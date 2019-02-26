@@ -6,18 +6,21 @@
 using namespace Rcpp;
 
 // generate_initial
-List generate_initial();
-RcppExport SEXP _rayweekend_generate_initial() {
+List generate_initial(int nx, int ny, int ns);
+RcppExport SEXP _rayweekend_generate_initial(SEXP nxSEXP, SEXP nySEXP, SEXP nsSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    rcpp_result_gen = Rcpp::wrap(generate_initial());
+    Rcpp::traits::input_parameter< int >::type nx(nxSEXP);
+    Rcpp::traits::input_parameter< int >::type ny(nySEXP);
+    Rcpp::traits::input_parameter< int >::type ns(nsSEXP);
+    rcpp_result_gen = Rcpp::wrap(generate_initial(nx, ny, ns));
     return rcpp_result_gen;
 END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_rayweekend_generate_initial", (DL_FUNC) &_rayweekend_generate_initial, 0},
+    {"_rayweekend_generate_initial", (DL_FUNC) &_rayweekend_generate_initial, 3},
     {NULL, NULL, 0}
 };
 
