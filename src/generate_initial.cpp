@@ -23,12 +23,12 @@ vec3 color(const ray& r, hitable *world, int depth) {
 }
 
 // [[Rcpp::export]]
-List generate_initial(int nx = 200, int ny = 100, int ns = 100) {
+List generate_initial(int nx = 200, int ny = 100, int ns = 100, float fov = 90.0) {
   
   NumericMatrix routput(nx,ny);
   NumericMatrix goutput(nx,ny);
   NumericMatrix boutput(nx,ny);
-  camera cam(90, float(nx)/float(ny));
+  camera cam(vec3(-2,2,1), vec3(0,0,-1), vec3(0,1,0),fov,float(nx)/float(ny));
   hitable *list[5];
   list[0] = new sphere(vec3(0,0,-1),0.5, new lambertian(vec3(0.8,0.3,0.3)));
   list[1] = new sphere(vec3(0,-100.5,-1),100, new lambertian(vec3(0.8,0.8,0.0)));

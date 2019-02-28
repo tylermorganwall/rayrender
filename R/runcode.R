@@ -6,8 +6,8 @@
 #'
 #' @examples
 #' #fake example
-runcode = function(width = 200, height = 100, aliasing = 100) {
-  rgb_mat = generate_initial(nx = width, ny = height, ns = aliasing)
+runcode = function(width = 200, height = 100, fov = 90, samples = 100) {
+  rgb_mat = generate_initial(nx = width, ny = height, ns = samples, fov = fov)
   full_array = array(0,c(ncol(rgb_mat$r),nrow(rgb_mat$r),3))
   full_array[,,1] = t(rgb_mat$r)
   full_array[,,2] = t(rgb_mat$g)

@@ -4,7 +4,7 @@
 \alias{runcode}
 \title{Title}
 \usage{
-runcode(width = 200, height = 100, aliasing = 100)
+runcode(width = 200, height = 100, fov = 90, samples = 100)
 }
 \value{
 DUM
