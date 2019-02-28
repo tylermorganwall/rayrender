@@ -5,18 +5,16 @@
 #include "float.h"
 using namespace Rcpp;
 
-vec3 random_in_unit_sphere() {
-  vec3 p;
-  do {
-    p = 2.0 * vec3(drand48(),drand48(),drand48()) - vec3(1,1,1);
-  } while (p.squared_length() >= 1.0);
-  return(p);
-}
-
-vec3 color(const ray& r, hitable *world) {
+vec3 color(const ray& r, hitable *world, int depth) {
   hit_record rec;
-  if(world->hit(r, 0.0, MAXFLOAT, rec)) {
-    return(0.5 * vec3(rec.normal.x()+1,rec.normal.y()+1,rec.normal.z()+1));
+  if(world->hit(r, 0.001, MAXFLOAT, rec)) {
+    ray scattered;
+    vec3 attenuation;
+    if(depth < 50 && rec.mat_ptr->scatter(r, rec, attenuation, scattered)) {
+      return(attenuation * color(scattered, world, depth + 1));
+    } else {
+      return(vec3(0,0,0));
+    }
   } else {
     vec3 unit_direction = unit_vector(r.direction());
     float t = 0.5 * (unit_direction.y() + 1.0);
@@ -25,15 +23,19 @@ vec3 color(const ray& r, hitable *world) {
 }
 
 // [[Rcpp::export]]
-List generate_initial(int nx, int ny, int ns) {
+List generate_initial(int nx = 200, int ny = 100, int ns = 100) {
+  
   NumericMatrix routput(nx,ny);
   NumericMatrix goutput(nx,ny);
   NumericMatrix boutput(nx,ny);
-  camera cam;
-  hitable *list[2];
-  list[0] = new sphere(vec3(0,0,-1),0.5);
-  list[1] = new sphere(vec3(0,-100.5,-1),100);
-  hitable *world = new hitable_list(list,2);
+  camera cam(90, float(nx)/float(ny));
+  hitable *list[5];
+  list[0] = new sphere(vec3(0,0,-1),0.5, new lambertian(vec3(0.8,0.3,0.3)));
+  list[1] = new sphere(vec3(0,-100.5,-1),100, new lambertian(vec3(0.8,0.8,0.0)));
+  list[2] = new sphere(vec3(1,0,-1),0.5, new metal(vec3(0.8,0.6,0.2), 0.8));
+  list[3] = new sphere(vec3(-1,0,-1), 0.5, new dielectric(1.5));
+  list[4] = new sphere(vec3(-1,0,-1), -0.45, new dielectric(1.5));
+  hitable *world = new hitable_list(list,5);
   for(int j = ny - 1; j >= 0; j--) {
     for(int i = 0; i < nx; i++) {
       vec3 col(0,0,0);
@@ -41,12 +43,12 @@ List generate_initial(int nx, int ny, int ns) {
         float u = float(i + drand48()) / float(nx);
         float v = float(j + drand48()) / float(ny);
         ray r = cam.get_ray(u,v);
-        col += color(r, world);
+        col += color(r, world, 0);
       }
       col /= float(ns);
-      routput(i,j) = col[0];
-      goutput(i,j) = col[1];
-      boutput(i,j) = col[2];
+      routput(i,j) = sqrt(col[0]);
+      goutput(i,j) = sqrt(col[1]);
+      boutput(i,j) = sqrt(col[2]);
     }
   }
   return(List::create(_["r"] = routput, _["g"] = goutput, _["b"] = boutput));
