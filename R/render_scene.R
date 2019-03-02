@@ -21,7 +21,7 @@
 #'
 #' @examples
 #' #Start with the ground
-#' scene = generate_ground()
+#' scene = generate_ground(depth=-0.5)
 #' render_scene(scene)
 #' 
 #' #Add a sphere to the center
