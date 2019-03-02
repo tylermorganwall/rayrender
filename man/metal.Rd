@@ -5,7 +5,7 @@
 \title{Metal Sphere}
 \usage{
 metal(x = 0, y = 0, z = 0, radius = 1, color = "#ffffff",
-  fuzz = 0)
+  fuzz = 0, velocity = c(0, 0, 0))
 }
 \arguments{
 \item{x}{Default `0`. x-coordinate of the center of the sphere.}
@@ -20,6 +20,8 @@ metal(x = 0, y = 0, z = 0, radius = 1, color = "#ffffff",
 a hexadecimal code, or a numeric rgb vector listing three intensities between `0` and `1`.}
 
 \item{fuzz}{Default `0`. The roughness of the metallic surface. Maximum `1`.}
+
+\item{velocity}{Default `c(0,0,0)`. Velocity of the sphere, used for motion blur.}
 }
 \value{
 Single row of a tibble describing the sphere in the scene.

@@ -12,6 +12,7 @@ Imports:
     rayshader,
     assertthat,
     tibble,
-    magrittr
+    magrittr,
+    purrr
 LinkingTo: Rcpp
 RoxygenNote: 6.1.1

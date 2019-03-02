@@ -4,7 +4,8 @@
 \alias{dielectric}
 \title{Dielelectric Sphere}
 \usage{
-dielectric(x = 0, y = 0, z = 0, radius = 1, refraction = 1.5)
+dielectric(x = 0, y = 0, z = 0, radius = 1, refraction = 1.5,
+  velocity = c(0, 0, 0))
 }
 \arguments{
 \item{x}{Default `0`. x-coordinate of the center of the sphere.}
@@ -16,6 +17,8 @@ dielectric(x = 0, y = 0, z = 0, radius = 1, refraction = 1.5)
 \item{radius}{Default `1`. Radius of the sphere.}
 
 \item{refraction}{Default `1.5`.  Index of refraction.}
+
+\item{velocity}{Default `c(0,0,0)`. Velocity of the sphere, used for motion blur.}
 }
 \value{
 Single row of a tibble describing the sphere in the scene.

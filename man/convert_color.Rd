@@ -17,6 +17,6 @@ Color vector
 Convert Color
 }
 \examples{
-rayballer:::convert_color("#eeff00")
+raynextweek:::convert_color("#eeff00")
 }
 \keyword{internal}

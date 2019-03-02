@@ -4,7 +4,8 @@
 \alias{lambertian}
 \title{Lambertian Sphere}
 \usage{
-lambertian(x = 0, y = 0, z = 0, radius = 1, color = "#ffffff")
+lambertian(x = 0, y = 0, z = 0, radius = 1, color = "#ffffff",
+  velocity = c(0, 0, 0))
 }
 \arguments{
 \item{x}{Default `0`. x-coordinate of the center of the sphere.}
@@ -17,6 +18,8 @@ lambertian(x = 0, y = 0, z = 0, radius = 1, color = "#ffffff")
 
 \item{color}{Default `#ffffff`. The color of the sphere. Can be either
 a hexadecimal code, or a numeric rgb vector listing three intensities between `0` and `1`.}
+
+\item{velocity}{Default `c(0,0,0)`. Velocity of the sphere, used for motion blur.}
 }
 \value{
 Single row of a tibble describing the sphere in the scene.

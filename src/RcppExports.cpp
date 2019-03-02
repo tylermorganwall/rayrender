@@ -6,8 +6,8 @@
 using namespace Rcpp;
 
 // generate_initial
-List generate_initial(int nx, int ny, int ns, float fov, NumericVector lookfromvec, NumericVector lookatvec, float aperture, IntegerVector type, NumericVector radius, NumericVector x, NumericVector y, NumericVector z, List properties, int n, NumericVector& bghigh, NumericVector& bglow);
-RcppExport SEXP _rayballer_generate_initial(SEXP nxSEXP, SEXP nySEXP, SEXP nsSEXP, SEXP fovSEXP, SEXP lookfromvecSEXP, SEXP lookatvecSEXP, SEXP apertureSEXP, SEXP typeSEXP, SEXP radiusSEXP, SEXP xSEXP, SEXP ySEXP, SEXP zSEXP, SEXP propertiesSEXP, SEXP nSEXP, SEXP bghighSEXP, SEXP bglowSEXP) {
+List generate_initial(int nx, int ny, int ns, float fov, NumericVector lookfromvec, NumericVector lookatvec, float aperture, IntegerVector type, NumericVector radius, NumericVector x, NumericVector y, NumericVector z, List properties, List velocity, LogicalVector moving, int n, NumericVector& bghigh, NumericVector& bglow, float shutteropen, float shutterclose);
+RcppExport SEXP _raynextweek_generate_initial(SEXP nxSEXP, SEXP nySEXP, SEXP nsSEXP, SEXP fovSEXP, SEXP lookfromvecSEXP, SEXP lookatvecSEXP, SEXP apertureSEXP, SEXP typeSEXP, SEXP radiusSEXP, SEXP xSEXP, SEXP ySEXP, SEXP zSEXP, SEXP propertiesSEXP, SEXP velocitySEXP, SEXP movingSEXP, SEXP nSEXP, SEXP bghighSEXP, SEXP bglowSEXP, SEXP shutteropenSEXP, SEXP shuttercloseSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -24,20 +24,24 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< NumericVector >::type y(ySEXP);
     Rcpp::traits::input_parameter< NumericVector >::type z(zSEXP);
     Rcpp::traits::input_parameter< List >::type properties(propertiesSEXP);
+    Rcpp::traits::input_parameter< List >::type velocity(velocitySEXP);
+    Rcpp::traits::input_parameter< LogicalVector >::type moving(movingSEXP);
     Rcpp::traits::input_parameter< int >::type n(nSEXP);
     Rcpp::traits::input_parameter< NumericVector& >::type bghigh(bghighSEXP);
     Rcpp::traits::input_parameter< NumericVector& >::type bglow(bglowSEXP);
-    rcpp_result_gen = Rcpp::wrap(generate_initial(nx, ny, ns, fov, lookfromvec, lookatvec, aperture, type, radius, x, y, z, properties, n, bghigh, bglow));
+    Rcpp::traits::input_parameter< float >::type shutteropen(shutteropenSEXP);
+    Rcpp::traits::input_parameter< float >::type shutterclose(shuttercloseSEXP);
+    rcpp_result_gen = Rcpp::wrap(generate_initial(nx, ny, ns, fov, lookfromvec, lookatvec, aperture, type, radius, x, y, z, properties, velocity, moving, n, bghigh, bglow, shutteropen, shutterclose));
     return rcpp_result_gen;
 END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_rayballer_generate_initial", (DL_FUNC) &_rayballer_generate_initial, 16},
+    {"_raynextweek_generate_initial", (DL_FUNC) &_raynextweek_generate_initial, 20},
     {NULL, NULL, 0}
 };
 
-RcppExport void R_init_rayballer(DllInfo *dll) {
+RcppExport void R_init_raynextweek(DllInfo *dll) {
     R_registerRoutines(dll, NULL, CallEntries, NULL, NULL);
     R_useDynamicSymbols(dll, FALSE);
 }

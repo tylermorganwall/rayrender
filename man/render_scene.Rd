@@ -7,7 +7,7 @@
 render_scene(scene, width = 400, height = 400, fov = 20,
   samples = 100, lookfrom = c(10, 1, 0), lookat = c(0, 0, 0),
   aperture = 0.1, filename = NULL, backgroundhigh = "#80b4ff",
-  backgroundlow = "#ffffff")
+  backgroundlow = "#ffffff", shutteropen = 0, shutterclose = 1)
 }
 \arguments{
 \item{scene}{Tibble of sphere locations and properties. Generate each row using one of the
@@ -35,6 +35,10 @@ a hexadecimal code, or a numeric rgb vector listing three intensities between `0
 
 \item{backgroundlow}{Default `#ffffff`. The "low" color in the background gradient. Can be either
 a hexadecimal code, or a numeric rgb vector listing three intensities between `0` and `1`.}
+
+\item{shutteropen}{Default `0`. Time at which the shutter is open. Only affects moving objects.}
+
+\item{shutterclose}{Default `1`. Time at which the shutter is open. Only affects moving objects.}
 }
 \value{
 Raytraced plot to current device, or an image saved to a file.
@@ -44,7 +48,7 @@ Title
 }
 \examples{
 #Start with the ground
-scene = generate_ground()
+scene = generate_ground(depth=-0.5)
 render_scene(scene)
 
 #Add a sphere to the center

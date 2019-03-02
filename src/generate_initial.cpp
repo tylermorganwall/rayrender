@@ -55,23 +55,42 @@ hitable *random_scene() {
 hitable *specific_scene(IntegerVector& type, 
                         NumericVector& radius,
                         NumericVector& x, NumericVector& y, NumericVector& z,
-                        List& properties,
-                        int n) {
+                        List& properties, List& velocity, LogicalVector& moving,
+                        int n, float shutteropen, float shutterclose) {
   hitable **list = new hitable*[n+1];
   NumericVector tempvector;
+  NumericVector tempvel;
   List templist;
   vec3 center(x(0), y(0), z(0));
+  vec3 vel(x(0), y(0), z(0));
   for(int i = 0; i < n; i++) {
     tempvector = as<NumericVector>(properties(i));
+    tempvel = as<NumericVector>(velocity(i));
     center =  vec3(x(i), y(i), z(i));
+    vel = vec3(tempvel(0),tempvel(1),tempvel(2));
     if (type(i) == 1) {
-      list[i] = new sphere(center, radius(i), 
-                             new lambertian(vec3(tempvector(0),tempvector(1),tempvector(2))));
+      if(!moving(i)) {
+        list[i] = new sphere(center + vel * shutteropen, radius(i), 
+                               new lambertian(vec3(tempvector(0),tempvector(1),tempvector(2))));
+      } else {
+        list[i] = new moving_sphere(center + vel * shutteropen, center + vel*shutterclose, shutteropen, shutterclose, radius(i),
+                               new lambertian(vec3(tempvector(0),tempvector(1),tempvector(2))));
+      }
     } else if (type(i)  == 2) {
-      list[i] = new sphere(center, radius(i), 
+      if(!moving(i)) {
+        list[i] = new sphere(center + vel * shutteropen, radius(i), 
+                               new metal(vec3(tempvector(0),tempvector(1),tempvector(2)),tempvector(3)));
+      } else {
+        list[i] = new moving_sphere(center + vel * shutteropen, center + vel*shutterclose, shutteropen, shutterclose, radius(i),
                              new metal(vec3(tempvector(0),tempvector(1),tempvector(2)),tempvector(3)));
+      }
     } else if (type(i)  == 3) {
-      list[i] = new sphere(center, radius(i), new dielectric(tempvector(0))); 
+      if(!moving(i)) {
+        list[i] = new sphere(center + vel * shutteropen, radius(i), new dielectric(tempvector(0))); 
+      } else {
+        list[i] = new moving_sphere(center + vel * shutteropen, center + vel*shutterclose, shutteropen, shutterclose, radius(i),
+                                    new dielectric(tempvector(0)));
+      }
     }
   }
   return(new hitable_list(list, n));
@@ -83,9 +102,10 @@ List generate_initial(int nx, int ny, int ns, float fov,
                       IntegerVector type, 
                       NumericVector radius,
                       NumericVector x, NumericVector y, NumericVector z,
-                      List properties,
+                      List properties, List velocity, LogicalVector moving,
                       int n,
-                      NumericVector& bghigh, NumericVector& bglow) {
+                      NumericVector& bghigh, NumericVector& bglow,
+                      float shutteropen, float shutterclose) {
   NumericMatrix routput(nx,ny);
   NumericMatrix goutput(nx,ny);
   NumericMatrix boutput(nx,ny);
@@ -94,8 +114,12 @@ List generate_initial(int nx, int ny, int ns, float fov,
   vec3 backgroundhigh(bghigh[0],bghigh[1],bghigh[2]);
   vec3 backgroundlow(bglow[0],bglow[1],bglow[2]);
   float dist_to_focus = (lookfrom-lookat).length();
-  camera cam(lookfrom, lookat, vec3(0,1,0), fov, float(nx)/float(ny), aperture, dist_to_focus);
-  hitable *world = specific_scene(type, radius, x, y, z, properties, n);
+  camera cam(lookfrom, lookat, vec3(0,1,0), fov, float(nx)/float(ny), 
+             aperture, dist_to_focus,
+             shutteropen, shutterclose);
+  hitable *world = specific_scene(type, radius, x, y, z, 
+                                  properties, velocity, moving,
+                                  n,shutteropen,shutterclose);
   for(int j = ny - 1; j >= 0; j--) {
     for(int i = 0; i < nx; i++) {
       vec3 col(0,0,0);

@@ -15,6 +15,8 @@
 #' a hexadecimal code, or a numeric rgb vector listing three intensities between `0` and `1`.
 #' @param backgroundlow Default `#ffffff`. The "low" color in the background gradient. Can be either
 #' a hexadecimal code, or a numeric rgb vector listing three intensities between `0` and `1`.
+#' @param shutteropen Default `0`. Time at which the shutter is open. Only affects moving objects.
+#' @param shutterclose Default `1`. Time at which the shutter is open. Only affects moving objects.
 #' @export
 #' @importFrom  grDevices col2rgb
 #' @return Raytraced plot to current device, or an image saved to a file.
@@ -66,7 +68,8 @@
 #'                  aperture = 1)
 render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 100,
                         lookfrom = c(10,1,0), lookat = c(0,0,0), aperture = 0.1,
-                        filename = NULL, backgroundhigh = "#80b4ff",backgroundlow = "#ffffff") { 
+                        filename = NULL, backgroundhigh = "#80b4ff",backgroundlow = "#ffffff",
+                        shutteropen = 0.0, shutterclose = 1.0) { 
   backgroundhigh = convert_color(backgroundhigh)
   backgroundlow = convert_color(backgroundlow)
   xvec = scene$x 
@@ -74,7 +77,12 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
   zvec = scene$z
   rvec = scene$radius
   typevec = unlist(lapply(tolower(scene$type),switch,"lambertian" = 1,"metal" = 2,"dielectric" = 3))
+  movingvec = purrr::map_lgl(scene$velocity,.f = ~any(.x != 0))
   proplist = scene$properties
+  vel_list = scene$velocity
+  if(shutteropen == shutterclose) {
+    movingvec = rep(FALSE,length(movingvec))
+  }
   assertthat::assert_that(all(c(length(xvec),length(yvec),length(zvec),length(rvec),length(typevec),length(proplist)) == length(xvec)))
   assertthat::assert_that(all(!is.null(typevec)))
   for(i in 1:length(xvec)) {
@@ -90,9 +98,10 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
                              lookfromvec = lookfrom, lookatvec = lookat, aperture=aperture,
                              type = typevec, radius = rvec,
                              x = xvec, y = yvec, z = zvec,
-                             properties = proplist,
-                             n = length(typevec),
-                             bghigh = backgroundhigh, bglow = backgroundlow) 
+                             properties = proplist, velocity = vel_list, moving = movingvec,
+                             n = length(typevec), 
+                             bghigh = backgroundhigh, bglow = backgroundlow,
+                             shutteropen = shutteropen, shutterclose = shutterclose) 
   full_array = array(0,c(ncol(rgb_mat$r),nrow(rgb_mat$r),3))
   full_array[,,1] = t(rgb_mat$r)
   full_array[,,2] = t(rgb_mat$g)
