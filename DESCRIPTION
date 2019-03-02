@@ -1,0 +1,17 @@
+Package: raynextweek
+Type: Package
+Title: Raytrace Spheres
+Version: 0.1.0
+Date: 2019-02-24
+Author: Tyler Morgan-Wall
+Maintainer: Tyler Morgan-Wall <tylermw@gmail.com>
+Description: A raytracer for lambertian, metallic, and dielectric spheres. Uses a tidy `tibble` input to build scenes. Based off of Peter Shirley's "Raytracing in One Weekend".
+License: GPL (>= 2)
+Imports: 
+    Rcpp (>= 1.0.0),
+    rayshader,
+    assertthat,
+    tibble,
+    magrittr
+LinkingTo: Rcpp
+RoxygenNote: 6.1.1
