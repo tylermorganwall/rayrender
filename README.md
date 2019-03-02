@@ -105,3 +105,25 @@ render_scene(scene,lookfrom = c(7,1.5,10),lookat = c(0,0.5,0),fov=15,
 ```
 
 ![](man/figures/README_basicspheres-9.png)<!-- -->
+
+Here’s the final scene representation:
+
+``` r
+scene
+```
+
+    ##    x        y     z  radius       type             properties
+    ## 1  0 -1000.50  0.00 1000.00 lambertian          0.8, 1.0, 0.0
+    ## 2  0     0.00  0.00    0.50 lambertian                1, 0, 1
+    ## 3  0     0.00  1.00    0.50      metal             1, 1, 1, 0
+    ## 4  0     1.00  0.00    0.50      metal 0.30, 0.60, 1.00, 0.25
+    ## 5  0     0.00 -1.00    0.50 dielectric                    1.6
+    ## 6  1    -0.33 -0.33    0.15 dielectric                    1.5
+    ## 7  1     0.00 -0.33    0.15 dielectric                    1.5
+    ## 8  1     0.33 -0.33    0.15 dielectric                    1.5
+    ## 9  1    -0.33  0.00    0.15 dielectric                    1.5
+    ## 10 1     0.00  0.00    0.15 dielectric                    1.5
+    ## 11 1     0.33  0.00    0.15 dielectric                    1.5
+    ## 12 1    -0.33  0.33    0.15 dielectric                    1.5
+    ## 13 1     0.00  0.33    0.15 dielectric                    1.5
+    ## 14 1     0.33  0.33    0.15 dielectric                    1.5

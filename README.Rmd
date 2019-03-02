@@ -85,3 +85,11 @@ render_scene(scene,lookfrom = c(7,1.5,10),lookat = c(0,0.5,0),fov=15,
 
 
 ```
+
+Here's the final scene representation:
+
+```{r}
+
+scene
+
+```
