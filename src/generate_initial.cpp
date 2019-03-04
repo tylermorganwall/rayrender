@@ -65,7 +65,7 @@ hitable *specific_scene(IntegerVector& type,
       }
     }
   }
-  return(new hitable_list(list, n));
+  return(new bvh_node(list, n, shutteropen, shutterclose));
 }
 
 // [[Rcpp::export]]
@@ -109,3 +109,4 @@ List generate_initial(int nx, int ny, int ns, float fov,
   }
   return(List::create(_["r"] = routput, _["g"] = goutput, _["b"] = boutput));
 }
+
