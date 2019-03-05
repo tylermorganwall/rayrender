@@ -82,7 +82,8 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
   vel_list = scene$velocity
   checkeredlist = scene$checkercolor
   checkeredbool = purrr::map_lgl(checkeredlist,.f = ~all(!is.na(.x)))
-  noisebool = scene$noise
+  noisebool = purrr::map_lgl(scene$noise, .f = ~.x > 0)
+  noisevec = scene$noise
   if(shutteropen == shutterclose) {
     movingvec = rep(FALSE,length(movingvec))
   }
@@ -105,7 +106,8 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
                              n = length(typevec), 
                              bghigh = backgroundhigh, bglow = backgroundlow,
                              shutteropen = shutteropen, shutterclose = shutterclose,
-                             ischeckered = checkeredbool, checkercolors = checkeredlist,noise=noisebool) 
+                             ischeckered = checkeredbool, checkercolors = checkeredlist,
+                             noise=noisevec,isnoise=noisebool) 
   full_array = array(0,c(ncol(rgb_mat$r),nrow(rgb_mat$r),3))
   full_array[,,1] = t(rgb_mat$r)
   full_array[,,2] = t(rgb_mat$g)

@@ -30,11 +30,13 @@ hitable *specific_scene(IntegerVector& type,
                         NumericVector& x, NumericVector& y, NumericVector& z,
                         List& properties, List& velocity, LogicalVector& moving,
                         int n, float shutteropen, float shutterclose,
-                        LogicalVector& ischeckered, List& checkercolors, LogicalVector& noise) {
+                        LogicalVector& ischeckered, List& checkercolors, 
+                        NumericVector& noise, LogicalVector& isnoise) {
   hitable **list = new hitable*[n+1];
   NumericVector tempvector;
   NumericVector tempchecker;
   NumericVector tempvel;
+  
   List templist;
   vec3 center(x(0), y(0), z(0));
   vec3 vel(x(0), y(0), z(0));
@@ -55,8 +57,8 @@ hitable *specific_scene(IntegerVector& type,
           list[i] = new moving_sphere(center + vel * shutteropen, center + vel*shutterclose, shutteropen, shutterclose, radius(i),
                                       new lambertian(checker));
         }
-      } else if(noise(i)) {
-        texture *perlinn = new noise_texture(); 
+      } else if(isnoise(i)) {
+        texture *perlinn = new noise_texture(noise(i),vec3(tempvector(0),tempvector(1),tempvector(2))); 
         if(!moving(i)) {
           list[i] = new sphere(center + vel * shutteropen, radius(i), 
                                new lambertian(perlinn));
@@ -103,7 +105,8 @@ List generate_initial(int nx, int ny, int ns, float fov,
                       int n,
                       NumericVector& bghigh, NumericVector& bglow,
                       float shutteropen, float shutterclose,
-                      LogicalVector ischeckered, List checkercolors, LogicalVector noise) {
+                      LogicalVector ischeckered, List checkercolors, 
+                      NumericVector noise, LogicalVector isnoise) {
   NumericMatrix routput(nx,ny);
   NumericMatrix goutput(nx,ny);
   NumericMatrix boutput(nx,ny);
@@ -118,7 +121,7 @@ List generate_initial(int nx, int ny, int ns, float fov,
   hitable *world = specific_scene(type, radius, x, y, z, 
                                   properties, velocity, moving,
                                   n,shutteropen,shutterclose,
-                                  ischeckered, checkercolors, noise);
+                                  ischeckered, checkercolors, noise, isnoise);
   for(int j = ny - 1; j >= 0; j--) {
     for(int i = 0; i < nx; i++) {
       vec3 col(0,0,0);
