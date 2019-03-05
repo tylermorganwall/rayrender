@@ -4,6 +4,7 @@
 #include "camera.h"
 #include "float.h"
 #include "bvh_node.h"
+#include "perlin.h"
 using namespace Rcpp;
 
 vec3 color(const ray& r, hitable *world, int depth, 
@@ -28,25 +29,49 @@ hitable *specific_scene(IntegerVector& type,
                         NumericVector& radius,
                         NumericVector& x, NumericVector& y, NumericVector& z,
                         List& properties, List& velocity, LogicalVector& moving,
-                        int n, float shutteropen, float shutterclose) {
+                        int n, float shutteropen, float shutterclose,
+                        LogicalVector& ischeckered, List& checkercolors, LogicalVector& noise) {
   hitable **list = new hitable*[n+1];
   NumericVector tempvector;
+  NumericVector tempchecker;
   NumericVector tempvel;
   List templist;
   vec3 center(x(0), y(0), z(0));
   vec3 vel(x(0), y(0), z(0));
   for(int i = 0; i < n; i++) {
     tempvector = as<NumericVector>(properties(i));
+    tempchecker = as<NumericVector>(checkercolors(i));
     tempvel = as<NumericVector>(velocity(i));
     center =  vec3(x(i), y(i), z(i));
     vel = vec3(tempvel(0),tempvel(1),tempvel(2));
     if (type(i) == 1) {
-      if(!moving(i)) {
-        list[i] = new sphere(center + vel * shutteropen, radius(i), 
-                               new lambertian(vec3(tempvector(0),tempvector(1),tempvector(2))));
+      if(ischeckered(i)) {
+        texture *checker = new checker_texture(new constant_texture(vec3(tempchecker(0),tempchecker(1),tempchecker(2))),
+                                               new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2)))); 
+        if(!moving(i)) {
+          list[i] = new sphere(center + vel * shutteropen, radius(i), 
+                               new lambertian(checker));
+        } else {
+          list[i] = new moving_sphere(center + vel * shutteropen, center + vel*shutterclose, shutteropen, shutterclose, radius(i),
+                                      new lambertian(checker));
+        }
+      } else if(noise(i)) {
+        texture *perlinn = new noise_texture(); 
+        if(!moving(i)) {
+          list[i] = new sphere(center + vel * shutteropen, radius(i), 
+                               new lambertian(perlinn));
+        } else {
+          list[i] = new moving_sphere(center + vel * shutteropen, center + vel*shutterclose, shutteropen, shutterclose, radius(i),
+                                      new lambertian(perlinn));
+        }
       } else {
-        list[i] = new moving_sphere(center + vel * shutteropen, center + vel*shutterclose, shutteropen, shutterclose, radius(i),
-                               new lambertian(vec3(tempvector(0),tempvector(1),tempvector(2))));
+        if(!moving(i)) {
+          list[i] = new sphere(center + vel * shutteropen, radius(i), 
+                               new lambertian(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2)))));
+        } else {
+          list[i] = new moving_sphere(center + vel * shutteropen, center + vel*shutterclose, shutteropen, shutterclose, radius(i),
+                                      new lambertian(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2)))));
+        }
       }
     } else if (type(i)  == 2) {
       if(!moving(i)) {
@@ -77,7 +102,8 @@ List generate_initial(int nx, int ny, int ns, float fov,
                       List properties, List velocity, LogicalVector moving,
                       int n,
                       NumericVector& bghigh, NumericVector& bglow,
-                      float shutteropen, float shutterclose) {
+                      float shutteropen, float shutterclose,
+                      LogicalVector ischeckered, List checkercolors, LogicalVector noise) {
   NumericMatrix routput(nx,ny);
   NumericMatrix goutput(nx,ny);
   NumericMatrix boutput(nx,ny);
@@ -91,7 +117,8 @@ List generate_initial(int nx, int ny, int ns, float fov,
              shutteropen, shutterclose);
   hitable *world = specific_scene(type, radius, x, y, z, 
                                   properties, velocity, moving,
-                                  n,shutteropen,shutterclose);
+                                  n,shutteropen,shutterclose,
+                                  ischeckered, checkercolors, noise);
   for(int j = ny - 1; j >= 0; j--) {
     for(int i = 0; i < nx; i++) {
       vec3 col(0,0,0);
