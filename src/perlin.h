@@ -29,7 +29,7 @@ public:
     for(int di = 0; di < 2; di++) {
       for(int dj = 0; dj < 2; dj++) {
         for(int dk = 0; dk < 2; dk++) {
-          c[di][dj][dk] = ranfloat[perm_x[(i + di) & 255] ^ perm_x[(j + dj) & 255] ^ perm_x[(k + dk) & 255]];
+          c[di][dj][dk] = ranfloat[perm_x[(i + di) & 255] ^ perm_y[(j + dj) & 255] ^ perm_z[(k + dk) & 255]];
         } 
       }
     }
