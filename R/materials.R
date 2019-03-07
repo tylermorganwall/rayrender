@@ -18,14 +18,20 @@
 #' 
 #' #add a single red sphere, using a hexcode
 #' scene = rbind(scene, lambertian(x=0,y=0.5,z=0,radius = 1, color = "#00ff00"))
-lambertian = function(x=0, y=0, z=0, radius=1, color = "#ffffff",velocity = c(0,0,0), checkercolor = NA, noise = 0) {
+lambertian = function(x=0, y=0, z=0, radius=1, color = "#ffffff", checkercolor = NA, velocity = c(0,0,0),
+                      noise = 0, noisephase = 0, noiseintensity = 10, angle = 0, image_array = NA) {
   if(all(!is.na(checkercolor))) {
     checkerlist = list(convert_color(checkercolor))
   } else {
     checkerlist = list(NA)
   }
   color = convert_color(color)
-  tibble::tibble(x=x,y=y,z=z,radius=radius, type = "lambertian", properties = list(color), velocity = list(velocity), checkercolor=checkerlist, noise=noise)
+  if(!is.array(image_array) && !is.na(image_array)) {
+    image = NA
+    warning("Image not in recognized format (array or matrix), ignoring")
+  }
+  tibble::tibble(x=x,y=y,z=z,radius=radius, type = "lambertian", properties = list(color), velocity = list(velocity), checkercolor=checkerlist, 
+                 noise=noise, noisephase = noisephase, noiseintensity = noiseintensity, angle=angle, image = list(image_array))
 }
 
 #' Metal Sphere
@@ -51,7 +57,8 @@ lambertian = function(x=0, y=0, z=0, radius=1, color = "#ffffff",velocity = c(0,
 #' metal(x=0,y=1,z=0,radius=1, color = c(1,0,0),fuzz=0)
 metal = function(x=0, y=0, z=0, radius=1, color = "#ffffff", fuzz = 0,velocity = c(0,0,0)) {
   color = convert_color(color)
-  tibble::tibble(x=x,y=y,z=z,radius=radius, type = "metal", properties = list(c(color,fuzz)), velocity = list(velocity), checkercolor=list(NA), noise=0)
+  tibble::tibble(x=x,y=y,z=z,radius=radius, type = "metal", properties = list(c(color,fuzz)), velocity = list(velocity), 
+                 checkercolor=list(NA), noise=0, noisephase = 0, noiseintensity = 0,angle=0,image = list(NA))
 }
 
 #' Dielelectric Sphere
@@ -69,5 +76,6 @@ metal = function(x=0, y=0, z=0, radius=1, color = "#ffffff", fuzz = 0,velocity =
 #' @examples
 #' dielectric(x=0,y=1,z=0,radius=1, refraction = 2)
 dielectric = function(x=0, y=0, z=0, radius=1, refraction = 1.5,velocity = c(0,0,0)) {
-  tibble::tibble(x=x,y=y,z=z,radius=radius, type = "dielectric", properties = list(refraction), velocity = list(velocity), checkercolor=list(NA), noise=0)
+  tibble::tibble(x=x,y=y,z=z,radius=radius, type = "dielectric", properties = list(refraction), velocity = list(velocity),
+                 checkercolor=list(NA), noise=0, noisephase = 0, noiseintensity = 0,angle=0,image = list(NA))
 }

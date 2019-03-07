@@ -6,8 +6,8 @@
 using namespace Rcpp;
 
 // generate_initial
-List generate_initial(int nx, int ny, int ns, float fov, NumericVector lookfromvec, NumericVector lookatvec, float aperture, IntegerVector type, NumericVector radius, NumericVector x, NumericVector y, NumericVector z, List properties, List velocity, LogicalVector moving, int n, NumericVector& bghigh, NumericVector& bglow, float shutteropen, float shutterclose, LogicalVector ischeckered, List checkercolors, NumericVector noise, LogicalVector isnoise);
-RcppExport SEXP _raynextweek_generate_initial(SEXP nxSEXP, SEXP nySEXP, SEXP nsSEXP, SEXP fovSEXP, SEXP lookfromvecSEXP, SEXP lookatvecSEXP, SEXP apertureSEXP, SEXP typeSEXP, SEXP radiusSEXP, SEXP xSEXP, SEXP ySEXP, SEXP zSEXP, SEXP propertiesSEXP, SEXP velocitySEXP, SEXP movingSEXP, SEXP nSEXP, SEXP bghighSEXP, SEXP bglowSEXP, SEXP shutteropenSEXP, SEXP shuttercloseSEXP, SEXP ischeckeredSEXP, SEXP checkercolorsSEXP, SEXP noiseSEXP, SEXP isnoiseSEXP) {
+List generate_initial(int nx, int ny, int ns, float fov, NumericVector lookfromvec, NumericVector lookatvec, float aperture, IntegerVector type, NumericVector radius, NumericVector x, NumericVector y, NumericVector z, List properties, List velocity, LogicalVector moving, int n, NumericVector& bghigh, NumericVector& bglow, float shutteropen, float shutterclose, LogicalVector ischeckered, List checkercolors, NumericVector noise, LogicalVector isnoise, NumericVector& noisephase, NumericVector& noiseintensity, NumericVector& angle, LogicalVector& isimage, CharacterVector& filelocation);
+RcppExport SEXP _raynextweek_generate_initial(SEXP nxSEXP, SEXP nySEXP, SEXP nsSEXP, SEXP fovSEXP, SEXP lookfromvecSEXP, SEXP lookatvecSEXP, SEXP apertureSEXP, SEXP typeSEXP, SEXP radiusSEXP, SEXP xSEXP, SEXP ySEXP, SEXP zSEXP, SEXP propertiesSEXP, SEXP velocitySEXP, SEXP movingSEXP, SEXP nSEXP, SEXP bghighSEXP, SEXP bglowSEXP, SEXP shutteropenSEXP, SEXP shuttercloseSEXP, SEXP ischeckeredSEXP, SEXP checkercolorsSEXP, SEXP noiseSEXP, SEXP isnoiseSEXP, SEXP noisephaseSEXP, SEXP noiseintensitySEXP, SEXP angleSEXP, SEXP isimageSEXP, SEXP filelocationSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -35,13 +35,18 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< List >::type checkercolors(checkercolorsSEXP);
     Rcpp::traits::input_parameter< NumericVector >::type noise(noiseSEXP);
     Rcpp::traits::input_parameter< LogicalVector >::type isnoise(isnoiseSEXP);
-    rcpp_result_gen = Rcpp::wrap(generate_initial(nx, ny, ns, fov, lookfromvec, lookatvec, aperture, type, radius, x, y, z, properties, velocity, moving, n, bghigh, bglow, shutteropen, shutterclose, ischeckered, checkercolors, noise, isnoise));
+    Rcpp::traits::input_parameter< NumericVector& >::type noisephase(noisephaseSEXP);
+    Rcpp::traits::input_parameter< NumericVector& >::type noiseintensity(noiseintensitySEXP);
+    Rcpp::traits::input_parameter< NumericVector& >::type angle(angleSEXP);
+    Rcpp::traits::input_parameter< LogicalVector& >::type isimage(isimageSEXP);
+    Rcpp::traits::input_parameter< CharacterVector& >::type filelocation(filelocationSEXP);
+    rcpp_result_gen = Rcpp::wrap(generate_initial(nx, ny, ns, fov, lookfromvec, lookatvec, aperture, type, radius, x, y, z, properties, velocity, moving, n, bghigh, bglow, shutteropen, shutterclose, ischeckered, checkercolors, noise, isnoise, noisephase, noiseintensity, angle, isimage, filelocation));
     return rcpp_result_gen;
 END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_raynextweek_generate_initial", (DL_FUNC) &_raynextweek_generate_initial, 24},
+    {"_raynextweek_generate_initial", (DL_FUNC) &_raynextweek_generate_initial, 29},
     {NULL, NULL, 0}
 };
 

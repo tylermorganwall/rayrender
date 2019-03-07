@@ -84,6 +84,17 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
   checkeredbool = purrr::map_lgl(checkeredlist,.f = ~all(!is.na(.x)))
   noisebool = purrr::map_lgl(scene$noise, .f = ~.x > 0)
   noisevec = scene$noise
+  noisephasevec = scene$noisephase
+  noiseintvec = scene$noiseintensity
+  rot_angle_vec = scene$angle
+  image_array_list = scene$image
+  image_tex_bool = purrr::map_lgl(image_array_list,.f = ~is.array(.x))
+  temp_file_names = purrr::map_chr(image_tex_bool,.f = ~ifelse(.x, tempfile(),""))
+  for(i in 1:length(image_array_list)) {
+    if(image_tex_bool[i]) {
+      png::writePNG(image_array_list[[i]],temp_file_names[i])
+    }
+  }
   if(shutteropen == shutterclose) {
     movingvec = rep(FALSE,length(movingvec))
   }
@@ -107,12 +118,22 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
                              bghigh = backgroundhigh, bglow = backgroundlow,
                              shutteropen = shutteropen, shutterclose = shutterclose,
                              ischeckered = checkeredbool, checkercolors = checkeredlist,
-                             noise=noisevec,isnoise=noisebool) 
+                             noise=noisevec,isnoise=noisebool,noisephase=noisephasevec, noiseintensity=noiseintvec,
+                             angle = rot_angle_vec, isimage = image_tex_bool, filelocation = temp_file_names) 
   full_array = array(0,c(ncol(rgb_mat$r),nrow(rgb_mat$r),3))
   full_array[,,1] = t(rgb_mat$r)
   full_array[,,2] = t(rgb_mat$g)
   full_array[,,3] = t(rgb_mat$b)
   array_from_mat = array(full_array,dim=c(nrow(full_array),ncol(full_array),3))
+  if(any(is.na(array_from_mat ))) {
+    warning("NAs detected--setting to black")
+    array_from_mat[is.na(array_from_mat)] = 0
+  }
+  if(any(array_from_mat > 1 | array_from_mat < 0,na.rm = TRUE)) {
+    warning("Out-of-range values found: Clamping between 1 and 0")
+    array_from_mat[array_from_mat > 1] = 1
+    array_from_mat[array_from_mat < 0] = 0
+  }
   if(is.null(filename)) {
     rayshader::plot_map(flipud(array_from_mat))
   } else {

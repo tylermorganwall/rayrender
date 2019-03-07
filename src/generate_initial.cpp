@@ -1,3 +1,6 @@
+#define STB_IMAGE_IMPLEMENTATION 
+#include "vec3.h"
+#include "stb_image.h"
 #include <Rcpp.h>
 #include "sphere.h"
 #include "hitablelist.h"
@@ -5,6 +8,7 @@
 #include "float.h"
 #include "bvh_node.h"
 #include "perlin.h"
+#include "texture.h"
 using namespace Rcpp;
 
 vec3 color(const ray& r, hitable *world, int depth, 
@@ -31,7 +35,10 @@ hitable *specific_scene(IntegerVector& type,
                         List& properties, List& velocity, LogicalVector& moving,
                         int n, float shutteropen, float shutterclose,
                         LogicalVector& ischeckered, List& checkercolors, 
-                        NumericVector& noise, LogicalVector& isnoise) {
+                        NumericVector& noise, LogicalVector& isnoise,
+                        NumericVector& noisephase, NumericVector& noiseintensity,
+                        NumericVector& angle, 
+                        LogicalVector& isimage, CharacterVector& filelocation) {
   hitable **list = new hitable*[n+1];
   NumericVector tempvector;
   NumericVector tempchecker;
@@ -58,13 +65,24 @@ hitable *specific_scene(IntegerVector& type,
                                       new lambertian(checker));
         }
       } else if(isnoise(i)) {
-        texture *perlinn = new noise_texture(noise(i),vec3(tempvector(0),tempvector(1),tempvector(2))); 
+        texture *perlin_tex = new noise_texture(noise(i),vec3(tempvector(0),tempvector(1),tempvector(2)), noisephase(i), noiseintensity(i));
         if(!moving(i)) {
-          list[i] = new sphere(center + vel * shutteropen, radius(i), 
-                               new lambertian(perlinn));
+          list[i] = new translate(new rotate_y(new sphere(vec3(0,0,0), radius(i), 
+                               new lambertian(perlin_tex)),angle(i)), center + vel * shutteropen);
         } else {
           list[i] = new moving_sphere(center + vel * shutteropen, center + vel*shutterclose, shutteropen, shutterclose, radius(i),
-                                      new lambertian(perlinn));
+                                      new lambertian(perlin_tex));
+        }
+      } else if(isimage(i)) {
+        int nx, ny, nn;
+        unsigned char *tex_data = stbi_load(filelocation(i), &nx, &ny, &nn, 0);
+        texture *perlin_tex = new image_texture(tex_data,nx,ny);
+        if(!moving(i)) {
+          list[i] = new translate(new rotate_y(new sphere(vec3(0,0,0), radius(i), 
+                                               new lambertian(perlin_tex)), angle(i)), center + vel * shutteropen);
+        } else {
+          list[i] = new moving_sphere(center + vel * shutteropen, center + vel*shutterclose, shutteropen, shutterclose, radius(i),
+                                      new lambertian(perlin_tex));
         }
       } else {
         if(!moving(i)) {
@@ -106,7 +124,9 @@ List generate_initial(int nx, int ny, int ns, float fov,
                       NumericVector& bghigh, NumericVector& bglow,
                       float shutteropen, float shutterclose,
                       LogicalVector ischeckered, List checkercolors, 
-                      NumericVector noise, LogicalVector isnoise) {
+                      NumericVector noise, LogicalVector isnoise,
+                      NumericVector& noisephase, NumericVector& noiseintensity, NumericVector& angle,
+                      LogicalVector& isimage, CharacterVector& filelocation) {
   NumericMatrix routput(nx,ny);
   NumericMatrix goutput(nx,ny);
   NumericMatrix boutput(nx,ny);
@@ -121,7 +141,10 @@ List generate_initial(int nx, int ny, int ns, float fov,
   hitable *world = specific_scene(type, radius, x, y, z, 
                                   properties, velocity, moving,
                                   n,shutteropen,shutterclose,
-                                  ischeckered, checkercolors, noise, isnoise);
+                                  ischeckered, checkercolors, 
+                                  noise, isnoise,noisephase,noiseintensity, 
+                                  angle, 
+                                  isimage, filelocation);
   for(int j = ny - 1; j >= 0; j--) {
     for(int i = 0; i < nx; i++) {
       vec3 col(0,0,0);

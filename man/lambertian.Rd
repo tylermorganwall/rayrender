@@ -5,7 +5,8 @@
 \title{Lambertian Sphere}
 \usage{
 lambertian(x = 0, y = 0, z = 0, radius = 1, color = "#ffffff",
-  velocity = c(0, 0, 0), checkercolor = NA, noise = 0)
+  checkercolor = NA, velocity = c(0, 0, 0), noise = 0,
+  noisephase = 0, noiseintensity = 10, angle = 0, image_array = NA)
 }
 \arguments{
 \item{x}{Default `0`. x-coordinate of the center of the sphere.}
