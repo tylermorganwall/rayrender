@@ -61,36 +61,36 @@ hitable *specific_scene(IntegerVector& type,
     vel = vec3(tempvel(0),tempvel(1),tempvel(2));
     if (type(i) == 1) {
       if(ischeckered(i)) {
-        texture *checker = new checker_texture(new constant_texture(vec3(tempchecker(0),tempchecker(1),tempchecker(2))),
-                                               new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2)))); 
+        material *checker = new lambertian(new checker_texture(new constant_texture(vec3(tempchecker(0),tempchecker(1),tempchecker(2))),
+                                               new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))))); 
         if(!moving(i)) {
           list[i] = new sphere(center + vel * shutteropen, radius(i), 
-                               new lambertian(checker));
+                               checker);
         } else {
           list[i] = new moving_sphere(center + vel * shutteropen, center + vel*shutterclose, shutteropen, shutterclose, radius(i),
-                                      new lambertian(checker));
+                                      checker);
         }
       } else if(isnoise(i)) {
-        texture *perlin_tex = new noise_texture(noise(i),vec3(tempvector(0),tempvector(1),tempvector(2)), noisephase(i), noiseintensity(i));
+        material *perlin_tex = new lambertian(new noise_texture(noise(i),vec3(tempvector(0),tempvector(1),tempvector(2)), noisephase(i), noiseintensity(i)));
         if(!moving(i)) {
           list[i] = new translate(new rotate_y(new sphere(vec3(0,0,0), radius(i), 
-                               new lambertian(perlin_tex)),angle(i)), center + vel * shutteropen);
+                                                          perlin_tex),angle(i)), center + vel * shutteropen);
         } else {
           list[i] = new moving_sphere(center + vel * shutteropen, center + vel*shutterclose, 
                                       shutteropen, shutterclose, radius(i),
-                                      new lambertian(perlin_tex));
+                                      perlin_tex);
         }
       } else if(isimage(i)) {
         int nx, ny, nn;
         unsigned char *tex_data = stbi_load(filelocation(i), &nx, &ny, &nn, 0);
-        texture *perlin_tex = new image_texture(tex_data,nx,ny);
+        material *perlin_tex = new lambertian(new image_texture(tex_data,nx,ny));
         if(!moving(i)) {
           list[i] = new translate(new rotate_y(new sphere(vec3(0,0,0), radius(i), 
-                                               new lambertian(perlin_tex)), angle(i)), center + vel * shutteropen);
+                                                          perlin_tex), angle(i)), center + vel * shutteropen);
         } else {
           list[i] = new moving_sphere(center + vel * shutteropen, center + vel*shutterclose, 
                                       shutteropen, shutterclose, radius(i),
-                                      new lambertian(perlin_tex));
+                                      perlin_tex);
         }
       } else if(islight(i)) {
         if(!moving(i)) {
@@ -183,7 +183,21 @@ hitable *specific_scene(IntegerVector& type,
         }
       }
     } else if (type(i)  == 7) {
-      material *rect_tex = new lambertian(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))) );
+      material *rect_tex;
+      if(isimage(i)) {
+        int nx, ny, nn;
+        unsigned char *tex_data = stbi_load(filelocation(i), &nx, &ny, &nn, 0);
+        rect_tex = new lambertian(new image_texture(tex_data,nx,ny));
+      } else if (islight(i)) {
+        rect_tex = new diffuse_light(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))*lightintensity(i)) );
+      } else if (isnoise(i)) {
+        rect_tex = new lambertian(new noise_texture(noise(i),vec3(tempvector(0),tempvector(1),tempvector(2)), noisephase(i), noiseintensity(i)));
+      } else if (ischeckered(i)) {
+        rect_tex = new lambertian(new checker_texture(new constant_texture(vec3(tempchecker(0),tempchecker(1),tempchecker(2))),
+                                        new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))))); 
+      } else {
+        rect_tex = new lambertian(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))) );
+      }
       list[i] = new translate(new rotate_y(new box(vec3(0,0,0), 
                                                    vec3(tempvector(3),tempvector(4),tempvector(5)), rect_tex),
                                            angle(i)), 
@@ -208,7 +222,7 @@ List generate_initial(int nx, int ny, int ns, float fov,
                       NumericVector& noisephase, NumericVector& noiseintensity, NumericVector& angle,
                       LogicalVector& isimage, CharacterVector& filelocation,
                       LogicalVector& islight, NumericVector& lightintensity,
-                      LogicalVector& isflipped) {
+                      LogicalVector& isflipped, float focus_distance) {
   NumericMatrix routput(nx,ny);
   NumericMatrix goutput(nx,ny);
   NumericMatrix boutput(nx,ny);
@@ -216,7 +230,7 @@ List generate_initial(int nx, int ny, int ns, float fov,
   vec3 lookat(lookatvec[0],lookatvec[1],lookatvec[2]);
   vec3 backgroundhigh(bghigh[0],bghigh[1],bghigh[2]);
   vec3 backgroundlow(bglow[0],bglow[1],bglow[2]);
-  float dist_to_focus = (lookfrom-lookat).length();
+  float dist_to_focus = focus_distance;
   camera cam(lookfrom, lookat, vec3(0,1,0), fov, float(nx)/float(ny), 
              aperture, dist_to_focus,
              shutteropen, shutterclose);
@@ -239,9 +253,9 @@ List generate_initial(int nx, int ny, int ns, float fov,
         col += color(r, world, 0, backgroundhigh, backgroundlow);
       }
       col /= float(ns);
-      routput(i,j) = sqrt(col[0]);
-      goutput(i,j) = sqrt(col[1]);
-      boutput(i,j) = sqrt(col[2]);
+      routput(i,j) = pow(col[0],1/2.2);
+      goutput(i,j) = pow(col[1],1/2.2);
+      boutput(i,j) = pow(col[2],1/2.2);
     }
   }
   return(List::create(_["r"] = routput, _["g"] = goutput, _["b"] = boutput));

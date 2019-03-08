@@ -69,7 +69,7 @@
 render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 100,
                         lookfrom = c(10,1,0), lookat = c(0,0,0), aperture = 0.1,
                         filename = NULL, backgroundhigh = "#80b4ff",backgroundlow = "#ffffff",
-                        shutteropen = 0.0, shutterclose = 1.0) { 
+                        shutteropen = 0.0, shutterclose = 1.0, focal_distance=NULL) { 
   backgroundhigh = convert_color(backgroundhigh)
   backgroundlow = convert_color(backgroundlow)
   xvec = scene$x 
@@ -125,6 +125,12 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
       assertthat::assert_that(length(proplist[[i]]) == 6)
     }
   }
+  assertthat::assert_that(length(lookfrom) == 3)
+  assertthat::assert_that(length(lookat) == 3)
+  if(is.null(focal_distance)) {
+    focal_distance = sqrt(sum((lookfrom-lookat)^2))
+  }
+  
   rgb_mat = generate_initial(nx = width, ny = height, ns = samples, fov = fov,
                              lookfromvec = lookfrom, lookatvec = lookat, aperture=aperture,
                              type = typevec, radius = rvec,
@@ -136,18 +142,17 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
                              ischeckered = checkeredbool, checkercolors = checkeredlist,
                              noise=noisevec,isnoise=noisebool,noisephase=noisephasevec, noiseintensity=noiseintvec,
                              angle = rot_angle_vec, isimage = image_tex_bool, filelocation = temp_file_names,
-                             islight = light_bool, lightintensity = light_prop_vec,isflipped = flip_vec) 
+                             islight = light_bool, lightintensity = light_prop_vec,isflipped = flip_vec,
+                             focus_distance=focal_distance) 
   full_array = array(0,c(ncol(rgb_mat$r),nrow(rgb_mat$r),3))
   full_array[,,1] = t(rgb_mat$r)
   full_array[,,2] = t(rgb_mat$g)
   full_array[,,3] = t(rgb_mat$b)
   array_from_mat = array(full_array,dim=c(nrow(full_array),ncol(full_array),3))
   if(any(is.na(array_from_mat ))) {
-    # warning("NAs detected--setting to black")
     array_from_mat[is.na(array_from_mat)] = 0
   }
   if(any(array_from_mat > 1 | array_from_mat < 0,na.rm = TRUE)) {
-    # warning("Out-of-range values found: Clamping between 1 and 0")
     array_from_mat[array_from_mat > 1] = 1
     array_from_mat[array_from_mat < 0] = 0
   }

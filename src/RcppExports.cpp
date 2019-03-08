@@ -6,8 +6,8 @@
 using namespace Rcpp;
 
 // generate_initial
-List generate_initial(int nx, int ny, int ns, float fov, NumericVector lookfromvec, NumericVector lookatvec, float aperture, IntegerVector type, NumericVector radius, NumericVector x, NumericVector y, NumericVector z, List properties, List velocity, LogicalVector moving, int n, NumericVector& bghigh, NumericVector& bglow, float shutteropen, float shutterclose, LogicalVector ischeckered, List checkercolors, NumericVector noise, LogicalVector isnoise, NumericVector& noisephase, NumericVector& noiseintensity, NumericVector& angle, LogicalVector& isimage, CharacterVector& filelocation, LogicalVector& islight, NumericVector& lightintensity, LogicalVector& isflipped);
-RcppExport SEXP _raynextweek_generate_initial(SEXP nxSEXP, SEXP nySEXP, SEXP nsSEXP, SEXP fovSEXP, SEXP lookfromvecSEXP, SEXP lookatvecSEXP, SEXP apertureSEXP, SEXP typeSEXP, SEXP radiusSEXP, SEXP xSEXP, SEXP ySEXP, SEXP zSEXP, SEXP propertiesSEXP, SEXP velocitySEXP, SEXP movingSEXP, SEXP nSEXP, SEXP bghighSEXP, SEXP bglowSEXP, SEXP shutteropenSEXP, SEXP shuttercloseSEXP, SEXP ischeckeredSEXP, SEXP checkercolorsSEXP, SEXP noiseSEXP, SEXP isnoiseSEXP, SEXP noisephaseSEXP, SEXP noiseintensitySEXP, SEXP angleSEXP, SEXP isimageSEXP, SEXP filelocationSEXP, SEXP islightSEXP, SEXP lightintensitySEXP, SEXP isflippedSEXP) {
+List generate_initial(int nx, int ny, int ns, float fov, NumericVector lookfromvec, NumericVector lookatvec, float aperture, IntegerVector type, NumericVector radius, NumericVector x, NumericVector y, NumericVector z, List properties, List velocity, LogicalVector moving, int n, NumericVector& bghigh, NumericVector& bglow, float shutteropen, float shutterclose, LogicalVector ischeckered, List checkercolors, NumericVector noise, LogicalVector isnoise, NumericVector& noisephase, NumericVector& noiseintensity, NumericVector& angle, LogicalVector& isimage, CharacterVector& filelocation, LogicalVector& islight, NumericVector& lightintensity, LogicalVector& isflipped, float focus_distance);
+RcppExport SEXP _raynextweek_generate_initial(SEXP nxSEXP, SEXP nySEXP, SEXP nsSEXP, SEXP fovSEXP, SEXP lookfromvecSEXP, SEXP lookatvecSEXP, SEXP apertureSEXP, SEXP typeSEXP, SEXP radiusSEXP, SEXP xSEXP, SEXP ySEXP, SEXP zSEXP, SEXP propertiesSEXP, SEXP velocitySEXP, SEXP movingSEXP, SEXP nSEXP, SEXP bghighSEXP, SEXP bglowSEXP, SEXP shutteropenSEXP, SEXP shuttercloseSEXP, SEXP ischeckeredSEXP, SEXP checkercolorsSEXP, SEXP noiseSEXP, SEXP isnoiseSEXP, SEXP noisephaseSEXP, SEXP noiseintensitySEXP, SEXP angleSEXP, SEXP isimageSEXP, SEXP filelocationSEXP, SEXP islightSEXP, SEXP lightintensitySEXP, SEXP isflippedSEXP, SEXP focus_distanceSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -43,13 +43,14 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< LogicalVector& >::type islight(islightSEXP);
     Rcpp::traits::input_parameter< NumericVector& >::type lightintensity(lightintensitySEXP);
     Rcpp::traits::input_parameter< LogicalVector& >::type isflipped(isflippedSEXP);
-    rcpp_result_gen = Rcpp::wrap(generate_initial(nx, ny, ns, fov, lookfromvec, lookatvec, aperture, type, radius, x, y, z, properties, velocity, moving, n, bghigh, bglow, shutteropen, shutterclose, ischeckered, checkercolors, noise, isnoise, noisephase, noiseintensity, angle, isimage, filelocation, islight, lightintensity, isflipped));
+    Rcpp::traits::input_parameter< float >::type focus_distance(focus_distanceSEXP);
+    rcpp_result_gen = Rcpp::wrap(generate_initial(nx, ny, ns, fov, lookfromvec, lookatvec, aperture, type, radius, x, y, z, properties, velocity, moving, n, bghigh, bglow, shutteropen, shutterclose, ischeckered, checkercolors, noise, isnoise, noisephase, noiseintensity, angle, isimage, filelocation, islight, lightintensity, isflipped, focus_distance));
     return rcpp_result_gen;
 END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_raynextweek_generate_initial", (DL_FUNC) &_raynextweek_generate_initial, 32},
+    {"_raynextweek_generate_initial", (DL_FUNC) &_raynextweek_generate_initial, 33},
     {NULL, NULL, 0}
 };
 
