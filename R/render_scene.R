@@ -76,7 +76,9 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
   yvec = scene$y
   zvec = scene$z
   rvec = scene$radius
-  typevec = unlist(lapply(tolower(scene$type),switch,"lambertian" = 1,"metal" = 2,"dielectric" = 3))
+  typevec = unlist(lapply(tolower(scene$type),switch,
+                          "lambertian" = 1,"metal" = 2,"dielectric" = 3,
+                          "xy" = 4, "xz" = 5,"yz" = 6,"box" = 7))
   movingvec = purrr::map_lgl(scene$velocity,.f = ~any(.x != 0))
   proplist = scene$properties
   vel_list = scene$velocity
@@ -87,6 +89,15 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
   noisephasevec = scene$noisephase
   noiseintvec = scene$noiseintensity
   rot_angle_vec = scene$angle
+  
+  #flip handler
+  flip_vec = scene$flipped
+  
+  #light handler
+  light_bool = !is.na(scene$lightintensity)
+  light_prop_vec =  scene$lightintensity
+  
+  #texture handler
   image_array_list = scene$image
   image_tex_bool = purrr::map_lgl(image_array_list,.f = ~is.array(.x))
   temp_file_names = purrr::map_chr(image_tex_bool,.f = ~ifelse(.x, tempfile(),""))
@@ -95,6 +106,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
       png::writePNG(image_array_list[[i]],temp_file_names[i])
     }
   }
+  #movement handler
   if(shutteropen == shutterclose) {
     movingvec = rep(FALSE,length(movingvec))
   }
@@ -107,6 +119,10 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
       assertthat::assert_that(length(proplist[[i]]) == 4)
     } else if (typevec[i] == 3) {
       assertthat::assert_that(length(proplist[[i]]) == 1)
+    } else if (typevec[i] %in% c(4,5,6)) {
+      assertthat::assert_that(length(proplist[[i]]) == 8)
+    } else {
+      assertthat::assert_that(length(proplist[[i]]) == 6)
     }
   }
   rgb_mat = generate_initial(nx = width, ny = height, ns = samples, fov = fov,
@@ -119,18 +135,19 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
                              shutteropen = shutteropen, shutterclose = shutterclose,
                              ischeckered = checkeredbool, checkercolors = checkeredlist,
                              noise=noisevec,isnoise=noisebool,noisephase=noisephasevec, noiseintensity=noiseintvec,
-                             angle = rot_angle_vec, isimage = image_tex_bool, filelocation = temp_file_names) 
+                             angle = rot_angle_vec, isimage = image_tex_bool, filelocation = temp_file_names,
+                             islight = light_bool, lightintensity = light_prop_vec,isflipped = flip_vec) 
   full_array = array(0,c(ncol(rgb_mat$r),nrow(rgb_mat$r),3))
   full_array[,,1] = t(rgb_mat$r)
   full_array[,,2] = t(rgb_mat$g)
   full_array[,,3] = t(rgb_mat$b)
   array_from_mat = array(full_array,dim=c(nrow(full_array),ncol(full_array),3))
   if(any(is.na(array_from_mat ))) {
-    warning("NAs detected--setting to black")
+    # warning("NAs detected--setting to black")
     array_from_mat[is.na(array_from_mat)] = 0
   }
   if(any(array_from_mat > 1 | array_from_mat < 0,na.rm = TRUE)) {
-    warning("Out-of-range values found: Clamping between 1 and 0")
+    # warning("Out-of-range values found: Clamping between 1 and 0")
     array_from_mat[array_from_mat > 1] = 1
     array_from_mat[array_from_mat < 0] = 0
   }

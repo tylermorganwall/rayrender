@@ -9,6 +9,8 @@
 #include "bvh_node.h"
 #include "perlin.h"
 #include "texture.h"
+#include "xyrect.h"
+#include "box.h"
 using namespace Rcpp;
 
 vec3 color(const ray& r, hitable *world, int depth, 
@@ -17,15 +19,17 @@ vec3 color(const ray& r, hitable *world, int depth,
   if(world->hit(r, 0.001, MAXFLOAT, rec)) {
     ray scattered;
     vec3 attenuation;
+    vec3 emitted = rec.mat_ptr->emitted(rec.u,rec.v,rec.p);
     if(depth < 50 && rec.mat_ptr->scatter(r, rec, attenuation, scattered)) {
-      return(attenuation * color(scattered, world, depth + 1, backgroundhigh, backgroundlow));
+      return(emitted + attenuation * color(scattered, world, depth + 1, backgroundhigh, backgroundlow));
     } else {
-      return(vec3(0,0,0));
+      return(emitted);
     }
   } else {
-    vec3 unit_direction = unit_vector(r.direction());
-    float t = 0.5 * (unit_direction.y() + 1.0);
-    return (1.0 - t) * backgroundlow + t * backgroundhigh;
+    return(vec3(0,0,0));
+    // vec3 unit_direction = unit_vector(r.direction());
+    // float t = 0.5 * (unit_direction.y() + 1.0);
+    // return (1.0 - t) * backgroundlow + t * backgroundhigh;
   }
 }
 
@@ -38,7 +42,9 @@ hitable *specific_scene(IntegerVector& type,
                         NumericVector& noise, LogicalVector& isnoise,
                         NumericVector& noisephase, NumericVector& noiseintensity,
                         NumericVector& angle, 
-                        LogicalVector& isimage, CharacterVector& filelocation) {
+                        LogicalVector& isimage, CharacterVector& filelocation,
+                        LogicalVector& islight, NumericVector& lightintensity,
+                        LogicalVector& isflipped) {
   hitable **list = new hitable*[n+1];
   NumericVector tempvector;
   NumericVector tempchecker;
@@ -70,7 +76,8 @@ hitable *specific_scene(IntegerVector& type,
           list[i] = new translate(new rotate_y(new sphere(vec3(0,0,0), radius(i), 
                                new lambertian(perlin_tex)),angle(i)), center + vel * shutteropen);
         } else {
-          list[i] = new moving_sphere(center + vel * shutteropen, center + vel*shutterclose, shutteropen, shutterclose, radius(i),
+          list[i] = new moving_sphere(center + vel * shutteropen, center + vel*shutterclose, 
+                                      shutteropen, shutterclose, radius(i),
                                       new lambertian(perlin_tex));
         }
       } else if(isimage(i)) {
@@ -81,15 +88,28 @@ hitable *specific_scene(IntegerVector& type,
           list[i] = new translate(new rotate_y(new sphere(vec3(0,0,0), radius(i), 
                                                new lambertian(perlin_tex)), angle(i)), center + vel * shutteropen);
         } else {
-          list[i] = new moving_sphere(center + vel * shutteropen, center + vel*shutterclose, shutteropen, shutterclose, radius(i),
+          list[i] = new moving_sphere(center + vel * shutteropen, center + vel*shutterclose, 
+                                      shutteropen, shutterclose, radius(i),
                                       new lambertian(perlin_tex));
+        }
+      } else if(islight(i)) {
+        if(!moving(i)) {
+          list[i] = new sphere(center + vel * shutteropen, radius(i), 
+                               new diffuse_light(new constant_texture(
+                                   vec3(tempvector(0),tempvector(1),tempvector(2))*lightintensity(i))));
+        } else {
+          list[i] = new moving_sphere(center + vel * shutteropen, center + vel*shutterclose, 
+                                      shutteropen, shutterclose, radius(i),
+                                      new diffuse_light(new constant_texture(
+                                          vec3(tempvector(0),tempvector(1),tempvector(2))*lightintensity(i))));
         }
       } else {
         if(!moving(i)) {
           list[i] = new sphere(center + vel * shutteropen, radius(i), 
                                new lambertian(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2)))));
         } else {
-          list[i] = new moving_sphere(center + vel * shutteropen, center + vel*shutterclose, shutteropen, shutterclose, radius(i),
+          list[i] = new moving_sphere(center + vel * shutteropen, center + vel*shutterclose, 
+                                      shutteropen, shutterclose, radius(i),
                                       new lambertian(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2)))));
         }
       }
@@ -108,6 +128,66 @@ hitable *specific_scene(IntegerVector& type,
         list[i] = new moving_sphere(center + vel * shutteropen, center + vel*shutterclose, shutteropen, shutterclose, radius(i),
                                     new dielectric(tempvector(0)));
       }
+    } else if (type(i)  == 4) {
+      if(islight(i)) {
+        if(isflipped(i)) {
+          material *rect_tex = new diffuse_light(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))*lightintensity(i)) );
+          list[i] = new flip_normals(new xy_rect(tempvector(3),tempvector(4),tempvector(5),tempvector(6),tempvector(7), rect_tex)); 
+        } else {
+          material *rect_tex = new diffuse_light(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))*lightintensity(i)) );
+          list[i] = new xy_rect(tempvector(3),tempvector(4),tempvector(5),tempvector(6),tempvector(7), rect_tex); 
+        }
+      } else {
+        if(isflipped(i)) {
+          material *rect_tex = new lambertian(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))) );
+          list[i] = new flip_normals(new xy_rect(tempvector(3),tempvector(4),tempvector(5),tempvector(6),tempvector(7), rect_tex));
+        } else {
+          material *rect_tex = new lambertian(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))) );
+          list[i] = new xy_rect(tempvector(3),tempvector(4),tempvector(5),tempvector(6),tempvector(7), rect_tex);
+        }
+      }
+    } else if (type(i)  == 5) {
+      if(islight(i)) {
+        if(isflipped(i)) {
+          material *rect_tex = new diffuse_light(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))*lightintensity(i)) );
+          list[i] = new flip_normals(new xz_rect(tempvector(3),tempvector(4),tempvector(5),tempvector(6),tempvector(7), rect_tex)); 
+        } else {
+          material *rect_tex = new diffuse_light(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))*lightintensity(i)) );
+          list[i] = new xz_rect(tempvector(3),tempvector(4),tempvector(5),tempvector(6),tempvector(7), rect_tex); 
+        }
+      } else {
+        if(isflipped(i)) {
+          material *rect_tex = new lambertian(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))) );
+          list[i] = new flip_normals(new xz_rect(tempvector(3),tempvector(4),tempvector(5),tempvector(6),tempvector(7), rect_tex)); 
+        } else {
+          material *rect_tex = new lambertian(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))) );
+          list[i] = new xz_rect(tempvector(3),tempvector(4),tempvector(5),tempvector(6),tempvector(7), rect_tex); 
+        }
+      }
+    } else if (type(i)  == 6) {
+      if(islight(i)) {
+        if(isflipped(i)) {
+          material *rect_tex = new diffuse_light(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))*lightintensity(i)) );
+          list[i] = new flip_normals(new yz_rect(tempvector(3),tempvector(4),tempvector(5),tempvector(6),tempvector(7), rect_tex)); 
+        } else {
+          material *rect_tex = new diffuse_light(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))*lightintensity(i)) );
+          list[i] = new yz_rect(tempvector(3),tempvector(4),tempvector(5),tempvector(6),tempvector(7), rect_tex); 
+        }
+      } else {
+        if(isflipped(i)) {
+          material *rect_tex = new lambertian(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))) );
+          list[i] = new flip_normals(new yz_rect(tempvector(3),tempvector(4),tempvector(5),tempvector(6),tempvector(7), rect_tex)); 
+        } else {
+          material *rect_tex = new lambertian(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))) );
+          list[i] = new yz_rect(tempvector(3),tempvector(4),tempvector(5),tempvector(6),tempvector(7), rect_tex); 
+        }
+      }
+    } else if (type(i)  == 7) {
+      material *rect_tex = new lambertian(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))) );
+      list[i] = new translate(new rotate_y(new box(vec3(0,0,0), 
+                                                   vec3(tempvector(3),tempvector(4),tempvector(5)), rect_tex),
+                                           angle(i)), 
+                              center + vel * shutteropen);
     }
   }
   return(new bvh_node(list, n, shutteropen, shutterclose));
@@ -126,7 +206,9 @@ List generate_initial(int nx, int ny, int ns, float fov,
                       LogicalVector ischeckered, List checkercolors, 
                       NumericVector noise, LogicalVector isnoise,
                       NumericVector& noisephase, NumericVector& noiseintensity, NumericVector& angle,
-                      LogicalVector& isimage, CharacterVector& filelocation) {
+                      LogicalVector& isimage, CharacterVector& filelocation,
+                      LogicalVector& islight, NumericVector& lightintensity,
+                      LogicalVector& isflipped) {
   NumericMatrix routput(nx,ny);
   NumericMatrix goutput(nx,ny);
   NumericMatrix boutput(nx,ny);
@@ -144,7 +226,9 @@ List generate_initial(int nx, int ny, int ns, float fov,
                                   ischeckered, checkercolors, 
                                   noise, isnoise,noisephase,noiseintensity, 
                                   angle, 
-                                  isimage, filelocation);
+                                  isimage, filelocation,
+                                  islight, lightintensity,
+                                  isflipped);
   for(int j = ny - 1; j >= 0; j--) {
     for(int i = 0; i < nx; i++) {
       vec3 col(0,0,0);
