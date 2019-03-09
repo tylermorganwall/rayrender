@@ -5,10 +5,10 @@
 \title{Title}
 \usage{
 render_scene(scene, width = 400, height = 400, fov = 20,
-  samples = 100, lookfrom = c(10, 1, 0), lookat = c(0, 0, 0),
-  aperture = 0.1, filename = NULL, backgroundhigh = "#80b4ff",
-  backgroundlow = "#ffffff", shutteropen = 0, shutterclose = 1,
-  focal_distance = NULL)
+  samples = 100, ambient_light = TRUE, lookfrom = c(10, 1, 0),
+  lookat = c(0, 0, 0), aperture = 0.1, filename = NULL,
+  backgroundhigh = "#80b4ff", backgroundlow = "#ffffff",
+  shutteropen = 0, shutterclose = 1, focal_distance = NULL)
 }
 \arguments{
 \item{scene}{Tibble of sphere locations and properties. Generate each row using one of the

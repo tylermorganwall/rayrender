@@ -6,7 +6,7 @@
 \usage{
 box(x, x1, y, y1, z, z1, color = "#ffffff", lightintensity = NA,
   noise = 0, noisephase = 0, noiseintensity = 10, angle = 0,
-  image_array = NA)
+  image_array = NA, fog = FALSE, fogdensity = 0.01)
 }
 \arguments{
 \item{x}{Default `0`. x-coordinate of the center of the rectangle.}

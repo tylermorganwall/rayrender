@@ -11,6 +11,7 @@
 #include "texture.h"
 #include "xyrect.h"
 #include "box.h"
+#include "constant.h"
 using namespace Rcpp;
 
 vec3 color(const ray& r, hitable *world, int depth, 
@@ -27,9 +28,27 @@ vec3 color(const ray& r, hitable *world, int depth,
     }
   } else {
     return(vec3(0,0,0));
-    // vec3 unit_direction = unit_vector(r.direction());
-    // float t = 0.5 * (unit_direction.y() + 1.0);
-    // return (1.0 - t) * backgroundlow + t * backgroundhigh;
+  }
+}
+
+vec3 color_amb(const ray& r, hitable *world, int depth, 
+           const vec3& backgroundhigh, const vec3& backgroundlow) {
+  hit_record rec;
+  if(world->hit(r, 0.001, MAXFLOAT, rec)) {
+    ray scattered;
+    vec3 attenuation;
+    vec3 emitted = rec.mat_ptr->emitted(rec.u,rec.v,rec.p);
+    if(depth < 50 && rec.mat_ptr->scatter(r, rec, attenuation, scattered)) {
+      return(emitted + attenuation * color_amb(scattered, world, depth + 1, backgroundhigh, backgroundlow));
+    } else {
+      vec3 unit_direction = unit_vector(r.direction());
+      float t = 0.5 * (unit_direction.y() + 1.0);
+      return(emitted+(1.0 - t) * backgroundlow + t * backgroundhigh);
+    }
+  } else {
+    vec3 unit_direction = unit_vector(r.direction());
+    float t = 0.5 * (unit_direction.y() + 1.0);
+    return (1.0 - t) * backgroundlow + t * backgroundhigh;
   }
 }
 
@@ -44,7 +63,8 @@ hitable *specific_scene(IntegerVector& type,
                         NumericVector& angle, 
                         LogicalVector& isimage, CharacterVector& filelocation,
                         LogicalVector& islight, NumericVector& lightintensity,
-                        LogicalVector& isflipped) {
+                        LogicalVector& isflipped,
+                        LogicalVector& isvolume, NumericVector& voldensity) {
   hitable **list = new hitable*[n+1];
   NumericVector tempvector;
   NumericVector tempchecker;
@@ -198,17 +218,22 @@ hitable *specific_scene(IntegerVector& type,
       } else {
         rect_tex = new lambertian(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))) );
       }
-      list[i] = new translate(new rotate_y(new box(vec3(0,0,0), 
-                                                   vec3(tempvector(3),tempvector(4),tempvector(5)), rect_tex),
-                                           angle(i)), 
-                              center + vel * shutteropen);
+      hitable *entry = new translate(new rotate_y(new box(vec3(0,0,0), 
+                                                          vec3(tempvector(3),tempvector(4),tempvector(5)), rect_tex),
+                                                          angle(i)), 
+                                                          center + vel * shutteropen);;
+      if(isvolume(i)) {
+        list[i] = new constant_medium(entry,voldensity(i), new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))));
+      } else {
+        list[i] = entry;
+      }
     }
   }
   return(new bvh_node(list, n, shutteropen, shutterclose));
 }
 
 // [[Rcpp::export]]
-List generate_initial(int nx, int ny, int ns, float fov, 
+List generate_initial(int nx, int ny, int ns, float fov, bool ambient_light,
                       NumericVector lookfromvec, NumericVector lookatvec, float aperture, 
                       IntegerVector type, 
                       NumericVector radius,
@@ -222,7 +247,8 @@ List generate_initial(int nx, int ny, int ns, float fov,
                       NumericVector& noisephase, NumericVector& noiseintensity, NumericVector& angle,
                       LogicalVector& isimage, CharacterVector& filelocation,
                       LogicalVector& islight, NumericVector& lightintensity,
-                      LogicalVector& isflipped, float focus_distance) {
+                      LogicalVector& isflipped, float focus_distance,
+                      LogicalVector& isvolume, NumericVector& voldensity) {
   NumericMatrix routput(nx,ny);
   NumericMatrix goutput(nx,ny);
   NumericMatrix boutput(nx,ny);
@@ -242,7 +268,8 @@ List generate_initial(int nx, int ny, int ns, float fov,
                                   angle, 
                                   isimage, filelocation,
                                   islight, lightintensity,
-                                  isflipped);
+                                  isflipped,
+                                  isvolume, voldensity);
   for(int j = ny - 1; j >= 0; j--) {
     for(int i = 0; i < nx; i++) {
       vec3 col(0,0,0);
@@ -250,7 +277,11 @@ List generate_initial(int nx, int ny, int ns, float fov,
         float u = float(i + drand48()) / float(nx);
         float v = float(j + drand48()) / float(ny);
         ray r = cam.get_ray(u,v);
-        col += color(r, world, 0, backgroundhigh, backgroundlow);
+        if(ambient_light) {
+          col += color_amb(r, world, 0, backgroundhigh, backgroundlow);
+        } else {
+          col += color(r, world, 0, backgroundhigh, backgroundlow);
+        }
       }
       col /= float(ns);
       routput(i,j) = pow(col[0],1/2.2);

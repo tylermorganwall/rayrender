@@ -3,6 +3,8 @@
 
 #include "aabb.h"
 #include "vec3.h"
+#include "texture.h"
+
 
 class material;
 

@@ -35,7 +35,8 @@ lambertian = function(x=0, y=0, z=0, radius=1, color = "#ffffff", checkercolor =
   tibble::tibble(x=x,y=y,z=z,radius=radius, type = "lambertian", 
                  properties = list(color), velocity = list(velocity), checkercolor=checkerlist, 
                  noise=noise, noisephase = noisephase, noiseintensity = noiseintensity, 
-                 angle=angle, image = list(image_array), lightintensity = lightintensity,flipped=FALSE)
+                 angle=angle, image = list(image_array), lightintensity = lightintensity,flipped=FALSE,
+                 fog=FALSE,fogdensity=FALSE)
 }
 
 #' Metal Sphere
@@ -65,7 +66,7 @@ metal = function(x=0, y=0, z=0, radius=1, color = "#ffffff", fuzz = 0,velocity =
                  properties = list(c(color,fuzz)), velocity = list(velocity), 
                  checkercolor=list(NA), noise=0, noisephase = 0, noiseintensity = 0,
                  islight = FALSE, lightinfo = list(NA),
-                 angle=0,image = list(NA), lightintensity = NA,flipped=FALSE)
+                 angle=0,image = list(NA), lightintensity = NA,flipped=FALSE,fog=FALSE,fogdensity=FALSE)
 }
 
 #' Dielelectric Sphere
@@ -86,7 +87,7 @@ dielectric = function(x=0, y=0, z=0, radius=1, refraction = 1.5,velocity = c(0,0
   tibble::tibble(x=x,y=y,z=z,radius=radius, type = "dielectric", 
                  properties = list(refraction), velocity = list(velocity),
                  checkercolor=list(NA), noise=0, noisephase = 0, noiseintensity = 0,
-                 angle=0,image = list(NA),lightintensity = NA,flipped=FALSE)
+                 angle=0,image = list(NA),lightintensity = NA,flipped=FALSE,fog=FALSE,fogdensity=FALSE)
 }
 
 #' xy rectangle
@@ -108,8 +109,8 @@ xy_rect = function(x0=0, x1=1, y0=0, y1=0, z=0, color = "#ffffff",lightintensity
   rectinfo = c(convert_color(color),x0,x1,y0,y1,z)
   tibble::tibble(x=NA,y=NA,z=NA,radius=NA, type = "xy", 
                  properties = list(rectinfo), velocity = list(c(0,0,0)),
-                 checkercolor=list(NA), noise=NA, noisephase = NA, noiseintensity = NA,
-                 angle=NA,image = list(NA),lightintensity = lightintensity,flipped=flipped)
+                 checkercolor=list(NA), noise=NA, noisephase = 0, noiseintensity = NA,
+                 angle=NA,image = list(NA),lightintensity = lightintensity,flipped=flipped,fog=FALSE,fogdensity=FALSE)
 }
 
 #' yz rectangle
@@ -131,8 +132,8 @@ yz_rect = function(x0=0, x1=1, y0=0, y1=0, z=0, color = "#ffffff",lightintensity
   rectinfo = c(convert_color(color),x0,x1,y0,y1,z)
   tibble::tibble(x=NA,y=NA,z=NA,radius=NA, type = "yz", 
                  properties = list(rectinfo), velocity = list(c(0,0,0)),
-                 checkercolor=list(NA), noise=NA, noisephase = NA, noiseintensity = NA,
-                 angle=NA,image = list(NA),lightintensity = lightintensity,flipped=flipped)
+                 checkercolor=list(NA), noise=NA, noisephase = 0, noiseintensity = NA,
+                 angle=NA,image = list(NA),lightintensity = lightintensity,flipped=flipped,fog=FALSE,fogdensity=FALSE)
 }
 
 #' xz rectangle
@@ -154,8 +155,8 @@ xz_rect = function(x0=0, x1=1, y0=0, y1=0, z=0, color = "#ffffff",lightintensity
   rectinfo = c(convert_color(color),x0,x1,y0,y1,z)
   tibble::tibble(x=NA,y=NA,z=NA,radius=NA, type = "xz", 
                  properties = list(rectinfo), velocity = list(c(0,0,0)),
-                 checkercolor=list(NA), noise=NA, noisephase = NA, noiseintensity = NA,
-                 angle=NA,image = list(NA),lightintensity = lightintensity,flipped=flipped)
+                 checkercolor=list(NA), noise=NA, noisephase = 0, noiseintensity = NA,
+                 angle=NA,image = list(NA),lightintensity = lightintensity,flipped=flipped,fog=FALSE,fogdensity=FALSE)
 }
 
 #' Box
@@ -176,10 +177,10 @@ xz_rect = function(x0=0, x1=1, y0=0, y1=0, z=0, color = "#ffffff",lightintensity
 #' dielectric(x=0,y=1,z=0,radius=1, refraction = 2)
 box = function(x, x1, y, y1, z, z1, color = "#ffffff",lightintensity = NA,
                    noise = 0, noisephase = 0, noiseintensity = 10,
-                   angle = 0, image_array = NA) {
+                   angle = 0, image_array = NA,fog=FALSE,fogdensity=0.01) {
   rectinfo = c(convert_color(color),x1,y1,z1)
   tibble::tibble(x=x,y=y,z=z,radius=NA, type = "box", 
                  properties = list(rectinfo), velocity = list(c(0,0,0)),
                  checkercolor=list(NA), noise=noise, noisephase = noisephase, noiseintensity = noiseintensity,
-                 angle=angle,image = list(image_array),lightintensity = lightintensity,flipped=FALSE)
+                 angle=angle,image = list(image_array),lightintensity = lightintensity,flipped=FALSE,fog=fog,fogdensity=fogdensity)
 }
