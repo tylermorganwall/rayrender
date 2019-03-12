@@ -16,7 +16,7 @@ sphere(x = 0, y = 0, z = 0, radius = 1, material = lambertian(),
 
 \item{radius}{Default `1`. Radius of the sphere.}
 
-\item{material}{The material, called from one of the material functions.}
+\item{material}{Default `[lambertian()]`.The material, called from one of the material functions [lambertian()], [metal()], or [dielectric()].}
 
 \item{velocity}{Default `c(0,0,0)`. Velocity of the sphere, used for motion blur.}
 }

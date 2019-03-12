@@ -4,21 +4,23 @@
 \alias{xy_rect}
 \title{Rectangular XY Plane Object}
 \usage{
-xy_rect(x0 = 0, x1 = 1, y0 = 0, y1 = 0, z = 0,
+xy_rect(x = 0, xwidth = 1, y = 0, ywidth = 1, z = 0,
   material = lambertian(), angle = 0, flipped = FALSE)
 }
 \arguments{
-\item{x0}{Default `0`. x-coordinate of the center of the rectangle.}
+\item{x}{Default `0`. x-coordinate of the center of the rectangle.}
 
-\item{x1}{Default `0`. y-coordinate of the center of the rectangle.}
+\item{xwidth}{Default `1`. y-coordinate of the center of the rectangle.}
 
-\item{y0}{Default `0`. x-coordinate of the center of the rectangle.}
+\item{y}{Default `0`. x-coordinate of the center of the rectangle.}
 
-\item{y1}{Default `0`. y-coordinate of the center of the rectangle.}
+\item{ywidth}{Default `1`. y-coordinate of the center of the rectangle.}
 
 \item{z}{Default `0`. z-coordinate of the center of the rectangle.}
 
-\item{material}{The material, called from one of the material functions.}
+\item{material}{Default `[lambertian()]`.The material, called from one of the material functions [lambertian()], [metal()], or [dielectric()].}
+
+\item{angle}{Default `0`. Angle of rotation around the y-axis.}
 
 \item{flipped}{Default `FALSE`. Whether to flip the normals.}
 }

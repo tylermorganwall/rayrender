@@ -14,7 +14,9 @@ cube(x = 0, x1 = 1, y = 0, y1 = 1, z = 0, z1 = 1,
 
 \item{z}{Default `0`. z-coordinate of the center of the sphere.}
 
-\item{material}{The material, called from one of the material functions.}
+\item{material}{Default `[lambertian()]`.The material, called from one of the material functions [lambertian()], [metal()], or [dielectric()].}
+
+\item{angle}{Default `0`. Angle of rotation around the y-axis.}
 
 \item{velocity}{Default `c(0,0,0)`. Velocity of the sphere, used for motion blur.}
 

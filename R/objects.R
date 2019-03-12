@@ -4,7 +4,7 @@
 #' @param y Default `0`. y-coordinate of the center of the sphere.
 #' @param z Default `0`. z-coordinate of the center of the sphere.
 #' @param radius Default `1`. Radius of the sphere.
-#' @param material The material, called from one of the material functions.
+#' @param material Default `[lambertian()]`.The material, called from one of the material functions [lambertian()], [metal()], or [dielectric()].
 #' @param velocity Default `c(0,0,0)`. Velocity of the sphere, used for motion blur.
 #' @importFrom  grDevices col2rgb
 #'
@@ -33,7 +33,8 @@ sphere = function(x=0, y=0, z=0, radius=1, material=lambertian(), angle = 0, vel
 #' @param y Default `0`. y-coordinate of the center of the sphere.
 #' @param z Default `0`. z-coordinate of the center of the sphere.
 #' @param radius Default `1`. Radius of the sphere.
-#' @param material The material, called from one of the material functions.
+#' @param material Default `[lambertian()]`.The material, called from one of the material functions [lambertian()], [metal()], or [dielectric()].
+#' @param angle Default `0`. Angle of rotation around the y-axis.
 #' @param velocity Default `c(0,0,0)`. Velocity of the sphere, used for motion blur.
 #' @importFrom  grDevices col2rgb
 #'
@@ -59,12 +60,13 @@ cube = function(x=0, x1=1, y=0, y1=1, z=0, z1=1, material=lambertian(), angle = 
 
 #' Rectangular XY Plane Object 
 #'
-#' @param x0 Default `0`. x-coordinate of the center of the rectangle.
-#' @param x1 Default `0`. y-coordinate of the center of the rectangle.
-#' @param y0 Default `0`. x-coordinate of the center of the rectangle.
-#' @param y1 Default `0`. y-coordinate of the center of the rectangle.
+#' @param x Default `0`. x-coordinate of the center of the rectangle.
+#' @param xwidth Default `1`. y-coordinate of the center of the rectangle.
+#' @param y Default `0`. x-coordinate of the center of the rectangle.
+#' @param ywidth Default `1`. y-coordinate of the center of the rectangle.
 #' @param z Default `0`. z-coordinate of the center of the rectangle.
-#' @param material The material, called from one of the material functions.
+#' @param material Default `[lambertian()]`.The material, called from one of the material functions [lambertian()], [metal()], or [dielectric()].
+#' @param angle Default `0`. Angle of rotation around the y-axis.
 #' @param flipped Default `FALSE`. Whether to flip the normals.
 #' 
 #' @return Single row of a tibble describing the sphere in the scene.
@@ -72,8 +74,8 @@ cube = function(x=0, x1=1, y=0, y1=1, z=0, z1=1, material=lambertian(), angle = 
 #'
 #' @examples
 #' dielectric(x=0,y=1,z=0,radius=1, refraction = 2)
-xy_rect = function(x0=0, x1=1, y0=0, y1=0, z=0, material = lambertian(), angle = 0, flipped=FALSE) {
-  rectinfo = c(unlist(material$properties),x0,x1,y0,y1,z)
+xy_rect = function(x=0, xwidth=1, y=0, ywidth=1, z=0, material = lambertian(), angle = 0, flipped=FALSE) {
+  rectinfo = c(unlist(material$properties),x,xwidth,y,ywidth,z)
   tibble::tibble(x=NA,y=NA,z=NA,radius=NA, type = material$type, shape="xy_rect",
                  properties = list(rectinfo), velocity = list(c(0,0,0)),
                  checkercolor=material$checkercolor, 
@@ -85,12 +87,13 @@ xy_rect = function(x0=0, x1=1, y0=0, y1=0, z=0, material = lambertian(), angle =
 
 #' Rectangular YZ Plane Object
 #'
-#' @param x0 Default `0`. x-coordinate of the center of the rectangle.
-#' @param x1 Default `0`. y-coordinate of the center of the rectangle.
-#' @param y0 Default `0`. x-coordinate of the center of the rectangle.
-#' @param y1 Default `0`. y-coordinate of the center of the rectangle.
-#' @param z Default `0`. z-coordinate of the center of the rectangle.
-#' @param material The material, called from one of the material functions.
+#' @param y Default `0`. x-coordinate of the center of the rectangle.
+#' @param ywidth Default `1`. y-coordinate of the center of the rectangle.
+#' @param z Default `0`. x-coordinate of the center of the rectangle.
+#' @param zwidth Default `1`. y-coordinate of the center of the rectangle.
+#' @param x Default `0`. x-coordinate of the center of the rectangle.
+#' @param material Default [lambertian()].The material, called from one of the material functions [lambertian()], [metal()], or [dielectric()].
+#' @param angle Default `0`. Angle of rotation around the y-axis.
 #' @param flipped Default `FALSE`. Whether to flip the normals.
 #' 
 #' @return Single row of a tibble describing the sphere in the scene.
@@ -98,8 +101,8 @@ xy_rect = function(x0=0, x1=1, y0=0, y1=0, z=0, material = lambertian(), angle =
 #'
 #' @examples
 #' dielectric(x=0,y=1,z=0,radius=1, refraction = 2)
-yz_rect = function(x0=0, x1=1, y0=0, y1=0, z=0, material = lambertian(), angle = 0, flipped=FALSE) {
-  rectinfo = c(unlist(material$properties),x0,x1,y0,y1,z)
+yz_rect = function(y=0, ywidth=1, z=0, zwidth=1, x=0, material = lambertian(), angle = 0, flipped=FALSE) {
+  rectinfo = c(unlist(material$properties),y,ywidth,z,zwidth,x)
   tibble::tibble(x=NA,y=NA,z=NA,radius=NA, type = material$type, shape="yz_rect",
                  properties = list(rectinfo), velocity = list(c(0,0,0)),
                  checkercolor=material$checkercolor, 
@@ -111,12 +114,13 @@ yz_rect = function(x0=0, x1=1, y0=0, y1=0, z=0, material = lambertian(), angle =
 
 #' Rectangular XZ Plane Object
 #'
-#' @param x0 Default `0`. x-coordinate of the center of the rectangle.
-#' @param x1 Default `0`. y-coordinate of the center of the rectangle.
-#' @param y0 Default `0`. x-coordinate of the center of the rectangle.
-#' @param y1 Default `0`. y-coordinate of the center of the rectangle.
-#' @param z Default `0`. z-coordinate of the center of the rectangle.
-#' @param material The material, called from one of the material functions.
+#' @param x Default `0`. x-coordinate of the center of the rectangle.
+#' @param xwidth Default `1`. y-coordinate of the center of the rectangle.
+#' @param z Default `0`. x-coordinate of the center of the rectangle.
+#' @param zwidth Default `1`. y-coordinate of the center of the rectangle.
+#' @param y Default `0`. z-coordinate of the center of the rectangle.
+#' @param material Default [lambertian()].The material, called from one of the material functions [lambertian()], [metal()], or [dielectric()].
+#' @param angle Default `0`. Angle of rotation around the y-axis.
 #' @param flipped Default `FALSE`. Whether to flip the normals.
 #' 
 #' @return Single row of a tibble describing the sphere in the scene.
@@ -124,8 +128,8 @@ yz_rect = function(x0=0, x1=1, y0=0, y1=0, z=0, material = lambertian(), angle =
 #'
 #' @examples
 #' dielectric(x=0,y=1,z=0,radius=1, refraction = 2)
-xz_rect = function(x0=0, x1=1, y0=0, y1=0, z=0, material = lambertian(), angle = 0, flipped=FALSE) {
-  rectinfo = c(unlist(material$properties),x0,x1,y0,y1,z)
+xz_rect = function(x=0, xwidth=1, z=0, zwidth=1, y=0, material = lambertian(), angle = 0, flipped=FALSE) {
+  rectinfo = c(unlist(material$properties),x,xwidth,z,zwidth,y)
   tibble::tibble(x=NA,y=NA,z=NA,radius=NA, 
                  type = material$type, shape="xz_rect",
                  properties = list(rectinfo), velocity = list(c(0,0,0)),

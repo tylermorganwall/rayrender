@@ -1,4 +1,4 @@
-#' @useDynLib raynextweek, .registration = TRUE
+#' @useDynLib rayrender, .registration = TRUE
 #' @importFrom Rcpp evalCpp
 NULL
 
