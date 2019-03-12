@@ -2,14 +2,17 @@
 % Please edit documentation in R/materials.R
 \name{lambertian}
 \alias{lambertian}
-\title{Lambertian Sphere}
+\title{Lambertian}
 \usage{
-lambertian(x = 0, y = 0, z = 0, radius = 1, color = "#ffffff",
-  checkercolor = NA, velocity = c(0, 0, 0), noise = 0,
-  noisephase = 0, noiseintensity = 10, angle = 0, image_array = NA,
-  lightintensity = NA)
+lambertian(color = "#ffffff", checkercolor = NA, checkerperiod = 3,
+  noise = 0, noisephase = 0, noiseintensity = 10,
+  noisecolor = "#000000", image_array = NA, lightintensity = NA,
+  fog = FALSE, fogdensity = 0.01)
 }
 \arguments{
+\item{color}{Default `#ffffff`. The color of the sphere. Can be either
+a hexadecimal code, or a numeric rgb vector listing three intensities between `0` and `1`.}
+
 \item{x}{Default `0`. x-coordinate of the center of the sphere.}
 
 \item{y}{Default `0`. y-coordinate of the center of the sphere.}
@@ -18,16 +21,13 @@ lambertian(x = 0, y = 0, z = 0, radius = 1, color = "#ffffff",
 
 \item{radius}{Default `1`. Radius of the sphere.}
 
-\item{color}{Default `#ffffff`. The color of the sphere. Can be either
-a hexadecimal code, or a numeric rgb vector listing three intensities between `0` and `1`.}
-
 \item{velocity}{Default `c(0,0,0)`. Velocity of the sphere, used for motion blur.}
 }
 \value{
 Single row of a tibble describing the sphere in the scene.
 }
 \description{
-Lambertian Sphere
+Lambertian
 }
 \examples{
 #create a single green sphere for the ground

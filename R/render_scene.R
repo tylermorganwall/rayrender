@@ -67,32 +67,39 @@
 #' render_scene(scene,lookfrom = c(7,1.5,10),lookat = c(0,0.5,0),fov=15,
 #'                  aperture = 1)
 render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 100, ambient_light = TRUE,
-                        lookfrom = c(10,1,0), lookat = c(0,0,0), aperture = 0.1,
+                        lookfrom = c(10,1,0), lookat = c(0,0,0), camera_up = c(0,1,0), aperture = 0.1,
                         filename = NULL, backgroundhigh = "#80b4ff",backgroundlow = "#ffffff",
-                        shutteropen = 0.0, shutterclose = 1.0, focal_distance=NULL) { 
+                        shutteropen = 0.0, shutterclose = 1.0, focal_distance=NULL,parallel=FALSE) { 
   backgroundhigh = convert_color(backgroundhigh)
   backgroundlow = convert_color(backgroundlow)
   xvec = scene$x 
   yvec = scene$y
   zvec = scene$z
   rvec = scene$radius
+  shapevec = unlist(lapply(tolower(scene$shape),switch,
+                          "sphere" = 1,"xy_rect" = 2, "xz_rect" = 3,"yz_rect" = 4,"box" = 5))
   typevec = unlist(lapply(tolower(scene$type),switch,
-                          "lambertian" = 1,"metal" = 2,"dielectric" = 3,
-                          "xy" = 4, "xz" = 5,"yz" = 6,"box" = 7))
+                          "lambertian" = 1,"metal" = 2,"dielectric" = 3))
   movingvec = purrr::map_lgl(scene$velocity,.f = ~any(.x != 0))
   proplist = scene$properties
   vel_list = scene$velocity
   checkeredlist = scene$checkercolor
   checkeredbool = purrr::map_lgl(checkeredlist,.f = ~all(!is.na(.x)))
+  
+  #noise handler
   noisebool = purrr::map_lgl(scene$noise, .f = ~.x > 0)
   noisevec = scene$noise
   noisephasevec = scene$noisephase * pi/180
   noiseintvec = scene$noiseintensity
+  noisecolorlist = scene$noisecolor
+  
+  #rotation handler
   rot_angle_vec = scene$angle
   
   #fog handler
   fog_bool = scene$fog
   fog_vec = scene$fogdensity
+  fog_color = scene$fogcolor
   
   #flip handler
   flip_vec = scene$flipped
@@ -118,16 +125,14 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
   assertthat::assert_that(all(!is.null(typevec)))
   for(i in 1:length(xvec)) {
     if(typevec[i] == 1) {
-      assertthat::assert_that(length(proplist[[i]]) == 3)
+      if(shapevec[i] == 1) {
+        assertthat::assert_that(length(proplist[[i]]) == 3)
+      }
     } else if (typevec[i] == 2) {
-      assertthat::assert_that(length(proplist[[i]]) == 4)
+      # assertthat::assert_that(length(proplist[[i]]) == 4)
     } else if (typevec[i] == 3) {
-      assertthat::assert_that(length(proplist[[i]]) == 1)
-    } else if (typevec[i] %in% c(4,5,6)) {
-      assertthat::assert_that(length(proplist[[i]]) == 8)
-    } else {
-      assertthat::assert_that(length(proplist[[i]]) == 6)
-    }
+      # assertthat::assert_that(length(proplist[[i]]) == 7)
+    } 
   }
   assertthat::assert_that(length(lookfrom) == 3)
   assertthat::assert_that(length(lookat) == 3)
@@ -136,18 +141,20 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
   }
   
   rgb_mat = generate_initial(nx = width, ny = height, ns = samples, fov = fov, ambient_light = ambient_light,
-                             lookfromvec = lookfrom, lookatvec = lookat, aperture=aperture,
-                             type = typevec, radius = rvec,
+                             lookfromvec = lookfrom, lookatvec = lookat, aperture=aperture,camera_up = camera_up,
+                             type = typevec, shape = shapevec, radius = rvec, 
                              x = xvec, y = yvec, z = zvec,
                              properties = proplist, velocity = vel_list, moving = movingvec,
                              n = length(typevec), 
                              bghigh = backgroundhigh, bglow = backgroundlow,
                              shutteropen = shutteropen, shutterclose = shutterclose,
                              ischeckered = checkeredbool, checkercolors = checkeredlist,
-                             noise=noisevec,isnoise=noisebool,noisephase=noisephasevec, noiseintensity=noiseintvec,
+                             noise=noisevec,isnoise=noisebool,noisephase=noisephasevec, 
+                             noiseintensity=noiseintvec, noisecolorlist = noisecolorlist,
                              angle = rot_angle_vec, isimage = image_tex_bool, filelocation = temp_file_names,
                              islight = light_bool, lightintensity = light_prop_vec,isflipped = flip_vec,
-                             focus_distance=focal_distance,isvolume=fog_bool, voldensity = fog_vec) 
+                             focus_distance=focal_distance,
+                             isvolume=fog_bool, fogcolor = fog_color, voldensity = fog_vec , parallel=parallel) 
   full_array = array(0,c(ncol(rgb_mat$r),nrow(rgb_mat$r),3))
   full_array[,,1] = t(rgb_mat$r)
   full_array[,,2] = t(rgb_mat$g)

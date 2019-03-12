@@ -6,9 +6,10 @@
 \usage{
 render_scene(scene, width = 400, height = 400, fov = 20,
   samples = 100, ambient_light = TRUE, lookfrom = c(10, 1, 0),
-  lookat = c(0, 0, 0), aperture = 0.1, filename = NULL,
-  backgroundhigh = "#80b4ff", backgroundlow = "#ffffff",
-  shutteropen = 0, shutterclose = 1, focal_distance = NULL)
+  lookat = c(0, 0, 0), camera_up = c(0, 1, 0), aperture = 0.1,
+  filename = NULL, backgroundhigh = "#80b4ff",
+  backgroundlow = "#ffffff", shutteropen = 0, shutterclose = 1,
+  focal_distance = NULL, parallel = FALSE)
 }
 \arguments{
 \item{scene}{Tibble of sphere locations and properties. Generate each row using one of the
@@ -53,19 +54,19 @@ scene = generate_ground(depth=-0.5)
 render_scene(scene)
 
 #Add a sphere to the center
-scene = add_sphere(scene, lambertian(x=0,y=0,z=0,radius=0.5,color=c(1,0,1)))
+scene = add_object(scene, lambertian(x=0,y=0,z=0,radius=0.5,color=c(1,0,1)))
 render_scene(scene)
 
 #Add a metal ball (using hexcode color representation)
-scene = add_sphere(scene, metal(x=0,y=0,z=1,radius=0.5,color="#ffffff",fuzz=0))
+scene = add_object(scene, metal(x=0,y=0,z=1,radius=0.5,color="#ffffff",fuzz=0))
 render_scene(scene)
 
 #Add a brushed metal ball 
-scene = add_sphere(scene, metal(x=0,y=1,z=0,radius=0.5,color=c(0.3,0.6,1),fuzz=0.25))
+scene = add_object(scene, metal(x=0,y=1,z=0,radius=0.5,color=c(0.3,0.6,1),fuzz=0.25))
 render_scene(scene)
 
 #Add a dielectric (glass) ball
-scene = add_sphere(scene, dielectric(x=0,y=0,z=-1,radius=0.5,refraction=1.6))
+scene = add_object(scene, dielectric(x=0,y=0,z=-1,radius=0.5,refraction=1.6))
 render_scene(scene)
 
 #Add a grid of glass balls in front
@@ -79,7 +80,7 @@ for(i in 1:9) {
 }
 glass_array = do.call(rbind,glass_array_list)
 
-scene = add_sphere(scene, glass_array)
+scene = add_object(scene, glass_array)
 render_scene(scene)
 
 #Move the camera

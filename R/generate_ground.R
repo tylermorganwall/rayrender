@@ -14,6 +14,6 @@
 #'   add_sphere(lambertian(color = "#ff0000"))
 #'   
 #' render_scene(scene)
-generate_ground = function(depth = -1, spheresize = 1000, color = "#ccff00", checkercolor=NA, noise=0) {
-  lambertian(x = 0,y = -spheresize + depth, z = 0, radius = spheresize, color = color, checkercolor=checkercolor,noise=noise)
+generate_ground = function(depth = -1, spheresize = 1000, material = lambertian(color = "#ccff00")) {
+  sphere(x = 0,y = -spheresize + depth, z = 0, radius = spheresize, material=material)
 }

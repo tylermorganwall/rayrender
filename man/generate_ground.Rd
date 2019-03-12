@@ -4,8 +4,8 @@
 \alias{generate_ground}
 \title{Title}
 \usage{
-generate_ground(depth = -1, spheresize = 1000, color = "#ccff00",
-  checkercolor = NA, noise = 0)
+generate_ground(depth = -1, spheresize = 1000,
+  material = lambertian(color = "#ccff00"))
 }
 \arguments{
 \item{depth}{Default `-1`. Depth of the surface.}

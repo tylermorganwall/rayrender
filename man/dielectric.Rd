@@ -2,29 +2,19 @@
 % Please edit documentation in R/materials.R
 \name{dielectric}
 \alias{dielectric}
-\title{Dielelectric Sphere}
+\title{Dielectric (glass)}
 \usage{
-dielectric(x = 0, y = 0, z = 0, radius = 1, refraction = 1.5,
-  velocity = c(0, 0, 0))
+dielectric(color = "#ffffff", refraction = 1.5, fog = FALSE,
+  fogcolor = "#ffffff", fogdensity = 0.01)
 }
 \arguments{
-\item{x}{Default `0`. x-coordinate of the center of the sphere.}
-
-\item{y}{Default `0`. y-coordinate of the center of the sphere.}
-
-\item{z}{Default `0`. z-coordinate of the center of the sphere.}
-
-\item{radius}{Default `1`. Radius of the sphere.}
-
 \item{refraction}{Default `1.5`.  Index of refraction.}
-
-\item{velocity}{Default `c(0,0,0)`. Velocity of the sphere, used for motion blur.}
 }
 \value{
 Single row of a tibble describing the sphere in the scene.
 }
 \description{
-Dielelectric Sphere
+Dielectric (glass)
 }
 \examples{
 dielectric(x=0,y=1,z=0,radius=1, refraction = 2)

@@ -6,8 +6,8 @@
 using namespace Rcpp;
 
 // generate_initial
-List generate_initial(int nx, int ny, int ns, float fov, bool ambient_light, NumericVector lookfromvec, NumericVector lookatvec, float aperture, IntegerVector type, NumericVector radius, NumericVector x, NumericVector y, NumericVector z, List properties, List velocity, LogicalVector moving, int n, NumericVector& bghigh, NumericVector& bglow, float shutteropen, float shutterclose, LogicalVector ischeckered, List checkercolors, NumericVector noise, LogicalVector isnoise, NumericVector& noisephase, NumericVector& noiseintensity, NumericVector& angle, LogicalVector& isimage, CharacterVector& filelocation, LogicalVector& islight, NumericVector& lightintensity, LogicalVector& isflipped, float focus_distance, LogicalVector& isvolume, NumericVector& voldensity);
-RcppExport SEXP _raynextweek_generate_initial(SEXP nxSEXP, SEXP nySEXP, SEXP nsSEXP, SEXP fovSEXP, SEXP ambient_lightSEXP, SEXP lookfromvecSEXP, SEXP lookatvecSEXP, SEXP apertureSEXP, SEXP typeSEXP, SEXP radiusSEXP, SEXP xSEXP, SEXP ySEXP, SEXP zSEXP, SEXP propertiesSEXP, SEXP velocitySEXP, SEXP movingSEXP, SEXP nSEXP, SEXP bghighSEXP, SEXP bglowSEXP, SEXP shutteropenSEXP, SEXP shuttercloseSEXP, SEXP ischeckeredSEXP, SEXP checkercolorsSEXP, SEXP noiseSEXP, SEXP isnoiseSEXP, SEXP noisephaseSEXP, SEXP noiseintensitySEXP, SEXP angleSEXP, SEXP isimageSEXP, SEXP filelocationSEXP, SEXP islightSEXP, SEXP lightintensitySEXP, SEXP isflippedSEXP, SEXP focus_distanceSEXP, SEXP isvolumeSEXP, SEXP voldensitySEXP) {
+List generate_initial(int nx, int ny, int ns, float fov, bool ambient_light, NumericVector lookfromvec, NumericVector lookatvec, float aperture, NumericVector camera_up, IntegerVector type, NumericVector radius, IntegerVector shape, NumericVector x, NumericVector y, NumericVector z, List properties, List velocity, LogicalVector moving, int n, NumericVector& bghigh, NumericVector& bglow, float shutteropen, float shutterclose, LogicalVector ischeckered, List checkercolors, NumericVector noise, LogicalVector isnoise, NumericVector& noisephase, NumericVector& noiseintensity, List noisecolorlist, NumericVector& angle, LogicalVector& isimage, CharacterVector& filelocation, LogicalVector& islight, NumericVector& lightintensity, LogicalVector& isflipped, float focus_distance, LogicalVector& isvolume, List& fogcolor, NumericVector& voldensity, bool parallel);
+RcppExport SEXP _rayrender_generate_initial(SEXP nxSEXP, SEXP nySEXP, SEXP nsSEXP, SEXP fovSEXP, SEXP ambient_lightSEXP, SEXP lookfromvecSEXP, SEXP lookatvecSEXP, SEXP apertureSEXP, SEXP camera_upSEXP, SEXP typeSEXP, SEXP radiusSEXP, SEXP shapeSEXP, SEXP xSEXP, SEXP ySEXP, SEXP zSEXP, SEXP propertiesSEXP, SEXP velocitySEXP, SEXP movingSEXP, SEXP nSEXP, SEXP bghighSEXP, SEXP bglowSEXP, SEXP shutteropenSEXP, SEXP shuttercloseSEXP, SEXP ischeckeredSEXP, SEXP checkercolorsSEXP, SEXP noiseSEXP, SEXP isnoiseSEXP, SEXP noisephaseSEXP, SEXP noiseintensitySEXP, SEXP noisecolorlistSEXP, SEXP angleSEXP, SEXP isimageSEXP, SEXP filelocationSEXP, SEXP islightSEXP, SEXP lightintensitySEXP, SEXP isflippedSEXP, SEXP focus_distanceSEXP, SEXP isvolumeSEXP, SEXP fogcolorSEXP, SEXP voldensitySEXP, SEXP parallelSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -19,8 +19,10 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< NumericVector >::type lookfromvec(lookfromvecSEXP);
     Rcpp::traits::input_parameter< NumericVector >::type lookatvec(lookatvecSEXP);
     Rcpp::traits::input_parameter< float >::type aperture(apertureSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type camera_up(camera_upSEXP);
     Rcpp::traits::input_parameter< IntegerVector >::type type(typeSEXP);
     Rcpp::traits::input_parameter< NumericVector >::type radius(radiusSEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type shape(shapeSEXP);
     Rcpp::traits::input_parameter< NumericVector >::type x(xSEXP);
     Rcpp::traits::input_parameter< NumericVector >::type y(ySEXP);
     Rcpp::traits::input_parameter< NumericVector >::type z(zSEXP);
@@ -38,6 +40,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< LogicalVector >::type isnoise(isnoiseSEXP);
     Rcpp::traits::input_parameter< NumericVector& >::type noisephase(noisephaseSEXP);
     Rcpp::traits::input_parameter< NumericVector& >::type noiseintensity(noiseintensitySEXP);
+    Rcpp::traits::input_parameter< List >::type noisecolorlist(noisecolorlistSEXP);
     Rcpp::traits::input_parameter< NumericVector& >::type angle(angleSEXP);
     Rcpp::traits::input_parameter< LogicalVector& >::type isimage(isimageSEXP);
     Rcpp::traits::input_parameter< CharacterVector& >::type filelocation(filelocationSEXP);
@@ -46,18 +49,20 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< LogicalVector& >::type isflipped(isflippedSEXP);
     Rcpp::traits::input_parameter< float >::type focus_distance(focus_distanceSEXP);
     Rcpp::traits::input_parameter< LogicalVector& >::type isvolume(isvolumeSEXP);
+    Rcpp::traits::input_parameter< List& >::type fogcolor(fogcolorSEXP);
     Rcpp::traits::input_parameter< NumericVector& >::type voldensity(voldensitySEXP);
-    rcpp_result_gen = Rcpp::wrap(generate_initial(nx, ny, ns, fov, ambient_light, lookfromvec, lookatvec, aperture, type, radius, x, y, z, properties, velocity, moving, n, bghigh, bglow, shutteropen, shutterclose, ischeckered, checkercolors, noise, isnoise, noisephase, noiseintensity, angle, isimage, filelocation, islight, lightintensity, isflipped, focus_distance, isvolume, voldensity));
+    Rcpp::traits::input_parameter< bool >::type parallel(parallelSEXP);
+    rcpp_result_gen = Rcpp::wrap(generate_initial(nx, ny, ns, fov, ambient_light, lookfromvec, lookatvec, aperture, camera_up, type, radius, shape, x, y, z, properties, velocity, moving, n, bghigh, bglow, shutteropen, shutterclose, ischeckered, checkercolors, noise, isnoise, noisephase, noiseintensity, noisecolorlist, angle, isimage, filelocation, islight, lightintensity, isflipped, focus_distance, isvolume, fogcolor, voldensity, parallel));
     return rcpp_result_gen;
 END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_raynextweek_generate_initial", (DL_FUNC) &_raynextweek_generate_initial, 36},
+    {"_rayrender_generate_initial", (DL_FUNC) &_rayrender_generate_initial, 41},
     {NULL, NULL, 0}
 };
 
-RcppExport void R_init_raynextweek(DllInfo *dll) {
+RcppExport void R_init_rayrender(DllInfo *dll) {
     R_registerRoutines(dll, NULL, CallEntries, NULL, NULL);
     R_useDynamicSymbols(dll, FALSE);
 }

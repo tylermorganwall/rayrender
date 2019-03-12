@@ -1,18 +1,20 @@
-Package: raynextweek
+Package: rayrender
 Type: Package
 Title: Raytrace Spheres
-Version: 0.1.0
-Date: 2019-02-24
+Version: 0.2.0
+Date: 2019-03-11
 Author: Tyler Morgan-Wall
 Maintainer: Tyler Morgan-Wall <tylermw@gmail.com>
-Description: A raytracer for lambertian, metallic, and dielectric spheres. Uses a tidy `tibble` input to build scenes. Based off of Peter Shirley's "Raytracing in One Weekend".
+Description: A raytracer for spheres, planes, and cubes. Uses a tidy `tibble` input to build scenes. Based off of Peter Shirley's "Ray Tracing in One Weekend" and "Ray Tracing: The Next Week".
 License: GPL (>= 2)
 Imports: 
     Rcpp (>= 1.0.0),
+    RcppParallel,
     rayshader,
     assertthat,
     tibble,
     magrittr,
     purrr
-LinkingTo: Rcpp
+LinkingTo: Rcpp, RcppParallel
 RoxygenNote: 6.1.1
+SystemRequirements: GNU make

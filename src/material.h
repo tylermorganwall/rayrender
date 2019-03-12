@@ -72,12 +72,12 @@ class metal : public material {
 
 class dielectric : public material {
   public:
-    dielectric(float ri) : ref_idx(ri) {};
+    dielectric(const vec3& a, float ri) : ref_idx(ri), albedo(a) {};
     virtual bool scatter(const ray& r_in, const hit_record& rec, vec3& attenuation, ray& scattered) const {
       vec3 outward_normal;
       vec3 reflected = reflect(r_in.direction(), rec.normal);
       float ni_over_nt;
-      attenuation = vec3(1.0,1.0,1.0);
+      attenuation = albedo;
       vec3 refracted;
       float reflect_prob;
       float cosine;
@@ -103,6 +103,7 @@ class dielectric : public material {
       return(true);
     }
     float ref_idx;
+    vec3 albedo;
 };
 
 class diffuse_light : public material {

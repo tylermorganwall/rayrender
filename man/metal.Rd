@@ -2,32 +2,21 @@
 % Please edit documentation in R/materials.R
 \name{metal}
 \alias{metal}
-\title{Metal Sphere}
+\title{Metal}
 \usage{
-metal(x = 0, y = 0, z = 0, radius = 1, color = "#ffffff",
-  fuzz = 0, velocity = c(0, 0, 0))
+metal(color = "#ffffff", fuzz = 0)
 }
 \arguments{
-\item{x}{Default `0`. x-coordinate of the center of the sphere.}
-
-\item{y}{Default `0`. y-coordinate of the center of the sphere.}
-
-\item{z}{Default `0`. z-coordinate of the center of the sphere.}
-
-\item{radius}{Default `1`. Radius of the sphere.}
-
 \item{color}{Default `#ffffff`. The color of the sphere. Can be either
 a hexadecimal code, or a numeric rgb vector listing three intensities between `0` and `1`.}
 
 \item{fuzz}{Default `0`. The roughness of the metallic surface. Maximum `1`.}
-
-\item{velocity}{Default `c(0,0,0)`. Velocity of the sphere, used for motion blur.}
 }
 \value{
 Single row of a tibble describing the sphere in the scene.
 }
 \description{
-Metal Sphere
+Metal
 }
 \examples{
 #create a single red metallic sphere

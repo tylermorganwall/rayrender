@@ -21,9 +21,10 @@ public:
 class checker_texture : public texture {
 public:
   checker_texture() {}
-  checker_texture(texture *t0, texture *t1) : even(t0), odd(t1) {}
+  checker_texture(texture *t0, texture *t1, float p) : even(t0), odd(t1), period(p) {}
   virtual vec3 value(float u, float v, const vec3& p) const {
-    float sines  = sin(3*p.x()*M_PI) * sin(3*p.y()*M_PI) * sin(3*p.z()*M_PI);
+    float invperiod = 1/period;
+    float sines  = sin(invperiod*p.x()*M_PI) * sin(invperiod*p.y()*M_PI) * sin(invperiod*p.z()*M_PI);
     if(sines < 0) {
       return(odd->value(u,v,p));
     } else {
@@ -32,18 +33,21 @@ public:
   }
   texture *even;
   texture *odd;
+  float period;
 };
 
 class noise_texture : public texture {
 public:
   noise_texture() {}
-  noise_texture(float sc, vec3 c, float ph, float inten) : scale(sc), color(c), phase(ph), intensity(inten) {}
+  noise_texture(float sc, vec3 c, vec3 c2, float ph, float inten) : scale(sc), color(c), color2(c2), phase(ph), intensity(inten) {}
   virtual vec3 value(float u, float v, const vec3& p) const {
-    return(color * 0.5*(1+sin(scale*p.y()  + intensity*noise.turb(scale * p) + phase)));
+    float weight = 0.5*(1+sin(scale*p.y()  + intensity*noise.turb(scale * p) + phase));
+    return(color * (1-weight) + color2 * weight);
   }
   perlin noise;
   float scale;
   vec3 color;
+  vec3 color2;
   float phase;
   float intensity;
 };
