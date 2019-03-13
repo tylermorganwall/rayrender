@@ -4,23 +4,27 @@
 \alias{cube}
 \title{Cube Object}
 \usage{
-cube(x = 0, x1 = 1, y = 0, y1 = 1, z = 0, z1 = 1,
-  material = lambertian(), angle = 0, velocity = c(0, 0, 0))
+cube(x = 0, xwidth = 1, y = 0, ywidth = 1, z = 0, zwidth = 1,
+  material = lambertian(), angle = c(0, 0, 0), velocity = c(0, 0, 0))
 }
 \arguments{
-\item{x}{Default `0`. x-coordinate of the center of the sphere.}
+\item{x}{Default `0`. x-coordinate of the center of the cube}
 
-\item{y}{Default `0`. y-coordinate of the center of the sphere.}
+\item{xwidth}{Default `1`. x-width of the cube.}
 
-\item{z}{Default `0`. z-coordinate of the center of the sphere.}
+\item{y}{Default `0`. y-coordinate of the center of the cube}
+
+\item{ywidth}{Default `1`. y-width of the cube.}
+
+\item{z}{Default `0`. z-coordinate of the center of the cube}
+
+\item{zwidth}{Default `1`. x-width of the cube.}
 
 \item{material}{Default `[lambertian()]`.The material, called from one of the material functions [lambertian()], [metal()], or [dielectric()].}
 
 \item{angle}{Default `0`. Angle of rotation around the y-axis.}
 
-\item{velocity}{Default `c(0,0,0)`. Velocity of the sphere, used for motion blur.}
-
-\item{radius}{Default `1`. Radius of the sphere.}
+\item{velocity}{Default `c(0,0,0)`. Velocity of the cube, used for motion blur.}
 }
 \value{
 Single row of a tibble describing the sphere in the scene.

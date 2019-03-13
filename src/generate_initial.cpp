@@ -99,7 +99,7 @@ hitable *build_scene(IntegerVector& type,
                         LogicalVector& ischeckered, List& checkercolors, 
                         NumericVector& noise, LogicalVector& isnoise,
                         NumericVector& noisephase, NumericVector& noiseintensity, List noisecolorlist,
-                        NumericVector& angle, 
+                        List& angle, 
                         LogicalVector& isimage, CharacterVector& filelocation,
                         LogicalVector& islight, NumericVector& lightintensity,
                         LogicalVector& isflipped,
@@ -110,7 +110,9 @@ hitable *build_scene(IntegerVector& type,
   NumericVector tempvel;
   NumericVector tempfog;
   NumericVector tempnoisecolor;
-  
+  NumericVector temprotvec;
+  int prop_len;
+
   List templist;
   vec3 center(x(0), y(0), z(0));
   vec3 vel(x(0), y(0), z(0));
@@ -120,7 +122,8 @@ hitable *build_scene(IntegerVector& type,
     tempvel = as<NumericVector>(velocity(i));
     tempfog = as<NumericVector>(fogcolor(i));
     tempnoisecolor = as<NumericVector>(noisecolorlist(i));
-    int prop_len=2;
+    temprotvec = as<NumericVector>(angle(i));
+    prop_len=2;
     
     center =  vec3(x(i), y(i), z(i));
     vel = vec3(tempvel(0),tempvel(1),tempvel(2));
@@ -145,18 +148,25 @@ hitable *build_scene(IntegerVector& type,
         }
       } else if (type(i) == 2) {
         sphere_tex = new metal(vec3(tempvector(0),tempvector(1),tempvector(2)),tempvector(3));
-      } else if (type(i) == 3) {
+      } else {
         sphere_tex = new dielectric(vec3(tempvector(0),tempvector(1),tempvector(2)),tempvector(3));
       }
-      hitable *entry;
+      hitable *entry = new sphere(vec3(0,0,0), radius(i), sphere_tex);
+      if(temprotvec(0) != 0) {
+        entry = new rotate_x(entry,temprotvec(0));
+      }
+      if(temprotvec(1) != 0) {
+        entry = new rotate_y(entry,temprotvec(1));
+      }
+      if(temprotvec(2) != 0) {
+        entry = new rotate_z(entry,temprotvec(2));
+      }
       if(!moving(i)) {
-        entry = new translate(new rotate_y(new sphere(vec3(0,0,0), radius(i), sphere_tex),
-                                           angle(i)), 
-                              center + vel * shutteropen);
+        entry = new translate(entry, center + vel * shutteropen);
       } else {
         entry = new moving_sphere(center + vel * shutteropen, 
-                                    center + vel * shutterclose, 
-                                    shutteropen, shutterclose, radius(i), sphere_tex);
+                                  center + vel * shutterclose, 
+                                  shutteropen, shutterclose, radius(i), sphere_tex);
       }
       if(isvolume(i)) {
         list[i] = new constant_medium(entry,voldensity(i), new constant_texture(vec3(tempfog(0),tempfog(1),tempfog(2))));
@@ -189,11 +199,19 @@ hitable *build_scene(IntegerVector& type,
         rect_tex = new dielectric(vec3(tempvector(0),tempvector(1),tempvector(2)),tempvector(3));
         prop_len = 3;
       }
-      hitable *entry = new translate(new rotate_y(new yz_rect(-tempvector(prop_len+2)/2,tempvector(prop_len+2)/2,
+      hitable *entry = new xy_rect(-tempvector(prop_len+2)/2,tempvector(prop_len+2)/2,
                                                               -tempvector(prop_len+4)/2,tempvector(prop_len+4)/2,
-                                                              -tempvector(prop_len+5)/2, rect_tex),
-                                                  angle(i)),
-                                     vec3(tempvector(prop_len+1),tempvector(prop_len+3),tempvector(prop_len+5)) + vel * shutteropen);
+                                                              0, rect_tex);
+      if(temprotvec(0) != 0) {
+        entry = new rotate_x(entry,temprotvec(0));
+      }
+      if(temprotvec(1) != 0) {
+        entry = new rotate_y(entry,temprotvec(1));
+      }
+      if(temprotvec(2) != 0) {
+        entry = new rotate_z(entry,temprotvec(2));
+      }
+      entry = new translate(entry,vec3(tempvector(prop_len+1),tempvector(prop_len+3),tempvector(prop_len+5)) + vel * shutteropen);
       if(isflipped(i)) {
         list[i] = new flip_normals(entry);
       } else {
@@ -225,11 +243,19 @@ hitable *build_scene(IntegerVector& type,
         rect_tex = new dielectric(vec3(tempvector(0),tempvector(1),tempvector(2)),tempvector(3));
         prop_len = 3;
       }
-      hitable *entry = new translate(new rotate_y(new xz_rect(-tempvector(prop_len+2)/2,tempvector(prop_len+2)/2,
-                                                              -tempvector(prop_len+4)/2,tempvector(prop_len+4)/2,
-                                                              -tempvector(prop_len+5)/2, rect_tex),
-                                                  angle(i)),
-                                    vec3(tempvector(prop_len+1),tempvector(prop_len+3),tempvector(prop_len+5)) + vel * shutteropen);
+      hitable *entry = new xz_rect(-tempvector(prop_len+2)/2,tempvector(prop_len+2)/2,
+                                   -tempvector(prop_len+4)/2,tempvector(prop_len+4)/2,
+                                   0, rect_tex);
+      if(temprotvec(0) != 0) {
+        entry = new rotate_x(entry,temprotvec(0));
+      }
+      if(temprotvec(1) != 0) {
+        entry = new rotate_y(entry,temprotvec(1));
+      }
+      if(temprotvec(2) != 0) {
+        entry = new rotate_z(entry,temprotvec(2));
+      }
+      entry = new translate(entry,vec3(tempvector(prop_len+1),tempvector(prop_len+5), tempvector(prop_len+3)) + vel * shutteropen);
       if(isflipped(i)) {
         list[i] = new flip_normals(entry);
       } else {
@@ -261,11 +287,19 @@ hitable *build_scene(IntegerVector& type,
         rect_tex = new dielectric(vec3(tempvector(0),tempvector(1),tempvector(2)),tempvector(3));
         prop_len = 3;
       }
-      hitable *entry = new translate(new rotate_y(new yz_rect(-tempvector(prop_len+2)/2,tempvector(prop_len+2)/2,
-                                                              -tempvector(prop_len+4)/2,tempvector(prop_len+4)/2,
-                                                              -tempvector(prop_len+5)/2, rect_tex),
-                                                    angle(i)),
-                                       vec3(tempvector(prop_len+1),tempvector(prop_len+3),tempvector(prop_len+5)) + vel * shutteropen);
+      hitable *entry = new yz_rect(-tempvector(prop_len+2)/2,tempvector(prop_len+2)/2,
+                                   -tempvector(prop_len+4)/2,tempvector(prop_len+4)/2,
+                                   0, rect_tex);
+      if(temprotvec(0) != 0) {
+        entry = new rotate_x(entry,temprotvec(0));
+      }
+      if(temprotvec(1) != 0) {
+        entry = new rotate_y(entry,temprotvec(1));
+      }
+      if(temprotvec(2) != 0) {
+        entry = new rotate_z(entry,temprotvec(2));
+      }
+      entry = new translate(entry,vec3(tempvector(prop_len+5),tempvector(prop_len+1),tempvector(prop_len+3)) + vel * shutteropen);
       if(isflipped(i)) {
         list[i] = new flip_normals(entry);
       } else {
@@ -298,11 +332,19 @@ hitable *build_scene(IntegerVector& type,
         rect_tex = new dielectric(vec3(tempvector(0),tempvector(1),tempvector(2)),tempvector(3));
         prop_len = 3;
       }
-      hitable *entry = new translate(new rotate_y(new box(vec3(0,0,0), 
-                                                          vec3(tempvector(prop_len+1),tempvector(prop_len+2),tempvector(prop_len+3)), 
-                                                          rect_tex),
-                                                  angle(i)), 
-                                     center + vel * shutteropen);
+      hitable *entry = new box(-vec3(tempvector(prop_len+1),tempvector(prop_len+2),tempvector(prop_len+3))/2, 
+                                vec3(tempvector(prop_len+1),tempvector(prop_len+2),tempvector(prop_len+3))/2, 
+                                rect_tex);
+      if(temprotvec(0) != 0) {
+        entry = new rotate_x(entry,temprotvec(0));
+      }
+      if(temprotvec(1) != 0) {
+        entry = new rotate_y(entry,temprotvec(1));
+      }
+      if(temprotvec(2) != 0) {
+        entry = new rotate_z(entry,temprotvec(2));
+      }
+      entry = new translate(entry,center + vel * shutteropen);
       if(isvolume(i)) {
         if(!isnoise(i)) {
           list[i] = new constant_medium(entry,voldensity(i), new constant_texture(vec3(tempfog(0),tempfog(1),tempfog(2))));
@@ -335,7 +377,7 @@ List generate_initial(int nx, int ny, int ns, float fov, bool ambient_light,
                       LogicalVector ischeckered, List checkercolors, 
                       NumericVector noise, LogicalVector isnoise,
                       NumericVector& noisephase, NumericVector& noiseintensity, List noisecolorlist,
-                      NumericVector& angle,
+                      List& angle,
                       LogicalVector& isimage, CharacterVector& filelocation,
                       LogicalVector& islight, NumericVector& lightintensity,
                       LogicalVector& isflipped, float focus_distance,

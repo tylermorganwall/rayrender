@@ -5,7 +5,7 @@
 \title{Sphere Object}
 \usage{
 sphere(x = 0, y = 0, z = 0, radius = 1, material = lambertian(),
-  angle = 0, velocity = c(0, 0, 0))
+  angle = c(0, 0, 0), velocity = c(0, 0, 0))
 }
 \arguments{
 \item{x}{Default `0`. x-coordinate of the center of the sphere.}

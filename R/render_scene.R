@@ -94,7 +94,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
   noisecolorlist = scene$noisecolor
   
   #rotation handler
-  rot_angle_vec = scene$angle
+  rot_angle_list = scene$angle
   
   #fog handler
   fog_bool = scene$fog
@@ -121,6 +121,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
   if(shutteropen == shutterclose) {
     movingvec = rep(FALSE,length(movingvec))
   }
+  
   assertthat::assert_that(all(c(length(xvec),length(yvec),length(zvec),length(rvec),length(typevec),length(proplist)) == length(xvec)))
   assertthat::assert_that(all(!is.null(typevec)))
   for(i in 1:length(xvec)) {
@@ -151,7 +152,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
                              ischeckered = checkeredbool, checkercolors = checkeredlist,
                              noise=noisevec,isnoise=noisebool,noisephase=noisephasevec, 
                              noiseintensity=noiseintvec, noisecolorlist = noisecolorlist,
-                             angle = rot_angle_vec, isimage = image_tex_bool, filelocation = temp_file_names,
+                             angle = rot_angle_list, isimage = image_tex_bool, filelocation = temp_file_names,
                              islight = light_bool, lightintensity = light_prop_vec,isflipped = flip_vec,
                              focus_distance=focal_distance,
                              isvolume=fog_bool, fogcolor = fog_color, voldensity = fog_vec , parallel=parallel) 

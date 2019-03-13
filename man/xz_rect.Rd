@@ -5,7 +5,7 @@
 \title{Rectangular XZ Plane Object}
 \usage{
 xz_rect(x = 0, xwidth = 1, z = 0, zwidth = 1, y = 0,
-  material = lambertian(), angle = 0, flipped = FALSE)
+  material = lambertian(), angle = c(0, 0, 0), flipped = FALSE)
 }
 \arguments{
 \item{x}{Default `0`. x-coordinate of the center of the rectangle.}
@@ -31,5 +31,15 @@ Single row of a tibble describing the sphere in the scene.
 Rectangular XZ Plane Object
 }
 \examples{
-dielectric(x=0,y=1,z=0,radius=1, refraction = 2)
+#Building the Cornell Box out of rectangles:
+scene = yz_rect(555/2,555,555/2,555,555,material = lambertian(color="#1f7326"),flipped = TRUE) \%>\%
+  add_object(yz_rect(555/2,555,555/2,555,0, material=lambertian(color="#a60d0d"))) \%>\% 
+  add_object(xz_rect(555/2,443,555/2,432,554,material=lambertian(color="white",lightintensity=5))) \%>\%
+  add_object(xz_rect(555/2,555,555/2,555,555,material=lambertian(color="#bababa"),flipped = TRUE)) \%>\%
+  add_object(xz_rect(555/2,555,555/2,555,0,material=lambertian(color="#bababa"))) \%>\%
+  add_object(xy_rect(555/2,555,555/2,555,555,material=lambertian(color = "#bababa"),flipped = TRUE))
+
+render_scene(scene, height=500, width=500, 
+  lookfrom=c(278,278,-800),lookat = c(278,278,0), 
+  aperture=0, fov=40,samples=40, ambient_light = FALSE, parallel=TRUE)
 }
