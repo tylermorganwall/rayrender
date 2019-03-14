@@ -13,7 +13,7 @@ public:
   vec3 local(float a, float b, float c) const {
     return(a*u() + b*v() + c*w());
   }
-  vec3 local(const vec3& a) {
+  vec3 local(const vec3& a) const {
     return(a.x()*u() + a.y()*v() + a.z() * w());
   }
   void build_from_w(const vec3&);
