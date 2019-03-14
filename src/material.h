@@ -71,7 +71,7 @@ class lambertian : public material {
       }
       return(cosine/M_PI);
     }
-    virtual bool scatter(const ray& r_in, const hit_record& rec, vec3& alb, ray& scattered, float& pdf) const {
+    bool scatter(const ray& r_in, const hit_record& rec, vec3& alb, ray& scattered, float& pdf) const {
       onb uvw;
       uvw.build_from_w(rec.normal);
       vec3 direction = uvw.local(random_cosine_direction());

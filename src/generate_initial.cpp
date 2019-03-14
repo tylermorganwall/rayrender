@@ -15,8 +15,7 @@
 #include <RcppParallel.h>
 using namespace Rcpp;
 
-vec3 color(const ray& r, hitable *world, int depth, 
-           const vec3& backgroundhigh, const vec3& backgroundlow) {
+vec3 color(const ray& r, hitable *world, int depth) {
   hit_record rec;
   if(world->hit(r, 0.001, FLT_MAX, rec)) {
     ray scattered;
@@ -24,7 +23,7 @@ vec3 color(const ray& r, hitable *world, int depth,
     vec3 emitted = rec.mat_ptr->emitted(rec.u,rec.v,rec.p);
     float pdf;
     if(depth < 50 && rec.mat_ptr->scatter(r, rec, albedo, scattered, pdf)) {
-      return(emitted + albedo * color(scattered, world, depth + 1, backgroundhigh, backgroundlow));
+      return(emitted + albedo * color(scattered, world, depth + 1));
     } else {
       return(emitted);
     }
@@ -73,7 +72,7 @@ struct Colorworker : public RcppParallel::Worker {
           if(ambient_light) {
             col += color_amb(r, world, 0, backgroundhigh, backgroundlow);
           } else {
-            col += color(r, world, 0, backgroundhigh, backgroundlow);
+            col += color(r, world, 0);
           }
         }
         col /= float(ns);
@@ -422,7 +421,7 @@ List generate_initial(int nx, int ny, int ns, float fov, bool ambient_light,
           if(ambient_light) {
             col += color_amb(r, world, 0, backgroundhigh, backgroundlow);
           } else {
-            col += color(r, world, 0, backgroundhigh, backgroundlow);
+            col += color(r, world, 0);
           }
         }
         col /= float(ns);
