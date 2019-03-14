@@ -131,26 +131,27 @@ hitable *build_scene(IntegerVector& type,
       material *sphere_tex;
       if(type(i) == 1) {
         if(isimage(i)) {
-          int nx, ny, nn;
-          unsigned char *tex_data = stbi_load(filelocation(i), &nx, &ny, &nn, 0);
-          sphere_tex = new lambertian(new image_texture(tex_data,nx,ny));
+          // int nx, ny, nn;
+          // unsigned char *tex_data = stbi_load(filelocation(i), &nx, &ny, &nn, 0);
+          // sphere_tex = new lambertian(new image_texture(tex_data,nx,ny));
         } else if (islight(i)) {
           sphere_tex = new diffuse_light(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))*lightintensity(i)) );
         } else if (isnoise(i)) {
-          sphere_tex = new lambertian(new noise_texture(noise(i),vec3(tempvector(0),tempvector(1),tempvector(2)), 
-                                                        vec3(tempnoisecolor(0),tempnoisecolor(1),tempnoisecolor(2)),
-                                                        noisephase(i), noiseintensity(i)));
+          // sphere_tex = new lambertian(new noise_texture(noise(i),vec3(tempvector(0),tempvector(1),tempvector(2)), 
+          //                                               vec3(tempnoisecolor(0),tempnoisecolor(1),tempnoisecolor(2)),
+          //                                               noisephase(i), noiseintensity(i)));
         } else if (ischeckered(i)) {
-          sphere_tex = new lambertian(new checker_texture(new constant_texture(vec3(tempchecker(0),tempchecker(1),tempchecker(2))),
-                                                        new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))),tempchecker(3))); 
+          // sphere_tex = new lambertian(new checker_texture(new constant_texture(vec3(tempchecker(0),tempchecker(1),tempchecker(2))),
+          //                                               new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))),tempchecker(3))); 
         } else {
           sphere_tex = new lambertian(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))) );
         }
-      } else if (type(i) == 2) {
-        sphere_tex = new metal(vec3(tempvector(0),tempvector(1),tempvector(2)),tempvector(3));
-      } else {
-        sphere_tex = new dielectric(vec3(tempvector(0),tempvector(1),tempvector(2)),tempvector(3));
-      }
+      } 
+      // else if (type(i) == 2) {
+      //   sphere_tex = new metal(vec3(tempvector(0),tempvector(1),tempvector(2)),tempvector(3));
+      // } else {
+      //   sphere_tex = new dielectric(vec3(tempvector(0),tempvector(1),tempvector(2)),tempvector(3));
+      // }
       hitable *entry = new sphere(vec3(0,0,0), radius(i), sphere_tex);
       if(temprotvec(0) != 0) {
         entry = new rotate_x(entry,temprotvec(0));
@@ -177,28 +178,29 @@ hitable *build_scene(IntegerVector& type,
       material *rect_tex;
       if(type(i) == 1) {
         if(isimage(i)) {
-          int nx, ny, nn;
-          unsigned char *tex_data = stbi_load(filelocation(i), &nx, &ny, &nn, 0);
-          rect_tex = new lambertian(new image_texture(tex_data,nx,ny));
+          // int nx, ny, nn;
+          // unsigned char *tex_data = stbi_load(filelocation(i), &nx, &ny, &nn, 0);
+          // rect_tex = new lambertian(new image_texture(tex_data,nx,ny));
         } else if (islight(i)) {
           rect_tex = new diffuse_light(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))*lightintensity(i)) );
         } else if (isnoise(i)) {
-          rect_tex = new lambertian(new noise_texture(noise(i),vec3(tempvector(0),tempvector(1),tempvector(2)), 
-                                                        vec3(tempnoisecolor(0),tempnoisecolor(1),tempnoisecolor(2)),
-                                                        noisephase(i), noiseintensity(i)));
+          // rect_tex = new lambertian(new noise_texture(noise(i),vec3(tempvector(0),tempvector(1),tempvector(2)), 
+          //                                               vec3(tempnoisecolor(0),tempnoisecolor(1),tempnoisecolor(2)),
+          //                                               noisephase(i), noiseintensity(i)));
         } else if (ischeckered(i)) {
-          rect_tex = new lambertian(new checker_texture(new constant_texture(vec3(tempchecker(0),tempchecker(1),tempchecker(2))),
-                                                          new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))),tempchecker(3))); 
+          // rect_tex = new lambertian(new checker_texture(new constant_texture(vec3(tempchecker(0),tempchecker(1),tempchecker(2))),
+          //                                                 new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))),tempchecker(3))); 
         } else {
           rect_tex = new lambertian(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))) );
         }
-      } else if (type(i) == 2) {
-        rect_tex = new metal(vec3(tempvector(0),tempvector(1),tempvector(2)),tempvector(3));
-        prop_len = 3;
-      } else {
-        rect_tex = new dielectric(vec3(tempvector(0),tempvector(1),tempvector(2)),tempvector(3));
-        prop_len = 3;
-      }
+      } 
+      // else if (type(i) == 2) {
+      //   rect_tex = new metal(vec3(tempvector(0),tempvector(1),tempvector(2)),tempvector(3));
+      //   prop_len = 3;
+      // } else {
+      //   rect_tex = new dielectric(vec3(tempvector(0),tempvector(1),tempvector(2)),tempvector(3));
+      //   prop_len = 3;
+      // }
       hitable *entry = new xy_rect(-tempvector(prop_len+2)/2,tempvector(prop_len+2)/2,
                                                               -tempvector(prop_len+4)/2,tempvector(prop_len+4)/2,
                                                               0, rect_tex);
@@ -221,28 +223,29 @@ hitable *build_scene(IntegerVector& type,
       material *rect_tex;
       if(type(i) == 1) {
         if(isimage(i)) {
-          int nx, ny, nn;
-          unsigned char *tex_data = stbi_load(filelocation(i), &nx, &ny, &nn, 0);
-          rect_tex = new lambertian(new image_texture(tex_data,nx,ny));
+          // int nx, ny, nn;
+          // unsigned char *tex_data = stbi_load(filelocation(i), &nx, &ny, &nn, 0);
+          // rect_tex = new lambertian(new image_texture(tex_data,nx,ny));
         } else if (islight(i)) {
           rect_tex = new diffuse_light(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))*lightintensity(i)) );
         } else if (isnoise(i)) {
-          rect_tex = new lambertian(new noise_texture(noise(i),vec3(tempvector(0),tempvector(1),tempvector(2)), 
-                                                      vec3(tempnoisecolor(0),tempnoisecolor(1),tempnoisecolor(2)),
-                                                      noisephase(i), noiseintensity(i)));
+          // rect_tex = new lambertian(new noise_texture(noise(i),vec3(tempvector(0),tempvector(1),tempvector(2)), 
+          //                                             vec3(tempnoisecolor(0),tempnoisecolor(1),tempnoisecolor(2)),
+          //                                             noisephase(i), noiseintensity(i)));
         } else if (ischeckered(i)) {
-          rect_tex = new lambertian(new checker_texture(new constant_texture(vec3(tempchecker(0),tempchecker(1),tempchecker(2))),
-                                                        new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))),tempchecker(3))); 
+          // rect_tex = new lambertian(new checker_texture(new constant_texture(vec3(tempchecker(0),tempchecker(1),tempchecker(2))),
+          //                                               new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))),tempchecker(3))); 
         } else {
           rect_tex = new lambertian(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))) );
         }
-      } else if (type(i) == 2) {
-        rect_tex = new metal(vec3(tempvector(0),tempvector(1),tempvector(2)),tempvector(3));
-        prop_len = 3;
-      } else {
-        rect_tex = new dielectric(vec3(tempvector(0),tempvector(1),tempvector(2)),tempvector(3));
-        prop_len = 3;
-      }
+      } 
+      // else if (type(i) == 2) {
+      //   rect_tex = new metal(vec3(tempvector(0),tempvector(1),tempvector(2)),tempvector(3));
+      //   prop_len = 3;
+      // } else {
+      //   rect_tex = new dielectric(vec3(tempvector(0),tempvector(1),tempvector(2)),tempvector(3));
+      //   prop_len = 3;
+      // }
       hitable *entry = new xz_rect(-tempvector(prop_len+2)/2,tempvector(prop_len+2)/2,
                                    -tempvector(prop_len+4)/2,tempvector(prop_len+4)/2,
                                    0, rect_tex);
@@ -265,28 +268,29 @@ hitable *build_scene(IntegerVector& type,
       material *rect_tex;
       if(type(i) == 1) {
         if(isimage(i)) {
-          int nx, ny, nn;
-          unsigned char *tex_data = stbi_load(filelocation(i), &nx, &ny, &nn, 0);
-          rect_tex = new lambertian(new image_texture(tex_data,nx,ny));
+          // int nx, ny, nn;
+          // unsigned char *tex_data = stbi_load(filelocation(i), &nx, &ny, &nn, 0);
+          // rect_tex = new lambertian(new image_texture(tex_data,nx,ny));
         } else if (islight(i)) {
           rect_tex = new diffuse_light(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))*lightintensity(i)) );
         } else if (isnoise(i)) {
-          rect_tex = new lambertian(new noise_texture(noise(i),vec3(tempvector(0),tempvector(1),tempvector(2)), 
-                                                      vec3(tempnoisecolor(0),tempnoisecolor(1),tempnoisecolor(2)),
-                                                      noisephase(i), noiseintensity(i)));
+          // rect_tex = new lambertian(new noise_texture(noise(i),vec3(tempvector(0),tempvector(1),tempvector(2)), 
+          //                                             vec3(tempnoisecolor(0),tempnoisecolor(1),tempnoisecolor(2)),
+          //                                             noisephase(i), noiseintensity(i)));
         } else if (ischeckered(i)) {
-          rect_tex = new lambertian(new checker_texture(new constant_texture(vec3(tempchecker(0),tempchecker(1),tempchecker(2))),
-                                                        new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))),tempchecker(3))); 
+          // rect_tex = new lambertian(new checker_texture(new constant_texture(vec3(tempchecker(0),tempchecker(1),tempchecker(2))),
+          //                                               new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))),tempchecker(3))); 
         } else {
           rect_tex = new lambertian(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))) );
         }
-      } else if (type(i) == 2) {
-        rect_tex = new metal(vec3(tempvector(0),tempvector(1),tempvector(2)),tempvector(3));
-        prop_len = 3;
-      } else {
-        rect_tex = new dielectric(vec3(tempvector(0),tempvector(1),tempvector(2)),tempvector(3));
-        prop_len = 3;
-      }
+      } 
+      // else if (type(i) == 2) {
+      //   rect_tex = new metal(vec3(tempvector(0),tempvector(1),tempvector(2)),tempvector(3));
+      //   prop_len = 3;
+      // } else {
+      //   rect_tex = new dielectric(vec3(tempvector(0),tempvector(1),tempvector(2)),tempvector(3));
+      //   prop_len = 3;
+      // }
       hitable *entry = new yz_rect(-tempvector(prop_len+2)/2,tempvector(prop_len+2)/2,
                                    -tempvector(prop_len+4)/2,tempvector(prop_len+4)/2,
                                    0, rect_tex);
@@ -309,29 +313,30 @@ hitable *build_scene(IntegerVector& type,
       material *rect_tex;
       if(type(i) == 1) {
         if(isimage(i)) {
-          int nx, ny, nn;
-          unsigned char *tex_data = stbi_load(filelocation(i), &nx, &ny, &nn, 0);
-          rect_tex = new lambertian(new image_texture(tex_data,nx,ny));
+          // int nx, ny, nn;
+          // unsigned char *tex_data = stbi_load(filelocation(i), &nx, &ny, &nn, 0);
+          // rect_tex = new lambertian(new image_texture(tex_data,nx,ny));
         } else if (islight(i)) {
           rect_tex = new diffuse_light(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))*lightintensity(i)) );
         } else if (isnoise(i)) {
-          rect_tex = new lambertian(new noise_texture(noise(i),
-                                                      vec3(tempvector(0),tempvector(1),tempvector(2)), 
-                                                      vec3(tempnoisecolor(0),tempnoisecolor(1),tempnoisecolor(2)),
-                                                      noisephase(i), noiseintensity(i)));
+          // rect_tex = new lambertian(new noise_texture(noise(i),
+          //                                             vec3(tempvector(0),tempvector(1),tempvector(2)), 
+          //                                             vec3(tempnoisecolor(0),tempnoisecolor(1),tempnoisecolor(2)),
+          //                                             noisephase(i), noiseintensity(i)));
         } else if (ischeckered(i)) {
-          rect_tex = new lambertian(new checker_texture(new constant_texture(vec3(tempchecker(0),tempchecker(1),tempchecker(2))),
-                                          new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))),tempchecker(3))); 
+          // rect_tex = new lambertian(new checker_texture(new constant_texture(vec3(tempchecker(0),tempchecker(1),tempchecker(2))),
+          //                                 new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))),tempchecker(3))); 
         } else {
           rect_tex = new lambertian(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))) );
         }
-      } else if (type(i) == 2) {
-        rect_tex = new metal(vec3(tempvector(0),tempvector(1),tempvector(2)),tempvector(3));
-        prop_len = 3;
-      } else {
-        rect_tex = new dielectric(vec3(tempvector(0),tempvector(1),tempvector(2)),tempvector(3));
-        prop_len = 3;
       }
+      // else if (type(i) == 2) {
+      //   rect_tex = new metal(vec3(tempvector(0),tempvector(1),tempvector(2)),tempvector(3));
+      //   prop_len = 3;
+      // } else {
+      //   rect_tex = new dielectric(vec3(tempvector(0),tempvector(1),tempvector(2)),tempvector(3));
+      //   prop_len = 3;
+      // }
       hitable *entry = new box(-vec3(tempvector(prop_len+1),tempvector(prop_len+2),tempvector(prop_len+3))/2, 
                                 vec3(tempvector(prop_len+1),tempvector(prop_len+2),tempvector(prop_len+3))/2, 
                                 rect_tex);
