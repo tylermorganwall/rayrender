@@ -20,10 +20,11 @@ vec3 color(const ray& r, hitable *world, int depth,
   hit_record rec;
   if(world->hit(r, 0.001, FLT_MAX, rec)) {
     ray scattered;
-    vec3 attenuation;
+    vec3 albedo;
     vec3 emitted = rec.mat_ptr->emitted(rec.u,rec.v,rec.p);
-    if(depth < 50 && rec.mat_ptr->scatter(r, rec, attenuation, scattered)) {
-      return(emitted + attenuation * color(scattered, world, depth + 1, backgroundhigh, backgroundlow));
+    float pdf;
+    if(depth < 50 && rec.mat_ptr->scatter(r, rec, albedo, scattered, pdf)) {
+      return(emitted + albedo * color(scattered, world, depth + 1, backgroundhigh, backgroundlow));
     } else {
       return(emitted);
     }
@@ -37,10 +38,11 @@ vec3 color_amb(const ray& r, hitable *world, int depth,
   hit_record rec;
   if(world->hit(r, 0.001, FLT_MAX, rec)) {
     ray scattered;
-    vec3 attenuation;
+    vec3 albedo;
     vec3 emitted = rec.mat_ptr->emitted(rec.u,rec.v,rec.p);
-    if(depth < 50 && rec.mat_ptr->scatter(r, rec, attenuation, scattered)) {
-      return(emitted + attenuation * color_amb(scattered, world, depth + 1, backgroundhigh, backgroundlow));
+    float pdf;
+    if(depth < 50 && rec.mat_ptr->scatter(r, rec, albedo, scattered, pdf)) {
+      return(emitted + albedo * color_amb(scattered, world, depth + 1, backgroundhigh, backgroundlow));
     } else {
       vec3 unit_direction = unit_vector(r.direction());
       float t = 0.5 * (unit_direction.y() + 1.0);

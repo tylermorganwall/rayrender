@@ -3,8 +3,20 @@
 
 #include "ray.h"
 #include "hitable.h"
+#include "onbh.h"
 
 struct hit_record;
+
+inline vec3 random_cosine_direction() {
+  float r1 = drand48();
+  float r2 = drand48();
+  float z = sqrt(1-r2);
+  float phi = 2 * M_PI *r1;
+  float x = cos(phi) * 2 * sqrt(r2);
+  float y = sin(phi) * 2 * sqrt(r2);
+  return(vec3(x,y,z));
+}
+
 
 vec3 random_in_unit_sphere() {
   vec3 p;
@@ -38,7 +50,12 @@ bool refract(const vec3& v, const vec3& n, float ni_over_nt, vec3& refracted) {
 
 class material {
   public:
-    virtual bool scatter(const ray& r_in, const hit_record& rec, vec3& attenuation, ray& scattered) const = 0;
+    virtual bool scatter(const ray& r_in, const hit_record& rec, vec3& attenuation, ray& scattered, float &pdf) const {
+      return(false);
+    };
+    virtual float scattering_pdf(const ray& r_in, const hit_record& rec, ray& scattered) const {
+      return(false);
+    }
     virtual vec3 emitted(float u, float v, const vec3& p) const {
       return(vec3(0,0,0));
     }
@@ -47,10 +64,20 @@ class material {
 class lambertian : public material {
   public: 
     lambertian(texture *a) : albedo(a) {}
-    virtual bool scatter(const ray& r_in, const hit_record& rec, vec3& attenuation, ray& scattered) const {
-      vec3 target = rec.p + rec.normal + random_in_unit_sphere();
-      scattered = ray(rec.p, target - rec.p, r_in.time());
-      attenuation = albedo->value(rec.u,rec.v,rec.p);
+    float scattering_pdf(const ray& r_in, const hit_record& rec, const ray& scattered) const {
+      float cosine = dot(rec.normal, unit_vector(scattered.direction()));
+      if(cosine < 0) {
+        cosine = 0;
+      }
+      return(cosine/M_PI);
+    }
+    virtual bool scatter(const ray& r_in, const hit_record& rec, vec3& alb, ray& scattered, float& pdf) const {
+      onb uvw;
+      uvw.build_from_w(rec.normal);
+      vec3 direction = uvw.local(random_cosine_direction());
+      scattered = ray(rec.p, unit_vector(direction), r_in.time());
+      alb = albedo->value(rec.u,rec.v,rec.p);
+      pdf = dot(uvw.w(), scattered.direction()) / M_PI;
       return(true);
     }
 
