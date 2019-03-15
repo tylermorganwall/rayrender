@@ -27,6 +27,21 @@ public:
     box = aabb(vec3(x0,k-0.0001,z0), vec3(x1,k+0.0001,z1));
     return(true);
   }
+  virtual float pdf_value(const vec3& o, const vec3& v) const {
+    hit_record rec;
+    if(this->hit(ray(o,v), 0.001, FLT_MAX, rec)) {
+      float area = (x1-x0)*(z1-z0);
+      float distance_squared = rec.t * rec.t * v.squared_length();
+      float cosine = fabs(dot(v,rec.normal)/v.length());
+      return(distance_squared / (cosine * area));
+    } else {
+      return(0);
+    }
+  }
+  virtual vec3 random(const vec3& o) const {
+    vec3 random_point = vec3(x0 + drand48() * (x1 - x0), k, z0 + drand48() * (z1-z0));
+    return(random_point-o);
+  }
   float x0, x1, z0, z1, k;
   material *mp;
 };

@@ -4,18 +4,9 @@
 #include "ray.h"
 #include "hitable.h"
 #include "onbh.h"
+#include "pdf.h"
 
 struct hit_record;
-
-inline vec3 random_cosine_direction() {
-  float r1 = drand48();
-  float r2 = drand48();
-  float z = sqrt(1-r2);
-  float phi = 2 * M_PI *r1;
-  float x = cos(phi) * 2 * sqrt(r2);
-  float y = sin(phi) * 2 * sqrt(r2);
-  return(vec3(x,y,z));
-}
 
 
 vec3 random_in_unit_sphere() {
@@ -53,10 +44,10 @@ class material {
     virtual bool scatter(const ray& r_in, const hit_record& rec, vec3& attenuation, ray& scattered, float &pdf) const {
       return(false);
     };
-    virtual float scattering_pdf(const ray& r_in, const hit_record& rec, ray& scattered) const {
+    virtual float scattering_pdf(const ray& r_in, const hit_record& rec, const ray& scattered) const {
       return(false);
     }
-    virtual vec3 emitted(float u, float v, const vec3& p) const {
+    virtual vec3 emitted(const ray& r_in, const hit_record& rec, float u, float v, const vec3& p) const {
       return(vec3(0,0,0));
     }
 };
@@ -139,8 +130,12 @@ public:
   virtual bool scatter(const ray& r_in, const hit_record& rec, vec3& attenuation, ray& scattered) const {
     return(false);
   }
-  virtual vec3 emitted(float u, float v, const vec3& p) const {
-    return(emit->value(u,v,p));
+  virtual vec3 emitted(const ray& r_in, const hit_record& rec, float u, float v, const vec3& p) const {
+    if(dot(rec.normal, r_in.direction()) < 0.0) {
+      return(emit->value(u,v,p));
+    } else {
+      return(vec3(0,0,0));
+    }
   }
   texture *emit;
 };

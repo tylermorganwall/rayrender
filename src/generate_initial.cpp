@@ -12,6 +12,7 @@
 #include "xyrect.h"
 #include "box.h"
 #include "constant.h"
+#include "pdf.h"
 #include <RcppParallel.h>
 using namespace Rcpp;
 
@@ -20,10 +21,16 @@ vec3 color(const ray& r, hitable *world, int depth) {
   if(world->hit(r, 0.001, FLT_MAX, rec)) {
     ray scattered;
     vec3 albedo;
-    vec3 emitted = rec.mat_ptr->emitted(rec.u,rec.v,rec.p);
-    float pdf;
-    if(depth < 50 && rec.mat_ptr->scatter(r, rec, albedo, scattered, pdf)) {
-      return(emitted + albedo * color(scattered, world, depth + 1));
+    vec3 emitted = rec.mat_ptr->emitted(r, rec, rec.u,rec.v,rec.p);
+    float pdf_val;
+    if(depth < 50 && rec.mat_ptr->scatter(r, rec, albedo, scattered, pdf_val)) {
+      hitable *light_shape = new xz_rect(213,343,227,332,554,0);
+      hitable_pdf p0(light_shape, rec.p);
+      cosine_pdf p1(rec.normal);
+      mixture_pdf p(&p0, &p1);
+      scattered = ray(rec.p, p.generate(), r.time());
+      pdf_val = p.value(scattered.direction());
+      return(emitted + albedo * rec.mat_ptr->scattering_pdf(r, rec, scattered) *  color(scattered, world, depth + 1) / pdf_val);
     } else {
       return(emitted);
     }
@@ -38,10 +45,15 @@ vec3 color_amb(const ray& r, hitable *world, int depth,
   if(world->hit(r, 0.001, FLT_MAX, rec)) {
     ray scattered;
     vec3 albedo;
-    vec3 emitted = rec.mat_ptr->emitted(rec.u,rec.v,rec.p);
-    float pdf;
-    if(depth < 50 && rec.mat_ptr->scatter(r, rec, albedo, scattered, pdf)) {
-      return(emitted + albedo * color_amb(scattered, world, depth + 1, backgroundhigh, backgroundlow));
+    vec3 emitted = rec.mat_ptr->emitted(r, rec,rec.u,rec.v,rec.p);
+    float pdf_val;
+    if(depth < 50 && rec.mat_ptr->scatter(r, rec, albedo, scattered, pdf_val)) {
+      cosine_pdf p(rec.normal);
+      scattered = ray(rec.p, p.generate(), r.time());
+      pdf_val = p.value(scattered.direction());
+      return(emitted + albedo * 
+             rec.mat_ptr->scattering_pdf(r, rec, scattered) * 
+             color_amb(scattered, world, depth + 1, backgroundhigh, backgroundlow) / pdf_val);
     } else {
       vec3 unit_direction = unit_vector(r.direction());
       float t = 0.5 * (unit_direction.y() + 1.0);
