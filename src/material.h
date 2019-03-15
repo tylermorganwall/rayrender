@@ -39,9 +39,16 @@ bool refract(const vec3& v, const vec3& n, float ni_over_nt, vec3& refracted) {
   }
 }
 
+struct scatter_record {
+  ray specular_ray;
+  bool is_specular;
+  vec3 attenuation;
+  pdf *pdf_ptr;
+};
+
 class material {
   public:
-    virtual bool scatter(const ray& r_in, const hit_record& rec, vec3& attenuation, ray& scattered, float &pdf) const {
+    virtual bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec) const {
       return(false);
     };
     virtual float scattering_pdf(const ray& r_in, const hit_record& rec, const ray& scattered) const {
@@ -62,31 +69,30 @@ class lambertian : public material {
       }
       return(cosine/M_PI);
     }
-    bool scatter(const ray& r_in, const hit_record& rec, vec3& alb, ray& scattered, float& pdf) const {
-      onb uvw;
-      uvw.build_from_w(rec.normal);
-      vec3 direction = uvw.local(random_cosine_direction());
-      scattered = ray(rec.p, unit_vector(direction), r_in.time());
-      alb = albedo->value(rec.u,rec.v,rec.p);
-      pdf = dot(uvw.w(), scattered.direction()) / M_PI;
+    bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec) const {
+      srec.is_specular = false;
+      srec.attenuation = albedo->value(hrec.u, hrec.v, hrec.p);
+      srec.pdf_ptr = new cosine_pdf(hrec.normal);
       return(true);
     }
-
+    
     texture *albedo;
 };
 
-// class metal : public material {
-//   public: 
-//     metal(const vec3& a, float f) : albedo(a) { if (f < 1) fuzz = f; else fuzz = 1;}
-//     virtual bool scatter(const ray& r_in, const hit_record& rec, vec3& attenuation, ray& scattered) const {
-//       vec3 reflected = reflect(unit_vector(r_in.direction()),rec.normal);
-//       scattered = ray(rec.p, reflected + fuzz * random_in_unit_sphere(), r_in.time());
-//       attenuation = albedo;
-//       return(dot(scattered.direction(), rec.normal) > 0);
-//     }
-//     vec3 albedo;
-//     float fuzz;
-// };
+class metal : public material {
+  public:
+    metal(const vec3& a, float f) : albedo(a) { if (f < 1) fuzz = f; else fuzz = 1;}
+    virtual bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec) const {
+      vec3 reflected = reflect(unit_vector(r_in.direction()),hrec.normal);
+      srec.specular_ray = ray(hrec.p, reflected + fuzz * random_in_unit_sphere(), r_in.time());
+      srec.attenuation = albedo;
+      srec.is_specular = true;
+      srec.pdf_ptr = 0;
+      return(true);
+    }
+    vec3 albedo;
+    float fuzz;
+};
 // 
 // class dielectric : public material {
 //   public:
