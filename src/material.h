@@ -43,7 +43,8 @@ struct scatter_record {
   ray specular_ray;
   bool is_specular;
   vec3 attenuation;
-  pdf *pdf_ptr;
+  pdf *pdf_ptr = nullptr;
+  ~scatter_record() { if(pdf_ptr) delete pdf_ptr; }
 };
 
 class material {

@@ -16,6 +16,14 @@
 #include <RcppParallel.h>
 using namespace Rcpp;
 
+inline vec3 de_nan(const vec3& c) {
+  vec3 temp = c;
+  if(isnan(c[0])) temp.e[0] = 0;
+  if(isnan(c[1])) temp.e[1] = 0;
+  if(isnan(c[2])) temp.e[2] = 0;
+  return(temp);
+}
+
 vec3 color(const ray& r, hitable *world, hitable *hlist, int depth) {
   hit_record hrec;
   if(world->hit(r, 0.001, FLT_MAX, hrec)) {
@@ -86,9 +94,9 @@ struct Colorworker : public RcppParallel::Worker {
           float v = float(j + drand48()) / float(ny);
           ray r = cam.get_ray(u,v);
           if(ambient_light) {
-            col += color_amb(r, world, hlist, 0, backgroundhigh, backgroundlow);
+            col += de_nan(color_amb(r, world, hlist, 0, backgroundhigh, backgroundlow));
           } else {
-            col += color(r, world, hlist, 0);
+            col += de_nan(color(r, world, hlist, 0));
           }
         }
         col /= float(ns);
@@ -429,8 +437,10 @@ List generate_initial(int nx, int ny, int ns, float fov, bool ambient_light,
                                   isvolume, fogcolor, voldensity);
   hitable *light_shape = new xz_rect(213,343,227,332,554,0);
   hitable *glass_shape = new sphere(vec3(190,90,190),90,0);
+  // hitable *mirror_shape = new box(vec3(182.5,0,212.5),vec3(182.5+165,0+330,212.5+165),0);
   hitable *a[2];
   a[0] = light_shape;
+  // a[1] = mirror_shape;
   a[1] = glass_shape;
   hitable_list hlist(a,2);
   
@@ -444,9 +454,9 @@ List generate_initial(int nx, int ny, int ns, float fov, bool ambient_light,
           float v = float(j + drand48()) / float(ny);
           ray r = cam.get_ray(u,v);
           if(ambient_light) {
-            col += color_amb(r, world, &hlist, 0, backgroundhigh, backgroundlow);
+            col += de_nan(color_amb(r, world, &hlist, 0, backgroundhigh, backgroundlow));
           } else {
-            col += color(r, world, &hlist, 0);
+            col += de_nan(color(r, world, &hlist, 0));
           }
         }
         col /= float(ns);

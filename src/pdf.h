@@ -48,8 +48,8 @@ public:
   virtual vec3 generate() const {
     return(ptr->random(o)); 
   }
-  vec3 o;
   hitable *ptr;
+  vec3 o;
 };
 
 class mixture_pdf : public pdf {
