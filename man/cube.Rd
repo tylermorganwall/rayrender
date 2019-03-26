@@ -4,38 +4,50 @@
 \alias{cube}
 \title{Cube Object}
 \usage{
-cube(x = 0, xwidth = 1, y = 0, ywidth = 1, z = 0, zwidth = 1,
-  material = lambertian(), angle = c(0, 0, 0), velocity = c(0, 0, 0))
+cube(x = 0, y = 0, z = 0, width = 1, xwidth = 1, ywidth = 1,
+  zwidth = 1, material = lambertian(), angle = c(0, 0, 0),
+  order_rotation = c(1, 2, 3), velocity = c(0, 0, 0),
+  flipped = FALSE)
 }
 \arguments{
 \item{x}{Default `0`. x-coordinate of the center of the cube}
 
-\item{xwidth}{Default `1`. x-width of the cube.}
-
 \item{y}{Default `0`. y-coordinate of the center of the cube}
-
-\item{ywidth}{Default `1`. y-width of the cube.}
 
 \item{z}{Default `0`. z-coordinate of the center of the cube}
 
-\item{zwidth}{Default `1`. x-width of the cube.}
+\item{width}{Default `1`. Cube width.}
 
-\item{material}{Default `[lambertian()]`.The material, called from one of the material functions [lambertian()], [metal()], or [dielectric()].}
+\item{xwidth}{Default `1`. x-width of the cube. Overrides `width` argument for x-axis.}
+
+\item{ywidth}{Default `1`. y-width of the cube. Overrides `width` argument for y-axis.}
+
+\item{zwidth}{Default `1`. z-width of the cube. Overrides `width` argument for z-axis.}
+
+\item{material}{Default  \code{\link{lambertian}}.The material, called from one of the material 
+functions \code{\link{lambertian}}, \code{\link{metal}}, or \code{\link{dielectric}}.}
 
 \item{angle}{Default `0`. Angle of rotation around the y-axis.}
 
 \item{velocity}{Default `c(0,0,0)`. Velocity of the cube, used for motion blur.}
+
+\item{flipped}{Default `FALSE`. Whether to flip the normals.}
 }
 \value{
-Single row of a tibble describing the sphere in the scene.
+Single row of a tibble describing the cube in the scene.
 }
 \description{
 Cube Object
 }
 \examples{
-#create a single red metallic sphere
-metal(x=0,y=1,z=0,radius=1, color = "#ff0000")
+#Generate a cube in the cornell box.
+generate_cornell() \%>\%
+  add_object(cube(x=555/2,y=100,z=555/2,xwidth=200,ywidth=200,zwidth=200,angle=c(0,30,0))) \%>\%
+  render_scene(lookfrom = c(278,278,-800) ,lookat = c(278,278,0), fov = 40, ambient_light=FALSE)
 
-#create a single red brushed metallic sphere, using an RGB vector
-metal(x=0,y=1,z=0,radius=1, color = c(1,0,0),fuzz=0)
+#Generate a GOLD cube in the cornell box (it's GOLD!)
+generate_cornell() \%>\%
+  add_object(cube(x=555/2,y=100,z=555/2,xwidth=200,ywidth=200,zwidth=200,angle=c(0,30,0),
+                  material = metal(color="gold", fuzz=0.2))) \%>\%
+  render_scene(lookfrom = c(278,278,-800) ,lookat = c(278,278,0), fov = 40, ambient_light=FALSE)
 }

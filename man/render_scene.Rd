@@ -2,18 +2,17 @@
 % Please edit documentation in R/render_scene.R
 \name{render_scene}
 \alias{render_scene}
-\title{Title}
+\title{Render Scene}
 \usage{
 render_scene(scene, width = 400, height = 400, fov = 20,
-  samples = 100, ambient_light = TRUE, lookfrom = c(10, 1, 0),
+  samples = 100, ambient_light = FALSE, lookfrom = c(10, 1, 0),
   lookat = c(0, 0, 0), camera_up = c(0, 1, 0), aperture = 0.1,
   filename = NULL, backgroundhigh = "#80b4ff",
   backgroundlow = "#ffffff", shutteropen = 0, shutterclose = 1,
   focal_distance = NULL, parallel = FALSE)
 }
 \arguments{
-\item{scene}{Tibble of sphere locations and properties. Generate each row using one of the
-material functions: [lambertian()], [metal()], and [dielectric()].}
+\item{scene}{Tibble of object locations and properties.}
 
 \item{width}{Default `200`. Width of the render, in pixels.}
 
@@ -22,6 +21,10 @@ material functions: [lambertian()], [metal()], and [dielectric()].}
 \item{fov}{Default `20`. Field of view, in degrees.}
 
 \item{samples}{Default `100`. Number of samples for each pixel.}
+
+\item{ambient_light}{Default `FALSE`, unless there are no emitting objects in the scene. 
+If `TRUE`, the background will be a gradient varying from `backgroundhigh` directly up (+y) to 
+`backgroundlow` directly down (-y).}
 
 \item{lookfrom}{Default `c(10,1,0)`. Location of the camera.}
 
@@ -41,50 +44,53 @@ a hexadecimal code, or a numeric rgb vector listing three intensities between `0
 \item{shutteropen}{Default `0`. Time at which the shutter is open. Only affects moving objects.}
 
 \item{shutterclose}{Default `1`. Time at which the shutter is open. Only affects moving objects.}
+
+\item{focal_distance}{Default `NULL`, automatically set to the `lookfrom-lookat` distance unless
+otherwise specified.}
+
+\item{parallel}{Default `FALSE`. If `TRUE`, it will use all available cores to render the image
+(or the number specified in `options("cores")` if that option is not `NULL`).}
 }
 \value{
 Raytraced plot to current device, or an image saved to a file.
 }
 \description{
-Title
+Takes the scene description and renders an image, either to the device or to a filename.
 }
 \examples{
-#Start with the ground
-scene = generate_ground(depth=-0.5)
-render_scene(scene)
+#Generate a large checkered sphere as the ground
+scene = generate_ground(depth=-0.5,material=lambertian(color="white", checkercolor="darkgreen"))
+render_scene(scene,samples=200,parallel=TRUE)
 
 #Add a sphere to the center
-scene = add_object(scene, lambertian(x=0,y=0,z=0,radius=0.5,color=c(1,0,1)))
-render_scene(scene)
+scene = scene \%>\%
+  add_object(sphere(x=0,y=0,z=0,radius=0.5,material = lambertian(color=c(1,0,1))))
+render_scene(scene,fov=20,parallel=TRUE)
 
-#Add a metal ball (using hexcode color representation)
-scene = add_object(scene, metal(x=0,y=0,z=1,radius=0.5,color="#ffffff",fuzz=0))
-render_scene(scene)
+#Add a marbled cube 
+scene = scene \%>\%
+  add_object(cube(x=0,y=0,z=1.1,material = lambertian(noise=3)))
+render_scene(scene,fov=20)
 
-#Add a brushed metal ball 
-scene = add_object(scene, metal(x=0,y=1,z=0,radius=0.5,color=c(0.3,0.6,1),fuzz=0.25))
-render_scene(scene)
+#Add a metallic gold sphere
+scene = scene \%>\%
+  add_object(sphere(x=0,y=0,z=-1.1,radius=0.5,material = metal(color="gold",fuzz=0.1)))
+render_scene(scene,fov=20)
 
-#Add a dielectric (glass) ball
-scene = add_object(scene, dielectric(x=0,y=0,z=-1,radius=0.5,refraction=1.6))
-render_scene(scene)
+#Add a floating R plot using the iris dataset as a png onto a floating 2D rectangle
+tempfileplot = tempfile()
+png(filename=tempfileplot,height=400,width=800)
+plot(iris$Petal.Length,iris$Sepal.Width,col=iris$Species,pch=18,cex=4)
+dev.off()
 
-#Add a grid of glass balls in front
-glass_array_list = list() 
-
-yloc = seq(-0.33,+0.33,length.out=3)
-zloc = seq(-0.33,0.33,length.out=3)
-locations = expand.grid(y=yloc,z=zloc)
-for(i in 1:9) {
-  glass_array_list[[i]] = dielectric(x=1,y=locations$y[i],z=locations$z[i], radius=0.15)
-}
-glass_array = do.call(rbind,glass_array_list)
-
-scene = add_object(scene, glass_array)
-render_scene(scene)
+image_array = png::readPNG(tempfileplot)
+scene = scene \%>\%
+  add_object(yz_rect(x=0,y=1.1,z=0,zwidth=2,material = lambertian(image = image_array)))
+render_scene(scene,fov=20)
 
 #Move the camera
 render_scene(scene,lookfrom = c(7,1.5,10),lookat = c(0,0.5,0),fov=15)
+
 
 #Change the background gradient to a night time ambience
 render_scene(scene,lookfrom = c(7,1.5,10),lookat = c(0,0.5,0),fov=15,
@@ -92,5 +98,17 @@ render_scene(scene,lookfrom = c(7,1.5,10),lookat = c(0,0.5,0),fov=15,
                  
 #Increase the aperture to give more depth of field.
 render_scene(scene,lookfrom = c(7,1.5,10),lookat = c(0,0.5,0),fov=15,
-                 aperture = 1)
+                 aperture = 0.5)
+                 
+#Spin the camera around the scene, decreasing the number of samples to render faster. To make 
+#an animation, specify the a filename in `render_scene` for each frame.
+
+t=1:30
+xpos = 10 * sin(t*12*pi/180+pi/2)
+zpos = 10 * cos(t*12*pi/180+pi/2)
+par(mfrow=c(5,6))
+for(i in 1:30) {
+ render_scene(scene, samples=5,
+   lookfrom = c(xpos[i],1.5,zpos[i]),lookat = c(0,0.5,0))
+}
 }

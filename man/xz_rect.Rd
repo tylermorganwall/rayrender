@@ -5,41 +5,45 @@
 \title{Rectangular XZ Plane Object}
 \usage{
 xz_rect(x = 0, xwidth = 1, z = 0, zwidth = 1, y = 0,
-  material = lambertian(), angle = c(0, 0, 0), flipped = FALSE)
+  material = lambertian(), angle = c(0, 0, 0), order_rotation = c(1,
+  2, 3), flipped = FALSE)
 }
 \arguments{
 \item{x}{Default `0`. x-coordinate of the center of the rectangle.}
 
-\item{xwidth}{Default `1`. y-coordinate of the center of the rectangle.}
+\item{xwidth}{Default `1`. x-width of the rectangle.}
 
-\item{z}{Default `0`. x-coordinate of the center of the rectangle.}
+\item{z}{Default `0`. z-coordinate of the center of the rectangle.}
 
-\item{zwidth}{Default `1`. y-coordinate of the center of the rectangle.}
+\item{zwidth}{Default `1`. z-width of the rectangle.}
 
-\item{y}{Default `0`. z-coordinate of the center of the rectangle.}
+\item{y}{Default `0`. y-coordinate of the center of the rectangle.}
 
-\item{material}{Default [lambertian()].The material, called from one of the material functions [lambertian()], [metal()], or [dielectric()].}
+\item{material}{Default  \code{\link{lambertian}}.The material, called from one of the material 
+functions \code{\link{lambertian}}, \code{\link{metal}}, or \code{\link{dielectric}}.}
 
 \item{angle}{Default `0`. Angle of rotation around the y-axis.}
+
+\item{order_rotation}{Default `c(1,2,3)`. The order to apply the rotations, referring to "x", "y", and "z".}
 
 \item{flipped}{Default `FALSE`. Whether to flip the normals.}
 }
 \value{
-Single row of a tibble describing the sphere in the scene.
+Single row of a tibble describing the XZ plane in the scene.
 }
 \description{
 Rectangular XZ Plane Object
 }
 \examples{
-#Building the Cornell Box out of rectangles:
-scene = yz_rect(555/2,555,555/2,555,555,material = lambertian(color="#1f7326"),flipped = TRUE) \%>\%
-  add_object(yz_rect(555/2,555,555/2,555,0, material=lambertian(color="#a60d0d"))) \%>\% 
-  add_object(xz_rect(555/2,443,555/2,432,554,material=lambertian(color="white",lightintensity=5))) \%>\%
-  add_object(xz_rect(555/2,555,555/2,555,555,material=lambertian(color="#bababa"),flipped = TRUE)) \%>\%
-  add_object(xz_rect(555/2,555,555/2,555,0,material=lambertian(color="#bababa"))) \%>\%
-  add_object(xy_rect(555/2,555,555/2,555,555,material=lambertian(color = "#bababa"),flipped = TRUE))
+#Generate a purple rectangle in the cornell box.
+generate_cornell() \%>\%
+  add_object(xz_rect(x=555/2,y=100,z=555/2,xwidth=200,zwidth=200,
+             material = lambertian(color="purple"))) \%>\%
+  render_scene(lookfrom = c(278,278,-800) ,lookat = c(278,278,0), fov = 40, ambient_light=FALSE)
 
-render_scene(scene, height=500, width=500, 
-  lookfrom=c(278,278,-800),lookat = c(278,278,0), 
-  aperture=0, fov=40,samples=40, ambient_light = FALSE, parallel=TRUE)
+#Generate a GOLD plane in the cornell box (it's GOLD!)
+generate_cornell() \%>\%
+  add_object(xz_rect(x=555/2,y=100,z=555/2,xwidth=200,zwidth=200,angle=c(0,30,0),
+             material = metal(color="gold"))) \%>\%
+  render_scene(lookfrom = c(278,278,-800) ,lookat = c(278,278,0), fov = 40, ambient_light=FALSE)
 }

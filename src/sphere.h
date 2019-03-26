@@ -56,6 +56,17 @@ bool sphere::hit(const ray& r, float t_min, float t_max, hit_record& rec) const 
   return(false);
 }
 
+float sphere::pdf_value(const vec3& o, const vec3& v) const {
+  hit_record rec;
+  if(this->hit(ray(o,v), 0.001, FLT_MAX, rec)) {
+    float cos_theta_max = sqrt(1 - radius * radius/(center - o).squared_length());
+    float solid_angle = 2 * M_PI * (1-cos_theta_max);
+    return(1/solid_angle);
+  } else {
+    return(0);
+  }
+}
+
 vec3 sphere::random(const vec3& o) const {
   vec3 direction = center - o;
   float distance_squared = direction.squared_length();
@@ -67,17 +78,6 @@ vec3 sphere::random(const vec3& o) const {
 bool sphere::bounding_box(float t0, float t1, aabb& box) const {
   box = aabb(center - vec3(radius,radius,radius), center + vec3(radius,radius,radius));
   return(true);
-}
-
-float sphere::pdf_value(const vec3& o, const vec3& v) const {
-  hit_record rec;
-  if(this->hit(ray(o,v), 0.001, FLT_MAX, rec)) {
-    float cos_theta_max = sqrt(1 - radius * radius/(center - o).squared_length());
-    float solid_angle = 2 * M_PI * (1-cos_theta_max);
-    return(1/solid_angle);
-  } else {
-    return(0);
-  }
 }
 
 class moving_sphere: public hitable {

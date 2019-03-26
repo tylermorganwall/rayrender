@@ -23,7 +23,7 @@ public:
   checker_texture() {}
   checker_texture(texture *t0, texture *t1, float p) : even(t0), odd(t1), period(p) {}
   virtual vec3 value(float u, float v, const vec3& p) const {
-    float invperiod = 1/period;
+    float invperiod = 1.0/period;
     float sines  = sin(invperiod*p.x()*M_PI) * sin(invperiod*p.y()*M_PI) * sin(invperiod*p.z()*M_PI);
     if(sines < 0) {
       return(odd->value(u,v,p));

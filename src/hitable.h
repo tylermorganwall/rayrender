@@ -32,7 +32,7 @@ class hitable {
       return(0.0);
     }
     virtual vec3 random(const vec3& o) const {
-      return(vec3(1,0,0));
+      return(vec3(0,1,0));
     }
 };
 
@@ -50,6 +50,13 @@ public:
   virtual bool bounding_box(float t0, float t1, aabb& box) const {
     return(ptr->bounding_box(t0,t1,box));
   }
+  float pdf_value(const vec3& o, const vec3& v) const {
+    return(ptr->pdf_value(o,v));
+  }
+  vec3 random(const vec3& o) const {
+    return(ptr->random(o));
+  }
+  
   hitable *ptr;
 };
 
@@ -58,6 +65,12 @@ public:
   translate(hitable *p, const vec3& displacement) : ptr(p), offset(displacement) {}
   virtual bool hit(const ray& r, float t_min, float t_max, hit_record& rec) const;
   virtual bool bounding_box(float t0, float t1, aabb& box) const;
+  float pdf_value(const vec3& o, const vec3& v) const {
+    return(ptr->pdf_value(o-offset,v));
+  }
+  vec3 random(const vec3& o) const {
+    return(ptr->random(o-offset));
+  }
   hitable *ptr;
   vec3 offset;
 };
@@ -88,6 +101,12 @@ public:
   virtual bool bounding_box(float t0, float t1, aabb& box) const {
     box = bbox; 
     return(hasbox);
+  }
+  float pdf_value(const vec3& o, const vec3& v) const {
+    return(ptr->pdf_value(o,v));
+  }
+  vec3 random(const vec3& o) const {
+    return(ptr->random(o));
   }
   hitable *ptr;
   float sin_theta;
@@ -157,6 +176,12 @@ public:
     box = bbox; 
     return(hasbox);
   }
+  float pdf_value(const vec3& o, const vec3& v) const {
+    return(ptr->pdf_value(o,v));
+  }
+  vec3 random(const vec3& o) const {
+    return(ptr->random(o));
+  }
   hitable *ptr;
   float sin_theta;
   float cos_theta;
@@ -223,6 +248,12 @@ public:
   virtual bool bounding_box(float t0, float t1, aabb& box) const {
     box = bbox; 
     return(hasbox);
+  }
+  float pdf_value(const vec3& o, const vec3& v) const {
+    return(ptr->pdf_value(o,v));
+  }
+  vec3 random(const vec3& o) const {
+    return(ptr->random(o));
   }
   hitable *ptr;
   float sin_theta;

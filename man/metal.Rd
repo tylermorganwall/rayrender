@@ -2,26 +2,48 @@
 % Please edit documentation in R/materials.R
 \name{metal}
 \alias{metal}
-\title{Metal}
+\title{Metallic Material}
 \usage{
-metal(color = "#ffffff", fuzz = 0)
+metal(color = "#ffffff", fuzz = 0, implicit_sample = FALSE)
 }
 \arguments{
-\item{color}{Default `#ffffff`. The color of the sphere. Can be either
-a hexadecimal code, or a numeric rgb vector listing three intensities between `0` and `1`.}
+\item{color}{Default `white`. The color of the sphere. Can be either
+a hexadecimal code, R color string, or a numeric rgb vector listing three intensities between `0` and `1`.}
 
 \item{fuzz}{Default `0`. The roughness of the metallic surface. Maximum `1`.}
+
+\item{implicit_sample}{Default `FALSE`. If `TRUE`, the object will
+be sampled as part of the scattering probability density function.}
 }
 \value{
 Single row of a tibble describing the sphere in the scene.
 }
 \description{
-Metal
+Metallic Material
 }
 \examples{
-#create a single red metallic sphere
-metal(x=0,y=1,z=0,radius=1, color = "#ff0000")
+#Generate the cornell box with a checkered base
+scene = generate_cornell()
+render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=200,
+             aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 
-#create a single red brushed metallic sphere, using an RGB vector
-metal(x=0,y=1,z=0,radius=1, color = c(1,0,0),fuzz=0)
+#Add a single metal sphere to the center
+scene = scene \%>\%
+  add_object(sphere(x=555/2,y=555/2,z=555/2,radius=555/8,material=metal()))
+render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=200,
+             aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
+                          
+#Add a rotated shiny metal cube     
+scene = scene \%>\%
+  add_object(cube(x=380,y=150/2,z=200,xwidth=150,ywidth=150,zwidth=150,
+  material = metal(color="#8B4513"),angle=c(0,45,0)))
+render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=200,
+             aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
+             
+#Add a brushed metal cube (setting the fuzz variable)           
+scene = scene \%>\%
+  add_object(cube(x=150,y=150/2,z=300,xwidth=150,ywidth=150,zwidth=150,
+  material = metal(color="#FAFAD2",fuzz=0.1),angle=c(0,-30,0)))
+render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=200,
+             aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 }

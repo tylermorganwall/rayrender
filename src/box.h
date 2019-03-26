@@ -13,8 +13,14 @@ public:
     box = aabb(pmin, pmax);
     return(true);
   }
+  virtual float pdf_value(const vec3& o, const vec3& v) const {
+    return(list_ptr.pdf_value(o,v));
+  }
+  virtual vec3 random(const vec3& o) const {
+    return(list_ptr.random(o));
+  }
   vec3 pmin, pmax;
-  hitable *list_ptr;
+  hitable_list list_ptr;
 };
 
 box::box(const vec3& p0, const vec3& p1, material *ptr) {
@@ -27,11 +33,11 @@ box::box(const vec3& p0, const vec3& p1, material *ptr) {
   list[3] = new flip_normals(new xz_rect(p0.x(), p1.x(), p0.z(), p1.z(), p0.y(), ptr));
   list[4] = new yz_rect(p0.y(), p1.y(), p0.z(), p1.z(), p1.x(), ptr);
   list[5] = new flip_normals(new yz_rect(p0.y(), p1.y(), p0.z(), p1.z(), p0.x(), ptr));
-  list_ptr = new hitable_list(list,6);
+  list_ptr = hitable_list(list,6);
 }
 
 bool box::hit(const ray& r, float t_min, float t_max, hit_record& rec) const {
-  return(list_ptr->hit(r,t_min,t_max,rec));
+  return(list_ptr.hit(r,t_min,t_max,rec));
 }
 
 #endif

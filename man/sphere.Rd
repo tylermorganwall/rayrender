@@ -5,7 +5,8 @@
 \title{Sphere Object}
 \usage{
 sphere(x = 0, y = 0, z = 0, radius = 1, material = lambertian(),
-  angle = c(0, 0, 0), velocity = c(0, 0, 0))
+  angle = c(0, 0, 0), order_rotation = c(1, 2, 3), velocity = c(0, 0,
+  0), flipped = FALSE)
 }
 \arguments{
 \item{x}{Default `0`. x-coordinate of the center of the sphere.}
@@ -16,9 +17,12 @@ sphere(x = 0, y = 0, z = 0, radius = 1, material = lambertian(),
 
 \item{radius}{Default `1`. Radius of the sphere.}
 
-\item{material}{Default `[lambertian()]`.The material, called from one of the material functions [lambertian()], [metal()], or [dielectric()].}
+\item{material}{Default  \code{\link{lambertian}}.The material, called from one of the material 
+functions \code{\link{lambertian}}, \code{\link{metal}}, or \code{\link{dielectric}}.}
 
 \item{velocity}{Default `c(0,0,0)`. Velocity of the sphere, used for motion blur.}
+
+\item{flipped}{Default `FALSE`. Whether to flip the normals.}
 }
 \value{
 Single row of a tibble describing the sphere in the scene.
@@ -27,9 +31,19 @@ Single row of a tibble describing the sphere in the scene.
 Sphere Object
 }
 \examples{
-#create a single red metallic sphere
-metal(x=0,y=1,z=0,radius=1, color = "#ff0000")
+#Generate a sphere in the cornell box.
+generate_cornell() \%>\%
+  add_object(sphere(x=555/2,y=555/2,z=555/2,radius=100)) \%>\%
+  render_scene(lookfrom = c(278,278,-800) ,lookat = c(278,278,0), fov = 40, ambient_light=FALSE)
 
-#create a single red brushed metallic sphere, using an RGB vector
-metal(x=0,y=1,z=0,radius=1, color = c(1,0,0),fuzz=0)
+#Generate a GOLD sphere in the cornell box (it's GOLD!)
+generate_cornell() \%>\%
+  add_object(sphere(x=555/2,y=100,z=555/2,radius=100,material=metal(color="gold",fuzz=0.2))) \%>\%
+  render_scene(lookfrom = c(278,278,-800) ,lookat = c(278,278,0), fov = 40, ambient_light=FALSE)
+  
+#Add motion blur and show the sphere moving
+generate_cornell() \%>\%
+  add_object(sphere(x=555/2,y=100,z=555/2,radius=100,
+             material=metal(color="gold",fuzz=0.2),velocity=c(50,0,0))) \%>\%
+  render_scene(lookfrom = c(278,278,-800) ,lookat = c(278,278,0), fov = 40, ambient_light=FALSE)
 }

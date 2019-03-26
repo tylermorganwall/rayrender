@@ -16,11 +16,20 @@
 #include <RcppParallel.h>
 using namespace Rcpp;
 
+
 inline vec3 de_nan(const vec3& c) {
   vec3 temp = c;
   if(isnan(c[0])) temp.e[0] = 0;
   if(isnan(c[1])) temp.e[1] = 0;
   if(isnan(c[2])) temp.e[2] = 0;
+  return(temp);
+}
+
+inline vec3 clamp(const vec3& c, float clampval) {
+  vec3 temp = c;
+  if(c[0] > clampval) temp.e[0] = clampval;
+  if(c[1] > clampval) temp.e[1] = clampval;
+  if(c[2] > clampval) temp.e[2] = clampval;
   return(temp);
 }
 
@@ -34,8 +43,8 @@ vec3 color(const ray& r, hitable *world, hitable *hlist, int depth) {
       if(srec.is_specular) {
         return(srec.attenuation * color(srec.specular_ray, world, hlist, depth + 1));
       }
-      hitable_pdf plight(hlist, hrec.p);
-      mixture_pdf p(&plight, srec.pdf_ptr);
+      hitable_pdf p_imp(hlist, hrec.p);
+      mixture_pdf p(&p_imp, srec.pdf_ptr);
       ray scattered = ray(hrec.p, p.generate(), r.time());
       pdf_val = p.value(scattered.direction());
       return(emitted + srec.attenuation * hrec.mat_ptr->scattering_pdf(r, hrec, scattered) *  color(scattered, world, hlist, depth + 1) / pdf_val);
@@ -59,8 +68,8 @@ vec3 color_amb(const ray& r, hitable *world, hitable *hlist, int depth,
         return(srec.attenuation * 
                color_amb(srec.specular_ray, world, hlist, depth + 1, backgroundhigh,backgroundlow));
       }
-      hitable_pdf plight(hlist, hrec.p);
-      mixture_pdf p(&plight, srec.pdf_ptr);
+      hitable_pdf p_imp(hlist, hrec.p);
+      mixture_pdf p(&p_imp, srec.pdf_ptr);
       ray scattered = ray(hrec.p, p.generate(), r.time());
       pdf_val = p.value(scattered.direction());
       return(emitted + srec.attenuation * 
@@ -78,12 +87,66 @@ vec3 color_amb(const ray& r, hitable *world, hitable *hlist, int depth,
   }
 }
 
+vec3 color_uniform(const ray& r, hitable *world, int depth) {
+  hit_record hrec;
+  if(world->hit(r, 0.001, FLT_MAX, hrec)) {
+    scatter_record srec;
+    vec3 emitted = hrec.mat_ptr->emitted(r, hrec, hrec.u, hrec.v,hrec.p);
+    float pdf_val;
+    if(depth < 50 && hrec.mat_ptr->scatter(r, hrec, srec)) {
+      if(srec.is_specular) {
+        return(srec.attenuation * color_uniform(srec.specular_ray, world, depth + 1));
+      }
+      cosine_pdf p(hrec.normal);
+      ray scattered = ray(hrec.p, p.generate(), r.time());
+      pdf_val = p.value(scattered.direction());
+      return(emitted + srec.attenuation * hrec.mat_ptr->scattering_pdf(r, hrec, scattered) *  
+             color_uniform(scattered, world, depth + 1) / pdf_val);
+    } else {
+      return(emitted);
+    }
+  } else {
+    return(vec3(0,0,0));
+  }
+}
+
+vec3 color_amb_uniform(const ray& r, hitable *world, int depth,
+               const vec3& backgroundhigh, const vec3& backgroundlow) {
+  hit_record hrec;
+  if(world->hit(r, 0.001, FLT_MAX, hrec)) {
+    scatter_record srec;
+    vec3 emitted = hrec.mat_ptr->emitted(r, hrec, hrec.u, hrec.v,hrec.p);
+    float pdf_val;
+    if(depth < 50 && hrec.mat_ptr->scatter(r, hrec, srec)) {
+      if(srec.is_specular) {
+        return(srec.attenuation * 
+               color_amb_uniform(srec.specular_ray, world, depth + 1, backgroundhigh,backgroundlow));
+      }
+      cosine_pdf p(hrec.normal);
+      ray scattered = ray(hrec.p, p.generate(), r.time());
+      pdf_val = p.value(scattered.direction());
+      return(emitted + srec.attenuation * 
+             hrec.mat_ptr->scattering_pdf(r, hrec, scattered) *  
+             color_amb_uniform(scattered, world, depth + 1, backgroundhigh,backgroundlow) / pdf_val);
+    } else {
+      vec3 unit_direction = unit_vector(r.direction());
+      float t = 0.5 * (unit_direction.y() + 1.0);
+      return(emitted+(1.0 - t) * backgroundlow + t * backgroundhigh);
+    }
+  } else {
+    vec3 unit_direction = unit_vector(r.direction());
+    float t = 0.5 * (unit_direction.y() + 1.0);
+    return (1.0 - t) * backgroundlow + t * backgroundhigh;
+  }
+}
+
 struct Colorworker : public RcppParallel::Worker {
   Colorworker(NumericMatrix outputr, NumericMatrix outputg, NumericMatrix outputb,
-              bool ambient_light, int nx, int ny, int ns, camera cam, vec3 backgroundhigh, vec3 backgroundlow, hitable *world, hitable *hlist)
+              bool ambient_light, int nx, int ny, int ns, camera cam, vec3 backgroundhigh, vec3 backgroundlow, 
+              hitable *world, hitable *hlist, int numbertosample)
   : outputr(outputr), outputg(outputg), outputb(outputb), ambient_light(ambient_light),
     nx(nx), ny(ny), ns(ns), cam(cam),
-    backgroundhigh(backgroundhigh), backgroundlow(backgroundlow), world(world), hlist(hlist) {}
+    backgroundhigh(backgroundhigh), backgroundlow(backgroundlow), world(world), hlist(hlist), numbertosample(numbertosample) {}
   void operator()(std::size_t begin, std::size_t end) {
     srand(end);
     for(int j = begin; j < end; j++) {
@@ -93,10 +156,18 @@ struct Colorworker : public RcppParallel::Worker {
           float u = float(i + drand48()) / float(nx);
           float v = float(j + drand48()) / float(ny);
           ray r = cam.get_ray(u,v);
-          if(ambient_light) {
-            col += de_nan(color_amb(r, world, hlist, 0, backgroundhigh, backgroundlow));
+          if(numbertosample) {
+            if(ambient_light) {
+              col += clamp(de_nan(color_amb(r, world, hlist, 0, backgroundhigh, backgroundlow)),3);
+            } else {
+              col += clamp(de_nan(color(r, world, hlist, 0)),3);
+            }
           } else {
-            col += de_nan(color(r, world, hlist, 0));
+            if(ambient_light) {
+              col += de_nan(color_amb_uniform(r, world, 0, backgroundhigh, backgroundlow));
+            } else {
+              col += de_nan(color_uniform(r, world, 0));
+            }
           }
         }
         col /= float(ns);
@@ -114,7 +185,29 @@ struct Colorworker : public RcppParallel::Worker {
   vec3 backgroundhigh, backgroundlow;
   hitable *world;
   hitable *hlist;
+  int numbertosample;
 };
+
+hitable* rotation_order(hitable* entry, NumericVector temprotvec, NumericVector order_rotation) {
+  for(int i = 0; i < 3; i++) {
+    if(order_rotation(i) == 1) {
+      if(temprotvec(0) != 0) {
+        entry = new rotate_x(entry,temprotvec(0));
+      }
+    }
+    if(order_rotation(i) == 2) {
+      if(temprotvec(1) != 0) {
+        entry = new rotate_y(entry,temprotvec(1));
+      }
+    }
+    if(order_rotation(i) == 3) {
+      if(temprotvec(2) != 0) {
+        entry = new rotate_z(entry,temprotvec(2));
+      }
+    }
+  }
+  return(entry);
+}
 
 
 hitable *build_scene(IntegerVector& type, 
@@ -129,14 +222,15 @@ hitable *build_scene(IntegerVector& type,
                         LogicalVector& isimage, CharacterVector& filelocation,
                         LogicalVector& islight, NumericVector& lightintensity,
                         LogicalVector& isflipped,
-                        LogicalVector& isvolume, List& fogcolor, NumericVector& voldensity) {
+                        LogicalVector& isvolume, NumericVector& voldensity,
+                        List& order_rotation_list) {
   hitable **list = new hitable*[n+1];
   NumericVector tempvector;
   NumericVector tempchecker;
   NumericVector tempvel;
-  NumericVector tempfog;
   NumericVector tempnoisecolor;
   NumericVector temprotvec;
+  NumericVector order_rotation;
   int prop_len;
 
   List templist;
@@ -146,9 +240,9 @@ hitable *build_scene(IntegerVector& type,
     tempvector = as<NumericVector>(properties(i));
     tempchecker = as<NumericVector>(checkercolors(i));
     tempvel = as<NumericVector>(velocity(i));
-    tempfog = as<NumericVector>(fogcolor(i));
     tempnoisecolor = as<NumericVector>(noisecolorlist(i));
     temprotvec = as<NumericVector>(angle(i));
+    order_rotation = as<NumericVector>(order_rotation_list(i));
     prop_len=2;
     
     center =  vec3(x(i), y(i), z(i));
@@ -179,15 +273,7 @@ hitable *build_scene(IntegerVector& type,
         sphere_tex = new dielectric(vec3(tempvector(0),tempvector(1),tempvector(2)),tempvector(3));
       }
       hitable *entry = new sphere(vec3(0,0,0), radius(i), sphere_tex);
-      if(temprotvec(0) != 0) {
-        entry = new rotate_x(entry,temprotvec(0));
-      }
-      if(temprotvec(1) != 0) {
-        entry = new rotate_y(entry,temprotvec(1));
-      }
-      if(temprotvec(2) != 0) {
-        entry = new rotate_z(entry,temprotvec(2));
-      }
+      entry = rotation_order(entry, temprotvec, order_rotation);
       if(!moving(i)) {
         entry = new translate(entry, center + vel * shutteropen);
       } else {
@@ -195,8 +281,11 @@ hitable *build_scene(IntegerVector& type,
                                   center + vel * shutterclose, 
                                   shutteropen, shutterclose, radius(i), sphere_tex);
       }
+      if(isflipped(i)) {
+        entry = new flip_normals(entry);
+      }
       if(isvolume(i)) {
-        list[i] = new constant_medium(entry,voldensity(i), new constant_texture(vec3(tempfog(0),tempfog(1),tempfog(2))));
+        list[i] = new constant_medium(entry, voldensity(i), new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))));
       } else {
         list[i] = entry;
       }
@@ -230,15 +319,7 @@ hitable *build_scene(IntegerVector& type,
       hitable *entry = new xy_rect(-tempvector(prop_len+2)/2,tempvector(prop_len+2)/2,
                                                               -tempvector(prop_len+4)/2,tempvector(prop_len+4)/2,
                                                               0, rect_tex);
-      if(temprotvec(0) != 0) {
-        entry = new rotate_x(entry,temprotvec(0));
-      }
-      if(temprotvec(1) != 0) {
-        entry = new rotate_y(entry,temprotvec(1));
-      }
-      if(temprotvec(2) != 0) {
-        entry = new rotate_z(entry,temprotvec(2));
-      }
+      entry = rotation_order(entry, temprotvec, order_rotation);
       entry = new translate(entry,vec3(tempvector(prop_len+1),tempvector(prop_len+3),tempvector(prop_len+5)) + vel * shutteropen);
       if(isflipped(i)) {
         list[i] = new flip_normals(entry);
@@ -275,15 +356,7 @@ hitable *build_scene(IntegerVector& type,
       hitable *entry = new xz_rect(-tempvector(prop_len+2)/2,tempvector(prop_len+2)/2,
                                    -tempvector(prop_len+4)/2,tempvector(prop_len+4)/2,
                                    0, rect_tex);
-      if(temprotvec(0) != 0) {
-        entry = new rotate_x(entry,temprotvec(0));
-      }
-      if(temprotvec(1) != 0) {
-        entry = new rotate_y(entry,temprotvec(1));
-      }
-      if(temprotvec(2) != 0) {
-        entry = new rotate_z(entry,temprotvec(2));
-      }
+      entry = rotation_order(entry, temprotvec, order_rotation);
       entry = new translate(entry,vec3(tempvector(prop_len+1),tempvector(prop_len+5), tempvector(prop_len+3)) + vel * shutteropen);
       if(isflipped(i)) {
         list[i] = new flip_normals(entry);
@@ -320,15 +393,7 @@ hitable *build_scene(IntegerVector& type,
       hitable *entry = new yz_rect(-tempvector(prop_len+2)/2,tempvector(prop_len+2)/2,
                                    -tempvector(prop_len+4)/2,tempvector(prop_len+4)/2,
                                    0, rect_tex);
-      if(temprotvec(0) != 0) {
-        entry = new rotate_x(entry,temprotvec(0));
-      }
-      if(temprotvec(1) != 0) {
-        entry = new rotate_y(entry,temprotvec(1));
-      }
-      if(temprotvec(2) != 0) {
-        entry = new rotate_z(entry,temprotvec(2));
-      }
+      entry = rotation_order(entry, temprotvec, order_rotation);
       entry = new translate(entry,vec3(tempvector(prop_len+5),tempvector(prop_len+1),tempvector(prop_len+3)) + vel * shutteropen);
       if(isflipped(i)) {
         list[i] = new flip_normals(entry);
@@ -366,23 +431,15 @@ hitable *build_scene(IntegerVector& type,
       hitable *entry = new box(-vec3(tempvector(prop_len+1),tempvector(prop_len+2),tempvector(prop_len+3))/2, 
                                 vec3(tempvector(prop_len+1),tempvector(prop_len+2),tempvector(prop_len+3))/2, 
                                 rect_tex);
-      if(temprotvec(0) != 0) {
-        entry = new rotate_x(entry,temprotvec(0));
-      }
-      if(temprotvec(1) != 0) {
-        entry = new rotate_y(entry,temprotvec(1));
-      }
-      if(temprotvec(2) != 0) {
-        entry = new rotate_z(entry,temprotvec(2));
-      }
+      entry = rotation_order(entry, temprotvec, order_rotation);
       entry = new translate(entry,center + vel * shutteropen);
       if(isvolume(i)) {
         if(!isnoise(i)) {
-          list[i] = new constant_medium(entry,voldensity(i), new constant_texture(vec3(tempfog(0),tempfog(1),tempfog(2))));
+          list[i] = new constant_medium(entry,voldensity(i), new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))));
         } else {
           list[i] = new constant_medium(entry,voldensity(i), 
                                         new noise_texture(noise(i),
-                                                          vec3(tempfog(0),tempfog(1),tempfog(2)),
+                                                          vec3(tempvector(0),tempvector(1),tempvector(2)),
                                                           vec3(tempnoisecolor(0),tempnoisecolor(1),tempnoisecolor(2)),
                                                           noisephase(i), noiseintensity(i)));
         }
@@ -394,8 +451,102 @@ hitable *build_scene(IntegerVector& type,
   return(new bvh_node(list, n, shutteropen, shutterclose));
 }
 
+hitable* build_imp_sample(IntegerVector& type, 
+                         NumericVector& radius, IntegerVector& shape,
+                         NumericVector& x, NumericVector& y, NumericVector& z,
+                         List& properties, List& velocity, 
+                         int n, float shutteropen, float shutterclose, 
+                         List& angle, int i) {
+  NumericVector tempvector;
+  NumericVector temprotvec;
+  NumericVector tempvel;
+  List templist;
+  vec3 center(x(0), y(0), z(0));
+  vec3 vel(x(0), y(0), z(0));
+  int prop_len;
+  tempvector = as<NumericVector>(properties(i));
+  tempvel = as<NumericVector>(velocity(i));
+  vel = vec3(tempvel(0),tempvel(1),tempvel(2));
+  temprotvec =  as<NumericVector>(angle(i));
+  prop_len=2;
+  center =  vec3(x(i), y(i), z(i));
+  
+  if(shape(i) == 1) {
+    hitable *entry = new sphere(vec3(0,0,0), radius(i), 0);
+    return(new translate(entry, center + vel * shutteropen));
+  } else if (shape(i) == 2) {
+    if(type(i) != 1) {
+      prop_len = 3;
+    }
+    hitable *entry = new xy_rect(-tempvector(prop_len+2)/2,tempvector(prop_len+2)/2,
+                                 -tempvector(prop_len+4)/2,tempvector(prop_len+4)/2,
+                                 0, 0);
+    if(temprotvec(0) != 0) {
+      entry = new rotate_x(entry,temprotvec(0));
+    }
+    if(temprotvec(1) != 0) {
+      entry = new rotate_y(entry,temprotvec(1));
+    }
+    if(temprotvec(2) != 0) {
+      entry = new rotate_z(entry,temprotvec(2));
+    }
+    return(new translate(entry,vec3(tempvector(prop_len+1),tempvector(prop_len+3),tempvector(prop_len+5)) + vel * shutteropen));
+  } else if (shape(i) == 3) {
+    if(type(i) != 1) {
+      prop_len = 3;
+    }
+    hitable *entry = new xz_rect(-tempvector(prop_len+2)/2,tempvector(prop_len+2)/2,
+                                 -tempvector(prop_len+4)/2,tempvector(prop_len+4)/2,
+                                 0, 0);
+    if(temprotvec(0) != 0) {
+      entry = new rotate_x(entry,temprotvec(0));
+    }
+    if(temprotvec(1) != 0) {
+      entry = new rotate_y(entry,temprotvec(1));
+    }
+    if(temprotvec(2) != 0) {
+      entry = new rotate_z(entry,temprotvec(2));
+    }
+    return(new translate(entry,vec3(tempvector(prop_len+1),tempvector(prop_len+5), tempvector(prop_len+3)) + vel * shutteropen));
+  } else if (shape(i) == 4) {
+    if(type(i) != 1) {
+      prop_len = 3;
+    }
+    hitable *entry = new yz_rect(-tempvector(prop_len+2)/2,tempvector(prop_len+2)/2,
+                                 -tempvector(prop_len+4)/2,tempvector(prop_len+4)/2,
+                                 0, 0);
+    if(temprotvec(0) != 0) {
+      entry = new rotate_x(entry,temprotvec(0));
+    }
+    if(temprotvec(1) != 0) {
+      entry = new rotate_y(entry,temprotvec(1));
+    }
+    if(temprotvec(2) != 0) {
+      entry = new rotate_z(entry,temprotvec(2));
+    }
+    return(new translate(entry,vec3(tempvector(prop_len+5),tempvector(prop_len+1),tempvector(prop_len+3)) + vel * shutteropen));
+  } else {
+    if(type(i) != 1) {
+      prop_len = 3;
+    }
+    hitable *entry = new box(-vec3(tempvector(prop_len+1),tempvector(prop_len+2),tempvector(prop_len+3))/2, 
+                             vec3(tempvector(prop_len+1),tempvector(prop_len+2),tempvector(prop_len+3))/2, 
+                             0);
+    if(temprotvec(0) != 0) {
+      entry = new rotate_x(entry,temprotvec(0));
+    }
+    if(temprotvec(1) != 0) {
+      entry = new rotate_y(entry,temprotvec(1));
+    }
+    if(temprotvec(2) != 0) {
+      entry = new rotate_z(entry,temprotvec(2));
+    }
+    return(new translate(entry,center + vel * shutteropen));
+  }
+}
+
 // [[Rcpp::export]]
-List generate_initial(int nx, int ny, int ns, float fov, bool ambient_light,
+List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
                       NumericVector lookfromvec, NumericVector lookatvec, 
                       float aperture, NumericVector camera_up,
                       IntegerVector type, 
@@ -412,8 +563,8 @@ List generate_initial(int nx, int ny, int ns, float fov, bool ambient_light,
                       LogicalVector& isimage, CharacterVector& filelocation,
                       LogicalVector& islight, NumericVector& lightintensity,
                       LogicalVector& isflipped, float focus_distance,
-                      LogicalVector& isvolume, List& fogcolor, NumericVector& voldensity,
-                      bool parallel) {
+                      LogicalVector& isvolume, NumericVector& voldensity,
+                      bool parallel, LogicalVector& implicit_sample, List& order_rotation_list) {
   NumericMatrix routput(nx,ny);
   NumericMatrix goutput(nx,ny);
   NumericMatrix boutput(nx,ny);
@@ -434,16 +585,26 @@ List generate_initial(int nx, int ny, int ns, float fov, bool ambient_light,
                                   isimage, filelocation,
                                   islight, lightintensity,
                                   isflipped,
-                                  isvolume, fogcolor, voldensity);
-  hitable *light_shape = new xz_rect(213,343,227,332,554,0);
-  hitable *glass_shape = new sphere(vec3(190,90,190),90,0);
-  // hitable *mirror_shape = new box(vec3(182.5,0,212.5),vec3(182.5+165,0+330,212.5+165),0);
-  hitable *a[2];
-  a[0] = light_shape;
-  // a[1] = mirror_shape;
-  a[1] = glass_shape;
-  hitable_list hlist(a,2);
-  
+                                  isvolume, voldensity, order_rotation_list);
+  int numbertosample = 0;
+  for(int i = 0; i < implicit_sample.size(); i++) {
+    if(implicit_sample(i)) {
+      numbertosample++;
+    }
+  }
+
+  hitable *a[numbertosample];
+  int counter = 0;
+  for(int i = 0; i < n; i++)  {
+    if(implicit_sample(i)) {
+      a[counter] = build_imp_sample(type, radius, shape, x, y, z,
+                               properties, velocity,
+                               n, shutteropen, shutterclose,
+                               angle, i);
+      counter++;
+    }
+  }
+  hitable_list hlist(a,numbertosample);
   
   if(!parallel) {
     for(int j = ny - 1; j >= 0; j--) {
@@ -453,10 +614,18 @@ List generate_initial(int nx, int ny, int ns, float fov, bool ambient_light,
           float u = float(i + drand48()) / float(nx);
           float v = float(j + drand48()) / float(ny);
           ray r = cam.get_ray(u,v);
-          if(ambient_light) {
-            col += de_nan(color_amb(r, world, &hlist, 0, backgroundhigh, backgroundlow));
+          if(numbertosample) {
+            if(ambient_light) {
+              col += de_nan(color_amb(r, world, &hlist, 0, backgroundhigh, backgroundlow));
+            } else {
+              col += de_nan(color(r, world, &hlist, 0));
+            }
           } else {
-            col += de_nan(color(r, world, &hlist, 0));
+            if(ambient_light) {
+              col += de_nan(color_amb_uniform(r, world, 0, backgroundhigh, backgroundlow));
+            } else {
+              col += de_nan(color_uniform(r, world, 0));
+            }
           }
         }
         col /= float(ns);
@@ -468,7 +637,7 @@ List generate_initial(int nx, int ny, int ns, float fov, bool ambient_light,
   } else {
     Colorworker color_worker(routput, goutput, boutput,
                       ambient_light, nx, ny, ns,
-                      cam, backgroundhigh, backgroundlow, world, &hlist);
+                      cam, backgroundhigh, backgroundlow, world, &hlist, numbertosample);
     RcppParallel::parallelFor(0, ny, color_worker);
   }
   return(List::create(_["r"] = routput, _["g"] = goutput, _["b"] = boutput));

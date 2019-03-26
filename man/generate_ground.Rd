@@ -2,29 +2,32 @@
 % Please edit documentation in R/generate_ground.R
 \name{generate_ground}
 \alias{generate_ground}
-\title{Title}
+\title{Generate Ground}
 \usage{
-generate_ground(depth = -1, spheresize = 1000,
+generate_ground(depth = -1, spheresize = 10000,
   material = lambertian(color = "#ccff00"))
 }
 \arguments{
 \item{depth}{Default `-1`. Depth of the surface.}
 
-\item{spheresize}{Default `1000`. Size of the sphere representing the surface.}
+\item{spheresize}{Default `10000`. Size of the sphere representing the surface.}
+
+\item{material}{Default  \code{\link{lambertian(color= "#ccff00"}}.The material, called from one of the material 
+functions \code{\link{lambertian}}, \code{\link{metal}}, or \code{\link{dielectric}}.}
 
 \item{color}{Default `#ccff00`. The color of the sphere. Can be either
 a hexadecimal code, or a numeric rgb vector listing three intensities between `0` and `1`.}
 }
 \value{
-Single row of a tibble describing the sphere in the scene.
+Single row of a tibble describing the ground.
 }
 \description{
-Title
+Generates a large sphere that can be used as the ground for a scene.
 }
 \examples{
-#Generate the ground and add a single red sphere
-scene = generate_ground() \%>\%
-  add_sphere(lambertian(color = "#ff0000"))
-  
+#Generate the ground and add some objects
+scene = generate_ground(depth=-0.5,material = lambertian(noise=1,noisephase=10)) \%>\%
+  add_object(cube(z=0.7,material=metal(color="red",fuzz=0.025),angle=c(0,-15,0))) \%>\%
+  add_object(sphere(z=-0.7,radius=0.5,material=dielectric(color="green")))
 render_scene(scene)
 }

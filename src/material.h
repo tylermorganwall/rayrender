@@ -68,7 +68,7 @@ class lambertian : public material {
       if(cosine < 0) {
         cosine = 0;
       }
-      return(cosine/M_PI);
+      return(cosine*M_1_PI);
     }
     bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec) const {
       srec.is_specular = false;
@@ -152,9 +152,13 @@ class isotropic : public material {
 public:
   isotropic(texture *a) : albedo(a) {}
   virtual bool scatter(const ray& r_in, const hit_record& rec, scatter_record& srec) const {
+    srec.is_specular = true;
     srec.specular_ray = ray(rec.p, random_in_unit_sphere());
     srec.attenuation = albedo->value(rec.u,rec.v,rec.p);
     return(true);
+  }
+  float scattering_pdf(const ray& r_in, const hit_record& rec, const ray& scattered) const {
+    return(0.25 * M_1_PI);
   }
   texture *albedo;
 };

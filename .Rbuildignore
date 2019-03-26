@@ -1,4 +1,16 @@
-^README\.Rmd$
+^man/figures$
+^tools/readme$
+^tic\.R$
+^appveyor\.yml$
+^\.travis\.yml$
 ^.*\.Rproj$
 ^\.Rproj\.user$
+^README.Rmd$
+^\.RDataTmp$
+^README\.md$
 ^README_cache$
+^README_files$
+^tests$
+^.*yml$
+^docs$
+^pkgdown$

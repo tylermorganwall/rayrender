@@ -2,6 +2,7 @@
 #define CONSTANTH
 
 #include "hitable.h"
+#include "material.h"
 #include <float.h>
 
 class material;
@@ -14,6 +15,12 @@ public:
   virtual bool hit(const ray& r, float t_min, float t_max, hit_record& rec) const;
   virtual bool bounding_box(float t0, float t1, aabb& box) const {
     return(boundary->bounding_box(t0,t1,box));
+  }
+  float pdf_value(const vec3& o, const vec3& v) const {
+    return(boundary->pdf_value(o,v));
+  }
+  vec3 random(const vec3& o) const {
+    return(boundary->random(o));
   }
   hitable *boundary;
   float density;

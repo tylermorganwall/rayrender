@@ -2,20 +2,43 @@
 % Please edit documentation in R/materials.R
 \name{dielectric}
 \alias{dielectric}
-\title{Dielectric (glass)}
+\title{Dielectric (glass) Material}
 \usage{
-dielectric(color = "#ffffff", refraction = 1.5, fog = FALSE,
-  fogcolor = "#ffffff", fogdensity = 0.01)
+dielectric(color = "white", refraction = 1.5,
+  implicit_sample = FALSE)
 }
 \arguments{
-\item{refraction}{Default `1.5`.  Index of refraction.}
+\item{color}{Default `white`. The color of the surface. Can be either
+a hexadecimal code, R color string, or a numeric rgb vector listing three intensities between `0` and `1`.}
+
+\item{refraction}{Default `1.5`. The index of refraction.}
+
+\item{implicit_sample}{Default `TRUE`. If `FALSE`, the object will not 
+be sampled as part of the scattering probability density function.}
 }
 \value{
 Single row of a tibble describing the sphere in the scene.
 }
 \description{
-Dielectric (glass)
+Dielectric (glass) Material
 }
 \examples{
-dielectric(x=0,y=1,z=0,radius=1, refraction = 2)
+#Generate a checkered ground
+scene = generate_ground(depth=-0.5,material=lambertian(color="white", checkercolor="grey30",checkerperiod=2))
+render_scene(scene,parallel=TRUE)
+
+#Add a glass sphere
+scene = scene \%>\%
+  add_object(sphere(z=-0.5,radius=0.5,material=dielectric()))
+render_scene(scene,parallel=TRUE)
+
+#Add a rotated colored glass cube
+scene = scene \%>\%
+  add_object(cube(z=0.5,zwidth=0.5,material=dielectric(color="darkgreen"),angle=c(0,-45,0)))
+render_scene(scene,parallel=TRUE)
+
+#Add an area light behind and at an angle and turn off the ambient lighting
+scene = scene \%>\%
+  add_object(yz_rect(x=-3,y=0.5,z=1,zwidth=3,ywidth=1.5,material=lambertian(lightintensity=15),angle=c(0,45,0)))
+render_scene(scene,parallel=TRUE,aperture=0, ambient_light=FALSE,samples=1000)
 }
