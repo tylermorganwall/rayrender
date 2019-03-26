@@ -1,0 +1,52 @@
+pandoc: 2.3.1
+pkgdown: 1.3.0.9000
+pkgdown_sha: 2f40b4769ea9ad2312aa4cc93f27ab116461543b
+articles: []
+
+reference:
+  - title: "Objects"
+    desc: "Functions for generating objects to add to scenes"
+    contents: 
+      - starts_with("sphere")
+      - starts_with("cube")
+      - ends_with("rect")
+      - starts_with("generate")
+  - title: "Materials"
+    desc: "Functions to specify the visual properties of objects"
+    contents:
+      - starts_with("lambertian")
+      - starts_with("metal")
+      - starts_with("dielectric")
+  - title: "Composing Scenes"
+    desc: "Function for adding objects together to form a scene."
+    contents:
+      - starts_with("add")
+  - title: "Render Raytraced Scene"
+    desc: "Function to render the current scene."
+    contents:
+      - starts_with("render")
+     
+navbar: 
+  title: "rayrender"
+  type: inverse
+  left:
+    - icon: fa-home
+      href: index.html
+    - text: "Tutorials"
+      menu: 
+      -  text: Getting Stated with Rayrender--Forging the R Sword
+         href: https://www.tylermw.com/2018-year-in-review/
+    - icon: fa-newspaper-o
+      text: "Changelog"
+      href: news/index.html
+  right:
+    - icon: fa-file-code-o 
+      text: "functions"
+      href: reference/index.html
+    - icon: fa-github fa-lg
+      text: "GitHub"
+      href: https://github.com/tylermorganwall/rayrender
+      
+authors:
+  Tyler Morgan-Wall: 
+    href: https://www.tylermw.com
