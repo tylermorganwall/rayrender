@@ -14,6 +14,7 @@
 #include "constant.h"
 #include "pdf.h"
 #include <RcppParallel.h>
+#include "rng.h"
 using namespace Rcpp;
 
 
@@ -576,9 +577,10 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
   vec3 backgroundhigh(bghigh[0],bghigh[1],bghigh[2]);
   vec3 backgroundlow(bglow[0],bglow[1],bglow[2]);
   float dist_to_focus = focus_distance;
+  random_gen rng;
   camera cam(lookfrom, lookat, vec3(camera_up(0),camera_up(1),camera_up(2)), fov, float(nx)/float(ny), 
              aperture, dist_to_focus,
-             shutteropen, shutterclose);
+             shutteropen, shutterclose, rng);
   hitable *world = build_scene(type, radius, shape, x, y, z, 
                                   properties, velocity, moving,
                                   n,shutteropen,shutterclose,
