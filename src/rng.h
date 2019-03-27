@@ -12,7 +12,7 @@ class random_gen {
 public:
   random_gen() : rng(pcg_extras::seed_seq_from<std::random_device>{}) { }
   float unif_rand() {
-    return float(rand()) * 0x1.0p-32f; 
+    return(ldexp(rng(),-32)); 
   }
   vec3 random_in_unit_disk() {
     vec3 p;

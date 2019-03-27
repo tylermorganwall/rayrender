@@ -34,21 +34,21 @@ inline vec3 clamp(const vec3& c, float clampval) {
   return(temp);
 }
 
-vec3 color(const ray& r, hitable *world, hitable *hlist, int depth) {
+vec3 color(const ray& r, hitable *world, hitable *hlist, int depth, random_gen& rng) {
   hit_record hrec;
   if(world->hit(r, 0.001, FLT_MAX, hrec)) {
     scatter_record srec;
     vec3 emitted = hrec.mat_ptr->emitted(r, hrec, hrec.u, hrec.v,hrec.p);
     float pdf_val;
-    if(depth < 50 && hrec.mat_ptr->scatter(r, hrec, srec)) {
+    if(depth < 50 && hrec.mat_ptr->scatter(r, hrec, srec, rng)) {
       if(srec.is_specular) {
-        return(srec.attenuation * color(srec.specular_ray, world, hlist, depth + 1));
+        return(srec.attenuation * color(srec.specular_ray, world, hlist, depth + 1, rng));
       }
       hitable_pdf p_imp(hlist, hrec.p);
       mixture_pdf p(&p_imp, srec.pdf_ptr);
       ray scattered = ray(hrec.p, p.generate(), r.time());
       pdf_val = p.value(scattered.direction());
-      return(emitted + srec.attenuation * hrec.mat_ptr->scattering_pdf(r, hrec, scattered) *  color(scattered, world, hlist, depth + 1) / pdf_val);
+      return(emitted + srec.attenuation * hrec.mat_ptr->scattering_pdf(r, hrec, scattered) *  color(scattered, world, hlist, depth + 1, rng) / pdf_val);
     } else {
       return(emitted);
     }
@@ -58,16 +58,16 @@ vec3 color(const ray& r, hitable *world, hitable *hlist, int depth) {
 }
 
 vec3 color_amb(const ray& r, hitable *world, hitable *hlist, int depth,
-           const vec3& backgroundhigh, const vec3& backgroundlow) {
+           const vec3& backgroundhigh, const vec3& backgroundlow, random_gen& rng) {
   hit_record hrec;
   if(world->hit(r, 0.001, FLT_MAX, hrec)) {
     scatter_record srec;
     vec3 emitted = hrec.mat_ptr->emitted(r, hrec, hrec.u, hrec.v,hrec.p);
     float pdf_val;
-    if(depth < 50 && hrec.mat_ptr->scatter(r, hrec, srec)) {
+    if(depth < 50 && hrec.mat_ptr->scatter(r, hrec, srec, rng)) {
       if(srec.is_specular) {
         return(srec.attenuation * 
-               color_amb(srec.specular_ray, world, hlist, depth + 1, backgroundhigh,backgroundlow));
+               color_amb(srec.specular_ray, world, hlist, depth + 1, backgroundhigh,backgroundlow, rng));
       }
       hitable_pdf p_imp(hlist, hrec.p);
       mixture_pdf p(&p_imp, srec.pdf_ptr);
@@ -75,7 +75,7 @@ vec3 color_amb(const ray& r, hitable *world, hitable *hlist, int depth,
       pdf_val = p.value(scattered.direction());
       return(emitted + srec.attenuation * 
              hrec.mat_ptr->scattering_pdf(r, hrec, scattered) *  
-             color_amb(scattered, world, hlist, depth + 1, backgroundhigh,backgroundlow) / pdf_val);
+             color_amb(scattered, world, hlist, depth + 1, backgroundhigh,backgroundlow, rng) / pdf_val);
     } else {
       vec3 unit_direction = unit_vector(r.direction());
       float t = 0.5 * (unit_direction.y() + 1.0);
@@ -88,21 +88,21 @@ vec3 color_amb(const ray& r, hitable *world, hitable *hlist, int depth,
   }
 }
 
-vec3 color_uniform(const ray& r, hitable *world, int depth) {
+vec3 color_uniform(const ray& r, hitable *world, int depth, random_gen& rng) {
   hit_record hrec;
   if(world->hit(r, 0.001, FLT_MAX, hrec)) {
     scatter_record srec;
     vec3 emitted = hrec.mat_ptr->emitted(r, hrec, hrec.u, hrec.v,hrec.p);
     float pdf_val;
-    if(depth < 50 && hrec.mat_ptr->scatter(r, hrec, srec)) {
+    if(depth < 50 && hrec.mat_ptr->scatter(r, hrec, srec, rng)) {
       if(srec.is_specular) {
-        return(srec.attenuation * color_uniform(srec.specular_ray, world, depth + 1));
+        return(srec.attenuation * color_uniform(srec.specular_ray, world, depth + 1, rng));
       }
       cosine_pdf p(hrec.normal);
       ray scattered = ray(hrec.p, p.generate(), r.time());
       pdf_val = p.value(scattered.direction());
       return(emitted + srec.attenuation * hrec.mat_ptr->scattering_pdf(r, hrec, scattered) *  
-             color_uniform(scattered, world, depth + 1) / pdf_val);
+             color_uniform(scattered, world, depth + 1, rng) / pdf_val);
     } else {
       return(emitted);
     }
@@ -112,23 +112,23 @@ vec3 color_uniform(const ray& r, hitable *world, int depth) {
 }
 
 vec3 color_amb_uniform(const ray& r, hitable *world, int depth,
-               const vec3& backgroundhigh, const vec3& backgroundlow) {
+               const vec3& backgroundhigh, const vec3& backgroundlow, random_gen& rng) {
   hit_record hrec;
   if(world->hit(r, 0.001, FLT_MAX, hrec)) {
     scatter_record srec;
     vec3 emitted = hrec.mat_ptr->emitted(r, hrec, hrec.u, hrec.v,hrec.p);
     float pdf_val;
-    if(depth < 50 && hrec.mat_ptr->scatter(r, hrec, srec)) {
+    if(depth < 50 && hrec.mat_ptr->scatter(r, hrec, srec, rng)) {
       if(srec.is_specular) {
         return(srec.attenuation * 
-               color_amb_uniform(srec.specular_ray, world, depth + 1, backgroundhigh,backgroundlow));
+               color_amb_uniform(srec.specular_ray, world, depth + 1, backgroundhigh,backgroundlow, rng));
       }
       cosine_pdf p(hrec.normal);
       ray scattered = ray(hrec.p, p.generate(), r.time());
       pdf_val = p.value(scattered.direction());
       return(emitted + srec.attenuation * 
              hrec.mat_ptr->scattering_pdf(r, hrec, scattered) *  
-             color_amb_uniform(scattered, world, depth + 1, backgroundhigh,backgroundlow) / pdf_val);
+             color_amb_uniform(scattered, world, depth + 1, backgroundhigh,backgroundlow, rng) / pdf_val);
     } else {
       vec3 unit_direction = unit_vector(r.direction());
       float t = 0.5 * (unit_direction.y() + 1.0);
@@ -150,25 +150,25 @@ struct Colorworker : public RcppParallel::Worker {
     backgroundhigh(backgroundhigh), backgroundlow(backgroundlow), world(world), hlist(hlist), 
     numbertosample(numbertosample), clampval(clampval) {}
   void operator()(std::size_t begin, std::size_t end) {
-    srand(end);
+    random_gen rng;
     for(int j = begin; j < end; j++) {
       for(int i = 0; i < nx; i++) {
         vec3 col(0,0,0);
         for(int s = 0; s < ns; s++) {
-          float u = float(i + drand48()) / float(nx);
-          float v = float(j + drand48()) / float(ny);
+          float u = float(i + rng.unif_rand()) / float(nx);
+          float v = float(j + rng.unif_rand()) / float(ny);
           ray r = cam.get_ray(u,v);
           if(numbertosample) {
             if(ambient_light) {
-              col += clamp(de_nan(color_amb(r, world, hlist, 0, backgroundhigh, backgroundlow)),clampval);
+              col += clamp(de_nan(color_amb(r, world, hlist, 0, backgroundhigh, backgroundlow, rng)),clampval);
             } else {
-              col += clamp(de_nan(color(r, world, hlist, 0)),clampval);
+              col += clamp(de_nan(color(r, world, hlist, 0, rng)),clampval);
             }
           } else {
             if(ambient_light) {
-              col += clamp(de_nan(color_amb_uniform(r, world, 0, backgroundhigh, backgroundlow)),clampval);
+              col += clamp(de_nan(color_amb_uniform(r, world, 0, backgroundhigh, backgroundlow, rng)),clampval);
             } else {
-              col += clamp(de_nan(color_uniform(r, world, 0)),clampval);
+              col += clamp(de_nan(color_uniform(r, world, 0, rng)),clampval);
             }
           }
         }
@@ -226,7 +226,7 @@ hitable *build_scene(IntegerVector& type,
                         LogicalVector& islight, NumericVector& lightintensity,
                         LogicalVector& isflipped,
                         LogicalVector& isvolume, NumericVector& voldensity,
-                        List& order_rotation_list) {
+                        List& order_rotation_list, random_gen& rng) {
   hitable **list = new hitable*[n+1];
   NumericVector tempvector;
   NumericVector tempchecker;
@@ -273,7 +273,7 @@ hitable *build_scene(IntegerVector& type,
       else if (type(i) == 2) {
         sphere_tex = new metal(vec3(tempvector(0),tempvector(1),tempvector(2)),tempvector(3));
       } else {
-        sphere_tex = new dielectric(vec3(tempvector(0),tempvector(1),tempvector(2)),tempvector(3));
+        sphere_tex = new dielectric(vec3(tempvector(0),tempvector(1),tempvector(2)),tempvector(3), rng);
       }
       hitable *entry = new sphere(vec3(0,0,0), radius(i), sphere_tex);
       entry = rotation_order(entry, temprotvec, order_rotation);
@@ -316,7 +316,7 @@ hitable *build_scene(IntegerVector& type,
         rect_tex = new metal(vec3(tempvector(0),tempvector(1),tempvector(2)),tempvector(3));
         prop_len = 3;
       } else {
-        rect_tex = new dielectric(vec3(tempvector(0),tempvector(1),tempvector(2)),tempvector(3));
+        rect_tex = new dielectric(vec3(tempvector(0),tempvector(1),tempvector(2)),tempvector(3), rng);
         prop_len = 3;
       }
       hitable *entry = new xy_rect(-tempvector(prop_len+2)/2,tempvector(prop_len+2)/2,
@@ -353,7 +353,7 @@ hitable *build_scene(IntegerVector& type,
         rect_tex = new metal(vec3(tempvector(0),tempvector(1),tempvector(2)),tempvector(3));
         prop_len = 3;
       } else {
-        rect_tex = new dielectric(vec3(tempvector(0),tempvector(1),tempvector(2)),tempvector(3));
+        rect_tex = new dielectric(vec3(tempvector(0),tempvector(1),tempvector(2)),tempvector(3), rng);
         prop_len = 3;
       }
       hitable *entry = new xz_rect(-tempvector(prop_len+2)/2,tempvector(prop_len+2)/2,
@@ -390,7 +390,7 @@ hitable *build_scene(IntegerVector& type,
         rect_tex = new metal(vec3(tempvector(0),tempvector(1),tempvector(2)),tempvector(3));
         prop_len = 3;
       } else {
-        rect_tex = new dielectric(vec3(tempvector(0),tempvector(1),tempvector(2)),tempvector(3));
+        rect_tex = new dielectric(vec3(tempvector(0),tempvector(1),tempvector(2)),tempvector(3), rng);
         prop_len = 3;
       }
       hitable *entry = new yz_rect(-tempvector(prop_len+2)/2,tempvector(prop_len+2)/2,
@@ -428,7 +428,7 @@ hitable *build_scene(IntegerVector& type,
         rect_tex = new metal(vec3(tempvector(0),tempvector(1),tempvector(2)),tempvector(3));
         prop_len = 3;
       } else {
-        rect_tex = new dielectric(vec3(tempvector(0),tempvector(1),tempvector(2)),tempvector(3));
+        rect_tex = new dielectric(vec3(tempvector(0),tempvector(1),tempvector(2)),tempvector(3), rng);
         prop_len = 3;
       }
       hitable *entry = new box(-vec3(tempvector(prop_len+1),tempvector(prop_len+2),tempvector(prop_len+3))/2, 
@@ -459,7 +459,7 @@ hitable* build_imp_sample(IntegerVector& type,
                          NumericVector& x, NumericVector& y, NumericVector& z,
                          List& properties, List& velocity, 
                          int n, float shutteropen, float shutterclose, 
-                         List& angle, int i) {
+                         List& angle, int i, random_gen& rng) {
   NumericVector tempvector;
   NumericVector temprotvec;
   NumericVector tempvel;
@@ -590,7 +590,7 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
                                   isimage, filelocation,
                                   islight, lightintensity,
                                   isflipped,
-                                  isvolume, voldensity, order_rotation_list);
+                                  isvolume, voldensity, order_rotation_list, rng);
   int numbertosample = 0;
   for(int i = 0; i < implicit_sample.size(); i++) {
     if(implicit_sample(i)) {
@@ -605,7 +605,7 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
       a[counter] = build_imp_sample(type, radius, shape, x, y, z,
                                properties, velocity,
                                n, shutteropen, shutterclose,
-                               angle, i);
+                               angle, i, rng);
       counter++;
     }
   }
@@ -616,20 +616,20 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
       for(int i = 0; i < nx; i++) {
         vec3 col(0,0,0);
         for(int s = 0; s < ns; s++) {
-          float u = float(i + drand48()) / float(nx);
-          float v = float(j + drand48()) / float(ny);
+          float u = float(i + rng.unif_rand()) / float(nx);
+          float v = float(j + rng.unif_rand()) / float(ny);
           ray r = cam.get_ray(u,v);
           if(numbertosample) {
             if(ambient_light) {
-              col += clamp(de_nan(color_amb(r, world, &hlist, 0, backgroundhigh, backgroundlow)),clampval);
+              col += clamp(de_nan(color_amb(r, world, &hlist, 0, backgroundhigh, backgroundlow, rng)),clampval);
             } else {
-              col += clamp(de_nan(color(r, world, &hlist, 0)),clampval);
+              col += clamp(de_nan(color(r, world, &hlist, 0, rng)),clampval);
             }
           } else {
             if(ambient_light) {
-              col += clamp(de_nan(color_amb_uniform(r, world, 0, backgroundhigh, backgroundlow)),clampval);
+              col += clamp(de_nan(color_amb_uniform(r, world, 0, backgroundhigh, backgroundlow, rng)),clampval);
             } else {
-              col += clamp(de_nan(color_uniform(r, world, 0)),clampval);
+              col += clamp(de_nan(color_uniform(r, world, 0, rng)),clampval);
             }
           }
         }
