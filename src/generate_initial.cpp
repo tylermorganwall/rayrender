@@ -143,10 +143,11 @@ vec3 color_amb_uniform(const ray& r, hitable *world, int depth,
 struct Colorworker : public RcppParallel::Worker {
   Colorworker(NumericMatrix outputr, NumericMatrix outputg, NumericMatrix outputb,
               bool ambient_light, int nx, int ny, int ns, camera cam, vec3 backgroundhigh, vec3 backgroundlow, 
-              hitable *world, hitable *hlist, int numbertosample)
+              hitable *world, hitable *hlist, int numbertosample, float clampval)
   : outputr(outputr), outputg(outputg), outputb(outputb), ambient_light(ambient_light),
     nx(nx), ny(ny), ns(ns), cam(cam),
-    backgroundhigh(backgroundhigh), backgroundlow(backgroundlow), world(world), hlist(hlist), numbertosample(numbertosample) {}
+    backgroundhigh(backgroundhigh), backgroundlow(backgroundlow), world(world), hlist(hlist), 
+    numbertosample(numbertosample), clampval(clampval) {}
   void operator()(std::size_t begin, std::size_t end) {
     srand(end);
     for(int j = begin; j < end; j++) {
@@ -158,15 +159,15 @@ struct Colorworker : public RcppParallel::Worker {
           ray r = cam.get_ray(u,v);
           if(numbertosample) {
             if(ambient_light) {
-              col += clamp(de_nan(color_amb(r, world, hlist, 0, backgroundhigh, backgroundlow)),3);
+              col += clamp(de_nan(color_amb(r, world, hlist, 0, backgroundhigh, backgroundlow)),clampval);
             } else {
-              col += clamp(de_nan(color(r, world, hlist, 0)),3);
+              col += clamp(de_nan(color(r, world, hlist, 0)),clampval);
             }
           } else {
             if(ambient_light) {
-              col += de_nan(color_amb_uniform(r, world, 0, backgroundhigh, backgroundlow));
+              col += clamp(de_nan(color_amb_uniform(r, world, 0, backgroundhigh, backgroundlow)),clampval);
             } else {
-              col += de_nan(color_uniform(r, world, 0));
+              col += clamp(de_nan(color_uniform(r, world, 0)),clampval);
             }
           }
         }
@@ -186,6 +187,7 @@ struct Colorworker : public RcppParallel::Worker {
   hitable *world;
   hitable *hlist;
   int numbertosample;
+  float clampval;
 };
 
 hitable* rotation_order(hitable* entry, NumericVector temprotvec, NumericVector order_rotation) {
@@ -564,7 +566,8 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
                       LogicalVector& islight, NumericVector& lightintensity,
                       LogicalVector& isflipped, float focus_distance,
                       LogicalVector& isvolume, NumericVector& voldensity,
-                      bool parallel, LogicalVector& implicit_sample, List& order_rotation_list) {
+                      bool parallel, LogicalVector& implicit_sample, List& order_rotation_list,
+                      float clampval) {
   NumericMatrix routput(nx,ny);
   NumericMatrix goutput(nx,ny);
   NumericMatrix boutput(nx,ny);
@@ -616,15 +619,15 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
           ray r = cam.get_ray(u,v);
           if(numbertosample) {
             if(ambient_light) {
-              col += de_nan(color_amb(r, world, &hlist, 0, backgroundhigh, backgroundlow));
+              col += clamp(de_nan(color_amb(r, world, &hlist, 0, backgroundhigh, backgroundlow)),clampval);
             } else {
-              col += de_nan(color(r, world, &hlist, 0));
+              col += clamp(de_nan(color(r, world, &hlist, 0)),clampval);
             }
           } else {
             if(ambient_light) {
-              col += de_nan(color_amb_uniform(r, world, 0, backgroundhigh, backgroundlow));
+              col += clamp(de_nan(color_amb_uniform(r, world, 0, backgroundhigh, backgroundlow)),clampval);
             } else {
-              col += de_nan(color_uniform(r, world, 0));
+              col += clamp(de_nan(color_uniform(r, world, 0)),clampval);
             }
           }
         }
@@ -637,7 +640,7 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
   } else {
     Colorworker color_worker(routput, goutput, boutput,
                       ambient_light, nx, ny, ns,
-                      cam, backgroundhigh, backgroundlow, world, &hlist, numbertosample);
+                      cam, backgroundhigh, backgroundlow, world, &hlist, numbertosample, clampval);
     RcppParallel::parallelFor(0, ny, color_worker);
   }
   return(List::create(_["r"] = routput, _["g"] = goutput, _["b"] = boutput));

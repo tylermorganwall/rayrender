@@ -13,6 +13,9 @@
 #' @param lookfrom Default `c(10,1,0)`. Location of the camera.
 #' @param lookat Default `c(0,0,0)`. Location where the camera is pointed.
 #' @param aperture Default `0.1`. Aperture of the camera. Higher numbers will increase depth of field.
+#' @param clamp_value Default `Inf`. If a bright light or a reflective material is in the scene, occasionally
+#' there will be bright spots that will not go away even with a large number of samples. These 
+#' can be removed (at the cost of slightly darkening the image) by setting this to a small number greater than 1. 
 #' @param filename Default `NULL`. If present, the renderer will write to the filename instead
 #' of the current device.
 #' @param backgroundhigh Default `#80b4ff`. The "high" color in the background gradient. Can be either
@@ -42,12 +45,12 @@
 #' #Add a marbled cube 
 #' scene = scene %>%
 #'   add_object(cube(x=0,y=0,z=1.1,material = lambertian(noise=3)))
-#' render_scene(scene,fov=20)
+#' render_scene(scene,fov=20,parallel=TRUE)
 #' 
 #' #Add a metallic gold sphere
 #' scene = scene %>%
 #'   add_object(sphere(x=0,y=0,z=-1.1,radius=0.5,material = metal(color="gold",fuzz=0.1)))
-#' render_scene(scene,fov=20)
+#' render_scene(scene,fov=20,parallel=TRUE)
 #' 
 #' #Add a floating R plot using the iris dataset as a png onto a floating 2D rectangle
 #' tempfileplot = tempfile()
@@ -58,19 +61,19 @@
 #' image_array = png::readPNG(tempfileplot)
 #' scene = scene %>%
 #'   add_object(yz_rect(x=0,y=1.1,z=0,zwidth=2,material = lambertian(image = image_array)))
-#' render_scene(scene,fov=20)
+#' render_scene(scene,fov=20,parallel=TRUE)
 #' 
 #' #Move the camera
-#' render_scene(scene,lookfrom = c(7,1.5,10),lookat = c(0,0.5,0),fov=15)
+#' render_scene(scene,lookfrom = c(7,1.5,10),lookat = c(0,0.5,0),fov=15,parallel=TRUE)
 #' 
 #' 
 #' #Change the background gradient to a night time ambience
 #' render_scene(scene,lookfrom = c(7,1.5,10),lookat = c(0,0.5,0),fov=15,
-#'                  backgroundhigh = "#282375", backgroundlow = "#7e77ea")
+#'                  backgroundhigh = "#282375", backgroundlow = "#7e77ea",parallel=TRUE)
 #'                  
 #'#Increase the aperture to give more depth of field.
 #' render_scene(scene,lookfrom = c(7,1.5,10),lookat = c(0,0.5,0),fov=15,
-#'                  aperture = 0.5)
+#'                  aperture = 0.5,parallel=TRUE)
 #'                  
 #'#Spin the camera around the scene, decreasing the number of samples to render faster. To make 
 #'#an animation, specify the a filename in `render_scene` for each frame.
@@ -81,10 +84,10 @@
 #'par(mfrow=c(5,6))
 #'for(i in 1:30) {
 #'  render_scene(scene, samples=5,
-#'    lookfrom = c(xpos[i],1.5,zpos[i]),lookat = c(0,0.5,0))
+#'    lookfrom = c(xpos[i],1.5,zpos[i]),lookat = c(0,0.5,0),parallel=TRUE)
 #'}
 render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 100, ambient_light = FALSE,
-                        lookfrom = c(10,1,0), lookat = c(0,0,0), camera_up = c(0,1,0), aperture = 0.1,
+                        lookfrom = c(10,1,0), lookat = c(0,0,0), camera_up = c(0,1,0), aperture = 0.1, clamp_value = Inf,
                         filename = NULL, backgroundhigh = "#80b4ff",backgroundlow = "#ffffff",
                         shutteropen = 0.0, shutterclose = 1.0, focal_distance=NULL, parallel=FALSE) { 
   #Check if Cornell Box scene and set camera if user did not:
@@ -221,7 +224,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
                              islight = light_bool, lightintensity = light_prop_vec,isflipped = flip_vec,
                              focus_distance=focal_distance,
                              isvolume=fog_bool, voldensity = fog_vec , parallel=parallel,
-                             implicit_sample = implicit_vec, order_rotation = order_rotation_list) 
+                             implicit_sample = implicit_vec, order_rotation = order_rotation_list, clampval = clamp_value) 
   full_array = array(0,c(ncol(rgb_mat$r),nrow(rgb_mat$r),3))
   full_array[,,1] = t(rgb_mat$r)
   full_array[,,2] = t(rgb_mat$g)

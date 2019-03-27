@@ -7,7 +7,7 @@
 render_scene(scene, width = 400, height = 400, fov = 20,
   samples = 100, ambient_light = FALSE, lookfrom = c(10, 1, 0),
   lookat = c(0, 0, 0), camera_up = c(0, 1, 0), aperture = 0.1,
-  filename = NULL, backgroundhigh = "#80b4ff",
+  clamp_value = Inf, filename = NULL, backgroundhigh = "#80b4ff",
   backgroundlow = "#ffffff", shutteropen = 0, shutterclose = 1,
   focal_distance = NULL, parallel = FALSE)
 }
@@ -31,6 +31,10 @@ If `TRUE`, the background will be a gradient varying from `backgroundhigh` direc
 \item{lookat}{Default `c(0,0,0)`. Location where the camera is pointed.}
 
 \item{aperture}{Default `0.1`. Aperture of the camera. Higher numbers will increase depth of field.}
+
+\item{clamp_value}{Default `Inf`. If a bright light or a reflective material is in the scene, occasionally
+there will be bright spots that will not go away even with a large number of samples. These 
+can be removed (at the cost of slightly darkening the image) by setting this to a small number greater than 1.}
 
 \item{filename}{Default `NULL`. If present, the renderer will write to the filename instead
 of the current device.}
