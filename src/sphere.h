@@ -4,16 +4,6 @@
 #include "hitable.h"
 #include "material.h"
 
-inline vec3 random_to_sphere(float radius, float distance_squared) {
-  float r1 = drand48();
-  float r2 = drand48();
-  float z = 1 + r2 * (sqrt(1-radius * radius / distance_squared) - 1);
-  float phi = 2 * M_PI * r1;
-  float x = cos(phi) * sqrt(1-z*z);
-  float y = sin(phi) * sqrt(1-z*z);
-  return(vec3(x,y,z));
-}
-
 class sphere: public hitable {
   public:
     sphere() {}
@@ -72,7 +62,7 @@ vec3 sphere::random(const vec3& o, random_gen& rng) {
   float distance_squared = direction.squared_length();
   onb uvw;
   uvw.build_from_w(direction);
-  return(uvw.local(random_to_sphere(radius,distance_squared)));
+  return(uvw.local(rng.random_to_sphere(radius,distance_squared)));
 }
 
 bool sphere::bounding_box(float t0, float t1, aabb& box) const {

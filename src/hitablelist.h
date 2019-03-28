@@ -60,7 +60,7 @@ float hitable_list::pdf_value(const vec3& o, const vec3& v, random_gen& rng) {
 }
 
 vec3 hitable_list::random(const vec3& o, random_gen& rng) {
-  int index = int(drand48() * list_size);
+  int index = int(rng.unif_rand() * list_size * 0.99999999);
   return(list[index]->random(o, rng));
 }
 

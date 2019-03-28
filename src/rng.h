@@ -37,6 +37,15 @@ public:
     float y = sin(phi)*2*sqrt(r2);
     return vec3(x, y, z);
   }
+  vec3 random_to_sphere(float radius, float distance_squared) {
+    float r1 = unif_rand();
+    float r2 = unif_rand();
+    float z = 1 + r2 * (sqrt(1-radius * radius / distance_squared) - 1);
+    float phi = 2 * M_PI * r1;
+    float x = cos(phi) * sqrt(1-z*z);
+    float y = sin(phi) * sqrt(1-z*z);
+    return(vec3(x,y,z));
+  }
 };
 
 

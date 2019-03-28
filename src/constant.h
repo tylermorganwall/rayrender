@@ -44,7 +44,7 @@ bool constant_medium::hit(const ray& r, float t_min, float t_max, hit_record& re
         rec1.t = 0;
       }
       float distance_inside_boundary = (rec2.t - rec1.t) * r.direction().length();
-      float hit_distance = -(1/density) * log(drand48());
+      float hit_distance = -(1/density) * log(rng.unif_rand());
       if(hit_distance < distance_inside_boundary) {
         rec.t = rec1.t + hit_distance / r.direction().length();
         rec.p = r.point_at_parameter(rec.t);
