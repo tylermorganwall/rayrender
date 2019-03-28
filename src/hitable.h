@@ -32,7 +32,7 @@ class hitable {
     virtual float pdf_value(const vec3& o, const vec3& v, random_gen& rng) {
       return(0.0);
     }
-    virtual vec3 random(const vec3& o) const {
+    virtual vec3 random(const vec3& o, random_gen& rng) {
       return(vec3(0,1,0));
     }
 };
@@ -54,8 +54,8 @@ public:
   float pdf_value(const vec3& o, const vec3& v, random_gen& rng) {
     return(ptr->pdf_value(o,v, rng));
   }
-  vec3 random(const vec3& o) const {
-    return(ptr->random(o));
+  vec3 random(const vec3& o, random_gen& rng) {
+    return(ptr->random(o, rng));
   }
   
   hitable *ptr;
@@ -69,8 +69,8 @@ public:
   float pdf_value(const vec3& o, const vec3& v, random_gen& rng) {
     return(ptr->pdf_value(o-offset,v, rng));
   }
-  vec3 random(const vec3& o) const {
-    return(ptr->random(o-offset));
+  vec3 random(const vec3& o, random_gen& rng) {
+    return(ptr->random(o-offset, rng));
   }
   hitable *ptr;
   vec3 offset;
@@ -106,8 +106,8 @@ public:
   float pdf_value(const vec3& o, const vec3& v, random_gen& rng) {
     return(ptr->pdf_value(o,v, rng));
   }
-  vec3 random(const vec3& o) const {
-    return(ptr->random(o));
+  vec3 random(const vec3& o, random_gen& rng) {
+    return(ptr->random(o, rng));
   }
   hitable *ptr;
   float sin_theta;
@@ -180,8 +180,8 @@ public:
   float pdf_value(const vec3& o, const vec3& v, random_gen& rng) {
     return(ptr->pdf_value(o,v, rng));
   }
-  vec3 random(const vec3& o) const {
-    return(ptr->random(o));
+  vec3 random(const vec3& o, random_gen& rng) {
+    return(ptr->random(o, rng));
   }
   hitable *ptr;
   float sin_theta;
@@ -253,8 +253,8 @@ public:
   float pdf_value(const vec3& o, const vec3& v, random_gen& rng) {
     return(ptr->pdf_value(o,v, rng));
   }
-  vec3 random(const vec3& o) const {
-    return(ptr->random(o));
+  vec3 random(const vec3& o, random_gen& rng) {
+    return(ptr->random(o, rng));
   }
   hitable *ptr;
   float sin_theta;

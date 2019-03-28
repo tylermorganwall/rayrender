@@ -10,7 +10,7 @@ class hitable_list: public hitable {
     virtual bool hit(const ray& r, float tmin, float tmax, hit_record& rec, random_gen& rng);
     virtual bool bounding_box(float t0, float t1, aabb& box) const;
     virtual float pdf_value(const vec3& o, const vec3& v, random_gen& rng);
-    virtual vec3 random(const vec3& o) const;
+    virtual vec3 random(const vec3& o, random_gen& rng);
     hitable **list;
     int list_size;
 };
@@ -59,9 +59,9 @@ float hitable_list::pdf_value(const vec3& o, const vec3& v, random_gen& rng) {
   return(sum);
 }
 
-vec3 hitable_list::random(const vec3& o) const {
+vec3 hitable_list::random(const vec3& o, random_gen& rng) {
   int index = int(drand48() * list_size);
-  return(list[index]->random(o));
+  return(list[index]->random(o, rng));
 }
 
 #endif

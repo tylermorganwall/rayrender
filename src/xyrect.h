@@ -24,7 +24,7 @@ public:
       return(0);
     }
   }
-  virtual vec3 random(const vec3& o) const {
+  virtual vec3 random(const vec3& o, random_gen& rng) {
     vec3 random_point = vec3(x0 + drand48() * (x1 - x0), y0 + drand48() * (y1-y0),k);
     return(random_point-o);
   }
@@ -53,7 +53,7 @@ public:
       return(0);
     }
   }
-  virtual vec3 random(const vec3& o) const {
+  virtual vec3 random(const vec3& o, random_gen& rng) {
     vec3 random_point = vec3(x0 + drand48() * (x1 - x0), k, z0 + drand48() * (z1-z0));
     return(random_point-o);
   }
@@ -82,7 +82,7 @@ public:
       return(0);
     }
   }
-  virtual vec3 random(const vec3& o) const {
+  virtual vec3 random(const vec3& o, random_gen& rng) {
     vec3 random_point = vec3(k, y0 + drand48() * (y1 - y0), z0 + drand48() * (z1-z0));
     return(random_point-o);
   }

@@ -19,8 +19,8 @@ public:
   float pdf_value(const vec3& o, const vec3& v, random_gen& rng) {
     return(boundary->pdf_value(o,v, rng));
   }
-  vec3 random(const vec3& o) const {
-    return(boundary->random(o));
+  vec3 random(const vec3& o, random_gen& rng) {
+    return(boundary->random(o, rng));
   }
   hitable *boundary;
   float density;

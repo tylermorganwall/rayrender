@@ -16,8 +16,8 @@ public:
   virtual float pdf_value(const vec3& o, const vec3& v, random_gen& rng) {
     return(list_ptr.pdf_value(o,v, rng));
   }
-  virtual vec3 random(const vec3& o) const {
-    return(list_ptr.random(o));
+  virtual vec3 random(const vec3& o, random_gen& rng) {
+    return(list_ptr.random(o, rng));
   }
   vec3 pmin, pmax;
   hitable_list list_ptr;

@@ -37,7 +37,7 @@ public:
     return(ptr->pdf_value(o, direction, rng));
   }
   virtual vec3 generate(random_gen& rng) {
-    return(ptr->random(o)); 
+    return(ptr->random(o, rng)); 
   }
   hitable *ptr;
   vec3 o;
