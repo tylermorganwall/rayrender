@@ -1,6 +1,7 @@
 #ifndef AABBH
 #define AABBH
 #include "ray.h"
+#include "rng.h"
 
 inline float ffmin(float a, float b) { return(a < b ? a : b);}
 inline float ffmax(float a, float b) { return(a > b ? a : b);}
@@ -14,13 +15,13 @@ class aabb {
     vec3 min() const {return(_min);}
     vec3 max() const {return(_max);}
     
-    bool hit(const ray& r, float tmin, float tmax) const;
+    bool hit(const ray& r, float tmin, float tmax, random_gen& rng);
     
     vec3 _min;
     vec3 _max;
 };
 
-bool aabb::hit(const ray& r, float tmin, float tmax) const {
+bool aabb::hit(const ray& r, float tmin, float tmax, random_gen& rng) {
   for(int a = 0; a < 3; a++) {
     float invD = 1.0f / r.direction()[a];
     float t0 = (min()[a] - r.origin()[a]) * invD;

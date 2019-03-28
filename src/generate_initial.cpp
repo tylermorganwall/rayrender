@@ -36,7 +36,7 @@ inline vec3 clamp(const vec3& c, float clampval) {
 
 vec3 color(const ray& r, hitable *world, hitable *hlist, int depth, random_gen& rng) {
   hit_record hrec;
-  if(world->hit(r, 0.001, FLT_MAX, hrec)) {
+  if(world->hit(r, 0.001, FLT_MAX, hrec, rng)) {
     scatter_record srec;
     vec3 emitted = hrec.mat_ptr->emitted(r, hrec, hrec.u, hrec.v,hrec.p);
     float pdf_val;
@@ -47,7 +47,7 @@ vec3 color(const ray& r, hitable *world, hitable *hlist, int depth, random_gen& 
       hitable_pdf p_imp(hlist, hrec.p);
       mixture_pdf p(&p_imp, srec.pdf_ptr);
       ray scattered = ray(hrec.p, p.generate(rng), r.time());
-      pdf_val = p.value(scattered.direction());
+      pdf_val = p.value(scattered.direction(), rng);
       return(emitted + srec.attenuation * hrec.mat_ptr->scattering_pdf(r, hrec, scattered) *  color(scattered, world, hlist, depth + 1, rng) / pdf_val);
     } else {
       return(emitted);
@@ -60,7 +60,7 @@ vec3 color(const ray& r, hitable *world, hitable *hlist, int depth, random_gen& 
 vec3 color_amb(const ray& r, hitable *world, hitable *hlist, int depth,
            const vec3& backgroundhigh, const vec3& backgroundlow, random_gen& rng) {
   hit_record hrec;
-  if(world->hit(r, 0.001, FLT_MAX, hrec)) {
+  if(world->hit(r, 0.001, FLT_MAX, hrec, rng)) {
     scatter_record srec;
     vec3 emitted = hrec.mat_ptr->emitted(r, hrec, hrec.u, hrec.v,hrec.p);
     float pdf_val;
@@ -72,7 +72,7 @@ vec3 color_amb(const ray& r, hitable *world, hitable *hlist, int depth,
       hitable_pdf p_imp(hlist, hrec.p);
       mixture_pdf p(&p_imp, srec.pdf_ptr);
       ray scattered = ray(hrec.p, p.generate(rng), r.time());
-      pdf_val = p.value(scattered.direction());
+      pdf_val = p.value(scattered.direction(), rng);
       return(emitted + srec.attenuation * 
              hrec.mat_ptr->scattering_pdf(r, hrec, scattered) *  
              color_amb(scattered, world, hlist, depth + 1, backgroundhigh,backgroundlow, rng) / pdf_val);
@@ -90,7 +90,7 @@ vec3 color_amb(const ray& r, hitable *world, hitable *hlist, int depth,
 
 vec3 color_uniform(const ray& r, hitable *world, int depth, random_gen& rng) {
   hit_record hrec;
-  if(world->hit(r, 0.001, FLT_MAX, hrec)) {
+  if(world->hit(r, 0.001, FLT_MAX, hrec, rng)) {
     scatter_record srec;
     vec3 emitted = hrec.mat_ptr->emitted(r, hrec, hrec.u, hrec.v,hrec.p);
     float pdf_val;
@@ -100,7 +100,7 @@ vec3 color_uniform(const ray& r, hitable *world, int depth, random_gen& rng) {
       }
       cosine_pdf p(hrec.normal);
       ray scattered = ray(hrec.p, p.generate(rng), r.time());
-      pdf_val = p.value(scattered.direction());
+      pdf_val = p.value(scattered.direction(), rng);
       return(emitted + srec.attenuation * hrec.mat_ptr->scattering_pdf(r, hrec, scattered) *  
              color_uniform(scattered, world, depth + 1, rng) / pdf_val);
     } else {
@@ -114,7 +114,7 @@ vec3 color_uniform(const ray& r, hitable *world, int depth, random_gen& rng) {
 vec3 color_amb_uniform(const ray& r, hitable *world, int depth,
                const vec3& backgroundhigh, const vec3& backgroundlow, random_gen& rng) {
   hit_record hrec;
-  if(world->hit(r, 0.001, FLT_MAX, hrec)) {
+  if(world->hit(r, 0.001, FLT_MAX, hrec, rng)) {
     scatter_record srec;
     vec3 emitted = hrec.mat_ptr->emitted(r, hrec, hrec.u, hrec.v,hrec.p);
     float pdf_val;
@@ -125,7 +125,7 @@ vec3 color_amb_uniform(const ray& r, hitable *world, int depth,
       }
       cosine_pdf p(hrec.normal);
       ray scattered = ray(hrec.p, p.generate(rng), r.time());
-      pdf_val = p.value(scattered.direction());
+      pdf_val = p.value(scattered.direction(), rng);
       return(emitted + srec.attenuation * 
              hrec.mat_ptr->scattering_pdf(r, hrec, scattered) *  
              color_amb_uniform(scattered, world, depth + 1, backgroundhigh,backgroundlow, rng) / pdf_val);

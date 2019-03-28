@@ -4,6 +4,7 @@
 #include "aabb.h"
 #include "vec3.h"
 #include "texture.h"
+#include "rng.h"
 
 
 class material;
@@ -26,9 +27,9 @@ struct hit_record {
 
 class hitable {
   public:
-    virtual bool hit(const ray& r, float t_min, float t_max, hit_record& rec) = 0;
+    virtual bool hit(const ray& r, float t_min, float t_max, hit_record& rec, random_gen& rng) = 0;
     virtual bool bounding_box(float t0, float t1, aabb& box) const = 0;
-    virtual float pdf_value(const vec3& o, const vec3& v) {
+    virtual float pdf_value(const vec3& o, const vec3& v, random_gen& rng) {
       return(0.0);
     }
     virtual vec3 random(const vec3& o) const {
@@ -39,8 +40,8 @@ class hitable {
 class flip_normals : public hitable {
 public:
   flip_normals(hitable *p) : ptr(p) {}
-  virtual bool hit(const ray& r, float t_min, float t_max, hit_record& rec) {
-    if(ptr->hit(r, t_min, t_max, rec)) {
+  virtual bool hit(const ray& r, float t_min, float t_max, hit_record& rec, random_gen& rng) {
+    if(ptr->hit(r, t_min, t_max, rec, rng)) {
       rec.normal = -rec.normal;
       return(true);
     } else {
@@ -50,8 +51,8 @@ public:
   virtual bool bounding_box(float t0, float t1, aabb& box) const {
     return(ptr->bounding_box(t0,t1,box));
   }
-  float pdf_value(const vec3& o, const vec3& v) {
-    return(ptr->pdf_value(o,v));
+  float pdf_value(const vec3& o, const vec3& v, random_gen& rng) {
+    return(ptr->pdf_value(o,v, rng));
   }
   vec3 random(const vec3& o) const {
     return(ptr->random(o));
@@ -63,10 +64,10 @@ public:
 class translate : public hitable {
 public: 
   translate(hitable *p, const vec3& displacement) : ptr(p), offset(displacement) {}
-  virtual bool hit(const ray& r, float t_min, float t_max, hit_record& rec);
+  virtual bool hit(const ray& r, float t_min, float t_max, hit_record& rec, random_gen& rng);
   virtual bool bounding_box(float t0, float t1, aabb& box) const;
-  float pdf_value(const vec3& o, const vec3& v) {
-    return(ptr->pdf_value(o-offset,v));
+  float pdf_value(const vec3& o, const vec3& v, random_gen& rng) {
+    return(ptr->pdf_value(o-offset,v, rng));
   }
   vec3 random(const vec3& o) const {
     return(ptr->random(o-offset));
@@ -75,9 +76,9 @@ public:
   vec3 offset;
 };
 
-bool translate::hit(const ray& r, float t_min, float t_max, hit_record& rec) {
+bool translate::hit(const ray& r, float t_min, float t_max, hit_record& rec, random_gen& rng) {
   ray moved_r(r.origin()-offset, r.direction(), r.time());
-  if(ptr->hit(moved_r, t_min, t_max, rec)) {
+  if(ptr->hit(moved_r, t_min, t_max, rec, rng)) {
     rec.p += offset;
     return(true);
   } else {
@@ -97,13 +98,13 @@ bool translate::bounding_box(float t0, float t1, aabb& box) const {
 class rotate_y : public hitable {
 public:
   rotate_y(hitable *p, float angle);
-  virtual bool hit(const ray& r, float t_min, float t_max, hit_record& rec);
+  virtual bool hit(const ray& r, float t_min, float t_max, hit_record& rec, random_gen& rng);
   virtual bool bounding_box(float t0, float t1, aabb& box) const {
     box = bbox; 
     return(hasbox);
   }
-  float pdf_value(const vec3& o, const vec3& v) {
-    return(ptr->pdf_value(o,v));
+  float pdf_value(const vec3& o, const vec3& v, random_gen& rng) {
+    return(ptr->pdf_value(o,v, rng));
   }
   vec3 random(const vec3& o) const {
     return(ptr->random(o));
@@ -145,7 +146,7 @@ rotate_y::rotate_y(hitable *p, float angle) : ptr(p) {
   bbox = aabb(min, max);
 }
 
-bool rotate_y::hit(const ray& r, float t_min, float t_max, hit_record& rec) {
+bool rotate_y::hit(const ray& r, float t_min, float t_max, hit_record& rec, random_gen& rng) {
   vec3 origin = r.origin();
   vec3 direction = r.direction();
   origin.e[0] = cos_theta*r.origin()[0] - sin_theta*r.origin()[2];
@@ -153,7 +154,7 @@ bool rotate_y::hit(const ray& r, float t_min, float t_max, hit_record& rec) {
   direction.e[0] = cos_theta*r.direction()[0] - sin_theta*r.direction()[2];
   direction.e[2] = sin_theta*r.direction()[0] + cos_theta*r.direction()[2];
   ray rotated_r(origin, direction, r.time());
-  if(ptr->hit(rotated_r, t_min, t_max, rec)) {
+  if(ptr->hit(rotated_r, t_min, t_max, rec, rng)) {
     vec3 p = rec.p;
     vec3 normal = rec.normal;
     p.e[0] = cos_theta*rec.p.e[0] + sin_theta*rec.p.e[2];
@@ -171,13 +172,13 @@ bool rotate_y::hit(const ray& r, float t_min, float t_max, hit_record& rec) {
 class rotate_x : public hitable {
 public:
   rotate_x(hitable *p, float angle);
-  virtual bool hit(const ray& r, float t_min, float t_max, hit_record& rec);
+  virtual bool hit(const ray& r, float t_min, float t_max, hit_record& rec, random_gen& rng);
   virtual bool bounding_box(float t0, float t1, aabb& box) const {
     box = bbox; 
     return(hasbox);
   }
-  float pdf_value(const vec3& o, const vec3& v) {
-    return(ptr->pdf_value(o,v));
+  float pdf_value(const vec3& o, const vec3& v, random_gen& rng) {
+    return(ptr->pdf_value(o,v, rng));
   }
   vec3 random(const vec3& o) const {
     return(ptr->random(o));
@@ -219,7 +220,7 @@ rotate_x::rotate_x(hitable *p, float angle) : ptr(p) {
   bbox = aabb(min, max);
 }
 
-bool rotate_x::hit(const ray& r, float t_min, float t_max, hit_record& rec) {
+bool rotate_x::hit(const ray& r, float t_min, float t_max, hit_record& rec, random_gen& rng) {
   vec3 origin = r.origin();
   vec3 direction = r.direction();
   origin.e[1] = cos_theta*r.origin()[1] - sin_theta*r.origin()[2];
@@ -227,7 +228,7 @@ bool rotate_x::hit(const ray& r, float t_min, float t_max, hit_record& rec) {
   direction.e[1] = cos_theta*r.direction()[1] - sin_theta*r.direction()[2];
   direction.e[2] = sin_theta*r.direction()[1] + cos_theta*r.direction()[2];
   ray rotated_r(origin, direction, r.time());
-  if(ptr->hit(rotated_r, t_min, t_max, rec)) {
+  if(ptr->hit(rotated_r, t_min, t_max, rec, rng)) {
     vec3 p = rec.p;
     vec3 normal = rec.normal;
     p.e[1] = cos_theta*rec.p.e[1] + sin_theta*rec.p.e[2];
@@ -244,13 +245,13 @@ bool rotate_x::hit(const ray& r, float t_min, float t_max, hit_record& rec) {
 class rotate_z : public hitable {
 public:
   rotate_z(hitable *p, float angle);
-  virtual bool hit(const ray& r, float t_min, float t_max, hit_record& rec);
+  virtual bool hit(const ray& r, float t_min, float t_max, hit_record& rec, random_gen& rng);
   virtual bool bounding_box(float t0, float t1, aabb& box) const {
     box = bbox; 
     return(hasbox);
   }
-  float pdf_value(const vec3& o, const vec3& v) {
-    return(ptr->pdf_value(o,v));
+  float pdf_value(const vec3& o, const vec3& v, random_gen& rng) {
+    return(ptr->pdf_value(o,v, rng));
   }
   vec3 random(const vec3& o) const {
     return(ptr->random(o));
@@ -292,7 +293,7 @@ rotate_z::rotate_z(hitable *p, float angle) : ptr(p) {
   bbox = aabb(min, max);
 }
 
-bool rotate_z::hit(const ray& r, float t_min, float t_max, hit_record& rec) {
+bool rotate_z::hit(const ray& r, float t_min, float t_max, hit_record& rec, random_gen& rng) {
   vec3 origin = r.origin();
   vec3 direction = r.direction();
   origin.e[0] = cos_theta*r.origin()[0] - sin_theta*r.origin()[1];
@@ -300,7 +301,7 @@ bool rotate_z::hit(const ray& r, float t_min, float t_max, hit_record& rec) {
   direction.e[0] = cos_theta*r.direction()[0] - sin_theta*r.direction()[1];
   direction.e[1] = sin_theta*r.direction()[0] + cos_theta*r.direction()[1];
   ray rotated_r(origin, direction, r.time());
-  if(ptr->hit(rotated_r, t_min, t_max, rec)) {
+  if(ptr->hit(rotated_r, t_min, t_max, rec, rng)) {
     vec3 p = rec.p;
     vec3 normal = rec.normal;
     p.e[0] = cos_theta*rec.p.e[0] + sin_theta*rec.p.e[1];

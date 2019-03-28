@@ -2,12 +2,13 @@
 #define BVHNODEH
 
 #include "hitable.h"
+#include "aabb.h"
 
 class bvh_node : public hitable {
   public:
     bvh_node() {}
     bvh_node(hitable **l, int n, float time0, float time1);
-    virtual bool hit(const ray& r, float t_min, float t_max, hit_record& rec);
+    virtual bool hit(const ray& r, float t_min, float t_max, hit_record& rec, random_gen& rng);
     virtual bool bounding_box(float t0, float t1, aabb& box) const;
     hitable *left;
     hitable *right;
@@ -19,13 +20,13 @@ bool bvh_node::bounding_box(float t0, float t1, aabb& b) const {
   return(true);
 }
 
-bool bvh_node::hit(const ray& r, float t_min, float t_max, hit_record& rec) {
-  if(box.hit(r,t_min,t_max)) {
-    if(left->hit(r,t_min,t_max,rec)) {
-      right->hit(r,t_min,rec.t,rec);
+bool bvh_node::hit(const ray& r, float t_min, float t_max, hit_record& rec, random_gen& rng) {
+  if(box.hit(r, t_min, t_max, rng)) {
+    if(left->hit(r,t_min,t_max,rec, rng)) {
+      right->hit(r,t_min,rec.t,rec, rng);
       return(true);
     } else {
-      return(right->hit(r,t_min,t_max,rec));
+      return(right->hit(r,t_min,t_max,rec, rng));
     }
   }
   return(false);
