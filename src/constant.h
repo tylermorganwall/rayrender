@@ -12,11 +12,11 @@ public:
   constant_medium(hitable *b, float d, texture *a) : boundary(b), density(d) {
     phase_function = new isotropic(a);
   }
-  virtual bool hit(const ray& r, float t_min, float t_max, hit_record& rec) const;
+  virtual bool hit(const ray& r, float t_min, float t_max, hit_record& rec);
   virtual bool bounding_box(float t0, float t1, aabb& box) const {
     return(boundary->bounding_box(t0,t1,box));
   }
-  float pdf_value(const vec3& o, const vec3& v) const {
+  float pdf_value(const vec3& o, const vec3& v) {
     return(boundary->pdf_value(o,v));
   }
   vec3 random(const vec3& o) const {
@@ -27,7 +27,7 @@ public:
   material *phase_function;
 };
 
-bool constant_medium::hit(const ray& r, float t_min, float t_max, hit_record& rec) const {
+bool constant_medium::hit(const ray& r, float t_min, float t_max, hit_record& rec) {
   hit_record rec1, rec2;
   if(boundary->hit(r, -FLT_MAX, FLT_MAX,rec1)) {
     if(boundary->hit(r, rec1.t + 0.0001, FLT_MAX, rec2)) {
