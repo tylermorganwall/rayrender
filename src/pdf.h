@@ -3,21 +3,12 @@
 
 #include "onbh.h"
 #include "hitable.h"
-
-inline vec3 random_cosine_direction() {
-  float r1 = drand48();
-  float r2 = drand48();
-  float z = sqrt(1-r2);
-  float phi = 2*M_PI*r1;
-  float x = cos(phi)*2*sqrt(r2);
-  float y = sin(phi)*2*sqrt(r2);
-  return vec3(x, y, z);
-}
+#include "rng.h"
 
 class pdf {
 public: 
   virtual float value(const vec3& direction) const = 0;
-  virtual vec3 generate() const = 0;
+  virtual vec3 generate(random_gen& rng) = 0;
 };
 
 class cosine_pdf : public pdf {
@@ -33,8 +24,8 @@ public:
       return(0);
     }
   } 
-  virtual vec3 generate() const {
-    return(uvw.local(random_cosine_direction()));
+  virtual vec3 generate(random_gen& rng) {
+    return(uvw.local(rng.random_cosine_direction()));
   }
   onb uvw;
 };
@@ -45,7 +36,7 @@ public:
   virtual float value(const vec3& direction) const {
     return(ptr->pdf_value(o,direction));
   }
-  virtual vec3 generate() const {
+  virtual vec3 generate(random_gen& rng) {
     return(ptr->random(o)); 
   }
   hitable *ptr;
@@ -61,11 +52,11 @@ public:
   virtual float value(const vec3& direction) const {
     return(0.5 * p[0]->value(direction) + 0.5 * p[1]->value(direction));
   }
-  virtual vec3 generate() const {
-    if(drand48() < 0.5) {
-      return(p[0]->generate());
+  virtual vec3 generate(random_gen& rng) {
+    if(rng.unif_rand() < 0.5) {
+      return(p[0]->generate(rng));
     } else {
-      return(p[1]->generate());
+      return(p[1]->generate(rng));
     } 
   }
   pdf *p[2];

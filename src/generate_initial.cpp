@@ -46,7 +46,7 @@ vec3 color(const ray& r, hitable *world, hitable *hlist, int depth, random_gen& 
       }
       hitable_pdf p_imp(hlist, hrec.p);
       mixture_pdf p(&p_imp, srec.pdf_ptr);
-      ray scattered = ray(hrec.p, p.generate(), r.time());
+      ray scattered = ray(hrec.p, p.generate(rng), r.time());
       pdf_val = p.value(scattered.direction());
       return(emitted + srec.attenuation * hrec.mat_ptr->scattering_pdf(r, hrec, scattered) *  color(scattered, world, hlist, depth + 1, rng) / pdf_val);
     } else {
@@ -71,7 +71,7 @@ vec3 color_amb(const ray& r, hitable *world, hitable *hlist, int depth,
       }
       hitable_pdf p_imp(hlist, hrec.p);
       mixture_pdf p(&p_imp, srec.pdf_ptr);
-      ray scattered = ray(hrec.p, p.generate(), r.time());
+      ray scattered = ray(hrec.p, p.generate(rng), r.time());
       pdf_val = p.value(scattered.direction());
       return(emitted + srec.attenuation * 
              hrec.mat_ptr->scattering_pdf(r, hrec, scattered) *  
@@ -99,7 +99,7 @@ vec3 color_uniform(const ray& r, hitable *world, int depth, random_gen& rng) {
         return(srec.attenuation * color_uniform(srec.specular_ray, world, depth + 1, rng));
       }
       cosine_pdf p(hrec.normal);
-      ray scattered = ray(hrec.p, p.generate(), r.time());
+      ray scattered = ray(hrec.p, p.generate(rng), r.time());
       pdf_val = p.value(scattered.direction());
       return(emitted + srec.attenuation * hrec.mat_ptr->scattering_pdf(r, hrec, scattered) *  
              color_uniform(scattered, world, depth + 1, rng) / pdf_val);
@@ -124,7 +124,7 @@ vec3 color_amb_uniform(const ray& r, hitable *world, int depth,
                color_amb_uniform(srec.specular_ray, world, depth + 1, backgroundhigh,backgroundlow, rng));
       }
       cosine_pdf p(hrec.normal);
-      ray scattered = ray(hrec.p, p.generate(), r.time());
+      ray scattered = ray(hrec.p, p.generate(rng), r.time());
       pdf_val = p.value(scattered.direction());
       return(emitted + srec.attenuation * 
              hrec.mat_ptr->scattering_pdf(r, hrec, scattered) *  
