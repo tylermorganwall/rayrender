@@ -451,7 +451,7 @@ hitable *build_scene(IntegerVector& type,
       }
     }
   }
-  return(new bvh_node(list, n, shutteropen, shutterclose));
+  return(new bvh_node(list, n, shutteropen, shutterclose, rng));
 }
 
 hitable* build_imp_sample(IntegerVector& type, 
