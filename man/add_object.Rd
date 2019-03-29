@@ -24,5 +24,5 @@ scene = generate_ground(depth=-0.5,material = lambertian(checkercolor="blue")) \
                   material=lambertian(noise=5,noisecolor="purple",color="black",noisephase=45),
                   angle=c(0,30,0))) \%>\%
   add_object(sphere(z=-0.7,radius=0.5,material=metal(color="gold")))
-render_scene(scene)
+render_scene(scene,parallel=TRUE)
 }

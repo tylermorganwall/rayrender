@@ -1,11 +1,11 @@
 Package: rayrender
 Type: Package
-Title: Raytrace Spheres
+Title: Build and Raytrace 3D Scenes
 Version: 0.2.0
 Date: 2019-03-11
 Author: Tyler Morgan-Wall
 Maintainer: Tyler Morgan-Wall <tylermw@gmail.com>
-Description: A raytracer for spheres, planes, and cubes. Uses a tidy `tibble` input to build scenes. Based off of Peter Shirley's "Ray Tracing in One Weekend" and "Ray Tracing: The Next Week".
+Description: A raytracer for spheres, planes, and cubes. Uses a tidy `tibble` input to build scenes. Based off of Peter Shirley's "Ray Tracing in One Weekend" book series.
 License: GPL (>= 2)
 Imports: 
     Rcpp (>= 1.0.0),

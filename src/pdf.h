@@ -9,6 +9,7 @@ class pdf {
 public: 
   virtual float value(const vec3& direction, random_gen& rng) = 0;
   virtual vec3 generate(random_gen& rng) = 0;
+  virtual ~pdf(){};
 };
 
 class cosine_pdf : public pdf {

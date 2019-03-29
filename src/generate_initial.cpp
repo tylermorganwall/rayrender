@@ -20,9 +20,9 @@ using namespace Rcpp;
 
 inline vec3 de_nan(const vec3& c) {
   vec3 temp = c;
-  if(isnan(c[0])) temp.e[0] = 0;
-  if(isnan(c[1])) temp.e[1] = 0;
-  if(isnan(c[2])) temp.e[2] = 0;
+  if(std::isnan(c[0])) temp.e[0] = 0;
+  if(std::isnan(c[1])) temp.e[1] = 0;
+  if(std::isnan(c[2])) temp.e[2] = 0;
   return(temp);
 }
 
@@ -598,18 +598,18 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
     }
   }
 
-  hitable *a[numbertosample];
+  hitable *implicit_sample_vector[numbertosample];
   int counter = 0;
   for(int i = 0; i < n; i++)  {
     if(implicit_sample(i)) {
-      a[counter] = build_imp_sample(type, radius, shape, x, y, z,
+      implicit_sample_vector[counter] = build_imp_sample(type, radius, shape, x, y, z,
                                properties, velocity,
                                n, shutteropen, shutterclose,
                                angle, i, rng);
       counter++;
     }
   }
-  hitable_list hlist(a,numbertosample);
+  hitable_list hlist(implicit_sample_vector,numbertosample);
   
   if(!parallel) {
     for(int j = ny - 1; j >= 0; j--) {

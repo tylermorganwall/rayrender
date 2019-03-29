@@ -74,11 +74,11 @@ int box_z_compare(const void * a, const void * b) {
 bvh_node::bvh_node(hitable **l, int n, float time0, float time1, random_gen rng) {
   int axis = int(3*rng.unif_rand());
   if(axis == 0) {
-    qsort(l, n, sizeof(hitable *), box_x_compare);
+    std::qsort(l, n, sizeof(hitable *), box_x_compare);
   } else if (axis == 1) {
-    qsort(l, n, sizeof(hitable *), box_y_compare);
+    std::qsort(l, n, sizeof(hitable *), box_y_compare);
   } else {
-    qsort(l, n, sizeof(hitable *), box_z_compare);
+    std::qsort(l, n, sizeof(hitable *), box_z_compare);
   }
   if(n == 1) {
     left = right = l[0];

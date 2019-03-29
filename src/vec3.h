@@ -2,7 +2,7 @@
 #define VECH
 
 #include <iostream>
-#include <math.h>
+#include <cmath>
 
 class vec3 {
 public:

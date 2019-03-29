@@ -47,7 +47,7 @@ public:
       weight *= 0.5;
       temp_p *= 2;
     }
-    return(fabs(accum));
+    return(std::fabs(accum));
   }
   static vec3 *ranvec;
   static int *perm_x;
