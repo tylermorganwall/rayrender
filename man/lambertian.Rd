@@ -24,10 +24,15 @@ the amount of turbulence in the texture.}
 
 \item{noisephase}{Default `0`. The phase of the noise. The noise will repeat at `360`.}
 
+\item{noiseintensity}{Default `10`. Intensity of the noise.}
+
 \item{noisecolor}{Default `#000000`. The secondary color of the noise pattern.
 Can be either a hexadecimal code, or a numeric rgb vector listing three intensities between `0` and `1`.}
 
 \item{image_array}{A 3-layer RGB array to be used as the texture on the surface of the object.}
+
+\item{lightintensity}{Default `NA`. If a positive value, this will turn this object into a light emitting the value specified
+in `color` (ignoring other properties). Higher values will produce a brighter light.}
 
 \item{fog}{Default `FALSE`. If `TRUE`, the object will be a volumetric scatterer.}
 

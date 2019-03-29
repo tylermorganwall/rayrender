@@ -6,6 +6,8 @@
 #' @param radius Default `1`. Radius of the sphere.
 #' @param material Default  \code{\link{lambertian}}.The material, called from one of the material 
 #' functions \code{\link{lambertian}}, \code{\link{metal}}, or \code{\link{dielectric}}.
+#' @param angle Default `c(0,0,0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.
+#' @param order_rotation Default `c(1,2,3)`. The order to apply the rotations, referring to "x", "y", and "z".
 #' @param velocity Default `c(0,0,0)`. Velocity of the sphere, used for motion blur.
 #' @param flipped Default `FALSE`. Whether to flip the normals.
 #' @importFrom  grDevices col2rgb
@@ -52,7 +54,8 @@ sphere = function(x=0, y=0, z=0, radius=1, material=lambertian(),
 #' @param zwidth Default `1`. z-width of the cube. Overrides `width` argument for z-axis.
 #' @param material Default  \code{\link{lambertian}}.The material, called from one of the material 
 #' functions \code{\link{lambertian}}, \code{\link{metal}}, or \code{\link{dielectric}}.
-#' @param angle Default `0`. Angle of rotation around the y-axis.
+#' @param angle Default `c(0,0,0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.
+#' @param order_rotation Default `c(1,2,3)`. The order to apply the rotations, referring to "x", "y", and "z".
 #' @param velocity Default `c(0,0,0)`. Velocity of the cube, used for motion blur.
 #' @param flipped Default `FALSE`. Whether to flip the normals.
 #' @importFrom  grDevices col2rgb
@@ -97,7 +100,8 @@ cube = function(x=0, y=0, z=0, width=1, xwidth=1, ywidth=1, zwidth=1,
 #' @param ywidth Default `1`. y-width of the rectangle.
 #' @param material Default  \code{\link{lambertian}}.The material, called from one of the material 
 #' functions \code{\link{lambertian}}, \code{\link{metal}}, or \code{\link{dielectric}}.
-#' @param angle Default `0`. Angle of rotation around the y-axis.
+#' @param angle Default `c(0,0,0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.
+#' @param order_rotation Default `c(1,2,3)`. The order to apply the rotations, referring to "x", "y", and "z".
 #' @param flipped Default `FALSE`. Whether to flip the normals.
 #' 
 #' @return Single row of a tibble describing the XY plane in the scene.
@@ -137,7 +141,8 @@ xy_rect = function(x=0, y=0, z=0, xwidth=1, ywidth=1,
 #' @param zwidth Default `1`. z-width of the rectangle.
 #' @param material Default  \code{\link{lambertian}}.The material, called from one of the material 
 #' functions \code{\link{lambertian}}, \code{\link{metal}}, or \code{\link{dielectric}}.
-#' @param angle Default `0`. Angle of rotation around the y-axis.
+#' @param angle Default `c(0,0,0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.
+#' @param order_rotation Default `c(1,2,3)`. The order to apply the rotations, referring to "x", "y", and "z".
 #' @param flipped Default `FALSE`. Whether to flip the normals.
 #' 
 #' @return Single row of a tibble describing the YZ plane in the scene.
@@ -177,7 +182,7 @@ yz_rect = function(x=0, y=0, z=0, ywidth=1, zwidth=1, material = lambertian(),
 #' @param zwidth Default `1`. z-width of the rectangle.
 #' @param material Default  \code{\link{lambertian}}.The material, called from one of the material 
 #' functions \code{\link{lambertian}}, \code{\link{metal}}, or \code{\link{dielectric}}.
-#' @param angle Default `0`. Angle of rotation around the y-axis.
+#' @param angle Default `c(0,0,0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.
 #' @param order_rotation Default `c(1,2,3)`. The order to apply the rotations, referring to "x", "y", and "z".
 #' @param flipped Default `FALSE`. Whether to flip the normals.
 #' 

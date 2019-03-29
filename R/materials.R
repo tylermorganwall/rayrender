@@ -9,9 +9,12 @@
 #' @param noise Default `0`. If not `0`, covers the surface in a turbulent marble pattern. This value will determine
 #' the amount of turbulence in the texture.
 #' @param noisephase Default `0`. The phase of the noise. The noise will repeat at `360`.
+#' @param noiseintensity Default `10`. Intensity of the noise.
 #' @param noisecolor Default `#000000`. The secondary color of the noise pattern.
 #' Can be either a hexadecimal code, or a numeric rgb vector listing three intensities between `0` and `1`.
 #' @param image_array A 3-layer RGB array to be used as the texture on the surface of the object.
+#' @param lightintensity Default `NA`. If a positive value, this will turn this object into a light emitting the value specified
+#' in `color` (ignoring other properties). Higher values will produce a brighter light.
 #' @param fog Default `FALSE`. If `TRUE`, the object will be a volumetric scatterer.
 #' @param fogdensity Default `0.01`. The density of the fog. Higher values will produce more opaque objects.
 #' @param implicit_sample Default `FALSE`, unless the object is a light. If `TRUE`, the object will
@@ -131,7 +134,8 @@ metal = function(color = "#ffffff", fuzz = 0,  implicit_sample = FALSE) {
 #'
 #' @examples
 #' #Generate a checkered ground
-#' scene = generate_ground(depth=-0.5,material=lambertian(color="white", checkercolor="grey30",checkerperiod=2))
+#' scene = generate_ground(depth=-0.5,
+#'                         material=lambertian(color="white", checkercolor="grey30",checkerperiod=2))
 #' render_scene(scene,parallel=TRUE)
 #' 
 #' #Add a glass sphere
@@ -146,7 +150,8 @@ metal = function(color = "#ffffff", fuzz = 0,  implicit_sample = FALSE) {
 #' 
 #' #Add an area light behind and at an angle and turn off the ambient lighting
 #' scene = scene %>%
-#'   add_object(yz_rect(x=-3,y=0.5,z=1,zwidth=3,ywidth=1.5,material=lambertian(lightintensity=15),angle=c(0,45,0)))
+#'   add_object(yz_rect(x=-3,y=0.5,z=1,zwidth=3,ywidth=1.5,
+#'                      material=lambertian(lightintensity=15),angle=c(0,45,0)))
 #' render_scene(scene,parallel=TRUE,aperture=0, ambient_light=FALSE,samples=1000)
 dielectric = function(color="white", refraction = 1.5, implicit_sample = FALSE) {
   color = convert_color(color)

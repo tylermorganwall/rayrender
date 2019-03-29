@@ -17,6 +17,6 @@ Color vector
 Convert Color
 }
 \examples{
-raynextweek:::convert_color("#eeff00")
+#none
 }
 \keyword{internal}

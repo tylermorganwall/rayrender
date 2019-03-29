@@ -30,6 +30,8 @@ If `TRUE`, the background will be a gradient varying from `backgroundhigh` direc
 
 \item{lookat}{Default `c(0,0,0)`. Location where the camera is pointed.}
 
+\item{camera_up}{Default `c(0,1,0)`. Vector indicating the "up" position of the camera.}
+
 \item{aperture}{Default `0.1`. Aperture of the camera. Higher numbers will increase depth of field.}
 
 \item{clamp_value}{Default `Inf`. If a bright light or a reflective material is in the scene, occasionally

@@ -20,6 +20,10 @@ sphere(x = 0, y = 0, z = 0, radius = 1, material = lambertian(),
 \item{material}{Default  \code{\link{lambertian}}.The material, called from one of the material 
 functions \code{\link{lambertian}}, \code{\link{metal}}, or \code{\link{dielectric}}.}
 
+\item{angle}{Default `c(0,0,0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.}
+
+\item{order_rotation}{Default `c(1,2,3)`. The order to apply the rotations, referring to "x", "y", and "z".}
+
 \item{velocity}{Default `c(0,0,0)`. Velocity of the sphere, used for motion blur.}
 
 \item{flipped}{Default `FALSE`. Whether to flip the normals.}

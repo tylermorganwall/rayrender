@@ -14,7 +14,8 @@ Imports:
     assertthat,
     tibble,
     magrittr,
-    purrr
+    purrr,
+    png
 LinkingTo: Rcpp, RcppParallel
 RoxygenNote: 6.1.1
 SystemRequirements: GNU make

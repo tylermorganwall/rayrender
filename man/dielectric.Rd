@@ -24,7 +24,8 @@ Dielectric (glass) Material
 }
 \examples{
 #Generate a checkered ground
-scene = generate_ground(depth=-0.5,material=lambertian(color="white", checkercolor="grey30",checkerperiod=2))
+scene = generate_ground(depth=-0.5,
+                        material=lambertian(color="white", checkercolor="grey30",checkerperiod=2))
 render_scene(scene,parallel=TRUE)
 
 #Add a glass sphere
@@ -39,6 +40,7 @@ render_scene(scene,parallel=TRUE)
 
 #Add an area light behind and at an angle and turn off the ambient lighting
 scene = scene \%>\%
-  add_object(yz_rect(x=-3,y=0.5,z=1,zwidth=3,ywidth=1.5,material=lambertian(lightintensity=15),angle=c(0,45,0)))
+  add_object(yz_rect(x=-3,y=0.5,z=1,zwidth=3,ywidth=1.5,
+                     material=lambertian(lightintensity=15),angle=c(0,45,0)))
 render_scene(scene,parallel=TRUE,aperture=0, ambient_light=FALSE,samples=1000)
 }

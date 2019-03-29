@@ -12,6 +12,7 @@
 #' `backgroundlow` directly down (-y).
 #' @param lookfrom Default `c(10,1,0)`. Location of the camera.
 #' @param lookat Default `c(0,0,0)`. Location where the camera is pointed.
+#' @param camera_up Default `c(0,1,0)`. Vector indicating the "up" position of the camera.
 #' @param aperture Default `0.1`. Aperture of the camera. Higher numbers will increase depth of field.
 #' @param clamp_value Default `Inf`. If a bright light or a reflective material is in the scene, occasionally
 #' there will be bright spots that will not go away even with a large number of samples. These 
@@ -224,7 +225,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
                              islight = light_bool, lightintensity = light_prop_vec,isflipped = flip_vec,
                              focus_distance=focal_distance,
                              isvolume=fog_bool, voldensity = fog_vec , parallel=parallel,
-                             implicit_sample = implicit_vec, order_rotation = order_rotation_list, clampval = clamp_value) 
+                             implicit_sample = implicit_vec, order_rotation_list = order_rotation_list, clampval = clamp_value) 
   full_array = array(0,c(ncol(rgb_mat$r),nrow(rgb_mat$r),3))
   full_array[,,1] = t(rgb_mat$r)
   full_array[,,2] = t(rgb_mat$g)

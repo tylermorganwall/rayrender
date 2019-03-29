@@ -12,7 +12,7 @@ generate_ground(depth = -1, spheresize = 10000,
 
 \item{spheresize}{Default `10000`. Size of the sphere representing the surface.}
 
-\item{material}{Default  \code{\link{lambertian(color= "#ccff00"}}.The material, called from one of the material 
+\item{material}{Default  \code{\link{lambertian}} with `color= "#ccff00"`.The material, called from one of the material 
 functions \code{\link{lambertian}}, \code{\link{metal}}, or \code{\link{dielectric}}.}
 
 \item{color}{Default `#ccff00`. The color of the sphere. Can be either

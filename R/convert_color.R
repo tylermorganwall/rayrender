@@ -7,7 +7,7 @@
 #' @keywords internal
 #'
 #' @examples
-#' raynextweek:::convert_color("#eeff00")
+#' #none
 convert_color = function(color) {
   if(class(color) == "character") {
     color = as.vector(col2rgb(color))/255
