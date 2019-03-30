@@ -4,13 +4,13 @@
 \alias{generate_ground}
 \title{Generate Ground}
 \usage{
-generate_ground(depth = -1, spheresize = 10000,
+generate_ground(depth = -1, spheresize = 1000,
   material = lambertian(color = "#ccff00"))
 }
 \arguments{
 \item{depth}{Default `-1`. Depth of the surface.}
 
-\item{spheresize}{Default `10000`. Size of the sphere representing the surface.}
+\item{spheresize}{Default `1000`. Radius of the sphere representing the surface.}
 
 \item{material}{Default  \code{\link{lambertian}} with `color= "#ccff00"`.The material, called from one of the material 
 functions \code{\link{lambertian}}, \code{\link{metal}}, or \code{\link{dielectric}}.}
@@ -29,5 +29,7 @@ Generates a large sphere that can be used as the ground for a scene.
 scene = generate_ground(depth=-0.5,material = lambertian(noise=1,noisephase=10)) \%>\%
   add_object(cube(z=0.7,material=metal(color="red",fuzz=0.025),angle=c(0,-15,0))) \%>\%
   add_object(sphere(z=-0.7,radius=0.5,material=dielectric(color="green")))
+\dontrun{
 render_scene(scene)
+}
 }

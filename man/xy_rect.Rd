@@ -36,14 +36,18 @@ Rectangular XY Plane Object
 }
 \examples{
 #Generate a purple rectangle in the cornell box.
+\dontrun{
 generate_cornell() \%>\%
   add_object(xy_rect(x=555/2,y=100,z=555/2,xwidth=200,ywidth=200,
              material = lambertian(color="purple"))) \%>\%
   render_scene(lookfrom = c(278,278,-800) ,lookat = c(278,278,0), fov = 40, ambient_light=FALSE)
+}
 
 #Generate a GOLD plane in the cornell box (it's GOLD!)
+\dontrun{
 generate_cornell() \%>\%
   add_object(xy_rect(x=555/2,y=100,z=555/2,xwidth=200,ywidth=200,angle=c(0,30,0),
              material = metal(color="gold"))) \%>\%
   render_scene(lookfrom = c(278,278,-800) ,lookat = c(278,278,0), fov = 40, ambient_light=FALSE)
+}
 }

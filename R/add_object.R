@@ -13,7 +13,9 @@
 #'                   material=lambertian(noise=5,noisecolor="purple",color="black",noisephase=45),
 #'                   angle=c(0,30,0))) %>%
 #'   add_object(sphere(z=-0.7,radius=0.5,material=metal(color="gold")))
+#' \dontrun{
 #' render_scene(scene,parallel=TRUE)
+#' }
 add_object = function(scene, objects) {
   rbind(scene,objects)
 }

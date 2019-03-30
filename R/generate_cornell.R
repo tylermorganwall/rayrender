@@ -12,16 +12,28 @@
 #' @examples
 #' #Generate and render the default Cornell box.
 #' scene = generate_cornell()
+#' \dontrun{
 #' render_scene(scene, samples=200,aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
+#' }
 #' 
 #' #Make a much smaller light in the center of the room.
 #' scene = generate_cornell(lightwidth=200,lightdepth=200)
+#' \dontrun{
 #' render_scene(scene, samples=200,aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
+#' }
 #' 
 #' #Place a sphere in the middle of the box.
 #' scene = scene %>%
 #'   add_object(sphere(x=555/2,y=555/2,z=555/2,radius=555/4))
+#' \dontrun{
 #' render_scene(scene, samples=200,aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
+#' }
+#' 
+#' #Reduce "fireflies" by setting a clamp_value in render_scene()
+#' \dontrun{
+#' render_scene(scene, samples=200,aperture=0, fov=40, ambient_light=FALSE, 
+#'              parallel=TRUE,clamp_value=3)
+#' }
 generate_cornell = function(light = TRUE, lightintensity = 5,lightcolor = "white",lightwidth = 332, lightdepth=343) {
   scene = yz_rect(x=555,y=555/2,z=555/2,555,555,
       material = lambertian(color = "#1f7326"),flipped = TRUE) %>%

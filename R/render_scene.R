@@ -36,22 +36,33 @@
 #' @examples
 #' #Generate a large checkered sphere as the ground
 #' scene = generate_ground(depth=-0.5,material=lambertian(color="white", checkercolor="darkgreen"))
+#' \dontrun{
 #' render_scene(scene,samples=200,parallel=TRUE)
+#' }
 #' 
 #' #Add a sphere to the center
 #' scene = scene %>%
 #'   add_object(sphere(x=0,y=0,z=0,radius=0.5,material = lambertian(color=c(1,0,1))))
+#' \dontrun{
 #' render_scene(scene,fov=20,parallel=TRUE)
+#' }
 #' 
 #' #Add a marbled cube 
 #' scene = scene %>%
 #'   add_object(cube(x=0,y=0,z=1.1,material = lambertian(noise=3)))
+#' \dontrun{
 #' render_scene(scene,fov=20,parallel=TRUE)
+#' }
 #' 
 #' #Add a metallic gold sphere
 #' scene = scene %>%
 #'   add_object(sphere(x=0,y=0,z=-1.1,radius=0.5,material = metal(color="gold",fuzz=0.1)))
+#' \dontrun{
 #' render_scene(scene,fov=20,parallel=TRUE)
+#' }
+#' 
+#' #Lower the number of samples to render more quickly.
+#' render_scene(scene,fov=15, samples=16)
 #' 
 #' #Add a floating R plot using the iris dataset as a png onto a floating 2D rectangle
 #' tempfileplot = tempfile()
@@ -62,19 +73,26 @@
 #' image_array = png::readPNG(tempfileplot)
 #' scene = scene %>%
 #'   add_object(yz_rect(x=0,y=1.1,z=0,zwidth=2,material = lambertian(image = image_array)))
+#' \dontrun{
 #' render_scene(scene,fov=20,parallel=TRUE)
+#' }
 #' 
 #' #Move the camera
+#' \dontrun{
 #' render_scene(scene,lookfrom = c(7,1.5,10),lookat = c(0,0.5,0),fov=15,parallel=TRUE)
-#' 
+#' }
 #' 
 #' #Change the background gradient to a night time ambience
+#' \dontrun{
 #' render_scene(scene,lookfrom = c(7,1.5,10),lookat = c(0,0.5,0),fov=15,
-#'                  backgroundhigh = "#282375", backgroundlow = "#7e77ea",parallel=TRUE)
+#'              backgroundhigh = "#282375", backgroundlow = "#7e77ea",parallel=TRUE)
+#' }
 #'                  
 #'#Increase the aperture to give more depth of field.
+#' \dontrun{
 #' render_scene(scene,lookfrom = c(7,1.5,10),lookat = c(0,0.5,0),fov=15,
-#'                  aperture = 0.5,parallel=TRUE)
+#'              aperture = 0.5,parallel=TRUE)
+#' }
 #'                  
 #'#Spin the camera around the scene, decreasing the number of samples to render faster. To make 
 #'#an animation, specify the a filename in `render_scene` for each frame.
@@ -82,10 +100,12 @@
 #'t=1:30
 #'xpos = 10 * sin(t*12*pi/180+pi/2)
 #'zpos = 10 * cos(t*12*pi/180+pi/2)
+#'\dontrun{
 #'par(mfrow=c(5,6))
 #'for(i in 1:30) {
 #'  render_scene(scene, samples=5,
 #'    lookfrom = c(xpos[i],1.5,zpos[i]),lookat = c(0,0.5,0),parallel=TRUE)
+#'}
 #'}
 render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 100, ambient_light = FALSE,
                         lookfrom = c(10,1,0), lookat = c(0,0,0), camera_up = c(0,1,0), aperture = 0.1, clamp_value = Inf,
@@ -187,6 +207,12 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
   #order rotation handler
   order_rotation_list = scene$order_rotation
   
+  #group handler
+  group_bool = purrr::map_lgl(scene$pivot_point,.f = ~all(!is.na(.x)))
+  group_pivot = scene$pivot_point 
+  group_angle = scene$group_angle 
+  group_order_rotation = scene$group_order_rotation 
+  
   assertthat::assert_that(all(c(length(xvec),length(yvec),length(zvec),length(rvec),length(typevec),length(proplist)) == length(xvec)))
   assertthat::assert_that(all(!is.null(typevec)))
   for(i in 1:length(xvec)) {
@@ -225,7 +251,9 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
                              islight = light_bool, lightintensity = light_prop_vec,isflipped = flip_vec,
                              focus_distance=focal_distance,
                              isvolume=fog_bool, voldensity = fog_vec , parallel=parallel,
-                             implicit_sample = implicit_vec, order_rotation_list = order_rotation_list, clampval = clamp_value) 
+                             implicit_sample = implicit_vec, order_rotation_list = order_rotation_list, clampval = clamp_value,
+                             isgrouped = group_bool, group_pivot=group_pivot, 
+                             group_angle = group_angle, group_order_rotation = group_order_rotation) 
   full_array = array(0,c(ncol(rgb_mat$r),nrow(rgb_mat$r),3))
   full_array[,,1] = t(rgb_mat$r)
   full_array[,,2] = t(rgb_mat$g)

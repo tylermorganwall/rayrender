@@ -226,7 +226,10 @@ hitable *build_scene(IntegerVector& type,
                         LogicalVector& islight, NumericVector& lightintensity,
                         LogicalVector& isflipped,
                         LogicalVector& isvolume, NumericVector& voldensity,
-                        List& order_rotation_list, random_gen& rng) {
+                        List& order_rotation_list, 
+                        LogicalVector& isgrouped, List& group_pivot, 
+                        List& group_angle, List& group_order_rotation,
+                        random_gen& rng) {
   hitable **list = new hitable*[n+1];
   NumericVector tempvector;
   NumericVector tempchecker;
@@ -234,6 +237,12 @@ hitable *build_scene(IntegerVector& type,
   NumericVector tempnoisecolor;
   NumericVector temprotvec;
   NumericVector order_rotation;
+  NumericVector temp_gpivot;
+  NumericVector temp_gorder;
+  NumericVector temp_gangle;
+  vec3 gpivot;
+  vec3 gorder;
+  vec3 gangle;
   int prop_len;
 
   List templist;
@@ -246,43 +255,59 @@ hitable *build_scene(IntegerVector& type,
     tempnoisecolor = as<NumericVector>(noisecolorlist(i));
     temprotvec = as<NumericVector>(angle(i));
     order_rotation = as<NumericVector>(order_rotation_list(i));
+    if(isgrouped(i)) {
+      temp_gpivot = as<NumericVector>(group_pivot(i));
+      temp_gangle = as<NumericVector>(group_angle(i));
+      temp_gorder = as<NumericVector>(group_order_rotation(i));
+      gpivot = vec3(temp_gpivot(0),temp_gpivot(1),temp_gpivot(2));
+      gangle = vec3(temp_gangle(0),temp_gangle(1),temp_gangle(2));
+      gorder = vec3(temp_gorder(0),temp_gorder(1),temp_gorder(2));
+    } else {
+      gpivot = vec3(0,0,0);
+      gangle = vec3(0,0,0);
+      gorder = vec3(1,2,3);
+    }
     prop_len=2;
     
     center =  vec3(x(i), y(i), z(i));
     vel = vec3(tempvel(0),tempvel(1),tempvel(2));
-    if (shape(i) == 1) {
-      material *sphere_tex;
-      if(type(i) == 1) {
-        if(isimage(i)) {
-          int nx, ny, nn;
-          unsigned char *tex_data = stbi_load(filelocation(i), &nx, &ny, &nn, 0);
-          sphere_tex = new lambertian(new image_texture(tex_data,nx,ny));
-        } else if (islight(i)) {
-          sphere_tex = new diffuse_light(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))*lightintensity(i)) );
-        } else if (isnoise(i)) {
-          sphere_tex = new lambertian(new noise_texture(noise(i),vec3(tempvector(0),tempvector(1),tempvector(2)),
-                                                        vec3(tempnoisecolor(0),tempnoisecolor(1),tempnoisecolor(2)),
-                                                        noisephase(i), noiseintensity(i)));
-        } else if (ischeckered(i)) {
-          sphere_tex = new lambertian(new checker_texture(new constant_texture(vec3(tempchecker(0),tempchecker(1),tempchecker(2))),
-                                                        new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))),tempchecker(3)));
-        } else {
-          sphere_tex = new lambertian(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))) );
-        }
-      } 
-      else if (type(i) == 2) {
-        sphere_tex = new metal(vec3(tempvector(0),tempvector(1),tempvector(2)),tempvector(3));
+    //Generate texture
+    material *tex;
+    if(type(i) == 1) {
+      if(isimage(i)) {
+        int nx, ny, nn;
+        unsigned char *tex_data = stbi_load(filelocation(i), &nx, &ny, &nn, 0);
+        tex = new lambertian(new image_texture(tex_data,nx,ny));
+      } else if (islight(i)) {
+        tex = new diffuse_light(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))*lightintensity(i)) );
+      } else if (isnoise(i)) {
+        tex = new lambertian(new noise_texture(noise(i),vec3(tempvector(0),tempvector(1),tempvector(2)),
+                                                    vec3(tempnoisecolor(0),tempnoisecolor(1),tempnoisecolor(2)),
+                                                    noisephase(i), noiseintensity(i)));
+      } else if (ischeckered(i)) {
+        tex = new lambertian(new checker_texture(new constant_texture(vec3(tempchecker(0),tempchecker(1),tempchecker(2))),
+                                                      new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))),tempchecker(3)));
       } else {
-        sphere_tex = new dielectric(vec3(tempvector(0),tempvector(1),tempvector(2)),tempvector(3), rng);
+        tex = new lambertian(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))) );
       }
-      hitable *entry = new sphere(vec3(0,0,0), radius(i), sphere_tex);
+    } 
+    else if (type(i) == 2) {
+      tex = new metal(vec3(tempvector(0),tempvector(1),tempvector(2)),tempvector(3));
+      prop_len = 3;
+    } else {
+      tex = new dielectric(vec3(tempvector(0),tempvector(1),tempvector(2)),tempvector(3), rng);
+      prop_len = 3;
+    }
+    //Generate objects
+    if (shape(i) == 1) {
+      hitable *entry = new sphere(gpivot, radius(i), tex);
       entry = rotation_order(entry, temprotvec, order_rotation);
       if(!moving(i)) {
         entry = new translate(entry, center + vel * shutteropen);
       } else {
         entry = new moving_sphere(center + vel * shutteropen, 
                                   center + vel * shutterclose, 
-                                  shutteropen, shutterclose, radius(i), sphere_tex);
+                                  shutteropen, shutterclose, radius(i), tex);
       }
       if(isflipped(i)) {
         entry = new flip_normals(entry);
@@ -293,35 +318,9 @@ hitable *build_scene(IntegerVector& type,
         list[i] = entry;
       }
     } else if (shape(i)  == 2) {
-      material *rect_tex;
-      if(type(i) == 1) {
-        if(isimage(i)) {
-          int nx, ny, nn;
-          unsigned char *tex_data = stbi_load(filelocation(i), &nx, &ny, &nn, 0);
-          rect_tex = new lambertian(new image_texture(tex_data,nx,ny));
-        } else if (islight(i)) {
-          rect_tex = new diffuse_light(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))*lightintensity(i)) );
-        } else if (isnoise(i)) {
-          rect_tex = new lambertian(new noise_texture(noise(i),vec3(tempvector(0),tempvector(1),tempvector(2)),
-                                                        vec3(tempnoisecolor(0),tempnoisecolor(1),tempnoisecolor(2)),
-                                                        noisephase(i), noiseintensity(i)));
-        } else if (ischeckered(i)) {
-          rect_tex = new lambertian(new checker_texture(new constant_texture(vec3(tempchecker(0),tempchecker(1),tempchecker(2))),
-                                                          new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))),tempchecker(3)));
-        } else {
-          rect_tex = new lambertian(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))) );
-        }
-      } 
-      else if (type(i) == 2) {
-        rect_tex = new metal(vec3(tempvector(0),tempvector(1),tempvector(2)),tempvector(3));
-        prop_len = 3;
-      } else {
-        rect_tex = new dielectric(vec3(tempvector(0),tempvector(1),tempvector(2)),tempvector(3), rng);
-        prop_len = 3;
-      }
       hitable *entry = new xy_rect(-tempvector(prop_len+2)/2,tempvector(prop_len+2)/2,
-                                                              -tempvector(prop_len+4)/2,tempvector(prop_len+4)/2,
-                                                              0, rect_tex);
+                                   -tempvector(prop_len+4)/2,tempvector(prop_len+4)/2,
+                                   0, tex);
       entry = rotation_order(entry, temprotvec, order_rotation);
       entry = new translate(entry,vec3(tempvector(prop_len+1),tempvector(prop_len+3),tempvector(prop_len+5)) + vel * shutteropen);
       if(isflipped(i)) {
@@ -330,35 +329,9 @@ hitable *build_scene(IntegerVector& type,
         list[i] = entry;
       }
     } else if (shape(i)  == 3) {
-      material *rect_tex;
-      if(type(i) == 1) {
-        if(isimage(i)) {
-          int nx, ny, nn;
-          unsigned char *tex_data = stbi_load(filelocation(i), &nx, &ny, &nn, 0);
-          rect_tex = new lambertian(new image_texture(tex_data,nx,ny));
-        } else if (islight(i)) {
-          rect_tex = new diffuse_light(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))*lightintensity(i)) );
-        } else if (isnoise(i)) {
-          rect_tex = new lambertian(new noise_texture(noise(i),vec3(tempvector(0),tempvector(1),tempvector(2)),
-                                                      vec3(tempnoisecolor(0),tempnoisecolor(1),tempnoisecolor(2)),
-                                                      noisephase(i), noiseintensity(i)));
-        } else if (ischeckered(i)) {
-          rect_tex = new lambertian(new checker_texture(new constant_texture(vec3(tempchecker(0),tempchecker(1),tempchecker(2))),
-                                                        new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))),tempchecker(3)));
-        } else {
-          rect_tex = new lambertian(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))) );
-        }
-      } 
-      else if (type(i) == 2) {
-        rect_tex = new metal(vec3(tempvector(0),tempvector(1),tempvector(2)),tempvector(3));
-        prop_len = 3;
-      } else {
-        rect_tex = new dielectric(vec3(tempvector(0),tempvector(1),tempvector(2)),tempvector(3), rng);
-        prop_len = 3;
-      }
       hitable *entry = new xz_rect(-tempvector(prop_len+2)/2,tempvector(prop_len+2)/2,
                                    -tempvector(prop_len+4)/2,tempvector(prop_len+4)/2,
-                                   0, rect_tex);
+                                   0, tex);
       entry = rotation_order(entry, temprotvec, order_rotation);
       entry = new translate(entry,vec3(tempvector(prop_len+1),tempvector(prop_len+5), tempvector(prop_len+3)) + vel * shutteropen);
       if(isflipped(i)) {
@@ -367,35 +340,9 @@ hitable *build_scene(IntegerVector& type,
         list[i] = entry;
       }
     } else if (shape(i)  == 4) {
-      material *rect_tex;
-      if(type(i) == 1) {
-        if(isimage(i)) {
-          int nx, ny, nn;
-          unsigned char *tex_data = stbi_load(filelocation(i), &nx, &ny, &nn, 0);
-          rect_tex = new lambertian(new image_texture(tex_data,nx,ny));
-        } else if (islight(i)) {
-          rect_tex = new diffuse_light(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))*lightintensity(i)) );
-        } else if (isnoise(i)) {
-          rect_tex = new lambertian(new noise_texture(noise(i),vec3(tempvector(0),tempvector(1),tempvector(2)),
-                                                      vec3(tempnoisecolor(0),tempnoisecolor(1),tempnoisecolor(2)),
-                                                      noisephase(i), noiseintensity(i)));
-        } else if (ischeckered(i)) {
-          rect_tex = new lambertian(new checker_texture(new constant_texture(vec3(tempchecker(0),tempchecker(1),tempchecker(2))),
-                                                        new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))),tempchecker(3)));
-        } else {
-          rect_tex = new lambertian(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))) );
-        }
-      } 
-      else if (type(i) == 2) {
-        rect_tex = new metal(vec3(tempvector(0),tempvector(1),tempvector(2)),tempvector(3));
-        prop_len = 3;
-      } else {
-        rect_tex = new dielectric(vec3(tempvector(0),tempvector(1),tempvector(2)),tempvector(3), rng);
-        prop_len = 3;
-      }
       hitable *entry = new yz_rect(-tempvector(prop_len+2)/2,tempvector(prop_len+2)/2,
                                    -tempvector(prop_len+4)/2,tempvector(prop_len+4)/2,
-                                   0, rect_tex);
+                                   0, tex);
       entry = rotation_order(entry, temprotvec, order_rotation);
       entry = new translate(entry,vec3(tempvector(prop_len+5),tempvector(prop_len+1),tempvector(prop_len+3)) + vel * shutteropen);
       if(isflipped(i)) {
@@ -404,36 +351,9 @@ hitable *build_scene(IntegerVector& type,
         list[i] = entry;
       }
     } else if (shape(i)  == 5) {
-      material *rect_tex;
-      if(type(i) == 1) {
-        if(isimage(i)) {
-          int nx, ny, nn;
-          unsigned char *tex_data = stbi_load(filelocation(i), &nx, &ny, &nn, 0);
-          rect_tex = new lambertian(new image_texture(tex_data,nx,ny));
-        } else if (islight(i)) {
-          rect_tex = new diffuse_light(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))*lightintensity(i)) );
-        } else if (isnoise(i)) {
-          rect_tex = new lambertian(new noise_texture(noise(i),
-                                                      vec3(tempvector(0),tempvector(1),tempvector(2)),
-                                                      vec3(tempnoisecolor(0),tempnoisecolor(1),tempnoisecolor(2)),
-                                                      noisephase(i), noiseintensity(i)));
-        } else if (ischeckered(i)) {
-          rect_tex = new lambertian(new checker_texture(new constant_texture(vec3(tempchecker(0),tempchecker(1),tempchecker(2))),
-                                          new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))),tempchecker(3)));
-        } else {
-          rect_tex = new lambertian(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))) );
-        }
-      }
-      else if (type(i) == 2) {
-        rect_tex = new metal(vec3(tempvector(0),tempvector(1),tempvector(2)),tempvector(3));
-        prop_len = 3;
-      } else {
-        rect_tex = new dielectric(vec3(tempvector(0),tempvector(1),tempvector(2)),tempvector(3), rng);
-        prop_len = 3;
-      }
       hitable *entry = new box(-vec3(tempvector(prop_len+1),tempvector(prop_len+2),tempvector(prop_len+3))/2, 
                                 vec3(tempvector(prop_len+1),tempvector(prop_len+2),tempvector(prop_len+3))/2, 
-                                rect_tex);
+                                tex);
       entry = rotation_order(entry, temprotvec, order_rotation);
       entry = new translate(entry,center + vel * shutteropen);
       if(isvolume(i)) {
@@ -459,7 +379,10 @@ hitable* build_imp_sample(IntegerVector& type,
                          NumericVector& x, NumericVector& y, NumericVector& z,
                          List& properties, List& velocity, 
                          int n, float shutteropen, float shutterclose, 
-                         List& angle, int i, random_gen& rng) {
+                         List& angle, int i, 
+                         LogicalVector& isgrouped, List& group_pivot, 
+                         List& group_angle, List& group_order_rotation,
+                         random_gen& rng) {
   NumericVector tempvector;
   NumericVector temprotvec;
   NumericVector tempvel;
@@ -568,7 +491,9 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
                       LogicalVector& isflipped, float focus_distance,
                       LogicalVector& isvolume, NumericVector& voldensity,
                       bool parallel, LogicalVector& implicit_sample, List& order_rotation_list,
-                      float clampval) {
+                      float clampval,
+                      LogicalVector& isgrouped, List& group_pivot, 
+                      List& group_angle, List& group_order_rotation) {
   NumericMatrix routput(nx,ny);
   NumericMatrix goutput(nx,ny);
   NumericMatrix boutput(nx,ny);
@@ -590,7 +515,9 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
                                   isimage, filelocation,
                                   islight, lightintensity,
                                   isflipped,
-                                  isvolume, voldensity, order_rotation_list, rng);
+                                  isvolume, voldensity, order_rotation_list, 
+                                  isgrouped, group_pivot, 
+                                  group_angle, group_order_rotation, rng);
   int numbertosample = 0;
   for(int i = 0; i < implicit_sample.size(); i++) {
     if(implicit_sample(i)) {
@@ -605,7 +532,9 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
       implicit_sample_vector[counter] = build_imp_sample(type, radius, shape, x, y, z,
                                properties, velocity,
                                n, shutteropen, shutterclose,
-                               angle, i, rng);
+                               angle, i, isgrouped, group_pivot, 
+                               group_angle, group_order_rotation,
+                               rng);
       counter++;
     }
   }

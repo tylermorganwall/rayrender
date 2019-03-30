@@ -17,20 +17,26 @@
 #'
 #' @examples
 #' #Generate a sphere in the cornell box.
+#' \dontrun{
 #' generate_cornell() %>%
 #'   add_object(sphere(x=555/2,y=555/2,z=555/2,radius=100)) %>%
 #'   render_scene(lookfrom = c(278,278,-800) ,lookat = c(278,278,0), fov = 40, ambient_light=FALSE)
+#' }
 #' 
 #' #Generate a GOLD sphere in the cornell box (it's GOLD!)
+#' \dontrun{
 #' generate_cornell() %>%
 #'   add_object(sphere(x=555/2,y=100,z=555/2,radius=100,material=metal(color="gold",fuzz=0.2))) %>%
 #'   render_scene(lookfrom = c(278,278,-800) ,lookat = c(278,278,0), fov = 40, ambient_light=FALSE)
+#' }
 #'   
 #' #Add motion blur and show the sphere moving
+#' \dontrun{
 #' generate_cornell() %>%
 #'   add_object(sphere(x=555/2,y=100,z=555/2,radius=100,
 #'              material=metal(color="gold",fuzz=0.2),velocity=c(50,0,0))) %>%
 #'   render_scene(lookfrom = c(278,278,-800) ,lookat = c(278,278,0), fov = 40, ambient_light=FALSE)
+#' }
 sphere = function(x=0, y=0, z=0, radius=1, material=lambertian(), 
                   angle = c(0,0,0), order_rotation = c(1,2,3), velocity = c(0,0,0), flipped=FALSE) {
   tibble::tibble(x=x,y=y,z=z,radius=radius, type = material$type, shape="sphere",
@@ -40,7 +46,8 @@ sphere = function(x=0, y=0, z=0, radius=1, material=lambertian(),
                  noiseintensity = material$noiseintensity,noisecolor=material$noisecolor,
                  angle=list(angle),image = material$image,lightintensity = material$lightintensity,
                  flipped=flipped,fog=material$fog,fogdensity=material$fogdensity,
-                 implicit_sample=material$implicit_sample,order_rotation=list(order_rotation))
+                 implicit_sample=material$implicit_sample,order_rotation=list(order_rotation),
+                 pivot_point = list(NA), group_angle = list(NA), group_order_rotation = list(NA))
 }
 
 #' Cube Object
@@ -65,15 +72,18 @@ sphere = function(x=0, y=0, z=0, radius=1, material=lambertian(),
 #'
 #' @examples
 #' #Generate a cube in the cornell box.
+#' \dontrun{
 #' generate_cornell() %>%
 #'   add_object(cube(x=555/2,y=100,z=555/2,xwidth=200,ywidth=200,zwidth=200,angle=c(0,30,0))) %>%
 #'   render_scene(lookfrom = c(278,278,-800) ,lookat = c(278,278,0), fov = 40, ambient_light=FALSE)
-#' 
+#' }
 #' #Generate a GOLD cube in the cornell box (it's GOLD!)
+#' \dontrun{
 #' generate_cornell() %>%
 #'   add_object(cube(x=555/2,y=100,z=555/2,xwidth=200,ywidth=200,zwidth=200,angle=c(0,30,0),
 #'                   material = metal(color="gold", fuzz=0.2))) %>%
 #'   render_scene(lookfrom = c(278,278,-800) ,lookat = c(278,278,0), fov = 40, ambient_light=FALSE)
+#' }
 cube = function(x=0, y=0, z=0, width=1, xwidth=1, ywidth=1, zwidth=1, 
                 material=lambertian(), angle = c(0,0,0), order_rotation = c(1,2,3),velocity = c(0,0,0),
                 flipped = FALSE) {
@@ -88,7 +98,8 @@ cube = function(x=0, y=0, z=0, width=1, xwidth=1, ywidth=1, zwidth=1,
                  noiseintensity = material$noiseintensity,noisecolor=material$noisecolor,
                  angle=list(angle),image = material$image,lightintensity = material$lightintensity,
                  flipped=flipped,fog=material$fog, fogdensity=material$fogdensity,
-                 implicit_sample=material$implicit_sample,order_rotation=list(order_rotation))
+                 implicit_sample=material$implicit_sample,order_rotation=list(order_rotation),
+                 pivot_point = list(NA), group_angle = list(NA), group_order_rotation = list(NA))
 }
 
 #' Rectangular XY Plane Object 
@@ -109,27 +120,32 @@ cube = function(x=0, y=0, z=0, width=1, xwidth=1, ywidth=1, zwidth=1,
 #'
 #' @examples
 #' #Generate a purple rectangle in the cornell box.
+#' \dontrun{
 #' generate_cornell() %>%
 #'   add_object(xy_rect(x=555/2,y=100,z=555/2,xwidth=200,ywidth=200,
 #'              material = lambertian(color="purple"))) %>%
 #'   render_scene(lookfrom = c(278,278,-800) ,lookat = c(278,278,0), fov = 40, ambient_light=FALSE)
+#' }
 #' 
 #' #Generate a GOLD plane in the cornell box (it's GOLD!)
+#' \dontrun{
 #' generate_cornell() %>%
 #'   add_object(xy_rect(x=555/2,y=100,z=555/2,xwidth=200,ywidth=200,angle=c(0,30,0),
 #'              material = metal(color="gold"))) %>%
 #'   render_scene(lookfrom = c(278,278,-800) ,lookat = c(278,278,0), fov = 40, ambient_light=FALSE)
+#' }
 xy_rect = function(x=0, y=0, z=0, xwidth=1, ywidth=1,  
                    material = lambertian(), angle = c(0,0,0), order_rotation = c(1,2,3), flipped=FALSE) {
   rectinfo = c(unlist(material$properties),x,xwidth,y,ywidth,z)
-  tibble::tibble(x=NA,y=NA,z=NA,radius=NA, type = material$type, shape="xy_rect",
+  tibble::tibble(x=x,y=y,z=z,radius=NA, type = material$type, shape="xy_rect",
                  properties = list(rectinfo), velocity = list(c(0,0,0)),
                  checkercolor=material$checkercolor, 
                  noise=material$noise, noisephase = material$noisephase, 
                  noiseintensity = material$noiseintensity, noisecolor=material$noisecolor,
                  angle=list(angle),image = material$image,lightintensity = material$lightintensity,
                  flipped=flipped,fog=material$fog,fogdensity=material$fogdensity,
-                 implicit_sample=material$implicit_sample,order_rotation=list(order_rotation))
+                 implicit_sample=material$implicit_sample,order_rotation=list(order_rotation),
+                 pivot_point = list(NA), group_angle = list(NA), group_order_rotation = list(NA))
 }
 
 #' Rectangular YZ Plane Object
@@ -150,27 +166,31 @@ xy_rect = function(x=0, y=0, z=0, xwidth=1, ywidth=1,
 #'
 #' @examples
 #' #Generate a purple rectangle in the cornell box.
+#' \dontrun{
 #' generate_cornell() %>%
 #'   add_object(yz_rect(x=100,y=100,z=555/2,ywidth=200,zwidth=200,
 #'              material = lambertian(color="purple"))) %>%
 #'   render_scene(lookfrom = c(278,278,-800) ,lookat = c(278,278,0), fov = 40, ambient_light=FALSE)
-#' 
+#' }
 #' #Generate a GOLD plane in the cornell box (it's GOLD!)
+#' \dontrun{
 #' generate_cornell() %>%
 #'   add_object(yz_rect(x=100,y=100,z=555/2,ywidth=200,zwidth=200, angle=c(0,30,0),
 #'              material = metal(color="gold"))) %>%
 #'   render_scene(lookfrom = c(278,278,-800) ,lookat = c(278,278,0), fov = 40, ambient_light=FALSE)
+#' }
 yz_rect = function(x=0, y=0, z=0, ywidth=1, zwidth=1, material = lambertian(), 
                    angle = c(0,0,0), order_rotation = c(1,2,3), flipped=FALSE) {
   rectinfo = c(unlist(material$properties),y,ywidth,z,zwidth,x)
-  tibble::tibble(x=NA,y=NA,z=NA,radius=NA, type = material$type, shape="yz_rect",
+  tibble::tibble(x=x,y=y,z=z,radius=NA, type = material$type, shape="yz_rect",
                  properties = list(rectinfo), velocity = list(c(0,0,0)),
                  checkercolor=material$checkercolor, 
                  noise=material$noise, noisephase = material$noisephase, 
                  noiseintensity = material$noiseintensity,noisecolor=material$noisecolor,
                  angle=list(angle),image = material$image,lightintensity = material$lightintensity,
                  flipped=flipped,fog=material$fog, fogdensity=material$fogdensity,
-                 implicit_sample=material$implicit_sample,order_rotation=list(order_rotation))
+                 implicit_sample=material$implicit_sample,order_rotation=list(order_rotation),
+                 pivot_point = list(NA), group_angle = list(NA), group_order_rotation = list(NA))
 }
 
 #' Rectangular XZ Plane Object
@@ -191,20 +211,24 @@ yz_rect = function(x=0, y=0, z=0, ywidth=1, zwidth=1, material = lambertian(),
 #'
 #' @examples
 #' #Generate a purple rectangle in the cornell box.
+#' \dontrun{
 #' generate_cornell() %>%
 #'   add_object(xz_rect(x=555/2,y=100,z=555/2,xwidth=200,zwidth=200,
 #'              material = lambertian(color="purple"))) %>%
 #'   render_scene(lookfrom = c(278,278,-800) ,lookat = c(278,278,0), fov = 40, ambient_light=FALSE)
+#' }
 #' 
 #' #Generate a GOLD plane in the cornell box (it's GOLD!)
+#' \dontrun{
 #' generate_cornell() %>%
 #'   add_object(xz_rect(x=555/2,y=100,z=555/2,xwidth=200,zwidth=200,angle=c(0,30,0),
 #'              material = metal(color="gold"))) %>%
 #'   render_scene(lookfrom = c(278,278,-800) ,lookat = c(278,278,0), fov = 40, ambient_light=FALSE)
+#' }
 xz_rect = function(x=0, xwidth=1, z=0, zwidth=1, y=0, material = lambertian(), 
                    angle = c(0,0,0), order_rotation = c(1,2,3), flipped=FALSE) {
   rectinfo = c(unlist(material$properties),x,xwidth,z,zwidth,y)
-  tibble::tibble(x=NA,y=NA,z=NA,radius=NA, 
+  tibble::tibble(x=x,y=y,z=z,radius=NA, 
                  type = material$type, shape="xz_rect",
                  properties = list(rectinfo), velocity = list(c(0,0,0)),
                  checkercolor=material$checkercolor, 
@@ -212,5 +236,6 @@ xz_rect = function(x=0, xwidth=1, z=0, zwidth=1, y=0, material = lambertian(),
                  noiseintensity = material$noiseintensity,noisecolor=material$noisecolor,
                  angle=list(angle),image = material$image,lightintensity = material$lightintensity,
                  flipped=flipped,fog=material$fog, fogdensity=material$fogdensity,
-                 implicit_sample=material$implicit_sample,order_rotation=list(order_rotation))
+                 implicit_sample=material$implicit_sample,order_rotation=list(order_rotation),
+                 pivot_point = list(NA), group_angle = list(NA), group_order_rotation = list(NA))
 }

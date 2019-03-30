@@ -66,22 +66,33 @@ Takes the scene description and renders an image, either to the device or to a f
 \examples{
 #Generate a large checkered sphere as the ground
 scene = generate_ground(depth=-0.5,material=lambertian(color="white", checkercolor="darkgreen"))
+\dontrun{
 render_scene(scene,samples=200,parallel=TRUE)
+}
 
 #Add a sphere to the center
 scene = scene \%>\%
   add_object(sphere(x=0,y=0,z=0,radius=0.5,material = lambertian(color=c(1,0,1))))
+\dontrun{
 render_scene(scene,fov=20,parallel=TRUE)
+}
 
 #Add a marbled cube 
 scene = scene \%>\%
   add_object(cube(x=0,y=0,z=1.1,material = lambertian(noise=3)))
+\dontrun{
 render_scene(scene,fov=20,parallel=TRUE)
+}
 
 #Add a metallic gold sphere
 scene = scene \%>\%
   add_object(sphere(x=0,y=0,z=-1.1,radius=0.5,material = metal(color="gold",fuzz=0.1)))
+\dontrun{
 render_scene(scene,fov=20,parallel=TRUE)
+}
+
+#Lower the number of samples to render more quickly.
+render_scene(scene,fov=15, samples=16)
 
 #Add a floating R plot using the iris dataset as a png onto a floating 2D rectangle
 tempfileplot = tempfile()
@@ -92,19 +103,26 @@ dev.off()
 image_array = png::readPNG(tempfileplot)
 scene = scene \%>\%
   add_object(yz_rect(x=0,y=1.1,z=0,zwidth=2,material = lambertian(image = image_array)))
+\dontrun{
 render_scene(scene,fov=20,parallel=TRUE)
+}
 
 #Move the camera
+\dontrun{
 render_scene(scene,lookfrom = c(7,1.5,10),lookat = c(0,0.5,0),fov=15,parallel=TRUE)
-
+}
 
 #Change the background gradient to a night time ambience
+\dontrun{
 render_scene(scene,lookfrom = c(7,1.5,10),lookat = c(0,0.5,0),fov=15,
-                 backgroundhigh = "#282375", backgroundlow = "#7e77ea",parallel=TRUE)
+             backgroundhigh = "#282375", backgroundlow = "#7e77ea",parallel=TRUE)
+}
                  
 #Increase the aperture to give more depth of field.
+\dontrun{
 render_scene(scene,lookfrom = c(7,1.5,10),lookat = c(0,0.5,0),fov=15,
-                 aperture = 0.5,parallel=TRUE)
+             aperture = 0.5,parallel=TRUE)
+}
                  
 #Spin the camera around the scene, decreasing the number of samples to render faster. To make 
 #an animation, specify the a filename in `render_scene` for each frame.
@@ -112,9 +130,11 @@ render_scene(scene,lookfrom = c(7,1.5,10),lookat = c(0,0.5,0),fov=15,
 t=1:30
 xpos = 10 * sin(t*12*pi/180+pi/2)
 zpos = 10 * cos(t*12*pi/180+pi/2)
+\dontrun{
 par(mfrow=c(5,6))
 for(i in 1:30) {
  render_scene(scene, samples=5,
    lookfrom = c(xpos[i],1.5,zpos[i]),lookat = c(0,0.5,0),parallel=TRUE)
+}
 }
 }

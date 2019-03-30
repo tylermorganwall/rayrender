@@ -36,9 +36,6 @@ navbar:
       menu: 
       -  text: Getting Stated with Rayrender--Forging the R Sword
          href: https://www.tylermw.com/getting-started-with-rayrender/
-    - icon: fa-newspaper-o
-      text: "Changelog"
-      href: news/index.html
   right:
     - icon: fa-file-code-o 
       text: "functions"
