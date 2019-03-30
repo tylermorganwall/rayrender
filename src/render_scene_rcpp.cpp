@@ -318,9 +318,9 @@ hitable *build_scene(IntegerVector& type,
         list[i] = entry;
       }
     } else if (shape(i)  == 2) {
-      hitable *entry = new xy_rect(-tempvector(prop_len+2)/2,tempvector(prop_len+2)/2,
-                                   -tempvector(prop_len+4)/2,tempvector(prop_len+4)/2,
-                                   0, tex);
+      hitable *entry = new xy_rect(-tempvector(prop_len+2)/2+gpivot.x(),tempvector(prop_len+2)/2+gpivot.x(),
+                                   -tempvector(prop_len+4)/2+gpivot.y(),tempvector(prop_len+4)/2+gpivot.y(),
+                                   gpivot.z(), tex);
       entry = rotation_order(entry, temprotvec, order_rotation);
       entry = new translate(entry,vec3(tempvector(prop_len+1),tempvector(prop_len+3),tempvector(prop_len+5)) + vel * shutteropen);
       if(isflipped(i)) {
@@ -329,9 +329,9 @@ hitable *build_scene(IntegerVector& type,
         list[i] = entry;
       }
     } else if (shape(i)  == 3) {
-      hitable *entry = new xz_rect(-tempvector(prop_len+2)/2,tempvector(prop_len+2)/2,
-                                   -tempvector(prop_len+4)/2,tempvector(prop_len+4)/2,
-                                   0, tex);
+      hitable *entry = new xz_rect(-tempvector(prop_len+2)/2+gpivot.x(),tempvector(prop_len+2)/2+gpivot.x(),
+                                   -tempvector(prop_len+4)/2+gpivot.z(),tempvector(prop_len+4)/2+gpivot.z(),
+                                   gpivot.y(), tex);
       entry = rotation_order(entry, temprotvec, order_rotation);
       entry = new translate(entry,vec3(tempvector(prop_len+1),tempvector(prop_len+5), tempvector(prop_len+3)) + vel * shutteropen);
       if(isflipped(i)) {
@@ -340,9 +340,9 @@ hitable *build_scene(IntegerVector& type,
         list[i] = entry;
       }
     } else if (shape(i)  == 4) {
-      hitable *entry = new yz_rect(-tempvector(prop_len+2)/2,tempvector(prop_len+2)/2,
-                                   -tempvector(prop_len+4)/2,tempvector(prop_len+4)/2,
-                                   0, tex);
+      hitable *entry = new yz_rect(-tempvector(prop_len+2)/2+gpivot.y(),tempvector(prop_len+2)/2+gpivot.y(),
+                                   -tempvector(prop_len+4)/2+gpivot.z(),tempvector(prop_len+4)/2+gpivot.z(),
+                                   gpivot.x(), tex);
       entry = rotation_order(entry, temprotvec, order_rotation);
       entry = new translate(entry,vec3(tempvector(prop_len+5),tempvector(prop_len+1),tempvector(prop_len+3)) + vel * shutteropen);
       if(isflipped(i)) {
@@ -351,8 +351,8 @@ hitable *build_scene(IntegerVector& type,
         list[i] = entry;
       }
     } else if (shape(i)  == 5) {
-      hitable *entry = new box(-vec3(tempvector(prop_len+1),tempvector(prop_len+2),tempvector(prop_len+3))/2, 
-                                vec3(tempvector(prop_len+1),tempvector(prop_len+2),tempvector(prop_len+3))/2, 
+      hitable *entry = new box(-vec3(tempvector(prop_len+1),tempvector(prop_len+2),tempvector(prop_len+3))/2 + gpivot, 
+                                vec3(tempvector(prop_len+1),tempvector(prop_len+2),tempvector(prop_len+3))/2 + gpivot, 
                                 tex);
       entry = rotation_order(entry, temprotvec, order_rotation);
       entry = new translate(entry,center + vel * shutteropen);
