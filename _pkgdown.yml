@@ -35,7 +35,7 @@ navbar:
     - text: "Tutorials"
       menu: 
       -  text: Getting Stated with Rayrender--Forging the R Sword
-         href: https://www.tylermw.com/2018-year-in-review/
+         href: https://www.tylermw.com/getting-started-with-rayrender/
     - icon: fa-newspaper-o
       text: "Changelog"
       href: news/index.html

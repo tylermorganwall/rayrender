@@ -239,8 +239,8 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
     array_from_mat[array_from_mat < 0] = 0
   }
   if(is.null(filename)) {
-    rayshader::plot_map(flipud(array_from_mat))
+    plot_map(flipud(array_from_mat))
   } else {
-    rayshader::save_png(flipud(array_from_mat),filename)
+    save_png(flipud(array_from_mat),filename)
   }
 }

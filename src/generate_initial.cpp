@@ -151,7 +151,7 @@ struct Colorworker : public RcppParallel::Worker {
     numbertosample(numbertosample), clampval(clampval) {}
   void operator()(std::size_t begin, std::size_t end) {
     random_gen rng;
-    for(int j = begin; j < end; j++) {
+    for(std::size_t j = begin; j < end; j++) {
       for(int i = 0; i < nx; i++) {
         vec3 col(0,0,0);
         for(int s = 0; s < ns; s++) {
@@ -598,7 +598,7 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
     }
   }
 
-  hitable *implicit_sample_vector[numbertosample];
+  std::vector<hitable* > implicit_sample_vector(numbertosample);
   int counter = 0;
   for(int i = 0; i < n; i++)  {
     if(implicit_sample(i)) {
@@ -609,7 +609,7 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
       counter++;
     }
   }
-  hitable_list hlist(implicit_sample_vector,numbertosample);
+  hitable_list hlist(&implicit_sample_vector[0],numbertosample);
   
   if(!parallel) {
     for(int j = ny - 1; j >= 0; j--) {

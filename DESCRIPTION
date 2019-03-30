@@ -10,12 +10,12 @@ License: GPL (>= 2)
 Imports: 
     Rcpp (>= 1.0.0),
     RcppParallel,
-    rayshader,
     assertthat,
     tibble,
     magrittr,
     purrr,
-    png
+    png,
+    raster
 LinkingTo: Rcpp, RcppParallel
 RoxygenNote: 6.1.1
 SystemRequirements: GNU make
