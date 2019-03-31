@@ -39,17 +39,24 @@ public:
 class noise_texture : public texture {
 public:
   noise_texture() {}
-  noise_texture(float sc, vec3 c, vec3 c2, float ph, float inten) : scale(sc), color(c), color2(c2), phase(ph), intensity(inten) {}
+  noise_texture(float sc, vec3 c, vec3 c2, float ph, float inten, random_gen rng) : 
+    scale(sc), color(c), color2(c2), phase(ph), intensity(inten) {
+    noise = new perlin(rng);
+  }
+  ~noise_texture() {
+    if(noise != 0) delete noise;
+  }
   virtual vec3 value(float u, float v, const vec3& p) const {
-    float weight = 0.5*(1+sin(scale*p.y()  + intensity*noise.turb(scale * p) + phase));
+    float weight = 0.5*(1+sin(scale*p.y()  + intensity*noise->turb(scale * p) + phase));
     return(color * (1-weight) + color2 * weight);
   }
-  perlin noise;
+  perlin *noise;
   float scale;
   vec3 color;
   vec3 color2;
   float phase;
   float intensity;
+  random_gen rng;
 };
 
 class image_texture : public texture {

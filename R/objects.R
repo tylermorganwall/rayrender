@@ -47,7 +47,8 @@ sphere = function(x=0, y=0, z=0, radius=1, material=lambertian(),
                  angle=list(angle),image = material$image,lightintensity = material$lightintensity,
                  flipped=flipped,fog=material$fog,fogdensity=material$fogdensity,
                  implicit_sample=material$implicit_sample,order_rotation=list(order_rotation),
-                 pivot_point = list(NA), group_angle = list(NA), group_order_rotation = list(NA))
+                 pivot_point = list(NA), group_translate = list(NA),
+                 group_angle = list(NA), group_order_rotation = list(NA))
 }
 
 #' Cube Object
@@ -99,7 +100,8 @@ cube = function(x=0, y=0, z=0, width=1, xwidth=1, ywidth=1, zwidth=1,
                  angle=list(angle),image = material$image,lightintensity = material$lightintensity,
                  flipped=flipped,fog=material$fog, fogdensity=material$fogdensity,
                  implicit_sample=material$implicit_sample,order_rotation=list(order_rotation),
-                 pivot_point = list(NA), group_angle = list(NA), group_order_rotation = list(NA))
+                 pivot_point = list(NA), group_translate = list(NA),
+                 group_angle = list(NA), group_order_rotation = list(NA))
 }
 
 #' Rectangular XY Plane Object 
@@ -145,7 +147,8 @@ xy_rect = function(x=0, y=0, z=0, xwidth=1, ywidth=1,
                  angle=list(angle),image = material$image,lightintensity = material$lightintensity,
                  flipped=flipped,fog=material$fog,fogdensity=material$fogdensity,
                  implicit_sample=material$implicit_sample,order_rotation=list(order_rotation),
-                 pivot_point = list(NA), group_angle = list(NA), group_order_rotation = list(NA))
+                 pivot_point = list(NA), group_translate = list(NA),
+                 group_angle = list(NA), group_order_rotation = list(NA))
 }
 
 #' Rectangular YZ Plane Object
@@ -190,7 +193,8 @@ yz_rect = function(x=0, y=0, z=0, ywidth=1, zwidth=1, material = lambertian(),
                  angle=list(angle),image = material$image,lightintensity = material$lightintensity,
                  flipped=flipped,fog=material$fog, fogdensity=material$fogdensity,
                  implicit_sample=material$implicit_sample,order_rotation=list(order_rotation),
-                 pivot_point = list(NA), group_angle = list(NA), group_order_rotation = list(NA))
+                 pivot_point = list(NA), group_translate = list(NA),
+                 group_angle = list(NA), group_order_rotation = list(NA))
 }
 
 #' Rectangular XZ Plane Object
@@ -237,5 +241,6 @@ xz_rect = function(x=0, xwidth=1, z=0, zwidth=1, y=0, material = lambertian(),
                  angle=list(angle),image = material$image,lightintensity = material$lightintensity,
                  flipped=flipped,fog=material$fog, fogdensity=material$fogdensity,
                  implicit_sample=material$implicit_sample,order_rotation=list(order_rotation),
-                 pivot_point = list(NA), group_angle = list(NA), group_order_rotation = list(NA))
+                 pivot_point = list(NA), group_translate = list(NA),
+                 group_angle = list(NA), group_order_rotation = list(NA))
 }

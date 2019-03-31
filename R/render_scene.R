@@ -130,11 +130,6 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
       corn_message = paste0(corn_message, "fov `40` ")
       missing_corn = TRUE
     }
-    if(missing(ambient_light)) {
-      ambient_light = FALSE
-      corn_message = paste0(corn_message, "ambient_light `FALSE` ")
-      missing_corn = TRUE
-    }
     corn_message = paste0(corn_message,".")
     if(missing_corn) {
       message(corn_message)
@@ -212,6 +207,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
   group_pivot = scene$pivot_point 
   group_angle = scene$group_angle 
   group_order_rotation = scene$group_order_rotation 
+  group_translate = scene$group_translate 
   
   assertthat::assert_that(all(c(length(xvec),length(yvec),length(zvec),length(rvec),length(typevec),length(proplist)) == length(xvec)))
   assertthat::assert_that(all(!is.null(typevec)))
@@ -252,7 +248,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
                              focus_distance=focal_distance,
                              isvolume=fog_bool, voldensity = fog_vec , parallel=parallel,
                              implicit_sample = implicit_vec, order_rotation_list = order_rotation_list, clampval = clamp_value,
-                             isgrouped = group_bool, group_pivot=group_pivot, 
+                             isgrouped = group_bool, group_pivot=group_pivot, group_translate = group_translate,
                              group_angle = group_angle, group_order_rotation = group_order_rotation) 
   full_array = array(0,c(ncol(rgb_mat$r),nrow(rgb_mat$r),3))
   full_array[,,1] = t(rgb_mat$r)

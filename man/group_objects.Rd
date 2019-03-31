@@ -2,16 +2,18 @@
 % Please edit documentation in R/group_objects.R
 \name{group_objects}
 \alias{group_objects}
-\title{Group Object}
+\title{Group Objects}
 \usage{
-group_objects(scene, pivot_point = c(0, 0, 0), group_angle = c(0, 0,
-  0), group_order_rotation = c(1, 2, 3))
+group_objects(scene, pivot_point = c(0, 0, 0), group_translate = c(0,
+  0, 0), group_angle = c(0, 0, 0), group_order_rotation = c(1, 2, 3))
 }
 \arguments{
 \item{scene}{Tibble of pre-existing object locations and properties to group together.}
 
 \item{pivot_point}{Defaults to the mean location of all the objects. 
 The point about which to pivot and move the group.}
+
+\item{group_translate}{Default `c(0,0,0)`. Vector indicating where to offset the group.}
 
 \item{group_angle}{Default `c(0,0,0)`. Angle of rotation around the x, y, and z axes, 
 applied in the order specified in `order_rotation`.}
@@ -23,8 +25,34 @@ referring to "x", "y", and "z".}
 Tibble of grouped object locations and properties.
 }
 \description{
-Group Object
+Group Objects
 }
 \examples{
 #Generate the ground and add some objects
+scene = generate_cornell() \%>\%
+        add_object(cube(x=555/2,y=555/8,z=555/2,width=555/4)) \%>\%
+        add_object(cube(x=555/2,y=555/4+555/16,z=555/2,width=555/8))
+\dontrun{
+render_scene(scene,samples=200,fov=50,parallel=TRUE,clamp_value=5)
+}
+
+#Group the entire room and rotate around its center, but keep the cube in the same place.
+scene2 = group_objects(generate_cornell(), 
+                       pivot_point=c(555/2,555/2,555/2),
+                       group_angle=c(0,30,0)) \%>\%
+         add_object(cube(x=555/2,y=555/8,z=555/2,width=555/4)) \%>\%
+        add_object(cube(x=555/2,y=555/4+555/16,z=555/2,width=555/8))
+                       
+\dontrun{
+render_scene(scene2,samples=200,fov=50,parallel=TRUE,clamp_value=5)
+}
+
+#Now group the cubes instead of the Cornell box, and rotate/translate them together
+twocubes = cube(x=555/2,y=555/8,z=555/2,width=555/4) \%>\%
+           add_object(cube(x=555/2, y=555/4 + 555/16, z=555/2, width=555/8))
+scene3 = generate_cornell() \%>\%
+         add_object(group_objects(twocubes, group_translate = c(0,50,0),group_angle = c(0,45,0)))
+\dontrun{
+render_scene(scene3,samples=200,fov=50,parallel=TRUE,clamp_value=5)
+}
 }

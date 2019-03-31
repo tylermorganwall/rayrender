@@ -92,7 +92,7 @@ render_scene(scene,fov=20,parallel=TRUE)
 }
 
 #Lower the number of samples to render more quickly.
-render_scene(scene,fov=15, samples=16)
+render_scene(scene,fov=20, samples=8)
 
 #Add a floating R plot using the iris dataset as a png onto a floating 2D rectangle
 tempfileplot = tempfile()

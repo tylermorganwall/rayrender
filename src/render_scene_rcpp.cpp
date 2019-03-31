@@ -227,7 +227,7 @@ hitable *build_scene(IntegerVector& type,
                         LogicalVector& isflipped,
                         LogicalVector& isvolume, NumericVector& voldensity,
                         List& order_rotation_list, 
-                        LogicalVector& isgrouped, List& group_pivot, 
+                        LogicalVector& isgrouped, List& group_pivot, List& group_translate,
                         List& group_angle, List& group_order_rotation,
                         random_gen& rng) {
   hitable **list = new hitable*[n+1];
@@ -238,9 +238,11 @@ hitable *build_scene(IntegerVector& type,
   NumericVector temprotvec;
   NumericVector order_rotation;
   NumericVector temp_gpivot;
+  NumericVector temp_gtrans;
   NumericVector temp_gorder;
   NumericVector temp_gangle;
   vec3 gpivot;
+  vec3 gtrans;
   vec3 gorder;
   vec3 gangle;
   int prop_len;
@@ -259,17 +261,26 @@ hitable *build_scene(IntegerVector& type,
       temp_gpivot = as<NumericVector>(group_pivot(i));
       temp_gangle = as<NumericVector>(group_angle(i));
       temp_gorder = as<NumericVector>(group_order_rotation(i));
+      temp_gtrans = as<NumericVector>(group_translate(i));
       gpivot = vec3(temp_gpivot(0),temp_gpivot(1),temp_gpivot(2));
-      gangle = vec3(temp_gangle(0),temp_gangle(1),temp_gangle(2));
-      gorder = vec3(temp_gorder(0),temp_gorder(1),temp_gorder(2));
-    } else {
-      gpivot = vec3(0,0,0);
-      gangle = vec3(0,0,0);
-      gorder = vec3(1,2,3);
+      gtrans = vec3(temp_gtrans(0),temp_gtrans(1),temp_gtrans(2));
+    } else{
+      gpivot = vec3(0,0,0); 
+      gtrans = vec3(0,0,0); 
     }
     prop_len=2;
     
-    center =  vec3(x(i), y(i), z(i));
+    if(shape(i) == 1) {
+      center =  vec3(x(i), y(i), z(i));
+    } else if(shape(i) == 2) {
+      center =  vec3(tempvector(prop_len+1),tempvector(prop_len+3),tempvector(prop_len+5));
+    } else if(shape(i) == 3) {
+      center =  vec3(tempvector(prop_len+1),tempvector(prop_len+5), tempvector(prop_len+3));
+    } else if(shape(i) == 4) {
+      center =  vec3(tempvector(prop_len+5),tempvector(prop_len+1),tempvector(prop_len+3));
+    } else if(shape(i) == 5) {
+      center =  vec3(x(i), y(i), z(i));
+    }
     vel = vec3(tempvel(0),tempvel(1),tempvel(2));
     //Generate texture
     material *tex;
@@ -283,7 +294,7 @@ hitable *build_scene(IntegerVector& type,
       } else if (isnoise(i)) {
         tex = new lambertian(new noise_texture(noise(i),vec3(tempvector(0),tempvector(1),tempvector(2)),
                                                     vec3(tempnoisecolor(0),tempnoisecolor(1),tempnoisecolor(2)),
-                                                    noisephase(i), noiseintensity(i)));
+                                                    noisephase(i), noiseintensity(i), rng));
       } else if (ischeckered(i)) {
         tex = new lambertian(new checker_texture(new constant_texture(vec3(tempchecker(0),tempchecker(1),tempchecker(2))),
                                                       new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))),tempchecker(3)));
@@ -300,10 +311,15 @@ hitable *build_scene(IntegerVector& type,
     }
     //Generate objects
     if (shape(i) == 1) {
-      hitable *entry = new sphere(gpivot, radius(i), tex);
+      hitable *entry = new sphere(vec3(0,0,0), radius(i), tex);
       entry = rotation_order(entry, temprotvec, order_rotation);
+      if(isgrouped(i)) {
+        entry = new translate(entry, center - gpivot);
+        entry = rotation_order(entry, temp_gangle, temp_gorder);
+        entry = new translate(entry, -center + gpivot );
+      }
       if(!moving(i)) {
-        entry = new translate(entry, center + vel * shutteropen);
+        entry = new translate(entry, center + gtrans + vel * shutteropen);
       } else {
         entry = new moving_sphere(center + vel * shutteropen, 
                                   center + vel * shutterclose, 
@@ -318,44 +334,64 @@ hitable *build_scene(IntegerVector& type,
         list[i] = entry;
       }
     } else if (shape(i)  == 2) {
-      hitable *entry = new xy_rect(-tempvector(prop_len+2)/2+gpivot.x(),tempvector(prop_len+2)/2+gpivot.x(),
-                                   -tempvector(prop_len+4)/2+gpivot.y(),tempvector(prop_len+4)/2+gpivot.y(),
-                                   gpivot.z(), tex);
+      hitable *entry = new xy_rect(-tempvector(prop_len+2)/2,tempvector(prop_len+2)/2,
+                                   -tempvector(prop_len+4)/2,tempvector(prop_len+4)/2,
+                                   0, tex);
       entry = rotation_order(entry, temprotvec, order_rotation);
-      entry = new translate(entry,vec3(tempvector(prop_len+1),tempvector(prop_len+3),tempvector(prop_len+5)) + vel * shutteropen);
+      if(isgrouped(i)) {
+        entry = new translate(entry, center - gpivot);
+        entry = rotation_order(entry, temp_gangle, temp_gorder);
+        entry = new translate(entry, -center + gpivot );
+      }
+      entry = new translate(entry,center + gtrans + vel * shutteropen);
       if(isflipped(i)) {
         list[i] = new flip_normals(entry);
       } else {
         list[i] = entry;
       }
     } else if (shape(i)  == 3) {
-      hitable *entry = new xz_rect(-tempvector(prop_len+2)/2+gpivot.x(),tempvector(prop_len+2)/2+gpivot.x(),
-                                   -tempvector(prop_len+4)/2+gpivot.z(),tempvector(prop_len+4)/2+gpivot.z(),
-                                   gpivot.y(), tex);
+      hitable *entry = new xz_rect(-tempvector(prop_len+2)/2,tempvector(prop_len+2)/2,
+                                   -tempvector(prop_len+4)/2,tempvector(prop_len+4)/2,
+                                   0, tex);
       entry = rotation_order(entry, temprotvec, order_rotation);
-      entry = new translate(entry,vec3(tempvector(prop_len+1),tempvector(prop_len+5), tempvector(prop_len+3)) + vel * shutteropen);
+      if(isgrouped(i)) {
+        entry = new translate(entry, center - gpivot);
+        entry = rotation_order(entry, temp_gangle, temp_gorder);
+        entry = new translate(entry, -center + gpivot );
+      }
+      entry = new translate(entry,center + gtrans + vel * shutteropen);
       if(isflipped(i)) {
         list[i] = new flip_normals(entry);
       } else {
         list[i] = entry;
       }
     } else if (shape(i)  == 4) {
-      hitable *entry = new yz_rect(-tempvector(prop_len+2)/2+gpivot.y(),tempvector(prop_len+2)/2+gpivot.y(),
-                                   -tempvector(prop_len+4)/2+gpivot.z(),tempvector(prop_len+4)/2+gpivot.z(),
-                                   gpivot.x(), tex);
+      hitable *entry = new yz_rect(-tempvector(prop_len+2)/2,tempvector(prop_len+2)/2,
+                                   -tempvector(prop_len+4)/2,tempvector(prop_len+4)/2,
+                                   0, tex);
       entry = rotation_order(entry, temprotvec, order_rotation);
-      entry = new translate(entry,vec3(tempvector(prop_len+5),tempvector(prop_len+1),tempvector(prop_len+3)) + vel * shutteropen);
+      if(isgrouped(i)) {
+        entry = new translate(entry, center - gpivot);
+        entry = rotation_order(entry, temp_gangle, temp_gorder);
+        entry = new translate(entry, -center + gpivot );
+      }
+      entry = new translate(entry,center + gtrans + vel * shutteropen);
       if(isflipped(i)) {
         list[i] = new flip_normals(entry);
       } else {
         list[i] = entry;
       }
     } else if (shape(i)  == 5) {
-      hitable *entry = new box(-vec3(tempvector(prop_len+1),tempvector(prop_len+2),tempvector(prop_len+3))/2 + gpivot, 
-                                vec3(tempvector(prop_len+1),tempvector(prop_len+2),tempvector(prop_len+3))/2 + gpivot, 
+      hitable *entry = new box(-vec3(tempvector(prop_len+1),tempvector(prop_len+2),tempvector(prop_len+3))/2, 
+                                vec3(tempvector(prop_len+1),tempvector(prop_len+2),tempvector(prop_len+3))/2, 
                                 tex);
       entry = rotation_order(entry, temprotvec, order_rotation);
-      entry = new translate(entry,center + vel * shutteropen);
+      if(isgrouped(i)) {
+        entry = new translate(entry, center - gpivot);
+        entry = rotation_order(entry, temp_gangle, temp_gorder);
+        entry = new translate(entry, -center + gpivot );
+      }
+      entry = new translate(entry, center + gtrans + vel * shutteropen);
       if(isvolume(i)) {
         if(!isnoise(i)) {
           list[i] = new constant_medium(entry,voldensity(i), new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))));
@@ -364,7 +400,7 @@ hitable *build_scene(IntegerVector& type,
                                         new noise_texture(noise(i),
                                                           vec3(tempvector(0),tempvector(1),tempvector(2)),
                                                           vec3(tempnoisecolor(0),tempnoisecolor(1),tempnoisecolor(2)),
-                                                          noisephase(i), noiseintensity(i)));
+                                                          noisephase(i), noiseintensity(i), rng));
         }
       } else {
         list[i] = entry;
@@ -379,13 +415,24 @@ hitable* build_imp_sample(IntegerVector& type,
                          NumericVector& x, NumericVector& y, NumericVector& z,
                          List& properties, List& velocity, 
                          int n, float shutteropen, float shutterclose, 
-                         List& angle, int i, 
-                         LogicalVector& isgrouped, List& group_pivot, 
+                         List& angle, int i, List& order_rotation_list,
+                         LogicalVector& isgrouped, 
+                         List& group_pivot, List& group_translate,
                          List& group_angle, List& group_order_rotation,
                          random_gen& rng) {
   NumericVector tempvector;
   NumericVector temprotvec;
   NumericVector tempvel;
+  NumericVector order_rotation;
+  NumericVector temp_gpivot;
+  NumericVector temp_gtrans;
+  NumericVector temp_gorder;
+  NumericVector temp_gangle;
+  vec3 gpivot;
+  vec3 gtrans;
+  vec3 gorder;
+  vec3 gangle;
+  
   List templist;
   vec3 center(x(0), y(0), z(0));
   vec3 vel(x(0), y(0), z(0));
@@ -394,80 +441,88 @@ hitable* build_imp_sample(IntegerVector& type,
   tempvel = as<NumericVector>(velocity(i));
   vel = vec3(tempvel(0),tempvel(1),tempvel(2));
   temprotvec =  as<NumericVector>(angle(i));
+  order_rotation = as<NumericVector>(order_rotation_list(i));
   prop_len=2;
   center =  vec3(x(i), y(i), z(i));
+  if(isgrouped(i)) {
+    temp_gpivot = as<NumericVector>(group_pivot(i));
+    temp_gangle = as<NumericVector>(group_angle(i));
+    temp_gorder = as<NumericVector>(group_order_rotation(i));
+    temp_gtrans = as<NumericVector>(group_translate(i));
+    gpivot = vec3(temp_gpivot(0),temp_gpivot(1),temp_gpivot(2));
+    gtrans = vec3(temp_gtrans(0),temp_gtrans(1),temp_gtrans(2));
+  } else{
+    gpivot = vec3(0,0,0); 
+    gtrans = vec3(0,0,0); 
+  }
+  if(type(i) != 1) {
+    prop_len = 3;
+  }
+  
+  if(shape(i) == 1) {
+    center =  vec3(x(i), y(i), z(i));
+  } else if(shape(i) == 2) {
+    center =  vec3(tempvector(prop_len+1),tempvector(prop_len+3),tempvector(prop_len+5));
+  } else if(shape(i) == 3) {
+    center =  vec3(tempvector(prop_len+1),tempvector(prop_len+5), tempvector(prop_len+3));
+  } else if(shape(i) == 4) {
+    center =  vec3(tempvector(prop_len+5),tempvector(prop_len+1),tempvector(prop_len+3));
+  } else if(shape(i) == 5) {
+    center =  vec3(x(i), y(i), z(i));
+  }
   
   if(shape(i) == 1) {
     hitable *entry = new sphere(vec3(0,0,0), radius(i), 0);
-    return(new translate(entry, center + vel * shutteropen));
-  } else if (shape(i) == 2) {
-    if(type(i) != 1) {
-      prop_len = 3;
+    if(isgrouped(i)) {
+      entry = new translate(entry, center - gpivot);
+      entry = rotation_order(entry, temp_gangle, temp_gorder);
+      entry = new translate(entry, -center + gpivot );
     }
+    return(new translate(entry, center + gtrans + vel * shutteropen));
+  } else if (shape(i) == 2) {
     hitable *entry = new xy_rect(-tempvector(prop_len+2)/2,tempvector(prop_len+2)/2,
                                  -tempvector(prop_len+4)/2,tempvector(prop_len+4)/2,
                                  0, 0);
-    if(temprotvec(0) != 0) {
-      entry = new rotate_x(entry,temprotvec(0));
+    entry = rotation_order(entry, temprotvec, order_rotation);
+    if(isgrouped(i)) {
+      entry = new translate(entry, center - gpivot);
+      entry = rotation_order(entry, temp_gangle, temp_gorder);
+      entry = new translate(entry, -center + gpivot );
     }
-    if(temprotvec(1) != 0) {
-      entry = new rotate_y(entry,temprotvec(1));
-    }
-    if(temprotvec(2) != 0) {
-      entry = new rotate_z(entry,temprotvec(2));
-    }
-    return(new translate(entry,vec3(tempvector(prop_len+1),tempvector(prop_len+3),tempvector(prop_len+5)) + vel * shutteropen));
+    return(new translate(entry,center + gtrans + vel * shutteropen));
   } else if (shape(i) == 3) {
-    if(type(i) != 1) {
-      prop_len = 3;
-    }
     hitable *entry = new xz_rect(-tempvector(prop_len+2)/2,tempvector(prop_len+2)/2,
                                  -tempvector(prop_len+4)/2,tempvector(prop_len+4)/2,
                                  0, 0);
-    if(temprotvec(0) != 0) {
-      entry = new rotate_x(entry,temprotvec(0));
+    entry = rotation_order(entry, temprotvec, order_rotation);
+    if(isgrouped(i)) {
+      entry = new translate(entry, center - gpivot);
+      entry = rotation_order(entry, temp_gangle, temp_gorder);
+      entry = new translate(entry, -center + gpivot );
     }
-    if(temprotvec(1) != 0) {
-      entry = new rotate_y(entry,temprotvec(1));
-    }
-    if(temprotvec(2) != 0) {
-      entry = new rotate_z(entry,temprotvec(2));
-    }
-    return(new translate(entry,vec3(tempvector(prop_len+1),tempvector(prop_len+5), tempvector(prop_len+3)) + vel * shutteropen));
+    return(new translate(entry,center + gtrans + vel * shutteropen));
   } else if (shape(i) == 4) {
-    if(type(i) != 1) {
-      prop_len = 3;
-    }
     hitable *entry = new yz_rect(-tempvector(prop_len+2)/2,tempvector(prop_len+2)/2,
                                  -tempvector(prop_len+4)/2,tempvector(prop_len+4)/2,
                                  0, 0);
-    if(temprotvec(0) != 0) {
-      entry = new rotate_x(entry,temprotvec(0));
+    entry = rotation_order(entry, temprotvec, order_rotation);
+    if(isgrouped(i)) {
+      entry = new translate(entry, center - gpivot);
+      entry = rotation_order(entry, temp_gangle, temp_gorder);
+      entry = new translate(entry, -center + gpivot );
     }
-    if(temprotvec(1) != 0) {
-      entry = new rotate_y(entry,temprotvec(1));
-    }
-    if(temprotvec(2) != 0) {
-      entry = new rotate_z(entry,temprotvec(2));
-    }
-    return(new translate(entry,vec3(tempvector(prop_len+5),tempvector(prop_len+1),tempvector(prop_len+3)) + vel * shutteropen));
+    return(new translate(entry,center + gtrans + vel * shutteropen));
   } else {
-    if(type(i) != 1) {
-      prop_len = 3;
-    }
     hitable *entry = new box(-vec3(tempvector(prop_len+1),tempvector(prop_len+2),tempvector(prop_len+3))/2, 
                              vec3(tempvector(prop_len+1),tempvector(prop_len+2),tempvector(prop_len+3))/2, 
                              0);
-    if(temprotvec(0) != 0) {
-      entry = new rotate_x(entry,temprotvec(0));
+    entry = rotation_order(entry, temprotvec, order_rotation);
+    if(isgrouped(i)) {
+      entry = new translate(entry, center - gpivot);
+      entry = rotation_order(entry, temp_gangle, temp_gorder);
+      entry = new translate(entry, -center + gpivot );
     }
-    if(temprotvec(1) != 0) {
-      entry = new rotate_y(entry,temprotvec(1));
-    }
-    if(temprotvec(2) != 0) {
-      entry = new rotate_z(entry,temprotvec(2));
-    }
-    return(new translate(entry,center + vel * shutteropen));
+    return(new translate(entry,center + gtrans + vel * shutteropen));
   }
 }
 
@@ -492,7 +547,7 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
                       LogicalVector& isvolume, NumericVector& voldensity,
                       bool parallel, LogicalVector& implicit_sample, List& order_rotation_list,
                       float clampval,
-                      LogicalVector& isgrouped, List& group_pivot, 
+                      LogicalVector& isgrouped, List& group_pivot, List& group_translate,
                       List& group_angle, List& group_order_rotation) {
   NumericMatrix routput(nx,ny);
   NumericMatrix goutput(nx,ny);
@@ -516,7 +571,7 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
                                   islight, lightintensity,
                                   isflipped,
                                   isvolume, voldensity, order_rotation_list, 
-                                  isgrouped, group_pivot, 
+                                  isgrouped, group_pivot, group_translate,
                                   group_angle, group_order_rotation, rng);
   int numbertosample = 0;
   for(int i = 0; i < implicit_sample.size(); i++) {
@@ -532,7 +587,8 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
       implicit_sample_vector[counter] = build_imp_sample(type, radius, shape, x, y, z,
                                properties, velocity,
                                n, shutteropen, shutterclose,
-                               angle, i, isgrouped, group_pivot, 
+                               angle, i, order_rotation_list,
+                               isgrouped, group_pivot, group_translate,
                                group_angle, group_order_rotation,
                                rng);
       counter++;
