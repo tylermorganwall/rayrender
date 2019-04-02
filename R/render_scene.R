@@ -37,28 +37,28 @@
 #' #Generate a large checkered sphere as the ground
 #' scene = generate_ground(depth=-0.5,material=lambertian(color="white", checkercolor="darkgreen"))
 #' \dontrun{
-#' render_scene(scene,samples=200,parallel=TRUE)
+#' render_scene(scene,parallel=TRUE,samples=500)
 #' }
 #' 
 #' #Add a sphere to the center
 #' scene = scene %>%
 #'   add_object(sphere(x=0,y=0,z=0,radius=0.5,material = lambertian(color=c(1,0,1))))
 #' \dontrun{
-#' render_scene(scene,fov=20,parallel=TRUE)
+#' render_scene(scene,fov=20,parallel=TRUE,samples=500)
 #' }
 #' 
 #' #Add a marbled cube 
 #' scene = scene %>%
 #'   add_object(cube(x=0,y=0,z=1.1,material = lambertian(noise=3)))
 #' \dontrun{
-#' render_scene(scene,fov=20,parallel=TRUE)
+#' render_scene(scene,fov=20,parallel=TRUE,samples=500)
 #' }
 #' 
 #' #Add a metallic gold sphere
 #' scene = scene %>%
 #'   add_object(sphere(x=0,y=0,z=-1.1,radius=0.5,material = metal(color="gold",fuzz=0.1)))
 #' \dontrun{
-#' render_scene(scene,fov=20,parallel=TRUE)
+#' render_scene(scene,fov=20,parallel=TRUE,samples=500)
 #' }
 #' 
 #' #Lower the number of samples to render more quickly.
@@ -74,7 +74,7 @@
 #' scene = scene %>%
 #'   add_object(yz_rect(x=0,y=1.1,z=0,zwidth=2,material = lambertian(image = image_array)))
 #' \dontrun{
-#' render_scene(scene,fov=20,parallel=TRUE)
+#' render_scene(scene,fov=20,parallel=TRUE,samples=500)
 #' }
 #' 
 #' #Move the camera
@@ -85,17 +85,19 @@
 #' #Change the background gradient to a night time ambience
 #' \dontrun{
 #' render_scene(scene,lookfrom = c(7,1.5,10),lookat = c(0,0.5,0),fov=15,
-#'              backgroundhigh = "#282375", backgroundlow = "#7e77ea",parallel=TRUE)
+#'              backgroundhigh = "#282375", backgroundlow = "#7e77ea",parallel=TRUE,
+#'              samples=500)
 #' }
 #'                  
 #'#Increase the aperture to give more depth of field.
 #' \dontrun{
 #' render_scene(scene,lookfrom = c(7,1.5,10),lookat = c(0,0.5,0),fov=15,
-#'              aperture = 0.5,parallel=TRUE)
+#'              aperture = 0.5,parallel=TRUE,samples=500)
 #' }
 #'                  
 #'#Spin the camera around the scene, decreasing the number of samples to render faster. To make 
-#'#an animation, specify the a filename in `render_scene` for each frame.
+#'#an animation, specify the a filename in `render_scene` for each frame and use the `av` package
+#'#or ffmpeg to combine them all into a movie.
 #'
 #'t=1:30
 #'xpos = 10 * sin(t*12*pi/180+pi/2)

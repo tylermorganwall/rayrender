@@ -269,18 +269,6 @@ hitable *build_scene(IntegerVector& type,
       gtrans = vec3(0,0,0); 
     }
     prop_len=2;
-    
-    if(shape(i) == 1) {
-      center =  vec3(x(i), y(i), z(i));
-    } else if(shape(i) == 2) {
-      center =  vec3(tempvector(prop_len+1),tempvector(prop_len+3),tempvector(prop_len+5));
-    } else if(shape(i) == 3) {
-      center =  vec3(tempvector(prop_len+1),tempvector(prop_len+5), tempvector(prop_len+3));
-    } else if(shape(i) == 4) {
-      center =  vec3(tempvector(prop_len+5),tempvector(prop_len+1),tempvector(prop_len+3));
-    } else if(shape(i) == 5) {
-      center =  vec3(x(i), y(i), z(i));
-    }
     vel = vec3(tempvel(0),tempvel(1),tempvel(2));
     //Generate texture
     material *tex;
@@ -308,6 +296,18 @@ hitable *build_scene(IntegerVector& type,
     } else {
       tex = new dielectric(vec3(tempvector(0),tempvector(1),tempvector(2)),tempvector(3), rng);
       prop_len = 3;
+    }
+    //Generate center vector
+    if(shape(i) == 1) {
+      center =  vec3(x(i), y(i), z(i));
+    } else if(shape(i) == 2) {
+      center =  vec3(tempvector(prop_len+1),tempvector(prop_len+3),tempvector(prop_len+5));
+    } else if(shape(i) == 3) {
+      center =  vec3(tempvector(prop_len+1),tempvector(prop_len+5), tempvector(prop_len+3));
+    } else if(shape(i) == 4) {
+      center =  vec3(tempvector(prop_len+5),tempvector(prop_len+1),tempvector(prop_len+3));
+    } else if(shape(i) == 5) {
+      center =  vec3(x(i), y(i), z(i));
     }
     //Generate objects
     if (shape(i) == 1) {

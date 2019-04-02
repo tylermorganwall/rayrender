@@ -34,14 +34,14 @@ render_scene(scene,parallel=TRUE)
 scene = scene \%>\%
   add_object(sphere(z=-0.5,radius=0.5,material=dielectric()))
 \dontrun{
-render_scene(scene,parallel=TRUE)
+render_scene(scene,parallel=TRUE,samples=500)
 }
 
 #Add a rotated colored glass cube
 scene = scene \%>\%
   add_object(cube(z=0.5,zwidth=0.5,material=dielectric(color="darkgreen"),angle=c(0,-45,0)))
 \dontrun{
-render_scene(scene,parallel=TRUE)
+render_scene(scene,parallel=TRUE,samples=500)
 }
 
 #Add an area light behind and at an angle and turn off the ambient lighting

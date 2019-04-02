@@ -21,7 +21,7 @@
 #'              samples=500, fov=50, parallel=TRUE, clamp_value=5)
 #' }
 #' 
-#' #Group the entire room and rotate around its center, but keep the cube in the same place.
+#' #Group the entire room and rotate around its center, but keep the cubes in the same place.
 #' scene2 = group_objects(generate_cornell(), 
 #'                        pivot_point=c(555/2,555/2,555/2),
 #'                        group_angle=c(0,30,0)) %>%

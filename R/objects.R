@@ -20,14 +20,16 @@
 #' \dontrun{
 #' generate_cornell() %>%
 #'   add_object(sphere(x=555/2,y=555/2,z=555/2,radius=100)) %>%
-#'   render_scene(lookfrom = c(278,278,-800) ,lookat = c(278,278,0), fov = 40, ambient_light=FALSE)
+#'   render_scene(lookfrom = c(278,278,-800) ,lookat = c(278,278,0), fov = 40, ambient_light=FALSE,
+#'                samples=500, parallel=TRUE, clamp_value=5)
 #' }
 #' 
 #' #Generate a GOLD sphere in the cornell box (it's GOLD!)
 #' \dontrun{
 #' generate_cornell() %>%
 #'   add_object(sphere(x=555/2,y=100,z=555/2,radius=100,material=metal(color="gold",fuzz=0.2))) %>%
-#'   render_scene(lookfrom = c(278,278,-800) ,lookat = c(278,278,0), fov = 40, ambient_light=FALSE)
+#'   render_scene(lookfrom = c(278,278,-800) ,lookat = c(278,278,0), fov = 40, ambient_light=FALSE,
+#'                samples=500, parallel=TRUE, clamp_value=5)
 #' }
 #'   
 #' #Add motion blur and show the sphere moving
@@ -35,7 +37,8 @@
 #' generate_cornell() %>%
 #'   add_object(sphere(x=555/2,y=100,z=555/2,radius=100,
 #'              material=metal(color="gold",fuzz=0.2),velocity=c(50,0,0))) %>%
-#'   render_scene(lookfrom = c(278,278,-800) ,lookat = c(278,278,0), fov = 40, ambient_light=FALSE)
+#'   render_scene(lookfrom = c(278,278,-800) ,lookat = c(278,278,0), fov = 40, ambient_light=FALSE,
+#'                samples=500, parallel=TRUE, clamp_value=5)
 #' }
 sphere = function(x=0, y=0, z=0, radius=1, material=lambertian(), 
                   angle = c(0,0,0), order_rotation = c(1,2,3), velocity = c(0,0,0), flipped=FALSE) {
@@ -76,14 +79,16 @@ sphere = function(x=0, y=0, z=0, radius=1, material=lambertian(),
 #' \dontrun{
 #' generate_cornell() %>%
 #'   add_object(cube(x=555/2,y=100,z=555/2,xwidth=200,ywidth=200,zwidth=200,angle=c(0,30,0))) %>%
-#'   render_scene(lookfrom = c(278,278,-800) ,lookat = c(278,278,0), fov = 40, ambient_light=FALSE)
+#'   render_scene(lookfrom = c(278,278,-800) ,lookat = c(278,278,0), fov = 40, ambient_light=FALSE,
+#'                samples=500, parallel=TRUE, clamp_value=5)
 #' }
 #' #Generate a GOLD cube in the cornell box (it's GOLD!)
 #' \dontrun{
 #' generate_cornell() %>%
 #'   add_object(cube(x=555/2,y=100,z=555/2,xwidth=200,ywidth=200,zwidth=200,angle=c(0,30,0),
 #'                   material = metal(color="gold", fuzz=0.2))) %>%
-#'   render_scene(lookfrom = c(278,278,-800) ,lookat = c(278,278,0), fov = 40, ambient_light=FALSE)
+#'   render_scene(lookfrom = c(278,278,-800) ,lookat = c(278,278,0), fov = 40, ambient_light=FALSE,
+#'                samples=500, parallel=TRUE, clamp_value=5)
 #' }
 cube = function(x=0, y=0, z=0, width=1, xwidth=1, ywidth=1, zwidth=1, 
                 material=lambertian(), angle = c(0,0,0), order_rotation = c(1,2,3),velocity = c(0,0,0),
@@ -127,16 +132,16 @@ cube = function(x=0, y=0, z=0, width=1, xwidth=1, ywidth=1, zwidth=1,
 #'   add_object(xy_rect(x=555/2,y=100,z=555/2,xwidth=200,ywidth=200,
 #'              material = lambertian(color="purple"))) %>%
 #'   render_scene(lookfrom = c(278,278,-800) ,lookat = c(278,278,0), fov = 40, ambient_light=FALSE,
-#'                parallel = TRUE)
+#'                samples=500, parallel = TRUE, clamp_value=5)
 #' }
 #' 
 #' #Generate a GOLD plane in the cornell box (it's GOLD!)
 #' \dontrun{
 #' generate_cornell() %>%
-#'   add_object(xy_rect(x=555/2,y=100,z=555/2,xwidth=200,ywidth=200,angle=c(0,0,0),
+#'   add_object(xy_rect(x=555/2,y=100,z=555/2,xwidth=200,ywidth=200,angle=c(0,30,0),
 #'              material = metal(color="gold"))) %>%
 #'   render_scene(lookfrom = c(278,278,-800) ,lookat = c(278,278,0), fov = 40, ambient_light=FALSE,
-#'                parallel = TRUE)
+#'                samples=500, parallel = TRUE, clamp_value=5)
 #' }
 xy_rect = function(x=0, y=0, z=0, xwidth=1, ywidth=1,  
                    material = lambertian(), angle = c(0,0,0), order_rotation = c(1,2,3), flipped=FALSE) {
@@ -175,14 +180,16 @@ xy_rect = function(x=0, y=0, z=0, xwidth=1, ywidth=1,
 #' generate_cornell() %>%
 #'   add_object(yz_rect(x=100,y=100,z=555/2,ywidth=200,zwidth=200,
 #'              material = lambertian(color="purple"))) %>%
-#'   render_scene(lookfrom = c(278,278,-800) ,lookat = c(278,278,0), fov = 40, ambient_light=FALSE)
+#'   render_scene(lookfrom = c(278,278,-800) ,lookat = c(278,278,0), fov = 40, ambient_light=FALSE,
+#'                samples=500, parallel = TRUE, clamp_value=5)
 #' }
 #' #Generate a GOLD plane in the cornell box (it's GOLD!)
 #' \dontrun{
 #' generate_cornell() %>%
 #'   add_object(yz_rect(x=100,y=100,z=555/2,ywidth=200,zwidth=200, angle=c(0,30,0),
 #'              material = metal(color="gold"))) %>%
-#'   render_scene(lookfrom = c(278,278,-800) ,lookat = c(278,278,0), fov = 40, ambient_light=FALSE)
+#'   render_scene(lookfrom = c(278,278,-800) ,lookat = c(278,278,0), fov = 40, ambient_light=FALSE,
+#'                samples=500, parallel = TRUE, clamp_value=5)
 #' }
 yz_rect = function(x=0, y=0, z=0, ywidth=1, zwidth=1, material = lambertian(), 
                    angle = c(0,0,0), order_rotation = c(1,2,3), flipped=FALSE) {
@@ -221,7 +228,8 @@ yz_rect = function(x=0, y=0, z=0, ywidth=1, zwidth=1, material = lambertian(),
 #' generate_cornell() %>%
 #'   add_object(xz_rect(x=555/2,y=100,z=555/2,xwidth=200,zwidth=200,
 #'              material = lambertian(color="purple"))) %>%
-#'   render_scene(lookfrom = c(278,278,-800) ,lookat = c(278,278,0), fov = 40, ambient_light=FALSE)
+#'   render_scene(lookfrom = c(278,278,-800) ,lookat = c(278,278,0), fov = 40, ambient_light=FALSE,
+#'                samples=500, parallel = TRUE, clamp_value=5)
 #' }
 #' 
 #' #Generate a GOLD plane in the cornell box (it's GOLD!)
@@ -229,7 +237,8 @@ yz_rect = function(x=0, y=0, z=0, ywidth=1, zwidth=1, material = lambertian(),
 #' generate_cornell() %>%
 #'   add_object(xz_rect(x=555/2,y=100,z=555/2,xwidth=200,zwidth=200,angle=c(0,30,0),
 #'              material = metal(color="gold"))) %>%
-#'   render_scene(lookfrom = c(278,278,-800) ,lookat = c(278,278,0), fov = 40, ambient_light=FALSE)
+#'   render_scene(lookfrom = c(278,278,-800) ,lookat = c(278,278,0), fov = 40, ambient_light=FALSE,
+#'                samples=500, parallel = TRUE, clamp_value=5)
 #' }
 xz_rect = function(x=0, xwidth=1, z=0, zwidth=1, y=0, material = lambertian(), 
                    angle = c(0,0,0), order_rotation = c(1,2,3), flipped=FALSE) {

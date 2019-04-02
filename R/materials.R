@@ -29,7 +29,7 @@
 #' scene = generate_cornell() %>%
 #'   add_object(sphere(x=555/2,y=555/2,z=555/2,radius=555/8,material=lambertian()))
 #' \dontrun{
-#' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=200,
+#' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
 #'              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 #' }
 #' 
@@ -38,7 +38,7 @@
 #'   add_object(cube(x=555/2,y=555/8,z=555/2,xwidth=555/2,ywidth=555/4,zwidth=555/2,
 #'   material = lambertian(checkercolor="purple",checkerperiod=20)))
 #' \dontrun{
-#' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=200,
+#' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
 #'              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 #' }
 #'   
@@ -47,7 +47,7 @@
 #'   add_object(sphere(x=555/2+555/4,y=555/2,z=555/2,radius=555/8,
 #'   material = lambertian(noise=1/20)))
 #' \dontrun{
-#' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=200,
+#' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
 #'              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 #' }
 #' 
@@ -56,7 +56,7 @@
 #'   add_object(cube(x=555/2-555/4,y=555/2,z=555/2,xwidth=555/4,ywidth=555/4,zwidth=555/4,
 #'   material = lambertian(fog=TRUE, fogdensity=0.05,color="orange")))
 #' \dontrun{
-#' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=200,
+#' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
 #'              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 #' }
 lambertian = function(color = "#ffffff", checkercolor = NA, checkerperiod = 3,
@@ -95,18 +95,11 @@ lambertian = function(color = "#ffffff", checkercolor = NA, checkerperiod = 3,
 #' @export
 #'
 #' @examples
-#' #Generate the cornell box with a checkered base
-#' scene = generate_cornell()
-#' \dontrun{
-#' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=200,
-#'              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
-#' }
-#' 
-#' #Add a single metal sphere to the center
+#' #Generate the cornell box with a single metal sphere in the center
 #' scene = scene %>%
 #'   add_object(sphere(x=555/2,y=555/2,z=555/2,radius=555/8,material=metal()))
 #' \dontrun{
-#' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=200,
+#' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
 #'              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 #' }
 #' #Add a rotated shiny metal cube     
@@ -114,7 +107,7 @@ lambertian = function(color = "#ffffff", checkercolor = NA, checkerperiod = 3,
 #'   add_object(cube(x=380,y=150/2,z=200,xwidth=150,ywidth=150,zwidth=150,
 #'   material = metal(color="#8B4513"),angle=c(0,45,0)))
 #' \dontrun{
-#' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=200,
+#' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
 #'              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 #' }
 #' #Add a brushed metal cube (setting the fuzz variable)           
@@ -122,7 +115,7 @@ lambertian = function(color = "#ffffff", checkercolor = NA, checkerperiod = 3,
 #'   add_object(cube(x=150,y=150/2,z=300,xwidth=150,ywidth=150,zwidth=150,
 #'   material = metal(color="#FAFAD2",fuzz=0.1),angle=c(0,-30,0)))
 #' \dontrun{
-#' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=200,
+#' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
 #'              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 #' }
 metal = function(color = "#ffffff", fuzz = 0,  implicit_sample = FALSE) {
@@ -158,14 +151,14 @@ metal = function(color = "#ffffff", fuzz = 0,  implicit_sample = FALSE) {
 #' scene = scene %>%
 #'   add_object(sphere(z=-0.5,radius=0.5,material=dielectric()))
 #' \dontrun{
-#' render_scene(scene,parallel=TRUE)
+#' render_scene(scene,parallel=TRUE,samples=500)
 #' }
 #' 
 #' #Add a rotated colored glass cube
 #' scene = scene %>%
 #'   add_object(cube(z=0.5,zwidth=0.5,material=dielectric(color="darkgreen"),angle=c(0,-45,0)))
 #' \dontrun{
-#' render_scene(scene,parallel=TRUE)
+#' render_scene(scene,parallel=TRUE,samples=500)
 #' }
 #' 
 #' #Add an area light behind and at an angle and turn off the ambient lighting
