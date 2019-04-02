@@ -16,6 +16,10 @@ lights, as well as procedural and user-specified image textures.
 **rayrender** includes multicore support via RcppParallel and random
 number generation via the PCG RNG.
 
+Browse the documentation and see more examples at the website:
+
+www.rayrender.net
+
 ## Installation
 
 ``` r

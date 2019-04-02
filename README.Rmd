@@ -17,6 +17,9 @@ Overview
 
 **rayrender** is an open source R package for raytracing scenes in created in R. Based off of Peter Shirley's three books "Ray Tracing in One Weekend", "Ray Tracing: The Next Week", and "Ray Tracing: The Rest of Your Life", this package provides a tidy R API to a raytracer built in C++ to render scenes out of spheres, planes, and cubes. **rayrender** builds scenes using a pipeable iterative interface, and supports Lambertian (diffuse), metallic, and dielectric (glass) materials, lights, as well as procedural and user-specified image textures. **rayrender** includes multicore support via RcppParallel and random number generation via the PCG RNG.
 
+Browse the documentation and see more examples at the website:
+
+www.rayrender.net
 
 Installation
 ------------
