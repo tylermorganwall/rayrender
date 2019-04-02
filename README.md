@@ -1,129 +1,101 @@
 
-# rayballer
+# rayrender
 
-<img src="man/figures/rayballer.gif" ></img>
+<img src="man/figures/swordsmall.gif" ></img>
 
 ## Overview
 
-**rayballer** is an open source R package for raytracing spheres. Based
-off of Peter Shirley’s “Raytracing in One Weekend” book, this package
-provides a tidy R API to the underlying raytracer to build scenes out of
-diffuse (lambertian), metallic, and glass (dielectric) spheres. The
-scene representation is a tibble of sphere properties, and the user can
-use the provided material helper functions to easily build the scene out
-of individual spheres.
+**rayrender** is an open source R package for raytracing scenes in
+created in R. Based off of Peter Shirley’s three books “Ray Tracing in
+One Weekend”, “Ray Tracing: The Next Week”, and “Ray Tracing: The Rest
+of Your Life”, this package provides a tidy R API to a raytracer built
+in C++ to render scenes out of spheres, planes, and cubes. **rayrender**
+builds scenes using a pipeable iterative interface, and supports
+Lambertian (diffuse), metallic, and dielectric (glass) materials,
+lights, as well as procedural and user-specified image textures.
+**rayrender** includes multicore support via RcppParallel and random
+number generation via the PCG RNG.
 
 ## Installation
 
 ``` r
 # To install the latest version from Github:
 # install.packages("devtools")
-devtools::install_github("tylermorganwall/rayballer")
+devtools::install_github("tylermorganwall/rayrender")
 ```
 
 ## Usage
 
 ``` r
-library(rayballer)
+library(rayrender)
 
-#Start with the ground
-scene = generate_ground(depth=-0.5)
-render_scene(scene)
+#Start by generating the Cornell box
+scene = generate_cornell()
+render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), aperture=0, fov=40, samples = 500,
+             ambient_light=FALSE, parallel=TRUE, width=500, height=500, clamp_value = 5)
 ```
 
-![](man/figures/README_basicspheres-1.png)<!-- -->
+![](man/figures/README_basic-1.png)<!-- -->
 
 ``` r
-#Add a sphere to the center
-scene = add_sphere(scene, lambertian(x=0,y=0,z=0,radius=0.5,color=c(1,0,1)))
-render_scene(scene)
+#Add a sphere to the center of the box, utilizing the pipe to compose the scene
+generate_cornell() %>%
+  add_object(sphere(x=555/2,y=555/8,z=555/2,radius=555/8)) %>%
+  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), aperture=0, fov=40,  samples = 500,
+             ambient_light=FALSE, parallel=TRUE, width=500, height=500, clamp_value = 5)
 ```
 
-![](man/figures/README_basicspheres-2.png)<!-- -->
+![](man/figures/README_basic-2.png)<!-- -->
 
 ``` r
-#Add a metal ball (using hexcode color representation)
-scene = add_sphere(scene, metal(x=0,y=0,z=1,radius=0.5,color="#ffffff",fuzz=0))
-render_scene(scene)
+#Add a metal cube to the scene
+generate_cornell() %>%
+  add_object(sphere(x=555/2,y=555/8,z=555/2,radius=555/8)) %>%
+  add_object(cube(x=100,y=130/2,z=555/2,xwidth = 130,ywidth=130,zwidth = 130,
+                  material=metal(color="lightblue"),angle=c(0,20,0))) %>%
+  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), aperture=0, fov=40,  samples = 500,
+             ambient_light=FALSE, parallel=TRUE, width=500, height=500, clamp_value = 5)
 ```
 
-![](man/figures/README_basicspheres-3.png)<!-- -->
+![](man/figures/README_basic-3.png)<!-- -->
 
 ``` r
-#Add a brushed metal ball 
-scene = add_sphere(scene, metal(x=0,y=1,z=0,radius=0.5,color=c(0.3,0.6,1),fuzz=0.25))
-render_scene(scene)
+#Add a colored glass sphere, now saving the scene and passing that to render_scene
+scene = generate_cornell() %>%
+  add_object(sphere(x=555/2,y=555/8,z=555/2,radius=555/8)) %>%
+  add_object(cube(x=100,y=130/2,z=200,xwidth = 130,ywidth=130,zwidth = 130,
+                  material=metal(color="lightblue"),angle=c(0,10,0))) %>%
+  add_object(sphere(x=420,y=555/8,z=100,radius=555/8,
+                    material = dielectric(color="orange"))) 
+render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), aperture=0, fov=40,  samples = 500,
+             ambient_light=FALSE, parallel=TRUE, width=500, height=500, clamp_value = 5)
 ```
 
-![](man/figures/README_basicspheres-4.png)<!-- -->
+![](man/figures/README_basic-4.png)<!-- -->
 
 ``` r
-#Add a dielectric (glass) ball
-scene = add_sphere(scene, dielectric(x=0,y=0,z=-1,radius=0.5,refraction=1.6))
-render_scene(scene)
+#Plaster the walls with the iris dataset using textures applied to rectangles
+tempfileplot = tempfile()
+png(filename=tempfileplot,height=1600,width=1600)
+plot(iris$Petal.Length,iris$Sepal.Width,col=iris$Species,pch=18,cex=12)
+dev.off()
 ```
 
-![](man/figures/README_basicspheres-5.png)<!-- -->
+    ## quartz_off_screen 
+    ##                 2
 
 ``` r
-#Add a grid of glass balls in front
-glass_array_list = list() 
+image_array = png::readPNG(tempfileplot)
 
-yloc = seq(-0.33,+0.33,length.out=3)
-zloc = seq(-0.33,0.33,length.out=3)
-locations = expand.grid(y=yloc,z=zloc)
-for(i in 1:9) {
-  glass_array_list[[i]] = dielectric(x=1,y=locations$y[i],z=locations$z[i], radius=0.15)
-}
-glass_array = do.call(rbind,glass_array_list)
-
-scene = add_sphere(scene, glass_array)
-render_scene(scene)
+scene %>%
+  add_object(yz_rect(x=0.01,y=300,z=555/2,zwidth=400,ywidth=400,
+                     material = lambertian(image = image_array))) %>%
+  add_object(yz_rect(x=555/2,y=300,z=555-0.01,zwidth=400,ywidth=400,
+                     material = lambertian(image = image_array),angle=c(0,90,0))) %>%
+  add_object(yz_rect(x=555-0.01,y=300,z=555/2,zwidth=400,ywidth=400,
+                     material = lambertian(image = image_array),angle=c(0,180,0))) %>%
+  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), aperture=0, fov=40,  samples = 500,
+             ambient_light=FALSE, parallel=TRUE, width=500, height=500, clamp_value = 5)
 ```
 
-![](man/figures/README_basicspheres-6.png)<!-- -->
-
-``` r
-#Move the camera
-render_scene(scene,lookfrom = c(7,1.5,10),lookat = c(0,0.5,0),fov=15)
-```
-
-![](man/figures/README_basicspheres-7.png)<!-- -->
-
-``` r
-#Change the background gradient to a night time ambience
-render_scene(scene,lookfrom = c(7,1.5,10),lookat = c(0,0.5,0),fov=15,
-                 backgroundhigh = "#282375", backgroundlow = "#7e77ea")
-```
-
-![](man/figures/README_basicspheres-8.png)<!-- -->
-
-``` r
-#'#Increase the aperture to give more depth of field.
-render_scene(scene,lookfrom = c(7,1.5,10),lookat = c(0,0.5,0),fov=15,
-                 aperture = 1)
-```
-
-![](man/figures/README_basicspheres-9.png)<!-- -->
-
-Here’s the final scene representation:
-
-``` r
-scene
-```
-
-    ##    x        y     z  radius       type             properties
-    ## 1  0 -1000.50  0.00 1000.00 lambertian          0.8, 1.0, 0.0
-    ## 2  0     0.00  0.00    0.50 lambertian                1, 0, 1
-    ## 3  0     0.00  1.00    0.50      metal             1, 1, 1, 0
-    ## 4  0     1.00  0.00    0.50      metal 0.30, 0.60, 1.00, 0.25
-    ## 5  0     0.00 -1.00    0.50 dielectric                    1.6
-    ## 6  1    -0.33 -0.33    0.15 dielectric                    1.5
-    ## 7  1     0.00 -0.33    0.15 dielectric                    1.5
-    ## 8  1     0.33 -0.33    0.15 dielectric                    1.5
-    ## 9  1    -0.33  0.00    0.15 dielectric                    1.5
-    ## 10 1     0.00  0.00    0.15 dielectric                    1.5
-    ## 11 1     0.33  0.00    0.15 dielectric                    1.5
-    ## 12 1    -0.33  0.33    0.15 dielectric                    1.5
-    ## 13 1     0.00  0.33    0.15 dielectric                    1.5
-    ## 14 1     0.33  0.33    0.15 dielectric                    1.5
+![](man/figures/README_basic-5.png)<!-- -->
