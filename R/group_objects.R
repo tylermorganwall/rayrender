@@ -17,7 +17,8 @@
 #'         add_object(cube(x=555/2,y=555/8,z=555/2,width=555/4)) %>%
 #'         add_object(cube(x=555/2,y=555/4+555/16,z=555/2,width=555/8))
 #' \dontrun{
-#' render_scene(scene,samples=200,fov=50,parallel=TRUE,clamp_value=5)
+#' render_scene(scene,lookfrom=c(278,278,-800),lookat = c(278,278,0), aperture=0,
+#'              samples=500, fov=50, parallel=TRUE, clamp_value=5)
 #' }
 #' 
 #' #Group the entire room and rotate around its center, but keep the cube in the same place.
@@ -28,7 +29,8 @@
 #'         add_object(cube(x=555/2,y=555/4+555/16,z=555/2,width=555/8))
 #'                        
 #' \dontrun{
-#' render_scene(scene2,samples=200,fov=50,parallel=TRUE,clamp_value=5)
+#' render_scene(scene2,lookfrom=c(278,278,-800),lookat = c(278,278,0), aperture=0,
+#'              samples=500, fov=50, parallel=TRUE, clamp_value=5)
 #' }
 #' 
 #' #Now group the cubes instead of the Cornell box, and rotate/translate them together
@@ -37,7 +39,8 @@
 #' scene3 = generate_cornell() %>%
 #'          add_object(group_objects(twocubes, group_translate = c(0,50,0),group_angle = c(0,45,0)))
 #' \dontrun{
-#' render_scene(scene3,samples=200,fov=50,parallel=TRUE,clamp_value=5)
+#' render_scene(scene3,lookfrom=c(278,278,-800),lookat = c(278,278,0), aperture=0,
+#'              samples=500, fov=50, parallel=TRUE, clamp_value=5)
 #' }
 group_objects = function(scene, pivot_point=c(0,0,0), group_translate = c(0,0,0),
                          group_angle = c(0,0,0), group_order_rotation = c(1,2,3)) {
