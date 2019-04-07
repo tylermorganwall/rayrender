@@ -255,3 +255,41 @@ xz_rect = function(x=0, xwidth=1, z=0, zwidth=1, y=0, material = lambertian(),
                  pivot_point = list(NA), group_translate = list(NA),
                  group_angle = list(NA), group_order_rotation = list(NA))
 }
+
+#' Triangle Object
+#'
+#' @param v1 Default `c(1,0,0)`. Length-3 vector indicating the x, y, and z coordinate of the first triangle vertex.
+#' @param v2 Default `c(0,1,0)`. Length-3 vector indicating the x, y, and z coordinate of the second triangle vertex.
+#' @param v3 Default `c(-1,0,0)`. Length-3 vector indicating the x, y, and z coordinate of the third triangle vertex.
+#' @param n1 Default `NA`. Length-3 vector indicating the normal vector associated with the first triangle vertex.
+#' @param n2 Default `NA`. Length-3 vector indicating the normal vector associated with the second triangle vertex.
+#' @param n3 Default `NA`. Length-3 vector indicating the normal vector associated with the third triangle vertex.
+
+#' @param material Default  \code{\link{lambertian}}.The material, called from one of the material 
+#' functions \code{\link{lambertian}}, \code{\link{metal}}, or \code{\link{dielectric}}.
+#' @param angle Default `c(0,0,0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.
+#' @param order_rotation Default `c(1,2,3)`. The order to apply the rotations, referring to "x", "y", and "z".
+#' @param flipped Default `FALSE`. Whether to flip the normals.
+#' 
+#' @return Single row of a tibble describing the XZ plane in the scene.
+#' @export
+#'
+#' @examples
+#' #Generate a purple rectangle in the cornell box.
+triangle = function(v1=c(1,0,0), v2=c(0,1,0),v3=c(-1,0,0), 
+                    n1 = rep(NA,3), n2 = rep(NA,3), n3 = rep(NA,3),
+                    material = lambertian(), 
+                    angle = c(0,0,0), order_rotation = c(1,2,3), flipped=FALSE) {
+  info = c(unlist(material$properties),v1,v2,v3, n1, n2, n3)
+  tibble::tibble(x=0,y=0,z=0,radius=NA, 
+                 type = material$type, shape="triangle",
+                 properties = list(info), velocity = list(c(0,0,0)),
+                 checkercolor=material$checkercolor, 
+                 noise=material$noise, noisephase = material$noisephase, 
+                 noiseintensity = material$noiseintensity,noisecolor=material$noisecolor,
+                 angle=list(angle),image = material$image,lightintensity = material$lightintensity,
+                 flipped=flipped,fog=material$fog, fogdensity=material$fogdensity,
+                 implicit_sample=material$implicit_sample,order_rotation=list(order_rotation),
+                 pivot_point = list(NA), group_translate = list(NA),
+                 group_angle = list(NA), group_order_rotation = list(NA))
+}
