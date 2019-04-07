@@ -14,9 +14,12 @@
 #include "constant.h"
 #include "triangle.h"
 #include "pdf.h"
-#include <RcppParallel.h>
+#include "RProgress.h"
 #include "rng.h"
 using namespace Rcpp;
+// [[Rcpp::plugins(cpp11)]]
+// [[Rcpp::depends(RcppThread)]]
+#include "RcppThread.h"
 
 
 inline vec3 de_nan(const vec3& c) {
@@ -152,57 +155,6 @@ vec3 color_amb_uniform(const ray& r, hitable *world, int depth,
     return (1.0 - t) * backgroundlow + t * backgroundhigh;
   }
 }
-
-struct Colorworker : public RcppParallel::Worker {
-  Colorworker(NumericMatrix outputr, NumericMatrix outputg, NumericMatrix outputb,
-              bool ambient_light, int nx, int ny, int ns, camera cam, vec3 backgroundhigh, vec3 backgroundlow, 
-              hitable *world, hitable *hlist, int numbertosample, float clampval)
-  : outputr(outputr), outputg(outputg), outputb(outputb), ambient_light(ambient_light),
-    nx(nx), ny(ny), ns(ns), cam(cam),
-    backgroundhigh(backgroundhigh), backgroundlow(backgroundlow), world(world), hlist(hlist), 
-    numbertosample(numbertosample), clampval(clampval) {}
-  void operator()(std::size_t begin, std::size_t end) {
-    random_gen rng;
-    for(std::size_t j = begin; j < end; j++) {
-      for(int i = 0; i < nx; i++) {
-        vec3 col(0,0,0);
-        for(int s = 0; s < ns; s++) {
-          float u = float(i + rng.unif_rand()) / float(nx);
-          float v = float(j + rng.unif_rand()) / float(ny);
-          ray r = cam.get_ray(u,v);
-          if(numbertosample) {
-            if(ambient_light) {
-              col += clamp(de_nan(color_amb(r, world, hlist, 0, 
-                                            backgroundhigh, backgroundlow, rng)),clampval);
-            } else {
-              col += clamp(de_nan(color(r, world, hlist, 0, rng)),clampval);
-            }
-          } else {
-            if(ambient_light) {
-              col += clamp(de_nan(color_amb_uniform(r, world, 0, backgroundhigh, backgroundlow, rng)),clampval);
-            } else {
-              col += clamp(de_nan(color_uniform(r, world, 0, rng)),clampval);
-            }
-          }
-        }
-        col /= float(ns);
-        outputr(i,j) = pow(col[0],1/2.2);
-        outputg(i,j) = pow(col[1],1/2.2);
-        outputb(i,j) = pow(col[2],1/2.2);
-      }
-    }
-  }
-
-  RcppParallel::RMatrix<double> outputr, outputg, outputb;
-  bool ambient_light;
-  int nx, ny, ns;
-  camera cam;
-  vec3 backgroundhigh, backgroundlow;
-  hitable *world;
-  hitable *hlist;
-  int numbertosample;
-  float clampval;
-};
 
 hitable* rotation_order(hitable* entry, NumericVector temprotvec, NumericVector order_rotation) {
   for(int i = 0; i < 3; i++) {
@@ -607,7 +559,7 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
                       float clampval,
                       LogicalVector& isgrouped, List& group_pivot, List& group_translate,
                       List& group_angle, List& group_order_rotation, 
-                      LogicalVector tri_normal_bools) {
+                      LogicalVector tri_normal_bools, bool progress_bar, int numbercores) {
   NumericMatrix routput(nx,ny);
   NumericMatrix goutput(nx,ny);
   NumericMatrix boutput(nx,ny);
@@ -655,8 +607,17 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
   }
   hitable_list hlist(&implicit_sample_vector[0],numbertosample);
   
+  RProgress::RProgress pb("Raytracing [:bar] ETA: :eta");
+  
+  if(progress_bar) {
+    pb.set_total(ny);
+  }
   if(!parallel) {
     for(int j = ny - 1; j >= 0; j--) {
+      Rcpp::checkUserInterrupt();
+      if(progress_bar) {
+        pb.tick();
+      }
       for(int i = 0; i < nx; i++) {
         vec3 col(0,0,0);
         for(int s = 0; s < ns; s++) {
@@ -686,11 +647,48 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
       }
     }
   } else {
-    Colorworker color_worker(routput, goutput, boutput,
-                      ambient_light, nx, ny, ns,
-                      cam, backgroundhigh, backgroundlow, world, &hlist, 
-                      numbertosample, clampval);
-    RcppParallel::parallelFor(0, ny, color_worker);
+    RcppThread::ThreadPool pool(numbercores);
+    auto worker = [&routput, &goutput, &boutput,
+                   ambient_light, nx, ny, ns,
+                   &cam, backgroundhigh, backgroundlow, &world, &hlist,
+                   numbertosample, clampval, progress_bar, numbercores] (int j) {
+    // auto worker = [nx, ns] (int j) {
+      if(progress_bar && j % numbercores == 0) {
+        RcppThread::Rcout << "Progress (" << numbercores << " cores): ";
+        RcppThread::Rcout << (1-(double)j/double(ny)) * 100 << "%\r";
+      }
+      random_gen rng;
+      for(int i = 0; i < nx; i++) {
+        vec3 col(0,0,0);
+        for(int s = 0; s < ns; s++) {
+          float u = float(i + rng.unif_rand()) / float(nx);
+          float v = float(j + rng.unif_rand()) / float(ny);
+          ray r = cam.get_ray(u,v);
+          if(numbertosample) {
+            if(ambient_light) {
+              col += clamp(de_nan(color_amb(r, world, &hlist, 0,
+                                            backgroundhigh, backgroundlow, rng)),clampval);
+            } else {
+              col += clamp(de_nan(color(r, world, &hlist, 0, rng)),clampval);
+            }
+          } else {
+            if(ambient_light) {
+              col += clamp(de_nan(color_amb_uniform(r, world, 0, backgroundhigh, backgroundlow, rng)),clampval);
+            } else {
+              col += clamp(de_nan(color_uniform(r, world, 0, rng)),clampval);
+            }
+          }
+        }
+        col /= float(ns);
+        routput(i,j) = pow(col[0],1/2.2);
+        goutput(i,j) = pow(col[1],1/2.2);
+        boutput(i,j) = pow(col[2],1/2.2);
+      }
+    };
+    for(int j = ny - 1; j >= 0; j--) {
+      pool.push(worker,j);
+    }
+    pool.join();
   }
   return(List::create(_["r"] = routput, _["g"] = goutput, _["b"] = boutput));
 }

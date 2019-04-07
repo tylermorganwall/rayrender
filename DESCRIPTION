@@ -9,13 +9,13 @@ Description: A raytracer for spheres, planes, and cubes. Uses a tidy `tibble` in
 License: GPL (>= 2)
 Imports: 
     Rcpp (>= 1.0.0),
-    RcppParallel,
+    parallel,
     assertthat,
     tibble,
     magrittr,
     purrr,
     png,
-    raster
-LinkingTo: Rcpp, RcppParallel
+    raster,
+    progress,
+LinkingTo: Rcpp, RcppThread, progress
 RoxygenNote: 6.1.1
-SystemRequirements: GNU make

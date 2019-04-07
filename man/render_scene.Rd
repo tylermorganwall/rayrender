@@ -9,7 +9,7 @@ render_scene(scene, width = 400, height = 400, fov = 20,
   lookat = c(0, 0, 0), camera_up = c(0, 1, 0), aperture = 0.1,
   clamp_value = Inf, filename = NULL, backgroundhigh = "#80b4ff",
   backgroundlow = "#ffffff", shutteropen = 0, shutterclose = 1,
-  focal_distance = NULL, parallel = FALSE)
+  focal_distance = NULL, parallel = FALSE, progress = interactive())
 }
 \arguments{
 \item{scene}{Tibble of object locations and properties.}
@@ -56,6 +56,8 @@ otherwise specified.}
 
 \item{parallel}{Default `FALSE`. If `TRUE`, it will use all available cores to render the image
 (or the number specified in `options("cores")` if that option is not `NULL`).}
+
+\item{progress}{Default `TRUE` if interactive session, `FALSE` otherwise.}
 }
 \value{
 Raytraced plot to current device, or an image saved to a file.
@@ -67,7 +69,7 @@ Takes the scene description and renders an image, either to the device or to a f
 #Generate a large checkered sphere as the ground
 scene = generate_ground(depth=-0.5,material=lambertian(color="white", checkercolor="darkgreen"))
 \dontrun{
-render_scene(scene,parallel=TRUE,samples=500)
+render_scene(scene,parallel=FALSE,samples=500)
 }
 
 #Add a sphere to the center
