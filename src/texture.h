@@ -81,4 +81,14 @@ vec3 image_texture::value(float u, float v, const vec3& p) const {
   return(vec3(r,g,b));
 }
 
+class triangle_texture : public texture {
+public:
+  triangle_texture() {}
+  triangle_texture(vec3 a, vec3 b, vec3 c) : a(a), b(b), c(c) {}
+  virtual vec3 value(float u, float v, const vec3& p) const {
+    return((1 - u - v) * a + u * b + v * c);
+  };
+  vec3 a,b,c;
+};
+
 #endif

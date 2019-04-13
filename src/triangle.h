@@ -93,7 +93,7 @@ bool triangle::hit(const ray& r, float t_min, float t_max, hit_record& rec, rand
   }
   float w = 1 - u - v;
   rec.t = t;
-  rec.p = r.origin() + t * r.direction();
+  rec.p = r.point_at_parameter(t);
   rec.u = u;
   rec.v = v;
   if(normals_provided) {

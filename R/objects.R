@@ -51,7 +51,8 @@ sphere = function(x=0, y=0, z=0, radius=1, material=lambertian(),
                  flipped=flipped,fog=material$fog,fogdensity=material$fogdensity,
                  implicit_sample=material$implicit_sample,order_rotation=list(order_rotation),
                  pivot_point = list(NA), group_translate = list(NA),
-                 group_angle = list(NA), group_order_rotation = list(NA))
+                 group_angle = list(NA), group_order_rotation = list(NA),
+                 tricolorinfo = list(NA))
 }
 
 #' Cube Object
@@ -106,7 +107,8 @@ cube = function(x=0, y=0, z=0, width=1, xwidth=1, ywidth=1, zwidth=1,
                  flipped=flipped,fog=material$fog, fogdensity=material$fogdensity,
                  implicit_sample=material$implicit_sample,order_rotation=list(order_rotation),
                  pivot_point = list(NA), group_translate = list(NA),
-                 group_angle = list(NA), group_order_rotation = list(NA))
+                 group_angle = list(NA), group_order_rotation = list(NA),
+                 tricolorinfo = list(NA))
 }
 
 #' Rectangular XY Plane Object 
@@ -155,7 +157,8 @@ xy_rect = function(x=0, y=0, z=0, xwidth=1, ywidth=1,
                  flipped=flipped,fog=material$fog,fogdensity=material$fogdensity,
                  implicit_sample=material$implicit_sample,order_rotation=list(order_rotation),
                  pivot_point = list(NA), group_translate = list(NA),
-                 group_angle = list(NA), group_order_rotation = list(NA))
+                 group_angle = list(NA), group_order_rotation = list(NA),
+                 tricolorinfo = list(NA))
 }
 
 #' Rectangular YZ Plane Object
@@ -203,7 +206,8 @@ yz_rect = function(x=0, y=0, z=0, ywidth=1, zwidth=1, material = lambertian(),
                  flipped=flipped,fog=material$fog, fogdensity=material$fogdensity,
                  implicit_sample=material$implicit_sample,order_rotation=list(order_rotation),
                  pivot_point = list(NA), group_translate = list(NA),
-                 group_angle = list(NA), group_order_rotation = list(NA))
+                 group_angle = list(NA), group_order_rotation = list(NA),
+                 tricolorinfo = list(NA))
 }
 
 #' Rectangular XZ Plane Object
@@ -253,7 +257,8 @@ xz_rect = function(x=0, xwidth=1, z=0, zwidth=1, y=0, material = lambertian(),
                  flipped=flipped,fog=material$fog, fogdensity=material$fogdensity,
                  implicit_sample=material$implicit_sample,order_rotation=list(order_rotation),
                  pivot_point = list(NA), group_translate = list(NA),
-                 group_angle = list(NA), group_order_rotation = list(NA))
+                 group_angle = list(NA), group_order_rotation = list(NA),
+                 tricolorinfo = list(NA))
 }
 
 #' Triangle Object
@@ -264,7 +269,12 @@ xz_rect = function(x=0, xwidth=1, z=0, zwidth=1, y=0, material = lambertian(),
 #' @param n1 Default `NA`. Length-3 vector indicating the normal vector associated with the first triangle vertex.
 #' @param n2 Default `NA`. Length-3 vector indicating the normal vector associated with the second triangle vertex.
 #' @param n3 Default `NA`. Length-3 vector indicating the normal vector associated with the third triangle vertex.
-
+#' @param color1 Default `NA`. Length-3 vector or string indicating the color associated with the first triangle vertex. 
+#' If NA but other vertices specified, color inherets from material.
+#' @param color2 Default `NA`. Length-3 vector or string indicating the color associated with the second triangle vertex.
+#' If NA but other vertices specified, color inherets from material.
+#' @param color3 Default `NA`. Length-3 vector or string indicating the color associated with the third triangle vertex.
+#' If NA but other vertices specified, color inherets from material.
 #' @param material Default  \code{\link{lambertian}}.The material, called from one of the material 
 #' functions \code{\link{lambertian}}, \code{\link{metal}}, or \code{\link{dielectric}}.
 #' @param angle Default `c(0,0,0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.
@@ -278,9 +288,29 @@ xz_rect = function(x=0, xwidth=1, z=0, zwidth=1, y=0, material = lambertian(),
 #' #Generate a purple rectangle in the cornell box.
 triangle = function(v1=c(1,0,0), v2=c(0,1,0),v3=c(-1,0,0), 
                     n1 = rep(NA,3), n2 = rep(NA,3), n3 = rep(NA,3),
+                    color1 = rep(NA,3), color2 = rep(NA,3), color3 = rep(NA,3),
                     material = lambertian(), 
                     angle = c(0,0,0), order_rotation = c(1,2,3), flipped=FALSE) {
   info = c(unlist(material$properties),v1,v2,v3, n1, n2, n3)
+  if(all(!is.na(color1))) {
+    color1 = convert_color(color1)
+  }
+  if(all(!is.na(color2))) {
+    color2 = convert_color(color2)
+  }
+  if(all(!is.na(color3))) {
+    color3 = convert_color(color3)
+  }
+  if(any(is.na(color1)) && any(!is.na(c(color2,color3)))) {
+    color1 = info[1:3]
+  }
+  if(any(is.na(color2)) && any(!is.na(c(color1,color3)))) {
+    color2 = info[1:3]
+  }
+  if(any(is.na(color3)) && any(!is.na(c(color1,color2)))) {
+    color3 = info[1:3]
+  }
+  colorvec = c(color1,color2,color3)
   tibble::tibble(x=0,y=0,z=0,radius=NA, 
                  type = material$type, shape="triangle",
                  properties = list(info), velocity = list(c(0,0,0)),
@@ -291,5 +321,6 @@ triangle = function(v1=c(1,0,0), v2=c(0,1,0),v3=c(-1,0,0),
                  flipped=flipped,fog=material$fog, fogdensity=material$fogdensity,
                  implicit_sample=material$implicit_sample,order_rotation=list(order_rotation),
                  pivot_point = list(NA), group_translate = list(NA),
-                 group_angle = list(NA), group_order_rotation = list(NA))
+                 group_angle = list(NA), group_order_rotation = list(NA),
+                 tricolorinfo = list(colorvec))
 }

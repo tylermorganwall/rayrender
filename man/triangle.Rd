@@ -6,6 +6,7 @@
 \usage{
 triangle(v1 = c(1, 0, 0), v2 = c(0, 1, 0), v3 = c(-1, 0, 0),
   n1 = rep(NA, 3), n2 = rep(NA, 3), n3 = rep(NA, 3),
+  color1 = rep(NA, 3), color2 = rep(NA, 3), color3 = rep(NA, 3),
   material = lambertian(), angle = c(0, 0, 0), order_rotation = c(1,
   2, 3), flipped = FALSE)
 }
@@ -21,6 +22,15 @@ triangle(v1 = c(1, 0, 0), v2 = c(0, 1, 0), v3 = c(-1, 0, 0),
 \item{n2}{Default `NA`. Length-3 vector indicating the normal vector associated with the second triangle vertex.}
 
 \item{n3}{Default `NA`. Length-3 vector indicating the normal vector associated with the third triangle vertex.}
+
+\item{color1}{Default `NA`. Length-3 vector or string indicating the color associated with the first triangle vertex. 
+If NA but other vertices specified, color inherets from material.}
+
+\item{color2}{Default `NA`. Length-3 vector or string indicating the color associated with the second triangle vertex.
+If NA but other vertices specified, color inherets from material.}
+
+\item{color3}{Default `NA`. Length-3 vector or string indicating the color associated with the third triangle vertex.
+If NA but other vertices specified, color inherets from material.}
 
 \item{material}{Default  \code{\link{lambertian}}.The material, called from one of the material 
 functions \code{\link{lambertian}}, \code{\link{metal}}, or \code{\link{dielectric}}.}

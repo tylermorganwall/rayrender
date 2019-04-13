@@ -69,7 +69,7 @@ Takes the scene description and renders an image, either to the device or to a f
 #Generate a large checkered sphere as the ground
 scene = generate_ground(depth=-0.5,material=lambertian(color="white", checkercolor="darkgreen"))
 \dontrun{
-render_scene(scene,parallel=FALSE,samples=500)
+render_scene(scene,parallel=TRUE,samples=500)
 }
 
 #Add a sphere to the center
