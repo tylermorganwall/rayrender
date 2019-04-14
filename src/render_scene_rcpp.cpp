@@ -29,24 +29,39 @@ inline vec3 clamp(const vec3& c, float clampval) {
 
 vec3 color(const ray& r, hitable *world, hitable *hlist, int depth, random_gen& rng) {
   hit_record hrec;
-  if(world->hit(r, 0.001, FLT_MAX, hrec, rng)) {
+  if(world->hit(r, 0.001, FLT_MAX, hrec, rng)) { //generated hit record, world space
     scatter_record srec;
-    vec3 emitted = hrec.mat_ptr->emitted(r, hrec, hrec.u, hrec.v,hrec.p);
+    vec3 emitted = hrec.mat_ptr->emitted(r, hrec, hrec.u, hrec.v, hrec.p);
     float pdf_val;
-    if(depth < 50 && hrec.mat_ptr->scatter(r, hrec, srec, rng)) {
-      if(srec.is_specular) {
+    if(depth < 50 && hrec.mat_ptr->scatter(r, hrec, srec, rng)) { //generates scatter record, world space
+      if(srec.is_specular) { //returns specular ray
         return(srec.attenuation * 
                color(srec.specular_ray, world, 
                      hlist, depth + 1, rng));
       }
-      hitable_pdf p_imp(hlist, hrec.p);
-      mixture_pdf p(&p_imp, srec.pdf_ptr);
-      rand_point temp_point = p.generate(rng);
-      ray scattered = ray(hrec.p, temp_point.p, r.time());
-      pdf_val = p.value(temp_point, rng);
-      return(emitted + srec.attenuation * 
-             hrec.mat_ptr->scattering_pdf(r, hrec, scattered) *  
-             color(scattered, world, 
+      hitable_pdf p_imp(hlist, hrec.p); //creates pdf of all objects to be sampled
+      mixture_pdf p(&p_imp, srec.pdf_ptr); //creates mixture pdf of surface intersected at hrec.p and all sampled objects
+      
+      //Generates a scatter direction (with origin hrec.p) from the mixture 
+      //and saves surface normal from light to use in pdf_value calculation
+      //(along with the scatter direction)
+      //Translates the world space point into object space point, generates ray assuring intersection, and then translates 
+      //ray back into world space
+      rand_point temp_ray = p.generate(rng); 
+      ray scattered = ray(hrec.p, temp_ray.dir, r.time()); //scatters a ray from hit point to direction
+      pdf_val = p.value(temp_ray, rng); //generates a pdf value based the intersection point and the mixture pdf
+      // return(vec3(pdf_val,pdf_val,pdf_val)/100);
+      return(vec3(1/pdf_val,1/pdf_val,1/pdf_val));
+      
+      // return(0.5*(unit_vector(vec3(temp_ray.dir.x(),temp_ray.dir.y(),temp_ray.dir.z())) + vec3(1,1,1)));
+      // return(0.5*(vec3(temp_ray.normal.x(),temp_ray.normal.y(),temp_ray.normal.z())+vec3(1,1,1)));
+      // return(0.5*(vec3(hrec.normal.x(),hrec.normal.y(),hrec.normal.z()) + vec3(1.0,1.0,1.0)));
+      // return(vec3(hrec.p.x(),hrec.p.y(),hrec.p.z())/555);
+      // float val = hrec.mat_ptr->scattering_pdf(r, hrec, scattered); 
+      // return(vec3(val,val,val));
+      return(emitted + srec.attenuation *
+             hrec.mat_ptr->scattering_pdf(r, hrec, scattered) *
+             color(scattered, world,
                   hlist, depth + 1, rng) / pdf_val);
     } else {
       return(emitted);
@@ -71,9 +86,9 @@ vec3 color_amb(const ray& r, hitable *world, hitable *hlist, int depth,
       }
       hitable_pdf p_imp(hlist, hrec.p);
       mixture_pdf p(&p_imp, srec.pdf_ptr);
-      rand_point temp_point = p.generate(rng);
-      ray scattered = ray(hrec.p, temp_point.p, r.time());
-      pdf_val = p.value(temp_point, rng);
+      rand_point temp_ray = p.generate(rng);
+      ray scattered = ray(hrec.p, temp_ray.dir, r.time());
+      pdf_val = p.value(temp_ray, rng);
       return(emitted + srec.attenuation * 
              hrec.mat_ptr->scattering_pdf(r, hrec, scattered) *  
              color_amb(scattered, world, hlist, depth + 1, 
@@ -101,9 +116,9 @@ vec3 color_uniform(const ray& r, hitable *world, int depth, random_gen& rng) {
         return(srec.attenuation * color_uniform(srec.specular_ray, world, depth + 1, rng));
       }
       cosine_pdf p(hrec.normal);
-      rand_point temp_point = p.generate(rng);
-      ray scattered = ray(hrec.p, temp_point.p, r.time());
-      pdf_val = p.value(temp_point, rng);
+      rand_point temp_ray = p.generate(rng);
+      ray scattered = ray(hrec.p, temp_ray.dir, r.time());
+      pdf_val = p.value(temp_ray, rng);
       return(emitted + srec.attenuation * hrec.mat_ptr->scattering_pdf(r, hrec, scattered) *  
              color_uniform(scattered, world, depth + 1, rng) / pdf_val);
     } else {
@@ -129,9 +144,9 @@ vec3 color_amb_uniform(const ray& r, hitable *world, int depth,
                                  backgroundhigh,backgroundlow, rng));
       }
       cosine_pdf p(hrec.normal);
-      rand_point temp_point = p.generate(rng);
-      ray scattered = ray(hrec.p, temp_point.p, r.time());
-      pdf_val = p.value(temp_point, rng);
+      rand_point temp_ray = p.generate(rng);
+      ray scattered = ray(hrec.p, temp_ray.dir, r.time());
+      pdf_val = p.value(temp_ray, rng);
       return(emitted + srec.attenuation * 
              hrec.mat_ptr->scattering_pdf(r, hrec, scattered) *  
              color_amb_uniform(scattered, world, depth + 1, 
