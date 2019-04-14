@@ -13,10 +13,10 @@ public:
     box = aabb(pmin, pmax);
     return(true);
   }
-  virtual float pdf_value(const vec3& o, const vec3& v, random_gen& rng) {
+  virtual float pdf_value(const vec3& o, const rand_point& v, random_gen& rng) {
     return(list_ptr.pdf_value(o,v, rng));
   }
-  virtual vec3 random(const vec3& o, random_gen& rng) {
+  virtual rand_point random(const vec3& o, random_gen& rng) {
     return(list_ptr.random(o, rng));
   }
   vec3 pmin, pmax;

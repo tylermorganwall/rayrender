@@ -10,8 +10,8 @@ class sphere: public hitable {
     sphere(vec3 cen, float r, material *mat) : center(cen), radius(r), mat_ptr(mat) {};
     virtual bool hit(const ray& r, float tmin, float tmax, hit_record& rec, random_gen& rng);
     virtual bool bounding_box(float t0, float t1, aabb& box) const;
-    virtual float pdf_value(const vec3& o, const vec3& v, random_gen& rng);
-    virtual vec3 random(const vec3& o, random_gen& rng);
+    virtual float pdf_value(const vec3& o, const rand_point& v, random_gen& rng);
+    virtual rand_point random(const vec3& o, random_gen& rng);
     vec3 center;
     float radius;
     material *mat_ptr;
@@ -46,9 +46,9 @@ bool sphere::hit(const ray& r, float t_min, float t_max, hit_record& rec, random
   return(false);
 }
 
-float sphere::pdf_value(const vec3& o, const vec3& v, random_gen& rng) {
+float sphere::pdf_value(const vec3& o, const rand_point& v, random_gen& rng) {
   hit_record rec;
-  if(this->hit(ray(o,v), 0.001, FLT_MAX, rec, rng)) {
+  if(this->hit(ray(o,v.p), 0.001, FLT_MAX, rec, rng)) {
     float cos_theta_max = sqrt(1 - radius * radius/(center - o).squared_length());
     float solid_angle = 2 * M_PI * (1-cos_theta_max);
     return(1/solid_angle);
@@ -57,12 +57,14 @@ float sphere::pdf_value(const vec3& o, const vec3& v, random_gen& rng) {
   }
 }
 
-vec3 sphere::random(const vec3& o, random_gen& rng) {
+rand_point sphere::random(const vec3& o, random_gen& rng) {
+  rand_point rand;
   vec3 direction = center - o;
   float distance_squared = direction.squared_length();
   onb uvw;
   uvw.build_from_w(direction);
-  return(uvw.local(rng.random_to_sphere(radius,distance_squared)));
+  rand.p = uvw.local(rng.random_to_sphere(radius,distance_squared));
+  return(rand);
 }
 
 bool sphere::bounding_box(float t0, float t1, aabb& box) const {

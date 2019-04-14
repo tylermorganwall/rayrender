@@ -41,22 +41,25 @@ public:
     box = aabb(min_v, max_v);
     return(true);
   }
-  virtual float pdf_value(const vec3& o, const vec3& v, random_gen& rng) { 
+  virtual float pdf_value(const vec3& o, const rand_point& v, random_gen& rng) { 
     hit_record rec;
-    if (this->hit(ray(o, v), 0.001, FLT_MAX, rec, rng)) {
-      float distance = rec.t * rec.t * v.squared_length();;
-      float cosine = dot(v, normal);
+    if (this->hit(ray(o, v.p), 0.001, FLT_MAX, rec, rng)) {
+      float distance = rec.t * rec.t * v.p.squared_length();;
+      float cosine = dot(v.p, normal);
       return(distance / (cosine * area));
     }
     return 0; 
   }
   
-  virtual vec3 random(const vec3& origin, random_gen& rng) {
+  virtual rand_point random(const vec3& origin, random_gen& rng) {
+    rand_point temp;
     float r1 = rng.unif_rand();
     float r2 = rng.unif_rand();
     float sr1 = sqrt(r1);
     vec3 random_point((1.0 - sr1) * a + sr1 * (1.0 - r2) * b + sr1 * r2 * c);
-    return random_point - origin; 
+    temp.p = random_point - origin;
+    temp.normal = normal;
+    return(temp); 
   }
   vec3 normal;
   vec3 a, b, c, na, nb, nc;

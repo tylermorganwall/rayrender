@@ -25,15 +25,21 @@ struct hit_record {
   material *mat_ptr;
 };
 
+struct rand_point {
+  vec3 p;
+  vec3 normal;
+};
+
 class hitable {
   public:
     virtual bool hit(const ray& r, float t_min, float t_max, hit_record& rec, random_gen& rng) = 0;
     virtual bool bounding_box(float t0, float t1, aabb& box) const = 0;
-    virtual float pdf_value(const vec3& o, const vec3& v, random_gen& rng) {
+    virtual float pdf_value(const vec3& o, const rand_point& v, random_gen& rng) {
       return(0.0);
     }
-    virtual vec3 random(const vec3& o, random_gen& rng) {
-      return(vec3(0,1,0));
+    virtual rand_point random(const vec3& o, random_gen& rng) {
+      rand_point n;
+      return(n);
     }
 };
 
@@ -51,10 +57,10 @@ public:
   virtual bool bounding_box(float t0, float t1, aabb& box) const {
     return(ptr->bounding_box(t0,t1,box));
   }
-  float pdf_value(const vec3& o, const vec3& v, random_gen& rng) {
+  float pdf_value(const vec3& o, const rand_point& v, random_gen& rng) {
     return(ptr->pdf_value(o,v, rng));
   }
-  vec3 random(const vec3& o, random_gen& rng) {
+  rand_point random(const vec3& o, random_gen& rng) {
     return(ptr->random(o, rng));
   }
   
@@ -66,10 +72,10 @@ public:
   translate(hitable *p, const vec3& displacement) : ptr(p), offset(displacement) {}
   virtual bool hit(const ray& r, float t_min, float t_max, hit_record& rec, random_gen& rng);
   virtual bool bounding_box(float t0, float t1, aabb& box) const;
-  float pdf_value(const vec3& o, const vec3& v, random_gen& rng) {
+  float pdf_value(const vec3& o, const rand_point& v, random_gen& rng) {
     return(ptr->pdf_value(o-offset,v, rng));
   }
-  vec3 random(const vec3& o, random_gen& rng) {
+  rand_point random(const vec3& o, random_gen& rng) {
     return(ptr->random(o-offset, rng));
   }
   hitable *ptr;
@@ -103,11 +109,15 @@ public:
     box = bbox; 
     return(hasbox);
   }
-  float pdf_value(const vec3& o, const vec3& v, random_gen& rng) {
+  float pdf_value(const vec3& o, const rand_point& v, random_gen& rng) {
     return(ptr->pdf_value(o,v, rng));
   }
-  vec3 random(const vec3& o, random_gen& rng) {
-    return(ptr->random(o, rng));
+  rand_point random(const vec3& o, random_gen& rng) {
+    rand_point temp = ptr->random(o, rng);
+    temp.normal = vec3(cos_theta * temp.normal.x() + sin_theta * temp.normal.z(),
+                       temp.normal.y(),
+                       -sin_theta * temp.normal.x() + cos_theta * temp.normal.z());
+    return(temp);
   }
   hitable *ptr;
   float sin_theta;
@@ -177,11 +187,15 @@ public:
     box = bbox; 
     return(hasbox);
   }
-  float pdf_value(const vec3& o, const vec3& v, random_gen& rng) {
+  float pdf_value(const vec3& o, const rand_point& v, random_gen& rng) {
     return(ptr->pdf_value(o,v, rng));
   }
-  vec3 random(const vec3& o, random_gen& rng) {
-    return(ptr->random(o, rng));
+  rand_point random(const vec3& o, random_gen& rng) {
+    rand_point temp = ptr->random(o, rng);
+    temp.normal = vec3(temp.normal.x(),
+                       cos_theta * temp.normal.y() + sin_theta * temp.normal.z(),
+                       -sin_theta * temp.normal.y() + cos_theta * temp.normal.z());
+    return(temp);
   }
   hitable *ptr;
   float sin_theta;
@@ -250,11 +264,15 @@ public:
     box = bbox; 
     return(hasbox);
   }
-  float pdf_value(const vec3& o, const vec3& v, random_gen& rng) {
+  float pdf_value(const vec3& o, const rand_point& v, random_gen& rng) {
     return(ptr->pdf_value(o,v, rng));
   }
-  vec3 random(const vec3& o, random_gen& rng) {
-    return(ptr->random(o, rng));
+  rand_point random(const vec3& o, random_gen& rng) {
+    rand_point temp = ptr->random(o, rng);
+    temp.normal = vec3(cos_theta * temp.normal.x() + sin_theta * temp.normal.y(),
+                       -sin_theta * temp.normal.x() + cos_theta * temp.normal.y(),
+                       temp.normal.z());
+    return(temp);
   }
   hitable *ptr;
   float sin_theta;

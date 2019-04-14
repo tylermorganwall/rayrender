@@ -16,10 +16,10 @@ public:
   virtual bool bounding_box(float t0, float t1, aabb& box) const {
     return(boundary->bounding_box(t0,t1,box));
   }
-  float pdf_value(const vec3& o, const vec3& v, random_gen& rng) {
+  float pdf_value(const vec3& o, const rand_point& v, random_gen& rng) {
     return(boundary->pdf_value(o,v, rng));
   }
-  vec3 random(const vec3& o, random_gen& rng) {
+  rand_point random(const vec3& o, random_gen& rng) {
     return(boundary->random(o, rng));
   }
   hitable *boundary;

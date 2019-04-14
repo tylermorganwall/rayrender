@@ -41,8 +41,9 @@ vec3 color(const ray& r, hitable *world, hitable *hlist, int depth, random_gen& 
       }
       hitable_pdf p_imp(hlist, hrec.p);
       mixture_pdf p(&p_imp, srec.pdf_ptr);
-      ray scattered = ray(hrec.p, p.generate(rng), r.time());
-      pdf_val = p.value(scattered.direction(), rng);
+      rand_point temp_point = p.generate(rng);
+      ray scattered = ray(hrec.p, temp_point.p, r.time());
+      pdf_val = p.value(temp_point, rng);
       return(emitted + srec.attenuation * 
              hrec.mat_ptr->scattering_pdf(r, hrec, scattered) *  
              color(scattered, world, 
@@ -70,8 +71,9 @@ vec3 color_amb(const ray& r, hitable *world, hitable *hlist, int depth,
       }
       hitable_pdf p_imp(hlist, hrec.p);
       mixture_pdf p(&p_imp, srec.pdf_ptr);
-      ray scattered = ray(hrec.p, p.generate(rng), r.time());
-      pdf_val = p.value(scattered.direction(), rng);
+      rand_point temp_point = p.generate(rng);
+      ray scattered = ray(hrec.p, temp_point.p, r.time());
+      pdf_val = p.value(temp_point, rng);
       return(emitted + srec.attenuation * 
              hrec.mat_ptr->scattering_pdf(r, hrec, scattered) *  
              color_amb(scattered, world, hlist, depth + 1, 
@@ -99,8 +101,9 @@ vec3 color_uniform(const ray& r, hitable *world, int depth, random_gen& rng) {
         return(srec.attenuation * color_uniform(srec.specular_ray, world, depth + 1, rng));
       }
       cosine_pdf p(hrec.normal);
-      ray scattered = ray(hrec.p, p.generate(rng), r.time());
-      pdf_val = p.value(scattered.direction(), rng);
+      rand_point temp_point = p.generate(rng);
+      ray scattered = ray(hrec.p, temp_point.p, r.time());
+      pdf_val = p.value(temp_point, rng);
       return(emitted + srec.attenuation * hrec.mat_ptr->scattering_pdf(r, hrec, scattered) *  
              color_uniform(scattered, world, depth + 1, rng) / pdf_val);
     } else {
@@ -126,9 +129,9 @@ vec3 color_amb_uniform(const ray& r, hitable *world, int depth,
                                  backgroundhigh,backgroundlow, rng));
       }
       cosine_pdf p(hrec.normal);
-      ray scattered = ray(hrec.p, p.generate(rng), r.time());
-
-      pdf_val = p.value(scattered.direction(), rng);
+      rand_point temp_point = p.generate(rng);
+      ray scattered = ray(hrec.p, temp_point.p, r.time());
+      pdf_val = p.value(temp_point, rng);
       return(emitted + srec.attenuation * 
              hrec.mat_ptr->scattering_pdf(r, hrec, scattered) *  
              color_amb_uniform(scattered, world, depth + 1, 

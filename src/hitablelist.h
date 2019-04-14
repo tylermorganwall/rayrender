@@ -9,8 +9,8 @@ class hitable_list: public hitable {
     hitable_list(hitable **l, int n) {list = l; list_size = n;}
     virtual bool hit(const ray& r, float tmin, float tmax, hit_record& rec, random_gen& rng);
     virtual bool bounding_box(float t0, float t1, aabb& box) const;
-    virtual float pdf_value(const vec3& o, const vec3& v, random_gen& rng);
-    virtual vec3 random(const vec3& o, random_gen& rng);
+    virtual float pdf_value(const vec3& o, const rand_point& v, random_gen& rng);
+    virtual rand_point random(const vec3& o, random_gen& rng);
     hitable **list;
     int list_size;
 };
@@ -50,7 +50,7 @@ bool hitable_list::bounding_box(float t0, float t1, aabb& box) const {
   return(true);
 }
 
-float hitable_list::pdf_value(const vec3& o, const vec3& v, random_gen& rng) {
+float hitable_list::pdf_value(const vec3& o, const rand_point& v, random_gen& rng) {
   float weight = 1.0 / list_size;
   float sum = 0;
   for (int i = 0; i < list_size; i++) {
@@ -59,7 +59,7 @@ float hitable_list::pdf_value(const vec3& o, const vec3& v, random_gen& rng) {
   return(sum);
 }
 
-vec3 hitable_list::random(const vec3& o, random_gen& rng) {
+rand_point hitable_list::random(const vec3& o, random_gen& rng) {
   int index = int(rng.unif_rand() * list_size * 0.99999999);
   return(list[index]->random(o, rng));
 }
