@@ -50,7 +50,7 @@ public:
     if(this->hit(ray(o,v.dir), 0.001, FLT_MAX, rec, rng)) {
       float area = (x1-x0)*(z1-z0);
       float distance_squared = rec.t * rec.t * v.dir.squared_length();
-      float cosine = fabs(dot(v.dir, v.normal)/v.dir.length());
+      float cosine = fabs(dot(v.dir, rec.normal)/v.dir.length());
       return(distance_squared / (cosine * area));
     } else {
       return(0);

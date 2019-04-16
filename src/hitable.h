@@ -115,9 +115,6 @@ public:
   }
   rand_point random(const vec3& o, random_gen& rng) {
     rand_point temp = ptr->random(o, rng);
-    temp.normal = vec3(cos_theta * temp.normal.x() + sin_theta * temp.normal.z(),
-                       temp.normal.y(),
-                       -sin_theta * temp.normal.x() + cos_theta * temp.normal.z());
     return(temp);
   }
   hitable *ptr;
@@ -193,9 +190,6 @@ public:
   }
   rand_point random(const vec3& o, random_gen& rng) {
     rand_point temp = ptr->random(o, rng);
-    temp.normal = vec3(temp.normal.x(),
-                       cos_theta * temp.normal.y() + sin_theta * temp.normal.z(),
-                       -sin_theta * temp.normal.y() + cos_theta * temp.normal.z());
     return(temp);
   }
   hitable *ptr;
@@ -266,17 +260,25 @@ public:
     return(hasbox);
   }
   float pdf_value(const vec3& o, rand_point& v, random_gen& rng) {
-    vec3 o2 = vec3(cos_theta * o.x() - sin_theta * o.y(),
-                   sin_theta * o.x() + cos_theta * o.y(),
-                   o.z());
-    return(ptr->pdf_value(o2,v, rng));
+    rand_point v2 = v;
+    v2.dir.e[0] = cos_theta*v.dir.x() - sin_theta*v.dir.y();
+    v2.dir.e[1] = sin_theta*v.dir.x() + cos_theta*v.dir.y();
+    vec3 o2 = o;
+    o2.e[0] = cos_theta*o.x() - sin_theta*o.y();
+    o2.e[1] = sin_theta*o.x() + cos_theta*o.y();
+    return(ptr->pdf_value(o2,v2, rng));
   }
   rand_point random(const vec3& o, random_gen& rng) {
-    vec3 o2 = vec3(cos_theta * o.x() - sin_theta * o.y(),
-                   sin_theta * o.x() + cos_theta * o.y(),
-                   o.z());
+    vec3 o2 = o;
+    o2.e[0] = cos_theta*o.x() - sin_theta*o.y();
+    o2.e[1] = sin_theta*o.x() + cos_theta*o.y();
     rand_point temp = ptr->random(o2, rng);
-    return(temp);
+    rand_point temp2 = temp;
+    temp2.dir.e[0] = cos_theta*temp.dir.e[0] + sin_theta*temp.dir.e[1];
+    temp2.dir.e[1] = -sin_theta*temp.dir.e[0] + cos_theta*temp.dir.e[1]; 
+    temp2.normal.e[0] = cos_theta*temp.normal.e[0] + sin_theta*temp.normal.e[1];
+    temp2.normal.e[1] = -sin_theta*temp.normal.e[0] + cos_theta*temp.normal.e[1]; 
+    return(temp2);
   }
   hitable *ptr;
   float sin_theta;

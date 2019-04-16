@@ -50,15 +50,6 @@ vec3 color(const ray& r, hitable *world, hitable *hlist, int depth, random_gen& 
       rand_point temp_ray = p.generate(rng); 
       ray scattered = ray(hrec.p, temp_ray.dir, r.time()); //scatters a ray from hit point to direction
       pdf_val = p.value(temp_ray, rng); //generates a pdf value based the intersection point and the mixture pdf
-      // return(vec3(pdf_val,pdf_val,pdf_val)/100);
-      return(vec3(1/pdf_val,1/pdf_val,1/pdf_val));
-      
-      // return(0.5*(unit_vector(vec3(temp_ray.dir.x(),temp_ray.dir.y(),temp_ray.dir.z())) + vec3(1,1,1)));
-      // return(0.5*(vec3(temp_ray.normal.x(),temp_ray.normal.y(),temp_ray.normal.z())+vec3(1,1,1)));
-      // return(0.5*(vec3(hrec.normal.x(),hrec.normal.y(),hrec.normal.z()) + vec3(1.0,1.0,1.0)));
-      // return(vec3(hrec.p.x(),hrec.p.y(),hrec.p.z())/555);
-      // float val = hrec.mat_ptr->scattering_pdf(r, hrec, scattered); 
-      // return(vec3(val,val,val));
       return(emitted + srec.attenuation *
              hrec.mat_ptr->scattering_pdf(r, hrec, scattered) *
              color(scattered, world,
