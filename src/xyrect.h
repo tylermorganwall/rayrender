@@ -13,23 +13,20 @@ public:
     box = aabb(vec3(x0,y0,k-0.0001), vec3(x1,y1,k+0.0001));
     return(true);
   }
-  virtual float pdf_value(const vec3& o, rand_point& v, random_gen& rng) {
+  virtual float pdf_value(const vec3& o, const vec3& v, random_gen& rng) {
     hit_record rec;
-    if(this->hit(ray(o,v.dir), 0.001, FLT_MAX, rec, rng)) {
+    if(this->hit(ray(o,v), 0.001, FLT_MAX, rec, rng)) {
       float area = (x1-x0)*(y1-y0);
-      float distance_squared = rec.t * rec.t * v.dir.squared_length();
-      float cosine = fabs(dot(v.dir,v.normal)/v.dir.length());
+      float distance_squared = rec.t * rec.t * v.squared_length();
+      float cosine = fabs(dot(v,rec.normal)/v.length());
       return(distance_squared / (cosine * area));
     } else {
       return(0);
     }
   }
-  virtual rand_point random(const vec3& o, random_gen& rng) {
-    rand_point rand;
+  virtual vec3 random(const vec3& o, random_gen& rng) {
     vec3 random_point = vec3(x0 + rng.unif_rand() * (x1 - x0), y0 + rng.unif_rand() * (y1-y0),k);
-    rand.dir = random_point - o;
-    rand.normal = vec3(0,0,1);
-    return(rand);
+    return(random_point - o);
   }
   float x0, x1, y0, y1, k;
   material *mp;
@@ -45,23 +42,20 @@ public:
     box = aabb(vec3(x0,k-0.0001,z0), vec3(x1,k+0.0001,z1));
     return(true);
   }
-  virtual float pdf_value(const vec3& o, rand_point& v, random_gen& rng) {
+  virtual float pdf_value(const vec3& o, const vec3& v, random_gen& rng) {
     hit_record rec;
-    if(this->hit(ray(o,v.dir), 0.001, FLT_MAX, rec, rng)) {
+    if(this->hit(ray(o,v), 0.001, FLT_MAX, rec, rng)) {
       float area = (x1-x0)*(z1-z0);
-      float distance_squared = rec.t * rec.t * v.dir.squared_length();
-      float cosine = fabs(dot(v.dir, rec.normal)/v.dir.length());
+      float distance_squared = rec.t * rec.t * v.squared_length();
+      float cosine = fabs(dot(v, rec.normal)/v.length());
       return(distance_squared / (cosine * area));
     } else {
       return(0);
     }
   }
-  virtual rand_point random(const vec3& o, random_gen& rng) {
-    rand_point rand;
+  virtual vec3 random(const vec3& o, random_gen& rng) {
     vec3 random_point = vec3(x0 + rng.unif_rand() * (x1 - x0), k, z0 + rng.unif_rand() * (z1-z0));
-    rand.dir = random_point - o;
-    rand.normal = vec3(0,1,0);
-    return(rand);
+    return(random_point - o);
   }
   float x0, x1, z0, z1, k;
   material *mp;
@@ -77,23 +71,20 @@ public:
     box = aabb(vec3(k-0.0001,y0,z0), vec3(k+0.0001,y1,z1));
     return(true);
   }
-  virtual float pdf_value(const vec3& o, rand_point& v, random_gen& rng) {
+  virtual float pdf_value(const vec3& o, const vec3& v, random_gen& rng) {
     hit_record rec;
-    if(this->hit(ray(o,v.dir), 0.001, FLT_MAX, rec, rng)) {
+    if(this->hit(ray(o,v), 0.001, FLT_MAX, rec, rng)) {
       float area = (y1-y0)*(z1-z0);
-      float distance_squared = rec.t * rec.t * v.dir.squared_length();
-      float cosine = fabs(dot(v.dir,v.normal)/v.dir.length());
+      float distance_squared = rec.t * rec.t * v.squared_length();
+      float cosine = fabs(dot(v,rec.normal)/v.length());
       return(distance_squared / (cosine * area));
     } else {
       return(0);
     }
   }
-  virtual rand_point random(const vec3& o, random_gen& rng) {
-    rand_point rand;
+  virtual vec3 random(const vec3& o, random_gen& rng) {
     vec3 random_point = vec3(k, y0 + rng.unif_rand() * (y1 - y0), z0 + rng.unif_rand() * (z1-z0));
-    rand.dir = random_point-o;
-    rand.normal = vec3(1,0,0);
-    return(rand);
+    return(random_point-o);
   }
   float y0, y1, z0, z1, k;
   material *mp;
