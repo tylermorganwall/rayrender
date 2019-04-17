@@ -104,10 +104,23 @@ public:
     return(hasbox);
   }
   float pdf_value(const vec3& o, const vec3& v, random_gen& rng) {
-    return(ptr->pdf_value(o,v, rng));
+    vec3 v2 = v;
+    v2.e[0] = cos_theta*v.x() - sin_theta*v.z();
+    v2.e[2] = sin_theta*v.x() + cos_theta*v.z();
+    vec3 o2 = o;
+    o2.e[0] = cos_theta*o.x() - sin_theta*o.z();
+    o2.e[2] = sin_theta*o.x() + cos_theta*o.z();
+    return(ptr->pdf_value(o2,v2, rng));
   }
   vec3 random(const vec3& o, random_gen& rng) {
-    return(ptr->random(o, rng));
+    vec3 o2 = o;
+    o2.e[0] = cos_theta*o.x() - sin_theta*o.z();
+    o2.e[2] = sin_theta*o.x() + cos_theta*o.z();
+    vec3 temp = ptr->random(o2, rng);
+    vec3 temp2 = temp;
+    temp2.e[0] = cos_theta*temp.x() + sin_theta*temp.z();
+    temp2.e[2] = -sin_theta*temp.x() + cos_theta*temp.z(); 
+    return(temp2);
   }
   hitable *ptr;
   float sin_theta;
@@ -178,10 +191,23 @@ public:
     return(hasbox);
   }
   float pdf_value(const vec3& o, const vec3& v, random_gen& rng) {
-    return(ptr->pdf_value(o,v, rng));
+    vec3 v2 = v;
+    v2.e[1] = cos_theta*v.y() - sin_theta*v.z();
+    v2.e[2] = sin_theta*v.y() + cos_theta*v.z();
+    vec3 o2 = o;
+    o2.e[1] = cos_theta*o.y() - sin_theta*o.z();
+    o2.e[2] = sin_theta*o.y() + cos_theta*o.z();
+    return(ptr->pdf_value(o2,v2, rng));
   }
   vec3 random(const vec3& o, random_gen& rng) {
-    return(ptr->random(o, rng));
+    vec3 o2 = o;
+    o2.e[1] = cos_theta*o.y() - sin_theta*o.z();
+    o2.e[2] = sin_theta*o.y() + cos_theta*o.z();
+    vec3 temp = ptr->random(o2, rng);
+    vec3 temp2 = temp;
+    temp2.e[1] = cos_theta*temp.y() + sin_theta*temp.z();
+    temp2.e[2] = -sin_theta*temp.y() + cos_theta*temp.z(); 
+    return(temp2);
   }
   hitable *ptr;
   float sin_theta;
