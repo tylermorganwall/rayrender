@@ -99,7 +99,7 @@ public:
                          float tex_u_b, float tex_v_b,
                          float tex_u_c, float tex_v_c) : data(pixels),  nx(A), ny(B),
                          a_u(tex_u_a), a_v(tex_v_a), 
-                         b_u(tex_u_b), b_v(tex_u_b), 
+                         b_u(tex_u_b), b_v(tex_v_b), 
                          c_u(tex_u_c), c_v(tex_v_c) {}
   virtual vec3 value(float u, float v, const vec3& p) const;
   
@@ -109,28 +109,18 @@ public:
 };
 
 vec3 triangle_image_texture::value(float u, float v, const vec3& p) const {
-  int i = a_u * nx;
-  int j = (1-a_v) * ny - 0.001;
+  float uu = ((1 - u - v) * a_u + u * b_u + v * c_u);
+  float vv = ((1 - u - v) * a_v + u * b_v + v * c_v);
+  int i = uu * nx;
+  int j = (1-vv) * ny - 0.001;
   if (i < 0) i = 0;
   if (j < 0) j = 0;
   if (i > nx-1) i = nx-1;
   if (j > ny-1) j = ny-1;
-  vec3 a(data[3*i + 3*nx*j]/255.0, data[3*i + 3*nx*j+1]/255.0, data[3*i + 3*nx*j+2]/255.0);
-  i = b_u * nx;
-  j = (1-b_v) * ny - 0.001;
-  if (i < 0) i = 0;
-  if (j < 0) j = 0;
-  if (i > nx-1) i = nx-1;
-  if (j > ny-1) j = ny-1;
-  vec3 b(data[3*i + 3*nx*j]/255.0, data[3*i + 3*nx*j+1]/255.0, data[3*i + 3*nx*j+2]/255.0);
-  i = c_u * nx;
-  j = (1-c_v) * ny - 0.001;
-  if (i < 0) i = 0;
-  if (j < 0) j = 0;
-  if (i > nx-1) i = nx-1;
-  if (j > ny-1) j = ny-1;
-  vec3 c(data[3*i + 3*nx*j]/255.0, data[3*i + 3*nx*j+1]/255.0, data[3*i + 3*nx*j+2]/255.0);
-  return((1 - u - v) * a + u * b + v * c);
+  float r = int(data[3*i + 3*nx*j])/255.0;
+  float g = int(data[3*i + 3*nx*j+1])/255.0;
+  float b = int(data[3*i + 3*nx*j+2])/255.0;
+  return(vec3(r,g,b));
 }
 
 #endif

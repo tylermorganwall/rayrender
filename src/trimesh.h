@@ -65,10 +65,10 @@ public:
                                 attrib.normals[3*idx.normal_index+1],
                                 attrib.normals[3*idx.normal_index+2]);
             }
-            tx[v] = fmod(attrib.texcoords[2*idx.texcoord_index+0], 1);
-            tx[v] = tx[v] < 0 ? -tx[v] : tx[v];
-            ty[v] = fmod(attrib.texcoords[2*idx.texcoord_index+1], 1);
-            ty[v] = ty[v] < 0 ? -ty[v] : ty[v];
+            tx[v] = attrib.texcoords[2*idx.texcoord_index+0];
+            // tx[v] = tx[v] < 0 ? -tx[v] : tx[v];
+            ty[v] = attrib.texcoords[2*idx.texcoord_index+1];
+            // ty[v] = ty[v] < 0 ? -ty[v] : ty[v];
             // Optional: vertex colors
             // colors[v] = vec3(attrib.colors[3*idx.vertex_index+0],
             //                  attrib.colors[3*idx.vertex_index+1],
@@ -113,6 +113,7 @@ public:
     std::string warn, err;
     
     bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, inputfile.c_str());
+    //need to define else
     if(ret) {
       int n = 0;
       for (size_t s = 0; s < shapes.size(); s++) {
