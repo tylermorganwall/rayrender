@@ -1,7 +1,6 @@
 #ifndef BUILDSCENEH
 #define BUILDSCENEH
 
-#include "stb_image.h"
 #include "hitable.h"
 #include "sphere.h"
 #include "hitablelist.h"
@@ -13,6 +12,7 @@
 #include "constant.h"
 #include "triangle.h"
 #include "pdf.h"
+#include "trimesh.h"
 #include <Rcpp.h>
 using namespace Rcpp;
 
@@ -56,7 +56,7 @@ hitable *build_scene(IntegerVector& type,
                      LogicalVector& isgrouped, List& group_pivot, List& group_translate,
                      List& group_angle, List& group_order_rotation,
                      LogicalVector& tri_normal_bools, LogicalVector& is_tri_color, List& tri_color_vert, 
-                     random_gen& rng) {
+                     CharacterVector& fileinfo, random_gen& rng) {
   hitable **list = new hitable*[n+1];
   NumericVector tempvector;
   NumericVector tempchecker;
@@ -256,6 +256,43 @@ hitable *build_scene(IntegerVector& type,
                             vec3(tempvector(prop_len+7),tempvector(prop_len+8),tempvector(prop_len+9)),
                             tex);
       }
+      entry = rotation_order(entry, temprotvec, order_rotation);
+      if(isgrouped(i)) {
+        entry = new translate(entry, center - gpivot);
+        entry = rotation_order(entry, temp_gangle, temp_gorder);
+        entry = new translate(entry, -center + gpivot );
+      }
+      entry = new translate(entry, center + gtrans + vel * shutteropen);
+      if(isflipped(i)) {
+        list[i] = new flip_normals(entry);
+      } else {
+        list[i] = entry;
+      }
+    } else if (shape(i) == 7) {
+      hitable *entry;
+      std::string objfilename = Rcpp::as<std::string>(fileinfo(i));
+      entry = new trimesh(objfilename,
+                         tex,
+                         tempvector(prop_len+1),
+                         shutteropen, shutterclose, rng);
+      entry = rotation_order(entry, temprotvec, order_rotation);
+      if(isgrouped(i)) {
+        entry = new translate(entry, center - gpivot);
+        entry = rotation_order(entry, temp_gangle, temp_gorder);
+        entry = new translate(entry, -center + gpivot );
+      }
+      entry = new translate(entry, center + gtrans + vel * shutteropen);
+      if(isflipped(i)) {
+        list[i] = new flip_normals(entry);
+      } else {
+        list[i] = entry;
+      }
+    } else if (shape(i) == 8) {
+      hitable *entry;
+      std::string objfilename = Rcpp::as<std::string>(fileinfo(i));
+      entry = new trimesh(objfilename,
+                          tempvector(prop_len+1),
+                          shutteropen, shutterclose, rng);
       entry = rotation_order(entry, temprotvec, order_rotation);
       if(isgrouped(i)) {
         entry = new translate(entry, center - gpivot);

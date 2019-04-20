@@ -146,7 +146,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
   zvec = scene$z
   rvec = scene$radius
   shapevec = unlist(lapply(tolower(scene$shape),switch,
-                          "sphere" = 1,"xy_rect" = 2, "xz_rect" = 3,"yz_rect" = 4,"box" = 5, "triangle" = 6))
+                          "sphere" = 1,"xy_rect" = 2, "xz_rect" = 3,"yz_rect" = 4,"box" = 5, "triangle" = 6, "obj" = 7, "objcolor" = 8))
   typevec = unlist(lapply(tolower(scene$type),switch,
                           "lambertian" = 1,"metal" = 2,"dielectric" = 3))
   movingvec = purrr::map_lgl(scene$velocity,.f = ~any(.x != 0))
@@ -216,6 +216,9 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
   tri_normal_bools = purrr::map2_lgl(shapevec,proplist,.f = ~.x == 6 && all(!is.na(.y)))
   tri_color_vert = scene$tricolorinfo
   is_tri_color = purrr::map_lgl(tri_color_vert,.f = ~all(!is.na(.x)))
+  
+  #obj handler
+  objfilenamevec = scene$fileinfo
 
   assertthat::assert_that(all(c(length(xvec),length(yvec),length(zvec),length(rvec),length(typevec),length(proplist)) == length(xvec)))
   assertthat::assert_that(all(!is.null(typevec)))
@@ -259,6 +262,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
                              isgrouped = group_bool, group_pivot=group_pivot, group_translate = group_translate,
                              group_angle = group_angle, group_order_rotation = group_order_rotation,
                              tri_normal_bools = tri_normal_bools, is_tri_color = is_tri_color, tri_color_vert= tri_color_vert,
+                             fileinfo = objfilenamevec,
                              progress_bar = progress, numbercores = numbercores) 
   full_array = array(0,c(ncol(rgb_mat$r),nrow(rgb_mat$r),3))
   full_array[,,1] = t(rgb_mat$r)

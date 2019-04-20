@@ -175,6 +175,7 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
                       LogicalVector& isgrouped, List& group_pivot, List& group_translate,
                       List& group_angle, List& group_order_rotation, 
                       LogicalVector& tri_normal_bools, LogicalVector& is_tri_color, List& tri_color_vert,
+                      CharacterVector& fileinfo,
                       bool progress_bar, int numbercores) {
   NumericMatrix routput(nx,ny);
   NumericMatrix goutput(nx,ny);
@@ -200,7 +201,7 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
                                   isvolume, voldensity, order_rotation_list, 
                                   isgrouped, group_pivot, group_translate,
                                   group_angle, group_order_rotation, 
-                                  tri_normal_bools, is_tri_color, tri_color_vert, rng);
+                                  tri_normal_bools, is_tri_color, tri_color_vert, fileinfo, rng);
   int numbertosample = 0;
   for(int i = 0; i < implicit_sample.size(); i++) {
     if(implicit_sample(i)) {
@@ -272,7 +273,7 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
     // auto worker = [nx, ns] (int j) {
       if(progress_bar && j % numbercores == 0) {
         RcppThread::Rcout << "Progress (" << numbercores << " cores): ";
-        RcppThread::Rcout << (1-(double)j/double(ny)) * 100 << "%\r";
+        RcppThread::Rcout << (int)((1-(double)j/double(ny)) * 100) << "%\r";
       }
       random_gen rng;
       for(int i = 0; i < nx; i++) {
