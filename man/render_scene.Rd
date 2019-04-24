@@ -9,7 +9,8 @@ render_scene(scene, width = 400, height = 400, fov = 20,
   lookat = c(0, 0, 0), camera_up = c(0, 1, 0), aperture = 0.1,
   clamp_value = Inf, filename = NULL, backgroundhigh = "#80b4ff",
   backgroundlow = "#ffffff", shutteropen = 0, shutterclose = 1,
-  focal_distance = NULL, parallel = FALSE, progress = interactive())
+  focal_distance = NULL, tonemap = "gamma", parallel = FALSE,
+  progress = interactive())
 }
 \arguments{
 \item{scene}{Tibble of object locations and properties.}
@@ -53,6 +54,11 @@ a hexadecimal code, or a numeric rgb vector listing three intensities between `0
 
 \item{focal_distance}{Default `NULL`, automatically set to the `lookfrom-lookat` distance unless
 otherwise specified.}
+
+\item{tonemap}{Default `gamma`. Choose the tone mapping function so bright lights do not blow out the 
+contrast in the scene. Default `gamma` solely adjusts for gamma and clamps values greater than 1 to 1. 
+`reinhold` scales values by their individual color channels `color/(1+color)` and then performs the 
+gamma adjustment. `uncharted` uses the mapping developed for Uncharted 2 by John Hable.}
 
 \item{parallel}{Default `FALSE`. If `TRUE`, it will use all available cores to render the image
 (or the number specified in `options("cores")` if that option is not `NULL`).}

@@ -6,6 +6,7 @@
 #include "buildscene.h"
 #include "RProgress.h"
 #include "rng.h"
+#include "tonemap.h"
 using namespace Rcpp;
 // [[Rcpp::plugins(cpp11)]]
 // [[Rcpp::depends(RcppThread)]]
@@ -175,7 +176,7 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
                       LogicalVector& isgrouped, List& group_pivot, List& group_translate,
                       List& group_angle, List& group_order_rotation, 
                       LogicalVector& tri_normal_bools, LogicalVector& is_tri_color, List& tri_color_vert,
-                      CharacterVector& fileinfo,
+                      CharacterVector& fileinfo, int toneval,
                       bool progress_bar, int numbercores) {
   NumericMatrix routput(nx,ny);
   NumericMatrix goutput(nx,ny);
@@ -259,9 +260,24 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
           }
         }
         col /= float(ns);
-        routput(i,j) = pow(col[0],1/2.2);
-        goutput(i,j) = pow(col[1],1/2.2);
-        boutput(i,j) = pow(col[2],1/2.2);
+        if(toneval == 1) {
+          routput(i,j) = pow(col[0],1/2.2);
+          goutput(i,j) = pow(col[1],1/2.2);
+          boutput(i,j) = pow(col[2],1/2.2);
+        } else if (toneval == 2) {
+          float avg = (col[0]+col[1]+col[2])/3;
+          routput(i,j) = reinhard(col[0],avg);
+          goutput(i,j) = reinhard(col[1],avg);
+          boutput(i,j) = reinhard(col[2],avg);
+        } else if (toneval == 3) {
+          routput(i,j) = hable(col[0]);
+          goutput(i,j) = hable(col[1]);
+          boutput(i,j) = hable(col[2]);
+        } else {
+          routput(i,j) = hbd(col[0]);
+          goutput(i,j) = hbd(col[1]);
+          boutput(i,j) = hbd(col[2]);
+        }
       }
     }
   } else {
@@ -269,7 +285,7 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
     auto worker = [&routput, &goutput, &boutput,
                    ambient_light, nx, ny, ns,
                    &cam, backgroundhigh, backgroundlow, &world, &hlist,
-                   numbertosample, clampval, progress_bar, numbercores] (int j) {
+                   numbertosample, clampval, toneval, progress_bar, numbercores] (int j) {
     // auto worker = [nx, ns] (int j) {
       if(progress_bar && j % numbercores == 0) {
         RcppThread::Rcout << "Progress (" << numbercores << " cores): ";
@@ -298,9 +314,24 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
           }
         }
         col /= float(ns);
-        routput(i,j) = pow(col[0],1/2.2);
-        goutput(i,j) = pow(col[1],1/2.2);
-        boutput(i,j) = pow(col[2],1/2.2);
+        if(toneval == 1) {
+          routput(i,j) = pow(col[0],1/2.2);
+          goutput(i,j) = pow(col[1],1/2.2);
+          boutput(i,j) = pow(col[2],1/2.2);
+        } else if (toneval == 2) {
+          float max = (col[0]+col[1]+col[2])/3;
+          routput(i,j) = reinhard(col[0],max);
+          goutput(i,j) = reinhard(col[1],max);
+          boutput(i,j) = reinhard(col[2],max);
+        } else if (toneval == 3) {
+          routput(i,j) = hable(col[0]);
+          goutput(i,j) = hable(col[1]);
+          boutput(i,j) = hable(col[2]);
+        } else {
+          routput(i,j) = hbd(col[0]);
+          goutput(i,j) = hbd(col[1]);
+          boutput(i,j) = hbd(col[2]);
+        }
       }
     };
     for(int j = ny - 1; j >= 0; j--) {

@@ -13,6 +13,7 @@
 #include "triangle.h"
 #include "pdf.h"
 #include "trimesh.h"
+#include "disc.h"
 #include <Rcpp.h>
 using namespace Rcpp;
 
@@ -143,6 +144,8 @@ hitable *build_scene(IntegerVector& type,
       center =  vec3(x(i), y(i), z(i));
     } else if(shape(i) == 6) {
       center =  vec3(0, 0, 0);
+    } else if(shape(i) == 9) {
+      center = vec3(x(i), y(i), z(i));
     }
     //Generate objects
     if (shape(i) == 1) {
@@ -305,6 +308,21 @@ hitable *build_scene(IntegerVector& type,
       } else {
         list[i] = entry;
       }
+    } else if (shape(i) == 9) {
+      hitable *entry;
+      entry = new disc(vec3(0,0,0), radius(i), tempvector(prop_len+1), tex);
+      entry = rotation_order(entry, temprotvec, order_rotation);
+      if(isgrouped(i)) {
+        entry = new translate(entry, center - gpivot);
+        entry = rotation_order(entry, temp_gangle, temp_gorder);
+        entry = new translate(entry, -center + gpivot );
+      }
+      entry = new translate(entry, center + gtrans + vel * shutteropen);
+      if(isflipped(i)) {
+        list[i] = new flip_normals(entry);
+      } else {
+        list[i] = entry;
+      }
     }
   }
   return(new bvh_node(list, n, shutteropen, shutterclose, rng));
@@ -425,7 +443,7 @@ hitable* build_imp_sample(IntegerVector& type,
       entry = new translate(entry, -center + gpivot );
     }
     return(new translate(entry,center + gtrans + vel * shutteropen));
-  } else {
+  } else if (shape(i) == 6) {
     hitable *entry = new triangle(vec3(tempvector(prop_len+1),tempvector(prop_len+2),tempvector(prop_len+3)),
                                   vec3(tempvector(prop_len+4),tempvector(prop_len+5),tempvector(prop_len+6)),
                                   vec3(tempvector(prop_len+7),tempvector(prop_len+8),tempvector(prop_len+9)),
@@ -437,7 +455,7 @@ hitable* build_imp_sample(IntegerVector& type,
       entry = new translate(entry, -center + gpivot );
     }
     return(new translate(entry, center + gtrans + vel * shutteropen));
-  }
+  } 
 }
 
 #endif

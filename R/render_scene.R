@@ -27,6 +27,11 @@
 #' @param shutterclose Default `1`. Time at which the shutter is open. Only affects moving objects.
 #' @param focal_distance Default `NULL`, automatically set to the `lookfrom-lookat` distance unless
 #' otherwise specified.
+#' @param tonemap Default `gamma`. Choose the tone mapping function,
+#' Default `gamma` solely adjusts for gamma and clamps values greater than 1 to 1. 
+#' `reinhold` scales values by their individual color channels `color/(1+color)` and then performs the 
+#' gamma adjustment. `uncharted` uses the mapping developed for Uncharted 2 by John Hable. `hbd` uses an
+#' optimized formula by Jim Hejl and Richard Burgess-Dawson.
 #' @param parallel Default `FALSE`. If `TRUE`, it will use all available cores to render the image
 #'  (or the number specified in `options("cores")` if that option is not `NULL`).
 #' @param progress Default `TRUE` if interactive session, `FALSE` otherwise. 
@@ -113,7 +118,7 @@
 render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 100, ambient_light = FALSE,
                         lookfrom = c(10,1,0), lookat = c(0,0,0), camera_up = c(0,1,0), aperture = 0.1, clamp_value = Inf,
                         filename = NULL, backgroundhigh = "#80b4ff",backgroundlow = "#ffffff",
-                        shutteropen = 0.0, shutterclose = 1.0, focal_distance=NULL, parallel=FALSE,
+                        shutteropen = 0.0, shutterclose = 1.0, focal_distance=NULL, tonemap ="gamma", parallel=FALSE,
                         progress = interactive()) { 
   #Check if Cornell Box scene and set camera if user did not:
   if(!is.null(attr(scene,"cornell"))) {
@@ -146,9 +151,12 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
   zvec = scene$z
   rvec = scene$radius
   shapevec = unlist(lapply(tolower(scene$shape),switch,
-                          "sphere" = 1,"xy_rect" = 2, "xz_rect" = 3,"yz_rect" = 4,"box" = 5, "triangle" = 6, "obj" = 7, "objcolor" = 8))
+                          "sphere" = 1,"xy_rect" = 2, "xz_rect" = 3,"yz_rect" = 4,"box" = 5, "triangle" = 6, 
+                          "obj" = 7, "objcolor" = 8, "disc" = 9))
   typevec = unlist(lapply(tolower(scene$type),switch,
                           "lambertian" = 1,"metal" = 2,"dielectric" = 3))
+  assertthat::assert_that(tonemap %in% c("gamma","reinhold","uncharted", "hbd"))
+  toneval = switch(tonemap, "gamma" = 1,"reinhold" = 2,"uncharted" = 3,"hbd" = 4)
   movingvec = purrr::map_lgl(scene$velocity,.f = ~any(.x != 0))
   proplist = scene$properties
   vel_list = scene$velocity
@@ -262,7 +270,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
                              isgrouped = group_bool, group_pivot=group_pivot, group_translate = group_translate,
                              group_angle = group_angle, group_order_rotation = group_order_rotation,
                              tri_normal_bools = tri_normal_bools, is_tri_color = is_tri_color, tri_color_vert= tri_color_vert,
-                             fileinfo = objfilenamevec,
+                             fileinfo = objfilenamevec, toneval = toneval,
                              progress_bar = progress, numbercores = numbercores) 
   full_array = array(0,c(ncol(rgb_mat$r),nrow(rgb_mat$r),3))
   full_array[,,1] = t(rgb_mat$r)
