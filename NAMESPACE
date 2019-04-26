@@ -3,6 +3,7 @@
 export("%>%")
 export(add_object)
 export(cube)
+export(cylinder)
 export(dielectric)
 export(disc)
 export(generate_cornell)

@@ -398,3 +398,39 @@ obj_model = function(filename, scale = 1, objcolor = FALSE,
                  group_angle = list(NA), group_order_rotation = list(NA),
                  tricolorinfo = list(NA), fileinfo = filename)
 }
+
+#' Cylinder Object
+#'
+#' @param x Default `0`. x-coordinate of the center of the cylinder
+#' @param y Default `0`. y-coordinate of the center of the cylinder
+#' @param z Default `0`. z-coordinate of the center of the cylinder
+#' @param radius Default `1`. Radius of the cylinder.
+#' @param length Default `1`. Length of the cylinder.
+#' @param material Default  \code{\link{lambertian}}.The material, called from one of the material 
+#' functions \code{\link{lambertian}}, \code{\link{metal}}, or \code{\link{dielectric}}.
+#' @param angle Default `c(0,0,0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.
+#' @param order_rotation Default `c(1,2,3)`. The order to apply the rotations, referring to "x", "y", and "z".
+#' @param velocity Default `c(0,0,0)`. Velocity of the cylinder, used for motion blur.
+#' @param flipped Default `FALSE`. Whether to flip the normals.
+#' @importFrom  grDevices col2rgb
+#'
+#' @return Single row of a tibble describing the sphere in the scene.
+#' @export
+#'
+#' @examples
+#' #Generate a sphere in the cornell box.
+cylinder = function(x=0, y=0, z=0, radius=1, length=1, material=lambertian(), 
+                  angle = c(0,0,0), order_rotation = c(1,2,3), velocity = c(0,0,0), flipped=FALSE) {
+  info = c(unlist(material$properties),length)
+  tibble::tibble(x=x,y=y,z=z,radius=radius, type = material$type, shape="cylinder",
+                 properties = list(info), velocity = list(velocity), 
+                 checkercolor=material$checkercolor, 
+                 noise=material$noise, noisephase = material$noisephase, 
+                 noiseintensity = material$noiseintensity,noisecolor=material$noisecolor,
+                 angle=list(angle),image = material$image,lightintensity = material$lightintensity,
+                 flipped=flipped,fog=material$fog,fogdensity=material$fogdensity,
+                 implicit_sample=material$implicit_sample,order_rotation=list(order_rotation),
+                 pivot_point = list(NA), group_translate = list(NA),
+                 group_angle = list(NA), group_order_rotation = list(NA),
+                 tricolorinfo = list(NA), fileinfo = NA)
+}

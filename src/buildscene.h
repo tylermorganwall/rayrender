@@ -14,6 +14,7 @@
 #include "pdf.h"
 #include "trimesh.h"
 #include "disc.h"
+#include "cylinder.h"
 #include <Rcpp.h>
 using namespace Rcpp;
 
@@ -112,7 +113,7 @@ hitable *build_scene(IntegerVector& type,
       } else if (isnoise(i)) {
         tex = new lambertian(new noise_texture(noise(i),vec3(tempvector(0),tempvector(1),tempvector(2)),
                                                vec3(tempnoisecolor(0),tempnoisecolor(1),tempnoisecolor(2)),
-                                               noisephase(i), noiseintensity(i), rng));
+                                               noisephase(i), noiseintensity(i)));
       } else if (ischeckered(i)) {
         tex = new lambertian(new checker_texture(new constant_texture(vec3(tempchecker(0),tempchecker(1),tempchecker(2))),
                                                  new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))),tempchecker(3)));
@@ -145,6 +146,8 @@ hitable *build_scene(IntegerVector& type,
     } else if(shape(i) == 6) {
       center =  vec3(0, 0, 0);
     } else if(shape(i) == 9) {
+      center = vec3(x(i), y(i), z(i));
+    } else if(shape(i) == 10) {
       center = vec3(x(i), y(i), z(i));
     }
     //Generate objects
@@ -238,7 +241,7 @@ hitable *build_scene(IntegerVector& type,
                                         new noise_texture(noise(i),
                                                           vec3(tempvector(0),tempvector(1),tempvector(2)),
                                                           vec3(tempnoisecolor(0),tempnoisecolor(1),tempnoisecolor(2)),
-                                                          noisephase(i), noiseintensity(i), rng));
+                                                          noisephase(i), noiseintensity(i)));
         }
       } else {
         list[i] = entry;
@@ -320,6 +323,23 @@ hitable *build_scene(IntegerVector& type,
       entry = new translate(entry, center + gtrans + vel * shutteropen);
       if(isflipped(i)) {
         list[i] = new flip_normals(entry);
+      } else {
+        list[i] = entry;
+      }
+    } else if (shape(i) == 10) {
+      hitable *entry = new cylinder(radius(i), tempvector(prop_len+1), tex);
+      entry = rotation_order(entry, temprotvec, order_rotation);
+      if(isgrouped(i)) {
+        entry = new translate(entry, center - gpivot);
+        entry = rotation_order(entry, temp_gangle, temp_gorder);
+        entry = new translate(entry, -center + gpivot );
+      }
+      entry = new translate(entry, center + gtrans + vel * shutteropen);
+      if(isflipped(i)) {
+        entry = new flip_normals(entry);
+      }
+      if(isvolume(i)) {
+        list[i] = new constant_medium(entry, voldensity(i), new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))));
       } else {
         list[i] = entry;
       }

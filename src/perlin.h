@@ -21,13 +21,7 @@ inline float perlin_interp(vec3 c[2][2][2], float u, float v, float w) {
 
 class perlin {
 public:
-  perlin(random_gen _rng) {
-    ranvec = perlin_generate();
-    perm_x = perlin_generate_perm();
-    perm_y = perlin_generate_perm();
-    perm_z = perlin_generate_perm();
-    rng = _rng;
-  };
+  perlin() {};
   float noise(const vec3& p) const {
     float u = p.x() - floor(p.x());
     float v = p.y() - floor(p.y());
@@ -56,36 +50,45 @@ public:
     }
     return(std::fabs(accum));
   }
-  vec3* perlin_generate() {
-    vec3 *p  = new vec3[256];
-    for(int i = 0; i < 256; i++) {
-      p[i] = unit_vector(vec3(-1.0f + 2*rng.unif_rand(),-1.0f + 2*rng.unif_rand(),-1.0f + 2*rng.unif_rand()));
-    }
-    return(p);
-  }
-  void permute(int *p, int n) {
-    for(int i = n-1; i > 0; i--) {
-      int target = int(rng.unif_rand()*(i+1));
-      int tmp = p[i];
-      p[i] = p[target];
-      p[target] = tmp;
-    }
-    return;
-  }
-  int* perlin_generate_perm() {
-    int * p = new int[256];
-    for(int i = 0; i < 256; i++) {
-      p[i] = i;
-    }
-    permute(p, 256);
-    return(p);
-  }
-  vec3 *ranvec;
-  int *perm_x;
-  int *perm_y;
-  int *perm_z;
+  static vec3 *ranvec;
+  static int *perm_x;
+  static int *perm_y;
+  static int *perm_z;
   random_gen rng;
 };
+
+void permute(int *p, int n) {
+  random_gen rng;
+  for(int i = n-1; i > 0; i--) {
+    int target = int(rng.unif_rand()*(i+1));
+    int tmp = p[i];
+    p[i] = p[target];
+    p[target] = tmp;
+  }
+  return;
+}
+int* perlin_generate_perm() {
+  int * p = new int[256];
+  for(int i = 0; i < 256; i++) {
+    p[i] = i;
+  }
+  permute(p, 256);
+  return(p);
+}
+
+vec3* perlin_generate() {
+  random_gen rng;
+  vec3 *p  = new vec3[256];
+  for(int i = 0; i < 256; i++) {
+    p[i] = unit_vector(vec3(-1.0f + 2*rng.unif_rand(),-1.0f + 2*rng.unif_rand(),-1.0f + 2*rng.unif_rand()));
+  }
+  return(p);
+}
+
+vec3 *perlin::ranvec = perlin_generate();
+int *perlin::perm_x = perlin_generate_perm();
+int *perlin::perm_y = perlin_generate_perm();
+int *perlin::perm_z = perlin_generate_perm();
 
 #endif
 

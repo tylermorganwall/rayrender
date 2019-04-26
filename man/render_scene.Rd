@@ -55,10 +55,11 @@ a hexadecimal code, or a numeric rgb vector listing three intensities between `0
 \item{focal_distance}{Default `NULL`, automatically set to the `lookfrom-lookat` distance unless
 otherwise specified.}
 
-\item{tonemap}{Default `gamma`. Choose the tone mapping function so bright lights do not blow out the 
-contrast in the scene. Default `gamma` solely adjusts for gamma and clamps values greater than 1 to 1. 
+\item{tonemap}{Default `gamma`. Choose the tone mapping function,
+Default `gamma` solely adjusts for gamma and clamps values greater than 1 to 1. 
 `reinhold` scales values by their individual color channels `color/(1+color)` and then performs the 
-gamma adjustment. `uncharted` uses the mapping developed for Uncharted 2 by John Hable.}
+gamma adjustment. `uncharted` uses the mapping developed for Uncharted 2 by John Hable. `hbd` uses an
+optimized formula by Jim Hejl and Richard Burgess-Dawson.}
 
 \item{parallel}{Default `FALSE`. If `TRUE`, it will use all available cores to render the image
 (or the number specified in `options("cores")` if that option is not `NULL`).}
