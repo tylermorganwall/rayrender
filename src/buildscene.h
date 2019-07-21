@@ -145,6 +145,10 @@ hitable *build_scene(IntegerVector& type,
       center =  vec3(x(i), y(i), z(i));
     } else if(shape(i) == 6) {
       center =  vec3(0, 0, 0);
+    } else if(shape(i) == 7) {
+      center =  vec3(0, 0, 0);
+    } else if(shape(i) == 8) {
+      center =  vec3(0, 0, 0);
     } else if(shape(i) == 9) {
       center = vec3(x(i), y(i), z(i));
     } else if(shape(i) == 10) {
@@ -338,11 +342,7 @@ hitable *build_scene(IntegerVector& type,
       if(isflipped(i)) {
         entry = new flip_normals(entry);
       }
-      if(isvolume(i)) {
-        list[i] = new constant_medium(entry, voldensity(i), new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))));
-      } else {
-        list[i] = entry;
-      }
+      list[i] = entry;
     }
   }
   return(new bvh_node(list, n, shutteropen, shutterclose, rng));

@@ -10,16 +10,28 @@ inline float ffmax(float a, float b) { return(a > b ? a : b);}
 class aabb {
   public: 
     aabb() {}
-    aabb(const vec3& a, const vec3& b) { _min = a; _max = b;}
+    aabb(const vec3& a, const vec3& b) { 
+      _min = a; 
+      _max = b;
+      centroid = (a + b)/2;
+      diagonal = b - a;
+    }
     
     vec3 min() const {return(_min);}
     vec3 max() const {return(_max);}
     
     bool hit(const ray& r, float tmin, float tmax, random_gen& rng);
-    
+    const vec3 offset(const vec3 o);
+    float surface_area();
     vec3 _min;
     vec3 _max;
+    vec3 centroid;
+    vec3 diagonal;
 };
+
+float aabb::surface_area() {
+  return(2*(diagonal.x() * diagonal.y() + diagonal.x() * diagonal.z() + diagonal.y()*diagonal.z()));
+}
 
 bool aabb::hit(const ray& r, float tmin, float tmax, random_gen& rng) {
   for(int a = 0; a < 3; a++) {
@@ -46,6 +58,14 @@ aabb surrounding_box(aabb box0, aabb box1) {
            fmax(box0.max().y(), box1.max().y()),
            fmax(box0.max().z(), box1.max().z()));
   return(aabb(small,big));
+}
+
+const vec3 aabb::offset(const vec3 p) {
+  vec3 o = p - _min;
+  if (_max.x() > _min.x()) o.e[0] /= _max.x() - _min.x();
+  if (_max.y() > _min.y()) o.e[1] /= _max.y() - _min.y();
+  if (_max.z() > _min.z()) o.e[2] /= _max.z() - _min.z();
+  return o;
 }
 
 #endif

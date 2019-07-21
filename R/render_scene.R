@@ -119,7 +119,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
                         lookfrom = c(10,1,0), lookat = c(0,0,0), camera_up = c(0,1,0), aperture = 0.1, clamp_value = Inf,
                         filename = NULL, backgroundhigh = "#80b4ff",backgroundlow = "#ffffff",
                         shutteropen = 0.0, shutterclose = 1.0, focal_distance=NULL, tonemap ="gamma", parallel=FALSE,
-                        progress = interactive()) { 
+                        progress = interactive(), debug = NULL) { 
   #Check if Cornell Box scene and set camera if user did not:
   if(!is.null(attr(scene,"cornell"))) {
     corn_message = "Setting default values for Cornell box: "
@@ -226,7 +226,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
   is_tri_color = purrr::map_lgl(tri_color_vert,.f = ~all(!is.na(.x)))
   
   #obj handler
-  objfilenamevec = scene$fileinfo
+  objfilenamevec = purrr::map_chr(scene$fileinfo, path.expand)
 
   assertthat::assert_that(all(c(length(xvec),length(yvec),length(zvec),length(rvec),length(typevec),length(proplist)) == length(xvec)))
   assertthat::assert_that(all(!is.null(typevec)))
@@ -251,6 +251,13 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
   } else {
     numbercores = parallel::detectCores()
   }
+  if(is.null(debug)) {
+    debugval = 0
+  } else if(debug == "bvh") {
+    debugval = 1
+  } else {
+    debugval = 0
+  }
   rgb_mat = render_scene_rcpp(nx = width, ny = height, ns = samples, fov = fov, ambient_light = ambient_light,
                              lookfromvec = lookfrom, lookatvec = lookat, aperture=aperture,camera_up = camera_up,
                              type = typevec, shape = shapevec, radius = rvec, 
@@ -271,7 +278,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
                              group_angle = group_angle, group_order_rotation = group_order_rotation,
                              tri_normal_bools = tri_normal_bools, is_tri_color = is_tri_color, tri_color_vert= tri_color_vert,
                              fileinfo = objfilenamevec, toneval = toneval,
-                             progress_bar = progress, numbercores = numbercores) 
+                             progress_bar = progress, numbercores = numbercores, debugval = debugval) 
   full_array = array(0,c(ncol(rgb_mat$r),nrow(rgb_mat$r),3))
   full_array[,,1] = t(rgb_mat$r)
   full_array[,,2] = t(rgb_mat$g)

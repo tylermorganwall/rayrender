@@ -10,7 +10,7 @@ render_scene(scene, width = 400, height = 400, fov = 20,
   clamp_value = Inf, filename = NULL, backgroundhigh = "#80b4ff",
   backgroundlow = "#ffffff", shutteropen = 0, shutterclose = 1,
   focal_distance = NULL, tonemap = "gamma", parallel = FALSE,
-  progress = interactive())
+  progress = interactive(), debug = NULL)
 }
 \arguments{
 \item{scene}{Tibble of object locations and properties.}
