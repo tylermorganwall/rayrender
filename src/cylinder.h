@@ -14,7 +14,7 @@ public:
   virtual vec3 random(const vec3& o, random_gen& rng);
   void get_cylinder_uv(const vec3& p, float& u, float& v) {
     float phi = atan2(p.z(),p.x());
-    if (phi < 0) phi += 2 * M_PI;
+    // if (phi < 0) phi += 2 * M_PI;
     u = 1 - (phi + M_PI) / (2*M_PI);
     v = (p.y() + length/2)/length;
   };
@@ -40,7 +40,7 @@ bool cylinder::hit(const ray& r, float t_min, float t_max, hit_record& rec, rand
       rec.p = temppoint;
       temppoint.e[1] = 0;
       rec.normal = temppoint / radius;
-      get_cylinder_uv(rec.normal, rec.u, rec.v);
+      get_cylinder_uv(rec.p, rec.u, rec.v);
       rec.mat_ptr = mat_ptr;
       return(true);
     }
@@ -51,11 +51,10 @@ bool cylinder::hit(const ray& r, float t_min, float t_max, hit_record& rec, rand
       rec.p = temppoint;
       temppoint.e[1] = 0;
       rec.normal = temppoint / radius;
-      get_cylinder_uv(rec.normal, rec.u, rec.v);
+      get_cylinder_uv(rec.p, rec.u, rec.v);
       rec.mat_ptr = mat_ptr;
       return(true);
     }
-
   }
   return(false);
 }
