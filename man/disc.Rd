@@ -15,7 +15,9 @@ disc(x = 0, y = 0, z = 0, radius = 1, inner_radius = 0,
 
 \item{z}{Default `0`. z-coordinate of the center of the disc}
 
-\item{radius}{Default `1`. Radius of the disc}
+\item{radius}{Default `1`. Radius of the disc.}
+
+\item{inner_radius}{Default `0`. Inner radius of the disc.}
 
 \item{material}{Default  \code{\link{lambertian}}.The material, called from one of the material 
 functions \code{\link{lambertian}}, \code{\link{metal}}, or \code{\link{dielectric}}.}

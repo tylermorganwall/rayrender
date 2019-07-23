@@ -35,13 +35,14 @@
 #' @param parallel Default `FALSE`. If `TRUE`, it will use all available cores to render the image
 #'  (or the number specified in `options("cores")` if that option is not `NULL`).
 #' @param progress Default `TRUE` if interactive session, `FALSE` otherwise. 
+#' @param debug Default `NULL`. If `bvh`, will return an image indicated the number of BVH lookups.
 #' @export
 #' @importFrom  grDevices col2rgb
 #' @return Raytraced plot to current device, or an image saved to a file.
 #'
 #' @examples
 #' #Generate a large checkered sphere as the ground
-#' scene = generate_ground(depth=-0.5,material=lambertian(color="white", checkercolor="darkgreen"))
+#' scene = generate_ground(depth=-0.5, material = lambertian(color="white", checkercolor="darkgreen"))
 #' \dontrun{
 #' render_scene(scene,parallel=TRUE,samples=500)
 #' }
@@ -68,7 +69,7 @@
 #' }
 #' 
 #' #Lower the number of samples to render more quickly.
-#' render_scene(scene,fov=20, samples=8)
+#' render_scene(scene, samples=8)
 #' 
 #' #Add a floating R plot using the iris dataset as a png onto a floating 2D rectangle
 #' tempfileplot = tempfile()
@@ -226,7 +227,9 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
   is_tri_color = purrr::map_lgl(tri_color_vert,.f = ~all(!is.na(.x)))
   
   #obj handler
-  objfilenamevec = purrr::map_chr(scene$fileinfo, path.expand)
+  fileinfovec = scene$fileinfo
+  fileinfovec[is.na(fileinfovec)] = ""
+  objfilenamevec = purrr::map_chr(fileinfovec, path.expand)
 
   assertthat::assert_that(all(c(length(xvec),length(yvec),length(zvec),length(rvec),length(typevec),length(proplist)) == length(xvec)))
   assertthat::assert_that(all(!is.null(typevec)))

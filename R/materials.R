@@ -96,7 +96,7 @@ lambertian = function(color = "#ffffff", checkercolor = NA, checkerperiod = 3,
 #'
 #' @examples
 #' #Generate the cornell box with a single metal sphere in the center
-#' scene = scene %>%
+#' scene = generate_cornell() %>%
 #'   add_object(sphere(x=555/2,y=555/2,z=555/2,radius=555/8,material=metal()))
 #' \dontrun{
 #' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,

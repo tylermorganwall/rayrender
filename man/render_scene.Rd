@@ -65,6 +65,8 @@ optimized formula by Jim Hejl and Richard Burgess-Dawson.}
 (or the number specified in `options("cores")` if that option is not `NULL`).}
 
 \item{progress}{Default `TRUE` if interactive session, `FALSE` otherwise.}
+
+\item{debug}{Default `NULL`. If `bvh`, will return an image indicated the number of BVH lookups.}
 }
 \value{
 Raytraced plot to current device, or an image saved to a file.
@@ -74,7 +76,7 @@ Takes the scene description and renders an image, either to the device or to a f
 }
 \examples{
 #Generate a large checkered sphere as the ground
-scene = generate_ground(depth=-0.5,material=lambertian(color="white", checkercolor="darkgreen"))
+scene = generate_ground(depth=-0.5, material = lambertian(color="white", checkercolor="darkgreen"))
 \dontrun{
 render_scene(scene,parallel=TRUE,samples=500)
 }
@@ -101,7 +103,7 @@ render_scene(scene,fov=20,parallel=TRUE,samples=500)
 }
 
 #Lower the number of samples to render more quickly.
-render_scene(scene,fov=20, samples=8)
+render_scene(scene, samples=8)
 
 #Add a floating R plot using the iris dataset as a png onto a floating 2D rectangle
 tempfileplot = tempfile()

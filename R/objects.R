@@ -330,7 +330,8 @@ triangle = function(v1=c(1,0,0), v2=c(0,1,0),v3=c(-1,0,0),
 #' @param x Default `0`. x-coordinate of the center of the disc
 #' @param y Default `0`. y-coordinate of the center of the disc
 #' @param z Default `0`. z-coordinate of the center of the disc
-#' @param radius Default `1`. Radius of the disc
+#' @param radius Default `1`. Radius of the disc.
+#' @param inner_radius Default `0`. Inner radius of the disc.
 #' @param material Default  \code{\link{lambertian}}.The material, called from one of the material 
 #' functions \code{\link{lambertian}}, \code{\link{metal}}, or \code{\link{dielectric}}.
 #' @param angle Default `c(0,0,0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.
