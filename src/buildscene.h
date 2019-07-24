@@ -357,7 +357,7 @@ hitable* build_imp_sample(IntegerVector& type,
                           LogicalVector& isgrouped, 
                           List& group_pivot, List& group_translate,
                           List& group_angle, List& group_order_rotation,
-                          random_gen& rng) {
+                          CharacterVector& fileinfo, random_gen& rng) {
   NumericVector tempvector;
   NumericVector temprotvec;
   NumericVector tempvel;
@@ -409,6 +409,14 @@ hitable* build_imp_sample(IntegerVector& type,
     center =  vec3(x(i), y(i), z(i));
   } else if(shape(i) == 6) {
     center =  vec3(x(i), y(i), z(i));
+  } else if(shape(i) == 7) {
+    center =  vec3(0, 0, 0);
+  } else if(shape(i) == 8) {
+    center =  vec3(0, 0, 0);
+  } else if(shape(i) == 9) {
+    center = vec3(x(i), y(i), z(i));
+  } else if(shape(i) == 10) {
+    center = vec3(x(i), y(i), z(i));
   }
   
   if(shape(i) == 1) {
@@ -429,7 +437,7 @@ hitable* build_imp_sample(IntegerVector& type,
       entry = rotation_order(entry, temp_gangle, temp_gorder);
       entry = new translate(entry, -center + gpivot );
     }
-    return(new translate(entry,center + gtrans + vel * shutteropen));
+    return(new translate(entry, center + gtrans + vel * shutteropen));
   } else if (shape(i) == 3) {
     hitable *entry = new xz_rect(-tempvector(prop_len+2)/2,tempvector(prop_len+2)/2,
                                  -tempvector(prop_len+4)/2,tempvector(prop_len+4)/2,
@@ -440,7 +448,7 @@ hitable* build_imp_sample(IntegerVector& type,
       entry = rotation_order(entry, temp_gangle, temp_gorder);
       entry = new translate(entry, -center + gpivot );
     }
-    return(new translate(entry,center + gtrans + vel * shutteropen));
+    return(new translate(entry, center + gtrans + vel * shutteropen));
   } else if (shape(i) == 4) {
     hitable *entry = new yz_rect(-tempvector(prop_len+2)/2,tempvector(prop_len+2)/2,
                                  -tempvector(prop_len+4)/2,tempvector(prop_len+4)/2,
@@ -451,7 +459,7 @@ hitable* build_imp_sample(IntegerVector& type,
       entry = rotation_order(entry, temp_gangle, temp_gorder);
       entry = new translate(entry, -center + gpivot );
     }
-    return(new translate(entry,center + gtrans + vel * shutteropen));
+    return(new translate(entry, center + gtrans + vel * shutteropen));
   } else if (shape(i) == 5) {
     hitable *entry = new box(-vec3(tempvector(prop_len+1),tempvector(prop_len+2),tempvector(prop_len+3))/2, 
                              vec3(tempvector(prop_len+1),tempvector(prop_len+2),tempvector(prop_len+3))/2, 
@@ -462,7 +470,7 @@ hitable* build_imp_sample(IntegerVector& type,
       entry = rotation_order(entry, temp_gangle, temp_gorder);
       entry = new translate(entry, -center + gpivot );
     }
-    return(new translate(entry,center + gtrans + vel * shutteropen));
+    return(new translate(entry, center + gtrans + vel * shutteropen));
   } else if (shape(i) == 6) {
     hitable *entry = new triangle(vec3(tempvector(prop_len+1),tempvector(prop_len+2),tempvector(prop_len+3)),
                                   vec3(tempvector(prop_len+4),tempvector(prop_len+5),tempvector(prop_len+6)),
@@ -475,7 +483,40 @@ hitable* build_imp_sample(IntegerVector& type,
       entry = new translate(entry, -center + gpivot );
     }
     return(new translate(entry, center + gtrans + vel * shutteropen));
-  } 
+  } else if (shape(i) == 7 || shape(i) == 8) {
+    hitable *entry;
+    std::string objfilename = Rcpp::as<std::string>(fileinfo(i));
+    entry = new trimesh(objfilename,
+                        0,
+                        tempvector(prop_len+1),
+                        shutteropen, shutterclose, rng);
+    entry = rotation_order(entry, temprotvec, order_rotation);
+    if(isgrouped(i)) {
+      entry = new translate(entry, center - gpivot);
+      entry = rotation_order(entry, temp_gangle, temp_gorder);
+      entry = new translate(entry, -center + gpivot );
+    }
+    return(new translate(entry, center + gtrans + vel * shutteropen));
+  } else if (shape(i) == 9) {
+    hitable *entry;
+    entry = new disc(vec3(0,0,0), radius(i), tempvector(prop_len+1), 0);
+    entry = rotation_order(entry, temprotvec, order_rotation);
+    if(isgrouped(i)) {
+      entry = new translate(entry, center - gpivot);
+      entry = rotation_order(entry, temp_gangle, temp_gorder);
+      entry = new translate(entry, -center + gpivot );
+    }
+    return(new translate(entry, center + gtrans + vel * shutteropen));
+  } else {
+    hitable *entry = new cylinder(radius(i), tempvector(prop_len+1), 0);
+    entry = rotation_order(entry, temprotvec, order_rotation);
+    if(isgrouped(i)) {
+      entry = new translate(entry, center - gpivot);
+      entry = rotation_order(entry, temp_gangle, temp_gorder);
+      entry = new translate(entry, -center + gpivot );
+    }
+    return(new translate(entry, center + gtrans + vel * shutteropen));
+  }
 }
 
 #endif

@@ -227,7 +227,7 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
                                angle, i, order_rotation_list,
                                isgrouped, group_pivot, group_translate,
                                group_angle, group_order_rotation,
-                               rng);
+                               fileinfo, rng);
       counter++;
     }
   }
