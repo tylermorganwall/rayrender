@@ -48,7 +48,6 @@ THE SOFTWARE.
 //
 
 //
-// Use this in *one* .cc
 //   #define TINYOBJLOADER_IMPLEMENTATION
 //   #include "tiny_obj_loader.h"
 //
@@ -61,16 +60,6 @@ THE SOFTWARE.
 #include <vector>
 
 namespace tinyobj {
-
-#ifdef __clang__
-#pragma clang diagnostic push
-#if __has_warning("-Wzero-as-null-pointer-constant")
-#pragma clang diagnostic ignored "-Wzero-as-null-pointer-constant"
-#endif
-
-#pragma clang diagnostic ignored "-Wpadded"
-
-#endif
 
 // https://en.wikipedia.org/wiki/Wavefront_.obj_file says ...
 //
@@ -2804,9 +2793,7 @@ bool ObjReader::ParseFromString(const std::string &obj_text, const std::string &
   return valid_;
 }
 
-#ifdef __clang__
-#pragma clang diagnostic pop
-#endif
+
 }  // namespace tinyobj
 
 #endif
