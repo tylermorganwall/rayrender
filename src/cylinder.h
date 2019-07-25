@@ -62,20 +62,22 @@ bool cylinder::hit(const ray& r, float t_min, float t_max, hit_record& rec, rand
 float cylinder::pdf_value(const vec3& o, const vec3& v, random_gen& rng) {
   hit_record rec;
   if(this->hit(ray(o,v), 0.001, FLT_MAX, rec, rng)) {
-    float cos_theta_max = sqrt(1 - radius * radius/o.squared_length());
-    float solid_angle = 2 * M_PI * (1-cos_theta_max);
-    return(1/solid_angle);
+    float area = 2*length*radius;
+    float distance_squared = rec.t * rec.t * v.squared_length();
+    float cosine = fabs(dot(v,rec.normal)/v.length());
+    return(distance_squared / (cosine * area));
   } else {
     return(0);
   }
 }
 
 vec3 cylinder::random(const vec3& o, random_gen& rng) {
-  vec3 direction = -o;
-  float distance_squared = direction.squared_length();
-  onb uvw;
-  uvw.build_from_w(direction);
-  return(uvw.local(rng.random_to_sphere(radius,distance_squared)));
+  float r1 = rng.unif_rand();
+  float y1 = length*(rng.unif_rand()-0.5);
+  float phi = 2 * M_PI * r1;
+  float x = radius * cos(phi);
+  float z = radius * sin(phi);
+  return(vec3(x,y1,z)-o);
 }
 
 bool cylinder::bounding_box(float t0, float t1, aabb& box) const {
