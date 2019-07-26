@@ -37,5 +37,5 @@ Single row of a tibble describing the sphere in the scene.
 Cylinder Object
 }
 \examples{
-#Generate a sphere in the cornell box.
+#Generate a cylinder in the cornell box.
 }

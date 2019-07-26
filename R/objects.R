@@ -419,9 +419,58 @@ obj_model = function(filename, scale = 1, objcolor = FALSE,
 #' @export
 #'
 #' @examples
-#' #Generate a sphere in the cornell box.
+#' #Generate a cylinder in the cornell box.
 cylinder = function(x=0, y=0, z=0, radius=1, length=1, material=lambertian(), 
                   angle = c(0,0,0), order_rotation = c(1,2,3), velocity = c(0,0,0), flipped=FALSE) {
+  info = c(unlist(material$properties),length)
+  tibble::tibble(x=x,y=y,z=z,radius=radius, type = material$type, shape="cylinder",
+                 properties = list(info), velocity = list(velocity), 
+                 checkercolor=material$checkercolor, 
+                 noise=material$noise, noisephase = material$noisephase, 
+                 noiseintensity = material$noiseintensity,noisecolor=material$noisecolor,
+                 angle=list(angle),image = material$image,lightintensity = material$lightintensity,
+                 flipped=flipped,fog=material$fog,fogdensity=material$fogdensity,
+                 implicit_sample=material$implicit_sample,order_rotation=list(order_rotation),
+                 pivot_point = list(NA), group_translate = list(NA),
+                 group_angle = list(NA), group_order_rotation = list(NA),
+                 tricolorinfo = list(NA), fileinfo = NA)
+}
+
+#' Segment Object
+#' 
+#' Similar to the cylinder object, but specified by start and end points.
+#'
+#' @param start Default `c(0,-1,0)`. Start point of the cylinder segment, specifing `x`, `y`, `z`.
+#' @param end Default `c(0,1,0)`. End point of the cylinder segment, specifing `x`, `y`, `z`.
+#' @param radius Default `1`. Radius of the segment.
+#' @param material Default  \code{\link{lambertian}}.The material, called from one of the material 
+#' functions \code{\link{lambertian}}, \code{\link{metal}}, or \code{\link{dielectric}}.
+#' @param velocity Default `c(0,0,0)`. Velocity of the segment, used for motion blur.
+#' @param flipped Default `FALSE`. Whether to flip the normals.
+#' @importFrom  grDevices col2rgb
+#'
+#' @return Single row of a tibble describing the sphere in the scene.
+#' @export
+#'
+#' @examples
+#' #Generate a sphere in the cornell box.
+segment = function(start = c(0,-1,0), end = c(0,1,0), radius=1, material=lambertian(), 
+                   velocity = c(0,0,0), flipped=FALSE) {
+  x = (start[1] + end[1])/2
+  y = (start[2] + end[2])/2
+  z = (start[3] + end[3])/2
+  order_rotation = c(3,2,1)
+  length = sqrt(sum((end-start)^2))
+  phi = asin(sqrt((end[3]-start[3])^2 + (end[1]-start[1])^2)/length)/pi*180
+  if(end[1] == start[1] && end[3] == start[3]) {
+    theta = 0
+  } else {
+    theta = atan(-(end[3]-start[3])/(end[1]-start[1]))/pi*180
+  }
+  if((end[3]-start[3] <= 0 && end[1]-start[1] <= 0) || (end[3]-start[3] >= 0 && end[1]-start[1] <= 0)) {
+    theta = theta + 180
+  }
+  angle = c(0,theta,phi)
   info = c(unlist(material$properties),length)
   tibble::tibble(x=x,y=y,z=z,radius=radius, type = material$type, shape="cylinder",
                  properties = list(info), velocity = list(velocity), 
