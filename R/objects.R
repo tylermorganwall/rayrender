@@ -407,6 +407,8 @@ obj_model = function(filename, scale = 1, objcolor = FALSE,
 #' @param z Default `0`. z-coordinate of the center of the cylinder
 #' @param radius Default `1`. Radius of the cylinder.
 #' @param length Default `1`. Length of the cylinder.
+#' @param phi_min Default `0`. Minimum angle around the segment.
+#' @param phi_max Default `360`. Maximum angle around the segment.
 #' @param material Default  \code{\link{lambertian}}.The material, called from one of the material 
 #' functions \code{\link{lambertian}}, \code{\link{metal}}, or \code{\link{dielectric}}.
 #' @param angle Default `c(0,0,0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.
@@ -420,9 +422,11 @@ obj_model = function(filename, scale = 1, objcolor = FALSE,
 #'
 #' @examples
 #' #Generate a cylinder in the cornell box.
-cylinder = function(x=0, y=0, z=0, radius=1, length=1, material=lambertian(), 
-                  angle = c(0,0,0), order_rotation = c(1,2,3), velocity = c(0,0,0), flipped=FALSE) {
-  info = c(unlist(material$properties),length)
+cylinder = function(x=0, y=0, z=0, radius=1, length=1, 
+                    phi_min = 0, phi_max = 360, material=lambertian(), 
+                    angle = c(0,0,0), order_rotation = c(1,2,3), velocity = c(0,0,0), flipped=FALSE) {
+  assertthat::assert_that(phi_max > phi_min)
+  info = c(unlist(material$properties),length, phi_min, phi_max)
   tibble::tibble(x=x,y=y,z=z,radius=radius, type = material$type, shape="cylinder",
                  properties = list(info), velocity = list(velocity), 
                  checkercolor=material$checkercolor, 
@@ -443,6 +447,8 @@ cylinder = function(x=0, y=0, z=0, radius=1, length=1, material=lambertian(),
 #' @param start Default `c(0,-1,0)`. Start point of the cylinder segment, specifing `x`, `y`, `z`.
 #' @param end Default `c(0,1,0)`. End point of the cylinder segment, specifing `x`, `y`, `z`.
 #' @param radius Default `1`. Radius of the segment.
+#' @param phi_min Default `0`. Minimum angle around the segment.
+#' @param phi_max Default `360`. Maximum angle around the segment.
 #' @param material Default  \code{\link{lambertian}}.The material, called from one of the material 
 #' functions \code{\link{lambertian}}, \code{\link{metal}}, or \code{\link{dielectric}}.
 #' @param velocity Default `c(0,0,0)`. Velocity of the segment, used for motion blur.
@@ -454,8 +460,11 @@ cylinder = function(x=0, y=0, z=0, radius=1, length=1, material=lambertian(),
 #'
 #' @examples
 #' #Generate a sphere in the cornell box.
-segment = function(start = c(0,-1,0), end = c(0,1,0), radius=1, material=lambertian(), 
+segment = function(start = c(0,-1,0), end = c(0,1,0), radius=1, 
+                   phi_min = 0, phi_max = 360,
+                   material=lambertian(), 
                    velocity = c(0,0,0), flipped=FALSE) {
+  assertthat::assert_that(phi_max > phi_min)
   x = (start[1] + end[1])/2
   y = (start[2] + end[2])/2
   z = (start[3] + end[3])/2
@@ -471,7 +480,7 @@ segment = function(start = c(0,-1,0), end = c(0,1,0), radius=1, material=lambert
     theta = theta + 180
   }
   angle = c(0,theta,phi)
-  info = c(unlist(material$properties),length)
+  info = c(unlist(material$properties),length, phi_min * pi / 180, phi_max * pi / 180)
   tibble::tibble(x=x,y=y,z=z,radius=radius, type = material$type, shape="cylinder",
                  properties = list(info), velocity = list(velocity), 
                  checkercolor=material$checkercolor, 

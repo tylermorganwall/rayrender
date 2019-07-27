@@ -331,7 +331,8 @@ hitable *build_scene(IntegerVector& type,
         list[i] = entry;
       }
     } else if (shape(i) == 10) {
-      hitable *entry = new cylinder(radius(i), tempvector(prop_len+1), tex);
+      hitable *entry = new cylinder(radius(i), tempvector(prop_len+1), 
+                                    tempvector(prop_len+2), tempvector(prop_len+3), tex);
       entry = rotation_order(entry, temprotvec, order_rotation);
       if(isgrouped(i)) {
         entry = new translate(entry, center - gpivot);
@@ -508,7 +509,8 @@ hitable* build_imp_sample(IntegerVector& type,
     }
     return(new translate(entry, center + gtrans + vel * shutteropen));
   } else {
-    hitable *entry = new cylinder(radius(i), tempvector(prop_len+1), 0);
+    hitable *entry = new cylinder(radius(i), tempvector(prop_len+1), 
+                                  tempvector(prop_len+2), tempvector(prop_len+3), 0);
     entry = rotation_order(entry, temprotvec, order_rotation);
     if(isgrouped(i)) {
       entry = new translate(entry, center - gpivot);

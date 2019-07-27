@@ -7,7 +7,8 @@
 class cylinder: public hitable {
 public:
   cylinder() {}
-  cylinder(float r, float len, material *mat) : radius(r), length(len), mat_ptr(mat) {};
+  cylinder(float r, float len, float phi_min, float phi_max, material *mat) : 
+  radius(r), length(len), phi_min(phi_min), phi_max(phi_max), mat_ptr(mat) {};
   virtual bool hit(const ray& r, float tmin, float tmax, hit_record& rec, random_gen& rng);
   virtual bool bounding_box(float t0, float t1, aabb& box) const;
   virtual float pdf_value(const vec3& o, const vec3& v, random_gen& rng);
@@ -20,6 +21,8 @@ public:
   };
   float radius;
   float length;
+  float phi_min;
+  float phi_max;
   material *mat_ptr;
 };
 
@@ -35,7 +38,9 @@ bool cylinder::hit(const ray& r, float t_min, float t_max, hit_record& rec, rand
   if(discriminant > 0) {
     float temp = (-b - sqrt(discriminant))/a;
     vec3 temppoint = r.point_at_parameter(temp);
-    if(temp < t_max && temp > t_min && temppoint.y() > -length/2 && temppoint.y() < length/2){
+    float phi = atan2(temppoint.z(),temppoint.x());
+    if(temp < t_max && temp > t_min && 
+       temppoint.y() > -length/2 && temppoint.y() < length/2 && phi <= phi_max && phi >= phi_min) {
       rec.t = temp;
       rec.p = temppoint;
       temppoint.e[1] = 0;
@@ -46,7 +51,9 @@ bool cylinder::hit(const ray& r, float t_min, float t_max, hit_record& rec, rand
     }
     temp = (-b + sqrt(discriminant))/a;
     temppoint = r.point_at_parameter(temp);
-    if(temp < t_max && temp > t_min && temppoint.y() > -length/2 && temppoint.y() < length/2) {
+    phi = atan2(temppoint.z(),temppoint.x());
+    if(temp < t_max && temp > t_min && 
+       temppoint.y() > -length/2 && temppoint.y() < length/2 && phi <= phi_max && phi >= phi_min) {
       rec.t = temp;
       rec.p = temppoint;
       temppoint.e[1] = 0;
@@ -62,7 +69,7 @@ bool cylinder::hit(const ray& r, float t_min, float t_max, hit_record& rec, rand
 float cylinder::pdf_value(const vec3& o, const vec3& v, random_gen& rng) {
   hit_record rec;
   if(this->hit(ray(o,v), 0.001, FLT_MAX, rec, rng)) {
-    float area = 2*length*radius;
+    float area = length * radius * (phi_max - phi_min);
     float distance_squared = rec.t * rec.t * v.squared_length();
     float cosine = fabs(dot(v,rec.normal)/v.length());
     return(distance_squared / (cosine * area));
@@ -74,7 +81,7 @@ float cylinder::pdf_value(const vec3& o, const vec3& v, random_gen& rng) {
 vec3 cylinder::random(const vec3& o, random_gen& rng) {
   float r1 = rng.unif_rand();
   float y1 = length*(rng.unif_rand()-0.5);
-  float phi = 2 * M_PI * r1;
+  float phi = (phi_max - phi_min) * r1 + phi_min;
   float x = radius * cos(phi);
   float z = radius * sin(phi);
   return(vec3(x,y1,z)-o);

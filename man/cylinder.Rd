@@ -5,8 +5,9 @@
 \title{Cylinder Object}
 \usage{
 cylinder(x = 0, y = 0, z = 0, radius = 1, length = 1,
-  material = lambertian(), angle = c(0, 0, 0), order_rotation = c(1,
-  2, 3), velocity = c(0, 0, 0), flipped = FALSE)
+  phi_min = 0, phi_max = 360, material = lambertian(), angle = c(0,
+  0, 0), order_rotation = c(1, 2, 3), velocity = c(0, 0, 0),
+  flipped = FALSE)
 }
 \arguments{
 \item{x}{Default `0`. x-coordinate of the center of the cylinder}
@@ -18,6 +19,10 @@ cylinder(x = 0, y = 0, z = 0, radius = 1, length = 1,
 \item{radius}{Default `1`. Radius of the cylinder.}
 
 \item{length}{Default `1`. Length of the cylinder.}
+
+\item{phi_min}{Default `0`. Minimum angle around the segment.}
+
+\item{phi_max}{Default `360`. Maximum angle around the segment.}
 
 \item{material}{Default  \code{\link{lambertian}}.The material, called from one of the material 
 functions \code{\link{lambertian}}, \code{\link{metal}}, or \code{\link{dielectric}}.}

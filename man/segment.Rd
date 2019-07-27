@@ -5,7 +5,8 @@
 \title{Segment Object}
 \usage{
 segment(start = c(0, -1, 0), end = c(0, 1, 0), radius = 1,
-  material = lambertian(), velocity = c(0, 0, 0), flipped = FALSE)
+  phi_min = 0, phi_max = 360, material = lambertian(),
+  velocity = c(0, 0, 0), flipped = FALSE)
 }
 \arguments{
 \item{start}{Default `c(0,-1,0)`. Start point of the cylinder segment, specifing `x`, `y`, `z`.}
@@ -13,6 +14,10 @@ segment(start = c(0, -1, 0), end = c(0, 1, 0), radius = 1,
 \item{end}{Default `c(0,1,0)`. End point of the cylinder segment, specifing `x`, `y`, `z`.}
 
 \item{radius}{Default `1`. Radius of the segment.}
+
+\item{phi_min}{Default `0`. Minimum angle around the segment.}
+
+\item{phi_max}{Default `360`. Maximum angle around the segment.}
 
 \item{material}{Default  \code{\link{lambertian}}.The material, called from one of the material 
 functions \code{\link{lambertian}}, \code{\link{metal}}, or \code{\link{dielectric}}.}
