@@ -39,6 +39,7 @@ bool cylinder::hit(const ray& r, float t_min, float t_max, hit_record& rec, rand
     float temp = (-b - sqrt(discriminant))/a;
     vec3 temppoint = r.point_at_parameter(temp);
     float phi = atan2(temppoint.z(),temppoint.x());
+    phi = phi < 0 ? phi + 2 * M_PI : phi;
     if(temp < t_max && temp > t_min && 
        temppoint.y() > -length/2 && temppoint.y() < length/2 && phi <= phi_max && phi >= phi_min) {
       rec.t = temp;
@@ -52,6 +53,7 @@ bool cylinder::hit(const ray& r, float t_min, float t_max, hit_record& rec, rand
     temp = (-b + sqrt(discriminant))/a;
     temppoint = r.point_at_parameter(temp);
     phi = atan2(temppoint.z(),temppoint.x());
+    phi = phi < 0 ? phi + 2 * M_PI : phi;
     if(temp < t_max && temp > t_min && 
        temppoint.y() > -length/2 && temppoint.y() < length/2 && phi <= phi_max && phi >= phi_min) {
       rec.t = temp;

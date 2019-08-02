@@ -426,7 +426,7 @@ cylinder = function(x=0, y=0, z=0, radius=1, length=1,
                     phi_min = 0, phi_max = 360, material=lambertian(), 
                     angle = c(0,0,0), order_rotation = c(1,2,3), velocity = c(0,0,0), flipped=FALSE) {
   assertthat::assert_that(phi_max > phi_min)
-  info = c(unlist(material$properties),length, phi_min, phi_max)
+  info = c(unlist(material$properties),length, phi_min * pi / 180, phi_max * pi / 180)
   tibble::tibble(x=x,y=y,z=z,radius=radius, type = material$type, shape="cylinder",
                  properties = list(info), velocity = list(velocity), 
                  checkercolor=material$checkercolor, 
