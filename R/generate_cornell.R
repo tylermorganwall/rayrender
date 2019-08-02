@@ -5,6 +5,9 @@
 #' @param lightcolor Default `white`. The color the of the light.
 #' @param lightwidth Default `332`. Width (z) of the light.
 #' @param lightdepth Default `343`. Depth (x) of the light.
+#' @param leftcolor Default `#1f7326` (green).
+#' @param rightcolor Default `#a60d0d` (red).
+#' @param roomcolor Default `#bababa` (light grey).
 #'
 #' @return Tibble containing the scene description of the Cornell box.
 #' @export
@@ -34,17 +37,19 @@
 #' render_scene(scene, samples=200,aperture=0, fov=40, ambient_light=FALSE, 
 #'              parallel=TRUE,clamp_value=3)
 #' }
-generate_cornell = function(light = TRUE, lightintensity = 5,lightcolor = "white",lightwidth = 332, lightdepth=343) {
+generate_cornell = function(light = TRUE, lightintensity = 5,
+                            lightcolor = "white",lightwidth = 332, lightdepth=343,
+                            leftcolor = "#1f7326", rightcolor = "#a60d0d", roomcolor = "#bababa") {
   scene = yz_rect(x=555,y=555/2,z=555/2,555,555,
-      material = lambertian(color = "#1f7326"),flipped = TRUE) %>%
+      material = lambertian(color = leftcolor),flipped = TRUE) %>%
     add_object(yz_rect(x=0,y=555/2,z=555/2,555,555,
-      material = lambertian(color = "#a60d0d"))) %>%
+      material = lambertian(color = rightcolor))) %>%
     add_object(xz_rect(x=555/2,y=555,z=555/2,555,555,
-      material = lambertian(color="#bababa"),flipped = TRUE)) %>%
+      material = lambertian(color=roomcolor),flipped = TRUE)) %>%
     add_object(xz_rect(x=555/2,y=0,z=555/2,555,555,
-      material = lambertian(color="#bababa"))) %>%
+      material = lambertian(color=roomcolor))) %>%
     add_object(xy_rect(x=555/2,y=555/2,z=555,555,555,
-      material = lambertian(color = "#bababa"),flipped = TRUE))
+      material = lambertian(color = roomcolor),flipped = TRUE))
   if(light) {
     scene = scene %>%
       add_object(xz_rect(x=555/2,y=554,z=555/2,lightdepth,lightwidth,
