@@ -11,20 +11,19 @@ class aabb {
   public: 
     aabb() {}
     aabb(const vec3& a, const vec3& b) { 
-      _min = a; 
-      _max = b;
+      bounds[0] = a;
+      bounds[1] = b;
       centroid = (a + b)/2;
       diagonal = b - a;
     }
     
-    vec3 min() const {return(_min);}
-    vec3 max() const {return(_max);}
+    vec3 min() const {return(bounds[0]);}
+    vec3 max() const {return(bounds[1]);}
     
     bool hit(const ray& r, float tmin, float tmax, random_gen& rng);
     const vec3 offset(const vec3 o);
     float surface_area();
-    vec3 _min;
-    vec3 _max;
+    vec3 bounds[2];
     vec3 centroid;
     vec3 diagonal;
 };
@@ -33,21 +32,17 @@ float aabb::surface_area() {
   return(2*(diagonal.x() * diagonal.y() + diagonal.x() * diagonal.z() + diagonal.y()*diagonal.z()));
 }
 
-bool aabb::hit(const ray& r, float tmin, float tmax, random_gen& rng) {
-  for(int a = 0; a < 3; a++) {
-    float invD = 1.0f / r.direction()[a];
-    float t0 = (min()[a] - r.origin()[a]) * invD;
-    float t1 = (max()[a] - r.origin()[a]) * invD;
-    if(invD < 0.0f) {
-      std::swap(t0,t1);
-    }
-    tmin = t0 > tmin ? t0 : tmin;
-    tmax = t1 < tmax ? t1 : tmax;
-    if(tmax <= tmin) {
-      return(false);
-    }
-  }
-  return(true);
+bool aabb::hit(const ray &r, float tmin, float tmax, random_gen& rng) {
+  float txmin, txmax, tymin, tymax, tzmin, tzmax;
+  txmin = (bounds[  r.sign[0]].x()-r.origin().x()) * r.inv_dir.x();
+  txmax = (bounds[1-r.sign[0]].x()-r.origin().x()) * r.inv_dir_pad.x();
+  tymin = (bounds[  r.sign[1]].y()-r.origin().y()) * r.inv_dir.y();
+  tymax = (bounds[1-r.sign[1]].y()-r.origin().y()) * r.inv_dir_pad.y();
+  tzmin = (bounds[  r.sign[2]].z()-r.origin().z()) * r.inv_dir.z();
+  tzmax = (bounds[1-r.sign[2]].z()-r.origin().z()) * r.inv_dir_pad.z();
+  tmin = ffmax(tzmin, ffmax(tymin, ffmax(txmin, tmin)));
+  tmax = ffmin(tzmax, ffmin(tymax, ffmin(txmax, tmax)));
+  return tmin <= tmax;
 }
 
 aabb surrounding_box(aabb box0, aabb box1) {
@@ -61,10 +56,10 @@ aabb surrounding_box(aabb box0, aabb box1) {
 }
 
 const vec3 aabb::offset(const vec3 p) {
-  vec3 o = p - _min;
-  if (_max.x() > _min.x()) o.e[0] /= _max.x() - _min.x();
-  if (_max.y() > _min.y()) o.e[1] /= _max.y() - _min.y();
-  if (_max.z() > _min.z()) o.e[2] /= _max.z() - _min.z();
+  vec3 o = p - min();
+  if (max().x() > min().x()) o.e[0] /= max().x() - min().x();
+  if (max().y() > min().y()) o.e[1] /= max().y() - min().y();
+  if (max().z() > min().z()) o.e[2] /= max().z() - min().z();
   return o;
 }
 
