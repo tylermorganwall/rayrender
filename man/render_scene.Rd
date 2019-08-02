@@ -10,7 +10,7 @@ render_scene(scene, width = 400, height = 400, fov = 20,
   clamp_value = Inf, filename = NULL, backgroundhigh = "#80b4ff",
   backgroundlow = "#ffffff", shutteropen = 0, shutterclose = 1,
   focal_distance = NULL, tonemap = "gamma", parallel = FALSE,
-  progress = interactive(), debug = NULL)
+  backgroundimage = NULL, progress = interactive(), debug = NULL)
 }
 \arguments{
 \item{scene}{Tibble of object locations and properties.}
@@ -63,6 +63,8 @@ optimized formula by Jim Hejl and Richard Burgess-Dawson.}
 
 \item{parallel}{Default `FALSE`. If `TRUE`, it will use all available cores to render the image
 (or the number specified in `options("cores")` if that option is not `NULL`).}
+
+\item{backgroundimage}{Default `NULL`.}
 
 \item{progress}{Default `TRUE` if interactive session, `FALSE` otherwise.}
 

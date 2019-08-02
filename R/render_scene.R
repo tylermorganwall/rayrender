@@ -32,6 +32,7 @@
 #' `reinhold` scales values by their individual color channels `color/(1+color)` and then performs the 
 #' gamma adjustment. `uncharted` uses the mapping developed for Uncharted 2 by John Hable. `hbd` uses an
 #' optimized formula by Jim Hejl and Richard Burgess-Dawson.
+#' @param backgroundimage Default `NULL`. 
 #' @param parallel Default `FALSE`. If `TRUE`, it will use all available cores to render the image
 #'  (or the number specified in `options("cores")` if that option is not `NULL`).
 #' @param progress Default `TRUE` if interactive session, `FALSE` otherwise. 
@@ -120,6 +121,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
                         lookfrom = c(10,1,0), lookat = c(0,0,0), camera_up = c(0,1,0), aperture = 0.1, clamp_value = Inf,
                         filename = NULL, backgroundhigh = "#80b4ff",backgroundlow = "#ffffff",
                         shutteropen = 0.0, shutterclose = 1.0, focal_distance=NULL, tonemap ="gamma", parallel=FALSE,
+                        backgroundimage = NULL,
                         progress = interactive(), debug = NULL) { 
   #Check if Cornell Box scene and set camera if user did not:
   if(!is.null(attr(scene,"cornell"))) {
@@ -231,6 +233,15 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
   fileinfovec[is.na(fileinfovec)] = ""
   objfilenamevec = purrr::map_chr(fileinfovec, path.expand)
 
+  #bg image handler
+  if(!is.null(backgroundimage)) {
+    hasbackground = TRUE
+    backgroundstring = path.expand(backgroundimage)
+  } else {
+    hasbackground = FALSE
+    backgroundstring = ""
+  }
+  
   assertthat::assert_that(all(c(length(xvec),length(yvec),length(zvec),length(rvec),length(typevec),length(proplist)) == length(xvec)))
   assertthat::assert_that(all(!is.null(typevec)))
   for(i in 1:length(xvec)) {
@@ -281,7 +292,8 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
                              group_angle = group_angle, group_order_rotation = group_order_rotation,
                              tri_normal_bools = tri_normal_bools, is_tri_color = is_tri_color, tri_color_vert= tri_color_vert,
                              fileinfo = objfilenamevec, toneval = toneval,
-                             progress_bar = progress, numbercores = numbercores, debugval = debugval) 
+                             progress_bar = progress, numbercores = numbercores, debugval = debugval,
+                             hasbackground = hasbackground, background = backgroundstring) 
   full_array = array(0,c(ncol(rgb_mat$r),nrow(rgb_mat$r),3))
   full_array[,,1] = t(rgb_mat$r)
   full_array[,,2] = t(rgb_mat$g)
