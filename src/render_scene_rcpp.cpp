@@ -206,9 +206,6 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
   camera cam(lookfrom, lookat, vec3(camera_up(0),camera_up(1),camera_up(2)), fov, float(nx)/float(ny), 
              aperture, dist_to_focus,
              shutteropen, shutterclose, rng);
-  if(progress_bar) {
-    Rcpp::Rcout << "Building scene BVH..." << "\n";
-  }
   int nx1, ny1, nn1;
   texture *background_texture;
   if(hasbackground) {
@@ -232,9 +229,6 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
                                   group_angle, group_order_rotation, 
                                   tri_normal_bools, is_tri_color, tri_color_vert, fileinfo,
                                   rng);
-  if(progress_bar) {
-    Rcpp::Rcout << "BVH built." << "\n";
-  }
   int numbertosample = 0;
   for(int i = 0; i < implicit_sample.size(); i++) {
     if(implicit_sample(i)) {
