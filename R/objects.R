@@ -493,3 +493,41 @@ segment = function(start = c(0,-1,0), end = c(0,1,0), radius=1,
                  group_angle = list(NA), group_order_rotation = list(NA),
                  tricolorinfo = list(NA), fileinfo = NA)
 }
+
+#' Ellipsoid Object
+#'
+#' @param x Default `0`. x-coordinate of the center of the ellipsoid.
+#' @param y Default `0`. y-coordinate of the center of the ellipsoid.
+#' @param z Default `0`. z-coordinate of the center of the ellipsoid.
+#' @param a Default `1`. Principal x-axis of the ellipsoid.
+#' @param b Default `1`. Principal y-axis of the ellipsoid.
+#' @param c Default `1`. Principal z-axis of the ellipsoid.
+#' @param material Default  \code{\link{lambertian}}.The material, called from one of the material 
+#' functions \code{\link{lambertian}}, \code{\link{metal}}, or \code{\link{dielectric}}.
+#' @param angle Default `c(0,0,0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.
+#' @param order_rotation Default `c(1,2,3)`. The order to apply the rotations, referring to "x", "y", and "z".
+#' @param velocity Default `c(0,0,0)`. Velocity of the segment, used for motion blur.
+#' @param flipped Default `FALSE`. Whether to flip the normals.
+#' @importFrom  grDevices col2rgb
+#'
+#' @return Single row of a tibble describing the sphere in the scene.
+#' @export
+#'
+ellipsoid = function(x=0, y=0, z=0, a = 1, b = 1, c = 1,
+                  material=lambertian(), 
+                  angle = c(0,0,0), order_rotation = c(1,2,3), 
+                  velocity = c(0,0,0), flipped=FALSE) {
+  radius = 1
+  info = c(unlist(material$properties), a, b, c)
+  tibble::tibble(x=x,y=y,z=z,radius=radius, type = material$type, shape="ellipsoid",
+                 properties = list(info), velocity = list(velocity), 
+                 checkercolor=material$checkercolor, 
+                 noise=material$noise, noisephase = material$noisephase, 
+                 noiseintensity = material$noiseintensity,noisecolor=material$noisecolor,
+                 angle=list(angle),image = material$image,lightintensity = material$lightintensity,
+                 flipped=flipped,fog=material$fog,fogdensity=material$fogdensity,
+                 implicit_sample=material$implicit_sample,order_rotation=list(order_rotation),
+                 pivot_point = list(NA), group_translate = list(NA),
+                 group_angle = list(NA), group_order_rotation = list(NA),
+                 tricolorinfo = list(NA), fileinfo = NA)
+}

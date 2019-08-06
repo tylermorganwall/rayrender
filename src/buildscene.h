@@ -15,6 +15,7 @@
 #include "trimesh.h"
 #include "disc.h"
 #include "cylinder.h"
+#include "ellipsoid.h"
 #include <Rcpp.h>
 using namespace Rcpp;
 
@@ -152,6 +153,8 @@ hitable *build_scene(IntegerVector& type,
     } else if(shape(i) == 9) {
       center = vec3(x(i), y(i), z(i));
     } else if(shape(i) == 10) {
+      center = vec3(x(i), y(i), z(i));
+    } else if(shape(i) == 11) {
       center = vec3(x(i), y(i), z(i));
     }
     //Generate objects
@@ -344,6 +347,25 @@ hitable *build_scene(IntegerVector& type,
         entry = new flip_normals(entry);
       }
       list[i] = entry;
+    } else if (shape(i) == 11) {
+      hitable *entry = new ellipsoid(vec3(0,0,0), radius(i), 
+                                     vec3(tempvector(prop_len + 1), tempvector(prop_len + 2), tempvector(prop_len + 3)),
+                                     tex);
+      entry = rotation_order(entry, temprotvec, order_rotation);
+      if(isgrouped(i)) {
+        entry = new translate(entry, center - gpivot);
+        entry = rotation_order(entry, temp_gangle, temp_gorder);
+        entry = new translate(entry, -center + gpivot );
+      }
+      if(isflipped(i)) {
+        entry = new flip_normals(entry);
+      }
+      if(isvolume(i)) {
+        list[i] = new constant_medium(entry, voldensity(i), 
+                                      new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))));
+      } else {
+        list[i] = entry;
+      }
     }
   }
   return(new bvh_node(list, n, shutteropen, shutterclose, rng));
@@ -417,6 +439,8 @@ hitable* build_imp_sample(IntegerVector& type,
   } else if(shape(i) == 9) {
     center = vec3(x(i), y(i), z(i));
   } else if(shape(i) == 10) {
+    center = vec3(x(i), y(i), z(i));
+  } else if(shape(i) == 11) {
     center = vec3(x(i), y(i), z(i));
   }
   
@@ -508,9 +532,20 @@ hitable* build_imp_sample(IntegerVector& type,
       entry = new translate(entry, -center + gpivot );
     }
     return(new translate(entry, center + gtrans + vel * shutteropen));
-  } else {
+  } else if (shape(i) == 10) {
     hitable *entry = new cylinder(radius(i), tempvector(prop_len+1), 
                                   tempvector(prop_len+2), tempvector(prop_len+3), 0);
+    entry = rotation_order(entry, temprotvec, order_rotation);
+    if(isgrouped(i)) {
+      entry = new translate(entry, center - gpivot);
+      entry = rotation_order(entry, temp_gangle, temp_gorder);
+      entry = new translate(entry, -center + gpivot );
+    }
+    return(new translate(entry, center + gtrans + vel * shutteropen));
+  } else {
+    hitable *entry = new ellipsoid(vec3(0,0,0), radius(i), 
+                                   vec3(tempvector(prop_len + 1), tempvector(prop_len + 2), tempvector(prop_len + 3)),
+                                   0);
     entry = rotation_order(entry, temprotvec, order_rotation);
     if(isgrouped(i)) {
       entry = new translate(entry, center - gpivot);

@@ -21,5 +21,5 @@
 #' render_scene(scene)
 #' }
 generate_ground = function(depth = -1, spheresize = 1000, material = lambertian(color = "#ccff00")) {
-  sphere(x = 0,y = -spheresize + depth, z = 0, radius = spheresize, material=material)
+  sphere(x = 0, y = -spheresize + depth, z = 0, radius = spheresize, material=material)
 }
