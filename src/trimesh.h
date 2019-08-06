@@ -8,6 +8,7 @@
 #include "stb_image.h"
 #include <Rcpp.h>
 
+
 class trimesh : public hitable {
 public:
   trimesh() {}
@@ -94,7 +95,13 @@ public:
           
           index_offset += 3;
           int material_num = shapes[s].mesh.material_ids[f];
-          
+          if(std::isnan(tris[0].x()) || std::isnan(tris[0].y()) || std::isnan(tris[0].z()) ||
+             std::isnan(tris[1].x()) || std::isnan(tris[1].y()) || std::isnan(tris[1].z()) ||
+             std::isnan(tris[2].x()) || std::isnan(tris[2].y()) || std::isnan(tris[2].z())) {
+            triangles.pop_back();
+            n--;
+            continue;
+          }
           // per-face material
           // shapes[s].mesh.material_ids[f];
           material *tex;
@@ -172,7 +179,15 @@ public:
                                 attrib.normals[3*idx.normal_index+2]);
             }
           }
+          
           index_offset += 3;
+          if(std::isnan(tris[0].x()) || std::isnan(tris[0].y()) || std::isnan(tris[0].z()) ||
+             std::isnan(tris[1].x()) || std::isnan(tris[1].y()) || std::isnan(tris[1].z()) ||
+             std::isnan(tris[2].x()) || std::isnan(tris[2].y()) || std::isnan(tris[2].z())) {
+            triangles.pop_back();
+            n--;
+            continue;
+          }
           if(has_normals) {
             triangles[currenttri] = new triangle(tris[0],tris[1],tris[2],
                                                  normals[0],normals[1],normals[2], 
