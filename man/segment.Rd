@@ -33,5 +33,16 @@ Single row of a tibble describing the sphere in the scene.
 Similar to the cylinder object, but specified by start and end points.
 }
 \examples{
-#Generate a sphere in the cornell box.
+#Generate a segment in the cornell box. 
+
+\dontrun{
+generate_cornell() \%>\%
+  add_object(segment(start = c(100,100,100), end = c(455, 455,455), radius=50)) \%>\%
+  add_object(segment(start = c(455,100,100), end = c(100, 455,455), radius=50)) \%>\%
+  add_object(sphere(x=445,y=100,z=100, radius=50)) \%>\% 
+  render_scene(lookfrom = c(278,278,-800) ,lookat = c(278,278,0), fov = 40, ambient_light=FALSE,
+               samples=50, parallel=TRUE, clamp_value=5)
+}
+
+#Draw a cube:
 }

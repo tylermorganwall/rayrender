@@ -38,3 +38,20 @@ Single row of a tibble describing the sphere in the scene.
 \description{
 Ellipsoid Object
 }
+\examples{
+#Generate an ellipsoid in a Cornell box
+\dontrun{
+generate_cornell() \%>\%
+  add_object(ellipsoid(x=555/2,y=555/2,z=555/2, a = 100, b=50, c = 50)) \%>\%
+  render_scene(lookfrom = c(278,278,-800) ,lookat = c(278,278,0), fov = 40, ambient_light=FALSE,
+               samples=500, parallel=TRUE, clamp_value=5)
+}
+
+#Change the axes to make it taller rather than wide:
+\dontrun {
+generate_cornell() \%>\%
+  add_object(ellipsoid(x=555/2,y=555/2,z=555/2, a = 100, b=200, c = 100, material = metal())) \%>\%
+  render_scene(lookfrom = c(278,278,-800) ,lookat = c(278,278,0), fov = 40, ambient_light=FALSE,
+               samples=50, parallel=TRUE, clamp_value=5)
+}
+}

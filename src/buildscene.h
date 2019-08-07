@@ -357,6 +357,7 @@ hitable *build_scene(IntegerVector& type,
         entry = rotation_order(entry, temp_gangle, temp_gorder);
         entry = new translate(entry, -center + gpivot );
       }
+      entry = new translate(entry, center + gtrans + vel * shutteropen);
       if(isflipped(i)) {
         entry = new flip_normals(entry);
       }

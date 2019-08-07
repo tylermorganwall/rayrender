@@ -459,7 +459,33 @@ cylinder = function(x=0, y=0, z=0, radius=1, length=1,
 #' @export
 #'
 #' @examples
-#' #Generate a sphere in the cornell box.
+#' #Generate a segment in the cornell box. 
+#' 
+#' \dontrun{
+#' generate_cornell() %>%
+#'   add_object(segment(start = c(100,100,100), end = c(455, 455,455), radius=50)) %>%
+#'   render_scene(lookfrom = c(278,278,-800) ,lookat = c(278,278,0), fov = 40, ambient_light=FALSE,
+#'                samples=50, parallel=TRUE, clamp_value=5)
+#' }
+#'
+#' #Draw the outline of a cube:
+#' \dontrun{
+#' generate_cornell() %>%
+#'   add_object(segment(start = c(100,100,100), end = c(100, 100, 455), radius=10)) %>%
+#'   add_object(segment(start = c(100,100,100), end = c(100, 455, 100), radius=10)) %>%
+#'   add_object(segment(start = c(100,100,100), end = c(455, 100, 100), radius=10)) %>%
+#'   add_object(segment(start = c(100,100,455), end = c(100, 455, 455), radius=10)) %>%
+#'   add_object(segment(start = c(100,100,455), end = c(455, 100, 455), radius=10)) %>%
+#'   add_object(segment(start = c(100,455,455), end = c(100, 455, 100), radius=10)) %>%
+#'   add_object(segment(start = c(100,455,455), end = c(455, 455, 455), radius=10)) %>%
+#'   add_object(segment(start = c(455,455,100), end = c(455, 100, 100), radius=10)) %>%
+#'   add_object(segment(start = c(455,455,100), end = c(455, 455, 455), radius=10)) %>%
+#'   add_object(segment(start = c(455,100,100), end = c(455, 100, 455), radius=10)) %>%
+#'   add_object(segment(start = c(455,100,455), end = c(455, 455, 455), radius=10)) %>%
+#'   add_object(segment(start = c(100,455,100), end = c(455, 455, 100), radius=10)) %>%
+#'   render_scene(lookfrom = c(278,278,-800) ,lookat = c(278,278,0), fov = 40, ambient_light=FALSE,
+#'                samples=50, parallel=TRUE, clamp_value=5)
+#' }
 segment = function(start = c(0,-1,0), end = c(0,1,0), radius=1, 
                    phi_min = 0, phi_max = 360,
                    material=lambertian(), 
@@ -469,18 +495,17 @@ segment = function(start = c(0,-1,0), end = c(0,1,0), radius=1,
   y = (start[2] + end[2])/2
   z = (start[3] + end[3])/2
   order_rotation = c(3,2,1)
-  length = sqrt(sum((end-start)^2))
-  phi = asin(sqrt((end[3]-start[3])^2 + (end[1]-start[1])^2)/length)/pi*180
+  phi =  atan2(end[1]-start[1],end[3]-start[3])/pi*180 + 90
+  
+  length_xy = sqrt((end[1]-start[1])^2 + (end[3]-start[3])^2)
   if(end[1] == start[1] && end[3] == start[3]) {
     theta = 0
   } else {
-    theta = atan(-(end[3]-start[3])/(end[1]-start[1]))/pi*180
+    theta = atan2(-length_xy,(end[2]-start[2]))/pi*180
   }
-  if((end[3]-start[3] <= 0 && end[1]-start[1] <= 0) || (end[3]-start[3] >= 0 && end[1]-start[1] <= 0)) {
-    theta = theta + 180
-  }
-  angle = c(0,theta,phi)
-  info = c(unlist(material$properties),length, phi_min * pi / 180, phi_max * pi / 180)
+  fulllength = sqrt(sum((end-start)^2))
+  angle = c(0,phi,theta)
+  info = c(unlist(material$properties),fulllength, phi_min * pi / 180, phi_max * pi / 180)
   tibble::tibble(x=x,y=y,z=z,radius=radius, type = material$type, shape="cylinder",
                  properties = list(info), velocity = list(velocity), 
                  checkercolor=material$checkercolor, 
@@ -512,7 +537,22 @@ segment = function(start = c(0,-1,0), end = c(0,1,0), radius=1,
 #'
 #' @return Single row of a tibble describing the sphere in the scene.
 #' @export
-#'
+#' @examples
+#' #Generate an ellipsoid in a Cornell box
+#' \dontrun{
+#' generate_cornell() %>%
+#'   add_object(ellipsoid(x=555/2,y=555/2,z=555/2, a = 100, b=50, c = 50)) %>%
+#'   render_scene(lookfrom = c(278,278,-800) ,lookat = c(278,278,0), fov = 40, ambient_light=FALSE,
+#'                samples=500, parallel=TRUE, clamp_value=5)
+#' }
+#' 
+#' #Change the axes to make it taller rather than wide:
+#' \dontrun {
+#' generate_cornell() %>%
+#'   add_object(ellipsoid(x=555/2,y=555/2,z=555/2, a = 100, b=200, c = 100, material = metal())) %>%
+#'   render_scene(lookfrom = c(278,278,-800) ,lookat = c(278,278,0), fov = 40, ambient_light=FALSE,
+#'                samples=50, parallel=TRUE, clamp_value=5)
+#'}
 ellipsoid = function(x=0, y=0, z=0, a = 1, b = 1, c = 1,
                   material=lambertian(), 
                   angle = c(0,0,0), order_rotation = c(1,2,3), 
