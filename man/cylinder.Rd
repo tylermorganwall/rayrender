@@ -42,5 +42,22 @@ Single row of a tibble describing the sphere in the scene.
 Cylinder Object
 }
 \examples{
-#Generate a cylinder in the cornell box.
+#Generate a cylinder in the cornell box. Add a cap to both ends.
+
+\dontrun{
+generate_cornell() \%>\%
+  add_object(cylinder(x=555/2,y=250,z=555/2,length=300,radius=100, material=metal())) \%>\%
+  add_object(disk(x=555/2,y=400,z=555/2, radius=100, material=metal())) \%>\%
+  add_object(disk(x=555/2,y=100,z=555/2, radius=100, material=metal(),flipped=TRUE)) \%>\%
+  render_scene(lookfrom = c(278,278,-800) ,lookat = c(278,278,0), fov = 40, ambient_light=FALSE,
+               samples=400, parallel=TRUE, clamp_value=5)
+}
+#Rotate the cylinder
+\dontrun{
+generate_cornell() \%>\%
+  add_object(cylinder(x=555/2,y=250,z=555/2,length=300,radius=100, angle=c(0,0,45),
+                      material=lambertian())) \%>\%
+  render_scene(lookfrom = c(278,278,-800) ,lookat = c(278,278,0), fov = 40, ambient_light=FALSE,
+               samples=400, parallel=TRUE, clamp_value=5)
+}
 }

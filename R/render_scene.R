@@ -10,7 +10,7 @@
 #' @param ambient_light Default `FALSE`, unless there are no emitting objects in the scene. 
 #' If `TRUE`, the background will be a gradient varying from `backgroundhigh` directly up (+y) to 
 #' `backgroundlow` directly down (-y).
-#' @param lookfrom Default `c(10,1,0)`. Location of the camera.
+#' @param lookfrom Default `c(0,1,10)`. Location of the camera.
 #' @param lookat Default `c(0,0,0)`. Location where the camera is pointed.
 #' @param camera_up Default `c(0,1,0)`. Vector indicating the "up" position of the camera.
 #' @param aperture Default `0.1`. Aperture of the camera. Higher numbers will increase depth of field.
@@ -118,7 +118,7 @@
 #'}
 #'}
 render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 100, ambient_light = FALSE,
-                        lookfrom = c(10,1,0), lookat = c(0,0,0), camera_up = c(0,1,0), aperture = 0.1, clamp_value = Inf,
+                        lookfrom = c(0,1,10), lookat = c(0,0,0), camera_up = c(0,1,0), aperture = 0.1, clamp_value = Inf,
                         filename = NULL, backgroundhigh = "#80b4ff",backgroundlow = "#ffffff",
                         shutteropen = 0.0, shutterclose = 1.0, focal_distance=NULL, tonemap ="gamma", parallel=FALSE,
                         backgroundimage = NULL,
@@ -155,7 +155,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
   rvec = scene$radius
   shapevec = unlist(lapply(tolower(scene$shape),switch,
                           "sphere" = 1,"xy_rect" = 2, "xz_rect" = 3,"yz_rect" = 4,"box" = 5, "triangle" = 6, 
-                          "obj" = 7, "objcolor" = 8, "disc" = 9, "cylinder" = 10, "ellipsoid" = 11))
+                          "obj" = 7, "objcolor" = 8, "disk" = 9, "cylinder" = 10, "ellipsoid" = 11))
   typevec = unlist(lapply(tolower(scene$type),switch,
                           "lambertian" = 1,"metal" = 2,"dielectric" = 3))
   assertthat::assert_that(tonemap %in% c("gamma","reinhold","uncharted", "hbd"))

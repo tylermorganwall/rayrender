@@ -42,6 +42,9 @@ bool cylinder::hit(const ray& r, float t_min, float t_max, hit_record& rec, rand
     phi = phi < 0 ? phi + 2 * M_PI : phi;
     if(temp < t_max && temp > t_min && 
        temppoint.y() > -length/2 && temppoint.y() < length/2 && phi <= phi_max && phi >= phi_min) {
+      float hitRad = std::sqrt(temppoint.x() * temppoint.x() + temppoint.z() * temppoint.z());
+      temppoint.e[0] *= radius / hitRad;
+      temppoint.e[2] *= radius / hitRad;
       rec.t = temp;
       rec.p = temppoint;
       temppoint.e[1] = 0;
@@ -56,6 +59,9 @@ bool cylinder::hit(const ray& r, float t_min, float t_max, hit_record& rec, rand
     phi = phi < 0 ? phi + 2 * M_PI : phi;
     if(temp < t_max && temp > t_min && 
        temppoint.y() > -length/2 && temppoint.y() < length/2 && phi <= phi_max && phi >= phi_min) {
+      float hitRad = std::sqrt(temppoint.x() * temppoint.x() + temppoint.z() * temppoint.z());
+      temppoint.e[0] *= radius / hitRad;
+      temppoint.e[2] *= radius / hitRad;
       rec.t = temp;
       rec.p = temppoint;
       temppoint.e[1] = 0;

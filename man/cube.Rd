@@ -47,7 +47,7 @@ Cube Object
 generate_cornell() \%>\%
   add_object(cube(x=555/2,y=100,z=555/2,xwidth=200,ywidth=200,zwidth=200,angle=c(0,30,0))) \%>\%
   render_scene(lookfrom = c(278,278,-800) ,lookat = c(278,278,0), fov = 40, ambient_light=FALSE,
-               samples=500, parallel=TRUE, clamp_value=5)
+               samples=400, parallel=TRUE, clamp_value=5)
 }
 #Generate a GOLD cube in the cornell box (it's GOLD!)
 \dontrun{
@@ -55,6 +55,6 @@ generate_cornell() \%>\%
   add_object(cube(x=555/2,y=100,z=555/2,xwidth=200,ywidth=200,zwidth=200,angle=c(0,30,0),
                   material = metal(color="gold", fuzz=0.2))) \%>\%
   render_scene(lookfrom = c(278,278,-800) ,lookat = c(278,278,0), fov = 40, ambient_light=FALSE,
-               samples=500, parallel=TRUE, clamp_value=5)
+               samples=400, parallel=TRUE, clamp_value=5)
 }
 }

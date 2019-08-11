@@ -28,6 +28,7 @@ bool sphere::hit(const ray& r, float t_min, float t_max, hit_record& rec, random
     if(temp < t_max && temp > t_min) {
       rec.t = temp;
       rec.p = r.point_at_parameter(rec.t);
+      rec.p *= radius / rec.p.length(); 
       rec.normal = (rec.p - center) / radius;
       get_sphere_uv(rec.normal, rec.u, rec.v);
       rec.mat_ptr = mat_ptr;
@@ -37,6 +38,7 @@ bool sphere::hit(const ray& r, float t_min, float t_max, hit_record& rec, random
     if(temp < t_max && temp > t_min) {
       rec.t = temp;
       rec.p = r.point_at_parameter(rec.t);
+      rec.p *= radius / rec.p.length(); 
       rec.normal = (rec.p - center) / radius;
       get_sphere_uv(rec.normal, rec.u, rec.v);
       rec.mat_ptr = mat_ptr;
@@ -106,6 +108,7 @@ bool moving_sphere::hit(const ray& r, float t_min, float t_max, hit_record& rec,
     if(temp < t_max && temp > t_min) {
       rec.t = temp;
       rec.p = r.point_at_parameter(rec.t);
+      rec.p *= radius / rec.p.length(); 
       rec.normal = (rec.p - center(r.time())) / radius;
       get_sphere_uv(rec.normal, rec.u, rec.v);
       rec.mat_ptr = mat_ptr;
@@ -115,6 +118,7 @@ bool moving_sphere::hit(const ray& r, float t_min, float t_max, hit_record& rec,
     if(temp < t_max && temp > t_min) {
       rec.t = temp;
       rec.p = r.point_at_parameter(rec.t);
+      rec.p *= radius / rec.p.length(); 
       rec.normal = (rec.p - center(r.time())) / radius;
       get_sphere_uv(rec.normal, rec.u, rec.v);
       rec.mat_ptr = mat_ptr;

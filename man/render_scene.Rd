@@ -5,7 +5,7 @@
 \title{Render Scene}
 \usage{
 render_scene(scene, width = 400, height = 400, fov = 20,
-  samples = 100, ambient_light = FALSE, lookfrom = c(10, 1, 0),
+  samples = 100, ambient_light = FALSE, lookfrom = c(0, 1, 10),
   lookat = c(0, 0, 0), camera_up = c(0, 1, 0), aperture = 0.1,
   clamp_value = Inf, filename = NULL, backgroundhigh = "#80b4ff",
   backgroundlow = "#ffffff", shutteropen = 0, shutterclose = 1,
@@ -27,7 +27,7 @@ render_scene(scene, width = 400, height = 400, fov = 20,
 If `TRUE`, the background will be a gradient varying from `backgroundhigh` directly up (+y) to 
 `backgroundlow` directly down (-y).}
 
-\item{lookfrom}{Default `c(10,1,0)`. Location of the camera.}
+\item{lookfrom}{Default `c(0,1,10)`. Location of the camera.}
 
 \item{lookat}{Default `c(0,0,0)`. Location where the camera is pointed.}
 

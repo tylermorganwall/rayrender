@@ -13,7 +13,7 @@
 #include "triangle.h"
 #include "pdf.h"
 #include "trimesh.h"
-#include "disc.h"
+#include "disk.h"
 #include "cylinder.h"
 #include "ellipsoid.h"
 #include <Rcpp.h>
@@ -147,9 +147,9 @@ hitable *build_scene(IntegerVector& type,
     } else if(shape(i) == 6) {
       center =  vec3(0, 0, 0);
     } else if(shape(i) == 7) {
-      center =  vec3(0, 0, 0);
+      center = vec3(x(i), y(i), z(i));
     } else if(shape(i) == 8) {
-      center =  vec3(0, 0, 0);
+      center = vec3(x(i), y(i), z(i));
     } else if(shape(i) == 9) {
       center = vec3(x(i), y(i), z(i));
     } else if(shape(i) == 10) {
@@ -320,7 +320,7 @@ hitable *build_scene(IntegerVector& type,
       }
     } else if (shape(i) == 9) {
       hitable *entry;
-      entry = new disc(vec3(0,0,0), radius(i), tempvector(prop_len+1), tex);
+      entry = new disk(vec3(0,0,0), radius(i), tempvector(prop_len+1), tex);
       entry = rotation_order(entry, temprotvec, order_rotation);
       if(isgrouped(i)) {
         entry = new translate(entry, center - gpivot);
@@ -434,9 +434,9 @@ hitable* build_imp_sample(IntegerVector& type,
   } else if(shape(i) == 6) {
     center =  vec3(x(i), y(i), z(i));
   } else if(shape(i) == 7) {
-    center =  vec3(0, 0, 0);
+    center = vec3(x(i), y(i), z(i));
   } else if(shape(i) == 8) {
-    center =  vec3(0, 0, 0);
+    center = vec3(x(i), y(i), z(i));
   } else if(shape(i) == 9) {
     center = vec3(x(i), y(i), z(i));
   } else if(shape(i) == 10) {
@@ -525,7 +525,7 @@ hitable* build_imp_sample(IntegerVector& type,
     return(new translate(entry, center + gtrans + vel * shutteropen));
   } else if (shape(i) == 9) {
     hitable *entry;
-    entry = new disc(vec3(0,0,0), radius(i), tempvector(prop_len+1), 0);
+    entry = new disk(vec3(0,0,0), radius(i), tempvector(prop_len+1), 0);
     entry = rotation_order(entry, temprotvec, order_rotation);
     if(isgrouped(i)) {
       entry = new translate(entry, center - gpivot);
