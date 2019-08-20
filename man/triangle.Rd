@@ -48,5 +48,20 @@ Single row of a tibble describing the XZ plane in the scene.
 Triangle Object
 }
 \examples{
-#Generate a purple rectangle in the cornell box.
+#Generate a triangle in the Cornell box.
+\dontrun{
+generate_cornell() \%>\%
+  add_object(triangle(v1 = c(100,100,100), v2 = c(555/2,455,455), v3 = c(455,100,100),
+                      material = lambertian(color="purple"))) \%>\%
+  render_scene(lookfrom = c(278,278,-800) ,lookat = c(278,278,0), fov = 40, ambient_light=FALSE,
+               samples=400, parallel=TRUE, clamp_value=5)
+}
+#Pass individual colors to each vertex:
+\dontrun{
+generate_cornell() \%>\%
+  add_object(triangle(v1 = c(100,100,100), v2 = c(555/2,455,455), v3 = c(455,100,100),
+                      color1 = "green", color2 = "yellow", color3="red")) \%>\%
+  render_scene(lookfrom = c(278,278,-800) ,lookat = c(278,278,0), fov = 40, ambient_light=FALSE,
+               samples=400, parallel=TRUE, clamp_value=5)
+}
 }

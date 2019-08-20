@@ -38,11 +38,26 @@ Similar to the cylinder object, but specified by start and end points.
 \dontrun{
 generate_cornell() \%>\%
   add_object(segment(start = c(100,100,100), end = c(455, 455,455), radius=50)) \%>\%
-  add_object(segment(start = c(455,100,100), end = c(100, 455,455), radius=50)) \%>\%
-  add_object(sphere(x=445,y=100,z=100, radius=50)) \%>\% 
   render_scene(lookfrom = c(278,278,-800) ,lookat = c(278,278,0), fov = 40, ambient_light=FALSE,
-               samples=50, parallel=TRUE, clamp_value=5)
+               samples=400, parallel=TRUE, clamp_value=5)
 }
 
-#Draw a cube:
+#Draw the outline of a cube:
+\dontrun{
+generate_cornell() \%>\%
+  add_object(segment(start = c(100,100,100), end = c(100, 100, 455), radius=10)) \%>\%
+  add_object(segment(start = c(100,100,100), end = c(100, 455, 100), radius=10)) \%>\%
+  add_object(segment(start = c(100,100,100), end = c(455, 100, 100), radius=10)) \%>\%
+  add_object(segment(start = c(100,100,455), end = c(100, 455, 455), radius=10)) \%>\%
+  add_object(segment(start = c(100,100,455), end = c(455, 100, 455), radius=10)) \%>\%
+  add_object(segment(start = c(100,455,455), end = c(100, 455, 100), radius=10)) \%>\%
+  add_object(segment(start = c(100,455,455), end = c(455, 455, 455), radius=10)) \%>\%
+  add_object(segment(start = c(455,455,100), end = c(455, 100, 100), radius=10)) \%>\%
+  add_object(segment(start = c(455,455,100), end = c(455, 455, 455), radius=10)) \%>\%
+  add_object(segment(start = c(455,100,100), end = c(455, 100, 455), radius=10)) \%>\%
+  add_object(segment(start = c(455,100,455), end = c(455, 455, 455), radius=10)) \%>\%
+  add_object(segment(start = c(100,455,100), end = c(455, 455, 100), radius=10)) \%>\%
+  render_scene(lookfrom = c(278,278,-800) ,lookat = c(278,278,0), fov = 40, ambient_light=FALSE,
+               samples=400, parallel=TRUE, clamp_value=5)
+}
 }
