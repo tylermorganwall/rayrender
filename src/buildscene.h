@@ -57,9 +57,10 @@ hitable *build_scene(IntegerVector& type,
                      LogicalVector& isvolume, NumericVector& voldensity,
                      List& order_rotation_list, 
                      LogicalVector& isgrouped, List& group_pivot, List& group_translate,
-                     List& group_angle, List& group_order_rotation,
+                     List& group_angle, List& group_order_rotation, List& group_scale,
                      LogicalVector& tri_normal_bools, LogicalVector& is_tri_color, List& tri_color_vert, 
-                     CharacterVector& fileinfo, random_gen& rng) {
+                     CharacterVector& fileinfo, CharacterVector& filebasedir,
+                     List& scale_list, random_gen& rng) {
   hitable **list = new hitable*[n+1];
   NumericVector tempvector;
   NumericVector tempchecker;
@@ -71,7 +72,9 @@ hitable *build_scene(IntegerVector& type,
   NumericVector temp_gtrans;
   NumericVector temp_gorder;
   NumericVector temp_gangle;
+  NumericVector temp_gscale;
   NumericVector temp_tri_color;
+  NumericVector temp_scales;
   vec3 gpivot;
   vec3 gtrans;
   vec3 gorder;
@@ -89,11 +92,21 @@ hitable *build_scene(IntegerVector& type,
     temprotvec = as<NumericVector>(angle(i));
     temp_tri_color = as<NumericVector>(tri_color_vert(i));
     order_rotation = as<NumericVector>(order_rotation_list(i));
+    temp_scales = as<NumericVector>(scale_list(i));
+    bool is_scaled = false;
+    bool is_group_scaled = false;
+    if(temp_scales[0] != 1 || temp_scales[1] != 1 || temp_scales[2] != 1) {
+      is_scaled = true;
+    }
     if(isgrouped(i)) {
       temp_gpivot = as<NumericVector>(group_pivot(i));
       temp_gangle = as<NumericVector>(group_angle(i));
       temp_gorder = as<NumericVector>(group_order_rotation(i));
       temp_gtrans = as<NumericVector>(group_translate(i));
+      temp_gscale = as<NumericVector>(group_scale(i));
+      if(temp_gscale[0] != 1 || temp_gscale[1] != 1 || temp_gscale[2] != 1) {
+        is_group_scaled = true;
+      }
       gpivot = vec3(temp_gpivot(0),temp_gpivot(1),temp_gpivot(2));
       gtrans = vec3(temp_gtrans(0),temp_gtrans(1),temp_gtrans(2));
     } else {
@@ -160,6 +173,9 @@ hitable *build_scene(IntegerVector& type,
     //Generate objects
     if (shape(i) == 1) {
       hitable *entry = new sphere(vec3(0,0,0), radius(i), tex);
+      if(is_scaled) {
+        entry = new scale(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
+      }
       entry = rotation_order(entry, temprotvec, order_rotation);
       if(isgrouped(i)) {
         entry = new translate(entry, center - gpivot);
@@ -168,10 +184,16 @@ hitable *build_scene(IntegerVector& type,
       }
       if(!moving(i)) {
         entry = new translate(entry, center + gtrans + vel * shutteropen);
+        if(is_group_scaled) {
+          entry = new scale(entry, vec3(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
+        }
       } else {
         entry = new moving_sphere(center + vel * shutteropen, 
                                   center + vel * shutterclose, 
                                   shutteropen, shutterclose, radius(i), tex);
+        if(is_group_scaled) {
+          entry = new scale(entry, vec3(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
+        }
       }
       if(isflipped(i)) {
         entry = new flip_normals(entry);
@@ -185,6 +207,9 @@ hitable *build_scene(IntegerVector& type,
       hitable *entry = new xy_rect(-tempvector(prop_len+2)/2,tempvector(prop_len+2)/2,
                                    -tempvector(prop_len+4)/2,tempvector(prop_len+4)/2,
                                    0, tex);
+      if(is_scaled) {
+        entry = new scale(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
+      }
       entry = rotation_order(entry, temprotvec, order_rotation);
       if(isgrouped(i)) {
         entry = new translate(entry, center - gpivot);
@@ -192,6 +217,9 @@ hitable *build_scene(IntegerVector& type,
         entry = new translate(entry, -center + gpivot );
       }
       entry = new translate(entry,center + gtrans + vel * shutteropen);
+      if(is_group_scaled) {
+        entry = new scale(entry, vec3(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
+      }
       if(isflipped(i)) {
         list[i] = new flip_normals(entry);
       } else {
@@ -201,6 +229,9 @@ hitable *build_scene(IntegerVector& type,
       hitable *entry = new xz_rect(-tempvector(prop_len+2)/2,tempvector(prop_len+2)/2,
                                    -tempvector(prop_len+4)/2,tempvector(prop_len+4)/2,
                                    0, tex);
+      if(is_scaled) {
+        entry = new scale(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
+      }
       entry = rotation_order(entry, temprotvec, order_rotation);
       if(isgrouped(i)) {
         entry = new translate(entry, center - gpivot);
@@ -208,6 +239,9 @@ hitable *build_scene(IntegerVector& type,
         entry = new translate(entry, -center + gpivot );
       }
       entry = new translate(entry,center + gtrans + vel * shutteropen);
+      if(is_group_scaled) {
+        entry = new scale(entry, vec3(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
+      }
       if(isflipped(i)) {
         list[i] = new flip_normals(entry);
       } else {
@@ -217,6 +251,9 @@ hitable *build_scene(IntegerVector& type,
       hitable *entry = new yz_rect(-tempvector(prop_len+2)/2,tempvector(prop_len+2)/2,
                                    -tempvector(prop_len+4)/2,tempvector(prop_len+4)/2,
                                    0, tex);
+      if(is_scaled) {
+        entry = new scale(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
+      }
       entry = rotation_order(entry, temprotvec, order_rotation);
       if(isgrouped(i)) {
         entry = new translate(entry, center - gpivot);
@@ -224,6 +261,9 @@ hitable *build_scene(IntegerVector& type,
         entry = new translate(entry, -center + gpivot );
       }
       entry = new translate(entry,center + gtrans + vel * shutteropen);
+      if(is_group_scaled) {
+        entry = new scale(entry, vec3(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
+      }
       if(isflipped(i)) {
         list[i] = new flip_normals(entry);
       } else {
@@ -233,6 +273,9 @@ hitable *build_scene(IntegerVector& type,
       hitable *entry = new box(-vec3(tempvector(prop_len+1),tempvector(prop_len+2),tempvector(prop_len+3))/2, 
                                vec3(tempvector(prop_len+1),tempvector(prop_len+2),tempvector(prop_len+3))/2, 
                                tex);
+      if(is_scaled) {
+        entry = new scale(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
+      }
       entry = rotation_order(entry, temprotvec, order_rotation);
       if(isgrouped(i)) {
         entry = new translate(entry, center - gpivot);
@@ -240,6 +283,9 @@ hitable *build_scene(IntegerVector& type,
         entry = new translate(entry, -center + gpivot );
       }
       entry = new translate(entry, center + gtrans + vel * shutteropen);
+      if(is_group_scaled) {
+        entry = new scale(entry, vec3(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
+      }
       if(isvolume(i)) {
         if(!isnoise(i)) {
           list[i] = new constant_medium(entry,voldensity(i), new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))));
@@ -269,6 +315,9 @@ hitable *build_scene(IntegerVector& type,
                             vec3(tempvector(prop_len+7),tempvector(prop_len+8),tempvector(prop_len+9)),
                             tex);
       }
+      if(is_scaled) {
+        entry = new scale(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
+      }
       entry = rotation_order(entry, temprotvec, order_rotation);
       if(isgrouped(i)) {
         entry = new translate(entry, center - gpivot);
@@ -276,6 +325,9 @@ hitable *build_scene(IntegerVector& type,
         entry = new translate(entry, -center + gpivot );
       }
       entry = new translate(entry, center + gtrans + vel * shutteropen);
+      if(is_group_scaled) {
+        entry = new scale(entry, vec3(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
+      }
       if(isflipped(i)) {
         list[i] = new flip_normals(entry);
       } else {
@@ -284,10 +336,14 @@ hitable *build_scene(IntegerVector& type,
     } else if (shape(i) == 7) {
       hitable *entry;
       std::string objfilename = Rcpp::as<std::string>(fileinfo(i));
-      entry = new trimesh(objfilename,
+      std::string objbasedirname = Rcpp::as<std::string>(filebasedir(i));
+      entry = new trimesh(objfilename, objbasedirname, 
                          tex,
                          tempvector(prop_len+1),
                          shutteropen, shutterclose, rng);
+      if(is_scaled) {
+        entry = new scale(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
+      }
       entry = rotation_order(entry, temprotvec, order_rotation);
       if(isgrouped(i)) {
         entry = new translate(entry, center - gpivot);
@@ -295,6 +351,9 @@ hitable *build_scene(IntegerVector& type,
         entry = new translate(entry, -center + gpivot );
       }
       entry = new translate(entry, center + gtrans + vel * shutteropen);
+      if(is_group_scaled) {
+        entry = new scale(entry, vec3(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
+      }
       if(isflipped(i)) {
         list[i] = new flip_normals(entry);
       } else {
@@ -303,9 +362,13 @@ hitable *build_scene(IntegerVector& type,
     } else if (shape(i) == 8) {
       hitable *entry;
       std::string objfilename = Rcpp::as<std::string>(fileinfo(i));
-      entry = new trimesh(objfilename,
+      std::string objbasedirname = Rcpp::as<std::string>(filebasedir(i));
+      entry = new trimesh(objfilename, objbasedirname, 
                           tempvector(prop_len+1),
                           shutteropen, shutterclose, rng);
+      if(is_scaled) {
+        entry = new scale(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
+      }
       entry = rotation_order(entry, temprotvec, order_rotation);
       if(isgrouped(i)) {
         entry = new translate(entry, center - gpivot);
@@ -313,6 +376,9 @@ hitable *build_scene(IntegerVector& type,
         entry = new translate(entry, -center + gpivot );
       }
       entry = new translate(entry, center + gtrans + vel * shutteropen);
+      if(is_group_scaled) {
+        entry = new scale(entry, vec3(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
+      }
       if(isflipped(i)) {
         list[i] = new flip_normals(entry);
       } else {
@@ -321,6 +387,9 @@ hitable *build_scene(IntegerVector& type,
     } else if (shape(i) == 9) {
       hitable *entry;
       entry = new disk(vec3(0,0,0), radius(i), tempvector(prop_len+1), tex);
+      if(is_scaled) {
+        entry = new scale(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
+      }
       entry = rotation_order(entry, temprotvec, order_rotation);
       if(isgrouped(i)) {
         entry = new translate(entry, center - gpivot);
@@ -328,6 +397,9 @@ hitable *build_scene(IntegerVector& type,
         entry = new translate(entry, -center + gpivot );
       }
       entry = new translate(entry, center + gtrans + vel * shutteropen);
+      if(is_group_scaled) {
+        entry = new scale(entry, vec3(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
+      }
       if(isflipped(i)) {
         list[i] = new flip_normals(entry);
       } else {
@@ -336,6 +408,9 @@ hitable *build_scene(IntegerVector& type,
     } else if (shape(i) == 10) {
       hitable *entry = new cylinder(radius(i), tempvector(prop_len+1), 
                                     tempvector(prop_len+2), tempvector(prop_len+3), tex);
+      if(is_scaled) {
+        entry = new scale(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
+      }
       entry = rotation_order(entry, temprotvec, order_rotation);
       if(isgrouped(i)) {
         entry = new translate(entry, center - gpivot);
@@ -343,6 +418,9 @@ hitable *build_scene(IntegerVector& type,
         entry = new translate(entry, -center + gpivot );
       }
       entry = new translate(entry, center + gtrans + vel * shutteropen);
+      if(is_group_scaled) {
+        entry = new scale(entry, vec3(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
+      }
       if(isflipped(i)) {
         entry = new flip_normals(entry);
       }
@@ -351,6 +429,9 @@ hitable *build_scene(IntegerVector& type,
       hitable *entry = new ellipsoid(vec3(0,0,0), radius(i), 
                                      vec3(tempvector(prop_len + 1), tempvector(prop_len + 2), tempvector(prop_len + 3)),
                                      tex);
+      if(is_scaled) {
+        entry = new scale(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
+      }
       entry = rotation_order(entry, temprotvec, order_rotation);
       if(isgrouped(i)) {
         entry = new translate(entry, center - gpivot);
@@ -358,6 +439,9 @@ hitable *build_scene(IntegerVector& type,
         entry = new translate(entry, -center + gpivot );
       }
       entry = new translate(entry, center + gtrans + vel * shutteropen);
+      if(is_group_scaled) {
+        entry = new scale(entry, vec3(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
+      }
       if(isflipped(i)) {
         entry = new flip_normals(entry);
       }
@@ -380,8 +464,9 @@ hitable* build_imp_sample(IntegerVector& type,
                           List& angle, int i, List& order_rotation_list,
                           LogicalVector& isgrouped, 
                           List& group_pivot, List& group_translate,
-                          List& group_angle, List& group_order_rotation,
-                          CharacterVector& fileinfo, random_gen& rng) {
+                          List& group_angle, List& group_order_rotation, List& group_scale,
+                          CharacterVector& fileinfo, CharacterVector& filebasedir,
+                          List& scale_list, random_gen& rng) {
   NumericVector tempvector;
   NumericVector temprotvec;
   NumericVector tempvel;
@@ -390,6 +475,8 @@ hitable* build_imp_sample(IntegerVector& type,
   NumericVector temp_gtrans;
   NumericVector temp_gorder;
   NumericVector temp_gangle;
+  NumericVector temp_gscale;
+  NumericVector temp_scales;
   vec3 gpivot;
   vec3 gtrans;
   vec3 gorder;
@@ -404,6 +491,12 @@ hitable* build_imp_sample(IntegerVector& type,
   vel = vec3(tempvel(0),tempvel(1),tempvel(2));
   temprotvec =  as<NumericVector>(angle(i));
   order_rotation = as<NumericVector>(order_rotation_list(i));
+  temp_scales = as<NumericVector>(scale_list(i));
+  bool is_scaled = false;
+  bool is_group_scaled = false;
+  if(temp_scales[0] != 1 || temp_scales[1] != 1 || temp_scales[2] != 1) {
+    is_scaled = true;
+  }
   prop_len=2;
   center =  vec3(x(i), y(i), z(i));
   if(isgrouped(i)) {
@@ -411,6 +504,10 @@ hitable* build_imp_sample(IntegerVector& type,
     temp_gangle = as<NumericVector>(group_angle(i));
     temp_gorder = as<NumericVector>(group_order_rotation(i));
     temp_gtrans = as<NumericVector>(group_translate(i));
+    temp_gscale = as<NumericVector>(group_scale(i));
+    if(temp_gscale[0] != 1 || temp_gscale[1] != 1 || temp_gscale[2] != 1) {
+      is_group_scaled = true;
+    }
     gpivot = vec3(temp_gpivot(0),temp_gpivot(1),temp_gpivot(2));
     gtrans = vec3(temp_gtrans(0),temp_gtrans(1),temp_gtrans(2));
   } else{
@@ -447,113 +544,193 @@ hitable* build_imp_sample(IntegerVector& type,
   
   if(shape(i) == 1) {
     hitable *entry = new sphere(vec3(0,0,0), radius(i), 0);
+    if(is_scaled) {
+      entry = new scale(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
+    }
     if(isgrouped(i)) {
+      if(is_group_scaled) {
+        entry = new scale(entry, vec3(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
+      }
       entry = new translate(entry, center - gpivot);
       entry = rotation_order(entry, temp_gangle, temp_gorder);
       entry = new translate(entry, -center + gpivot );
     }
-    return(new translate(entry, center + gtrans + vel * shutteropen));
+    entry = new translate(entry, center + gtrans + vel * shutteropen);
+    if(is_group_scaled) {
+      entry = new scale(entry, vec3(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
+    }
+    return(entry);
   } else if (shape(i) == 2) {
     hitable *entry = new xy_rect(-tempvector(prop_len+2)/2,tempvector(prop_len+2)/2,
                                  -tempvector(prop_len+4)/2,tempvector(prop_len+4)/2,
                                  0, 0);
+    if(is_scaled) {
+      entry = new scale(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
+    }
     entry = rotation_order(entry, temprotvec, order_rotation);
     if(isgrouped(i)) {
+      if(is_group_scaled) {
+        entry = new scale(entry, vec3(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
+      }
       entry = new translate(entry, center - gpivot);
       entry = rotation_order(entry, temp_gangle, temp_gorder);
       entry = new translate(entry, -center + gpivot );
     }
-    return(new translate(entry, center + gtrans + vel * shutteropen));
+    entry = new translate(entry, center + gtrans + vel * shutteropen);
+    if(is_group_scaled) {
+      entry = new scale(entry, vec3(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
+    }
+    return(entry);
   } else if (shape(i) == 3) {
     hitable *entry = new xz_rect(-tempvector(prop_len+2)/2,tempvector(prop_len+2)/2,
                                  -tempvector(prop_len+4)/2,tempvector(prop_len+4)/2,
                                  0, 0);
+    if(is_scaled) {
+      entry = new scale(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
+    }
     entry = rotation_order(entry, temprotvec, order_rotation);
     if(isgrouped(i)) {
+      if(is_group_scaled) {
+        entry = new scale(entry, vec3(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
+      }
       entry = new translate(entry, center - gpivot);
       entry = rotation_order(entry, temp_gangle, temp_gorder);
       entry = new translate(entry, -center + gpivot );
     }
-    return(new translate(entry, center + gtrans + vel * shutteropen));
+    entry = new translate(entry, center + gtrans + vel * shutteropen);
+    if(is_group_scaled) {
+      entry = new scale(entry, vec3(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
+    }
+    return(entry);
   } else if (shape(i) == 4) {
     hitable *entry = new yz_rect(-tempvector(prop_len+2)/2,tempvector(prop_len+2)/2,
                                  -tempvector(prop_len+4)/2,tempvector(prop_len+4)/2,
                                  0, 0);
+    if(is_scaled) {
+      entry = new scale(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
+    }
     entry = rotation_order(entry, temprotvec, order_rotation);
     if(isgrouped(i)) {
       entry = new translate(entry, center - gpivot);
       entry = rotation_order(entry, temp_gangle, temp_gorder);
       entry = new translate(entry, -center + gpivot );
     }
-    return(new translate(entry, center + gtrans + vel * shutteropen));
+    entry = new translate(entry, center + gtrans + vel * shutteropen);
+    if(is_group_scaled) {
+      entry = new scale(entry, vec3(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
+    }
+    return(entry);
   } else if (shape(i) == 5) {
     hitable *entry = new box(-vec3(tempvector(prop_len+1),tempvector(prop_len+2),tempvector(prop_len+3))/2, 
                              vec3(tempvector(prop_len+1),tempvector(prop_len+2),tempvector(prop_len+3))/2, 
                              0);
+    if(is_scaled) {
+      entry = new scale(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
+    }
     entry = rotation_order(entry, temprotvec, order_rotation);
     if(isgrouped(i)) {
       entry = new translate(entry, center - gpivot);
       entry = rotation_order(entry, temp_gangle, temp_gorder);
       entry = new translate(entry, -center + gpivot );
     }
-    return(new translate(entry, center + gtrans + vel * shutteropen));
+    entry = new translate(entry, center + gtrans + vel * shutteropen);
+    if(is_group_scaled) {
+      entry = new scale(entry, vec3(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
+    }
+    return(entry);
   } else if (shape(i) == 6) {
     hitable *entry = new triangle(vec3(tempvector(prop_len+1),tempvector(prop_len+2),tempvector(prop_len+3)),
                                   vec3(tempvector(prop_len+4),tempvector(prop_len+5),tempvector(prop_len+6)),
                                   vec3(tempvector(prop_len+7),tempvector(prop_len+8),tempvector(prop_len+9)),
                                   0);
+    if(is_scaled) {
+      entry = new scale(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
+    }
     entry = rotation_order(entry, temprotvec, order_rotation);
     if(isgrouped(i)) {
       entry = new translate(entry, center - gpivot);
       entry = rotation_order(entry, temp_gangle, temp_gorder);
       entry = new translate(entry, -center + gpivot );
     }
-    return(new translate(entry, center + gtrans + vel * shutteropen));
+    entry = new translate(entry, center + gtrans + vel * shutteropen);
+    if(is_group_scaled) {
+      entry = new scale(entry, vec3(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
+    }
+    return(entry);
   } else if (shape(i) == 7 || shape(i) == 8) {
     hitable *entry;
     std::string objfilename = Rcpp::as<std::string>(fileinfo(i));
-    entry = new trimesh(objfilename,
+    std::string objbasedirname = Rcpp::as<std::string>(filebasedir(i));
+    entry = new trimesh(objfilename, objbasedirname,
                         0,
                         tempvector(prop_len+1),
                         shutteropen, shutterclose, rng);
+    if(is_scaled) {
+      entry = new scale(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
+    }
     entry = rotation_order(entry, temprotvec, order_rotation);
     if(isgrouped(i)) {
       entry = new translate(entry, center - gpivot);
       entry = rotation_order(entry, temp_gangle, temp_gorder);
       entry = new translate(entry, -center + gpivot );
     }
-    return(new translate(entry, center + gtrans + vel * shutteropen));
+    entry = new translate(entry, center + gtrans + vel * shutteropen);
+    if(is_group_scaled) {
+      entry = new scale(entry, vec3(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
+    }
+    return(entry);
   } else if (shape(i) == 9) {
     hitable *entry;
     entry = new disk(vec3(0,0,0), radius(i), tempvector(prop_len+1), 0);
+    if(is_scaled) {
+      entry = new scale(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
+    }
     entry = rotation_order(entry, temprotvec, order_rotation);
     if(isgrouped(i)) {
       entry = new translate(entry, center - gpivot);
       entry = rotation_order(entry, temp_gangle, temp_gorder);
       entry = new translate(entry, -center + gpivot );
     }
-    return(new translate(entry, center + gtrans + vel * shutteropen));
+    entry = new translate(entry, center + gtrans + vel * shutteropen);
+    if(is_group_scaled) {
+      entry = new scale(entry, vec3(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
+    }
+    return(entry);
   } else if (shape(i) == 10) {
     hitable *entry = new cylinder(radius(i), tempvector(prop_len+1), 
                                   tempvector(prop_len+2), tempvector(prop_len+3), 0);
+    if(is_scaled) {
+      entry = new scale(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
+    }
     entry = rotation_order(entry, temprotvec, order_rotation);
     if(isgrouped(i)) {
       entry = new translate(entry, center - gpivot);
       entry = rotation_order(entry, temp_gangle, temp_gorder);
       entry = new translate(entry, -center + gpivot );
     }
-    return(new translate(entry, center + gtrans + vel * shutteropen));
+    entry = new translate(entry, center + gtrans + vel * shutteropen);
+    if(is_group_scaled) {
+      entry = new scale(entry, vec3(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
+    }
+    return(entry);
   } else {
     hitable *entry = new ellipsoid(vec3(0,0,0), radius(i), 
                                    vec3(tempvector(prop_len + 1), tempvector(prop_len + 2), tempvector(prop_len + 3)),
                                    0);
+    if(is_scaled) {
+      entry = new scale(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
+    }
     entry = rotation_order(entry, temprotvec, order_rotation);
     if(isgrouped(i)) {
       entry = new translate(entry, center - gpivot);
       entry = rotation_order(entry, temp_gangle, temp_gorder);
       entry = new translate(entry, -center + gpivot );
     }
-    return(new translate(entry, center + gtrans + vel * shutteropen));
+    entry = new translate(entry, center + gtrans + vel * shutteropen);
+    if(is_group_scaled) {
+      entry = new scale(entry, vec3(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
+    }
+    return(entry);
   }
 }
 

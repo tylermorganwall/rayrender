@@ -98,6 +98,47 @@ bool translate::bounding_box(float t0, float t1, aabb& box) const {
   }
 }
 
+class scale : public hitable {
+public: 
+  scale(hitable *p, const vec3& scale_factor) : ptr(p), scale_factor(scale_factor) {
+    inv_scale.e[0] = 1 / scale_factor.x();
+    inv_scale.e[1] = 1 / scale_factor.y();
+    inv_scale.e[2] = 1 / scale_factor.z();
+  }
+  virtual bool hit(const ray& r, float t_min, float t_max, hit_record& rec, random_gen& rng);
+  virtual bool bounding_box(float t0, float t1, aabb& box) const;
+  float pdf_value(const vec3& o, const vec3& v, random_gen& rng) {
+    return(ptr->pdf_value(o * inv_scale, v, rng));
+  }
+  vec3 random(const vec3& o, random_gen& rng) {
+    return(ptr->random(o * inv_scale, rng));
+  }
+  hitable *ptr;
+  vec3 scale_factor;
+  vec3 inv_scale;
+};
+
+bool scale::hit(const ray& r, float t_min, float t_max, hit_record& rec, random_gen& rng) {
+  ray scaled_r(r.origin() * inv_scale, r.direction() * inv_scale, r.time());
+  if(ptr->hit(scaled_r, t_min, t_max, rec, rng)) {
+    rec.p *= scale_factor;
+    rec.normal *= scale_factor;
+    rec.normal.make_unit_vector();
+    return(true);
+  } else {
+    return(false);
+  }
+}
+
+bool scale::bounding_box(float t0, float t1, aabb& box) const {
+  if(ptr->bounding_box(t0,t1,box)) {
+    box = aabb(box.min() * scale_factor, box.max() * scale_factor);
+    return(true);
+  } else {
+    return(false);
+  }
+}
+
 class rotate_y : public hitable {
 public:
   rotate_y(hitable *p, float angle);

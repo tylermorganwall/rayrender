@@ -189,11 +189,11 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
                       bool parallel, LogicalVector& implicit_sample, List& order_rotation_list,
                       float clampval,
                       LogicalVector& isgrouped, List& group_pivot, List& group_translate,
-                      List& group_angle, List& group_order_rotation, 
+                      List& group_angle, List& group_order_rotation, List& group_scale,
                       LogicalVector& tri_normal_bools, LogicalVector& is_tri_color, List& tri_color_vert,
-                      CharacterVector& fileinfo, int toneval,
+                      CharacterVector& fileinfo, CharacterVector& filebasedir, int toneval,
                       bool progress_bar, int numbercores, int debugval, 
-                      bool hasbackground, CharacterVector& background) {
+                      bool hasbackground, CharacterVector& background, List& scale_list) {
   NumericMatrix routput(nx,ny);
   NumericMatrix goutput(nx,ny);
   NumericMatrix boutput(nx,ny);
@@ -226,9 +226,10 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
                                   isflipped,
                                   isvolume, voldensity, order_rotation_list, 
                                   isgrouped, group_pivot, group_translate,
-                                  group_angle, group_order_rotation, 
-                                  tri_normal_bools, is_tri_color, tri_color_vert, fileinfo,
-                                  rng);
+                                  group_angle, group_order_rotation, group_scale,
+                                  tri_normal_bools, is_tri_color, tri_color_vert, 
+                                  fileinfo, filebasedir, 
+                                  scale_list, rng);
   int numbertosample = 0;
   for(int i = 0; i < implicit_sample.size(); i++) {
     if(implicit_sample(i)) {
@@ -245,8 +246,8 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
                                n, shutteropen, shutterclose,
                                angle, i, order_rotation_list,
                                isgrouped, group_pivot, group_translate,
-                               group_angle, group_order_rotation,
-                               fileinfo, rng);
+                               group_angle, group_order_rotation, group_scale,
+                               fileinfo, filebasedir, scale_list, rng);
       counter++;
     }
   }

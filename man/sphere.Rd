@@ -6,7 +6,7 @@
 \usage{
 sphere(x = 0, y = 0, z = 0, radius = 1, material = lambertian(),
   angle = c(0, 0, 0), order_rotation = c(1, 2, 3), velocity = c(0, 0,
-  0), flipped = FALSE)
+  0), flipped = FALSE, scale = c(1, 1, 1))
 }
 \arguments{
 \item{x}{Default `0`. x-coordinate of the center of the sphere.}
@@ -17,16 +17,18 @@ sphere(x = 0, y = 0, z = 0, radius = 1, material = lambertian(),
 
 \item{radius}{Default `1`. Radius of the sphere.}
 
-\item{material}{Default  \code{\link{lambertian}}.The material, called from one of the material 
+\item{material}{Default  \code{\link{lambertian}}. The material, called from one of the material 
 functions \code{\link{lambertian}}, \code{\link{metal}}, or \code{\link{dielectric}}.}
 
-\item{angle}{Default `c(0,0,0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.}
+\item{angle}{Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.}
 
-\item{order_rotation}{Default `c(1,2,3)`. The order to apply the rotations, referring to "x", "y", and "z".}
+\item{order_rotation}{Default `c(1, 2, 3)`. The order to apply the rotations, referring to "x", "y", and "z".}
 
-\item{velocity}{Default `c(0,0,0)`. Velocity of the sphere, used for motion blur.}
+\item{velocity}{Default `c(0, 0, 0)`. Velocity of the sphere, used for motion blur.}
 
 \item{flipped}{Default `FALSE`. Whether to flip the normals.}
+
+\item{scale}{Default `c(1,1,1)`. Scale transformation in the x, y, and z directions.}
 }
 \value{
 Single row of a tibble describing the sphere in the scene.
@@ -38,25 +40,26 @@ Sphere Object
 #Generate a sphere in the cornell box.
 \dontrun{
 generate_cornell() \%>\%
-  add_object(sphere(x=555/2,y=555/2,z=555/2,radius=100)) \%>\%
-  render_scene(lookfrom = c(278,278,-800) ,lookat = c(278,278,0), fov = 40, ambient_light=FALSE,
-               samples=400, parallel=TRUE, clamp_value=5)
+  add_object(sphere(x = 555/2, y = 555/2, z = 555/2, radius = 100)) \%>\%
+  render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
+               ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
 }
 
-#Generate a GOLD sphere in the cornell box (it's GOLD!)
+#Generate a gold sphere in the cornell box
 \dontrun{
 generate_cornell() \%>\%
-  add_object(sphere(x=555/2,y=100,z=555/2,radius=100,material=metal(color="gold",fuzz=0.2))) \%>\%
-  render_scene(lookfrom = c(278,278,-800) ,lookat = c(278,278,0), fov = 40, ambient_light=FALSE,
-               samples=400, parallel=TRUE, clamp_value=5)
+  add_object(sphere(x = 555/2, y = 100, z = 555/2, radius = 100, 
+                    material = metal(color = "gold", fuzz = 0.2))) \%>\%
+  render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
+               ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
 }
   
 #Add motion blur and show the sphere moving
 \dontrun{
 generate_cornell() \%>\%
-  add_object(sphere(x=555/2,y=100,z=555/2,radius=100,
-             material=metal(color="gold",fuzz=0.2),velocity=c(50,0,0))) \%>\%
-  render_scene(lookfrom = c(278,278,-800) ,lookat = c(278,278,0), fov = 40, ambient_light=FALSE,
-               samples=400, parallel=TRUE, clamp_value=5)
+  add_object(sphere(x = 555/2, y = 100, z = 555/2, radius = 100,
+             material = metal(color = "gold", fuzz = 0.2), velocity = c(50, 0, 0))) \%>\%
+  render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
+               ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
 }
 }

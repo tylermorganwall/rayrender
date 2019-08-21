@@ -8,6 +8,7 @@
 #' applied in the order specified in `order_rotation`.
 #' @param group_order_rotation Default `c(1,2,3)`. The order to apply the rotations, 
 #' referring to "x", "y", and "z".
+#' @param group_scale Default `c(1,1,1)`. Scaling factor for x, y, and z directions for all objects in group.
 #'
 #' @return Tibble of grouped object locations and properties.
 #' @export
@@ -43,7 +44,8 @@
 #'              samples=500, fov=50, parallel=TRUE, clamp_value=5)
 #' }
 group_objects = function(scene, pivot_point=c(0,0,0), group_translate = c(0,0,0),
-                         group_angle = c(0,0,0), group_order_rotation = c(1,2,3)) {
+                         group_angle = c(0,0,0), group_order_rotation = c(1,2,3),
+                         group_scale = c(1,1,1)) {
   if(missing(pivot_point)) {
     pivot_point = c(mean(scene$x), mean(scene$y), mean(scene$z))
   }
@@ -55,5 +57,6 @@ group_objects = function(scene, pivot_point=c(0,0,0), group_translate = c(0,0,0)
   scene$group_translate = list(group_translate)
   scene$group_angle = list(group_angle)
   scene$group_order_rotation = list(group_order_rotation)
+  scene$group_scale = list(group_scale)
   return(scene)
 }

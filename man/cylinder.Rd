@@ -7,7 +7,7 @@
 cylinder(x = 0, y = 0, z = 0, radius = 1, length = 1,
   phi_min = 0, phi_max = 360, material = lambertian(), angle = c(0,
   0, 0), order_rotation = c(1, 2, 3), velocity = c(0, 0, 0),
-  flipped = FALSE)
+  flipped = FALSE, scale = c(1, 1, 1))
 }
 \arguments{
 \item{x}{Default `0`. x-coordinate of the center of the cylinder}
@@ -27,13 +27,15 @@ cylinder(x = 0, y = 0, z = 0, radius = 1, length = 1,
 \item{material}{Default  \code{\link{lambertian}}.The material, called from one of the material 
 functions \code{\link{lambertian}}, \code{\link{metal}}, or \code{\link{dielectric}}.}
 
-\item{angle}{Default `c(0,0,0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.}
+\item{angle}{Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.}
 
-\item{order_rotation}{Default `c(1,2,3)`. The order to apply the rotations, referring to "x", "y", and "z".}
+\item{order_rotation}{Default `c(1, 2, 3)`. The order to apply the rotations, referring to "x", "y", and "z".}
 
-\item{velocity}{Default `c(0,0,0)`. Velocity of the cylinder, used for motion blur.}
+\item{velocity}{Default `c(0, 0, 0)`. Velocity of the cylinder, used for motion blur.}
 
 \item{flipped}{Default `FALSE`. Whether to flip the normals.}
+
+\item{scale}{Default `c(1,1,1)`. Scale transformation in the x, y, and z directions.}
 }
 \value{
 Single row of a tibble describing the sphere in the scene.
@@ -46,18 +48,22 @@ Cylinder Object
 
 \dontrun{
 generate_cornell() \%>\%
-  add_object(cylinder(x=555/2,y=250,z=555/2,length=300,radius=100, material=metal())) \%>\%
-  add_object(disk(x=555/2,y=400,z=555/2, radius=100, material=metal())) \%>\%
-  add_object(disk(x=555/2,y=100,z=555/2, radius=100, material=metal(),flipped=TRUE)) \%>\%
-  render_scene(lookfrom = c(278,278,-800) ,lookat = c(278,278,0), fov = 40, ambient_light=FALSE,
-               samples=400, parallel=TRUE, clamp_value=5)
+  add_object(cylinder(x = 555/2, y = 250, z = 555/2, 
+                      length = 300, radius = 100, material = metal())) \%>\%
+  add_object(disk(x = 555/2, y = 400, z = 555/2, 
+                  radius = 100, material = metal())) \%>\%
+  add_object(disk(x = 555/2, y = 100, z = 555/2, 
+                  radius = 100, material = metal(), flipped = TRUE)) \%>\%
+  render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
+               ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
 }
 #Rotate the cylinder
 \dontrun{
 generate_cornell() \%>\%
-  add_object(cylinder(x=555/2,y=250,z=555/2,length=300,radius=100, angle=c(0,0,45),
-                      material=lambertian())) \%>\%
-  render_scene(lookfrom = c(278,278,-800) ,lookat = c(278,278,0), fov = 40, ambient_light=FALSE,
-               samples=400, parallel=TRUE, clamp_value=5)
+  add_object(cylinder(x = 555/2, y = 250, z = 555/2, 
+                      length = 300, radius = 100, angle = c(0, 0, 45),
+                      material = lambertian())) \%>\%
+  render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
+               ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
 }
 }

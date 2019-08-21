@@ -6,12 +6,12 @@
 \usage{
 segment(start = c(0, -1, 0), end = c(0, 1, 0), radius = 1,
   phi_min = 0, phi_max = 360, material = lambertian(),
-  velocity = c(0, 0, 0), flipped = FALSE)
+  velocity = c(0, 0, 0), flipped = FALSE, scale = c(1, 1, 1))
 }
 \arguments{
-\item{start}{Default `c(0,-1,0)`. Start point of the cylinder segment, specifing `x`, `y`, `z`.}
+\item{start}{Default `c(0, -1, 0)`. Start point of the cylinder segment, specifing `x`, `y`, `z`.}
 
-\item{end}{Default `c(0,1,0)`. End point of the cylinder segment, specifing `x`, `y`, `z`.}
+\item{end}{Default `c(0, 1, 0)`. End point of the cylinder segment, specifing `x`, `y`, `z`.}
 
 \item{radius}{Default `1`. Radius of the segment.}
 
@@ -22,9 +22,12 @@ segment(start = c(0, -1, 0), end = c(0, 1, 0), radius = 1,
 \item{material}{Default  \code{\link{lambertian}}.The material, called from one of the material 
 functions \code{\link{lambertian}}, \code{\link{metal}}, or \code{\link{dielectric}}.}
 
-\item{velocity}{Default `c(0,0,0)`. Velocity of the segment, used for motion blur.}
+\item{velocity}{Default `c(0, 0, 0)`. Velocity of the segment, used for motion blur.}
 
 \item{flipped}{Default `FALSE`. Whether to flip the normals.}
+
+\item{scale}{Default `c(1,1,1)`. Scale transformation in the x, y, and z directions. Note: this will 
+change the stated start/end position of the segment.}
 }
 \value{
 Single row of a tibble describing the sphere in the scene.
@@ -34,30 +37,29 @@ Similar to the cylinder object, but specified by start and end points.
 }
 \examples{
 #Generate a segment in the cornell box. 
-
 \dontrun{
 generate_cornell() \%>\%
-  add_object(segment(start = c(100,100,100), end = c(455, 455,455), radius=50)) \%>\%
-  render_scene(lookfrom = c(278,278,-800) ,lookat = c(278,278,0), fov = 40, ambient_light=FALSE,
-               samples=400, parallel=TRUE, clamp_value=5)
+  add_object(segment(start = c(100, 100, 100), end = c(455, 455, 455), radius = 50)) \%>\%
+  render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
+               ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
 }
 
 #Draw the outline of a cube:
 \dontrun{
 generate_cornell() \%>\%
-  add_object(segment(start = c(100,100,100), end = c(100, 100, 455), radius=10)) \%>\%
-  add_object(segment(start = c(100,100,100), end = c(100, 455, 100), radius=10)) \%>\%
-  add_object(segment(start = c(100,100,100), end = c(455, 100, 100), radius=10)) \%>\%
-  add_object(segment(start = c(100,100,455), end = c(100, 455, 455), radius=10)) \%>\%
-  add_object(segment(start = c(100,100,455), end = c(455, 100, 455), radius=10)) \%>\%
-  add_object(segment(start = c(100,455,455), end = c(100, 455, 100), radius=10)) \%>\%
-  add_object(segment(start = c(100,455,455), end = c(455, 455, 455), radius=10)) \%>\%
-  add_object(segment(start = c(455,455,100), end = c(455, 100, 100), radius=10)) \%>\%
-  add_object(segment(start = c(455,455,100), end = c(455, 455, 455), radius=10)) \%>\%
-  add_object(segment(start = c(455,100,100), end = c(455, 100, 455), radius=10)) \%>\%
-  add_object(segment(start = c(455,100,455), end = c(455, 455, 455), radius=10)) \%>\%
-  add_object(segment(start = c(100,455,100), end = c(455, 455, 100), radius=10)) \%>\%
-  render_scene(lookfrom = c(278,278,-800) ,lookat = c(278,278,0), fov = 40, ambient_light=FALSE,
-               samples=400, parallel=TRUE, clamp_value=5)
+  add_object(segment(start = c(100, 100, 100), end = c(100, 100, 455), radius = 10)) \%>\%
+  add_object(segment(start = c(100, 100, 100), end = c(100, 455, 100), radius = 10)) \%>\%
+  add_object(segment(start = c(100, 100, 100), end = c(455, 100, 100), radius = 10)) \%>\%
+  add_object(segment(start = c(100, 100, 455), end = c(100, 455, 455), radius = 10)) \%>\%
+  add_object(segment(start = c(100, 100, 455), end = c(455, 100, 455), radius = 10)) \%>\%
+  add_object(segment(start = c(100, 455, 455), end = c(100, 455, 100), radius = 10)) \%>\%
+  add_object(segment(start = c(100, 455, 455), end = c(455, 455, 455), radius = 10)) \%>\%
+  add_object(segment(start = c(455, 455, 100), end = c(455, 100, 100), radius = 10)) \%>\%
+  add_object(segment(start = c(455, 455, 100), end = c(455, 455, 455), radius = 10)) \%>\%
+  add_object(segment(start = c(455, 100, 100), end = c(455, 100, 455), radius = 10)) \%>\%
+  add_object(segment(start = c(455, 100, 455), end = c(455, 455, 455), radius = 10)) \%>\%
+  add_object(segment(start = c(100, 455, 100), end = c(455, 455, 100), radius = 10)) \%>\%
+  render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
+               ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
 }
 }

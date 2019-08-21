@@ -7,7 +7,7 @@
 cube(x = 0, y = 0, z = 0, width = 1, xwidth = 1, ywidth = 1,
   zwidth = 1, material = lambertian(), angle = c(0, 0, 0),
   order_rotation = c(1, 2, 3), velocity = c(0, 0, 0),
-  flipped = FALSE)
+  flipped = FALSE, scale = c(1, 1, 1))
 }
 \arguments{
 \item{x}{Default `0`. x-coordinate of the center of the cube}
@@ -27,13 +27,15 @@ cube(x = 0, y = 0, z = 0, width = 1, xwidth = 1, ywidth = 1,
 \item{material}{Default  \code{\link{lambertian}}.The material, called from one of the material 
 functions \code{\link{lambertian}}, \code{\link{metal}}, or \code{\link{dielectric}}.}
 
-\item{angle}{Default `c(0,0,0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.}
+\item{angle}{Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.}
 
-\item{order_rotation}{Default `c(1,2,3)`. The order to apply the rotations, referring to "x", "y", and "z".}
+\item{order_rotation}{Default `c(1, 2, 3)`. The order to apply the rotations, referring to "x", "y", and "z".}
 
-\item{velocity}{Default `c(0,0,0)`. Velocity of the cube, used for motion blur.}
+\item{velocity}{Default `c(0, 0, 0)`. Velocity of the cube, used for motion blur.}
 
 \item{flipped}{Default `FALSE`. Whether to flip the normals.}
+
+\item{scale}{Default `c(1,1,1)`. Scale transformation in the x, y, and z directions.}
 }
 \value{
 Single row of a tibble describing the cube in the scene.
@@ -45,16 +47,18 @@ Cube Object
 #Generate a cube in the cornell box.
 \dontrun{
 generate_cornell() \%>\%
-  add_object(cube(x=555/2,y=100,z=555/2,xwidth=200,ywidth=200,zwidth=200,angle=c(0,30,0))) \%>\%
-  render_scene(lookfrom = c(278,278,-800) ,lookat = c(278,278,0), fov = 40, ambient_light=FALSE,
-               samples=400, parallel=TRUE, clamp_value=5)
+  add_object(cube(x = 555/2, y = 100, z = 555/2, 
+                  xwidth = 200, ywidth = 200, zwidth = 200, angle = c(0, 30, 0))) \%>\%
+  render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
+               ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
 }
-#Generate a GOLD cube in the cornell box (it's GOLD!)
+#Generate a gold cube in the cornell box
 \dontrun{
 generate_cornell() \%>\%
-  add_object(cube(x=555/2,y=100,z=555/2,xwidth=200,ywidth=200,zwidth=200,angle=c(0,30,0),
-                  material = metal(color="gold", fuzz=0.2))) \%>\%
-  render_scene(lookfrom = c(278,278,-800) ,lookat = c(278,278,0), fov = 40, ambient_light=FALSE,
-               samples=400, parallel=TRUE, clamp_value=5)
+  add_object(cube(x = 555/2, y = 100, z = 555/2, 
+                  xwidth = 200, ywidth = 200, zwidth = 200, angle = c(0, 30, 0),
+                  material = metal(color = "gold", fuzz = 0.2))) \%>\%
+  render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
+               ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
 }
 }

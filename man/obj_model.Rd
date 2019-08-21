@@ -4,25 +4,33 @@
 \alias{obj_model}
 \title{`obj` File Object}
 \usage{
-obj_model(filename, scale = 1, objcolor = FALSE,
-  material = lambertian(), angle = c(0, 0, 0), order_rotation = c(1,
-  2, 3), flipped = FALSE)
+obj_model(filename, x = 0, y = 0, z = 0, scale_obj = 1,
+  objcolor = FALSE, material = lambertian(), angle = c(0, 0, 0),
+  order_rotation = c(1, 2, 3), flipped = FALSE, scale = c(1, 1, 1))
 }
 \arguments{
-\item{filename}{Filename and path to the `obj` file.}
+\item{filename}{Filename and path to the `obj` file. Can also be a `txt` file, if it's in the correct `obj` internally.}
 
-\item{scale}{Default `1`. Amount to scale the model.}
+\item{x}{Default `0`. x-coordinate to offset the model.}
+
+\item{y}{Default `0`. y-coordinate to offset the model.}
+
+\item{z}{Default `0`. z-coordinate to offset the model.}
+
+\item{scale_obj}{Default `1`. Amount to scale the model.}
 
 \item{objcolor}{Default `FALSE`. Whether to load an obj file with vertex colors.}
 
 \item{material}{Default  \code{\link{lambertian}}.The material, called from one of the material 
 functions \code{\link{lambertian}}, \code{\link{metal}}, or \code{\link{dielectric}}.}
 
-\item{angle}{Default `c(0,0,0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.}
+\item{angle}{Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.}
 
-\item{order_rotation}{Default `c(1,2,3)`. The order to apply the rotations, referring to "x", "y", and "z".}
+\item{order_rotation}{Default `c(1, 2, 3)`. The order to apply the rotations, referring to "x", "y", and "z".}
 
 \item{flipped}{Default `FALSE`. Whether to flip the normals.}
+
+\item{scale}{Default `c(1,1,1)`. Scale transformation in the x, y, and z directions.}
 }
 \value{
 Single row of a tibble describing the obj model in the scene.
@@ -31,5 +39,22 @@ Single row of a tibble describing the obj model in the scene.
 `obj` File Object
 }
 \examples{
-#Generate a purple rectangle in the cornell box.
+#Load the included example R object file, by calling the r_obj() function. This
+#returns the local file path to the `r.txt` obj file. The file extension is "txt" 
+#due to package constraints, but the file contents are identical and it does not 
+#affect the function.
+
+\dontrun{
+generate_ground(material = lambertian(checkercolor = "grey50")) \%>\%
+  add_object(obj_model(y = -0.8, filename = r_obj(),
+                       material = metal(color = "gold", fuzz = 0.025))) \%>\%
+  add_object(obj_model(x = 1.8, y = -0.8, filename = r_obj(), 
+                       material = lambertian(color = "lightblue"))) \%>\%
+  add_object(obj_model(x = -1.8, y = -0.8, filename = r_obj() , 
+                       material = dielectric(color = "pink"))) \%>\%
+  add_object(sphere(z = 20, x = 20, y = 20, radius = 10,
+                    material = lambertian(lightintensity = 20, implicit_sample = TRUE))) \%>\%
+  render_scene(parallel = TRUE, samples = 400, 
+               tonemap = "reinhold", aperture = 0.05, fov = 32, lookfrom = c(0, 2, 10))
+}
 }
