@@ -17,7 +17,9 @@ pig(x = 0, y = 0, z = 0, angle = c(0, 0, 0),
 
 \item{angle}{Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.}
 
-\item{order_rotation}{Default `c(1, 2, 3)`. The order to apply the rotations, referring to "x", "y", and "z".s}
+\item{order_rotation}{Default `c(1, 2, 3)`. The order to apply the rotations, referring to "x", "y", and "z".}
+
+\item{emotion}{Default `neutral`. Other options include `skeptical`, `worried`, and `angry`.}
 
 \item{material}{Default  \code{\link{lambertian}}. The material, called from one of the material 
 functions \code{\link{lambertian}}, \code{\link{metal}}, or \code{\link{dielectric}}.}
