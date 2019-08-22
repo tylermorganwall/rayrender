@@ -26,8 +26,8 @@ functions \code{\link{lambertian}}, \code{\link{metal}}, or \code{\link{dielectr
 
 \item{flipped}{Default `FALSE`. Whether to flip the normals.}
 
-\item{scale}{Default `c(1,1,1)`. Scale transformation in the x, y, and z directions. Note: this will 
-change the stated start/end position of the segment.}
+\item{scale}{Default `c(1,1,1)`. Scale transformation in the x, y, and z directions. Notes: this will 
+change the stated start/end position of the segment. Emissive objects may not currently function correctly when scaled.}
 }
 \value{
 Single row of a tibble describing the sphere in the scene.

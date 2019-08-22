@@ -10,7 +10,8 @@
 #' @param order_rotation Default `c(1, 2, 3)`. The order to apply the rotations, referring to "x", "y", and "z".
 #' @param velocity Default `c(0, 0, 0)`. Velocity of the sphere, used for motion blur.
 #' @param flipped Default `FALSE`. Whether to flip the normals.
-#' @param scale Default `c(1,1,1)`. Scale transformation in the x, y, and z directions.
+#' @param scale Default `c(1,1,1)`. Scale transformation in the x, y, and z directions. 
+#' Note: emissive objects may not currently function correctly when scaled.
 #' @importFrom  grDevices col2rgb
 #'
 #' @return Single row of a tibble describing the sphere in the scene.
@@ -74,6 +75,7 @@ sphere = function(x = 0, y = 0, z = 0, radius = 1, material = lambertian(),
 #' @param velocity Default `c(0, 0, 0)`. Velocity of the cube, used for motion blur.
 #' @param flipped Default `FALSE`. Whether to flip the normals.
 #' @param scale Default `c(1,1,1)`. Scale transformation in the x, y, and z directions.
+#' Note: emissive objects may not currently function correctly when scaled.
 #' @importFrom  grDevices col2rgb
 #'
 #' @return Single row of a tibble describing the cube in the scene.
@@ -130,6 +132,7 @@ cube = function(x = 0, y = 0, z = 0, width = 1, xwidth = 1, ywidth = 1, zwidth =
 #' @param order_rotation Default `c(1, 2, 3)`. The order to apply the rotations, referring to "x", "y", and "z".
 #' @param flipped Default `FALSE`. Whether to flip the normals.
 #' @param scale Default `c(1,1,1)`. Scale transformation in the x, y, and z directions.
+#' Note: emissive objects may not currently function correctly when scaled.
 #' 
 #' @return Single row of a tibble describing the XY plane in the scene.
 #' @export
@@ -183,6 +186,7 @@ xy_rect = function(x = 0, y = 0, z = 0, xwidth = 1, ywidth = 1,
 #' @param order_rotation Default `c(1, 2, 3)`. The order to apply the rotations, referring to "x", "y", and "z".
 #' @param flipped Default `FALSE`. Whether to flip the normals.
 #' @param scale Default `c(1,1,1)`. Scale transformation in the x, y, and z directions.
+#' Note: emissive objects may not currently function correctly when scaled.
 #' 
 #' @return Single row of a tibble describing the YZ plane in the scene.
 #' @export
@@ -235,6 +239,7 @@ yz_rect = function(x = 0, y = 0, z = 0, ywidth = 1, zwidth = 1, material = lambe
 #' @param order_rotation Default `c(1, 2, 3)`. The order to apply the rotations, referring to "x", "y", and "z".
 #' @param flipped Default `FALSE`. Whether to flip the normals.
 #' @param scale Default `c(1,1,1)`. Scale transformation in the x, y, and z directions.
+#' Note: emissive objects may not currently function correctly when scaled.
 #' 
 #' @return Single row of a tibble describing the XZ plane in the scene.
 #' @export
@@ -296,6 +301,7 @@ xz_rect = function(x = 0, xwidth = 1, z = 0, zwidth = 1, y = 0, material = lambe
 #' @param order_rotation Default `c(1, 2, 3)`. The order to apply the rotations, referring to "x", "y", and "z".
 #' @param flipped Default `FALSE`. Whether to flip the normals.
 #' @param scale Default `c(1,1,1)`. Scale transformation in the x, y, and z directions.
+#' Note: emissive objects may not currently function correctly when scaled.
 #' 
 #' @return Single row of a tibble describing the XZ plane in the scene.
 #' @export
@@ -371,6 +377,7 @@ triangle = function(v1 = c(1, 0, 0), v2 = c(0, 1, 0), v3 = c(-1, 0, 0),
 #' @param velocity Default `c(0, 0, 0)`. Velocity of the disk.
 #' @param flipped Default `FALSE`. Whether to flip the normals.
 #' @param scale Default `c(1,1,1)`. Scale transformation in the x, y, and z directions.
+#' Note: emissive objects may not currently function correctly when scaled.
 #' 
 #' @importFrom  grDevices col2rgb
 #'
@@ -421,19 +428,23 @@ disk = function(x = 0, y = 0, z = 0, radius = 1, inner_radius = 0, material = la
 }
 
 #' `obj` File Object
+#' 
+#' Load an obj file via a filepath. Currently only supports the diffuse texture with the `texture` argument. 
+#' Note: light importance sampling currently not supported for this shape.
 #'
 #' @param filename Filename and path to the `obj` file. Can also be a `txt` file, if it's in the correct `obj` internally.
 #' @param x Default `0`. x-coordinate to offset the model.
 #' @param y Default `0`. y-coordinate to offset the model.
 #' @param z Default `0`. z-coordinate to offset the model.
 #' @param scale_obj Default `1`. Amount to scale the model.
-#' @param objcolor Default `FALSE`. Whether to load an obj file with vertex colors.
+#' @param texture Default `FALSE`. Whether to load the obj file texture.
 #' @param material Default  \code{\link{lambertian}}.The material, called from one of the material 
 #' functions \code{\link{lambertian}}, \code{\link{metal}}, or \code{\link{dielectric}}. 
 #' @param angle Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.
 #' @param order_rotation Default `c(1, 2, 3)`. The order to apply the rotations, referring to "x", "y", and "z".
 #' @param flipped Default `FALSE`. Whether to flip the normals.
 #' @param scale Default `c(1,1,1)`. Scale transformation in the x, y, and z directions.
+#' Note: emissive objects may not currently function correctly when scaled.
 #' 
 #' @return Single row of a tibble describing the obj model in the scene.
 #' @export
@@ -457,12 +468,12 @@ disk = function(x = 0, y = 0, z = 0, radius = 1, inner_radius = 0, material = la
 #'   render_scene(parallel = TRUE, samples = 400, 
 #'                tonemap = "reinhold", aperture = 0.05, fov = 32, lookfrom = c(0, 2, 10))
 #' }
-obj_model = function(filename, x = 0, y = 0, z = 0, scale_obj = 1, objcolor = FALSE,
+obj_model = function(filename, x = 0, y = 0, z = 0, scale_obj = 1, texture = FALSE,
                     material = lambertian(), 
                     angle = c(0, 0, 0), order_rotation = c(1, 2, 3), 
                     flipped = FALSE, scale = c(1,1,1)) {
   info = c(unlist(material$properties), scale_obj)
-  if(objcolor) {
+  if(texture) {
     shape = "objcolor"
   } else {
     shape = "obj"
@@ -497,6 +508,7 @@ obj_model = function(filename, x = 0, y = 0, z = 0, scale_obj = 1, objcolor = FA
 #' @param velocity Default `c(0, 0, 0)`. Velocity of the cylinder, used for motion blur.
 #' @param flipped Default `FALSE`. Whether to flip the normals.
 #' @param scale Default `c(1,1,1)`. Scale transformation in the x, y, and z directions.
+#' Note: emissive objects may not currently function correctly when scaled.
 #' 
 #' @importFrom  grDevices col2rgb
 #'
@@ -558,8 +570,8 @@ cylinder = function(x = 0, y = 0, z = 0, radius = 1, length = 1,
 #' functions \code{\link{lambertian}}, \code{\link{metal}}, or \code{\link{dielectric}}.
 #' @param velocity Default `c(0, 0, 0)`. Velocity of the segment, used for motion blur.
 #' @param flipped Default `FALSE`. Whether to flip the normals.
-#' @param scale Default `c(1,1,1)`. Scale transformation in the x, y, and z directions. Note: this will 
-#' change the stated start/end position of the segment.
+#' @param scale Default `c(1,1,1)`. Scale transformation in the x, y, and z directions. Notes: this will 
+#' change the stated start/end position of the segment. Emissive objects may not currently function correctly when scaled.
 #' 
 #' @importFrom  grDevices col2rgb
 #'
@@ -628,6 +640,9 @@ segment = function(start = c(0, -1, 0), end = c(0, 1, 0), radius = 1,
 
 #' Ellipsoid Object
 #'
+#' Note: light importance sampling for this shape is currently approximated by a sphere. This will fail
+#' for ellipsoids with large differences between axes.
+#'
 #' @param x Default `0`. x-coordinate of the center of the ellipsoid.
 #' @param y Default `0`. y-coordinate of the center of the ellipsoid.
 #' @param z Default `0`. z-coordinate of the center of the ellipsoid.
@@ -641,6 +656,7 @@ segment = function(start = c(0, -1, 0), end = c(0, 1, 0), radius = 1,
 #' @param velocity Default `c(0, 0, 0)`. Velocity of the segment, used for motion blur.
 #' @param flipped Default `FALSE`. Whether to flip the normals.
 #' @param scale Default `c(1,1,1)`. Scale transformation in the x, y, and z directions.
+#' Note: emissive objects may not currently function correctly when scaled.
 #' 
 #' @importFrom  grDevices col2rgb
 #'

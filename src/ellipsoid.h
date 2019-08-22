@@ -10,6 +10,7 @@ class ellipsoid: public hitable {
     ellipsoid(vec3 cen, float r, vec3 axes, material *mat) : 
       center(cen), radius(r), axes(axes),  mat_ptr(mat) {
       inv_axes = vec3(1.0f/axes.x(), 1.0f/axes.y(), 1.0f/axes.z());
+      largest_proj_axis = axes.x() * axes.y() * axes.z() / ffmin(axes.x(), ffmin(axes.y(), axes.z()));
     };
     virtual bool hit(const ray& r, float tmin, float tmax, hit_record& rec, random_gen& rng);
     virtual bool bounding_box(float t0, float t1, aabb& box) const;
@@ -19,6 +20,7 @@ class ellipsoid: public hitable {
     float radius;
     vec3 axes;
     vec3 inv_axes;
+    float largest_proj_axis;
     material *mat_ptr;
 };
 
@@ -59,8 +61,8 @@ bool ellipsoid::hit(const ray& r, float t_min, float t_max, hit_record& rec, ran
 float ellipsoid::pdf_value(const vec3& o, const vec3& v, random_gen& rng) {
   hit_record rec;
   if(this->hit(ray(o,v), 0.001, FLT_MAX, rec, rng)) {
-    float cos_theta_max = sqrt(1 - radius * radius/(center - o).squared_length());
-    float solid_angle = 2 * M_PI * (1-cos_theta_max) * axes.x() * axes.y() * axes.z();
+    float cos_theta_max = sqrt(1 - 1/(center - o).squared_length());
+    float solid_angle = 2 * M_PI * (1-cos_theta_max) * largest_proj_axis ;
     return(1/solid_angle);
   } else {
     return(0);

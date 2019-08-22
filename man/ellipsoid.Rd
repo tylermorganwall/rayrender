@@ -32,13 +32,15 @@ functions \code{\link{lambertian}}, \code{\link{metal}}, or \code{\link{dielectr
 
 \item{flipped}{Default `FALSE`. Whether to flip the normals.}
 
-\item{scale}{Default `c(1,1,1)`. Scale transformation in the x, y, and z directions.}
+\item{scale}{Default `c(1,1,1)`. Scale transformation in the x, y, and z directions.
+Note: emissive objects may not currently function correctly when scaled.}
 }
 \value{
 Single row of a tibble describing the sphere in the scene.
 }
 \description{
-Ellipsoid Object
+Note: light importance sampling for this shape is currently approximated by a sphere. This will fail
+for ellipsoids with large differences between axes.
 }
 \examples{
 #Generate an ellipsoid in a Cornell box

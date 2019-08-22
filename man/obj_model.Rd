@@ -5,7 +5,7 @@
 \title{`obj` File Object}
 \usage{
 obj_model(filename, x = 0, y = 0, z = 0, scale_obj = 1,
-  objcolor = FALSE, material = lambertian(), angle = c(0, 0, 0),
+  texture = FALSE, material = lambertian(), angle = c(0, 0, 0),
   order_rotation = c(1, 2, 3), flipped = FALSE, scale = c(1, 1, 1))
 }
 \arguments{
@@ -19,7 +19,7 @@ obj_model(filename, x = 0, y = 0, z = 0, scale_obj = 1,
 
 \item{scale_obj}{Default `1`. Amount to scale the model.}
 
-\item{objcolor}{Default `FALSE`. Whether to load an obj file with vertex colors.}
+\item{texture}{Default `FALSE`. Whether to load the obj file texture.}
 
 \item{material}{Default  \code{\link{lambertian}}.The material, called from one of the material 
 functions \code{\link{lambertian}}, \code{\link{metal}}, or \code{\link{dielectric}}.}
@@ -30,13 +30,15 @@ functions \code{\link{lambertian}}, \code{\link{metal}}, or \code{\link{dielectr
 
 \item{flipped}{Default `FALSE`. Whether to flip the normals.}
 
-\item{scale}{Default `c(1,1,1)`. Scale transformation in the x, y, and z directions.}
+\item{scale}{Default `c(1,1,1)`. Scale transformation in the x, y, and z directions.
+Note: emissive objects may not currently function correctly when scaled.}
 }
 \value{
 Single row of a tibble describing the obj model in the scene.
 }
 \description{
-`obj` File Object
+Load an obj file via a filepath. Currently only supports the diffuse texture with the `texture` argument. 
+Note: light importance sampling currently not supported for this shape.
 }
 \examples{
 #Load the included example R object file, by calling the r_obj() function. This
