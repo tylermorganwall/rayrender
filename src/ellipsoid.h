@@ -26,31 +26,33 @@ class ellipsoid: public hitable {
 
 
 bool ellipsoid::hit(const ray& r, float t_min, float t_max, hit_record& rec, random_gen& rng) {
-  vec3 oc = r.origin() * inv_axes - center;
-  float a = dot(r.direction() * inv_axes, r.direction() * inv_axes);
-  float b = dot(oc, r.direction() * inv_axes); 
-  float c = dot(oc,oc) - radius * radius;
+  ray scaled_ray(r.origin() * inv_axes - center, r.direction() * inv_axes);
+  float a = dot(scaled_ray.direction(), scaled_ray.direction());
+  float b = dot(scaled_ray.origin(), scaled_ray.direction()); 
+  float c = dot(scaled_ray.origin(),scaled_ray.origin()) - radius * radius;
   float discriminant = b * b -  a * c; 
   if(discriminant > 0) {
     float temp = (-b - sqrt(discriminant))/a;
     if(temp < t_max && temp > t_min) {
       rec.t = temp;
-      rec.p = r.point_at_parameter(rec.t);
-      rec.normal = (rec.p - center) / radius;
+      rec.p = scaled_ray.point_at_parameter(rec.t);
+      rec.normal = (rec.p - center) / radius ;
+      rec.p *= 1/rec.p.length() * axes;
       get_sphere_uv(rec.normal, rec.u, rec.v);
       rec.mat_ptr = mat_ptr;
-      rec.normal *= inv_axes;
+      rec.normal *= inv_axes * inv_axes;
       rec.normal.make_unit_vector();
       return(true);
     }
     temp = (-b + sqrt(discriminant))/a;
     if(temp < t_max && temp > t_min) {
       rec.t = temp;
-      rec.p = r.point_at_parameter(rec.t);
-      rec.normal = (rec.p - center) / radius * inv_axes;
+      rec.p = scaled_ray.point_at_parameter(rec.t) * axes;
+      rec.normal = (rec.p - center) / radius ;
+      rec.p *= 1/rec.p.length() * axes;
       get_sphere_uv(rec.normal, rec.u, rec.v);
       rec.mat_ptr = mat_ptr;
-      rec.normal *= inv_axes;
+      rec.normal *= inv_axes * inv_axes;
       rec.normal.make_unit_vector();
       return(true);
     }
