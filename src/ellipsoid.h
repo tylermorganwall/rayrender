@@ -35,25 +35,25 @@ bool ellipsoid::hit(const ray& r, float t_min, float t_max, hit_record& rec, ran
     float temp = (-b - sqrt(discriminant))/a;
     if(temp < t_max && temp > t_min) {
       rec.t = temp;
-      rec.p = scaled_ray.point_at_parameter(rec.t);
+      rec.p = scaled_ray.point_at_parameter(rec.t) ;
       rec.normal = (rec.p - center) / radius ;
       rec.p *= 1/rec.p.length() * axes;
-      get_sphere_uv(rec.normal, rec.u, rec.v);
       rec.mat_ptr = mat_ptr;
-      rec.normal *= inv_axes * inv_axes;
+      rec.normal *= inv_axes ;
       rec.normal.make_unit_vector();
+      get_sphere_uv(rec.normal, rec.u, rec.v);
       return(true);
     }
     temp = (-b + sqrt(discriminant))/a;
     if(temp < t_max && temp > t_min) {
       rec.t = temp;
-      rec.p = scaled_ray.point_at_parameter(rec.t) * axes;
+      rec.p = scaled_ray.point_at_parameter(rec.t) ;
       rec.normal = (rec.p - center) / radius ;
       rec.p *= 1/rec.p.length() * axes;
-      get_sphere_uv(rec.normal, rec.u, rec.v);
       rec.mat_ptr = mat_ptr;
-      rec.normal *= inv_axes * inv_axes;
+      rec.normal *= inv_axes ;
       rec.normal.make_unit_vector();
+      get_sphere_uv(rec.normal, rec.u, rec.v);
       return(true);
     }
   }
