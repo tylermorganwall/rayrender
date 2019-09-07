@@ -7,7 +7,16 @@
 #include "tinyobj/tiny_obj_loader.h"
 #include "stb_image.h"
 #include <Rcpp.h>
+#include <chrono>
+#include <thread>
 
+inline char separator() {
+  #if defined _WIN32 || defined __CYGWIN__
+    return '\\';
+  #else
+    return '/';
+  #endif
+}
 
 class trimesh : public hitable {
 public:
@@ -20,6 +29,7 @@ public:
 
     bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, inputfile.c_str(), basedir.c_str());
     // Rcpp::Rcout << inputfile.c_str() << ": " << warn << " " << err << "\n";
+
     if(ret) {
       int n = 0;
       for (size_t s = 0; s < shapes.size(); s++) {
@@ -39,7 +49,7 @@ public:
 
       for (size_t i = 0; i < materials.size(); i++) {
         if(strlen(materials[i].diffuse_texname.c_str()) > 0) {
-          obj_materials[i] = stbi_load(materials[i].diffuse_texname.c_str(), &nx, &ny, &nn, 0);
+          obj_materials[i] = stbi_load((basedir + separator() + materials[i].diffuse_texname).c_str(), &nx, &ny, &nn, 0);
           has_diffuse[i] = true;
           has_single_diffuse[i] = false;
           nx_mat[i] = nx;
@@ -104,6 +114,7 @@ public:
           }
           // per-face material
           int material_num = shapes[s].mesh.material_ids[f];
+          
           material *tex;
           
           if(has_normals) {
@@ -128,25 +139,23 @@ public:
             currenttri++;
           } else {
             if(material_num == -1) {
-              triangles[currenttri] = new triangle(tris[0],tris[1],tris[2],
-                                                   new lambertian(new constant_texture(diffuse_materials[material_num])));
+              tex = new lambertian(new constant_texture(diffuse_materials[material_num]));
             } else {
               if(has_diffuse[material_num]) {
                 if(has_single_diffuse[material_num]) {
-                  triangles[currenttri] = new triangle(tris[0],tris[1],tris[2],
-                                                       new lambertian(new constant_texture(diffuse_materials[material_num])));
+                  tex = new lambertian(new constant_texture(diffuse_materials[material_num]));
                 } else {
-                  triangles[currenttri] = new triangle(tris[0],tris[1],tris[2],
-                                            new lambertian(new triangle_image_texture(obj_materials[material_num],
-                                                                                      nx_mat[material_num],ny_mat[material_num],
-                                                                                      tx[0],ty[0],
-                                                                                      tx[1],ty[1],
-                                                                                      tx[2],ty[2])));
+                  tex = new lambertian(new triangle_image_texture(obj_materials[material_num],
+                                                                  nx_mat[material_num],ny_mat[material_num],
+                                                                  tx[0],ty[0],
+                                                                  tx[1],ty[1],
+                                                                  tx[2],ty[2]));
                 }
               } else {
-                triangles[currenttri] = new triangle(tris[0],tris[1],tris[2],new lambertian(new constant_texture(vec3(1,1,1))));
+                tex = new lambertian(new constant_texture(vec3(1,1,1)));
               }
             }
+            triangles[currenttri] = new triangle(tris[0],tris[1],tris[2], tex);
             currenttri++;
           }
         }
