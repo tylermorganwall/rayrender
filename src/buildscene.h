@@ -352,7 +352,11 @@ hitable *build_scene(IntegerVector& type,
       }
       entry = new translate(entry, center + gtrans + vel * shutteropen);
       if(isflipped(i)) {
-        list[i] = new flip_normals(entry);
+        entry = new flip_normals(entry);
+      } 
+      if(isvolume(i)) {
+        list[i] = new constant_medium(entry, voldensity(i), 
+                                      new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))));
       } else {
         list[i] = entry;
       }
@@ -377,7 +381,11 @@ hitable *build_scene(IntegerVector& type,
       }
       entry = new translate(entry, center + gtrans + vel * shutteropen);
       if(isflipped(i)) {
-        list[i] = new flip_normals(entry);
+        entry = new flip_normals(entry);
+      } 
+      if(isvolume(i)) {
+        list[i] = new constant_medium(entry, voldensity(i), 
+                                      new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))));
       } else {
         list[i] = entry;
       }
