@@ -14,11 +14,21 @@
 #'
 #' @examples
 #' #Generate the ground and add some objects
-#' scene = generate_ground(depth=-0.5,material = lambertian(noise=1,noisephase=10)) %>%
-#'   add_object(cube(z=0.7,material=metal(color="red",fuzz=0.025),angle=c(0,-15,0))) %>%
-#'   add_object(sphere(z=-0.7,radius=0.5,material=dielectric(color="green")))
+#' scene = generate_ground(depth=-0.5,
+#'                         material = lambertian(noise=1,noisecolor="blue",noisephase=10)) %>%
+#'   add_object(cube(x=0.7,material=lambertian(color="red"),angle=c(0,-15,0))) %>%
+#'   add_object(sphere(x=-0.7,radius=0.5,material=dielectric(color="white")))
 #' \dontrun{
-#' render_scene(scene)
+#' render_scene(scene, parallel=TRUE,lookfrom=c(0,2,10))
+#' }
+#' 
+#' # Make the sphere representing the ground larger and make it a checkered surface.
+#' scene = generate_ground(depth=-0.5, spheresize=10000,
+#'                         material = lambertian(checkercolor="grey50")) %>%
+#'   add_object(cube(x=0.7,material=lambertian(color="red"),angle=c(0,-15,0))) %>%
+#'   add_object(sphere(x=-0.7,radius=0.5,material=dielectric(color="white")))
+#' \dontrun{
+#' render_scene(scene, parallel=TRUE,lookfrom=c(0,1,10))
 #' }
 generate_ground = function(depth = -1, spheresize = 1000, material = lambertian(color = "#ccff00")) {
   sphere(x = 0, y = -spheresize + depth, z = 0, radius = spheresize, material=material)

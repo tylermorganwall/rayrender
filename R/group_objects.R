@@ -43,6 +43,15 @@
 #' render_scene(scene3,lookfrom=c(278,278,-800),lookat = c(278,278,0), aperture=0,
 #'              samples=500, fov=50, parallel=TRUE, clamp_value=5)
 #' }
+#' 
+#' #Flatten and stretch the cubes together on two axes
+#' scene4 = generate_cornell() %>%
+#'          add_object(group_objects(twocubes, group_translate = c(0,-40,0), 
+#'                                   group_angle = c(0,45,0), group_scale = c(2,0.5,1)))
+#' \dontrun{
+#' render_scene(scene4,lookfrom=c(278,278,-800),lookat = c(278,278,0), aperture=0,
+#'              samples=500, fov=50, parallel=TRUE, clamp_value=5)
+#' }
 group_objects = function(scene, pivot_point=c(0,0,0), group_translate = c(0,0,0),
                          group_angle = c(0,0,0), group_order_rotation = c(1,2,3),
                          group_scale = c(1,1,1)) {

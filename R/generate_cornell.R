@@ -37,6 +37,12 @@
 #' render_scene(scene, samples=200,aperture=0, fov=40, ambient_light=FALSE, 
 #'              parallel=TRUE,clamp_value=3)
 #' }
+#' # Change the color scheme of the cornell box
+#' \dontrun{
+#' new_cornell = generate_cornell(leftcolor="purple", rightcolor="yellow")
+#' render_scene(new_cornell, samples=200,aperture=0, fov=40, ambient_light=FALSE, 
+#'              parallel=TRUE,clamp_value=3)
+#' }
 generate_cornell = function(light = TRUE, lightintensity = 5,
                             lightcolor = "white",lightwidth = 332, lightdepth=343,
                             leftcolor = "#1f7326", rightcolor = "#a60d0d", roomcolor = "#bababa") {

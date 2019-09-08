@@ -10,7 +10,8 @@
 #' @param order_rotation Default `c(1, 2, 3)`. The order to apply the rotations, referring to "x", "y", and "z".
 #' @param velocity Default `c(0, 0, 0)`. Velocity of the sphere, used for motion blur.
 #' @param flipped Default `FALSE`. Whether to flip the normals.
-#' @param scale Default `c(1,1,1)`. Scale transformation in the x, y, and z directions. 
+#' @param scale Default `c(1, 1, 1)`. Scale transformation in the x, y, and z directions. If this is a single value,
+#' number, the object will be scaled uniformly.
 #' Note: emissive objects may not currently function correctly when scaled.
 #' @importFrom  grDevices col2rgb
 #'
@@ -46,6 +47,9 @@
 sphere = function(x = 0, y = 0, z = 0, radius = 1, material = lambertian(), 
                   angle = c(0, 0, 0), order_rotation = c(1, 2, 3), velocity = c(0, 0, 0), 
                   flipped = FALSE, scale = c(1,1,1)) {
+  if(length(scale) == 1) {
+    scale = c(scale, scale, scale)
+  }
   tibble::tibble(x = x, y = y, z = z, radius = radius, type = material$type, shape = "sphere",
                  properties = material$properties, velocity = list(velocity), 
                  checkercolor = material$checkercolor, 
@@ -72,9 +76,10 @@ sphere = function(x = 0, y = 0, z = 0, radius = 1, material = lambertian(),
 #' functions \code{\link{lambertian}}, \code{\link{metal}}, or \code{\link{dielectric}}.
 #' @param angle Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.
 #' @param order_rotation Default `c(1, 2, 3)`. The order to apply the rotations, referring to "x", "y", and "z".
-#' @param velocity Default `c(0, 0, 0)`. Velocity of the cube, used for motion blur.
+#' @param velocity Default `c(0, 0, 0)`. Velocity of the cube.
 #' @param flipped Default `FALSE`. Whether to flip the normals.
-#' @param scale Default `c(1,1,1)`. Scale transformation in the x, y, and z directions.
+#' @param scale Default `c(1, 1, 1)`. Scale transformation in the x, y, and z directions. If this is a single value,
+#' number, the object will be scaled uniformly.
 #' Note: emissive objects may not currently function correctly when scaled.
 #' @importFrom  grDevices col2rgb
 #'
@@ -99,9 +104,22 @@ sphere = function(x = 0, y = 0, z = 0, radius = 1, material = lambertian(),
 #'   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
 #'                ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
 #' }
+#' 
+#' #Generate a rotateddielectric box in the cornell box
+#' \dontrun{
+#' generate_cornell() %>%
+#'   add_object(cube(x = 555/2, y = 200, z = 555/2, 
+#'                   xwidth = 200, ywidth = 100, zwidth = 200, angle = c(30, 30, 30),
+#'                   material = dielectric())) %>%
+#'   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
+#'                ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
+#' }
 cube = function(x = 0, y = 0, z = 0, width = 1, xwidth = 1, ywidth = 1, zwidth = 1, 
                 material = lambertian(), angle = c(0, 0, 0), order_rotation = c(1, 2, 3), velocity = c(0, 0, 0),
                 flipped = FALSE, scale = c(1,1,1)) {
+  if(length(scale) == 1) {
+    scale = c(scale, scale, scale)
+  }
   xwidth = ifelse(missing(xwidth), width, xwidth)
   ywidth = ifelse(missing(ywidth), width, ywidth)
   zwidth = ifelse(missing(zwidth), width, zwidth)
@@ -131,7 +149,8 @@ cube = function(x = 0, y = 0, z = 0, width = 1, xwidth = 1, ywidth = 1, zwidth =
 #' @param angle Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.
 #' @param order_rotation Default `c(1, 2, 3)`. The order to apply the rotations, referring to "x", "y", and "z".
 #' @param flipped Default `FALSE`. Whether to flip the normals.
-#' @param scale Default `c(1,1,1)`. Scale transformation in the x, y, and z directions.
+#' @param scale Default `c(1, 1, 1)`. Scale transformation in the x, y, and z directions. If this is a single value,
+#' number, the object will be scaled uniformly.
 #' Note: emissive objects may not currently function correctly when scaled.
 #' 
 #' @return Single row of a tibble describing the XY plane in the scene.
@@ -159,6 +178,9 @@ cube = function(x = 0, y = 0, z = 0, width = 1, xwidth = 1, ywidth = 1, zwidth =
 xy_rect = function(x = 0, y = 0, z = 0, xwidth = 1, ywidth = 1,  
                    material = lambertian(), angle = c(0, 0, 0), order_rotation = c(1, 2, 3), 
                    flipped = FALSE, scale = c(1,1,1)) {
+  if(length(scale) == 1) {
+    scale = c(scale, scale, scale)
+  }
   rectinfo = c(unlist(material$properties), x, xwidth, y, ywidth, z)
   tibble::tibble(x = x, y = y, z = z, radius = NA, type = material$type, shape = "xy_rect",
                  properties = list(rectinfo), velocity = list(c(0, 0, 0)),
@@ -185,7 +207,8 @@ xy_rect = function(x = 0, y = 0, z = 0, xwidth = 1, ywidth = 1,
 #' @param angle Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.
 #' @param order_rotation Default `c(1, 2, 3)`. The order to apply the rotations, referring to "x", "y", and "z".
 #' @param flipped Default `FALSE`. Whether to flip the normals.
-#' @param scale Default `c(1,1,1)`. Scale transformation in the x, y, and z directions.
+#' @param scale Default `c(1, 1, 1)`. Scale transformation in the x, y, and z directions. If this is a single value,
+#' number, the object will be scaled uniformly.
 #' Note: emissive objects may not currently function correctly when scaled.
 #' 
 #' @return Single row of a tibble describing the YZ plane in the scene.
@@ -212,6 +235,9 @@ xy_rect = function(x = 0, y = 0, z = 0, xwidth = 1, ywidth = 1,
 yz_rect = function(x = 0, y = 0, z = 0, ywidth = 1, zwidth = 1, material = lambertian(), 
                    angle = c(0, 0, 0), order_rotation = c(1, 2, 3), 
                    flipped = FALSE, scale = c(1,1,1)) {
+  if(length(scale) == 1) {
+    scale = c(scale, scale, scale)
+  }
   rectinfo = c(unlist(material$properties), y, ywidth, z, zwidth, x)
   tibble::tibble(x = x, y = y, z = z, radius = NA, type = material$type, shape = "yz_rect",
                  properties = list(rectinfo), velocity = list(c(0, 0, 0)),
@@ -238,7 +264,8 @@ yz_rect = function(x = 0, y = 0, z = 0, ywidth = 1, zwidth = 1, material = lambe
 #' @param angle Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.
 #' @param order_rotation Default `c(1, 2, 3)`. The order to apply the rotations, referring to "x", "y", and "z".
 #' @param flipped Default `FALSE`. Whether to flip the normals.
-#' @param scale Default `c(1,1,1)`. Scale transformation in the x, y, and z directions.
+#' @param scale Default `c(1, 1, 1)`. Scale transformation in the x, y, and z directions. If this is a single value,
+#' number, the object will be scaled uniformly.
 #' Note: emissive objects may not currently function correctly when scaled.
 #' 
 #' @return Single row of a tibble describing the XZ plane in the scene.
@@ -266,6 +293,9 @@ yz_rect = function(x = 0, y = 0, z = 0, ywidth = 1, zwidth = 1, material = lambe
 xz_rect = function(x = 0, xwidth = 1, z = 0, zwidth = 1, y = 0, material = lambertian(), 
                    angle = c(0, 0, 0), order_rotation = c(1, 2, 3), 
                    flipped = FALSE, scale = c(1,1,1)) {
+  if(length(scale) == 1) {
+    scale = c(scale, scale, scale)
+  }
   rectinfo = c(unlist(material$properties), x, xwidth, z, zwidth, y)
   tibble::tibble(x = x, y = y, z = z, radius = NA, 
                  type = material$type, shape = "xz_rect",
@@ -300,7 +330,8 @@ xz_rect = function(x = 0, xwidth = 1, z = 0, zwidth = 1, y = 0, material = lambe
 #' @param angle Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.
 #' @param order_rotation Default `c(1, 2, 3)`. The order to apply the rotations, referring to "x", "y", and "z".
 #' @param flipped Default `FALSE`. Whether to flip the normals.
-#' @param scale Default `c(1,1,1)`. Scale transformation in the x, y, and z directions.
+#' @param scale Default `c(1, 1, 1)`. Scale transformation in the x, y, and z directions. If this is a single value,
+#' number, the object will be scaled uniformly.
 #' Note: emissive objects may not currently function correctly when scaled.
 #' 
 #' @return Single row of a tibble describing the XZ plane in the scene.
@@ -329,6 +360,9 @@ triangle = function(v1 = c(1, 0, 0), v2 = c(0, 1, 0), v3 = c(-1, 0, 0),
                     material = lambertian(), 
                     angle = c(0, 0, 0), order_rotation = c(1, 2, 3), 
                     flipped = FALSE, scale = c(1,1,1)) {
+  if(length(scale) == 1) {
+    scale = c(scale, scale, scale)
+  }
   info = c(unlist(material$properties), v1, v2, v3, n1, n2, n3)
   if(all(!is.na(color1))) {
     color1 = convert_color(color1)
@@ -376,7 +410,8 @@ triangle = function(v1 = c(1, 0, 0), v2 = c(0, 1, 0), v3 = c(-1, 0, 0),
 #' @param order_rotation Default `c(1, 2, 3)`. The order to apply the rotations, referring to "x", "y", and "z".
 #' @param velocity Default `c(0, 0, 0)`. Velocity of the disk.
 #' @param flipped Default `FALSE`. Whether to flip the normals.
-#' @param scale Default `c(1,1,1)`. Scale transformation in the x, y, and z directions.
+#' @param scale Default `c(1, 1, 1)`. Scale transformation in the x, y, and z directions. If this is a single value,
+#' number, the object will be scaled uniformly.
 #' Note: emissive objects may not currently function correctly when scaled.
 #' 
 #' @importFrom  grDevices col2rgb
@@ -413,6 +448,9 @@ triangle = function(v1 = c(1, 0, 0), v2 = c(0, 1, 0), v3 = c(-1, 0, 0),
 disk = function(x = 0, y = 0, z = 0, radius = 1, inner_radius = 0, material = lambertian(), 
                 angle = c(0, 0, 0), order_rotation = c(1, 2, 3), velocity = c(0, 0, 0), 
                 flipped = FALSE, scale = c(1,1,1)) {
+  if(length(scale) == 1) {
+    scale = c(scale, scale, scale)
+  }
   info = c(unlist(material$properties), inner_radius)
   tibble::tibble(x = x, y = y, z = z, radius = radius, type = material$type, shape = "disk",
                  properties = list(info), velocity = list(velocity), 
@@ -436,14 +474,16 @@ disk = function(x = 0, y = 0, z = 0, radius = 1, inner_radius = 0, material = la
 #' @param x Default `0`. x-coordinate to offset the model.
 #' @param y Default `0`. y-coordinate to offset the model.
 #' @param z Default `0`. z-coordinate to offset the model.
-#' @param scale_obj Default `1`. Amount to scale the model.
+#' @param scale_obj Default `1`. Amount to scale the model. Use this to scale the object up or down on all axes, as it is
+#' more robust to numerical precision errors than the generic scale option.
 #' @param texture Default `FALSE`. Whether to load the obj file texture.
 #' @param material Default  \code{\link{lambertian}}.The material, called from one of the material 
 #' functions \code{\link{lambertian}}, \code{\link{metal}}, or \code{\link{dielectric}}. 
 #' @param angle Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.
 #' @param order_rotation Default `c(1, 2, 3)`. The order to apply the rotations, referring to "x", "y", and "z".
 #' @param flipped Default `FALSE`. Whether to flip the normals.
-#' @param scale Default `c(1,1,1)`. Scale transformation in the x, y, and z directions.
+#' @param scale Default `c(1, 1, 1)`. Scale transformation in the x, y, and z directions. If this is a single value,
+#' number, the object will be scaled uniformly.
 #' Note: emissive objects may not currently function correctly when scaled.
 #' 
 #' @return Single row of a tibble describing the obj model in the scene.
@@ -468,10 +508,26 @@ disk = function(x = 0, y = 0, z = 0, radius = 1, inner_radius = 0, material = la
 #'   render_scene(parallel = TRUE, samples = 400, 
 #'                tonemap = "reinhold", aperture = 0.05, fov = 32, lookfrom = c(0, 2, 10))
 #' }
+#' 
+#' #Use scale_obj to make objects bigger--this is more robust than the generic scale argument.
+#' \dontrun{
+#' generate_ground(material = lambertian(checkercolor = "grey50")) %>%
+#'   add_object(obj_model(y = -0.8, filename = r_obj(), scale_obj = 2,
+#'                        material = lambertian(noise = TRUE, noiseintensity = 10,noisephase=45))) %>%
+#'   add_object(sphere(z = 20, x = 20, y = 20, radius = 10,
+#'                     material = lambertian(lightintensity = 10, implicit_sample = TRUE))) %>%
+#'   render_scene(parallel = TRUE, samples = 400, ambient = TRUE, 
+#'                backgroundhigh="blue", backgroundlow="red",
+#'                aperture = 0.05, fov = 32, lookfrom = c(0, 2, 10),
+#'                lookat = c(0,1,0))
+#' }
 obj_model = function(filename, x = 0, y = 0, z = 0, scale_obj = 1, texture = FALSE,
                     material = lambertian(), 
                     angle = c(0, 0, 0), order_rotation = c(1, 2, 3), 
                     flipped = FALSE, scale = c(1,1,1)) {
+  if(length(scale) == 1) {
+    scale = c(scale, scale, scale)
+  }
   info = c(unlist(material$properties), scale_obj)
   if(texture) {
     shape = "objcolor"
@@ -505,9 +561,10 @@ obj_model = function(filename, x = 0, y = 0, z = 0, scale_obj = 1, texture = FAL
 #' functions \code{\link{lambertian}}, \code{\link{metal}}, or \code{\link{dielectric}}.
 #' @param angle Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.
 #' @param order_rotation Default `c(1, 2, 3)`. The order to apply the rotations, referring to "x", "y", and "z".
-#' @param velocity Default `c(0, 0, 0)`. Velocity of the cylinder, used for motion blur.
+#' @param velocity Default `c(0, 0, 0)`. Velocity of the cylinder.
 #' @param flipped Default `FALSE`. Whether to flip the normals.
-#' @param scale Default `c(1,1,1)`. Scale transformation in the x, y, and z directions.
+#' @param scale Default `c(1, 1, 1)`. Scale transformation in the x, y, and z directions. If this is a single value,
+#' number, the object will be scaled uniformly.
 #' Note: emissive objects may not currently function correctly when scaled.
 #' 
 #' @importFrom  grDevices col2rgb
@@ -538,10 +595,23 @@ obj_model = function(filename, x = 0, y = 0, z = 0, scale_obj = 1, texture = FAL
 #'   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
 #'                ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
 #' }
+#' 
+#' # Only render a subtended arc of the cylinder,
+#' \dontrun{
+#' generate_cornell(lightintensity=3) %>%
+#'   add_object(cylinder(x = 555/2, y = 250, z = 555/2, 
+#'                       length = 300, radius = 100, angle = c(45, 0, 0), phi_min = 0, phi_max = 180,
+#'                       material = lambertian())) %>%
+#'   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
+#'                ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
+#' }
 cylinder = function(x = 0, y = 0, z = 0, radius = 1, length = 1,
                     phi_min = 0, phi_max = 360, material = lambertian(), 
                     angle = c(0, 0, 0), order_rotation = c(1, 2, 3), velocity = c(0, 0, 0), 
                     flipped = FALSE, scale = c(1,1,1)) {
+  if(length(scale) == 1) {
+    scale = c(scale, scale, scale)
+  }
   assertthat::assert_that(phi_max > phi_min)
   info = c(unlist(material$properties), length, phi_min * pi / 180, phi_max * pi / 180)
   tibble::tibble(x = x, y = y, z = z, radius = radius, type = material$type, shape = "cylinder",
@@ -568,10 +638,11 @@ cylinder = function(x = 0, y = 0, z = 0, radius = 1, length = 1,
 #' @param phi_max Default `360`. Maximum angle around the segment.
 #' @param material Default  \code{\link{lambertian}}.The material, called from one of the material 
 #' functions \code{\link{lambertian}}, \code{\link{metal}}, or \code{\link{dielectric}}.
-#' @param velocity Default `c(0, 0, 0)`. Velocity of the segment, used for motion blur.
+#' @param velocity Default `c(0, 0, 0)`. Velocity of the segment.
 #' @param flipped Default `FALSE`. Whether to flip the normals.
-#' @param scale Default `c(1,1,1)`. Scale transformation in the x, y, and z directions. Notes: this will 
-#' change the stated start/end position of the segment. Emissive objects may not currently function correctly when scaled.
+#' @param scale Default `c(1, 1, 1)`. Scale transformation in the x, y, and z directions. If this is a single value,
+#' number, the object will be scaled uniformly. Notes: this will change the stated start/end position of the segment. 
+#' Emissive objects may not currently function correctly when scaled.
 #' 
 #' @importFrom  grDevices col2rgb
 #'
@@ -587,10 +658,28 @@ cylinder = function(x = 0, y = 0, z = 0, radius = 1, length = 1,
 #'                ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
 #' }
 #'
-#' #Draw the outline of a cube:
+#' # Draw a line graph representing a normal distribution, but with gold:
+#' xvals = seq(-3, 3, length.out = 30)
+#' yvals = dnorm(xvals)
+#' 
+#' scene_list = list()
+#' for(i in 1:(length(xvals) - 1)) {
+#'   scene_list[[i]] = segment(start = c(555/2 + xvals[i] * 80, yvals[i] * 800, 555/2),
+#'                             end = c(555/2 + xvals[i + 1] * 80, yvals[i + 1] * 800, 555/2),
+#'                             radius = 10,
+#'                             material = metal())
+#' }
+#' scene_segments = do.call(rbind,scene_list)
 #' \dontrun{
-#' generate_cornell() %>%
-#'   add_object(segment(start = c(100, 100, 100), end = c(100, 100, 455), radius = 10)) %>%
+#' generate_cornell() %>% 
+#'   add_object(scene_segments) %>%
+#'   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
+#'                ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
+#' }
+#'
+#' #Draw the outline of a cube:
+#' 
+#' cube_outline = segment(start = c(100, 100, 100), end = c(100, 100, 455), radius = 10) %>%
 #'   add_object(segment(start = c(100, 100, 100), end = c(100, 455, 100), radius = 10)) %>%
 #'   add_object(segment(start = c(100, 100, 100), end = c(455, 100, 100), radius = 10)) %>%
 #'   add_object(segment(start = c(100, 100, 455), end = c(100, 455, 455), radius = 10)) %>%
@@ -601,14 +690,30 @@ cylinder = function(x = 0, y = 0, z = 0, radius = 1, length = 1,
 #'   add_object(segment(start = c(455, 455, 100), end = c(455, 455, 455), radius = 10)) %>%
 #'   add_object(segment(start = c(455, 100, 100), end = c(455, 100, 455), radius = 10)) %>%
 #'   add_object(segment(start = c(455, 100, 455), end = c(455, 455, 455), radius = 10)) %>%
-#'   add_object(segment(start = c(100, 455, 100), end = c(455, 455, 100), radius = 10)) %>%
+#'   add_object(segment(start = c(100, 455, 100), end = c(455, 455, 100), radius = 10))
+#' 
+#' \dontrun{
+#' generate_cornell() %>%
+#'   add_object(cube_outline) %>%
 #'   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
 #'                ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
+#' }
+#' 
+#' #Shrink and rotate the cube
+#' \dontrun{
+#' generate_cornell() %>%
+#'   add_object(group_objects(cube_outline, pivot_point = c(555/2, 555/2, 555/2),
+#'                            group_angle = c(45,45,45), group_scale = c(0.5,0.5,0.5))) %>%
+#'   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
+#'                ambient_light = FALSE, samples = 40, parallel = TRUE, clamp_value = 5)
 #' }
 segment = function(start = c(0, -1, 0), end = c(0, 1, 0), radius = 1, 
                    phi_min = 0, phi_max = 360,
                    material = lambertian(), 
                    velocity = c(0, 0, 0), flipped = FALSE, scale = c(1,1,1)) {
+  if(length(scale) == 1) {
+    scale = c(scale, scale, scale)
+  }
   assertthat::assert_that(phi_max > phi_min)
   x = (start[1] + end[1])/2
   y = (start[2] + end[2])/2
@@ -653,10 +758,10 @@ segment = function(start = c(0, -1, 0), end = c(0, 1, 0), radius = 1,
 #' functions \code{\link{lambertian}}, \code{\link{metal}}, or \code{\link{dielectric}}.
 #' @param angle Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.
 #' @param order_rotation Default `c(1, 2, 3)`. The order to apply the rotations, referring to "x", "y", and "z".
-#' @param velocity Default `c(0, 0, 0)`. Velocity of the segment, used for motion blur.
+#' @param velocity Default `c(0, 0, 0)`. Velocity of the segment.
 #' @param flipped Default `FALSE`. Whether to flip the normals.
-#' @param scale Default `c(1,1,1)`. Scale transformation in the x, y, and z directions.
-#' Note: emissive objects may not currently function correctly when scaled.
+#' @param scale Default `c(1, 1, 1)`. Scale transformation in the x, y, and z directions. If this is a single value,
+#' number, the object will be scaled uniformly. Note: emissive objects may not currently function correctly when scaled.
 #' 
 #' @importFrom  grDevices col2rgb
 #'
@@ -694,6 +799,9 @@ ellipsoid = function(x = 0, y = 0, z = 0, a = 1, b = 1, c = 1,
                   material = lambertian(), 
                   angle = c(0, 0, 0), order_rotation = c(1, 2, 3), 
                   velocity = c(0, 0, 0), flipped = FALSE, scale = c(1,1,1)) {
+  if(length(scale) == 1) {
+    scale = c(scale, scale, scale)
+  }
   radius = 1
   info = c(unlist(material$properties), a, b, c)
   tibble::tibble(x = x, y = y, z = z, radius = radius, type = material$type, shape = "ellipsoid",

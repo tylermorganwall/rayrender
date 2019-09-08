@@ -31,11 +31,12 @@ functions \code{\link{lambertian}}, \code{\link{metal}}, or \code{\link{dielectr
 
 \item{order_rotation}{Default `c(1, 2, 3)`. The order to apply the rotations, referring to "x", "y", and "z".}
 
-\item{velocity}{Default `c(0, 0, 0)`. Velocity of the cube, used for motion blur.}
+\item{velocity}{Default `c(0, 0, 0)`. Velocity of the cube.}
 
 \item{flipped}{Default `FALSE`. Whether to flip the normals.}
 
-\item{scale}{Default `c(1,1,1)`. Scale transformation in the x, y, and z directions.
+\item{scale}{Default `c(1, 1, 1)`. Scale transformation in the x, y, and z directions. If this is a single value,
+number, the object will be scaled uniformly.
 Note: emissive objects may not currently function correctly when scaled.}
 }
 \value{
@@ -59,6 +60,16 @@ generate_cornell() \%>\%
   add_object(cube(x = 555/2, y = 100, z = 555/2, 
                   xwidth = 200, ywidth = 200, zwidth = 200, angle = c(0, 30, 0),
                   material = metal(color = "gold", fuzz = 0.2))) \%>\%
+  render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
+               ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
+}
+
+#Generate a rotateddielectric box in the cornell box
+\dontrun{
+generate_cornell() \%>\%
+  add_object(cube(x = 555/2, y = 200, z = 555/2, 
+                  xwidth = 200, ywidth = 100, zwidth = 200, angle = c(30, 30, 30),
+                  material = dielectric())) \%>\%
   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
                ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
 }

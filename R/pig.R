@@ -3,19 +3,54 @@
 #' @param x Default `0`. x-coordinate of the center of the pig.
 #' @param y Default `0`. y-coordinate of the center of the pig.
 #' @param z Default `0`. z-coordinate of the center of the pig.
-#' @param material Default  \code{\link{lambertian}}. The material, called from one of the material 
-#' functions \code{\link{lambertian}}, \code{\link{metal}}, or \code{\link{dielectric}}.
+#' @param emotion Default `neutral`. Other options include `skeptical`, `worried`, and `angry`.
 #' @param angle Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.
 #' @param order_rotation Default `c(1, 2, 3)`. The order to apply the rotations, referring to "x", "y", and "z".
-#' @param emotion Default `neutral`. Other options include `skeptical`, `worried`, and `angry`.
+#' @param scale Default `c(1, 1, 1)`. Scale transformation in the x, y, and z directions. If this is a single value,
+#' number, the object will be scaled uniformly.
 #'
 #' @return Single row of a tibble describing the sphere in the scene.
 #' @export
 #'
 #' @examples
 #' #Generate a pig in the cornell box.
-pig = function(x = 0, y = 0, z = 0, angle = c(0, 0, 0), order_rotation = c(1, 2, 3), 
-               scale = c(1, 1, 1), emotion = "neutral") {
+#' 
+#' \dontrun{
+#' generate_cornell() %>%
+#'   add_object(pig(x=555/2,z=555/2,y=120,scale=c(80,80,80), angle = c(0,135,0))) %>%
+#'   render_scene(parallel=TRUE, samples=400,clamp_value=10)
+#' }
+#' 
+#' # Show the pig staring into a mirror, worried 
+#' \dontrun{
+#' generate_cornell() %>%
+#'   add_object(pig(x=555/2-70,z=555/2+50,y=120,scale=c(80,80,80), 
+#'                  angle = c(0,-40,0), emotion = "worried")) %>%
+#'   add_object(xy_rect(x=450,z=450,y=250, ywidth=500, xwidth=200,  
+#'                  angle = c(0,45,0), material = metal())) %>%
+#'   render_scene(parallel=TRUE, samples=400,clamp_value=10)
+#' }
+#' 
+#' # Render many small pigs facing random directions, with an evil pig overlord
+#' set.seed(1)
+#' lots_of_pigs = list() 
+#' 
+#' for(i in 1:10) {
+#'   lots_of_pigs[[i]] = pig(x=50 + 450 * runif(1), z = 50 + 450 * runif(1), y=50, 
+#'                              scale = c(30,30,30), angle = c(0,360*runif(1),0), emotion = "worried")
+#' }
+#' 
+#' many_pigs_scene = do.call(rbind, lots_of_pigs) %>%
+#'  add_object(generate_cornell(lightintensity=20)) %>%
+#'  add_object(pig(z=500,x=555/2,y=400, emotion = "angry",
+#'             scale=c(100,100,100),angle=c(30,90,0), order_rotation=c(2,1,3)))
+#' render_scene(many_pigs_scene,parallel=TRUE,clamp_value=10, samples=400, tonemap = "reinhold")
+pig = function(x = 0, y = 0, z = 0, emotion = "neutral",
+               angle = c(0, 0, 0), order_rotation = c(1, 2, 3), 
+               scale = c(1, 1, 1)) {
+  if(length(scale) == 1) {
+    scale = c(scale, scale, scale)
+  }
   spiral = list()
   tail_angles = seq(0,500,length.out = 33)
   for(i in 1:32) {

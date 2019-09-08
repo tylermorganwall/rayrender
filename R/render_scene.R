@@ -57,19 +57,19 @@
 #' 
 #' #Add a marbled cube 
 #' scene = scene %>%
-#'   add_object(cube(x=0,y=0,z=1.1,material = lambertian(noise=3)))
+#'   add_object(cube(x=1.1,y=0,z=0,material = lambertian(noise=3)))
 #' \dontrun{
 #' render_scene(scene,fov=20,parallel=TRUE,samples=500)
 #' }
 #' 
 #' #Add a metallic gold sphere
 #' scene = scene %>%
-#'   add_object(sphere(x=0,y=0,z=-1.1,radius=0.5,material = metal(color="gold",fuzz=0.1)))
+#'   add_object(sphere(x=-1.1,y=0,z=0,radius=0.5,material = metal(color="gold",fuzz=0.1)))
 #' \dontrun{
 #' render_scene(scene,fov=20,parallel=TRUE,samples=500)
 #' }
 #' 
-#' #Lower the number of samples to render more quickly.
+#' #Lower the number of samples to render more quickly (here, we also use only one core).
 #' render_scene(scene, samples=8)
 #' 
 #' #Add a floating R plot using the iris dataset as a png onto a floating 2D rectangle
@@ -78,9 +78,10 @@
 #' plot(iris$Petal.Length,iris$Sepal.Width,col=iris$Species,pch=18,cex=4)
 #' dev.off()
 #' 
-#' image_array = png::readPNG(tempfileplot)
+#' image_array = aperm(png::readPNG(tempfileplot),c(2,1,3))
 #' scene = scene %>%
-#'   add_object(yz_rect(x=0,y=1.1,z=0,zwidth=2,material = lambertian(image = image_array)))
+#'   add_object(xy_rect(x=0,y=1.1,z=0,xwidth=2,angle = c(0,180,0),
+#'                      material = lambertian(image = image_array)))
 #' \dontrun{
 #' render_scene(scene,fov=20,parallel=TRUE,samples=500)
 #' }
@@ -93,7 +94,7 @@
 #' #Change the background gradient to a night time ambience
 #' \dontrun{
 #' render_scene(scene,lookfrom = c(7,1.5,10),lookat = c(0,0.5,0),fov=15,
-#'              backgroundhigh = "#282375", backgroundlow = "#7e77ea",parallel=TRUE,
+#'              backgroundhigh = "#282375", backgroundlow = "#7e77ea", parallel=TRUE,
 #'              samples=500)
 #' }
 #'                  
@@ -114,7 +115,7 @@
 #'par(mfrow=c(5,6))
 #'for(i in 1:30) {
 #'  render_scene(scene, samples=5,
-#'    lookfrom = c(xpos[i],1.5,zpos[i]),lookat = c(0,0.5,0),parallel=TRUE)
+#'    lookfrom = c(xpos[i],1.5,zpos[i]),lookat = c(0,0.5,0), parallel=TRUE)
 #'}
 #'}
 render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 100, ambient_light = FALSE,

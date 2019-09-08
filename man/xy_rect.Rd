@@ -28,7 +28,8 @@ functions \code{\link{lambertian}}, \code{\link{metal}}, or \code{\link{dielectr
 
 \item{flipped}{Default `FALSE`. Whether to flip the normals.}
 
-\item{scale}{Default `c(1,1,1)`. Scale transformation in the x, y, and z directions.
+\item{scale}{Default `c(1, 1, 1)`. Scale transformation in the x, y, and z directions. If this is a single value,
+number, the object will be scaled uniformly.
 Note: emissive objects may not currently function correctly when scaled.}
 }
 \value{

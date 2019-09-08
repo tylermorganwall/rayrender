@@ -17,7 +17,8 @@ obj_model(filename, x = 0, y = 0, z = 0, scale_obj = 1,
 
 \item{z}{Default `0`. z-coordinate to offset the model.}
 
-\item{scale_obj}{Default `1`. Amount to scale the model.}
+\item{scale_obj}{Default `1`. Amount to scale the model. Use this to scale the object up or down on all axes, as it is
+more robust to numerical precision errors than the generic scale option.}
 
 \item{texture}{Default `FALSE`. Whether to load the obj file texture.}
 
@@ -30,7 +31,8 @@ functions \code{\link{lambertian}}, \code{\link{metal}}, or \code{\link{dielectr
 
 \item{flipped}{Default `FALSE`. Whether to flip the normals.}
 
-\item{scale}{Default `c(1,1,1)`. Scale transformation in the x, y, and z directions.
+\item{scale}{Default `c(1, 1, 1)`. Scale transformation in the x, y, and z directions. If this is a single value,
+number, the object will be scaled uniformly.
 Note: emissive objects may not currently function correctly when scaled.}
 }
 \value{
@@ -58,5 +60,18 @@ generate_ground(material = lambertian(checkercolor = "grey50")) \%>\%
                     material = lambertian(lightintensity = 20, implicit_sample = TRUE))) \%>\%
   render_scene(parallel = TRUE, samples = 400, 
                tonemap = "reinhold", aperture = 0.05, fov = 32, lookfrom = c(0, 2, 10))
+}
+
+#Use scale_obj to make objects bigger--this is more robust than the generic scale argument.
+\dontrun{
+generate_ground(material = lambertian(checkercolor = "grey50")) \%>\%
+  add_object(obj_model(y = -0.8, filename = r_obj(), scale_obj = 2,
+                       material = lambertian(noise = TRUE, noiseintensity = 10,noisephase=45))) \%>\%
+  add_object(sphere(z = 20, x = 20, y = 20, radius = 10,
+                    material = lambertian(lightintensity = 10, implicit_sample = TRUE))) \%>\%
+  render_scene(parallel = TRUE, samples = 400, ambient = TRUE, 
+               backgroundhigh="blue", backgroundlow="red",
+               aperture = 0.05, fov = 32, lookfrom = c(0, 2, 10),
+               lookat = c(0,1,0))
 }
 }

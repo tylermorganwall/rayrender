@@ -31,11 +31,12 @@ functions \code{\link{lambertian}}, \code{\link{metal}}, or \code{\link{dielectr
 
 \item{order_rotation}{Default `c(1, 2, 3)`. The order to apply the rotations, referring to "x", "y", and "z".}
 
-\item{velocity}{Default `c(0, 0, 0)`. Velocity of the cylinder, used for motion blur.}
+\item{velocity}{Default `c(0, 0, 0)`. Velocity of the cylinder.}
 
 \item{flipped}{Default `FALSE`. Whether to flip the normals.}
 
-\item{scale}{Default `c(1,1,1)`. Scale transformation in the x, y, and z directions.
+\item{scale}{Default `c(1, 1, 1)`. Scale transformation in the x, y, and z directions. If this is a single value,
+number, the object will be scaled uniformly.
 Note: emissive objects may not currently function correctly when scaled.}
 }
 \value{
@@ -63,6 +64,16 @@ generate_cornell() \%>\%
 generate_cornell() \%>\%
   add_object(cylinder(x = 555/2, y = 250, z = 555/2, 
                       length = 300, radius = 100, angle = c(0, 0, 45),
+                      material = lambertian())) \%>\%
+  render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
+               ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
+}
+
+# Only render a subtended arc of the cylinder,
+\dontrun{
+generate_cornell(lightintensity=3) \%>\%
+  add_object(cylinder(x = 555/2, y = 250, z = 555/2, 
+                      length = 300, radius = 100, angle = c(45, 0, 0), phi_min = 0, phi_max = 180,
                       material = lambertian())) \%>\%
   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
                ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)

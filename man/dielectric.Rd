@@ -31,24 +31,28 @@ render_scene(scene,parallel=TRUE)
 }
 
 #Add a glass sphere
-scene = scene \%>\%
-  add_object(sphere(z=-0.5,radius=0.5,material=dielectric()))
 \dontrun{
-render_scene(scene,parallel=TRUE,samples=500)
+scene \%>\%
+  add_object(sphere(x=-0.5,radius=0.5,material=dielectric())) \%>\%
+  render_scene(parallel=TRUE,samples=400)
 }
 
 #Add a rotated colored glass cube
-scene = scene \%>\%
-  add_object(cube(z=0.5,zwidth=0.5,material=dielectric(color="darkgreen"),angle=c(0,-45,0)))
 \dontrun{
-render_scene(scene,parallel=TRUE,samples=500)
+scene \%>\%
+  add_object(sphere(x=-0.5,radius=0.5,material=dielectric())) \%>\%
+  add_object(cube(x=0.5,xwidth=0.5,material=dielectric(color="darkgreen"),angle=c(0,-45,0))) \%>\%
+  render_scene(parallel=TRUE,samples=40)
 }
 
 #Add an area light behind and at an angle and turn off the ambient lighting
-scene = scene \%>\%
-  add_object(yz_rect(x=-3,y=0.5,z=1,zwidth=3,ywidth=1.5,
-                     material=lambertian(lightintensity=15),angle=c(0,45,0)))
 \dontrun{
-render_scene(scene,parallel=TRUE,aperture=0, ambient_light=FALSE,samples=1000)
+scene \%>\%
+  add_object(sphere(x=-0.5,radius=0.5,material=dielectric())) \%>\%
+  add_object(cube(x=0.5,xwidth=0.5,material=dielectric(color="darkgreen"),angle=c(0,-45,0))) \%>\%
+  add_object(yz_rect(z=-3,y=1,x=0,zwidth=3,ywidth=1.5,
+                     material=lambertian(lightintensity=15),
+                     angle=c(0,-90,45), order_rotation = c(3,2,1))) \%>\%
+  render_scene(parallel=TRUE,aperture=0, ambient_light=FALSE,samples=1000)
 }
 }

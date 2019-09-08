@@ -22,12 +22,13 @@ segment(start = c(0, -1, 0), end = c(0, 1, 0), radius = 1,
 \item{material}{Default  \code{\link{lambertian}}.The material, called from one of the material 
 functions \code{\link{lambertian}}, \code{\link{metal}}, or \code{\link{dielectric}}.}
 
-\item{velocity}{Default `c(0, 0, 0)`. Velocity of the segment, used for motion blur.}
+\item{velocity}{Default `c(0, 0, 0)`. Velocity of the segment.}
 
 \item{flipped}{Default `FALSE`. Whether to flip the normals.}
 
-\item{scale}{Default `c(1,1,1)`. Scale transformation in the x, y, and z directions. Notes: this will 
-change the stated start/end position of the segment. Emissive objects may not currently function correctly when scaled.}
+\item{scale}{Default `c(1, 1, 1)`. Scale transformation in the x, y, and z directions. If this is a single value,
+number, the object will be scaled uniformly. Notes: this will change the stated start/end position of the segment. 
+Emissive objects may not currently function correctly when scaled.}
 }
 \value{
 Single row of a tibble describing the sphere in the scene.
@@ -44,10 +45,28 @@ generate_cornell() \%>\%
                ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
 }
 
-#Draw the outline of a cube:
+# Draw a line graph representing a normal distribution, but with gold:
+xvals = seq(-3, 3, length.out = 30)
+yvals = dnorm(xvals)
+
+scene_list = list()
+for(i in 1:(length(xvals) - 1)) {
+  scene_list[[i]] = segment(start = c(555/2 + xvals[i] * 80, yvals[i] * 800, 555/2),
+                            end = c(555/2 + xvals[i + 1] * 80, yvals[i + 1] * 800, 555/2),
+                            radius = 10,
+                            material = metal())
+}
+scene_segments = do.call(rbind,scene_list)
 \dontrun{
-generate_cornell() \%>\%
-  add_object(segment(start = c(100, 100, 100), end = c(100, 100, 455), radius = 10)) \%>\%
+generate_cornell() \%>\% 
+  add_object(scene_segments) \%>\%
+  render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
+               ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
+}
+
+#Draw the outline of a cube:
+
+cube_outline = segment(start = c(100, 100, 100), end = c(100, 100, 455), radius = 10) \%>\%
   add_object(segment(start = c(100, 100, 100), end = c(100, 455, 100), radius = 10)) \%>\%
   add_object(segment(start = c(100, 100, 100), end = c(455, 100, 100), radius = 10)) \%>\%
   add_object(segment(start = c(100, 100, 455), end = c(100, 455, 455), radius = 10)) \%>\%
@@ -58,8 +77,21 @@ generate_cornell() \%>\%
   add_object(segment(start = c(455, 455, 100), end = c(455, 455, 455), radius = 10)) \%>\%
   add_object(segment(start = c(455, 100, 100), end = c(455, 100, 455), radius = 10)) \%>\%
   add_object(segment(start = c(455, 100, 455), end = c(455, 455, 455), radius = 10)) \%>\%
-  add_object(segment(start = c(100, 455, 100), end = c(455, 455, 100), radius = 10)) \%>\%
+  add_object(segment(start = c(100, 455, 100), end = c(455, 455, 100), radius = 10))
+
+\dontrun{
+generate_cornell() \%>\%
+  add_object(cube_outline) \%>\%
   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
                ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
+}
+
+#Shrink and rotate the cube
+\dontrun{
+generate_cornell() \%>\%
+  add_object(group_objects(cube_outline, pivot_point = c(555/2, 555/2, 555/2),
+                           group_angle = c(45,45,45), group_scale = c(0.5,0.5,0.5))) \%>\%
+  render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
+               ambient_light = FALSE, samples = 40, parallel = TRUE, clamp_value = 5)
 }
 }
