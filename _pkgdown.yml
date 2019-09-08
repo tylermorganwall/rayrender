@@ -11,6 +11,13 @@ reference:
       - starts_with("cube")
       - ends_with("rect")
       - starts_with("generate")
+      - starts_with("segment")
+      - starts_with("cylinder")
+      - starts_with("triangle")
+      - starts_with("ellipsoid")
+      - starts_with("disk")
+      - starts_with("obj")
+      - starts_with("pig")
   - title: "Materials"
     desc: "Functions to specify the visual properties of objects"
     contents:
