@@ -1,8 +1,7 @@
 Package: rayrender
 Type: Package
 Title: Build and Raytrace 3D Scenes
-Version: 0.2.0
-Date: 2019-03-11
+Version: 0.3.0
 Author: Tyler Morgan-Wall
 Maintainer: Tyler Morgan-Wall <tylermw@gmail.com>
 Description: A raytracer for spheres, planes, and cubes. Uses a tidy `tibble` input to build scenes. Based off of Peter Shirley's "Ray Tracing in One Weekend" book series.
