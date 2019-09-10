@@ -35,7 +35,7 @@ number, the object will be scaled uniformly.
 Note: emissive objects may not currently function correctly when scaled.}
 }
 \value{
-Single row of a tibble describing the sphere in the scene.
+Single row of a tibble describing the disk in the scene.
 }
 \description{
 Disk Object

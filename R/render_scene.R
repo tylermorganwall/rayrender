@@ -3,8 +3,8 @@
 #' Takes the scene description and renders an image, either to the device or to a filename.
 #'
 #' @param scene Tibble of object locations and properties. 
-#' @param width Default `200`. Width of the render, in pixels.
-#' @param height Default `200`. Height of the render, in pixels.
+#' @param width Default `400`. Width of the render, in pixels.
+#' @param height Default `400`. Height of the render, in pixels.
 #' @param fov Default `20`. Field of view, in degrees.
 #' @param samples Default `100`. Number of samples for each pixel.
 #' @param ambient_light Default `FALSE`, unless there are no emitting objects in the scene. 

@@ -36,7 +36,7 @@ functions \code{\link{lambertian}}, \code{\link{metal}}, or \code{\link{dielectr
 number, the object will be scaled uniformly. Note: emissive objects may not currently function correctly when scaled.}
 }
 \value{
-Single row of a tibble describing the sphere in the scene.
+Single row of a tibble describing the ellipsoid in the scene.
 }
 \description{
 Note: light importance sampling for this shape is currently approximated by a sphere. This will fail

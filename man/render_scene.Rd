@@ -15,9 +15,9 @@ render_scene(scene, width = 400, height = 400, fov = 20,
 \arguments{
 \item{scene}{Tibble of object locations and properties.}
 
-\item{width}{Default `200`. Width of the render, in pixels.}
+\item{width}{Default `400`. Width of the render, in pixels.}
 
-\item{height}{Default `200`. Height of the render, in pixels.}
+\item{height}{Default `400`. Height of the render, in pixels.}
 
 \item{fov}{Default `20`. Field of view, in degrees.}
 

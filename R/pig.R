@@ -9,7 +9,7 @@
 #' @param scale Default `c(1, 1, 1)`. Scale transformation in the x, y, and z directions. If this is a single value,
 #' number, the object will be scaled uniformly.
 #'
-#' @return Single row of a tibble describing the sphere in the scene.
+#' @return Single row of a tibble describing the pig in the scene.
 #' @export
 #'
 #' @examples
@@ -28,7 +28,7 @@
 #'                  angle = c(0,-40,0), emotion = "worried")) %>%
 #'   add_object(xy_rect(x=450,z=450,y=250, ywidth=500, xwidth=200,  
 #'                  angle = c(0,45,0), material = metal())) %>%
-#'   render_scene(parallel=TRUE, samples=400,clamp_value=10)
+#'   render_scene(parallel=TRUE, samples=500,clamp_value=10)
 #' }
 #' 
 #' # Render many small pigs facing random directions, with an evil pig overlord
@@ -44,7 +44,9 @@
 #'  add_object(generate_cornell(lightintensity=20)) %>%
 #'  add_object(pig(z=500,x=555/2,y=400, emotion = "angry",
 #'             scale=c(100,100,100),angle=c(30,90,0), order_rotation=c(2,1,3)))
-#' render_scene(many_pigs_scene,parallel=TRUE,clamp_value=10, samples=400, tonemap = "reinhold")
+#' \dontrun{
+#' render_scene(many_pigs_scene,parallel=TRUE,clamp_value=10, samples=500, tonemap = "reinhold")
+#' }
 pig = function(x = 0, y = 0, z = 0, emotion = "neutral",
                angle = c(0, 0, 0), order_rotation = c(1, 2, 3), 
                scale = c(1, 1, 1)) {

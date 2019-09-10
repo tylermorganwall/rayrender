@@ -416,7 +416,7 @@ triangle = function(v1 = c(1, 0, 0), v2 = c(0, 1, 0), v3 = c(-1, 0, 0),
 #' 
 #' @importFrom  grDevices col2rgb
 #'
-#' @return Single row of a tibble describing the sphere in the scene.
+#' @return Single row of a tibble describing the disk in the scene.
 #' @export
 #'
 #' @examples
@@ -569,7 +569,7 @@ obj_model = function(filename, x = 0, y = 0, z = 0, scale_obj = 1, texture = FAL
 #' 
 #' @importFrom  grDevices col2rgb
 #'
-#' @return Single row of a tibble describing the sphere in the scene.
+#' @return Single row of a tibble describing the cylinder in the scene.
 #' @export
 #'
 #' @examples
@@ -646,7 +646,7 @@ cylinder = function(x = 0, y = 0, z = 0, radius = 1, length = 1,
 #' 
 #' @importFrom  grDevices col2rgb
 #'
-#' @return Single row of a tibble describing the sphere in the scene.
+#' @return Single row of a tibble describing the segment in the scene.
 #' @export
 #'
 #' @examples
@@ -658,7 +658,7 @@ cylinder = function(x = 0, y = 0, z = 0, radius = 1, length = 1,
 #'                ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
 #' }
 #'
-#' # Draw a line graph representing a normal distribution, but with gold:
+#' # Draw a line graph representing a normal distribution, but with metal:
 #' xvals = seq(-3, 3, length.out = 30)
 #' yvals = dnorm(xvals)
 #' 
@@ -705,7 +705,7 @@ cylinder = function(x = 0, y = 0, z = 0, radius = 1, length = 1,
 #'   add_object(group_objects(cube_outline, pivot_point = c(555/2, 555/2, 555/2),
 #'                            group_angle = c(45,45,45), group_scale = c(0.5,0.5,0.5))) %>%
 #'   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
-#'                ambient_light = FALSE, samples = 40, parallel = TRUE, clamp_value = 5)
+#'                ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
 #' }
 segment = function(start = c(0, -1, 0), end = c(0, 1, 0), radius = 1, 
                    phi_min = 0, phi_max = 360,
@@ -765,7 +765,7 @@ segment = function(start = c(0, -1, 0), end = c(0, 1, 0), radius = 1,
 #' 
 #' @importFrom  grDevices col2rgb
 #'
-#' @return Single row of a tibble describing the sphere in the scene.
+#' @return Single row of a tibble describing the ellipsoid in the scene.
 #' @export
 #' @examples
 #' #Generate an ellipsoid in a Cornell box
