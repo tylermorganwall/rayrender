@@ -42,6 +42,8 @@ navbar:
       href: index.html
     - text: "Tutorials"
       menu: 
+      -  text: Raytracing Lenticular Gifs with rayrender
+         href: https://www.tylermw.com/raytracing-lenticular-gifs/
       -  text: Getting Stated with Rayrender--Forging the R Sword
          href: https://www.tylermw.com/getting-started-with-rayrender/
   right:
