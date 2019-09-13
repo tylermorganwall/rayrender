@@ -1,6 +1,7 @@
 #ifndef RAYH
 #define RAYH
 #include "vec3.h"
+#include <cstring>
 
 template <typename IN_T, typename OUT_T>
 inline OUT_T reinterpret_type(const IN_T in) {
@@ -13,6 +14,13 @@ inline float add_ulp_magnitude(float f, int ulps) {
   const unsigned bits = reinterpret_type<float, unsigned>(f);
   return reinterpret_type<unsigned, float>(bits + ulps);
 }
+
+// static constexpr float MachineEpsilon =
+//   std::numeric_limits<float>::epsilon() * 0.5;
+// 
+// inline constexpr float gamma(int n) {
+//   return (n * MachineEpsilon) / (1 - n * MachineEpsilon);
+// }
 
 class ray {
   public: 

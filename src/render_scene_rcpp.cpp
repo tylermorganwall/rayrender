@@ -202,7 +202,8 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
   vec3 backgroundhigh(bghigh[0],bghigh[1],bghigh[2]);
   vec3 backgroundlow(bglow[0],bglow[1],bglow[2]);
   float dist_to_focus = focus_distance;
-  random_gen rng;
+  GetRNGstate();
+  random_gen rng(unif_rand() * pow(2,32));
   camera cam(lookfrom, lookat, vec3(camera_up(0),camera_up(1),camera_up(2)), fov, float(nx)/float(ny), 
              aperture, dist_to_focus,
              shutteropen, shutterclose, rng);
@@ -332,9 +333,13 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
         }
       }
     } else {
+      std::vector<unsigned int> seeds(ny);
+      for(int i = 0; i < ny; i++) {
+        seeds[i] = unif_rand() * pow(2,32);
+      }
       RcppThread::ThreadPool pool(numbercores);
       auto worker = [&routput, &goutput, &boutput,
-                     ambient_light, nx, ny, ns,
+                     ambient_light, nx, ny, ns, seeds,
                      &cam, backgroundhigh, backgroundlow, &world, &hlist,
                      numbertosample, clampval, toneval, progress_bar, numbercores, background_texture] (int j) {
       // auto worker = [nx, ns] (int j) {
@@ -342,7 +347,7 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
           RcppThread::Rcout << "Progress (" << numbercores << " cores): ";
           RcppThread::Rcout << (int)((1-(double)j/double(ny)) * 100) << "%\r";
         }
-        random_gen rng;
+        random_gen rng(seeds[j]);
         for(int i = 0; i < nx; i++) {
           vec3 col(0,0,0);
           for(int s = 0; s < ns; s++) {
@@ -391,6 +396,7 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
       pool.join();
     }
   }
+  PutRNGstate();
   return(List::create(_["r"] = routput, _["g"] = goutput, _["b"] = boutput));
 }
 
