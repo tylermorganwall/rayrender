@@ -9,20 +9,20 @@
 class bvh_node : public hitable {
   public:
     bvh_node() {}
-    bvh_node(hitable **l, int n, float time0, float time1, random_gen rng);
-    virtual bool hit(const ray& r, float t_min, float t_max, hit_record& rec, random_gen& rng);
-    virtual bool bounding_box(float t0, float t1, aabb& box) const;
+    bvh_node(hitable **l, int n, Float time0, Float time1, random_gen rng);
+    virtual bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng);
+    virtual bool bounding_box(Float t0, Float t1, aabb& box) const;
     hitable *left;
     hitable *right;
     aabb box;
 };
 
-bool bvh_node::bounding_box(float t0, float t1, aabb& b) const {
+bool bvh_node::bounding_box(Float t0, Float t1, aabb& b) const {
   b = box;
   return(true);
 }
 
-bool bvh_node::hit(const ray& r, float t_min, float t_max, hit_record& rec, random_gen& rng) {
+bool bvh_node::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
   if(box.hit(r, t_min, t_max, rng)) {
     rec.bvh_nodes++;
     if(left->hit(r,t_min,t_max,rec, rng)) {
@@ -73,7 +73,7 @@ int box_z_compare(const void * a, const void * b) {
   }
 }
 
-bvh_node::bvh_node(hitable **l, int n, float time0, float time1, random_gen rng) {
+bvh_node::bvh_node(hitable **l, int n, Float time0, Float time1, random_gen rng) {
   aabb centroid_bounds;
   l[0]->bounding_box(time0, time1, centroid_bounds);
   for (int i = 0; i < n; ++i) {

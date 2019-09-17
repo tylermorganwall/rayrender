@@ -7,7 +7,7 @@
 
 class pdf {
 public: 
-  virtual float value(const vec3& direction, random_gen& rng) = 0;
+  virtual Float value(const vec3& direction, random_gen& rng) = 0;
   virtual vec3 generate(random_gen& rng) = 0;
   virtual ~pdf(){};
 };
@@ -17,8 +17,8 @@ public:
   cosine_pdf(const vec3& w) {
     uvw.build_from_w(w);
   }
-  virtual float value(const vec3& direction, random_gen& rng) {
-    float cosine = dot(unit_vector(direction), uvw.w());
+  virtual Float value(const vec3& direction, random_gen& rng) {
+    Float cosine = dot(unit_vector(direction), uvw.w());
     if(cosine > 0) {
       return(cosine/M_PI);
     } else {
@@ -34,7 +34,7 @@ public:
 class hitable_pdf : public pdf {
 public:
   hitable_pdf(hitable *p, const vec3& origin) : ptr(p), o(origin) {}
-  virtual float value(const vec3& direction, random_gen& rng) {
+  virtual Float value(const vec3& direction, random_gen& rng) {
     return(ptr->pdf_value(o, direction, rng));
   }
   virtual vec3 generate(random_gen& rng) {
@@ -50,7 +50,7 @@ public:
     p[0] = p0;
     p[1] = p1;
   }
-  virtual float value(const vec3& direction, random_gen& rng) {
+  virtual Float value(const vec3& direction, random_gen& rng) {
     return(0.5 * p[0]->value(direction, rng) + 0.5 * p[1]->value(direction, rng));
   }
   virtual vec3 generate(random_gen& rng) {

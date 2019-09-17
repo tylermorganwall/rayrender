@@ -21,7 +21,7 @@ inline char separator() {
 class trimesh : public hitable {
 public:
   trimesh() {}
-  trimesh(std::string inputfile, std::string basedir, float scale, float shutteropen, float shutterclose, random_gen rng) {
+  trimesh(std::string inputfile, std::string basedir, Float scale, Float shutteropen, Float shutterclose, random_gen rng) {
     tinyobj::attrib_t attrib;
     std::vector<tinyobj::shape_t > shapes;
     std::vector<tinyobj::material_t > materials;
@@ -38,7 +38,7 @@ public:
       std::vector<unsigned char* > obj_materials(materials.size()+1);
       std::vector<vec3 > diffuse_materials(materials.size()+1);
       std::vector<vec3 > specular_materials(materials.size()+1);
-      std::vector<float > ior_materials(materials.size()+1);
+      std::vector<Float > ior_materials(materials.size()+1);
       std::vector<bool > has_diffuse(materials.size()+1);
       std::vector<bool > has_transparency(materials.size()+1);
       std::vector<bool > has_single_diffuse(materials.size()+1);
@@ -72,8 +72,8 @@ public:
       vec3 tris[3];
       vec3 normals[3];
       vec3 colors[3];
-      float tx[3];
-      float ty[3];
+      Float tx[3];
+      Float ty[3];
       int currenttri=0;
       std::vector<hitable* > triangles(n+1);
       for (size_t s = 0; s < shapes.size(); s++) {
@@ -163,7 +163,7 @@ public:
       tri_mesh_bvh = bvh_node(&triangles[0], n, shutteropen, shutterclose, rng);
     }
   };
-  trimesh(std::string inputfile, std::string basedir, material *mat, float scale, float shutteropen, float shutterclose, random_gen rng) {
+  trimesh(std::string inputfile, std::string basedir, material *mat, Float scale, Float shutteropen, Float shutterclose, random_gen rng) {
     tinyobj::attrib_t attrib;
     std::vector<tinyobj::shape_t > shapes;
     std::vector<tinyobj::material_t > materials;
@@ -220,10 +220,10 @@ public:
       tri_mesh_bvh = bvh_node(&triangles[0], n, shutteropen, shutterclose, rng);
     }
   };
-  virtual bool hit(const ray& r, float t_min, float t_max, hit_record& rec, random_gen& rng) {
+  virtual bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
     return(tri_mesh_bvh.hit(r, t_min, t_max, rec, rng));
   };
-  virtual bool bounding_box(float t0, float t1, aabb& box) const {
+  virtual bool bounding_box(Float t0, Float t1, aabb& box) const {
     return(tri_mesh_bvh.bounding_box(t0,t1,box));
   };
   bvh_node tri_mesh_bvh;

@@ -1,11 +1,9 @@
 #ifndef AABBH
 #define AABBH
+
 #include "ray.h"
 #include "rng.h"
-
-inline float ffmin(float a, float b) { return(a < b ? a : b);}
-inline float ffmax(float a, float b) { return(a > b ? a : b);}
-
+#include "mathinline.h"
 
 class aabb {
   public: 
@@ -20,20 +18,20 @@ class aabb {
     vec3 min() const {return(bounds[0]);}
     vec3 max() const {return(bounds[1]);}
     
-    bool hit(const ray& r, float tmin, float tmax, random_gen& rng);
+    bool hit(const ray& r, Float tmin, Float tmax, random_gen& rng);
     const vec3 offset(const vec3 o);
-    float surface_area();
+    Float surface_area();
     vec3 bounds[2];
     vec3 centroid;
     vec3 diagonal;
 };
 
-float aabb::surface_area() {
+Float aabb::surface_area() {
   return(2*(diagonal.x() * diagonal.y() + diagonal.x() * diagonal.z() + diagonal.y()*diagonal.z()));
 }
 
-bool aabb::hit(const ray &r, float tmin, float tmax, random_gen& rng) {
-  float txmin, txmax, tymin, tymax, tzmin, tzmax;
+bool aabb::hit(const ray &r, Float tmin, Float tmax, random_gen& rng) {
+  Float txmin, txmax, tymin, tymax, tzmin, tzmax;
   txmin = (bounds[  r.sign[0]].x()-r.origin().x()) * r.inv_dir.x();
   txmax = (bounds[1-r.sign[0]].x()-r.origin().x()) * r.inv_dir_pad.x();
   tymin = (bounds[  r.sign[1]].y()-r.origin().y()) * r.inv_dir.y();

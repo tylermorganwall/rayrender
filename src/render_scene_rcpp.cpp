@@ -1,5 +1,6 @@
 #define STB_IMAGE_IMPLEMENTATION 
 
+#include "mathinline.h"
 #include "vec3.h"
 #include "camera.h"
 #include "float.h"

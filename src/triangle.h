@@ -23,8 +23,8 @@ public:
     area = normal.length()/2;
     normals_provided = true;
   };
-  virtual bool hit(const ray& r, float t_min, float t_max, hit_record& rec, random_gen& rng);
-  virtual bool bounding_box(float t0, float t1, aabb& box) const {
+  virtual bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng);
+  virtual bool bounding_box(Float t0, Float t1, aabb& box) const {
     vec3 min_v(fmin(fmin(a.x(), b.x()), c.x()), 
                fmin(fmin(a.y(), b.y()), c.y()), 
                fmin(fmin(a.z(), b.z()), c.z()));
@@ -41,57 +41,57 @@ public:
     box = aabb(min_v, max_v);
     return(true);
   }
-  virtual float pdf_value(const vec3& o, const vec3& v, random_gen& rng) { 
+  virtual Float pdf_value(const vec3& o, const vec3& v, random_gen& rng) { 
     hit_record rec;
     if (this->hit(ray(o, v), 0.001, FLT_MAX, rec, rng)) {
-      float distance = rec.t * rec.t * v.squared_length();;
-      float cosine = dot(v, rec.normal);
+      Float distance = rec.t * rec.t * v.squared_length();;
+      Float cosine = dot(v, rec.normal);
       return(distance / (cosine * area));
     }
     return 0; 
   }
   
   virtual vec3 random(const vec3& origin, random_gen& rng) {
-    float r1 = rng.unif_rand();
-    float r2 = rng.unif_rand();
-    float sr1 = sqrt(r1);
+    Float r1 = rng.unif_rand();
+    Float r2 = rng.unif_rand();
+    Float sr1 = sqrt(r1);
     vec3 random_point((1.0 - sr1) * a + sr1 * (1.0 - r2) * b + sr1 * r2 * c);
     return(random_point - origin); 
   }
   vec3 normal;
   vec3 a, b, c, na, nb, nc;
   vec3 edge1, edge2;
-  float area;
+  Float area;
   bool normals_provided;
   material *mp;
 };
 
-bool triangle::hit(const ray& r, float t_min, float t_max, hit_record& rec, random_gen& rng) {
+bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
   vec3 pvec = cross(r.direction(), edge2);
-  float det = dot(pvec, edge1);
+  Float det = dot(pvec, edge1);
 
   // no culling
   if (std::fabs(det) < 1E-15) {
     return(false);
   }
-  float invdet = 1.0 / det;
+  Float invdet = 1.0 / det;
   vec3 tvec = r.origin() - a;
-  float u = dot(pvec, tvec) * invdet;
+  Float u = dot(pvec, tvec) * invdet;
   if (u < 0.0 || u > 1.0) {
     return(false);
   }
 
   vec3 qvec = cross(tvec, edge1);
-  float v = dot(qvec, r.direction()) * invdet;
+  Float v = dot(qvec, r.direction()) * invdet;
   if (v < 0 || u + v > 1.0) {
     return(false);
   }
-  float t = dot(qvec, edge2) * invdet; 
+  Float t = dot(qvec, edge2) * invdet; 
   
   if (t < t_min || t > t_max) {
     return(false);
   }
-  float w = 1 - u - v;
+  Float w = 1 - u - v;
   rec.t = t;
   rec.p = r.point_at_parameter(t);
   rec.u = u;

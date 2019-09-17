@@ -3,11 +3,11 @@
 
 #include "rng.h"
 
-inline float perlin_interp(vec3 c[2][2][2], float u, float v, float w) {
-  float uu = u*u*(3-2*u);
-  float vv = v*v*(3-2*v);
-  float ww = w*w*(3-2*w);
-  float accum = 0;
+inline Float perlin_interp(vec3 c[2][2][2], Float u, Float v, Float w) {
+  Float uu = u*u*(3-2*u);
+  Float vv = v*v*(3-2*v);
+  Float ww = w*w*(3-2*w);
+  Float accum = 0;
   for(int i = 0; i < 2; i++) {
     for(int j = 0; j < 2; j++) {
       for(int k = 0; k < 2; k++) {
@@ -22,10 +22,10 @@ inline float perlin_interp(vec3 c[2][2][2], float u, float v, float w) {
 class perlin {
 public:
   perlin() {};
-  float noise(const vec3& p) const {
-    float u = p.x() - floor(p.x());
-    float v = p.y() - floor(p.y());
-    float w = p.z() - floor(p.z());
+  Float noise(const vec3& p) const {
+    Float u = p.x() - floor(p.x());
+    Float v = p.y() - floor(p.y());
+    Float w = p.z() - floor(p.z());
     int i = floor(p.x());
     int j = floor(p.y());
     int k = floor(p.z());
@@ -39,10 +39,10 @@ public:
     }
     return(perlin_interp(c,u,v,w));
   }
-  float turb(const vec3& p, int depth=7) const {
-    float accum = 0;
+  Float turb(const vec3& p, int depth=7) const {
+    Float accum = 0;
     vec3 temp_p = p;
-    float weight = 0.5;
+    Float weight = 0.5;
     for(int i = 0; i < depth; i++) {
       accum += weight * noise(temp_p);
       weight *= 0.5;

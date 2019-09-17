@@ -8,12 +8,12 @@ class box : public hitable {
 public:
   box() {}
   box(const vec3& p0, const vec3& p1, material *ptr);
-  virtual bool hit(const ray& r, float t_min, float t_max, hit_record& rec, random_gen& rng);
-  virtual bool bounding_box(float t0, float t1, aabb& box) const {
+  virtual bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng);
+  virtual bool bounding_box(Float t0, Float t1, aabb& box) const {
     box = aabb(pmin, pmax);
     return(true);
   }
-  virtual float pdf_value(const vec3& o, const vec3& v, random_gen& rng) {
+  virtual Float pdf_value(const vec3& o, const vec3& v, random_gen& rng) {
     return(list_ptr.pdf_value(o,v, rng));
   }
   virtual vec3 random(const vec3& o, random_gen& rng) {
@@ -36,7 +36,7 @@ box::box(const vec3& p0, const vec3& p1, material *ptr) {
   list_ptr = hitable_list(list,6);
 }
 
-bool box::hit(const ray& r, float t_min, float t_max, hit_record& rec, random_gen& rng) {
+bool box::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
   return(list_ptr.hit(r,t_min,t_max,rec, rng));
 }
 

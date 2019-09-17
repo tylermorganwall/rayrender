@@ -9,23 +9,23 @@ inline OUT_T reinterpret_type(const IN_T in) {
   memcpy(&out, &in, sizeof(out));
   return out;
 }
-inline float add_ulp_magnitude(float f, int ulps) {
+inline Float add_ulp_magnitude(Float f, int ulps) {
   if (!std::isfinite(f)) return f;
-  const unsigned bits = reinterpret_type<float, unsigned>(f);
-  return reinterpret_type<unsigned, float>(bits + ulps);
+  const unsigned bits = reinterpret_type<Float, unsigned>(f);
+  return reinterpret_type<unsigned, Float>(bits + ulps);
 }
 
-// static constexpr float MachineEpsilon =
-//   std::numeric_limits<float>::epsilon() * 0.5;
+// static constexpr Float MachineEpsilon =
+//   std::numeric_limits<Float>::epsilon() * 0.5;
 // 
-// inline constexpr float gamma(int n) {
+// inline constexpr Float gamma(int n) {
 //   return (n * MachineEpsilon) / (1 - n * MachineEpsilon);
 // }
 
 class ray {
   public: 
     ray() {}
-    ray(const vec3& a, const vec3& b, float ti = 0.0) {
+    ray(const vec3& a, const vec3& b, Float ti = 0.0) {
       A = a; 
       B = b; 
       _time = ti;
@@ -41,15 +41,15 @@ class ray {
     vec3 origin() const {return(A);}
     vec3 direction() const {return(B);}
     vec3 inverse_dir() const {return(inv_dir);}
-    float time() const {return _time;}
-    vec3 point_at_parameter(float t) const {return(A + t*B);}
+    Float time() const {return _time;}
+    vec3 point_at_parameter(Float t) const {return(A + t*B);}
     
     vec3 A;
     vec3 B;
     vec3 inv_dir;
     vec3 inv_dir_pad;
     int sign[3];
-    float _time;
+    Float _time;
 };
 
 #endif
