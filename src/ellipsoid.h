@@ -57,6 +57,7 @@ bool ellipsoid::hit(const ray& r, float t_min, float t_max, hit_record& rec, ran
     get_sphere_uv(rec.normal, rec.u, rec.v);
     return(true);
   }
+  return(false);
 }
 
 float ellipsoid::pdf_value(const vec3& o, const vec3& v, random_gen& rng) {

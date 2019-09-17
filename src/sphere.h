@@ -45,6 +45,7 @@ bool sphere::hit(const ray& r, float t_min, float t_max, hit_record& rec, random
     rec.mat_ptr = mat_ptr;
     return(true);
   }
+  return(false);
 }
 
 float sphere::pdf_value(const vec3& o, const vec3& v, random_gen& rng) {
@@ -123,6 +124,7 @@ bool moving_sphere::hit(const ray& r, float t_min, float t_max, hit_record& rec,
     rec.mat_ptr = mat_ptr;
     return(true);
   }
+  return(false);
 }
 
 #endif
