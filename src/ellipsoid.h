@@ -3,6 +3,7 @@
 
 #include "sphere.h"
 #include "material.h"
+#include "mathinline.h"
 
 class ellipsoid: public hitable {
   public:
@@ -28,36 +29,34 @@ class ellipsoid: public hitable {
 bool ellipsoid::hit(const ray& r, float t_min, float t_max, hit_record& rec, random_gen& rng) {
   ray scaled_ray(r.origin() * inv_axes - center, r.direction() * inv_axes);
   float a = dot(scaled_ray.direction(), scaled_ray.direction());
-  float b = dot(scaled_ray.origin(), scaled_ray.direction()); 
-  float c = dot(scaled_ray.origin(),scaled_ray.origin()) - radius * radius;
-  float discriminant = b * b -  a * c; 
-  if(discriminant > 0) {
-    float temp = (-b - sqrt(discriminant))/a;
-    if(temp < t_max && temp > t_min) {
-      rec.t = temp;
-      rec.p = scaled_ray.point_at_parameter(rec.t) ;
-      rec.normal = (rec.p - center) / radius ;
-      rec.p *= 1/rec.p.length() * axes;
-      rec.mat_ptr = mat_ptr;
-      rec.normal *= inv_axes ;
-      rec.normal.make_unit_vector();
-      get_sphere_uv(rec.normal, rec.u, rec.v);
-      return(true);
-    }
-    temp = (-b + sqrt(discriminant))/a;
-    if(temp < t_max && temp > t_min) {
-      rec.t = temp;
-      rec.p = scaled_ray.point_at_parameter(rec.t) ;
-      rec.normal = (rec.p - center) / radius ;
-      rec.p *= 1/rec.p.length() * axes;
-      rec.mat_ptr = mat_ptr;
-      rec.normal *= inv_axes ;
-      rec.normal.make_unit_vector();
-      get_sphere_uv(rec.normal, rec.u, rec.v);
-      return(true);
-    }
+  float b = 2 * dot(scaled_ray.origin(), scaled_ray.direction()); 
+  float c = dot(scaled_ray.origin(),scaled_ray.origin()) - 1;
+  float temp1, temp2;
+  if (!quadratic(a, b, c, &temp1, &temp2)) {
+    return(false);
   }
-  return(false);
+  if(temp1 < t_max && temp1 > t_min) {
+    rec.t = temp1;
+    rec.p = scaled_ray.point_at_parameter(rec.t) ;
+    rec.normal = (rec.p - center);
+    rec.p *= 1/rec.p.length() * axes;
+    rec.mat_ptr = mat_ptr;
+    rec.normal *= inv_axes ;
+    rec.normal.make_unit_vector();
+    get_sphere_uv(rec.normal, rec.u, rec.v);
+    return(true);
+  }
+  if(temp2 < t_max && temp2 > t_min) {
+    rec.t = temp2;
+    rec.p = scaled_ray.point_at_parameter(rec.t) ;
+    rec.normal = (rec.p - center);
+    rec.p *= 1/rec.p.length() * axes;
+    rec.mat_ptr = mat_ptr;
+    rec.normal *= inv_axes ;
+    rec.normal.make_unit_vector();
+    get_sphere_uv(rec.normal, rec.u, rec.v);
+    return(true);
+  }
 }
 
 float ellipsoid::pdf_value(const vec3& o, const vec3& v, random_gen& rng) {

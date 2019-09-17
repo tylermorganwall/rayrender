@@ -3,6 +3,7 @@
 
 #include "hitable.h"
 #include "material.h"
+#include "mathinline.h"
 
 class sphere: public hitable {
   public:
@@ -20,32 +21,30 @@ class sphere: public hitable {
 bool sphere::hit(const ray& r, float t_min, float t_max, hit_record& rec, random_gen& rng) {
   vec3 oc = r.origin() - center;
   float a = dot(r.direction(), r.direction());
-  float b = dot(oc, r.direction()); 
+  float b = 2 * dot(oc, r.direction()); 
   float c = dot(oc,oc) - radius * radius;
-  float discriminant = b * b -  a * c; 
-  if(discriminant > 0) {
-    float temp = (-b - sqrt(discriminant))/a;
-    if(temp < t_max && temp > t_min) {
-      rec.t = temp;
-      rec.p = r.point_at_parameter(rec.t);
-      rec.p *= radius / rec.p.length(); 
-      rec.normal = (rec.p - center) / radius;
-      get_sphere_uv(rec.normal, rec.u, rec.v);
-      rec.mat_ptr = mat_ptr;
-      return(true);
-    }
-    temp = (-b + sqrt(discriminant))/a;
-    if(temp < t_max && temp > t_min) {
-      rec.t = temp;
-      rec.p = r.point_at_parameter(rec.t);
-      rec.p *= radius / rec.p.length(); 
-      rec.normal = (rec.p - center) / radius;
-      get_sphere_uv(rec.normal, rec.u, rec.v);
-      rec.mat_ptr = mat_ptr;
-      return(true);
-    }
+  float temp1, temp2;
+  if (!quadratic(a, b, c, &temp1, &temp2)) {
+    return(false);
   }
-  return(false);
+  if(temp1 < t_max && temp1 > t_min) {
+    rec.t = temp1;
+    rec.p = r.point_at_parameter(rec.t);
+    rec.p *= radius / rec.p.length(); 
+    rec.normal = (rec.p - center) / radius;
+    get_sphere_uv(rec.normal, rec.u, rec.v);
+    rec.mat_ptr = mat_ptr;
+    return(true);
+  }
+  if(temp2 < t_max && temp2 > t_min) {
+    rec.t = temp2;
+    rec.p = r.point_at_parameter(rec.t);
+    rec.p *= radius / rec.p.length(); 
+    rec.normal = (rec.p - center) / radius;
+    get_sphere_uv(rec.normal, rec.u, rec.v);
+    rec.mat_ptr = mat_ptr;
+    return(true);
+  }
 }
 
 float sphere::pdf_value(const vec3& o, const vec3& v, random_gen& rng) {
@@ -100,32 +99,30 @@ bool moving_sphere::bounding_box(float t0, float t1, aabb& box) const {
 bool moving_sphere::hit(const ray& r, float t_min, float t_max, hit_record& rec, random_gen& rng) {
   vec3 oc = r.origin() - center(r.time());
   float a = dot(r.direction(), r.direction());
-  float b = dot(oc, r.direction()); 
+  float b = 2 * dot(oc, r.direction()); 
   float c = dot(oc,oc) - radius * radius;
-  float discriminant = b * b -  a * c; 
-  if(discriminant > 0) {
-    float temp = (-b - sqrt(discriminant))/a;
-    if(temp < t_max && temp > t_min) {
-      rec.t = temp;
-      rec.p = r.point_at_parameter(rec.t);
-      rec.p *= radius / rec.p.length(); 
-      rec.normal = (rec.p - center(r.time())) / radius;
-      get_sphere_uv(rec.normal, rec.u, rec.v);
-      rec.mat_ptr = mat_ptr;
-      return(true);
-    }
-    temp = (-b + sqrt(discriminant))/a;
-    if(temp < t_max && temp > t_min) {
-      rec.t = temp;
-      rec.p = r.point_at_parameter(rec.t);
-      rec.p *= radius / rec.p.length(); 
-      rec.normal = (rec.p - center(r.time())) / radius;
-      get_sphere_uv(rec.normal, rec.u, rec.v);
-      rec.mat_ptr = mat_ptr;
-      return(true);
-    }
+  float temp1, temp2;
+  if (!quadratic(a, b, c, &temp1, &temp2)) {
+    return(false);
   }
-  return(false);
+  if(temp1 < t_max && temp1 > t_min) {
+    rec.t = temp1;
+    rec.p = r.point_at_parameter(rec.t);
+    rec.p *= radius / rec.p.length(); 
+    rec.normal = (rec.p - center(r.time())) / radius;
+    get_sphere_uv(rec.normal, rec.u, rec.v);
+    rec.mat_ptr = mat_ptr;
+    return(true);
+  }
+  if(temp2 < t_max && temp2 > t_min) {
+    rec.t = temp2;
+    rec.p = r.point_at_parameter(rec.t);
+    rec.p *= radius / rec.p.length(); 
+    rec.normal = (rec.p - center(r.time())) / radius;
+    get_sphere_uv(rec.normal, rec.u, rec.v);
+    rec.mat_ptr = mat_ptr;
+    return(true);
+  }
 }
 
 #endif
