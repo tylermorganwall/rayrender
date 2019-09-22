@@ -7,7 +7,7 @@ Authors@R: c(person("Tyler", "Morgan-Wall", email = "tylermw@gmail.com",
     person("Syoyo", "Fujita", role=c("ctb")),
     person("Melissa", "O'Neill", email = "oneill@pcg-random.org", role = "ctb"))
 Maintainer: Tyler Morgan-Wall <tylermw@gmail.com>
-Description: Render scenes using pathtracing. Build 3D scenes out of spheres, cubes, planes, triangles, line segments, cylinders, ellipsoids, and OBJ files using a pipeable interface. Supports several material types, textures, multicore rendering, and tonemapping. Based off of Peter Shirley's "Ray Tracing in One Weekend" book series.
+Description: Render scenes using pathtracing. Build 3D scenes out of spheres, cubes, planes, triangles, line segments, cylinders, ellipsoids, and OBJ files. Supports several material types, textures, multicore rendering, and tone-mapping. Based off of Peter Shirley's "Ray Tracing in One Weekend" book series.
 License: GPL-3 + file LICENSE
 Imports: 
     Rcpp (>= 1.0.0),
