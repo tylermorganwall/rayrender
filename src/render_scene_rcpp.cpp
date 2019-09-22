@@ -31,7 +31,7 @@ inline vec3 clamp(const vec3& c, float clampval) {
 
 vec3 color(const ray& r, hitable *world, hitable *hlist, int depth, random_gen& rng, texture* background_texture) {
   hit_record hrec;
-  if(world->hit(r, 0.00001, FLT_MAX, hrec, rng)) { //generated hit record, world space
+  if(world->hit(r, 0.001, FLT_MAX, hrec, rng)) { //generated hit record, world space
     scatter_record srec;
     vec3 emitted = hrec.mat_ptr->emitted(r, hrec, hrec.u, hrec.v, hrec.p);
     float pdf_val;
@@ -70,7 +70,7 @@ vec3 color(const ray& r, hitable *world, hitable *hlist, int depth, random_gen& 
 vec3 color_amb(const ray& r, hitable *world, hitable *hlist, int depth,
            const vec3& backgroundhigh, const vec3& backgroundlow, random_gen& rng) {
   hit_record hrec;
-  if(world->hit(r, 0.00001, FLT_MAX, hrec, rng)) {
+  if(world->hit(r, 0.001, FLT_MAX, hrec, rng)) {
     scatter_record srec;
     vec3 emitted = hrec.mat_ptr->emitted(r, hrec, hrec.u, hrec.v,hrec.p);
     float pdf_val;
@@ -102,7 +102,7 @@ vec3 color_amb(const ray& r, hitable *world, hitable *hlist, int depth,
 
 vec3 color_uniform(const ray& r, hitable *world, int depth, random_gen& rng, texture* background_texture) {
   hit_record hrec;
-  if(world->hit(r, 0.00001, FLT_MAX, hrec, rng)) {
+  if(world->hit(r, 0.001, FLT_MAX, hrec, rng)) {
     scatter_record srec;
     vec3 emitted = hrec.mat_ptr->emitted(r, hrec, hrec.u, hrec.v,hrec.p);
     float pdf_val;
@@ -130,7 +130,7 @@ vec3 color_uniform(const ray& r, hitable *world, int depth, random_gen& rng, tex
 vec3 color_amb_uniform(const ray& r, hitable *world, int depth,
                const vec3& backgroundhigh, const vec3& backgroundlow, random_gen& rng) {
   hit_record hrec;
-  if(world->hit(r, 0.00001, FLT_MAX, hrec, rng)) {
+  if(world->hit(r, 0.001, FLT_MAX, hrec, rng)) {
     scatter_record srec;
 
     vec3 emitted = hrec.mat_ptr->emitted(r, hrec, hrec.u, hrec.v,hrec.p);
