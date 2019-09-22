@@ -234,6 +234,12 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
   fileinfovec = scene$fileinfo
   fileinfovec[is.na(fileinfovec)] = ""
   objfilenamevec = purrr::map_chr(fileinfovec, path.expand)
+  if(any(!file.exists(objfilenamevec) & nchar(objfilenamevec) > 0)) {
+    stop(paste0("Cannot find the following .obj files:\n",
+                 paste(objfilenamevec[!file.exists(objfilenamevec) & nchar(objfilenamevec) > 0], 
+                       collapse="\n")
+                 ))
+  }
   objbasedirvec = purrr::map_chr(objfilenamevec, dirname)
 
   #bg image handler
