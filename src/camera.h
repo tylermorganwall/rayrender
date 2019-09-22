@@ -20,8 +20,8 @@ class camera {
       u = unit_vector(cross(vup, w));
       v = cross(w, u);
       lower_left_corner = origin - half_width * focus_dist *  u - half_height * focus_dist * v - focus_dist * w;
-      horizontal = 2 * half_width * focus_dist * u;
-      vertical = 2 * half_height * focus_dist * v;
+      horizontal = 2.0f * half_width * focus_dist * u;
+      vertical = 2.0f * half_height * focus_dist * v;
     }
     ray get_ray(Float s, Float t) {
       vec3 rd = lens_radius * rng2.random_in_unit_disk();

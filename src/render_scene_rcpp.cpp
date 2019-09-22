@@ -1,7 +1,7 @@
 #define STB_IMAGE_IMPLEMENTATION 
 
-#include "mathinline.h"
 #include "vec3.h"
+#include "mathinline.h"
 #include "camera.h"
 #include "float.h"
 #include "buildscene.h"
@@ -15,9 +15,9 @@ using namespace Rcpp;
 
 inline vec3 de_nan(const vec3& c) {
   vec3 temp = c;
-  if(std::isnan(c[0])) temp.e[0] = 0;
-  if(std::isnan(c[1])) temp.e[1] = 0;
-  if(std::isnan(c[2])) temp.e[2] = 0;
+  if(std::isnan(c[0])) temp.e[0] = 0.0f;
+  if(std::isnan(c[1])) temp.e[1] = 0.0f;
+  if(std::isnan(c[2])) temp.e[2] = 0.0f;
   return(temp);
 }
 
@@ -31,7 +31,7 @@ inline vec3 clamp(const vec3& c, float clampval) {
 
 vec3 color(const ray& r, hitable *world, hitable *hlist, int depth, random_gen& rng, texture* background_texture) {
   hit_record hrec;
-  if(world->hit(r, 0.001, FLT_MAX, hrec, rng)) { //generated hit record, world space
+  if(world->hit(r, 0.00001, FLT_MAX, hrec, rng)) { //generated hit record, world space
     scatter_record srec;
     vec3 emitted = hrec.mat_ptr->emitted(r, hrec, hrec.u, hrec.v, hrec.p);
     float pdf_val;
@@ -61,8 +61,8 @@ vec3 color(const ray& r, hitable *world, hitable *hlist, int depth, random_gen& 
   } else {
     vec3 unit_direction = unit_vector(r.direction());
     float phi = atan2(unit_direction.x(),unit_direction.z());
-    float u = 0.5 + phi / (2*M_PI);
-    float v = 0.5 * (1.0 + unit_direction.y());
+    float u = 0.5f + phi / (2*M_PI);
+    float v = 0.5f * (1.0f + unit_direction.y());
     return(background_texture->value(u, v, unit_direction));
   }
 }
@@ -70,7 +70,7 @@ vec3 color(const ray& r, hitable *world, hitable *hlist, int depth, random_gen& 
 vec3 color_amb(const ray& r, hitable *world, hitable *hlist, int depth,
            const vec3& backgroundhigh, const vec3& backgroundlow, random_gen& rng) {
   hit_record hrec;
-  if(world->hit(r, 0.001, FLT_MAX, hrec, rng)) {
+  if(world->hit(r, 0.00001, FLT_MAX, hrec, rng)) {
     scatter_record srec;
     vec3 emitted = hrec.mat_ptr->emitted(r, hrec, hrec.u, hrec.v,hrec.p);
     float pdf_val;
@@ -90,19 +90,19 @@ vec3 color_amb(const ray& r, hitable *world, hitable *hlist, int depth,
                        backgroundhigh,backgroundlow, rng) / pdf_val);
     } else {
       vec3 unit_direction = unit_vector(r.direction());
-      float t = 0.5 * (unit_direction.y() + 1.0);
-      return(emitted+(1.0 - t) * backgroundlow + t * backgroundhigh);
+      float t = 0.5f * (unit_direction.y() + 1.0f);
+      return(emitted + (1.0f - t) * backgroundlow + t * backgroundhigh);
     }
   } else {
     vec3 unit_direction = unit_vector(r.direction());
-    float t = 0.5 * (unit_direction.y() + 1.0);
+    float t = 0.5f * (unit_direction.y() + 1.0);
     return (1.0 - t) * backgroundlow + t * backgroundhigh;
   }
 }
 
 vec3 color_uniform(const ray& r, hitable *world, int depth, random_gen& rng, texture* background_texture) {
   hit_record hrec;
-  if(world->hit(r, 0.001, FLT_MAX, hrec, rng)) {
+  if(world->hit(r, 0.00001, FLT_MAX, hrec, rng)) {
     scatter_record srec;
     vec3 emitted = hrec.mat_ptr->emitted(r, hrec, hrec.u, hrec.v,hrec.p);
     float pdf_val;
@@ -130,7 +130,7 @@ vec3 color_uniform(const ray& r, hitable *world, int depth, random_gen& rng, tex
 vec3 color_amb_uniform(const ray& r, hitable *world, int depth,
                const vec3& backgroundhigh, const vec3& backgroundlow, random_gen& rng) {
   hit_record hrec;
-  if(world->hit(r, 0.001, FLT_MAX, hrec, rng)) {
+  if(world->hit(r, 0.00001, FLT_MAX, hrec, rng)) {
     scatter_record srec;
 
     vec3 emitted = hrec.mat_ptr->emitted(r, hrec, hrec.u, hrec.v,hrec.p);
@@ -163,7 +163,7 @@ vec3 color_amb_uniform(const ray& r, hitable *world, int depth,
 float debug_bvh(const ray& r, hitable *world, random_gen rng) {
   hit_record hrec;
   hrec.bvh_nodes = 0;
-  world->hit(r, 0.001, FLT_MAX, hrec, rng);
+  world->hit(r, 0.00001, FLT_MAX, hrec, rng);
   return(hrec.bvh_nodes);
 }
 
@@ -261,12 +261,12 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
     pb.set_total(ny);
   }
   if(debugval == 1) {
-    float bvh_intersections = 0.0;
-    float max_intersections = 0.0;
+    Float bvh_intersections = 0.0;
+    Float max_intersections = 0.0;
     for(int j = ny - 1; j >= 0; j--) {
       for(int i = 0; i < nx; i++) {
-        float u = float(i + rng.unif_rand()) / float(nx);
-        float v = float(j + rng.unif_rand()) / float(ny);
+        Float u = Float(i + rng.unif_rand()) / Float(nx);
+        Float v = Float(j + rng.unif_rand()) / Float(ny);
         ray r = cam.get_ray(u,v);
         bvh_intersections = 0.0;
         bvh_intersections = debug_bvh(r, world, rng);
@@ -293,8 +293,8 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
         for(int i = 0; i < nx; i++) {
           vec3 col(0,0,0);
           for(int s = 0; s < ns; s++) {
-            float u = float(i + rng.unif_rand()) / float(nx);
-            float v = float(j + rng.unif_rand()) / float(ny);
+            Float u = Float(i + rng.unif_rand()) / Float(nx);
+            Float v = Float(j + rng.unif_rand()) / Float(ny);
             ray r = cam.get_ray(u,v);
             if(numbertosample) {
               if(ambient_light) {
@@ -312,13 +312,13 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
               }
             }
           }
-          col /= float(ns);
+          col /= Float(ns);
           if(toneval == 1) {
-            routput(i,j) = pow(col[0],1/2.2);
-            goutput(i,j) = pow(col[1],1/2.2);
-            boutput(i,j) = pow(col[2],1/2.2);
+            routput(i,j) = pow(col[0],1.0f/2.2f);
+            goutput(i,j) = pow(col[1],1.0f/2.2f);
+            boutput(i,j) = pow(col[2],1.0f/2.2f);
           } else if (toneval == 2) {
-            float avg = (col[0]+col[1]+col[2])/3;
+            float avg = (col[0]+col[1]+col[2])/3.0f;
             routput(i,j) = reinhard(col[0],avg);
             goutput(i,j) = reinhard(col[1],avg);
             boutput(i,j) = reinhard(col[2],avg);
@@ -352,8 +352,8 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
         for(int i = 0; i < nx; i++) {
           vec3 col(0,0,0);
           for(int s = 0; s < ns; s++) {
-            float u = float(i + rng.unif_rand()) / float(nx);
-            float v = float(j + rng.unif_rand()) / float(ny);
+            Float u = Float(i + rng.unif_rand()) / Float(nx);
+            Float v = Float(j + rng.unif_rand()) / Float(ny);
             ray r = cam.get_ray(u,v);
             if(numbertosample) {
               if(ambient_light) {
@@ -370,13 +370,13 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
               }
             }
           }
-          col /= float(ns);
+          col /= Float(ns);
           if(toneval == 1) {
-            routput(i,j) = pow(col[0],1/2.2);
-            goutput(i,j) = pow(col[1],1/2.2);
-            boutput(i,j) = pow(col[2],1/2.2);
+            routput(i,j) = pow(col[0],1.0f/2.2f);
+            goutput(i,j) = pow(col[1],1.0f/2.2f);
+            boutput(i,j) = pow(col[2],1.0f/2.2f);
           } else if (toneval == 2) {
-            float max = (col[0]+col[1]+col[2])/3;
+            float max = (col[0]+col[1]+col[2])/3.0f;
             routput(i,j) = reinhard(col[0],max);
             goutput(i,j) = reinhard(col[1],max);
             boutput(i,j) = reinhard(col[2],max);
