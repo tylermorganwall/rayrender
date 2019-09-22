@@ -1,0 +1,9 @@
+Files: src/pcg/*
+Copyright: 2014-2019 Melissa O'Neill and the PCG Project contributors.
+License: Apache-2.0 or MIT
+URL: https://github.com/imneme/pcg-cpp
+
+File: src/tinyobj/*
+Copyright: 2012-2019 Syoyo Fujita
+License: MIT
+URL: https://github.com/syoyo/tinyobjloader/
