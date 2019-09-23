@@ -204,7 +204,7 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
   vec3 backgroundlow(bglow[0],bglow[1],bglow[2]);
   float dist_to_focus = focus_distance;
   GetRNGstate();
-  random_gen rng(unif_rand() * pow(2,32));
+  random_gen rng(unif_rand() * std::pow(2,32));
   camera cam(lookfrom, lookat, vec3(camera_up(0),camera_up(1),camera_up(2)), fov, float(nx)/float(ny), 
              aperture, dist_to_focus,
              shutteropen, shutterclose, rng);
@@ -314,9 +314,9 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
           }
           col /= Float(ns);
           if(toneval == 1) {
-            routput(i,j) = pow(col[0],1.0f/2.2f);
-            goutput(i,j) = pow(col[1],1.0f/2.2f);
-            boutput(i,j) = pow(col[2],1.0f/2.2f);
+            routput(i,j) = std::pow(col[0],1.0f/2.2f);
+            goutput(i,j) = std::pow(col[1],1.0f/2.2f);
+            boutput(i,j) = std::pow(col[2],1.0f/2.2f);
           } else if (toneval == 2) {
             float avg = (col[0]+col[1]+col[2])/3.0f;
             routput(i,j) = reinhard(col[0],avg);
@@ -336,7 +336,7 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
     } else {
       std::vector<unsigned int> seeds(ny);
       for(int i = 0; i < ny; i++) {
-        seeds[i] = unif_rand() * pow(2,32);
+        seeds[i] = unif_rand() * std::pow(2,32);
       }
       RcppThread::ThreadPool pool(numbercores);
       auto worker = [&routput, &goutput, &boutput,
@@ -372,9 +372,9 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
           }
           col /= Float(ns);
           if(toneval == 1) {
-            routput(i,j) = pow(col[0],1.0f/2.2f);
-            goutput(i,j) = pow(col[1],1.0f/2.2f);
-            boutput(i,j) = pow(col[2],1.0f/2.2f);
+            routput(i,j) = std::pow(col[0],1.0f/2.2f);
+            goutput(i,j) = std::pow(col[1],1.0f/2.2f);
+            boutput(i,j) = std::pow(col[2],1.0f/2.2f);
           } else if (toneval == 2) {
             float max = (col[0]+col[1]+col[2])/3.0f;
             routput(i,j) = reinhard(col[0],max);

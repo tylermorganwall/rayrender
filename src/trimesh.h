@@ -71,7 +71,7 @@ public:
       bool has_normals = attrib.normals.size() > 0 ? true : false;
       vec3 tris[3];
       vec3 normals[3];
-      vec3 colors[3];
+      // vec3 colors[3];
       Float tx[3];
       Float ty[3];
       int currenttri=0;
@@ -179,7 +179,7 @@ public:
       bool has_normals = attrib.normals.size() > 0 ? true : false;
       vec3 tris[3];
       vec3 normals[3];
-      vec3 colors[3];
+      // vec3 colors[3];
       std::vector<hitable* > triangles(n+1);
       int currenttri=0;
       for (size_t s = 0; s < shapes.size(); s++) {

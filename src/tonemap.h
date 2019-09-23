@@ -3,7 +3,7 @@
 
 Float reinhard(Float color, Float sum) {
   color = color*sum/(1 + sum);
-  return(pow(color,1/2.2));
+  return(std::pow(color,1/2.2));
 }
 
 Float A = 0.15;
@@ -23,7 +23,7 @@ Float hable(Float color) {
   Float curr = uncharted(exposure_bias*color);
   Float whiteScale = 1.0f/uncharted(W);
   color = curr*whiteScale;
-  return(pow(color,1/2.2));
+  return(std::pow(color,1/2.2));
 }
 
 Float hbd(Float color) {

@@ -2,7 +2,9 @@
 #define RNGH
 
 #include <random>
+#define extended extended_rng
 #include "pcg/pcg_random.hpp"
+#undef extended
 #include "vec3.h"
 
 
@@ -13,7 +15,7 @@ public:
   random_gen(unsigned int seed) : rng(seed) {}
   random_gen() : rng(pcg_extras::seed_seq_from<std::random_device>{}) { }
   Float unif_rand() {
-    return(ldexp(rng(),-32)); 
+    return(std::ldexp(rng(),-32)); 
   }
   vec3 random_in_unit_disk() {
     vec3 p;
@@ -32,19 +34,19 @@ public:
   vec3 random_cosine_direction() {
     Float r1 = unif_rand();
     Float r2 = unif_rand();
-    Float z = sqrt(1-r2);
+    Float z = std::sqrt(1-r2);
     Float phi = 2*M_PI*r1;
-    Float x = cos(phi)*2*sqrt(r2);
-    Float y = sin(phi)*2*sqrt(r2);
+    Float x = cos(phi)*2*std::sqrt(r2);
+    Float y = sin(phi)*2*std::sqrt(r2);
     return vec3(x, y, z);
   }
   vec3 random_to_sphere(Float radius, Float distance_squared) {
     Float r1 = unif_rand();
     Float r2 = unif_rand();
-    Float z = 1 + r2 * (sqrt(1-radius * radius / distance_squared) - 1);
+    Float z = 1 + r2 * (std::sqrt(1-radius * radius / distance_squared) - 1);
     Float phi = 2 * M_PI * r1;
-    Float x = cos(phi) * sqrt(1-z*z);
-    Float y = sin(phi) * sqrt(1-z*z);
+    Float x = std::cos(phi) * std::sqrt(1-z*z);
+    Float y = std::sin(phi) * std::sqrt(1-z*z);
     return(vec3(x,y,z));
   }
 };
