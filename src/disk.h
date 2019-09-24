@@ -31,7 +31,7 @@ bool disk::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_g
     return(false);
   }
   vec3 p = r.point_at_parameter(t);
-  p.e[2] = 0;
+  p.e[1] = 0;
   rec.p = p;
   rec.normal = n;
   rec.t = t;
