@@ -28,7 +28,7 @@ public:
     std::string warn, err;
 
     bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, inputfile.c_str(), basedir.c_str());
-    // Rcpp::Rcout << inputfile.c_str() << ": " << warn << " " << err << "\n";
+    // Rcpp::Rcerr << inputfile.c_str() << ": " << warn << " " << err << "\n";
 
     if(ret) {
       int n = 0;
@@ -63,7 +63,7 @@ public:
           has_single_diffuse[i] = false;
         }
         if(materials[i].dissolve < 1) {
-          specular_materials[i] = vec3(materials[i].specular[0],materials[i].specular[1],materials[i].specular[2]);
+          specular_materials[i] = vec3(materials[i].diffuse[0],materials[i].diffuse[1],materials[i].diffuse[2]);
           ior_materials[i] = materials[i].ior;
           has_transparency[i] = true; 
         }
@@ -77,31 +77,25 @@ public:
       int currenttri=0;
       std::vector<hitable* > triangles(n+1);
       for (size_t s = 0; s < shapes.size(); s++) {
+        bool tempnormal = false;
         // Loop over faces(polygon)
         size_t index_offset = 0;
         for (size_t f = 0; f < shapes[s].mesh.num_face_vertices.size(); f++) {
-
           // Loop over vertices in the face.
           for (size_t v = 0; v < 3; v++) {
             // access to vertex
-            
             tinyobj::index_t idx = shapes[s].mesh.indices[index_offset + v];
             tris[v] = vec3(attrib.vertices[3*idx.vertex_index+0],
                            attrib.vertices[3*idx.vertex_index+1],
                            attrib.vertices[3*idx.vertex_index+2])*scale;
-            if(has_normals) {
+            if(has_normals && idx.normal_index != -1) {
+              tempnormal = true;
               normals[v] = vec3(attrib.normals[3*idx.normal_index+0],
                                 attrib.normals[3*idx.normal_index+1],
                                 attrib.normals[3*idx.normal_index+2]);
             }
             tx[v] = attrib.texcoords[2*idx.texcoord_index+0];
-            // tx[v] = tx[v] < 0 ? -tx[v] : tx[v];
             ty[v] = attrib.texcoords[2*idx.texcoord_index+1];
-            // ty[v] = ty[v] < 0 ? -ty[v] : ty[v];
-            // Optional: vertex colors
-            // colors[v] = vec3(attrib.colors[3*idx.vertex_index+0],
-            //                  attrib.colors[3*idx.vertex_index+1],
-            //                  attrib.colors[3*idx.vertex_index+2]);
           }
           
           index_offset += 3;
@@ -117,7 +111,7 @@ public:
           
           material *tex;
           
-          if(has_normals) {
+          if(has_normals && tempnormal) {
             if(material_num == -1) {
               tex = new lambertian(new constant_texture(vec3(1,1,1)));
             } else {
@@ -135,13 +129,15 @@ public:
                 tex = new lambertian(new constant_texture(vec3(1,1,1)));
               }
             }
-            triangles[currenttri] = new triangle(tris[0],tris[1],tris[2],normals[0], normals[1], normals[2], tex);
+            triangles[currenttri] = new triangle(tris[0],tris[1],tris[2], normals[0], normals[1], normals[2], tex);
             currenttri++;
           } else {
             if(material_num == -1) {
               tex = new lambertian(new constant_texture(diffuse_materials[material_num]));
             } else {
-              if(has_diffuse[material_num]) {
+              if(has_transparency[material_num]) {
+                tex = new dielectric(specular_materials[material_num], ior_materials[material_num], rng);;
+              } else if(has_diffuse[material_num]) {
                 if(has_single_diffuse[material_num]) {
                   tex = new lambertian(new constant_texture(diffuse_materials[material_num]));
                 } else {
