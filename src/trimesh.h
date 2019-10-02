@@ -94,8 +94,10 @@ public:
                                 attrib.normals[3*idx.normal_index+1],
                                 attrib.normals[3*idx.normal_index+2]);
             }
-            tx[v] = attrib.texcoords[2*idx.texcoord_index+0];
-            ty[v] = attrib.texcoords[2*idx.texcoord_index+1];
+            if(idx.texcoord_index != -1) {
+              tx[v] = attrib.texcoords[2*idx.texcoord_index+0];
+              ty[v] = attrib.texcoords[2*idx.texcoord_index+1];
+            }
           }
           
           index_offset += 3;
