@@ -48,7 +48,7 @@ Note: light importance sampling currently not supported for this shape.
 #due to package constraints, but the file contents are identical and it does not 
 #affect the function.
 
-\dontrun{
+\donttest{
 generate_ground(material = lambertian(checkercolor = "grey50")) \%>\%
   add_object(obj_model(y = -0.8, filename = r_obj(),
                        material = metal(color = "gold", fuzz = 0.025))) \%>\%
@@ -63,7 +63,7 @@ generate_ground(material = lambertian(checkercolor = "grey50")) \%>\%
 }
 
 #Use scale_obj to make objects bigger--this is more robust than the generic scale argument.
-\dontrun{
+\donttest{
 generate_ground(material = lambertian(checkercolor = "grey50")) \%>\%
   add_object(obj_model(y = -0.8, filename = r_obj(), scale_obj = 2,
                        material = lambertian(noise = TRUE, noiseintensity = 10,noisephase=45))) \%>\%

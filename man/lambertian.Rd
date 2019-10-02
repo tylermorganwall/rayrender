@@ -51,7 +51,7 @@ Lambertian (diffuse) Material
 #Generate the cornell box and add a single white sphere to the center
 scene = generate_cornell() \%>\%
   add_object(sphere(x=555/2,y=555/2,z=555/2,radius=555/8,material=lambertian()))
-\dontrun{
+\donttest{
 render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 }
@@ -60,7 +60,7 @@ render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
 scene = scene \%>\%
   add_object(cube(x=555/2,y=555/8,z=555/2,xwidth=555/2,ywidth=555/4,zwidth=555/2,
   material = lambertian(checkercolor="purple",checkerperiod=20)))
-\dontrun{
+\donttest{
 render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 }
@@ -69,7 +69,7 @@ render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
 scene = scene \%>\%
   add_object(sphere(x=555/2+555/4,y=555/2,z=555/2,radius=555/8,
   material = lambertian(noise=1/20)))
-\dontrun{
+\donttest{
 render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 }
@@ -78,7 +78,7 @@ render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
 scene = scene \%>\%
   add_object(cube(x=555/2-555/4,y=555/2,z=555/2,xwidth=555/4,ywidth=555/4,zwidth=555/4,
   material = lambertian(fog=TRUE, fogdensity=0.05,color="orange")))
-\dontrun{
+\donttest{
 render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 }

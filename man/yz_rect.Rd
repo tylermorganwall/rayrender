@@ -40,7 +40,7 @@ Rectangular YZ Plane Object
 }
 \examples{
 #Generate a purple rectangle in the cornell box.
-\dontrun{
+\donttest{
 generate_cornell() \%>\%
   add_object(yz_rect(x = 100, y = 100, z = 555/2, ywidth = 200, zwidth = 200,
                      material = lambertian(color = "purple"))) \%>\%
@@ -48,7 +48,7 @@ generate_cornell() \%>\%
                ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
 }
 #Generate a gold plane in the cornell box
-\dontrun{
+\donttest{
 generate_cornell() \%>\%
   add_object(yz_rect(x = 100, y = 100, z = 555/2, 
                      ywidth = 200, zwidth = 200, angle = c(0, 30, 0),

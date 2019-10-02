@@ -26,19 +26,19 @@ Dielectric (glass) Material
 #Generate a checkered ground
 scene = generate_ground(depth=-0.5,
                         material=lambertian(color="white", checkercolor="grey30",checkerperiod=2))
-\dontrun{
+\donttest{
 render_scene(scene,parallel=TRUE)
 }
 
 #Add a glass sphere
-\dontrun{
+\donttest{
 scene \%>\%
   add_object(sphere(x=-0.5,radius=0.5,material=dielectric())) \%>\%
   render_scene(parallel=TRUE,samples=400)
 }
 
 #Add a rotated colored glass cube
-\dontrun{
+\donttest{
 scene \%>\%
   add_object(sphere(x=-0.5,radius=0.5,material=dielectric())) \%>\%
   add_object(cube(x=0.5,xwidth=0.5,material=dielectric(color="darkgreen"),angle=c(0,-45,0))) \%>\%
@@ -46,7 +46,7 @@ scene \%>\%
 }
 
 #Add an area light behind and at an angle and turn off the ambient lighting
-\dontrun{
+\donttest{
 scene \%>\%
   add_object(sphere(x=-0.5,radius=0.5,material=dielectric())) \%>\%
   add_object(cube(x=0.5,xwidth=0.5,material=dielectric(color="darkgreen"),angle=c(0,-45,0))) \%>\%

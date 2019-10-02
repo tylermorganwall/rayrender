@@ -79,28 +79,28 @@ Takes the scene description and renders an image, either to the device or to a f
 \examples{
 #Generate a large checkered sphere as the ground
 scene = generate_ground(depth=-0.5, material = lambertian(color="white", checkercolor="darkgreen"))
-\dontrun{
+\donttest{
 render_scene(scene,parallel=TRUE,samples=500)
 }
 
 #Add a sphere to the center
 scene = scene \%>\%
   add_object(sphere(x=0,y=0,z=0,radius=0.5,material = lambertian(color=c(1,0,1))))
-\dontrun{
+\donttest{
 render_scene(scene,fov=20,parallel=TRUE,samples=500)
 }
 
 #Add a marbled cube 
 scene = scene \%>\%
   add_object(cube(x=1.1,y=0,z=0,material = lambertian(noise=3)))
-\dontrun{
+\donttest{
 render_scene(scene,fov=20,parallel=TRUE,samples=500)
 }
 
 #Add a metallic gold sphere
 scene = scene \%>\%
   add_object(sphere(x=-1.1,y=0,z=0,radius=0.5,material = metal(color="gold",fuzz=0.1)))
-\dontrun{
+\donttest{
 render_scene(scene,fov=20,parallel=TRUE,samples=500)
 }
 
@@ -117,24 +117,24 @@ image_array = aperm(png::readPNG(tempfileplot),c(2,1,3))
 scene = scene \%>\%
   add_object(xy_rect(x=0,y=1.1,z=0,xwidth=2,angle = c(0,180,0),
                      material = lambertian(image = image_array)))
-\dontrun{
+\donttest{
 render_scene(scene,fov=20,parallel=TRUE,samples=500)
 }
 
 #Move the camera
-\dontrun{
+\donttest{
 render_scene(scene,lookfrom = c(7,1.5,10),lookat = c(0,0.5,0),fov=15,parallel=TRUE)
 }
 
 #Change the background gradient to a night time ambience
-\dontrun{
+\donttest{
 render_scene(scene,lookfrom = c(7,1.5,10),lookat = c(0,0.5,0),fov=15,
              backgroundhigh = "#282375", backgroundlow = "#7e77ea", parallel=TRUE,
              samples=500)
 }
                  
 #Increase the aperture to give more depth of field.
-\dontrun{
+\donttest{
 render_scene(scene,lookfrom = c(7,1.5,10),lookat = c(0,0.5,0),fov=15,
              aperture = 0.5,parallel=TRUE,samples=500)
 }
@@ -146,7 +146,7 @@ render_scene(scene,lookfrom = c(7,1.5,10),lookat = c(0,0.5,0),fov=15,
 t=1:30
 xpos = 10 * sin(t*12*pi/180+pi/2)
 zpos = 10 * cos(t*12*pi/180+pi/2)
-\dontrun{
+\donttest{
 par(mfrow=c(5,6))
 for(i in 1:30) {
  render_scene(scene, samples=5,

@@ -42,7 +42,7 @@ Disk Object
 }
 \examples{
 #Generate a disk in the cornell box.
-\dontrun{
+\donttest{
 generate_cornell() \%>\%
   add_object(disk(x = 555/2, y = 50, z = 555/2, radius = 150, 
                   material = lambertian(color = "orange"))) \%>\%
@@ -50,7 +50,7 @@ generate_cornell() \%>\%
                ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
 }
 #Rotate the disk.
-\dontrun{
+\donttest{
 generate_cornell() \%>\%
   add_object(disk(x = 555/2, y = 555/2, z = 555/2, radius = 150, angle = c(45, 0, 0), 
                   material = lambertian(color = "orange"))) \%>\%
@@ -58,7 +58,7 @@ generate_cornell() \%>\%
                ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
 }
 #Pass a value for the inner radius.
-\dontrun{
+\donttest{
 generate_cornell() \%>\% 
   add_object(disk(x = 555/2, y = 555/2, z = 555/2, 
                   radius = 150, inner_radius = 75, angle = c(45, 0, 0), 

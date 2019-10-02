@@ -30,7 +30,7 @@ scene = generate_ground(depth=-0.5,
                         material = lambertian(noise=1,noisecolor="blue",noisephase=10)) \%>\%
   add_object(cube(x=0.7,material=lambertian(color="red"),angle=c(0,-15,0))) \%>\%
   add_object(sphere(x=-0.7,radius=0.5,material=dielectric(color="white")))
-\dontrun{
+\donttest{
 render_scene(scene, parallel=TRUE,lookfrom=c(0,2,10))
 }
 
@@ -39,7 +39,7 @@ scene = generate_ground(depth=-0.5, spheresize=10000,
                         material = lambertian(checkercolor="grey50")) \%>\%
   add_object(cube(x=0.7,material=lambertian(color="red"),angle=c(0,-15,0))) \%>\%
   add_object(sphere(x=-0.7,radius=0.5,material=dielectric(color="white")))
-\dontrun{
+\donttest{
 render_scene(scene, parallel=TRUE,lookfrom=c(0,1,10))
 }
 }

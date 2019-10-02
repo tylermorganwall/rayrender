@@ -25,7 +25,7 @@ Metallic Material
 #Generate the cornell box with a single metal sphere in the center
 scene = generate_cornell() \%>\%
   add_object(sphere(x=555/2,y=555/2,z=555/2,radius=555/8,material=metal()))
-\dontrun{
+\donttest{
 render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 }
@@ -33,7 +33,7 @@ render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
 scene = scene \%>\%
   add_object(cube(x=380,y=150/2,z=200,xwidth=150,ywidth=150,zwidth=150,
   material = metal(color="#8B4513"),angle=c(0,45,0)))
-\dontrun{
+\donttest{
 render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 }
@@ -41,7 +41,7 @@ render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
 scene = scene \%>\%
   add_object(cube(x=150,y=150/2,z=300,xwidth=150,ywidth=150,zwidth=150,
   material = metal(color="#FAFAD2",fuzz=0.1),angle=c(0,-30,0)))
-\dontrun{
+\donttest{
 render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 }

@@ -28,7 +28,7 @@
 #' #Generate the cornell box and add a single white sphere to the center
 #' scene = generate_cornell() %>%
 #'   add_object(sphere(x=555/2,y=555/2,z=555/2,radius=555/8,material=lambertian()))
-#' \dontrun{
+#' \donttest{
 #' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
 #'              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 #' }
@@ -37,7 +37,7 @@
 #' scene = scene %>%
 #'   add_object(cube(x=555/2,y=555/8,z=555/2,xwidth=555/2,ywidth=555/4,zwidth=555/2,
 #'   material = lambertian(checkercolor="purple",checkerperiod=20)))
-#' \dontrun{
+#' \donttest{
 #' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
 #'              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 #' }
@@ -46,7 +46,7 @@
 #' scene = scene %>%
 #'   add_object(sphere(x=555/2+555/4,y=555/2,z=555/2,radius=555/8,
 #'   material = lambertian(noise=1/20)))
-#' \dontrun{
+#' \donttest{
 #' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
 #'              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 #' }
@@ -55,7 +55,7 @@
 #' scene = scene %>%
 #'   add_object(cube(x=555/2-555/4,y=555/2,z=555/2,xwidth=555/4,ywidth=555/4,zwidth=555/4,
 #'   material = lambertian(fog=TRUE, fogdensity=0.05,color="orange")))
-#' \dontrun{
+#' \donttest{
 #' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
 #'              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 #' }
@@ -98,7 +98,7 @@ lambertian = function(color = "#ffffff", checkercolor = NA, checkerperiod = 3,
 #' #Generate the cornell box with a single metal sphere in the center
 #' scene = generate_cornell() %>%
 #'   add_object(sphere(x=555/2,y=555/2,z=555/2,radius=555/8,material=metal()))
-#' \dontrun{
+#' \donttest{
 #' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
 #'              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 #' }
@@ -106,7 +106,7 @@ lambertian = function(color = "#ffffff", checkercolor = NA, checkerperiod = 3,
 #' scene = scene %>%
 #'   add_object(cube(x=380,y=150/2,z=200,xwidth=150,ywidth=150,zwidth=150,
 #'   material = metal(color="#8B4513"),angle=c(0,45,0)))
-#' \dontrun{
+#' \donttest{
 #' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
 #'              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 #' }
@@ -114,7 +114,7 @@ lambertian = function(color = "#ffffff", checkercolor = NA, checkerperiod = 3,
 #' scene = scene %>%
 #'   add_object(cube(x=150,y=150/2,z=300,xwidth=150,ywidth=150,zwidth=150,
 #'   material = metal(color="#FAFAD2",fuzz=0.1),angle=c(0,-30,0)))
-#' \dontrun{
+#' \donttest{
 #' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
 #'              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 #' }
@@ -143,19 +143,19 @@ metal = function(color = "#ffffff", fuzz = 0,  implicit_sample = FALSE) {
 #' #Generate a checkered ground
 #' scene = generate_ground(depth=-0.5,
 #'                         material=lambertian(color="white", checkercolor="grey30",checkerperiod=2))
-#' \dontrun{
+#' \donttest{
 #' render_scene(scene,parallel=TRUE)
 #' }
 #' 
 #' #Add a glass sphere
-#' \dontrun{
+#' \donttest{
 #' scene %>%
 #'   add_object(sphere(x=-0.5,radius=0.5,material=dielectric())) %>%
 #'   render_scene(parallel=TRUE,samples=400)
 #' }
 #' 
 #' #Add a rotated colored glass cube
-#' \dontrun{
+#' \donttest{
 #' scene %>%
 #'   add_object(sphere(x=-0.5,radius=0.5,material=dielectric())) %>%
 #'   add_object(cube(x=0.5,xwidth=0.5,material=dielectric(color="darkgreen"),angle=c(0,-45,0))) %>%
@@ -163,7 +163,7 @@ metal = function(color = "#ffffff", fuzz = 0,  implicit_sample = FALSE) {
 #' }
 #' 
 #' #Add an area light behind and at an angle and turn off the ambient lighting
-#' \dontrun{
+#' \donttest{
 #' scene %>%
 #'   add_object(sphere(x=-0.5,radius=0.5,material=dielectric())) %>%
 #'   add_object(cube(x=0.5,xwidth=0.5,material=dielectric(color="darkgreen"),angle=c(0,-45,0))) %>%

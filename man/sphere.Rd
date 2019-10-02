@@ -40,7 +40,7 @@ Sphere Object
 }
 \examples{
 #Generate a sphere in the cornell box.
-\dontrun{
+\donttest{
 generate_cornell() \%>\%
   add_object(sphere(x = 555/2, y = 555/2, z = 555/2, radius = 100)) \%>\%
   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
@@ -48,7 +48,7 @@ generate_cornell() \%>\%
 }
 
 #Generate a gold sphere in the cornell box
-\dontrun{
+\donttest{
 generate_cornell() \%>\%
   add_object(sphere(x = 555/2, y = 100, z = 555/2, radius = 100, 
                     material = metal(color = "gold", fuzz = 0.2))) \%>\%
@@ -57,7 +57,7 @@ generate_cornell() \%>\%
 }
   
 #Add motion blur and show the sphere moving
-\dontrun{
+\donttest{
 generate_cornell() \%>\%
   add_object(sphere(x = 555/2, y = 100, z = 555/2, radius = 100,
              material = metal(color = "gold", fuzz = 0.2), velocity = c(50, 0, 0))) \%>\%

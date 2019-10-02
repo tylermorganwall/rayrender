@@ -20,7 +20,7 @@
 #'
 #' @examples
 #' #Generate a sphere in the cornell box.
-#' \dontrun{
+#' \donttest{
 #' generate_cornell() %>%
 #'   add_object(sphere(x = 555/2, y = 555/2, z = 555/2, radius = 100)) %>%
 #'   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
@@ -28,7 +28,7 @@
 #' }
 #' 
 #' #Generate a gold sphere in the cornell box
-#' \dontrun{
+#' \donttest{
 #' generate_cornell() %>%
 #'   add_object(sphere(x = 555/2, y = 100, z = 555/2, radius = 100, 
 #'                     material = metal(color = "gold", fuzz = 0.2))) %>%
@@ -37,7 +37,7 @@
 #' }
 #'   
 #' #Add motion blur and show the sphere moving
-#' \dontrun{
+#' \donttest{
 #' generate_cornell() %>%
 #'   add_object(sphere(x = 555/2, y = 100, z = 555/2, radius = 100,
 #'              material = metal(color = "gold", fuzz = 0.2), velocity = c(50, 0, 0))) %>%
@@ -88,7 +88,7 @@ sphere = function(x = 0, y = 0, z = 0, radius = 1, material = lambertian(),
 #'
 #' @examples
 #' #Generate a cube in the cornell box.
-#' \dontrun{
+#' \donttest{
 #' generate_cornell() %>%
 #'   add_object(cube(x = 555/2, y = 100, z = 555/2, 
 #'                   xwidth = 200, ywidth = 200, zwidth = 200, angle = c(0, 30, 0))) %>%
@@ -96,7 +96,7 @@ sphere = function(x = 0, y = 0, z = 0, radius = 1, material = lambertian(),
 #'                ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
 #' }
 #' #Generate a gold cube in the cornell box
-#' \dontrun{
+#' \donttest{
 #' generate_cornell() %>%
 #'   add_object(cube(x = 555/2, y = 100, z = 555/2, 
 #'                   xwidth = 200, ywidth = 200, zwidth = 200, angle = c(0, 30, 0),
@@ -106,7 +106,7 @@ sphere = function(x = 0, y = 0, z = 0, radius = 1, material = lambertian(),
 #' }
 #' 
 #' #Generate a rotateddielectric box in the cornell box
-#' \dontrun{
+#' \donttest{
 #' generate_cornell() %>%
 #'   add_object(cube(x = 555/2, y = 200, z = 555/2, 
 #'                   xwidth = 200, ywidth = 100, zwidth = 200, angle = c(30, 30, 30),
@@ -158,7 +158,7 @@ cube = function(x = 0, y = 0, z = 0, width = 1, xwidth = 1, ywidth = 1, zwidth =
 #'
 #' @examples
 #' #Generate a purple rectangle in the cornell box.
-#' \dontrun{
+#' \donttest{
 #' generate_cornell() %>%
 #'   add_object(xy_rect(x = 555/2, y = 100, z = 555/2, xwidth = 200, ywidth = 200,
 #'              material = lambertian(color = "purple"))) %>%
@@ -167,7 +167,7 @@ cube = function(x = 0, y = 0, z = 0, width = 1, xwidth = 1, ywidth = 1, zwidth =
 #' }
 #' 
 #' #Generate a gold plane in the cornell box
-#' \dontrun{
+#' \donttest{
 #' generate_cornell() %>%
 #'   add_object(xy_rect(x = 555/2, y = 100, z = 555/2, 
 #'                      xwidth = 200, ywidth = 200, angle = c(0, 30, 0),
@@ -216,7 +216,7 @@ xy_rect = function(x = 0, y = 0, z = 0, xwidth = 1, ywidth = 1,
 #'
 #' @examples
 #' #Generate a purple rectangle in the cornell box.
-#' \dontrun{
+#' \donttest{
 #' generate_cornell() %>%
 #'   add_object(yz_rect(x = 100, y = 100, z = 555/2, ywidth = 200, zwidth = 200,
 #'                      material = lambertian(color = "purple"))) %>%
@@ -224,7 +224,7 @@ xy_rect = function(x = 0, y = 0, z = 0, xwidth = 1, ywidth = 1,
 #'                ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
 #' }
 #' #Generate a gold plane in the cornell box
-#' \dontrun{
+#' \donttest{
 #' generate_cornell() %>%
 #'   add_object(yz_rect(x = 100, y = 100, z = 555/2, 
 #'                      ywidth = 200, zwidth = 200, angle = c(0, 30, 0),
@@ -273,7 +273,7 @@ yz_rect = function(x = 0, y = 0, z = 0, ywidth = 1, zwidth = 1, material = lambe
 #'
 #' @examples
 #' #Generate a purple rectangle in the cornell box.
-#' \dontrun{
+#' \donttest{
 #' generate_cornell() %>%
 #'   add_object(xz_rect(x = 555/2, y = 100, z = 555/2, xwidth = 200, zwidth = 200,
 #'              material = lambertian(color = "purple"))) %>%
@@ -282,7 +282,7 @@ yz_rect = function(x = 0, y = 0, z = 0, ywidth = 1, zwidth = 1, material = lambe
 #' }
 #' 
 #' #Generate a gold plane in the cornell box
-#' \dontrun{
+#' \donttest{
 #' generate_cornell() %>%
 #'   add_object(xz_rect(x = 555/2, y = 100, z = 555/2, 
 #'              xwidth = 200, zwidth = 200, angle = c(0, 30, 0),
@@ -339,7 +339,7 @@ xz_rect = function(x = 0, xwidth = 1, z = 0, zwidth = 1, y = 0, material = lambe
 #'
 #' @examples
 #' #Generate a triangle in the Cornell box.
-#' \dontrun{
+#' \donttest{
 #' generate_cornell() %>%
 #'   add_object(triangle(v1 = c(100, 100, 100), v2 = c(555/2, 455, 455), v3 = c(455, 100, 100),
 #'                       material = lambertian(color = "purple"))) %>%
@@ -347,7 +347,7 @@ xz_rect = function(x = 0, xwidth = 1, z = 0, zwidth = 1, y = 0, material = lambe
 #'                ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
 #' }
 #' #Pass individual colors to each vertex:
-#' \dontrun{
+#' \donttest{
 #' generate_cornell() %>%
 #'   add_object(triangle(v1 = c(100, 100, 100), v2 = c(555/2, 455, 455), v3 = c(455, 100, 100),
 #'                       color1 = "green", color2 = "yellow", color3 = "red")) %>%
@@ -421,7 +421,7 @@ triangle = function(v1 = c(1, 0, 0), v2 = c(0, 1, 0), v3 = c(-1, 0, 0),
 #'
 #' @examples
 #' #Generate a disk in the cornell box.
-#' \dontrun{
+#' \donttest{
 #' generate_cornell() %>%
 #'   add_object(disk(x = 555/2, y = 50, z = 555/2, radius = 150, 
 #'                   material = lambertian(color = "orange"))) %>%
@@ -429,7 +429,7 @@ triangle = function(v1 = c(1, 0, 0), v2 = c(0, 1, 0), v3 = c(-1, 0, 0),
 #'                ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
 #' }
 #' #Rotate the disk.
-#' \dontrun{
+#' \donttest{
 #' generate_cornell() %>%
 #'   add_object(disk(x = 555/2, y = 555/2, z = 555/2, radius = 150, angle = c(45, 0, 0), 
 #'                   material = lambertian(color = "orange"))) %>%
@@ -437,7 +437,7 @@ triangle = function(v1 = c(1, 0, 0), v2 = c(0, 1, 0), v3 = c(-1, 0, 0),
 #'                ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
 #' }
 #' #Pass a value for the inner radius.
-#' \dontrun{
+#' \donttest{
 #' generate_cornell() %>% 
 #'   add_object(disk(x = 555/2, y = 555/2, z = 555/2, 
 #'                   radius = 150, inner_radius = 75, angle = c(45, 0, 0), 
@@ -495,7 +495,7 @@ disk = function(x = 0, y = 0, z = 0, radius = 1, inner_radius = 0, material = la
 #' #due to package constraints, but the file contents are identical and it does not 
 #' #affect the function.
 #' 
-#' \dontrun{
+#' \donttest{
 #' generate_ground(material = lambertian(checkercolor = "grey50")) %>%
 #'   add_object(obj_model(y = -0.8, filename = r_obj(),
 #'                        material = metal(color = "gold", fuzz = 0.025))) %>%
@@ -510,7 +510,7 @@ disk = function(x = 0, y = 0, z = 0, radius = 1, inner_radius = 0, material = la
 #' }
 #' 
 #' #Use scale_obj to make objects bigger--this is more robust than the generic scale argument.
-#' \dontrun{
+#' \donttest{
 #' generate_ground(material = lambertian(checkercolor = "grey50")) %>%
 #'   add_object(obj_model(y = -0.8, filename = r_obj(), scale_obj = 2,
 #'                        material = lambertian(noise = TRUE, noiseintensity = 10,noisephase=45))) %>%
@@ -575,7 +575,7 @@ obj_model = function(filename, x = 0, y = 0, z = 0, scale_obj = 1, texture = FAL
 #' @examples
 #' #Generate a cylinder in the cornell box. Add a cap to both ends.
 #' 
-#' \dontrun{
+#' \donttest{
 #' generate_cornell() %>%
 #'   add_object(cylinder(x = 555/2, y = 250, z = 555/2, 
 #'                       length = 300, radius = 100, material = metal())) %>%
@@ -587,7 +587,7 @@ obj_model = function(filename, x = 0, y = 0, z = 0, scale_obj = 1, texture = FAL
 #'                ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
 #' }
 #' #Rotate the cylinder
-#' \dontrun{
+#' \donttest{
 #' generate_cornell() %>%
 #'   add_object(cylinder(x = 555/2, y = 250, z = 555/2, 
 #'                       length = 300, radius = 100, angle = c(0, 0, 45),
@@ -597,7 +597,7 @@ obj_model = function(filename, x = 0, y = 0, z = 0, scale_obj = 1, texture = FAL
 #' }
 #' 
 #' # Only render a subtended arc of the cylinder,
-#' \dontrun{
+#' \donttest{
 #' generate_cornell(lightintensity=3) %>%
 #'   add_object(cylinder(x = 555/2, y = 250, z = 555/2, 
 #'                       length = 300, radius = 100, angle = c(45, 0, 0), phi_min = 0, phi_max = 180,
@@ -651,7 +651,7 @@ cylinder = function(x = 0, y = 0, z = 0, radius = 1, length = 1,
 #'
 #' @examples
 #' #Generate a segment in the cornell box. 
-#' \dontrun{
+#' \donttest{
 #' generate_cornell() %>%
 #'   add_object(segment(start = c(100, 100, 100), end = c(455, 455, 455), radius = 50)) %>%
 #'   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
@@ -670,7 +670,7 @@ cylinder = function(x = 0, y = 0, z = 0, radius = 1, length = 1,
 #'                             material = metal())
 #' }
 #' scene_segments = do.call(rbind,scene_list)
-#' \dontrun{
+#' \donttest{
 #' generate_cornell() %>% 
 #'   add_object(scene_segments) %>%
 #'   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
@@ -692,7 +692,7 @@ cylinder = function(x = 0, y = 0, z = 0, radius = 1, length = 1,
 #'   add_object(segment(start = c(455, 100, 455), end = c(455, 455, 455), radius = 10)) %>%
 #'   add_object(segment(start = c(100, 455, 100), end = c(455, 455, 100), radius = 10))
 #' 
-#' \dontrun{
+#' \donttest{
 #' generate_cornell() %>%
 #'   add_object(cube_outline) %>%
 #'   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
@@ -700,7 +700,7 @@ cylinder = function(x = 0, y = 0, z = 0, radius = 1, length = 1,
 #' }
 #' 
 #' #Shrink and rotate the cube
-#' \dontrun{
+#' \donttest{
 #' generate_cornell() %>%
 #'   add_object(group_objects(cube_outline, pivot_point = c(555/2, 555/2, 555/2),
 #'                            group_angle = c(45,45,45), group_scale = c(0.5,0.5,0.5))) %>%
@@ -769,7 +769,7 @@ segment = function(start = c(0, -1, 0), end = c(0, 1, 0), radius = 1,
 #' @export
 #' @examples
 #' #Generate an ellipsoid in a Cornell box
-#' \dontrun{
+#' \donttest{
 #' generate_cornell() %>%
 #'   add_object(ellipsoid(x = 555/2, y = 555/2, z = 555/2, 
 #'                        a = 100, b = 50, c = 50)) %>%
@@ -778,7 +778,7 @@ segment = function(start = c(0, -1, 0), end = c(0, 1, 0), radius = 1,
 #' }
 #' 
 #' #Change the axes to make it taller rather than wide:
-#' \dontrun{
+#' \donttest{
 #' generate_cornell() %>%
 #'   add_object(ellipsoid(x = 555/2, y = 555/2, z = 555/2, 
 #'                        a = 100, b = 200, c = 100, material = metal())) %>%
@@ -787,7 +787,7 @@ segment = function(start = c(0, -1, 0), end = c(0, 1, 0), radius = 1,
 #' }
 #' 
 #' #Rotate it and make it dielectric:
-#' \dontrun{
+#' \donttest{
 #' generate_cornell() %>%
 #'   add_object(ellipsoid(x = 555/2, y = 555/2, z = 555/2, 
 #'                        a = 100, b = 200, c = 100, angle = c(0, 0, 45),

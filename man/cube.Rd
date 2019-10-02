@@ -47,7 +47,7 @@ Cube Object
 }
 \examples{
 #Generate a cube in the cornell box.
-\dontrun{
+\donttest{
 generate_cornell() \%>\%
   add_object(cube(x = 555/2, y = 100, z = 555/2, 
                   xwidth = 200, ywidth = 200, zwidth = 200, angle = c(0, 30, 0))) \%>\%
@@ -55,7 +55,7 @@ generate_cornell() \%>\%
                ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
 }
 #Generate a gold cube in the cornell box
-\dontrun{
+\donttest{
 generate_cornell() \%>\%
   add_object(cube(x = 555/2, y = 100, z = 555/2, 
                   xwidth = 200, ywidth = 200, zwidth = 200, angle = c(0, 30, 0),
@@ -65,7 +65,7 @@ generate_cornell() \%>\%
 }
 
 #Generate a rotateddielectric box in the cornell box
-\dontrun{
+\donttest{
 generate_cornell() \%>\%
   add_object(cube(x = 555/2, y = 200, z = 555/2, 
                   xwidth = 200, ywidth = 100, zwidth = 200, angle = c(30, 30, 30),

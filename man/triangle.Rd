@@ -53,7 +53,7 @@ Triangle Object
 }
 \examples{
 #Generate a triangle in the Cornell box.
-\dontrun{
+\donttest{
 generate_cornell() \%>\%
   add_object(triangle(v1 = c(100, 100, 100), v2 = c(555/2, 455, 455), v3 = c(455, 100, 100),
                       material = lambertian(color = "purple"))) \%>\%
@@ -61,7 +61,7 @@ generate_cornell() \%>\%
                ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
 }
 #Pass individual colors to each vertex:
-\dontrun{
+\donttest{
 generate_cornell() \%>\%
   add_object(triangle(v1 = c(100, 100, 100), v2 = c(555/2, 455, 455), v3 = c(455, 100, 100),
                       color1 = "green", color2 = "yellow", color3 = "red")) \%>\%

@@ -14,7 +14,7 @@ File location of the R.obj file (saved with a .txt extension)
 }
 \examples{
 #Load and render the included example R object file.
-\dontrun{
+\donttest{
 generate_ground(material = lambertian(noise = TRUE, noisecolor = "grey20")) \%>\%
   add_object(sphere(x = 2, y = 3, z = 2, radius = 1,
                     material = lambertian(lightintensity = 10, implicit_sample = TRUE))) \%>\%

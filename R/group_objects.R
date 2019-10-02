@@ -17,7 +17,7 @@
 #' scene = generate_cornell() %>%
 #'         add_object(cube(x=555/2,y=555/8,z=555/2,width=555/4)) %>%
 #'         add_object(cube(x=555/2,y=555/4+555/16,z=555/2,width=555/8))
-#' \dontrun{
+#' \donttest{
 #' render_scene(scene,lookfrom=c(278,278,-800),lookat = c(278,278,0), aperture=0,
 #'              samples=500, fov=50, parallel=TRUE, clamp_value=5)
 #' }
@@ -29,7 +29,7 @@
 #'          add_object(cube(x=555/2,y=555/8,z=555/2,width=555/4)) %>%
 #'         add_object(cube(x=555/2,y=555/4+555/16,z=555/2,width=555/8))
 #'                        
-#' \dontrun{
+#' \donttest{
 #' render_scene(scene2,lookfrom=c(278,278,-800),lookat = c(278,278,0), aperture=0,
 #'              samples=500, fov=50, parallel=TRUE, clamp_value=5)
 #' }
@@ -39,7 +39,7 @@
 #'            add_object(cube(x=555/2, y=555/4 + 555/16, z=555/2, width=555/8))
 #' scene3 = generate_cornell() %>%
 #'          add_object(group_objects(twocubes, group_translate = c(0,50,0),group_angle = c(0,45,0)))
-#' \dontrun{
+#' \donttest{
 #' render_scene(scene3,lookfrom=c(278,278,-800),lookat = c(278,278,0), aperture=0,
 #'              samples=500, fov=50, parallel=TRUE, clamp_value=5)
 #' }
@@ -48,7 +48,7 @@
 #' scene4 = generate_cornell() %>%
 #'          add_object(group_objects(twocubes, group_translate = c(0,-40,0), 
 #'                                   group_angle = c(0,45,0), group_scale = c(2,0.5,1)))
-#' \dontrun{
+#' \donttest{
 #' render_scene(scene4,lookfrom=c(278,278,-800),lookat = c(278,278,0), aperture=0,
 #'              samples=500, fov=50, parallel=TRUE, clamp_value=5)
 #' }
