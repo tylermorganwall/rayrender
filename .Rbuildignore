@@ -1,5 +1,6 @@
 ^\.git$
 ^build_gh_pages_rayrender\.R$
+^cran_build\.R$
 ^man/figures$
 ^tools/readme$
 ^tic\.R$

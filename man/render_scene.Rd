@@ -147,10 +147,13 @@ t=1:30
 xpos = 10 * sin(t*12*pi/180+pi/2)
 zpos = 10 * cos(t*12*pi/180+pi/2)
 \donttest{
+#Save old par() settings
+old.par = par(no.readonly = TRUE)
 par(mfrow=c(5,6))
 for(i in 1:30) {
  render_scene(scene, samples=5,
    lookfrom = c(xpos[i],1.5,zpos[i]),lookat = c(0,0.5,0), parallel=TRUE)
 }
+par(old.par)
 }
 }
