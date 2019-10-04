@@ -27,6 +27,7 @@
 #' @param shutterclose Default `1`. Time at which the shutter is open. Only affects moving objects.
 #' @param focal_distance Default `NULL`, automatically set to the `lookfrom-lookat` distance unless
 #' otherwise specified.
+#' @param ortho_dimensions Default `c(1,1)`. Width and height of the orthographic camera. Will only be used if `fov = 0`. 
 #' @param tonemap Default `gamma`. Choose the tone mapping function,
 #' Default `gamma` solely adjusts for gamma and clamps values greater than 1 to 1. 
 #' `reinhold` scales values by their individual color channels `color/(1+color)` and then performs the 
@@ -124,7 +125,8 @@
 render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 100, ambient_light = FALSE,
                         lookfrom = c(0,1,10), lookat = c(0,0,0), camera_up = c(0,1,0), aperture = 0.1, clamp_value = Inf,
                         filename = NULL, backgroundhigh = "#80b4ff",backgroundlow = "#ffffff",
-                        shutteropen = 0.0, shutterclose = 1.0, focal_distance=NULL, tonemap ="gamma", parallel=FALSE,
+                        shutteropen = 0.0, shutterclose = 1.0, focal_distance=NULL, ortho_dimensions = c(1,1),
+                        tonemap ="gamma", parallel=TRUE,
                         backgroundimage = NULL,
                         progress = interactive(), debug = NULL) { 
   #Check if Cornell Box scene and set camera if user did not:
@@ -144,6 +146,11 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
     if(missing(fov)) {
       fov=40
       corn_message = paste0(corn_message, "fov `40` ")
+      missing_corn = TRUE
+    }
+    if(fov == 0 && missing(ortho_dimensions)) {
+      ortho_dimensions = c(580,580)
+      corn_message = paste0(corn_message, "ortho_dimensions `c(580, 580)` ")
       missing_corn = TRUE
     }
     corn_message = paste0(corn_message,".")
@@ -287,6 +294,9 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
   } else {
     debugval = 0
   }
+  if(fov == 0) {
+    assertthat::assert_that(length(ortho_dimensions) == 2)
+  }
   rgb_mat = render_scene_rcpp(nx = width, ny = height, ns = samples, fov = fov, ambient_light = ambient_light,
                              lookfromvec = lookfrom, lookatvec = lookat, aperture=aperture,camera_up = camera_up,
                              type = typevec, shape = shapevec, radius = rvec, 
@@ -308,7 +318,8 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
                              tri_normal_bools = tri_normal_bools, is_tri_color = is_tri_color, tri_color_vert= tri_color_vert,
                              fileinfo = objfilenamevec, filebasedir = objbasedirvec, toneval = toneval,
                              progress_bar = progress, numbercores = numbercores, debugval = debugval,
-                             hasbackground = hasbackground, background = backgroundstring, scale_list = scale_factor) 
+                             hasbackground = hasbackground, background = backgroundstring, scale_list = scale_factor,
+                             ortho_dimensions = ortho_dimensions) 
   full_array = array(0,c(ncol(rgb_mat$r),nrow(rgb_mat$r),3))
   full_array[,,1] = t(rgb_mat$r)
   full_array[,,2] = t(rgb_mat$g)

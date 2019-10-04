@@ -194,7 +194,8 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
                       LogicalVector& tri_normal_bools, LogicalVector& is_tri_color, List& tri_color_vert,
                       CharacterVector& fileinfo, CharacterVector& filebasedir, int toneval,
                       bool progress_bar, int numbercores, int debugval, 
-                      bool hasbackground, CharacterVector& background, List& scale_list) {
+                      bool hasbackground, CharacterVector& background, List& scale_list,
+                      NumericVector ortho_dimensions) {
   NumericMatrix routput(nx,ny);
   NumericMatrix goutput(nx,ny);
   NumericMatrix boutput(nx,ny);
@@ -208,6 +209,9 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
   camera cam(lookfrom, lookat, vec3(camera_up(0),camera_up(1),camera_up(2)), fov, float(nx)/float(ny), 
              aperture, dist_to_focus,
              shutteropen, shutterclose, rng);
+  ortho_camera ocam(lookfrom, lookat, vec3(camera_up(0),camera_up(1),camera_up(2)),
+                    ortho_dimensions(0), ortho_dimensions(1),
+                    shutteropen, shutterclose, rng);
   int nx1, ny1, nn1;
   texture *background_texture;
   if(hasbackground) {
@@ -267,7 +271,12 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
       for(int i = 0; i < nx; i++) {
         Float u = Float(i + rng.unif_rand()) / Float(nx);
         Float v = Float(j + rng.unif_rand()) / Float(ny);
-        ray r = cam.get_ray(u,v);
+        ray r;
+        if(fov != 0) {
+          r = cam.get_ray(u,v);
+        } else {
+          r = ocam.get_ray(u,v);
+        }
         bvh_intersections = 0.0;
         bvh_intersections = debug_bvh(r, world, rng);
         routput(i,j) = bvh_intersections;
@@ -295,7 +304,12 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
           for(int s = 0; s < ns; s++) {
             Float u = Float(i + rng.unif_rand()) / Float(nx);
             Float v = Float(j + rng.unif_rand()) / Float(ny);
-            ray r = cam.get_ray(u,v);
+            ray r;
+            if(fov != 0) {
+              r = cam.get_ray(u,v);
+            } else {
+              r = ocam.get_ray(u,v);
+            }
             if(numbertosample) {
               if(ambient_light) {
                 col += clamp(de_nan(color_amb(r, world, &hlist, 0, 
@@ -340,8 +354,8 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
       }
       RcppThread::ThreadPool pool(numbercores);
       auto worker = [&routput, &goutput, &boutput,
-                     ambient_light, nx, ny, ns, seeds,
-                     &cam, backgroundhigh, backgroundlow, &world, &hlist,
+                     ambient_light, nx, ny, ns, seeds, fov,
+                     &cam, &ocam, backgroundhigh, backgroundlow, &world, &hlist,
                      numbertosample, clampval, toneval, progress_bar, numbercores, background_texture] (int j) {
       // auto worker = [nx, ns] (int j) {
         if(progress_bar && j % numbercores == 0) {
@@ -354,7 +368,12 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
           for(int s = 0; s < ns; s++) {
             Float u = Float(i + rng.unif_rand()) / Float(nx);
             Float v = Float(j + rng.unif_rand()) / Float(ny);
-            ray r = cam.get_ray(u,v);
+            ray r;
+            if(fov != 0) {
+              r = cam.get_ray(u,v);
+            } else {
+              r = ocam.get_ray(u,v);
+            }
             if(numbertosample) {
               if(ambient_light) {
                 col += clamp(de_nan(color_amb(r, world, &hlist, 0,

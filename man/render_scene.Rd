@@ -9,8 +9,9 @@ render_scene(scene, width = 400, height = 400, fov = 20,
   lookat = c(0, 0, 0), camera_up = c(0, 1, 0), aperture = 0.1,
   clamp_value = Inf, filename = NULL, backgroundhigh = "#80b4ff",
   backgroundlow = "#ffffff", shutteropen = 0, shutterclose = 1,
-  focal_distance = NULL, tonemap = "gamma", parallel = FALSE,
-  backgroundimage = NULL, progress = interactive(), debug = NULL)
+  focal_distance = NULL, ortho_dimensions = c(1, 1),
+  tonemap = "gamma", parallel = TRUE, backgroundimage = NULL,
+  progress = interactive(), debug = NULL)
 }
 \arguments{
 \item{scene}{Tibble of object locations and properties.}
@@ -54,6 +55,8 @@ a hexadecimal code, or a numeric rgb vector listing three intensities between `0
 
 \item{focal_distance}{Default `NULL`, automatically set to the `lookfrom-lookat` distance unless
 otherwise specified.}
+
+\item{ortho_dimensions}{Default `c(1,1)`. Width and height of the orthographic camera. Will only be used if `fov = 0`.}
 
 \item{tonemap}{Default `gamma`. Choose the tone mapping function,
 Default `gamma` solely adjusts for gamma and clamps values greater than 1 to 1. 
