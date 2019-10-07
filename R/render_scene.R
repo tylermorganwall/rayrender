@@ -116,12 +116,12 @@
 #'\donttest{
 #'#Save old par() settings
 #'old.par = par(no.readonly = TRUE)
+#'on.exit(par(old.par))
 #'par(mfrow=c(5,6))
 #'for(i in 1:30) {
 #'  render_scene(scene, samples=5,
 #'    lookfrom = c(xpos[i],1.5,zpos[i]),lookat = c(0,0.5,0), parallel=TRUE)
 #'}
-#'par(old.par)
 #'}
 render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 100, ambient_light = FALSE,
                         lookfrom = c(0,1,10), lookat = c(0,0,0), camera_up = c(0,1,0), aperture = 0.1, clamp_value = Inf,
