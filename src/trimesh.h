@@ -45,6 +45,8 @@ public:
       std::vector<vec3 > image_dim(materials.size()+1);
       std::vector<int > nx_mat(materials.size()+1);
       std::vector<int > ny_mat(materials.size()+1);
+      std::vector<int > nn_mat(materials.size()+1);
+      
       int nx,ny,nn;
 
       for (size_t i = 0; i < materials.size(); i++) {
@@ -54,6 +56,7 @@ public:
           has_single_diffuse[i] = false;
           nx_mat[i] = nx;
           ny_mat[i] = ny;
+          nn_mat[i] = nn;
         } else if (sizeof(materials[i].diffuse) == 12) {
           diffuse_materials[i] = vec3(materials[i].diffuse[0],materials[i].diffuse[1],materials[i].diffuse[2]);
           has_diffuse[i] = true;
@@ -124,7 +127,7 @@ public:
                   tex = new lambertian(new constant_texture(diffuse_materials[material_num]));
                 } else {
                   tex = new lambertian(new triangle_image_texture(obj_materials[material_num],
-                                        nx_mat[material_num], ny_mat[material_num],
+                                        nx_mat[material_num], ny_mat[material_num],nn_mat[material_num],
                                         tx[0],ty[0], tx[1],ty[1],tx[2],ty[2]));
                 }
               } else {
@@ -144,7 +147,7 @@ public:
                   tex = new lambertian(new constant_texture(diffuse_materials[material_num]));
                 } else {
                   tex = new lambertian(new triangle_image_texture(obj_materials[material_num],
-                                                                  nx_mat[material_num],ny_mat[material_num],
+                                                                  nx_mat[material_num],ny_mat[material_num],nn_mat[material_num],
                                                                   tx[0],ty[0],
                                                                   tx[1],ty[1],
                                                                   tx[2],ty[2]));

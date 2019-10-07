@@ -120,8 +120,8 @@ hitable *build_scene(IntegerVector& type,
     if(type(i) == 1) {
       if(isimage(i)) {
         int nx, ny, nn;
-        unsigned char *tex_data = stbi_load(filelocation(i), &nx, &ny, &nn, 0);
-        tex = new lambertian(new image_texture(tex_data,nx,ny));
+        unsigned char *tex_data = stbi_load(filelocation(i), &nx, &ny, &nn, 4);
+        tex = new lambertian(new image_texture(tex_data,nx,ny,nn));
       } else if (islight(i)) {
         tex = new diffuse_light(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))*lightintensity(i)) );
       } else if (isnoise(i)) {

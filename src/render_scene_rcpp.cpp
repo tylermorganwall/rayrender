@@ -217,7 +217,7 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
   if(hasbackground) {
     unsigned char *background_texture_data;
     background_texture_data = stbi_load(background[0], &nx1, &ny1, &nn1, 0);
-    background_texture = new image_texture(background_texture_data, nx1, ny1);
+    background_texture = new image_texture(background_texture_data, nx1, ny1, nn1);
   } else {
     background_texture = new constant_texture(vec3(0,0,0));
   }
