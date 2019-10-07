@@ -20,7 +20,8 @@ render_scene(scene, width = 400, height = 400, fov = 20,
 
 \item{height}{Default `400`. Height of the render, in pixels.}
 
-\item{fov}{Default `20`. Field of view, in degrees.}
+\item{fov}{Default `20`. Field of view, in degrees. If this is zero, the camera will use an orthographic projection. The size of the plane
+used to create the orthographic projection is given in argument `ortho_dimensions`.}
 
 \item{samples}{Default `100`. Number of samples for each pixel.}
 
@@ -129,7 +130,7 @@ render_scene(scene,fov=20,parallel=TRUE,samples=500)
 render_scene(scene,lookfrom = c(7,1.5,10),lookat = c(0,0.5,0),fov=15,parallel=TRUE)
 }
 
-#Change the background gradient to a night time ambience
+#Change the background gradient to a night time ambiance
 \donttest{
 render_scene(scene,lookfrom = c(7,1.5,10),lookat = c(0,0.5,0),fov=15,
              backgroundhigh = "#282375", backgroundlow = "#7e77ea", parallel=TRUE,

@@ -5,7 +5,8 @@
 #' @param scene Tibble of object locations and properties. 
 #' @param width Default `400`. Width of the render, in pixels.
 #' @param height Default `400`. Height of the render, in pixels.
-#' @param fov Default `20`. Field of view, in degrees.
+#' @param fov Default `20`. Field of view, in degrees. If this is zero, the camera will use an orthographic projection. The size of the plane
+#' used to create the orthographic projection is given in argument `ortho_dimensions`.
 #' @param samples Default `100`. Number of samples for each pixel.
 #' @param ambient_light Default `FALSE`, unless there are no emitting objects in the scene. 
 #' If `TRUE`, the background will be a gradient varying from `backgroundhigh` directly up (+y) to 
@@ -92,7 +93,7 @@
 #' render_scene(scene,lookfrom = c(7,1.5,10),lookat = c(0,0.5,0),fov=15,parallel=TRUE)
 #' }
 #' 
-#' #Change the background gradient to a night time ambience
+#' #Change the background gradient to a night time ambiance
 #' \donttest{
 #' render_scene(scene,lookfrom = c(7,1.5,10),lookat = c(0,0.5,0),fov=15,
 #'              backgroundhigh = "#282375", backgroundlow = "#7e77ea", parallel=TRUE,
