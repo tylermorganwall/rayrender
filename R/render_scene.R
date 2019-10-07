@@ -72,9 +72,10 @@
 #' }
 #' 
 #' #Lower the number of samples to render more quickly (here, we also use only one core).
-#' render_scene(scene, samples=8)
+#' render_scene(scene, samples=4)
 #' 
 #' #Add a floating R plot using the iris dataset as a png onto a floating 2D rectangle
+#' 
 #' tempfileplot = tempfile()
 #' png(filename=tempfileplot,height=400,width=800)
 #' plot(iris$Petal.Length,iris$Sepal.Width,col=iris$Species,pch=18,cex=4)
