@@ -1,5 +1,11 @@
 #define STB_IMAGE_IMPLEMENTATION 
 
+#ifdef RAY_FLOAT_AS_DOUBLE
+typedef double Float;
+#else
+typedef float Float;
+#endif 
+
 #include "vec3.h"
 #include "mathinline.h"
 #include "camera.h"
@@ -21,14 +27,6 @@ inline vec3 de_nan(const vec3& c) {
   return(temp);
 }
 
-inline vec3 clamp(const vec3& c, float clampval) {
-  vec3 temp = c;
-  if(c[0] > clampval) temp.e[0] = clampval;
-  if(c[1] > clampval) temp.e[1] = clampval;
-  if(c[2] > clampval) temp.e[2] = clampval;
-  return(temp);
-}
-
 vec3 color(const ray& r, hitable *world, hitable *hlist, int depth, random_gen& rng, texture* background_texture) {
   hit_record hrec;
   if(world->hit(r, 0.001, FLT_MAX, hrec, rng)) { //generated hit record, world space
@@ -42,7 +40,7 @@ vec3 color(const ray& r, hitable *world, hitable *hlist, int depth, random_gen& 
                      hlist, depth + 1, rng, background_texture));
       }
       hitable_pdf p_imp(hlist, hrec.p); //creates pdf of all objects to be sampled
-      mixture_pdf p(&p_imp, srec.pdf_ptr); //creates mixture pdf of surface intersected at hrec.p and all sampled objects
+      mixture_pdf p(&p_imp, srec.pdf_ptr); //creates mixture pdf of surface intersected at hrec.p and all sampled objects/lights
       
       //Generates a scatter direction (with origin hrec.p) from the mixture 
       //and saves surface normal from light to use in pdf_value calculation
@@ -195,7 +193,7 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
                       CharacterVector& fileinfo, CharacterVector& filebasedir, int toneval,
                       bool progress_bar, int numbercores, int debugval, 
                       bool hasbackground, CharacterVector& background, List& scale_list,
-                      NumericVector ortho_dimensions) {
+                      NumericVector ortho_dimensions, NumericVector sigmavec) {
   NumericMatrix routput(nx,ny);
   NumericMatrix goutput(nx,ny);
   NumericMatrix boutput(nx,ny);
@@ -235,7 +233,7 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
                                   group_angle, group_order_rotation, group_scale,
                                   tri_normal_bools, is_tri_color, tri_color_vert, 
                                   fileinfo, filebasedir, 
-                                  scale_list, rng);
+                                  scale_list, sigmavec, rng);
   int numbertosample = 0;
   for(int i = 0; i < implicit_sample.size(); i++) {
     if(implicit_sample(i)) {
@@ -313,16 +311,16 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
             if(numbertosample) {
               if(ambient_light) {
                 col += clamp(de_nan(color_amb(r, world, &hlist, 0, 
-                                              backgroundhigh, backgroundlow, rng)),clampval);
+                                              backgroundhigh, backgroundlow, rng)),0,clampval);
               } else {
-                col += clamp(de_nan(color(r, world, &hlist, 0, rng, background_texture)),clampval);
+                col += clamp(de_nan(color(r, world, &hlist, 0, rng, background_texture)),0,clampval);
               }
             } else {
               if(ambient_light) {
                 col += clamp(de_nan(color_amb_uniform(r, world, 0, 
-                                                      backgroundhigh, backgroundlow, rng)),clampval);
+                                                      backgroundhigh, backgroundlow, rng)),0,clampval);
               } else {
-                col += clamp(de_nan(color_uniform(r, world, 0, rng, background_texture)),clampval);
+                col += clamp(de_nan(color_uniform(r, world, 0, rng, background_texture)),0,clampval);
               }
             }
           }
@@ -377,15 +375,15 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
             if(numbertosample) {
               if(ambient_light) {
                 col += clamp(de_nan(color_amb(r, world, &hlist, 0,
-                                              backgroundhigh, backgroundlow, rng)),clampval);
+                                              backgroundhigh, backgroundlow, rng)),0,clampval);
               } else {
-                col += clamp(de_nan(color(r, world, &hlist, 0, rng, background_texture)),clampval);
+                col += clamp(de_nan(color(r, world, &hlist, 0, rng, background_texture)),0,clampval);
               }
             } else {
               if(ambient_light) {
-                col += clamp(de_nan(color_amb_uniform(r, world, 0, backgroundhigh, backgroundlow, rng)),clampval);
+                col += clamp(de_nan(color_amb_uniform(r, world, 0, backgroundhigh, backgroundlow, rng)),0,clampval);
               } else {
-                col += clamp(de_nan(color_uniform(r, world, 0, rng, background_texture)),clampval);
+                col += clamp(de_nan(color_uniform(r, world, 0, rng, background_texture)),0,clampval);
               }
             }
           }

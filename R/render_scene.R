@@ -45,21 +45,21 @@
 #'
 #' @examples
 #' #Generate a large checkered sphere as the ground
-#' scene = generate_ground(depth=-0.5, material = lambertian(color="white", checkercolor="darkgreen"))
+#' scene = generate_ground(depth=-0.5, material = diffuse(color="white", checkercolor="darkgreen"))
 #' \donttest{
 #' render_scene(scene,parallel=TRUE,samples=500)
 #' }
 #' 
 #' #Add a sphere to the center
 #' scene = scene %>%
-#'   add_object(sphere(x=0,y=0,z=0,radius=0.5,material = lambertian(color=c(1,0,1))))
+#'   add_object(sphere(x=0,y=0,z=0,radius=0.5,material = diffuse(color=c(1,0,1))))
 #' \donttest{
 #' render_scene(scene,fov=20,parallel=TRUE,samples=500)
 #' }
 #' 
 #' #Add a marbled cube 
 #' scene = scene %>%
-#'   add_object(cube(x=1.1,y=0,z=0,material = lambertian(noise=3)))
+#'   add_object(cube(x=1.1,y=0,z=0,material = diffuse(noise=3)))
 #' \donttest{
 #' render_scene(scene,fov=20,parallel=TRUE,samples=500)
 #' }
@@ -76,6 +76,7 @@
 #' 
 #' #Add a floating R plot using the iris dataset as a png onto a floating 2D rectangle
 #' 
+#' \donttest{
 #' tempfileplot = tempfile()
 #' png(filename=tempfileplot,height=400,width=800)
 #' plot(iris$Petal.Length,iris$Sepal.Width,col=iris$Species,pch=18,cex=4)
@@ -84,8 +85,7 @@
 #' image_array = aperm(png::readPNG(tempfileplot),c(2,1,3))
 #' scene = scene %>%
 #'   add_object(xy_rect(x=0,y=1.1,z=0,xwidth=2,angle = c(0,180,0),
-#'                      material = lambertian(image = image_array)))
-#' \donttest{
+#'                      material = diffuse(image = image_array)))
 #' render_scene(scene,fov=20,parallel=TRUE,samples=500)
 #' }
 #' 
@@ -170,7 +170,8 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
                           "sphere" = 1,"xy_rect" = 2, "xz_rect" = 3,"yz_rect" = 4,"box" = 5, "triangle" = 6, 
                           "obj" = 7, "objcolor" = 8, "disk" = 9, "cylinder" = 10, "ellipsoid" = 11))
   typevec = unlist(lapply(tolower(scene$type),switch,
-                          "lambertian" = 1,"metal" = 2,"dielectric" = 3))
+                          "diffuse" = 1,"metal" = 2,"dielectric" = 3, "oren-nayar" = 4))
+  sigmavec = unlist(scene$sigma)
   assertthat::assert_that(tonemap %in% c("gamma","reinhold","uncharted", "hbd"))
   toneval = switch(tonemap, "gamma" = 1,"reinhold" = 2,"uncharted" = 3,"hbd" = 4)
   movingvec = purrr::map_lgl(scene$velocity,.f = ~any(.x != 0))
@@ -271,7 +272,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
   for(i in 1:length(xvec)) {
     if(typevec[i] == 1) {
       if(shapevec[i] == 1) {
-        assertthat::assert_that(length(proplist[[i]]) == 3)
+        # assertthat::assert_that(length(proplist[[i]]) == 3)
       }
     } else if (typevec[i] == 2) {
       # assertthat::assert_that(length(proplist[[i]]) == 4)
@@ -321,7 +322,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
                              fileinfo = objfilenamevec, filebasedir = objbasedirvec, toneval = toneval,
                              progress_bar = progress, numbercores = numbercores, debugval = debugval,
                              hasbackground = hasbackground, background = backgroundstring, scale_list = scale_factor,
-                             ortho_dimensions = ortho_dimensions) 
+                             ortho_dimensions = ortho_dimensions, sigmavec = sigmavec) 
   full_array = array(0,c(ncol(rgb_mat$r),nrow(rgb_mat$r),3))
   full_array[,,1] = t(rgb_mat$r)
   full_array[,,2] = t(rgb_mat$g)

@@ -3,7 +3,6 @@
 
 #include <iostream>
 #include <cmath>
-#include "mathinline.h"
 
 class vec3 {
 public:

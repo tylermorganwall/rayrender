@@ -4,8 +4,8 @@
 #' @param y Default `0`. y-coordinate of the center of the sphere.
 #' @param z Default `0`. z-coordinate of the center of the sphere.
 #' @param radius Default `1`. Radius of the sphere.
-#' @param material Default  \code{\link{lambertian}}. The material, called from one of the material 
-#' functions \code{\link{lambertian}}, \code{\link{metal}}, or \code{\link{dielectric}}.
+#' @param material Default  \code{\link{diffuse}}. The material, called from one of the material 
+#' functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}.
 #' @param angle Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.
 #' @param order_rotation Default `c(1, 2, 3)`. The order to apply the rotations, referring to "x", "y", and "z".
 #' @param velocity Default `c(0, 0, 0)`. Velocity of the sphere, used for motion blur.
@@ -44,7 +44,7 @@
 #'   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
 #'                ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
 #' }
-sphere = function(x = 0, y = 0, z = 0, radius = 1, material = lambertian(), 
+sphere = function(x = 0, y = 0, z = 0, radius = 1, material = diffuse(), 
                   angle = c(0, 0, 0), order_rotation = c(1, 2, 3), velocity = c(0, 0, 0), 
                   flipped = FALSE, scale = c(1,1,1)) {
   if(length(scale) == 1) {
@@ -57,7 +57,8 @@ sphere = function(x = 0, y = 0, z = 0, radius = 1, material = lambertian(),
                  noiseintensity = material$noiseintensity, noisecolor = material$noisecolor,
                  angle = list(angle), image = material$image, lightintensity = material$lightintensity,
                  flipped = flipped, fog = material$fog, fogdensity = material$fogdensity,
-                 implicit_sample = material$implicit_sample, order_rotation = list(order_rotation),
+                 implicit_sample = material$implicit_sample, sigma = material$sigma,
+                 order_rotation = list(order_rotation),
                  pivot_point = list(NA), group_translate = list(NA),
                  group_angle = list(NA), group_order_rotation = list(NA),
                  tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA))
@@ -72,8 +73,8 @@ sphere = function(x = 0, y = 0, z = 0, radius = 1, material = lambertian(),
 #' @param xwidth Default `1`. x-width of the cube. Overrides `width` argument for x-axis.
 #' @param ywidth Default `1`. y-width of the cube. Overrides `width` argument for y-axis.
 #' @param zwidth Default `1`. z-width of the cube. Overrides `width` argument for z-axis.
-#' @param material Default  \code{\link{lambertian}}.The material, called from one of the material 
-#' functions \code{\link{lambertian}}, \code{\link{metal}}, or \code{\link{dielectric}}.
+#' @param material Default  \code{\link{diffuse}}.The material, called from one of the material 
+#' functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}.
 #' @param angle Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.
 #' @param order_rotation Default `c(1, 2, 3)`. The order to apply the rotations, referring to "x", "y", and "z".
 #' @param velocity Default `c(0, 0, 0)`. Velocity of the cube.
@@ -115,7 +116,7 @@ sphere = function(x = 0, y = 0, z = 0, radius = 1, material = lambertian(),
 #'                ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
 #' }
 cube = function(x = 0, y = 0, z = 0, width = 1, xwidth = 1, ywidth = 1, zwidth = 1, 
-                material = lambertian(), angle = c(0, 0, 0), order_rotation = c(1, 2, 3), velocity = c(0, 0, 0),
+                material = diffuse(), angle = c(0, 0, 0), order_rotation = c(1, 2, 3), velocity = c(0, 0, 0),
                 flipped = FALSE, scale = c(1,1,1)) {
   if(length(scale) == 1) {
     scale = c(scale, scale, scale)
@@ -131,7 +132,8 @@ cube = function(x = 0, y = 0, z = 0, width = 1, xwidth = 1, ywidth = 1, zwidth =
                  noiseintensity = material$noiseintensity, noisecolor = material$noisecolor,
                  angle = list(angle), image = material$image, lightintensity = material$lightintensity,
                  flipped = flipped, fog = material$fog, fogdensity = material$fogdensity,
-                 implicit_sample = material$implicit_sample, order_rotation = list(order_rotation),
+                 implicit_sample = material$implicit_sample,  sigma = material$sigma,
+                 order_rotation = list(order_rotation),
                  pivot_point = list(NA), group_translate = list(NA),
                  group_angle = list(NA), group_order_rotation = list(NA),
                  tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA))
@@ -144,8 +146,8 @@ cube = function(x = 0, y = 0, z = 0, width = 1, xwidth = 1, ywidth = 1, zwidth =
 #' @param z Default `0`. z-coordinate of the center of the rectangle.
 #' @param xwidth Default `1`. x-width of the rectangle.
 #' @param ywidth Default `1`. y-width of the rectangle.
-#' @param material Default  \code{\link{lambertian}}.The material, called from one of the material 
-#' functions \code{\link{lambertian}}, \code{\link{metal}}, or \code{\link{dielectric}}.
+#' @param material Default  \code{\link{diffuse}}.The material, called from one of the material 
+#' functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}.
 #' @param angle Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.
 #' @param order_rotation Default `c(1, 2, 3)`. The order to apply the rotations, referring to "x", "y", and "z".
 #' @param flipped Default `FALSE`. Whether to flip the normals.
@@ -161,7 +163,7 @@ cube = function(x = 0, y = 0, z = 0, width = 1, xwidth = 1, ywidth = 1, zwidth =
 #' \donttest{
 #' generate_cornell() %>%
 #'   add_object(xy_rect(x = 555/2, y = 100, z = 555/2, xwidth = 200, ywidth = 200,
-#'              material = lambertian(color = "purple"))) %>%
+#'              material = diffuse(color = "purple"))) %>%
 #'   render_scene(lookfrom = c(278, 278, -800), lookat = c(278, 278, 0), fov = 40, 
 #'                ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
 #' }
@@ -176,7 +178,7 @@ cube = function(x = 0, y = 0, z = 0, width = 1, xwidth = 1, ywidth = 1, zwidth =
 #'                ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
 #' }
 xy_rect = function(x = 0, y = 0, z = 0, xwidth = 1, ywidth = 1,  
-                   material = lambertian(), angle = c(0, 0, 0), order_rotation = c(1, 2, 3), 
+                   material = diffuse(), angle = c(0, 0, 0), order_rotation = c(1, 2, 3), 
                    flipped = FALSE, scale = c(1,1,1)) {
   if(length(scale) == 1) {
     scale = c(scale, scale, scale)
@@ -189,7 +191,8 @@ xy_rect = function(x = 0, y = 0, z = 0, xwidth = 1, ywidth = 1,
                  noiseintensity = material$noiseintensity, noisecolor = material$noisecolor,
                  angle = list(angle), image = material$image, lightintensity = material$lightintensity,
                  flipped = flipped, fog = material$fog, fogdensity = material$fogdensity,
-                 implicit_sample = material$implicit_sample, order_rotation = list(order_rotation),
+                 implicit_sample = material$implicit_sample,  sigma = material$sigma,
+                 order_rotation = list(order_rotation),
                  pivot_point = list(NA), group_translate = list(NA),
                  group_angle = list(NA), group_order_rotation = list(NA),
                  tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA))
@@ -202,8 +205,8 @@ xy_rect = function(x = 0, y = 0, z = 0, xwidth = 1, ywidth = 1,
 #' @param z Default `0`. z-coordinate of the center of the rectangle.
 #' @param ywidth Default `1`. y-width of the rectangle.
 #' @param zwidth Default `1`. z-width of the rectangle.
-#' @param material Default  \code{\link{lambertian}}.The material, called from one of the material 
-#' functions \code{\link{lambertian}}, \code{\link{metal}}, or \code{\link{dielectric}}.
+#' @param material Default  \code{\link{diffuse}}.The material, called from one of the material 
+#' functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}.
 #' @param angle Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.
 #' @param order_rotation Default `c(1, 2, 3)`. The order to apply the rotations, referring to "x", "y", and "z".
 #' @param flipped Default `FALSE`. Whether to flip the normals.
@@ -219,7 +222,7 @@ xy_rect = function(x = 0, y = 0, z = 0, xwidth = 1, ywidth = 1,
 #' \donttest{
 #' generate_cornell() %>%
 #'   add_object(yz_rect(x = 100, y = 100, z = 555/2, ywidth = 200, zwidth = 200,
-#'                      material = lambertian(color = "purple"))) %>%
+#'                      material = diffuse(color = "purple"))) %>%
 #'   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
 #'                ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
 #' }
@@ -232,7 +235,7 @@ xy_rect = function(x = 0, y = 0, z = 0, xwidth = 1, ywidth = 1,
 #'   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
 #'                ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
 #' }
-yz_rect = function(x = 0, y = 0, z = 0, ywidth = 1, zwidth = 1, material = lambertian(), 
+yz_rect = function(x = 0, y = 0, z = 0, ywidth = 1, zwidth = 1, material = diffuse(), 
                    angle = c(0, 0, 0), order_rotation = c(1, 2, 3), 
                    flipped = FALSE, scale = c(1,1,1)) {
   if(length(scale) == 1) {
@@ -246,7 +249,8 @@ yz_rect = function(x = 0, y = 0, z = 0, ywidth = 1, zwidth = 1, material = lambe
                  noiseintensity = material$noiseintensity, noisecolor = material$noisecolor,
                  angle = list(angle), image = material$image, lightintensity = material$lightintensity,
                  flipped = flipped, fog = material$fog, fogdensity = material$fogdensity,
-                 implicit_sample = material$implicit_sample, order_rotation = list(order_rotation),
+                 implicit_sample = material$implicit_sample,  sigma = material$sigma,
+                 order_rotation = list(order_rotation),
                  pivot_point = list(NA), group_translate = list(NA),
                  group_angle = list(NA), group_order_rotation = list(NA),
                  tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA))
@@ -259,8 +263,8 @@ yz_rect = function(x = 0, y = 0, z = 0, ywidth = 1, zwidth = 1, material = lambe
 #' @param z Default `0`. z-coordinate of the center of the rectangle.
 #' @param xwidth Default `1`. x-width of the rectangle.
 #' @param zwidth Default `1`. z-width of the rectangle.
-#' @param material Default  \code{\link{lambertian}}.The material, called from one of the material 
-#' functions \code{\link{lambertian}}, \code{\link{metal}}, or \code{\link{dielectric}}.
+#' @param material Default  \code{\link{diffuse}}.The material, called from one of the material 
+#' functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}.
 #' @param angle Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.
 #' @param order_rotation Default `c(1, 2, 3)`. The order to apply the rotations, referring to "x", "y", and "z".
 #' @param flipped Default `FALSE`. Whether to flip the normals.
@@ -276,7 +280,7 @@ yz_rect = function(x = 0, y = 0, z = 0, ywidth = 1, zwidth = 1, material = lambe
 #' \donttest{
 #' generate_cornell() %>%
 #'   add_object(xz_rect(x = 555/2, y = 100, z = 555/2, xwidth = 200, zwidth = 200,
-#'              material = lambertian(color = "purple"))) %>%
+#'              material = diffuse(color = "purple"))) %>%
 #'   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
 #'                ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
 #' }
@@ -290,7 +294,7 @@ yz_rect = function(x = 0, y = 0, z = 0, ywidth = 1, zwidth = 1, material = lambe
 #'   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
 #'                ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
 #' }
-xz_rect = function(x = 0, xwidth = 1, z = 0, zwidth = 1, y = 0, material = lambertian(), 
+xz_rect = function(x = 0, xwidth = 1, z = 0, zwidth = 1, y = 0, material = diffuse(), 
                    angle = c(0, 0, 0), order_rotation = c(1, 2, 3), 
                    flipped = FALSE, scale = c(1,1,1)) {
   if(length(scale) == 1) {
@@ -305,7 +309,8 @@ xz_rect = function(x = 0, xwidth = 1, z = 0, zwidth = 1, y = 0, material = lambe
                  noiseintensity = material$noiseintensity, noisecolor = material$noisecolor,
                  angle = list(angle), image = material$image, lightintensity = material$lightintensity,
                  flipped = flipped, fog = material$fog, fogdensity = material$fogdensity,
-                 implicit_sample = material$implicit_sample, order_rotation = list(order_rotation),
+                 implicit_sample = material$implicit_sample,  sigma = material$sigma,
+                 order_rotation = list(order_rotation),
                  pivot_point = list(NA), group_translate = list(NA),
                  group_angle = list(NA), group_order_rotation = list(NA),
                  tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA))
@@ -325,8 +330,8 @@ xz_rect = function(x = 0, xwidth = 1, z = 0, zwidth = 1, y = 0, material = lambe
 #' If NA but other vertices specified, color inherits from material.
 #' @param color3 Default `NA`. Length-3 vector or string indicating the color associated with the third triangle vertex.
 #' If NA but other vertices specified, color inherits from material.
-#' @param material Default  \code{\link{lambertian}}.The material, called from one of the material 
-#' functions \code{\link{lambertian}}, \code{\link{metal}}, or \code{\link{dielectric}}.
+#' @param material Default  \code{\link{diffuse}}.The material, called from one of the material 
+#' functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}.
 #' @param angle Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.
 #' @param order_rotation Default `c(1, 2, 3)`. The order to apply the rotations, referring to "x", "y", and "z".
 #' @param flipped Default `FALSE`. Whether to flip the normals.
@@ -342,7 +347,7 @@ xz_rect = function(x = 0, xwidth = 1, z = 0, zwidth = 1, y = 0, material = lambe
 #' \donttest{
 #' generate_cornell() %>%
 #'   add_object(triangle(v1 = c(100, 100, 100), v2 = c(555/2, 455, 455), v3 = c(455, 100, 100),
-#'                       material = lambertian(color = "purple"))) %>%
+#'                       material = diffuse(color = "purple"))) %>%
 #'   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
 #'                ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
 #' }
@@ -357,7 +362,7 @@ xz_rect = function(x = 0, xwidth = 1, z = 0, zwidth = 1, y = 0, material = lambe
 triangle = function(v1 = c(1, 0, 0), v2 = c(0, 1, 0), v3 = c(-1, 0, 0), 
                     n1 = rep(NA, 3), n2 = rep(NA, 3), n3 = rep(NA, 3),
                     color1 = rep(NA, 3), color2 = rep(NA, 3), color3 = rep(NA, 3),
-                    material = lambertian(), 
+                    material = diffuse(), 
                     angle = c(0, 0, 0), order_rotation = c(1, 2, 3), 
                     flipped = FALSE, scale = c(1,1,1)) {
   if(length(scale) == 1) {
@@ -391,7 +396,8 @@ triangle = function(v1 = c(1, 0, 0), v2 = c(0, 1, 0), v3 = c(-1, 0, 0),
                  noiseintensity = material$noiseintensity, noisecolor = material$noisecolor,
                  angle = list(angle), image = material$image, lightintensity = material$lightintensity,
                  flipped = flipped, fog = material$fog, fogdensity = material$fogdensity,
-                 implicit_sample = material$implicit_sample, order_rotation = list(order_rotation),
+                 implicit_sample = material$implicit_sample,  sigma = material$sigma,
+                 order_rotation = list(order_rotation),
                  pivot_point = list(NA), group_translate = list(NA),
                  group_angle = list(NA), group_order_rotation = list(NA),
                  tricolorinfo = list(colorvec), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA))
@@ -404,8 +410,8 @@ triangle = function(v1 = c(1, 0, 0), v2 = c(0, 1, 0), v3 = c(-1, 0, 0),
 #' @param z Default `0`. z-coordinate of the center of the disk
 #' @param radius Default `1`. Radius of the disk.
 #' @param inner_radius Default `0`. Inner radius of the disk.
-#' @param material Default  \code{\link{lambertian}}.The material, called from one of the material 
-#' functions \code{\link{lambertian}}, \code{\link{metal}}, or \code{\link{dielectric}}.
+#' @param material Default  \code{\link{diffuse}}.The material, called from one of the material 
+#' functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}.
 #' @param angle Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.
 #' @param order_rotation Default `c(1, 2, 3)`. The order to apply the rotations, referring to "x", "y", and "z".
 #' @param velocity Default `c(0, 0, 0)`. Velocity of the disk.
@@ -424,7 +430,7 @@ triangle = function(v1 = c(1, 0, 0), v2 = c(0, 1, 0), v3 = c(-1, 0, 0),
 #' \donttest{
 #' generate_cornell() %>%
 #'   add_object(disk(x = 555/2, y = 50, z = 555/2, radius = 150, 
-#'                   material = lambertian(color = "orange"))) %>%
+#'                   material = diffuse(color = "orange"))) %>%
 #'   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
 #'                ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
 #' }
@@ -432,7 +438,7 @@ triangle = function(v1 = c(1, 0, 0), v2 = c(0, 1, 0), v3 = c(-1, 0, 0),
 #' \donttest{
 #' generate_cornell() %>%
 #'   add_object(disk(x = 555/2, y = 555/2, z = 555/2, radius = 150, angle = c(45, 0, 0), 
-#'                   material = lambertian(color = "orange"))) %>%
+#'                   material = diffuse(color = "orange"))) %>%
 #'   render_scene(lookfrom = c(278, 278, -800) , lookat = c(278, 278, 0), fov = 40, 
 #'                ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
 #' }
@@ -441,11 +447,11 @@ triangle = function(v1 = c(1, 0, 0), v2 = c(0, 1, 0), v3 = c(-1, 0, 0),
 #' generate_cornell() %>% 
 #'   add_object(disk(x = 555/2, y = 555/2, z = 555/2, 
 #'                   radius = 150, inner_radius = 75, angle = c(45, 0, 0), 
-#'                   material = lambertian(color = "orange"))) %>%
+#'                   material = diffuse(color = "orange"))) %>%
 #'   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
 #'                ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
 #' }
-disk = function(x = 0, y = 0, z = 0, radius = 1, inner_radius = 0, material = lambertian(), 
+disk = function(x = 0, y = 0, z = 0, radius = 1, inner_radius = 0, material = diffuse(), 
                 angle = c(0, 0, 0), order_rotation = c(1, 2, 3), velocity = c(0, 0, 0), 
                 flipped = FALSE, scale = c(1,1,1)) {
   if(length(scale) == 1) {
@@ -459,7 +465,8 @@ disk = function(x = 0, y = 0, z = 0, radius = 1, inner_radius = 0, material = la
                  noiseintensity = material$noiseintensity, noisecolor = material$noisecolor,
                  angle = list(angle), image = material$image, lightintensity = material$lightintensity,
                  flipped = flipped, fog = material$fog, fogdensity = material$fogdensity,
-                 implicit_sample = material$implicit_sample, order_rotation = list(order_rotation),
+                 implicit_sample = material$implicit_sample,  sigma = material$sigma,
+                 order_rotation = list(order_rotation),
                  pivot_point = list(NA), group_translate = list(NA),
                  group_angle = list(NA), group_order_rotation = list(NA),
                  tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA))
@@ -477,8 +484,8 @@ disk = function(x = 0, y = 0, z = 0, radius = 1, inner_radius = 0, material = la
 #' @param scale_obj Default `1`. Amount to scale the model. Use this to scale the object up or down on all axes, as it is
 #' more robust to numerical precision errors than the generic scale option.
 #' @param texture Default `FALSE`. Whether to load the obj file texture.
-#' @param material Default  \code{\link{lambertian}}.The material, called from one of the material 
-#' functions \code{\link{lambertian}}, \code{\link{metal}}, or \code{\link{dielectric}}. 
+#' @param material Default  \code{\link{diffuse}}.The material, called from one of the material 
+#' functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}. 
 #' @param angle Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.
 #' @param order_rotation Default `c(1, 2, 3)`. The order to apply the rotations, referring to "x", "y", and "z".
 #' @param flipped Default `FALSE`. Whether to flip the normals.
@@ -496,33 +503,33 @@ disk = function(x = 0, y = 0, z = 0, radius = 1, inner_radius = 0, material = la
 #' #affect the function.
 #' 
 #' \donttest{
-#' generate_ground(material = lambertian(checkercolor = "grey50")) %>%
+#' generate_ground(material = diffuse(checkercolor = "grey50")) %>%
 #'   add_object(obj_model(y = -0.8, filename = r_obj(),
 #'                        material = metal(color = "gold", fuzz = 0.025))) %>%
 #'   add_object(obj_model(x = 1.8, y = -0.8, filename = r_obj(), 
-#'                        material = lambertian(color = "lightblue"))) %>%
+#'                        material = diffuse(color = "lightblue"))) %>%
 #'   add_object(obj_model(x = -1.8, y = -0.8, filename = r_obj() , 
 #'                        material = dielectric(color = "pink"))) %>%
 #'   add_object(sphere(z = 20, x = 20, y = 20, radius = 10,
-#'                     material = lambertian(lightintensity = 20, implicit_sample = TRUE))) %>%
+#'                     material = diffuse(lightintensity = 20, implicit_sample = TRUE))) %>%
 #'   render_scene(parallel = TRUE, samples = 400, 
 #'                tonemap = "reinhold", aperture = 0.05, fov = 32, lookfrom = c(0, 2, 10))
 #' }
 #' 
 #' #Use scale_obj to make objects bigger--this is more robust than the generic scale argument.
 #' \donttest{
-#' generate_ground(material = lambertian(checkercolor = "grey50")) %>%
+#' generate_ground(material = diffuse(checkercolor = "grey50")) %>%
 #'   add_object(obj_model(y = -0.8, filename = r_obj(), scale_obj = 2,
-#'                        material = lambertian(noise = TRUE, noiseintensity = 10,noisephase=45))) %>%
+#'                        material = diffuse(noise = TRUE, noiseintensity = 10,noisephase=45))) %>%
 #'   add_object(sphere(z = 20, x = 20, y = 20, radius = 10,
-#'                     material = lambertian(lightintensity = 10, implicit_sample = TRUE))) %>%
+#'                     material = diffuse(lightintensity = 10, implicit_sample = TRUE))) %>%
 #'   render_scene(parallel = TRUE, samples = 400, ambient = TRUE, 
 #'                backgroundhigh="blue", backgroundlow="red",
 #'                aperture = 0.05, fov = 32, lookfrom = c(0, 2, 10),
 #'                lookat = c(0,1,0))
 #' }
 obj_model = function(filename, x = 0, y = 0, z = 0, scale_obj = 1, texture = FALSE,
-                    material = lambertian(), 
+                    material = diffuse(), 
                     angle = c(0, 0, 0), order_rotation = c(1, 2, 3), 
                     flipped = FALSE, scale = c(1,1,1)) {
   if(length(scale) == 1) {
@@ -542,7 +549,8 @@ obj_model = function(filename, x = 0, y = 0, z = 0, scale_obj = 1, texture = FAL
                  noiseintensity = material$noiseintensity, noisecolor = material$noisecolor,
                  angle = list(angle), image = material$image, lightintensity = material$lightintensity,
                  flipped = flipped, fog = material$fog, fogdensity = material$fogdensity,
-                 implicit_sample = material$implicit_sample, order_rotation = list(order_rotation),
+                 implicit_sample = material$implicit_sample,  sigma = material$sigma,
+                 order_rotation = list(order_rotation),
                  pivot_point = list(NA), group_translate = list(NA),
                  group_angle = list(NA), group_order_rotation = list(NA),
                  tricolorinfo = list(NA), fileinfo = filename, scale_factor = list(scale), group_scale = list(NA))
@@ -557,8 +565,8 @@ obj_model = function(filename, x = 0, y = 0, z = 0, scale_obj = 1, texture = FAL
 #' @param length Default `1`. Length of the cylinder.
 #' @param phi_min Default `0`. Minimum angle around the segment.
 #' @param phi_max Default `360`. Maximum angle around the segment.
-#' @param material Default  \code{\link{lambertian}}.The material, called from one of the material 
-#' functions \code{\link{lambertian}}, \code{\link{metal}}, or \code{\link{dielectric}}.
+#' @param material Default  \code{\link{diffuse}}.The material, called from one of the material 
+#' functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}.
 #' @param angle Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.
 #' @param order_rotation Default `c(1, 2, 3)`. The order to apply the rotations, referring to "x", "y", and "z".
 #' @param velocity Default `c(0, 0, 0)`. Velocity of the cylinder.
@@ -591,7 +599,7 @@ obj_model = function(filename, x = 0, y = 0, z = 0, scale_obj = 1, texture = FAL
 #' generate_cornell() %>%
 #'   add_object(cylinder(x = 555/2, y = 250, z = 555/2, 
 #'                       length = 300, radius = 100, angle = c(0, 0, 45),
-#'                       material = lambertian())) %>%
+#'                       material = diffuse())) %>%
 #'   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
 #'                ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
 #' }
@@ -601,12 +609,12 @@ obj_model = function(filename, x = 0, y = 0, z = 0, scale_obj = 1, texture = FAL
 #' generate_cornell(lightintensity=3) %>%
 #'   add_object(cylinder(x = 555/2, y = 250, z = 555/2, 
 #'                       length = 300, radius = 100, angle = c(45, 0, 0), phi_min = 0, phi_max = 180,
-#'                       material = lambertian())) %>%
+#'                       material = diffuse())) %>%
 #'   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
 #'                ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
 #' }
 cylinder = function(x = 0, y = 0, z = 0, radius = 1, length = 1,
-                    phi_min = 0, phi_max = 360, material = lambertian(), 
+                    phi_min = 0, phi_max = 360, material = diffuse(), 
                     angle = c(0, 0, 0), order_rotation = c(1, 2, 3), velocity = c(0, 0, 0), 
                     flipped = FALSE, scale = c(1,1,1)) {
   if(length(scale) == 1) {
@@ -621,7 +629,8 @@ cylinder = function(x = 0, y = 0, z = 0, radius = 1, length = 1,
                  noiseintensity = material$noiseintensity, noisecolor = material$noisecolor,
                  angle = list(angle), image = material$image, lightintensity = material$lightintensity,
                  flipped = flipped, fog = material$fog, fogdensity = material$fogdensity,
-                 implicit_sample = material$implicit_sample, order_rotation = list(order_rotation),
+                 implicit_sample = material$implicit_sample,  sigma = material$sigma,
+                 order_rotation = list(order_rotation),
                  pivot_point = list(NA), group_translate = list(NA),
                  group_angle = list(NA), group_order_rotation = list(NA),
                  tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA))
@@ -636,8 +645,8 @@ cylinder = function(x = 0, y = 0, z = 0, radius = 1, length = 1,
 #' @param radius Default `1`. Radius of the segment.
 #' @param phi_min Default `0`. Minimum angle around the segment.
 #' @param phi_max Default `360`. Maximum angle around the segment.
-#' @param material Default  \code{\link{lambertian}}.The material, called from one of the material 
-#' functions \code{\link{lambertian}}, \code{\link{metal}}, or \code{\link{dielectric}}.
+#' @param material Default  \code{\link{diffuse}}.The material, called from one of the material 
+#' functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}.
 #' @param velocity Default `c(0, 0, 0)`. Velocity of the segment.
 #' @param flipped Default `FALSE`. Whether to flip the normals.
 #' @param scale Default `c(1, 1, 1)`. Scale transformation in the x, y, and z directions. If this is a single value,
@@ -709,7 +718,7 @@ cylinder = function(x = 0, y = 0, z = 0, radius = 1, length = 1,
 #' }
 segment = function(start = c(0, -1, 0), end = c(0, 1, 0), radius = 1, 
                    phi_min = 0, phi_max = 360,
-                   material = lambertian(), 
+                   material = diffuse(), 
                    velocity = c(0, 0, 0), flipped = FALSE, scale = c(1,1,1)) {
   if(length(scale) == 1) {
     scale = c(scale, scale, scale)
@@ -737,7 +746,8 @@ segment = function(start = c(0, -1, 0), end = c(0, 1, 0), radius = 1,
                  noiseintensity = material$noiseintensity, noisecolor = material$noisecolor,
                  angle = list(angle), image = material$image, lightintensity = material$lightintensity,
                  flipped = flipped, fog = material$fog, fogdensity = material$fogdensity,
-                 implicit_sample = material$implicit_sample, order_rotation = list(order_rotation),
+                 implicit_sample = material$implicit_sample,  sigma = material$sigma,
+                 order_rotation = list(order_rotation),
                  pivot_point = list(NA), group_translate = list(NA),
                  group_angle = list(NA), group_order_rotation = list(NA),
                  tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA))
@@ -754,8 +764,8 @@ segment = function(start = c(0, -1, 0), end = c(0, 1, 0), radius = 1,
 #' @param a Default `1`. Principal x-axis of the ellipsoid.
 #' @param b Default `1`. Principal y-axis of the ellipsoid.
 #' @param c Default `1`. Principal z-axis of the ellipsoid.
-#' @param material Default  \code{\link{lambertian}}.The material, called from one of the material 
-#' functions \code{\link{lambertian}}, \code{\link{metal}}, or \code{\link{dielectric}}.
+#' @param material Default  \code{\link{diffuse}}.The material, called from one of the material 
+#' functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}.
 #' @param angle Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.
 #' @param order_rotation Default `c(1, 2, 3)`. The order to apply the rotations, referring to "x", "y", and "z".
 #' @param velocity Default `c(0, 0, 0)`. Velocity of the segment.
@@ -796,7 +806,7 @@ segment = function(start = c(0, -1, 0), end = c(0, 1, 0), radius = 1,
 #'                ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
 #' }
 ellipsoid = function(x = 0, y = 0, z = 0, a = 1, b = 1, c = 1,
-                  material = lambertian(), 
+                  material = diffuse(), 
                   angle = c(0, 0, 0), order_rotation = c(1, 2, 3), 
                   velocity = c(0, 0, 0), flipped = FALSE, scale = c(1,1,1)) {
   if(length(scale) == 1) {
@@ -811,7 +821,8 @@ ellipsoid = function(x = 0, y = 0, z = 0, a = 1, b = 1, c = 1,
                  noiseintensity = material$noiseintensity, noisecolor = material$noisecolor,
                  angle = list(angle), image = material$image, lightintensity = material$lightintensity,
                  flipped = flipped, fog = material$fog, fogdensity = material$fogdensity,
-                 implicit_sample = material$implicit_sample, order_rotation = list(order_rotation),
+                 implicit_sample = material$implicit_sample,  sigma = material$sigma,
+                 order_rotation = list(order_rotation),
                  pivot_point = list(NA), group_translate = list(NA),
                  group_angle = list(NA), group_order_rotation = list(NA),
                  tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA))

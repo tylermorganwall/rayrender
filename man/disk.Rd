@@ -5,8 +5,8 @@
 \title{Disk Object}
 \usage{
 disk(x = 0, y = 0, z = 0, radius = 1, inner_radius = 0,
-  material = lambertian(), angle = c(0, 0, 0), order_rotation = c(1,
-  2, 3), velocity = c(0, 0, 0), flipped = FALSE, scale = c(1, 1, 1))
+  material = diffuse(), angle = c(0, 0, 0), order_rotation = c(1, 2,
+  3), velocity = c(0, 0, 0), flipped = FALSE, scale = c(1, 1, 1))
 }
 \arguments{
 \item{x}{Default `0`. x-coordinate of the center of the disk}
@@ -19,8 +19,8 @@ disk(x = 0, y = 0, z = 0, radius = 1, inner_radius = 0,
 
 \item{inner_radius}{Default `0`. Inner radius of the disk.}
 
-\item{material}{Default  \code{\link{lambertian}}.The material, called from one of the material 
-functions \code{\link{lambertian}}, \code{\link{metal}}, or \code{\link{dielectric}}.}
+\item{material}{Default  \code{\link{diffuse}}.The material, called from one of the material 
+functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}.}
 
 \item{angle}{Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.}
 
@@ -45,7 +45,7 @@ Disk Object
 \donttest{
 generate_cornell() \%>\%
   add_object(disk(x = 555/2, y = 50, z = 555/2, radius = 150, 
-                  material = lambertian(color = "orange"))) \%>\%
+                  material = diffuse(color = "orange"))) \%>\%
   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
                ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
 }
@@ -53,7 +53,7 @@ generate_cornell() \%>\%
 \donttest{
 generate_cornell() \%>\%
   add_object(disk(x = 555/2, y = 555/2, z = 555/2, radius = 150, angle = c(45, 0, 0), 
-                  material = lambertian(color = "orange"))) \%>\%
+                  material = diffuse(color = "orange"))) \%>\%
   render_scene(lookfrom = c(278, 278, -800) , lookat = c(278, 278, 0), fov = 40, 
                ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
 }
@@ -62,7 +62,7 @@ generate_cornell() \%>\%
 generate_cornell() \%>\% 
   add_object(disk(x = 555/2, y = 555/2, z = 555/2, 
                   radius = 150, inner_radius = 75, angle = c(45, 0, 0), 
-                  material = lambertian(color = "orange"))) \%>\%
+                  material = diffuse(color = "orange"))) \%>\%
   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
                ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
 }

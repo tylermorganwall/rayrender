@@ -5,7 +5,7 @@
 \title{`obj` File Object}
 \usage{
 obj_model(filename, x = 0, y = 0, z = 0, scale_obj = 1,
-  texture = FALSE, material = lambertian(), angle = c(0, 0, 0),
+  texture = FALSE, material = diffuse(), angle = c(0, 0, 0),
   order_rotation = c(1, 2, 3), flipped = FALSE, scale = c(1, 1, 1))
 }
 \arguments{
@@ -22,8 +22,8 @@ more robust to numerical precision errors than the generic scale option.}
 
 \item{texture}{Default `FALSE`. Whether to load the obj file texture.}
 
-\item{material}{Default  \code{\link{lambertian}}.The material, called from one of the material 
-functions \code{\link{lambertian}}, \code{\link{metal}}, or \code{\link{dielectric}}.}
+\item{material}{Default  \code{\link{diffuse}}.The material, called from one of the material 
+functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}.}
 
 \item{angle}{Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.}
 
@@ -49,26 +49,26 @@ Note: light importance sampling currently not supported for this shape.
 #affect the function.
 
 \donttest{
-generate_ground(material = lambertian(checkercolor = "grey50")) \%>\%
+generate_ground(material = diffuse(checkercolor = "grey50")) \%>\%
   add_object(obj_model(y = -0.8, filename = r_obj(),
                        material = metal(color = "gold", fuzz = 0.025))) \%>\%
   add_object(obj_model(x = 1.8, y = -0.8, filename = r_obj(), 
-                       material = lambertian(color = "lightblue"))) \%>\%
+                       material = diffuse(color = "lightblue"))) \%>\%
   add_object(obj_model(x = -1.8, y = -0.8, filename = r_obj() , 
                        material = dielectric(color = "pink"))) \%>\%
   add_object(sphere(z = 20, x = 20, y = 20, radius = 10,
-                    material = lambertian(lightintensity = 20, implicit_sample = TRUE))) \%>\%
+                    material = diffuse(lightintensity = 20, implicit_sample = TRUE))) \%>\%
   render_scene(parallel = TRUE, samples = 400, 
                tonemap = "reinhold", aperture = 0.05, fov = 32, lookfrom = c(0, 2, 10))
 }
 
 #Use scale_obj to make objects bigger--this is more robust than the generic scale argument.
 \donttest{
-generate_ground(material = lambertian(checkercolor = "grey50")) \%>\%
+generate_ground(material = diffuse(checkercolor = "grey50")) \%>\%
   add_object(obj_model(y = -0.8, filename = r_obj(), scale_obj = 2,
-                       material = lambertian(noise = TRUE, noiseintensity = 10,noisephase=45))) \%>\%
+                       material = diffuse(noise = TRUE, noiseintensity = 10,noisephase=45))) \%>\%
   add_object(sphere(z = 20, x = 20, y = 20, radius = 10,
-                    material = lambertian(lightintensity = 10, implicit_sample = TRUE))) \%>\%
+                    material = diffuse(lightintensity = 10, implicit_sample = TRUE))) \%>\%
   render_scene(parallel = TRUE, samples = 400, ambient = TRUE, 
                backgroundhigh="blue", backgroundlow="red",
                aperture = 0.05, fov = 32, lookfrom = c(0, 2, 10),

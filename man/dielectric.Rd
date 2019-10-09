@@ -17,7 +17,7 @@ a hexadecimal code, R color string, or a numeric rgb vector listing three intens
 be sampled as part of the scattering probability density function.}
 }
 \value{
-Single row of a tibble describing the sphere in the scene.
+Single row of a tibble describing the dielectric material.
 }
 \description{
 Dielectric (glass) Material
@@ -25,7 +25,7 @@ Dielectric (glass) Material
 \examples{
 #Generate a checkered ground
 scene = generate_ground(depth=-0.5,
-                        material=lambertian(color="white", checkercolor="grey30",checkerperiod=2))
+                        material=diffuse(color="white", checkercolor="grey30",checkerperiod=2))
 \donttest{
 render_scene(scene,parallel=TRUE)
 }
@@ -51,7 +51,7 @@ scene \%>\%
   add_object(sphere(x=-0.5,radius=0.5,material=dielectric())) \%>\%
   add_object(cube(x=0.5,xwidth=0.5,material=dielectric(color="darkgreen"),angle=c(0,-45,0))) \%>\%
   add_object(yz_rect(z=-3,y=1,x=0,zwidth=3,ywidth=1.5,
-                     material=lambertian(lightintensity=15),
+                     material=diffuse(lightintensity=15),
                      angle=c(0,-90,45), order_rotation = c(3,2,1))) \%>\%
   render_scene(parallel=TRUE,aperture=0, ambient_light=FALSE,samples=1000)
 }

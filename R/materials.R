@@ -1,4 +1,4 @@
-#' Lambertian (diffuse) Material
+#' Diffuse Material
 #'
 #' @param color Default `white`. The color of the surface. Can be either
 #' a hexadecimal code, R color string, or a numeric rgb vector listing three intensities between `0` and `1`.
@@ -17,17 +17,20 @@
 #' in `color` (ignoring other properties). Higher values will produce a brighter light.
 #' @param fog Default `FALSE`. If `TRUE`, the object will be a volumetric scatterer.
 #' @param fogdensity Default `0.01`. The density of the fog. Higher values will produce more opaque objects.
+#' @param sigma Default `NULL`. A number between 0 and Infinity specifying the roughness of the surface using the Oren-Nayar microfacet model.
+#' Higher numbers indicate a roughed surface, where sigma is the standard deviation of the microfacet orientation angle. When 0, this reverts
+#' to the default lambertian behavior.
 #' @param implicit_sample Default `FALSE`, unless the object is a light. If `TRUE`, the object will
 #' be sampled as part of the scattering probability density function.
 #'
-#' @return Single row of a tibble describing the sphere in the scene.
+#' @return Single row of a tibble describing the diffuse material.
 #' @export
 #' @importFrom  grDevices col2rgb
 #'
 #' @examples
 #' #Generate the cornell box and add a single white sphere to the center
 #' scene = generate_cornell() %>%
-#'   add_object(sphere(x=555/2,y=555/2,z=555/2,radius=555/8,material=lambertian()))
+#'   add_object(sphere(x=555/2,y=555/2,z=555/2,radius=555/8,material=diffuse()))
 #' \donttest{
 #' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
 #'              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
@@ -36,7 +39,7 @@
 #' #Add a checkered rectangular cube below             
 #' scene = scene %>%
 #'   add_object(cube(x=555/2,y=555/8,z=555/2,xwidth=555/2,ywidth=555/4,zwidth=555/2,
-#'   material = lambertian(checkercolor="purple",checkerperiod=20)))
+#'   material = diffuse(checkercolor="purple",checkerperiod=20)))
 #' \donttest{
 #' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
 #'              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
@@ -45,7 +48,7 @@
 #' #Add a marbled sphere           
 #' scene = scene %>%
 #'   add_object(sphere(x=555/2+555/4,y=555/2,z=555/2,radius=555/8,
-#'   material = lambertian(noise=1/20)))
+#'   material = diffuse(noise=1/20)))
 #' \donttest{
 #' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
 #'              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
@@ -54,32 +57,48 @@
 #' #Add an orange volumetric (fog) cube           
 #' scene = scene %>%
 #'   add_object(cube(x=555/2-555/4,y=555/2,z=555/2,xwidth=555/4,ywidth=555/4,zwidth=555/4,
-#'   material = lambertian(fog=TRUE, fogdensity=0.05,color="orange")))
+#'   material = diffuse(fog=TRUE, fogdensity=0.05,color="orange")))
 #' \donttest{
 #' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
 #'              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 #' }
-lambertian = function(color = "#ffffff", checkercolor = NA, checkerperiod = 3,
+diffuse = function(color = "#ffffff", checkercolor = NA, checkerperiod = 3,
                       noise = 0, noisephase = 0, noiseintensity = 10, noisecolor = "#000000",
                       image_array = NA, 
-                      lightintensity = NA, fog = FALSE, fogdensity = 0.01, implicit_sample = FALSE) {
+                      lightintensity = NA, fog = FALSE, fogdensity = 0.01, 
+                      sigma = NULL, implicit_sample = FALSE) {
   if(all(!is.na(checkercolor))) {
     checkercolor = convert_color(checkercolor)
   } else {
     checkercolor = NA
   }
-  color = convert_color(color)
+  info = convert_color(color)
   noisecolor = convert_color(noisecolor)
   if(!is.array(image_array) && !is.na(image_array)) {
     image = NA
     warning("Image not in recognized format (array or matrix), ignoring")
   }
+  type = "diffuse"
+  if(!is.null(sigma) && is.numeric(sigma)) {
+    if(sigma < 0) {
+      warning("sigma must be greater than 0 (input: ", sigma, ")--ignoring and using lambertian model")
+    } else {
+      if(sigma == 0) {
+        type = "diffuse"
+      } else {
+        type = "oren-nayar"
+        sigma = sigma*pi/180
+      }
+    }
+  } else {
+    sigma = 0
+  }
   assertthat::assert_that(checkerperiod != 0)
-  tibble::tibble(type = "lambertian", 
-                 properties = list(color), checkercolor=list(c(checkercolor,checkerperiod)), 
+  tibble::tibble(type = type, 
+                 properties = list(info), checkercolor=list(c(checkercolor,checkerperiod)), 
                  noise=noise, noisephase = noisephase, noiseintensity = noiseintensity, noisecolor = list(noisecolor),
                  image = list(image_array), lightintensity = lightintensity,
-                 fog=fog, fogdensity=fogdensity,implicit_sample = implicit_sample)
+                 fog=fog, fogdensity=fogdensity,implicit_sample = implicit_sample, sigma = sigma)
 }
 
 #' Metallic Material
@@ -91,7 +110,7 @@ lambertian = function(color = "#ffffff", checkercolor = NA, checkerperiod = 3,
 #' be sampled as part of the scattering probability density function.
 #' @importFrom  grDevices col2rgb
 #'
-#' @return Single row of a tibble describing the sphere in the scene.
+#' @return Single row of a tibble describing the metallic material.
 #' @export
 #'
 #' @examples
@@ -125,7 +144,7 @@ metal = function(color = "#ffffff", fuzz = 0,  implicit_sample = FALSE) {
                  checkercolor=list(NA), noise=0, noisephase = 0, noiseintensity = 0, noisecolor = list(c(0,0,0)),
                  islight = FALSE, lightinfo = list(NA),
                  image = list(NA), lightintensity = NA,fog=FALSE,fogdensity=0.01,
-                 implicit_sample = implicit_sample)
+                 implicit_sample = implicit_sample, sigma = 0)
 }
 
 #' Dielectric (glass) Material
@@ -136,13 +155,13 @@ metal = function(color = "#ffffff", fuzz = 0,  implicit_sample = FALSE) {
 #' @param implicit_sample Default `TRUE`. If `FALSE`, the object will not 
 #' be sampled as part of the scattering probability density function.
 #'
-#' @return Single row of a tibble describing the sphere in the scene.
+#' @return Single row of a tibble describing the dielectric material.
 #' @export
 #'
 #' @examples
 #' #Generate a checkered ground
 #' scene = generate_ground(depth=-0.5,
-#'                         material=lambertian(color="white", checkercolor="grey30",checkerperiod=2))
+#'                         material=diffuse(color="white", checkercolor="grey30",checkerperiod=2))
 #' \donttest{
 #' render_scene(scene,parallel=TRUE)
 #' }
@@ -168,7 +187,7 @@ metal = function(color = "#ffffff", fuzz = 0,  implicit_sample = FALSE) {
 #'   add_object(sphere(x=-0.5,radius=0.5,material=dielectric())) %>%
 #'   add_object(cube(x=0.5,xwidth=0.5,material=dielectric(color="darkgreen"),angle=c(0,-45,0))) %>%
 #'   add_object(yz_rect(z=-3,y=1,x=0,zwidth=3,ywidth=1.5,
-#'                      material=lambertian(lightintensity=15),
+#'                      material=diffuse(lightintensity=15),
 #'                      angle=c(0,-90,45), order_rotation = c(3,2,1))) %>%
 #'   render_scene(parallel=TRUE,aperture=0, ambient_light=FALSE,samples=1000)
 #' }
@@ -178,5 +197,27 @@ dielectric = function(color="white", refraction = 1.5, implicit_sample = FALSE) 
                  properties = list(c(color,refraction)), 
                  checkercolor=list(NA), noise=0, noisephase = 0, noiseintensity = 0, noisecolor = list(c(0,0,0)),
                  image = list(NA), lightintensity = NA, 
-                 fog=FALSE, fogdensity=NA, implicit_sample = implicit_sample)
+                 fog=FALSE, fogdensity=NA, implicit_sample = implicit_sample, sigma = 0)
 }
+
+#' Lambertian Material (deprecated)
+#'
+#' @param ... Arguments to pass to diffuse() function.
+#'
+#' @return Single row of a tibble describing the diffuse material.
+#' @export
+#' @importFrom  grDevices col2rgb
+#'
+#' @examples
+#' #Deprecated lambertian material. Will display a warning.
+#' \donttest{
+#' scene = generate_cornell() %>%
+#'   add_object(sphere(x=555/2,y=555/2,z=555/2,radius=555/8,material=lambertian()))
+#'   render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=10,
+#'              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
+#' }
+lambertian = function(...) {
+  warning("lambertian() deprecated--use diffuse() instead.")
+  diffuse(...)
+}
+

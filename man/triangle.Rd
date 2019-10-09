@@ -7,8 +7,8 @@
 triangle(v1 = c(1, 0, 0), v2 = c(0, 1, 0), v3 = c(-1, 0, 0),
   n1 = rep(NA, 3), n2 = rep(NA, 3), n3 = rep(NA, 3),
   color1 = rep(NA, 3), color2 = rep(NA, 3), color3 = rep(NA, 3),
-  material = lambertian(), angle = c(0, 0, 0), order_rotation = c(1,
-  2, 3), flipped = FALSE, scale = c(1, 1, 1))
+  material = diffuse(), angle = c(0, 0, 0), order_rotation = c(1, 2,
+  3), flipped = FALSE, scale = c(1, 1, 1))
 }
 \arguments{
 \item{v1}{Default `c(1, 0, 0)`. Length-3 vector indicating the x, y, and z coordinate of the first triangle vertex.}
@@ -32,8 +32,8 @@ If NA but other vertices specified, color inherits from material.}
 \item{color3}{Default `NA`. Length-3 vector or string indicating the color associated with the third triangle vertex.
 If NA but other vertices specified, color inherits from material.}
 
-\item{material}{Default  \code{\link{lambertian}}.The material, called from one of the material 
-functions \code{\link{lambertian}}, \code{\link{metal}}, or \code{\link{dielectric}}.}
+\item{material}{Default  \code{\link{diffuse}}.The material, called from one of the material 
+functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}.}
 
 \item{angle}{Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.}
 
@@ -56,7 +56,7 @@ Triangle Object
 \donttest{
 generate_cornell() \%>\%
   add_object(triangle(v1 = c(100, 100, 100), v2 = c(555/2, 455, 455), v3 = c(455, 100, 100),
-                      material = lambertian(color = "purple"))) \%>\%
+                      material = diffuse(color = "purple"))) \%>\%
   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
                ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
 }

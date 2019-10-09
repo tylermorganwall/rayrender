@@ -2,84 +2,25 @@
 % Please edit documentation in R/materials.R
 \name{lambertian}
 \alias{lambertian}
-\title{Lambertian (diffuse) Material}
+\title{Lambertian Material (deprecated)}
 \usage{
-lambertian(color = "#ffffff", checkercolor = NA, checkerperiod = 3,
-  noise = 0, noisephase = 0, noiseintensity = 10,
-  noisecolor = "#000000", image_array = NA, lightintensity = NA,
-  fog = FALSE, fogdensity = 0.01, implicit_sample = FALSE)
+lambertian(...)
 }
 \arguments{
-\item{color}{Default `white`. The color of the surface. Can be either
-a hexadecimal code, R color string, or a numeric rgb vector listing three intensities between `0` and `1`.}
-
-\item{checkercolor}{Default `NA`. If not `NA`, determines the secondary color of the checkered surface. 
-Can be either a hexadecimal code, or a numeric rgb vector listing three intensities between `0` and `1`.}
-
-\item{checkerperiod}{Default `3`. The period of the checker pattern. Increasing this value makes the checker 
-pattern bigger, and decreasing it makes it smaller}
-
-\item{noise}{Default `0`. If not `0`, covers the surface in a turbulent marble pattern. This value will determine
-the amount of turbulence in the texture.}
-
-\item{noisephase}{Default `0`. The phase of the noise. The noise will repeat at `360`.}
-
-\item{noiseintensity}{Default `10`. Intensity of the noise.}
-
-\item{noisecolor}{Default `#000000`. The secondary color of the noise pattern.
-Can be either a hexadecimal code, or a numeric rgb vector listing three intensities between `0` and `1`.}
-
-\item{image_array}{A 3-layer RGB array to be used as the texture on the surface of the object.}
-
-\item{lightintensity}{Default `NA`. If a positive value, this will turn this object into a light emitting the value specified
-in `color` (ignoring other properties). Higher values will produce a brighter light.}
-
-\item{fog}{Default `FALSE`. If `TRUE`, the object will be a volumetric scatterer.}
-
-\item{fogdensity}{Default `0.01`. The density of the fog. Higher values will produce more opaque objects.}
-
-\item{implicit_sample}{Default `FALSE`, unless the object is a light. If `TRUE`, the object will
-be sampled as part of the scattering probability density function.}
+\item{...}{Arguments to pass to diffuse() function.}
 }
 \value{
-Single row of a tibble describing the sphere in the scene.
+Single row of a tibble describing the diffuse material.
 }
 \description{
-Lambertian (diffuse) Material
+Lambertian Material (deprecated)
 }
 \examples{
-#Generate the cornell box and add a single white sphere to the center
+#Deprecated lambertian material. Will display a warning.
+\donttest{
 scene = generate_cornell() \%>\%
   add_object(sphere(x=555/2,y=555/2,z=555/2,radius=555/8,material=lambertian()))
-\donttest{
-render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
-             aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
-}
-
-#Add a checkered rectangular cube below             
-scene = scene \%>\%
-  add_object(cube(x=555/2,y=555/8,z=555/2,xwidth=555/2,ywidth=555/4,zwidth=555/2,
-  material = lambertian(checkercolor="purple",checkerperiod=20)))
-\donttest{
-render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
-             aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
-}
-  
-#Add a marbled sphere           
-scene = scene \%>\%
-  add_object(sphere(x=555/2+555/4,y=555/2,z=555/2,radius=555/8,
-  material = lambertian(noise=1/20)))
-\donttest{
-render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
-             aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
-}
-
-#Add an orange volumetric (fog) cube           
-scene = scene \%>\%
-  add_object(cube(x=555/2-555/4,y=555/2,z=555/2,xwidth=555/4,ywidth=555/4,zwidth=555/4,
-  material = lambertian(fog=TRUE, fogdensity=0.05,color="orange")))
-\donttest{
-render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
+  render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=10,
              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 }
 }

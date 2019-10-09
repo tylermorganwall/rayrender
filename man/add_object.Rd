@@ -19,9 +19,9 @@ Add Object
 }
 \examples{
 #Generate the ground and add some objects
-scene = generate_ground(depth=-0.5,material = lambertian(checkercolor="blue")) \%>\%
+scene = generate_ground(depth=-0.5,material = diffuse(checkercolor="blue")) \%>\%
   add_object(cube(x=0.7,
-                  material=lambertian(noise=5,noisecolor="purple",color="black",noisephase=45),
+                  material=diffuse(noise=5,noisecolor="purple",color="black",noisephase=45),
                   angle=c(0,-30,0))) \%>\%
   add_object(sphere(x=-0.7,radius=0.5,material=metal(color="gold")))
 \donttest{

@@ -6,6 +6,7 @@
 #include "onbh.h"
 #include "pdf.h"
 #include "rng.h"
+#include "mathinline.h"
 
 struct hit_record;
 
@@ -56,6 +57,8 @@ class lambertian : public material {
   public: 
     lambertian(texture *a) : albedo(a) {}
     Float scattering_pdf(const ray& r_in, const hit_record& rec, const ray& scattered) const {
+      //unit_vector(scattered.direction()) == wo
+      //r_in.direction() == wi
       Float cosine = dot(rec.normal, unit_vector(scattered.direction()));
       if(cosine < 0) {
         cosine = 0;
@@ -153,6 +156,53 @@ public:
   Float scattering_pdf(const ray& r_in, const hit_record& rec, const ray& scattered) const {
     return(0.25 * M_1_PI);
   }
+  texture *albedo;
+};
+
+class orennayer : public material {
+public:
+  orennayer(texture *a, Float sigma) : albedo(a) {
+    Float sigma2 = sigma*sigma;
+    A = 1.0f - (sigma2 / (2.0f * (sigma2 + 0.33f)));
+    B = 0.45f * sigma2 / (sigma2 + 0.09f);
+  }
+  bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng) {
+    srec.is_specular = false;
+    srec.attenuation = albedo->value(hrec.u, hrec.v, hrec.p);
+    srec.pdf_ptr = new cosine_pdf(hrec.normal);
+    return(true);
+  }
+  Float scattering_pdf(const ray& r_in, const hit_record& rec, const ray& scattered) const {
+    vec3 wi = unit_vector(r_in.direction());
+    vec3 wo = unit_vector(scattered.direction());
+    
+    Float cosine = dot(rec.normal, wo);
+    if(cosine < 0) {
+      cosine = 0;
+    }
+    
+    Float sinThetaI = SinTheta(wi);
+    Float sinThetaO = SinTheta(wo);
+    Float maxCos = 0;
+    if(sinThetaI > 1e-4 && sinThetaO > 1e-4) {
+      Float sinPhiI = SinPhi(wi);
+      Float cosPhiI = CosPhi(wi);
+      Float sinPhiO = SinPhi(wo);
+      Float cosPhiO = CosPhi(wo);
+      Float dCos = cosPhiI * cosPhiO + sinPhiI * sinPhiO;
+      maxCos = std::max((Float)0, dCos);
+    }
+    Float sinAlpha, tanBeta;
+    if(AbsCosTheta(wi) > AbsCosTheta(wo)) {
+      sinAlpha = sinThetaO;
+      tanBeta = sinThetaI / AbsCosTheta(wi);
+    } else {
+      sinAlpha = sinThetaI;
+      tanBeta = sinThetaO / AbsCosTheta(wo);
+    }
+    return((A + B * maxCos * sinAlpha * tanBeta ) * M_1_PI * cosine);
+  }
+  Float A, B;
   texture *albedo;
 };
 

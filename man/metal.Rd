@@ -16,7 +16,7 @@ a hexadecimal code, R color string, or a numeric rgb vector listing three intens
 be sampled as part of the scattering probability density function.}
 }
 \value{
-Single row of a tibble describing the sphere in the scene.
+Single row of a tibble describing the metallic material.
 }
 \description{
 Metallic Material

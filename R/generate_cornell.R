@@ -47,19 +47,19 @@ generate_cornell = function(light = TRUE, lightintensity = 5,
                             lightcolor = "white",lightwidth = 332, lightdepth=343,
                             leftcolor = "#1f7326", rightcolor = "#a60d0d", roomcolor = "#bababa") {
   scene = yz_rect(x=555,y=555/2,z=555/2,555,555,
-      material = lambertian(color = leftcolor),flipped = TRUE) %>%
+      material = diffuse(color = leftcolor),flipped = TRUE) %>%
     add_object(yz_rect(x=0,y=555/2,z=555/2,555,555,
-      material = lambertian(color = rightcolor))) %>%
+      material = diffuse(color = rightcolor))) %>%
     add_object(xz_rect(x=555/2,y=555,z=555/2,555,555,
-      material = lambertian(color=roomcolor),flipped = TRUE)) %>%
+      material = diffuse(color=roomcolor),flipped = TRUE)) %>%
     add_object(xz_rect(x=555/2,y=0,z=555/2,555,555,
-      material = lambertian(color=roomcolor))) %>%
+      material = diffuse(color=roomcolor))) %>%
     add_object(xy_rect(x=555/2,y=555/2,z=555,555,555,
-      material = lambertian(color = roomcolor),flipped = TRUE))
+      material = diffuse(color = roomcolor),flipped = TRUE))
   if(light) {
     scene = scene %>%
       add_object(xz_rect(x=555/2,y=554,z=555/2,lightdepth,lightwidth,
-                       material = lambertian(color=lightcolor,
+                       material = diffuse(color=lightcolor,
                                              lightintensity=lightintensity,implicit_sample = TRUE),
                        flipped=TRUE)) 
   }

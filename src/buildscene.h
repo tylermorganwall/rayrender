@@ -60,7 +60,7 @@ hitable *build_scene(IntegerVector& type,
                      List& group_angle, List& group_order_rotation, List& group_scale,
                      LogicalVector& tri_normal_bools, LogicalVector& is_tri_color, List& tri_color_vert, 
                      CharacterVector& fileinfo, CharacterVector& filebasedir,
-                     List& scale_list, random_gen& rng) {
+                     List& scale_list, NumericVector& sigma, random_gen& rng) {
   hitable **list = new hitable*[n+1];
   NumericVector tempvector;
   NumericVector tempchecker;
@@ -138,13 +138,35 @@ hitable *build_scene(IntegerVector& type,
       } else {
         tex = new lambertian(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))) );
       }
-    } 
+    }
     else if (type(i) == 2) {
       tex = new metal(vec3(tempvector(0),tempvector(1),tempvector(2)),tempvector(3));
       prop_len = 3;
-    } else {
+    } else if (type(i) == 3) {
       tex = new dielectric(vec3(tempvector(0),tempvector(1),tempvector(2)),tempvector(3), rng);
       prop_len = 3;
+    } else {
+      if(isimage(i)) {
+        int nx, ny, nn;
+        unsigned char *tex_data = stbi_load(filelocation(i), &nx, &ny, &nn, 4);
+        tex = new orennayer(new image_texture(tex_data,nx,ny,nn), sigma(i));
+      } else if (islight(i)) {
+        tex = new diffuse_light(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))*lightintensity(i)) );
+      } else if (isnoise(i)) {
+        tex = new orennayer(new noise_texture(noise(i),vec3(tempvector(0),tempvector(1),tempvector(2)),
+                                               vec3(tempnoisecolor(0),tempnoisecolor(1),tempnoisecolor(2)),
+                                               noisephase(i), noiseintensity(i)), sigma(i));
+      } else if (ischeckered(i)) {
+        tex = new orennayer(new checker_texture(new constant_texture(vec3(tempchecker(0),tempchecker(1),tempchecker(2))),
+                                                 new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))),tempchecker(3)), 
+                                                 sigma(i));
+      } else if (is_tri_color(i)) {
+        tex = new orennayer(new triangle_texture(vec3(temp_tri_color(0),temp_tri_color(1),temp_tri_color(2)),
+                                                  vec3(temp_tri_color(3),temp_tri_color(4),temp_tri_color(5)),
+                                                  vec3(temp_tri_color(6),temp_tri_color(7),temp_tri_color(8))), sigma(i) );
+      } else {
+        tex = new orennayer(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))), sigma(i));
+      }
     }
     //Generate center vector
     if(shape(i) == 1) {

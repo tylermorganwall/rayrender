@@ -5,8 +5,8 @@
 \title{Ellipsoid Object}
 \usage{
 ellipsoid(x = 0, y = 0, z = 0, a = 1, b = 1, c = 1,
-  material = lambertian(), angle = c(0, 0, 0), order_rotation = c(1,
-  2, 3), velocity = c(0, 0, 0), flipped = FALSE, scale = c(1, 1, 1))
+  material = diffuse(), angle = c(0, 0, 0), order_rotation = c(1, 2,
+  3), velocity = c(0, 0, 0), flipped = FALSE, scale = c(1, 1, 1))
 }
 \arguments{
 \item{x}{Default `0`. x-coordinate of the center of the ellipsoid.}
@@ -21,8 +21,8 @@ ellipsoid(x = 0, y = 0, z = 0, a = 1, b = 1, c = 1,
 
 \item{c}{Default `1`. Principal z-axis of the ellipsoid.}
 
-\item{material}{Default  \code{\link{lambertian}}.The material, called from one of the material 
-functions \code{\link{lambertian}}, \code{\link{metal}}, or \code{\link{dielectric}}.}
+\item{material}{Default  \code{\link{diffuse}}.The material, called from one of the material 
+functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}.}
 
 \item{angle}{Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.}
 
