@@ -60,7 +60,7 @@ hitable *build_scene(IntegerVector& type,
                      List& group_angle, List& group_order_rotation, List& group_scale,
                      LogicalVector& tri_normal_bools, LogicalVector& is_tri_color, List& tri_color_vert, 
                      CharacterVector& fileinfo, CharacterVector& filebasedir,
-                     List& scale_list, NumericVector& sigma, random_gen& rng) {
+                     List& scale_list, NumericVector& sigma, List &glossyinfo, random_gen& rng) {
   hitable **list = new hitable*[n+1];
   NumericVector tempvector;
   NumericVector tempchecker;
@@ -75,6 +75,7 @@ hitable *build_scene(IntegerVector& type,
   NumericVector temp_gscale;
   NumericVector temp_tri_color;
   NumericVector temp_scales;
+  NumericVector temp_glossy;
   vec3 gpivot;
   vec3 gtrans;
   vec3 gorder;
@@ -93,6 +94,7 @@ hitable *build_scene(IntegerVector& type,
     temp_tri_color = as<NumericVector>(tri_color_vert(i));
     order_rotation = as<NumericVector>(order_rotation_list(i));
     temp_scales = as<NumericVector>(scale_list(i));
+    temp_glossy = as<NumericVector>(glossyinfo(i));
     bool is_scaled = false;
     bool is_group_scaled = false;
     if(temp_scales[0] != 1 || temp_scales[1] != 1 || temp_scales[2] != 1) {
@@ -145,7 +147,7 @@ hitable *build_scene(IntegerVector& type,
     } else if (type(i) == 3) {
       tex = new dielectric(vec3(tempvector(0),tempvector(1),tempvector(2)),tempvector(3), rng);
       prop_len = 3;
-    } else {
+    } else if (type(i) == 4) {
       if(isimage(i)) {
         int nx, ny, nn;
         unsigned char *tex_data = stbi_load(filelocation(i), &nx, &ny, &nn, 4);
@@ -166,6 +168,34 @@ hitable *build_scene(IntegerVector& type,
                                                   vec3(temp_tri_color(6),temp_tri_color(7),temp_tri_color(8))), sigma(i) );
       } else {
         tex = new orennayer(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))), sigma(i));
+      }
+    } else if (type(i) == 5) {
+      MicrofacetDistribution *dist;
+      if(temp_glossy(0) == 1) {
+        dist = new TrowbridgeReitzDistribution(temp_glossy(2), temp_glossy(3), true);
+      } else {
+        dist = new BeckmannDistribution(temp_glossy(2), temp_glossy(3), true);
+      }
+      if(isimage(i)) {
+        int nx, ny, nn;
+        unsigned char *tex_data = stbi_load(filelocation(i), &nx, &ny, &nn, 4);
+        tex = new MicrofacetReflection(new image_texture(tex_data,nx,ny,nn), dist, temp_glossy(1));
+      } else if (islight(i)) {
+        tex = new diffuse_light(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))*lightintensity(i)) );
+      } else if (isnoise(i)) {
+        tex = new MicrofacetReflection(new noise_texture(noise(i),vec3(tempvector(0),tempvector(1),tempvector(2)),
+                                              vec3(tempnoisecolor(0),tempnoisecolor(1),tempnoisecolor(2)),
+                                              noisephase(i), noiseintensity(i)), dist, temp_glossy(1));
+      } else if (ischeckered(i)) {
+        tex = new MicrofacetReflection(new checker_texture(new constant_texture(vec3(tempchecker(0),tempchecker(1),tempchecker(2))),
+                                                new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))),tempchecker(3)), 
+                                                dist, temp_glossy(1));
+      } else if (is_tri_color(i)) {
+        tex = new MicrofacetReflection(new triangle_texture(vec3(temp_tri_color(0),temp_tri_color(1),temp_tri_color(2)),
+                                                 vec3(temp_tri_color(3),temp_tri_color(4),temp_tri_color(5)),
+                                                 vec3(temp_tri_color(6),temp_tri_color(7),temp_tri_color(8))), dist, temp_glossy(1) );
+      } else {
+        tex = new MicrofacetReflection(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))), dist,temp_glossy(1));
       }
     }
     //Generate center vector

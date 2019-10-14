@@ -92,6 +92,31 @@ inline Float Sin2Phi(const vec3 &w) {
   return(SinPhi(w) * SinPhi(w));
 }
 
+inline Float TanTheta(const vec3 &w) {
+  return(SinTheta(w) / CosTheta(w));
+}
+
+inline Float Tan2Theta(const vec3 &w) {
+  return(Sin2Theta(w) / Cos2Theta(w));
+}
+
+Float FrDielectric(Float cosThetaI, Float etaI, Float etaT) {
+  cosThetaI = clamp(cosThetaI, -1, 1);
+  bool entering = cosThetaI > 0.f;
+  if (!entering) {
+    std::swap(etaI, etaT);
+    cosThetaI = std::abs(cosThetaI);
+  }
+  Float sinThetaI = std::sqrt(std::max((Float)0, 1 - cosThetaI * cosThetaI));
+  Float sinThetaT = etaI / etaT * sinThetaI;
+  Float cosThetaT = std::sqrt(std::max((Float)0, 1 - sinThetaT * sinThetaT));
+  Float Rparl = ((etaT * cosThetaI) - (etaI * cosThetaT)) /
+    ((etaT * cosThetaI) + (etaI * cosThetaT));
+  Float Rperp = ((etaI * cosThetaI) - (etaT * cosThetaT)) /
+    ((etaI * cosThetaI) + (etaT * cosThetaT));
+  return((Rparl * Rparl + Rperp * Rperp) / 2);
+}
+
 inline bool quadratic(Float a, Float b, Float c, Float *t0, Float *t1) {
   double discrim = (double)b * (double)b - 4 * (double)a * (double)c;
   if (discrim < 0) {

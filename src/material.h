@@ -7,6 +7,7 @@
 #include "pdf.h"
 #include "rng.h"
 #include "mathinline.h"
+#include "microfacetdist.h"
 
 struct hit_record;
 
@@ -206,5 +207,39 @@ public:
   texture *albedo;
 };
 
+class MicrofacetReflection : public material {
+public:
+  MicrofacetReflection(texture* a, MicrofacetDistribution *distribution, Float ref_idx)
+    : albedo(a), distribution(distribution), ri(ref_idx) {}
+  
+  bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng) {
+    srec.is_specular = false;
+    srec.attenuation = albedo->value(hrec.u, hrec.v, hrec.p);
+    srec.pdf_ptr = new cosine_pdf(hrec.normal);
+    return(true);
+  }
+  Float scattering_pdf(const ray& r_in, const hit_record& rec, const ray& scattered) const {
+    vec3 wi = unit_vector(r_in.direction());
+    vec3 wo = unit_vector(scattered.direction());
+    
+    Float cosThetaO = AbsCosTheta(wo);
+    Float cosThetaI = AbsCosTheta(wi);
+    vec3 wh = wi + wo;
+    if (cosThetaI == 0 || cosThetaO == 0) {
+      return(0.0);
+    }
+    if (wh.x() == 0 && wh.y() == 0 && wh.z() == 0) {
+      return(0.0);
+    }
+    wh = unit_vector(wh);
+    Float F = schlick(dot(wi, wh), ri);
+    return(distribution->G(wo,wi) *
+           distribution->D(wh) *  F / (4 * cosThetaI * cosThetaO));
+  }
+private:
+  texture *albedo;
+  MicrofacetDistribution *distribution;
+  Float ri;
+};
 
 #endif

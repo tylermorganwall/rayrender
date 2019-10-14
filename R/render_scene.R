@@ -170,7 +170,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
                           "sphere" = 1,"xy_rect" = 2, "xz_rect" = 3,"yz_rect" = 4,"box" = 5, "triangle" = 6, 
                           "obj" = 7, "objcolor" = 8, "disk" = 9, "cylinder" = 10, "ellipsoid" = 11))
   typevec = unlist(lapply(tolower(scene$type),switch,
-                          "diffuse" = 1,"metal" = 2,"dielectric" = 3, "oren-nayar" = 4))
+                          "diffuse" = 1,"metal" = 2,"dielectric" = 3, "oren-nayar" = 4, "glossy" = 5))
   sigmavec = unlist(scene$sigma)
   assertthat::assert_that(tonemap %in% c("gamma","reinhold","uncharted", "hbd"))
   toneval = switch(tonemap, "gamma" = 1,"reinhold" = 2,"uncharted" = 3,"hbd" = 4)
@@ -181,6 +181,9 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
   checkeredlist = scene$checkercolor
   checkeredbool = purrr::map_lgl(checkeredlist,.f = ~all(!is.na(.x)))
   
+  #glossy 
+  glossyinfo = scene$glossyinfo
+
   #noise handler
   noisebool = purrr::map_lgl(scene$noise, .f = ~.x > 0)
   noisevec = scene$noise
@@ -322,7 +325,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
                              fileinfo = objfilenamevec, filebasedir = objbasedirvec, toneval = toneval,
                              progress_bar = progress, numbercores = numbercores, debugval = debugval,
                              hasbackground = hasbackground, background = backgroundstring, scale_list = scale_factor,
-                             ortho_dimensions = ortho_dimensions, sigmavec = sigmavec) 
+                             ortho_dimensions = ortho_dimensions, sigmavec = sigmavec, glossyinfo = glossyinfo) 
   full_array = array(0,c(ncol(rgb_mat$r),nrow(rgb_mat$r),3))
   full_array[,,1] = t(rgb_mat$r)
   full_array[,,2] = t(rgb_mat$g)

@@ -98,7 +98,7 @@ diffuse = function(color = "#ffffff", checkercolor = NA, checkerperiod = 3,
                  properties = list(info), checkercolor=list(c(checkercolor,checkerperiod)), 
                  noise=noise, noisephase = noisephase, noiseintensity = noiseintensity, noisecolor = list(noisecolor),
                  image = list(image_array), lightintensity = lightintensity,
-                 fog=fog, fogdensity=fogdensity,implicit_sample = implicit_sample, sigma = sigma)
+                 fog=fog, fogdensity=fogdensity,implicit_sample = implicit_sample, sigma = sigma, glossyinfo = list(NA))
 }
 
 #' Metallic Material
@@ -144,7 +144,7 @@ metal = function(color = "#ffffff", fuzz = 0,  implicit_sample = FALSE) {
                  checkercolor=list(NA), noise=0, noisephase = 0, noiseintensity = 0, noisecolor = list(c(0,0,0)),
                  islight = FALSE, lightinfo = list(NA),
                  image = list(NA), lightintensity = NA,fog=FALSE,fogdensity=0.01,
-                 implicit_sample = implicit_sample, sigma = 0)
+                 implicit_sample = implicit_sample, sigma = 0, glossyinfo = list(NA))
 }
 
 #' Dielectric (glass) Material
@@ -197,7 +197,70 @@ dielectric = function(color="white", refraction = 1.5, implicit_sample = FALSE) 
                  properties = list(c(color,refraction)), 
                  checkercolor=list(NA), noise=0, noisephase = 0, noiseintensity = 0, noisecolor = list(c(0,0,0)),
                  image = list(NA), lightintensity = NA, 
-                 fog=FALSE, fogdensity=NA, implicit_sample = implicit_sample, sigma = 0)
+                 fog=FALSE, fogdensity=NA, implicit_sample = implicit_sample, sigma = 0,  glossyinfo = list(NA))
+}
+
+#' Dielectric (glass) Material
+#'
+#' @param color Default `white`. The color of the surface. Can be either
+#' a hexadecimal code, R color string, or a numeric rgb vector listing three intensities between `0` and `1`.
+#' @param refraction Default `1.5`. The index of refraction.
+#' @param implicit_sample Default `TRUE`. If `FALSE`, the object will not 
+#' be sampled as part of the scattering probability density function.
+#'
+#' @return Single row of a tibble describing the dielectric material.
+#' @export
+#'
+#' @examples
+#' #Generate a checkered ground
+#' scene = generate_ground(depth=-0.5,
+#'                         material=diffuse(color="white", checkercolor="grey30",checkerperiod=2))
+#' \donttest{
+#' render_scene(scene,parallel=TRUE)
+#' }
+#' 
+#' #Add a glass sphere
+#' \donttest{
+#' scene %>%
+#'   add_object(sphere(x=-0.5,radius=0.5,material=dielectric())) %>%
+#'   render_scene(parallel=TRUE,samples=400)
+#' }
+#' 
+#' #Add a rotated colored glass cube
+#' \donttest{
+#' scene %>%
+#'   add_object(sphere(x=-0.5,radius=0.5,material=dielectric())) %>%
+#'   add_object(cube(x=0.5,xwidth=0.5,material=dielectric(color="darkgreen"),angle=c(0,-45,0))) %>%
+#'   render_scene(parallel=TRUE,samples=40)
+#' }
+#' 
+#' #Add an area light behind and at an angle and turn off the ambient lighting
+#' \donttest{
+#' scene %>%
+#'   add_object(sphere(x=-0.5,radius=0.5,material=dielectric())) %>%
+#'   add_object(cube(x=0.5,xwidth=0.5,material=dielectric(color="darkgreen"),angle=c(0,-45,0))) %>%
+#'   add_object(yz_rect(z=-3,y=1,x=0,zwidth=3,ywidth=1.5,
+#'                      material=diffuse(lightintensity=15),
+#'                      angle=c(0,-90,45), order_rotation = c(3,2,1))) %>%
+#'   render_scene(parallel=TRUE,aperture=0, ambient_light=FALSE,samples=1000)
+#' }
+glossy = function(color="white", refraction = 1.5, microfacet = "tbr",
+                  implicit_sample = FALSE, alpha = 1) {
+  microtype = switch(microfacet, "tbr" = 1,"beckmann" = 2, 1)
+  if(length(alpha) == 1) {
+    alphax = alpha
+    alphay = alpha
+  } else {
+    alphax = alpha[1]
+    alphay = alpha[2]
+  }
+  color = convert_color(color)
+  glossyinfo = list(c(microtype, refraction, alphax, alphay));
+  tibble::tibble(type = "glossy", 
+                 properties = list(c(color)), 
+                 checkercolor=list(NA), noise=0, noisephase = 0, noiseintensity = 0, noisecolor = list(c(0,0,0)),
+                 image = list(NA), lightintensity = NA, 
+                 fog=FALSE, fogdensity=NA, implicit_sample = implicit_sample, sigma = 0, glossyinfo = glossyinfo)
 }
 
 #' Lambertian Material (deprecated)
