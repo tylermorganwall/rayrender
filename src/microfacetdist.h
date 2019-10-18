@@ -14,6 +14,7 @@ public:
     return(1 / (1 + Lambda(wo) + Lambda(wi)));
   }
   Float Pdf(const vec3 &wo, const vec3 &wi) const;
+  Float GetAlpha() const;
 protected:
   MicrofacetDistribution(bool sampleVisibleArea) 
       : sampleVisibleArea(sampleVisibleArea) {}
@@ -31,6 +32,9 @@ public:
   BeckmannDistribution(Float alphax, Float alphay, bool samplevis = true)
     : MicrofacetDistribution(samplevis), alphax(alphax), alphay(alphay) {}
   Float D(const vec3 &wh) const;
+  Float GetAlpha() const {
+    return(std::sqrt(alphax * alphax + alphay * alphay));
+  }
 private:
   Float Lambda(const vec3 &w) const;
   const Float alphax, alphay;
@@ -70,6 +74,9 @@ public:
   TrowbridgeReitzDistribution(Float alphax, Float alphay, bool samplevis = true)
     : MicrofacetDistribution(samplevis), alphax(alphax), alphay(alphay) {}
   Float D(const vec3 &w) const;
+  Float GetAlpha() const {
+    return(std::sqrt(alphax * alphax + alphay * alphay));
+  }
 private:
   Float Lambda(const vec3 &w) const;
   const Float alphax, alphay;

@@ -195,7 +195,7 @@ hitable *build_scene(IntegerVector& type,
                                                  vec3(temp_tri_color(3),temp_tri_color(4),temp_tri_color(5)),
                                                  vec3(temp_tri_color(6),temp_tri_color(7),temp_tri_color(8))), dist, temp_glossy(1) );
       } else {
-        tex = new MicrofacetReflection(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))), dist,temp_glossy(1));
+        tex = new MicrofacetReflection(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))), dist, temp_glossy(1));
       }
     }
     //Generate center vector
