@@ -160,6 +160,12 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
       message(corn_message)
     }
   }
+  lookvec = (lookat - lookfrom)
+  i1 = c(2,3,1)
+  i2 = c(3,1,2)
+  if(all(lookvec[i1]*camera_up[i2] - lookvec[i2]*camera_up[i1] == 0)) {
+    stop("camera_up value c(", paste(camera_up, collapse=","), ") is aligned exactly with camera vector (lookat - lookfrom). Choose a different value for camera_up.")
+  }
   backgroundhigh = convert_color(backgroundhigh)
   backgroundlow = convert_color(backgroundlow)
   xvec = scene$x 
