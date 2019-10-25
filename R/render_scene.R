@@ -14,7 +14,7 @@
 #' @param lookfrom Default `c(0,1,10)`. Location of the camera.
 #' @param lookat Default `c(0,0,0)`. Location where the camera is pointed.
 #' @param camera_up Default `c(0,1,0)`. Vector indicating the "up" position of the camera.
-#' @param aperture Default `0.1`. Aperture of the camera. Higher numbers will increase depth of field.
+#' @param aperture Default `0.1`. Aperture of the camera. Smaller numbers will increase depth of field.
 #' @param clamp_value Default `Inf`. If a bright light or a reflective material is in the scene, occasionally
 #' there will be bright spots that will not go away even with a large number of samples. These 
 #' can be removed (at the cost of slightly darkening the image) by setting this to a small number greater than 1. 
