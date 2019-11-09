@@ -63,13 +63,14 @@ inline Float clamp(const Float& c, Float clamplow, Float clamphigh) {
   return(c);
 }
 
-inline Float CosTheta(const vec3 &w) { return w.z(); };
-inline Float Cos2Theta(const vec3 &w) { return w.z() * w.z(); };
-inline Float AbsCosTheta(const vec3 &w) { return std::abs(w.z()); };
+inline Float CosTheta(const vec3 &w) { return w.z(); }
+inline Float Cos2Theta(const vec3 &w) { return w.z() * w.z(); }
+inline Float AbsCosTheta(const vec3 &w) { return std::abs(w.z()); }
 
 inline Float Sin2Theta(const vec3 &w) {
   return(std::max((Float)0, (Float)1 - Cos2Theta(w)));
 }
+
 inline Float SinTheta(const vec3 &w) {
   return(std::sqrt(Sin2Theta(w)));
 }
