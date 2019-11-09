@@ -35,7 +35,8 @@ If `TRUE`, the background will be a gradient varying from `backgroundhigh` direc
 
 \item{camera_up}{Default `c(0,1,0)`. Vector indicating the "up" position of the camera.}
 
-\item{aperture}{Default `0.1`. Aperture of the camera. Higher numbers will increase depth of field.}
+\item{aperture}{Default `0.1`. Aperture of the camera. Smaller numbers will increase depth of field, causing
+more blurring in areas not in focus.}
 
 \item{clamp_value}{Default `Inf`. If a bright light or a reflective material is in the scene, occasionally
 there will be bright spots that will not go away even with a large number of samples. These 
