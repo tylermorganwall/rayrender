@@ -15,7 +15,7 @@
 #' @param lookat Default `c(0,0,0)`. Location where the camera is pointed.
 #' @param camera_up Default `c(0,1,0)`. Vector indicating the "up" position of the camera.
 #' @param aperture Default `0.1`. Aperture of the camera. Smaller numbers will increase depth of field, causing
-#' more blurring in areas not in focus.
+#' less blurring in areas not in focus.
 #' @param clamp_value Default `Inf`. If a bright light or a reflective material is in the scene, occasionally
 #' there will be bright spots that will not go away even with a large number of samples. These 
 #' can be removed (at the cost of slightly darkening the image) by setting this to a small number greater than 1. 
@@ -102,7 +102,7 @@
 #'              samples=500)
 #' }
 #'                  
-#'#Increase the aperture to give more depth of field.
+#'#Increase the aperture to blur objects that are further from the focal plane.
 #' \donttest{
 #' render_scene(scene,lookfrom = c(7,1.5,10),lookat = c(0,0.5,0),fov=15,
 #'              aperture = 0.5,parallel=TRUE,samples=500)
