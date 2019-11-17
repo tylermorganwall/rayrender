@@ -24,8 +24,13 @@ public:
   checker_texture(texture *t0, texture *t1, Float p) : even(t0), odd(t1), period(p) {}
   virtual vec3 value(Float u, Float v, const vec3& p) const {
     Float invperiod = 1.0/period;
-    Float sines  = sin(invperiod*p.x()*M_PI) * sin(invperiod*p.y()*M_PI) * sin(invperiod*p.z()*M_PI);
-    if(sines < 0) {
+    Float sinx  = sin(invperiod*p.x()*M_PI);
+    sinx = sinx == 0 ? 1 : sinx;
+    Float siny  = sin(invperiod*p.y()*M_PI);
+    siny = siny == 0 ? 1 : siny;
+    Float sinz  = sin(invperiod*p.z()*M_PI);
+    sinz = sinz == 0 ? 1 : sinz;
+    if(sinx * siny * sinz < 0) {
       return(odd->value(u,v,p));
     } else {
       return(even->value(u,v,p));
