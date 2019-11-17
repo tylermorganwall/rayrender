@@ -28,7 +28,7 @@ referring to "x", "y", and "z".}
 Tibble of grouped object locations and properties.
 }
 \description{
-Group Objects
+Group and transform objects together. Currently only supports a single level of grouping.
 }
 \examples{
 #Generate the ground and add some objects
