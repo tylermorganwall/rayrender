@@ -46,6 +46,7 @@ public:
   noise_texture() {}
   noise_texture(Float sc, vec3 c, vec3 c2, Float ph, Float inten) : 
     scale(sc), color(c), color2(c2), phase(ph), intensity(inten) {
+    noise = new perlin();
   }
   ~noise_texture() {
     if(noise != 0) delete noise;

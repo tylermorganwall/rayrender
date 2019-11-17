@@ -256,11 +256,13 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
     }
   }
   
-  if(implicit_sample_vector.empty()) {
-    return(List::create(_["r"] = routput, _["g"] = goutput, _["b"] = boutput));
+  hitable_list hlist;
+  if(!implicit_sample_vector.empty()) {
+    hlist = hitable_list(&implicit_sample_vector[0], numbertosample);
+  } else {
+    numbertosample = 0;
   }
-  hitable_list hlist(&implicit_sample_vector[0],numbertosample);
-  
+
   RProgress::RProgress pb("Raytracing [:bar] ETA: :eta");
   
   if(progress_bar) {
