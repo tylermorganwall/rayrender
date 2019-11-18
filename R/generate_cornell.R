@@ -59,8 +59,7 @@ generate_cornell = function(light = TRUE, lightintensity = 5,
   if(light) {
     scene = scene %>%
       add_object(xz_rect(x=555/2,y=554,z=555/2,lightdepth,lightwidth,
-                       material = diffuse(color=lightcolor,
-                                             lightintensity=lightintensity,implicit_sample = TRUE),
+                       material = light(color=lightcolor,intensity=lightintensity),
                        flipped=TRUE)) 
   }
   attr(scene,"cornell") = TRUE

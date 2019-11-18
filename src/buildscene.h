@@ -52,7 +52,7 @@ hitable *build_scene(IntegerVector& type,
                      NumericVector& noisephase, NumericVector& noiseintensity, List noisecolorlist,
                      List& angle, 
                      LogicalVector& isimage, CharacterVector& filelocation,
-                     LogicalVector& islight, NumericVector& lightintensity,
+                     NumericVector& lightintensity,
                      LogicalVector& isflipped,
                      LogicalVector& isvolume, NumericVector& voldensity,
                      List& order_rotation_list, 
@@ -122,8 +122,6 @@ hitable *build_scene(IntegerVector& type,
         int nx, ny, nn;
         unsigned char *tex_data = stbi_load(filelocation(i), &nx, &ny, &nn, 4);
         tex = new lambertian(new image_texture(tex_data,nx,ny,nn));
-      } else if (islight(i)) {
-        tex = new diffuse_light(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))*lightintensity(i)) );
       } else if (isnoise(i)) {
         tex = new lambertian(new noise_texture(noise(i),vec3(tempvector(0),tempvector(1),tempvector(2)),
                                                vec3(tempnoisecolor(0),tempnoisecolor(1),tempnoisecolor(2)),
@@ -145,28 +143,28 @@ hitable *build_scene(IntegerVector& type,
     } else if (type(i) == 3) {
       tex = new dielectric(vec3(tempvector(0),tempvector(1),tempvector(2)),tempvector(3), rng);
       prop_len = 3;
-    } else {
+    } else if (type(i) == 4) {
       if(isimage(i)) {
         int nx, ny, nn;
         unsigned char *tex_data = stbi_load(filelocation(i), &nx, &ny, &nn, 4);
-        tex = new orennayer(new image_texture(tex_data,nx,ny,nn), sigma(i));
-      } else if (islight(i)) {
-        tex = new diffuse_light(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))*lightintensity(i)) );
+        tex = new orennayar(new image_texture(tex_data,nx,ny,nn), sigma(i));
       } else if (isnoise(i)) {
-        tex = new orennayer(new noise_texture(noise(i),vec3(tempvector(0),tempvector(1),tempvector(2)),
+        tex = new orennayar(new noise_texture(noise(i),vec3(tempvector(0),tempvector(1),tempvector(2)),
                                                vec3(tempnoisecolor(0),tempnoisecolor(1),tempnoisecolor(2)),
                                                noisephase(i), noiseintensity(i)), sigma(i));
       } else if (ischeckered(i)) {
-        tex = new orennayer(new checker_texture(new constant_texture(vec3(tempchecker(0),tempchecker(1),tempchecker(2))),
+        tex = new orennayar(new checker_texture(new constant_texture(vec3(tempchecker(0),tempchecker(1),tempchecker(2))),
                                                  new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))),tempchecker(3)), 
                                                  sigma(i));
       } else if (is_tri_color(i)) {
-        tex = new orennayer(new triangle_texture(vec3(temp_tri_color(0),temp_tri_color(1),temp_tri_color(2)),
+        tex = new orennayar(new triangle_texture(vec3(temp_tri_color(0),temp_tri_color(1),temp_tri_color(2)),
                                                   vec3(temp_tri_color(3),temp_tri_color(4),temp_tri_color(5)),
                                                   vec3(temp_tri_color(6),temp_tri_color(7),temp_tri_color(8))), sigma(i) );
       } else {
-        tex = new orennayer(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))), sigma(i));
+        tex = new orennayar(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))), sigma(i));
       }
+    } else {
+      tex = new diffuse_light(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))*lightintensity(i)) );
     }
     //Generate center vector
     if(shape(i) == 1) {
@@ -192,6 +190,7 @@ hitable *build_scene(IntegerVector& type,
     } else if(shape(i) == 11) {
       center = vec3(x(i), y(i), z(i));
     }
+
     //Generate objects
     if (shape(i) == 1) {
       hitable *entry = new sphere(vec3(0,0,0), radius(i), tex);
@@ -541,7 +540,7 @@ hitable* build_imp_sample(IntegerVector& type,
     gpivot = vec3(0,0,0); 
     gtrans = vec3(0,0,0); 
   }
-  if(type(i) != 1) {
+  if(type(i) != 1 && type(i) != 5) {
     prop_len = 3;
   }
   

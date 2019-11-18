@@ -159,7 +159,7 @@ public:
   texture *albedo;
 };
 
-class orennayer : public material {
+class orennayar : public material {
 public:
   orennayer(texture *a, Float sigma) : albedo(a) {
     Float sigma2 = sigma*sigma;

@@ -6,9 +6,8 @@
 \usage{
 diffuse(color = "#ffffff", checkercolor = NA, checkerperiod = 3,
   noise = 0, noisephase = 0, noiseintensity = 10,
-  noisecolor = "#000000", image_array = NA, lightintensity = NA,
-  fog = FALSE, fogdensity = 0.01, sigma = NULL,
-  implicit_sample = FALSE)
+  noisecolor = "#000000", image_array = NA, fog = FALSE,
+  fogdensity = 0.01, sigma = NULL, importance_sample = FALSE)
 }
 \arguments{
 \item{color}{Default `white`. The color of the surface. Can be either
@@ -32,9 +31,6 @@ Can be either a hexadecimal code, or a numeric rgb vector listing three intensit
 
 \item{image_array}{A 3-layer RGB array to be used as the texture on the surface of the object.}
 
-\item{lightintensity}{Default `NA`. If a positive value, this will turn this object into a light emitting the value specified
-in `color` (ignoring other properties). Higher values will produce a brighter light.}
-
 \item{fog}{Default `FALSE`. If `TRUE`, the object will be a volumetric scatterer.}
 
 \item{fogdensity}{Default `0.01`. The density of the fog. Higher values will produce more opaque objects.}
@@ -43,7 +39,7 @@ in `color` (ignoring other properties). Higher values will produce a brighter li
 Higher numbers indicate a roughed surface, where sigma is the standard deviation of the microfacet orientation angle. When 0, this reverts
 to the default lambertian behavior.}
 
-\item{implicit_sample}{Default `FALSE`, unless the object is a light. If `TRUE`, the object will
+\item{importance_sample}{Default `FALSE`, unless the object is a light. If `TRUE`, the object will
 be sampled as part of the scattering probability density function.}
 }
 \value{

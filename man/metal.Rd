@@ -4,7 +4,7 @@
 \alias{metal}
 \title{Metallic Material}
 \usage{
-metal(color = "#ffffff", fuzz = 0, implicit_sample = FALSE)
+metal(color = "#ffffff", fuzz = 0, importance_sample = FALSE)
 }
 \arguments{
 \item{color}{Default `white`. The color of the sphere. Can be either
@@ -12,7 +12,7 @@ a hexadecimal code, R color string, or a numeric rgb vector listing three intens
 
 \item{fuzz}{Default `0`. The roughness of the metallic surface. Maximum `1`.}
 
-\item{implicit_sample}{Default `FALSE`. If `TRUE`, the object will
+\item{importance_sample}{Default `FALSE`. If `TRUE`, the object will
 be sampled as part of the scattering probability density function.}
 }
 \value{
