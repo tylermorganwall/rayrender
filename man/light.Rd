@@ -31,4 +31,13 @@ scene = generate_cornell(light=FALSE) \%>\%
 render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 }
+
+#All gather around the orb
+scene = generate_ground(material = diffuse(checkercolor="grey50")) \%>\%
+  add_object(sphere(radius=0.5,material=light(intensity=5,color="red"))) \%>\%
+  add_object(obj_model(r_obj(), z=-3,x=-1.5,y=-1, angle=c(0,45,0))) \%>\%
+  add_object(pig(scale=0.3, x=1.5,z=-2,y=-1.5,angle=c(0,-135,0)))
+\donttest{
+render_scene(scene, samples=500, parallel=TRUE, clamp_value=10)
+}
 }
