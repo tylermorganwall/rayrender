@@ -108,4 +108,28 @@ inline bool quadratic(Float a, Float b, Float c, Float *t0, Float *t1) {
   return(true);
 }
 
+//interval search, pbrt utilities
+template <typename Predicate> int FindInterval(int size, const Predicate &pred) {
+  int first = 0, len = size;
+  while (len > 0) {
+    int half = len >> 1, middle = first + half;
+    if (pred(middle)) {
+      first = middle + 1;
+      len -= half + 1;
+    } else {
+      len = half;
+    }
+  }
+  return clamp(first - 1, 0, size - 2);
+}
+
+inline Float SphericalPhi(const vec3 &v) {
+  float p = atan2f(v.x(), v.z());
+  return((p < 0.0f) ? p + 2.0f*M_PI : p);
+}
+
+inline Float SphericalTheta(const vec3 &v) {
+  return(acosf(clamp(v.y(), -1.0f, 1.0f)));
+}
+
 #endif
