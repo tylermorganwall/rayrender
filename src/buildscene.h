@@ -60,8 +60,8 @@ hitable *build_scene(IntegerVector& type,
                      List& group_angle, List& group_order_rotation, List& group_scale,
                      LogicalVector& tri_normal_bools, LogicalVector& is_tri_color, List& tri_color_vert, 
                      CharacterVector& fileinfo, CharacterVector& filebasedir,
-                     List& scale_list, NumericVector& sigma, random_gen& rng) {
-  hitable **list = new hitable*[n+1];
+                     List& scale_list, NumericVector& sigma,  random_gen& rng) {
+  hitable **list = new hitable*[n + 1];
   NumericVector tempvector;
   NumericVector tempchecker;
   NumericVector tempvel;
@@ -120,7 +120,7 @@ hitable *build_scene(IntegerVector& type,
     if(type(i) == 1) {
       if(isimage(i)) {
         int nx, ny, nn;
-        unsigned char *tex_data = stbi_load(filelocation(i), &nx, &ny, &nn, 4);
+        Float *tex_data = stbi_loadf(filelocation(i), &nx, &ny, &nn, 4);
         tex = new lambertian(new image_texture(tex_data,nx,ny,nn));
       } else if (isnoise(i)) {
         tex = new lambertian(new noise_texture(noise(i),vec3(tempvector(0),tempvector(1),tempvector(2)),
@@ -146,7 +146,7 @@ hitable *build_scene(IntegerVector& type,
     } else if (type(i) == 4) {
       if(isimage(i)) {
         int nx, ny, nn;
-        unsigned char *tex_data = stbi_load(filelocation(i), &nx, &ny, &nn, 4);
+        Float *tex_data = stbi_loadf(filelocation(i), &nx, &ny, &nn, 4);
         tex = new orennayar(new image_texture(tex_data,nx,ny,nn), sigma(i));
       } else if (isnoise(i)) {
         tex = new orennayar(new noise_texture(noise(i),vec3(tempvector(0),tempvector(1),tempvector(2)),
@@ -190,7 +190,7 @@ hitable *build_scene(IntegerVector& type,
     } else if(shape(i) == 11) {
       center = vec3(x(i), y(i), z(i));
     }
-
+    
     //Generate objects
     if (shape(i) == 1) {
       hitable *entry = new sphere(vec3(0,0,0), radius(i), tex);

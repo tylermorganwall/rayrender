@@ -35,7 +35,7 @@ public:
       for (size_t s = 0; s < shapes.size(); s++) {
         n += shapes[s].mesh.num_face_vertices.size();
       }
-      std::vector<unsigned char* > obj_materials(materials.size()+1);
+      std::vector<Float* > obj_materials(materials.size()+1);
       std::vector<vec3 > diffuse_materials(materials.size()+1);
       std::vector<vec3 > specular_materials(materials.size()+1);
       std::vector<Float > ior_materials(materials.size()+1);
@@ -51,7 +51,7 @@ public:
 
       for (size_t i = 0; i < materials.size(); i++) {
         if(strlen(materials[i].diffuse_texname.c_str()) > 0) {
-          obj_materials[i] = stbi_load((basedir + separator() + materials[i].diffuse_texname).c_str(), &nx, &ny, &nn, 0);
+          obj_materials[i] = stbi_loadf((basedir + separator() + materials[i].diffuse_texname).c_str(), &nx, &ny, &nn, 0);
           has_diffuse[i] = true;
           has_single_diffuse[i] = false;
           nx_mat[i] = nx;

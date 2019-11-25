@@ -4,12 +4,15 @@
 #include "hitable.h"
 #include "aabb.h"
 #include <Rcpp.h>
+#include "material.h"
 
+#include <chrono>
+#include <thread>
 
 class bvh_node : public hitable {
   public:
     bvh_node() {}
-    bvh_node(hitable **l, int n, Float time0, Float time1, random_gen rng);
+    bvh_node(hitable **l, int n, Float time0, Float time1, random_gen &rng);
     virtual bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng);
     virtual bool bounding_box(Float t0, Float t1, aabb& box) const;
     hitable *left;
@@ -24,7 +27,9 @@ bool bvh_node::bounding_box(Float t0, Float t1, aabb& b) const {
 
 bool bvh_node::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
   if(box.hit(r, t_min, t_max, rng)) {
+#ifdef DEBUGBVH
     rec.bvh_nodes++;
+#endif
     if(left->hit(r,t_min,t_max,rec, rng)) {
       right->hit(r,t_min,rec.t,rec, rng);
       return(true);
@@ -40,6 +45,7 @@ int box_x_compare(const void * a, const void * b) {
   hitable *bh = *(hitable**)b;
   if(!ah->bounding_box(0,0,box_left) || !bh->bounding_box(0,0,box_right)) {
   }
+
   if(box_left.centroid.x() - box_right.centroid.x() < 0.0) {
     return(-1);
   } else {
@@ -73,7 +79,7 @@ int box_z_compare(const void * a, const void * b) {
   }
 }
 
-bvh_node::bvh_node(hitable **l, int n, Float time0, Float time1, random_gen rng) {
+bvh_node::bvh_node(hitable **l, int n, Float time0, Float time1, random_gen &rng) {
   aabb centroid_bounds;
   l[0]->bounding_box(time0, time1, centroid_bounds);
   for (int i = 0; i < n; ++i) {
@@ -89,6 +95,7 @@ bvh_node::bvh_node(hitable **l, int n, Float time0, Float time1, random_gen rng)
   } else {
     axis = centroid_bounds_values.y() > centroid_bounds_values.z() ? 1 : 2;
   }
+  // int axis = rng.unif_rand() * 2.99999;
   if(axis == 0) {
     std::qsort(l, n, sizeof(hitable *), box_x_compare);
   } else if (axis == 1) {

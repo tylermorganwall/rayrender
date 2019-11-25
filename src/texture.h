@@ -66,9 +66,9 @@ public:
 class image_texture : public texture {
 public:
   image_texture() {}
-  image_texture(unsigned char *pixels, int A, int B, int nn) : data(pixels), nx(A), ny(B), channels(nn) {}
+  image_texture(Float *pixels, int A, int B, int nn) : data(pixels), nx(A), ny(B), channels(nn) {}
   virtual vec3 value(Float u, Float v, const vec3& p) const;
-  unsigned char *data;
+  Float *data;
   int nx, ny, channels;
 };
 
@@ -79,9 +79,9 @@ vec3 image_texture::value(Float u, Float v, const vec3& p) const {
   if (j < 0) j = 0;
   if (i > nx-1) i = nx-1;
   if (j > ny-1) j = ny-1;
-  Float r = int(data[channels*i + channels*nx*j])/255.0;
-  Float g = int(data[channels*i + channels*nx*j+1])/255.0;
-  Float b = int(data[channels*i + channels*nx*j+2])/255.0;
+  Float r = data[channels*i + channels*nx*j];
+  Float g = data[channels*i + channels*nx*j+1];
+  Float b = data[channels*i + channels*nx*j+2];
   return(vec3(r,g,b));
 }
 
@@ -98,7 +98,7 @@ public:
 class triangle_image_texture : public texture {
 public:
   triangle_image_texture() {}
-  triangle_image_texture(unsigned char *pixels, int A, int B, int nn,
+  triangle_image_texture(Float *pixels, int A, int B, int nn,
                          Float tex_u_a, Float tex_v_a,
                          Float tex_u_b, Float tex_v_b,
                          Float tex_u_c, Float tex_v_c) : data(pixels),  nx(A), ny(B), channels(nn),
@@ -107,7 +107,7 @@ public:
                          c_u(tex_u_c), c_v(tex_v_c) {}
   virtual vec3 value(Float u, Float v, const vec3& p) const;
   
-  unsigned char *data;
+  Float *data;
   int nx, ny, channels;
   Float a_u, a_v, b_u, b_v,c_u, c_v;
 };
@@ -121,9 +121,9 @@ vec3 triangle_image_texture::value(Float u, Float v, const vec3& p) const {
   if (j < 0) j = 0;
   if (i > nx-1) i = nx-1;
   if (j > ny-1) j = ny-1;
-  Float r = int(data[channels*i + channels*nx*j])/255.0;
-  Float g = int(data[channels*i + channels*nx*j+1])/255.0;
-  Float b = int(data[channels*i + channels*nx*j+2])/255.0;
+  Float r = data[channels*i + channels*nx*j];
+  Float g = data[channels*i + channels*nx*j+1];
+  Float b = data[channels*i + channels*nx*j+2];
   return(vec3(r,g,b));
 }
 

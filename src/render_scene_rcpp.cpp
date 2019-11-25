@@ -14,10 +14,14 @@ typedef float Float;
 #include "RProgress.h"
 #include "rng.h"
 #include "tonemap.h"
+#include "infinite_area_light.h"
 using namespace Rcpp;
 // [[Rcpp::plugins(cpp11)]]
 // [[Rcpp::depends(RcppThread)]]
 #include "RcppThread.h"
+
+#include <chrono>
+#include <thread>
 
 inline vec3 de_nan(const vec3& c) {
   vec3 temp = c;
@@ -49,6 +53,11 @@ vec3 color(const ray& r, hitable *world, hitable *hlist, int depth, random_gen& 
       //ray back into world space
       ray scattered = ray(hrec.p, p.generate(rng), r.time()); //scatters a ray from hit point to direction
       pdf_val = p.value(scattered.direction(), rng); //generates a pdf value based the intersection point and the mixture pdf
+      
+      // if(hrec.escaped) {
+      //   return(emitted + srec.attenuation *
+      //          hrec.mat_ptr->scattering_pdf(r, hrec, scattered) / pdf_val);
+      // }
       return(emitted + srec.attenuation *
              hrec.mat_ptr->scattering_pdf(r, hrec, scattered) *
              color(scattered, world,
@@ -57,11 +66,12 @@ vec3 color(const ray& r, hitable *world, hitable *hlist, int depth, random_gen& 
       return(emitted);
     }
   } else {
-    vec3 unit_direction = unit_vector(r.direction());
-    float phi = atan2(unit_direction.x(),unit_direction.z());
-    float u = 0.5f + phi / (2*M_PI);
-    float v = 0.5f * (1.0f + unit_direction.y());
-    return(background_texture->value(u, v, unit_direction));
+    return(vec3(0,0,0));
+    // vec3 unit_direction = unit_vector(r.direction());
+    // float phi = atan2(unit_direction.x(),unit_direction.z());
+    // float u = 0.5f + phi / (2*M_PI);
+    // float v = 0.5f * (1.0f + unit_direction.y());
+    // return(background_texture->value(u, v, unit_direction));
   }
 }
 
@@ -158,12 +168,14 @@ vec3 color_amb_uniform(const ray& r, hitable *world, int depth,
   }
 }
 
+#ifdef DEBUGBVH
 float debug_bvh(const ray& r, hitable *world, random_gen rng) {
   hit_record hrec;
   hrec.bvh_nodes = 0;
   world->hit(r, 0.00001, FLT_MAX, hrec, rng);
   return(hrec.bvh_nodes);
 }
+#endif
 
 
 // [[Rcpp::export]]
@@ -211,35 +223,69 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
                     ortho_dimensions(0), ortho_dimensions(1),
                     shutteropen, shutterclose, rng);
   int nx1, ny1, nn1;
-  texture *background_texture;
+  // Rcpp::Rcout << "test" << "\n";
+  // std::this_thread::sleep_for(std::chrono::milliseconds(100))
+  
+  // for(int i = 0; i < nx; i++) {
+  //   for(int j = 0; j < ny; j++) {
+  //     Distribution2D* test = background_tex->distribution;
+  //     routput(i,j) = test->Pdf(vec2((float)i/float(nx), (float)j/float(ny)));
+  //     goutput(i,j) = test->Pdf(vec2((float)i/float(nx), (float)j/float(ny)));
+  //     boutput(i,j) = test->Pdf(vec2((float)i/float(nx), (float)j/float(ny)));
+  //   }
+  // }
+  // PutRNGstate();
+  // return(List::create(_["r"] = routput, _["g"] = goutput, _["b"] = boutput));
+  hitable *worldbvh = build_scene(type, radius, shape, x, y, z, 
+                                properties, velocity, moving,
+                                n,shutteropen,shutterclose,
+                                ischeckered, checkercolors, 
+                                noise, isnoise,noisephase,noiseintensity, noisecolorlist,
+                                angle, 
+                                isimage, filelocation,
+                                lightintensity, isflipped,
+                                isvolume, voldensity, order_rotation_list, 
+                                isgrouped, group_pivot, group_translate,
+                                group_angle, group_order_rotation, group_scale,
+                                tri_normal_bools, is_tri_color, tri_color_vert, 
+                                fileinfo, filebasedir, 
+                                scale_list, sigmavec, rng);
+  //Calculate world bounds
+  aabb bounding_box_world;
+  worldbvh->bounding_box(0,0,bounding_box_world);
+  Float world_radius = bounding_box_world.diagonal.length()/2;
+  vec3 world_center  = bounding_box_world.centroid;
+  
+  //Initialize background
+  texture *background_texture = nullptr;
+  material *background_material = nullptr;
+  hitable *background_sphere = nullptr;
   if(hasbackground) {
-    unsigned char *background_texture_data;
-    background_texture_data = stbi_load(background[0], &nx1, &ny1, &nn1, 0);
+    Float *background_texture_data;
+    background_texture_data = stbi_loadf(background[0], &nx1, &ny1, &nn1, 0);
     background_texture = new image_texture(background_texture_data, nx1, ny1, nn1);
+    background_material = new diffuse_light(background_texture);
+    background_sphere = new InfiniteAreaLight(nx1, ny1, bounding_box_world, world_center,
+                                              background_texture, background_material);
   } else {
     background_texture = new constant_texture(vec3(0,0,0));
+    background_material = new lambertian(background_texture);
+    background_sphere = new sphere(world_center, world_radius, background_material);
   }
-  hitable *world = build_scene(type, radius, shape, x, y, z, 
-                                  properties, velocity, moving,
-                                  n,shutteropen,shutterclose,
-                                  ischeckered, checkercolors, 
-                                  noise, isnoise,noisephase,noiseintensity, noisecolorlist,
-                                  angle, 
-                                  isimage, filelocation,
-                                  lightintensity, isflipped,
-                                  isvolume, voldensity, order_rotation_list, 
-                                  isgrouped, group_pivot, group_translate,
-                                  group_angle, group_order_rotation, group_scale,
-                                  tri_normal_bools, is_tri_color, tri_color_vert, 
-                                  fileinfo, filebasedir, 
-                                  scale_list, sigmavec, rng);
+  hitable *world_full[2];
+  world_full[0] = background_sphere;
+  world_full[1] = worldbvh;
+  hitable_list world(world_full, 2);
   int numbertosample = 0;
   for(int i = 0; i < implicit_sample.size(); i++) {
     if(implicit_sample(i)) {
       numbertosample++;
     }
   }
-
+  if(hasbackground) {
+    numbertosample++;
+  }
+  
   std::vector<hitable* > implicit_sample_vector(numbertosample);
   int counter = 0;
   for(int i = 0; i < n; i++)  {
@@ -254,7 +300,11 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
       counter++;
     }
   }
+  if(hasbackground) {
+    implicit_sample_vector[counter] = background_sphere;
+  }
   
+
   hitable_list hlist;
   if(!implicit_sample_vector.empty()) {
     hlist = hitable_list(&implicit_sample_vector[0], numbertosample);
@@ -268,6 +318,8 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
     pb.set_total(ny);
   }
   if(debugval == 1) {
+#ifdef DEBUGBVH
+
     Float bvh_intersections = 0.0;
     Float max_intersections = 0.0;
     for(int j = ny - 1; j >= 0; j--) {
@@ -295,6 +347,7 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
       boutput(i,j) = boutput(i,j) / max_intersections;
       }
     }
+#endif
   } else {
     if(!parallel) {
       for(int j = ny - 1; j >= 0; j--) {
@@ -315,17 +368,17 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
             }
             if(numbertosample) {
               if(ambient_light) {
-                col += clamp(de_nan(color_amb(r, world, &hlist, 0, 
+                col += clamp(de_nan(color_amb(r, &world, &hlist, 0, 
                                               backgroundhigh, backgroundlow, rng)),0,clampval);
               } else {
-                col += clamp(de_nan(color(r, world, &hlist, 0, rng, background_texture)),0,clampval);
+                col += clamp(de_nan(color(r, &world, &hlist, 0, rng, background_texture)),0,clampval);
               }
             } else {
               if(ambient_light) {
-                col += clamp(de_nan(color_amb_uniform(r, world, 0, 
+                col += clamp(de_nan(color_amb_uniform(r, &world, 0, 
                                                       backgroundhigh, backgroundlow, rng)),0,clampval);
               } else {
-                col += clamp(de_nan(color_uniform(r, world, 0, rng, background_texture)),0,clampval);
+                col += clamp(de_nan(color_uniform(r, &world, 0, rng, background_texture)),0,clampval);
               }
             }
           }
@@ -379,16 +432,16 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
             }
             if(numbertosample) {
               if(ambient_light) {
-                col += clamp(de_nan(color_amb(r, world, &hlist, 0,
+                col += clamp(de_nan(color_amb(r, &world, &hlist, 0,
                                               backgroundhigh, backgroundlow, rng)),0,clampval);
               } else {
-                col += clamp(de_nan(color(r, world, &hlist, 0, rng, background_texture)),0,clampval);
+                col += clamp(de_nan(color(r, &world, &hlist, 0, rng, background_texture)),0,clampval);
               }
             } else {
               if(ambient_light) {
-                col += clamp(de_nan(color_amb_uniform(r, world, 0, backgroundhigh, backgroundlow, rng)),0,clampval);
+                col += clamp(de_nan(color_amb_uniform(r, &world, 0, backgroundhigh, backgroundlow, rng)),0,clampval);
               } else {
-                col += clamp(de_nan(color_uniform(r, world, 0, rng, background_texture)),0,clampval);
+                col += clamp(de_nan(color_uniform(r, &world, 0, rng, background_texture)),0,clampval);
               }
             }
           }
