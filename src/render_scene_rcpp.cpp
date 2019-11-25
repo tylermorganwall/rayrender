@@ -273,9 +273,10 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
     background_sphere = new sphere(world_center, world_radius, background_material);
   }
   hitable *world_full[2];
-  world_full[0] = background_sphere;
-  world_full[1] = worldbvh;
-  hitable_list world(world_full, 2);
+  world_full[0] = worldbvh;
+  world_full[1] = background_sphere;
+  int nval = hasbackground ? 2 : 1;
+  hitable_list world(world_full, nval);
   int numbertosample = 0;
   for(int i = 0; i < implicit_sample.size(); i++) {
     if(implicit_sample(i)) {
