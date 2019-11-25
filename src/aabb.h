@@ -40,7 +40,7 @@ bool aabb::hit(const ray &r, Float tmin, Float tmax, random_gen& rng) {
   tzmax = (bounds[1-r.sign[2]].z()-r.origin().z()) * r.inv_dir_pad.z();
   tmin = ffmax(tzmin, ffmax(tymin, ffmax(txmin, tmin)));
   tmax = ffmin(tzmax, ffmin(tymax, ffmin(txmax, tmax)));
-  return tmin <= tmax;
+  return(tmin <= tmax);
 }
 
 aabb surrounding_box(aabb box0, aabb box1) {
