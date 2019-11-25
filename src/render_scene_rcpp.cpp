@@ -265,7 +265,7 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
     background_texture_data = stbi_loadf(background[0], &nx1, &ny1, &nn1, 0);
     background_texture = new image_texture(background_texture_data, nx1, ny1, nn1);
     background_material = new diffuse_light(background_texture);
-    background_sphere = new InfiniteAreaLight(nx1, ny1, bounding_box_world, world_center,
+    background_sphere = new InfiniteAreaLight(nx1, ny1, world_radius*2, world_center,
                                               background_texture, background_material);
   } else {
     background_texture = new constant_texture(vec3(0,0,0));
