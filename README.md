@@ -11,11 +11,11 @@ One Weekend”, “Ray Tracing: The Next Week”, and “Ray Tracing: The Rest
 of Your Life”, this package provides a tidy R API to a raytracer built
 in C++ to render scenes built out of an array of primitives.
 **rayrender** builds scenes using a pipeable iterative interface, and
-supports Lambertian (diffuse), metallic, and dielectric (glass)
-materials, lights, as well as procedural and user-specified image
-textures. **rayrender** includes multicore support (with progress bars)
-via RcppThread, random number generation via the PCG RNG, and `.obj`
-file support via TinyObjLoader.
+supports diffuse, metallic, dielectric (glass), light emitting
+materials, as well as procedural and user-specified image textures and
+HDR environment lighting. **rayrender** includes multicore support (with
+progress bars) via RcppThread, random number generation via the PCG RNG,
+and `.obj` file support via TinyObjLoader.
 
 Browse the documentation and see more examples at the website (if you
 aren’t already there):
@@ -45,7 +45,7 @@ also add a simple red sphere to the scene.
 library(rayrender)
 
 scene = generate_ground() %>%
-  add_object(sphere(material = lambertian(color="#ff5555")))
+  add_object(sphere(material = diffuse(color="#ff5555")))
 render_scene(scene, parallel = TRUE, width = 800, height = 800, samples = 1000)
 ```
 
@@ -58,10 +58,10 @@ camera.
 
 ``` r
 scene = generate_ground() %>%
-  add_object(sphere(material = lambertian(color="#ff5555"))) %>%
+  add_object(sphere(material = diffuse(color="#ff5555", sigma=100))) %>%
   add_object(sphere(y=5, z = 5, x = 5, radius = 3, 
-                    material = lambertian(lightintensity = 10, implicit_sample = TRUE))) 
-render_scene(scene, parallel = TRUE, width = 800, height = 800, samples = 1000)
+                    material = light(intensity = 10))) 
+render_scene(scene, parallel = TRUE, width = 800, height = 800, samples = 100)
 ```
 
 ![](man/figures/README_ground_sphere-1.png)<!-- -->
@@ -73,10 +73,10 @@ We’ll also turn down the light intensity.
 
 ``` r
 scene = generate_ground() %>%
-  add_object(sphere(material = lambertian(color="#ff5555"))) %>%
+  add_object(sphere(material = diffuse(color="#ff5555"))) %>%
   add_object(obj_model(r_obj(), y = -0.4, z = 0.9, scale_obj = 0.6)) %>%
   add_object(sphere(y=5, z = 5, x = 5, radius = 3, 
-                    material = lambertian(lightintensity = 5, implicit_sample = TRUE))) 
+                    material = light(intensity = 5))) 
 render_scene(scene, parallel = TRUE, width = 800, height = 800, samples = 1000)
 ```
 
@@ -118,7 +118,7 @@ sphere, a pig, and plaster the walls with the iris dataset using
 textures applied to rectangles. We first write the textures out to a
 temporary filename, and then read the image back in using the
 `png::readPNG()` function. We then pass this to the `image` argument in
-the Lambertian material, which applies it as a texture.
+the diffuse material, which applies it as a texture.
 
 ``` r
 tempfileplot = tempfile()
@@ -136,18 +136,40 @@ image_array = png::readPNG(tempfileplot)
 generate_cornell() %>%
   add_object(ellipsoid(x=555/2,y=100,z=555/2,a=50,b=100,c=50, material = metal(color="lightblue"))) %>%
   add_object(cube(x=100,y=130/2,z=200,xwidth = 130,ywidth=130,zwidth = 130,
-                  material=lambertian(checkercolor="purple", checkerperiod = 30),angle=c(0,10,0))) %>%
+                  material=diffuse(checkercolor="purple", checkerperiod = 30),angle=c(0,10,0))) %>%
   add_object(pig(x=100,y=190,z=200,scale=40,angle=c(0,30,0))) %>%
   add_object(sphere(x=420,y=555/8,z=100,radius=555/8,
                     material = dielectric(color="orange"))) %>%
   add_object(yz_rect(x=0.01,y=300,z=555/2,zwidth=400,ywidth=400,
-                     material = lambertian(image = image_array))) %>%
+                     material = diffuse(image = image_array))) %>%
   add_object(yz_rect(x=555/2,y=300,z=555-0.01,zwidth=400,ywidth=400,
-                     material = lambertian(image = image_array),angle=c(0,90,0))) %>%
+                     material = diffuse(image = image_array),angle=c(0,90,0))) %>%
   add_object(yz_rect(x=555-0.01,y=300,z=555/2,zwidth=400,ywidth=400,
-                     material = lambertian(image = image_array),angle=c(0,180,0))) %>%
+                     material = diffuse(image = image_array),angle=c(0,180,0))) %>%
   render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), aperture=0, fov=40,  samples = 1000,
              ambient_light=FALSE, parallel=TRUE, width=800, height=800, clamp_value = 5)
 ```
 
 ![](man/figures/README_basic_sphere-1.png)<!-- -->
+
+Finally, rayrender supports environment lighting with the
+`environment_light` argument. Pass a high dynamic range image (`.hdr`)
+or a low-dynamic range image (`.jpg`,`.png`) and the image will be used
+to light the scene (along with any other lights). Here’s an example
+using an HDR image of Venice at sunset (obtained for free from
+hdrihaven.com), also using the Oren-Nayar diffuse model with `sigma
+= 90` for a more realistic diffuse surface.
+
+``` r
+tempfilehdr = tempfile(fileext = ".hdr")
+download.file("https://www.tylermw.com/data/venice_sunset_2k.hdr",tempfilehdr)
+
+generate_ground(material = diffuse(color="grey20", checkercolor = "grey50",sigma=90)) %>%
+  add_object(sphere(material=metal())) %>%
+  add_object(obj_model(y=-1,x=-1.8,r_obj(), angle=c(0,135,0),material = diffuse(sigma=90))) %>%
+  add_object(pig(x=1.8,y=-1.2,scale=0.5,angle=c(0,90,0),diffuse_sigma = 90)) %>%
+  render_scene(parallel = TRUE, environment_light = tempfilehdr, width=800,height=800,
+               fov=30,clamp_value=10,samples=400,lookfrom=c(0,1,-10))
+```
+
+![](man/figures/README_hdr-1.png)<!-- -->

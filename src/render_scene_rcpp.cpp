@@ -253,9 +253,14 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
   //Calculate world bounds
   aabb bounding_box_world;
   worldbvh->bounding_box(0,0,bounding_box_world);
-  Float world_radius = bounding_box_world.diagonal.length()/2;
+  Float world_radius = bounding_box_world.diagonal.length()/2 ;
   vec3 world_center  = bounding_box_world.centroid;
+  world_radius = world_radius > (lookfrom - world_center).length() ? world_radius : (lookfrom - world_center).length()*2;
   
+  if(fov == 0) {
+    Float ortho_diag = sqrt(pow(ortho_dimensions(0),2) + pow(ortho_dimensions(1),2));
+    world_radius += ortho_diag;
+  }
   //Initialize background
   texture *background_texture = nullptr;
   material *background_material = nullptr;

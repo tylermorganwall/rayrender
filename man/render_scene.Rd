@@ -10,7 +10,7 @@ render_scene(scene, width = 400, height = 400, fov = 20,
   clamp_value = Inf, filename = NULL, backgroundhigh = "#80b4ff",
   backgroundlow = "#ffffff", shutteropen = 0, shutterclose = 1,
   focal_distance = NULL, ortho_dimensions = c(1, 1),
-  tonemap = "gamma", parallel = TRUE, backgroundimage = NULL,
+  tonemap = "gamma", parallel = TRUE, environment_light = NULL,
   progress = interactive(), debug = NULL)
 }
 \arguments{
@@ -69,7 +69,8 @@ optimized formula by Jim Hejl and Richard Burgess-Dawson.}
 \item{parallel}{Default `FALSE`. If `TRUE`, it will use all available cores to render the image
 (or the number specified in `options("cores")` if that option is not `NULL`).}
 
-\item{backgroundimage}{Default `NULL`.}
+\item{environment_light}{Default `NULL`. An image to be used for the background for rays that escape
+the scene. Supports both HDR (`.hdr`) and low-dynamic range (`.png`, `.jpg`) images.}
 
 \item{progress}{Default `TRUE` if interactive session, `FALSE` otherwise.}
 

@@ -35,7 +35,8 @@
 #' `reinhold` scales values by their individual color channels `color/(1+color)` and then performs the 
 #' gamma adjustment. `uncharted` uses the mapping developed for Uncharted 2 by John Hable. `hbd` uses an
 #' optimized formula by Jim Hejl and Richard Burgess-Dawson.
-#' @param backgroundimage Default `NULL`. 
+#' @param environment_light Default `NULL`. An image to be used for the background for rays that escape
+#' the scene. Supports both HDR (`.hdr`) and low-dynamic range (`.png`, `.jpg`) images.
 #' @param parallel Default `FALSE`. If `TRUE`, it will use all available cores to render the image
 #'  (or the number specified in `options("cores")` if that option is not `NULL`).
 #' @param progress Default `TRUE` if interactive session, `FALSE` otherwise. 
@@ -126,11 +127,12 @@
 #'}
 #'}
 render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 100, ambient_light = FALSE,
-                        lookfrom = c(0,1,10), lookat = c(0,0,0), camera_up = c(0,1,0), aperture = 0.1, clamp_value = Inf,
+                        lookfrom = c(0,1,10), lookat = c(0,0,0), camera_up = c(0,1,0), 
+                        aperture = 0.1, clamp_value = Inf,
                         filename = NULL, backgroundhigh = "#80b4ff",backgroundlow = "#ffffff",
                         shutteropen = 0.0, shutterclose = 1.0, focal_distance=NULL, ortho_dimensions = c(1,1),
                         tonemap ="gamma", parallel=TRUE,
-                        backgroundimage = NULL,
+                        environment_light = NULL,
                         progress = interactive(), debug = NULL) { 
   #Check if Cornell Box scene and set camera if user did not:
   if(!is.null(attr(scene,"cornell"))) {
@@ -208,7 +210,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
   #light handler
   light_prop_vec =  scene$lightintensity
   
-  if(!any(typevec == 5) && missing(ambient_light) && missing(backgroundimage)) {
+  if(!any(typevec == 5) && missing(ambient_light) && missing(environment_light)) {
     ambient_light = TRUE
   }
   
@@ -262,9 +264,13 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
   objbasedirvec = purrr::map_chr(objfilenamevec, dirname)
 
   #bg image handler
-  if(!is.null(backgroundimage)) {
+  if(!is.null(environment_light)) {
     hasbackground = TRUE
-    backgroundstring = path.expand(backgroundimage)
+    backgroundstring = path.expand(environment_light)
+    if(!file.exists(environment_light)) {
+      hasbackground = FALSE
+      warning("file '", environment_light, "' cannot be found, not using background image.")
+    }
   } else {
     hasbackground = FALSE
     backgroundstring = ""

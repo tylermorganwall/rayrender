@@ -8,6 +8,7 @@
 #' @param order_rotation Default `c(1, 2, 3)`. The order to apply the rotations, referring to "x", "y", and "z".
 #' @param scale Default `c(1, 1, 1)`. Scale transformation in the x, y, and z directions. If this is a single value,
 #' number, the object will be scaled uniformly.
+#' @param diffuse_sigma Default `0`. Controls the Oren-Nayar sigma parameter for the pig's diffuse material.
 #'
 #' @return Single row of a tibble describing the pig in the scene.
 #' @export
@@ -49,7 +50,7 @@
 #' }
 pig = function(x = 0, y = 0, z = 0, emotion = "neutral",
                angle = c(0, 0, 0), order_rotation = c(1, 2, 3), 
-               scale = c(1, 1, 1)) {
+               scale = c(1, 1, 1), diffuse_sigma = 0) {
   if(length(scale) == 1) {
     scale = c(scale, scale, scale)
   }
@@ -78,6 +79,9 @@ pig = function(x = 0, y = 0, z = 0, emotion = "neutral",
   } else {
     eyebrow_offset_left = c(0, 0)
     eyebrow_offset_right = c(0, 0)
+  }
+  diffuse = function(...) {
+    rayrender::diffuse(... , sigma=diffuse_sigma)
   }
   pig = group_objects(
     ellipsoid(y = 1, a = 2, b = 1, c = 1, material = diffuse(color="#f09089")) %>%

@@ -21,9 +21,10 @@ reference:
   - title: "Materials"
     desc: "Functions to specify the visual properties of objects"
     contents:
-      - starts_with("lambertian")
+      - starts_with("diffuse")
       - starts_with("metal")
       - starts_with("dielectric")
+      - starts_with("light")
   - title: "Composing Scenes"
     desc: "Function for adding objects together to form a scene."
     contents:
