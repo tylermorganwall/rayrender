@@ -161,7 +161,7 @@ public:
 
 class orennayar : public material {
 public:
-  orennayer(texture *a, Float sigma) : albedo(a) {
+  orennayar(texture *a, Float sigma) : albedo(a) {
     Float sigma2 = sigma*sigma;
     A = 1.0f - (sigma2 / (2.0f * (sigma2 + 0.33f)));
     B = 0.45f * sigma2 / (sigma2 + 0.09f);

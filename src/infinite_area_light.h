@@ -104,40 +104,20 @@ Float InfiniteAreaLight::pdf_value(const vec3& o, const vec3& v, random_gen& rng
   }
 }
 
-// vec3 InfiniteAreaLight::random(const vec3& o, random_gen& rng) {
-//   vec3 direction = center - o;
-//   Float distance_squared = direction.squared_length();
-//   onb uvw;
-//   uvw.build_from_w(direction);
-//   return(uvw.local(rng.random_to_sphere(radius,distance_squared)));
-// }
 
 vec3 InfiniteAreaLight::random(const vec3& o, random_gen& rng) {
   vec2 u(rng.unif_rand(),rng.unif_rand());
-  // Find $(u,v)$ sample coordinates in infinite light texture
   Float mapPdf;
   vec2 uv = distribution->SampleContinuous(u, &mapPdf);
-  // Rcpp::Rcout << uv[0] << " " << uv[1] << " " << mapPdf << "\n";
-  // std::this_thread::sleep_for(std::chrono::milliseconds(100));
-
   if (mapPdf == 0) {
     return(vec3(0.f,0.f,0.f));
   }
   //theta vertical, phi horizontal
-  Float theta = uv[1] * M_PI, phi = uv[0] * 2.0f * M_PI;
-  // vec3 unit_direction = unit_vector(r.direction());
-  // float phi = atan2(unit_direction.x(),unit_direction.z());
-  // float u = 0.5f + phi / (2*M_PI);
-  // float v = 0.5f * (1.0f + unit_direction.y());
+  Float theta = (1-uv[1]) * M_PI, phi = (1-uv[0]) * 2.0f * M_PI;
   Float cosTheta = std::cos(theta), sinTheta = std::sin(theta);
   Float sinPhi = std::sin(phi), cosPhi = std::cos(phi);
   vec3 d(sinTheta * sinPhi,cosTheta,sinTheta * cosPhi);
-  // Rcpp::Rcout << theta*180/M_PI << " " << phi*180/M_PI << "\n";
-  // std::this_thread::sleep_for(std::chrono::milliseconds(100));
   return(d);
-  // onb uvw;
-  // uvw.build_from_w(d);
-  // return(uvw.local(rng.random_to_sphere(radius,1)));
 }
 
 bool InfiniteAreaLight::bounding_box(Float t0, Float t1, aabb& box) const {
