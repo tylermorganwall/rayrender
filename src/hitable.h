@@ -25,7 +25,6 @@ struct hit_record {
 #endif
   vec3 p;
   vec3 normal;
-  bool escaped;
   material *mat_ptr;
 };
 

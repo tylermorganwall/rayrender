@@ -53,11 +53,6 @@ vec3 color(const ray& r, hitable *world, hitable *hlist, int depth, random_gen& 
       //ray back into world space
       ray scattered = ray(hrec.p, p.generate(rng), r.time()); //scatters a ray from hit point to direction
       pdf_val = p.value(scattered.direction(), rng); //generates a pdf value based the intersection point and the mixture pdf
-      
-      // if(hrec.escaped) {
-      //   return(emitted + srec.attenuation *
-      //          hrec.mat_ptr->scattering_pdf(r, hrec, scattered) / pdf_val);
-      // }
       return(emitted + srec.attenuation *
              hrec.mat_ptr->scattering_pdf(r, hrec, scattered) *
              color(scattered, world,
@@ -205,7 +200,8 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
                       CharacterVector& fileinfo, CharacterVector& filebasedir, int toneval,
                       bool progress_bar, int numbercores, int debugval, 
                       bool hasbackground, CharacterVector& background, List& scale_list,
-                      NumericVector ortho_dimensions, NumericVector sigmavec) {
+                      NumericVector ortho_dimensions, NumericVector sigmavec,
+                      float rotate_env) {
   NumericMatrix routput(nx,ny);
   NumericMatrix goutput(nx,ny);
   NumericMatrix boutput(nx,ny);
@@ -223,19 +219,6 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
                     ortho_dimensions(0), ortho_dimensions(1),
                     shutteropen, shutterclose, rng);
   int nx1, ny1, nn1;
-  // Rcpp::Rcout << "test" << "\n";
-  // std::this_thread::sleep_for(std::chrono::milliseconds(100))
-  
-  // for(int i = 0; i < nx; i++) {
-  //   for(int j = 0; j < ny; j++) {
-  //     Distribution2D* test = background_tex->distribution;
-  //     routput(i,j) = test->Pdf(vec2((float)i/float(nx), (float)j/float(ny)));
-  //     goutput(i,j) = test->Pdf(vec2((float)i/float(nx), (float)j/float(ny)));
-  //     boutput(i,j) = test->Pdf(vec2((float)i/float(nx), (float)j/float(ny)));
-  //   }
-  // }
-  // PutRNGstate();
-  // return(List::create(_["r"] = routput, _["g"] = goutput, _["b"] = boutput));
   hitable *worldbvh = build_scene(type, radius, shape, x, y, z, 
                                 properties, velocity, moving,
                                 n,shutteropen,shutterclose,
@@ -272,6 +255,9 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
     background_material = new diffuse_light(background_texture);
     background_sphere = new InfiniteAreaLight(nx1, ny1, world_radius*2, world_center,
                                               background_texture, background_material);
+    if(rotate_env != 0) {
+      background_sphere = new rotate_y(background_sphere, rotate_env);
+    }
   } else {
     background_texture = new constant_texture(vec3(0,0,0));
     background_material = new lambertian(background_texture);

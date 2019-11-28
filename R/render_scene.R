@@ -37,6 +37,7 @@
 #' optimized formula by Jim Hejl and Richard Burgess-Dawson.
 #' @param environment_light Default `NULL`. An image to be used for the background for rays that escape
 #' the scene. Supports both HDR (`.hdr`) and low-dynamic range (`.png`, `.jpg`) images.
+#' @param rotate_env Default `0`. The number of degrees to rotate the environment map around the scene.
 #' @param parallel Default `FALSE`. If `TRUE`, it will use all available cores to render the image
 #'  (or the number specified in `options("cores")` if that option is not `NULL`).
 #' @param progress Default `TRUE` if interactive session, `FALSE` otherwise. 
@@ -132,7 +133,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
                         filename = NULL, backgroundhigh = "#80b4ff",backgroundlow = "#ffffff",
                         shutteropen = 0.0, shutterclose = 1.0, focal_distance=NULL, ortho_dimensions = c(1,1),
                         tonemap ="gamma", parallel=TRUE,
-                        environment_light = NULL,
+                        environment_light = NULL, rotate_env = 0,
                         progress = interactive(), debug = NULL) { 
   #Check if Cornell Box scene and set camera if user did not:
   if(!is.null(attr(scene,"cornell"))) {
@@ -334,7 +335,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
                              fileinfo = objfilenamevec, filebasedir = objbasedirvec, toneval = toneval,
                              progress_bar = progress, numbercores = numbercores, debugval = debugval,
                              hasbackground = hasbackground, background = backgroundstring, scale_list = scale_factor,
-                             ortho_dimensions = ortho_dimensions, sigmavec = sigmavec) 
+                             ortho_dimensions = ortho_dimensions, sigmavec = sigmavec, rotate_env = rotate_env) 
   full_array = array(0,c(ncol(rgb_mat$r),nrow(rgb_mat$r),3))
   full_array[,,1] = t(rgb_mat$r)
   full_array[,,2] = t(rgb_mat$g)

@@ -17,10 +17,6 @@ typedef float Float;
 #endif 
 #endif
 
-
-#include <chrono>
-#include <thread>
-
 class InfiniteAreaLight: public hitable {
 public:
   InfiniteAreaLight() {}
@@ -67,22 +63,24 @@ bool InfiniteAreaLight::hit(const ray& r, Float t_min, Float t_max, hit_record& 
     return(false);
   }
   if(temp1 < t_max && temp1 > t_min) {
-    rec.escaped = true;
     rec.t = temp1;
     rec.p = r.point_at_parameter(rec.t);
     rec.p *= radius / rec.p.length(); 
     rec.normal = (rec.p - center) / radius;
-    get_sphere_uv(unit_vector(r.direction()), rec.u, rec.v);
+    vec3 v2(-r.direction().z(),r.direction().y(),r.direction().x());
+    get_sphere_uv(unit_vector(v2), rec.u, rec.v);
+    rec.u = 1 - rec.u;
     rec.mat_ptr = mat_ptr;
     return(true);
   }
   if(temp2 < t_max && temp2 > t_min) {
-    rec.escaped = true;
     rec.t = temp1;
     rec.p = r.point_at_parameter(rec.t);
     rec.p *= radius / rec.p.length(); 
     rec.normal = (rec.p - center) / radius;
-    get_sphere_uv(unit_vector(r.direction()), rec.u, rec.v);
+    vec3 v2(-r.direction().z(),r.direction().y(),r.direction().x());
+    get_sphere_uv(unit_vector(v2), rec.u, rec.v);
+    rec.u = 1 - rec.u;
     rec.mat_ptr = mat_ptr;
     return(true);
   }
@@ -92,12 +90,15 @@ bool InfiniteAreaLight::hit(const ray& r, Float t_min, Float t_max, hit_record& 
 Float InfiniteAreaLight::pdf_value(const vec3& o, const vec3& v, random_gen& rng) {
   hit_record rec;
   if(this->hit(ray(o,v), 0.001, FLT_MAX, rec, rng)) {
-    Float theta = SphericalTheta(v), phi = SphericalPhi(v);
-    Float sinTheta = std::sin(theta);
+    vec3 v2(-v.z(),v.y(),v.x());
+    get_sphere_uv(unit_vector(v2), rec.u, rec.v);
+    rec.u = 1 - rec.u;
+    Float sinTheta = std::sin(rec.v * M_PI);
     if (sinTheta == 0) {
       return(0);
     }
-    return(distribution->Pdf(vec2(phi * M_1_PI/2, theta * M_1_PI)) /
+    //u = phi, v = theta
+    return(distribution->Pdf(vec2(rec.u, rec.v)) /
       (2 * M_PI * M_PI * sinTheta));
   } else {
     return(0);
@@ -106,7 +107,7 @@ Float InfiniteAreaLight::pdf_value(const vec3& o, const vec3& v, random_gen& rng
 
 
 vec3 InfiniteAreaLight::random(const vec3& o, random_gen& rng) {
-  vec2 u(rng.unif_rand(),rng.unif_rand());
+  vec2 u(rng.unif_rand(), rng.unif_rand());
   Float mapPdf;
   vec2 uv = distribution->SampleContinuous(u, &mapPdf);
   if (mapPdf == 0) {
@@ -116,7 +117,7 @@ vec3 InfiniteAreaLight::random(const vec3& o, random_gen& rng) {
   Float theta = (1-uv[1]) * M_PI, phi = (1-uv[0]) * 2.0f * M_PI;
   Float cosTheta = std::cos(theta), sinTheta = std::sin(theta);
   Float sinPhi = std::sin(phi), cosPhi = std::cos(phi);
-  vec3 d(sinTheta * sinPhi,cosTheta,sinTheta * cosPhi);
+  vec3 d(sinTheta * sinPhi, cosTheta, sinTheta * cosPhi);
   return(d);
 }
 
