@@ -385,9 +385,15 @@ hitable *build_scene(IntegerVector& type,
       hitable *entry;
       std::string objfilename = Rcpp::as<std::string>(fileinfo(i));
       std::string objbasedirname = Rcpp::as<std::string>(filebasedir(i));
-      entry = new trimesh(objfilename, objbasedirname, 
-                          tempvector(prop_len+1),
-                          shutteropen, shutterclose, rng);
+      if(sigma(i) == 0) {
+        entry = new trimesh(objfilename, objbasedirname, 
+                            tempvector(prop_len+1), 
+                            shutteropen, shutterclose, rng);
+      } else {
+        entry = new trimesh(objfilename, objbasedirname, 
+                            tempvector(prop_len+1), sigma(i),
+                            shutteropen, shutterclose, rng);
+      }
       if(is_scaled) {
         entry = new scale(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
       }
@@ -679,7 +685,6 @@ hitable* build_imp_sample(IntegerVector& type,
     std::string objfilename = Rcpp::as<std::string>(fileinfo(i));
     std::string objbasedirname = Rcpp::as<std::string>(filebasedir(i));
     entry = new trimesh(objfilename, objbasedirname,
-                        0,
                         tempvector(prop_len+1),
                         shutteropen, shutterclose, rng);
     if(is_scaled) {
