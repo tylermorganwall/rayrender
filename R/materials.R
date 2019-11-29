@@ -18,8 +18,10 @@
 #' @param sigma Default `NULL`. A number between 0 and Infinity specifying the roughness of the surface using the Oren-Nayar microfacet model.
 #' Higher numbers indicate a roughed surface, where sigma is the standard deviation of the microfacet orientation angle. When 0, this reverts
 #' to the default lambertian behavior.
-#' @param importance_sample Default `FALSE`, unless the object is a light. If `TRUE`, the object will
-#' be sampled as part of the scattering probability density function.
+#' @param importance_sample Default `FALSE`. If `TRUE`, the object will be sampled explicitly during 
+#' the rendering process. If the object is particularly important in contributing to the light paths
+#' in the image (e.g. light sources, refracting glass ball with caustics, metal objects concentrating light),
+#' this will help with the convergence of the image.
 #'
 #' @return Single row of a tibble describing the diffuse material.
 #' @export
@@ -103,8 +105,10 @@ diffuse = function(color = "#ffffff", checkercolor = NA, checkerperiod = 3,
 #' @param color Default `white`. The color of the sphere. Can be either
 #' a hexadecimal code, R color string, or a numeric rgb vector listing three intensities between `0` and `1`.
 #' @param fuzz  Default `0`. The roughness of the metallic surface. Maximum `1`.
-#' @param importance_sample Default `FALSE`. If `TRUE`, the object will
-#' be sampled as part of the scattering probability density function.
+#' @param importance_sample Default `FALSE`. If `TRUE`, the object will be sampled explicitly during 
+#' the rendering process. If the object is particularly important in contributing to the light paths
+#' in the image (e.g. light sources, refracting glass ball with caustics, metal objects concentrating light),
+#' this will help with the convergence of the image.
 #' @importFrom  grDevices col2rgb
 #'
 #' @return Single row of a tibble describing the metallic material.
@@ -149,8 +153,10 @@ metal = function(color = "#ffffff", fuzz = 0,  importance_sample = FALSE) {
 #' @param color Default `white`. The color of the surface. Can be either
 #' a hexadecimal code, R color string, or a numeric rgb vector listing three intensities between `0` and `1`.
 #' @param refraction Default `1.5`. The index of refraction.
-#' @param importance_sample Default `TRUE`. If `FALSE`, the object will not 
-#' be sampled as part of the scattering probability density function.
+#' @param importance_sample Default `FALSE`. If `TRUE`, the object will be sampled explicitly during 
+#' the rendering process. If the object is particularly important in contributing to the light paths
+#' in the image (e.g. light sources, refracting glass ball with caustics, metal objects concentrating light),
+#' this will help with the convergence of the image.
 #'
 #' @return Single row of a tibble describing the dielectric material.
 #' @export
@@ -203,9 +209,10 @@ dielectric = function(color="white", refraction = 1.5, importance_sample = FALSE
 #' a hexadecimal code, R color string, or a numeric rgb vector listing three intensities between `0` and `1`.
 #' @param intensity Default `NA`. If a positive value, this will turn this object into a light emitting the value specified
 #' in `color` (ignoring other properties). Higher values will produce a brighter light.
-#' @param importance_sample Default `TRUE`, If `FALSE`, the light will not be 
-#' be sampled explicitly. Keeping this on for lights improves the convergence of the rendering 
-#' algorithm, in most cases.
+#' @param importance_sample Default `TRUE`. Keeping this on for lights improves the convergence of the rendering 
+#' algorithm, in most cases. If the object is particularly important in contributing to the light paths
+#' in the image (e.g. light sources, refracting glass ball with caustics, metal objects concentrating light),
+#' this will help with the convergence of the image.
 #'
 #' @return Single row of a tibble describing the diffuse material.
 #' @export

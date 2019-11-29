@@ -39,8 +39,10 @@ Can be either a hexadecimal code, or a numeric rgb vector listing three intensit
 Higher numbers indicate a roughed surface, where sigma is the standard deviation of the microfacet orientation angle. When 0, this reverts
 to the default lambertian behavior.}
 
-\item{importance_sample}{Default `FALSE`, unless the object is a light. If `TRUE`, the object will
-be sampled as part of the scattering probability density function.}
+\item{importance_sample}{Default `FALSE`. If `TRUE`, the object will be sampled explicitly during 
+the rendering process. If the object is particularly important in contributing to the light paths
+in the image (e.g. light sources, refracting glass ball with caustics, metal objects concentrating light),
+this will help with the convergence of the image.}
 }
 \value{
 Single row of a tibble describing the diffuse material.

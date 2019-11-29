@@ -13,9 +13,10 @@ a hexadecimal code, R color string, or a numeric rgb vector listing three intens
 \item{intensity}{Default `NA`. If a positive value, this will turn this object into a light emitting the value specified
 in `color` (ignoring other properties). Higher values will produce a brighter light.}
 
-\item{importance_sample}{Default `TRUE`, If `FALSE`, the light will not be 
-be sampled explicitly. Keeping this on for lights improves the convergence of the rendering 
-algorithm, in most cases.}
+\item{importance_sample}{Default `TRUE`. Keeping this on for lights improves the convergence of the rendering 
+algorithm, in most cases. If the object is particularly important in contributing to the light paths
+in the image (e.g. light sources, refracting glass ball with caustics, metal objects concentrating light),
+this will help with the convergence of the image.}
 }
 \value{
 Single row of a tibble describing the diffuse material.

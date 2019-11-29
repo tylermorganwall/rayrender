@@ -13,8 +13,10 @@ a hexadecimal code, R color string, or a numeric rgb vector listing three intens
 
 \item{refraction}{Default `1.5`. The index of refraction.}
 
-\item{importance_sample}{Default `TRUE`. If `FALSE`, the object will not 
-be sampled as part of the scattering probability density function.}
+\item{importance_sample}{Default `FALSE`. If `TRUE`, the object will be sampled explicitly during 
+the rendering process. If the object is particularly important in contributing to the light paths
+in the image (e.g. light sources, refracting glass ball with caustics, metal objects concentrating light),
+this will help with the convergence of the image.}
 }
 \value{
 Single row of a tibble describing the dielectric material.
