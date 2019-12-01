@@ -20,7 +20,9 @@ struct hit_record {
   Float t;
   Float u;
   Float v;
+#ifdef DEBUGBVH
   Float bvh_nodes;
+#endif
   vec3 p;
   vec3 normal;
   material *mat_ptr;

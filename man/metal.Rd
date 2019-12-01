@@ -4,7 +4,7 @@
 \alias{metal}
 \title{Metallic Material}
 \usage{
-metal(color = "#ffffff", fuzz = 0, implicit_sample = FALSE)
+metal(color = "#ffffff", fuzz = 0, importance_sample = FALSE)
 }
 \arguments{
 \item{color}{Default `white`. The color of the sphere. Can be either
@@ -12,8 +12,10 @@ a hexadecimal code, R color string, or a numeric rgb vector listing three intens
 
 \item{fuzz}{Default `0`. The roughness of the metallic surface. Maximum `1`.}
 
-\item{implicit_sample}{Default `FALSE`. If `TRUE`, the object will
-be sampled as part of the scattering probability density function.}
+\item{importance_sample}{Default `FALSE`. If `TRUE`, the object will be sampled explicitly during 
+the rendering process. If the object is particularly important in contributing to the light paths
+in the image (e.g. light sources, refracting glass ball with caustics, metal objects concentrating light),
+this will help with the convergence of the image.}
 }
 \value{
 Single row of a tibble describing the metallic material.

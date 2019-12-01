@@ -2,10 +2,10 @@
 % Please edit documentation in R/materials.R
 \name{glossy}
 \alias{glossy}
-\title{Dielectric (glass) Material}
+\title{Glossy Material}
 \usage{
 glossy(color = "white", refraction = 1.5, microfacet = "tbr",
-  implicit_sample = FALSE, alphax = 1, alphay = 1)
+  alpha = 1, importance_sample = FALSE)
 }
 \arguments{
 \item{color}{Default `white`. The color of the surface. Can be either
@@ -13,46 +13,21 @@ a hexadecimal code, R color string, or a numeric rgb vector listing three intens
 
 \item{refraction}{Default `1.5`. The index of refraction.}
 
-\item{implicit_sample}{Default `TRUE`. If `FALSE`, the object will not 
-be sampled as part of the scattering probability density function.}
+\item{microfacet}{Default `tbr`.  Type of microfacet distribution. Alternative option `beckmann`.}
+
+\item{alpha}{Default `1`.}
+
+\item{importance_sample}{Default `FALSE`. If `TRUE`, the object will be sampled explicitly during 
+the rendering process. If the object is particularly important in contributing to the light paths
+in the image (e.g. light sources, refracting glass ball with caustics, metal objects concentrating light),
+this will help with the convergence of the image.}
 }
 \value{
 Single row of a tibble describing the dielectric material.
 }
 \description{
-Dielectric (glass) Material
+Glossy Material
 }
 \examples{
 #Generate a checkered ground
-scene = generate_ground(depth=-0.5,
-                        material=diffuse(color="white", checkercolor="grey30",checkerperiod=2))
-\donttest{
-render_scene(scene,parallel=TRUE)
-}
-
-#Add a glass sphere
-\donttest{
-scene \%>\%
-  add_object(sphere(x=-0.5,radius=0.5,material=dielectric())) \%>\%
-  render_scene(parallel=TRUE,samples=400)
-}
-
-#Add a rotated colored glass cube
-\donttest{
-scene \%>\%
-  add_object(sphere(x=-0.5,radius=0.5,material=dielectric())) \%>\%
-  add_object(cube(x=0.5,xwidth=0.5,material=dielectric(color="darkgreen"),angle=c(0,-45,0))) \%>\%
-  render_scene(parallel=TRUE,samples=40)
-}
-
-#Add an area light behind and at an angle and turn off the ambient lighting
-\donttest{
-scene \%>\%
-  add_object(sphere(x=-0.5,radius=0.5,material=dielectric())) \%>\%
-  add_object(cube(x=0.5,xwidth=0.5,material=dielectric(color="darkgreen"),angle=c(0,-45,0))) \%>\%
-  add_object(yz_rect(z=-3,y=1,x=0,zwidth=3,ywidth=1.5,
-                     material=diffuse(lightintensity=15),
-                     angle=c(0,-90,45), order_rotation = c(3,2,1))) \%>\%
-  render_scene(parallel=TRUE,aperture=0, ambient_light=FALSE,samples=1000)
-}
 }

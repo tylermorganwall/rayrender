@@ -14,7 +14,8 @@
 #' @param lookfrom Default `c(0,1,10)`. Location of the camera.
 #' @param lookat Default `c(0,0,0)`. Location where the camera is pointed.
 #' @param camera_up Default `c(0,1,0)`. Vector indicating the "up" position of the camera.
-#' @param aperture Default `0.1`. Aperture of the camera. Higher numbers will increase depth of field.
+#' @param aperture Default `0.1`. Aperture of the camera. Smaller numbers will increase depth of field, causing
+#' less blurring in areas not in focus.
 #' @param clamp_value Default `Inf`. If a bright light or a reflective material is in the scene, occasionally
 #' there will be bright spots that will not go away even with a large number of samples. These 
 #' can be removed (at the cost of slightly darkening the image) by setting this to a small number greater than 1. 
@@ -34,7 +35,9 @@
 #' `reinhold` scales values by their individual color channels `color/(1+color)` and then performs the 
 #' gamma adjustment. `uncharted` uses the mapping developed for Uncharted 2 by John Hable. `hbd` uses an
 #' optimized formula by Jim Hejl and Richard Burgess-Dawson.
-#' @param backgroundimage Default `NULL`. 
+#' @param environment_light Default `NULL`. An image to be used for the background for rays that escape
+#' the scene. Supports both HDR (`.hdr`) and low-dynamic range (`.png`, `.jpg`) images.
+#' @param rotate_env Default `0`. The number of degrees to rotate the environment map around the scene.
 #' @param parallel Default `FALSE`. If `TRUE`, it will use all available cores to render the image
 #'  (or the number specified in `options("cores")` if that option is not `NULL`).
 #' @param progress Default `TRUE` if interactive session, `FALSE` otherwise. 
@@ -101,7 +104,7 @@
 #'              samples=500)
 #' }
 #'                  
-#'#Increase the aperture to give more depth of field.
+#'#Increase the aperture to blur objects that are further from the focal plane.
 #' \donttest{
 #' render_scene(scene,lookfrom = c(7,1.5,10),lookat = c(0,0.5,0),fov=15,
 #'              aperture = 0.5,parallel=TRUE,samples=500)
@@ -125,11 +128,12 @@
 #'}
 #'}
 render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 100, ambient_light = FALSE,
-                        lookfrom = c(0,1,10), lookat = c(0,0,0), camera_up = c(0,1,0), aperture = 0.1, clamp_value = Inf,
+                        lookfrom = c(0,1,10), lookat = c(0,0,0), camera_up = c(0,1,0), 
+                        aperture = 0.1, clamp_value = Inf,
                         filename = NULL, backgroundhigh = "#80b4ff",backgroundlow = "#ffffff",
                         shutteropen = 0.0, shutterclose = 1.0, focal_distance=NULL, ortho_dimensions = c(1,1),
                         tonemap ="gamma", parallel=TRUE,
-                        backgroundimage = NULL,
+                        environment_light = NULL, rotate_env = 0,
                         progress = interactive(), debug = NULL) { 
   #Check if Cornell Box scene and set camera if user did not:
   if(!is.null(attr(scene,"cornell"))) {
@@ -160,6 +164,12 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
       message(corn_message)
     }
   }
+  lookvec = (lookat - lookfrom)
+  i1 = c(2,3,1)
+  i2 = c(3,1,2)
+  if(all(lookvec[i1]*camera_up[i2] - lookvec[i2]*camera_up[i1] == 0)) {
+    stop("camera_up value c(", paste(camera_up, collapse=","), ") is aligned exactly with camera vector (lookat - lookfrom). Choose a different value for camera_up.")
+  }
   backgroundhigh = convert_color(backgroundhigh)
   backgroundlow = convert_color(backgroundlow)
   xvec = scene$x 
@@ -170,7 +180,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
                           "sphere" = 1,"xy_rect" = 2, "xz_rect" = 3,"yz_rect" = 4,"box" = 5, "triangle" = 6, 
                           "obj" = 7, "objcolor" = 8, "disk" = 9, "cylinder" = 10, "ellipsoid" = 11))
   typevec = unlist(lapply(tolower(scene$type),switch,
-                          "diffuse" = 1,"metal" = 2,"dielectric" = 3, "oren-nayar" = 4, "glossy" = 5))
+                          "diffuse" = 1,"metal" = 2,"dielectric" = 3, "oren-nayar" = 4, "glossy" = 5, "light" = 6))
   sigmavec = unlist(scene$sigma)
   assertthat::assert_that(tonemap %in% c("gamma","reinhold","uncharted", "hbd"))
   toneval = switch(tonemap, "gamma" = 1,"reinhold" = 2,"uncharted" = 3,"hbd" = 4)
@@ -202,10 +212,9 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
   flip_vec = scene$flipped
   
   #light handler
-  light_bool = !is.na(scene$lightintensity)
   light_prop_vec =  scene$lightintensity
   
-  if(!any(light_bool) && missing(ambient_light) && missing(backgroundimage)) {
+  if(!any(typevec == 5) && missing(ambient_light) && missing(environment_light)) {
     ambient_light = TRUE
   }
   
@@ -259,9 +268,13 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
   objbasedirvec = purrr::map_chr(objfilenamevec, dirname)
 
   #bg image handler
-  if(!is.null(backgroundimage)) {
+  if(!is.null(environment_light)) {
     hasbackground = TRUE
-    backgroundstring = path.expand(backgroundimage)
+    backgroundstring = path.expand(environment_light)
+    if(!file.exists(environment_light)) {
+      hasbackground = FALSE
+      warning("file '", environment_light, "' cannot be found, not using background image.")
+    }
   } else {
     hasbackground = FALSE
     backgroundstring = ""
@@ -315,7 +328,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
                              noise=noisevec,isnoise=noisebool,noisephase=noisephasevec, 
                              noiseintensity=noiseintvec, noisecolorlist = noisecolorlist,
                              angle = rot_angle_list, isimage = image_tex_bool, filelocation = temp_file_names,
-                             islight = light_bool, lightintensity = light_prop_vec,isflipped = flip_vec,
+                             lightintensity = light_prop_vec,isflipped = flip_vec,
                              focus_distance=focal_distance,
                              isvolume=fog_bool, voldensity = fog_vec , parallel=parallel,
                              implicit_sample = implicit_vec, order_rotation_list = order_rotation_list, clampval = clamp_value,
@@ -325,7 +338,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
                              fileinfo = objfilenamevec, filebasedir = objbasedirvec, toneval = toneval,
                              progress_bar = progress, numbercores = numbercores, debugval = debugval,
                              hasbackground = hasbackground, background = backgroundstring, scale_list = scale_factor,
-                             ortho_dimensions = ortho_dimensions, sigmavec = sigmavec, glossyinfo = glossyinfo) 
+                             ortho_dimensions = ortho_dimensions, sigmavec = sigmavec, rotate_env = rotate_env, glossyinfo = glossyinfo) 
   full_array = array(0,c(ncol(rgb_mat$r),nrow(rgb_mat$r),3))
   full_array[,,1] = t(rgb_mat$r)
   full_array[,,2] = t(rgb_mat$g)

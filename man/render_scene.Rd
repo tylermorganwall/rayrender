@@ -10,8 +10,8 @@ render_scene(scene, width = 400, height = 400, fov = 20,
   clamp_value = Inf, filename = NULL, backgroundhigh = "#80b4ff",
   backgroundlow = "#ffffff", shutteropen = 0, shutterclose = 1,
   focal_distance = NULL, ortho_dimensions = c(1, 1),
-  tonemap = "gamma", parallel = TRUE, backgroundimage = NULL,
-  progress = interactive(), debug = NULL)
+  tonemap = "gamma", parallel = TRUE, environment_light = NULL,
+  rotate_env = 0, progress = interactive(), debug = NULL)
 }
 \arguments{
 \item{scene}{Tibble of object locations and properties.}
@@ -35,7 +35,8 @@ If `TRUE`, the background will be a gradient varying from `backgroundhigh` direc
 
 \item{camera_up}{Default `c(0,1,0)`. Vector indicating the "up" position of the camera.}
 
-\item{aperture}{Default `0.1`. Aperture of the camera. Higher numbers will increase depth of field.}
+\item{aperture}{Default `0.1`. Aperture of the camera. Smaller numbers will increase depth of field, causing
+less blurring in areas not in focus.}
 
 \item{clamp_value}{Default `Inf`. If a bright light or a reflective material is in the scene, occasionally
 there will be bright spots that will not go away even with a large number of samples. These 
@@ -68,7 +69,10 @@ optimized formula by Jim Hejl and Richard Burgess-Dawson.}
 \item{parallel}{Default `FALSE`. If `TRUE`, it will use all available cores to render the image
 (or the number specified in `options("cores")` if that option is not `NULL`).}
 
-\item{backgroundimage}{Default `NULL`.}
+\item{environment_light}{Default `NULL`. An image to be used for the background for rays that escape
+the scene. Supports both HDR (`.hdr`) and low-dynamic range (`.png`, `.jpg`) images.}
+
+\item{rotate_env}{Default `0`. The number of degrees to rotate the environment map around the scene.}
 
 \item{progress}{Default `TRUE` if interactive session, `FALSE` otherwise.}
 
@@ -138,7 +142,7 @@ render_scene(scene,lookfrom = c(7,1.5,10),lookat = c(0,0.5,0),fov=15,
              samples=500)
 }
                  
-#Increase the aperture to give more depth of field.
+#Increase the aperture to blur objects that are further from the focal plane.
 \donttest{
 render_scene(scene,lookfrom = c(7,1.5,10),lookat = c(0,0.5,0),fov=15,
              aperture = 0.5,parallel=TRUE,samples=500)

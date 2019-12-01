@@ -52,7 +52,7 @@ hitable *build_scene(IntegerVector& type,
                      NumericVector& noisephase, NumericVector& noiseintensity, List noisecolorlist,
                      List& angle, 
                      LogicalVector& isimage, CharacterVector& filelocation,
-                     LogicalVector& islight, NumericVector& lightintensity,
+                     NumericVector& lightintensity,
                      LogicalVector& isflipped,
                      LogicalVector& isvolume, NumericVector& voldensity,
                      List& order_rotation_list, 
@@ -61,7 +61,7 @@ hitable *build_scene(IntegerVector& type,
                      LogicalVector& tri_normal_bools, LogicalVector& is_tri_color, List& tri_color_vert, 
                      CharacterVector& fileinfo, CharacterVector& filebasedir,
                      List& scale_list, NumericVector& sigma, List &glossyinfo, random_gen& rng) {
-  hitable **list = new hitable*[n+1];
+  hitable **list = new hitable*[n + 1];
   NumericVector tempvector;
   NumericVector tempchecker;
   NumericVector tempvel;
@@ -122,10 +122,8 @@ hitable *build_scene(IntegerVector& type,
     if(type(i) == 1) {
       if(isimage(i)) {
         int nx, ny, nn;
-        unsigned char *tex_data = stbi_load(filelocation(i), &nx, &ny, &nn, 4);
+        Float *tex_data = stbi_loadf(filelocation(i), &nx, &ny, &nn, 4);
         tex = new lambertian(new image_texture(tex_data,nx,ny,nn));
-      } else if (islight(i)) {
-        tex = new diffuse_light(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))*lightintensity(i)) );
       } else if (isnoise(i)) {
         tex = new lambertian(new noise_texture(noise(i),vec3(tempvector(0),tempvector(1),tempvector(2)),
                                                vec3(tempnoisecolor(0),tempnoisecolor(1),tempnoisecolor(2)),
@@ -150,24 +148,22 @@ hitable *build_scene(IntegerVector& type,
     } else if (type(i) == 4) {
       if(isimage(i)) {
         int nx, ny, nn;
-        unsigned char *tex_data = stbi_load(filelocation(i), &nx, &ny, &nn, 4);
-        tex = new orennayer(new image_texture(tex_data,nx,ny,nn), sigma(i));
-      } else if (islight(i)) {
-        tex = new diffuse_light(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))*lightintensity(i)) );
+        Float *tex_data = stbi_loadf(filelocation(i), &nx, &ny, &nn, 4);
+        tex = new orennayar(new image_texture(tex_data,nx,ny,nn), sigma(i));
       } else if (isnoise(i)) {
-        tex = new orennayer(new noise_texture(noise(i),vec3(tempvector(0),tempvector(1),tempvector(2)),
+        tex = new orennayar(new noise_texture(noise(i),vec3(tempvector(0),tempvector(1),tempvector(2)),
                                                vec3(tempnoisecolor(0),tempnoisecolor(1),tempnoisecolor(2)),
                                                noisephase(i), noiseintensity(i)), sigma(i));
       } else if (ischeckered(i)) {
-        tex = new orennayer(new checker_texture(new constant_texture(vec3(tempchecker(0),tempchecker(1),tempchecker(2))),
+        tex = new orennayar(new checker_texture(new constant_texture(vec3(tempchecker(0),tempchecker(1),tempchecker(2))),
                                                  new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))),tempchecker(3)), 
                                                  sigma(i));
       } else if (is_tri_color(i)) {
-        tex = new orennayer(new triangle_texture(vec3(temp_tri_color(0),temp_tri_color(1),temp_tri_color(2)),
+        tex = new orennayar(new triangle_texture(vec3(temp_tri_color(0),temp_tri_color(1),temp_tri_color(2)),
                                                   vec3(temp_tri_color(3),temp_tri_color(4),temp_tri_color(5)),
                                                   vec3(temp_tri_color(6),temp_tri_color(7),temp_tri_color(8))), sigma(i) );
       } else {
-        tex = new orennayer(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))), sigma(i));
+        tex = new orennayar(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))), sigma(i));
       }
     } else if (type(i) == 5) {
       MicrofacetDistribution *dist;
@@ -178,10 +174,8 @@ hitable *build_scene(IntegerVector& type,
       }
       if(isimage(i)) {
         int nx, ny, nn;
-        unsigned char *tex_data = stbi_load(filelocation(i), &nx, &ny, &nn, 4);
+        Float *tex_data = stbi_loadf(filelocation(i), &nx, &ny, &nn, 4);
         tex = new MicrofacetReflection(new image_texture(tex_data,nx,ny,nn), dist, temp_glossy(1));
-      } else if (islight(i)) {
-        tex = new diffuse_light(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))*lightintensity(i)) );
       } else if (isnoise(i)) {
         tex = new MicrofacetReflection(new noise_texture(noise(i),vec3(tempvector(0),tempvector(1),tempvector(2)),
                                               vec3(tempnoisecolor(0),tempnoisecolor(1),tempnoisecolor(2)),
@@ -197,6 +191,8 @@ hitable *build_scene(IntegerVector& type,
       } else {
         tex = new MicrofacetReflection(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))), dist, temp_glossy(1));
       }
+    } else {
+      tex = new diffuse_light(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))*lightintensity(i)) );
     }
     //Generate center vector
     if(shape(i) == 1) {
@@ -222,6 +218,7 @@ hitable *build_scene(IntegerVector& type,
     } else if(shape(i) == 11) {
       center = vec3(x(i), y(i), z(i));
     }
+    
     //Generate objects
     if (shape(i) == 1) {
       hitable *entry = new sphere(vec3(0,0,0), radius(i), tex);
@@ -416,9 +413,15 @@ hitable *build_scene(IntegerVector& type,
       hitable *entry;
       std::string objfilename = Rcpp::as<std::string>(fileinfo(i));
       std::string objbasedirname = Rcpp::as<std::string>(filebasedir(i));
-      entry = new trimesh(objfilename, objbasedirname, 
-                          tempvector(prop_len+1),
-                          shutteropen, shutterclose, rng);
+      if(sigma(i) == 0) {
+        entry = new trimesh(objfilename, objbasedirname, 
+                            tempvector(prop_len+1), 
+                            shutteropen, shutterclose, rng);
+      } else {
+        entry = new trimesh(objfilename, objbasedirname, 
+                            tempvector(prop_len+1), sigma(i),
+                            shutteropen, shutterclose, rng);
+      }
       if(is_scaled) {
         entry = new scale(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
       }
@@ -571,7 +574,7 @@ hitable* build_imp_sample(IntegerVector& type,
     gpivot = vec3(0,0,0); 
     gtrans = vec3(0,0,0); 
   }
-  if(type(i) != 1) {
+  if(type(i) != 1 && type(i) != 5) {
     prop_len = 3;
   }
   
@@ -710,7 +713,6 @@ hitable* build_imp_sample(IntegerVector& type,
     std::string objfilename = Rcpp::as<std::string>(fileinfo(i));
     std::string objbasedirname = Rcpp::as<std::string>(filebasedir(i));
     entry = new trimesh(objfilename, objbasedirname,
-                        0,
                         tempvector(prop_len+1),
                         shutteropen, shutterclose, rng);
     if(is_scaled) {

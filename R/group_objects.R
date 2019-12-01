@@ -1,5 +1,7 @@
 #' Group Objects
 #'
+#' Group and transform objects together. Currently only supports a single level of grouping.
+#'
 #' @param scene Tibble of pre-existing object locations and properties to group together.
 #' @param pivot_point Defaults to the mean location of all the objects. 
 #' The point about which to pivot and move the group.

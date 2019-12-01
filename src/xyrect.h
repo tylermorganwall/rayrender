@@ -105,6 +105,8 @@ bool xy_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
   rec.t = t;
   rec.mat_ptr = mp;
   rec.p = r.point_at_parameter(t);
+  rec.p.e[2] = k;
+  
   rec.normal = vec3(0,0,1);
   return(true);
 }
@@ -124,6 +126,7 @@ bool xz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
   rec.t = t;
   rec.mat_ptr = mp;
   rec.p = r.point_at_parameter(t);
+  rec.p.e[1] = k;
   rec.normal = vec3(0,1,0);
   return(true);
 }
@@ -143,6 +146,7 @@ bool yz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
   rec.t = t;
   rec.mat_ptr = mp;
   rec.p = r.point_at_parameter(t);
+  rec.p.e[0] = k;
   rec.normal = vec3(1,0,0);
   return(true);
 }

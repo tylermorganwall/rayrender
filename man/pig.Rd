@@ -5,7 +5,7 @@
 \title{Pig Object}
 \usage{
 pig(x = 0, y = 0, z = 0, emotion = "neutral", angle = c(0, 0, 0),
-  order_rotation = c(1, 2, 3), scale = c(1, 1, 1))
+  order_rotation = c(1, 2, 3), scale = c(1, 1, 1), diffuse_sigma = 0)
 }
 \arguments{
 \item{x}{Default `0`. x-coordinate of the center of the pig.}
@@ -22,6 +22,8 @@ pig(x = 0, y = 0, z = 0, emotion = "neutral", angle = c(0, 0, 0),
 
 \item{scale}{Default `c(1, 1, 1)`. Scale transformation in the x, y, and z directions. If this is a single value,
 number, the object will be scaled uniformly.}
+
+\item{diffuse_sigma}{Default `0`. Controls the Oren-Nayar sigma parameter for the pig's diffuse material.}
 }
 \value{
 Single row of a tibble describing the pig in the scene.

@@ -5,7 +5,7 @@
 \title{Dielectric (glass) Material}
 \usage{
 dielectric(color = "white", refraction = 1.5,
-  implicit_sample = FALSE)
+  importance_sample = FALSE)
 }
 \arguments{
 \item{color}{Default `white`. The color of the surface. Can be either
@@ -13,8 +13,10 @@ a hexadecimal code, R color string, or a numeric rgb vector listing three intens
 
 \item{refraction}{Default `1.5`. The index of refraction.}
 
-\item{implicit_sample}{Default `TRUE`. If `FALSE`, the object will not 
-be sampled as part of the scattering probability density function.}
+\item{importance_sample}{Default `FALSE`. If `TRUE`, the object will be sampled explicitly during 
+the rendering process. If the object is particularly important in contributing to the light paths
+in the image (e.g. light sources, refracting glass ball with caustics, metal objects concentrating light),
+this will help with the convergence of the image.}
 }
 \value{
 Single row of a tibble describing the dielectric material.
@@ -51,7 +53,7 @@ scene \%>\%
   add_object(sphere(x=-0.5,radius=0.5,material=dielectric())) \%>\%
   add_object(cube(x=0.5,xwidth=0.5,material=dielectric(color="darkgreen"),angle=c(0,-45,0))) \%>\%
   add_object(yz_rect(z=-3,y=1,x=0,zwidth=3,ywidth=1.5,
-                     material=diffuse(lightintensity=15),
+                     material=light(intensity=15),
                      angle=c(0,-90,45), order_rotation = c(3,2,1))) \%>\%
   render_scene(parallel=TRUE,aperture=0, ambient_light=FALSE,samples=1000)
 }
