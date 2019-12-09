@@ -168,9 +168,9 @@ hitable *build_scene(IntegerVector& type,
     } else if (type(i) == 5) {
       MicrofacetDistribution *dist;
       if(temp_glossy(0) == 1) {
-        dist = new TrowbridgeReitzDistribution(temp_glossy(2), temp_glossy(3), true);
+        dist = new TrowbridgeReitzDistribution(temp_glossy(2), temp_glossy(3), true, true);
       } else {
-        dist = new BeckmannDistribution(temp_glossy(2), temp_glossy(3), true);
+        dist = new BeckmannDistribution(temp_glossy(2), temp_glossy(3), false, true);
       }
       if(isimage(i)) {
         int nx, ny, nn;
@@ -574,7 +574,7 @@ hitable* build_imp_sample(IntegerVector& type,
     gpivot = vec3(0,0,0); 
     gtrans = vec3(0,0,0); 
   }
-  if(type(i) != 1 && type(i) != 5) {
+  if(type(i) == 2 || type(i) == 3) {
     prop_len = 3;
   }
   

@@ -2,6 +2,8 @@
 #define MICROFACETDIST
 
 #include "mathinline.h"
+#include "rng.h"
+#include "vec2.h"
 
 class MicrofacetDistribution {
 public:
@@ -14,11 +16,14 @@ public:
     return(1 / (1 + Lambda(wo) + Lambda(wi)));
   }
   Float Pdf(const vec3 &wo, const vec3 &wi) const;
-  Float GetAlpha() const;
+  virtual Float GetAlpha() const = 0;
+  virtual vec2 GetAlphas() const = 0;
+  virtual bool GetType() const = 0;
 protected:
   MicrofacetDistribution(bool sampleVisibleArea) 
       : sampleVisibleArea(sampleVisibleArea) {}
   const bool sampleVisibleArea;
+  bool type;
 };
 
 class BeckmannDistribution : public MicrofacetDistribution {
@@ -29,15 +34,23 @@ public:
     return(1.62142f + 0.819955f * x + 0.1734f * x * x +
            0.0171201f * x * x * x + 0.000640711f * x * x * x * x);
   }
-  BeckmannDistribution(Float alphax, Float alphay, bool samplevis = true)
-    : MicrofacetDistribution(samplevis), alphax(alphax), alphay(alphay) {}
+  BeckmannDistribution(Float alphax, Float alphay, bool type, bool samplevis = true)
+    : MicrofacetDistribution(samplevis), alphax(alphax), alphay(alphay),type(type) {
+  }
   Float D(const vec3 &wh) const;
   Float GetAlpha() const {
     return(std::sqrt(alphax * alphax + alphay * alphay));
   }
+  vec2 GetAlphas() const {
+    return(vec2(alphax, alphay));
+  }
+  bool GetType() const { 
+    return(type);
+  };
 private:
   Float Lambda(const vec3 &w) const;
   const Float alphax, alphay;
+  bool type;
 };
 
 Float BeckmannDistribution::D(const vec3 &wh) const {
@@ -63,23 +76,67 @@ Float BeckmannDistribution::Lambda(const vec3 &w) const {
   return((1 - 1.259f * a + 0.396f * a * a) / (3.535f * a + 2.181f * a * a));
 }
 
+// vec3 BeckmannDistribution::scatter(const vec3 &wo, random_gen &rng) const {
+//   Float tan2Theta, phi;
+//   Float u0 = rng.unif_rand();
+//   Float u1 = rng.unif_rand();
+//   if (alphax == alphay) {
+//     Float logSample = std::log(1 - u0);
+//     if (std::isinf(logSample)) {
+//       logSample = 0;
+//     }
+//     tan2Theta = -alphax * alphax * logSample;
+//     phi = u1 * 2 * M_PI;
+//   } else {
+//     Float logSample = std::log(u0);
+//     phi = std::atan(alphay / alphax * std::tan(2 * M_PI * u1 + 0.5f * M_PI));
+//     if (u1 > 0.5f) {
+//       phi += M_PI;
+//     }
+//     Float sinPhi = std::sin(phi), cosPhi = std::cos(phi);
+//     Float alphax2 = alphax * alphax, alphay2 = alphay * alphay;
+//     tan2Theta = -logSample /
+//       (cosPhi * cosPhi / alphax2 + sinPhi * sinPhi / alphay2);
+//     
+//   }
+//   
+//   Float cosTheta = 1 / std::sqrt(1 + tan2Theta);
+//   Float sinTheta = std::sqrt(std::max((Float)0, 1 - cosTheta * cosTheta));
+//   vec3 wh = SphericalDirection(sinTheta, cosTheta, phi);
+//   if (!SameHemisphere(wo, wh)) wh = -wh;
+//   return(wh);
+// }
+
 class TrowbridgeReitzDistribution : public MicrofacetDistribution {
 public:
+  TrowbridgeReitzDistribution(const Float alphax_, const Float alphay_, const bool type_, bool samplevis = true)
+    : MicrofacetDistribution(samplevis) {
+    // type(type), alphax(alphax), alphay(alphay)
+    alphax = alphax_;
+    alphay = alphay_;
+    type = type_;
+    // Rcpp::Rcout << alphax << " " << alphay << " " << type << "\n";
+  }
   static Float RoughnessToAlpha(Float roughness) {
     roughness = std::max(roughness, (Float)1e-3);
     Float x = std::log(roughness);
     return(1.62142f + 0.819955f * x + 0.1734f * x * x +
            0.0171201f * x * x * x + 0.000640711f * x * x * x * x);
   }
-  TrowbridgeReitzDistribution(Float alphax, Float alphay, bool samplevis = true)
-    : MicrofacetDistribution(samplevis), alphax(alphax), alphay(alphay) {}
   Float D(const vec3 &w) const;
   Float GetAlpha() const {
     return(std::sqrt(alphax * alphax + alphay * alphay));
   }
+  vec2 GetAlphas() const {
+    return(vec2(alphax,alphay));
+  }
+  bool GetType() const { 
+    return(type);
+  };
 private:
   Float Lambda(const vec3 &w) const;
-  const Float alphax, alphay;
+  Float alphax, alphay;
+  bool type;
 };
 
 Float TrowbridgeReitzDistribution::D(const vec3 &wh) const {

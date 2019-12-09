@@ -203,11 +203,11 @@ dielectric = function(color="white", refraction = 1.5, importance_sample = FALSE
                  fog=FALSE, fogdensity=NA, implicit_sample = importance_sample, sigma = 0,  glossyinfo = list(NA))
 }
 
-#' Glossy Material
+#' Microfacet Material
 #'
 #' @param color Default `white`. The color of the surface. Can be either
 #' a hexadecimal code, R color string, or a numeric rgb vector listing three intensities between `0` and `1`.
-#' @param refraction Default `1.5`. The index of refraction.
+#' @param reflection Default `1`. The reflection coefficient. `1` is perfect reflection, `0` is no reflection.
 #' @param microfacet Default `tbr`.  Type of microfacet distribution. Alternative option `beckmann`.
 #' @param alpha Default `1`. 
 #' @param importance_sample Default `FALSE`. If `TRUE`, the object will be sampled explicitly during 
@@ -220,9 +220,10 @@ dielectric = function(color="white", refraction = 1.5, importance_sample = FALSE
 #'
 #' @examples
 #' #Generate a checkered ground
-glossy = function(color="white", refraction = 1.5, microfacet = "tbr", alpha = 1,
+microfacet = function(color="white", reflection = 1, microfacet = "tbr", alpha = 1,
                   importance_sample = FALSE) {
   microtype = switch(microfacet, "tbr" = 1,"beckmann" = 2, 1)
+  assertthat::assert_that(reflection <= 1 && reflection >= 0)
   if(length(alpha) == 1) {
     alphax = alpha
     alphay = alpha
@@ -231,8 +232,8 @@ glossy = function(color="white", refraction = 1.5, microfacet = "tbr", alpha = 1
     alphay = alpha[2]
   }
   color = convert_color(color)
-  glossyinfo = list(c(microtype, refraction, alphax, alphay));
-  tibble::tibble(type = "glossy", 
+  glossyinfo = list(c(microtype, reflection, alphax, alphay));
+  tibble::tibble(type = "microfacet", 
                  properties = list(c(color)), 
                  checkercolor=list(NA), noise=0, noisephase = 0, noiseintensity = 0, noisecolor = list(c(0,0,0)),
                  image = list(NA), lightintensity = NA, 
@@ -281,6 +282,62 @@ light = function(color = "#ffffff", intensity = 10, importance_sample = TRUE) {
                  glossyinfo = list(NA))
 }
 
+#' Glossy Material
+#'
+#' @param color Default `white`. The color of the surface. Can be either
+#' a hexadecimal code, R color string, or a numeric rgb vector listing three intensities between `0` and `1`.
+#' @param checkercolor Default `NA`. If not `NA`, determines the secondary color of the checkered surface. 
+#' Can be either a hexadecimal code, or a numeric rgb vector listing three intensities between `0` and `1`.
+#' @param checkerperiod Default `3`. The period of the checker pattern. Increasing this value makes the checker 
+#' pattern bigger, and decreasing it makes it smaller
+#' @param noise Default `0`. If not `0`, covers the surface in a turbulent marble pattern. This value will determine
+#' the amount of turbulence in the texture.
+#' @param noisephase Default `0`. The phase of the noise. The noise will repeat at `360`.
+#' @param noiseintensity Default `10`. Intensity of the noise.
+#' @param noisecolor Default `#000000`. The secondary color of the noise pattern.
+#' Can be either a hexadecimal code, or a numeric rgb vector listing three intensities between `0` and `1`.
+#' @param image_array A 3-layer RGB array to be used as the texture on the surface of the object.
+#' @param fog Default `FALSE`. If `TRUE`, the object will be a volumetric scatterer.
+#' @param fogdensity Default `0.01`. The density of the fog. Higher values will produce more opaque objects.
+#' @param importance_sample Default `FALSE`. If `TRUE`, the object will be sampled explicitly during 
+#' the rendering process. If the object is particularly important in contributing to the light paths
+#' in the image (e.g. light sources, refracting glass ball with caustics, metal objects concentrating light),
+#' this will help with the convergence of the image.
+#'
+#' @return Single row of a tibble describing the diffuse material.
+#' @export
+#' @importFrom  grDevices col2rgb
+#'
+#' @examples
+#' #Generate the cornell box and add a single white sphere to the center
+#' scene = generate_cornell() %>%
+#'   add_object(sphere(x=555/2,y=555/2,z=555/2,radius=555/8,material=diffuse()))
+#' \donttest{
+#' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
+#'              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
+#' }
+glossy = function(color = "#ffffff", checkercolor = NA, checkerperiod = 3,
+                  noise = 0, noisephase = 0, noiseintensity = 10, noisecolor = "#000000",
+                  image_array = NA, fog = FALSE, fogdensity = 0.01, importance_sample = FALSE) {
+  if(all(!is.na(checkercolor))) {
+    checkercolor = convert_color(checkercolor)
+  } else {
+    checkercolor = NA
+  }
+  info = convert_color(color)
+  noisecolor = convert_color(noisecolor)
+  if(!is.array(image_array) && !is.na(image_array)) {
+    image = NA
+    warning("Image not in recognized format (array or matrix), ignoring")
+  }
+  type = "glossy"
+  assertthat::assert_that(checkerperiod != 0)
+  tibble::tibble(type = type, 
+                 properties = list(info), checkercolor=list(c(checkercolor,checkerperiod)), 
+                 noise=noise, noisephase = noisephase, noiseintensity = noiseintensity, noisecolor = list(noisecolor),
+                 image = list(image_array), lightintensity = NA,
+                 fog=fog, fogdensity=fogdensity,implicit_sample = importance_sample, sigma = sigma, glossyinfo = list(NA))
+}
 
 #' Lambertian Material (deprecated)
 #'
