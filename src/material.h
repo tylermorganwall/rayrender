@@ -51,6 +51,7 @@ class material {
     virtual vec3 emitted(const ray& r_in, const hit_record& rec, Float u, Float v, const vec3& p) const {
       return(vec3(0,0,0));
     }
+    virtual ~material() {};
 };
 
 class lambertian : public material {

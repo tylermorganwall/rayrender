@@ -31,7 +31,7 @@ inline vec3 de_nan(const vec3& c) {
   return(temp);
 }
 
-vec3 color(const ray& r, hitable *world, hitable *hlist, int depth, random_gen& rng, texture* background_texture) {
+vec3 color(const ray& r, hitable *world, hitable *hlist, int depth, random_gen& rng) {
   hit_record hrec;
   if(world->hit(r, 0.001, FLT_MAX, hrec, rng)) { //generated hit record, world space
     scatter_record srec;
@@ -41,7 +41,7 @@ vec3 color(const ray& r, hitable *world, hitable *hlist, int depth, random_gen& 
       if(srec.is_specular) { //returns specular ray
         return(srec.attenuation * 
                color(srec.specular_ray, world, 
-                     hlist, depth + 1, rng, background_texture));
+                     hlist, depth + 1, rng));
       }
       hitable_pdf p_imp(hlist, hrec.p); //creates pdf of all objects to be sampled
       mixture_pdf p(&p_imp, srec.pdf_ptr); //creates mixture pdf of surface intersected at hrec.p and all sampled objects/lights
@@ -56,17 +56,12 @@ vec3 color(const ray& r, hitable *world, hitable *hlist, int depth, random_gen& 
       return(emitted + srec.attenuation *
              hrec.mat_ptr->scattering_pdf(r, hrec, scattered) *
              color(scattered, world,
-                  hlist, depth + 1, rng, background_texture) / pdf_val);
+                  hlist, depth + 1, rng) / pdf_val);
     } else {
       return(emitted);
     }
   } else {
     return(vec3(0,0,0));
-    // vec3 unit_direction = unit_vector(r.direction());
-    // float phi = atan2(unit_direction.x(),unit_direction.z());
-    // float u = 0.5f + phi / (2*M_PI);
-    // float v = 0.5f * (1.0f + unit_direction.y());
-    // return(background_texture->value(u, v, unit_direction));
   }
 }
 
@@ -252,6 +247,7 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
     Float *background_texture_data;
     background_texture_data = stbi_loadf(background[0], &nx1, &ny1, &nn1, 0);
     background_texture = new image_texture(background_texture_data, nx1, ny1, nn1);
+    stbi_image_free(background_texture_data);
     background_material = new diffuse_light(background_texture);
     background_sphere = new InfiniteAreaLight(nx1, ny1, world_radius*2, world_center,
                                               background_texture, background_material);
@@ -363,7 +359,7 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
                 col += clamp(de_nan(color_amb(r, &world, &hlist, 0, 
                                               backgroundhigh, backgroundlow, rng)),0,clampval);
               } else {
-                col += clamp(de_nan(color(r, &world, &hlist, 0, rng, background_texture)),0,clampval);
+                col += clamp(de_nan(color(r, &world, &hlist, 0, rng)),0,clampval);
               }
             } else {
               if(ambient_light) {
@@ -427,7 +423,7 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
                 col += clamp(de_nan(color_amb(r, &world, &hlist, 0,
                                               backgroundhigh, backgroundlow, rng)),0,clampval);
               } else {
-                col += clamp(de_nan(color(r, &world, &hlist, 0, rng, background_texture)),0,clampval);
+                col += clamp(de_nan(color(r, &world, &hlist, 0, rng)),0,clampval);
               }
             } else {
               if(ambient_light) {
@@ -464,6 +460,9 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
       pool.join();
     }
   }
+  delete background_texture;
+  delete background_material;
+  delete background_sphere;
   PutRNGstate();
   return(List::create(_["r"] = routput, _["g"] = goutput, _["b"] = boutput));
 }

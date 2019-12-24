@@ -38,6 +38,7 @@ class hitable {
     virtual vec3 random(const vec3& o, random_gen& rng) {
       return(vec3(0,1,0));
     }
+    virtual ~hitable() {}
 };
 
 class flip_normals : public hitable {
