@@ -197,6 +197,7 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
                       bool hasbackground, CharacterVector& background, List& scale_list,
                       NumericVector ortho_dimensions, NumericVector sigmavec,
                       float rotate_env, bool verbose) {
+  auto startfirst = std::chrono::high_resolution_clock::now();
   NumericMatrix routput(nx,ny);
   NumericMatrix goutput(nx,ny);
   NumericMatrix boutput(nx,ny);
@@ -491,10 +492,16 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
   if(verbose) {
     Rcpp::Rcout << "Cleaning up memory..." << "\n";
   }
+  delete worldbvh;
   delete background_texture;
   delete background_material;
   delete background_sphere;
   PutRNGstate();
+  finish = std::chrono::high_resolution_clock::now();
+  if(verbose) {
+    std::chrono::duration<double> elapsed = finish - startfirst;
+    Rcpp::Rcout << "Total time elapsed: " << elapsed.count() << " seconds" << "\n";
+  }
   return(List::create(_["r"] = routput, _["g"] = goutput, _["b"] = boutput));
 }
 

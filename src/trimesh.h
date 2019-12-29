@@ -78,8 +78,8 @@ public:
       // vec3 colors[3];
       Float tx[3];
       Float ty[3];
-      int currenttri=0;
-      std::vector<hitable* > triangles(n+1);
+      std::vector<hitable* > triangles;
+      triangles.reserve(n+1);
       for (size_t s = 0; s < shapes.size(); s++) {
         bool tempnormal = false;
         // Loop over faces(polygon)
@@ -135,8 +135,7 @@ public:
                 tex = new lambertian(new constant_texture(vec3(1,1,1)));
               }
             }
-            triangles[currenttri] = new triangle(tris[0],tris[1],tris[2], normals[0], normals[1], normals[2], tex);
-            currenttri++;
+            triangles.push_back(new triangle(tris[0],tris[1],tris[2], normals[0], normals[1], normals[2], tex));
           } else {
             if(material_num == -1) {
               tex = new lambertian(new constant_texture(diffuse_materials[material_num]));
@@ -157,8 +156,7 @@ public:
                 tex = new lambertian(new constant_texture(vec3(1,1,1)));
               }
             }
-            triangles[currenttri] = new triangle(tris[0],tris[1],tris[2], tex);
-            currenttri++;
+            triangles.push_back(new triangle(tris[0],tris[1],tris[2], tex));
           }
         }
       }
@@ -221,8 +219,8 @@ public:
       // vec3 colors[3];
       Float tx[3];
       Float ty[3];
-      int currenttri=0;
-      std::vector<hitable* > triangles(n+1);
+      std::vector<hitable* > triangles;
+      triangles.reserve(n+1);
       for (size_t s = 0; s < shapes.size(); s++) {
         bool tempnormal = false;
         // Loop over faces(polygon)
@@ -278,8 +276,7 @@ public:
                 tex = new orennayar(new constant_texture(vec3(1,1,1)), sigma);
               }
             }
-            triangles[currenttri] = new triangle(tris[0],tris[1],tris[2], normals[0], normals[1], normals[2], tex);
-            currenttri++;
+            triangles.push_back(new triangle(tris[0],tris[1],tris[2], normals[0], normals[1], normals[2], tex));
           } else {
             if(material_num == -1) {
               tex = new orennayar(new constant_texture(diffuse_materials[material_num]), sigma);
@@ -298,12 +295,14 @@ public:
                 tex = new orennayar(new constant_texture(vec3(1,1,1)), sigma);
               }
             }
-            triangles[currenttri] = new triangle(tris[0],tris[1],tris[2], tex);
-            currenttri++;
+            triangles.push_back(new triangle(tris[0],tris[1],tris[2], tex));
           }
         }
       }
       tri_mesh_bvh = bvh_node(&triangles[0], n, shutteropen, shutterclose, rng);
+      // for(auto tri : triangles) {
+      //   delete tri;
+      // }
     }
   };
   trimesh(std::string inputfile, std::string basedir, material *mat, 
@@ -324,8 +323,8 @@ public:
       vec3 tris[3];
       vec3 normals[3];
       // vec3 colors[3];
-      std::vector<hitable* > triangles(n+1);
-      int currenttri=0;
+      std::vector<hitable* > triangles;
+      triangles.reserve(n+1);
       for (size_t s = 0; s < shapes.size(); s++) {
         size_t index_offset = 0;
         for (size_t f = 0; f < shapes[s].mesh.num_face_vertices.size(); f++) {
@@ -352,13 +351,12 @@ public:
             continue;
           }
           if(has_normals) {
-            triangles[currenttri] = new triangle(tris[0],tris[1],tris[2],
+            triangles.push_back(new triangle(tris[0],tris[1],tris[2],
                                                  normals[0],normals[1],normals[2], 
-                                                 mat);
+                                                 mat));
           } else {
-            triangles[currenttri] = new triangle(tris[0],tris[1],tris[2],mat);
+            triangles.push_back(new triangle(tris[0],tris[1],tris[2],mat));
           }
-          currenttri++;
         }
       }
       tri_mesh_bvh = bvh_node(&triangles[0], n, shutteropen, shutterclose, rng);
