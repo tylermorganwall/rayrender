@@ -122,6 +122,7 @@ hitable *build_scene(IntegerVector& type,
         int nx, ny, nn;
         Float *tex_data = stbi_loadf(filelocation(i), &nx, &ny, &nn, 4);
         tex = new lambertian(new image_texture(tex_data,nx,ny,nn));
+        stbi_image_free(tex_data);
       } else if (isnoise(i)) {
         tex = new lambertian(new noise_texture(noise(i),vec3(tempvector(0),tempvector(1),tempvector(2)),
                                                vec3(tempnoisecolor(0),tempnoisecolor(1),tempnoisecolor(2)),
@@ -148,6 +149,7 @@ hitable *build_scene(IntegerVector& type,
         int nx, ny, nn;
         Float *tex_data = stbi_loadf(filelocation(i), &nx, &ny, &nn, 4);
         tex = new orennayar(new image_texture(tex_data,nx,ny,nn), sigma(i));
+        stbi_image_free(tex_data);
       } else if (isnoise(i)) {
         tex = new orennayar(new noise_texture(noise(i),vec3(tempvector(0),tempvector(1),tempvector(2)),
                                                vec3(tempnoisecolor(0),tempnoisecolor(1),tempnoisecolor(2)),
