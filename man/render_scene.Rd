@@ -11,7 +11,8 @@ render_scene(scene, width = 400, height = 400, fov = 20,
   backgroundlow = "#ffffff", shutteropen = 0, shutterclose = 1,
   focal_distance = NULL, ortho_dimensions = c(1, 1),
   tonemap = "gamma", parallel = TRUE, environment_light = NULL,
-  rotate_env = 0, progress = interactive(), debug = NULL)
+  rotate_env = 0, progress = interactive(), verbose = FALSE,
+  debug = NULL)
 }
 \arguments{
 \item{scene}{Tibble of object locations and properties.}
@@ -75,6 +76,9 @@ the scene. Supports both HDR (`.hdr`) and low-dynamic range (`.png`, `.jpg`) ima
 \item{rotate_env}{Default `0`. The number of degrees to rotate the environment map around the scene.}
 
 \item{progress}{Default `TRUE` if interactive session, `FALSE` otherwise.}
+
+\item{verbose}{Default `FALSE`. Prints information and timing information about scene
+construction and raytracing progress.}
 
 \item{debug}{Default `NULL`. If `bvh`, will return an image indicated the number of BVH lookups.}
 }

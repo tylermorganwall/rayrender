@@ -41,6 +41,8 @@
 #' @param parallel Default `FALSE`. If `TRUE`, it will use all available cores to render the image
 #'  (or the number specified in `options("cores")` if that option is not `NULL`).
 #' @param progress Default `TRUE` if interactive session, `FALSE` otherwise. 
+#' @param verbose Default `FALSE`. Prints information and timing information about scene
+#' construction and raytracing progress.
 #' @param debug Default `NULL`. If `bvh`, will return an image indicated the number of BVH lookups.
 #' @export
 #' @importFrom  grDevices col2rgb
@@ -134,7 +136,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
                         shutteropen = 0.0, shutterclose = 1.0, focal_distance=NULL, ortho_dimensions = c(1,1),
                         tonemap ="gamma", parallel=TRUE,
                         environment_light = NULL, rotate_env = 0,
-                        progress = interactive(), debug = NULL) { 
+                        progress = interactive(), verbose = FALSE, debug = NULL) { 
   #Check if Cornell Box scene and set camera if user did not:
   if(!is.null(attr(scene,"cornell"))) {
     corn_message = "Setting default values for Cornell box: "
@@ -335,7 +337,8 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
                              fileinfo = objfilenamevec, filebasedir = objbasedirvec, toneval = toneval,
                              progress_bar = progress, numbercores = numbercores, debugval = debugval,
                              hasbackground = hasbackground, background = backgroundstring, scale_list = scale_factor,
-                             ortho_dimensions = ortho_dimensions, sigmavec = sigmavec, rotate_env = rotate_env) 
+                             ortho_dimensions = ortho_dimensions, sigmavec = sigmavec, rotate_env = rotate_env,
+                             verbose = verbose) 
   full_array = array(0,c(ncol(rgb_mat$r),nrow(rgb_mat$r),3))
   full_array[,,1] = t(rgb_mat$r)
   full_array[,,2] = t(rgb_mat$g)

@@ -196,7 +196,7 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
                       bool progress_bar, int numbercores, int debugval, 
                       bool hasbackground, CharacterVector& background, List& scale_list,
                       NumericVector ortho_dimensions, NumericVector sigmavec,
-                      float rotate_env) {
+                      float rotate_env, bool verbose) {
   NumericMatrix routput(nx,ny);
   NumericMatrix goutput(nx,ny);
   NumericMatrix boutput(nx,ny);
@@ -214,6 +214,10 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
                     ortho_dimensions(0), ortho_dimensions(1),
                     shutteropen, shutterclose, rng);
   int nx1, ny1, nn1;
+  auto start = std::chrono::high_resolution_clock::now();
+  if(verbose) {
+    Rcpp::Rcout << "Building BVH: ";
+  }
   hitable *worldbvh = build_scene(type, radius, shape, x, y, z, 
                                 properties, velocity, moving,
                                 n,shutteropen,shutterclose,
@@ -228,6 +232,12 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
                                 tri_normal_bools, is_tri_color, tri_color_vert, 
                                 fileinfo, filebasedir, 
                                 scale_list, sigmavec, rng);
+  auto finish = std::chrono::high_resolution_clock::now();
+  if(verbose) {
+    std::chrono::duration<double> elapsed = finish - start;
+    Rcpp::Rcout << elapsed.count() << " seconds" << "\n";
+  }
+
   //Calculate world bounds
   aabb bounding_box_world;
   worldbvh->bounding_box(0,0,bounding_box_world);
@@ -240,6 +250,10 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
     world_radius += ortho_diag;
   }
   //Initialize background
+  if(verbose && hasbackground) {
+    Rcpp::Rcout << "Loading Environment Image: ";
+  }
+  start = std::chrono::high_resolution_clock::now();
   texture *background_texture = nullptr;
   material *background_material = nullptr;
   hitable *background_sphere = nullptr;
@@ -259,6 +273,11 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
     background_material = new lambertian(background_texture);
     background_sphere = new sphere(world_center, world_radius, background_material);
   }
+  finish = std::chrono::high_resolution_clock::now();
+  if(verbose) {
+    std::chrono::duration<double> elapsed = finish - start;
+    Rcpp::Rcout << elapsed.count() << " seconds" << "\n";
+  }
   hitable *world_full[2];
   world_full[0] = worldbvh;
   world_full[1] = background_sphere;
@@ -276,6 +295,10 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
   
   std::vector<hitable* > implicit_sample_vector(numbertosample);
   int counter = 0;
+  if(verbose) {
+    Rcpp::Rcout << "Building Importance Sampling List: ";
+  }
+  start = std::chrono::high_resolution_clock::now();
   for(int i = 0; i < n; i++)  {
     if(implicit_sample(i)) {
       implicit_sample_vector[counter] = build_imp_sample(type, radius, shape, x, y, z,
@@ -287,6 +310,11 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
                                fileinfo, filebasedir, scale_list, rng);
       counter++;
     }
+  }
+  finish = std::chrono::high_resolution_clock::now();
+  if(verbose) {
+    std::chrono::duration<double> elapsed = finish - start;
+    Rcpp::Rcout << elapsed.count() << " seconds" << "\n";
   }
   if(hasbackground) {
     implicit_sample_vector[counter] = background_sphere;
@@ -459,6 +487,9 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
       }
       pool.join();
     }
+  }
+  if(verbose) {
+    Rcpp::Rcout << "Cleaning up memory..." << "\n";
   }
   delete background_texture;
   delete background_material;
