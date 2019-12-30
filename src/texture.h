@@ -2,6 +2,7 @@
 #define TEXTUREH
 
 #include "perlin.h"
+#include "Rcpp.h"
 
 class texture {
 public: 
@@ -22,6 +23,10 @@ public:
 class checker_texture : public texture {
 public:
   checker_texture() {}
+  ~checker_texture() {
+    // if(even) delete even;
+    // if(odd) delete odd;
+  }
   checker_texture(texture *t0, texture *t1, Float p) : even(t0), odd(t1), period(p) {}
   virtual vec3 value(Float u, Float v, const vec3& p) const {
     Float invperiod = 1.0/period;
@@ -99,6 +104,10 @@ public:
 class triangle_image_texture : public texture {
 public:
   triangle_image_texture() {}
+  ~triangle_image_texture() {
+    // Rcpp::Rcout << "deleting triangle" << "\n";
+    // delete data;
+  }
   triangle_image_texture(Float *pixels, int A, int B, int nn,
                          Float tex_u_a, Float tex_v_a,
                          Float tex_u_b, Float tex_v_b,

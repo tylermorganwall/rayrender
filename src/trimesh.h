@@ -21,6 +21,10 @@ inline char separator() {
 class trimesh : public hitable {
 public:
   trimesh() {}
+  ~trimesh() {
+    // Rcpp::Rcout << "deleting trimesh" << "\n";
+    delete tri_mesh_bvh;
+  }
   trimesh(std::string inputfile, std::string basedir, Float scale, 
           Float shutteropen, Float shutterclose, random_gen rng) {
     tinyobj::attrib_t attrib;
@@ -160,7 +164,7 @@ public:
           }
         }
       }
-      tri_mesh_bvh = bvh_node(&triangles[0], n, shutteropen, shutterclose, rng);
+      tri_mesh_bvh = new bvh_node(&triangles[0], n, shutteropen, shutterclose, rng);
     }
   };
   trimesh(std::string inputfile, std::string basedir, Float scale, Float sigma,
@@ -299,10 +303,7 @@ public:
           }
         }
       }
-      tri_mesh_bvh = bvh_node(&triangles[0], n, shutteropen, shutterclose, rng);
-      // for(auto tri : triangles) {
-      //   delete tri;
-      // }
+      tri_mesh_bvh = new bvh_node(&triangles[0], n, shutteropen, shutterclose, rng);
     }
   };
   trimesh(std::string inputfile, std::string basedir, material *mat, 
@@ -359,16 +360,16 @@ public:
           }
         }
       }
-      tri_mesh_bvh = bvh_node(&triangles[0], n, shutteropen, shutterclose, rng);
+      tri_mesh_bvh = new bvh_node(&triangles[0], n, shutteropen, shutterclose, rng);
     }
   };
   virtual bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
-    return(tri_mesh_bvh.hit(r, t_min, t_max, rec, rng));
+    return(tri_mesh_bvh->hit(r, t_min, t_max, rec, rng));
   };
   virtual bool bounding_box(Float t0, Float t1, aabb& box) const {
-    return(tri_mesh_bvh.bounding_box(t0,t1,box));
+    return(tri_mesh_bvh->bounding_box(t0,t1,box));
   };
-  bvh_node tri_mesh_bvh;
+  bvh_node* tri_mesh_bvh;
 };
 
 #endif

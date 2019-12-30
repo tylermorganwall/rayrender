@@ -6,6 +6,10 @@
 class triangle : public hitable {
 public:
   triangle() {}
+  ~triangle() {
+    // Rcpp::Rcout << "deleting triangle" << "\n";
+    // if(mp) delete mp;
+  }
   triangle(vec3 _a, vec3 _b, vec3 _c, material *mat) :
   a(_a), b(_b), c(_c), mp(mat) {
     edge1 = b-a;

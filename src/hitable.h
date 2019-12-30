@@ -44,6 +44,10 @@ class hitable {
 class flip_normals : public hitable {
 public:
   flip_normals(hitable *p) : ptr(p) {}
+  ~flip_normals() {
+    //Rcpp::Rcout << "normal delete " << typeid(*ptr).name() << "\n";
+    if(ptr) delete ptr;
+  }
   virtual bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
     if(ptr->hit(r, t_min, t_max, rec, rng)) {
       rec.normal = -rec.normal;
@@ -70,6 +74,10 @@ public:
 class translate : public hitable {
 public: 
   translate(hitable *p, const vec3& displacement) : ptr(p), offset(displacement) {}
+  ~translate() {
+    //Rcpp::Rcout << "translate delete " << typeid(*ptr).name() << "\n";
+    if(ptr) delete ptr;
+  }
   virtual bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng);
   virtual bool bounding_box(Float t0, Float t1, aabb& box) const;
   Float pdf_value(const vec3& o, const vec3& v, random_gen& rng) {
@@ -108,6 +116,10 @@ public:
     inv_scale.e[1] = 1 / scale_factor.y();
     inv_scale.e[2] = 1 / scale_factor.z();
   }
+  ~scale() {
+    //Rcpp::Rcout << "delete scale" << "\n";
+    if(ptr) delete ptr;
+  }
   virtual bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng);
   virtual bool bounding_box(Float t0, Float t1, aabb& box) const;
   Float pdf_value(const vec3& o, const vec3& v, random_gen& rng) {
@@ -145,6 +157,10 @@ bool scale::bounding_box(Float t0, Float t1, aabb& box) const {
 class rotate_y : public hitable {
 public:
   rotate_y(hitable *p, Float angle);
+  ~rotate_y() {
+    //Rcpp::Rcout << "rotate_y delete " << typeid(*ptr).name() << "\n";
+    if(ptr) delete ptr;
+  }
   virtual bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng);
   virtual bool bounding_box(Float t0, Float t1, aabb& box) const {
     box = bbox; 
@@ -232,6 +248,10 @@ bool rotate_y::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
 class rotate_x : public hitable {
 public:
   rotate_x(hitable *p, Float angle);
+  ~rotate_x() {
+    //Rcpp::Rcout << "rotate_x delete " << typeid(*ptr).name() << "\n";
+    if(ptr) delete ptr;
+  }
   virtual bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng);
   virtual bool bounding_box(Float t0, Float t1, aabb& box) const {
     box = bbox; 
@@ -318,6 +338,10 @@ bool rotate_x::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
 class rotate_z : public hitable {
 public:
   rotate_z(hitable *p, Float angle);
+  ~rotate_z() {
+    //Rcpp::Rcout << "rotate_z delete " << typeid(*ptr).name() << "\n";
+    if(ptr) delete ptr;
+  }
   virtual bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng);
   virtual bool bounding_box(Float t0, Float t1, aabb& box) const {
     box = bbox; 
