@@ -10,7 +10,7 @@ class sphere: public hitable {
     sphere() {}
     ~sphere() {
       // Rcpp::Rcout << "sphere delete " << typeid(*mat_ptr).name() << "\n";
-      // delete mat_ptr;
+      delete mat_ptr;
     }
     sphere(vec3 cen, Float r, material *mat) : center(cen), radius(r), mat_ptr(mat) {};
     virtual bool hit(const ray& r, Float tmin, Float tmax, hit_record& rec, random_gen& rng);

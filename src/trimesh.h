@@ -22,8 +22,11 @@ class trimesh : public hitable {
 public:
   trimesh() {}
   ~trimesh() {
-    // Rcpp::Rcout << "deleting trimesh" << "\n";
+    // Rcpp::Rcout << "deleting trimesh " << obj_materials.size() << "\n";
     delete tri_mesh_bvh;
+    for(auto mat : obj_materials) {
+      if(mat) stbi_image_free(mat);
+    }
   }
   trimesh(std::string inputfile, std::string basedir, Float scale, 
           Float shutteropen, Float shutterclose, random_gen rng) {
@@ -40,7 +43,8 @@ public:
       for (size_t s = 0; s < shapes.size(); s++) {
         n += shapes[s].mesh.num_face_vertices.size();
       }
-      std::vector<Float* > obj_materials(materials.size()+1);
+      obj_materials.reserve(materials.size()+1);
+      // std::vector<Float* > obj_materials(materials.size()+1);
       std::vector<vec3 > diffuse_materials(materials.size()+1);
       std::vector<vec3 > specular_materials(materials.size()+1);
       std::vector<Float > ior_materials(materials.size()+1);
@@ -56,21 +60,24 @@ public:
 
       for (size_t i = 0; i < materials.size(); i++) {
         if(strlen(materials[i].diffuse_texname.c_str()) > 0) {
-          obj_materials[i] = stbi_loadf((basedir + separator() + materials[i].diffuse_texname).c_str(), &nx, &ny, &nn, 0);
+          obj_materials.push_back(stbi_loadf((basedir + separator() + materials[i].diffuse_texname).c_str(), &nx, &ny, &nn, 0));
           has_diffuse[i] = true;
           has_single_diffuse[i] = false;
           nx_mat[i] = nx;
           ny_mat[i] = ny;
           nn_mat[i] = nn;
         } else if (sizeof(materials[i].diffuse) == 12) {
+          obj_materials.push_back(nullptr);
           diffuse_materials[i] = vec3(materials[i].diffuse[0],materials[i].diffuse[1],materials[i].diffuse[2]);
           has_diffuse[i] = true;
           has_single_diffuse[i] = true;
         } else {
+          obj_materials.push_back(nullptr);
           has_diffuse[i] = false;
           has_single_diffuse[i] = false;
         }
         if(materials[i].dissolve < 1) {
+          obj_materials.push_back(nullptr);
           specular_materials[i] = vec3(materials[i].diffuse[0],materials[i].diffuse[1],materials[i].diffuse[2]);
           ior_materials[i] = materials[i].ior;
           has_transparency[i] = true; 
@@ -82,7 +89,6 @@ public:
       // vec3 colors[3];
       Float tx[3];
       Float ty[3];
-      std::vector<hitable* > triangles;
       triangles.reserve(n+1);
       for (size_t s = 0; s < shapes.size(); s++) {
         bool tempnormal = false;
@@ -112,7 +118,7 @@ public:
           if(std::isnan(tris[0].x()) || std::isnan(tris[0].y()) || std::isnan(tris[0].z()) ||
              std::isnan(tris[1].x()) || std::isnan(tris[1].y()) || std::isnan(tris[1].z()) ||
              std::isnan(tris[2].x()) || std::isnan(tris[2].y()) || std::isnan(tris[2].z())) {
-            triangles.pop_back();
+            // triangles.pop_back();
             n--;
             continue;
           }
@@ -181,7 +187,8 @@ public:
       for (size_t s = 0; s < shapes.size(); s++) {
         n += shapes[s].mesh.num_face_vertices.size();
       }
-      std::vector<Float* > obj_materials(materials.size()+1);
+      obj_materials.reserve(materials.size()+1);
+      // std::vector<Float* > obj_materials(materials.size()+1);
       std::vector<vec3 > diffuse_materials(materials.size()+1);
       std::vector<vec3 > specular_materials(materials.size()+1);
       std::vector<Float > ior_materials(materials.size()+1);
@@ -197,21 +204,24 @@ public:
       
       for (size_t i = 0; i < materials.size(); i++) {
         if(strlen(materials[i].diffuse_texname.c_str()) > 0) {
-          obj_materials[i] = stbi_loadf((basedir + separator() + materials[i].diffuse_texname).c_str(), &nx, &ny, &nn, 0);
+          obj_materials.push_back(stbi_loadf((basedir + separator() + materials[i].diffuse_texname).c_str(), &nx, &ny, &nn, 0));
           has_diffuse[i] = true;
           has_single_diffuse[i] = false;
           nx_mat[i] = nx;
           ny_mat[i] = ny;
           nn_mat[i] = nn;
         } else if (sizeof(materials[i].diffuse) == 12) {
+          obj_materials.push_back(nullptr);
           diffuse_materials[i] = vec3(materials[i].diffuse[0],materials[i].diffuse[1],materials[i].diffuse[2]);
           has_diffuse[i] = true;
           has_single_diffuse[i] = true;
         } else {
+          obj_materials.push_back(nullptr);
           has_diffuse[i] = false;
           has_single_diffuse[i] = false;
         }
         if(materials[i].dissolve < 1) {
+          obj_materials.push_back(nullptr);
           specular_materials[i] = vec3(materials[i].diffuse[0],materials[i].diffuse[1],materials[i].diffuse[2]);
           ior_materials[i] = materials[i].ior;
           has_transparency[i] = true; 
@@ -223,7 +233,6 @@ public:
       // vec3 colors[3];
       Float tx[3];
       Float ty[3];
-      std::vector<hitable* > triangles;
       triangles.reserve(n+1);
       for (size_t s = 0; s < shapes.size(); s++) {
         bool tempnormal = false;
@@ -253,7 +262,7 @@ public:
           if(std::isnan(tris[0].x()) || std::isnan(tris[0].y()) || std::isnan(tris[0].z()) ||
              std::isnan(tris[1].x()) || std::isnan(tris[1].y()) || std::isnan(tris[1].z()) ||
              std::isnan(tris[2].x()) || std::isnan(tris[2].y()) || std::isnan(tris[2].z())) {
-            triangles.pop_back();
+            // triangles.pop_back();
             n--;
             continue;
           }
@@ -324,7 +333,7 @@ public:
       vec3 tris[3];
       vec3 normals[3];
       // vec3 colors[3];
-      std::vector<hitable* > triangles;
+      // std::vector<hitable* > triangles;
       triangles.reserve(n+1);
       for (size_t s = 0; s < shapes.size(); s++) {
         size_t index_offset = 0;
@@ -347,16 +356,16 @@ public:
           if(std::isnan(tris[0].x()) || std::isnan(tris[0].y()) || std::isnan(tris[0].z()) ||
              std::isnan(tris[1].x()) || std::isnan(tris[1].y()) || std::isnan(tris[1].z()) ||
              std::isnan(tris[2].x()) || std::isnan(tris[2].y()) || std::isnan(tris[2].z())) {
-            triangles.pop_back();
+            // triangles.pop_back();
             n--;
             continue;
           }
           if(has_normals) {
             triangles.push_back(new triangle(tris[0],tris[1],tris[2],
                                                  normals[0],normals[1],normals[2], 
-                                                 mat));
+                                                 new material(*mat)));
           } else {
-            triangles.push_back(new triangle(tris[0],tris[1],tris[2],mat));
+            triangles.push_back(new triangle(tris[0],tris[1],tris[2], new material(*mat)));
           }
         }
       }
@@ -370,6 +379,8 @@ public:
     return(tri_mesh_bvh->bounding_box(t0,t1,box));
   };
   bvh_node* tri_mesh_bvh;
+  std::vector<Float* > obj_materials;
+  std::vector<hitable* > triangles;
 };
 
 #endif

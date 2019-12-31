@@ -493,8 +493,6 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
     Rcpp::Rcout << "Cleaning up memory..." << "\n";
   }
   delete worldbvh;
-  delete background_texture;
-  delete background_material;
   delete background_sphere;
   PutRNGstate();
   finish = std::chrono::high_resolution_clock::now();

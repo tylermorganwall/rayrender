@@ -2,13 +2,14 @@
 #define TRIANGLEH
 
 #include "hitable.h"
+#include "material.h"
 
 class triangle : public hitable {
 public:
   triangle() {}
   ~triangle() {
-    // Rcpp::Rcout << "deleting triangle" << "\n";
-    // if(mp) delete mp;
+    // Rcpp::Rcout << "bvh delete " << typeid(*mp).name() << "\n";
+    if(mp) delete mp;
   }
   triangle(vec3 _a, vec3 _b, vec3 _c, material *mat) :
   a(_a), b(_b), c(_c), mp(mat) {

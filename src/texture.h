@@ -24,8 +24,8 @@ class checker_texture : public texture {
 public:
   checker_texture() {}
   ~checker_texture() {
-    // if(even) delete even;
-    // if(odd) delete odd;
+    if(even) delete even;
+    if(odd) delete odd;
   }
   checker_texture(texture *t0, texture *t1, Float p) : even(t0), odd(t1), period(p) {}
   virtual vec3 value(Float u, Float v, const vec3& p) const {

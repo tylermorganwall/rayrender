@@ -61,7 +61,7 @@ hitable *build_scene(IntegerVector& type,
                      LogicalVector& tri_normal_bools, LogicalVector& is_tri_color, List& tri_color_vert, 
                      CharacterVector& fileinfo, CharacterVector& filebasedir,
                      List& scale_list, NumericVector& sigma,  random_gen& rng) {
-  hitable **list = new hitable*[n + 1];
+  hitable **list = new hitable*[n + 1]; //change to vector
   NumericVector tempvector;
   NumericVector tempchecker;
   NumericVector tempvel;
