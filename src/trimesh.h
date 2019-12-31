@@ -27,6 +27,9 @@ public:
     for(auto mat : obj_materials) {
       if(mat) stbi_image_free(mat);
     }
+    if(mat_ptr) {
+      delete mat_ptr;
+    }
   }
   trimesh(std::string inputfile, std::string basedir, Float scale, 
           Float shutteropen, Float shutterclose, random_gen rng) {
@@ -34,7 +37,8 @@ public:
     std::vector<tinyobj::shape_t > shapes;
     std::vector<tinyobj::material_t > materials;
     std::string warn, err;
-
+    mat_ptr = nullptr;
+    
     bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, inputfile.c_str(), basedir.c_str());
     // Rcpp::Rcerr << inputfile.c_str() << ": " << warn << " " << err << "\n";
 
@@ -145,7 +149,7 @@ public:
                 tex = new lambertian(new constant_texture(vec3(1,1,1)));
               }
             }
-            triangles.push_back(new triangle(tris[0],tris[1],tris[2], normals[0], normals[1], normals[2], tex));
+            triangles.push_back(new triangle(tris[0],tris[1],tris[2], normals[0], normals[1], normals[2], true, tex));
           } else {
             if(material_num == -1) {
               tex = new lambertian(new constant_texture(diffuse_materials[material_num]));
@@ -166,7 +170,7 @@ public:
                 tex = new lambertian(new constant_texture(vec3(1,1,1)));
               }
             }
-            triangles.push_back(new triangle(tris[0],tris[1],tris[2], tex));
+            triangles.push_back(new triangle(tris[0],tris[1],tris[2], true, tex));
           }
         }
       }
@@ -179,6 +183,7 @@ public:
     std::vector<tinyobj::shape_t > shapes;
     std::vector<tinyobj::material_t > materials;
     std::string warn, err;
+    mat_ptr = nullptr;
     
     bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, inputfile.c_str(), basedir.c_str());
 
@@ -289,7 +294,7 @@ public:
                 tex = new orennayar(new constant_texture(vec3(1,1,1)), sigma);
               }
             }
-            triangles.push_back(new triangle(tris[0],tris[1],tris[2], normals[0], normals[1], normals[2], tex));
+            triangles.push_back(new triangle(tris[0],tris[1],tris[2], normals[0], normals[1], normals[2], true, tex));
           } else {
             if(material_num == -1) {
               tex = new orennayar(new constant_texture(diffuse_materials[material_num]), sigma);
@@ -308,7 +313,7 @@ public:
                 tex = new orennayar(new constant_texture(vec3(1,1,1)), sigma);
               }
             }
-            triangles.push_back(new triangle(tris[0],tris[1],tris[2], tex));
+            triangles.push_back(new triangle(tris[0],tris[1],tris[2], true, tex));
           }
         }
       }
@@ -321,6 +326,7 @@ public:
     std::vector<tinyobj::shape_t > shapes;
     std::vector<tinyobj::material_t > materials;
     std::string warn, err;
+    mat_ptr = mat;
 
     bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, inputfile.c_str(), basedir.c_str());
     //need to define else
@@ -362,10 +368,11 @@ public:
           }
           if(has_normals) {
             triangles.push_back(new triangle(tris[0],tris[1],tris[2],
-                                                 normals[0],normals[1],normals[2], 
-                                                 new material(*mat)));
+                                             normals[0],normals[1],normals[2], 
+                                             false,
+                                             mat_ptr));
           } else {
-            triangles.push_back(new triangle(tris[0],tris[1],tris[2], new material(*mat)));
+            triangles.push_back(new triangle(tris[0],tris[1],tris[2], false, mat_ptr));
           }
         }
       }
@@ -379,6 +386,7 @@ public:
     return(tri_mesh_bvh->bounding_box(t0,t1,box));
   };
   bvh_node* tri_mesh_bvh;
+  material *mat_ptr;
   std::vector<Float* > obj_materials;
   std::vector<hitable* > triangles;
 };

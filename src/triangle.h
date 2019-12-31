@@ -9,10 +9,12 @@ public:
   triangle() {}
   ~triangle() {
     // Rcpp::Rcout << "bvh delete " << typeid(*mp).name() << "\n";
-    if(mp) delete mp;
+    if(single) {
+      if(mp) delete mp;
+    }
   }
-  triangle(vec3 _a, vec3 _b, vec3 _c, material *mat) :
-  a(_a), b(_b), c(_c), mp(mat) {
+  triangle(vec3 _a, vec3 _b, vec3 _c, bool _single, material *mat) :
+  a(_a), b(_b), c(_c), single(_single), mp(mat) {
     edge1 = b-a;
     edge2 = c-a;
     normal = cross(edge1, edge2);
@@ -20,8 +22,8 @@ public:
     normal.make_unit_vector();
     normals_provided = false;
   };
-  triangle(vec3 _a, vec3 _b, vec3 _c, vec3 _na, vec3 _nb, vec3 _nc, material *mat) :
-    a(_a), b(_b), c(_c), na(_na), nb(_nb), nc(_nc), mp(mat) {
+  triangle(vec3 _a, vec3 _b, vec3 _c, vec3 _na, vec3 _nb, vec3 _nc, bool _single, material *mat) :
+    a(_a), b(_b), c(_c), na(_na), nb(_nb), nc(_nc), single(_single), mp(mat) {
     edge1 = b-a;
     edge2 = c-a;
     normal = cross(edge1, edge2);
@@ -68,6 +70,7 @@ public:
   vec3 edge1, edge2;
   Float area;
   bool normals_provided;
+  bool single;
   material *mp;
 };
 

@@ -163,7 +163,7 @@ hitable *build_scene(IntegerVector& type,
                                                   vec3(temp_tri_color(3),temp_tri_color(4),temp_tri_color(5)),
                                                   vec3(temp_tri_color(6),temp_tri_color(7),temp_tri_color(8))), sigma(i) );
       } else {
-        tex = new orennayar(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))), sigma(i));
+        tex = new orennayar(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))), sigma(i)); //marked as small definite loss in valgrind memcheck
       }
     } else {
       tex = new diffuse_light(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))*lightintensity(i)) );
@@ -328,11 +328,13 @@ hitable *build_scene(IntegerVector& type,
                             vec3(tempvector(prop_len+10),tempvector(prop_len+11),tempvector(prop_len+12)),
                             vec3(tempvector(prop_len+13),tempvector(prop_len+14),tempvector(prop_len+15)),
                             vec3(tempvector(prop_len+16),tempvector(prop_len+17),tempvector(prop_len+18)),
+                            true,
                             tex);
       } else {
         entry= new triangle(vec3(tempvector(prop_len+1),tempvector(prop_len+2),tempvector(prop_len+3)),
                             vec3(tempvector(prop_len+4),tempvector(prop_len+5),tempvector(prop_len+6)),
                             vec3(tempvector(prop_len+7),tempvector(prop_len+8),tempvector(prop_len+9)),
+                            true,
                             tex);
       }
       if(is_scaled) {
@@ -667,6 +669,7 @@ hitable* build_imp_sample(IntegerVector& type,
     hitable *entry = new triangle(vec3(tempvector(prop_len+1),tempvector(prop_len+2),tempvector(prop_len+3)),
                                   vec3(tempvector(prop_len+4),tempvector(prop_len+5),tempvector(prop_len+6)),
                                   vec3(tempvector(prop_len+7),tempvector(prop_len+8),tempvector(prop_len+9)),
+                                  false,
                                   0);
     if(is_scaled) {
       entry = new scale(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
