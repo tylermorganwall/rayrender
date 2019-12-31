@@ -258,11 +258,11 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
   texture *background_texture = nullptr;
   material *background_material = nullptr;
   hitable *background_sphere = nullptr;
+  Float *background_texture_data = nullptr;
+  
   if(hasbackground) {
-    Float *background_texture_data;
     background_texture_data = stbi_loadf(background[0], &nx1, &ny1, &nn1, 0);
     background_texture = new image_texture(background_texture_data, nx1, ny1, nn1);
-    stbi_image_free(background_texture_data);
     background_material = new diffuse_light(background_texture);
     background_sphere = new InfiniteAreaLight(nx1, ny1, world_radius*2, world_center,
                                               background_texture, background_material);
@@ -494,6 +494,9 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
   }
   delete worldbvh;
   delete background_sphere;
+  if(hasbackground) {
+    stbi_image_free(background_texture_data);
+  }
   PutRNGstate();
   finish = std::chrono::high_resolution_clock::now();
   if(verbose) {
