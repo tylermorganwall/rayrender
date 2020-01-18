@@ -115,6 +115,8 @@ public:
             if(idx.texcoord_index != -1) {
               tx[v] = attrib.texcoords[2*idx.texcoord_index+0];
               ty[v] = attrib.texcoords[2*idx.texcoord_index+1];
+              if(tx[v] < 0) tx[v] += 1;
+              if(ty[v] < 0) ty[v] += 1;
             }
           }
           
@@ -250,16 +252,18 @@ public:
             tinyobj::index_t idx = shapes[s].mesh.indices[index_offset + v];
             tris[v] = vec3(attrib.vertices[3*idx.vertex_index+0],
                            attrib.vertices[3*idx.vertex_index+1],
-                                          attrib.vertices[3*idx.vertex_index+2])*scale;
+                           attrib.vertices[3*idx.vertex_index+2])*scale;
             if(has_normals && idx.normal_index != -1) {
               tempnormal = true;
               normals[v] = vec3(attrib.normals[3*idx.normal_index+0],
                                 attrib.normals[3*idx.normal_index+1],
-                                              attrib.normals[3*idx.normal_index+2]);
+                                attrib.normals[3*idx.normal_index+2]);
             }
             if(idx.texcoord_index != -1) {
               tx[v] = attrib.texcoords[2*idx.texcoord_index+0];
               ty[v] = attrib.texcoords[2*idx.texcoord_index+1];
+              if(tx[v] < 0) tx[v] += 1;
+              if(ty[v] < 0) ty[v] += 1;
             }
           }
           
