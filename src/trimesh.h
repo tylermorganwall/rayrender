@@ -117,6 +117,8 @@ public:
               ty[v] = attrib.texcoords[2*idx.texcoord_index+1];
               if(tx[v] < 0) tx[v] += 1;
               if(ty[v] < 0) ty[v] += 1;
+              if(tx[v] > 1) tx[v] -= 1;
+              if(ty[v] > 1) ty[v] -= 1;
             }
           }
           
@@ -264,6 +266,8 @@ public:
               ty[v] = attrib.texcoords[2*idx.texcoord_index+1];
               if(tx[v] < 0) tx[v] += 1;
               if(ty[v] < 0) ty[v] += 1;
+              if(tx[v] > 1) tx[v] -= 1;
+              if(ty[v] > 1) ty[v] -= 1;
             }
           }
           
