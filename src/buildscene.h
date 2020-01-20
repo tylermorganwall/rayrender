@@ -51,7 +51,8 @@ hitable *build_scene(IntegerVector& type,
                      NumericVector& noise, LogicalVector& isnoise,
                      NumericVector& noisephase, NumericVector& noiseintensity, List noisecolorlist,
                      List& angle, 
-                     LogicalVector& isimage, CharacterVector& filelocation,
+                     LogicalVector& isimage, 
+                     std::vector<Float* > textures, std::vector<int* > nvec,
                      NumericVector& lightintensity,
                      LogicalVector& isflipped,
                      LogicalVector& isvolume, NumericVector& voldensity,
@@ -116,13 +117,10 @@ hitable *build_scene(IntegerVector& type,
     prop_len=2;
     vel = vec3(tempvel(0),tempvel(1),tempvel(2));
     //Generate texture
-    material *tex;
+    material *tex = nullptr;
     if(type(i) == 1) {
       if(isimage(i)) {
-        int nx, ny, nn;
-        Float *tex_data = stbi_loadf(filelocation(i), &nx, &ny, &nn, 4);
-        tex = new lambertian(new image_texture(tex_data,nx,ny,nn));
-        stbi_image_free(tex_data);
+        tex = new lambertian(new image_texture(textures[i],nvec[i][0],nvec[i][1],nvec[i][2]));
       } else if (isnoise(i)) {
         tex = new lambertian(new noise_texture(noise(i),vec3(tempvector(0),tempvector(1),tempvector(2)),
                                                vec3(tempnoisecolor(0),tempnoisecolor(1),tempnoisecolor(2)),
@@ -146,10 +144,7 @@ hitable *build_scene(IntegerVector& type,
       prop_len = 3;
     } else if (type(i) == 4) {
       if(isimage(i)) {
-        int nx, ny, nn;
-        Float *tex_data = stbi_loadf(filelocation(i), &nx, &ny, &nn, 4);
-        tex = new orennayar(new image_texture(tex_data,nx,ny,nn), sigma(i));
-        stbi_image_free(tex_data);
+        tex = new orennayar(new image_texture(textures[i],nvec[i][0],nvec[i][1],nvec[i][2]), sigma(i));
       } else if (isnoise(i)) {
         tex = new orennayar(new noise_texture(noise(i),vec3(tempvector(0),tempvector(1),tempvector(2)),
                                                vec3(tempnoisecolor(0),tempnoisecolor(1),tempnoisecolor(2)),

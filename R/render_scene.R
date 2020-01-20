@@ -220,7 +220,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
   #texture handler
   image_array_list = scene$image
   image_tex_bool = purrr::map_lgl(image_array_list,.f = ~is.array(.x))
-  temp_file_names = purrr::map_chr(image_tex_bool,.f = ~ifelse(.x, tempfile(),""))
+  temp_file_names = purrr::map_chr(image_tex_bool,.f = ~ifelse(.x, tempfile(fileext = ".png"),""))
   for(i in 1:length(image_array_list)) {
     if(image_tex_bool[i]) {
       if(dim(image_array_list[[i]])[3] == 4) {

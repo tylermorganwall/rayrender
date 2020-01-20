@@ -219,13 +219,31 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
   if(verbose) {
     Rcpp::Rcout << "Building BVH: ";
   }
+  std::vector<Float* > textures;
+  std::vector<int* > nx_ny_nn;
+  
+  for(int i = 0; i < n; i++) {
+    if(isimage(i)) {
+      int nx, ny, nn;
+      Float* tex_data = stbi_loadf(filelocation(i), &nx, &ny, &nn, 4);
+      textures.push_back(tex_data);
+      nx_ny_nn.push_back(new int[3]);
+      nx_ny_nn[i][0] = nx;
+      nx_ny_nn[i][1] = ny;
+      nx_ny_nn[i][2] = nn;
+    } else {
+      textures.push_back(nullptr);
+      nx_ny_nn.push_back(nullptr);
+    }
+  }
   hitable *worldbvh = build_scene(type, radius, shape, x, y, z, 
                                 properties, velocity, moving,
                                 n,shutteropen,shutterclose,
                                 ischeckered, checkercolors, 
                                 noise, isnoise,noisephase,noiseintensity, noisecolorlist,
                                 angle, 
-                                isimage, filelocation,
+                                isimage, 
+                                textures, nx_ny_nn,
                                 lightintensity, isflipped,
                                 isvolume, voldensity, order_rotation_list, 
                                 isgrouped, group_pivot, group_translate,
@@ -496,6 +514,12 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
   delete background_sphere;
   if(hasbackground) {
     stbi_image_free(background_texture_data);
+  }
+  for(int i = 0; i < n; i++) {
+    if(isimage(i)) {
+      stbi_image_free(textures[i]);
+      delete nx_ny_nn[i];
+    } 
   }
   PutRNGstate();
   finish = std::chrono::high_resolution_clock::now();
