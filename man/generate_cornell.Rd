@@ -4,10 +4,16 @@
 \alias{generate_cornell}
 \title{Generate Cornell Box}
 \usage{
-generate_cornell(light = TRUE, lightintensity = 5,
-  lightcolor = "white", lightwidth = 332, lightdepth = 343,
-  leftcolor = "#1f7326", rightcolor = "#a60d0d",
-  roomcolor = "#bababa")
+generate_cornell(
+  light = TRUE,
+  lightintensity = 5,
+  lightcolor = "white",
+  lightwidth = 332,
+  lightdepth = 343,
+  leftcolor = "#1f7326",
+  rightcolor = "#a60d0d",
+  roomcolor = "#bababa"
+)
 }
 \arguments{
 \item{light}{Default `TRUE`. Whether to include a light on the ceiling of the box.}

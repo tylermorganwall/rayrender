@@ -4,10 +4,20 @@
 \alias{diffuse}
 \title{Diffuse Material}
 \usage{
-diffuse(color = "#ffffff", checkercolor = NA, checkerperiod = 3,
-  noise = 0, noisephase = 0, noiseintensity = 10,
-  noisecolor = "#000000", image_array = NA, fog = FALSE,
-  fogdensity = 0.01, sigma = NULL, importance_sample = FALSE)
+diffuse(
+  color = "#ffffff",
+  checkercolor = NA,
+  checkerperiod = 3,
+  noise = 0,
+  noisephase = 0,
+  noiseintensity = 10,
+  noisecolor = "#000000",
+  image_array = NA,
+  fog = FALSE,
+  fogdensity = 0.01,
+  sigma = NULL,
+  importance_sample = FALSE
+)
 }
 \arguments{
 \item{color}{Default `white`. The color of the surface. Can be either

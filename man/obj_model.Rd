@@ -4,9 +4,19 @@
 \alias{obj_model}
 \title{`obj` File Object}
 \usage{
-obj_model(filename, x = 0, y = 0, z = 0, scale_obj = 1,
-  texture = FALSE, material = diffuse(), angle = c(0, 0, 0),
-  order_rotation = c(1, 2, 3), flipped = FALSE, scale = c(1, 1, 1))
+obj_model(
+  filename,
+  x = 0,
+  y = 0,
+  z = 0,
+  scale_obj = 1,
+  texture = FALSE,
+  material = diffuse(),
+  angle = c(0, 0, 0),
+  order_rotation = c(1, 2, 3),
+  flipped = FALSE,
+  scale = c(1, 1, 1)
+)
 }
 \arguments{
 \item{filename}{Filename and path to the `obj` file. Can also be a `txt` file, if it's in the correct `obj` internally.}

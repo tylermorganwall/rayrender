@@ -4,11 +4,22 @@
 \alias{triangle}
 \title{Triangle Object}
 \usage{
-triangle(v1 = c(1, 0, 0), v2 = c(0, 1, 0), v3 = c(-1, 0, 0),
-  n1 = rep(NA, 3), n2 = rep(NA, 3), n3 = rep(NA, 3),
-  color1 = rep(NA, 3), color2 = rep(NA, 3), color3 = rep(NA, 3),
-  material = diffuse(), angle = c(0, 0, 0), order_rotation = c(1, 2,
-  3), flipped = FALSE, scale = c(1, 1, 1))
+triangle(
+  v1 = c(1, 0, 0),
+  v2 = c(0, 1, 0),
+  v3 = c(-1, 0, 0),
+  n1 = rep(NA, 3),
+  n2 = rep(NA, 3),
+  n3 = rep(NA, 3),
+  color1 = rep(NA, 3),
+  color2 = rep(NA, 3),
+  color3 = rep(NA, 3),
+  material = diffuse(),
+  angle = c(0, 0, 0),
+  order_rotation = c(1, 2, 3),
+  flipped = FALSE,
+  scale = c(1, 1, 1)
+)
 }
 \arguments{
 \item{v1}{Default `c(1, 0, 0)`. Length-3 vector indicating the x, y, and z coordinate of the first triangle vertex.}

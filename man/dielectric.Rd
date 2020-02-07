@@ -4,8 +4,7 @@
 \alias{dielectric}
 \title{Dielectric (glass) Material}
 \usage{
-dielectric(color = "white", refraction = 1.5,
-  importance_sample = FALSE)
+dielectric(color = "white", refraction = 1.5, importance_sample = FALSE)
 }
 \arguments{
 \item{color}{Default `white`. The color of the surface. Can be either
