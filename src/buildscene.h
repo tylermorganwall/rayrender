@@ -44,7 +44,7 @@ hitable* rotation_order(hitable* entry, NumericVector temprotvec, NumericVector 
 
 hitable *build_scene(IntegerVector& type, 
                      NumericVector& radius, IntegerVector& shape,
-                     NumericVector& x, NumericVector& y, NumericVector& z,
+                     List& position_list,
                      List& properties, List& velocity, LogicalVector& moving,
                      int n, Float shutteropen, Float shutterclose,
                      LogicalVector& ischeckered, List& checkercolors, 
@@ -67,6 +67,9 @@ hitable *build_scene(IntegerVector& type,
   LogicalVector isgradient = gradient_info["isgradient"];
   List gradient_colors = gradient_info["gradient_colors"];
   LogicalVector gradient_trans = gradient_info["gradient_trans"];
+  NumericVector x = position_list["xvec"];
+  NumericVector y = position_list["yvec"];
+  NumericVector z = position_list["zvec"];
   
   NumericVector tempvector;
   NumericVector tempchecker;
@@ -504,7 +507,7 @@ hitable *build_scene(IntegerVector& type,
 
 hitable* build_imp_sample(IntegerVector& type, 
                           NumericVector& radius, IntegerVector& shape,
-                          NumericVector& x, NumericVector& y, NumericVector& z,
+                          List& position_list,
                           List& properties, List& velocity, 
                           int n, Float shutteropen, Float shutterclose, 
                           List& angle, int i, List& order_rotation_list,
@@ -513,6 +516,10 @@ hitable* build_imp_sample(IntegerVector& type,
                           List& group_angle, List& group_order_rotation, List& group_scale,
                           CharacterVector& fileinfo, CharacterVector& filebasedir,
                           List& scale_list, random_gen& rng) {
+  NumericVector x = position_list["xvec"];
+  NumericVector y = position_list["yvec"];
+  NumericVector z = position_list["zvec"];
+  
   NumericVector tempvector;
   NumericVector temprotvec;
   NumericVector tempvel;
@@ -529,22 +536,21 @@ hitable* build_imp_sample(IntegerVector& type,
   vec3 gangle;
   
   List templist;
-  vec3 center(x(0), y(0), z(0));
-  vec3 vel(x(0), y(0), z(0));
   int prop_len;
   tempvector = as<NumericVector>(properties(i));
   tempvel = as<NumericVector>(velocity(i));
-  vel = vec3(tempvel(0),tempvel(1),tempvel(2));
   temprotvec =  as<NumericVector>(angle(i));
   order_rotation = as<NumericVector>(order_rotation_list(i));
   temp_scales = as<NumericVector>(scale_list(i));
+  
+  vec3 center(x(i), y(i), z(i));
+  vec3 vel(tempvel(0),tempvel(1),tempvel(2));
   bool is_scaled = false;
   bool is_group_scaled = false;
   if(temp_scales[0] != 1 || temp_scales[1] != 1 || temp_scales[2] != 1) {
     is_scaled = true;
   }
   prop_len=2;
-  center =  vec3(x(i), y(i), z(i));
   if(isgrouped(i)) {
     temp_gpivot = as<NumericVector>(group_pivot(i));
     temp_gangle = as<NumericVector>(group_angle(i));

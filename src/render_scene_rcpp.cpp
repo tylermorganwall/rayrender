@@ -179,7 +179,7 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
                       float aperture, NumericVector camera_up,
                       IntegerVector type, 
                       NumericVector radius, IntegerVector shape,
-                      NumericVector x, NumericVector y, NumericVector z,
+                      List position_list,
                       List properties, List velocity, LogicalVector moving,
                       int n,
                       NumericVector& bghigh, NumericVector& bglow,
@@ -243,7 +243,7 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
       nx_ny_nn.push_back(nullptr);
     }
   }
-  hitable *worldbvh = build_scene(type, radius, shape, x, y, z, 
+  hitable *worldbvh = build_scene(type, radius, shape, position_list,
                                 properties, velocity, moving,
                                 n,shutteropen,shutterclose,
                                 ischeckered, checkercolors, 
@@ -328,7 +328,7 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
   start = std::chrono::high_resolution_clock::now();
   for(int i = 0; i < n; i++)  {
     if(implicit_sample(i)) {
-      implicit_sample_vector[counter] = build_imp_sample(type, radius, shape, x, y, z,
+      implicit_sample_vector[counter] = build_imp_sample(type, radius, shape, position_list,
                                properties, velocity,
                                n, shutteropen, shutterclose,
                                angle, i, order_rotation_list,

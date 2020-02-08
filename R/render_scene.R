@@ -175,9 +175,10 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
   }
   backgroundhigh = convert_color(backgroundhigh)
   backgroundlow = convert_color(backgroundlow)
-  xvec = scene$x 
-  yvec = scene$y
-  zvec = scene$z
+  position_list = list()
+  position_list$xvec = scene$x 
+  position_list$yvec = scene$y
+  position_list$zvec = scene$z
   rvec = scene$radius
   shapevec = unlist(lapply(tolower(scene$shape),switch,
                           "sphere" = 1,"xy_rect" = 2, "xz_rect" = 3,"yz_rect" = 4,"box" = 5, "triangle" = 6, 
@@ -185,6 +186,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
   typevec = unlist(lapply(tolower(scene$type),switch,
                           "diffuse" = 1,"metal" = 2,"dielectric" = 3, "oren-nayar" = 4, "light" = 5))
   sigmavec = unlist(scene$sigma)
+  
   assertthat::assert_that(tonemap %in% c("gamma","reinhold","uncharted", "hbd"))
   toneval = switch(tonemap, "gamma" = 1,"reinhold" = 2,"uncharted" = 3,"hbd" = 4)
   movingvec = purrr::map_lgl(scene$velocity,.f = ~any(.x != 0))
@@ -227,6 +229,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
   #texture handler
   image_array_list = scene$image
   image_tex_bool = purrr::map_lgl(image_array_list,.f = ~is.array(.x))
+  image_filename_bool = purrr::map_lgl(image_array_list,.f = ~is.character(.x))
   temp_file_names = purrr::map_chr(image_tex_bool,.f = ~ifelse(.x, tempfile(fileext = ".png"),""))
   for(i in 1:length(image_array_list)) {
     if(image_tex_bool[i]) {
@@ -236,7 +239,15 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
         png::writePNG(fliplr(aperm(image_array_list[[i]],c(2,1,3))),temp_file_names[i])
       }
     }
+    if(image_filename_bool[i]) {
+      if(any(!file.exists(path.expand(image_array_list[[i]])) & nchar(image_array_list[[i]]) > 0)) {
+        stop(paste0("Cannot find the following texture file:\n",
+                    paste(image_array_list[[i]], collapse="\n")))
+      }
+      temp_file_names[i] = path.expand(image_array_list[[i]])
+    }
   }
+  image_tex_bool = image_tex_bool | image_filename_bool;
   #movement handler
   if(shutteropen == shutterclose) {
     movingvec = rep(FALSE,length(movingvec))
@@ -289,9 +300,9 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
   #scale handler
   scale_factor = scene$scale_factor
   
-  assertthat::assert_that(all(c(length(xvec),length(yvec),length(zvec),length(rvec),length(typevec),length(proplist)) == length(xvec)))
+  assertthat::assert_that(all(c(length(position_list$xvec),length(position_list$yvec),length(position_list$zvec),length(rvec),length(typevec),length(proplist)) == length(position_list$xvec)))
   assertthat::assert_that(all(!is.null(typevec)))
-  for(i in 1:length(xvec)) {
+  for(i in 1:length(position_list$xvec)) {
     if(typevec[i] == 1) {
       if(shapevec[i] == 1) {
         # assertthat::assert_that(length(proplist[[i]]) == 3)
@@ -325,7 +336,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
   rgb_mat = render_scene_rcpp(nx = width, ny = height, ns = samples, fov = fov, ambient_light = ambient_light,
                              lookfromvec = lookfrom, lookatvec = lookat, aperture=aperture,camera_up = camera_up,
                              type = typevec, shape = shapevec, radius = rvec, 
-                             x = xvec, y = yvec, z = zvec,
+                             position_list = position_list,
                              properties = proplist, velocity = vel_list, moving = movingvec,
                              n = length(typevec), 
                              bghigh = backgroundhigh, bglow = backgroundlow,

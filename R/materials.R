@@ -16,7 +16,7 @@
 #' between the this color and color specified in `color`. Direction is determined by `gradient_transpose`.
 #' @param gradient_transpose Default `FALSE`. If `TRUE`, this will use the `v` coordinate texture instead
 #' of the `u` coordinate texture to map the gradient.
-#' @param image_array A 3-layer RGB array to be used as the texture on the surface of the object.
+#' @param image_texture Default `NA`. A 3-layer RGB array or filename to be used as the texture on the surface of the object.
 #' @param fog Default `FALSE`. If `TRUE`, the object will be a volumetric scatterer.
 #' @param fogdensity Default `0.01`. The density of the fog. Higher values will produce more opaque objects.
 #' @param sigma Default `NULL`. A number between 0 and Infinity specifying the roughness of the surface using the Oren-Nayar microfacet model.
@@ -79,7 +79,8 @@ diffuse = function(color = "#ffffff",
                    checkercolor = NA, checkerperiod = 3,
                    noise = 0, noisephase = 0, noiseintensity = 10, noisecolor = "#000000",
                    gradient_color = NA, gradient_transpose = FALSE,
-                   image_array = NA, fog = FALSE, fogdensity = 0.01, 
+                   image_texture = NA, 
+                   fog = FALSE, fogdensity = 0.01, 
                    sigma = NULL, importance_sample = FALSE) {
   if(all(!is.na(checkercolor))) {
     checkercolor = convert_color(checkercolor)
@@ -94,9 +95,9 @@ diffuse = function(color = "#ffffff",
   
   info = convert_color(color)
   noisecolor = convert_color(noisecolor)
-  if(!is.array(image_array) && !is.na(image_array)) {
-    image = NA
-    warning("Image not in recognized format (array or matrix), ignoring")
+  if(!is.array(image_texture) && !is.na(image_texture) && !is.character(image_texture)) {
+    image_texture = NA
+    warning("Image not in recognized format (array, matrix, or filename), ignoring.")
   }
   type = "diffuse"
   if(!is.null(sigma) && is.numeric(sigma)) {
@@ -118,7 +119,7 @@ diffuse = function(color = "#ffffff",
                  properties = list(info), checkercolor=list(c(checkercolor,checkerperiod)), 
                  gradient_color = list(gradient_color), gradient_transpose = gradient_transpose,
                  noise=noise, noisephase = noisephase, noiseintensity = noiseintensity, noisecolor = list(noisecolor),
-                 image = list(image_array), lightintensity = NA,
+                 image = list(image_texture), lightintensity = NA,
                  fog=fog, fogdensity=fogdensity,implicit_sample = importance_sample, sigma = sigma)
 }
 
