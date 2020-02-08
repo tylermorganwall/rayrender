@@ -12,6 +12,8 @@ diffuse(
   noisephase = 0,
   noiseintensity = 10,
   noisecolor = "#000000",
+  gradient_color = NA,
+  gradient_transpose = FALSE,
   image_array = NA,
   fog = FALSE,
   fogdensity = 0.01,
@@ -38,6 +40,12 @@ the amount of turbulence in the texture.}
 
 \item{noisecolor}{Default `#000000`. The secondary color of the noise pattern.
 Can be either a hexadecimal code, or a numeric rgb vector listing three intensities between `0` and `1`.}
+
+\item{gradient_color}{Default `NA`. If not `NA`, creates a secondary color for a linear gradient 
+between the this color and color specified in `color`. Direction is determined by `gradient_transpose`.}
+
+\item{gradient_transpose}{Default `FALSE`. If `TRUE`, this will use the `v` coordinate texture instead
+of the `u` coordinate texture to map the gradient.}
 
 \item{image_array}{A 3-layer RGB array to be used as the texture on the surface of the object.}
 
@@ -91,6 +99,15 @@ render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
 scene = scene \%>\%
   add_object(cube(x=555/2-555/4,y=555/2,z=555/2,xwidth=555/4,ywidth=555/4,zwidth=555/4,
   material = diffuse(fog=TRUE, fogdensity=0.05,color="orange")))
+\donttest{
+render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
+             aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
+}
+
+#' #Add an line segment with a color gradient        
+scene = scene \%>\%
+  add_object(segment(start = c(555,450,450),end=c(0,450,450),radius = 50, 
+                     material = diffuse(color="#1f7326", gradient_color = "#a60d0d")))
 \donttest{
 render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)

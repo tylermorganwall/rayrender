@@ -137,4 +137,17 @@ vec3 triangle_image_texture::value(Float u, Float v, const vec3& p) const {
   return(vec3(r,g,b));
 }
 
+class gradient_texture : public texture {
+public: 
+  gradient_texture() {}
+  gradient_texture(vec3 c1, vec3 c2, bool v) : 
+    gamma_color1(c1.pow(1/2.2)), gamma_color2(c2.pow(1/2.2)), aligned_v(v) {}
+  virtual vec3 value(Float u, Float v, const vec3& p) const {
+    vec3 final_color = aligned_v ? gamma_color1 * (1-u) + u * gamma_color2 : gamma_color1 * (1-v) + v * gamma_color2;
+    return(final_color.pow(2.2));
+  }
+  vec3 gamma_color1, gamma_color2;
+  bool aligned_v;
+};
+
 #endif

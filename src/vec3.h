@@ -40,6 +40,9 @@ public:
   
   inline Float length() const { return sqrt(e[0]*e[0] + e[1]*e[1] + e[2]*e[2]); }
   inline Float squared_length() const { return e[0]*e[0] + e[1]*e[1] + e[2]*e[2]; }
+  inline vec3 pow(Float exponent) const {
+    return(vec3(std::pow(e[0],exponent),std::pow(e[1],exponent),std::pow(e[2],exponent)));
+  }
   inline void make_unit_vector();
   
   Float e[3];

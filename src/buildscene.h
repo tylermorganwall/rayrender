@@ -48,6 +48,7 @@ hitable *build_scene(IntegerVector& type,
                      List& properties, List& velocity, LogicalVector& moving,
                      int n, Float shutteropen, Float shutterclose,
                      LogicalVector& ischeckered, List& checkercolors, 
+                     List gradient_info,
                      NumericVector& noise, LogicalVector& isnoise,
                      NumericVector& noisephase, NumericVector& noiseintensity, List noisecolorlist,
                      List& angle, 
@@ -63,8 +64,13 @@ hitable *build_scene(IntegerVector& type,
                      CharacterVector& fileinfo, CharacterVector& filebasedir,
                      List& scale_list, NumericVector& sigma,  random_gen& rng) {
   hitable **list = new hitable*[n + 1]; //change to vector
+  LogicalVector isgradient = gradient_info["isgradient"];
+  List gradient_colors = gradient_info["gradient_colors"];
+  LogicalVector gradient_trans = gradient_info["gradient_trans"];
+  
   NumericVector tempvector;
   NumericVector tempchecker;
+  NumericVector tempgradient;
   NumericVector tempvel;
   NumericVector tempnoisecolor;
   NumericVector temprotvec;
@@ -87,6 +93,7 @@ hitable *build_scene(IntegerVector& type,
   vec3 vel(x(0), y(0), z(0));
   for(int i = 0; i < n; i++) {
     tempvector = as<NumericVector>(properties(i));
+    tempgradient = as<NumericVector>(gradient_colors(i));
     tempchecker = as<NumericVector>(checkercolors(i));
     tempvel = as<NumericVector>(velocity(i));
     tempnoisecolor = as<NumericVector>(noisecolorlist(i));
@@ -128,6 +135,10 @@ hitable *build_scene(IntegerVector& type,
       } else if (ischeckered(i)) {
         tex = new lambertian(new checker_texture(new constant_texture(vec3(tempchecker(0),tempchecker(1),tempchecker(2))),
                                                  new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))),tempchecker(3)));
+      } else if (isgradient(i)) {
+        tex = new lambertian(new gradient_texture(vec3(tempvector(0),tempvector(1),tempvector(2)),
+                                                  vec3(tempgradient(0),tempgradient(1),tempgradient(2)),
+                                                  gradient_trans(i)));
       } else if (is_tri_color(i)) {
         tex = new lambertian(new triangle_texture(vec3(temp_tri_color(0),temp_tri_color(1),temp_tri_color(2)),
                                                   vec3(temp_tri_color(3),temp_tri_color(4),temp_tri_color(5)),
@@ -153,6 +164,10 @@ hitable *build_scene(IntegerVector& type,
         tex = new orennayar(new checker_texture(new constant_texture(vec3(tempchecker(0),tempchecker(1),tempchecker(2))),
                                                  new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))),tempchecker(3)), 
                                                  sigma(i));
+      } else if (isgradient(i)) {
+        tex = new orennayar(new gradient_texture(vec3(tempvector(0),tempvector(1),tempvector(2)),
+                                                  vec3(tempgradient(0),tempgradient(1),tempgradient(2)),
+                                                  gradient_trans(i)), sigma(i));
       } else if (is_tri_color(i)) {
         tex = new orennayar(new triangle_texture(vec3(temp_tri_color(0),temp_tri_color(1),temp_tri_color(2)),
                                                   vec3(temp_tri_color(3),temp_tri_color(4),temp_tri_color(5)),

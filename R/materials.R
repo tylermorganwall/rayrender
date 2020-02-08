@@ -12,6 +12,10 @@
 #' @param noiseintensity Default `10`. Intensity of the noise.
 #' @param noisecolor Default `#000000`. The secondary color of the noise pattern.
 #' Can be either a hexadecimal code, or a numeric rgb vector listing three intensities between `0` and `1`.
+#' @param gradient_color Default `NA`. If not `NA`, creates a secondary color for a linear gradient 
+#' between the this color and color specified in `color`. Direction is determined by `gradient_transpose`.
+#' @param gradient_transpose Default `FALSE`. If `TRUE`, this will use the `v` coordinate texture instead
+#' of the `u` coordinate texture to map the gradient.
 #' @param image_array A 3-layer RGB array to be used as the texture on the surface of the object.
 #' @param fog Default `FALSE`. If `TRUE`, the object will be a volumetric scatterer.
 #' @param fogdensity Default `0.01`. The density of the fog. Higher values will produce more opaque objects.
@@ -62,8 +66,19 @@
 #' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
 #'              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 #' }
-diffuse = function(color = "#ffffff", checkercolor = NA, checkerperiod = 3,
+#' 
+#' #' #Add an line segment with a color gradient        
+#' scene = scene %>%
+#'   add_object(segment(start = c(555,450,450),end=c(0,450,450),radius = 50, 
+#'                      material = diffuse(color="#1f7326", gradient_color = "#a60d0d")))
+#' \donttest{
+#' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
+#'              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
+#' }
+diffuse = function(color = "#ffffff", 
+                   checkercolor = NA, checkerperiod = 3,
                    noise = 0, noisephase = 0, noiseintensity = 10, noisecolor = "#000000",
+                   gradient_color = NA, gradient_transpose = FALSE,
                    image_array = NA, fog = FALSE, fogdensity = 0.01, 
                    sigma = NULL, importance_sample = FALSE) {
   if(all(!is.na(checkercolor))) {
@@ -71,6 +86,12 @@ diffuse = function(color = "#ffffff", checkercolor = NA, checkerperiod = 3,
   } else {
     checkercolor = NA
   }
+  if(all(!is.na(gradient_color))) {
+    gradient_color = convert_color(gradient_color)
+  } else {
+    gradient_color = NA
+  }
+  
   info = convert_color(color)
   noisecolor = convert_color(noisecolor)
   if(!is.array(image_array) && !is.na(image_array)) {
@@ -95,6 +116,7 @@ diffuse = function(color = "#ffffff", checkercolor = NA, checkerperiod = 3,
   assertthat::assert_that(checkerperiod != 0)
   tibble::tibble(type = type, 
                  properties = list(info), checkercolor=list(c(checkercolor,checkerperiod)), 
+                 gradient_color = list(gradient_color), gradient_transpose = gradient_transpose,
                  noise=noise, noisephase = noisephase, noiseintensity = noiseintensity, noisecolor = list(noisecolor),
                  image = list(image_array), lightintensity = NA,
                  fog=fog, fogdensity=fogdensity,implicit_sample = importance_sample, sigma = sigma)
@@ -142,7 +164,9 @@ metal = function(color = "#ffffff", fuzz = 0,  importance_sample = FALSE) {
   color = convert_color(color)
   tibble::tibble(type = "metal", 
                  properties = list(c(color,fuzz)), 
-                 checkercolor=list(NA), noise=0, noisephase = 0, noiseintensity = 0, noisecolor = list(c(0,0,0)),
+                 checkercolor=list(NA), 
+                 gradient_color = list(NA), gradient_transpose = FALSE,
+                 noise=0, noisephase = 0, noiseintensity = 0, noisecolor = list(c(0,0,0)),
                  lightinfo = list(NA),
                  image = list(NA), lightintensity = NA,fog=FALSE,fogdensity=0.01,
                  implicit_sample = importance_sample, sigma = 0)
@@ -198,7 +222,9 @@ dielectric = function(color="white", refraction = 1.5, importance_sample = FALSE
   color = convert_color(color)
   tibble::tibble(type = "dielectric", 
                  properties = list(c(color,refraction)), 
-                 checkercolor=list(NA), noise=0, noisephase = 0, noiseintensity = 0, noisecolor = list(c(0,0,0)),
+                 checkercolor=list(NA), 
+                 gradient_color = list(NA), gradient_transpose = FALSE,
+                 noise=0, noisephase = 0, noiseintensity = 0, noisecolor = list(c(0,0,0)),
                  image = list(NA), lightintensity = NA, 
                  fog=FALSE, fogdensity=NA, implicit_sample = importance_sample, sigma = 0)
 }
@@ -238,8 +264,9 @@ dielectric = function(color="white", refraction = 1.5, importance_sample = FALSE
 light = function(color = "#ffffff", intensity = 10, importance_sample = TRUE) {
   info = convert_color(color)
   tibble::tibble(type = "light", 
-                 properties = list(info), checkercolor=list(NA), noise=0, noisephase = 0, 
-                 noiseintensity = 0, noisecolor = list(c(0,0,0)),
+                 properties = list(info), checkercolor=list(NA), 
+                 gradient_color = list(NA), gradient_transpose = FALSE,
+                 noise=0, noisephase = 0, noiseintensity = 0, noisecolor = list(c(0,0,0)),
                  image = list(NA), lightintensity = intensity,
                  fog=FALSE, fogdensity=0.01, implicit_sample = importance_sample, sigma = 0)
 }

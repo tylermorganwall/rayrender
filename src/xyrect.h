@@ -141,8 +141,8 @@ bool yz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
   if(z < z0 || z > z1 || y < y0 || y > y1) {
     return(false);
   }
-  rec.u = (y-y0)/(y1-y0);
-  rec.v = (z-z0)/(z1-z0);
+  rec.u = (z-z0)/(z1-z0);
+  rec.v = (y-y0)/(y1-y0);
   rec.t = t;
   rec.mat_ptr = mp;
   rec.p = r.point_at_parameter(t);

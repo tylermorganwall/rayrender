@@ -194,6 +194,12 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
   checkeredlist = scene$checkercolor
   checkeredbool = purrr::map_lgl(checkeredlist,.f = ~all(!is.na(.x)))
   
+  #gradient handler
+  gradient_info = list()
+  gradient_info$gradient_colors = scene$gradient_color
+  gradient_info$isgradient = purrr::map_lgl(gradient_info$gradient_colors,.f = ~all(!is.na(.x)))
+  gradient_info$gradient_trans = scene$gradient_transpose
+  
   #noise handler
   noisebool = purrr::map_lgl(scene$noise, .f = ~.x > 0)
   noisevec = scene$noise
@@ -325,6 +331,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
                              bghigh = backgroundhigh, bglow = backgroundlow,
                              shutteropen = shutteropen, shutterclose = shutterclose,
                              ischeckered = checkeredbool, checkercolors = checkeredlist,
+                             gradient_info = gradient_info,
                              noise=noisevec,isnoise=noisebool,noisephase=noisephasevec, 
                              noiseintensity=noiseintvec, noisecolorlist = noisecolorlist,
                              angle = rot_angle_list, isimage = image_tex_bool, filelocation = temp_file_names,
