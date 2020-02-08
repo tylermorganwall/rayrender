@@ -34,7 +34,8 @@
 #' Default `gamma` solely adjusts for gamma and clamps values greater than 1 to 1. 
 #' `reinhold` scales values by their individual color channels `color/(1+color)` and then performs the 
 #' gamma adjustment. `uncharted` uses the mapping developed for Uncharted 2 by John Hable. `hbd` uses an
-#' optimized formula by Jim Hejl and Richard Burgess-Dawson.
+#' optimized formula by Jim Hejl and Richard Burgess-Dawson. Note: If set to anything other than `gamma`,
+#' objects with material `light()` may not be anti-aliased.
 #' @param environment_light Default `NULL`. An image to be used for the background for rays that escape
 #' the scene. Supports both HDR (`.hdr`) and low-dynamic range (`.png`, `.jpg`) images.
 #' @param rotate_env Default `0`. The number of degrees to rotate the environment map around the scene.
