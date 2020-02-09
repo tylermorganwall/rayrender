@@ -52,7 +52,8 @@ hitable *build_scene(IntegerVector& type,
                      NumericVector& noise, LogicalVector& isnoise,
                      NumericVector& noisephase, NumericVector& noiseintensity, List noisecolorlist,
                      List& angle, 
-                     LogicalVector& isimage, 
+                     LogicalVector& isimage, LogicalVector has_alpha,
+                     std::vector<Float* > alpha_textures, std::vector<int* > nveca,
                      std::vector<Float* > textures, std::vector<int* > nvec,
                      NumericVector& lightintensity,
                      LogicalVector& isflipped,
@@ -128,29 +129,46 @@ hitable *build_scene(IntegerVector& type,
     vel = vec3(tempvel(0),tempvel(1),tempvel(2));
     //Generate texture
     material *tex = nullptr;
+    alpha_texture *alpha = nullptr;
+    if(has_alpha(i)) {
+      alpha = new alpha_texture(alpha_textures[i], nveca[i][0], nveca[i][1], nveca[i][2]);
+    }
     if(type(i) == 1) {
       if(isimage(i)) {
-        tex = new lambertian(new image_texture(textures[i],nvec[i][0],nvec[i][1],nvec[i][2]));
+        tex = new lambertian(new image_texture(textures[i],nvec[i][0],nvec[i][1],nvec[i][2]),
+                             has_alpha(i), alpha);
       } else if (isnoise(i)) {
         tex = new lambertian(new noise_texture(noise(i),vec3(tempvector(0),tempvector(1),tempvector(2)),
                                                vec3(tempnoisecolor(0),tempnoisecolor(1),tempnoisecolor(2)),
-                                               noisephase(i), noiseintensity(i)));
+                                               noisephase(i), noiseintensity(i)),
+                             has_alpha(i), alpha);
       } else if (ischeckered(i)) {
         tex = new lambertian(new checker_texture(new constant_texture(vec3(tempchecker(0),tempchecker(1),tempchecker(2))),
-                                                 new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))),tempchecker(3)));
+                                                 new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))),tempchecker(3)),
+                             has_alpha(i), alpha);
       } else if (isgradient(i)) {
         tex = new lambertian(new gradient_texture(vec3(tempvector(0),tempvector(1),tempvector(2)),
                                                   vec3(tempgradient(0),tempgradient(1),tempgradient(2)),
-                                                  gradient_trans(i)));
+                                                  gradient_trans(i)),
+                             has_alpha(i), alpha);
       } else if (is_tri_color(i)) {
         tex = new lambertian(new triangle_texture(vec3(temp_tri_color(0),temp_tri_color(1),temp_tri_color(2)),
                                                   vec3(temp_tri_color(3),temp_tri_color(4),temp_tri_color(5)),
-                                                  vec3(temp_tri_color(6),temp_tri_color(7),temp_tri_color(8))) );
+                                                  vec3(temp_tri_color(6),temp_tri_color(7),temp_tri_color(8))),
+                             has_alpha(i), alpha);
       } else {
-        tex = new lambertian(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))) );
+        if(has_alpha(i)) {
+          Rcpp::Rcout << "has_alpha " << nveca[i][0] << " " << nveca[i][1] << " " << nveca[i][2] << "\n";
+          tex = new lambertian(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))),
+                               has_alpha(i), alpha);
+        } else {
+          Rcpp::Rcout << "no_alpha" << "\n";
+          
+          tex = new lambertian(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))),
+                               has_alpha(i), alpha);
+        }
       }
-    }
-    else if (type(i) == 2) {
+    } else if (type(i) == 2) {
       tex = new metal(vec3(tempvector(0),tempvector(1),tempvector(2)),tempvector(3));
       prop_len = 3;
     } else if (type(i) == 3) {
@@ -205,6 +223,7 @@ hitable *build_scene(IntegerVector& type,
     } else if(shape(i) == 11) {
       center = vec3(x(i), y(i), z(i));
     }
+    Rcpp::Rcout << "getting objects" << "\n";
     
     //Generate objects
     if (shape(i) == 1) {
@@ -593,7 +612,7 @@ hitable* build_imp_sample(IntegerVector& type,
   } else if(shape(i) == 11) {
     center = vec3(x(i), y(i), z(i));
   }
-  
+
   if(shape(i) == 1) {
     hitable *entry = new sphere(vec3(0,0,0), radius(i), 0);
     if(is_scaled) {

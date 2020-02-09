@@ -9,10 +9,12 @@ class sphere: public hitable {
   public:
     sphere() {}
     ~sphere() {
-      // Rcpp::Rcout << "sphere delete " << typeid(*mat_ptr).name() << "\n";
+      Rcpp::Rcout << "sphere delete " << typeid(*mat_ptr).name() << "\n";
       delete mat_ptr;
     }
-    sphere(vec3 cen, Float r, material *mat) : center(cen), radius(r), mat_ptr(mat) {};
+    sphere(vec3 cen, Float r, material *mat) : center(cen), radius(r), mat_ptr(mat) {
+      Rcpp::Rcout << "sphere create " <<  typeid(*mat_ptr).name() << " " << mat_ptr->hasAlphaTexture << "\n";
+    };
     virtual bool hit(const ray& r, Float tmin, Float tmax, hit_record& rec, random_gen& rng);
     virtual bool bounding_box(Float t0, Float t1, aabb& box) const;
     virtual Float pdf_value(const vec3& o, const vec3& v, random_gen& rng);
@@ -38,6 +40,14 @@ bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random
     rec.normal = (rec.p - center) / radius;
     get_sphere_uv(rec.normal, rec.u, rec.v);
     rec.mat_ptr = mat_ptr;
+    if(mat_ptr->hasAlphaTexture == 0) {
+      // if(rng.unif_rand() >= 1) {
+        return(false);
+      // }
+      // if(rng.unif_rand() >= mat_ptr->alphaTexture->value(rec.u, rec.v, rec.p).x()) {
+      //   return(false);
+      // }
+    }
     return(true);
   }
   if(temp2 < t_max && temp2 > t_min) {
@@ -47,6 +57,14 @@ bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random
     rec.normal = (rec.p - center) / radius;
     get_sphere_uv(rec.normal, rec.u, rec.v);
     rec.mat_ptr = mat_ptr;
+    if(mat_ptr->hasAlphaTexture == 0) {
+      // if(rng.unif_rand() >= 1) {
+        return(false);
+      // }
+      // if(rng.unif_rand() >= mat_ptr->alphaTexture->value(rec.u, rec.v, rec.p).x()) {
+      //   return(false);
+      // }
+    }
     return(true);
   }
   return(false);

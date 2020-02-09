@@ -247,7 +247,36 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
       temp_file_names[i] = path.expand(image_array_list[[i]])
     }
   }
-  image_tex_bool = image_tex_bool | image_filename_bool;
+  image_tex_bool = image_tex_bool | image_filename_bool
+  #alpha texture handler
+  alpha_array_list = scene$alphaimage
+  alpha_tex_bool = purrr::map_lgl(alpha_array_list,.f = ~is.array(.x[[1]]))
+  alpha_filename_bool = purrr::map_lgl(alpha_array_list,.f = ~is.character(.x[[1]]))
+  alpha_temp_file_names = purrr::map_chr(alpha_tex_bool,.f = ~ifelse(.x, tempfile(fileext = ".png"),""))
+  for(i in 1:length(alpha_array_list)) {
+    if(alpha_tex_bool[i]) {
+      if(length(dim(alpha_array_list[[i]])) == 2) {
+        png::writePNG(fliplr(t(alpha_array_list[[i]])), alpha_temp_file_names[i])
+      } else if(dim(alpha_array_list[[i]])[3] == 4) {
+        png::writePNG(fliplr(aperm(alpha_array_list[[i]][,,1:3],c(2,1,3))), alpha_temp_file_names[i])
+      } else if(dim(alpha_array_list[[i]])[3] == 3) {
+        png::writePNG(fliplr(aperm(alpha_array_list[[i]],c(2,1,3))), alpha_temp_file_names[i])
+      } else {
+        stop("alpha texture dims: c(", paste(dim(alpha_array_list[[i]]),collapse=", "), ") not valid for texture.")
+      }
+    }
+    if(alpha_filename_bool[i]) {
+      if(any(!file.exists(path.expand(alpha_array_list[[i]][[1]])) & nchar(alpha_array_list[[i]]) > 0)) {
+        stop(paste0("Cannot find the following texture file:\n",
+                    paste(alpha_array_list[[i]], collapse="\n")))
+      }
+      alpha_temp_file_names[i] = path.expand(alpha_array_list[[i]][[1]])
+    }
+  }
+  alpha_tex_bool = alpha_tex_bool | alpha_filename_bool
+  alphalist = list()
+  alphalist$alpha_temp_file_names = alpha_temp_file_names
+  alphalist$alpha_tex_bool = alpha_tex_bool
   #movement handler
   if(shutteropen == shutterclose) {
     movingvec = rep(FALSE,length(movingvec))
@@ -342,10 +371,11 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
                              bghigh = backgroundhigh, bglow = backgroundlow,
                              shutteropen = shutteropen, shutterclose = shutterclose,
                              ischeckered = checkeredbool, checkercolors = checkeredlist,
-                             gradient_info = gradient_info,
+                             gradient_info = gradient_info, 
                              noise=noisevec,isnoise=noisebool,noisephase=noisephasevec, 
                              noiseintensity=noiseintvec, noisecolorlist = noisecolorlist,
                              angle = rot_angle_list, isimage = image_tex_bool, filelocation = temp_file_names,
+                             alphalist = alphalist,
                              lightintensity = light_prop_vec,isflipped = flip_vec,
                              focus_distance=focal_distance,
                              isvolume=fog_bool, voldensity = fog_vec , parallel=parallel,

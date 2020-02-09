@@ -190,6 +190,7 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
                       NumericVector& noisephase, NumericVector& noiseintensity, List noisecolorlist,
                       List& angle,
                       LogicalVector& isimage, CharacterVector& filelocation,
+                      List& alphalist,
                       NumericVector& lightintensity,
                       LogicalVector& isflipped, float focus_distance,
                       LogicalVector& isvolume, NumericVector& voldensity,
@@ -213,6 +214,9 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
   vec3 backgroundlow(bglow[0],bglow[1],bglow[2]);
   float dist_to_focus = focus_distance;
   bool tonemap = toneval == 1 ? false : true;
+  CharacterVector alpha_files = alphalist["alpha_temp_file_names"];
+  LogicalVector has_alpha = alphalist["alpha_tex_bool"];
+  
   GetRNGstate();
   random_gen rng(unif_rand() * std::pow(2,32));
   camera cam(lookfrom, lookat, vec3(camera_up(0),camera_up(1),camera_up(2)), fov, float(nx)/float(ny), 
@@ -226,8 +230,12 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
   if(verbose) {
     Rcpp::Rcout << "Building BVH: ";
   }
+  
   std::vector<Float* > textures;
   std::vector<int* > nx_ny_nn;
+  std::vector<Float* > alpha_textures;
+  std::vector<int* > nx_ny_nn_alpha;
+  
   
   for(int i = 0; i < n; i++) {
     if(isimage(i)) {
@@ -242,15 +250,28 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
       textures.push_back(nullptr);
       nx_ny_nn.push_back(nullptr);
     }
+    if(has_alpha(i)) {
+      int nxa, nya, nna;
+      Rcpp::Rcout << i << " " << alpha_files(i) << "\n";
+      Float* tex_data_alpha = stbi_loadf(alpha_files(i), &nxa, &nya, &nna, 4);
+      alpha_textures.push_back(tex_data_alpha);
+      nx_ny_nn_alpha.push_back(new int[3]);
+      nx_ny_nn_alpha[i][0] = nxa;
+      nx_ny_nn_alpha[i][1] = nya;
+      nx_ny_nn_alpha[i][2] = nna;
+    } else {
+      alpha_textures.push_back(nullptr);
+      nx_ny_nn_alpha.push_back(nullptr);
+    }
   }
   hitable *worldbvh = build_scene(type, radius, shape, position_list,
                                 properties, velocity, moving,
                                 n,shutteropen,shutterclose,
                                 ischeckered, checkercolors, 
                                 gradient_info,
-                                noise, isnoise,noisephase,noiseintensity, noisecolorlist,
+                                noise, isnoise, noisephase, noiseintensity, noisecolorlist,
                                 angle, 
-                                isimage, 
+                                isimage, has_alpha, alpha_textures, nx_ny_nn_alpha,
                                 textures, nx_ny_nn,
                                 lightintensity, isflipped,
                                 isvolume, voldensity, order_rotation_list, 
@@ -297,7 +318,7 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
     }
   } else {
     background_texture = new constant_texture(vec3(0,0,0));
-    background_material = new lambertian(background_texture);
+    background_material = new lambertian(background_texture, false, nullptr);
     background_sphere = new sphere(world_center, world_radius, background_material);
   }
   finish = std::chrono::high_resolution_clock::now();
@@ -354,7 +375,9 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
   } else {
     numbertosample = 0;
   }
-
+  if(verbose) {
+    Rcpp::Rcout << "Starting Raytracing:\n ";
+  }
   RProgress::RProgress pb("Raytracing [:bar] ETA: :eta");
   
   if(progress_bar) {
@@ -517,6 +540,7 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
       pool.join();
     }
   }
+
   if(verbose) {
     Rcpp::Rcout << "Cleaning up memory..." << "\n";
   }
@@ -530,6 +554,10 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
       stbi_image_free(textures[i]);
       delete nx_ny_nn[i];
     } 
+    if(has_alpha(i)) {
+      stbi_image_free(alpha_textures[i]);
+      delete nx_ny_nn_alpha[i];
+    }
   }
   PutRNGstate();
   finish = std::chrono::high_resolution_clock::now();

@@ -150,4 +150,26 @@ public:
   bool aligned_v;
 };
 
+class alpha_texture {
+public:
+  alpha_texture() {}
+  alpha_texture(Float *pixels, int A, int B, int nn) : data(pixels), nx(A), ny(B), channels(nn) {}
+  virtual vec3 value(Float u, Float v, const vec3& p) const;
+  Float *data;
+  int nx, ny, channels;
+};
+
+vec3 alpha_texture::value(Float u, Float v, const vec3& p) const {
+  int i = u * nx;
+  int j = (1-v) * ny - 0.001;
+  if (i < 0) i = 0;
+  if (j < 0) j = 0;
+  if (i > nx-1) i = nx-1;
+  if (j > ny-1) j = ny-1;
+  // Float r = data[channels*i + channels*nx*j];
+  // Float g = data[channels*i + channels*nx*j+1];
+  // Float b = data[channels*i + channels*nx*j+2];
+  return(vec3(0,0,0));
+}
+
 #endif

@@ -137,41 +137,41 @@ public:
           
           if(has_normals && tempnormal) {
             if(material_num == -1) {
-              tex = new lambertian(new constant_texture(vec3(1,1,1)));
+              tex = new lambertian(new constant_texture(vec3(1,1,1)), false, nullptr);
             } else {
               if(has_transparency[material_num]) {
                 tex = new dielectric(specular_materials[material_num], ior_materials[material_num], rng);;
               } else if(has_diffuse[material_num]) {
                 if(has_single_diffuse[material_num]) {
-                  tex = new lambertian(new constant_texture(diffuse_materials[material_num]));
+                  tex = new lambertian(new constant_texture(diffuse_materials[material_num]), false, nullptr);
                 } else {
                   tex = new lambertian(new triangle_image_texture(obj_materials[material_num],
                                         nx_mat[material_num], ny_mat[material_num],nn_mat[material_num],
-                                        tx[0],ty[0], tx[1],ty[1],tx[2],ty[2]));
+                                        tx[0],ty[0], tx[1],ty[1],tx[2],ty[2]), false, nullptr);
                 }
               } else {
-                tex = new lambertian(new constant_texture(vec3(1,1,1)));
+                tex = new lambertian(new constant_texture(vec3(1,1,1)), false, nullptr);
               }
             }
             triangles.push_back(new triangle(tris[0],tris[1],tris[2], normals[0], normals[1], normals[2], true, tex));
           } else {
             if(material_num == -1) {
-              tex = new lambertian(new constant_texture(diffuse_materials[material_num]));
+              tex = new lambertian(new constant_texture(diffuse_materials[material_num]), false, nullptr);
             } else {
               if(has_transparency[material_num]) {
                 tex = new dielectric(specular_materials[material_num], ior_materials[material_num], rng);;
               } else if(has_diffuse[material_num]) {
                 if(has_single_diffuse[material_num]) {
-                  tex = new lambertian(new constant_texture(diffuse_materials[material_num]));
+                  tex = new lambertian(new constant_texture(diffuse_materials[material_num]), false, nullptr);
                 } else {
                   tex = new lambertian(new triangle_image_texture(obj_materials[material_num],
                                                                   nx_mat[material_num],ny_mat[material_num],nn_mat[material_num],
                                                                   tx[0],ty[0],
                                                                   tx[1],ty[1],
-                                                                  tx[2],ty[2]));
+                                                                  tx[2],ty[2]), false, nullptr);
                 }
               } else {
-                tex = new lambertian(new constant_texture(vec3(1,1,1)));
+                tex = new lambertian(new constant_texture(vec3(1,1,1)), false, nullptr);
               }
             }
             triangles.push_back(new triangle(tris[0],tris[1],tris[2], true, tex));

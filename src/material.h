@@ -52,11 +52,20 @@ class material {
       return(vec3(0,0,0));
     }
     virtual ~material() {};
+    bool hasAlphaTexture;
+    alpha_texture* alphaTexture;
 };
 
 class lambertian : public material {
   public: 
-    lambertian(texture *a) : albedo(a) {}
+    // lambertian(texture *a) : albedo(a), hasAlphaTexture(false), alphaTexture(nullptr) {
+    //   Rcpp::Rcout << "inside no alpha " << hasAlphaTexture << " " << typeid(alphaTexture).name() << "\n";
+    // 
+    // }
+    lambertian(texture *a, bool _hasAlphaTexture, alpha_texture *_alphaTexture) : 
+               albedo(a), hasAlphaTexture(_hasAlphaTexture), alphaTexture(_alphaTexture) {
+      Rcpp::Rcout << "inside alpha " << hasAlphaTexture << " " << typeid(alphaTexture).name() << "\n";
+    }
     ~lambertian() {
       // Rcpp::Rcout << "delete albedo" << "\n";
       if(albedo) delete albedo;
@@ -78,11 +87,19 @@ class lambertian : public material {
     }
     
     texture *albedo;
+    bool hasAlphaTexture;
+    alpha_texture *alphaTexture;
 };
 
 class metal : public material {
   public:
-    metal(const vec3& a, Float f) : albedo(a) { if (f < 1) fuzz = f; else fuzz = 1;}
+    metal(const vec3& a, Float f) : albedo(a), hasAlphaTexture(false), alphaTexture(nullptr) { 
+      if (f < 1) fuzz = f; else fuzz = 1;
+    }
+    metal(const vec3& a, Float f, alpha_texture *_alphaTexture) : albedo(a), 
+          hasAlphaTexture(true), alphaTexture(_alphaTexture) { 
+      if (f < 1) fuzz = f; else fuzz = 1;
+    }
     virtual bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng) {
       vec3 reflected = reflect(unit_vector(r_in.direction()),hrec.normal);
       srec.specular_ray = ray(hrec.p, reflected + fuzz * rng.random_in_unit_sphere(), r_in.time());
@@ -93,11 +110,17 @@ class metal : public material {
     }
     vec3 albedo;
     Float fuzz;
+    bool hasAlphaTexture;
+    alpha_texture *alphaTexture;
 };
 // 
 class dielectric : public material {
   public:
-    dielectric(const vec3& a, Float ri, random_gen& rng) : ref_idx(ri), albedo(a), rng(rng) {};
+    dielectric(const vec3& a, Float ri, random_gen& rng) : ref_idx(ri), albedo(a), rng(rng), 
+               hasAlphaTexture(false), alphaTexture(nullptr) {};
+    dielectric(const vec3& a, Float ri, random_gen& rng, alpha_texture *_alphaTexture) : 
+               ref_idx(ri), albedo(a), rng(rng), 
+               hasAlphaTexture(true), alphaTexture(_alphaTexture) {};
     virtual bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng) {
       srec.is_specular = true;
       vec3 outward_normal;
@@ -131,11 +154,15 @@ class dielectric : public material {
     Float ref_idx;
     vec3 albedo;
     random_gen rng;
+    bool hasAlphaTexture;
+    alpha_texture *alphaTexture;
 };
 
 class diffuse_light : public material {
 public:
-  diffuse_light(texture *a) : emit(a) {}
+  diffuse_light(texture *a) : emit(a), hasAlphaTexture(false), alphaTexture(nullptr)  {}
+  diffuse_light(texture *a, bool hasAlphaTexture, alpha_texture *_alphaTexture) : 
+                emit(a), hasAlphaTexture(true), alphaTexture(_alphaTexture) {}
   ~diffuse_light() {
     // Rcpp::Rcout << "delete diffuse_light" << "\n";
     if(emit) delete emit;
@@ -151,6 +178,8 @@ public:
     }
   }
   texture *emit;
+  bool hasAlphaTexture;
+  alpha_texture *alphaTexture;
 };
 
 class isotropic : public material {
@@ -174,7 +203,13 @@ public:
 
 class orennayar : public material {
 public:
-  orennayar(texture *a, Float sigma) : albedo(a) {
+  orennayar(texture *a, Float sigma) : albedo(a), hasAlphaTexture(false), alphaTexture(nullptr) {
+    Float sigma2 = sigma*sigma;
+    A = 1.0f - (sigma2 / (2.0f * (sigma2 + 0.33f)));
+    B = 0.45f * sigma2 / (sigma2 + 0.09f);
+  }
+  orennayar(texture *a, Float sigma, alpha_texture *_alphaTexture) : albedo(a), 
+            hasAlphaTexture(true), alphaTexture(_alphaTexture) {
     Float sigma2 = sigma*sigma;
     A = 1.0f - (sigma2 / (2.0f * (sigma2 + 0.33f)));
     B = 0.45f * sigma2 / (sigma2 + 0.09f);
@@ -221,6 +256,8 @@ public:
   }
   Float A, B;
   texture *albedo;
+  bool hasAlphaTexture;
+  alpha_texture *alphaTexture;
 };
 
 
