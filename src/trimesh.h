@@ -140,7 +140,7 @@ public:
               tex = new lambertian(new constant_texture(vec3(1,1,1)));
             } else {
               if(has_transparency[material_num]) {
-                tex = new dielectric(specular_materials[material_num], ior_materials[material_num], rng);;
+                tex = new dielectric(specular_materials[material_num], ior_materials[material_num], vec3(0,0,0), rng);;
               } else if(has_diffuse[material_num]) {
                 if(has_single_diffuse[material_num]) {
                   tex = new lambertian(new constant_texture(diffuse_materials[material_num]));
@@ -159,7 +159,7 @@ public:
               tex = new lambertian(new constant_texture(diffuse_materials[material_num]));
             } else {
               if(has_transparency[material_num]) {
-                tex = new dielectric(specular_materials[material_num], ior_materials[material_num], rng);;
+                tex = new dielectric(specular_materials[material_num], ior_materials[material_num], vec3(0,0,0), rng);;
               } else if(has_diffuse[material_num]) {
                 if(has_single_diffuse[material_num]) {
                   tex = new lambertian(new constant_texture(diffuse_materials[material_num]));
@@ -289,7 +289,7 @@ public:
               tex = new orennayar(new constant_texture(vec3(1,1,1)), sigma);
             } else {
               if(has_transparency[material_num]) {
-                tex = new dielectric(specular_materials[material_num], ior_materials[material_num], rng);;
+                tex = new dielectric(specular_materials[material_num], ior_materials[material_num], vec3(0,0,0), rng);;
               } else if(has_diffuse[material_num]) {
                 if(has_single_diffuse[material_num]) {
                   tex = new orennayar(new constant_texture(diffuse_materials[material_num]), sigma);
@@ -308,7 +308,7 @@ public:
               tex = new orennayar(new constant_texture(diffuse_materials[material_num]), sigma);
             } else {
               if(has_transparency[material_num]) {
-                tex = new dielectric(specular_materials[material_num], ior_materials[material_num], rng);;
+                tex = new dielectric(specular_materials[material_num], ior_materials[material_num], vec3(0,0,0), rng);;
               } else if(has_diffuse[material_num]) {
                 if(has_single_diffuse[material_num]) {
                   tex = new orennayar(new constant_texture(diffuse_materials[material_num]), sigma);

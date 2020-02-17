@@ -4,13 +4,21 @@
 \alias{dielectric}
 \title{Dielectric (glass) Material}
 \usage{
-dielectric(color = "white", refraction = 1.5, importance_sample = FALSE)
+dielectric(
+  color = "white",
+  refraction = 1.5,
+  attenuation = c(0, 0, 0),
+  importance_sample = FALSE
+)
 }
 \arguments{
 \item{color}{Default `white`. The color of the surface. Can be either
 a hexadecimal code, R color string, or a numeric rgb vector listing three intensities between `0` and `1`.}
 
 \item{refraction}{Default `1.5`. The index of refraction.}
+
+\item{attenuation}{Default `c(0,0,0)`. The Beer-Lambert color-channel specific exponential attenuation 
+through the material. Higher numbers will result in less of that color making it through the material.}
 
 \item{importance_sample}{Default `FALSE`. If `TRUE`, the object will be sampled explicitly during 
 the rendering process. If the object is particularly important in contributing to the light paths
@@ -25,8 +33,7 @@ Dielectric (glass) Material
 }
 \examples{
 #Generate a checkered ground
-scene = generate_ground(depth=-0.5,
-                        material=diffuse(color="white", checkercolor="grey30",checkerperiod=2))
+scene = generate_ground(depth=-0.5, material = diffuse(checkercolor="grey30",checkerperiod=2))
 \donttest{
 render_scene(scene,parallel=TRUE)
 }
@@ -55,5 +62,17 @@ scene \%>\%
                      material=light(intensity=15),
                      angle=c(0,-90,45), order_rotation = c(3,2,1))) \%>\%
   render_scene(parallel=TRUE,aperture=0, ambient_light=FALSE,samples=1000)
+}
+
+#Color glass using Beer-Lambert attenuation, which attenuates light on a per-channel
+#basis as it travels through the material. This effect is what gives some types of glass
+#a green glow at the edges. We will get this effect by setting a lower attenuation value 
+#for the `green` channel in the dielectric `attenuation` argument.
+\donttest{
+generate_ground(depth=-0.5,material=diffuse(checkercolor="grey30",checkerperiod=2)) \%>\%
+  add_object(sphere(z=-5,x=-0.5,y=1,material=light(intensity=10))) \%>\%
+  add_object(cube(y=0.3,ywidth=0.1,xwidth=2,zwidth=2,
+                  material=dielectric(attenuation=c(1.2,0.2,1.2)),angle=c(45,110,0))) \%>\%
+  render_scene(parallel=TRUE, samples = 1000)
 }
 }

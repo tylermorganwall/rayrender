@@ -154,8 +154,8 @@ hitable *build_scene(IntegerVector& type,
       tex = new metal(vec3(tempvector(0),tempvector(1),tempvector(2)),tempvector(3));
       prop_len = 3;
     } else if (type(i) == 3) {
-      tex = new dielectric(vec3(tempvector(0),tempvector(1),tempvector(2)),tempvector(3), rng);
-      prop_len = 3;
+      tex = new dielectric(vec3(tempvector(0),tempvector(1),tempvector(2)),tempvector(3), vec3(tempvector(4),tempvector(5),tempvector(6)), rng);
+      prop_len = 6;
     } else if (type(i) == 4) {
       if(isimage(i)) {
         tex = new orennayar(new image_texture(textures[i],nvec[i][0],nvec[i][1],nvec[i][2]), sigma(i));
@@ -566,7 +566,9 @@ hitable* build_imp_sample(IntegerVector& type,
     gpivot = vec3(0,0,0); 
     gtrans = vec3(0,0,0); 
   }
-  if(type(i) != 1 && type(i) != 5) {
+  if(type(i) == 3) {
+    prop_len = 6;
+  } else if(type(i) != 1 && type(i) != 5) {
     prop_len = 3;
   }
   
