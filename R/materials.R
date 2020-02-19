@@ -179,6 +179,7 @@ metal = function(color = "#ffffff", fuzz = 0,  importance_sample = FALSE) {
 #' a hexadecimal code, R color string, or a numeric rgb vector listing three intensities between `0` and `1`.
 #' @param attenuation Default `c(0,0,0)`. The Beer-Lambert color-channel specific exponential attenuation 
 #' through the material. Higher numbers will result in less of that color making it through the material.
+#' Note: This assumes the object has a closed surface.
 #' @param refraction Default `1.5`. The index of refraction.
 #' @param importance_sample Default `FALSE`. If `TRUE`, the object will be sampled explicitly during 
 #' the rendering process. If the object is particularly important in contributing to the light paths

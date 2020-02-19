@@ -18,7 +18,8 @@ a hexadecimal code, R color string, or a numeric rgb vector listing three intens
 \item{refraction}{Default `1.5`. The index of refraction.}
 
 \item{attenuation}{Default `c(0,0,0)`. The Beer-Lambert color-channel specific exponential attenuation 
-through the material. Higher numbers will result in less of that color making it through the material.}
+through the material. Higher numbers will result in less of that color making it through the material.
+Note: This assumes the object has a closed surface.}
 
 \item{importance_sample}{Default `FALSE`. If `TRUE`, the object will be sampled explicitly during 
 the rendering process. If the object is particularly important in contributing to the light paths
@@ -67,7 +68,7 @@ scene \%>\%
 #Color glass using Beer-Lambert attenuation, which attenuates light on a per-channel
 #basis as it travels through the material. This effect is what gives some types of glass
 #a green glow at the edges. We will get this effect by setting a lower attenuation value 
-#for the `green` channel in the dielectric `attenuation` argument.
+#for the `green` (second) channel in the dielectric `attenuation` argument.
 \donttest{
 generate_ground(depth=-0.5,material=diffuse(checkercolor="grey30",checkerperiod=2)) \%>\%
   add_object(sphere(z=-5,x=-0.5,y=1,material=light(intensity=10))) \%>\%

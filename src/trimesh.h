@@ -374,6 +374,12 @@ public:
             n--;
             continue;
           }
+          if((normals[0].x() == 0 && normals[0].y() == 0 && normals[0].z() == 0) ||
+             (normals[1].x() == 0 && normals[1].y() == 0 && normals[1].z() == 0) ||
+             (normals[2].x() == 0 && normals[2].y() == 0 && normals[2].z() == 0)) {
+            has_normals = false;
+          }
+          
           if(has_normals) {
             triangles.push_back(new triangle(tris[0],tris[1],tris[2],
                                              normals[0],normals[1],normals[2], 

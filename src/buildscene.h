@@ -154,7 +154,8 @@ hitable *build_scene(IntegerVector& type,
       tex = new metal(vec3(tempvector(0),tempvector(1),tempvector(2)),tempvector(3));
       prop_len = 3;
     } else if (type(i) == 3) {
-      tex = new dielectric(vec3(tempvector(0),tempvector(1),tempvector(2)),tempvector(3), vec3(tempvector(4),tempvector(5),tempvector(6)), rng);
+      tex = new dielectric(vec3(tempvector(0),tempvector(1),tempvector(2)), tempvector(3), 
+                           vec3(tempvector(4),tempvector(5),tempvector(6)), rng);
       prop_len = 6;
     } else if (type(i) == 4) {
       if(isimage(i)) {
