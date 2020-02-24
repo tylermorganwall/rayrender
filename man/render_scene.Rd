@@ -27,6 +27,7 @@ render_scene(
   parallel = TRUE,
   environment_light = NULL,
   rotate_env = 0,
+  depth_map = FALSE,
   progress = interactive(),
   verbose = FALSE,
   debug = NULL
@@ -84,7 +85,8 @@ Default `gamma` solely adjusts for gamma and clamps values greater than 1 to 1.
 `reinhold` scales values by their individual color channels `color/(1+color)` and then performs the 
 gamma adjustment. `uncharted` uses the mapping developed for Uncharted 2 by John Hable. `hbd` uses an
 optimized formula by Jim Hejl and Richard Burgess-Dawson. Note: If set to anything other than `gamma`,
-objects with material `light()` may not be anti-aliased.}
+objects with material `light()` may not be anti-aliased. If `raw`, the raw array of HDR values will be
+returned, rather than an image or a plot.}
 
 \item{parallel}{Default `FALSE`. If `TRUE`, it will use all available cores to render the image
 (or the number specified in `options("cores")` if that option is not `NULL`).}
@@ -93,6 +95,8 @@ objects with material `light()` may not be anti-aliased.}
 the scene. Supports both HDR (`.hdr`) and low-dynamic range (`.png`, `.jpg`) images.}
 
 \item{rotate_env}{Default `0`. The number of degrees to rotate the environment map around the scene.}
+
+\item{depth_map}{Default `FALSE`. Will return a depth map of rays into the scene instead of an image.}
 
 \item{progress}{Default `TRUE` if interactive session, `FALSE` otherwise.}
 

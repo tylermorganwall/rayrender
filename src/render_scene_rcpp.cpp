@@ -20,9 +20,6 @@ using namespace Rcpp;
 // [[Rcpp::depends(RcppThread)]]
 #include "RcppThread.h"
 
-#include <chrono>
-#include <thread>
-
 inline vec3 de_nan(const vec3& c) {
   vec3 temp = c;
   if(std::isnan(c[0])) temp.e[0] = 0.0f;
@@ -172,6 +169,14 @@ float debug_bvh(const ray& r, hitable *world, random_gen rng) {
 }
 #endif
 
+float calculate_depth(const ray& r, hitable *world, random_gen rng) {
+  hit_record hrec;
+  if(world->hit(r, 0.00001, FLT_MAX, hrec, rng)) {
+    return((r.origin()-hrec.p).length());
+  } else {
+    return(INFINITY);
+  }
+}
 
 // [[Rcpp::export]]
 List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
@@ -202,7 +207,7 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
                       bool progress_bar, int numbercores, int debugval, 
                       bool hasbackground, CharacterVector& background, List& scale_list,
                       NumericVector ortho_dimensions, NumericVector sigmavec,
-                      float rotate_env, bool verbose) {
+                      float rotate_env, bool verbose, bool depthmap) {
   auto startfirst = std::chrono::high_resolution_clock::now();
   NumericMatrix routput(nx,ny);
   NumericMatrix goutput(nx,ny);
@@ -360,7 +365,26 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
   if(progress_bar) {
     pb.set_total(ny);
   }
-  if(debugval == 1) {
+  if(depthmap) {
+    Float depth_into_scene = 0.0;
+    for(int j = ny - 1; j >= 0; j--) {
+      for(int i = 0; i < nx; i++) {
+        depth_into_scene = 0;
+        Float u = Float(i) / Float(nx);
+        Float v = Float(j) / Float(ny);
+        ray r;
+        if(fov != 0) {
+          r = cam.get_ray(u,v);
+        } else {
+          r = ocam.get_ray(u,v);
+        }
+        depth_into_scene = calculate_depth(r, &world, rng);
+        routput(i,j) = depth_into_scene;
+        goutput(i,j) = depth_into_scene;
+        boutput(i,j) = depth_into_scene;
+      }
+    }
+  } else if(debugval == 1) {
 #ifdef DEBUGBVH
 
     Float bvh_intersections = 0.0;
@@ -376,7 +400,7 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
           r = ocam.get_ray(u,v);
         }
         bvh_intersections = 0.0;
-        bvh_intersections = debug_bvh(r, world, rng);
+        bvh_intersections = debug_bvh(r, &world, rng);
         routput(i,j) = bvh_intersections;
         goutput(i,j) = bvh_intersections;
         boutput(i,j) = bvh_intersections;
@@ -426,24 +450,9 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
             }
           }
           col /= Float(ns);
-          if(toneval == 1) {
-            routput(i,j) = std::pow(col[0],1.0f/2.2f);
-            goutput(i,j) = std::pow(col[1],1.0f/2.2f);
-            boutput(i,j) = std::pow(col[2],1.0f/2.2f);
-          } else if (toneval == 2) {
-            float avg = (col[0]+col[1]+col[2])/3.0f;
-            routput(i,j) = reinhard(col[0],avg);
-            goutput(i,j) = reinhard(col[1],avg);
-            boutput(i,j) = reinhard(col[2],avg);
-          } else if (toneval == 3) {
-            routput(i,j) = hable(col[0]);
-            goutput(i,j) = hable(col[1]);
-            boutput(i,j) = hable(col[2]);
-          } else {
-            routput(i,j) = hbd(col[0]);
-            goutput(i,j) = hbd(col[1]);
-            boutput(i,j) = hbd(col[2]);
-          }
+          routput(i,j) = col[0];
+          goutput(i,j) = col[1];
+          boutput(i,j) = col[2];
         }
       }
     } else {
@@ -455,7 +464,7 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
       auto worker = [&routput, &goutput, &boutput,
                      ambient_light, nx, ny, ns, seeds, fov,
                      &cam, &ocam, backgroundhigh, backgroundlow, &world, &hlist,
-                     numbertosample, clampval, toneval, tonemap, progress_bar, 
+                     numbertosample, clampval, tonemap, progress_bar, 
                      numbercores, background_texture] (int j) {
       // auto worker = [nx, ns] (int j) {
         if(progress_bar && j % numbercores == 0) {
@@ -491,24 +500,9 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
             }
           }
           col /= Float(ns);
-          if(toneval == 1) {
-            routput(i,j) = std::pow(col[0],1.0f/2.2f);
-            goutput(i,j) = std::pow(col[1],1.0f/2.2f);
-            boutput(i,j) = std::pow(col[2],1.0f/2.2f);
-          } else if (toneval == 2) {
-            float max = (col[0]+col[1]+col[2])/3.0f;
-            routput(i,j) = reinhard(col[0],max);
-            goutput(i,j) = reinhard(col[1],max);
-            boutput(i,j) = reinhard(col[2],max);
-          } else if (toneval == 3) {
-            routput(i,j) = hable(col[0]);
-            goutput(i,j) = hable(col[1]);
-            boutput(i,j) = hable(col[2]);
-          } else {
-            routput(i,j) = hbd(col[0]);
-            goutput(i,j) = hbd(col[1]);
-            boutput(i,j) = hbd(col[2]);
-          }
+          routput(i,j) = col[0];
+          goutput(i,j) = col[1];
+          boutput(i,j) = col[2];
         }
       };
       for(int j = ny - 1; j >= 0; j--) {
@@ -540,3 +534,34 @@ List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light,
   return(List::create(_["r"] = routput, _["g"] = goutput, _["b"] = boutput));
 }
 
+
+// [[Rcpp::export]]
+List tonemap_image(int nx, int ny, 
+                   NumericMatrix routput, NumericMatrix goutput, NumericMatrix boutput, 
+                   int toneval) {
+  for(int j = ny - 1; j >= 0; j--) {
+    for(int i = 0; i < nx; i++) {
+      if(toneval == 1) {
+        routput(i,j) = std::pow(routput(i,j),1.0f/2.2f);
+        goutput(i,j) = std::pow(goutput(i,j),1.0f/2.2f);
+        boutput(i,j) = std::pow(boutput(i,j),1.0f/2.2f);
+      } else if (toneval == 2) {
+        float max = (routput(i,j)+goutput(i,j)+boutput(i,j))/3.0f;
+        routput(i,j) = reinhard(routput(i,j),max);
+        goutput(i,j) = reinhard(goutput(i,j),max);
+        boutput(i,j) = reinhard(boutput(i,j),max);
+      } else if (toneval == 3) {
+        routput(i,j) = hable(routput(i,j));
+        goutput(i,j) = hable(goutput(i,j));
+        boutput(i,j) = hable(boutput(i,j));
+      } else if (toneval == 4) {
+        routput(i,j) = hbd(routput(i,j));
+        goutput(i,j) = hbd(goutput(i,j));
+        boutput(i,j) = hbd(boutput(i,j));
+      } else {
+        //do nothing
+      }
+    }
+  }
+  return(List::create(_["r"] = routput, _["g"] = goutput, _["b"] = boutput));
+}
