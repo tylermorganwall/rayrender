@@ -37,6 +37,12 @@
 #' optimized formula by Jim Hejl and Richard Burgess-Dawson. Note: If set to anything other than `gamma`,
 #' objects with material `light()` may not be anti-aliased. If `raw`, the raw array of HDR values will be
 #' returned, rather than an image or a plot.
+#' @param bloom Default `TRUE`. Set to `FALSE` to get the raw, pathtraced image. Otherwise,
+#' this performs a convolution of the HDR image of the scene with a sharp, long-tailed
+#' exponential kernel, which does not visibly affect dimly pixels, but does result in emitters light
+#' slightly bleeding into adjacent pixels. This provides an antialiasing effect for lights, even when
+#' tonemapping the image. Pass in a matrix to specify the convolution kernel manually, or a positive number
+#' to control the intensity of the bloom (higher number = more bloom).
 #' @param environment_light Default `NULL`. An image to be used for the background for rays that escape
 #' the scene. Supports both HDR (`.hdr`) and low-dynamic range (`.png`, `.jpg`) images.
 #' @param rotate_env Default `0`. The number of degrees to rotate the environment map around the scene.
@@ -137,9 +143,13 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
                         aperture = 0.1, clamp_value = Inf,
                         filename = NULL, backgroundhigh = "#80b4ff",backgroundlow = "#ffffff",
                         shutteropen = 0.0, shutterclose = 1.0, focal_distance=NULL, ortho_dimensions = c(1,1),
-                        tonemap ="gamma", parallel=TRUE,
+                        tonemap ="gamma", bloom = TRUE, parallel=TRUE, 
                         environment_light = NULL, rotate_env = 0, depth_map = FALSE,
                         progress = interactive(), verbose = FALSE, debug = NULL) { 
+  if(verbose) {
+    currenttime = proc.time()
+    cat("Building Scene: ")
+  }
   #Check if Cornell Box scene and set camera if user did not:
   if(!is.null(attr(scene,"cornell"))) {
     corn_message = "Setting default values for Cornell box: "
@@ -294,6 +304,9 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
       hasbackground = FALSE
       warning("file '", environment_light, "' cannot be found, not using background image.")
     }
+    if(dir.exists(environment_light)) {
+      stop("environment_light argument '", environment_light, "' is a directory, not a file.")
+    }
   } else {
     hasbackground = FALSE
     backgroundstring = ""
@@ -335,6 +348,10 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
   if(fov == 0) {
     assertthat::assert_that(length(ortho_dimensions) == 2)
   }
+  if(verbose) {
+    buildingtime = proc.time() - currenttime
+    cat(sprintf("%0.3f seconds \n",buildingtime[3]))
+  }
   rgb_mat = render_scene_rcpp(nx = width, ny = height, ns = samples, fov = fov, ambient_light = ambient_light,
                              lookfromvec = lookfrom, lookatvec = lookat, aperture=aperture,camera_up = camera_up,
                              type = typevec, shape = shapevec, radius = rvec, 
@@ -361,9 +378,9 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
                              ortho_dimensions = ortho_dimensions, sigmavec = sigmavec, rotate_env = rotate_env,
                              verbose = verbose, depthmap = depth_map) 
   full_array = array(0,c(ncol(rgb_mat$r),nrow(rgb_mat$r),3))
-  full_array[,,1] = rgb_mat$r
-  full_array[,,2] = rgb_mat$g
-  full_array[,,3] = rgb_mat$b
+  full_array[,,1] = flipud(t(rgb_mat$r))
+  full_array[,,2] = flipud(t(rgb_mat$g))
+  full_array[,,3] = flipud(t(rgb_mat$b))
   if(depth_map) {
     returnmat = full_array[,,1]
     returnmat[is.infinite(returnmat)] = NA
@@ -371,12 +388,12 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
   }
   if(!is.matrix(bloom)) {
     if(is.numeric(bloom) && length(bloom) == 1) {
-      kernel = rayfocus::generate_2d_exponential(0.1,11,3*1/bloom)
-      full_array = aperm(rayfocus::render_convolution(image = full_array, kernel = kernel, min_value = 1, plot=FALSE),c(2,1,3))
+      kernel = rayimage::generate_2d_exponential(0.1,11,3*1/bloom)
+      full_array = rayimage::render_convolution(image = full_array, kernel = kernel, min_value = 1, preview=FALSE)
     } else {
       if(bloom) {
-        kernel = rayfocus::generate_2d_exponential(0.1,11,3)
-        full_array = aperm(rayfocus::render_convolution(image = full_array, kernel = kernel, min_value = 1, plot=FALSE),c(2,1,3))
+        kernel = rayimage::generate_2d_exponential(0.1,11,3)
+        full_array = rayimage::render_convolution(image = full_array, kernel = kernel, min_value = 1, preview=FALSE)
       }
     }
   } else {
@@ -391,16 +408,15 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
       newkernel[1:nrow(kernel),] = kernel
       kernel = newkernel
     }
-    full_array = aperm(rayfocus::render_convolution(image = full_array, kernel = kernel,  min_value = 1, plot=FALSE),c(2,1,3))
+    full_array = rayimage::render_convolution(image = full_array, kernel = kernel,  min_value = 1, preview=FALSE)
   }
-  tonemapped_channels = tonemap_image(width,height,full_array[,,1],full_array[,,2],full_array[,,3],toneval)
-  full_array = array(0,c(ncol(tonemapped_channels$r),nrow(tonemapped_channels$r),3))
-  full_array[,,1] = t(tonemapped_channels$r)
-  full_array[,,2] = t(tonemapped_channels$g)
-  full_array[,,3] = t(tonemapped_channels$b)
-  
+  tonemapped_channels = tonemap_image(height,width,full_array[,,1],full_array[,,2],full_array[,,3],toneval)
+  full_array = array(0,c(nrow(tonemapped_channels$r),ncol(tonemapped_channels$r),3))
+  full_array[,,1] = tonemapped_channels$r
+  full_array[,,2] = tonemapped_channels$g
+  full_array[,,3] = tonemapped_channels$b
   if(toneval == 5) {
-    return(flipud(full_array))
+    return(full_array)
   }
 
   array_from_mat = array(full_array,dim=c(nrow(full_array),ncol(full_array),3))
@@ -412,8 +428,8 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
     array_from_mat[array_from_mat < 0] = 0
   }
   if(is.null(filename)) {
-    plot_map(flipud(array_from_mat))
+    plot_map(array_from_mat)
   } else {
-    save_png(flipud(array_from_mat),filename)
+    save_png(array_from_mat,filename)
   }
 }

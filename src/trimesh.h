@@ -22,14 +22,11 @@ class trimesh : public hitable {
 public:
   trimesh() {}
   ~trimesh() {
-    // Rcpp::Rcout << "deleting trimesh " << obj_materials.size() << "\n";
     delete tri_mesh_bvh;
     for(auto mat : obj_materials) {
       if(mat) stbi_image_free(mat);
     }
-    if(mat_ptr) {
-      delete mat_ptr;
-    }
+    delete mat_ptr;
   }
   trimesh(std::string inputfile, std::string basedir, Float scale, 
           Float shutteropen, Float shutterclose, random_gen rng) {

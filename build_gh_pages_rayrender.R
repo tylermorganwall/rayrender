@@ -1,4 +1,4 @@
-pkgdown::build_site(run_dont_run = TRUE)
+pkgdown::build_site(run_dont_run = TRUE,lazy  = TRUE)
 system('echo "www.rayrender.net" >> docs/CNAME')
 system("git checkout -b gh-pages")
 system("git add -f docs")

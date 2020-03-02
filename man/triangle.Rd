@@ -18,6 +18,7 @@ triangle(
   angle = c(0, 0, 0),
   order_rotation = c(1, 2, 3),
   flipped = FALSE,
+  reversed = FALSE,
   scale = c(1, 1, 1)
 )
 }
@@ -52,6 +53,9 @@ functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}
 
 \item{flipped}{Default `FALSE`. Whether to flip the normals.}
 
+\item{reversed}{Default `FALSE`. Similar to the `flipped` argument, but this reverses the handedness of the 
+triangle so it will be oriented in the opposite direction.}
+
 \item{scale}{Default `c(1, 1, 1)`. Scale transformation in the x, y, and z directions. If this is a single value,
 number, the object will be scaled uniformly.
 Note: emissive objects may not currently function correctly when scaled.}
@@ -71,7 +75,7 @@ generate_cornell() \%>\%
   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
                ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
 }
-#Pass individual colors to each vertex:
+#Pass individual colors to each vertex: 
 \donttest{
 generate_cornell() \%>\%
   add_object(triangle(v1 = c(100, 100, 100), v2 = c(555/2, 455, 455), v3 = c(455, 100, 100),

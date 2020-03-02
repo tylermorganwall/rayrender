@@ -55,11 +55,7 @@ vec3 color(const ray& r, hitable *world, hitable *hlist, int depth, bool tonemap
              color(scattered, world,
                   hlist, depth + 1, tonemap, rng) / pdf_val);
     } else {
-      if(depth == 0 && !tonemap) {
-        return(clamp(emitted,0, 1));
-      } else {
-        return(emitted);
-      }
+      return(emitted);
     }
   } else {
     return(vec3(0,0,0));

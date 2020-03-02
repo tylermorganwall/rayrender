@@ -82,6 +82,6 @@ generate_ground(material = diffuse(checkercolor = "grey50")) \%>\%
   render_scene(parallel = TRUE, samples = 400, ambient = TRUE, 
                backgroundhigh="blue", backgroundlow="red",
                aperture = 0.05, fov = 32, lookfrom = c(0, 2, 10),
-               lookat = c(0,1,0))
+               lookat = c(0,1,0)) 
 }
 }

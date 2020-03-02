@@ -17,3 +17,5 @@
 ^.*yml$
 ^docs$
 ^pkgdown$
+^.*\.png$
+^.*\.mp4$
