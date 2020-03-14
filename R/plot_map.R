@@ -39,6 +39,10 @@ plot_map = function(hillshade, rotate=0, ...) {
         hillshade = newarrayt
       }
     }
+    if(any(hillshade > 1 | hillshade < 0,na.rm = TRUE)) {
+      hillshade[hillshade > 1] = 1
+      hillshade[hillshade < 0] = 0
+    }
     suppressWarnings(raster::plotRGB(raster::brick(hillshade, xmn = 0.5, xmx = dim(hillshade)[2]+ 0.5,ymn = 0.5, ymx = dim(hillshade)[1] + 0.5, ...),scale=1, maxpixels=nrow(hillshade)*ncol(hillshade),...))
   } else if(class(hillshade) == "matrix") {
     flipud = function(matrix) {
@@ -51,6 +55,10 @@ plot_map = function(hillshade, rotate=0, ...) {
       for(j in 1:number_of_rots) {
         hillshade = rotatef(hillshade)
       }
+    }
+    if(any(hillshade > 1 | hillshade < 0,na.rm = TRUE)) {
+      hillshade[hillshade > 1] = 1
+      hillshade[hillshade < 0] = 0
     }
     array_from_mat = array(flipud(t(hillshade)),dim=c(ncol(hillshade),nrow(hillshade),3))
     suppressWarnings(raster::plotRGB(raster::brick(array_from_mat, xmn = 0.5, xmx = dim(array_from_mat)[2] + 0.5,ymn =  0.5, ymx = dim(array_from_mat)[1] +  0.5, ...),scale=1, maxpixels=nrow(hillshade)*ncol(hillshade), ...))

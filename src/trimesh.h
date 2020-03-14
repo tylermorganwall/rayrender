@@ -22,14 +22,11 @@ class trimesh : public hitable {
 public:
   trimesh() {}
   ~trimesh() {
-    // Rcpp::Rcout << "deleting trimesh " << obj_materials.size() << "\n";
     delete tri_mesh_bvh;
     for(auto mat : obj_materials) {
       if(mat) stbi_image_free(mat);
     }
-    if(mat_ptr) {
-      delete mat_ptr;
-    }
+    delete mat_ptr;
   }
   trimesh(std::string inputfile, std::string basedir, Float scale, 
           Float shutteropen, Float shutterclose, random_gen rng) {
@@ -140,7 +137,7 @@ public:
               tex = new lambertian(new constant_texture(vec3(1,1,1)), false, nullptr);
             } else {
               if(has_transparency[material_num]) {
-                tex = new dielectric(specular_materials[material_num], ior_materials[material_num], rng);;
+                tex = new dielectric(specular_materials[material_num], ior_materials[material_num], vec3(0,0,0), rng);;
               } else if(has_diffuse[material_num]) {
                 if(has_single_diffuse[material_num]) {
                   tex = new lambertian(new constant_texture(diffuse_materials[material_num]), false, nullptr);
@@ -159,7 +156,7 @@ public:
               tex = new lambertian(new constant_texture(diffuse_materials[material_num]), false, nullptr);
             } else {
               if(has_transparency[material_num]) {
-                tex = new dielectric(specular_materials[material_num], ior_materials[material_num], rng);;
+                tex = new dielectric(specular_materials[material_num], ior_materials[material_num], vec3(0,0,0), rng);;
               } else if(has_diffuse[material_num]) {
                 if(has_single_diffuse[material_num]) {
                   tex = new lambertian(new constant_texture(diffuse_materials[material_num]), false, nullptr);
@@ -289,7 +286,7 @@ public:
               tex = new orennayar(new constant_texture(vec3(1,1,1)), sigma);
             } else {
               if(has_transparency[material_num]) {
-                tex = new dielectric(specular_materials[material_num], ior_materials[material_num], rng);;
+                tex = new dielectric(specular_materials[material_num], ior_materials[material_num], vec3(0,0,0), rng);;
               } else if(has_diffuse[material_num]) {
                 if(has_single_diffuse[material_num]) {
                   tex = new orennayar(new constant_texture(diffuse_materials[material_num]), sigma);
@@ -308,7 +305,7 @@ public:
               tex = new orennayar(new constant_texture(diffuse_materials[material_num]), sigma);
             } else {
               if(has_transparency[material_num]) {
-                tex = new dielectric(specular_materials[material_num], ior_materials[material_num], rng);;
+                tex = new dielectric(specular_materials[material_num], ior_materials[material_num], vec3(0,0,0), rng);;
               } else if(has_diffuse[material_num]) {
                 if(has_single_diffuse[material_num]) {
                   tex = new orennayar(new constant_texture(diffuse_materials[material_num]), sigma);
@@ -374,6 +371,12 @@ public:
             n--;
             continue;
           }
+          if((normals[0].x() == 0 && normals[0].y() == 0 && normals[0].z() == 0) ||
+             (normals[1].x() == 0 && normals[1].y() == 0 && normals[1].z() == 0) ||
+             (normals[2].x() == 0 && normals[2].y() == 0 && normals[2].z() == 0)) {
+            has_normals = false;
+          }
+          
           if(has_normals) {
             triangles.push_back(new triangle(tris[0],tris[1],tris[2],
                                              normals[0],normals[1],normals[2], 

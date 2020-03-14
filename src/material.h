@@ -116,10 +116,10 @@ class metal : public material {
 // 
 class dielectric : public material {
   public:
-    dielectric(const vec3& a, Float ri, random_gen& rng) : ref_idx(ri), albedo(a), rng(rng), 
-               hasAlphaTexture(false), alphaTexture(nullptr) {};
-    dielectric(const vec3& a, Float ri, random_gen& rng, alpha_texture *_alphaTexture) : 
-               ref_idx(ri), albedo(a), rng(rng), 
+    dielectric(const vec3& a, Float ri, const vec3& atten, random_gen& rng) : ref_idx(ri), 
+               albedo(a), attenuation(atten), rng(rng), hasAlphaTexture(false), alphaTexture(nullptr) {};
+    dielectric(const vec3& a, Float ri, const vec3& atten, random_gen& rng, alpha_texture *_alphaTexture) : 
+               ref_idx(ri), albedo(a), attenuation(atten), rng(rng), 
                hasAlphaTexture(true), alphaTexture(_alphaTexture) {};
     virtual bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng) {
       srec.is_specular = true;
@@ -127,13 +127,16 @@ class dielectric : public material {
       vec3 reflected = reflect(r_in.direction(), hrec.normal);
       Float ni_over_nt;
       srec.attenuation = albedo;
+      
       vec3 refracted;
       Float reflect_prob;
       Float cosine;
+      bool inside = false;
       if(dot(r_in.direction(), hrec.normal) > 0) {
         outward_normal = -hrec.normal;
         ni_over_nt = ref_idx;
         cosine = ref_idx * dot(r_in.direction(), hrec.normal) / r_in.direction().length();
+        inside = true;
       } else {
         outward_normal = hrec.normal;
         ni_over_nt = 1.0 / ref_idx;
@@ -144,6 +147,14 @@ class dielectric : public material {
       } else {
         reflect_prob = 1.0;
       }
+      if(inside) {
+        Float distance = (hrec.p-r_in.point_at_parameter(0)).length();
+        srec.attenuation = albedo * vec3(std::exp(-distance * attenuation.x()),
+                                         std::exp(-distance * attenuation.y()),
+                                         std::exp(-distance * attenuation.z()));
+      } else {
+        srec.attenuation = albedo;
+      }
       if(rng.unif_rand() < reflect_prob) {
         srec.specular_ray = ray(hrec.p, reflected, r_in.time());
       }  else {
@@ -153,6 +164,7 @@ class dielectric : public material {
     }
     Float ref_idx;
     vec3 albedo;
+    vec3 attenuation;
     random_gen rng;
     bool hasAlphaTexture;
     alpha_texture *alphaTexture;

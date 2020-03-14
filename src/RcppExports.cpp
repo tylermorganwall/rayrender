@@ -6,8 +6,8 @@
 using namespace Rcpp;
 
 // render_scene_rcpp
-List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light, NumericVector lookfromvec, NumericVector lookatvec, float aperture, NumericVector camera_up, IntegerVector type, NumericVector radius, IntegerVector shape, List position_list, List properties, List velocity, LogicalVector moving, int n, NumericVector& bghigh, NumericVector& bglow, float shutteropen, float shutterclose, LogicalVector ischeckered, List checkercolors, List gradient_info, NumericVector noise, LogicalVector isnoise, NumericVector& noisephase, NumericVector& noiseintensity, List noisecolorlist, List& angle, LogicalVector& isimage, CharacterVector& filelocation, List& alphalist, NumericVector& lightintensity, LogicalVector& isflipped, float focus_distance, LogicalVector& isvolume, NumericVector& voldensity, bool parallel, LogicalVector& implicit_sample, List& order_rotation_list, float clampval, LogicalVector& isgrouped, List& group_pivot, List& group_translate, List& group_angle, List& group_order_rotation, List& group_scale, LogicalVector& tri_normal_bools, LogicalVector& is_tri_color, List& tri_color_vert, CharacterVector& fileinfo, CharacterVector& filebasedir, int toneval, bool progress_bar, int numbercores, int debugval, bool hasbackground, CharacterVector& background, List& scale_list, NumericVector ortho_dimensions, NumericVector sigmavec, float rotate_env, bool verbose);
-RcppExport SEXP _rayrender_render_scene_rcpp(SEXP nxSEXP, SEXP nySEXP, SEXP nsSEXP, SEXP fovSEXP, SEXP ambient_lightSEXP, SEXP lookfromvecSEXP, SEXP lookatvecSEXP, SEXP apertureSEXP, SEXP camera_upSEXP, SEXP typeSEXP, SEXP radiusSEXP, SEXP shapeSEXP, SEXP position_listSEXP, SEXP propertiesSEXP, SEXP velocitySEXP, SEXP movingSEXP, SEXP nSEXP, SEXP bghighSEXP, SEXP bglowSEXP, SEXP shutteropenSEXP, SEXP shuttercloseSEXP, SEXP ischeckeredSEXP, SEXP checkercolorsSEXP, SEXP gradient_infoSEXP, SEXP noiseSEXP, SEXP isnoiseSEXP, SEXP noisephaseSEXP, SEXP noiseintensitySEXP, SEXP noisecolorlistSEXP, SEXP angleSEXP, SEXP isimageSEXP, SEXP filelocationSEXP, SEXP alphalistSEXP, SEXP lightintensitySEXP, SEXP isflippedSEXP, SEXP focus_distanceSEXP, SEXP isvolumeSEXP, SEXP voldensitySEXP, SEXP parallelSEXP, SEXP implicit_sampleSEXP, SEXP order_rotation_listSEXP, SEXP clampvalSEXP, SEXP isgroupedSEXP, SEXP group_pivotSEXP, SEXP group_translateSEXP, SEXP group_angleSEXP, SEXP group_order_rotationSEXP, SEXP group_scaleSEXP, SEXP tri_normal_boolsSEXP, SEXP is_tri_colorSEXP, SEXP tri_color_vertSEXP, SEXP fileinfoSEXP, SEXP filebasedirSEXP, SEXP tonevalSEXP, SEXP progress_barSEXP, SEXP numbercoresSEXP, SEXP debugvalSEXP, SEXP hasbackgroundSEXP, SEXP backgroundSEXP, SEXP scale_listSEXP, SEXP ortho_dimensionsSEXP, SEXP sigmavecSEXP, SEXP rotate_envSEXP, SEXP verboseSEXP) {
+List render_scene_rcpp(int nx, int ny, int ns, float fov, bool ambient_light, NumericVector lookfromvec, NumericVector lookatvec, float aperture, NumericVector camera_up, IntegerVector type, NumericVector radius, IntegerVector shape, List position_list, List properties, List velocity, LogicalVector moving, int n, NumericVector& bghigh, NumericVector& bglow, float shutteropen, float shutterclose, LogicalVector ischeckered, List checkercolors, List gradient_info, NumericVector noise, LogicalVector isnoise, NumericVector& noisephase, NumericVector& noiseintensity, List noisecolorlist, List& angle, LogicalVector& isimage, CharacterVector& filelocation, List& alphalist, NumericVector& lightintensity, LogicalVector& isflipped, float focus_distance, LogicalVector& isvolume, NumericVector& voldensity, bool parallel, LogicalVector& implicit_sample, List& order_rotation_list, float clampval, LogicalVector& isgrouped, List& group_pivot, List& group_translate, List& group_angle, List& group_order_rotation, List& group_scale, LogicalVector& tri_normal_bools, LogicalVector& is_tri_color, List& tri_color_vert, CharacterVector& fileinfo, CharacterVector& filebasedir, int toneval, bool progress_bar, int numbercores, int debugval, bool hasbackground, CharacterVector& background, List& scale_list, NumericVector ortho_dimensions, NumericVector sigmavec, float rotate_env, bool verbose, bool depthmap);
+RcppExport SEXP _rayrender_render_scene_rcpp(SEXP nxSEXP, SEXP nySEXP, SEXP nsSEXP, SEXP fovSEXP, SEXP ambient_lightSEXP, SEXP lookfromvecSEXP, SEXP lookatvecSEXP, SEXP apertureSEXP, SEXP camera_upSEXP, SEXP typeSEXP, SEXP radiusSEXP, SEXP shapeSEXP, SEXP position_listSEXP, SEXP propertiesSEXP, SEXP velocitySEXP, SEXP movingSEXP, SEXP nSEXP, SEXP bghighSEXP, SEXP bglowSEXP, SEXP shutteropenSEXP, SEXP shuttercloseSEXP, SEXP ischeckeredSEXP, SEXP checkercolorsSEXP, SEXP gradient_infoSEXP, SEXP noiseSEXP, SEXP isnoiseSEXP, SEXP noisephaseSEXP, SEXP noiseintensitySEXP, SEXP noisecolorlistSEXP, SEXP angleSEXP, SEXP isimageSEXP, SEXP filelocationSEXP, SEXP alphalistSEXP, SEXP lightintensitySEXP, SEXP isflippedSEXP, SEXP focus_distanceSEXP, SEXP isvolumeSEXP, SEXP voldensitySEXP, SEXP parallelSEXP, SEXP implicit_sampleSEXP, SEXP order_rotation_listSEXP, SEXP clampvalSEXP, SEXP isgroupedSEXP, SEXP group_pivotSEXP, SEXP group_translateSEXP, SEXP group_angleSEXP, SEXP group_order_rotationSEXP, SEXP group_scaleSEXP, SEXP tri_normal_boolsSEXP, SEXP is_tri_colorSEXP, SEXP tri_color_vertSEXP, SEXP fileinfoSEXP, SEXP filebasedirSEXP, SEXP tonevalSEXP, SEXP progress_barSEXP, SEXP numbercoresSEXP, SEXP debugvalSEXP, SEXP hasbackgroundSEXP, SEXP backgroundSEXP, SEXP scale_listSEXP, SEXP ortho_dimensionsSEXP, SEXP sigmavecSEXP, SEXP rotate_envSEXP, SEXP verboseSEXP, SEXP depthmapSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -75,13 +75,31 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< NumericVector >::type sigmavec(sigmavecSEXP);
     Rcpp::traits::input_parameter< float >::type rotate_env(rotate_envSEXP);
     Rcpp::traits::input_parameter< bool >::type verbose(verboseSEXP);
-    rcpp_result_gen = Rcpp::wrap(render_scene_rcpp(nx, ny, ns, fov, ambient_light, lookfromvec, lookatvec, aperture, camera_up, type, radius, shape, position_list, properties, velocity, moving, n, bghigh, bglow, shutteropen, shutterclose, ischeckered, checkercolors, gradient_info, noise, isnoise, noisephase, noiseintensity, noisecolorlist, angle, isimage, filelocation, alphalist, lightintensity, isflipped, focus_distance, isvolume, voldensity, parallel, implicit_sample, order_rotation_list, clampval, isgrouped, group_pivot, group_translate, group_angle, group_order_rotation, group_scale, tri_normal_bools, is_tri_color, tri_color_vert, fileinfo, filebasedir, toneval, progress_bar, numbercores, debugval, hasbackground, background, scale_list, ortho_dimensions, sigmavec, rotate_env, verbose));
+    Rcpp::traits::input_parameter< bool >::type depthmap(depthmapSEXP);
+    rcpp_result_gen = Rcpp::wrap(render_scene_rcpp(nx, ny, ns, fov, ambient_light, lookfromvec, lookatvec, aperture, camera_up, type, radius, shape, position_list, properties, velocity, moving, n, bghigh, bglow, shutteropen, shutterclose, ischeckered, checkercolors, gradient_info, noise, isnoise, noisephase, noiseintensity, noisecolorlist, angle, isimage, filelocation, alphalist, lightintensity, isflipped, focus_distance, isvolume, voldensity, parallel, implicit_sample, order_rotation_list, clampval, isgrouped, group_pivot, group_translate, group_angle, group_order_rotation, group_scale, tri_normal_bools, is_tri_color, tri_color_vert, fileinfo, filebasedir, toneval, progress_bar, numbercores, debugval, hasbackground, background, scale_list, ortho_dimensions, sigmavec, rotate_env, verbose, depthmap));
+    return rcpp_result_gen;
+END_RCPP
+}
+// tonemap_image
+List tonemap_image(int nx, int ny, NumericMatrix routput, NumericMatrix goutput, NumericMatrix boutput, int toneval);
+RcppExport SEXP _rayrender_tonemap_image(SEXP nxSEXP, SEXP nySEXP, SEXP routputSEXP, SEXP goutputSEXP, SEXP boutputSEXP, SEXP tonevalSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< int >::type nx(nxSEXP);
+    Rcpp::traits::input_parameter< int >::type ny(nySEXP);
+    Rcpp::traits::input_parameter< NumericMatrix >::type routput(routputSEXP);
+    Rcpp::traits::input_parameter< NumericMatrix >::type goutput(goutputSEXP);
+    Rcpp::traits::input_parameter< NumericMatrix >::type boutput(boutputSEXP);
+    Rcpp::traits::input_parameter< int >::type toneval(tonevalSEXP);
+    rcpp_result_gen = Rcpp::wrap(tonemap_image(nx, ny, routput, goutput, boutput, toneval));
     return rcpp_result_gen;
 END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_rayrender_render_scene_rcpp", (DL_FUNC) &_rayrender_render_scene_rcpp, 64},
+    {"_rayrender_render_scene_rcpp", (DL_FUNC) &_rayrender_render_scene_rcpp, 65},
+    {"_rayrender_tonemap_image", (DL_FUNC) &_rayrender_tonemap_image, 6},
     {NULL, NULL, 0}
 };
 

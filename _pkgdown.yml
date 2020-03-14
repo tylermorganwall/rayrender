@@ -17,6 +17,7 @@ reference:
       - starts_with("ellipsoid")
       - starts_with("disk")
       - starts_with("obj")
+      - starts_with("extruded")
       - starts_with("pig")
   - title: "Materials"
     desc: "Functions to specify the visual properties of objects"
@@ -34,6 +35,7 @@ reference:
     desc: "Function to render the current scene."
     contents:
       - starts_with("render")
+
      
 navbar: 
   title: "rayrender"

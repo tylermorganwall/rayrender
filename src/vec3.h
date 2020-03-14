@@ -13,6 +13,13 @@ typedef float Float;
 #endif 
 #endif
 
+inline float DifferenceOfProducts(float a, float b, float c, float d) {
+  float cd = c * d;
+  float err = std::fma(-c, d, cd);
+  float dop = std::fma(a, b, -cd);
+  return(dop + err);
+}
+
 class vec3 {
 public:
   vec3() {}
@@ -86,9 +93,9 @@ inline Float dot(const vec3 &v1, const vec3 &v2) {
 }
 
 inline vec3 cross(const vec3 &v1, const vec3 &v2) {
-  return( vec3( (v1.e[1] * v2.e[2] - v1.e[2] * v2.e[1]),
-                (-(v1.e[0] * v2.e[2] - v1.e[2] * v2.e[0])),
-                (v1.e[0] * v2.e[1] - v1.e[1] * v2.e[0])));
+  return(vec3(DifferenceOfProducts(v1.y(), v2.z(), v1.z(), v2.y()),
+              DifferenceOfProducts(v1.z(), v2.x(), v1.x(), v2.z()),
+              DifferenceOfProducts(v1.x(), v2.y(), v1.y(), v2.x())));
 }
 
 inline vec3& vec3::operator+=(const vec3 &v) {
@@ -137,6 +144,34 @@ inline vec3& vec3::operator/=(const Float t) {
 
 inline vec3 unit_vector(vec3 v) {
   return(v/v.length());
+}
+
+inline Float MinComponent(const vec3 &v) {
+  return(std::min(v.x(), std::min(v.y(), v.z())));
+}
+
+inline Float MaxComponent(const vec3 &v) {
+  return(std::max(v.x(), std::max(v.y(), v.z())));
+}
+
+inline int MaxDimension(const vec3 &v) {
+  return((v.x() > v.y()) ? ((v.x() > v.z()) ? 0 : 2) : ((v.y() > v.z()) ? 1 : 2));
+}
+
+inline vec3 Min(const vec3 &p1, const vec3 &p2) {
+  return(vec3(std::min(p1.x(), p2.x()), std::min(p1.y(), p2.y()), std::min(p1.z(), p2.z())));
+}
+
+inline vec3 Max(const vec3 &p1, const vec3 &p2) {
+  return(vec3(std::max(p1.x(), p2.x()), std::max(p1.y(), p2.y()),std::max(p1.z(), p2.z())));
+}
+
+inline vec3 Permute(const vec3 &v, int x, int y, int z) {
+  return(vec3(v.e[x], v.e[y], v.e[z]));
+}
+
+inline vec3 Abs(const vec3 &v) {
+  return(vec3(v.x(), v.y(), v.z()));
 }
 
 #endif

@@ -24,9 +24,11 @@ render_scene(
   focal_distance = NULL,
   ortho_dimensions = c(1, 1),
   tonemap = "gamma",
+  bloom = TRUE,
   parallel = TRUE,
   environment_light = NULL,
   rotate_env = 0,
+  depth_map = FALSE,
   progress = interactive(),
   verbose = FALSE,
   debug = NULL
@@ -84,7 +86,15 @@ Default `gamma` solely adjusts for gamma and clamps values greater than 1 to 1.
 `reinhold` scales values by their individual color channels `color/(1+color)` and then performs the 
 gamma adjustment. `uncharted` uses the mapping developed for Uncharted 2 by John Hable. `hbd` uses an
 optimized formula by Jim Hejl and Richard Burgess-Dawson. Note: If set to anything other than `gamma`,
-objects with material `light()` may not be anti-aliased.}
+objects with material `light()` may not be anti-aliased. If `raw`, the raw array of HDR values will be
+returned, rather than an image or a plot.}
+
+\item{bloom}{Default `TRUE`. Set to `FALSE` to get the raw, pathtraced image. Otherwise,
+this performs a convolution of the HDR image of the scene with a sharp, long-tailed
+exponential kernel, which does not visibly affect dimly pixels, but does result in emitters light
+slightly bleeding into adjacent pixels. This provides an antialiasing effect for lights, even when
+tonemapping the image. Pass in a matrix to specify the convolution kernel manually, or a positive number
+to control the intensity of the bloom (higher number = more bloom).}
 
 \item{parallel}{Default `FALSE`. If `TRUE`, it will use all available cores to render the image
 (or the number specified in `options("cores")` if that option is not `NULL`).}
@@ -93,6 +103,8 @@ objects with material `light()` may not be anti-aliased.}
 the scene. Supports both HDR (`.hdr`) and low-dynamic range (`.png`, `.jpg`) images.}
 
 \item{rotate_env}{Default `0`. The number of degrees to rotate the environment map around the scene.}
+
+\item{depth_map}{Default `FALSE`. Will return a depth map of rays into the scene instead of an image.}
 
 \item{progress}{Default `TRUE` if interactive session, `FALSE` otherwise.}
 
