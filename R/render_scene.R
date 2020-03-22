@@ -46,7 +46,9 @@
 #' @param environment_light Default `NULL`. An image to be used for the background for rays that escape
 #' the scene. Supports both HDR (`.hdr`) and low-dynamic range (`.png`, `.jpg`) images.
 #' @param rotate_env Default `0`. The number of degrees to rotate the environment map around the scene.
-#' @param depth_map Default `FALSE`. Will return a depth map of rays into the scene instead of an image.
+#' @param debug_channel Default `none`. If `depth`, function will return a depth map of rays into the scene 
+#' instead of an image. If `normals`, function will return an image of scene normals, mapped from 0 to 1.
+#' If `uv`, function will return an image of the uv coords.
 #' @param parallel Default `FALSE`. If `TRUE`, it will use all available cores to render the image
 #'  (or the number specified in `options("cores")` if that option is not `NULL`).
 #' @param progress Default `TRUE` if interactive session, `FALSE` otherwise. 
@@ -125,7 +127,7 @@
 #'#an animation, specify the a filename in `render_scene` for each frame and use the `av` package
 #'#or ffmpeg to combine them all into a movie.
 #'
-#'t=1:30
+#'t=1:30 
 #'xpos = 10 * sin(t*12*pi/180+pi/2)
 #'zpos = 10 * cos(t*12*pi/180+pi/2)
 #'\donttest{
@@ -144,7 +146,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
                         filename = NULL, backgroundhigh = "#80b4ff",backgroundlow = "#ffffff",
                         shutteropen = 0.0, shutterclose = 1.0, focal_distance=NULL, ortho_dimensions = c(1,1),
                         tonemap ="gamma", bloom = TRUE, parallel=TRUE, 
-                        environment_light = NULL, rotate_env = 0, depth_map = FALSE,
+                        environment_light = NULL, rotate_env = 0, debug_channel = "none",
                         progress = interactive(), verbose = FALSE, debug = NULL) { 
   if(verbose) {
     currenttime = proc.time()
@@ -262,8 +264,8 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
   image_tex_bool = image_tex_bool | image_filename_bool
   #alpha texture handler
   alpha_array_list = scene$alphaimage
-  alpha_tex_bool = purrr::map_lgl(alpha_array_list,.f = ~is.array(.x[[1]]))
-  alpha_filename_bool = purrr::map_lgl(alpha_array_list,.f = ~is.character(.x[[1]]))
+  alpha_tex_bool = purrr::map_lgl(alpha_array_list,.f = ~is.array(.x))
+  alpha_filename_bool = purrr::map_lgl(alpha_array_list,.f = ~is.character(.x))
   alpha_temp_file_names = purrr::map_chr(alpha_tex_bool,.f = ~ifelse(.x, tempfile(fileext = ".png"),""))
   for(i in 1:length(alpha_array_list)) {
     if(alpha_tex_bool[i]) {
@@ -278,11 +280,11 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
       }
     }
     if(alpha_filename_bool[i]) {
-      if(any(!file.exists(path.expand(alpha_array_list[[i]][[1]])) & nchar(alpha_array_list[[i]]) > 0)) {
+      if(any(!file.exists(path.expand(alpha_array_list[[i]])) & nchar(alpha_array_list[[i]]) > 0)) {
         stop(paste0("Cannot find the following texture file:\n",
                     paste(alpha_array_list[[i]], collapse="\n")))
       }
-      alpha_temp_file_names[i] = path.expand(alpha_array_list[[i]][[1]])
+      alpha_temp_file_names[i] = path.expand(alpha_array_list[[i]])
     }
   }
   alpha_tex_bool = alpha_tex_bool | alpha_filename_bool
@@ -374,6 +376,8 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
   } else {
     debugval = 0
   }
+  debug_channel = unlist(lapply(tolower(debug_channel),switch,
+                          "none" = 0,"depth" = 1,"normals" = 2, "uv" = 3))
   if(fov == 0) {
     assertthat::assert_that(length(ortho_dimensions) == 2)
   }
@@ -381,14 +385,33 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
     buildingtime = proc.time() - currenttime
     cat(sprintf("%0.3f seconds \n",buildingtime[3]))
   }
-  rgb_mat = render_scene_rcpp(nx = width, ny = height, ns = samples, fov = fov, ambient_light = ambient_light,
-                             lookfromvec = lookfrom, lookatvec = lookat, aperture=aperture,camera_up = camera_up,
+  camera_info = list()
+  
+  camera_info$nx = width
+  camera_info$ny = height
+  camera_info$ns = samples
+  camera_info$fov = fov
+  camera_info$lookfrom = lookfrom
+  camera_info$lookat = lookat
+  camera_info$aperture = aperture
+  camera_info$camera_up = camera_up
+  camera_info$shutteropen = shutteropen
+  camera_info$shutterclose = shutterclose
+  camera_info$ortho_dimensions = ortho_dimensions
+  camera_info$focal_distance = focal_distance
+  camera_info$toneval = toneval
+  
+  #Material ID handler
+  material_id = scene$material_id
+  material_id = as.integer(as.factor(material_id))-1
+  material_id_bool = !is.na(scene$material_id)
+  
+  rgb_mat = render_scene_rcpp(camera_info = camera_info, ambient_light = ambient_light,
                              type = typevec, shape = shapevec, radius = rvec, 
                              position_list = position_list,
                              properties = proplist, velocity = vel_list, moving = movingvec,
                              n = length(typevec), 
                              bghigh = backgroundhigh, bglow = backgroundlow,
-                             shutteropen = shutteropen, shutterclose = shutterclose,
                              ischeckered = checkeredbool, checkercolors = checkeredlist,
                              gradient_info = gradient_info, 
                              noise=noisevec,isnoise=noisebool,noisephase=noisephasevec, 
@@ -396,26 +419,34 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
                              angle = rot_angle_list, isimage = image_tex_bool, filelocation = temp_file_names,
                              alphalist = alphalist,
                              lightintensity = light_prop_vec,isflipped = flip_vec,
-                             focus_distance=focal_distance,
                              isvolume=fog_bool, voldensity = fog_vec , parallel=parallel,
                              implicit_sample = implicit_vec, order_rotation_list = order_rotation_list, clampval = clamp_value,
                              isgrouped = group_bool, group_pivot=group_pivot, group_translate = group_translate,
                              group_angle = group_angle, group_order_rotation = group_order_rotation, group_scale = group_scale,
                              tri_normal_bools = tri_normal_bools, is_tri_color = is_tri_color, tri_color_vert= tri_color_vert,
-                             fileinfo = objfilenamevec, filebasedir = objbasedirvec, toneval = toneval,
+                             fileinfo = objfilenamevec, filebasedir = objbasedirvec,
                              progress_bar = progress, numbercores = numbercores, debugval = debugval,
                              hasbackground = hasbackground, background = backgroundstring, scale_list = scale_factor,
-                             ortho_dimensions = ortho_dimensions, sigmavec = sigmavec, rotate_env = rotate_env,
-                             verbose = verbose, depthmap = depth_map) 
+                             sigmavec = sigmavec, rotate_env = rotate_env,
+                             verbose = verbose, debug_channel = debug_channel,
+                             shared_id_mat=material_id, is_shared_mat=material_id_bool) 
   full_array = array(0,c(ncol(rgb_mat$r),nrow(rgb_mat$r),3))
   full_array[,,1] = flipud(t(rgb_mat$r))
   full_array[,,2] = flipud(t(rgb_mat$g))
   full_array[,,3] = flipud(t(rgb_mat$b))
-  if(depth_map) {
+  if(debug_channel == 1) {
     returnmat = full_array[,,1]
     returnmat[is.infinite(returnmat)] = NA
     return(returnmat)
-  }
+  } else if (debug_channel %in% c(2,3)) {
+    if(is.null(filename)) {
+      plot_map(full_array)
+      return(invisible(full_array))
+    } else {
+      save_png(full_array,filename)
+      return(invisible(full_array))
+    }
+  } 
   if(!is.matrix(bloom)) {
     if(is.numeric(bloom) && length(bloom) == 1) {
       kernel = rayimage::generate_2d_exponential(0.1,11,3*1/bloom)

@@ -28,7 +28,7 @@ render_scene(
   parallel = TRUE,
   environment_light = NULL,
   rotate_env = 0,
-  depth_map = FALSE,
+  debug_channel = "none",
   progress = interactive(),
   verbose = FALSE,
   debug = NULL
@@ -104,7 +104,9 @@ the scene. Supports both HDR (`.hdr`) and low-dynamic range (`.png`, `.jpg`) ima
 
 \item{rotate_env}{Default `0`. The number of degrees to rotate the environment map around the scene.}
 
-\item{depth_map}{Default `FALSE`. Will return a depth map of rays into the scene instead of an image.}
+\item{debug_channel}{Default `none`. If `depth`, function will return a depth map of rays into the scene 
+instead of an image. If `normals`, function will return an image of scene normals, mapped from 0 to 1.
+If `uv`, function will return an image of the uv coords.}
 
 \item{progress}{Default `TRUE` if interactive session, `FALSE` otherwise.}
 
@@ -187,7 +189,7 @@ render_scene(scene,lookfrom = c(7,1.5,10),lookat = c(0,0.5,0),fov=15,
 #an animation, specify the a filename in `render_scene` for each frame and use the `av` package
 #or ffmpeg to combine them all into a movie.
 
-t=1:30
+t=1:30 
 xpos = 10 * sin(t*12*pi/180+pi/2)
 zpos = 10 * cos(t*12*pi/180+pi/2)
 \donttest{

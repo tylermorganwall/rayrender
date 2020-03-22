@@ -63,7 +63,8 @@ sphere = function(x = 0, y = 0, z = 0, radius = 1, material = diffuse(),
                  order_rotation = list(order_rotation),
                  pivot_point = list(NA), group_translate = list(NA),
                  group_angle = list(NA), group_order_rotation = list(NA),
-                 tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA))
+                 tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA),
+                 material_id = NA)
 }
 
 #' Cube Object
@@ -96,7 +97,7 @@ sphere = function(x = 0, y = 0, z = 0, radius = 1, material = diffuse(),
 #'   add_object(cube(x = 555/2, y = 100, z = 555/2, 
 #'                   xwidth = 200, ywidth = 200, zwidth = 200, angle = c(0, 30, 0))) %>%
 #'   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
-#'                ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
+#'                ambient_light = FALSE, samples = 500, parallel = TRUE, clamp_value = 5)
 #' }
 #' #Generate a gold cube in the cornell box
 #' \donttest{
@@ -105,7 +106,7 @@ sphere = function(x = 0, y = 0, z = 0, radius = 1, material = diffuse(),
 #'                   xwidth = 200, ywidth = 200, zwidth = 200, angle = c(0, 30, 0),
 #'                   material = metal(color = "gold", fuzz = 0.2))) %>%
 #'   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
-#'                ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
+#'                ambient_light = FALSE, samples = 500, parallel = TRUE, clamp_value = 5)
 #' }
 #' 
 #' #Generate a rotateddielectric box in the cornell box
@@ -115,7 +116,7 @@ sphere = function(x = 0, y = 0, z = 0, radius = 1, material = diffuse(),
 #'                   xwidth = 200, ywidth = 100, zwidth = 200, angle = c(30, 30, 30),
 #'                   material = dielectric())) %>%
 #'   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
-#'                ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
+#'                ambient_light = FALSE, samples = 500, parallel = TRUE, clamp_value = 5)
 #' }
 cube = function(x = 0, y = 0, z = 0, width = 1, xwidth = 1, ywidth = 1, zwidth = 1, 
                 material = diffuse(), angle = c(0, 0, 0), order_rotation = c(1, 2, 3), velocity = c(0, 0, 0),
@@ -140,7 +141,8 @@ cube = function(x = 0, y = 0, z = 0, width = 1, xwidth = 1, ywidth = 1, zwidth =
                  order_rotation = list(order_rotation),
                  pivot_point = list(NA), group_translate = list(NA),
                  group_angle = list(NA), group_order_rotation = list(NA),
-                 tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA))
+                 tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA),
+                 material_id = NA)
 }
 
 #' Rectangular XY Plane Object 
@@ -201,7 +203,8 @@ xy_rect = function(x = 0, y = 0, z = 0, xwidth = 1, ywidth = 1,
                  order_rotation = list(order_rotation),
                  pivot_point = list(NA), group_translate = list(NA),
                  group_angle = list(NA), group_order_rotation = list(NA),
-                 tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA))
+                 tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA),
+                 material_id = NA)
 }
 
 #' Rectangular YZ Plane Object
@@ -261,7 +264,8 @@ yz_rect = function(x = 0, y = 0, z = 0, ywidth = 1, zwidth = 1, material = diffu
                  order_rotation = list(order_rotation),
                  pivot_point = list(NA), group_translate = list(NA),
                  group_angle = list(NA), group_order_rotation = list(NA),
-                 tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA))
+                 tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA),
+                 material_id = NA)
 }
 
 #' Rectangular XZ Plane Object
@@ -323,7 +327,8 @@ xz_rect = function(x = 0, xwidth = 1, z = 0, zwidth = 1, y = 0, material = diffu
                  order_rotation = list(order_rotation),
                  pivot_point = list(NA), group_translate = list(NA),
                  group_angle = list(NA), group_order_rotation = list(NA),
-                 tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA))
+                 tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA),
+                 material_id = NA)
 }
 
 #' Triangle Object
@@ -421,7 +426,8 @@ triangle = function(v1 = c(1, 0, 0), v2 = c(0, 1, 0), v3 = c(-1, 0, 0),
                  order_rotation = list(order_rotation),
                  pivot_point = list(NA), group_translate = list(NA),
                  group_angle = list(NA), group_order_rotation = list(NA),
-                 tricolorinfo = list(colorvec), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA))
+                 tricolorinfo = list(colorvec), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA),
+                 material_id = NA)
 }
 
 #' Disk Object
@@ -492,7 +498,8 @@ disk = function(x = 0, y = 0, z = 0, radius = 1, inner_radius = 0, material = di
                  order_rotation = list(order_rotation),
                  pivot_point = list(NA), group_translate = list(NA),
                  group_angle = list(NA), group_order_rotation = list(NA),
-                 tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA))
+                 tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA),
+                 material_id = NA)
 }
 
 #' `obj` File Object
@@ -535,7 +542,7 @@ disk = function(x = 0, y = 0, z = 0, radius = 1, inner_radius = 0, material = di
 #'                        material = dielectric(color = "pink"))) %>%
 #'   add_object(sphere(z = 20, x = 20, y = 20, radius = 10,
 #'                     material = light(intensity = 20))) %>%
-#'   render_scene(parallel = TRUE, samples = 400, 
+#'   render_scene(parallel = TRUE, samples = 500, 
 #'                tonemap = "reinhold", aperture = 0.05, fov = 32, lookfrom = c(0, 2, 10))
 #' }
 #' 
@@ -546,7 +553,7 @@ disk = function(x = 0, y = 0, z = 0, radius = 1, inner_radius = 0, material = di
 #'                        material = diffuse(noise = TRUE, noiseintensity = 10,noisephase=45))) %>%
 #'   add_object(sphere(z = 20, x = 20, y = 20, radius = 10,
 #'                     material = light(intensity = 10))) %>%
-#'   render_scene(parallel = TRUE, samples = 400, ambient = TRUE, 
+#'   render_scene(parallel = TRUE, samples = 500, ambient = TRUE, 
 #'                backgroundhigh="blue", backgroundlow="red",
 #'                aperture = 0.05, fov = 32, lookfrom = c(0, 2, 10),
 #'                lookat = c(0,1,0)) 
@@ -578,7 +585,8 @@ obj_model = function(filename, x = 0, y = 0, z = 0, scale_obj = 1, texture = FAL
                  order_rotation = list(order_rotation),
                  pivot_point = list(NA), group_translate = list(NA),
                  group_angle = list(NA), group_order_rotation = list(NA),
-                 tricolorinfo = list(NA), fileinfo = filename, scale_factor = list(scale), group_scale = list(NA))
+                 tricolorinfo = list(NA), fileinfo = filename, scale_factor = list(scale), group_scale = list(NA),
+                 material_id = NA)
 }
 
 #' Cylinder Object
@@ -660,7 +668,8 @@ cylinder = function(x = 0, y = 0, z = 0, radius = 1, length = 1,
                  order_rotation = list(order_rotation),
                  pivot_point = list(NA), group_translate = list(NA),
                  group_angle = list(NA), group_order_rotation = list(NA),
-                 tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA))
+                 tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA),
+                 material_id = NA)
 }
 
 #' Segment Object
@@ -779,7 +788,8 @@ segment = function(start = c(0, -1, 0), end = c(0, 1, 0), radius = 1,
                  order_rotation = list(order_rotation),
                  pivot_point = list(NA), group_translate = list(NA),
                  group_angle = list(NA), group_order_rotation = list(NA),
-                 tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA))
+                 tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA),
+                 material_id = NA)
 }
 
 #' Ellipsoid Object
@@ -813,7 +823,7 @@ segment = function(start = c(0, -1, 0), end = c(0, 1, 0), radius = 1,
 #'   add_object(ellipsoid(x = 555/2, y = 555/2, z = 555/2, 
 #'                        a = 100, b = 50, c = 50)) %>%
 #'   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
-#'                ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
+#'                ambient_light = FALSE, samples = 500, parallel = TRUE, clamp_value = 5)
 #' }
 #' 
 #' #Change the axes to make it taller rather than wide:
@@ -822,7 +832,7 @@ segment = function(start = c(0, -1, 0), end = c(0, 1, 0), radius = 1,
 #'   add_object(ellipsoid(x = 555/2, y = 555/2, z = 555/2, 
 #'                        a = 100, b = 200, c = 100, material = metal())) %>%
 #'   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
-#'                ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
+#'                ambient_light = FALSE, samples = 500, parallel = TRUE, clamp_value = 5)
 #' }
 #' 
 #' #Rotate it and make it dielectric:
@@ -832,7 +842,7 @@ segment = function(start = c(0, -1, 0), end = c(0, 1, 0), radius = 1,
 #'                        a = 100, b = 200, c = 100, angle = c(0, 0, 45),
 #'                        material = dielectric())) %>%
 #'   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
-#'                ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
+#'                ambient_light = FALSE, samples = 500, parallel = TRUE, clamp_value = 5)
 #' }
 ellipsoid = function(x = 0, y = 0, z = 0, a = 1, b = 1, c = 1,
                   material = diffuse(), 
@@ -856,7 +866,8 @@ ellipsoid = function(x = 0, y = 0, z = 0, a = 1, b = 1, c = 1,
                  order_rotation = list(order_rotation),
                  pivot_point = list(NA), group_translate = list(NA),
                  group_angle = list(NA), group_order_rotation = list(NA),
-                 tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA))
+                 tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA),
+                 material_id = NA)
 }
 
 #' Extruded Polygon Object
@@ -872,6 +883,8 @@ ellipsoid = function(x = 0, y = 0, z = 0, a = 1, b = 1, c = 1,
 #' extruded and just the one side will be rendered.
 #' @param bottom Default `0`. Extruded bottom distance. If this equals `top`, the polygon will not be
 #' extruded and just the one side will be rendered.
+#' @param holes Default `0`. If passing in a polygon directly, this specifies which index represents
+#' the holes in the polygon. See the `earcut` function in the `decido` package for more information.
 #' @param material Default  \code{\link{diffuse}}.The material, called from one of the material 
 #' functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}. 
 #' @param center Default `FALSE`. Whether to center the polygon at the origin.
@@ -883,9 +896,11 @@ ellipsoid = function(x = 0, y = 0, z = 0, a = 1, b = 1, c = 1,
 #' to specify the bottom of the extruded polygon.
 #' @param scale_data Default `1`. If specifying `data_column_top` or `data_column_bottom`, how
 #' much to scale that value when rendering.
+#' @param material_id Default `NA`. A unique label/number to ensure the material is shared between
+#' all triangles that make up the extruded polygon. Required if the material is `dielectric()`.
 #' @param angle Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.
 #' @param order_rotation Default `c(1, 2, 3)`. The order to apply the rotations, referring to "x", "y", and "z".
-#' @param flipped Default `FALSE`. Whether to flip the normals.
+#' @param pivot_point Default `c(0,0,0)`. Point at which to rotate the polygon around.
 #' @param scale Default `c(1, 1, 1)`. Scale transformation in the x, y, and z directions. If this is a single value,
 #' number, the object will be scaled uniformly.
 #' Note: emissive objects may not currently function correctly when scaled.
@@ -1011,7 +1026,7 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
                    pivot_point = c(0,0,0), material = diffuse(),
                    center = FALSE, flip_horizontal = FALSE, flip_vertical = FALSE,
                    data_column_top = NULL, data_column_bottom = NULL, scale_data = 1,
-                   scale = c(1,1,1)) {
+                   scale = c(1,1,1), material_id = NA) {
   if(length(scale) == 1) {
     scale = c(scale, scale, scale)
   }
@@ -1035,6 +1050,9 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
     }
   } else {
     stop("Plane ", plane, " not recognized.")
+  }
+  if(material$type == "dielectric" && is.na(material_id)) {
+    stop("If an extruded polygon has a dielectric material, user must supply a unique material_id")
   }
   rot_coords = function(x1,x2,theta) {
     cos_theta = cospi(theta/180)
@@ -1078,6 +1096,9 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
   base_poly = FALSE
   counter = 1
   if(inherits(polygon,"sf")) {
+    if(!"sf" %in% rownames(utils::installed.packages())) {
+      stop("sf package required when handling sf objects")
+    }
     poly_info = sf::st_drop_geometry(polygon)
     polygon = sf::as_Spatial(polygon)
     if(!is.null(data_column_top)) {
@@ -1328,5 +1349,6 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
     sceneprop = lapply(sceneprop,add_at_indices,indices=c(proplen + 3,proplen + 6, proplen + 9), off = z_off)
     scenefull$properties = sceneprop
   }
+  scenefull$material_id = rep(material_id, nrow(scenefull))
   return(scenefull)
 }

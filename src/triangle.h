@@ -10,11 +10,12 @@ public:
   ~triangle() {
     // Rcpp::Rcout << "bvh delete " << typeid(*mp).name() << "\n";
     if(single) {
-      if(mp) delete mp;
+      delete mp;
+      delete alpha_mask;
     }
   }
-  triangle(vec3 _a, vec3 _b, vec3 _c, bool _single, material *mat) :
-  a(_a), b(_b), c(_c), single(_single), mp(mat) {
+  triangle(vec3 _a, vec3 _b, vec3 _c, bool _single, material *mat, alpha_texture *alpha_mask) :
+  a(_a), b(_b), c(_c), single(_single), mp(mat), alpha_mask(alpha_mask) {
     edge1 = b-a;
     edge2 = c-a;
     normal = cross(edge1, edge2);
@@ -22,8 +23,9 @@ public:
     normal.make_unit_vector();
     normals_provided = false;
   };
-  triangle(vec3 _a, vec3 _b, vec3 _c, vec3 _na, vec3 _nb, vec3 _nc, bool _single, material *mat) :
-    a(_a), b(_b), c(_c), na(_na), nb(_nb), nc(_nc), single(_single), mp(mat) {
+  triangle(vec3 _a, vec3 _b, vec3 _c, vec3 _na, vec3 _nb, vec3 _nc, bool _single, 
+           material *mat, alpha_texture *alpha_mask) :
+    a(_a), b(_b), c(_c), na(_na), nb(_nb), nc(_nc), single(_single), mp(mat), alpha_mask(alpha_mask) {
     edge1 = b-a;
     edge2 = c-a;
     normal = cross(edge1, edge2);
@@ -72,6 +74,7 @@ public:
   bool normals_provided;
   bool single;
   material *mp;
+  alpha_texture *alpha_mask;
 };
 
 bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
@@ -99,15 +102,29 @@ bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
   if (t < t_min || t > t_max) {
     return(false);
   }
+  if(alpha_mask) {
+    if(alpha_mask->channel_value(u, v, rec.p) < rng.unif_rand()) {
+      return(false);
+    }
+  }
   Float w = 1 - u - v;
   rec.t = t;
   rec.p = r.point_at_parameter(t);
   rec.u = u;
   rec.v = v;
   if(normals_provided) {
-    rec.normal = w * na + u * nb + v * nc;
+    vec3 normal_temp = w * na + u * nb + v * nc;
+    if(alpha_mask) {
+      rec.normal = dot(r.direction(), normal_temp) < 0 ? normal_temp : -normal_temp;
+    } else {
+      rec.normal = normal_temp;
+    }
   } else {
-    rec.normal = normal;
+    if(alpha_mask) {
+      rec.normal = dot(r.direction(), normal) < 0 ? normal : -normal;
+    } else {
+      rec.normal = normal;
+    }
   }
   rec.mat_ptr = mp;
   return(true);

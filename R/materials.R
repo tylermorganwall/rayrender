@@ -133,6 +133,7 @@ diffuse = function(color = "#ffffff",
 #' @param color Default `white`. The color of the sphere. Can be either
 #' a hexadecimal code, R color string, or a numeric rgb vector listing three intensities between `0` and `1`.
 #' @param fuzz  Default `0`. The roughness of the metallic surface. Maximum `1`.
+#' @param alpha_texture Default `NA`. A matrix or filename (specifying a greyscale image) to be used to specify the transparency.
 #' @param importance_sample Default `FALSE`. If `TRUE`, the object will be sampled explicitly during 
 #' the rendering process. If the object is particularly important in contributing to the light paths
 #' in the image (e.g. light sources, refracting glass ball with caustics, metal objects concentrating light),
@@ -166,27 +167,36 @@ diffuse = function(color = "#ffffff",
 #' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
 #'              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 #' }
-metal = function(color = "#ffffff", fuzz = 0,  importance_sample = FALSE) {
+metal = function(color = "#ffffff", fuzz = 0,  alpha_texture = NA, 
+                 importance_sample = FALSE) {
   color = convert_color(color)
+  if(!is.array(alpha_texture) && !is.na(alpha_texture) && !is.character(alpha_texture)) {
+    alpha_texture = NA
+    warning("Alpha texture not in recognized format (array, matrix, or filename), ignoring.")
+  }
   tibble::tibble(type = "metal", 
                  properties = list(c(color,fuzz)), 
                  checkercolor=list(NA), 
                  gradient_color = list(NA), gradient_transpose = FALSE,
                  noise=0, noisephase = 0, noiseintensity = 0, noisecolor = list(c(0,0,0)),
                  lightinfo = list(NA), 
-                 image = list(NA), alphaimage = list(NA), 
+                 image = list(NA), alphaimage = list(alpha_texture), 
                  lightintensity = NA,fog=FALSE,fogdensity=0.01,
                  implicit_sample = importance_sample, sigma = 0)
 }
 
 #' Dielectric (glass) Material
+#' 
 #'
 #' @param color Default `white`. The color of the surface. Can be either
 #' a hexadecimal code, R color string, or a numeric rgb vector listing three intensities between `0` and `1`.
+#' @param refraction Default `1.5`. The index of refraction.
 #' @param attenuation Default `c(0,0,0)`. The Beer-Lambert color-channel specific exponential attenuation 
 #' through the material. Higher numbers will result in less of that color making it through the material.
-#' Note: This assumes the object has a closed surface.
-#' @param refraction Default `1.5`. The index of refraction.
+#' Note: This assumes the object has a closed surface. 
+#' @param priority Default `0`. When two dielectric materials overlap, the one with the lower priority value
+#' is used for intersection. NOTE: If the camera is placed inside a dielectric object, its priority value
+#' will not be taken into account when determining hits to other objects also inside the object.
 #' @param importance_sample Default `FALSE`. If `TRUE`, the object will be sampled explicitly during 
 #' the rendering process. If the object is particularly important in contributing to the light paths
 #' in the image (e.g. light sources, refracting glass ball with caustics, metal objects concentrating light),
@@ -214,7 +224,7 @@ metal = function(color = "#ffffff", fuzz = 0,  importance_sample = FALSE) {
 #' scene %>%
 #'   add_object(sphere(x=-0.5,radius=0.5,material=dielectric())) %>%
 #'   add_object(cube(x=0.5,xwidth=0.5,material=dielectric(color="darkgreen"),angle=c(0,-45,0))) %>%
-#'   render_scene(parallel=TRUE,samples=40)
+#'   render_scene(parallel=TRUE,samples=400)
 #' }
 #' 
 #' #Add an area light behind and at an angle and turn off the ambient lighting
@@ -239,10 +249,39 @@ metal = function(color = "#ffffff", fuzz = 0,  importance_sample = FALSE) {
 #'                   material=dielectric(attenuation=c(1.2,0.2,1.2)),angle=c(45,110,0))) %>%
 #'   render_scene(parallel=TRUE, samples = 1000)
 #' }
-dielectric = function(color="white", refraction = 1.5,  attenuation = c(0,0,0), importance_sample = FALSE) {
+#' 
+#' #If you have overlapping dielectrics, the `priority` value can help disambiguate what 
+#' #object wins. Here, I place a bubble inside a cube by setting a lower priority value and
+#' #making the inner sphere have a index of refraction of 1. I also place spheres at the corners.
+#' \donttest{
+#' generate_ground(depth=-0.51,material=diffuse(checkercolor="grey30",checkerperiod=2)) %>%
+#'   add_object(cube(material = dielectric(priority=2, attenuation = c(10,3,10)))) %>%
+#'   add_object(sphere(radius=0.49,material = dielectric(priority=1, refraction=1))) %>%
+#'   add_object(sphere(radius=0.25,x=0.5,z=-0.5,y=0.5, 
+#'                     material = dielectric(priority=0,attenuation = c(10,3,10) ))) %>%
+#'   add_object(sphere(radius=0.25,x=-0.5,z=0.5,y=0.5,
+#'                     material = dielectric(priority=0,attenuation = c(10,3,10)))) %>%
+#'   render_scene(parallel=TRUE, samples = 400,lookfrom=c(5,1,5))
+#' }
+#' 
+#' # We can also use this as a basic Constructive Solid Geometry interface by setting 
+#' # the index of refraction equal to empty space, 1. This will subtract out those regions.
+#' # Here I make a concave lens by subtracting two spheres from a cube.
+#' \donttest{
+#' generate_ground(depth=-0.51,material=diffuse(checkercolor="grey30",checkerperiod=2,sigma=90)) %>%
+#'   add_object(cube(material = dielectric(attenuation = c(6,6,2),priority=1))) %>%
+#'   add_object(sphere(radius=1,x=1.01,
+#'                     material = dielectric(priority=0,refraction=1))) %>%
+#'   add_object(sphere(radius=1,x=-1.01,
+#'                     material = dielectric(priority=0,refraction=1))) %>%
+#'   add_object(sphere(y=10,x=3,material=light(intensit=150))) %>%
+#'   render_scene(parallel=TRUE, samples = 400,lookfrom=c(5,3,5))
+#' }
+dielectric = function(color="white", refraction = 1.5,  attenuation = c(0,0,0), 
+                      priority = 0, importance_sample = FALSE) {
   color = convert_color(color)
   tibble::tibble(type = "dielectric", 
-                 properties = list(c(color, refraction, attenuation)), 
+                 properties = list(c(color, refraction, attenuation, priority)), 
                  checkercolor=list(NA), 
                  gradient_color = list(NA), gradient_transpose = FALSE,
                  noise=0, noisephase = 0, noiseintensity = 0, noisecolor = list(c(0,0,0)),

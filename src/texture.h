@@ -80,7 +80,7 @@ public:
 
 vec3 image_texture::value(Float u, Float v, const vec3& p) const {
   int i = u * nx;
-  int j = (1-v) * ny - 0.001;
+  int j = (1-v) * ny - 0.00001;
   if (i < 0) i = 0;
   if (j < 0) j = 0;
   if (i > nx-1) i = nx-1;
@@ -119,14 +119,14 @@ public:
   
   Float *data;
   int nx, ny, channels;
-  Float a_u, a_v, b_u, b_v,c_u, c_v;
+  Float a_u, a_v, b_u, b_v, c_u, c_v;
 };
 
 vec3 triangle_image_texture::value(Float u, Float v, const vec3& p) const {
   Float uu = ((1 - u - v) * a_u + u * b_u + v * c_u);
   Float vv = ((1 - u - v) * a_v + u * b_v + v * c_v);
   int i = uu * nx;
-  int j = (1-vv) * ny - 0.001;
+  int j = (1-vv) * ny - 0.00001;
   if (i < 0) i = 0;
   if (j < 0) j = 0;
   if (i > nx-1) i = nx-1;
@@ -153,23 +153,42 @@ public:
 class alpha_texture {
 public:
   alpha_texture() {}
-  alpha_texture(Float *pixels, int A, int B, int nn) : data(pixels), nx(A), ny(B), channels(nn) {}
-  virtual vec3 value(Float u, Float v, const vec3& p) const;
+  alpha_texture(Float *pixels, int A, int B, int nn) : data(pixels), nx(A), ny(B), channels(nn) {
+    u_vec = vec3(0,0,0);
+    v_vec = vec3(0,0,0);
+  }
+  alpha_texture(Float *pixels, int A, int B, int nn, vec3 u, vec3 v) : 
+                data(pixels), nx(A), ny(B), channels(nn), u_vec(u), v_vec(v) {}
+  vec3 value(Float u, Float v, const vec3& p) const;
+  Float channel_value(Float u, Float v, const vec3& p) const;
   Float *data;
   int nx, ny, channels;
+  vec3 u_vec, v_vec;
 };
 
 vec3 alpha_texture::value(Float u, Float v, const vec3& p) const {
   int i = u * nx;
-  int j = (1-v) * ny - 0.001;
+  int j = (1-v) * ny - 0.00001;
   if (i < 0) i = 0;
   if (j < 0) j = 0;
   if (i > nx-1) i = nx-1;
   if (j > ny-1) j = ny-1;
-  // Float r = data[channels*i + channels*nx*j];
-  // Float g = data[channels*i + channels*nx*j+1];
-  // Float b = data[channels*i + channels*nx*j+2];
-  return(vec3(0,0,0));
+  Float r = data[channels*i + channels*nx*j];
+  Float g = data[channels*i + channels*nx*j+1];
+  Float b = data[channels*i + channels*nx*j+2];
+  return(vec3(r,g,b));
+}
+
+Float alpha_texture::channel_value(Float u, Float v, const vec3& p) const {
+  Float uu = ((1 - u - v) * u_vec.x() + u * u_vec.y() + v * u_vec.z());
+  Float vv = ((1 - u - v) * v_vec.x() + u * v_vec.y() + v * v_vec.z());
+  int i = uu * nx;
+  int j = (1-vv) * ny - 0.00001;
+  if (i < 0) i = 0;
+  if (j < 0) j = 0;
+  if (i > nx-1) i = nx-1;
+  if (j > ny-1) j = ny-1;
+  return(data[channels*i + channels*nx*j+3]);
 }
 
 #endif

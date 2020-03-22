@@ -4,13 +4,20 @@
 \alias{metal}
 \title{Metallic Material}
 \usage{
-metal(color = "#ffffff", fuzz = 0, importance_sample = FALSE)
+metal(
+  color = "#ffffff",
+  fuzz = 0,
+  alpha_texture = NA,
+  importance_sample = FALSE
+)
 }
 \arguments{
 \item{color}{Default `white`. The color of the sphere. Can be either
 a hexadecimal code, R color string, or a numeric rgb vector listing three intensities between `0` and `1`.}
 
 \item{fuzz}{Default `0`. The roughness of the metallic surface. Maximum `1`.}
+
+\item{alpha_texture}{Default `NA`. A matrix or filename (specifying a greyscale image) to be used to specify the transparency.}
 
 \item{importance_sample}{Default `FALSE`. If `TRUE`, the object will be sampled explicitly during 
 the rendering process. If the object is particularly important in contributing to the light paths

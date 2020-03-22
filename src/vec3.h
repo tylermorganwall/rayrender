@@ -34,6 +34,7 @@ public:
   inline const vec3& operator+() const { return *this; }
   inline vec3 operator-() const { return vec3(-e[0], -e[1], -e[2]); }
   inline Float operator[](int i) const { return e[i]; }
+  inline Float& operator[](int i) { return e[i]; }
   
   inline vec3& operator+=(const vec3 &v2);
   inline vec3& operator-=(const vec3 &v2);
@@ -41,6 +42,7 @@ public:
   inline vec3& operator/=(const vec3 &v2);
   inline vec3& operator*=(const Float t);
   inline vec3& operator/=(const Float t);
+  
   bool HasNaNs() const {
     return(std::isnan(e[0]) || std::isnan(e[1]) || std::isnan(e[2]));
   }
@@ -58,6 +60,16 @@ public:
 inline void vec3::make_unit_vector() {
   Float k = 1.0 / sqrt(e[0]*e[0] + e[1]*e[1] + e[2]*e[2]);
   e[0] *= k; e[1] *= k; e[2] *= k; 
+}
+
+inline std::istream& operator>>(std::istream &is, vec3 &t) {
+  is >> t.e[0] >> t.e[1] >> t.e[2];
+  return is;
+}
+
+inline std::ostream& operator<<(std::ostream &os, const vec3 &t) {
+  os << t.e[0] << " " << t.e[1] << " " << t.e[2];
+  return os;
 }
 
 inline vec3 operator+(const vec3 &v1, const vec3 &v2) {
