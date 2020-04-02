@@ -2,7 +2,6 @@
 #define RAYH
 
 #include "vec3.h"
-#include <cstring>
 #include <vector>
 #include "mathinline.h"
 
