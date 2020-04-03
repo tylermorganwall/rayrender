@@ -174,9 +174,7 @@ vec3 alpha_texture::value(Float u, Float v, const vec3& p) const {
   if (i > nx-1) i = nx-1;
   if (j > ny-1) j = ny-1;
   Float r = data[channels*i + channels*nx*j];
-  Float g = data[channels*i + channels*nx*j+1];
-  Float b = data[channels*i + channels*nx*j+2];
-  return(vec3(r,g,b));
+  return(vec3(r,r,r));
 }
 
 Float alpha_texture::channel_value(Float u, Float v, const vec3& p) const {

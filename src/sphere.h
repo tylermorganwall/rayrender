@@ -46,7 +46,7 @@ bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random
       p1 *= radius / p1.length(); 
       vec3 normal = (p1 - center) / radius;
       get_sphere_uv(normal, u, v);
-      if(alpha_mask->value(u, v, rec.p).x() > rng.unif_rand()) {
+      if(alpha_mask->value(u, v, rec.p).x() < rng.unif_rand()) {
         is_hit = false;
       }
     }
@@ -55,7 +55,7 @@ bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random
       p2 *= radius / p2.length(); 
       vec3 normal = (p2 - center) / radius;
       get_sphere_uv(normal, u, v);
-      if(alpha_mask->value(u, v, rec.p).x() > rng.unif_rand()) {
+      if(alpha_mask->value(u, v, rec.p).x() < rng.unif_rand()) {
         if(!is_hit) {
           return(false);
         }
@@ -157,7 +157,7 @@ bool moving_sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec,
       p1 *= radius / p1.length(); 
       vec3 normal = (p1 - center(r.time())) / radius;
       get_sphere_uv(normal, u, v);
-      if(alpha_mask->value(u, v, rec.p).x() > rng.unif_rand()) {
+      if(alpha_mask->value(u, v, rec.p).x() < rng.unif_rand()) {
         is_hit = false;
       }
     }
@@ -166,7 +166,7 @@ bool moving_sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec,
       p2 *= radius / p2.length(); 
       vec3 normal = (p2 - center(r.time())) / radius;
       get_sphere_uv(normal, u, v);
-      if(alpha_mask->value(u, v, rec.p).x() > rng.unif_rand()) {
+      if(alpha_mask->value(u, v, rec.p).x() < rng.unif_rand()) {
         if(!is_hit) {
           return(false);
         }

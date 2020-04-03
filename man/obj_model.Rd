@@ -11,6 +11,7 @@ obj_model(
   z = 0,
   scale_obj = 1,
   texture = FALSE,
+  vertex_colors = FALSE,
   material = diffuse(),
   angle = c(0, 0, 0),
   order_rotation = c(1, 2, 3),

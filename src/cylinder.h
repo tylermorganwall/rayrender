@@ -57,7 +57,7 @@ bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
         temppoint.e[0] *= radius / hitRad;
         temppoint.e[2] *= radius / hitRad;
         get_cylinder_uv(temppoint, u, v);
-        if(alpha_mask->value(u, v, rec.p).x() > rng.unif_rand()) {
+        if(alpha_mask->value(u, v, rec.p).x() < rng.unif_rand()) {
           is_hit = false;
         }
       }
@@ -71,7 +71,7 @@ bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
         temppoint.e[0] *= radius / hitRad;
         temppoint.e[2] *= radius / hitRad;
         get_cylinder_uv(temppoint, u, v);
-        if(alpha_mask->value(u, v, rec.p).x() > rng.unif_rand()) {
+        if(alpha_mask->value(u, v, rec.p).x() < rng.unif_rand()) {
           if(!is_hit) {
             return(false);
           }

@@ -196,7 +196,8 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
   rvec = scene$radius
   shapevec = unlist(lapply(tolower(scene$shape),switch,
                           "sphere" = 1,"xy_rect" = 2, "xz_rect" = 3,"yz_rect" = 4,"box" = 5, "triangle" = 6, 
-                          "obj" = 7, "objcolor" = 8, "disk" = 9, "cylinder" = 10, "ellipsoid" = 11))
+                          "obj" = 7, "objcolor" = 8, "disk" = 9, "cylinder" = 10, "ellipsoid" = 11,
+                          "objvertexcolor" = 12))
   typevec = unlist(lapply(tolower(scene$type),switch,
                           "diffuse" = 1,"metal" = 2,"dielectric" = 3, "oren-nayar" = 4, "light" = 5))
   sigmavec = unlist(scene$sigma)
@@ -264,27 +265,36 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
   image_tex_bool = image_tex_bool | image_filename_bool
   #alpha texture handler
   alpha_array_list = scene$alphaimage
-  alpha_tex_bool = purrr::map_lgl(alpha_array_list,.f = ~is.array(.x))
-  alpha_filename_bool = purrr::map_lgl(alpha_array_list,.f = ~is.character(.x))
-  alpha_temp_file_names = purrr::map_chr(alpha_tex_bool,.f = ~ifelse(.x, tempfile(fileext = ".png"),""))
+  alpha_tex_bool = purrr::map_lgl(alpha_array_list,.f = ~is.array(.x[[1]]))
+  alpha_filename_bool = purrr::map_lgl(alpha_array_list,.f = ~is.character(.x[[1]]))
+  alpha_temp_file_names = purrr::map_chr(alpha_tex_bool, .f = (function(.x) tempfile(fileext = ".png")))
   for(i in 1:length(alpha_array_list)) {
     if(alpha_tex_bool[i]) {
-      if(length(dim(alpha_array_list[[i]])) == 2) {
-        png::writePNG(fliplr(t(alpha_array_list[[i]])), alpha_temp_file_names[i])
-      } else if(dim(alpha_array_list[[i]])[3] == 4) {
-        png::writePNG(fliplr(aperm(alpha_array_list[[i]][,,1:3],c(2,1,3))), alpha_temp_file_names[i])
-      } else if(dim(alpha_array_list[[i]])[3] == 3) {
-        png::writePNG(fliplr(aperm(alpha_array_list[[i]],c(2,1,3))), alpha_temp_file_names[i])
+      if(length(dim(alpha_array_list[[i]][[1]])) == 2) {
+        png::writePNG(fliplr(t(alpha_array_list[[i]][[1]])), alpha_temp_file_names[i])
+      } else if(dim(alpha_array_list[[i]][[1]])[3] == 4) {
+        alpha_array_list[[i]][[1]][,,1] = alpha_array_list[[i]][[1]][,,4]
+        alpha_array_list[[i]][[1]][,,2] = alpha_array_list[[i]][[1]][,,4]
+        alpha_array_list[[i]][[1]][,,3] = alpha_array_list[[i]][[1]][,,4]
+        png::writePNG(fliplr(aperm(alpha_array_list[[i]][[1]][,,1:3],c(2,1,3))), alpha_temp_file_names[i])
+      } else if(dim(alpha_array_list[[i]][[1]])[3] == 3) {
+        png::writePNG(fliplr(aperm(alpha_array_list[[i]][[1]],c(2,1,3))), alpha_temp_file_names[i])
       } else {
-        stop("alpha texture dims: c(", paste(dim(alpha_array_list[[i]]),collapse=", "), ") not valid for texture.")
+        stop("alpha texture dims: c(", paste(dim(alpha_array_list[[i]][[1]]),collapse=", "), ") not valid for texture.")
       }
     }
     if(alpha_filename_bool[i]) {
-      if(any(!file.exists(path.expand(alpha_array_list[[i]])) & nchar(alpha_array_list[[i]]) > 0)) {
+      if(any(!file.exists(path.expand(alpha_array_list[[i]][[1]])) & nchar(alpha_array_list[[i]][[1]]) > 0)) {
         stop(paste0("Cannot find the following texture file:\n",
-                    paste(alpha_array_list[[i]], collapse="\n")))
+                    paste(alpha_array_list[[i]][[1]], collapse="\n")))
       }
-      alpha_temp_file_names[i] = path.expand(alpha_array_list[[i]])
+      temp_array = png::readPNG(alpha_array_list[[i]][[1]]) 
+      if(dim(temp_array)[3] == 4 && any(temp_array[,,4] != 1)) {
+        temp_array[,,1] = temp_array[,,4]
+        temp_array[,,2] = temp_array[,,4]
+        temp_array[,,3] = temp_array[,,4]
+      }
+      png::writePNG(temp_array,alpha_temp_file_names[i])
     }
   }
   alpha_tex_bool = alpha_tex_bool | alpha_filename_bool

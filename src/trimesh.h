@@ -110,7 +110,6 @@ public:
       bool has_normals = attrib.normals.size() > 0 ? true : false;
       vec3 tris[3];
       vec3 normals[3];
-      // vec3 colors[3];
       Float tx[3];
       Float ty[3];
       triangles.reserve(n+1);
@@ -126,6 +125,7 @@ public:
             tris[v] = vec3(attrib.vertices[3*idx.vertex_index+0],
                            attrib.vertices[3*idx.vertex_index+1],
                            attrib.vertices[3*idx.vertex_index+2])*scale;
+
             if(has_normals && idx.normal_index != -1) {
               tempnormal = true;
               normals[v] = vec3(attrib.normals[3*idx.normal_index+0],
@@ -295,7 +295,6 @@ public:
       bool has_normals = attrib.normals.size() > 0 ? true : false;
       vec3 tris[3];
       vec3 normals[3];
-      // vec3 colors[3];
       Float tx[3];
       Float ty[3];
       triangles.reserve(n+1);
@@ -416,8 +415,6 @@ public:
       bool has_normals = attrib.normals.size() > 0 ? true : false;
       vec3 tris[3];
       vec3 normals[3];
-      // vec3 colors[3];
-      // std::vector<hitable* > triangles;
       triangles.reserve(n+1);
       for (size_t s = 0; s < shapes.size(); s++) {
         size_t index_offset = 0;
@@ -457,6 +454,87 @@ public:
                                              mat_ptr, nullptr));
           } else {
             triangles.push_back(new triangle(tris[0],tris[1],tris[2], false, mat_ptr, nullptr));
+          }
+        }
+      }
+      tri_mesh_bvh = new bvh_node(&triangles[0], n, shutteropen, shutterclose, rng);
+    }
+  };
+  trimesh(std::string inputfile, std::string basedir, float vertex_color_sigma,
+          Float scale, bool is_vertex_color, Float shutteropen, Float shutterclose, random_gen rng) {
+    tinyobj::attrib_t attrib;
+    std::vector<tinyobj::shape_t > shapes;
+    std::vector<tinyobj::material_t > materials;
+    std::string warn, err;
+    mat_ptr = nullptr;
+    
+    bool is_lamb = vertex_color_sigma == 0 ? true : false;
+    
+    bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, inputfile.c_str(), basedir.c_str());
+    //need to define else
+    if(ret) {
+      int n = 0;
+      for (size_t s = 0; s < shapes.size(); s++) {
+        n += shapes[s].mesh.num_face_vertices.size();
+      }
+      bool has_normals = attrib.normals.size() > 0 ? true : false;
+      bool has_vertex_colors = attrib.colors.size() > 0 ? true : false;
+      vec3 tris[3];
+      vec3 normals[3];
+      vec3 colors[3];
+      triangles.reserve(n+1);
+      for (size_t s = 0; s < shapes.size(); s++) {
+        size_t index_offset = 0;
+        for (size_t f = 0; f < shapes[s].mesh.num_face_vertices.size(); f++) {
+          colors[0] = vec3(1,1,1);
+          colors[1] = vec3(1,1,1);
+          colors[2] = vec3(1,1,1);
+          for (size_t v = 0; v < 3; v++) {
+            tinyobj::index_t idx = shapes[s].mesh.indices[index_offset + v];
+            
+            tris[v] = vec3(attrib.vertices[3*idx.vertex_index+0],
+                           attrib.vertices[3*idx.vertex_index+1],
+                           attrib.vertices[3*idx.vertex_index+2])*scale;
+            if(has_vertex_colors) {
+              colors[v] = vec3(attrib.colors[3*idx.vertex_index+0],
+                               attrib.colors[3*idx.vertex_index+1],
+                               attrib.colors[3*idx.vertex_index+2]);
+            }
+            if(has_normals) {
+              normals[v] = vec3(attrib.normals[3*idx.normal_index+0],
+                                attrib.normals[3*idx.normal_index+1],
+                                attrib.normals[3*idx.normal_index+2]);
+            }
+          }
+          
+          index_offset += 3;
+          if(std::isnan(tris[0].x()) || std::isnan(tris[0].y()) || std::isnan(tris[0].z()) ||
+             std::isnan(tris[1].x()) || std::isnan(tris[1].y()) || std::isnan(tris[1].z()) ||
+             std::isnan(tris[2].x()) || std::isnan(tris[2].y()) || std::isnan(tris[2].z())) {
+            // triangles.pop_back();
+            n--;
+            continue;
+          }
+          if((normals[0].x() == 0 && normals[0].y() == 0 && normals[0].z() == 0) ||
+             (normals[1].x() == 0 && normals[1].y() == 0 && normals[1].z() == 0) ||
+             (normals[2].x() == 0 && normals[2].y() == 0 && normals[2].z() == 0)) {
+            has_normals = false;
+          }
+          material* tex;
+          if(is_lamb) {
+            tex = new lambertian(new triangle_texture(colors[0],colors[1],colors[2]));
+          } else {
+            tex = new orennayar(new triangle_texture(colors[0],colors[1],colors[2]),
+                                vertex_color_sigma);
+          }
+          
+          if(has_normals) {
+            triangles.push_back(new triangle(tris[0],tris[1],tris[2],
+                                             normals[0],normals[1],normals[2], 
+                                             true,
+                                             tex, nullptr));
+          } else {
+            triangles.push_back(new triangle(tris[0],tris[1],tris[2], true, tex, nullptr));
           }
         }
       }

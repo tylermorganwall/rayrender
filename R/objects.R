@@ -558,10 +558,11 @@ disk = function(x = 0, y = 0, z = 0, radius = 1, inner_radius = 0, material = di
 #'                aperture = 0.05, fov = 32, lookfrom = c(0, 2, 10),
 #'                lookat = c(0,1,0)) 
 #' }
-obj_model = function(filename, x = 0, y = 0, z = 0, scale_obj = 1, texture = FALSE,
-                    material = diffuse(), 
-                    angle = c(0, 0, 0), order_rotation = c(1, 2, 3), 
-                    flipped = FALSE, scale = c(1,1,1)) {
+obj_model = function(filename, x = 0, y = 0, z = 0, scale_obj = 1, 
+                     texture = FALSE, vertex_colors = FALSE,
+                     material = diffuse(), 
+                     angle = c(0, 0, 0), order_rotation = c(1, 2, 3), 
+                     flipped = FALSE, scale = c(1,1,1)) {
   if(length(scale) == 1) {
     scale = c(scale, scale, scale)
   }
@@ -570,6 +571,9 @@ obj_model = function(filename, x = 0, y = 0, z = 0, scale_obj = 1, texture = FAL
     shape = "objcolor"
   } else {
     shape = "obj"
+  }
+  if(vertex_colors) {
+    shape = "objvertexcolor"
   }
   tibble::tibble(x = x, y = y, z = z, radius = NA, 
                  type = material$type, shape = shape,

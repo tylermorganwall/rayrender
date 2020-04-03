@@ -224,6 +224,8 @@ hitable *build_scene(IntegerVector& type,
       center = vec3(x(i), y(i), z(i));
     } else if(shape(i) == 11) {
       center = vec3(x(i), y(i), z(i));
+    } else if(shape(i) == 12) {
+      center = vec3(x(i), y(i), z(i));
     }
 
     //Generate objects
@@ -508,6 +510,36 @@ hitable *build_scene(IntegerVector& type,
       } else {
         list[i] = entry;
       }
+    } else if (shape(i) == 12) {
+      hitable *entry;
+      std::string objfilename = Rcpp::as<std::string>(fileinfo(i));
+      std::string objbasedirname = Rcpp::as<std::string>(filebasedir(i));
+      entry = new trimesh(objfilename, objbasedirname, 
+                          sigma(i),
+                          tempvector(prop_len+1), true,
+                          shutteropen, shutterclose, rng);
+      if(is_scaled) {
+        entry = new scale(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
+      }
+      entry = rotation_order(entry, temprotvec, order_rotation);
+      if(isgrouped(i)) {
+        entry = new translate(entry, center - gpivot);
+        if(is_group_scaled) {
+          entry = new scale(entry, vec3(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
+        }
+        entry = rotation_order(entry, temp_gangle, temp_gorder);
+        entry = new translate(entry, -center + gpivot );
+      }
+      entry = new translate(entry, center + gtrans + vel * shutteropen);
+      if(isflipped(i)) {
+        entry = new flip_normals(entry);
+      } 
+      if(isvolume(i)) {
+        list[i] = new constant_medium(entry, voldensity(i), 
+                                      new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))));
+      } else {
+        list[i] = entry;
+      }
     }
   }
   return(new bvh_node(list, n, shutteropen, shutterclose, rng));
@@ -601,6 +633,8 @@ hitable* build_imp_sample(IntegerVector& type,
   } else if(shape(i) == 10) {
     center = vec3(x(i), y(i), z(i));
   } else if(shape(i) == 11) {
+    center = vec3(x(i), y(i), z(i));
+  } else if(shape(i) == 12) {
     center = vec3(x(i), y(i), z(i));
   }
 
@@ -711,7 +745,7 @@ hitable* build_imp_sample(IntegerVector& type,
     }
     entry = new translate(entry, center + gtrans + vel * shutteropen);
     return(entry);
-  } else if (shape(i) == 7 || shape(i) == 8) {
+  } else if (shape(i) == 7 || shape(i) == 8 || shape(i) == 12) {
     hitable *entry;
     std::string objfilename = Rcpp::as<std::string>(fileinfo(i));
     std::string objbasedirname = Rcpp::as<std::string>(filebasedir(i));

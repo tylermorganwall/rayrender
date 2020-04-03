@@ -44,7 +44,7 @@ bool disk::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_g
   Float v = p.z() / (2.0 * radius) + 0.5;
   u = 1 - u;
   if(alpha_mask) {
-    if(alpha_mask->value(u, v, rec.p).x() == 1) {
+    if(alpha_mask->value(u, v, rec.p).x() < 1) {
       return(false);
     }
   }

@@ -128,7 +128,7 @@ bool xy_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
     u = 1 - u;
   }
   if(alpha_mask) {
-    if(alpha_mask->value(u, v, rec.p).x() > rng.unif_rand()) {
+    if(alpha_mask->value(u, v, rec.p).x() < rng.unif_rand()) {
       return(false);
     }
     rec.normal = dot(r.direction(),vec3(0,0,1)) < 0 ? vec3(0,0,1) : vec3(0,0,-1);
@@ -161,7 +161,7 @@ bool xz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
     u = 1 - u;
   }
   if(alpha_mask) {
-    if(alpha_mask->value(u, v, rec.p).x() > rng.unif_rand()) {
+    if(alpha_mask->value(u, v, rec.p).x() < rng.unif_rand()) {
       return(false);
     }
     rec.normal =  dot(r.direction(),vec3(0,1,0)) < 0 ? vec3(0,1,0) : vec3(0,-1,0);
@@ -194,7 +194,7 @@ bool yz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
     u = 1 - u;
   }
   if(alpha_mask) {
-    if(alpha_mask->value(u, v, rec.p).x() > rng.unif_rand()) {
+    if(alpha_mask->value(u, v, rec.p).x() < rng.unif_rand()) {
       return(false);
     }
     rec.normal =  dot(r.direction(),vec3(1,0,0)) < 0 ? vec3(1,0,0) : vec3(-1,0,0);
