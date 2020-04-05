@@ -10,6 +10,8 @@ render_scene(
   height = 400,
   fov = 20,
   samples = 100,
+  min_variance = 2e-04,
+  min_adaptive_size = 8,
   ambient_light = FALSE,
   lookfrom = c(0, 1, 10),
   lookat = c(0, 0, 0),
@@ -30,8 +32,7 @@ render_scene(
   rotate_env = 0,
   debug_channel = "none",
   progress = interactive(),
-  verbose = FALSE,
-  debug = NULL
+  verbose = FALSE
 )
 }
 \arguments{
@@ -45,6 +46,12 @@ render_scene(
 used to create the orthographic projection is given in argument `ortho_dimensions`.}
 
 \item{samples}{Default `100`. Number of samples for each pixel.}
+
+\item{min_variance}{Default `0.0002`. Minimum acceptable variance for a block of pixels for the 
+adaptive sampler. If this is set to zero, the adaptive sampler will be turned off and the renderer
+will use the maximum number of samples everywhere.}
+
+\item{min_adaptive_size}{Default `8`. Width of the minimum block size in the adaptive sampler.}
 
 \item{ambient_light}{Default `FALSE`, unless there are no emitting objects in the scene. 
 If `TRUE`, the background will be a gradient varying from `backgroundhigh` directly up (+y) to 
@@ -106,7 +113,8 @@ the scene. Supports both HDR (`.hdr`) and low-dynamic range (`.png`, `.jpg`) ima
 
 \item{debug_channel}{Default `none`. If `depth`, function will return a depth map of rays into the scene 
 instead of an image. If `normals`, function will return an image of scene normals, mapped from 0 to 1.
-If `uv`, function will return an image of the uv coords.}
+If `uv`, function will return an image of the uv coords. If `variance`, function will return an image 
+showing the number of samples needed to take for each block to converge (when the}
 
 \item{progress}{Default `TRUE` if interactive session, `FALSE` otherwise.}
 

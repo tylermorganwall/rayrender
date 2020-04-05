@@ -20,6 +20,8 @@ using namespace Rcpp;
 // [[Rcpp::depends(RcppThread)]]
 #include "RcppThread.h"
 
+using namespace std;
+
 inline vec3 de_nan(const vec3& c) {
   vec3 temp = c;
   if(std::isnan(c[0])) temp.e[0] = 0.0f;
@@ -27,6 +29,16 @@ inline vec3 de_nan(const vec3& c) {
   if(std::isnan(c[2])) temp.e[2] = 0.0f;
   return(temp);
 }
+
+struct pixel_block {
+  size_t startx, starty;
+  size_t endx, endy;
+  size_t split_axis;
+  size_t split_pos;
+  bool erase;
+  bool split;
+  float error;
+};
 
 
 vec3 color(const ray& r, hitable *world, hitable *hlist, int depth, bool tonemap, random_gen& rng) {
@@ -168,6 +180,7 @@ float debug_bvh(const ray& r, hitable *world, random_gen rng) {
 }
 #endif
 
+
 float calculate_depth(const ray& r, hitable *world, random_gen rng) {
   hit_record hrec;
   if(world->hit(r, 0.001, FLT_MAX, hrec, rng)) {
@@ -246,11 +259,12 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
                        List& group_angle, List& group_order_rotation, List& group_scale,
                        LogicalVector& tri_normal_bools, LogicalVector& is_tri_color, List& tri_color_vert,
                        CharacterVector& fileinfo, CharacterVector& filebasedir, 
-                       bool progress_bar, int numbercores, int debugval, 
+                       bool progress_bar, int numbercores,
                        bool hasbackground, CharacterVector& background, List& scale_list,
                        NumericVector sigmavec,
                        float rotate_env, bool verbose, int debug_channel,
-                       IntegerVector& shared_id_mat, LogicalVector& is_shared_mat) {
+                       IntegerVector& shared_id_mat, LogicalVector& is_shared_mat,
+                       float min_variance, int min_adaptive_size) {
   auto startfirst = std::chrono::high_resolution_clock::now();
   //Unpack Camera Info
   int nx = as<int>(camera_info["nx"]);
@@ -280,7 +294,7 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
   bool tonemap = toneval == 1 ? false : true;
   CharacterVector alpha_files = as<CharacterVector>(alphalist["alpha_temp_file_names"]);
   LogicalVector has_alpha = as<LogicalVector>(alphalist["alpha_tex_bool"]);
-  
+  RcppThread::ThreadPool pool(numbercores);
   GetRNGstate();
   random_gen rng(unif_rand() * std::pow(2,32));
   camera cam(lookfrom, lookat, vec3(camera_up(0),camera_up(1),camera_up(2)), fov, float(nx)/float(ny), 
@@ -449,7 +463,11 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
   RProgress::RProgress pb("Raytracing [:bar] ETA: :eta");
   
   if(progress_bar) {
-    pb.set_total(ny);
+    if(parallel && min_variance != 0.0f) {
+      pb.set_total(ns);
+    } else {
+      pb.set_total(ny);
+    }
   }
   if(debug_channel == 1) {
     Float depth_into_scene = 0.0;
@@ -508,7 +526,7 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
         boutput(i,j) = uv_map.z();
       }
     }
-  } else if(debugval == 1) {
+  } else if(debug_channel == 4) {
 #ifdef DEBUGBVH
 
     Float bvh_intersections = 0.0;
@@ -585,65 +603,275 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
       }
       delete mat_stack;
     } else {
-      std::vector<unsigned int> seeds(ny);
-      for(int i = 0; i < ny; i++) {
-        seeds[i] = unif_rand() * std::pow(2,32);
-      }
-      RcppThread::ThreadPool pool(numbercores);
-      auto worker = [&routput, &goutput, &boutput,
-                     ambient_light, nx, ny, ns, seeds, fov,
-                     &cam, &ocam, backgroundhigh, backgroundlow, &world, &hlist,
-                     numbertosample, clampval, tonemap, progress_bar, 
-                     numbercores, background_texture] (int j) {
-      // auto worker = [nx, ns] (int j) {
-        if(progress_bar && j % numbercores == 0) {
-          RcppThread::Rcout << "Progress (" << numbercores << " cores): ";
-          RcppThread::Rcout << (int)((1-(double)j/double(ny)) * 100) << "%\r";
+      if(min_variance == 0) {
+        std::vector<unsigned int> seeds(ny);
+        for(int i = 0; i < ny; i++) {
+          seeds[i] = unif_rand() * std::pow(2,32);
         }
-        random_gen rng(seeds[j]);
-        std::vector<dielectric*> *mat_stack = new std::vector<dielectric*>;
+        RcppThread::ThreadPool pool(numbercores);
+        auto worker = [&routput, &goutput, &boutput,
+                       ambient_light, nx, ny, ns, seeds, fov,
+                       &cam, &ocam, backgroundhigh, backgroundlow, &world, &hlist,
+                       numbertosample, clampval, tonemap, progress_bar, 
+                       numbercores, background_texture] (int j) {
+         if(progress_bar && j % numbercores == 0) {
+           RcppThread::Rcout << "Progress (" << numbercores << " cores): ";
+           RcppThread::Rcout << (int)((1-(double)j/double(ny)) * 100) << "%\r";
+         }
+         random_gen rng(seeds[j]);
+         std::vector<dielectric*> *mat_stack = new std::vector<dielectric*>;
+         
+         for(int i = 0; i < nx; i++) {
+           vec3 col(0,0,0);
+           for(int s = 0; s < ns; s++) {
+             Float u = Float(i + rng.unif_rand()) / Float(nx);
+             Float v = Float(j + rng.unif_rand()) / Float(ny);
+             ray r;
+             if(fov != 0) {
+               r = cam.get_ray(u,v);
+             } else {
+               r = ocam.get_ray(u,v);
+             }
+             r.pri_stack = mat_stack;
+             
+             if(numbertosample) {
+               if(ambient_light) {
+                 col += clamp(de_nan(color_amb(r, &world, &hlist, 0,
+                                               backgroundhigh, backgroundlow, tonemap, rng)),0,clampval);
+               } else {
+                 col += clamp(de_nan(color(r, &world, &hlist, 0, tonemap, rng)),0,clampval);
+               }
+             } else {
+               if(ambient_light) {
+                 col += clamp(de_nan(color_amb_uniform(r, &world, 0, 
+                                                       backgroundhigh, backgroundlow, tonemap, rng)),0,clampval);
+               } else {
+                 col += clamp(de_nan(color_uniform(r, &world, 0, tonemap, rng, background_texture)),0,clampval);
+               }
+             }
+             mat_stack->clear();
+           }
+           col /= Float(ns);
+           routput(i,j) = col[0];
+           goutput(i,j) = col[1];
+           boutput(i,j) = col[2];
+         }
+         delete mat_stack;
+       };
+        for(int j = ny - 1; j >= 0; j--) {
+          pool.push(worker,j);
+        }
+        pool.join();
+      } else {
+        NumericMatrix routput_update(nx,ny);
+        NumericMatrix goutput_update(nx,ny);
+        NumericMatrix boutput_update(nx,ny);
         
-        for(int i = 0; i < nx; i++) {
-          vec3 col(0,0,0);
-          for(int s = 0; s < ns; s++) {
-            Float u = Float(i + rng.unif_rand()) / Float(nx);
-            Float v = Float(j + rng.unif_rand()) / Float(ny);
-            ray r;
-            if(fov != 0) {
-              r = cam.get_ray(u,v);
-            } else {
-              r = ocam.get_ray(u,v);
-            }
-            r.pri_stack = mat_stack;
-            
-            if(numbertosample) {
-              if(ambient_light) {
-                col += clamp(de_nan(color_amb(r, &world, &hlist, 0,
-                                              backgroundhigh, backgroundlow, tonemap, rng)),0,clampval);
-              } else {
-                col += clamp(de_nan(color(r, &world, &hlist, 0, tonemap, rng)),0,clampval);
-              }
-            } else {
-              if(ambient_light) {
-                col += clamp(de_nan(color_amb_uniform(r, &world, 0, 
-                                                      backgroundhigh, backgroundlow, tonemap, rng)),0,clampval);
-              } else {
-                col += clamp(de_nan(color_uniform(r, &world, 0, tonemap, rng, background_texture)),0,clampval);
-              }
-            }
-            mat_stack->clear();
+        std::vector<pixel_block> pixel_blocks;
+        size_t nx_chunk = nx / numbercores;
+        size_t ny_chunk = ny / numbercores;
+        size_t bonus_x = nx - nx_chunk * numbercores;
+        size_t bonus_y = ny - ny_chunk * numbercores;
+        for(size_t i = 0; i < numbercores; i++) {
+          for(size_t j = 0; j < numbercores ; j++) {
+            size_t extra_x = i == numbercores - 1 ? bonus_x : 0;
+            size_t extra_y = j == numbercores - 1 ? bonus_y : 0;
+            pixel_block chunk = {i*nx_chunk, j*ny_chunk,
+                                 (i+1)*nx_chunk + extra_x, (j+1)*ny_chunk  + extra_y,
+                                 0, 0, false, false, 0};
+            pixel_blocks.push_back(chunk);
           }
-          col /= Float(ns);
-          routput(i,j) = col[0];
-          goutput(i,j) = col[1];
-          boutput(i,j) = col[2];
         }
-        delete mat_stack;
-      };
-      for(int j = ny - 1; j >= 0; j--) {
-        pool.push(worker,j);
+        for(int s = 0; s < ns; s++) {
+          Rcpp::checkUserInterrupt();
+          if(progress_bar) {
+            pb.tick();
+          }
+          std::vector<random_gen > rngs;
+          for(int i = 0; i < nx * ny; i++) {
+            random_gen rng_single(unif_rand() * std::pow(2,32));
+            rngs.push_back(rng_single);
+          }
+          RcppThread::ThreadPool pool(numbercores);
+          auto worker = [&routput, &goutput, &boutput, 
+                         &routput_update, &goutput_update, &boutput_update, &pixel_blocks,
+                         ambient_light, nx, ny, s, min_variance,
+                         &rngs, fov, 
+                         &cam, &ocam, backgroundhigh, backgroundlow, &world, &hlist,
+                         numbertosample, clampval, tonemap, 
+                         background_texture] (int k) {
+             int nx_begin = pixel_blocks[k].startx;
+             int ny_begin = pixel_blocks[k].starty;
+             int nx_end = pixel_blocks[k].endx;
+             int ny_end = pixel_blocks[k].endy;
+             random_gen rng = rngs[k];
+             std::vector<dielectric*> *mat_stack = new std::vector<dielectric*>;
+             vec3 blockcol(rng.unif_rand(), rng.unif_rand(), rng.unif_rand());
+             for(int i = nx_begin; i < nx_end; i++) {
+               for(int j = ny_begin; j < ny_end; j++) {
+                 vec3 col(0,0,0);
+                 Float u = Float(i + rng.unif_rand()) / Float(nx);
+                 Float v = Float(j + rng.unif_rand()) / Float(ny);
+                 ray r;
+                 if(fov != 0) {
+                   r = cam.get_ray(u,v);
+                 } else {
+                   r = ocam.get_ray(u,v);
+                 }
+                 r.pri_stack = mat_stack;
+                 
+                 if(numbertosample) {
+                   if(ambient_light) {
+                     col += clamp(de_nan(color_amb(r, &world, &hlist, 0,
+                                                   backgroundhigh, backgroundlow, tonemap, rng)),0,clampval);
+                   } else {
+                     col += clamp(de_nan(color(r, &world, &hlist, 0, tonemap, rng)),0,clampval);
+                   }
+                 } else {
+                   if(ambient_light) {
+                     col += clamp(de_nan(color_amb_uniform(r, &world, 0, 
+                                                           backgroundhigh, backgroundlow, tonemap, rng)),0,clampval);
+                   } else {
+                     col += clamp(de_nan(color_uniform(r, &world, 0, tonemap, rng, background_texture)),0,clampval);
+                   }
+                 }
+                 mat_stack->clear();
+                 routput(i,j) += col[0];
+                 goutput(i,j) += col[1];
+                 boutput(i,j) += col[2];
+                 if(s % 2 == 0) {
+                   routput_update(i,j) += col[0];
+                   goutput_update(i,j) += col[1];
+                   boutput_update(i,j) += col[2];
+                 }
+               }
+             }
+             // Test for convergence
+             if(s % 2 == 1 && s > 1) {
+               Float error_block = 0.0;
+               int nx_block = (nx_end-nx_begin);
+               int ny_block = (ny_end-ny_begin);
+               Float N = (Float)nx_block * (Float)ny_block;
+               Float r_b = std::sqrt(N / ((Float)nx * (Float)ny));
+               std::vector<Float> error_sum(nx_block * ny_block, 0);
+               for(int i = nx_begin; i < nx_end; i++) {
+                 for(int j = ny_begin; j < ny_end; j++) {
+                   error_sum[(i-nx_begin) + (j-ny_begin) * nx_block] = fabs(routput(i,j) - 2 * routput_update(i,j)) +
+                                 fabs(goutput(i,j) - 2 * goutput_update(i,j)) +
+                                 fabs(boutput(i,j) - 2 * boutput_update(i,j));
+                   error_sum[(i-nx_begin) + (j-ny_begin) * nx_block] *= r_b / (s*N);
+                   Float normalize = sqrt(routput(i,j) + goutput(i,j)  + boutput(i,j));
+                   if(normalize != 0) {
+                     error_sum[(i-nx_begin) + (j-ny_begin) * nx_block] /= normalize;
+                   }
+                   error_block += error_sum[(i-nx_begin) + (j-ny_begin) * nx_block];
+                 }
+               }
+               pixel_blocks[k].error = error_block;
+               if(error_block < min_variance) {
+                 pixel_blocks[k].erase = true;
+               } else if(error_block < min_variance*256) {
+                 pixel_blocks[k].split = true;
+                 Float error_half = 0.0f;
+                 if((nx_end-nx_begin) >= (ny_end-ny_begin)) {
+                   pixel_blocks[k].split_axis = 0;
+                   for(int i = nx_begin; i < nx_end; i++) {
+                     for(int j = ny_begin; j < ny_end; j++) {
+                       error_half += error_sum[(i-nx_begin) + (j-ny_begin) * nx_block];
+                     }
+                     if(error_half >= error_block/2) {
+                       pixel_blocks[k].split_pos = i;
+                       break;
+                     }
+                   }
+                 } else {
+                   pixel_blocks[k].split_axis = 1;
+                   for(int j = ny_begin; j < ny_end; j++) {
+                     for(int i = nx_begin; i < nx_end; i++) {
+                       error_half += error_sum[(i-nx_begin) + (j-ny_begin) * nx_block];
+                     }
+                     if(error_half >= error_block/2) {
+                       pixel_blocks[k].split_pos = j;
+                       break;
+                     }
+                   }
+                 }
+               }
+             }
+             delete mat_stack;
+           };
+          for(int j = 0; j < pixel_blocks.size(); j++) {
+            pool.push(worker, j);
+          }
+  
+          pool.join();
+          if(s % 2 == 1 && s > 1) {
+            auto it = pixel_blocks.begin();
+            std::vector<pixel_block> temppixels;
+            while(it != pixel_blocks.end()) {
+              if(it->erase) {
+                for(int i = it->startx; i < it->endx; i++) {
+                  for(int j = it->starty; j < it->endy; j++) {
+                    routput(i,j) /= (float)(s+1);
+                    goutput(i,j) /= (float)(s+1);
+                    boutput(i,j) /= (float)(s+1);
+                    if(debug_channel == 5) {
+                      routput(i,j) = (float)(s+1)/(float)ns;
+                      goutput(i,j) = (float)(s+1)/(float)ns;
+                      boutput(i,j) = (float)(s+1)/(float)ns;
+                    }
+                  }
+                }
+              } else if(it->split &&
+                 (it->endx - it->startx) > min_adaptive_size &&
+                 (it->endy - it->starty) > min_adaptive_size) {
+                if(it->split_axis == 1) {
+                  pixel_block b1 = {it->startx, it->starty,
+                                    it->endx, it->split_pos,
+                                    0, 0, false, false, 0};
+                  pixel_block b2 = {it->startx, it->split_pos,
+                                    it->endx, it->endy,
+                                    0, 0, false, false, 0};
+                  temppixels.push_back(b1);
+                  temppixels.push_back(b2);
+                } else if(it->split_axis == 0) {
+                  pixel_block b1 = {it->startx, it->starty,
+                                    it->split_pos, it->endy,
+                                    0, 0, false, false, 0};
+                  pixel_block b2 = {it->split_pos, it->starty,
+                                    it->endx, it->endy,
+                                    0, 0, false, false, 0};
+                  temppixels.push_back(b1);
+                  temppixels.push_back(b2);
+                } 
+              } else {
+                temppixels.push_back(*it);
+              }
+              it++;
+            }
+            pixel_blocks = temppixels;
+            if(pixel_blocks.size() == 0) {
+              break;
+            }
+          }
+        }
+        auto it = pixel_blocks.begin();
+        while(it != pixel_blocks.end()) {
+          for(int i = it->startx; i < it->endx; i++) {
+            for(int j = it->starty; j < it->endy; j++) {
+              routput(i,j) /= (float)ns;
+              goutput(i,j) /= (float)ns;
+              boutput(i,j) /= (float)ns;
+              if(debug_channel == 5) {
+                routput(i,j) = 1;
+                goutput(i,j) = 1;
+                boutput(i,j) = 1;
+              }
+            }
+          }
+          it++;
+        }
       }
-      pool.join();
     }
   }
 

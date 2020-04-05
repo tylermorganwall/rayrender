@@ -8,6 +8,10 @@
 #' @param fov Default `20`. Field of view, in degrees. If this is zero, the camera will use an orthographic projection. The size of the plane
 #' used to create the orthographic projection is given in argument `ortho_dimensions`.
 #' @param samples Default `100`. Number of samples for each pixel.
+#' @param min_variance Default `0.0002`. Minimum acceptable variance for a block of pixels for the 
+#' adaptive sampler. If this is set to zero, the adaptive sampler will be turned off and the renderer
+#' will use the maximum number of samples everywhere.
+#' @param min_adaptive_size Default `8`. Width of the minimum block size in the adaptive sampler.
 #' @param ambient_light Default `FALSE`, unless there are no emitting objects in the scene. 
 #' If `TRUE`, the background will be a gradient varying from `backgroundhigh` directly up (+y) to 
 #' `backgroundlow` directly down (-y).
@@ -48,7 +52,8 @@
 #' @param rotate_env Default `0`. The number of degrees to rotate the environment map around the scene.
 #' @param debug_channel Default `none`. If `depth`, function will return a depth map of rays into the scene 
 #' instead of an image. If `normals`, function will return an image of scene normals, mapped from 0 to 1.
-#' If `uv`, function will return an image of the uv coords.
+#' If `uv`, function will return an image of the uv coords. If `variance`, function will return an image 
+#' showing the number of samples needed to take for each block to converge (when the 
 #' @param parallel Default `FALSE`. If `TRUE`, it will use all available cores to render the image
 #'  (or the number specified in `options("cores")` if that option is not `NULL`).
 #' @param progress Default `TRUE` if interactive session, `FALSE` otherwise. 
@@ -140,14 +145,16 @@
 #'    lookfrom = c(xpos[i],1.5,zpos[i]),lookat = c(0,0.5,0), parallel=TRUE)
 #'}
 #'}
-render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 100, ambient_light = FALSE,
+render_scene = function(scene, width = 400, height = 400, fov = 20, 
+                        samples = 100, min_variance = 0.0002, min_adaptive_size = 8,
+                        ambient_light = FALSE,
                         lookfrom = c(0,1,10), lookat = c(0,0,0), camera_up = c(0,1,0), 
                         aperture = 0.1, clamp_value = Inf,
                         filename = NULL, backgroundhigh = "#80b4ff",backgroundlow = "#ffffff",
                         shutteropen = 0.0, shutterclose = 1.0, focal_distance=NULL, ortho_dimensions = c(1,1),
                         tonemap ="gamma", bloom = TRUE, parallel=TRUE, 
                         environment_light = NULL, rotate_env = 0, debug_channel = "none",
-                        progress = interactive(), verbose = FALSE, debug = NULL) { 
+                        progress = interactive(), verbose = FALSE) { 
   if(verbose) {
     currenttime = proc.time()
     cat("Building Scene: ")
@@ -379,15 +386,14 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
   } else {
     numbercores = parallel::detectCores()
   }
-  if(is.null(debug)) {
-    debugval = 0
-  } else if(debug == "bvh") {
-    debugval = 1
-  } else {
-    debugval = 0
-  }
+
   debug_channel = unlist(lapply(tolower(debug_channel),switch,
-                          "none" = 0,"depth" = 1,"normals" = 2, "uv" = 3))
+                          "none" = 0,"depth" = 1,"normals" = 2, "uv" = 3, "bvh" = 4,
+                          "variance" = 5))
+  if(debug_channel == 4) {
+    message("rayrender must be compiled with option DEBUGBVH for this debug option to work")
+  }
+  
   if(fov == 0) {
     assertthat::assert_that(length(ortho_dimensions) == 2)
   }
@@ -416,6 +422,15 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
   material_id = as.integer(as.factor(material_id))-1
   material_id_bool = !is.na(scene$material_id)
   
+  if(min_adaptive_size < 1) {
+    warning("min_adaptive_size cannot be less than one: setting to one")
+    min_adaptive_size = 1
+  }
+  
+  if(min_variance < 0) {
+    stop("min_variance cannot be less than zero")
+  }
+  
   rgb_mat = render_scene_rcpp(camera_info = camera_info, ambient_light = ambient_light,
                              type = typevec, shape = shapevec, radius = rvec, 
                              position_list = position_list,
@@ -435,11 +450,12 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
                              group_angle = group_angle, group_order_rotation = group_order_rotation, group_scale = group_scale,
                              tri_normal_bools = tri_normal_bools, is_tri_color = is_tri_color, tri_color_vert= tri_color_vert,
                              fileinfo = objfilenamevec, filebasedir = objbasedirvec,
-                             progress_bar = progress, numbercores = numbercores, debugval = debugval,
+                             progress_bar = progress, numbercores = numbercores, 
                              hasbackground = hasbackground, background = backgroundstring, scale_list = scale_factor,
                              sigmavec = sigmavec, rotate_env = rotate_env,
                              verbose = verbose, debug_channel = debug_channel,
-                             shared_id_mat=material_id, is_shared_mat=material_id_bool) 
+                             shared_id_mat=material_id, is_shared_mat=material_id_bool, 
+                             min_variance = min_variance, min_adaptive_size = min_adaptive_size) 
   full_array = array(0,c(ncol(rgb_mat$r),nrow(rgb_mat$r),3))
   full_array[,,1] = flipud(t(rgb_mat$r))
   full_array[,,2] = flipud(t(rgb_mat$g))
