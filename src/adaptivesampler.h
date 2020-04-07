@@ -1,11 +1,9 @@
-#ifndef PIXELCHUNKH
-#define PIXELCHUNKH
+#ifndef ADAPTIVESAMPLERH
+#define ADAPTIVESAMPLERH
 
 #include "vec3.h"
-#include "vec2.h"
 
 using namespace Rcpp;
-
 
 struct pixel_block {
   size_t startx, starty;
@@ -25,7 +23,7 @@ public:
                    NumericMatrix& r2, NumericMatrix& g2, NumericMatrix& b2) : 
                    nx(nx), ny(ny), ns(ns), debug_channel(debug_channel), 
                    min_variance(min_variance), min_adaptive_size(min_adaptive_size),
-                   r(r), g(g), b(b), r2(r2), g2(g2), b2(b2){
+                   r(r), g(g), b(b), r2(r2), g2(g2), b2(b2) {
     size_t nx_chunk = nx / numbercores;
     size_t ny_chunk = ny / numbercores;
     size_t bonus_x = nx - nx_chunk * numbercores;
@@ -160,17 +158,19 @@ public:
       it++;
     }
   }
-  size_t size() {return(pixel_chunks.size());}
   void add_color_main(int i, int j, vec3 color) {
     r(i,j) += color.r();
     g(i,j) += color.g();
     b(i,j) += color.b();
   }
+  
   void add_color_sec(int i, int j, vec3 color) {
     r2(i,j) += color.r();
     g2(i,j) += color.g();
     b2(i,j) += color.b();
   }
+  size_t size() {return(pixel_chunks.size());}
+
   size_t nx, ny, ns;
   int debug_channel;
   float min_variance;

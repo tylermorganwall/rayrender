@@ -15,7 +15,7 @@ typedef float Float;
 #include "rng.h"
 #include "tonemap.h"
 #include "infinite_area_light.h"
-#include "pixelchunk.h"
+#include "adaptivesampler.h"
 using namespace Rcpp;
 // [[Rcpp::plugins(cpp11)]]
 // [[Rcpp::depends(RcppThread)]]
@@ -458,11 +458,12 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
   } else {
     numbertosample = 0;
   }
-  if(verbose) {
+  if(verbose && !progress_bar) {
     Rcpp::Rcout << "Starting Raytracing:\n ";
   }
-  RProgress::RProgress pb("Raytracing [:bar] ETA: :eta");
-  
+  RProgress::RProgress pb("Adaptive Raytracing [:bar] :percent%");
+  pb.set_width(70);
+
   if(progress_bar) {
     if(min_variance != 0.0f) {
       pb.set_total(ns);
@@ -571,7 +572,7 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
                      numbertosample, clampval, tonemap, progress_bar, 
                      numbercores, background_texture] (int j) {
        if(progress_bar && j % numbercores == 0) {
-         RcppThread::Rcout << "Progress (" << numbercores << " cores): ";
+         RcppThread::Rcout << "Progress (" << numbercores << " core): ";
          RcppThread::Rcout << (int)((1-(double)j/double(ny)) * 100) << "%\r";
        }
        random_gen rng(seeds[j]);
