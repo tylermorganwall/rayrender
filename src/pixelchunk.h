@@ -161,12 +161,21 @@ public:
     }
   }
   size_t size() {return(pixel_chunks.size());}
-  
-  NumericMatrix &r, &g, &b, &r2, &g2, &b2;
+  void add_color_main(int i, int j, vec3 color) {
+    r(i,j) += color.r();
+    g(i,j) += color.g();
+    b(i,j) += color.b();
+  }
+  void add_color_sec(int i, int j, vec3 color) {
+    r2(i,j) += color.r();
+    g2(i,j) += color.g();
+    b2(i,j) += color.b();
+  }
   size_t nx, ny, ns;
   int debug_channel;
   float min_variance;
   int min_adaptive_size;
+  NumericMatrix &r, &g, &b, &r2, &g2, &b2;
   std::vector<pixel_block> pixel_chunks;
 };
 

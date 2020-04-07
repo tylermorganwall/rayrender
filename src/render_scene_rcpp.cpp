@@ -254,7 +254,7 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
                        NumericVector& lightintensity,
                        LogicalVector& isflipped,
                        LogicalVector& isvolume, NumericVector& voldensity,
-                       bool parallel, LogicalVector& implicit_sample, List& order_rotation_list,
+                       LogicalVector& implicit_sample, List& order_rotation_list,
                        float clampval,
                        LogicalVector& isgrouped, List& group_pivot, List& group_translate,
                        List& group_angle, List& group_order_rotation, List& group_scale,
@@ -464,7 +464,7 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
   RProgress::RProgress pb("Raytracing [:bar] ETA: :eta");
   
   if(progress_bar) {
-    if(parallel && min_variance != 0.0f) {
+    if(min_variance != 0.0f) {
       pb.set_total(ns);
     } else {
       pb.set_total(ny);
@@ -559,327 +559,144 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
     }
 #endif
   } else {
-    if(!parallel) {
-      std::vector<dielectric*> *mat_stack = new std::vector<dielectric*>;
+    if(min_variance == 0) {
+      std::vector<unsigned int> seeds(ny);
+      for(int i = 0; i < ny; i++) {
+        seeds[i] = unif_rand() * std::pow(2,32);
+      }
+      RcppThread::ThreadPool pool(numbercores);
+      auto worker = [&routput, &goutput, &boutput,
+                     ambient_light, nx, ny, ns, seeds, fov,
+                     &cam, &ocam, backgroundhigh, backgroundlow, &world, &hlist,
+                     numbertosample, clampval, tonemap, progress_bar, 
+                     numbercores, background_texture] (int j) {
+       if(progress_bar && j % numbercores == 0) {
+         RcppThread::Rcout << "Progress (" << numbercores << " cores): ";
+         RcppThread::Rcout << (int)((1-(double)j/double(ny)) * 100) << "%\r";
+       }
+       random_gen rng(seeds[j]);
+       std::vector<dielectric*> *mat_stack = new std::vector<dielectric*>;
+       
+       for(int i = 0; i < nx; i++) {
+         vec3 col(0,0,0);
+         for(int s = 0; s < ns; s++) {
+           Float u = Float(i + rng.unif_rand()) / Float(nx);
+           Float v = Float(j + rng.unif_rand()) / Float(ny);
+           ray r;
+           if(fov != 0) {
+             r = cam.get_ray(u,v);
+           } else {
+             r = ocam.get_ray(u,v);
+           }
+           r.pri_stack = mat_stack;
+           
+           if(numbertosample) {
+             if(ambient_light) {
+               col += clamp(de_nan(color_amb(r, &world, &hlist, 0,
+                                             backgroundhigh, backgroundlow, tonemap, rng)),0,clampval);
+             } else {
+               col += clamp(de_nan(color(r, &world, &hlist, 0, tonemap, rng)),0,clampval);
+             }
+           } else {
+             if(ambient_light) {
+               col += clamp(de_nan(color_amb_uniform(r, &world, 0, 
+                                                     backgroundhigh, backgroundlow, tonemap, rng)),0,clampval);
+             } else {
+               col += clamp(de_nan(color_uniform(r, &world, 0, tonemap, rng, background_texture)),0,clampval);
+             }
+           }
+           mat_stack->clear();
+         }
+         col /= Float(ns);
+         routput(i,j) = col[0];
+         goutput(i,j) = col[1];
+         boutput(i,j) = col[2];
+       }
+       delete mat_stack;
+     };
       for(int j = ny - 1; j >= 0; j--) {
+        pool.push(worker,j);
+      }
+      pool.join();
+    } else {
+      NumericMatrix routput2(nx,ny);
+      NumericMatrix goutput2(nx,ny);
+      NumericMatrix boutput2(nx,ny);
+      adaptive_sampler adaptive_pixel_sampler(numbercores, nx, ny, ns, debug_channel,
+                                              min_variance, min_adaptive_size,
+                                              routput, goutput, boutput,
+                                              routput2, goutput2, boutput2);
+      for(int s = 0; s < ns; s++) {
         Rcpp::checkUserInterrupt();
         if(progress_bar) {
           pb.tick();
         }
-        for(int i = 0; i < nx; i++) {
-          vec3 col(0,0,0);
-          for(int s = 0; s < ns; s++) {
-            Float u = Float(i + rng.unif_rand()) / Float(nx);
-            Float v = Float(j + rng.unif_rand()) / Float(ny);
-            ray r;
-            if(fov != 0) {
-              r = cam.get_ray(u,v);
-            } else {
-              r = ocam.get_ray(u,v);
-            }
-            r.pri_stack = mat_stack;
-            
-            if(numbertosample) {
-              if(ambient_light) {
-                col += clamp(de_nan(color_amb(r, &world, &hlist, 0, 
-                                              backgroundhigh, backgroundlow, tonemap, rng)),0,clampval);
-              } else {
-                col += clamp(de_nan(color(r, &world, &hlist, 0, tonemap, rng)),0,clampval);
-              }
-            } else {
-              if(ambient_light) {
-                col += clamp(de_nan(color_amb_uniform(r, &world, 0, 
-                                                      backgroundhigh, backgroundlow, tonemap, rng)),0,clampval);
-              } else {
-                col += clamp(de_nan(color_uniform(r, &world, 0,  tonemap, rng, background_texture)),0,clampval);
-              }
-            }
-            mat_stack->clear();
-          }
-          col /= Float(ns);
-          routput(i,j) = col[0];
-          goutput(i,j) = col[1];
-          boutput(i,j) = col[2];
-        }
-      }
-      delete mat_stack;
-    } else {
-      if(min_variance == 0) {
-        std::vector<unsigned int> seeds(ny);
-        for(int i = 0; i < ny; i++) {
-          seeds[i] = unif_rand() * std::pow(2,32);
+        std::vector<random_gen > rngs;
+        for(int i = 0; i < nx * ny; i++) {
+          random_gen rng_single(unif_rand() * std::pow(2,32));
+          rngs.push_back(rng_single);
         }
         RcppThread::ThreadPool pool(numbercores);
-        auto worker = [&routput, &goutput, &boutput,
-                       ambient_light, nx, ny, ns, seeds, fov,
+        auto worker = [&adaptive_pixel_sampler, 
+                       ambient_light, nx, ny, s, 
+                       &rngs, fov, 
                        &cam, &ocam, backgroundhigh, backgroundlow, &world, &hlist,
-                       numbertosample, clampval, tonemap, progress_bar, 
-                       numbercores, background_texture] (int j) {
-         if(progress_bar && j % numbercores == 0) {
-           RcppThread::Rcout << "Progress (" << numbercores << " cores): ";
-           RcppThread::Rcout << (int)((1-(double)j/double(ny)) * 100) << "%\r";
-         }
-         random_gen rng(seeds[j]);
-         std::vector<dielectric*> *mat_stack = new std::vector<dielectric*>;
-         
-         for(int i = 0; i < nx; i++) {
-           vec3 col(0,0,0);
-           for(int s = 0; s < ns; s++) {
-             Float u = Float(i + rng.unif_rand()) / Float(nx);
-             Float v = Float(j + rng.unif_rand()) / Float(ny);
-             ray r;
-             if(fov != 0) {
-               r = cam.get_ray(u,v);
-             } else {
-               r = ocam.get_ray(u,v);
-             }
-             r.pri_stack = mat_stack;
-             
-             if(numbertosample) {
-               if(ambient_light) {
-                 col += clamp(de_nan(color_amb(r, &world, &hlist, 0,
-                                               backgroundhigh, backgroundlow, tonemap, rng)),0,clampval);
+                       numbertosample, clampval, tonemap, 
+                       background_texture] (int k) {
+           int nx_begin = adaptive_pixel_sampler.pixel_chunks[k].startx;
+           int ny_begin = adaptive_pixel_sampler.pixel_chunks[k].starty;
+           int nx_end = adaptive_pixel_sampler.pixel_chunks[k].endx;
+           int ny_end = adaptive_pixel_sampler.pixel_chunks[k].endy;
+           random_gen rng = rngs[k];
+           std::vector<dielectric*> *mat_stack = new std::vector<dielectric*>;
+           for(int i = nx_begin; i < nx_end; i++) {
+             for(int j = ny_begin; j < ny_end; j++) {
+               vec3 col(0,0,0);
+               Float u = Float(i + rng.unif_rand()) / Float(nx);
+               Float v = Float(j + rng.unif_rand()) / Float(ny);
+               ray r;
+               if(fov != 0) {
+                 r = cam.get_ray(u,v);
                } else {
-                 col += clamp(de_nan(color(r, &world, &hlist, 0, tonemap, rng)),0,clampval);
+                 r = ocam.get_ray(u,v);
                }
-             } else {
-               if(ambient_light) {
-                 col += clamp(de_nan(color_amb_uniform(r, &world, 0, 
-                                                       backgroundhigh, backgroundlow, tonemap, rng)),0,clampval);
+               r.pri_stack = mat_stack;
+               if(numbertosample) {
+                 if(ambient_light) {
+                   col = clamp(de_nan(color_amb(r, &world, &hlist, 0,
+                                                 backgroundhigh, backgroundlow, tonemap, rng)),0,clampval);
+                 } else {
+                   col = clamp(de_nan(color(r, &world, &hlist, 0, tonemap, rng)),0,clampval);
+                 }
                } else {
-                 col += clamp(de_nan(color_uniform(r, &world, 0, tonemap, rng, background_texture)),0,clampval);
+                 if(ambient_light) {
+                   col = clamp(de_nan(color_amb_uniform(r, &world, 0, 
+                                                         backgroundhigh, backgroundlow, tonemap, rng)),0,clampval);
+                 } else {
+                   col = clamp(de_nan(color_uniform(r, &world, 0, tonemap, rng, background_texture)),0,clampval);
+                 }
+               }
+               mat_stack->clear();
+               adaptive_pixel_sampler.add_color_main(i, j, col);
+               if(s % 2 == 0) {
+                 adaptive_pixel_sampler.add_color_sec(i, j, col);
                }
              }
-             mat_stack->clear();
            }
-           col /= Float(ns);
-           routput(i,j) = col[0];
-           goutput(i,j) = col[1];
-           boutput(i,j) = col[2];
-         }
-         delete mat_stack;
-       };
-        for(int j = ny - 1; j >= 0; j--) {
-          pool.push(worker,j);
+           if(s % 2 == 1 && s > 1) {
+             adaptive_pixel_sampler.test_for_convergence(k, s, nx_end, nx_begin, ny_end, ny_begin);
+           }
+           delete mat_stack;
+         };
+        for(int j = 0; j < adaptive_pixel_sampler.size(); j++) {
+          pool.push(worker, j);
         }
         pool.join();
-      } else {
-        NumericMatrix routput2(nx,ny);
-        NumericMatrix goutput2(nx,ny);
-        NumericMatrix boutput2(nx,ny);
-        
-        adaptive_sampler adaptive_pixel_sampler(numbercores, nx, ny, ns, debug_channel,
-                                                min_variance, min_adaptive_size,
-                                                routput, goutput, boutput,
-                                                routput2, goutput2, boutput2);
-        // std::vector<pixel_block> pixel_blocks;
-        // size_t nx_chunk = nx / numbercores;
-        // size_t ny_chunk = ny / numbercores;
-        // size_t bonus_x = nx - nx_chunk * numbercores;
-        // size_t bonus_y = ny - ny_chunk * numbercores;
-        // for(size_t i = 0; i < numbercores; i++) {
-        //   for(size_t j = 0; j < numbercores ; j++) {
-        //     size_t extra_x = i == numbercores - 1 ? bonus_x : 0;
-        //     size_t extra_y = j == numbercores - 1 ? bonus_y : 0;
-        //     pixel_block chunk = {i*nx_chunk, j*ny_chunk,
-        //                          (i+1)*nx_chunk + extra_x, (j+1)*ny_chunk  + extra_y,
-        //                          0, 0, false, false, 0};
-        //     pixel_blocks.push_back(chunk);
-        //   }
-        // }
-        for(int s = 0; s < ns; s++) {
-          Rcpp::checkUserInterrupt();
-          if(progress_bar) {
-            pb.tick();
-          }
-          std::vector<random_gen > rngs;
-          for(int i = 0; i < nx * ny; i++) {
-            random_gen rng_single(unif_rand() * std::pow(2,32));
-            rngs.push_back(rng_single);
-          }
-          RcppThread::ThreadPool pool(numbercores);
-          auto worker = [&routput, &goutput, &boutput, 
-                         &routput2, &goutput2, &boutput2, &adaptive_pixel_sampler, //&pixel_blocks,
-                         ambient_light, nx, ny, s, min_variance,
-                         &rngs, fov, 
-                         &cam, &ocam, backgroundhigh, backgroundlow, &world, &hlist,
-                         numbertosample, clampval, tonemap, 
-                         background_texture] (int k) {
-             int nx_begin = adaptive_pixel_sampler.pixel_chunks[k].startx;
-             int ny_begin = adaptive_pixel_sampler.pixel_chunks[k].starty;
-             int nx_end = adaptive_pixel_sampler.pixel_chunks[k].endx;
-             int ny_end = adaptive_pixel_sampler.pixel_chunks[k].endy;
-             random_gen rng = rngs[k];
-             std::vector<dielectric*> *mat_stack = new std::vector<dielectric*>;
-             vec3 blockcol(rng.unif_rand(), rng.unif_rand(), rng.unif_rand());
-             for(int i = nx_begin; i < nx_end; i++) {
-               for(int j = ny_begin; j < ny_end; j++) {
-                 vec3 col(0,0,0);
-                 Float u = Float(i + rng.unif_rand()) / Float(nx);
-                 Float v = Float(j + rng.unif_rand()) / Float(ny);
-                 ray r;
-                 if(fov != 0) {
-                   r = cam.get_ray(u,v);
-                 } else {
-                   r = ocam.get_ray(u,v);
-                 }
-                 r.pri_stack = mat_stack;
-                 
-                 if(numbertosample) {
-                   if(ambient_light) {
-                     col += clamp(de_nan(color_amb(r, &world, &hlist, 0,
-                                                   backgroundhigh, backgroundlow, tonemap, rng)),0,clampval);
-                   } else {
-                     col += clamp(de_nan(color(r, &world, &hlist, 0, tonemap, rng)),0,clampval);
-                   }
-                 } else {
-                   if(ambient_light) {
-                     col += clamp(de_nan(color_amb_uniform(r, &world, 0, 
-                                                           backgroundhigh, backgroundlow, tonemap, rng)),0,clampval);
-                   } else {
-                     col += clamp(de_nan(color_uniform(r, &world, 0, tonemap, rng, background_texture)),0,clampval);
-                   }
-                 }
-                 mat_stack->clear();
-                 routput(i,j) += col[0];
-                 goutput(i,j) += col[1];
-                 boutput(i,j) += col[2];
-                 if(s % 2 == 0) {
-                   routput2(i,j) += col[0];
-                   goutput2(i,j) += col[1];
-                   boutput2(i,j) += col[2];
-                 }
-               }
-             }
-             // Test for convergence
-             if(s % 2 == 1 && s > 1) {
-               adaptive_pixel_sampler.test_for_convergence(k, s, nx_end, nx_begin, ny_end, ny_begin);
-               // Float error_block = 0.0;
-               // int nx_block = (nx_end-nx_begin);
-               // int ny_block = (ny_end-ny_begin);
-               // Float N = (Float)nx_block * (Float)ny_block;
-               // Float r_b = std::sqrt(N / ((Float)nx * (Float)ny));
-               // std::vector<Float> error_sum(nx_block * ny_block, 0);
-               // for(int i = nx_begin; i < nx_end; i++) {
-               //   for(int j = ny_begin; j < ny_end; j++) {
-               //     error_sum[(i-nx_begin) + (j-ny_begin) * nx_block] = fabs(routput(i,j) - 2 * routput2(i,j)) +
-               //                   fabs(goutput(i,j) - 2 * goutput2(i,j)) +
-               //                   fabs(boutput(i,j) - 2 * boutput2(i,j));
-               //     error_sum[(i-nx_begin) + (j-ny_begin) * nx_block] *= r_b / (s*N);
-               //     Float normalize = sqrt(routput(i,j) + goutput(i,j)  + boutput(i,j));
-               //     if(normalize != 0) {
-               //       error_sum[(i-nx_begin) + (j-ny_begin) * nx_block] /= normalize;
-               //     }
-               //     error_block += error_sum[(i-nx_begin) + (j-ny_begin) * nx_block];
-               //   }
-               // }
-               // pixel_blocks[k].error = error_block;
-               // if(error_block < min_variance) {
-               //   pixel_blocks[k].erase = true;
-               // } else if(error_block < min_variance*256) {
-               //   pixel_blocks[k].split = true;
-               //   Float error_half = 0.0f;
-               //   if((nx_end-nx_begin) >= (ny_end-ny_begin)) {
-               //     pixel_blocks[k].split_axis = 0;
-               //     for(int i = nx_begin; i < nx_end; i++) {
-               //       for(int j = ny_begin; j < ny_end; j++) {
-               //         error_half += error_sum[(i-nx_begin) + (j-ny_begin) * nx_block];
-               //       }
-               //       if(error_half >= error_block/2) {
-               //         pixel_blocks[k].split_pos = i;
-               //         break;
-               //       }
-               //     }
-               //   } else {
-               //     pixel_blocks[k].split_axis = 1;
-               //     for(int j = ny_begin; j < ny_end; j++) {
-               //       for(int i = nx_begin; i < nx_end; i++) {
-               //         error_half += error_sum[(i-nx_begin) + (j-ny_begin) * nx_block];
-               //       }
-               //       if(error_half >= error_block/2) {
-               //         pixel_blocks[k].split_pos = j;
-               //         break;
-               //       }
-               //     }
-               //   }
-               // }
-             }
-             delete mat_stack;
-           };
-          for(int j = 0; j < adaptive_pixel_sampler.size(); j++) {
-            pool.push(worker, j);
-          }
-  
-          pool.join();
-          if(s % 2 == 1 && s > 1) {
-            adaptive_pixel_sampler.split_remove_chunks(s);
-            // auto it = pixel_blocks.begin();
-            // std::vector<pixel_block> temppixels;
-            // while(it != pixel_blocks.end()) {
-            //   if(it->erase) {
-            //     for(int i = it->startx; i < it->endx; i++) {
-            //       for(int j = it->starty; j < it->endy; j++) {
-            //         routput(i,j) /= (float)(s+1);
-            //         goutput(i,j) /= (float)(s+1);
-            //         boutput(i,j) /= (float)(s+1);
-            //         if(debug_channel == 5) {
-            //           routput(i,j) = (float)(s+1)/(float)ns;
-            //           goutput(i,j) = (float)(s+1)/(float)ns;
-            //           boutput(i,j) = (float)(s+1)/(float)ns;
-            //         }
-            //       }
-            //     }
-            //   } else if(it->split &&
-            //      (it->endx - it->startx) > min_adaptive_size &&
-            //      (it->endy - it->starty) > min_adaptive_size) {
-            //     if(it->split_axis == 1) {
-            //       pixel_block b1 = {it->startx, it->starty,
-            //                         it->endx, it->split_pos,
-            //                         0, 0, false, false, 0};
-            //       pixel_block b2 = {it->startx, it->split_pos,
-            //                         it->endx, it->endy,
-            //                         0, 0, false, false, 0};
-            //       temppixels.push_back(b1);
-            //       temppixels.push_back(b2);
-            //     } else if(it->split_axis == 0) {
-            //       pixel_block b1 = {it->startx, it->starty,
-            //                         it->split_pos, it->endy,
-            //                         0, 0, false, false, 0};
-            //       pixel_block b2 = {it->split_pos, it->starty,
-            //                         it->endx, it->endy,
-            //                         0, 0, false, false, 0};
-            //       temppixels.push_back(b1);
-            //       temppixels.push_back(b2);
-            //     } 
-            //   } else {
-            //     temppixels.push_back(*it);
-            //   }
-            //   it++;
-            // }
-            // pixel_blocks = temppixels;
-            // if(pixel_blocks.size() == 0) {
-            //   break;
-            // }
-          }
+        if(s % 2 == 1 && s > 1) {
+          adaptive_pixel_sampler.split_remove_chunks(s);
         }
-        adaptive_pixel_sampler.write_final_pixels();
-        // auto it = pixel_blocks.begin();
-        // while(it != pixel_blocks.end()) {
-        //   for(int i = it->startx; i < it->endx; i++) {
-        //     for(int j = it->starty; j < it->endy; j++) {
-        //       routput(i,j) /= (float)ns;
-        //       goutput(i,j) /= (float)ns;
-        //       boutput(i,j) /= (float)ns;
-        //       if(debug_channel == 5) {
-        //         routput(i,j) = 1;
-        //         goutput(i,j) = 1;
-        //         boutput(i,j) = 1;
-        //       }
-        //     }
-        //   }
-        //   it++;
-        // }
       }
+      adaptive_pixel_sampler.write_final_pixels();
     }
   }
 

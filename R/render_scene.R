@@ -386,6 +386,9 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
   } else {
     numbercores = parallel::detectCores()
   }
+  if(!parallel) {
+    numbercores = 1
+  }
 
   debug_channel = unlist(lapply(tolower(debug_channel),switch,
                           "none" = 0,"depth" = 1,"normals" = 2, "uv" = 3, "bvh" = 4,
@@ -444,7 +447,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
                              angle = rot_angle_list, isimage = image_tex_bool, filelocation = temp_file_names,
                              alphalist = alphalist,
                              lightintensity = light_prop_vec,isflipped = flip_vec,
-                             isvolume=fog_bool, voldensity = fog_vec , parallel=parallel,
+                             isvolume=fog_bool, voldensity = fog_vec, 
                              implicit_sample = implicit_vec, order_rotation_list = order_rotation_list, clampval = clamp_value,
                              isgrouped = group_bool, group_pivot=group_pivot, group_translate = group_translate,
                              group_angle = group_angle, group_order_rotation = group_order_rotation, group_scale = group_scale,
