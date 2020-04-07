@@ -10,7 +10,7 @@ render_scene(
   height = 400,
   fov = 20,
   samples = 100,
-  min_variance = 2e-04,
+  min_variance = 1e-04,
   min_adaptive_size = 8,
   ambient_light = FALSE,
   lookfrom = c(0, 1, 10),
@@ -45,10 +45,11 @@ render_scene(
 \item{fov}{Default `20`. Field of view, in degrees. If this is zero, the camera will use an orthographic projection. The size of the plane
 used to create the orthographic projection is given in argument `ortho_dimensions`.}
 
-\item{samples}{Default `100`. Number of samples for each pixel.}
+\item{samples}{Default `100`. The maximum number of samples for each pixel.}
 
-\item{min_variance}{Default `0.0002`. Minimum acceptable variance for a block of pixels for the 
-adaptive sampler. If this is set to zero, the adaptive sampler will be turned off and the renderer
+\item{min_variance}{Default `0.0001`. Minimum acceptable variance for a block of pixels for the 
+adaptive sampler. Smaller numbers give higher quality images, at the expense of longer rendering times.
+If this is set to zero, the adaptive sampler will be turned off and the renderer
 will use the maximum number of samples everywhere.}
 
 \item{min_adaptive_size}{Default `8`. Width of the minimum block size in the adaptive sampler.}

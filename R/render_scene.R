@@ -7,9 +7,10 @@
 #' @param height Default `400`. Height of the render, in pixels.
 #' @param fov Default `20`. Field of view, in degrees. If this is zero, the camera will use an orthographic projection. The size of the plane
 #' used to create the orthographic projection is given in argument `ortho_dimensions`.
-#' @param samples Default `100`. Number of samples for each pixel.
-#' @param min_variance Default `0.0002`. Minimum acceptable variance for a block of pixels for the 
-#' adaptive sampler. If this is set to zero, the adaptive sampler will be turned off and the renderer
+#' @param samples Default `100`. The maximum number of samples for each pixel.
+#' @param min_variance Default `0.0001`. Minimum acceptable variance for a block of pixels for the 
+#' adaptive sampler. Smaller numbers give higher quality images, at the expense of longer rendering times.
+#' If this is set to zero, the adaptive sampler will be turned off and the renderer
 #' will use the maximum number of samples everywhere.
 #' @param min_adaptive_size Default `8`. Width of the minimum block size in the adaptive sampler.
 #' @param ambient_light Default `FALSE`, unless there are no emitting objects in the scene. 
@@ -146,7 +147,7 @@
 #'}
 #'}
 render_scene = function(scene, width = 400, height = 400, fov = 20, 
-                        samples = 100, min_variance = 0.0002, min_adaptive_size = 8,
+                        samples = 100, min_variance = 0.0001, min_adaptive_size = 8,
                         ambient_light = FALSE,
                         lookfrom = c(0,1,10), lookat = c(0,0,0), camera_up = c(0,1,0), 
                         aperture = 0.1, clamp_value = Inf,

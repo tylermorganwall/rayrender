@@ -405,7 +405,7 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
     background_sphere = new sphere(world_center, world_radius, background_material, nullptr);
   }
   finish = std::chrono::high_resolution_clock::now();
-  if(verbose) {
+  if(verbose && hasbackground) {
     std::chrono::duration<double> elapsed = finish - start;
     Rcpp::Rcout << elapsed.count() << " seconds" << "\n";
   }
