@@ -31,17 +31,6 @@ inline vec3 de_nan(const vec3& c) {
   return(temp);
 }
 
-// struct pixel_block {
-//   size_t startx, starty;
-//   size_t endx, endy;
-//   size_t split_axis;
-//   size_t split_pos;
-//   bool erase;
-//   bool split;
-//   float error;
-// };
-
-
 vec3 color(const ray& r, hitable *world, hitable *hlist, int depth, bool tonemap, random_gen& rng) {
   hit_record hrec;
   if(world->hit(r, 0.001, FLT_MAX, hrec, rng)) { //generated hit record, world space
@@ -696,6 +685,7 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
         if(s % 2 == 1 && s > 1) {
           adaptive_pixel_sampler.split_remove_chunks(s);
         }
+        adaptive_pixel_sampler.max_s++;
       }
       adaptive_pixel_sampler.write_final_pixels();
     }

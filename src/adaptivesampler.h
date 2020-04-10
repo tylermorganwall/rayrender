@@ -21,7 +21,7 @@ public:
                    float min_variance, int min_adaptive_size, 
                    NumericMatrix& r, NumericMatrix& g, NumericMatrix& b,
                    NumericMatrix& r2, NumericMatrix& g2, NumericMatrix& b2) : 
-                   nx(nx), ny(ny), ns(ns), debug_channel(debug_channel), 
+                   nx(nx), ny(ny), ns(ns), max_s(0), debug_channel(debug_channel), 
                    min_variance(min_variance), min_adaptive_size(min_adaptive_size),
                    r(r), g(g), b(b), r2(r2), g2(g2), b2(b2) {
     size_t nx_chunk = nx / numbercores;
@@ -149,9 +149,9 @@ public:
           g(i,j) /= (float)ns;
           b(i,j) /= (float)ns;
           if(debug_channel == 5) {
-            r(i,j) = 1;
-            g(i,j) = 1;
-            b(i,j) = 1;
+            r(i,j) = (float)max_s/(float)ns;
+            g(i,j) = (float)max_s/(float)ns;
+            b(i,j) = (float)max_s/(float)ns;
           }
         }
       }
@@ -172,6 +172,7 @@ public:
   size_t size() {return(pixel_chunks.size());}
 
   size_t nx, ny, ns;
+  size_t max_s;
   int debug_channel;
   float min_variance;
   int min_adaptive_size;

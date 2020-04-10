@@ -1,6 +1,6 @@
 #' Render Scene
 #' 
-#' Takes the scene description and renders an image, either to the device or to a filename.
+#' Takes the scene description and renders an image, either to the device or to a filename. 
 #'
 #' @param scene Tibble of object locations and properties. 
 #' @param width Default `400`. Width of the render, in pixels.
@@ -8,7 +8,7 @@
 #' @param fov Default `20`. Field of view, in degrees. If this is zero, the camera will use an orthographic projection. The size of the plane
 #' used to create the orthographic projection is given in argument `ortho_dimensions`.
 #' @param samples Default `100`. The maximum number of samples for each pixel.
-#' @param min_variance Default `0.0001`. Minimum acceptable variance for a block of pixels for the 
+#' @param min_variance Default `0.00005`. Minimum acceptable variance for a block of pixels for the 
 #' adaptive sampler. Smaller numbers give higher quality images, at the expense of longer rendering times.
 #' If this is set to zero, the adaptive sampler will be turned off and the renderer
 #' will use the maximum number of samples everywhere.
@@ -147,7 +147,7 @@
 #'}
 #'}
 render_scene = function(scene, width = 400, height = 400, fov = 20, 
-                        samples = 100, min_variance = 0.0001, min_adaptive_size = 8,
+                        samples = 100, min_variance = 0.00005, min_adaptive_size = 8,
                         ambient_light = FALSE,
                         lookfrom = c(0,1,10), lookat = c(0,0,0), camera_up = c(0,1,0), 
                         aperture = 0.1, clamp_value = Inf,
@@ -467,8 +467,14 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
   if(debug_channel == 1) {
     returnmat = full_array[,,1]
     returnmat[is.infinite(returnmat)] = NA
-    return(returnmat)
-  } else if (debug_channel %in% c(2,3)) {
+    if(is.null(filename)) {
+      plot_map(full_array)
+      return(invisible(full_array))
+    } else {
+      save_png(full_array,filename)
+      return(invisible(full_array))
+    }
+  } else if (debug_channel %in% c(2,3,4,5)) {
     if(is.null(filename)) {
       plot_map(full_array)
       return(invisible(full_array))
@@ -523,4 +529,5 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
   } else {
     save_png(array_from_mat,filename)
   }
+  return(invisible(array_from_mat))
 }
