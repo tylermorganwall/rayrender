@@ -60,10 +60,9 @@
 #' @param progress Default `TRUE` if interactive session, `FALSE` otherwise. 
 #' @param verbose Default `FALSE`. Prints information and timing information about scene
 #' construction and raytracing progress.
-#' @param debug Default `NULL`. If `bvh`, will return an image indicated the number of BVH lookups.
 #' @export
 #' @importFrom  grDevices col2rgb
-#' @return Raytraced plot to current device, or an image saved to a file.
+#' @return Raytraced plot to current device, or an image saved to a file. 
 #'
 #' @examples
 #' #Generate a large checkered sphere as the ground

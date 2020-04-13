@@ -26,7 +26,31 @@ jobs:
           path: ${{ env.R_LIBS_USER }}
           key: macOS-r-3.6-${{ hashFiles('.github/depends.Rds') }}
           restore-keys: macOS-r-3.6-
-
+          
+      - name: Install system dependencies
+        if: runner.os == 'Linux'
+        env:
+          RHUB_PLATFORM: linux-x86_64-ubuntu-gcc
+        run: |
+          Rscript -e "remotes::install_github('r-hub/sysreqs')"
+          sysreqs=$(Rscript -e "cat(sysreqs::sysreq_commands('DESCRIPTION'))")
+          sudo -s eval "$sysreqs"
+          # install spatial dependencies
+          sudo add-apt-repository ppa:ubuntugis/ubuntugis-unstable
+          sudo apt update
+          sudo apt install \
+            libudunits2-dev \
+            libgdal-dev \
+            libgeos-dev \
+            libproj-dev
+            
+      - name: Brew
+        if: runner.os == 'macOS'
+        run: |
+          brew install pkg-config
+          brew install udunits
+          brew install gdal
+            
       - name: Install dependencies
         run: |
           install.packages("remotes")

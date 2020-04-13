@@ -61,10 +61,11 @@ generate_cornell() \%>\%
 # Render many small pigs facing random directions, with an evil pig overlord
 set.seed(1)
 lots_of_pigs = list() 
-
+\donttest{
 for(i in 1:10) {
   lots_of_pigs[[i]] = pig(x=50 + 450 * runif(1), z = 50 + 450 * runif(1), y=50, 
                              scale = c(30,30,30), angle = c(0,360*runif(1),0), emotion = "worried")
+}
 }
 
 many_pigs_scene = do.call(rbind, lots_of_pigs) \%>\%

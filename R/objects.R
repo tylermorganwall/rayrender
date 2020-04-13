@@ -514,6 +514,8 @@ disk = function(x = 0, y = 0, z = 0, radius = 1, inner_radius = 0, material = di
 #' @param scale_obj Default `1`. Amount to scale the model. Use this to scale the object up or down on all axes, as it is
 #' more robust to numerical precision errors than the generic scale option.
 #' @param texture Default `FALSE`. Whether to load the obj file texture.
+#' @param vertex_colors Default `FALSE`. Set to `TRUE` if the OBJ file has vertex colors to apply them
+#' to the model.
 #' @param material Default  \code{\link{diffuse}}.The material, called from one of the material 
 #' functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}. 
 #' @param angle Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.

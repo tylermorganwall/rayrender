@@ -33,6 +33,9 @@ more robust to numerical precision errors than the generic scale option.}
 
 \item{texture}{Default `FALSE`. Whether to load the obj file texture.}
 
+\item{vertex_colors}{Default `FALSE`. Set to `TRUE` if the OBJ file has vertex colors to apply them
+to the model.}
+
 \item{material}{Default  \code{\link{diffuse}}.The material, called from one of the material 
 functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}.}
 

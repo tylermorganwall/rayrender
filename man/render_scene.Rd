@@ -121,8 +121,6 @@ showing the number of samples needed to take for each block to converge (when th
 
 \item{verbose}{Default `FALSE`. Prints information and timing information about scene
 construction and raytracing progress.}
-
-\item{debug}{Default `NULL`. If `bvh`, will return an image indicated the number of BVH lookups.}
 }
 \value{
 Raytraced plot to current device, or an image saved to a file.
