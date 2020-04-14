@@ -922,7 +922,7 @@ ellipsoid = function(x = 0, y = 0, z = 0, a = 1, b = 1, c = 1,
 #' yy = rev(c(rep(c(1,0.5),5),1) * cospi(angles/180))
 #' star_polygon = data.frame(x=xx,y=yy)
 #' 
-#' \dontrun{
+#' \donttest{
 #' generate_ground(depth=0,
 #'                 material = diffuse(color="grey50",checkercolor="grey20")) %>%
 #'   add_object(extruded_polygon(star_polygon,top=0.5,bottom=0,
@@ -938,7 +938,7 @@ ellipsoid = function(x = 0, y = 0, z = 0, a = 1, b = 1, c = 1,
 #' 
 #' hollow_star = rbind(star_polygon,0.8*star_polygon)
 #' 
-#' \dontrun{
+#' \donttest{
 #' generate_ground(depth=-0.01,
 #'                 material = diffuse(color="grey50",checkercolor="grey20")) %>%
 #'   add_object(extruded_polygon(hollow_star,top=0.25,bottom=0, hole = nrow(star_polygon),
@@ -949,7 +949,7 @@ ellipsoid = function(x = 0, y = 0, z = 0, a = 1, b = 1, c = 1,
 #' 
 #' # Render one in the y-x plane as well by changing the `plane` argument,
 #' # as well as offset it slightly.
-#' \dontrun{
+#' \donttest{
 #' generate_ground(depth=-0.01,
 #'                 material = diffuse(color="grey50",checkercolor="grey20")) %>%
 #'   add_object(extruded_polygon(hollow_star,top=0.25,bottom=0, hole = nrow(star_polygon),
@@ -962,7 +962,7 @@ ellipsoid = function(x = 0, y = 0, z = 0, a = 1, b = 1, c = 1,
 #' }
 #' 
 #' # Now add the zy plane:
-#' \dontrun{
+#' \donttest{
 #' generate_ground(depth=-0.01,
 #'                 material = diffuse(color="grey50",checkercolor="grey20")) %>%
 #'   add_object(extruded_polygon(hollow_star,top=0.25,bottom=0, hole = nrow(star_polygon),
@@ -987,7 +987,7 @@ ellipsoid = function(x = 0, y = 0, z = 0, a = 1, b = 1, c = 1,
 #' 
 #' #This uses the raw coordinates, unless `center = TRUE`, which centers the bounding box
 #' #of the polygon at the origin.
-#' \dontrun{
+#' \donttest{
 #' generate_ground(depth=-0.01,
 #'                 material = diffuse(color="grey50",checkercolor="grey20")) %>%
 #'   add_object(extruded_polygon(texas, center = TRUE,
@@ -998,7 +998,7 @@ ellipsoid = function(x = 0, y = 0, z = 0, a = 1, b = 1, c = 1,
 #' }
 #' 
 #' #Here we use the raw coordinates, but offset the polygon manually.
-#' \dontrun{
+#' \donttest{
 #' generate_ground(depth=-0.01,
 #'                 material = diffuse(color="grey50",checkercolor="grey20")) %>%
 #'   add_object(extruded_polygon(us_states, x=-96,z=-40, top=2,
@@ -1013,7 +1013,7 @@ ellipsoid = function(x = 0, y = 0, z = 0, a = 1, b = 1, c = 1,
 #' #We can also set the map the height of each polygon to a column in the sf object,
 #' #scaling it down by the maximum population state.
 #' 
-#' \dontrun{
+#' \donttest{
 #' generate_ground(depth=0,
 #'                 material = diffuse(color="grey50",checkercolor="grey20",sigma=90)) %>%
 #'   add_object(extruded_polygon(us_states, x=-96,z=-45, data_column_top = "total_pop_15",
