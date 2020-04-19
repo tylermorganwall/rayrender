@@ -130,34 +130,36 @@ Takes the scene description and renders an image, either to the device or to a f
 }
 \examples{
 #Generate a large checkered sphere as the ground
-scene = generate_ground(depth=-0.5, material = diffuse(color="white", checkercolor="darkgreen"))
 \donttest{
+scene = generate_ground(depth=-0.5, material = diffuse(color="white", checkercolor="darkgreen"))
 render_scene(scene,parallel=TRUE,samples=500)
 }
 
 #Add a sphere to the center
+\donttest{
 scene = scene \%>\%
   add_object(sphere(x=0,y=0,z=0,radius=0.5,material = diffuse(color=c(1,0,1))))
-\donttest{
 render_scene(scene,fov=20,parallel=TRUE,samples=500)
 }
 
 #Add a marbled cube 
+\donttest{
 scene = scene \%>\%
   add_object(cube(x=1.1,y=0,z=0,material = diffuse(noise=3)))
-\donttest{
 render_scene(scene,fov=20,parallel=TRUE,samples=500)
 }
 
 #Add a metallic gold sphere
+\donttest{
 scene = scene \%>\%
   add_object(sphere(x=-1.1,y=0,z=0,radius=0.5,material = metal(color="gold",fuzz=0.1)))
-\donttest{
 render_scene(scene,fov=20,parallel=TRUE,samples=500)
 }
 
 #Lower the number of samples to render more quickly (here, we also use only one core).
+\donttest{
 render_scene(scene, samples=4)
+}
 
 #Add a floating R plot using the iris dataset as a png onto a floating 2D rectangle
 
