@@ -32,39 +32,41 @@ inline vec3 de_nan(const vec3& c) {
 }
 
 vec3 color(const ray& r, hitable *world, hitable *hlist, int depth, bool tonemap, random_gen& rng) {
-  hit_record hrec;
-  if(world->hit(r, 0.001, FLT_MAX, hrec, rng)) { //generated hit record, world space
-    scatter_record srec;
-    vec3 emitted = hrec.mat_ptr->emitted(r, hrec, hrec.u, hrec.v, hrec.p);
-    float pdf_val;
-    if(depth < 50 && hrec.mat_ptr->scatter(r, hrec, srec, rng)) { //generates scatter record, world space
-      if(srec.is_specular) { //returns specular ray
-        // srec.specular_ray.origin() = offset_ray(srec.specular_ray.origin(), hrec.normal);
-        return(srec.attenuation * 
-               color(srec.specular_ray, world, 
-                     hlist, depth + 1, tonemap, rng));
+  vec3 final_color(0,0,0);
+  vec3 throughput(1,1,1);
+  ray r2 = r;
+  for(int i = 0; i < 50; i++) {
+    hit_record hrec;
+    if(world->hit(r2, 0.001, FLT_MAX, hrec, rng)) { //generated hit record, world space
+      scatter_record srec;
+      final_color += throughput * hrec.mat_ptr->emitted(r2, hrec, hrec.u, hrec.v, hrec.p);
+      float pdf_val;
+      if(hrec.mat_ptr->scatter(r2, hrec, srec, rng)) { //generates scatter record, world space
+        if(srec.is_specular) { //returns specular ray
+          r2 = srec.specular_ray;
+          throughput *= srec.attenuation;
+          continue;
+        }
+        hitable_pdf p_imp(hlist, hrec.p); //creates pdf of all objects to be sampled
+        mixture_pdf p(&p_imp, srec.pdf_ptr); //creates mixture pdf of surface intersected at hrec.p and all sampled objects/lights
+        
+        //Generates a scatter direction (with origin hrec.p) from the mixture 
+        //and saves surface normal from light to use in pdf_value calculation
+        //(along with the scatter direction)
+        //Translates the world space point into object space point, generates ray assuring intersection, and then translates 
+        //ray back into world space
+        // ray scattered = ray(offset_ray(hrec.p,hrec.normal), p.generate(rng), r.pri_stack, r.time()); //scatters a ray from hit point to direction
+        r2 = ray(hrec.p, p.generate(rng), r2.pri_stack, r2.time()); //scatters a ray from hit point to direction
+        pdf_val = p.value(r2.direction(), rng); //generates a pdf value based the intersection point and the mixture pdf
+        throughput *= srec.attenuation * hrec.mat_ptr->scattering_pdf(r, hrec, r2) / pdf_val;
+      } else {
+        return(final_color);
       }
-      hitable_pdf p_imp(hlist, hrec.p); //creates pdf of all objects to be sampled
-      mixture_pdf p(&p_imp, srec.pdf_ptr); //creates mixture pdf of surface intersected at hrec.p and all sampled objects/lights
-      
-      //Generates a scatter direction (with origin hrec.p) from the mixture 
-      //and saves surface normal from light to use in pdf_value calculation
-      //(along with the scatter direction)
-      //Translates the world space point into object space point, generates ray assuring intersection, and then translates 
-      //ray back into world space
-      // ray scattered = ray(offset_ray(hrec.p,hrec.normal), p.generate(rng), r.pri_stack, r.time()); //scatters a ray from hit point to direction
-      ray scattered = ray(hrec.p, p.generate(rng), r.pri_stack, r.time()); //scatters a ray from hit point to direction
-      pdf_val = p.value(scattered.direction(), rng); //generates a pdf value based the intersection point and the mixture pdf
-      return(emitted + srec.attenuation *
-             hrec.mat_ptr->scattering_pdf(r, hrec, scattered) *
-             color(scattered, world,
-                  hlist, depth + 1, tonemap, rng) / pdf_val);
     } else {
-      return(emitted);
+      return(final_color);
     }
-  } else {
-    return(vec3(0,0,0));
   }
+  return(final_color);
 }
 
 vec3 color_amb(const ray& r, hitable *world, hitable *hlist, int depth,
