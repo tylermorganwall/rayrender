@@ -146,7 +146,7 @@ class dielectric : public material {
                                 std::exp(-distance * prev_atten.y()),
                                 std::exp(-distance * prev_atten.z()));
         if(!entering && current_layer != -1) {
-          r_in.pri_stack->erase(r_in.pri_stack->begin() + current_layer);
+          r_in.pri_stack->erase(r_in.pri_stack->begin() + static_cast<size_t>(current_layer));
         }
         return(true);
       }
@@ -202,7 +202,7 @@ class dielectric : public material {
     Float ref_idx;
     vec3 albedo;
     vec3 attenuation;
-    int priority;
+    size_t priority;
     random_gen rng;
 };
 

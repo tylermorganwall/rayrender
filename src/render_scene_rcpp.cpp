@@ -678,7 +678,7 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
            }
            delete mat_stack;
          };
-        for(int j = 0; j < adaptive_pixel_sampler.size(); j++) {
+        for(size_t j = 0; j < adaptive_pixel_sampler.size(); j++) {
           pool.push(worker, j);
         }
         pool.join();
@@ -709,7 +709,7 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
       delete nx_ny_nn_alpha[i];
     }
   }
-  for(int i = 0; i < shared_materials->size(); i++) {
+  for(size_t i = 0; i < shared_materials->size(); i++) {
     delete shared_materials->at(i);
   }
   delete shared_materials;

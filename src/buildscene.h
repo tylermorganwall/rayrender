@@ -141,7 +141,7 @@ hitable *build_scene(IntegerVector& type,
     } else if (type(i) == 3) {
       prop_len = 7;
     }
-    if(is_shared_mat(i) && shared_materials->size() > shared_id_mat(i)) {
+    if(is_shared_mat(i) && shared_materials->size() > static_cast<size_t>(shared_id_mat(i))) {
       tex = shared_materials->at(shared_id_mat(i));
     } else {
       if(type(i) == 1) {
@@ -198,7 +198,7 @@ hitable *build_scene(IntegerVector& type,
         tex = new diffuse_light(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))*lightintensity(i)) );
       }
     }
-    if(is_shared_mat(i) && shared_materials->size() <= shared_id_mat(i) ) {
+    if(is_shared_mat(i) && shared_materials->size() <= static_cast<size_t>(shared_id_mat(i)) ) {
       shared_materials->push_back(tex);
     }
     //Generate center vector
