@@ -40,6 +40,13 @@ vec3 color(const ray& r, hitable *world, hitable *hlist, int depth, bool tonemap
     if(world->hit(r2, 0.001, FLT_MAX, hrec, rng)) { //generated hit record, world space
       scatter_record srec;
       final_color += throughput * hrec.mat_ptr->emitted(r2, hrec, hrec.u, hrec.v, hrec.p);
+      if(i > 5) {
+        float prob_continue = std::max(throughput.x(), std::max(throughput.y(), throughput.z()));
+        if(rng.unif_rand() > prob_continue) {
+          return(final_color);
+        }
+        throughput *= 1 / prob_continue;
+      }
       float pdf_val;
       if(hrec.mat_ptr->scatter(r2, hrec, srec, rng)) { //generates scatter record, world space
         if(srec.is_specular) { //returns specular ray
