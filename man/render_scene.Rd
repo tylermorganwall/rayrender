@@ -12,6 +12,8 @@ render_scene(
   samples = 100,
   min_variance = 5e-05,
   min_adaptive_size = 8,
+  max_depth = 50,
+  roulette_active_depth = 10,
   ambient_light = FALSE,
   lookfrom = c(0, 1, 10),
   lookat = c(0, 0, 0),
@@ -53,6 +55,11 @@ If this is set to zero, the adaptive sampler will be turned off and the renderer
 will use the maximum number of samples everywhere.}
 
 \item{min_adaptive_size}{Default `8`. Width of the minimum block size in the adaptive sampler.}
+
+\item{max_depth}{Default `50`. Maximum number of bounces a ray can make in a scene.}
+
+\item{roulette_active_depth}{Default `10`. Number of ray bounces until a ray can stop bouncing via
+Russian roulette.}
 
 \item{ambient_light}{Default `FALSE`, unless there are no emitting objects in the scene. 
 If `TRUE`, the background will be a gradient varying from `backgroundhigh` directly up (+y) to 

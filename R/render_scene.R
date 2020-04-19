@@ -13,6 +13,9 @@
 #' If this is set to zero, the adaptive sampler will be turned off and the renderer
 #' will use the maximum number of samples everywhere.
 #' @param min_adaptive_size Default `8`. Width of the minimum block size in the adaptive sampler.
+#' @param max_depth Default `50`. Maximum number of bounces a ray can make in a scene.
+#' @param roulette_active_depth Default `10`. Number of ray bounces until a ray can stop bouncing via
+#' Russian roulette.
 #' @param ambient_light Default `FALSE`, unless there are no emitting objects in the scene. 
 #' If `TRUE`, the background will be a gradient varying from `backgroundhigh` directly up (+y) to 
 #' `backgroundlow` directly down (-y).
@@ -147,6 +150,7 @@
 #'}
 render_scene = function(scene, width = 400, height = 400, fov = 20, 
                         samples = 100, min_variance = 0.00005, min_adaptive_size = 8,
+                        max_depth = 50, roulette_active_depth = 10,
                         ambient_light = FALSE,
                         lookfrom = c(0,1,10), lookat = c(0,0,0), camera_up = c(0,1,0), 
                         aperture = 0.1, clamp_value = Inf,
@@ -418,7 +422,12 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
   camera_info$shutterclose = shutterclose
   camera_info$ortho_dimensions = ortho_dimensions
   camera_info$focal_distance = focal_distance
-  camera_info$toneval = toneval
+  camera_info$max_depth = max_depth
+  camera_info$roulette_active_depth = roulette_active_depth
+  
+  assertthat::assert_that(max_depth > 0)
+  assertthat::assert_that(roulette_active_depth > 0)
+  
   
   #Material ID handler
   material_id = scene$material_id

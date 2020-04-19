@@ -31,17 +31,22 @@ inline vec3 de_nan(const vec3& c) {
   return(temp);
 }
 
-vec3 color(const ray& r, hitable *world, hitable *hlist, int depth, bool tonemap, random_gen& rng) {
+vec3 color(const ray& r, hitable *world, hitable *hlist, 
+           size_t max_depth, size_t roulette_activate, random_gen& rng) {
   vec3 final_color(0,0,0);
   vec3 throughput(1,1,1);
+  float prev_t = 1;
   ray r2 = r;
-  for(int i = 0; i < 50; i++) {
+  for(size_t i = 0; i < max_depth; i++) {
     hit_record hrec;
     if(world->hit(r2, 0.001, FLT_MAX, hrec, rng)) { //generated hit record, world space
       scatter_record srec;
       final_color += throughput * hrec.mat_ptr->emitted(r2, hrec, hrec.u, hrec.v, hrec.p);
-      if(i > 5) {
-        float prob_continue = std::max(throughput.x(), std::max(throughput.y(), throughput.z()));
+      if(i > roulette_activate) {
+        float t = std::max(throughput.x(), std::max(throughput.y(), throughput.z()));
+        //From Szecsi, Szirmay-Kalos, and Kelemen
+        float prob_continue = std::min(1.0f, std::sqrt(t/prev_t));
+        prev_t = t;
         if(rng.unif_rand() > prob_continue) {
           return(final_color);
         }
@@ -62,7 +67,6 @@ vec3 color(const ray& r, hitable *world, hitable *hlist, int depth, bool tonemap
         //(along with the scatter direction)
         //Translates the world space point into object space point, generates ray assuring intersection, and then translates 
         //ray back into world space
-        // ray scattered = ray(offset_ray(hrec.p,hrec.normal), p.generate(rng), r.pri_stack, r.time()); //scatters a ray from hit point to direction
         r2 = ray(hrec.p, p.generate(rng), r2.pri_stack, r2.time()); //scatters a ray from hit point to direction
         pdf_val = p.value(r2.direction(), rng); //generates a pdf value based the intersection point and the mixture pdf
         throughput *= srec.attenuation * hrec.mat_ptr->scattering_pdf(r, hrec, r2) / pdf_val;
@@ -74,100 +78,6 @@ vec3 color(const ray& r, hitable *world, hitable *hlist, int depth, bool tonemap
     }
   }
   return(final_color);
-}
-
-vec3 color_amb(const ray& r, hitable *world, hitable *hlist, int depth,
-           const vec3& backgroundhigh, const vec3& backgroundlow, bool tonemap, random_gen& rng) {
-  hit_record hrec;
-  if(world->hit(r, 0.001, FLT_MAX, hrec, rng)) {
-    scatter_record srec;
-    vec3 emitted = hrec.mat_ptr->emitted(r, hrec, hrec.u, hrec.v,hrec.p);
-    float pdf_val;
-    if(depth < 50 && hrec.mat_ptr->scatter(r, hrec, srec, rng)) {
-      if(srec.is_specular) {
-        return(srec.attenuation * 
-               color_amb(srec.specular_ray, world, hlist, depth + 1, 
-                         backgroundhigh,backgroundlow,tonemap, rng));
-      }
-      hitable_pdf p_imp(hlist, hrec.p);
-      mixture_pdf p(&p_imp, srec.pdf_ptr);
-      ray scattered = ray(hrec.p, p.generate(rng), r.pri_stack, r.time());
-      pdf_val = p.value(scattered.direction(), rng);
-      return(emitted + srec.attenuation * 
-             hrec.mat_ptr->scattering_pdf(r, hrec, scattered) *  
-             color_amb(scattered, world, hlist, depth + 1, 
-                       backgroundhigh,backgroundlow, tonemap, rng) / pdf_val);
-    } else {
-      vec3 unit_direction = unit_vector(r.direction());
-      float t = 0.5f * (unit_direction.y() + 1.0f);
-      return(emitted + (1.0f - t) * backgroundlow + t * backgroundhigh);
-    }
-  } else {
-    vec3 unit_direction = unit_vector(r.direction());
-    float t = 0.5f * (unit_direction.y() + 1.0);
-    return (1.0 - t) * backgroundlow + t * backgroundhigh;
-  }
-}
-
-vec3 color_uniform(const ray& r, hitable *world, int depth, bool tonemap, random_gen& rng, texture* background_texture) {
-  hit_record hrec;
-  if(world->hit(r, 0.001, FLT_MAX, hrec, rng)) {
-    scatter_record srec;
-    vec3 emitted = hrec.mat_ptr->emitted(r, hrec, hrec.u, hrec.v,hrec.p);
-    float pdf_val;
-    if(depth < 50 && hrec.mat_ptr->scatter(r, hrec, srec, rng)) {
-      if(srec.is_specular) {
-        return(srec.attenuation * color_uniform(srec.specular_ray, world, depth + 1, 
-                                                tonemap, rng, background_texture));
-      }
-      cosine_pdf p(hrec.normal);
-      ray scattered = ray(hrec.p, p.generate(rng), r.pri_stack, r.time());
-      pdf_val = p.value(scattered.direction(), rng);
-      return(emitted + srec.attenuation * hrec.mat_ptr->scattering_pdf(r, hrec, scattered) *  
-             color_uniform(scattered, world, depth + 1, tonemap, rng, background_texture) / pdf_val);
-    } else {
-      return(emitted);
-    }
-  } else {
-    vec3 unit_direction = unit_vector(r.direction());
-    float phi = atan2(unit_direction.x(),unit_direction.z());
-    float u = 0.5 + phi / (2*M_PI);
-    float v = 0.5 * (1.0 + unit_direction.y());
-    return(background_texture->value(u, v, unit_direction));
-  }
-}
-
-vec3 color_amb_uniform(const ray& r, hitable *world, int depth,
-               const vec3& backgroundhigh, const vec3& backgroundlow, bool tonemap, random_gen& rng) {
-  hit_record hrec;
-  if(world->hit(r, 0.001, FLT_MAX, hrec, rng)) {
-    scatter_record srec;
-
-    vec3 emitted = hrec.mat_ptr->emitted(r, hrec, hrec.u, hrec.v,hrec.p);
-    float pdf_val;
-    if(depth < 50 && hrec.mat_ptr->scatter(r, hrec, srec, rng)) {
-      if(srec.is_specular) {
-        return(srec.attenuation * 
-               color_amb_uniform(srec.specular_ray, world, depth + 1, 
-                                 backgroundhigh,backgroundlow, tonemap, rng));
-      }
-      cosine_pdf p(hrec.normal);
-      ray scattered = ray(hrec.p, p.generate(rng), r.pri_stack, r.time());
-      pdf_val = p.value(scattered.direction(), rng);
-      return(emitted + srec.attenuation * 
-             hrec.mat_ptr->scattering_pdf(r, hrec, scattered) *  
-             color_amb_uniform(scattered, world, depth + 1, 
-                               backgroundhigh,backgroundlow, tonemap, rng) / pdf_val);
-    } else {
-      vec3 unit_direction = unit_vector(r.direction());
-      float t = 0.5 * (unit_direction.y() + 1.0);
-      return(emitted+(1.0 - t) * backgroundlow + t * backgroundhigh);
-    }
-  } else {
-    vec3 unit_direction = unit_vector(r.direction());
-    float t = 0.5 * (unit_direction.y() + 1.0);
-    return (1.0 - t) * backgroundlow + t * backgroundhigh;
-  }
 }
 
 #ifdef DEBUGBVH
@@ -277,9 +187,10 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
   Float shutteropen = as<Float>(camera_info["shutteropen"]);
   Float shutterclose = as<Float>(camera_info["shutterclose"]);
   Float focus_distance = as<Float>(camera_info["focal_distance"]);
-  int toneval = as<Float>(camera_info["toneval"]);
   NumericVector ortho_dimensions = as<NumericVector>(camera_info["ortho_dimensions"]);
-  
+  size_t max_depth = as<size_t>(camera_info["max_depth"]);
+  size_t roulette_active = as<size_t>(camera_info["roulette_active_depth"]);
+
   //Initialize output matrices
   NumericMatrix routput(nx,ny);
   NumericMatrix goutput(nx,ny);
@@ -290,7 +201,6 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
   vec3 backgroundhigh(bghigh[0],bghigh[1],bghigh[2]);
   vec3 backgroundlow(bglow[0],bglow[1],bglow[2]);
   float dist_to_focus = focus_distance;
-  bool tonemap = toneval == 1 ? false : true;
   CharacterVector alpha_files = as<CharacterVector>(alphalist["alpha_temp_file_names"]);
   LogicalVector has_alpha = as<LogicalVector>(alphalist["alpha_tex_bool"]);
   RcppThread::ThreadPool pool(numbercores);
@@ -397,31 +307,46 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
     if(rotate_env != 0) {
       background_sphere = new rotate_y(background_sphere, rotate_env);
     }
+  } else if(ambient_light) {
+    //Check if both high and low are black, and set to FLT_MIN
+    if(backgroundhigh.length() == 0 && backgroundlow.length() == 0) {
+      backgroundhigh = vec3(FLT_MIN,FLT_MIN,FLT_MIN);
+      backgroundlow = vec3(FLT_MIN,FLT_MIN,FLT_MIN);
+    }
+    background_texture = new gradient_texture(backgroundhigh, backgroundlow, false);
+    background_material = new diffuse_light(background_texture);
+    background_sphere = new InfiniteAreaLight(100, 100, world_radius*2, world_center,
+                                              background_texture, background_material);
   } else {
-    background_texture = new constant_texture(vec3(0,0,0));
-    background_material = new lambertian(background_texture);
-    background_sphere = new sphere(world_center, world_radius, background_material, nullptr);
+    //Minimum intensity FLT_MIN so the CDF isn't NAN
+    background_texture = new constant_texture(vec3(FLT_MIN,FLT_MIN,FLT_MIN));
+    background_material = new diffuse_light(background_texture);
+    background_sphere = new InfiniteAreaLight(100, 100, world_radius*2, world_center,
+                                              background_texture, background_material);
   }
   finish = std::chrono::high_resolution_clock::now();
   if(verbose && hasbackground) {
     std::chrono::duration<double> elapsed = finish - start;
     Rcpp::Rcout << elapsed.count() << " seconds" << "\n";
   }
-  hitable *world_full[2];
-  world_full[0] = worldbvh;
-  world_full[1] = background_sphere;
-  int nval = hasbackground ? 2 : 1;
-  hitable_list world(world_full, nval);
   int numbertosample = 0;
   for(int i = 0; i < implicit_sample.size(); i++) {
     if(implicit_sample(i)) {
       numbertosample++;
     }
   }
-  if(hasbackground) {
-    numbertosample++;
-  }
+  hitable *world_full[2];
+  world_full[0] = worldbvh;
+  world_full[1] = background_sphere;
+  int nval = numbertosample == 0 || hasbackground ? 2 : 1;
   
+  hitable_list world(world_full, nval);
+  bool impl_only_bg = false;
+  if(numbertosample == 0 || hasbackground) {
+    numbertosample++; 
+    impl_only_bg = true;
+  }
+
   std::vector<hitable* > implicit_sample_vector(numbertosample);
   int counter = 0;
   if(verbose) {
@@ -445,17 +370,13 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
     std::chrono::duration<double> elapsed = finish - start;
     Rcpp::Rcout << elapsed.count() << " seconds" << "\n";
   }
-  if(hasbackground) {
+  if(impl_only_bg || hasbackground) {
     implicit_sample_vector[counter] = background_sphere;
   }
-  
 
   hitable_list hlist;
-  if(!implicit_sample_vector.empty()) {
-    hlist = hitable_list(&implicit_sample_vector[0], numbertosample);
-  } else {
-    numbertosample = 0;
-  }
+  hlist = hitable_list(&implicit_sample_vector[0], numbertosample);
+
   if(verbose && !progress_bar) {
     Rcpp::Rcout << "Starting Raytracing:\n ";
   }
@@ -565,10 +486,10 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
       }
       RcppThread::ThreadPool pool(numbercores);
       auto worker = [&routput, &goutput, &boutput,
-                     ambient_light, nx, ny, ns, seeds, fov,
-                     &cam, &ocam, backgroundhigh, backgroundlow, &world, &hlist,
-                     numbertosample, clampval, tonemap, progress_bar, 
-                     numbercores, background_texture] (int j) {
+                     nx, ny, ns, seeds, fov,
+                     &cam, &ocam, &world, &hlist,
+                     clampval, max_depth, roulette_active, progress_bar, 
+                     numbercores] (int j) {
        if(progress_bar && j % numbercores == 0) {
          RcppThread::Rcout << "Progress (" << numbercores << " core): ";
          RcppThread::Rcout << (int)((1-(double)j/double(ny)) * 100) << "%\r";
@@ -589,21 +510,7 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
            }
            r.pri_stack = mat_stack;
            
-           if(numbertosample) {
-             if(ambient_light) {
-               col += clamp(de_nan(color_amb(r, &world, &hlist, 0,
-                                             backgroundhigh, backgroundlow, tonemap, rng)),0,clampval);
-             } else {
-               col += clamp(de_nan(color(r, &world, &hlist, 0, tonemap, rng)),0,clampval);
-             }
-           } else {
-             if(ambient_light) {
-               col += clamp(de_nan(color_amb_uniform(r, &world, 0, 
-                                                     backgroundhigh, backgroundlow, tonemap, rng)),0,clampval);
-             } else {
-               col += clamp(de_nan(color_uniform(r, &world, 0, tonemap, rng, background_texture)),0,clampval);
-             }
-           }
+           col += clamp(de_nan(color(r, &world, &hlist, max_depth, roulette_active, rng)),0,clampval);
            mat_stack->clear();
          }
          col /= Float(ns);
@@ -637,11 +544,10 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
         }
         RcppThread::ThreadPool pool(numbercores);
         auto worker = [&adaptive_pixel_sampler, 
-                       ambient_light, nx, ny, s, 
+                       nx, ny, s, 
                        &rngs, fov, 
-                       &cam, &ocam, backgroundhigh, backgroundlow, &world, &hlist,
-                       numbertosample, clampval, tonemap, 
-                       background_texture] (int k) {
+                       &cam, &ocam, &world, &hlist,
+                       clampval, max_depth, roulette_active] (int k) {
            int nx_begin = adaptive_pixel_sampler.pixel_chunks[k].startx;
            int ny_begin = adaptive_pixel_sampler.pixel_chunks[k].starty;
            int nx_end = adaptive_pixel_sampler.pixel_chunks[k].endx;
@@ -660,21 +566,7 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
                  r = ocam.get_ray(u,v);
                }
                r.pri_stack = mat_stack;
-               if(numbertosample) {
-                 if(ambient_light) {
-                   col = clamp(de_nan(color_amb(r, &world, &hlist, 0,
-                                                 backgroundhigh, backgroundlow, tonemap, rng)),0,clampval);
-                 } else {
-                   col = clamp(de_nan(color(r, &world, &hlist, 0, tonemap, rng)),0,clampval);
-                 }
-               } else {
-                 if(ambient_light) {
-                   col = clamp(de_nan(color_amb_uniform(r, &world, 0, 
-                                                         backgroundhigh, backgroundlow, tonemap, rng)),0,clampval);
-                 } else {
-                   col = clamp(de_nan(color_uniform(r, &world, 0, tonemap, rng, background_texture)),0,clampval);
-                 }
-               }
+               col = clamp(de_nan(color(r, &world, &hlist, max_depth, roulette_active, rng)),0,clampval);
                mat_stack->clear();
                adaptive_pixel_sampler.add_color_main(i, j, col);
                if(s % 2 == 0) {
