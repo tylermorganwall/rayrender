@@ -1332,7 +1332,7 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
         R <- matrix(c(cos(e1e2), sin(e1e2), -sin(e1e2), cos(e1e2)), 2)
         right <- (R %*% e2)[1] >= 0 # if positive x offset, triangle on right
 
-        for(i in seq_len(length(side - 1))) {
+        for(i in seq_len(length(side) - 1L)) {
           xi <- x[side[i]]        # vertex i
           yi <- y[side[i]]
           xii <- x[side[i + 1L]]  # vertex i + 1
