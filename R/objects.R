@@ -1273,31 +1273,42 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
       reversed = !reversed
     }
     if(extruded) {
-      #side
-      for(i in 1:(length(x)-1)) {
-        scenelist[[counter]] = triangle(v1=scale*permute_axes(c(x[i],height_poly,y[i]),planeval),
-                                        v2=scale*permute_axes(c(x[i],bottom_poly,y[i]),planeval),
-                                        v3=scale*permute_axes(c(x[i+1],bottom_poly,y[i+1]),planeval),
-                                        material = material, reversed = reversed)
-        counter = counter + 1
-        scenelist[[counter]] = triangle(v1=scale*permute_axes(c(x[i],height_poly,y[i]),planeval),
-                                        v2=scale*permute_axes(c(x[i+1],bottom_poly,y[i+1]),planeval),
-                                        v3=scale*permute_axes(c(x[i+1],height_poly,y[i+1]),planeval),
-                                        material = material, reversed = reversed)
-        counter = counter + 1
-      }
-      if(length(x_h) > 0) {
-        for(i in 1:(length(x_h)-1)) {
-          scenelist[[counter]] = triangle(v1=scale*permute_axes(c(x_h[i],height_poly,y_h[i]),planeval),
-                                          v2=scale*permute_axes(c(x_h[i],bottom_poly,y_h[i]),planeval),
-                                          v3=scale*permute_axes(c(x_h[i+1],bottom_poly,y_h[i+1]),planeval),
-                                          material = material, reversed = !reversed)
+      # polygon sides, first outside, then holes (what if there are multiple
+      # holes?  This is okay so long as we don't mind a polygon inside the
+      # object connecting the two holes, but might be a problem with
+      # dielectrics?  Maybe submit as a separate issue.
+
+      for(side in list(list(x=x, y=y, rev=!reversed), list(x=x_h, y=y_h, rev=reversed))) {
+        # to do the sides correctly, we need to figure out which way the
+        # "inside" of the polygon is relative to either the hole(s) or the
+        # outer polygon.  We can figure this out easily from the decido data,
+        # all we need is one triangle and that establishes which side of the
+        # vertex is inside vs. outside.  So for the first item, find the
+        # triangle that has for side i to i+1, then, assuming the triangle
+        # is not degenerate (surely, decido wouldn't create such a triangle),
+        # the remaining vertex points "into" the polygon.  We can compare the
+        # direction of the path relative to that vertex (i.e. is the vertex to
+        # the left or right) and based on that, we can figure out whether we
+        # need to flip or not.
+
+        idx <- c(seq_len(length(side[['x']])), 1L)
+        for(i in seq_along(side[['x']])) {
+
+          xi <- side[['x']][idx][i]
+          yi <- side[['y']][idx][i]
+          xii <- side[['x']][idx][i + 1L]
+          yii <- side[['y']][idx][i + 1L]
+          scenelist[[counter]] = triangle(v1=scale*permute_axes(c(xi,height_poly,yi),planeval),
+                                          v2=scale*permute_axes(c(xi,bottom_poly,yi),planeval),
+                                          v3=scale*permute_axes(c(xii,bottom_poly,yii),planeval),
+                                          material = material, reversed = side[['rev']])
           counter = counter + 1
-          scenelist[[counter]] = triangle(v1=scale*permute_axes(c(x_h[i],height_poly,y_h[i]),planeval),
-                                          v2=scale*permute_axes(c(x_h[i+1],bottom_poly,y_h[i+1]),planeval),
-                                          v3=scale*permute_axes(c(x_h[i+1],height_poly,y_h[i+1]),planeval),
-                                          material = material, reversed = !reversed)
+          scenelist[[counter]] = triangle(v1=scale*permute_axes(c(xi,height_poly,yi),planeval),
+                                          v2=scale*permute_axes(c(xii,bottom_poly,yii),planeval),
+                                          v3=scale*permute_axes(c(xii,height_poly,yii),planeval),
+                                          material = material, reversed = side[['rev']])
           counter = counter + 1
+
         }
       }
     }
