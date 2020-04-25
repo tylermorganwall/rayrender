@@ -1262,7 +1262,13 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
     y_h = y[holes]
     x = x[!holes]
     y = y[!holes]
-    flipped = FALSE
+
+    # Two questions
+    # * should this also affect the for(1:nrow(vertices)) loop?
+    # * do we need a different var name, or do this outside of the
+    #   for(1:length(polylist)) loop?  Otherwise are we not going to be
+    #   alternating value each loop?  Doesn't affect base polygons, so maybe
+    #   that's okay give input format from other poly sources?
     if(!(flip_horizontal && flip_vertical) && ((flip_horizontal || flip_vertical))) {
       reversed = !reversed
     }
