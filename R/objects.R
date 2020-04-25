@@ -1253,7 +1253,7 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
           stop("holes cannot begin before vertex 4. Hole index here starts at: ", hole_start)
         }
         holes = rep(TRUE, nrow(poly_list[[poly]]))
-        holes[1:hole_start] = FALSE
+        holes[1:(hole_start-1)] = FALSE
       }
     } else {
       holes = poly_list[[poly]][,3] == 1
