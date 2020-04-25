@@ -1200,11 +1200,16 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
     xylist = grDevices::xy.coords(polygon)
     x = xylist$x
     y = xylist$y
+    # close polygon if not closed
+    if(x[1L] != x[length(x)] || y[1L] != y[length(y)]) {
+      x <- c(x, x[1L])
+      y <- c(y, y[1L])
+    }
     if(is.null(holes)) {
       holes = 0
-    } 
+    }
     poly_list[[1]] = as.matrix(data.frame(x=x,y=y,hole=holes))
-    vertex_list[[1]] = decido::earcut(poly_list[[1]][,1:2],holes = holes)
+    vertex_list[[1]] = decido::earcut(poly_list[[1]][,1:2], holes = holes)
     height_list[[1]] = data_vals_top
     bottom_list[[1]] = data_vals_bottom
     if(center) {
@@ -1253,6 +1258,9 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
     # after.
     #
     # for now we'll write code assuming one hole
+    #
+    # Also, some confusion between scalar hole index, and logical vector
+    # indicating holes
 
     if(base_poly) {
       hole_start = poly_list[[poly]][1,3]
@@ -1262,6 +1270,8 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
         }
         holes = rep(TRUE, nrow(poly_list[[poly]]))
         holes[1:(hole_start-1)] = FALSE
+      } else {
+        holes = logical(length(poly_list[[poly]][,1]))
       }
     } else {
       holes = poly_list[[poly]][,3] >= 1
@@ -1286,6 +1296,8 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
       # split on hole id.
 
       for(side in list(which(!holes), which(holes))) {
+        if(!length(side)) next
+
         # Find first edge in earcut list, and check whether the corresponding
         # triangle is pointing "left" or "right":
         #
@@ -1298,6 +1310,7 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
         # outside polygon and holes, and also 3 or 4 sided polygons. Vertices
         # are assumed to be ordered strictly increasing in `side`.
 
+        side <- side[side %in% vertices]  # duplicate vertices may not show up
         v1 <- side[1L]
         v2 <- side[2L]
         first_edge <- which(rowSums(vertices <= v2 & vertices >= v1) == 2L)
@@ -1315,16 +1328,15 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
         # (y-axis), and apply rotation to e2 to see which "side" e2 is pointing
         # by looking at resulting x value (not super efficient...).
 
-        angle <- acos(sum(e1  * c(0, 1)) / (sqrt(sum(e1^2)))) * sign(e1[['x']])
-        R <- matrix(c(cos(angle), sin(angle), -sin(angle), cos(angle)), 2)
+        e1e2 <- acos(sum(e1  * c(0, 1)) / (sqrt(sum(e1^2)))) * sign(e1[['x']])
+        R <- matrix(c(cos(e1e2), sin(e1e2), -sin(e1e2), cos(e1e2)), 2)
         right <- (R %*% e2)[1] >= 0 # if positive x offset, triangle on right
 
-        idx <- c(seq_along(side), 1L)
-        for(i in seq_along(side)) {
-          xi <- x[side[idx[i]]]        # vertex i
-          yi <- y[side[idx[i]]]
-          xii <- x[side[idx[i + 1L]]]  # vertex i + 1
-          yii <- y[side[idx[i + 1L]]]
+        for(i in seq_len(length(side - 1))) {
+          xi <- x[side[i]]        # vertex i
+          yi <- y[side[i]]
+          xii <- x[side[i + 1L]]  # vertex i + 1
+          yii <- y[side[i + 1L]]
 
           scenelist[[counter]] = triangle(v1=scale*permute_axes(c(xi,height_poly,yi),planeval),
                                           v2=scale*permute_axes(c(xi,bottom_poly,yi),planeval),
