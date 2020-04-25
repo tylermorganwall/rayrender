@@ -1246,6 +1246,14 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
         counter = counter + 1
       }
     }
+    # Everything indicates that there is only support for one hole, from the
+    # assumption that hole_start is scalar in base_poly, to the use of == 1
+    # (changed to >= 1 by YT) for detecting holes.  AFAICT the SF format is the
+    # same as decido, outer non-intersecting polygon first, holes in sequence
+    # after.
+    #
+    # for now we'll write code assuming one hole
+
     if(base_poly) {
       hole_start = poly_list[[poly]][1,3]
       if(hole_start != 0) {
@@ -1256,12 +1264,12 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
         holes[1:(hole_start-1)] = FALSE
       }
     } else {
-      holes = poly_list[[poly]][,3] == 1
+      holes = poly_list[[poly]][,3] >= 1
     }
-    x_h= x[holes]
-    y_h = y[holes]
-    x = x[!holes]
-    y = y[!holes]
+    if(any(holes) & sum(holes) < 3)
+      stop("holes must have at least three vertices.")
+    if(sum(!holes) < 3)
+      stop("outer polygon must have at least three vertices.")
 
     # Two questions
     # * should this also affect the for(1:nrow(vertices)) loop?
@@ -1273,40 +1281,60 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
       reversed = !reversed
     }
     if(extruded) {
-      # polygon sides, first outside, then holes (what if there are multiple
-      # holes?  This is okay so long as we don't mind a polygon inside the
-      # object connecting the two holes, but might be a problem with
-      # dielectrics?  Maybe submit as a separate issue.
+      # polygon sides, first outside, then holes, although currently we assume
+      # there is only hole max, which is wrong.  In the future we'll make this a
+      # split on hole id.
 
-      for(side in list(list(x=x, y=y, rev=!reversed), list(x=x_h, y=y_h, rev=reversed))) {
-        # to do the sides correctly, we need to figure out which way the
-        # "inside" of the polygon is relative to either the hole(s) or the
-        # outer polygon.  We can figure this out easily from the decido data,
-        # all we need is one triangle and that establishes which side of the
-        # vertex is inside vs. outside.  So for the first item, find the
-        # triangle that has for side i to i+1, then, assuming the triangle
-        # is not degenerate (surely, decido wouldn't create such a triangle),
-        # the remaining vertex points "into" the polygon.  We can compare the
-        # direction of the path relative to that vertex (i.e. is the vertex to
-        # the left or right) and based on that, we can figure out whether we
-        # need to flip or not.
+      for(side in list(which(!holes), which(holes))) {
+        # Find first edge in earcut list, and check whether the corresponding
+        # triangle is pointing "left" or "right":
+        #
+        # |         |  other polygon edges
+        # |         |
+        # |\   vs  /|  1st edge
+        # |/       \|
+        #
+        # This tells us which side the polygon is on, and should work both for
+        # outside polygon and holes, and also 3 or 4 sided polygons. Vertices
+        # are assumed to be ordered strictly increasing in `side`.
 
-        idx <- c(seq_len(length(side[['x']])), 1L)
-        for(i in seq_along(side[['x']])) {
+        v1 <- side[1L]
+        v2 <- side[2L]
+        first_edge <- which(rowSums(vertices <= v2 & vertices >= v1) == 2L)
+        if(length(first_edge) != 1L)
+          stop("internal error resolving first polygon edge from earcuts")
 
-          xi <- side[['x']][idx][i]
-          yi <- side[['y']][idx][i]
-          xii <- side[['x']][idx][i + 1L]
-          yii <- side[['y']][idx][i + 1L]
+        v3 <- vertices[first_edge,][!vertices[first_edge,] %in% c(v1, v2)]
+
+        # these are earcut edges, not original polygon edges
+
+        e1 <- c(x=x[v2] - x[v1], y=y[v2] - y[v1])
+        e2 <- c(x=x[v3] - x[v1], y=y[v3] - y[v1])
+
+        # Determine rotation required to get e1 to point along (0,1) vector
+        # (y-axis), and apply rotation to e2 to see which "side" e2 is pointing
+        # by looking at resulting x value (not super efficient...).
+
+        angle <- acos(sum(e1  * c(0, 1)) / (sqrt(sum(e1^2)))) * sign(e1[['x']])
+        R <- matrix(c(cos(angle), sin(angle), -sin(angle), cos(angle)), 2)
+        right <- (R %*% e2)[1] >= 0 # if positive x offset, triangle on right
+
+        idx <- c(seq_along(side), 1L)
+        for(i in seq_along(side)) {
+          xi <- x[side[idx[i]]]        # vertex i
+          yi <- y[side[idx[i]]]
+          xii <- x[side[idx[i + 1L]]]  # vertex i + 1
+          yii <- y[side[idx[i + 1L]]]
+
           scenelist[[counter]] = triangle(v1=scale*permute_axes(c(xi,height_poly,yi),planeval),
                                           v2=scale*permute_axes(c(xi,bottom_poly,yi),planeval),
                                           v3=scale*permute_axes(c(xii,bottom_poly,yii),planeval),
-                                          material = material, reversed = side[['rev']])
+                                          material = material, reversed = xor(reversed, right))
           counter = counter + 1
           scenelist[[counter]] = triangle(v1=scale*permute_axes(c(xi,height_poly,yi),planeval),
                                           v2=scale*permute_axes(c(xii,bottom_poly,yii),planeval),
                                           v3=scale*permute_axes(c(xii,height_poly,yii),planeval),
-                                          material = material, reversed = side[['rev']])
+                                          material = material, reversed = xor(reversed, right))
           counter = counter + 1
 
         }
