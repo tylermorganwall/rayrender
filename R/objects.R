@@ -1219,7 +1219,7 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
     # close polygons if not closed, must do so for outer and each hole
 
     if(isTRUE(holes == 0)) {
-      xy_dat <- data.frame(x, y, holes=1L)
+      xy_dat <- data.frame(x, y, holes=0L)
     } else {
       xy_dat <- data.frame(x, y, holes=cumsum(seq_along(x) %in% holes))
     }
@@ -1229,10 +1229,15 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
         dat[c(seq_len(nrow(dat)), 1L),]
       } else dat
     }
-    xy_dat <- do.call(rbind, lapply(xy_dat_split, close_poly))
-    rownames(xy_dat) <- NULL
+    xy_dat_closed <- lapply(xy_dat_split, close_poly)
+    xy_dat_len <- vapply(xy_dat_closed, nrow, 0)
+    holes <- if(length(xy_dat_closed) > 1) {
+      cumsum(xy_dat_len[-length(xy_dat_closed)]) + 1L
+    } else 0L
+    xy_dat_fin <- do.call(rbind, xy_dat_closed)
+    rownames(xy_dat_fin) <- NULL
 
-    poly_list[[1]] = as.matrix(xy_dat)
+    poly_list[[1]] = as.matrix(xy_dat_fin)
     vertex_list[[1]] = decido::earcut(poly_list[[1]][,1:2], holes = holes)
     height_list[[1]] = data_vals_top
     bottom_list[[1]] = data_vals_bottom
@@ -1275,23 +1280,21 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
         counter = counter + 1
       }
     }
-    # Everything indicates that there is only support for one hole, from the
-    # assumption that hole_start is scalar in base_poly, to the use of == 1
-    # (changed to >= 1 by YT) for detecting holes.  AFAICT the SF format is the
-    # same as decido, outer non-intersecting polygon first, holes in sequence
-    # after.
-    #
-    # for now we'll write code assuming one hole
-    #
-    # Also, some confusion between scalar hole index, and logical vector
-    # indicating holes
-
-    holes = poly_list[[poly]][,3] >= 1
-
-    if(any(holes) & sum(holes) < 3)
-      stop("holes must have at least three vertices.")
-    if(sum(!holes) < 3)
-      stop("outer polygon must have at least three vertices.")
+    holes = poly_list[[poly]][,3]
+    hole_n = table(holes)
+    if(hole_n[1L] < 4L) {
+      stop(
+        "outer polygon for polygon ", poly, " only has ", hole_n[1L],
+        " vertices including the closing vertex; needs at least 4."
+      )
+    } else if (any(hole_n[-1L] < 4L)) {
+      stop(
+        "hole polygon(s) ",
+        paste0(names(hole_n[-1L])[hole_n[-1L] < 4L], collapse=", "),
+        " for poly ", poly, " do not have at least 4 vertices ",
+        "including the closing vertex."
+      )
+    }
 
     # Two questions
     # * should this also affect the for(1:nrow(vertices)) loop?
@@ -1303,13 +1306,7 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
       reversed = !reversed
     }
     if(extruded) {
-      # polygon sides, first outside, then holes, although currently we assume
-      # there is only hole max, which is wrong.  In the future we'll make this a
-      # split on hole id.
-
-      for(side in list(which(!holes), which(holes))) {
-        if(!length(side)) next
-
+      for(side in split(seq_along(x), holes)) {
         # Find first edge in earcut list, and check whether the corresponding
         # triangle is pointing "left" or "right":
         #
@@ -1318,16 +1315,17 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
         # |\   vs  /|  1st edge
         # |/       \|
         #
-        # This tells us which side the polygon is on, and should work both for
-        # outside polygon and holes, and also 3 or 4 sided polygons. Vertices
-        # are assumed to be ordered strictly increasing in `side`.
+        # This tells us which direction the polygon is drawn around, so we can
+        # orient the side face normals correctly (works for outer and holes).
 
-        side <- side[side %in% vertices]  # duplicate vertices may not show up
-        v1 <- side[1L]
-        v2 <- side[2L]
+        if(!length(side)) next
+
+        side_triangulated <- side[side %in% vertices] # close/open vertex may be missing
+        v1 <- side_triangulated[1L]
+        v2 <- side_triangulated[2L]
         first_edge <- which(rowSums(vertices <= v2 & vertices >= v1) == 2L)
         if(length(first_edge) != 1L)
-          stop("internal error resolving first polygon edge from earcuts")
+          stop("internal error resolving first polygon edge from triangulated")
 
         v3 <- vertices[first_edge,][!vertices[first_edge,] %in% c(v1, v2)]
 
@@ -1336,17 +1334,15 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
         e1 <- c(x=x[v2] - x[v1], y=y[v2] - y[v1])
         e2 <- c(x=x[v3] - x[v1], y=y[v3] - y[v1])
 
-        # Determine rotation required to get e1 to point along (0,1) vector
-        # (y-axis), and apply rotation to e2 to see which "side" e2 is pointing
+        # Determine rotation required to get e1 to point along "y"-axis,
+        # and apply rotation to e2 to see which "side" e2 is pointing
         # by looking at resulting x value (not super efficient...).
 
         e1e2 <- acos(sum(e1  * c(0, 1)) / (sqrt(sum(e1^2)))) * sign(e1[['x']])
         R <- matrix(c(cos(e1e2), sin(e1e2), -sin(e1e2), cos(e1e2)), 2)
         right <- (R %*% e2)[1] >= 0 # if positive x offset, triangle on right
 
-        # polygons are assumed to be closed
-
-        for(i in seq_len(length(side) - 1L)) {
+        for(i in seq_len(length(side) - 1L)) {  # polygons are closed
           xi <- x[side[i]]        # vertex i
           yi <- y[side[i]]
           xii <- x[side[i + 1L]]  # vertex i + 1
@@ -1362,7 +1358,6 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
                                           v3=scale*permute_axes(c(xii,height_poly,yii),planeval),
                                           material = material, reversed = xor(reversed, right))
           counter = counter + 1
-
         }
       }
     }
