@@ -1200,15 +1200,39 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
     xylist = grDevices::xy.coords(polygon)
     x = xylist$x
     y = xylist$y
-    # close polygon if not closed
-    if(x[1L] != x[length(x)] || y[1L] != y[length(y)]) {
-      x <- c(x, x[1L])
-      y <- c(y, y[1L])
-    }
     if(is.null(holes)) {
       holes = 0
+    } else if (
+      !is.numeric(holes) || anyNA(holes <- as.integer(holes))
+    ) {
+      stop("holes must be integer")
+    } else if (
+      any(holes < 0L) || any(holes) > length(x) ||
+      (any(holes == 0L) && length(holes) != 1L)
+    ) {
+      stop(
+        "holes must be zero, or contain indices to polygon vertices"
+      )
+    } else if (any(holes < 4)) {
+      stop("holes cannot begin before vertex 4. Hole index here starts at: ", min(hole_start))
     }
-    poly_list[[1]] = as.matrix(data.frame(x=x,y=y,hole=holes))
+    # close polygons if not closed, must do so for outer and each hole
+
+    if(isTRUE(holes == 0)) {
+      xy_dat <- data.frame(x, y, holes=1L)
+    } else {
+      xy_dat <- data.frame(x, y, holes=cumsum(seq_along(x) %in% holes))
+    }
+    xy_dat_split <- split(xy_dat, xy_dat[['holes']])
+    close_poly <- function(dat) {
+      if(!all(dat[1L,] == dat[nrow(dat),])) {
+        dat[c(seq_len(nrow(dat)), 1L),]
+      } else dat
+    }
+    xy_dat <- do.call(rbind, lapply(xy_dat_split, close_poly))
+    rownames(xy_dat) <- NULL
+
+    poly_list[[1]] = as.matrix(xy_dat)
     vertex_list[[1]] = decido::earcut(poly_list[[1]][,1:2], holes = holes)
     height_list[[1]] = data_vals_top
     bottom_list[[1]] = data_vals_bottom
@@ -1262,20 +1286,8 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
     # Also, some confusion between scalar hole index, and logical vector
     # indicating holes
 
-    if(base_poly) {
-      hole_start = poly_list[[poly]][1,3]
-      if(hole_start != 0) {
-        if(hole_start < 4) {
-          stop("holes cannot begin before vertex 4. Hole index here starts at: ", hole_start)
-        }
-        holes = rep(TRUE, nrow(poly_list[[poly]]))
-        holes[1:(hole_start-1)] = FALSE
-      } else {
-        holes = logical(length(poly_list[[poly]][,1]))
-      }
-    } else {
-      holes = poly_list[[poly]][,3] >= 1
-    }
+    holes = poly_list[[poly]][,3] >= 1
+
     if(any(holes) & sum(holes) < 3)
       stop("holes must have at least three vertices.")
     if(sum(!holes) < 3)
@@ -1331,6 +1343,8 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
         e1e2 <- acos(sum(e1  * c(0, 1)) / (sqrt(sum(e1^2)))) * sign(e1[['x']])
         R <- matrix(c(cos(e1e2), sin(e1e2), -sin(e1e2), cos(e1e2)), 2)
         right <- (R %*% e2)[1] >= 0 # if positive x offset, triangle on right
+
+        # polygons are assumed to be closed
 
         for(i in seq_len(length(side) - 1L)) {
           xi <- x[side[i]]        # vertex i
