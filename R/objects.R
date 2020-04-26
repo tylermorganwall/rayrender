@@ -1251,7 +1251,10 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
   }
   scenelist= list()
   counter = 1
-  
+
+  if(!(flip_horizontal && flip_vertical) && ((flip_horizontal || flip_vertical))) {
+    reversed = !reversed
+  }
   for(poly in 1:length(poly_list)) {
     x=poly_list[[poly]][,1]
     y=poly_list[[poly]][,2]
@@ -1302,9 +1305,6 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
     #   for(1:length(polylist)) loop?  Otherwise are we not going to be
     #   alternating value each loop?  Doesn't affect base polygons, so maybe
     #   that's okay give input format from other poly sources?
-    if(!(flip_horizontal && flip_vertical) && ((flip_horizontal || flip_vertical))) {
-      reversed = !reversed
-    }
     if(extruded) {
       for(side in split(seq_along(x), holes)) {
         # Find first edge in earcut list, and check whether the corresponding
