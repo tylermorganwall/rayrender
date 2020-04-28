@@ -1099,6 +1099,7 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
   vertex_list = list()
   height_list = list()
   bottom_list = list()
+  holes_list = list()
   base_poly = FALSE
   counter = 1
   if(inherits(polygon,"sf")) {
@@ -1164,12 +1165,6 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
         poly_list[[counter]][,1] = -poly_list[[counter]][,1]
         height_list[[counter]] = data_vals_top[obj]
         bottom_list[[counter]] = data_vals_bottom[obj]
-        if(flip_horizontal) {
-          poly_list[[counter]][,1] = -poly_list[[counter]][,1]
-        }
-        if(flip_vertical) {
-          poly_list[[counter]][,2] = -poly_list[[counter]][,2]
-        }
         if(length(hole_vec) > 0) {
           if(any(hole_vec >= min_index & hole_vec <= max_index)) {
             hole_val = hole_vec[hole_vec >= min_index & hole_vec <= max_index] - prev_vertices
@@ -1179,20 +1174,9 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
         } else {
           hole_val = 0
         }
-        vertex_list[[counter]] = decido::earcut(poly_list[[counter]][,1:2],holes = hole_val)
+        holes_list[[counter]] = hole_val
         prev_vertices = prev_vertices + nrow(poly_list[[counter]])
         counter = counter + 1
-      }
-    }
-    if(center) {
-      all_vertices = do.call(rbind,poly_list)
-      middle_x = (max(all_vertices[,1]) + min(all_vertices[,1]))/2
-      middle_y = (max(all_vertices[,2]) + min(all_vertices[,2]))/2
-      counter_center = 1
-      for(part in unique_parts) {
-        poly_list[[counter_center]][,1] = poly_list[[counter_center]][,1] - middle_x
-        poly_list[[counter_center]][,2] = poly_list[[counter_center]][,2] - middle_y
-        counter_center = counter_center + 1
       }
     }
   } else {
@@ -1237,24 +1221,37 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
     xy_dat_fin <- do.call(rbind, xy_dat_closed)
     rownames(xy_dat_fin) <- NULL
 
+    holes_list[[1]] <- holes
     poly_list[[1]] = as.matrix(xy_dat_fin)
-    vertex_list[[1]] = decido::earcut(poly_list[[1]][,1:2], holes = holes)
     height_list[[1]] = data_vals_top
     bottom_list[[1]] = data_vals_bottom
-    if(center) {
-      all_vertices = do.call(rbind,poly_list)
-      middle_x = (max(all_vertices[,1]) + min(all_vertices[,1]))/2
-      middle_y = (max(all_vertices[,2]) + min(all_vertices[,2]))/2
-      poly_list[[1]][,1] = poly_list[[1]][,1] - middle_x
-      poly_list[[1]][,2] = poly_list[[1]][,2] - middle_y
+  }
+  # Processing common to base and SF: flip/earcut/center
+
+  for(i in seq_along(poly_list)) {
+    if(flip_horizontal) {
+      poly_list[[i]][,1] = -poly_list[[i]][,1]
+    }
+    if(flip_vertical) {
+      poly_list[[i]][,2] = -poly_list[[i]][,2]
+    }
+    vertex_list[[i]] = matrix(
+      decido::earcut(poly_list[[i]][,1:2],holes = holes_list[[i]]),
+      ncol=3, byrow=TRUE
+    )
+  }
+  if(center) {
+    all_vertices = do.call(rbind,poly_list)
+    middle_x = (max(all_vertices[,1]) + min(all_vertices[,1]))/2
+    middle_y = (max(all_vertices[,2]) + min(all_vertices[,2]))/2
+    for(i in seq_along(poly_list)) {
+      poly_list[[i]][,1] = poly_list[[i]][,1] - middle_x
+      poly_list[[i]][,2] = poly_list[[i]][,2] - middle_y
     }
   }
   scenelist= list()
   counter = 1
 
-  if(!(flip_horizontal && flip_vertical) && ((flip_horizontal || flip_vertical))) {
-    reversed = !reversed
-  }
   for(poly in 1:length(poly_list)) {
     x=poly_list[[poly]][,1]
     y=poly_list[[poly]][,2]
@@ -1262,13 +1259,6 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
     height_poly = height_list[[poly]]
     bottom_poly = bottom_list[[poly]]
     
-    if(!is.matrix(vertices)) {
-      if(length(vertices) %% 3 == 0) {
-        vertices = matrix(vertices,ncol=3,byrow=TRUE)
-      } else {
-        stop("Number of vertices (",length(vertices),") is not divisible by 3")
-      }
-    }
     for(i in 1:nrow(vertices)) {
       scenelist[[counter]] = triangle(v1=scale*permute_axes(c(x[vertices[i,3]],bottom_poly,y[vertices[i,3]]),planeval),
                                       v2=scale*permute_axes(c(x[vertices[i,2]],bottom_poly,y[vertices[i,2]]),planeval),
@@ -1299,12 +1289,6 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
       )
     }
 
-    # Two questions
-    # * should this also affect the for(1:nrow(vertices)) loop?
-    # * do we need a different var name, or do this outside of the
-    #   for(1:length(polylist)) loop?  Otherwise are we not going to be
-    #   alternating value each loop?  Doesn't affect base polygons, so maybe
-    #   that's okay give input format from other poly sources?
     if(extruded) {
       for(side in split(seq_along(x), holes)) {
         # Find first edge in earcut list, and check whether the corresponding
