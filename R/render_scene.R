@@ -431,9 +431,11 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
   assertthat::assert_that(roulette_active_depth > 0)
   
   
-  #Material ID handler
+  #Material ID handler; these must show up in increasing order.  Note, this will
+  #cause problems if `match` is every changed to return doubles when matching in
+  #long vectors as has happened with `which` recently.
   material_id = scene$material_id
-  material_id = as.integer(as.factor(material_id))-1
+  material_id = as.integer(match(material_id, unique(material_id)) - 1L)
   material_id_bool = !is.na(scene$material_id)
   
   if(min_adaptive_size < 1) {
