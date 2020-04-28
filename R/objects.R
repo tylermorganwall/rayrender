@@ -1322,7 +1322,7 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
         # and apply rotation to e2 to see which "side" e2 is pointing
         # by looking at resulting x value (not super efficient...).
 
-        e1e2 <- acos(sum(e1  * c(0, 1)) / (sqrt(sum(e1^2)))) * sign(e1[['x']])
+        e1e2 <- acos(sum(e1  * c(0, 1)) / (sqrt(sum(e1^2)))) * if(e1[['x']] < 0)  -1 else 1
         R <- matrix(c(cos(e1e2), sin(e1e2), -sin(e1e2), cos(e1e2)), 2)
         right <- (R %*% e2)[1] >= 0 # if positive x offset, triangle on right
 
