@@ -879,7 +879,8 @@ ellipsoid = function(x = 0, y = 0, z = 0, a = 1, b = 1, c = 1,
 #' Extruded Polygon Object
 #'
 #' @param polygon `sf` object or xy coordinates of polygon represented in a way that can be processed 
-#' by `xy.coords()`.
+#'   by `xy.coords()`.  If the latter type of polygon is open, it will be closed by adding an edge from the last
+#'   point to the first.
 #' @param x Default `0`. x-coordinate to offset the extruded model.
 #' @param y Default `0`. y-coordinate to offset the extruded model.
 #' @param z Default `0`. z-coordinate to offset the extruded model.
@@ -1137,6 +1138,9 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
     data_vals_bottom = bottom[1]
   }
   if(inherits(polygon,"SpatialPolygonsDataFrame") || inherits(polygon,"SpatialPolygons")) {
+    if(!is.null(holes)) {
+      warning("holes is not NULL, but is unused when input is sf or Spatial")
+    }
     coord_data = raster::geom(polygon)
     unique_objects = unique(coord_data[,1])
     counter_obj = 1
