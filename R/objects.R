@@ -1100,7 +1100,7 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
   vertex_list = list()
   height_list = list()
   bottom_list = list()
-  holes_list = list()
+  holes_start_i_list = list()
   base_poly = FALSE
   counter = 1
   if(inherits(polygon,"sf")) {
@@ -1178,7 +1178,7 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
         } else {
           hole_val = 0
         }
-        holes_list[[counter]] = hole_val
+        holes_start_i_list[[counter]] = hole_val
         prev_vertices = prev_vertices + nrow(poly_list[[counter]])
         counter = counter + 1
       }
@@ -1204,13 +1204,15 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
     } else if (any(holes < 4)) {
       stop("holes cannot begin before vertex 4. Hole index here starts at: ", min(hole_start))
     }
-    # close polygons if not closed, must do so for outer and each hole
+    # label each vertex with a hole id
 
     if(isTRUE(holes == 0)) {
       xy_dat <- data.frame(x, y, holes=0L)
     } else {
       xy_dat <- data.frame(x, y, holes=cumsum(seq_along(x) %in% holes))
     }
+    # close polygons if not closed, must do so for outer and each hole
+
     xy_dat_split <- split(xy_dat, xy_dat[['holes']])
     close_poly <- function(dat) {
       if(!all(dat[1L,] == dat[nrow(dat),])) {
@@ -1225,7 +1227,7 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
     xy_dat_fin <- do.call(rbind, xy_dat_closed)
     rownames(xy_dat_fin) <- NULL
 
-    holes_list[[1]] <- holes
+    holes_start_i_list[[1]] <- holes  # hole indices for decido::earcut
     poly_list[[1]] = as.matrix(xy_dat_fin)
     height_list[[1]] = data_vals_top
     bottom_list[[1]] = data_vals_bottom
@@ -1240,7 +1242,7 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
       poly_list[[i]][,2] = -poly_list[[i]][,2]
     }
     vertex_list[[i]] = matrix(
-      decido::earcut(poly_list[[i]][,1:2],holes = holes_list[[i]]),
+      decido::earcut(poly_list[[i]][,1:2],holes = holes_start_i_list[[i]]),
       ncol=3, byrow=TRUE
     )
   }
@@ -1294,57 +1296,35 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
     }
 
     if(extruded) {
-      for(side in split(seq_along(x), holes)) {
-        # Find first edge in earcut list, and check whether the corresponding
-        # triangle is pointing "left" or "right":
-        #
-        # |         |  other polygon edges
-        # |         |
-        # |\   vs  /|  1st edge
-        # |/       \|
-        #
-        # This tells us which direction the polygon is drawn around, so we can
-        # orient the side face normals correctly (works for outer and holes).
+      for(polyv in split(seq_along(x), holes)) {
+        # Find which direction polygon is wound by computing signed area,
+        # assumes non-intersecting polygon (side is a closed polygon).  CW
+        # outer polygon need to flip sides, as do CCW holes
 
-        if(!length(side)) next
+        i <- polyv[seq_len(length(polyv) - 2L)]
+        ii <- polyv[seq_len(length(polyv) - 2L) + 1L]   # i + 1
+        area_s <- sum(x[i] * y[ii] - x[ii] * y[i]) / 2
 
-        side_triangulated <- side[side %in% vertices] # close/open vertex may be missing
-        v1 <- side_triangulated[1L]
-        v2 <- side_triangulated[2L]
-        first_edge <- which(rowSums(vertices <= v2 & vertices >= v1) == 2L)
-        if(length(first_edge) != 1L)
-          stop("internal error resolving first polygon edge from triangulated")
-
-        v3 <- vertices[first_edge,][!vertices[first_edge,] %in% c(v1, v2)]
-
-        # these are earcut edges, not original polygon edges
-
-        e1 <- c(x=x[v2] - x[v1], y=y[v2] - y[v1])
-        e2 <- c(x=x[v3] - x[v1], y=y[v3] - y[v1])
-
-        # Determine rotation required to get e1 to point along "y"-axis,
-        # and apply rotation to e2 to see which "side" e2 is pointing
-        # by looking at resulting x value (not super efficient...).
-
-        e1e2 <- acos(sum(e1  * c(0, 1)) / (sqrt(sum(e1^2)))) * if(e1[['x']] < 0)  -1 else 1
-        R <- matrix(c(cos(e1e2), sin(e1e2), -sin(e1e2), cos(e1e2)), 2)
-        right <- (R %*% e2)[1] >= 0 # if positive x offset, triangle on right
-
-        for(i in seq_len(length(side) - 1L)) {  # polygons are closed
-          xi <- x[side[i]]        # vertex i
-          yi <- y[side[i]]
-          xii <- x[side[i + 1L]]  # vertex i + 1
-          yii <- y[side[i + 1L]]
+        ccw <- area_s >= 0  # treat degenerates as counter-clockwise
+        side_rev <- (
+          (holes[polyv[1L]] == 0L && !ccw) ||
+          (holes[polyv[1L]] != 0L && ccw)
+        )
+        for(i in seq_len(length(polyv) - 1L)) {  # polygons are closed
+          xi <- x[polyv[i]]        # vertex i
+          yi <- y[polyv[i]]
+          xii <- x[polyv[i + 1L]]  # vertex i + 1
+          yii <- y[polyv[i + 1L]]
 
           scenelist[[counter]] = triangle(v1=scale*permute_axes(c(xi,height_poly,yi),planeval),
                                           v2=scale*permute_axes(c(xi,bottom_poly,yi),planeval),
                                           v3=scale*permute_axes(c(xii,bottom_poly,yii),planeval),
-                                          material = material, reversed = xor(reversed, right))
+                                          material = material, reversed = xor(reversed, side_rev))
           counter = counter + 1
           scenelist[[counter]] = triangle(v1=scale*permute_axes(c(xi,height_poly,yi),planeval),
                                           v2=scale*permute_axes(c(xii,bottom_poly,yii),planeval),
                                           v3=scale*permute_axes(c(xii,height_poly,yii),planeval),
-                                          material = material, reversed = xor(reversed, right))
+                                          material = material, reversed = xor(reversed, side_rev))
           counter = counter + 1
         }
       }
