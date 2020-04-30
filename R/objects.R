@@ -1151,11 +1151,28 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
       counter_holes = 0
       hole_vec = c()
       for(part in 1:(length(unique_parts)-1)) {
-        if(all(temp_data[temp_data[,2] == unique_parts[part-counter_holes]+1,4] == 1)) {
-          if(length(temp_data[temp_data[,2] == unique_parts[part-counter_holes]+1,4] == 1) > 0) {
-            hole_vec = c(hole_vec, min(which(temp_data[temp_data[,2] == unique_parts[part-counter_holes]+1,4] == 1)) + 
-                         length(temp_data[temp_data[,2] < unique_parts[part-counter_holes]+1,4]))
-            temp_data[temp_data[,2] > unique_parts[part-counter_holes],2] = temp_data[temp_data[,2] > unique_parts[part-counter_holes],2] - 1
+        # Look ahead at the next part, and if the next part is all-hole, then
+        # ....
+        # The -counter-holes part is b/c at each iteration the "part" column is
+        # decremented by one.
+        if(
+          all(
+            temp_data[
+              temp_data[,2] == unique_parts[part-counter_holes]+1,4
+            ] == 1)
+        ) {
+          # if next part has at least one hole, then:
+          # * add start position of hole
+          # * subtract one from all the part ids
+          if(
+            length(temp_data[temp_data[,2] == unique_parts[part-counter_holes]+1,4] == 1) > 0
+          ) {
+            hole_vec = c(
+              hole_vec, 
+              min(which(temp_data[temp_data[,2] == unique_parts[part-counter_holes]+1,4] == 1)) + 
+                length(temp_data[temp_data[,2] < unique_parts[part-counter_holes]+1,4]))
+            temp_data[temp_data[,2] > unique_parts[part-counter_holes],2] =
+              temp_data[temp_data[,2] > unique_parts[part-counter_holes],2] - 1
             counter_holes = counter_holes + 1
           }
         }
@@ -1165,6 +1182,7 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
       for(part in unique_parts) {
         min_index = min(which(temp_data[,2] == part))
         max_index = max(which(temp_data[,2] == part))
+        # xy and hole
         poly_list[[counter]] = temp_data[temp_data[,2] == part,c(5,6,4)]
         poly_list[[counter]][,1] = -poly_list[[counter]][,1]
         height_list[[counter]] = data_vals_top[obj]
@@ -1211,7 +1229,8 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
     } else {
       xy_dat <- data.frame(x, y, holes=cumsum(seq_along(x) %in% holes))
     }
-    # close polygons if not closed, must do so for outer and each hole
+    # close polygons if not closed, must do so for outer and each hole;
+    # sf and Spatial polygons should be closed
 
     xy_dat_split <- split(xy_dat, xy_dat[['holes']])
     close_poly <- function(dat) {
