@@ -1309,8 +1309,8 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
         # assumes non-intersecting polygon (side is a closed polygon).  CW
         # outer polygon need to flip sides, as do CCW holes
 
-        i <- polyv[seq_len(length(polyv) - 2L)]
-        ii <- polyv[seq_len(length(polyv) - 2L) + 1L]   # i + 1
+        i <- polyv[seq_len(length(polyv) - 1L)]
+        ii <- polyv[seq_len(length(polyv) - 1L) + 1L]   # i + 1
         area_s <- sum(x[i] * y[ii] - x[ii] * y[i]) / 2
 
         ccw <- area_s >= 0  # treat degenerates as counter-clockwise
