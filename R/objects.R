@@ -1038,6 +1038,9 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
     scale = c(scale, scale, scale)
   }
   reversed = FALSE
+  if(!is.character(plane) || length(plane) != 1L || is.na(plane)) {
+    stop("plane must be scalar character and not NA")
+  }
   if(tolower(plane) %in% c("xy","yx","xz","zx","zy","yz")) {
     if(plane == "xz") {
       planeval = 1
@@ -1141,66 +1144,52 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
     if(!is.null(holes)) {
       warning("holes is not NULL, but is unused when input is sf or Spatial")
     }
-    coord_data = raster::geom(polygon)
-    unique_objects = unique(coord_data[,1])
-    counter_obj = 1
-    
-    for(obj in unique_objects) {
-      temp_data = coord_data[coord_data[,1] == obj,]
-      unique_parts = unique(temp_data[,2])
-      counter_holes = 0
-      hole_vec = c()
-      for(part in 1:(length(unique_parts)-1)) {
-        # Look ahead at the next part, and if the next part is all-hole, then
-        # ....
-        # The -counter-holes part is b/c at each iteration the "part" column is
-        # decremented by one.
-        if(
-          all(
-            temp_data[
-              temp_data[,2] == unique_parts[part-counter_holes]+1,4
-            ] == 1)
-        ) {
-          # if next part has at least one hole, then:
-          # * add start position of hole
-          # * subtract one from all the part ids
-          if(
-            length(temp_data[temp_data[,2] == unique_parts[part-counter_holes]+1,4] == 1) > 0
-          ) {
-            hole_vec = c(
-              hole_vec, 
-              min(which(temp_data[temp_data[,2] == unique_parts[part-counter_holes]+1,4] == 1)) + 
-                length(temp_data[temp_data[,2] < unique_parts[part-counter_holes]+1,4]))
-            temp_data[temp_data[,2] > unique_parts[part-counter_holes],2] =
-              temp_data[temp_data[,2] > unique_parts[part-counter_holes],2] - 1
-            counter_holes = counter_holes + 1
-          }
-        }
-      }
-      unique_parts = unique(temp_data[,2])
-      prev_vertices = 0
-      for(part in unique_parts) {
-        min_index = min(which(temp_data[,2] == part))
-        max_index = max(which(temp_data[,2] == part))
-        # xy and hole
-        poly_list[[counter]] = temp_data[temp_data[,2] == part,c(5,6,4)]
-        poly_list[[counter]][,1] = -poly_list[[counter]][,1]
-        height_list[[counter]] = data_vals_top[obj]
-        bottom_list[[counter]] = data_vals_bottom[obj]
-        if(length(hole_vec) > 0) {
-          if(any(hole_vec >= min_index & hole_vec <= max_index)) {
-            hole_val = hole_vec[hole_vec >= min_index & hole_vec <= max_index] - prev_vertices
-          } else {
-            hole_val = 0
-          }
+    coord_data = raster::geom(polygon) # See ?raster::geom for col meaning
+
+    # Holes are only holes if every hole value of `part` column (col 2) is a
+    # hole to match original code (seems like it should always be true?).
+
+    opart <- interaction(coord_data[, 1], coord_data[, 2], drop=TRUE)
+    coord_data[, 4] <- ave(coord_data[, 4], opart, FUN=min)
+
+    # multipolygon share same object ID, detect new polygon start in multipoly
+    # by when switching back from hole to not-holes
+
+    new_poly <- cumsum(
+      c(FALSE, coord_data[-1, 4] == 0 & coord_data[-nrow(coord_data), 4] > 0)
+    )
+    object = coord_data[, 1]
+    new_object = as.integer(interaction(object, new_poly, drop=TRUE))
+    new_part = ave(coord_data[,2], new_object, FUN=function(x) x - min(x) + 1L)
+    coord_data[, 1:2] = cbind(new_object, new_part)
+    coord_data[, 5] = -coord_data[, 5]  # due to xz defalt plane need to negate x
+
+    # give distinct hole ids instead of just 0,1 flag
+
+    coord_data[, 4] = coord_data[, 4] * coord_data[, 2]
+
+    # remap the new object id to old
+
+    no_len = rle(new_object)[['lengths']]
+    obj_map_id = object[c(1L, cumsum(no_len)[-length(no_len)] + 1L)]
+
+    height_list = as.list(data_vals_top[obj_map_id])    # list for compatibility
+    bottom_list = as.list(data_vals_bottom[obj_map_id])
+    poly_list = unname(split.data.frame(coord_data[, c(5,6,4,2)], coord_data[,1]))
+
+    # assume that all holes are after all outer polygons
+
+    holes_start_i_list = lapply(
+      poly_list,
+      function(x) {
+        if(!any(x[,3] > 0)) {              # no hole
+          0
         } else {
-          hole_val = 0
-        }
-        holes_start_i_list[[counter]] = hole_val
-        prev_vertices = prev_vertices + nrow(poly_list[[counter]])
-        counter = counter + 1
-      }
-    }
+          which(
+            c(FALSE, diff(x[,4]) > 0) &             # start id of each "part"
+            seq_len(nrow(x)) >= which(x[,3] > 0)[1] # for holes
+          )
+    } } )
   } else {
     base_poly = TRUE
     xylist = grDevices::xy.coords(polygon)
