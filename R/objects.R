@@ -1153,8 +1153,8 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
     # Holes are only holes if every hole value of `part` column (col 2) is a
     # hole to match original code (seems like it should always be true?).
 
-    opart <- interaction(coord_data[, 1], coord_data[, 2], drop=TRUE)
-    coord_data[, 4] <- ave(coord_data[, 4], opart, FUN=min)
+    opart = interaction(coord_data[, 1], coord_data[, 2], drop=TRUE)
+    coord_data[, 4] = ave(coord_data[, 4], opart, FUN=min)
 
     # Every `part` is considered a polygon, unless it is a hole, in which case
     # it is assumed to be a hole in the nearest preceding non-hole polygon.
@@ -1170,7 +1170,7 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
 
     coord_data[, 4] = coord_data[, 4] * coord_data[, 3]
 
-    # remap the new object id to old
+    # remap the new object id to old to get height data
 
     obj_new_len = rle(object_new)[['lengths']]
     obj_map_id = object[c(1L, cumsum(obj_new_len)[-length(obj_new_len)] + 1L)]
@@ -1216,28 +1216,28 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
     # label each vertex with a hole id
 
     if(isTRUE(holes == 0)) {
-      xy_dat <- data.frame(x, y, holes=0L)
+      xy_dat = data.frame(x, y, holes=0L)
     } else {
-      xy_dat <- data.frame(x, y, holes=cumsum(seq_along(x) %in% holes))
+      xy_dat = data.frame(x, y, holes=cumsum(seq_along(x) %in% holes))
     }
     # close polygons if not closed, must do so for outer and each hole;
     # sf and Spatial polygons should be closed
 
-    xy_dat_split <- split(xy_dat, xy_dat[['holes']])
-    close_poly <- function(dat) {
+    xy_dat_split = split(xy_dat, xy_dat[['holes']])
+    close_poly = function(dat) {
       if(!all(dat[1L,] == dat[nrow(dat),])) {
         dat[c(seq_len(nrow(dat)), 1L),]
       } else dat
     }
-    xy_dat_closed <- lapply(xy_dat_split, close_poly)
-    xy_dat_len <- vapply(xy_dat_closed, nrow, 0)
-    holes <- if(length(xy_dat_closed) > 1) {
+    xy_dat_closed = lapply(xy_dat_split, close_poly)
+    xy_dat_len = vapply(xy_dat_closed, nrow, 0)
+    holes = if(length(xy_dat_closed) > 1) {
       cumsum(xy_dat_len[-length(xy_dat_closed)]) + 1L
     } else 0L
-    xy_dat_fin <- do.call(rbind, xy_dat_closed)
-    rownames(xy_dat_fin) <- NULL
+    xy_dat_fin = do.call(rbind, xy_dat_closed)
+    rownames(xy_dat_fin) = NULL
 
-    holes_start_i_list[[1]] <- holes  # hole indices for decido::earcut
+    holes_start_i_list[[1]] = holes  # hole indices for decido::earcut
     poly_list[[1]] = as.matrix(xy_dat_fin)
     height_list[[1]] = data_vals_top
     bottom_list[[1]] = data_vals_bottom
@@ -1311,20 +1311,20 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
         # assumes non-intersecting polygon (side is a closed polygon).  CW
         # outer polygon need to flip sides, as do CCW holes
 
-        i <- polyv[seq_len(length(polyv) - 1L)]
-        ii <- polyv[seq_len(length(polyv) - 1L) + 1L]   # i + 1
-        area_s <- sum(x[i] * y[ii] - x[ii] * y[i]) / 2
+        i = polyv[seq_len(length(polyv) - 1L)]
+        ii = polyv[seq_len(length(polyv) - 1L) + 1L]   # i + 1
+        area_s = sum(x[i] * y[ii] - x[ii] * y[i]) / 2
 
-        ccw <- area_s >= 0  # treat degenerates as counter-clockwise
-        side_rev <- (
+        ccw = area_s >= 0  # treat degenerates as counter-clockwise
+        side_rev = (
           (holes[polyv[1L]] == 0L && !ccw) ||
           (holes[polyv[1L]] != 0L && ccw)
         )
         for(i in seq_len(length(polyv) - 1L)) {  # polygons are closed
-          xi <- x[polyv[i]]        # vertex i
-          yi <- y[polyv[i]]
-          xii <- x[polyv[i + 1L]]  # vertex i + 1
-          yii <- y[polyv[i + 1L]]
+          xi = x[polyv[i]]        # vertex i
+          yi = y[polyv[i]]
+          xii = x[polyv[i + 1L]]  # vertex i + 1
+          yii = y[polyv[i + 1L]]
 
           scenelist[[counter]] = triangle(v1=scale*permute_axes(c(xi,height_poly,yi),planeval),
                                           v2=scale*permute_axes(c(xi,bottom_poly,yi),planeval),
