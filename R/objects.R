@@ -1188,8 +1188,8 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
           0
         } else {
           which(
-            c(FALSE, diff(x[,4]) > 0) &             # start id of each "part"
-            seq_len(nrow(x)) >= which(x[,3] > 0)[1] # for holes
+            c(TRUE, diff(x[,4]) > 0) &     # start position of each "part"
+            x[,3] > 0                      # that correspond to holes
           )
     } } )
   } else {
