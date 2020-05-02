@@ -880,9 +880,8 @@ ellipsoid = function(x = 0, y = 0, z = 0, a = 1, b = 1, c = 1,
 #'
 #' @param polygon `sf` object, "SpatialPolygon" `sp` object,  or xy coordinates
 #'   of polygon represented in a way that can be processed by `xy.coords()`.  If
-#'   an `sf` object contains non-polygon geometries, those will be dropped.  If
-#'   the latter type of polygon is open, it will be closed by adding an edge from
-#'   the last point to the first.
+#'   xy-coordinate based polygons are open, they will be closed by adding an
+#'   edge from the last point to the first.
 #' @param x Default `0`. x-coordinate to offset the extruded model.
 #' @param y Default `0`. y-coordinate to offset the extruded model.
 #' @param z Default `0`. z-coordinate to offset the extruded model.
@@ -1112,7 +1111,6 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
     if(!"sf" %in% rownames(utils::installed.packages())) {
       stop("sf package required when handling sf objects")
     }
-    polygon = sf::st_collection_extract(polygon, "POLYGON")
     poly_info = sf::st_drop_geometry(polygon)
     polygon = sf::as_Spatial(polygon)
     if(!is.null(data_column_top)) {
