@@ -1148,6 +1148,7 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
       warning("holes is not NULL, but is unused when input is sf or Spatial")
     }
     coord_data = raster::geom(polygon) # See ?raster::geom for col meaning
+    coord_data = coord_data[order(coord_data[,1],coord_data[,2] ),] # just in case
 
     # Holes are only holes if every hole value of `part` column (col 2) is a
     # hole to match original code (seems like it should always be true?).
@@ -1155,26 +1156,24 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
     opart <- interaction(coord_data[, 1], coord_data[, 2], drop=TRUE)
     coord_data[, 4] <- ave(coord_data[, 4], opart, FUN=min)
 
-    # multipolygon share same object ID, detect new polygon start in multipoly
-    # by when switching back from hole to not-holes
+    # Every `part` is considered a polygon, unless it is a hole, in which case
+    # it is assumed to be a hole in the nearest preceding non-hole polygon.
 
-    new_poly <- cumsum(
-      c(FALSE, coord_data[-1, 4] == 0 & coord_data[-nrow(coord_data), 4] > 0)
-    )
     object = coord_data[, 1]
-    new_object = as.integer(interaction(object, new_poly, drop=TRUE))
-    new_part = ave(coord_data[,2], new_object, FUN=function(x) x - min(x) + 1L)
-    coord_data[, 1:2] = cbind(new_object, new_part)
+    object_new = coord_data[, 3]
+    object_new[coord_data[, 4] == 1] = min(coord_data[,3]) - 1L
+    object_new = cummax(object_new)
+    coord_data[, 1] = object_new
     coord_data[, 5] = -coord_data[, 5]  # due to xz defalt plane need to negate x
 
     # give distinct hole ids instead of just 0,1 flag
 
-    coord_data[, 4] = coord_data[, 4] * coord_data[, 2]
+    coord_data[, 4] = coord_data[, 4] * coord_data[, 3]
 
     # remap the new object id to old
 
-    no_len = rle(new_object)[['lengths']]
-    obj_map_id = object[c(1L, cumsum(no_len)[-length(no_len)] + 1L)]
+    obj_new_len = rle(object_new)[['lengths']]
+    obj_map_id = object[c(1L, cumsum(obj_new_len)[-length(obj_new_len)] + 1L)]
 
     height_list = as.list(data_vals_top[obj_map_id])    # list for compatibility
     bottom_list = as.list(data_vals_bottom[obj_map_id])
