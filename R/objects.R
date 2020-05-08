@@ -50,7 +50,7 @@ sphere = function(x = 0, y = 0, z = 0, radius = 1, material = diffuse(),
   if(length(scale) == 1) {
     scale = c(scale, scale, scale)
   }
-  tibble::tibble(x = x, y = y, z = z, radius = radius, type = material$type, shape = "sphere",
+  new_tibble_row(list(x = x, y = y, z = z, radius = radius, type = material$type, shape = "sphere",
                  properties = material$properties, velocity = list(velocity), 
                  checkercolor = material$checkercolor, 
                  gradient_color = material$gradient_color, gradient_transpose = material$gradient_transpose, 
@@ -64,7 +64,7 @@ sphere = function(x = 0, y = 0, z = 0, radius = 1, material = diffuse(),
                  pivot_point = list(NA), group_translate = list(NA),
                  group_angle = list(NA), group_order_rotation = list(NA),
                  tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA),
-                 material_id = NA)
+                 material_id = NA))
 }
 
 #' Cube Object
@@ -128,7 +128,7 @@ cube = function(x = 0, y = 0, z = 0, width = 1, xwidth = 1, ywidth = 1, zwidth =
   ywidth = ifelse(missing(ywidth), width, ywidth)
   zwidth = ifelse(missing(zwidth), width, zwidth)
   boxinfo = c(unlist(material$properties), xwidth, ywidth, zwidth)
-  tibble::tibble(x = x, y = y, z = z, radius = NA, type = material$type, shape = "box",
+  new_tibble_row(list(x = x, y = y, z = z, radius = NA, type = material$type, shape = "box",
                  properties = list(boxinfo), velocity = list(velocity), 
                  checkercolor = material$checkercolor, 
                  gradient_color = material$gradient_color, gradient_transpose = material$gradient_transpose, 
@@ -142,7 +142,7 @@ cube = function(x = 0, y = 0, z = 0, width = 1, xwidth = 1, ywidth = 1, zwidth =
                  pivot_point = list(NA), group_translate = list(NA),
                  group_angle = list(NA), group_order_rotation = list(NA),
                  tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA),
-                 material_id = NA)
+                 material_id = NA))
 }
 
 #' Rectangular XY Plane Object 
@@ -190,7 +190,7 @@ xy_rect = function(x = 0, y = 0, z = 0, xwidth = 1, ywidth = 1,
     scale = c(scale, scale, scale)
   }
   rectinfo = c(unlist(material$properties), x, xwidth, y, ywidth, z)
-  tibble::tibble(x = x, y = y, z = z, radius = NA, type = material$type, shape = "xy_rect",
+  new_tibble_row(list(x = x, y = y, z = z, radius = NA, type = material$type, shape = "xy_rect",
                  properties = list(rectinfo), velocity = list(c(0, 0, 0)),
                  checkercolor = material$checkercolor, 
                  gradient_color = material$gradient_color, gradient_transpose = material$gradient_transpose, 
@@ -204,7 +204,7 @@ xy_rect = function(x = 0, y = 0, z = 0, xwidth = 1, ywidth = 1,
                  pivot_point = list(NA), group_translate = list(NA),
                  group_angle = list(NA), group_order_rotation = list(NA),
                  tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA),
-                 material_id = NA)
+                 material_id = NA))
 }
 
 #' Rectangular YZ Plane Object
@@ -251,7 +251,7 @@ yz_rect = function(x = 0, y = 0, z = 0, ywidth = 1, zwidth = 1, material = diffu
     scale = c(scale, scale, scale)
   }
   rectinfo = c(unlist(material$properties), y, ywidth, z, zwidth, x)
-  tibble::tibble(x = x, y = y, z = z, radius = NA, type = material$type, shape = "yz_rect",
+  new_tibble_row(list(x = x, y = y, z = z, radius = NA, type = material$type, shape = "yz_rect",
                  properties = list(rectinfo), velocity = list(c(0, 0, 0)),
                  checkercolor = material$checkercolor, 
                  gradient_color = material$gradient_color, gradient_transpose = material$gradient_transpose, 
@@ -265,7 +265,7 @@ yz_rect = function(x = 0, y = 0, z = 0, ywidth = 1, zwidth = 1, material = diffu
                  pivot_point = list(NA), group_translate = list(NA),
                  group_angle = list(NA), group_order_rotation = list(NA),
                  tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA),
-                 material_id = NA)
+                 material_id = NA))
 }
 
 #' Rectangular XZ Plane Object
@@ -313,7 +313,7 @@ xz_rect = function(x = 0, xwidth = 1, z = 0, zwidth = 1, y = 0, material = diffu
     scale = c(scale, scale, scale)
   }
   rectinfo = c(unlist(material$properties), x, xwidth, z, zwidth, y)
-  tibble::tibble(x = x, y = y, z = z, radius = NA, 
+  new_tibble_row(list(x = x, y = y, z = z, radius = NA, 
                  type = material$type, shape = "xz_rect",
                  properties = list(rectinfo), velocity = list(c(0, 0, 0)),
                  checkercolor = material$checkercolor, 
@@ -328,7 +328,7 @@ xz_rect = function(x = 0, xwidth = 1, z = 0, zwidth = 1, y = 0, material = diffu
                  pivot_point = list(NA), group_translate = list(NA),
                  group_angle = list(NA), group_order_rotation = list(NA),
                  tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA),
-                 material_id = NA)
+                 material_id = NA))
 }
 
 #' Triangle Object
@@ -412,7 +412,7 @@ triangle = function(v1 = c(1, 0, 0), v2 = c(0, 1, 0), v3 = c(-1, 0, 0),
     color3 = info[1:3]
   }
   colorvec = c(color1, color2, color3)
-  tibble::tibble(x = 0, y = 0, z = 0, radius = NA, 
+  new_tibble_row(list(x = 0, y = 0, z = 0, radius = NA, 
                  type = material$type, shape = "triangle",
                  properties = list(info), velocity = list(c(0, 0, 0)),
                  checkercolor = material$checkercolor, 
@@ -427,7 +427,7 @@ triangle = function(v1 = c(1, 0, 0), v2 = c(0, 1, 0), v3 = c(-1, 0, 0),
                  pivot_point = list(NA), group_translate = list(NA),
                  group_angle = list(NA), group_order_rotation = list(NA),
                  tricolorinfo = list(colorvec), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA),
-                 material_id = NA)
+                 material_id = NA))
 }
 
 #' Disk Object
@@ -485,7 +485,7 @@ disk = function(x = 0, y = 0, z = 0, radius = 1, inner_radius = 0, material = di
     scale = c(scale, scale, scale)
   }
   info = c(unlist(material$properties), inner_radius)
-  tibble::tibble(x = x, y = y, z = z, radius = radius, type = material$type, shape = "disk",
+  new_tibble_row(list(x = x, y = y, z = z, radius = radius, type = material$type, shape = "disk",
                  properties = list(info), velocity = list(velocity), 
                  checkercolor = material$checkercolor, 
                  gradient_color = material$gradient_color, gradient_transpose = material$gradient_transpose, 
@@ -499,7 +499,7 @@ disk = function(x = 0, y = 0, z = 0, radius = 1, inner_radius = 0, material = di
                  pivot_point = list(NA), group_translate = list(NA),
                  group_angle = list(NA), group_order_rotation = list(NA),
                  tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA),
-                 material_id = NA)
+                 material_id = NA))
 }
 
 #' `obj` File Object
@@ -577,7 +577,7 @@ obj_model = function(filename, x = 0, y = 0, z = 0, scale_obj = 1,
   if(vertex_colors) {
     shape = "objvertexcolor"
   }
-  tibble::tibble(x = x, y = y, z = z, radius = NA, 
+  new_tibble_row(list(x = x, y = y, z = z, radius = NA, 
                  type = material$type, shape = shape,
                  properties = list(info), velocity = list(c(0, 0, 0)),
                  checkercolor = material$checkercolor, 
@@ -592,7 +592,7 @@ obj_model = function(filename, x = 0, y = 0, z = 0, scale_obj = 1,
                  pivot_point = list(NA), group_translate = list(NA),
                  group_angle = list(NA), group_order_rotation = list(NA),
                  tricolorinfo = list(NA), fileinfo = filename, scale_factor = list(scale), group_scale = list(NA),
-                 material_id = NA)
+                 material_id = NA))
 }
 
 #' Cylinder Object
@@ -661,7 +661,7 @@ cylinder = function(x = 0, y = 0, z = 0, radius = 1, length = 1,
   }
   assertthat::assert_that(phi_max > phi_min)
   info = c(unlist(material$properties), length, phi_min * pi / 180, phi_max * pi / 180)
-  tibble::tibble(x = x, y = y, z = z, radius = radius, type = material$type, shape = "cylinder",
+  new_tibble_row(list(x = x, y = y, z = z, radius = radius, type = material$type, shape = "cylinder",
                  properties = list(info), velocity = list(velocity), 
                  checkercolor = material$checkercolor, 
                  gradient_color = material$gradient_color, gradient_transpose = material$gradient_transpose, 
@@ -675,7 +675,7 @@ cylinder = function(x = 0, y = 0, z = 0, radius = 1, length = 1,
                  pivot_point = list(NA), group_translate = list(NA),
                  group_angle = list(NA), group_order_rotation = list(NA),
                  tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA),
-                 material_id = NA)
+                 material_id = NA))
 }
 
 #' Segment Object
@@ -781,7 +781,7 @@ segment = function(start = c(0, -1, 0), end = c(0, 1, 0), radius = 1,
   fulllength = sqrt(sum((end-start)^2))
   angle = c(0, phi, theta)
   info = c(unlist(material$properties), fulllength, phi_min * pi / 180, phi_max * pi / 180)
-  tibble::tibble(x = x, y = y, z = z, radius = radius, type = material$type, shape = "cylinder",
+  new_tibble_row(list(x = x, y = y, z = z, radius = radius, type = material$type, shape = "cylinder",
                  properties = list(info), velocity = list(velocity), 
                  checkercolor = material$checkercolor, 
                  gradient_color = material$gradient_color, gradient_transpose = material$gradient_transpose, 
@@ -795,7 +795,7 @@ segment = function(start = c(0, -1, 0), end = c(0, 1, 0), radius = 1,
                  pivot_point = list(NA), group_translate = list(NA),
                  group_angle = list(NA), group_order_rotation = list(NA),
                  tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA),
-                 material_id = NA)
+                 material_id = NA))
 }
 
 #' Ellipsoid Object
@@ -859,7 +859,7 @@ ellipsoid = function(x = 0, y = 0, z = 0, a = 1, b = 1, c = 1,
   }
   radius = 1
   info = c(unlist(material$properties), a, b, c)
-  tibble::tibble(x = x, y = y, z = z, radius = radius, type = material$type, shape = "ellipsoid",
+  new_tibble_row(list(x = x, y = y, z = z, radius = radius, type = material$type, shape = "ellipsoid",
                  properties = list(info), velocity = list(velocity), 
                  checkercolor = material$checkercolor, 
                  gradient_color = material$gradient_color, gradient_transpose = material$gradient_transpose, 
@@ -873,7 +873,7 @@ ellipsoid = function(x = 0, y = 0, z = 0, a = 1, b = 1, c = 1,
                  pivot_point = list(NA), group_translate = list(NA),
                  group_angle = list(NA), group_order_rotation = list(NA),
                  tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA),
-                 material_id = NA)
+                 material_id = NA))
 }
 
 #' Extruded Polygon Object
@@ -1338,7 +1338,11 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
       }
     }
   }
-  scenefull = do.call(rbind,scenelist)
+  if("dplyr" %in% rownames(utils::installed.packages())) {
+    scenefull = dplyr::bind_rows(scenelist)
+  } else {
+    scenefull = do.call(rbind, scenelist)
+  }
   if(any(angle != 0)) {
     if(any(pivot_point != 0)) {
       sceneprop = scenefull$properties
@@ -1398,5 +1402,6 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
     scenefull$properties = sceneprop
   }
   scenefull$material_id = rep(material_id, nrow(scenefull))
+  tibble::validate_tibble(scenefull)
   return(scenefull)
 }

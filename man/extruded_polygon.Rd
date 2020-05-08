@@ -28,8 +28,10 @@ extruded_polygon(
 )
 }
 \arguments{
-\item{polygon}{`sf` object or xy coordinates of polygon represented in a way that can be processed 
-by `xy.coords()`.}
+\item{polygon}{`sf` object, "SpatialPolygon" `sp` object,  or xy coordinates
+of polygon represented in a way that can be processed by `xy.coords()`.  If
+xy-coordinate based polygons are open, they will be closed by adding an
+edge from the last point to the first.}
 
 \item{x}{Default `0`. x-coordinate to offset the extruded model.}
 
@@ -105,7 +107,7 @@ generate_ground(depth=0,
 
 #Now, let's add a hole to the center of the polygon. We'll make the polygon
 #hollow by shrinking it, combining it with the normal size polygon,
-#and specify with the `hole` argument that everything after `nrow(star_polygon)`
+#and specify with the `holes` argument that everything after `nrow(star_polygon)`
 #in the following should be used to draw a hole:
 
 hollow_star = rbind(star_polygon,0.8*star_polygon)
@@ -113,7 +115,7 @@ hollow_star = rbind(star_polygon,0.8*star_polygon)
 \donttest{
 generate_ground(depth=-0.01,
                 material = diffuse(color="grey50",checkercolor="grey20")) \%>\%
-  add_object(extruded_polygon(hollow_star,top=0.25,bottom=0, hole = nrow(star_polygon),
+  add_object(extruded_polygon(hollow_star,top=0.25,bottom=0, holes = nrow(star_polygon) + 1,
                               material=diffuse(color="red",sigma=90))) \%>\%
   add_object(sphere(y=4,x=-3,z=-3,material=light(intensity=30))) \%>\%
   render_scene(parallel=TRUE,lookfrom = c(0,2,4),samples=400,lookat=c(0,0,0),fov=30)
@@ -124,10 +126,10 @@ generate_ground(depth=-0.01,
 \donttest{
 generate_ground(depth=-0.01,
                 material = diffuse(color="grey50",checkercolor="grey20")) \%>\%
-  add_object(extruded_polygon(hollow_star,top=0.25,bottom=0, hole = nrow(star_polygon),
+  add_object(extruded_polygon(hollow_star,top=0.25,bottom=0, holes = nrow(star_polygon),
                               material=diffuse(color="red",sigma=90))) \%>\%
   add_object(extruded_polygon(hollow_star,top=0.25,bottom=0, y=1.2, z=-1.2, 
-                              hole = nrow(star_polygon), plane = "yx", 
+                              holes = nrow(star_polygon) + 1, plane = "yx", 
                               material=diffuse(color="green",sigma=90))) \%>\%
   add_object(sphere(y=4,x=-3,material=light(intensity=30))) \%>\%
   render_scene(parallel=TRUE,lookfrom = c(0,2,4),samples=400,lookat=c(0,0.9,0),fov=40)
@@ -137,13 +139,13 @@ generate_ground(depth=-0.01,
 \donttest{
 generate_ground(depth=-0.01,
                 material = diffuse(color="grey50",checkercolor="grey20")) \%>\%
-  add_object(extruded_polygon(hollow_star,top=0.25,bottom=0, hole = nrow(star_polygon),
+  add_object(extruded_polygon(hollow_star,top=0.25,bottom=0, holes = nrow(star_polygon) + 1,
                               material=diffuse(color="red",sigma=90))) \%>\%
   add_object(extruded_polygon(hollow_star,top=0.25,bottom=0, y=1.2, z=-1.2, 
-                              hole = nrow(star_polygon), plane = "yx", 
+                              holes = nrow(star_polygon) + 1, plane = "yx", 
                               material=diffuse(color="green",sigma=90))) \%>\%
   add_object(extruded_polygon(hollow_star,top=0.25,bottom=0, y=1.2, x=1.2, 
-                              hole = nrow(star_polygon), plane = "zy", 
+                              holes = nrow(star_polygon) + 1, plane = "zy", 
                               material=diffuse(color="blue",sigma=90))) \%>\%
   add_object(sphere(y=4,x=-3,material=light(intensity=30))) \%>\%
   render_scene(parallel=TRUE,lookfrom = c(-4,2,4),samples=400,lookat=c(0,0.9,0),fov=40)

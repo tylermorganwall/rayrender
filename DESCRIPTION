@@ -20,10 +20,12 @@ Imports:
     png,
     raster,
     decido,
-    rayimage
+    rayimage,
+    stats
 Suggests:
     sf,
-    spData
+    spData,
+    dplyr
 LinkingTo: Rcpp, RcppThread, progress
 URL: https://www.rayrender.net, https://github.com/tylermorganwall/rayrender
 RoxygenNote: 7.0.2

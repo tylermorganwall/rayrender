@@ -120,12 +120,12 @@ diffuse = function(color = "#ffffff",
     sigma = 0
   }
   assertthat::assert_that(checkerperiod != 0)
-  tibble::tibble(type = type, 
+  new_tibble_row(list(type = type, 
                  properties = list(info), checkercolor=list(c(checkercolor,checkerperiod)), 
                  gradient_color = list(gradient_color), gradient_transpose = gradient_transpose,
                  noise=noise, noisephase = noisephase, noiseintensity = noiseintensity, noisecolor = list(noisecolor),
                  image = list(image_texture), alphaimage = list(alpha_texture), lightintensity = NA,
-                 fog=fog, fogdensity=fogdensity,implicit_sample = importance_sample, sigma = sigma)
+                 fog=fog, fogdensity=fogdensity,implicit_sample = importance_sample, sigma = sigma))
 }
 
 #' Metallic Material
@@ -174,7 +174,7 @@ metal = function(color = "#ffffff", fuzz = 0,  alpha_texture = NA,
     alpha_texture = NA
     warning("Alpha texture not in recognized format (array, matrix, or filename), ignoring.")
   }
-  tibble::tibble(type = "metal", 
+  new_tibble_row(list(type = "metal", 
                  properties = list(c(color,fuzz)), 
                  checkercolor=list(NA), 
                  gradient_color = list(NA), gradient_transpose = FALSE,
@@ -182,7 +182,7 @@ metal = function(color = "#ffffff", fuzz = 0,  alpha_texture = NA,
                  lightinfo = list(NA), 
                  image = list(NA), alphaimage = list(alpha_texture), 
                  lightintensity = NA,fog=FALSE,fogdensity=0.01,
-                 implicit_sample = importance_sample, sigma = 0)
+                 implicit_sample = importance_sample, sigma = 0))
 }
 
 #' Dielectric (glass) Material
@@ -280,13 +280,13 @@ metal = function(color = "#ffffff", fuzz = 0,  alpha_texture = NA,
 dielectric = function(color="white", refraction = 1.5,  attenuation = c(0,0,0), 
                       priority = 0, importance_sample = FALSE) {
   color = convert_color(color)
-  tibble::tibble(type = "dielectric", 
+  new_tibble_row(list(type = "dielectric", 
                  properties = list(c(color, refraction, attenuation, priority)), 
                  checkercolor=list(NA), 
                  gradient_color = list(NA), gradient_transpose = FALSE,
                  noise=0, noisephase = 0, noiseintensity = 0, noisecolor = list(c(0,0,0)),
                  image = list(NA), alphaimage = list(NA), lightintensity = NA, 
-                 fog=FALSE, fogdensity=NA, implicit_sample = importance_sample, sigma = 0)
+                 fog=FALSE, fogdensity=NA, implicit_sample = importance_sample, sigma = 0))
 }
 
 #' Light Material
@@ -323,12 +323,12 @@ dielectric = function(color="white", refraction = 1.5,  attenuation = c(0,0,0),
 #' }
 light = function(color = "#ffffff", intensity = 10, importance_sample = TRUE) {
   info = convert_color(color)
-  tibble::tibble(type = "light", 
+  new_tibble_row(list(type = "light", 
                  properties = list(info), checkercolor=list(NA), 
                  gradient_color = list(NA), gradient_transpose = FALSE,
                  noise=0, noisephase = 0, noiseintensity = 0, noisecolor = list(c(0,0,0)),
                  image = list(NA), alphaimage = list(NA), lightintensity = intensity,
-                 fog=FALSE, fogdensity=0.01, implicit_sample = importance_sample, sigma = 0)
+                 fog=FALSE, fogdensity=0.01, implicit_sample = importance_sample, sigma = 0))
 }
 
 
