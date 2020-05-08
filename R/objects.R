@@ -1152,7 +1152,7 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
     # hole to match original code (seems like it should always be true?).
 
     opart = interaction(coord_data[, 1], coord_data[, 2], drop=TRUE)
-    coord_data[, 4] = ave(coord_data[, 4], opart, FUN=min)
+    coord_data[, 4] = stats::ave(coord_data[, 4], opart, FUN=min)
 
     # Every `part` is considered a polygon, unless it is a hole, in which case
     # it is assumed to be a hole in the nearest preceding non-hole polygon.
@@ -1209,7 +1209,7 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
         "holes must be zero, or contain indices to polygon vertices"
       )
     } else if (any(holes < 4)) {
-      stop("holes cannot begin before vertex 4. Hole index here starts at: ", min(hole_start))
+      stop("holes cannot begin before vertex 4. Hole index here starts at: ", min(holes))
     }
     # label each vertex with a hole id
 
