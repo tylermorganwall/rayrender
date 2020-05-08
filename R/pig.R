@@ -67,7 +67,11 @@ pig = function(x = 0, y = 0, z = 0, emotion = "neutral",
                           radius=0.05,
                           material = diffuse(color="#f09089"))
   }
-  spiralscene = do.call(rbind,spiral)
+  if("dplyr" %in% rownames(utils::installed.packages())) {
+    spiralscene = dplyr::bind_rows(spiral)
+  } else {
+    spiralscene = do.call(rbind,spiral)
+  }
   if(emotion == "skeptical") {
     eyebrow_offset_left = c(0.1, -0.1)
     eyebrow_offset_right = c(0, 0)

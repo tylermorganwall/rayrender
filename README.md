@@ -185,3 +185,8 @@ generate_ground(material = diffuse(color="grey20", checkercolor = "grey50",sigma
 ```
 
 ![](man/figures/README_hdr-1.png)<!-- -->
+
+## Acknowledgments
+
+Thanks to Brodie Gaslam (@brodieG) for contributions to the
+`extruded_polygon()` function.

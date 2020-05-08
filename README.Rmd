@@ -143,3 +143,8 @@ generate_ground(material = diffuse(color="grey20", checkercolor = "grey50",sigma
                lookfrom=c(-0.9,1.2,-4.5),lookat=c(0,-1,0))
 
 ```
+
+Acknowledgments 
+--------
+
+Thanks to Brodie Gaslam (@brodieG) for contributions to the `extruded_polygon()` function.
