@@ -43,8 +43,10 @@ navbar:
   left:
     - icon: fa-home
       href: index.html
-    - text: "Tutorials"
+    - text: "Tutorials/Demos"
       menu: 
+      -  text: Pathtracing Neon Landscapes in R
+         href: https://www.tylermw.com/pathtracing-neon-landscapes-in-r/          
       -  text: Raytracing Lenticular Gifs with rayrender
          href: https://www.tylermw.com/raytracing-lenticular-gifs/
       -  text: Getting Stated with Rayrender--Forging the R Sword
