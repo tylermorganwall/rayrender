@@ -17,3 +17,8 @@
 ^.*yml$
 ^docs$
 ^pkgdown$
+^.*\.png$
+^.*\.mp4$
+^\.github$
+^.*\.obj$
+^.*\.mtl$

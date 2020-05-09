@@ -4,10 +4,21 @@
 \alias{cylinder}
 \title{Cylinder Object}
 \usage{
-cylinder(x = 0, y = 0, z = 0, radius = 1, length = 1,
-  phi_min = 0, phi_max = 360, material = diffuse(), angle = c(0, 0,
-  0), order_rotation = c(1, 2, 3), velocity = c(0, 0, 0),
-  flipped = FALSE, scale = c(1, 1, 1))
+cylinder(
+  x = 0,
+  y = 0,
+  z = 0,
+  radius = 1,
+  length = 1,
+  phi_min = 0,
+  phi_max = 360,
+  material = diffuse(),
+  angle = c(0, 0, 0),
+  order_rotation = c(1, 2, 3),
+  velocity = c(0, 0, 0),
+  flipped = FALSE,
+  scale = c(1, 1, 1)
+)
 }
 \arguments{
 \item{x}{Default `0`. x-coordinate of the center of the cylinder}

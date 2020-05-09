@@ -61,7 +61,7 @@ scene = generate_ground() %>%
   add_object(sphere(material = diffuse(color="#ff5555", sigma=100))) %>%
   add_object(sphere(y=5, z = 5, x = 5, radius = 3, 
                     material = light(intensity = 10))) 
-render_scene(scene, parallel = TRUE, width = 800, height = 800, samples = 100)
+render_scene(scene, parallel = TRUE, width = 800, height = 800, samples = 1000)
 ```
 
 ![](man/figures/README_ground_sphere-1.png)<!-- -->
@@ -158,18 +158,35 @@ or a low-dynamic range image (`.jpg`,`.png`) and the image will be used
 to light the scene (along with any other lights). Here’s an example
 using an HDR image of Venice at sunset (obtained for free from
 hdrihaven.com), also using the Oren-Nayar diffuse model with `sigma
-= 90` for a more realistic diffuse surface.
+= 90` for a more realistic diffuse surface. We also add an extruded
+polygon star, using the `extruded_polygon` object.
 
 ``` r
 tempfilehdr = tempfile(fileext = ".hdr")
 download.file("https://www.tylermw.com/data/venice_sunset_2k.hdr",tempfilehdr)
 
+#Create star polygon
+angles = seq(0,360,by=36)
+xx = rev(c(rep(c(1,0.5),5),1) * sinpi(angles/180))
+yy = rev(c(rep(c(1,0.5),5),1) * cospi(angles/180))
+star_polygon = data.frame(x=xx,y=yy)
+hollow_star = rbind(star_polygon,0.8*star_polygon)
+
 generate_ground(material = diffuse(color="grey20", checkercolor = "grey50",sigma=90)) %>%
   add_object(sphere(material=metal())) %>%
   add_object(obj_model(y=-1,x=-1.8,r_obj(), angle=c(0,135,0),material = diffuse(sigma=90))) %>%
   add_object(pig(x=1.8,y=-1.2,scale=0.5,angle=c(0,90,0),diffuse_sigma = 90)) %>%
+  add_object(extruded_polygon(hollow_star,top=-0.5,bottom=-1, z=-2,
+                              hole = nrow(star_polygon),
+                              material=diffuse(color="red",sigma=90))) %>%
   render_scene(parallel = TRUE, environment_light = tempfilehdr, width=800,height=800,
-               fov=30,clamp_value=10,samples=400,lookfrom=c(0,1,-10))
+               fov=70,clamp_value=10,samples=1000, aperture=0.1,
+               lookfrom=c(-0.9,1.2,-4.5),lookat=c(0,-1,0))
 ```
 
 ![](man/figures/README_hdr-1.png)<!-- -->
+
+## Acknowledgments
+
+Thanks to Brodie Gaslam (@brodieG) for contributions to the
+`extruded_polygon()` function.

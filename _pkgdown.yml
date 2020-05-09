@@ -17,6 +17,7 @@ reference:
       - starts_with("ellipsoid")
       - starts_with("disk")
       - starts_with("obj")
+      - starts_with("extruded")
       - starts_with("pig")
   - title: "Materials"
     desc: "Functions to specify the visual properties of objects"
@@ -34,6 +35,7 @@ reference:
     desc: "Function to render the current scene."
     contents:
       - starts_with("render")
+
      
 navbar: 
   title: "rayrender"
@@ -41,8 +43,10 @@ navbar:
   left:
     - icon: fa-home
       href: index.html
-    - text: "Tutorials"
+    - text: "Tutorials/Demos"
       menu: 
+      -  text: Pathtracing Neon Landscapes in R
+         href: https://www.tylermw.com/pathtracing-neon-landscapes-in-r/          
       -  text: Raytracing Lenticular Gifs with rayrender
          href: https://www.tylermw.com/raytracing-lenticular-gifs/
       -  text: Getting Stated with Rayrender--Forging the R Sword

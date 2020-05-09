@@ -4,9 +4,17 @@
 \alias{segment}
 \title{Segment Object}
 \usage{
-segment(start = c(0, -1, 0), end = c(0, 1, 0), radius = 1,
-  phi_min = 0, phi_max = 360, material = diffuse(), velocity = c(0,
-  0, 0), flipped = FALSE, scale = c(1, 1, 1))
+segment(
+  start = c(0, -1, 0),
+  end = c(0, 1, 0),
+  radius = 1,
+  phi_min = 0,
+  phi_max = 360,
+  material = diffuse(),
+  velocity = c(0, 0, 0),
+  flipped = FALSE,
+  scale = c(1, 1, 1)
+)
 }
 \arguments{
 \item{start}{Default `c(0, -1, 0)`. Start point of the cylinder segment, specifing `x`, `y`, `z`.}

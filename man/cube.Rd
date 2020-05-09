@@ -4,10 +4,21 @@
 \alias{cube}
 \title{Cube Object}
 \usage{
-cube(x = 0, y = 0, z = 0, width = 1, xwidth = 1, ywidth = 1,
-  zwidth = 1, material = diffuse(), angle = c(0, 0, 0),
-  order_rotation = c(1, 2, 3), velocity = c(0, 0, 0),
-  flipped = FALSE, scale = c(1, 1, 1))
+cube(
+  x = 0,
+  y = 0,
+  z = 0,
+  width = 1,
+  xwidth = 1,
+  ywidth = 1,
+  zwidth = 1,
+  material = diffuse(),
+  angle = c(0, 0, 0),
+  order_rotation = c(1, 2, 3),
+  velocity = c(0, 0, 0),
+  flipped = FALSE,
+  scale = c(1, 1, 1)
+)
 }
 \arguments{
 \item{x}{Default `0`. x-coordinate of the center of the cube}
@@ -52,7 +63,7 @@ generate_cornell() \%>\%
   add_object(cube(x = 555/2, y = 100, z = 555/2, 
                   xwidth = 200, ywidth = 200, zwidth = 200, angle = c(0, 30, 0))) \%>\%
   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
-               ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
+               ambient_light = FALSE, samples = 500, parallel = TRUE, clamp_value = 5)
 }
 #Generate a gold cube in the cornell box
 \donttest{
@@ -61,7 +72,7 @@ generate_cornell() \%>\%
                   xwidth = 200, ywidth = 200, zwidth = 200, angle = c(0, 30, 0),
                   material = metal(color = "gold", fuzz = 0.2))) \%>\%
   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
-               ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
+               ambient_light = FALSE, samples = 500, parallel = TRUE, clamp_value = 5)
 }
 
 #Generate a rotateddielectric box in the cornell box
@@ -71,6 +82,6 @@ generate_cornell() \%>\%
                   xwidth = 200, ywidth = 100, zwidth = 200, angle = c(30, 30, 30),
                   material = dielectric())) \%>\%
   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
-               ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
+               ambient_light = FALSE, samples = 500, parallel = TRUE, clamp_value = 5)
 }
 }

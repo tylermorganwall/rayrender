@@ -7,8 +7,13 @@
 class cylinder: public hitable {
 public:
   cylinder() {}
-  cylinder(Float r, Float len, Float phi_min, Float phi_max, material *mat) : 
-  radius(r), length(len), phi_min(phi_min), phi_max(phi_max), mat_ptr(mat) {};
+  cylinder(Float r, Float len, Float phi_min, Float phi_max, 
+           material *mat, alpha_texture *alpha_mask) : 
+  radius(r), length(len), phi_min(phi_min), phi_max(phi_max), mat_ptr(mat), alpha_mask(alpha_mask) {};
+  ~cylinder() {
+    delete mat_ptr;
+    delete alpha_mask;
+  }
   virtual bool hit(const ray& r, Float tmin, Float tmax, hit_record& rec, random_gen& rng);
   virtual bool bounding_box(Float t0, Float t1, aabb& box) const;
   virtual Float pdf_value(const vec3& o, const vec3& v, random_gen& rng);
@@ -24,6 +29,7 @@ public:
   Float phi_min;
   Float phi_max;
   material *mat_ptr;
+  alpha_texture *alpha_mask;
 };
 
 bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
@@ -36,11 +42,48 @@ bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
   Float c = dot(oc, oc) - radius * radius;
   Float discriminant = b * b -  a * c; 
   if(discriminant > 0) {
+    bool is_hit = true;
+    bool second_is_hit = true;
+    if(alpha_mask) {
+      Float temp = (-b - sqrt(discriminant))/a;
+      vec3 temppoint = r.point_at_parameter(temp);
+      Float phi = atan2(temppoint.z(),temppoint.x());
+      phi = phi < 0 ? phi + 2 * M_PI : phi;
+      Float u;
+      Float v;
+      if(temp < t_max && temp > t_min && 
+         temppoint.y() > -length/2 && temppoint.y() < length/2 && phi <= phi_max && phi >= phi_min) {
+        Float hitRad = std::sqrt(temppoint.x() * temppoint.x() + temppoint.z() * temppoint.z());
+        temppoint.e[0] *= radius / hitRad;
+        temppoint.e[2] *= radius / hitRad;
+        get_cylinder_uv(temppoint, u, v);
+        if(alpha_mask->value(u, v, rec.p).x() < rng.unif_rand()) {
+          is_hit = false;
+        }
+      }
+      temp = (-b + sqrt(discriminant))/a;
+      temppoint = r.point_at_parameter(temp);
+      phi = atan2(temppoint.z(),temppoint.x());
+      phi = phi < 0 ? phi + 2 * M_PI : phi;
+      if(temp < t_max && temp > t_min && 
+         temppoint.y() > -length/2 && temppoint.y() < length/2 && phi <= phi_max && phi >= phi_min) {
+        Float hitRad = std::sqrt(temppoint.x() * temppoint.x() + temppoint.z() * temppoint.z());
+        temppoint.e[0] *= radius / hitRad;
+        temppoint.e[2] *= radius / hitRad;
+        get_cylinder_uv(temppoint, u, v);
+        if(alpha_mask->value(u, v, rec.p).x() < rng.unif_rand()) {
+          if(!is_hit) {
+            return(false);
+          }
+          second_is_hit = false;
+        } 
+      }
+    }
     Float temp = (-b - sqrt(discriminant))/a;
     vec3 temppoint = r.point_at_parameter(temp);
     Float phi = atan2(temppoint.z(),temppoint.x());
     phi = phi < 0 ? phi + 2 * M_PI : phi;
-    if(temp < t_max && temp > t_min && 
+    if(is_hit && temp < t_max && temp > t_min && 
        temppoint.y() > -length/2 && temppoint.y() < length/2 && phi <= phi_max && phi >= phi_min) {
       Float hitRad = std::sqrt(temppoint.x() * temppoint.x() + temppoint.z() * temppoint.z());
       temppoint.e[0] *= radius / hitRad;
@@ -57,7 +100,7 @@ bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
     temppoint = r.point_at_parameter(temp);
     phi = atan2(temppoint.z(),temppoint.x());
     phi = phi < 0 ? phi + 2 * M_PI : phi;
-    if(temp < t_max && temp > t_min && 
+    if(second_is_hit && temp < t_max && temp > t_min && 
        temppoint.y() > -length/2 && temppoint.y() < length/2 && phi <= phi_max && phi >= phi_min) {
       Float hitRad = std::sqrt(temppoint.x() * temppoint.x() + temppoint.z() * temppoint.z());
       temppoint.e[0] *= radius / hitRad;

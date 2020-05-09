@@ -12,7 +12,12 @@
 #' @param noiseintensity Default `10`. Intensity of the noise.
 #' @param noisecolor Default `#000000`. The secondary color of the noise pattern.
 #' Can be either a hexadecimal code, or a numeric rgb vector listing three intensities between `0` and `1`.
-#' @param image_array A 3-layer RGB array to be used as the texture on the surface of the object.
+#' @param gradient_color Default `NA`. If not `NA`, creates a secondary color for a linear gradient 
+#' between the this color and color specified in `color`. Direction is determined by `gradient_transpose`.
+#' @param gradient_transpose Default `FALSE`. If `TRUE`, this will use the `v` coordinate texture instead
+#' of the `u` coordinate texture to map the gradient.
+#' @param image_texture Default `NA`. A 3-layer RGB array or filename to be used as the texture on the surface of the object.
+#' @param alpha_texture Default `NA`. A matrix or filename (specifying a greyscale image) to be used to specify the transparency.
 #' @param fog Default `FALSE`. If `TRUE`, the object will be a volumetric scatterer.
 #' @param fogdensity Default `0.01`. The density of the fog. Higher values will produce more opaque objects.
 #' @param sigma Default `NULL`. A number between 0 and Infinity specifying the roughness of the surface using the Oren-Nayar microfacet model.
@@ -62,20 +67,42 @@
 #' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
 #'              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 #' }
-diffuse = function(color = "#ffffff", checkercolor = NA, checkerperiod = 3,
+#' 
+#' #' #Add an line segment with a color gradient        
+#' scene = scene %>%
+#'   add_object(segment(start = c(555,450,450),end=c(0,450,450),radius = 50, 
+#'                      material = diffuse(color="#1f7326", gradient_color = "#a60d0d")))
+#' \donttest{
+#' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
+#'              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
+#' }
+diffuse = function(color = "#ffffff", 
+                   checkercolor = NA, checkerperiod = 3,
                    noise = 0, noisephase = 0, noiseintensity = 10, noisecolor = "#000000",
-                   image_array = NA, fog = FALSE, fogdensity = 0.01, 
+                   gradient_color = NA, gradient_transpose = FALSE,
+                   image_texture = NA, alpha_texture = NA,
+                   fog = FALSE, fogdensity = 0.01, 
                    sigma = NULL, importance_sample = FALSE) {
   if(all(!is.na(checkercolor))) {
     checkercolor = convert_color(checkercolor)
   } else {
     checkercolor = NA
   }
+  if(all(!is.na(gradient_color))) {
+    gradient_color = convert_color(gradient_color)
+  } else {
+    gradient_color = NA
+  }
+  
   info = convert_color(color)
   noisecolor = convert_color(noisecolor)
-  if(!is.array(image_array) && !is.na(image_array)) {
-    image = NA
-    warning("Image not in recognized format (array or matrix), ignoring")
+  if(!is.array(image_texture) && !is.na(image_texture) && !is.character(image_texture)) {
+    image_texture = NA
+    warning("Texture not in recognized format (array, matrix, or filename), ignoring.")
+  }
+  if(!is.array(alpha_texture) && !is.na(alpha_texture) && !is.character(alpha_texture)) {
+    alpha_texture = NA
+    warning("Alpha texture not in recognized format (array, matrix, or filename), ignoring.")
   }
   type = "diffuse"
   if(!is.null(sigma) && is.numeric(sigma)) {
@@ -93,11 +120,12 @@ diffuse = function(color = "#ffffff", checkercolor = NA, checkerperiod = 3,
     sigma = 0
   }
   assertthat::assert_that(checkerperiod != 0)
-  tibble::tibble(type = type, 
+  new_tibble_row(list(type = type, 
                  properties = list(info), checkercolor=list(c(checkercolor,checkerperiod)), 
+                 gradient_color = list(gradient_color), gradient_transpose = gradient_transpose,
                  noise=noise, noisephase = noisephase, noiseintensity = noiseintensity, noisecolor = list(noisecolor),
-                 image = list(image_array), lightintensity = NA,
-                 fog=fog, fogdensity=fogdensity,implicit_sample = importance_sample, sigma = sigma, glossyinfo = list(NA))
+                 image = list(image_texture), alphaimage = list(alpha_texture), lightintensity = NA,
+                 fog=fog, fogdensity=fogdensity,implicit_sample = importance_sample, sigma = sigma, glossyinfo = list(NA)))
 }
 
 #' Metallic Material
@@ -105,6 +133,7 @@ diffuse = function(color = "#ffffff", checkercolor = NA, checkerperiod = 3,
 #' @param color Default `white`. The color of the sphere. Can be either
 #' a hexadecimal code, R color string, or a numeric rgb vector listing three intensities between `0` and `1`.
 #' @param fuzz  Default `0`. The roughness of the metallic surface. Maximum `1`.
+#' @param alpha_texture Default `NA`. A matrix or filename (specifying a greyscale image) to be used to specify the transparency.
 #' @param importance_sample Default `FALSE`. If `TRUE`, the object will be sampled explicitly during 
 #' the rendering process. If the object is particularly important in contributing to the light paths
 #' in the image (e.g. light sources, refracting glass ball with caustics, metal objects concentrating light),
@@ -138,21 +167,36 @@ diffuse = function(color = "#ffffff", checkercolor = NA, checkerperiod = 3,
 #' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
 #'              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 #' }
-metal = function(color = "#ffffff", fuzz = 0,  importance_sample = FALSE) {
+metal = function(color = "#ffffff", fuzz = 0,  alpha_texture = NA, 
+                 importance_sample = FALSE) {
   color = convert_color(color)
-  tibble::tibble(type = "metal", 
+  if(!is.array(alpha_texture) && !is.na(alpha_texture) && !is.character(alpha_texture)) {
+    alpha_texture = NA
+    warning("Alpha texture not in recognized format (array, matrix, or filename), ignoring.")
+  }
+  new_tibble_row(list(type = "metal", 
                  properties = list(c(color,fuzz)), 
-                 checkercolor=list(NA), noise=0, noisephase = 0, noiseintensity = 0, noisecolor = list(c(0,0,0)),
-                 lightinfo = list(NA),
-                 image = list(NA), lightintensity = NA,fog=FALSE,fogdensity=0.01,
-                 implicit_sample = importance_sample, sigma = 0, glossyinfo = list(NA))
+                 checkercolor=list(NA), 
+                 gradient_color = list(NA), gradient_transpose = FALSE,
+                 noise=0, noisephase = 0, noiseintensity = 0, noisecolor = list(c(0,0,0)),
+                 lightinfo = list(NA), 
+                 image = list(NA), alphaimage = list(alpha_texture), 
+                 lightintensity = NA,fog=FALSE,fogdensity=0.01,
+                 implicit_sample = importance_sample, sigma = 0, glossyinfo = list(NA)))
 }
 
 #' Dielectric (glass) Material
+#' 
 #'
 #' @param color Default `white`. The color of the surface. Can be either
 #' a hexadecimal code, R color string, or a numeric rgb vector listing three intensities between `0` and `1`.
 #' @param refraction Default `1.5`. The index of refraction.
+#' @param attenuation Default `c(0,0,0)`. The Beer-Lambert color-channel specific exponential attenuation 
+#' through the material. Higher numbers will result in less of that color making it through the material.
+#' Note: This assumes the object has a closed surface. 
+#' @param priority Default `0`. When two dielectric materials overlap, the one with the lower priority value
+#' is used for intersection. NOTE: If the camera is placed inside a dielectric object, its priority value
+#' will not be taken into account when determining hits to other objects also inside the object.
 #' @param importance_sample Default `FALSE`. If `TRUE`, the object will be sampled explicitly during 
 #' the rendering process. If the object is particularly important in contributing to the light paths
 #' in the image (e.g. light sources, refracting glass ball with caustics, metal objects concentrating light),
@@ -163,8 +207,7 @@ metal = function(color = "#ffffff", fuzz = 0,  importance_sample = FALSE) {
 #'
 #' @examples
 #' #Generate a checkered ground
-#' scene = generate_ground(depth=-0.5,
-#'                         material=diffuse(color="white", checkercolor="grey30",checkerperiod=2))
+#' scene = generate_ground(depth=-0.5, material = diffuse(checkercolor="grey30",checkerperiod=2))
 #' \donttest{
 #' render_scene(scene,parallel=TRUE)
 #' }
@@ -181,7 +224,7 @@ metal = function(color = "#ffffff", fuzz = 0,  importance_sample = FALSE) {
 #' scene %>%
 #'   add_object(sphere(x=-0.5,radius=0.5,material=dielectric())) %>%
 #'   add_object(cube(x=0.5,xwidth=0.5,material=dielectric(color="darkgreen"),angle=c(0,-45,0))) %>%
-#'   render_scene(parallel=TRUE,samples=40)
+#'   render_scene(parallel=TRUE,samples=400)
 #' }
 #' 
 #' #Add an area light behind and at an angle and turn off the ambient lighting
@@ -194,13 +237,56 @@ metal = function(color = "#ffffff", fuzz = 0,  importance_sample = FALSE) {
 #'                      angle=c(0,-90,45), order_rotation = c(3,2,1))) %>%
 #'   render_scene(parallel=TRUE,aperture=0, ambient_light=FALSE,samples=1000)
 #' }
-dielectric = function(color="white", refraction = 1.5, importance_sample = FALSE) {
+#' 
+#' #Color glass using Beer-Lambert attenuation, which attenuates light on a per-channel
+#' #basis as it travels through the material. This effect is what gives some types of glass
+#' #a green glow at the edges. We will get this effect by setting a lower attenuation value 
+#' #for the `green` (second) channel in the dielectric `attenuation` argument.
+#' \donttest{
+#' generate_ground(depth=-0.5,material=diffuse(checkercolor="grey30",checkerperiod=2)) %>%
+#'   add_object(sphere(z=-5,x=-0.5,y=1,material=light(intensity=10))) %>%
+#'   add_object(cube(y=0.3,ywidth=0.1,xwidth=2,zwidth=2,
+#'                   material=dielectric(attenuation=c(1.2,0.2,1.2)),angle=c(45,110,0))) %>%
+#'   render_scene(parallel=TRUE, samples = 1000)
+#' }
+#' 
+#' #If you have overlapping dielectrics, the `priority` value can help disambiguate what 
+#' #object wins. Here, I place a bubble inside a cube by setting a lower priority value and
+#' #making the inner sphere have a index of refraction of 1. I also place spheres at the corners.
+#' \donttest{
+#' generate_ground(depth=-0.51,material=diffuse(checkercolor="grey30",checkerperiod=2)) %>%
+#'   add_object(cube(material = dielectric(priority=2, attenuation = c(10,3,10)))) %>%
+#'   add_object(sphere(radius=0.49,material = dielectric(priority=1, refraction=1))) %>%
+#'   add_object(sphere(radius=0.25,x=0.5,z=-0.5,y=0.5, 
+#'                     material = dielectric(priority=0,attenuation = c(10,3,10) ))) %>%
+#'   add_object(sphere(radius=0.25,x=-0.5,z=0.5,y=0.5,
+#'                     material = dielectric(priority=0,attenuation = c(10,3,10)))) %>%
+#'   render_scene(parallel=TRUE, samples = 400,lookfrom=c(5,1,5))
+#' }
+#' 
+#' # We can also use this as a basic Constructive Solid Geometry interface by setting 
+#' # the index of refraction equal to empty space, 1. This will subtract out those regions.
+#' # Here I make a concave lens by subtracting two spheres from a cube.
+#' \donttest{
+#' generate_ground(depth=-0.51,material=diffuse(checkercolor="grey30",checkerperiod=2,sigma=90)) %>%
+#'   add_object(cube(material = dielectric(attenuation = c(6,6,2),priority=1))) %>%
+#'   add_object(sphere(radius=1,x=1.01,
+#'                     material = dielectric(priority=0,refraction=1))) %>%
+#'   add_object(sphere(radius=1,x=-1.01,
+#'                     material = dielectric(priority=0,refraction=1))) %>%
+#'   add_object(sphere(y=10,x=3,material=light(intensit=150))) %>%
+#'   render_scene(parallel=TRUE, samples = 400,lookfrom=c(5,3,5))
+#' }
+dielectric = function(color="white", refraction = 1.5,  attenuation = c(0,0,0), 
+                      priority = 0, importance_sample = FALSE) {
   color = convert_color(color)
-  tibble::tibble(type = "dielectric", 
-                 properties = list(c(color,refraction)), 
-                 checkercolor=list(NA), noise=0, noisephase = 0, noiseintensity = 0, noisecolor = list(c(0,0,0)),
-                 image = list(NA), lightintensity = NA, 
-                 fog=FALSE, fogdensity=NA, implicit_sample = importance_sample, sigma = 0,  glossyinfo = list(NA))
+  new_tibble_row(list(type = "dielectric", 
+                      properties = list(c(color, refraction, attenuation, priority)), 
+                      checkercolor=list(NA), 
+                      gradient_color = list(NA), gradient_transpose = FALSE,
+                      noise=0, noisephase = 0, noiseintensity = 0, noisecolor = list(c(0,0,0)),
+                      image = list(NA), alphaimage = list(NA), lightintensity = NA, 
+                      fog=FALSE, fogdensity=NA, implicit_sample = importance_sample, sigma = 0, glossyinfo = list(NA)))
 }
 
 #' Microfacet Material
@@ -233,11 +319,11 @@ microfacet = function(color="white", reflection = 1, microfacet = "tbr", alpha =
   }
   color = convert_color(color)
   glossyinfo = list(c(microtype, reflection, alphax, alphay));
-  tibble::tibble(type = "microfacet", 
+  new_tibble_row(list(type = "microfacet", 
                  properties = list(c(color)), 
                  checkercolor=list(NA), noise=0, noisephase = 0, noiseintensity = 0, noisecolor = list(c(0,0,0)),
                  image = list(NA), lightintensity = NA, 
-                 fog=FALSE, fogdensity=NA, implicit_sample = importance_sample, sigma = 0, glossyinfo = glossyinfo)
+                 fog=FALSE, fogdensity=NA, implicit_sample = importance_sample, sigma = 0, glossyinfo = glossyinfo))
 }
 
 #' Light Material
@@ -274,12 +360,12 @@ microfacet = function(color="white", reflection = 1, microfacet = "tbr", alpha =
 #' }
 light = function(color = "#ffffff", intensity = 10, importance_sample = TRUE) {
   info = convert_color(color)
-  tibble::tibble(type = "light", 
-                 properties = list(info), checkercolor=list(NA), noise=0, noisephase = 0, 
-                 noiseintensity = 0, noisecolor = list(c(0,0,0)),
-                 image = list(NA), lightintensity = intensity,
-                 fog=FALSE, fogdensity=0.01, implicit_sample = importance_sample, sigma = 0, 
-                 glossyinfo = list(NA))
+  new_tibble_row(list(type = "light", 
+                 properties = list(info), checkercolor=list(NA), 
+                 gradient_color = list(NA), gradient_transpose = FALSE,
+                 noise=0, noisephase = 0, noiseintensity = 0, noisecolor = list(c(0,0,0)),
+                 image = list(NA), alphaimage = list(NA), lightintensity = intensity,
+                 fog=FALSE, fogdensity=0.01, implicit_sample = importance_sample, sigma = 0, glossyinfo = list(NA)))
 }
 
 #' Glossy Material

@@ -22,6 +22,7 @@ public:
   InfiniteAreaLight() {}
   ~InfiniteAreaLight() {
     delete distribution;
+    delete mat_ptr;
   }
   InfiniteAreaLight(int width, int height, Float r, vec3 center, texture *image,  material *mat);
   virtual bool hit(const ray& r, Float tmin, Float tmax, hit_record& rec, random_gen& rng);

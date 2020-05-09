@@ -1,13 +1,21 @@
 #' Render Scene
 #' 
-#' Takes the scene description and renders an image, either to the device or to a filename.
+#' Takes the scene description and renders an image, either to the device or to a filename. 
 #'
 #' @param scene Tibble of object locations and properties. 
 #' @param width Default `400`. Width of the render, in pixels.
 #' @param height Default `400`. Height of the render, in pixels.
 #' @param fov Default `20`. Field of view, in degrees. If this is zero, the camera will use an orthographic projection. The size of the plane
 #' used to create the orthographic projection is given in argument `ortho_dimensions`.
-#' @param samples Default `100`. Number of samples for each pixel.
+#' @param samples Default `100`. The maximum number of samples for each pixel.
+#' @param min_variance Default `0.00005`. Minimum acceptable variance for a block of pixels for the 
+#' adaptive sampler. Smaller numbers give higher quality images, at the expense of longer rendering times.
+#' If this is set to zero, the adaptive sampler will be turned off and the renderer
+#' will use the maximum number of samples everywhere.
+#' @param min_adaptive_size Default `8`. Width of the minimum block size in the adaptive sampler.
+#' @param max_depth Default `50`. Maximum number of bounces a ray can make in a scene.
+#' @param roulette_active_depth Default `10`. Number of ray bounces until a ray can stop bouncing via
+#' Russian roulette.
 #' @param ambient_light Default `FALSE`, unless there are no emitting objects in the scene. 
 #' If `TRUE`, the background will be a gradient varying from `backgroundhigh` directly up (+y) to 
 #' `backgroundlow` directly down (-y).
@@ -34,48 +42,63 @@
 #' Default `gamma` solely adjusts for gamma and clamps values greater than 1 to 1. 
 #' `reinhold` scales values by their individual color channels `color/(1+color)` and then performs the 
 #' gamma adjustment. `uncharted` uses the mapping developed for Uncharted 2 by John Hable. `hbd` uses an
-#' optimized formula by Jim Hejl and Richard Burgess-Dawson.
+#' optimized formula by Jim Hejl and Richard Burgess-Dawson. Note: If set to anything other than `gamma`,
+#' objects with material `light()` may not be anti-aliased. If `raw`, the raw array of HDR values will be
+#' returned, rather than an image or a plot.
+#' @param bloom Default `TRUE`. Set to `FALSE` to get the raw, pathtraced image. Otherwise,
+#' this performs a convolution of the HDR image of the scene with a sharp, long-tailed
+#' exponential kernel, which does not visibly affect dimly pixels, but does result in emitters light
+#' slightly bleeding into adjacent pixels. This provides an antialiasing effect for lights, even when
+#' tonemapping the image. Pass in a matrix to specify the convolution kernel manually, or a positive number
+#' to control the intensity of the bloom (higher number = more bloom).
 #' @param environment_light Default `NULL`. An image to be used for the background for rays that escape
 #' the scene. Supports both HDR (`.hdr`) and low-dynamic range (`.png`, `.jpg`) images.
 #' @param rotate_env Default `0`. The number of degrees to rotate the environment map around the scene.
+#' @param debug_channel Default `none`. If `depth`, function will return a depth map of rays into the scene 
+#' instead of an image. If `normals`, function will return an image of scene normals, mapped from 0 to 1.
+#' If `uv`, function will return an image of the uv coords. If `variance`, function will return an image 
+#' showing the number of samples needed to take for each block to converge (when the 
 #' @param parallel Default `FALSE`. If `TRUE`, it will use all available cores to render the image
 #'  (or the number specified in `options("cores")` if that option is not `NULL`).
 #' @param progress Default `TRUE` if interactive session, `FALSE` otherwise. 
-#' @param debug Default `NULL`. If `bvh`, will return an image indicated the number of BVH lookups.
+#' @param verbose Default `FALSE`. Prints information and timing information about scene
+#' construction and raytracing progress.
 #' @export
 #' @importFrom  grDevices col2rgb
-#' @return Raytraced plot to current device, or an image saved to a file.
+#' @return Raytraced plot to current device, or an image saved to a file. 
 #'
 #' @examples
 #' #Generate a large checkered sphere as the ground
-#' scene = generate_ground(depth=-0.5, material = diffuse(color="white", checkercolor="darkgreen"))
 #' \donttest{
+#' scene = generate_ground(depth=-0.5, material = diffuse(color="white", checkercolor="darkgreen"))
 #' render_scene(scene,parallel=TRUE,samples=500)
 #' }
 #' 
 #' #Add a sphere to the center
+#' \donttest{
 #' scene = scene %>%
 #'   add_object(sphere(x=0,y=0,z=0,radius=0.5,material = diffuse(color=c(1,0,1))))
-#' \donttest{
 #' render_scene(scene,fov=20,parallel=TRUE,samples=500)
 #' }
 #' 
 #' #Add a marbled cube 
+#' \donttest{
 #' scene = scene %>%
 #'   add_object(cube(x=1.1,y=0,z=0,material = diffuse(noise=3)))
-#' \donttest{
 #' render_scene(scene,fov=20,parallel=TRUE,samples=500)
 #' }
 #' 
 #' #Add a metallic gold sphere
+#' \donttest{
 #' scene = scene %>%
 #'   add_object(sphere(x=-1.1,y=0,z=0,radius=0.5,material = metal(color="gold",fuzz=0.1)))
-#' \donttest{
 #' render_scene(scene,fov=20,parallel=TRUE,samples=500)
 #' }
 #' 
 #' #Lower the number of samples to render more quickly (here, we also use only one core).
+#' \donttest{
 #' render_scene(scene, samples=4)
+#' }
 #' 
 #' #Add a floating R plot using the iris dataset as a png onto a floating 2D rectangle
 #' 
@@ -114,7 +137,7 @@
 #'#an animation, specify the a filename in `render_scene` for each frame and use the `av` package
 #'#or ffmpeg to combine them all into a movie.
 #'
-#'t=1:30
+#'t=1:30 
 #'xpos = 10 * sin(t*12*pi/180+pi/2)
 #'zpos = 10 * cos(t*12*pi/180+pi/2)
 #'\donttest{
@@ -127,14 +150,21 @@
 #'    lookfrom = c(xpos[i],1.5,zpos[i]),lookat = c(0,0.5,0), parallel=TRUE)
 #'}
 #'}
-render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 100, ambient_light = FALSE,
+render_scene = function(scene, width = 400, height = 400, fov = 20, 
+                        samples = 100, min_variance = 0.00005, min_adaptive_size = 8,
+                        max_depth = 50, roulette_active_depth = 10,
+                        ambient_light = FALSE,
                         lookfrom = c(0,1,10), lookat = c(0,0,0), camera_up = c(0,1,0), 
                         aperture = 0.1, clamp_value = Inf,
                         filename = NULL, backgroundhigh = "#80b4ff",backgroundlow = "#ffffff",
                         shutteropen = 0.0, shutterclose = 1.0, focal_distance=NULL, ortho_dimensions = c(1,1),
-                        tonemap ="gamma", parallel=TRUE,
-                        environment_light = NULL, rotate_env = 0,
-                        progress = interactive(), debug = NULL) { 
+                        tonemap ="gamma", bloom = TRUE, parallel=TRUE, 
+                        environment_light = NULL, rotate_env = 0, debug_channel = "none",
+                        progress = interactive(), verbose = FALSE) { 
+  if(verbose) {
+    currenttime = proc.time()
+    cat("Building Scene: ")
+  }
   #Check if Cornell Box scene and set camera if user did not:
   if(!is.null(attr(scene,"cornell"))) {
     corn_message = "Setting default values for Cornell box: "
@@ -172,18 +202,21 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
   }
   backgroundhigh = convert_color(backgroundhigh)
   backgroundlow = convert_color(backgroundlow)
-  xvec = scene$x 
-  yvec = scene$y
-  zvec = scene$z
+  position_list = list()
+  position_list$xvec = scene$x 
+  position_list$yvec = scene$y
+  position_list$zvec = scene$z
   rvec = scene$radius
   shapevec = unlist(lapply(tolower(scene$shape),switch,
                           "sphere" = 1,"xy_rect" = 2, "xz_rect" = 3,"yz_rect" = 4,"box" = 5, "triangle" = 6, 
-                          "obj" = 7, "objcolor" = 8, "disk" = 9, "cylinder" = 10, "ellipsoid" = 11))
+                          "obj" = 7, "objcolor" = 8, "disk" = 9, "cylinder" = 10, "ellipsoid" = 11,
+                          "objvertexcolor" = 12))
   typevec = unlist(lapply(tolower(scene$type),switch,
-                          "diffuse" = 1,"metal" = 2,"dielectric" = 3, "oren-nayar" = 4, "microfacet" = 5, "light" = 6, "glossy" = 7))
+                          "diffuse" = 1,"metal" = 2,"dielectric" = 3, "oren-nayar" = 4, "light" = 5, "microfacet" = 6, "glossy" = 7))
   sigmavec = unlist(scene$sigma)
-  assertthat::assert_that(tonemap %in% c("gamma","reinhold","uncharted", "hbd"))
-  toneval = switch(tonemap, "gamma" = 1,"reinhold" = 2,"uncharted" = 3,"hbd" = 4)
+  
+  assertthat::assert_that(tonemap %in% c("gamma","reinhold","uncharted", "hbd", "raw"))
+  toneval = switch(tonemap, "gamma" = 1,"reinhold" = 2,"uncharted" = 3,"hbd" = 4, "raw" = 5)
   movingvec = purrr::map_lgl(scene$velocity,.f = ~any(.x != 0))
   proplist = scene$properties
   vel_list = scene$velocity
@@ -194,6 +227,12 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
   #glossy 
   glossyinfo = scene$glossyinfo
 
+  #gradient handler
+  gradient_info = list()
+  gradient_info$gradient_colors = scene$gradient_color
+  gradient_info$isgradient = purrr::map_lgl(gradient_info$gradient_colors,.f = ~all(!is.na(.x)))
+  gradient_info$gradient_trans = scene$gradient_transpose
+  
   #noise handler
   noisebool = purrr::map_lgl(scene$noise, .f = ~.x > 0)
   noisevec = scene$noise
@@ -221,7 +260,8 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
   #texture handler
   image_array_list = scene$image
   image_tex_bool = purrr::map_lgl(image_array_list,.f = ~is.array(.x))
-  temp_file_names = purrr::map_chr(image_tex_bool,.f = ~ifelse(.x, tempfile(),""))
+  image_filename_bool = purrr::map_lgl(image_array_list,.f = ~is.character(.x))
+  temp_file_names = purrr::map_chr(image_tex_bool,.f = ~ifelse(.x, tempfile(fileext = ".png"),""))
   for(i in 1:length(image_array_list)) {
     if(image_tex_bool[i]) {
       if(dim(image_array_list[[i]])[3] == 4) {
@@ -230,7 +270,53 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
         png::writePNG(fliplr(aperm(image_array_list[[i]],c(2,1,3))),temp_file_names[i])
       }
     }
+    if(image_filename_bool[i]) {
+      if(any(!file.exists(path.expand(image_array_list[[i]])) & nchar(image_array_list[[i]]) > 0)) {
+        stop(paste0("Cannot find the following texture file:\n",
+                    paste(image_array_list[[i]], collapse="\n")))
+      }
+      temp_file_names[i] = path.expand(image_array_list[[i]])
+    }
   }
+  image_tex_bool = image_tex_bool | image_filename_bool
+  #alpha texture handler
+  alpha_array_list = scene$alphaimage
+  alpha_tex_bool = purrr::map_lgl(alpha_array_list,.f = ~is.array(.x[[1]]))
+  alpha_filename_bool = purrr::map_lgl(alpha_array_list,.f = ~is.character(.x[[1]]))
+  alpha_temp_file_names = purrr::map_chr(alpha_tex_bool, .f = (function(.x) tempfile(fileext = ".png")))
+  for(i in 1:length(alpha_array_list)) {
+    if(alpha_tex_bool[i]) {
+      if(length(dim(alpha_array_list[[i]][[1]])) == 2) {
+        png::writePNG(fliplr(t(alpha_array_list[[i]][[1]])), alpha_temp_file_names[i])
+      } else if(dim(alpha_array_list[[i]][[1]])[3] == 4) {
+        alpha_array_list[[i]][[1]][,,1] = alpha_array_list[[i]][[1]][,,4]
+        alpha_array_list[[i]][[1]][,,2] = alpha_array_list[[i]][[1]][,,4]
+        alpha_array_list[[i]][[1]][,,3] = alpha_array_list[[i]][[1]][,,4]
+        png::writePNG(fliplr(aperm(alpha_array_list[[i]][[1]][,,1:3],c(2,1,3))), alpha_temp_file_names[i])
+      } else if(dim(alpha_array_list[[i]][[1]])[3] == 3) {
+        png::writePNG(fliplr(aperm(alpha_array_list[[i]][[1]],c(2,1,3))), alpha_temp_file_names[i])
+      } else {
+        stop("alpha texture dims: c(", paste(dim(alpha_array_list[[i]][[1]]),collapse=", "), ") not valid for texture.")
+      }
+    }
+    if(alpha_filename_bool[i]) {
+      if(any(!file.exists(path.expand(alpha_array_list[[i]][[1]])) & nchar(alpha_array_list[[i]][[1]]) > 0)) {
+        stop(paste0("Cannot find the following texture file:\n",
+                    paste(alpha_array_list[[i]][[1]], collapse="\n")))
+      }
+      temp_array = png::readPNG(alpha_array_list[[i]][[1]]) 
+      if(dim(temp_array)[3] == 4 && any(temp_array[,,4] != 1)) {
+        temp_array[,,1] = temp_array[,,4]
+        temp_array[,,2] = temp_array[,,4]
+        temp_array[,,3] = temp_array[,,4]
+      }
+      png::writePNG(temp_array,alpha_temp_file_names[i])
+    }
+  }
+  alpha_tex_bool = alpha_tex_bool | alpha_filename_bool
+  alphalist = list()
+  alphalist$alpha_temp_file_names = alpha_temp_file_names
+  alphalist$alpha_tex_bool = alpha_tex_bool
   #movement handler
   if(shutteropen == shutterclose) {
     movingvec = rep(FALSE,length(movingvec))
@@ -275,6 +361,9 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
       hasbackground = FALSE
       warning("file '", environment_light, "' cannot be found, not using background image.")
     }
+    if(dir.exists(environment_light)) {
+      stop("environment_light argument '", environment_light, "' is a directory, not a file.")
+    }
   } else {
     hasbackground = FALSE
     backgroundstring = ""
@@ -283,9 +372,9 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
   #scale handler
   scale_factor = scene$scale_factor
   
-  assertthat::assert_that(all(c(length(xvec),length(yvec),length(zvec),length(rvec),length(typevec),length(proplist)) == length(xvec)))
+  assertthat::assert_that(all(c(length(position_list$xvec),length(position_list$yvec),length(position_list$zvec),length(rvec),length(typevec),length(proplist)) == length(position_list$xvec)))
   assertthat::assert_that(all(!is.null(typevec)))
-  for(i in 1:length(xvec)) {
+  for(i in 1:length(position_list$xvec)) {
     if(typevec[i] == 1) {
       if(shapevec[i] == 1) {
         # assertthat::assert_that(length(proplist[[i]]) == 3)
@@ -306,43 +395,142 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
   } else {
     numbercores = parallel::detectCores()
   }
-  if(is.null(debug)) {
-    debugval = 0
-  } else if(debug == "bvh") {
-    debugval = 1
-  } else {
-    debugval = 0
+  if(!parallel) {
+    numbercores = 1
   }
+
+  debug_channel = unlist(lapply(tolower(debug_channel),switch,
+                          "none" = 0,"depth" = 1,"normals" = 2, "uv" = 3, "bvh" = 4,
+                          "variance" = 5))
+  if(debug_channel == 4) {
+    message("rayrender must be compiled with option DEBUGBVH for this debug option to work")
+  }
+  
   if(fov == 0) {
     assertthat::assert_that(length(ortho_dimensions) == 2)
   }
-  rgb_mat = render_scene_rcpp(nx = width, ny = height, ns = samples, fov = fov, ambient_light = ambient_light,
-                             lookfromvec = lookfrom, lookatvec = lookat, aperture=aperture,camera_up = camera_up,
+  if(verbose) {
+    buildingtime = proc.time() - currenttime
+    cat(sprintf("%0.3f seconds \n",buildingtime[3]))
+  }
+  camera_info = list()
+  
+  camera_info$nx = width
+  camera_info$ny = height
+  camera_info$ns = samples
+  camera_info$fov = fov
+  camera_info$lookfrom = lookfrom
+  camera_info$lookat = lookat
+  camera_info$aperture = aperture
+  camera_info$camera_up = camera_up
+  camera_info$shutteropen = shutteropen
+  camera_info$shutterclose = shutterclose
+  camera_info$ortho_dimensions = ortho_dimensions
+  camera_info$focal_distance = focal_distance
+  camera_info$max_depth = max_depth
+  camera_info$roulette_active_depth = roulette_active_depth
+  
+  assertthat::assert_that(max_depth > 0)
+  assertthat::assert_that(roulette_active_depth > 0)
+  
+  
+  #Material ID handler; these must show up in increasing order.  Note, this will
+  #cause problems if `match` is every changed to return doubles when matching in
+  #long vectors as has happened with `which` recently.
+  material_id = scene$material_id
+  material_id = as.integer(match(material_id, unique(material_id)) - 1L)
+  material_id_bool = !is.na(scene$material_id)
+  
+  if(min_adaptive_size < 1) {
+    warning("min_adaptive_size cannot be less than one: setting to one")
+    min_adaptive_size = 1
+  }
+  
+  if(min_variance < 0) {
+    stop("min_variance cannot be less than zero")
+  }
+  
+  rgb_mat = render_scene_rcpp(camera_info = camera_info, ambient_light = ambient_light,
                              type = typevec, shape = shapevec, radius = rvec, 
-                             x = xvec, y = yvec, z = zvec,
+                             position_list = position_list,
                              properties = proplist, velocity = vel_list, moving = movingvec,
                              n = length(typevec), 
                              bghigh = backgroundhigh, bglow = backgroundlow,
-                             shutteropen = shutteropen, shutterclose = shutterclose,
                              ischeckered = checkeredbool, checkercolors = checkeredlist,
+                             gradient_info = gradient_info, 
                              noise=noisevec,isnoise=noisebool,noisephase=noisephasevec, 
                              noiseintensity=noiseintvec, noisecolorlist = noisecolorlist,
                              angle = rot_angle_list, isimage = image_tex_bool, filelocation = temp_file_names,
+                             alphalist = alphalist,
                              lightintensity = light_prop_vec,isflipped = flip_vec,
-                             focus_distance=focal_distance,
-                             isvolume=fog_bool, voldensity = fog_vec , parallel=parallel,
+                             isvolume=fog_bool, voldensity = fog_vec, 
                              implicit_sample = implicit_vec, order_rotation_list = order_rotation_list, clampval = clamp_value,
                              isgrouped = group_bool, group_pivot=group_pivot, group_translate = group_translate,
                              group_angle = group_angle, group_order_rotation = group_order_rotation, group_scale = group_scale,
                              tri_normal_bools = tri_normal_bools, is_tri_color = is_tri_color, tri_color_vert= tri_color_vert,
-                             fileinfo = objfilenamevec, filebasedir = objbasedirvec, toneval = toneval,
-                             progress_bar = progress, numbercores = numbercores, debugval = debugval,
+                             fileinfo = objfilenamevec, filebasedir = objbasedirvec,
+                             progress_bar = progress, numbercores = numbercores, 
                              hasbackground = hasbackground, background = backgroundstring, scale_list = scale_factor,
-                             ortho_dimensions = ortho_dimensions, sigmavec = sigmavec, rotate_env = rotate_env, glossyinfo = glossyinfo) 
+                             sigmavec = sigmavec, rotate_env = rotate_env,
+                             verbose = verbose, debug_channel = debug_channel,
+                             shared_id_mat=material_id, is_shared_mat=material_id_bool, 
+                             min_variance = min_variance, min_adaptive_size = min_adaptive_size, glossyinfo = glossyinfo) 
   full_array = array(0,c(ncol(rgb_mat$r),nrow(rgb_mat$r),3))
-  full_array[,,1] = t(rgb_mat$r)
-  full_array[,,2] = t(rgb_mat$g)
-  full_array[,,3] = t(rgb_mat$b)
+  full_array[,,1] = flipud(t(rgb_mat$r))
+  full_array[,,2] = flipud(t(rgb_mat$g))
+  full_array[,,3] = flipud(t(rgb_mat$b))
+  if(debug_channel == 1) {
+    returnmat = full_array[,,1]
+    returnmat[is.infinite(returnmat)] = NA
+    if(is.null(filename)) {
+      plot_map(full_array)
+      return(invisible(full_array))
+    } else {
+      save_png(full_array,filename)
+      return(invisible(full_array))
+    }
+  } else if (debug_channel %in% c(2,3,4,5)) {
+    if(is.null(filename)) {
+      plot_map(full_array)
+      return(invisible(full_array))
+    } else {
+      save_png(full_array,filename)
+      return(invisible(full_array))
+    }
+  } 
+  if(!is.matrix(bloom)) {
+    if(is.numeric(bloom) && length(bloom) == 1) {
+      kernel = rayimage::generate_2d_exponential(0.1,11,3*1/bloom)
+      full_array = rayimage::render_convolution(image = full_array, kernel = kernel, min_value = 1, preview=FALSE)
+    } else {
+      if(bloom) {
+        kernel = rayimage::generate_2d_exponential(0.1,11,3)
+        full_array = rayimage::render_convolution(image = full_array, kernel = kernel, min_value = 1, preview=FALSE)
+      }
+    }
+  } else {
+    kernel = bloom
+    if(ncol(kernel) %% 2 == 0) {
+      newkernel = matrix(0, ncol = ncol(kernel) + 1, nrow = nrow(kernel))
+      newkernel[,1:ncol(kernel)] = kernel
+      kernel = newkernel
+    }
+    if(nrow(kernel) %% 2 == 0) {
+      newkernel = matrix(0, ncol = ncol(kernel), nrow = nrow(kernel) + 1)
+      newkernel[1:nrow(kernel),] = kernel
+      kernel = newkernel
+    }
+    full_array = rayimage::render_convolution(image = full_array, kernel = kernel,  min_value = 1, preview=FALSE)
+  }
+  tonemapped_channels = tonemap_image(height,width,full_array[,,1],full_array[,,2],full_array[,,3],toneval)
+  full_array = array(0,c(nrow(tonemapped_channels$r),ncol(tonemapped_channels$r),3))
+  full_array[,,1] = tonemapped_channels$r
+  full_array[,,2] = tonemapped_channels$g
+  full_array[,,3] = tonemapped_channels$b
+  if(toneval == 5) {
+    return(full_array)
+  }
+
   array_from_mat = array(full_array,dim=c(nrow(full_array),ncol(full_array),3))
   if(any(is.na(array_from_mat ))) {
     array_from_mat[is.na(array_from_mat)] = 0
@@ -352,8 +540,9 @@ render_scene = function(scene, width = 400, height = 400, fov = 20, samples = 10
     array_from_mat[array_from_mat < 0] = 0
   }
   if(is.null(filename)) {
-    plot_map(flipud(array_from_mat))
+    plot_map(array_from_mat)
   } else {
-    save_png(flipud(array_from_mat),filename)
+    save_png(array_from_mat,filename)
   }
+  return(invisible(array_from_mat))
 }

@@ -3,11 +3,17 @@
 
 #include "hitable.h"
 #include "onbh.h"
+#include "material.h"
 
 class disk : public hitable {
 public:
   disk() {}
-  disk(vec3 cen, Float r, Float i_r, material *mat) : center(cen), radius(r), inner_radius(i_r), mat_ptr(mat) {};
+  disk(vec3 cen, Float r, Float i_r, material *mat, alpha_texture *alpha_mask) : center(cen), radius(r), 
+       inner_radius(i_r), mat_ptr(mat), alpha_mask(alpha_mask) {};
+  ~disk() {
+    delete mat_ptr;
+    delete alpha_mask;
+  }
   virtual bool hit(const ray& r, Float tmin, Float tmax, hit_record& rec, random_gen& rng);
   virtual bool bounding_box(Float t0, Float t1, aabb& box) const;
   virtual Float pdf_value(const vec3& o, const vec3& v, random_gen& rng);
@@ -16,6 +22,7 @@ public:
   Float radius;
   Float inner_radius;
   material *mat_ptr;
+  alpha_texture *alpha_mask;
 };
 
 bool disk::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
@@ -32,12 +39,21 @@ bool disk::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_g
   }
   vec3 p = r.point_at_parameter(t);
   p.e[1] = 0;
+  
+  Float u = p.x() / (2.0 * radius) + 0.5;
+  Float v = p.z() / (2.0 * radius) + 0.5;
+  u = 1 - u;
+  if(alpha_mask) {
+    if(alpha_mask->value(u, v, rec.p).x() < 1) {
+      return(false);
+    }
+  }
   rec.p = p;
   rec.normal = n;
   rec.t = t;
   rec.mat_ptr = mat_ptr;
-  rec.u = p.x() / (2.0 * radius) + 0.5;
-  rec.v = p.z() / (2.0 * radius) + 0.5;
+  rec.u = u;
+  rec.v = v;
   return(true);
 }
 

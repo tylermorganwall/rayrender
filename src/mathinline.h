@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstring>
 #include "vec3.h"
 
 template<class T>
@@ -166,4 +167,26 @@ inline vec3 SphericalDirection(Float sinTheta, Float cosTheta, Float phi) {
 inline bool SameHemisphere(const vec3 &w, const vec3 &wp) {
   return(w.y() * wp.y()) > 0;
 }
+
+template <typename IN_T, typename OUT_T>
+inline OUT_T reinterpret_type(const IN_T in) {
+  OUT_T out;
+  memcpy(&out, &in, sizeof(out));
+  return out;
+}
+
+// constexpr Float origin() { return 1.0f / 32.0f; }
+// constexpr Float float_scale() { return 1.0f / 65536.0f; }
+// constexpr Float int_scale() { return 256.0f; }
+// 
+// vec3 offset_ray(const vec3 p, const vec3 n) {
+//   int of_i[3] = {(int)(int_scale() * n.x()), (int)(int_scale() * n.y()), (int)(int_scale() * n.z())};
+//   vec3 p_i(reinterpret_type<int,Float>(reinterpret_type<Float,int>(p.x())+((p.x() < 0) ? -of_i[0] : of_i[0])), 
+//            reinterpret_type<int,Float>(reinterpret_type<Float,int>(p.y())+((p.y() < 0) ? -of_i[1] : of_i[1])), 
+//            reinterpret_type<int,Float>(reinterpret_type<Float,int>(p.z())+((p.z() < 0) ? -of_i[2] : of_i[2])));
+//   return(vec3(fabs(p.x()) < origin() ? p.x() + float_scale()*n.x() : p_i.x(), 
+//               fabs(p.y()) < origin() ? p.y() + float_scale()*n.y() : p_i.y(),
+//               fabs(p.z()) < origin() ? p.z() + float_scale()*n.z() : p_i.z()));
+// }
+
 #endif

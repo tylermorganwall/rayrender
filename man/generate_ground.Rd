@@ -4,8 +4,11 @@
 \alias{generate_ground}
 \title{Generate Ground}
 \usage{
-generate_ground(depth = -1, spheresize = 1000,
-  material = diffuse(color = "#ccff00"))
+generate_ground(
+  depth = -1,
+  spheresize = 1000,
+  material = diffuse(color = "#ccff00")
+)
 }
 \arguments{
 \item{depth}{Default `-1`. Depth of the surface.}

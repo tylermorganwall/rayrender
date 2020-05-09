@@ -4,9 +4,20 @@
 \alias{ellipsoid}
 \title{Ellipsoid Object}
 \usage{
-ellipsoid(x = 0, y = 0, z = 0, a = 1, b = 1, c = 1,
-  material = diffuse(), angle = c(0, 0, 0), order_rotation = c(1, 2,
-  3), velocity = c(0, 0, 0), flipped = FALSE, scale = c(1, 1, 1))
+ellipsoid(
+  x = 0,
+  y = 0,
+  z = 0,
+  a = 1,
+  b = 1,
+  c = 1,
+  material = diffuse(),
+  angle = c(0, 0, 0),
+  order_rotation = c(1, 2, 3),
+  velocity = c(0, 0, 0),
+  flipped = FALSE,
+  scale = c(1, 1, 1)
+)
 }
 \arguments{
 \item{x}{Default `0`. x-coordinate of the center of the ellipsoid.}
@@ -49,7 +60,7 @@ generate_cornell() \%>\%
   add_object(ellipsoid(x = 555/2, y = 555/2, z = 555/2, 
                        a = 100, b = 50, c = 50)) \%>\%
   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
-               ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
+               ambient_light = FALSE, samples = 500, parallel = TRUE, clamp_value = 5)
 }
 
 #Change the axes to make it taller rather than wide:
@@ -58,7 +69,7 @@ generate_cornell() \%>\%
   add_object(ellipsoid(x = 555/2, y = 555/2, z = 555/2, 
                        a = 100, b = 200, c = 100, material = metal())) \%>\%
   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
-               ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
+               ambient_light = FALSE, samples = 500, parallel = TRUE, clamp_value = 5)
 }
 
 #Rotate it and make it dielectric:
@@ -68,6 +79,6 @@ generate_cornell() \%>\%
                        a = 100, b = 200, c = 100, angle = c(0, 0, 45),
                        material = dielectric())) \%>\%
   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
-               ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
+               ambient_light = FALSE, samples = 500, parallel = TRUE, clamp_value = 5)
 }
 }

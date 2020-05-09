@@ -4,9 +4,14 @@
 \alias{group_objects}
 \title{Group Objects}
 \usage{
-group_objects(scene, pivot_point = c(0, 0, 0), group_translate = c(0,
-  0, 0), group_angle = c(0, 0, 0), group_order_rotation = c(1, 2, 3),
-  group_scale = c(1, 1, 1))
+group_objects(
+  scene,
+  pivot_point = c(0, 0, 0),
+  group_translate = c(0, 0, 0),
+  group_angle = c(0, 0, 0),
+  group_order_rotation = c(1, 2, 3),
+  group_scale = c(1, 1, 1)
+)
 }
 \arguments{
 \item{scene}{Tibble of pre-existing object locations and properties to group together.}
