@@ -321,8 +321,9 @@ microfacet = function(color="white", reflection = 1, microfacet = "tbr", alpha =
   glossyinfo = list(c(microtype, reflection, alphax, alphay));
   new_tibble_row(list(type = "microfacet", 
                  properties = list(c(color)), 
+                 gradient_color = list(NA), gradient_transpose = FALSE,
                  checkercolor=list(NA), noise=0, noisephase = 0, noiseintensity = 0, noisecolor = list(c(0,0,0)),
-                 image = list(NA), lightintensity = NA, 
+                 image = list(NA), alphaimage = list(NA), lightintensity = NA, 
                  fog=FALSE, fogdensity=NA, implicit_sample = importance_sample, sigma = 0, glossyinfo = glossyinfo))
 }
 

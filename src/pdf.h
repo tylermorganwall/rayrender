@@ -49,57 +49,109 @@ public:
     if (!SameHemisphere(wo, wi)) {
       return(0);
     }
-    // vec3 wh = (wo + wi);
-    // wh.make_unit_vector();
-    // std::this_thread::sleep_for(std::chrono::milliseconds(10));
-    // Rcpp::Rcout << distribution->D(wh) *  AbsCosTheta(wh) << "\n";
-    // vec3 colorval = hrec.mat_ptr->f(r, hrec, scattered);
-    // Rcpp::Rcout << colorval.x() << " " << colorval.y() << " " << colorval.z() << "\n";
-    // vec3 wi = wo - 2.0f * dot(uvw.v(), wh) * uvw.v();
-    // Rcpp::Rcout << distribution->D(wh) *  AbsCosTheta(wh) << "\n";
     return(distribution->D(wo) *  AbsCosTheta(wo) / (4 * dot(wo,wi)));
-    // Float cosTheta = dot(unit_vector(direction), uvw.w());;
-    // Float expval = (a2 - 1.0f) * cosTheta * cosTheta + 1;
-    // // Float D = a2 * cosTheta * std::sqrtf(1-cosTheta * cosTheta)/ (M_PI * expval * expval);
-    // // vec3 wi = wo - 2.0f * dot(uvw.w(), direction) * uvw.w();
-    // return(a2 * cosTheta * std::sqrtf(1-cosTheta * cosTheta)/ (M_PI * expval * expval));
   }
+  static void TrowbridgeReitzSample11(Float cosTheta, Float U1, Float U2,
+                                      Float *slope_x, Float *slope_y);
   virtual vec3 generate(random_gen& rng) {
-    Float tan2Theta, phi;
-    Float u0 = rng.unif_rand();
-    Float u1 = rng.unif_rand();
-    if (alphas.x() == alphas.y()) {
-      Float logSample = std::log(1 - u0);
-      if (std::isinf(logSample)) {
-        logSample = 0;
-      }
-      tan2Theta = -alphas.x() * alphas.x() * logSample;
-      phi = u1 * 2 * M_PI;
-    } else {
-      Float logSample = std::log(u0);
-      phi = std::atan(alphas.y() / alphas.x() * std::tan(2 * M_PI * u1 + 0.5f * M_PI));
-      if (u1 > 0.5f) {
-        phi += M_PI;
-      }
-      Float sinPhi = std::sin(phi), cosPhi = std::cos(phi);
-      Float alphax2 = alphas.x() * alphas.x();
-      Float alphay2 = alphas.y() * alphas.y();
-      tan2Theta = -logSample /(cosPhi * cosPhi / alphax2 + sinPhi * sinPhi / alphay2);
-    }
-    Float cosTheta = 1 / std::sqrt(1 + tan2Theta);
-    Float sinTheta = std::sqrt(std::max((Float)0, 1 - cosTheta * cosTheta));
-    vec3 wh = SphericalDirection(sinTheta, cosTheta, phi);
-    if (!SameHemisphere(wi, wh)) {
-      wh = -wh;
-    }
-    vec3 wo = -wi + 2 * dot(wi, wh) * wh;
-    return(uvw.local(wo));
+    vec3 wiStretched = unit_vector(vec3(alpha_x * wi.x, alpha_y * wi.y, wi.z));
+    
+    // 2. simulate P22_{wi}(x_slope, y_slope, 1, 1)
+    Float slope_x, slope_y;
+    TrowbridgeReitzSample11(CosTheta(wiStretched), U1, U2, &slope_x, &slope_y);
+    
+    // 3. rotate
+    Float tmp = CosPhi(wiStretched) * slope_x - SinPhi(wiStretched) * slope_y;
+    slope_y = SinPhi(wiStretched) * slope_x + CosPhi(wiStretched) * slope_y;
+    slope_x = tmp;
+    
+    // 4. unstretch
+    slope_x = alphas.x() * slope_x;
+    slope_y = alphas.y() * slope_y;
+    
+    // 5. compute normal
+    return(unit_vector(vec3(-slope_x, 1.0f, -slope_y)));
+    // Float tan2Theta, phi;
+    // Float u0 = rng.unif_rand();
+    // Float u1 = rng.unif_rand();
+    // if (alphas.x() == alphas.y()) {
+    //   Float logSample = std::log(1 - u0);
+    //   if (std::isinf(logSample)) {
+    //     logSample = 0;
+    //   }
+    //   tan2Theta = -alphas.x() * alphas.x() * logSample;
+    //   phi = u1 * 2 * M_PI;
+    // } else {
+    //   Float logSample = std::log(u0);
+    //   phi = std::atan(alphas.y() / alphas.x() * std::tan(2 * M_PI * u1 + 0.5f * M_PI));
+    //   if (u1 > 0.5f) {
+    //     phi += M_PI;
+    //   }
+    //   Float sinPhi = std::sin(phi), cosPhi = std::cos(phi);
+    //   Float alphax2 = alphas.x() * alphas.x();
+    //   Float alphay2 = alphas.y() * alphas.y();
+    //   tan2Theta = -logSample /(cosPhi * cosPhi / alphax2 + sinPhi * sinPhi / alphay2);
+    // }
+    // Float cosTheta = 1 / std::sqrt(1 + tan2Theta);
+    // Float sinTheta = std::sqrt(std::max((Float)0, 1 - cosTheta * cosTheta));
+    // vec3 wh = SphericalDirection(sinTheta, cosTheta, phi);
+    // if (!SameHemisphere(wi, wh)) {
+    //   wh = -wh;
+    // }
+    // vec3 wo = -wi + 2 * dot(wi, wh) * wh;
+    // return(uvw.local(wo));
   }
   onb uvw;
   vec3 wi;
   vec2 alphas;
   MicrofacetDistribution *distribution;
 };
+
+static void TrowbridgeReitzSample11(Float cosTheta, Float U1, Float U2,
+                                    Float *slope_x, Float *slope_y) {
+  // special case (normal incidence)
+  if (cosTheta > .9999) {
+    Float r = sqrt(U1 / (1 - U1));
+    Float phi = 6.28318530718 * U2;
+    *slope_x = r * cos(phi);
+    *slope_y = r * sin(phi);
+    return;
+  }
+  
+  Float sinTheta =
+    std::sqrt(std::max((Float)0, (Float)1 - cosTheta * cosTheta));
+  Float tanTheta = sinTheta / cosTheta;
+  Float a = 1 / tanTheta;
+  Float G1 = 2 / (1 + std::sqrt(1.f + 1.f / (a * a)));
+  
+  // sample slope_x
+  Float A = 2 * U1 / G1 - 1;
+  Float tmp = 1.f / (A * A - 1.f);
+  if (tmp > 1e10) tmp = 1e10;
+  Float B = tanTheta;
+  Float D = std::sqrt(
+    std::max(Float(B * B * tmp * tmp - (A * A - B * B) * tmp), Float(0)));
+  Float slope_x_1 = B * tmp - D;
+  Float slope_x_2 = B * tmp + D;
+  *slope_x = (A < 0 || slope_x_2 > 1.f / tanTheta) ? slope_x_1 : slope_x_2;
+  
+  // sample slope_y
+  Float S;
+  if (U2 > 0.5f) {
+    S = 1.f;
+    U2 = 2.f * (U2 - .5f);
+  } else {
+    S = -1.f;
+    U2 = 2.f * (.5f - U2);
+  }
+  Float z =
+    (U2 * (U2 * (U2 * 0.27385f - 0.73369f) + 0.46341f)) /
+      (U2 * (U2 * (U2 * 0.093073f + 0.309420f) - 1.000000f) + 0.597999f);
+  *slope_y = S * z * std::sqrt(1.f + *slope_x * *slope_x);
+  
+  CHECK(!std::isinf(*slope_y));
+  CHECK(!std::isnan(*slope_y));
+}
 
 class micro_beck_pdf : public pdf {
 public:
@@ -113,9 +165,6 @@ public:
     Float cosTheta = dot(unit_vector(direction), uvw.w());;
     Float expval = (a2 - 1.0f) * cosTheta + 1;
     Float D = a2 / (M_PI * expval * expval);
-    // Rcpp::Rcout << "DUM" << "\n";
-    
-    // vec3 wi = wo - 2.0f * dot(uvw.w(), direction) * uvw.w();
     return(D/4);
   }
   virtual vec3 generate(random_gen& rng) {

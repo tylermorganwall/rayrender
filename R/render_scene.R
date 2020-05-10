@@ -253,7 +253,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
   #light handler
   light_prop_vec =  scene$lightintensity
   
-  if(!any(typevec == 6) && missing(ambient_light) && missing(environment_light)) {
+  if(!any(typevec == 5) && missing(ambient_light) && missing(environment_light)) {
     ambient_light = TRUE
   }
   

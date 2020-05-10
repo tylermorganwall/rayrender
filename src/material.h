@@ -24,7 +24,9 @@ Float schlick(Float cosine, Float ref_idx, Float ref_idx2) {
 }
 
 Float schlick_reflection(Float cosine, Float r0) {
-  return(r0 + (1-r0) * pow((1-cosine),5));
+  Float r02 = (1 - r0) / (1 + r0);
+  r02 = r02 * r02;
+  return(r02 + (1-r02) * pow((1-cosine),5));
 }
 
 bool refract(const vec3& v, const vec3& n, Float ni_over_nt, vec3& refracted) {
@@ -59,7 +61,7 @@ class material {
     virtual bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng) {
       return(false);
     };
-    virtual vec3 scattering_pdf(const ray& r_in, const hit_record& rec, const ray& scattered) const {
+    virtual vec3 f(const ray& r_in, const hit_record& rec, const ray& scattered) const {
       return(vec3(0,0,0));
     }
     virtual vec3 emitted(const ray& r_in, const hit_record& rec, Float u, Float v, const vec3& p) const {
@@ -78,7 +80,7 @@ class lambertian : public material {
       // Rcpp::Rcout << "delete albedo" << "\n";
       if(albedo) delete albedo;
     }
-    vec3 scattering_pdf(const ray& r_in, const hit_record& rec, const ray& scattered) const {
+    vec3 f(const ray& r_in, const hit_record& rec, const ray& scattered) const {
       //unit_vector(scattered.direction()) == wo
       //r_in.direction() == wi
       Float cosine = dot(rec.normal, unit_vector(scattered.direction()));
@@ -254,7 +256,7 @@ public:
     srec.attenuation = albedo->value(rec.u,rec.v,rec.p);
     return(true);
   }
-  vec3 scattering_pdf(const ray& r_in, const hit_record& rec, const ray& scattered) const {
+  vec3 f(const ray& r_in, const hit_record& rec, const ray& scattered) const {
     return(albedo->value(rec.u,rec.v,rec.p) * 0.25 * M_1_PI);
   }
   texture *albedo;
@@ -278,7 +280,7 @@ public:
     return(true);
   }
   //Equivalent to f() function, minus Spectrum
-  vec3 scattering_pdf(const ray& r_in, const hit_record& rec, const ray& scattered) const {
+  vec3 f(const ray& r_in, const hit_record& rec, const ray& scattered) const {
     vec3 wi = unit_vector(r_in.direction());
     vec3 wo = unit_vector(scattered.direction());
     
@@ -368,6 +370,10 @@ class MicrofacetReflection : public material {
 public:
   MicrofacetReflection(texture* a, MicrofacetDistribution *distribution, Float ref_idx)
     : albedo(a), distribution(distribution), ri(ref_idx) {}
+  ~MicrofacetReflection() {
+    if(albedo) delete albedo;
+    if(distribution) delete distribution;
+  }
   
   bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng) {
     srec.is_specular = false;
@@ -381,7 +387,7 @@ public:
   }
   //wh = surface normal
 
-  vec3 scattering_pdf(const ray& r_in, const hit_record& rec, const ray& scattered) const {
+  vec3 f(const ray& r_in, const hit_record& rec, const ray& scattered) const {
     vec3 wi = unit_vector(r_in.direction());
     vec3 wo = unit_vector(scattered.direction());
     

@@ -7,6 +7,7 @@
 
 class MicrofacetDistribution {
 public:
+  virtual ~MicrofacetDistribution() {}
   virtual Float D(const vec3 &wh) const = 0;
   virtual Float Lambda(const vec3 &w) const = 0;
   Float G1(const vec3 &w) const {
@@ -37,6 +38,7 @@ public:
   BeckmannDistribution(Float alphax, Float alphay, bool type, bool samplevis = true)
     : MicrofacetDistribution(samplevis), alphax(alphax), alphay(alphay),type(type) {
   }
+  ~BeckmannDistribution() {}
   Float D(const vec3 &wh) const;
   Float GetAlpha() const {
     return(std::sqrt(alphax * alphax + alphay * alphay));
@@ -117,6 +119,7 @@ public:
     type = type_;
     // Rcpp::Rcout << alphax << " " << alphay << " " << type << "\n";
   }
+  ~TrowbridgeReitzDistribution() {}
   static Float RoughnessToAlpha(Float roughness) {
     roughness = std::max(roughness, (Float)1e-3);
     Float x = std::log(roughness);

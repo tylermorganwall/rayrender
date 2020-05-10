@@ -31,7 +31,8 @@ inline vec3 de_nan(const vec3& c) {
   return(temp);
 }
 
-vec3 color(const ray& r, hitable *world, hitable *hlist, 
+
+vec3 color(const ray& r, hitable *world, hitable *hlist,
            size_t max_depth, size_t roulette_activate, random_gen& rng) {
   vec3 final_color(0,0,0);
   vec3 throughput(1,1,1);
@@ -69,7 +70,7 @@ vec3 color(const ray& r, hitable *world, hitable *hlist,
         //ray back into world space
         r2 = ray(hrec.p, p.generate(rng), r2.pri_stack, r2.time()); //scatters a ray from hit point to direction
         pdf_val = p.value(r2.direction(), rng); //generates a pdf value based the intersection point and the mixture pdf
-        throughput *= srec.attenuation * hrec.mat_ptr->scattering_pdf(r, hrec, r2) / pdf_val;
+        throughput *= hrec.mat_ptr->f(r, hrec, r2) / pdf_val;
       } else {
         return(final_color);
       }
