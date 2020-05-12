@@ -114,10 +114,9 @@ public:
   TrowbridgeReitzDistribution(const Float alphax_, const Float alphay_, const bool type_, bool samplevis = true)
     : MicrofacetDistribution(samplevis) {
     // type(type), alphax(alphax), alphay(alphay)
-    alphax = alphax_;
-    alphay = alphay_;
+    alphax = RoughnessToAlpha(alphax_);
+    alphay = RoughnessToAlpha(alphay_);
     type = type_;
-    // Rcpp::Rcout << alphax << " " << alphay << " " << type << "\n";
   }
   ~TrowbridgeReitzDistribution() {}
   static Float RoughnessToAlpha(Float roughness) {
@@ -142,14 +141,14 @@ private:
   bool type;
 };
 
-Float TrowbridgeReitzDistribution::D(const vec3 &wh) const {
-  Float tan2Theta = Tan2Theta(wh);
+Float TrowbridgeReitzDistribution::D(const vec3 &normal) const {
+  Float tan2Theta = Tan2Theta(normal);
   if(std::isinf(tan2Theta)) {
     return(0.0);
   }
-  const Float cos4Theta = Cos2Theta(wh) * Cos2Theta(wh);
-  Float e = tan2Theta *(Cos2Phi(wh) / (alphax * alphax) + 
-                        Sin2Phi(wh) / (alphay * alphay));
+  const Float cos4Theta = Cos2Theta(normal) * Cos2Theta(normal);
+  Float e = tan2Theta *(Cos2Phi(normal) / (alphax * alphax) + 
+                        Sin2Phi(normal) / (alphay * alphay));
   return(1/(M_PI * alphax * alphay * cos4Theta * (1+e) * (1+e)));
 }
 

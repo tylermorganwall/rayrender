@@ -48,29 +48,30 @@ public:
     vec3 wo = unit_vector(direction);
     if (!SameHemisphere(wo, wi)) {
       return(0);
-    }
-    return(distribution->D(wo) *  AbsCosTheta(wo) / (4 * dot(wo,wi)));
+    } 
+    return(AbsCosTheta(wo) * M_1_PI);
+    // return(distribution->D(wo) *  AbsCosTheta(wo) / (4 * dot(wo,wi)));
   }
   static void TrowbridgeReitzSample11(Float cosTheta, Float U1, Float U2,
                                       Float *slope_x, Float *slope_y);
   virtual vec3 generate(random_gen& rng) {
-    vec3 wiStretched = unit_vector(vec3(alpha_x * wi.x, alpha_y * wi.y, wi.z));
-    
+    vec3 wiStretched = unit_vector(vec3(alphas.x() * wi.x(),  wi.y(), alphas.y() *wi.z()));
+
     // 2. simulate P22_{wi}(x_slope, y_slope, 1, 1)
     Float slope_x, slope_y;
-    TrowbridgeReitzSample11(CosTheta(wiStretched), U1, U2, &slope_x, &slope_y);
-    
+    TrowbridgeReitzSample11(CosTheta(wiStretched), rng.unif_rand(), rng.unif_rand(), 
+                            &slope_x, &slope_y);
+
     // 3. rotate
     Float tmp = CosPhi(wiStretched) * slope_x - SinPhi(wiStretched) * slope_y;
     slope_y = SinPhi(wiStretched) * slope_x + CosPhi(wiStretched) * slope_y;
     slope_x = tmp;
-    
+
     // 4. unstretch
     slope_x = alphas.x() * slope_x;
     slope_y = alphas.y() * slope_y;
-    
     // 5. compute normal
-    return(unit_vector(vec3(-slope_x, 1.0f, -slope_y)));
+    return(uvw.local(unit_vector(vec3(-slope_x, 1.0f, -slope_y))));
     // Float tan2Theta, phi;
     // Float u0 = rng.unif_rand();
     // Float u1 = rng.unif_rand();
@@ -107,19 +108,18 @@ public:
   MicrofacetDistribution *distribution;
 };
 
-static void TrowbridgeReitzSample11(Float cosTheta, Float U1, Float U2,
+void micro_trow_pdf::TrowbridgeReitzSample11(Float cosTheta, Float U1, Float U2,
                                     Float *slope_x, Float *slope_y) {
   // special case (normal incidence)
   if (cosTheta > .9999) {
     Float r = sqrt(U1 / (1 - U1));
-    Float phi = 6.28318530718 * U2;
+    Float phi = 2 * M_PI * U2;
     *slope_x = r * cos(phi);
     *slope_y = r * sin(phi);
     return;
   }
   
-  Float sinTheta =
-    std::sqrt(std::max((Float)0, (Float)1 - cosTheta * cosTheta));
+  Float sinTheta = std::sqrt(std::max((Float)0, (Float)1 - cosTheta * cosTheta));
   Float tanTheta = sinTheta / cosTheta;
   Float a = 1 / tanTheta;
   Float G1 = 2 / (1 + std::sqrt(1.f + 1.f / (a * a)));
@@ -129,8 +129,7 @@ static void TrowbridgeReitzSample11(Float cosTheta, Float U1, Float U2,
   Float tmp = 1.f / (A * A - 1.f);
   if (tmp > 1e10) tmp = 1e10;
   Float B = tanTheta;
-  Float D = std::sqrt(
-    std::max(Float(B * B * tmp * tmp - (A * A - B * B) * tmp), Float(0)));
+  Float D = std::sqrt(std::max(Float(B * B * tmp * tmp - (A * A - B * B) * tmp), Float(0)));
   Float slope_x_1 = B * tmp - D;
   Float slope_x_2 = B * tmp + D;
   *slope_x = (A < 0 || slope_x_2 > 1.f / tanTheta) ? slope_x_1 : slope_x_2;
@@ -148,9 +147,6 @@ static void TrowbridgeReitzSample11(Float cosTheta, Float U1, Float U2,
     (U2 * (U2 * (U2 * 0.27385f - 0.73369f) + 0.46341f)) /
       (U2 * (U2 * (U2 * 0.093073f + 0.309420f) - 1.000000f) + 0.597999f);
   *slope_y = S * z * std::sqrt(1.f + *slope_x * *slope_x);
-  
-  CHECK(!std::isinf(*slope_y));
-  CHECK(!std::isnan(*slope_y));
 }
 
 class micro_beck_pdf : public pdf {

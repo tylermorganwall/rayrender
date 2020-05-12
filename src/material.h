@@ -379,36 +379,42 @@ public:
     srec.is_specular = false;
     srec.attenuation = albedo->value(hrec.u, hrec.v, hrec.p);
     if(distribution->GetType()) {
+      // srec.pdf_ptr = new cosine_pdf(hrec.normal);
+      
       srec.pdf_ptr = new micro_trow_pdf(hrec.normal, r_in.direction(), distribution);
     } else {
       srec.pdf_ptr = new micro_beck_pdf(hrec.normal, distribution->GetAlpha(), r_in.direction());
     }
     return(true);
   }
-  //wh = surface normal
 
   vec3 f(const ray& r_in, const hit_record& rec, const ray& scattered) const {
     vec3 wi = unit_vector(r_in.direction());
     vec3 wo = unit_vector(scattered.direction());
-    
+
     Float cosThetaO = AbsCosTheta(wo);
     Float cosThetaI = AbsCosTheta(wi);
-    vec3 wh = wi + wo;
+    vec3 normal = wi + wo;
     if (cosThetaI == 0 || cosThetaO == 0) {
       return(vec3(0,0,0));
     }
-    if (wh.x() == 0 && wh.y() == 0 && wh.z() == 0) {
+    if (normal.x() == 0 && normal.y() == 0 && normal.z() == 0) {
       return(vec3(0,0,0));
     }
-    wh = unit_vector(wh);
-    Float cosine = dot(wh, wo);
+    normal = unit_vector(normal);
+    Float cosine = dot(normal, wo);
     if(cosine < 0) {
       cosine = 0;
     }
-    Float F = schlick_reflection(dot(wi, wh), ri);
+    Float F = schlick_reflection(dot(wi, normal), ri);
     Float G = distribution->G(wo,wi);
-    Float D = distribution->D(wh);
+    Float D = distribution->D(normal);
     return(albedo->value(rec.u, rec.v, rec.p) * F * G * D  / (4 * cosThetaI * cosThetaO) * cosine);
+    // Float cosine = dot(rec.normal, unit_vector(scattered.direction()));
+    // if(cosine < 0) {
+    //   cosine = 0;
+    // }
+    // return(albedo->value(rec.u, rec.v, rec.p) * cosine * M_1_PI);
   }
 private:
   texture *albedo;
