@@ -5,6 +5,7 @@
 #' @param lightcolor Default `white`. The color the of the light.
 #' @param lightwidth Default `332`. Width (z) of the light.
 #' @param lightdepth Default `343`. Depth (x) of the light.
+#' @param sigma Default `0`. Oren-Nayar microfacet angle.
 #' @param leftcolor Default `#1f7326` (green).
 #' @param rightcolor Default `#a60d0d` (red).
 #' @param roomcolor Default `#bababa` (light grey).
@@ -44,18 +45,18 @@
 #'              parallel=TRUE,clamp_value=3)
 #' }
 generate_cornell = function(light = TRUE, lightintensity = 5,
-                            lightcolor = "white",lightwidth = 332, lightdepth=343,
+                            lightcolor = "white",lightwidth = 332, lightdepth=343, sigma=0,
                             leftcolor = "#1f7326", rightcolor = "#a60d0d", roomcolor = "#bababa") {
   scene = yz_rect(x=555,y=555/2,z=555/2,555,555,
-      material = diffuse(color = leftcolor),flipped=TRUE) %>%
+      material = diffuse(color = leftcolor, sigma = sigma),flipped=TRUE) %>%
     add_object(yz_rect(x=0,y=555/2,z=555/2,555,555,
-      material = diffuse(color = rightcolor))) %>%
+      material = diffuse(color = rightcolor, sigma = sigma))) %>%
     add_object(xz_rect(x=555/2,y=555,z=555/2,555,555,
-      material = diffuse(color=roomcolor),flipped=TRUE)) %>%
+      material = diffuse(color=roomcolor, sigma = sigma),flipped=TRUE)) %>%
     add_object(xz_rect(x=555/2,y=0,z=555/2,555,555,
-      material = diffuse(color=roomcolor))) %>%
+      material = diffuse(color=roomcolor, sigma = sigma))) %>%
     add_object(xy_rect(x=555/2,y=555/2,z=555,555,555,
-      material = diffuse(color = roomcolor),flipped=TRUE))
+      material = diffuse(color = roomcolor, sigma = sigma),flipped=TRUE))
   if(light) {
     scene = scene %>%
       add_object(xz_rect(x=555/2,y=554,z=555/2,lightdepth,lightwidth, flipped = TRUE,

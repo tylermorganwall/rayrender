@@ -10,6 +10,7 @@ generate_cornell(
   lightcolor = "white",
   lightwidth = 332,
   lightdepth = 343,
+  sigma = 0,
   leftcolor = "#1f7326",
   rightcolor = "#a60d0d",
   roomcolor = "#bababa"
@@ -25,6 +26,8 @@ generate_cornell(
 \item{lightwidth}{Default `332`. Width (z) of the light.}
 
 \item{lightdepth}{Default `343`. Depth (x) of the light.}
+
+\item{sigma}{Default `0`. Oren-Nayar microfacet angle.}
 
 \item{leftcolor}{Default `#1f7326` (green).}
 
