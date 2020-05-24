@@ -44,9 +44,10 @@
 #' render_scene(new_cornell, samples=400,aperture=0, fov=40, ambient_light=FALSE, 
 #'              parallel=TRUE,clamp_value=3)
 #' }
-generate_cornell = function(light = TRUE, lightintensity = 5,
+generate_cornell = function(light = TRUE, lightintensity = 5, 
                             lightcolor = "white",lightwidth = 332, lightdepth=343, sigma=0,
-                            leftcolor = "#1f7326", rightcolor = "#a60d0d", roomcolor = "#bababa") {
+                            leftcolor = "#1f7326", rightcolor = "#a60d0d", roomcolor = "#bababa",
+                            importance_sample = TRUE) {
   scene = yz_rect(x=555,y=555/2,z=555/2,555,555,
       material = diffuse(color = leftcolor, sigma = sigma),flipped=TRUE) %>%
     add_object(yz_rect(x=0,y=555/2,z=555/2,555,555,
@@ -60,7 +61,8 @@ generate_cornell = function(light = TRUE, lightintensity = 5,
   if(light) {
     scene = scene %>%
       add_object(xz_rect(x=555/2,y=554,z=555/2,lightdepth,lightwidth, flipped = TRUE,
-                       material = light(color=lightcolor,intensity=lightintensity))) 
+                       material = light(color=lightcolor,intensity=lightintensity,
+                                        importance_sample = importance_sample))) 
   }
   attr(scene,"cornell") = TRUE
   scene

@@ -7,9 +7,6 @@
 #include "vec2.h"
 #include "microfacetdist.h"
 
-#include <chrono>
-#include <thread>
-
 class pdf {
 public: 
   virtual Float value(const vec3& direction, random_gen& rng) = 0;
@@ -31,7 +28,7 @@ public:
     }
   } 
   virtual vec3 generate(random_gen& rng) {
-    return(uvw.local(rng.random_cosine_direction()));
+    return(uvw.local_to_world(rng.random_cosine_direction()));
   }
   onb uvw;
 };
@@ -55,52 +52,52 @@ public:
   static void TrowbridgeReitzSample11(Float cosTheta, Float U1, Float U2,
                                       Float *slope_x, Float *slope_y);
   virtual vec3 generate(random_gen& rng) {
-    vec3 wiStretched = unit_vector(vec3(alphas.x() * wi.x(),  wi.y(), alphas.y() *wi.z()));
+    // vec3 wiStretched = unit_vector(vec3(alphas.x() * wi.x(),  wi.y(), alphas.y() *wi.z()));
 
     // 2. simulate P22_{wi}(x_slope, y_slope, 1, 1)
-    Float slope_x, slope_y;
-    TrowbridgeReitzSample11(CosTheta(wiStretched), rng.unif_rand(), rng.unif_rand(), 
-                            &slope_x, &slope_y);
+    // Float slope_x, slope_y;
+    // TrowbridgeReitzSample11(CosTheta(wiStretched), rng.unif_rand(), rng.unif_rand(), 
+    //                         &slope_x, &slope_y);
 
     // 3. rotate
-    Float tmp = CosPhi(wiStretched) * slope_x - SinPhi(wiStretched) * slope_y;
-    slope_y = SinPhi(wiStretched) * slope_x + CosPhi(wiStretched) * slope_y;
-    slope_x = tmp;
+    // Float tmp = CosPhi(wiStretched) * slope_x - SinPhi(wiStretched) * slope_y;
+    // slope_y = SinPhi(wiStretched) * slope_x + CosPhi(wiStretched) * slope_y;
+    // slope_x = tmp;
 
     // 4. unstretch
-    slope_x = alphas.x() * slope_x;
-    slope_y = alphas.y() * slope_y;
+    // slope_x = alphas.x() * slope_x;
+    // slope_y = alphas.y() * slope_y;
     // 5. compute normal
-    return(uvw.local(unit_vector(vec3(-slope_x, 1.0f, -slope_y))));
-    // Float tan2Theta, phi;
-    // Float u0 = rng.unif_rand();
-    // Float u1 = rng.unif_rand();
-    // if (alphas.x() == alphas.y()) {
-    //   Float logSample = std::log(1 - u0);
-    //   if (std::isinf(logSample)) {
-    //     logSample = 0;
-    //   }
-    //   tan2Theta = -alphas.x() * alphas.x() * logSample;
-    //   phi = u1 * 2 * M_PI;
-    // } else {
-    //   Float logSample = std::log(u0);
-    //   phi = std::atan(alphas.y() / alphas.x() * std::tan(2 * M_PI * u1 + 0.5f * M_PI));
-    //   if (u1 > 0.5f) {
-    //     phi += M_PI;
-    //   }
-    //   Float sinPhi = std::sin(phi), cosPhi = std::cos(phi);
-    //   Float alphax2 = alphas.x() * alphas.x();
-    //   Float alphay2 = alphas.y() * alphas.y();
-    //   tan2Theta = -logSample /(cosPhi * cosPhi / alphax2 + sinPhi * sinPhi / alphay2);
-    // }
-    // Float cosTheta = 1 / std::sqrt(1 + tan2Theta);
-    // Float sinTheta = std::sqrt(std::max((Float)0, 1 - cosTheta * cosTheta));
-    // vec3 wh = SphericalDirection(sinTheta, cosTheta, phi);
-    // if (!SameHemisphere(wi, wh)) {
-    //   wh = -wh;
-    // }
-    // vec3 wo = -wi + 2 * dot(wi, wh) * wh;
-    // return(uvw.local(wo));
+    // return(uvw.local_to_world(unit_vector(vec3(-slope_x, 1.0f, -slope_y))));
+    Float tan2Theta, phi;
+    Float u0 = rng.unif_rand();
+    Float u1 = rng.unif_rand();
+    if (alphas.x() == alphas.y()) {
+      Float logSample = std::log(1 - u0);
+      if (std::isinf(logSample)) {
+        logSample = 0;
+      }
+      tan2Theta = -alphas.x() * alphas.x() * logSample;
+      phi = u1 * 2 * M_PI;
+    } else {
+      Float logSample = std::log(u0);
+      phi = std::atan(alphas.y() / alphas.x() * std::tan(2 * M_PI * u1 + 0.5f * M_PI));
+      if (u1 > 0.5f) {
+        phi += M_PI;
+      }
+      Float sinPhi = std::sin(phi), cosPhi = std::cos(phi);
+      Float alphax2 = alphas.x() * alphas.x();
+      Float alphay2 = alphas.y() * alphas.y();
+      tan2Theta = -logSample /(cosPhi * cosPhi / alphax2 + sinPhi * sinPhi / alphay2);
+    }
+    Float cosTheta = 1 / std::sqrt(1 + tan2Theta);
+    Float sinTheta = std::sqrt(std::max((Float)0, 1 - cosTheta * cosTheta));
+    vec3 wh = SphericalDirection(sinTheta, cosTheta, phi);
+    if (!SameHemisphere(wi, wh)) {
+      wh = -wh;
+    }
+    vec3 wo = -wi + 2 * dot(wi, wh) * wh;
+    return(uvw.local_to_world(wo));
   }
   onb uvw;
   vec3 wi;
@@ -171,7 +168,7 @@ public:
                    std::sin(theta) * std::sin(phi));
     wm.make_unit_vector();
     vec3 wi = 2.0f * dot(wo, wm) * wm - wo;
-    return(uvw.local(wi));
+    return(uvw.local_to_world(wi));
   }
   onb uvw;
   Float a2;

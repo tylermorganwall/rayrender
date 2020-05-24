@@ -113,7 +113,7 @@ vec3 ellipsoid::random(const vec3& o, random_gen& rng) {
   Float distance_squared = direction.squared_length();
   onb uvw;
   uvw.build_from_w(direction);
-  return(uvw.local(rng.random_to_sphere(radius,distance_squared) * inv_axes));
+  return(uvw.local_to_world(rng.random_to_sphere(radius,distance_squared) * inv_axes));
 }
 
 bool ellipsoid::bounding_box(Float t0, Float t1, aabb& box) const {

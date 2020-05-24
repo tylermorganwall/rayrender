@@ -9,6 +9,24 @@
 #include "mathinline.h"
 #include "microfacetdist.h"
 
+// #define DEBUG2
+
+// #ifdef DEBUG2
+// #include <iostream>
+// #include <fstream>
+// using namespace std;
+// #endif
+
+// #ifdef DEBUG2
+//     ray debugrayi(rec.p, wi);
+//     ray debugrayo(rec.p, wo);
+//     ofstream myfile;
+//     myfile.open("onb.txt", ios::app | ios::out);
+//     myfile << rec.p << ", " << uvw.world_to_local(wi) << ", " << uvw.world_to_local(wo) << ", " << 
+//       uvw.w() << ", " << uvw.v() << ", " << uvw.u() << "\n";
+//     myfile.close();
+// #endif
+
 #include <utility>
 
 struct hit_record;
@@ -280,11 +298,13 @@ public:
     return(true);
   }
   //Equivalent to f() function, minus Spectrum
-  vec3 f(const ray& r_in, const hit_record& rec, const ray& scattered) const {
-    vec3 wi = unit_vector(r_in.direction());
-    vec3 wo = unit_vector(scattered.direction());
-    
-    Float cosine = dot(rec.normal, wo);
+vec3 f(const ray& r_in, const hit_record& rec, const ray& scattered) const {
+    onb uvw;
+    uvw.build_from_w(rec.normal);
+    vec3 wi = -unit_vector(uvw.world_to_local(r_in.direction()));
+    vec3 wo = unit_vector(uvw.world_to_local(scattered.direction()));
+
+    Float cosine = wo.z();
     if(cosine < 0) {
       cosine = 0;
     }
@@ -308,7 +328,7 @@ public:
       sinAlpha = sinThetaI;
       tanBeta = sinThetaO / AbsCosTheta(wo);
     }
-    return(albedo->value(rec.u, rec.v, rec.p) * (A + B * maxCos * sinAlpha * tanBeta ) * M_1_PI * cosine);
+    return(albedo->value(rec.u, rec.v, rec.p) * (A + B * maxCos * sinAlpha * tanBeta ) * cosine * M_1_PI );
   }
   Float A, B;
   texture *albedo;
@@ -389,12 +409,14 @@ public:
   }
 
   vec3 f(const ray& r_in, const hit_record& rec, const ray& scattered) const {
-    vec3 wi = unit_vector(r_in.direction());
-    vec3 wo = unit_vector(scattered.direction());
-
+    onb uvw;
+    uvw.build_from_w(rec.normal);
+    vec3 wi = -unit_vector(uvw.world_to_local(r_in.direction()));
+    vec3 wo = unit_vector(uvw.world_to_local(scattered.direction()));
+    
     Float cosThetaO = AbsCosTheta(wo);
     Float cosThetaI = AbsCosTheta(wi);
-    vec3 normal = wi + wo;
+    vec3 normal = unit_vector(wi + wo);
     if (cosThetaI == 0 || cosThetaO == 0) {
       return(vec3(0,0,0));
     }
@@ -410,11 +432,6 @@ public:
     Float G = distribution->G(wo,wi);
     Float D = distribution->D(normal);
     return(albedo->value(rec.u, rec.v, rec.p) * F * G * D  / (4 * cosThetaI * cosThetaO) * cosine);
-    // Float cosine = dot(rec.normal, unit_vector(scattered.direction()));
-    // if(cosine < 0) {
-    //   cosine = 0;
-    // }
-    // return(albedo->value(rec.u, rec.v, rec.p) * cosine * M_1_PI);
   }
 private:
   texture *albedo;

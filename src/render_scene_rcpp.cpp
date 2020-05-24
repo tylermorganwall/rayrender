@@ -21,6 +21,13 @@ using namespace Rcpp;
 // [[Rcpp::depends(RcppThread)]]
 #include "RcppThread.h"
 
+// #define DEBUG
+
+#ifdef DEBUG
+#include <iostream>
+#include <fstream>
+#endif
+
 using namespace std;
 
 inline vec3 de_nan(const vec3& c) {
@@ -32,8 +39,12 @@ inline vec3 de_nan(const vec3& c) {
 }
 
 
-vec3 color(const ray& r, hitable *world, hitable *hlist,
+vec3 color(const ray& r, hitable *world, hitable_list *hlist,
            size_t max_depth, size_t roulette_activate, random_gen& rng) {
+#ifdef DEBUG
+  ofstream myfile;
+  myfile.open("rays.txt", ios::app | ios::out);
+#endif
   vec3 final_color(0,0,0);
   vec3 throughput(1,1,1);
   float prev_t = 1;
@@ -41,6 +52,12 @@ vec3 color(const ray& r, hitable *world, hitable *hlist,
   for(size_t i = 0; i < max_depth; i++) {
     hit_record hrec;
     if(world->hit(r2, 0.001, FLT_MAX, hrec, rng)) { //generated hit record, world space
+#ifdef DEBUG
+      myfile << i << ", " << r2.A << " ";
+      myfile << ", " << hrec.p << "\n";
+      // myfile << i << ", " << vec3(0,0,0) << "\n";
+      // myfile << i << ", " << unit_vector(r2.B) << "\n";
+#endif
       scatter_record srec;
       final_color += throughput * hrec.mat_ptr->emitted(r2, hrec, hrec.u, hrec.v, hrec.p);
       if(i > roulette_activate) {
@@ -69,6 +86,7 @@ vec3 color(const ray& r, hitable *world, hitable *hlist,
         //Translates the world space point into object space point, generates ray assuring intersection, and then translates 
         //ray back into world space
         r2 = ray(hrec.p, p.generate(rng), r2.pri_stack, r2.time()); //scatters a ray from hit point to direction
+        
         pdf_val = p.value(r2.direction(), rng); //generates a pdf value based the intersection point and the mixture pdf
         throughput *= hrec.mat_ptr->f(r, hrec, r2) / pdf_val;
       } else {
@@ -78,6 +96,9 @@ vec3 color(const ray& r, hitable *world, hitable *hlist,
       return(final_color);
     }
   }
+#ifdef DEBUG
+  myfile.close();
+#endif
   return(final_color);
 }
 

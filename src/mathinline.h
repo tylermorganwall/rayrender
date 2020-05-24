@@ -64,9 +64,9 @@ inline Float clamp(const Float& c, Float clamplow, Float clamphigh) {
   return(c);
 }
 
-inline Float CosTheta(const vec3 &w) { return w.y(); }
-inline Float Cos2Theta(const vec3 &w) { return w.y() * w.y(); }
-inline Float AbsCosTheta(const vec3 &w) { return std::abs(w.y()); }
+inline Float CosTheta(const vec3 &w) { return w.z(); }
+inline Float Cos2Theta(const vec3 &w) { return w.z() * w.z(); }
+inline Float AbsCosTheta(const vec3 &w) { return std::abs(w.z()); }
 
 inline Float Sin2Theta(const vec3 &w) {
   return(std::max((Float)0, (Float)1 - Cos2Theta(w)));
@@ -83,7 +83,7 @@ inline Float CosPhi(const vec3 &w) {
 
 inline Float SinPhi(const vec3 &w) {
   Float sinTheta = SinTheta(w);
-  return((sinTheta == 0) ? 0 : clamp(w.z() / sinTheta, -1, 1));
+  return((sinTheta == 0) ? 0 : clamp(w.y() / sinTheta, -1, 1));
 }
 
 inline Float Cos2Phi(const vec3 &w) {
@@ -150,12 +150,12 @@ template <typename Predicate> int FindInterval(int size, const Predicate &pred) 
 }
 
 inline Float SphericalPhi(const vec3 &v) {
-  float p = atan2f(v.x(), v.z());
+  float p = atan2f(v.x(), v.y());
   return((p < 0.0f) ? p + 2.0f*M_PI : p);
 }
 
 inline Float SphericalTheta(const vec3 &v) {
-  return(acosf(clamp(v.y(), -1.0f, 1.0f)));
+  return(acosf(clamp(v.z(), -1.0f, 1.0f)));
 }
 
 inline vec3 SphericalDirection(Float sinTheta, Float cosTheta, Float phi) {
@@ -165,7 +165,7 @@ inline vec3 SphericalDirection(Float sinTheta, Float cosTheta, Float phi) {
 }
 
 inline bool SameHemisphere(const vec3 &w, const vec3 &wp) {
-  return(w.y() * wp.y()) > 0;
+  return(w.z() * wp.z()) > 0;
 }
 
 template <typename IN_T, typename OUT_T>

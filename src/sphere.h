@@ -103,7 +103,7 @@ vec3 sphere::random(const vec3& o, random_gen& rng) {
   Float distance_squared = direction.squared_length();
   onb uvw;
   uvw.build_from_w(direction);
-  return(uvw.local(rng.random_to_sphere(radius,distance_squared)));
+  return(uvw.local_to_world(rng.random_to_sphere(radius,distance_squared)));
 }
 
 bool sphere::bounding_box(Float t0, Float t1, aabb& box) const {

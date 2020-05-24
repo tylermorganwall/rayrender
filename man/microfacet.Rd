@@ -4,8 +4,13 @@
 \alias{microfacet}
 \title{Microfacet Material}
 \usage{
-microfacet(color = "white", reflection = 1, microfacet = "tbr",
-  alpha = 1, importance_sample = FALSE)
+microfacet(
+  color = "white",
+  reflection = 1,
+  microfacet = "tbr",
+  alpha = 1,
+  importance_sample = FALSE
+)
 }
 \arguments{
 \item{color}{Default `white`. The color of the surface. Can be either

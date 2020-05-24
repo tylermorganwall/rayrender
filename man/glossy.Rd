@@ -4,10 +4,19 @@
 \alias{glossy}
 \title{Glossy Material}
 \usage{
-glossy(color = "#ffffff", checkercolor = NA, checkerperiod = 3,
-  noise = 0, noisephase = 0, noiseintensity = 10,
-  noisecolor = "#000000", image_array = NA, fog = FALSE,
-  fogdensity = 0.01, importance_sample = FALSE)
+glossy(
+  color = "#ffffff",
+  checkercolor = NA,
+  checkerperiod = 3,
+  noise = 0,
+  noisephase = 0,
+  noiseintensity = 10,
+  noisecolor = "#000000",
+  image_array = NA,
+  fog = FALSE,
+  fogdensity = 0.01,
+  importance_sample = FALSE
+)
 }
 \arguments{
 \item{color}{Default `white`. The color of the surface. Can be either
