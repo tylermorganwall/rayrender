@@ -24,6 +24,7 @@ class vec3 {
 public:
   vec3() {}
   vec3(Float e0, Float e1, Float e2) {e[0] = e0; e[1] = e1; e[2] = e2;}
+  vec3(Float e0) {e[0] = e0; e[1] = e0; e[2] = e0;}
   inline Float x() const { return e[0]; }
   inline Float y() const { return e[1]; }
   inline Float z() const { return e[2]; }

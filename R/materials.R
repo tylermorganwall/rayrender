@@ -306,10 +306,9 @@ dielectric = function(color="white", refraction = 1.5,  attenuation = c(0,0,0),
 #'
 #' @examples
 #' #Generate a checkered ground
-microfacet = function(color="white", reflection = 1, microfacet = "tbr", alpha = 1,
+microfacet = function(color="white", reflection = 1.6, microfacet = "tbr", alpha = 1,
                   importance_sample = FALSE) {
   microtype = switch(microfacet, "tbr" = 1,"beckmann" = 2, 1)
-  assertthat::assert_that(reflection <= 1 && reflection >= 0)
   if(length(alpha) == 1) {
     alphax = alpha
     alphay = alpha

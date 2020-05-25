@@ -91,11 +91,8 @@ class material {
 
 class lambertian : public material {
   public: 
-    lambertian(texture *a) : albedo(a) {
-      // Rcpp::Rcout << "inside alpha " << hasAlphaTexture << " " << typeid(alphaTexture).name() << "\n";
-    }
+    lambertian(texture *a) : albedo(a) {}
     ~lambertian() {
-      // Rcpp::Rcout << "delete albedo" << "\n";
       if(albedo) delete albedo;
     }
     vec3 f(const ray& r_in, const hit_record& rec, const ray& scattered) const {
@@ -245,7 +242,6 @@ class diffuse_light : public material {
 public:
   diffuse_light(texture *a) : emit(a) {}
   ~diffuse_light() {
-    // Rcpp::Rcout << "delete diffuse_light" << "\n";
     if(emit) delete emit;
   }
   virtual bool scatter(const ray& r_in, const hit_record& rec, scatter_record& srec, random_gen& rng) {
@@ -265,7 +261,6 @@ class isotropic : public material {
 public:
   isotropic(texture *a) : albedo(a) {}
   ~isotropic() {
-    // Rcpp::Rcout << "delete isotropic" << "\n";
     if(albedo) delete albedo;
   }
   virtual bool scatter(const ray& r_in, const hit_record& rec, scatter_record& srec, random_gen& rng) {
@@ -288,7 +283,6 @@ public:
     B = 0.45f * sigma2 / (sigma2 + 0.09f);
   }
   ~orennayar() {
-    // Rcpp::Rcout << "delete orennayar" << "\n";
     if(albedo) delete albedo;
   }
   bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng) {
@@ -297,7 +291,6 @@ public:
     srec.pdf_ptr = new cosine_pdf(hrec.normal);
     return(true);
   }
-  //Equivalent to f() function, minus Spectrum
 vec3 f(const ray& r_in, const hit_record& rec, const ray& scattered) const {
     onb uvw;
     uvw.build_from_w(rec.normal);
@@ -318,7 +311,7 @@ vec3 f(const ray& r_in, const hit_record& rec, const ray& scattered) const {
       Float sinPhiO = SinPhi(wo);
       Float cosPhiO = CosPhi(wo);
       Float dCos = cosPhiI * cosPhiO + sinPhiI * sinPhiO;
-      maxCos = std::max((Float)0, dCos);
+      maxCos = std::fmax((Float)0, dCos);
     }
     Float sinAlpha, tanBeta;
     if(AbsCosTheta(wi) > AbsCosTheta(wo)) {
@@ -334,58 +327,6 @@ vec3 f(const ray& r_in, const hit_record& rec, const ray& scattered) const {
   texture *albedo;
 };
 
-// class glossy : public material {
-// public:
-//   glossy(texture *a, vec3 gloss, MicrofacetDistribution *distribution) :
-//   albedo(a), glossycolor(gloss), distribution(distribution) {}
-//   vec3 f(const ray& r_in, const hit_record& rec, const ray& scattered) const {
-//     vec3 wi = unit_vector(r_in.direction());
-//     vec3 wo = unit_vector(scattered.direction());
-//     vec3 color = albedo->value(rec.u, rec.v, rec.p);
-//     auto pow5 = [](Float v) { return (v * v) * (v * v) * v; };
-//     
-//     vec3 diffuse = (28.0f/(23.0f*M_PI)) * color *
-//       (vec3(1.0,1.0,1.0) - glossycolor) *
-//       (1 - pow5(1.0f - 0.5f * AbsCosTheta(wi))) *
-//       (1 - pow5(1.0f - 0.5f * AbsCosTheta(wo)));
-//     vec3 wh = wi + wo;
-//     if (wh.x() == 0 && wh.y() == 0 && wh.z() == 0) {
-//       return(vec3(0,0,0));
-//     }
-//     wh.make_unit_vector();
-//     vec3 specular = distribution->D(wh) / (4 * std::fabs(dot(wi, wh)) *
-//         std::max(AbsCosTheta(wi), AbsCosTheta(wo))) *
-//         schlick_fresnel(dot(wi, wh), color);
-//     return(diffuse + specular);
-//   }
-//   bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng) {
-//     Float rand = rng.unif_rand();
-//     if (rand < .5) {
-//       rand *= 2;
-//       srec.is_specular = false;
-//       srec.attenuation = albedo->value(hrec.u, hrec.v, hrec.p);
-//       srec.pdf_ptr = new cosine_pdf(hrec.normal);
-//       return(true);
-//     } else {
-//       rand = 2 * (rand - 0.5f);
-//       vec3 wh = distribution->scatter(wo, rng);
-//       *wi = Reflect(wo, wh);
-//       if (!SameHemisphere(wo, *wi)) return vec3(0.f);
-//       
-//     }
-//     *pdf = Pdf(wo, *wi);
-//     return f(wo, *wi);
-//     srec.is_specular = false;
-//     srec.attenuation = albedo->value(hrec.u, hrec.v, hrec.p);
-//     srec.pdf_ptr = new cosine_pdf(hrec.normal);
-//     return(true);
-//   }
-// 
-//   texture *albedo;
-//   vec3 glossycolor;
-//   MicrofacetDistribution *distribution;
-// };
-
 class MicrofacetReflection : public material {
 public:
   MicrofacetReflection(texture* a, MicrofacetDistribution *distribution, Float ref_idx)
@@ -399,8 +340,6 @@ public:
     srec.is_specular = false;
     srec.attenuation = albedo->value(hrec.u, hrec.v, hrec.p);
     if(distribution->GetType()) {
-      // srec.pdf_ptr = new cosine_pdf(hrec.normal);
-      
       srec.pdf_ptr = new micro_trow_pdf(hrec.normal, r_in.direction(), distribution);
     } else {
       srec.pdf_ptr = new micro_beck_pdf(hrec.normal, distribution->GetAlpha(), r_in.direction());
@@ -423,15 +362,14 @@ public:
     if (normal.x() == 0 && normal.y() == 0 && normal.z() == 0) {
       return(vec3(0,0,0));
     }
-    normal = unit_vector(normal);
     Float cosine = dot(normal, wo);
     if(cosine < 0) {
       cosine = 0;
     }
-    Float F = schlick_reflection(dot(wi, normal), ri);
-    Float G = distribution->G(wo,wi);
+    vec3 F = FrCond(dot(wi, normal), vec3(0.05), vec3(3.0,4.0,5.0));
+    Float G = distribution->G(wo,wi,normal);
     Float D = distribution->D(normal);
-    return(albedo->value(rec.u, rec.v, rec.p) * F * G * D  / (4 * cosThetaI * cosThetaO) * cosine);
+    return(albedo->value(rec.u, rec.v, rec.p) * F * G * D  / (4.0 * cosThetaI * cosThetaO) * cosine );
   }
 private:
   texture *albedo;
