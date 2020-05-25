@@ -18,7 +18,7 @@ public:
     Float NdotWo = AbsCosTheta(wo);
     Float NdotWi = AbsCosTheta(wi);
     Float WOdotWh = std::fabs(dot(wo, wh));
-    return(std::fmin(1.f, std::fmin((2.f * NdotWh * NdotWo / WOdotWh), (2.f * NdotWh * NdotWi / WOdotWh))));
+    return(std::fmin(1.f, std::fmin((2.0f * NdotWh * NdotWo / WOdotWh), (2.0f * NdotWh * NdotWi / WOdotWh))));
     // return(1 / (1 + Lambda(wo) + Lambda(wi)));
   }
   Float Pdf(const vec3 &wo, const vec3 &wi) const;

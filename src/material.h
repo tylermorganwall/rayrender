@@ -362,7 +362,7 @@ public:
     if (normal.x() == 0 && normal.y() == 0 && normal.z() == 0) {
       return(vec3(0,0,0));
     }
-    Float cosine = dot(normal, wo);
+    Float cosine = dot(rec.normal, scattered.direction());
     if(cosine < 0) {
       cosine = 0;
     }
