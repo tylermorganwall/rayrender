@@ -169,7 +169,45 @@ hitable *build_scene(IntegerVector& type,
           tex = new lambertian(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))));
         }
       } else if (type(i) == 2) {
-        tex = new metal(vec3(tempvector(0),tempvector(1),tempvector(2)),tempvector(3));
+        if(isimage(i)) {
+          tex = new metal(new image_texture(textures[i],nvec[i][0],nvec[i][1],nvec[i][2]),
+                          tempvector(3), 
+                          vec3(temp_glossy(3), temp_glossy(4), temp_glossy(5)), 
+                          vec3(temp_glossy(6),temp_glossy(7),temp_glossy(8)));
+        } else if (isnoise(i)) {
+          tex = new metal(new noise_texture(noise(i),vec3(tempvector(0),tempvector(1),tempvector(2)),
+                                                 vec3(tempnoisecolor(0),tempnoisecolor(1),tempnoisecolor(2)),
+                                                 noisephase(i), noiseintensity(i)),
+                          tempvector(3), 
+                          vec3(temp_glossy(3), temp_glossy(4), temp_glossy(5)), 
+                          vec3(temp_glossy(6),temp_glossy(7),temp_glossy(8)));
+        } else if (ischeckered(i)) {
+          tex = new metal(new checker_texture(new constant_texture(vec3(tempchecker(0),tempchecker(1),tempchecker(2))),
+                                              new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))),
+                                              tempchecker(3)),
+                          tempvector(3), 
+                          vec3(temp_glossy(3), temp_glossy(4), temp_glossy(5)), 
+                          vec3(temp_glossy(6),temp_glossy(7),temp_glossy(8)));
+        } else if (isgradient(i)) {
+          tex = new metal(new gradient_texture(vec3(tempvector(0),tempvector(1),tempvector(2)),
+                                                    vec3(tempgradient(0),tempgradient(1),tempgradient(2)),
+                                                    gradient_trans(i)),
+                          tempvector(3), 
+                          vec3(temp_glossy(3), temp_glossy(4), temp_glossy(5)), 
+                          vec3(temp_glossy(6),temp_glossy(7),temp_glossy(8)));
+        } else if (is_tri_color(i)) {
+          tex = new metal(new triangle_texture(vec3(temp_tri_color(0),temp_tri_color(1),temp_tri_color(2)),
+                                                    vec3(temp_tri_color(3),temp_tri_color(4),temp_tri_color(5)),
+                                                    vec3(temp_tri_color(6),temp_tri_color(7),temp_tri_color(8))),
+                          tempvector(3), 
+                          vec3(temp_glossy(3), temp_glossy(4), temp_glossy(5)), 
+                          vec3(temp_glossy(6),temp_glossy(7),temp_glossy(8)));
+        } else {
+          tex = new metal(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))),
+                          tempvector(3), 
+                          vec3(temp_glossy(3), temp_glossy(4), temp_glossy(5)), 
+                          vec3(temp_glossy(6),temp_glossy(7),temp_glossy(8)));
+        }
       } else if (type(i) == 3) {
         tex = new dielectric(vec3(tempvector(0),tempvector(1),tempvector(2)), tempvector(3), 
                              vec3(tempvector(4),tempvector(5),tempvector(6)), 
@@ -201,30 +239,42 @@ hitable *build_scene(IntegerVector& type,
       } else if (type(i) == 6) {
         MicrofacetDistribution *dist;
         if(temp_glossy(0) == 1) {
-          dist = new TrowbridgeReitzDistribution(temp_glossy(2), temp_glossy(3), true, true);
+          dist = new TrowbridgeReitzDistribution(temp_glossy(1), temp_glossy(2), true, true);
         } else {
-          dist = new BeckmannDistribution(temp_glossy(2), temp_glossy(3), false, true);
+          dist = new BeckmannDistribution(temp_glossy(1), temp_glossy(2), false, true);
         }
         if(isimage(i)) {
-          tex = new MicrofacetReflection(new image_texture(textures[i],nvec[i][0],nvec[i][1],nvec[i][2]), dist, temp_glossy(1));
+          tex = new MicrofacetReflection(new image_texture(textures[i],nvec[i][0],nvec[i][1],nvec[i][2]), dist, 
+                                         vec3(temp_glossy(3), temp_glossy(4), temp_glossy(5)), 
+                                         vec3(temp_glossy(6),temp_glossy(7),temp_glossy(8)));
         } else if (isnoise(i)) {
           tex = new MicrofacetReflection(new noise_texture(noise(i),vec3(tempvector(0),tempvector(1),tempvector(2)),
                                                 vec3(tempnoisecolor(0),tempnoisecolor(1),tempnoisecolor(2)),
-                                                noisephase(i), noiseintensity(i)), dist, temp_glossy(1));
+                                                noisephase(i), noiseintensity(i)), dist, 
+                                                vec3(temp_glossy(3), temp_glossy(4), temp_glossy(5)), 
+                                                vec3(temp_glossy(6),temp_glossy(7),temp_glossy(8)));
         } else if (ischeckered(i)) {
           tex = new MicrofacetReflection(new checker_texture(new constant_texture(vec3(tempchecker(0),tempchecker(1),tempchecker(2))),
                                                   new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))),tempchecker(3)), 
-                                                  dist, temp_glossy(1));
+                                                  dist, 
+                                                  vec3(temp_glossy(3), temp_glossy(4), temp_glossy(5)), 
+                                                  vec3(temp_glossy(6),temp_glossy(7),temp_glossy(8)));
         }  else if (isgradient(i)) {
           tex = new MicrofacetReflection(new gradient_texture(vec3(tempvector(0),tempvector(1),tempvector(2)),
                                                    vec3(tempgradient(0),tempgradient(1),tempgradient(2)),
-                                                   gradient_trans(i)), dist, temp_glossy(1));
+                                                   gradient_trans(i)), dist, 
+                                                   vec3(temp_glossy(3), temp_glossy(4), temp_glossy(5)), 
+                                                   vec3(temp_glossy(6),temp_glossy(7),temp_glossy(8)));
         } else if (is_tri_color(i)) {
           tex = new MicrofacetReflection(new triangle_texture(vec3(temp_tri_color(0),temp_tri_color(1),temp_tri_color(2)),
                                                    vec3(temp_tri_color(3),temp_tri_color(4),temp_tri_color(5)),
-                                                   vec3(temp_tri_color(6),temp_tri_color(7),temp_tri_color(8))), dist, temp_glossy(1) );
+                                                   vec3(temp_tri_color(6),temp_tri_color(7),temp_tri_color(8))), dist, 
+                                                   vec3(temp_glossy(3), temp_glossy(4), temp_glossy(5)), 
+                                                   vec3(temp_glossy(6),temp_glossy(7),temp_glossy(8)));
         } else {
-          tex = new MicrofacetReflection(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))), dist, temp_glossy(1));
+          tex = new MicrofacetReflection(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))), dist, 
+                                         vec3(temp_glossy(3), temp_glossy(4), temp_glossy(5)), 
+                                         vec3(temp_glossy(6),temp_glossy(7),temp_glossy(8)));
         }
       }
     }

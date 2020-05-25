@@ -133,6 +133,26 @@ diffuse = function(color = "#ffffff",
 #' @param color Default `white`. The color of the sphere. Can be either
 #' a hexadecimal code, R color string, or a numeric rgb vector listing three intensities between `0` and `1`.
 #' @param fuzz  Default `0`. The roughness of the metallic surface. Maximum `1`.
+#' @param eta Default `0`. Wavelength dependent refractivity of the material (red, green, and blue channels).
+#' If single number, will be repeated across all three channels.
+#' @param kappa Default `0`. Wavelength dependent absorption of the material (red, green, and blue channels).
+#' If single number, will be repeated across all three channels.
+#' @param checkercolor Default `NA`. If not `NA`, determines the secondary color of the checkered surface. 
+#' Can be either a hexadecimal code, or a numeric rgb vector listing three intensities between `0` and `1`.
+#' @param checkerperiod Default `3`. The period of the checker pattern. Increasing this value makes the checker 
+#' pattern bigger, and decreasing it makes it smaller
+#' @param noise Default `0`. If not `0`, covers the surface in a turbulent marble pattern. This value will determine
+#' the amount of turbulence in the texture.
+#' @param noisephase Default `0`. The phase of the noise. The noise will repeat at `360`.
+#' @param noiseintensity Default `10`. Intensity of the noise.
+#' @param noisecolor Default `#000000`. The secondary color of the noise pattern.
+#' Can be either a hexadecimal code, or a numeric rgb vector listing three intensities between `0` and `1`.
+#' @param gradient_color Default `NA`. If not `NA`, creates a secondary color for a linear gradient 
+#' between the this color and color specified in `color`. Direction is determined by `gradient_transpose`.
+#' @param gradient_transpose Default `FALSE`. If `TRUE`, this will use the `v` coordinate texture instead
+#' of the `u` coordinate texture to map the gradient.
+#' @param image_texture Default `NA`. A 3-layer RGB array or filename to be used as the texture on the surface of the object.
+#' @param alpha_texture Default `NA`. A matrix or filename (specifying a greyscale image) to be used to specify the transparency.
 #' @param alpha_texture Default `NA`. A matrix or filename (specifying a greyscale image) to be used to specify the transparency.
 #' @param importance_sample Default `FALSE`. If `TRUE`, the object will be sampled explicitly during 
 #' the rendering process. If the object is particularly important in contributing to the light paths
@@ -167,22 +187,60 @@ diffuse = function(color = "#ffffff",
 #' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
 #'              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 #' }
-metal = function(color = "#ffffff", fuzz = 0,  alpha_texture = NA, 
+metal = function(color = "#ffffff", fuzz = 0,  
+                 eta = 0, kappa = 0,
+                 checkercolor = NA, checkerperiod = 3,
+                 noise = 0, noisephase = 0, noiseintensity = 10, noisecolor = "#000000",
+                 gradient_color = NA, gradient_transpose = FALSE,
+                 image_texture = NA, alpha_texture = NA,
                  importance_sample = FALSE) {
   color = convert_color(color)
   if(!is.array(alpha_texture) && !is.na(alpha_texture) && !is.character(alpha_texture)) {
     alpha_texture = NA
     warning("Alpha texture not in recognized format (array, matrix, or filename), ignoring.")
   }
+  if(all(!is.na(checkercolor))) {
+    checkercolor = convert_color(checkercolor)
+  } else {
+    checkercolor = NA
+  }
+  if(all(!is.na(gradient_color))) {
+    gradient_color = convert_color(gradient_color)
+  } else {
+    gradient_color = NA
+  }
+  noisecolor = convert_color(noisecolor)
+  if(!is.array(image_texture) && !is.na(image_texture) && !is.character(image_texture)) {
+    image_texture = NA
+    warning("Texture not in recognized format (array, matrix, or filename), ignoring.")
+  }
+  if(!is.array(alpha_texture) && !is.na(alpha_texture) && !is.character(alpha_texture)) {
+    alpha_texture = NA
+    warning("Alpha texture not in recognized format (array, matrix, or filename), ignoring.")
+  }
+  if(length(eta) == 1) {
+    eta = c(eta,eta,eta)
+  }
+  if(length(kappa) == 1) {
+    kappa = c(kappa,kappa,kappa)
+  }
+  if(length(eta) > 3 || length(eta) == 2) {
+    stop("eta must be either single number or 3-component vector")
+  }
+  if(length(kappa) > 3 || length(kappa) == 2) {
+    top("kappa must be either single number or 3-component vector")
+  }
+  glossyinfo = list(c(1, 0, 0, eta, kappa));
   new_tibble_row(list(type = "metal", 
                  properties = list(c(color,fuzz)), 
-                 checkercolor=list(NA), 
-                 gradient_color = list(NA), gradient_transpose = FALSE,
-                 noise=0, noisephase = 0, noiseintensity = 0, noisecolor = list(c(0,0,0)),
+                 checkercolor=list(c(checkercolor,checkerperiod)), 
+                 gradient_color = list(gradient_color), gradient_transpose = gradient_transpose,
+                 noise=noise, noisephase = noisephase, 
+                 noiseintensity = noiseintensity, noisecolor = list(noisecolor),
                  lightinfo = list(NA), 
-                 image = list(NA), alphaimage = list(alpha_texture), 
+                 image = list(image_texture), alphaimage = list(alpha_texture), 
                  lightintensity = NA,fog=FALSE,fogdensity=0.01,
-                 implicit_sample = importance_sample, sigma = 0, glossyinfo = list(NA)))
+                 implicit_sample = importance_sample, sigma = 0, glossyinfo = glossyinfo))
 }
 
 #' Dielectric (glass) Material
@@ -293,9 +351,17 @@ dielectric = function(color="white", refraction = 1.5,  attenuation = c(0,0,0),
 #'
 #' @param color Default `white`. The color of the surface. Can be either
 #' a hexadecimal code, R color string, or a numeric rgb vector listing three intensities between `0` and `1`.
-#' @param reflection Default `1`. The reflection coefficient. `1` is perfect reflection, `0` is no reflection.
+#' @param roughness Default `0.0001`. Roughness of the surface. Can be either a single number,
+#' or two numbers indicating an anisotropic distribution of normals. `0` has a smooth micro surface, while
+#' `1` is extremely rough. This can be used to create a wide-variety of materials (e.g. `0.0001` is shiny 
+#' metal, `0.001`-`0.01` is rough metal, `0.05`-`0.25` is glossy-diffuse, `0.3`-`1.0` is a satin-like material). 
+#' Two numbers will specify the x and y roughness separately (e.g. `roughness = c(0.01, 0.001)` gives an 
+#' etched metal effect).
+#' @param eta Default `0`. Wavelength dependent refractivity of the material (red, green, and blue channels).
+#' If single number, will be repeated across all three channels.
+#' @param kappa Default `0`. Wavelength dependent absorption of the material (red, green, and blue channels).
+#' If single number, will be repeated across all three channels.
 #' @param microfacet Default `tbr`.  Type of microfacet distribution. Alternative option `beckmann`.
-#' @param alpha Default `1`. 
 #' @param importance_sample Default `FALSE`. If `TRUE`, the object will be sampled explicitly during 
 #' the rendering process. If the object is particularly important in contributing to the light paths
 #' in the image (e.g. light sources, refracting glass ball with caustics, metal objects concentrating light),
@@ -306,18 +372,32 @@ dielectric = function(color="white", refraction = 1.5,  attenuation = c(0,0,0),
 #'
 #' @examples
 #' #Generate a checkered ground
-microfacet = function(color="white", reflection = 1.6, microfacet = "tbr", alpha = 1,
-                  importance_sample = FALSE) {
+microfacet = function(color="white", roughness = 0.0001, eta = 0, kappa = 0, 
+                      microfacet = "tbr", importance_sample = FALSE) {
   microtype = switch(microfacet, "tbr" = 1,"beckmann" = 2, 1)
-  if(length(alpha) == 1) {
-    alphax = alpha
-    alphay = alpha
+  roughness[roughness < 0] = 0
+  roughness[roughness > 1] = 1
+  if(length(roughness) == 1) {
+    alphax = roughness
+    alphay = roughness
   } else {
-    alphax = alpha[1]
-    alphay = alpha[2]
+    alphax = roughness[1]
+    alphay = roughness[2]
+  }
+  if(length(eta) == 1) {
+    eta = c(eta,eta,eta)
+  }
+  if(length(kappa) == 1) {
+    kappa = c(kappa,kappa,kappa)
+  }
+  if(length(eta) > 3 || length(eta) == 2) {
+    stop("eta must be either single number or 3-component vector")
+  }
+  if(length(kappa) > 3 || length(kappa) == 2) {
+    top("kappa must be either single number or 3-component vector")
   }
   color = convert_color(color)
-  glossyinfo = list(c(microtype, reflection, alphax, alphay));
+  glossyinfo = list(c(microtype, alphax, alphay, eta, kappa));
   new_tibble_row(list(type = "microfacet", 
                  properties = list(c(color)), 
                  gradient_color = list(NA), gradient_transpose = FALSE,

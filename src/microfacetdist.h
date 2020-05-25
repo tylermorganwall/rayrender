@@ -19,9 +19,7 @@ public:
     Float NdotWi = AbsCosTheta(wi);
     Float WOdotWh = std::fabs(dot(wo, wh));
     return(std::fmin(1.f, std::fmin((2.0f * NdotWh * NdotWo / WOdotWh), (2.0f * NdotWh * NdotWi / WOdotWh))));
-    // return(1 / (1 + Lambda(wo) + Lambda(wi)));
   }
-  Float Pdf(const vec3 &wo, const vec3 &wi) const;
   virtual Float GetAlpha() const = 0;
   virtual vec2 GetAlphas() const = 0;
   virtual bool GetType() const = 0;
@@ -37,13 +35,15 @@ protected:
 class BeckmannDistribution : public MicrofacetDistribution {
 public:
   static Float RoughnessToAlpha(Float roughness) {
-    roughness = std::fmax(roughness, (Float)1e-3);
+    roughness = std::fmax(roughness, (Float)0.0001551552);
     Float x = std::log(roughness);
     return(1.62142f + 0.819955f * x + 0.1734f * x * x +
-           0.0171201f * x * x * x + 0.000640711f * x * x * x * x);
+           0.0171201f * x * x * x + 0.000640711f * x * x * x * x - 0.009386714);
   }
-  BeckmannDistribution(Float alphax, Float alphay, bool type, bool samplevis = true)
-    : MicrofacetDistribution(samplevis), alphax(alphax), alphay(alphay),type(type) {
+  BeckmannDistribution(Float alphax_, Float alphay_, bool type, bool samplevis = true)
+    : MicrofacetDistribution(samplevis), type(type) {
+    alphax = RoughnessToAlpha(alphax_);
+    alphay = RoughnessToAlpha(alphay_);
   }
   ~BeckmannDistribution() {}
   Float D(const vec3 &wh) const;
@@ -59,18 +59,17 @@ public:
   vec3 Sample_wh(const vec3 &wo, const Float u1, const Float u2) const;
 private:
   Float Lambda(const vec3 &w) const;
-  const Float alphax, alphay;
+  Float alphax, alphay;
   bool type;
 };
 
 vec3 FrCond(Float cosi, const vec3 &eta, const vec3 &k) {
   vec3 tmp = (eta*eta + k*k) * cosi*cosi;
-  vec3 Rparl2 = (tmp - (2.f * eta * cosi) + 1) /
-                      (tmp + (2.f * eta * cosi) + 1);
+  vec3 Rparl2 = (tmp - (2.0f * eta * cosi) + vec3(1.0f)) /
+                (tmp + (2.0f * eta * cosi) + vec3(1.0f));
   vec3 tmp_f = eta*eta + k*k;
-  vec3 Rperp2 =
-        (tmp_f - (2.f * eta * cosi) + cosi*cosi) /
-        (tmp_f + (2.f * eta * cosi) + cosi*cosi);
+  vec3 Rperp2 = (tmp_f - (2.0f * eta * cosi) + cosi*cosi) /
+                (tmp_f + (2.0f * eta * cosi) + cosi*cosi);
   return((Rparl2 + Rperp2) / 2.0f);
 }
 
@@ -208,16 +207,16 @@ public:
   TrowbridgeReitzDistribution(const Float alphax_, const Float alphay_, const bool type_, bool samplevis = true)
     : MicrofacetDistribution(samplevis) {
     // type(type), alphax(alphax), alphay(alphay)
-    alphax = (alphax_);
-    alphay = (alphay_);
+    alphax = RoughnessToAlpha(alphax_);
+    alphay = RoughnessToAlpha(alphay_);
     type = type_;
   }
   ~TrowbridgeReitzDistribution() {}
   static Float RoughnessToAlpha(Float roughness) {
-    roughness = std::fmax(roughness, (Float)1e-3);
+    roughness = std::fmax(roughness, (Float)0.0001551552);
     Float x = std::log(roughness);
     return(1.62142f + 0.819955f * x + 0.1734f * x * x +
-           0.0171201f * x * x * x + 0.000640711f * x * x * x * x);
+           0.0171201f * x * x * x + 0.000640711f * x * x * x * x - 0.009386714);
   }
   Float D(const vec3 &w) const;
   Float GetAlpha() const {
@@ -262,7 +261,7 @@ static void TrowbridgeReitzSample11(Float cosTheta, Float U1, Float U2,
   // special case (normal incidence)
   if (cosTheta > .9999) {
     Float r = sqrt(U1 / (1 - U1));
-    Float phi = 6.28318530718 * U2;
+    Float phi = 2 * M_PI * U2;
     *slope_x = r * cos(phi);
     *slope_y = r * sin(phi);
     return;

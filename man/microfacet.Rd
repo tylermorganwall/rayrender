@@ -6,9 +6,10 @@
 \usage{
 microfacet(
   color = "white",
-  reflection = 1,
+  roughness = 1e-04,
+  eta = 0,
+  k = 0,
   microfacet = "tbr",
-  alpha = 1,
   importance_sample = FALSE
 )
 }
@@ -16,11 +17,20 @@ microfacet(
 \item{color}{Default `white`. The color of the surface. Can be either
 a hexadecimal code, R color string, or a numeric rgb vector listing three intensities between `0` and `1`.}
 
-\item{reflection}{Default `1`. The reflection coefficient. `1` is perfect reflection, `0` is no reflection.}
+\item{roughness}{Default `0.0001`. Roughness of the surface. Can be either a single number,
+or two numbers indicating an anisotropic distribution of normals. `0` has a smooth micro surface, while
+`1` is extremely rough. This can be used to create a wide-variety of materials (e.g. `0.0001` is shiny 
+metal, `0.001`-`0.01` is rough metal, `0.05`-`0.25` is glossy-diffuse, `0.3`-`1.0` is a satin-like material). 
+Two numbers will specify the x and y roughness separately (e.g. `roughness = c(0.01, 0.001)` gives an 
+etched metal effect).}
+
+\item{eta}{Default `0`. Wavelength dependent reflectivity of the material (red, green, and blue channels).
+If single number, will be repeated across all three channels.}
+
+\item{k}{Default `0`. Wavelength dependent absorbtion of the material (red, green, and blue channels).
+If single number, will be repeated across all three channels.}
 
 \item{microfacet}{Default `tbr`.  Type of microfacet distribution. Alternative option `beckmann`.}
-
-\item{alpha}{Default `1`.}
 
 \item{importance_sample}{Default `FALSE`. If `TRUE`, the object will be sampled explicitly during 
 the rendering process. If the object is particularly important in contributing to the light paths

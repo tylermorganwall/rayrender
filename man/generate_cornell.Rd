@@ -13,7 +13,8 @@ generate_cornell(
   sigma = 0,
   leftcolor = "#1f7326",
   rightcolor = "#a60d0d",
-  roomcolor = "#bababa"
+  roomcolor = "#bababa",
+  importance_sample = TRUE
 )
 }
 \arguments{

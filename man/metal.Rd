@@ -8,6 +8,8 @@ metal(
   color = "#ffffff",
   fuzz = 0,
   alpha_texture = NA,
+  eta = 0,
+  k = 0,
   importance_sample = FALSE
 )
 }
@@ -18,6 +20,12 @@ a hexadecimal code, R color string, or a numeric rgb vector listing three intens
 \item{fuzz}{Default `0`. The roughness of the metallic surface. Maximum `1`.}
 
 \item{alpha_texture}{Default `NA`. A matrix or filename (specifying a greyscale image) to be used to specify the transparency.}
+
+\item{eta}{Default `0`. Wavelength dependent reflectivity of the material (red, green, and blue channels).
+If single number, will be repeated across all three channels.}
+
+\item{k}{Default `0`. Wavelength dependent absorbtion of the material (red, green, and blue channels).
+If single number, will be repeated across all three channels.}
 
 \item{importance_sample}{Default `FALSE`. If `TRUE`, the object will be sampled explicitly during 
 the rendering process. If the object is particularly important in contributing to the light paths

@@ -33,62 +33,24 @@ public:
   onb uvw;
 };
 
-class micro_trow_pdf : public pdf {
+class micro_pdf : public pdf {
 public:
-  micro_trow_pdf(const vec3& w, const vec3& wi_, MicrofacetDistribution* distribution) : distribution(distribution) {
-    alphas = distribution->GetAlphas();
+  micro_pdf(const vec3& w, const vec3& wi_, MicrofacetDistribution* distribution) : distribution(distribution) {
     uvw.build_from_w(w);
     wi = -unit_vector(uvw.world_to_local(wi_));;
   }
   virtual Float value(const vec3& direction, random_gen& rng) {
     vec3 wo = unit_vector(uvw.world_to_local(direction));
-    if (!SameHemisphere(wo, wi)) {
-      return(INFINITY);
-    }
     vec3 wh = unit_vector(wi + wo);
-    return(distribution->D(wh) * distribution->G(wo, wi, wh) * std::fabs(dot(wo, wh)) / AbsCosTheta(wo));
+    return(distribution->D(wh) * distribution->G(wo,wi,wh) * AbsDot(wo, wh) );
   }
   virtual vec3 generate(random_gen& rng) {
     vec3 wh = distribution->Sample_wh(wi, rng.unif_rand(), rng.unif_rand());
-    // Float theta = atan(sqrt(-distribution->GetAlpha() * distribution->GetAlpha() * log(1.0-rng.unif_rand())));
-    // Float phi = 2 * M_PI * rng.unif_rand();
-    // return(uvw.local_to_world(vec3(sin(theta) * cos(phi),sin(theta) * sin(phi),cos(theta))));
-    
     return(uvw.local_to_world(Reflect(wi, wh)));
   }
   onb uvw;
   vec3 wi;
-  vec2 alphas;
   MicrofacetDistribution *distribution;
-};
-
-class micro_beck_pdf : public pdf {
-public:
-  micro_beck_pdf(const vec3& w, Float roughness, vec3 wo_) {
-    wo_.make_unit_vector();
-    wo = wo_;
-    a2 = roughness * roughness * roughness * roughness;
-    uvw.build_from_w(w);
-  }
-  virtual Float value(const vec3& direction, random_gen& rng) {
-    Float cosTheta = dot(unit_vector(direction), uvw.w());;
-    Float expval = (a2 - 1.0f) * cosTheta + 1;
-    Float D = a2 / (M_PI * expval * expval);
-    return(D/4);
-  }
-  virtual vec3 generate(random_gen& rng) {
-    Float theta = std::acos(std::sqrtf(1.0f / (-a2 * std::log(1.0f - rng.unif_rand()))));
-    Float phi = 2 * M_PI * rng.unif_rand();
-    vec3 wm = vec3(std::sin(theta) * std::cos(phi),
-                   std::sin(theta) * std::sin(phi),
-                   std::cos(theta));
-    wm.make_unit_vector();
-    vec3 wi = 2.0f * dot(wo, wm) * wm - wo;
-    return(uvw.local_to_world(wi));
-  }
-  onb uvw;
-  Float a2;
-  vec3 wo;
 };
 
 class hitable_pdf : public pdf {

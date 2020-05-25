@@ -116,18 +116,23 @@ class lambertian : public material {
 
 class metal : public material {
   public:
-    metal(const vec3& a, Float f) : albedo(a) { 
+    metal(texture* a, Float f, vec3 eta, vec3 k) : albedo(a), eta(eta), k(k) { 
       if (f < 1) fuzz = f; else fuzz = 1;
     }
+    ~metal() {
+      if(albedo) delete albedo;
+    }
     virtual bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng) {
-      vec3 reflected = reflect(unit_vector(r_in.direction()),hrec.normal);
+      vec3 wi = unit_vector(r_in.direction());
+      vec3 reflected = reflect(wi,hrec.normal);
       srec.specular_ray = ray(hrec.p, reflected + fuzz * rng.random_in_unit_sphere(), r_in.pri_stack, r_in.time());
-      srec.attenuation = albedo;
+      srec.attenuation = albedo->value(hrec.u, hrec.v, hrec.p) / FrCond(dot(wi, hrec.normal), eta, k);
       srec.is_specular = true;
       srec.pdf_ptr = 0;
       return(true);
     }
-    vec3 albedo;
+    texture *albedo;
+    vec3 eta, k;
     Float fuzz;
 };
 // 
@@ -329,8 +334,9 @@ vec3 f(const ray& r_in, const hit_record& rec, const ray& scattered) const {
 
 class MicrofacetReflection : public material {
 public:
-  MicrofacetReflection(texture* a, MicrofacetDistribution *distribution, Float ref_idx)
-    : albedo(a), distribution(distribution), ri(ref_idx) {}
+  MicrofacetReflection(texture* a, MicrofacetDistribution *distribution, 
+                       vec3 eta, vec3 k)
+    : albedo(a), distribution(distribution), eta(eta), k(k) {}
   ~MicrofacetReflection() {
     if(albedo) delete albedo;
     if(distribution) delete distribution;
@@ -339,11 +345,7 @@ public:
   bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng) {
     srec.is_specular = false;
     srec.attenuation = albedo->value(hrec.u, hrec.v, hrec.p);
-    if(distribution->GetType()) {
-      srec.pdf_ptr = new micro_trow_pdf(hrec.normal, r_in.direction(), distribution);
-    } else {
-      srec.pdf_ptr = new micro_beck_pdf(hrec.normal, distribution->GetAlpha(), r_in.direction());
-    }
+    srec.pdf_ptr = new micro_pdf(hrec.normal, r_in.direction(), distribution);
     return(true);
   }
 
@@ -366,15 +368,16 @@ public:
     if(cosine < 0) {
       cosine = 0;
     }
-    vec3 F = FrCond(dot(wi, normal), vec3(0.05), vec3(3.0,4.0,5.0));
+    vec3 F = FrCond(dot(wi, normal), eta, k);
     Float G = distribution->G(wo,wi,normal);
     Float D = distribution->D(normal);
-    return(albedo->value(rec.u, rec.v, rec.p) * F * G * D  / (4.0 * cosThetaI * cosThetaO) * cosine );
+    return(albedo->value(rec.u, rec.v, rec.p) * F * G * D  * cosine);
   }
 private:
   texture *albedo;
   MicrofacetDistribution *distribution;
-  Float ri;
+  vec3 eta;
+  vec3 k;
 };
 
 #endif

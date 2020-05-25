@@ -168,12 +168,19 @@ inline bool SameHemisphere(const vec3 &w, const vec3 &wp) {
   return(w.z() * wp.z() > 0);
 }
 
+
+inline Float AbsDot(const vec3 &v1, const vec3 &v2) {
+  return(std::fabsf(dot(v1,v2)));
+} 
+
 template <typename IN_T, typename OUT_T>
 inline OUT_T reinterpret_type(const IN_T in) {
   OUT_T out;
   memcpy(&out, &in, sizeof(out));
   return out;
 }
+
+
 
 
 inline Float ErfInv(Float x) {
