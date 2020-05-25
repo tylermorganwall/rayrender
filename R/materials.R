@@ -372,8 +372,13 @@ dielectric = function(color="white", refraction = 1.5,  attenuation = c(0,0,0),
 #'
 #' @examples
 #' #Generate a checkered ground
-microfacet = function(color="white", roughness = 0.0001, eta = 0, kappa = 0, 
-                      microfacet = "tbr", importance_sample = FALSE) {
+microfacet = function(color="white", roughness = 0.0001, 
+                      eta = 0, kappa = 0, microfacet = "tbr", 
+                      checkercolor = NA, checkerperiod = 3,
+                      noise = 0, noisephase = 0, noiseintensity = 10, noisecolor = "#000000",
+                      gradient_color = NA, gradient_transpose = FALSE,
+                      image_texture = NA, alpha_texture = NA,
+                      importance_sample = FALSE) {
   microtype = switch(microfacet, "tbr" = 1,"beckmann" = 2, 1)
   roughness[roughness < 0] = 0
   roughness[roughness > 1] = 1
@@ -397,13 +402,38 @@ microfacet = function(color="white", roughness = 0.0001, eta = 0, kappa = 0,
     top("kappa must be either single number or 3-component vector")
   }
   color = convert_color(color)
+  if(!is.array(alpha_texture) && !is.na(alpha_texture) && !is.character(alpha_texture)) {
+    alpha_texture = NA
+    warning("Alpha texture not in recognized format (array, matrix, or filename), ignoring.")
+  }
+  if(all(!is.na(checkercolor))) {
+    checkercolor = convert_color(checkercolor)
+  } else {
+    checkercolor = NA
+  }
+  if(all(!is.na(gradient_color))) {
+    gradient_color = convert_color(gradient_color)
+  } else {
+    gradient_color = NA
+  }
+  noisecolor = convert_color(noisecolor)
+  if(!is.array(image_texture) && !is.na(image_texture) && !is.character(image_texture)) {
+    image_texture = NA
+    warning("Texture not in recognized format (array, matrix, or filename), ignoring.")
+  }
+  if(!is.array(alpha_texture) && !is.na(alpha_texture) && !is.character(alpha_texture)) {
+    alpha_texture = NA
+    warning("Alpha texture not in recognized format (array, matrix, or filename), ignoring.")
+  }
   glossyinfo = list(c(microtype, alphax, alphay, eta, kappa));
   new_tibble_row(list(type = "microfacet", 
                  properties = list(c(color)), 
-                 gradient_color = list(NA), gradient_transpose = FALSE,
-                 checkercolor=list(NA), noise=0, noisephase = 0, noiseintensity = 0, noisecolor = list(c(0,0,0)),
-                 image = list(NA), alphaimage = list(NA), lightintensity = NA, 
-                 fog=FALSE, fogdensity=NA, implicit_sample = importance_sample, sigma = 0, glossyinfo = glossyinfo))
+                 gradient_color = list(gradient_color), gradient_transpose = FALSE,
+                 checkercolor=list(c(checkercolor,checkerperiod)), 
+                 noise=noise, noisephase = noisephase, noiseintensity = noiseintensity, noisecolor = list(noisecolor),
+                 image = list(image_texture), alphaimage = list(alpha_texture), lightintensity = NA, 
+                 fog=FALSE, fogdensity=NA, implicit_sample = importance_sample, 
+                 sigma = 0, glossyinfo = glossyinfo))
 }
 
 #' Light Material
