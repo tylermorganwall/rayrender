@@ -276,6 +276,46 @@ hitable *build_scene(IntegerVector& type,
                                          vec3(temp_glossy(3), temp_glossy(4), temp_glossy(5)), 
                                          vec3(temp_glossy(6),temp_glossy(7),temp_glossy(8)));
         }
+      } if (type(i) == 7) {
+        MicrofacetDistribution *dist;
+        if(temp_glossy(0) == 1) {
+          dist = new TrowbridgeReitzDistribution(temp_glossy(1), temp_glossy(2), true, true);
+        } else {
+          dist = new BeckmannDistribution(temp_glossy(1), temp_glossy(2), false, true);
+        }
+        if(isimage(i)) {
+          tex = new glossy(new image_texture(textures[i],nvec[i][0],nvec[i][1],nvec[i][2]), dist, 
+                           vec3(temp_glossy(3), temp_glossy(4), temp_glossy(5)), 
+                           vec3(temp_glossy(6),temp_glossy(7),temp_glossy(8)));
+        } else if (isnoise(i)) {
+          tex = new glossy(new noise_texture(noise(i),vec3(tempvector(0),tempvector(1),tempvector(2)),
+                                             vec3(tempnoisecolor(0),tempnoisecolor(1),tempnoisecolor(2)),
+                                             noisephase(i), noiseintensity(i)), dist, 
+                           vec3(temp_glossy(3), temp_glossy(4), temp_glossy(5)), 
+                           vec3(temp_glossy(6),temp_glossy(7),temp_glossy(8)));
+        } else if (ischeckered(i)) {
+          tex = new glossy(new checker_texture(new constant_texture(vec3(tempchecker(0),tempchecker(1),tempchecker(2))),
+                                               new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))),tempchecker(3)), 
+                           dist, 
+                           vec3(temp_glossy(3), temp_glossy(4), temp_glossy(5)), 
+                           vec3(temp_glossy(6),temp_glossy(7),temp_glossy(8)));
+        }  else if (isgradient(i)) {
+          tex = new glossy(new gradient_texture(vec3(tempvector(0),tempvector(1),tempvector(2)),
+                                                     vec3(tempgradient(0),tempgradient(1),tempgradient(2)),
+                                                     gradient_trans(i)), dist, 
+                           vec3(temp_glossy(3), temp_glossy(4), temp_glossy(5)), 
+                           vec3(temp_glossy(6),temp_glossy(7),temp_glossy(8)));
+        } else if (is_tri_color(i)) {
+          tex = new glossy(new triangle_texture(vec3(temp_tri_color(0),temp_tri_color(1),temp_tri_color(2)),
+                                                vec3(temp_tri_color(3),temp_tri_color(4),temp_tri_color(5)),
+                                                vec3(temp_tri_color(6),temp_tri_color(7),temp_tri_color(8))), dist, 
+                           vec3(temp_glossy(3), temp_glossy(4), temp_glossy(5)), 
+                           vec3(temp_glossy(6),temp_glossy(7),temp_glossy(8)));
+        } else {
+          tex = new glossy(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))), dist, 
+                           vec3(temp_glossy(3), temp_glossy(4), temp_glossy(5)), 
+                           vec3(temp_glossy(6),temp_glossy(7),temp_glossy(8)));
+        }
       }
     }
     if(is_shared_mat(i) && shared_materials->size() <= static_cast<size_t>(shared_id_mat(i)) ) {
