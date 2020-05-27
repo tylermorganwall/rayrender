@@ -48,15 +48,14 @@ vec3 color(const ray& r, hitable *world, hitable_list *hlist,
   vec3 final_color(0,0,0);
   vec3 throughput(1,1,1);
   float prev_t = 1;
+  ray r1 = r;
   ray r2 = r;
   for(size_t i = 0; i < max_depth; i++) {
     hit_record hrec;
     if(world->hit(r2, 0.001, FLT_MAX, hrec, rng)) { //generated hit record, world space
 #ifdef DEBUG
       myfile << i << ", " << r2.A << " ";
-      myfile << ", " << hrec.p << "\n";
-      // myfile << i << ", " << vec3(0,0,0) << "\n";
-      // myfile << i << ", " << unit_vector(r2.B) << "\n";
+      myfile << ", " << hrec.p << "\n ";
 #endif
       scatter_record srec;
       final_color += throughput * hrec.mat_ptr->emitted(r2, hrec, hrec.u, hrec.v, hrec.p);
@@ -85,10 +84,11 @@ vec3 color(const ray& r, hitable *world, hitable_list *hlist,
         //(along with the scatter direction)
         //Translates the world space point into object space point, generates ray assuring intersection, and then translates 
         //ray back into world space
+        r1 = r2;
         r2 = ray(hrec.p, p.generate(rng), r2.pri_stack, r2.time()); //scatters a ray from hit point to direction
         
         pdf_val = p.value(r2.direction(), rng); //generates a pdf value based the intersection point and the mixture pdf
-        throughput *= hrec.mat_ptr->f(r, hrec, r2) / pdf_val;
+        throughput *= hrec.mat_ptr->f(r1, hrec, r2) / pdf_val;
       } else {
         return(final_color);
       }
@@ -106,7 +106,7 @@ vec3 color(const ray& r, hitable *world, hitable_list *hlist,
 float debug_bvh(const ray& r, hitable *world, random_gen rng) {
   hit_record hrec;
   hrec.bvh_nodes = 0;
-  world->hit(r, 0.000.01, FLT_MAX, hrec, rng);
+  world->hit(r, 0.001, FLT_MAX, hrec, rng);
   return(hrec.bvh_nodes);
 }
 #endif
@@ -201,7 +201,7 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
   int nx = as<int>(camera_info["nx"]);
   int ny = as<int>(camera_info["ny"]);
   int ns = as<int>(camera_info["ns"]);
-  Float fov = as<int>(camera_info["fov"]);
+  Float fov = as<Float>(camera_info["fov"]);
   NumericVector lookfromvec = as<NumericVector>(camera_info["lookfrom"]);
   NumericVector lookatvec = as<NumericVector>(camera_info["lookat"]);
   Float aperture = as<Float>(camera_info["aperture"]);

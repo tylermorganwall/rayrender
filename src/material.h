@@ -124,9 +124,11 @@ class metal : public material {
     }
     virtual bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng) {
       vec3 wi = unit_vector(r_in.direction());
-      vec3 reflected = reflect(wi,hrec.normal);
+      vec3 reflected = reflect(wi,unit_vector(hrec.normal));
+      Float cosine = dot(reflected, hrec.normal);
+      
       srec.specular_ray = ray(hrec.p, reflected + fuzz * rng.random_in_unit_sphere(), r_in.pri_stack, r_in.time());
-      srec.attenuation = albedo->value(hrec.u, hrec.v, hrec.p) / FrCond(dot(wi, hrec.normal), eta, k);
+      srec.attenuation = albedo->value(hrec.u, hrec.v, hrec.p) * FrCond(cosine, eta, k)  ;
       srec.is_specular = true;
       srec.pdf_ptr = 0;
       return(true);
@@ -364,14 +366,14 @@ public:
     if (normal.x() == 0 && normal.y() == 0 && normal.z() == 0) {
       return(vec3(0,0,0));
     }
-    Float cosine = dot(rec.normal, scattered.direction());
+    Float cosine = dot(rec.normal, unit_vector(scattered.direction()));
     if(cosine < 0) {
       cosine = 0;
     }
     vec3 F = FrCond(dot(wi, normal), eta, k);
     Float G = distribution->G(wo,wi,normal);
     Float D = distribution->D(normal);
-    return(albedo->value(rec.u, rec.v, rec.p) * F * G * D  * cosine / (4 * AbsCosTheta(wo) * AbsCosTheta(wi)));
+    return(albedo->value(rec.u, rec.v, rec.p) * F * G * D  * cosine / (4 * CosTheta(wo) * CosTheta(wi) ));
   }
 private:
   texture *albedo;

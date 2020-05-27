@@ -42,7 +42,7 @@ public:
   virtual Float value(const vec3& direction, random_gen& rng) {
     vec3 wo = unit_vector(uvw.world_to_local(direction));
     vec3 wh = unit_vector(wi + wo);
-    return(distribution->D(wh) * distribution->G1(wo) * AbsDot(wo, wh) / (AbsCosTheta(wo) * 4 * dot(wo, wh))  );
+    return(distribution->Pdf(wo, wh) / ( 4 * dot(wo, wh) ));
   }
   virtual vec3 generate(random_gen& rng) {
     vec3 wh = distribution->Sample_wh(wi, rng.unif_rand(), rng.unif_rand());

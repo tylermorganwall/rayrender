@@ -48,7 +48,7 @@ public:
     return(std::isnan(e[0]) || std::isnan(e[1]) || std::isnan(e[2]));
   }
   
-  inline Float length() const { return sqrt(e[0]*e[0] + e[1]*e[1] + e[2]*e[2]); }
+  inline Float length() const { return std::sqrtf(e[0]*e[0] + e[1]*e[1] + e[2]*e[2]); }
   inline Float squared_length() const { return e[0]*e[0] + e[1]*e[1] + e[2]*e[2]; }
   inline vec3 pow(Float exponent) const {
     return(vec3(std::pow(e[0],exponent),std::pow(e[1],exponent),std::pow(e[2],exponent)));
@@ -59,7 +59,7 @@ public:
 };
 
 inline void vec3::make_unit_vector() {
-  Float k = 1.0 / sqrt(e[0]*e[0] + e[1]*e[1] + e[2]*e[2]);
+  Float k = 1.0 / std::sqrtf(e[0]*e[0] + e[1]*e[1] + e[2]*e[2]);
   e[0] *= k; e[1] *= k; e[2] *= k; 
 }
 
