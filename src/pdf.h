@@ -6,6 +6,7 @@
 #include "rng.h"
 #include "vec2.h"
 #include "microfacetdist.h"
+#include "hitablelist.h"
 
 class pdf {
 public: 
@@ -42,7 +43,7 @@ public:
   virtual Float value(const vec3& direction, random_gen& rng) {
     vec3 wo = unit_vector(uvw.world_to_local(direction));
     vec3 wh = unit_vector(wi + wo);
-    return(distribution->Pdf(wo, wh) / ( 4 * dot(wo, wh) ));
+    return(distribution->Pdf(wo, wi, wh) / ( 4 * dot(wo, wh) ));
   }
   virtual vec3 generate(random_gen& rng) {
     vec3 wh = distribution->Sample_wh(wi, rng.unif_rand(), rng.unif_rand());
@@ -75,14 +76,14 @@ public:
 
 class hitable_pdf : public pdf {
 public:
-  hitable_pdf(hitable *p, const vec3& origin) : ptr(p), o(origin) {}
+  hitable_pdf(hitable_list *p, const vec3& origin) : ptr(p), o(origin) {}
   virtual Float value(const vec3& direction, random_gen& rng) {
     return(ptr->pdf_value(o, direction, rng));
   }
   virtual vec3 generate(random_gen& rng) {
     return(ptr->random(o, rng)); 
   }
-  hitable *ptr;
+  hitable_list *ptr;
   vec3 o;
 };
 

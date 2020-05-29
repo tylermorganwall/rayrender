@@ -51,10 +51,10 @@ generate_cornell() \%>\%
 # Show the pig staring into a mirror, worried 
 \donttest{
 generate_cornell() \%>\%
-  add_object(pig(x=555/2-70,z=555/2+50,y=120,scale=c(80,80,80), 
+  add_object(pig(x=555/2-70,z=555/2+50,y=120,scale=c(80,80,80),
                  angle = c(0,-40,0), emotion = "worried")) \%>\%
-  add_object(xy_rect(x=450,z=450,y=250, ywidth=500, xwidth=200,  
-                 angle = c(0,45,0), material = metal())) \%>\%
+  add_object(cube(x=450,z=450,y=250, ywidth=500, xwidth=200,
+                  angle = c(0,45,0), material = metal())) \%>\%
   render_scene(parallel=TRUE, samples=500,clamp_value=10)
 }
 
@@ -69,10 +69,10 @@ for(i in 1:10) {
 }
 
 many_pigs_scene = do.call(rbind, lots_of_pigs) \%>\%
- add_object(generate_cornell(lightintensity=20)) \%>\%
+ add_object(generate_cornell(lightintensity=30, lightwidth=100)) \%>\%
  add_object(pig(z=500,x=555/2,y=400, emotion = "angry",
             scale=c(100,100,100),angle=c(30,90,0), order_rotation=c(2,1,3)))
 \donttest{
-render_scene(many_pigs_scene,parallel=TRUE,clamp_value=10, samples=500, tonemap = "reinhold")
+render_scene(many_pigs_scene,parallel=TRUE,clamp_value=10, samples=500)
 }
 }

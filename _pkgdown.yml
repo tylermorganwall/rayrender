@@ -24,6 +24,7 @@ reference:
     contents:
       - starts_with("diffuse")
       - starts_with("metal")
+      - starts_with("microfacet")
       - starts_with("dielectric")
       - starts_with("light")
   - title: "Composing Scenes"

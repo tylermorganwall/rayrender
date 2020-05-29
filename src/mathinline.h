@@ -171,7 +171,7 @@ inline bool SameHemisphere(const vec3 &w, const vec3 &wp) {
 
 
 inline Float AbsDot(const vec3 &v1, const vec3 &v2) {
-  return(std::fabsf(dot(v1,v2)));
+  return(std::fabs(dot(v1,v2)));
 } 
 
 template <typename IN_T, typename OUT_T>

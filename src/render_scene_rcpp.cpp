@@ -59,6 +59,9 @@ vec3 color(const ray& r, hitable *world, hitable_list *hlist,
 #endif
       scatter_record srec;
       final_color += throughput * hrec.mat_ptr->emitted(r2, hrec, hrec.u, hrec.v, hrec.p);
+      if(throughput.x() == 0 && throughput.y() == 0 && throughput.z() == 0) {
+        return(vec3(0,0,0));
+      }
       if(i > roulette_activate) {
         float t = std::max(throughput.x(), std::max(throughput.y(), throughput.z()));
         //From Szecsi, Szirmay-Kalos, and Kelemen
@@ -90,7 +93,7 @@ vec3 color(const ray& r, hitable *world, hitable_list *hlist,
         r2 = ray(offset_p, p.generate(rng), r2.pri_stack, r2.time()); //scatters a ray from hit point to direction
         
         pdf_val = p.value(r2.direction(), rng); //generates a pdf value based the intersection point and the mixture pdf
-        throughput *= hrec.mat_ptr->f(r1, hrec, r2) / pdf_val;
+        throughput *= dot(hrec.normal,r2.direction()) > 0 ? hrec.mat_ptr->f(r1, hrec, r2) / pdf_val : 0;
       } else {
         return(final_color);
       }
