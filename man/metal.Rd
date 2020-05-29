@@ -73,7 +73,9 @@ Single row of a tibble describing the metallic material.
 Metallic Material
 }
 \examples{
-#Generate the cornell box with a single chrome sphere in the center
+# Generate the cornell box with a single chrome sphere in the center. For other metals,
+# See the website refractiveindex.info for eta and k data, use wavelengths 5
+# 80nm (R), 530nm (G), and 430nm (B).
 scene = generate_cornell() \%>\%
   add_object(sphere(x=555/2,y=555/2,z=555/2,radius=555/8,
   material=metal(eta=c(3.2176,3.1029,2.1839), k = c(3.3018,3.33,3.0339))))

@@ -28,9 +28,10 @@ microfacet(
 a hexadecimal code, R color string, or a numeric rgb vector listing three intensities between `0` and `1`.}
 
 \item{roughness}{Default `0.0001`. Roughness of the surface, between `0` (smooth) and `1` (diffuse). 
-Can be either a single number, or two numbers indicating an anisotropic distribution of normals. `0` has a smooth micro surface, while
-`1` is extremely rough. This can be used to create a wide-variety of materials (e.g. `0.0001` is shiny 
-metal, `0.001`-`0.01` is rough metal, `0.05`-`0.25` is glossy-diffuse, `0.3`-`1.0` is a satin-like material). 
+Can be either a single number, or two numbers indicating an anisotropic distribution of normals. `0` is a smooth surface, while
+`1` is extremely rough. This can be used to create a wide-variety of materials (e.g. `0-0.01` is specular 
+metal, `0.02`-`0.1` is brushed metal, `0.1`-`0.3` is a rough metallic surface , `0.3`-`0.5` is diffuse, and 
+above that is a rough satin-like material). 
 Two numbers will specify the x and y roughness separately (e.g. `roughness = c(0.01, 0.001)` gives an 
 etched metal effect). If `0`, this defaults to the `metal()` material for faster evaluation.}
 
@@ -54,23 +55,26 @@ Single row of a tibble describing the microfacet material.
 Microfacet Material
 }
 \examples{
-#Generate a golden egg, using eta and kappa taken from physical measurements
+# Generate a golden egg, using eta and kappa taken from physical measurements
+# See the website refractiveindex.info for eta and k data, use 
+# wavelengths 580nm (R), 530nm (G), and 430nm (B).
 \donttest{
 generate_cornell() \%>\%
   add_object(ellipsoid(x=555/2,555/2,y=150, a=100,b=150,c=100,
-             material=microfacet(roughness=0.001,
+             material=microfacet(roughness=0.1,
                                  eta=c(0.216,0.42833,1.3184), kappa=c(3.239,2.4599,1.8661)))) \%>\% 
  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
              aperture=0, fov=40, parallel=TRUE)
  
 #Make the roughness anisotropic (either horizontal or vertical), adding an extra light in front
+#to show off the different microfacet orientations
 generate_cornell() \%>\%
   add_object(sphere(x=555/2,z=50,y=75,radius=20,material=light())) \%>\% 
   add_object(ellipsoid(x=555-150,555/2,y=150, a=100,b=150,c=100,
-             material=microfacet(roughness=c(0.001,0.02),
+             material=microfacet(roughness=c(0.1,0.02),
                                  eta=c(0.216,0.42833,1.3184), kappa=c(3.239,2.4599,1.8661)))) \%>\% 
  add_object(ellipsoid(x=150,555/2,y=150, a=100,b=150,c=100,
-             material=microfacet(roughness=c(0.02,0.001),
+             material=microfacet(roughness=c(0.02,0.1),
                                  eta=c(0.216,0.42833,1.3184), kappa=c(3.239,2.4599,1.8661)))) \%>\%  
  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
              aperture=0, fov=40,  parallel=TRUE)
@@ -78,10 +82,10 @@ generate_cornell() \%>\%
 #Render a rough silver R with a smaller golden egg in front
 generate_cornell() \%>\%
   add_object(obj_model(r_obj(),x=555/2,z=350,y=0, scale_obj = 200, angle=c(0,200,0),
-             material=microfacet(roughness=0.002,
+             material=microfacet(roughness=0.2,
                                  eta=c(1.1583,0.9302,0.5996), kappa=c(6.9650,6.396,5.332)))) \%>\% 
  add_object(ellipsoid(x=200,z=200,y=80, a=50,b=80,c=50,
-             material=microfacet(roughness=0.001,
+             material=microfacet(roughness=0.1,
                                  eta=c(0.216,0.42833,1.3184), kappa=c(3.239,2.4599,1.8661)))) \%>\% 
  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
              aperture=0, fov=40, parallel=TRUE)

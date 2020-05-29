@@ -165,7 +165,9 @@ diffuse = function(color = "#ffffff",
 #' @export
 #'
 #' @examples
-#' #Generate the cornell box with a single chrome sphere in the center
+#' # Generate the cornell box with a single chrome sphere in the center. For other metals,
+#' # See the website refractiveindex.info for eta and k data, use wavelengths 5
+#' # 80nm (R), 530nm (G), and 430nm (B).
 #' scene = generate_cornell() %>%
 #'   add_object(sphere(x=555/2,y=555/2,z=555/2,radius=555/8,
 #'   material=metal(eta=c(3.2176,3.1029,2.1839), k = c(3.3018,3.33,3.0339))))
@@ -367,9 +369,10 @@ dielectric = function(color="white", refraction = 1.5,  attenuation = c(0,0,0),
 #' @param color Default `white`. The color of the surface. Can be either
 #' a hexadecimal code, R color string, or a numeric rgb vector listing three intensities between `0` and `1`.
 #' @param roughness Default `0.0001`. Roughness of the surface, between `0` (smooth) and `1` (diffuse). 
-#' Can be either a single number, or two numbers indicating an anisotropic distribution of normals. `0` has a smooth micro surface, while
-#' `1` is extremely rough. This can be used to create a wide-variety of materials (e.g. `0.0001` is shiny 
-#' metal, `0.001`-`0.01` is rough metal, `0.05`-`0.25` is glossy-diffuse, `0.3`-`1.0` is a satin-like material). 
+#' Can be either a single number, or two numbers indicating an anisotropic distribution of normals. `0` is a smooth surface, while
+#' `1` is extremely rough. This can be used to create a wide-variety of materials (e.g. `0-0.01` is specular 
+#' metal, `0.02`-`0.1` is brushed metal, `0.1`-`0.3` is a rough metallic surface , `0.3`-`0.5` is diffuse, and 
+#' above that is a rough satin-like material). 
 #' Two numbers will specify the x and y roughness separately (e.g. `roughness = c(0.01, 0.001)` gives an 
 #' etched metal effect). If `0`, this defaults to the `metal()` material for faster evaluation.
 #' @param eta Default `0`. Wavelength dependent refractivity of the material (red, green, and blue channels).
@@ -386,23 +389,26 @@ dielectric = function(color="white", refraction = 1.5,  attenuation = c(0,0,0),
 #' @export
 #'
 #' @examples
-#' #Generate a golden egg, using eta and kappa taken from physical measurements
+#' # Generate a golden egg, using eta and kappa taken from physical measurements
+#' # See the website refractiveindex.info for eta and k data, use 
+#' # wavelengths 580nm (R), 530nm (G), and 430nm (B).
 #' \donttest{
 #' generate_cornell() %>%
 #'   add_object(ellipsoid(x=555/2,555/2,y=150, a=100,b=150,c=100,
-#'              material=microfacet(roughness=0.001,
+#'              material=microfacet(roughness=0.1,
 #'                                  eta=c(0.216,0.42833,1.3184), kappa=c(3.239,2.4599,1.8661)))) %>% 
 #'  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
 #'              aperture=0, fov=40, parallel=TRUE)
 #'  
 #' #Make the roughness anisotropic (either horizontal or vertical), adding an extra light in front
+#' #to show off the different microfacet orientations
 #' generate_cornell() %>%
 #'   add_object(sphere(x=555/2,z=50,y=75,radius=20,material=light())) %>% 
 #'   add_object(ellipsoid(x=555-150,555/2,y=150, a=100,b=150,c=100,
-#'              material=microfacet(roughness=c(0.001,0.02),
+#'              material=microfacet(roughness=c(0.1,0.02),
 #'                                  eta=c(0.216,0.42833,1.3184), kappa=c(3.239,2.4599,1.8661)))) %>% 
 #'  add_object(ellipsoid(x=150,555/2,y=150, a=100,b=150,c=100,
-#'              material=microfacet(roughness=c(0.02,0.001),
+#'              material=microfacet(roughness=c(0.02,0.1),
 #'                                  eta=c(0.216,0.42833,1.3184), kappa=c(3.239,2.4599,1.8661)))) %>%  
 #'  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
 #'              aperture=0, fov=40,  parallel=TRUE)
@@ -410,10 +416,10 @@ dielectric = function(color="white", refraction = 1.5,  attenuation = c(0,0,0),
 #' #Render a rough silver R with a smaller golden egg in front
 #' generate_cornell() %>%
 #'   add_object(obj_model(r_obj(),x=555/2,z=350,y=0, scale_obj = 200, angle=c(0,200,0),
-#'              material=microfacet(roughness=0.002,
+#'              material=microfacet(roughness=0.2,
 #'                                  eta=c(1.1583,0.9302,0.5996), kappa=c(6.9650,6.396,5.332)))) %>% 
 #'  add_object(ellipsoid(x=200,z=200,y=80, a=50,b=80,c=50,
-#'              material=microfacet(roughness=0.001,
+#'              material=microfacet(roughness=0.1,
 #'                                  eta=c(0.216,0.42833,1.3184), kappa=c(3.239,2.4599,1.8661)))) %>% 
 #'  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
 #'              aperture=0, fov=40, parallel=TRUE)
@@ -440,11 +446,11 @@ microfacet = function(color="white", roughness = 0.0001,
   roughness[roughness <= 0] = 0
   roughness[roughness > 1] = 1
   if(length(roughness) == 1) {
-    alphax = roughness
-    alphay = roughness
+    alphax = roughness^2
+    alphay = roughness^2
   } else {
-    alphax = roughness[1]
-    alphay = roughness[2]
+    alphax = roughness[1]^2
+    alphay = roughness[2]^2
   }
   if(length(eta) == 1) {
     eta = c(eta,eta,eta)
@@ -544,95 +550,6 @@ light = function(color = "#ffffff", intensity = 10, importance_sample = TRUE) {
                  noise=0, noisephase = 0, noiseintensity = 0, noisecolor = list(c(0,0,0)),
                  image = list(NA), alphaimage = list(NA), lightintensity = intensity,
                  fog=FALSE, fogdensity=0.01, implicit_sample = importance_sample, sigma = 0, glossyinfo = list(NA)))
-}
-
-#' Microfacet Material
-#'
-#' @param color Default `white`. The color of the surface. Can be either
-#' a hexadecimal code, R color string, or a numeric rgb vector listing three intensities between `0` and `1`.
-#' @param roughness Default `0.0001`. Roughness of the surface. Can be either a single number,
-#' or two numbers indicating an anisotropic distribution of normals. `0` has a smooth micro surface, while
-#' `1` is extremely rough. This can be used to create a wide-variety of materials (e.g. `0.0001` is shiny 
-#' metal, `0.001`-`0.01` is rough metal, `0.05`-`0.25` is glossy-diffuse, `0.3`-`1.0` is a satin-like material). 
-#' Two numbers will specify the x and y roughness separately (e.g. `roughness = c(0.01, 0.001)` gives an 
-#' etched metal effect).
-#' @param eta Default `0`. Wavelength dependent refractivity of the material (red, green, and blue channels).
-#' If single number, will be repeated across all three channels.
-#' @param kappa Default `0`. Wavelength dependent absorption of the material (red, green, and blue channels).
-#' If single number, will be repeated across all three channels.
-#' @param microfacet Default `tbr`.  Type of microfacet distribution. Alternative option `beckmann`.
-#' @param importance_sample Default `FALSE`. If `TRUE`, the object will be sampled explicitly during 
-#' the rendering process. If the object is particularly important in contributing to the light paths
-#' in the image (e.g. light sources, refracting glass ball with caustics, metal objects concentrating light),
-#' this will help with the convergence of the image.
-#'
-#' @return Single row of a tibble describing the dielectric material.
-#' @export
-#'
-#' @examples
-#' #Generate a checkered ground
-glossy = function(color="white", roughness = 0.0001, 
-                  eta = 0, kappa = 0, microfacet = "tbr", 
-                  checkercolor = NA, checkerperiod = 3,
-                  noise = 0, noisephase = 0, noiseintensity = 10, noisecolor = "#000000",
-                  gradient_color = NA, gradient_transpose = FALSE,
-                  image_texture = NA, alpha_texture = NA,
-                  importance_sample = FALSE) {
-  microtype = switch(microfacet, "tbr" = 1,"beckmann" = 2, 1)
-  roughness[roughness < 0] = 0
-  roughness[roughness > 1] = 1
-  if(length(roughness) == 1) {
-    alphax = roughness
-    alphay = roughness
-  } else {
-    alphax = roughness[1]
-    alphay = roughness[2]
-  }
-  if(length(eta) == 1) {
-    eta = c(eta,eta,eta)
-  }
-  if(length(kappa) == 1) {
-    kappa = c(kappa,kappa,kappa)
-  }
-  if(length(eta) > 3 || length(eta) == 2) {
-    stop("eta must be either single number or 3-component vector")
-  }
-  if(length(kappa) > 3 || length(kappa) == 2) {
-    top("kappa must be either single number or 3-component vector")
-  }
-  color = convert_color(color)
-  if(!is.array(alpha_texture) && !is.na(alpha_texture) && !is.character(alpha_texture)) {
-    alpha_texture = NA
-    warning("Alpha texture not in recognized format (array, matrix, or filename), ignoring.")
-  }
-  if(all(!is.na(checkercolor))) {
-    checkercolor = convert_color(checkercolor)
-  } else {
-    checkercolor = NA
-  }
-  if(all(!is.na(gradient_color))) {
-    gradient_color = convert_color(gradient_color)
-  } else {
-    gradient_color = NA
-  }
-  noisecolor = convert_color(noisecolor)
-  if(!is.array(image_texture) && !is.na(image_texture) && !is.character(image_texture)) {
-    image_texture = NA
-    warning("Texture not in recognized format (array, matrix, or filename), ignoring.")
-  }
-  if(!is.array(alpha_texture) && !is.na(alpha_texture) && !is.character(alpha_texture)) {
-    alpha_texture = NA
-    warning("Alpha texture not in recognized format (array, matrix, or filename), ignoring.")
-  }
-  glossyinfo = list(c(microtype, alphax, alphay, eta, kappa));
-  new_tibble_row(list(type = "glossy", 
-                      properties = list(c(color)), 
-                      gradient_color = list(gradient_color), gradient_transpose = FALSE,
-                      checkercolor=list(c(checkercolor,checkerperiod)), 
-                      noise=noise, noisephase = noisephase, noiseintensity = noiseintensity, noisecolor = list(noisecolor),
-                      image = list(image_texture), alphaimage = list(alpha_texture), lightintensity = NA, 
-                      fog=FALSE, fogdensity=NA, implicit_sample = importance_sample, 
-                      sigma = 0, glossyinfo = glossyinfo))
 }
 
 #' Lambertian Material (deprecated)
