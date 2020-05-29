@@ -114,10 +114,11 @@ public:
       Float ty[3];
       triangles.reserve(n+1);
       for (size_t s = 0; s < shapes.size(); s++) {
-        bool tempnormal = false;
         // Loop over faces(polygon)
         size_t index_offset = 0;
         for (size_t f = 0; f < shapes[s].mesh.num_face_vertices.size(); f++) {
+          bool tempnormal = false;
+          
           // Loop over vertices in the face.
           for (size_t v = 0; v < 3; v++) {
             // access to vertex
@@ -299,10 +300,11 @@ public:
       Float ty[3];
       triangles.reserve(n+1);
       for (size_t s = 0; s < shapes.size(); s++) {
-        bool tempnormal = false;
         // Loop over faces(polygon)
         size_t index_offset = 0;
         for (size_t f = 0; f < shapes[s].mesh.num_face_vertices.size(); f++) {
+          bool tempnormal = false;
+          
           // Loop over vertices in the face.
           for (size_t v = 0; v < 3; v++) {
             // access to vertex
@@ -417,8 +419,11 @@ public:
       vec3 normals[3];
       triangles.reserve(n+1);
       for (size_t s = 0; s < shapes.size(); s++) {
+
         size_t index_offset = 0;
         for (size_t f = 0; f < shapes[s].mesh.num_face_vertices.size(); f++) {
+          bool tempnormal = false;
+          
           for (size_t v = 0; v < 3; v++) {
             tinyobj::index_t idx = shapes[s].mesh.indices[index_offset + v];
             
@@ -426,7 +431,9 @@ public:
                            attrib.vertices[3*idx.vertex_index+1],
                            attrib.vertices[3*idx.vertex_index+2])*scale;
 
-            if(has_normals) {
+            if(has_normals  && idx.normal_index != -1) {
+              tempnormal = true;
+              
               normals[v] = vec3(attrib.normals[3*idx.normal_index+0],
                                 attrib.normals[3*idx.normal_index+1],
                                 attrib.normals[3*idx.normal_index+2]);
@@ -447,7 +454,7 @@ public:
             has_normals = false;
           }
           
-          if(has_normals) {
+          if(has_normals && tempnormal) {
             triangles.push_back(new triangle(tris[0],tris[1],tris[2],
                                              normals[0],normals[1],normals[2], 
                                              false,
@@ -486,6 +493,8 @@ public:
       for (size_t s = 0; s < shapes.size(); s++) {
         size_t index_offset = 0;
         for (size_t f = 0; f < shapes[s].mesh.num_face_vertices.size(); f++) {
+          bool tempnormal = false;
+          
           colors[0] = vec3(1,1,1);
           colors[1] = vec3(1,1,1);
           colors[2] = vec3(1,1,1);
@@ -500,7 +509,7 @@ public:
                                attrib.colors[3*idx.vertex_index+1],
                                attrib.colors[3*idx.vertex_index+2]);
             }
-            if(has_normals) {
+            if(has_normals && idx.normal_index != -1) {
               normals[v] = vec3(attrib.normals[3*idx.normal_index+0],
                                 attrib.normals[3*idx.normal_index+1],
                                 attrib.normals[3*idx.normal_index+2]);
@@ -515,11 +524,6 @@ public:
             n--;
             continue;
           }
-          if((normals[0].x() == 0 && normals[0].y() == 0 && normals[0].z() == 0) ||
-             (normals[1].x() == 0 && normals[1].y() == 0 && normals[1].z() == 0) ||
-             (normals[2].x() == 0 && normals[2].y() == 0 && normals[2].z() == 0)) {
-            has_normals = false;
-          }
           material* tex;
           if(is_lamb) {
             tex = new lambertian(new triangle_texture(colors[0],colors[1],colors[2]));
@@ -528,7 +532,7 @@ public:
                                 vertex_color_sigma);
           }
           
-          if(has_normals) {
+          if(has_normals && tempnormal) {
             triangles.push_back(new triangle(tris[0],tris[1],tris[2],
                                              normals[0],normals[1],normals[2], 
                                              true,

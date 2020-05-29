@@ -132,11 +132,12 @@ diffuse = function(color = "#ffffff",
 #'
 #' @param color Default `white`. The color of the sphere. Can be either
 #' a hexadecimal code, R color string, or a numeric rgb vector listing three intensities between `0` and `1`.
-#' @param fuzz  Default `0`. The roughness of the metallic surface. Maximum `1`.
 #' @param eta Default `0`. Wavelength dependent refractivity of the material (red, green, and blue channels).
 #' If single number, will be repeated across all three channels.
 #' @param kappa Default `0`. Wavelength dependent absorption of the material (red, green, and blue channels).
 #' If single number, will be repeated across all three channels.
+#' @param fuzz  Default `0`. Deprecated--Use the microfacet material instead, as it is designed for rough metals. 
+#' The roughness of the metallic surface. Maximum `1`.
 #' @param checkercolor Default `NA`. If not `NA`, determines the secondary color of the checkered surface. 
 #' Can be either a hexadecimal code, or a numeric rgb vector listing three intensities between `0` and `1`.
 #' @param checkerperiod Default `3`. The period of the checker pattern. Increasing this value makes the checker 
@@ -164,31 +165,45 @@ diffuse = function(color = "#ffffff",
 #' @export
 #'
 #' @examples
-#' #Generate the cornell box with a single metal sphere in the center
+#' #Generate the cornell box with a single chrome sphere in the center
 #' scene = generate_cornell() %>%
-#'   add_object(sphere(x=555/2,y=555/2,z=555/2,radius=555/8,material=metal()))
+#'   add_object(sphere(x=555/2,y=555/2,z=555/2,radius=555/8,
+#'   material=metal(eta=c(3.2176,3.1029,2.1839), k = c(3.3018,3.33,3.0339))))
 #' \donttest{
-#' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
+#' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=50,
 #'              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 #' }
-#' #Add a rotated shiny metal cube     
+#' #Add an aluminum rotated shiny metal block     
 #' scene = scene %>%
 #'   add_object(cube(x=380,y=150/2,z=200,xwidth=150,ywidth=150,zwidth=150,
-#'   material = metal(color="#8B4513"),angle=c(0,45,0)))
+#'   material = metal(eta = c(1.07,0.8946,0.523), k = c(6.7144,6.188,4.95)),angle=c(0,45,0)))
 #' \donttest{
 #' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
 #'              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 #' }
-#' #Add a brushed metal cube (setting the fuzz variable)           
+#' #Add a copper metal cube      
 #' scene = scene %>%
 #'   add_object(cube(x=150,y=150/2,z=300,xwidth=150,ywidth=150,zwidth=150,
-#'   material = metal(color="#FAFAD2",fuzz=0.1),angle=c(0,-30,0)))
+#'                   material = metal(eta = c(0.497,0.8231,1.338), 
+#'                                    k = c(2.898,2.476,2.298)),
+#'                   angle=c(0,-30,0)))
 #' \donttest{
-#' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
+#' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=50,
 #'              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 #' }
-metal = function(color = "#ffffff", fuzz = 0,  
-                 eta = 0, kappa = 0,
+#' 
+#' #Finally, let's add a lead pipe
+#' scene2 = scene %>%
+#'   add_object(cylinder(x=450,y=200,z=400,length=400,radius=30,
+#'                   material = metal(eta = c(1.44,1.78,1.9), 
+#'                                    k = c(3.18,3.36,3.43)),
+#'                   angle=c(0,-30,0)))
+#' #\donttest{
+#' render_scene(scene2, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=50,
+#'              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
+#' }
+metal = function(color = "#ffffff", 
+                 eta = 0, kappa = 0, fuzz = 0,  
                  checkercolor = NA, checkerperiod = 3,
                  noise = 0, noisephase = 0, noiseintensity = 10, noisecolor = "#000000",
                  gradient_color = NA, gradient_transpose = FALSE,
@@ -351,12 +366,12 @@ dielectric = function(color="white", refraction = 1.5,  attenuation = c(0,0,0),
 #'
 #' @param color Default `white`. The color of the surface. Can be either
 #' a hexadecimal code, R color string, or a numeric rgb vector listing three intensities between `0` and `1`.
-#' @param roughness Default `0.0001`. Roughness of the surface. Can be either a single number,
-#' or two numbers indicating an anisotropic distribution of normals. `0` has a smooth micro surface, while
+#' @param roughness Default `0.0001`. Roughness of the surface, between `0` (smooth) and `1` (diffuse). 
+#' Can be either a single number, or two numbers indicating an anisotropic distribution of normals. `0` has a smooth micro surface, while
 #' `1` is extremely rough. This can be used to create a wide-variety of materials (e.g. `0.0001` is shiny 
 #' metal, `0.001`-`0.01` is rough metal, `0.05`-`0.25` is glossy-diffuse, `0.3`-`1.0` is a satin-like material). 
 #' Two numbers will specify the x and y roughness separately (e.g. `roughness = c(0.01, 0.001)` gives an 
-#' etched metal effect).
+#' etched metal effect). If `0`, this defaults to the `metal()` material for faster evaluation.
 #' @param eta Default `0`. Wavelength dependent refractivity of the material (red, green, and blue channels).
 #' If single number, will be repeated across all three channels.
 #' @param kappa Default `0`. Wavelength dependent absorption of the material (red, green, and blue channels).
@@ -367,11 +382,53 @@ dielectric = function(color="white", refraction = 1.5,  attenuation = c(0,0,0),
 #' in the image (e.g. light sources, refracting glass ball with caustics, metal objects concentrating light),
 #' this will help with the convergence of the image.
 #'
-#' @return Single row of a tibble describing the dielectric material.
+#' @return Single row of a tibble describing the microfacet material.
 #' @export
 #'
 #' @examples
-#' #Generate a checkered ground
+#' #Generate a golden egg, using eta and kappa taken from physical measurements
+#' \donttest{
+#' generate_cornell() %>%
+#'   add_object(ellipsoid(x=555/2,555/2,y=150, a=100,b=150,c=100,
+#'              material=microfacet(roughness=0.001,
+#'                                  eta=c(0.216,0.42833,1.3184), kappa=c(3.239,2.4599,1.8661)))) %>% 
+#'  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
+#'              aperture=0, fov=40, parallel=TRUE)
+#'  
+#' #Make the roughness anisotropic (either horizontal or vertical), adding an extra light in front
+#' generate_cornell() %>%
+#'   add_object(sphere(x=555/2,z=50,y=75,radius=20,material=light())) %>% 
+#'   add_object(ellipsoid(x=555-150,555/2,y=150, a=100,b=150,c=100,
+#'              material=microfacet(roughness=c(0.001,0.02),
+#'                                  eta=c(0.216,0.42833,1.3184), kappa=c(3.239,2.4599,1.8661)))) %>% 
+#'  add_object(ellipsoid(x=150,555/2,y=150, a=100,b=150,c=100,
+#'              material=microfacet(roughness=c(0.02,0.001),
+#'                                  eta=c(0.216,0.42833,1.3184), kappa=c(3.239,2.4599,1.8661)))) %>%  
+#'  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
+#'              aperture=0, fov=40,  parallel=TRUE)
+#'
+#' #Render a rough silver R with a smaller golden egg in front
+#' generate_cornell() %>%
+#'   add_object(obj_model(r_obj(),x=555/2,z=350,y=0, scale_obj = 200, angle=c(0,200,0),
+#'              material=microfacet(roughness=0.002,
+#'                                  eta=c(1.1583,0.9302,0.5996), kappa=c(6.9650,6.396,5.332)))) %>% 
+#'  add_object(ellipsoid(x=200,z=200,y=80, a=50,b=80,c=50,
+#'              material=microfacet(roughness=0.001,
+#'                                  eta=c(0.216,0.42833,1.3184), kappa=c(3.239,2.4599,1.8661)))) %>% 
+#'  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
+#'              aperture=0, fov=40, parallel=TRUE)
+#'  
+#' #Increase the roughness
+#' generate_cornell() %>%
+#'   add_object(obj_model(r_obj(),x=555/2,z=350,y=0, scale_obj = 200, angle=c(0,200,0),
+#'              material=microfacet(roughness=0.1,
+#'                                  eta=c(1.1583,0.9302,0.5996), kappa=c(6.9650,6.396,5.332)))) %>% 
+#'  add_object(ellipsoid(x=200,z=200,y=80, a=50,b=80,c=50,
+#'              material=microfacet(roughness=0.05,
+#'                                  eta=c(0.216,0.42833,1.3184), kappa=c(3.239,2.4599,1.8661)))) %>% 
+#'  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
+#'              aperture=0, fov=40, parallel=TRUE)
+#' }
 microfacet = function(color="white", roughness = 0.0001, 
                       eta = 0, kappa = 0, microfacet = "tbr", 
                       checkercolor = NA, checkerperiod = 3,
@@ -380,7 +437,7 @@ microfacet = function(color="white", roughness = 0.0001,
                       image_texture = NA, alpha_texture = NA,
                       importance_sample = FALSE) {
   microtype = switch(microfacet, "tbr" = 1,"beckmann" = 2, 1)
-  roughness[roughness < 0] = 0
+  roughness[roughness <= 0] = 0
   roughness[roughness > 1] = 1
   if(length(roughness) == 1) {
     alphax = roughness
@@ -426,14 +483,25 @@ microfacet = function(color="white", roughness = 0.0001,
     warning("Alpha texture not in recognized format (array, matrix, or filename), ignoring.")
   }
   glossyinfo = list(c(microtype, alphax, alphay, eta, kappa));
-  new_tibble_row(list(type = "microfacet", 
-                 properties = list(c(color)), 
-                 gradient_color = list(gradient_color), gradient_transpose = FALSE,
-                 checkercolor=list(c(checkercolor,checkerperiod)), 
-                 noise=noise, noisephase = noisephase, noiseintensity = noiseintensity, noisecolor = list(noisecolor),
-                 image = list(image_texture), alphaimage = list(alpha_texture), lightintensity = NA, 
-                 fog=FALSE, fogdensity=NA, implicit_sample = importance_sample, 
-                 sigma = 0, glossyinfo = glossyinfo))
+  if(alphax == 0 && alphay == 0) {
+    new_tibble_row(list(type = "metal", 
+                        properties = list(c(color, 0)), 
+                        gradient_color = list(gradient_color), gradient_transpose = FALSE,
+                        checkercolor=list(c(checkercolor,checkerperiod)), 
+                        noise=noise, noisephase = noisephase, noiseintensity = noiseintensity, noisecolor = list(noisecolor),
+                        image = list(image_texture), alphaimage = list(alpha_texture), lightintensity = NA, 
+                        fog=FALSE, fogdensity=NA, implicit_sample = importance_sample, 
+                        sigma = 0, glossyinfo = glossyinfo))
+  } else {
+    new_tibble_row(list(type = "microfacet", 
+                   properties = list(c(color)), 
+                   gradient_color = list(gradient_color), gradient_transpose = FALSE,
+                   checkercolor=list(c(checkercolor,checkerperiod)), 
+                   noise=noise, noisephase = noisephase, noiseintensity = noiseintensity, noisecolor = list(noisecolor),
+                   image = list(image_texture), alphaimage = list(alpha_texture), lightintensity = NA, 
+                   fog=FALSE, fogdensity=NA, implicit_sample = importance_sample, 
+                   sigma = 0, glossyinfo = glossyinfo))
+  }
 }
 
 #' Light Material

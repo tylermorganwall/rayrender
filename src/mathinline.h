@@ -120,6 +120,7 @@ Float FrDielectric(Float cosThetaI, Float etaI, Float etaT) {
 }
 
 inline bool quadratic(Float a, Float b, Float c, Float *t0, Float *t1) {
+  // Float discrim = DifferenceOfProducts(b, b, 4 * a, c);
   double discrim = (double)b * (double)b - 4 * (double)a * (double)c;
   if (discrim < 0) {
     return(false);
@@ -176,6 +177,18 @@ inline Float AbsDot(const vec3 &v1, const vec3 &v2) {
 template <typename IN_T, typename OUT_T>
 inline OUT_T reinterpret_type(const IN_T in) {
   OUT_T out;
+  memcpy(&out, &in, sizeof(out));
+  return out;
+}
+
+inline Float int_to_float(const int in) {
+  Float out;
+  memcpy(&out, &in, sizeof(out));
+  return out;
+}
+
+inline int float_to_int(const Float in) {
+  int out;
   memcpy(&out, &in, sizeof(out));
   return out;
 }
@@ -238,18 +251,18 @@ inline vec3 Reflect(const vec3 &wo, const vec3 &n) {
   return(-wo + 2 * dot(wo, n) * n);
 }
 
-// constexpr Float origin() { return 1.0f / 32.0f; }
-// constexpr Float float_scale() { return 1.0f / 65536.0f; }
-// constexpr Float int_scale() { return 256.0f; }
-// 
-// vec3 offset_ray(const vec3 p, const vec3 n) {
-//   int of_i[3] = {(int)(int_scale() * n.x()), (int)(int_scale() * n.y()), (int)(int_scale() * n.z())};
-//   vec3 p_i(reinterpret_type<int,Float>(reinterpret_type<Float,int>(p.x())+((p.x() < 0) ? -of_i[0] : of_i[0])), 
-//            reinterpret_type<int,Float>(reinterpret_type<Float,int>(p.y())+((p.y() < 0) ? -of_i[1] : of_i[1])), 
-//            reinterpret_type<int,Float>(reinterpret_type<Float,int>(p.z())+((p.z() < 0) ? -of_i[2] : of_i[2])));
-//   return(vec3(fabs(p.x()) < origin() ? p.x() + float_scale()*n.x() : p_i.x(), 
-//               fabs(p.y()) < origin() ? p.y() + float_scale()*n.y() : p_i.y(),
-//               fabs(p.z()) < origin() ? p.z() + float_scale()*n.z() : p_i.z()));
-// }
+constexpr Float origin() { return 1.0f / 32.0f; }
+constexpr Float float_scale() { return 1.0f / 65536.0f; }
+constexpr Float int_scale() { return 256.0f; }
+
+vec3 offset_ray(const vec3 p, const vec3 n) {
+  int of_i[3] = {(int)(int_scale() * n.x()), (int)(int_scale() * n.y()), (int)(int_scale() * n.z())};
+  vec3 p_i(int_to_float(float_to_int(p.x())+((p.x() < 0) ? -of_i[0] : of_i[0])),
+           int_to_float(float_to_int(p.y())+((p.y() < 0) ? -of_i[1] : of_i[1])),
+           int_to_float(float_to_int(p.z())+((p.z() < 0) ? -of_i[2] : of_i[2])));
+  return(vec3(fabs(p.x()) < origin() ? p.x() + float_scale()*n.x() : p_i.x(),
+              fabs(p.y()) < origin() ? p.y() + float_scale()*n.y() : p_i.y(),
+              fabs(p.z()) < origin() ? p.z() + float_scale()*n.z() : p_i.z()));
+}
 
 #endif

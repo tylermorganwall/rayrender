@@ -84,8 +84,10 @@ vec3 color(const ray& r, hitable *world, hitable_list *hlist,
         //(along with the scatter direction)
         //Translates the world space point into object space point, generates ray assuring intersection, and then translates 
         //ray back into world space
+        vec3 offset_p = offset_ray(hrec.p-r2.A, hrec.normal) + r2.A;
+
         r1 = r2;
-        r2 = ray(hrec.p, p.generate(rng), r2.pri_stack, r2.time()); //scatters a ray from hit point to direction
+        r2 = ray(offset_p, p.generate(rng), r2.pri_stack, r2.time()); //scatters a ray from hit point to direction
         
         pdf_val = p.value(r2.direction(), rng); //generates a pdf value based the intersection point and the mixture pdf
         throughput *= hrec.mat_ptr->f(r1, hrec, r2) / pdf_val;
