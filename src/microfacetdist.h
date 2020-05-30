@@ -14,19 +14,18 @@ public:
     return(1 / (1 + Lambda(w)));
   }
   Float G(const vec3 &wo, const vec3 &wi, const vec3 &wh) const {
-    // Float NdotWh = AbsCosTheta(wh);
-    // Float NdotWo = AbsCosTheta(wo);
-    // Float NdotWi = AbsCosTheta(wi);
-    // Float WOdotWh = std::fabs(dot(wo, wh));
-    // return(std::fmin(1.f, std::fmin((2.0f * NdotWh * NdotWo / WOdotWh), (2.0f * NdotWh * NdotWi / WOdotWh))));
-    return(1 / (1 + Lambda(wo) + Lambda(wi)));
+    Float NdotWh = AbsCosTheta(wh);
+    Float NdotWo = AbsCosTheta(wo);
+    Float NdotWi = AbsCosTheta(wi);
+    Float WOdotWh = std::fabs(dot(wo, wh));
+    return(std::fmin(1.f, std::fmin((2.0f * NdotWh * NdotWo / WOdotWh), (2.0f * NdotWh * NdotWi / WOdotWh))));
   }
   virtual Float GetAlpha() const = 0;
   virtual vec2 GetAlphas() const = 0;
   virtual bool GetType() const = 0;
   virtual vec3 Sample_wh(const vec3 &wi, const Float u1, const Float u2) const = 0;
-  Float Pdf(const vec3 &wo, const vec3 &wh) {
-    return(D(wh) * G1(wo) * AbsDot(wo, wh) / AbsCosTheta(wo));
+  Float Pdf(const vec3 &wo,const vec3 &wi, const vec3 &wh) {
+    return(D(wh) * G(wo, wi, wh) * AbsDot(wo, wh) / AbsCosTheta(wo));
   }
 protected:
   MicrofacetDistribution(bool sampleVisibleArea) 
