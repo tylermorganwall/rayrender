@@ -62,12 +62,19 @@ public:
   }
   virtual Float value(const vec3& direction, random_gen& rng) {
     vec3 wo = unit_vector(uvw.world_to_local(direction));
+    if(wo.z() * wi.z() < 0) {
+      return(INFINITY);
+    }
     vec3 wh = unit_vector(wi + wo);
-    return(0.5f  * M_1_PI);// + distribution->D(wh) * distribution->G(wo,wi,wh) * AbsDot(wo, wh));
+    return(0.5f * (AbsCosTheta(wi) * M_1_PI + distribution->Pdf(wo, wi, wh) / (4 * dot(wo, wh))));
   }
   virtual vec3 generate(random_gen& rng) {
-    vec3 wh = distribution->Sample_wh(wi, rng.unif_rand(), rng.unif_rand());
-    return(uvw.local_to_world(Reflect(wi, wh)));
+    if(rng.unif_rand() < 0.5) {
+      vec3 wh = distribution->Sample_wh(wi, rng.unif_rand(), rng.unif_rand());
+      return(uvw.local_to_world(Reflect(wi, wh)));
+    } else {
+      return(uvw.local_to_world(rng.random_cosine_direction()));
+    }
   }
   onb uvw;
   vec3 wi;

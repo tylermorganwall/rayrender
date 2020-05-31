@@ -43,6 +43,32 @@ If single number, will be repeated across all three channels.}
 
 \item{microfacet}{Default `tbr`.  Type of microfacet distribution. Alternative option `beckmann`.}
 
+\item{checkercolor}{Default `NA`. If not `NA`, determines the secondary color of the checkered surface. 
+Can be either a hexadecimal code, or a numeric rgb vector listing three intensities between `0` and `1`.}
+
+\item{checkerperiod}{Default `3`. The period of the checker pattern. Increasing this value makes the checker 
+pattern bigger, and decreasing it makes it smaller}
+
+\item{noise}{Default `0`. If not `0`, covers the surface in a turbulent marble pattern. This value will determine
+the amount of turbulence in the texture.}
+
+\item{noisephase}{Default `0`. The phase of the noise. The noise will repeat at `360`.}
+
+\item{noiseintensity}{Default `10`. Intensity of the noise.}
+
+\item{noisecolor}{Default `#000000`. The secondary color of the noise pattern.
+Can be either a hexadecimal code, or a numeric rgb vector listing three intensities between `0` and `1`.}
+
+\item{gradient_color}{Default `NA`. If not `NA`, creates a secondary color for a linear gradient 
+between the this color and color specified in `color`. Direction is determined by `gradient_transpose`.}
+
+\item{gradient_transpose}{Default `FALSE`. If `TRUE`, this will use the `v` coordinate texture instead
+of the `u` coordinate texture to map the gradient.}
+
+\item{image_texture}{Default `NA`. A 3-layer RGB array or filename to be used as the texture on the surface of the object.}
+
+\item{alpha_texture}{Default `NA`. A matrix or filename (specifying a greyscale image) to be used to specify the transparency.}
+
 \item{importance_sample}{Default `FALSE`. If `TRUE`, the object will be sampled explicitly during 
 the rendering process. If the object is particularly important in contributing to the light paths
 in the image (e.g. light sources, refracting glass ball with caustics, metal objects concentrating light),

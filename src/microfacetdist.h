@@ -46,6 +46,8 @@ public:
     : MicrofacetDistribution(samplevis), type(type) {
     alphax = RoughnessToAlpha(alphax_);
     alphay = RoughnessToAlpha(alphay_);
+    alphax *= alphax;
+    alphay *= alphay;
   }
   ~BeckmannDistribution() {}
   Float D(const vec3 &wh) const;
@@ -210,6 +212,8 @@ public:
     : MicrofacetDistribution(samplevis) {
     alphax = RoughnessToAlpha(alphax_);
     alphay = RoughnessToAlpha(alphay_);
+    alphax *= alphax;
+    alphay *= alphay;
     type = type_;
   }
   ~TrowbridgeReitzDistribution() {}

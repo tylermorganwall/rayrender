@@ -370,10 +370,10 @@ public:
     if (normal.x() == 0 && normal.y() == 0 && normal.z() == 0) {
       return(vec3(0,0,0));
     }
-    vec3 F = FrCond(cosThetaI, eta, k);
+    vec3 F = FrCond(cosThetaO, eta, k);
     Float G = distribution->G(wo,wi,normal);
     Float D = distribution->D(normal);
-    return(albedo->value(rec.u, rec.v, rec.p) * F * G * D  * cosThetaI / (4 * CosTheta(wo) * CosTheta(wi) ));
+    return(albedo->value(rec.u, rec.v, rec.p) * F * G * D  * cosThetaO / (4 * CosTheta(wo) * CosTheta(wi) ));
   }
 private:
   texture *albedo;
@@ -395,7 +395,7 @@ public:
   bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng) {
     srec.is_specular = false;
     srec.attenuation = albedo->value(hrec.u, hrec.v, hrec.p);
-    srec.pdf_ptr = new cosine_pdf(hrec.normal);
+    srec.pdf_ptr = new glossy_pdf(hrec.normal, r_in.direction(), distribution);
     return(true);
   }
   
@@ -405,22 +405,24 @@ public:
     vec3 wi = -unit_vector(uvw.world_to_local(r_in.direction()));
     vec3 wo = unit_vector(uvw.world_to_local(scattered.direction()));
     
-    // auto pow5 = [](Float v) { return (v * v) * (v * v) * v; };
-    vec3 diffuse = //(28.0f/(23.0f*M_PI)) * 
-      albedo->value(rec.u, rec.v, rec.p); //*
-      // (vec3(1.0f) - Rs) * 
-      // (1.0 - pow5(1 - 0.5f * AbsCosTheta(wi))) *
-      // (1.0 - pow5(1 - 0.5f * AbsCosTheta(wo)));
+    auto pow5 = [](Float v) { return (v * v) * (v * v) * v; };
+    vec3 diffuse = (28.0f/(23.0f*M_PI)) * albedo->value(rec.u, rec.v, rec.p) *
+      (vec3(1.0f) - Rs) *
+      (1.0 - pow5(1 - 0.5f * AbsCosTheta(wi))) *
+      (1.0 - pow5(1 - 0.5f * AbsCosTheta(wo)));
     vec3 wh = unit_vector(wi + wo);
     if (wh.x() == 0 && wh.y() == 0 && wh.z() == 0) {
       return(vec3(0.0f));
     }
-    Float cosine  = dot(wh,wo);
-    // vec3 specular = distribution->D(wh) /
-    //   (4 * AbsDot(wi, wh) *
-    //     std::fmax(AbsCosTheta(wi), AbsCosTheta(wo))) *
-    //     SchlickFresnel(dot(wi, wh));
-    return(diffuse * cosine * M_1_PI);
+    Float cosine  = dot(wh,wi);
+    if(cosine < 0) {
+      cosine = 0;
+    }
+    vec3 specular = distribution->D(wh) /
+        (4 * AbsDot(wi, wh) *
+        std::fmax(AbsCosTheta(wi), AbsCosTheta(wo))) *
+        SchlickFresnel(dot(wo, wh));
+    return((diffuse + specular) * cosine);
   }
   vec3 SchlickFresnel(Float cosTheta) const {
     auto pow5 = [](Float v) { return (v * v) * (v * v) * v; };
