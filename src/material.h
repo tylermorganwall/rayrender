@@ -373,7 +373,7 @@ public:
     vec3 F = FrCond(cosThetaO, eta, k);
     Float G = distribution->G(wo,wi,normal);
     Float D = distribution->D(normal);
-    return(albedo->value(rec.u, rec.v, rec.p) * F * G * D  * cosThetaO / (4 * CosTheta(wo) * CosTheta(wi) ));
+    return(albedo->value(rec.u, rec.v, rec.p) * F * G * D  * cosThetaI / (4 * CosTheta(wo) * CosTheta(wi) ));
   }
 private:
   texture *albedo;

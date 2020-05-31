@@ -24,8 +24,9 @@ reference:
     contents:
       - starts_with("diffuse")
       - starts_with("metal")
-      - starts_with("microfacet")
       - starts_with("dielectric")
+      - starts_with("microfacet")
+      - starts_with("glossy")
       - starts_with("light")
   - title: "Composing Scenes"
     desc: "Function for adding objects together to form a scene."
