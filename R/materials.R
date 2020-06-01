@@ -17,6 +17,8 @@
 #' @param gradient_transpose Default `FALSE`. If `TRUE`, this will use the `v` coordinate texture instead
 #' of the `u` coordinate texture to map the gradient.
 #' @param image_texture Default `NA`. A 3-layer RGB array or filename to be used as the texture on the surface of the object.
+#' @param image_repeat Default `1`. Number of times to repeat the image across the surface.
+#' `u` and `v` repeat amount can be set independently if user passes in a length-2 vector.
 #' @param alpha_texture Default `NA`. A matrix or filename (specifying a greyscale image) to be used to specify the transparency.
 #' @param fog Default `FALSE`. If `TRUE`, the object will be a volumetric scatterer.
 #' @param fogdensity Default `0.01`. The density of the fog. Higher values will produce more opaque objects.
@@ -80,7 +82,7 @@ diffuse = function(color = "#ffffff",
                    checkercolor = NA, checkerperiod = 3,
                    noise = 0, noisephase = 0, noiseintensity = 10, noisecolor = "#000000",
                    gradient_color = NA, gradient_transpose = FALSE,
-                   image_texture = NA, alpha_texture = NA,
+                   image_texture = NA, image_repeat = 1, alpha_texture = NA,
                    fog = FALSE, fogdensity = 0.01, 
                    sigma = NULL, importance_sample = FALSE) {
   if(all(!is.na(checkercolor))) {
@@ -119,12 +121,16 @@ diffuse = function(color = "#ffffff",
   } else {
     sigma = 0
   }
+  if(length(image_repeat) == 1) {
+    image_repeat = c(image_repeat,image_repeat)
+  }
   assertthat::assert_that(checkerperiod != 0)
   new_tibble_row(list(type = type, 
                  properties = list(info), checkercolor=list(c(checkercolor,checkerperiod)), 
                  gradient_color = list(gradient_color), gradient_transpose = gradient_transpose,
                  noise=noise, noisephase = noisephase, noiseintensity = noiseintensity, noisecolor = list(noisecolor),
-                 image = list(image_texture), alphaimage = list(alpha_texture), lightintensity = NA,
+                 image = list(image_texture), image_repeat = list(image_repeat), 
+                 alphaimage = list(alpha_texture), lightintensity = NA,
                  fog=fog, fogdensity=fogdensity,implicit_sample = importance_sample, sigma = sigma, glossyinfo = list(NA)))
 }
 
@@ -153,7 +159,8 @@ diffuse = function(color = "#ffffff",
 #' @param gradient_transpose Default `FALSE`. If `TRUE`, this will use the `v` coordinate texture instead
 #' of the `u` coordinate texture to map the gradient.
 #' @param image_texture Default `NA`. A 3-layer RGB array or filename to be used as the texture on the surface of the object.
-#' @param alpha_texture Default `NA`. A matrix or filename (specifying a greyscale image) to be used to specify the transparency.
+#' @param image_repeat Default `1`. Number of times to repeat the image across the surface.
+#' `u` and `v` repeat amount can be set independently if user passes in a length-2 vector.
 #' @param alpha_texture Default `NA`. A matrix or filename (specifying a greyscale image) to be used to specify the transparency.
 #' @param importance_sample Default `FALSE`. If `TRUE`, the object will be sampled explicitly during 
 #' the rendering process. If the object is particularly important in contributing to the light paths
@@ -209,7 +216,7 @@ metal = function(color = "#ffffff",
                  checkercolor = NA, checkerperiod = 3,
                  noise = 0, noisephase = 0, noiseintensity = 10, noisecolor = "#000000",
                  gradient_color = NA, gradient_transpose = FALSE,
-                 image_texture = NA, alpha_texture = NA,
+                 image_texture = NA, image_repeat = 1, alpha_texture = NA,
                  importance_sample = FALSE) {
   color = convert_color(color)
   if(!is.array(alpha_texture) && !is.na(alpha_texture) && !is.character(alpha_texture)) {
@@ -245,7 +252,10 @@ metal = function(color = "#ffffff",
     stop("eta must be either single number or 3-component vector")
   }
   if(length(kappa) > 3 || length(kappa) == 2) {
-    top("kappa must be either single number or 3-component vector")
+    stop("kappa must be either single number or 3-component vector")
+  }
+  if(length(image_repeat) == 1) {
+    image_repeat = c(image_repeat,image_repeat)
   }
   glossyinfo = list(c(1, 0, 0, eta, kappa));
   new_tibble_row(list(type = "metal", 
@@ -255,7 +265,8 @@ metal = function(color = "#ffffff",
                  noise=noise, noisephase = noisephase, 
                  noiseintensity = noiseintensity, noisecolor = list(noisecolor),
                  lightinfo = list(NA), 
-                 image = list(image_texture), alphaimage = list(alpha_texture), 
+                 image = list(image_texture), image_repeat = list(image_repeat),
+                 alphaimage = list(alpha_texture), 
                  lightintensity = NA,fog=FALSE,fogdensity=0.01,
                  implicit_sample = importance_sample, sigma = 0, glossyinfo = glossyinfo))
 }
@@ -360,7 +371,8 @@ dielectric = function(color="white", refraction = 1.5,  attenuation = c(0,0,0),
                       checkercolor=list(NA), 
                       gradient_color = list(NA), gradient_transpose = FALSE,
                       noise=0, noisephase = 0, noiseintensity = 0, noisecolor = list(c(0,0,0)),
-                      image = list(NA), alphaimage = list(NA), lightintensity = NA, 
+                      image = list(NA), image_repeat = list(c(1,1)), 
+                      alphaimage = list(NA), lightintensity = NA, 
                       fog=FALSE, fogdensity=NA, implicit_sample = importance_sample, sigma = 0, glossyinfo = list(NA)))
 }
 
@@ -395,6 +407,8 @@ dielectric = function(color="white", refraction = 1.5,  attenuation = c(0,0,0),
 #' @param gradient_transpose Default `FALSE`. If `TRUE`, this will use the `v` coordinate texture instead
 #' of the `u` coordinate texture to map the gradient.
 #' @param image_texture Default `NA`. A 3-layer RGB array or filename to be used as the texture on the surface of the object.
+#' @param image_repeat Default `1`. Number of times to repeat the image across the surface.
+#' `u` and `v` repeat amount can be set independently if user passes in a length-2 vector.
 #' @param alpha_texture Default `NA`. A matrix or filename (specifying a greyscale image) to be used to specify the transparency.
 #' @param alpha_texture Default `NA`. A matrix or filename (specifying a greyscale image) to be used to specify the transparency.
 #' @param importance_sample Default `FALSE`. If `TRUE`, the object will be sampled explicitly during 
@@ -422,12 +436,12 @@ dielectric = function(color="white", refraction = 1.5,  attenuation = c(0,0,0),
 #' generate_cornell() %>%
 #'   add_object(sphere(x=555/2,z=50,y=75,radius=20,material=light())) %>% 
 #'   add_object(ellipsoid(x=555-150,555/2,y=150, a=100,b=150,c=100,
-#'              material=microfacet(roughness=c(0.1,0.02),
+#'              material=microfacet(roughness=c(0.3,0.1),
 #'                                  eta=c(0.216,0.42833,1.3184), kappa=c(3.239,2.4599,1.8661)))) %>% 
 #'  add_object(ellipsoid(x=150,555/2,y=150, a=100,b=150,c=100,
-#'              material=microfacet(roughness=c(0.02,0.1),
+#'              material=microfacet(roughness=c(0.1,0.3),
 #'                                  eta=c(0.216,0.42833,1.3184), kappa=c(3.239,2.4599,1.8661)))) %>%  
-#'  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
+#'  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=50,
 #'              aperture=0, fov=40,  parallel=TRUE)
 #'
 #' #Render a rough silver R with a smaller golden egg in front
@@ -457,7 +471,7 @@ microfacet = function(color="white", roughness = 0.0001,
                       checkercolor = NA, checkerperiod = 3,
                       noise = 0, noisephase = 0, noiseintensity = 10, noisecolor = "#000000",
                       gradient_color = NA, gradient_transpose = FALSE,
-                      image_texture = NA, alpha_texture = NA,
+                      image_texture = NA, image_repeat = 1, alpha_texture = NA,
                       importance_sample = FALSE) {
   microtype = switch(microfacet, "tbr" = 1,"beckmann" = 2, 1)
   roughness[roughness <= 0] = 0
@@ -479,7 +493,7 @@ microfacet = function(color="white", roughness = 0.0001,
     stop("eta must be either single number or 3-component vector")
   }
   if(length(kappa) > 3 || length(kappa) == 2) {
-    top("kappa must be either single number or 3-component vector")
+    stop("kappa must be either single number or 3-component vector")
   }
   color = convert_color(color)
   if(!is.array(alpha_texture) && !is.na(alpha_texture) && !is.character(alpha_texture)) {
@@ -505,6 +519,9 @@ microfacet = function(color="white", roughness = 0.0001,
     alpha_texture = NA
     warning("Alpha texture not in recognized format (array, matrix, or filename), ignoring.")
   }
+  if(length(image_repeat) == 1) {
+    image_repeat = c(image_repeat,image_repeat)
+  }
   glossyinfo = list(c(microtype, alphax, alphay, eta, kappa));
   if(alphax == 0 && alphay == 0) {
     new_tibble_row(list(type = "metal", 
@@ -512,7 +529,8 @@ microfacet = function(color="white", roughness = 0.0001,
                         gradient_color = list(gradient_color), gradient_transpose = FALSE,
                         checkercolor=list(c(checkercolor,checkerperiod)), 
                         noise=noise, noisephase = noisephase, noiseintensity = noiseintensity, noisecolor = list(noisecolor),
-                        image = list(image_texture), alphaimage = list(alpha_texture), lightintensity = NA, 
+                        image = list(image_texture), image_repeat = list(image_repeat), 
+                        alphaimage = list(alpha_texture), lightintensity = NA, 
                         fog=FALSE, fogdensity=NA, implicit_sample = importance_sample, 
                         sigma = 0, glossyinfo = glossyinfo))
   } else {
@@ -521,7 +539,8 @@ microfacet = function(color="white", roughness = 0.0001,
                    gradient_color = list(gradient_color), gradient_transpose = FALSE,
                    checkercolor=list(c(checkercolor,checkerperiod)), 
                    noise=noise, noisephase = noisephase, noiseintensity = noiseintensity, noisecolor = list(noisecolor),
-                   image = list(image_texture), alphaimage = list(alpha_texture), lightintensity = NA, 
+                   image = list(image_texture), image_repeat = list(image_repeat), 
+                   alphaimage = list(alpha_texture), lightintensity = NA, 
                    fog=FALSE, fogdensity=NA, implicit_sample = importance_sample, 
                    sigma = 0, glossyinfo = glossyinfo))
   }
@@ -565,7 +584,8 @@ light = function(color = "#ffffff", intensity = 10, importance_sample = TRUE) {
                  properties = list(info), checkercolor=list(NA), 
                  gradient_color = list(NA), gradient_transpose = FALSE,
                  noise=0, noisephase = 0, noiseintensity = 0, noisecolor = list(c(0,0,0)),
-                 image = list(NA), alphaimage = list(NA), lightintensity = intensity,
+                 image = list(NA), image_repeat = list(c(1,1)),
+                 alphaimage = list(NA), lightintensity = intensity,
                  fog=FALSE, fogdensity=0.01, implicit_sample = importance_sample, sigma = 0, glossyinfo = list(NA)))
 }
 
@@ -592,6 +612,8 @@ light = function(color = "#ffffff", intensity = 10, importance_sample = TRUE) {
 #' @param gradient_transpose Default `FALSE`. If `TRUE`, this will use the `v` coordinate texture instead
 #' of the `u` coordinate texture to map the gradient.
 #' @param image_texture Default `NA`. A 3-layer RGB array or filename to be used as the texture on the surface of the object.
+#' @param image_repeat Default `1`. Number of times to repeat the image across the surface.
+#' `u` and `v` repeat amount can be set independently if user passes in a length-2 vector.
 #' @param alpha_texture Default `NA`. A matrix or filename (specifying a greyscale image) to be used to specify the transparency.
 #' @param alpha_texture Default `NA`. A matrix or filename (specifying a greyscale image) to be used to specify the transparency.
 #' @param importance_sample Default `FALSE`. If `TRUE`, the object will be sampled explicitly during 
@@ -646,7 +668,7 @@ glossy = function(color="white", gloss = 1, reflectance = 0.05, microfacet = "tb
                   checkercolor = NA, checkerperiod = 3,
                   noise = 0, noisephase = 0, noiseintensity = 10, noisecolor = "#000000",
                   gradient_color = NA, gradient_transpose = FALSE,
-                  image_texture = NA, alpha_texture = NA,
+                  image_texture = NA, image_repeat = 1, alpha_texture = NA,
                   importance_sample = FALSE) {
   microtype = switch(microfacet, "tbr" = 1,"beckmann" = 2, 1)
   gloss[gloss <= 0] = 0
@@ -685,13 +707,17 @@ glossy = function(color="white", gloss = 1, reflectance = 0.05, microfacet = "tb
     alpha_texture = NA
     warning("Alpha texture not in recognized format (array, matrix, or filename), ignoring.")
   }
+  if(length(image_repeat) == 1) {
+    image_repeat = c(image_repeat,image_repeat)
+  }
   glossyinfo = list(c(microtype, alphax, alphay, reflectance, c(0,0,0)));
   new_tibble_row(list(type = "glossy", 
                       properties = list(c(color)), 
                       gradient_color = list(gradient_color), gradient_transpose = FALSE,
                       checkercolor=list(c(checkercolor,checkerperiod)), 
                       noise=noise, noisephase = noisephase, noiseintensity = noiseintensity, noisecolor = list(noisecolor),
-                      image = list(image_texture), alphaimage = list(alpha_texture), lightintensity = NA, 
+                      image = list(image_texture), image_repeat = list(image_repeat), 
+                      alphaimage = list(alpha_texture), lightintensity = NA, 
                       fog=FALSE, fogdensity=NA, implicit_sample = importance_sample, 
                       sigma = 0, glossyinfo = glossyinfo))
 }

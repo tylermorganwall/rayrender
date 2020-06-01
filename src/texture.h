@@ -72,13 +72,17 @@ public:
 class image_texture : public texture {
 public:
   image_texture() {}
-  image_texture(Float *pixels, int A, int B, int nn) : data(pixels), nx(A), ny(B), channels(nn) {}
+  image_texture(Float *pixels, int A, int B, int nn, Float repeatu, Float repeatv) : 
+    data(pixels), nx(A), ny(B), channels(nn), repeatu(repeatu), repeatv(repeatv) {}
   virtual vec3 value(Float u, Float v, const vec3& p) const;
   Float *data;
   int nx, ny, channels;
+  Float repeatu, repeatv;
 };
 
 vec3 image_texture::value(Float u, Float v, const vec3& p) const {
+  u = fmod(u * repeatu,1);
+  v = fmod(v * repeatv,1);
   int i = u * nx;
   int j = (1-v) * ny - 0.00001;
   if (i < 0) i = 0;

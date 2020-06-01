@@ -18,6 +18,7 @@ metal(
   gradient_color = NA,
   gradient_transpose = FALSE,
   image_texture = NA,
+  image_repeat = 1,
   alpha_texture = NA,
   importance_sample = FALSE
 )
@@ -58,6 +59,9 @@ between the this color and color specified in `color`. Direction is determined b
 of the `u` coordinate texture to map the gradient.}
 
 \item{image_texture}{Default `NA`. A 3-layer RGB array or filename to be used as the texture on the surface of the object.}
+
+\item{image_repeat}{Default `1`. Number of times to repeat the image across the surface.
+`u` and `v` repeat amount can be set independently if user passes in a length-2 vector.}
 
 \item{alpha_texture}{Default `NA`. A matrix or filename (specifying a greyscale image) to be used to specify the transparency.}
 

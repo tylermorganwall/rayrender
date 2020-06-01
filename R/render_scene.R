@@ -279,6 +279,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
     }
   }
   image_tex_bool = image_tex_bool | image_filename_bool
+  image_repeat = scene$image_repeat
   #alpha texture handler
   alpha_array_list = scene$alphaimage
   alpha_tex_bool = purrr::map_lgl(alpha_array_list,.f = ~is.array(.x[[1]]))
@@ -474,7 +475,8 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
                              sigmavec = sigmavec, rotate_env = rotate_env,
                              verbose = verbose, debug_channel = debug_channel,
                              shared_id_mat=material_id, is_shared_mat=material_id_bool, 
-                             min_variance = min_variance, min_adaptive_size = min_adaptive_size, glossyinfo = glossyinfo) 
+                             min_variance = min_variance, min_adaptive_size = min_adaptive_size, 
+                             glossyinfo = glossyinfo, image_repeat = image_repeat) 
   full_array = array(0,c(ncol(rgb_mat$r),nrow(rgb_mat$r),3))
   full_array[,,1] = flipud(t(rgb_mat$r))
   full_array[,,2] = flipud(t(rgb_mat$g))

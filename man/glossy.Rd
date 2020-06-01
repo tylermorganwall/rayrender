@@ -18,6 +18,7 @@ glossy(
   gradient_color = NA,
   gradient_transpose = FALSE,
   image_texture = NA,
+  image_repeat = 1,
   alpha_texture = NA,
   importance_sample = FALSE
 )
@@ -28,6 +29,8 @@ a hexadecimal code, R color string, or a numeric rgb vector listing three intens
 
 \item{gloss}{Default `0.8`. Gloss of the surface, between `1` (completely glossy) and `0` (rough glossy). 
 Can be either a single number, or two numbers indicating an anisotropic distribution of normals (as in `microfacet()`).}
+
+\item{reflectance}{Default `0.03`. The reflectivity of the surface. `1` is a full mirror, `0` is diffuse with a glossy highlight.}
 
 \item{microfacet}{Default `tbr`.  Type of microfacet distribution. Alternative option `beckmann`.}
 
@@ -54,6 +57,9 @@ between the this color and color specified in `color`. Direction is determined b
 of the `u` coordinate texture to map the gradient.}
 
 \item{image_texture}{Default `NA`. A 3-layer RGB array or filename to be used as the texture on the surface of the object.}
+
+\item{image_repeat}{Default `1`. Number of times to repeat the image across the surface.
+`u` and `v` repeat amount can be set independently if user passes in a length-2 vector.}
 
 \item{alpha_texture}{Default `NA`. A matrix or filename (specifying a greyscale image) to be used to specify the transparency.}
 
@@ -102,10 +108,10 @@ generate_ground(material=diffuse(sigma=90)) \%>\%
  
 #Add an R and a fill light (this may look familiar)
 generate_ground(material=diffuse()) \%>\%
-  add_object(sphere(y=0.2,material=glossy(color="#2b6eff"))) \%>\% 
+  add_object(sphere(y=0.2,material=glossy(color="#2b6eff",reflectance=0.05))) \%>\% 
   add_object(obj_model(r_obj(),z=1,y=-0.05,scale_obj=0.45,material=diffuse())) \%>\%
-  add_object(sphere(y=4,radius=2,material=light(intensity=7))) \%>\%
-  add_object(sphere(z=15,material=light(intensity=100))) \%>\%
+  add_object(sphere(y=6,z=1,radius=4,material=light(intensity=3))) \%>\%
+  add_object(sphere(z=15,material=light(intensity=50))) \%>\%
   render_scene(parallel=TRUE,clamp_value=10,samples=500)
 }
 }

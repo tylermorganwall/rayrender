@@ -9,6 +9,7 @@
 #' @param leftcolor Default `#1f7326` (green).
 #' @param rightcolor Default `#a60d0d` (red).
 #' @param roomcolor Default `#bababa` (light grey).
+#' @param importance_sample Default `TRUE`. Importance sample the light in the room.
 #'
 #' @return Tibble containing the scene description of the Cornell box.
 #' @export

@@ -19,6 +19,7 @@ microfacet(
   gradient_color = NA,
   gradient_transpose = FALSE,
   image_texture = NA,
+  image_repeat = 1,
   alpha_texture = NA,
   importance_sample = FALSE
 )
@@ -67,6 +68,9 @@ of the `u` coordinate texture to map the gradient.}
 
 \item{image_texture}{Default `NA`. A 3-layer RGB array or filename to be used as the texture on the surface of the object.}
 
+\item{image_repeat}{Default `1`. Number of times to repeat the image across the surface.
+`u` and `v` repeat amount can be set independently if user passes in a length-2 vector.}
+
 \item{alpha_texture}{Default `NA`. A matrix or filename (specifying a greyscale image) to be used to specify the transparency.}
 
 \item{importance_sample}{Default `FALSE`. If `TRUE`, the object will be sampled explicitly during 
@@ -97,10 +101,10 @@ generate_cornell() \%>\%
 generate_cornell() \%>\%
   add_object(sphere(x=555/2,z=50,y=75,radius=20,material=light())) \%>\% 
   add_object(ellipsoid(x=555-150,555/2,y=150, a=100,b=150,c=100,
-             material=microfacet(roughness=c(0.1,0.02),
+             material=microfacet(roughness=c(0.2,0.1),
                                  eta=c(0.216,0.42833,1.3184), kappa=c(3.239,2.4599,1.8661)))) \%>\% 
  add_object(ellipsoid(x=150,555/2,y=150, a=100,b=150,c=100,
-             material=microfacet(roughness=c(0.02,0.1),
+             material=microfacet(roughness=c(0.1,0.2),
                                  eta=c(0.216,0.42833,1.3184), kappa=c(3.239,2.4599,1.8661)))) \%>\%  
  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
              aperture=0, fov=40,  parallel=TRUE)

@@ -200,7 +200,8 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
                        NumericVector sigmavec,
                        float rotate_env, bool verbose, int debug_channel,
                        IntegerVector& shared_id_mat, LogicalVector& is_shared_mat,
-                       float min_variance, int min_adaptive_size, List glossyinfo) {
+                       float min_variance, int min_adaptive_size, List glossyinfo,
+                       List image_repeat) {
   auto startfirst = std::chrono::high_resolution_clock::now();
   //Unpack Camera Info
   int nx = as<int>(camera_info["nx"]);
@@ -296,7 +297,8 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
                                 tri_normal_bools, is_tri_color, tri_color_vert, 
                                 fileinfo, filebasedir, 
                                 scale_list, sigmavec, glossyinfo,
-                                shared_id_mat, is_shared_mat, shared_materials, rng);
+                                shared_id_mat, is_shared_mat, shared_materials,
+                                image_repeat, rng);
   auto finish = std::chrono::high_resolution_clock::now();
   if(verbose) {
     std::chrono::duration<double> elapsed = finish - start;
@@ -326,7 +328,7 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
   
   if(hasbackground) {
     background_texture_data = stbi_loadf(background[0], &nx1, &ny1, &nn1, 0);
-    background_texture = new image_texture(background_texture_data, nx1, ny1, nn1);
+    background_texture = new image_texture(background_texture_data, nx1, ny1, nn1, 1, 1);
     background_material = new diffuse_light(background_texture);
     background_sphere = new InfiniteAreaLight(nx1, ny1, world_radius*2, world_center,
                                               background_texture, background_material);

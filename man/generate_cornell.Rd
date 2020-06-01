@@ -35,6 +35,8 @@ generate_cornell(
 \item{rightcolor}{Default `#a60d0d` (red).}
 
 \item{roomcolor}{Default `#bababa` (light grey).}
+
+\item{importance_sample}{Default `TRUE`. Importance sample the light in the room.}
 }
 \value{
 Tibble containing the scene description of the Cornell box.

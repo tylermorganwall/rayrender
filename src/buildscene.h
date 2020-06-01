@@ -65,7 +65,7 @@ hitable *build_scene(IntegerVector& type,
                      CharacterVector& fileinfo, CharacterVector& filebasedir,
                      List& scale_list, NumericVector& sigma,  List &glossyinfo,
                      IntegerVector& shared_id_mat, LogicalVector& is_shared_mat,
-                     std::vector<material* >* shared_materials,
+                     std::vector<material* >* shared_materials, List& image_repeat_list,
                      random_gen& rng) {
   hitable **list = new hitable*[n + 1]; //change to vector
   LogicalVector isgradient = gradient_info["isgradient"];
@@ -90,6 +90,7 @@ hitable *build_scene(IntegerVector& type,
   NumericVector temp_tri_color;
   NumericVector temp_scales;
   NumericVector temp_glossy;
+  NumericVector temp_repeat;
   vec3 gpivot;
   vec3 gtrans;
   vec3 gorder;
@@ -110,6 +111,7 @@ hitable *build_scene(IntegerVector& type,
     order_rotation = as<NumericVector>(order_rotation_list(i));
     temp_scales = as<NumericVector>(scale_list(i));
     temp_glossy = as<NumericVector>(glossyinfo(i));
+    temp_repeat = as<NumericVector>(image_repeat_list(i));
     bool is_scaled = false;
     bool is_group_scaled = false;
     if(temp_scales[0] != 1 || temp_scales[1] != 1 || temp_scales[2] != 1) {
@@ -148,7 +150,8 @@ hitable *build_scene(IntegerVector& type,
     } else {
       if(type(i) == 1) {
         if(isimage(i)) {
-          tex = new lambertian(new image_texture(textures[i],nvec[i][0],nvec[i][1],nvec[i][2]));
+          tex = new lambertian(new image_texture(textures[i],nvec[i][0],nvec[i][1],nvec[i][2], 
+                                                 temp_repeat[0], temp_repeat[1]));
         } else if (isnoise(i)) {
           tex = new lambertian(new noise_texture(noise(i),vec3(tempvector(0),tempvector(1),tempvector(2)),
                                                  vec3(tempnoisecolor(0),tempnoisecolor(1),tempnoisecolor(2)),
@@ -170,7 +173,8 @@ hitable *build_scene(IntegerVector& type,
         }
       } else if (type(i) == 2) {
         if(isimage(i)) {
-          tex = new metal(new image_texture(textures[i],nvec[i][0],nvec[i][1],nvec[i][2]),
+          tex = new metal(new image_texture(textures[i],nvec[i][0],nvec[i][1],nvec[i][2], 
+                                            temp_repeat[0], temp_repeat[1]),
                           tempvector(3), 
                           vec3(temp_glossy(3), temp_glossy(4), temp_glossy(5)), 
                           vec3(temp_glossy(6),temp_glossy(7),temp_glossy(8)));
@@ -214,7 +218,8 @@ hitable *build_scene(IntegerVector& type,
                              tempvector(7), rng);
       } else if (type(i) == 4) {
         if(isimage(i)) {
-          tex = new orennayar(new image_texture(textures[i],nvec[i][0],nvec[i][1],nvec[i][2]), sigma(i));
+          tex = new orennayar(new image_texture(textures[i],nvec[i][0],nvec[i][1],nvec[i][2], 
+                                                temp_repeat[0], temp_repeat[1]), sigma(i));
         } else if (isnoise(i)) {
           tex = new orennayar(new noise_texture(noise(i),vec3(tempvector(0),tempvector(1),tempvector(2)),
                                                  vec3(tempnoisecolor(0),tempnoisecolor(1),tempnoisecolor(2)),
@@ -244,7 +249,8 @@ hitable *build_scene(IntegerVector& type,
           dist = new BeckmannDistribution(temp_glossy(1), temp_glossy(2), false, true);
         }
         if(isimage(i)) {
-          tex = new MicrofacetReflection(new image_texture(textures[i],nvec[i][0],nvec[i][1],nvec[i][2]), dist, 
+          tex = new MicrofacetReflection(new image_texture(textures[i],nvec[i][0],nvec[i][1],nvec[i][2], 
+                                                           temp_repeat[0], temp_repeat[1]), dist, 
                                          vec3(temp_glossy(3), temp_glossy(4), temp_glossy(5)), 
                                          vec3(temp_glossy(6),temp_glossy(7),temp_glossy(8)));
         } else if (isnoise(i)) {
@@ -284,7 +290,8 @@ hitable *build_scene(IntegerVector& type,
           dist = new BeckmannDistribution(temp_glossy(1), temp_glossy(2), false, true);
         }
         if(isimage(i)) {
-          tex = new glossy(new image_texture(textures[i],nvec[i][0],nvec[i][1],nvec[i][2]), dist, 
+          tex = new glossy(new image_texture(textures[i],nvec[i][0],nvec[i][1],nvec[i][2], 
+                                             temp_repeat[0], temp_repeat[1]), dist, 
                            vec3(temp_glossy(3), temp_glossy(4), temp_glossy(5)), 
                            vec3(temp_glossy(6),temp_glossy(7),temp_glossy(8)));
         } else if (isnoise(i)) {
