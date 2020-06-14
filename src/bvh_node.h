@@ -14,11 +14,9 @@ class bvh_node : public hitable {
     bvh_node() {}
     ~bvh_node() {
       if(left != right) {
-        // Rcpp::Rcout << "bvh delete " << typeid(*left).name() << " " << typeid(*right).name() << "\n";
         delete left;
         delete right;
       } else {
-        // Rcpp::Rcout << "bvh delete " << typeid(*left).name() << "\n";
         delete left;
       }
     }
