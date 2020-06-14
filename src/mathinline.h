@@ -120,13 +120,12 @@ Float FrDielectric(Float cosThetaI, Float etaI, Float etaT) {
 }
 
 inline bool quadratic(Float a, Float b, Float c, Float *t0, Float *t1) {
-  // Float discrim = DifferenceOfProducts(b, b, 4 * a, c);
-  double discrim = (double)b * (double)b - 4 * (double)a * (double)c;
+  Float discrim = DifferenceOfProducts(b, b, 4 * a, c);
   if (discrim < 0) {
     return(false);
   }
-  double rootDiscrim = std::sqrt(discrim);
-  double q = (b < 0) ? -0.5 * (b - rootDiscrim) : -0.5 * (b + rootDiscrim);
+  Float rootDiscrim = std::sqrt(discrim);
+  Float q = (b < 0) ? -0.5 * (b - rootDiscrim) : -0.5 * (b + rootDiscrim);
   *t0 = q / a;
   *t1 = c / q;
   if (*t0 > *t1) {

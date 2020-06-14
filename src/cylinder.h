@@ -40,7 +40,7 @@ bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
   Float a = dot(dir, dir);
   Float b = dot(oc, dir); 
   Float c = dot(oc, oc) - radius * radius;
-  Float discriminant = b * b -  a * c; 
+  Float discriminant = DifferenceOfProducts(b,b,a,c); 
   if(discriminant > 0) {
     bool is_hit = true;
     bool second_is_hit = true;
