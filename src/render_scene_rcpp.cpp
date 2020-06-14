@@ -341,7 +341,7 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
       backgroundhigh = vec3(FLT_MIN,FLT_MIN,FLT_MIN);
       backgroundlow = vec3(FLT_MIN,FLT_MIN,FLT_MIN);
     }
-    background_texture = new gradient_texture(backgroundhigh, backgroundlow, false);
+    background_texture = new gradient_texture(backgroundlow, backgroundhigh, false);
     background_material = new diffuse_light(background_texture);
     background_sphere = new InfiniteAreaLight(100, 100, world_radius*2, world_center,
                                               background_texture, background_material);
