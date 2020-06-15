@@ -16,6 +16,7 @@ typedef float Float;
 #include "tonemap.h"
 #include "infinite_area_light.h"
 #include "adaptivesampler.h"
+// #include "sampler.h"
 using namespace Rcpp;
 // [[Rcpp::plugins(cpp11)]]
 // [[Rcpp::depends(RcppThread)]]
@@ -570,9 +571,10 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
           random_gen rng_single(unif_rand() * std::pow(2,32));
           rngs.push_back(rng_single);
         }
+        // StratifiedSampler sampler(nx,ny,ns,5);
         RcppThread::ThreadPool pool(numbercores);
         auto worker = [&adaptive_pixel_sampler, 
-                       nx, ny, s, 
+                       nx, ny, s, ns,
                        &rngs, fov, 
                        &cam, &ocam, &world, &hlist,
                        clampval, max_depth, roulette_active] (int k) {
@@ -581,12 +583,20 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
            int nx_end = adaptive_pixel_sampler.pixel_chunks[k].endx;
            int ny_end = adaptive_pixel_sampler.pixel_chunks[k].endy;
            random_gen rng = rngs[k];
+           // int seed = ny_begin * nx + nx_begin;
+           // std::unique_ptr<Sampler> tileSampler = sampler->Clone(seed);
+           vec2 u2;
+           int sqrtns = sqrt(ns);
            std::vector<dielectric*> *mat_stack = new std::vector<dielectric*>;
            for(int i = nx_begin; i < nx_end; i++) {
              for(int j = ny_begin; j < ny_end; j++) {
                vec3 col(0,0,0);
-               Float u = Float(i + rng.unif_rand()) / Float(nx);
-               Float v = Float(j + rng.unif_rand()) / Float(ny);
+               u2 = vec2(rng.unif_rand(),
+                         rng.unif_rand());
+               // u2 = vec2(rng.unif_rand()/sqrtns + (s % sqrtns)/sqrtns,
+               //           rng.unif_rand()/sqrtns + (s / sqrtns)/sqrtns);
+               Float u = Float(i + u2.x()) / Float(nx);
+               Float v = Float(j + u2.y()) / Float(ny);
                ray r;
                if(fov != 0) {
                  r = cam.get_ray(u,v);

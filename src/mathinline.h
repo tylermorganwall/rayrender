@@ -264,4 +264,9 @@ vec3 offset_ray(const vec3 p, const vec3 n) {
               fabs(p.z()) < origin() ? p.z() + float_scale()*n.z() : p_i.z()));
 }
 
+inline Float Log2(Float x) {
+  const Float invLog2 = 1.442695040888963387004650940071;
+  return(std::log(x) * invLog2);
+}
+
 #endif

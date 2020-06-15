@@ -7,6 +7,11 @@
 #undef extended
 #include "vec3.h"
 
+#ifdef RAY_FLOAT_AS_DOUBLE
+static const Float OneMinusEpsilon = 0x1.fffffffffffffp-1;
+#else
+static const Float OneMinusEpsilon = 0x1.fffffep-1;
+#endif
 
 
 class random_gen {
@@ -48,6 +53,17 @@ public:
     Float x = std::cos(phi) * std::sqrt(1-z*z);
     Float y = std::sin(phi) * std::sqrt(1-z*z);
     return(vec3(x,y,z));
+  }
+  uint32_t UniformUInt32(uint32_t b) {
+    uint32_t threshold = (~b + 1u) % b;
+    while (true) {
+      uint32_t r = rng();
+      if (r >= threshold)
+        return r % b;
+    }
+  }
+  void SetSequence(unsigned int seed) {
+    rng = seed;
   }
 };
 
