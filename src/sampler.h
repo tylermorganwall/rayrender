@@ -30,7 +30,7 @@ public:
   void Request2DArray(int n);
   
   virtual bool StartNextSample();
-  virtual std::unique_ptr<Sampler> Clone(int seed) = 0;
+  // virtual std::unique_ptr<Sampler> Clone(int seed) = 0;
   virtual bool SetSampleNumber(size_t sampleNum);
   
   const size_t samplesPerPixel;
@@ -62,8 +62,8 @@ public:
   }
   bool StartNextSample();
   bool SetSampleNumber(size_t);
-  Float Get1D();
-  vec2 Get2D();
+  virtual Float Get1D();
+  virtual vec2 Get2D();
   
 protected:
   std::vector<std::vector<Float>> samples1D;
@@ -80,11 +80,35 @@ public:
   : PixelSampler(xPixelSamples * yPixelSamples, nSampledDimensions, seed),
     xPixelSamples(xPixelSamples), yPixelSamples(yPixelSamples), jitterSamples(jitterSamples) { }
   void StartPixel(const vec2 &p);
-  std::unique_ptr<Sampler> Clone(int seed);
+  // std::unique_ptr<Sampler> Clone(int seed);
 
 private:
   const int xPixelSamples, yPixelSamples;
   const bool jitterSamples;
+};
+
+class RandomSampler : public PixelSampler {
+public:
+  RandomSampler(unsigned int seed) : PixelSampler(1 * 1, 0, seed) {
+    random_gen rng2(seed);
+    rng = rng2;
+  }
+  void StartPixel(const vec2 &p) {};
+  Float Get1D() {
+    return(rng.unif_rand());
+  }
+  vec2 Get2D() {
+    return(vec2(rng.unif_rand(), rng.unif_rand()));
+  }
+  bool StartNextSample() {
+    return(true);
+  }
+  bool SetSampleNumber(size_t) {
+    return(true);
+  }
+  
+private:
+  random_gen rng;
 };
 
 #endif

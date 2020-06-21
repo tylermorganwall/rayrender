@@ -7,11 +7,14 @@
 #include "vec2.h"
 #include "microfacetdist.h"
 #include "hitablelist.h"
+#include "sampler.h"
+#include "mathinline.h"
 
 class pdf {
 public: 
   virtual Float value(const vec3& direction, random_gen& rng) = 0;
   virtual vec3 generate(random_gen& rng) = 0;
+  virtual vec3 generate(Sampler* sampler) = 0;
   virtual ~pdf(){};
 };
 
@@ -31,6 +34,9 @@ public:
   virtual vec3 generate(random_gen& rng) {
     return(uvw.local_to_world(rng.random_cosine_direction()));
   }
+  virtual vec3 generate(Sampler* sampler) {
+    return(uvw.local_to_world(rand_cosine_direction(sampler->Get2D())));
+  }
   onb uvw;
 };
 
@@ -47,6 +53,11 @@ public:
   }
   virtual vec3 generate(random_gen& rng) {
     vec3 wh = distribution->Sample_wh(wi, rng.unif_rand(), rng.unif_rand());
+    return(uvw.local_to_world(Reflect(wi, wh)));
+  }
+  virtual vec3 generate(Sampler* sampler) {
+    vec2 u = sampler->Get2D();
+    vec3 wh = distribution->Sample_wh(wi, u.x(), u.y());
     return(uvw.local_to_world(Reflect(wi, wh)));
   }
   onb uvw;
@@ -76,6 +87,15 @@ public:
       return(uvw.local_to_world(rng.random_cosine_direction()));
     }
   }
+  virtual vec3 generate(Sampler* sampler) {
+    if(sampler->Get1D() < 0.5) {
+      vec2 u = sampler->Get2D();
+      vec3 wh = distribution->Sample_wh(wi, u.x(), u.y());
+      return(uvw.local_to_world(Reflect(wi, wh)));
+    } else {
+      return(uvw.local_to_world(rand_cosine_direction(sampler->Get2D())));
+    }
+  }
   onb uvw;
   vec3 wi;
   MicrofacetDistribution *distribution;
@@ -89,6 +109,9 @@ public:
   }
   virtual vec3 generate(random_gen& rng) {
     return(ptr->random(o, rng)); 
+  }
+  virtual vec3 generate(Sampler* sampler) {
+    return(ptr->random(o, sampler)); 
   }
   hitable_list *ptr;
   vec3 o;
@@ -108,6 +131,13 @@ public:
       return(p[0]->generate(rng));
     } else {
       return(p[1]->generate(rng));
+    } 
+  }
+  virtual vec3 generate(Sampler* sampler) {
+    if(sampler->Get1D() < 0.5) {
+      return(p[0]->generate(sampler));
+    } else {
+      return(p[1]->generate(sampler));
     } 
   }
   pdf *p[2];

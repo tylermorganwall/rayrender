@@ -21,6 +21,7 @@ class sphere: public hitable {
     virtual bool bounding_box(Float t0, Float t1, aabb& box) const;
     virtual Float pdf_value(const vec3& o, const vec3& v, random_gen& rng);
     virtual vec3 random(const vec3& o, random_gen& rng);
+    virtual vec3 random(const vec3& o, Sampler* sampler);
     vec3 center;
     Float radius;
     material *mat_ptr;
@@ -104,6 +105,14 @@ vec3 sphere::random(const vec3& o, random_gen& rng) {
   onb uvw;
   uvw.build_from_w(direction);
   return(uvw.local_to_world(rng.random_to_sphere(radius,distance_squared)));
+}
+
+vec3 sphere::random(const vec3& o, Sampler* sampler) {
+  vec3 direction = center - o;
+  Float distance_squared = direction.squared_length();
+  onb uvw;
+  uvw.build_from_w(direction);
+  return(uvw.local_to_world(rand_to_sphere(radius,distance_squared, sampler->Get2D())));
 }
 
 bool sphere::bounding_box(Float t0, Float t1, aabb& box) const {

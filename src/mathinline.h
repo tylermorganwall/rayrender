@@ -35,6 +35,27 @@ inline vec3 rand_to_unit(vec2 u) {
   return(vec3(r*cos(phi),r*sin(phi),0));
 }
 
+inline vec3 rand_cosine_direction(vec2 u) {
+  Float r1 = u.x();
+  Float r2 = u.y();
+  Float z = std::sqrt(1.0-r2);
+  Float phi = 2.0 * M_PI * r1;
+  Float x = cos(phi) * std::sqrt(r2);
+  Float y = sin(phi) * std::sqrt(r2);
+  return(vec3(x, y, z));
+}
+
+inline vec3 rand_to_sphere(Float radius, Float distance_squared, vec2 u) {
+  Float r1 = u.x();
+  Float r2 = u.y();
+  Float z = 1.0 + r2 * (std::sqrt(1.0-radius * radius / distance_squared) - 1);
+  Float phi = 2.0 * M_PI * r1;
+  Float x = std::cos(phi) * std::sqrt(1-z*z);
+  Float y = std::sin(phi) * std::sqrt(1-z*z);
+  return(vec3(x,y,z));
+}
+
+
 
 template<class T>
 inline T lerp(T t, T v1, T v2) {

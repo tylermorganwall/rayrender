@@ -2,6 +2,7 @@
 #define HITABLELISTH
 
 #include "hitable.h"
+#include "sampler.h"
 
 class hitable_list: public hitable {
   public:
@@ -11,6 +12,7 @@ class hitable_list: public hitable {
     virtual bool bounding_box(Float t0, Float t1, aabb& box) const;
     virtual Float pdf_value(const vec3& o, const vec3& v, random_gen& rng);
     virtual vec3 random(const vec3& o, random_gen& rng);
+    virtual vec3 random(const vec3& o, Sampler* sampler);
     hitable **list;
     int list_size;
 };
@@ -62,6 +64,11 @@ Float hitable_list::pdf_value(const vec3& o, const vec3& v, random_gen& rng) {
 vec3 hitable_list::random(const vec3& o, random_gen& rng) {
   int index = int(rng.unif_rand() * list_size * 0.99999999);
   return(list[index]->random(o, rng));
+}
+
+vec3 hitable_list::random(const vec3& o, Sampler* sampler) {
+  int index = int(sampler->Get1D() * list_size * 0.99999999);
+  return(list[index]->random(o, sampler));
 }
 
 #endif

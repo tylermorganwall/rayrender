@@ -34,6 +34,11 @@ public:
     vec3 random_point = vec3(x0 + rng.unif_rand() * (x1 - x0), y0 + rng.unif_rand() * (y1-y0),k);
     return(random_point - o);
   }
+  virtual vec3 random(const vec3& o, Sampler* sampler) {
+    vec2 u = sampler->Get2D();
+    vec3 random_point = vec3(x0 + u.x() * (x1 - x0), y0 + u.y() * (y1-y0),k);
+    return(random_point - o);
+  }
   Float x0, x1, y0, y1, k;
   material *mp;
   alpha_texture *alpha_mask;
@@ -68,6 +73,11 @@ public:
   }
   virtual vec3 random(const vec3& o, random_gen& rng) {
     vec3 random_point = vec3(x0 + rng.unif_rand() * (x1 - x0), k, z0 + rng.unif_rand() * (z1-z0));
+    return(random_point - o);
+  }
+  virtual vec3 random(const vec3& o, Sampler* sampler) {
+    vec2 u = sampler->Get2D();
+    vec3 random_point = vec3(x0 + u.x() * (x1 - x0), k, z0 + u.y()  * (z1-z0));
     return(random_point - o);
   }
   Float x0, x1, z0, z1, k;
@@ -105,6 +115,11 @@ public:
   virtual vec3 random(const vec3& o, random_gen& rng) {
     vec3 random_point = vec3(k, y0 + rng.unif_rand() * (y1 - y0), z0 + rng.unif_rand() * (z1-z0));
     return(random_point-o);
+  }
+  virtual vec3 random(const vec3& o, Sampler* sampler) {
+    vec2 u = sampler->Get2D();
+    vec3 random_point = vec3(k, y0 + u.x() * (y1 - y0), z0 + u.y() * (z1-z0));
+    return(random_point - o);
   }
   Float y0, y1, z0, z1, k;
   material *mp;

@@ -5,6 +5,7 @@
 #include "vec3.h"
 #include "texture.h"
 #include "rng.h"
+#include "sampler.h"
 #include <Rcpp.h>
 
 class material;
@@ -38,6 +39,9 @@ class hitable {
     virtual vec3 random(const vec3& o, random_gen& rng) {
       return(vec3(0,1,0));
     }
+    virtual vec3 random(const vec3& o, Sampler* sampler) {
+      return(vec3(0,1,0));
+    }
     virtual ~hitable() {}
 };
 
@@ -65,6 +69,9 @@ public:
   vec3 random(const vec3& o, random_gen& rng) {
     return(ptr->random(o, rng));
   }
+  vec3 random(const vec3& o, Sampler* sampler) {
+    return(ptr->random(o, sampler));
+  }
   
   hitable *ptr;
 };
@@ -85,6 +92,9 @@ public:
   }
   vec3 random(const vec3& o, random_gen& rng) {
     return(ptr->random(o - offset, rng));
+  }
+  vec3 random(const vec3& o, Sampler* sampler) {
+    return(ptr->random(o - offset, sampler));
   }
   hitable *ptr;
   vec3 offset;
@@ -127,6 +137,9 @@ public:
   }
   vec3 random(const vec3& o, random_gen& rng) {
     return(ptr->random(o * inv_scale, rng));
+  }
+  vec3 random(const vec3& o, Sampler* sampler) {
+    return(ptr->random(o * inv_scale, sampler));
   }
   hitable *ptr;
   vec3 scale_factor;
@@ -180,6 +193,16 @@ public:
     o2.e[0] = cos_theta*o.x() - sin_theta*o.z();
     o2.e[2] = sin_theta*o.x() + cos_theta*o.z();
     vec3 temp = ptr->random(o2, rng);
+    vec3 temp2 = temp;
+    temp2.e[0] = cos_theta*temp.x() + sin_theta*temp.z();
+    temp2.e[2] = -sin_theta*temp.x() + cos_theta*temp.z(); 
+    return(temp2);
+  }
+  vec3 random(const vec3& o, Sampler* sampler) {
+    vec3 o2 = o;
+    o2.e[0] = cos_theta*o.x() - sin_theta*o.z();
+    o2.e[2] = sin_theta*o.x() + cos_theta*o.z();
+    vec3 temp = ptr->random(o2, sampler);
     vec3 temp2 = temp;
     temp2.e[0] = cos_theta*temp.x() + sin_theta*temp.z();
     temp2.e[2] = -sin_theta*temp.x() + cos_theta*temp.z(); 
@@ -276,6 +299,16 @@ public:
     temp2.e[2] = -sin_theta*temp.y() + cos_theta*temp.z(); 
     return(temp2);
   }
+  vec3 random(const vec3& o, Sampler* sampler) {
+    vec3 o2 = o;
+    o2.e[1] = cos_theta*o.y() - sin_theta*o.z();
+    o2.e[2] = sin_theta*o.y() + cos_theta*o.z();
+    vec3 temp = ptr->random(o2, sampler);
+    vec3 temp2 = temp;
+    temp2.e[1] = cos_theta*temp.y() + sin_theta*temp.z();
+    temp2.e[2] = -sin_theta*temp.y() + cos_theta*temp.z(); 
+    return(temp2);
+  }
   hitable *ptr;
   Float sin_theta;
   Float cos_theta;
@@ -361,6 +394,16 @@ public:
     o2.e[0] = cos_theta*o.x() - sin_theta*o.y();
     o2.e[1] = sin_theta*o.x() + cos_theta*o.y();
     vec3 temp = ptr->random(o2, rng);
+    vec3 temp2 = temp;
+    temp2.e[0] = cos_theta*temp.x() + sin_theta*temp.y();
+    temp2.e[1] = -sin_theta*temp.x() + cos_theta*temp.y(); 
+    return(temp2);
+  }
+  vec3 random(const vec3& o, Sampler* sampler) {
+    vec3 o2 = o;
+    o2.e[0] = cos_theta*o.x() - sin_theta*o.y();
+    o2.e[1] = sin_theta*o.x() + cos_theta*o.y();
+    vec3 temp = ptr->random(o2, sampler);
     vec3 temp2 = temp;
     temp2.e[0] = cos_theta*temp.x() + sin_theta*temp.y();
     temp2.e[1] = -sin_theta*temp.x() + cos_theta*temp.y(); 

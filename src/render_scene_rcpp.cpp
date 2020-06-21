@@ -54,7 +54,7 @@ inline vec3 de_nan(const vec3& c) {
 
 
 vec3 color(const ray& r, hitable *world, hitable_list *hlist,
-           size_t max_depth, size_t roulette_activate, Sampler* sampler) {
+           size_t max_depth, size_t roulette_activate, random_gen& rng, Sampler* sampler) {
 #ifdef DEBUG
   ofstream myfile;
   myfile.open("rays.txt", ios::app | ios::out);
@@ -64,9 +64,10 @@ vec3 color(const ray& r, hitable *world, hitable_list *hlist,
   float prev_t = 1;
   ray r1 = r;
   ray r2 = r;
+  bool diffuse_bounce = false;
   for(size_t i = 0; i < max_depth; i++) {
     hit_record hrec;
-    if(world->hit(r2, 0.001, FLT_MAX, hrec, sampler)) { //generated hit record, world space
+    if(world->hit(r2, 0.001, FLT_MAX, hrec, rng)) { //generated hit record, world space
 #ifdef DEBUG
       myfile << i << ", " << r2.A << " ";
       myfile << ", " << hrec.p << "\n ";
@@ -104,7 +105,13 @@ vec3 color(const ray& r, hitable *world, hitable_list *hlist,
         vec3 offset_p = offset_ray(hrec.p-r2.A, hrec.normal) + r2.A;
 
         r1 = r2;
-        r2 = ray(offset_p, p.generate(rng), r2.pri_stack, r2.time()); //scatters a ray from hit point to direction
+        if(!diffuse_bounce) {
+          diffuse_bounce = true;
+          r2 = ray(offset_p, p.generate(sampler), r2.pri_stack, r2.time()); //scatters a ray from hit point to stratified direction
+        } else {
+          r2 = ray(offset_p, p.generate(rng), r2.pri_stack, r2.time()); //scatters a ray from hit point to direction
+        }
+        // r2 = ray(offset_p, p.generate(rng), r2.pri_stack, r2.time()); //scatters a ray from hit point to direction
         
         pdf_val = p.value(r2.direction(), rng); //generates a pdf value based the intersection point and the mixture pdf
         throughput *= hrec.mat_ptr->f(r1, hrec, r2) / pdf_val;
@@ -526,16 +533,21 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
       for(int i = 0; i < ny; i++) {
         seeds[i] = unif_rand() * std::pow(2,32);
       }
-      std::vector<StratifiedSampler> samplers;
+      std::vector<random_gen > rngs;
+      std::vector<Sampler* > samplers;
       for(int i = 0; i < nx * ny; i++) {
-        StratifiedSampler strat(sqrt(ns), sqrt(ns), true, 2,  unif_rand() * std::pow(2,32));
-        strat.StartPixel(vec2(0,0));
-        strat.SetSampleNumber(0);
+        random_gen rng_single(unif_rand() * std::pow(2,32));
+        rngs.push_back(rng_single);
+        
+        Sampler* strat = new StratifiedSampler(floor(sqrt(ns)), floor(sqrt(ns)), 
+                                               true, 3, unif_rand() * std::pow(2,32));
+        strat->StartPixel(vec2(0,0));
+        strat->SetSampleNumber(0);
         samplers.push_back(strat);
       }
       RcppThread::ThreadPool pool(numbercores);
       auto worker = [&routput, &goutput, &boutput,
-                     nx, ny, ns, seeds, //&samplers, 
+                     nx, ny, ns, seeds, &samplers, 
                      fov,
                      &cam, &ocam, &world, &hlist,
                      clampval, max_depth, roulette_active, progress_bar, 
@@ -561,7 +573,7 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
            r.pri_stack = mat_stack;
            
            col += clamp(de_nan(color(r, &world, &hlist, max_depth, roulette_active, 
-                                     rng)),0,clampval);
+                                     rng, samplers[0])),0,clampval);
            mat_stack->clear();
          }
          col /= Float(ns);
@@ -575,6 +587,9 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
         pool.push(worker,j);
       }
       pool.join();
+      for(size_t i = 0; i < samplers.size(); i++) {
+        delete samplers.at(i);
+      }
     } else {
       NumericMatrix routput2(nx,ny);
       NumericMatrix goutput2(nx,ny);
@@ -590,8 +605,9 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
         random_gen rng_single(unif_rand() * std::pow(2,32));
         rngs.push_back(rng_single);
         
-        Sampler* strat = new StratifiedSampler(floor(sqrt(ns)), floor(sqrt(ns)), 
-                                true, 3, unif_rand() * std::pow(2,32));
+        Sampler* strat = new StratifiedSampler(floor(sqrt(ns)), floor(sqrt(ns)),
+                                true, 5, unif_rand() * std::pow(2,32));
+        // Sampler* strat = new RandomSampler(unif_rand() * std::pow(2,32));
         strat->StartPixel(vec2(0,0));
         strat->SetSampleNumber(0);
         samplers.push_back(strat);
@@ -630,7 +646,7 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
                r.pri_stack = mat_stack;
 
                vec3 col = clamp(de_nan(color(r, &world, &hlist, max_depth, 
-                                        roulette_active, rngs[index])),
+                                        roulette_active, rngs[index], samplers[index])),
                            0, clampval);
                mat_stack->clear();
                adaptive_pixel_sampler.add_color_main(i, j, col);
