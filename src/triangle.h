@@ -67,6 +67,14 @@ public:
     vec3 random_point((1.0 - sr1) * a + sr1 * (1.0 - r2) * b + sr1 * r2 * c);
     return(random_point - origin); 
   }
+  virtual vec3 random(const vec3& origin, Sampler* sampler) {
+    vec2 u = sampler->Get2D();
+    Float r1 = u.x();
+    Float r2 = u.y();
+    Float sr1 = sqrt(r1);
+    vec3 random_point((1.0 - sr1) * a + sr1 * (1.0 - r2) * b + sr1 * r2 * c);
+    return(random_point - origin); 
+  }
   vec3 normal;
   vec3 a, b, c, na, nb, nc;
   vec3 edge1, edge2;

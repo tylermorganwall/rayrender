@@ -34,14 +34,6 @@ using namespace Rcpp;
 #include <fstream>
 #endif
 
-// // [[Rcpp::export]]
-// List test_sampler(int nx, int ny, int ns) {
-//   StratifiedSampler strat(sqrt(ns), sqrt(ns), true, 4, unif_rand() * std::pow(2,32));
-//   strat.StartPixel(vec2(0,0));
-//   strat.SetSampleNumber(0);
-//   return(List::create(_["r"] = nx));
-// }
-
 using namespace std;
 
 inline vec3 de_nan(const vec3& c) {
@@ -239,7 +231,9 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
   NumericVector ortho_dimensions = as<NumericVector>(camera_info["ortho_dimensions"]);
   size_t max_depth = as<size_t>(camera_info["max_depth"]);
   size_t roulette_active = as<size_t>(camera_info["roulette_active_depth"]);
-
+  int sample_method = as<int>(camera_info["sample_method"]);
+  NumericVector stratified_dim = as<NumericVector>(camera_info["stratified_dim"]);
+  
   //Initialize output matrices
   NumericMatrix routput(nx,ny);
   NumericMatrix goutput(nx,ny);
@@ -533,21 +527,34 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
       for(int i = 0; i < ny; i++) {
         seeds[i] = unif_rand() * std::pow(2,32);
       }
+      if(verbose) {
+        start = std::chrono::high_resolution_clock::now();
+        if(sample_method == 0) {
+          Rcpp::Rcout << "Allocating random sampler: ";
+        } else {
+          Rcpp::Rcout << "Allocating stratified (" << 
+            stratified_dim(0)<< "x" << stratified_dim(1) << ") sampler: ";
+        }
+      }
       std::vector<random_gen > rngs;
       std::vector<Sampler* > samplers;
       for(int i = 0; i < nx * ny; i++) {
         random_gen rng_single(unif_rand() * std::pow(2,32));
         rngs.push_back(rng_single);
-        
-        Sampler* strat = new StratifiedSampler(floor(sqrt(ns)), floor(sqrt(ns)), 
-                                               true, 3, unif_rand() * std::pow(2,32));
+        Sampler* strat;
+        if(sample_method == 0) {
+          strat = new RandomSampler(unif_rand() * std::pow(2,32));
+        } else {
+          strat = new StratifiedSampler(stratified_dim(0), stratified_dim(1),
+                                        true, 5, unif_rand() * std::pow(2,32));
+        }
         strat->StartPixel(vec2(0,0));
         strat->SetSampleNumber(0);
         samplers.push_back(strat);
       }
       RcppThread::ThreadPool pool(numbercores);
       auto worker = [&routput, &goutput, &boutput,
-                     nx, ny, ns, seeds, &samplers, 
+                     nx, ny, ns, &rngs, &samplers, 
                      fov,
                      &cam, &ocam, &world, &hlist,
                      clampval, max_depth, roulette_active, progress_bar, 
@@ -556,25 +563,29 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
          RcppThread::Rcout << "Progress (" << numbercores << " core): ";
          RcppThread::Rcout << (int)((1-(double)j/double(ny)) * 100) << "%\r";
        }
-       random_gen rng(seeds[j]);
        std::vector<dielectric*> *mat_stack = new std::vector<dielectric*>;
        
        for(int i = 0; i < nx; i++) {
          vec3 col(0,0,0);
+         int index = j + ny * i;
+         
          for(int s = 0; s < ns; s++) {
-           Float u = Float(i + rng.unif_rand()) / Float(nx);
-           Float v = Float(j + rng.unif_rand()) / Float(ny);
+           vec2 u2 = samplers[index]->Get2D();
+           Float u = (Float(i) + u2.x()) / Float(nx);
+           Float v = (Float(j) + u2.y()) / Float(ny);
            ray r;
            if(fov != 0) {
-             r = cam.get_ray(u,v, rng.random_in_unit_disk(), 0);
+             r = cam.get_ray(u, v, rand_to_unit(samplers[index]->Get2D()), 
+                             samplers[index]->Get1D());
            } else {
              r = ocam.get_ray(u,v);
            }
            r.pri_stack = mat_stack;
            
            col += clamp(de_nan(color(r, &world, &hlist, max_depth, roulette_active, 
-                                     rng, samplers[0])),0,clampval);
+                                     rngs[index], samplers[index])),0,clampval);
            mat_stack->clear();
+           samplers[index]->StartNextSample();
          }
          col /= Float(ns);
          routput(i,j) = col[0];
@@ -598,19 +609,36 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
                                               min_variance, min_adaptive_size,
                                               routput, goutput, boutput,
                                               routput2, goutput2, boutput2);
-      
+      if(verbose) {
+        start = std::chrono::high_resolution_clock::now();
+        if(sample_method == 0) {
+          Rcpp::Rcout << "Allocating random sampler: ";
+        } else {
+          Rcpp::Rcout << "Allocating stratified (" << 
+            stratified_dim(0)<< "x" << stratified_dim(1) << ") sampler: ";
+        }
+      }
       std::vector<random_gen > rngs;
       std::vector<Sampler* > samplers;
       for(int i = 0; i < nx * ny; i++) {
         random_gen rng_single(unif_rand() * std::pow(2,32));
         rngs.push_back(rng_single);
-        
-        Sampler* strat = new StratifiedSampler(floor(sqrt(ns)), floor(sqrt(ns)),
-                                true, 5, unif_rand() * std::pow(2,32));
-        // Sampler* strat = new RandomSampler(unif_rand() * std::pow(2,32));
+        Sampler* strat;
+        if(sample_method == 0) {
+          strat = new RandomSampler(unif_rand() * std::pow(2,32));
+        } else {
+          strat = new StratifiedSampler(stratified_dim(0), stratified_dim(1),
+                                        true, 5, unif_rand() * std::pow(2,32));
+        }
         strat->StartPixel(vec2(0,0));
         strat->SetSampleNumber(0);
         samplers.push_back(strat);
+      }
+
+      if(verbose) {
+        finish = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> elapsed = finish - start;
+        Rcpp::Rcout << elapsed.count() << " seconds" << "\n";
       }
       for(size_t s = 0; s < ns; s++) {
         Rcpp::checkUserInterrupt();

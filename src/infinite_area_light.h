@@ -29,6 +29,8 @@ public:
   virtual bool bounding_box(Float t0, Float t1, aabb& box) const;
   virtual Float pdf_value(const vec3& o, const vec3& v, random_gen& rng);
   virtual vec3 random(const vec3& o, random_gen& rng);
+  virtual vec3 random(const vec3& o, Sampler* sampler);
+  
   int width, height;
   Float radius;
   vec3 center;
@@ -121,6 +123,22 @@ vec3 InfiniteAreaLight::random(const vec3& o, random_gen& rng) {
   vec3 d(sinTheta * sinPhi, cosTheta, sinTheta * cosPhi);
   return(d);
 }
+
+vec3 InfiniteAreaLight::random(const vec3& o, Sampler* sampler) {
+  vec2 u = sampler->Get2D();
+  Float mapPdf;
+  vec2 uv = distribution->SampleContinuous(u, &mapPdf);
+  if (mapPdf == 0) {
+    return(vec3(0.f,0.f,0.f));
+  }
+  //theta vertical, phi horizontal
+  Float theta = (1-uv[1]) * M_PI, phi = (1-uv[0]) * 2.0f * M_PI;
+  Float cosTheta = std::cos(theta), sinTheta = std::sin(theta);
+  Float sinPhi = std::sin(phi), cosPhi = std::cos(phi);
+  vec3 d(sinTheta * sinPhi, cosTheta, sinTheta * cosPhi);
+  return(d);
+}
+
 
 bool InfiniteAreaLight::bounding_box(Float t0, Float t1, aabb& box) const {
   box = aabb(center - vec3(radius,radius,radius), center + vec3(radius,radius,radius));

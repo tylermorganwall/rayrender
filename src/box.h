@@ -19,6 +19,9 @@ public:
   virtual vec3 random(const vec3& o, random_gen& rng) {
     return(list_ptr.random(o, rng));
   }
+  virtual vec3 random(const vec3& o, Sampler* sampler) {
+    return(list_ptr.random(o, sampler));
+  }
   vec3 pmin, pmax;
   hitable_list list_ptr;
 };

@@ -7,12 +7,16 @@
 #' @param height Default `400`. Height of the render, in pixels.
 #' @param fov Default `20`. Field of view, in degrees. If this is zero, the camera will use an orthographic projection. The size of the plane
 #' used to create the orthographic projection is given in argument `ortho_dimensions`.
-#' @param samples Default `100`. The maximum number of samples for each pixel.
+#' @param samples Default `100`. The maximum number of samples for each pixel. If this is a length-2
+#' vector and the `sample_method` is `stratified`, this will control the number of strata in each dimension.
+#' The total number of samples in this case will be the product of the two numbers.
 #' @param min_variance Default `0.00005`. Minimum acceptable variance for a block of pixels for the 
 #' adaptive sampler. Smaller numbers give higher quality images, at the expense of longer rendering times.
 #' If this is set to zero, the adaptive sampler will be turned off and the renderer
 #' will use the maximum number of samples everywhere.
 #' @param min_adaptive_size Default `8`. Width of the minimum block size in the adaptive sampler.
+#' @param sample_method Default `stratified`. The type of sampling method used to generate
+#' random numbers. The other option is `random`.
 #' @param max_depth Default `50`. Maximum number of bounces a ray can make in a scene.
 #' @param roulette_active_depth Default `10`. Number of ray bounces until a ray can stop bouncing via
 #' Russian roulette.
@@ -152,8 +156,9 @@
 #'}
 render_scene = function(scene, width = 400, height = 400, fov = 20, 
                         samples = 100, min_variance = 0.00005, min_adaptive_size = 8,
+                        sample_method = "stratified",
                         max_depth = 50, roulette_active_depth = 10,
-                        ambient_light = FALSE,
+                        ambient_light = FALSE, 
                         lookfrom = c(0,1,10), lookat = c(0,0,0), camera_up = c(0,1,0), 
                         aperture = 0.1, clamp_value = Inf,
                         filename = NULL, backgroundhigh = "#80b4ff",backgroundlow = "#ffffff",
@@ -414,7 +419,17 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
     buildingtime = proc.time() - currenttime
     cat(sprintf("%0.3f seconds \n",buildingtime[3]))
   }
+  sample_method = unlist(lapply(tolower(sample_method),switch,
+                                "random" = 0,"stratified" = 1, 0))
+  
   camera_info = list()
+  strat_dim = c()
+  if(length(samples) == 2) {
+    strat_dim = samples
+    samples = samples[1]*samples[2]
+  } else {
+    strat_dim = rep(min(floor(sqrt(samples)),16),2)
+  }
   
   camera_info$nx = width
   camera_info$ny = height
@@ -430,6 +445,8 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
   camera_info$focal_distance = focal_distance
   camera_info$max_depth = max_depth
   camera_info$roulette_active_depth = roulette_active_depth
+  camera_info$sample_method = sample_method
+  camera_info$stratified_dim = strat_dim
   
   assertthat::assert_that(max_depth > 0)
   assertthat::assert_that(roulette_active_depth > 0)

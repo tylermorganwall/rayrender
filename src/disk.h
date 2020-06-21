@@ -18,6 +18,8 @@ public:
   virtual bool bounding_box(Float t0, Float t1, aabb& box) const;
   virtual Float pdf_value(const vec3& o, const vec3& v, random_gen& rng);
   virtual vec3 random(const vec3& o, random_gen& rng);
+  virtual vec3 random(const vec3& o, Sampler* sampler);
+  
   vec3 center;
   Float radius;
   Float inner_radius;
@@ -72,6 +74,16 @@ Float disk::pdf_value(const vec3& o, const vec3& v, random_gen& rng) {
 vec3 disk::random(const vec3& o, random_gen& rng) {
   Float r1 = rng.unif_rand();
   Float r2 = sqrt(rng.unif_rand());
+  Float phi = 2 * M_PI * r1;
+  Float x = ((radius - inner_radius) * r2 + inner_radius) * cos(phi);
+  Float z = ((radius - inner_radius) * r2 + inner_radius) * sin(phi);
+  return(vec3(x,0,z)+center-o);
+}
+
+vec3 disk::random(const vec3& o, Sampler* sampler) {
+  vec2 u = sampler->Get2D();
+  Float r1 = u.x();
+  Float r2 = sqrt(u.y());
   Float phi = 2 * M_PI * r1;
   Float x = ((radius - inner_radius) * r2 + inner_radius) * cos(phi);
   Float z = ((radius - inner_radius) * r2 + inner_radius) * sin(phi);

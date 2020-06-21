@@ -18,6 +18,7 @@ public:
   virtual bool bounding_box(Float t0, Float t1, aabb& box) const;
   virtual Float pdf_value(const vec3& o, const vec3& v, random_gen& rng);
   virtual vec3 random(const vec3& o, random_gen& rng);
+  virtual vec3 random(const vec3& o, Sampler* sampler);
   void get_cylinder_uv(const vec3& p, Float& u, Float& v) {
     Float phi = atan2(p.z(),p.x());
     // if (phi < 0) phi += 2 * M_PI;
@@ -137,6 +138,17 @@ vec3 cylinder::random(const vec3& o, random_gen& rng) {
   Float z = radius * sin(phi);
   return(vec3(x,y1,z)-o);
 }
+
+vec3 cylinder::random(const vec3& o, Sampler* sampler) {
+  vec2 u = sampler->Get2D();
+  Float r1 = u.x();
+  Float y1 = length*(u.y()-0.5);
+  Float phi = (phi_max - phi_min) * r1 + phi_min;
+  Float x = radius * cos(phi);
+  Float z = radius * sin(phi);
+  return(vec3(x,y1,z)-o);
+}
+
 
 bool cylinder::bounding_box(Float t0, Float t1, aabb& box) const {
   box = aabb(-vec3(radius,length/2,radius), vec3(radius,length/2,radius));

@@ -12,6 +12,7 @@ render_scene(
   samples = 100,
   min_variance = 5e-05,
   min_adaptive_size = 8,
+  sample_method = "stratified",
   max_depth = 50,
   roulette_active_depth = 10,
   ambient_light = FALSE,
@@ -47,7 +48,9 @@ render_scene(
 \item{fov}{Default `20`. Field of view, in degrees. If this is zero, the camera will use an orthographic projection. The size of the plane
 used to create the orthographic projection is given in argument `ortho_dimensions`.}
 
-\item{samples}{Default `100`. The maximum number of samples for each pixel.}
+\item{samples}{Default `100`. The maximum number of samples for each pixel. If this is a length-2
+vector and the `sample_method` is `stratified`, this will control the number of strata in each dimension.
+The total number of samples in this case will be the product of the two numbers.}
 
 \item{min_variance}{Default `0.00005`. Minimum acceptable variance for a block of pixels for the 
 adaptive sampler. Smaller numbers give higher quality images, at the expense of longer rendering times.
@@ -55,6 +58,9 @@ If this is set to zero, the adaptive sampler will be turned off and the renderer
 will use the maximum number of samples everywhere.}
 
 \item{min_adaptive_size}{Default `8`. Width of the minimum block size in the adaptive sampler.}
+
+\item{sample_method}{Default `stratified`. The type of sampling method used to generate
+random numbers. The other option is `random`.}
 
 \item{max_depth}{Default `50`. Maximum number of bounces a ray can make in a scene.}
 
