@@ -1,12 +1,17 @@
 #define STB_IMAGE_IMPLEMENTATION 
 
+
+#ifndef FLOATDEF
+#define FLOATDEF
 #ifdef RAY_FLOAT_AS_DOUBLE
 typedef double Float;
 #else
 typedef float Float;
 #endif 
+#endif
 
 #include "vec3.h"
+#include "vec2.h"
 #include "mathinline.h"
 #include "camera.h"
 #include "float.h"
@@ -16,7 +21,7 @@ typedef float Float;
 #include "tonemap.h"
 #include "infinite_area_light.h"
 #include "adaptivesampler.h"
-// #include "sampler.h"
+#include "sampler.h"
 using namespace Rcpp;
 // [[Rcpp::plugins(cpp11)]]
 // [[Rcpp::depends(RcppThread)]]
@@ -28,6 +33,14 @@ using namespace Rcpp;
 #include <iostream>
 #include <fstream>
 #endif
+
+// // [[Rcpp::export]]
+// List test_sampler(int nx, int ny, int ns) {
+//   StratifiedSampler strat(sqrt(ns), sqrt(ns), true, 4, unif_rand() * std::pow(2,32));
+//   strat.StartPixel(vec2(0,0));
+//   strat.SetSampleNumber(0);
+//   return(List::create(_["r"] = nx));
+// }
 
 using namespace std;
 
@@ -41,7 +54,7 @@ inline vec3 de_nan(const vec3& c) {
 
 
 vec3 color(const ray& r, hitable *world, hitable_list *hlist,
-           size_t max_depth, size_t roulette_activate, random_gen& rng) {
+           size_t max_depth, size_t roulette_activate, Sampler* sampler) {
 #ifdef DEBUG
   ofstream myfile;
   myfile.open("rays.txt", ios::app | ios::out);
@@ -53,7 +66,7 @@ vec3 color(const ray& r, hitable *world, hitable_list *hlist,
   ray r2 = r;
   for(size_t i = 0; i < max_depth; i++) {
     hit_record hrec;
-    if(world->hit(r2, 0.001, FLT_MAX, hrec, rng)) { //generated hit record, world space
+    if(world->hit(r2, 0.001, FLT_MAX, hrec, sampler)) { //generated hit record, world space
 #ifdef DEBUG
       myfile << i << ", " << r2.A << " ";
       myfile << ", " << hrec.p << "\n ";
@@ -237,7 +250,7 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
   random_gen rng(unif_rand() * std::pow(2,32));
   camera cam(lookfrom, lookat, vec3(camera_up(0),camera_up(1),camera_up(2)), fov, float(nx)/float(ny), 
              aperture, dist_to_focus,
-             shutteropen, shutterclose, rng);
+             shutteropen, shutterclose);
   ortho_camera ocam(lookfrom, lookat, vec3(camera_up(0),camera_up(1),camera_up(2)),
                     ortho_dimensions(0), ortho_dimensions(1),
                     shutteropen, shutterclose, rng);
@@ -428,7 +441,7 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
         Float v = Float(j) / Float(ny);
         ray r;
         if(fov != 0) {
-          r = cam.get_ray(u,v);
+          r = cam.get_ray(u,v, vec3(0,0,0), 0);
         } else {
           r = ocam.get_ray(u,v);
         }
@@ -447,7 +460,7 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
         Float v = Float(j) / Float(ny);
         ray r;
         if(fov != 0) {
-          r = cam.get_ray(u,v);
+          r = cam.get_ray(u,v, vec3(0,0,0), 0);
         } else {
           r = ocam.get_ray(u,v);
         }
@@ -466,7 +479,7 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
         Float v = Float(j) / Float(ny);
         ray r;
         if(fov != 0) {
-          r = cam.get_ray(u,v);
+          r = cam.get_ray(u,v, vec3(0,0,0), 0);
         } else {
           r = ocam.get_ray(u,v);
         }
@@ -487,7 +500,7 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
         Float v = Float(j + rng.unif_rand()) / Float(ny);
         ray r;
         if(fov != 0) {
-          r = cam.get_ray(u,v);
+          r = cam.get_ray(u,v, vec3(0,0,0));
         } else {
           r = ocam.get_ray(u,v);
         }
@@ -513,9 +526,17 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
       for(int i = 0; i < ny; i++) {
         seeds[i] = unif_rand() * std::pow(2,32);
       }
+      std::vector<StratifiedSampler> samplers;
+      for(int i = 0; i < nx * ny; i++) {
+        StratifiedSampler strat(sqrt(ns), sqrt(ns), true, 2,  unif_rand() * std::pow(2,32));
+        strat.StartPixel(vec2(0,0));
+        strat.SetSampleNumber(0);
+        samplers.push_back(strat);
+      }
       RcppThread::ThreadPool pool(numbercores);
       auto worker = [&routput, &goutput, &boutput,
-                     nx, ny, ns, seeds, fov,
+                     nx, ny, ns, seeds, //&samplers, 
+                     fov,
                      &cam, &ocam, &world, &hlist,
                      clampval, max_depth, roulette_active, progress_bar, 
                      numbercores] (int j) {
@@ -533,13 +554,14 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
            Float v = Float(j + rng.unif_rand()) / Float(ny);
            ray r;
            if(fov != 0) {
-             r = cam.get_ray(u,v);
+             r = cam.get_ray(u,v, rng.random_in_unit_disk(), 0);
            } else {
              r = ocam.get_ray(u,v);
            }
            r.pri_stack = mat_stack;
            
-           col += clamp(de_nan(color(r, &world, &hlist, max_depth, roulette_active, rng)),0,clampval);
+           col += clamp(de_nan(color(r, &world, &hlist, max_depth, roulette_active, 
+                                     rng)),0,clampval);
            mat_stack->clear();
          }
          col /= Float(ns);
@@ -561,62 +583,68 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
                                               min_variance, min_adaptive_size,
                                               routput, goutput, boutput,
                                               routput2, goutput2, boutput2);
-      for(int s = 0; s < ns; s++) {
+      
+      std::vector<random_gen > rngs;
+      std::vector<Sampler* > samplers;
+      for(int i = 0; i < nx * ny; i++) {
+        random_gen rng_single(unif_rand() * std::pow(2,32));
+        rngs.push_back(rng_single);
+        
+        Sampler* strat = new StratifiedSampler(floor(sqrt(ns)), floor(sqrt(ns)), 
+                                true, 3, unif_rand() * std::pow(2,32));
+        strat->StartPixel(vec2(0,0));
+        strat->SetSampleNumber(0);
+        samplers.push_back(strat);
+      }
+      for(size_t s = 0; s < ns; s++) {
         Rcpp::checkUserInterrupt();
         if(progress_bar) {
           pb.tick();
         }
-        std::vector<random_gen > rngs;
-        for(int i = 0; i < nx * ny; i++) {
-          random_gen rng_single(unif_rand() * std::pow(2,32));
-          rngs.push_back(rng_single);
-        }
-        // StratifiedSampler sampler(nx,ny,ns,5);
         RcppThread::ThreadPool pool(numbercores);
-        auto worker = [&adaptive_pixel_sampler, 
-                       nx, ny, s, ns,
-                       &rngs, fov, 
+        auto worker = [&adaptive_pixel_sampler,
+                       nx, ny, s,
+                       &rngs, fov, &samplers,
                        &cam, &ocam, &world, &hlist,
                        clampval, max_depth, roulette_active] (int k) {
            int nx_begin = adaptive_pixel_sampler.pixel_chunks[k].startx;
            int ny_begin = adaptive_pixel_sampler.pixel_chunks[k].starty;
            int nx_end = adaptive_pixel_sampler.pixel_chunks[k].endx;
            int ny_end = adaptive_pixel_sampler.pixel_chunks[k].endy;
-           random_gen rng = rngs[k];
-           // int seed = ny_begin * nx + nx_begin;
-           // std::unique_ptr<Sampler> tileSampler = sampler->Clone(seed);
-           vec2 u2;
-           int sqrtns = sqrt(ns);
+           
            std::vector<dielectric*> *mat_stack = new std::vector<dielectric*>;
            for(int i = nx_begin; i < nx_end; i++) {
              for(int j = ny_begin; j < ny_end; j++) {
-               vec3 col(0,0,0);
-               u2 = vec2(rng.unif_rand(),
-                         rng.unif_rand());
-               // u2 = vec2(rng.unif_rand()/sqrtns + (s % sqrtns)/sqrtns,
-               //           rng.unif_rand()/sqrtns + (s / sqrtns)/sqrtns);
-               Float u = Float(i + u2.x()) / Float(nx);
-               Float v = Float(j + u2.y()) / Float(ny);
-               ray r;
+               int index = j + ny * i;
+               vec2 u2 = samplers[index]->Get2D();
+               Float u = (Float(i) + u2.x()) / Float(nx);
+               Float v = (Float(j) + u2.y()) / Float(ny);
+               ray r; 
                if(fov != 0) {
-                 r = cam.get_ray(u,v);
+                 r = cam.get_ray(u, v, rand_to_unit(samplers[index]->Get2D()), 
+                                 samplers[index]->Get1D());
+                 
                } else {
                  r = ocam.get_ray(u,v);
                }
                r.pri_stack = mat_stack;
-               col = clamp(de_nan(color(r, &world, &hlist, max_depth, roulette_active, rng)),0,clampval);
+
+               vec3 col = clamp(de_nan(color(r, &world, &hlist, max_depth, 
+                                        roulette_active, rngs[index])),
+                           0, clampval);
                mat_stack->clear();
                adaptive_pixel_sampler.add_color_main(i, j, col);
                if(s % 2 == 0) {
                  adaptive_pixel_sampler.add_color_sec(i, j, col);
                }
+               samplers[index]->StartNextSample();
              }
            }
            if(s % 2 == 1 && s > 1) {
              adaptive_pixel_sampler.test_for_convergence(k, s, nx_end, nx_begin, ny_end, ny_begin);
            }
            delete mat_stack;
-         };
+        };
         for(size_t j = 0; j < adaptive_pixel_sampler.size(); j++) {
           pool.push(worker, j);
         }
@@ -627,6 +655,9 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
         adaptive_pixel_sampler.max_s++;
       }
       adaptive_pixel_sampler.write_final_pixels();
+      for(size_t i = 0; i < samplers.size(); i++) {
+        delete samplers.at(i);
+      }
     }
   }
 

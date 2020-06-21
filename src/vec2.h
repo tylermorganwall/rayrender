@@ -42,6 +42,17 @@ public:
   Float e[2];
 };
 
+
+inline std::istream& operator>>(std::istream &is, vec2 &t) {
+  is >> t.e[0] >> t.e[1];
+  return is;
+}
+
+inline std::ostream& operator<<(std::ostream &os, const vec2 &t) {
+  os << t.e[0] << ", " << t.e[1];
+  return os;
+}
+
 inline void vec2::make_unit_vector() {
   Float k = 1.0 / sqrt(e[0]*e[0] + e[1]*e[1]);
   e[0] *= k; e[1] *= k; 

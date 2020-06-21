@@ -5,6 +5,7 @@
 #include <cmath>
 #include <cstring>
 #include "vec3.h"
+#include "vec2.h"
 
 template<class T>
 inline T ffmin(T a, T b) { return(a < b ? a : b);}
@@ -16,6 +17,24 @@ template<class T>
 inline T lerp(Float t, T v1, T v2) {
   return((1-t) * v1 + t * v2);
 }
+
+inline vec3 rand_to_unit(vec2 u) {
+  Float a = 2.0*u.x() - 1.0; 
+  Float b = 2.0*u.y() - 1.0;
+  if (b == 0) {
+    b = 1.0;
+  }
+  Float r, phi;
+  if (a*a > b*b) {
+    r = a;
+    phi = (M_PI/4)*(b/a);
+  } else {
+    r = b;
+    phi = (M_PI_2) - (M_PI_4)*(a/b);
+  }
+  return(vec3(r*cos(phi),r*sin(phi),0));
+}
+
 
 template<class T>
 inline T lerp(T t, T v1, T v2) {

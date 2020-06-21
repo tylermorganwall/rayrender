@@ -3,12 +3,12 @@
 
 #include "ray.h"
 #include "rng.h"
+#include "Rcpp.h"
 
 class camera {
   public:
     camera(vec3 lookfrom, vec3 lookat, vec3 vup, Float vfov, Float aspect, Float aperture, Float focus_dist,
-           Float t0, Float t1, random_gen& rng) {
-      rng2 = rng;
+           Float t0, Float t1) {
       time0 = t0;
       time1 = t1;
       lens_radius = aperture / 2;
@@ -23,10 +23,10 @@ class camera {
       horizontal = 2.0f * half_width * focus_dist * u;
       vertical = 2.0f * half_height * focus_dist * v;
     }
-    ray get_ray(Float s, Float t) {
-      vec3 rd = lens_radius * rng2.random_in_unit_disk();
+    ray get_ray(Float s, Float t, vec3 u3, Float u1) {
+      vec3 rd = lens_radius * u3;
       vec3 offset = u * rd.x() + v * rd.y();
-      Float time = time0 + rng2.unif_rand() * (time1 - time0);
+      Float time = time0 + u1 * (time1 - time0);
       return(ray(origin + offset, lower_left_corner + s * horizontal + t * vertical - origin - offset, time)); 
     }
     
@@ -37,7 +37,6 @@ class camera {
     vec3 u, v, w;
     Float time0, time1;
     Float lens_radius;
-    random_gen rng2;
 };
 
 class ortho_camera {
