@@ -71,6 +71,8 @@ hitable *build_scene(IntegerVector& type,
   LogicalVector isgradient = gradient_info["isgradient"];
   List gradient_colors = gradient_info["gradient_colors"];
   LogicalVector gradient_trans = gradient_info["gradient_trans"];
+  List gradient_control_points = gradient_info["gradient_control_points"];
+  LogicalVector is_world_gradient = gradient_info["is_world_gradient"];
   NumericVector x = position_list["xvec"];
   NumericVector y = position_list["yvec"];
   NumericVector z = position_list["zvec"];
@@ -91,6 +93,7 @@ hitable *build_scene(IntegerVector& type,
   NumericVector temp_scales;
   NumericVector temp_glossy;
   NumericVector temp_repeat;
+  NumericVector temp_gradient_control;
   vec3 gpivot;
   vec3 gtrans;
   vec3 gorder;
@@ -112,6 +115,7 @@ hitable *build_scene(IntegerVector& type,
     temp_scales = as<NumericVector>(scale_list(i));
     temp_glossy = as<NumericVector>(glossyinfo(i));
     temp_repeat = as<NumericVector>(image_repeat_list(i));
+    temp_gradient_control = as<NumericVector>(gradient_control_points(i));
     bool is_scaled = false;
     bool is_group_scaled = false;
     if(temp_scales[0] != 1 || temp_scales[1] != 1 || temp_scales[2] != 1) {
@@ -160,7 +164,7 @@ hitable *build_scene(IntegerVector& type,
           tex = new lambertian(new checker_texture(new constant_texture(vec3(tempchecker(0),tempchecker(1),tempchecker(2))),
                                                    new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))),
                                                    tempchecker(3)));
-        } else if (isgradient(i)) {
+        } else if (isgradient(i) && !is_world_gradient(i)) {
           tex = new lambertian(new gradient_texture(vec3(tempvector(0),tempvector(1),tempvector(2)),
                                                     vec3(tempgradient(0),tempgradient(1),tempgradient(2)),
                                                     gradient_trans(i)));
@@ -168,6 +172,11 @@ hitable *build_scene(IntegerVector& type,
           tex = new lambertian(new triangle_texture(vec3(temp_tri_color(0),temp_tri_color(1),temp_tri_color(2)),
                                                     vec3(temp_tri_color(3),temp_tri_color(4),temp_tri_color(5)),
                                                     vec3(temp_tri_color(6),temp_tri_color(7),temp_tri_color(8))));
+        } else if (is_world_gradient(i)) {
+          tex = new lambertian(new world_gradient_texture(vec3(temp_gradient_control(0),temp_gradient_control(1),temp_gradient_control(2)),
+                                                          vec3(temp_gradient_control(3),temp_gradient_control(4),temp_gradient_control(5)),
+                                                          vec3(tempvector(0),tempvector(1),tempvector(2)),
+                                                          vec3(tempgradient(0),tempgradient(1),tempgradient(2))));
         } else {
           tex = new lambertian(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))));
         }
@@ -192,7 +201,7 @@ hitable *build_scene(IntegerVector& type,
                           tempvector(3), 
                           vec3(temp_glossy(3), temp_glossy(4), temp_glossy(5)), 
                           vec3(temp_glossy(6),temp_glossy(7),temp_glossy(8)));
-        } else if (isgradient(i)) {
+        } else if (isgradient(i) && !is_world_gradient(i)) {
           tex = new metal(new gradient_texture(vec3(tempvector(0),tempvector(1),tempvector(2)),
                                                     vec3(tempgradient(0),tempgradient(1),tempgradient(2)),
                                                     gradient_trans(i)),
@@ -206,6 +215,14 @@ hitable *build_scene(IntegerVector& type,
                           tempvector(3), 
                           vec3(temp_glossy(3), temp_glossy(4), temp_glossy(5)), 
                           vec3(temp_glossy(6),temp_glossy(7),temp_glossy(8)));
+        } else if (is_world_gradient(i)) {
+          tex = new metal(new world_gradient_texture(vec3(temp_gradient_control(0),temp_gradient_control(1),temp_gradient_control(2)),
+                                                     vec3(temp_gradient_control(3),temp_gradient_control(4),temp_gradient_control(5)),
+                                                     vec3(tempvector(0),tempvector(1),tempvector(2)),
+                                                     vec3(tempgradient(0),tempgradient(1),tempgradient(2))),
+                         tempvector(3), 
+                         vec3(temp_glossy(3), temp_glossy(4), temp_glossy(5)), 
+                         vec3(temp_glossy(6),temp_glossy(7),temp_glossy(8)));
         } else {
           tex = new metal(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))),
                           tempvector(3), 
@@ -228,7 +245,7 @@ hitable *build_scene(IntegerVector& type,
           tex = new orennayar(new checker_texture(new constant_texture(vec3(tempchecker(0),tempchecker(1),tempchecker(2))),
                                                    new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))),tempchecker(3)), 
                                                    sigma(i));
-        } else if (isgradient(i)) {
+        } else if (isgradient(i) && !is_world_gradient(i)) {
           tex = new orennayar(new gradient_texture(vec3(tempvector(0),tempvector(1),tempvector(2)),
                                                     vec3(tempgradient(0),tempgradient(1),tempgradient(2)),
                                                     gradient_trans(i)), sigma(i));
@@ -236,6 +253,11 @@ hitable *build_scene(IntegerVector& type,
           tex = new orennayar(new triangle_texture(vec3(temp_tri_color(0),temp_tri_color(1),temp_tri_color(2)),
                                                     vec3(temp_tri_color(3),temp_tri_color(4),temp_tri_color(5)),
                                                     vec3(temp_tri_color(6),temp_tri_color(7),temp_tri_color(8))), sigma(i) );
+        } else if (is_world_gradient(i)) {
+          tex = new orennayar(new world_gradient_texture(vec3(temp_gradient_control(0),temp_gradient_control(1),temp_gradient_control(2)),
+                                                         vec3(temp_gradient_control(3),temp_gradient_control(4),temp_gradient_control(5)),
+                                                         vec3(tempvector(0),tempvector(1),tempvector(2)),
+                                                         vec3(tempgradient(0),tempgradient(1),tempgradient(2))), sigma(i));
         } else {
           tex = new orennayar(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))), sigma(i)); //marked as small definite loss in valgrind memcheck
         }
@@ -265,7 +287,7 @@ hitable *build_scene(IntegerVector& type,
                                                   dist, 
                                                   vec3(temp_glossy(3), temp_glossy(4), temp_glossy(5)), 
                                                   vec3(temp_glossy(6),temp_glossy(7),temp_glossy(8)));
-        }  else if (isgradient(i)) {
+        }  else if (isgradient(i) && !is_world_gradient(i)) {
           tex = new MicrofacetReflection(new gradient_texture(vec3(tempvector(0),tempvector(1),tempvector(2)),
                                                    vec3(tempgradient(0),tempgradient(1),tempgradient(2)),
                                                    gradient_trans(i)), dist, 
@@ -277,6 +299,13 @@ hitable *build_scene(IntegerVector& type,
                                                    vec3(temp_tri_color(6),temp_tri_color(7),temp_tri_color(8))), dist, 
                                                    vec3(temp_glossy(3), temp_glossy(4), temp_glossy(5)), 
                                                    vec3(temp_glossy(6),temp_glossy(7),temp_glossy(8)));
+        } else if (is_world_gradient(i)) {
+          tex = new MicrofacetReflection(new world_gradient_texture(vec3(temp_gradient_control(0),temp_gradient_control(1),temp_gradient_control(2)),
+                                                                    vec3(temp_gradient_control(3),temp_gradient_control(4),temp_gradient_control(5)),
+                                                                    vec3(tempvector(0),tempvector(1),tempvector(2)),
+                                                                    vec3(tempgradient(0),tempgradient(1),tempgradient(2))), dist, 
+                                                                    vec3(temp_glossy(3), temp_glossy(4), temp_glossy(5)), 
+                                                                    vec3(temp_glossy(6),temp_glossy(7),temp_glossy(8)));
         } else {
           tex = new MicrofacetReflection(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))), dist, 
                                          vec3(temp_glossy(3), temp_glossy(4), temp_glossy(5)), 
@@ -306,7 +335,7 @@ hitable *build_scene(IntegerVector& type,
                            dist, 
                            vec3(temp_glossy(3), temp_glossy(4), temp_glossy(5)), 
                            vec3(temp_glossy(6),temp_glossy(7),temp_glossy(8)));
-        }  else if (isgradient(i)) {
+        }  else if (isgradient(i) && !is_world_gradient(i)) {
           tex = new glossy(new gradient_texture(vec3(tempvector(0),tempvector(1),tempvector(2)),
                                                      vec3(tempgradient(0),tempgradient(1),tempgradient(2)),
                                                      gradient_trans(i)), dist, 
@@ -318,6 +347,13 @@ hitable *build_scene(IntegerVector& type,
                                                 vec3(temp_tri_color(6),temp_tri_color(7),temp_tri_color(8))), dist, 
                            vec3(temp_glossy(3), temp_glossy(4), temp_glossy(5)), 
                            vec3(temp_glossy(6),temp_glossy(7),temp_glossy(8)));
+        } else if (is_world_gradient(i)) {
+          tex = new glossy(new world_gradient_texture(vec3(temp_gradient_control(0),temp_gradient_control(1),temp_gradient_control(2)),
+                                                      vec3(temp_gradient_control(3),temp_gradient_control(4),temp_gradient_control(5)),
+                                                      vec3(tempvector(0),tempvector(1),tempvector(2)),
+                                                      vec3(tempgradient(0),tempgradient(1),tempgradient(2))), dist, 
+                          vec3(temp_glossy(3), temp_glossy(4), temp_glossy(5)), 
+                          vec3(temp_glossy(6),temp_glossy(7),temp_glossy(8)));
         } else {
           tex = new glossy(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))), dist, 
                            vec3(temp_glossy(3), temp_glossy(4), temp_glossy(5)), 

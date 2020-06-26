@@ -237,6 +237,8 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
   gradient_info$gradient_colors = scene$gradient_color
   gradient_info$isgradient = purrr::map_lgl(gradient_info$gradient_colors,.f = ~all(!is.na(.x)))
   gradient_info$gradient_trans = scene$gradient_transpose
+  gradient_info$is_world_gradient = scene$world_gradient
+  gradient_info$gradient_control_points = scene$gradient_point_info
   
   #noise handler
   noisebool = purrr::map_lgl(scene$noise, .f = ~.x > 0)
@@ -428,7 +430,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
     strat_dim = samples
     samples = samples[1]*samples[2]
   } else {
-    strat_dim = rep(min(floor(sqrt(samples)),16),2)
+    strat_dim = rep(min(floor(sqrt(samples)),8),2)
   }
   
   camera_info$nx = width

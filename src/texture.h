@@ -3,6 +3,7 @@
 
 #include "perlin.h"
 #include "Rcpp.h"
+#include "mathinline.h"
 
 class texture {
 public: 
@@ -67,6 +68,27 @@ public:
   vec3 color2;
   Float phase;
   Float intensity;
+};
+
+class world_gradient_texture : public texture {
+public:
+  world_gradient_texture() {}
+  world_gradient_texture(vec3 p1, vec3 p2, vec3 c1, vec3 c2) : 
+    point1(p1), gamma_color1(c1.pow(1/2.2)), gamma_color2(c2.pow(1/2.2))  {
+    dir = p2 - p1;
+    inv_trans_length = 1.0/dir.squared_length();
+  }
+  ~world_gradient_texture() {}
+  virtual vec3 value(Float u, Float v, const vec3& p) const {
+    vec3 offsetp = p - point1;
+    Float mix = clamp(dot(offsetp, dir)*inv_trans_length, 0, 1);
+    vec3 color = gamma_color1 * (1-mix) + mix * gamma_color2;
+    return(color.pow(2.2));
+  }
+  vec3 point1;
+  vec3 gamma_color1, gamma_color2;
+  Float inv_trans_length;
+  vec3 dir;
 };
 
 class image_texture : public texture {

@@ -381,7 +381,7 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
   hitable *world_full[2];
   world_full[0] = worldbvh;
   world_full[1] = background_sphere;
-  int nval = numbertosample == 0 || hasbackground ? 2 : 1;
+  int nval = numbertosample == 0 || hasbackground || ambient_light ? 2 : 1;
   
   hitable_list world(world_full, nval);
   bool impl_only_bg = false;
@@ -423,10 +423,13 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
   if(verbose && !progress_bar) {
     Rcpp::Rcout << "Starting Raytracing:\n ";
   }
+  RProgress::RProgress pb_sampler("Generating Samples [:bar] :percent%");
+  pb_sampler.set_width(70);
   RProgress::RProgress pb("Adaptive Raytracing [:bar] :percent%");
   pb.set_width(70);
 
   if(progress_bar) {
+    pb_sampler.set_total(ny);
     if(min_variance != 0.0f) {
       pb.set_total(ns);
     } else {
@@ -621,6 +624,9 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
       std::vector<random_gen > rngs;
       std::vector<Sampler* > samplers;
       for(int i = 0; i < nx * ny; i++) {
+        if(progress_bar && (i % ny == 0)) {
+          pb_sampler.tick();
+        }
         random_gen rng_single(unif_rand() * std::pow(2,32));
         rngs.push_back(rng_single);
         Sampler* strat;
