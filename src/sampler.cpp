@@ -129,11 +129,11 @@ vec2 PixelSampler::Get2D() {
 }
 
 
-// std::unique_ptr<Sampler> StratifiedSampler::Clone(int seed) {
-//   StratifiedSampler *ss = new StratifiedSampler(*this);
-//   ss->rng.SetSequence(seed);
-//   return(std::unique_ptr<Sampler>(ss));
-// }
+std::unique_ptr<Sampler> StratifiedSampler::Clone(int seed) {
+  StratifiedSampler *ss = new StratifiedSampler(*this);
+  ss->rng.SetSequence(seed);
+  return(std::unique_ptr<Sampler>(ss));
+}
 
 void StratifiedSampler::StartPixel(const vec2 &p) {
   // Generate single stratified samples for the pixel
@@ -161,4 +161,10 @@ void StratifiedSampler::StartPixel(const vec2 &p) {
     }
   }
   PixelSampler::StartPixel(p);
+}
+
+std::unique_ptr<Sampler> RandomSampler::Clone(int seed) {
+  RandomSampler *ss = new RandomSampler(*this);
+  ss->rng.SetSequence(seed);
+  return(std::unique_ptr<Sampler>(ss));
 }

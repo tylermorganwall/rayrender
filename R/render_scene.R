@@ -15,8 +15,9 @@
 #' If this is set to zero, the adaptive sampler will be turned off and the renderer
 #' will use the maximum number of samples everywhere.
 #' @param min_adaptive_size Default `8`. Width of the minimum block size in the adaptive sampler.
-#' @param sample_method Default `stratified`. The type of sampling method used to generate
-#' random numbers. The other option is `random`.
+#' @param sample_method Default `random`. The type of sampling method used to generate
+#' random numbers. The other option is `stratified`, which can improve the render quality (at the cost
+#' of increased time allocating the random samples).
 #' @param max_depth Default `50`. Maximum number of bounces a ray can make in a scene.
 #' @param roulette_active_depth Default `10`. Number of ray bounces until a ray can stop bouncing via
 #' Russian roulette.
@@ -156,7 +157,7 @@
 #'}
 render_scene = function(scene, width = 400, height = 400, fov = 20, 
                         samples = 100, min_variance = 0.00005, min_adaptive_size = 8,
-                        sample_method = "stratified",
+                        sample_method = "random",
                         max_depth = 50, roulette_active_depth = 10,
                         ambient_light = FALSE, 
                         lookfrom = c(0,1,10), lookat = c(0,0,0), camera_up = c(0,1,0), 

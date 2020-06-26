@@ -546,10 +546,10 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
         rngs.push_back(rng_single);
         Sampler* strat;
         if(sample_method == 0) {
-          strat = new RandomSampler(unif_rand() * std::pow(2,32));
+          strat = new RandomSampler(rng_single);
         } else {
           strat = new StratifiedSampler(stratified_dim(0), stratified_dim(1),
-                                        true, 5, unif_rand() * std::pow(2,32));
+                                        true, 5, rng_single);
         }
         strat->StartPixel(vec2(0,0));
         strat->SetSampleNumber(0);
@@ -612,17 +612,10 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
                                               min_variance, min_adaptive_size,
                                               routput, goutput, boutput,
                                               routput2, goutput2, boutput2);
-      if(verbose) {
-        start = std::chrono::high_resolution_clock::now();
-        if(sample_method == 0) {
-          Rcpp::Rcout << "Allocating random sampler: ";
-        } else {
-          Rcpp::Rcout << "Allocating stratified (" << 
-            stratified_dim(0)<< "x" << stratified_dim(1) << ") sampler: ";
-        }
-      }
       std::vector<random_gen > rngs;
       std::vector<Sampler* > samplers;
+      start = std::chrono::high_resolution_clock::now();
+      
       for(int i = 0; i < nx * ny; i++) {
         if(progress_bar && (i % ny == 0)) {
           pb_sampler.tick();
@@ -631,10 +624,10 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
         rngs.push_back(rng_single);
         Sampler* strat;
         if(sample_method == 0) {
-          strat = new RandomSampler(unif_rand() * std::pow(2,32));
+          strat = new RandomSampler(rng_single);
         } else {
           strat = new StratifiedSampler(stratified_dim(0), stratified_dim(1),
-                                        true, 5, unif_rand() * std::pow(2,32));
+                                        true, 5, rng_single);
         }
         strat->StartPixel(vec2(0,0));
         strat->SetSampleNumber(0);
@@ -643,6 +636,12 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
 
       if(verbose) {
         finish = std::chrono::high_resolution_clock::now();
+        if(sample_method == 0) {
+          Rcpp::Rcout << "Allocating random sampler: ";
+        } else {
+          Rcpp::Rcout << "Allocating stratified (" << 
+            stratified_dim(0)<< "x" << stratified_dim(1) << ") sampler: ";
+        }
         std::chrono::duration<double> elapsed = finish - start;
         Rcpp::Rcout << elapsed.count() << " seconds" << "\n";
       }

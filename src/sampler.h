@@ -30,7 +30,7 @@ public:
   void Request2DArray(int n);
   
   virtual bool StartNextSample();
-  // virtual std::unique_ptr<Sampler> Clone(int seed) = 0;
+  virtual std::unique_ptr<Sampler> Clone(int seed) = 0;
   virtual bool SetSampleNumber(size_t sampleNum);
   
   const size_t samplesPerPixel;
@@ -49,16 +49,12 @@ private:
 
 class PixelSampler : public Sampler {
 public:
-  PixelSampler(size_t samplesPerPixel, size_t nSampledDimensions, unsigned int seed)
-    : Sampler(samplesPerPixel) {
+  PixelSampler(size_t samplesPerPixel, size_t nSampledDimensions, random_gen& rng)
+    : Sampler(samplesPerPixel), current1DDimension(0), current2DDimension(0), rng(rng) {
     for (size_t i = 0; i < nSampledDimensions; ++i) {
       samples1D.push_back(std::vector<Float>(samplesPerPixel));
       samples2D.push_back(std::vector<vec2>(samplesPerPixel));
     }
-    random_gen rng2(seed);
-    rng = rng2;
-    current1DDimension = 0;
-    current2DDimension = 0;
   }
   bool StartNextSample();
   bool SetSampleNumber(size_t);
@@ -66,8 +62,8 @@ public:
   virtual vec2 Get2D();
   
 protected:
-  std::vector<std::vector<Float>> samples1D;
-  std::vector<std::vector<vec2>> samples2D;
+  std::vector<std::vector<Float> > samples1D;
+  std::vector<std::vector<vec2> > samples2D;
   int current1DDimension;
   int current2DDimension;
   random_gen rng;
@@ -75,12 +71,12 @@ protected:
 
 class StratifiedSampler : public PixelSampler {
 public:
-  StratifiedSampler(int xPixelSamples, int yPixelSamples,
-                  bool jitterSamples, size_t nSampledDimensions, unsigned int seed)
-  : PixelSampler(xPixelSamples * yPixelSamples, nSampledDimensions, seed),
+  StratifiedSampler(int xPixelSamples, int yPixelSamples, 
+                  bool jitterSamples, size_t nSampledDimensions, random_gen& rng)
+  : PixelSampler(xPixelSamples * yPixelSamples, nSampledDimensions, rng),
     xPixelSamples(xPixelSamples), yPixelSamples(yPixelSamples), jitterSamples(jitterSamples) { }
   void StartPixel(const vec2 &p);
-  // std::unique_ptr<Sampler> Clone(int seed);
+  std::unique_ptr<Sampler> Clone(int seed);
 
 private:
   const int xPixelSamples, yPixelSamples;
@@ -89,10 +85,7 @@ private:
 
 class RandomSampler : public PixelSampler {
 public:
-  RandomSampler(unsigned int seed) : PixelSampler(1 * 1, 0, seed) {
-    random_gen rng2(seed);
-    rng = rng2;
-  }
+  RandomSampler(random_gen& rng) : PixelSampler(1 * 1, 0, rng) {}
   void StartPixel(const vec2 &p) {};
   Float Get1D() {
     return(rng.unif_rand());
@@ -106,9 +99,7 @@ public:
   bool SetSampleNumber(size_t) {
     return(true);
   }
-  
-private:
-  random_gen rng;
+  std::unique_ptr<Sampler> Clone(int seed);
 };
 
 #endif

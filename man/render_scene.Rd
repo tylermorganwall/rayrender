@@ -12,7 +12,7 @@ render_scene(
   samples = 100,
   min_variance = 5e-05,
   min_adaptive_size = 8,
-  sample_method = "stratified",
+  sample_method = "random",
   max_depth = 50,
   roulette_active_depth = 10,
   ambient_light = FALSE,
@@ -59,8 +59,9 @@ will use the maximum number of samples everywhere.}
 
 \item{min_adaptive_size}{Default `8`. Width of the minimum block size in the adaptive sampler.}
 
-\item{sample_method}{Default `stratified`. The type of sampling method used to generate
-random numbers. The other option is `random`.}
+\item{sample_method}{Default `random`. The type of sampling method used to generate
+random numbers. The other option is `stratified`, which can improve the render quality (at the cost
+of increased time allocating the random samples).}
 
 \item{max_depth}{Default `50`. Maximum number of bounces a ray can make in a scene.}
 
