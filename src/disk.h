@@ -36,9 +36,14 @@ bool disk::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_g
   }
   Float x = r.origin().x() + t*r.direction().x();
   Float z = r.origin().z() + t*r.direction().z();
-  if(x*x + z*z >= radius * radius || x*x + z*z <= inner_radius * inner_radius) {
+  Float radHit2 = x*x + z*z;
+  if(radHit2 >= radius * radius || radHit2 <= inner_radius * inner_radius) {
     return(false);
   }
+  //Interaction information
+  rec.dpdu = vec3(1, 0, 0);
+  rec.dpdv = vec3(0, 0, 1);
+  
   vec3 p = r.point_at_parameter(t);
   p.e[1] = 0;
   
