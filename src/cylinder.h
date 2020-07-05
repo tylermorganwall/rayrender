@@ -91,6 +91,11 @@ bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
       temppoint.e[2] *= radius / hitRad;
       rec.t = temp;
       rec.p = temppoint;
+      
+      //Interaction information
+      rec.dpdu = vec3(-phi_max * temppoint.z(),0,  phi_max * temppoint.x());
+      rec.dpdv = vec3(0, length, 0);
+      
       temppoint.e[1] = 0;
       rec.normal = dot(temppoint, dir) > 0 ? -temppoint / radius : temppoint / radius;
       get_cylinder_uv(rec.p, rec.u, rec.v);
@@ -108,6 +113,11 @@ bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
       temppoint.e[2] *= radius / hitRad;
       rec.t = temp;
       rec.p = temppoint;
+      
+      //Interaction information
+      rec.dpdu = vec3(-phi_max * temppoint.z(), 0,  phi_max * temppoint.x());
+      rec.dpdv = vec3(0, length, 0);
+      
       temppoint.e[1] = 0;
       rec.normal = dot(temppoint,dir) > 0 ? -temppoint / radius : temppoint / radius;
       get_cylinder_uv(rec.p, rec.u, rec.v);

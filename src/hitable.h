@@ -26,6 +26,7 @@ struct hit_record {
 #endif
   vec3 p;
   vec3 normal;
+  vec3 dpdu, dpdv;
   material *mat_ptr;
 };
 
