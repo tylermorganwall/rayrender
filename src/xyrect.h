@@ -153,6 +153,11 @@ bool xy_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
   rec.u = u;
   rec.v = v;
   rec.t = t;
+  
+  //Interaction information
+  rec.dpdu = vec3(1, 0, 0);
+  rec.dpdv = vec3(0, 1, 0);
+  
   rec.mat_ptr = mp;
   rec.p = r.point_at_parameter(t);
   rec.p.e[2] = k;
@@ -186,6 +191,11 @@ bool xz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
   rec.u = u;
   rec.v = v;
   rec.t = t;
+  
+  //Interaction information
+  rec.dpdu = vec3(1, 0, 0);
+  rec.dpdv = vec3(0, 0, 1);
+  
   rec.mat_ptr = mp;
   rec.p = r.point_at_parameter(t);
   rec.p.e[1] = k;
@@ -219,6 +229,11 @@ bool yz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
   rec.u = u;
   rec.v = v;
   rec.t = t;
+  
+  //Interaction information
+  rec.dpdu = vec3(0, 0, 1);
+  rec.dpdv = vec3(0, 1, 0);
+  
   rec.mat_ptr = mp;
   rec.p = r.point_at_parameter(t);
   rec.p.e[0] = k;
