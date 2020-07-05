@@ -69,6 +69,16 @@ bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random
     rec.p = r.point_at_parameter(rec.t);
     rec.p *= radius / rec.p.length(); 
     rec.normal = (rec.p - center) / radius;
+    
+    //Interaction information
+    Float zRadius = std::sqrt(rec.p.x() * rec.p.x()  + rec.p.z()  * rec.p.z() );
+    Float invZRadius = 1 / zRadius;
+    Float cosPhi = rec.p.x() * invZRadius;
+    Float sinPhi = rec.p.z() * invZRadius;
+    Float theta = std::acos(clamp(rec.p.z() / radius, -1, 1));
+    rec.dpdu = 2 * M_PI * vec3(-rec.p.z(), 0, rec.p.x());
+    rec.dpdv = 2 * M_PI * vec3(rec.p.z() * cosPhi, rec.p.z() * sinPhi, -radius * std::sin(theta));
+    
     get_sphere_uv(rec.normal, rec.u, rec.v);
     rec.mat_ptr = mat_ptr;
     return(true);
@@ -78,6 +88,16 @@ bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random
     rec.p = r.point_at_parameter(rec.t);
     rec.p *= radius / rec.p.length();
     rec.normal = (rec.p - center) / radius;
+    
+    //Interaction information
+    Float zRadius = std::sqrt(rec.p.x() * rec.p.x()  + rec.p.z()  * rec.p.z() );
+    Float invZRadius = 1 / zRadius;
+    Float cosPhi = rec.p.x() * invZRadius;
+    Float sinPhi = rec.p.z() * invZRadius;
+    Float theta = std::acos(clamp(rec.p.z() / radius, -1, 1));
+    rec.dpdu = 2 * M_PI * vec3(-rec.p.z(), 0, rec.p.x());
+    rec.dpdv = 2 * M_PI * vec3(rec.p.z() * cosPhi, rec.p.z() * sinPhi, -radius * std::sin(theta));
+    
     get_sphere_uv(rec.normal, rec.u, rec.v);
     if(alpha_mask) {
       rec.normal = -rec.normal;
@@ -187,6 +207,16 @@ bool moving_sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec,
     rec.p = r.point_at_parameter(rec.t);
     rec.p *= radius / rec.p.length(); 
     rec.normal = (rec.p - center(r.time())) / radius;
+    
+    //Interaction information
+    Float zRadius = std::sqrt(rec.p.x() * rec.p.x()  + rec.p.z()  * rec.p.z() );
+    Float invZRadius = 1 / zRadius;
+    Float cosPhi = rec.p.x() * invZRadius;
+    Float sinPhi = rec.p.z() * invZRadius;
+    Float theta = std::acos(clamp(rec.p.z() / radius, -1, 1));
+    rec.dpdu = 2 * M_PI * vec3(-rec.p.z(), 0, rec.p.x());
+    rec.dpdv = 2 * M_PI * vec3(rec.p.z() * cosPhi, rec.p.z() * sinPhi, -radius * std::sin(theta));
+    
     get_sphere_uv(rec.normal, rec.u, rec.v);
     rec.mat_ptr = mat_ptr;
     return(true);
@@ -196,6 +226,16 @@ bool moving_sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec,
     rec.p = r.point_at_parameter(rec.t);
     rec.p *= radius / rec.p.length(); 
     rec.normal = (rec.p - center(r.time())) / radius;
+    
+    //Interaction information
+    Float zRadius = std::sqrt(rec.p.x() * rec.p.x()  + rec.p.z()  * rec.p.z() );
+    Float invZRadius = 1 / zRadius;
+    Float cosPhi = rec.p.x() * invZRadius;
+    Float sinPhi = rec.p.z() * invZRadius;
+    Float theta = std::acos(clamp(rec.p.z() / radius, -1, 1));
+    rec.dpdu = 2 * M_PI * vec3(-rec.p.z(), 0, rec.p.x());
+    rec.dpdv = 2 * M_PI * vec3(rec.p.z() * cosPhi, rec.p.z() * sinPhi, -radius * std::sin(theta));
+    
     get_sphere_uv(rec.normal, rec.u, rec.v);
     if(!is_hit) {
       rec.normal = -rec.normal;
