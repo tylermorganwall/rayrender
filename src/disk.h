@@ -8,11 +8,13 @@
 class disk : public hitable {
 public:
   disk() {}
-  disk(vec3 cen, Float r, Float i_r, material *mat, alpha_texture *alpha_mask) : center(cen), radius(r), 
-       inner_radius(i_r), mat_ptr(mat), alpha_mask(alpha_mask) {};
+  disk(vec3 cen, Float r, Float i_r, material *mat, alpha_texture *alpha_mask, 
+       bump_texture* bump_tex) : center(cen), radius(r), 
+       inner_radius(i_r), mat_ptr(mat), alpha_mask(alpha_mask), bump_tex(bump_tex) {};
   ~disk() {
     delete mat_ptr;
     delete alpha_mask;
+    delete bump_tex;
   }
   virtual bool hit(const ray& r, Float tmin, Float tmax, hit_record& rec, random_gen& rng);
   virtual bool bounding_box(Float t0, Float t1, aabb& box) const;
@@ -25,6 +27,7 @@ public:
   Float inner_radius;
   material *mat_ptr;
   alpha_texture *alpha_mask;
+  bump_texture *bump_tex;
 };
 
 bool disk::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
@@ -40,9 +43,7 @@ bool disk::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_g
   if(radHit2 >= radius * radius || radHit2 <= inner_radius * inner_radius) {
     return(false);
   }
-  //Interaction information
-  rec.dpdu = vec3(1, 0, 0);
-  rec.dpdv = vec3(0, 0, 1);
+  
   
   vec3 p = r.point_at_parameter(t);
   p.e[1] = 0;
@@ -61,6 +62,18 @@ bool disk::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_g
   rec.mat_ptr = mat_ptr;
   rec.u = u;
   rec.v = v;
+  
+  //Interaction information
+  rec.dpdu = vec3(1, 0, 0);
+  rec.dpdv = vec3(0, 0, 1);
+  rec.has_bump = bump_tex ? true : false;
+  
+  if(bump_tex) {
+    vec3 bvbu = bump_tex->value(rec.u,rec.v, rec.p);
+    rec.bump_normal = rec.normal + bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv; 
+    rec.bump_normal.make_unit_vector();
+  }
+  
   return(true);
 }
 

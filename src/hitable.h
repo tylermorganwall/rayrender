@@ -27,6 +27,8 @@ struct hit_record {
   vec3 p;
   vec3 normal;
   vec3 dpdu, dpdv;
+  vec3 bump_normal;
+  bool has_bump;
   material *mat_ptr;
 };
 
@@ -56,6 +58,9 @@ public:
   virtual bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
     if(ptr->hit(r, t_min, t_max, rec, rng)) {
       rec.normal = -rec.normal;
+      if(rec.has_bump) {
+        rec.bump_normal = -rec.bump_normal;
+      }
       return(true);
     } else {
       return(false);
@@ -153,6 +158,10 @@ bool scale::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_
     rec.p *= scale_factor;
     rec.normal *= scale_factor;
     rec.normal.make_unit_vector();
+    if(rec.has_bump) {
+      rec.bump_normal *= scale_factor;
+      rec.bump_normal.make_unit_vector();
+    }
     return(true);
   } else {
     return(false);
@@ -263,6 +272,12 @@ bool rotate_y::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
     normal.e[2] = -sin_theta*rec.normal.e[0] + cos_theta*rec.normal.e[2]; 
     rec.p = p;
     rec.normal = normal;
+    if(rec.has_bump) {
+      normal = rec.bump_normal;
+      normal.e[0] = cos_theta*rec.bump_normal.e[0] + sin_theta*rec.bump_normal.e[2];
+      normal.e[2] = -sin_theta*rec.bump_normal.e[0] + cos_theta*rec.bump_normal.e[2]; 
+      rec.bump_normal = normal;
+    }
     return(true);
   } else {
     return(false);
@@ -364,6 +379,12 @@ bool rotate_x::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
     normal.e[2] = -sin_theta*rec.normal.e[1] + cos_theta*rec.normal.e[2]; 
     rec.p = p;
     rec.normal = normal;
+    if(rec.has_bump) {
+      normal = rec.bump_normal;
+      normal.e[1] = cos_theta*rec.bump_normal.e[1] + sin_theta*rec.bump_normal.e[2];
+      normal.e[2] = -sin_theta*rec.bump_normal.e[1] + cos_theta*rec.bump_normal.e[2]; 
+      rec.bump_normal = normal;
+    }
     return(true);
   } else {
     return(false);
@@ -464,6 +485,12 @@ bool rotate_z::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
     normal.e[1] = -sin_theta*rec.normal.e[0] + cos_theta*rec.normal.e[1]; 
     rec.p = p;
     rec.normal = normal;
+    if(rec.has_bump) {
+      normal = rec.bump_normal;
+      normal.e[0] = cos_theta*rec.bump_normal.e[0] + sin_theta*rec.bump_normal.e[1];
+      normal.e[1] = -sin_theta*rec.bump_normal.e[0] + cos_theta*rec.bump_normal.e[1]; 
+      rec.bump_normal = normal;
+    }
     return(true);
   } else {
     return(false);

@@ -215,4 +215,31 @@ Float alpha_texture::channel_value(Float u, Float v, const vec3& p) const {
   return(data[channels*i + channels*nx*j+3]);
 }
 
+class bump_texture {
+public:
+  bump_texture() {}
+  bump_texture(Float *pixels, int A, int B, int nn, Float intensity) : 
+  data(pixels), nx(A), ny(B), channels(nn), intensity(intensity) { }
+  bump_texture(Float *pixels, int A, int B, int nn, vec3 u, vec3 v) : 
+  data(pixels), nx(A), ny(B), channels(nn), u_vec(u), v_vec(v) {}
+  vec3 value(Float u, Float v, const vec3& p) const;
+  Float *data;
+  int nx, ny, channels;
+  vec3 u_vec, v_vec;
+  Float intensity;
+};
+
+vec3 bump_texture::value(Float u, Float v, const vec3& p) const {
+  int i = u * (nx-1);
+  int j = (1-v) * (ny-1) - 0.00001;
+  if (i < 0) i = 0;
+  if (j < 0) j = 0;
+  if (i > nx-2) i = nx-2;
+  if (j > ny-2) j = ny-2;
+  Float bu = data[channels*(i+1) + channels*nx*j] - data[channels*i + channels*nx*j];
+  Float bv = data[channels*i + channels*nx*(j+1)] - data[channels*i + channels*nx*j];;
+  return(vec3(intensity*bu,intensity*bv,0));
+}
+
+
 #endif

@@ -90,6 +90,7 @@ diffuse = function(color = "#ffffff",
                    gradient_color = NA, gradient_transpose = FALSE, 
                    gradient_point_start = NA, gradient_point_end = NA,
                    image_texture = NA, image_repeat = 1, alpha_texture = NA,
+                   bump_texture = NA, bump_intensity = 1,
                    fog = FALSE, fogdensity = 0.01, 
                    sigma = NULL, importance_sample = FALSE) {
   if(all(!is.na(checkercolor))) {
@@ -124,6 +125,10 @@ diffuse = function(color = "#ffffff",
     alpha_texture = NA
     warning("Alpha texture not in recognized format (array, matrix, or filename), ignoring.")
   }
+  if(!is.array(bump_texture) && !is.na(bump_texture) && !is.character(bump_texture)) {
+    bump_texture = NA
+    warning("Bump texture not in recognized format (array, matrix, or filename), ignoring.")
+  }
   type = "diffuse"
   if(!is.null(sigma) && is.numeric(sigma)) {
     if(sigma < 0) {
@@ -150,7 +155,9 @@ diffuse = function(color = "#ffffff",
                  noise=noise, noisephase = noisephase, noiseintensity = noiseintensity, noisecolor = list(noisecolor),
                  image = list(image_texture), image_repeat = list(image_repeat), 
                  alphaimage = list(alpha_texture), lightintensity = NA,
-                 fog=fog, fogdensity=fogdensity,implicit_sample = importance_sample, sigma = sigma, glossyinfo = list(NA)))
+                 fog=fog, fogdensity=fogdensity,implicit_sample = importance_sample, 
+                 sigma = sigma, glossyinfo = list(NA), bump_texture = list(bump_texture),
+                 bump_intensity = bump_intensity))
 }
 
 #' Metallic Material
@@ -243,12 +250,9 @@ metal = function(color = "#ffffff",
                  gradient_color = NA, gradient_transpose = FALSE,
                  gradient_point_start = NA, gradient_point_end = NA,
                  image_texture = NA, image_repeat = 1, alpha_texture = NA,
+                 bump_texture = NA, bump_intensity = 1,
                  importance_sample = FALSE) {
   color = convert_color(color)
-  if(!is.array(alpha_texture) && !is.na(alpha_texture) && !is.character(alpha_texture)) {
-    alpha_texture = NA
-    warning("Alpha texture not in recognized format (array, matrix, or filename), ignoring.")
-  }
   if(all(!is.na(checkercolor))) {
     checkercolor = convert_color(checkercolor)
   } else {
@@ -279,6 +283,10 @@ metal = function(color = "#ffffff",
     alpha_texture = NA
     warning("Alpha texture not in recognized format (array, matrix, or filename), ignoring.")
   }
+  if(!is.array(bump_texture) && !is.na(bump_texture) && !is.character(bump_texture)) {
+    bump_texture = NA
+    warning("Bump texture not in recognized format (array, matrix, or filename), ignoring.")
+  }
   if(length(eta) == 1) {
     eta = c(eta,eta,eta)
   }
@@ -306,7 +314,9 @@ metal = function(color = "#ffffff",
                  image = list(image_texture), image_repeat = list(image_repeat),
                  alphaimage = list(alpha_texture), 
                  lightintensity = NA,fog=FALSE,fogdensity=0.01,
-                 implicit_sample = importance_sample, sigma = 0, glossyinfo = glossyinfo))
+                 implicit_sample = importance_sample, 
+                 sigma = 0, glossyinfo = glossyinfo, bump_texture = list(bump_texture),
+                 bump_intensity = bump_intensity))
 }
 
 #' Dielectric (glass) Material
@@ -412,7 +422,9 @@ dielectric = function(color="white", refraction = 1.5,  attenuation = c(0,0,0),
                       noise=0, noisephase = 0, noiseintensity = 0, noisecolor = list(c(0,0,0)),
                       image = list(NA), image_repeat = list(c(1,1)), 
                       alphaimage = list(NA), lightintensity = NA, 
-                      fog=FALSE, fogdensity=NA, implicit_sample = importance_sample, sigma = 0, glossyinfo = list(NA)))
+                      fog=FALSE, fogdensity=NA, implicit_sample = importance_sample, 
+                      sigma = 0, glossyinfo = list(NA), bump_texture = list(NA),
+                      bump_intensity = 1))
 }
 
 #' Microfacet Material
@@ -454,7 +466,6 @@ dielectric = function(color="white", refraction = 1.5,  attenuation = c(0,0,0),
 #' @param image_texture Default `NA`. A 3-layer RGB array or filename to be used as the texture on the surface of the object.
 #' @param image_repeat Default `1`. Number of times to repeat the image across the surface.
 #' `u` and `v` repeat amount can be set independently if user passes in a length-2 vector.
-#' @param alpha_texture Default `NA`. A matrix or filename (specifying a greyscale image) to be used to specify the transparency.
 #' @param alpha_texture Default `NA`. A matrix or filename (specifying a greyscale image) to be used to specify the transparency.
 #' @param importance_sample Default `FALSE`. If `TRUE`, the object will be sampled explicitly during 
 #' the rendering process. If the object is particularly important in contributing to the light paths
@@ -518,6 +529,7 @@ microfacet = function(color="white", roughness = 0.0001,
                       gradient_color = NA, gradient_transpose = FALSE,
                       gradient_point_start = NA, gradient_point_end = NA,
                       image_texture = NA, image_repeat = 1, alpha_texture = NA,
+                      bump_texture = NA, bump_intensity = 1,
                       importance_sample = FALSE) {
   microtype = switch(microfacet, "tbr" = 1,"beckmann" = 2, 1)
   roughness[roughness <= 0] = 0
@@ -542,10 +554,6 @@ microfacet = function(color="white", roughness = 0.0001,
     stop("kappa must be either single number or 3-component vector")
   }
   color = convert_color(color)
-  if(!is.array(alpha_texture) && !is.na(alpha_texture) && !is.character(alpha_texture)) {
-    alpha_texture = NA
-    warning("Alpha texture not in recognized format (array, matrix, or filename), ignoring.")
-  }
   if(all(!is.na(checkercolor))) {
     checkercolor = convert_color(checkercolor)
   } else {
@@ -576,6 +584,10 @@ microfacet = function(color="white", roughness = 0.0001,
     alpha_texture = NA
     warning("Alpha texture not in recognized format (array, matrix, or filename), ignoring.")
   }
+  if(!is.array(bump_texture) && !is.na(bump_texture) && !is.character(bump_texture)) {
+    bump_texture = NA
+    warning("Bump texture not in recognized format (array, matrix, or filename), ignoring.")
+  }
   if(length(image_repeat) == 1) {
     image_repeat = c(image_repeat,image_repeat)
   }
@@ -590,7 +602,8 @@ microfacet = function(color="white", roughness = 0.0001,
                         image = list(image_texture), image_repeat = list(image_repeat), 
                         alphaimage = list(alpha_texture), lightintensity = NA, 
                         fog=FALSE, fogdensity=NA, implicit_sample = importance_sample, 
-                        sigma = 0, glossyinfo = glossyinfo))
+                        sigma = 0, glossyinfo = glossyinfo, bump_texture = list(bump_texture),
+                        bump_intensity = bump_intensity))
   } else {
     new_tibble_row(list(type = "microfacet", 
                    properties = list(c(color)), 
@@ -601,7 +614,8 @@ microfacet = function(color="white", roughness = 0.0001,
                    image = list(image_texture), image_repeat = list(image_repeat), 
                    alphaimage = list(alpha_texture), lightintensity = NA, 
                    fog=FALSE, fogdensity=NA, implicit_sample = importance_sample, 
-                   sigma = 0, glossyinfo = glossyinfo))
+                   sigma = 0, glossyinfo = glossyinfo, bump_texture = list(bump_texture),
+                   bump_intensity = bump_intensity))
   }
 }
 
@@ -646,7 +660,9 @@ light = function(color = "#ffffff", intensity = 10, importance_sample = TRUE) {
                  noise=0, noisephase = 0, noiseintensity = 0, noisecolor = list(c(0,0,0)),
                  image = list(NA), image_repeat = list(c(1,1)),
                  alphaimage = list(NA), lightintensity = intensity,
-                 fog=FALSE, fogdensity=0.01, implicit_sample = importance_sample, sigma = 0, glossyinfo = list(NA)))
+                 fog=FALSE, fogdensity=0.01, implicit_sample = importance_sample, 
+                 sigma = 0, glossyinfo = list(NA), bump_texture = list(NA),
+                 bump_intensity = 1))
 }
 
 #' Glossy Material
@@ -680,7 +696,6 @@ light = function(color = "#ffffff", intensity = 10, importance_sample = TRUE) {
 #' @param image_texture Default `NA`. A 3-layer RGB array or filename to be used as the texture on the surface of the object.
 #' @param image_repeat Default `1`. Number of times to repeat the image across the surface.
 #' `u` and `v` repeat amount can be set independently if user passes in a length-2 vector.
-#' @param alpha_texture Default `NA`. A matrix or filename (specifying a greyscale image) to be used to specify the transparency.
 #' @param alpha_texture Default `NA`. A matrix or filename (specifying a greyscale image) to be used to specify the transparency.
 #' @param importance_sample Default `FALSE`. If `TRUE`, the object will be sampled explicitly during 
 #' the rendering process. If the object is particularly important in contributing to the light paths
@@ -736,6 +751,7 @@ glossy = function(color="white", gloss = 1, reflectance = 0.05, microfacet = "tb
                   gradient_color = NA, gradient_transpose = FALSE,
                   gradient_point_start = NA, gradient_point_end = NA,
                   image_texture = NA, image_repeat = 1, alpha_texture = NA,
+                  bump_texture = NA, bump_intensity = 1,
                   importance_sample = FALSE) {
   microtype = switch(microfacet, "tbr" = 1,"beckmann" = 2, 1)
   gloss[gloss <= 0] = 0
@@ -751,10 +767,6 @@ glossy = function(color="white", gloss = 1, reflectance = 0.05, microfacet = "tb
   }
   color = convert_color(color)
   reflectance = rep(reflectance,3)
-  if(!is.array(alpha_texture) && !is.na(alpha_texture) && !is.character(alpha_texture)) {
-    alpha_texture = NA
-    warning("Alpha texture not in recognized format (array, matrix, or filename), ignoring.")
-  }
   if(all(!is.na(checkercolor))) {
     checkercolor = convert_color(checkercolor)
   } else {
@@ -785,6 +797,10 @@ glossy = function(color="white", gloss = 1, reflectance = 0.05, microfacet = "tb
     alpha_texture = NA
     warning("Alpha texture not in recognized format (array, matrix, or filename), ignoring.")
   }
+  if(!is.array(bump_texture) && !is.na(bump_texture) && !is.character(bump_texture)) {
+    bump_texture = NA
+    warning("Bump texture not in recognized format (array, matrix, or filename), ignoring.")
+  }
   if(length(image_repeat) == 1) {
     image_repeat = c(image_repeat,image_repeat)
   }
@@ -798,7 +814,8 @@ glossy = function(color="white", gloss = 1, reflectance = 0.05, microfacet = "tb
                       image = list(image_texture), image_repeat = list(image_repeat), 
                       alphaimage = list(alpha_texture), lightintensity = NA, 
                       fog=FALSE, fogdensity=NA, implicit_sample = importance_sample, 
-                      sigma = 0, glossyinfo = glossyinfo))
+                      sigma = 0, glossyinfo = glossyinfo, bump_texture = list(bump_texture),
+                      bump_intensity = bump_intensity))
 }
 
 #' Lambertian Material (deprecated)

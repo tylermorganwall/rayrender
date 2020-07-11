@@ -326,6 +326,34 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
   alphalist = list()
   alphalist$alpha_temp_file_names = alpha_temp_file_names
   alphalist$alpha_tex_bool = alpha_tex_bool
+  
+  #bump texture handler
+  bump_array_list = scene$bump_texture
+  bump_tex_bool = purrr::map_lgl(bump_array_list,.f = ~is.array(.x[[1]]))
+  bump_filename_bool = purrr::map_lgl(bump_array_list,.f = ~is.character(.x[[1]]))
+  bump_temp_file_names = purrr::map_chr(bump_tex_bool,.f = ~ifelse(.x, tempfile(fileext = ".png"),""))
+  for(i in 1:length(bump_array_list)) {
+    if(bump_tex_bool[i]) {
+      if(dim(bump_array_list[[i]][[1]])[3] == 4) {
+        png::writePNG(fliplr(aperm(bump_array_list[[i]][[1]][,,1:3],c(2,1,3))),bump_temp_file_names[i])
+      } else if(dim(bump_array_list[[i]][[1]])[3] == 3){
+        png::writePNG(fliplr(aperm(bump_array_list[[i]][[1]],c(2,1,3))),bump_temp_file_names[i])
+      }
+    }
+    if(bump_filename_bool[i]) {
+      if(any(!file.exists(path.expand(bump_array_list[[i]][[1]])) & nchar(bump_array_list[[i]][[1]]) > 0)) {
+        stop(paste0("Cannot find the following texture file:\n",
+                    paste(bump_array_list[[i]][[1]], collapse="\n")))
+      }
+      bump_temp_file_names[i] = path.expand(bump_array_list[[i]][[1]])
+    }
+  }
+  bump_tex_bool = bump_tex_bool | bump_filename_bool
+  bump_intensity = scene$bump_intensity
+  alphalist$bump_temp_file_names = bump_temp_file_names
+  alphalist$bump_tex_bool = bump_tex_bool
+  alphalist$bump_intensity = bump_intensity
+  
   #movement handler
   if(shutteropen == shutterclose) {
     movingvec = rep(FALSE,length(movingvec))

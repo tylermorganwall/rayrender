@@ -55,6 +55,9 @@ hitable *build_scene(IntegerVector& type,
                      LogicalVector& isimage, LogicalVector has_alpha,
                      std::vector<Float* >& alpha_textures, std::vector<int* >& nveca,
                      std::vector<Float* >& textures, std::vector<int* >& nvec,
+                     LogicalVector has_bump,
+                     std::vector<Float* >& bump_textures, std::vector<int* >& nvecb,
+                     NumericVector& bump_intensity,
                      NumericVector& lightintensity,
                      LogicalVector& isflipped,
                      LogicalVector& isvolume, NumericVector& voldensity,
@@ -141,8 +144,12 @@ hitable *build_scene(IntegerVector& type,
     //Generate texture
     material *tex = nullptr;
     alpha_texture *alpha = nullptr;
+    bump_texture *bump = nullptr;
     if(has_alpha(i)) {
       alpha = new alpha_texture(alpha_textures[i], nveca[i][0], nveca[i][1], nveca[i][2]);
+    }
+    if(has_bump(i)) {
+      bump = new bump_texture(bump_textures[i], nvecb[i][0], nvecb[i][1], nvecb[i][2], bump_intensity(i));
     }
     if(type(i) == 2) {
       prop_len = 3;
@@ -393,7 +400,9 @@ hitable *build_scene(IntegerVector& type,
 
     //Generate objects
     if (shape(i) == 1) {
-      hitable *entry = new sphere(vec3(0,0,0), radius(i), tex, alpha);
+      
+      //Fix moving memory leak
+      hitable *entry = new sphere(vec3(0,0,0), radius(i), tex, alpha, bump);
       if(is_scaled) {
         entry = new scale(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
       }
@@ -411,7 +420,7 @@ hitable *build_scene(IntegerVector& type,
       } else {
         entry = new moving_sphere(center + vel * shutteropen, 
                                   center + vel * shutterclose, 
-                                  shutteropen, shutterclose, radius(i), tex, alpha);
+                                  shutteropen, shutterclose, radius(i), tex, alpha, bump);
       }
       if(isflipped(i)) {
         entry = new flip_normals(entry);
@@ -424,7 +433,7 @@ hitable *build_scene(IntegerVector& type,
     } else if (shape(i)  == 2) {
       hitable *entry = new xy_rect(-tempvector(prop_len+2)/2,tempvector(prop_len+2)/2,
                                    -tempvector(prop_len+4)/2,tempvector(prop_len+4)/2,
-                                   0, tex, alpha, isflipped(i));
+                                   0, tex, alpha, bump, isflipped(i));
       if(is_scaled) {
         entry = new scale(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
       }
@@ -442,7 +451,7 @@ hitable *build_scene(IntegerVector& type,
     } else if (shape(i)  == 3) {
       hitable *entry = new xz_rect(-tempvector(prop_len+2)/2,tempvector(prop_len+2)/2,
                                    -tempvector(prop_len+4)/2,tempvector(prop_len+4)/2,
-                                   0, tex, alpha, isflipped(i));
+                                   0, tex, alpha, bump, isflipped(i));
       if(is_scaled) {
         entry = new scale(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
       }
@@ -460,7 +469,7 @@ hitable *build_scene(IntegerVector& type,
     } else if (shape(i)  == 4) {
       hitable *entry = new yz_rect(-tempvector(prop_len+2)/2,tempvector(prop_len+2)/2,
                                    -tempvector(prop_len+4)/2,tempvector(prop_len+4)/2,
-                                   0, tex, alpha, isflipped(i));
+                                   0, tex, alpha, bump, isflipped(i));
       if(is_scaled) {
         entry = new scale(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
       }
@@ -478,7 +487,7 @@ hitable *build_scene(IntegerVector& type,
     } else if (shape(i)  == 5) {
       hitable *entry = new box(-vec3(tempvector(prop_len+1),tempvector(prop_len+2),tempvector(prop_len+3))/2, 
                                vec3(tempvector(prop_len+1),tempvector(prop_len+2),tempvector(prop_len+3))/2, 
-                               tex, alpha);
+                               tex, alpha, bump);
       if(is_scaled) {
         entry = new scale(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
       }
@@ -608,7 +617,7 @@ hitable *build_scene(IntegerVector& type,
       }
     } else if (shape(i) == 9) {
       hitable *entry;
-      entry = new disk(vec3(0,0,0), radius(i), tempvector(prop_len+1), tex, alpha);
+      entry = new disk(vec3(0,0,0), radius(i), tempvector(prop_len+1), tex, alpha, bump);
       if(is_scaled) {
         entry = new scale(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
       }
@@ -629,7 +638,7 @@ hitable *build_scene(IntegerVector& type,
       }
     } else if (shape(i) == 10) {
       hitable *entry = new cylinder(radius(i), tempvector(prop_len+1), 
-                                    tempvector(prop_len+2), tempvector(prop_len+3), tex, alpha);
+                                    tempvector(prop_len+2), tempvector(prop_len+3), tex, alpha, bump);
       if(is_scaled) {
         entry = new scale(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
       }
@@ -650,7 +659,7 @@ hitable *build_scene(IntegerVector& type,
     } else if (shape(i) == 11) {
       hitable *entry = new ellipsoid(vec3(0,0,0), radius(i), 
                                      vec3(tempvector(prop_len + 1), tempvector(prop_len + 2), tempvector(prop_len + 3)),
-                                     tex, alpha);
+                                     tex, alpha, bump);
       if(is_scaled) {
         entry = new scale(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
       }
@@ -802,7 +811,7 @@ hitable* build_imp_sample(IntegerVector& type,
   }
 
   if(shape(i) == 1) {
-    hitable *entry = new sphere(vec3(0,0,0), radius(i), 0, nullptr);
+    hitable *entry = new sphere(vec3(0,0,0), radius(i), 0, nullptr,nullptr);
     if(is_scaled) {
       entry = new scale(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
     }
@@ -819,7 +828,7 @@ hitable* build_imp_sample(IntegerVector& type,
   } else if (shape(i) == 2) {
     hitable *entry = new xy_rect(-tempvector(prop_len+2)/2,tempvector(prop_len+2)/2,
                                  -tempvector(prop_len+4)/2,tempvector(prop_len+4)/2,
-                                 0, 0, nullptr, false);
+                                 0, 0, nullptr, nullptr, false);
     if(is_scaled) {
       entry = new scale(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
     }
@@ -837,7 +846,7 @@ hitable* build_imp_sample(IntegerVector& type,
   } else if (shape(i) == 3) {
     hitable *entry = new xz_rect(-tempvector(prop_len+2)/2,tempvector(prop_len+2)/2,
                                  -tempvector(prop_len+4)/2,tempvector(prop_len+4)/2,
-                                 0, 0, nullptr, false);
+                                 0, 0, nullptr, nullptr, false);
     if(is_scaled) {
       entry = new scale(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
     }
@@ -855,7 +864,7 @@ hitable* build_imp_sample(IntegerVector& type,
   } else if (shape(i) == 4) {
     hitable *entry = new yz_rect(-tempvector(prop_len+2)/2,tempvector(prop_len+2)/2,
                                  -tempvector(prop_len+4)/2,tempvector(prop_len+4)/2,
-                                 0, 0, nullptr, false);
+                                 0, 0, nullptr, nullptr, false);
     if(is_scaled) {
       entry = new scale(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
     }
@@ -873,7 +882,7 @@ hitable* build_imp_sample(IntegerVector& type,
   } else if (shape(i) == 5) {
     hitable *entry = new box(-vec3(tempvector(prop_len+1),tempvector(prop_len+2),tempvector(prop_len+3))/2, 
                              vec3(tempvector(prop_len+1),tempvector(prop_len+2),tempvector(prop_len+3))/2, 
-                             0, nullptr);
+                             0, nullptr,nullptr);
     if(is_scaled) {
       entry = new scale(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
     }
@@ -931,7 +940,7 @@ hitable* build_imp_sample(IntegerVector& type,
     return(entry);
   } else if (shape(i) == 9) {
     hitable *entry;
-    entry = new disk(vec3(0,0,0), radius(i), tempvector(prop_len+1), 0, nullptr);
+    entry = new disk(vec3(0,0,0), radius(i), tempvector(prop_len+1), 0, nullptr,nullptr);
     if(is_scaled) {
       entry = new scale(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
     }
@@ -948,7 +957,7 @@ hitable* build_imp_sample(IntegerVector& type,
     return(entry);
   } else if (shape(i) == 10) {
     hitable *entry = new cylinder(radius(i), tempvector(prop_len+1), 
-                                  tempvector(prop_len+2), tempvector(prop_len+3), 0, nullptr);
+                                  tempvector(prop_len+2), tempvector(prop_len+3), 0, nullptr,nullptr);
     if(is_scaled) {
       entry = new scale(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
     }
@@ -966,7 +975,7 @@ hitable* build_imp_sample(IntegerVector& type,
   } else {
     hitable *entry = new ellipsoid(vec3(0,0,0), radius(i), 
                                    vec3(tempvector(prop_len + 1), tempvector(prop_len + 2), tempvector(prop_len + 3)),
-                                   0, nullptr);
+                                   0, nullptr,nullptr);
     if(is_scaled) {
       entry = new scale(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
     }

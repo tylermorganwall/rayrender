@@ -12,9 +12,10 @@ class sphere: public hitable {
       // Rcpp::Rcout << "sphere delete " << typeid(*mat_ptr).name() << "\n";
       delete mat_ptr;
       delete alpha_mask;
+      delete bump_tex;
     }
-    sphere(vec3 cen, Float r, material *mat, alpha_texture *alpha_mask) : center(cen), radius(r), 
-           mat_ptr(mat), alpha_mask(alpha_mask) {
+    sphere(vec3 cen, Float r, material *mat, alpha_texture *alpha_mask, bump_texture* bump_tex) : center(cen), radius(r), 
+           mat_ptr(mat), alpha_mask(alpha_mask), bump_tex(bump_tex) {
       // Rcpp::Rcout << "sphere create " <<  typeid(*mat_ptr).name() << " " << mat_ptr->hasAlphaTexture << "\n";
     };
     virtual bool hit(const ray& r, Float tmin, Float tmax, hit_record& rec, random_gen& rng);
@@ -26,6 +27,7 @@ class sphere: public hitable {
     Float radius;
     material *mat_ptr;
     alpha_texture *alpha_mask;
+    bump_texture *bump_tex;
 };
 
 bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
@@ -78,8 +80,15 @@ bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random
     Float theta = std::acos(clamp(rec.p.z() / radius, -1, 1));
     rec.dpdu = 2 * M_PI * vec3(-rec.p.z(), 0, rec.p.x());
     rec.dpdv = 2 * M_PI * vec3(rec.p.z() * cosPhi, rec.p.z() * sinPhi, -radius * std::sin(theta));
-    
     get_sphere_uv(rec.normal, rec.u, rec.v);
+    rec.has_bump = bump_tex ? true : false;
+    
+    if(bump_tex) {
+      vec3 bvbu = bump_tex->value(rec.u,rec.v, rec.p);
+      rec.bump_normal = rec.normal + bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv; 
+      rec.bump_normal.make_unit_vector();
+    }
+    
     rec.mat_ptr = mat_ptr;
     return(true);
   }
@@ -97,8 +106,15 @@ bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random
     Float theta = std::acos(clamp(rec.p.z() / radius, -1, 1));
     rec.dpdu = 2 * M_PI * vec3(-rec.p.z(), 0, rec.p.x());
     rec.dpdv = 2 * M_PI * vec3(rec.p.z() * cosPhi, rec.p.z() * sinPhi, -radius * std::sin(theta));
-    
     get_sphere_uv(rec.normal, rec.u, rec.v);
+    rec.has_bump = bump_tex ? true : false;
+    
+    if(bump_tex) {
+      vec3 bvbu = bump_tex->value(rec.u,rec.v, rec.p);
+      rec.bump_normal = rec.normal +  bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv; 
+      rec.bump_normal.make_unit_vector();
+    }
+    
     if(alpha_mask) {
       rec.normal = -rec.normal;
     }
@@ -144,9 +160,9 @@ class moving_sphere: public hitable {
   public:
     moving_sphere() {}
     moving_sphere(vec3 cen0, vec3 cen1, Float t0, Float t1, Float r, 
-                  material *mat,alpha_texture *alpha_mask) : 
+                  material *mat,alpha_texture *alpha_mask, bump_texture* bump_tex) : 
                   center0(cen0), center1(cen1), time0(t0), time1(t1), radius(r), 
-                  mat_ptr(mat), alpha_mask(alpha_mask) {};
+                  mat_ptr(mat), alpha_mask(alpha_mask), bump_tex(bump_tex) {};
     virtual bool hit(const ray& r, Float tmin, Float tmax, hit_record& rec, random_gen& rng);
     virtual bool bounding_box(Float t0, Float t1, aabb& box) const;
     vec3 center(Float time) const;
@@ -155,6 +171,7 @@ class moving_sphere: public hitable {
     Float radius;
     material *mat_ptr;
     alpha_texture *alpha_mask;
+    bump_texture *bump_tex;
 };
 
 vec3 moving_sphere::center(Float time) const {
@@ -217,6 +234,12 @@ bool moving_sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec,
     rec.dpdu = 2 * M_PI * vec3(-rec.p.z(), 0, rec.p.x());
     rec.dpdv = 2 * M_PI * vec3(rec.p.z() * cosPhi, rec.p.z() * sinPhi, -radius * std::sin(theta));
     
+    if(bump_tex) {
+      vec3 bvbu = bump_tex->value(rec.u,rec.v, rec.p);
+      rec.bump_normal = rec.normal + bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv; 
+      rec.bump_normal.make_unit_vector();
+    }
+    
     get_sphere_uv(rec.normal, rec.u, rec.v);
     rec.mat_ptr = mat_ptr;
     return(true);
@@ -235,6 +258,12 @@ bool moving_sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec,
     Float theta = std::acos(clamp(rec.p.z() / radius, -1, 1));
     rec.dpdu = 2 * M_PI * vec3(-rec.p.z(), 0, rec.p.x());
     rec.dpdv = 2 * M_PI * vec3(rec.p.z() * cosPhi, rec.p.z() * sinPhi, -radius * std::sin(theta));
+    
+    if(bump_tex) {
+      vec3 bvbu = bump_tex->value(rec.u,rec.v, rec.p);
+      rec.bump_normal = rec.normal + bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv; 
+      rec.bump_normal.make_unit_vector();
+    }
     
     get_sphere_uv(rec.normal, rec.u, rec.v);
     if(!is_hit) {

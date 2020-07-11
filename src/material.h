@@ -98,11 +98,21 @@ class lambertian : public material {
     vec3 f(const ray& r_in, const hit_record& rec, const ray& scattered) const {
       //unit_vector(scattered.direction()) == wo
       //r_in.direction() == wi
-      Float cosine = dot(rec.normal, unit_vector(scattered.direction()));
+      vec3 wi = unit_vector(scattered.direction());
+      Float cosine = dot(rec.normal, wi);
+      //Shadow terminator if bump map
+      Float G = 1.0f;
+      if(rec.has_bump) {
+        Float NsNlight = dot(rec.bump_normal, wi);
+        Float NsNg = dot(rec.bump_normal, rec.normal);
+        G = NsNlight > 0.0 && NsNg > 0.0 ? std::fmin(1.0, dot(wi, rec.normal) / (NsNlight * NsNg)) : 0;
+        G = G > 0.0f ? -G * G * G + G * G + G : 0.0f;
+        cosine = dot(rec.bump_normal, wi);
+      }
       if(cosine < 0) {
         cosine = 0;
       }
-      return(albedo->value(rec.u, rec.v, rec.p) * cosine * M_1_PI);
+      return(G * albedo->value(rec.u, rec.v, rec.p) * cosine * M_1_PI);
     }
     bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng) {
       srec.is_specular = false;
@@ -123,9 +133,10 @@ class metal : public material {
       if(albedo) delete albedo;
     }
     virtual bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng) {
+      vec3 normal = !hrec.has_bump ? hrec.normal : hrec.bump_normal;
       vec3 wi = -unit_vector(r_in.direction());
-      vec3 reflected = Reflect(wi,unit_vector(hrec.normal));
-      Float cosine = AbsDot(unit_vector(reflected), unit_vector(hrec.normal));
+      vec3 reflected = Reflect(wi,unit_vector(normal));
+      Float cosine = AbsDot(unit_vector(reflected), unit_vector(normal));
       if(cosine < 0) {
         cosine = 0;
       }
@@ -351,13 +362,21 @@ public:
   bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng) {
     srec.is_specular = false;
     srec.attenuation = albedo->value(hrec.u, hrec.v, hrec.p);
-    srec.pdf_ptr = new micro_pdf(hrec.normal, r_in.direction(), distribution);
+    if(!hrec.has_bump) {
+      srec.pdf_ptr = new micro_pdf(hrec.normal, r_in.direction(), distribution);
+    } else {
+      srec.pdf_ptr = new micro_pdf(hrec.bump_normal, r_in.direction(), distribution);
+    }
     return(true);
   }
 
   vec3 f(const ray& r_in, const hit_record& rec, const ray& scattered) const {
     onb uvw;
-    uvw.build_from_w(rec.normal);
+    if(!rec.has_bump) {
+      uvw.build_from_w(rec.normal);
+    } else {
+      uvw.build_from_w(rec.bump_normal);
+    }
     vec3 wi = -unit_vector(uvw.world_to_local(r_in.direction()));
     vec3 wo = unit_vector(uvw.world_to_local(scattered.direction()));
     
@@ -401,7 +420,11 @@ public:
   
   vec3 f(const ray& r_in, const hit_record& rec, const ray& scattered) const {
     onb uvw;
-    uvw.build_from_w(rec.normal);
+    if(!rec.has_bump) {
+      uvw.build_from_w(rec.normal);
+    } else {
+      uvw.build_from_w(rec.bump_normal);
+    }
     vec3 wi = -unit_vector(uvw.world_to_local(r_in.direction()));
     vec3 wo = unit_vector(uvw.world_to_local(scattered.direction()));
     

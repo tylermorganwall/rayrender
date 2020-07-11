@@ -103,7 +103,6 @@ vec3 color(const ray& r, hitable *world, hitable_list *hlist,
         } else {
           r2 = ray(offset_p, p.generate(rng), r2.pri_stack, r2.time()); //scatters a ray from hit point to direction
         }
-        // r2 = ray(offset_p, p.generate(rng), r2.pri_stack, r2.time()); //scatters a ray from hit point to direction
         
         pdf_val = p.value(r2.direction(), rng); //generates a pdf value based the intersection point and the mixture pdf
         throughput *= hrec.mat_ptr->f(r1, hrec, r2) / pdf_val;
@@ -246,6 +245,12 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
   float dist_to_focus = focus_distance;
   CharacterVector alpha_files = as<CharacterVector>(alphalist["alpha_temp_file_names"]);
   LogicalVector has_alpha = as<LogicalVector>(alphalist["alpha_tex_bool"]);
+  
+  CharacterVector bump_files = as<CharacterVector>(alphalist["bump_temp_file_names"]);
+  LogicalVector has_bump = as<LogicalVector>(alphalist["bump_tex_bool"]);
+  NumericVector bump_intensity = as<NumericVector>(alphalist["bump_intensity"]);
+  
+  
   RcppThread::ThreadPool pool(numbercores);
   GetRNGstate();
   random_gen rng(unif_rand() * std::pow(2,32));
@@ -263,8 +268,12 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
   
   std::vector<Float* > textures;
   std::vector<int* > nx_ny_nn;
+  
   std::vector<Float* > alpha_textures;
   std::vector<int* > nx_ny_nn_alpha;
+  
+  std::vector<Float* > bump_textures;
+  std::vector<int* > nx_ny_nn_bump;
   //Shared material vector
   std::vector<material* >* shared_materials = new std::vector<material* >;
   
@@ -293,6 +302,18 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
       alpha_textures.push_back(nullptr);
       nx_ny_nn_alpha.push_back(nullptr);
     }
+    if(has_bump(i)) {
+      int nxb, nyb, nnb;
+      Float* tex_data_bump = stbi_loadf(bump_files(i), &nxb, &nyb, &nnb, 4);
+      bump_textures.push_back(tex_data_bump);
+      nx_ny_nn_bump.push_back(new int[3]);
+      nx_ny_nn_bump[i][0] = nxb;
+      nx_ny_nn_bump[i][1] = nyb;
+      nx_ny_nn_bump[i][2] = nnb;
+    } else {
+      bump_textures.push_back(nullptr);
+      nx_ny_nn_bump.push_back(nullptr);
+    }
   }
   
   
@@ -304,7 +325,8 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
                                 noise, isnoise, noisephase, noiseintensity, noisecolorlist,
                                 angle, 
                                 isimage, has_alpha, alpha_textures, nx_ny_nn_alpha,
-                                textures, nx_ny_nn,
+                                textures, nx_ny_nn, has_bump, bump_textures, nx_ny_nn_bump,
+                                bump_intensity,
                                 lightintensity, isflipped,
                                 isvolume, voldensity, order_rotation_list, 
                                 isgrouped, group_pivot, group_translate,
@@ -726,6 +748,10 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
     if(has_alpha(i)) {
       stbi_image_free(alpha_textures[i]);
       delete nx_ny_nn_alpha[i];
+    }
+    if(has_bump(i)) {
+      stbi_image_free(bump_textures[i]);
+      delete nx_ny_nn_bump[i];
     }
   }
   for(size_t i = 0; i < shared_materials->size(); i++) {
