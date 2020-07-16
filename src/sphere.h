@@ -117,6 +117,7 @@ bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random
     
     if(alpha_mask) {
       rec.normal = -rec.normal;
+      rec.bump_normal = -rec.bump_normal;
     }
     rec.mat_ptr = mat_ptr;
     return(true);
@@ -261,13 +262,16 @@ bool moving_sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec,
     
     if(bump_tex) {
       vec3 bvbu = bump_tex->value(rec.u,rec.v, rec.p);
-      rec.bump_normal = rec.normal + bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv; 
+      vec3 o_u = cross(rec.normal, rec.dpdu);
+      vec3 o_v = cross(rec.normal, rec.dpdv);
+      rec.bump_normal = rec.normal + bvbu.x() * o_v - bvbu.y() * o_u; 
       rec.bump_normal.make_unit_vector();
     }
     
     get_sphere_uv(rec.normal, rec.u, rec.v);
     if(!is_hit) {
       rec.normal = -rec.normal;
+      rec.bump_normal = -rec.bump_normal;
     }
     rec.mat_ptr = mat_ptr;
     return(true);

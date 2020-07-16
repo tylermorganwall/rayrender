@@ -3,19 +3,21 @@
 
 #include "hitable.h"
 #include "material.h"
+#include "onbh.h"
 
 class triangle : public hitable {
 public:
   triangle() {}
   ~triangle() {
-    // Rcpp::Rcout << "bvh delete " << typeid(*mp).name() << "\n";
     if(single) {
-      delete mp;
-      delete alpha_mask;
+      if(mp) delete mp;
+      if(alpha_mask) delete alpha_mask;
+      if(bump_tex) delete bump_tex;
     }
   }
-  triangle(vec3 _a, vec3 _b, vec3 _c, bool _single, material *mat, alpha_texture *alpha_mask) :
-  a(_a), b(_b), c(_c), single(_single), mp(mat), alpha_mask(alpha_mask) {
+  triangle(vec3 _a, vec3 _b, vec3 _c, bool _single, material *mat, 
+           alpha_texture *alpha_mask, bump_texture* bump_tex) :
+  a(_a), b(_b), c(_c), single(_single), mp(mat), alpha_mask(alpha_mask), bump_tex(bump_tex) {
     edge1 = b-a;
     edge2 = c-a;
     normal = cross(edge1, edge2);
@@ -24,8 +26,9 @@ public:
     normals_provided = false;
   };
   triangle(vec3 _a, vec3 _b, vec3 _c, vec3 _na, vec3 _nb, vec3 _nc, bool _single, 
-           material *mat, alpha_texture *alpha_mask) :
-    a(_a), b(_b), c(_c), na(_na), nb(_nb), nc(_nc), single(_single), mp(mat), alpha_mask(alpha_mask) {
+           material *mat, alpha_texture *alpha_mask, bump_texture* bump_tex) :
+    a(_a), b(_b), c(_c), na(_na), nb(_nb), nc(_nc), single(_single), mp(mat), 
+    alpha_mask(alpha_mask), bump_tex(bump_tex) {
     edge1 = b-a;
     edge2 = c-a;
     normal = cross(edge1, edge2);
@@ -83,6 +86,7 @@ public:
   bool single;
   material *mp;
   alpha_texture *alpha_mask;
+  bump_texture *bump_tex;
 };
 
 bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
@@ -120,6 +124,38 @@ bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
   rec.p = r.point_at_parameter(t);
   rec.u = u;
   rec.v = v;
+  rec.has_bump = false;
+  
+  if(bump_tex) {
+    //Get UV values + calculate dpdu/dpdv
+    vec3 u_val, v_val;
+    vec2 uv[3];
+    u_val = bump_tex->u_vec;
+    v_val = bump_tex->v_vec;
+    uv[0] = vec2(u_val.x(), v_val.x());
+    uv[1] = vec2(u_val.y(), v_val.y());
+    uv[2] = vec2(u_val.z(), v_val.z());
+    vec2 duv02 = uv[0] - uv[2];
+    vec2 duv12 = uv[1] - uv[2];
+    vec3 dp02 = edge1;
+    vec3 dp12 = edge2;
+    
+    Float determinant = DifferenceOfProducts(duv02[0],duv12[1],duv02[1],duv12[0]);
+    if (determinant == 0) {
+      onb uvw;
+      uvw.build_from_w(cross(edge2,edge1));
+      rec.dpdu = uvw.u();
+      rec.dpdv = uvw.v();
+    } else {
+      Float invdet = 1 / determinant;
+      rec.dpdu = -( duv12[1] * dp02 - duv02[1] * dp12) * invdet;
+      rec.dpdv = -(-duv12[0] * dp02 + duv02[0] * dp12) * invdet;
+    }
+  } else {
+    rec.dpdu = vec3(0,0,0);
+    rec.dpdv = vec3(0,0,0);
+  }
+  // Use that to calculate normals
   if(normals_provided) {
     vec3 normal_temp = w * na + u * nb + v * nc;
     if(alpha_mask) {
@@ -133,6 +169,14 @@ bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
     } else {
       rec.normal = normal;
     }
+  }
+  if(bump_tex) {
+    vec3 bvbu = bump_tex->mesh_value(rec.u, rec.v, rec.p);
+    rec.bump_normal = dot(r.direction(), normal) < 0 ? 
+                      rec.normal +  bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv :
+                      rec.normal -  bvbu.x() * rec.dpdu - bvbu.y() * rec.dpdv;
+    rec.bump_normal.make_unit_vector();
+    rec.has_bump = true;
   }
   rec.mat_ptr = mp;
   return(true);

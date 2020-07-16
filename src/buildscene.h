@@ -149,7 +149,8 @@ hitable *build_scene(IntegerVector& type,
       alpha = new alpha_texture(alpha_textures[i], nveca[i][0], nveca[i][1], nveca[i][2]);
     }
     if(has_bump(i)) {
-      bump = new bump_texture(bump_textures[i], nvecb[i][0], nvecb[i][1], nvecb[i][2], bump_intensity(i));
+      bump = new bump_texture(bump_textures[i], nvecb[i][0], nvecb[i][1], nvecb[i][2], 
+                              bump_intensity(i));
     }
     if(type(i) == 2) {
       prop_len = 3;
@@ -524,13 +525,13 @@ hitable *build_scene(IntegerVector& type,
                             vec3(tempvector(prop_len+13),tempvector(prop_len+14),tempvector(prop_len+15)),
                             vec3(tempvector(prop_len+16),tempvector(prop_len+17),tempvector(prop_len+18)),
                             !is_shared_mat(i), //turn off if shared material (e.g. extruded polygon)
-                            tex, nullptr);
+                            tex, alpha, bump);
       } else {
         entry= new triangle(vec3(tempvector(prop_len+1),tempvector(prop_len+2),tempvector(prop_len+3)),
                             vec3(tempvector(prop_len+4),tempvector(prop_len+5),tempvector(prop_len+6)),
                             vec3(tempvector(prop_len+7),tempvector(prop_len+8),tempvector(prop_len+9)),
                             !is_shared_mat(i), //turn off if shared material (e.g. extruded polygon)
-                            tex, nullptr);
+                            tex, alpha, bump);
       }
       if(is_scaled) {
         entry = new scale(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
@@ -779,8 +780,8 @@ hitable* build_imp_sample(IntegerVector& type,
     gtrans = vec3(0,0,0); 
   }
   if(type(i) == 3) {
-    prop_len = 8;
-  } else if(type(i) != 1 && type(i) != 5) {
+    prop_len = 7;
+  } else if(type(i) == 2) {
     prop_len = 3;
   }
   
@@ -902,7 +903,7 @@ hitable* build_imp_sample(IntegerVector& type,
                                   vec3(tempvector(prop_len+4),tempvector(prop_len+5),tempvector(prop_len+6)),
                                   vec3(tempvector(prop_len+7),tempvector(prop_len+8),tempvector(prop_len+9)),
                                   false,
-                                  0, nullptr);
+                                  0, nullptr, nullptr);
     if(is_scaled) {
       entry = new scale(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
     }

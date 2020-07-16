@@ -22,6 +22,8 @@ glossy(
   image_texture = NA,
   image_repeat = 1,
   alpha_texture = NA,
+  bump_texture = NA,
+  bump_intensity = 1,
   importance_sample = FALSE
 )
 }
@@ -72,6 +74,11 @@ begins with value `gradient_color`.}
 `u` and `v` repeat amount can be set independently if user passes in a length-2 vector.}
 
 \item{alpha_texture}{Default `NA`. A matrix or filename (specifying a greyscale image) to be used to specify the transparency.}
+
+\item{bump_texture}{Default `NA`. A matrix, array, or filename (specifying a greyscale image) to 
+be used to specify a bump map for the surface.}
+
+\item{bump_intensity}{Default `1`. Intensity of the bump map. High values may lead to unphysical results.}
 
 \item{importance_sample}{Default `FALSE`. If `TRUE`, the object will be sampled explicitly during 
 the rendering process. If the object is particularly important in contributing to the light paths

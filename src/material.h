@@ -161,7 +161,9 @@ class dielectric : public material {
     virtual bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng) {
       srec.is_specular = true;
       vec3 outward_normal;
-      vec3 reflected = reflect(r_in.direction(), hrec.normal);
+      vec3 normal = !hrec.has_bump ? hrec.normal : hrec.bump_normal;
+      
+      vec3 reflected = reflect(r_in.direction(), normal);
       Float ni_over_nt;
       srec.attenuation = albedo;
       Float current_ref_idx = 1.0;
@@ -207,10 +209,10 @@ class dielectric : public material {
       
       Float reflect_prob;
       if(!entering) {
-        outward_normal = -hrec.normal;
+        outward_normal = -normal;
         ni_over_nt = ref_idx / current_ref_idx ;
       } else {
-        outward_normal = hrec.normal;
+        outward_normal = normal;
         ni_over_nt = current_ref_idx / ref_idx;
       }
       vec3 unit_direction = unit_vector(r_in.direction());
@@ -315,11 +317,16 @@ public:
   }
 vec3 f(const ray& r_in, const hit_record& rec, const ray& scattered) const {
     onb uvw;
-    uvw.build_from_w(rec.normal);
+    if(!rec.has_bump) {
+      uvw.build_from_w(rec.normal);
+    } else {
+      uvw.build_from_w(rec.bump_normal);
+    }
     vec3 wi = -unit_vector(uvw.world_to_local(r_in.direction()));
     vec3 wo = unit_vector(uvw.world_to_local(scattered.direction()));
 
     Float cosine = wo.z();
+    
     if(cosine < 0) {
       cosine = 0;
     }

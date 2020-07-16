@@ -36,20 +36,16 @@ Generates a curved studio backdrop.
 }
 \examples{
 #Generate the ground and add some objects
-scene = generate_ground(depth=-0.5,
-                        material = diffuse(noise=1,noisecolor="blue",noisephase=10)) \%>\%
-  add_object(cube(x=0.7,material=diffuse(color="red"),angle=c(0,-15,0))) \%>\%
-  add_object(sphere(x=-0.7,radius=0.5,material=dielectric(color="white")))
+scene = generate_studio(depth=-1, material = diffuse(color="white")) \%>\%
+  add_object(obj_model(r_obj(),y=-1,x=0.7,material=glossy(color="darkred"),angle=c(0,-20,0))) \%>\%
+  add_object(sphere(x=-0.7,radius=0.5,material=dielectric())) \%>\% 
+  add_object(sphere(y=3,x=-2,z=20,material=light(intensity=600)))
 \donttest{
-render_scene(scene, parallel=TRUE,lookfrom=c(0,2,10))
+render_scene(scene, parallel=TRUE,lookfrom=c(0,2,10),fov=20,clamp_value=10,samples=400)
 }
 
-# Make the sphere representing the ground larger and make it a checkered surface.
-scene = generate_ground(depth=-0.5, spheresize=10000,
-                        material = diffuse(checkercolor="grey50")) \%>\%
-  add_object(cube(x=0.7,material=diffuse(color="red"),angle=c(0,-15,0))) \%>\%
-  add_object(sphere(x=-0.7,radius=0.5,material=dielectric(color="white")))
+#Zooming out to show the full default scene
 \donttest{
-render_scene(scene, parallel=TRUE,lookfrom=c(0,1,10))
+render_scene(scene, parallel=TRUE,lookfrom=c(0,200,400),clamp_value=10,samples=400)
 }
 }

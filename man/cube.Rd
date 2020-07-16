@@ -75,7 +75,7 @@ generate_cornell() \%>\%
                ambient_light = FALSE, samples = 500, parallel = TRUE, clamp_value = 5)
 }
 
-#Generate a rotateddielectric box in the cornell box
+#Generate a rotated dielectric box in the cornell box
 \donttest{
 generate_cornell() \%>\%
   add_object(cube(x = 555/2, y = 200, z = 555/2, 

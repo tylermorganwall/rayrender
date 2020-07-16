@@ -23,6 +23,8 @@ microfacet(
   image_texture = NA,
   image_repeat = 1,
   alpha_texture = NA,
+  bump_texture = NA,
+  bump_intensity = 1,
   importance_sample = FALSE
 )
 }
@@ -83,6 +85,11 @@ begins with value `gradient_color`.}
 
 \item{alpha_texture}{Default `NA`. A matrix or filename (specifying a greyscale image) to be used to specify the transparency.}
 
+\item{bump_texture}{Default `NA`. A matrix, array, or filename (specifying a greyscale image) to 
+be used to specify a bump map for the surface.}
+
+\item{bump_intensity}{Default `1`. Intensity of the bump map. High values may lead to unphysical results.}
+
 \item{importance_sample}{Default `FALSE`. If `TRUE`, the object will be sampled explicitly during 
 the rendering process. If the object is particularly important in contributing to the light paths
 in the image (e.g. light sources, refracting glass ball with caustics, metal objects concentrating light),
@@ -104,7 +111,7 @@ generate_cornell() \%>\%
              material=microfacet(roughness=0.1,
                                  eta=c(0.216,0.42833,1.3184), kappa=c(3.239,2.4599,1.8661)))) \%>\% 
  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
-             aperture=0, fov=40, parallel=TRUE)
+             aperture=0, fov=40, parallel=TRUE,clamp_value=10)
  
 #Make the roughness anisotropic (either horizontal or vertical), adding an extra light in front
 #to show off the different microfacet orientations
@@ -116,8 +123,8 @@ generate_cornell() \%>\%
  add_object(ellipsoid(x=150,555/2,y=150, a=100,b=150,c=100,
              material=microfacet(roughness=c(0.1,0.3),
                                  eta=c(0.216,0.42833,1.3184), kappa=c(3.239,2.4599,1.8661)))) \%>\%  
- render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=50,
-             aperture=0, fov=40,  parallel=TRUE)
+ render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
+             aperture=0, fov=40,  parallel=TRUE,clamp_value=10)
 
 #Render a rough silver R with a smaller golden egg in front
 generate_cornell() \%>\%
@@ -128,7 +135,7 @@ generate_cornell() \%>\%
              material=microfacet(roughness=0.1,
                                  eta=c(0.216,0.42833,1.3184), kappa=c(3.239,2.4599,1.8661)))) \%>\% 
  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
-             aperture=0, fov=40, parallel=TRUE)
+             aperture=0, fov=40, parallel=TRUE,clamp_value=10)
  
 #Increase the roughness
 generate_cornell() \%>\%
@@ -139,6 +146,6 @@ generate_cornell() \%>\%
              material=microfacet(roughness=0.3,
                                  eta=c(0.216,0.42833,1.3184), kappa=c(3.239,2.4599,1.8661)))) \%>\% 
  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
-             aperture=0, fov=40, parallel=TRUE)
+             aperture=0, fov=40, parallel=TRUE,clamp_value=10)
 }
 }

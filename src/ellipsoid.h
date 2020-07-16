@@ -136,6 +136,7 @@ bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, ran
     
     if(alpha_mask) {
       rec.normal = -rec.normal;
+      rec.bump_normal = -rec.bump_normal;
     }
     return(true);
   }

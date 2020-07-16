@@ -24,6 +24,9 @@ public:
     for(auto mat : obj_materials) {
       if(mat) stbi_image_free(mat);
     }
+    for(auto bump : bump_materials) {
+      if(bump) stbi_image_free(bump);
+    }
     delete mat_ptr;
   }
   trimesh(std::string inputfile, std::string basedir, Float scale, 
@@ -43,8 +46,12 @@ public:
         n += shapes[s].mesh.num_face_vertices.size();
       }
       alpha_texture* alpha = nullptr;
+      bump_texture* bump = nullptr;
+      
       obj_materials.reserve(materials.size()+1);
-      // std::vector<Float* > obj_materials(materials.size()+1);
+      bump_materials.reserve(materials.size()+1);
+      bump_textures.reserve(materials.size()+1);
+
       std::vector<vec3 > diffuse_materials(materials.size()+1);
       std::vector<vec3 > specular_materials(materials.size()+1);
       std::vector<Float > ior_materials(materials.size()+1);
@@ -52,11 +59,16 @@ public:
       std::vector<bool > has_transparency(materials.size()+1);
       std::vector<bool > has_single_diffuse(materials.size()+1);
       std::vector<bool > has_alpha(materials.size()+1);
-      std::vector<vec3 > image_dim(materials.size()+1);
+      std::vector<bool > has_bump(materials.size()+1);
+      std::vector<Float > bump_intensity(materials.size()+1);
+      
       std::vector<int > nx_mat(materials.size()+1);
       std::vector<int > ny_mat(materials.size()+1);
       std::vector<int > nn_mat(materials.size()+1);
       
+      std::vector<int > nx_mat_bump(materials.size()+1);
+      std::vector<int > ny_mat_bump(materials.size()+1);
+      std::vector<int > nn_mat_bump(materials.size()+1);
       int nx, ny, nn;
 
       for (size_t i = 0; i < materials.size(); i++) {
@@ -106,8 +118,21 @@ public:
           has_alpha[i] = false;
           has_transparency[i] = true; 
         }
+        if(strlen(materials[i].bump_texname.c_str()) > 0) {
+          bump_materials[i] = stbi_loadf((basedir + separator() + materials[i].bump_texname).c_str(), &nx, &ny, &nn, 0);
+          nx_mat_bump[i] = nx;
+          ny_mat_bump[i] = ny;
+          nn_mat_bump[i] = nn;
+          bump_intensity[i] = materials[i].bump_texopt.bump_multiplier;
+          has_bump[i] = true;
+        } else {
+          bump_materials.push_back(nullptr);
+          bump_intensity[i] = 1.0f;
+          has_bump[i] = false;
+        }
       }
       bool has_normals = attrib.normals.size() > 0 ? true : false;
+
       vec3 tris[3];
       vec3 normals[3];
       Float tx[3];
@@ -136,10 +161,6 @@ public:
             if(idx.texcoord_index != -1) {
               tx[v] = attrib.texcoords[2*idx.texcoord_index+0];
               ty[v] = attrib.texcoords[2*idx.texcoord_index+1];
-              while(tx[v] < 0) tx[v] += 1;
-              while(ty[v] < 0) ty[v] += 1;
-              while(tx[v] > 1) tx[v] -= 1;
-              while(ty[v] > 1) ty[v] -= 1;
             }
           }
           index_offset += 3;
@@ -150,19 +171,32 @@ public:
             n--;
             continue;
           }
+          
           // per-face material
           int material_num = shapes[s].mesh.material_ids[f];
           if(material_num > -1) {
             if(has_alpha[material_num]) {
-              alpha = new alpha_texture(obj_materials[material_num], nx, ny, nn, 
+              alpha = new alpha_texture(obj_materials[material_num], 
+                                        nx_mat[material_num], ny_mat[material_num], nn_mat[material_num], 
                                         vec3(tx[0], tx[1], tx[2]), 
                                         vec3(ty[0], ty[1], ty[2]));
               alpha_materials.push_back(alpha);
             } else {
               alpha = nullptr;
             }
+            if(has_bump[material_num]) {
+              bump = new bump_texture(bump_materials[material_num],
+                                      nx_mat_bump[material_num], ny_mat_bump[material_num], nn_mat_bump[material_num],
+                                      vec3(tx[0], tx[1], tx[2]),
+                                      vec3(ty[0], ty[1], ty[2]), bump_intensity[material_num]);
+              bump_textures.push_back(bump);
+            } else {
+              bump = nullptr;
+              bump_textures.push_back(nullptr);
+            }
           } else {
             alpha = nullptr;
+            bump = nullptr;
           }
           
           material *tex;
@@ -186,8 +220,9 @@ public:
                 tex = new lambertian(new constant_texture(vec3(1,1,1)));
               }
             }
-            triangles.push_back(new triangle(tris[0],tris[1],tris[2], normals[0], normals[1], normals[2], true, 
-                                             tex, alpha));
+            triangles.push_back(new triangle(tris[0],tris[1],tris[2], 
+                                             normals[0], normals[1], normals[2], true, 
+                                             tex, alpha, bump));
           } else {
             if(material_num == -1) {
               tex = new lambertian(new constant_texture(diffuse_materials[material_num]));
@@ -209,7 +244,7 @@ public:
                 tex = new lambertian(new constant_texture(vec3(1,1,1)));
               }
             }
-            triangles.push_back(new triangle(tris[0],tris[1],tris[2], true, tex, alpha));
+            triangles.push_back(new triangle(tris[0],tris[1],tris[2], true, tex, alpha, bump));
           }
         }
       }
@@ -232,7 +267,11 @@ public:
         n += shapes[s].mesh.num_face_vertices.size();
       }
       alpha_texture *alpha = nullptr;
+      bump_texture* bump = nullptr;
+      
       obj_materials.reserve(materials.size()+1);
+      bump_materials.reserve(materials.size()+1);
+      
       // std::vector<Float* > obj_materials(materials.size()+1);
       std::vector<vec3 > diffuse_materials(materials.size()+1);
       std::vector<vec3 > specular_materials(materials.size()+1);
@@ -241,10 +280,16 @@ public:
       std::vector<bool > has_transparency(materials.size()+1);
       std::vector<bool > has_single_diffuse(materials.size()+1);
       std::vector<bool > has_alpha(materials.size()+1);
-      std::vector<vec3 > image_dim(materials.size()+1);
+      std::vector<bool > has_bump(materials.size()+1);
+      std::vector<Float > bump_intensity(materials.size()+1);
+      
       std::vector<int > nx_mat(materials.size()+1);
       std::vector<int > ny_mat(materials.size()+1);
       std::vector<int > nn_mat(materials.size()+1);
+      
+      std::vector<int > nx_mat_bump(materials.size()+1);
+      std::vector<int > ny_mat_bump(materials.size()+1);
+      std::vector<int > nn_mat_bump(materials.size()+1);
       
       int nx,ny,nn;
       
@@ -292,6 +337,18 @@ public:
           ior_materials[i] = materials[i].ior;
           has_transparency[i] = true; 
         }
+        if(strlen(materials[i].bump_texname.c_str()) > 0) {
+          bump_materials[i] = stbi_loadf((basedir + separator() + materials[i].bump_texname).c_str(), &nx, &ny, &nn, 0);
+          nx_mat_bump[i] = nx;
+          ny_mat_bump[i] = ny;
+          nn_mat_bump[i] = nn;
+          bump_intensity[i] = materials[i].bump_texopt.bump_multiplier;
+          has_bump[i] = true;
+        } else {
+          bump_materials.push_back(nullptr);
+          bump_intensity[i] = 1.0f;
+          has_bump[i] = false;
+        }
       }
       bool has_normals = attrib.normals.size() > 0 ? true : false;
       vec3 tris[3];
@@ -321,10 +378,6 @@ public:
             if(idx.texcoord_index != -1) {
               tx[v] = attrib.texcoords[2*idx.texcoord_index+0];
               ty[v] = attrib.texcoords[2*idx.texcoord_index+1];
-              while(tx[v] < 0) tx[v] += 1;
-              while(ty[v] < 0) ty[v] += 1;
-              while(tx[v] > 1) tx[v] -= 1;
-              while(ty[v] > 1) ty[v] -= 1;
             }
           }
           
@@ -347,6 +400,16 @@ public:
             } else {
               alpha = nullptr;
               alpha_materials.push_back(nullptr);
+            }
+            if(has_bump[material_num]) {
+              bump = new bump_texture(bump_materials[material_num],
+                                      nx_mat_bump[material_num], ny_mat_bump[material_num], nn_mat_bump[material_num],
+                                      vec3(tx[0], tx[1], tx[2]),
+                                      vec3(ty[0], ty[1], ty[2]), bump_intensity[material_num]);
+              bump_textures.push_back(bump);
+            } else {
+              bump = nullptr;
+              bump_textures.push_back(nullptr);
             }
           }
           
@@ -371,8 +434,9 @@ public:
                 tex = new orennayar(new constant_texture(vec3(1,1,1)), sigma);
               }
             }
-            triangles.push_back(new triangle(tris[0],tris[1],tris[2], normals[0], normals[1], normals[2], true, 
-                                             tex,alpha));
+            triangles.push_back(new triangle(tris[0],tris[1],tris[2], 
+                                             normals[0], normals[1], normals[2], true, 
+                                             tex, alpha,  bump));
           } else {
             if(material_num == -1) {
               tex = new orennayar(new constant_texture(diffuse_materials[material_num]), sigma);
@@ -392,7 +456,7 @@ public:
                 tex = new orennayar(new constant_texture(vec3(1,1,1)), sigma);
               }
             }
-            triangles.push_back(new triangle(tris[0],tris[1],tris[2], true, tex, alpha));
+            triangles.push_back(new triangle(tris[0],tris[1],tris[2], true, tex, alpha, bump));
           }
         }
       }
@@ -458,9 +522,9 @@ public:
             triangles.push_back(new triangle(tris[0],tris[1],tris[2],
                                              normals[0],normals[1],normals[2], 
                                              false,
-                                             mat_ptr, nullptr));
+                                             mat_ptr, nullptr,  nullptr));
           } else {
-            triangles.push_back(new triangle(tris[0],tris[1],tris[2], false, mat_ptr, nullptr));
+            triangles.push_back(new triangle(tris[0],tris[1],tris[2], false, mat_ptr, nullptr, nullptr));
           }
         }
       }
@@ -536,9 +600,9 @@ public:
             triangles.push_back(new triangle(tris[0],tris[1],tris[2],
                                              normals[0],normals[1],normals[2], 
                                              true,
-                                             tex, nullptr));
+                                             tex, nullptr, nullptr));
           } else {
-            triangles.push_back(new triangle(tris[0],tris[1],tris[2], true, tex, nullptr));
+            triangles.push_back(new triangle(tris[0],tris[1],tris[2], true, tex, nullptr, nullptr));
           }
         }
       }
@@ -554,6 +618,8 @@ public:
   bvh_node* tri_mesh_bvh;
   material *mat_ptr;
   std::vector<Float* > obj_materials;
+  std::vector<Float* > bump_materials;
+  std::vector<bump_texture* > bump_textures;
   std::vector<alpha_texture* > alpha_materials;
   std::vector<hitable* > triangles;
 };

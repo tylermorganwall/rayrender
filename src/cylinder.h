@@ -8,11 +8,13 @@ class cylinder: public hitable {
 public:
   cylinder() {}
   cylinder(Float r, Float len, Float phi_min, Float phi_max, 
-           material *mat, alpha_texture *alpha_mask) : 
-  radius(r), length(len), phi_min(phi_min), phi_max(phi_max), mat_ptr(mat), alpha_mask(alpha_mask) {};
+           material *mat, alpha_texture *alpha_mask, bump_texture* bump_tex) : 
+  radius(r), length(len), phi_min(phi_min), phi_max(phi_max), mat_ptr(mat), 
+  alpha_mask(alpha_mask), bump_tex(bump_tex) {};
   ~cylinder() {
     delete mat_ptr;
     delete alpha_mask;
+    delete bump_tex;
   }
   virtual bool hit(const ray& r, Float tmin, Float tmax, hit_record& rec, random_gen& rng);
   virtual bool bounding_box(Float t0, Float t1, aabb& box) const;
@@ -31,6 +33,7 @@ public:
   Float phi_max;
   material *mat_ptr;
   alpha_texture *alpha_mask;
+  bump_texture *bump_tex;
 };
 
 bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
@@ -92,13 +95,23 @@ bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
       rec.t = temp;
       rec.p = temppoint;
       
-      //Interaction information
-      rec.dpdu = vec3(-phi_max * temppoint.z(),0,  phi_max * temppoint.x());
-      rec.dpdv = vec3(0, length, 0);
-      
       temppoint.e[1] = 0;
       rec.normal = dot(temppoint, dir) > 0 ? -temppoint / radius : temppoint / radius;
       get_cylinder_uv(rec.p, rec.u, rec.v);
+      
+      //Interaction information
+      rec.dpdu = vec3(-temppoint.z(),0,  temppoint.x());
+      rec.dpdv = vec3(0, length, 0);
+      rec.has_bump = bump_tex ? true : false;
+      
+      if(bump_tex) {
+        vec3 bvbu = bump_tex->value(rec.u, rec.v, rec.p);
+        rec.bump_normal = rec.normal + bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv; 
+        rec.bump_normal.make_unit_vector();
+        rec.bump_normal *= dot(temppoint, dir) > 0 ? -1 : 1;
+        
+      }
+      
       rec.mat_ptr = mat_ptr;
       return(true);
     }
@@ -114,13 +127,21 @@ bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
       rec.t = temp;
       rec.p = temppoint;
       
-      //Interaction information
-      rec.dpdu = vec3(-phi_max * temppoint.z(), 0,  phi_max * temppoint.x());
-      rec.dpdv = vec3(0, length, 0);
-      
       temppoint.e[1] = 0;
       rec.normal = dot(temppoint,dir) > 0 ? -temppoint / radius : temppoint / radius;
       get_cylinder_uv(rec.p, rec.u, rec.v);
+      
+      //Interaction information
+      rec.dpdu = vec3(-phi_max * temppoint.z(), 0,  phi_max * temppoint.x());
+      rec.dpdv = vec3(0, length, 0);
+      rec.has_bump = bump_tex ? true : false;
+      
+      if(bump_tex) {
+        vec3 bvbu = bump_tex->value(rec.u,rec.v, rec.p);
+        rec.bump_normal = rec.normal + bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv; 
+        rec.bump_normal.make_unit_vector();
+      }
+      
       rec.mat_ptr = mat_ptr;
       return(true);
     }

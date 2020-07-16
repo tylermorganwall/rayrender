@@ -25,7 +25,11 @@
 #' @param image_texture Default `NA`. A 3-layer RGB array or filename to be used as the texture on the surface of the object.
 #' @param image_repeat Default `1`. Number of times to repeat the image across the surface.
 #' `u` and `v` repeat amount can be set independently if user passes in a length-2 vector.
-#' @param alpha_texture Default `NA`. A matrix or filename (specifying a greyscale image) to be used to specify the transparency.
+#' @param alpha_texture Default `NA`. A matrix or filename (specifying a greyscale image) to 
+#' be used to specify the transparency.
+#' @param bump_texture Default `NA`. A matrix, array, or filename (specifying a greyscale image) to 
+#' be used to specify a bump map for the surface.
+#' @param bump_intensity Default `1`. Intensity of the bump map. High values may lead to unphysical results.
 #' @param fog Default `FALSE`. If `TRUE`, the object will be a volumetric scatterer.
 #' @param fogdensity Default `0.01`. The density of the fog. Higher values will produce more opaque objects.
 #' @param sigma Default `NULL`. A number between 0 and Infinity specifying the roughness of the surface using the Oren-Nayar microfacet model.
@@ -194,6 +198,9 @@ diffuse = function(color = "#ffffff",
 #' @param image_repeat Default `1`. Number of times to repeat the image across the surface.
 #' `u` and `v` repeat amount can be set independently if user passes in a length-2 vector.
 #' @param alpha_texture Default `NA`. A matrix or filename (specifying a greyscale image) to be used to specify the transparency.
+#' @param bump_texture Default `NA`. A matrix, array, or filename (specifying a greyscale image) to 
+#' be used to specify a bump map for the surface.
+#' @param bump_intensity Default `1`. Intensity of the bump map. High values may lead to unphysical results.
 #' @param importance_sample Default `FALSE`. If `TRUE`, the object will be sampled explicitly during 
 #' the rendering process. If the object is particularly important in contributing to the light paths
 #' in the image (e.g. light sources, refracting glass ball with caustics, metal objects concentrating light),
@@ -335,6 +342,9 @@ metal = function(color = "#ffffff",
 #' the rendering process. If the object is particularly important in contributing to the light paths
 #' in the image (e.g. light sources, refracting glass ball with caustics, metal objects concentrating light),
 #' this will help with the convergence of the image.
+#' @param bump_texture Default `NA`. A matrix, array, or filename (specifying a greyscale image) to 
+#' be used to specify a bump map for the surface.
+#' @param bump_intensity Default `1`. Intensity of the bump map. High values may lead to unphysical results.
 #'
 #' @return Single row of a tibble describing the dielectric material.
 #' @export
@@ -412,8 +422,13 @@ metal = function(color = "#ffffff",
 #'   render_scene(parallel=TRUE, samples = 400,lookfrom=c(5,3,5))
 #' }
 dielectric = function(color="white", refraction = 1.5,  attenuation = c(0,0,0), 
-                      priority = 0, importance_sample = FALSE) {
+                      priority = 0, importance_sample = FALSE,
+                      bump_texture = NA, bump_intensity = 1) {
   color = convert_color(color)
+  if(!is.array(bump_texture) && !is.na(bump_texture) && !is.character(bump_texture)) {
+    bump_texture = NA
+    warning("Bump texture not in recognized format (array, matrix, or filename), ignoring.")
+  }
   new_tibble_row(list(type = "dielectric", 
                       properties = list(c(color, refraction, attenuation, priority)), 
                       checkercolor=list(NA), 
@@ -423,8 +438,8 @@ dielectric = function(color="white", refraction = 1.5,  attenuation = c(0,0,0),
                       image = list(NA), image_repeat = list(c(1,1)), 
                       alphaimage = list(NA), lightintensity = NA, 
                       fog=FALSE, fogdensity=NA, implicit_sample = importance_sample, 
-                      sigma = 0, glossyinfo = list(NA), bump_texture = list(NA),
-                      bump_intensity = 1))
+                      sigma = 0, glossyinfo = list(NA), bump_texture = list(bump_texture),
+                      bump_intensity = bump_intensity))
 }
 
 #' Microfacet Material
@@ -467,6 +482,9 @@ dielectric = function(color="white", refraction = 1.5,  attenuation = c(0,0,0),
 #' @param image_repeat Default `1`. Number of times to repeat the image across the surface.
 #' `u` and `v` repeat amount can be set independently if user passes in a length-2 vector.
 #' @param alpha_texture Default `NA`. A matrix or filename (specifying a greyscale image) to be used to specify the transparency.
+#' @param bump_texture Default `NA`. A matrix, array, or filename (specifying a greyscale image) to 
+#' be used to specify a bump map for the surface.
+#' @param bump_intensity Default `1`. Intensity of the bump map. High values may lead to unphysical results.
 #' @param importance_sample Default `FALSE`. If `TRUE`, the object will be sampled explicitly during 
 #' the rendering process. If the object is particularly important in contributing to the light paths
 #' in the image (e.g. light sources, refracting glass ball with caustics, metal objects concentrating light),
@@ -485,7 +503,7 @@ dielectric = function(color="white", refraction = 1.5,  attenuation = c(0,0,0),
 #'              material=microfacet(roughness=0.1,
 #'                                  eta=c(0.216,0.42833,1.3184), kappa=c(3.239,2.4599,1.8661)))) %>% 
 #'  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
-#'              aperture=0, fov=40, parallel=TRUE)
+#'              aperture=0, fov=40, parallel=TRUE,clamp_value=10)
 #'  
 #' #Make the roughness anisotropic (either horizontal or vertical), adding an extra light in front
 #' #to show off the different microfacet orientations
@@ -497,8 +515,8 @@ dielectric = function(color="white", refraction = 1.5,  attenuation = c(0,0,0),
 #'  add_object(ellipsoid(x=150,555/2,y=150, a=100,b=150,c=100,
 #'              material=microfacet(roughness=c(0.1,0.3),
 #'                                  eta=c(0.216,0.42833,1.3184), kappa=c(3.239,2.4599,1.8661)))) %>%  
-#'  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=50,
-#'              aperture=0, fov=40,  parallel=TRUE)
+#'  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
+#'              aperture=0, fov=40,  parallel=TRUE,clamp_value=10)
 #'
 #' #Render a rough silver R with a smaller golden egg in front
 #' generate_cornell() %>%
@@ -509,7 +527,7 @@ dielectric = function(color="white", refraction = 1.5,  attenuation = c(0,0,0),
 #'              material=microfacet(roughness=0.1,
 #'                                  eta=c(0.216,0.42833,1.3184), kappa=c(3.239,2.4599,1.8661)))) %>% 
 #'  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
-#'              aperture=0, fov=40, parallel=TRUE)
+#'              aperture=0, fov=40, parallel=TRUE,clamp_value=10)
 #'  
 #' #Increase the roughness
 #' generate_cornell() %>%
@@ -520,7 +538,7 @@ dielectric = function(color="white", refraction = 1.5,  attenuation = c(0,0,0),
 #'              material=microfacet(roughness=0.3,
 #'                                  eta=c(0.216,0.42833,1.3184), kappa=c(3.239,2.4599,1.8661)))) %>% 
 #'  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
-#'              aperture=0, fov=40, parallel=TRUE)
+#'              aperture=0, fov=40, parallel=TRUE,clamp_value=10)
 #' }
 microfacet = function(color="white", roughness = 0.0001, 
                       eta = 0, kappa = 0, microfacet = "tbr", 
@@ -697,6 +715,9 @@ light = function(color = "#ffffff", intensity = 10, importance_sample = TRUE) {
 #' @param image_repeat Default `1`. Number of times to repeat the image across the surface.
 #' `u` and `v` repeat amount can be set independently if user passes in a length-2 vector.
 #' @param alpha_texture Default `NA`. A matrix or filename (specifying a greyscale image) to be used to specify the transparency.
+#' @param bump_texture Default `NA`. A matrix, array, or filename (specifying a greyscale image) to 
+#' be used to specify a bump map for the surface.
+#' @param bump_intensity Default `1`. Intensity of the bump map. High values may lead to unphysical results.
 #' @param importance_sample Default `FALSE`. If `TRUE`, the object will be sampled explicitly during 
 #' the rendering process. If the object is particularly important in contributing to the light paths
 #' in the image (e.g. light sources, refracting glass ball with caustics, metal objects concentrating light),

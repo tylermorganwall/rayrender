@@ -130,10 +130,7 @@ public:
 class triangle_image_texture : public texture {
 public:
   triangle_image_texture() {}
-  ~triangle_image_texture() {
-    // Rcpp::Rcout << "deleting triangle" << "\n";
-    // delete data;
-  }
+  ~triangle_image_texture() {}
   triangle_image_texture(Float *pixels, int A, int B, int nn,
                          Float tex_u_a, Float tex_v_a,
                          Float tex_u_b, Float tex_v_b,
@@ -151,6 +148,10 @@ public:
 vec3 triangle_image_texture::value(Float u, Float v, const vec3& p) const {
   Float uu = ((1 - u - v) * a_u + u * b_u + v * c_u);
   Float vv = ((1 - u - v) * a_v + u * b_v + v * c_v);
+  while(uu < 0) uu += 1;
+  while(vv < 0) vv += 1;
+  while(uu > 1) uu -= 1;
+  while(vv > 1) vv -= 1;
   int i = uu * nx;
   int j = (1-vv) * ny - 0.00001;
   if (i < 0) i = 0;
@@ -180,8 +181,8 @@ class alpha_texture {
 public:
   alpha_texture() {}
   alpha_texture(Float *pixels, int A, int B, int nn) : data(pixels), nx(A), ny(B), channels(nn) {
-    u_vec = vec3(0,0,0);
-    v_vec = vec3(0,0,0);
+    u_vec = vec3(0,1,0);
+    v_vec = vec3(0,0,1);
   }
   alpha_texture(Float *pixels, int A, int B, int nn, vec3 u, vec3 v) : 
                 data(pixels), nx(A), ny(B), channels(nn), u_vec(u), v_vec(v) {}
@@ -206,23 +207,31 @@ vec3 alpha_texture::value(Float u, Float v, const vec3& p) const {
 Float alpha_texture::channel_value(Float u, Float v, const vec3& p) const {
   Float uu = ((1 - u - v) * u_vec.x() + u * u_vec.y() + v * u_vec.z());
   Float vv = ((1 - u - v) * v_vec.x() + u * v_vec.y() + v * v_vec.z());
+  while(uu < 0) uu += 1;
+  while(vv < 0) vv += 1;
+  while(uu > 1) uu -= 1;
+  while(vv > 1) vv -= 1;
   int i = uu * nx;
   int j = (1-vv) * ny - 0.00001;
   if (i < 0) i = 0;
   if (j < 0) j = 0;
   if (i > nx-1) i = nx-1;
   if (j > ny-1) j = ny-1;
-  return(data[channels*i + channels*nx*j+3]);
+  return(data[channels*i + channels*nx*j + 3]);
 }
 
 class bump_texture {
 public:
   bump_texture() {}
   bump_texture(Float *pixels, int A, int B, int nn, Float intensity) : 
-  data(pixels), nx(A), ny(B), channels(nn), intensity(intensity) { }
-  bump_texture(Float *pixels, int A, int B, int nn, vec3 u, vec3 v) : 
-  data(pixels), nx(A), ny(B), channels(nn), u_vec(u), v_vec(v) {}
+    data(pixels), nx(A), ny(B), channels(nn), intensity(intensity) { 
+    u_vec = vec3(0,1,0);
+    v_vec = vec3(0,0,1);
+  }
+  bump_texture(Float *pixels, int A, int B, int nn, vec3 u, vec3 v, Float intensity) : 
+    data(pixels), nx(A), ny(B), channels(nn), u_vec(u), v_vec(v), intensity(intensity) {}
   vec3 value(Float u, Float v, const vec3& p) const;
+  vec3 mesh_value(Float u, Float v, const vec3& p) const;
   Float *data;
   int nx, ny, channels;
   vec3 u_vec, v_vec;
@@ -230,14 +239,36 @@ public:
 };
 
 vec3 bump_texture::value(Float u, Float v, const vec3& p) const {
+  while(u < 0) u += 1;
+  while(v < 0) v += 1;
+  while(u > 1) u -= 1;
+  while(v > 1) v -= 1;
   int i = u * (nx-1);
   int j = (1-v) * (ny-1) - 0.00001;
-  if (i < 0) i = 0;
-  if (j < 0) j = 0;
+  if (i < 1) i = 1;
+  if (j < 1) j = 1;
   if (i > nx-2) i = nx-2;
   if (j > ny-2) j = ny-2;
-  Float bu = data[channels*(i+1) + channels*nx*j] - data[channels*i + channels*nx*j];
-  Float bv = data[channels*i + channels*nx*(j+1)] - data[channels*i + channels*nx*j];;
+  Float bu = (data[channels*(i+1) + channels*nx*j] - data[channels*(i-1) + channels*nx*j])/2;
+  Float bv = (data[channels*i + channels*nx*(j+1)] - data[channels*i + channels*nx*(j-1)])/2;
+  return(vec3(intensity*bu,intensity*bv,0));
+}
+
+vec3 bump_texture::mesh_value(Float u, Float v, const vec3& p) const {
+  Float uu = ((1 - u - v) * u_vec.x() + u * u_vec.y() + v * u_vec.z());
+  Float vv = ((1 - u - v) * v_vec.x() + u * v_vec.y() + v * v_vec.z());
+  while(uu < 0) uu += 1;
+  while(vv < 0) vv += 1;
+  while(uu > 1) uu -= 1;
+  while(vv > 1) vv -= 1;
+  int i = uu * (nx-1);
+  int j = (1-vv) * (ny-1) - 0.00001;
+  if (i < 1) i = 1;
+  if (j < 1) j = 1;
+  if (i > nx-2) i = nx-2;
+  if (j > ny-2) j = ny-2;
+  Float bu = (data[channels*(i+1) + channels*nx*j] - data[channels*(i-1) + channels*nx*j])/2;
+  Float bv = (data[channels*i + channels*nx*(j+1)] - data[channels*i + channels*nx*(j-1)])/2;
   return(vec3(intensity*bu,intensity*bv,0));
 }
 
