@@ -9,15 +9,12 @@ class sphere: public hitable {
   public:
     sphere() {}
     ~sphere() {
-      // Rcpp::Rcout << "sphere delete " << typeid(*mat_ptr).name() << "\n";
       delete mat_ptr;
       delete alpha_mask;
       delete bump_tex;
     }
     sphere(vec3 cen, Float r, material *mat, alpha_texture *alpha_mask, bump_texture* bump_tex) : center(cen), radius(r), 
-           mat_ptr(mat), alpha_mask(alpha_mask), bump_tex(bump_tex) {
-      // Rcpp::Rcout << "sphere create " <<  typeid(*mat_ptr).name() << " " << mat_ptr->hasAlphaTexture << "\n";
-    };
+           mat_ptr(mat), alpha_mask(alpha_mask), bump_tex(bump_tex) {};
     virtual bool hit(const ray& r, Float tmin, Float tmax, hit_record& rec, random_gen& rng);
     virtual bool bounding_box(Float t0, Float t1, aabb& box) const;
     virtual Float pdf_value(const vec3& o, const vec3& v, random_gen& rng);

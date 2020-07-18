@@ -56,7 +56,7 @@ public:
     noise = new perlin();
   }
   ~noise_texture() {
-    if(noise != 0) delete noise;
+    if(noise) delete noise;
   }
   virtual vec3 value(Float u, Float v, const vec3& p) const {
     Float weight = 0.5*(1+sin(scale*p.y()  + intensity*noise->turb(scale * p) + phase));

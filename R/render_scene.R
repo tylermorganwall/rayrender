@@ -334,10 +334,20 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
   bump_temp_file_names = purrr::map_chr(bump_tex_bool,.f = ~ifelse(.x, tempfile(fileext = ".png"),""))
   for(i in 1:length(bump_array_list)) {
     if(bump_tex_bool[i]) {
-      if(dim(bump_array_list[[i]][[1]])[3] == 4) {
-        png::writePNG(fliplr(aperm(bump_array_list[[i]][[1]][,,1:3],c(2,1,3))),bump_temp_file_names[i])
-      } else if(dim(bump_array_list[[i]][[1]])[3] == 3){
-        png::writePNG(fliplr(aperm(bump_array_list[[i]][[1]],c(2,1,3))),bump_temp_file_names[i])
+      bump_dims = dim(bump_array_list[[i]][[1]])
+      if(length(bump_dims) == 2) {
+        temp_array = array(0, dim = c(bump_dims,3))
+        temp_array[,,1] = bump_array_list[[i]][[1]]
+        temp_array[,,2] = bump_array_list[[i]][[1]]
+        temp_array[,,3] = bump_array_list[[i]][[1]]
+        bump_dims = c(bump_dims,3)
+      } else {
+        temp_array = bump_array_list[[i]][[1]]
+      }
+      if(bump_dims[3] == 4) {
+        png::writePNG(fliplr(aperm(temp_array[,,1:3],c(2,1,3))),bump_temp_file_names[i])
+      } else if(bump_dims[3] == 3){
+        png::writePNG(fliplr(aperm(temp_array,c(2,1,3))),bump_temp_file_names[i])
       }
     }
     if(bump_filename_bool[i]) {
