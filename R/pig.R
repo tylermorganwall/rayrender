@@ -66,6 +66,11 @@ pig = function(x = 0, y = 0, z = 0, emotion = "neutral",
                                   -0.2 * sinpi(tail_angles[i+1]/180- pi/2)),
                           radius=0.05,
                           material = diffuse(color="#f09089"))
+    spiral[[i+32]] = sphere(x= -1.9 - 0.02 * (i+1), 
+                            y=1 - 0.2 * cospi(tail_angles[i+1]/180 - pi/2), 
+                            z=-0.2 * sinpi(tail_angles[i+1]/180- pi/2),
+                          radius=0.05,
+                          material = diffuse(color="#f09089"))
   }
   if("dplyr" %in% rownames(utils::installed.packages())) {
     spiralscene = dplyr::bind_rows(spiral)
@@ -96,10 +101,10 @@ pig = function(x = 0, y = 0, z = 0, emotion = "neutral",
     add_object(cylinder(x = -1, y = 0.4, z = 0.5, length=2,radius=0.25,material = diffuse(color="#f09089"))) %>%
     add_object(cylinder(x = -1, y = 0.4, z = -0.5, length=2,radius=0.25,material = diffuse(color="#f09089"))) %>%
     add_object(segment(start = c(1.5,2,0), end = c(2.5,2,0),radius=0.3,material = diffuse(color="#f09089"))) %>%
-    add_object(sphere(x = 2, y = 2.5, z = 0.3, radius=0.25,material = diffuse(color="white"))) %>%
-    add_object(sphere(x = 2, y = 2.5, z = -0.3, radius=0.25,material = diffuse(color="white"))) %>%
-    add_object(sphere(x = 2.2, y = 2.5, z = 0.3, radius=0.1,material = diffuse(color="black"))) %>%
-    add_object(sphere(x = 2.2, y = 2.5, z = -0.3, radius=0.1,material = diffuse(color="black"))) %>%
+    add_object(sphere(x = 2, y = 2.5, z = 0.3, radius=0.25,material = glossy(color="white"))) %>%
+    add_object(sphere(x = 2, y = 2.5, z = -0.3, radius=0.25,material = glossy(color="white"))) %>%
+    add_object(sphere(x = 2.2, y = 2.5, z = 0.3, radius=0.1,material = glossy(color="black"))) %>%
+    add_object(sphere(x = 2.2, y = 2.5, z = -0.3, radius=0.1,material = glossy(color="black"))) %>%
     add_object(spiralscene) %>%
     add_object(ellipsoid(x = 1.98+0.02, y = 1.6, z = 0, a= 0.2, b= 0.2, c= 0.3,material = diffuse(color="black"))) %>%
     add_object(ellipsoid(x = 2.5, y = 2, z = 0.1, a= 0.05, b= 0.1, c= 0.05,material = diffuse(color="black"))) %>%

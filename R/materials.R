@@ -22,6 +22,7 @@
 #' @param gradient_point_end Default `NA`. If not `NA`, this changes the behavior from mapping texture coordinates to 
 #' mapping to world space coordinates. This should be a length-3 vector specifying the x,y, and z points where the gradient
 #' begins with value `gradient_color`.
+#' @param gradient_type Default `hsv`. Colorspace to calculate the gradient. Alternative `rgb`.
 #' @param image_texture Default `NA`. A 3-layer RGB array or filename to be used as the texture on the surface of the object.
 #' @param image_repeat Default `1`. Number of times to repeat the image across the surface.
 #' `u` and `v` repeat amount can be set independently if user passes in a length-2 vector.
@@ -92,7 +93,7 @@ diffuse = function(color = "#ffffff",
                    checkercolor = NA, checkerperiod = 3,
                    noise = 0, noisephase = 0, noiseintensity = 10, noisecolor = "#000000",
                    gradient_color = NA, gradient_transpose = FALSE, 
-                   gradient_point_start = NA, gradient_point_end = NA,
+                   gradient_point_start = NA, gradient_point_end = NA, gradient_type = "hsv",
                    image_texture = NA, image_repeat = 1, alpha_texture = NA,
                    bump_texture = NA, bump_intensity = 1,
                    fog = FALSE, fogdensity = 0.01, 
@@ -156,6 +157,7 @@ diffuse = function(color = "#ffffff",
                  properties = list(info), checkercolor=list(c(checkercolor,checkerperiod)), 
                  gradient_color = list(gradient_color), gradient_transpose = gradient_transpose,
                  world_gradient = is_world_gradient,gradient_point_info = list(gradient_point_info),
+                 gradient_type = gradient_type,
                  noise=noise, noisephase = noisephase, noiseintensity = noiseintensity, noisecolor = list(noisecolor),
                  image = list(image_texture), image_repeat = list(image_repeat), 
                  alphaimage = list(alpha_texture), lightintensity = NA,
@@ -194,6 +196,7 @@ diffuse = function(color = "#ffffff",
 #' @param gradient_point_end Default `NA`. If not `NA`, this changes the behavior from mapping texture coordinates to 
 #' mapping to world space coordinates. This should be a length-3 vector specifying the x,y, and z points where the gradient
 #' begins with value `gradient_color`.
+#' @param gradient_type Default `hsv`. Colorspace to calculate the gradient. Alternative `rgb`.
 #' @param image_texture Default `NA`. A 3-layer RGB array or filename to be used as the texture on the surface of the object.
 #' @param image_repeat Default `1`. Number of times to repeat the image across the surface.
 #' `u` and `v` repeat amount can be set independently if user passes in a length-2 vector.
@@ -255,7 +258,7 @@ metal = function(color = "#ffffff",
                  checkercolor = NA, checkerperiod = 3,
                  noise = 0, noisephase = 0, noiseintensity = 10, noisecolor = "#000000",
                  gradient_color = NA, gradient_transpose = FALSE,
-                 gradient_point_start = NA, gradient_point_end = NA,
+                 gradient_point_start = NA, gradient_point_end = NA, gradient_type = "hsv",
                  image_texture = NA, image_repeat = 1, alpha_texture = NA,
                  bump_texture = NA, bump_intensity = 1,
                  importance_sample = FALSE) {
@@ -315,6 +318,7 @@ metal = function(color = "#ffffff",
                  checkercolor=list(c(checkercolor,checkerperiod)), 
                  gradient_color = list(gradient_color), gradient_transpose = gradient_transpose,
                  world_gradient = is_world_gradient,gradient_point_info = list(gradient_point_info),
+                 gradient_type = gradient_type,
                  noise=noise, noisephase = noisephase, 
                  noiseintensity = noiseintensity, noisecolor = list(noisecolor),
                  lightinfo = list(NA), 
@@ -416,7 +420,7 @@ metal = function(color = "#ffffff",
 #'   add_object(cube(material = dielectric(attenuation = c(6,6,2),priority=1))) %>%
 #'   add_object(sphere(radius=1,x=1.01,
 #'                     material = dielectric(priority=0,refraction=1))) %>%
-#'   add_object(sphere(radius=1,x=-1.01,
+#'   add_object(sphere(radius=1,x=-1.01, 
 #'                     material = dielectric(priority=0,refraction=1))) %>%
 #'   add_object(sphere(y=10,x=3,material=light(intensit=150))) %>%
 #'   render_scene(parallel=TRUE, samples = 400,lookfrom=c(5,3,5))
@@ -434,6 +438,7 @@ dielectric = function(color="white", refraction = 1.5,  attenuation = c(0,0,0),
                       checkercolor=list(NA), 
                       gradient_color = list(NA), gradient_transpose = FALSE,
                       world_gradient = FALSE,gradient_point_info = list(NA),
+                      gradient_type = NA,
                       noise=0, noisephase = 0, noiseintensity = 0, noisecolor = list(c(0,0,0)),
                       image = list(NA), image_repeat = list(c(1,1)), 
                       alphaimage = list(NA), lightintensity = NA, 
@@ -478,6 +483,7 @@ dielectric = function(color="white", refraction = 1.5,  attenuation = c(0,0,0),
 #' @param gradient_point_end Default `NA`. If not `NA`, this changes the behavior from mapping texture coordinates to 
 #' mapping to world space coordinates. This should be a length-3 vector specifying the x,y, and z points where the gradient
 #' begins with value `gradient_color`.
+#' @param gradient_type Default `hsv`. Colorspace to calculate the gradient. Alternative `rgb`.
 #' @param image_texture Default `NA`. A 3-layer RGB array or filename to be used as the texture on the surface of the object.
 #' @param image_repeat Default `1`. Number of times to repeat the image across the surface.
 #' `u` and `v` repeat amount can be set independently if user passes in a length-2 vector.
@@ -545,7 +551,7 @@ microfacet = function(color="white", roughness = 0.0001,
                       checkercolor = NA, checkerperiod = 3,
                       noise = 0, noisephase = 0, noiseintensity = 10, noisecolor = "#000000",
                       gradient_color = NA, gradient_transpose = FALSE,
-                      gradient_point_start = NA, gradient_point_end = NA,
+                      gradient_point_start = NA, gradient_point_end = NA, gradient_type = "hsv",
                       image_texture = NA, image_repeat = 1, alpha_texture = NA,
                       bump_texture = NA, bump_intensity = 1,
                       importance_sample = FALSE) {
@@ -615,6 +621,7 @@ microfacet = function(color="white", roughness = 0.0001,
                         properties = list(c(color, 0)), 
                         gradient_color = list(gradient_color), gradient_transpose = FALSE,
                         world_gradient = is_world_gradient, gradient_point_info = list(gradient_point_info),
+                        gradient_type = gradient_type,
                         checkercolor=list(c(checkercolor,checkerperiod)), 
                         noise=noise, noisephase = noisephase, noiseintensity = noiseintensity, noisecolor = list(noisecolor),
                         image = list(image_texture), image_repeat = list(image_repeat), 
@@ -627,6 +634,7 @@ microfacet = function(color="white", roughness = 0.0001,
                    properties = list(c(color)), 
                    gradient_color = list(gradient_color), gradient_transpose = FALSE,
                    world_gradient = is_world_gradient,gradient_point_info = list(gradient_point_info),
+                   gradient_type = gradient_type,
                    checkercolor=list(c(checkercolor,checkerperiod)), 
                    noise=noise, noisephase = noisephase, noiseintensity = noiseintensity, noisecolor = list(noisecolor),
                    image = list(image_texture), image_repeat = list(image_repeat), 
@@ -675,6 +683,7 @@ light = function(color = "#ffffff", intensity = 10, importance_sample = TRUE) {
                  properties = list(info), checkercolor=list(NA), 
                  gradient_color = list(NA), gradient_transpose = FALSE,
                  world_gradient = FALSE,gradient_point_info = list(NA),
+                 gradient_type = NA,
                  noise=0, noisephase = 0, noiseintensity = 0, noisecolor = list(c(0,0,0)),
                  image = list(NA), image_repeat = list(c(1,1)),
                  alphaimage = list(NA), lightintensity = intensity,
@@ -711,6 +720,7 @@ light = function(color = "#ffffff", intensity = 10, importance_sample = TRUE) {
 #' @param gradient_point_end Default `NA`. If not `NA`, this changes the behavior from mapping texture coordinates to 
 #' mapping to world space coordinates. This should be a length-3 vector specifying the x,y, and z points where the gradient
 #' begins with value `gradient_color`.
+#' @param gradient_type Default `hsv`. Colorspace to calculate the gradient. Alternative `rgb`.
 #' @param image_texture Default `NA`. A 3-layer RGB array or filename to be used as the texture on the surface of the object.
 #' @param image_repeat Default `1`. Number of times to repeat the image across the surface.
 #' `u` and `v` repeat amount can be set independently if user passes in a length-2 vector.
@@ -770,7 +780,7 @@ glossy = function(color="white", gloss = 1, reflectance = 0.05, microfacet = "tb
                   checkercolor = NA, checkerperiod = 3,
                   noise = 0, noisephase = 0, noiseintensity = 10, noisecolor = "#000000",
                   gradient_color = NA, gradient_transpose = FALSE,
-                  gradient_point_start = NA, gradient_point_end = NA,
+                  gradient_point_start = NA, gradient_point_end = NA, gradient_type = "hsv",
                   image_texture = NA, image_repeat = 1, alpha_texture = NA,
                   bump_texture = NA, bump_intensity = 1,
                   importance_sample = FALSE) {
@@ -830,6 +840,7 @@ glossy = function(color="white", gloss = 1, reflectance = 0.05, microfacet = "tb
                       properties = list(c(color)), 
                       gradient_color = list(gradient_color), gradient_transpose = FALSE,
                       world_gradient = is_world_gradient, gradient_point_info = list(gradient_point_info),
+                      gradient_type = gradient_type,
                       checkercolor=list(c(checkercolor,checkerperiod)), 
                       noise=noise, noisephase = noisephase, noiseintensity = noiseintensity, noisecolor = list(noisecolor),
                       image = list(image_texture), image_repeat = list(image_repeat), 

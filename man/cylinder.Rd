@@ -63,10 +63,6 @@ Cylinder Object
 generate_cornell() \%>\%
   add_object(cylinder(x = 555/2, y = 250, z = 555/2, 
                       length = 300, radius = 100, material = metal())) \%>\%
-  add_object(disk(x = 555/2, y = 400, z = 555/2, 
-                  radius = 100, material = metal())) \%>\%
-  add_object(disk(x = 555/2, y = 100, z = 555/2, 
-                  radius = 100, material = metal(), flipped = TRUE)) \%>\%
   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
                ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
 }

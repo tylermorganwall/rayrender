@@ -33,6 +33,7 @@ render_scene(
   parallel = TRUE,
   environment_light = NULL,
   rotate_env = 0,
+  intensity_env = 1,
   debug_channel = "none",
   progress = interactive(),
   verbose = FALSE
@@ -126,6 +127,9 @@ the scene. Supports both HDR (`.hdr`) and low-dynamic range (`.png`, `.jpg`) ima
 
 \item{rotate_env}{Default `0`. The number of degrees to rotate the environment map around the scene.}
 
+\item{intensity_env}{Default `1`. The amount to increase the intensity of the environment lighting. Useful
+if using a LDR (JPEG or PNG) image as an environment map.}
+
 \item{debug_channel}{Default `none`. If `depth`, function will return a depth map of rays into the scene 
 instead of an image. If `normals`, function will return an image of scene normals, mapped from 0 to 1.
 If `uv`, function will return an image of the uv coords. If `variance`, function will return an image 
@@ -163,11 +167,11 @@ scene = scene \%>\%
 render_scene(scene,fov=20,parallel=TRUE,samples=500)
 }
 
-#Add a metallic gold sphere
+#Add a metallic gold sphere, using stratified sampling for a higher quality render
 \donttest{
 scene = scene \%>\%
   add_object(sphere(x=-1.1,y=0,z=0,radius=0.5,material = metal(color="gold",fuzz=0.1)))
-render_scene(scene,fov=20,parallel=TRUE,samples=500)
+render_scene(scene,fov=20,parallel=TRUE,samples=500, sample_method = "stratified")
 }
 
 #Lower the number of samples to render more quickly (here, we also use only one core).
@@ -221,7 +225,7 @@ old.par = par(no.readonly = TRUE)
 on.exit(par(old.par))
 par(mfrow=c(5,6))
 for(i in 1:30) {
- render_scene(scene, samples=5,
+ render_scene(scene, samples=16, 
    lookfrom = c(xpos[i],1.5,zpos[i]),lookat = c(0,0.5,0), parallel=TRUE)
 }
 }

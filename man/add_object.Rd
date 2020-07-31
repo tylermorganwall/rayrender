@@ -25,6 +25,6 @@ scene = generate_ground(depth=-0.5,material = diffuse(checkercolor="blue")) \%>\
                   angle=c(0,-30,0))) \%>\%
   add_object(sphere(x=-0.7,radius=0.5,material=metal(color="gold")))
 \donttest{
-render_scene(scene,parallel=TRUE)
+render_scene(scene,parallel=TRUE) 
 }
 }

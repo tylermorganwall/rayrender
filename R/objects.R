@@ -55,6 +55,7 @@ sphere = function(x = 0, y = 0, z = 0, radius = 1, material = diffuse(),
                  checkercolor = material$checkercolor, 
                  gradient_color = material$gradient_color, gradient_transpose = material$gradient_transpose, 
                  world_gradient = material$world_gradient, gradient_point_info = material$gradient_point_info,
+                 gradient_type = material$gradient_type,
                  noise = material$noise, noisephase = material$noisephase, 
                  noiseintensity = material$noiseintensity, noisecolor = material$noisecolor,
                  angle = list(angle), image = material$image,  image_repeat = material$image_repeat,
@@ -135,6 +136,7 @@ cube = function(x = 0, y = 0, z = 0, width = 1, xwidth = 1, ywidth = 1, zwidth =
                  checkercolor = material$checkercolor, 
                  gradient_color = material$gradient_color, gradient_transpose = material$gradient_transpose, 
                  world_gradient = material$world_gradient, gradient_point_info = material$gradient_point_info,
+                 gradient_type = material$gradient_type,
                  noise = material$noise, noisephase = material$noisephase, 
                  noiseintensity = material$noiseintensity, noisecolor = material$noisecolor,
                  angle = list(angle), image = material$image,  image_repeat = material$image_repeat,
@@ -199,6 +201,7 @@ xy_rect = function(x = 0, y = 0, z = 0, xwidth = 1, ywidth = 1,
                  checkercolor = material$checkercolor, 
                  gradient_color = material$gradient_color, gradient_transpose = material$gradient_transpose, 
                  world_gradient = material$world_gradient, gradient_point_info = material$gradient_point_info,
+                 gradient_type = material$gradient_type,
                  noise = material$noise, noisephase = material$noisephase, 
                  noiseintensity = material$noiseintensity, noisecolor = material$noisecolor,
                  angle = list(angle), image = material$image, image_repeat = material$image_repeat,
@@ -262,6 +265,7 @@ yz_rect = function(x = 0, y = 0, z = 0, ywidth = 1, zwidth = 1, material = diffu
                  checkercolor = material$checkercolor, 
                  gradient_color = material$gradient_color, gradient_transpose = material$gradient_transpose, 
                  world_gradient = material$world_gradient, gradient_point_info = material$gradient_point_info,
+                 gradient_type = material$gradient_type,
                  noise = material$noise, noisephase = material$noisephase, 
                  noiseintensity = material$noiseintensity, noisecolor = material$noisecolor,
                  angle = list(angle), image = material$image, image_repeat = material$image_repeat,
@@ -327,6 +331,7 @@ xz_rect = function(x = 0, xwidth = 1, z = 0, zwidth = 1, y = 0, material = diffu
                  checkercolor = material$checkercolor, 
                  gradient_color = material$gradient_color, gradient_transpose = material$gradient_transpose, 
                  world_gradient = material$world_gradient, gradient_point_info = material$gradient_point_info,
+                 gradient_type = material$gradient_type,
                  noise = material$noise, noisephase = material$noisephase, 
                  noiseintensity = material$noiseintensity, noisecolor = material$noisecolor,
                  angle = list(angle), image = material$image, image_repeat = material$image_repeat,
@@ -428,6 +433,7 @@ triangle = function(v1 = c(1, 0, 0), v2 = c(0, 1, 0), v3 = c(-1, 0, 0),
                  checkercolor = material$checkercolor, 
                  gradient_color = material$gradient_color, gradient_transpose = material$gradient_transpose, 
                  world_gradient = material$world_gradient, gradient_point_info = material$gradient_point_info,
+                 gradient_type = material$gradient_type,
                  noise = material$noise, noisephase = material$noisephase, 
                  noiseintensity = material$noiseintensity, noisecolor = material$noisecolor,
                  angle = list(angle), image = material$image, image_repeat = material$image_repeat,
@@ -502,6 +508,7 @@ disk = function(x = 0, y = 0, z = 0, radius = 1, inner_radius = 0, material = di
                  checkercolor = material$checkercolor, 
                  gradient_color = material$gradient_color, gradient_transpose = material$gradient_transpose, 
                  world_gradient = material$world_gradient, gradient_point_info = material$gradient_point_info,
+                 gradient_type = material$gradient_type,
                  noise = material$noise, noisephase = material$noisephase, 
                  noiseintensity = material$noiseintensity, noisecolor = material$noisecolor,
                  angle = list(angle), image = material$image, image_repeat = material$image_repeat,
@@ -597,6 +604,7 @@ obj_model = function(filename, x = 0, y = 0, z = 0, scale_obj = 1,
                  checkercolor = material$checkercolor, 
                  gradient_color = material$gradient_color, gradient_transpose = material$gradient_transpose, 
                  world_gradient = material$world_gradient, gradient_point_info = material$gradient_point_info,
+                 gradient_type = material$gradient_type,
                  noise = material$noise, noisephase = material$noisephase, 
                  noiseintensity = material$noiseintensity, noisecolor = material$noisecolor,
                  angle = list(angle), image = material$image, image_repeat = material$image_repeat,
@@ -642,10 +650,6 @@ obj_model = function(filename, x = 0, y = 0, z = 0, scale_obj = 1,
 #' generate_cornell() %>%
 #'   add_object(cylinder(x = 555/2, y = 250, z = 555/2, 
 #'                       length = 300, radius = 100, material = metal())) %>%
-#'   add_object(disk(x = 555/2, y = 400, z = 555/2, 
-#'                   radius = 100, material = metal())) %>%
-#'   add_object(disk(x = 555/2, y = 100, z = 555/2, 
-#'                   radius = 100, material = metal(), flipped = TRUE)) %>%
 #'   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
 #'                ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
 #' }
@@ -668,7 +672,7 @@ obj_model = function(filename, x = 0, y = 0, z = 0, scale_obj = 1,
 #'   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
 #'                ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
 #' }
-cylinder = function(x = 0, y = 0, z = 0, radius = 1, length = 1,
+cylinder = function(x = 0, y = 0, z = 0, radius = 1, length = 1, 
                     phi_min = 0, phi_max = 360, material = diffuse(), 
                     angle = c(0, 0, 0), order_rotation = c(1, 2, 3), velocity = c(0, 0, 0), 
                     flipped = FALSE, scale = c(1,1,1)) {
@@ -682,6 +686,7 @@ cylinder = function(x = 0, y = 0, z = 0, radius = 1, length = 1,
                  checkercolor = material$checkercolor, 
                  gradient_color = material$gradient_color, gradient_transpose = material$gradient_transpose, 
                  world_gradient = material$world_gradient, gradient_point_info = material$gradient_point_info,
+                 gradient_type = material$gradient_type,
                  noise = material$noise, noisephase = material$noisephase, 
                  noiseintensity = material$noiseintensity, noisecolor = material$noisecolor,
                  angle = list(angle), image = material$image, image_repeat = material$image_repeat,
@@ -705,6 +710,11 @@ cylinder = function(x = 0, y = 0, z = 0, radius = 1, length = 1,
 #' @param radius Default `1`. Radius of the segment.
 #' @param phi_min Default `0`. Minimum angle around the segment.
 #' @param phi_max Default `360`. Maximum angle around the segment.
+#' @param direction Default `NA`. Alternative to `start` and `end`, specify the direction (via 
+#' a length-3 vector) of the segment. Segment will be centered at `start`, and the length will be
+#' determined by the magnitude of the direction vector.
+#' @param from_center Default `TRUE`. If orientation specified via `direction`, setting this argument
+#' to `FALSE` will make `start` specify the bottom of the segment, instead of the middle.
 #' @param material Default  \code{\link{diffuse}}.The material, called from one of the material 
 #' functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}.
 #' @param velocity Default `c(0, 0, 0)`. Velocity of the segment.
@@ -777,13 +787,24 @@ cylinder = function(x = 0, y = 0, z = 0, radius = 1, length = 1,
 #'                ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
 #' }
 segment = function(start = c(0, -1, 0), end = c(0, 1, 0), radius = 1, 
-                   phi_min = 0, phi_max = 360,
+                   phi_min = 0, phi_max = 360, from_center = TRUE, direction = NA,
                    material = diffuse(), 
                    velocity = c(0, 0, 0), flipped = FALSE, scale = c(1,1,1)) {
   if(length(scale) == 1) {
     scale = c(scale, scale, scale)
   }
   assertthat::assert_that(phi_max > phi_min)
+  if(!is.na(direction) && length(direction) == 3) {
+    if(from_center) {
+      new_start = start - direction/2
+      new_end = start + direction/2
+    } else {
+      new_start = start
+      new_end = start + direction
+    }
+    start = new_start
+    end = new_end
+  } 
   x = (start[1] + end[1])/2
   y = (start[2] + end[2])/2
   z = (start[3] + end[3])/2
@@ -804,6 +825,7 @@ segment = function(start = c(0, -1, 0), end = c(0, 1, 0), radius = 1,
                  checkercolor = material$checkercolor, 
                  gradient_color = material$gradient_color, gradient_transpose = material$gradient_transpose, 
                  world_gradient = material$world_gradient, gradient_point_info = material$gradient_point_info,
+                 gradient_type = material$gradient_type,
                  noise = material$noise, noisephase = material$noisephase, 
                  noiseintensity = material$noiseintensity, noisecolor = material$noisecolor,
                  angle = list(angle), image = material$image, image_repeat = material$image_repeat,
@@ -884,6 +906,7 @@ ellipsoid = function(x = 0, y = 0, z = 0, a = 1, b = 1, c = 1,
                  checkercolor = material$checkercolor, 
                  gradient_color = material$gradient_color, gradient_transpose = material$gradient_transpose, 
                  world_gradient = material$world_gradient, gradient_point_info = material$gradient_point_info,
+                 gradient_type = material$gradient_type,
                  noise = material$noise, noisephase = material$noisephase, 
                  noiseintensity = material$noiseintensity, noisecolor = material$noisecolor,
                  angle = list(angle), image = material$image, image_repeat = material$image_repeat,
@@ -1426,4 +1449,277 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
   scenefull$material_id = rep(material_id, nrow(scenefull))
   tibble::validate_tibble(scenefull)
   return(scenefull)
+}
+
+#' Cone Object
+#' 
+#'
+#' @param start Default `c(0, 0, 0)`. Base of the cone, specifying `x`, `y`, `z`.
+#' @param end Default `c(0, 1, 0)`. Tip of the cone, specifying `x`, `y`, `z`.
+#' @param radius Default `1`. Radius of the bottom of the cone.
+#' @param direction Default `NA`. Alternative to `start` and `end`, specify the direction (via 
+#' a length-3 vector) of the cone. Cone will be centered at `start`, and the length will be
+#' determined by the magnitude of the direction vector.
+#' @param from_center Default `TRUE`. If orientation specified via `direction`, setting this argument
+#' to `FALSE` will make `start` specify the bottom of the cone, instead of the middle.
+#' @param material Default  \code{\link{diffuse}}.The material, called from one of the material 
+#' functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}.
+#' @param angle Default `c(0, 0, 0)`. Rotation angle. Note: This will change the `start` and `end` coordinates.
+#' @param velocity Default `c(0, 0, 0)`. Velocity of the segment.
+#' @param flipped Default `FALSE`. Whether to flip the normals.
+#' @param scale Default `c(1, 1, 1)`. Scale transformation in the x, y, and z directions. If this is a single value,
+#' number, the object will be scaled uniformly. Notes: this will change the stated start/end position of the cone. 
+#' Emissive objects may not currently function correctly when scaled.
+#' 
+#' @importFrom  grDevices col2rgb
+#'
+#' @return Single row of a tibble describing the cone in the scene.
+#' @export
+#'
+#' @examples
+#' #Generate a cone in a studio, pointing upwards:
+#' \donttest{
+#' generate_studio() %>% 
+#'  add_object(cone(start=c(0,-1,0), end=c(0,1,0), radius=1,material=diffuse(color="red"))) %>% 
+#'  add_object(sphere(y=5,x=5,material=light(intensity=40))) %>% 
+#'  render_scene(samples=400,clamp_value=10)
+#'  
+#'  #Change the radius, length, and direction
+#' generate_studio() %>% 
+#'  add_object(cone(start=c(0,0,0), end=c(0,-1,0), radius=0.5,material=diffuse(color="red"))) %>% 
+#'  add_object(sphere(y=5,x=5,material=light(intensity=40))) %>% 
+#'  render_scene(samples=400,clamp_value=10)
+#'  
+#' #Give custom start and end points (and customize the color/texture)
+#' generate_studio() %>% 
+#'  add_object(cone(start=c(-1,0.5,-1), end=c(0,0,0), radius=0.5,material=diffuse(color="red"))) %>%
+#'  add_object(cone(start=c(1,0.5,-1), end=c(0,0,0), radius=0.5,material=diffuse(color="green"))) %>%
+#'  add_object(cone(start=c(0,1,-1), end=c(0,0,0), radius=0.5,material=diffuse(color="orange"))) %>% 
+#'  add_object(cone(start=c(-1,-0.5,0), end=c(1,-0.5,0), radius=0.25,
+#'    material = diffuse(color="red",gradient_color="green"))) %>% 
+#'  add_object(sphere(y=5,x=5,material=light(intensity=40))) %>% 
+#'  render_scene(samples=400,clamp_value=10)
+#'  
+#'  
+#' #Specify cone via direction and location, instead of start and end positions
+#' #Length is derived from the magnitude of the direction.
+#' gold_mat = microfacet(roughness=0.1,eta=c(0.216,0.42833,1.3184), kappa=c(3.239,2.4599,1.8661))
+#' generate_studio() %>% 
+#'   add_object(cone(start = c(-1,0,0), direction = c(-0.5,0.5,0), material = gold_mat)) %>% 
+#'   add_object(cone(start = c(1,0,0), direction = c(0.5,0.5,0), material = gold_mat)) %>% 
+#'   add_object(cone(start = c(0,0,-1), direction = c(0,0.5,-0.5), material = gold_mat)) %>% 
+#'   add_object(cone(start = c(0,0,1), direction = c(0,0.5,0.5), material = gold_mat)) %>% 
+#'   add_object(sphere(y=5,material=light())) %>% 
+#'   add_object(sphere(y=3,x=-3,z=-3,material=light(color="red"))) %>% 
+#'   add_object(sphere(y=3,x=3,z=-3,material=light(color="green"))) %>% 
+#'   render_scene(lookfrom=c(0,4,10), clamp_value=10, samples=400)
+#'   
+#'  #Render the position from the base, instead of the center of the cone:
+#'  noise_mat = material = glossy(color="purple",noisecolor="blue", noise=5)
+#'  generate_studio() %>% 
+#'   add_object(cone(start = c(0,-1,0), from_center = FALSE, radius=1, direction = c(0,2,0), 
+#'     material = noise_mat)) %>% 
+#'   add_object(cone(start = c(-1.5,-1,0), from_center = FALSE, radius=0.5, direction = c(0,1,0), 
+#'     material = noise_mat)) %>% 
+#'   add_object(cone(start = c(1.5,-1,0), from_center = FALSE, radius=0.5, direction = c(0,1,0), 
+#'     material = noise_mat)) %>% 
+#'   add_object(cone(start = c(0,-1,1.5), from_center = FALSE, radius=0.5, direction = c(0,1,0), 
+#'     material = noise_mat)) %>% 
+#'   add_object(sphere(y=5,x=5,material=light(intensity=40))) %>% 
+#'   render_scene(lookfrom=c(0,4,10), clamp_value=10,fov=25, samples=400)
+#'   
+#' }
+#' 
+cone = function(start = c(0, 0, 0), end = c(0, 1, 0), radius = 0.5, 
+                direction = NA, from_center = TRUE,
+                material = diffuse(), angle = c(0,0,0),
+                velocity = c(0, 0, 0), flipped = FALSE, scale = c(1,1,1)) {
+  if(length(scale) == 1) {
+    scale = c(scale, scale, scale)
+  }
+  if(!is.na(material$lightintensity) && material$implicit_sample) {
+    message("Importance sampling not supported with cone lights: turning off")
+    material$implicit_sample = FALSE
+  }
+  if(!is.na(material$alphaimage)) {
+    message("Alpha transparency currently not supported with cones: turning off")
+    material$alphaimage = NA
+  }
+  if(!is.na(direction) && length(direction) == 3) {
+    if(from_center) {
+      new_start = start - direction/2
+      new_end = start + direction/2
+    } else {
+      new_start = start
+      new_end = start + direction
+    }
+    start = new_start
+    end = new_end
+  }
+  x = start[1] 
+  y = start[2] 
+  z = start[3] 
+  order_rotation = c(3, 2, 1)
+  phi =  atan2( as.numeric(end[1]-start[1]), as.numeric(end[3]-start[3]))/pi*180 + 90
+  
+  length_xy = sqrt((end[1]-start[1])^2 + (end[3]-start[3])^2)
+  if(end[1] == start[1] && end[3] == start[3]) {
+    if((end[2]-start[2]) < 0) {
+      theta = 180
+    } else {
+      theta = 0
+    }
+  } else {
+    theta = atan2(-length_xy, (end[2]-start[2]))/pi*180
+  }
+  fulllength = sqrt(sum((end-start)^2))
+  angle = c(0, phi, theta) + angle
+  info = c(unlist(material$properties), fulllength)
+  new_tibble_row(list(x = x, y = y, z = z, radius = radius, type = material$type, shape = "cone",
+                      properties = list(info), velocity = list(velocity), 
+                      checkercolor = material$checkercolor, 
+                      gradient_color = material$gradient_color, gradient_transpose = material$gradient_transpose, 
+                      world_gradient = material$world_gradient, gradient_point_info = material$gradient_point_info,
+                      gradient_type = material$gradient_type,
+                      noise = material$noise, noisephase = material$noisephase, 
+                      noiseintensity = material$noiseintensity, noisecolor = material$noisecolor,
+                      angle = list(angle), image = material$image, image_repeat = material$image_repeat,
+                      alphaimage = list(material$alphaimage), bump_texture = list(material$bump_texture),
+                      bump_intensity = material$bump_intensity, lightintensity = material$lightintensity,
+                      flipped = flipped, fog = material$fog, fogdensity = material$fogdensity,
+                      implicit_sample = material$implicit_sample,  sigma = material$sigma, glossyinfo = material$glossyinfo,
+                      order_rotation = list(order_rotation),
+                      pivot_point = list(NA), group_translate = list(NA),
+                      group_angle = list(NA), group_order_rotation = list(NA),
+                      tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA),
+                      material_id = NA))
+}
+
+#' Arrow Object
+#' 
+#' Composite object (cone + segment)
+#'
+#' @param start Default `c(0, 0, 0)`. Base of the arrow, specifying `x`, `y`, `z`.
+#' @param end Default `c(0, 1, 0)`. Tip of the arrow, specifying `x`, `y`, `z`.
+#' @param radius_top Default `0.5`. Radius of the top of the arrow.
+#' @param radius_tail Default `0.2`.  Radius of the tail of the arrow.
+#' @param tail_proportion Default `0.5`. Proportion of the arrow that is the tail.
+#' @param direction Default `NA`. Alternative to `start` and `end`, specify the direction (via 
+#' a length-3 vector) of the arrow. Arrow will be centered at `start`, and the length will be
+#' determined by the magnitude of the direction vector.
+#' @param from_center Default `TRUE`. If orientation specified via `direction`, setting this argument
+#' to `FALSE` will make `start` specify the bottom of the cone, instead of the middle.
+#' @param material Default  \code{\link{diffuse}}.The material, called from one of the material 
+#' functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}.
+#' @param velocity Default `c(0, 0, 0)`. Velocity of the segment.
+#' @param flipped Default `FALSE`. Whether to flip the normals.
+#' @param scale Default `c(1, 1, 1)`. Scale transformation in the x, y, and z directions. If this is a single value,
+#' number, the object will be scaled uniformly. Notes: this will change the stated start/end position of the cone. 
+#' Emissive objects may not currently function correctly when scaled.
+#' 
+#' @importFrom  grDevices col2rgb
+#'
+#' @return Single row of a tibble describing the cone in the scene.
+#' @export
+#'
+#' @examples
+#' #Draw a simple arrow from x = -1 to x = 1
+#' \donttest{
+#' generate_studio() %>% 
+#'   add_object(arrow(start = c(-1,0,0), end = c(1,0,0), material=glossy(color="red"))) %>% 
+#'   add_object(sphere(y=5,material=light(intensity=20))) %>% 
+#'   render_scene(clamp_value=10,  samples=400)
+#' 
+#' #Change the proportion of tail to top
+#' generate_studio(depth=-2) %>% 
+#'   add_object(arrow(start = c(-1,-1,0), end = c(1,-1,0), tail_proportion = 0.5,
+#'                    material=glossy(color="red"))) %>% 
+#'   add_object(arrow(start = c(-1,0,0), end = c(1,0,0), tail_proportion = 0.75,
+#'                    material=glossy(color="red"))) %>% 
+#'   add_object(arrow(start = c(-1,1,0), end = c(1,1,0), tail_proportion = 0.9,
+#'                    material=glossy(color="red"))) %>% 
+#'   add_object(sphere(y=5,z=5,x=2,material=light(intensity=30))) %>% 
+#'   render_scene(clamp_value=10, fov=25,  samples=400)
+#'   
+#' #Change the radius of the tail/top segments
+#' generate_studio(depth=-1.5) %>% 
+#'   add_object(arrow(start = c(-1,-1,0), end = c(1,-1,0), tail_proportion = 0.75,
+#'                    radius_top = 0.1, radius_tail=0.03,
+#'                    material=glossy(color="red"))) %>% 
+#'   add_object(arrow(start = c(-1,0,0), end = c(1,0,0), tail_proportion = 0.75,
+#'                    radius_top = 0.2, radius_tail=0.1,
+#'                    material=glossy(color="red"))) %>% 
+#'   add_object(arrow(start = c(-1,1,0), end = c(1,1,0), tail_proportion = 0.75,
+#'                    radius_top = 0.3, radius_tail=0.2,
+#'                    material=glossy(color="red"))) %>% 
+#'   add_object(sphere(y=5,z=5,x=2,material=light(intensity=30))) %>% 
+#'   render_scene(clamp_value=10, samples=400)
+#'   
+#'   
+#' #We can also specify arrows via a midpoint and direction:
+#' generate_studio(depth=-1) %>% 
+#'   add_object(arrow(start = c(-1,-0.5,0), direction = c(0,0,1),
+#'                    material=glossy(color="green"))) %>% 
+#'   add_object(arrow(start = c(1,-0.5,0), direction = c(0,0,-1),
+#'                    material=glossy(color="red"))) %>% 
+#'   add_object(arrow(start = c(0,-0.5,1), direction = c(1,0,0),
+#'                    material=glossy(color="yellow"))) %>% 
+#'   add_object(arrow(start = c(0,-0.5,-1), direction = c(-1,0,0),
+#'                    material=glossy(color="purple"))) %>% 
+#'   add_object(sphere(y=5,z=5,x=2,material=light(intensity=30))) %>% 
+#'   render_scene(clamp_value=10, samples=400, 
+#'                lookfrom=c(0,5,10), lookat=c(0,-0.5,0), fov=16)
+#' 
+#' #Plot a 3D vector field for a gravitational well:
+#' 
+#' r = 1.5
+#' theta_vals = seq(0,2*pi,length.out = 16)[-16]
+#' phi_vals = seq(0,pi,length.out = 16)[-16][-1]
+#' arrow_list = list()
+#' counter = 1
+#' for(theta in theta_vals) {
+#'   for(phi in phi_vals) {
+#'     rval = c(r*sin(phi)*cos(theta),r*cos(phi),r*sin(phi)*sin(theta)) 
+#'     arrow_list[[counter]] = arrow(rval, direction = -1/2*rval/sqrt(sum(rval*rval))^3,
+#'                                   tail_proportion = 0.66, radius_top=0.03, radius_tail=0.01,
+#'                                   material = diffuse(color="red"))
+#'     counter = counter + 1
+#'   }
+#' }
+#' vector_field = do.call(rbind,arrow_list)
+#' sphere(material=diffuse(noise=1,color="blue",noisecolor="darkgreen")) %>% 
+#'   add_object(vector_field) %>% 
+#'   add_object(sphere(y=0,x=10,z=5,material=light(intensity=200))) %>% 
+#'   render_scene(fov=20, ambient=TRUE, samples=400,
+#'                backgroundlow="black",backgroundhigh="white")
+#' }
+arrow = function(start = c(0,0,0), end = c(0,1,0), 
+                 radius_top = 0.2, radius_tail = 0.1, tail_proportion = 0.5,
+                 direction = NA,  from_center = TRUE, 
+                 material = diffuse(), velocity = c(0,0,0),
+                 flipped = FALSE, scale = c(1,1,1)) {
+  stopifnot(tail_proportion > 0 && tail_proportion < 1)
+  head_proportion = 1 - tail_proportion
+  from_direction = TRUE
+  if(is.na(direction) || length(direction) != 3) {
+    direction = end - start
+    from_direction = FALSE
+  }
+  if(from_center && from_direction) {
+    start = start - direction/2
+  }
+  start_segment = start
+  end_segment = start + direction * tail_proportion 
+  start_tip = end_segment - direction/100
+  end_tip = start + direction + direction/100
+  segment(start = start_segment, 
+          end = end_segment,
+          radius = radius_tail, 
+          material = material, 
+          flipped = flipped, scale = scale, velocity = velocity) %>%
+    add_object(cone(start = start_tip, 
+                    end = end_tip,
+                    radius = radius_top, 
+                    material = material, 
+                    flipped = flipped, scale = scale, velocity = velocity))
 }

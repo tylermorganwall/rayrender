@@ -16,6 +16,7 @@ diffuse(
   gradient_transpose = FALSE,
   gradient_point_start = NA,
   gradient_point_end = NA,
+  gradient_type = "hsv",
   image_texture = NA,
   image_repeat = 1,
   alpha_texture = NA,
@@ -60,6 +61,8 @@ begins with value `color`.}
 \item{gradient_point_end}{Default `NA`. If not `NA`, this changes the behavior from mapping texture coordinates to 
 mapping to world space coordinates. This should be a length-3 vector specifying the x,y, and z points where the gradient
 begins with value `gradient_color`.}
+
+\item{gradient_type}{Default `hsv`. Colorspace to calculate the gradient. Alternative `rgb`.}
 
 \item{image_texture}{Default `NA`. A 3-layer RGB array or filename to be used as the texture on the surface of the object.}
 

@@ -59,6 +59,8 @@
 #' @param environment_light Default `NULL`. An image to be used for the background for rays that escape
 #' the scene. Supports both HDR (`.hdr`) and low-dynamic range (`.png`, `.jpg`) images.
 #' @param rotate_env Default `0`. The number of degrees to rotate the environment map around the scene.
+#' @param intensity_env Default `1`. The amount to increase the intensity of the environment lighting. Useful
+#' if using a LDR (JPEG or PNG) image as an environment map.
 #' @param debug_channel Default `none`. If `depth`, function will return a depth map of rays into the scene 
 #' instead of an image. If `normals`, function will return an image of scene normals, mapped from 0 to 1.
 #' If `uv`, function will return an image of the uv coords. If `variance`, function will return an image 
@@ -93,11 +95,11 @@
 #' render_scene(scene,fov=20,parallel=TRUE,samples=500)
 #' }
 #' 
-#' #Add a metallic gold sphere
+#' #Add a metallic gold sphere, using stratified sampling for a higher quality render
 #' \donttest{
 #' scene = scene %>%
 #'   add_object(sphere(x=-1.1,y=0,z=0,radius=0.5,material = metal(color="gold",fuzz=0.1)))
-#' render_scene(scene,fov=20,parallel=TRUE,samples=500)
+#' render_scene(scene,fov=20,parallel=TRUE,samples=500, sample_method = "stratified")
 #' }
 #' 
 #' #Lower the number of samples to render more quickly (here, we also use only one core).
@@ -151,7 +153,7 @@
 #'on.exit(par(old.par))
 #'par(mfrow=c(5,6))
 #'for(i in 1:30) {
-#'  render_scene(scene, samples=5,
+#'  render_scene(scene, samples=16, 
 #'    lookfrom = c(xpos[i],1.5,zpos[i]),lookat = c(0,0.5,0), parallel=TRUE)
 #'}
 #'}
@@ -165,7 +167,8 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
                         filename = NULL, backgroundhigh = "#80b4ff",backgroundlow = "#ffffff",
                         shutteropen = 0.0, shutterclose = 1.0, focal_distance=NULL, ortho_dimensions = c(1,1),
                         tonemap ="gamma", bloom = TRUE, parallel=TRUE, 
-                        environment_light = NULL, rotate_env = 0, debug_channel = "none",
+                        environment_light = NULL, rotate_env = 0, intensity_env = 1,
+                        debug_channel = "none",
                         progress = interactive(), verbose = FALSE) { 
   if(verbose) {
     currenttime = proc.time()
@@ -216,7 +219,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
   shapevec = unlist(lapply(tolower(scene$shape),switch,
                           "sphere" = 1,"xy_rect" = 2, "xz_rect" = 3,"yz_rect" = 4,"box" = 5, "triangle" = 6, 
                           "obj" = 7, "objcolor" = 8, "disk" = 9, "cylinder" = 10, "ellipsoid" = 11,
-                          "objvertexcolor" = 12))
+                          "objvertexcolor" = 12, "cone" = 13))
   typevec = unlist(lapply(tolower(scene$type),switch,
                           "diffuse" = 1,"metal" = 2,"dielectric" = 3, "oren-nayar" = 4, "light" = 5, "microfacet" = 6, "glossy" = 7))
   sigmavec = unlist(scene$sigma)
@@ -240,7 +243,8 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
   gradient_info$gradient_trans = scene$gradient_transpose
   gradient_info$is_world_gradient = scene$world_gradient
   gradient_info$gradient_control_points = scene$gradient_point_info
-  
+  gradient_info$type = unlist(lapply(tolower(scene$gradient_type),switch,
+                                     "hsv" = TRUE, "rgb" = FALSE, FALSE))
   #noise handler
   noisebool = purrr::map_lgl(scene$noise, .f = ~.x > 0)
   noisevec = scene$noise
@@ -421,17 +425,6 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
   
   assertthat::assert_that(all(c(length(position_list$xvec),length(position_list$yvec),length(position_list$zvec),length(rvec),length(typevec),length(proplist)) == length(position_list$xvec)))
   assertthat::assert_that(all(!is.null(typevec)))
-  for(i in 1:length(position_list$xvec)) {
-    if(typevec[i] == 1) {
-      if(shapevec[i] == 1) {
-        # assertthat::assert_that(length(proplist[[i]]) == 3)
-      }
-    } else if (typevec[i] == 2) {
-      # assertthat::assert_that(length(proplist[[i]]) == 4)
-    } else if (typevec[i] == 3) {
-      # assertthat::assert_that(length(proplist[[i]]) == 7)
-    } 
-  }
   assertthat::assert_that(length(lookfrom) == 3)
   assertthat::assert_that(length(lookat) == 3)
   if(is.null(focal_distance)) {
@@ -530,7 +523,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
                              fileinfo = objfilenamevec, filebasedir = objbasedirvec,
                              progress_bar = progress, numbercores = numbercores, 
                              hasbackground = hasbackground, background = backgroundstring, scale_list = scale_factor,
-                             sigmavec = sigmavec, rotate_env = rotate_env,
+                             sigmavec = sigmavec, rotate_env = rotate_env, intensity_env = intensity_env,
                              verbose = verbose, debug_channel = debug_channel,
                              shared_id_mat=material_id, is_shared_mat=material_id_bool, 
                              min_variance = min_variance, min_adaptive_size = min_adaptive_size, 

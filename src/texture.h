@@ -73,33 +73,38 @@ public:
 class world_gradient_texture : public texture {
 public:
   world_gradient_texture() {}
-  world_gradient_texture(vec3 p1, vec3 p2, vec3 c1, vec3 c2) : 
-    point1(p1), gamma_color1(c1.pow(1/2.2)), gamma_color2(c2.pow(1/2.2))  {
+  world_gradient_texture(vec3 p1, vec3 p2, vec3 c1, vec3 c2, bool hsv2) : 
+    point1(p1)  {
+    gamma_color1 = hsv2 ? RGBtoHSV(c1) : c1;
+    gamma_color2 = hsv2 ? RGBtoHSV(c2) : c2;
     dir = p2 - p1;
     inv_trans_length = 1.0/dir.squared_length();
+    hsv = hsv2;
   }
   ~world_gradient_texture() {}
   virtual vec3 value(Float u, Float v, const vec3& p) const {
     vec3 offsetp = p - point1;
     Float mix = clamp(dot(offsetp, dir)*inv_trans_length, 0, 1);
     vec3 color = gamma_color1 * (1-mix) + mix * gamma_color2;
-    return(color.pow(2.2));
+    return(hsv ? HSVtoRGB(color) : color);
   }
   vec3 point1;
   vec3 gamma_color1, gamma_color2;
   Float inv_trans_length;
   vec3 dir;
+  bool hsv;
 };
 
 class image_texture : public texture {
 public:
   image_texture() {}
-  image_texture(Float *pixels, int A, int B, int nn, Float repeatu, Float repeatv) : 
-    data(pixels), nx(A), ny(B), channels(nn), repeatu(repeatu), repeatv(repeatv) {}
+  image_texture(Float *pixels, int A, int B, int nn, Float repeatu, Float repeatv, Float intensity) : 
+    data(pixels), nx(A), ny(B), channels(nn), repeatu(repeatu), repeatv(repeatv), intensity(intensity) {}
   virtual vec3 value(Float u, Float v, const vec3& p) const;
   Float *data;
   int nx, ny, channels;
   Float repeatu, repeatv;
+  Float intensity;
 };
 
 vec3 image_texture::value(Float u, Float v, const vec3& p) const {
@@ -111,9 +116,9 @@ vec3 image_texture::value(Float u, Float v, const vec3& p) const {
   if (j < 0) j = 0;
   if (i > nx-1) i = nx-1;
   if (j > ny-1) j = ny-1;
-  Float r = data[channels*i + channels*nx*j];
-  Float g = data[channels*i + channels*nx*j+1];
-  Float b = data[channels*i + channels*nx*j+2];
+  Float r = data[channels*i + channels*nx*j] * intensity;
+  Float g = data[channels*i + channels*nx*j+1] * intensity;
+  Float b = data[channels*i + channels*nx*j+2] * intensity;
   return(vec3(r,g,b));
 }
 
@@ -167,14 +172,19 @@ vec3 triangle_image_texture::value(Float u, Float v, const vec3& p) const {
 class gradient_texture : public texture {
 public: 
   gradient_texture() {}
-  gradient_texture(vec3 c1, vec3 c2, bool v) : 
-    gamma_color1(c1.pow(1/2.2)), gamma_color2(c2.pow(1/2.2)), aligned_v(v) {}
+  gradient_texture(vec3 c1, vec3 c2, bool v, bool hsv2) : 
+    aligned_v(v) {
+    gamma_color1 = hsv2 ? RGBtoHSV(c1) : c1;
+    gamma_color2 = hsv2 ? RGBtoHSV(c2) : c2;
+    hsv = hsv2;
+  }
   virtual vec3 value(Float u, Float v, const vec3& p) const {
     vec3 final_color = aligned_v ? gamma_color1 * (1-u) + u * gamma_color2 : gamma_color1 * (1-v) + v * gamma_color2;
-    return(final_color.pow(2.2));
+    return(hsv ? HSVtoRGB(final_color) : final_color);
   }
   vec3 gamma_color1, gamma_color2;
   bool aligned_v;
+  bool hsv;
 };
 
 class alpha_texture {

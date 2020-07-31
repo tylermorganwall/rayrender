@@ -10,6 +10,8 @@ segment(
   radius = 1,
   phi_min = 0,
   phi_max = 360,
+  from_center = TRUE,
+  direction = NA,
   material = diffuse(),
   velocity = c(0, 0, 0),
   flipped = FALSE,
@@ -26,6 +28,13 @@ segment(
 \item{phi_min}{Default `0`. Minimum angle around the segment.}
 
 \item{phi_max}{Default `360`. Maximum angle around the segment.}
+
+\item{from_center}{Default `TRUE`. If orientation specified via `direction`, setting this argument
+to `FALSE` will make `start` specify the bottom of the segment, instead of the middle.}
+
+\item{direction}{Default `NA`. Alternative to `start` and `end`, specify the direction (via 
+a length-3 vector) of the segment. Segment will be centered at `start`, and the length will be
+determined by the magnitude of the direction vector.}
 
 \item{material}{Default  \code{\link{diffuse}}.The material, called from one of the material 
 functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}.}

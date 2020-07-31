@@ -17,6 +17,8 @@ reference:
       - starts_with("ellipsoid")
       - starts_with("disk")
       - starts_with("obj")
+      - starts_with("cone")
+      - starts_with("arrow")
       - starts_with("extruded")
       - starts_with("pig")
   - title: "Materials"
@@ -47,6 +49,8 @@ navbar:
       href: index.html
     - text: "Tutorials/Demos"
       menu: 
+      -  text: Generating Procedural 3D Trees with Raybonsai and Rayrender
+         href: https://www.tylermw.com/raybonsai-generate-procedural-3d-trees-in-r/
       -  text: Pathtracing Neon Landscapes in R
          href: https://www.tylermw.com/pathtracing-neon-landscapes-in-r/          
       -  text: Raytracing Lenticular Gifs with rayrender

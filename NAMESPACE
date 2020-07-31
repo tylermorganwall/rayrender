@@ -2,6 +2,8 @@
 
 export("%>%")
 export(add_object)
+export(arrow)
+export(cone)
 export(cube)
 export(cylinder)
 export(dielectric)

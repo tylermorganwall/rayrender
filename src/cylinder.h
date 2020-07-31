@@ -7,9 +7,9 @@
 class cylinder: public hitable {
 public:
   cylinder() {}
-  cylinder(Float r, Float len, Float phi_min, Float phi_max, 
+  cylinder(Float r, Float len, Float phi_min, Float phi_max, bool has_caps,
            material *mat, alpha_texture *alpha_mask, bump_texture* bump_tex) : 
-  radius(r), length(len), phi_min(phi_min), phi_max(phi_max), mat_ptr(mat), 
+  radius(r), length(len), phi_min(phi_min), phi_max(phi_max), has_caps(has_caps), mat_ptr(mat), 
   alpha_mask(alpha_mask), bump_tex(bump_tex) {};
   ~cylinder() {
     delete mat_ptr;
@@ -31,6 +31,7 @@ public:
   Float length;
   Float phi_min;
   Float phi_max;
+  bool has_caps;
   material *mat_ptr;
   alpha_texture *alpha_mask;
   bump_texture *bump_tex;
@@ -42,109 +43,178 @@ bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
   dir.e[1] = 0;
   oc.e[1] = 0;
   Float a = dot(dir, dir);
-  Float b = dot(oc, dir); 
+  Float b = 2 * dot(oc, dir); 
   Float c = dot(oc, oc) - radius * radius;
-  Float discriminant = DifferenceOfProducts(b,b,a,c); 
-  if(discriminant > 0) {
-    bool is_hit = true;
-    bool second_is_hit = true;
-    if(alpha_mask) {
-      Float temp = (-b - sqrt(discriminant))/a;
-      vec3 temppoint = r.point_at_parameter(temp);
-      Float phi = atan2(temppoint.z(),temppoint.x());
-      phi = phi < 0 ? phi + 2 * M_PI : phi;
-      Float u;
-      Float v;
-      if(temp < t_max && temp > t_min && 
-         temppoint.y() > -length/2 && temppoint.y() < length/2 && phi <= phi_max && phi >= phi_min) {
-        Float hitRad = std::sqrt(temppoint.x() * temppoint.x() + temppoint.z() * temppoint.z());
-        temppoint.e[0] *= radius / hitRad;
-        temppoint.e[2] *= radius / hitRad;
-        get_cylinder_uv(temppoint, u, v);
-        if(alpha_mask->value(u, v, rec.p).x() < rng.unif_rand()) {
-          is_hit = false;
-        }
-      }
-      temp = (-b + sqrt(discriminant))/a;
-      temppoint = r.point_at_parameter(temp);
-      phi = atan2(temppoint.z(),temppoint.x());
-      phi = phi < 0 ? phi + 2 * M_PI : phi;
-      if(temp < t_max && temp > t_min && 
-         temppoint.y() > -length/2 && temppoint.y() < length/2 && phi <= phi_max && phi >= phi_min) {
-        Float hitRad = std::sqrt(temppoint.x() * temppoint.x() + temppoint.z() * temppoint.z());
-        temppoint.e[0] *= radius / hitRad;
-        temppoint.e[2] *= radius / hitRad;
-        get_cylinder_uv(temppoint, u, v);
-        if(alpha_mask->value(u, v, rec.p).x() < rng.unif_rand()) {
-          if(!is_hit) {
-            return(false);
-          }
-          second_is_hit = false;
-        } 
-      }
-    }
-    Float temp = (-b - sqrt(discriminant))/a;
-    vec3 temppoint = r.point_at_parameter(temp);
+  Float temp1, temp2;
+  if (!quadratic(a, b, c, &temp1, &temp2)) {
+    return(false);
+  }
+  bool is_hit = true;
+  bool second_is_hit = true;
+  if(alpha_mask) {
+    vec3 temppoint = r.point_at_parameter(temp1);
     Float phi = atan2(temppoint.z(),temppoint.x());
     phi = phi < 0 ? phi + 2 * M_PI : phi;
-    if(is_hit && temp < t_max && temp > t_min && 
+    Float u;
+    Float v;
+    if(temp1 < t_max && temp1 > t_min && 
        temppoint.y() > -length/2 && temppoint.y() < length/2 && phi <= phi_max && phi >= phi_min) {
       Float hitRad = std::sqrt(temppoint.x() * temppoint.x() + temppoint.z() * temppoint.z());
       temppoint.e[0] *= radius / hitRad;
       temppoint.e[2] *= radius / hitRad;
-      rec.t = temp;
-      rec.p = temppoint;
-      
-      temppoint.e[1] = 0;
-      rec.normal = dot(temppoint, dir) > 0 ? -temppoint / radius : temppoint / radius;
-      get_cylinder_uv(rec.p, rec.u, rec.v);
-      
-      //Interaction information
-      rec.dpdu = vec3(-temppoint.z(),0,  temppoint.x());
-      rec.dpdv = vec3(0, length, 0);
-      rec.has_bump = bump_tex ? true : false;
-      
-      if(bump_tex) {
-        vec3 bvbu = bump_tex->value(rec.u, rec.v, rec.p);
-        rec.bump_normal = rec.normal + bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv; 
-        rec.bump_normal.make_unit_vector();
-        rec.bump_normal *= dot(temppoint, dir) > 0 ? -1 : 1;
-        
+      get_cylinder_uv(temppoint, u, v);
+      if(alpha_mask->value(u, v, rec.p).x() < rng.unif_rand()) {
+        is_hit = false;
       }
-      
-      rec.mat_ptr = mat_ptr;
-      return(true);
     }
-    temp = (-b + sqrt(discriminant))/a;
-    temppoint = r.point_at_parameter(temp);
+    temppoint = r.point_at_parameter(temp2);
     phi = atan2(temppoint.z(),temppoint.x());
     phi = phi < 0 ? phi + 2 * M_PI : phi;
-    if(second_is_hit && temp < t_max && temp > t_min && 
+    if(temp2 < t_max && temp2 > t_min && 
        temppoint.y() > -length/2 && temppoint.y() < length/2 && phi <= phi_max && phi >= phi_min) {
       Float hitRad = std::sqrt(temppoint.x() * temppoint.x() + temppoint.z() * temppoint.z());
       temppoint.e[0] *= radius / hitRad;
       temppoint.e[2] *= radius / hitRad;
-      rec.t = temp;
-      rec.p = temppoint;
-      
-      temppoint.e[1] = 0;
-      rec.normal = dot(temppoint,dir) > 0 ? -temppoint / radius : temppoint / radius;
-      get_cylinder_uv(rec.p, rec.u, rec.v);
-      
-      //Interaction information
-      rec.dpdu = vec3(-phi_max * temppoint.z(), 0,  phi_max * temppoint.x());
-      rec.dpdv = vec3(0, length, 0);
-      rec.has_bump = bump_tex ? true : false;
-      
-      if(bump_tex) {
-        vec3 bvbu = bump_tex->value(rec.u,rec.v, rec.p);
-        rec.bump_normal = rec.normal + bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv; 
-        rec.bump_normal.make_unit_vector();
-      }
-      
-      rec.mat_ptr = mat_ptr;
-      return(true);
+      get_cylinder_uv(temppoint, u, v);
+      if(alpha_mask->value(u, v, rec.p).x() < rng.unif_rand()) {
+        if(!is_hit) {
+          return(false);
+        }
+        second_is_hit = false;
+      } 
     }
+  }
+  vec3 temppoint = r.point_at_parameter(temp1);
+  Float phi = atan2(temppoint.z(),temppoint.x());
+  phi = phi < 0 ? phi + 2 * M_PI : phi;
+  if(is_hit && temp1 < t_max && temp1 > t_min && 
+     temppoint.y() > -length/2 && temppoint.y() < length/2 && phi <= phi_max && phi >= phi_min) {
+    Float hitRad = std::sqrt(temppoint.x() * temppoint.x() + temppoint.z() * temppoint.z());
+    temppoint.e[0] *= radius / hitRad;
+    temppoint.e[2] *= radius / hitRad;
+    rec.t = temp1;
+    rec.p = temppoint;
+    
+    temppoint.e[1] = 0;
+    rec.normal = dot(temppoint, dir) > 0 ? -temppoint / radius : temppoint / radius;
+    get_cylinder_uv(rec.p, rec.u, rec.v);
+    
+    //Interaction information
+    rec.dpdu = vec3(-temppoint.z(),0,  temppoint.x());
+    rec.dpdv = vec3(0, length, 0);
+    rec.has_bump = bump_tex ? true : false;
+    
+    if(bump_tex) {
+      vec3 bvbu = bump_tex->value(rec.u, rec.v, rec.p);
+      rec.bump_normal = rec.normal + bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv; 
+      rec.bump_normal.make_unit_vector();
+      rec.bump_normal *= dot(temppoint, dir) > 0 ? -1 : 1;
+      
+    }
+    rec.mat_ptr = mat_ptr;
+    return(true);
+  }
+  Float t_cyl = -(r.origin().y()-length/2) / r.direction().y();
+  Float t_cyl2 = -(r.origin().y()+length/2) / r.direction().y();
+  Float x = r.origin().x() + t_cyl*r.direction().x();
+  Float z = r.origin().z() + t_cyl*r.direction().z();
+  
+  Float phi2 = atan2(z,x);
+  phi2 = phi2 < 0 ? phi2 + 2 * M_PI : phi2;
+  Float radHit2 = x*x + z*z;
+  if(has_caps && t_cyl < temp2 && t_cyl > t_min && t_cyl < t_max && t_cyl < t_cyl2 && 
+     radHit2 <= radius * radius && phi2 <= phi_max && phi2 >= phi_min) {
+    vec3 p = r.point_at_parameter(t_cyl);
+    p.e[1] = length/2;
+    
+    Float u = p.x() / (2.0 * radius) + 0.5;
+    Float v = p.z() / (2.0 * radius) + 0.5;
+    u = 1 - u;
+    if(alpha_mask) {
+      if(alpha_mask->value(u, v, rec.p).x() < 1) {
+        return(false);
+      }
+    }
+    rec.p = p;
+    rec.normal = vec3(0,1,0);
+    rec.t = t_cyl;
+    rec.mat_ptr = mat_ptr;
+    rec.u = u;
+    rec.v = v;
+    rec.dpdu = vec3(1, 0, 0);
+    rec.dpdv = vec3(0, 0, 1);
+    rec.has_bump = bump_tex ? true : false;
+    
+    if(bump_tex) {
+      vec3 bvbu = bump_tex->value(rec.u,rec.v, rec.p);
+      rec.bump_normal = rec.normal + bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv;
+      rec.bump_normal.make_unit_vector();
+    }
+    return(true);
+  }
+  Float x2 = r.origin().x() + t_cyl2*r.direction().x();
+  Float z2 = r.origin().z() + t_cyl2*r.direction().z();
+  
+  Float phi3 = atan2(z2,x2);
+  phi3 = phi3 < 0 ? phi3 + 2 * M_PI : phi3;
+  Float radHit3 = x2*x2 + z2*z2;
+  if(has_caps && t_cyl2 < temp2 && t_cyl2 > t_min && t_cyl2 < t_max && radHit3 <= radius * radius && phi3 <= phi_max && phi3 >= phi_min) {
+    vec3 p = r.point_at_parameter(t_cyl2);
+    p.e[1] = -length/2;
+    
+    Float u = p.x() / (2.0 * radius) + 0.5;
+    Float v = p.z() / (2.0 * radius) + 0.5;
+    u = 1 - u;
+    if(alpha_mask) {
+      if(alpha_mask->value(u, v, rec.p).x() < 1) {
+        return(false);
+      }
+    }
+    rec.p = p;
+    rec.normal = vec3(0,-1,0);
+    rec.t = t_cyl2;
+    rec.mat_ptr = mat_ptr;
+    rec.u = u;
+    rec.v = v;
+    rec.dpdu = vec3(1, 0, 0);
+    rec.dpdv = vec3(0, 0, 1);
+    rec.has_bump = bump_tex ? true : false;
+    
+    if(bump_tex) {
+      vec3 bvbu = bump_tex->value(rec.u,rec.v, rec.p);
+      rec.bump_normal = rec.normal + bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv;
+      rec.bump_normal.make_unit_vector();
+    }
+    return(true);
+  }
+  temppoint = r.point_at_parameter(temp2);
+  phi = atan2(temppoint.z(),temppoint.x());
+  phi = phi < 0 ? phi + 2 * M_PI : phi;
+  if(second_is_hit && temp2 < t_max && temp2 > t_min && 
+     temppoint.y() > -length/2 && temppoint.y() < length/2 && phi <= phi_max && phi >= phi_min) {
+    Float hitRad = std::sqrt(temppoint.x() * temppoint.x() + temppoint.z() * temppoint.z());
+    temppoint.e[0] *= radius / hitRad;
+    temppoint.e[2] *= radius / hitRad;
+    rec.t = temp2;
+    rec.p = temppoint;
+    
+    temppoint.e[1] = 0;
+    rec.normal = dot(temppoint,dir) > 0 ? -temppoint / radius : temppoint / radius;
+    get_cylinder_uv(rec.p, rec.u, rec.v);
+    
+    //Interaction information
+    rec.dpdu = vec3(-phi_max * temppoint.z(), 0,  phi_max * temppoint.x());
+    rec.dpdv = vec3(0, length, 0);
+    rec.has_bump = bump_tex ? true : false;
+    
+    if(bump_tex) {
+      vec3 bvbu = bump_tex->value(rec.u,rec.v, rec.p);
+      rec.bump_normal = rec.normal + bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv; 
+      rec.bump_normal.make_unit_vector();
+    }
+    
+    rec.mat_ptr = mat_ptr;
+    return(true);
   }
   return(false);
 }

@@ -111,7 +111,7 @@ generate_ground(depth=-0.51,material=diffuse(checkercolor="grey30",checkerperiod
   add_object(cube(material = dielectric(attenuation = c(6,6,2),priority=1))) \%>\%
   add_object(sphere(radius=1,x=1.01,
                     material = dielectric(priority=0,refraction=1))) \%>\%
-  add_object(sphere(radius=1,x=-1.01,
+  add_object(sphere(radius=1,x=-1.01, 
                     material = dielectric(priority=0,refraction=1))) \%>\%
   add_object(sphere(y=10,x=3,material=light(intensit=150))) \%>\%
   render_scene(parallel=TRUE, samples = 400,lookfrom=c(5,3,5))

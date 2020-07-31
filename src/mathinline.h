@@ -309,4 +309,74 @@ inline Float Log2(Float x) {
   return(std::log(x) * invLog2);
 }
 
+inline vec3 RGBtoHSV(vec3& rgb) {
+  Float max_val = ffmax(ffmax(rgb.r(), rgb.g()), rgb.b());
+  Float min_val = ffmin(ffmin(rgb.r(), rgb.g()), rgb.b());
+  Float delta_val = max_val - min_val;
+  vec3 hsv;
+  
+  if(delta_val > 0) {
+    if(max_val == rgb.r()) {
+      hsv.e[0] = 60 * (fmod(((rgb.g() - rgb.b()) / delta_val), 6));
+    } else if(max_val == rgb.g()) {
+      hsv.e[0] = 60 * (((rgb.b() - rgb.r()) / delta_val) + 2);
+    } else if(max_val == rgb.b()) {
+      hsv.e[0] = 60 * (((rgb.r() - rgb.g()) / delta_val) + 4);
+    }
+    if(max_val > 0) {
+      hsv.e[1] = delta_val / max_val;
+    } else {
+      hsv.e[1] = 0;
+    }
+    hsv.e[2] = max_val;
+  } else {
+    hsv.e[0] = 0;
+    hsv.e[1] = 0;
+    hsv.e[2] = max_val;
+  }
+  if(hsv.e[0] < 0) {
+    hsv.e[0] = 360 + hsv.e[0];
+  }
+  return(hsv);
+}
+
+
+inline vec3 HSVtoRGB(vec3 hsv) {
+  Float chroma = hsv.z() * hsv.y(); 
+  Float fHPrime = fmod(hsv.x() / 60.0, 6);
+  Float x_val = chroma * (1 - fabs(fmod(fHPrime, 2) - 1));
+  Float m_val = hsv.z() - chroma;
+
+  if(0 <= fHPrime && fHPrime < 1) {
+    vec3 rgb(chroma,x_val,0);
+    rgb += m_val;
+    return(rgb);
+  } else if(1 <= fHPrime && fHPrime < 2) {
+    vec3 rgb(x_val,chroma,0);
+    rgb += m_val;
+    return(rgb);
+  } else if(2 <= fHPrime && fHPrime < 3) {
+    vec3 rgb(0,chroma,x_val);
+    rgb += m_val;
+    return(rgb);
+  } else if(3 <= fHPrime && fHPrime < 4) {
+    vec3 rgb(0,x_val,chroma);
+    rgb += m_val;
+    return(rgb);
+  } else if(4 <= fHPrime && fHPrime < 5) {
+    vec3 rgb(x_val,0,chroma);
+    rgb += m_val;
+    return(rgb);
+  } else if(5 <= fHPrime && fHPrime < 6) {
+    vec3 rgb(chroma,0,x_val);
+    rgb += m_val;
+    return(rgb);
+  } else {
+    vec3 rgb(0,0,0);
+    rgb += m_val;
+    return(rgb);
+  }
+}
+
+
 #endif
