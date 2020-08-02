@@ -794,7 +794,7 @@ segment = function(start = c(0, -1, 0), end = c(0, 1, 0), radius = 1,
     scale = c(scale, scale, scale)
   }
   assertthat::assert_that(phi_max > phi_min)
-  if(!is.na(direction) && length(direction) == 3) {
+  if(all(!is.na(direction)) && length(direction) == 3) {
     if(from_center) {
       new_start = start - direction/2
       new_end = start + direction/2
@@ -1545,7 +1545,7 @@ cone = function(start = c(0, 0, 0), end = c(0, 1, 0), radius = 0.5,
     message("Alpha transparency currently not supported with cones: turning off")
     material$alphaimage = NA
   }
-  if(!is.na(direction) && length(direction) == 3) {
+  if(all(!is.na(direction)) && length(direction) == 3) {
     if(from_center) {
       new_start = start - direction/2
       new_end = start + direction/2
@@ -1701,7 +1701,7 @@ arrow = function(start = c(0,0,0), end = c(0,1,0),
   stopifnot(tail_proportion > 0 && tail_proportion < 1)
   head_proportion = 1 - tail_proportion
   from_direction = TRUE
-  if(is.na(direction) || length(direction) != 3) {
+  if(any(is.na(direction)) || length(direction) != 3) {
     direction = end - start
     from_direction = FALSE
   }

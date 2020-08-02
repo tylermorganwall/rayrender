@@ -3,21 +3,12 @@
 
 #include "rng.h"
 #include "vec2.h"
+#include <memory>
 
 class Sampler {
 public:
   Sampler(size_t number_pixel_samples) : samplesPerPixel(number_pixel_samples) {}
   virtual ~Sampler() = 0;
-  // void markOccupiedStrata1(vec2 pt, int NN) {
-  //   int shape = 0;
-  //   int xdivs = NN;
-  //   int ydivs = 1;
-  //   while(xdivs != 0) {
-  //     int xstratum = (xdivs * pt.x());
-  //     int ystratum = (ydivs * pt.y());
-  //   }
-  // }
-  // std::vector<bool> occupiedStrata;
   virtual void StartPixel(const vec2 &p);
   virtual Float Get1D() = 0;
   virtual vec2 Get2D() = 0;
@@ -64,8 +55,8 @@ public:
 protected:
   std::vector<std::vector<Float> > samples1D;
   std::vector<std::vector<vec2> > samples2D;
-  int current1DDimension;
-  int current2DDimension;
+  size_t current1DDimension;
+  size_t current2DDimension;
   random_gen rng;
 };
 

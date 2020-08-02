@@ -30,3 +30,4 @@ Suggests:
 LinkingTo: Rcpp, RcppThread, progress
 URL: https://www.rayrender.net, https://github.com/tylermorganwall/rayrender
 RoxygenNote: 7.1.0
+SystemRequirements: C++11

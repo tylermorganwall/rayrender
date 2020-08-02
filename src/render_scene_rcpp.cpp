@@ -667,7 +667,7 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
         std::chrono::duration<double> elapsed = finish - start;
         Rcpp::Rcout << elapsed.count() << " seconds" << "\n";
       }
-      for(size_t s = 0; s < ns; s++) {
+      for(size_t s = 0; s < static_cast<size_t>(ns); s++) {
         Rcpp::checkUserInterrupt();
         if(progress_bar) {
           pb.tick();
