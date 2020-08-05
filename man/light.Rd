@@ -4,7 +4,14 @@
 \alias{light}
 \title{Light Material}
 \usage{
-light(color = "#ffffff", intensity = 10, importance_sample = TRUE)
+light(
+  color = "#ffffff",
+  intensity = 10,
+  importance_sample = TRUE,
+  spotlight_focus = NA,
+  spotlight_width = 30,
+  spotlight_start_falloff = 15
+)
 }
 \arguments{
 \item{color}{Default `white`. The color of the light Can be either

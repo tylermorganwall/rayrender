@@ -31,23 +31,23 @@
 
 struct hit_record;
 
-vec3 reflect(const vec3& v, const vec3& n) {
+inline vec3 reflect(const vec3& v, const vec3& n) {
   return(v - 2*dot(v,n) * n);
 }
 
-Float schlick(Float cosine, Float ref_idx, Float ref_idx2) {
+inline Float schlick(Float cosine, Float ref_idx, Float ref_idx2) {
   Float r0 = (ref_idx2 - ref_idx) / (ref_idx2 + ref_idx);
   r0 = r0 * r0;
   return(r0 + (1-r0) * pow((1-cosine),5));
 }
 
-Float schlick_reflection(Float cosine, Float r0) {
+inline Float schlick_reflection(Float cosine, Float r0) {
   Float r02 = (1 - r0) / (1 + r0);
   r02 = r02 * r02;
   return(r02 + (1-r02) * pow((1-cosine),5));
 }
 
-bool refract(const vec3& v, const vec3& n, Float ni_over_nt, vec3& refracted) {
+inline bool refract(const vec3& v, const vec3& n, Float ni_over_nt, vec3& refracted) {
   vec3 uv = unit_vector(v);
   Float dt = dot(uv, n);
   Float discriminant = 1.0 - ni_over_nt * ni_over_nt * (1 - dt * dt);
@@ -59,7 +59,7 @@ bool refract(const vec3& v, const vec3& n, Float ni_over_nt, vec3& refracted) {
   }
 }
 
-vec3 refract(const vec3& uv, const vec3& n, Float ni_over_nt) {
+inline vec3 refract(const vec3& uv, const vec3& n, Float ni_over_nt) {
   Float cos_theta = dot(-uv, n);
   vec3 r_out_parallel =  ni_over_nt * (uv + cos_theta*n);
   vec3 r_out_perp = -sqrt(1.0 - r_out_parallel.squared_length()) * n;
@@ -73,6 +73,16 @@ struct scatter_record {
   pdf *pdf_ptr = nullptr;
   ~scatter_record() { if(pdf_ptr) delete pdf_ptr; }
 };
+
+inline vec3 FrCond(Float cosi, const vec3 &eta, const vec3 &k) {
+  vec3 tmp = (eta*eta + k*k) * cosi*cosi;
+  vec3 Rparl2 = (tmp - (2.0f * eta * cosi) + vec3(1.0f)) /
+    (tmp + (2.0f * eta * cosi) + vec3(1.0f));
+  vec3 tmp_f = eta*eta + k*k;
+  vec3 Rperp2 = (tmp_f - (2.0f * eta * cosi) + cosi*cosi) /
+    (tmp_f + (2.0f * eta * cosi) + cosi*cosi);
+  return((Rparl2 + Rperp2) / 2.0f);
+}
 
 class material {
   public:
@@ -279,6 +289,39 @@ public:
     }
   }
   texture *emit;
+};
+
+class spot_light : public material {
+  public:
+    spot_light(texture *a, vec3 dir, Float cosTotalWidth, Float cosFalloffStart) : 
+    emit(a), spot_direction(unit_vector(dir)), cosTotalWidth(cosTotalWidth), cosFalloffStart(cosFalloffStart) {}
+    ~spot_light() {
+      if(emit) delete emit;
+    }
+    virtual bool scatter(const ray& r_in, const hit_record& rec, scatter_record& srec, random_gen& rng) {
+      return(false);
+    }
+    virtual vec3 emitted(const ray& r_in, const hit_record& rec, Float u, Float v, const vec3& p) const {
+      if(dot(rec.normal, r_in.direction()) < 0.0) {
+        return(falloff(r_in.origin() - rec.p) * emit->value(u,v,p) );
+      } else {
+        return(vec3(0,0,0));
+      }
+    }
+    Float falloff(const vec3 &w) const {
+      Float cosTheta = dot(spot_direction, unit_vector(w));
+      if (cosTheta < cosTotalWidth) {
+        return(0);
+      }
+      if (cosTheta > cosFalloffStart) {
+        return(1);
+      }
+      Float delta = (cosTheta - cosTotalWidth) /(cosFalloffStart - cosTotalWidth);
+      return((delta * delta) * (delta * delta));
+    }
+    texture *emit;
+    vec3 spot_direction;
+    const Float cosTotalWidth, cosFalloffStart;
 };
 
 class isotropic : public material {

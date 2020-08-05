@@ -1723,3 +1723,62 @@ arrow = function(start = c(0,0,0), end = c(0,1,0),
                     material = material, 
                     flipped = flipped, scale = scale, velocity = velocity))
 }
+
+#' Curve Object
+#' 
+#' Bezier curve basis, defined by 4 control points.
+#'
+#' @param x Default `0`. x-coordinate offset for the curve.
+#' @param y Default `0`. y-coordinate offset for the curve.
+#' @param z Default `0`. z-coordinate offset for the curve.
+#' @param p0 Default `c(0,0,0)`. First control point.
+#' @param p1 Default `c(-1,0.33,0)`. Second control point.
+#' @param p2 Default `c(1,0.66,0)`. Third control point.
+#' @param p3 Default `c(0,1,0)`. Fourth control point.
+#' @param width Default `1`. Curve width.
+#' @param u_min Default `0`. Minimum parametric coordinate for the curve.
+#' @param u_max Default `1`. Maximum parametric coordinate for the curve.
+#' @param material Default  \code{\link{diffuse}}.The material, called from one of the material 
+#' functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}.
+#' @param angle Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.
+#' @param order_rotation Default `c(1, 2, 3)`. The order to apply the rotations, referring to "x", "y", and "z".
+#' @param velocity Default `c(0, 0, 0)`. Velocity of the cube.
+#' @param flipped Default `FALSE`. Whether to flip the normals.
+#' @param scale Default `c(1, 1, 1)`. Scale transformation in the x, y, and z directions. If this is a single value,
+#' number, the object will be scaled uniformly.
+#' Note: emissive objects may not currently function correctly when scaled.
+#' @importFrom  grDevices col2rgb
+#'
+#' @return Single row of a tibble describing the cube in the scene.
+#' @export
+#'
+#' @examples
+#' #Generate a curve in the cornell box.
+curve = function(x=0, y=0, z=0,
+                 p0 = c(0,0,0), p1 = c(-1,0.33,0), p2 = c(1,0.66,0), p3=c(0,1,0), 
+                 width = 1, u_min = 0, u_max = 1,
+                 material = diffuse(), angle = c(0, 0, 0), order_rotation = c(1, 2, 3), velocity = c(0, 0, 0),
+                 flipped = FALSE, scale = c(1,1,1)) {
+  if(length(scale) == 1) {
+    scale = c(scale, scale, scale)
+  }
+  curve_info = c(unlist(material$properties), p0, p1, p2, p3, width,u_min, u_max)
+  new_tibble_row(list(x = x, y = y, z = z, radius = NA, type = material$type, shape = "curve",
+                      properties = list(curve_info), velocity = list(velocity), 
+                      checkercolor = material$checkercolor, 
+                      gradient_color = material$gradient_color, gradient_transpose = material$gradient_transpose, 
+                      world_gradient = material$world_gradient, gradient_point_info = material$gradient_point_info,
+                      gradient_type = material$gradient_type,
+                      noise = material$noise, noisephase = material$noisephase, 
+                      noiseintensity = material$noiseintensity, noisecolor = material$noisecolor,
+                      angle = list(angle), image = material$image,  image_repeat = material$image_repeat,
+                      alphaimage = list(material$alphaimage), bump_texture = list(material$bump_texture),
+                      bump_intensity = material$bump_intensity, lightintensity = material$lightintensity,
+                      flipped = flipped, fog = material$fog, fogdensity = material$fogdensity,
+                      implicit_sample = material$implicit_sample,  sigma = material$sigma, glossyinfo = material$glossyinfo,
+                      order_rotation = list(order_rotation), 
+                      pivot_point = list(NA), group_translate = list(NA),
+                      group_angle = list(NA), group_order_rotation = list(NA),
+                      tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA),
+                      material_id = NA))
+}

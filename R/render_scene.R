@@ -219,9 +219,11 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
   shapevec = unlist(lapply(tolower(scene$shape),switch,
                           "sphere" = 1,"xy_rect" = 2, "xz_rect" = 3,"yz_rect" = 4,"box" = 5, "triangle" = 6, 
                           "obj" = 7, "objcolor" = 8, "disk" = 9, "cylinder" = 10, "ellipsoid" = 11,
-                          "objvertexcolor" = 12, "cone" = 13))
+                          "objvertexcolor" = 12, "cone" = 13, "curve" = 14))
   typevec = unlist(lapply(tolower(scene$type),switch,
-                          "diffuse" = 1,"metal" = 2,"dielectric" = 3, "oren-nayar" = 4, "light" = 5, "microfacet" = 6, "glossy" = 7))
+                          "diffuse" = 1,"metal" = 2,"dielectric" = 3, 
+                          "oren-nayar" = 4, "light" = 5, "microfacet" = 6, 
+                          "glossy" = 7, "spotlight" = 8))
   sigmavec = unlist(scene$sigma)
   
   assertthat::assert_that(tonemap %in% c("gamma","reinhold","uncharted", "hbd", "raw"))
@@ -265,7 +267,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
   #light handler
   light_prop_vec =  scene$lightintensity
   
-  if(!any(typevec == 5) && missing(ambient_light) && missing(environment_light)) {
+  if(!any(typevec == 5) && !any(typevec == 8) && missing(ambient_light) && missing(environment_light)) {
     ambient_light = TRUE
   }
   
@@ -484,6 +486,18 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
   
   assertthat::assert_that(max_depth > 0)
   assertthat::assert_that(roulette_active_depth > 0)
+  
+  #Spotlight handler
+  if(any(typevec == 8)) {
+    if(any(shapevec[typevec == 8] > 4)) {
+      stop("spotlights are only supported for spheres and rects")
+    }
+    for(i in 1:length(proplist)) {
+      if(typevec[i] == 8) {
+        proplist[[i]][4:6] = proplist[[i]][4:6] - c(position_list$xvec[i],position_list$yvec[i],position_list$zvec[i]) 
+      }
+    }
+  }
   
   
   #Material ID handler; these must show up in increasing order.  Note, this will
