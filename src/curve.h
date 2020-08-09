@@ -35,7 +35,7 @@ class curve: public hitable {
     material *mat_ptr;
   private:
     bool recursiveIntersect(const ray& r, Float tmin, Float tmax, hit_record& rec, random_gen& rng,
-                            const vec3 cp[4], Float u0, Float u1, int depth) const;
+                            const vec3 cp[4], Float u0, Float u1, int depth, onb& uvw) const;
 
     const CurveCommon* common;
     Float uMin, uMax;

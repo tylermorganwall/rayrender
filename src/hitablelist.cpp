@@ -3,6 +3,9 @@
 
 bool hitable_list::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
   hit_record temp_rec;
+#ifdef DEBUGBVH
+  temp_rec.bvh_nodes = rec.bvh_nodes;
+#endif
   bool hit_anything = false;
   double closest_so_far = t_max;
   for(int i = 0; i < list_size; i++) {

@@ -168,7 +168,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
                         shutteropen = 0.0, shutterclose = 1.0, focal_distance=NULL, ortho_dimensions = c(1,1),
                         tonemap ="gamma", bloom = TRUE, parallel=TRUE, 
                         environment_light = NULL, rotate_env = 0, intensity_env = 1,
-                        debug_channel = "none",
+                        debug_channel = "none", return_raw_array = FALSE,
                         progress = interactive(), verbose = FALSE) { 
   if(verbose) {
     currenttime = proc.time()
@@ -443,7 +443,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
 
   debug_channel = unlist(lapply(tolower(debug_channel),switch,
                           "none" = 0,"depth" = 1,"normals" = 2, "uv" = 3, "bvh" = 4,
-                          "variance" = 5))
+                          "variance" = 5, "normal" = 2, "dpdu" = 6, "dpdv" = 7))
   if(debug_channel == 4) {
     message("rayrender must be compiled with option DEBUGBVH for this debug option to work")
   }
@@ -550,7 +550,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
     returnmat = full_array[,,1]
     returnmat[is.infinite(returnmat)] = NA
     if(is.null(filename)) {
-      plot_map(full_array)
+      plot_map((full_array-min(full_array,na.rm=TRUE))/(max(full_array,na.rm=TRUE) - min(full_array,na.rm=TRUE)))
       return(invisible(full_array))
     } else {
       save_png(full_array,filename)
@@ -558,7 +558,11 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
     }
   } else if (debug_channel %in% c(2,3,4,5)) {
     if(is.null(filename)) {
-      plot_map(full_array)
+      if(debug_channel == 4) {
+        plot_map(full_array/(max(full_array,na.rm=TRUE)))
+      } else {
+        plot_map(full_array)
+      }
       return(invisible(full_array))
     } else {
       save_png(full_array,filename)

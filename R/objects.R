@@ -1738,6 +1738,7 @@ arrow = function(start = c(0,0,0), end = c(0,1,0),
 #' @param width Default `1`. Curve width.
 #' @param u_min Default `0`. Minimum parametric coordinate for the curve.
 #' @param u_max Default `1`. Maximum parametric coordinate for the curve.
+#' @param curve_type Default `flat`. Other options are `cylinder` and `ribbon`.
 #' @param material Default  \code{\link{diffuse}}.The material, called from one of the material 
 #' functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}.
 #' @param angle Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.
@@ -1756,13 +1757,34 @@ arrow = function(start = c(0,0,0), end = c(0,1,0),
 #' #Generate a curve in the cornell box.
 curve = function(x=0, y=0, z=0,
                  p0 = c(0,0,0), p1 = c(-1,0.33,0), p2 = c(1,0.66,0), p3=c(0,1,0), 
-                 width = 1, u_min = 0, u_max = 1,
+                 width = 0.1, width_end = NA, u_min = 0, u_max = 1, curve_type = "flat",
+                 normal = NA, normal_end = NA, 
                  material = diffuse(), angle = c(0, 0, 0), order_rotation = c(1, 2, 3), velocity = c(0, 0, 0),
                  flipped = FALSE, scale = c(1,1,1)) {
   if(length(scale) == 1) {
     scale = c(scale, scale, scale)
   }
-  curve_info = c(unlist(material$properties), p0, p1, p2, p3, width,u_min, u_max)
+  if(is.na(width_end)) {
+    width_end = width
+  }
+  stopifnot(length(width) == 1 && is.numeric(width))
+  stopifnot(length(width_end) == 1 && is.numeric(width_end))
+  
+  if(all(!is.na(normal)) && all(is.na(normal_end))) {
+    normal_end = normal
+  }
+  if(all(!is.na(normal)) || all(!is.na(normal_end))) {
+    stopifnot(length(normal) == 3 && is.numeric(normal))
+    stopifnot(length(normal_end) == 3 && is.numeric(normal_end))
+  }
+  if(all(is.na(normal)) || curve_type == "cylinder" || curve_type == "flat") {
+    normal = c(0,0,0)
+    normal_end = c(0,0,0)
+  }
+  curvetype = unlist(lapply(tolower(curve_type),switch,
+                           "flat" = 1,"cylinder" = 2, "ribbon" = 3))
+  curve_info = c(unlist(material$properties), p0, p1, p2, p3, width, width_end, 
+                 u_min, u_max, curvetype, normal, normal_end)
   new_tibble_row(list(x = x, y = y, z = z, radius = NA, type = material$type, shape = "curve",
                       properties = list(curve_info), velocity = list(velocity), 
                       checkercolor = material$checkercolor, 

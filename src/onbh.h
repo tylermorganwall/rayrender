@@ -18,6 +18,9 @@ public:
   vec3 local(Float a, Float b, Float c) const {
     return(a*u() + b*v() + c*w());
   }
+  vec3 local(const vec3& a) const {
+    return(a.x()*u() + a.y()*v() + a.z()*w());
+  }
   vec3 local_to_world(const vec3& a) const {
     return(a.x()*u() + a.y()*v() + a.z() * w());
   }

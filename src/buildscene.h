@@ -754,12 +754,25 @@ hitable *build_scene(IntegerVector& type,
     } else if (shape(i) == 14) {
       int pl = prop_len;
       vec3 p[4];
+      vec3 n[2];
+      CurveType type_curve;
+      if(tempvector(pl+17) == 1) {
+        type_curve = CurveType::Flat;
+      } else if (tempvector(pl+17) == 2) {
+        type_curve = CurveType::Cylinder;
+      } else {
+        type_curve = CurveType::Ribbon;
+      }
       p[0] = vec3(tempvector(pl+1),tempvector(pl+2),tempvector(pl+3));
       p[1] = vec3(tempvector(pl+4),tempvector(pl+5),tempvector(pl+6));
       p[2] = vec3(tempvector(pl+7),tempvector(pl+8),tempvector(pl+9));
       p[3] = vec3(tempvector(pl+10),tempvector(pl+11),tempvector(pl+12));
-      CurveCommon *curve_data = new CurveCommon(p, tempvector(pl+13), tempvector(pl+13), CurveType::Flat, nullptr);
-      hitable *entry = new curve(tempvector(pl+14),tempvector(pl+15), curve_data, tex);
+      
+      n[0] = vec3(tempvector(pl+18), tempvector(pl+19), tempvector(pl+20));
+      n[1] = vec3(tempvector(pl+21), tempvector(pl+22), tempvector(pl+23));
+      
+      CurveCommon *curve_data = new CurveCommon(p, tempvector(pl+13), tempvector(pl+14), type_curve, n);
+      hitable *entry = new curve(tempvector(pl+15),tempvector(pl+16), curve_data, tex);
       if(is_scaled) {
         entry = new scale(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
       }
@@ -876,6 +889,10 @@ hitable* build_imp_sample(IntegerVector& type,
   } else if(shape(i) == 11) {
     center = vec3(x(i), y(i), z(i));
   } else if(shape(i) == 12) {
+    center = vec3(x(i), y(i), z(i));
+  } else if(shape(i) == 13) {
+    center = vec3(x(i), y(i), z(i));
+  } else if(shape(i) == 14) {
     center = vec3(x(i), y(i), z(i));
   }
 
@@ -1084,8 +1101,8 @@ hitable* build_imp_sample(IntegerVector& type,
     p[1] = vec3(tempvector(pl+4),tempvector(pl+5),tempvector(pl+6));
     p[2] = vec3(tempvector(pl+7),tempvector(pl+8),tempvector(pl+9));
     p[3] = vec3(tempvector(pl+10),tempvector(pl+11),tempvector(pl+12));
-    CurveCommon *curve_data = new CurveCommon(p, tempvector(pl+13), tempvector(pl+13), CurveType::Flat, nullptr);
-    hitable *entry = new curve(tempvector(pl+14),tempvector(pl+15), curve_data, 0);
+    CurveCommon *curve_data = new CurveCommon(p, tempvector(pl+13), tempvector(pl+14), CurveType::Flat, nullptr);
+    hitable *entry = new curve(tempvector(pl+15),tempvector(pl+16), curve_data, 0);
     if(is_scaled) {
       entry = new scale(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
     }

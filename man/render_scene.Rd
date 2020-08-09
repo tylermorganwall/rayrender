@@ -35,6 +35,7 @@ render_scene(
   rotate_env = 0,
   intensity_env = 1,
   debug_channel = "none",
+  return_raw_array = FALSE,
   progress = interactive(),
   verbose = FALSE
 )

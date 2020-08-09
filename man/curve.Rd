@@ -9,17 +9,19 @@ curve(
   y = 0,
   z = 0,
   p0 = c(0, 0, 0),
-  p1 = c(0, 0, 0),
-  p2 = c(0, 0, 0),
-  p3 = c(0, 0, 0),
-  width = 1,
+  p1 = c(-1, 0.33, 0),
+  p2 = c(1, 0.66, 0),
+  p3 = c(0, 1, 0),
+  width_start = 0.1,
+  width_end = 0.01,
   u_min = 0,
   u_max = 1,
+  curve_type = "flat",
   material = diffuse(),
   angle = c(0, 0, 0),
   order_rotation = c(1, 2, 3),
   velocity = c(0, 0, 0),
-  sflipped = FALSE,
+  flipped = FALSE,
   scale = c(1, 1, 1)
 )
 }
@@ -38,11 +40,11 @@ curve(
 
 \item{p3}{Default `c(0,1,0)`. Fourth control point.}
 
-\item{width}{Default `1`. Curve width.}
-
 \item{u_min}{Default `0`. Minimum parametric coordinate for the curve.}
 
 \item{u_max}{Default `1`. Maximum parametric coordinate for the curve.}
+
+\item{curve_type}{Default `flat`. Other options are `cylinder` and `ribbon`.}
 
 \item{material}{Default  \code{\link{diffuse}}.The material, called from one of the material 
 functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}.}
@@ -53,11 +55,13 @@ functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}
 
 \item{velocity}{Default `c(0, 0, 0)`. Velocity of the cube.}
 
+\item{flipped}{Default `FALSE`. Whether to flip the normals.}
+
 \item{scale}{Default `c(1, 1, 1)`. Scale transformation in the x, y, and z directions. If this is a single value,
 number, the object will be scaled uniformly.
 Note: emissive objects may not currently function correctly when scaled.}
 
-\item{flipped}{Default `FALSE`. Whether to flip the normals.}
+\item{width}{Default `1`. Curve width.}
 }
 \value{
 Single row of a tibble describing the cube in the scene.

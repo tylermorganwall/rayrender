@@ -120,16 +120,19 @@ vec3 color(const ray& r, hitable *world, hitable_list *hlist,
 }
 
 #ifdef DEBUGBVH
-float debug_bvh(const ray& r, hitable *world, random_gen rng) {
+inline double debug_bvh(const ray& r, hitable *world, random_gen &rng) {
   hit_record hrec;
-  hrec.bvh_nodes = 0;
-  world->hit(r, 0.001, FLT_MAX, hrec, rng);
-  return(hrec.bvh_nodes);
+  hrec.bvh_nodes = 0.0;
+  if(world->hit(r, 0.001, FLT_MAX, hrec, rng)) {
+    return(hrec.bvh_nodes);
+  } else {
+    return(0.0);
+  }
 }
 #endif
 
 
-float calculate_depth(const ray& r, hitable *world, random_gen rng) {
+inline Float calculate_depth(const ray& r, hitable *world, random_gen &rng) {
   hit_record hrec;
   if(world->hit(r, 0.001, FLT_MAX, hrec, rng)) {
     return((r.origin()-hrec.p).length());
@@ -138,7 +141,7 @@ float calculate_depth(const ray& r, hitable *world, random_gen rng) {
   }
 }
 
-vec3 calculate_normals(const ray& r, hitable *world, random_gen rng) {
+inline vec3 calculate_normals(const ray& r, hitable *world, random_gen &rng) {
   hit_record hrec;
   if(world->hit(r, 0.001, FLT_MAX, hrec, rng)) {
     hrec.normal.make_unit_vector();
@@ -148,10 +151,23 @@ vec3 calculate_normals(const ray& r, hitable *world, random_gen rng) {
   }
 }
 
-vec3 calculate_uv(const ray& r, hitable *world, random_gen rng) {
+inline vec3 calculate_uv(const ray& r, hitable *world, random_gen &rng) {
   hit_record hrec;
   if(world->hit(r, 0.001, FLT_MAX, hrec, rng)) {
     return(vec3(hrec.u,hrec.v,1-hrec.u-hrec.v));
+  } else {
+    return(vec3(0,0,0));
+  }
+}
+
+inline vec3 calculate_dpduv(const ray& r, hitable *world, random_gen &rng, bool u) {
+  hit_record hrec;
+  if(world->hit(r, 0.001, FLT_MAX, hrec, rng)) {
+    if(u) {
+      return((unit_vector(hrec.dpdu) + 1)/2);
+    } else {
+      return((unit_vector(hrec.dpdv) + 1)/2);
+    }
   } else {
     return(vec3(0,0,0));
   }
@@ -517,35 +533,40 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
     }
   } else if(debug_channel == 4) {
 #ifdef DEBUGBVH
-
-    Float bvh_intersections = 0.0;
-    Float max_intersections = 0.0;
     for(int j = ny - 1; j >= 0; j--) {
       for(int i = 0; i < nx; i++) {
-        Float u = Float(i + rng.unif_rand()) / Float(nx);
-        Float v = Float(j + rng.unif_rand()) / Float(ny);
+        Float u = Float(i) / Float(nx);
+        Float v = Float(j) / Float(ny);
         ray r;
         if(fov != 0) {
-          r = cam.get_ray(u,v, vec3(0,0,0));
+          r = cam.get_ray(u,v, vec3(0,0,0), 0);
         } else {
           r = ocam.get_ray(u,v);
         }
-        bvh_intersections = 0.0;
-        bvh_intersections = debug_bvh(r, &world, rng);
+        double bvh_intersections = debug_bvh(r, &world, rng);
         routput(i,j) = bvh_intersections;
         goutput(i,j) = bvh_intersections;
         boutput(i,j) = bvh_intersections;
-        max_intersections = bvh_intersections > max_intersections ? bvh_intersections : max_intersections;
-      }
-    }
-    for(int j = ny - 1; j >= 0; j--) {
-      for(int i = 0; i < nx; i++) {
-      routput(i,j) = routput(i,j) / max_intersections;
-      goutput(i,j) = goutput(i,j) / max_intersections;
-      boutput(i,j) = boutput(i,j) / max_intersections;
       }
     }
 #endif
+  } else if (debug_channel == 6 || debug_channel == 7) {
+    for(int j = ny - 1; j >= 0; j--) {
+      for(int i = 0; i < nx; i++) {
+        Float u = Float(i) / Float(nx);
+        Float v = Float(j) / Float(ny);
+        ray r;
+        if(fov != 0) {
+          r = cam.get_ray(u,v, vec3(0,0,0), 0);
+        } else {
+          r = ocam.get_ray(u,v);
+        }
+        vec3 dpd_val = calculate_dpduv(r, &world, rng, debug_channel == 6);
+        routput(i,j) = dpd_val.x();
+        goutput(i,j) = dpd_val.y();
+        boutput(i,j) = dpd_val.z();
+      }
+    }
   } else {
     if(min_variance == 0) {
       std::vector<unsigned int> seeds(ny);
