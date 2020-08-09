@@ -6,9 +6,6 @@
 #include <Rcpp.h>
 #include "material.h"
 
-#include <chrono>
-#include <thread>
-
 class bvh_node : public hitable {
   public:
     bvh_node() {}
@@ -35,10 +32,8 @@ bool bvh_node::bounding_box(Float t0, Float t1, aabb& b) const {
 }
 
 bool bvh_node::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
+#ifndef DEBUGBVH
   if(box.hit(r, t_min, t_max, rng)) {
-#ifdef DEBUGBVH
-    rec.bvh_nodes++;
-#endif
     if(left->hit(r,t_min,t_max,rec, rng)) {
       right->hit(r,t_min,rec.t,rec, rng);
       return(true);
@@ -47,6 +42,19 @@ bool bvh_node::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
     }
   }
   return(false);
+#endif
+#ifdef DEBUGBVH
+  if(box.hit(r, t_min, t_max, rng)) {
+    rec.bvh_nodes++;
+    if(left->hit(r,t_min,t_max,rec, rng)) {
+      right->hit(r,t_min,rec.t,rec, rng);
+      return(true);
+    } else {
+      return(right->hit(r,t_min,t_max,rec, rng));
+    }
+  }
+  return(false);
+#endif
 }
 int box_x_compare(const void * a, const void * b) {
   aabb box_left, box_right;
