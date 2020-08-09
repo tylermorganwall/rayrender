@@ -251,6 +251,7 @@ bool curve::recursiveIntersect(const ray& r, Float tmin, Float tmax, hit_record&
     Float u = clamp(lerp(w, u0, u1), u0, u1);
     Float hitWidth = lerp(u, common->width[0], common->width[1]);
     vec3 nHit;
+    bool flipped_n = false;
     if (common->type == CurveType::Ribbon) {
       // Scale _hitWidth_ based on ribbon orientation
       Float sin0 = std::sin((1 - u) * common->normalAngle) * common->invSinNormalAngle;
@@ -261,6 +262,7 @@ bool curve::recursiveIntersect(const ray& r, Float tmin, Float tmax, hit_record&
         nHit = common->n[0];
       }
       hitWidth *= AbsDot(nHit, r.direction()) / rayLength;
+      flipped_n = dot(nHit, r.direction()) > 0;
     }
 
     // Test intersection point against curve width
@@ -279,7 +281,8 @@ bool curve::recursiveIntersect(const ray& r, Float tmin, Float tmax, hit_record&
     Float ptCurveDist = std::sqrt(ptCurveDist2);
     Float edgeFunc = dpcdw.x() * -pc.y() + pc.x() * dpcdw.y();
     Float v = (edgeFunc > 0) ? 0.5f + ptCurveDist / hitWidth : 0.5f - ptCurveDist / hitWidth;
-    Float tnew =  pc.z() / rayLength;
+    Float max_direction = std::max(r.direction().x(), std::max(r.direction().y(), r.direction().z()));
+    Float tnew =  r.origin().z() > 0 ? -pc.z() * r.inverse_dir().z() : pc.z() * r.inverse_dir().z();
 
     // Compute hit _t_ and partial derivatives for curve intersection
     if (tnew > tmin && tnew < tmax) {
@@ -291,15 +294,16 @@ bool curve::recursiveIntersect(const ray& r, Float tmin, Float tmax, hit_record&
 
       if (common->type == CurveType::Ribbon) {
         rec.dpdv = unit_vector(cross(nHit, rec.dpdu)) * hitWidth;
-        rec.normal = nHit;
+        rec.normal = !flipped_n ? nHit : -nHit;
       } else {
         //   // Compute curve $\dpdv$ for flat and cylinder curves
         //Assumes z-axis faces directly at viewer
-        vec3 dpduPlane = uvw.local(rec.dpdu); 
-        vec3 dpdvPlane = cross(dpduPlane, vec3(0,0,-1)) ;
-        rec.dpdu = unit_vector(uvw.local_to_world(dpduPlane));
-        rec.dpdv = unit_vector(uvw.local_to_world(dpdvPlane));
-        rec.normal = uvw.local_to_world(vec3(0,0,-1));
+        // vec3 dpduPlane = uvw.local(rec.dpdu); 
+        // vec3 dpdvPlane = cross(dpduPlane, vec3(0,0,-1)) ;
+        // rec.dpdv = (uvw.local_to_world(dpdvPlane));
+        rec.dpdv = unit_vector(cross(rec.dpdu,uvw.w()));
+        rec.normal = -uvw.w(); 
+
         
         if (common->type == CurveType::Cylinder) {
           // Rotate _dpdvPlane_ to give cylindrical appearance
@@ -307,7 +311,7 @@ bool curve::recursiveIntersect(const ray& r, Float tmin, Float tmax, hit_record&
           Float sinTheta = std::sin(theta);
           Float cosTheta = std::cos(theta);
           //Rodrigues' rotation formula
-          rec.normal = rec.normal * cosTheta + cross(rec.dpdu,rec.normal) * sinTheta;
+          rec.normal = rec.normal * cosTheta + cross(unit_vector(rec.dpdu),rec.normal) * sinTheta;
         }
       }
       rec.u = u;

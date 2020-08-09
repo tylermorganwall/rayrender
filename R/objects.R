@@ -1758,7 +1758,7 @@ arrow = function(start = c(0,0,0), end = c(0,1,0),
 curve = function(x=0, y=0, z=0,
                  p0 = c(0,0,0), p1 = c(-1,0.33,0), p2 = c(1,0.66,0), p3=c(0,1,0), 
                  width = 0.1, width_end = NA, u_min = 0, u_max = 1, curve_type = "flat",
-                 normal = NA, normal_end = NA, 
+                 normal = c(0,0,-1), normal_end = NA, 
                  material = diffuse(), angle = c(0, 0, 0), order_rotation = c(1, 2, 3), velocity = c(0, 0, 0),
                  flipped = FALSE, scale = c(1,1,1)) {
   if(length(scale) == 1) {
