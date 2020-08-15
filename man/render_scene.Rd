@@ -35,6 +35,7 @@ render_scene(
   rotate_env = 0,
   intensity_env = 1,
   debug_channel = "none",
+  return_raw_array = FALSE,
   progress = interactive(),
   verbose = FALSE
 )
@@ -134,6 +135,9 @@ if using a LDR (JPEG or PNG) image as an environment map.}
 instead of an image. If `normals`, function will return an image of scene normals, mapped from 0 to 1.
 If `uv`, function will return an image of the uv coords. If `variance`, function will return an image 
 showing the number of samples needed to take for each block to converge (when the}
+
+\item{return_raw_array}{Default `FALSE`. If `TRUE`, function will return raw array with RGB intensity
+information.}
 
 \item{progress}{Default `TRUE` if interactive session, `FALSE` otherwise.}
 

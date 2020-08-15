@@ -57,10 +57,10 @@ inline vec3 rand_to_sphere(Float radius, Float distance_squared, vec2 u) {
 
 
 
-template<class T>
-inline T lerp(T t, T v1, T v2) {
-  return((1-t) * v1 + t * v2);
-}
+// template<class T>
+// inline T lerp(T t, T v1, T v2) {
+//   return((1-t) * v1 + t * v2);
+// }
 
 inline Float saturate(Float v1) {
   v1 = v1 < 0 ? 0 : v1;
@@ -142,7 +142,7 @@ inline Float Tan2Theta(const vec3 &w) {
   return(Sin2Theta(w) / Cos2Theta(w));
 }
 
-Float FrDielectric(Float cosThetaI, Float etaI, Float etaT) {
+inline Float FrDielectric(Float cosThetaI, Float etaI, Float etaT) {
   cosThetaI = clamp(cosThetaI, -1, 1);
   bool entering = cosThetaI > 0.f;
   if (!entering) {
@@ -290,11 +290,23 @@ inline vec3 Reflect(const vec3 &wo, const vec3 &n) {
   return(-wo + 2 * dot(wo, n) * n);
 }
 
+inline uint32_t FloatToBits(float f) {
+  uint32_t ui;
+  memcpy(&ui, &f, sizeof(float));
+  return ui;
+}
+
+inline float BitsToFloat(uint32_t ui) {
+  float f;
+  memcpy(&f, &ui, sizeof(uint32_t));
+  return f;
+}
+
 constexpr Float origin() { return 1.0f / 32.0f; }
 constexpr Float float_scale() { return 1.0f / 65536.0f; }
 constexpr Float int_scale() { return 256.0f; }
 
-vec3 offset_ray(const vec3 p, const vec3 n) {
+inline vec3 offset_ray(const vec3 p, const vec3 n) {
   int of_i[3] = {(int)(int_scale() * n.x()), (int)(int_scale() * n.y()), (int)(int_scale() * n.z())};
   vec3 p_i(int_to_float(float_to_int(p.x())+((p.x() < 0) ? -of_i[0] : of_i[0])),
            int_to_float(float_to_int(p.y())+((p.y() < 0) ? -of_i[1] : of_i[1])),

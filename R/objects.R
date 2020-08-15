@@ -1723,3 +1723,349 @@ arrow = function(start = c(0,0,0), end = c(0,1,0),
                     material = material, 
                     flipped = flipped, scale = scale, velocity = velocity))
 }
+
+#' Bezier Curve Object
+#' 
+#' Bezier curve, defined by 4 control points.
+#'
+#' @param p0 Default `c(0,0,0)`. First control point. Can also be a list of 4 length-3 numeric vectors 
+#' or 4x3 matrix/data.frame specifying the x/y/z control points.
+#' @param p1 Default `c(-1,0.33,0)`. Second control point.
+#' @param p2 Default `c(1,0.66,0)`. Third control point.
+#' @param p3 Default `c(0,1,0)`. Fourth control point.
+#' @param x Default `0`. x-coordinate offset for the curve.
+#' @param y Default `0`. y-coordinate offset for the curve.
+#' @param z Default `0`. z-coordinate offset for the curve.
+#' @param width Default `0.1`. Curve width.
+#' @param width_end Default `NA`. Width at end of path. Same as `width`, unless specified.
+#' @param u_min Default `0`. Minimum parametric coordinate for the curve.
+#' @param u_max Default `1`. Maximum parametric coordinate for the curve.
+#' @param type Default `cylinder`. Other options are `flat` and `ribbon`.
+#' @param normal Default `c(0,0,-1)`. Orientation surface normal for the start of ribbon curves.
+#' @param normal_end Default `NA`. Orientation surface normal for the start of ribbon curves. If not
+#' specified, same as `normal`.
+#' @param material Default  \code{\link{diffuse}}.The material, called from one of the material 
+#' functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}.
+#' @param angle Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.
+#' @param order_rotation Default `c(1, 2, 3)`. The order to apply the rotations, referring to "x", "y", and "z".
+#' @param velocity Default `c(0, 0, 0)`. Velocity of the cube.
+#' @param flipped Default `FALSE`. Whether to flip the normals.
+#' @param scale Default `c(1, 1, 1)`. Scale transformation in the x, y, and z directions. If this is a single value,
+#' number, the object will be scaled uniformly.
+#' Note: emissive objects may not currently function correctly when scaled.
+#' @importFrom  grDevices col2rgb
+#'
+#' @return Single row of a tibble describing the cube in the scene.
+#' @export
+#'
+#' @examples
+#' #Generate the default curve:
+#' \donttest{
+#' generate_studio(depth=-0.1) %>%
+#'   add_object(bezier_curve(material=diffuse(color="red"))) %>%
+#'   add_object(sphere(y=3,z=5,x=2,radius=0.3,
+#'                     material=light(intensity=200, spotlight_focus = c(0,0.5,0)))) %>%
+#'   render_scene(clamp_value = 10, lookat = c(0,0.5,0),width=600,height=600,samples=4)
+#' 
+#' #Change the control points to change the direction of the curve. Here, we place spheres
+#' #at the control point locations.
+#' 
+#' #We can give the impression of a cylinder by setting the type
+#' generate_studio(depth=-0.1) %>%
+#'   add_object(bezier_curve(type="cylinder", material=glossy(color="red"))) %>%
+#'   add_object(sphere(y=3,z=5,x=2,radius=0.3,
+#'                     material=light(intensity=200, spotlight_focus = c(0,0.5,0)))) %>%
+#'   render_scene(clamp_value = 10, lookat = c(0,0.5,0),
+#'                width=600,height=600,samples=4,sample_method = "stratified")
+#' 
+#' 
+#' #We can also plot a ribbon, which is further specified by a start and end orientation with
+#' #two surface normals.
+#' generate_studio(depth=-0.1) %>%
+#'   add_object(bezier_curve(type="ribbon", width=0.2,
+#'                    p0 = c(0,0,0), p1 = c(0,0.33,0), p2 = c(0,0.66,0), p3 = c(0.3,1,0),
+#'                    normal_end = c(0,0,1),
+#'                    material=glossy(color="red"))) %>%
+#'   add_object(sphere(y=3,z=5,x=2,radius=0.3,
+#'                     material=light(intensity=200, spotlight_focus = c(0,0.5,0)))) %>%
+#'   render_scene(clamp_value = 10, lookat = c(0,0.5,0),fov=10,
+#'                width=600,height=600,samples=4,sample_method = "stratified")
+#' 
+#' 
+#' #Create a single curve and copy and rotate it around the y-axis to create a wavy fountain effect:
+#' scene_curves = list()
+#' for(i in 1:90) {
+#'   scene_curves[[i]] = bezier_curve(p0 = c(0,0,0),p1 = c(0,5-sinpi(i*16/180),2),
+#'                             p2 = c(0,5-0.5 * sinpi(i*16/180),4),p3 = c(0,0,6),
+#'                             angle=c(0,i*4,0), type="cylinder",
+#'                             width = 0.1, width_end =0.1,material=glossy(color="red"))
+#' }
+#' all_curves = do.call(rbind, scene_curves)
+#' generate_ground(depth=0,material=diffuse(checkercolor="grey20")) %>%
+#'   add_object(all_curves) %>%
+#'   add_object(sphere(y=7,z=0,x=0,material=light(intensity=100))) %>% 
+#'   render_scene(lookfrom = c(12,20,50),samples=64, sample_method = "stratified",
+#'                lookat=c(0,1,0),fov=15,clamp_value = 10,width=800,height=800, parallel=TRUE)
+#' 
+#' }
+bezier_curve = function(p0 = c(0,0,0), p1 = c(-1,0.33,0), p2 = c(1,0.66,0), p3=c(0,1,0), 
+                        x=0, y=0, z=0,
+                        width = 0.1, width_end = NA, u_min = 0, u_max = 1, type = "cylinder",
+                        normal = c(0,0,-1), normal_end = NA, 
+                        material = diffuse(), angle = c(0, 0, 0),
+                        order_rotation = c(1, 2, 3), velocity = c(0, 0, 0),
+                        flipped = FALSE, scale = c(1,1,1)) {
+  if(inherits(p0,"list")) {
+    stopifnot(length(p0) == 4 && all(lapply(p0, (function(x) length(x) == 3))))
+    p0 = do.call(rbind, p0)
+  }
+  if(inherits(p0,"matrix") || inherits(p0,"data.frame")) {
+    if(dim(p0)[1] == 4 && dim(p0)[2] == 3) {
+      p1 = p0[2,]
+      p2 = p0[3,]
+      p3 = p0[4,]
+      p0 = p0[1,]
+    }
+  }
+  if(length(scale) == 1) {
+    scale = c(scale, scale, scale)
+  }
+  if(is.na(width_end)) {
+    width_end = width
+  }
+  stopifnot(u_min < u_max)
+  stopifnot(length(width) == 1 && is.numeric(width))
+  stopifnot(length(width_end) == 1 && is.numeric(width_end))
+  
+  if(all(!is.na(normal)) && all(is.na(normal_end))) {
+    normal_end = normal
+  }
+  if(all(!is.na(normal)) || all(!is.na(normal_end))) {
+    stopifnot(length(normal) == 3 && is.numeric(normal))
+    stopifnot(length(normal_end) == 3 && is.numeric(normal_end))
+  }
+  if(all(is.na(normal)) || type == "cylinder" || type == "flat") {
+    normal = c(0,0,0)
+    normal_end = c(0,0,0)
+  }
+  curvetype = unlist(lapply(tolower(type),switch,
+                           "flat" = 1,"cylinder" = 2, "ribbon" = 3))
+  curve_info = c(unlist(material$properties), p0, p1, p2, p3, width, width_end, 
+                 u_min, u_max, curvetype, normal, normal_end)
+  new_tibble_row(list(x = x, y = y, z = z, radius = NA, type = material$type, shape = "curve",
+                      properties = list(curve_info), velocity = list(velocity), 
+                      checkercolor = material$checkercolor, 
+                      gradient_color = material$gradient_color, gradient_transpose = material$gradient_transpose, 
+                      world_gradient = material$world_gradient, gradient_point_info = material$gradient_point_info,
+                      gradient_type = material$gradient_type,
+                      noise = material$noise, noisephase = material$noisephase, 
+                      noiseintensity = material$noiseintensity, noisecolor = material$noisecolor,
+                      angle = list(angle), image = material$image,  image_repeat = material$image_repeat,
+                      alphaimage = list(material$alphaimage), bump_texture = list(material$bump_texture),
+                      bump_intensity = material$bump_intensity, lightintensity = material$lightintensity,
+                      flipped = flipped, fog = material$fog, fogdensity = material$fogdensity,
+                      implicit_sample = material$implicit_sample,  sigma = material$sigma, glossyinfo = material$glossyinfo,
+                      order_rotation = list(order_rotation), 
+                      pivot_point = list(NA), group_translate = list(NA),
+                      group_angle = list(NA), group_order_rotation = list(NA),
+                      tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA),
+                      material_id = NA))
+}
+
+#' Path Object
+#' 
+#' Either a closed or open path made up of bezier curves that go through the specified points 
+#' (with continuous first and second derivatives), or straight line segments.
+#'
+#' @param points Either a list of length-3 numeric vectors or 3-column matrix/data.frame specifying
+#' the x/y/z points that the path should go through.
+#' @param x Default `0`. x-coordinate offset for the path.
+#' @param y Default `0`. y-coordinate offset for the path.
+#' @param z Default `0`. z-coordinate offset for the path.
+#' @param closed Default `FALSE`. If `TRUE`, a final segment will be added that connects the first
+#' and last points (unless they are already the same). Note: This final connection does not have 
+#' continuous 1st and 2nd derivatives.
+#' @param straight Default `FALSE`. If `TRUE`, straight lines will be used to connect the points instead
+#' of bezier curves. 
+#' @param width Default `0.1`. Curve width.
+#' @param width_end Default `NA`. Width at end of path. Same as `width`, unless specified.
+#' @param u_min Default `0`. Minimum parametric coordinate for the path.
+#' @param u_max Default `1`. Maximum parametric coordinate for the path.
+#' @param type Default `cylinder`. Other options are `flat` and `ribbon`.
+#' @param normal Default `c(0,0,-1)`. Orientation surface normal for the start of ribbon curves.
+#' @param normal_end Default `NA`. Orientation surface normal for the start of ribbon curves. If not
+#' specified, same as `normal`.
+#' @param material Default  \code{\link{diffuse}}.The material, called from one of the material 
+#' functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}.
+#' @param angle Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.
+#' @param order_rotation Default `c(1, 2, 3)`. The order to apply the rotations, referring to "x", "y", and "z".
+#' @param velocity Default `c(0, 0, 0)`. Velocity of the cube.
+#' @param flipped Default `FALSE`. Whether to flip the normals.
+#' @param scale Default `c(1, 1, 1)`. Scale transformation in the x, y, and z directions. If this is a single value,
+#' number, the object will be scaled uniformly.
+#' Note: emissive objects may not currently function correctly when scaled.
+#' @importFrom  grDevices col2rgb
+#'
+#' @return Single row of a tibble describing the cube in the scene.
+#' @export
+#'
+#' @examples
+#' \donttest{
+#' #Generate a wavy line, showing the line goes through the specified points:
+#' wave = list(c(-2,1,0),c(-1,-1,0),c(0,1,0),c(1,-1,0),c(2,1,0))
+#' generate_studio(depth=-1.5) %>% 
+#'   add_object(path(points = wave,material=glossy(color="red"))) %>% 
+#'   add_object(sphere(x=-2,y=1,radius=0.1,material=point_mat)) %>% 
+#'   add_object(sphere(x=-1,y=-1,radius=0.1,material=point_mat)) %>% 
+#'   add_object(sphere(x=0,y=1,radius=0.1,material=point_mat)) %>% 
+#'   add_object(sphere(x=1,y=-1,radius=0.1,material=point_mat)) %>% 
+#'   add_object(sphere(x=2,y=1,radius=0.1,material=point_mat)) %>% 
+#'   add_object(sphere(z=5,x=5,y=5,radius=2,material=light(intensity=15))) %>% 
+#'   render_scene(samples=500, sample_method = "stratified", clamp_value=10,fov=30)
+#'   
+#' #Here we use straight lines by setting `straight = TRUE`:
+#' generate_studio(depth=-1.5) %>% 
+#'   add_object(path(points = wave,straight = TRUE, material=glossy(color="red"))) %>% 
+#'   add_object(sphere(z=5,x=5,y=5,radius=2,material=light(intensity=15))) %>% 
+#'   render_scene(samples=500, sample_method = "stratified", clamp_value=10,fov=30)
+#'   
+#' #We can also pass a matrix of values, specifying the x/y/z coordinates. Here,
+#' #we'll create a random curve:
+#' set.seed(21)
+#' random_mat = matrix(runif(3*9)*2-1, ncol=3)
+#' generate_studio(depth=-1.5) %>% 
+#'   add_object(path(points=random_mat, material=glossy(color="red"))) %>% 
+#'   add_object(sphere(y=5,radius=1,material=light(intensity=30))) %>% 
+#'   render_scene(samples=500, sample_method = "stratified", clamp_value=10)
+#'   
+#' #We can ensure the curve is closed by setting `closed = TRUE`
+#' generate_studio(depth=-1.5) %>% 
+#'   add_object(path(points=random_mat, closed = TRUE, material=glossy(color="red"))) %>% 
+#'   add_object(sphere(y=5,radius=1,material=light(intensity=30))) %>% 
+#'   render_scene(samples=500, sample_method = "stratified", clamp_value=10)
+#'   
+#' #Finally, let's render a pretzel to show how you can render just a subset of the curve:
+#' pretzel = list(c(-0.8,-0.5,0.1),c(0,-0.2,-0.1),c(0,0.3,0.1),c(-0.5,0.5,0.1), c(-0.6,-0.5,-0.1),
+#'                c(0,-0.8,-0.1),
+#'                c(0.6,-0.5,-0.1),c(0.5,0.5,-0.1), c(0,0.3,-0.1),c(-0,-0.2,0.1), c(0.8,-0.5,0.1))
+#'                
+#' #Render the full pretzel:
+#' generate_studio() %>% 
+#'   add_object(path(pretzel, width=0.17,  material = glossy(color="#db5b00"))) %>% 
+#'   add_object(sphere(y=5,x=2,z=4,material=light(intensity=20,spotlight_focus = c(0,0,0)))) %>% 
+#'   render_scene(samples=500,sample_method = "stratified", clamp_value=10)
+#'   
+#' #Here, we'll render only the first third of the pretzel by setting `u_max = 0.33`
+#' generate_studio() %>% 
+#'   add_object(path(pretzel, width=0.17, u_max=0.33, material = glossy(color="#db5b00"))) %>% 
+#'   add_object(sphere(y=5,x=2,z=4,material=light(intensity=20,spotlight_focus = c(0,0,0)))) %>% 
+#'   render_scene(samples=500, sample_method = "stratified", clamp_value=10)
+#'   
+#' #Here's the last third, by setting `u_min = 0.66`
+#' generate_studio() %>% 
+#'   add_object(path(pretzel, width=0.17, u_min=0.66, material = glossy(color="#db5b00"))) %>% 
+#'   add_object(sphere(y=5,x=2,z=4,material=light(intensity=20,spotlight_focus = c(0,0,0)))) %>% 
+#'   render_scene(samples=500,sample_method = "stratified", clamp_value=10)
+#'   
+#' #Here's the full pretzel, decomposed into thirds using the u_min and u_max coordinates
+#' generate_studio() %>% 
+#'   add_object(path(pretzel, width=0.17, u_max=0.33, x = -0.8, y =0.6,
+#'                   material = glossy(color="#db5b00"))) %>% 
+#'   add_object(path(pretzel, width=0.17, u_min=0.66, x = 0.8, y =0.6,
+#'                   material = glossy(color="#db5b00"))) %>% 
+#'   add_object(path(pretzel, width=0.17, u_min=0.33, u_max=0.66, x=0,
+#'                   material = glossy(color="#db5b00"))) %>% 
+#'   add_object(sphere(y=5,x=2,z=4,material=light(intensity=20,spotlight_focus = c(0,0,0)))) %>% 
+#'   render_scene(samples=500, sample_method = "stratified", clamp_value=10, lookfrom=c(0,3,10))
+#' }
+path = function(points,
+                x=0,y=0,z=0, closed = FALSE, straight = FALSE,
+                width = 0.1, width_end = NA, u_min = 0, u_max = 1, type = "cylinder",
+                normal = c(0,0,-1), normal_end = NA, 
+                material = diffuse(), angle = c(0, 0, 0),
+                order_rotation = c(1, 2, 3), velocity = c(0, 0, 0),
+                flipped = FALSE, scale = c(1,1,1)) {
+  if(is.na(width_end)) {
+    width_end = width
+  }
+  stopifnot(u_min < u_max)
+  stopifnot(length(width) == 1 && is.numeric(width))
+  stopifnot(length(width_end) == 1 && is.numeric(width_end))
+  
+  if(all(!is.na(normal)) && all(is.na(normal_end))) {
+    normal_end = normal
+  }
+  if(all(!is.na(normal)) || all(!is.na(normal_end))) {
+    stopifnot(length(normal) == 3 && is.numeric(normal))
+    stopifnot(length(normal_end) == 3 && is.numeric(normal_end))
+  }
+  if(all(is.na(normal)) || type == "cylinder" || type == "flat") {
+    normal = c(0,0,0)
+    normal_end = c(0,0,0)
+  }
+  if(inherits(points,"numeric")) {
+    stop("Input must either be list, matrix, or data.frame, not numeric.")
+  }
+  if(inherits(points,"list")) {
+    if(any(unlist(lapply(points,(function(x) length(x) != 3))))) {
+      stop("If `points` is a list, each entry must be a length-3 vector")
+    }
+    points = do.call(rbind,points)
+  }
+  if(nrow(points) == 1) {
+    stop("Only one point passed, no path specified.")
+  }
+  if(nrow(points) == 2 && closed) {
+    closed=FALSE
+  }
+  if(closed && all(points[1,] != points[nrow(points),])) {
+    points = rbind(points,points[1,])
+  }
+  if(inherits(points,"matrix") || inherits(points,"data.frame")) {
+    if(ncol(points) == 3) {
+      if(!straight) {
+        full_control_points = calculate_control_points(points)
+      } else {
+        full_control_points = calculate_control_points_straight(points)
+      }
+    } else {
+      stop("If points a matrix or data.frame, must have 3 columns")
+    }
+  } else {
+    stop("points not of supported type (function expects matrix/data.frame/list, got ", class(points),")")
+  }
+  u_min_segment = length(full_control_points) * u_min 
+  u_max_segment = length(full_control_points) * u_max 
+  
+  curve_list = list()
+  for(i in seq_len(length(full_control_points))) {
+    u_min_temp = 0
+    u_max_temp = 1
+    if(u_min_segment <= i && u_min_segment > i-1) {
+      u_min_temp = u_min_segment - (i - 1)
+    }
+    if(u_max_segment >= i-1 && u_max_segment < i) {
+      u_max_temp = u_max_segment - (i - 1)
+    }
+    if(u_min_temp == u_max_temp) {
+      next
+    }
+    temp_width_start = width + (width_end - width) * (u_min_temp + i - 1) / length(full_control_points)
+    temp_width_end = width + (width_end - width) * (u_max_temp + i - 1) / length(full_control_points)
+    temp_normal_start = normal + (normal_end - normal) * (u_min_temp + i - 1) / length(full_control_points)
+    temp_normal_end = normal + (normal_end - normal) * (u_max_temp + i - 1) / length(full_control_points)
+
+    if(u_min_segment < i && u_max_segment >= i - 1) {
+      curve_list[[i]] = bezier_curve(x=x,y=y,z=z,
+                                     p0=full_control_points[[i]], type = type,
+                                     u_min = u_min_temp,
+                                     u_max = u_max_temp,
+                                     width = temp_width_start, width_end = temp_width_end,
+                                     normal = temp_normal_start, normal_end = temp_normal_end,
+                                     material = material, angle = angle,
+                                     order_rotation = order_rotation, velocity = velocity,
+                                     flipped = flipped, scale = scale)
+    }
+  }
+  do.call(rbind,curve_list)
+}

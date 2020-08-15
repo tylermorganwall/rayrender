@@ -4,7 +4,14 @@
 \alias{light}
 \title{Light Material}
 \usage{
-light(color = "#ffffff", intensity = 10, importance_sample = TRUE)
+light(
+  color = "#ffffff",
+  intensity = 10,
+  importance_sample = TRUE,
+  spotlight_focus = NA,
+  spotlight_width = 30,
+  spotlight_start_falloff = 15
+)
 }
 \arguments{
 \item{color}{Default `white`. The color of the light Can be either
@@ -17,6 +24,13 @@ in `color` (ignoring other properties). Higher values will produce a brighter li
 algorithm, in most cases. If the object is particularly important in contributing to the light paths
 in the image (e.g. light sources, refracting glass ball with caustics, metal objects concentrating light),
 this will help with the convergence of the image.}
+
+\item{spotlight_focus}{Default `NA`, no spotlight. Otherwise, a length-3 numeric vector specifying
+the x/y/z coordinates that the spotlight should be focused on. Only works for spheres and rectangles.}
+
+\item{spotlight_width}{Default `30`. Angular width of the spotlight.}
+
+\item{spotlight_start_falloff}{Default `15`. Angle at which the light starts fading in intensity.}
 }
 \value{
 Single row of a tibble describing the diffuse material.

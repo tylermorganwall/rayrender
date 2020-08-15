@@ -17,6 +17,7 @@
 #include "cylinder.h"
 #include "ellipsoid.h"
 #include "cone.h"
+#include "curve.h"
 #include <Rcpp.h>
 using namespace Rcpp;
 
@@ -159,6 +160,8 @@ hitable *build_scene(IntegerVector& type,
     if(type(i) == 2) {
       prop_len = 3;
     } else if (type(i) == 3) {
+      prop_len = 7;
+    } else if (type(i) == 8) {
       prop_len = 7;
     }
     if(is_shared_mat(i) && shared_materials->size() > static_cast<size_t>(shared_id_mat(i))) {
@@ -374,6 +377,9 @@ hitable *build_scene(IntegerVector& type,
                            vec3(temp_glossy(3), temp_glossy(4), temp_glossy(5)), 
                            vec3(temp_glossy(6),temp_glossy(7),temp_glossy(8)));
         }
+      } else if (type(i) == 8) {
+        tex = new spot_light(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))*lightintensity(i)),
+                             vec3(tempvector(3),tempvector(4),tempvector(5)), tempvector(6),tempvector(7));
       }
     }
     if(is_shared_mat(i) && shared_materials->size() <= static_cast<size_t>(shared_id_mat(i)) ) {
@@ -405,6 +411,8 @@ hitable *build_scene(IntegerVector& type,
     } else if(shape(i) == 12) {
       center = vec3(x(i), y(i), z(i));
     } else if(shape(i) == 13) {
+      center = vec3(x(i), y(i), z(i));
+    } else if(shape(i) == 14) {
       center = vec3(x(i), y(i), z(i));
     }
 
@@ -647,7 +655,7 @@ hitable *build_scene(IntegerVector& type,
         list[i] = entry;
       }
     } else if (shape(i) == 10) {
-      bool has_caps = type(i) != 5;
+      bool has_caps = type(i) != 5 && type(i) != 8;
       hitable *entry = new cylinder(radius(i), tempvector(prop_len+1), 
                                     tempvector(prop_len+2), tempvector(prop_len+3),has_caps,
                                     tex, alpha, bump);
@@ -743,6 +751,45 @@ hitable *build_scene(IntegerVector& type,
         entry = new flip_normals(entry);
       }
       list[i] = entry;
+    } else if (shape(i) == 14) {
+      int pl = prop_len;
+      vec3 p[4];
+      vec3 n[2];
+      CurveType type_curve;
+      if(tempvector(pl+17) == 1) {
+        type_curve = CurveType::Flat;
+      } else if (tempvector(pl+17) == 2) {
+        type_curve = CurveType::Cylinder;
+      } else {
+        type_curve = CurveType::Ribbon;
+      }
+      p[0] = vec3(tempvector(pl+1),tempvector(pl+2),tempvector(pl+3));
+      p[1] = vec3(tempvector(pl+4),tempvector(pl+5),tempvector(pl+6));
+      p[2] = vec3(tempvector(pl+7),tempvector(pl+8),tempvector(pl+9));
+      p[3] = vec3(tempvector(pl+10),tempvector(pl+11),tempvector(pl+12));
+      
+      n[0] = vec3(tempvector(pl+18), tempvector(pl+19), tempvector(pl+20));
+      n[1] = vec3(tempvector(pl+21), tempvector(pl+22), tempvector(pl+23));
+      
+      CurveCommon *curve_data = new CurveCommon(p, tempvector(pl+13), tempvector(pl+14), type_curve, n);
+      hitable *entry = new curve(tempvector(pl+15),tempvector(pl+16), curve_data, tex);
+      if(is_scaled) {
+        entry = new scale(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
+      }
+      entry = rotation_order(entry, temprotvec, order_rotation);
+      if(isgrouped(i)) {
+        entry = new translate(entry, center - gpivot);
+        if(is_group_scaled) {
+          entry = new scale(entry, vec3(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
+        }
+        entry = rotation_order(entry, temp_gangle, temp_gorder);
+        entry = new translate(entry, -center + gpivot );
+      }
+      entry = new translate(entry, center + gtrans + vel * shutteropen);
+      if(isflipped(i)) {
+        entry = new flip_normals(entry);
+      }
+      list[i] = entry;
     }
   }
   hitable *full_scene = new bvh_node(list, n, shutteropen, shutterclose, rng);
@@ -815,6 +862,8 @@ hitable* build_imp_sample(IntegerVector& type,
     prop_len = 7;
   } else if(type(i) == 2) {
     prop_len = 3;
+  } else if (type(i) == 8) {
+    prop_len = 7;
   }
   
   if(shape(i) == 1) {
@@ -840,6 +889,10 @@ hitable* build_imp_sample(IntegerVector& type,
   } else if(shape(i) == 11) {
     center = vec3(x(i), y(i), z(i));
   } else if(shape(i) == 12) {
+    center = vec3(x(i), y(i), z(i));
+  } else if(shape(i) == 13) {
+    center = vec3(x(i), y(i), z(i));
+  } else if(shape(i) == 14) {
     center = vec3(x(i), y(i), z(i));
   }
 
@@ -989,7 +1042,7 @@ hitable* build_imp_sample(IntegerVector& type,
     entry = new translate(entry, center + gtrans + vel * shutteropen);
     return(entry);
   } else if (shape(i) == 10) {
-    bool has_caps = type(i) != 5;
+    bool has_caps = type(i) != 5 && type(i) != 8;
     hitable *entry = new cylinder(radius(i), tempvector(prop_len+1), 
                                   tempvector(prop_len+2), tempvector(prop_len+3),has_caps, 
                                   0, nullptr,nullptr);
@@ -1025,8 +1078,31 @@ hitable* build_imp_sample(IntegerVector& type,
     }
     entry = new translate(entry, center + gtrans + vel * shutteropen);
     return(entry);
-  } else {
+  } else if (shape(i) == 13) {
     hitable *entry = new cone(radius(i), tempvector(prop_len+1), 0, nullptr, nullptr);
+    if(is_scaled) {
+      entry = new scale(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
+    }
+    entry = rotation_order(entry, temprotvec, order_rotation);
+    if(isgrouped(i)) {
+      entry = new translate(entry, center - gpivot);
+      if(is_group_scaled) {
+        entry = new scale(entry, vec3(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
+      }
+      entry = rotation_order(entry, temp_gangle, temp_gorder);
+      entry = new translate(entry, -center + gpivot );
+    }
+    entry = new translate(entry, center + gtrans + vel * shutteropen);
+    return(entry);
+  } else {
+    int pl = prop_len;
+    vec3 p[4];
+    p[0] = vec3(tempvector(pl+1),tempvector(pl+2),tempvector(pl+3));
+    p[1] = vec3(tempvector(pl+4),tempvector(pl+5),tempvector(pl+6));
+    p[2] = vec3(tempvector(pl+7),tempvector(pl+8),tempvector(pl+9));
+    p[3] = vec3(tempvector(pl+10),tempvector(pl+11),tempvector(pl+12));
+    CurveCommon *curve_data = new CurveCommon(p, tempvector(pl+13), tempvector(pl+14), CurveType::Flat, nullptr);
+    hitable *entry = new curve(tempvector(pl+15),tempvector(pl+16), curve_data, 0);
     if(is_scaled) {
       entry = new scale(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
     }

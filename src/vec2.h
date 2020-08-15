@@ -13,10 +13,13 @@ typedef float Float;
 #endif 
 #endif
 
+#include "vec3.h"
+
 class vec2 {
 public:
   vec2() {}
   vec2(Float e0, Float e1) {e[0] = e0; e[1] = e1;}
+  explicit vec2(const vec3 &p) { e[0] = p.x(); e[1] = p.y(); }
   inline Float x() const { return e[0]; }
   inline Float y() const { return e[1]; }
   inline Float u() const { return e[0]; }

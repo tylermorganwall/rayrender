@@ -9,6 +9,7 @@ pig(
   y = 0,
   z = 0,
   emotion = "neutral",
+  spider = FALSE,
   angle = c(0, 0, 0),
   order_rotation = c(1, 2, 3),
   scale = c(1, 1, 1),
@@ -23,6 +24,8 @@ pig(
 \item{z}{Default `0`. z-coordinate of the center of the pig.}
 
 \item{emotion}{Default `neutral`. Other options include `skeptical`, `worried`, and `angry`.}
+
+\item{spider}{Default `FALSE`. Spiderpig.}
 
 \item{angle}{Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.}
 

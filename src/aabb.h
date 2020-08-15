@@ -9,8 +9,8 @@ class aabb {
   public: 
     aabb() {}
     aabb(const vec3& a, const vec3& b) { 
-      bounds[0] = a;
-      bounds[1] = b;
+      bounds[0] = vec3(ffmin(a.x(), b.x()), ffmin(a.y(), b.y()),ffmin(a.z(), b.z()));
+      bounds[1] = vec3(ffmax(a.x(), b.x()), ffmax(a.y(), b.y()),ffmax(a.z(), b.z()));
       centroid = (a + b)/2;
       diagonal = b - a;
     }
@@ -21,29 +21,13 @@ class aabb {
     bool hit(const ray& r, Float tmin, Float tmax, random_gen& rng);
     const vec3 offset(const vec3 o);
     Float surface_area();
+    void Expand(Float delta);
     vec3 bounds[2];
     vec3 centroid;
     vec3 diagonal;
 };
 
-Float aabb::surface_area() {
-  return(2*(diagonal.x() * diagonal.y() + diagonal.x() * diagonal.z() + diagonal.y()*diagonal.z()));
-}
-
-bool aabb::hit(const ray &r, Float tmin, Float tmax, random_gen& rng) {
-  Float txmin, txmax, tymin, tymax, tzmin, tzmax;
-  txmin = (bounds[  r.sign[0]].x()-r.origin().x()) * r.inv_dir.x();
-  txmax = (bounds[1-r.sign[0]].x()-r.origin().x()) * r.inv_dir_pad.x();
-  tymin = (bounds[  r.sign[1]].y()-r.origin().y()) * r.inv_dir.y();
-  tymax = (bounds[1-r.sign[1]].y()-r.origin().y()) * r.inv_dir_pad.y();
-  tzmin = (bounds[  r.sign[2]].z()-r.origin().z()) * r.inv_dir.z();
-  tzmax = (bounds[1-r.sign[2]].z()-r.origin().z()) * r.inv_dir_pad.z();
-  tmin = ffmax(tzmin, ffmax(tymin, ffmax(txmin, tmin)));
-  tmax = ffmin(tzmax, ffmin(tymax, ffmin(txmax, tmax)));
-  return(tmin <= tmax);
-}
-
-aabb surrounding_box(aabb box0, aabb box1) {
+inline aabb surrounding_box(aabb box0, aabb box1) {
   vec3 small(fmin(box0.min().x(), box1.min().x()),
              fmin(box0.min().y(), box1.min().y()),
              fmin(box0.min().z(), box1.min().z()));
@@ -53,12 +37,9 @@ aabb surrounding_box(aabb box0, aabb box1) {
   return(aabb(small,big));
 }
 
-const vec3 aabb::offset(const vec3 p) {
-  vec3 o = p - min();
-  if (max().x() > min().x()) o.e[0] /= max().x() - min().x();
-  if (max().y() > min().y()) o.e[1] /= max().y() - min().y();
-  if (max().z() > min().z()) o.e[2] /= max().z() - min().z();
-  return o;
+inline aabb Expand(aabb box, Float delta) {
+  return(aabb(box.min() - vec3(delta, delta, delta),
+              box.max() + vec3(delta, delta, delta)));
 }
 
 #endif

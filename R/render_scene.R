@@ -65,6 +65,8 @@
 #' instead of an image. If `normals`, function will return an image of scene normals, mapped from 0 to 1.
 #' If `uv`, function will return an image of the uv coords. If `variance`, function will return an image 
 #' showing the number of samples needed to take for each block to converge (when the 
+#' @param return_raw_array Default `FALSE`. If `TRUE`, function will return raw array with RGB intensity
+#' information.
 #' @param parallel Default `FALSE`. If `TRUE`, it will use all available cores to render the image
 #'  (or the number specified in `options("cores")` if that option is not `NULL`).
 #' @param progress Default `TRUE` if interactive session, `FALSE` otherwise. 
@@ -168,7 +170,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
                         shutteropen = 0.0, shutterclose = 1.0, focal_distance=NULL, ortho_dimensions = c(1,1),
                         tonemap ="gamma", bloom = TRUE, parallel=TRUE, 
                         environment_light = NULL, rotate_env = 0, intensity_env = 1,
-                        debug_channel = "none",
+                        debug_channel = "none", return_raw_array = FALSE,
                         progress = interactive(), verbose = FALSE) { 
   if(verbose) {
     currenttime = proc.time()
@@ -219,9 +221,11 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
   shapevec = unlist(lapply(tolower(scene$shape),switch,
                           "sphere" = 1,"xy_rect" = 2, "xz_rect" = 3,"yz_rect" = 4,"box" = 5, "triangle" = 6, 
                           "obj" = 7, "objcolor" = 8, "disk" = 9, "cylinder" = 10, "ellipsoid" = 11,
-                          "objvertexcolor" = 12, "cone" = 13))
+                          "objvertexcolor" = 12, "cone" = 13, "curve" = 14))
   typevec = unlist(lapply(tolower(scene$type),switch,
-                          "diffuse" = 1,"metal" = 2,"dielectric" = 3, "oren-nayar" = 4, "light" = 5, "microfacet" = 6, "glossy" = 7))
+                          "diffuse" = 1,"metal" = 2,"dielectric" = 3, 
+                          "oren-nayar" = 4, "light" = 5, "microfacet" = 6, 
+                          "glossy" = 7, "spotlight" = 8))
   sigmavec = unlist(scene$sigma)
   
   assertthat::assert_that(tonemap %in% c("gamma","reinhold","uncharted", "hbd", "raw"))
@@ -265,7 +269,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
   #light handler
   light_prop_vec =  scene$lightintensity
   
-  if(!any(typevec == 5) && missing(ambient_light) && missing(environment_light)) {
+  if(!any(typevec == 5) && !any(typevec == 8) && missing(ambient_light) && missing(environment_light)) {
     ambient_light = TRUE
   }
   
@@ -441,7 +445,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
 
   debug_channel = unlist(lapply(tolower(debug_channel),switch,
                           "none" = 0,"depth" = 1,"normals" = 2, "uv" = 3, "bvh" = 4,
-                          "variance" = 5))
+                          "variance" = 5, "normal" = 2, "dpdu" = 6, "dpdv" = 7))
   if(debug_channel == 4) {
     message("rayrender must be compiled with option DEBUGBVH for this debug option to work")
   }
@@ -484,6 +488,18 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
   
   assertthat::assert_that(max_depth > 0)
   assertthat::assert_that(roulette_active_depth > 0)
+  
+  #Spotlight handler
+  if(any(typevec == 8)) {
+    if(any(shapevec[typevec == 8] > 4)) {
+      stop("spotlights are only supported for spheres and rects")
+    }
+    for(i in 1:length(proplist)) {
+      if(typevec[i] == 8) {
+        proplist[[i]][4:6] = proplist[[i]][4:6] - c(position_list$xvec[i],position_list$yvec[i],position_list$zvec[i]) 
+      }
+    }
+  }
   
   
   #Material ID handler; these must show up in increasing order.  Note, this will
@@ -536,7 +552,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
     returnmat = full_array[,,1]
     returnmat[is.infinite(returnmat)] = NA
     if(is.null(filename)) {
-      plot_map(full_array)
+      plot_map((full_array-min(full_array,na.rm=TRUE))/(max(full_array,na.rm=TRUE) - min(full_array,na.rm=TRUE)))
       return(invisible(full_array))
     } else {
       save_png(full_array,filename)
@@ -544,7 +560,11 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
     }
   } else if (debug_channel %in% c(2,3,4,5)) {
     if(is.null(filename)) {
-      plot_map(full_array)
+      if(debug_channel == 4) {
+        plot_map(full_array/(max(full_array,na.rm=TRUE)))
+      } else {
+        plot_map(full_array)
+      }
       return(invisible(full_array))
     } else {
       save_png(full_array,filename)
