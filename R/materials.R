@@ -655,7 +655,11 @@ microfacet = function(color="white", roughness = 0.0001,
 #' algorithm, in most cases. If the object is particularly important in contributing to the light paths
 #' in the image (e.g. light sources, refracting glass ball with caustics, metal objects concentrating light),
 #' this will help with the convergence of the image.
-#'
+#' @param spotlight_focus Default `NA`, no spotlight. Otherwise, a length-3 numeric vector specifying
+#' the x/y/z coordinates that the spotlight should be focused on. Only works for spheres and rectangles.
+#' @param spotlight_width Default `30`. Angular width of the spotlight.
+#' @param spotlight_start_falloff Default `15`. Angle at which the light starts fading in intensity.
+#' 
 #' @return Single row of a tibble describing the diffuse material.
 #' @export
 #' @importFrom  grDevices col2rgb

@@ -136,6 +136,9 @@ instead of an image. If `normals`, function will return an image of scene normal
 If `uv`, function will return an image of the uv coords. If `variance`, function will return an image 
 showing the number of samples needed to take for each block to converge (when the}
 
+\item{return_raw_array}{Default `FALSE`. If `TRUE`, function will return raw array with RGB intensity
+information.}
+
 \item{progress}{Default `TRUE` if interactive session, `FALSE` otherwise.}
 
 \item{verbose}{Default `FALSE`. Prints information and timing information about scene

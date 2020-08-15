@@ -509,82 +509,82 @@ private:
 };
 
 // General Utility Functions
-inline Float Sqr(Float v) { return v * v; }
-template <int n>
-static Float Pow(Float v) {
-  static_assert(n > 0, "Power can't be negative");
-  Float n2 = Pow<n / 2>(v);
-  return n2 * n2 * Pow<n & 1>(v);
-}
+// inline Float Sqr(Float v) { return v * v; }
+// template <int n>
+// static Float Pow(Float v) {
+//   static_assert(n > 0, "Power can't be negative");
+//   Float n2 = Pow<n / 2>(v);
+//   return n2 * n2 * Pow<n & 1>(v);
+// }
 
-template <>
-inline Float Pow<1>(Float v) {
-  return(v);
-}
+// template <>
+// inline Float Pow<1>(Float v) {
+//   return(v);
+// }
+// 
+// template <>
+// inline Float Pow<0>(Float v) {
+//   return(1);
+// }
+// inline Float SafeASin(Float x) {
+//   return(std::asin(clamp(x, -1, 1)));
+// }
+// 
+// inline Float SafeSqrt(Float x) {
+//   return(std::sqrt(std::max(Float(0), x)));
+// }
 
-template <>
-inline Float Pow<0>(Float v) {
-  return(1);
-}
-inline Float SafeASin(Float x) {
-  return(std::asin(clamp(x, -1, 1)));
-}
+// static uint32_t Compact1By1(uint32_t x) {
+//   // TODO: as of Haswell, the PEXT instruction could do all this in a
+//   // single instruction.
+//   // x = -f-e -d-c -b-a -9-8 -7-6 -5-4 -3-2 -1-0
+//   x &= 0x55555555;
+//   // x = --fe --dc --ba --98 --76 --54 --32 --10
+//   x = (x ^ (x >> 1)) & 0x33333333;
+//   // x = ---- fedc ---- ba98 ---- 7654 ---- 3210
+//   x = (x ^ (x >> 2)) & 0x0f0f0f0f;
+//   // x = ---- ---- fedc ba98 ---- ---- 7654 3210
+//   x = (x ^ (x >> 4)) & 0x00ff00ff;
+//   // x = ---- ---- ---- ---- fedc ba98 7654 3210
+//   x = (x ^ (x >> 8)) & 0x0000ffff;
+//   return(x);
+// }
 
-inline Float SafeSqrt(Float x) {
-  return(std::sqrt(std::max(Float(0), x)));
-}
-
-static uint32_t Compact1By1(uint32_t x) {
-  // TODO: as of Haswell, the PEXT instruction could do all this in a
-  // single instruction.
-  // x = -f-e -d-c -b-a -9-8 -7-6 -5-4 -3-2 -1-0
-  x &= 0x55555555;
-  // x = --fe --dc --ba --98 --76 --54 --32 --10
-  x = (x ^ (x >> 1)) & 0x33333333;
-  // x = ---- fedc ---- ba98 ---- 7654 ---- 3210
-  x = (x ^ (x >> 2)) & 0x0f0f0f0f;
-  // x = ---- ---- fedc ba98 ---- ---- 7654 3210
-  x = (x ^ (x >> 4)) & 0x00ff00ff;
-  // x = ---- ---- ---- ---- fedc ba98 7654 3210
-  x = (x ^ (x >> 8)) & 0x0000ffff;
-  return(x);
-}
-
-static vec2 DemuxFloat(Float f) {
-  uint64_t v = f * (1ull << 32);
-  uint32_t bits[2] = {Compact1By1(v), Compact1By1(v >> 1)};
-  return(vec2(bits[0] / Float(1 << 16), bits[1] / Float(1 << 16)));
-}
+// static vec2 DemuxFloat(Float f) {
+//   uint64_t v = f * (1ull << 32);
+//   uint32_t bits[2] = {Compact1By1(v), Compact1By1(v >> 1)};
+//   return(vec2(bits[0] / Float(1 << 16), bits[1] / Float(1 << 16)));
+// }
 
 //Hair utilities
 
-static const int pMax = 3;
-static const Float SqrtPiOver8 = 0.626657069f;
-
-class hair : public material {
-  public:
-    hair(vec3 sigma_a, vec3 color, Float eumelanin, Float pheomelanin,
-         Float eta, Float beta_m, Float beta_n, Float alpha) : 
-      sigma_a(sigma_a), color(color), 
-      eumelanin(eumelanin), pheomelanin(pheomelanin),
-      eta(eta), beta_m(beta_m), beta_n(beta_n), alpha(alpha) {}
-    ~hair() {}
-
-    bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng) {
-      return(true);
-    }
-
-    vec3 f(const ray& r_in, const hit_record& rec, const ray& scattered) const {
-      return(sigma_a);
-    }
-
-    static vec3 SigmaAFromConcentration(Float ce, Float cp);
-    static vec3 SigmaAFromReflectance(const vec3 &c, Float beta_n);
-    
-    vec3 sigma_a, color;
-    Float eumelanin, pheomelanin, eta;
-    Float beta_m, beta_n;
-    Float alpha;
-};
+// static const int pMax = 3;
+// static const Float SqrtPiOver8 = 0.626657069f;
+// 
+// class hair : public material {
+//   public:
+//     hair(vec3 sigma_a, vec3 color, Float eumelanin, Float pheomelanin,
+//          Float eta, Float beta_m, Float beta_n, Float alpha) : 
+//       sigma_a(sigma_a), color(color), 
+//       eumelanin(eumelanin), pheomelanin(pheomelanin),
+//       eta(eta), beta_m(beta_m), beta_n(beta_n), alpha(alpha) {}
+//     ~hair() {}
+// 
+//     bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng) {
+//       return(true);
+//     }
+// 
+//     vec3 f(const ray& r_in, const hit_record& rec, const ray& scattered) const {
+//       return(sigma_a);
+//     }
+// 
+//     static vec3 SigmaAFromConcentration(Float ce, Float cp);
+//     static vec3 SigmaAFromReflectance(const vec3 &c, Float beta_n);
+//     
+//     vec3 sigma_a, color;
+//     Float eumelanin, pheomelanin, eta;
+//     Float beta_m, beta_n;
+//     Float alpha;
+// };
 
 #endif

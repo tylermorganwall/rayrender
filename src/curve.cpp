@@ -58,7 +58,7 @@ CurveCommon::CurveCommon(const vec3 c[4], Float width0, Float width1,
 }
 
 bool curve::bounding_box(Float t0, Float t1, aabb& box) const {
-  // Compute object-space control points for curve segment, _cpObj_
+  // Compute object-space control points for curve segment, cpObj
   vec3 cpObj[4];
   cpObj[0] = BlossomBezier(common->cpObj, uMin, uMin, uMin);
   cpObj[1] = BlossomBezier(common->cpObj, uMin, uMin, uMax);
@@ -73,7 +73,7 @@ bool curve::bounding_box(Float t0, Float t1, aabb& box) const {
 
 
 bool curve::hit(const ray& r, Float tmin, Float tmax, hit_record& rec, random_gen& rng) {
-  // Compute object-space control points for curve segment, _cpObj_
+  // Compute object-space control points for curve segment, cpObj
   vec3 cpObj[4];
   cpObj[0] = BlossomBezier(common->cpObj, uMin, uMin, uMin);
   cpObj[1] = BlossomBezier(common->cpObj, uMin, uMin, uMax);
@@ -81,16 +81,7 @@ bool curve::hit(const ray& r, Float tmin, Float tmax, hit_record& rec, random_ge
   cpObj[3] = BlossomBezier(common->cpObj, uMax, uMax, uMax);
   
   // Project curve control points to plane perpendicular to ray
-  
-  // Be careful to set the "up" direction passed to LookAt() to equal the
-  // vector from the first to the last control points.  In turn, this
-  // helps orient the curve to be roughly parallel to the x axis in the
-  // ray coordinate system.
-  //
-  // In turn (especially for curves that are approaching straight lines),
-  // we get curve bounds with minimal extent in y, which in turn lets us
-  // early out more quickly in recursiveIntersect().
-  vec3 unit_dir = unit_vector(r.direction());
+  vec3 unit_dir = unit_vector(r.direction()); 
   vec3 dx = unit_vector(cross(unit_dir, cpObj[3] - cpObj[0]));
   vec3 dy = cross(unit_dir, dx);
   if (dx.squared_length() == 0) {
@@ -102,10 +93,9 @@ bool curve::hit(const ray& r, Float tmin, Float tmax, hit_record& rec, random_ge
     uvw.build_from_w(unit_dir);
     dx = uvw.u();
     dy = uvw.v();
-    // CoordinateSystem(ray.d, &dx, &dy);
   }
   
-  onb objectToRay(dx, dy, unit_dir);
+  onb objectToRay(dx, dy, unit_dir); //Coordinate system must have ray parallel to z-axis
   vec3 cp[4] = {objectToRay.world_to_local(cpObj[0] - r.origin()), objectToRay.world_to_local(cpObj[1] - r.origin()),
                 objectToRay.world_to_local(cpObj[2] - r.origin()), objectToRay.world_to_local(cpObj[3] - r.origin())};
   
@@ -140,7 +130,7 @@ bool curve::hit(const ray& r, Float tmin, Float tmax, hit_record& rec, random_ge
     return false;
   }
   
-  // Compute refinement depth for curve, _maxDepth_
+  // Compute refinement depth for curve, maxDepth
   Float L0 = 0;
   for (int i = 0; i < 2; ++i) {
     L0 = std::max(
@@ -239,7 +229,7 @@ bool curve::recursiveIntersect(const ray& r, Float tmin, Float tmax, hit_record&
       return(false);
     }
 
-    // Compute line $w$ that gives minimum distance to sample point
+    // Compute line w that gives minimum distance to sample point
     vec2 segmentDirection = vec2(cp[3]) - vec2(cp[0]);
     Float denom = segmentDirection.squared_length();
     if (denom == 0) {
@@ -247,13 +237,13 @@ bool curve::recursiveIntersect(const ray& r, Float tmin, Float tmax, hit_record&
     }
     Float w = dot(-vec2(cp[0]), segmentDirection) / denom;
 
-    // Compute $u$ coordinate of curve intersection point and _hitWidth_
+    // Compute u coordinate of curve intersection point and hitWidth
     Float u = clamp(lerp(w, u0, u1), u0, u1);
     Float hitWidth = lerp(u, common->width[0], common->width[1]);
-    vec3 nHit;
+    vec3 nHit; // specified in world space
     bool flipped_n = false;
     if (common->type == CurveType::Ribbon) {
-      // Scale _hitWidth_ based on ribbon orientation
+      // Scale hitWidth based on ribbon orientation
       Float sin0 = std::sin((1 - u) * common->normalAngle) * common->invSinNormalAngle;
       Float sin1 = std::sin(u * common->normalAngle) * common->invSinNormalAngle;
       if(!std::isnan(sin0) && !std::isnan(sin1)) {
@@ -261,7 +251,7 @@ bool curve::recursiveIntersect(const ray& r, Float tmin, Float tmax, hit_record&
       } else {
         nHit = common->n[0];
       }
-      hitWidth *= AbsDot(nHit, r.direction()) / rayLength;
+      hitWidth *= AbsDot(nHit, r.direction()) / rayLength; //both specified in world space
       flipped_n = dot(nHit, r.direction()) > 0;
     }
 
@@ -277,52 +267,47 @@ bool curve::recursiveIntersect(const ray& r, Float tmin, Float tmax, hit_record&
       return(false);
     }
 
-    // Compute $v$ coordinate of curve intersection point
+    // Compute v coordinate of curve intersection point
     Float ptCurveDist = std::sqrt(ptCurveDist2);
     Float edgeFunc = dpcdw.x() * -pc.y() + pc.x() * dpcdw.y();
     Float v = (edgeFunc > 0) ? 0.5f + ptCurveDist / hitWidth : 0.5f - ptCurveDist / hitWidth;
-    Float max_direction = std::max(r.direction().x(), std::max(r.direction().y(), r.direction().z()));
-    Float tnew =  r.origin().z() > 0 ? -pc.z() * r.inverse_dir().z() : pc.z() * r.inverse_dir().z();
+    Float tnew =  pc.z() / rayLength;
 
-    // Compute hit _t_ and partial derivatives for curve intersection
-    if (tnew > tmin && tnew < tmax) {
-      // FIXME: this rec.t isn't quite right for ribbons...
-      rec.t = tnew;
+    // Compute hit t and partial derivatives for curve intersection
+    rec.t = tnew;
 
-      // Compute $\dpdu$ and $\dpdv$ for curve intersection
-      EvalBezier(common->cpObj, u, &rec.dpdu);
-
-      if (common->type == CurveType::Ribbon) {
-        rec.dpdv = unit_vector(cross(nHit, rec.dpdu)) * hitWidth;
-        rec.normal = !flipped_n ? nHit : -nHit;
-      } else {
-        //   // Compute curve $\dpdv$ for flat and cylinder curves
-        //Assumes z-axis faces directly at viewer
-        // vec3 dpduPlane = uvw.local(rec.dpdu); 
-        // vec3 dpdvPlane = cross(dpduPlane, vec3(0,0,-1)) ;
-        // rec.dpdv = (uvw.local_to_world(dpdvPlane));
-        rec.dpdv = unit_vector(cross(rec.dpdu,uvw.w()));
-        rec.normal = -uvw.w(); 
-
-        
-        if (common->type == CurveType::Cylinder) {
-          // Rotate _dpdvPlane_ to give cylindrical appearance
-          Float theta = lerp(v, -M_PI_2, M_PI_2);
-          Float sinTheta = std::sin(theta);
-          Float cosTheta = std::cos(theta);
-          //Rodrigues' rotation formula
-          rec.normal = rec.normal * cosTheta + cross(unit_vector(rec.dpdu),rec.normal) * sinTheta;
-        }
+    // Compute dpdu and dpdv for curve intersection
+    EvalBezier(common->cpObj, u, &rec.dpdu);
+    
+    Float offset_scale = 1;
+    if (common->type == CurveType::Ribbon) {
+      rec.dpdv = unit_vector(cross(nHit, rec.dpdu)) * hitWidth;
+      rec.normal = !flipped_n ? nHit : -nHit;
+    } else {
+      //Compute curve dpdv for flat and cylinder curves
+      //Assumes z-axis faces directly at viewer
+      rec.dpdv = unit_vector(cross(rec.dpdu,-r.direction()));
+      rec.normal = unit_vector(-r.direction());
+      
+      if (common->type == CurveType::Cylinder) {
+        // Rotate dpdvPlane to give cylindrical appearance
+        Float theta = lerp(v, -M_PI_2, M_PI_2);
+        Float sinTheta = std::sin(theta);
+        Float cosTheta = std::cos(theta);
+        //Rodrigues' rotation formula
+        rec.normal = rec.normal * cosTheta + cross(unit_vector(rec.dpdu),rec.normal) * sinTheta;
+        offset_scale = offset_scale * cosTheta;
       }
-      rec.u = u;
-      rec.v = v;
-      rec.mat_ptr = mat_ptr;
-      rec.has_bump = false;
-      rec.p = r.point_at_parameter(rec.t);
-      return(true);
+      
     }
-    return(false);
+    rec.u = u;
+    rec.v = v;
+    rec.mat_ptr = mat_ptr;
+    rec.has_bump = false;
+    rec.p = r.point_at_parameter(rec.t) + rec.normal * hitWidth * offset_scale;
+    return(true);
   }
+  return(false);
 }
 
 vec3 curve::random(const vec3& o, random_gen& rng) {
