@@ -5,10 +5,10 @@
 \title{Bezier Curve Object}
 \usage{
 bezier_curve(
-  p0 = c(0, 0, 0),
-  p1 = c(-1, 0.33, 0),
-  p2 = c(1, 0.66, 0),
-  p3 = c(0, 1, 0),
+  p1 = c(0, 0, 0),
+  p2 = c(-1, 0.33, 0),
+  p3 = c(1, 0.66, 0),
+  p4 = c(0, 1, 0),
   x = 0,
   y = 0,
   z = 0,
@@ -28,14 +28,14 @@ bezier_curve(
 )
 }
 \arguments{
-\item{p0}{Default `c(0,0,0)`. First control point. Can also be a list of 4 length-3 numeric vectors 
+\item{p1}{Default `c(0,0,0)`. First control point. Can also be a list of 4 length-3 numeric vectors 
 or 4x3 matrix/data.frame specifying the x/y/z control points.}
 
-\item{p1}{Default `c(-1,0.33,0)`. Second control point.}
+\item{p2}{Default `c(-1,0.33,0)`. Second control point.}
 
-\item{p2}{Default `c(1,0.66,0)`. Third control point.}
+\item{p3}{Default `c(1,0.66,0)`. Third control point.}
 
-\item{p3}{Default `c(0,1,0)`. Fourth control point.}
+\item{p4}{Default `c(0,1,0)`. Fourth control point.}
 
 \item{x}{Default `0`. x-coordinate offset for the curve.}
 
@@ -86,38 +86,49 @@ generate_studio(depth=-0.1) \%>\%
   add_object(bezier_curve(material=diffuse(color="red"))) \%>\%
   add_object(sphere(y=3,z=5,x=2,radius=0.3,
                     material=light(intensity=200, spotlight_focus = c(0,0.5,0)))) \%>\%
-  render_scene(clamp_value = 10, lookat = c(0,0.5,0),width=600,height=600,samples=4)
+  render_scene(clamp_value = 10, lookat = c(0,0.5,0), fov=13,
+               samples=500, sample_method = "stratified")
 
 #Change the control points to change the direction of the curve. Here, we place spheres
 #at the control point locations.
-
-#We can give the impression of a cylinder by setting the type
 generate_studio(depth=-0.1) \%>\%
-  add_object(bezier_curve(type="cylinder", material=glossy(color="red"))) \%>\%
+  add_object(bezier_curve(material=diffuse(color="red"))) \%>\%
+  add_object(sphere(radius=0.075,material=glossy(color="green"))) \%>\% 
+  add_object(sphere(radius=0.075,x=-1,y=0.33,material=glossy(color="green"))) \%>\% 
+  add_object(sphere(radius=0.075,x=1,y=0.66,material=glossy(color="green"))) \%>\% 
+  add_object(sphere(radius=0.075,y=1,material=glossy(color="green"))) \%>\% 
   add_object(sphere(y=3,z=5,x=2,radius=0.3,
                     material=light(intensity=200, spotlight_focus = c(0,0.5,0)))) \%>\%
-  render_scene(clamp_value = 10, lookat = c(0,0.5,0),
-               width=600,height=600,samples=4,sample_method = "stratified")
+  render_scene(clamp_value = 10, lookat = c(0,0.5,0), fov=15,
+               samples=500, sample_method = "stratified")
+               
+#We can make the curve flat (always facing the camera) by setting the type to `flat`
+generate_studio(depth=-0.1) \%>\%
+  add_object(bezier_curve(type="flat", material=glossy(color="red"))) \%>\%
+  add_object(sphere(y=3,z=5,x=2,radius=0.3,
+                    material=light(intensity=200, spotlight_focus = c(0,0.5,0)))) \%>\%
+  render_scene(clamp_value = 10, lookat = c(0,0.5,0), fov=13,
+               samples=500, sample_method = "stratified")
 
 
 #We can also plot a ribbon, which is further specified by a start and end orientation with
 #two surface normals.
 generate_studio(depth=-0.1) \%>\%
   add_object(bezier_curve(type="ribbon", width=0.2,
-                   p0 = c(0,0,0), p1 = c(0,0.33,0), p2 = c(0,0.66,0), p3 = c(0.3,1,0),
+                   p1 = c(0,0,0), p2 = c(0,0.33,0), p3 = c(0,0.66,0), p4 = c(0.3,1,0),
                    normal_end = c(0,0,1),
                    material=glossy(color="red"))) \%>\%
   add_object(sphere(y=3,z=5,x=2,radius=0.3,
                     material=light(intensity=200, spotlight_focus = c(0,0.5,0)))) \%>\%
-  render_scene(clamp_value = 10, lookat = c(0,0.5,0),fov=10,
-               width=600,height=600,samples=4,sample_method = "stratified")
+  render_scene(clamp_value = 10, lookat = c(0,0.5,0), fov=13,
+               samples=500, sample_method = "stratified")
 
 
 #Create a single curve and copy and rotate it around the y-axis to create a wavy fountain effect:
 scene_curves = list()
 for(i in 1:90) {
-  scene_curves[[i]] = bezier_curve(p0 = c(0,0,0),p1 = c(0,5-sinpi(i*16/180),2),
-                            p2 = c(0,5-0.5 * sinpi(i*16/180),4),p3 = c(0,0,6),
+  scene_curves[[i]] = bezier_curve(p1 = c(0,0,0),p2 = c(0,5-sinpi(i*16/180),2),
+                            p3 = c(0,5-0.5 * sinpi(i*16/180),4),p4 = c(0,0,6),
                             angle=c(0,i*4,0), type="cylinder",
                             width = 0.1, width_end =0.1,material=glossy(color="red"))
 }
@@ -125,8 +136,8 @@ all_curves = do.call(rbind, scene_curves)
 generate_ground(depth=0,material=diffuse(checkercolor="grey20")) \%>\%
   add_object(all_curves) \%>\%
   add_object(sphere(y=7,z=0,x=0,material=light(intensity=100))) \%>\% 
-  render_scene(lookfrom = c(12,20,50),samples=64, sample_method = "stratified",
-               lookat=c(0,1,0),fov=15,clamp_value = 10,width=800,height=800, parallel=TRUE)
+  render_scene(lookfrom = c(12,20,50),samples=500, sample_method = "stratified",
+               lookat=c(0,1,0), fov=15, clamp_value = 10)
 
 }
 }

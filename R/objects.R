@@ -24,7 +24,7 @@
 #' generate_cornell() %>%
 #'   add_object(sphere(x = 555/2, y = 555/2, z = 555/2, radius = 100)) %>%
 #'   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
-#'                ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
+#'                ambient_light = FALSE, samples = 400, clamp_value = 5)
 #' }
 #' 
 #' #Generate a gold sphere in the cornell box
@@ -33,7 +33,7 @@
 #'   add_object(sphere(x = 555/2, y = 100, z = 555/2, radius = 100, 
 #'                     material = metal(color = "gold", fuzz = 0.2))) %>%
 #'   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
-#'                ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
+#'                ambient_light = FALSE, samples = 400, clamp_value = 5)
 #' }
 #'   
 #' #Add motion blur and show the sphere moving
@@ -42,7 +42,7 @@
 #'   add_object(sphere(x = 555/2, y = 100, z = 555/2, radius = 100,
 #'              material = metal(color = "gold", fuzz = 0.2), velocity = c(50, 0, 0))) %>%
 #'   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
-#'                ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
+#'                ambient_light = FALSE, samples = 400, clamp_value = 5)
 #' }
 sphere = function(x = 0, y = 0, z = 0, radius = 1, material = diffuse(), 
                   angle = c(0, 0, 0), order_rotation = c(1, 2, 3), velocity = c(0, 0, 0), 
@@ -1728,11 +1728,11 @@ arrow = function(start = c(0,0,0), end = c(0,1,0),
 #' 
 #' Bezier curve, defined by 4 control points.
 #'
-#' @param p0 Default `c(0,0,0)`. First control point. Can also be a list of 4 length-3 numeric vectors 
+#' @param p1 Default `c(0,0,0)`. First control point. Can also be a list of 4 length-3 numeric vectors 
 #' or 4x3 matrix/data.frame specifying the x/y/z control points.
-#' @param p1 Default `c(-1,0.33,0)`. Second control point.
-#' @param p2 Default `c(1,0.66,0)`. Third control point.
-#' @param p3 Default `c(0,1,0)`. Fourth control point.
+#' @param p2 Default `c(-1,0.33,0)`. Second control point.
+#' @param p3 Default `c(1,0.66,0)`. Third control point.
+#' @param p4 Default `c(0,1,0)`. Fourth control point.
 #' @param x Default `0`. x-coordinate offset for the curve.
 #' @param y Default `0`. y-coordinate offset for the curve.
 #' @param z Default `0`. z-coordinate offset for the curve.
@@ -1765,38 +1765,49 @@ arrow = function(start = c(0,0,0), end = c(0,1,0),
 #'   add_object(bezier_curve(material=diffuse(color="red"))) %>%
 #'   add_object(sphere(y=3,z=5,x=2,radius=0.3,
 #'                     material=light(intensity=200, spotlight_focus = c(0,0.5,0)))) %>%
-#'   render_scene(clamp_value = 10, lookat = c(0,0.5,0),width=600,height=600,samples=4)
+#'   render_scene(clamp_value = 10, lookat = c(0,0.5,0), fov=13,
+#'                samples=500, sample_method = "stratified")
 #' 
 #' #Change the control points to change the direction of the curve. Here, we place spheres
 #' #at the control point locations.
-#' 
-#' #We can give the impression of a cylinder by setting the type
 #' generate_studio(depth=-0.1) %>%
-#'   add_object(bezier_curve(type="cylinder", material=glossy(color="red"))) %>%
+#'   add_object(bezier_curve(material=diffuse(color="red"))) %>%
+#'   add_object(sphere(radius=0.075,material=glossy(color="green"))) %>% 
+#'   add_object(sphere(radius=0.075,x=-1,y=0.33,material=glossy(color="green"))) %>% 
+#'   add_object(sphere(radius=0.075,x=1,y=0.66,material=glossy(color="green"))) %>% 
+#'   add_object(sphere(radius=0.075,y=1,material=glossy(color="green"))) %>% 
 #'   add_object(sphere(y=3,z=5,x=2,radius=0.3,
 #'                     material=light(intensity=200, spotlight_focus = c(0,0.5,0)))) %>%
-#'   render_scene(clamp_value = 10, lookat = c(0,0.5,0),
-#'                width=600,height=600,samples=4,sample_method = "stratified")
+#'   render_scene(clamp_value = 10, lookat = c(0,0.5,0), fov=15,
+#'                samples=500, sample_method = "stratified")
+#'                
+#' #We can make the curve flat (always facing the camera) by setting the type to `flat`
+#' generate_studio(depth=-0.1) %>%
+#'   add_object(bezier_curve(type="flat", material=glossy(color="red"))) %>%
+#'   add_object(sphere(y=3,z=5,x=2,radius=0.3,
+#'                     material=light(intensity=200, spotlight_focus = c(0,0.5,0)))) %>%
+#'   render_scene(clamp_value = 10, lookat = c(0,0.5,0), fov=13,
+#'                samples=500, sample_method = "stratified")
 #' 
 #' 
 #' #We can also plot a ribbon, which is further specified by a start and end orientation with
 #' #two surface normals.
 #' generate_studio(depth=-0.1) %>%
 #'   add_object(bezier_curve(type="ribbon", width=0.2,
-#'                    p0 = c(0,0,0), p1 = c(0,0.33,0), p2 = c(0,0.66,0), p3 = c(0.3,1,0),
+#'                    p1 = c(0,0,0), p2 = c(0,0.33,0), p3 = c(0,0.66,0), p4 = c(0.3,1,0),
 #'                    normal_end = c(0,0,1),
 #'                    material=glossy(color="red"))) %>%
 #'   add_object(sphere(y=3,z=5,x=2,radius=0.3,
 #'                     material=light(intensity=200, spotlight_focus = c(0,0.5,0)))) %>%
-#'   render_scene(clamp_value = 10, lookat = c(0,0.5,0),fov=10,
-#'                width=600,height=600,samples=4,sample_method = "stratified")
+#'   render_scene(clamp_value = 10, lookat = c(0,0.5,0), fov=13,
+#'                samples=500, sample_method = "stratified")
 #' 
 #' 
 #' #Create a single curve and copy and rotate it around the y-axis to create a wavy fountain effect:
 #' scene_curves = list()
 #' for(i in 1:90) {
-#'   scene_curves[[i]] = bezier_curve(p0 = c(0,0,0),p1 = c(0,5-sinpi(i*16/180),2),
-#'                             p2 = c(0,5-0.5 * sinpi(i*16/180),4),p3 = c(0,0,6),
+#'   scene_curves[[i]] = bezier_curve(p1 = c(0,0,0),p2 = c(0,5-sinpi(i*16/180),2),
+#'                             p3 = c(0,5-0.5 * sinpi(i*16/180),4),p4 = c(0,0,6),
 #'                             angle=c(0,i*4,0), type="cylinder",
 #'                             width = 0.1, width_end =0.1,material=glossy(color="red"))
 #' }
@@ -1804,27 +1815,27 @@ arrow = function(start = c(0,0,0), end = c(0,1,0),
 #' generate_ground(depth=0,material=diffuse(checkercolor="grey20")) %>%
 #'   add_object(all_curves) %>%
 #'   add_object(sphere(y=7,z=0,x=0,material=light(intensity=100))) %>% 
-#'   render_scene(lookfrom = c(12,20,50),samples=64, sample_method = "stratified",
-#'                lookat=c(0,1,0),fov=15,clamp_value = 10,width=800,height=800, parallel=TRUE)
+#'   render_scene(lookfrom = c(12,20,50),samples=500, sample_method = "stratified",
+#'                lookat=c(0,1,0), fov=15, clamp_value = 10)
 #' 
 #' }
-bezier_curve = function(p0 = c(0,0,0), p1 = c(-1,0.33,0), p2 = c(1,0.66,0), p3=c(0,1,0), 
+bezier_curve = function(p1 = c(0,0,0), p2 = c(-1,0.33,0), p3 = c(1,0.66,0), p4=c(0,1,0), 
                         x=0, y=0, z=0,
                         width = 0.1, width_end = NA, u_min = 0, u_max = 1, type = "cylinder",
                         normal = c(0,0,-1), normal_end = NA, 
                         material = diffuse(), angle = c(0, 0, 0),
                         order_rotation = c(1, 2, 3), velocity = c(0, 0, 0),
                         flipped = FALSE, scale = c(1,1,1)) {
-  if(inherits(p0,"list")) {
-    stopifnot(length(p0) == 4 && all(lapply(p0, (function(x) length(x) == 3))))
-    p0 = do.call(rbind, p0)
+  if(inherits(p1,"list")) {
+    stopifnot(length(p1) == 4 && all(lapply(p1, (function(x) length(x) == 3))))
+    p1 = do.call(rbind, p1)
   }
-  if(inherits(p0,"matrix") || inherits(p0,"data.frame")) {
-    if(dim(p0)[1] == 4 && dim(p0)[2] == 3) {
-      p1 = p0[2,]
-      p2 = p0[3,]
-      p3 = p0[4,]
-      p0 = p0[1,]
+  if(inherits(p1,"matrix") || inherits(p1,"data.frame")) {
+    if(dim(p1)[1] == 4 && dim(p1)[2] == 3) {
+      p2 = p1[2,]
+      p3 = p1[3,]
+      p4 = p1[4,]
+      p1 = p1[1,]
     }
   }
   if(length(scale) == 1) {
@@ -1850,7 +1861,7 @@ bezier_curve = function(p0 = c(0,0,0), p1 = c(-1,0.33,0), p2 = c(1,0.66,0), p3=c
   }
   curvetype = unlist(lapply(tolower(type),switch,
                            "flat" = 1,"cylinder" = 2, "ribbon" = 3))
-  curve_info = c(unlist(material$properties), p0, p1, p2, p3, width, width_end, 
+  curve_info = c(unlist(material$properties), p1, p2, p3, p4, width, width_end, 
                  u_min, u_max, curvetype, normal, normal_end)
   new_tibble_row(list(x = x, y = y, z = z, radius = NA, type = material$type, shape = "curve",
                       properties = list(curve_info), velocity = list(velocity), 
@@ -1913,6 +1924,7 @@ bezier_curve = function(p0 = c(0,0,0), p1 = c(-1,0.33,0), p2 = c(1,0.66,0), p3=c
 #' \donttest{
 #' #Generate a wavy line, showing the line goes through the specified points:
 #' wave = list(c(-2,1,0),c(-1,-1,0),c(0,1,0),c(1,-1,0),c(2,1,0))
+#' point_mat = glossy(color="green")
 #' generate_studio(depth=-1.5) %>% 
 #'   add_object(path(points = wave,material=glossy(color="red"))) %>% 
 #'   add_object(sphere(x=-2,y=1,radius=0.1,material=point_mat)) %>% 
@@ -2037,6 +2049,8 @@ path = function(points,
   u_min_segment = length(full_control_points) * u_min 
   u_max_segment = length(full_control_points) * u_max 
   
+  seg_begin = floor(u_min_segment) + 1
+  seg_end = floor(u_max_segment) + 1
   curve_list = list()
   for(i in seq_len(length(full_control_points))) {
     u_min_temp = 0
@@ -2050,14 +2064,17 @@ path = function(points,
     if(u_min_temp == u_max_temp) {
       next
     }
+    if(round(u_max_temp,8) == 0) {
+      break
+    }
     temp_width_start = width + (width_end - width) * (u_min_temp + i - 1) / length(full_control_points)
     temp_width_end = width + (width_end - width) * (u_max_temp + i - 1) / length(full_control_points)
     temp_normal_start = normal + (normal_end - normal) * (u_min_temp + i - 1) / length(full_control_points)
     temp_normal_end = normal + (normal_end - normal) * (u_max_temp + i - 1) / length(full_control_points)
 
-    if(u_min_segment < i && u_max_segment >= i - 1) {
+    if(seg_begin <= i  && seg_end >= i) {
       curve_list[[i]] = bezier_curve(x=x,y=y,z=z,
-                                     p0=full_control_points[[i]], type = type,
+                                     p1=full_control_points[[i]], type = type,
                                      u_min = u_min_temp,
                                      u_max = u_max_temp,
                                      width = temp_width_start, width_end = temp_width_end,
@@ -2067,5 +2084,9 @@ path = function(points,
                                      flipped = flipped, scale = scale)
     }
   }
-  do.call(rbind,curve_list)
+  if("dplyr" %in% rownames(utils::installed.packages())) {
+    return(dplyr::bind_rows(curve_list))
+  } else {
+    return(do.call(rbind, curve_list))
+  }
 }

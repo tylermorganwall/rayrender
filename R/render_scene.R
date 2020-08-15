@@ -555,7 +555,8 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
       plot_map((full_array-min(full_array,na.rm=TRUE))/(max(full_array,na.rm=TRUE) - min(full_array,na.rm=TRUE)))
       return(invisible(full_array))
     } else {
-      save_png(full_array,filename)
+      save_png((full_array-min(full_array,na.rm=TRUE))/(max(full_array,na.rm=TRUE) - min(full_array,na.rm=TRUE)),
+               filename)
       return(invisible(full_array))
     }
   } else if (debug_channel %in% c(2,3,4,5)) {

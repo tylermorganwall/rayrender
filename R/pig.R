@@ -21,34 +21,36 @@
 #' generate_cornell() %>%
 #'   add_object(pig(x=555/2,z=555/2,y=120,scale=c(80,80,80), angle = c(0,135,0))) %>%
 #'   render_scene(parallel=TRUE, samples=400,clamp_value=10)
-#' }
 #' 
 #' # Show the pig staring into a mirror, worried 
-#' \donttest{
 #' generate_cornell() %>%
 #'   add_object(pig(x=555/2-70,z=555/2+50,y=120,scale=c(80,80,80),
 #'                  angle = c(0,-40,0), emotion = "worried")) %>%
 #'   add_object(cube(x=450,z=450,y=250, ywidth=500, xwidth=200,
 #'                   angle = c(0,45,0), material = metal())) %>%
-#'   render_scene(parallel=TRUE, samples=500,clamp_value=10)
-#' }
+#'   render_scene(parallel=TRUE, samples=500,clamp_value=10, sample_method="stratified")
 #' 
 #' # Render many small pigs facing random directions, with an evil pig overlord
 #' set.seed(1)
 #' lots_of_pigs = list() 
-#' \donttest{
 #' for(i in 1:10) {
 #'   lots_of_pigs[[i]] = pig(x=50 + 450 * runif(1), z = 50 + 450 * runif(1), y=50, 
 #'                              scale = c(30,30,30), angle = c(0,360*runif(1),0), emotion = "worried")
-#' }
 #' }
 #' 
 #' many_pigs_scene = do.call(rbind, lots_of_pigs) %>%
 #'  add_object(generate_cornell(lightintensity=30, lightwidth=100)) %>%
 #'  add_object(pig(z=500,x=555/2,y=400, emotion = "angry",
 #'             scale=c(100,100,100),angle=c(30,90,0), order_rotation=c(2,1,3)))
-#' \donttest{
-#' render_scene(many_pigs_scene,parallel=TRUE,clamp_value=10, samples=500)
+#'             
+#' render_scene(many_pigs_scene,parallel=TRUE,clamp_value=10, samples=500, 
+#'              sample_method="stratified")
+#' 
+#' #Render spiderpig
+#' generate_studio() %>%  
+#'   add_object(pig(y=-1,angle=c(0,-100,0), scale=1/2,spider=TRUE)) %>% 
+#'   add_object(sphere(y=5,z=5,x=5,material=light(intensity=100))) %>% 
+#'   render_scene(samples=500,lookfrom=c(0,2,10),sample_method = "stratified",clamp_value=10)
 #' }
 pig = function(x = 0, y = 0, z = 0, emotion = "neutral", spider = FALSE,
                angle = c(0, 0, 0), order_rotation = c(1, 2, 3), 
@@ -132,10 +134,6 @@ pig = function(x = 0, y = 0, z = 0, emotion = "neutral", spider = FALSE,
     eye_scene = 
       sphere(x = 2, y = 2.5, z = 0.3, radius=0.25,material = eyemat) %>%
       add_object(sphere(x = 2, y = 2.5, z = -0.3, radius=0.25,material = eyemat)) %>%
-      add_object(sphere(x = 2.2, y = 2.5, z = 0.3, radius=0.1,material = glossy(color="black"))) %>%
-      add_object(sphere(x = 2.2, y = 2.5, z = -0.3, radius=0.1,material = glossy(color="black"))) %>%
-      add_object(sphere(x = 2, y = 2.4, z = 0.4, radius=0.20,material = eyemat)) %>%
-      add_object(sphere(x = 2, y = 2.4, z = -0.4, radius=0.20,material = eyemat)) %>%
       add_object(sphere(x = 2.2, y = 2.5, z = 0.3, radius=0.1,material = glossy(color="black"))) %>%
       add_object(sphere(x = 2.2, y = 2.5, z = -0.3, radius=0.1,material = glossy(color="black"))) 
   }

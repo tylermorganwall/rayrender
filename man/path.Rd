@@ -84,6 +84,7 @@ Either a closed or open path made up of bezier curves that go through the specif
 \donttest{
 #Generate a wavy line, showing the line goes through the specified points:
 wave = list(c(-2,1,0),c(-1,-1,0),c(0,1,0),c(1,-1,0),c(2,1,0))
+point_mat = glossy(color="green")
 generate_studio(depth=-1.5) \%>\% 
   add_object(path(points = wave,material=glossy(color="red"))) \%>\% 
   add_object(sphere(x=-2,y=1,radius=0.1,material=point_mat)) \%>\% 

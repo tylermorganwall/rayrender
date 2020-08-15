@@ -3,6 +3,15 @@ pkgdown: 1.3.0.9000
 pkgdown_sha: 2f40b4769ea9ad2312aa4cc93f27ab116461543b
 articles: []
 
+template:
+  opengraph:
+    image:
+      src: man/figures/website_rayrender.jpg
+      alt: "Picture of a golden 3D ggplot with a description of rayrender"
+    twitter:
+      creator: "@tylermorganwall"
+      card: summary_large_image
+
 reference:
   - title: "Objects"
     desc: "Functions for generating objects to add to scenes"
@@ -20,6 +29,8 @@ reference:
       - starts_with("cone")
       - starts_with("arrow")
       - starts_with("extruded")
+      - starts_with("bezier")
+      - starts_with("path")
       - starts_with("pig")
   - title: "Materials"
     desc: "Functions to specify the visual properties of objects"

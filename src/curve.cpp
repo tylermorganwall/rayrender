@@ -82,7 +82,7 @@ bool curve::hit(const ray& r, Float tmin, Float tmax, hit_record& rec, random_ge
   
   // Project curve control points to plane perpendicular to ray
   vec3 unit_dir = unit_vector(r.direction()); 
-  vec3 dx = unit_vector(cross(unit_dir, cpObj[3] - cpObj[0]));
+  vec3 dx = cross(unit_dir, cpObj[3] - cpObj[0]);
   vec3 dy = cross(unit_dir, dx);
   if (dx.squared_length() == 0) {
     // If the ray and the vector between the first and last control
@@ -91,8 +91,11 @@ bool curve::hit(const ray& r, Float tmin, Float tmax, hit_record& rec, random_ge
     // tests can proceed in this unusual case.
     onb uvw;
     uvw.build_from_w(unit_dir);
-    dx = uvw.u();
-    dy = uvw.v();
+    dx = uvw.v();
+    dy = uvw.u();
+  } else {
+    dx.make_unit_vector();
+    dy.make_unit_vector();
   }
   
   onb objectToRay(dx, dy, unit_dir); //Coordinate system must have ray parallel to z-axis
