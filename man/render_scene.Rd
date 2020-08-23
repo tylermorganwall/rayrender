@@ -134,7 +134,9 @@ if using a LDR (JPEG or PNG) image as an environment map.}
 \item{debug_channel}{Default `none`. If `depth`, function will return a depth map of rays into the scene 
 instead of an image. If `normals`, function will return an image of scene normals, mapped from 0 to 1.
 If `uv`, function will return an image of the uv coords. If `variance`, function will return an image 
-showing the number of samples needed to take for each block to converge (when the}
+showing the number of samples needed to take for each block to converge. If `dpdu` or `dpdv`, function will return
+an image showing the differential `u` and `u` coordinates. If `color`, function will return the raw albedo
+values (with white for `metal` and `dielectric` materials).}
 
 \item{return_raw_array}{Default `FALSE`. If `TRUE`, function will return raw array with RGB intensity
 information.}

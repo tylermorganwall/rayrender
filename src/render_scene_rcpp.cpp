@@ -173,6 +173,28 @@ inline vec3 calculate_dpduv(const ray& r, hitable *world, random_gen &rng, bool 
   }
 }
 
+inline vec3 calculate_color(const ray& r, hitable *world, random_gen &rng) {
+  hit_record hrec;
+  scatter_record srec;
+  ray r2 = r;
+  if(world->hit(r2, 0.001, FLT_MAX, hrec, rng)) {
+    vec3 emit = hrec.mat_ptr->emitted(r2, hrec, hrec.u, hrec.v, hrec.p);
+    if(emit.x() != 0 || emit.y() != 0 || emit.z() != 0) {
+      return(emit);
+    }
+    if(hrec.mat_ptr->scatter(r2, hrec, srec, rng)) { //generates scatter record, world space
+      if(srec.is_specular) { 
+        return(vec3(1,1,1));
+      }
+      return(hrec.mat_ptr->get_albedo(r2, hrec));
+    } else {
+      return(vec3(0,0,0));
+    }
+  } else {
+    return(vec3(0,0,0));
+  }
+}
+
 // //Does not take into account moving objects
 // void calculate_inside(const ray& r_in, hitable *world, random_gen rng) {
 //   hit_record hrec;
@@ -567,6 +589,29 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
         boutput(i,j) = dpd_val.z();
       }
     }
+  } else if (debug_channel == 8) {
+    std::vector<dielectric*> *mat_stack = new std::vector<dielectric*>;
+    
+    for(int j = ny - 1; j >= 0; j--) {
+      for(int i = 0; i < nx; i++) {
+        Float u = Float(i) / Float(nx);
+        Float v = Float(j) / Float(ny);
+        ray r;
+        if(fov != 0) {
+          r = cam.get_ray(u,v, vec3(0,0,0), 0);
+        } else {
+          r = ocam.get_ray(u,v);
+        }
+        r.pri_stack = mat_stack;
+        vec3 dpd_val = calculate_color(r, &world, rng);
+        mat_stack->clear();
+        
+        routput(i,j) = dpd_val.x();
+        goutput(i,j) = dpd_val.y();
+        boutput(i,j) = dpd_val.z();
+      }
+    }
+    delete mat_stack;
   } else {
     if(min_variance == 0) {
       std::vector<unsigned int> seeds(ny);

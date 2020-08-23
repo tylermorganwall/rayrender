@@ -95,6 +95,9 @@ class material {
     virtual vec3 emitted(const ray& r_in, const hit_record& rec, Float u, Float v, const vec3& p) const {
       return(vec3(0,0,0));
     }
+    virtual vec3 get_albedo(const ray& r_in, const hit_record& rec) const {
+      return(vec3(0,0,0));
+    }
     virtual ~material() {};
 };
 
@@ -130,6 +133,9 @@ class lambertian : public material {
       srec.pdf_ptr = new cosine_pdf(hrec.normal);
       return(true);
     }
+    vec3 get_albedo(const ray& r_in, const hit_record& rec) const {
+      return(albedo->value(rec.u, rec.v, rec.p));
+    }
     
     texture *albedo;
 };
@@ -157,6 +163,9 @@ class metal : public material {
       srec.is_specular = true;
       srec.pdf_ptr = 0;
       return(true);
+    }
+    vec3 get_albedo(const ray& r_in, const hit_record& rec) const {
+      return(albedo->value(rec.u, rec.v, rec.p));
     }
     texture *albedo;
     vec3 eta, k;
@@ -265,6 +274,9 @@ class dielectric : public material {
       }
       return(true);
     }
+    vec3 get_albedo(const ray& r_in, const hit_record& rec) const {
+      return(vec3(1,1,1));
+    }
     Float ref_idx;
     vec3 albedo;
     vec3 attenuation;
@@ -287,6 +299,9 @@ public:
     } else {
       return(vec3(0,0,0));
     }
+  }
+  vec3 get_albedo(const ray& r_in, const hit_record& rec) const {
+    return(emit->value(rec.u, rec.v, rec.p));
   }
   texture *emit;
 };
@@ -319,6 +334,9 @@ class spot_light : public material {
       Float delta = (cosTheta - cosTotalWidth) /(cosFalloffStart - cosTotalWidth);
       return((delta * delta) * (delta * delta));
     }
+    vec3 get_albedo(const ray& r_in, const hit_record& rec) const {
+      return(emit->value(rec.u, rec.v, rec.p));
+    }
     texture *emit;
     vec3 spot_direction;
     const Float cosTotalWidth, cosFalloffStart;
@@ -338,6 +356,9 @@ public:
   }
   vec3 f(const ray& r_in, const hit_record& rec, const ray& scattered) const {
     return(albedo->value(rec.u,rec.v,rec.p) * 0.25 * M_1_PI);
+  }
+  vec3 get_albedo(const ray& r_in, const hit_record& rec) const {
+    return(albedo->value(rec.u, rec.v, rec.p));
   }
   texture *albedo;
 };
@@ -395,6 +416,9 @@ vec3 f(const ray& r_in, const hit_record& rec, const ray& scattered) const {
     }
     return(albedo->value(rec.u, rec.v, rec.p) * (A + B * maxCos * sinAlpha * tanBeta ) * cosine * M_1_PI );
   }
+  vec3 get_albedo(const ray& r_in, const hit_record& rec) const {
+    return(albedo->value(rec.u, rec.v, rec.p));
+  }
   Float A, B;
   texture *albedo;
 };
@@ -443,6 +467,9 @@ public:
     Float G = distribution->G(wo,wi,normal);
     Float D = distribution->D(normal);
     return(albedo->value(rec.u, rec.v, rec.p) * F * G * D  * cosThetaI / (4 * CosTheta(wo) * CosTheta(wi) ));
+  }
+  vec3 get_albedo(const ray& r_in, const hit_record& rec) const {
+    return(albedo->value(rec.u, rec.v, rec.p));
   }
 private:
   texture *albedo;
@@ -500,6 +527,9 @@ public:
   vec3 SchlickFresnel(Float cosTheta) const {
     auto pow5 = [](Float v) { return (v * v) * (v * v) * v; };
     return Rs + pow5(1 - cosTheta) * (vec3(1.0f) - Rs);
+  }
+  vec3 get_albedo(const ray& r_in, const hit_record& rec) const {
+    return(albedo->value(rec.u, rec.v, rec.p));
   }
   
 private:

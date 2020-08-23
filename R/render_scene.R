@@ -64,7 +64,9 @@
 #' @param debug_channel Default `none`. If `depth`, function will return a depth map of rays into the scene 
 #' instead of an image. If `normals`, function will return an image of scene normals, mapped from 0 to 1.
 #' If `uv`, function will return an image of the uv coords. If `variance`, function will return an image 
-#' showing the number of samples needed to take for each block to converge (when the 
+#' showing the number of samples needed to take for each block to converge. If `dpdu` or `dpdv`, function will return
+#' an image showing the differential `u` and `u` coordinates. If `color`, function will return the raw albedo
+#' values (with white for `metal` and `dielectric` materials).
 #' @param return_raw_array Default `FALSE`. If `TRUE`, function will return raw array with RGB intensity
 #' information.
 #' @param parallel Default `FALSE`. If `TRUE`, it will use all available cores to render the image
@@ -445,7 +447,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
 
   debug_channel = unlist(lapply(tolower(debug_channel),switch,
                           "none" = 0,"depth" = 1,"normals" = 2, "uv" = 3, "bvh" = 4,
-                          "variance" = 5, "normal" = 2, "dpdu" = 6, "dpdv" = 7))
+                          "variance" = 5, "normal" = 2, "dpdu" = 6, "dpdv" = 7, "color" = 8, 0))
   if(debug_channel == 4) {
     message("rayrender must be compiled with option DEBUGBVH for this debug option to work")
   }
