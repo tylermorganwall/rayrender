@@ -8,6 +8,7 @@
 #include "rng.h"
 #include "mathinline.h"
 #include "microfacetdist.h"
+#include <array>
 
 // #define DEBUG2
 
@@ -538,83 +539,255 @@ private:
   vec3 Rs;
 };
 
-// General Utility Functions
-// inline Float Sqr(Float v) { return v * v; }
-// template <int n>
-// static Float Pow(Float v) {
-//   static_assert(n > 0, "Power can't be negative");
-//   Float n2 = Pow<n / 2>(v);
-//   return n2 * n2 * Pow<n & 1>(v);
-// }
+// Hair Local Functions
 
-// template <>
-// inline Float Pow<1>(Float v) {
-//   return(v);
-// }
-// 
-// template <>
-// inline Float Pow<0>(Float v) {
-//   return(1);
-// }
-// inline Float SafeASin(Float x) {
-//   return(std::asin(clamp(x, -1, 1)));
-// }
-// 
-// inline Float SafeSqrt(Float x) {
-//   return(std::sqrt(std::max(Float(0), x)));
-// }
+static const Float mpi_over_180 = M_PI/180;
+static const Float ONE_OVER_2_PI = 1 / (2* M_PI);
 
-// static uint32_t Compact1By1(uint32_t x) {
-//   // TODO: as of Haswell, the PEXT instruction could do all this in a
-//   // single instruction.
-//   // x = -f-e -d-c -b-a -9-8 -7-6 -5-4 -3-2 -1-0
-//   x &= 0x55555555;
-//   // x = --fe --dc --ba --98 --76 --54 --32 --10
-//   x = (x ^ (x >> 1)) & 0x33333333;
-//   // x = ---- fedc ---- ba98 ---- 7654 ---- 3210
-//   x = (x ^ (x >> 2)) & 0x0f0f0f0f;
-//   // x = ---- ---- fedc ba98 ---- ---- 7654 3210
-//   x = (x ^ (x >> 4)) & 0x00ff00ff;
-//   // x = ---- ---- ---- ---- fedc ba98 7654 3210
-//   x = (x ^ (x >> 8)) & 0x0000ffff;
-//   return(x);
-// }
+static const Float SqrtPiOver8 = 0.626657069f;
+inline Float I0(Float x), LogI0(Float x);
+static std::array<vec3, pMax + 1> Ap(Float cosThetaO, Float eta, Float h,
+                                     const vec3 &T);
 
-// static vec2 DemuxFloat(Float f) {
-//   uint64_t v = f * (1ull << 32);
-//   uint32_t bits[2] = {Compact1By1(v), Compact1By1(v >> 1)};
-//   return(vec2(bits[0] / Float(1 << 16), bits[1] / Float(1 << 16)));
-// }
+static Float Mp(Float cosThetaI, Float cosThetaO, Float sinThetaI,
+                Float sinThetaO, Float v) {
+  Float a = cosThetaI * cosThetaO / v;
+  Float b = sinThetaI * sinThetaO / v;
+  Float mp = (v <= .1)
+    ? (std::exp(LogI0(a) - b - 1 / v + 0.6931f + std::log(1 / (2 * v))))
+    : (std::exp(-b) * I0(a)) / (std::sinh(1 / v) * 2 * v);
+  return mp;
+}
+
+inline Float I0(Float x) {
+  Float val = 0;
+  Float x2i = 1;
+  int64_t ifact = 1;
+  int i4 = 1;
+  // I0(x) \approx Sum_i x^(2i) / (4^i (i!)^2)
+  for (int i = 0; i < 10; ++i) {
+    if (i > 1) ifact *= i;
+    val += x2i / (i4 * Sqr(ifact));
+    x2i *= x * x;
+    i4 *= 4;
+  }
+  return val;
+}
+
+inline Float LogI0(Float x) {
+  if (x > 12) {
+    return x + 0.5 * (-std::log(2 * M_PI) + std::log(1 / x) + 1 / (8 * x));
+  } else {
+    return std::log(I0(x));
+  }
+}
+
+//Hair material
+inline Float Np(Float phi, int p, Float s, Float gammaO, Float gammaT);
+
+class hair : public material {
+  public:
+    hair(vec3 sigma_a, vec3 color, Float eumelanin, Float pheomelanin,
+         Float eta, Float beta_m, Float beta_n, Float alpha, Float h) :
+      sigma_a(sigma_a), color(color),
+      eumelanin(eumelanin), pheomelanin(pheomelanin),
+      eta(eta), 
+      beta_m(beta_m),  //longitudinal roughness
+      beta_n(beta_n), 
+      alpha(alpha), //scale angle
+      h(h), gammaO(SafeASin(h)) {
+      v[0] = Sqr(0.726f * beta_m + 0.812f * Sqr(beta_m) + 3.7f * Pow<20>(beta_m));
+      v[1] = .25 * v[0];
+      v[2] = 4 * v[0];
+      for (int p = 3; p <= pMax; ++p)
+        // TODO: is there anything better here?
+        v[p] = v[2];
+      
+      // Compute azimuthal logistic scale factor from $\beta_n$
+      s = SqrtPiOver8 *
+        (0.265f * beta_n + 1.194f * Sqr(beta_n) + 5.372f * Pow<22>(beta_n));
+
+      // Compute $\alpha$ terms for hair scales
+      sin2kAlpha[0] = std::sin(mpi_over_180 * alpha);
+      cos2kAlpha[0] = SafeSqrt(1 - Sqr(sin2kAlpha[0]));
+      for (int i = 1; i < 3; ++i) {
+        sin2kAlpha[i] = 2 * cos2kAlpha[i - 1] * sin2kAlpha[i - 1];
+        cos2kAlpha[i] = Sqr(cos2kAlpha[i - 1]) - Sqr(sin2kAlpha[i - 1]);
+      }
+    }
+    ~hair() {}
+    
+    bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng) {
+      return(true);
+    }
+    
+    vec3 f(const ray& r_in, const hit_record& rec, const ray& scattered) const {
+      onb uvw;
+      uvw.build_from_w(rec.normal);
+      vec3 wi = -unit_vector(uvw.world_to_local(r_in.direction()));
+      vec3 wo = unit_vector(uvw.world_to_local(scattered.direction()));
+      
+      Float sinThetaO = wo.x();
+      Float cosThetaO = SafeSqrt(1 - Sqr(sinThetaO));
+      Float phiO = std::atan2(wo.z(), wo.y());
+      
+      // Compute hair coordinate system terms related to _wi_
+      Float sinThetaI = wi.x();
+      Float cosThetaI = SafeSqrt(1 - Sqr(sinThetaI));
+      Float phiI = std::atan2(wi.z(), wi.y());
+      
+      // Compute $\cos \thetat$ for refracted ray
+      Float sinThetaT = sinThetaO / eta;
+      Float cosThetaT = SafeSqrt(1 - Sqr(sinThetaT));
+      
+      // Compute $\gammat$ for refracted ray
+      Float etap = std::sqrt(eta * eta - Sqr(sinThetaO)) / cosThetaO;
+      Float sinGammaT = h / etap;
+      Float cosGammaT = SafeSqrt(1 - Sqr(sinGammaT));
+      Float gammaT = SafeASin(sinGammaT);
+      
+      // Compute the transmittance _T_ of a single path through the cylinder
+      vec3 T = Exp(-sigma_a * (2 * cosGammaT / cosThetaT));
+      
+      // Evaluate hair BSDF
+      Float phi = phiI - phiO;
+      std::array<vec3, pMax + 1> ap = Ap(cosThetaO, eta, h, T);
+      vec3 fsum(0.0);
+      for (int p = 0; p < pMax; ++p) {
+        // Compute $\sin \thetao$ and $\cos \thetao$ terms accounting for scales
+        Float sinThetaOp, cosThetaOp;
+        if (p == 0) {
+          sinThetaOp = sinThetaO * cos2kAlpha[1] - cosThetaO * sin2kAlpha[1];
+          cosThetaOp = cosThetaO * cos2kAlpha[1] + sinThetaO * sin2kAlpha[1];
+        }
+        
+        // Handle remainder of $p$ values for hair scale tilt
+        else if (p == 1) {
+          sinThetaOp = sinThetaO * cos2kAlpha[0] + cosThetaO * sin2kAlpha[0];
+          cosThetaOp = cosThetaO * cos2kAlpha[0] - sinThetaO * sin2kAlpha[0];
+        } else if (p == 2) {
+          sinThetaOp = sinThetaO * cos2kAlpha[2] + cosThetaO * sin2kAlpha[2];
+          cosThetaOp = cosThetaO * cos2kAlpha[2] - sinThetaO * sin2kAlpha[2];
+        } else {
+          sinThetaOp = sinThetaO;
+          cosThetaOp = cosThetaO;
+        }
+        
+        // Handle out-of-range $\cos \thetao$ from scale adjustment
+        cosThetaOp = std::abs(cosThetaOp);
+        fsum += Mp(cosThetaI, cosThetaOp, sinThetaI, sinThetaOp, v[p]) * ap[p] *
+          Np(phi, p, s, gammaO, gammaT);
+      }
+      
+      // Compute contribution of remaining terms after _pMax_
+      fsum += Mp(cosThetaI, cosThetaO, sinThetaI, sinThetaO, v[pMax]) * ap[pMax] * ONE_OVER_2_PI;
+      if (AbsCosTheta(wi) > 0) {
+        fsum /= AbsCosTheta(wi);
+      }
+      return(fsum);
+    }
+    
+    static vec3 SigmaAFromConcentration(Float ce, Float cp);
+    static vec3 SigmaAFromReflectance(const vec3 &c, Float beta_n);
+    
+    vec3 sigma_a, color;
+    Float eumelanin, pheomelanin, eta;
+    Float beta_m, beta_n;
+    Float alpha;
+    Float h, gammaO;
+  private:
+    std::array<Float, pMax + 1> ComputeApPdf(Float cosThetaO) const;
+    Float v[pMax + 1];
+    Float s;
+    Float sin2kAlpha[3], cos2kAlpha[3];
+};
+
+std::array<Float, pMax + 1> hair::ComputeApPdf(Float cosThetaO) const {
+  // Compute array of $A_p$ values for _cosThetaO_
+  Float sinThetaO = SafeSqrt(1 - cosThetaO * cosThetaO);
+  
+  // Compute $\cos \thetat$ for refracted ray
+  Float sinThetaT = sinThetaO / eta;
+  Float cosThetaT = SafeSqrt(1 - Sqr(sinThetaT));
+  
+  // Compute $\gammat$ for refracted ray
+  Float etap = std::sqrt(eta * eta - Sqr(sinThetaO)) / cosThetaO;
+  Float sinGammaT = h / etap;
+  Float cosGammaT = SafeSqrt(1 - Sqr(sinGammaT));
+  
+  // Compute the transmittance _T_ of a single path through the cylinder
+  vec3 T = Exp(-sigma_a * (2 * cosGammaT / cosThetaT));
+  std::array<vec3, pMax + 1> ap = Ap(cosThetaO, eta, h, T);
+  
+  // Compute $A_p$ PDF from individual $A_p$ terms
+  std::array<Float, pMax + 1> apPdf;
+  Float sumY = std::accumulate(ap.begin(), ap.end(), Float(0),
+                    [](Float s, const vec3 &ap) { return s + ap.y(); });
+  for (int i = 0; i <= pMax; ++i) {
+    apPdf[i] = ap[i].y() / sumY;
+  }
+  return apPdf;
+}
+
+vec3 hair::SigmaAFromConcentration(Float ce, Float cp) {
+  vec3 sigma_a;
+  Float eumelaninSigmaA[3] = {0.419f, 0.697f, 1.37f};
+  Float pheomelaninSigmaA[3] = {0.187f, 0.4f, 1.05f};
+  for (int i = 0; i < 3; ++i)
+    sigma_a.e[i] = (ce * eumelaninSigmaA[i] + cp * pheomelaninSigmaA[i]);
+  return(sigma_a);
+}
+
+vec3 hair::SigmaAFromReflectance(const vec3 &c, Float beta_n) {
+  vec3 sigma_a;
+  for (int i = 0; i < 3; ++i)
+    sigma_a.e[i] = Sqr(std::log(c.e[i]) /
+      (5.969f - 0.215f * beta_n + 2.532f * Sqr(beta_n) -
+        10.73f * Pow<3>(beta_n) + 5.574f * Pow<4>(beta_n) +
+        0.245f * Pow<5>(beta_n)));
+  return(sigma_a);
+}
 
 //Hair utilities
 
-// static const int pMax = 3;
-// static const Float SqrtPiOver8 = 0.626657069f;
-// 
-// class hair : public material {
-//   public:
-//     hair(vec3 sigma_a, vec3 color, Float eumelanin, Float pheomelanin,
-//          Float eta, Float beta_m, Float beta_n, Float alpha) : 
-//       sigma_a(sigma_a), color(color), 
-//       eumelanin(eumelanin), pheomelanin(pheomelanin),
-//       eta(eta), beta_m(beta_m), beta_n(beta_n), alpha(alpha) {}
-//     ~hair() {}
-// 
-//     bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng) {
-//       return(true);
-//     }
-// 
-//     vec3 f(const ray& r_in, const hit_record& rec, const ray& scattered) const {
-//       return(sigma_a);
-//     }
-// 
-//     static vec3 SigmaAFromConcentration(Float ce, Float cp);
-//     static vec3 SigmaAFromReflectance(const vec3 &c, Float beta_n);
-//     
-//     vec3 sigma_a, color;
-//     Float eumelanin, pheomelanin, eta;
-//     Float beta_m, beta_n;
-//     Float alpha;
-// };
+static std::array<vec3, pMax + 1> Ap(Float cosThetaO, Float eta, Float h,
+                                     const vec3 &T) {
+  std::array<vec3, pMax + 1> ap;
+  // Compute $p=0$ attenuation at initial cylinder intersection
+  Float cosGammaO = SafeSqrt(1 - h * h);
+  Float cosTheta = cosThetaO * cosGammaO;
+  Float f = FrDielectric(cosTheta, 1.f, eta);
+  ap[0] = f;
+
+  // Compute $p=1$ attenuation term
+  ap[1] = Sqr(1 - f) * T;
+
+  // Compute attenuation terms up to $p=_pMax_$
+  for (int p = 2; p < pMax; ++p) {
+    ap[p] = ap[p - 1] * T * f;
+  }
+
+  // Compute attenuation term accounting for remaining orders of scattering
+  ap[pMax] = ap[pMax - 1] * f * T / (vec3(1.f) - T * f);
+  return ap;
+}
+
+inline Float Phi(int p, Float gammaO, Float gammaT) {
+  return 2 * p * gammaT - 2 * gammaO + p * M_PI;
+}
+
+inline Float Np(Float phi, int p, Float s, Float gammaO, Float gammaT) {
+  Float dphi = phi - Phi(p, gammaO, gammaT);
+  // Remap _dphi_ to $[-\pi,\pi]$
+  while (dphi > M_PI) dphi -= 2 * M_PI;
+  while (dphi < -M_PI) dphi += 2 * M_PI;
+  return TrimmedLogistic(dphi, s, -M_PI, M_PI);
+}
+
+static Float SampleTrimmedLogistic(Float u, Float s, Float a, Float b) {
+  Float k = LogisticCDF(b, s) - LogisticCDF(a, s);
+  Float x = -s * std::log(1 / (u * k + LogisticCDF(a, s)) - 1);
+  return(clamp(x, a, b));
+}
 
 #endif

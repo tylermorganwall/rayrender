@@ -390,5 +390,50 @@ inline vec3 HSVtoRGB(vec3 hsv) {
   }
 }
 
+// General Utility Functions
+inline Float Sqr(Float v) { return v * v; }
+template <int n>
+static Float Pow(Float v) {
+  static_assert(n > 0, "Power can't be negative");
+  Float n2 = Pow<n / 2>(v);
+  return n2 * n2 * Pow<n & 1>(v);
+}
+
+template <>
+inline Float Pow<1>(Float v) {
+  return(v);
+}
+
+template <>
+inline Float Pow<0>(Float v) {
+  return(1);
+}
+inline Float SafeASin(Float x) {
+  return(std::asin(clamp(x, -1, 1)));
+}
+
+inline Float SafeSqrt(Float x) {
+  return(std::sqrt(std::max(Float(0), x)));
+}
+
+
+inline vec3 Exp(vec3 a) {
+  return(vec3(std::exp(a.x()),std::exp(a.y()),std::exp(a.z())));
+}
+
+inline Float Logistic(Float x, Float s) {
+  x = std::abs(x);
+  return std::exp(-x / s) / (s * Sqr(1 + std::exp(-x / s)));
+}
+
+inline Float LogisticCDF(Float x, Float s) {
+  return 1 / (1 + std::exp(-x / s));
+}
+
+inline Float TrimmedLogistic(Float x, Float s, Float a, Float b) {
+  return Logistic(x, s) / (LogisticCDF(b, s) - LogisticCDF(a, s));
+}
+
+
 
 #endif
