@@ -18,6 +18,7 @@
 #include "ellipsoid.h"
 #include "cone.h"
 #include "curve.h"
+#include "csg.h"
 #include <Rcpp.h>
 using namespace Rcpp;
 
@@ -414,6 +415,8 @@ hitable *build_scene(IntegerVector& type,
       center = vec3(x(i), y(i), z(i));
     } else if(shape(i) == 14) {
       center = vec3(x(i), y(i), z(i));
+    } else if(shape(i) == 15) {
+      center = vec3(x(i), y(i), z(i));
     }
 
     //Generate objects
@@ -790,6 +793,24 @@ hitable *build_scene(IntegerVector& type,
         entry = new flip_normals(entry);
       }
       list[i] = entry;
+    } else if (shape(i) == 15) {
+      hitable *entry = new csg(vec3(0,0,0), radius(i), tex);
+      if(is_scaled) {
+        entry = new scale(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
+      }
+      entry = rotation_order(entry, temprotvec, order_rotation);
+      if(isgrouped(i)) {
+        entry = new translate(entry, center - gpivot);
+        if(is_group_scaled) {
+          entry = new scale(entry, vec3(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
+        }
+        entry = rotation_order(entry, temp_gangle, temp_gorder);
+        entry = new translate(entry, -center + gpivot );
+      }
+      if(isflipped(i)) {
+        entry = new flip_normals(entry);
+      }
+      list[i] = entry;
     }
   }
   hitable *full_scene = new bvh_node(list, n, shutteropen, shutterclose, rng);
@@ -893,6 +914,8 @@ hitable* build_imp_sample(IntegerVector& type,
   } else if(shape(i) == 13) {
     center = vec3(x(i), y(i), z(i));
   } else if(shape(i) == 14) {
+    center = vec3(x(i), y(i), z(i));
+  } else if(shape(i) == 15) {
     center = vec3(x(i), y(i), z(i));
   }
 
@@ -1094,7 +1117,7 @@ hitable* build_imp_sample(IntegerVector& type,
     }
     entry = new translate(entry, center + gtrans + vel * shutteropen);
     return(entry);
-  } else {
+  } else if (shape(i) == 14) {
     int pl = prop_len;
     vec3 p[4];
     p[0] = vec3(tempvector(pl+1),tempvector(pl+2),tempvector(pl+3));
@@ -1107,6 +1130,21 @@ hitable* build_imp_sample(IntegerVector& type,
       entry = new scale(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
     }
     entry = rotation_order(entry, temprotvec, order_rotation);
+    if(isgrouped(i)) {
+      entry = new translate(entry, center - gpivot);
+      if(is_group_scaled) {
+        entry = new scale(entry, vec3(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
+      }
+      entry = rotation_order(entry, temp_gangle, temp_gorder);
+      entry = new translate(entry, -center + gpivot );
+    }
+    entry = new translate(entry, center + gtrans + vel * shutteropen);
+    return(entry);
+  } else {
+    hitable *entry = new csg(vec3(0,0,0), radius(i), 0);
+    if(is_scaled) {
+      entry = new scale(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
+    }
     if(isgrouped(i)) {
       entry = new translate(entry, center - gpivot);
       if(is_group_scaled) {
