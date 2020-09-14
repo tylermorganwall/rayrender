@@ -223,7 +223,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
   shapevec = unlist(lapply(tolower(scene$shape),switch,
                           "sphere" = 1,"xy_rect" = 2, "xz_rect" = 3,"yz_rect" = 4,"box" = 5, "triangle" = 6, 
                           "obj" = 7, "objcolor" = 8, "disk" = 9, "cylinder" = 10, "ellipsoid" = 11,
-                          "objvertexcolor" = 12, "cone" = 13, "curve" = 14, "csg_sphere" = 15))
+                          "objvertexcolor" = 12, "cone" = 13, "curve" = 14, "csg_object" = 15))
   typevec = unlist(lapply(tolower(scene$type),switch,
                           "diffuse" = 1,"metal" = 2,"dielectric" = 3, 
                           "oren-nayar" = 4, "light" = 5, "microfacet" = 6, 
@@ -444,10 +444,16 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
   if(!parallel) {
     numbercores = 1
   }
-
-  debug_channel = unlist(lapply(tolower(debug_channel),switch,
-                          "none" = 0,"depth" = 1,"normals" = 2, "uv" = 3, "bvh" = 4,
-                          "variance" = 5, "normal" = 2, "dpdu" = 6, "dpdv" = 7, "color" = 8, 0))
+  if(!is.numeric(debug_channel)) {
+    debug_channel = unlist(lapply(tolower(debug_channel),switch,
+                            "none" = 0,"depth" = 1,"normals" = 2, "uv" = 3, "bvh" = 4,
+                            "variance" = 5, "normal" = 2, "dpdu" = 6, "dpdv" = 7, "color" = 8, 
+                            0))
+    light_direction = c(0,1,0)
+  } else {
+    light_direction = debug_channel
+    debug_channel = 9
+  }
   if(debug_channel == 4) {
     message("rayrender must be compiled with option DEBUGBVH for this debug option to work")
   }
@@ -487,6 +493,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
   camera_info$roulette_active_depth = roulette_active_depth
   camera_info$sample_method = sample_method
   camera_info$stratified_dim = strat_dim
+  camera_info$light_direction = light_direction
   
   assertthat::assert_that(max_depth > 0)
   assertthat::assert_that(roulette_active_depth > 0)
@@ -520,6 +527,11 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
     stop("min_variance cannot be less than zero")
   }
   
+  #CSG handler
+  csg_list = scene$csg_object
+  csg_info = list()
+  csg_info$csg = csg_list
+  
   rgb_mat = render_scene_rcpp(camera_info = camera_info, ambient_light = ambient_light,
                              type = typevec, shape = shapevec, radius = rvec, 
                              position_list = position_list,
@@ -545,7 +557,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
                              verbose = verbose, debug_channel = debug_channel,
                              shared_id_mat=material_id, is_shared_mat=material_id_bool, 
                              min_variance = min_variance, min_adaptive_size = min_adaptive_size, 
-                             glossyinfo = glossyinfo, image_repeat = image_repeat) 
+                             glossyinfo = glossyinfo, image_repeat = image_repeat, csg_info = csg_info) 
   full_array = array(0,c(ncol(rgb_mat$r),nrow(rgb_mat$r),3))
   full_array[,,1] = flipud(t(rgb_mat$r))
   full_array[,,2] = flipud(t(rgb_mat$g))
@@ -554,7 +566,9 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
     returnmat = full_array[,,1]
     returnmat[is.infinite(returnmat)] = NA
     if(is.null(filename)) {
-      plot_map((full_array-min(full_array,na.rm=TRUE))/(max(full_array,na.rm=TRUE) - min(full_array,na.rm=TRUE)))
+      if(!return_raw_array) {
+        plot_map((full_array-min(full_array,na.rm=TRUE))/(max(full_array,na.rm=TRUE) - min(full_array,na.rm=TRUE)))
+      }
       return(invisible(full_array))
     } else {
       save_png((full_array-min(full_array,na.rm=TRUE))/(max(full_array,na.rm=TRUE) - min(full_array,na.rm=TRUE)),
@@ -563,10 +577,12 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
     }
   } else if (debug_channel %in% c(2,3,4,5)) {
     if(is.null(filename)) {
-      if(debug_channel == 4) {
-        plot_map(full_array/(max(full_array,na.rm=TRUE)))
-      } else {
-        plot_map(full_array)
+      if(!return_raw_array) {
+        if(debug_channel == 4) {
+          plot_map(full_array/(max(full_array,na.rm=TRUE)))
+        } else {
+          plot_map(full_array)
+        }
       }
       return(invisible(full_array))
     } else {
@@ -616,7 +632,9 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
     array_from_mat[array_from_mat < 0] = 0
   }
   if(is.null(filename)) {
-    plot_map(array_from_mat)
+    if(!return_raw_array) {
+      plot_map(array_from_mat)
+    }
   } else {
     save_png(array_from_mat,filename)
   }

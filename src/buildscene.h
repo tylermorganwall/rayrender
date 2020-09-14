@@ -72,6 +72,7 @@ hitable *build_scene(IntegerVector& type,
                      List& scale_list, NumericVector& sigma,  List &glossyinfo,
                      IntegerVector& shared_id_mat, LogicalVector& is_shared_mat,
                      std::vector<material* >* shared_materials, List& image_repeat_list,
+                     List& csg_info,
                      random_gen& rng) {
   hitable **list = new hitable*[n + 1]; //change to vector
   LogicalVector isgradient = gradient_info["isgradient"];
@@ -84,6 +85,8 @@ hitable *build_scene(IntegerVector& type,
   NumericVector x = position_list["xvec"];
   NumericVector y = position_list["yvec"];
   NumericVector z = position_list["zvec"];
+  
+  List csg_list = csg_info["csg"];
   
   NumericVector tempvector;
   NumericVector tempchecker;
@@ -794,7 +797,9 @@ hitable *build_scene(IntegerVector& type,
       }
       list[i] = entry;
     } else if (shape(i) == 15) {
-      hitable *entry = new csg(vec3(0,0,0), radius(i), tex);
+      List temp_csg = csg_list(i);
+      std::shared_ptr<ImplicitShape> shapes = parse_csg(temp_csg);
+      hitable *entry = new csg(tex, shapes);
       if(is_scaled) {
         entry = new scale(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
       }
@@ -807,6 +812,7 @@ hitable *build_scene(IntegerVector& type,
         entry = rotation_order(entry, temp_gangle, temp_gorder);
         entry = new translate(entry, -center + gpivot );
       }
+      entry = new translate(entry, center + gtrans + vel * shutteropen);
       if(isflipped(i)) {
         entry = new flip_normals(entry);
       }
@@ -1141,7 +1147,8 @@ hitable* build_imp_sample(IntegerVector& type,
     entry = new translate(entry, center + gtrans + vel * shutteropen);
     return(entry);
   } else {
-    hitable *entry = new csg(vec3(0,0,0), radius(i), 0);
+    std::shared_ptr<ImplicitShape> shapes;
+    hitable *entry = new csg(nullptr, shapes);
     if(is_scaled) {
       entry = new scale(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
     }

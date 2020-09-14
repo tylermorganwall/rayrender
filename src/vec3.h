@@ -184,7 +184,7 @@ inline vec3 Permute(const vec3 &v, int x, int y, int z) {
 }
 
 inline vec3 Abs(const vec3 &v) {
-  return(vec3(v.x(), v.y(), v.z()));
+  return(vec3(std::fabs(v.x()), std::fabs(v.y()), std::fabs(v.z())));
 }
 
 #endif
