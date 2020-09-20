@@ -15,8 +15,52 @@ csg_onion(object, thickness = 0.1)
 List describing the triangle in the scene.
 }
 \description{
-CSG Onion
+Note: This operation has no overt effect on the external appearance of an object--it carves
+regions on the interior. Thus, you will only see an effect with a transparent material or when
+you carve into the object.
 }
 \examples{
-#Generate a sphere in the cornell box.
+\donttest{
+#Cut and onion a sphere:
+generate_ground(material=diffuse(checkercolor="grey20")) \%>\%
+  add_object(csg_object(csg_combine(
+    csg_onion(csg_sphere(z=2,x=2,radius=1), thickness = 0.2),
+    csg_box(y=1,width=c(10,2,10)), operation = "subtract"),
+    material=glossy(color="red"))) \%>\%
+    add_object(csg_object(csg_combine(
+      csg_onion(csg_sphere(radius=1), thickness = 0.4),
+      csg_box(y=1,width=c(10,2,10)), operation = "subtract"),
+      material=glossy(color="purple"))) \%>\%
+    add_object(csg_object(csg_combine(
+      csg_onion(csg_sphere(z=-2.5,x=-2.5,radius=1), thickness = 0.6),
+      csg_box(y=1,width=c(10,2,10)), operation = "subtract"),
+      material=glossy(color="green"))) \%>\%
+ add_object(sphere(y=5,x=5,radius=2,material=light())) \%>\% 
+ render_scene(clamp_value=10,sample_method="stratified",lookat=c(0,-0.5,0),
+              lookfrom=c(3,5,10),fov=35)
+
+#Multiple onion layers:
+generate_ground(material=diffuse(checkercolor="grey20")) \%>\%
+  add_object(csg_object(csg_combine(
+    csg_onion(csg_onion(csg_onion(csg_sphere(radius=1), 0.4), 0.2),0.1),
+    csg_box(y=1,width=c(10,2,10)), operation = "subtract"),
+    material=glossy(color="purple"))) \%>\%
+  add_object(sphere(y=5,x=5,radius=2,material=light())) \%>\% 
+  render_scene(clamp_value=10,sample_method="stratified",lookat=c(0,-0.5,0),
+               lookfrom=c(3,5,10),fov=20)
+  
+#Onion with dielectric sphere to make a bubble:
+generate_cornell() \%>\%
+  add_object(csg_object(
+    csg_onion(csg_sphere(x=555/2,y=555/2,z=555/2, radius=150), 5),
+    material=dielectric(attenuation=c(1,1,0.3)/100))) \%>\%
+  render_scene(clamp_value=10,sample_method="stratified")
+  
+#Multiple onion operations to make a bubble within a bubble:
+generate_cornell() \%>\%
+  add_object(csg_object(
+    csg_onion(csg_onion(csg_sphere(x=555/2,y=555/2,z=555/2, radius=150), 10),5),
+    material=dielectric(attenuation=c(1,1,0.3)/100))) \%>\%
+  render_scene(clamp_value=10,sample_method="stratified")
+}
 }

@@ -15,14 +15,41 @@ csg_torus(x = 0, y = 0, z = 0, radius = 1, minor_radius = 0.5)
 
 \item{radius}{Default `1`. Torus radius.}
 
-\item{cross_radius}{Default `0.5`. Cross section radius of the torus.}
+\item{minor_radius}{Default `0.5`. Cross section radius of the torus.}
 }
 \value{
-List describing the box in the scene.
+List describing the torus in the scene.
 }
 \description{
 CSG Torus
 }
 \examples{
-#Generate a sphere in the cornell box.
+\donttest{
+#Generate a torus:
+generate_ground(material=diffuse(checkercolor="grey20")) \%>\% 
+  add_object(csg_object(csg_torus(), material=glossy(color="dodgerblue4"))) \%>\%
+  add_object(sphere(y=5,x=5,radius=3,material=light(intensity=10))) \%>\%  
+  render_scene(clamp_value=10,lookfrom=c(0,5,10),fov=30,sample_method="stratified")
+  
+#Change the radius of the torus:
+generate_ground(material=diffuse(checkercolor="grey20")) \%>\% 
+  add_object(csg_object(csg_torus(radius=2), material=glossy(color="dodgerblue4"))) \%>\%
+  add_object(sphere(y=5,x=5,radius=3,material=light(intensity=10))) \%>\%  
+  render_scene(clamp_value=10,lookfrom=c(0,5,10),fov=30,sample_method="stratified")
+
+#Change the minor radius of the torus:
+generate_ground(material=diffuse(checkercolor="grey20")) \%>\% 
+  add_object(csg_object(csg_torus(radius=2, minor_radius=0.25), 
+                        material=glossy(color="dodgerblue4"))) \%>\%
+  add_object(sphere(y=5,x=5,radius=3,material=light(intensity=10))) \%>\%  
+  render_scene(clamp_value=10,lookfrom=c(0,5,10),fov=30,sample_method="stratified")
+  
+#Generate a rotated torus in the Cornell Box
+generate_cornell() \%>\% 
+  add_object(csg_object(csg_rotate(
+    csg_torus(x=555/2,y=555/2,z=555/2,radius=100, minor_radius=50), 
+    pivot_point = c(555/2,555/2,555/2), up =c(0,1,-1)), 
+                        material=glossy(color="dodgerblue4"))) \%>\%
+  render_scene(clamp_value=10,sample_method="stratified")
+}
 }

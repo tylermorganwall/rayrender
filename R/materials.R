@@ -655,6 +655,9 @@ microfacet = function(color="white", roughness = 0.0001,
 #' algorithm, in most cases. If the object is particularly important in contributing to the light paths
 #' in the image (e.g. light sources, refracting glass ball with caustics, metal objects concentrating light),
 #' this will help with the convergence of the image.
+#' @param image_texture Default `NA`. A 3-layer RGB array or filename to be used as the texture on the surface of the object.
+#' @param image_repeat Default `1`. Number of times to repeat the image across the surface.
+#' `u` and `v` repeat amount can be set independently if user passes in a length-2 vector.
 #' @param spotlight_focus Default `NA`, no spotlight. Otherwise, a length-3 numeric vector specifying
 #' the x/y/z coordinates that the spotlight should be focused on. Only works for spheres and rectangles.
 #' @param spotlight_width Default `30`. Angular width of the spotlight.
@@ -682,8 +685,16 @@ microfacet = function(color="white", roughness = 0.0001,
 #' render_scene(scene, samples=500, parallel=TRUE, clamp_value=10)
 #' }
 light = function(color = "#ffffff", intensity = 10, importance_sample = TRUE, 
+                 image_texture = NA, image_repeat = 1, 
                  spotlight_focus = NA, spotlight_width = 30, spotlight_start_falloff = 15) {
   info = convert_color(color)
+  if(!is.array(image_texture) && !is.na(image_texture) && !is.character(image_texture)) {
+    image_texture = NA
+    warning("Texture not in recognized format (array, matrix, or filename), ignoring.")
+  }
+  if(length(image_repeat) == 1) {
+    image_repeat = c(image_repeat,image_repeat)
+  }
   if(all(!is.na(spotlight_focus))) {
     stopifnot(length(spotlight_focus) == 3)
     spotlight_width = min(c(spotlight_width,180))
@@ -695,7 +706,7 @@ light = function(color = "#ffffff", intensity = 10, importance_sample = TRUE,
                         world_gradient = FALSE,gradient_point_info = list(NA),
                         gradient_type = NA,
                         noise=0, noisephase = 0, noiseintensity = 0, noisecolor = list(c(0,0,0)),
-                        image = list(NA), image_repeat = list(c(1,1)),
+                        image = list(image_texture), image_repeat = list(image_repeat),
                         alphaimage = list(NA), lightintensity = intensity,
                         fog=FALSE, fogdensity=0.01, implicit_sample = importance_sample, 
                         sigma = 0, glossyinfo = list(NA), bump_texture = list(NA),
@@ -707,7 +718,7 @@ light = function(color = "#ffffff", intensity = 10, importance_sample = TRUE,
                         world_gradient = FALSE,gradient_point_info = list(NA),
                         gradient_type = NA,
                         noise=0, noisephase = 0, noiseintensity = 0, noisecolor = list(c(0,0,0)),
-                        image = list(NA), image_repeat = list(c(1,1)),
+                        image = list(image_texture), image_repeat = list(image_repeat),
                         alphaimage = list(NA), lightintensity = intensity,
                         fog=FALSE, fogdensity=0.01, implicit_sample = importance_sample, 
                         sigma = 0, glossyinfo = list(NA), bump_texture = list(NA),

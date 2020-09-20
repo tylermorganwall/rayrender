@@ -4,16 +4,18 @@
 \alias{csg_elongate}
 \title{CSG Elongate}
 \usage{
-csg_elongate(object, x = 0, y = 0, z = 0, robust = TRUE)
+csg_elongate(object, x = 0, y = 0, z = 0, elongate = c(0, 0, 0), robust = TRUE)
 }
 \arguments{
 \item{object}{CSG object.}
 
-\item{x}{Default `0`. x-elongation.}
+\item{x}{Default `0`. Center of x-elongation.}
 
-\item{y}{Default `0`. y-elongation.}
+\item{y}{Default `0`. Center of y-elongation.}
 
-\item{z}{Default `0`. z-elongation.}
+\item{z}{Default `0`. Center of z-elongation.}
+
+\item{elongate}{Default `c(0,0,0)` (no elongation). Elongation amount.}
 
 \item{robust}{Default `TRUE`. `FALSE` switches to a faster (but less robust in 2D) method.}
 }
@@ -21,8 +23,66 @@ csg_elongate(object, x = 0, y = 0, z = 0, robust = TRUE)
 List describing the triangle in the scene.
 }
 \description{
-CSG Elongate
+This operation elongates an existing CSG object in a direction.
 }
 \examples{
-#Generate a sphere in the cornell box.
+\donttest{
+#Elongate a sphere to create a capsule in 1D or a rounded rectangle in 2D:
+generate_ground(material=diffuse(checkercolor="grey20",color="dodgerblue4")) \%>\% 
+ add_object(csg_object(csg_sphere(z=-3,x=-3),
+                        material=glossy(color="purple"))) \%>\% 
+ add_object(csg_object(csg_elongate(csg_sphere(z=-3,x=3),x=3,z=-3, elongate = c(0.8,0,0)),
+                        material=glossy(color="red"))) \%>\% 
+ add_object(csg_object(csg_elongate(csg_sphere(z=2),z=2, elongate = c(0.8,0,0.8)),
+                        material=glossy(color="white"))) \%>\% 
+ add_object(sphere(y=10,radius=3,material=light(intensity=8))) \%>\% 
+ render_scene(clamp_value=10,sample_method="stratified",fov=40,lookfrom=c(0,10,10))
+  
+#Elongate a torus:
+generate_ground(material=diffuse(checkercolor="grey20",color="dodgerblue4")) \%>\% 
+ add_object(csg_object(csg_torus(z=-3,x=-3),
+                        material=glossy(color="purple"))) \%>\% 
+ add_object(csg_object(csg_elongate(csg_torus(z=-3,x=3),x=3,z=-3, elongate = c(0.8,0,0)),
+                        material=glossy(color="red"))) \%>\% 
+ add_object(csg_object(csg_elongate(csg_torus(z=2),z=2, elongate = c(0.8,0,0.8)),
+                        material=glossy(color="white"))) \%>\% 
+ add_object(sphere(y=10,radius=3,material=light(intensity=8))) \%>\% 
+ render_scene(clamp_value=10,sample_method="stratified",fov=40,lookfrom=c(0,10,10))
+ 
+#Elongate a cylinder:
+generate_ground(material=diffuse(checkercolor="grey20",color="dodgerblue4")) \%>\% 
+ add_object(csg_object(csg_cylinder(start=c(-3,0,-3), end = c(-3,1,-3)),
+                        material=glossy(color="purple"))) \%>\% 
+ add_object(csg_object(csg_elongate(csg_cylinder(start=c(3,0,-3), end = c(3,1,-3)), x=3, z=-3, 
+                       elongate = c(0.8,0,0)),
+                       material=glossy(color="red"))) \%>\% 
+ add_object(csg_object(csg_elongate(csg_cylinder(start=c(0,0,3), end = c(0,1,3)), z=3, 
+                       elongate = c(0.8,0,0.8)),
+                       material=glossy(color="white"))) \%>\% 
+ add_object(sphere(y=10,radius=3,material=light(intensity=8))) \%>\% 
+ render_scene(clamp_value=10,sample_method="stratified",fov=40,lookfrom=c(0,10,10))
+ 
+#Elongate a pyramid:
+generate_ground(material=diffuse(checkercolor="grey20",color="dodgerblue4")) \%>\% 
+ add_object(csg_object(csg_pyramid(z=-3,x=-3),
+                        material=glossy(color="purple"))) \%>\% 
+ add_object(csg_object(csg_elongate(csg_pyramid(z=-3,x=3),x=3,z=-3, elongate = c(0.8,0,0)),
+                        material=glossy(color="red"))) \%>\% 
+ add_object(csg_object(csg_elongate(csg_pyramid(z=2),z=2, elongate = c(0.8,0,0.8)),
+                        material=glossy(color="white"))) \%>\% 
+ add_object(sphere(y=10,radius=3,material=light(intensity=8))) \%>\% 
+ render_scene(clamp_value=10,sample_method="stratified",fov=40,lookfrom=c(0,10,10))
+
+#Change the elongation point to start the elongation on the side of the pyramid:
+generate_ground(material=diffuse(checkercolor="grey20",color="dodgerblue4")) \%>\% 
+ add_object(csg_object(csg_pyramid(z=-3,x=-3),
+                        material=glossy(color="purple"))) \%>\% 
+ add_object(csg_object(csg_elongate(csg_pyramid(z=-3,x=3),x=2.75,z=-2.75, elongate = c(0.8,0,0)),
+                        material=glossy(color="red"))) \%>\% 
+ add_object(csg_object(csg_elongate(csg_pyramid(z=2),z=2.25, elongate = c(0.8,0,0.8)),
+                        material=glossy(color="white"))) \%>\% 
+ add_object(sphere(y=10,radius=3,material=light(intensity=8))) \%>\% 
+ render_scene(clamp_value=10,sample_method="stratified",fov=40,
+              lookfrom=c(5,5,10),lookat=c(0,0,-1.5))
+}
 }

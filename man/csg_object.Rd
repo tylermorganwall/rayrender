@@ -19,13 +19,15 @@ csg_object(
 )
 }
 \arguments{
-\item{x}{Default `0`. x-coordinate of the center of the sphere.}
+\item{object}{Object created with CSG interface.}
 
-\item{y}{Default `0`. y-coordinate of the center of the sphere.}
+\item{x}{Default `0`. x-offset of the center of the object.}
 
-\item{z}{Default `0`. z-coordinate of the center of the sphere.}
+\item{y}{Default `0`. y-offset of the center of the object.}
 
-\item{radius}{Default `1`. Radius of the sphere.}
+\item{z}{Default `0`. z-offset of the center of the object.}
+
+\item{radius}{Default `1`. Radius of the sphere..}
 
 \item{material}{Default  \code{\link{diffuse}}. The material, called from one of the material 
 functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}.}
@@ -54,5 +56,46 @@ Note: For dielectric objects, any other objects not included in the CSG object a
 nested inside will be ignored.
 }
 \examples{
-#Generate a sphere in the cornell box.
+\donttest{
+#We will combine these three objects:
+generate_ground(material=diffuse(checkercolor="grey20")) \%>\%
+  add_object(csg_object(csg_box(), material=glossy(color="red"))) \%>\% 
+  add_object(csg_object(csg_sphere(radius=0.707), material=glossy(color="green"))) \%>\% 
+  add_object(csg_object(csg_group(list(csg_cylinder(start=c(-1,0,0), end=c(1,0,0), radius=0.4),
+                   csg_cylinder(start=c(0,-1,0), end=c(0,1,0), radius=0.4),
+                   csg_cylinder(start=c(0,0,-1), end=c(0,0,1), radius=0.4))),
+                   material=glossy(color="blue"))) \%>\% 
+  add_object(sphere(y=5,x=3,radius=1,material=light(intensity=30))) \%>\%
+  render_scene(clamp_value=10, fov=15,lookfrom=c(5,5,10))
+
+#Standard CSG sphere + box - crossed cylinder combination:
+generate_ground(material=diffuse(checkercolor="grey20")) \%>\%
+  add_object(csg_object(csg_combine(
+    csg_combine(
+      csg_box(),
+      csg_sphere(radius=0.707),
+      operation="intersection"),
+    csg_group(list(csg_cylinder(start=c(-1,0,0), end=c(1,0,0), radius=0.4),
+                   csg_cylinder(start=c(0,-1,0), end=c(0,1,0), radius=0.4),
+                   csg_cylinder(start=c(0,0,-1), end=c(0,0,1), radius=0.4))),
+    operation="subtract"),
+    material=glossy(color="red"))) \%>\%
+  add_object(sphere(y=5,x=3,radius=1,material=light(intensity=30))) \%>\%
+  render_scene(clamp_value=10, fov=10,lookfrom=c(5,5,10))
+  
+#Blend them all instead:
+generate_ground(material=diffuse(checkercolor="grey20")) \%>\%
+  add_object(csg_object(csg_combine(
+    csg_combine(
+      csg_box(),
+      csg_sphere(radius=0.707),
+      operation="blend"),
+    csg_group(list(csg_cylinder(start=c(-1,0,0), end=c(1,0,0), radius=0.4),
+                   csg_cylinder(start=c(0,-1,0), end=c(0,1,0), radius=0.4),
+                   csg_cylinder(start=c(0,0,-1), end=c(0,0,1), radius=0.4))),
+    operation="blend"),
+    material=glossy(color="purple"))) \%>\%
+  add_object(sphere(y=5,x=3,radius=1,material=light(intensity=30))) \%>\%
+  render_scene(clamp_value=10, fov=15,lookfrom=c(5,5,10))
+}
 }

@@ -7,22 +7,45 @@
 csg_ellipsoid(x = 0, y = 0, z = 0, axes = c(0.5, 1, 0.5))
 }
 \arguments{
-\item{x}{Default `0`. x-coordinate on the torus.}
+\item{x}{Default `0`. x-coordinate on the ellipsoid.}
 
-\item{y}{Default `0`. y-coordinate on the torus.}
+\item{y}{Default `0`. y-coordinate on the ellipsoid.}
 
-\item{z}{Default `0`. z-coordinate on the torus.}
+\item{z}{Default `0`. z-coordinate on the ellipsoid.}
 
 \item{axes}{Default `c(0.5,1,0.5)`. Ellipsoid principle axes.}
-
-\item{cross_radius}{Default `0.5`. Cross section radius of the torus.}
 }
 \value{
-List describing the box in the scene.
+List describing the ellipsoid in the scene.
 }
 \description{
 CSG Ellipsoid
 }
 \examples{
-#Generate a sphere in the cornell box.
+\donttest{
+#Generate a basic ellipsoid:
+generate_ground(material=diffuse(checkercolor="grey20")) \%>\% 
+  add_object(csg_object(csg_ellipsoid(),material=glossy(color="red"))) \%>\% 
+  render_scene(clamp_value=10,sample_method="stratified",fov=20)
+  
+#Three different ellipsoids:
+generate_ground(material=diffuse(checkercolor="grey20")) \%>\% 
+ add_object(csg_object(csg_group(list(
+   csg_ellipsoid(x=-1.2, axes = c(0.2,0.5,0.5)),
+   csg_ellipsoid(x=0, axes = c(0.5,0.2,0.5)),
+   csg_ellipsoid(x=1.2, axes = c(0.5,0.5,0.2)))),
+   material=glossy(color="red"))) \%>\% 
+ render_scene(clamp_value=10,sample_method="stratified",fov=20,lookfrom=c(0,5,10))
+ 
+#Generate a glass ellipsoid:
+generate_ground(material=diffuse(checkercolor="grey20")) \%>\% 
+  add_object(csg_object(csg_ellipsoid(),material=dielectric(attenuation = c(1,1,0.3)))) \%>\% 
+  render_scene(clamp_value=10,sample_method="stratified",fov=20)
+  
+#Generate a glass ellipsoid in a Cornell box:
+generate_cornell() \%>\% 
+  add_object(csg_object(csg_ellipsoid(x=555/2,y=555/2,z=555/2,axes=c(100,150,200)),
+    material=dielectric(attenuation = c(1,0.3,1)/200))) \%>\% 
+  render_scene(clamp_value=10,sample_method="stratified")
+}
 }

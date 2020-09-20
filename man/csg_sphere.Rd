@@ -22,5 +22,46 @@ List describing the sphere in the scene.
 CSG Sphere
 }
 \examples{
-#Generate a sphere in the cornell box.
+\donttest{
+#Generate a simple sphere:
+generate_ground() \%>\% 
+  add_object(csg_object(csg_sphere(),
+                        material=glossy(color="purple"))) \%>\% 
+  render_scene(clamp_value=10,sample_method="stratified")
+
+#Generate a bigger sphere in the cornell box.
+generate_cornell() \%>\% 
+  add_object(csg_object(csg_sphere(x=555/2,y=555/2,z=555/2,radius=100),
+                        material=glossy(checkercolor="purple", checkerperiod=100))) \%>\% 
+  render_scene(clamp_value=10,sample_method="stratified")
+  
+#Combine two spheres of different sizes
+generate_cornell() \%>\% 
+  add_object(csg_object(
+    csg_combine(
+      csg_sphere(x=555/2,y=555/2-50,z=555/2,radius=100),
+      csg_sphere(x=555/2,y=555/2+50,z=555/2,radius=80)),
+    material=glossy(color="purple"))) \%>\% 
+  render_scene(clamp_value=10,sample_method="stratified")
+
+#Subtract two spheres to create an indented region
+generate_cornell() \%>\% 
+  add_object(csg_object(
+    csg_combine(
+      csg_sphere(x=555/2,y=555/2-50,z=555/2,radius=100),
+      csg_sphere(x=555/2+30,y=555/2+20,z=555/2-90,radius=40),
+      operation="subtract"),
+    material=glossy(color="grey20"))) \%>\% 
+  render_scene(clamp_value=10,sample_method="stratified")
+  
+#Use csg_combine(operation="blend") to melt the two together
+generate_cornell() \%>\% 
+  add_object(csg_object(
+    csg_combine(
+      csg_sphere(x=555/2,y=555/2-50,z=555/2,radius=100),
+      csg_sphere(x=555/2,y=555/2+50,z=555/2,radius=80),
+      operation="blend", radius=20),
+    material=glossy(color="purple"))) \%>\% 
+  render_scene(clamp_value=10,sample_method="stratified")
+}
 }

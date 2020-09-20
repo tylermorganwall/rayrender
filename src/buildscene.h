@@ -284,7 +284,14 @@ hitable *build_scene(IntegerVector& type,
           tex = new orennayar(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))), sigma(i)); //marked as small definite loss in valgrind memcheck
         }
       } else if (type(i) == 5) {
-        tex = new diffuse_light(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))*lightintensity(i)) );
+        texture* light_tex;
+        if(isimage(i)) {
+          light_tex = new image_texture(textures[i],nvec[i][0],nvec[i][1],nvec[i][2], 
+                                        temp_repeat[0], temp_repeat[1], 1.0);
+        } else {
+          light_tex = new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2)));
+        }
+        tex = new diffuse_light(light_tex, lightintensity(i));
       } else if (type(i) == 6) {
         MicrofacetDistribution *dist;
         if(temp_glossy(0) == 1) {

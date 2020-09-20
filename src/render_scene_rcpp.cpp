@@ -430,7 +430,7 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
   if(hasbackground) {
     background_texture_data = stbi_loadf(background[0], &nx1, &ny1, &nn1, 0);
     background_texture = new image_texture(background_texture_data, nx1, ny1, nn1, 1, 1, intensity_env);
-    background_material = new diffuse_light(background_texture);
+    background_material = new diffuse_light(background_texture, 1.0);
     background_sphere = new InfiniteAreaLight(nx1, ny1, world_radius*2, world_center,
                                               background_texture, background_material);
     if(rotate_env != 0) {
@@ -443,13 +443,13 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
       backgroundlow = vec3(FLT_MIN,FLT_MIN,FLT_MIN);
     }
     background_texture = new gradient_texture(backgroundlow, backgroundhigh, false, false);
-    background_material = new diffuse_light(background_texture);
+    background_material = new diffuse_light(background_texture, 1.0);
     background_sphere = new InfiniteAreaLight(100, 100, world_radius*2, world_center,
                                               background_texture, background_material);
   } else {
     //Minimum intensity FLT_MIN so the CDF isn't NAN
     background_texture = new constant_texture(vec3(FLT_MIN,FLT_MIN,FLT_MIN));
-    background_material = new diffuse_light(background_texture);
+    background_material = new diffuse_light(background_texture, 1.0);
     background_sphere = new InfiniteAreaLight(100, 100, world_radius*2, world_center,
                                               background_texture, background_material);
   }

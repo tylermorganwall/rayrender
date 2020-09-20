@@ -122,7 +122,7 @@
 #' image_array = aperm(png::readPNG(tempfileplot),c(2,1,3))
 #' scene = scene %>%
 #'   add_object(xy_rect(x=0,y=1.1,z=0,xwidth=2,angle = c(0,180,0),
-#'                      material = diffuse(image = image_array)))
+#'                      material = diffuse(image_texture = image_array)))
 #' render_scene(scene,fov=20,parallel=TRUE,samples=500)
 #' }
 #' 

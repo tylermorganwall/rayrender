@@ -8,6 +8,8 @@ light(
   color = "#ffffff",
   intensity = 10,
   importance_sample = TRUE,
+  image_texture = NA,
+  image_repeat = 1,
   spotlight_focus = NA,
   spotlight_width = 30,
   spotlight_start_falloff = 15
@@ -24,6 +26,11 @@ in `color` (ignoring other properties). Higher values will produce a brighter li
 algorithm, in most cases. If the object is particularly important in contributing to the light paths
 in the image (e.g. light sources, refracting glass ball with caustics, metal objects concentrating light),
 this will help with the convergence of the image.}
+
+\item{image_texture}{Default `NA`. A 3-layer RGB array or filename to be used as the texture on the surface of the object.}
+
+\item{image_repeat}{Default `1`. Number of times to repeat the image across the surface.
+`u` and `v` repeat amount can be set independently if user passes in a length-2 vector.}
 
 \item{spotlight_focus}{Default `NA`, no spotlight. Otherwise, a length-3 numeric vector specifying
 the x/y/z coordinates that the spotlight should be focused on. Only works for spheres and rectangles.}

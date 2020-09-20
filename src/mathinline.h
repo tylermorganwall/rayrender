@@ -22,6 +22,11 @@ template <typename T> int sgn(T val) {
   return (T(0) < val) - (val < T(0));
 }
 
+inline vec3 sgn(vec3 v) {
+  return(vec3(sgn(v.x()),sgn(v.y()),sgn(v.z())));
+}
+
+
 inline vec3 rand_to_unit(vec2 u) {
   Float a = 2.0*u.x() - 1.0; 
   Float b = 2.0*u.y() - 1.0;
@@ -109,10 +114,10 @@ inline Float clamp(const Float& c, Float clamplow, Float clamphigh) {
 }
 
 inline vec3 clamp(vec3 input, vec3 low, vec3 high) {
-  input.e[0] = clamp(input.x(), low.x(), high.x());
-  input.e[1] = clamp(input.y(), low.y(), high.y());
-  input.e[2] = clamp(input.z(), low.z(), high.z());
-  return(input);
+  vec3 final(clamp(input.x(), low.x(), high.x()),
+             clamp(input.y(), low.y(), high.y()),
+             clamp(input.z(), low.z(), high.z()));
+  return(final);
 }
 
 inline Float CosTheta(const vec3 &w) { return w.z(); }

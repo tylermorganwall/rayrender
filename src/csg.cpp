@@ -1,41 +1,43 @@
 #include "csg.h"
 
 bool csg::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
-  constexpr Float threshold = 10e-6; 
+  Float threshold = 10e-6;
   Float delta = 10e-5 * max_dist/100; 
   Float t = 0; 
-  uint32_t numSteps = 0; 
   bool first = true;
   vec3 dir = unit_vector(r.direction());
+  Float max_t = t_max * r.direction().length();
   
-  while (t < max_dist) {
+  while (t < max_t) { 
     Float minDistance = INFINITY; 
     vec3 from = r.origin() + t * dir; 
     
     //Need distance from interior edge to support dielectrics
     float d =  abs(shapes->getDistance(from)); 
     
-    //Offset first distance if less than threshold
-    if(first) {
+    //Need to deal with refraction, often initial distance is too close to surface, so we offset
+    if(first &&  t < threshold) {
+      t += 100 * threshold; //Hard coded threshold, not great
       first = false;
-      d = 0.001;
-    }
+      continue;
+    } 
+    
     if (d < minDistance) {
       minDistance = d;
     }
     if (minDistance <= threshold * t) { 
       Float tval = t / r.direction().length();
       if(tval > t_min && tval < t_max) {
-        rec.p = r.origin() + t * dir;
         rec.normal = vec3( 
-          shapes->getDistance(rec.p + vec3(delta, 0, 0)) - shapes->getDistance(rec.p + vec3(-delta, 0, 0)), 
-          shapes->getDistance(rec.p + vec3(0, delta, 0)) - shapes->getDistance(rec.p + vec3(0, -delta, 0)), 
-          shapes->getDistance(rec.p + vec3(0, 0, delta)) - shapes->getDistance(rec.p + vec3(0, 0, -delta))
-        ); 
-        //Deal with degenerate case--not ideal
+          shapes->getDistance(from + vec3(delta, 0, 0)) - shapes->getDistance(from + vec3(-delta, 0, 0)), 
+          shapes->getDistance(from + vec3(0, delta, 0)) - shapes->getDistance(from + vec3(0, -delta, 0)), 
+          shapes->getDistance(from + vec3(0, 0, delta)) - shapes->getDistance(from + vec3(0, 0, -delta))
+        );
+        //Deal with degenerate case by setting directly at camera--not ideal, need better fix
         if(rec.normal.x() == 0 && rec.normal.y() == 0 && rec.normal.z() == 0) {
           rec.normal = -r.direction();
         }
+        rec.p = from;
         rec.normal.make_unit_vector(); 
         rec.t = tval;
         rec.u = 0.5;
@@ -51,7 +53,6 @@ bool csg::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_ge
       }
     } 
     t += minDistance; 
-    numSteps++; 
   } 
   return(false);
 }

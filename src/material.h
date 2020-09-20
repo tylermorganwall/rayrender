@@ -194,6 +194,8 @@ class dielectric : public material {
 
       bool entering = dot(hrec.normal, r_in.direction()) < 0;
       bool skip = false;
+      vec3 offset_p = entering ? offset_ray(hrec.p-r_in.A, -hrec.normal) + r_in.A : offset_ray(hrec.p-r_in.A, hrec.normal) + r_in.A ;
+      
       
       for(size_t i = 0; i < r_in.pri_stack->size(); i++) {
         if(r_in.pri_stack->at(i) == this) {
@@ -214,8 +216,8 @@ class dielectric : public material {
       }
       current_ref_idx = prev_active != -1 ? r_in.pri_stack->at(prev_active)->ref_idx : 1;
       if(skip) {
-        srec.specular_ray = ray(hrec.p, r_in.direction(), r_in.pri_stack, r_in.time());
-        Float distance = (hrec.p-r_in.point_at_parameter(0)).length();
+        srec.specular_ray = ray(offset_p, r_in.direction(), r_in.pri_stack, r_in.time());
+        Float distance = (offset_p-r_in.point_at_parameter(0)).length();
         vec3 prev_atten = r_in.pri_stack->at(prev_active)->attenuation;
         srec.attenuation = vec3(std::exp(-distance * prev_atten.x()),
                                 std::exp(-distance * prev_atten.y()),
@@ -264,13 +266,13 @@ class dielectric : public material {
         if(entering) {
           r_in.pri_stack->pop_back();
         }
-        srec.specular_ray = ray(hrec.p, reflected, r_in.pri_stack, r_in.time());
+        srec.specular_ray = ray(offset_p, reflected, r_in.pri_stack, r_in.time());
       } else {
         if(!entering && current_layer != -1) {
           r_in.pri_stack->erase(r_in.pri_stack->begin() + current_layer);
         }
         vec3 refracted = refract(unit_direction, outward_normal, ni_over_nt);
-        srec.specular_ray = ray(hrec.p, refracted, r_in.pri_stack, r_in.time());
+        srec.specular_ray = ray(offset_p, refracted, r_in.pri_stack, r_in.time());
       }
       return(true);
     }
@@ -286,7 +288,7 @@ class dielectric : public material {
 
 class diffuse_light : public material {
 public:
-  diffuse_light(texture *a) : emit(a) {}
+  diffuse_light(texture *a, Float intensity) : emit(a), intensity(intensity) {}
   ~diffuse_light() {
     if(emit) delete emit;
   }
@@ -295,7 +297,7 @@ public:
   }
   virtual vec3 emitted(const ray& r_in, const hit_record& rec, Float u, Float v, const vec3& p) const {
     if(dot(rec.normal, r_in.direction()) < 0.0) {
-      return(emit->value(u,v,p));
+      return(emit->value(u,v,p) * intensity);
     } else {
       return(vec3(0,0,0));
     }
@@ -304,6 +306,7 @@ public:
     return(emit->value(rec.u, rec.v, rec.p));
   }
   texture *emit;
+  Float intensity;
 };
 
 class spot_light : public material {

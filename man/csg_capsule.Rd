@@ -7,22 +7,47 @@
 csg_capsule(start = c(0, 0, 0), end = c(0, 1, 0), radius = 1)
 }
 \arguments{
-\item{radius}{Default `1`. Torus radius.}
+\item{start}{Default `c(0, 0, 0)`. Start point of the capsule, specifying `x`, `y`, `z`.}
 
-\item{x}{Default `0`. x-coordinate on the torus.}
+\item{end}{Default `c(0, 1, 0)`. End point of the capsule, specifying `x`, `y`, `z`.}
 
-\item{y}{Default `0`. y-coordinate on the torus.}
-
-\item{z}{Default `0`. z-coordinate on the torus.}
-
-\item{cross_radius}{Default `0.5`. Cross section radius of the torus.}
+\item{radius}{Default `1`. Capsule radius.}
 }
 \value{
-List describing the box in the scene.
+List describing the capsule in the scene.
 }
 \description{
 CSG Capsule
 }
 \examples{
-#Generate a sphere in the cornell box.
+\donttest{
+#Generate a basic capsule:
+generate_ground(material=diffuse(checkercolor="grey20")) \%>\% 
+  add_object(csg_object(csg_capsule(radius=0.5),material=glossy(color="red"))) \%>\% 
+  render_scene(clamp_value=10,sample_method="stratified",fov=20)
+  
+#Change the orientation by specifying a start and end
+generate_ground(material=diffuse(color="dodgerblue4",checkercolor="grey10")) \%>\% 
+  add_object(csg_object(csg_capsule(start = c(-1,0.5,-2), end = c(1,0.5,-2),
+  radius=0.5),material=glossy(checkercolor="red"))) \%>\% 
+  render_scene(clamp_value=10,sample_method="stratified",fov=20,
+               lookat=c(0,0.5,-2),lookfrom=c(3,3,10))
+ 
+#Show the effect of changing the radius
+generate_ground(material=diffuse(color="dodgerblue4",checkercolor="grey10")) \%>\% 
+  add_object(csg_object(
+    csg_combine(
+    csg_capsule(start = c(-1,0.5,-2), end = c(1,0.5,-2), radius=0.5),
+    csg_capsule(start = c(-0.5,1.5,-2), end = c(0.5,1.5,-2), radius=0.25)),
+    material=glossy(checkercolor="red"))) \%>\% 
+  render_scene(clamp_value=10,sample_method="stratified",fov=20,
+               lookat=c(0,0.5,-2),lookfrom=c(-3,3,10))
+               
+#Render a capsule in a Cornell box
+generate_cornell() \%>\% 
+  add_object(csg_object(
+    csg_capsule(start = c(555/2-100,555/2,555/2), end = c(555/2+100,555/2,555/2), radius=100),
+    material=glossy(color="dodgerblue4"))) \%>\% 
+  render_scene(clamp_value=10,sample_method="stratified")
+}
 }

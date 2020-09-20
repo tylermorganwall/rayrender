@@ -13,7 +13,9 @@ csg_box(x = 0, y = 0, z = 0, width = c(1, 1, 1), corner_radius = 0)
 
 \item{z}{Default `0`. A z-coordinate on the box}
 
-\item{normal}{Default `c(1,1,1)`. Length-3 vector describing the x/y/z widths of the box}
+\item{width}{Default `c(1,1,1)`. Length-3 vector describing the x/y/z widths of the box}
+
+\item{corner_radius}{Default `0`. Radius if rounded box.}
 }
 \value{
 List describing the box in the scene.
@@ -22,5 +24,26 @@ List describing the box in the scene.
 CSG Box
 }
 \examples{
-#Generate a sphere in the cornell box.
+\donttest{
+#Generate a box
+generate_ground(material=diffuse(checkercolor="grey20")) \%>\% 
+  add_object(csg_object(csg_box(), material=glossy(color="#FF69B4"))) \%>\%
+  add_object(sphere(y=5,x=5,radius=3,material=light(intensity=5))) \%>\%  
+  render_scene(clamp_value=10,lookfrom=c(7,3,7),sample_method="stratified")
+  
+#Change the width
+generate_ground(material=diffuse(checkercolor="grey20")) \%>\% 
+  add_object(csg_object(csg_box(width = c(2,1,0.5)), material=glossy(color="#FF69B4"))) \%>\%
+  add_object(sphere(y=5,x=5,radius=3,material=light(intensity=5))) \%>\%  
+  render_scene(clamp_value=10,lookfrom=c(7,3,7),sample_method="stratified")
+
+#Subtract two boxes to make stairs
+generate_ground(material=diffuse(checkercolor="grey20")) \%>\% 
+  add_object(csg_object(csg_combine(
+    csg_box(),
+    csg_box(x=0.5,y=0.5,width=c(1,1,1.1)),operation="subtract"),
+   material=glossy(color="#FF69B4"))) \%>\%
+  add_object(sphere(y=5,x=5,radius=3,material=light(intensity=5))) \%>\%  
+  render_scene(clamp_value=10,lookfrom=c(7,3,7),fov=13,sample_method="stratified")
+  }
 }
