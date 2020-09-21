@@ -6,7 +6,6 @@
 #include "mathinline.h"
 #include <algorithm>
 
-
 class ImplicitShape { 
   public: 
     virtual float getDistance(const vec3& from) const = 0; 
@@ -42,8 +41,8 @@ class csg_plane : public ImplicitShape {
       Float dist_z = dot(axis.w(),from - pointOnPlane);
       Float diff_x = abs(dist_x) - width_x/2;
       Float diff_z = abs(dist_z) - width_z/2;
-      dist = diff_x > 0 ? sqrt(diff_x * diff_x + dist * dist) : dist;
-      dist = diff_z > 0 ? sqrt(diff_z * diff_z + dist * dist) : dist;
+      dist = diff_x > 0 ? std::sqrt(diff_x * diff_x + dist * dist) : dist;
+      dist = diff_z > 0 ? std::sqrt(diff_z * diff_z + dist * dist) : dist;
       return(dist); 
     } 
     virtual bool bbox(Float t0, Float t1, aabb& box) const {
@@ -160,18 +159,20 @@ class csg_capsule : public ImplicitShape {
 class csg_cylinder : public ImplicitShape { 
   public: 
     csg_cylinder(vec3 start, vec3 end, Float radius, Float corner_radius) :  start(start), end(end), 
-      radius(radius), corner_radius(corner_radius) {} 
+      radius(radius), corner_radius(corner_radius) {
+      ba = end - start;
+      baba = dot(ba,ba);
+      inv_baba = 1.0/baba;
+    } 
     float getDistance(const vec3& from) const {
       vec3 pa = from - start; 
-      vec3 ba = end - start;
-      float baba = dot(ba,ba);
       float paba = dot(pa,ba);
       float x = (pa*baba-ba*paba).length() - radius*baba;
-      float y = abs(paba-baba*0.5)-baba*0.5;
+      float y = std::fabs(paba-baba*0.5)-baba*0.5;
       float x2 = x*x;
       float y2 = y*y*baba;
       float d = (std::fmax(x,y)<0.0)?-std::fmin(x2,y2):(((x>0.0)?x2:0.0)+((y>0.0)?y2:0.0));
-      return(d > 0 ? sqrt(abs(d))/baba - corner_radius : -sqrt(abs(d))/baba - corner_radius);
+      return(d > 0 ? std::sqrt(std::fabs(d)) * inv_baba - corner_radius : -std::sqrt(std::fabs(d)) * inv_baba - corner_radius);
     } 
     virtual bool bbox(Float t0, Float t1, aabb& box) const {
       vec3 min = vec3(ffmin(start.x(),end.x()),ffmin(start.y(),end.y()),ffmin(start.z(),end.z()));
@@ -179,8 +180,8 @@ class csg_cylinder : public ImplicitShape {
       box = aabb(min-radius, max+radius);
       return(true);
     }
-    vec3 start, end; 
-    Float radius, corner_radius;
+    vec3 start, end, ba; 
+    Float radius, corner_radius, baba, inv_baba;
 }; 
 
 class csg_ellipsoid : public ImplicitShape { 
@@ -221,12 +222,12 @@ class csg_rounded_cone : public ImplicitShape {
       
       float k = sgn(rr) * rr*rr*x2;
       if(sgn(z)*a2*z2 > k ) {
-        return(sqrt(x2 + z2)*il2 - r2);
+        return(std::sqrt(x2 + z2)*il2 - r2);
       }
       if(sgn(y)*a2*y2 < k ) {
-        return(sqrt(x2 + y2)*il2 - r1);
+        return(std::sqrt(x2 + y2)*il2 - r1);
       }
-      return((sqrt(x2*a2*il2)+y*rr)*il2 - r1);
+      return((std::sqrt(x2*a2*il2)+y*rr)*il2 - r1);
     } 
     virtual bool bbox(Float t0, Float t1, aabb& box) const {
       vec3 min = vec3(ffmin(start.x(),end.x()),ffmin(start.y(),end.y()),ffmin(start.z(),end.z()));
@@ -257,7 +258,7 @@ class csg_cone : public ImplicitShape {
       float k = sgn( q.y() );
       float d = std::min(dot( a, a ),dot(b, b));
       float s = std::max( k*(w.x()*q.y()-w.y()*q.x()),k*(w.y()-q.y()));
-      return sqrt(d)*sgn(s);
+      return(std::sqrt(d)*sgn(s));
     } 
     virtual bool bbox(Float t0, Float t1, aabb& box) const {
       vec3 min = vec3(ffmin(start.x(),end.x()),ffmin(start.y(),end.y()),ffmin(start.z(),end.z()));
@@ -281,8 +282,8 @@ class csg_pyramid : public ImplicitShape {
     float getDistance(const vec3& from_old) const {
       vec3 from = from_old - center_bottom;
       from = from * base_inv;
-      from.e[0] = abs(from.e[0]); 
-      from.e[2] = abs(from.e[2]);
+      from.e[0] = std::fabs(from.e[0]); 
+      from.e[2] = std::fabs(from.e[2]);
       from = (from.z() > from.x()) ? vec3(from.z(),from.y(),from.x()) : from;
       from -= vec3(0.5,0,0.5);
       
@@ -296,7 +297,7 @@ class csg_pyramid : public ImplicitShape {
       
       float d2 = std::fmin(q.y(),-q.x()*m2-q.y()*0.5) > 0.0 ? 0.0 : std::fmin(a,b);
       
-      return(sqrt((d2+q.z()*q.z()) * m2_inv ) * sgn(std::fmax(q.z(),-from.y())));
+      return(std::sqrt((d2+q.z()*q.z()) * m2_inv ) * sgn(std::fmax(q.z(),-from.y())));
     } 
     virtual bool bbox(Float t0, Float t1, aabb& box) const {
       box = aabb(center_bottom-vec3(base,0,base), center_bottom+vec3(base,h,base));
@@ -318,7 +319,7 @@ class csg_triangle : public ImplicitShape {
       vec3 pa = from - a;
       vec3 pb = from - b;
       vec3 pc = from - c;
-      return(sqrt((sgn(dot(cross(ba,nor),pa)) +
+      return(std::sqrt((sgn(dot(cross(ba,nor),pa)) +
                    sgn(dot(cross(cb,nor),pb)) +
                    sgn(dot(cross(ac,nor),pc)) < 2.0) ?
                    std::min(std::min(
@@ -604,7 +605,7 @@ class csg: public hitable {
       if(temp) {
         max_dist = fmax(100,(box.max()-box.min()).length());
       }
-      if(isinf(max_dist)) {
+      if(std::isinf(max_dist)) {
         Rcpp::Rcout << "min: " << box.min() << "\n";
         Rcpp::Rcout << "max: " << box.max() << "\n";
         throw std::runtime_error("error");

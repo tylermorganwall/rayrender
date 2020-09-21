@@ -122,7 +122,7 @@ inline vec3 clamp(vec3 input, vec3 low, vec3 high) {
 
 inline Float CosTheta(const vec3 &w) { return w.z(); }
 inline Float Cos2Theta(const vec3 &w) { return w.z() * w.z(); }
-inline Float AbsCosTheta(const vec3 &w) { return std::abs(w.z()); }
+inline Float AbsCosTheta(const vec3 &w) { return std::fabs(w.z()); }
 
 inline Float Sin2Theta(const vec3 &w) {
   return(std::max((Float)0, (Float)1 - Cos2Theta(w)));
@@ -163,7 +163,7 @@ inline Float FrDielectric(Float cosThetaI, Float etaI, Float etaT) {
   bool entering = cosThetaI > 0.f;
   if (!entering) {
     std::swap(etaI, etaT);
-    cosThetaI = std::abs(cosThetaI);
+    cosThetaI = std::fabs(cosThetaI);
   }
   Float sinThetaI = std::sqrt(std::fmax((Float)0, 1 - cosThetaI * cosThetaI));
   Float sinThetaT = etaI / etaT * sinThetaI;
@@ -327,9 +327,9 @@ inline vec3 offset_ray(const vec3 p, const vec3 n) {
   vec3 p_i(int_to_float(float_to_int(p.x())+((p.x() < 0) ? -of_i[0] : of_i[0])),
            int_to_float(float_to_int(p.y())+((p.y() < 0) ? -of_i[1] : of_i[1])),
            int_to_float(float_to_int(p.z())+((p.z() < 0) ? -of_i[2] : of_i[2])));
-  return(vec3(fabs(p.x()) < origin() ? p.x() + float_scale()*n.x() : p_i.x(),
-              fabs(p.y()) < origin() ? p.y() + float_scale()*n.y() : p_i.y(),
-              fabs(p.z()) < origin() ? p.z() + float_scale()*n.z() : p_i.z()));
+  return(vec3(std::fabs(p.x()) < origin() ? p.x() + float_scale()*n.x() : p_i.x(),
+              std::fabs(p.y()) < origin() ? p.y() + float_scale()*n.y() : p_i.y(),
+              std::fabs(p.z()) < origin() ? p.z() + float_scale()*n.z() : p_i.z()));
 }
 
 inline Float Log2(Float x) {
@@ -372,7 +372,7 @@ inline vec3 RGBtoHSV(vec3& rgb) {
 inline vec3 HSVtoRGB(vec3 hsv) {
   Float chroma = hsv.z() * hsv.y(); 
   Float fHPrime = fmod(hsv.x() / 60.0, 6);
-  Float x_val = chroma * (1 - fabs(fmod(fHPrime, 2) - 1));
+  Float x_val = chroma * (1 - std::fabs(fmod(fHPrime, 2) - 1));
   Float m_val = hsv.z() - chroma;
 
   if(0 <= fHPrime && fHPrime < 1) {

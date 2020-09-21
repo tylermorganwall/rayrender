@@ -932,7 +932,7 @@ csg_translate = function(object, x=0,y=0,z=0) {
 
 #' CSG Combine
 #' 
-#' Note: Subtract operations aren't communutative: the second object is subtracted from the first. 
+#' Note: Subtract operations aren't commutative: the second object is subtracted from the first. 
 #'
 #' @param object1 First CSG object
 #' @param object2 Second CSG object

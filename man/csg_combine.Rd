@@ -19,7 +19,7 @@ csg_combine(object1, object2, operation = "union", radius = 0.5)
 List describing the combined csg object in the scene.
 }
 \description{
-Note: Subtract operations aren't communutative: the second object is subtracted from the first.
+Note: Subtract operations aren't commutative: the second object is subtracted from the first.
 }
 \examples{
 \donttest{

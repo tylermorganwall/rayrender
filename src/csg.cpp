@@ -13,7 +13,7 @@ bool csg::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_ge
     vec3 from = r.origin() + t * dir; 
     
     //Need distance from interior edge to support dielectrics
-    float d =  abs(shapes->getDistance(from)); 
+    float d =  std::fabs(shapes->getDistance(from)); 
     
     //Need to deal with refraction, often initial distance is too close to surface, so we offset
     if(first &&  t < threshold) {
