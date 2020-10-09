@@ -655,15 +655,26 @@ microfacet = function(color="white", roughness = 0.0001,
 #' algorithm, in most cases. If the object is particularly important in contributing to the light paths
 #' in the image (e.g. light sources, refracting glass ball with caustics, metal objects concentrating light),
 #' this will help with the convergence of the image.
-#' @param image_texture Default `NA`. A 3-layer RGB array or filename to be used as the texture on the surface of the object.
-#' @param image_repeat Default `1`. Number of times to repeat the image across the surface.
-#' `u` and `v` repeat amount can be set independently if user passes in a length-2 vector.
 #' @param spotlight_focus Default `NA`, no spotlight. Otherwise, a length-3 numeric vector specifying
 #' the x/y/z coordinates that the spotlight should be focused on. Only works for spheres and rectangles.
 #' @param spotlight_width Default `30`. Angular width of the spotlight.
 #' @param spotlight_start_falloff Default `15`. Angle at which the light starts fading in intensity.
+#' @param image_texture Default `NA`. A 3-layer RGB array or filename to be used as the texture on the surface of the object.
+#' @param image_repeat Default `1`. Number of times to repeat the image across the surface.
+#' `u` and `v` repeat amount can be set independently if user passes in a length-2 vector.
+#' @param gradient_color Default `NA`. If not `NA`, creates a secondary color for a linear gradient 
+#' between the this color and color specified in `color`. Direction is determined by `gradient_transpose`.
+#' @param gradient_transpose Default `FALSE`. If `TRUE`, this will use the `v` coordinate texture instead
+#' of the `u` coordinate texture to map the gradient.
+#' @param gradient_point_start Default `NA`. If not `NA`, this changes the behavior from mapping texture coordinates to 
+#' mapping to world space coordinates. This should be a length-3 vector specifying the x,y, and z points where the gradient
+#' begins with value `color`.
+#' @param gradient_point_end Default `NA`. If not `NA`, this changes the behavior from mapping texture coordinates to 
+#' mapping to world space coordinates. This should be a length-3 vector specifying the x,y, and z points where the gradient
+#' begins with value `gradient_color`.
+#' @param gradient_type Default `hsv`. Colorspace to calculate the gradient. Alternative `rgb`.
 #' 
-#' @return Single row of a tibble describing the diffuse material.
+#' @return Single row of a tibble describing the light material.
 #' @export
 #' @importFrom  grDevices col2rgb
 #'
@@ -685,8 +696,10 @@ microfacet = function(color="white", roughness = 0.0001,
 #' render_scene(scene, samples=500, parallel=TRUE, clamp_value=10)
 #' }
 light = function(color = "#ffffff", intensity = 10, importance_sample = TRUE, 
+                 spotlight_focus = NA, spotlight_width = 30, spotlight_start_falloff = 15,
                  image_texture = NA, image_repeat = 1, 
-                 spotlight_focus = NA, spotlight_width = 30, spotlight_start_falloff = 15) {
+                 gradient_color = NA, gradient_transpose = FALSE,
+                 gradient_point_start = NA, gradient_point_end = NA, gradient_type = "hsv") {
   info = convert_color(color)
   if(!is.array(image_texture) && !is.na(image_texture) && !is.character(image_texture)) {
     image_texture = NA
@@ -694,6 +707,22 @@ light = function(color = "#ffffff", intensity = 10, importance_sample = TRUE,
   }
   if(length(image_repeat) == 1) {
     image_repeat = c(image_repeat,image_repeat)
+  }
+  if(all(!is.na(gradient_color))) {
+    gradient_color = convert_color(gradient_color)
+  } else {
+    gradient_color = NA
+  }
+  if(!is.na(gradient_point_start) && !is.na(gradient_point_end) && !is.na(gradient_color)) {
+    assertthat::assert_that(length(gradient_point_start) == 3)
+    assertthat::assert_that(length(gradient_point_end) == 3)
+    assertthat::assert_that(is.numeric(gradient_point_start))
+    assertthat::assert_that(is.numeric(gradient_point_end))
+    gradient_point_info = c(gradient_point_start,gradient_point_end)
+    is_world_gradient = TRUE
+  } else {
+    is_world_gradient = FALSE
+    gradient_point_info = NA
   }
   if(all(!is.na(spotlight_focus))) {
     stopifnot(length(spotlight_focus) == 3)
@@ -714,9 +743,9 @@ light = function(color = "#ffffff", intensity = 10, importance_sample = TRUE,
   } else {
     new_tibble_row(list(type = "light", 
                         properties = list(info), checkercolor=list(NA), 
-                        gradient_color = list(NA), gradient_transpose = FALSE,
-                        world_gradient = FALSE,gradient_point_info = list(NA),
-                        gradient_type = NA,
+                        gradient_color = list(gradient_color), gradient_transpose = gradient_transpose,
+                        world_gradient = is_world_gradient, gradient_point_info = list(gradient_point_info),
+                        gradient_type = gradient_type,
                         noise=0, noisephase = 0, noiseintensity = 0, noisecolor = list(c(0,0,0)),
                         image = list(image_texture), image_repeat = list(image_repeat),
                         alphaimage = list(NA), lightintensity = intensity,

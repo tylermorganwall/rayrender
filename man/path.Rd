@@ -11,6 +11,7 @@ path(
   z = 0,
   closed = FALSE,
   straight = FALSE,
+  precomputed_control_points = FALSE,
   width = 0.1,
   width_end = NA,
   u_min = 0,
@@ -42,6 +43,9 @@ continuous 1st and 2nd derivatives.}
 
 \item{straight}{Default `FALSE`. If `TRUE`, straight lines will be used to connect the points instead
 of bezier curves.}
+
+\item{precomputed_control_points}{Default `FALSE`. If `TRUE`, `points` argument will expect
+a list of control points calculated with the internal rayrender function `rayrender:::calculate_control_points()`.}
 
 \item{width}{Default `0.1`. Curve width.}
 

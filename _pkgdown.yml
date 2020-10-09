@@ -32,6 +32,7 @@ reference:
       - starts_with("bezier")
       - starts_with("path")
       - starts_with("pig")
+      - starts_with("text")
       - starts_with("csg_object")
   - title: "Constructive Solid Geometry (CSG) Interface"
     desc: "Functions to model and build objects using CSG"

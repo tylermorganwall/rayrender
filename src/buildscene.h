@@ -288,6 +288,27 @@ hitable *build_scene(IntegerVector& type,
         if(isimage(i)) {
           light_tex = new image_texture(textures[i],nvec[i][0],nvec[i][1],nvec[i][2], 
                                         temp_repeat[0], temp_repeat[1], 1.0);
+        } else if (isnoise(i)) {
+          light_tex = new noise_texture(noise(i),vec3(tempvector(0),tempvector(1),tempvector(2)),
+                                                vec3(tempnoisecolor(0),tempnoisecolor(1),tempnoisecolor(2)),
+                                                noisephase(i), noiseintensity(i));
+        } else if (ischeckered(i)) {
+          light_tex = new checker_texture(new constant_texture(vec3(tempchecker(0),tempchecker(1),tempchecker(2))),
+                                                  new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))),tempchecker(3));
+        } else if (isgradient(i) && !is_world_gradient(i)) {
+          light_tex = new gradient_texture(vec3(tempvector(0),tempvector(1),tempvector(2)),
+                                                   vec3(tempgradient(0),tempgradient(1),tempgradient(2)),
+                                                   gradient_trans(i), gradient_is_hsv(i));
+        } else if (is_tri_color(i)) {
+          light_tex = new triangle_texture(vec3(temp_tri_color(0),temp_tri_color(1),temp_tri_color(2)),
+                                                   vec3(temp_tri_color(3),temp_tri_color(4),temp_tri_color(5)),
+                                                   vec3(temp_tri_color(6),temp_tri_color(7),temp_tri_color(8)));
+        } else if (is_world_gradient(i)) {
+          light_tex = new world_gradient_texture(vec3(temp_gradient_control(0),temp_gradient_control(1),temp_gradient_control(2)),
+                                                         vec3(temp_gradient_control(3),temp_gradient_control(4),temp_gradient_control(5)),
+                                                         vec3(tempvector(0),tempvector(1),tempvector(2)),
+                                                         vec3(tempgradient(0),tempgradient(1),tempgradient(2)),
+                                                         gradient_is_hsv(i));
         } else {
           light_tex = new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2)));
         }

@@ -8,11 +8,16 @@ light(
   color = "#ffffff",
   intensity = 10,
   importance_sample = TRUE,
-  image_texture = NA,
-  image_repeat = 1,
   spotlight_focus = NA,
   spotlight_width = 30,
-  spotlight_start_falloff = 15
+  spotlight_start_falloff = 15,
+  image_texture = NA,
+  image_repeat = 1,
+  gradient_color = NA,
+  gradient_transpose = FALSE,
+  gradient_point_start = NA,
+  gradient_point_end = NA,
+  gradient_type = "hsv"
 )
 }
 \arguments{
@@ -27,20 +32,36 @@ algorithm, in most cases. If the object is particularly important in contributin
 in the image (e.g. light sources, refracting glass ball with caustics, metal objects concentrating light),
 this will help with the convergence of the image.}
 
-\item{image_texture}{Default `NA`. A 3-layer RGB array or filename to be used as the texture on the surface of the object.}
-
-\item{image_repeat}{Default `1`. Number of times to repeat the image across the surface.
-`u` and `v` repeat amount can be set independently if user passes in a length-2 vector.}
-
 \item{spotlight_focus}{Default `NA`, no spotlight. Otherwise, a length-3 numeric vector specifying
 the x/y/z coordinates that the spotlight should be focused on. Only works for spheres and rectangles.}
 
 \item{spotlight_width}{Default `30`. Angular width of the spotlight.}
 
 \item{spotlight_start_falloff}{Default `15`. Angle at which the light starts fading in intensity.}
+
+\item{image_texture}{Default `NA`. A 3-layer RGB array or filename to be used as the texture on the surface of the object.}
+
+\item{image_repeat}{Default `1`. Number of times to repeat the image across the surface.
+`u` and `v` repeat amount can be set independently if user passes in a length-2 vector.}
+
+\item{gradient_color}{Default `NA`. If not `NA`, creates a secondary color for a linear gradient 
+between the this color and color specified in `color`. Direction is determined by `gradient_transpose`.}
+
+\item{gradient_transpose}{Default `FALSE`. If `TRUE`, this will use the `v` coordinate texture instead
+of the `u` coordinate texture to map the gradient.}
+
+\item{gradient_point_start}{Default `NA`. If not `NA`, this changes the behavior from mapping texture coordinates to 
+mapping to world space coordinates. This should be a length-3 vector specifying the x,y, and z points where the gradient
+begins with value `color`.}
+
+\item{gradient_point_end}{Default `NA`. If not `NA`, this changes the behavior from mapping texture coordinates to 
+mapping to world space coordinates. This should be a length-3 vector specifying the x,y, and z points where the gradient
+begins with value `gradient_color`.}
+
+\item{gradient_type}{Default `hsv`. Colorspace to calculate the gradient. Alternative `rgb`.}
 }
 \value{
-Single row of a tibble describing the diffuse material.
+Single row of a tibble describing the light material.
 }
 \description{
 Light Material
