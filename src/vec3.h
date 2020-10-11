@@ -172,11 +172,11 @@ inline int MaxDimension(const vec3 &v) {
 }
 
 inline vec3 Min(const vec3 &p1, const vec3 &p2) {
-  return(vec3(std::min(p1.x(), p2.x()), std::min(p1.y(), p2.y()), std::min(p1.z(), p2.z())));
+  return(vec3(fmin(p1.x(), p2.x()), fmin(p1.y(), p2.y()),fmin(p1.z(), p2.z())));
 }
 
 inline vec3 Max(const vec3 &p1, const vec3 &p2) {
-  return(vec3(std::max(p1.x(), p2.x()), std::max(p1.y(), p2.y()),std::max(p1.z(), p2.z())));
+  return(vec3(fmax(p1.x(), p2.x()), fmax(p1.y(), p2.y()),fmax(p1.z(), p2.z())));
 }
 
 inline vec3 Permute(const vec3 &v, int x, int y, int z) {
@@ -184,7 +184,7 @@ inline vec3 Permute(const vec3 &v, int x, int y, int z) {
 }
 
 inline vec3 Abs(const vec3 &v) {
-  return(vec3(v.x(), v.y(), v.z()));
+  return(vec3(fabs(v.x()), fabs(v.y()), fabs(v.z())));
 }
 
 #endif

@@ -18,6 +18,7 @@
 #include "ellipsoid.h"
 #include "cone.h"
 #include "curve.h"
+#include "csg.h"
 #include <Rcpp.h>
 using namespace Rcpp;
 
@@ -71,6 +72,7 @@ hitable *build_scene(IntegerVector& type,
                      List& scale_list, NumericVector& sigma,  List &glossyinfo,
                      IntegerVector& shared_id_mat, LogicalVector& is_shared_mat,
                      std::vector<material* >* shared_materials, List& image_repeat_list,
+                     List& csg_info,
                      random_gen& rng) {
   hitable **list = new hitable*[n + 1]; //change to vector
   LogicalVector isgradient = gradient_info["isgradient"];
@@ -83,6 +85,8 @@ hitable *build_scene(IntegerVector& type,
   NumericVector x = position_list["xvec"];
   NumericVector y = position_list["yvec"];
   NumericVector z = position_list["zvec"];
+  
+  List csg_list = csg_info["csg"];
   
   NumericVector tempvector;
   NumericVector tempchecker;
@@ -280,7 +284,35 @@ hitable *build_scene(IntegerVector& type,
           tex = new orennayar(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))), sigma(i)); //marked as small definite loss in valgrind memcheck
         }
       } else if (type(i) == 5) {
-        tex = new diffuse_light(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))*lightintensity(i)) );
+        texture* light_tex;
+        if(isimage(i)) {
+          light_tex = new image_texture(textures[i],nvec[i][0],nvec[i][1],nvec[i][2], 
+                                        temp_repeat[0], temp_repeat[1], 1.0);
+        } else if (isnoise(i)) {
+          light_tex = new noise_texture(noise(i),vec3(tempvector(0),tempvector(1),tempvector(2)),
+                                                vec3(tempnoisecolor(0),tempnoisecolor(1),tempnoisecolor(2)),
+                                                noisephase(i), noiseintensity(i));
+        } else if (ischeckered(i)) {
+          light_tex = new checker_texture(new constant_texture(vec3(tempchecker(0),tempchecker(1),tempchecker(2))),
+                                                  new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))),tempchecker(3));
+        } else if (isgradient(i) && !is_world_gradient(i)) {
+          light_tex = new gradient_texture(vec3(tempvector(0),tempvector(1),tempvector(2)),
+                                                   vec3(tempgradient(0),tempgradient(1),tempgradient(2)),
+                                                   gradient_trans(i), gradient_is_hsv(i));
+        } else if (is_tri_color(i)) {
+          light_tex = new triangle_texture(vec3(temp_tri_color(0),temp_tri_color(1),temp_tri_color(2)),
+                                                   vec3(temp_tri_color(3),temp_tri_color(4),temp_tri_color(5)),
+                                                   vec3(temp_tri_color(6),temp_tri_color(7),temp_tri_color(8)));
+        } else if (is_world_gradient(i)) {
+          light_tex = new world_gradient_texture(vec3(temp_gradient_control(0),temp_gradient_control(1),temp_gradient_control(2)),
+                                                         vec3(temp_gradient_control(3),temp_gradient_control(4),temp_gradient_control(5)),
+                                                         vec3(tempvector(0),tempvector(1),tempvector(2)),
+                                                         vec3(tempgradient(0),tempgradient(1),tempgradient(2)),
+                                                         gradient_is_hsv(i));
+        } else {
+          light_tex = new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2)));
+        }
+        tex = new diffuse_light(light_tex, lightintensity(i));
       } else if (type(i) == 6) {
         MicrofacetDistribution *dist;
         if(temp_glossy(0) == 1) {
@@ -413,6 +445,8 @@ hitable *build_scene(IntegerVector& type,
     } else if(shape(i) == 13) {
       center = vec3(x(i), y(i), z(i));
     } else if(shape(i) == 14) {
+      center = vec3(x(i), y(i), z(i));
+    } else if(shape(i) == 15) {
       center = vec3(x(i), y(i), z(i));
     }
 
@@ -790,6 +824,27 @@ hitable *build_scene(IntegerVector& type,
         entry = new flip_normals(entry);
       }
       list[i] = entry;
+    } else if (shape(i) == 15) {
+      List temp_csg = csg_list(i);
+      std::shared_ptr<ImplicitShape> shapes = parse_csg(temp_csg);
+      hitable *entry = new csg(tex, shapes);
+      if(is_scaled) {
+        entry = new scale(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
+      }
+      entry = rotation_order(entry, temprotvec, order_rotation);
+      if(isgrouped(i)) {
+        entry = new translate(entry, center - gpivot);
+        if(is_group_scaled) {
+          entry = new scale(entry, vec3(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
+        }
+        entry = rotation_order(entry, temp_gangle, temp_gorder);
+        entry = new translate(entry, -center + gpivot );
+      }
+      entry = new translate(entry, center + gtrans + vel * shutteropen);
+      if(isflipped(i)) {
+        entry = new flip_normals(entry);
+      }
+      list[i] = entry;
     }
   }
   hitable *full_scene = new bvh_node(list, n, shutteropen, shutterclose, rng);
@@ -893,6 +948,8 @@ hitable* build_imp_sample(IntegerVector& type,
   } else if(shape(i) == 13) {
     center = vec3(x(i), y(i), z(i));
   } else if(shape(i) == 14) {
+    center = vec3(x(i), y(i), z(i));
+  } else if(shape(i) == 15) {
     center = vec3(x(i), y(i), z(i));
   }
 
@@ -1094,7 +1151,7 @@ hitable* build_imp_sample(IntegerVector& type,
     }
     entry = new translate(entry, center + gtrans + vel * shutteropen);
     return(entry);
-  } else {
+  } else if (shape(i) == 14) {
     int pl = prop_len;
     vec3 p[4];
     p[0] = vec3(tempvector(pl+1),tempvector(pl+2),tempvector(pl+3));
@@ -1107,6 +1164,22 @@ hitable* build_imp_sample(IntegerVector& type,
       entry = new scale(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
     }
     entry = rotation_order(entry, temprotvec, order_rotation);
+    if(isgrouped(i)) {
+      entry = new translate(entry, center - gpivot);
+      if(is_group_scaled) {
+        entry = new scale(entry, vec3(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
+      }
+      entry = rotation_order(entry, temp_gangle, temp_gorder);
+      entry = new translate(entry, -center + gpivot );
+    }
+    entry = new translate(entry, center + gtrans + vel * shutteropen);
+    return(entry);
+  } else {
+    std::shared_ptr<ImplicitShape> shapes;
+    hitable *entry = new csg(nullptr, shapes);
+    if(is_scaled) {
+      entry = new scale(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
+    }
     if(isgrouped(i)) {
       entry = new translate(entry, center - gpivot);
       if(is_group_scaled) {

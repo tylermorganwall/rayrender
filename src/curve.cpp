@@ -283,31 +283,30 @@ bool curve::recursiveIntersect(const ray& r, Float tmin, Float tmax, hit_record&
     EvalBezier(common->cpObj, u, &rec.dpdu);
     
     Float offset_scale = 1;
-    if (common->type == CurveType::Ribbon) {
+    if (common->type == CurveType::Cylinder) {
+      rec.dpdv = unit_vector(cross(rec.dpdu,-r.direction()));
+      rec.normal = -unit_vector(cross(rec.dpdu,rec.dpdv));
+      // Rotate dpdvPlane to give cylindrical appearance
+      Float theta = lerp(v, -M_PI_2, M_PI_2);
+      Float sinTheta = std::sin(theta);
+      Float cosTheta = std::cos(theta);
+      //Rodrigues' rotation formula
+      rec.normal = rec.normal * cosTheta + cross(unit_vector(rec.dpdu),rec.normal) * sinTheta;
+      offset_scale = offset_scale * cosTheta;
+    } else if (common->type == CurveType::Ribbon) {
       rec.dpdv = unit_vector(cross(nHit, rec.dpdu)) * hitWidth;
       rec.normal = !flipped_n ? nHit : -nHit;
-    } else {
+    } else if (common->type == CurveType::Flat) {
       //Compute curve dpdv for flat and cylinder curves
       //Assumes z-axis faces directly at viewer
       rec.dpdv = unit_vector(cross(rec.dpdu,-r.direction()));
       rec.normal = unit_vector(-r.direction());
-      
-      if (common->type == CurveType::Cylinder) {
-        // Rotate dpdvPlane to give cylindrical appearance
-        Float theta = lerp(v, -M_PI_2, M_PI_2);
-        Float sinTheta = std::sin(theta);
-        Float cosTheta = std::cos(theta);
-        //Rodrigues' rotation formula
-        rec.normal = rec.normal * cosTheta + cross(unit_vector(rec.dpdu),rec.normal) * sinTheta;
-        offset_scale = offset_scale * cosTheta;
-      }
-      
-    }
+    } 
     rec.u = u;
     rec.v = v;
     rec.mat_ptr = mat_ptr;
     rec.has_bump = false;
-    rec.p = r.point_at_parameter(rec.t) + rec.normal * hitWidth * offset_scale;
+    rec.p = r.point_at_parameter(rec.t) + rec.normal * hitWidth * 0.5 * offset_scale;
     return(true);
   }
   return(false);

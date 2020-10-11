@@ -39,13 +39,13 @@ a sphere, and the included `R.obj` file. The location of the `R.obj`
 file can be accessed by calling the function `r_obj()`. First adding the
 ground using the `render_ground()` function. This renders an extremely
 large sphere that (at our scene’s scale) functions as a flat surface. We
-also add a simple red sphere to the scene.
+also add a simple blue sphere to the scene.
 
 ``` r
 library(rayrender)
 
-scene = generate_ground() %>%
-  add_object(sphere(material = diffuse(color="#ff5555")))
+scene = generate_ground(material=diffuse(checkercolor="grey20")) %>%
+  add_object(sphere(y=0.2,material=glossy(color="#2b6eff",reflectance=0.05))) 
 render_scene(scene, parallel = TRUE, width = 800, height = 800, samples = 1000)
 ```
 
@@ -57,11 +57,11 @@ to our scene. We will add an emissive sphere above and behind our
 camera.
 
 ``` r
-scene = generate_ground() %>%
-  add_object(sphere(material = diffuse(color="#ff5555", sigma=100))) %>%
-  add_object(sphere(y=5, z = 5, x = 5, radius = 3, 
-                    material = light(intensity = 10))) 
-render_scene(scene, parallel = TRUE, width = 800, height = 800, samples = 1000)
+scene = generate_ground(material=diffuse(checkercolor="grey20")) %>%
+  add_object(sphere(y=0.2,material=glossy(color="#2b6eff",reflectance=0.05))) %>%
+  add_object(sphere(y=6,z=1,radius=4,material=light(intensity=8))) %>%
+  add_object(sphere(z=15,material=light(intensity=70)))
+render_scene(scene, parallel = TRUE, width = 800, height = 800, samples = 1000, clamp_value=10)
 ```
 
 ![](man/figures/README_ground_sphere-1.png)<!-- -->
@@ -69,15 +69,14 @@ render_scene(scene, parallel = TRUE, width = 800, height = 800, samples = 1000)
 Now we’ll add the (included) R .obj file into the scene, using the
 `obj_model()` function. We will scale it down slightly using the
 `scale_obj` argument, and then embed it on the surface of the ball.
-We’ll also turn down the light intensity.
 
 ``` r
-scene = generate_ground() %>%
-  add_object(sphere(material = diffuse(color="#ff5555"))) %>%
-  add_object(obj_model(r_obj(), y = -0.4, z = 0.9, scale_obj = 0.6)) %>%
-  add_object(sphere(y=5, z = 5, x = 5, radius = 3, 
-                    material = light(intensity = 5))) 
-render_scene(scene, parallel = TRUE, width = 800, height = 800, samples = 1000)
+scene = generate_ground(material=diffuse(checkercolor="grey20")) %>%
+  add_object(sphere(y=0.2,material=glossy(color="#2b6eff",reflectance=0.05))) %>%
+  add_object(obj_model(r_obj(),z=1,y=-0.05,scale_obj=0.45,material=diffuse())) %>%
+  add_object(sphere(y=10,z=1,radius=4,material=light(intensity=8))) %>%
+  add_object(sphere(z=15,material=light(intensity=70)))
+render_scene(scene, parallel = TRUE, width = 800, height = 800, samples = 1000, clamp_value=10)
 ```
 
 ![](man/figures/README_ground_r-1.png)<!-- -->
@@ -86,10 +85,14 @@ Here we’ll render a grid of different viewpoints.
 
 ``` r
 par(mfrow=c(2,2))
-render_scene(scene, parallel = TRUE, width = 400, height = 400, lookfrom = c(7,1,7), samples = 1000)
-render_scene(scene, parallel = TRUE, width = 400, height = 400, lookfrom = c(0,7,7), samples = 1000)
-render_scene(scene, parallel = TRUE, width = 400, height = 400, lookfrom = c(-7,0,-7), samples = 1000)
-render_scene(scene, parallel = TRUE, width = 400, height = 400, lookfrom = c(-7,7,7), samples = 1000)
+render_scene(scene, parallel = TRUE, width = 400, height = 400, 
+             lookfrom = c(7,1,7), samples = 1000, clamp_value=10)
+render_scene(scene, parallel = TRUE, width = 400, height = 400, 
+             lookfrom = c(0,7,7), samples = 1000, clamp_value=10)
+render_scene(scene, parallel = TRUE, width = 400, height = 400, 
+             lookfrom = c(-7,0,-7), samples = 1000, clamp_value=10)
+render_scene(scene, parallel = TRUE, width = 400, height = 400, 
+             lookfrom = c(-7,7,7), samples = 1000, clamp_value=10)
 ```
 
 ![](man/figures/README_ground_grid-1.png)<!-- -->
@@ -141,16 +144,45 @@ generate_cornell() %>%
   add_object(sphere(x=420,y=555/8,z=100,radius=555/8,
                     material = dielectric(color="orange"))) %>%
   add_object(yz_rect(x=0.01,y=300,z=555/2,zwidth=400,ywidth=400,
-                     material = diffuse(image = image_array))) %>%
+                     material = diffuse(image_texture = image_array))) %>%
   add_object(yz_rect(x=555/2,y=300,z=555-0.01,zwidth=400,ywidth=400,
-                     material = diffuse(image = image_array),angle=c(0,90,0))) %>%
+                     material = diffuse(image_texture = image_array),angle=c(0,90,0))) %>%
   add_object(yz_rect(x=555-0.01,y=300,z=555/2,zwidth=400,ywidth=400,
-                     material = diffuse(image = image_array),angle=c(0,180,0))) %>%
+                     material = diffuse(image_texture = image_array),angle=c(0,180,0))) %>%
   render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), aperture=0, fov=40,  samples = 1000,
              ambient_light=FALSE, parallel=TRUE, width=800, height=800, clamp_value = 5)
 ```
 
 ![](man/figures/README_basic_sphere-1.png)<!-- -->
+
+Rayrender also has an interface to create objects using constructive
+solid geometry, with a wide variety of primitives and operations.
+
+``` r
+generate_ground(material=diffuse(checkercolor="grey20")) %>%
+  add_object(csg_object(csg_combine(
+    csg_combine(
+      csg_box(),
+      csg_sphere(radius=0.707),
+      operation="intersection"),
+    csg_group(list(csg_cylinder(start=c(-1,0,0), end=c(1,0,0), radius=0.4),
+                   csg_cylinder(start=c(0,-1,0), end=c(0,1,0), radius=0.4),
+                   csg_cylinder(start=c(0,0,-1), end=c(0,0,1), radius=0.4))),
+    operation="subtract"),
+    material=glossy(color="red"))) %>%
+  add_object(csg_object(csg_translate(csg_combine(
+    csg_onion(csg_onion(csg_onion(csg_sphere(radius=0.3), 0.2), 0.1),0.05),
+    csg_box(y=1,width=c(10,2,10)), operation = "subtract"), x=1.3),
+    material=glossy(color="purple"))) %>%
+  add_object(csg_object(csg_combine(
+     csg_sphere(x=-1.2,z=-0.3, y=0.5,radius = 0.4),
+     csg_sphere(x=-1.4,z=0.4, radius = 0.4), operation="blend", radius=0.5),
+     material=glossy(color="dodgerblue4"))) %>%
+  add_object(sphere(y=5,x=3,radius=1,material=light(intensity=30))) %>%
+  render_scene(clamp_value=10, fov=20,lookfrom=c(5,5,10),samples=1000,width=800,height=800)
+```
+
+![](man/figures/unnamed-chunk-1-1.png)<!-- -->
 
 Finally, rayrender supports environment lighting with the
 `environment_light` argument. Pass a high dynamic range image (`.hdr`)

@@ -33,6 +33,11 @@ public:
     axis[1] = unit_vector(cross(w(),a));
     axis[0] = cross(w(), v());
   }
+  void swap_yz() {
+    vec3 tempaxis = axis[1];
+    axis[1] = axis[2];
+    axis[2] = tempaxis;
+  }
   vec3 axis[3];
   bool axis_flag;
 };

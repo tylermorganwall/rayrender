@@ -67,7 +67,7 @@ sphere = function(x = 0, y = 0, z = 0, radius = 1, material = diffuse(),
                  pivot_point = list(NA), group_translate = list(NA),
                  group_angle = list(NA), group_order_rotation = list(NA),
                  tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA),
-                 material_id = NA))
+                 material_id = NA, csg_object = list(NA)))
 }
 
 #' Cube Object
@@ -148,7 +148,7 @@ cube = function(x = 0, y = 0, z = 0, width = 1, xwidth = 1, ywidth = 1, zwidth =
                  pivot_point = list(NA), group_translate = list(NA),
                  group_angle = list(NA), group_order_rotation = list(NA),
                  tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA),
-                 material_id = NA))
+                 material_id = NA, csg_object = list(NA)))
 }
 
 #' Rectangular XY Plane Object 
@@ -213,7 +213,7 @@ xy_rect = function(x = 0, y = 0, z = 0, xwidth = 1, ywidth = 1,
                  pivot_point = list(NA), group_translate = list(NA),
                  group_angle = list(NA), group_order_rotation = list(NA),
                  tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA),
-                 material_id = NA))
+                 material_id = NA, csg_object = list(NA)))
 }
 
 #' Rectangular YZ Plane Object
@@ -277,7 +277,7 @@ yz_rect = function(x = 0, y = 0, z = 0, ywidth = 1, zwidth = 1, material = diffu
                  pivot_point = list(NA), group_translate = list(NA),
                  group_angle = list(NA), group_order_rotation = list(NA),
                  tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA),
-                 material_id = NA))
+                 material_id = NA, csg_object = list(NA)))
 }
 
 #' Rectangular XZ Plane Object
@@ -343,7 +343,7 @@ xz_rect = function(x = 0, xwidth = 1, z = 0, zwidth = 1, y = 0, material = diffu
                  pivot_point = list(NA), group_translate = list(NA),
                  group_angle = list(NA), group_order_rotation = list(NA),
                  tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA),
-                 material_id = NA))
+                 material_id = NA, csg_object = list(NA)))
 }
 
 #' Triangle Object
@@ -445,7 +445,7 @@ triangle = function(v1 = c(1, 0, 0), v2 = c(0, 1, 0), v3 = c(-1, 0, 0),
                  pivot_point = list(NA), group_translate = list(NA),
                  group_angle = list(NA), group_order_rotation = list(NA),
                  tricolorinfo = list(colorvec), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA),
-                 material_id = NA))
+                 material_id = NA, csg_object = list(NA)))
 }
 
 #' Disk Object
@@ -520,7 +520,7 @@ disk = function(x = 0, y = 0, z = 0, radius = 1, inner_radius = 0, material = di
                  pivot_point = list(NA), group_translate = list(NA),
                  group_angle = list(NA), group_order_rotation = list(NA),
                  tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA),
-                 material_id = NA))
+                 material_id = NA, csg_object = list(NA)))
 }
 
 #' `obj` File Object
@@ -616,7 +616,7 @@ obj_model = function(filename, x = 0, y = 0, z = 0, scale_obj = 1,
                  pivot_point = list(NA), group_translate = list(NA),
                  group_angle = list(NA), group_order_rotation = list(NA),
                  tricolorinfo = list(NA), fileinfo = filename, scale_factor = list(scale), group_scale = list(NA),
-                 material_id = NA))
+                 material_id = NA, csg_object = list(NA)))
 }
 
 #' Cylinder Object
@@ -698,7 +698,7 @@ cylinder = function(x = 0, y = 0, z = 0, radius = 1, length = 1,
                  pivot_point = list(NA), group_translate = list(NA),
                  group_angle = list(NA), group_order_rotation = list(NA),
                  tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA),
-                 material_id = NA))
+                 material_id = NA, csg_object = list(NA)))
 }
 
 #' Segment Object
@@ -837,7 +837,7 @@ segment = function(start = c(0, -1, 0), end = c(0, 1, 0), radius = 1,
                  pivot_point = list(NA), group_translate = list(NA),
                  group_angle = list(NA), group_order_rotation = list(NA),
                  tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA),
-                 material_id = NA))
+                 material_id = NA, csg_object = list(NA)))
 }
 
 #' Ellipsoid Object
@@ -918,7 +918,7 @@ ellipsoid = function(x = 0, y = 0, z = 0, a = 1, b = 1, c = 1,
                  pivot_point = list(NA), group_translate = list(NA),
                  group_angle = list(NA), group_order_rotation = list(NA),
                  tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA),
-                 material_id = NA))
+                 material_id = NA, csg_object = list(NA)))
 }
 
 #' Extruded Polygon Object
@@ -1592,7 +1592,7 @@ cone = function(start = c(0, 0, 0), end = c(0, 1, 0), radius = 0.5,
                       pivot_point = list(NA), group_translate = list(NA),
                       group_angle = list(NA), group_order_rotation = list(NA),
                       tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA),
-                      material_id = NA))
+                      material_id = NA, csg_object = list(NA)))
 }
 
 #' Arrow Object
@@ -1880,7 +1880,7 @@ bezier_curve = function(p1 = c(0,0,0), p2 = c(-1,0.33,0), p3 = c(1,0.66,0), p4=c
                       pivot_point = list(NA), group_translate = list(NA),
                       group_angle = list(NA), group_order_rotation = list(NA),
                       tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA),
-                      material_id = NA))
+                      material_id = NA, csg_object = list(NA)))
 }
 
 #' Path Object
@@ -1898,6 +1898,8 @@ bezier_curve = function(p1 = c(0,0,0), p2 = c(-1,0.33,0), p3 = c(1,0.66,0), p4=c
 #' continuous 1st and 2nd derivatives.
 #' @param straight Default `FALSE`. If `TRUE`, straight lines will be used to connect the points instead
 #' of bezier curves. 
+#' @param precomputed_control_points Default `FALSE`. If `TRUE`, `points` argument will expect
+#' a list of control points calculated with the internal rayrender function `rayrender:::calculate_control_points()`.
 #' @param width Default `0.1`. Curve width.
 #' @param width_end Default `NA`. Width at end of path. Same as `width`, unless specified.
 #' @param u_min Default `0`. Minimum parametric coordinate for the path.
@@ -1991,7 +1993,7 @@ bezier_curve = function(p1 = c(0,0,0), p2 = c(-1,0.33,0), p3 = c(1,0.66,0), p4=c
 #'   render_scene(samples=500, sample_method = "stratified", clamp_value=10, lookfrom=c(0,3,10))
 #' }
 path = function(points,
-                x=0,y=0,z=0, closed = FALSE, straight = FALSE,
+                x=0,y=0,z=0, closed = FALSE, straight = FALSE, precomputed_control_points = FALSE,
                 width = 0.1, width_end = NA, u_min = 0, u_max = 1, type = "cylinder",
                 normal = c(0,0,-1), normal_end = NA, 
                 material = diffuse(), angle = c(0, 0, 0),
@@ -2000,7 +2002,10 @@ path = function(points,
   if(is.na(width_end)) {
     width_end = width
   }
-  stopifnot(u_min < u_max)
+  if(u_min == u_max) {
+    return()
+  }
+  stopifnot(u_min <= u_max)
   stopifnot(length(width) == 1 && is.numeric(width))
   stopifnot(length(width_end) == 1 && is.numeric(width_end))
   
@@ -2018,33 +2023,42 @@ path = function(points,
   if(inherits(points,"numeric")) {
     stop("Input must either be list, matrix, or data.frame, not numeric.")
   }
-  if(inherits(points,"list")) {
+  if(inherits(points,"list") && !precomputed_control_points) {
     if(any(unlist(lapply(points,(function(x) length(x) != 3))))) {
       stop("If `points` is a list, each entry must be a length-3 vector")
     }
     points = do.call(rbind,points)
   }
-  if(nrow(points) == 1) {
-    stop("Only one point passed, no path specified.")
+  if(inherits(points,"data.frame")) {
+    points = as.matrix(points)
   }
-  if(nrow(points) == 2 && closed) {
-    closed=FALSE
+  if(is.array(points)) {
+    if(nrow(points) == 1) {
+      stop("Only one point passed, no path specified.")
+    }
+    if(nrow(points) == 2 && closed) {
+      closed=FALSE
+    }
+    if(closed && all(points[1,] != points[nrow(points),])) {
+      points = rbind(points,points[1,])
+    }
   }
-  if(closed && all(points[1,] != points[nrow(points),])) {
-    points = rbind(points,points[1,])
-  }
-  if(inherits(points,"matrix") || inherits(points,"data.frame")) {
-    if(ncol(points) == 3) {
-      if(!straight) {
-        full_control_points = calculate_control_points(points)
+  if(!precomputed_control_points) {
+    if(inherits(points,"matrix")) {
+      if(ncol(points) == 3) {
+        if(!straight) {
+          full_control_points = calculate_control_points(points)
+        } else {
+          full_control_points = calculate_control_points_straight(points)
+        }
       } else {
-        full_control_points = calculate_control_points_straight(points)
+        stop("If points a matrix or data.frame, must have 3 columns")
       }
     } else {
-      stop("If points a matrix or data.frame, must have 3 columns")
+      stop("points not of supported type (function expects matrix/data.frame/list, got ", class(points),")")
     }
   } else {
-    stop("points not of supported type (function expects matrix/data.frame/list, got ", class(points),")")
+    full_control_points = points
   }
   u_min_segment = length(full_control_points) * u_min 
   u_max_segment = length(full_control_points) * u_max 
@@ -2090,3 +2104,98 @@ path = function(points,
     return(do.call(rbind, curve_list))
   }
 }
+
+#' Text Object
+#'
+#' @param label Text string.
+#' @param x Default `0`. x-coordinate of the center of the label.
+#' @param y Default `0`. y-coordinate of the center of the label.
+#' @param z Default `0`. z-coordinate of the center of the label.
+#' @param text_height Default `1`. Height of the text.
+#' @param orientation Default `xy`. Orientation of the plane. Other options are `yz` and `xz`.
+#' @param material Default  \code{\link{diffuse}}. The material, called from one of the material 
+#' functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}.
+#' @param angle Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.
+#' @param order_rotation Default `c(1, 2, 3)`. The order to apply the rotations, referring to "x", "y", and "z".
+#' @param velocity Default `c(0, 0, 0)`. Velocity of the sphere, used for motion blur.
+#' @param flipped Default `FALSE`. Whether to flip the normals.
+#' @param scale Default `c(1, 1, 1)`. Scale transformation in the x, y, and z directions. If this is a single value,
+#' number, the object will be scaled uniformly.
+#' Note: emissive objects may not currently function correctly when scaled.
+#' @importFrom  grDevices col2rgb
+#'
+#' @return Single row of a tibble describing the text in the scene.
+#' @export
+#'
+#' @examples
+#' #Generate a label in the cornell box.
+#' \donttest{
+#' generate_cornell() %>% 
+#'   add_object(text3d(label="Cornell Box", x=555/2,y=555/2,z=555/2,text_height=60,
+#'                     material=diffuse(color="grey10"), angle=c(0,180,0))) %>% 
+#'   render_scene(samples=500, sample_method = "stratified", clamp_value=10)
+#'   
+#' #Change the orientation
+#' generate_cornell() %>% 
+#'   add_object(text3d(label="YZ Plane", x=550,y=555/2,z=555/2,text_height=100,
+#'                     orientation = "yz",
+#'                     material=diffuse(color="grey10"), angle=c(0,180,0))) %>% 
+#'  add_object(text3d(label="XY Plane", z=550,y=555/2,x=555/2,text_height=100,
+#'                     orientation = "xy",
+#'                     material=diffuse(color="grey10"), angle=c(0,180,0))) %>% 
+#'  add_object(text3d(label="XZ Plane", z=555/2,y=5,x=555/2,text_height=100,
+#'                     orientation = "xz",
+#'                     material=diffuse(color="grey10"))) %>% 
+#'   render_scene(samples=500, sample_method = "stratified", clamp_value=10)
+#'   
+#' #Add an label in front of a sphere
+#' generate_cornell() %>% 
+#'   add_object(text3d(label="Cornell Box", x=555/2,y=555/2,z=555/2,text_height=60,
+#'                     material=diffuse(color="grey10"), angle=c(0,180,0))) %>% 
+#'   add_object(text3d(label="Sphere", x=555/2,y=100,z=100,text_height=30,
+#'                     material=diffuse(color="white"), angle=c(0,180,0))) %>% 
+#'   add_object(sphere(y=100,radius=100,z=555/2,x=555/2,
+#'                     material=glossy(color="purple"))) %>% 
+#'   add_object(sphere(y=555,radius=100,z=-1000,x=555/2,
+#'                     material=light(intensity=100,spotlight_focus=c(555/2,100,100)))) %>%                   
+#'   render_scene(samples=500, sample_method = "stratified", clamp_value=10)
+#'   
+#'   
+#' #A room full of bees
+#' bee_list = list()
+#' for(i in 1:100) {
+#' bee_list[[i]] = text3d("B", x=20+runif(1)*525, y=20+runif(1)*525, z=20+runif(1)*525, 
+#'                        text_height = 50, angle=c(0,180,0))
+#' }
+#' bees = do.call(rbind,bee_list)
+#' generate_cornell() %>% 
+#'   add_object(bees) %>%                   
+#'   render_scene(samples=500, sample_method = "stratified", clamp_value=10)
+#' }
+text3d = function(label, x = 0, y = 0, z = 0, text_height = 1, orientation = "xy",
+                  material = diffuse(), 
+                  angle = c(0, 0, 0), order_rotation = c(1, 2, 3), velocity = c(0, 0, 0), 
+                  flipped = FALSE, scale = c(1,1,1)) {
+  labelfile = tempfile(fileext = ".png")
+  rayimage::add_title(matrix(0,ncol = nchar(label)*60, nrow=60*1.2), 
+                      title_size  = 60,
+                      title_offset = c(0,0),title_text = label, title_color = "white",
+                      title_position = "center", filename = labelfile)
+  material$alphaimage = list(labelfile)
+  if(orientation == "xy" || orientation == "yx") {
+    rayrender::xy_rect(x=x,y=y,z=z, angle = angle,
+                       xwidth = nchar(label)*text_height, ywidth = text_height,
+                       material = material)
+  } else if (orientation == "yz" || orientation == "zy") {
+    rayrender::yz_rect(x=x,y=y,z=z, angle = angle,
+                       zwidth = nchar(label)*text_height, ywidth = text_height,
+                       material = material)
+  } else if (orientation == "xz" || orientation == "zx") {
+    rayrender::xz_rect(x=x,y=y,z=z, angle = angle,
+                       xwidth = nchar(label)*text_height, zwidth = text_height,
+                       material = material)
+  } else {
+    stop("Orientation ", orientation, " not recognized")
+  }
+}
+

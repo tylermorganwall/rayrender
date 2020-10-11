@@ -9,8 +9,8 @@ class aabb {
   public: 
     aabb() {}
     aabb(const vec3& a, const vec3& b) { 
-      bounds[0] = vec3(ffmin(a.x(), b.x()), ffmin(a.y(), b.y()),ffmin(a.z(), b.z()));
-      bounds[1] = vec3(ffmax(a.x(), b.x()), ffmax(a.y(), b.y()),ffmax(a.z(), b.z()));
+      bounds[0] = vec3(fmin(a.x(), b.x()), fmin(a.y(), b.y()),fmin(a.z(), b.z()));
+      bounds[1] = vec3(fmax(a.x(), b.x()), fmax(a.y(), b.y()),fmax(a.z(), b.z()));
       centroid = (a + b)/2;
       diagonal = b - a;
     }
@@ -40,6 +40,11 @@ inline aabb surrounding_box(aabb box0, aabb box1) {
 inline aabb Expand(aabb box, Float delta) {
   return(aabb(box.min() - vec3(delta, delta, delta),
               box.max() + vec3(delta, delta, delta)));
+}
+
+inline aabb Expand(aabb box, vec3 delta) {
+  return(aabb(box.min() - delta,
+              box.max() + delta));
 }
 
 #endif

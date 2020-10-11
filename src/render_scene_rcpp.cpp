@@ -195,6 +195,31 @@ inline vec3 calculate_color(const ray& r, hitable *world, random_gen &rng) {
   }
 }
 
+inline vec3 quick_render(const ray& r, hitable *world, random_gen &rng, vec3 lightdir, Float n) {
+  hit_record hrec;
+  scatter_record srec;
+  ray r2 = r;
+  if(world->hit(r2, 0.001, FLT_MAX, hrec, rng)) {
+    vec3 emit = hrec.mat_ptr->emitted(r2, hrec, hrec.u, hrec.v, hrec.p);
+    if(emit.x() != 0 || emit.y() != 0 || emit.z() != 0) {
+      return(emit);
+    }
+    if(hrec.mat_ptr->scatter(r2, hrec, srec, rng)) { //generates scatter record, world space
+      if(srec.is_specular) { 
+        return(vec3(1,1,1));
+      }
+      vec3 normal = hrec.has_bump ? hrec.bump_normal : hrec.normal;
+      vec3 R = Reflect(lightdir, hrec.normal); 
+      return(hrec.mat_ptr->get_albedo(r2, hrec) * (dot(normal, lightdir)+1)/2 + 
+            std::pow(std::max(0.f, dot(R, -unit_vector(r.direction()))), n));
+    } else {
+      return(vec3(0,0,0));
+    }
+  } else {
+    return(vec3(0,0,0));
+  }
+}
+
 // //Does not take into account moving objects
 // void calculate_inside(const ray& r_in, hitable *world, random_gen rng) {
 //   hit_record hrec;
@@ -251,7 +276,7 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
                        float rotate_env, float intensity_env, bool verbose, int debug_channel,
                        IntegerVector& shared_id_mat, LogicalVector& is_shared_mat,
                        float min_variance, int min_adaptive_size, List glossyinfo,
-                       List image_repeat) {
+                       List image_repeat, List csg_info) {
   auto startfirst = std::chrono::high_resolution_clock::now();
   //Unpack Camera Info
   int nx = as<int>(camera_info["nx"]);
@@ -270,6 +295,7 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
   size_t roulette_active = as<size_t>(camera_info["roulette_active_depth"]);
   int sample_method = as<int>(camera_info["sample_method"]);
   NumericVector stratified_dim = as<NumericVector>(camera_info["stratified_dim"]);
+  NumericVector light_direction = as<NumericVector>(camera_info["light_direction"]);
   
   //Initialize output matrices
   NumericMatrix routput(nx,ny);
@@ -373,7 +399,7 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
                                 fileinfo, filebasedir, 
                                 scale_list, sigmavec, glossyinfo,
                                 shared_id_mat, is_shared_mat, shared_materials,
-                                image_repeat, rng);
+                                image_repeat, csg_info, rng);
   auto finish = std::chrono::high_resolution_clock::now();
   if(verbose) {
     std::chrono::duration<double> elapsed = finish - start;
@@ -404,7 +430,7 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
   if(hasbackground) {
     background_texture_data = stbi_loadf(background[0], &nx1, &ny1, &nn1, 0);
     background_texture = new image_texture(background_texture_data, nx1, ny1, nn1, 1, 1, intensity_env);
-    background_material = new diffuse_light(background_texture);
+    background_material = new diffuse_light(background_texture, 1.0);
     background_sphere = new InfiniteAreaLight(nx1, ny1, world_radius*2, world_center,
                                               background_texture, background_material);
     if(rotate_env != 0) {
@@ -417,13 +443,13 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
       backgroundlow = vec3(FLT_MIN,FLT_MIN,FLT_MIN);
     }
     background_texture = new gradient_texture(backgroundlow, backgroundhigh, false, false);
-    background_material = new diffuse_light(background_texture);
+    background_material = new diffuse_light(background_texture, 1.0);
     background_sphere = new InfiniteAreaLight(100, 100, world_radius*2, world_center,
                                               background_texture, background_material);
   } else {
     //Minimum intensity FLT_MIN so the CDF isn't NAN
     background_texture = new constant_texture(vec3(FLT_MIN,FLT_MIN,FLT_MIN));
-    background_material = new diffuse_light(background_texture);
+    background_material = new diffuse_light(background_texture, 1.0);
     background_sphere = new InfiniteAreaLight(100, 100, world_radius*2, world_center,
                                               background_texture, background_material);
   }
@@ -612,6 +638,38 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
       }
     }
     delete mat_stack;
+  } else if (debug_channel == 9) {
+    vec3 light_dir(light_direction(0),light_direction(1),light_direction(2));
+    Float n_exp = light_direction(3);
+    RcppThread::ThreadPool pool(numbercores);
+    auto worker = [&routput, &goutput, &boutput,
+                   nx, ny,  fov, light_dir, n_exp,
+                   &cam, &ocam, &world] (int j) {
+                     std::vector<dielectric*> *mat_stack = new std::vector<dielectric*>;
+                     random_gen rng(j);
+                     for(int i = 0; i < nx; i++) {
+                       Float u = Float(i) / Float(nx);
+                       Float v = Float(j) / Float(ny);
+                       ray r;
+                       if(fov != 0) {
+                         r = cam.get_ray(u,v, vec3(0,0,0), 0);
+                       } else {
+                         r = ocam.get_ray(u,v);
+                       }
+                       r.pri_stack = mat_stack;
+                       vec3 qr = quick_render(r, &world, rng, light_dir, n_exp);
+                       mat_stack->clear();
+                       
+                       routput(i,j) = qr.x();
+                       goutput(i,j) = qr.y();
+                       boutput(i,j) = qr.z();
+                     }
+                     delete mat_stack;
+                   };
+    for(int j = ny - 1; j >= 0; j--) {
+      pool.push(worker,j);
+    }
+    pool.join();
   } else {
     if(min_variance == 0) {
       std::vector<unsigned int> seeds(ny);
