@@ -26,6 +26,7 @@ reference:
       - starts_with("ellipsoid")
       - starts_with("disk")
       - starts_with("obj")
+      - starts_with("ply")
       - starts_with("cone")
       - starts_with("arrow")
       - starts_with("extruded")
@@ -47,6 +48,7 @@ reference:
       - starts_with("microfacet")
       - starts_with("glossy")
       - starts_with("light")
+      - starts_with("hair")
   - title: "Composing Scenes"
     desc: "Function for adding objects together to form a scene."
     contents:

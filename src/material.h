@@ -195,7 +195,7 @@ class dielectric : public material {
 
       bool entering = dot(hrec.normal, r_in.direction()) < 0;
       bool skip = false;
-      vec3 offset_p = entering ? offset_ray(hrec.p-r_in.A, -hrec.normal) + r_in.A : offset_ray(hrec.p-r_in.A, hrec.normal) + r_in.A ;
+      vec3 offset_p = entering ? offset_ray(hrec.p-r_in.A, hrec.normal) + r_in.A : offset_ray(hrec.p-r_in.A, -hrec.normal) + r_in.A ;
       
       
       for(size_t i = 0; i < r_in.pri_stack->size(); i++) {
@@ -247,13 +247,13 @@ class dielectric : public material {
         reflect_prob = 1.0;
       }
       if(!entering) {
-        Float distance = (hrec.p-r_in.point_at_parameter(0)).length();
+        Float distance = (offset_p-r_in.point_at_parameter(0)).length();
         srec.attenuation = vec3(std::exp(-distance * attenuation.x()),
                                 std::exp(-distance * attenuation.y()),
                                 std::exp(-distance * attenuation.z()));
       } else {
         if(prev_active != -1) {
-          Float distance = (hrec.p-r_in.point_at_parameter(0)).length();
+          Float distance = (offset_p-r_in.point_at_parameter(0)).length();
           vec3 prev_atten = r_in.pri_stack->at(prev_active)->attenuation;
 
           srec.attenuation = albedo * vec3(std::exp(-distance * prev_atten.x()),
