@@ -223,11 +223,11 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
   shapevec = unlist(lapply(tolower(scene$shape),switch,
                           "sphere" = 1,"xy_rect" = 2, "xz_rect" = 3,"yz_rect" = 4,"box" = 5, "triangle" = 6, 
                           "obj" = 7, "objcolor" = 8, "disk" = 9, "cylinder" = 10, "ellipsoid" = 11,
-                          "objvertexcolor" = 12, "cone" = 13, "curve" = 14, "csg_object" = 15))
+                          "objvertexcolor" = 12, "cone" = 13, "curve" = 14, "csg_object" = 15, "ply" = 16))
   typevec = unlist(lapply(tolower(scene$type),switch,
                           "diffuse" = 1,"metal" = 2,"dielectric" = 3, 
                           "oren-nayar" = 4, "light" = 5, "microfacet" = 6, 
-                          "glossy" = 7, "spotlight" = 8))
+                          "glossy" = 7, "spotlight" = 8, "hair" = 9))
   sigmavec = unlist(scene$sigma)
   
   assertthat::assert_that(tonemap %in% c("gamma","reinhold","uncharted", "hbd", "raw"))
@@ -403,7 +403,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
   fileinfovec[is.na(fileinfovec)] = ""
   objfilenamevec = purrr::map_chr(fileinfovec, path.expand)
   if(any(!file.exists(objfilenamevec) & nchar(objfilenamevec) > 0)) {
-    stop(paste0("Cannot find the following .obj files:\n",
+    stop(paste0("Cannot find the following obj/ply files:\n",
                  paste(objfilenamevec[!file.exists(objfilenamevec) & nchar(objfilenamevec) > 0], 
                        collapse="\n")
                  ))

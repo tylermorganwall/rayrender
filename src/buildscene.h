@@ -19,6 +19,7 @@
 #include "cone.h"
 #include "curve.h"
 #include "csg.h"
+#include "plymesh.h"
 #include <Rcpp.h>
 using namespace Rcpp;
 
@@ -167,6 +168,8 @@ hitable *build_scene(IntegerVector& type,
       prop_len = 7;
     } else if (type(i) == 8) {
       prop_len = 7;
+    } else if (type(i) == 9) {
+      prop_len = 6;
     }
     if(is_shared_mat(i) && shared_materials->size() > static_cast<size_t>(shared_id_mat(i))) {
       tex = shared_materials->at(shared_id_mat(i));
@@ -412,6 +415,9 @@ hitable *build_scene(IntegerVector& type,
       } else if (type(i) == 8) {
         tex = new spot_light(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))*lightintensity(i)),
                              vec3(tempvector(3),tempvector(4),tempvector(5)), tempvector(6),tempvector(7));
+      } else if (type(i) == 9) {
+        tex = new hair(vec3(tempvector(0),tempvector(1),tempvector(2)), 
+                       tempvector(3),tempvector(4),tempvector(5),tempvector(6));
       }
     }
     if(is_shared_mat(i) && shared_materials->size() <= static_cast<size_t>(shared_id_mat(i)) ) {
@@ -447,6 +453,8 @@ hitable *build_scene(IntegerVector& type,
     } else if(shape(i) == 14) {
       center = vec3(x(i), y(i), z(i));
     } else if(shape(i) == 15) {
+      center = vec3(x(i), y(i), z(i));
+    } else if(shape(i) == 16) {
       center = vec3(x(i), y(i), z(i));
     }
 
@@ -845,6 +853,39 @@ hitable *build_scene(IntegerVector& type,
         entry = new flip_normals(entry);
       }
       list[i] = entry;
+    } else if (shape(i) == 16) {
+      hitable *entry;
+      std::string objfilename = Rcpp::as<std::string>(fileinfo(i));
+      std::string objbasedirname = Rcpp::as<std::string>(filebasedir(i));
+      entry = new plymesh(objfilename, objbasedirname, 
+                          tex,
+                          tempvector(prop_len+1),
+                          shutteropen, shutterclose, rng);
+      if(entry == nullptr) {
+        continue;
+      }
+      if(is_scaled) {
+        entry = new scale(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
+      }
+      entry = rotation_order(entry, temprotvec, order_rotation);
+      if(isgrouped(i)) {
+        entry = new translate(entry, center - gpivot);
+        if(is_group_scaled) {
+          entry = new scale(entry, vec3(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
+        }
+        entry = rotation_order(entry, temp_gangle, temp_gorder);
+        entry = new translate(entry, -center + gpivot );
+      }
+      entry = new translate(entry, center + gtrans + vel * shutteropen);
+      if(isflipped(i)) {
+        entry = new flip_normals(entry);
+      } 
+      if(isvolume(i)) {
+        list[i] = new constant_medium(entry, voldensity(i), 
+                                      new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))));
+      } else {
+        list[i] = entry;
+      }
     }
   }
   hitable *full_scene = new bvh_node(list, n, shutteropen, shutterclose, rng);
@@ -919,6 +960,8 @@ hitable* build_imp_sample(IntegerVector& type,
     prop_len = 3;
   } else if (type(i) == 8) {
     prop_len = 7;
+  } else if (type(i) == 9) {
+    prop_len = 6;
   }
   
   if(shape(i) == 1) {
@@ -950,6 +993,8 @@ hitable* build_imp_sample(IntegerVector& type,
   } else if(shape(i) == 14) {
     center = vec3(x(i), y(i), z(i));
   } else if(shape(i) == 15) {
+    center = vec3(x(i), y(i), z(i));
+  } else if(shape(i) == 16) {
     center = vec3(x(i), y(i), z(i));
   }
 
@@ -1174,12 +1219,34 @@ hitable* build_imp_sample(IntegerVector& type,
     }
     entry = new translate(entry, center + gtrans + vel * shutteropen);
     return(entry);
-  } else {
+  } else if (shape(i) == 15) {
     std::shared_ptr<ImplicitShape> shapes;
     hitable *entry = new csg(nullptr, shapes);
     if(is_scaled) {
       entry = new scale(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
     }
+    if(isgrouped(i)) {
+      entry = new translate(entry, center - gpivot);
+      if(is_group_scaled) {
+        entry = new scale(entry, vec3(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
+      }
+      entry = rotation_order(entry, temp_gangle, temp_gorder);
+      entry = new translate(entry, -center + gpivot );
+    }
+    entry = new translate(entry, center + gtrans + vel * shutteropen);
+    return(entry);
+  } else {
+    hitable *entry;
+    std::string objfilename = Rcpp::as<std::string>(fileinfo(i));
+    std::string objbasedirname = Rcpp::as<std::string>(filebasedir(i));
+    entry = new plymesh(objfilename, objbasedirname, 
+                        nullptr,
+                        tempvector(prop_len+1),
+                        shutteropen, shutterclose, rng);
+    if(is_scaled) {
+      entry = new scale(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
+    }
+    entry = rotation_order(entry, temprotvec, order_rotation);
     if(isgrouped(i)) {
       entry = new translate(entry, center - gpivot);
       if(is_group_scaled) {

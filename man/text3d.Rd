@@ -83,7 +83,8 @@ generate_cornell() \%>\%
   add_object(sphere(y=100,radius=100,z=555/2,x=555/2,
                     material=glossy(color="purple"))) \%>\% 
   add_object(sphere(y=555,radius=100,z=-1000,x=555/2,
-                    material=light(intensity=100,spotlight_focus=c(555/2,100,100)))) \%>\%                   
+                    material=light(intensity=100,
+                                   spotlight_focus=c(555/2,100,100)))) \%>\%                   
   render_scene(samples=500, sample_method = "stratified", clamp_value=10)
   
   

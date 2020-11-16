@@ -1855,6 +1855,9 @@ bezier_curve = function(p1 = c(0,0,0), p2 = c(-1,0.33,0), p3 = c(1,0.66,0), p4=c
     stopifnot(length(normal) == 3 && is.numeric(normal))
     stopifnot(length(normal_end) == 3 && is.numeric(normal_end))
   }
+  if(material$type == "hair") {
+    type = "flat"
+  }
   if(all(is.na(normal)) || type == "cylinder" || type == "flat") {
     normal = c(0,0,0)
     normal_end = c(0,0,0)
@@ -2157,7 +2160,8 @@ path = function(points,
 #'   add_object(sphere(y=100,radius=100,z=555/2,x=555/2,
 #'                     material=glossy(color="purple"))) %>% 
 #'   add_object(sphere(y=555,radius=100,z=-1000,x=555/2,
-#'                     material=light(intensity=100,spotlight_focus=c(555/2,100,100)))) %>%                   
+#'                     material=light(intensity=100,
+#'                                    spotlight_focus=c(555/2,100,100)))) %>%                   
 #'   render_scene(samples=500, sample_method = "stratified", clamp_value=10)
 #'   
 #'   
@@ -2197,5 +2201,82 @@ text3d = function(label, x = 0, y = 0, z = 0, text_height = 1, orientation = "xy
   } else {
     stop("Orientation ", orientation, " not recognized")
   }
+}
+
+#' `ply` File Object
+#' 
+#' Load an PLY file via a filepath. 
+#' Note: light importance sampling currently not supported for this shape.
+#'
+#' @param filename Filename and path to the `ply` file. Can also be a `txt` file, if it's in the correct `ply` internally.
+#' @param x Default `0`. x-coordinate to offset the model.
+#' @param y Default `0`. y-coordinate to offset the model.
+#' @param z Default `0`. z-coordinate to offset the model.
+#' @param scale_ply Default `1`. Amount to scale the model. Use this to scale the object up or down on all axes, as it is
+#' more robust to numerical precision errors than the generic scale option.
+#' @param material Default  \code{\link{diffuse}}.The material, called from one of the material 
+#' functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}. 
+#' @param angle Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.
+#' @param order_rotation Default `c(1, 2, 3)`. The order to apply the rotations, referring to "x", "y", and "z".
+#' @param flipped Default `FALSE`. Whether to flip the normals.
+#' @param scale Default `c(1, 1, 1)`. Scale transformation in the x, y, and z directions. If this is a single value,
+#' number, the object will be scaled uniformly.
+#' Note: emissive objects may not currently function correctly when scaled.
+#' 
+#' @return Single row of a tibble describing the obj model in the scene.
+#' @export
+#'
+#' @examples
+#' #See the documentation for `obj_model()`--no example PLY models are included with this package,
+#' #but the process of loading a model is the same (without support for vertex colors).
+ply_model = function(filename, x = 0, y = 0, z = 0, scale_ply = 1, 
+                     material = diffuse(), 
+                     angle = c(0, 0, 0), order_rotation = c(1, 2, 3), 
+                     flipped = FALSE, scale = c(1,1,1)) {
+  if(length(scale) == 1) {
+    scale = c(scale, scale, scale)
+  }
+  tempcon = file(filename, open="rt")
+  on.exit(close(tempcon))
+  is_ply = scan(tempcon,what=character(),n=1, quiet=TRUE) == "ply"
+  if(!is_ply) {
+    stop(filename, " does not appear to be PLY file.")
+  }
+  tokenval = scan(tempcon,what=character(),n=1, quiet=TRUE)
+  while(tokenval != "end_header") {
+    if(tokenval == "vertex") {
+      if(scan(tempcon,what=integer(),n=1, quiet=TRUE) == 0) {
+        warning(filename, " contains no vertices, skipping.")
+        return()
+      }
+    }
+    if(tokenval == "face") {
+      if(scan(tempcon,what=integer(),n=1, quiet=TRUE) == 0) {
+        warning(filename, " contains no polygon faces, skipping.")
+        return()
+      }
+    }
+    tokenval = scan(tempcon,what=character(),n=1, quiet=TRUE)
+  }
+  info = c(unlist(material$properties), scale_ply)
+  new_tibble_row(list(x = x, y = y, z = z, radius = NA, 
+                      type = material$type, shape = "ply",
+                      properties = list(info), velocity = list(c(0, 0, 0)),
+                      checkercolor = material$checkercolor, 
+                      gradient_color = material$gradient_color, gradient_transpose = material$gradient_transpose, 
+                      world_gradient = material$world_gradient, gradient_point_info = material$gradient_point_info,
+                      gradient_type = material$gradient_type,
+                      noise = material$noise, noisephase = material$noisephase, 
+                      noiseintensity = material$noiseintensity, noisecolor = material$noisecolor,
+                      angle = list(angle), image = material$image, image_repeat = material$image_repeat,
+                      alphaimage = list(material$alphaimage), bump_texture = list(material$bump_texture),
+                      bump_intensity = material$bump_intensity, lightintensity = material$lightintensity,
+                      flipped = flipped, fog = material$fog, fogdensity = material$fogdensity,
+                      implicit_sample = material$implicit_sample,  sigma = material$sigma, glossyinfo = material$glossyinfo,
+                      order_rotation = list(order_rotation),
+                      pivot_point = list(NA), group_translate = list(NA),
+                      group_angle = list(NA), group_order_rotation = list(NA),
+                      tricolorinfo = list(NA), fileinfo = filename, scale_factor = list(scale), group_scale = list(NA),
+                      material_id = NA, csg_object = list(NA)))
 }
 

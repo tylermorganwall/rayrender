@@ -302,6 +302,8 @@ bool curve::recursiveIntersect(const ray& r, Float tmin, Float tmax, hit_record&
       rec.dpdv = unit_vector(cross(rec.dpdu,-r.direction()));
       rec.normal = unit_vector(-r.direction());
     } 
+    rec.dpdu.make_unit_vector();
+    
     rec.u = u;
     rec.v = v;
     rec.mat_ptr = mat_ptr;

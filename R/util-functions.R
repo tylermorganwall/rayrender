@@ -66,3 +66,12 @@ calculate_control_points_straight = function(s_mat) {
   }
   return(return_points)
 }
+
+#' Clamp Values
+#'
+#' @keywords internal
+clamp = function(v, min=0, max=Inf) {
+  v[v < min] = min
+  v[v > max] = max
+  v
+}

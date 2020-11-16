@@ -6,6 +6,12 @@
 #include <cstring>
 #include "vec3.h"
 #include "vec2.h"
+#include <array>
+
+
+static const Float mpi_over_180 = M_PI/180;
+static const Float SqrtPiOver8 = 0.626657069f;
+static const Float ONE_OVER_2_PI = 1 / (2 * M_PI);
 
 template<class T>
 inline T ffmin(T a, T b) { return(a < b ? a : b);}
@@ -432,23 +438,125 @@ inline Float SafeSqrt(Float x) {
   return(std::sqrt(std::max(Float(0), x)));
 }
 
-
 inline vec3 Exp(vec3 a) {
   return(vec3(std::exp(a.x()),std::exp(a.y()),std::exp(a.z())));
 }
 
 inline Float Logistic(Float x, Float s) {
   x = std::abs(x);
-  return std::exp(-x / s) / (s * Sqr(1 + std::exp(-x / s)));
+  return(std::exp(-x / s) / (s * Sqr(1 + std::exp(-x / s))));
 }
 
 inline Float LogisticCDF(Float x, Float s) {
-  return 1 / (1 + std::exp(-x / s));
+  return(1 / (1 + std::exp(-x / s)));
 }
 
 inline Float TrimmedLogistic(Float x, Float s, Float a, Float b) {
-  return Logistic(x, s) / (LogisticCDF(b, s) - LogisticCDF(a, s));
+  return(Logistic(x, s) / (LogisticCDF(b, s) - LogisticCDF(a, s)));
 }
+
+//Hair utilities
+static const int pMax = 3;
+
+
+inline uint32_t Compact1By1(uint32_t x) {
+  // TODO: as of Haswell, the PEXT instruction could do all this in a
+  // single instruction.
+  // x = -f-e -d-c -b-a -9-8 -7-6 -5-4 -3-2 -1-0
+  x &= 0x55555555;
+  // x = --fe --dc --ba --98 --76 --54 --32 --10
+  x = (x ^ (x >> 1)) & 0x33333333;
+  // x = ---- fedc ---- ba98 ---- 7654 ---- 3210
+  x = (x ^ (x >> 2)) & 0x0f0f0f0f;
+  // x = ---- ---- fedc ba98 ---- ---- 7654 3210
+  x = (x ^ (x >> 4)) & 0x00ff00ff;
+  // x = ---- ---- ---- ---- fedc ba98 7654 3210
+  x = (x ^ (x >> 8)) & 0x0000ffff;
+  return(x);
+}
+
+inline vec2 DemuxFloat(Float f) {
+  uint64_t v = f * (1ull << 32);
+  uint32_t bits[2] = {Compact1By1(v), Compact1By1(v >> 1)};
+  return(vec2(bits[0] / Float(1 << 16), bits[1] / Float(1 << 16)));
+}
+
+inline Float I0(Float x) {
+  Float val = 0;
+  Float x2i = 1;
+  int64_t ifact = 1;
+  int i4 = 1;
+  // I0(x) \approx Sum_i x^(2i) / (4^i (i!)^2)
+  for (int i = 0; i < 10; ++i) {
+    if (i > 1) {
+      ifact *= i;
+    }
+    val += x2i / (i4 * Sqr(ifact));
+    x2i *= x * x;
+    i4 *= 4;
+  }
+  return(val);
+}
+
+inline Float LogI0(Float x) {
+  if (x > 12) {
+    return(x + 0.5 * (-std::log(2 * M_PI) + std::log(1 / x) + 1 / (8 * x)));
+  } else {
+    return(std::log(I0(x)));
+  }
+}
+
+inline std::array<vec3, pMax + 1> Ap(Float cosThetaO, Float eta, Float h,
+                                     const vec3 &T) {
+  std::array<vec3, pMax + 1> ap;
+  // Compute $p=0$ attenuation at initial cylinder intersection
+  Float cosGammaO = SafeSqrt(1 - h * h);
+  Float cosTheta = cosThetaO * cosGammaO;
+  Float f = FrDielectric(cosTheta, 1.f, eta);
+  ap[0] = f;
+  
+  // Compute $p=1$ attenuation term
+  ap[1] = Sqr(1 - f) * T;
+  
+  // Compute attenuation terms up to $p=_pMax_$
+  for (int p = 2; p < pMax; ++p) {
+    ap[p] = ap[p - 1] * T * f;
+  }
+  
+  // Compute attenuation term accounting for remaining orders of scattering
+  ap[pMax] = ap[pMax - 1] * f * T / (vec3(1.0f,1.0f,1.0f) - T * f);
+  return(ap);
+}
+
+
+inline Float Mp(Float cosThetaI, Float cosThetaO, Float sinThetaI,
+                Float sinThetaO, Float v) {
+  Float a = cosThetaI * cosThetaO / v;
+  Float b = sinThetaI * sinThetaO / v;
+  Float mp = (v <= .1)
+    ? (std::exp(LogI0(a) - b - 1 / v + 0.6931f + std::log(1 / (2 * v))))
+    : (std::exp(-b) * I0(a)) / (std::sinh(1 / v) * 2 * v);
+  return(mp);
+}
+
+inline Float Phi(int p, Float gammaO, Float gammaT) {
+  return(2 * p * gammaT - 2 * gammaO + p * M_PI);
+}
+
+inline Float Np(Float phi, int p, Float s, Float gammaO, Float gammaT) {
+  Float dphi = phi - Phi(p, gammaO, gammaT);
+  // Remap _dphi_ to $[-\pi,\pi]$
+  while (dphi > M_PI) dphi -= 2 * M_PI;
+  while (dphi < -M_PI) dphi += 2 * M_PI;
+  return(TrimmedLogistic(dphi, s, -M_PI, M_PI));
+}
+
+inline Float SampleTrimmedLogistic(Float u, Float s, Float a, Float b) {
+  Float k = LogisticCDF(b, s) - LogisticCDF(a, s);
+  Float x = -s * std::log(1 / (u * k + LogisticCDF(a, s)) - 1);
+  return(clamp(x, a, b));
+}
+
 
 
 

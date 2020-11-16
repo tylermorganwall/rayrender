@@ -913,6 +913,117 @@ glossy = function(color="white", gloss = 1, reflectance = 0.05, microfacet = "tb
                       bump_intensity = bump_intensity))
 }
 
+
+SigmaAFromConcentration = function(ce, cp) {
+  eumelaninSigmaA = c(0.419, 0.697, 1.37);
+  pheomelaninSigmaA = c(0.187, 0.4, 1.05);
+  sigma_a = ce * eumelaninSigmaA + cp * pheomelaninSigmaA
+  return(sigma_a);
+}
+
+SigmaAFromReflectance = function(c, beta_n) {
+  sigma_a = (log(c) / (5.969 - 0.215 * beta_n + 2.532 * (beta_n)^2 -
+             10.73 * (beta_n)^3 + 5.574 * (beta_n)^4 +
+             0.245 * (beta_n)^5))^2;
+  return(sigma_a);
+}
+
+#' Hair Material
+#'
+#' @param pigment Default `1.3`. Concentration of the eumelanin pigment in the hair. Blonde hair has concentrations around 0.3, brown around 1.3, and black around 8.
+#' @param red_pigment Default `0`.Concentration of the pheomelanin pigment in the hair. Pheomelanin makes red hair red.
+#' @param color Default `NA`. Approximate color. Overrides `pigment`/`redness` arguments.
+#' @param sigma_a Default `NA`. Attenuation. Overrides `color` and `pigment`/`redness` arguments.
+#' @param eta Default `1.55`. Index of refraction of the hair medium.
+#' @param beta_m Default `0.3`. Longitudinal roughness of the hair. Should be between 0 and 1. This roughness controls the size and shape of the hair highlight.
+#' @param beta_n Default `0.3`. Azimuthal roughness of the hair. Should be between 0 and 1.
+#' @param alpha Default `2`. Angle of scales on the hair surface, in degrees.
+#'
+#' @return Single row of a tibble describing the hair material.
+#' @export
+#' @importFrom  grDevices col2rgb
+#'
+#' @examples
+#' #Create a hairball
+#' \donttest{
+#' #Generate rendom points on a sphere
+#' lengthval = 0.5
+#' theta = acos(2*runif(10000)-1.0);
+#' phi = 2*pi*(runif(10000))
+#' bezier_list = list()
+#' 
+#' #Grow the hairs
+#' for(i in 1:length(phi)) {
+#'   pointval = c(sin(theta[i]) * sin(phi[i]),
+#'                cos(theta[i]),
+#'                sin(theta[i]) * cos(phi[i]))
+#'   bezier_list[[i]] = bezier_curve(width=0.01, width_end=0.008,
+#'                                   p1 = pointval,
+#'                                   p2 = (1+(lengthval*0.33))*pointval, 
+#'                                   p3 = (1+(lengthval*0.66))*pointval,
+#'                                   p4 = (1+(lengthval)) * pointval,
+#'                                   material=hair(pigment = 0.3, red_pigment = 1.3,
+#'                                                 beta_m = 0.3, beta_n= 0.3),
+#'                                   type="flat")
+#' }
+#' hairball = dplyr::bind_rows(bezier_list)
+#' 
+#' generate_ground(depth=-2,material=diffuse(color="grey20")) %>%
+#'   add_object(sphere()) %>%
+#'   add_object(hairball) %>%
+#'   add_object(sphere(y=20,z=20,radius=5,material=light(color="white",intensity = 100))) %>%
+#'   render_scene(samples=64, lookfrom=c(0,3,10),clamp_value = 10, sample_method = "stratified",
+#'                fov=20)
+#'                
+#'                
+#' #Specify the color directly and increase hair roughness
+#' for(i in 1:length(phi)) {
+#'   pointval = c(sin(theta[i]) * sin(phi[i]),
+#'                cos(theta[i]),
+#'                sin(theta[i]) * cos(phi[i]))
+#'   bezier_list[[i]] = bezier_curve(width=0.01, width_end=0.008,
+#'                                   p1 = pointval,
+#'                                   p2 = (1+(lengthval*0.33))*pointval, 
+#'                                   p3 = (1+(lengthval*0.66))*pointval,
+#'                                   p4 = (1+(lengthval)) * pointval,
+#'                                   material=hair(color="purple",
+#'                                                 beta_m = 0.5, beta_n= 0.5),
+#'                                   type="flat")
+#' }
+#' hairball = dplyr::bind_rows(bezier_list)
+#' generate_ground(depth=-2,material=diffuse(color="grey20")) %>%
+#'   add_object(sphere()) %>%
+#'   add_object(hairball) %>%
+#'   add_object(sphere(y=20,z=20,radius=5,material=light(color="white",intensity = 100))) %>%
+#'   render_scene(samples=64, lookfrom=c(0,3,10),clamp_value = 10, sample_method = "stratified",
+#'                fov=20)
+#' }
+hair = function(pigment = 1.3, red_pigment = 0, color = NA, sigma_a = NA, 
+                eta = 1.55, beta_m = 0.3, beta_n = 0.3, alpha = 2) {
+  if(!is.na(sigma_a)) {
+    sigma_a = sigma_a
+  } else if(!is.na(color)) {
+    sigma_a = SigmaAFromReflectance(convert_color(color), beta_n)
+  } else {
+    stopifnot(pigment >= 0)
+    stopifnot(red_pigment >= 0)
+    sigma_a = SigmaAFromConcentration(pigment, red_pigment)
+  }
+  
+  info = c(sigma_a, eta, beta_m, beta_n, alpha)
+  new_tibble_row(list(type = "hair", 
+                      properties = list(info), checkercolor=list(NA), 
+                      gradient_color = list(NA), gradient_transpose = NA,
+                      world_gradient = FALSE, gradient_point_info = list(NA),
+                      gradient_type = NA,
+                      noise=0, noisephase = 0, noiseintensity = 0, noisecolor = list(c(0,0,0)),
+                      image = list(NA), image_repeat = list(NA),
+                      alphaimage = list(NA), lightintensity = NA,
+                      fog=FALSE, fogdensity=NA, implicit_sample = FALSE, 
+                      sigma = NA, glossyinfo = list(NA), bump_texture = list(NA),
+                      bump_intensity = NA))
+}
+
 #' Lambertian Material (deprecated)
 #'
 #' @param ... Arguments to pass to diffuse() function.
