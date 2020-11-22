@@ -59,6 +59,7 @@ struct TriMesh {
 static TriMesh* parse_file_with_miniply(const char* filename, bool assumeTriangles) {
   miniply::PLYReader reader(filename);
   if (!reader.valid()) {
+    Rcpp::Rcout << "Not valid reader \n";
     return nullptr;
   }
   
@@ -77,7 +78,7 @@ static TriMesh* parse_file_with_miniply(const char* filename, bool assumeTriangl
       }
       gotVerts = true;
     } else if (reader.element_is(miniply::kPLYFaceElement) && reader.load_element() && reader.find_indices(indexes)) {
-      uint32_t propIdx = 1;
+      uint32_t propIdx = 1; 
       bool polys = reader.requires_triangulation(propIdx);
       if (polys && !gotVerts) {
         Rcpp::Rcout << "Error: need vertex positions to triangulate faces.\n";
@@ -100,6 +101,9 @@ static TriMesh* parse_file_with_miniply(const char* filename, bool assumeTriangl
     reader.next_element();
   }
   if (!gotVerts || !gotFaces) {
+    std::string vert1 = gotVerts ? "" : "vertices ";
+    std::string face1 = gotFaces ? "" : "faces";
+    Rcpp::Rcout << "Failed to load: " << vert1 << face1 << "\n";
     delete trimesh;
     return nullptr;
   }
@@ -115,7 +119,7 @@ plymesh::plymesh(std::string inputfile, std::string basedir, material *mat,
   
   if(tri == nullptr) {
     std::string err = inputfile;
-    throw std::runtime_error("No mesh loaded" + err);
+    throw std::runtime_error("No mesh loaded: " + err);
   }
   bool has_normals = false;
   if(tri->normal != nullptr) {

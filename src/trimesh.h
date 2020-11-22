@@ -4,7 +4,10 @@
 #include "triangle.h"
 #include "bvh_node.h"
 #include "rng.h"
+#ifndef STBIMAGEH
+#define STBIMAGEH
 #include "stb_image.h"
+#endif
 #include <Rcpp.h>
 
 inline char separator() {

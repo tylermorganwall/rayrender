@@ -276,7 +276,7 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
                        float rotate_env, float intensity_env, bool verbose, int debug_channel,
                        IntegerVector& shared_id_mat, LogicalVector& is_shared_mat,
                        float min_variance, int min_adaptive_size, List glossyinfo,
-                       List image_repeat, List csg_info) {
+                       List image_repeat, List csg_info, List mesh_list) {
   auto startfirst = std::chrono::high_resolution_clock::now();
   //Unpack Camera Info
   int nx = as<int>(camera_info["nx"]);
@@ -399,7 +399,7 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
                                 fileinfo, filebasedir, 
                                 scale_list, sigmavec, glossyinfo,
                                 shared_id_mat, is_shared_mat, shared_materials,
-                                image_repeat, csg_info, rng);
+                                image_repeat, csg_info, mesh_list, rng);
   auto finish = std::chrono::high_resolution_clock::now();
   if(verbose) {
     std::chrono::duration<double> elapsed = finish - start;
@@ -490,7 +490,7 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
                                angle, i, order_rotation_list,
                                isgrouped, group_pivot, group_translate,
                                group_angle, group_order_rotation, group_scale,
-                               fileinfo, filebasedir, scale_list, rng);
+                               fileinfo, filebasedir, scale_list, mesh_list, rng);
       counter++;
     }
   }

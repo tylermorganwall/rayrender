@@ -67,7 +67,7 @@ sphere = function(x = 0, y = 0, z = 0, radius = 1, material = diffuse(),
                  pivot_point = list(NA), group_translate = list(NA),
                  group_angle = list(NA), group_order_rotation = list(NA),
                  tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA),
-                 material_id = NA, csg_object = list(NA)))
+                 material_id = NA, csg_object = list(NA), mesh_info = list(NA)))
 }
 
 #' Cube Object
@@ -148,7 +148,7 @@ cube = function(x = 0, y = 0, z = 0, width = 1, xwidth = 1, ywidth = 1, zwidth =
                  pivot_point = list(NA), group_translate = list(NA),
                  group_angle = list(NA), group_order_rotation = list(NA),
                  tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA),
-                 material_id = NA, csg_object = list(NA)))
+                 material_id = NA, csg_object = list(NA), mesh_info = list(NA)))
 }
 
 #' Rectangular XY Plane Object 
@@ -213,7 +213,7 @@ xy_rect = function(x = 0, y = 0, z = 0, xwidth = 1, ywidth = 1,
                  pivot_point = list(NA), group_translate = list(NA),
                  group_angle = list(NA), group_order_rotation = list(NA),
                  tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA),
-                 material_id = NA, csg_object = list(NA)))
+                 material_id = NA, csg_object = list(NA), mesh_info = list(NA)))
 }
 
 #' Rectangular YZ Plane Object
@@ -277,7 +277,7 @@ yz_rect = function(x = 0, y = 0, z = 0, ywidth = 1, zwidth = 1, material = diffu
                  pivot_point = list(NA), group_translate = list(NA),
                  group_angle = list(NA), group_order_rotation = list(NA),
                  tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA),
-                 material_id = NA, csg_object = list(NA)))
+                 material_id = NA, csg_object = list(NA), mesh_info = list(NA)))
 }
 
 #' Rectangular XZ Plane Object
@@ -343,7 +343,7 @@ xz_rect = function(x = 0, xwidth = 1, z = 0, zwidth = 1, y = 0, material = diffu
                  pivot_point = list(NA), group_translate = list(NA),
                  group_angle = list(NA), group_order_rotation = list(NA),
                  tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA),
-                 material_id = NA, csg_object = list(NA)))
+                 material_id = NA, csg_object = list(NA), mesh_info = list(NA)))
 }
 
 #' Triangle Object
@@ -445,7 +445,7 @@ triangle = function(v1 = c(1, 0, 0), v2 = c(0, 1, 0), v3 = c(-1, 0, 0),
                  pivot_point = list(NA), group_translate = list(NA),
                  group_angle = list(NA), group_order_rotation = list(NA),
                  tricolorinfo = list(colorvec), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA),
-                 material_id = NA, csg_object = list(NA)))
+                 material_id = NA, csg_object = list(NA), mesh_info = list(NA)))
 }
 
 #' Disk Object
@@ -520,7 +520,7 @@ disk = function(x = 0, y = 0, z = 0, radius = 1, inner_radius = 0, material = di
                  pivot_point = list(NA), group_translate = list(NA),
                  group_angle = list(NA), group_order_rotation = list(NA),
                  tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA),
-                 material_id = NA, csg_object = list(NA)))
+                 material_id = NA, csg_object = list(NA), mesh_info = list(NA)))
 }
 
 #' `obj` File Object
@@ -616,7 +616,7 @@ obj_model = function(filename, x = 0, y = 0, z = 0, scale_obj = 1,
                  pivot_point = list(NA), group_translate = list(NA),
                  group_angle = list(NA), group_order_rotation = list(NA),
                  tricolorinfo = list(NA), fileinfo = filename, scale_factor = list(scale), group_scale = list(NA),
-                 material_id = NA, csg_object = list(NA)))
+                 material_id = NA, csg_object = list(NA), mesh_info = list(NA)))
 }
 
 #' Cylinder Object
@@ -698,7 +698,7 @@ cylinder = function(x = 0, y = 0, z = 0, radius = 1, length = 1,
                  pivot_point = list(NA), group_translate = list(NA),
                  group_angle = list(NA), group_order_rotation = list(NA),
                  tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA),
-                 material_id = NA, csg_object = list(NA)))
+                 material_id = NA, csg_object = list(NA), mesh_info = list(NA)))
 }
 
 #' Segment Object
@@ -837,7 +837,7 @@ segment = function(start = c(0, -1, 0), end = c(0, 1, 0), radius = 1,
                  pivot_point = list(NA), group_translate = list(NA),
                  group_angle = list(NA), group_order_rotation = list(NA),
                  tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA),
-                 material_id = NA, csg_object = list(NA)))
+                 material_id = NA, csg_object = list(NA), mesh_info = list(NA)))
 }
 
 #' Ellipsoid Object
@@ -918,7 +918,7 @@ ellipsoid = function(x = 0, y = 0, z = 0, a = 1, b = 1, c = 1,
                  pivot_point = list(NA), group_translate = list(NA),
                  group_angle = list(NA), group_order_rotation = list(NA),
                  tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA),
-                 material_id = NA, csg_object = list(NA)))
+                 material_id = NA, csg_object = list(NA), mesh_info = list(NA)))
 }
 
 #' Extruded Polygon Object
@@ -1592,7 +1592,7 @@ cone = function(start = c(0, 0, 0), end = c(0, 1, 0), radius = 0.5,
                       pivot_point = list(NA), group_translate = list(NA),
                       group_angle = list(NA), group_order_rotation = list(NA),
                       tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA),
-                      material_id = NA, csg_object = list(NA)))
+                      material_id = NA, csg_object = list(NA), mesh_info = list(NA)))
 }
 
 #' Arrow Object
@@ -1883,7 +1883,7 @@ bezier_curve = function(p1 = c(0,0,0), p2 = c(-1,0.33,0), p3 = c(1,0.66,0), p4=c
                       pivot_point = list(NA), group_translate = list(NA),
                       group_angle = list(NA), group_order_rotation = list(NA),
                       tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA),
-                      material_id = NA, csg_object = list(NA)))
+                      material_id = NA, csg_object = list(NA), mesh_info = list(NA)))
 }
 
 #' Path Object
@@ -2277,6 +2277,164 @@ ply_model = function(filename, x = 0, y = 0, z = 0, scale_ply = 1,
                       pivot_point = list(NA), group_translate = list(NA),
                       group_angle = list(NA), group_order_rotation = list(NA),
                       tricolorinfo = list(NA), fileinfo = filename, scale_factor = list(scale), group_scale = list(NA),
-                      material_id = NA, csg_object = list(NA)))
+                      material_id = NA, csg_object = list(NA), mesh_info = list(NA)))
+}
+
+#' `mesh3d` model
+#' 
+#' Load an `mesh3d` (or `shapelist3d`) object, as specified in the `rgl` package. 
+#'
+#' @param mesh A `mesh3d` or `shapelist3d` object. Pulls the vertex, index, texture coordinates, 
+#' normals, and material information. If the material references an image texture, the 
+#' `mesh$material$texture` argument should be set to the image filename. The `mesh3d` format
+#' only supports one image texture per mesh. All quads will be triangulated.
+#' @param x Default `0`. x-coordinate to offset the model.
+#' @param y Default `0`. y-coordinate to offset the model.
+#' @param z Default `0`. z-coordinate to offset the model.
+#' @param swap_yz Default `FALSE`. Swap the Y and Z coordinates.
+#' @param reverse Default `FALSE`. Reverse the orientation of the indices, flipping their normals.
+#' @param scale_mesh Default `1`. Amount to scale the size of the mesh in all directions.
+#' @param verbose Default `FALSE`. If `TRUE`, prints information about the mesh to the console.
+#' @param override_material Default `FALSE`. If `TRUE`, overrides the material specified in the 
+#' `mesh3d` object with the one specified in `material`.
+#' @param material Default  \code{\link{diffuse}}.The material, called from one of the material 
+#' functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}. 
+#' @param angle Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.
+#' @param order_rotation Default `c(1, 2, 3)`. The order to apply the rotations, referring to "x", "y", and "z".
+#' @param flipped Default `FALSE`. Whether to flip the normals.
+#' @param scale Default `c(1, 1, 1)`. Scale transformation in the x, y, and z directions. If this is a single value,
+#' number, the object will be scaled uniformly.
+#' Note: emissive objects may not currently function correctly when scaled.
+#' 
+#' @return Single row of a tibble describing the mesh3d model in the scene.
+#' @export
+#'
+#' @examples
+#' #Load a mesh3d object (from the Rvcg) and render it:
+#' if("Rcvg" %in% rownames(utils::installed.packages())) {
+#'   library(Rvcg)
+#'   data(humface)
+#'   
+#'   generate_studio() %>% 
+#'     add_object(mesh3d_model(humface,y=-0.3,x=0,z=0,
+#'                           material=glossy(color="dodgerblue4"), scale_mesh = 1/100)) %>%
+#'     add_object(sphere(y=5,x=5,z=5,material=light(intensity=50))) %>% 
+#'     render_scene(samples=500,width=800,height=800,
+#'                  lookat = c(0,0.5,1), aperture=0.0)
+#' }
+mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FALSE,
+                        scale_mesh = 1, verbose = FALSE,
+                        override_material = FALSE, material = diffuse(), 
+                        angle = c(0, 0, 0), order_rotation = c(1, 2, 3), 
+                        flipped = FALSE, scale = c(1,1,1)) {
+  if(length(scale) == 1) {
+    scale = c(scale, scale, scale)
+  }
+  if(inherits(mesh,"shapelist3d")) {
+    shapes = list()
+    for(shape in seq_len(length(mesh))) {
+      shapes[[shape]] = mesh3d_model(mesh[[shape]], x=x,y=y,z=z,
+                                     swap_yz=swap_yz,reverse=reverse,scale_mesh = scale_mesh,
+                                     override_material=override_material,material=material,
+                                     angle=angle,order_rotation=order_rotation,flipped=flipped,
+                                     scale=scale,verbose=verbose)
+    }
+    return(do.call(rbind,shapes))
+  }
+  if(!inherits(mesh,"mesh3d")) {
+    stop("mesh must be of class 'mesh3d': actual class is ", class(mesh))
+  }
+  vertices = t(mesh$vb)
+  if(ncol(vertices) == 4) {
+    vertices = vertices[,1:3]
+  }
+  if(swap_yz) {
+    vertices = vertices[,c(1,3,2)]
+  }
+  indices = t(mesh$it)-1
+  if(!is.null(mesh$ib)) {
+    quads = mesh$ib
+    tri_ind = t(matrix(rbind(quads[c(1L, 2L, 4L),], 
+                        quads[c(2L, 3L, 4L),]), 3L)) - 1
+    indices = rbind(indices,tri_ind)
+  }
+  normals = mesh$normals
+  if(is.null(normals)) {
+    normals = matrix()
+  } else {
+    normals = t(normals)
+  }
+  texcoords = mesh$texcoords
+  if(is.null(texcoords)) {
+    texcoords = matrix()
+  } else {
+    texcoords = t(texcoords)
+  }
+  texture = mesh$material$texture
+  if(!is.null(texture)) {
+    texture = path.expand(texture)
+  } else {
+    texture = ""
+  }
+  face_color_vals = mesh$material$color
+  if(!is.null(face_color_vals)) {
+    if(length(face_color_vals) == 1 && texture == "") {
+      face_color_vals = rep(face_color_vals, nrow(indices))
+      mesh$meshColor = "faces"
+    }
+    color_vals = matrix(convert_color(face_color_vals), ncol=3, byrow=TRUE)
+  } else {
+    color_vals = matrix()
+  }
+  if(!is.null(mesh$meshColor)) {
+    color_type = switch(mesh$meshColor,"vertices" = 1, "faces" = 2, 3)
+    if(color_type == 1) {
+      if(is.null(texcoords) && nrow(color_vals) == nrow(vertices)) {
+        color_type = 4
+      } else {
+        if(texture == "") {
+          warning("material set as vertex color but no texture image passed--ignoring mesh3d material.")
+          color_type = 3
+        }
+      }
+    }
+  } else {
+    color_type = 3
+  }
+  if(override_material) {
+    color_type = 3
+  }
+  if(reverse) {
+    indices = indices[,c(3,2,1)]
+  }
+  mesh_info = list(vertices=vertices,indices=indices,
+                   normals=normals,texcoords=texcoords,
+                   texture=texture,color_vals=color_vals,
+                   color_type=color_type,scale_mesh=scale_mesh)
+  info = c(unlist(material$properties))
+  if(verbose) {
+    bbox = apply(vertices,2,range)
+    message(sprintf("mesh3d Bounding Box: %0.1f-%0.1f x %0.1f-%0.1f x %0.1f-%0.1f", 
+                    bbox[1,1],bbox[2,1],bbox[1,2],bbox[2,2],bbox[1,3],bbox[2,3]))
+  }
+  new_tibble_row(list(x = x, y = y, z = z, radius = NA, 
+                      type = material$type, shape = "mesh3d",
+                      properties = list(info), velocity = list(c(0, 0, 0)),
+                      checkercolor = material$checkercolor, 
+                      gradient_color = material$gradient_color, gradient_transpose = material$gradient_transpose, 
+                      world_gradient = material$world_gradient, gradient_point_info = material$gradient_point_info,
+                      gradient_type = material$gradient_type,
+                      noise = material$noise, noisephase = material$noisephase, 
+                      noiseintensity = material$noiseintensity, noisecolor = material$noisecolor,
+                      angle = list(angle), image = material$image, image_repeat = material$image_repeat,
+                      alphaimage = list(material$alphaimage), bump_texture = list(material$bump_texture),
+                      bump_intensity = material$bump_intensity, lightintensity = material$lightintensity,
+                      flipped = flipped, fog = material$fog, fogdensity = material$fogdensity,
+                      implicit_sample = material$implicit_sample,  sigma = material$sigma, glossyinfo = material$glossyinfo,
+                      order_rotation = list(order_rotation),
+                      pivot_point = list(NA), group_translate = list(NA),
+                      group_angle = list(NA), group_order_rotation = list(NA),
+                      tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA),
+                      material_id = NA, csg_object = list(NA), mesh_info = list(mesh_info)))
 }
 

@@ -20,6 +20,7 @@
 #include "curve.h"
 #include "csg.h"
 #include "plymesh.h"
+#include "mesh3d.h"
 #include <Rcpp.h>
 using namespace Rcpp;
 
@@ -73,7 +74,7 @@ hitable *build_scene(IntegerVector& type,
                      List& scale_list, NumericVector& sigma,  List &glossyinfo,
                      IntegerVector& shared_id_mat, LogicalVector& is_shared_mat,
                      std::vector<material* >* shared_materials, List& image_repeat_list,
-                     List& csg_info,
+                     List& csg_info, List& mesh_list,
                      random_gen& rng) {
   hitable **list = new hitable*[n + 1]; //change to vector
   LogicalVector isgradient = gradient_info["isgradient"];
@@ -88,7 +89,7 @@ hitable *build_scene(IntegerVector& type,
   NumericVector z = position_list["zvec"];
   
   List csg_list = csg_info["csg"];
-  
+
   NumericVector tempvector;
   NumericVector tempchecker;
   NumericVector tempgradient;
@@ -455,6 +456,8 @@ hitable *build_scene(IntegerVector& type,
     } else if(shape(i) == 15) {
       center = vec3(x(i), y(i), z(i));
     } else if(shape(i) == 16) {
+      center = vec3(x(i), y(i), z(i));
+    } else if(shape(i) == 17) {
       center = vec3(x(i), y(i), z(i));
     }
 
@@ -886,6 +889,27 @@ hitable *build_scene(IntegerVector& type,
       } else {
         list[i] = entry;
       }
+    } else if (shape(i) == 17) {
+      List mesh_entry = mesh_list(i);
+      hitable *entry = new mesh3d(mesh_entry, tex,
+                                  shutteropen, shutterclose, rng);
+      if(is_scaled) {
+        entry = new scale(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
+      }
+      entry = rotation_order(entry, temprotvec, order_rotation);
+      if(isgrouped(i)) {
+        entry = new translate(entry, center - gpivot);
+        if(is_group_scaled) {
+          entry = new scale(entry, vec3(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
+        }
+        entry = rotation_order(entry, temp_gangle, temp_gorder);
+        entry = new translate(entry, -center + gpivot );
+      }
+      entry = new translate(entry, center + gtrans + vel * shutteropen);
+      if(isflipped(i)) {
+        entry = new flip_normals(entry);
+      }
+      list[i] = entry;
     }
   }
   hitable *full_scene = new bvh_node(list, n, shutteropen, shutterclose, rng);
@@ -903,7 +927,7 @@ hitable* build_imp_sample(IntegerVector& type,
                           List& group_pivot, List& group_translate,
                           List& group_angle, List& group_order_rotation, List& group_scale,
                           CharacterVector& fileinfo, CharacterVector& filebasedir,
-                          List& scale_list, random_gen& rng) {
+                          List& scale_list, List& mesh_list, random_gen& rng) {
   NumericVector x = position_list["xvec"];
   NumericVector y = position_list["yvec"];
   NumericVector z = position_list["zvec"];
@@ -995,6 +1019,8 @@ hitable* build_imp_sample(IntegerVector& type,
   } else if(shape(i) == 15) {
     center = vec3(x(i), y(i), z(i));
   } else if(shape(i) == 16) {
+    center = vec3(x(i), y(i), z(i));
+  } else if(shape(i) == 17) {
     center = vec3(x(i), y(i), z(i));
   }
 
@@ -1235,7 +1261,7 @@ hitable* build_imp_sample(IntegerVector& type,
     }
     entry = new translate(entry, center + gtrans + vel * shutteropen);
     return(entry);
-  } else {
+  } else if (shape(i) == 16) {
     hitable *entry;
     std::string objfilename = Rcpp::as<std::string>(fileinfo(i));
     std::string objbasedirname = Rcpp::as<std::string>(filebasedir(i));
@@ -1243,6 +1269,24 @@ hitable* build_imp_sample(IntegerVector& type,
                         nullptr,
                         tempvector(prop_len+1),
                         shutteropen, shutterclose, rng);
+    if(is_scaled) {
+      entry = new scale(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
+    }
+    entry = rotation_order(entry, temprotvec, order_rotation);
+    if(isgrouped(i)) {
+      entry = new translate(entry, center - gpivot);
+      if(is_group_scaled) {
+        entry = new scale(entry, vec3(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
+      }
+      entry = rotation_order(entry, temp_gangle, temp_gorder);
+      entry = new translate(entry, -center + gpivot );
+    }
+    entry = new translate(entry, center + gtrans + vel * shutteropen);
+    return(entry);
+  } else {
+    List mesh_entry = mesh_list(i);
+    hitable *entry = new mesh3d(mesh_entry, nullptr,
+                                shutteropen, shutterclose, rng);
     if(is_scaled) {
       entry = new scale(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
     }

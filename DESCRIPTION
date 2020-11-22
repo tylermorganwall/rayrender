@@ -1,8 +1,8 @@
 Package: rayrender
 Type: Package
 Title: Build and Raytrace 3D Scenes
-Version: 0.18.0
-Date: 2020-11-15
+Version: 0.19.0
+Date: 2020-11-21
 Authors@R: c(person("Tyler", "Morgan-Wall", email = "tylermw@gmail.com",
     role = c("aut", "cph", "cre"), comment = c(ORCID = "0000-0002-3131-3814")),
     person("Syoyo", "Fujita", role=c("ctb", "cph")),
@@ -27,7 +27,8 @@ Imports:
 Suggests:
     sf,
     spData,
-    dplyr
+    dplyr,
+    Rvcg
 LinkingTo: Rcpp, RcppThread, progress
 URL: https://www.rayrender.net, https://github.com/tylermorganwall/rayrender
 RoxygenNote: 7.1.0

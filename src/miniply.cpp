@@ -1208,7 +1208,7 @@ namespace miniply {
 
   bool PLYReader::find_indices(uint32_t propIdxs[1]) const
   {
-    return find_properties(propIdxs, 1, "vertex_index") || find_properties(propIdxs, 1, "vertex_index");
+    return find_properties(propIdxs, 1, "vertex_index") || find_properties(propIdxs, 1, "vertex_indices");
   }
 
 

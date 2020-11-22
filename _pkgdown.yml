@@ -27,6 +27,7 @@ reference:
       - starts_with("disk")
       - starts_with("obj")
       - starts_with("ply")
+      - starts_with("mesh3d")
       - starts_with("cone")
       - starts_with("arrow")
       - starts_with("extruded")

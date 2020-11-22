@@ -223,7 +223,8 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
   shapevec = unlist(lapply(tolower(scene$shape),switch,
                           "sphere" = 1,"xy_rect" = 2, "xz_rect" = 3,"yz_rect" = 4,"box" = 5, "triangle" = 6, 
                           "obj" = 7, "objcolor" = 8, "disk" = 9, "cylinder" = 10, "ellipsoid" = 11,
-                          "objvertexcolor" = 12, "cone" = 13, "curve" = 14, "csg_object" = 15, "ply" = 16))
+                          "objvertexcolor" = 12, "cone" = 13, "curve" = 14, "csg_object" = 15, "ply" = 16,
+                          "mesh3d" = 17))
   typevec = unlist(lapply(tolower(scene$type),switch,
                           "diffuse" = 1,"metal" = 2,"dielectric" = 3, 
                           "oren-nayar" = 4, "light" = 5, "microfacet" = 6, 
@@ -532,6 +533,9 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
   csg_info = list()
   csg_info$csg = csg_list
   
+  #mesh3d handler
+  mesh_list = scene$mesh_info
+  
   rgb_mat = render_scene_rcpp(camera_info = camera_info, ambient_light = ambient_light,
                              type = typevec, shape = shapevec, radius = rvec, 
                              position_list = position_list,
@@ -557,7 +561,8 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
                              verbose = verbose, debug_channel = debug_channel,
                              shared_id_mat=material_id, is_shared_mat=material_id_bool, 
                              min_variance = min_variance, min_adaptive_size = min_adaptive_size, 
-                             glossyinfo = glossyinfo, image_repeat = image_repeat, csg_info = csg_info) 
+                             glossyinfo = glossyinfo, image_repeat = image_repeat, csg_info = csg_info,
+                             mesh_list=mesh_list) 
   full_array = array(0,c(ncol(rgb_mat$r),nrow(rgb_mat$r),3))
   full_array[,,1] = flipud(t(rgb_mat$r))
   full_array[,,2] = flipud(t(rgb_mat$g))
