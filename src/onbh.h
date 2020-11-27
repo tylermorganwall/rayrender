@@ -39,7 +39,6 @@ public:
     axis[2] = tempaxis;
   }
   vec3 axis[3];
-  bool axis_flag;
 };
 
 
