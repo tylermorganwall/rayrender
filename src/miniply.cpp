@@ -556,7 +556,8 @@ namespace miniply {
         uint32_t propIdx = listPropIdx + 1 + i;
 
         PLYProperty& itemProp = properties[propIdx];
-        snprintf(nameBuf, sizeof(nameBuf), "%s_%u", oldListProp.name.c_str(), i) < 0 ? abort() : (void)0;;
+        snprintf(nameBuf, sizeof(nameBuf), "%s_%u", oldListProp.name.c_str(), i) < 0 ? 
+        throw std::runtime_error("i hope this never errors") : (void)0;;
         itemProp.name = nameBuf;
         itemProp.type = oldListProp.type;
         itemProp.countType = PLYPropertyType::None;
