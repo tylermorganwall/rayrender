@@ -48,12 +48,6 @@ jobs:
             libgeos-dev \
             libproj-dev
             
-      - name: Brew
-        if: runner.os == 'macOS'
-        run: |
-          brew install pkg-config
-          brew install udunits
-          brew install gdal
       - name: Install dependencies
         run: |
           remotes::install_deps(dependencies = TRUE)
