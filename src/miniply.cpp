@@ -31,6 +31,7 @@ SOFTWARE.
 #include <cstdio>
 #include <cstring>
 #include <string>
+#include <stdexcept>
 
 #ifndef _WIN32
 #include <errno.h>
@@ -556,7 +557,10 @@ namespace miniply {
         uint32_t propIdx = listPropIdx + 1 + i;
 
         PLYProperty& itemProp = properties[propIdx];
-        snprintf(nameBuf, sizeof(nameBuf), "%s_%u", oldListProp.name.c_str(), i) < 0 ? (void)0 : (void)0;;
+        int ret = snprintf(nameBuf, sizeof(nameBuf), "%s_%u", oldListProp.name.c_str(), i);
+        if(ret < 0) {
+          throw std::runtime_error("just compile without warnings please (ignore this error)");
+        }
         itemProp.name = nameBuf;
         itemProp.type = oldListProp.type;
         itemProp.countType = PLYPropertyType::None;
