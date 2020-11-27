@@ -77,7 +77,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">rayrender</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.18.0</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.19.0</span>
       </span>
     </div>
 
@@ -148,18 +148,18 @@
     <p>Generate Cornell Box</p>
     </div>
 
-    <pre class="usage"><span class='fu'>generate_cornell</span>(
-  <span class='kw'>light</span> <span class='kw'>=</span> <span class='fl'>TRUE</span>,
-  <span class='kw'>lightintensity</span> <span class='kw'>=</span> <span class='fl'>5</span>,
-  <span class='kw'>lightcolor</span> <span class='kw'>=</span> <span class='st'>"white"</span>,
-  <span class='kw'>lightwidth</span> <span class='kw'>=</span> <span class='fl'>332</span>,
-  <span class='kw'>lightdepth</span> <span class='kw'>=</span> <span class='fl'>343</span>,
-  <span class='kw'>sigma</span> <span class='kw'>=</span> <span class='fl'>0</span>,
-  <span class='kw'>leftcolor</span> <span class='kw'>=</span> <span class='st'>"#1f7326"</span>,
-  <span class='kw'>rightcolor</span> <span class='kw'>=</span> <span class='st'>"#a60d0d"</span>,
-  <span class='kw'>roomcolor</span> <span class='kw'>=</span> <span class='st'>"#bababa"</span>,
-  <span class='kw'>importance_sample</span> <span class='kw'>=</span> <span class='fl'>TRUE</span>
-)</pre>
+    <pre class="usage"><span class='fu'>generate_cornell</span><span class='op'>(</span>
+  light <span class='op'>=</span> <span class='cn'>TRUE</span>,
+  lightintensity <span class='op'>=</span> <span class='fl'>5</span>,
+  lightcolor <span class='op'>=</span> <span class='st'>"white"</span>,
+  lightwidth <span class='op'>=</span> <span class='fl'>332</span>,
+  lightdepth <span class='op'>=</span> <span class='fl'>343</span>,
+  sigma <span class='op'>=</span> <span class='fl'>0</span>,
+  leftcolor <span class='op'>=</span> <span class='st'>"#1f7326"</span>,
+  rightcolor <span class='op'>=</span> <span class='st'>"#a60d0d"</span>,
+  roomcolor <span class='op'>=</span> <span class='st'>"#bababa"</span>,
+  importance_sample <span class='op'>=</span> <span class='cn'>TRUE</span>
+<span class='op'>)</span></pre>
 
     <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
     <table class="ref-arguments">
@@ -212,30 +212,35 @@
 
     <h2 class="hasAnchor" id="examples"><a class="anchor" href="#examples"></a>Examples</h2>
     <pre class="examples"><div class='input'><span class='co'>#Generate and render the default Cornell box.</span>
-<span class='no'>scene</span> <span class='kw'>=</span> <span class='fu'>generate_cornell</span>()
+<span class='va'>scene</span> <span class='op'>=</span> <span class='fu'>generate_cornell</span><span class='op'>(</span><span class='op'>)</span>
 <span class='co'># \donttest{</span>
-<span class='fu'><a href='render_scene.html'>render_scene</a></span>(<span class='no'>scene</span>, <span class='kw'>samples</span><span class='kw'>=</span><span class='fl'>400</span>,<span class='kw'>aperture</span><span class='kw'>=</span><span class='fl'>0</span>, <span class='kw'>fov</span><span class='kw'>=</span><span class='fl'>40</span>, <span class='kw'>ambient_light</span><span class='kw'>=</span><span class='fl'>FALSE</span>, <span class='kw'>parallel</span><span class='kw'>=</span><span class='fl'>TRUE</span>)</div><div class='output co'>#&gt; <span class='message'>Setting default values for Cornell box: lookfrom `c(278,278,-800)` lookat `c(278,278,0)` .</span></div><div class='img'><img src='generate_cornell-1.png' alt='' width='700' height='433' /></div><div class='input'><span class='co'># }</span>
+<span class='fu'><a href='render_scene.html'>render_scene</a></span><span class='op'>(</span><span class='va'>scene</span>, samples<span class='op'>=</span><span class='fl'>400</span>,aperture<span class='op'>=</span><span class='fl'>0</span>, fov<span class='op'>=</span><span class='fl'>40</span>, ambient_light<span class='op'>=</span><span class='cn'>FALSE</span>, parallel<span class='op'>=</span><span class='cn'>TRUE</span><span class='op'>)</span>
+</div><div class='output co'>#&gt; <span class='message'>Setting default values for Cornell box: lookfrom `c(278,278,-800)` lookat `c(278,278,0)` .</span></div><div class='img'><img src='generate_cornell-1.png' alt='' width='700' height='433' /></div><div class='input'><span class='co'># }</span>
 
 <span class='co'>#Make a much smaller light in the center of the room.</span>
-<span class='no'>scene</span> <span class='kw'>=</span> <span class='fu'>generate_cornell</span>(<span class='kw'>lightwidth</span><span class='kw'>=</span><span class='fl'>200</span>,<span class='kw'>lightdepth</span><span class='kw'>=</span><span class='fl'>200</span>)
+<span class='va'>scene</span> <span class='op'>=</span> <span class='fu'>generate_cornell</span><span class='op'>(</span>lightwidth<span class='op'>=</span><span class='fl'>200</span>,lightdepth<span class='op'>=</span><span class='fl'>200</span><span class='op'>)</span>
 <span class='co'># \donttest{</span>
-<span class='fu'><a href='render_scene.html'>render_scene</a></span>(<span class='no'>scene</span>, <span class='kw'>samples</span><span class='kw'>=</span><span class='fl'>400</span>,<span class='kw'>aperture</span><span class='kw'>=</span><span class='fl'>0</span>, <span class='kw'>fov</span><span class='kw'>=</span><span class='fl'>40</span>, <span class='kw'>ambient_light</span><span class='kw'>=</span><span class='fl'>FALSE</span>, <span class='kw'>parallel</span><span class='kw'>=</span><span class='fl'>TRUE</span>)</div><div class='output co'>#&gt; <span class='message'>Setting default values for Cornell box: lookfrom `c(278,278,-800)` lookat `c(278,278,0)` .</span></div><div class='img'><img src='generate_cornell-2.png' alt='' width='700' height='433' /></div><div class='input'><span class='co'># }</span>
+<span class='fu'><a href='render_scene.html'>render_scene</a></span><span class='op'>(</span><span class='va'>scene</span>, samples<span class='op'>=</span><span class='fl'>400</span>,aperture<span class='op'>=</span><span class='fl'>0</span>, fov<span class='op'>=</span><span class='fl'>40</span>, ambient_light<span class='op'>=</span><span class='cn'>FALSE</span>, parallel<span class='op'>=</span><span class='cn'>TRUE</span><span class='op'>)</span>
+</div><div class='output co'>#&gt; <span class='message'>Setting default values for Cornell box: lookfrom `c(278,278,-800)` lookat `c(278,278,0)` .</span></div><div class='img'><img src='generate_cornell-2.png' alt='' width='700' height='433' /></div><div class='input'><span class='co'># }</span>
 
 <span class='co'>#Place a sphere in the middle of the box.</span>
-<span class='no'>scene</span> <span class='kw'>=</span> <span class='no'>scene</span> <span class='kw'>%&gt;%</span>
-  <span class='fu'><a href='add_object.html'>add_object</a></span>(<span class='fu'><a href='sphere.html'>sphere</a></span>(<span class='kw'>x</span><span class='kw'>=</span><span class='fl'>555</span>/<span class='fl'>2</span>,<span class='kw'>y</span><span class='kw'>=</span><span class='fl'>555</span>/<span class='fl'>2</span>,<span class='kw'>z</span><span class='kw'>=</span><span class='fl'>555</span>/<span class='fl'>2</span>,<span class='kw'>radius</span><span class='kw'>=</span><span class='fl'>555</span>/<span class='fl'>4</span>))
+<span class='va'>scene</span> <span class='op'>=</span> <span class='va'>scene</span> <span class='op'>%&gt;%</span>
+  <span class='fu'><a href='add_object.html'>add_object</a></span><span class='op'>(</span><span class='fu'><a href='sphere.html'>sphere</a></span><span class='op'>(</span>x<span class='op'>=</span><span class='fl'>555</span><span class='op'>/</span><span class='fl'>2</span>,y<span class='op'>=</span><span class='fl'>555</span><span class='op'>/</span><span class='fl'>2</span>,z<span class='op'>=</span><span class='fl'>555</span><span class='op'>/</span><span class='fl'>2</span>,radius<span class='op'>=</span><span class='fl'>555</span><span class='op'>/</span><span class='fl'>4</span><span class='op'>)</span><span class='op'>)</span>
 <span class='co'># \donttest{</span>
-<span class='fu'><a href='render_scene.html'>render_scene</a></span>(<span class='no'>scene</span>, <span class='kw'>samples</span><span class='kw'>=</span><span class='fl'>400</span>,<span class='kw'>aperture</span><span class='kw'>=</span><span class='fl'>0</span>, <span class='kw'>fov</span><span class='kw'>=</span><span class='fl'>40</span>, <span class='kw'>ambient_light</span><span class='kw'>=</span><span class='fl'>FALSE</span>, <span class='kw'>parallel</span><span class='kw'>=</span><span class='fl'>TRUE</span>)</div><div class='output co'>#&gt; <span class='message'>Setting default values for Cornell box: lookfrom `c(278,278,-800)` lookat `c(278,278,0)` .</span></div><div class='img'><img src='generate_cornell-3.png' alt='' width='700' height='433' /></div><div class='input'><span class='co'># }</span>
+<span class='fu'><a href='render_scene.html'>render_scene</a></span><span class='op'>(</span><span class='va'>scene</span>, samples<span class='op'>=</span><span class='fl'>400</span>,aperture<span class='op'>=</span><span class='fl'>0</span>, fov<span class='op'>=</span><span class='fl'>40</span>, ambient_light<span class='op'>=</span><span class='cn'>FALSE</span>, parallel<span class='op'>=</span><span class='cn'>TRUE</span><span class='op'>)</span>
+</div><div class='output co'>#&gt; <span class='message'>Setting default values for Cornell box: lookfrom `c(278,278,-800)` lookat `c(278,278,0)` .</span></div><div class='img'><img src='generate_cornell-3.png' alt='' width='700' height='433' /></div><div class='input'><span class='co'># }</span>
 
 <span class='co'>#Reduce "fireflies" by setting a clamp_value in render_scene()</span>
 <span class='co'># \donttest{</span>
-<span class='fu'><a href='render_scene.html'>render_scene</a></span>(<span class='no'>scene</span>, <span class='kw'>samples</span><span class='kw'>=</span><span class='fl'>400</span>,<span class='kw'>aperture</span><span class='kw'>=</span><span class='fl'>0</span>, <span class='kw'>fov</span><span class='kw'>=</span><span class='fl'>40</span>, <span class='kw'>ambient_light</span><span class='kw'>=</span><span class='fl'>FALSE</span>,
-             <span class='kw'>parallel</span><span class='kw'>=</span><span class='fl'>TRUE</span>,<span class='kw'>clamp_value</span><span class='kw'>=</span><span class='fl'>3</span>)</div><div class='output co'>#&gt; <span class='message'>Setting default values for Cornell box: lookfrom `c(278,278,-800)` lookat `c(278,278,0)` .</span></div><div class='img'><img src='generate_cornell-4.png' alt='' width='700' height='433' /></div><div class='input'><span class='co'># }</span>
+<span class='fu'><a href='render_scene.html'>render_scene</a></span><span class='op'>(</span><span class='va'>scene</span>, samples<span class='op'>=</span><span class='fl'>400</span>,aperture<span class='op'>=</span><span class='fl'>0</span>, fov<span class='op'>=</span><span class='fl'>40</span>, ambient_light<span class='op'>=</span><span class='cn'>FALSE</span>, 
+             parallel<span class='op'>=</span><span class='cn'>TRUE</span>,clamp_value<span class='op'>=</span><span class='fl'>3</span><span class='op'>)</span>
+</div><div class='output co'>#&gt; <span class='message'>Setting default values for Cornell box: lookfrom `c(278,278,-800)` lookat `c(278,278,0)` .</span></div><div class='img'><img src='generate_cornell-4.png' alt='' width='700' height='433' /></div><div class='input'><span class='co'># }</span>
 <span class='co'># Change the color scheme of the cornell box</span>
 <span class='co'># \donttest{</span>
-<span class='no'>new_cornell</span> <span class='kw'>=</span> <span class='fu'>generate_cornell</span>(<span class='kw'>leftcolor</span><span class='kw'>=</span><span class='st'>"purple"</span>, <span class='kw'>rightcolor</span><span class='kw'>=</span><span class='st'>"yellow"</span>)
-<span class='fu'><a href='render_scene.html'>render_scene</a></span>(<span class='no'>new_cornell</span>, <span class='kw'>samples</span><span class='kw'>=</span><span class='fl'>400</span>,<span class='kw'>aperture</span><span class='kw'>=</span><span class='fl'>0</span>, <span class='kw'>fov</span><span class='kw'>=</span><span class='fl'>40</span>, <span class='kw'>ambient_light</span><span class='kw'>=</span><span class='fl'>FALSE</span>,
-             <span class='kw'>parallel</span><span class='kw'>=</span><span class='fl'>TRUE</span>,<span class='kw'>clamp_value</span><span class='kw'>=</span><span class='fl'>3</span>)</div><div class='output co'>#&gt; <span class='message'>Setting default values for Cornell box: lookfrom `c(278,278,-800)` lookat `c(278,278,0)` .</span></div><div class='img'><img src='generate_cornell-5.png' alt='' width='700' height='433' /></div><div class='input'># }
+<span class='va'>new_cornell</span> <span class='op'>=</span> <span class='fu'>generate_cornell</span><span class='op'>(</span>leftcolor<span class='op'>=</span><span class='st'>"purple"</span>, rightcolor<span class='op'>=</span><span class='st'>"yellow"</span><span class='op'>)</span>
+<span class='fu'><a href='render_scene.html'>render_scene</a></span><span class='op'>(</span><span class='va'>new_cornell</span>, samples<span class='op'>=</span><span class='fl'>400</span>,aperture<span class='op'>=</span><span class='fl'>0</span>, fov<span class='op'>=</span><span class='fl'>40</span>, ambient_light<span class='op'>=</span><span class='cn'>FALSE</span>, 
+             parallel<span class='op'>=</span><span class='cn'>TRUE</span>,clamp_value<span class='op'>=</span><span class='fl'>3</span><span class='op'>)</span>
+</div><div class='output co'>#&gt; <span class='message'>Setting default values for Cornell box: lookfrom `c(278,278,-800)` lookat `c(278,278,0)` .</span></div><div class='img'><img src='generate_cornell-5.png' alt='' width='700' height='433' /></div><div class='input'><span class='co'># }</span>
 </div></pre>
   </div>
   <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">
@@ -252,7 +257,7 @@
 </div>
 
 <div class="pkgdown">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.5.1.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.6.1.</p>
 </div>
 
       </footer>

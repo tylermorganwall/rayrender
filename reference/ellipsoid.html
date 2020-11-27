@@ -78,7 +78,7 @@ for ellipsoids with large differences between axes." />
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">rayrender</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.18.0</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.19.0</span>
       </span>
     </div>
 
@@ -150,20 +150,20 @@ for ellipsoids with large differences between axes." />
 for ellipsoids with large differences between axes.</p>
     </div>
 
-    <pre class="usage"><span class='fu'>ellipsoid</span>(
-  <span class='kw'>x</span> <span class='kw'>=</span> <span class='fl'>0</span>,
-  <span class='kw'>y</span> <span class='kw'>=</span> <span class='fl'>0</span>,
-  <span class='kw'>z</span> <span class='kw'>=</span> <span class='fl'>0</span>,
-  <span class='kw'>a</span> <span class='kw'>=</span> <span class='fl'>1</span>,
-  <span class='kw'>b</span> <span class='kw'>=</span> <span class='fl'>1</span>,
-  <span class='kw'>c</span> <span class='kw'>=</span> <span class='fl'>1</span>,
-  <span class='kw'>material</span> <span class='kw'>=</span> <span class='fu'><a href='diffuse.html'>diffuse</a></span>(),
-  <span class='kw'>angle</span> <span class='kw'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span>(<span class='fl'>0</span>, <span class='fl'>0</span>, <span class='fl'>0</span>),
-  <span class='kw'>order_rotation</span> <span class='kw'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span>(<span class='fl'>1</span>, <span class='fl'>2</span>, <span class='fl'>3</span>),
-  <span class='kw'>velocity</span> <span class='kw'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span>(<span class='fl'>0</span>, <span class='fl'>0</span>, <span class='fl'>0</span>),
-  <span class='kw'>flipped</span> <span class='kw'>=</span> <span class='fl'>FALSE</span>,
-  <span class='kw'>scale</span> <span class='kw'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span>(<span class='fl'>1</span>, <span class='fl'>1</span>, <span class='fl'>1</span>)
-)</pre>
+    <pre class="usage"><span class='fu'>ellipsoid</span><span class='op'>(</span>
+  x <span class='op'>=</span> <span class='fl'>0</span>,
+  y <span class='op'>=</span> <span class='fl'>0</span>,
+  z <span class='op'>=</span> <span class='fl'>0</span>,
+  a <span class='op'>=</span> <span class='fl'>1</span>,
+  b <span class='op'>=</span> <span class='fl'>1</span>,
+  c <span class='op'>=</span> <span class='fl'>1</span>,
+  material <span class='op'>=</span> <span class='fu'><a href='diffuse.html'>diffuse</a></span><span class='op'>(</span><span class='op'>)</span>,
+  angle <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>0</span>, <span class='fl'>0</span>, <span class='fl'>0</span><span class='op'>)</span>,
+  order_rotation <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>1</span>, <span class='fl'>2</span>, <span class='fl'>3</span><span class='op'>)</span>,
+  velocity <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>0</span>, <span class='fl'>0</span>, <span class='fl'>0</span><span class='op'>)</span>,
+  flipped <span class='op'>=</span> <span class='cn'>FALSE</span>,
+  scale <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>1</span>, <span class='fl'>1</span>, <span class='fl'>1</span><span class='op'>)</span>
+<span class='op'>)</span></pre>
 
     <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
     <table class="ref-arguments">
@@ -227,28 +227,31 @@ number, the object will be scaled uniformly. Note: emissive objects may not curr
     <h2 class="hasAnchor" id="examples"><a class="anchor" href="#examples"></a>Examples</h2>
     <pre class="examples"><div class='input'><span class='co'>#Generate an ellipsoid in a Cornell box</span>
 <span class='co'># \donttest{</span>
-<span class='fu'><a href='generate_cornell.html'>generate_cornell</a></span>() <span class='kw'>%&gt;%</span>
-  <span class='fu'><a href='add_object.html'>add_object</a></span>(<span class='fu'>ellipsoid</span>(<span class='kw'>x</span> <span class='kw'>=</span> <span class='fl'>555</span>/<span class='fl'>2</span>, <span class='kw'>y</span> <span class='kw'>=</span> <span class='fl'>555</span>/<span class='fl'>2</span>, <span class='kw'>z</span> <span class='kw'>=</span> <span class='fl'>555</span>/<span class='fl'>2</span>,
-                       <span class='kw'>a</span> <span class='kw'>=</span> <span class='fl'>100</span>, <span class='kw'>b</span> <span class='kw'>=</span> <span class='fl'>50</span>, <span class='kw'>c</span> <span class='kw'>=</span> <span class='fl'>50</span>)) <span class='kw'>%&gt;%</span>
-  <span class='fu'><a href='render_scene.html'>render_scene</a></span>(<span class='kw'>lookfrom</span> <span class='kw'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span>(<span class='fl'>278</span>, <span class='fl'>278</span>, -<span class='fl'>800</span>) ,<span class='kw'>lookat</span> <span class='kw'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span>(<span class='fl'>278</span>, <span class='fl'>278</span>, <span class='fl'>0</span>), <span class='kw'>fov</span> <span class='kw'>=</span> <span class='fl'>40</span>,
-               <span class='kw'>ambient_light</span> <span class='kw'>=</span> <span class='fl'>FALSE</span>, <span class='kw'>samples</span> <span class='kw'>=</span> <span class='fl'>500</span>, <span class='kw'>parallel</span> <span class='kw'>=</span> <span class='fl'>TRUE</span>, <span class='kw'>clamp_value</span> <span class='kw'>=</span> <span class='fl'>5</span>)</div><div class='img'><img src='ellipsoid-1.png' alt='' width='700' height='433' /></div><div class='input'><span class='co'># }</span>
+<span class='fu'><a href='generate_cornell.html'>generate_cornell</a></span><span class='op'>(</span><span class='op'>)</span> <span class='op'>%&gt;%</span>
+  <span class='fu'><a href='add_object.html'>add_object</a></span><span class='op'>(</span><span class='fu'>ellipsoid</span><span class='op'>(</span>x <span class='op'>=</span> <span class='fl'>555</span><span class='op'>/</span><span class='fl'>2</span>, y <span class='op'>=</span> <span class='fl'>555</span><span class='op'>/</span><span class='fl'>2</span>, z <span class='op'>=</span> <span class='fl'>555</span><span class='op'>/</span><span class='fl'>2</span>, 
+                       a <span class='op'>=</span> <span class='fl'>100</span>, b <span class='op'>=</span> <span class='fl'>50</span>, c <span class='op'>=</span> <span class='fl'>50</span><span class='op'>)</span><span class='op'>)</span> <span class='op'>%&gt;%</span>
+  <span class='fu'><a href='render_scene.html'>render_scene</a></span><span class='op'>(</span>lookfrom <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>278</span>, <span class='fl'>278</span>, <span class='op'>-</span><span class='fl'>800</span><span class='op'>)</span> ,lookat <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>278</span>, <span class='fl'>278</span>, <span class='fl'>0</span><span class='op'>)</span>, fov <span class='op'>=</span> <span class='fl'>40</span>, 
+               ambient_light <span class='op'>=</span> <span class='cn'>FALSE</span>, samples <span class='op'>=</span> <span class='fl'>500</span>, parallel <span class='op'>=</span> <span class='cn'>TRUE</span>, clamp_value <span class='op'>=</span> <span class='fl'>5</span><span class='op'>)</span>
+</div><div class='img'><img src='ellipsoid-1.png' alt='' width='700' height='433' /></div><div class='input'><span class='co'># }</span>
 
 <span class='co'>#Change the axes to make it taller rather than wide:</span>
 <span class='co'># \donttest{</span>
-<span class='fu'><a href='generate_cornell.html'>generate_cornell</a></span>() <span class='kw'>%&gt;%</span>
-  <span class='fu'><a href='add_object.html'>add_object</a></span>(<span class='fu'>ellipsoid</span>(<span class='kw'>x</span> <span class='kw'>=</span> <span class='fl'>555</span>/<span class='fl'>2</span>, <span class='kw'>y</span> <span class='kw'>=</span> <span class='fl'>555</span>/<span class='fl'>2</span>, <span class='kw'>z</span> <span class='kw'>=</span> <span class='fl'>555</span>/<span class='fl'>2</span>,
-                       <span class='kw'>a</span> <span class='kw'>=</span> <span class='fl'>100</span>, <span class='kw'>b</span> <span class='kw'>=</span> <span class='fl'>200</span>, <span class='kw'>c</span> <span class='kw'>=</span> <span class='fl'>100</span>, <span class='kw'>material</span> <span class='kw'>=</span> <span class='fu'><a href='metal.html'>metal</a></span>())) <span class='kw'>%&gt;%</span>
-  <span class='fu'><a href='render_scene.html'>render_scene</a></span>(<span class='kw'>lookfrom</span> <span class='kw'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span>(<span class='fl'>278</span>, <span class='fl'>278</span>, -<span class='fl'>800</span>) ,<span class='kw'>lookat</span> <span class='kw'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span>(<span class='fl'>278</span>, <span class='fl'>278</span>, <span class='fl'>0</span>), <span class='kw'>fov</span> <span class='kw'>=</span> <span class='fl'>40</span>,
-               <span class='kw'>ambient_light</span> <span class='kw'>=</span> <span class='fl'>FALSE</span>, <span class='kw'>samples</span> <span class='kw'>=</span> <span class='fl'>500</span>, <span class='kw'>parallel</span> <span class='kw'>=</span> <span class='fl'>TRUE</span>, <span class='kw'>clamp_value</span> <span class='kw'>=</span> <span class='fl'>5</span>)</div><div class='img'><img src='ellipsoid-2.png' alt='' width='700' height='433' /></div><div class='input'><span class='co'># }</span>
+<span class='fu'><a href='generate_cornell.html'>generate_cornell</a></span><span class='op'>(</span><span class='op'>)</span> <span class='op'>%&gt;%</span>
+  <span class='fu'><a href='add_object.html'>add_object</a></span><span class='op'>(</span><span class='fu'>ellipsoid</span><span class='op'>(</span>x <span class='op'>=</span> <span class='fl'>555</span><span class='op'>/</span><span class='fl'>2</span>, y <span class='op'>=</span> <span class='fl'>555</span><span class='op'>/</span><span class='fl'>2</span>, z <span class='op'>=</span> <span class='fl'>555</span><span class='op'>/</span><span class='fl'>2</span>, 
+                       a <span class='op'>=</span> <span class='fl'>100</span>, b <span class='op'>=</span> <span class='fl'>200</span>, c <span class='op'>=</span> <span class='fl'>100</span>, material <span class='op'>=</span> <span class='fu'><a href='metal.html'>metal</a></span><span class='op'>(</span><span class='op'>)</span><span class='op'>)</span><span class='op'>)</span> <span class='op'>%&gt;%</span>
+  <span class='fu'><a href='render_scene.html'>render_scene</a></span><span class='op'>(</span>lookfrom <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>278</span>, <span class='fl'>278</span>, <span class='op'>-</span><span class='fl'>800</span><span class='op'>)</span> ,lookat <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>278</span>, <span class='fl'>278</span>, <span class='fl'>0</span><span class='op'>)</span>, fov <span class='op'>=</span> <span class='fl'>40</span>, 
+               ambient_light <span class='op'>=</span> <span class='cn'>FALSE</span>, samples <span class='op'>=</span> <span class='fl'>500</span>, parallel <span class='op'>=</span> <span class='cn'>TRUE</span>, clamp_value <span class='op'>=</span> <span class='fl'>5</span><span class='op'>)</span>
+</div><div class='img'><img src='ellipsoid-2.png' alt='' width='700' height='433' /></div><div class='input'><span class='co'># }</span>
 
 <span class='co'>#Rotate it and make it dielectric:</span>
 <span class='co'># \donttest{</span>
-<span class='fu'><a href='generate_cornell.html'>generate_cornell</a></span>() <span class='kw'>%&gt;%</span>
-  <span class='fu'><a href='add_object.html'>add_object</a></span>(<span class='fu'>ellipsoid</span>(<span class='kw'>x</span> <span class='kw'>=</span> <span class='fl'>555</span>/<span class='fl'>2</span>, <span class='kw'>y</span> <span class='kw'>=</span> <span class='fl'>555</span>/<span class='fl'>2</span>, <span class='kw'>z</span> <span class='kw'>=</span> <span class='fl'>555</span>/<span class='fl'>2</span>,
-                       <span class='kw'>a</span> <span class='kw'>=</span> <span class='fl'>100</span>, <span class='kw'>b</span> <span class='kw'>=</span> <span class='fl'>200</span>, <span class='kw'>c</span> <span class='kw'>=</span> <span class='fl'>100</span>, <span class='kw'>angle</span> <span class='kw'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span>(<span class='fl'>0</span>, <span class='fl'>0</span>, <span class='fl'>45</span>),
-                       <span class='kw'>material</span> <span class='kw'>=</span> <span class='fu'><a href='dielectric.html'>dielectric</a></span>())) <span class='kw'>%&gt;%</span>
-  <span class='fu'><a href='render_scene.html'>render_scene</a></span>(<span class='kw'>lookfrom</span> <span class='kw'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span>(<span class='fl'>278</span>, <span class='fl'>278</span>, -<span class='fl'>800</span>) ,<span class='kw'>lookat</span> <span class='kw'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span>(<span class='fl'>278</span>, <span class='fl'>278</span>, <span class='fl'>0</span>), <span class='kw'>fov</span> <span class='kw'>=</span> <span class='fl'>40</span>,
-               <span class='kw'>ambient_light</span> <span class='kw'>=</span> <span class='fl'>FALSE</span>, <span class='kw'>samples</span> <span class='kw'>=</span> <span class='fl'>500</span>, <span class='kw'>parallel</span> <span class='kw'>=</span> <span class='fl'>TRUE</span>, <span class='kw'>clamp_value</span> <span class='kw'>=</span> <span class='fl'>5</span>)</div><div class='img'><img src='ellipsoid-3.png' alt='' width='700' height='433' /></div><div class='input'># }
+<span class='fu'><a href='generate_cornell.html'>generate_cornell</a></span><span class='op'>(</span><span class='op'>)</span> <span class='op'>%&gt;%</span>
+  <span class='fu'><a href='add_object.html'>add_object</a></span><span class='op'>(</span><span class='fu'>ellipsoid</span><span class='op'>(</span>x <span class='op'>=</span> <span class='fl'>555</span><span class='op'>/</span><span class='fl'>2</span>, y <span class='op'>=</span> <span class='fl'>555</span><span class='op'>/</span><span class='fl'>2</span>, z <span class='op'>=</span> <span class='fl'>555</span><span class='op'>/</span><span class='fl'>2</span>, 
+                       a <span class='op'>=</span> <span class='fl'>100</span>, b <span class='op'>=</span> <span class='fl'>200</span>, c <span class='op'>=</span> <span class='fl'>100</span>, angle <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>0</span>, <span class='fl'>0</span>, <span class='fl'>45</span><span class='op'>)</span>,
+                       material <span class='op'>=</span> <span class='fu'><a href='dielectric.html'>dielectric</a></span><span class='op'>(</span><span class='op'>)</span><span class='op'>)</span><span class='op'>)</span> <span class='op'>%&gt;%</span>
+  <span class='fu'><a href='render_scene.html'>render_scene</a></span><span class='op'>(</span>lookfrom <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>278</span>, <span class='fl'>278</span>, <span class='op'>-</span><span class='fl'>800</span><span class='op'>)</span> ,lookat <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>278</span>, <span class='fl'>278</span>, <span class='fl'>0</span><span class='op'>)</span>, fov <span class='op'>=</span> <span class='fl'>40</span>, 
+               ambient_light <span class='op'>=</span> <span class='cn'>FALSE</span>, samples <span class='op'>=</span> <span class='fl'>500</span>, parallel <span class='op'>=</span> <span class='cn'>TRUE</span>, clamp_value <span class='op'>=</span> <span class='fl'>5</span><span class='op'>)</span>
+</div><div class='img'><img src='ellipsoid-3.png' alt='' width='700' height='433' /></div><div class='input'><span class='co'># }</span>
 </div></pre>
   </div>
   <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">
@@ -265,7 +268,7 @@ number, the object will be scaled uniformly. Note: emissive objects may not curr
 </div>
 
 <div class="pkgdown">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.5.1.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.6.1.</p>
 </div>
 
       </footer>

@@ -77,7 +77,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">rayrender</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.18.0</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.19.0</span>
       </span>
     </div>
 
@@ -148,7 +148,7 @@
     <p>Lambertian Material (deprecated)</p>
     </div>
 
-    <pre class="usage"><span class='fu'>lambertian</span>(<span class='no'>...</span>)</pre>
+    <pre class="usage"><span class='fu'>lambertian</span><span class='op'>(</span><span class='va'>...</span><span class='op'>)</span></pre>
 
     <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
     <table class="ref-arguments">
@@ -166,9 +166,11 @@
     <h2 class="hasAnchor" id="examples"><a class="anchor" href="#examples"></a>Examples</h2>
     <pre class="examples"><div class='input'><span class='co'>#Deprecated lambertian material. Will display a warning.</span>
 <span class='co'># \donttest{</span>
-<span class='no'>scene</span> <span class='kw'>=</span> <span class='fu'><a href='generate_cornell.html'>generate_cornell</a></span>() <span class='kw'>%&gt;%</span>
-  <span class='fu'><a href='add_object.html'>add_object</a></span>(<span class='fu'><a href='sphere.html'>sphere</a></span>(<span class='kw'>x</span><span class='kw'>=</span><span class='fl'>555</span>/<span class='fl'>2</span>,<span class='kw'>y</span><span class='kw'>=</span><span class='fl'>555</span>/<span class='fl'>2</span>,<span class='kw'>z</span><span class='kw'>=</span><span class='fl'>555</span>/<span class='fl'>2</span>,<span class='kw'>radius</span><span class='kw'>=</span><span class='fl'>555</span>/<span class='fl'>8</span>,<span class='kw'>material</span><span class='kw'>=</span><span class='fu'>lambertian</span>()))</div><div class='output co'>#&gt; <span class='warning'>Warning: lambertian() deprecated--use diffuse() instead.</span></div><div class='input'>  <span class='fu'><a href='render_scene.html'>render_scene</a></span>(<span class='no'>scene</span>, <span class='kw'>lookfrom</span><span class='kw'>=</span><span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span>(<span class='fl'>278</span>,<span class='fl'>278</span>,-<span class='fl'>800</span>),<span class='kw'>lookat</span> <span class='kw'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span>(<span class='fl'>278</span>,<span class='fl'>278</span>,<span class='fl'>0</span>), <span class='kw'>samples</span><span class='kw'>=</span><span class='fl'>10</span>,
-             <span class='kw'>aperture</span><span class='kw'>=</span><span class='fl'>0</span>, <span class='kw'>fov</span><span class='kw'>=</span><span class='fl'>40</span>, <span class='kw'>ambient_light</span><span class='kw'>=</span><span class='fl'>FALSE</span>, <span class='kw'>parallel</span><span class='kw'>=</span><span class='fl'>TRUE</span>)</div><div class='img'><img src='lambertian-1.png' alt='' width='700' height='433' /></div><div class='input'># }
+<span class='va'>scene</span> <span class='op'>=</span> <span class='fu'><a href='generate_cornell.html'>generate_cornell</a></span><span class='op'>(</span><span class='op'>)</span> <span class='op'>%&gt;%</span>
+  <span class='fu'><a href='add_object.html'>add_object</a></span><span class='op'>(</span><span class='fu'><a href='sphere.html'>sphere</a></span><span class='op'>(</span>x<span class='op'>=</span><span class='fl'>555</span><span class='op'>/</span><span class='fl'>2</span>,y<span class='op'>=</span><span class='fl'>555</span><span class='op'>/</span><span class='fl'>2</span>,z<span class='op'>=</span><span class='fl'>555</span><span class='op'>/</span><span class='fl'>2</span>,radius<span class='op'>=</span><span class='fl'>555</span><span class='op'>/</span><span class='fl'>8</span>,material<span class='op'>=</span><span class='fu'>lambertian</span><span class='op'>(</span><span class='op'>)</span><span class='op'>)</span><span class='op'>)</span>
+</div><div class='output co'>#&gt; <span class='warning'>Warning: lambertian() deprecated--use diffuse() instead.</span></div><div class='input'>  <span class='fu'><a href='render_scene.html'>render_scene</a></span><span class='op'>(</span><span class='va'>scene</span>, lookfrom<span class='op'>=</span><span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>278</span>,<span class='fl'>278</span>,<span class='op'>-</span><span class='fl'>800</span><span class='op'>)</span>,lookat <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>278</span>,<span class='fl'>278</span>,<span class='fl'>0</span><span class='op'>)</span>, samples<span class='op'>=</span><span class='fl'>10</span>,
+             aperture<span class='op'>=</span><span class='fl'>0</span>, fov<span class='op'>=</span><span class='fl'>40</span>, ambient_light<span class='op'>=</span><span class='cn'>FALSE</span>, parallel<span class='op'>=</span><span class='cn'>TRUE</span><span class='op'>)</span>
+</div><div class='img'><img src='lambertian-1.png' alt='' width='700' height='433' /></div><div class='input'><span class='co'># }</span>
 </div></pre>
   </div>
   <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">
@@ -185,7 +187,7 @@
 </div>
 
 <div class="pkgdown">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.5.1.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.6.1.</p>
 </div>
 
       </footer>

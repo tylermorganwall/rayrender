@@ -77,7 +77,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">rayrender</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.18.0</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.19.0</span>
       </span>
     </div>
 
@@ -148,29 +148,29 @@
     <p>Diffuse Material</p>
     </div>
 
-    <pre class="usage"><span class='fu'>diffuse</span>(
-  <span class='kw'>color</span> <span class='kw'>=</span> <span class='st'>"#ffffff"</span>,
-  <span class='kw'>checkercolor</span> <span class='kw'>=</span> <span class='fl'>NA</span>,
-  <span class='kw'>checkerperiod</span> <span class='kw'>=</span> <span class='fl'>3</span>,
-  <span class='kw'>noise</span> <span class='kw'>=</span> <span class='fl'>0</span>,
-  <span class='kw'>noisephase</span> <span class='kw'>=</span> <span class='fl'>0</span>,
-  <span class='kw'>noiseintensity</span> <span class='kw'>=</span> <span class='fl'>10</span>,
-  <span class='kw'>noisecolor</span> <span class='kw'>=</span> <span class='st'>"#000000"</span>,
-  <span class='kw'>gradient_color</span> <span class='kw'>=</span> <span class='fl'>NA</span>,
-  <span class='kw'>gradient_transpose</span> <span class='kw'>=</span> <span class='fl'>FALSE</span>,
-  <span class='kw'>gradient_point_start</span> <span class='kw'>=</span> <span class='fl'>NA</span>,
-  <span class='kw'>gradient_point_end</span> <span class='kw'>=</span> <span class='fl'>NA</span>,
-  <span class='kw'>gradient_type</span> <span class='kw'>=</span> <span class='st'>"hsv"</span>,
-  <span class='kw'>image_texture</span> <span class='kw'>=</span> <span class='fl'>NA</span>,
-  <span class='kw'>image_repeat</span> <span class='kw'>=</span> <span class='fl'>1</span>,
-  <span class='kw'>alpha_texture</span> <span class='kw'>=</span> <span class='fl'>NA</span>,
-  <span class='kw'>bump_texture</span> <span class='kw'>=</span> <span class='fl'>NA</span>,
-  <span class='kw'>bump_intensity</span> <span class='kw'>=</span> <span class='fl'>1</span>,
-  <span class='kw'>fog</span> <span class='kw'>=</span> <span class='fl'>FALSE</span>,
-  <span class='kw'>fogdensity</span> <span class='kw'>=</span> <span class='fl'>0.01</span>,
-  <span class='kw'>sigma</span> <span class='kw'>=</span> <span class='kw'>NULL</span>,
-  <span class='kw'>importance_sample</span> <span class='kw'>=</span> <span class='fl'>FALSE</span>
-)</pre>
+    <pre class="usage"><span class='fu'>diffuse</span><span class='op'>(</span>
+  color <span class='op'>=</span> <span class='st'>"#ffffff"</span>,
+  checkercolor <span class='op'>=</span> <span class='cn'>NA</span>,
+  checkerperiod <span class='op'>=</span> <span class='fl'>3</span>,
+  noise <span class='op'>=</span> <span class='fl'>0</span>,
+  noisephase <span class='op'>=</span> <span class='fl'>0</span>,
+  noiseintensity <span class='op'>=</span> <span class='fl'>10</span>,
+  noisecolor <span class='op'>=</span> <span class='st'>"#000000"</span>,
+  gradient_color <span class='op'>=</span> <span class='cn'>NA</span>,
+  gradient_transpose <span class='op'>=</span> <span class='cn'>FALSE</span>,
+  gradient_point_start <span class='op'>=</span> <span class='cn'>NA</span>,
+  gradient_point_end <span class='op'>=</span> <span class='cn'>NA</span>,
+  gradient_type <span class='op'>=</span> <span class='st'>"hsv"</span>,
+  image_texture <span class='op'>=</span> <span class='cn'>NA</span>,
+  image_repeat <span class='op'>=</span> <span class='fl'>1</span>,
+  alpha_texture <span class='op'>=</span> <span class='cn'>NA</span>,
+  bump_texture <span class='op'>=</span> <span class='cn'>NA</span>,
+  bump_intensity <span class='op'>=</span> <span class='fl'>1</span>,
+  fog <span class='op'>=</span> <span class='cn'>FALSE</span>,
+  fogdensity <span class='op'>=</span> <span class='fl'>0.01</span>,
+  sigma <span class='op'>=</span> <span class='cn'>NULL</span>,
+  importance_sample <span class='op'>=</span> <span class='cn'>FALSE</span>
+<span class='op'>)</span></pre>
 
     <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
     <table class="ref-arguments">
@@ -286,43 +286,48 @@ this will help with the convergence of the image.</p></td>
 
     <h2 class="hasAnchor" id="examples"><a class="anchor" href="#examples"></a>Examples</h2>
     <pre class="examples"><div class='input'><span class='co'>#Generate the cornell box and add a single white sphere to the center</span>
-<span class='no'>scene</span> <span class='kw'>=</span> <span class='fu'><a href='generate_cornell.html'>generate_cornell</a></span>() <span class='kw'>%&gt;%</span>
-  <span class='fu'><a href='add_object.html'>add_object</a></span>(<span class='fu'><a href='sphere.html'>sphere</a></span>(<span class='kw'>x</span><span class='kw'>=</span><span class='fl'>555</span>/<span class='fl'>2</span>,<span class='kw'>y</span><span class='kw'>=</span><span class='fl'>555</span>/<span class='fl'>2</span>,<span class='kw'>z</span><span class='kw'>=</span><span class='fl'>555</span>/<span class='fl'>2</span>,<span class='kw'>radius</span><span class='kw'>=</span><span class='fl'>555</span>/<span class='fl'>8</span>,<span class='kw'>material</span><span class='kw'>=</span><span class='fu'>diffuse</span>()))
+<span class='va'>scene</span> <span class='op'>=</span> <span class='fu'><a href='generate_cornell.html'>generate_cornell</a></span><span class='op'>(</span><span class='op'>)</span> <span class='op'>%&gt;%</span>
+  <span class='fu'><a href='add_object.html'>add_object</a></span><span class='op'>(</span><span class='fu'><a href='sphere.html'>sphere</a></span><span class='op'>(</span>x<span class='op'>=</span><span class='fl'>555</span><span class='op'>/</span><span class='fl'>2</span>,y<span class='op'>=</span><span class='fl'>555</span><span class='op'>/</span><span class='fl'>2</span>,z<span class='op'>=</span><span class='fl'>555</span><span class='op'>/</span><span class='fl'>2</span>,radius<span class='op'>=</span><span class='fl'>555</span><span class='op'>/</span><span class='fl'>8</span>,material<span class='op'>=</span><span class='fu'>diffuse</span><span class='op'>(</span><span class='op'>)</span><span class='op'>)</span><span class='op'>)</span>
 <span class='co'># \donttest{</span>
-<span class='fu'><a href='render_scene.html'>render_scene</a></span>(<span class='no'>scene</span>, <span class='kw'>lookfrom</span><span class='kw'>=</span><span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span>(<span class='fl'>278</span>,<span class='fl'>278</span>,-<span class='fl'>800</span>),<span class='kw'>lookat</span> <span class='kw'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span>(<span class='fl'>278</span>,<span class='fl'>278</span>,<span class='fl'>0</span>), <span class='kw'>samples</span><span class='kw'>=</span><span class='fl'>500</span>,
-             <span class='kw'>aperture</span><span class='kw'>=</span><span class='fl'>0</span>, <span class='kw'>fov</span><span class='kw'>=</span><span class='fl'>40</span>, <span class='kw'>ambient_light</span><span class='kw'>=</span><span class='fl'>FALSE</span>, <span class='kw'>parallel</span><span class='kw'>=</span><span class='fl'>TRUE</span>)</div><div class='img'><img src='diffuse-1.png' alt='' width='700' height='433' /></div><div class='input'><span class='co'># }</span>
+<span class='fu'><a href='render_scene.html'>render_scene</a></span><span class='op'>(</span><span class='va'>scene</span>, lookfrom<span class='op'>=</span><span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>278</span>,<span class='fl'>278</span>,<span class='op'>-</span><span class='fl'>800</span><span class='op'>)</span>,lookat <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>278</span>,<span class='fl'>278</span>,<span class='fl'>0</span><span class='op'>)</span>, samples<span class='op'>=</span><span class='fl'>500</span>,
+             aperture<span class='op'>=</span><span class='fl'>0</span>, fov<span class='op'>=</span><span class='fl'>40</span>, ambient_light<span class='op'>=</span><span class='cn'>FALSE</span>, parallel<span class='op'>=</span><span class='cn'>TRUE</span><span class='op'>)</span>
+</div><div class='img'><img src='diffuse-1.png' alt='' width='700' height='433' /></div><div class='input'><span class='co'># }</span>
 
 <span class='co'>#Add a checkered rectangular cube below             </span>
-<span class='no'>scene</span> <span class='kw'>=</span> <span class='no'>scene</span> <span class='kw'>%&gt;%</span>
-  <span class='fu'><a href='add_object.html'>add_object</a></span>(<span class='fu'><a href='cube.html'>cube</a></span>(<span class='kw'>x</span><span class='kw'>=</span><span class='fl'>555</span>/<span class='fl'>2</span>,<span class='kw'>y</span><span class='kw'>=</span><span class='fl'>555</span>/<span class='fl'>8</span>,<span class='kw'>z</span><span class='kw'>=</span><span class='fl'>555</span>/<span class='fl'>2</span>,<span class='kw'>xwidth</span><span class='kw'>=</span><span class='fl'>555</span>/<span class='fl'>2</span>,<span class='kw'>ywidth</span><span class='kw'>=</span><span class='fl'>555</span>/<span class='fl'>4</span>,<span class='kw'>zwidth</span><span class='kw'>=</span><span class='fl'>555</span>/<span class='fl'>2</span>,
-  <span class='kw'>material</span> <span class='kw'>=</span> <span class='fu'>diffuse</span>(<span class='kw'>checkercolor</span><span class='kw'>=</span><span class='st'>"purple"</span>,<span class='kw'>checkerperiod</span><span class='kw'>=</span><span class='fl'>20</span>)))
+<span class='va'>scene</span> <span class='op'>=</span> <span class='va'>scene</span> <span class='op'>%&gt;%</span>
+  <span class='fu'><a href='add_object.html'>add_object</a></span><span class='op'>(</span><span class='fu'><a href='cube.html'>cube</a></span><span class='op'>(</span>x<span class='op'>=</span><span class='fl'>555</span><span class='op'>/</span><span class='fl'>2</span>,y<span class='op'>=</span><span class='fl'>555</span><span class='op'>/</span><span class='fl'>8</span>,z<span class='op'>=</span><span class='fl'>555</span><span class='op'>/</span><span class='fl'>2</span>,xwidth<span class='op'>=</span><span class='fl'>555</span><span class='op'>/</span><span class='fl'>2</span>,ywidth<span class='op'>=</span><span class='fl'>555</span><span class='op'>/</span><span class='fl'>4</span>,zwidth<span class='op'>=</span><span class='fl'>555</span><span class='op'>/</span><span class='fl'>2</span>,
+  material <span class='op'>=</span> <span class='fu'>diffuse</span><span class='op'>(</span>checkercolor<span class='op'>=</span><span class='st'>"purple"</span>,checkerperiod<span class='op'>=</span><span class='fl'>20</span><span class='op'>)</span><span class='op'>)</span><span class='op'>)</span>
 <span class='co'># \donttest{</span>
-<span class='fu'><a href='render_scene.html'>render_scene</a></span>(<span class='no'>scene</span>, <span class='kw'>lookfrom</span><span class='kw'>=</span><span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span>(<span class='fl'>278</span>,<span class='fl'>278</span>,-<span class='fl'>800</span>),<span class='kw'>lookat</span> <span class='kw'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span>(<span class='fl'>278</span>,<span class='fl'>278</span>,<span class='fl'>0</span>), <span class='kw'>samples</span><span class='kw'>=</span><span class='fl'>500</span>,
-             <span class='kw'>aperture</span><span class='kw'>=</span><span class='fl'>0</span>, <span class='kw'>fov</span><span class='kw'>=</span><span class='fl'>40</span>, <span class='kw'>ambient_light</span><span class='kw'>=</span><span class='fl'>FALSE</span>, <span class='kw'>parallel</span><span class='kw'>=</span><span class='fl'>TRUE</span>)</div><div class='img'><img src='diffuse-2.png' alt='' width='700' height='433' /></div><div class='input'><span class='co'># }</span>
-
+<span class='fu'><a href='render_scene.html'>render_scene</a></span><span class='op'>(</span><span class='va'>scene</span>, lookfrom<span class='op'>=</span><span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>278</span>,<span class='fl'>278</span>,<span class='op'>-</span><span class='fl'>800</span><span class='op'>)</span>,lookat <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>278</span>,<span class='fl'>278</span>,<span class='fl'>0</span><span class='op'>)</span>, samples<span class='op'>=</span><span class='fl'>500</span>,
+             aperture<span class='op'>=</span><span class='fl'>0</span>, fov<span class='op'>=</span><span class='fl'>40</span>, ambient_light<span class='op'>=</span><span class='cn'>FALSE</span>, parallel<span class='op'>=</span><span class='cn'>TRUE</span><span class='op'>)</span>
+</div><div class='img'><img src='diffuse-2.png' alt='' width='700' height='433' /></div><div class='input'><span class='co'># }</span>
+  
 <span class='co'>#Add a marbled sphere           </span>
-<span class='no'>scene</span> <span class='kw'>=</span> <span class='no'>scene</span> <span class='kw'>%&gt;%</span>
-  <span class='fu'><a href='add_object.html'>add_object</a></span>(<span class='fu'><a href='sphere.html'>sphere</a></span>(<span class='kw'>x</span><span class='kw'>=</span><span class='fl'>555</span>/<span class='fl'>2</span>+<span class='fl'>555</span>/<span class='fl'>4</span>,<span class='kw'>y</span><span class='kw'>=</span><span class='fl'>555</span>/<span class='fl'>2</span>,<span class='kw'>z</span><span class='kw'>=</span><span class='fl'>555</span>/<span class='fl'>2</span>,<span class='kw'>radius</span><span class='kw'>=</span><span class='fl'>555</span>/<span class='fl'>8</span>,
-  <span class='kw'>material</span> <span class='kw'>=</span> <span class='fu'>diffuse</span>(<span class='kw'>noise</span><span class='kw'>=</span><span class='fl'>1</span>/<span class='fl'>20</span>)))
+<span class='va'>scene</span> <span class='op'>=</span> <span class='va'>scene</span> <span class='op'>%&gt;%</span>
+  <span class='fu'><a href='add_object.html'>add_object</a></span><span class='op'>(</span><span class='fu'><a href='sphere.html'>sphere</a></span><span class='op'>(</span>x<span class='op'>=</span><span class='fl'>555</span><span class='op'>/</span><span class='fl'>2</span><span class='op'>+</span><span class='fl'>555</span><span class='op'>/</span><span class='fl'>4</span>,y<span class='op'>=</span><span class='fl'>555</span><span class='op'>/</span><span class='fl'>2</span>,z<span class='op'>=</span><span class='fl'>555</span><span class='op'>/</span><span class='fl'>2</span>,radius<span class='op'>=</span><span class='fl'>555</span><span class='op'>/</span><span class='fl'>8</span>,
+  material <span class='op'>=</span> <span class='fu'>diffuse</span><span class='op'>(</span>noise<span class='op'>=</span><span class='fl'>1</span><span class='op'>/</span><span class='fl'>20</span><span class='op'>)</span><span class='op'>)</span><span class='op'>)</span>
 <span class='co'># \donttest{</span>
-<span class='fu'><a href='render_scene.html'>render_scene</a></span>(<span class='no'>scene</span>, <span class='kw'>lookfrom</span><span class='kw'>=</span><span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span>(<span class='fl'>278</span>,<span class='fl'>278</span>,-<span class='fl'>800</span>),<span class='kw'>lookat</span> <span class='kw'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span>(<span class='fl'>278</span>,<span class='fl'>278</span>,<span class='fl'>0</span>), <span class='kw'>samples</span><span class='kw'>=</span><span class='fl'>500</span>,
-             <span class='kw'>aperture</span><span class='kw'>=</span><span class='fl'>0</span>, <span class='kw'>fov</span><span class='kw'>=</span><span class='fl'>40</span>, <span class='kw'>ambient_light</span><span class='kw'>=</span><span class='fl'>FALSE</span>, <span class='kw'>parallel</span><span class='kw'>=</span><span class='fl'>TRUE</span>)</div><div class='img'><img src='diffuse-3.png' alt='' width='700' height='433' /></div><div class='input'><span class='co'># }</span>
+<span class='fu'><a href='render_scene.html'>render_scene</a></span><span class='op'>(</span><span class='va'>scene</span>, lookfrom<span class='op'>=</span><span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>278</span>,<span class='fl'>278</span>,<span class='op'>-</span><span class='fl'>800</span><span class='op'>)</span>,lookat <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>278</span>,<span class='fl'>278</span>,<span class='fl'>0</span><span class='op'>)</span>, samples<span class='op'>=</span><span class='fl'>500</span>,
+             aperture<span class='op'>=</span><span class='fl'>0</span>, fov<span class='op'>=</span><span class='fl'>40</span>, ambient_light<span class='op'>=</span><span class='cn'>FALSE</span>, parallel<span class='op'>=</span><span class='cn'>TRUE</span><span class='op'>)</span>
+</div><div class='img'><img src='diffuse-3.png' alt='' width='700' height='433' /></div><div class='input'><span class='co'># }</span>
 
 <span class='co'>#Add an orange volumetric (fog) cube           </span>
-<span class='no'>scene</span> <span class='kw'>=</span> <span class='no'>scene</span> <span class='kw'>%&gt;%</span>
-  <span class='fu'><a href='add_object.html'>add_object</a></span>(<span class='fu'><a href='cube.html'>cube</a></span>(<span class='kw'>x</span><span class='kw'>=</span><span class='fl'>555</span>/<span class='fl'>2</span>-<span class='fl'>555</span>/<span class='fl'>4</span>,<span class='kw'>y</span><span class='kw'>=</span><span class='fl'>555</span>/<span class='fl'>2</span>,<span class='kw'>z</span><span class='kw'>=</span><span class='fl'>555</span>/<span class='fl'>2</span>,<span class='kw'>xwidth</span><span class='kw'>=</span><span class='fl'>555</span>/<span class='fl'>4</span>,<span class='kw'>ywidth</span><span class='kw'>=</span><span class='fl'>555</span>/<span class='fl'>4</span>,<span class='kw'>zwidth</span><span class='kw'>=</span><span class='fl'>555</span>/<span class='fl'>4</span>,
-  <span class='kw'>material</span> <span class='kw'>=</span> <span class='fu'>diffuse</span>(<span class='kw'>fog</span><span class='kw'>=</span><span class='fl'>TRUE</span>, <span class='kw'>fogdensity</span><span class='kw'>=</span><span class='fl'>0.05</span>,<span class='kw'>color</span><span class='kw'>=</span><span class='st'>"orange"</span>)))
+<span class='va'>scene</span> <span class='op'>=</span> <span class='va'>scene</span> <span class='op'>%&gt;%</span>
+  <span class='fu'><a href='add_object.html'>add_object</a></span><span class='op'>(</span><span class='fu'><a href='cube.html'>cube</a></span><span class='op'>(</span>x<span class='op'>=</span><span class='fl'>555</span><span class='op'>/</span><span class='fl'>2</span><span class='op'>-</span><span class='fl'>555</span><span class='op'>/</span><span class='fl'>4</span>,y<span class='op'>=</span><span class='fl'>555</span><span class='op'>/</span><span class='fl'>2</span>,z<span class='op'>=</span><span class='fl'>555</span><span class='op'>/</span><span class='fl'>2</span>,xwidth<span class='op'>=</span><span class='fl'>555</span><span class='op'>/</span><span class='fl'>4</span>,ywidth<span class='op'>=</span><span class='fl'>555</span><span class='op'>/</span><span class='fl'>4</span>,zwidth<span class='op'>=</span><span class='fl'>555</span><span class='op'>/</span><span class='fl'>4</span>,
+  material <span class='op'>=</span> <span class='fu'>diffuse</span><span class='op'>(</span>fog<span class='op'>=</span><span class='cn'>TRUE</span>, fogdensity<span class='op'>=</span><span class='fl'>0.05</span>,color<span class='op'>=</span><span class='st'>"orange"</span><span class='op'>)</span><span class='op'>)</span><span class='op'>)</span>
 <span class='co'># \donttest{</span>
-<span class='fu'><a href='render_scene.html'>render_scene</a></span>(<span class='no'>scene</span>, <span class='kw'>lookfrom</span><span class='kw'>=</span><span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span>(<span class='fl'>278</span>,<span class='fl'>278</span>,-<span class='fl'>800</span>),<span class='kw'>lookat</span> <span class='kw'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span>(<span class='fl'>278</span>,<span class='fl'>278</span>,<span class='fl'>0</span>), <span class='kw'>samples</span><span class='kw'>=</span><span class='fl'>500</span>,
-             <span class='kw'>aperture</span><span class='kw'>=</span><span class='fl'>0</span>, <span class='kw'>fov</span><span class='kw'>=</span><span class='fl'>40</span>, <span class='kw'>ambient_light</span><span class='kw'>=</span><span class='fl'>FALSE</span>, <span class='kw'>parallel</span><span class='kw'>=</span><span class='fl'>TRUE</span>)</div><div class='img'><img src='diffuse-4.png' alt='' width='700' height='433' /></div><div class='input'><span class='co'># }</span>
+<span class='fu'><a href='render_scene.html'>render_scene</a></span><span class='op'>(</span><span class='va'>scene</span>, lookfrom<span class='op'>=</span><span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>278</span>,<span class='fl'>278</span>,<span class='op'>-</span><span class='fl'>800</span><span class='op'>)</span>,lookat <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>278</span>,<span class='fl'>278</span>,<span class='fl'>0</span><span class='op'>)</span>, samples<span class='op'>=</span><span class='fl'>500</span>,
+             aperture<span class='op'>=</span><span class='fl'>0</span>, fov<span class='op'>=</span><span class='fl'>40</span>, ambient_light<span class='op'>=</span><span class='cn'>FALSE</span>, parallel<span class='op'>=</span><span class='cn'>TRUE</span><span class='op'>)</span>
+</div><div class='img'><img src='diffuse-4.png' alt='' width='700' height='433' /></div><div class='input'><span class='co'># }</span>
 
 <span class='co'>#' #Add an line segment with a color gradient        </span>
-<span class='no'>scene</span> <span class='kw'>=</span> <span class='no'>scene</span> <span class='kw'>%&gt;%</span>
-  <span class='fu'><a href='add_object.html'>add_object</a></span>(<span class='fu'><a href='segment.html'>segment</a></span>(<span class='kw'>start</span> <span class='kw'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span>(<span class='fl'>555</span>,<span class='fl'>450</span>,<span class='fl'>450</span>),<span class='kw'>end</span><span class='kw'>=</span><span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span>(<span class='fl'>0</span>,<span class='fl'>450</span>,<span class='fl'>450</span>),<span class='kw'>radius</span> <span class='kw'>=</span> <span class='fl'>50</span>,
-                     <span class='kw'>material</span> <span class='kw'>=</span> <span class='fu'>diffuse</span>(<span class='kw'>color</span><span class='kw'>=</span><span class='st'>"#1f7326"</span>, <span class='kw'>gradient_color</span> <span class='kw'>=</span> <span class='st'>"#a60d0d"</span>)))
+<span class='va'>scene</span> <span class='op'>=</span> <span class='va'>scene</span> <span class='op'>%&gt;%</span>
+  <span class='fu'><a href='add_object.html'>add_object</a></span><span class='op'>(</span><span class='fu'><a href='segment.html'>segment</a></span><span class='op'>(</span>start <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>555</span>,<span class='fl'>450</span>,<span class='fl'>450</span><span class='op'>)</span>,end<span class='op'>=</span><span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>0</span>,<span class='fl'>450</span>,<span class='fl'>450</span><span class='op'>)</span>,radius <span class='op'>=</span> <span class='fl'>50</span>, 
+                     material <span class='op'>=</span> <span class='fu'>diffuse</span><span class='op'>(</span>color<span class='op'>=</span><span class='st'>"#1f7326"</span>, gradient_color <span class='op'>=</span> <span class='st'>"#a60d0d"</span><span class='op'>)</span><span class='op'>)</span><span class='op'>)</span>
 <span class='co'># \donttest{</span>
-<span class='fu'><a href='render_scene.html'>render_scene</a></span>(<span class='no'>scene</span>, <span class='kw'>lookfrom</span><span class='kw'>=</span><span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span>(<span class='fl'>278</span>,<span class='fl'>278</span>,-<span class='fl'>800</span>),<span class='kw'>lookat</span> <span class='kw'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span>(<span class='fl'>278</span>,<span class='fl'>278</span>,<span class='fl'>0</span>), <span class='kw'>samples</span><span class='kw'>=</span><span class='fl'>500</span>,
-             <span class='kw'>aperture</span><span class='kw'>=</span><span class='fl'>0</span>, <span class='kw'>fov</span><span class='kw'>=</span><span class='fl'>40</span>, <span class='kw'>ambient_light</span><span class='kw'>=</span><span class='fl'>FALSE</span>, <span class='kw'>parallel</span><span class='kw'>=</span><span class='fl'>TRUE</span>)</div><div class='img'><img src='diffuse-5.png' alt='' width='700' height='433' /></div><div class='input'># }
+<span class='fu'><a href='render_scene.html'>render_scene</a></span><span class='op'>(</span><span class='va'>scene</span>, lookfrom<span class='op'>=</span><span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>278</span>,<span class='fl'>278</span>,<span class='op'>-</span><span class='fl'>800</span><span class='op'>)</span>,lookat <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>278</span>,<span class='fl'>278</span>,<span class='fl'>0</span><span class='op'>)</span>, samples<span class='op'>=</span><span class='fl'>500</span>,
+             aperture<span class='op'>=</span><span class='fl'>0</span>, fov<span class='op'>=</span><span class='fl'>40</span>, ambient_light<span class='op'>=</span><span class='cn'>FALSE</span>, parallel<span class='op'>=</span><span class='cn'>TRUE</span><span class='op'>)</span>
+</div><div class='img'><img src='diffuse-5.png' alt='' width='700' height='433' /></div><div class='input'><span class='co'># }</span>
 </div></pre>
   </div>
   <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">
@@ -339,7 +344,7 @@ this will help with the convergence of the image.</p></td>
 </div>
 
 <div class="pkgdown">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.5.1.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.6.1.</p>
 </div>
 
       </footer>

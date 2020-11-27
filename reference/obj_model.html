@@ -78,7 +78,7 @@ Note: light importance sampling currently not supported for this shape." />
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">rayrender</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.18.0</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.19.0</span>
       </span>
     </div>
 
@@ -150,20 +150,20 @@ Note: light importance sampling currently not supported for this shape." />
 Note: light importance sampling currently not supported for this shape.</p>
     </div>
 
-    <pre class="usage"><span class='fu'>obj_model</span>(
-  <span class='no'>filename</span>,
-  <span class='kw'>x</span> <span class='kw'>=</span> <span class='fl'>0</span>,
-  <span class='kw'>y</span> <span class='kw'>=</span> <span class='fl'>0</span>,
-  <span class='kw'>z</span> <span class='kw'>=</span> <span class='fl'>0</span>,
-  <span class='kw'>scale_obj</span> <span class='kw'>=</span> <span class='fl'>1</span>,
-  <span class='kw'>texture</span> <span class='kw'>=</span> <span class='fl'>FALSE</span>,
-  <span class='kw'>vertex_colors</span> <span class='kw'>=</span> <span class='fl'>FALSE</span>,
-  <span class='kw'>material</span> <span class='kw'>=</span> <span class='fu'><a href='diffuse.html'>diffuse</a></span>(),
-  <span class='kw'>angle</span> <span class='kw'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span>(<span class='fl'>0</span>, <span class='fl'>0</span>, <span class='fl'>0</span>),
-  <span class='kw'>order_rotation</span> <span class='kw'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span>(<span class='fl'>1</span>, <span class='fl'>2</span>, <span class='fl'>3</span>),
-  <span class='kw'>flipped</span> <span class='kw'>=</span> <span class='fl'>FALSE</span>,
-  <span class='kw'>scale</span> <span class='kw'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span>(<span class='fl'>1</span>, <span class='fl'>1</span>, <span class='fl'>1</span>)
-)</pre>
+    <pre class="usage"><span class='fu'>obj_model</span><span class='op'>(</span>
+  <span class='va'>filename</span>,
+  x <span class='op'>=</span> <span class='fl'>0</span>,
+  y <span class='op'>=</span> <span class='fl'>0</span>,
+  z <span class='op'>=</span> <span class='fl'>0</span>,
+  scale_obj <span class='op'>=</span> <span class='fl'>1</span>,
+  texture <span class='op'>=</span> <span class='cn'>FALSE</span>,
+  vertex_colors <span class='op'>=</span> <span class='cn'>FALSE</span>,
+  material <span class='op'>=</span> <span class='fu'><a href='diffuse.html'>diffuse</a></span><span class='op'>(</span><span class='op'>)</span>,
+  angle <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>0</span>, <span class='fl'>0</span>, <span class='fl'>0</span><span class='op'>)</span>,
+  order_rotation <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>1</span>, <span class='fl'>2</span>, <span class='fl'>3</span><span class='op'>)</span>,
+  flipped <span class='op'>=</span> <span class='cn'>FALSE</span>,
+  scale <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>1</span>, <span class='fl'>1</span>, <span class='fl'>1</span><span class='op'>)</span>
+<span class='op'>)</span></pre>
 
     <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
     <table class="ref-arguments">
@@ -234,29 +234,31 @@ Note: emissive objects may not currently function correctly when scaled.</p></td
 <span class='co'>#affect the function.</span>
 
 <span class='co'># \donttest{</span>
-<span class='fu'><a href='generate_ground.html'>generate_ground</a></span>(<span class='kw'>material</span> <span class='kw'>=</span> <span class='fu'><a href='diffuse.html'>diffuse</a></span>(<span class='kw'>checkercolor</span> <span class='kw'>=</span> <span class='st'>"grey50"</span>)) <span class='kw'>%&gt;%</span>
-  <span class='fu'><a href='add_object.html'>add_object</a></span>(<span class='fu'>obj_model</span>(<span class='kw'>y</span> <span class='kw'>=</span> -<span class='fl'>0.8</span>, <span class='kw'>filename</span> <span class='kw'>=</span> <span class='fu'><a href='r_obj.html'>r_obj</a></span>(),
-                       <span class='kw'>material</span> <span class='kw'>=</span> <span class='fu'><a href='metal.html'>metal</a></span>(<span class='kw'>color</span> <span class='kw'>=</span> <span class='st'>"gold"</span>, <span class='kw'>fuzz</span> <span class='kw'>=</span> <span class='fl'>0.025</span>))) <span class='kw'>%&gt;%</span>
-  <span class='fu'><a href='add_object.html'>add_object</a></span>(<span class='fu'>obj_model</span>(<span class='kw'>x</span> <span class='kw'>=</span> <span class='fl'>1.8</span>, <span class='kw'>y</span> <span class='kw'>=</span> -<span class='fl'>0.8</span>, <span class='kw'>filename</span> <span class='kw'>=</span> <span class='fu'><a href='r_obj.html'>r_obj</a></span>(),
-                       <span class='kw'>material</span> <span class='kw'>=</span> <span class='fu'><a href='diffuse.html'>diffuse</a></span>(<span class='kw'>color</span> <span class='kw'>=</span> <span class='st'>"lightblue"</span>))) <span class='kw'>%&gt;%</span>
-  <span class='fu'><a href='add_object.html'>add_object</a></span>(<span class='fu'>obj_model</span>(<span class='kw'>x</span> <span class='kw'>=</span> -<span class='fl'>1.8</span>, <span class='kw'>y</span> <span class='kw'>=</span> -<span class='fl'>0.8</span>, <span class='kw'>filename</span> <span class='kw'>=</span> <span class='fu'><a href='r_obj.html'>r_obj</a></span>() ,
-                       <span class='kw'>material</span> <span class='kw'>=</span> <span class='fu'><a href='dielectric.html'>dielectric</a></span>(<span class='kw'>color</span> <span class='kw'>=</span> <span class='st'>"pink"</span>))) <span class='kw'>%&gt;%</span>
-  <span class='fu'><a href='add_object.html'>add_object</a></span>(<span class='fu'><a href='sphere.html'>sphere</a></span>(<span class='kw'>z</span> <span class='kw'>=</span> <span class='fl'>20</span>, <span class='kw'>x</span> <span class='kw'>=</span> <span class='fl'>20</span>, <span class='kw'>y</span> <span class='kw'>=</span> <span class='fl'>20</span>, <span class='kw'>radius</span> <span class='kw'>=</span> <span class='fl'>10</span>,
-                    <span class='kw'>material</span> <span class='kw'>=</span> <span class='fu'><a href='light.html'>light</a></span>(<span class='kw'>intensity</span> <span class='kw'>=</span> <span class='fl'>20</span>))) <span class='kw'>%&gt;%</span>
-  <span class='fu'><a href='render_scene.html'>render_scene</a></span>(<span class='kw'>parallel</span> <span class='kw'>=</span> <span class='fl'>TRUE</span>, <span class='kw'>samples</span> <span class='kw'>=</span> <span class='fl'>500</span>,
-               <span class='kw'>tonemap</span> <span class='kw'>=</span> <span class='st'>"reinhold"</span>, <span class='kw'>aperture</span> <span class='kw'>=</span> <span class='fl'>0.05</span>, <span class='kw'>fov</span> <span class='kw'>=</span> <span class='fl'>32</span>, <span class='kw'>lookfrom</span> <span class='kw'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span>(<span class='fl'>0</span>, <span class='fl'>2</span>, <span class='fl'>10</span>))</div><div class='img'><img src='obj_model-1.png' alt='' width='700' height='433' /></div><div class='input'><span class='co'># }</span>
+<span class='fu'><a href='generate_ground.html'>generate_ground</a></span><span class='op'>(</span>material <span class='op'>=</span> <span class='fu'><a href='diffuse.html'>diffuse</a></span><span class='op'>(</span>checkercolor <span class='op'>=</span> <span class='st'>"grey50"</span><span class='op'>)</span><span class='op'>)</span> <span class='op'>%&gt;%</span>
+  <span class='fu'><a href='add_object.html'>add_object</a></span><span class='op'>(</span><span class='fu'>obj_model</span><span class='op'>(</span>y <span class='op'>=</span> <span class='op'>-</span><span class='fl'>0.8</span>, filename <span class='op'>=</span> <span class='fu'><a href='r_obj.html'>r_obj</a></span><span class='op'>(</span><span class='op'>)</span>,
+                       material <span class='op'>=</span> <span class='fu'><a href='metal.html'>metal</a></span><span class='op'>(</span>color <span class='op'>=</span> <span class='st'>"gold"</span>, fuzz <span class='op'>=</span> <span class='fl'>0.025</span><span class='op'>)</span><span class='op'>)</span><span class='op'>)</span> <span class='op'>%&gt;%</span>
+  <span class='fu'><a href='add_object.html'>add_object</a></span><span class='op'>(</span><span class='fu'>obj_model</span><span class='op'>(</span>x <span class='op'>=</span> <span class='fl'>1.8</span>, y <span class='op'>=</span> <span class='op'>-</span><span class='fl'>0.8</span>, filename <span class='op'>=</span> <span class='fu'><a href='r_obj.html'>r_obj</a></span><span class='op'>(</span><span class='op'>)</span>, 
+                       material <span class='op'>=</span> <span class='fu'><a href='diffuse.html'>diffuse</a></span><span class='op'>(</span>color <span class='op'>=</span> <span class='st'>"lightblue"</span><span class='op'>)</span><span class='op'>)</span><span class='op'>)</span> <span class='op'>%&gt;%</span>
+  <span class='fu'><a href='add_object.html'>add_object</a></span><span class='op'>(</span><span class='fu'>obj_model</span><span class='op'>(</span>x <span class='op'>=</span> <span class='op'>-</span><span class='fl'>1.8</span>, y <span class='op'>=</span> <span class='op'>-</span><span class='fl'>0.8</span>, filename <span class='op'>=</span> <span class='fu'><a href='r_obj.html'>r_obj</a></span><span class='op'>(</span><span class='op'>)</span> , 
+                       material <span class='op'>=</span> <span class='fu'><a href='dielectric.html'>dielectric</a></span><span class='op'>(</span>color <span class='op'>=</span> <span class='st'>"pink"</span><span class='op'>)</span><span class='op'>)</span><span class='op'>)</span> <span class='op'>%&gt;%</span>
+  <span class='fu'><a href='add_object.html'>add_object</a></span><span class='op'>(</span><span class='fu'><a href='sphere.html'>sphere</a></span><span class='op'>(</span>z <span class='op'>=</span> <span class='fl'>20</span>, x <span class='op'>=</span> <span class='fl'>20</span>, y <span class='op'>=</span> <span class='fl'>20</span>, radius <span class='op'>=</span> <span class='fl'>10</span>,
+                    material <span class='op'>=</span> <span class='fu'><a href='light.html'>light</a></span><span class='op'>(</span>intensity <span class='op'>=</span> <span class='fl'>20</span><span class='op'>)</span><span class='op'>)</span><span class='op'>)</span> <span class='op'>%&gt;%</span>
+  <span class='fu'><a href='render_scene.html'>render_scene</a></span><span class='op'>(</span>parallel <span class='op'>=</span> <span class='cn'>TRUE</span>, samples <span class='op'>=</span> <span class='fl'>500</span>, 
+               tonemap <span class='op'>=</span> <span class='st'>"reinhold"</span>, aperture <span class='op'>=</span> <span class='fl'>0.05</span>, fov <span class='op'>=</span> <span class='fl'>32</span>, lookfrom <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>0</span>, <span class='fl'>2</span>, <span class='fl'>10</span><span class='op'>)</span><span class='op'>)</span>
+</div><div class='img'><img src='obj_model-1.png' alt='' width='700' height='433' /></div><div class='input'><span class='co'># }</span>
 
 <span class='co'>#Use scale_obj to make objects bigger--this is more robust than the generic scale argument.</span>
 <span class='co'># \donttest{</span>
-<span class='fu'><a href='generate_ground.html'>generate_ground</a></span>(<span class='kw'>material</span> <span class='kw'>=</span> <span class='fu'><a href='diffuse.html'>diffuse</a></span>(<span class='kw'>checkercolor</span> <span class='kw'>=</span> <span class='st'>"grey50"</span>)) <span class='kw'>%&gt;%</span>
-  <span class='fu'><a href='add_object.html'>add_object</a></span>(<span class='fu'>obj_model</span>(<span class='kw'>y</span> <span class='kw'>=</span> -<span class='fl'>0.8</span>, <span class='kw'>filename</span> <span class='kw'>=</span> <span class='fu'><a href='r_obj.html'>r_obj</a></span>(), <span class='kw'>scale_obj</span> <span class='kw'>=</span> <span class='fl'>2</span>,
-                       <span class='kw'>material</span> <span class='kw'>=</span> <span class='fu'><a href='diffuse.html'>diffuse</a></span>(<span class='kw'>noise</span> <span class='kw'>=</span> <span class='fl'>TRUE</span>, <span class='kw'>noiseintensity</span> <span class='kw'>=</span> <span class='fl'>10</span>,<span class='kw'>noisephase</span><span class='kw'>=</span><span class='fl'>45</span>))) <span class='kw'>%&gt;%</span>
-  <span class='fu'><a href='add_object.html'>add_object</a></span>(<span class='fu'><a href='sphere.html'>sphere</a></span>(<span class='kw'>z</span> <span class='kw'>=</span> <span class='fl'>20</span>, <span class='kw'>x</span> <span class='kw'>=</span> <span class='fl'>20</span>, <span class='kw'>y</span> <span class='kw'>=</span> <span class='fl'>20</span>, <span class='kw'>radius</span> <span class='kw'>=</span> <span class='fl'>10</span>,
-                    <span class='kw'>material</span> <span class='kw'>=</span> <span class='fu'><a href='light.html'>light</a></span>(<span class='kw'>intensity</span> <span class='kw'>=</span> <span class='fl'>10</span>))) <span class='kw'>%&gt;%</span>
-  <span class='fu'><a href='render_scene.html'>render_scene</a></span>(<span class='kw'>parallel</span> <span class='kw'>=</span> <span class='fl'>TRUE</span>, <span class='kw'>samples</span> <span class='kw'>=</span> <span class='fl'>500</span>, <span class='kw'>ambient</span> <span class='kw'>=</span> <span class='fl'>TRUE</span>,
-               <span class='kw'>backgroundhigh</span><span class='kw'>=</span><span class='st'>"blue"</span>, <span class='kw'>backgroundlow</span><span class='kw'>=</span><span class='st'>"red"</span>,
-               <span class='kw'>aperture</span> <span class='kw'>=</span> <span class='fl'>0.05</span>, <span class='kw'>fov</span> <span class='kw'>=</span> <span class='fl'>32</span>, <span class='kw'>lookfrom</span> <span class='kw'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span>(<span class='fl'>0</span>, <span class='fl'>2</span>, <span class='fl'>10</span>),
-               <span class='kw'>lookat</span> <span class='kw'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span>(<span class='fl'>0</span>,<span class='fl'>1</span>,<span class='fl'>0</span>))</div><div class='img'><img src='obj_model-2.png' alt='' width='700' height='433' /></div><div class='input'># }
+<span class='fu'><a href='generate_ground.html'>generate_ground</a></span><span class='op'>(</span>material <span class='op'>=</span> <span class='fu'><a href='diffuse.html'>diffuse</a></span><span class='op'>(</span>checkercolor <span class='op'>=</span> <span class='st'>"grey50"</span><span class='op'>)</span><span class='op'>)</span> <span class='op'>%&gt;%</span>
+  <span class='fu'><a href='add_object.html'>add_object</a></span><span class='op'>(</span><span class='fu'>obj_model</span><span class='op'>(</span>y <span class='op'>=</span> <span class='op'>-</span><span class='fl'>0.8</span>, filename <span class='op'>=</span> <span class='fu'><a href='r_obj.html'>r_obj</a></span><span class='op'>(</span><span class='op'>)</span>, scale_obj <span class='op'>=</span> <span class='fl'>2</span>,
+                       material <span class='op'>=</span> <span class='fu'><a href='diffuse.html'>diffuse</a></span><span class='op'>(</span>noise <span class='op'>=</span> <span class='cn'>TRUE</span>, noiseintensity <span class='op'>=</span> <span class='fl'>10</span>,noisephase<span class='op'>=</span><span class='fl'>45</span><span class='op'>)</span><span class='op'>)</span><span class='op'>)</span> <span class='op'>%&gt;%</span>
+  <span class='fu'><a href='add_object.html'>add_object</a></span><span class='op'>(</span><span class='fu'><a href='sphere.html'>sphere</a></span><span class='op'>(</span>z <span class='op'>=</span> <span class='fl'>20</span>, x <span class='op'>=</span> <span class='fl'>20</span>, y <span class='op'>=</span> <span class='fl'>20</span>, radius <span class='op'>=</span> <span class='fl'>10</span>,
+                    material <span class='op'>=</span> <span class='fu'><a href='light.html'>light</a></span><span class='op'>(</span>intensity <span class='op'>=</span> <span class='fl'>10</span><span class='op'>)</span><span class='op'>)</span><span class='op'>)</span> <span class='op'>%&gt;%</span>
+  <span class='fu'><a href='render_scene.html'>render_scene</a></span><span class='op'>(</span>parallel <span class='op'>=</span> <span class='cn'>TRUE</span>, samples <span class='op'>=</span> <span class='fl'>500</span>, ambient <span class='op'>=</span> <span class='cn'>TRUE</span>, 
+               backgroundhigh<span class='op'>=</span><span class='st'>"blue"</span>, backgroundlow<span class='op'>=</span><span class='st'>"red"</span>,
+               aperture <span class='op'>=</span> <span class='fl'>0.05</span>, fov <span class='op'>=</span> <span class='fl'>32</span>, lookfrom <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>0</span>, <span class='fl'>2</span>, <span class='fl'>10</span><span class='op'>)</span>,
+               lookat <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>0</span>,<span class='fl'>1</span>,<span class='fl'>0</span><span class='op'>)</span><span class='op'>)</span> 
+</div><div class='img'><img src='obj_model-2.png' alt='' width='700' height='433' /></div><div class='input'><span class='co'># }</span>
 </div></pre>
   </div>
   <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">
@@ -273,7 +275,7 @@ Note: emissive objects may not currently function correctly when scaled.</p></td
 </div>
 
 <div class="pkgdown">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.5.1.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.6.1.</p>
 </div>
 
       </footer>

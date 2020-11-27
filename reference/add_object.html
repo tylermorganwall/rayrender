@@ -77,7 +77,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">rayrender</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.18.0</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.19.0</span>
       </span>
     </div>
 
@@ -148,7 +148,7 @@
     <p>Add Object</p>
     </div>
 
-    <pre class="usage"><span class='fu'>add_object</span>(<span class='no'>scene</span>, <span class='no'>objects</span>)</pre>
+    <pre class="usage"><span class='fu'>add_object</span><span class='op'>(</span><span class='va'>scene</span>, <span class='va'>objects</span><span class='op'>)</span></pre>
 
     <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
     <table class="ref-arguments">
@@ -169,13 +169,14 @@
 
     <h2 class="hasAnchor" id="examples"><a class="anchor" href="#examples"></a>Examples</h2>
     <pre class="examples"><div class='input'><span class='co'>#Generate the ground and add some objects</span>
-<span class='no'>scene</span> <span class='kw'>=</span> <span class='fu'><a href='generate_ground.html'>generate_ground</a></span>(<span class='kw'>depth</span><span class='kw'>=</span>-<span class='fl'>0.5</span>,<span class='kw'>material</span> <span class='kw'>=</span> <span class='fu'><a href='diffuse.html'>diffuse</a></span>(<span class='kw'>checkercolor</span><span class='kw'>=</span><span class='st'>"blue"</span>)) <span class='kw'>%&gt;%</span>
-  <span class='fu'>add_object</span>(<span class='fu'><a href='cube.html'>cube</a></span>(<span class='kw'>x</span><span class='kw'>=</span><span class='fl'>0.7</span>,
-                  <span class='kw'>material</span><span class='kw'>=</span><span class='fu'><a href='diffuse.html'>diffuse</a></span>(<span class='kw'>noise</span><span class='kw'>=</span><span class='fl'>5</span>,<span class='kw'>noisecolor</span><span class='kw'>=</span><span class='st'>"purple"</span>,<span class='kw'>color</span><span class='kw'>=</span><span class='st'>"black"</span>,<span class='kw'>noisephase</span><span class='kw'>=</span><span class='fl'>45</span>),
-                  <span class='kw'>angle</span><span class='kw'>=</span><span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span>(<span class='fl'>0</span>,-<span class='fl'>30</span>,<span class='fl'>0</span>))) <span class='kw'>%&gt;%</span>
-  <span class='fu'>add_object</span>(<span class='fu'><a href='sphere.html'>sphere</a></span>(<span class='kw'>x</span><span class='kw'>=</span>-<span class='fl'>0.7</span>,<span class='kw'>radius</span><span class='kw'>=</span><span class='fl'>0.5</span>,<span class='kw'>material</span><span class='kw'>=</span><span class='fu'><a href='metal.html'>metal</a></span>(<span class='kw'>color</span><span class='kw'>=</span><span class='st'>"gold"</span>)))
+<span class='va'>scene</span> <span class='op'>=</span> <span class='fu'><a href='generate_ground.html'>generate_ground</a></span><span class='op'>(</span>depth<span class='op'>=</span><span class='op'>-</span><span class='fl'>0.5</span>,material <span class='op'>=</span> <span class='fu'><a href='diffuse.html'>diffuse</a></span><span class='op'>(</span>checkercolor<span class='op'>=</span><span class='st'>"blue"</span><span class='op'>)</span><span class='op'>)</span> <span class='op'>%&gt;%</span>
+  <span class='fu'>add_object</span><span class='op'>(</span><span class='fu'><a href='cube.html'>cube</a></span><span class='op'>(</span>x<span class='op'>=</span><span class='fl'>0.7</span>,
+                  material<span class='op'>=</span><span class='fu'><a href='diffuse.html'>diffuse</a></span><span class='op'>(</span>noise<span class='op'>=</span><span class='fl'>5</span>,noisecolor<span class='op'>=</span><span class='st'>"purple"</span>,color<span class='op'>=</span><span class='st'>"black"</span>,noisephase<span class='op'>=</span><span class='fl'>45</span><span class='op'>)</span>,
+                  angle<span class='op'>=</span><span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>0</span>,<span class='op'>-</span><span class='fl'>30</span>,<span class='fl'>0</span><span class='op'>)</span><span class='op'>)</span><span class='op'>)</span> <span class='op'>%&gt;%</span>
+  <span class='fu'>add_object</span><span class='op'>(</span><span class='fu'><a href='sphere.html'>sphere</a></span><span class='op'>(</span>x<span class='op'>=</span><span class='op'>-</span><span class='fl'>0.7</span>,radius<span class='op'>=</span><span class='fl'>0.5</span>,material<span class='op'>=</span><span class='fu'><a href='metal.html'>metal</a></span><span class='op'>(</span>color<span class='op'>=</span><span class='st'>"gold"</span><span class='op'>)</span><span class='op'>)</span><span class='op'>)</span>
 <span class='co'># \donttest{</span>
-<span class='fu'><a href='render_scene.html'>render_scene</a></span>(<span class='no'>scene</span>,<span class='kw'>parallel</span><span class='kw'>=</span><span class='fl'>TRUE</span>)</div><div class='img'><img src='add_object-1.png' alt='' width='700' height='433' /></div><div class='input'># }
+<span class='fu'><a href='render_scene.html'>render_scene</a></span><span class='op'>(</span><span class='va'>scene</span>,parallel<span class='op'>=</span><span class='cn'>TRUE</span><span class='op'>)</span>
+</div><div class='img'><img src='add_object-1.png' alt='' width='700' height='433' /></div><div class='input'><span class='co'># }</span>
 </div></pre>
   </div>
   <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">
@@ -192,7 +193,7 @@
 </div>
 
 <div class="pkgdown">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.5.1.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.6.1.</p>
 </div>
 
       </footer>

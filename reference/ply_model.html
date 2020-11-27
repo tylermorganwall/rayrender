@@ -78,7 +78,7 @@ Note: light importance sampling currently not supported for this shape." />
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">rayrender</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.18.0</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.19.0</span>
       </span>
     </div>
 
@@ -150,18 +150,18 @@ Note: light importance sampling currently not supported for this shape." />
 Note: light importance sampling currently not supported for this shape.</p>
     </div>
 
-    <pre class="usage"><span class='fu'>ply_model</span>(
-  <span class='no'>filename</span>,
-  <span class='kw'>x</span> <span class='kw'>=</span> <span class='fl'>0</span>,
-  <span class='kw'>y</span> <span class='kw'>=</span> <span class='fl'>0</span>,
-  <span class='kw'>z</span> <span class='kw'>=</span> <span class='fl'>0</span>,
-  <span class='kw'>scale_ply</span> <span class='kw'>=</span> <span class='fl'>1</span>,
-  <span class='kw'>material</span> <span class='kw'>=</span> <span class='fu'><a href='diffuse.html'>diffuse</a></span>(),
-  <span class='kw'>angle</span> <span class='kw'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span>(<span class='fl'>0</span>, <span class='fl'>0</span>, <span class='fl'>0</span>),
-  <span class='kw'>order_rotation</span> <span class='kw'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span>(<span class='fl'>1</span>, <span class='fl'>2</span>, <span class='fl'>3</span>),
-  <span class='kw'>flipped</span> <span class='kw'>=</span> <span class='fl'>FALSE</span>,
-  <span class='kw'>scale</span> <span class='kw'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span>(<span class='fl'>1</span>, <span class='fl'>1</span>, <span class='fl'>1</span>)
-)</pre>
+    <pre class="usage"><span class='fu'>ply_model</span><span class='op'>(</span>
+  <span class='va'>filename</span>,
+  x <span class='op'>=</span> <span class='fl'>0</span>,
+  y <span class='op'>=</span> <span class='fl'>0</span>,
+  z <span class='op'>=</span> <span class='fl'>0</span>,
+  scale_ply <span class='op'>=</span> <span class='fl'>1</span>,
+  material <span class='op'>=</span> <span class='fu'><a href='diffuse.html'>diffuse</a></span><span class='op'>(</span><span class='op'>)</span>,
+  angle <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>0</span>, <span class='fl'>0</span>, <span class='fl'>0</span><span class='op'>)</span>,
+  order_rotation <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>1</span>, <span class='fl'>2</span>, <span class='fl'>3</span><span class='op'>)</span>,
+  flipped <span class='op'>=</span> <span class='cn'>FALSE</span>,
+  scale <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>1</span>, <span class='fl'>1</span>, <span class='fl'>1</span><span class='op'>)</span>
+<span class='op'>)</span></pre>
 
     <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
     <table class="ref-arguments">
@@ -217,8 +217,8 @@ Note: emissive objects may not currently function correctly when scaled.</p></td
     <p>Single row of a tibble describing the obj model in the scene.</p>
 
     <h2 class="hasAnchor" id="examples"><a class="anchor" href="#examples"></a>Examples</h2>
-    <pre class="examples"><div class='input'>#See the documentation for `obj_model()`--no example PLY models are included with this package,
-#but the process of loading a model is the same (without support for vertex colors).
+    <pre class="examples"><div class='input'><span class='co'>#See the documentation for `obj_model()`--no example PLY models are included with this package,</span>
+<span class='co'>#but the process of loading a model is the same (without support for vertex colors).</span>
 </div></pre>
   </div>
   <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">
@@ -235,7 +235,7 @@ Note: emissive objects may not currently function correctly when scaled.</p></td
 </div>
 
 <div class="pkgdown">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.5.1.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.6.1.</p>
 </div>
 
       </footer>
