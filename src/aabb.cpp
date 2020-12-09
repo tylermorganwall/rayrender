@@ -1,7 +1,9 @@
 #include "aabb.h"
 
 Float aabb::surface_area() {
-  return(2*(diagonal.x() * diagonal.y() + diagonal.x() * diagonal.z() + diagonal.y()*diagonal.z()));
+  return(bounds[0].x() < bounds[1].x() ? 
+           2*(diag.x() * diag.y() + diag.x() * diag.z() + diag.y()*diag.z()):
+           0);
 }
 
 bool aabb::hit(const ray &r, Float tmin, Float tmax, random_gen& rng) {
