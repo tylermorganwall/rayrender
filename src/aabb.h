@@ -50,15 +50,6 @@ class aabb {
 };
 
 inline aabb surrounding_box(aabb box0, aabb box1) {
-  // if(!box0.init && !box1.init) {
-  //   throw std::runtime_error("uninitialized boxes");
-  // }
-  // if(!box0.init && box1.init) {
-  //   return(box1);
-  // }
-  // if(!box1.init && box0.init) {
-  //   return(box0);
-  // }
   vec3 small(fmin(box0.min().x(), box1.min().x()),
              fmin(box0.min().y(), box1.min().y()),
              fmin(box0.min().z(), box1.min().z()));

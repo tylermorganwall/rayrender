@@ -110,7 +110,6 @@ trimesh::trimesh(std::string inputfile, std::string basedir, Float scale,
     vec3 normals[3];
     Float tx[3];
     Float ty[3];
-    triangles.reserve(n+1);
     for (size_t s = 0; s < shapes.size(); s++) {
       // Loop over faces(polygon)
       size_t index_offset = 0;
@@ -199,7 +198,7 @@ trimesh::trimesh(std::string inputfile, std::string basedir, Float scale,
               tex = new lambertian(new constant_texture(vec3(1,1,1)));
             }
           }
-          triangles.push_back(new triangle(tris[0],tris[1],tris[2], 
+          triangles.add(std::make_shared<triangle>(tris[0],tris[1],tris[2], 
                                            normals[0], normals[1], normals[2], true, 
                                            tex, alpha, bump));
         } else {
@@ -223,11 +222,11 @@ trimesh::trimesh(std::string inputfile, std::string basedir, Float scale,
               tex = new lambertian(new constant_texture(vec3(1,1,1)));
             }
           }
-          triangles.push_back(new triangle(tris[0],tris[1],tris[2], true, tex, alpha, bump));
+          triangles.add(std::make_shared<triangle>(tris[0],tris[1],tris[2], true, tex, alpha, bump));
         }
       }
     }
-    tri_mesh_bvh = new bvh_node(&triangles[0], n, shutteropen, shutterclose, rng);
+    tri_mesh_bvh = std::make_shared<bvh_node>(triangles, 0, n, shutteropen, shutterclose, rng);
   } else {
     std::string mes = "Error reading " + inputfile + ": ";
     throw std::runtime_error(mes + warn + err);
@@ -338,7 +337,6 @@ trimesh::trimesh(std::string inputfile, std::string basedir, Float scale, Float 
     vec3 normals[3];
     Float tx[3];
     Float ty[3];
-    triangles.reserve(n+1);
     for (size_t s = 0; s < shapes.size(); s++) {
       // Loop over faces(polygon)
       size_t index_offset = 0;
@@ -417,7 +415,7 @@ trimesh::trimesh(std::string inputfile, std::string basedir, Float scale, Float 
               tex = new orennayar(new constant_texture(vec3(1,1,1)), sigma);
             }
           }
-          triangles.push_back(new triangle(tris[0],tris[1],tris[2], 
+          triangles.add(std::make_shared<triangle>(tris[0],tris[1],tris[2], 
                                            normals[0], normals[1], normals[2], true, 
                                            tex, alpha,  bump));
         } else {
@@ -439,11 +437,11 @@ trimesh::trimesh(std::string inputfile, std::string basedir, Float scale, Float 
               tex = new orennayar(new constant_texture(vec3(1,1,1)), sigma);
             }
           }
-          triangles.push_back(new triangle(tris[0],tris[1],tris[2], true, tex, alpha, bump));
+          triangles.add(std::make_shared<triangle>(tris[0],tris[1],tris[2], true, tex, alpha, bump));
         }
       }
     }
-    tri_mesh_bvh = new bvh_node(&triangles[0], n, shutteropen, shutterclose, rng);
+    tri_mesh_bvh = std::make_shared<bvh_node>(triangles, 0, n, shutteropen, shutterclose, rng);
   } else {
     std::string mes = "Error reading " + inputfile + ": ";
     throw std::runtime_error(mes + warn + err);
@@ -458,7 +456,8 @@ trimesh::trimesh(std::string inputfile, std::string basedir, material *mat,
   mat_ptr = mat;
   
   bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, inputfile.c_str(), basedir.c_str());
-  
+  alpha_texture* alpha = nullptr;
+  bump_texture* bump = nullptr;
   if(ret) {
     int n = 0;
     for (size_t s = 0; s < shapes.size(); s++) {
@@ -467,7 +466,6 @@ trimesh::trimesh(std::string inputfile, std::string basedir, material *mat,
     bool has_normals = attrib.normals.size() > 0 ? true : false;
     vec3 tris[3];
     vec3 normals[3];
-    triangles.reserve(n+1);
     for (size_t s = 0; s < shapes.size(); s++) {
       
       size_t index_offset = 0;
@@ -505,16 +503,17 @@ trimesh::trimesh(std::string inputfile, std::string basedir, material *mat,
         }
         
         if(has_normals && tempnormal) {
-          triangles.push_back(new triangle(tris[0],tris[1],tris[2],
+          triangles.add(std::make_shared<triangle>(tris[0],tris[1],tris[2],
                                            normals[0],normals[1],normals[2], 
-                                                                        false,
-                                                                        mat_ptr, nullptr,  nullptr));
+                                           false,
+                                           mat_ptr, alpha,  bump));
         } else {
-          triangles.push_back(new triangle(tris[0],tris[1],tris[2], false, mat_ptr, nullptr, nullptr));
+          triangles.add(std::make_shared<triangle>(tris[0],tris[1],tris[2], false, 
+                                                   mat_ptr, alpha, bump));
         }
       }
     }
-    tri_mesh_bvh = new bvh_node(&triangles[0], n, shutteropen, shutterclose, rng);
+    tri_mesh_bvh = std::make_shared<bvh_node>(triangles, 0, n, shutteropen, shutterclose, rng);
   } else {
     std::string mes = "Error reading " + inputfile + ": ";
     throw std::runtime_error(mes + warn + err);
@@ -530,6 +529,8 @@ trimesh::trimesh(std::string inputfile, std::string basedir, float vertex_color_
   mat_ptr = nullptr;
   
   bool is_lamb = vertex_color_sigma == 0 ? true : false;
+  alpha_texture* alpha = nullptr;
+  bump_texture* bump = nullptr;
   
   bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, inputfile.c_str(), basedir.c_str());
   if(ret) {
@@ -542,7 +543,6 @@ trimesh::trimesh(std::string inputfile, std::string basedir, float vertex_color_
     vec3 tris[3];
     vec3 normals[3];
     vec3 colors[3];
-    triangles.reserve(n+1);
     for (size_t s = 0; s < shapes.size(); s++) {
       size_t index_offset = 0;
       for (size_t f = 0; f < shapes[s].mesh.num_face_vertices.size(); f++) {
@@ -586,16 +586,16 @@ trimesh::trimesh(std::string inputfile, std::string basedir, float vertex_color_
         }
         
         if(has_normals && tempnormal) {
-          triangles.push_back(new triangle(tris[0],tris[1],tris[2],
+          triangles.add(std::make_shared<triangle>(tris[0],tris[1],tris[2],
                                            normals[0],normals[1],normals[2], 
                                           true,
-                                          tex, nullptr, nullptr));
+                                          tex, alpha, bump));
         } else {
-          triangles.push_back(new triangle(tris[0],tris[1],tris[2], true, tex, nullptr, nullptr));
+          triangles.add(std::make_shared<triangle>(tris[0],tris[1],tris[2], true, tex, alpha, bump));
         }
       }
     }
-    tri_mesh_bvh = new bvh_node(&triangles[0], n, shutteropen, shutterclose, rng);
+    tri_mesh_bvh = std::make_shared<bvh_node>(triangles, 0, n, shutteropen, shutterclose, rng);
   } else {
     std::string mes = "Error reading " + inputfile + ": ";
     throw std::runtime_error(mes + warn + err);

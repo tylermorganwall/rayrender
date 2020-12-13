@@ -7,6 +7,7 @@
 #include "rng.h"
 #include "sampler.h"
 #include <Rcpp.h>
+#include <memory>
 
 class material;
 
@@ -45,10 +46,10 @@ class hitable {
 
 class flip_normals : public hitable {
   public:
-    flip_normals(hitable *p) : ptr(p) {}
+    flip_normals(std::shared_ptr<hitable> p) : ptr(p) {}
     ~flip_normals() {
       //Rcpp::Rcout << "normal delete " << typeid(*ptr).name() << "\n";
-      if(ptr) delete ptr;
+      // if(ptr) delete ptr;
     }
     virtual bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
       if(ptr->hit(r, t_min, t_max, rec, rng)) {
@@ -70,17 +71,17 @@ class flip_normals : public hitable {
       return(ptr->random(o, sampler));
     }
     
-    hitable *ptr;
+    std::shared_ptr<hitable> ptr;
 };
 
 
 
 class translate : public hitable {
 public: 
-  translate(hitable *p, const vec3& displacement) : ptr(p), offset(displacement) {}
+  translate(std::shared_ptr<hitable> p, const vec3& displacement) : ptr(p), offset(displacement) {}
   ~translate() {
     //Rcpp::Rcout << "translate delete " << typeid(*ptr).name() << "\n";
-    if(ptr) delete ptr;
+    // if(ptr) delete ptr;
   }
   virtual bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng);
   virtual bool bounding_box(Float t0, Float t1, aabb& box) const;
@@ -93,21 +94,21 @@ public:
   vec3 random(const vec3& o, Sampler* sampler) {
     return(ptr->random(o - offset, sampler));
   }
-  hitable *ptr;
+  std::shared_ptr<hitable> ptr;
   vec3 offset;
 };
 
 
 class scale : public hitable {
 public: 
-  scale(hitable *p, const vec3& scale_factor) : ptr(p), scale_factor(scale_factor) {
+  scale(std::shared_ptr<hitable> p, const vec3& scale_factor) : ptr(p), scale_factor(scale_factor) {
     inv_scale.e[0] = 1 / scale_factor.x();
     inv_scale.e[1] = 1 / scale_factor.y();
     inv_scale.e[2] = 1 / scale_factor.z();
   }
   ~scale() {
     //Rcpp::Rcout << "delete scale" << "\n";
-    if(ptr) delete ptr;
+    // if(ptr) delete ptr;
   }
   virtual bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng);
   virtual bool bounding_box(Float t0, Float t1, aabb& box) const;
@@ -120,17 +121,17 @@ public:
   vec3 random(const vec3& o, Sampler* sampler) {
     return(ptr->random(o * inv_scale, sampler));
   }
-  hitable *ptr;
+  std::shared_ptr<hitable> ptr;
   vec3 scale_factor;
   vec3 inv_scale;
 };
 
 class rotate_y : public hitable {
 public:
-  rotate_y(hitable *p, Float angle);
+  rotate_y(std::shared_ptr<hitable> p, Float angle);
   ~rotate_y() {
     //Rcpp::Rcout << "rotate_y delete " << typeid(*ptr).name() << "\n";
-    if(ptr) delete ptr;
+    // if(ptr) delete ptr;
   }
   virtual bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng);
   virtual bool bounding_box(Float t0, Float t1, aabb& box) const {
@@ -166,7 +167,7 @@ public:
     temp2.e[2] = -sin_theta*temp.x() + cos_theta*temp.z(); 
     return(temp2);
   }
-  hitable *ptr;
+  std::shared_ptr<hitable> ptr;
   Float sin_theta;
   Float cos_theta;
   bool hasbox;
@@ -175,10 +176,10 @@ public:
 
 class rotate_x : public hitable {
 public:
-  rotate_x(hitable *p, Float angle);
+  rotate_x(std::shared_ptr<hitable> p, Float angle);
   ~rotate_x() {
     //Rcpp::Rcout << "rotate_x delete " << typeid(*ptr).name() << "\n";
-    if(ptr) delete ptr;
+    // if(ptr) delete ptr;
   }
   virtual bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng);
   virtual bool bounding_box(Float t0, Float t1, aabb& box) const {
@@ -214,7 +215,7 @@ public:
     temp2.e[2] = -sin_theta*temp.y() + cos_theta*temp.z(); 
     return(temp2);
   }
-  hitable *ptr;
+  std::shared_ptr<hitable> ptr;
   Float sin_theta;
   Float cos_theta;
   bool hasbox;
@@ -223,10 +224,10 @@ public:
 
 class rotate_z : public hitable {
 public:
-  rotate_z(hitable *p, Float angle);
+  rotate_z(std::shared_ptr<hitable> p, Float angle);
   ~rotate_z() {
     //Rcpp::Rcout << "rotate_z delete " << typeid(*ptr).name() << "\n";
-    if(ptr) delete ptr;
+    // if(ptr) delete ptr;
   }
   virtual bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng);
   virtual bool bounding_box(Float t0, Float t1, aabb& box) const {
@@ -262,7 +263,7 @@ public:
     temp2.e[1] = -sin_theta*temp.x() + cos_theta*temp.y(); 
     return(temp2);
   }
-  hitable *ptr;
+  std::shared_ptr<hitable> ptr;
   Float sin_theta;
   Float cos_theta;
   bool hasbox;

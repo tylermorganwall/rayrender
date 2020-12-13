@@ -381,7 +381,7 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
   }
   
   
-  hitable *worldbvh = build_scene(type, radius, shape, position_list,
+  std::shared_ptr<hitable> worldbvh = build_scene(type, radius, shape, position_list,
                                 properties, velocity, moving,
                                 n,shutteropen,shutterclose,
                                 ischeckered, checkercolors, 
@@ -424,17 +424,17 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
   start = std::chrono::high_resolution_clock::now();
   texture *background_texture = nullptr;
   material *background_material = nullptr;
-  hitable *background_sphere = nullptr;
+  std::shared_ptr<hitable> background_sphere = nullptr;
   Float *background_texture_data = nullptr;
   
   if(hasbackground) {
     background_texture_data = stbi_loadf(background[0], &nx1, &ny1, &nn1, 0);
     background_texture = new image_texture(background_texture_data, nx1, ny1, nn1, 1, 1, intensity_env);
     background_material = new diffuse_light(background_texture, 1.0);
-    background_sphere = new InfiniteAreaLight(nx1, ny1, world_radius*2, world_center,
+    background_sphere = std::make_shared<InfiniteAreaLight>(nx1, ny1, world_radius*2, world_center,
                                               background_texture, background_material);
     if(rotate_env != 0) {
-      background_sphere = new rotate_y(background_sphere, rotate_env);
+      background_sphere = std::make_shared<rotate_y>(background_sphere, rotate_env);
     }
   } else if(ambient_light) {
     //Check if both high and low are black, and set to FLT_MIN
@@ -444,13 +444,13 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
     }
     background_texture = new gradient_texture(backgroundlow, backgroundhigh, false, false);
     background_material = new diffuse_light(background_texture, 1.0);
-    background_sphere = new InfiniteAreaLight(100, 100, world_radius*2, world_center,
+    background_sphere = std::make_shared<InfiniteAreaLight>(100, 100, world_radius*2, world_center,
                                               background_texture, background_material);
   } else {
     //Minimum intensity FLT_MIN so the CDF isn't NAN
     background_texture = new constant_texture(vec3(FLT_MIN,FLT_MIN,FLT_MIN));
     background_material = new diffuse_light(background_texture, 1.0);
-    background_sphere = new InfiniteAreaLight(100, 100, world_radius*2, world_center,
+    background_sphere = std::make_shared<InfiniteAreaLight>(100, 100, world_radius*2, world_center,
                                               background_texture, background_material);
   }
   finish = std::chrono::high_resolution_clock::now();
@@ -464,34 +464,30 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
       numbertosample++;
     }
   }
-  hitable *world_full[2];
-  world_full[0] = worldbvh;
-  world_full[1] = background_sphere;
-  int nval = numbertosample == 0 || hasbackground || ambient_light ? 2 : 1;
+  hitable_list world;
   
-  hitable_list world(world_full, nval);
+  world.add(worldbvh);
+  
   bool impl_only_bg = false;
   if(numbertosample == 0 || hasbackground) {
-    numbertosample++; 
+    world.add(background_sphere);
     impl_only_bg = true;
   }
 
-  std::vector<hitable* > implicit_sample_vector(numbertosample);
-  int counter = 0;
+  hitable_list hlist;
   if(verbose) {
     Rcpp::Rcout << "Building Importance Sampling List: ";
   }
   start = std::chrono::high_resolution_clock::now();
   for(int i = 0; i < n; i++)  {
     if(implicit_sample(i)) {
-      implicit_sample_vector[counter] = build_imp_sample(type, radius, shape, position_list,
+      hlist.add(build_imp_sample(type, radius, shape, position_list,
                                properties, velocity,
                                n, shutteropen, shutterclose,
                                angle, i, order_rotation_list,
                                isgrouped, group_pivot, group_translate,
                                group_angle, group_order_rotation, group_scale,
-                               fileinfo, filebasedir, scale_list, mesh_list, rng);
-      counter++;
+                               fileinfo, filebasedir, scale_list, mesh_list, rng));
     }
   }
   finish = std::chrono::high_resolution_clock::now();
@@ -500,11 +496,8 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
     Rcpp::Rcout << elapsed.count() << " seconds" << "\n";
   }
   if(impl_only_bg || hasbackground) {
-    implicit_sample_vector[counter] = background_sphere;
+    hlist.add(background_sphere);
   }
-
-  hitable_list hlist;
-  hlist = hitable_list(&implicit_sample_vector[0], numbertosample);
 
   if(verbose && !progress_bar) {
     Rcpp::Rcout << "Starting Raytracing:\n ";
@@ -778,8 +771,6 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
   if(verbose) {
     Rcpp::Rcout << "Cleaning up memory..." << "\n";
   }
-  delete worldbvh;
-  delete background_sphere;
   if(hasbackground) {
     stbi_image_free(background_texture_data);
   }

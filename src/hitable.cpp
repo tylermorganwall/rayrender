@@ -59,7 +59,7 @@ bool scale::bounding_box(Float t0, Float t1, aabb& box) const {
 //Rotate implementations
 
 
-rotate_y::rotate_y(hitable *p, Float angle) : ptr(p) {
+rotate_y::rotate_y(std::shared_ptr<hitable> p, Float angle) : ptr(p) {
   Float radians = (M_PI / 180.0) * angle;
   sin_theta = sin(radians);
   cos_theta = cos(radians);
@@ -119,7 +119,7 @@ bool rotate_y::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
 }
 
 
-rotate_x::rotate_x(hitable *p, Float angle) : ptr(p) {
+rotate_x::rotate_x(std::shared_ptr<hitable> p, Float angle) : ptr(p) {
   Float radians = (M_PI / 180.0) * angle;
   sin_theta = sin(radians);
   cos_theta = cos(radians);
@@ -179,7 +179,7 @@ bool rotate_x::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
 }
 
 
-rotate_z::rotate_z(hitable *p, Float angle) : ptr(p) {
+rotate_z::rotate_z(std::shared_ptr<hitable> p, Float angle) : ptr(p) {
   Float radians = (M_PI / 180.0) * angle;
   sin_theta = sin(radians);
   cos_theta = cos(radians);

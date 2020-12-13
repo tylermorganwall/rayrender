@@ -22,7 +22,6 @@ class trimesh : public hitable {
 public:
   trimesh() {}
   ~trimesh() {
-    delete tri_mesh_bvh;
     for(auto mat : obj_materials) {
       if(mat) stbi_image_free(mat);
     }
@@ -42,13 +41,13 @@ public:
   virtual bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng);
   virtual bool bounding_box(Float t0, Float t1, aabb& box) const;
   
-  bvh_node* tri_mesh_bvh;
+  std::shared_ptr<bvh_node> tri_mesh_bvh;
   material *mat_ptr;
   std::vector<Float* > obj_materials;
   std::vector<Float* > bump_materials;
   std::vector<bump_texture* > bump_textures;
   std::vector<alpha_texture* > alpha_materials;
-  std::vector<hitable* > triangles;
+  hitable_list triangles;
 };
 
 #endif

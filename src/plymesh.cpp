@@ -165,15 +165,15 @@ plymesh::plymesh(std::string inputfile, std::string basedir, material *mat,
     }
     
     if(has_normals && tempnormal) {
-      triangles.push_back(new triangle(tris[0],tris[1],tris[2],
+      triangles.add(std::make_shared<triangle>(tris[0],tris[1],tris[2],
                                        normals[0],normals[1],normals[2],
                                                                     false,
                                                                     mat_ptr, nullptr,  nullptr));
     } else {
-      triangles.push_back(new triangle(tris[0],tris[1],tris[2], false, mat_ptr, nullptr, nullptr));
+      triangles.add(std::make_shared<triangle>(tris[0],tris[1],tris[2], false, mat_ptr, nullptr, nullptr));
     }
   }
-  ply_mesh_bvh = new bvh_node(&triangles[0], number_faces, shutteropen, shutterclose, rng);
+  ply_mesh_bvh = std::make_shared<bvh_node>(triangles, 0, number_faces, shutteropen, shutterclose, rng);
   delete tri;
 };
 
