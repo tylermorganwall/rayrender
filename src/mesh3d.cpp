@@ -1,7 +1,7 @@
 #include "mesh3d.h"
 
 mesh3d::mesh3d(Rcpp::List mesh_info, material *mat, 
-       Float shutteropen, Float shutterclose, random_gen rng) {
+       Float shutteropen, Float shutterclose, int bvh_type, random_gen rng) {
   Rcpp::NumericMatrix vertices = Rcpp::as<Rcpp::NumericMatrix>(mesh_info["vertices"]);
   Rcpp::IntegerMatrix indices = Rcpp::as<Rcpp::IntegerMatrix>(mesh_info["indices"]);
   Rcpp::NumericMatrix norms = Rcpp::as<Rcpp::NumericMatrix>(mesh_info["normals"]);
@@ -81,7 +81,7 @@ mesh3d::mesh3d(Rcpp::List mesh_info, material *mat,
                                        single_tex, tex, nullptr, nullptr));
     }
   }
-  mesh_bvh = std::make_shared<bvh_node>(triangles, 0, number_faces, shutteropen, shutterclose, rng);
+  mesh_bvh = std::make_shared<bvh_node>(triangles, shutteropen, shutterclose, bvh_type, rng);
 }
 
 bool mesh3d::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {

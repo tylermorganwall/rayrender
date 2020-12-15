@@ -296,6 +296,7 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
   int sample_method = as<int>(camera_info["sample_method"]);
   NumericVector stratified_dim = as<NumericVector>(camera_info["stratified_dim"]);
   NumericVector light_direction = as<NumericVector>(camera_info["light_direction"]);
+  int bvh_type = as<int>(camera_info["bvh"]);
   
   //Initialize output matrices
   NumericMatrix routput(nx,ny);
@@ -399,7 +400,7 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
                                 fileinfo, filebasedir, 
                                 scale_list, sigmavec, glossyinfo,
                                 shared_id_mat, is_shared_mat, shared_materials,
-                                image_repeat, csg_info, mesh_list, rng);
+                                image_repeat, csg_info, mesh_list, bvh_type, rng);
   auto finish = std::chrono::high_resolution_clock::now();
   if(verbose) {
     std::chrono::duration<double> elapsed = finish - start;
@@ -487,7 +488,8 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
                                angle, i, order_rotation_list,
                                isgrouped, group_pivot, group_translate,
                                group_angle, group_order_rotation, group_scale,
-                               fileinfo, filebasedir, scale_list, mesh_list, rng));
+                               fileinfo, filebasedir, scale_list, 
+                               mesh_list,bvh_type,  rng));
     }
   }
   finish = std::chrono::high_resolution_clock::now();

@@ -31,6 +31,7 @@ render_scene(
   tonemap = "gamma",
   bloom = TRUE,
   parallel = TRUE,
+  bvh_type = "sah",
   environment_light = NULL,
   rotate_env = 0,
   intensity_env = 1,
@@ -122,6 +123,10 @@ to control the intensity of the bloom (higher number = more bloom).}
 
 \item{parallel}{Default `FALSE`. If `TRUE`, it will use all available cores to render the image
 (or the number specified in `options("cores")` if that option is not `NULL`).}
+
+\item{bvh_type}{Default `"sah"`, "surface area heuristic". Method of building the bounding volume
+hierarchy structure used when rendering. Other option is "equal", which splits tree into groups
+of equal size.}
 
 \item{environment_light}{Default `NULL`. An image to be used for the background for rays that escape
 the scene. Supports both HDR (`.hdr`) and low-dynamic range (`.png`, `.jpg`) images.}

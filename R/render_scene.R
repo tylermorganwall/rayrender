@@ -71,6 +71,9 @@
 #' information.
 #' @param parallel Default `FALSE`. If `TRUE`, it will use all available cores to render the image
 #'  (or the number specified in `options("cores")` if that option is not `NULL`).
+#' @param bvh_type Default `"sah"`, "surface area heuristic". Method of building the bounding volume
+#' hierarchy structure used when rendering. Other option is "equal", which splits tree into groups
+#' of equal size.
 #' @param progress Default `TRUE` if interactive session, `FALSE` otherwise. 
 #' @param verbose Default `FALSE`. Prints information and timing information about scene
 #' construction and raytracing progress.
@@ -170,7 +173,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
                         aperture = 0.1, clamp_value = Inf,
                         filename = NULL, backgroundhigh = "#80b4ff",backgroundlow = "#ffffff",
                         shutteropen = 0.0, shutterclose = 1.0, focal_distance=NULL, ortho_dimensions = c(1,1),
-                        tonemap ="gamma", bloom = TRUE, parallel=TRUE, 
+                        tonemap ="gamma", bloom = TRUE, parallel=TRUE, bvh_type = "sah",
                         environment_light = NULL, rotate_env = 0, intensity_env = 1,
                         debug_channel = "none", return_raw_array = FALSE,
                         progress = interactive(), verbose = FALSE) { 
@@ -495,6 +498,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
   camera_info$sample_method = sample_method
   camera_info$stratified_dim = strat_dim
   camera_info$light_direction = light_direction
+  camera_info$bvh = switch(bvh_type,"sah" = 1, "equal" = 2, 1)
   
   assertthat::assert_that(max_depth > 0)
   assertthat::assert_that(roulette_active_depth > 0)

@@ -75,9 +75,8 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
                      List& scale_list, NumericVector& sigma,  List &glossyinfo,
                      IntegerVector& shared_id_mat, LogicalVector& is_shared_mat,
                      std::vector<material* >* shared_materials, List& image_repeat_list,
-                     List& csg_info, List& mesh_list,
+                     List& csg_info, List& mesh_list, int bvh_type,
                      random_gen& rng) {
-  // hitable **list = new hitable*[n + 1]; //change to vector
   hitable_list list;
   LogicalVector isgradient = gradient_info["isgradient"];
   List gradient_colors = gradient_info["gradient_colors"];
@@ -622,7 +621,7 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
       entry = std::make_shared<trimesh>(objfilename, objbasedirname, 
                          tex,
                          tempvector(prop_len+1),
-                         shutteropen, shutterclose, rng);
+                         shutteropen, shutterclose, bvh_type, rng);
       if(is_scaled) {
         entry = std::make_shared<scale>(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
       }
@@ -652,11 +651,11 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
       if(sigma(i) == 0) {
         entry = std::make_shared<trimesh>(objfilename, objbasedirname, 
                             tempvector(prop_len+1), 
-                            shutteropen, shutterclose, rng);
+                            shutteropen, shutterclose, bvh_type, rng);
       } else {
         entry = std::make_shared<trimesh>(objfilename, objbasedirname, 
                             tempvector(prop_len+1), sigma(i),
-                            shutteropen, shutterclose, rng);
+                            shutteropen, shutterclose, bvh_type, rng);
       }
       if(is_scaled) {
         entry = std::make_shared<scale>(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
@@ -756,7 +755,7 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
       entry = std::make_shared<trimesh>(objfilename, objbasedirname, 
                           sigma(i),
                           tempvector(prop_len+1), true,
-                          shutteropen, shutterclose, rng);
+                          shutteropen, shutterclose, bvh_type, rng);
       if(is_scaled) {
         entry = std::make_shared<scale>(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
       }
@@ -865,7 +864,7 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
       entry = std::make_shared<plymesh>(objfilename, objbasedirname, 
                           tex,
                           tempvector(prop_len+1),
-                          shutteropen, shutterclose, rng);
+                          shutteropen, shutterclose, bvh_type, rng);
       if(entry == nullptr) {
         continue;
       }
@@ -894,7 +893,7 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
     } else if (shape(i) == 17) {
       List mesh_entry = mesh_list(i);
       std::shared_ptr<hitable> entry = std::make_shared<mesh3d>(mesh_entry, tex,
-                                  shutteropen, shutterclose, rng);
+                                  shutteropen, shutterclose, bvh_type, rng);
       if(is_scaled) {
         entry = std::make_shared<scale>(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
       }
@@ -914,7 +913,7 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
       list.add(entry);
     }
   }
-  std::shared_ptr<hitable> full_scene = std::make_shared<bvh_node>(list, 0, list.size(), shutteropen, shutterclose, rng);
+  std::shared_ptr<hitable> full_scene = std::make_shared<bvh_node>(list, shutteropen, shutterclose, bvh_type, rng);
   return(full_scene);
 }
 
@@ -928,7 +927,7 @@ std::shared_ptr<hitable> build_imp_sample(IntegerVector& type,
                           List& group_pivot, List& group_translate,
                           List& group_angle, List& group_order_rotation, List& group_scale,
                           CharacterVector& fileinfo, CharacterVector& filebasedir,
-                          List& scale_list, List& mesh_list, random_gen& rng) {
+                          List& scale_list, List& mesh_list, int bvh_type, random_gen& rng) {
   NumericVector x = position_list["xvec"];
   NumericVector y = position_list["yvec"];
   NumericVector z = position_list["zvec"];
@@ -1142,7 +1141,7 @@ std::shared_ptr<hitable> build_imp_sample(IntegerVector& type,
     std::string objbasedirname = Rcpp::as<std::string>(filebasedir(i));
     entry = std::make_shared<trimesh>(objfilename, objbasedirname,
                         tempvector(prop_len+1),
-                        shutteropen, shutterclose, rng);
+                        shutteropen, shutterclose, bvh_type, rng);
     if(is_scaled) {
       entry = std::make_shared<scale>(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
     }
@@ -1274,7 +1273,7 @@ std::shared_ptr<hitable> build_imp_sample(IntegerVector& type,
     entry = std::make_shared<plymesh>(objfilename, objbasedirname, 
                         tex,
                         tempvector(prop_len+1),
-                        shutteropen, shutterclose, rng);
+                        shutteropen, shutterclose, bvh_type, rng);
     if(is_scaled) {
       entry = std::make_shared<scale>(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
     }
@@ -1292,7 +1291,7 @@ std::shared_ptr<hitable> build_imp_sample(IntegerVector& type,
   } else {
     List mesh_entry = mesh_list(i);
     std::shared_ptr<hitable> entry = std::make_shared<mesh3d>(mesh_entry, tex,
-                                shutteropen, shutterclose, rng);
+                                shutteropen, shutterclose, bvh_type, rng);
     if(is_scaled) {
       entry = std::make_shared<scale>(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
     }

@@ -31,13 +31,14 @@ public:
     delete mat_ptr;
   }
   trimesh(std::string inputfile, std::string basedir, Float scale, 
-          Float shutteropen, Float shutterclose, random_gen rng);
+          Float shutteropen, Float shutterclose, int bvh_type, random_gen rng);
   trimesh(std::string inputfile, std::string basedir, Float scale, Float sigma,
-          Float shutteropen, Float shutterclose, random_gen rng);
+          Float shutteropen, Float shutterclose, int bvh_type, random_gen rng);
   trimesh(std::string inputfile, std::string basedir, material *mat, 
-          Float scale, Float shutteropen, Float shutterclose, random_gen rng);
+          Float scale, Float shutteropen, Float shutterclose, int bvh_type, random_gen rng);
   trimesh(std::string inputfile, std::string basedir, float vertex_color_sigma,
-          Float scale, bool is_vertex_color, Float shutteropen, Float shutterclose, random_gen rng);
+          Float scale, bool is_vertex_color, Float shutteropen, Float shutterclose, int bvh_type, 
+          random_gen rng);
   virtual bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng);
   virtual bool bounding_box(Float t0, Float t1, aabb& box) const;
   

@@ -5,7 +5,7 @@
 
 
 trimesh::trimesh(std::string inputfile, std::string basedir, Float scale, 
-        Float shutteropen, Float shutterclose, random_gen rng) {
+        Float shutteropen, Float shutterclose, int bvh_type, random_gen rng) {
   tinyobj::attrib_t attrib;
   std::vector<tinyobj::shape_t > shapes;
   std::vector<tinyobj::material_t > materials;
@@ -226,7 +226,7 @@ trimesh::trimesh(std::string inputfile, std::string basedir, Float scale,
         }
       }
     }
-    tri_mesh_bvh = std::make_shared<bvh_node>(triangles, 0, n, shutteropen, shutterclose, rng);
+    tri_mesh_bvh = std::make_shared<bvh_node>(triangles, shutteropen, shutterclose, bvh_type, rng);
   } else {
     std::string mes = "Error reading " + inputfile + ": ";
     throw std::runtime_error(mes + warn + err);
@@ -234,7 +234,7 @@ trimesh::trimesh(std::string inputfile, std::string basedir, Float scale,
 };
 
 trimesh::trimesh(std::string inputfile, std::string basedir, Float scale, Float sigma,
-        Float shutteropen, Float shutterclose, random_gen rng) {
+        Float shutteropen, Float shutterclose, int bvh_type, random_gen rng) {
   tinyobj::attrib_t attrib;
   std::vector<tinyobj::shape_t > shapes;
   std::vector<tinyobj::material_t > materials;
@@ -441,14 +441,14 @@ trimesh::trimesh(std::string inputfile, std::string basedir, Float scale, Float 
         }
       }
     }
-    tri_mesh_bvh = std::make_shared<bvh_node>(triangles, 0, n, shutteropen, shutterclose, rng);
+    tri_mesh_bvh = std::make_shared<bvh_node>(triangles, shutteropen, shutterclose, bvh_type, rng);
   } else {
     std::string mes = "Error reading " + inputfile + ": ";
     throw std::runtime_error(mes + warn + err);
   }
 };
 trimesh::trimesh(std::string inputfile, std::string basedir, material *mat, 
-        Float scale, Float shutteropen, Float shutterclose, random_gen rng) {
+        Float scale, Float shutteropen, Float shutterclose, int bvh_type, random_gen rng) {
   tinyobj::attrib_t attrib;
   std::vector<tinyobj::shape_t > shapes;
   std::vector<tinyobj::material_t > materials;
@@ -513,7 +513,7 @@ trimesh::trimesh(std::string inputfile, std::string basedir, material *mat,
         }
       }
     }
-    tri_mesh_bvh = std::make_shared<bvh_node>(triangles, 0, n, shutteropen, shutterclose, rng);
+    tri_mesh_bvh = std::make_shared<bvh_node>(triangles, shutteropen, shutterclose, bvh_type, rng);
   } else {
     std::string mes = "Error reading " + inputfile + ": ";
     throw std::runtime_error(mes + warn + err);
@@ -521,7 +521,8 @@ trimesh::trimesh(std::string inputfile, std::string basedir, material *mat,
 };
 
 trimesh::trimesh(std::string inputfile, std::string basedir, float vertex_color_sigma,
-        Float scale, bool is_vertex_color, Float shutteropen, Float shutterclose, random_gen rng) {
+        Float scale, bool is_vertex_color, Float shutteropen, Float shutterclose, int bvh_type, 
+        random_gen rng) {
   tinyobj::attrib_t attrib;
   std::vector<tinyobj::shape_t > shapes;
   std::vector<tinyobj::material_t > materials;
@@ -595,7 +596,7 @@ trimesh::trimesh(std::string inputfile, std::string basedir, float vertex_color_
         }
       }
     }
-    tri_mesh_bvh = std::make_shared<bvh_node>(triangles, 0, n, shutteropen, shutterclose, rng);
+    tri_mesh_bvh = std::make_shared<bvh_node>(triangles, shutteropen, shutterclose, bvh_type, rng);
   } else {
     std::string mes = "Error reading " + inputfile + ": ";
     throw std::runtime_error(mes + warn + err);

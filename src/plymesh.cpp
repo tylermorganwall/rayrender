@@ -113,7 +113,7 @@ static TriMesh* parse_file_with_miniply(const char* filename, bool assumeTriangl
 
 
 plymesh::plymesh(std::string inputfile, std::string basedir, material *mat, 
-            Float scale, Float shutteropen, Float shutterclose, random_gen rng) {
+            Float scale, Float shutteropen, Float shutterclose, int bvh_type, random_gen rng) {
   TriMesh* tri = parse_file_with_miniply(inputfile.c_str(), false);
   mat_ptr = mat;
   
@@ -173,7 +173,7 @@ plymesh::plymesh(std::string inputfile, std::string basedir, material *mat,
       triangles.add(std::make_shared<triangle>(tris[0],tris[1],tris[2], false, mat_ptr, nullptr, nullptr));
     }
   }
-  ply_mesh_bvh = std::make_shared<bvh_node>(triangles, 0, number_faces, shutteropen, shutterclose, rng);
+  ply_mesh_bvh = std::make_shared<bvh_node>(triangles, shutteropen, shutterclose, bvh_type, rng);
   delete tri;
 };
 

@@ -25,7 +25,7 @@ mesh3d_model(
 \item{mesh}{A `mesh3d` or `shapelist3d` object. Pulls the vertex, index, texture coordinates, 
 normals, and material information. If the material references an image texture, the 
 `mesh$material$texture` argument should be set to the image filename. The `mesh3d` format
-only supports one image texture per mesh.}
+only supports one image texture per mesh. All quads will be triangulated.}
 
 \item{x}{Default `0`. x-coordinate to offset the model.}
 
@@ -71,7 +71,7 @@ if("Rcvg" \%in\% rownames(utils::installed.packages())) {
   
   generate_studio() \%>\% 
     add_object(mesh3d_model(humface,y=-0.3,x=0,z=0,
-                          material=glossy(color="dodgerblue4"), scale_mesh = 1/100)) \%>\%
+                          material=glossy(color="dodgerblue4"), scale_mesh = 1/70)) \%>\%
     add_object(sphere(y=5,x=5,z=5,material=light(intensity=50))) \%>\% 
     render_scene(samples=500,width=800,height=800,
                  lookat = c(0,0.5,1), aperture=0.0)
