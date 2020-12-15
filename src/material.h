@@ -105,9 +105,9 @@ class material {
 
 class lambertian : public material {
   public: 
-    lambertian(texture *a) : albedo(a) {}
+    lambertian(std::shared_ptr<texture> a) : albedo(a) {}
     ~lambertian() {
-      if(albedo) delete albedo;
+      // if(albedo) delete albedo;
     }
     vec3 f(const ray& r_in, const hit_record& rec, const ray& scattered) const {
       //unit_vector(scattered.direction()) == wo
@@ -138,16 +138,16 @@ class lambertian : public material {
       return(albedo->value(rec.u, rec.v, rec.p));
     }
     
-    texture *albedo;
+    std::shared_ptr<texture> albedo;
 };
 
 class metal : public material {
   public:
-    metal(texture* a, Float f, vec3 eta, vec3 k) : albedo(a), eta(eta), k(k) { 
+    metal(std::shared_ptr<texture> a, Float f, vec3 eta, vec3 k) : albedo(a), eta(eta), k(k) { 
       if (f < 1) fuzz = f; else fuzz = 1;
     }
     ~metal() {
-      if(albedo) delete albedo;
+      // if(albedo) delete albedo;
     }
     virtual bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng) {
       vec3 normal = !hrec.has_bump ? hrec.normal : hrec.bump_normal;
@@ -168,7 +168,7 @@ class metal : public material {
     vec3 get_albedo(const ray& r_in, const hit_record& rec) const {
       return(albedo->value(rec.u, rec.v, rec.p));
     }
-    texture *albedo;
+    std::shared_ptr<texture> albedo;
     vec3 eta, k;
     Float fuzz;
 };
@@ -289,9 +289,9 @@ class dielectric : public material {
 
 class diffuse_light : public material {
 public:
-  diffuse_light(texture *a, Float intensity) : emit(a), intensity(intensity) {}
+  diffuse_light(std::shared_ptr<texture>  a, Float intensity) : emit(a), intensity(intensity) {}
   ~diffuse_light() {
-    if(emit) delete emit;
+    // if(emit) delete emit;
   }
   virtual bool scatter(const ray& r_in, const hit_record& rec, scatter_record& srec, random_gen& rng) {
     return(false);
@@ -306,16 +306,16 @@ public:
   vec3 get_albedo(const ray& r_in, const hit_record& rec) const {
     return(emit->value(rec.u, rec.v, rec.p));
   }
-  texture *emit;
+  std::shared_ptr<texture>  emit;
   Float intensity;
 };
 
 class spot_light : public material {
   public:
-    spot_light(texture *a, vec3 dir, Float cosTotalWidth, Float cosFalloffStart) : 
+    spot_light(std::shared_ptr<texture>  a, vec3 dir, Float cosTotalWidth, Float cosFalloffStart) : 
     emit(a), spot_direction(unit_vector(dir)), cosTotalWidth(cosTotalWidth), cosFalloffStart(cosFalloffStart) {}
     ~spot_light() {
-      if(emit) delete emit;
+      // if(emit) delete emit;
     }
     virtual bool scatter(const ray& r_in, const hit_record& rec, scatter_record& srec, random_gen& rng) {
       return(false);
@@ -341,16 +341,16 @@ class spot_light : public material {
     vec3 get_albedo(const ray& r_in, const hit_record& rec) const {
       return(emit->value(rec.u, rec.v, rec.p));
     }
-    texture *emit;
+    std::shared_ptr<texture>  emit;
     vec3 spot_direction;
     const Float cosTotalWidth, cosFalloffStart;
 };
 
 class isotropic : public material {
 public:
-  isotropic(texture *a) : albedo(a) {}
+  isotropic(std::shared_ptr<texture> a) : albedo(a) {}
   ~isotropic() {
-    if(albedo) delete albedo;
+    // if(albedo) delete albedo;
   }
   virtual bool scatter(const ray& r_in, const hit_record& rec, scatter_record& srec, random_gen& rng) {
     srec.is_specular = true;
@@ -364,18 +364,18 @@ public:
   vec3 get_albedo(const ray& r_in, const hit_record& rec) const {
     return(albedo->value(rec.u, rec.v, rec.p));
   }
-  texture *albedo;
+  std::shared_ptr<texture> albedo;
 };
 
 class orennayar : public material {
 public:
-  orennayar(texture *a, Float sigma) : albedo(a)  {
+  orennayar(std::shared_ptr<texture>  a, Float sigma) : albedo(a)  {
     Float sigma2 = sigma*sigma;
     A = 1.0f - (sigma2 / (2.0f * (sigma2 + 0.33f)));
     B = 0.45f * sigma2 / (sigma2 + 0.09f);
   }
   ~orennayar() {
-    if(albedo) delete albedo;
+    // if(albedo) delete albedo;
   }
   bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng) {
     srec.is_specular = false;
@@ -424,16 +424,16 @@ vec3 f(const ray& r_in, const hit_record& rec, const ray& scattered) const {
     return(albedo->value(rec.u, rec.v, rec.p));
   }
   Float A, B;
-  texture *albedo;
+  std::shared_ptr<texture> albedo;
 };
 
 class MicrofacetReflection : public material {
 public:
-  MicrofacetReflection(texture* a, MicrofacetDistribution *distribution, 
+  MicrofacetReflection(std::shared_ptr<texture> a, MicrofacetDistribution *distribution, 
                        vec3 eta, vec3 k)
     : albedo(a), distribution(distribution), eta(eta), k(k) {}
   ~MicrofacetReflection() {
-    if(albedo) delete albedo;
+    // if(albedo) delete albedo;
     if(distribution) delete distribution;
   }
   
@@ -476,7 +476,7 @@ public:
     return(albedo->value(rec.u, rec.v, rec.p));
   }
 private:
-  texture *albedo;
+  std::shared_ptr<texture> albedo;
   MicrofacetDistribution *distribution;
   vec3 eta;
   vec3 k;
@@ -484,11 +484,11 @@ private:
 
 class glossy : public material {
 public:
-  glossy(texture* a, MicrofacetDistribution *distribution, 
+  glossy(std::shared_ptr<texture> a, MicrofacetDistribution *distribution, 
          vec3 Rs, vec3 Rd2)
     : albedo(a), distribution(distribution), Rs(Rs) {}
   ~glossy() {
-    if(albedo) delete albedo;
+    // if(albedo) delete albedo;
     if(distribution) delete distribution;
   }
   
@@ -537,7 +537,7 @@ public:
   }
   
 private:
-  texture *albedo;
+  std::shared_ptr<texture>  albedo;
   MicrofacetDistribution *distribution;
   vec3 Rs;
 };

@@ -10,10 +10,11 @@ class sphere: public hitable {
     sphere() {}
     ~sphere() {
       delete mat_ptr;
-      delete alpha_mask;
-      delete bump_tex;
+      // delete alpha_mask;
+      // delete bump_tex;
     }
-    sphere(vec3 cen, Float r, material *mat, alpha_texture *alpha_mask, bump_texture* bump_tex) : center(cen), radius(r), 
+    sphere(vec3 cen, Float r, material *mat, 
+           std::shared_ptr<alpha_texture> alpha_mask, std::shared_ptr<bump_texture> bump_tex) : center(cen), radius(r), 
            mat_ptr(mat), alpha_mask(alpha_mask), bump_tex(bump_tex) {};
     virtual bool hit(const ray& r, Float tmin, Float tmax, hit_record& rec, random_gen& rng);
     virtual bool bounding_box(Float t0, Float t1, aabb& box) const;
@@ -23,8 +24,8 @@ class sphere: public hitable {
     vec3 center;
     Float radius;
     material *mat_ptr;
-    alpha_texture *alpha_mask;
-    bump_texture *bump_tex;
+    std::shared_ptr<alpha_texture> alpha_mask;
+    std::shared_ptr<bump_texture> bump_tex;
 };
 
 bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
@@ -158,7 +159,8 @@ class moving_sphere: public hitable {
   public:
     moving_sphere() {}
     moving_sphere(vec3 cen0, vec3 cen1, Float t0, Float t1, Float r, 
-                  material *mat,alpha_texture *alpha_mask, bump_texture* bump_tex) : 
+                  material *mat,
+                  std::shared_ptr<alpha_texture> alpha_mask, std::shared_ptr<bump_texture> bump_tex) : 
                   center0(cen0), center1(cen1), time0(t0), time1(t1), radius(r), 
                   mat_ptr(mat), alpha_mask(alpha_mask), bump_tex(bump_tex) {};
     virtual bool hit(const ray& r, Float tmin, Float tmax, hit_record& rec, random_gen& rng);
@@ -168,8 +170,8 @@ class moving_sphere: public hitable {
     Float time0, time1;
     Float radius;
     material *mat_ptr;
-    alpha_texture *alpha_mask;
-    bump_texture *bump_tex;
+    std::shared_ptr<alpha_texture> alpha_mask;
+    std::shared_ptr<bump_texture> bump_tex;
 };
 
 vec3 moving_sphere::center(Float time) const {

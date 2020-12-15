@@ -9,14 +9,14 @@ class ellipsoid: public hitable {
   public:
     ellipsoid() {}
     ellipsoid(vec3 cen, Float r, vec3 axes, material *mat, 
-                alpha_texture *alpha_mask, bump_texture *bump_tex) : 
+              std::shared_ptr<alpha_texture> alpha_mask, std::shared_ptr<bump_texture> bump_tex) : 
       center(cen), radius(r), axes(axes),  mat_ptr(mat), alpha_mask(alpha_mask), bump_tex(bump_tex) {
       inv_axes = vec3(1.0f/axes.x(), 1.0f/axes.y(), 1.0f/axes.z());
       largest_proj_axis = axes.x() * axes.y() * axes.z() / ffmin(axes.x(), ffmin(axes.y(), axes.z()));
     };
     ~ellipsoid() {
-      delete mat_ptr;
-      delete alpha_mask;
+      // delete mat_ptr;
+      // delete alpha_mask;
     }
     virtual bool hit(const ray& r, Float tmin, Float tmax, hit_record& rec, random_gen& rng);
     virtual bool bounding_box(Float t0, Float t1, aabb& box) const;
@@ -30,8 +30,8 @@ class ellipsoid: public hitable {
     vec3 inv_axes;
     Float largest_proj_axis;
     material *mat_ptr;
-    alpha_texture *alpha_mask;
-    bump_texture *bump_tex;
+    std::shared_ptr<alpha_texture> alpha_mask;
+    std::shared_ptr<bump_texture> bump_tex;
 };
 
 

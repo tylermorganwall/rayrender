@@ -46,8 +46,8 @@ public:
   material *mat_ptr;
   std::vector<Float* > obj_materials;
   std::vector<Float* > bump_materials;
-  std::vector<bump_texture* > bump_textures;
-  std::vector<alpha_texture* > alpha_materials;
+  std::vector<std::shared_ptr<bump_texture> > bump_textures;
+  std::vector<std::shared_ptr<alpha_texture> > alpha_materials;
   hitable_list triangles;
 };
 

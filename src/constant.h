@@ -10,7 +10,7 @@ class material;
 
 class constant_medium : public hitable {
 public:
-  constant_medium(std::shared_ptr<hitable> b, Float d, texture *a ) : boundary(b), density(d) {
+  constant_medium(std::shared_ptr<hitable> b, Float d, std::shared_ptr<texture> a ) : boundary(b), density(d) {
     phase_function = new isotropic(a);
   }
   virtual bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng);

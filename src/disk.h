@@ -8,13 +8,13 @@
 class disk : public hitable {
 public:
   disk() {}
-  disk(vec3 cen, Float r, Float i_r, material *mat, alpha_texture *alpha_mask, 
-       bump_texture* bump_tex) : center(cen), radius(r), 
+  disk(vec3 cen, Float r, Float i_r, material *mat, std::shared_ptr<alpha_texture> alpha_mask, 
+       std::shared_ptr<bump_texture> bump_tex) : center(cen), radius(r), 
        inner_radius(i_r), mat_ptr(mat), alpha_mask(alpha_mask), bump_tex(bump_tex) {};
   ~disk() {
     delete mat_ptr;
-    delete alpha_mask;
-    delete bump_tex;
+    // delete alpha_mask;
+    // delete bump_tex;
   }
   virtual bool hit(const ray& r, Float tmin, Float tmax, hit_record& rec, random_gen& rng);
   virtual bool bounding_box(Float t0, Float t1, aabb& box) const;
@@ -26,8 +26,8 @@ public:
   Float radius;
   Float inner_radius;
   material *mat_ptr;
-  alpha_texture *alpha_mask;
-  bump_texture *bump_tex;
+  std::shared_ptr<alpha_texture> alpha_mask;
+  std::shared_ptr<bump_texture> bump_tex;
 };
 
 bool disk::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {

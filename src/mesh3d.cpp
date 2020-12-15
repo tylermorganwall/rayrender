@@ -52,18 +52,18 @@ mesh3d::mesh3d(Rcpp::List mesh_info, material *mat,
       tx[2] = vec2(txcoord(idx[2],0),txcoord(idx[2],1));
     }
     if(colortype == 1 && has_texcoords && has_texture) {
-      tex = new lambertian(new triangle_image_texture(mesh_materials,
+      tex = new lambertian(std::make_shared<triangle_image_texture>(mesh_materials,
                                                       nx,ny,nn,
                                                       tx[0].x(),tx[0].y(),
                                                       tx[1].x(),tx[1].y(),
                                                       tx[2].x(),tx[2].y()));
     } else if(colortype == 2) {
-      tex = new lambertian(new triangle_texture(
+      tex = new lambertian(std::make_shared<triangle_texture>(
         vec3(colors(i,0),colors(i,1),colors(i,2)),
         vec3(colors(i,0),colors(i,1),colors(i,2)),
         vec3(colors(i,0),colors(i,1),colors(i,2))));
     } else if(colortype == 4) {
-      tex = new lambertian(new triangle_texture(
+      tex = new lambertian(std::make_shared<triangle_texture>(
         vec3(colors(idx[0],0),colors(idx[0],1),colors(idx[0],2)),
         vec3(colors(idx[1],0),colors(idx[1],1),colors(idx[1],2)),
         vec3(colors(idx[2],0),colors(idx[2],1),colors(idx[2],2))));

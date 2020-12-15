@@ -423,14 +423,14 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
     Rcpp::Rcout << "Loading Environment Image: ";
   }
   start = std::chrono::high_resolution_clock::now();
-  texture *background_texture = nullptr;
+  std::shared_ptr<texture> background_texture = nullptr;
   material *background_material = nullptr;
   std::shared_ptr<hitable> background_sphere = nullptr;
   Float *background_texture_data = nullptr;
   
   if(hasbackground) {
     background_texture_data = stbi_loadf(background[0], &nx1, &ny1, &nn1, 0);
-    background_texture = new image_texture(background_texture_data, nx1, ny1, nn1, 1, 1, intensity_env);
+    background_texture = std::make_shared<image_texture>(background_texture_data, nx1, ny1, nn1, 1, 1, intensity_env);
     background_material = new diffuse_light(background_texture, 1.0);
     background_sphere = std::make_shared<InfiniteAreaLight>(nx1, ny1, world_radius*2, world_center,
                                               background_texture, background_material);
@@ -443,13 +443,13 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
       backgroundhigh = vec3(FLT_MIN,FLT_MIN,FLT_MIN);
       backgroundlow = vec3(FLT_MIN,FLT_MIN,FLT_MIN);
     }
-    background_texture = new gradient_texture(backgroundlow, backgroundhigh, false, false);
+    background_texture = std::make_shared<gradient_texture>(backgroundlow, backgroundhigh, false, false);
     background_material = new diffuse_light(background_texture, 1.0);
     background_sphere = std::make_shared<InfiniteAreaLight>(100, 100, world_radius*2, world_center,
                                               background_texture, background_material);
   } else {
     //Minimum intensity FLT_MIN so the CDF isn't NAN
-    background_texture = new constant_texture(vec3(FLT_MIN,FLT_MIN,FLT_MIN));
+    background_texture = std::make_shared<constant_texture>(vec3(FLT_MIN,FLT_MIN,FLT_MIN));
     background_material = new diffuse_light(background_texture, 1.0);
     background_sphere = std::make_shared<InfiniteAreaLight>(100, 100, world_radius*2, world_center,
                                               background_texture, background_material);

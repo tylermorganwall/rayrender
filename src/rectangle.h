@@ -8,12 +8,14 @@ class xy_rect : public hitable {
 public:
   xy_rect() {}
   xy_rect(Float _x0, Float _x1, Float _y0, Float _y1, Float _k, 
-          material *mat, alpha_texture* alpha_mask, bump_texture* bump_tex, bool flipped) :
+          material *mat, 
+          std::shared_ptr<alpha_texture> alpha_mask, 
+          std::shared_ptr<bump_texture> bump_tex, bool flipped) :
     x0(_x0), x1(_x1), y0(_y0), y1(_y1), k(_k), mp(mat), alpha_mask(alpha_mask),
     bump_tex(bump_tex), flipped(flipped) {};
   ~xy_rect() {
-    delete bump_tex;
-    delete alpha_mask;
+    // delete bump_tex;
+    // delete alpha_mask;
     delete mp;
   }
   virtual bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng);
@@ -43,8 +45,8 @@ public:
   }
   Float x0, x1, y0, y1, k;
   material *mp;
-  alpha_texture *alpha_mask;
-  bump_texture *bump_tex;
+  std::shared_ptr<alpha_texture> alpha_mask;
+  std::shared_ptr<bump_texture> bump_tex;
   bool flipped;
 };
 
@@ -52,12 +54,14 @@ class xz_rect : public hitable {
 public:
   xz_rect() {}
   xz_rect(Float _x0, Float _x1, Float _z0, Float _z1, Float _k, 
-          material *mat, alpha_texture* alpha_mask, bump_texture* bump_tex, bool flipped) :
+          material *mat, 
+          std::shared_ptr<alpha_texture> alpha_mask, 
+          std::shared_ptr<bump_texture> bump_tex, bool flipped) :
   x0(_x0), x1(_x1), z0(_z0), z1(_z1), k(_k), mp(mat), alpha_mask(alpha_mask), 
   bump_tex(bump_tex), flipped(flipped) {};
   ~xz_rect() {
-    delete bump_tex;
-    delete alpha_mask;
+    // delete bump_tex;
+    // delete alpha_mask;
     delete mp;
   }
   virtual bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng);
@@ -87,8 +91,8 @@ public:
   }
   Float x0, x1, z0, z1, k;
   material *mp;
-  alpha_texture *alpha_mask;
-  bump_texture *bump_tex;
+  std::shared_ptr<alpha_texture> alpha_mask;
+  std::shared_ptr<bump_texture> bump_tex;
   bool flipped;
 };
 
@@ -96,12 +100,13 @@ class yz_rect : public hitable {
 public:
   yz_rect() {}
   yz_rect(Float _y0, Float _y1, Float _z0, Float _z1, Float _k, 
-          material *mat, alpha_texture* alpha_mask, bump_texture* bump_tex, bool flipped) :
+          material *mat, 
+          std::shared_ptr<alpha_texture> alpha_mask, std::shared_ptr<bump_texture> bump_tex, bool flipped) :
   y0(_y0), y1(_y1), z0(_z0), z1(_z1), k(_k), mp(mat), alpha_mask(alpha_mask), 
   bump_tex(bump_tex), flipped(flipped) {};
   ~yz_rect() {
-    delete bump_tex;
-    delete alpha_mask;
+    // delete bump_tex;
+    // delete alpha_mask;
     delete mp;
   }
   virtual bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng);
@@ -131,8 +136,8 @@ public:
   }
   Float y0, y1, z0, z1, k;
   material *mp;
-  alpha_texture *alpha_mask;
-  bump_texture *bump_tex;
+  std::shared_ptr<alpha_texture> alpha_mask;
+  std::shared_ptr<bump_texture> bump_tex;
   bool flipped;
 };
 

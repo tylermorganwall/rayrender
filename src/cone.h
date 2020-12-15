@@ -10,10 +10,11 @@ public:
   cone() {}
   ~cone() {
     delete mat_ptr;
-    delete alpha_mask;
-    delete bump_tex;
+    // delete alpha_mask;
+    // delete bump_tex;
   }
-  cone(Float r, Float h, material *mat, alpha_texture *alpha_mask, bump_texture* bump_tex) : 
+  cone(Float r, Float h, material *mat, 
+       std::shared_ptr<alpha_texture> alpha_mask, std::shared_ptr<bump_texture> bump_tex) : 
      radius(r), height(h), mat_ptr(mat), alpha_mask(alpha_mask), bump_tex(bump_tex) {};
   virtual bool hit(const ray& r, Float tmin, Float tmax, hit_record& rec, random_gen& rng);
   virtual bool bounding_box(Float t0, Float t1, aabb& box) const;
@@ -24,8 +25,8 @@ public:
   Float height;
   //Float phi2; //unwrapped cone in a circle, angle around origin (radians)
   material *mat_ptr;
-  alpha_texture *alpha_mask;
-  bump_texture *bump_tex;
+  std::shared_ptr<alpha_texture> alpha_mask;
+  std::shared_ptr<bump_texture> bump_tex;
 };
 
 bool cone::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {

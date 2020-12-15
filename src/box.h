@@ -8,7 +8,8 @@
 class box : public hitable {
 public:
   box() {}
-  box(const vec3& p0, const vec3& p1, material *ptr, alpha_texture *alpha_mask, bump_texture *bump_tex);
+  box(const vec3& p0, const vec3& p1, material *ptr, 
+      std::shared_ptr<alpha_texture> alpha_mask, std::shared_ptr<bump_texture> bump_tex);
   virtual bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng);
   virtual bool bounding_box(Float t0, Float t1, aabb& box) const {
     box = aabb(pmin, pmax);

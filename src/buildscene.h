@@ -117,6 +117,8 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
   List templist;
   vec3 center(x(0), y(0), z(0));
   vec3 vel(x(0), y(0), z(0));
+  std::vector<std::shared_ptr<alpha_texture> > alpha(n);
+  std::vector<std::shared_ptr<bump_texture> > bump(n);
   for(int i = 0; i < n; i++) {
     tempvector = as<NumericVector>(properties(i));
     tempgradient = as<NumericVector>(gradient_colors(i));
@@ -155,13 +157,13 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
     vel = vec3(tempvel(0),tempvel(1),tempvel(2));
     //Generate texture
     material *tex = nullptr;
-    alpha_texture *alpha = nullptr;
-    bump_texture *bump = nullptr;
     if(has_alpha(i)) {
-      alpha = new alpha_texture(alpha_textures[i], nveca[i][0], nveca[i][1], nveca[i][2]);
+      alpha[i] = std::make_shared<alpha_texture>(alpha_textures[i], 
+                                                 nveca[i][0], nveca[i][1], nveca[i][2]);
     }
     if(has_bump(i)) {
-      bump = new bump_texture(bump_textures[i], nvecb[i][0], nvecb[i][1], nvecb[i][2], 
+      bump[i] = std::make_shared<bump_texture>(bump_textures[i], 
+                                               nvecb[i][0], nvecb[i][1], nvecb[i][2], 
                               bump_intensity(i));
     }
     if(type(i) == 2) {
@@ -178,70 +180,70 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
     } else {
       if(type(i) == 1) {
         if(isimage(i)) {
-          tex = new lambertian(new image_texture(textures[i],nvec[i][0],nvec[i][1],nvec[i][2], 
+          tex = new lambertian(std::make_shared<image_texture>(textures[i],nvec[i][0],nvec[i][1],nvec[i][2], 
                                                  temp_repeat[0], temp_repeat[1], 1.0));
         } else if (isnoise(i)) {
-          tex = new lambertian(new noise_texture(noise(i),vec3(tempvector(0),tempvector(1),tempvector(2)),
+          tex = new lambertian(std::make_shared<noise_texture>(noise(i),vec3(tempvector(0),tempvector(1),tempvector(2)),
                                                  vec3(tempnoisecolor(0),tempnoisecolor(1),tempnoisecolor(2)),
                                                  noisephase(i), noiseintensity(i)));
         } else if (ischeckered(i)) {
-          tex = new lambertian(new checker_texture(new constant_texture(vec3(tempchecker(0),tempchecker(1),tempchecker(2))),
+          tex = new lambertian(std::make_shared<checker_texture>(new constant_texture(vec3(tempchecker(0),tempchecker(1),tempchecker(2))),
                                                    new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))),
                                                    tempchecker(3)));
         } else if (isgradient(i) && !is_world_gradient(i)) {
-          tex = new lambertian(new gradient_texture(vec3(tempvector(0),tempvector(1),tempvector(2)),
+          tex = new lambertian(std::make_shared<gradient_texture>(vec3(tempvector(0),tempvector(1),tempvector(2)),
                                                     vec3(tempgradient(0),tempgradient(1),tempgradient(2)),
                                                     gradient_trans(i), gradient_is_hsv(i)));
         } else if (is_tri_color(i)) {
-          tex = new lambertian(new triangle_texture(vec3(temp_tri_color(0),temp_tri_color(1),temp_tri_color(2)),
+          tex = new lambertian(std::make_shared<triangle_texture>(vec3(temp_tri_color(0),temp_tri_color(1),temp_tri_color(2)),
                                                     vec3(temp_tri_color(3),temp_tri_color(4),temp_tri_color(5)),
                                                     vec3(temp_tri_color(6),temp_tri_color(7),temp_tri_color(8))));
         } else if (is_world_gradient(i)) {
-          tex = new lambertian(new world_gradient_texture(vec3(temp_gradient_control(0),temp_gradient_control(1),temp_gradient_control(2)),
+          tex = new lambertian(std::make_shared<world_gradient_texture>(vec3(temp_gradient_control(0),temp_gradient_control(1),temp_gradient_control(2)),
                                                           vec3(temp_gradient_control(3),temp_gradient_control(4),temp_gradient_control(5)),
                                                           vec3(tempvector(0),tempvector(1),tempvector(2)),
                                                           vec3(tempgradient(0),tempgradient(1),tempgradient(2)),
                                                           gradient_is_hsv(i)));
         } else {
-          tex = new lambertian(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))));
+          tex = new lambertian(std::make_shared<constant_texture>(vec3(tempvector(0),tempvector(1),tempvector(2))));
         }
       } else if (type(i) == 2) {
         if(isimage(i)) {
-          tex = new metal(new image_texture(textures[i],nvec[i][0],nvec[i][1],nvec[i][2], 
+          tex = new metal(std::make_shared<image_texture>(textures[i],nvec[i][0],nvec[i][1],nvec[i][2], 
                                             temp_repeat[0], temp_repeat[1], 1.0),
                           tempvector(3), 
                           vec3(temp_glossy(3), temp_glossy(4), temp_glossy(5)), 
                           vec3(temp_glossy(6),temp_glossy(7),temp_glossy(8)));
         } else if (isnoise(i)) {
-          tex = new metal(new noise_texture(noise(i),vec3(tempvector(0),tempvector(1),tempvector(2)),
+          tex = new metal(std::make_shared<noise_texture>(noise(i),vec3(tempvector(0),tempvector(1),tempvector(2)),
                                                  vec3(tempnoisecolor(0),tempnoisecolor(1),tempnoisecolor(2)),
                                                  noisephase(i), noiseintensity(i)),
                           tempvector(3), 
                           vec3(temp_glossy(3), temp_glossy(4), temp_glossy(5)), 
                           vec3(temp_glossy(6),temp_glossy(7),temp_glossy(8)));
         } else if (ischeckered(i)) {
-          tex = new metal(new checker_texture(new constant_texture(vec3(tempchecker(0),tempchecker(1),tempchecker(2))),
+          tex = new metal(std::make_shared<checker_texture>(new constant_texture(vec3(tempchecker(0),tempchecker(1),tempchecker(2))),
                                               new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))),
                                               tempchecker(3)),
                           tempvector(3), 
                           vec3(temp_glossy(3), temp_glossy(4), temp_glossy(5)), 
                           vec3(temp_glossy(6),temp_glossy(7),temp_glossy(8)));
         } else if (isgradient(i) && !is_world_gradient(i)) {
-          tex = new metal(new gradient_texture(vec3(tempvector(0),tempvector(1),tempvector(2)),
+          tex = new metal(std::make_shared<gradient_texture>(vec3(tempvector(0),tempvector(1),tempvector(2)),
                                                     vec3(tempgradient(0),tempgradient(1),tempgradient(2)),
                                                     gradient_trans(i), gradient_is_hsv(i)),
                           tempvector(3), 
                           vec3(temp_glossy(3), temp_glossy(4), temp_glossy(5)), 
                           vec3(temp_glossy(6),temp_glossy(7),temp_glossy(8)));
         } else if (is_tri_color(i)) {
-          tex = new metal(new triangle_texture(vec3(temp_tri_color(0),temp_tri_color(1),temp_tri_color(2)),
+          tex = new metal(std::make_shared<triangle_texture>(vec3(temp_tri_color(0),temp_tri_color(1),temp_tri_color(2)),
                                                     vec3(temp_tri_color(3),temp_tri_color(4),temp_tri_color(5)),
                                                     vec3(temp_tri_color(6),temp_tri_color(7),temp_tri_color(8))),
                           tempvector(3), 
                           vec3(temp_glossy(3), temp_glossy(4), temp_glossy(5)), 
                           vec3(temp_glossy(6),temp_glossy(7),temp_glossy(8)));
         } else if (is_world_gradient(i)) {
-          tex = new metal(new world_gradient_texture(vec3(temp_gradient_control(0),temp_gradient_control(1),temp_gradient_control(2)),
+          tex = new metal(std::make_shared<world_gradient_texture>(vec3(temp_gradient_control(0),temp_gradient_control(1),temp_gradient_control(2)),
                                                      vec3(temp_gradient_control(3),temp_gradient_control(4),temp_gradient_control(5)),
                                                      vec3(tempvector(0),tempvector(1),tempvector(2)),
                                                      vec3(tempgradient(0),tempgradient(1),tempgradient(2)),
@@ -250,7 +252,7 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
                          vec3(temp_glossy(3), temp_glossy(4), temp_glossy(5)), 
                          vec3(temp_glossy(6),temp_glossy(7),temp_glossy(8)));
         } else {
-          tex = new metal(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))),
+          tex = new metal(std::make_shared<constant_texture>(vec3(tempvector(0),tempvector(1),tempvector(2))),
                           tempvector(3), 
                           vec3(temp_glossy(3), temp_glossy(4), temp_glossy(5)), 
                           vec3(temp_glossy(6),temp_glossy(7),temp_glossy(8)));
@@ -261,61 +263,61 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
                              tempvector(7), rng);
       } else if (type(i) == 4) {
         if(isimage(i)) {
-          tex = new orennayar(new image_texture(textures[i],nvec[i][0],nvec[i][1],nvec[i][2], 
+          tex = new orennayar(std::make_shared<image_texture>(textures[i],nvec[i][0],nvec[i][1],nvec[i][2], 
                                                 temp_repeat[0], temp_repeat[1], 1.0), sigma(i));
         } else if (isnoise(i)) {
-          tex = new orennayar(new noise_texture(noise(i),vec3(tempvector(0),tempvector(1),tempvector(2)),
+          tex = new orennayar(std::make_shared<noise_texture>(noise(i),vec3(tempvector(0),tempvector(1),tempvector(2)),
                                                  vec3(tempnoisecolor(0),tempnoisecolor(1),tempnoisecolor(2)),
                                                  noisephase(i), noiseintensity(i)), sigma(i));
         } else if (ischeckered(i)) {
-          tex = new orennayar(new checker_texture(new constant_texture(vec3(tempchecker(0),tempchecker(1),tempchecker(2))),
+          tex = new orennayar(std::make_shared<checker_texture>(new constant_texture(vec3(tempchecker(0),tempchecker(1),tempchecker(2))),
                                                    new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))),tempchecker(3)), 
                                                    sigma(i));
         } else if (isgradient(i) && !is_world_gradient(i)) {
-          tex = new orennayar(new gradient_texture(vec3(tempvector(0),tempvector(1),tempvector(2)),
+          tex = new orennayar(std::make_shared<gradient_texture>(vec3(tempvector(0),tempvector(1),tempvector(2)),
                                                     vec3(tempgradient(0),tempgradient(1),tempgradient(2)),
                                                     gradient_trans(i), gradient_is_hsv(i)), sigma(i));
         } else if (is_tri_color(i)) {
-          tex = new orennayar(new triangle_texture(vec3(temp_tri_color(0),temp_tri_color(1),temp_tri_color(2)),
+          tex = new orennayar(std::make_shared<triangle_texture>(vec3(temp_tri_color(0),temp_tri_color(1),temp_tri_color(2)),
                                                     vec3(temp_tri_color(3),temp_tri_color(4),temp_tri_color(5)),
                                                     vec3(temp_tri_color(6),temp_tri_color(7),temp_tri_color(8))), sigma(i) );
         } else if (is_world_gradient(i)) {
-          tex = new orennayar(new world_gradient_texture(vec3(temp_gradient_control(0),temp_gradient_control(1),temp_gradient_control(2)),
+          tex = new orennayar(std::make_shared<world_gradient_texture>(vec3(temp_gradient_control(0),temp_gradient_control(1),temp_gradient_control(2)),
                                                          vec3(temp_gradient_control(3),temp_gradient_control(4),temp_gradient_control(5)),
                                                          vec3(tempvector(0),tempvector(1),tempvector(2)),
                                                          vec3(tempgradient(0),tempgradient(1),tempgradient(2)),
                                                          gradient_is_hsv(i)), sigma(i));
         } else {
-          tex = new orennayar(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))), sigma(i)); //marked as small definite loss in valgrind memcheck
+          tex = new orennayar(std::make_shared<constant_texture>(vec3(tempvector(0),tempvector(1),tempvector(2))), sigma(i)); //marked as small definite loss in valgrind memcheck
         }
       } else if (type(i) == 5) {
-        texture* light_tex;
+        std::shared_ptr<texture> light_tex = nullptr;
         if(isimage(i)) {
-          light_tex = new image_texture(textures[i],nvec[i][0],nvec[i][1],nvec[i][2], 
+          light_tex = std::make_shared<image_texture>(textures[i],nvec[i][0],nvec[i][1],nvec[i][2], 
                                         temp_repeat[0], temp_repeat[1], 1.0);
         } else if (isnoise(i)) {
-          light_tex = new noise_texture(noise(i),vec3(tempvector(0),tempvector(1),tempvector(2)),
+          light_tex = std::make_shared<noise_texture>(noise(i),vec3(tempvector(0),tempvector(1),tempvector(2)),
                                                 vec3(tempnoisecolor(0),tempnoisecolor(1),tempnoisecolor(2)),
                                                 noisephase(i), noiseintensity(i));
         } else if (ischeckered(i)) {
-          light_tex = new checker_texture(new constant_texture(vec3(tempchecker(0),tempchecker(1),tempchecker(2))),
+          light_tex = std::make_shared<checker_texture>(new constant_texture(vec3(tempchecker(0),tempchecker(1),tempchecker(2))),
                                                   new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))),tempchecker(3));
         } else if (isgradient(i) && !is_world_gradient(i)) {
-          light_tex = new gradient_texture(vec3(tempvector(0),tempvector(1),tempvector(2)),
+          light_tex = std::make_shared<gradient_texture>(vec3(tempvector(0),tempvector(1),tempvector(2)),
                                                    vec3(tempgradient(0),tempgradient(1),tempgradient(2)),
                                                    gradient_trans(i), gradient_is_hsv(i));
         } else if (is_tri_color(i)) {
-          light_tex = new triangle_texture(vec3(temp_tri_color(0),temp_tri_color(1),temp_tri_color(2)),
+          light_tex = std::make_shared<triangle_texture>(vec3(temp_tri_color(0),temp_tri_color(1),temp_tri_color(2)),
                                                    vec3(temp_tri_color(3),temp_tri_color(4),temp_tri_color(5)),
                                                    vec3(temp_tri_color(6),temp_tri_color(7),temp_tri_color(8)));
         } else if (is_world_gradient(i)) {
-          light_tex = new world_gradient_texture(vec3(temp_gradient_control(0),temp_gradient_control(1),temp_gradient_control(2)),
+          light_tex = std::make_shared<world_gradient_texture>(vec3(temp_gradient_control(0),temp_gradient_control(1),temp_gradient_control(2)),
                                                          vec3(temp_gradient_control(3),temp_gradient_control(4),temp_gradient_control(5)),
                                                          vec3(tempvector(0),tempvector(1),tempvector(2)),
                                                          vec3(tempgradient(0),tempgradient(1),tempgradient(2)),
                                                          gradient_is_hsv(i));
         } else {
-          light_tex = new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2)));
+          light_tex = std::make_shared<constant_texture>(vec3(tempvector(0),tempvector(1),tempvector(2)));
         }
         tex = new diffuse_light(light_tex, lightintensity(i));
       } else if (type(i) == 6) {
@@ -326,43 +328,43 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
           dist = new BeckmannDistribution(temp_glossy(1), temp_glossy(2), false, true);
         }
         if(isimage(i)) {
-          tex = new MicrofacetReflection(new image_texture(textures[i],nvec[i][0],nvec[i][1],nvec[i][2], 
+          tex = new MicrofacetReflection(std::make_shared<image_texture>(textures[i],nvec[i][0],nvec[i][1],nvec[i][2], 
                                                            temp_repeat[0], temp_repeat[1], 1.0), dist, 
                                          vec3(temp_glossy(3), temp_glossy(4), temp_glossy(5)), 
                                          vec3(temp_glossy(6),temp_glossy(7),temp_glossy(8)));
         } else if (isnoise(i)) {
-          tex = new MicrofacetReflection(new noise_texture(noise(i),vec3(tempvector(0),tempvector(1),tempvector(2)),
+          tex = new MicrofacetReflection(std::make_shared<noise_texture>(noise(i),vec3(tempvector(0),tempvector(1),tempvector(2)),
                                                 vec3(tempnoisecolor(0),tempnoisecolor(1),tempnoisecolor(2)),
                                                 noisephase(i), noiseintensity(i)), dist, 
                                                 vec3(temp_glossy(3), temp_glossy(4), temp_glossy(5)), 
                                                 vec3(temp_glossy(6),temp_glossy(7),temp_glossy(8)));
         } else if (ischeckered(i)) {
-          tex = new MicrofacetReflection(new checker_texture(new constant_texture(vec3(tempchecker(0),tempchecker(1),tempchecker(2))),
+          tex = new MicrofacetReflection(std::make_shared<checker_texture>(new constant_texture(vec3(tempchecker(0),tempchecker(1),tempchecker(2))),
                                                   new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))),tempchecker(3)), 
                                                   dist, 
                                                   vec3(temp_glossy(3), temp_glossy(4), temp_glossy(5)), 
                                                   vec3(temp_glossy(6),temp_glossy(7),temp_glossy(8)));
         }  else if (isgradient(i) && !is_world_gradient(i)) {
-          tex = new MicrofacetReflection(new gradient_texture(vec3(tempvector(0),tempvector(1),tempvector(2)),
+          tex = new MicrofacetReflection(std::make_shared<gradient_texture>(vec3(tempvector(0),tempvector(1),tempvector(2)),
                                                    vec3(tempgradient(0),tempgradient(1),tempgradient(2)),
                                                    gradient_trans(i), gradient_is_hsv(i)), dist, 
                                                    vec3(temp_glossy(3), temp_glossy(4), temp_glossy(5)), 
                                                    vec3(temp_glossy(6),temp_glossy(7),temp_glossy(8)));
         } else if (is_tri_color(i)) {
-          tex = new MicrofacetReflection(new triangle_texture(vec3(temp_tri_color(0),temp_tri_color(1),temp_tri_color(2)),
+          tex = new MicrofacetReflection(std::make_shared<triangle_texture>(vec3(temp_tri_color(0),temp_tri_color(1),temp_tri_color(2)),
                                                    vec3(temp_tri_color(3),temp_tri_color(4),temp_tri_color(5)),
                                                    vec3(temp_tri_color(6),temp_tri_color(7),temp_tri_color(8))), dist, 
                                                    vec3(temp_glossy(3), temp_glossy(4), temp_glossy(5)), 
                                                    vec3(temp_glossy(6),temp_glossy(7),temp_glossy(8)));
         } else if (is_world_gradient(i)) {
-          tex = new MicrofacetReflection(new world_gradient_texture(vec3(temp_gradient_control(0),temp_gradient_control(1),temp_gradient_control(2)),
+          tex = new MicrofacetReflection(std::make_shared<world_gradient_texture>(vec3(temp_gradient_control(0),temp_gradient_control(1),temp_gradient_control(2)),
                                                                     vec3(temp_gradient_control(3),temp_gradient_control(4),temp_gradient_control(5)),
                                                                     vec3(tempvector(0),tempvector(1),tempvector(2)),
                                                                     vec3(tempgradient(0),tempgradient(1),tempgradient(2)), gradient_is_hsv(i)), dist, 
                                                                     vec3(temp_glossy(3), temp_glossy(4), temp_glossy(5)), 
                                                                     vec3(temp_glossy(6),temp_glossy(7),temp_glossy(8)));
         } else {
-          tex = new MicrofacetReflection(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))), dist, 
+          tex = new MicrofacetReflection(std::make_shared<constant_texture>(vec3(tempvector(0),tempvector(1),tempvector(2))), dist, 
                                          vec3(temp_glossy(3), temp_glossy(4), temp_glossy(5)), 
                                          vec3(temp_glossy(6),temp_glossy(7),temp_glossy(8)));
         }
@@ -374,48 +376,48 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
           dist = new BeckmannDistribution(temp_glossy(1), temp_glossy(2), false, true);
         }
         if(isimage(i)) {
-          tex = new glossy(new image_texture(textures[i],nvec[i][0],nvec[i][1],nvec[i][2], 
+          tex = new glossy(std::make_shared<image_texture>(textures[i],nvec[i][0],nvec[i][1],nvec[i][2], 
                                              temp_repeat[0], temp_repeat[1], 1.0), dist, 
                            vec3(temp_glossy(3), temp_glossy(4), temp_glossy(5)), 
                            vec3(temp_glossy(6),temp_glossy(7),temp_glossy(8)));
         } else if (isnoise(i)) {
-          tex = new glossy(new noise_texture(noise(i),vec3(tempvector(0),tempvector(1),tempvector(2)),
+          tex = new glossy(std::make_shared<noise_texture>(noise(i),vec3(tempvector(0),tempvector(1),tempvector(2)),
                                              vec3(tempnoisecolor(0),tempnoisecolor(1),tempnoisecolor(2)),
                                              noisephase(i), noiseintensity(i)), dist, 
                            vec3(temp_glossy(3), temp_glossy(4), temp_glossy(5)), 
                            vec3(temp_glossy(6),temp_glossy(7),temp_glossy(8)));
         } else if (ischeckered(i)) {
-          tex = new glossy(new checker_texture(new constant_texture(vec3(tempchecker(0),tempchecker(1),tempchecker(2))),
+          tex = new glossy(std::make_shared<checker_texture>(new constant_texture(vec3(tempchecker(0),tempchecker(1),tempchecker(2))),
                                                new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))),tempchecker(3)), 
                            dist, 
                            vec3(temp_glossy(3), temp_glossy(4), temp_glossy(5)), 
                            vec3(temp_glossy(6),temp_glossy(7),temp_glossy(8)));
         }  else if (isgradient(i) && !is_world_gradient(i)) {
-          tex = new glossy(new gradient_texture(vec3(tempvector(0),tempvector(1),tempvector(2)),
+          tex = new glossy(std::make_shared<gradient_texture>(vec3(tempvector(0),tempvector(1),tempvector(2)),
                                                      vec3(tempgradient(0),tempgradient(1),tempgradient(2)),
                                                      gradient_trans(i), gradient_is_hsv(i)), dist, 
                            vec3(temp_glossy(3), temp_glossy(4), temp_glossy(5)), 
                            vec3(temp_glossy(6),temp_glossy(7),temp_glossy(8)));
         } else if (is_tri_color(i)) {
-          tex = new glossy(new triangle_texture(vec3(temp_tri_color(0),temp_tri_color(1),temp_tri_color(2)),
+          tex = new glossy(std::make_shared<triangle_texture>(vec3(temp_tri_color(0),temp_tri_color(1),temp_tri_color(2)),
                                                 vec3(temp_tri_color(3),temp_tri_color(4),temp_tri_color(5)),
                                                 vec3(temp_tri_color(6),temp_tri_color(7),temp_tri_color(8))), dist, 
                            vec3(temp_glossy(3), temp_glossy(4), temp_glossy(5)), 
                            vec3(temp_glossy(6),temp_glossy(7),temp_glossy(8)));
         } else if (is_world_gradient(i)) {
-          tex = new glossy(new world_gradient_texture(vec3(temp_gradient_control(0),temp_gradient_control(1),temp_gradient_control(2)),
+          tex = new glossy(std::make_shared<world_gradient_texture>(vec3(temp_gradient_control(0),temp_gradient_control(1),temp_gradient_control(2)),
                                                       vec3(temp_gradient_control(3),temp_gradient_control(4),temp_gradient_control(5)),
                                                       vec3(tempvector(0),tempvector(1),tempvector(2)),
                                                       vec3(tempgradient(0),tempgradient(1),tempgradient(2)), gradient_is_hsv(i)), dist, 
                           vec3(temp_glossy(3), temp_glossy(4), temp_glossy(5)), 
                           vec3(temp_glossy(6),temp_glossy(7),temp_glossy(8)));
         } else {
-          tex = new glossy(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))), dist, 
+          tex = new glossy(std::make_shared<constant_texture>(vec3(tempvector(0),tempvector(1),tempvector(2))), dist, 
                            vec3(temp_glossy(3), temp_glossy(4), temp_glossy(5)), 
                            vec3(temp_glossy(6),temp_glossy(7),temp_glossy(8)));
         }
       } else if (type(i) == 8) {
-        tex = new spot_light(new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2))*lightintensity(i)),
+        tex = new spot_light(std::make_shared<constant_texture>(vec3(tempvector(0),tempvector(1),tempvector(2))*lightintensity(i)),
                              vec3(tempvector(3),tempvector(4),tempvector(5)), tempvector(6),tempvector(7));
       } else if (type(i) == 9) {
         tex = new hair(vec3(tempvector(0),tempvector(1),tempvector(2)), 
@@ -466,7 +468,7 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
     if (shape(i) == 1) {
       
       //Fix moving memory leak
-      std::shared_ptr<hitable> entry = std::make_shared<sphere>(vec3(0,0,0), radius(i), tex, alpha, bump);
+      std::shared_ptr<hitable> entry = std::make_shared<sphere>(vec3(0,0,0), radius(i), tex, alpha[i], bump[i]);
       if(is_scaled) {
         entry = std::make_shared<scale>(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
       }
@@ -484,20 +486,21 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
       } else {
         entry = std::make_shared<moving_sphere>(center + vel * shutteropen, 
                                   center + vel * shutterclose, 
-                                  shutteropen, shutterclose, radius(i), tex, alpha, bump);
+                                  shutteropen, shutterclose, radius(i), tex, alpha[i], bump[i]);
       }
       if(isflipped(i)) {
         entry = std::make_shared<flip_normals>(entry);
       }
       if(isvolume(i)) {
-        list.add(std::make_shared<constant_medium>(entry, voldensity(i), new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2)))));
+        list.add(std::make_shared<constant_medium>(entry, voldensity(i), 
+                 std::make_shared<constant_texture>(vec3(tempvector(0),tempvector(1),tempvector(2)))));
       } else {
         list.add(entry);;
       }
     } else if (shape(i)  == 2) {
       std::shared_ptr<hitable> entry = std::make_shared<xy_rect>(-tempvector(prop_len+2)/2,tempvector(prop_len+2)/2,
                                    -tempvector(prop_len+4)/2,tempvector(prop_len+4)/2,
-                                   0, tex, alpha, bump, isflipped(i));
+                                   0, tex, alpha[i], bump[i], isflipped(i));
       if(is_scaled) {
         entry = std::make_shared<scale>(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
       }
@@ -515,7 +518,7 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
     } else if (shape(i)  == 3) {
       std::shared_ptr<hitable> entry = std::make_shared<xz_rect>(-tempvector(prop_len+2)/2,tempvector(prop_len+2)/2,
                                    -tempvector(prop_len+4)/2,tempvector(prop_len+4)/2,
-                                   0, tex, alpha, bump, isflipped(i));
+                                   0, tex, alpha[i], bump[i], isflipped(i));
       if(is_scaled) {
         entry = std::make_shared<scale>(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
       }
@@ -533,7 +536,7 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
     } else if (shape(i)  == 4) {
       std::shared_ptr<hitable> entry = std::make_shared<yz_rect>(-tempvector(prop_len+2)/2,tempvector(prop_len+2)/2,
                                    -tempvector(prop_len+4)/2,tempvector(prop_len+4)/2,
-                                   0, tex, alpha, bump, isflipped(i));
+                                   0, tex, alpha[i], bump[i], isflipped(i));
       if(is_scaled) {
         entry = std::make_shared<scale>(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
       }
@@ -551,7 +554,7 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
     } else if (shape(i)  == 5) {
       std::shared_ptr<hitable> entry = std::make_shared<box>(-vec3(tempvector(prop_len+1),tempvector(prop_len+2),tempvector(prop_len+3))/2, 
                                vec3(tempvector(prop_len+1),tempvector(prop_len+2),tempvector(prop_len+3))/2, 
-                               tex, alpha, bump);
+                               tex, alpha[i], bump[i]);
       if(is_scaled) {
         entry = std::make_shared<scale>(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
       }
@@ -567,10 +570,10 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
       entry = std::make_shared<translate>(entry, center + gtrans + vel * shutteropen);
       if(isvolume(i)) {
         if(!isnoise(i)) {
-          list.add(std::make_shared<constant_medium>(entry,voldensity(i), new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2)))));;
+          list.add(std::make_shared<constant_medium>(entry,voldensity(i), std::make_shared<constant_texture>(vec3(tempvector(0),tempvector(1),tempvector(2)))));;
         } else {
           list.add(std::make_shared<constant_medium>(entry,voldensity(i), 
-                                        new noise_texture(noise(i),
+                                                     std::make_shared<noise_texture>(noise(i),
                                                           vec3(tempvector(0),tempvector(1),tempvector(2)),
                                                           vec3(tempnoisecolor(0),tempnoisecolor(1),tempnoisecolor(2)),
                                                           noisephase(i), noiseintensity(i))));
@@ -588,13 +591,13 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
                             vec3(tempvector(prop_len+13),tempvector(prop_len+14),tempvector(prop_len+15)),
                             vec3(tempvector(prop_len+16),tempvector(prop_len+17),tempvector(prop_len+18)),
                             !is_shared_mat(i), //turn off if shared material (e.g. extruded polygon)
-                            tex, alpha, bump);
+                            tex, alpha[i], bump[i]);
       } else {
         entry= std::make_shared<triangle>(vec3(tempvector(prop_len+1),tempvector(prop_len+2),tempvector(prop_len+3)),
                             vec3(tempvector(prop_len+4),tempvector(prop_len+5),tempvector(prop_len+6)),
                             vec3(tempvector(prop_len+7),tempvector(prop_len+8),tempvector(prop_len+9)),
                             !is_shared_mat(i), //turn off if shared material (e.g. extruded polygon)
-                            tex, alpha, bump);
+                            tex, alpha[i], bump[i]);
       }
       if(is_scaled) {
         entry = std::make_shared<scale>(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
@@ -640,7 +643,7 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
       } 
       if(isvolume(i)) {
         list.add(std::make_shared<constant_medium>(entry, voldensity(i), 
-                                      new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2)))));
+                 std::make_shared<constant_texture>(vec3(tempvector(0),tempvector(1),tempvector(2)))));
       } else {
         list.add(entry);
       }
@@ -675,13 +678,13 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
       } 
       if(isvolume(i)) {
         list.add(std::make_shared<constant_medium>(entry, voldensity(i), 
-                                      new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2)))));
+                  std::make_shared<constant_texture>(vec3(tempvector(0),tempvector(1),tempvector(2)))));
       } else {
         list.add(entry);
       }
     } else if (shape(i) == 9) {
       std::shared_ptr<hitable> entry;
-      entry = std::make_shared<disk>(vec3(0,0,0), radius(i), tempvector(prop_len+1), tex, alpha, bump);
+      entry = std::make_shared<disk>(vec3(0,0,0), radius(i), tempvector(prop_len+1), tex, alpha[i], bump[i]);
       if(is_scaled) {
         entry = std::make_shared<scale>(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
       }
@@ -704,7 +707,7 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
       bool has_caps = type(i) != 5 && type(i) != 8;
       std::shared_ptr<hitable> entry = std::make_shared<cylinder>(radius(i), tempvector(prop_len+1), 
                                     tempvector(prop_len+2), tempvector(prop_len+3),has_caps,
-                                    tex, alpha, bump);
+                                    tex, alpha[i], bump[i]);
       if(is_scaled) {
         entry = std::make_shared<scale>(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
       }
@@ -725,7 +728,7 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
     } else if (shape(i) == 11) {
       std::shared_ptr<hitable> entry = std::make_shared<ellipsoid>(vec3(0,0,0), radius(i), 
                                      vec3(tempvector(prop_len + 1), tempvector(prop_len + 2), tempvector(prop_len + 3)),
-                                     tex, alpha, bump);
+                                     tex, alpha[i], bump[i]);
       if(is_scaled) {
         entry = std::make_shared<scale>(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
       }
@@ -744,7 +747,7 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
       }
       if(isvolume(i)) {
         list.add(std::make_shared<constant_medium>(entry, voldensity(i), 
-                                      new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2)))));
+                std::make_shared<constant_texture>(vec3(tempvector(0),tempvector(1),tempvector(2)))));
       } else {
         list.add(entry);
       }
@@ -774,12 +777,12 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
       } 
       if(isvolume(i)) {
         list.add(std::make_shared<constant_medium>(entry, voldensity(i), 
-                                      new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2)))));
+                                                   std::make_shared<constant_texture>(vec3(tempvector(0),tempvector(1),tempvector(2)))));
       } else {
         list.add(entry);
       }
     } else if (shape(i) == 13) {
-      std::shared_ptr<hitable> entry = std::make_shared<cone>(radius(i), tempvector(prop_len+1), tex, alpha, bump);
+      std::shared_ptr<hitable> entry = std::make_shared<cone>(radius(i), tempvector(prop_len+1), tex, alpha[i], bump[i]);
       if(is_scaled) {
         entry = std::make_shared<scale>(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
       }
@@ -886,7 +889,7 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
       } 
       if(isvolume(i)) {
         list.add(std::make_shared<constant_medium>(entry, voldensity(i), 
-                                      new constant_texture(vec3(tempvector(0),tempvector(1),tempvector(2)))));
+                                                   std::make_shared<constant_texture>(vec3(tempvector(0),tempvector(1),tempvector(2)))));
       } else {
         list.add(entry);
       }
@@ -1025,8 +1028,8 @@ std::shared_ptr<hitable> build_imp_sample(IntegerVector& type,
   }
   
   material *tex = nullptr;
-  alpha_texture *alpha = nullptr;
-  bump_texture *bump = nullptr;
+  std::shared_ptr<alpha_texture> alpha = nullptr;
+  std::shared_ptr<bump_texture> bump = nullptr;
 
   if(shape(i) == 1) {
     std::shared_ptr<hitable> entry = std::make_shared<sphere>(vec3(0,0,0), radius(i), tex, alpha,bump);
