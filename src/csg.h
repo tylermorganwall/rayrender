@@ -597,9 +597,9 @@ class csg: public hitable {
   public:
     csg() {}
     ~csg() {
-      delete mat_ptr;
+      // delete mat_ptr;
     }
-    csg(material *mat, std::shared_ptr<ImplicitShape> shapes) : mat_ptr(mat), shapes(shapes) {
+    csg(std::shared_ptr<material> mat, std::shared_ptr<ImplicitShape> shapes) : mat_ptr(mat), shapes(shapes) {
       aabb box;
       bool temp = shapes->bbox(0,1,box);
       if(temp) {
@@ -622,7 +622,7 @@ class csg: public hitable {
     virtual vec3 random(const vec3& o, Sampler* sampler) {
       return(vec3(0,1,0));
     }
-    material *mat_ptr;
+    std::shared_ptr<material> mat_ptr;
     std::shared_ptr<ImplicitShape> shapes;
     Float max_dist;
     vec3 last_intersection;

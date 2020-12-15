@@ -340,7 +340,7 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
   std::vector<Float* > bump_textures;
   std::vector<int* > nx_ny_nn_bump;
   //Shared material vector
-  std::vector<material* >* shared_materials = new std::vector<material* >;
+  std::vector<std::shared_ptr<material> >* shared_materials = new std::vector<std::shared_ptr<material> >;
   
   for(int i = 0; i < n; i++) {
     if(isimage(i)) {
@@ -424,14 +424,14 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
   }
   start = std::chrono::high_resolution_clock::now();
   std::shared_ptr<texture> background_texture = nullptr;
-  material *background_material = nullptr;
+  std::shared_ptr<material> background_material = nullptr;
   std::shared_ptr<hitable> background_sphere = nullptr;
   Float *background_texture_data = nullptr;
   
   if(hasbackground) {
     background_texture_data = stbi_loadf(background[0], &nx1, &ny1, &nn1, 0);
     background_texture = std::make_shared<image_texture>(background_texture_data, nx1, ny1, nn1, 1, 1, intensity_env);
-    background_material = new diffuse_light(background_texture, 1.0);
+    background_material = std::make_shared<diffuse_light>(background_texture, 1.0);
     background_sphere = std::make_shared<InfiniteAreaLight>(nx1, ny1, world_radius*2, world_center,
                                               background_texture, background_material);
     if(rotate_env != 0) {
@@ -444,13 +444,13 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
       backgroundlow = vec3(FLT_MIN,FLT_MIN,FLT_MIN);
     }
     background_texture = std::make_shared<gradient_texture>(backgroundlow, backgroundhigh, false, false);
-    background_material = new diffuse_light(background_texture, 1.0);
+    background_material = std::make_shared<diffuse_light>(background_texture, 1.0);
     background_sphere = std::make_shared<InfiniteAreaLight>(100, 100, world_radius*2, world_center,
                                               background_texture, background_material);
   } else {
     //Minimum intensity FLT_MIN so the CDF isn't NAN
     background_texture = std::make_shared<constant_texture>(vec3(FLT_MIN,FLT_MIN,FLT_MIN));
-    background_material = new diffuse_light(background_texture, 1.0);
+    background_material = std::make_shared<diffuse_light>(background_texture, 1.0);
     background_sphere = std::make_shared<InfiniteAreaLight>(100, 100, world_radius*2, world_center,
                                               background_texture, background_material);
   }
@@ -790,9 +790,9 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
       delete nx_ny_nn_bump[i];
     }
   }
-  for(size_t i = 0; i < shared_materials->size(); i++) {
-    delete shared_materials->at(i);
-  }
+  // for(size_t i = 0; i < shared_materials->size(); i++) {
+  //   delete shared_materials->at(i);
+  // }
   delete shared_materials;
   PutRNGstate();
   finish = std::chrono::high_resolution_clock::now();

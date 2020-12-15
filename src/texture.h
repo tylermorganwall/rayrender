@@ -4,6 +4,7 @@
 #include "perlin.h"
 #include "Rcpp.h"
 #include "mathinline.h"
+#include <memory>
 
 class texture {
 public: 
@@ -25,10 +26,10 @@ class checker_texture : public texture {
 public:
   checker_texture() {}
   ~checker_texture() {
-    if(even) delete even;
-    if(odd) delete odd;
+    // if(even) delete even;
+    // if(odd) delete odd;
   }
-  checker_texture(texture *t0, texture *t1, Float p) : even(t0), odd(t1), period(p) {}
+  checker_texture(std::shared_ptr<texture> t0, std::shared_ptr<texture> t1, Float p) : even(t0), odd(t1), period(p) {}
   virtual vec3 value(Float u, Float v, const vec3& p) const {
     Float invperiod = 1.0/period;
     Float sinx  = sin(invperiod*p.x()*M_PI);
@@ -43,8 +44,8 @@ public:
       return(even->value(u,v,p));
     }
   }
-  texture *even;
-  texture *odd;
+  std::shared_ptr<texture> even;
+  std::shared_ptr<texture> odd;
   Float period;
 };
 

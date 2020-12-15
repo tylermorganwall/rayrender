@@ -22,9 +22,10 @@ public:
   InfiniteAreaLight() {}
   ~InfiniteAreaLight() {
     delete distribution;
-    delete mat_ptr;
+    // delete mat_ptr;
   }
-  InfiniteAreaLight(int width, int height, Float r, vec3 center, std::shared_ptr<texture> image,  material *mat);
+  InfiniteAreaLight(int width, int height, Float r, vec3 center, 
+                    std::shared_ptr<texture> image,  std::shared_ptr<material> mat);
   virtual bool hit(const ray& r, Float tmin, Float tmax, hit_record& rec, random_gen& rng);
   virtual bool bounding_box(Float t0, Float t1, aabb& box) const;
   virtual Float pdf_value(const vec3& o, const vec3& v, random_gen& rng);
@@ -34,12 +35,12 @@ public:
   int width, height;
   Float radius;
   vec3 center;
-  material *mat_ptr;
+  std::shared_ptr<material> mat_ptr;
   Distribution2D *distribution;
 };
 
 InfiniteAreaLight::InfiniteAreaLight(int width, int height, Float r, vec3 center, 
-                                     std::shared_ptr<texture> image, material *mat)
+                                     std::shared_ptr<texture> image, std::shared_ptr<material> mat)
   : width(width), height(height), radius(r), center(center), mat_ptr(mat) {
   //Set up distribution
   std::unique_ptr<Float[]>  img(new Float[width * height]);

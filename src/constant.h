@@ -11,7 +11,7 @@ class material;
 class constant_medium : public hitable {
 public:
   constant_medium(std::shared_ptr<hitable> b, Float d, std::shared_ptr<texture> a ) : boundary(b), density(d) {
-    phase_function = new isotropic(a);
+    phase_function = std::make_shared<isotropic>(a);
   }
   virtual bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng);
   virtual bool bounding_box(Float t0, Float t1, aabb& box) const {
@@ -25,7 +25,7 @@ public:
   }
   std::shared_ptr<hitable> boundary;
   Float density;
-  material *phase_function;
+  std::shared_ptr<material> phase_function;
 };
 
 bool constant_medium::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {

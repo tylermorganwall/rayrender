@@ -112,7 +112,7 @@ static TriMesh* parse_file_with_miniply(const char* filename, bool assumeTriangl
 }
 
 
-plymesh::plymesh(std::string inputfile, std::string basedir, material *mat, 
+plymesh::plymesh(std::string inputfile, std::string basedir, std::shared_ptr<material> mat, 
             Float scale, Float shutteropen, Float shutterclose, int bvh_type, random_gen rng) {
   TriMesh* tri = parse_file_with_miniply(inputfile.c_str(), false);
   mat_ptr = mat;

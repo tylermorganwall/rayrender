@@ -1,6 +1,6 @@
 #include "mesh3d.h"
 
-mesh3d::mesh3d(Rcpp::List mesh_info, material *mat, 
+mesh3d::mesh3d(Rcpp::List mesh_info, std::shared_ptr<material> mat, 
        Float shutteropen, Float shutterclose, int bvh_type, random_gen rng) {
   Rcpp::NumericMatrix vertices = Rcpp::as<Rcpp::NumericMatrix>(mesh_info["vertices"]);
   Rcpp::IntegerMatrix indices = Rcpp::as<Rcpp::IntegerMatrix>(mesh_info["indices"]);
@@ -25,7 +25,7 @@ mesh3d::mesh3d(Rcpp::List mesh_info, material *mat,
   int number_faces = indices.nrow();
   bool has_normals = norms.nrow() > 1;
   bool has_texcoords = txcoord.nrow() > 1;
-  material* tex = nullptr;
+  std::shared_ptr<material> tex = nullptr;
   bool single_tex = colortype != 3;
   
   for (int i = 0; i < number_faces; i++) {
@@ -52,18 +52,18 @@ mesh3d::mesh3d(Rcpp::List mesh_info, material *mat,
       tx[2] = vec2(txcoord(idx[2],0),txcoord(idx[2],1));
     }
     if(colortype == 1 && has_texcoords && has_texture) {
-      tex = new lambertian(std::make_shared<triangle_image_texture>(mesh_materials,
+      tex = std::make_shared<lambertian>(std::make_shared<triangle_image_texture>(mesh_materials,
                                                       nx,ny,nn,
                                                       tx[0].x(),tx[0].y(),
                                                       tx[1].x(),tx[1].y(),
                                                       tx[2].x(),tx[2].y()));
     } else if(colortype == 2) {
-      tex = new lambertian(std::make_shared<triangle_texture>(
+      tex = std::make_shared<lambertian>(std::make_shared<triangle_texture>(
         vec3(colors(i,0),colors(i,1),colors(i,2)),
         vec3(colors(i,0),colors(i,1),colors(i,2)),
         vec3(colors(i,0),colors(i,1),colors(i,2))));
     } else if(colortype == 4) {
-      tex = new lambertian(std::make_shared<triangle_texture>(
+      tex = std::make_shared<lambertian>(std::make_shared<triangle_texture>(
         vec3(colors(idx[0],0),colors(idx[0],1),colors(idx[0],2)),
         vec3(colors(idx[1],0),colors(idx[1],1),colors(idx[1],2)),
         vec3(colors(idx[2],0),colors(idx[2],1),colors(idx[2],2))));

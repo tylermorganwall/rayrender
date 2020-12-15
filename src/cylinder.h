@@ -8,12 +8,12 @@ class cylinder: public hitable {
 public:
   cylinder() {}
   cylinder(Float r, Float len, Float phi_min, Float phi_max, bool has_caps,
-           material *mat, 
+           std::shared_ptr<material> mat, 
            std::shared_ptr<alpha_texture> alpha_mask, std::shared_ptr<bump_texture> bump_tex) : 
   radius(r), length(len), phi_min(phi_min), phi_max(phi_max), has_caps(has_caps), mat_ptr(mat), 
   alpha_mask(alpha_mask), bump_tex(bump_tex) {};
   ~cylinder() {
-    delete mat_ptr;
+    // delete mat_ptr;
     // delete alpha_mask;
     // delete bump_tex;
   }
@@ -33,7 +33,7 @@ public:
   Float phi_min;
   Float phi_max;
   bool has_caps;
-  material *mat_ptr;
+  std::shared_ptr<material> mat_ptr;
   std::shared_ptr<alpha_texture> alpha_mask;
   std::shared_ptr<bump_texture> bump_tex;
 };

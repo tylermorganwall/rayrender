@@ -8,11 +8,11 @@
 class disk : public hitable {
 public:
   disk() {}
-  disk(vec3 cen, Float r, Float i_r, material *mat, std::shared_ptr<alpha_texture> alpha_mask, 
+  disk(vec3 cen, Float r, Float i_r, std::shared_ptr<material> mat, std::shared_ptr<alpha_texture> alpha_mask, 
        std::shared_ptr<bump_texture> bump_tex) : center(cen), radius(r), 
        inner_radius(i_r), mat_ptr(mat), alpha_mask(alpha_mask), bump_tex(bump_tex) {};
   ~disk() {
-    delete mat_ptr;
+    // delete mat_ptr;
     // delete alpha_mask;
     // delete bump_tex;
   }
@@ -25,7 +25,7 @@ public:
   vec3 center;
   Float radius;
   Float inner_radius;
-  material *mat_ptr;
+  std::shared_ptr<material> mat_ptr;
   std::shared_ptr<alpha_texture> alpha_mask;
   std::shared_ptr<bump_texture> bump_tex;
 };

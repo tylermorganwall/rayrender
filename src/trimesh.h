@@ -28,13 +28,13 @@ public:
     for(auto bump : bump_materials) {
       if(bump) stbi_image_free(bump);
     }
-    delete mat_ptr;
+    // delete mat_ptr;
   }
   trimesh(std::string inputfile, std::string basedir, Float scale, 
           Float shutteropen, Float shutterclose, int bvh_type, random_gen rng);
   trimesh(std::string inputfile, std::string basedir, Float scale, Float sigma,
           Float shutteropen, Float shutterclose, int bvh_type, random_gen rng);
-  trimesh(std::string inputfile, std::string basedir, material *mat, 
+  trimesh(std::string inputfile, std::string basedir, std::shared_ptr<material> mat, 
           Float scale, Float shutteropen, Float shutterclose, int bvh_type, random_gen rng);
   trimesh(std::string inputfile, std::string basedir, float vertex_color_sigma,
           Float scale, bool is_vertex_color, Float shutteropen, Float shutterclose, int bvh_type, 
@@ -43,7 +43,7 @@ public:
   virtual bool bounding_box(Float t0, Float t1, aabb& box) const;
   
   std::shared_ptr<bvh_node> tri_mesh_bvh;
-  material *mat_ptr;
+  std::shared_ptr<material> mat_ptr;
   std::vector<Float* > obj_materials;
   std::vector<Float* > bump_materials;
   std::vector<std::shared_ptr<bump_texture> > bump_textures;

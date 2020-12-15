@@ -25,7 +25,7 @@ struct hit_record {
   vec3 dpdu, dpdv;
   vec3 bump_normal;
   bool has_bump;
-  material *mat_ptr;
+  std::shared_ptr<material> mat_ptr;
 };
 
 class hitable {
