@@ -74,7 +74,7 @@ bvh_node::bvh_node(std::vector<std::shared_ptr<hitable> >& l,
   }
   constexpr int nBuckets = 12;
   size_t n = end - start;
-
+  
   std::vector<aabb> primitiveBounds(n);
 
   l[start]->bounding_box(time0, time1, centroid_bounds);
@@ -119,6 +119,11 @@ bvh_node::bvh_node(std::vector<std::shared_ptr<hitable> >& l,
     }
   } else {
     std::sort(l.begin() + start, l.begin() + end, comparator);
+    //Handle case where all shapes share the same centroid
+    if(central_bounds.diag.squared_length() == 0 ) {
+      sah = false;
+      bvh_type = 2;
+    }
     //SAH 
     if(sah) {
       for (int i = 0; i < n; ++i) {
@@ -150,7 +155,7 @@ bvh_node::bvh_node(std::vector<std::shared_ptr<hitable> >& l,
         }
       }
       
-      int minCostSplitBucket = -1;
+      int minCostSplitBucket = 0;
       Float minCost = INFINITY;
       for (int i = 0; i < nSplits; ++i) {
         if (countBelow[i] == 0 || countAbove[i] == 0) {

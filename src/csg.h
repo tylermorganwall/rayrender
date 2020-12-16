@@ -596,9 +596,6 @@ using Mix = CSG<mixFunc, float>;
 class csg: public hitable {
   public:
     csg() {}
-    ~csg() {
-      // delete mat_ptr;
-    }
     csg(std::shared_ptr<material> mat, std::shared_ptr<ImplicitShape> shapes) : mat_ptr(mat), shapes(shapes) {
       aabb box;
       bool temp = shapes->bbox(0,1,box);
