@@ -14,10 +14,6 @@ class ellipsoid: public hitable {
       inv_axes = vec3(1.0f/axes.x(), 1.0f/axes.y(), 1.0f/axes.z());
       largest_proj_axis = axes.x() * axes.y() * axes.z() / ffmin(axes.x(), ffmin(axes.y(), axes.z()));
     };
-    ~ellipsoid() {
-      // delete mat_ptr;
-      // delete alpha_mask;
-    }
     virtual bool hit(const ray& r, Float tmin, Float tmax, hit_record& rec, random_gen& rng);
     virtual bool bounding_box(Float t0, Float t1, aabb& box) const;
     virtual Float pdf_value(const vec3& o, const vec3& v, random_gen& rng);
@@ -51,7 +47,7 @@ bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, ran
     Float v;
     if(temp1 < t_max && temp1 > t_min) {
       vec3 p1 = scaled_ray.point_at_parameter(temp1) ;
-      p1 *= 1/p1.length() * axes;; 
+      p1 *= 1/p1.length() * axes;
       vec3 normal = (p1 - center) * inv_axes;
       normal.make_unit_vector();
       get_sphere_uv(normal, u, v);
@@ -61,7 +57,7 @@ bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, ran
     }
     if(temp2 < t_max && temp2 > t_min) {
       vec3 p2 = scaled_ray.point_at_parameter(temp2) ;
-      p2 *= 1/p2.length() * axes;; 
+      p2 *= 1/p2.length() * axes;
       vec3 normal = (p2 - center) * inv_axes;
       normal.make_unit_vector();
       get_sphere_uv(normal, u, v);
@@ -77,7 +73,7 @@ bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, ran
     rec.t = temp1;
     rec.p = scaled_ray.point_at_parameter(rec.t) ;
     rec.normal = (rec.p - center);
-    rec.mat_ptr = mat_ptr;
+    rec.mat_ptr = mat_ptr.get();
     vec3 trans_normal = rec.normal *  inv_axes;
     trans_normal.make_unit_vector();
 
@@ -109,7 +105,7 @@ bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, ran
     rec.t = temp2;
     rec.p = scaled_ray.point_at_parameter(rec.t) ;
     rec.normal = (rec.p - center);
-    rec.mat_ptr = mat_ptr;
+    rec.mat_ptr = mat_ptr.get();
     vec3 trans_normal = rec.normal *  inv_axes;
     trans_normal.make_unit_vector();
     

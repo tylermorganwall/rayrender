@@ -74,7 +74,7 @@ bool InfiniteAreaLight::hit(const ray& r, Float t_min, Float t_max, hit_record& 
     vec3 v2(-r.direction().z(),r.direction().y(),r.direction().x());
     get_sphere_uv(unit_vector(v2), rec.u, rec.v);
     rec.u = 1 - rec.u;
-    rec.mat_ptr = mat_ptr;
+    rec.mat_ptr = mat_ptr.get();
     return(true);
   }
   if(temp2 < t_max && temp2 > t_min) {
@@ -85,7 +85,7 @@ bool InfiniteAreaLight::hit(const ray& r, Float t_min, Float t_max, hit_record& 
     vec3 v2(-r.direction().z(),r.direction().y(),r.direction().x());
     get_sphere_uv(unit_vector(v2), rec.u, rec.v);
     rec.u = 1 - rec.u;
-    rec.mat_ptr = mat_ptr;
+    rec.mat_ptr = mat_ptr.get();
     return(true);
   }
   return(false);

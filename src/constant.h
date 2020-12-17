@@ -50,7 +50,7 @@ bool constant_medium::hit(const ray& r, Float t_min, Float t_max, hit_record& re
         rec.t = rec1.t + hit_distance / r.direction().length();
         rec.p = r.point_at_parameter(rec.t);
         rec.normal = vec3(1,0,0);
-        rec.mat_ptr = phase_function;
+        rec.mat_ptr = phase_function.get();
         return(true);
       }
     }

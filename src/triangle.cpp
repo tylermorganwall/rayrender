@@ -90,7 +90,7 @@ bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
     rec.bump_normal.make_unit_vector();
     rec.has_bump = true;
   }
-  rec.mat_ptr = mp;
+  rec.mat_ptr = mp.get();
   return(true);
 }
 

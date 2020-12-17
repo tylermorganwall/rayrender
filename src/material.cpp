@@ -1,6 +1,105 @@
 #include "material.h"
 #include "mathinline.h"
 
+bool dielectric::scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng) {
+  srec.is_specular = true;
+  vec3 outward_normal;
+  vec3 normal = !hrec.has_bump ? hrec.normal : hrec.bump_normal;
+  
+  vec3 reflected = reflect(r_in.direction(), normal);
+  Float ni_over_nt;
+  srec.attenuation = albedo;
+  Float current_ref_idx = 1.0;
+  
+  size_t active_priority_value = priority;
+  size_t next_down_priority = 100000;
+  int current_layer = -1; //keeping track of index of current material
+  int prev_active = -1;  //keeping track of index of active material (higher priority)
+  
+  bool entering = dot(hrec.normal, r_in.direction()) < 0;
+  bool skip = false;
+  vec3 offset_p = hrec.p;
+  
+  for(size_t i = 0; i < r_in.pri_stack->size(); i++) {
+    if(r_in.pri_stack->at(i) == this) {
+      current_layer = i;
+      continue;
+    }
+    if(r_in.pri_stack->at(i)->priority < active_priority_value) {
+      active_priority_value = r_in.pri_stack->at(i)->priority;
+      skip = true;
+    }
+    if(r_in.pri_stack->at(i)->priority < next_down_priority && r_in.pri_stack->at(i) != this) {
+      prev_active = i;
+      next_down_priority = r_in.pri_stack->at(i)->priority;
+    }
+  }
+  if(entering) {
+    r_in.pri_stack->push_back(this);
+  }
+  current_ref_idx = prev_active != -1 ? r_in.pri_stack->at(prev_active)->ref_idx : 1;
+  if(skip) {
+    srec.specular_ray = ray(offset_p, r_in.direction(), r_in.pri_stack, r_in.time());
+    Float distance = (offset_p-r_in.point_at_parameter(0)).length();
+    vec3 prev_atten = r_in.pri_stack->at(prev_active)->attenuation;
+    srec.attenuation = vec3(std::exp(-distance * prev_atten.x()),
+                            std::exp(-distance * prev_atten.y()),
+                            std::exp(-distance * prev_atten.z()));
+    if(!entering && current_layer != -1) {
+      r_in.pri_stack->erase(r_in.pri_stack->begin() + static_cast<size_t>(current_layer));
+    }
+    return(true);
+  }
+  
+  Float reflect_prob;
+  if(!entering) {
+    outward_normal = -normal;
+    ni_over_nt = ref_idx / current_ref_idx ;
+  } else {
+    outward_normal = normal;
+    ni_over_nt = current_ref_idx / ref_idx;
+  }
+  vec3 unit_direction = unit_vector(r_in.direction());
+  Float cos_theta = ffmin(dot(-unit_direction, outward_normal), (Float)1.0);
+  Float sin_theta = sqrt(1.0 - cos_theta*cos_theta);
+  if(ni_over_nt * sin_theta <= 1.0 ) {
+    reflect_prob = schlick(cos_theta, ref_idx, current_ref_idx);
+    reflect_prob = ni_over_nt == 1 ? 0 : reflect_prob;
+  } else {
+    reflect_prob = 1.0;
+  }
+  if(!entering) {
+    Float distance = (offset_p-r_in.point_at_parameter(0)).length();
+    srec.attenuation = vec3(std::exp(-distance * attenuation.x()),
+                            std::exp(-distance * attenuation.y()),
+                            std::exp(-distance * attenuation.z()));
+  } else {
+    if(prev_active != -1) {
+      Float distance = (offset_p-r_in.point_at_parameter(0)).length();
+      vec3 prev_atten = r_in.pri_stack->at(prev_active)->attenuation;
+      
+      srec.attenuation = albedo * vec3(std::exp(-distance * prev_atten.x()),
+                                       std::exp(-distance * prev_atten.y()),
+                                       std::exp(-distance * prev_atten.z()));
+    } else {
+      srec.attenuation = albedo;
+    }
+  }
+  if(rng.unif_rand() < reflect_prob) {
+    if(entering) {
+      r_in.pri_stack->pop_back();
+    }
+    srec.specular_ray = ray(offset_p, reflected, r_in.pri_stack, r_in.time());
+  } else {
+    if(!entering && current_layer != -1) {
+      r_in.pri_stack->erase(r_in.pri_stack->begin() + current_layer);
+    }
+    vec3 refracted = refract(unit_direction, outward_normal, ni_over_nt);
+    srec.specular_ray = ray(offset_p, refracted, r_in.pri_stack, r_in.time());
+  }
+  return(true);
+}
+
 std::array<Float, pMax + 1> hair::ComputeApPdf(Float cosThetaO, Float h) const {
   // Compute array of $A_p$ values for _cosThetaO_
   Float sinThetaO = SafeSqrt(1 - cosThetaO * cosThetaO);

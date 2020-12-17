@@ -1,12 +1,14 @@
 #include "csg.h"
 
 bool csg::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
-  Float threshold = 10e-6;
+  Float threshold = 0.001;
+  
   Float delta = 10e-5 * max_dist/100; 
   Float t = 0; 
   bool first = true;
   vec3 dir = unit_vector(r.direction());
   Float max_t = t_max * r.direction().length();
+
   
   while (t < max_t) { 
     Float minDistance = INFINITY; 
@@ -16,8 +18,8 @@ bool csg::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_ge
     float d =  std::fabs(shapes->getDistance(from)); 
     
     //Need to deal with refraction, often initial distance is too close to surface, so we offset
-    if(first &&  t < threshold) {
-      t += 100 * threshold; //Hard coded threshold, not great
+    if(first && d < threshold) {
+      t += 0.01; //Hard coded offset, not great
       first = false;
       continue;
     } 
@@ -25,7 +27,8 @@ bool csg::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_ge
     if (d < minDistance) {
       minDistance = d;
     }
-    if (minDistance <= threshold * t) { 
+    first = false;
+    if (minDistance <= threshold) { 
       Float tval = t / r.direction().length();
       if(tval > t_min && tval < t_max) {
         rec.normal = vec3( 
@@ -44,7 +47,7 @@ bool csg::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_ge
         rec.v = 0.5;
         rec.dpdu = 0.5;
         rec.dpdv = 0.5;
-        rec.mat_ptr = mat_ptr;
+        rec.mat_ptr = mat_ptr.get();
         rec.has_bump = false;
         rec.bump_normal =  rec.normal;
         return(true);

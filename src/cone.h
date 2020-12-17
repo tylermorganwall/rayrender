@@ -129,7 +129,7 @@ bool cone::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_g
     //   rec.bump_normal = -rec.bump_normal;
     // }
 
-    rec.mat_ptr = mat_ptr;
+    rec.mat_ptr = mat_ptr.get();
     return(true);
   }
   // if((t_cyl < temp2 || !second_is_hit) && t_cyl > t_min && t_cyl < t_max && radHit2 <= radius * radius && base_is_hit) {
@@ -143,7 +143,7 @@ bool cone::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_g
     rec.p = p;
     rec.normal = vec3(0,-1,0);
     rec.t = t_cyl;
-    rec.mat_ptr = mat_ptr;
+    rec.mat_ptr = mat_ptr.get();
     rec.u = u;
     rec.v = v;
     rec.dpdu = vec3(1, 0, 0);
@@ -187,7 +187,7 @@ bool cone::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_g
     //   rec.normal = -rec.normal;
     //   rec.bump_normal = -rec.bump_normal;
     // }
-    rec.mat_ptr = mat_ptr;
+    rec.mat_ptr = mat_ptr.get();
     return(true);
   }
   return(false);

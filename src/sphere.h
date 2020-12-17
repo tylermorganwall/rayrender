@@ -87,7 +87,7 @@ bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random
       rec.bump_normal.make_unit_vector();
     }
     
-    rec.mat_ptr = mat_ptr;
+    rec.mat_ptr = mat_ptr.get();
     return(true);
   }
   if(temp2 < t_max && temp2 > t_min && second_is_hit) {
@@ -117,7 +117,7 @@ bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random
       rec.normal = -rec.normal;
       rec.bump_normal = -rec.bump_normal;
     }
-    rec.mat_ptr = mat_ptr;
+    rec.mat_ptr = mat_ptr.get();
     return(true);
   }
   return(false);
@@ -241,7 +241,7 @@ bool moving_sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec,
     }
     
     get_sphere_uv(rec.normal, rec.u, rec.v);
-    rec.mat_ptr = mat_ptr;
+    rec.mat_ptr = mat_ptr.get();
     return(true);
   }
   if(temp2 < t_max && temp2 > t_min) {
@@ -272,7 +272,7 @@ bool moving_sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec,
       rec.normal = -rec.normal;
       rec.bump_normal = -rec.bump_normal;
     }
-    rec.mat_ptr = mat_ptr;
+    rec.mat_ptr = mat_ptr.get();
     return(true);
   }
   return(false);

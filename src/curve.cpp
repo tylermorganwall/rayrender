@@ -306,7 +306,7 @@ bool curve::recursiveIntersect(const ray& r, Float tmin, Float tmax, hit_record&
     
     rec.u = u;
     rec.v = v;
-    rec.mat_ptr = mat_ptr;
+    rec.mat_ptr = mat_ptr.get();
     rec.has_bump = false;
     rec.p = r.point_at_parameter(rec.t) + rec.normal * hitWidth * 0.5 * offset_scale;
     return(true);

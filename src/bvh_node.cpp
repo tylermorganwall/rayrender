@@ -31,16 +31,6 @@ bool bvh_node::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
 #endif
 }
 
-// bool bvh_node::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng)  {
-//   if (!box.hit(r, t_min, t_max, rng))
-//     return false;
-//   
-//   bool hit_left = left->hit(r, t_min, t_max, rec, rng);
-//   bool hit_right = right->hit(r, t_min, hit_left ? rec.t : t_max, rec, rng);
-//   
-//   return hit_left || hit_right;
-// }
-
 inline bool box_compare(const std::shared_ptr<hitable> a, const std::shared_ptr<hitable> b, int axis) {
   aabb box_a;
   aabb box_b;

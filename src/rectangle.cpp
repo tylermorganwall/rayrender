@@ -39,7 +39,7 @@ bool xy_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
     rec.bump_normal.make_unit_vector();
   }
   
-  rec.mat_ptr = mp;
+  rec.mat_ptr = mp.get();
   rec.p = r.point_at_parameter(t);
   rec.p.e[2] = k;
   
@@ -85,7 +85,7 @@ bool xz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
     rec.bump_normal.make_unit_vector();
   }
   
-  rec.mat_ptr = mp;
+  rec.mat_ptr = mp.get();
   rec.p = r.point_at_parameter(t);
   rec.p.e[1] = k;
   
@@ -130,7 +130,7 @@ bool yz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
     rec.bump_normal.make_unit_vector();
   }
   
-  rec.mat_ptr = mp;
+  rec.mat_ptr = mp.get();
   rec.p = r.point_at_parameter(t);
   rec.p.e[0] = k;
   

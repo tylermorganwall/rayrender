@@ -112,7 +112,7 @@ bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
       rec.bump_normal *= dot(temppoint, dir) > 0 ? -1 : 1;
       
     }
-    rec.mat_ptr = mat_ptr;
+    rec.mat_ptr = mat_ptr.get();
     return(true);
   }
   Float t_cyl = -(r.origin().y()-length/2) / r.direction().y();
@@ -139,7 +139,7 @@ bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
     rec.p = p;
     rec.normal = vec3(0,1,0);
     rec.t = t_cyl;
-    rec.mat_ptr = mat_ptr;
+    rec.mat_ptr = mat_ptr.get();
     rec.u = u;
     rec.v = v;
     rec.dpdu = vec3(1, 0, 0);
@@ -174,7 +174,7 @@ bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
     rec.p = p;
     rec.normal = vec3(0,-1,0);
     rec.t = t_cyl2;
-    rec.mat_ptr = mat_ptr;
+    rec.mat_ptr = mat_ptr.get();
     rec.u = u;
     rec.v = v;
     rec.dpdu = vec3(1, 0, 0);
@@ -214,7 +214,7 @@ bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
       rec.bump_normal.make_unit_vector();
     }
     
-    rec.mat_ptr = mat_ptr;
+    rec.mat_ptr = mat_ptr.get();
     return(true);
   }
   return(false);

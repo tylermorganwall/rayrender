@@ -354,8 +354,6 @@ class csg_elongate : public ImplicitShape {
     } 
     virtual bool bbox(Float t0, Float t1, aabb& box) const {
       shape->bbox(t0,t1,box);
-      box.bounds[0] += center;
-      box.bounds[1] += center;
       box = Expand(box, elongate);
       return(true);
     }
@@ -377,8 +375,6 @@ class csg_elongate_robust : public ImplicitShape {
     } 
     virtual bool bbox(Float t0, Float t1, aabb& box) const {
       shape->bbox(t0,t1,box);
-      box.bounds[0] += center;
-      box.bounds[1] += center;
       box = Expand(box, elongate);
       return(true);
     }
