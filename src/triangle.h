@@ -8,13 +8,6 @@
 class triangle : public hitable {
 public:
   triangle() {}
-  ~triangle() {
-    if(single) {
-      // if(mp) delete mp;
-      // if(alpha_mask) delete alpha_mask;
-      // if(bump_tex) delete bump_tex;
-    }
-  }
   triangle(vec3 _a, vec3 _b, vec3 _c, bool _single, std::shared_ptr<material> mat, 
            std::shared_ptr<alpha_texture> alpha_mask, std::shared_ptr<bump_texture> bump_tex) :
   a(_a), b(_b), c(_c), single(_single), mp(mat), alpha_mask(alpha_mask), bump_tex(bump_tex) {

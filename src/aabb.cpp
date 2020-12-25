@@ -1,9 +1,15 @@
 #include "aabb.h"
 
 Float aabb::surface_area() {
-  return(bounds[0].x() < bounds[1].x() ? 
-           2*(diag.x() * diag.y() + diag.x() * diag.z() + diag.y()*diag.z()):
-           0);
+  return(min().x() <= max().x() ? 
+         2*(diag.x() * diag.y() + diag.x() * diag.z() + diag.y()*diag.z()):
+         10E20);
+}
+
+Float aabb::Volume() {
+  return(min().x() <= max().x() ? 
+         diag.x() * diag.y() * diag.z():
+         10E20);
 }
 
 bool aabb::hit(const ray &r, Float tmin, Float tmax, random_gen& rng) {
@@ -21,8 +27,15 @@ bool aabb::hit(const ray &r, Float tmin, Float tmax, random_gen& rng) {
 
 const vec3 aabb::offset(const vec3 p) {
   vec3 o = p - min();
-  if (max().x() > min().x()) o.e[0] /= max().x() - min().x();
-  if (max().y() > min().y()) o.e[1] /= max().y() - min().y();
-  if (max().z() > min().z()) o.e[2] /= max().z() - min().z();
-  return o;
+  if (max().x() > min().x()) {
+    o.e[0] /= (max().x() - min().x());
+  }
+  if (max().y() > min().y()) {
+    o.e[1] /= (max().y() - min().y());
+  }
+  if (max().z() > min().z()) {
+    o.e[2] /= (max().z() - min().z());
+  }
+  return(o);
 }
+

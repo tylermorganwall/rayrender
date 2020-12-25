@@ -28,7 +28,6 @@ public:
     for(auto bump : bump_materials) {
       if(bump) stbi_image_free(bump);
     }
-    // delete mat_ptr;
   }
   trimesh(std::string inputfile, std::string basedir, Float scale, 
           Float shutteropen, Float shutterclose, int bvh_type, random_gen rng);

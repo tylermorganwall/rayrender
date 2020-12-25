@@ -13,7 +13,7 @@ class aabb {
       bounds[0] = vec3(maxNum, maxNum, maxNum);
       bounds[1] = vec3(minNum, minNum, minNum);
       centroid = vec3(0,0,0);
-      diag = bounds[1] - bounds[0];
+      diag = vec3(0);
     }
     aabb(vec3 a) {
       bounds[0] = a;
@@ -26,14 +26,12 @@ class aabb {
       bounds[1] = vec3(fmax(a.x(), b.x()), fmax(a.y(), b.y()),fmax(a.z(), b.z()));
       centroid = (a + b)/2;
       diag = b - a;
-      // init = true;
     }
     aabb(const aabb &box) {
       bounds[0] = box.bounds[0]; 
       bounds[1] = box.bounds[1];
       centroid = box.centroid;
       diag = box.diag;
-      // init = box.init;
     } 
     
     vec3 min() const {return(bounds[0]);}
@@ -42,11 +40,12 @@ class aabb {
     bool hit(const ray& r, Float tmin, Float tmax, random_gen& rng);
     const vec3 offset(const vec3 o);
     Float surface_area();
+    Float Volume();
+    
     void Expand(Float delta);
     vec3 bounds[2];
     vec3 centroid;
     vec3 diag;
-    // bool init;
 };
 
 inline aabb surrounding_box(aabb box0, aabb box1) {

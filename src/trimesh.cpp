@@ -254,7 +254,6 @@ trimesh::trimesh(std::string inputfile, std::string basedir, Float scale, Float 
     obj_materials.reserve(materials.size()+1);
     bump_materials.reserve(materials.size()+1);
     
-    // std::vector<Float* > obj_materials(materials.size()+1);
     std::vector<vec3 > diffuse_materials(materials.size()+1);
     std::vector<vec3 > specular_materials(materials.size()+1);
     std::vector<Float > ior_materials(materials.size()+1);

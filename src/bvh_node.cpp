@@ -1,5 +1,13 @@
 #include "bvh_node.h"
 
+
+#ifdef DEBUGBBOX
+#include <iostream>
+#include <fstream>
+using namespace std;
+#endif
+
+
 bool bvh_node::bounding_box(Float t0, Float t1, aabb& b) const {
   b = box;
   return(true);
@@ -37,7 +45,7 @@ inline bool box_compare(const std::shared_ptr<hitable> a, const std::shared_ptr<
   
   if (!a->bounding_box(0,0, box_a) || !b->bounding_box(0,0, box_b)){}
 
-  return(box_a.min().e[axis] < box_b.min().e[axis]);
+  return(box_a.centroid.e[axis] < box_b.centroid.e[axis]);
 }
 
 
@@ -53,9 +61,19 @@ bool box_z_compare (const std::shared_ptr<hitable> a, const std::shared_ptr<hita
   return box_compare(a, b, 2);
 }
 
+#ifdef DEBUGBBOX
 bvh_node::bvh_node(std::vector<std::shared_ptr<hitable> >& l, 
                    size_t start, size_t end,
-                   Float time0, Float time1, int bvh_type, random_gen &rng) {
+                   Float time0, Float time1, int bvh_type, int depth, random_gen &rng) {
+  if(start == end) {
+    throw std::runtime_error("start node must not equal end node");
+  }
+#endif
+#ifndef DEBUGBBOX
+  bvh_node::bvh_node(std::vector<std::shared_ptr<hitable> >& l, 
+                     size_t start, size_t end,
+                     Float time0, Float time1, int bvh_type, random_gen &rng) {
+#endif
   aabb centroid_bounds;
   if(bvh_type == 1) {
     sah = true;
@@ -65,17 +83,13 @@ bvh_node::bvh_node(std::vector<std::shared_ptr<hitable> >& l,
   constexpr int nBuckets = 12;
   size_t n = end - start;
   
-  std::vector<aabb> primitiveBounds(n);
+  //Don't need sorted, just used to count bins and generate bin bounds
+  //Contains AABB of each primitve
+  std::vector<aabb> primitiveBounds(n); 
 
   l[start]->bounding_box(time0, time1, centroid_bounds);
-  aabb central_bounds(centroid_bounds.centroid);
-  
-  struct BucketInfo {
-    int count = 0;
-    aabb bounds;
-  };
-  
-  BucketInfo buckets[nBuckets];
+  aabb central_bounds;
+
 
   for (int i = start; i < end; ++i) {
     aabb tempbox;
@@ -87,6 +101,18 @@ bvh_node::bvh_node(std::vector<std::shared_ptr<hitable> >& l,
   }
   
   vec3 centroid_bounds_values = central_bounds.max() - central_bounds.min();
+  
+#ifdef DEBUGBBOX
+  if(centroid_bounds_values.x() < 0 || centroid_bounds_values.y() < 0 || centroid_bounds_values.z() < 0) {
+    throw std::runtime_error("centroid extent less than 0");
+  }
+      ofstream myfile;
+      myfile.open("bbox.txt", ios::app | ios::out);
+      myfile << central_bounds.min() << "," << central_bounds.max() << 
+        "," << central_bounds.Volume() << "," << n << "," << depth << "\n";
+      myfile.close();
+  #endif
+
   int axis = centroid_bounds_values.x() > centroid_bounds_values.y() ? 0 : 1;
   if(axis == 0) {
     axis = centroid_bounds_values.x() > centroid_bounds_values.z() ? 0 : 2;
@@ -96,7 +122,7 @@ bvh_node::bvh_node(std::vector<std::shared_ptr<hitable> >& l,
   auto comparator = (axis == 0) ? box_x_compare
     : (axis == 1) ? box_y_compare
     : box_z_compare;
-  
+
   if (n == 1) {
     left = right = l[start];
   } else if (n == 2) {
@@ -110,17 +136,35 @@ bvh_node::bvh_node(std::vector<std::shared_ptr<hitable> >& l,
   } else {
     std::sort(l.begin() + start, l.begin() + end, comparator);
     //Handle case where all shapes share the same centroid
-    if(central_bounds.diag.squared_length() == 0 ) {
+    if(central_bounds.diag.e[axis] == 0 ) {
+      sah = false;
+      bvh_type = 2;
+    }
+    
+    if(n <= 4) {
       sah = false;
       bvh_type = 2;
     }
     //SAH 
     if(sah) {
+      struct BucketInfo {
+        int count = 0;
+        aabb bounds;
+      };
+      
+      BucketInfo buckets[nBuckets];
+      
+      //Count number of objects in each bin and calculate bounding box for each bin.
       for (int i = 0; i < n; ++i) {
         int b = nBuckets * central_bounds.offset(primitiveBounds[i].centroid)[axis];
         if (b == nBuckets) {
           b = nBuckets - 1;
         }
+#ifdef DEBUGBBOX
+        if(b < 0 || b > nBuckets - 1) {
+          throw std::runtime_error("SAH bucket out of bounds");
+        }
+#endif
         buckets[b].count++;
         buckets[b].bounds = surrounding_box(buckets[b].bounds, primitiveBounds[i]);
       }
@@ -131,28 +175,28 @@ bvh_node::bvh_node(std::vector<std::shared_ptr<hitable> >& l,
       boundsBelow[0] = buckets[0].bounds;
       for (int i = 1; i < nSplits; ++i) {
         countBelow[i] = countBelow[i - 1] + buckets[i].count;
-        if(buckets[i].count != 0) {
-          boundsBelow[i] = surrounding_box(boundsBelow[i - 1], buckets[i].bounds);
-        }
+        boundsBelow[i] = surrounding_box(boundsBelow[i - 1], buckets[i].bounds);
       }
       
       countAbove[nSplits - 1] = buckets[nBuckets - 1].count;
       boundsAbove[nSplits - 1] = buckets[nBuckets - 1].bounds;
       for (int i = nSplits - 2; i >= 0; --i) {
         countAbove[i] = countAbove[i + 1] + buckets[i + 1].count;
-        if(buckets[i + 1].count != 0) {
-          boundsAbove[i] = surrounding_box(boundsAbove[i + 1], buckets[i + 1].bounds);
-        }
+        boundsAbove[i] = surrounding_box(boundsAbove[i + 1], buckets[i + 1].bounds);
       }
-      
-      int minCostSplitBucket = 0;
+
+      int minCostSplitBucket = -1;
       Float minCost = INFINITY;
+      Float costs[nBuckets];
+      
       for (int i = 0; i < nSplits; ++i) {
         if (countBelow[i] == 0 || countAbove[i] == 0) {
           continue;
         }
         Float cost = (countBelow[i] * boundsBelow[i].surface_area() +
-          countAbove[i] * boundsAbove[i].surface_area()) / centroid_bounds.surface_area();
+          countAbove[i] * boundsAbove[i].surface_area());
+        costs[i] = cost;
+        
         if (cost < minCost) {
           minCost = cost;
           minCostSplitBucket = i;
@@ -160,12 +204,27 @@ bvh_node::bvh_node(std::vector<std::shared_ptr<hitable> >& l,
       }
       int halfCount = countBelow[minCostSplitBucket];
       //End SAH
+#ifdef DEBUGBBOX
+      depth++;
+      left = std::make_shared<bvh_node>(l, start, start + halfCount, time0, time1, bvh_type, depth, rng);
+      right = std::make_shared<bvh_node>(l, start + halfCount, end, time0, time1, bvh_type, depth, rng);
+#endif
+#ifndef DEBUGBBOX
       left = std::make_shared<bvh_node>(l, start, start + halfCount, time0, time1, bvh_type, rng);
       right = std::make_shared<bvh_node>(l, start + halfCount, end, time0, time1, bvh_type, rng);
+#endif
     } else {
+#ifdef DEBUGBBOX
+      depth++;
+      auto mid = start + n/2;
+      left = std::make_shared<bvh_node>(l, start, mid, time0, time1, bvh_type, depth, rng);
+      right = std::make_shared<bvh_node>(l, mid, end, time0, time1, bvh_type,  depth, rng);
+#endif
+#ifndef DEBUGBBOX
       auto mid = start + n/2;
       left = std::make_shared<bvh_node>(l, start, mid, time0, time1, bvh_type, rng);
       right = std::make_shared<bvh_node>(l, mid, end, time0, time1, bvh_type, rng);
+#endif
     }
   }
 
