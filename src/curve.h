@@ -27,13 +27,17 @@ class curve: public hitable {
           const std::shared_ptr<CurveCommon> common, std::shared_ptr<material> mat) : 
       mat_ptr(mat), common(common), uMin(uMin), uMax(uMax) {};
     virtual bool hit(const ray& r, Float tmin, Float tmax, hit_record& rec, random_gen& rng);
+    virtual bool hit(const ray& r, Float tmin, Float tmax, hit_record& rec, Sampler* sampler);
+    
     virtual bool bounding_box(Float t0, Float t1, aabb& box) const;
-    virtual Float pdf_value(const vec3& o, const vec3& v, random_gen& rng);
-    virtual vec3 random(const vec3& o, random_gen& rng);
-    virtual vec3 random(const vec3& o, Sampler* sampler);
+    virtual Float pdf_value(const vec3& o, const vec3& v, random_gen& rng, Float time = 0);
+    virtual Float pdf_value(const vec3& o, const vec3& v, Sampler* sampler, Float time = 0);
+    
+    virtual vec3 random(const vec3& o, random_gen& rng, Float time = 0);
+    virtual vec3 random(const vec3& o, Sampler* sampler, Float time = 0);
     std::shared_ptr<material> mat_ptr;
   private:
-    bool recursiveIntersect(const ray& r, Float tmin, Float tmax, hit_record& rec, random_gen& rng,
+    bool recursiveIntersect(const ray& r, Float tmin, Float tmax, hit_record& rec,
                             const vec3 cp[4], Float u0, Float u1, int depth, onb& uvw) const;
 
     const std::shared_ptr<CurveCommon> common;

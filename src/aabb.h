@@ -4,6 +4,7 @@
 #include "ray.h"
 #include "rng.h"
 #include "mathinline.h"
+#include "sampler.h"
 
 class aabb {
   public: 
@@ -38,6 +39,8 @@ class aabb {
     vec3 max() const {return(bounds[1]);}
     
     bool hit(const ray& r, Float tmin, Float tmax, random_gen& rng);
+    bool hit(const ray& r, Float tmin, Float tmax, Sampler* sampler);
+    
     const vec3 offset(const vec3 o);
     Float surface_area();
     Float Volume();

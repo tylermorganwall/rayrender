@@ -90,6 +90,9 @@ class material {
     virtual bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng) {
       return(false);
     };
+    virtual bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler) {
+      return(false);
+    };
     virtual vec3 f(const ray& r_in, const hit_record& rec, const ray& scattered) const {
       return(vec3(0,0,0));
     }
@@ -131,6 +134,12 @@ class lambertian : public material {
       srec.pdf_ptr = new cosine_pdf(hrec.normal);
       return(true);
     }
+    bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler) {
+      srec.is_specular = false;
+      srec.attenuation = albedo->value(hrec.u, hrec.v, hrec.p);
+      srec.pdf_ptr = new cosine_pdf(hrec.normal);
+      return(true);
+    }
     vec3 get_albedo(const ray& r_in, const hit_record& rec) const {
       return(albedo->value(rec.u, rec.v, rec.p));
     }
@@ -159,6 +168,22 @@ class metal : public material {
       srec.pdf_ptr = 0;
       return(true);
     }
+    virtual bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler) {
+      vec3 normal = !hrec.has_bump ? hrec.normal : hrec.bump_normal;
+      vec3 wi = -unit_vector(r_in.direction());
+      vec3 reflected = Reflect(wi,unit_vector(normal));
+      Float cosine = AbsDot(unit_vector(reflected), unit_vector(normal));
+      if(cosine < 0) {
+        cosine = 0;
+      }
+      vec3 offset_p = offset_ray(hrec.p-r_in.A, hrec.normal) + r_in.A;
+      
+      srec.specular_ray = ray(offset_p, reflected + fuzz * rand_to_unit(sampler->Get2D()), r_in.pri_stack, r_in.time());
+      srec.attenuation = albedo->value(hrec.u, hrec.v, hrec.p) * FrCond(cosine, eta, k);
+      srec.is_specular = true;
+      srec.pdf_ptr = 0;
+      return(true);
+    }
     vec3 get_albedo(const ray& r_in, const hit_record& rec) const {
       return(albedo->value(rec.u, rec.v, rec.p));
     }
@@ -173,6 +198,8 @@ class dielectric : public material {
     dielectric(const vec3& a, Float ri, const vec3& atten, int priority2, random_gen& rng) : ref_idx(ri), 
                albedo(a), attenuation(atten), priority(priority2), rng(rng) {};
     bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng);
+    bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler);
+    
     vec3 get_albedo(const ray& r_in, const hit_record& rec) const {
       return(vec3(1,1,1));
     }
@@ -190,6 +217,9 @@ public:
     // if(emit) delete emit;
   }
   virtual bool scatter(const ray& r_in, const hit_record& rec, scatter_record& srec, random_gen& rng) {
+    return(false);
+  }
+  virtual bool scatter(const ray& r_in, const hit_record& rec, scatter_record& srec, Sampler* sampler) {
     return(false);
   }
   virtual vec3 emitted(const ray& r_in, const hit_record& rec, Float u, Float v, const vec3& p) const {
@@ -214,6 +244,9 @@ class spot_light : public material {
       // if(emit) delete emit;
     }
     virtual bool scatter(const ray& r_in, const hit_record& rec, scatter_record& srec, random_gen& rng) {
+      return(false);
+    }
+    virtual bool scatter(const ray& r_in, const hit_record& rec, scatter_record& srec, Sampler* sampler) {
       return(false);
     }
     virtual vec3 emitted(const ray& r_in, const hit_record& rec, Float u, Float v, const vec3& p) const {
@@ -245,12 +278,16 @@ class spot_light : public material {
 class isotropic : public material {
 public:
   isotropic(std::shared_ptr<texture> a) : albedo(a) {}
-  ~isotropic() {
-    // if(albedo) delete albedo;
-  }
+  ~isotropic() {}
   virtual bool scatter(const ray& r_in, const hit_record& rec, scatter_record& srec, random_gen& rng) {
     srec.is_specular = true;
     srec.specular_ray = ray(rec.p, rng.random_in_unit_sphere(), r_in.pri_stack);
+    srec.attenuation = albedo->value(rec.u,rec.v,rec.p);
+    return(true);
+  }
+  virtual bool scatter(const ray& r_in, const hit_record& rec, scatter_record& srec, Sampler* sampler) {
+    srec.is_specular = true;
+    srec.specular_ray = ray(rec.p, rand_to_sphere(1, 1, sampler->Get2D()), r_in.pri_stack);
     srec.attenuation = albedo->value(rec.u,rec.v,rec.p);
     return(true);
   }
@@ -274,6 +311,12 @@ public:
     // if(albedo) delete albedo;
   }
   bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng) {
+    srec.is_specular = false;
+    srec.attenuation = albedo->value(hrec.u, hrec.v, hrec.p);
+    srec.pdf_ptr = new cosine_pdf(hrec.normal);
+    return(true);
+  }
+  bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler) {
     srec.is_specular = false;
     srec.attenuation = albedo->value(hrec.u, hrec.v, hrec.p);
     srec.pdf_ptr = new cosine_pdf(hrec.normal);
@@ -343,6 +386,17 @@ public:
     }
     return(true);
   }
+  
+  bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler) {
+    srec.is_specular = false;
+    srec.attenuation = albedo->value(hrec.u, hrec.v, hrec.p);
+    if(!hrec.has_bump) {
+      srec.pdf_ptr = new micro_pdf(hrec.normal, r_in.direction(), distribution);
+    } else {
+      srec.pdf_ptr = new micro_pdf(hrec.bump_normal, r_in.direction(), distribution);
+    }
+    return(true);
+  }
 
   vec3 f(const ray& r_in, const hit_record& rec, const ray& scattered) const {
     onb uvw;
@@ -389,6 +443,12 @@ public:
   }
   
   bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng) {
+    srec.is_specular = false;
+    srec.attenuation = albedo->value(hrec.u, hrec.v, hrec.p);
+    srec.pdf_ptr = new glossy_pdf(hrec.normal, r_in.direction(), distribution);
+    return(true);
+  }
+  bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler) {
     srec.is_specular = false;
     srec.attenuation = albedo->value(hrec.u, hrec.v, hrec.p);
     srec.pdf_ptr = new glossy_pdf(hrec.normal, r_in.direction(), distribution);
@@ -468,6 +528,8 @@ class hair : public material {
     }
     ~hair() {}
     bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng);
+    bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler);
+    
     vec3 f(const ray& r_in, const hit_record& rec, const ray& scattered) const;
     
     vec3 sigma_a;

@@ -166,7 +166,7 @@
 #'}
 render_scene = function(scene, width = 400, height = 400, fov = 20, 
                         samples = 100, min_variance = 0.00005, min_adaptive_size = 8,
-                        sample_method = "random",
+                        sample_method = "sobol",
                         max_depth = 50, roulette_active_depth = 10,
                         ambient_light = FALSE, 
                         lookfrom = c(0,1,10), lookat = c(0,0,0), camera_up = c(0,1,0), 
@@ -470,7 +470,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
     cat(sprintf("%0.3f seconds \n",buildingtime[3]))
   }
   sample_method = unlist(lapply(tolower(sample_method),switch,
-                                "random" = 0,"stratified" = 1, 0))
+                                "random" = 0,"stratified" = 1, "sobol" = 2, 0))
   
   camera_info = list()
   strat_dim = c()

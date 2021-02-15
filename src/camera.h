@@ -43,8 +43,7 @@ class ortho_camera {
 public:
   ortho_camera(vec3 lookfrom, vec3 lookat, vec3 vup, 
                Float cam_width, Float cam_height, 
-               Float t0, Float t1, random_gen& rng) {
-    rng2 = rng;
+               Float t0, Float t1) {
     time0 = t0;
     time1 = t1;
     origin = lookfrom;
@@ -55,8 +54,8 @@ public:
     horizontal = cam_width * u;
     vertical = cam_height * v;
   }
-  ray get_ray(Float s, Float t) {
-    Float time = time0 + rng2.unif_rand() * (time1 - time0);
+  ray get_ray(Float s, Float t, Float u) {
+    Float time = time0 + u * (time1 - time0);
     return(ray(lower_left_corner + s * horizontal + t * vertical, -w, time)); 
   }
   
@@ -66,7 +65,6 @@ public:
   vec3 vertical;
   vec3 u, v, w;
   Float time0, time1;
-  random_gen rng2;
 };
   
 #endif

@@ -53,8 +53,10 @@ void StratifiedSample2D(vec2 *samp, int nx, int ny, random_gen &rng,
 
 Sampler::~Sampler() {};
 
-void Sampler::StartPixel(const vec2 &p) {
-  currentPixel = p;
+void Sampler::StartPixel(unsigned int i, unsigned int j) {
+  currentPixelx = i;
+  currentPixely = j;
+  
   currentPixelSampleIndex = 0;
   array1DOffset = array2DOffset = 0;
 }
@@ -135,7 +137,7 @@ std::unique_ptr<Sampler> StratifiedSampler::Clone(int seed) {
   return(std::unique_ptr<Sampler>(ss));
 }
 
-void StratifiedSampler::StartPixel(const vec2 &p) {
+void StratifiedSampler::StartPixel(unsigned int i, unsigned int j) {
   // Generate single stratified samples for the pixel
   for (size_t i = 0; i < samples1D.size(); ++i) {
     StratifiedSample1D(&samples1D[i][0], xPixelSamples * yPixelSamples, rng, jitterSamples);
@@ -160,11 +162,89 @@ void StratifiedSampler::StartPixel(const vec2 &p) {
       LatinHypercube(&sampleArray2D[i][j * count].e[0], count, 2, rng);
     }
   }
-  PixelSampler::StartPixel(p);
+  PixelSampler::StartPixel(i,j);
 }
 
 std::unique_ptr<Sampler> RandomSampler::Clone(int seed) {
   RandomSampler *ss = new RandomSampler(*this);
+  ss->rng.SetSequence(seed);
+  return(std::unique_ptr<Sampler>(ss));
+}
+
+
+Float RandomSampler::Get1D() {
+  return(rng.unif_rand());
+}
+vec2 RandomSampler::Get2D() {
+  return(vec2(rng.unif_rand(), rng.unif_rand()));
+}
+bool RandomSampler::StartNextSample() {
+  return(true);
+}
+
+bool RandomSampler::SetSampleNumber(size_t) {
+  return(true);
+}
+
+
+static inline float sobol_calc_single(unsigned long long  i, unsigned int dim, unsigned int scramble) {
+  return(spacefillr::sobol_owen_fast_single(i, dim, scramble));
+}
+
+static inline vec2 sobol_calc_double(unsigned long long  i, unsigned int dim, unsigned int scramble) {
+  return(vec2(spacefillr::sobol_owen_fast_single(i, dim, scramble),
+              spacefillr::sobol_owen_fast_single(i, dim+1, scramble)));
+}
+
+SobolSampler::SobolSampler(unsigned int xPixelSamples, unsigned int yPixelSamples,
+                           unsigned int maxSamples,
+             random_gen& rng) : PixelSampler(1000000000,0,rng),
+             xPixelSamples(xPixelSamples), yPixelSamples(yPixelSamples),
+             current1Dsample(0), current2Dsample(0)  {
+  pixelseed = rng.unif_rand()*std::numeric_limits<unsigned int>::max();
+}
+
+void SobolSampler::StartPixel( unsigned int i,  unsigned int j) {
+  currentPixelx = i;
+  currentPixely = j;
+  current2DDimension = 0;
+  current1DDimension = 0;
+}
+
+Float SobolSampler::Get1D() {
+  double temp = sobol_calc_single(current1Dsample,
+                                  current1DDimension,
+                                  pixelseed + currentPixelx +
+                                  currentPixely * xPixelSamples 
+                                  );
+  current1DDimension++;
+  return(temp);
+}
+
+
+vec2 SobolSampler::Get2D() {
+  vec2 temp = sobol_calc_double(current2Dsample,
+                                current2DDimension,
+                                pixelseed + currentPixelx +
+                                currentPixely * xPixelSamples 
+                                );
+  current2DDimension += 2;
+  return(temp);
+}
+
+
+bool SobolSampler::StartNextSample() {
+  current1Dsample++;
+  current2Dsample++;
+  current1DDimension = current2DDimension = 0;
+  return(true);
+}
+bool SobolSampler::SetSampleNumber(size_t) {
+  return(true);
+}
+
+std::unique_ptr<Sampler> SobolSampler::Clone(int seed) {
+  SobolSampler *ss = new SobolSampler(*this);
   ss->rng.SetSequence(seed);
   return(std::unique_ptr<Sampler>(ss));
 }

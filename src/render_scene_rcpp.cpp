@@ -22,6 +22,7 @@ typedef float Float;
 #include "infinite_area_light.h"
 #include "adaptivesampler.h"
 #include "sampler.h"
+#include "color.h"
 using namespace Rcpp;
 // [[Rcpp::plugins(cpp11)]]
 // [[Rcpp::depends(RcppThread)]]
@@ -42,81 +43,6 @@ inline vec3 de_nan(const vec3& c) {
   if(std::isnan(c[1])) temp.e[1] = 0.0f;
   if(std::isnan(c[2])) temp.e[2] = 0.0f;
   return(temp);
-}
-
-
-vec3 color(const ray& r, hitable *world, hitable_list *hlist,
-           size_t max_depth, size_t roulette_activate, random_gen& rng, Sampler* sampler) {
-#ifdef DEBUG
-  ofstream myfile;
-  myfile.open("rays.txt", ios::app | ios::out);
-#endif
-  vec3 final_color(0,0,0);
-  vec3 throughput(1,1,1);
-  float prev_t = 1;
-  ray r1 = r;
-  ray r2 = r;
-  bool diffuse_bounce = false;
-  for(size_t i = 0; i < max_depth; i++) {
-    hit_record hrec;
-    if(world->hit(r2, 0.001, FLT_MAX, hrec, rng)) { //generated hit record, world space
-#ifdef DEBUG
-      myfile << i << ", " << r2.A << " ";
-      myfile << ", " << hrec.p << "\n ";
-#endif
-      scatter_record srec;
-      final_color += throughput * hrec.mat_ptr->emitted(r2, hrec, hrec.u, hrec.v, hrec.p);
-      if(throughput.x() == 0 && throughput.y() == 0 && throughput.z() == 0) {
-        return(vec3(0,0,0));
-      }
-      if(i > roulette_activate) {
-        float t = std::max(throughput.x(), std::max(throughput.y(), throughput.z()));
-        //From Szecsi, Szirmay-Kalos, and Kelemen
-        float prob_continue = std::min(1.0f, std::sqrt(t/prev_t));
-        prev_t = t;
-        if(rng.unif_rand() > prob_continue) {
-          return(final_color);
-        }
-        throughput *= 1 / prob_continue;
-      }
-      float pdf_val;
-      if(hrec.mat_ptr->scatter(r2, hrec, srec, rng)) { //generates scatter record, world space
-        if(srec.is_specular) { //returns specular ray
-          r2 = srec.specular_ray;
-          throughput *= srec.attenuation;
-          continue;
-        }
-        hitable_pdf p_imp(hlist, hrec.p); //creates pdf of all objects to be sampled
-        mixture_pdf p(&p_imp, srec.pdf_ptr); //creates mixture pdf of surface intersected at hrec.p and all sampled objects/lights
-        
-        //Generates a scatter direction (with origin hrec.p) from the mixture 
-        //and saves surface normal from light to use in pdf_value calculation
-        //(along with the scatter direction)
-        //Translates the world space point into object space point, generates ray assuring intersection, and then translates 
-        //ray back into world space
-        vec3 offset_p = offset_ray(hrec.p-r2.A, hrec.normal) + r2.A;
-
-        r1 = r2;
-        if(!diffuse_bounce) {
-          diffuse_bounce = true;
-          r2 = ray(offset_p, p.generate(sampler), r2.pri_stack, r2.time()); //scatters a ray from hit point to stratified direction
-        } else {
-          r2 = ray(offset_p, p.generate(rng), r2.pri_stack, r2.time()); //scatters a ray from hit point to direction
-        }
-        
-        pdf_val = p.value(r2.direction(), rng); //generates a pdf value based the intersection point and the mixture pdf
-        throughput *= hrec.mat_ptr->f(r1, hrec, r2) / pdf_val;
-      } else {
-        return(final_color);
-      }
-    } else {
-      return(final_color);
-    }
-  }
-#ifdef DEBUG
-  myfile.close();
-#endif
-  return(final_color);
 }
 
 #ifdef DEBUGBVH
@@ -324,7 +250,7 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
              shutteropen, shutterclose);
   ortho_camera ocam(lookfrom, lookat, vec3(camera_up(0),camera_up(1),camera_up(2)),
                     ortho_dimensions(0), ortho_dimensions(1),
-                    shutteropen, shutterclose, rng);
+                    shutteropen, shutterclose);
   int nx1, ny1, nn1;
   auto start = std::chrono::high_resolution_clock::now();
   if(verbose) {
@@ -470,7 +396,7 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
   world.add(worldbvh);
   
   bool impl_only_bg = false;
-  if(numbertosample == 0 || hasbackground) {
+  if(numbertosample == 0 || hasbackground || ambient_light) {
     world.add(background_sphere);
     impl_only_bg = true;
   }
@@ -489,7 +415,7 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
                                isgrouped, group_pivot, group_translate,
                                group_angle, group_order_rotation, group_scale,
                                fileinfo, filebasedir, scale_list, 
-                               mesh_list,bvh_type,  rng));
+                               mesh_list,bvh_type,  moving, rng));
     }
   }
   finish = std::chrono::high_resolution_clock::now();
@@ -528,7 +454,7 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
         if(fov != 0) {
           r = cam.get_ray(u,v, vec3(0,0,0), 0);
         } else {
-          r = ocam.get_ray(u,v);
+          r = ocam.get_ray(u,v, rng.unif_rand());
         }
         depth_into_scene = calculate_depth(r, &world, rng);
         routput(i,j) = depth_into_scene;
@@ -547,7 +473,7 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
         if(fov != 0) {
           r = cam.get_ray(u,v, vec3(0,0,0), 0);
         } else {
-          r = ocam.get_ray(u,v);
+          r = ocam.get_ray(u,v, rng.unif_rand());
         }
         normal_map = calculate_normals(r, &world, rng);
         routput(i,j) = normal_map.x();
@@ -566,7 +492,7 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
         if(fov != 0) {
           r = cam.get_ray(u,v, vec3(0,0,0), 0);
         } else {
-          r = ocam.get_ray(u,v);
+          r = ocam.get_ray(u,v, rng.unif_rand());
         }
         uv_map = calculate_uv(r, &world, rng);
         routput(i,j) = uv_map.x();
@@ -584,7 +510,7 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
         if(fov != 0) {
           r = cam.get_ray(u,v, vec3(0,0,0), 0);
         } else {
-          r = ocam.get_ray(u,v);
+          r = ocam.get_ray(u,v, rng.unif_rand());
         }
         double bvh_intersections = debug_bvh(r, &world, rng);
         routput(i,j) = bvh_intersections;
@@ -602,7 +528,7 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
         if(fov != 0) {
           r = cam.get_ray(u,v, vec3(0,0,0), 0);
         } else {
-          r = ocam.get_ray(u,v);
+          r = ocam.get_ray(u,v, rng.unif_rand());
         }
         vec3 dpd_val = calculate_dpduv(r, &world, rng, debug_channel == 6);
         routput(i,j) = dpd_val.x();
@@ -621,7 +547,7 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
         if(fov != 0) {
           r = cam.get_ray(u,v, vec3(0,0,0), 0);
         } else {
-          r = ocam.get_ray(u,v);
+          r = ocam.get_ray(u,v, rng.unif_rand());
         }
         r.pri_stack = mat_stack;
         vec3 dpd_val = calculate_color(r, &world, rng);
@@ -649,7 +575,7 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
         if(fov != 0) {
           r = cam.get_ray(u,v, vec3(0,0,0), 0);
         } else {
-          r = ocam.get_ray(u,v);
+          r = ocam.get_ray(u,v, rng.unif_rand());
         }
         r.pri_stack = mat_stack;
         vec3 qr = quick_render(r, &world, rng, light_dir, n_exp);
@@ -677,22 +603,28 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
     std::vector<Sampler* > samplers;
     start = std::chrono::high_resolution_clock::now();
     
-    for(int i = 0; i < nx * ny; i++) {
-      if(progress_bar && (i % ny == 0)) {
+    for(int j = 0; j < ny; j++) {
+      if(progress_bar) {
         pb_sampler.tick();
       }
-      random_gen rng_single(unif_rand() * std::pow(2,32));
-      rngs.push_back(rng_single);
-      Sampler* strat;
-      if(sample_method == 0) {
-        strat = new RandomSampler(rng_single);
-      } else {
-        strat = new StratifiedSampler(stratified_dim(0), stratified_dim(1),
-                                      true, 5, rng_single);
+      for(int i = 0; i < nx; i++) {
+        Sampler* strat;
+        random_gen rng_single(unif_rand() * std::pow(2,32));
+        rngs.push_back(rng_single);
+        if(sample_method == 0) {
+          strat = new RandomSampler(rng_single);
+          strat->StartPixel(0,0);
+        } else if (sample_method == 1){
+          strat = new StratifiedSampler(stratified_dim(0), stratified_dim(1),
+                                        true, 5, rng_single);
+          strat->StartPixel(0,0);
+        } else {
+          strat = new SobolSampler(nx, ny, ns, rng_single);
+          strat->StartPixel(i,j);
+        }
+        strat->SetSampleNumber(0);
+        samplers.push_back(strat);
       }
-      strat->StartPixel(vec2(0,0));
-      strat->SetSampleNumber(0);
-      samplers.push_back(strat);
     }
 
     if(verbose) {
@@ -713,7 +645,7 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
       }
       RcppThread::ThreadPool pool(numbercores);
       auto worker = [&adaptive_pixel_sampler,
-                     nx, ny, s,
+                     nx, ny, s, sample_method,
                      &rngs, fov, &samplers,
                      &cam, &ocam, &world, &hlist,
                      clampval, max_depth, roulette_active] (int k) {
@@ -731,11 +663,11 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
              Float v = (Float(j) + u2.y()) / Float(ny);
              ray r; 
              if(fov != 0) {
-               r = cam.get_ray(u, v, rand_to_unit(samplers[index]->Get2D()), 
+               r = cam.get_ray(u, v,rand_to_unit(samplers[index]->Get2D()),
                                samplers[index]->Get1D());
                
              } else {
-               r = ocam.get_ray(u,v);
+               r = ocam.get_ray(u,v, samplers[index]->Get1D());
              }
              r.pri_stack = mat_stack;
 
@@ -750,7 +682,7 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
              samplers[index]->StartNextSample();
            }
          }
-         if(s % 2 == 1 && s > 1) {
+         if((s % 2 == 1 && s > 3 && sample_method != 2) || (s % 2 == 1 && sample_method == 2 && s > 64)) {
            adaptive_pixel_sampler.test_for_convergence(k, s, nx_end, nx_begin, ny_end, ny_begin);
          }
          delete mat_stack;

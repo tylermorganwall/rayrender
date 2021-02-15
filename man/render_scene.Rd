@@ -12,7 +12,7 @@ render_scene(
   samples = 100,
   min_variance = 5e-05,
   min_adaptive_size = 8,
-  sample_method = "random",
+  sample_method = "sobol",
   max_depth = 50,
   roulette_active_depth = 10,
   ambient_light = FALSE,

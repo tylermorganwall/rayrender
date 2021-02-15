@@ -88,6 +88,11 @@ bool mesh3d::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random
   return(mesh_bvh->hit(r, t_min, t_max, rec, rng));
 };
 
+
+bool mesh3d::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) {
+  return(mesh_bvh->hit(r, t_min, t_max, rec, sampler));
+};
+
 bool mesh3d::bounding_box(Float t0, Float t1, aabb& box) const {
   return(mesh_bvh->bounding_box(t0,t1,box));
 };

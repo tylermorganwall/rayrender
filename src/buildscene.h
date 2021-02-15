@@ -467,9 +467,14 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
 
     //Generate objects
     if (shape(i) == 1) {
-      
-      //Fix moving memory leak
-      std::shared_ptr<hitable> entry = std::make_shared<sphere>(vec3(0,0,0), radius(i), tex, alpha[i], bump[i]);
+      std::shared_ptr<hitable> entry;
+      if(moving(i)) {
+        entry = std::make_shared<moving_sphere>(vel * shutteropen, 
+                                                vel * shutterclose, 
+                                                shutteropen, shutterclose, radius(i), tex, alpha[i], bump[i]);
+      } else {
+        entry = std::make_shared<sphere>(vec3(0,0,0), radius(i), tex, alpha[i], bump[i]);
+      }
       if(is_scaled) {
         entry = std::make_shared<scale>(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
       }
@@ -485,9 +490,7 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
       if(!moving(i)) {
         entry = std::make_shared<translate>(entry, center + gtrans + vel * shutteropen);
       } else {
-        entry = std::make_shared<moving_sphere>(center + vel * shutteropen, 
-                                  center + vel * shutterclose, 
-                                  shutteropen, shutterclose, radius(i), tex, alpha[i], bump[i]);
+        entry = std::make_shared<translate>(entry, center + gtrans);
       }
       if(isflipped(i)) {
         entry = std::make_shared<flip_normals>(entry);
@@ -931,7 +934,7 @@ std::shared_ptr<hitable> build_imp_sample(IntegerVector& type,
                           List& group_pivot, List& group_translate,
                           List& group_angle, List& group_order_rotation, List& group_scale,
                           CharacterVector& fileinfo, CharacterVector& filebasedir,
-                          List& scale_list, List& mesh_list, int bvh_type, random_gen& rng) {
+                          List& scale_list, List& mesh_list, int bvh_type, LogicalVector& moving,random_gen& rng) {
   NumericVector x = position_list["xvec"];
   NumericVector y = position_list["yvec"];
   NumericVector z = position_list["zvec"];
@@ -1033,7 +1036,14 @@ std::shared_ptr<hitable> build_imp_sample(IntegerVector& type,
   std::shared_ptr<bump_texture> bump = nullptr;
 
   if(shape(i) == 1) {
-    std::shared_ptr<hitable> entry = std::make_shared<sphere>(vec3(0,0,0), radius(i), tex, alpha,bump);
+    std::shared_ptr<hitable> entry;
+    if(moving(i)) {
+      entry = std::make_shared<moving_sphere>(vel * shutteropen, 
+                                              vel * shutterclose, 
+                                              shutteropen, shutterclose, radius(i), tex, alpha, bump);
+    } else {
+      entry = std::make_shared<sphere>(vec3(0,0,0), radius(i), tex, alpha,bump);
+    }
     if(is_scaled) {
       entry = std::make_shared<scale>(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
     }
@@ -1045,7 +1055,11 @@ std::shared_ptr<hitable> build_imp_sample(IntegerVector& type,
       entry = rotation_order(entry, temp_gangle, temp_gorder);
       entry = std::make_shared<translate>(entry, -center + gpivot );
     }
-    entry = std::make_shared<translate>(entry, center + gtrans + vel * shutteropen);
+    if(!moving(i)) {
+      entry = std::make_shared<translate>(entry, center + gtrans + vel * shutteropen);
+    } else {
+      entry = std::make_shared<translate>(entry, center + gtrans);
+    }
     return(entry);
   } else if (shape(i) == 2) {
     std::shared_ptr<hitable> entry = std::make_shared<xy_rect>(-tempvector(prop_len+2)/2,tempvector(prop_len+2)/2,

@@ -13,9 +13,11 @@
 
 class pdf {
 public: 
-  virtual Float value(const vec3& direction, random_gen& rng) = 0;
-  virtual vec3 generate(random_gen& rng) = 0;
-  virtual vec3 generate(Sampler* sampler) = 0;
+  virtual Float value(const vec3& direction, random_gen& rng, Float time = 0) = 0;
+  virtual Float value(const vec3& direction, Sampler* sampler, Float time = 0) = 0;
+  
+  virtual vec3 generate(random_gen& rng, Float time = 0) = 0;
+  virtual vec3 generate(Sampler* sampler, Float time = 0) = 0;
   virtual ~pdf(){};
 };
 
@@ -24,7 +26,7 @@ public:
   cosine_pdf(const vec3& w) {
     uvw.build_from_w(w);
   }
-  virtual Float value(const vec3& direction, random_gen& rng) {
+  virtual Float value(const vec3& direction, random_gen& rng, Float time = 0) {
     Float cosine = dot(unit_vector(direction), uvw.w());
     if(cosine > 0) {
       return(cosine/M_PI);
@@ -32,10 +34,18 @@ public:
       return(0);
     }
   } 
-  virtual vec3 generate(random_gen& rng) {
+  virtual Float value(const vec3& direction, Sampler* sampler, Float time = 0) {
+    Float cosine = dot(unit_vector(direction), uvw.w());
+    if(cosine > 0) {
+      return(cosine/M_PI);
+    } else {
+      return(0);
+    }
+  } 
+  virtual vec3 generate(random_gen& rng, Float time = 0) {
     return(uvw.local_to_world(rng.random_cosine_direction()));
   }
-  virtual vec3 generate(Sampler* sampler) {
+  virtual vec3 generate(Sampler* sampler, Float time = 0) {
     return(uvw.local_to_world(rand_cosine_direction(sampler->Get2D())));
   }
   onb uvw;
@@ -47,16 +57,21 @@ public:
     uvw.build_from_w(w);
     wi = -unit_vector(uvw.world_to_local(wi_));;
   }
-  virtual Float value(const vec3& direction, random_gen& rng) {
+  virtual Float value(const vec3& direction, random_gen& rng, Float time = 0) {
     vec3 wo = unit_vector(uvw.world_to_local(direction));
     vec3 wh = unit_vector(wi + wo);
     return(distribution->Pdf(wo, wi, wh) / ( 4 * dot(wo, wh) ));
   }
-  virtual vec3 generate(random_gen& rng) {
+  virtual Float value(const vec3& direction, Sampler* sampler, Float time = 0) {
+    vec3 wo = unit_vector(uvw.world_to_local(direction));
+    vec3 wh = unit_vector(wi + wo);
+    return(distribution->Pdf(wo, wi, wh) / ( 4 * dot(wo, wh) ));
+  }
+  virtual vec3 generate(random_gen& rng, Float time = 0) {
     vec3 wh = distribution->Sample_wh(wi, rng.unif_rand(), rng.unif_rand());
     return(uvw.local_to_world(Reflect(wi, wh)));
   }
-  virtual vec3 generate(Sampler* sampler) {
+  virtual vec3 generate(Sampler* sampler, Float time = 0) {
     vec2 u = sampler->Get2D();
     vec3 wh = distribution->Sample_wh(wi, u.x(), u.y());
     return(uvw.local_to_world(Reflect(wi, wh)));
@@ -72,7 +87,7 @@ public:
     uvw.build_from_w(w);
     wi = -unit_vector(uvw.world_to_local(wi_));;
   }
-  virtual Float value(const vec3& direction, random_gen& rng) {
+  virtual Float value(const vec3& direction, random_gen& rng, Float time = 0) {
     vec3 wo = unit_vector(uvw.world_to_local(direction));
     if(wo.z() * wi.z() < 0) {
       return(INFINITY);
@@ -80,7 +95,15 @@ public:
     vec3 wh = unit_vector(wi + wo);
     return(0.5f * (AbsCosTheta(wi) * M_1_PI + distribution->Pdf(wo, wi, wh) / (4 * dot(wo, wh))));
   }
-  virtual vec3 generate(random_gen& rng) {
+  virtual Float value(const vec3& direction, Sampler* sampler, Float time = 0) {
+    vec3 wo = unit_vector(uvw.world_to_local(direction));
+    if(wo.z() * wi.z() < 0) {
+      return(INFINITY);
+    }
+    vec3 wh = unit_vector(wi + wo);
+    return(0.5f * (AbsCosTheta(wi) * M_1_PI + distribution->Pdf(wo, wi, wh) / (4 * dot(wo, wh))));
+  }
+  virtual vec3 generate(random_gen& rng, Float time = 0) {
     if(rng.unif_rand() < 0.5) {
       vec3 wh = distribution->Sample_wh(wi, rng.unif_rand(), rng.unif_rand());
       return(uvw.local_to_world(Reflect(wi, wh)));
@@ -88,7 +111,7 @@ public:
       return(uvw.local_to_world(rng.random_cosine_direction()));
     }
   }
-  virtual vec3 generate(Sampler* sampler) {
+  virtual vec3 generate(Sampler* sampler, Float time = 0) {
     if(sampler->Get1D() < 0.5) {
       vec2 u = sampler->Get2D();
       vec3 wh = distribution->Sample_wh(wi, u.x(), u.y());
@@ -123,9 +146,11 @@ class hair_pdf : public pdf {
       s = s_;
       sigma_a = sigma_a_;
     }
-    Float value(const vec3& direction, random_gen& rng);
-    virtual vec3 generate(random_gen& rng);
-    virtual vec3 generate(Sampler* sampler);
+    Float value(const vec3& direction, random_gen& rng, Float time = 0);
+    Float value(const vec3& direction, Sampler* sampler, Float time = 0);
+    
+    virtual vec3 generate(random_gen& rng, Float time = 0);
+    virtual vec3 generate(Sampler* sampler, Float time = 0);
     onb uvw;
     vec3 wi;
     vec3 wo;
@@ -141,14 +166,17 @@ class hair_pdf : public pdf {
 class hitable_pdf : public pdf {
 public:
   hitable_pdf(hitable_list *p, const vec3& origin) : ptr(p), o(origin) {}
-  virtual Float value(const vec3& direction, random_gen& rng) {
-    return(ptr->pdf_value(o, direction, rng));
+  virtual Float value(const vec3& direction, random_gen& rng, Float time = 0) {
+    return(ptr->pdf_value(o, direction, rng, time));
   }
-  virtual vec3 generate(random_gen& rng) {
-    return(ptr->random(o, rng)); 
+  virtual Float value(const vec3& direction, Sampler* sampler, Float time = 0) {
+    return(ptr->pdf_value(o, direction, sampler, time));
   }
-  virtual vec3 generate(Sampler* sampler) {
-    return(ptr->random(o, sampler)); 
+  virtual vec3 generate(random_gen& rng, Float time = 0) {
+    return(ptr->random(o, rng, time)); 
+  }
+  virtual vec3 generate(Sampler* sampler, Float time = 0) {
+    return(ptr->random(o, sampler, time)); 
   }
   hitable_list *ptr;
   vec3 o;
@@ -160,21 +188,24 @@ public:
     p[0] = p0;
     p[1] = p1;
   }
-  virtual Float value(const vec3& direction, random_gen& rng) {
-    return(0.5 * p[0]->value(direction, rng) + 0.5 * p[1]->value(direction, rng));
+  virtual Float value(const vec3& direction, random_gen& rng, Float time = 0) {
+    return(0.5 * p[0]->value(direction, rng, time) + 0.5 * p[1]->value(direction, rng, time));
   }
-  virtual vec3 generate(random_gen& rng) {
+  virtual Float value(const vec3& direction, Sampler* sampler, Float time = 0) {
+    return(0.5 * p[0]->value(direction, sampler, time) + 0.5 * p[1]->value(direction, sampler, time));
+  }
+  virtual vec3 generate(random_gen& rng, Float time = 0) {
     if(rng.unif_rand() < 0.5) {
-      return(p[0]->generate(rng));
+      return(p[0]->generate(rng, time));
     } else {
-      return(p[1]->generate(rng));
+      return(p[1]->generate(rng, time));
     } 
   }
-  virtual vec3 generate(Sampler* sampler) {
+  virtual vec3 generate(Sampler* sampler, Float time = 0) {
     if(sampler->Get1D() < 0.5) {
-      return(p[0]->generate(sampler));
+      return(p[0]->generate(sampler, time));
     } else {
-      return(p[1]->generate(sampler));
+      return(p[1]->generate(sampler, time));
     } 
   }
   pdf *p[2];

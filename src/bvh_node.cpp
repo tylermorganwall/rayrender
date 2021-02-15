@@ -39,6 +39,32 @@ bool bvh_node::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
 #endif
 }
 
+bool bvh_node::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) {
+#ifndef DEBUGBVH
+  if(box.hit(r, t_min, t_max, sampler)) {
+    if(left->hit(r,t_min,t_max,rec, sampler)) {
+      right->hit(r,t_min,rec.t,rec, sampler);
+      return(true);
+    } else {
+      return(right->hit(r,t_min,t_max,rec, sampler));
+    }
+  }
+  return(false);
+#endif
+#ifdef DEBUGBVH
+  if(box.hit(r, t_min, t_max, sampler)) {
+    rec.bvh_nodes++;
+    if(left->hit(r,t_min,t_max,rec, sampler)) {
+      right->hit(r,t_min,rec.t,rec, sampler);
+      return(true);
+    } else {
+      return(right->hit(r,t_min,t_max,rec, sampler));
+    }
+  }
+  return(false);
+#endif
+}
+
 inline bool box_compare(const std::shared_ptr<hitable> a, const std::shared_ptr<hitable> b, int axis) {
   aabb box_a;
   aabb box_b;
@@ -232,4 +258,23 @@ bvh_node::bvh_node(std::vector<std::shared_ptr<hitable> >& l,
   if(!left->bounding_box(time0,time1,box_left) || !right->bounding_box(time0,time1,box_right)) {
   }
   box = surrounding_box(box_left,box_right);
+}
+  
+  
+Float bvh_node::pdf_value(const vec3& o, const vec3& v, random_gen& rng, Float time) {
+  return(0.5*left->pdf_value(o,v, rng, time) + 0.5*right->pdf_value(o,v, rng, time));
+}
+
+Float bvh_node::pdf_value(const vec3& o, const vec3& v, Sampler* sampler, Float time) {
+  return(0.5*left->pdf_value(o,v, sampler, time) + 0.5*right->pdf_value(o,v, sampler, time));
+  
+}
+
+vec3 bvh_node::random(const vec3& o, random_gen& rng, Float time) {
+  return(rng.unif_rand() > 0.5 ? left->random(o, rng, time) : right->random(o, rng, time));
+}
+
+vec3 bvh_node::random(const vec3& o, Sampler* sampler, Float time) {
+  return(sampler->Get1D() > 0.5 ? left->random(o, sampler, time) : right->random(o, sampler, time));
+  
 }

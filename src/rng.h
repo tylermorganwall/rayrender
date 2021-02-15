@@ -15,7 +15,6 @@ static const Float OneMinusEpsilon = 0x1.fffffep-1;
 
 
 class random_gen {
-  pcg32 rng;
 public:
   random_gen(unsigned int seed) : rng(seed) {}
   random_gen() : rng(pcg_extras::seed_seq_from<std::random_device>{}) { }
@@ -25,8 +24,10 @@ public:
   vec3 random_in_unit_sphere();
   vec3 random_cosine_direction();
   vec3 random_to_sphere(Float radius, Float distance_squared);
+
   uint32_t UniformUInt32(uint32_t b);
   void SetSequence(unsigned int seed);
+  pcg32 rng;
 };
 
 

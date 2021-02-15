@@ -29,7 +29,7 @@ Suggests:
     spData,
     dplyr,
     Rvcg
-LinkingTo: Rcpp, RcppThread, progress
+LinkingTo: Rcpp, RcppThread, progress, spacefillr
 URL: https://www.rayrender.net, https://github.com/tylermorganwall/rayrender
 RoxygenNote: 7.1.0
 SystemRequirements: C++11

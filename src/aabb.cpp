@@ -25,6 +25,19 @@ bool aabb::hit(const ray &r, Float tmin, Float tmax, random_gen& rng) {
   return(tmin <= tmax);
 }
 
+bool aabb::hit(const ray &r, Float tmin, Float tmax, Sampler* sampler) {
+  Float txmin, txmax, tymin, tymax, tzmin, tzmax;
+  txmin = (bounds[  r.sign[0]].x()-r.origin().x()) * r.inv_dir.x();
+  txmax = (bounds[1-r.sign[0]].x()-r.origin().x()) * r.inv_dir_pad.x();
+  tymin = (bounds[  r.sign[1]].y()-r.origin().y()) * r.inv_dir.y();
+  tymax = (bounds[1-r.sign[1]].y()-r.origin().y()) * r.inv_dir_pad.y();
+  tzmin = (bounds[  r.sign[2]].z()-r.origin().z()) * r.inv_dir.z();
+  tzmax = (bounds[1-r.sign[2]].z()-r.origin().z()) * r.inv_dir_pad.z();
+  tmin = ffmax(tzmin, ffmax(tymin, ffmax(txmin, tmin)));
+  tmax = ffmin(tzmax, ffmin(tymax, ffmin(txmax, tmax)));
+  return(tmin <= tmax);
+}
+
 const vec3 aabb::offset(const vec3 p) {
   vec3 o = p - min();
   if (max().x() > min().x()) {

@@ -15,3 +15,7 @@ box::box(const vec3& p0, const vec3& p1, std::shared_ptr<material> ptr,
 bool box::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
   return(list.hit(r,t_min,t_max,rec, rng));
 }
+
+bool box::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) {
+  return(list.hit(r,t_min,t_max,rec, sampler));
+}

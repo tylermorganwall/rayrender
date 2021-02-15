@@ -157,11 +157,101 @@ bool curve::hit(const ray& r, Float tmin, Float tmax, hit_record& rec, random_ge
   // Compute log base 4 by dividing log2 in half.
   int r0 = Log2(1.41421356237f * 6.f * L0 / (8.f * eps)) / 2;
   int maxDepth = clamp(r0, 0, 10);
-  return(recursiveIntersect(r, tmin, tmax, rec, rng, cp, uMin,
+  return(recursiveIntersect(r, tmin, tmax, rec, cp, uMin,
                             uMax, maxDepth, objectToRay));
 }
 
-bool curve::recursiveIntersect(const ray& r, Float tmin, Float tmax, hit_record& rec, random_gen& rng,
+
+bool curve::hit(const ray& r, Float tmin, Float tmax, hit_record& rec, Sampler* sampler) {
+  // Compute object-space control points for curve segment, cpObj
+  vec3 cpObj[4];
+  cpObj[0] = BlossomBezier(common->cpObj, uMin, uMin, uMin);
+  cpObj[1] = BlossomBezier(common->cpObj, uMin, uMin, uMax);
+  cpObj[2] = BlossomBezier(common->cpObj, uMin, uMax, uMax);
+  cpObj[3] = BlossomBezier(common->cpObj, uMax, uMax, uMax);
+  
+  // Project curve control points to plane perpendicular to ray
+  vec3 unit_dir = unit_vector(r.direction()); 
+  vec3 dx = cross(unit_dir, cpObj[3] - cpObj[0]);
+  vec3 dy = cross(unit_dir, dx);
+  if (dx.squared_length() == 0) {
+    // If the ray and the vector between the first and last control
+    // points are parallel, dx will be zero.  Generate an arbitrary xy
+    // orientation for the ray coordinate system so that intersection
+    // tests can proceed in this unusual case.
+    onb uvw;
+    uvw.build_from_w(unit_dir);
+    dx = uvw.v();
+    dy = uvw.u();
+  } else {
+    dx.make_unit_vector();
+    dy.make_unit_vector();
+  }
+  
+  onb objectToRay(dx, dy, unit_dir); //Coordinate system must have ray parallel to z-axis
+  vec3 cp[4] = {objectToRay.world_to_local(cpObj[0] - r.origin()), objectToRay.world_to_local(cpObj[1] - r.origin()),
+                objectToRay.world_to_local(cpObj[2] - r.origin()), objectToRay.world_to_local(cpObj[3] - r.origin())};
+  
+  // Before going any further, see if the ray's bounding box intersects
+  // the curve's bounding box. We start with the y dimension, since the y
+  // extent is generally the smallest (and is often tiny) due to our
+  // careful orientation of the ray coordinate system above.
+  Float maxWidth = std::max(lerp(uMin, common->width[0], common->width[1]),
+                            lerp(uMax, common->width[0], common->width[1]));
+  if (std::max(std::max(cp[0].y(), cp[1].y()), std::max(cp[2].y(), cp[3].y())) +
+      0.5f * maxWidth < 0 ||
+      std::min(std::min(cp[0].y(), cp[1].y()), std::min(cp[2].y(), cp[3].y())) -
+      0.5f * maxWidth > 0) {
+    return false;
+  }
+  
+  // Check for non-overlap in x.
+  if (std::max(std::max(cp[0].x(), cp[1].x()), std::max(cp[2].x(), cp[3].x())) +
+      0.5f * maxWidth < 0 ||
+      std::min(std::min(cp[0].x(), cp[1].x()), std::min(cp[2].x(), cp[3].x())) -
+      0.5f * maxWidth > 0) {
+    return false;
+  }
+  
+  // Check for non-overlap in z.
+  Float rayLength = r.direction().length();
+  Float zMax = rayLength * tmax;
+  if (std::max(std::max(cp[0].z(), cp[1].z()), std::max(cp[2].z(), cp[3].z())) +
+      0.5f * maxWidth < 0 ||
+      std::min(std::min(cp[0].z(), cp[1].z()), std::min(cp[2].z(), cp[3].z())) -
+      0.5f * maxWidth > zMax) {
+    return false;
+  }
+  
+  // Compute refinement depth for curve, maxDepth
+  Float L0 = 0;
+  for (int i = 0; i < 2; ++i) {
+    L0 = std::max(
+      L0, std::max(
+          std::max(std::abs(cp[i].x() - 2 * cp[i + 1].x() + cp[i + 2].x()),
+                   std::abs(cp[i].y() - 2 * cp[i + 1].y() + cp[i + 2].y())),
+                   std::abs(cp[i].z() - 2 * cp[i + 1].z() + cp[i + 2].z())));
+  }
+  
+  Float eps = std::max(common->width[0], common->width[1]) * .05f;  // width / 20
+  auto Log2 = [](float v) -> int {
+    if (v < 1) {
+      return 0;
+    }
+    uint32_t bits = FloatToBits(v);
+    // https://graphics.stanford.edu/~seander/bithacks.html#IntegerLog
+    // (With an additional add so get round-to-nearest rather than
+    // round down.)
+    return (bits >> 23) - 127 + (bits & (1 << 22) ? 1 : 0);
+  };
+  // Compute log base 4 by dividing log2 in half.
+  int r0 = Log2(1.41421356237f * 6.f * L0 / (8.f * eps)) / 2;
+  int maxDepth = clamp(r0, 0, 10);
+  return(recursiveIntersect(r, tmin, tmax, rec, cp, uMin,
+                            uMax, maxDepth, objectToRay));
+}
+
+bool curve::recursiveIntersect(const ray& r, Float tmin, Float tmax, hit_record& rec, 
                                const vec3 cp[4], Float u0, Float u1, int depth, onb& uvw) const {
   Float rayLength = r.direction().length();
 
@@ -210,7 +300,7 @@ bool curve::recursiveIntersect(const ray& r, Float tmin, Float tmax, hit_record&
         continue;
       }
 
-      hit |= recursiveIntersect(r, r.time(), tmax, rec, rng, cps,
+      hit |= recursiveIntersect(r, r.time(), tmax, rec, cps,
                                 u[seg], u[seg + 1], depth - 1, uvw);
       // If we found an intersection and this is a shadow ray,
       // we can exit out immediately.
@@ -314,15 +404,19 @@ bool curve::recursiveIntersect(const ray& r, Float tmin, Float tmax, hit_record&
   return(false);
 }
 
-vec3 curve::random(const vec3& o, random_gen& rng) {
+vec3 curve::random(const vec3& o, random_gen& rng, Float time) {
   return(vec3(0,0,0));
 };
 
-vec3 curve::random(const vec3& o, Sampler* sampler) {
+vec3 curve::random(const vec3& o, Sampler* sampler, Float time) {
   return(vec3(0,0,0));
 };
 
-Float curve::pdf_value(const vec3& o, const vec3& v, random_gen& rng) {
+Float curve::pdf_value(const vec3& o, const vec3& v, random_gen& rng, Float time) {
+  return(0);
+}
+
+Float curve::pdf_value(const vec3& o, const vec3& v, Sampler* sampler, Float time) {
   return(0);
 }
 

@@ -1,7 +1,7 @@
 #include "pdf.h"
 #include "mathinline.h"
 
-Float hair_pdf::value(const vec3& direction, random_gen& rng) {
+Float hair_pdf::value(const vec3& direction, random_gen& rng, Float time) {
   Float sinThetaO = wo.x();
   Float cosThetaO = SafeSqrt(1 - Sqr(sinThetaO));
   Float phiO = std::atan2(wo.z(), wo.y());
@@ -52,7 +52,60 @@ Float hair_pdf::value(const vec3& direction, random_gen& rng) {
   return(pdf);
 }
 
-vec3 hair_pdf::generate(random_gen& rng) {
+
+Float hair_pdf::value(const vec3& direction, Sampler* sampler, Float time) {
+  Float sinThetaO = wo.x();
+  Float cosThetaO = SafeSqrt(1 - Sqr(sinThetaO));
+  Float phiO = std::atan2(wo.z(), wo.y());
+  
+  // Compute hair coordinate system terms related to _wi_
+  Float sinThetaI = wi.x();
+  Float cosThetaI = SafeSqrt(1 - Sqr(sinThetaI));
+  Float phiI = std::atan2(wi.z(), wi.y());
+  
+  // Compute $\gammat$ for refracted ray
+  Float etap = std::sqrt(eta * eta - Sqr(sinThetaO)) / cosThetaO;
+  Float sinGammaT = h / etap;
+  Float gammaT = SafeASin(sinGammaT);
+  
+  // Compute PDF for $A_p$ terms
+  std::array<Float, pMax + 1> apPdf = ComputeApPdf(cosThetaO);
+  
+  // Compute PDF sum for hair scattering events
+  Float phi = phiI - phiO;
+  Float pdf = 0;
+  for (int p = 0; p < pMax; ++p) {
+    // Compute $\sin \thetao$ and $\cos \thetao$ terms accounting for scales
+    Float sinThetaOp, cosThetaOp;
+    if (p == 0) {
+      sinThetaOp = sinThetaO * cos2kAlpha[1] - cosThetaO * sin2kAlpha[1];
+      cosThetaOp = cosThetaO * cos2kAlpha[1] + sinThetaO * sin2kAlpha[1];
+    }
+    
+    // Handle remainder of $p$ values for hair scale tilt
+    else if (p == 1) {
+      sinThetaOp = sinThetaO * cos2kAlpha[0] + cosThetaO * sin2kAlpha[0];
+      cosThetaOp = cosThetaO * cos2kAlpha[0] - sinThetaO * sin2kAlpha[0];
+    } else if (p == 2) {
+      sinThetaOp = sinThetaO * cos2kAlpha[2] + cosThetaO * sin2kAlpha[2];
+      cosThetaOp = cosThetaO * cos2kAlpha[2] - sinThetaO * sin2kAlpha[2];
+    } else {
+      sinThetaOp = sinThetaO;
+      cosThetaOp = cosThetaO;
+    }
+    
+    // Handle out-of-range $\cos \thetao$ from scale adjustment
+    cosThetaOp = std::abs(cosThetaOp);
+    pdf += Mp(cosThetaI, cosThetaOp, sinThetaI, sinThetaOp, v[p]) *
+      apPdf[p] * Np(phi, p, s, gammaO, gammaT);
+  }
+  pdf += Mp(cosThetaI, cosThetaO, sinThetaI, sinThetaO, v[pMax]) * 
+    apPdf[pMax] * ONE_OVER_2_PI;
+  return(pdf);
+}
+
+
+vec3 hair_pdf::generate(random_gen& rng, Float time) {
   Float sinThetaO = wo.x();
   Float cosThetaO = SafeSqrt(1 - Sqr(sinThetaO));
   Float phiO = std::atan2(wo.z(), wo.y());
@@ -110,7 +163,7 @@ vec3 hair_pdf::generate(random_gen& rng) {
                                  cosThetaI * std::sin(phiI))));
 }
 
-vec3 hair_pdf::generate(Sampler* sampler) {
+vec3 hair_pdf::generate(Sampler* sampler, Float time) {
   Float sinThetaO = wo.x();
   Float cosThetaO = SafeSqrt(1 - Sqr(sinThetaO));
   Float phiO = std::atan2(wo.z(), wo.y());

@@ -4,12 +4,13 @@
 #include "rng.h"
 #include "vec2.h"
 #include <memory>
+#include "single_sample.h"
 
 class Sampler {
 public:
   Sampler(size_t number_pixel_samples) : samplesPerPixel(number_pixel_samples) {}
   virtual ~Sampler() = 0;
-  virtual void StartPixel(const vec2 &p);
+  virtual void StartPixel(const unsigned int i, const unsigned int j);
   virtual Float Get1D() = 0;
   virtual vec2 Get2D() = 0;
   virtual int RoundCount(int n) const {
@@ -28,7 +29,7 @@ public:
   
 protected:
   //Add int vec2 class
-  vec2 currentPixel;
+  unsigned int currentPixelx, currentPixely;
   size_t currentPixelSampleIndex;
   std::vector<int> samples1DArraySizes, samples2DArraySizes;
   std::vector<std::vector<Float>> sampleArray1D;
@@ -66,7 +67,7 @@ public:
                   bool jitterSamples, size_t nSampledDimensions, random_gen& rng)
   : PixelSampler(xPixelSamples * yPixelSamples, nSampledDimensions, rng),
     xPixelSamples(xPixelSamples), yPixelSamples(yPixelSamples), jitterSamples(jitterSamples) { }
-  void StartPixel(const vec2 &p);
+  void StartPixel( unsigned int i,  unsigned int j);
   std::unique_ptr<Sampler> Clone(int seed);
 
 private:
@@ -77,20 +78,31 @@ private:
 class RandomSampler : public PixelSampler {
 public:
   RandomSampler(random_gen& rng) : PixelSampler(1 * 1, 0, rng) {}
-  void StartPixel(const vec2 &p) {};
-  Float Get1D() {
-    return(rng.unif_rand());
-  }
-  vec2 Get2D() {
-    return(vec2(rng.unif_rand(), rng.unif_rand()));
-  }
-  bool StartNextSample() {
-    return(true);
-  }
-  bool SetSampleNumber(size_t) {
-    return(true);
-  }
+  void StartPixel( unsigned int i,  unsigned int j) {};
+  Float Get1D();
+  vec2 Get2D();
+  bool StartNextSample();
+  bool SetSampleNumber(size_t);
   std::unique_ptr<Sampler> Clone(int seed);
+};
+
+class SobolSampler : public PixelSampler {
+  public:
+    SobolSampler(unsigned int xPixelSamples, unsigned int yPixelSamples,
+                 unsigned int maxSamples,
+                 random_gen& rng);
+    void StartPixel( unsigned int i,  unsigned int j);
+    Float Get1D();
+    vec2 Get2D();
+    bool StartNextSample();
+    bool SetSampleNumber(size_t);
+    std::unique_ptr<Sampler> Clone(int seed);
+  private:
+    const unsigned int xPixelSamples, yPixelSamples;
+    unsigned int current1Dsample, current2Dsample;
+    unsigned int pixelseed;
+    unsigned int pixeloffset;
+    
 };
 
 #endif

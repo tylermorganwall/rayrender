@@ -8,7 +8,6 @@
 #include "vec2.h"
 #include <array>
 
-
 static const Float mpi_over_180 = M_PI/180;
 static const Float SqrtPiOver8 = 0.626657069f;
 static const Float ONE_OVER_2_PI = 1 / (2 * M_PI);
@@ -557,7 +556,36 @@ inline Float SampleTrimmedLogistic(Float u, Float s, Float a, Float b) {
   return(clamp(x, a, b));
 }
 
+//Sampling helpers
 
+
+inline int CountTrailingZeros(uint32_t v) {
+// #if defined(PBRT_IS_MSVC)
+//   unsigned long index;
+//   if (_BitScanForward(&index, v))
+//     return index;
+//   else
+//     return 32;
+// #else
+  return __builtin_ctz(v);
+// #endif
+}
+
+// Low Discrepancy Inline Functions
+inline uint32_t ReverseBits32(uint32_t n) {
+  n = (n << 16) | (n >> 16);
+  n = ((n & 0x00ff00ff) << 8) | ((n & 0xff00ff00) >> 8);
+  n = ((n & 0x0f0f0f0f) << 4) | ((n & 0xf0f0f0f0) >> 4);
+  n = ((n & 0x33333333) << 2) | ((n & 0xcccccccc) >> 2);
+  n = ((n & 0x55555555) << 1) | ((n & 0xaaaaaaaa) >> 1);
+  return n;
+}
+
+inline uint64_t ReverseBits64(uint64_t n) {
+  uint64_t n0 = ReverseBits32((uint32_t)n);
+  uint64_t n1 = ReverseBits32((uint32_t)(n >> 32));
+  return (n0 << 32) | n1;
+}
 
 
 #endif
