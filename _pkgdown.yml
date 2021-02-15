@@ -69,6 +69,12 @@ navbar:
       href: index.html
     - text: "Tutorials/Demos"
       menu: 
+      -  text: How to: Download and Animate Polar Ice Data in R with Rayrender
+         href: https://www.tylermw.com/polar-ice-data-in-r-with-rayrender/
+      -  text: Plinko Statistics, Insights from the Bean Machine
+         href: https://www.tylermw.com/plinko-statistics-insights-from-the-bean-machine/
+      -  text: Loading and Visualizing OpenSky Network Flight Data in R
+         href: https://www.tylermw.com/loading-and-visualizing-opensky-network-data-in-r/
       -  text: Generating Procedural 3D Trees with Raybonsai and Rayrender
          href: https://www.tylermw.com/raybonsai-generate-procedural-3d-trees-in-r/
       -  text: Pathtracing Neon Landscapes in R

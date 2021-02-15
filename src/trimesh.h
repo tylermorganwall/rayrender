@@ -39,6 +39,13 @@ public:
           Float scale, bool is_vertex_color, Float shutteropen, Float shutterclose, int bvh_type, 
           random_gen rng);
   virtual bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng);
+  virtual bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler);
+  
+  Float pdf_value(const vec3& o, const vec3& v, random_gen& rng, Float time = 0);
+  Float pdf_value(const vec3& o, const vec3& v, Sampler* sampler, Float time = 0);
+  vec3 random(const vec3& o, random_gen& rng, Float time = 0);
+  vec3 random(const vec3& o, Sampler* sampler, Float time = 0);
+  
   virtual bool bounding_box(Float t0, Float t1, aabb& box) const;
   
   std::shared_ptr<bvh_node> tri_mesh_bvh;

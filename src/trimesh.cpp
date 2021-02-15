@@ -606,6 +606,29 @@ bool trimesh::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
   return(tri_mesh_bvh->hit(r, t_min, t_max, rec, rng));
 };
 
+bool trimesh::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) {
+  return(tri_mesh_bvh->hit(r, t_min, t_max, rec, sampler));
+};
+
 bool trimesh::bounding_box(Float t0, Float t1, aabb& box) const {
   return(tri_mesh_bvh->bounding_box(t0,t1,box));
 };
+
+
+Float trimesh::pdf_value(const vec3& o, const vec3& v, random_gen& rng, Float time) {
+  return(triangles.pdf_value(o,v, rng, time));
+}
+
+Float trimesh::pdf_value(const vec3& o, const vec3& v, Sampler* sampler, Float time) {
+  return(triangles.pdf_value(o,v, sampler, time));
+  
+}
+
+vec3 trimesh::random(const vec3& o, random_gen& rng, Float time) {
+  return(triangles.random(o, rng, time));
+}
+
+vec3 trimesh::random(const vec3& o, Sampler* sampler, Float time) {
+  return(triangles.random(o, sampler, time));
+  
+}
