@@ -15,7 +15,7 @@ vec3 color(const ray& r, hitable *world, hitable_list *hlist,
   bool diffuse_bounce = false;
   for(size_t i = 0; i < max_depth; i++) {
     hit_record hrec;
-    if(world->hit(r2, 0.001, FLT_MAX, hrec, sampler)) { //generated hit record, world space
+    if(world->hit(r2, 0.001, FLT_MAX, hrec, rng)) { //generated hit record, world space
 #ifdef DEBUG
       myfile << i << ", " << r2.A << " ";
       myfile << ", " << hrec.p << "\n ";

@@ -608,16 +608,16 @@ class csg: public hitable {
     virtual bool hit(const ray& r, Float tmin, Float tmax, hit_record& rec, Sampler* sampler);
     
     virtual bool bounding_box(Float t0, Float t1, aabb& box) const;
-    virtual Float pdf_value(const vec3& o, const vec3& v, random_gen& rng, Float time = 0) {
+    virtual Float pdf_value(const vec3& o, const vec3& v, random_gen& rng, Float time) {
       return(1);
     }
-    virtual Float pdf_value(const vec3& o, const vec3& v, Sampler* sampler, Float time = 0) {
+    virtual Float pdf_value(const vec3& o, const vec3& v, Sampler* sampler, Float time) {
       return(1);
     }
-    virtual vec3 random(const vec3& o, random_gen& rng, Float time = 0) {
+    virtual vec3 random(const vec3& o, random_gen& rng, Float time) {
       return(vec3(0,1,0));
     }
-    virtual vec3 random(const vec3& o, Sampler* sampler, Float time = 0) {
+    virtual vec3 random(const vec3& o, Sampler* sampler, Float time) {
       return(vec3(0,1,0));
     }
     std::shared_ptr<material> mat_ptr;

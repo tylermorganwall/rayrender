@@ -72,7 +72,6 @@ bool xy_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampl
   rec.u = u;
   rec.v = v;
   rec.t = t;
-  
   //Interaction information
   rec.dpdu = vec3(-1, 0, 0);
   rec.dpdv = vec3(0, 1, 0);
@@ -90,6 +89,35 @@ bool xy_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampl
   rec.p.e[2] = k;
   
   return(true);
+}
+
+bool xy_rect::bounding_box(Float t0, Float t1, aabb& box) const {
+  box = aabb(vec3(x0,y0,k-0.001), vec3(x1,y1,k+0.001));
+  return(true);
+}
+
+Float xy_rect::pdf_value(const vec3& o, const vec3& v, random_gen& rng, Float time) {
+  hit_record rec;
+  if(this->hit(ray(o,v), 0.001, FLT_MAX, rec, rng)) {
+    Float area = (x1-x0)*(y1-y0);
+    Float distance_squared = rec.t * rec.t * v.squared_length();
+    Float cosine = fabs(dot(v,rec.normal)/v.length());
+    return(distance_squared / (cosine * area));
+  } else {
+    return(0);
+  }
+}
+
+Float xy_rect::pdf_value(const vec3& o, const vec3& v, Sampler* sampler, Float time) {
+  hit_record rec;
+  if(this->hit(ray(o,v), 0.001, FLT_MAX, rec, sampler)) {
+    Float area = (x1-x0)*(y1-y0);
+    Float distance_squared = rec.t * rec.t * v.squared_length();
+    Float cosine = fabs(dot(v,rec.normal)/v.length());
+    return(distance_squared / (cosine * area));
+  } else {
+    return(0);
+  }
 }
 
 bool xz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
