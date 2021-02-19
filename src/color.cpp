@@ -15,7 +15,7 @@ vec3 color(const ray& r, hitable *world, hitable_list *hlist,
   bool diffuse_bounce = false;
   for(size_t i = 0; i < max_depth; i++) {
     hit_record hrec;
-    if(world->hit(r2, 0.001, FLT_MAX, hrec, rng)) { //generated hit record, world space
+    if(world->hit(r2, 0.001, FLT_MAX, hrec, sampler)) { //generated hit record, world space
 #ifdef DEBUG
       myfile << i << ", " << r2.A << " ";
       myfile << ", " << hrec.p << "\n ";
@@ -57,7 +57,7 @@ vec3 color(const ray& r, hitable *world, hitable_list *hlist,
           diffuse_bounce = true;
           r2 = ray(offset_p, p.generate(sampler, r2.time()), r2.pri_stack, r2.time()); //scatters a ray from hit point to stratified direction
         } else {
-          r2 = ray(offset_p, p.generate(rng, r2.time()), r2.pri_stack, r2.time()); //scatters a ray from hit point to direction
+          r2 = ray(offset_p, p.generate(sampler, r2.time()), r2.pri_stack, r2.time()); //scatters a ray from hit point to direction
         }
         pdf_val = p.value(r2.direction(), sampler, r2.time()); //generates a pdf value based the intersection point and the mixture pdf
         throughput *= hrec.mat_ptr->f(r1, hrec, r2) / pdf_val;

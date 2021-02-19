@@ -32,6 +32,16 @@ inline vec3 sgn(vec3 v) {
 }
 
 
+inline vec3 de_nan(const vec3& c) {
+  vec3 temp = c;
+  if(std::isnan(c[0])) temp.e[0] = 0.0f;
+  if(std::isnan(c[1])) temp.e[1] = 0.0f;
+  if(std::isnan(c[2])) temp.e[2] = 0.0f;
+  return(temp);
+}
+
+
+
 inline vec3 rand_to_unit(vec2 u) {
   Float a = 2.0*u.x() - 1.0; 
   Float b = 2.0*u.y() - 1.0;

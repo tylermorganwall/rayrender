@@ -105,4 +105,19 @@ class SobolSampler : public PixelSampler {
     
 };
 
+class SobolBlueNoiseSampler : public PixelSampler {
+  public:
+    SobolBlueNoiseSampler(random_gen& rng);
+    void StartPixel( unsigned int i,  unsigned int j);
+    Float Get1D();
+    vec2 Get2D();
+    bool StartNextSample();
+    bool SetSampleNumber(size_t);
+    std::unique_ptr<Sampler> Clone(int seed);
+    private:
+      unsigned int current1Dsample, current2Dsample;
+      unsigned int pixelseed;
+
+};
+
 #endif

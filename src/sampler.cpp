@@ -1,4 +1,5 @@
 #include "sampler.h"
+#include "samplerBlueNoise.h"
 
 template <typename T>
 void Shuffle(T *samp, int count, int nDimensions, random_gen &rng) {
@@ -188,12 +189,21 @@ bool RandomSampler::SetSampleNumber(size_t) {
 
 
 static inline float sobol_calc_single(unsigned long long  i, unsigned int dim, unsigned int scramble) {
-  return(spacefillr::sobol_owen_fast_single(i, dim, scramble));
-}
+  return(spacefillr::sobol_owen_single(i, dim, scramble));
+} 
 
 static inline vec2 sobol_calc_double(unsigned long long  i, unsigned int dim, unsigned int scramble) {
-  return(vec2(spacefillr::sobol_owen_fast_single(i, dim, scramble),
-              spacefillr::sobol_owen_fast_single(i, dim+1, scramble)));
+  return(vec2(spacefillr::sobol_owen_single(i, dim, scramble), 
+              spacefillr::sobol_owen_single(i, dim+1, scramble)));
+}
+
+static inline double sobol_calc_single_bluenoise(int  x, int  y, int i, int dim) {
+  return(spacefillr::samplerBlueNoise(x,y, i, dim)); 
+}
+
+static inline vec2 sobol_calc_double_bluenoise(int  x, int  y, int i, int dim) {
+  return(vec2(spacefillr::samplerBlueNoise(x,y, i, dim), 
+              spacefillr::samplerBlueNoise(x,y, i, dim+1)));
 }
 
 SobolSampler::SobolSampler(unsigned int xPixelSamples, unsigned int yPixelSamples,
@@ -204,31 +214,31 @@ SobolSampler::SobolSampler(unsigned int xPixelSamples, unsigned int yPixelSample
   pixelseed = rng.unif_rand()*std::numeric_limits<unsigned int>::max();
 }
 
-void SobolSampler::StartPixel( unsigned int i,  unsigned int j) {
+void SobolSampler::StartPixel( unsigned int i,  unsigned int j) { 
   currentPixelx = i;
   currentPixely = j;
   current2DDimension = 0;
   current1DDimension = 0;
 }
 
+#include "RcppThread.h"
+
 Float SobolSampler::Get1D() {
   double temp = sobol_calc_single(current1Dsample,
-                                  current1DDimension,
-                                  pixelseed + currentPixelx +
-                                  currentPixely * xPixelSamples 
+                                  2,
+                                  pixelseed + current1DDimension
                                   );
-  current1DDimension++;
+  current1DDimension += 1;
   return(temp);
 }
 
 
 vec2 SobolSampler::Get2D() {
   vec2 temp = sobol_calc_double(current2Dsample,
-                                current2DDimension,
-                                pixelseed + currentPixelx +
-                                currentPixely * xPixelSamples 
+                                0,
+                                pixelseed + current2DDimension
                                 );
-  current2DDimension += 2;
+  current2DDimension += 1;
   return(temp);
 }
 
@@ -245,6 +255,53 @@ bool SobolSampler::SetSampleNumber(size_t) {
 
 std::unique_ptr<Sampler> SobolSampler::Clone(int seed) {
   SobolSampler *ss = new SobolSampler(*this);
+  ss->rng.SetSequence(seed);
+  return(std::unique_ptr<Sampler>(ss));
+}
+
+
+Float SobolBlueNoiseSampler::Get1D() {
+  double temp = sobol_calc_single_bluenoise(currentPixelx,
+                                            currentPixely,
+                                            current1Dsample,
+                                            current1DDimension);
+  
+  current1DDimension += 1;
+  return(temp);
+}
+
+vec2 SobolBlueNoiseSampler::Get2D() {
+  vec2 temp = sobol_calc_double_bluenoise(currentPixelx,
+                                          currentPixely,
+                                          current2Dsample,
+                                          current2DDimension);
+  current2DDimension += 2;
+  return(temp);
+}
+
+SobolBlueNoiseSampler::SobolBlueNoiseSampler(random_gen& rng)
+  : PixelSampler(1000000000,0,rng),  current1Dsample(0), current2Dsample(0)  {}
+
+
+void SobolBlueNoiseSampler::StartPixel( unsigned int i,  unsigned int j) {
+  currentPixelx = i;
+  currentPixely = j;
+  current2DDimension = 0;
+  current1DDimension = 0;
+}
+
+bool SobolBlueNoiseSampler::StartNextSample() {
+  current1Dsample++;
+  current2Dsample++;
+  current1DDimension = current2DDimension = 0;
+  return(true);
+}
+bool SobolBlueNoiseSampler::SetSampleNumber(size_t) {
+  return(true);
+}
+
+std::unique_ptr<Sampler> SobolBlueNoiseSampler::Clone(int seed) {
+  SobolBlueNoiseSampler *ss = new SobolBlueNoiseSampler(*this);
   ss->rng.SetSequence(seed);
   return(std::unique_ptr<Sampler>(ss));
 }

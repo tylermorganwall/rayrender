@@ -23,6 +23,7 @@ typedef float Float;
 #include "adaptivesampler.h"
 #include "sampler.h"
 #include "color.h"
+#include "integrator.h"
 using namespace Rcpp;
 // [[Rcpp::plugins(cpp11)]]
 // [[Rcpp::depends(RcppThread)]]
@@ -36,14 +37,6 @@ using namespace Rcpp;
 #endif
 
 using namespace std;
-
-inline vec3 de_nan(const vec3& c) {
-  vec3 temp = c;
-  if(std::isnan(c[0])) temp.e[0] = 0.0f;
-  if(std::isnan(c[1])) temp.e[1] = 0.0f;
-  if(std::isnan(c[2])) temp.e[2] = 0.0f;
-  return(temp);
-}
 
 #ifdef DEBUGBVH
 inline double debug_bvh(const ray& r, hitable *world, random_gen &rng) {
@@ -592,114 +585,13 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
     }
     pool.join();
   } else {
-    NumericMatrix routput2(nx,ny);
-    NumericMatrix goutput2(nx,ny);
-    NumericMatrix boutput2(nx,ny);
-    adaptive_sampler adaptive_pixel_sampler(numbercores, nx, ny, ns, debug_channel,
-                                            min_variance, min_adaptive_size,
-                                            routput, goutput, boutput,
-                                            routput2, goutput2, boutput2);
-    std::vector<random_gen > rngs;
-    std::vector<Sampler* > samplers;
-    start = std::chrono::high_resolution_clock::now();
-    
-    for(int j = 0; j < ny; j++) {
-      if(progress_bar) {
-        pb_sampler.tick();
-      }
-      for(int i = 0; i < nx; i++) {
-        Sampler* strat;
-        random_gen rng_single(unif_rand() * std::pow(2,32));
-        rngs.push_back(rng_single);
-        if(sample_method == 0) {
-          strat = new RandomSampler(rng_single);
-          strat->StartPixel(0,0);
-        } else if (sample_method == 1){
-          strat = new StratifiedSampler(stratified_dim(0), stratified_dim(1),
-                                        true, 5, rng_single);
-          strat->StartPixel(0,0);
-        } else {
-          strat = new SobolSampler(nx, ny, ns, rng_single);
-          strat->StartPixel(i,j);
-        }
-        strat->SetSampleNumber(0);
-        samplers.push_back(strat);
-      }
-    }
-
-    if(verbose) {
-      finish = std::chrono::high_resolution_clock::now();
-      if(sample_method == 0) {
-        Rcpp::Rcout << "Allocating random sampler: ";
-      } else {
-        Rcpp::Rcout << "Allocating stratified (" << 
-          stratified_dim(0)<< "x" << stratified_dim(1) << ") sampler: ";
-      }
-      std::chrono::duration<double> elapsed = finish - start;
-      Rcpp::Rcout << elapsed.count() << " seconds" << "\n";
-    }
-    for(size_t s = 0; s < static_cast<size_t>(ns); s++) {
-      Rcpp::checkUserInterrupt();
-      if(progress_bar) {
-        pb.tick();
-      }
-      RcppThread::ThreadPool pool(numbercores);
-      auto worker = [&adaptive_pixel_sampler,
-                     nx, ny, s, sample_method,
-                     &rngs, fov, &samplers,
-                     &cam, &ocam, &world, &hlist,
-                     clampval, max_depth, roulette_active] (int k) {
-         int nx_begin = adaptive_pixel_sampler.pixel_chunks[k].startx;
-         int ny_begin = adaptive_pixel_sampler.pixel_chunks[k].starty;
-         int nx_end = adaptive_pixel_sampler.pixel_chunks[k].endx;
-         int ny_end = adaptive_pixel_sampler.pixel_chunks[k].endy;
-         
-         std::vector<dielectric*> *mat_stack = new std::vector<dielectric*>;
-         for(int i = nx_begin; i < nx_end; i++) {
-           for(int j = ny_begin; j < ny_end; j++) {
-             int index = j + ny * i;
-             vec2 u2 = samplers[index]->Get2D();
-             Float u = (Float(i) + u2.x()) / Float(nx);
-             Float v = (Float(j) + u2.y()) / Float(ny);
-             ray r; 
-             if(fov != 0) {
-               r = cam.get_ray(u, v,rand_to_unit(samplers[index]->Get2D()),
-                               samplers[index]->Get1D());
-               
-             } else {
-               r = ocam.get_ray(u,v, samplers[index]->Get1D());
-             }
-             r.pri_stack = mat_stack;
-
-             vec3 col = clamp(de_nan(color(r, &world, &hlist, max_depth, 
-                                      roulette_active, rngs[index], samplers[index])),
-                         0, clampval);
-             mat_stack->clear();
-             adaptive_pixel_sampler.add_color_main(i, j, col);
-             if(s % 2 == 0) {
-               adaptive_pixel_sampler.add_color_sec(i, j, col);
-             }
-             samplers[index]->StartNextSample();
-           }
-         }
-         if((s % 2 == 1 && s > 3 && sample_method != 2) || (s % 2 == 1 && sample_method == 2 && s > 64)) {
-           adaptive_pixel_sampler.test_for_convergence(k, s, nx_end, nx_begin, ny_end, ny_begin);
-         }
-         delete mat_stack;
-      };
-      for(size_t j = 0; j < adaptive_pixel_sampler.size(); j++) {
-        pool.push(worker, j);
-      }
-      pool.join();
-      if(s % 2 == 1 && s > 1) {
-        adaptive_pixel_sampler.split_remove_chunks(s);
-      }
-      adaptive_pixel_sampler.max_s++;
-    }
-    adaptive_pixel_sampler.write_final_pixels();
-    for(size_t i = 0; i < samplers.size(); i++) {
-      delete samplers.at(i);
-    }
+    pathtracer(numbercores, nx, ny, ns, debug_channel,
+               min_variance, min_adaptive_size, 
+               routput, goutput,boutput,
+               progress_bar, sample_method, stratified_dim,
+               verbose, ocam, cam, fov,
+               world, hlist,
+               clampval, max_depth, roulette_active);
   }
 
   if(verbose) {
@@ -722,9 +614,6 @@ List render_scene_rcpp(List camera_info, bool ambient_light,
       delete nx_ny_nn_bump[i];
     }
   }
-  // for(size_t i = 0; i < shared_materials->size(); i++) {
-  //   delete shared_materials->at(i);
-  // }
   delete shared_materials;
   PutRNGstate();
   finish = std::chrono::high_resolution_clock::now();
