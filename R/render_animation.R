@@ -1,12 +1,11 @@
-#' Render Scene
+#' Render Animation
 #' 
 #' Takes the scene description and renders an image, either to the device or to a filename. 
 #'
 #' @param scene Tibble of object locations and properties. 
+#' @param camera_motion Data frame of camera motion vectors, calculated with `generate_camera_motion()`.
 #' @param width Default `400`. Width of the render, in pixels.
 #' @param height Default `400`. Height of the render, in pixels.
-#' @param fov Default `20`. Field of view, in degrees. If this is zero, the camera will use an orthographic projection. The size of the plane
-#' used to create the orthographic projection is given in argument `ortho_dimensions`.
 #' @param samples Default `100`. The maximum number of samples for each pixel. If this is a length-2
 #' vector and the `sample_method` is `stratified`, this will control the number of strata in each dimension.
 #' The total number of samples in this case will be the product of the two numbers.
@@ -25,8 +24,6 @@
 #' @param ambient_light Default `FALSE`, unless there are no emitting objects in the scene. 
 #' If `TRUE`, the background will be a gradient varying from `backgroundhigh` directly up (+y) to 
 #' `backgroundlow` directly down (-y).
-#' @param lookfrom Default `c(0,1,10)`. Location of the camera.
-#' @param lookat Default `c(0,0,0)`. Location where the camera is pointed.
 #' @param camera_up Default `c(0,1,0)`. Vector indicating the "up" position of the camera.
 #' @param aperture Default `0.1`. Aperture of the camera. Smaller numbers will increase depth of field, causing
 #' less blurring in areas not in focus.
@@ -83,139 +80,89 @@
 #' @return Raytraced plot to current device, or an image saved to a file. 
 #'
 #' @examples
-#' #Generate a large checkered sphere as the ground
+#' #Fly through a bunch of ellipsoids
 #' \donttest{
-#' scene = generate_ground(depth=-0.5, material = diffuse(color="white", checkercolor="darkgreen"))
-#' render_scene(scene,parallel=TRUE,samples=500,sample_method="sobol")
+#' set.seed(3)
+#' elliplist = list()
+#' ellip_colors = rainbow(8)
+#' for(i in 1:1200) {
+#'   elliplist[[i]] = ellipsoid(x=10*runif(1)-5,y=10*runif(1)-5,z=10*runif(1)-5,
+#'                              angle = 360*runif(3), a=0.1,b=0.05,c=0.1,
+#'                              material=glossy(color=sample(ellip_colors,1)))
 #' }
+#' ellip_scene = do.call(rbind, elliplist)
 #' 
-#' #Add a sphere to the center
-#' \donttest{
-#' scene = scene %>%
-#'   add_object(sphere(x=0,y=0,z=0,radius=0.5,material = diffuse(color=c(1,0,1))))
-#' render_scene(scene,fov=20,parallel=TRUE,samples=500)
-#' }
+#' camera_pos = list(c(0,1,15),c(5,-5,5),c(-5,5,-5),c(0,1,-15))
 #' 
-#' #Add a marbled cube 
-#' \donttest{
-#' scene = scene %>%
-#'   add_object(cube(x=1.1,y=0,z=0,material = diffuse(noise=3)))
-#' render_scene(scene,fov=20,parallel=TRUE,samples=500)
-#' }
-#' 
-#' #Add a metallic gold sphere, using stratified sampling for a higher quality render
-#' \donttest{
-#' scene = scene %>%
-#'   add_object(sphere(x=-1.1,y=0,z=0,radius=0.5,material = metal(color="gold",fuzz=0.1)))
-#' render_scene(scene,fov=20,parallel=TRUE,samples=500, sample_method = "stratified")
-#' }
-#' 
-#' #Lower the number of samples to render more quickly (here, we also use only one core).
-#' \donttest{
-#' render_scene(scene, samples=4)
-#' }
-#' 
-#' #Add a floating R plot using the iris dataset as a png onto a floating 2D rectangle
-#' 
-#' \donttest{
-#' tempfileplot = tempfile()
-#' png(filename=tempfileplot,height=400,width=800)
-#' plot(iris$Petal.Length,iris$Sepal.Width,col=iris$Species,pch=18,cex=4)
-#' dev.off()
-#' 
-#' image_array = aperm(png::readPNG(tempfileplot),c(2,1,3))
-#' scene = scene %>%
-#'   add_object(xy_rect(x=0,y=1.1,z=0,xwidth=2,angle = c(0,180,0),
-#'                      material = diffuse(image_texture = image_array)))
-#' render_scene(scene,fov=20,parallel=TRUE,samples=500)
-#' }
-#' 
-#' #Move the camera
-#' \donttest{
-#' render_scene(scene,lookfrom = c(7,1.5,10),lookat = c(0,0.5,0),fov=15,parallel=TRUE)
-#' }
-#' 
-#' #Change the background gradient to a night time ambiance
-#' \donttest{
-#' render_scene(scene,lookfrom = c(7,1.5,10),lookat = c(0,0.5,0),fov=15,
-#'              backgroundhigh = "#282375", backgroundlow = "#7e77ea", parallel=TRUE,
-#'              samples=500)
-#' }
+#' #Plot the camera path and render from above using the path object:
+#' generate_ground(material=diffuse(checkercolor="grey20"),depth=-10) %>% 
+#'   add_object(ellip_scene) %>% 
+#'   add_object(sphere(y=50,radius=10,material=light(intensity=30))) %>% 
+#'   add_object(path(camera_pos, material=diffuse(color="red"))) %>% 
+#'   render_scene(lookfrom=c(0,20,0),camera_up=c(0,0,1), width=800,height=800,samples=4,
+#'                  fov=80)
+#'             
+#' #Side view     
+#' generate_ground(material=diffuse(checkercolor="grey20"),depth=-10) %>% 
+#'   add_object(ellip_scene) %>% 
+#'   add_object(sphere(y=50,radius=10,material=light(intensity=30))) %>% 
+#'   add_object(path(camera_pos, material=diffuse(color="red"))) %>% 
+#'   render_scene(lookfrom=c(20,0,0),width=800,height=800,samples=4,
+#'                  fov=80)
+#'  
+#' #View from the start        
+#' generate_ground(material=diffuse(checkercolor="grey20"),depth=-10) %>% 
+#'   add_object(ellip_scene) %>% 
+#'   add_object(sphere(y=50,radius=10,material=light(intensity=30))) %>% 
+#'   add_object(path(camera_pos, material=diffuse(color="red"))) %>% 
+#'   render_scene(lookfrom=c(0,1.5,16),width=800,height=800,samples=4,
+#'                  fov=80)
 #'                  
-#'#Increase the aperture to blur objects that are further from the focal plane.
-#' \donttest{
-#' render_scene(scene,lookfrom = c(7,1.5,10),lookat = c(0,0.5,0),fov=15,
-#'              aperture = 0.5,parallel=TRUE,samples=500)
+#' #Generate Camera movement, setting the lookat position to be same as camera position, but offset
+#' #slightly in front. We'll render 12 frames.
+#' 
+#' camera_motion =  generate_camera_motion(positions = camera_pos, lookats = camera_pos, 
+#'                                         offset_lookat = 0.1, fovs=80, frames=12) 
+#'                                         
+#' #This returns a data frame of individual camera positions, interpolated by cubic bezier curves.
+#' camera_motion
+#' 
+#' #Pass NA filename to plot to the device. We'll keep the path and offset it slightly to see
+#' #where we're going. This results in a "roller coaster" effect.
+#' generate_ground(material=diffuse(checkercolor="grey20"),depth=-10) %>% 
+#'   add_object(ellip_scene) %>% 
+#'   add_object(sphere(y=50,radius=10,material=light(intensity=30))) %>% 
+#'   add_object(obj_model(r_obj(),x=10,y=-10,scale_obj=3, angle=c(0,-45,0),
+#'                        material=dielectric(attenuation=c(1,1,0.3)))) %>% 
+#'   add_object(pig(x=-7,y=10,z=-5,scale=1,angle=c(0,-45,80),emotion="angry")) %>% 
+#'   add_object(pig(x=0,y=-0.25,z=-15,scale=1,angle=c(0,225,-20), order_rotation=c(3,2,1),
+#'                  emotion="angry", spider=TRUE)) %>% 
+#'   add_object(path(camera_pos, y=-0.2,material=diffuse(color="red"))) %>% 
+#'   render_animation(filename = NA, camera_motion = camera_motion, samples=100,
+#'                    sample_method="sobol_blue",  
+#'                    clamp_value=10, width=800, height=800)
+#' 
 #' }
-#'                  
-#'#Spin the camera around the scene, decreasing the number of samples to render faster. To make 
-#'#an animation, specify the a filename in `render_scene` for each frame and use the `av` package
-#'#or ffmpeg to combine them all into a movie.
-#'
-#'t=1:30 
-#'xpos = 10 * sin(t*12*pi/180+pi/2)
-#'zpos = 10 * cos(t*12*pi/180+pi/2)
-#'\donttest{
-#'#Save old par() settings
-#'old.par = par(no.readonly = TRUE)
-#'on.exit(par(old.par))
-#'par(mfrow=c(5,6))
-#'for(i in 1:30) {
-#'  render_scene(scene, samples=16, 
-#'    lookfrom = c(xpos[i],1.5,zpos[i]),lookat = c(0,0.5,0), parallel=TRUE)
-#'}
-#'}
-render_scene = function(scene, width = 400, height = 400, fov = 20, 
-                        samples = 100, min_variance = 0.00005, min_adaptive_size = 8,
-                        sample_method = "sobol",
-                        max_depth = 50, roulette_active_depth = 10,
-                        ambient_light = FALSE, 
-                        lookfrom = c(0,1,10), lookat = c(0,0,0), camera_up = c(0,1,0), 
-                        aperture = 0.1, clamp_value = Inf,
-                        filename = NULL, backgroundhigh = "#80b4ff",backgroundlow = "#ffffff",
-                        shutteropen = 0.0, shutterclose = 1.0, focal_distance=NULL, ortho_dimensions = c(1,1),
-                        tonemap ="gamma", bloom = TRUE, parallel=TRUE, bvh_type = "sah",
-                        environment_light = NULL, rotate_env = 0, intensity_env = 1,
-                        debug_channel = "none", return_raw_array = FALSE,
-                        progress = interactive(), verbose = FALSE) { 
+render_animation = function(scene, camera_motion, start = 1,
+                            width = 400, height = 400, 
+                            samples = 100, min_variance = 0.00005, min_adaptive_size = 8,
+                            sample_method = "sobol",
+                            max_depth = 50, roulette_active_depth = 10,
+                            ambient_light = FALSE, 
+                            camera_up = c(0,1,0), clamp_value = Inf,
+                            filename = "rayimage", backgroundhigh = "#80b4ff",backgroundlow = "#ffffff",
+                            shutteropen = 0.0, shutterclose = 1.0, focal_distance=NULL, ortho_dimensions = c(1,1),
+                            tonemap ="gamma", bloom = TRUE, parallel=TRUE, bvh_type = "sah",
+                            environment_light = NULL, rotate_env = 0, intensity_env = 1,
+                            debug_channel = "none", return_raw_array = FALSE,
+                            progress = interactive(), verbose = FALSE,
+                            preview_light_direction = c(0,-1,0), preview_exponent = 6) { 
   if(verbose) {
     currenttime = proc.time()
     cat("Building Scene: ")
   }
-  #Check if Cornell Box scene and set camera if user did not:
-  if(!is.null(attr(scene,"cornell"))) {
-    corn_message = "Setting default values for Cornell box: "
-    missing_corn = FALSE
-    if(missing(lookfrom)) {
-      lookfrom = c(278, 278, -800)
-      corn_message = paste0(corn_message, "lookfrom `c(278,278,-800)` ")
-      missing_corn = TRUE
-    }
-    if(missing(lookat)) {
-      lookat = c(278, 278, 0)
-      corn_message = paste0(corn_message, "lookat `c(278,278,0)` ")
-      missing_corn = TRUE
-    }
-    if(missing(fov)) {
-      fov=40
-      corn_message = paste0(corn_message, "fov `40` ")
-      missing_corn = TRUE
-    }
-    if(fov == 0 && missing(ortho_dimensions)) {
-      ortho_dimensions = c(580,580)
-      corn_message = paste0(corn_message, "ortho_dimensions `c(580, 580)` ")
-      missing_corn = TRUE
-    }
-    corn_message = paste0(corn_message,".")
-    if(missing_corn) {
-      message(corn_message)
-    }
-  }
-  lookvec = (lookat - lookfrom)
-  i1 = c(2,3,1)
-  i2 = c(3,1,2)
-  if(all(lookvec[i1]*camera_up[i2] - lookvec[i2]*camera_up[i1] == 0)) {
-    stop("camera_up value c(", paste(camera_up, collapse=","), ") is aligned exactly with camera vector (lookat - lookfrom). Choose a different value for camera_up.")
+  if(is.na(filename)) {
+    filename = ""
   }
   backgroundhigh = convert_color(backgroundhigh)
   backgroundlow = convert_color(backgroundlow)
@@ -225,10 +172,10 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
   position_list$zvec = scene$z
   rvec = scene$radius
   shapevec = unlist(lapply(tolower(scene$shape),switch,
-                          "sphere" = 1,"xy_rect" = 2, "xz_rect" = 3,"yz_rect" = 4,"box" = 5, "triangle" = 6, 
-                          "obj" = 7, "objcolor" = 8, "disk" = 9, "cylinder" = 10, "ellipsoid" = 11,
-                          "objvertexcolor" = 12, "cone" = 13, "curve" = 14, "csg_object" = 15, "ply" = 16,
-                          "mesh3d" = 17))
+                           "sphere" = 1,"xy_rect" = 2, "xz_rect" = 3,"yz_rect" = 4,"box" = 5, "triangle" = 6, 
+                           "obj" = 7, "objcolor" = 8, "disk" = 9, "cylinder" = 10, "ellipsoid" = 11,
+                           "objvertexcolor" = 12, "cone" = 13, "curve" = 14, "csg_object" = 15, "ply" = 16,
+                           "mesh3d" = 17))
   typevec = unlist(lapply(tolower(scene$type),switch,
                           "diffuse" = 1,"metal" = 2,"dielectric" = 3, 
                           "oren-nayar" = 4, "light" = 5, "microfacet" = 6, 
@@ -246,7 +193,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
   
   #glossy 
   glossyinfo = scene$glossyinfo
-
+  
   #gradient handler
   gradient_info = list()
   gradient_info$gradient_colors = scene$gradient_color
@@ -269,7 +216,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
   #fog handler
   fog_bool = scene$fog
   fog_vec = scene$fogdensity
-
+  
   #flip handler
   flip_vec = scene$flipped
   
@@ -409,12 +356,12 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
   objfilenamevec = purrr::map_chr(fileinfovec, path.expand)
   if(any(!file.exists(objfilenamevec) & nchar(objfilenamevec) > 0)) {
     stop(paste0("Cannot find the following obj/ply files:\n",
-                 paste(objfilenamevec[!file.exists(objfilenamevec) & nchar(objfilenamevec) > 0], 
-                       collapse="\n")
-                 ))
+                paste(objfilenamevec[!file.exists(objfilenamevec) & nchar(objfilenamevec) > 0], 
+                      collapse="\n")
+    ))
   }
   objbasedirvec = purrr::map_chr(objfilenamevec, dirname)
-
+  
   #bg image handler
   if(!is.null(environment_light)) {
     hasbackground = TRUE
@@ -436,11 +383,6 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
   
   assertthat::assert_that(all(c(length(position_list$xvec),length(position_list$yvec),length(position_list$zvec),length(rvec),length(typevec),length(proplist)) == length(position_list$xvec)))
   assertthat::assert_that(all(!is.null(typevec)))
-  assertthat::assert_that(length(lookfrom) == 3)
-  assertthat::assert_that(length(lookat) == 3)
-  if(is.null(focal_distance)) {
-    focal_distance = sqrt(sum((lookfrom-lookat)^2))
-  }
   if(!is.null(options("cores")[[1]])) {
     numbercores = options("cores")[[1]]
   } else {
@@ -449,23 +391,20 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
   if(!parallel) {
     numbercores = 1
   }
-  if(!is.numeric(debug_channel)) {
+  if(debug_channel != "preview") {
     debug_channel = unlist(lapply(tolower(debug_channel),switch,
-                            "none" = 0,"depth" = 1,"normals" = 2, "uv" = 3, "bvh" = 4,
-                            "variance" = 5, "normal" = 2, "dpdu" = 6, "dpdv" = 7, "color" = 8, 
-                            0))
-    light_direction = c(0,1,0)
+                                  "none" = 0,"depth" = 1,"normals" = 2, "uv" = 3, "bvh" = 4,
+                                  "variance" = 5, "normal" = 2, "dpdu" = 6, "dpdv" = 7, "color" = 8, 
+                                  0))
+    light_direction = c(0,1,0,0)
   } else {
-    light_direction = debug_channel
+    light_direction = c(-preview_light_direction, preview_exponent)
     debug_channel = 9
   }
   if(debug_channel == 4) {
     message("rayrender must be compiled with option DEBUGBVH for this debug option to work")
   }
   
-  if(fov == 0) {
-    assertthat::assert_that(length(ortho_dimensions) == 2)
-  }
   if(verbose) {
     buildingtime = proc.time() - currenttime
     cat(sprintf("%0.3f seconds \n",buildingtime[3]))
@@ -485,15 +424,9 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
   camera_info$nx = width
   camera_info$ny = height
   camera_info$ns = samples
-  camera_info$fov = fov
-  camera_info$lookfrom = lookfrom
-  camera_info$lookat = lookat
-  camera_info$aperture = aperture
   camera_info$camera_up = camera_up
   camera_info$shutteropen = shutteropen
   camera_info$shutterclose = shutterclose
-  camera_info$ortho_dimensions = ortho_dimensions
-  camera_info$focal_distance = focal_distance
   camera_info$max_depth = max_depth
   camera_info$roulette_active_depth = roulette_active_depth
   camera_info$sample_method = sample_method
@@ -602,89 +535,16 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
   scene_info$image_repeat = image_repeat
   scene_info$csg_info = csg_info
   scene_info$mesh_list=mesh_list
-
-  #Pathrace Scene
-  rgb_mat = render_scene_rcpp(camera_info = camera_info, scene_info = scene_info) 
   
-  full_array = array(0,c(ncol(rgb_mat$r),nrow(rgb_mat$r),3))
-  full_array[,,1] = flipud(t(rgb_mat$r))
-  full_array[,,2] = flipud(t(rgb_mat$g))
-  full_array[,,3] = flipud(t(rgb_mat$b))
-  if(debug_channel == 1) {
-    returnmat = full_array[,,1]
-    returnmat[is.infinite(returnmat)] = NA
-    if(is.null(filename)) {
-      if(!return_raw_array) {
-        plot_map((full_array-min(full_array,na.rm=TRUE))/(max(full_array,na.rm=TRUE) - min(full_array,na.rm=TRUE)))
-      }
-      return(invisible(full_array))
-    } else {
-      save_png((full_array-min(full_array,na.rm=TRUE))/(max(full_array,na.rm=TRUE) - min(full_array,na.rm=TRUE)),
-               filename)
-      return(invisible(full_array))
-    }
-  } else if (debug_channel %in% c(2,3,4,5)) {
-    if(is.null(filename)) {
-      if(!return_raw_array) {
-        if(debug_channel == 4) {
-          plot_map(full_array/(max(full_array,na.rm=TRUE)))
-        } else {
-          plot_map(full_array)
-        }
-      }
-      return(invisible(full_array))
-    } else {
-      save_png(full_array,filename)
-      return(invisible(full_array))
-    }
-  } 
-  if(!is.matrix(bloom)) {
-    if(is.numeric(bloom) && length(bloom) == 1) {
-      kernel = rayimage::generate_2d_exponential(0.1,11,3*1/bloom)
-      full_array = rayimage::render_convolution(image = full_array, kernel = kernel, min_value = 1, preview=FALSE)
-    } else {
-      if(bloom) {
-        kernel = rayimage::generate_2d_exponential(0.1,11,3)
-        full_array = rayimage::render_convolution(image = full_array, kernel = kernel, min_value = 1, preview=FALSE)
-      }
-    }
+  #Camera Movement Info
+  if(filename != "") {
+    filename_str = paste0(filename,1:nrow(camera_motion),".png")
   } else {
-    kernel = bloom
-    if(ncol(kernel) %% 2 == 0) {
-      newkernel = matrix(0, ncol = ncol(kernel) + 1, nrow = nrow(kernel))
-      newkernel[,1:ncol(kernel)] = kernel
-      kernel = newkernel
-    }
-    if(nrow(kernel) %% 2 == 0) {
-      newkernel = matrix(0, ncol = ncol(kernel), nrow = nrow(kernel) + 1)
-      newkernel[1:nrow(kernel),] = kernel
-      kernel = newkernel
-    }
-    full_array = rayimage::render_convolution(image = full_array, kernel = kernel,  min_value = 1, preview=FALSE)
+    filename_str = rep("", length(1:nrow(camera_motion)))
   }
-  tonemapped_channels = tonemap_image(height,width,full_array[,,1],full_array[,,2],full_array[,,3],toneval)
-  full_array = array(0,c(nrow(tonemapped_channels$r),ncol(tonemapped_channels$r),3))
-  full_array[,,1] = tonemapped_channels$r
-  full_array[,,2] = tonemapped_channels$g
-  full_array[,,3] = tonemapped_channels$b
-  if(toneval == 5) {
-    return(full_array)
-  }
-
-  array_from_mat = array(full_array,dim=c(nrow(full_array),ncol(full_array),3))
-  if(any(is.na(array_from_mat ))) {
-    array_from_mat[is.na(array_from_mat)] = 0
-  }
-  if(any(array_from_mat > 1 | array_from_mat < 0,na.rm = TRUE)) {
-    array_from_mat[array_from_mat > 1] = 1
-    array_from_mat[array_from_mat < 0] = 0
-  }
-  if(is.null(filename)) {
-    if(!return_raw_array) {
-      plot_map(array_from_mat)
-    }
-  } else {
-    save_png(array_from_mat,filename)
-  }
-  return(invisible(array_from_mat))
+  
+  #Pathrace Scene
+  rgb_mat = render_animation_rcpp(camera_info = camera_info, scene_info = scene_info, camera_movement = camera_motion,
+                              start_frame = start - 1, filenames = filename_str, post_process_frame  = post_process_frame,
+                              toneval=toneval) 
 }

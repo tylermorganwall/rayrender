@@ -12,6 +12,15 @@ static const Float mpi_over_180 = M_PI/180;
 static const Float SqrtPiOver8 = 0.626657069f;
 static const Float ONE_OVER_2_PI = 1 / (2 * M_PI);
 
+#ifndef FLOATDEF
+#define FLOATDEF
+#ifdef RAY_FLOAT_AS_DOUBLE
+typedef double Float;
+#else
+typedef float Float;
+#endif 
+#endif
+
 template<class T>
 inline T ffmin(T a, T b) { return(a < b ? a : b);}
 

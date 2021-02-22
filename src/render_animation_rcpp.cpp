@@ -1,15 +1,4 @@
-#ifndef STB_IMAGE_IMPLEMENTATION
-#define STB_IMAGE_IMPLEMENTATION 
-#endif
-
-#ifndef FLOATDEF
-#define FLOATDEF
-#ifdef RAY_FLOAT_AS_DOUBLE
-typedef double Float;
-#else
-typedef float Float;
-#endif 
-#endif
+#define RCPP_USE_UNWIND_PROTECT
 
 #include "vec3.h"
 #include "vec2.h"
@@ -27,21 +16,13 @@ typedef float Float;
 #include "integrator.h"
 #include "debug.h"
 using namespace Rcpp;
-// [[Rcpp::plugins(cpp11)]]
-// [[Rcpp::depends(RcppThread)]]
 #include "RcppThread.h"
-
-// #define DEBUG
-
-#ifdef DEBUG
-#include <iostream>
-#include <fstream>
-#endif
 
 using namespace std;
 
 // [[Rcpp::export]]
-List render_scene_rcpp(List camera_info, List scene_info) {
+void render_animation_rcpp(List camera_info, List scene_info, List camera_movement, int start_frame,
+                           CharacterVector filenames, Function post_process_frame, int toneval) {
   
   //Unpack scene info
   bool ambient_light = as<bool>(scene_info["ambient_light"]);
@@ -103,22 +84,16 @@ List render_scene_rcpp(List camera_info, List scene_info) {
   List image_repeat = as<List>(scene_info["image_repeat"]);
   List csg_info = as<List>(scene_info["csg_info"]);
   List mesh_list = as<List>(scene_info["mesh_list"]);
-
+  
   
   auto startfirst = std::chrono::high_resolution_clock::now();
   //Unpack Camera Info
   int nx = as<int>(camera_info["nx"]);
   int ny = as<int>(camera_info["ny"]);
   int ns = as<int>(camera_info["ns"]);
-  Float fov = as<Float>(camera_info["fov"]);
-  NumericVector lookfromvec = as<NumericVector>(camera_info["lookfrom"]);
-  NumericVector lookatvec = as<NumericVector>(camera_info["lookat"]);
-  Float aperture = as<Float>(camera_info["aperture"]);
   NumericVector camera_up = as<NumericVector>(camera_info["camera_up"]);
   Float shutteropen = as<Float>(camera_info["shutteropen"]);
   Float shutterclose = as<Float>(camera_info["shutterclose"]);
-  Float focus_distance = as<Float>(camera_info["focal_distance"]);
-  NumericVector ortho_dimensions = as<NumericVector>(camera_info["ortho_dimensions"]);
   size_t max_depth = as<size_t>(camera_info["max_depth"]);
   size_t roulette_active = as<size_t>(camera_info["roulette_active_depth"]);
   int sample_method = as<int>(camera_info["sample_method"]);
@@ -126,16 +101,22 @@ List render_scene_rcpp(List camera_info, List scene_info) {
   NumericVector light_direction = as<NumericVector>(camera_info["light_direction"]);
   int bvh_type = as<int>(camera_info["bvh"]);
   
-  //Initialize output matrices
-  NumericMatrix routput(nx,ny);
-  NumericMatrix goutput(nx,ny);
-  NumericMatrix boutput(nx,ny);
+  //unpack motion info
+  NumericVector cam_x        = as<NumericVector>(camera_movement["x"]);
+  NumericVector cam_y        = as<NumericVector>(camera_movement["y"]);
+  NumericVector cam_z        = as<NumericVector>(camera_movement["z"]);
+  NumericVector cam_dx       = as<NumericVector>(camera_movement["dx"]);
+  NumericVector cam_dy       = as<NumericVector>(camera_movement["dy"]);
+  NumericVector cam_dz       = as<NumericVector>(camera_movement["dz"]);
+  NumericVector cam_aperture = as<NumericVector>(camera_movement["aperture"]);
+  NumericVector cam_fov      = as<NumericVector>(camera_movement["fov"]);
+  NumericVector cam_focal    = as<NumericVector>(camera_movement["focal"]);
+  NumericVector cam_orthox   = as<NumericVector>(camera_movement["orthox"]);
+  NumericVector cam_orthoy   = as<NumericVector>(camera_movement["orthoy"]);
+  int n_frames = cam_x.size();
   
-  vec3 lookfrom(lookfromvec[0],lookfromvec[1],lookfromvec[2]);
-  vec3 lookat(lookatvec[0],lookatvec[1],lookatvec[2]);
   vec3 backgroundhigh(bghigh[0],bghigh[1],bghigh[2]);
   vec3 backgroundlow(bglow[0],bglow[1],bglow[2]);
-  float dist_to_focus = focus_distance;
   CharacterVector alpha_files = as<CharacterVector>(alphalist["alpha_temp_file_names"]);
   LogicalVector has_alpha = as<LogicalVector>(alphalist["alpha_tex_bool"]);
   
@@ -147,12 +128,6 @@ List render_scene_rcpp(List camera_info, List scene_info) {
   RcppThread::ThreadPool pool(numbercores);
   GetRNGstate();
   random_gen rng(unif_rand() * std::pow(2,32));
-  camera cam(lookfrom, lookat, vec3(camera_up(0),camera_up(1),camera_up(2)), fov, float(nx)/float(ny), 
-             aperture, dist_to_focus,
-             shutteropen, shutterclose);
-  ortho_camera ocam(lookfrom, lookat, vec3(camera_up(0),camera_up(1),camera_up(2)),
-                    ortho_dimensions(0), ortho_dimensions(1),
-                    shutteropen, shutterclose);
   int nx1, ny1, nn1;
   auto start = std::chrono::high_resolution_clock::now();
   if(verbose) {
@@ -211,24 +186,24 @@ List render_scene_rcpp(List camera_info, List scene_info) {
   
   
   std::shared_ptr<hitable> worldbvh = build_scene(type, radius, shape, position_list,
-                                properties, velocity, moving,
-                                n,shutteropen,shutterclose,
-                                ischeckered, checkercolors, 
-                                gradient_info,
-                                noise, isnoise, noisephase, noiseintensity, noisecolorlist,
-                                angle, 
-                                isimage, has_alpha, alpha_textures, nx_ny_nn_alpha,
-                                textures, nx_ny_nn, has_bump, bump_textures, nx_ny_nn_bump,
-                                bump_intensity,
-                                lightintensity, isflipped,
-                                isvolume, voldensity, order_rotation_list, 
-                                isgrouped, group_pivot, group_translate,
-                                group_angle, group_order_rotation, group_scale,
-                                tri_normal_bools, is_tri_color, tri_color_vert, 
-                                fileinfo, filebasedir, 
-                                scale_list, sigmavec, glossyinfo,
-                                shared_id_mat, is_shared_mat, shared_materials,
-                                image_repeat, csg_info, mesh_list, bvh_type, rng);
+                                                  properties, velocity, moving,
+                                                  n,shutteropen,shutterclose,
+                                                  ischeckered, checkercolors, 
+                                                  gradient_info,
+                                                  noise, isnoise, noisephase, noiseintensity, noisecolorlist,
+                                                  angle, 
+                                                  isimage, has_alpha, alpha_textures, nx_ny_nn_alpha,
+                                                  textures, nx_ny_nn, has_bump, bump_textures, nx_ny_nn_bump,
+                                                  bump_intensity,
+                                                  lightintensity, isflipped,
+                                                  isvolume, voldensity, order_rotation_list, 
+                                                  isgrouped, group_pivot, group_translate,
+                                                  group_angle, group_order_rotation, group_scale,
+                                                  tri_normal_bools, is_tri_color, tri_color_vert, 
+                                                  fileinfo, filebasedir, 
+                                                  scale_list, sigmavec, glossyinfo,
+                                                  shared_id_mat, is_shared_mat, shared_materials,
+                                                  image_repeat, csg_info, mesh_list, bvh_type, rng);
   auto finish = std::chrono::high_resolution_clock::now();
   if(verbose) {
     std::chrono::duration<double> elapsed = finish - start;
@@ -240,12 +215,7 @@ List render_scene_rcpp(List camera_info, List scene_info) {
   worldbvh->bounding_box(0,0,bounding_box_world);
   Float world_radius = bounding_box_world.diag.length()/2 ;
   vec3 world_center  = bounding_box_world.centroid;
-  world_radius = world_radius > (lookfrom - world_center).length() ? world_radius : (lookfrom - world_center).length()*2;
   
-  if(fov == 0) {
-    Float ortho_diag = sqrt(pow(ortho_dimensions(0),2) + pow(ortho_dimensions(1),2));
-    world_radius += ortho_diag;
-  }
   //Initialize background
   if(verbose && hasbackground) {
     Rcpp::Rcout << "Loading Environment Image: ";
@@ -261,7 +231,7 @@ List render_scene_rcpp(List camera_info, List scene_info) {
     background_texture = std::make_shared<image_texture>(background_texture_data, nx1, ny1, nn1, 1, 1, intensity_env);
     background_material = std::make_shared<diffuse_light>(background_texture, 1.0);
     background_sphere = std::make_shared<InfiniteAreaLight>(nx1, ny1, world_radius*2, world_center,
-                                              background_texture, background_material);
+                                                            background_texture, background_material);
     if(rotate_env != 0) {
       background_sphere = std::make_shared<rotate_y>(background_sphere, rotate_env);
     }
@@ -274,13 +244,13 @@ List render_scene_rcpp(List camera_info, List scene_info) {
     background_texture = std::make_shared<gradient_texture>(backgroundlow, backgroundhigh, false, false);
     background_material = std::make_shared<diffuse_light>(background_texture, 1.0);
     background_sphere = std::make_shared<InfiniteAreaLight>(100, 100, world_radius*2, world_center,
-                                              background_texture, background_material);
+                                                            background_texture, background_material);
   } else {
     //Minimum intensity FLT_MIN so the CDF isn't NAN
     background_texture = std::make_shared<constant_texture>(vec3(FLT_MIN,FLT_MIN,FLT_MIN));
     background_material = std::make_shared<diffuse_light>(background_texture, 1.0);
     background_sphere = std::make_shared<InfiniteAreaLight>(100, 100, world_radius*2, world_center,
-                                              background_texture, background_material);
+                                                            background_texture, background_material);
   }
   finish = std::chrono::high_resolution_clock::now();
   if(verbose && hasbackground) {
@@ -302,7 +272,7 @@ List render_scene_rcpp(List camera_info, List scene_info) {
     world.add(background_sphere);
     impl_only_bg = true;
   }
-
+  
   hitable_list hlist;
   if(verbose) {
     Rcpp::Rcout << "Building Importance Sampling List: ";
@@ -311,13 +281,13 @@ List render_scene_rcpp(List camera_info, List scene_info) {
   for(int i = 0; i < n; i++)  {
     if(implicit_sample(i)) {
       hlist.add(build_imp_sample(type, radius, shape, position_list,
-                               properties, velocity,
-                               n, shutteropen, shutterclose,
-                               angle, i, order_rotation_list,
-                               isgrouped, group_pivot, group_translate,
-                               group_angle, group_order_rotation, group_scale,
-                               fileinfo, filebasedir, scale_list, 
-                               mesh_list,bvh_type,  moving, rng));
+                                 properties, velocity,
+                                 n, shutteropen, shutterclose,
+                                 angle, i, order_rotation_list,
+                                 isgrouped, group_pivot, group_translate,
+                                 group_angle, group_order_rotation, group_scale,
+                                 fileinfo, filebasedir, scale_list, 
+                                 mesh_list,bvh_type,  moving, rng));
     }
   }
   finish = std::chrono::high_resolution_clock::now();
@@ -328,7 +298,7 @@ List render_scene_rcpp(List camera_info, List scene_info) {
   if(impl_only_bg || hasbackground) {
     hlist.add(background_sphere);
   }
-
+  
   if(verbose && !progress_bar) {
     Rcpp::Rcout << "Starting Raytracing:\n ";
   }
@@ -336,34 +306,103 @@ List render_scene_rcpp(List camera_info, List scene_info) {
   pb_sampler.set_width(70);
   RProgress::RProgress pb("Adaptive Raytracing [:bar] :percent%");
   pb.set_width(70);
+  RProgress::RProgress pb_frames("Frame :current/:total [:bar] :percent%");
 
+  pb_frames.set_width(70);
+  
   if(progress_bar) {
     pb_sampler.set_total(ny);
     pb.set_total(ns);
+    pb_frames.set_total(n_frames);
   }
   if(min_variance == 0) {
     min_adaptive_size = 1;
     min_variance = 10E-8;
   }
+  
   if(debug_channel != 0) {
-    debug_scene(numbercores, nx, ny, ns, debug_channel,
-                min_variance, min_adaptive_size, 
-                routput, goutput,boutput,
-                progress_bar, sample_method, stratified_dim,
-                verbose, ocam, cam, fov,
-                world, hlist,
-                clampval, max_depth, roulette_active, 
-                light_direction, rng);
+    for(int i = start_frame; i < n_frames; i++ ) {
+      if(progress_bar) {
+        pb_frames.tick();
+      }
+      vec3 lookfrom = vec3(cam_x(i),cam_y(i),cam_z(i));
+      vec3 lookat = vec3(cam_dx(i),cam_dy(i),cam_dz(i));
+      Float fov = cam_fov(i);
+      Float aperture = cam_aperture(i);
+      Float dist_to_focus = cam_focal(i);
+      Float orthox = cam_orthox(i);
+      Float orthoy = cam_orthoy(i);
+      
+      camera cam(lookfrom, lookat, vec3(camera_up(0),camera_up(1),camera_up(2)), fov, float(nx)/float(ny), 
+                 aperture, dist_to_focus,
+                 shutteropen, shutterclose);
+      ortho_camera ocam(lookfrom, lookat, vec3(camera_up(0),camera_up(1),camera_up(2)),
+                        orthox, orthoy,
+                        shutteropen, shutterclose);
+      world_radius = world_radius > (lookfrom - world_center).length() ? world_radius : (lookfrom - world_center).length()*2;
+      
+      if(fov == 0) {
+        Float ortho_diag = sqrt(pow(orthox,2) + pow(orthoy,2));
+        world_radius += ortho_diag;
+      }
+      
+      //Initialize output matrices
+      NumericMatrix routput(nx,ny);
+      NumericMatrix goutput(nx,ny);
+      NumericMatrix boutput(nx,ny);
+      debug_scene(numbercores, nx, ny, ns, debug_channel,
+                  min_variance, min_adaptive_size, 
+                  routput, goutput,boutput,
+                  progress_bar, sample_method, stratified_dim,
+                  verbose, ocam, cam, fov,
+                  world, hlist,
+                  clampval, max_depth, roulette_active, 
+                  light_direction, rng);
+      List temp = List::create(_["r"] = routput, _["g"] = goutput, _["b"] = boutput);
+      post_process_frame(temp, debug_channel, as<std::string>(filenames(i)), nx, ny, toneval);
+    }
   } else {
-    pathtracer(numbercores, nx, ny, ns, debug_channel,
-               min_variance, min_adaptive_size, 
-               routput, goutput,boutput,
-               progress_bar, sample_method, stratified_dim,
-               verbose, ocam, cam, fov,
-               world, hlist,
-               clampval, max_depth, roulette_active);
+    for(int i = start_frame; i < n_frames; i++ ) {
+      if(progress_bar) {
+        pb_frames.tick();
+      }
+      vec3 lookfrom = vec3(cam_x(i),cam_y(i),cam_z(i));
+      vec3 lookat = vec3(cam_dx(i),cam_dy(i),cam_dz(i));
+      Float fov = cam_fov(i);
+      Float aperture = cam_aperture(i);
+      Float dist_to_focus = cam_focal(i);
+      Float orthox = cam_orthox(i);
+      Float orthoy = cam_orthoy(i);
+      
+      camera cam(lookfrom, lookat, vec3(camera_up(0),camera_up(1),camera_up(2)), fov, float(nx)/float(ny), 
+                 aperture, dist_to_focus,
+                 shutteropen, shutterclose);
+      ortho_camera ocam(lookfrom, lookat, vec3(camera_up(0),camera_up(1),camera_up(2)),
+                        orthox, orthoy,
+                        shutteropen, shutterclose);
+      world_radius = world_radius > (lookfrom - world_center).length() ? world_radius : (lookfrom - world_center).length()*2;
+      
+      if(fov == 0) {
+        Float ortho_diag = sqrt(pow(orthox,2) + pow(orthoy,2));
+        world_radius += ortho_diag;
+      }
+      
+      //Initialize output matrices
+      NumericMatrix routput(nx,ny);
+      NumericMatrix goutput(nx,ny);
+      NumericMatrix boutput(nx,ny);
+      pathtracer(numbercores, nx, ny, ns, debug_channel,
+                 min_variance, min_adaptive_size, 
+                 routput, goutput,boutput,
+                 progress_bar, sample_method, stratified_dim,
+                 verbose, ocam, cam, fov,
+                 world, hlist,
+                 clampval, max_depth, roulette_active);
+      List temp = List::create(_["r"] = routput, _["g"] = goutput, _["b"] = boutput);
+      post_process_frame(temp, debug_channel, as<std::string>(filenames(i)), nx, ny, toneval);
+    }
   }
-
+  
   if(verbose) {
     Rcpp::Rcout << "Cleaning up memory..." << "\n";
   }
@@ -391,5 +430,4 @@ List render_scene_rcpp(List camera_info, List scene_info) {
     std::chrono::duration<double> elapsed = finish - startfirst;
     Rcpp::Rcout << "Total time elapsed: " << elapsed.count() << " seconds" << "\n";
   }
-  return(List::create(_["r"] = routput, _["g"] = goutput, _["b"] = boutput));
 }

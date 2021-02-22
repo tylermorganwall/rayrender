@@ -2063,6 +2063,13 @@ path = function(points,
   } else {
     full_control_points = points
   }
+  if(closed) {
+    first_point = full_control_points[[1]]
+    last_point = full_control_points[[length(full_control_points)-1]]
+    full_control_points[[length(full_control_points)]][4,] = first_point[1,]
+    full_control_points[[length(full_control_points)]][3,] = 2*first_point[1,] - first_point[2,]
+    full_control_points[[length(full_control_points)]][2,] = 2*last_point[4,]  - last_point[3,]
+  }
   u_min_segment = length(full_control_points) * u_min 
   u_max_segment = length(full_control_points) * u_max 
   

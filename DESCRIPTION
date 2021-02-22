@@ -31,5 +31,5 @@ Suggests:
     Rvcg
 LinkingTo: Rcpp, RcppThread, progress, spacefillr
 URL: https://www.rayrender.net, https://github.com/tylermorganwall/rayrender
-RoxygenNote: 7.1.0
+RoxygenNote: 7.1.1
 SystemRequirements: C++11
