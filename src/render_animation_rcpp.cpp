@@ -91,7 +91,6 @@ void render_animation_rcpp(List camera_info, List scene_info, List camera_moveme
   int nx = as<int>(camera_info["nx"]);
   int ny = as<int>(camera_info["ny"]);
   int ns = as<int>(camera_info["ns"]);
-  NumericVector camera_up = as<NumericVector>(camera_info["camera_up"]);
   Float shutteropen = as<Float>(camera_info["shutteropen"]);
   Float shutterclose = as<Float>(camera_info["shutterclose"]);
   size_t max_depth = as<size_t>(camera_info["max_depth"]);
@@ -108,6 +107,9 @@ void render_animation_rcpp(List camera_info, List scene_info, List camera_moveme
   NumericVector cam_dx       = as<NumericVector>(camera_movement["dx"]);
   NumericVector cam_dy       = as<NumericVector>(camera_movement["dy"]);
   NumericVector cam_dz       = as<NumericVector>(camera_movement["dz"]);
+  NumericVector cam_upx      = as<NumericVector>(camera_movement["upx"]);
+  NumericVector cam_upy      = as<NumericVector>(camera_movement["upy"]);
+  NumericVector cam_upz      = as<NumericVector>(camera_movement["upz"]);
   NumericVector cam_aperture = as<NumericVector>(camera_movement["aperture"]);
   NumericVector cam_fov      = as<NumericVector>(camera_movement["fov"]);
   NumericVector cam_focal    = as<NumericVector>(camera_movement["focal"]);
@@ -313,7 +315,7 @@ void render_animation_rcpp(List camera_info, List scene_info, List camera_moveme
   if(progress_bar) {
     pb_sampler.set_total(ny);
     pb.set_total(ns);
-    pb_frames.set_total(n_frames);
+    pb_frames.set_total(n_frames - start_frame);
   }
   if(min_variance == 0) {
     min_adaptive_size = 1;
@@ -332,11 +334,13 @@ void render_animation_rcpp(List camera_info, List scene_info, List camera_moveme
       Float dist_to_focus = cam_focal(i);
       Float orthox = cam_orthox(i);
       Float orthoy = cam_orthoy(i);
+      vec3 camera_up = vec3(cam_upx(i),cam_upy(i),cam_upz(i));
       
-      camera cam(lookfrom, lookat, vec3(camera_up(0),camera_up(1),camera_up(2)), fov, float(nx)/float(ny), 
+      
+      camera cam(lookfrom, lookat, camera_up, fov, float(nx)/float(ny), 
                  aperture, dist_to_focus,
                  shutteropen, shutterclose);
-      ortho_camera ocam(lookfrom, lookat, vec3(camera_up(0),camera_up(1),camera_up(2)),
+      ortho_camera ocam(lookfrom, lookat, camera_up,
                         orthox, orthoy,
                         shutteropen, shutterclose);
       world_radius = world_radius > (lookfrom - world_center).length() ? world_radius : (lookfrom - world_center).length()*2;
@@ -368,16 +372,18 @@ void render_animation_rcpp(List camera_info, List scene_info, List camera_moveme
       }
       vec3 lookfrom = vec3(cam_x(i),cam_y(i),cam_z(i));
       vec3 lookat = vec3(cam_dx(i),cam_dy(i),cam_dz(i));
+      vec3 camera_up = vec3(cam_upx(i),cam_upy(i),cam_upz(i));
+      
       Float fov = cam_fov(i);
       Float aperture = cam_aperture(i);
       Float dist_to_focus = cam_focal(i);
       Float orthox = cam_orthox(i);
       Float orthoy = cam_orthoy(i);
       
-      camera cam(lookfrom, lookat, vec3(camera_up(0),camera_up(1),camera_up(2)), fov, float(nx)/float(ny), 
+      camera cam(lookfrom, lookat, camera_up, fov, float(nx)/float(ny), 
                  aperture, dist_to_focus,
                  shutteropen, shutterclose);
-      ortho_camera ocam(lookfrom, lookat, vec3(camera_up(0),camera_up(1),camera_up(2)),
+      ortho_camera ocam(lookfrom, lookat, camera_up,
                         orthox, orthoy,
                         shutteropen, shutterclose);
       world_radius = world_radius > (lookfrom - world_center).length() ? world_radius : (lookfrom - world_center).length()*2;

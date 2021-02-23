@@ -24,7 +24,6 @@
 #' @param ambient_light Default `FALSE`, unless there are no emitting objects in the scene. 
 #' If `TRUE`, the background will be a gradient varying from `backgroundhigh` directly up (+y) to 
 #' `backgroundlow` directly down (-y).
-#' @param camera_up Default `c(0,1,0)`. Vector indicating the "up" position of the camera.
 #' @param aperture Default `0.1`. Aperture of the camera. Smaller numbers will increase depth of field, causing
 #' less blurring in areas not in focus.
 #' @param clamp_value Default `Inf`. If a bright light or a reflective material is in the scene, occasionally
@@ -99,7 +98,7 @@
 #'   add_object(ellip_scene) %>% 
 #'   add_object(sphere(y=50,radius=10,material=light(intensity=30))) %>% 
 #'   add_object(path(camera_pos, material=diffuse(color="red"))) %>% 
-#'   render_scene(lookfrom=c(0,20,0),camera_up=c(0,0,1), width=800,height=800,samples=4,
+#'   render_scene(lookfrom=c(0,20,0), width=800,height=800,samples=4,
 #'                  fov=80)
 #'             
 #' #Side view     
@@ -149,7 +148,7 @@ render_animation = function(scene, camera_motion, start = 1,
                             sample_method = "sobol",
                             max_depth = 50, roulette_active_depth = 10,
                             ambient_light = FALSE, 
-                            camera_up = c(0,1,0), clamp_value = Inf,
+                            clamp_value = Inf,
                             filename = "rayimage", backgroundhigh = "#80b4ff",backgroundlow = "#ffffff",
                             shutteropen = 0.0, shutterclose = 1.0, focal_distance=NULL, ortho_dimensions = c(1,1),
                             tonemap ="gamma", bloom = TRUE, parallel=TRUE, bvh_type = "sah",
@@ -424,7 +423,6 @@ render_animation = function(scene, camera_motion, start = 1,
   camera_info$nx = width
   camera_info$ny = height
   camera_info$ns = samples
-  camera_info$camera_up = camera_up
   camera_info$shutteropen = shutteropen
   camera_info$shutterclose = shutterclose
   camera_info$max_depth = max_depth
