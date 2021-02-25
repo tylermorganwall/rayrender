@@ -8,6 +8,11 @@ calculate_distance_along_bezier_curve(cps, breaks = 20)
 }
 \arguments{
 \item{cps}{Control points}
+
+\item{breaks}{Number of interpolation breaks}
+}
+\value{
+Data frame of points along curve, along with distances
 }
 \description{
 Get Distance Along Bezier Curve

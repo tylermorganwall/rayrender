@@ -2,14 +2,21 @@
 % Please edit documentation in R/generate_camera_motion.R
 \name{process_point_series}
 \alias{process_point_series}
-\title{Process Points to Control Poinst}
+\title{Process Points to Control Points}
 \usage{
 process_point_series(points, closed = FALSE, straight = FALSE)
 }
 \arguments{
-\item{closed}{}
+\item{points}{Points}
+
+\item{closed}{Whether to be closed}
+
+\item{straight}{Whether to be straight}
+}
+\value{
+Matrix of control points
 }
 \description{
-Process Points to Control Poinst
+Process Points to Control Points
 }
 \keyword{internal}

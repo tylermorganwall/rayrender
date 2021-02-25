@@ -7,7 +7,7 @@
 render_animation(
   scene,
   camera_motion,
-  start = 1,
+  start_frame = 1,
   width = 400,
   height = 400,
   samples = 100,
@@ -17,7 +17,6 @@ render_animation(
   max_depth = 50,
   roulette_active_depth = 10,
   ambient_light = FALSE,
-  camera_up = c(0, 1, 0),
   clamp_value = Inf,
   filename = "rayimage",
   backgroundhigh = "#80b4ff",
@@ -45,6 +44,8 @@ render_animation(
 \item{scene}{Tibble of object locations and properties.}
 
 \item{camera_motion}{Data frame of camera motion vectors, calculated with `generate_camera_motion()`.}
+
+\item{start_frame}{Default `1`. Frame to start the animation.}
 
 \item{width}{Default `400`. Width of the render, in pixels.}
 
@@ -74,8 +75,6 @@ Russian roulette.}
 \item{ambient_light}{Default `FALSE`, unless there are no emitting objects in the scene. 
 If `TRUE`, the background will be a gradient varying from `backgroundhigh` directly up (+y) to 
 `backgroundlow` directly down (-y).}
-
-\item{camera_up}{Default `c(0,1,0)`. Vector indicating the "up" position of the camera.}
 
 \item{clamp_value}{Default `Inf`. If a bright light or a reflective material is in the scene, occasionally
 there will be bright spots that will not go away even with a large number of samples. These 
@@ -134,7 +133,8 @@ instead of an image. If `normals`, function will return an image of scene normal
 If `uv`, function will return an image of the uv coords. If `variance`, function will return an image 
 showing the number of samples needed to take for each block to converge. If `dpdu` or `dpdv`, function will return
 an image showing the differential `u` and `u` coordinates. If `color`, function will return the raw albedo
-values (with white for `metal` and `dielectric` materials).}
+values (with white for `metal` and `dielectric` materials). If `preview`, an image rendered with `render_preview()` 
+will be returned.}
 
 \item{return_raw_array}{Default `FALSE`. If `TRUE`, function will return raw array with RGB intensity
 information.}
@@ -144,8 +144,9 @@ information.}
 \item{verbose}{Default `FALSE`. Prints information and timing information about scene
 construction and raytracing progress.}
 
-\item{aperture}{Default `0.1`. Aperture of the camera. Smaller numbers will increase depth of field, causing
-less blurring in areas not in focus.}
+\item{preview_light_direction}{Default `c(0,-1,0)`. Vector specifying the orientation for the global light using for phong shading.}
+
+\item{preview_exponent}{Default `6`. Phong exponent.}
 }
 \value{
 Raytraced plot to current device, or an image saved to a file.
@@ -154,7 +155,7 @@ Raytraced plot to current device, or an image saved to a file.
 Takes the scene description and renders an image, either to the device or to a filename.
 }
 \examples{
-#Fly through a bunch of ellipsoids
+#Create and animate flying through a scene on a simulated roller coaster
 \donttest{
 set.seed(3)
 elliplist = list()
@@ -173,15 +174,16 @@ generate_ground(material=diffuse(checkercolor="grey20"),depth=-10) \%>\%
   add_object(ellip_scene) \%>\% 
   add_object(sphere(y=50,radius=10,material=light(intensity=30))) \%>\% 
   add_object(path(camera_pos, material=diffuse(color="red"))) \%>\% 
-  render_scene(lookfrom=c(0,20,0),camera_up=c(0,0,1), width=800,height=800,samples=4,
-                 fov=80)
+  render_scene(lookfrom=c(0,20,0), width=800,height=800,samples=32,
+               camera_up = c(0,0,1),
+               fov=80)
             
 #Side view     
 generate_ground(material=diffuse(checkercolor="grey20"),depth=-10) \%>\% 
   add_object(ellip_scene) \%>\% 
   add_object(sphere(y=50,radius=10,material=light(intensity=30))) \%>\% 
   add_object(path(camera_pos, material=diffuse(color="red"))) \%>\% 
-  render_scene(lookfrom=c(20,0,0),width=800,height=800,samples=4,
+  render_scene(lookfrom=c(20,0,0),width=800,height=800,samples=32,
                  fov=80)
  
 #View from the start        
@@ -189,14 +191,14 @@ generate_ground(material=diffuse(checkercolor="grey20"),depth=-10) \%>\%
   add_object(ellip_scene) \%>\% 
   add_object(sphere(y=50,radius=10,material=light(intensity=30))) \%>\% 
   add_object(path(camera_pos, material=diffuse(color="red"))) \%>\% 
-  render_scene(lookfrom=c(0,1.5,16),width=800,height=800,samples=4,
+  render_scene(lookfrom=c(0,1.5,16),width=800,height=800,samples=32,
                  fov=80)
                  
 #Generate Camera movement, setting the lookat position to be same as camera position, but offset
-#slightly in front. We'll render 12 frames.
+#slightly in front. We'll render 12 frames, but you'd likely want more in a real animation.
 
 camera_motion =  generate_camera_motion(positions = camera_pos, lookats = camera_pos, 
-                                        offset_lookat = 0.1, fovs=80, frames=12) 
+                                        offset_lookat = 1, fovs=80, frames=12) 
                                         
 #This returns a data frame of individual camera positions, interpolated by cubic bezier curves.
 camera_motion

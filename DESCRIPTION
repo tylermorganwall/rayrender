@@ -23,7 +23,8 @@ Imports:
     raster,
     decido,
     rayimage,
-    stats
+    stats,
+    progress
 Suggests:
     sf,
     spData,

@@ -7,7 +7,14 @@
 process_point_series_2d(values, closed = FALSE, straight = FALSE)
 }
 \arguments{
-\item{closed}{}
+\item{closed}{Whether to be closed}
+
+\item{straight}{Whether to be straight}
+
+\item{points}{Points}
+}
+\value{
+Matrix of control points
 }
 \description{
 Process Points to Control Points

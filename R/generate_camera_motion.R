@@ -65,9 +65,9 @@ process_point_series_1d = function(values, closed=FALSE, straight=FALSE) {
   mat_values = matrix(0,ncol=3,nrow=length(values))
   mat_values[,1] = values
   if(!straight) {
-    full_control_points = rayrender:::calculate_control_points(mat_values)
+    full_control_points = calculate_control_points(mat_values)
   } else {
-    full_control_points = rayrender:::calculate_control_points_straight(mat_values)
+    full_control_points = calculate_control_points_straight(mat_values)
   }
   return(full_control_points)
 }
@@ -82,12 +82,12 @@ process_point_series_1d = function(values, closed=FALSE, straight=FALSE) {
 #' @keywords internal
 process_point_series_2d = function(values, closed=FALSE, straight=FALSE) {
   mat_values = matrix(0,ncol=3,nrow=length(values))
-  mat_values[,1] = values[1]
-  mat_values[,2] = values[2]
+  mat_values[,1] = values[,1]
+  mat_values[,2] = values[,2]
   if(!straight) {
-    full_control_points = rayrender:::calculate_control_points(mat_values)
+    full_control_points = calculate_control_points(mat_values)
   } else {
-    full_control_points = rayrender:::calculate_control_points_straight(mat_values)
+    full_control_points = calculate_control_points_straight(mat_values)
   }
   return(full_control_points)
 }
@@ -228,14 +228,11 @@ calculate_final_path = function(linearized_cp, steps, constant_step = TRUE,
       for(i in 1:(length(rowvals)-1)) {
         final_points[[i]] = lerp(rowvals[i]-floor(rowvals[i]),
                                  linearized_cp[floor(rowvals[i]),c("x","y","z")],
-                                 linearized_cp[max(c(floor(rowvals[i+1]),rowvals[i]+1)),c("x","y","z")])
+                                 linearized_cp[floor(rowvals[i])+1,c("x","y","z")])
         if(offset != 0) {
-          direction = lerp(rowvals[i]-floor(rowvals[i])+0.025,
-                           linearized_cp[floor(rowvals[i]),c("x","y","z")],
-                           linearized_cp[max(c(floor(rowvals[i+1]),rowvals[i]+1)),c("x","y","z")]) -
-            lerp(rowvals[i]-floor(rowvals[i])- 0.025,
-                 linearized_cp[floor(rowvals[i]),c("x","y","z")],
-                 linearized_cp[max(c(floor(rowvals[i+1]),rowvals[i]+1)),c("x","y","z")])
+          direction = lerp(rowvals[i]-floor(rowvals[i]),
+                           linearized_cp[floor(rowvals[i]),c("dx","dy","dz")],
+                           linearized_cp[floor(rowvals[i])+1,c("dx","dy","dz")]) 
           if(all(direction != 0)) {
             direction = direction / sqrt(sum(direction^2))
           } else {
@@ -265,10 +262,14 @@ calculate_final_path = function(linearized_cp, steps, constant_step = TRUE,
         if(progress) {
           pb$update(current_dist/maxdist)
         }
-        row = which.min(abs(floor(linearized_cp$total_dist - current_dist)))
+        row = which.min(abs(linearized_cp$total_dist - current_dist))
+        if(linearized_cp$total_dist[row] - current_dist > 0) {
+          row = row - 1
+        }
         if(row+1 > nrow(linearized_cp)) {
           row = nrow(linearized_cp) - 1
         }
+        
         tval = (current_dist - linearized_cp$total_dist[row])/(linearized_cp$total_dist[row+1] - linearized_cp$total_dist[row])
         
         final_points[[i]] = lerp(tval,
@@ -306,6 +307,8 @@ calculate_final_path = function(linearized_cp, steps, constant_step = TRUE,
 #' @param fovs Default `40`. A numeric vector of field of view values.
 #' @param focal_distances Default `NULL`, automatically the distance between positions and lookats. 
 #' Numeric vector of focal distances.
+#' @param ortho_dims Default `NULL`, which results in `c(1,1)` orthographic dimensions.  A list or 2-column matrix
+#' of orthographic dimensions.
 #' @param camera_ups Default `NULL`, which gives at up vector of `c(0,1,0)`. Camera up orientation.
 #' @param frames Default `30`. Number of frames between each key frame.
 #' @param closed Default `FALSE`. Whether to close the camera curve.
@@ -315,12 +318,24 @@ calculate_final_path = function(linearized_cp, steps, constant_step = TRUE,
 #' 3D second derivative, and uses them to determine the step size.
 #' over the path. If `FALSE`, the camera will speed up and slow down depending on the bezier curve
 #' parameterization.
+#' @param aperture_linear Default `TRUE`. This linearly interpolates focal distances, rather than using a smooth bezier curve.
+#' @param fov_linear Default `TRUE`. This linearly interpolates focal distances, rather than using a smooth bezier curve.
+#' @param focal_linear Default `TRUE`. This linearly interpolates focal distances, rather than using a smooth bezier curve.
+#' @param curvature_adjust Default `FALSE`. Whether to slow down the camera at areas of high curvature
+#' to prevent fast swings.
+#' @param curvature_scale Default `30`. Constant dividing factor for curvature. Higher values will subdivide the
+#' path more, potentially finding a smoother path, but increasing the calculation time. Increasing this value
+#' after a certain point will not increase the quality of the path, but it is scene-dependent.
+#' @param offset_lookat Default `0`. Amount to offset the lookat position, either along the path (if `constant_step = TRUE`)
+#' or towards the derivative of the bezier curve.
+#' @param camera_up_constant = TRUE,
+#' @param progress Default `TRUE`. Whether to display a progress bar.
 #' 
 #' @export
 #' @return Data frame of camera positions, orientations, apertures, focal distances, and field of views
 #'
 #' @examples
-#' #Generate a camera moving through space
+#' #Create and animate flying through a scene on a simulated roller coaster
 #' \donttest{
 #' set.seed(3)
 #' elliplist = list()
@@ -339,15 +354,16 @@ calculate_final_path = function(linearized_cp, steps, constant_step = TRUE,
 #'   add_object(ellip_scene) %>% 
 #'   add_object(sphere(y=50,radius=10,material=light(intensity=30))) %>% 
 #'   add_object(path(camera_pos, material=diffuse(color="red"))) %>% 
-#'   render_scene(lookfrom=c(0,20,0),camera_up=c(0,0,1), width=800,height=800,samples=4,
-#'                  fov=80)
+#'   render_scene(lookfrom=c(0,20,0), width=800,height=800,samples=32,
+#'                camera_up = c(0,0,1),
+#'                fov=80)
 #'             
 #' #Side view     
 #' generate_ground(material=diffuse(checkercolor="grey20"),depth=-10) %>% 
 #'   add_object(ellip_scene) %>% 
 #'   add_object(sphere(y=50,radius=10,material=light(intensity=30))) %>% 
 #'   add_object(path(camera_pos, material=diffuse(color="red"))) %>% 
-#'   render_scene(lookfrom=c(20,0,0),width=800,height=800,samples=4,
+#'   render_scene(lookfrom=c(20,0,0),width=800,height=800,samples=32,
 #'                  fov=80)
 #'  
 #' #View from the start        
@@ -355,14 +371,14 @@ calculate_final_path = function(linearized_cp, steps, constant_step = TRUE,
 #'   add_object(ellip_scene) %>% 
 #'   add_object(sphere(y=50,radius=10,material=light(intensity=30))) %>% 
 #'   add_object(path(camera_pos, material=diffuse(color="red"))) %>% 
-#'   render_scene(lookfrom=c(0,1.5,16),width=800,height=800,samples=4,
+#'   render_scene(lookfrom=c(0,1.5,16),width=800,height=800,samples=32,
 #'                  fov=80)
 #'                  
 #' #Generate Camera movement, setting the lookat position to be same as camera position, but offset
-#' #slightly in front. We'll render 12 frames.
+#' #slightly in front. We'll render 12 frames, but you'd likely want more in a real animation.
 #' 
 #' camera_motion =  generate_camera_motion(positions = camera_pos, lookats = camera_pos, 
-#'                                         offset_lookat = 0.1, fovs=80, frames=12) 
+#'                                         offset_lookat = 1, fovs=80, frames=12) 
 #'                                         
 #' #This returns a data frame of individual camera positions, interpolated by cubic bezier curves.
 #' camera_motion
@@ -381,15 +397,27 @@ calculate_final_path = function(linearized_cp, steps, constant_step = TRUE,
 #'   render_animation(filename = NA, camera_motion = camera_motion, samples=100,
 #'                    sample_method="sobol_blue",  
 #'                    clamp_value=10, width=800, height=800)
+#' 
 #' }
-generate_camera_motion = function(positions, lookats = NULL, apertures = 0, fovs = 40,
-                                  focal_distances = NULL, ortho_dims = NULL, camera_ups = NULL,
-                                  frames = 30, closed=FALSE, linear=FALSE, 
-                                  aperture_linear = TRUE,  fovs_linear = TRUE, focal_linear = TRUE,
+generate_camera_motion = function(positions, 
+                                  lookats = NULL, 
+                                  apertures = 0, fovs = 40,
+                                  focal_distances = NULL, 
+                                  ortho_dims = NULL, 
+                                  camera_ups = NULL,
+                                  frames = 30, 
+                                  closed=FALSE, 
+                                  linear=FALSE, 
+                                  aperture_linear = TRUE,  
+                                  fov_linear = TRUE, 
+                                  focal_linear = TRUE,
                                   constant_step = TRUE, 
-                                  curvature_adjust = FALSE, curvature_scale = 10,
-                                  offset_lookat = 0, camera_up_constant = TRUE,
-                                  function_step = NULL, progress = TRUE) {
+                                  curvature_adjust = FALSE, 
+                                  curvature_scale = 30,
+                                  offset_lookat = 0, 
+                                  camera_up_constant = TRUE,
+                                  function_step = NULL, 
+                                  progress = TRUE) {
   position_control_points = process_point_series(positions,closed=closed,straight=linear)
   points_dist = calculate_distance_along_bezier_curve(position_control_points, breaks = 50)
   points_final = calculate_final_path(points_dist, steps = frames, constant_step = constant_step,
@@ -440,7 +468,7 @@ generate_camera_motion = function(positions, lookats = NULL, apertures = 0, fovs
     apertures_final = matrix(apertures,  nrow = nrow(points_final), ncol=1)
   }
   if(length(fovs) != 1) {
-    fovs_control_lookats = process_point_series_1d(fovs,closed=closed,straight=fovs_linear)
+    fovs_control_lookats = process_point_series_1d(fovs,closed=closed,straight=fov_linear)
     fovs_dist = calculate_distance_along_bezier_curve(fovs_control_lookats, breaks = 50)
     fovs_final = calculate_final_path(fovs_dist, steps = frames, constant_step = constant_step)
     fovs_final = fovs_final[,1]

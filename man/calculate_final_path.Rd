@@ -4,10 +4,28 @@
 \alias{calculate_final_path}
 \title{Linearize and Calculate Final Points (with constant stepsize)}
 \usage{
-calculate_final_path(linearized_cp, steps, constant_step = TRUE, offset = 0)
+calculate_final_path(
+  linearized_cp,
+  steps,
+  constant_step = TRUE,
+  curvature_adjust = FALSE,
+  curvature_scale = 1,
+  offset = 0,
+  progress = FALSE,
+  string = ""
+)
 }
 \arguments{
 \item{linearized_cp}{Matrix (4x3)}
+
+\item{steps}{Number of steps}
+
+\item{constant_step}{Whether to step at constant steps or not}
+
+\item{offset}{Offset along curve}
+}
+\value{
+Matrix of points along curve
 }
 \description{
 Linearize and Calculate Final Points (with constant stepsize)

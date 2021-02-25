@@ -11,35 +11,83 @@ generate_camera_motion(
   fovs = 40,
   focal_distances = NULL,
   ortho_dims = NULL,
+  camera_ups = NULL,
   frames = 30,
   closed = FALSE,
-  straight = FALSE,
-  constant_step = TRUE,
+  linear = FALSE,
   aperture_linear = TRUE,
-  fovs_linear = TRUE,
+  fov_linear = TRUE,
   focal_linear = TRUE,
-  offset_lookat = 0
+  constant_step = TRUE,
+  curvature_adjust = FALSE,
+  curvature_scale = 30,
+  offset_lookat = 0,
+  camera_up_constant = TRUE,
+  function_step = NULL,
+  progress = TRUE
 )
 }
 \arguments{
+\item{positions}{A list or 3-column XYZ matrix of camera positions. 
+These will serve as key frames for the camera position.}
+
+\item{lookats}{Default `NULL`, which sets the camera lookat to the origin c(0,0,0) 
+for the animation. A list or 3-column XYZ matrix
+of lookat points. Must be the same number of points as `positions`.}
+
+\item{apertures}{Default `0`. A numeric vector of aperture values.}
+
+\item{fovs}{Default `40`. A numeric vector of field of view values.}
+
+\item{focal_distances}{Default `NULL`, automatically the distance between positions and lookats. 
+Numeric vector of focal distances.}
+
+\item{ortho_dims}{Default `NULL`, which results in `c(1,1)` orthographic dimensions.  A list or 2-column matrix
+of orthographic dimensions.}
+
+\item{camera_ups}{Default `NULL`, which gives at up vector of `c(0,1,0)`. Camera up orientation.}
+
 \item{frames}{Default `30`. Number of frames between each key frame.}
 
 \item{closed}{Default `FALSE`. Whether to close the camera curve.}
 
-\item{straight}{Default `FALSE`. Whether the camera movement should follow straight lines.}
+\item{linear}{Default `FALSE`. Whether the camera movement should follow straight lines or bezier curves.}
 
-\item{constant_step}{Default `FALSE`. If `TRUE`,}
+\item{aperture_linear}{Default `TRUE`. This linearly interpolates focal distances, rather than using a smooth bezier curve.}
 
-\item{smooth}{Default `TRUE`.}
+\item{fov_linear}{Default `TRUE`. This linearly interpolates focal distances, rather than using a smooth bezier curve.}
+
+\item{focal_linear}{Default `TRUE`. This linearly interpolates focal distances, rather than using a smooth bezier curve.}
+
+\item{constant_step}{Default `TRUE`. This will make the camera travel at a constant speed}
+
+\item{curvature_adjust}{Default `FALSE`. Whether to slow down the camera at areas of high curvature
+to prevent fast swings.}
+
+\item{curvature_scale}{Default `30`. Constant dividing factor for curvature. Higher values will subdivide the
+path more, potentially finding a smoother path, but increasing the calculation time. Increasing this value
+after a certain point will not increase the quality of the path, but it is scene-dependent.}
+
+\item{offset_lookat}{Default `0`. Amount to offset the lookat position, either along the path (if `constant_step = TRUE`)
+or towards the derivative of the bezier curve.}
+
+\item{camera_up_constant}{= TRUE,}
+
+\item{function_step}{Default `NULL`. A function that takes three inputs: the 3D position, the 3D derivative, and the
+3D second derivative, and uses them to determine the step size.
+over the path. If `FALSE`, the camera will speed up and slow down depending on the bezier curve
+parameterization.}
+
+\item{progress}{Default `TRUE`. Whether to display a progress bar.}
 }
 \value{
-Nothing
+Data frame of camera positions, orientations, apertures, focal distances, and field of views
 }
 \description{
-Takes the scene description and renders an image, either to the device or to a filename.
+Takes a series of key frame camera positions and smoothly interpolates between them.
 }
 \examples{
-#Generate a camera moving through space
+#Create and animate flying through a scene on a simulated roller coaster
 \donttest{
 set.seed(3)
 elliplist = list()
@@ -58,15 +106,16 @@ generate_ground(material=diffuse(checkercolor="grey20"),depth=-10) \%>\%
   add_object(ellip_scene) \%>\% 
   add_object(sphere(y=50,radius=10,material=light(intensity=30))) \%>\% 
   add_object(path(camera_pos, material=diffuse(color="red"))) \%>\% 
-  render_scene(lookfrom=c(0,20,0),camera_up=c(0,0,1), width=800,height=800,samples=4,
-                 fov=80)
+  render_scene(lookfrom=c(0,20,0), width=800,height=800,samples=32,
+               camera_up = c(0,0,1),
+               fov=80)
             
 #Side view     
 generate_ground(material=diffuse(checkercolor="grey20"),depth=-10) \%>\% 
   add_object(ellip_scene) \%>\% 
   add_object(sphere(y=50,radius=10,material=light(intensity=30))) \%>\% 
   add_object(path(camera_pos, material=diffuse(color="red"))) \%>\% 
-  render_scene(lookfrom=c(20,0,0),width=800,height=800,samples=4,
+  render_scene(lookfrom=c(20,0,0),width=800,height=800,samples=32,
                  fov=80)
  
 #View from the start        
@@ -74,14 +123,14 @@ generate_ground(material=diffuse(checkercolor="grey20"),depth=-10) \%>\%
   add_object(ellip_scene) \%>\% 
   add_object(sphere(y=50,radius=10,material=light(intensity=30))) \%>\% 
   add_object(path(camera_pos, material=diffuse(color="red"))) \%>\% 
-  render_scene(lookfrom=c(0,1.5,16),width=800,height=800,samples=4,
+  render_scene(lookfrom=c(0,1.5,16),width=800,height=800,samples=32,
                  fov=80)
                  
 #Generate Camera movement, setting the lookat position to be same as camera position, but offset
-#slightly in front. We'll render 12 frames.
+#slightly in front. We'll render 12 frames, but you'd likely want more in a real animation.
 
 camera_motion =  generate_camera_motion(positions = camera_pos, lookats = camera_pos, 
-                                        offset_lookat = 0.1, fovs=80, frames=12) 
+                                        offset_lookat = 1, fovs=80, frames=12) 
                                         
 #This returns a data frame of individual camera positions, interpolated by cubic bezier curves.
 camera_motion
@@ -100,5 +149,6 @@ generate_ground(material=diffuse(checkercolor="grey20"),depth=-10) \%>\%
   render_animation(filename = NA, camera_motion = camera_motion, samples=100,
                    sample_method="sobol_blue",  
                    clamp_value=10, width=800, height=800)
+
 }
 }

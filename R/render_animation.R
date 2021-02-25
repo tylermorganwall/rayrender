@@ -4,6 +4,7 @@
 #'
 #' @param scene Tibble of object locations and properties. 
 #' @param camera_motion Data frame of camera motion vectors, calculated with `generate_camera_motion()`.
+#' @param start_frame Default `1`. Frame to start the animation. 
 #' @param width Default `400`. Width of the render, in pixels.
 #' @param height Default `400`. Height of the render, in pixels.
 #' @param samples Default `100`. The maximum number of samples for each pixel. If this is a length-2
@@ -24,8 +25,6 @@
 #' @param ambient_light Default `FALSE`, unless there are no emitting objects in the scene. 
 #' If `TRUE`, the background will be a gradient varying from `backgroundhigh` directly up (+y) to 
 #' `backgroundlow` directly down (-y).
-#' @param aperture Default `0.1`. Aperture of the camera. Smaller numbers will increase depth of field, causing
-#' less blurring in areas not in focus.
 #' @param clamp_value Default `Inf`. If a bright light or a reflective material is in the scene, occasionally
 #' there will be bright spots that will not go away even with a large number of samples. These 
 #' can be removed (at the cost of slightly darkening the image) by setting this to a small number greater than 1. 
@@ -63,7 +62,8 @@
 #' If `uv`, function will return an image of the uv coords. If `variance`, function will return an image 
 #' showing the number of samples needed to take for each block to converge. If `dpdu` or `dpdv`, function will return
 #' an image showing the differential `u` and `u` coordinates. If `color`, function will return the raw albedo
-#' values (with white for `metal` and `dielectric` materials).
+#' values (with white for `metal` and `dielectric` materials). If `preview`, an image rendered with `render_preview()` 
+#' will be returned.
 #' @param return_raw_array Default `FALSE`. If `TRUE`, function will return raw array with RGB intensity
 #' information.
 #' @param parallel Default `FALSE`. If `TRUE`, it will use all available cores to render the image
@@ -72,6 +72,8 @@
 #' hierarchy structure used when rendering. Other option is "equal", which splits tree into groups
 #' of equal size.
 #' @param progress Default `TRUE` if interactive session, `FALSE` otherwise. 
+#' @param preview_light_direction Default `c(0,-1,0)`. Vector specifying the orientation for the global light using for phong shading.
+#' @param preview_exponent Default `6`. Phong exponent.  
 #' @param verbose Default `FALSE`. Prints information and timing information about scene
 #' construction and raytracing progress.
 #' @export
@@ -79,7 +81,7 @@
 #' @return Raytraced plot to current device, or an image saved to a file. 
 #'
 #' @examples
-#' #Fly through a bunch of ellipsoids
+#' #Create and animate flying through a scene on a simulated roller coaster
 #' \donttest{
 #' set.seed(3)
 #' elliplist = list()
@@ -98,15 +100,16 @@
 #'   add_object(ellip_scene) %>% 
 #'   add_object(sphere(y=50,radius=10,material=light(intensity=30))) %>% 
 #'   add_object(path(camera_pos, material=diffuse(color="red"))) %>% 
-#'   render_scene(lookfrom=c(0,20,0), width=800,height=800,samples=4,
-#'                  fov=80)
+#'   render_scene(lookfrom=c(0,20,0), width=800,height=800,samples=32,
+#'                camera_up = c(0,0,1),
+#'                fov=80)
 #'             
 #' #Side view     
 #' generate_ground(material=diffuse(checkercolor="grey20"),depth=-10) %>% 
 #'   add_object(ellip_scene) %>% 
 #'   add_object(sphere(y=50,radius=10,material=light(intensity=30))) %>% 
 #'   add_object(path(camera_pos, material=diffuse(color="red"))) %>% 
-#'   render_scene(lookfrom=c(20,0,0),width=800,height=800,samples=4,
+#'   render_scene(lookfrom=c(20,0,0),width=800,height=800,samples=32,
 #'                  fov=80)
 #'  
 #' #View from the start        
@@ -114,14 +117,14 @@
 #'   add_object(ellip_scene) %>% 
 #'   add_object(sphere(y=50,radius=10,material=light(intensity=30))) %>% 
 #'   add_object(path(camera_pos, material=diffuse(color="red"))) %>% 
-#'   render_scene(lookfrom=c(0,1.5,16),width=800,height=800,samples=4,
+#'   render_scene(lookfrom=c(0,1.5,16),width=800,height=800,samples=32,
 #'                  fov=80)
 #'                  
 #' #Generate Camera movement, setting the lookat position to be same as camera position, but offset
-#' #slightly in front. We'll render 12 frames.
+#' #slightly in front. We'll render 12 frames, but you'd likely want more in a real animation.
 #' 
 #' camera_motion =  generate_camera_motion(positions = camera_pos, lookats = camera_pos, 
-#'                                         offset_lookat = 0.1, fovs=80, frames=12) 
+#'                                         offset_lookat = 1, fovs=80, frames=12) 
 #'                                         
 #' #This returns a data frame of individual camera positions, interpolated by cubic bezier curves.
 #' camera_motion
@@ -142,7 +145,7 @@
 #'                    clamp_value=10, width=800, height=800)
 #' 
 #' }
-render_animation = function(scene, camera_motion, start = 1,
+render_animation = function(scene, camera_motion, start_frame = 1,
                             width = 400, height = 400, 
                             samples = 100, min_variance = 0.00005, min_adaptive_size = 8,
                             sample_method = "sobol",
@@ -543,6 +546,6 @@ render_animation = function(scene, camera_motion, start = 1,
   
   #Pathrace Scene
   rgb_mat = render_animation_rcpp(camera_info = camera_info, scene_info = scene_info, camera_movement = camera_motion,
-                              start_frame = start - 1, filenames = filename_str, post_process_frame  = post_process_frame,
+                              start_frame = start_frame - 1, filenames = filename_str, post_process_frame  = post_process_frame,
                               toneval=toneval) 
 }
