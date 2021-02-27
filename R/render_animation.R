@@ -547,5 +547,5 @@ render_animation = function(scene, camera_motion, start_frame = 1,
   #Pathrace Scene
   rgb_mat = render_animation_rcpp(camera_info = camera_info, scene_info = scene_info, camera_movement = camera_motion,
                               start_frame = start_frame - 1, filenames = filename_str, post_process_frame  = post_process_frame,
-                              toneval=toneval) 
+                              toneval=toneval, bloom = bloom) 
 }
