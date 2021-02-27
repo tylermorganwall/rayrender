@@ -45,10 +45,12 @@ process_point_series = function(points, closed=FALSE, straight=FALSE) {
   }
   if(closed) {
     first_point = full_control_points[[1]]
-    last_point = full_control_points[[length(full_control_points)-1]]
+    last_point = full_control_points[[length(full_control_points)]]
+    full_control_points[[length(full_control_points) + 1]] = last_point
     full_control_points[[length(full_control_points)]][4,] = first_point[1,]
     full_control_points[[length(full_control_points)]][3,] = 2*first_point[1,] - first_point[2,]
     full_control_points[[length(full_control_points)]][2,] = 2*last_point[4,]  - last_point[3,]
+    full_control_points[[length(full_control_points)]][2,] = last_point[4,]
   }
   return(full_control_points)
 }
