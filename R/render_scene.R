@@ -662,7 +662,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
     }
     full_array = rayimage::render_convolution(image = full_array, kernel = kernel,  min_value = 1, preview=FALSE)
   }
-  tonemapped_channels = tonemap_image(height,width,full_array[,,1],full_array[,,2],full_array[,,3],toneval)
+  tonemapped_channels = tonemap_image(full_array[,,1],full_array[,,2],full_array[,,3],toneval)
   full_array = array(0,c(nrow(tonemapped_channels$r),ncol(tonemapped_channels$r),3))
   full_array[,,1] = tonemapped_channels$r
   full_array[,,2] = tonemapped_channels$g
