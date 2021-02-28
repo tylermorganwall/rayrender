@@ -19,8 +19,7 @@ static Float hable(Float color);
 static Float hbd(Float color);
 
 // [[Rcpp::export]]
-Rcpp::List tonemap_image(int nx, int ny, 
-                         Rcpp::NumericMatrix routput, Rcpp::NumericMatrix goutput, Rcpp::NumericMatrix boutput, 
+Rcpp::List tonemap_image(Rcpp::NumericMatrix routput, Rcpp::NumericMatrix goutput, Rcpp::NumericMatrix boutput, 
                          int toneval);
 
 #endif

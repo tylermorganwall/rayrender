@@ -35,18 +35,16 @@ BEGIN_RCPP
 END_RCPP
 }
 // tonemap_image
-Rcpp::List tonemap_image(int nx, int ny, Rcpp::NumericMatrix routput, Rcpp::NumericMatrix goutput, Rcpp::NumericMatrix boutput, int toneval);
-RcppExport SEXP _rayrender_tonemap_image(SEXP nxSEXP, SEXP nySEXP, SEXP routputSEXP, SEXP goutputSEXP, SEXP boutputSEXP, SEXP tonevalSEXP) {
+Rcpp::List tonemap_image(Rcpp::NumericMatrix routput, Rcpp::NumericMatrix goutput, Rcpp::NumericMatrix boutput, int toneval);
+RcppExport SEXP _rayrender_tonemap_image(SEXP routputSEXP, SEXP goutputSEXP, SEXP boutputSEXP, SEXP tonevalSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< int >::type nx(nxSEXP);
-    Rcpp::traits::input_parameter< int >::type ny(nySEXP);
     Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type routput(routputSEXP);
     Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type goutput(goutputSEXP);
     Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type boutput(boutputSEXP);
     Rcpp::traits::input_parameter< int >::type toneval(tonevalSEXP);
-    rcpp_result_gen = Rcpp::wrap(tonemap_image(nx, ny, routput, goutput, boutput, toneval));
+    rcpp_result_gen = Rcpp::wrap(tonemap_image(routput, goutput, boutput, toneval));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -54,7 +52,7 @@ END_RCPP
 static const R_CallMethodDef CallEntries[] = {
     {"_rayrender_render_animation_rcpp", (DL_FUNC) &_rayrender_render_animation_rcpp, 8},
     {"_rayrender_render_scene_rcpp", (DL_FUNC) &_rayrender_render_scene_rcpp, 2},
-    {"_rayrender_tonemap_image", (DL_FUNC) &_rayrender_tonemap_image, 6},
+    {"_rayrender_tonemap_image", (DL_FUNC) &_rayrender_tonemap_image, 4},
     {NULL, NULL, 0}
 };
 

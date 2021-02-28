@@ -364,7 +364,7 @@ void render_animation_rcpp(List camera_info, List scene_info, List camera_moveme
                   clampval, max_depth, roulette_active, 
                   light_direction, rng);
       List temp = List::create(_["r"] = routput, _["g"] = goutput, _["b"] = boutput);
-      post_process_frame(temp, debug_channel, as<std::string>(filenames(i)), nx, ny, toneval);
+      post_process_frame(temp, debug_channel, as<std::string>(filenames(i)), toneval);
     }
   } else {
     for(int i = start_frame; i < n_frames; i++ ) {
@@ -406,7 +406,7 @@ void render_animation_rcpp(List camera_info, List scene_info, List camera_moveme
                  world, hlist,
                  clampval, max_depth, roulette_active);
       List temp = List::create(_["r"] = routput, _["g"] = goutput, _["b"] = boutput);
-      post_process_frame(temp, debug_channel, as<std::string>(filenames(i)), ny, nx, toneval, bloom);
+      post_process_frame(temp, debug_channel, as<std::string>(filenames(i)), toneval, bloom);
     }
   }
   

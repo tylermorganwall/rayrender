@@ -1,8 +1,9 @@
 #' Post-process Frame
 #'
+#' @return Nothing
 #'
 #' @keywords internal
-post_process_frame = function(rgb_mat, debug_channel, filename, height, width, toneval, bloom = TRUE) {
+post_process_frame = function(rgb_mat, debug_channel, filename, toneval, bloom = TRUE) {
   full_array = array(0,c(ncol(rgb_mat$r),nrow(rgb_mat$r),3))
   full_array[,,1] = flipud(t(rgb_mat$r))
   full_array[,,2] = flipud(t(rgb_mat$g))
@@ -12,14 +13,14 @@ post_process_frame = function(rgb_mat, debug_channel, filename, height, width, t
     returnmat[is.infinite(returnmat)] = NA
     save_png((full_array-min(full_array,na.rm=TRUE))/(max(full_array,na.rm=TRUE) - min(full_array,na.rm=TRUE)),
              filename)
-  } else if (debug_channel %in% c(2,3,4,5)) {
+  } else if (debug_channel %in% c(2,3,4,5,6,7,8,9)) {
     save_png(full_array,filename)
   } 
   if(bloom) {
     kernel = rayimage::generate_2d_exponential(0.1,11,3)
     full_array = rayimage::render_convolution(image = full_array, kernel = kernel, min_value = 1, preview=FALSE)
   }
-  tonemapped_channels = tonemap_image(height,width,full_array[,,1],full_array[,,2],full_array[,,3],toneval)
+  tonemapped_channels = tonemap_image(full_array[,,1],full_array[,,2],full_array[,,3],toneval)
   full_array = array(0,c(nrow(tonemapped_channels$r),ncol(tonemapped_channels$r),3))
   full_array[,,1] = tonemapped_channels$r
   full_array[,,2] = tonemapped_channels$g

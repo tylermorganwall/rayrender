@@ -27,9 +27,11 @@ static Float hbd(Float color) {
   return(retcolor);
 }
 
-Rcpp::List tonemap_image(int nx, int ny, 
-                         Rcpp::NumericMatrix routput, Rcpp::NumericMatrix goutput, Rcpp::NumericMatrix boutput, 
+Rcpp::List tonemap_image(Rcpp::NumericMatrix routput, Rcpp::NumericMatrix goutput, Rcpp::NumericMatrix boutput, 
                          int toneval) {
+  int ny = routput.ncol();
+  int nx = routput.nrow();
+  
   for(int j = ny - 1; j >= 0; j--) {
     for(int i = 0; i < nx; i++) {
       if(toneval == 1) {

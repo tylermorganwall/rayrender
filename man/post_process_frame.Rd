@@ -4,15 +4,10 @@
 \alias{post_process_frame}
 \title{Post-process Frame}
 \usage{
-post_process_frame(
-  rgb_mat,
-  debug_channel,
-  filename,
-  height,
-  width,
-  toneval,
-  bloom = TRUE
-)
+post_process_frame(rgb_mat, debug_channel, filename, toneval, bloom = TRUE)
+}
+\value{
+Nothing
 }
 \description{
 Post-process Frame
