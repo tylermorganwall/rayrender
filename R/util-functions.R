@@ -75,3 +75,92 @@ clamp = function(v, min=0, max=Inf) {
   v[v > max] = max
   v
 }
+
+#' Lerp
+#'
+#' @param t Interpolation distance
+#' @param v1 Value 1
+#' @param v2 Value 2
+#' @return Linearly interpolated value
+#' 
+#' @keywords internal
+lerp = function(t, v1, v2) {
+  return((1-t) * v1 + t * v2)
+}
+
+#' Quad-in-out
+#' 
+#' @param t Value
+#' @return number
+#'
+#' @keywords internal
+quadInOut = function(t) {
+  ifelse(t * 2 <= 1, (2*t) ^ 2/2, (2-(2*t-2)^2)/2)
+}
+
+#' Cubic-in-out
+#' 
+#' @param t Value
+#' @return number
+#'
+#' @keywords internal
+cubicInOut = function(t) {
+  ifelse(t * 2 <= 1, (2*t) ^ 3/2, ((2*t-2)^3+2)/2)
+}
+
+#' Cubic-in-out
+#' 
+#' @param t Value
+#' @return number
+#'
+#' @keywords internal
+expInOut = function(t) {
+  ifelse(t * 2 <= 1, 2^(-10 * (1-2*t))/2, (2 - 2^(-10 * (2*t-1)))/2)
+}
+
+#' Cubic-in-out
+#' 
+#' @param vals Numeric values
+#' @param n Frames
+#' @param type typenae
+#' @return number
+#'
+#' @keywords internal
+tween = function(vals, n, ease = "cubic") {
+  len_vals = rep(0, length(vals)-1)
+  free_vals = n - length(vals)
+  counter = 1
+  for(i in seq_len(free_vals)) {
+    len_vals[counter] = len_vals[counter] + 1
+    counter = counter + 1
+    if(counter > (length(vals)-1)) {
+      counter = 1
+    }
+  }
+  tlist = list()
+  for(i in seq_len((length(vals)-1))) {
+    if(ease == "cubic") {
+      tlist[[i]] = cubicInOut(seq(0,1,length.out = len_vals[i]+2)[-(len_vals[i]+2)])
+    } else if(ease == "exp") {
+      tlist[[i]] = expInOut(seq(0,1,length.out = len_vals[i]+2)[-(len_vals[i]+2)])
+    } else if(ease == "quad") {
+      tlist[[i]] = quadInOut(seq(0,1,length.out = len_vals[i]+2)[-(len_vals[i]+2)])
+    } else {
+      tlist[[i]] = seq(0,1,length.out = len_vals[i]+2)[-(len_vals[i]+2)]
+    }
+  }
+  final_vals = list()
+  counter = 1
+  for(i in seq_len(length(tlist))) {
+    seg = tlist[[i]]
+    for(j in seq_len(length(seg))) {
+      final_vals[[counter]] = lerp(seg[j], vals[i], vals[i+1])
+      counter = counter + 1
+    }
+  }
+  final_vals[[counter]] = vals[length(vals)]
+  if(length(final_vals) != n) {
+    stop("Length of interpolated sequence (", length(final_vals) ,") not equal to frames (", n, ")")
+  }
+  return(unlist(final_vals))
+}

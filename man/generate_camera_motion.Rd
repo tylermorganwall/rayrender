@@ -48,7 +48,8 @@ of orthographic dimensions.}
 
 \item{camera_ups}{Default `NULL`, which gives at up vector of `c(0,1,0)`. Camera up orientation.}
 
-\item{type}{Default `bezier`. Type of transition between keyframes. Other options are `linear`, `cubic` and `exponential`.}
+\item{type}{Default `bezier`. Type of transition between keyframes. 
+Other options are `linear`, `quad`, `cubic` and `exp`.}
 
 \item{frames}{Default `30`. Number of frames between each key frame.}
 

@@ -94,18 +94,6 @@ process_point_series_2d = function(values, closed=FALSE, straight=FALSE) {
   return(full_control_points)
 }
 
-#' Lerp
-#'
-#' @param t Interpolation distance
-#' @param v1 Value 1
-#' @param v2 Value 2
-#' @return Linearly interpolated value
-#' 
-#' @keywords internal
-lerp = function(t, v1, v2) {
-  return((1-t) * v1 + t * v2)
-}
-
 #' Evaluate Bezier
 #'
 #' @param cp Control point matrix (4x3)
@@ -312,7 +300,8 @@ calculate_final_path = function(linearized_cp, steps, constant_step = TRUE,
 #' @param ortho_dims Default `NULL`, which results in `c(1,1)` orthographic dimensions.  A list or 2-column matrix
 #' of orthographic dimensions.
 #' @param camera_ups Default `NULL`, which gives at up vector of `c(0,1,0)`. Camera up orientation.
-#' @param type Default `bezier`. Type of transition between keyframes. Other options are `linear`, `cubic` and `exponential`.
+#' @param type Default `bezier`. Type of transition between keyframes. 
+#' Other options are `linear`, `quad`, `cubic` and `exp`.
 #' @param frames Default `30`. Number of frames between each key frame.
 #' @param closed Default `FALSE`. Whether to close the camera curve.
 #' @param linear Default `FALSE`. Whether the camera movement should follow straight lines or bezier curves. 
@@ -518,174 +507,65 @@ generate_camera_motion = function(positions,
                                 "aperture","fov","focal","orthox","orthoy",
                                 "upx","upy","upz")
     return(return_values)
-  } else if (type == "cubic") {
-    if("tweenr" %in% rownames(utils::installed.packages())) {
-      if(inherits(positions,"list")) {
-        positions = do.call(rbind,positions)
-      }
-      if(inherits(lookats,"list")) {
-        lookats = do.call(rbind,lookats)
-      }
-      if(inherits(camera_ups,"list")) {
-        camera_ups = do.call(rbind,camera_ups)
-      }
-      if(inherits(ortho_dims,"list")) {
-        ortho_dims = do.call(rbind,ortho_dims)
-      }
-      positions = xyz.coords(positions)
-      
-      if(is.null(lookats)) {
-        lookats = matrix(0,ncol=3,nrow=length(positions$x))
-      }
-      lookats = xyz.coords(lookats)
-      if(is.null(camera_ups)) {
-        camera_ups = matrix(c(0,1,0),ncol=3,nrow=length(positions$x),byrow=TRUE)
-      }
-      camera_ups = xyz.coords(camera_ups)
-      
-      if(is.null(focal_distances)) {
-        focal_distances = sqrt((positions$x - lookats$x)^2 + 
-                               (positions$y - lookats$y)^2 + 
-                               (positions$z - lookats$z)^2)
-      } else if (length(focal_distances) == 1) {
-        focal_distances = rep(focal_distances,length(positions$x))
-      }
-      if(is.null(ortho_dims)) {
-        ortho_dims = matrix(c(1,1),ncol=2,nrow=length(positions$x),byrow=TRUE)
-      }
-      ortho = xy.coords(ortho_dims)
-      tween_df = data.frame(x=positions$x, y=positions$y, z=positions$z,
-                           dx=lookats$x, dy=lookats$y, dz=lookats$z,
-                           aperture = rep(apertures,length(positions$x)),
-                           fov = rep(fovs,length(positions$x)),
-                           focal = focal_distances,
-                           orthox = ortho$x, orthoy = ortho$y,
-                           upx =camera_ups$x, upy = camera_ups$y ,upz = camera_ups$z)
-      return_values = as.data.frame(do.call(cbind,unlist(apply(tween_df,2,
-                                                               tweenr::tween, n = frames,ease="cubic-in-out"),
-                                                         recursive = FALSE)))
-      if(aperture_linear) {
-        return_values$aperture = tweenr::tween(apertures,n=frames,ease="linear")
-      }
-      if(fov_linear) {
-        return_values$fov = tweenr::tween(fovs,n=frames,ease="linear")
-      }
-      if(focal_linear) {
-        return_values$focal = tweenr::tween(focal_distances,n=frames,ease="linear")
-      }
-      return(return_values)
-    } else {
-      stop("tweenr package required for cubic interpolation")
+  } else if (type %in% c("exp", "quad",  "cubic", "linear")) {
+    if(inherits(positions,"list")) {
+      positions = do.call(rbind,positions)
     }
-  } else if (type == "exponential") {
-    if("tweenr" %in% rownames(utils::installed.packages())) {
-      if(inherits(positions,"list")) {
-        positions = do.call(rbind,positions)
-      }
-      if(inherits(lookats,"list")) {
-        lookats = do.call(rbind,lookats)
-      }
-      if(inherits(camera_ups,"list")) {
-        camera_ups = do.call(rbind,camera_ups)
-      }
-      if(inherits(ortho_dims,"list")) {
-        ortho_dims = do.call(rbind,ortho_dims)
-      }
-      positions = xyz.coords(positions)
-      
-      if(is.null(lookats)) {
-        lookats = matrix(0,ncol=3,nrow=length(positions$x))
-      }
-      lookats = xyz.coords(lookats)
-      if(is.null(camera_ups)) {
-        camera_ups = matrix(c(0,1,0),ncol=3,nrow=length(positions$x),byrow=TRUE)
-      }
-      camera_ups = xyz.coords(camera_ups)
-      
-      if(is.null(focal_distances)) {
-        focal_distances = sqrt((positions$x - lookats$x)^2 + 
-                                 (positions$y - lookats$y)^2 + 
-                                 (positions$z - lookats$z)^2)
-      } else if (length(focal_distances) == 1) {
-        focal_distances = rep(focal_distances,length(positions$x))
-      }
-      if(is.null(ortho_dims)) {
-        ortho_dims = matrix(c(1,1),ncol=2,nrow=length(positions$x),byrow=TRUE)
-      }
-      ortho = xy.coords(ortho_dims)
-      tween_df = data.frame(x=positions$x, y=positions$y, z=positions$z,
-                            dx=lookats$x, dy=lookats$y, dz=lookats$z,
-                            aperture = rep(apertures,length(positions$x)),
-                            fov = rep(fovs,length(positions$x)),
-                            focal = focal_distances,
-                            orthox = ortho$x, orthoy = ortho$y,
-                            upx =camera_ups$x, upy = camera_ups$y ,upz = camera_ups$z)
-      
-      return_values = as.data.frame(do.call(cbind,unlist(apply(tween_df,2,
-                                                               tweenr::tween, n = frames,ease="exponential-in-out"),
-                                                         recursive = FALSE)))
-      if(aperture_linear) {
-        return_values$aperture = tweenr::tween(apertures,n=frames,ease="linear")
-      }
-      if(fov_linear) {
-        return_values$fov = tweenr::tween(fovs,n=frames,ease="linear")
-      }
-      if(focal_linear) {
-        return_values$focal = tweenr::tween(focal_distances,n=frames,ease="linear")
-      }
-      return(return_values)
-    } else {
-      stop("tweenr package required for exponential interpolatioln")
+    if(inherits(lookats,"list")) {
+      lookats = do.call(rbind,lookats)
     }
-  } else if (type == "linear") {
-    if("tweenr" %in% rownames(utils::installed.packages())) {
-      if(inherits(positions,"list")) {
-        positions = do.call(rbind,positions)
-      }
-      if(inherits(lookats,"list")) {
-        lookats = do.call(rbind,lookats)
-      }
-      if(inherits(camera_ups,"list")) {
-        camera_ups = do.call(rbind,camera_ups)
-      }
-      if(inherits(ortho_dims,"list")) {
-        ortho_dims = do.call(rbind,ortho_dims)
-      }
-      positions = xyz.coords(positions)
-      
-      if(is.null(lookats)) {
-        lookats = matrix(0,ncol=3,nrow=length(positions$x))
-      }
-      lookats = xyz.coords(lookats)
-      if(is.null(camera_ups)) {
-        camera_ups = matrix(c(0,1,0),ncol=3,nrow=length(positions$x),byrow=TRUE)
-      }
-      camera_ups = xyz.coords(camera_ups)
-      
-      if(is.null(focal_distances)) {
-        focal_distances = sqrt((positions$x - lookats$x)^2 + 
-                                 (positions$y - lookats$y)^2 + 
-                                 (positions$z - lookats$z)^2)
-      } else if (length(focal_distances) == 1) {
-        focal_distances = rep(focal_distances,length(positions$x))
-      }
-      if(is.null(ortho_dims)) {
-        ortho_dims = matrix(c(1,1),ncol=2,nrow=length(positions$x),byrow=TRUE)
-      }
-      ortho = xy.coords(ortho_dims)
-      tween_df = data.frame(x=positions$x, y=positions$y, z=positions$z,
-                            dx=lookats$x, dy=lookats$y, dz=lookats$z,
-                            aperture = rep(apertures,length(positions$x)),
-                            fov = rep(fovs,length(positions$x)),
-                            focal = focal_distances,
-                            orthox = ortho$x, orthoy = ortho$y,
-                            upx =camera_ups$x, upy = camera_ups$y ,upz = camera_ups$z)
-      return_values = as.data.frame(do.call(cbind,unlist(apply(tween_df,2,tweenr::tween, n = frames,ease="linear"),
-                                                         recursive = FALSE)))
-      return(return_values)
-    } else {
-      stop("tweenr package required for linear interpolatioln")
+    if(inherits(camera_ups,"list")) {
+      camera_ups = do.call(rbind,camera_ups)
     }
+    if(inherits(ortho_dims,"list")) {
+      ortho_dims = do.call(rbind,ortho_dims)
+    }
+    positions = xyz.coords(positions)
+    
+    if(is.null(lookats)) {
+      lookats = matrix(0,ncol=3,nrow=length(positions$x))
+    }
+    lookats = xyz.coords(lookats)
+    if(is.null(camera_ups)) {
+      camera_ups = matrix(c(0,1,0),ncol=3,nrow=length(positions$x),byrow=TRUE)
+    }
+    camera_ups = xyz.coords(camera_ups)
+    
+    if(is.null(focal_distances)) {
+      focal_distances = sqrt((positions$x - lookats$x)^2 + 
+                             (positions$y - lookats$y)^2 + 
+                             (positions$z - lookats$z)^2)
+    } else if (length(focal_distances) == 1) {
+      focal_distances = rep(focal_distances,length(positions$x))
+    }
+    if(is.null(ortho_dims)) {
+      ortho_dims = matrix(c(1,1),ncol=2,nrow=length(positions$x),byrow=TRUE)
+    }
+    ortho = xy.coords(ortho_dims)
+    tween_df = data.frame(x=positions$x, y=positions$y, z=positions$z,
+                         dx=lookats$x, dy=lookats$y, dz=lookats$z,
+                         aperture = rep(apertures,length(positions$x)),
+                         fov = rep(fovs,length(positions$x)),
+                         focal = focal_distances,
+                         orthox = ortho$x, orthoy = ortho$y,
+                         upx =camera_ups$x, upy = camera_ups$y ,upz = camera_ups$z)
+    if(closed) {
+      tween_df = rbind(tween_df,tween_df[1,])
+      apertures = c(apertures,apertures[1])
+      fovs = c(fovs,fovs[1])
+      focal_distances = c(focal_distances,focal_distances[1])
+    }
+    return_values = as.data.frame(apply(tween_df,2,tween, n = frames,ease=type))
+    if(aperture_linear) {
+      return_values$aperture =tween(apertures,n=frames,ease="linear")
+    }
+    if(fov_linear) {
+      return_values$fov = tween(fovs,n=frames,ease="linear")
+    }
+    if(focal_linear) {
+      return_values$focal = tween(focal_distances,n=frames,ease="linear")
+    }
+    return(return_values)
   } else {
     stop("type '", type, "' not recognized")
   }
