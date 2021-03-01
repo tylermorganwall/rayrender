@@ -312,9 +312,10 @@ calculate_final_path = function(linearized_cp, steps, constant_step = TRUE,
 #' @param ortho_dims Default `NULL`, which results in `c(1,1)` orthographic dimensions.  A list or 2-column matrix
 #' of orthographic dimensions.
 #' @param camera_ups Default `NULL`, which gives at up vector of `c(0,1,0)`. Camera up orientation.
+#' @param type Default `bezier`. Type of transition between keyframes. Other options are `linear`, `cubic` and `exponential`.
 #' @param frames Default `30`. Number of frames between each key frame.
 #' @param closed Default `FALSE`. Whether to close the camera curve.
-#' @param linear Default `FALSE`. Whether the camera movement should follow straight lines or bezier curves.
+#' @param linear Default `FALSE`. Whether the camera movement should follow straight lines or bezier curves. 
 #' @param constant_step Default `TRUE`. This will make the camera travel at a constant speed 
 #' @param function_step Default `NULL`. A function that takes three inputs: the 3D position, the 3D derivative, and the
 #' 3D second derivative, and uses them to determine the step size.
@@ -407,6 +408,7 @@ generate_camera_motion = function(positions,
                                   focal_distances = NULL, 
                                   ortho_dims = NULL, 
                                   camera_ups = NULL,
+                                  type = "bezier",
                                   frames = 30, 
                                   closed=FALSE, 
                                   linear=FALSE, 
@@ -420,99 +422,271 @@ generate_camera_motion = function(positions,
                                   camera_up_constant = TRUE,
                                   function_step = NULL, 
                                   progress = TRUE) {
-  position_control_points = process_point_series(positions,closed=closed,straight=linear)
-  points_dist = calculate_distance_along_bezier_curve(position_control_points, breaks = 50)
-  points_final = calculate_final_path(points_dist, steps = frames, constant_step = constant_step,
-                                      curvature_adjust = curvature_adjust, 
-                                      curvature_scale=curvature_scale,
-                                      progress = progress, string = "Position   ")
-  if(!is.null(lookats)) {
-    position_control_lookats = process_point_series(lookats,closed=closed,straight=linear)
-    lookats_dist = calculate_distance_along_bezier_curve(position_control_lookats, breaks = 50)
-    lookats_final = calculate_final_path(lookats_dist, steps = frames, 
-                                         constant_step = constant_step, offset = offset_lookat,
-                                         curvature_adjust = curvature_adjust, 
-                                         curvature_scale=curvature_scale,
-                                         progress = progress, string = "Orientation")
-  } else {
-    lookats_final = matrix(c(0,0,0), nrow = nrow(points_final), ncol=3, byrow=TRUE)
-  }
-  if(curvature_adjust) {
-    temp_points  = points_final[1:frames,]
-    temp_lookats = lookats_final[1:frames,]
-
-    rowvals = seq(1,nrow(points_final),length.out = frames)
-    for(i in 1:frames) {
-      rv = rowvals[i]
-      frv = floor(rv)
-      if(frv == rv) {
-        temp_points[i,] = points_final[rv,]
-        temp_lookats[i,] = lookats_final[rv,]
-        next
-      }
-      temp_points[i,] = lerp(rv-frv,
-                             points_final[rv,],
-                             points_final[frv+1,])
-      temp_lookats[i,] = lerp(rv-frv,
-                              lookats_final[rv,],
-                              lookats_final[frv+1,])
+  if(type=="bezier") {
+    position_control_points = process_point_series(positions,closed=closed,straight=linear)
+    points_dist = calculate_distance_along_bezier_curve(position_control_points, breaks = 50)
+    points_final = calculate_final_path(points_dist, steps = frames, constant_step = constant_step,
+                                        curvature_adjust = curvature_adjust, 
+                                        curvature_scale=curvature_scale,
+                                        progress = progress, string = "Position   ")
+    if(!is.null(lookats)) {
+      position_control_lookats = process_point_series(lookats,closed=closed,straight=linear)
+      lookats_dist = calculate_distance_along_bezier_curve(position_control_lookats, breaks = 50)
+      lookats_final = calculate_final_path(lookats_dist, steps = frames, 
+                                           constant_step = constant_step, offset = offset_lookat,
+                                           curvature_adjust = curvature_adjust, 
+                                           curvature_scale=curvature_scale,
+                                           progress = progress, string = "Orientation")
+    } else {
+      lookats_final = matrix(c(0,0,0), nrow = nrow(points_final), ncol=3, byrow=TRUE)
     }
-    points_final = temp_points
-    lookats_final = temp_lookats
-  }
+    if(curvature_adjust) {
+      temp_points  = points_final[1:frames,]
+      temp_lookats = lookats_final[1:frames,]
   
-  if(length(apertures) != 1) {
-    apertures_control_lookats = process_point_series_1d(apertures,closed=closed,straight=aperture_linear)
-    apertures_dist = calculate_distance_along_bezier_curve(apertures_control_lookats, breaks = 50)
-    apertures_final = calculate_final_path(apertures_dist, steps = frames, constant_step = constant_step)
-    apertures_final = apertures_final[,1]
-  } else {
-    apertures_final = matrix(apertures,  nrow = nrow(points_final), ncol=1)
-  }
-  if(length(fovs) != 1) {
-    fovs_control_lookats = process_point_series_1d(fovs,closed=closed,straight=fov_linear)
-    fovs_dist = calculate_distance_along_bezier_curve(fovs_control_lookats, breaks = 50)
-    fovs_final = calculate_final_path(fovs_dist, steps = frames, constant_step = constant_step)
-    fovs_final = fovs_final[,1]
-  } else {
-    fovs_final = matrix(fovs,  nrow = nrow(points_final), ncol=1)
-  }
-  if(!is.null(focal_distances)) {
-    if(is.numeric(focal_distances)) {
-      if(length(focal_distances) == 1) {
-        focal_final = rep(focal_distances,nrow(points_final))
+      rowvals = seq(1,nrow(points_final),length.out = frames)
+      for(i in 1:frames) {
+        rv = rowvals[i]
+        frv = floor(rv)
+        if(frv == rv) {
+          temp_points[i,] = points_final[rv,]
+          temp_lookats[i,] = lookats_final[rv,]
+          next
+        }
+        temp_points[i,] = lerp(rv-frv,
+                               points_final[rv,],
+                               points_final[frv+1,])
+        temp_lookats[i,] = lerp(rv-frv,
+                                lookats_final[rv,],
+                                lookats_final[frv+1,])
+      }
+      points_final = temp_points
+      lookats_final = temp_lookats
+    }
+    
+    if(length(apertures) != 1) {
+      apertures_control_lookats = process_point_series_1d(apertures,closed=closed,straight=aperture_linear)
+      apertures_dist = calculate_distance_along_bezier_curve(apertures_control_lookats, breaks = 50)
+      apertures_final = calculate_final_path(apertures_dist, steps = frames, constant_step = constant_step)
+      apertures_final = apertures_final[,1]
+    } else {
+      apertures_final = matrix(apertures,  nrow = nrow(points_final), ncol=1)
+    }
+    if(length(fovs) != 1) {
+      fovs_control_lookats = process_point_series_1d(fovs,closed=closed,straight=fov_linear)
+      fovs_dist = calculate_distance_along_bezier_curve(fovs_control_lookats, breaks = 50)
+      fovs_final = calculate_final_path(fovs_dist, steps = frames, constant_step = constant_step)
+      fovs_final = fovs_final[,1]
+    } else {
+      fovs_final = matrix(fovs,  nrow = nrow(points_final), ncol=1)
+    }
+    if(!is.null(focal_distances)) {
+      if(is.numeric(focal_distances)) {
+        if(length(focal_distances) == 1) {
+          focal_final = rep(focal_distances,nrow(points_final))
+        } else {
+          focal_final = focal_distances
+        }
       } else {
-        focal_final = focal_distances
+        focal_control_lookats = process_point_series_1d(focal_distances,closed=closed,straight=focal_linear)
+        focal_dist = calculate_distance_along_bezier_curve(focal_control_lookats, breaks = 50)
+        focal_final = calculate_final_path(focal_dist, steps = frames, constant_step = constant_step)
+        focal_final = focal_final[,1]
       }
     } else {
-      focal_control_lookats = process_point_series_1d(focal_distances,closed=closed,straight=focal_linear)
-      focal_dist = calculate_distance_along_bezier_curve(focal_control_lookats, breaks = 50)
-      focal_final = calculate_final_path(focal_dist, steps = frames, constant_step = constant_step)
-      focal_final = focal_final[,1]
+      focal_final = sqrt(apply((points_final-lookats_final)^2,1,sum))
+    }
+    if(!is.null(ortho_dims)) {
+      ortho_control_lookats = process_point_series_2d(ortho_dims,closed=closed,straight=focal_linear)
+      ortho_dist = calculate_distance_along_bezier_curve(ortho_control_lookats, breaks = 50)
+      ortho_final = calculate_final_path(ortho_dist, steps = frames, constant_step = constant_step)
+      ortho_final = ortho_final[,1:2]
+    } else {
+      ortho_final = matrix(c(1,1),  nrow = nrow(points_final), ncol=2)
+    }
+    if(!is.null(camera_ups)) {
+      ups_control = process_point_series_2d(camera_ups,closed=closed,straight=linear)
+      up_dist = calculate_distance_along_bezier_curve(ups_control, breaks = 50)
+      up_final = calculate_final_path(up_dist, steps = frames, constant_step = constant_step)
+    } else {
+      up_final = matrix(c(0,1,0), nrow = nrow(points_final), ncol=3, byrow=TRUE)
+    }
+    return_values = as.data.frame(cbind(points_final,lookats_final,apertures_final,fovs_final,focal_final,ortho_final,
+                                        up_final))
+    colnames(return_values) = c("x","y","z",
+                                "dx","dy","dz",
+                                "aperture","fov","focal","orthox","orthoy",
+                                "upx","upy","upz")
+    return(return_values)
+  } else if (type == "cubic") {
+    if("tweenr" %in% rownames(utils::installed.packages())) {
+      if(inherits(positions,"list")) {
+        positions = do.call(rbind,positions)
+      }
+      if(inherits(lookats,"list")) {
+        lookats = do.call(rbind,lookats)
+      }
+      if(inherits(camera_ups,"list")) {
+        camera_ups = do.call(rbind,camera_ups)
+      }
+      if(inherits(ortho_dims,"list")) {
+        ortho_dims = do.call(rbind,ortho_dims)
+      }
+      positions = xyz.coords(positions)
+      
+      if(is.null(lookats)) {
+        lookats = matrix(0,ncol=3,nrow=length(positions$x))
+      }
+      lookats = xyz.coords(lookats)
+      if(is.null(camera_ups)) {
+        camera_ups = matrix(c(0,1,0),ncol=3,nrow=length(positions$x),byrow=TRUE)
+      }
+      camera_ups = xyz.coords(camera_ups)
+      
+      if(is.null(focal_distances)) {
+        focal_distances = sqrt((positions$x - lookats$x)^2 + 
+                               (positions$y - lookats$y)^2 + 
+                               (positions$z - lookats$z)^2)
+      } else if (length(focal_distances) == 1) {
+        focal_distances = rep(focal_distances,length(positions$x))
+      }
+      if(is.null(ortho_dims)) {
+        ortho_dims = matrix(c(1,1),ncol=2,nrow=length(positions$x),byrow=TRUE)
+      }
+      ortho = xy.coords(ortho_dims)
+      tween_df = data.frame(x=positions$x, y=positions$y, z=positions$z,
+                           dx=lookats$x, dy=lookats$y, dz=lookats$z,
+                           aperture = rep(apertures,length(positions$x)),
+                           fov = rep(fovs,length(positions$x)),
+                           focal = focal_distances,
+                           orthox = ortho$x, orthoy = ortho$y,
+                           upx =camera_ups$x, upy = camera_ups$y ,upz = camera_ups$z)
+      return_values = as.data.frame(do.call(cbind,unlist(apply(tween_df,2,
+                                                               tweenr::tween, n = frames,ease="cubic-in-out"),
+                                                         recursive = FALSE)))
+      if(aperture_linear) {
+        return_values$aperture = tweenr::tween(apertures,n=frames,ease="linear")
+      }
+      if(fov_linear) {
+        return_values$fov = tweenr::tween(fovs,n=frames,ease="linear")
+      }
+      if(focal_linear) {
+        return_values$focal = tweenr::tween(focal_distances,n=frames,ease="linear")
+      }
+      return(return_values)
+    } else {
+      stop("tweenr package required for cubic interpolation")
+    }
+  } else if (type == "exponential") {
+    if("tweenr" %in% rownames(utils::installed.packages())) {
+      if(inherits(positions,"list")) {
+        positions = do.call(rbind,positions)
+      }
+      if(inherits(lookats,"list")) {
+        lookats = do.call(rbind,lookats)
+      }
+      if(inherits(camera_ups,"list")) {
+        camera_ups = do.call(rbind,camera_ups)
+      }
+      if(inherits(ortho_dims,"list")) {
+        ortho_dims = do.call(rbind,ortho_dims)
+      }
+      positions = xyz.coords(positions)
+      
+      if(is.null(lookats)) {
+        lookats = matrix(0,ncol=3,nrow=length(positions$x))
+      }
+      lookats = xyz.coords(lookats)
+      if(is.null(camera_ups)) {
+        camera_ups = matrix(c(0,1,0),ncol=3,nrow=length(positions$x),byrow=TRUE)
+      }
+      camera_ups = xyz.coords(camera_ups)
+      
+      if(is.null(focal_distances)) {
+        focal_distances = sqrt((positions$x - lookats$x)^2 + 
+                                 (positions$y - lookats$y)^2 + 
+                                 (positions$z - lookats$z)^2)
+      } else if (length(focal_distances) == 1) {
+        focal_distances = rep(focal_distances,length(positions$x))
+      }
+      if(is.null(ortho_dims)) {
+        ortho_dims = matrix(c(1,1),ncol=2,nrow=length(positions$x),byrow=TRUE)
+      }
+      ortho = xy.coords(ortho_dims)
+      tween_df = data.frame(x=positions$x, y=positions$y, z=positions$z,
+                            dx=lookats$x, dy=lookats$y, dz=lookats$z,
+                            aperture = rep(apertures,length(positions$x)),
+                            fov = rep(fovs,length(positions$x)),
+                            focal = focal_distances,
+                            orthox = ortho$x, orthoy = ortho$y,
+                            upx =camera_ups$x, upy = camera_ups$y ,upz = camera_ups$z)
+      
+      return_values = as.data.frame(do.call(cbind,unlist(apply(tween_df,2,
+                                                               tweenr::tween, n = frames,ease="exponential-in-out"),
+                                                         recursive = FALSE)))
+      if(aperture_linear) {
+        return_values$aperture = tweenr::tween(apertures,n=frames,ease="linear")
+      }
+      if(fov_linear) {
+        return_values$fov = tweenr::tween(fovs,n=frames,ease="linear")
+      }
+      if(focal_linear) {
+        return_values$focal = tweenr::tween(focal_distances,n=frames,ease="linear")
+      }
+      return(return_values)
+    } else {
+      stop("tweenr package required for exponential interpolatioln")
+    }
+  } else if (type == "linear") {
+    if("tweenr" %in% rownames(utils::installed.packages())) {
+      if(inherits(positions,"list")) {
+        positions = do.call(rbind,positions)
+      }
+      if(inherits(lookats,"list")) {
+        lookats = do.call(rbind,lookats)
+      }
+      if(inherits(camera_ups,"list")) {
+        camera_ups = do.call(rbind,camera_ups)
+      }
+      if(inherits(ortho_dims,"list")) {
+        ortho_dims = do.call(rbind,ortho_dims)
+      }
+      positions = xyz.coords(positions)
+      
+      if(is.null(lookats)) {
+        lookats = matrix(0,ncol=3,nrow=length(positions$x))
+      }
+      lookats = xyz.coords(lookats)
+      if(is.null(camera_ups)) {
+        camera_ups = matrix(c(0,1,0),ncol=3,nrow=length(positions$x),byrow=TRUE)
+      }
+      camera_ups = xyz.coords(camera_ups)
+      
+      if(is.null(focal_distances)) {
+        focal_distances = sqrt((positions$x - lookats$x)^2 + 
+                                 (positions$y - lookats$y)^2 + 
+                                 (positions$z - lookats$z)^2)
+      } else if (length(focal_distances) == 1) {
+        focal_distances = rep(focal_distances,length(positions$x))
+      }
+      if(is.null(ortho_dims)) {
+        ortho_dims = matrix(c(1,1),ncol=2,nrow=length(positions$x),byrow=TRUE)
+      }
+      ortho = xy.coords(ortho_dims)
+      tween_df = data.frame(x=positions$x, y=positions$y, z=positions$z,
+                            dx=lookats$x, dy=lookats$y, dz=lookats$z,
+                            aperture = rep(apertures,length(positions$x)),
+                            fov = rep(fovs,length(positions$x)),
+                            focal = focal_distances,
+                            orthox = ortho$x, orthoy = ortho$y,
+                            upx =camera_ups$x, upy = camera_ups$y ,upz = camera_ups$z)
+      return_values = as.data.frame(do.call(cbind,unlist(apply(tween_df,2,tweenr::tween, n = frames,ease="linear"),
+                                                         recursive = FALSE)))
+      return(return_values)
+    } else {
+      stop("tweenr package required for linear interpolatioln")
     }
   } else {
-    focal_final = sqrt(apply((points_final-lookats_final)^2,1,sum))
+    stop("type '", type, "' not recognized")
   }
-  if(!is.null(ortho_dims)) {
-    ortho_control_lookats = process_point_series_2d(ortho_dims,closed=closed,straight=focal_linear)
-    ortho_dist = calculate_distance_along_bezier_curve(ortho_control_lookats, breaks = 50)
-    ortho_final = calculate_final_path(ortho_dist, steps = frames, constant_step = constant_step)
-    ortho_final = ortho_final[,1:2]
-  } else {
-    ortho_final = matrix(c(1,1),  nrow = nrow(points_final), ncol=2)
-  }
-  if(!is.null(camera_ups)) {
-    ups_control = process_point_series_2d(camera_ups,closed=closed,straight=linear)
-    up_dist = calculate_distance_along_bezier_curve(ups_control, breaks = 50)
-    up_final = calculate_final_path(up_dist, steps = frames, constant_step = constant_step)
-  } else {
-    up_final = matrix(c(0,1,0), nrow = nrow(points_final), ncol=3, byrow=TRUE)
-  }
-  return_values = as.data.frame(cbind(points_final,lookats_final,apertures_final,fovs_final,focal_final,ortho_final,
-                                      up_final))
-  colnames(return_values) = c("x","y","z",
-                              "dx","dy","dz",
-                              "aperture","fov","focal","orthox","orthoy",
-                              "upx","upy","upz")
-  return(return_values)
 }

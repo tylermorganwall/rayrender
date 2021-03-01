@@ -12,6 +12,7 @@ generate_camera_motion(
   focal_distances = NULL,
   ortho_dims = NULL,
   camera_ups = NULL,
+  type = "bezier",
   frames = 30,
   closed = FALSE,
   linear = FALSE,
@@ -46,6 +47,8 @@ Numeric vector of focal distances.}
 of orthographic dimensions.}
 
 \item{camera_ups}{Default `NULL`, which gives at up vector of `c(0,1,0)`. Camera up orientation.}
+
+\item{type}{Default `bezier`. Type of transition between keyframes. Other options are `linear`, `cubic` and `exponential`.}
 
 \item{frames}{Default `30`. Number of frames between each key frame.}
 
