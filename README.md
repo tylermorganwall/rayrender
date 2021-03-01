@@ -1,9 +1,10 @@
 
 # rayrender
 
-<img src="man/figures/swordsmall.gif" ></img>
-
-## Overview
+<img src="man/figures/swordsmall.gif" ></img> <!-- badges: start -->
+[![R build
+status](https://github.com/tylermorganwall/rayrender/workflows/R-CMD-check/badge.svg)](https://github.com/tylermorganwall/rayrender/actions)
+<!-- badges: end --> Overview ——–
 
 **rayrender** is an open source R package for raytracing scenes in
 created in R. Based off of Peter Shirley’s three books “Ray Tracing in
@@ -79,7 +80,7 @@ scene = generate_ground(material=diffuse(checkercolor="grey20")) %>%
 render_scene(scene, parallel = TRUE, width = 800, height = 800, samples = 1000, clamp_value=10)
 ```
 
-![](man/figures/README_ground_r-1.png)<!-- -->
+![](man/figures/README_ground_r_path-1.png)<!-- -->
 
 Here we’ll render a grid of different viewpoints.
 
@@ -183,6 +184,38 @@ generate_ground(material=diffuse(checkercolor="grey20")) %>%
 ```
 
 ![](man/figures/unnamed-chunk-1-1.png)<!-- -->
+
+We can also use the `path()` element to draw 3D paths. Here, we render
+the Lorenz attractor:
+
+``` r
+library(deSolve)
+parameters = c(s = 10, r = 28, b = 8/3)
+state = c(X = 1, Y = 0, Z = 1)
+
+Lorenz = function(t, state, parameters) {
+  with(as.list(c(state, parameters)), {
+    dX = s * (Y - X)
+    dY = X * (r - Z) - Y
+    dZ = X * Y - b * Z
+    list(c(dX, dY, dZ))
+  })
+}
+
+times = seq(0, 50, by = 0.05)
+vals = ode(y = state, times = times, func = Lorenz, parms = parameters)[,-1]
+
+#scale and rearrange:
+vals = vals[,c(1,3,2)]/20
+
+generate_studio() %>% 
+  add_object(path(points=vals,y=-0.6,width=0.01,material=diffuse(color="red"))) %>% 
+  add_object(sphere(y=5,z=5,radius=0.5,material=light(intensity=200))) %>% 
+  render_scene(samples=256,lookat=c(0,0.5,0),lookfrom=c(0,1,10),width = 800, height = 800, 
+               clamp_value=10,parallel=TRUE)
+```
+
+![](man/figures/README_ground_r_lorenz-1.png)<!-- -->
 
 Finally, rayrender supports environment lighting with the
 `environment_light` argument. Pass a high dynamic range image (`.hdr`)

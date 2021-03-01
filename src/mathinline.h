@@ -110,17 +110,17 @@ inline vec3 saturate(vec3 v1) {
 
 inline vec3 clamp(const vec3& c, Float clamplow, Float clamphigh) {
   vec3 temp = c;
-  if(c[0] > clamphigh) {
+  if(c.e[0] > clamphigh) {
     temp.e[0] = clamphigh;
   } else if(c[0] < clamplow) {
     temp.e[0] = clamplow;
   }
-  if(c[1] > clamphigh) {
+  if(c.e[1] > clamphigh) {
     temp.e[1] = clamphigh;
   } else if(c[1] < clamplow) {
     temp.e[1] = clamplow;
   }
-  if(c[2] > clamphigh) {
+  if(c.e[2] > clamphigh) {
     temp.e[2] = clamphigh;
   } else if(c[2] < clamplow) {
     temp.e[2] = clamplow;
