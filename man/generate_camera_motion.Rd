@@ -15,15 +15,14 @@ generate_camera_motion(
   type = "bezier",
   frames = 30,
   closed = FALSE,
-  linear = FALSE,
   aperture_linear = TRUE,
   fov_linear = TRUE,
   focal_linear = TRUE,
+  ortho_linear = TRUE,
   constant_step = TRUE,
-  curvature_adjust = FALSE,
+  curvature_adjust = "none",
   curvature_scale = 30,
   offset_lookat = 0,
-  camera_up_constant = TRUE,
   function_step = NULL,
   progress = TRUE
 )
@@ -49,38 +48,38 @@ of orthographic dimensions.}
 \item{camera_ups}{Default `NULL`, which gives at up vector of `c(0,1,0)`. Camera up orientation.}
 
 \item{type}{Default `bezier`. Type of transition between keyframes. 
-Other options are `linear`, `quad`, `cubic` and `exp`.}
+Other options are `linear`, `quad`, `cubic`, `exp`, and `none`.}
 
 \item{frames}{Default `30`. Number of frames between each key frame.}
 
 \item{closed}{Default `FALSE`. Whether to close the camera curve.}
 
-\item{linear}{Default `FALSE`. Whether the camera movement should follow straight lines or bezier curves.}
+\item{aperture_linear}{Default `TRUE`. This linearly interpolates focal distances, rather than using a smooth bezier curve  or easing function.}
 
-\item{aperture_linear}{Default `TRUE`. This linearly interpolates focal distances, rather than using a smooth bezier curve.}
+\item{fov_linear}{Default `TRUE`. This linearly interpolates focal distances, rather than using a smooth bezier curve  or easing function.}
 
-\item{fov_linear}{Default `TRUE`. This linearly interpolates focal distances, rather than using a smooth bezier curve.}
+\item{focal_linear}{Default `TRUE`. This linearly interpolates focal distances, rather than using a smooth bezier curve or easing function.}
 
-\item{focal_linear}{Default `TRUE`. This linearly interpolates focal distances, rather than using a smooth bezier curve.}
+\item{ortho_linear}{Default `TRUE`. This linearly interpolates orthographic dimensions, rather than using a smooth bezier curve or easing function.}
 
-\item{constant_step}{Default `TRUE`. This will make the camera travel at a constant speed}
+\item{constant_step}{Default `TRUE`. This will make the camera travel at a constant speed.}
 
-\item{curvature_adjust}{Default `FALSE`. Whether to slow down the camera at areas of high curvature
-to prevent fast swings.}
+\item{curvature_adjust}{Default `none`. Other options are `position`, `lookat`, and `both`. Whether to slow down the camera at areas of high curvature
+to prevent fast swings. Only used for curve `type = bezier`. Note: This feature will likely result in the `lookat` and `position` diverging if they do not 
+have similar curvatures at each point. This feature is best used when passing the same set of points to `positions` and `lookats` 
+and providing an `offset_lookat` value, which ensures the curvature will be the same at every point.}
 
 \item{curvature_scale}{Default `30`. Constant dividing factor for curvature. Higher values will subdivide the
-path more, potentially finding a smoother path, but increasing the calculation time. Increasing this value
-after a certain point will not increase the quality of the path, but it is scene-dependent.}
+path more, potentially finding a smoother path, but increasing the calculation time. Only used for curve `type = bezier`.
+Increasing this value after a certain point will not increase the quality of the path, but it is scene-dependent.}
 
 \item{offset_lookat}{Default `0`. Amount to offset the lookat position, either along the path (if `constant_step = TRUE`)
-or towards the derivative of the bezier curve.}
-
-\item{camera_up_constant}{= TRUE,}
+or towards the derivative of the bezier curve. Only used for curve `type = bezier`.}
 
 \item{function_step}{Default `NULL`. A function that takes three inputs: the 3D position, the 3D derivative, and the
 3D second derivative, and uses them to determine the step size.
 over the path. If `FALSE`, the camera will speed up and slow down depending on the bezier curve
-parameterization.}
+parameterization. Only used for curve `type = bezier`.}
 
 \item{progress}{Default `TRUE`. Whether to display a progress bar.}
 }

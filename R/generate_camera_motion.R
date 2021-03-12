@@ -301,26 +301,27 @@ calculate_final_path = function(linearized_cp, steps, constant_step = TRUE,
 #' of orthographic dimensions.
 #' @param camera_ups Default `NULL`, which gives at up vector of `c(0,1,0)`. Camera up orientation.
 #' @param type Default `bezier`. Type of transition between keyframes. 
-#' Other options are `linear`, `quad`, `cubic` and `exp`.
+#' Other options are `linear`, `quad`, `cubic`, `exp`, and `none`.
 #' @param frames Default `30`. Number of frames between each key frame.
 #' @param closed Default `FALSE`. Whether to close the camera curve.
-#' @param linear Default `FALSE`. Whether the camera movement should follow straight lines or bezier curves. 
-#' @param constant_step Default `TRUE`. This will make the camera travel at a constant speed 
+#' @param constant_step Default `TRUE`. This will make the camera travel at a constant speed. 
 #' @param function_step Default `NULL`. A function that takes three inputs: the 3D position, the 3D derivative, and the
 #' 3D second derivative, and uses them to determine the step size.
 #' over the path. If `FALSE`, the camera will speed up and slow down depending on the bezier curve
-#' parameterization.
-#' @param aperture_linear Default `TRUE`. This linearly interpolates focal distances, rather than using a smooth bezier curve.
-#' @param fov_linear Default `TRUE`. This linearly interpolates focal distances, rather than using a smooth bezier curve.
-#' @param focal_linear Default `TRUE`. This linearly interpolates focal distances, rather than using a smooth bezier curve.
-#' @param curvature_adjust Default `FALSE`. Whether to slow down the camera at areas of high curvature
-#' to prevent fast swings.
+#' parameterization. Only used for curve `type = bezier`.
+#' @param aperture_linear Default `TRUE`. This linearly interpolates focal distances, rather than using a smooth bezier curve  or easing function.
+#' @param fov_linear Default `TRUE`. This linearly interpolates focal distances, rather than using a smooth bezier curve  or easing function.
+#' @param focal_linear Default `TRUE`. This linearly interpolates focal distances, rather than using a smooth bezier curve or easing function. 
+#' @param ortho_linear Default `TRUE`. This linearly interpolates orthographic dimensions, rather than using a smooth bezier curve or easing function. 
+#' @param curvature_adjust Default `none`. Other options are `position`, `lookat`, and `both`. Whether to slow down the camera at areas of high curvature
+#' to prevent fast swings. Only used for curve `type = bezier`. Note: This feature will likely result in the `lookat` and `position` diverging if they do not 
+#' have similar curvatures at each point. This feature is best used when passing the same set of points to `positions` and `lookats` 
+#' and providing an `offset_lookat` value, which ensures the curvature will be the same at every point. 
 #' @param curvature_scale Default `30`. Constant dividing factor for curvature. Higher values will subdivide the
-#' path more, potentially finding a smoother path, but increasing the calculation time. Increasing this value
-#' after a certain point will not increase the quality of the path, but it is scene-dependent.
+#' path more, potentially finding a smoother path, but increasing the calculation time. Only used for curve `type = bezier`.
+#' Increasing this value after a certain point will not increase the quality of the path, but it is scene-dependent.
 #' @param offset_lookat Default `0`. Amount to offset the lookat position, either along the path (if `constant_step = TRUE`)
-#' or towards the derivative of the bezier curve.
-#' @param camera_up_constant = TRUE,
+#' or towards the derivative of the bezier curve. Only used for curve `type = bezier`.
 #' @param progress Default `TRUE`. Whether to display a progress bar.
 #' 
 #' @export
@@ -400,36 +401,40 @@ generate_camera_motion = function(positions,
                                   type = "bezier",
                                   frames = 30, 
                                   closed=FALSE, 
-                                  linear=FALSE, 
                                   aperture_linear = TRUE,  
                                   fov_linear = TRUE, 
                                   focal_linear = TRUE,
+                                  ortho_linear = TRUE,
                                   constant_step = TRUE, 
-                                  curvature_adjust = FALSE, 
+                                  curvature_adjust = "none", 
                                   curvature_scale = 30,
                                   offset_lookat = 0, 
-                                  camera_up_constant = TRUE,
                                   function_step = NULL, 
                                   progress = TRUE) {
+  curve_adj_type = unlist(lapply(tolower(curvature_adjust),switch,
+                               "none" = 0,"position" = 1,"lookats" = 2, "both" = 3, 0))
+  curvature_adjust_pos = curve_adj_type %in% c(1,3)
+  curvature_adjust_look = curve_adj_type %in% c(2,3)
+  
   if(type=="bezier") {
-    position_control_points = process_point_series(positions,closed=closed,straight=linear)
+    position_control_points = process_point_series(positions,closed=closed,straight=FALSE)
     points_dist = calculate_distance_along_bezier_curve(position_control_points, breaks = 50)
     points_final = calculate_final_path(points_dist, steps = frames, constant_step = constant_step,
-                                        curvature_adjust = curvature_adjust, 
+                                        curvature_adjust = curvature_adjust_pos, 
                                         curvature_scale=curvature_scale,
                                         progress = progress, string = "Position   ")
     if(!is.null(lookats)) {
-      position_control_lookats = process_point_series(lookats,closed=closed,straight=linear)
+      position_control_lookats = process_point_series(lookats,closed=closed,straight=FALSE)
       lookats_dist = calculate_distance_along_bezier_curve(position_control_lookats, breaks = 50)
       lookats_final = calculate_final_path(lookats_dist, steps = frames, 
                                            constant_step = constant_step, offset = offset_lookat,
-                                           curvature_adjust = curvature_adjust, 
+                                           curvature_adjust = curvature_adjust_look, 
                                            curvature_scale=curvature_scale,
                                            progress = progress, string = "Orientation")
     } else {
       lookats_final = matrix(c(0,0,0), nrow = nrow(points_final), ncol=3, byrow=TRUE)
     }
-    if(curvature_adjust) {
+    if(curvature_adjust_pos || curvature_adjust_look) {
       temp_points  = points_final[1:frames,]
       temp_lookats = lookats_final[1:frames,]
   
@@ -449,8 +454,12 @@ generate_camera_motion = function(positions,
                                 lookats_final[rv,],
                                 lookats_final[frv+1,])
       }
-      points_final = temp_points
-      lookats_final = temp_lookats
+      if(curvature_adjust_pos) {
+        points_final = temp_points
+      }
+      if(curvature_adjust_look) {
+        lookats_final = temp_lookats
+      }
     }
     
     if(length(apertures) != 1) {
@@ -494,7 +503,7 @@ generate_camera_motion = function(positions,
       ortho_final = matrix(c(1,1),  nrow = nrow(points_final), ncol=2)
     }
     if(!is.null(camera_ups)) {
-      ups_control = process_point_series_2d(camera_ups,closed=closed,straight=linear)
+      ups_control = process_point_series_2d(camera_ups,closed=closed,straight=ortho_linear)
       up_dist = calculate_distance_along_bezier_curve(ups_control, breaks = 50)
       up_final = calculate_final_path(up_dist, steps = frames, constant_step = constant_step)
     } else {
@@ -520,16 +529,16 @@ generate_camera_motion = function(positions,
     if(inherits(ortho_dims,"list")) {
       ortho_dims = do.call(rbind,ortho_dims)
     }
-    positions = xyz.coords(positions)
+    positions = grDevices::xyz.coords(positions)
     
     if(is.null(lookats)) {
       lookats = matrix(0,ncol=3,nrow=length(positions$x))
     }
-    lookats = xyz.coords(lookats)
+    lookats = grDevices::xyz.coords(lookats)
     if(is.null(camera_ups)) {
       camera_ups = matrix(c(0,1,0),ncol=3,nrow=length(positions$x),byrow=TRUE)
     }
-    camera_ups = xyz.coords(camera_ups)
+    camera_ups = grDevices::xyz.coords(camera_ups)
     
     if(is.null(focal_distances)) {
       focal_distances = sqrt((positions$x - lookats$x)^2 + 
@@ -541,7 +550,7 @@ generate_camera_motion = function(positions,
     if(is.null(ortho_dims)) {
       ortho_dims = matrix(c(1,1),ncol=2,nrow=length(positions$x),byrow=TRUE)
     }
-    ortho = xy.coords(ortho_dims)
+    ortho = grDevices::xy.coords(ortho_dims)
     tween_df = data.frame(x=positions$x, y=positions$y, z=positions$z,
                          dx=lookats$x, dy=lookats$y, dz=lookats$z,
                          aperture = rep(apertures,length(positions$x)),
@@ -565,7 +574,59 @@ generate_camera_motion = function(positions,
     if(focal_linear) {
       return_values$focal = tween(focal_distances,n=frames,ease="linear")
     }
+    if(ortho_linear) {
+      return_values$orthox = tween(ortho$x,n=frames,ease="linear")
+      return_values$orthoy = tween(ortho$y,n=frames,ease="linear")
+    }
     return(return_values)
+  } else if (type == "manual") {
+    if(inherits(positions,"list")) {
+      positions = do.call(rbind,positions)
+    }
+    if(inherits(lookats,"list")) {
+      lookats = do.call(rbind,lookats)
+    }
+    if(inherits(camera_ups,"list")) {
+      camera_ups = do.call(rbind,camera_ups)
+    }
+    if(inherits(ortho_dims,"list")) {
+      ortho_dims = do.call(rbind,ortho_dims)
+    }
+    if (is.numeric(ortho_dims) && length(ortho_dims) == 2) {
+      ortho_dims = matrix(ortho_dims,ncol=2,nrow=length(positions$x),byrow=TRUE)
+    }
+      
+    positions = grDevices::xyz.coords(positions)
+    
+    if(is.null(lookats)) {
+      lookats = matrix(0,ncol=3,nrow=length(positions$x))
+    } else if (is.numeric(lookats) && length(lookats) == 3) {
+      lookats = matrix(lookats,ncol=3,nrow=length(positions$x),byrow=TRUE)
+    }
+    lookats = grDevices::xyz.coords(lookats)
+    if(is.null(camera_ups)) {
+      camera_ups = matrix(c(0,1,0),ncol=3,nrow=length(positions$x),byrow=TRUE)
+    }
+    camera_ups = grDevices::xyz.coords(camera_ups)
+    
+    if(is.null(focal_distances)) {
+      focal_distances = sqrt((positions$x - lookats$x)^2 + 
+                               (positions$y - lookats$y)^2 + 
+                               (positions$z - lookats$z)^2)
+    } else if (length(focal_distances) == 1) {
+      focal_distances = rep(focal_distances,length(positions$x))
+    }
+    if(is.null(ortho_dims)) {
+      ortho_dims = matrix(c(1,1),ncol=2,nrow=length(positions$x),byrow=TRUE)
+    }
+    ortho = grDevices::xy.coords(ortho_dims)
+    return(data.frame(x=positions$x, y=positions$y, z=positions$z,
+                      dx=lookats$x, dy=lookats$y, dz=lookats$z,
+                      aperture = rep(apertures,length(positions$x)),
+                      fov = rep(fovs,length(positions$x)),
+                      focal = focal_distances,
+                      orthox = ortho$x, orthoy = ortho$y,
+                      upx =camera_ups$x, upy = camera_ups$y ,upz = camera_ups$z))
   } else {
     stop("type '", type, "' not recognized")
   }
