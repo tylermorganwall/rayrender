@@ -6,9 +6,16 @@ bool csg::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_ge
   Float delta = 10e-5 * max_dist/100; 
   Float t = 0; 
   bool first = true;
+  aabb box;
+  bounding_box(t_min,t_max,box);
+  Float dist1 = (box.min()-r.origin()).length();
+  Float dist2 = (box.max()-r.origin()).length();
+  
+  Float max_path = std::fmax(dist1,dist2) + box.diag.length()/2;
+  
   vec3 dir = unit_vector(r.direction());
-  Float max_t = t_max * r.direction().length();
-
+  Float max_t = max_path * r.direction().length();
+  
   
   while (t < max_t) { 
     Float minDistance = INFINITY; 

@@ -5,6 +5,7 @@
 #include "material.h"
 #include "mathinline.h"
 #include <algorithm>
+#include <cmath>
 
 class ImplicitShape { 
   public: 
@@ -39,8 +40,8 @@ class csg_plane : public ImplicitShape {
       Float dist   = dot(axis.v(),from - pointOnPlane);
       Float dist_x = dot(axis.u(),from - pointOnPlane);
       Float dist_z = dot(axis.w(),from - pointOnPlane);
-      Float diff_x = abs(dist_x) - width_x/2;
-      Float diff_z = abs(dist_z) - width_z/2;
+      Float diff_x = std::fabs(dist_x) - width_x/2;
+      Float diff_z = std::fabs(dist_z) - width_z/2;
       dist = diff_x > 0 ? std::sqrt(diff_x * diff_x + dist * dist) : dist;
       dist = diff_z > 0 ? std::sqrt(diff_z * diff_z + dist * dist) : dist;
       return(dist); 
@@ -403,7 +404,7 @@ class csg_onion : public ImplicitShape {
     csg_onion(std::shared_ptr<ImplicitShape> shape, Float thickness) : 
     shape(shape),thickness(thickness) {} 
     float getDistance(const vec3& from) const {
-      return(abs(shape->getDistance(from)) - thickness);
+      return(fabs(shape->getDistance(from)) - thickness);
     } 
     virtual bool bbox(Float t0, Float t1, aabb& box) const {
       shape->bbox(t0,t1,box);
@@ -538,7 +539,7 @@ struct intersectionFunc {
 struct blendFunc { 
   blendFunc(const float &_k) : k(_k) {} 
   float operator() (float a, float b) const { 
-    float h = std::fmax(k-abs(a-b), 0.0 )/k;
+    float h = std::fmax(k-std::fabs(a-b), 0.0 )/k;
     return(std::fmin( a, b ) - h*h*k*(1.0/4.0));
   } 
   float k; 
@@ -547,7 +548,7 @@ struct blendFunc {
 struct blendFuncMinus { 
   blendFuncMinus(const float &_k) : k(_k) {} 
   float operator() (float a, float b) const { 
-    float h = std::fmax(k-abs(-b-a), 0.0)/k;
+    float h = std::fmax(k-std::fabs(-b-a), 0.0)/k;
     return(std::fmax(-b, a) + h*h*k*(1.0/4.0));
   }
   float k; 
