@@ -87,7 +87,7 @@ generate_studio(depth=-0.1) \%>\%
   add_object(sphere(y=3,z=5,x=2,radius=0.3,
                     material=light(intensity=200, spotlight_focus = c(0,0.5,0)))) \%>\%
   render_scene(clamp_value = 10, lookat = c(0,0.5,0), fov=13,
-               samples=500, sample_method = "stratified")
+               samples=500)
 
 #Change the control points to change the direction of the curve. Here, we place spheres
 #at the control point locations.
@@ -100,7 +100,7 @@ generate_studio(depth=-0.1) \%>\%
   add_object(sphere(y=3,z=5,x=2,radius=0.3,
                     material=light(intensity=200, spotlight_focus = c(0,0.5,0)))) \%>\%
   render_scene(clamp_value = 10, lookat = c(0,0.5,0), fov=15,
-               samples=500, sample_method = "stratified")
+               samples=500)
                
 #We can make the curve flat (always facing the camera) by setting the type to `flat`
 generate_studio(depth=-0.1) \%>\%
@@ -108,7 +108,7 @@ generate_studio(depth=-0.1) \%>\%
   add_object(sphere(y=3,z=5,x=2,radius=0.3,
                     material=light(intensity=200, spotlight_focus = c(0,0.5,0)))) \%>\%
   render_scene(clamp_value = 10, lookat = c(0,0.5,0), fov=13,
-               samples=500, sample_method = "stratified")
+               samples=500)
 
 
 #We can also plot a ribbon, which is further specified by a start and end orientation with
@@ -121,7 +121,7 @@ generate_studio(depth=-0.1) \%>\%
   add_object(sphere(y=3,z=5,x=2,radius=0.3,
                     material=light(intensity=200, spotlight_focus = c(0,0.5,0)))) \%>\%
   render_scene(clamp_value = 10, lookat = c(0,0.5,0), fov=13,
-               samples=500, sample_method = "stratified")
+               samples=500)
 
 
 #Create a single curve and copy and rotate it around the y-axis to create a wavy fountain effect:
@@ -136,7 +136,7 @@ all_curves = do.call(rbind, scene_curves)
 generate_ground(depth=0,material=diffuse(checkercolor="grey20")) \%>\%
   add_object(all_curves) \%>\%
   add_object(sphere(y=7,z=0,x=0,material=light(intensity=100))) \%>\% 
-  render_scene(lookfrom = c(12,20,50),samples=500, sample_method = "stratified",
+  render_scene(lookfrom = c(12,20,50),samples=500,
                lookat=c(0,1,0), fov=15, clamp_value = 10)
 
 }

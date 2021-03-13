@@ -28,7 +28,7 @@ generate_ground(material=diffuse(checkercolor="grey20")) \%>\%
   add_object(csg_object(csg_round(csg_pyramid(x=0,z=-2,y=-0.5), radius=0.5),
                         material=glossy(color="green"))) \%>\% 
   add_object(sphere(y=5,x=5,z=5,radius=1,material=light(intensity=50))) \%>\% 
-  render_scene(sample_method="stratified",lookfrom=c(-3,4,10), fov=22, 
+  render_scene(lookfrom=c(-3,4,10), fov=22, 
                lookat=c(0,-0.5,0),clamp_value=10)
 
 #Round a blend of two objects
@@ -42,7 +42,7 @@ generate_ground(material=diffuse(checkercolor="grey20")) \%>\%
     csg_pyramid(x=0.5,y=-0.79,z=-1), operation="blend"), radius=0.2),
                         material=glossy(color="green"))) \%>\% 
   add_object(sphere(y=5,x=5,z=5,radius=1,material=light(intensity=50))) \%>\% 
-  render_scene(sample_method="stratified",lookfrom=c(-3,5,10), fov=22, 
+  render_scene(lookfrom=c(-3,5,10), fov=22, 
                lookat=c(0,-0.5,0),clamp_value=10)
 }
 }

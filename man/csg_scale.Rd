@@ -26,7 +26,7 @@ generate_ground(material=diffuse(checkercolor="grey20")) \%>\%
   add_object(csg_object(csg_scale(csg_pyramid(z=-1,y=-0.5),2),
                         material=glossy(color="green"))) \%>\% 
   add_object(sphere(y=5,x=5,z=5,material=light(intensity=40))) \%>\% 
-  render_scene(sample_method="stratified",lookfrom=c(-3,4,10), fov=20, 
+  render_scene(lookfrom=c(-3,4,10), fov=20, 
                lookat=c(0,-0.5,-0.5),clamp_value=10)
 }
 }

@@ -45,7 +45,7 @@ generate_ground(material=diffuse(checkercolor="grey20")) \%>\%
                         pivot_point = c(0,-0.99,-1.5),angle=c(0,45,0)),
                         material=glossy(color="green"))) \%>\% 
   add_object(sphere(y=5,x=5,z=5,material=light(intensity=40))) \%>\% 
-  render_scene(sample_method="stratified",lookfrom=c(-3,4,10), fov=15, 
+  render_scene(lookfrom=c(-3,4,10), fov=15, 
                lookat=c(0,-0.5,0),clamp_value=10)
   
 #Rotate by specifying a new up vector:
@@ -56,7 +56,7 @@ generate_ground(material=diffuse(checkercolor="grey20")) \%>\%
                         pivot_point = c(0,-0.49,-1.5), up =c(1,1,0)),
                         material=glossy(color="green"))) \%>\% 
   add_object(sphere(y=5,x=5,z=5,material=light(intensity=40))) \%>\% 
-  render_scene(sample_method="stratified",lookfrom=c(-3,4,10), fov=15, 
+  render_scene(lookfrom=c(-3,4,10), fov=15, 
                lookat=c(0,-0.5,0),clamp_value=10)
 }
 }

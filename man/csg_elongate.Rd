@@ -36,7 +36,7 @@ generate_ground(material=diffuse(checkercolor="grey20",color="dodgerblue4")) \%>
  add_object(csg_object(csg_elongate(csg_sphere(z=2),z=2, elongate = c(0.8,0,0.8)),
                         material=glossy(color="white"))) \%>\% 
  add_object(sphere(y=10,radius=3,material=light(intensity=8))) \%>\% 
- render_scene(clamp_value=10,sample_method="stratified",fov=40,lookfrom=c(0,10,10))
+ render_scene(clamp_value=10,fov=40,lookfrom=c(0,10,10))
   
 #Elongate a torus:
 generate_ground(material=diffuse(checkercolor="grey20",color="dodgerblue4")) \%>\% 
@@ -47,7 +47,7 @@ generate_ground(material=diffuse(checkercolor="grey20",color="dodgerblue4")) \%>
  add_object(csg_object(csg_elongate(csg_torus(z=2),z=2, elongate = c(0.8,0,0.8)),
                         material=glossy(color="white"))) \%>\% 
  add_object(sphere(y=10,radius=3,material=light(intensity=8))) \%>\% 
- render_scene(clamp_value=10,sample_method="stratified",fov=40,lookfrom=c(0,10,10))
+ render_scene(clamp_value=10,fov=40,lookfrom=c(0,10,10))
  
 #Elongate a cylinder:
 generate_ground(material=diffuse(checkercolor="grey20",color="dodgerblue4")) \%>\% 
@@ -60,7 +60,7 @@ generate_ground(material=diffuse(checkercolor="grey20",color="dodgerblue4")) \%>
                        elongate = c(0.8,0,0.8)),
                        material=glossy(color="white"))) \%>\% 
  add_object(sphere(y=10,radius=3,material=light(intensity=8))) \%>\% 
- render_scene(clamp_value=10,sample_method="stratified",fov=40,lookfrom=c(0,10,10))
+ render_scene(clamp_value=10,fov=40,lookfrom=c(0,10,10))
  
 #Elongate a pyramid:
 generate_ground(material=diffuse(checkercolor="grey20",color="dodgerblue4")) \%>\% 
@@ -71,7 +71,7 @@ generate_ground(material=diffuse(checkercolor="grey20",color="dodgerblue4")) \%>
  add_object(csg_object(csg_elongate(csg_pyramid(z=2),z=2, elongate = c(0.8,0,0.8)),
                         material=glossy(color="white"))) \%>\% 
  add_object(sphere(y=10,radius=3,material=light(intensity=8))) \%>\% 
- render_scene(clamp_value=10,sample_method="stratified",fov=40,lookfrom=c(0,10,10))
+ render_scene(clamp_value=10,fov=40,lookfrom=c(0,10,10))
 
 #Change the elongation point to start the elongation on the side of the pyramid:
 generate_ground(material=diffuse(checkercolor="grey20",color="dodgerblue4")) \%>\% 
@@ -82,7 +82,7 @@ generate_ground(material=diffuse(checkercolor="grey20",color="dodgerblue4")) \%>
  add_object(csg_object(csg_elongate(csg_pyramid(z=2),z=2.25, elongate = c(0.8,0,0.8)),
                         material=glossy(color="white"))) \%>\% 
  add_object(sphere(y=10,radius=3,material=light(intensity=8))) \%>\% 
- render_scene(clamp_value=10,sample_method="stratified",fov=40,
+ render_scene(clamp_value=10,fov=40,
               lookfrom=c(5,5,10),lookat=c(0,0,-1.5))
 }
 }

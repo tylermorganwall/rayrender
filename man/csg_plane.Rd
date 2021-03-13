@@ -31,7 +31,7 @@ way.
 #Generate a plane
 csg_object(csg_plane(width_x=4, width_z=4), material=diffuse(checkercolor="purple")) \%>\% 
   add_object(sphere(y=5,x=5,material=light(intensity=40))) \%>\% 
-  render_scene(clamp_value=10,sample_method="stratified")
+  render_scene(clamp_value=10)
  
 #Combine the plane with a sphere
 csg_object(csg_combine(
@@ -39,7 +39,7 @@ csg_object(csg_combine(
     csg_plane(width_x=4, width_z=4,y=-0.5), 
     operation="blend"),material=diffuse(checkercolor="purple")) \%>\% 
   add_object(sphere(y=5,x=5,material=light(intensity=40))) \%>\% 
-  render_scene(clamp_value=10,sample_method="stratified")
+  render_scene(clamp_value=10)
   
 #Re-orient the plane using the normal and 
 csg_object(csg_combine(
@@ -47,6 +47,6 @@ csg_object(csg_combine(
     csg_plane(normal = c(1,1,0),width_x=4, width_z=4,y=-0.5), 
     operation="blend"),material=diffuse(checkercolor="purple")) \%>\% 
   add_object(sphere(y=5,x=5,material=light(intensity=40))) \%>\% 
-  render_scene(clamp_value=10,sample_method="stratified")
+  render_scene(clamp_value=10)
 }
 }

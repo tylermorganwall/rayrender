@@ -56,7 +56,7 @@ generate_cornell() \%>\%
                  angle = c(0,-40,0), emotion = "worried")) \%>\%
   add_object(cube(x=450,z=450,y=250, ywidth=500, xwidth=200,
                   angle = c(0,45,0), material = metal())) \%>\%
-  render_scene(parallel=TRUE, samples=500,clamp_value=10, sample_method="stratified")
+  render_scene(parallel=TRUE, samples=500,clamp_value=10)
 
 # Render many small pigs facing random directions, with an evil pig overlord
 set.seed(1)
@@ -78,6 +78,6 @@ render_scene(many_pigs_scene,parallel=TRUE,clamp_value=10, samples=500,
 generate_studio() \%>\%  
   add_object(pig(y=-1,angle=c(0,-100,0), scale=1/2,spider=TRUE)) \%>\% 
   add_object(sphere(y=5,z=5,x=5,material=light(intensity=100))) \%>\% 
-  render_scene(samples=500,lookfrom=c(0,2,10),sample_method = "stratified",clamp_value=10)
+  render_scene(samples=500,lookfrom=c(0,2,10),clamp_value=10)
 }
 }

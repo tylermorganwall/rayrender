@@ -184,7 +184,7 @@ render_scene(scene,fov=20,parallel=TRUE,samples=500)
 \donttest{
 scene = scene \%>\%
   add_object(sphere(x=-1.1,y=0,z=0,radius=0.5,material = metal(color="gold",fuzz=0.1)))
-render_scene(scene,fov=20,parallel=TRUE,samples=500, sample_method = "stratified")
+render_scene(scene,fov=20,parallel=TRUE,samples=500)
 }
 
 #Lower the number of samples to render more quickly (here, we also use only one core).

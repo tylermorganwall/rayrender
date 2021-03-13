@@ -24,13 +24,13 @@ CSG Capsule
 #Generate a basic capsule:
 generate_ground(material=diffuse(checkercolor="grey20")) \%>\% 
   add_object(csg_object(csg_capsule(radius=0.5),material=glossy(color="red"))) \%>\% 
-  render_scene(clamp_value=10,sample_method="stratified",fov=20)
+  render_scene(clamp_value=10,fov=20)
   
 #Change the orientation by specifying a start and end
 generate_ground(material=diffuse(color="dodgerblue4",checkercolor="grey10")) \%>\% 
   add_object(csg_object(csg_capsule(start = c(-1,0.5,-2), end = c(1,0.5,-2),
   radius=0.5),material=glossy(checkercolor="red"))) \%>\% 
-  render_scene(clamp_value=10,sample_method="stratified",fov=20,
+  render_scene(clamp_value=10,fov=20,
                lookat=c(0,0.5,-2),lookfrom=c(3,3,10))
  
 #Show the effect of changing the radius
@@ -40,7 +40,7 @@ generate_ground(material=diffuse(color="dodgerblue4",checkercolor="grey10")) \%>
     csg_capsule(start = c(-1,0.5,-2), end = c(1,0.5,-2), radius=0.5),
     csg_capsule(start = c(-0.5,1.5,-2), end = c(0.5,1.5,-2), radius=0.25)),
     material=glossy(checkercolor="red"))) \%>\% 
-  render_scene(clamp_value=10,sample_method="stratified",fov=20,
+  render_scene(clamp_value=10,fov=20,
                lookat=c(0,0.5,-2),lookfrom=c(-3,3,10))
                
 #Render a capsule in a Cornell box
@@ -48,6 +48,6 @@ generate_cornell() \%>\%
   add_object(csg_object(
     csg_capsule(start = c(555/2-100,555/2,555/2), end = c(555/2+100,555/2,555/2), radius=100),
     material=glossy(color="dodgerblue4"))) \%>\% 
-  render_scene(clamp_value=10,sample_method="stratified")
+  render_scene(clamp_value=10)
 }
 }

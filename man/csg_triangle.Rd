@@ -25,19 +25,19 @@ CSG Triangle
 generate_ground(material=diffuse(checkercolor="grey20")) \%>\% 
   add_object(csg_object(csg_triangle(),material=diffuse(color="red"))) \%>\% 
   add_object(sphere(y=5,z=3,material=light(intensity=30))) \%>\% 
-  render_scene(clamp_value=10,sample_method="stratified",fov=20)
+  render_scene(clamp_value=10,fov=20)
   
 #Change a vertex:
 generate_ground(material=diffuse(checkercolor="grey20")) \%>\% 
   add_object(csg_object(csg_triangle(v1 = c(1,1,0)),material=diffuse(color="green"))) \%>\% 
   add_object(sphere(y=5,z=3,material=light(intensity=30))) \%>\% 
-  render_scene(clamp_value=10,sample_method="stratified",fov=20)
+  render_scene(clamp_value=10,fov=20)
   
 #Change all three vertices:
 generate_ground(material=diffuse(checkercolor="grey20")) \%>\% 
   add_object(csg_object(csg_triangle(v1 = c(0.5,1,0), v2 = c(1,-0.5,0), v3 = c(-1,0.5,0)),
                         material=diffuse(color="blue"))) \%>\% 
   add_object(sphere(y=5,z=3,material=light(intensity=30))) \%>\% 
-  render_scene(clamp_value=10,sample_method="stratified",fov=20,lookfrom=c(0,5,10))
+  render_scene(clamp_value=10,fov=20,lookfrom=c(0,5,10))
 }
 }

@@ -972,7 +972,7 @@ SigmaAFromReflectance = function(c, beta_n) {
 #'   add_object(sphere()) %>%
 #'   add_object(hairball) %>%
 #'   add_object(sphere(y=20,z=20,radius=5,material=light(color="white",intensity = 100))) %>%
-#'   render_scene(samples=64, lookfrom=c(0,3,10),clamp_value = 10, sample_method = "stratified",
+#'   render_scene(samples=64, lookfrom=c(0,3,10),clamp_value = 10,
 #'                fov=20)
 #'                
 #'                
@@ -995,7 +995,7 @@ SigmaAFromReflectance = function(c, beta_n) {
 #'   add_object(sphere()) %>%
 #'   add_object(hairball) %>%
 #'   add_object(sphere(y=20,z=20,radius=5,material=light(color="white",intensity = 100))) %>%
-#'   render_scene(samples=64, lookfrom=c(0,3,10),clamp_value = 10, sample_method = "stratified",
+#'   render_scene(samples=64, lookfrom=c(0,3,10),clamp_value = 10,
 #'                fov=20)
 #' }
 hair = function(pigment = 1.3, red_pigment = 0, color = NA, sigma_a = NA, 

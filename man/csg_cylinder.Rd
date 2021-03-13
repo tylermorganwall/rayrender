@@ -31,13 +31,13 @@ CSG Cylinder
 #Generate a basic cylinder:
 generate_ground(material=diffuse(checkercolor="grey20")) \%>\% 
   add_object(csg_object(csg_cylinder(radius=0.25),material=glossy(color="red"))) \%>\% 
-  render_scene(clamp_value=10,sample_method="stratified",fov=20)
+  render_scene(clamp_value=10,fov=20)
   
 #Change the orientation by specifying a start and end
 generate_ground(material=diffuse(color="dodgerblue4",checkercolor="grey10")) \%>\% 
   add_object(csg_object(csg_cylinder(start = c(-1,0.5,-2), end = c(1,0.5,-2),
     radius=0.5),material=glossy(checkercolor="red"))) \%>\% 
-  render_scene(clamp_value=10,sample_method="stratified",fov=20,
+  render_scene(clamp_value=10,fov=20,
                lookat=c(0,0.5,-2),lookfrom=c(3,3,10))
  
 #Show the effect of changing the radius
@@ -47,7 +47,7 @@ generate_ground(material=diffuse(color="dodgerblue4",checkercolor="grey10")) \%>
     csg_cylinder(start = c(-1,0.5,-2), end = c(1,0.5,-2), radius=0.5),
     csg_cylinder(start = c(-0.5,1.5,-2), end = c(0.5,1.5,-2), radius=0.25)),
     material=glossy(checkercolor="red"))) \%>\% 
-  render_scene(clamp_value=10,sample_method="stratified",fov=20,
+  render_scene(clamp_value=10,fov=20,
                lookat=c(0,0.5,-2),lookfrom=c(-3,3,10))
                
 #Render a red marble cylinder in a Cornell box
@@ -58,6 +58,6 @@ generate_cornell(light=FALSE) \%>\%
     add_object(sphere(y=555,x=5,z=5, radius=5,
                material=light(intensity=10000,
                               spotlight_focus = c(555/2,555/2,555/2),spotlight_width = 45))) \%>\% 
-  render_scene(sample_method="stratified",clamp_value=4)
+  render_scene(clamp_value=4)
 }
 }

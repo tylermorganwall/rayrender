@@ -109,13 +109,13 @@ csg_object = function(object, x = 0, y = 0, z = 0, radius = 1, material = diffus
 #' generate_ground() %>% 
 #'   add_object(csg_object(csg_sphere(),
 #'                         material=glossy(color="purple"))) %>% 
-#'   render_scene(clamp_value=10,sample_method="stratified")
+#'   render_scene(clamp_value=10)
 #' 
 #' #Generate a bigger sphere in the cornell box.
 #' generate_cornell() %>% 
 #'   add_object(csg_object(csg_sphere(x=555/2,y=555/2,z=555/2,radius=100),
 #'                         material=glossy(checkercolor="purple", checkerperiod=100))) %>% 
-#'   render_scene(clamp_value=10,sample_method="stratified")
+#'   render_scene(clamp_value=10)
 #'   
 #' #Combine two spheres of different sizes
 #' generate_cornell() %>% 
@@ -124,7 +124,7 @@ csg_object = function(object, x = 0, y = 0, z = 0, radius = 1, material = diffus
 #'       csg_sphere(x=555/2,y=555/2-50,z=555/2,radius=100),
 #'       csg_sphere(x=555/2,y=555/2+50,z=555/2,radius=80)),
 #'     material=glossy(color="purple"))) %>% 
-#'   render_scene(clamp_value=10,sample_method="stratified")
+#'   render_scene(clamp_value=10)
 #'
 #'#Subtract two spheres to create an indented region
 #' generate_cornell() %>% 
@@ -134,7 +134,7 @@ csg_object = function(object, x = 0, y = 0, z = 0, radius = 1, material = diffus
 #'       csg_sphere(x=555/2+30,y=555/2+20,z=555/2-90,radius=40),
 #'       operation="subtract"),
 #'     material=glossy(color="grey20"))) %>% 
-#'   render_scene(clamp_value=10,sample_method="stratified")
+#'   render_scene(clamp_value=10)
 #'   
 #'#Use csg_combine(operation="blend") to melt the two together
 #' generate_cornell() %>% 
@@ -144,7 +144,7 @@ csg_object = function(object, x = 0, y = 0, z = 0, radius = 1, material = diffus
 #'       csg_sphere(x=555/2,y=555/2+50,z=555/2,radius=80),
 #'       operation="blend", radius=20),
 #'     material=glossy(color="purple"))) %>% 
-#'   render_scene(clamp_value=10,sample_method="stratified")
+#'   render_scene(clamp_value=10)
 #' }
 csg_sphere = function(x=0,y=0,z=0, radius=1) {
   csg_obj = list(csg_type = 2, x=x,y=y,z=z,radius=radius)
@@ -171,7 +171,7 @@ csg_sphere = function(x=0,y=0,z=0, radius=1) {
 #' #Generate a plane
 #' csg_object(csg_plane(width_x=4, width_z=4), material=diffuse(checkercolor="purple")) %>% 
 #'   add_object(sphere(y=5,x=5,material=light(intensity=40))) %>% 
-#'   render_scene(clamp_value=10,sample_method="stratified")
+#'   render_scene(clamp_value=10)
 #'  
 #' #Combine the plane with a sphere
 #' csg_object(csg_combine(
@@ -179,7 +179,7 @@ csg_sphere = function(x=0,y=0,z=0, radius=1) {
 #'     csg_plane(width_x=4, width_z=4,y=-0.5), 
 #'     operation="blend"),material=diffuse(checkercolor="purple")) %>% 
 #'   add_object(sphere(y=5,x=5,material=light(intensity=40))) %>% 
-#'   render_scene(clamp_value=10,sample_method="stratified")
+#'   render_scene(clamp_value=10)
 #'   
 #' #Re-orient the plane using the normal and 
 #' csg_object(csg_combine(
@@ -187,7 +187,7 @@ csg_sphere = function(x=0,y=0,z=0, radius=1) {
 #'     csg_plane(normal = c(1,1,0),width_x=4, width_z=4,y=-0.5), 
 #'     operation="blend"),material=diffuse(checkercolor="purple")) %>% 
 #'   add_object(sphere(y=5,x=5,material=light(intensity=40))) %>% 
-#'   render_scene(clamp_value=10,sample_method="stratified")
+#'   render_scene(clamp_value=10)
 #' }
 csg_plane = function(x=0,y=0,z=0, normal=c(0,1,0),width_x=4, width_z=4) {
   csg_obj = list(csg_type = 3,x=x,y=y,z=z,normal=normal,width_x=width_x, width_z=width_z)
@@ -211,13 +211,13 @@ csg_plane = function(x=0,y=0,z=0, normal=c(0,1,0),width_x=4, width_z=4) {
 #' generate_ground(material=diffuse(checkercolor="grey20")) %>% 
 #'   add_object(csg_object(csg_box(), material=glossy(color="#FF69B4"))) %>%
 #'   add_object(sphere(y=5,x=5,radius=3,material=light(intensity=5))) %>%  
-#'   render_scene(clamp_value=10,lookfrom=c(7,3,7),sample_method="stratified")
+#'   render_scene(clamp_value=10,lookfrom=c(7,3,7))
 #'   
 #' #Change the width
 #' generate_ground(material=diffuse(checkercolor="grey20")) %>% 
 #'   add_object(csg_object(csg_box(width = c(2,1,0.5)), material=glossy(color="#FF69B4"))) %>%
 #'   add_object(sphere(y=5,x=5,radius=3,material=light(intensity=5))) %>%  
-#'   render_scene(clamp_value=10,lookfrom=c(7,3,7),sample_method="stratified")
+#'   render_scene(clamp_value=10,lookfrom=c(7,3,7))
 #'
 #' #Subtract two boxes to make stairs
 #' generate_ground(material=diffuse(checkercolor="grey20")) %>% 
@@ -226,7 +226,7 @@ csg_plane = function(x=0,y=0,z=0, normal=c(0,1,0),width_x=4, width_z=4) {
 #'     csg_box(x=0.5,y=0.5,width=c(1,1,1.1)),operation="subtract"),
 #'    material=glossy(color="#FF69B4"))) %>%
 #'   add_object(sphere(y=5,x=5,radius=3,material=light(intensity=5))) %>%  
-#'   render_scene(clamp_value=10,lookfrom=c(7,3,7),fov=13,sample_method="stratified")
+#'   render_scene(clamp_value=10,lookfrom=c(7,3,7),fov=13)
 #'   }
 csg_box = function(x=0,y=0,z=0, width=c(1,1,1), corner_radius = 0) {
   if(corner_radius == 0) {
@@ -256,20 +256,20 @@ csg_box = function(x=0,y=0,z=0, width=c(1,1,1), corner_radius = 0) {
 #' generate_ground(material=diffuse(checkercolor="grey20")) %>% 
 #'   add_object(csg_object(csg_torus(), material=glossy(color="dodgerblue4"))) %>%
 #'   add_object(sphere(y=5,x=5,radius=3,material=light(intensity=10))) %>%  
-#'   render_scene(clamp_value=10,lookfrom=c(0,5,10),fov=30,sample_method="stratified")
+#'   render_scene(clamp_value=10,lookfrom=c(0,5,10),fov=30)
 #'   
 #' #Change the radius of the torus:
 #' generate_ground(material=diffuse(checkercolor="grey20")) %>% 
 #'   add_object(csg_object(csg_torus(radius=2), material=glossy(color="dodgerblue4"))) %>%
 #'   add_object(sphere(y=5,x=5,radius=3,material=light(intensity=10))) %>%  
-#'   render_scene(clamp_value=10,lookfrom=c(0,5,10),fov=30,sample_method="stratified")
+#'   render_scene(clamp_value=10,lookfrom=c(0,5,10),fov=30)
 #'
 #'#Change the minor radius of the torus:
 #' generate_ground(material=diffuse(checkercolor="grey20")) %>% 
 #'   add_object(csg_object(csg_torus(radius=2, minor_radius=0.25), 
 #'                         material=glossy(color="dodgerblue4"))) %>%
 #'   add_object(sphere(y=5,x=5,radius=3,material=light(intensity=10))) %>%  
-#'   render_scene(clamp_value=10,lookfrom=c(0,5,10),fov=30,sample_method="stratified")
+#'   render_scene(clamp_value=10,lookfrom=c(0,5,10),fov=30)
 #'   
 #'#Generate a rotated torus in the Cornell Box
 #' generate_cornell() %>% 
@@ -277,7 +277,7 @@ csg_box = function(x=0,y=0,z=0, width=c(1,1,1), corner_radius = 0) {
 #'     csg_torus(x=555/2,y=555/2,z=555/2,radius=100, minor_radius=50), 
 #'     pivot_point = c(555/2,555/2,555/2), up =c(0,1,-1)), 
 #'                         material=glossy(color="dodgerblue4"))) %>%
-#'   render_scene(clamp_value=10,sample_method="stratified")
+#'   render_scene(clamp_value=10)
 #' }
 csg_torus = function(x=0,y=0,z=0, radius=1, minor_radius=0.5) {
   csg_obj = list(csg_type = 7,x=x,y=y,z=z,ring_radius=radius, cross_radius=minor_radius)
@@ -298,13 +298,13 @@ csg_torus = function(x=0,y=0,z=0, radius=1, minor_radius=0.5) {
 #' #Generate a basic capsule:
 #' generate_ground(material=diffuse(checkercolor="grey20")) %>% 
 #'   add_object(csg_object(csg_capsule(radius=0.5),material=glossy(color="red"))) %>% 
-#'   render_scene(clamp_value=10,sample_method="stratified",fov=20)
+#'   render_scene(clamp_value=10,fov=20)
 #'   
 #' #Change the orientation by specifying a start and end
 #' generate_ground(material=diffuse(color="dodgerblue4",checkercolor="grey10")) %>% 
 #'   add_object(csg_object(csg_capsule(start = c(-1,0.5,-2), end = c(1,0.5,-2),
 #'   radius=0.5),material=glossy(checkercolor="red"))) %>% 
-#'   render_scene(clamp_value=10,sample_method="stratified",fov=20,
+#'   render_scene(clamp_value=10,fov=20,
 #'                lookat=c(0,0.5,-2),lookfrom=c(3,3,10))
 #'  
 #' #Show the effect of changing the radius
@@ -314,7 +314,7 @@ csg_torus = function(x=0,y=0,z=0, radius=1, minor_radius=0.5) {
 #'     csg_capsule(start = c(-1,0.5,-2), end = c(1,0.5,-2), radius=0.5),
 #'     csg_capsule(start = c(-0.5,1.5,-2), end = c(0.5,1.5,-2), radius=0.25)),
 #'     material=glossy(checkercolor="red"))) %>% 
-#'   render_scene(clamp_value=10,sample_method="stratified",fov=20,
+#'   render_scene(clamp_value=10,fov=20,
 #'                lookat=c(0,0.5,-2),lookfrom=c(-3,3,10))
 #'                
 #' #Render a capsule in a Cornell box
@@ -322,7 +322,7 @@ csg_torus = function(x=0,y=0,z=0, radius=1, minor_radius=0.5) {
 #'   add_object(csg_object(
 #'     csg_capsule(start = c(555/2-100,555/2,555/2), end = c(555/2+100,555/2,555/2), radius=100),
 #'     material=glossy(color="dodgerblue4"))) %>% 
-#'   render_scene(clamp_value=10,sample_method="stratified")
+#'   render_scene(clamp_value=10)
 #'}
 csg_capsule = function(start = c(0,0,0), end = c(0,1,0), radius=1) {
   csg_obj = list(csg_type = 8,start=start, end=end,radius=radius)
@@ -344,13 +344,13 @@ csg_capsule = function(start = c(0,0,0), end = c(0,1,0), radius=1) {
 #' #Generate a basic cylinder:
 #' generate_ground(material=diffuse(checkercolor="grey20")) %>% 
 #'   add_object(csg_object(csg_cylinder(radius=0.25),material=glossy(color="red"))) %>% 
-#'   render_scene(clamp_value=10,sample_method="stratified",fov=20)
+#'   render_scene(clamp_value=10,fov=20)
 #'   
 #' #Change the orientation by specifying a start and end
 #' generate_ground(material=diffuse(color="dodgerblue4",checkercolor="grey10")) %>% 
 #'   add_object(csg_object(csg_cylinder(start = c(-1,0.5,-2), end = c(1,0.5,-2),
 #'     radius=0.5),material=glossy(checkercolor="red"))) %>% 
-#'   render_scene(clamp_value=10,sample_method="stratified",fov=20,
+#'   render_scene(clamp_value=10,fov=20,
 #'                lookat=c(0,0.5,-2),lookfrom=c(3,3,10))
 #'  
 #' #Show the effect of changing the radius
@@ -360,7 +360,7 @@ csg_capsule = function(start = c(0,0,0), end = c(0,1,0), radius=1) {
 #'     csg_cylinder(start = c(-1,0.5,-2), end = c(1,0.5,-2), radius=0.5),
 #'     csg_cylinder(start = c(-0.5,1.5,-2), end = c(0.5,1.5,-2), radius=0.25)),
 #'     material=glossy(checkercolor="red"))) %>% 
-#'   render_scene(clamp_value=10,sample_method="stratified",fov=20,
+#'   render_scene(clamp_value=10,fov=20,
 #'                lookat=c(0,0.5,-2),lookfrom=c(-3,3,10))
 #'                
 #' #Render a red marble cylinder in a Cornell box
@@ -371,7 +371,7 @@ csg_capsule = function(start = c(0,0,0), end = c(0,1,0), radius=1) {
 #'     add_object(sphere(y=555,x=5,z=5, radius=5,
 #'                material=light(intensity=10000,
 #'                               spotlight_focus = c(555/2,555/2,555/2),spotlight_width = 45))) %>% 
-#'   render_scene(sample_method="stratified",clamp_value=4)
+#'   render_scene(clamp_value=4)
 #'}
 csg_cylinder = function(start = c(0,0,0), end = c(0,1,0), radius=1, corner_radius=0) {
   csg_obj = list(csg_type = 9,start=start, end=end,radius=radius,corner_radius=corner_radius)
@@ -393,7 +393,7 @@ csg_cylinder = function(start = c(0,0,0), end = c(0,1,0), radius=1, corner_radiu
 #' #Generate a basic ellipsoid:
 #' generate_ground(material=diffuse(checkercolor="grey20")) %>% 
 #'   add_object(csg_object(csg_ellipsoid(),material=glossy(color="red"))) %>% 
-#'   render_scene(clamp_value=10,sample_method="stratified",fov=20)
+#'   render_scene(clamp_value=10,fov=20)
 #'   
 #' #Three different ellipsoids:
 #'generate_ground(material=diffuse(checkercolor="grey20")) %>% 
@@ -402,18 +402,18 @@ csg_cylinder = function(start = c(0,0,0), end = c(0,1,0), radius=1, corner_radiu
 #'    csg_ellipsoid(x=0, axes = c(0.5,0.2,0.5)),
 #'    csg_ellipsoid(x=1.2, axes = c(0.5,0.5,0.2)))),
 #'    material=glossy(color="red"))) %>% 
-#'  render_scene(clamp_value=10,sample_method="stratified",fov=20,lookfrom=c(0,5,10))
+#'  render_scene(clamp_value=10,fov=20,lookfrom=c(0,5,10))
 #'  
 #' #Generate a glass ellipsoid:
 #' generate_ground(material=diffuse(checkercolor="grey20")) %>% 
 #'   add_object(csg_object(csg_ellipsoid(),material=dielectric(attenuation = c(1,1,0.3)))) %>% 
-#'   render_scene(clamp_value=10,sample_method="stratified",fov=20)
+#'   render_scene(clamp_value=10,fov=20)
 #'   
 #' #Generate a glass ellipsoid in a Cornell box:
 #' generate_cornell() %>% 
 #'   add_object(csg_object(csg_ellipsoid(x=555/2,y=555/2,z=555/2,axes=c(100,150,200)),
 #'     material=dielectric(attenuation = c(1,0.3,1)/200))) %>% 
-#'   render_scene(clamp_value=10,sample_method="stratified")
+#'   render_scene(clamp_value=10)
 #'}
 csg_ellipsoid = function(x=0,y=0,z=0,axes=c(0.5,1,0.5)) {
   csg_obj = list(csg_type = 10,x=x, y=y,z=z,axes=axes)
@@ -435,13 +435,13 @@ csg_ellipsoid = function(x=0,y=0,z=0,axes=c(0.5,1,0.5)) {
 #' #Generate a basic rounded cone:
 #' generate_ground(material=diffuse(checkercolor="grey20")) %>% 
 #'   add_object(csg_object(csg_rounded_cone(),material=glossy(color="red"))) %>% 
-#'   render_scene(clamp_value=10,sample_method="stratified",fov=20)
+#'   render_scene(clamp_value=10,fov=20)
 #'   
 #' #Change the orientation by specifying a start and end
 #' generate_ground(material=diffuse(color="dodgerblue4",checkercolor="grey10")) %>% 
 #'   add_object(csg_object(csg_rounded_cone(start = c(-1,0.5,-2), end = c(1,0.5,-2),
 #'   radius=0.5),material=glossy(checkercolor="red"))) %>% 
-#'   render_scene(clamp_value=10,sample_method="stratified",fov=20,
+#'   render_scene(clamp_value=10,fov=20,
 #'                lookat=c(0,0.5,-2),lookfrom=c(3,3,10))
 #'  
 #' #Show the effect of changing the radius
@@ -451,7 +451,7 @@ csg_ellipsoid = function(x=0,y=0,z=0,axes=c(0.5,1,0.5)) {
 #'     csg_rounded_cone(start = c(-1,0.5,-2), end = c(1,0.5,-2), radius=0.5),
 #'     csg_rounded_cone(start = c(-0.5,1.5,-2), end = c(0.5,1.5,-2), radius=0.2,upper_radius = 0.5)),
 #'     material=glossy(checkercolor="red"))) %>% 
-#'   render_scene(clamp_value=10,sample_method="stratified",fov=20,
+#'   render_scene(clamp_value=10,fov=20,
 #'                lookat=c(0,0.5,-2),lookfrom=c(-3,3,10))
 #'                
 #' #Render a glass rounded cone in a Cornell box
@@ -459,7 +459,7 @@ csg_ellipsoid = function(x=0,y=0,z=0,axes=c(0.5,1,0.5)) {
 #'   add_object(csg_object(
 #'     csg_rounded_cone(start = c(555/2,555/2-100,555/2), end = c(555/2,555/2+100,555/2), radius=100),
 #'     material=dielectric(attenuation=c(1,1,0.3)/100))) %>% 
-#'   render_scene(clamp_value=10,sample_method="stratified")
+#'   render_scene(clamp_value=10)
 #'}
 csg_rounded_cone = function(start = c(0,0,0), end = c(0,1,0), radius=0.5, upper_radius = 0.2) {
   csg_obj = list(csg_type = 11, start = start, end=end,
@@ -481,13 +481,13 @@ csg_rounded_cone = function(start = c(0,0,0), end = c(0,1,0), radius=0.5, upper_
 #' #Generate a basic cone:
 #' generate_ground(material=diffuse(checkercolor="grey20")) %>% 
 #'   add_object(csg_object(csg_cone(),material=glossy(color="red"))) %>% 
-#'   render_scene(clamp_value=10,sample_method="stratified",fov=20)
+#'   render_scene(clamp_value=10,fov=20)
 #'   
 #' #Change the orientation by specifying a start and end
 #' generate_ground(material=diffuse(color="dodgerblue4",checkercolor="grey10")) %>% 
 #'   add_object(csg_object(csg_cone(start = c(-1,0.5,-2), end = c(1,0.5,-2),
 #'   radius=0.5),material=glossy(checkercolor="red"))) %>% 
-#'   render_scene(clamp_value=10,sample_method="stratified",fov=20,
+#'   render_scene(clamp_value=10,fov=20,
 #'                lookat=c(0,0.5,-2),lookfrom=c(3,3,10))
 #'  
 #' #Show the effect of changing the radius
@@ -497,7 +497,7 @@ csg_rounded_cone = function(start = c(0,0,0), end = c(0,1,0), radius=0.5, upper_
 #'     csg_cone(start = c(-1,0.5,-2), end = c(1,0.5,-2), radius=0.5),
 #'     csg_cone(start = c(-0.5,1.5,-2), end = c(0.5,1.5,-2), radius=0.2)),
 #'     material=glossy(checkercolor="red"))) %>% 
-#'   render_scene(clamp_value=10,sample_method="stratified",fov=20,
+#'   render_scene(clamp_value=10,fov=20,
 #'                lookat=c(0,0.5,-2),lookfrom=c(-3,3,10))
 #'                
 #' #Render a glass cone in a Cornell box
@@ -505,7 +505,7 @@ csg_rounded_cone = function(start = c(0,0,0), end = c(0,1,0), radius=0.5, upper_
 #'   add_object(csg_object(
 #'     csg_cone(start = c(555/2,0,555/2), end = c(555/2,555/2+100,555/2), radius=100),
 #'     material=dielectric(attenuation=c(1,1,0.3)/100))) %>% 
-#'   render_scene(clamp_value=10,sample_method="stratified")
+#'   render_scene(clamp_value=10)
 #'}
 csg_cone = function(start = c(0,0,0), end = c(0,1,0), radius=0.5) {
   csg_obj = list(csg_type = 12, start = start, end=end,
@@ -534,7 +534,7 @@ csg_cone = function(start = c(0,0,0), end = c(0,1,0), radius=0.5) {
 #'   add_object(csg_object(csg_pyramid(y=-0.99),
 #'                         material=glossy(color="red"))) %>% 
 #'   add_object(sphere(y=5,x=5,z=5,material=light(intensity=20))) %>% 
-#'   render_scene(clamp_value=10,sample_method="stratified",lookfrom=c(-3,1,10), 
+#'   render_scene(clamp_value=10,lookfrom=c(-3,1,10), 
 #'                fov=15, lookat=c(0,-0.5,0))
 #' 
 #' #Make a taller pyramid
@@ -542,7 +542,7 @@ csg_cone = function(start = c(0,0,0), end = c(0,1,0), radius=0.5) {
 #'   add_object(csg_object(csg_pyramid(y=-0.95, height=1.5),
 #'                         material=glossy(color="red"))) %>% 
 #'   add_object(sphere(y=5,x=5,z=5,material=light(intensity=20))) %>% 
-#'   render_scene(clamp_value=10,sample_method="stratified",lookfrom=c(-3,1,10), 
+#'   render_scene(clamp_value=10,lookfrom=c(-3,1,10), 
 #'                fov=15, lookat=c(0,-0.5,0))
 #'   
 #' #Make a wider pyramid
@@ -550,7 +550,7 @@ csg_cone = function(start = c(0,0,0), end = c(0,1,0), radius=0.5) {
 #'   add_object(csg_object(csg_pyramid(y=-0.95, base=1.5),
 #'                         material=glossy(color="red"))) %>% 
 #'   add_object(sphere(y=5,x=5,z=5,material=light(intensity=20))) %>% 
-#'   render_scene(clamp_value=10,sample_method="stratified",lookfrom=c(-3,1,10), 
+#'   render_scene(clamp_value=10,lookfrom=c(-3,1,10), 
 #'                fov=15, lookat=c(0,-0.5,0))
 #'}
 csg_pyramid = function(x=0,y=0,z=0,height=1,base=1) {
@@ -574,20 +574,20 @@ csg_pyramid = function(x=0,y=0,z=0,height=1,base=1) {
 #' generate_ground(material=diffuse(checkercolor="grey20")) %>% 
 #'   add_object(csg_object(csg_triangle(),material=diffuse(color="red"))) %>% 
 #'   add_object(sphere(y=5,z=3,material=light(intensity=30))) %>% 
-#'   render_scene(clamp_value=10,sample_method="stratified",fov=20)
+#'   render_scene(clamp_value=10,fov=20)
 #'   
 #' #Change a vertex:
 #' generate_ground(material=diffuse(checkercolor="grey20")) %>% 
 #'   add_object(csg_object(csg_triangle(v1 = c(1,1,0)),material=diffuse(color="green"))) %>% 
 #'   add_object(sphere(y=5,z=3,material=light(intensity=30))) %>% 
-#'   render_scene(clamp_value=10,sample_method="stratified",fov=20)
+#'   render_scene(clamp_value=10,fov=20)
 #'   
 #' #Change all three vertices:
 #' generate_ground(material=diffuse(checkercolor="grey20")) %>% 
 #'   add_object(csg_object(csg_triangle(v1 = c(0.5,1,0), v2 = c(1,-0.5,0), v3 = c(-1,0.5,0)),
 #'                         material=diffuse(color="blue"))) %>% 
 #'   add_object(sphere(y=5,z=3,material=light(intensity=30))) %>% 
-#'   render_scene(clamp_value=10,sample_method="stratified",fov=20,lookfrom=c(0,5,10))
+#'   render_scene(clamp_value=10,fov=20,lookfrom=c(0,5,10))
 #'}
 csg_triangle = function(v1=c(0,1,0),v2=c(1,0,0),v3=c(-1,0,0)) {
   csg_obj = list(csg_type = 14, v1=v1,v2=v2,v3=v3)
@@ -619,7 +619,7 @@ csg_triangle = function(v1=c(0,1,0),v2=c(1,0,0),v3=c(-1,0,0)) {
 #'  add_object(csg_object(csg_elongate(csg_sphere(z=2),z=2, elongate = c(0.8,0,0.8)),
 #'                         material=glossy(color="white"))) %>% 
 #'  add_object(sphere(y=10,radius=3,material=light(intensity=8))) %>% 
-#'  render_scene(clamp_value=10,sample_method="stratified",fov=40,lookfrom=c(0,10,10))
+#'  render_scene(clamp_value=10,fov=40,lookfrom=c(0,10,10))
 #'   
 #' #Elongate a torus:
 #' generate_ground(material=diffuse(checkercolor="grey20",color="dodgerblue4")) %>% 
@@ -630,7 +630,7 @@ csg_triangle = function(v1=c(0,1,0),v2=c(1,0,0),v3=c(-1,0,0)) {
 #'  add_object(csg_object(csg_elongate(csg_torus(z=2),z=2, elongate = c(0.8,0,0.8)),
 #'                         material=glossy(color="white"))) %>% 
 #'  add_object(sphere(y=10,radius=3,material=light(intensity=8))) %>% 
-#'  render_scene(clamp_value=10,sample_method="stratified",fov=40,lookfrom=c(0,10,10))
+#'  render_scene(clamp_value=10,fov=40,lookfrom=c(0,10,10))
 #'  
 #' #Elongate a cylinder:
 #' generate_ground(material=diffuse(checkercolor="grey20",color="dodgerblue4")) %>% 
@@ -643,7 +643,7 @@ csg_triangle = function(v1=c(0,1,0),v2=c(1,0,0),v3=c(-1,0,0)) {
 #'                        elongate = c(0.8,0,0.8)),
 #'                        material=glossy(color="white"))) %>% 
 #'  add_object(sphere(y=10,radius=3,material=light(intensity=8))) %>% 
-#'  render_scene(clamp_value=10,sample_method="stratified",fov=40,lookfrom=c(0,10,10))
+#'  render_scene(clamp_value=10,fov=40,lookfrom=c(0,10,10))
 #'  
 #' #Elongate a pyramid:
 #' generate_ground(material=diffuse(checkercolor="grey20",color="dodgerblue4")) %>% 
@@ -654,7 +654,7 @@ csg_triangle = function(v1=c(0,1,0),v2=c(1,0,0),v3=c(-1,0,0)) {
 #'  add_object(csg_object(csg_elongate(csg_pyramid(z=2),z=2, elongate = c(0.8,0,0.8)),
 #'                         material=glossy(color="white"))) %>% 
 #'  add_object(sphere(y=10,radius=3,material=light(intensity=8))) %>% 
-#'  render_scene(clamp_value=10,sample_method="stratified",fov=40,lookfrom=c(0,10,10))
+#'  render_scene(clamp_value=10,fov=40,lookfrom=c(0,10,10))
 #'
 #' #Change the elongation point to start the elongation on the side of the pyramid:
 #' generate_ground(material=diffuse(checkercolor="grey20",color="dodgerblue4")) %>% 
@@ -665,7 +665,7 @@ csg_triangle = function(v1=c(0,1,0),v2=c(1,0,0),v3=c(-1,0,0)) {
 #'  add_object(csg_object(csg_elongate(csg_pyramid(z=2),z=2.25, elongate = c(0.8,0,0.8)),
 #'                         material=glossy(color="white"))) %>% 
 #'  add_object(sphere(y=10,radius=3,material=light(intensity=8))) %>% 
-#'  render_scene(clamp_value=10,sample_method="stratified",fov=40,
+#'  render_scene(clamp_value=10,fov=40,
 #'               lookfrom=c(5,5,10),lookat=c(0,0,-1.5))
 #' }
 csg_elongate = function(object, x=0,y=0,z=0, elongate = c(0,0,0), robust = TRUE) {
@@ -699,7 +699,7 @@ csg_elongate = function(object, x=0,y=0,z=0, elongate = c(0,0,0), robust = TRUE)
 #'   add_object(csg_object(csg_round(csg_pyramid(x=0,z=-2,y=-0.5), radius=0.5),
 #'                         material=glossy(color="green"))) %>% 
 #'   add_object(sphere(y=5,x=5,z=5,radius=1,material=light(intensity=50))) %>% 
-#'   render_scene(sample_method="stratified",lookfrom=c(-3,4,10), fov=22, 
+#'   render_scene(lookfrom=c(-3,4,10), fov=22, 
 #'                lookat=c(0,-0.5,0),clamp_value=10)
 #'
 #' #Round a blend of two objects
@@ -713,7 +713,7 @@ csg_elongate = function(object, x=0,y=0,z=0, elongate = c(0,0,0), robust = TRUE)
 #'     csg_pyramid(x=0.5,y=-0.79,z=-1), operation="blend"), radius=0.2),
 #'                         material=glossy(color="green"))) %>% 
 #'   add_object(sphere(y=5,x=5,z=5,radius=1,material=light(intensity=50))) %>% 
-#'   render_scene(sample_method="stratified",lookfrom=c(-3,5,10), fov=22, 
+#'   render_scene(lookfrom=c(-3,5,10), fov=22, 
 #'                lookat=c(0,-0.5,0),clamp_value=10)
 #'}
 csg_round = function(object, radius=0.1) {
@@ -753,7 +753,7 @@ csg_round = function(object, radius=0.1) {
 #'       csg_box(y=1,width=c(10,2,10)), operation = "subtract"),
 #'       material=glossy(color="green"))) %>%
 #'  add_object(sphere(y=5,x=5,radius=2,material=light())) %>% 
-#'  render_scene(clamp_value=10,sample_method="stratified",lookat=c(0,-0.5,0),
+#'  render_scene(clamp_value=10,lookat=c(0,-0.5,0),
 #'               lookfrom=c(3,5,10),fov=35)
 #'
 #'#Multiple onion layers:
@@ -763,7 +763,7 @@ csg_round = function(object, radius=0.1) {
 #'     csg_box(y=1,width=c(10,2,10)), operation = "subtract"),
 #'     material=glossy(color="purple"))) %>%
 #'   add_object(sphere(y=5,x=5,radius=2,material=light())) %>% 
-#'   render_scene(clamp_value=10,sample_method="stratified",lookat=c(0,-0.5,0),
+#'   render_scene(clamp_value=10,lookat=c(0,-0.5,0),
 #'                lookfrom=c(3,5,10),fov=20)
 #'   
 #'#Onion with dielectric sphere to make a bubble:
@@ -771,14 +771,14 @@ csg_round = function(object, radius=0.1) {
 #'   add_object(csg_object(
 #'     csg_onion(csg_sphere(x=555/2,y=555/2,z=555/2, radius=150), 5),
 #'     material=dielectric(attenuation=c(1,1,0.3)/100))) %>%
-#'   render_scene(clamp_value=10,sample_method="stratified")
+#'   render_scene(clamp_value=10)
 #'   
 #'#Multiple onion operations to make a bubble within a bubble:
 #' generate_cornell() %>%
 #'   add_object(csg_object(
 #'     csg_onion(csg_onion(csg_sphere(x=555/2,y=555/2,z=555/2, radius=150), 10),5),
 #'     material=dielectric(attenuation=c(1,1,0.3)/100))) %>%
-#'   render_scene(clamp_value=10,sample_method="stratified")
+#'   render_scene(clamp_value=10)
 #'}
 csg_onion = function(object, thickness=0.1) {
   if(!inherits(object,"ray_csg")) {
@@ -805,7 +805,7 @@ csg_onion = function(object, thickness=0.1) {
 #'   add_object(csg_object(csg_scale(csg_pyramid(z=-1,y=-0.5),2),
 #'                         material=glossy(color="green"))) %>% 
 #'   add_object(sphere(y=5,x=5,z=5,material=light(intensity=40))) %>% 
-#'   render_scene(sample_method="stratified",lookfrom=c(-3,4,10), fov=20, 
+#'   render_scene(lookfrom=c(-3,4,10), fov=20, 
 #'                lookat=c(0,-0.5,-0.5),clamp_value=10)
 #'}
 csg_scale = function(object, scale=1) {
@@ -842,7 +842,7 @@ csg_scale = function(object, scale=1) {
 #'                         pivot_point = c(0,-0.99,-1.5),angle=c(0,45,0)),
 #'                         material=glossy(color="green"))) %>% 
 #'   add_object(sphere(y=5,x=5,z=5,material=light(intensity=40))) %>% 
-#'   render_scene(sample_method="stratified",lookfrom=c(-3,4,10), fov=15, 
+#'   render_scene(lookfrom=c(-3,4,10), fov=15, 
 #'                lookat=c(0,-0.5,0),clamp_value=10)
 #'   
 #' #Rotate by specifying a new up vector:
@@ -853,7 +853,7 @@ csg_scale = function(object, scale=1) {
 #'                         pivot_point = c(0,-0.49,-1.5), up =c(1,1,0)),
 #'                         material=glossy(color="green"))) %>% 
 #'   add_object(sphere(y=5,x=5,z=5,material=light(intensity=40))) %>% 
-#'   render_scene(sample_method="stratified",lookfrom=c(-3,4,10), fov=15, 
+#'   render_scene(lookfrom=c(-3,4,10), fov=15, 
 #'                lookat=c(0,-0.5,0),clamp_value=10)
 #'}
 csg_rotate = function(object, pivot_point = c(0,0,0), 
@@ -903,7 +903,7 @@ csg_rotate = function(object, pivot_point = c(0,0,0),
 #'   add_object(csg_object(csg_translate(csg_torus(),x=-2,y=1,z=-2), 
 #'                         material=glossy(color="red"))) %>%
 #'   add_object(sphere(y=5,x=5,radius=3,material=light(intensity=10))) %>%  
-#'   render_scene(clamp_value=10,lookfrom=c(0,5,10),fov=30,sample_method="stratified",
+#'   render_scene(clamp_value=10,lookfrom=c(0,5,10),fov=30,
 #'                lookat=c(-1,0.5,-1))
 #' 
 #' #Translate a blended object:
@@ -918,7 +918,7 @@ csg_rotate = function(object, pivot_point = c(0,0,0),
 #'     x=-3,y=1,z=-3),
 #'     material=glossy(color="red"))) %>%
 #'   add_object(sphere(y=5,x=5,radius=3,material=light(intensity=10))) %>%  
-#'   render_scene(clamp_value=10,lookfrom=c(0,5,10),fov=30,sample_method="stratified",
+#'   render_scene(clamp_value=10,lookfrom=c(0,5,10),fov=30,
 #'                lookat=c(-1.5,0.5,-1.5))
 #'}
 csg_translate = function(object, x=0,y=0,z=0) {
@@ -951,7 +951,7 @@ csg_translate = function(object, x=0,y=0,z=0) {
 #'      csg_sphere(x=0.4,z=0.4), operation="union"),
 #'   material=glossy(color="dodgerblue4"))) %>%
 #'   add_object(sphere(y=5,x=5,radius=3,material=light(intensity=10))) %>%  
-#'   render_scene(clamp_value=10,fov=20,sample_method="stratified",lookfrom=c(-3,5,10))
+#'   render_scene(clamp_value=10,fov=20,lookfrom=c(-3,5,10))
 #'   
 #' #Subtract one sphere from another:
 #' generate_ground(material=diffuse(checkercolor="grey20")) %>% 
@@ -960,7 +960,7 @@ csg_translate = function(object, x=0,y=0,z=0) {
 #'      csg_sphere(x=0.4,z=0.4), operation="subtract"),
 #'   material=glossy(color="dodgerblue4"))) %>%
 #'   add_object(sphere(y=5,x=5,radius=3,material=light(intensity=10))) %>%  
-#'   render_scene(clamp_value=10,fov=20,sample_method="stratified",lookfrom=c(-3,5,10))
+#'   render_scene(clamp_value=10,fov=20,lookfrom=c(-3,5,10))
 #'   
 #' #Get the intersection of two spheres:
 #' generate_ground(material=diffuse(checkercolor="grey20")) %>% 
@@ -969,7 +969,7 @@ csg_translate = function(object, x=0,y=0,z=0) {
 #'      csg_sphere(x=0.4,z=0.4), operation="intersection"),
 #'   material=glossy(color="dodgerblue4"))) %>%
 #'   add_object(sphere(y=5,x=5,radius=3,material=light(intensity=10))) %>%  
-#'   render_scene(clamp_value=10,fov=20,sample_method="stratified",lookfrom=c(-3,5,10))
+#'   render_scene(clamp_value=10,fov=20,lookfrom=c(-3,5,10))
 #'   
 #' #Get the blended union of two spheres:
 #' generate_ground(material=diffuse(checkercolor="grey20")) %>% 
@@ -978,7 +978,7 @@ csg_translate = function(object, x=0,y=0,z=0) {
 #'      csg_sphere(x=0.4,z=0.4), operation="blend"),
 #'   material=glossy(color="dodgerblue4"))) %>%
 #'   add_object(sphere(y=5,x=5,radius=3,material=light(intensity=10))) %>%  
-#'   render_scene(clamp_value=10,fov=20,sample_method="stratified",lookfrom=c(-3,5,10))
+#'   render_scene(clamp_value=10,fov=20,lookfrom=c(-3,5,10))
 #'   
 #' #Get the blended subtraction of two spheres:
 #' generate_ground(material=diffuse(checkercolor="grey20")) %>% 
@@ -987,7 +987,7 @@ csg_translate = function(object, x=0,y=0,z=0) {
 #'      csg_sphere(x=0.4,z=0.4), operation="subtractblend"),
 #'   material=glossy(color="dodgerblue4"))) %>%
 #'   add_object(sphere(y=5,x=5,radius=3,material=light(intensity=10))) %>%  
-#'   render_scene(clamp_value=10,fov=20,sample_method="stratified",lookfrom=c(-3,5,10))
+#'   render_scene(clamp_value=10,fov=20,lookfrom=c(-3,5,10))
 #'   
 #' #Change the blending radius:
 #' generate_ground(material=diffuse(checkercolor="grey20")) %>% 
@@ -996,7 +996,7 @@ csg_translate = function(object, x=0,y=0,z=0) {
 #'      csg_sphere(x=0.4,z=0.4), operation="blend", radius=0.2),
 #'   material=glossy(color="dodgerblue4"))) %>%
 #'   add_object(sphere(y=5,x=5,radius=3,material=light(intensity=10))) %>%  
-#'   render_scene(clamp_value=10,fov=20,sample_method="stratified",lookfrom=c(-3,5,10))
+#'   render_scene(clamp_value=10,fov=20,lookfrom=c(-3,5,10))
 #'   
 #' #Change the subtract blending radius:
 #' generate_ground(material=diffuse(checkercolor="grey20")) %>% 
@@ -1005,7 +1005,7 @@ csg_translate = function(object, x=0,y=0,z=0) {
 #'      csg_sphere(x=0.4,z=0.4), operation="subtractblend", radius=0.2),
 #'   material=glossy(color="dodgerblue4"))) %>%
 #'   add_object(sphere(y=5,x=5,radius=3,material=light(intensity=10))) %>%  
-#'   render_scene(clamp_value=10,fov=20,sample_method="stratified",lookfrom=c(-3,5,10))
+#'   render_scene(clamp_value=10,fov=20,lookfrom=c(-3,5,10))
 #'   
 #' #Get the mixture of various objects:
 #' generate_ground(material=diffuse(checkercolor="grey20")) %>% 
@@ -1022,7 +1022,7 @@ csg_translate = function(object, x=0,y=0,z=0) {
 #'      csg_box(), operation="mix"),z=2.5),
 #'   material=glossy(color="green"))) %>%
 #'   add_object(sphere(y=10,x=-5,radius=3,material=light(intensity=10))) %>%  
-#'   render_scene(clamp_value=10,fov=20,sample_method="stratified",lookfrom=c(-15,10,10))
+#'   render_scene(clamp_value=10,fov=20,lookfrom=c(-15,10,10))
 #'}
 csg_combine = function(object1, object2, operation = "union", radius = 0.5) {
   if(!inherits(object1,"ray_csg")) {

@@ -59,7 +59,7 @@ Text Object
 generate_cornell() \%>\% 
   add_object(text3d(label="Cornell Box", x=555/2,y=555/2,z=555/2,text_height=60,
                     material=diffuse(color="grey10"), angle=c(0,180,0))) \%>\% 
-  render_scene(samples=500, sample_method = "stratified", clamp_value=10)
+  render_scene(samples=500, clamp_value=10)
   
 #Change the orientation
 generate_cornell() \%>\% 
@@ -72,7 +72,7 @@ generate_cornell() \%>\%
  add_object(text3d(label="XZ Plane", z=555/2,y=5,x=555/2,text_height=100,
                     orientation = "xz",
                     material=diffuse(color="grey10"))) \%>\% 
-  render_scene(samples=500, sample_method = "stratified", clamp_value=10)
+  render_scene(samples=500, clamp_value=10)
   
 #Add an label in front of a sphere
 generate_cornell() \%>\% 
@@ -85,7 +85,7 @@ generate_cornell() \%>\%
   add_object(sphere(y=555,radius=100,z=-1000,x=555/2,
                     material=light(intensity=100,
                                    spotlight_focus=c(555/2,100,100)))) \%>\%                   
-  render_scene(samples=500, sample_method = "stratified", clamp_value=10)
+  render_scene(samples=500, clamp_value=10)
   
   
 #A room full of bees
@@ -97,6 +97,6 @@ bee_list[[i]] = text3d("B", x=20+runif(1)*525, y=20+runif(1)*525, z=20+runif(1)*
 bees = do.call(rbind,bee_list)
 generate_cornell() \%>\% 
   add_object(bees) \%>\%                   
-  render_scene(samples=500, sample_method = "stratified", clamp_value=10)
+  render_scene(samples=500, clamp_value=10)
 }
 }

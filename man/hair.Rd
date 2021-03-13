@@ -67,7 +67,7 @@ generate_ground(depth=-2,material=diffuse(color="grey20")) \%>\%
   add_object(sphere()) \%>\%
   add_object(hairball) \%>\%
   add_object(sphere(y=20,z=20,radius=5,material=light(color="white",intensity = 100))) \%>\%
-  render_scene(samples=64, lookfrom=c(0,3,10),clamp_value = 10, sample_method = "stratified",
+  render_scene(samples=64, lookfrom=c(0,3,10),clamp_value = 10,
                fov=20)
                
                
@@ -90,7 +90,7 @@ generate_ground(depth=-2,material=diffuse(color="grey20")) \%>\%
   add_object(sphere()) \%>\%
   add_object(hairball) \%>\%
   add_object(sphere(y=20,z=20,radius=5,material=light(color="white",intensity = 100))) \%>\%
-  render_scene(samples=64, lookfrom=c(0,3,10),clamp_value = 10, sample_method = "stratified",
+  render_scene(samples=64, lookfrom=c(0,3,10),clamp_value = 10,
                fov=20)
 }
 }

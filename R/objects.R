@@ -1766,7 +1766,7 @@ arrow = function(start = c(0,0,0), end = c(0,1,0),
 #'   add_object(sphere(y=3,z=5,x=2,radius=0.3,
 #'                     material=light(intensity=200, spotlight_focus = c(0,0.5,0)))) %>%
 #'   render_scene(clamp_value = 10, lookat = c(0,0.5,0), fov=13,
-#'                samples=500, sample_method = "stratified")
+#'                samples=500)
 #' 
 #' #Change the control points to change the direction of the curve. Here, we place spheres
 #' #at the control point locations.
@@ -1779,7 +1779,7 @@ arrow = function(start = c(0,0,0), end = c(0,1,0),
 #'   add_object(sphere(y=3,z=5,x=2,radius=0.3,
 #'                     material=light(intensity=200, spotlight_focus = c(0,0.5,0)))) %>%
 #'   render_scene(clamp_value = 10, lookat = c(0,0.5,0), fov=15,
-#'                samples=500, sample_method = "stratified")
+#'                samples=500)
 #'                
 #' #We can make the curve flat (always facing the camera) by setting the type to `flat`
 #' generate_studio(depth=-0.1) %>%
@@ -1787,7 +1787,7 @@ arrow = function(start = c(0,0,0), end = c(0,1,0),
 #'   add_object(sphere(y=3,z=5,x=2,radius=0.3,
 #'                     material=light(intensity=200, spotlight_focus = c(0,0.5,0)))) %>%
 #'   render_scene(clamp_value = 10, lookat = c(0,0.5,0), fov=13,
-#'                samples=500, sample_method = "stratified")
+#'                samples=500)
 #' 
 #' 
 #' #We can also plot a ribbon, which is further specified by a start and end orientation with
@@ -1800,7 +1800,7 @@ arrow = function(start = c(0,0,0), end = c(0,1,0),
 #'   add_object(sphere(y=3,z=5,x=2,radius=0.3,
 #'                     material=light(intensity=200, spotlight_focus = c(0,0.5,0)))) %>%
 #'   render_scene(clamp_value = 10, lookat = c(0,0.5,0), fov=13,
-#'                samples=500, sample_method = "stratified")
+#'                samples=500)
 #' 
 #' 
 #' #Create a single curve and copy and rotate it around the y-axis to create a wavy fountain effect:
@@ -1815,7 +1815,7 @@ arrow = function(start = c(0,0,0), end = c(0,1,0),
 #' generate_ground(depth=0,material=diffuse(checkercolor="grey20")) %>%
 #'   add_object(all_curves) %>%
 #'   add_object(sphere(y=7,z=0,x=0,material=light(intensity=100))) %>% 
-#'   render_scene(lookfrom = c(12,20,50),samples=500, sample_method = "stratified",
+#'   render_scene(lookfrom = c(12,20,50),samples=500,
 #'                lookat=c(0,1,0), fov=15, clamp_value = 10)
 #' 
 #' }
@@ -1938,13 +1938,13 @@ bezier_curve = function(p1 = c(0,0,0), p2 = c(-1,0.33,0), p3 = c(1,0.66,0), p4=c
 #'   add_object(sphere(x=1,y=-1,radius=0.1,material=point_mat)) %>% 
 #'   add_object(sphere(x=2,y=1,radius=0.1,material=point_mat)) %>% 
 #'   add_object(sphere(z=5,x=5,y=5,radius=2,material=light(intensity=15))) %>% 
-#'   render_scene(samples=500, sample_method = "stratified", clamp_value=10,fov=30)
+#'   render_scene(samples=500, clamp_value=10,fov=30)
 #'   
 #' #Here we use straight lines by setting `straight = TRUE`:
 #' generate_studio(depth=-1.5) %>% 
 #'   add_object(path(points = wave,straight = TRUE, material=glossy(color="red"))) %>% 
 #'   add_object(sphere(z=5,x=5,y=5,radius=2,material=light(intensity=15))) %>% 
-#'   render_scene(samples=500, sample_method = "stratified", clamp_value=10,fov=30)
+#'   render_scene(samples=500, clamp_value=10,fov=30)
 #'   
 #' #We can also pass a matrix of values, specifying the x/y/z coordinates. Here,
 #' #we'll create a random curve:
@@ -1953,13 +1953,13 @@ bezier_curve = function(p1 = c(0,0,0), p2 = c(-1,0.33,0), p3 = c(1,0.66,0), p4=c
 #' generate_studio(depth=-1.5) %>% 
 #'   add_object(path(points=random_mat, material=glossy(color="red"))) %>% 
 #'   add_object(sphere(y=5,radius=1,material=light(intensity=30))) %>% 
-#'   render_scene(samples=500, sample_method = "stratified", clamp_value=10)
+#'   render_scene(samples=500, clamp_value=10)
 #'   
 #' #We can ensure the curve is closed by setting `closed = TRUE`
 #' generate_studio(depth=-1.5) %>% 
 #'   add_object(path(points=random_mat, closed = TRUE, material=glossy(color="red"))) %>% 
 #'   add_object(sphere(y=5,radius=1,material=light(intensity=30))) %>% 
-#'   render_scene(samples=500, sample_method = "stratified", clamp_value=10)
+#'   render_scene(samples=500, clamp_value=10)
 #'   
 #' #Finally, let's render a pretzel to show how you can render just a subset of the curve:
 #' pretzel = list(c(-0.8,-0.5,0.1),c(0,-0.2,-0.1),c(0,0.3,0.1),c(-0.5,0.5,0.1), c(-0.6,-0.5,-0.1),
@@ -1970,19 +1970,19 @@ bezier_curve = function(p1 = c(0,0,0), p2 = c(-1,0.33,0), p3 = c(1,0.66,0), p4=c
 #' generate_studio() %>% 
 #'   add_object(path(pretzel, width=0.17,  material = glossy(color="#db5b00"))) %>% 
 #'   add_object(sphere(y=5,x=2,z=4,material=light(intensity=20,spotlight_focus = c(0,0,0)))) %>% 
-#'   render_scene(samples=500,sample_method = "stratified", clamp_value=10)
+#'   render_scene(samples=500, clamp_value=10)
 #'   
 #' #Here, we'll render only the first third of the pretzel by setting `u_max = 0.33`
 #' generate_studio() %>% 
 #'   add_object(path(pretzel, width=0.17, u_max=0.33, material = glossy(color="#db5b00"))) %>% 
 #'   add_object(sphere(y=5,x=2,z=4,material=light(intensity=20,spotlight_focus = c(0,0,0)))) %>% 
-#'   render_scene(samples=500, sample_method = "stratified", clamp_value=10)
+#'   render_scene(samples=500, clamp_value=10)
 #'   
 #' #Here's the last third, by setting `u_min = 0.66`
 #' generate_studio() %>% 
 #'   add_object(path(pretzel, width=0.17, u_min=0.66, material = glossy(color="#db5b00"))) %>% 
 #'   add_object(sphere(y=5,x=2,z=4,material=light(intensity=20,spotlight_focus = c(0,0,0)))) %>% 
-#'   render_scene(samples=500,sample_method = "stratified", clamp_value=10)
+#'   render_scene(samples=500, clamp_value=10)
 #'   
 #' #Here's the full pretzel, decomposed into thirds using the u_min and u_max coordinates
 #' generate_studio() %>% 
@@ -1993,7 +1993,7 @@ bezier_curve = function(p1 = c(0,0,0), p2 = c(-1,0.33,0), p3 = c(1,0.66,0), p4=c
 #'   add_object(path(pretzel, width=0.17, u_min=0.33, u_max=0.66, x=0,
 #'                   material = glossy(color="#db5b00"))) %>% 
 #'   add_object(sphere(y=5,x=2,z=4,material=light(intensity=20,spotlight_focus = c(0,0,0)))) %>% 
-#'   render_scene(samples=500, sample_method = "stratified", clamp_value=10, lookfrom=c(0,3,10))
+#'   render_scene(samples=500, clamp_value=10, lookfrom=c(0,3,10))
 #' }
 path = function(points,
                 x=0,y=0,z=0, closed = FALSE, straight = FALSE, precomputed_control_points = FALSE,
@@ -2145,7 +2145,7 @@ path = function(points,
 #' generate_cornell() %>% 
 #'   add_object(text3d(label="Cornell Box", x=555/2,y=555/2,z=555/2,text_height=60,
 #'                     material=diffuse(color="grey10"), angle=c(0,180,0))) %>% 
-#'   render_scene(samples=500, sample_method = "stratified", clamp_value=10)
+#'   render_scene(samples=500, clamp_value=10)
 #'   
 #' #Change the orientation
 #' generate_cornell() %>% 
@@ -2158,7 +2158,7 @@ path = function(points,
 #'  add_object(text3d(label="XZ Plane", z=555/2,y=5,x=555/2,text_height=100,
 #'                     orientation = "xz",
 #'                     material=diffuse(color="grey10"))) %>% 
-#'   render_scene(samples=500, sample_method = "stratified", clamp_value=10)
+#'   render_scene(samples=500, clamp_value=10)
 #'   
 #' #Add an label in front of a sphere
 #' generate_cornell() %>% 
@@ -2171,7 +2171,7 @@ path = function(points,
 #'   add_object(sphere(y=555,radius=100,z=-1000,x=555/2,
 #'                     material=light(intensity=100,
 #'                                    spotlight_focus=c(555/2,100,100)))) %>%                   
-#'   render_scene(samples=500, sample_method = "stratified", clamp_value=10)
+#'   render_scene(samples=500, clamp_value=10)
 #'   
 #'   
 #' #A room full of bees
@@ -2183,7 +2183,7 @@ path = function(points,
 #' bees = do.call(rbind,bee_list)
 #' generate_cornell() %>% 
 #'   add_object(bees) %>%                   
-#'   render_scene(samples=500, sample_method = "stratified", clamp_value=10)
+#'   render_scene(samples=500, clamp_value=10)
 #' }
 text3d = function(label, x = 0, y = 0, z = 0, text_height = 1, orientation = "xy",
                   material = diffuse(), 
