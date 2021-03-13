@@ -23,7 +23,6 @@ generate_camera_motion(
   curvature_adjust = "none",
   curvature_scale = 30,
   offset_lookat = 0,
-  function_step = NULL,
   progress = TRUE
 )
 }
@@ -31,9 +30,9 @@ generate_camera_motion(
 \item{positions}{A list or 3-column XYZ matrix of camera positions. 
 These will serve as key frames for the camera position.}
 
-\item{lookats}{Default `NULL`, which sets the camera lookat to the origin c(0,0,0) 
+\item{lookats}{Default `NULL`, which sets the camera lookat to the origin `c(0,0,0)` 
 for the animation. A list or 3-column XYZ matrix
-of lookat points. Must be the same number of points as `positions`.}
+of `lookat` points. Must be the same number of points as `positions`.}
 
 \item{apertures}{Default `0`. A numeric vector of aperture values.}
 
@@ -48,38 +47,35 @@ of orthographic dimensions.}
 \item{camera_ups}{Default `NULL`, which gives at up vector of `c(0,1,0)`. Camera up orientation.}
 
 \item{type}{Default `bezier`. Type of transition between keyframes. 
-Other options are `linear`, `quad`, `cubic`, `exp`, and `none`.}
+Other options are `linear`, `quad`, `cubic`, `exp`, and `manual`. `manual` just returns the values 
+passed in, properly formatted to be passed to `render_animation()`.}
 
-\item{frames}{Default `30`. Number of frames between each key frame.}
+\item{frames}{Default `30`. Total number of frames.}
 
-\item{closed}{Default `FALSE`. Whether to close the camera curve.}
+\item{closed}{Default `FALSE`. Whether to close the camera curve so the first position matches the last. Set this to `TRUE` for perfect loops.}
 
-\item{aperture_linear}{Default `TRUE`. This linearly interpolates focal distances, rather than using a smooth bezier curve  or easing function.}
+\item{aperture_linear}{Default `TRUE`. This linearly interpolates focal distances, rather than using a smooth Bezier curve  or easing function.}
 
-\item{fov_linear}{Default `TRUE`. This linearly interpolates focal distances, rather than using a smooth bezier curve  or easing function.}
+\item{fov_linear}{Default `TRUE`. This linearly interpolates focal distances, rather than using a smooth Bezier curve  or easing function.}
 
-\item{focal_linear}{Default `TRUE`. This linearly interpolates focal distances, rather than using a smooth bezier curve or easing function.}
+\item{focal_linear}{Default `TRUE`. This linearly interpolates focal distances, rather than using a smooth Bezier curve or easing function.}
 
-\item{ortho_linear}{Default `TRUE`. This linearly interpolates orthographic dimensions, rather than using a smooth bezier curve or easing function.}
+\item{ortho_linear}{Default `TRUE`. This linearly interpolates orthographic dimensions, rather than using a smooth Bezier curve or easing function.}
 
 \item{constant_step}{Default `TRUE`. This will make the camera travel at a constant speed.}
 
 \item{curvature_adjust}{Default `none`. Other options are `position`, `lookat`, and `both`. Whether to slow down the camera at areas of high curvature
-to prevent fast swings. Only used for curve `type = bezier`. Note: This feature will likely result in the `lookat` and `position` diverging if they do not 
+to prevent fast swings. Only used for curve `type = bezier`. This does not preserve key frame positions.
+Note: This feature will likely result in the `lookat` and `position` diverging if they do not 
 have similar curvatures at each point. This feature is best used when passing the same set of points to `positions` and `lookats` 
-and providing an `offset_lookat` value, which ensures the curvature will be the same at every point.}
+and providing an `offset_lookat` value, which ensures the curvature will be the same.}
 
 \item{curvature_scale}{Default `30`. Constant dividing factor for curvature. Higher values will subdivide the
 path more, potentially finding a smoother path, but increasing the calculation time. Only used for curve `type = bezier`.
 Increasing this value after a certain point will not increase the quality of the path, but it is scene-dependent.}
 
 \item{offset_lookat}{Default `0`. Amount to offset the lookat position, either along the path (if `constant_step = TRUE`)
-or towards the derivative of the bezier curve. Only used for curve `type = bezier`.}
-
-\item{function_step}{Default `NULL`. A function that takes three inputs: the 3D position, the 3D derivative, and the
-3D second derivative, and uses them to determine the step size.
-over the path. If `FALSE`, the camera will speed up and slow down depending on the bezier curve
-parameterization. Only used for curve `type = bezier`.}
+or towards the derivative of the Bezier curve.}
 
 \item{progress}{Default `TRUE`. Whether to display a progress bar.}
 }
@@ -87,7 +83,8 @@ parameterization. Only used for curve `type = bezier`.}
 Data frame of camera positions, orientations, apertures, focal distances, and field of views
 }
 \description{
-Takes a series of key frame camera positions and smoothly interpolates between them.
+Takes a series of key frame camera positions and smoothly interpolates between them. Generates
+a data.frame that can be passed to `render_animation()`.
 }
 \examples{
 #Create and animate flying through a scene on a simulated roller coaster
@@ -149,8 +146,7 @@ generate_ground(material=diffuse(checkercolor="grey20"),depth=-10) \%>\%
   add_object(pig(x=0,y=-0.25,z=-15,scale=1,angle=c(0,225,-20), order_rotation=c(3,2,1),
                  emotion="angry", spider=TRUE)) \%>\% 
   add_object(path(camera_pos, y=-0.2,material=diffuse(color="red"))) \%>\% 
-  render_animation(filename = NA, camera_motion = camera_motion, samples=100,
-                   sample_method="sobol_blue",  
+  render_animation(filename = NA, camera_motion = camera_motion, 
                    clamp_value=10, width=800, height=800)
 
 }

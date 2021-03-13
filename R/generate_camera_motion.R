@@ -1,3 +1,348 @@
+#' Generate Camera Movement
+#' 
+#' Takes a series of key frame camera positions and smoothly interpolates between them. Generates
+#' a data.frame that can be passed to `render_animation()`.
+#' 
+#' @param positions A list or 3-column XYZ matrix of camera positions. 
+#' These will serve as key frames for the camera position.
+#' @param lookats Default `NULL`, which sets the camera lookat to the origin `c(0,0,0)` 
+#' for the animation. A list or 3-column XYZ matrix
+#' of `lookat` points. Must be the same number of points as `positions`.
+#' @param apertures Default `0`. A numeric vector of aperture values.
+#' @param fovs Default `40`. A numeric vector of field of view values.
+#' @param focal_distances Default `NULL`, automatically the distance between positions and lookats. 
+#' Numeric vector of focal distances.
+#' @param ortho_dims Default `NULL`, which results in `c(1,1)` orthographic dimensions.  A list or 2-column matrix
+#' of orthographic dimensions.
+#' @param camera_ups Default `NULL`, which gives at up vector of `c(0,1,0)`. Camera up orientation.
+#' @param type Default `bezier`. Type of transition between keyframes. 
+#' Other options are `linear`, `quad`, `cubic`, `exp`, and `manual`. `manual` just returns the values 
+#' passed in, properly formatted to be passed to `render_animation()`.
+#' @param frames Default `30`. Total number of frames.
+#' @param closed Default `FALSE`. Whether to close the camera curve so the first position matches the last. Set this to `TRUE` for perfect loops.
+#' @param constant_step Default `TRUE`. This will make the camera travel at a constant speed. 
+#' @param aperture_linear Default `TRUE`. This linearly interpolates focal distances, rather than using a smooth Bezier curve  or easing function.
+#' @param fov_linear Default `TRUE`. This linearly interpolates focal distances, rather than using a smooth Bezier curve  or easing function.
+#' @param focal_linear Default `TRUE`. This linearly interpolates focal distances, rather than using a smooth Bezier curve or easing function. 
+#' @param ortho_linear Default `TRUE`. This linearly interpolates orthographic dimensions, rather than using a smooth Bezier curve or easing function. 
+#' @param curvature_adjust Default `none`. Other options are `position`, `lookat`, and `both`. Whether to slow down the camera at areas of high curvature
+#' to prevent fast swings. Only used for curve `type = bezier`. This does not preserve key frame positions.
+#' Note: This feature will likely result in the `lookat` and `position` diverging if they do not 
+#' have similar curvatures at each point. This feature is best used when passing the same set of points to `positions` and `lookats` 
+#' and providing an `offset_lookat` value, which ensures the curvature will be the same.
+#' @param curvature_scale Default `30`. Constant dividing factor for curvature. Higher values will subdivide the
+#' path more, potentially finding a smoother path, but increasing the calculation time. Only used for curve `type = bezier`.
+#' Increasing this value after a certain point will not increase the quality of the path, but it is scene-dependent.
+#' @param offset_lookat Default `0`. Amount to offset the lookat position, either along the path (if `constant_step = TRUE`)
+#' or towards the derivative of the Bezier curve. 
+#' @param progress Default `TRUE`. Whether to display a progress bar.
+#' 
+#' @export
+#' @return Data frame of camera positions, orientations, apertures, focal distances, and field of views
+#'
+#' @examples
+#' #Create and animate flying through a scene on a simulated roller coaster
+#' \donttest{
+#' set.seed(3)
+#' elliplist = list()
+#' ellip_colors = rainbow(8)
+#' for(i in 1:1200) {
+#'   elliplist[[i]] = ellipsoid(x=10*runif(1)-5,y=10*runif(1)-5,z=10*runif(1)-5,
+#'                              angle = 360*runif(3), a=0.1,b=0.05,c=0.1,
+#'                              material=glossy(color=sample(ellip_colors,1)))
+#' }
+#' ellip_scene = do.call(rbind, elliplist)
+#' 
+#' camera_pos = list(c(0,1,15),c(5,-5,5),c(-5,5,-5),c(0,1,-15))
+#' 
+#' #Plot the camera path and render from above using the path object:
+#' generate_ground(material=diffuse(checkercolor="grey20"),depth=-10) %>% 
+#'   add_object(ellip_scene) %>% 
+#'   add_object(sphere(y=50,radius=10,material=light(intensity=30))) %>% 
+#'   add_object(path(camera_pos, material=diffuse(color="red"))) %>% 
+#'   render_scene(lookfrom=c(0,20,0), width=800,height=800,samples=32,
+#'                camera_up = c(0,0,1),
+#'                fov=80)
+#'             
+#' #Side view     
+#' generate_ground(material=diffuse(checkercolor="grey20"),depth=-10) %>% 
+#'   add_object(ellip_scene) %>% 
+#'   add_object(sphere(y=50,radius=10,material=light(intensity=30))) %>% 
+#'   add_object(path(camera_pos, material=diffuse(color="red"))) %>% 
+#'   render_scene(lookfrom=c(20,0,0),width=800,height=800,samples=32,
+#'                  fov=80)
+#'  
+#' #View from the start        
+#' generate_ground(material=diffuse(checkercolor="grey20"),depth=-10) %>% 
+#'   add_object(ellip_scene) %>% 
+#'   add_object(sphere(y=50,radius=10,material=light(intensity=30))) %>% 
+#'   add_object(path(camera_pos, material=diffuse(color="red"))) %>% 
+#'   render_scene(lookfrom=c(0,1.5,16),width=800,height=800,samples=32,
+#'                  fov=80)
+#'                  
+#' #Generate Camera movement, setting the lookat position to be same as camera position, but offset
+#' #slightly in front. We'll render 12 frames, but you'd likely want more in a real animation.
+#' 
+#' camera_motion =  generate_camera_motion(positions = camera_pos, lookats = camera_pos, 
+#'                                         offset_lookat = 1, fovs=80, frames=12) 
+#'                                         
+#' #This returns a data frame of individual camera positions, interpolated by cubic bezier curves.
+#' camera_motion
+#' 
+#' #Pass NA filename to plot to the device. We'll keep the path and offset it slightly to see
+#' #where we're going. This results in a "roller coaster" effect.
+#' generate_ground(material=diffuse(checkercolor="grey20"),depth=-10) %>% 
+#'   add_object(ellip_scene) %>% 
+#'   add_object(sphere(y=50,radius=10,material=light(intensity=30))) %>% 
+#'   add_object(obj_model(r_obj(),x=10,y=-10,scale_obj=3, angle=c(0,-45,0),
+#'                        material=dielectric(attenuation=c(1,1,0.3)))) %>% 
+#'   add_object(pig(x=-7,y=10,z=-5,scale=1,angle=c(0,-45,80),emotion="angry")) %>% 
+#'   add_object(pig(x=0,y=-0.25,z=-15,scale=1,angle=c(0,225,-20), order_rotation=c(3,2,1),
+#'                  emotion="angry", spider=TRUE)) %>% 
+#'   add_object(path(camera_pos, y=-0.2,material=diffuse(color="red"))) %>% 
+#'   render_animation(filename = NA, camera_motion = camera_motion, 
+#'                    clamp_value=10, width=800, height=800)
+#' 
+#' }
+generate_camera_motion = function(positions, 
+                                  lookats = NULL, 
+                                  apertures = 0, fovs = 40,
+                                  focal_distances = NULL, 
+                                  ortho_dims = NULL, 
+                                  camera_ups = NULL,
+                                  type = "bezier",
+                                  frames = 30, 
+                                  closed = FALSE, 
+                                  aperture_linear = TRUE,  
+                                  fov_linear = TRUE, 
+                                  focal_linear = TRUE,
+                                  ortho_linear = TRUE,
+                                  constant_step = TRUE, 
+                                  curvature_adjust = "none", 
+                                  curvature_scale = 30,
+                                  offset_lookat = 0, 
+                                  progress = TRUE) {
+  curve_adj_type = unlist(lapply(tolower(curvature_adjust),switch,
+                                 "none" = 0,"position" = 1,"lookats" = 2, "both" = 3, 0))
+  curvature_adjust_pos = curve_adj_type %in% c(1,3)
+  curvature_adjust_look = curve_adj_type %in% c(2,3)
+  
+  if(type=="bezier") {
+    position_control_points = process_point_series(positions,closed=closed,straight=FALSE)
+    points_dist = calculate_distance_along_bezier_curve(position_control_points, breaks = 50)
+    points_final = calculate_final_path(points_dist, steps = frames, constant_step = constant_step,
+                                        curvature_adjust = curvature_adjust_pos, 
+                                        curvature_scale=curvature_scale,
+                                        progress = progress, string = "Position   ")
+    if(!is.null(lookats)) {
+      position_control_lookats = process_point_series(lookats,closed=closed,straight=FALSE)
+      lookats_dist = calculate_distance_along_bezier_curve(position_control_lookats, breaks = 50)
+      lookats_final = calculate_final_path(lookats_dist, steps = frames, 
+                                           constant_step = constant_step, offset = offset_lookat,
+                                           curvature_adjust = curvature_adjust_look, 
+                                           curvature_scale=curvature_scale,
+                                           progress = progress, string = "Orientation")
+    } else {
+      lookats_final = matrix(c(0,0,0), nrow = nrow(points_final), ncol=3, byrow=TRUE)
+    }
+    if(curvature_adjust_pos || curvature_adjust_look) {
+      temp_points  = points_final[1:frames,]
+      temp_lookats = lookats_final[1:frames,]
+      
+      rowvals = seq(1,nrow(points_final),length.out = frames)
+      for(i in 1:frames) {
+        rv = rowvals[i]
+        frv = floor(rv)
+        if(frv == rv) {
+          temp_points[i,] = points_final[rv,]
+          temp_lookats[i,] = lookats_final[rv,]
+          next
+        }
+        temp_points[i,] = lerp(rv-frv,
+                               points_final[rv,],
+                               points_final[frv+1,])
+        temp_lookats[i,] = lerp(rv-frv,
+                                lookats_final[rv,],
+                                lookats_final[frv+1,])
+      }
+      if(curvature_adjust_pos) {
+        points_final = temp_points
+      }
+      if(curvature_adjust_look) {
+        lookats_final = temp_lookats
+      }
+    }
+    
+    if(length(apertures) != 1) {
+      apertures_control_lookats = process_point_series_1d(apertures,closed=closed,straight=aperture_linear)
+      apertures_dist = calculate_distance_along_bezier_curve(apertures_control_lookats, breaks = 50)
+      apertures_final = calculate_final_path(apertures_dist, steps = frames, constant_step = constant_step)
+      apertures_final = apertures_final[,1]
+    } else {
+      apertures_final = matrix(apertures,  nrow = nrow(points_final), ncol=1)
+    }
+    if(length(fovs) != 1) {
+      fovs_control_lookats = process_point_series_1d(fovs,closed=closed,straight=fov_linear)
+      fovs_dist = calculate_distance_along_bezier_curve(fovs_control_lookats, breaks = 50)
+      fovs_final = calculate_final_path(fovs_dist, steps = frames, constant_step = constant_step)
+      fovs_final = fovs_final[,1]
+    } else {
+      fovs_final = matrix(fovs,  nrow = nrow(points_final), ncol=1)
+    }
+    if(!is.null(focal_distances)) {
+      if(is.numeric(focal_distances)) {
+        if(length(focal_distances) == 1) {
+          focal_final = rep(focal_distances,nrow(points_final))
+        } else {
+          focal_final = focal_distances
+        }
+      } else {
+        focal_control_lookats = process_point_series_1d(focal_distances,closed=closed,straight=focal_linear)
+        focal_dist = calculate_distance_along_bezier_curve(focal_control_lookats, breaks = 50)
+        focal_final = calculate_final_path(focal_dist, steps = frames, constant_step = constant_step)
+        focal_final = focal_final[,1]
+      }
+    } else {
+      focal_final = sqrt(apply((points_final-lookats_final)^2,1,sum))
+    }
+    if(!is.null(ortho_dims)) {
+      ortho_control_lookats = process_point_series_2d(ortho_dims,closed=closed,straight=focal_linear)
+      ortho_dist = calculate_distance_along_bezier_curve(ortho_control_lookats, breaks = 50)
+      ortho_final = calculate_final_path(ortho_dist, steps = frames, constant_step = constant_step)
+      ortho_final = ortho_final[,1:2]
+    } else {
+      ortho_final = matrix(c(1,1),  nrow = nrow(points_final), ncol=2)
+    }
+    if(!is.null(camera_ups)) {
+      ups_control = process_point_series_2d(camera_ups,closed=closed,straight=ortho_linear)
+      up_dist = calculate_distance_along_bezier_curve(ups_control, breaks = 50)
+      up_final = calculate_final_path(up_dist, steps = frames, constant_step = constant_step)
+    } else {
+      up_final = matrix(c(0,1,0), nrow = nrow(points_final), ncol=3, byrow=TRUE)
+    }
+    return_values = as.data.frame(cbind(points_final,lookats_final,apertures_final,fovs_final,focal_final,ortho_final,
+                                        up_final))
+    colnames(return_values) = c("x","y","z",
+                                "dx","dy","dz",
+                                "aperture","fov","focal","orthox","orthoy",
+                                "upx","upy","upz")
+    return(return_values)
+  } else if (type %in% c("exp", "quad",  "cubic", "linear")) {
+    if(inherits(positions,"list")) {
+      positions = do.call(rbind,positions)
+    }
+    if(inherits(lookats,"list")) {
+      lookats = do.call(rbind,lookats)
+    }
+    if(inherits(camera_ups,"list")) {
+      camera_ups = do.call(rbind,camera_ups)
+    }
+    if(inherits(ortho_dims,"list")) {
+      ortho_dims = do.call(rbind,ortho_dims)
+    }
+    positions = grDevices::xyz.coords(positions)
+    
+    if(is.null(lookats)) {
+      lookats = matrix(0,ncol=3,nrow=length(positions$x))
+    }
+    lookats = grDevices::xyz.coords(lookats)
+    if(is.null(camera_ups)) {
+      camera_ups = matrix(c(0,1,0),ncol=3,nrow=length(positions$x),byrow=TRUE)
+    }
+    camera_ups = grDevices::xyz.coords(camera_ups)
+    
+    if(is.null(focal_distances)) {
+      focal_distances = sqrt((positions$x - lookats$x)^2 + 
+                               (positions$y - lookats$y)^2 + 
+                               (positions$z - lookats$z)^2)
+    } else if (length(focal_distances) == 1) {
+      focal_distances = rep(focal_distances,length(positions$x))
+    }
+    if(is.null(ortho_dims)) {
+      ortho_dims = matrix(c(1,1),ncol=2,nrow=length(positions$x),byrow=TRUE)
+    }
+    ortho = grDevices::xy.coords(ortho_dims)
+    tween_df = data.frame(x=positions$x, y=positions$y, z=positions$z,
+                          dx=lookats$x, dy=lookats$y, dz=lookats$z,
+                          aperture = rep(apertures,length(positions$x)),
+                          fov = rep(fovs,length(positions$x)),
+                          focal = focal_distances,
+                          orthox = ortho$x, orthoy = ortho$y,
+                          upx =camera_ups$x, upy = camera_ups$y ,upz = camera_ups$z)
+    if(closed) {
+      tween_df = rbind(tween_df,tween_df[1,])
+      apertures = c(apertures,apertures[1])
+      fovs = c(fovs,fovs[1])
+      focal_distances = c(focal_distances,focal_distances[1])
+    }
+    return_values = as.data.frame(apply(tween_df,2,tween, n = frames,ease=type))
+    if(aperture_linear) {
+      return_values$aperture =tween(apertures,n=frames,ease="linear")
+    }
+    if(fov_linear) {
+      return_values$fov = tween(fovs,n=frames,ease="linear")
+    }
+    if(focal_linear) {
+      return_values$focal = tween(focal_distances,n=frames,ease="linear")
+    }
+    if(ortho_linear) {
+      return_values$orthox = tween(ortho$x,n=frames,ease="linear")
+      return_values$orthoy = tween(ortho$y,n=frames,ease="linear")
+    }
+    return(return_values)
+  } else if (type == "manual") {
+    if(inherits(positions,"list")) {
+      positions = do.call(rbind,positions)
+    }
+    if(inherits(lookats,"list")) {
+      lookats = do.call(rbind,lookats)
+    }
+    if(inherits(camera_ups,"list")) {
+      camera_ups = do.call(rbind,camera_ups)
+    }
+    if(inherits(ortho_dims,"list")) {
+      ortho_dims = do.call(rbind,ortho_dims)
+    }
+    if (is.numeric(ortho_dims) && length(ortho_dims) == 2) {
+      ortho_dims = matrix(ortho_dims,ncol=2,nrow=length(positions$x),byrow=TRUE)
+    }
+    
+    positions = grDevices::xyz.coords(positions)
+    
+    if(is.null(lookats)) {
+      lookats = matrix(0,ncol=3,nrow=length(positions$x))
+    } else if (is.numeric(lookats) && length(lookats) == 3) {
+      lookats = matrix(lookats,ncol=3,nrow=length(positions$x),byrow=TRUE)
+    }
+    lookats = grDevices::xyz.coords(lookats)
+    if(is.null(camera_ups)) {
+      camera_ups = matrix(c(0,1,0),ncol=3,nrow=length(positions$x),byrow=TRUE)
+    }
+    camera_ups = grDevices::xyz.coords(camera_ups)
+    
+    if(is.null(focal_distances)) {
+      focal_distances = sqrt((positions$x - lookats$x)^2 + 
+                               (positions$y - lookats$y)^2 + 
+                               (positions$z - lookats$z)^2)
+    } else if (length(focal_distances) == 1) {
+      focal_distances = rep(focal_distances,length(positions$x))
+    }
+    if(is.null(ortho_dims)) {
+      ortho_dims = matrix(c(1,1),ncol=2,nrow=length(positions$x),byrow=TRUE)
+    }
+    ortho = grDevices::xy.coords(ortho_dims)
+    return(data.frame(x=positions$x, y=positions$y, z=positions$z,
+                      dx=lookats$x, dy=lookats$y, dz=lookats$z,
+                      aperture = rep(apertures,length(positions$x)),
+                      fov = rep(fovs,length(positions$x)),
+                      focal = focal_distances,
+                      orthox = ortho$x, orthoy = ortho$y,
+                      upx =camera_ups$x, upy = camera_ups$y ,upz = camera_ups$z))
+  } else {
+    stop("type '", type, "' not recognized")
+  }
+}
+
 #' Process Points to Control Points
 #'
 #' @param points Points
@@ -281,353 +626,4 @@ calculate_final_path = function(linearized_cp, steps, constant_step = TRUE,
     }
   }
   return(do.call(rbind,final_points))
-}
-
-
-#' Generate Camera Movement
-#' 
-#' Takes a series of key frame camera positions and smoothly interpolates between them.
-#' 
-#' @param positions A list or 3-column XYZ matrix of camera positions. 
-#' These will serve as key frames for the camera position.
-#' @param lookats Default `NULL`, which sets the camera lookat to the origin c(0,0,0) 
-#' for the animation. A list or 3-column XYZ matrix
-#' of lookat points. Must be the same number of points as `positions`.
-#' @param apertures Default `0`. A numeric vector of aperture values.
-#' @param fovs Default `40`. A numeric vector of field of view values.
-#' @param focal_distances Default `NULL`, automatically the distance between positions and lookats. 
-#' Numeric vector of focal distances.
-#' @param ortho_dims Default `NULL`, which results in `c(1,1)` orthographic dimensions.  A list or 2-column matrix
-#' of orthographic dimensions.
-#' @param camera_ups Default `NULL`, which gives at up vector of `c(0,1,0)`. Camera up orientation.
-#' @param type Default `bezier`. Type of transition between keyframes. 
-#' Other options are `linear`, `quad`, `cubic`, `exp`, and `none`.
-#' @param frames Default `30`. Number of frames between each key frame.
-#' @param closed Default `FALSE`. Whether to close the camera curve.
-#' @param constant_step Default `TRUE`. This will make the camera travel at a constant speed. 
-#' @param function_step Default `NULL`. A function that takes three inputs: the 3D position, the 3D derivative, and the
-#' 3D second derivative, and uses them to determine the step size.
-#' over the path. If `FALSE`, the camera will speed up and slow down depending on the bezier curve
-#' parameterization. Only used for curve `type = bezier`.
-#' @param aperture_linear Default `TRUE`. This linearly interpolates focal distances, rather than using a smooth bezier curve  or easing function.
-#' @param fov_linear Default `TRUE`. This linearly interpolates focal distances, rather than using a smooth bezier curve  or easing function.
-#' @param focal_linear Default `TRUE`. This linearly interpolates focal distances, rather than using a smooth bezier curve or easing function. 
-#' @param ortho_linear Default `TRUE`. This linearly interpolates orthographic dimensions, rather than using a smooth bezier curve or easing function. 
-#' @param curvature_adjust Default `none`. Other options are `position`, `lookat`, and `both`. Whether to slow down the camera at areas of high curvature
-#' to prevent fast swings. Only used for curve `type = bezier`. Note: This feature will likely result in the `lookat` and `position` diverging if they do not 
-#' have similar curvatures at each point. This feature is best used when passing the same set of points to `positions` and `lookats` 
-#' and providing an `offset_lookat` value, which ensures the curvature will be the same at every point. 
-#' @param curvature_scale Default `30`. Constant dividing factor for curvature. Higher values will subdivide the
-#' path more, potentially finding a smoother path, but increasing the calculation time. Only used for curve `type = bezier`.
-#' Increasing this value after a certain point will not increase the quality of the path, but it is scene-dependent.
-#' @param offset_lookat Default `0`. Amount to offset the lookat position, either along the path (if `constant_step = TRUE`)
-#' or towards the derivative of the bezier curve. Only used for curve `type = bezier`.
-#' @param progress Default `TRUE`. Whether to display a progress bar.
-#' 
-#' @export
-#' @return Data frame of camera positions, orientations, apertures, focal distances, and field of views
-#'
-#' @examples
-#' #Create and animate flying through a scene on a simulated roller coaster
-#' \donttest{
-#' set.seed(3)
-#' elliplist = list()
-#' ellip_colors = rainbow(8)
-#' for(i in 1:1200) {
-#'   elliplist[[i]] = ellipsoid(x=10*runif(1)-5,y=10*runif(1)-5,z=10*runif(1)-5,
-#'                              angle = 360*runif(3), a=0.1,b=0.05,c=0.1,
-#'                              material=glossy(color=sample(ellip_colors,1)))
-#' }
-#' ellip_scene = do.call(rbind, elliplist)
-#' 
-#' camera_pos = list(c(0,1,15),c(5,-5,5),c(-5,5,-5),c(0,1,-15))
-#' 
-#' #Plot the camera path and render from above using the path object:
-#' generate_ground(material=diffuse(checkercolor="grey20"),depth=-10) %>% 
-#'   add_object(ellip_scene) %>% 
-#'   add_object(sphere(y=50,radius=10,material=light(intensity=30))) %>% 
-#'   add_object(path(camera_pos, material=diffuse(color="red"))) %>% 
-#'   render_scene(lookfrom=c(0,20,0), width=800,height=800,samples=32,
-#'                camera_up = c(0,0,1),
-#'                fov=80)
-#'             
-#' #Side view     
-#' generate_ground(material=diffuse(checkercolor="grey20"),depth=-10) %>% 
-#'   add_object(ellip_scene) %>% 
-#'   add_object(sphere(y=50,radius=10,material=light(intensity=30))) %>% 
-#'   add_object(path(camera_pos, material=diffuse(color="red"))) %>% 
-#'   render_scene(lookfrom=c(20,0,0),width=800,height=800,samples=32,
-#'                  fov=80)
-#'  
-#' #View from the start        
-#' generate_ground(material=diffuse(checkercolor="grey20"),depth=-10) %>% 
-#'   add_object(ellip_scene) %>% 
-#'   add_object(sphere(y=50,radius=10,material=light(intensity=30))) %>% 
-#'   add_object(path(camera_pos, material=diffuse(color="red"))) %>% 
-#'   render_scene(lookfrom=c(0,1.5,16),width=800,height=800,samples=32,
-#'                  fov=80)
-#'                  
-#' #Generate Camera movement, setting the lookat position to be same as camera position, but offset
-#' #slightly in front. We'll render 12 frames, but you'd likely want more in a real animation.
-#' 
-#' camera_motion =  generate_camera_motion(positions = camera_pos, lookats = camera_pos, 
-#'                                         offset_lookat = 1, fovs=80, frames=12) 
-#'                                         
-#' #This returns a data frame of individual camera positions, interpolated by cubic bezier curves.
-#' camera_motion
-#' 
-#' #Pass NA filename to plot to the device. We'll keep the path and offset it slightly to see
-#' #where we're going. This results in a "roller coaster" effect.
-#' generate_ground(material=diffuse(checkercolor="grey20"),depth=-10) %>% 
-#'   add_object(ellip_scene) %>% 
-#'   add_object(sphere(y=50,radius=10,material=light(intensity=30))) %>% 
-#'   add_object(obj_model(r_obj(),x=10,y=-10,scale_obj=3, angle=c(0,-45,0),
-#'                        material=dielectric(attenuation=c(1,1,0.3)))) %>% 
-#'   add_object(pig(x=-7,y=10,z=-5,scale=1,angle=c(0,-45,80),emotion="angry")) %>% 
-#'   add_object(pig(x=0,y=-0.25,z=-15,scale=1,angle=c(0,225,-20), order_rotation=c(3,2,1),
-#'                  emotion="angry", spider=TRUE)) %>% 
-#'   add_object(path(camera_pos, y=-0.2,material=diffuse(color="red"))) %>% 
-#'   render_animation(filename = NA, camera_motion = camera_motion, samples=100,
-#'                    sample_method="sobol_blue",  
-#'                    clamp_value=10, width=800, height=800)
-#' 
-#' }
-generate_camera_motion = function(positions, 
-                                  lookats = NULL, 
-                                  apertures = 0, fovs = 40,
-                                  focal_distances = NULL, 
-                                  ortho_dims = NULL, 
-                                  camera_ups = NULL,
-                                  type = "bezier",
-                                  frames = 30, 
-                                  closed=FALSE, 
-                                  aperture_linear = TRUE,  
-                                  fov_linear = TRUE, 
-                                  focal_linear = TRUE,
-                                  ortho_linear = TRUE,
-                                  constant_step = TRUE, 
-                                  curvature_adjust = "none", 
-                                  curvature_scale = 30,
-                                  offset_lookat = 0, 
-                                  function_step = NULL, 
-                                  progress = TRUE) {
-  curve_adj_type = unlist(lapply(tolower(curvature_adjust),switch,
-                               "none" = 0,"position" = 1,"lookats" = 2, "both" = 3, 0))
-  curvature_adjust_pos = curve_adj_type %in% c(1,3)
-  curvature_adjust_look = curve_adj_type %in% c(2,3)
-  
-  if(type=="bezier") {
-    position_control_points = process_point_series(positions,closed=closed,straight=FALSE)
-    points_dist = calculate_distance_along_bezier_curve(position_control_points, breaks = 50)
-    points_final = calculate_final_path(points_dist, steps = frames, constant_step = constant_step,
-                                        curvature_adjust = curvature_adjust_pos, 
-                                        curvature_scale=curvature_scale,
-                                        progress = progress, string = "Position   ")
-    if(!is.null(lookats)) {
-      position_control_lookats = process_point_series(lookats,closed=closed,straight=FALSE)
-      lookats_dist = calculate_distance_along_bezier_curve(position_control_lookats, breaks = 50)
-      lookats_final = calculate_final_path(lookats_dist, steps = frames, 
-                                           constant_step = constant_step, offset = offset_lookat,
-                                           curvature_adjust = curvature_adjust_look, 
-                                           curvature_scale=curvature_scale,
-                                           progress = progress, string = "Orientation")
-    } else {
-      lookats_final = matrix(c(0,0,0), nrow = nrow(points_final), ncol=3, byrow=TRUE)
-    }
-    if(curvature_adjust_pos || curvature_adjust_look) {
-      temp_points  = points_final[1:frames,]
-      temp_lookats = lookats_final[1:frames,]
-  
-      rowvals = seq(1,nrow(points_final),length.out = frames)
-      for(i in 1:frames) {
-        rv = rowvals[i]
-        frv = floor(rv)
-        if(frv == rv) {
-          temp_points[i,] = points_final[rv,]
-          temp_lookats[i,] = lookats_final[rv,]
-          next
-        }
-        temp_points[i,] = lerp(rv-frv,
-                               points_final[rv,],
-                               points_final[frv+1,])
-        temp_lookats[i,] = lerp(rv-frv,
-                                lookats_final[rv,],
-                                lookats_final[frv+1,])
-      }
-      if(curvature_adjust_pos) {
-        points_final = temp_points
-      }
-      if(curvature_adjust_look) {
-        lookats_final = temp_lookats
-      }
-    }
-    
-    if(length(apertures) != 1) {
-      apertures_control_lookats = process_point_series_1d(apertures,closed=closed,straight=aperture_linear)
-      apertures_dist = calculate_distance_along_bezier_curve(apertures_control_lookats, breaks = 50)
-      apertures_final = calculate_final_path(apertures_dist, steps = frames, constant_step = constant_step)
-      apertures_final = apertures_final[,1]
-    } else {
-      apertures_final = matrix(apertures,  nrow = nrow(points_final), ncol=1)
-    }
-    if(length(fovs) != 1) {
-      fovs_control_lookats = process_point_series_1d(fovs,closed=closed,straight=fov_linear)
-      fovs_dist = calculate_distance_along_bezier_curve(fovs_control_lookats, breaks = 50)
-      fovs_final = calculate_final_path(fovs_dist, steps = frames, constant_step = constant_step)
-      fovs_final = fovs_final[,1]
-    } else {
-      fovs_final = matrix(fovs,  nrow = nrow(points_final), ncol=1)
-    }
-    if(!is.null(focal_distances)) {
-      if(is.numeric(focal_distances)) {
-        if(length(focal_distances) == 1) {
-          focal_final = rep(focal_distances,nrow(points_final))
-        } else {
-          focal_final = focal_distances
-        }
-      } else {
-        focal_control_lookats = process_point_series_1d(focal_distances,closed=closed,straight=focal_linear)
-        focal_dist = calculate_distance_along_bezier_curve(focal_control_lookats, breaks = 50)
-        focal_final = calculate_final_path(focal_dist, steps = frames, constant_step = constant_step)
-        focal_final = focal_final[,1]
-      }
-    } else {
-      focal_final = sqrt(apply((points_final-lookats_final)^2,1,sum))
-    }
-    if(!is.null(ortho_dims)) {
-      ortho_control_lookats = process_point_series_2d(ortho_dims,closed=closed,straight=focal_linear)
-      ortho_dist = calculate_distance_along_bezier_curve(ortho_control_lookats, breaks = 50)
-      ortho_final = calculate_final_path(ortho_dist, steps = frames, constant_step = constant_step)
-      ortho_final = ortho_final[,1:2]
-    } else {
-      ortho_final = matrix(c(1,1),  nrow = nrow(points_final), ncol=2)
-    }
-    if(!is.null(camera_ups)) {
-      ups_control = process_point_series_2d(camera_ups,closed=closed,straight=ortho_linear)
-      up_dist = calculate_distance_along_bezier_curve(ups_control, breaks = 50)
-      up_final = calculate_final_path(up_dist, steps = frames, constant_step = constant_step)
-    } else {
-      up_final = matrix(c(0,1,0), nrow = nrow(points_final), ncol=3, byrow=TRUE)
-    }
-    return_values = as.data.frame(cbind(points_final,lookats_final,apertures_final,fovs_final,focal_final,ortho_final,
-                                        up_final))
-    colnames(return_values) = c("x","y","z",
-                                "dx","dy","dz",
-                                "aperture","fov","focal","orthox","orthoy",
-                                "upx","upy","upz")
-    return(return_values)
-  } else if (type %in% c("exp", "quad",  "cubic", "linear")) {
-    if(inherits(positions,"list")) {
-      positions = do.call(rbind,positions)
-    }
-    if(inherits(lookats,"list")) {
-      lookats = do.call(rbind,lookats)
-    }
-    if(inherits(camera_ups,"list")) {
-      camera_ups = do.call(rbind,camera_ups)
-    }
-    if(inherits(ortho_dims,"list")) {
-      ortho_dims = do.call(rbind,ortho_dims)
-    }
-    positions = grDevices::xyz.coords(positions)
-    
-    if(is.null(lookats)) {
-      lookats = matrix(0,ncol=3,nrow=length(positions$x))
-    }
-    lookats = grDevices::xyz.coords(lookats)
-    if(is.null(camera_ups)) {
-      camera_ups = matrix(c(0,1,0),ncol=3,nrow=length(positions$x),byrow=TRUE)
-    }
-    camera_ups = grDevices::xyz.coords(camera_ups)
-    
-    if(is.null(focal_distances)) {
-      focal_distances = sqrt((positions$x - lookats$x)^2 + 
-                             (positions$y - lookats$y)^2 + 
-                             (positions$z - lookats$z)^2)
-    } else if (length(focal_distances) == 1) {
-      focal_distances = rep(focal_distances,length(positions$x))
-    }
-    if(is.null(ortho_dims)) {
-      ortho_dims = matrix(c(1,1),ncol=2,nrow=length(positions$x),byrow=TRUE)
-    }
-    ortho = grDevices::xy.coords(ortho_dims)
-    tween_df = data.frame(x=positions$x, y=positions$y, z=positions$z,
-                         dx=lookats$x, dy=lookats$y, dz=lookats$z,
-                         aperture = rep(apertures,length(positions$x)),
-                         fov = rep(fovs,length(positions$x)),
-                         focal = focal_distances,
-                         orthox = ortho$x, orthoy = ortho$y,
-                         upx =camera_ups$x, upy = camera_ups$y ,upz = camera_ups$z)
-    if(closed) {
-      tween_df = rbind(tween_df,tween_df[1,])
-      apertures = c(apertures,apertures[1])
-      fovs = c(fovs,fovs[1])
-      focal_distances = c(focal_distances,focal_distances[1])
-    }
-    return_values = as.data.frame(apply(tween_df,2,tween, n = frames,ease=type))
-    if(aperture_linear) {
-      return_values$aperture =tween(apertures,n=frames,ease="linear")
-    }
-    if(fov_linear) {
-      return_values$fov = tween(fovs,n=frames,ease="linear")
-    }
-    if(focal_linear) {
-      return_values$focal = tween(focal_distances,n=frames,ease="linear")
-    }
-    if(ortho_linear) {
-      return_values$orthox = tween(ortho$x,n=frames,ease="linear")
-      return_values$orthoy = tween(ortho$y,n=frames,ease="linear")
-    }
-    return(return_values)
-  } else if (type == "manual") {
-    if(inherits(positions,"list")) {
-      positions = do.call(rbind,positions)
-    }
-    if(inherits(lookats,"list")) {
-      lookats = do.call(rbind,lookats)
-    }
-    if(inherits(camera_ups,"list")) {
-      camera_ups = do.call(rbind,camera_ups)
-    }
-    if(inherits(ortho_dims,"list")) {
-      ortho_dims = do.call(rbind,ortho_dims)
-    }
-    if (is.numeric(ortho_dims) && length(ortho_dims) == 2) {
-      ortho_dims = matrix(ortho_dims,ncol=2,nrow=length(positions$x),byrow=TRUE)
-    }
-      
-    positions = grDevices::xyz.coords(positions)
-    
-    if(is.null(lookats)) {
-      lookats = matrix(0,ncol=3,nrow=length(positions$x))
-    } else if (is.numeric(lookats) && length(lookats) == 3) {
-      lookats = matrix(lookats,ncol=3,nrow=length(positions$x),byrow=TRUE)
-    }
-    lookats = grDevices::xyz.coords(lookats)
-    if(is.null(camera_ups)) {
-      camera_ups = matrix(c(0,1,0),ncol=3,nrow=length(positions$x),byrow=TRUE)
-    }
-    camera_ups = grDevices::xyz.coords(camera_ups)
-    
-    if(is.null(focal_distances)) {
-      focal_distances = sqrt((positions$x - lookats$x)^2 + 
-                               (positions$y - lookats$y)^2 + 
-                               (positions$z - lookats$z)^2)
-    } else if (length(focal_distances) == 1) {
-      focal_distances = rep(focal_distances,length(positions$x))
-    }
-    if(is.null(ortho_dims)) {
-      ortho_dims = matrix(c(1,1),ncol=2,nrow=length(positions$x),byrow=TRUE)
-    }
-    ortho = grDevices::xy.coords(ortho_dims)
-    return(data.frame(x=positions$x, y=positions$y, z=positions$z,
-                      dx=lookats$x, dy=lookats$y, dz=lookats$z,
-                      aperture = rep(apertures,length(positions$x)),
-                      fov = rep(fovs,length(positions$x)),
-                      focal = focal_distances,
-                      orthox = ortho$x, orthoy = ortho$y,
-                      upx =camera_ups$x, upy = camera_ups$y ,upz = camera_ups$z))
-  } else {
-    stop("type '", type, "' not recognized")
-  }
 }
