@@ -24,7 +24,7 @@ void pathtracer(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_c
                                           routput, goutput, boutput,
                                           routput2, goutput2, boutput2);
   std::vector<random_gen > rngs;
-  std::vector<Sampler* > samplers;
+  std::vector<std::unique_ptr<Sampler> > samplers;
   auto start = std::chrono::high_resolution_clock::now();
   
   for(int j = 0; j < ny; j++) {
@@ -32,25 +32,23 @@ void pathtracer(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_c
       pb_sampler.tick();
     }
     for(int i = 0; i < nx; i++) {
-      Sampler* strat;
       random_gen rng_single(unif_rand() * std::pow(2,32));
       rngs.push_back(rng_single);
       if(sample_method == 0) {
-        strat = new RandomSampler(rng_single);
-        strat->StartPixel(0,0);
+        samplers.push_back(std::unique_ptr<Sampler>(new RandomSampler(rng_single)));
+        samplers.back()->StartPixel(0,0);
       } else if (sample_method == 1){
-        strat = new StratifiedSampler(stratified_dim(0), stratified_dim(1),
-                                      true, 5, rng_single);
-        strat->StartPixel(0,0);
+        samplers.push_back(std::unique_ptr<Sampler>(new StratifiedSampler(stratified_dim(0), stratified_dim(1),
+                                      true, 5, rng_single)));
+        samplers.back()->StartPixel(0,0);
       } else if (sample_method == 2) {
-        strat = new SobolSampler(nx, ny, ns, rng_single);
-        strat->StartPixel(i,j);
+        samplers.push_back(std::unique_ptr<Sampler>(new SobolSampler(nx, ny, ns, rng_single)));
+        samplers.back()->StartPixel(i,j);
       } else {
-        strat = new SobolBlueNoiseSampler(rng_single);
-        strat->StartPixel(i,j);
+        samplers.push_back(std::unique_ptr<Sampler>(new SobolBlueNoiseSampler(rng_single)));
+        samplers.back()->StartPixel(i,j);
       }
-      strat->SetSampleNumber(0);
-      samplers.push_back(strat);
+      samplers.back()->SetSampleNumber(0);
     }
   }
   
@@ -99,7 +97,7 @@ void pathtracer(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_c
                          r.pri_stack = mat_stack;
                          
                          vec3 col = clamp(de_nan(color(r, &world, &hlist, max_depth, 
-                                                       roulette_active, rngs[index], samplers[index])),
+                                                       roulette_active, rngs[index], samplers[index].get())),
                                                        0, clampval);
                          mat_stack->clear();
                          adaptive_pixel_sampler.add_color_main(i, j, col);
@@ -124,7 +122,7 @@ void pathtracer(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_c
     adaptive_pixel_sampler.max_s++;
   }
   adaptive_pixel_sampler.write_final_pixels();
-  for(size_t i = 0; i < samplers.size(); i++) {
-    delete samplers.at(i);
-  }
+  // for(size_t i = 0; i < samplers.size(); i++) {
+  //   delete samplers.at(i);
+  // }
 }
