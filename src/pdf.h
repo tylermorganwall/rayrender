@@ -137,7 +137,7 @@ class hair_pdf : public pdf {
         sin2kAlpha[i] = sin2kAlpha_[i];
         cos2kAlpha[i] = cos2kAlpha_[i];
       }
-      for (int p = 0; p <= pMax + 1; ++p) {
+      for (int p = 0; p <= pMax; ++p) {
         v[p] = v_[p];
       }
       eta = eta_;
