@@ -122,7 +122,4 @@ void pathtracer(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_c
     adaptive_pixel_sampler.max_s++;
   }
   adaptive_pixel_sampler.write_final_pixels();
-  // for(size_t i = 0; i < samplers.size(); i++) {
-  //   delete samplers.at(i);
-  // }
 }

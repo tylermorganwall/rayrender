@@ -231,7 +231,7 @@ trimesh::trimesh(std::string inputfile, std::string basedir, Float scale,
     std::string mes = "Error reading " + inputfile + ": ";
     throw std::runtime_error(mes + warn + err);
   }
-};
+}
 
 trimesh::trimesh(std::string inputfile, std::string basedir, Float scale, Float sigma,
         Float shutteropen, Float shutterclose, int bvh_type, random_gen rng) {
@@ -445,7 +445,8 @@ trimesh::trimesh(std::string inputfile, std::string basedir, Float scale, Float 
     std::string mes = "Error reading " + inputfile + ": ";
     throw std::runtime_error(mes + warn + err);
   }
-};
+}
+
 trimesh::trimesh(std::string inputfile, std::string basedir, std::shared_ptr<material> mat, 
         Float scale, Float shutteropen, Float shutterclose, int bvh_type, random_gen rng) {
   tinyobj::attrib_t attrib;
@@ -517,7 +518,7 @@ trimesh::trimesh(std::string inputfile, std::string basedir, std::shared_ptr<mat
     std::string mes = "Error reading " + inputfile + ": ";
     throw std::runtime_error(mes + warn + err);
   }
-};
+}
 
 trimesh::trimesh(std::string inputfile, std::string basedir, float vertex_color_sigma,
         Float scale, bool is_vertex_color, Float shutteropen, Float shutterclose, int bvh_type, 
@@ -600,19 +601,19 @@ trimesh::trimesh(std::string inputfile, std::string basedir, float vertex_color_
     std::string mes = "Error reading " + inputfile + ": ";
     throw std::runtime_error(mes + warn + err);
   }
-};
+}
 
 bool trimesh::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
   return(tri_mesh_bvh->hit(r, t_min, t_max, rec, rng));
-};
+}
 
 bool trimesh::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) {
   return(tri_mesh_bvh->hit(r, t_min, t_max, rec, sampler));
-};
+}
 
 bool trimesh::bounding_box(Float t0, Float t1, aabb& box) const {
   return(tri_mesh_bvh->bounding_box(t0,t1,box));
-};
+}
 
 
 Float trimesh::pdf_value(const vec3& o, const vec3& v, random_gen& rng, Float time) {

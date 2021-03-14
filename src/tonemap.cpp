@@ -3,7 +3,7 @@
 using namespace Rcpp;
 
 
-static inline Float reinhard(Float color, Float sum) {
+static Float reinhard(Float color, Float sum) {
   color = color*sum/(1 + sum);
   return(std::pow(color,1/2.2));
 }

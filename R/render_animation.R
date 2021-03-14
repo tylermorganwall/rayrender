@@ -142,7 +142,7 @@
 #'   add_object(path(camera_pos, y=-0.2,material=diffuse(color="red"))) %>% 
 #'   render_animation(filename = NA, camera_motion = camera_motion, samples=100,
 #'                    sample_method="sobol_blue",  
-#'                    clamp_value=10, width=800, height=800)
+#'                    clamp_value=10, width=400, height=400)
 #' 
 #' }
 render_animation = function(scene, camera_motion, start_frame = 1,

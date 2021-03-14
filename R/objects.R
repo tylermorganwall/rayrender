@@ -1815,7 +1815,7 @@ arrow = function(start = c(0,0,0), end = c(0,1,0),
 #' generate_ground(depth=0,material=diffuse(checkercolor="grey20")) %>%
 #'   add_object(all_curves) %>%
 #'   add_object(sphere(y=7,z=0,x=0,material=light(intensity=100))) %>% 
-#'   render_scene(lookfrom = c(12,20,50),samples=500,
+#'   render_scene(lookfrom = c(12,20,50),samples=100,
 #'                lookat=c(0,1,0), fov=15, clamp_value = 10)
 #' 
 #' }
