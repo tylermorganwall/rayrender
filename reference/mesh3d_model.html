@@ -77,7 +77,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">rayrender</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.19.2</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.20.0</span>
       </span>
     </div>
 
@@ -96,6 +96,15 @@
     <span class="caret"></span>
   </a>
   <ul class="dropdown-menu" role="menu">
+    <li>
+      <a href="https://www.tylermw.com/polar-ice-data-in-r-with-rayrender/">How to Download and Animate Polar Ice Data in R with Rayrender</a>
+    </li>
+    <li>
+      <a href="https://www.tylermw.com/plinko-statistics-insights-from-the-bean-machine/">Plinko Statistics-Insights from the Bean Machine</a>
+    </li>
+    <li>
+      <a href="https://www.tylermw.com/loading-and-visualizing-opensky-network-data-in-r/">Loading and Visualizing OpenSky Network Flight Data in R</a>
+    </li>
     <li>
       <a href="https://www.tylermw.com/raybonsai-generate-procedural-3d-trees-in-r/">Generating Procedural 3D Trees with Raybonsai and Rayrender</a>
     </li>
@@ -240,7 +249,7 @@ Note: emissive objects may not currently function correctly when scaled.</p></td
     <h2 class="hasAnchor" id="examples"><a class="anchor" href="#examples"></a>Examples</h2>
     <pre class="examples"><div class='input'><span class='co'>#Load a mesh3d object (from the Rvcg) and render it:</span>
 <span class='kw'>if</span><span class='op'>(</span><span class='st'>"Rcvg"</span> <span class='op'>%in%</span> <span class='fu'><a href='https://rdrr.io/r/base/colnames.html'>rownames</a></span><span class='op'>(</span><span class='fu'>utils</span><span class='fu'>::</span><span class='fu'><a href='https://rdrr.io/r/utils/installed.packages.html'>installed.packages</a></span><span class='op'>(</span><span class='op'>)</span><span class='op'>)</span><span class='op'>)</span> <span class='op'>{</span>
-  <span class='kw'><a href='https://rdrr.io/r/base/library.html'>library</a></span><span class='op'>(</span><span class='va'><a href='http://github.com/zarquon42b/Rvcg'>Rvcg</a></span><span class='op'>)</span>
+  <span class='kw'><a href='https://rdrr.io/r/base/library.html'>library</a></span><span class='op'>(</span><span class='va'><a href='https://github.com/zarquon42b/Rvcg'>Rvcg</a></span><span class='op'>)</span>
   <span class='fu'><a href='https://rdrr.io/r/utils/data.html'>data</a></span><span class='op'>(</span><span class='va'>humface</span><span class='op'>)</span>
   
   <span class='fu'><a href='generate_studio.html'>generate_studio</a></span><span class='op'>(</span><span class='op'>)</span> <span class='op'>%&gt;%</span> 

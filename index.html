@@ -36,7 +36,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="index.html">rayrender</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.19.2</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.20.0</span>
       </span>
     </div>
 
@@ -56,6 +56,15 @@
   </a>
   <ul class="dropdown-menu" role="menu">
 <li>
+      <a href="https://www.tylermw.com/polar-ice-data-in-r-with-rayrender/">How to Download and Animate Polar Ice Data in R with Rayrender</a>
+    </li>
+    <li>
+      <a href="https://www.tylermw.com/plinko-statistics-insights-from-the-bean-machine/">Plinko Statistics-Insights from the Bean Machine</a>
+    </li>
+    <li>
+      <a href="https://www.tylermw.com/loading-and-visualizing-opensky-network-data-in-r/">Loading and Visualizing OpenSky Network Flight Data in R</a>
+    </li>
+    <li>
       <a href="https://www.tylermw.com/raybonsai-generate-procedural-3d-trees-in-r/">Generating Procedural 3D Trees with Raybonsai and Rayrender</a>
     </li>
     <li>
@@ -100,15 +109,11 @@
 <div id="rayrender" class="section level1">
 <div class="page-header"><h1 class="hasAnchor">
 <a href="#rayrender" class="anchor"></a>rayrender</h1></div>
-<p><img src="reference/figures/swordsmall.gif"></p>
-<div id="overview" class="section level2">
-<h2 class="hasAnchor">
-<a href="#overview" class="anchor"></a>Overview</h2>
+<p><img src="reference/figures/swordsmall.gif"><!-- badges: start --><a href="https://github.com/tylermorganwall/rayrender/actions"><img src="https://github.com/tylermorganwall/rayrender/workflows/R-CMD-check/badge.svg" alt="R build status"></a> <!-- badges: end --> Overview ——–</p>
 <p><strong>rayrender</strong> is an open source R package for raytracing scenes in created in R. Based off of Peter Shirley’s three books “Ray Tracing in One Weekend”, “Ray Tracing: The Next Week”, and “Ray Tracing: The Rest of Your Life”, this package provides a tidy R API to a raytracer built in C++ to render scenes built out of an array of primitives. <strong>rayrender</strong> builds scenes using a pipeable iterative interface, and supports diffuse, metallic, dielectric (glass), light emitting materials, as well as procedural and user-specified image textures and HDR environment lighting. <strong>rayrender</strong> includes multicore support (with progress bars) via RcppThread, random number generation via the PCG RNG, and <code>.obj</code> file support via TinyObjLoader.</p>
 <p>Browse the documentation and see more examples at the website (if you aren’t already there):</p>
 <p><a href="https://www.rayrender.net">rayrender.net</a></p>
 <p><img src="reference/figures/rayrendersmall.jpg"></p>
-</div>
 <div id="installation" class="section level2">
 <h2 class="hasAnchor">
 <a href="#installation" class="anchor"></a>Installation</h2>
@@ -144,7 +149,7 @@
   <span class="fu"><a href="reference/add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="reference/sphere.html">sphere</a></span><span class="op">(</span>y<span class="op">=</span><span class="fl">10</span>,z<span class="op">=</span><span class="fl">1</span>,radius<span class="op">=</span><span class="fl">4</span>,material<span class="op">=</span><span class="fu"><a href="reference/light.html">light</a></span><span class="op">(</span>intensity<span class="op">=</span><span class="fl">8</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op">%&gt;%</span>
   <span class="fu"><a href="reference/add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="reference/sphere.html">sphere</a></span><span class="op">(</span>z<span class="op">=</span><span class="fl">15</span>,material<span class="op">=</span><span class="fu"><a href="reference/light.html">light</a></span><span class="op">(</span>intensity<span class="op">=</span><span class="fl">70</span><span class="op">)</span><span class="op">)</span><span class="op">)</span>
 <span class="fu"><a href="reference/render_scene.html">render_scene</a></span><span class="op">(</span><span class="va">scene</span>, parallel <span class="op">=</span> <span class="cn">TRUE</span>, width <span class="op">=</span> <span class="fl">800</span>, height <span class="op">=</span> <span class="fl">800</span>, samples <span class="op">=</span> <span class="fl">1000</span>, clamp_value<span class="op">=</span><span class="fl">10</span><span class="op">)</span></code></pre></div>
-<p><img src="reference/figures/README_ground_r-1.png"><!-- --></p>
+<p><img src="reference/figures/README_ground_r_path-1.png"><!-- --></p>
 <p>Here we’ll render a grid of different viewpoints.</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="fu"><a href="https://rdrr.io/r/graphics/par.html">par</a></span><span class="op">(</span>mfrow<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="fl">2</span>,<span class="fl">2</span><span class="op">)</span><span class="op">)</span>
@@ -216,8 +221,35 @@
   <span class="fu"><a href="reference/add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="reference/sphere.html">sphere</a></span><span class="op">(</span>y<span class="op">=</span><span class="fl">5</span>,x<span class="op">=</span><span class="fl">3</span>,radius<span class="op">=</span><span class="fl">1</span>,material<span class="op">=</span><span class="fu"><a href="reference/light.html">light</a></span><span class="op">(</span>intensity<span class="op">=</span><span class="fl">30</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op">%&gt;%</span>
   <span class="fu"><a href="reference/render_scene.html">render_scene</a></span><span class="op">(</span>clamp_value<span class="op">=</span><span class="fl">10</span>, fov<span class="op">=</span><span class="fl">20</span>,lookfrom<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="fl">5</span>,<span class="fl">5</span>,<span class="fl">10</span><span class="op">)</span>,samples<span class="op">=</span><span class="fl">1000</span>,width<span class="op">=</span><span class="fl">800</span>,height<span class="op">=</span><span class="fl">800</span><span class="op">)</span></code></pre></div>
 <p><img src="reference/figures/unnamed-chunk-1-1.png"><!-- --></p>
-<p>Finally, rayrender supports environment lighting with the <code>environment_light</code> argument. Pass a high dynamic range image (<code>.hdr</code>) or a low-dynamic range image (<code>.jpg</code>,<code>.png</code>) and the image will be used to light the scene (along with any other lights). Here’s an example using an HDR image of Venice at sunset (obtained for free from hdrihaven.com), also using the Oren-Nayar diffuse model with <code>sigma = 90</code> for a more realistic diffuse surface. We also add an extruded polygon star, using the <code>extruded_polygon</code> object.</p>
+<p>We can also use the <code><a href="reference/path.html">path()</a></code> element to draw 3D paths. Here, we render the Lorenz attractor:</p>
 <div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="kw"><a href="https://rdrr.io/r/base/library.html">library</a></span><span class="op">(</span><span class="va">deSolve</span><span class="op">)</span>
+<span class="va">parameters</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span>s <span class="op">=</span> <span class="fl">10</span>, r <span class="op">=</span> <span class="fl">28</span>, b <span class="op">=</span> <span class="fl">8</span><span class="op">/</span><span class="fl">3</span><span class="op">)</span>
+<span class="va">state</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span>X <span class="op">=</span> <span class="fl">1</span>, Y <span class="op">=</span> <span class="fl">0</span>, Z <span class="op">=</span> <span class="fl">1</span><span class="op">)</span>
+
+<span class="va">Lorenz</span> <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">t</span>, <span class="va">state</span>, <span class="va">parameters</span><span class="op">)</span> <span class="op">{</span>
+  <span class="fu"><a href="https://rdrr.io/r/base/with.html">with</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html">as.list</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="va">state</span>, <span class="va">parameters</span><span class="op">)</span><span class="op">)</span>, <span class="op">{</span>
+    <span class="va">dX</span> <span class="op">=</span> <span class="va">s</span> <span class="op">*</span> <span class="op">(</span><span class="va">Y</span> <span class="op">-</span> <span class="va">X</span><span class="op">)</span>
+    <span class="va">dY</span> <span class="op">=</span> <span class="va">X</span> <span class="op">*</span> <span class="op">(</span><span class="va">r</span> <span class="op">-</span> <span class="va">Z</span><span class="op">)</span> <span class="op">-</span> <span class="va">Y</span>
+    <span class="va">dZ</span> <span class="op">=</span> <span class="va">X</span> <span class="op">*</span> <span class="va">Y</span> <span class="op">-</span> <span class="va">b</span> <span class="op">*</span> <span class="va">Z</span>
+    <span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="va">dX</span>, <span class="va">dY</span>, <span class="va">dZ</span><span class="op">)</span><span class="op">)</span>
+  <span class="op">}</span><span class="op">)</span>
+<span class="op">}</span>
+
+<span class="va">times</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html">seq</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">50</span>, by <span class="op">=</span> <span class="fl">0.05</span><span class="op">)</span>
+<span class="va">vals</span> <span class="op">=</span> <span class="fu">ode</span><span class="op">(</span>y <span class="op">=</span> <span class="va">state</span>, times <span class="op">=</span> <span class="va">times</span>, func <span class="op">=</span> <span class="va">Lorenz</span>, parms <span class="op">=</span> <span class="va">parameters</span><span class="op">)</span><span class="op">[</span>,<span class="op">-</span><span class="fl">1</span><span class="op">]</span>
+
+<span class="co">#scale and rearrange:</span>
+<span class="va">vals</span> <span class="op">=</span> <span class="va">vals</span><span class="op">[</span>,<span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="fl">1</span>,<span class="fl">3</span>,<span class="fl">2</span><span class="op">)</span><span class="op">]</span><span class="op">/</span><span class="fl">20</span>
+
+<span class="fu"><a href="reference/generate_studio.html">generate_studio</a></span><span class="op">(</span><span class="op">)</span> <span class="op">%&gt;%</span> 
+  <span class="fu"><a href="reference/add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="reference/path.html">path</a></span><span class="op">(</span>points<span class="op">=</span><span class="va">vals</span>,y<span class="op">=</span><span class="op">-</span><span class="fl">0.6</span>,width<span class="op">=</span><span class="fl">0.01</span>,material<span class="op">=</span><span class="fu"><a href="reference/diffuse.html">diffuse</a></span><span class="op">(</span>color<span class="op">=</span><span class="st">"red"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op">%&gt;%</span> 
+  <span class="fu"><a href="reference/add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="reference/sphere.html">sphere</a></span><span class="op">(</span>y<span class="op">=</span><span class="fl">5</span>,z<span class="op">=</span><span class="fl">5</span>,radius<span class="op">=</span><span class="fl">0.5</span>,material<span class="op">=</span><span class="fu"><a href="reference/light.html">light</a></span><span class="op">(</span>intensity<span class="op">=</span><span class="fl">200</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op">%&gt;%</span> 
+  <span class="fu"><a href="reference/render_scene.html">render_scene</a></span><span class="op">(</span>samples<span class="op">=</span><span class="fl">256</span>,lookat<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">0.5</span>,<span class="fl">0</span><span class="op">)</span>,lookfrom<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">1</span>,<span class="fl">10</span><span class="op">)</span>,width <span class="op">=</span> <span class="fl">800</span>, height <span class="op">=</span> <span class="fl">800</span>, 
+               clamp_value<span class="op">=</span><span class="fl">10</span>,parallel<span class="op">=</span><span class="cn">TRUE</span><span class="op">)</span></code></pre></div>
+<p><img src="reference/figures/README_ground_r_lorenz-1.png"><!-- --></p>
+<p>Finally, rayrender supports environment lighting with the <code>environment_light</code> argument. Pass a high dynamic range image (<code>.hdr</code>) or a low-dynamic range image (<code>.jpg</code>,<code>.png</code>) and the image will be used to light the scene (along with any other lights). Here’s an example using an HDR image of Venice at sunset (obtained for free from hdrihaven.com), also using the Oren-Nayar diffuse model with <code>sigma = 90</code> for a more realistic diffuse surface. We also add an extruded polygon star, using the <code>extruded_polygon</code> object.</p>
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="va">tempfilehdr</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".hdr"</span><span class="op">)</span>
 <span class="fu"><a href="https://rdrr.io/r/utils/download.file.html">download.file</a></span><span class="op">(</span><span class="st">"https://www.tylermw.com/data/venice_sunset_2k.hdr"</span>,<span class="va">tempfilehdr</span><span class="op">)</span>
 

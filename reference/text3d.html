@@ -77,7 +77,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">rayrender</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.19.2</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.20.0</span>
       </span>
     </div>
 
@@ -96,6 +96,15 @@
     <span class="caret"></span>
   </a>
   <ul class="dropdown-menu" role="menu">
+    <li>
+      <a href="https://www.tylermw.com/polar-ice-data-in-r-with-rayrender/">How to Download and Animate Polar Ice Data in R with Rayrender</a>
+    </li>
+    <li>
+      <a href="https://www.tylermw.com/plinko-statistics-insights-from-the-bean-machine/">Plinko Statistics-Insights from the Bean Machine</a>
+    </li>
+    <li>
+      <a href="https://www.tylermw.com/loading-and-visualizing-opensky-network-data-in-r/">Loading and Visualizing OpenSky Network Flight Data in R</a>
+    </li>
     <li>
       <a href="https://www.tylermw.com/raybonsai-generate-procedural-3d-trees-in-r/">Generating Procedural 3D Trees with Raybonsai and Rayrender</a>
     </li>
@@ -229,7 +238,7 @@ Note: emissive objects may not currently function correctly when scaled.</p></td
 <span class='fu'><a href='generate_cornell.html'>generate_cornell</a></span><span class='op'>(</span><span class='op'>)</span> <span class='op'>%&gt;%</span> 
   <span class='fu'><a href='add_object.html'>add_object</a></span><span class='op'>(</span><span class='fu'>text3d</span><span class='op'>(</span>label<span class='op'>=</span><span class='st'>"Cornell Box"</span>, x<span class='op'>=</span><span class='fl'>555</span><span class='op'>/</span><span class='fl'>2</span>,y<span class='op'>=</span><span class='fl'>555</span><span class='op'>/</span><span class='fl'>2</span>,z<span class='op'>=</span><span class='fl'>555</span><span class='op'>/</span><span class='fl'>2</span>,text_height<span class='op'>=</span><span class='fl'>60</span>,
                     material<span class='op'>=</span><span class='fu'><a href='diffuse.html'>diffuse</a></span><span class='op'>(</span>color<span class='op'>=</span><span class='st'>"grey10"</span><span class='op'>)</span>, angle<span class='op'>=</span><span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>0</span>,<span class='fl'>180</span>,<span class='fl'>0</span><span class='op'>)</span><span class='op'>)</span><span class='op'>)</span> <span class='op'>%&gt;%</span> 
-  <span class='fu'><a href='render_scene.html'>render_scene</a></span><span class='op'>(</span>samples<span class='op'>=</span><span class='fl'>500</span>, sample_method <span class='op'>=</span> <span class='st'>"stratified"</span>, clamp_value<span class='op'>=</span><span class='fl'>10</span><span class='op'>)</span>
+  <span class='fu'><a href='render_scene.html'>render_scene</a></span><span class='op'>(</span>samples<span class='op'>=</span><span class='fl'>500</span>, clamp_value<span class='op'>=</span><span class='fl'>10</span><span class='op'>)</span>
 </div><div class='output co'>#&gt; <span class='error'>Error in rayimage::add_title(matrix(0, ncol = nchar(label) * 60, nrow = 60 *     1.2), title_size = 60, title_offset = c(0, 0), title_text = label,     title_color = "white", title_position = "center", filename = labelfile): `magick` package required for adding title</span></div><div class='input'>  
 <span class='co'>#Change the orientation</span>
 <span class='fu'><a href='generate_cornell.html'>generate_cornell</a></span><span class='op'>(</span><span class='op'>)</span> <span class='op'>%&gt;%</span> 
@@ -242,7 +251,7 @@ Note: emissive objects may not currently function correctly when scaled.</p></td
  <span class='fu'><a href='add_object.html'>add_object</a></span><span class='op'>(</span><span class='fu'>text3d</span><span class='op'>(</span>label<span class='op'>=</span><span class='st'>"XZ Plane"</span>, z<span class='op'>=</span><span class='fl'>555</span><span class='op'>/</span><span class='fl'>2</span>,y<span class='op'>=</span><span class='fl'>5</span>,x<span class='op'>=</span><span class='fl'>555</span><span class='op'>/</span><span class='fl'>2</span>,text_height<span class='op'>=</span><span class='fl'>100</span>,
                     orientation <span class='op'>=</span> <span class='st'>"xz"</span>,
                     material<span class='op'>=</span><span class='fu'><a href='diffuse.html'>diffuse</a></span><span class='op'>(</span>color<span class='op'>=</span><span class='st'>"grey10"</span><span class='op'>)</span><span class='op'>)</span><span class='op'>)</span> <span class='op'>%&gt;%</span> 
-  <span class='fu'><a href='render_scene.html'>render_scene</a></span><span class='op'>(</span>samples<span class='op'>=</span><span class='fl'>500</span>, sample_method <span class='op'>=</span> <span class='st'>"stratified"</span>, clamp_value<span class='op'>=</span><span class='fl'>10</span><span class='op'>)</span>
+  <span class='fu'><a href='render_scene.html'>render_scene</a></span><span class='op'>(</span>samples<span class='op'>=</span><span class='fl'>500</span>, clamp_value<span class='op'>=</span><span class='fl'>10</span><span class='op'>)</span>
 </div><div class='output co'>#&gt; <span class='error'>Error in rayimage::add_title(matrix(0, ncol = nchar(label) * 60, nrow = 60 *     1.2), title_size = 60, title_offset = c(0, 0), title_text = label,     title_color = "white", title_position = "center", filename = labelfile): `magick` package required for adding title</span></div><div class='input'>  
 <span class='co'>#Add an label in front of a sphere</span>
 <span class='fu'><a href='generate_cornell.html'>generate_cornell</a></span><span class='op'>(</span><span class='op'>)</span> <span class='op'>%&gt;%</span> 
@@ -255,7 +264,7 @@ Note: emissive objects may not currently function correctly when scaled.</p></td
   <span class='fu'><a href='add_object.html'>add_object</a></span><span class='op'>(</span><span class='fu'><a href='sphere.html'>sphere</a></span><span class='op'>(</span>y<span class='op'>=</span><span class='fl'>555</span>,radius<span class='op'>=</span><span class='fl'>100</span>,z<span class='op'>=</span><span class='op'>-</span><span class='fl'>1000</span>,x<span class='op'>=</span><span class='fl'>555</span><span class='op'>/</span><span class='fl'>2</span>,
                     material<span class='op'>=</span><span class='fu'><a href='light.html'>light</a></span><span class='op'>(</span>intensity<span class='op'>=</span><span class='fl'>100</span>,
                                    spotlight_focus<span class='op'>=</span><span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>555</span><span class='op'>/</span><span class='fl'>2</span>,<span class='fl'>100</span>,<span class='fl'>100</span><span class='op'>)</span><span class='op'>)</span><span class='op'>)</span><span class='op'>)</span> <span class='op'>%&gt;%</span>                   
-  <span class='fu'><a href='render_scene.html'>render_scene</a></span><span class='op'>(</span>samples<span class='op'>=</span><span class='fl'>500</span>, sample_method <span class='op'>=</span> <span class='st'>"stratified"</span>, clamp_value<span class='op'>=</span><span class='fl'>10</span><span class='op'>)</span>
+  <span class='fu'><a href='render_scene.html'>render_scene</a></span><span class='op'>(</span>samples<span class='op'>=</span><span class='fl'>500</span>, clamp_value<span class='op'>=</span><span class='fl'>10</span><span class='op'>)</span>
 </div><div class='output co'>#&gt; <span class='error'>Error in rayimage::add_title(matrix(0, ncol = nchar(label) * 60, nrow = 60 *     1.2), title_size = 60, title_offset = c(0, 0), title_text = label,     title_color = "white", title_position = "center", filename = labelfile): `magick` package required for adding title</span></div><div class='input'>  
   
 <span class='co'>#A room full of bees</span>
@@ -267,7 +276,7 @@ Note: emissive objects may not currently function correctly when scaled.</p></td
 </div><div class='output co'>#&gt; <span class='error'>Error in rayimage::add_title(matrix(0, ncol = nchar(label) * 60, nrow = 60 *     1.2), title_size = 60, title_offset = c(0, 0), title_text = label,     title_color = "white", title_position = "center", filename = labelfile): `magick` package required for adding title</span></div><div class='input'><span class='va'>bees</span> <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/do.call.html'>do.call</a></span><span class='op'>(</span><span class='va'>rbind</span>,<span class='va'>bee_list</span><span class='op'>)</span>
 <span class='fu'><a href='generate_cornell.html'>generate_cornell</a></span><span class='op'>(</span><span class='op'>)</span> <span class='op'>%&gt;%</span> 
   <span class='fu'><a href='add_object.html'>add_object</a></span><span class='op'>(</span><span class='va'>bees</span><span class='op'>)</span> <span class='op'>%&gt;%</span>                   
-  <span class='fu'><a href='render_scene.html'>render_scene</a></span><span class='op'>(</span>samples<span class='op'>=</span><span class='fl'>500</span>, sample_method <span class='op'>=</span> <span class='st'>"stratified"</span>, clamp_value<span class='op'>=</span><span class='fl'>10</span><span class='op'>)</span>
+  <span class='fu'><a href='render_scene.html'>render_scene</a></span><span class='op'>(</span>samples<span class='op'>=</span><span class='fl'>500</span>, clamp_value<span class='op'>=</span><span class='fl'>10</span><span class='op'>)</span>
 </div><div class='output co'>#&gt; <span class='message'>Setting default values for Cornell box: lookfrom `c(278,278,-800)` lookat `c(278,278,0)` fov `40` .</span></div><div class='img'><img src='text3d-1.png' alt='' width='700' height='433' /></div><div class='input'><span class='co'># }</span>
 </div></pre>
   </div>

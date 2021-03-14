@@ -77,7 +77,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">rayrender</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.19.2</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.20.0</span>
       </span>
     </div>
 
@@ -96,6 +96,15 @@
     <span class="caret"></span>
   </a>
   <ul class="dropdown-menu" role="menu">
+    <li>
+      <a href="https://www.tylermw.com/polar-ice-data-in-r-with-rayrender/">How to Download and Animate Polar Ice Data in R with Rayrender</a>
+    </li>
+    <li>
+      <a href="https://www.tylermw.com/plinko-statistics-insights-from-the-bean-machine/">Plinko Statistics-Insights from the Bean Machine</a>
+    </li>
+    <li>
+      <a href="https://www.tylermw.com/loading-and-visualizing-opensky-network-data-in-r/">Loading and Visualizing OpenSky Network Flight Data in R</a>
+    </li>
     <li>
       <a href="https://www.tylermw.com/raybonsai-generate-procedural-3d-trees-in-r/">Generating Procedural 3D Trees with Raybonsai and Rayrender</a>
     </li>
@@ -205,7 +214,7 @@
                         pivot_point <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>0</span>,<span class='op'>-</span><span class='fl'>0.99</span>,<span class='op'>-</span><span class='fl'>1.5</span><span class='op'>)</span>,angle<span class='op'>=</span><span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>0</span>,<span class='fl'>45</span>,<span class='fl'>0</span><span class='op'>)</span><span class='op'>)</span>,
                         material<span class='op'>=</span><span class='fu'><a href='glossy.html'>glossy</a></span><span class='op'>(</span>color<span class='op'>=</span><span class='st'>"green"</span><span class='op'>)</span><span class='op'>)</span><span class='op'>)</span> <span class='op'>%&gt;%</span> 
   <span class='fu'><a href='add_object.html'>add_object</a></span><span class='op'>(</span><span class='fu'><a href='sphere.html'>sphere</a></span><span class='op'>(</span>y<span class='op'>=</span><span class='fl'>5</span>,x<span class='op'>=</span><span class='fl'>5</span>,z<span class='op'>=</span><span class='fl'>5</span>,material<span class='op'>=</span><span class='fu'><a href='light.html'>light</a></span><span class='op'>(</span>intensity<span class='op'>=</span><span class='fl'>40</span><span class='op'>)</span><span class='op'>)</span><span class='op'>)</span> <span class='op'>%&gt;%</span> 
-  <span class='fu'><a href='render_scene.html'>render_scene</a></span><span class='op'>(</span>sample_method<span class='op'>=</span><span class='st'>"stratified"</span>,lookfrom<span class='op'>=</span><span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='op'>-</span><span class='fl'>3</span>,<span class='fl'>4</span>,<span class='fl'>10</span><span class='op'>)</span>, fov<span class='op'>=</span><span class='fl'>15</span>, 
+  <span class='fu'><a href='render_scene.html'>render_scene</a></span><span class='op'>(</span>lookfrom<span class='op'>=</span><span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='op'>-</span><span class='fl'>3</span>,<span class='fl'>4</span>,<span class='fl'>10</span><span class='op'>)</span>, fov<span class='op'>=</span><span class='fl'>15</span>, 
                lookat<span class='op'>=</span><span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>0</span>,<span class='op'>-</span><span class='fl'>0.5</span>,<span class='fl'>0</span><span class='op'>)</span>,clamp_value<span class='op'>=</span><span class='fl'>10</span><span class='op'>)</span>
 </div><div class='img'><img src='csg_rotate-1.png' alt='' width='700' height='433' /></div><div class='input'>  
 <span class='co'>#Rotate by specifying a new up vector:</span>
@@ -216,7 +225,7 @@
                         pivot_point <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>0</span>,<span class='op'>-</span><span class='fl'>0.49</span>,<span class='op'>-</span><span class='fl'>1.5</span><span class='op'>)</span>, up <span class='op'>=</span><span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>1</span>,<span class='fl'>1</span>,<span class='fl'>0</span><span class='op'>)</span><span class='op'>)</span>,
                         material<span class='op'>=</span><span class='fu'><a href='glossy.html'>glossy</a></span><span class='op'>(</span>color<span class='op'>=</span><span class='st'>"green"</span><span class='op'>)</span><span class='op'>)</span><span class='op'>)</span> <span class='op'>%&gt;%</span> 
   <span class='fu'><a href='add_object.html'>add_object</a></span><span class='op'>(</span><span class='fu'><a href='sphere.html'>sphere</a></span><span class='op'>(</span>y<span class='op'>=</span><span class='fl'>5</span>,x<span class='op'>=</span><span class='fl'>5</span>,z<span class='op'>=</span><span class='fl'>5</span>,material<span class='op'>=</span><span class='fu'><a href='light.html'>light</a></span><span class='op'>(</span>intensity<span class='op'>=</span><span class='fl'>40</span><span class='op'>)</span><span class='op'>)</span><span class='op'>)</span> <span class='op'>%&gt;%</span> 
-  <span class='fu'><a href='render_scene.html'>render_scene</a></span><span class='op'>(</span>sample_method<span class='op'>=</span><span class='st'>"stratified"</span>,lookfrom<span class='op'>=</span><span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='op'>-</span><span class='fl'>3</span>,<span class='fl'>4</span>,<span class='fl'>10</span><span class='op'>)</span>, fov<span class='op'>=</span><span class='fl'>15</span>, 
+  <span class='fu'><a href='render_scene.html'>render_scene</a></span><span class='op'>(</span>lookfrom<span class='op'>=</span><span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='op'>-</span><span class='fl'>3</span>,<span class='fl'>4</span>,<span class='fl'>10</span><span class='op'>)</span>, fov<span class='op'>=</span><span class='fl'>15</span>, 
                lookat<span class='op'>=</span><span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>0</span>,<span class='op'>-</span><span class='fl'>0.5</span>,<span class='fl'>0</span><span class='op'>)</span>,clamp_value<span class='op'>=</span><span class='fl'>10</span><span class='op'>)</span>
 </div><div class='img'><img src='csg_rotate-2.png' alt='' width='700' height='433' /></div><div class='input'><span class='co'># }</span>
 </div></pre>
