@@ -10,7 +10,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                 Rcpp::NumericVector& light_direction, random_gen& rng) {
   if(debug_channel == 1) {
     Float depth_into_scene = 0.0;
-    for(unsigned int j = ny - 1; j >= 0; j--) {
+    for(unsigned int j = 0; j < ny; j++) {
       for(unsigned int i = 0; i < nx; i++) {
         depth_into_scene = 0;
         Float u = Float(i) / Float(nx);
@@ -29,7 +29,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
     }
   } else if(debug_channel == 2) {
     vec3 normal_map(0,0,0);
-    for(unsigned int j = ny - 1; j >= 0; j--) {
+    for(unsigned int j = 0; j < ny; j++) {
       for(unsigned int i = 0; i < nx; i++) {
         normal_map = vec3(0,0,0);
         Float u = Float(i) / Float(nx);
@@ -48,7 +48,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
     }
   } else if(debug_channel == 3) {
     vec3 uv_map(0,0,0);
-    for(unsigned int j = ny - 1; j >= 0; j--) {
+    for(unsigned int j = 0; j < ny; j++) {
       for(unsigned int i = 0; i < nx; i++) {
         uv_map = vec3(0,0,0);
         Float u = Float(i) / Float(nx);
@@ -67,7 +67,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
     }
   } else if(debug_channel == 4) {
   #ifdef DEBUGBVH
-    for(unsigned int j = ny - 1; j >= 0; j--) {
+    for(unsigned int j = 0; j < ny; j++) {
       for(unsigned int i = 0; i < nx; i++) {
         Float u = Float(i) / Float(nx);
         Float v = Float(j) / Float(ny);
@@ -85,7 +85,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
     }
   #endif
   } else if (debug_channel == 6 || debug_channel == 7) {
-    for(unsigned int j = ny - 1; j >= 0; j--) {
+    for(unsigned int j = 0; j < ny; j++) {
       for(unsigned int i = 0; i < nx; i++) {
         Float u = Float(i) / Float(nx);
         Float v = Float(j) / Float(ny);
@@ -104,7 +104,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
   } else if (debug_channel == 8) {
     std::vector<dielectric*> *mat_stack = new std::vector<dielectric*>;
     
-    for(unsigned int j = ny - 1; j >= 0; j--) {
+    for(unsigned int j = 0; j < ny; j++) {
       for(unsigned int i = 0; i < nx; i++) {
         Float u = Float(i) / Float(nx);
         Float v = Float(j) / Float(ny);
