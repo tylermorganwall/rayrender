@@ -612,17 +612,15 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
   full_array[,,2] = flipud(t(rgb_mat$g))
   full_array[,,3] = flipud(t(rgb_mat$b))
   if(debug_channel == 1) {
-    returnmat = full_array[,,1]
+    returnmat = fliplr(t(full_array[,,1]))
     returnmat[is.infinite(returnmat)] = NA
     if(is.null(filename)) {
-      if(!return_raw_array) {
-        plot_map((full_array-min(full_array,na.rm=TRUE))/(max(full_array,na.rm=TRUE) - min(full_array,na.rm=TRUE)))
-      }
-      return(invisible(full_array))
+      plot_map((returnmat-min(returnmat,na.rm=TRUE))/(max(returnmat,na.rm=TRUE) - min(returnmat,na.rm=TRUE)))
+      return(invisible(returnmat))
     } else {
-      save_png((full_array-min(full_array,na.rm=TRUE))/(max(full_array,na.rm=TRUE) - min(full_array,na.rm=TRUE)),
+      save_png((returnmat-min(returnmat,na.rm=TRUE))/(max(returnmat,na.rm=TRUE) - min(returnmat,na.rm=TRUE)),
                filename)
-      return(invisible(full_array))
+      return(invisible(returnmat))
     }
   } else if (debug_channel %in% c(2,3,4,5)) {
     if(is.null(filename)) {
