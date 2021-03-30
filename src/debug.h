@@ -69,8 +69,9 @@ inline vec3 calculate_color(const ray& r, hitable *world, random_gen &rng) {
   hit_record hrec;
   scatter_record srec;
   ray r2 = r;
+  bool invisible = false;
   if(world->hit(r2, 0.001, FLT_MAX, hrec, rng)) {
-    vec3 emit = hrec.mat_ptr->emitted(r2, hrec, hrec.u, hrec.v, hrec.p);
+    vec3 emit = hrec.mat_ptr->emitted(r2, hrec, hrec.u, hrec.v, hrec.p, invisible);
     if(emit.x() != 0 || emit.y() != 0 || emit.z() != 0) {
       return(emit);
     }
@@ -91,8 +92,9 @@ inline vec3 quick_render(const ray& r, hitable *world, random_gen &rng, vec3 lig
   hit_record hrec;
   scatter_record srec;
   ray r2 = r;
+  bool invisible = false;
   if(world->hit(r2, 0.001, FLT_MAX, hrec, rng)) {
-    vec3 emit = hrec.mat_ptr->emitted(r2, hrec, hrec.u, hrec.v, hrec.p);
+    vec3 emit = hrec.mat_ptr->emitted(r2, hrec, hrec.u, hrec.v, hrec.p, invisible);
     if(emit.x() != 0 || emit.y() != 0 || emit.z() != 0) {
       return(emit);
     }
@@ -142,7 +144,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                  Float min_variance, size_t min_adaptive_size, 
                  Rcpp::NumericMatrix& routput, Rcpp::NumericMatrix& goutput, Rcpp::NumericMatrix& boutput,
                  bool progress_bar, int sample_method, Rcpp::NumericVector& stratified_dim,
-                 bool verbose, ortho_camera& ocam, camera &cam, Float fov,
+                 bool verbose, ortho_camera& ocam, camera &cam, environment_camera &ecam, Float fov,
                  hitable_list& world, hitable_list& hlist,
                  Float clampval, size_t max_depth, size_t roulette_active,
                  Rcpp::NumericVector& light_direction, random_gen& rng);

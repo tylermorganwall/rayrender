@@ -232,7 +232,7 @@ void render_animation_rcpp(List camera_info, List scene_info, List camera_moveme
   if(hasbackground) {
     background_texture_data = stbi_loadf(background[0], &nx1, &ny1, &nn1, 0);
     background_texture = std::make_shared<image_texture>(background_texture_data, nx1, ny1, nn1, 1, 1, intensity_env);
-    background_material = std::make_shared<diffuse_light>(background_texture, 1.0);
+    background_material = std::make_shared<diffuse_light>(background_texture, 1.0, false);
     background_sphere = std::make_shared<InfiniteAreaLight>(nx1, ny1, world_radius*2, world_center,
                                                             background_texture, background_material);
     if(rotate_env != 0) {
@@ -245,13 +245,13 @@ void render_animation_rcpp(List camera_info, List scene_info, List camera_moveme
       backgroundlow = vec3(FLT_MIN,FLT_MIN,FLT_MIN);
     }
     background_texture = std::make_shared<gradient_texture>(backgroundlow, backgroundhigh, false, false);
-    background_material = std::make_shared<diffuse_light>(background_texture, 1.0);
+    background_material = std::make_shared<diffuse_light>(background_texture, 1.0, false);
     background_sphere = std::make_shared<InfiniteAreaLight>(100, 100, world_radius*2, world_center,
                                                             background_texture, background_material);
   } else {
     //Minimum intensity FLT_MIN so the CDF isn't NAN
     background_texture = std::make_shared<constant_texture>(vec3(FLT_MIN,FLT_MIN,FLT_MIN));
-    background_material = std::make_shared<diffuse_light>(background_texture, 1.0);
+    background_material = std::make_shared<diffuse_light>(background_texture, 1.0, false);
     background_sphere = std::make_shared<InfiniteAreaLight>(100, 100, world_radius*2, world_center,
                                                             background_texture, background_material);
   }
@@ -344,6 +344,9 @@ void render_animation_rcpp(List camera_info, List scene_info, List camera_moveme
       ortho_camera ocam(lookfrom, lookat, camera_up,
                         orthox, orthoy,
                         shutteropen, shutterclose);
+      environment_camera ecam(lookfrom, lookat, camera_up,
+                              shutteropen, shutterclose);
+      
       world_radius = world_radius > (lookfrom - world_center).length() ? world_radius : (lookfrom - world_center).length()*2;
       
       if(fov == 0) {
@@ -359,7 +362,7 @@ void render_animation_rcpp(List camera_info, List scene_info, List camera_moveme
                   min_variance, min_adaptive_size, 
                   routput, goutput,boutput,
                   progress_bar, sample_method, stratified_dim,
-                  verbose, ocam, cam, fov,
+                  verbose, ocam, cam, ecam, fov,
                   world, hlist,
                   clampval, max_depth, roulette_active, 
                   light_direction, rng);
@@ -387,6 +390,9 @@ void render_animation_rcpp(List camera_info, List scene_info, List camera_moveme
       ortho_camera ocam(lookfrom, lookat, camera_up,
                         orthox, orthoy,
                         shutteropen, shutterclose);
+      environment_camera ecam(lookfrom, lookat, camera_up,
+                              shutteropen, shutterclose);
+      
       world_radius = world_radius > (lookfrom - world_center).length() ? world_radius : (lookfrom - world_center).length()*2;
       
       if(fov == 0) {
@@ -402,7 +408,7 @@ void render_animation_rcpp(List camera_info, List scene_info, List camera_moveme
                  min_variance, min_adaptive_size, 
                  routput, goutput,boutput,
                  progress_bar, sample_method, stratified_dim,
-                 verbose, ocam, cam, fov,
+                 verbose, ocam, cam, ecam, fov,
                  world, hlist,
                  clampval, max_depth, roulette_active);
       List temp = List::create(_["r"] = routput, _["g"] = goutput, _["b"] = boutput);

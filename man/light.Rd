@@ -11,6 +11,7 @@ light(
   spotlight_focus = NA,
   spotlight_width = 30,
   spotlight_start_falloff = 15,
+  invisible = FALSE,
   image_texture = NA,
   image_repeat = 1,
   gradient_color = NA,
@@ -38,6 +39,8 @@ the x/y/z coordinates that the spotlight should be focused on. Only works for sp
 \item{spotlight_width}{Default `30`. Angular width of the spotlight.}
 
 \item{spotlight_start_falloff}{Default `15`. Angle at which the light starts fading in intensity.}
+
+\item{invisible}{Default `FALSE`. If `TRUE`, the light itself will be invisible.}
 
 \item{image_texture}{Default `NA`. A 3-layer RGB array or filename to be used as the texture on the surface of the object.}
 

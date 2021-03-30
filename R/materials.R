@@ -659,6 +659,7 @@ microfacet = function(color="white", roughness = 0.0001,
 #' the x/y/z coordinates that the spotlight should be focused on. Only works for spheres and rectangles.
 #' @param spotlight_width Default `30`. Angular width of the spotlight.
 #' @param spotlight_start_falloff Default `15`. Angle at which the light starts fading in intensity.
+#' @param invisible Default `FALSE`. If `TRUE`, the light itself will be invisible.
 #' @param image_texture Default `NA`. A 3-layer RGB array or filename to be used as the texture on the surface of the object.
 #' @param image_repeat Default `1`. Number of times to repeat the image across the surface.
 #' `u` and `v` repeat amount can be set independently if user passes in a length-2 vector.
@@ -697,7 +698,7 @@ microfacet = function(color="white", roughness = 0.0001,
 #' }
 light = function(color = "#ffffff", intensity = 10, importance_sample = TRUE, 
                  spotlight_focus = NA, spotlight_width = 30, spotlight_start_falloff = 15,
-                 image_texture = NA, image_repeat = 1, 
+                 invisible = FALSE, image_texture = NA, image_repeat = 1, 
                  gradient_color = NA, gradient_transpose = FALSE,
                  gradient_point_start = NA, gradient_point_end = NA, gradient_type = "hsv") {
   info = convert_color(color)
@@ -724,11 +725,16 @@ light = function(color = "#ffffff", intensity = 10, importance_sample = TRUE,
     is_world_gradient = FALSE
     gradient_point_info = NA
   }
+  if(invisible) {
+    invisible = 1
+  } else {
+    invisible = 0
+  }
   if(all(!is.na(spotlight_focus))) {
     stopifnot(length(spotlight_focus) == 3)
     spotlight_width = min(c(spotlight_width,180))
     spotlight_start_falloff = min(c(spotlight_start_falloff,90))
-    info = c(info, spotlight_focus, cospi(spotlight_width/180), cospi(spotlight_start_falloff/180))
+    info = c(info, spotlight_focus, cospi(spotlight_width/180), cospi(spotlight_start_falloff/180), invisible)
     new_tibble_row(list(type = "spotlight", 
                         properties = list(info), checkercolor=list(NA), 
                         gradient_color = list(NA), gradient_transpose = FALSE,
@@ -741,6 +747,7 @@ light = function(color = "#ffffff", intensity = 10, importance_sample = TRUE,
                         sigma = 0, glossyinfo = list(NA), bump_texture = list(NA),
                         bump_intensity = 1))
   } else {
+    info = c(info, invisible)
     new_tibble_row(list(type = "light", 
                         properties = list(info), checkercolor=list(NA), 
                         gradient_color = list(gradient_color), gradient_transpose = gradient_transpose,

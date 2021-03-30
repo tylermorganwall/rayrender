@@ -16,8 +16,8 @@ public:
   virtual Float value(const vec3& direction, random_gen& rng, Float time = 0) = 0;
   virtual Float value(const vec3& direction, Sampler* sampler, Float time = 0) = 0;
   
-  virtual vec3 generate(random_gen& rng, Float time = 0) = 0;
-  virtual vec3 generate(Sampler* sampler, Float time = 0) = 0;
+  virtual vec3 generate(random_gen& rng, bool& diffuse_bounce, Float time = 0) = 0;
+  virtual vec3 generate(Sampler* sampler, bool& diffuse_bounce, Float time = 0) = 0;
   virtual ~pdf(){};
 };
 
@@ -42,10 +42,12 @@ public:
       return(0);
     }
   } 
-  virtual vec3 generate(random_gen& rng, Float time = 0) {
+  virtual vec3 generate(random_gen& rng, bool& diffuse_bounce, Float time = 0) {
+    diffuse_bounce = true;
     return(uvw.local_to_world(rng.random_cosine_direction()));
   }
-  virtual vec3 generate(Sampler* sampler, Float time = 0) {
+  virtual vec3 generate(Sampler* sampler, bool& diffuse_bounce, Float time = 0) {
+    diffuse_bounce = true;
     return(uvw.local_to_world(rand_cosine_direction(sampler->Get2D())));
   }
   onb uvw;
@@ -67,11 +69,11 @@ public:
     vec3 wh = unit_vector(wi + wo);
     return(distribution->Pdf(wo, wi, wh) / ( 4 * dot(wo, wh) ));
   }
-  virtual vec3 generate(random_gen& rng, Float time = 0) {
+  virtual vec3 generate(random_gen& rng, bool& diffuse_bounce, Float time = 0) {
     vec3 wh = distribution->Sample_wh(wi, rng.unif_rand(), rng.unif_rand());
     return(uvw.local_to_world(Reflect(wi, wh)));
   }
-  virtual vec3 generate(Sampler* sampler, Float time = 0) {
+  virtual vec3 generate(Sampler* sampler, bool& diffuse_bounce, Float time = 0) {
     vec2 u = sampler->Get2D();
     vec3 wh = distribution->Sample_wh(wi, u.x(), u.y());
     return(uvw.local_to_world(Reflect(wi, wh)));
@@ -103,20 +105,22 @@ public:
     vec3 wh = unit_vector(wi + wo);
     return(0.5f * (AbsCosTheta(wi) * M_1_PI + distribution->Pdf(wo, wi, wh) / (4 * dot(wo, wh))));
   }
-  virtual vec3 generate(random_gen& rng, Float time = 0) {
+  virtual vec3 generate(random_gen& rng, bool& diffuse_bounce, Float time = 0) {
     if(rng.unif_rand() < 0.5) {
       vec3 wh = distribution->Sample_wh(wi, rng.unif_rand(), rng.unif_rand());
       return(uvw.local_to_world(Reflect(wi, wh)));
     } else {
+      diffuse_bounce = true;
       return(uvw.local_to_world(rng.random_cosine_direction()));
     }
   }
-  virtual vec3 generate(Sampler* sampler, Float time = 0) {
+  virtual vec3 generate(Sampler* sampler, bool& diffuse_bounce, Float time = 0) {
     if(sampler->Get1D() < 0.5) {
       vec2 u = sampler->Get2D();
       vec3 wh = distribution->Sample_wh(wi, u.x(), u.y());
       return(uvw.local_to_world(Reflect(wi, wh)));
     } else {
+      diffuse_bounce = true;
       return(uvw.local_to_world(rand_cosine_direction(sampler->Get2D())));
     }
   }
@@ -149,8 +153,8 @@ class hair_pdf : public pdf {
     Float value(const vec3& direction, random_gen& rng, Float time = 0);
     Float value(const vec3& direction, Sampler* sampler, Float time = 0);
     
-    virtual vec3 generate(random_gen& rng, Float time = 0);
-    virtual vec3 generate(Sampler* sampler, Float time = 0);
+    virtual vec3 generate(random_gen& rng, bool& diffuse_bounce, Float time = 0);
+    virtual vec3 generate(Sampler* sampler, bool& diffuse_bounce, Float time = 0);
     onb uvw;
     vec3 wi;
     vec3 wo;
@@ -172,10 +176,12 @@ public:
   virtual Float value(const vec3& direction, Sampler* sampler, Float time = 0) {
     return(ptr->pdf_value(o, direction, sampler, time));
   }
-  virtual vec3 generate(random_gen& rng, Float time = 0) {
+  virtual vec3 generate(random_gen& rng, bool& diffuse_bounce, Float time = 0) {
+    diffuse_bounce = true;
     return(ptr->random(o, rng, time)); 
   }
-  virtual vec3 generate(Sampler* sampler, Float time = 0) {
+  virtual vec3 generate(Sampler* sampler, bool& diffuse_bounce, Float time = 0) {
+    diffuse_bounce = true;
     return(ptr->random(o, sampler, time)); 
   }
   hitable_list *ptr;
@@ -185,8 +191,8 @@ public:
 class mixture_pdf : public pdf {
 public:
   mixture_pdf(pdf *p0, pdf *p1) {
-    p[0] = p0;
-    p[1] = p1;
+    p[0] = p0; //Importance Sampling List
+    p[1] = p1; //Surface PDF
   }
   virtual Float value(const vec3& direction, random_gen& rng, Float time = 0) {
     return(0.5 * p[0]->value(direction, rng, time) + 0.5 * p[1]->value(direction, rng, time));
@@ -194,18 +200,18 @@ public:
   virtual Float value(const vec3& direction, Sampler* sampler, Float time = 0) {
     return(0.5 * p[0]->value(direction, sampler, time) + 0.5 * p[1]->value(direction, sampler, time));
   }
-  virtual vec3 generate(random_gen& rng, Float time = 0) {
+  virtual vec3 generate(random_gen& rng, bool& diffuse_bounce, Float time = 0) {
     if(rng.unif_rand() < 0.5) {
-      return(p[0]->generate(rng, time));
+      return(p[0]->generate(rng, diffuse_bounce, time));
     } else {
-      return(p[1]->generate(rng, time));
+      return(p[1]->generate(rng, diffuse_bounce, time));
     } 
   }
-  virtual vec3 generate(Sampler* sampler, Float time = 0) {
+  virtual vec3 generate(Sampler* sampler, bool& diffuse_bounce, Float time = 0) {
     if(sampler->Get1D() < 0.5) {
-      return(p[0]->generate(sampler, time));
+      return(p[0]->generate(sampler, diffuse_bounce, time));
     } else {
-      return(p[1]->generate(sampler, time));
+      return(p[1]->generate(sampler, diffuse_bounce, time));
     } 
   }
   pdf *p[2];

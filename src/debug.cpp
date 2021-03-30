@@ -4,7 +4,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                 Float min_variance, size_t min_adaptive_size, 
                 Rcpp::NumericMatrix& routput, Rcpp::NumericMatrix& goutput, Rcpp::NumericMatrix& boutput,
                 bool progress_bar, int sample_method, Rcpp::NumericVector& stratified_dim,
-                bool verbose, ortho_camera& ocam, camera &cam, Float fov,
+                bool verbose, ortho_camera& ocam, camera &cam, environment_camera &ecam, Float fov,
                 hitable_list& world, hitable_list& hlist,
                 Float clampval, size_t max_depth, size_t roulette_active,
                 Rcpp::NumericVector& light_direction, random_gen& rng) {
@@ -16,10 +16,12 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
         Float u = Float(i) / Float(nx);
         Float v = Float(j) / Float(ny);
         ray r;
-        if(fov != 0) {
+        if(fov != 0 && fov != 360) {
           r = cam.get_ray(u,v, vec3(0,0,0), 0);
-        } else {
+        } else if (fov == 0){
           r = ocam.get_ray(u,v, rng.unif_rand());
+        } else {
+          r = ecam.get_ray(u,v, rng.unif_rand());
         }
         depth_into_scene = calculate_depth(r, &world, rng);
         routput(i,j) = depth_into_scene;
@@ -35,10 +37,12 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
         Float u = Float(i) / Float(nx);
         Float v = Float(j) / Float(ny);
         ray r;
-        if(fov != 0) {
+        if(fov != 0 && fov != 360) {
           r = cam.get_ray(u,v, vec3(0,0,0), 0);
-        } else {
+        } else if (fov == 0){
           r = ocam.get_ray(u,v, rng.unif_rand());
+        } else {
+          r = ecam.get_ray(u,v, rng.unif_rand());
         }
         normal_map = calculate_normals(r, &world, rng);
         routput(i,j) = normal_map.x();
@@ -54,10 +58,12 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
         Float u = Float(i) / Float(nx);
         Float v = Float(j) / Float(ny);
         ray r;
-        if(fov != 0) {
+        if(fov != 0 && fov != 360) {
           r = cam.get_ray(u,v, vec3(0,0,0), 0);
-        } else {
+        } else if (fov == 0){
           r = ocam.get_ray(u,v, rng.unif_rand());
+        } else {
+          r = ecam.get_ray(u,v, rng.unif_rand());
         }
         uv_map = calculate_uv(r, &world, rng);
         routput(i,j) = uv_map.x();
@@ -72,10 +78,12 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
         Float u = Float(i) / Float(nx);
         Float v = Float(j) / Float(ny);
         ray r;
-        if(fov != 0) {
+        if(fov != 0 && fov != 360) {
           r = cam.get_ray(u,v, vec3(0,0,0), 0);
-        } else {
+        } else if (fov == 0){
           r = ocam.get_ray(u,v, rng.unif_rand());
+        } else {
+          r = ecam.get_ray(u,v, rng.unif_rand());
         }
         double bvh_intersections = debug_bvh(r, &world, rng);
         routput(i,j) = bvh_intersections;
@@ -90,10 +98,12 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
         Float u = Float(i) / Float(nx);
         Float v = Float(j) / Float(ny);
         ray r;
-        if(fov != 0) {
+        if(fov != 0 && fov != 360) {
           r = cam.get_ray(u,v, vec3(0,0,0), 0);
-        } else {
+        } else if (fov == 0){
           r = ocam.get_ray(u,v, rng.unif_rand());
+        } else {
+          r = ecam.get_ray(u,v, rng.unif_rand());
         }
         vec3 dpd_val = calculate_dpduv(r, &world, rng, debug_channel == 6);
         routput(i,j) = dpd_val.x();
@@ -109,10 +119,12 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
         Float u = Float(i) / Float(nx);
         Float v = Float(j) / Float(ny);
         ray r;
-        if(fov != 0) {
+        if(fov != 0 && fov != 360) {
           r = cam.get_ray(u,v, vec3(0,0,0), 0);
-        } else {
+        } else if (fov == 0){
           r = ocam.get_ray(u,v, rng.unif_rand());
+        } else {
+          r = ecam.get_ray(u,v, rng.unif_rand());
         }
         r.pri_stack = mat_stack;
         vec3 dpd_val = calculate_color(r, &world, rng);
@@ -130,17 +142,19 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
     RcppThread::ThreadPool pool(numbercores);
     auto worker = [&routput, &goutput, &boutput,
                    nx, ny,  fov, light_dir, n_exp,
-                   &cam, &ocam, &world] (int j) {
+                   &cam, &ocam, &ecam, &world] (int j) {
                      std::vector<dielectric*> *mat_stack = new std::vector<dielectric*>;
                      random_gen rng(j);
                      for(unsigned int i = 0; i < nx; i++) {
                        Float u = Float(i) / Float(nx);
                        Float v = Float(j) / Float(ny);
                        ray r;
-                       if(fov != 0) {
+                       if(fov != 0 && fov != 360) {
                          r = cam.get_ray(u,v, vec3(0,0,0), 0);
-                       } else {
+                       } else if (fov == 0){
                          r = ocam.get_ray(u,v, rng.unif_rand());
+                       } else {
+                         r = ecam.get_ray(u,v, rng.unif_rand());
                        }
                        r.pri_stack = mat_stack;
                        vec3 qr = quick_render(r, &world, rng, light_dir, n_exp);

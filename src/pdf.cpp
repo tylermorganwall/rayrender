@@ -105,7 +105,8 @@ Float hair_pdf::value(const vec3& direction, Sampler* sampler, Float time) {
 }
 
 
-vec3 hair_pdf::generate(random_gen& rng, Float time) {
+vec3 hair_pdf::generate(random_gen& rng, bool& diffuse_bounce, Float time) {
+  diffuse_bounce = true;
   Float sinThetaO = wo.x();
   Float cosThetaO = SafeSqrt(1 - Sqr(sinThetaO));
   Float phiO = std::atan2(wo.z(), wo.y());
@@ -163,7 +164,8 @@ vec3 hair_pdf::generate(random_gen& rng, Float time) {
                                  cosThetaI * std::sin(phiI))));
 }
 
-vec3 hair_pdf::generate(Sampler* sampler, Float time) {
+vec3 hair_pdf::generate(Sampler* sampler, bool& diffuse_bounce, Float time) {
+  diffuse_bounce = true;
   Float sinThetaO = wo.x();
   Float cosThetaO = SafeSqrt(1 - Sqr(sinThetaO));
   Float phiO = std::atan2(wo.z(), wo.y());

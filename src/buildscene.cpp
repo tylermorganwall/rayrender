@@ -144,8 +144,10 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
       prop_len = 3;
     } else if (type(i) == 3) {
       prop_len = 7;
+    } else if (type(i) == 5) {
+      prop_len = 3;
     } else if (type(i) == 8) {
-      prop_len = 7;
+      prop_len = 8;
     } else if (type(i) == 9) {
       prop_len = 6;
     }
@@ -294,7 +296,8 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
         } else {
           light_tex = std::make_shared<constant_texture>(vec3(tempvector(0),tempvector(1),tempvector(2)));
         }
-        tex = std::make_shared<diffuse_light>(light_tex, lightintensity(i));
+        bool is_invisible = tempvector(3) == 1;
+        tex = std::make_shared<diffuse_light>(light_tex, lightintensity(i), is_invisible);
       } else if (type(i) == 6) {
         MicrofacetDistribution *dist;
         if(temp_glossy(0) == 1) {
@@ -392,8 +395,9 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
                            vec3(temp_glossy(6),temp_glossy(7),temp_glossy(8)));
         }
       } else if (type(i) == 8) {
+        bool is_invisible = tempvector(8) == 1;
         tex = std::make_shared<spot_light>(std::make_shared<constant_texture>(vec3(tempvector(0),tempvector(1),tempvector(2))*lightintensity(i)),
-                             vec3(tempvector(3),tempvector(4),tempvector(5)), tempvector(6),tempvector(7));
+                             vec3(tempvector(3),tempvector(4),tempvector(5)), tempvector(6),tempvector(7), is_invisible);
       } else if (type(i) == 9) {
         tex = std::make_shared<hair>(vec3(tempvector(0),tempvector(1),tempvector(2)), 
                        tempvector(3),tempvector(4),tempvector(5),tempvector(6));
@@ -963,8 +967,10 @@ std::shared_ptr<hitable> build_imp_sample(IntegerVector& type,
     prop_len = 7;
   } else if(type(i) == 2) {
     prop_len = 3;
+  } else if(type(i) == 5) {
+    prop_len = 3;
   } else if (type(i) == 8) {
-    prop_len = 7;
+    prop_len = 8;
   } else if (type(i) == 9) {
     prop_len = 6;
   }

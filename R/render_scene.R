@@ -5,8 +5,9 @@
 #' @param scene Tibble of object locations and properties. 
 #' @param width Default `400`. Width of the render, in pixels.
 #' @param height Default `400`. Height of the render, in pixels.
-#' @param fov Default `20`. Field of view, in degrees. If this is zero, the camera will use an orthographic projection. The size of the plane
-#' used to create the orthographic projection is given in argument `ortho_dimensions`.
+#' @param fov Default `20`. Field of view, in degrees. If this is `0`, the camera will use an orthographic projection. The size of the plane
+#' used to create the orthographic projection is given in argument `ortho_dimensions`. From `0` to `180`, this uses a perspective
+#' projections. If this value is `360`, a 360 degree environment image will be rendered. 
 #' @param samples Default `100`. The maximum number of samples for each pixel. If this is a length-2
 #' vector and the `sample_method` is `stratified`, this will control the number of strata in each dimension.
 #' The total number of samples in this case will be the product of the two numbers.
@@ -148,6 +149,22 @@
 #' render_scene(scene,lookfrom = c(7,1.5,10),lookat = c(0,0.5,0),fov=15,
 #'              aperture = 0.5,parallel=TRUE,samples=500)
 #' }
+#' 
+#'#We can also capture a 360 environment image by setting `fov = 360` (can be used for VR)
+#'\donttest{
+#' generate_cornell() %>%
+#'   add_object(ellipsoid(x=555/2,y=100,z=555/2,a=50,b=100,c=50, material = metal(color="lightblue"))) %>%
+#'   add_object(cube(x=100,y=130/2,z=200,xwidth = 130,ywidth=130,zwidth = 130,
+#'                   material=diffuse(checkercolor="purple", checkerperiod = 30),angle=c(0,10,0))) %>%
+#'   add_object(pig(x=100,y=190,z=200,scale=40,angle=c(0,30,0))) %>%
+#'   add_object(sphere(x=420,y=555/8,z=100,radius=555/8,
+#'                     material = dielectric(color="orange"))) %>%
+#'   add_object(xz_rect(x=555/2,z=555/2, y=1,xwidth=555,zwidth=555,
+#'                      material = glossy(checkercolor = "white",
+#'                                        checkerperiod=10,color="dodgerblue"))) %>%
+#'   render_scene(lookfrom=c(278,278,30), lookat=c(278,278,500), clamp_value=10,
+#'                fov = 360,  samples = 500, width=800, height=400)
+#'}
 #'                  
 #'#Spin the camera around the scene, decreasing the number of samples to render faster. To make 
 #'#an animation, specify the a filename in `render_scene` for each frame and use the `av` package

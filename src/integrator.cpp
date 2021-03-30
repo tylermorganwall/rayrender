@@ -4,7 +4,7 @@ void pathtracer(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_c
                 Float min_variance, size_t min_adaptive_size, 
                 Rcpp::NumericMatrix& routput, Rcpp::NumericMatrix& goutput, Rcpp::NumericMatrix& boutput,
                 bool progress_bar, int sample_method, Rcpp::NumericVector& stratified_dim,
-                bool verbose, ortho_camera& ocam, camera &cam, Float fov,
+                bool verbose, ortho_camera& ocam, camera &cam, environment_camera &ecam, Float fov,
                 hitable_list& world, hitable_list& hlist,
                 Float clampval, size_t max_depth, size_t roulette_active) {
   RProgress::RProgress pb_sampler("Generating Samples [:bar] :percent%");
@@ -72,7 +72,7 @@ void pathtracer(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_c
     auto worker = [&adaptive_pixel_sampler,
                    nx, ny, s, sample_method,
                    &rngs, fov, &samplers,
-                   &cam, &ocam, &world, &hlist,
+                   &cam, &ocam, &ecam, &world, &hlist,
                    clampval, max_depth, roulette_active] (int k) {
                      int nx_begin = adaptive_pixel_sampler.pixel_chunks[k].startx;
                      int ny_begin = adaptive_pixel_sampler.pixel_chunks[k].starty;
@@ -87,12 +87,14 @@ void pathtracer(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_c
                          Float u = (Float(i) + u2.x()) / Float(nx);
                          Float v = (Float(j) + u2.y()) / Float(ny);
                          ray r; 
-                         if(fov != 0) {
+                         if(fov != 0 && fov != 360) {
                            r = cam.get_ray(u, v,rand_to_unit(samplers[index]->Get2D()),
                                            samplers[index]->Get1D());
                            
-                         } else {
+                         } else if (fov == 0) {
                            r = ocam.get_ray(u,v, samplers[index]->Get1D());
+                         } else {
+                           r = ecam.get_ray(u,v, samplers[index]->Get1D());
                          }
                          r.pri_stack = mat_stack;
                          

@@ -150,9 +150,13 @@ List render_scene_rcpp(List camera_info, List scene_info) {
   camera cam(lookfrom, lookat, vec3(camera_up(0),camera_up(1),camera_up(2)), fov, float(nx)/float(ny), 
              aperture, dist_to_focus,
              shutteropen, shutterclose);
+  
   ortho_camera ocam(lookfrom, lookat, vec3(camera_up(0),camera_up(1),camera_up(2)),
                     ortho_dimensions(0), ortho_dimensions(1),
                     shutteropen, shutterclose);
+  
+  environment_camera ecam(lookfrom, lookat, vec3(camera_up(0),camera_up(1),camera_up(2)),
+                          shutteropen, shutterclose);
   int nx1, ny1, nn1;
   auto start = std::chrono::high_resolution_clock::now();
   if(verbose) {
@@ -259,7 +263,7 @@ List render_scene_rcpp(List camera_info, List scene_info) {
   if(hasbackground) {
     background_texture_data = stbi_loadf(background[0], &nx1, &ny1, &nn1, 0);
     background_texture = std::make_shared<image_texture>(background_texture_data, nx1, ny1, nn1, 1, 1, intensity_env);
-    background_material = std::make_shared<diffuse_light>(background_texture, 1.0);
+    background_material = std::make_shared<diffuse_light>(background_texture, 1.0, false);
     background_sphere = std::make_shared<InfiniteAreaLight>(nx1, ny1, world_radius*2, world_center,
                                               background_texture, background_material);
     if(rotate_env != 0) {
@@ -272,13 +276,13 @@ List render_scene_rcpp(List camera_info, List scene_info) {
       backgroundlow = vec3(FLT_MIN,FLT_MIN,FLT_MIN);
     }
     background_texture = std::make_shared<gradient_texture>(backgroundlow, backgroundhigh, false, false);
-    background_material = std::make_shared<diffuse_light>(background_texture, 1.0);
+    background_material = std::make_shared<diffuse_light>(background_texture, 1.0, false);
     background_sphere = std::make_shared<InfiniteAreaLight>(100, 100, world_radius*2, world_center,
                                               background_texture, background_material);
   } else {
     //Minimum intensity FLT_MIN so the CDF isn't NAN
     background_texture = std::make_shared<constant_texture>(vec3(FLT_MIN,FLT_MIN,FLT_MIN));
-    background_material = std::make_shared<diffuse_light>(background_texture, 1.0);
+    background_material = std::make_shared<diffuse_light>(background_texture, 1.0, false);
     background_sphere = std::make_shared<InfiniteAreaLight>(100, 100, world_radius*2, world_center,
                                               background_texture, background_material);
   }
@@ -350,7 +354,7 @@ List render_scene_rcpp(List camera_info, List scene_info) {
                 min_variance, min_adaptive_size, 
                 routput, goutput,boutput,
                 progress_bar, sample_method, stratified_dim,
-                verbose, ocam, cam, fov,
+                verbose, ocam, cam, ecam, fov,
                 world, hlist,
                 clampval, max_depth, roulette_active, 
                 light_direction, rng);
@@ -359,7 +363,7 @@ List render_scene_rcpp(List camera_info, List scene_info) {
                min_variance, min_adaptive_size, 
                routput, goutput,boutput,
                progress_bar, sample_method, stratified_dim,
-               verbose, ocam, cam, fov,
+               verbose, ocam, cam, ecam, fov,
                world, hlist,
                clampval, max_depth, roulette_active);
   }

@@ -96,7 +96,7 @@ class material {
     virtual vec3 f(const ray& r_in, const hit_record& rec, const ray& scattered) const {
       return(vec3(0,0,0));
     }
-    virtual vec3 emitted(const ray& r_in, const hit_record& rec, Float u, Float v, const vec3& p) const {
+    virtual vec3 emitted(const ray& r_in, const hit_record& rec, Float u, Float v, const vec3& p, bool& is_invisible) {
       return(vec3(0,0,0));
     }
     virtual vec3 get_albedo(const ray& r_in, const hit_record& rec) const {
@@ -109,40 +109,10 @@ class material {
 class lambertian : public material {
   public: 
     lambertian(std::shared_ptr<texture> a) : albedo(a) {}
-    vec3 f(const ray& r_in, const hit_record& rec, const ray& scattered) const {
-      //unit_vector(scattered.direction()) == wo
-      //r_in.direction() == wi
-      vec3 wi = unit_vector(scattered.direction());
-      Float cosine = dot(rec.normal, wi);
-      //Shadow terminator if bump map
-      Float G = 1.0f;
-      if(rec.has_bump) {
-        Float NsNlight = dot(rec.bump_normal, wi);
-        Float NsNg = dot(rec.bump_normal, rec.normal);
-        G = NsNlight > 0.0 && NsNg > 0.0 ? std::fmin(1.0, dot(wi, rec.normal) / (NsNlight * NsNg)) : 0;
-        G = G > 0.0f ? -G * G * G + G * G + G : 0.0f;
-        cosine = dot(rec.bump_normal, wi);
-      }
-      if(cosine < 0) {
-        cosine = 0;
-      }
-      return(G * albedo->value(rec.u, rec.v, rec.p) * cosine * M_1_PI);
-    }
-    bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng) {
-      srec.is_specular = false;
-      srec.attenuation = albedo->value(hrec.u, hrec.v, hrec.p);
-      srec.pdf_ptr = new cosine_pdf(hrec.normal);
-      return(true);
-    }
-    bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler) {
-      srec.is_specular = false;
-      srec.attenuation = albedo->value(hrec.u, hrec.v, hrec.p);
-      srec.pdf_ptr = new cosine_pdf(hrec.normal);
-      return(true);
-    }
-    vec3 get_albedo(const ray& r_in, const hit_record& rec) const {
-      return(albedo->value(rec.u, rec.v, rec.p));
-    }
+    vec3 f(const ray& r_in, const hit_record& rec, const ray& scattered) const;
+    bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng);
+    bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler);
+    vec3 get_albedo(const ray& r_in, const hit_record& rec) const;
     
     std::shared_ptr<texture> albedo;
 };
@@ -152,41 +122,9 @@ class metal : public material {
     metal(std::shared_ptr<texture> a, Float f, vec3 eta, vec3 k) : albedo(a), eta(eta), k(k) { 
       if (f < 1) fuzz = f; else fuzz = 1;
     }
-    virtual bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng) {
-      vec3 normal = !hrec.has_bump ? hrec.normal : hrec.bump_normal;
-      vec3 wi = -unit_vector(r_in.direction());
-      vec3 reflected = Reflect(wi,unit_vector(normal));
-      Float cosine = AbsDot(unit_vector(reflected), unit_vector(normal));
-      if(cosine < 0) {
-        cosine = 0;
-      }
-      vec3 offset_p = offset_ray(hrec.p-r_in.A, hrec.normal) + r_in.A;
-      
-      srec.specular_ray = ray(offset_p, reflected + fuzz * rng.random_in_unit_sphere(), r_in.pri_stack, r_in.time());
-      srec.attenuation = albedo->value(hrec.u, hrec.v, hrec.p) * FrCond(cosine, eta, k);
-      srec.is_specular = true;
-      srec.pdf_ptr = 0;
-      return(true);
-    }
-    virtual bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler) {
-      vec3 normal = !hrec.has_bump ? hrec.normal : hrec.bump_normal;
-      vec3 wi = -unit_vector(r_in.direction());
-      vec3 reflected = Reflect(wi,unit_vector(normal));
-      Float cosine = AbsDot(unit_vector(reflected), unit_vector(normal));
-      if(cosine < 0) {
-        cosine = 0;
-      }
-      vec3 offset_p = offset_ray(hrec.p-r_in.A, hrec.normal) + r_in.A;
-      
-      srec.specular_ray = ray(offset_p, reflected + fuzz * rand_to_unit(sampler->Get2D()), r_in.pri_stack, r_in.time());
-      srec.attenuation = albedo->value(hrec.u, hrec.v, hrec.p) * FrCond(cosine, eta, k);
-      srec.is_specular = true;
-      srec.pdf_ptr = 0;
-      return(true);
-    }
-    vec3 get_albedo(const ray& r_in, const hit_record& rec) const {
-      return(albedo->value(rec.u, rec.v, rec.p));
-    }
+    virtual bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng);
+    virtual bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler);
+    vec3 get_albedo(const ray& r_in, const hit_record& rec) const;
     std::shared_ptr<texture> albedo;
     vec3 eta, k;
     Float fuzz;
@@ -212,91 +150,51 @@ class dielectric : public material {
 
 class diffuse_light : public material {
 public:
-  diffuse_light(std::shared_ptr<texture>  a, Float intensity) : emit(a), intensity(intensity) {}
-  ~diffuse_light() {
-    // if(emit) delete emit;
-  }
-  virtual bool scatter(const ray& r_in, const hit_record& rec, scatter_record& srec, random_gen& rng) {
+  diffuse_light(std::shared_ptr<texture>  a, Float intensity, bool invisible) : 
+    emit(a), intensity(intensity), invisible(invisible) {}
+  ~diffuse_light() {}
+  bool scatter(const ray& r_in, const hit_record& rec, scatter_record& srec, random_gen& rng) {
     return(false);
   }
-  virtual bool scatter(const ray& r_in, const hit_record& rec, scatter_record& srec, Sampler* sampler) {
+  bool scatter(const ray& r_in, const hit_record& rec, scatter_record& srec, Sampler* sampler) {
     return(false);
   }
-  virtual vec3 emitted(const ray& r_in, const hit_record& rec, Float u, Float v, const vec3& p) const {
-    if(dot(rec.normal, r_in.direction()) < 0.0) {
-      return(emit->value(u,v,p) * intensity);
-    } else {
-      return(vec3(0,0,0));
-    }
-  }
-  vec3 get_albedo(const ray& r_in, const hit_record& rec) const {
-    return(emit->value(rec.u, rec.v, rec.p));
-  }
+  vec3 emitted(const ray& r_in, const hit_record& rec, Float u, Float v, const vec3& p, bool& is_invisible);
+  vec3 get_albedo(const ray& r_in, const hit_record& rec) const;
   std::shared_ptr<texture>  emit;
   Float intensity;
+  bool invisible;
 };
 
 class spot_light : public material {
   public:
-    spot_light(std::shared_ptr<texture>  a, vec3 dir, Float cosTotalWidth, Float cosFalloffStart) : 
-    emit(a), spot_direction(unit_vector(dir)), cosTotalWidth(cosTotalWidth), cosFalloffStart(cosFalloffStart) {}
-    ~spot_light() {
-      // if(emit) delete emit;
-    }
-    virtual bool scatter(const ray& r_in, const hit_record& rec, scatter_record& srec, random_gen& rng) {
+    spot_light(std::shared_ptr<texture>  a, vec3 dir, Float cosTotalWidth, Float cosFalloffStart, bool invisible) : 
+      emit(a), spot_direction(unit_vector(dir)), cosTotalWidth(cosTotalWidth), 
+      cosFalloffStart(cosFalloffStart), invisible(invisible) {}
+    ~spot_light() {}
+    bool scatter(const ray& r_in, const hit_record& rec, scatter_record& srec, random_gen& rng) {
       return(false);
     }
-    virtual bool scatter(const ray& r_in, const hit_record& rec, scatter_record& srec, Sampler* sampler) {
+    bool scatter(const ray& r_in, const hit_record& rec, scatter_record& srec, Sampler* sampler) {
       return(false);
     }
-    virtual vec3 emitted(const ray& r_in, const hit_record& rec, Float u, Float v, const vec3& p) const {
-      if(dot(rec.normal, r_in.direction()) < 0.0) {
-        return(falloff(r_in.origin() - rec.p) * emit->value(u,v,p) );
-      } else {
-        return(vec3(0,0,0));
-      }
-    }
-    Float falloff(const vec3 &w) const {
-      Float cosTheta = dot(spot_direction, unit_vector(w));
-      if (cosTheta < cosTotalWidth) {
-        return(0);
-      }
-      if (cosTheta > cosFalloffStart) {
-        return(1);
-      }
-      Float delta = (cosTheta - cosTotalWidth) /(cosFalloffStart - cosTotalWidth);
-      return((delta * delta) * (delta * delta));
-    }
-    vec3 get_albedo(const ray& r_in, const hit_record& rec) const {
-      return(emit->value(rec.u, rec.v, rec.p));
-    }
+    vec3 emitted(const ray& r_in, const hit_record& rec, Float u, Float v, const vec3& p, bool& is_invisible);
+    Float falloff(const vec3 &w) const;
+    vec3 get_albedo(const ray& r_in, const hit_record& rec) const;
     std::shared_ptr<texture>  emit;
     vec3 spot_direction;
     const Float cosTotalWidth, cosFalloffStart;
+    bool invisible;
 };
 
 class isotropic : public material {
 public:
   isotropic(std::shared_ptr<texture> a) : albedo(a) {}
   ~isotropic() {}
-  virtual bool scatter(const ray& r_in, const hit_record& rec, scatter_record& srec, random_gen& rng) {
-    srec.is_specular = true;
-    srec.specular_ray = ray(rec.p, rng.random_in_unit_sphere(), r_in.pri_stack);
-    srec.attenuation = albedo->value(rec.u,rec.v,rec.p);
-    return(true);
-  }
-  virtual bool scatter(const ray& r_in, const hit_record& rec, scatter_record& srec, Sampler* sampler) {
-    srec.is_specular = true;
-    srec.specular_ray = ray(rec.p, rand_to_sphere(1, 1, sampler->Get2D()), r_in.pri_stack);
-    srec.attenuation = albedo->value(rec.u,rec.v,rec.p);
-    return(true);
-  }
-  vec3 f(const ray& r_in, const hit_record& rec, const ray& scattered) const {
-    return(albedo->value(rec.u,rec.v,rec.p) * 0.25 * M_1_PI);
-  }
-  vec3 get_albedo(const ray& r_in, const hit_record& rec) const {
-    return(albedo->value(rec.u, rec.v, rec.p));
-  }
+  virtual bool scatter(const ray& r_in, const hit_record& rec, scatter_record& srec, random_gen& rng);
+  virtual bool scatter(const ray& r_in, const hit_record& rec, scatter_record& srec, Sampler* sampler);
+  vec3 f(const ray& r_in, const hit_record& rec, const ray& scattered) const;
+  vec3 get_albedo(const ray& r_in, const hit_record& rec) const;
   std::shared_ptr<texture> albedo;
 };
 
@@ -307,61 +205,11 @@ public:
     A = 1.0f - (sigma2 / (2.0f * (sigma2 + 0.33f)));
     B = 0.45f * sigma2 / (sigma2 + 0.09f);
   }
-  ~orennayar() {
-    // if(albedo) delete albedo;
-  }
-  bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng) {
-    srec.is_specular = false;
-    srec.attenuation = albedo->value(hrec.u, hrec.v, hrec.p);
-    srec.pdf_ptr = new cosine_pdf(hrec.normal);
-    return(true);
-  }
-  bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler) {
-    srec.is_specular = false;
-    srec.attenuation = albedo->value(hrec.u, hrec.v, hrec.p);
-    srec.pdf_ptr = new cosine_pdf(hrec.normal);
-    return(true);
-  }
-vec3 f(const ray& r_in, const hit_record& rec, const ray& scattered) const {
-    onb uvw;
-    if(!rec.has_bump) {
-      uvw.build_from_w(rec.normal);
-    } else {
-      uvw.build_from_w(rec.bump_normal);
-    }
-    vec3 wi = -unit_vector(uvw.world_to_local(r_in.direction()));
-    vec3 wo = unit_vector(uvw.world_to_local(scattered.direction()));
-
-    Float cosine = wo.z();
-    
-    if(cosine < 0) {
-      cosine = 0;
-    }
-    
-    Float sinThetaI = SinTheta(wi);
-    Float sinThetaO = SinTheta(wo);
-    Float maxCos = 0;
-    if(sinThetaI > 1e-4 && sinThetaO > 1e-4) {
-      Float sinPhiI = SinPhi(wi);
-      Float cosPhiI = CosPhi(wi);
-      Float sinPhiO = SinPhi(wo);
-      Float cosPhiO = CosPhi(wo);
-      Float dCos = cosPhiI * cosPhiO + sinPhiI * sinPhiO;
-      maxCos = std::fmax((Float)0, dCos);
-    }
-    Float sinAlpha, tanBeta;
-    if(AbsCosTheta(wi) > AbsCosTheta(wo)) {
-      sinAlpha = sinThetaO;
-      tanBeta = sinThetaI / AbsCosTheta(wi);
-    } else {
-      sinAlpha = sinThetaI;
-      tanBeta = sinThetaO / AbsCosTheta(wo);
-    }
-    return(albedo->value(rec.u, rec.v, rec.p) * (A + B * maxCos * sinAlpha * tanBeta ) * cosine * M_1_PI );
-  }
-  vec3 get_albedo(const ray& r_in, const hit_record& rec) const {
-    return(albedo->value(rec.u, rec.v, rec.p));
-  }
+  ~orennayar() {}
+  bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng);
+  bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler);
+  vec3 f(const ray& r_in, const hit_record& rec, const ray& scattered) const;
+  vec3 get_albedo(const ray& r_in, const hit_record& rec) const;
   Float A, B;
   std::shared_ptr<texture> albedo;
 };
@@ -372,59 +220,13 @@ public:
                        vec3 eta, vec3 k)
     : albedo(a), distribution(distribution), eta(eta), k(k) {}
   ~MicrofacetReflection() {
-    // if(albedo) delete albedo;
     if(distribution) delete distribution;
   }
   
-  bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng) {
-    srec.is_specular = false;
-    srec.attenuation = albedo->value(hrec.u, hrec.v, hrec.p);
-    if(!hrec.has_bump) {
-      srec.pdf_ptr = new micro_pdf(hrec.normal, r_in.direction(), distribution);
-    } else {
-      srec.pdf_ptr = new micro_pdf(hrec.bump_normal, r_in.direction(), distribution);
-    }
-    return(true);
-  }
-  
-  bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler) {
-    srec.is_specular = false;
-    srec.attenuation = albedo->value(hrec.u, hrec.v, hrec.p);
-    if(!hrec.has_bump) {
-      srec.pdf_ptr = new micro_pdf(hrec.normal, r_in.direction(), distribution);
-    } else {
-      srec.pdf_ptr = new micro_pdf(hrec.bump_normal, r_in.direction(), distribution);
-    }
-    return(true);
-  }
-
-  vec3 f(const ray& r_in, const hit_record& rec, const ray& scattered) const {
-    onb uvw;
-    if(!rec.has_bump) {
-      uvw.build_from_w(rec.normal);
-    } else {
-      uvw.build_from_w(rec.bump_normal);
-    }
-    vec3 wi = -unit_vector(uvw.world_to_local(r_in.direction()));
-    vec3 wo = unit_vector(uvw.world_to_local(scattered.direction()));
-    
-    Float cosThetaO = AbsCosTheta(wo);
-    Float cosThetaI = AbsCosTheta(wi);
-    vec3 normal = unit_vector(wi + wo);
-    if (cosThetaI == 0 || cosThetaO == 0) {
-      return(vec3(0,0,0));
-    }
-    if (normal.x() == 0 && normal.y() == 0 && normal.z() == 0) {
-      return(vec3(0,0,0));
-    }
-    vec3 F = FrCond(cosThetaO, eta, k);
-    Float G = distribution->G(wo,wi,normal);
-    Float D = distribution->D(normal);
-    return(albedo->value(rec.u, rec.v, rec.p) * F * G * D  * cosThetaI / (4 * CosTheta(wo) * CosTheta(wi) ));
-  }
-  vec3 get_albedo(const ray& r_in, const hit_record& rec) const {
-    return(albedo->value(rec.u, rec.v, rec.p));
-  }
+  bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng);
+  bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler);
+  vec3 f(const ray& r_in, const hit_record& rec, const ray& scattered) const;
+  vec3 get_albedo(const ray& r_in, const hit_record& rec) const;
 private:
   std::shared_ptr<texture> albedo;
   MicrofacetDistribution *distribution;
@@ -438,59 +240,13 @@ public:
          vec3 Rs, vec3 Rd2)
     : albedo(a), distribution(distribution), Rs(Rs) {}
   ~glossy() {
-    // if(albedo) delete albedo;
     if(distribution) delete distribution;
   }
-  
-  bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng) {
-    srec.is_specular = false;
-    srec.attenuation = albedo->value(hrec.u, hrec.v, hrec.p);
-    srec.pdf_ptr = new glossy_pdf(hrec.normal, r_in.direction(), distribution);
-    return(true);
-  }
-  bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler) {
-    srec.is_specular = false;
-    srec.attenuation = albedo->value(hrec.u, hrec.v, hrec.p);
-    srec.pdf_ptr = new glossy_pdf(hrec.normal, r_in.direction(), distribution);
-    return(true);
-  }
-  
-  vec3 f(const ray& r_in, const hit_record& rec, const ray& scattered) const {
-    onb uvw;
-    if(!rec.has_bump) {
-      uvw.build_from_w(rec.normal);
-    } else {
-      uvw.build_from_w(rec.bump_normal);
-    }
-    vec3 wi = -unit_vector(uvw.world_to_local(r_in.direction()));
-    vec3 wo = unit_vector(uvw.world_to_local(scattered.direction()));
-    
-    auto pow5 = [](Float v) { return (v * v) * (v * v) * v; };
-    vec3 diffuse = (28.0f/(23.0f*M_PI)) * albedo->value(rec.u, rec.v, rec.p) *
-      (vec3(1.0f) - Rs) *
-      (1.0 - pow5(1 - 0.5f * AbsCosTheta(wi))) *
-      (1.0 - pow5(1 - 0.5f * AbsCosTheta(wo)));
-    vec3 wh = unit_vector(wi + wo);
-    if (wh.x() == 0 && wh.y() == 0 && wh.z() == 0) {
-      return(vec3(0.0f));
-    }
-    Float cosine  = dot(wh,wi);
-    if(cosine < 0) {
-      cosine = 0;
-    }
-    vec3 specular = distribution->D(wh) /
-        (4 * AbsDot(wi, wh) *
-        std::fmax(AbsCosTheta(wi), AbsCosTheta(wo))) *
-        SchlickFresnel(dot(wo, wh));
-    return((diffuse + specular) * cosine);
-  }
-  vec3 SchlickFresnel(Float cosTheta) const {
-    auto pow5 = [](Float v) { return (v * v) * (v * v) * v; };
-    return Rs + pow5(1 - cosTheta) * (vec3(1.0f) - Rs);
-  }
-  vec3 get_albedo(const ray& r_in, const hit_record& rec) const {
-    return(albedo->value(rec.u, rec.v, rec.p));
-  }
+  bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng);
+  bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler);
+  vec3 f(const ray& r_in, const hit_record& rec, const ray& scattered) const;
+  vec3 SchlickFresnel(Float cosTheta) const;
+  vec3 get_albedo(const ray& r_in, const hit_record& rec) const;
   
 private:
   std::shared_ptr<texture>  albedo;
