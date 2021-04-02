@@ -122,6 +122,6 @@ sphere(material=diffuse(noise=1,color="blue",noisecolor="darkgreen")) \%>\%
   add_object(vector_field) \%>\% 
   add_object(sphere(y=0,x=10,z=5,material=light(intensity=200))) \%>\% 
   render_scene(fov=20, ambient=TRUE, samples=400,
-               backgroundlow="black",backgroundhigh="white")
+               backgroundlow="black",backgroundhigh="white") 
 }
 }

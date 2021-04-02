@@ -119,7 +119,7 @@ sphere = function(x = 0, y = 0, z = 0, radius = 1, material = diffuse(),
 #'                   xwidth = 200, ywidth = 100, zwidth = 200, angle = c(30, 30, 30),
 #'                   material = dielectric())) %>%
 #'   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40,  
-#'                ambient_light = FALSE, samples = 500, parallel = TRUE, clamp_value = 5)
+#'                ambient_light = FALSE, samples = 500, parallel = TRUE, clamp_value = 5) 
 #' }
 cube = function(x = 0, y = 0, z = 0, width = 1, xwidth = 1, ywidth = 1, zwidth = 1, 
                 material = diffuse(), angle = c(0, 0, 0), order_rotation = c(1, 2, 3), velocity = c(0, 0, 0),
@@ -1691,7 +1691,7 @@ cone = function(start = c(0, 0, 0), end = c(0, 1, 0), radius = 0.5,
 #'   add_object(vector_field) %>% 
 #'   add_object(sphere(y=0,x=10,z=5,material=light(intensity=200))) %>% 
 #'   render_scene(fov=20, ambient=TRUE, samples=400,
-#'                backgroundlow="black",backgroundhigh="white")
+#'                backgroundlow="black",backgroundhigh="white") 
 #' }
 arrow = function(start = c(0,0,0), end = c(0,1,0), 
                  radius_top = 0.2, radius_tail = 0.1, tail_proportion = 0.5,

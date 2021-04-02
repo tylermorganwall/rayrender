@@ -100,7 +100,7 @@ generate_ground(depth=-0.51,material=diffuse(checkercolor="grey30",checkerperiod
                     material = dielectric(priority=0,attenuation = c(10,3,10) ))) \%>\%
   add_object(sphere(radius=0.25,x=-0.5,z=0.5,y=0.5,
                     material = dielectric(priority=0,attenuation = c(10,3,10)))) \%>\%
-  render_scene(parallel=TRUE, samples = 400,lookfrom=c(5,1,5))
+  render_scene(parallel=TRUE, samples = 400,lookfrom=c(5,1,5)) 
 }
 
 # We can also use this as a basic Constructive Solid Geometry interface by setting 

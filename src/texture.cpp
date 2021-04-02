@@ -4,7 +4,7 @@ vec3 image_texture::value(Float u, Float v, const vec3& p) const {
   u = fmod(u * repeatu,1);
   v = fmod(v * repeatv,1);
   int i = u * nx;
-  int j = (1-v) * ny - 0.00001;
+  int j = (1-v) * ny;
   if (i < 0) i = 0;
   if (j < 0) j = 0;
   if (i > nx-1) i = nx-1;
@@ -24,7 +24,7 @@ vec3 triangle_image_texture::value(Float u, Float v, const vec3& p) const {
   while(uu > 1) uu -= 1;
   while(vv > 1) vv -= 1;
   int i = uu * nx;
-  int j = (1-vv) * ny - 0.00001;
+  int j = (1-vv) * ny;
   if (i < 0) i = 0;
   if (j < 0) j = 0;
   if (i > nx-1) i = nx-1;
@@ -38,7 +38,7 @@ vec3 triangle_image_texture::value(Float u, Float v, const vec3& p) const {
 
 vec3 alpha_texture::value(Float u, Float v, const vec3& p) const {
   int i = u * nx;
-  int j = (1-v) * ny - 0.00001;
+  int j = (1-v) * ny;
   if (i < 0) i = 0;
   if (j < 0) j = 0;
   if (i > nx-1) i = nx-1;
@@ -55,7 +55,7 @@ Float alpha_texture::channel_value(Float u, Float v, const vec3& p) const {
   while(uu > 1) uu -= 1;
   while(vv > 1) vv -= 1;
   int i = uu * nx;
-  int j = (1-vv) * ny - 0.00001;
+  int j = (1-vv) * ny;
   if (i < 0) i = 0;
   if (j < 0) j = 0;
   if (i > nx-1) i = nx-1;
@@ -70,7 +70,7 @@ vec3 bump_texture::value(Float u, Float v, const vec3& p) const {
   while(u > 1) u -= 1;
   while(v > 1) v -= 1;
   int i = u * (nx-1);
-  int j = (1-v) * (ny-1) - 0.00001;
+  int j = (1-v) * (ny-1);
   if (i < 1) i = 1;
   if (j < 1) j = 1;
   if (i > nx-2) i = nx-2;
@@ -88,7 +88,7 @@ vec3 bump_texture::mesh_value(Float u, Float v, const vec3& p) const {
   while(uu > 1) uu -= 1;
   while(vv > 1) vv -= 1;
   int i = uu * (nx-1);
-  int j = (1-vv) * (ny-1) - 0.00001;
+  int j = (1-vv) * (ny-1);
   if (i < 1) i = 1;
   if (j < 1) j = 1;
   if (i > nx-2) i = nx-2;
