@@ -72,16 +72,6 @@ namespace tinyobj {
 #define TINYOBJ_OVERRIDE
 #endif
 
-#ifdef __clang__
-#pragma clang diagnostic push
-#if __has_warning("-Wzero-as-null-pointer-constant")
-#pragma clang diagnostic ignored "-Wzero-as-null-pointer-constant"
-#endif
-
-#pragma clang diagnostic ignored "-Wpadded"
-
-#endif
-
 // https://en.wikipedia.org/wiki/Wavefront_.obj_file says ...
 //
 //  -blendu on | off                       # set horizontal texture blending
@@ -138,10 +128,8 @@ namespace tinyobj {
 //
 
 #ifdef TINYOBJLOADER_USE_DOUBLE
-//#pragma message "using double"
 typedef double real_t;
 #else
-//#pragma message "using float"
 typedef float real_t;
 #endif
 
@@ -3207,9 +3195,6 @@ bool ObjReader::ParseFromString(const std::string &obj_text,
   return valid_;
 }
 
-#ifdef __clang__
-#pragma clang diagnostic pop
-#endif
 }  // namespace tinyobj
 
 #endif

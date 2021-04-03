@@ -3,17 +3,17 @@
 using namespace Rcpp;
 
 
-static Float reinhard(Float color, Float sum) {
+static inline Float reinhard(Float color, Float sum) {
   color = color*sum/(1 + sum);
   return(std::pow(color,1/2.2));
 }
 
 
-static Float uncharted(Float x) {
+static inline Float uncharted(Float x) {
   return(((x*(A*x+C*B)+D*E)/(x*(A*x+B)+D*F))-E/F);
 }
 
-static Float hable(Float color) {
+static inline Float hable(Float color) {
   Float exposure_bias = 2.0f;
   Float curr = uncharted(exposure_bias*color);
   Float whiteScale = 1.0f/uncharted(W);
@@ -21,7 +21,7 @@ static Float hable(Float color) {
   return(std::pow(color,1/2.2));
 }
 
-static Float hbd(Float color) {
+static inline Float hbd(Float color) {
   Float x = color-0.004 > 0 ? color - 0.004 : 0;
   Float retcolor = (x*(6.2*x+.5))/(x*(6.2*x+1.7)+0.06);
   return(retcolor);
