@@ -194,7 +194,7 @@ bvh_node::bvh_node(std::vector<std::shared_ptr<hitable> >& l,
         buckets[b].count++;
         buckets[b].bounds = surrounding_box(buckets[b].bounds, primitiveBounds[i]);
       }
-      int nSplits = nBuckets - 1;
+      constexpr int nSplits = nBuckets - 1;
       int countBelow[nSplits], countAbove[nSplits];
       aabb boundsBelow[nSplits], boundsAbove[nSplits];
       countBelow[0] = buckets[0].count;

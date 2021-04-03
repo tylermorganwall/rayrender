@@ -557,7 +557,7 @@ namespace miniply {
         uint32_t propIdx = listPropIdx + 1 + i;
 
         PLYProperty& itemProp = properties[propIdx];
-        int ret = snprintf(nameBuf, sizeof(nameBuf), "%s_%u", oldListProp.name.c_str(), i);
+        int ret = snprintf(nameBuf, nameBufSize, "%s_%u", oldListProp.name.c_str(), i);
         if(ret < 0) {
           throw std::runtime_error("just compile without warnings please (ignore this error)");
         }
