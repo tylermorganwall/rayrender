@@ -177,7 +177,7 @@ List render_scene_rcpp(List camera_info, List scene_info) {
   for(int i = 0; i < n; i++) {
     if(isimage(i)) {
       int nx, ny, nn;
-      Float* tex_data = stbi_loadf(filelocation(i), &nx, &ny, &nn, 4);
+      Float* tex_data = stbi_loadf(filelocation(i), &nx, &ny, &nn, 0);
       textures.push_back(tex_data);
       nx_ny_nn.push_back(new int[3]);
       nx_ny_nn[i][0] = nx;
@@ -189,7 +189,7 @@ List render_scene_rcpp(List camera_info, List scene_info) {
     }
     if(has_alpha(i)) {
       int nxa, nya, nna;
-      Float* tex_data_alpha = stbi_loadf(alpha_files(i), &nxa, &nya, &nna, 4);
+      Float* tex_data_alpha = stbi_loadf(alpha_files(i), &nxa, &nya, &nna, 0);
       alpha_textures.push_back(tex_data_alpha);
       nx_ny_nn_alpha.push_back(new int[3]);
       nx_ny_nn_alpha[i][0] = nxa;
@@ -201,7 +201,7 @@ List render_scene_rcpp(List camera_info, List scene_info) {
     }
     if(has_bump(i)) {
       int nxb, nyb, nnb;
-      Float* tex_data_bump = stbi_loadf(bump_files(i), &nxb, &nyb, &nnb, 4);
+      Float* tex_data_bump = stbi_loadf(bump_files(i), &nxb, &nyb, &nnb, 0);
       bump_textures.push_back(tex_data_bump);
       nx_ny_nn_bump.push_back(new int[3]);
       nx_ny_nn_bump[i][0] = nxb;
