@@ -636,6 +636,7 @@ obj_model = function(filename, x = 0, y = 0, z = 0, scale_obj = 1,
 #' @param flipped Default `FALSE`. Whether to flip the normals.
 #' @param scale Default `c(1, 1, 1)`. Scale transformation in the x, y, and z directions. If this is a single value,
 #' number, the object will be scaled uniformly.
+#' @param capped Default `TRUE`. Whether to add caps to the segment. Turned off when using the `light()` material.
 #' Note: emissive objects may not currently function correctly when scaled.
 #' 
 #' @importFrom  grDevices col2rgb
@@ -675,12 +676,13 @@ obj_model = function(filename, x = 0, y = 0, z = 0, scale_obj = 1,
 cylinder = function(x = 0, y = 0, z = 0, radius = 1, length = 1, 
                     phi_min = 0, phi_max = 360, material = diffuse(), 
                     angle = c(0, 0, 0), order_rotation = c(1, 2, 3), velocity = c(0, 0, 0), 
-                    flipped = FALSE, scale = c(1,1,1)) {
+                    flipped = FALSE, scale = c(1,1,1), xf = TRUE) {
   if(length(scale) == 1) {
     scale = c(scale, scale, scale)
   }
-  assertthat::assert_that(phi_max > phi_min)
-  info = c(unlist(material$properties), length, phi_min * pi / 180, phi_max * pi / 180)
+  stopifnot(phi_max > phi_min)
+  cap_int = ifelse(capped, 1, 0)
+  info = c(unlist(material$properties), length, phi_min * pi / 180, phi_max * pi / 180, cap_int)
   new_tibble_row(list(x = x, y = y, z = z, radius = radius, type = material$type, shape = "cylinder",
                  properties = list(info), velocity = list(velocity), 
                  checkercolor = material$checkercolor, 
@@ -793,7 +795,7 @@ segment = function(start = c(0, -1, 0), end = c(0, 1, 0), radius = 1,
   if(length(scale) == 1) {
     scale = c(scale, scale, scale)
   }
-  assertthat::assert_that(phi_max > phi_min)
+  stopifnot(phi_max > phi_min)
   if(all(!is.na(direction)) && length(direction) == 3) {
     if(from_center) {
       new_start = start - direction/2

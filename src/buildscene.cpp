@@ -687,8 +687,9 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
       }
     } else if (shape(i) == 10) {
       bool has_caps = type(i) != 5 && type(i) != 8;
+      bool has_cap_option = tempvector(prop_len+4) == 1;
       std::shared_ptr<hitable> entry = std::make_shared<cylinder>(radius(i), tempvector(prop_len+1), 
-                                    tempvector(prop_len+2), tempvector(prop_len+3),has_caps,
+                                    tempvector(prop_len+2), tempvector(prop_len+3),has_caps && has_cap_option,
                                     tex, alpha[i], bump[i]);
       if(is_scaled) {
         entry = std::make_shared<scale>(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
@@ -1173,8 +1174,9 @@ std::shared_ptr<hitable> build_imp_sample(IntegerVector& type,
     return(entry);
   } else if (shape(i) == 10) {
     bool has_caps = type(i) != 5 && type(i) != 8;
+    bool has_cap_option = tempvector(prop_len+4) == 1;
     std::shared_ptr<hitable> entry = std::make_shared<cylinder>(radius(i), tempvector(prop_len+1), 
-                                  tempvector(prop_len+2), tempvector(prop_len+3),has_caps, 
+                                  tempvector(prop_len+2), tempvector(prop_len+3),has_caps && has_cap_option, 
                                   tex, alpha,bump);
     if(is_scaled) {
       entry = std::make_shared<scale>(entry, vec3(temp_scales[0], temp_scales[1], temp_scales[2]));
