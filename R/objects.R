@@ -676,7 +676,7 @@ obj_model = function(filename, x = 0, y = 0, z = 0, scale_obj = 1,
 cylinder = function(x = 0, y = 0, z = 0, radius = 1, length = 1, 
                     phi_min = 0, phi_max = 360, material = diffuse(), 
                     angle = c(0, 0, 0), order_rotation = c(1, 2, 3), velocity = c(0, 0, 0), 
-                    flipped = FALSE, scale = c(1,1,1), xf = TRUE) {
+                    flipped = FALSE, scale = c(1,1,1), capped = TRUE) {
   if(length(scale) == 1) {
     scale = c(scale, scale, scale)
   }
