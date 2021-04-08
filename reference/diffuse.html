@@ -77,7 +77,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">rayrender</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.21.2</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.21.4</span>
       </span>
     </div>
 
@@ -336,7 +336,7 @@ this will help with the convergence of the image.</p></td>
 <span class='co'># \donttest{</span>
 <span class='fu'><a href='render_scene.html'>render_scene</a></span><span class='op'>(</span><span class='va'>scene</span>, lookfrom<span class='op'>=</span><span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>278</span>,<span class='fl'>278</span>,<span class='op'>-</span><span class='fl'>800</span><span class='op'>)</span>,lookat <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>278</span>,<span class='fl'>278</span>,<span class='fl'>0</span><span class='op'>)</span>, samples<span class='op'>=</span><span class='fl'>500</span>,
              aperture<span class='op'>=</span><span class='fl'>0</span>, fov<span class='op'>=</span><span class='fl'>40</span>, ambient_light<span class='op'>=</span><span class='cn'>FALSE</span>, parallel<span class='op'>=</span><span class='cn'>TRUE</span><span class='op'>)</span>
-</div><div class='img'><img src='diffuse-5.png' alt='' width='700' height='433' /></div><div class='input'><span class='co'># }</span>
+</div><div class='output co'>#&gt; <span class='error'>Error in render_scene_rcpp(camera_info = camera_info, scene_info = scene_info): Index out of bounds: [index=6; extent=6].</span></div><div class='input'><span class='co'># }</span>
 </div></pre>
   </div>
   <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">
