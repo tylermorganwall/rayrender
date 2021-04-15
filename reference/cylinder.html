@@ -170,7 +170,8 @@
   order_rotation <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>1</span>, <span class='fl'>2</span>, <span class='fl'>3</span><span class='op'>)</span>,
   velocity <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>0</span>, <span class='fl'>0</span>, <span class='fl'>0</span><span class='op'>)</span>,
   flipped <span class='op'>=</span> <span class='cn'>FALSE</span>,
-  scale <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>1</span>, <span class='fl'>1</span>, <span class='fl'>1</span><span class='op'>)</span>
+  scale <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>1</span>, <span class='fl'>1</span>, <span class='fl'>1</span><span class='op'>)</span>,
+  capped <span class='op'>=</span> <span class='cn'>TRUE</span>
 <span class='op'>)</span></pre>
 
     <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
@@ -228,7 +229,11 @@ functions <code><a href='diffuse.html'>diffuse</a></code>, <code><a href='metal.
     <tr>
       <th>scale</th>
       <td><p>Default `c(1, 1, 1)`. Scale transformation in the x, y, and z directions. If this is a single value,
-number, the object will be scaled uniformly.
+number, the object will be scaled uniformly.</p></td>
+    </tr>
+    <tr>
+      <th>capped</th>
+      <td><p>Default `TRUE`. Whether to add caps to the segment. Turned off when using the `light()` material.
 Note: emissive objects may not currently function correctly when scaled.</p></td>
     </tr>
     </table>
