@@ -255,7 +255,9 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
                           "glossy" = 7, "spotlight" = 8, "hair" = 9))
   sigmavec = unlist(scene$sigma)
   
-  assertthat::assert_that(tonemap %in% c("gamma","reinhold","uncharted", "hbd", "raw"))
+  if(!tonemap %in% c("gamma","reinhold","uncharted", "hbd", "raw")) {
+    stop("tonemap value ", tonemap, " not recognized")
+  }
   toneval = switch(tonemap, "gamma" = 1,"reinhold" = 2,"uncharted" = 3,"hbd" = 4, "raw" = 5)
   movingvec = purrr::map_lgl(scene$velocity,.f = ~any(.x != 0))
   proplist = scene$properties
@@ -454,10 +456,12 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
   #scale handler
   scale_factor = scene$scale_factor
   
-  assertthat::assert_that(all(c(length(position_list$xvec),length(position_list$yvec),length(position_list$zvec),length(rvec),length(typevec),length(proplist)) == length(position_list$xvec)))
-  assertthat::assert_that(all(!is.null(typevec)))
-  assertthat::assert_that(length(lookfrom) == 3)
-  assertthat::assert_that(length(lookat) == 3)
+  if(length(lookfrom) != 3) {
+    stop("lookfrom must be length-3 numeric vector")
+  }
+  if(length(lookat) != 3) {
+    stop("lookat must be length-3 numeric vector")
+  }
   if(is.null(focal_distance)) {
     focal_distance = sqrt(sum((lookfrom-lookat)^2))
   }
@@ -484,7 +488,9 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
   }
   
   if(fov == 0) {
-    assertthat::assert_that(length(ortho_dimensions) == 2)
+    if(length(ortho_dimensions) != 2) {
+      stop("ortho_dimensions must be length-2 numeric vector")
+    }
   }
   if(verbose) {
     buildingtime = proc.time() - currenttime
@@ -521,8 +527,12 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
   camera_info$light_direction = light_direction
   camera_info$bvh = switch(bvh_type,"sah" = 1, "equal" = 2, 1)
   
-  assertthat::assert_that(max_depth > 0)
-  assertthat::assert_that(roulette_active_depth > 0)
+  if(max_depth <= 0) {
+    stop("max_depth must be greater than zero")
+  }
+  if(roulette_active_depth <= 0) {
+    stop("roulette_active_depth must be greater than zero")
+  }
   
   #Spotlight handler
   if(any(typevec == 8)) {

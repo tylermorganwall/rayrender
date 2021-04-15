@@ -109,10 +109,10 @@ diffuse = function(color = "#ffffff",
     gradient_color = NA
   }
   if(!is.na(gradient_point_start) && !is.na(gradient_point_end) && !is.na(gradient_color)) {
-    assertthat::assert_that(length(gradient_point_start) == 3)
-    assertthat::assert_that(length(gradient_point_end) == 3)
-    assertthat::assert_that(is.numeric(gradient_point_start))
-    assertthat::assert_that(is.numeric(gradient_point_end))
+    stopifnot(length(gradient_point_start) == 3)
+    stopifnot(length(gradient_point_end) == 3)
+    stopifnot(is.numeric(gradient_point_start))
+    stopifnot(is.numeric(gradient_point_end))
     gradient_point_info = c(gradient_point_start,gradient_point_end)
     is_world_gradient = TRUE
   } else {
@@ -152,7 +152,7 @@ diffuse = function(color = "#ffffff",
   if(length(image_repeat) == 1) {
     image_repeat = c(image_repeat,image_repeat)
   }
-  assertthat::assert_that(checkerperiod != 0)
+  stopifnot(checkerperiod != 0)
   new_tibble_row(list(type = type, 
                  properties = list(info), checkercolor=list(c(checkercolor,checkerperiod)), 
                  gradient_color = list(gradient_color), gradient_transpose = gradient_transpose,
@@ -274,10 +274,10 @@ metal = function(color = "#ffffff",
     gradient_color = NA
   }
   if(!is.na(gradient_point_start) && !is.na(gradient_point_end) && !is.na(gradient_color)) {
-    assertthat::assert_that(length(gradient_point_start) == 3)
-    assertthat::assert_that(length(gradient_point_end) == 3)
-    assertthat::assert_that(is.numeric(gradient_point_start))
-    assertthat::assert_that(is.numeric(gradient_point_end))
+    stopifnot(length(gradient_point_start) == 3)
+    stopifnot(length(gradient_point_end) == 3)
+    stopifnot(is.numeric(gradient_point_start))
+    stopifnot(is.numeric(gradient_point_end))
     gradient_point_info = c(gradient_point_start,gradient_point_end)
     is_world_gradient = TRUE
   } else {
@@ -589,10 +589,10 @@ microfacet = function(color="white", roughness = 0.0001,
     gradient_color = NA
   }
   if(!is.na(gradient_point_start) && !is.na(gradient_point_end) && !is.na(gradient_color)) {
-    assertthat::assert_that(length(gradient_point_start) == 3)
-    assertthat::assert_that(length(gradient_point_end) == 3)
-    assertthat::assert_that(is.numeric(gradient_point_start))
-    assertthat::assert_that(is.numeric(gradient_point_end))
+    stopifnot(length(gradient_point_start) == 3)
+    stopifnot(length(gradient_point_end) == 3)
+    stopifnot(is.numeric(gradient_point_start))
+    stopifnot(is.numeric(gradient_point_end))
     gradient_point_info = c(gradient_point_start,gradient_point_end)
     is_world_gradient = TRUE
   } else {
@@ -724,10 +724,10 @@ light = function(color = "#ffffff", intensity = 10, importance_sample = TRUE,
     gradient_color = NA
   }
   if(!is.na(gradient_point_start) && !is.na(gradient_point_end) && !is.na(gradient_color)) {
-    assertthat::assert_that(length(gradient_point_start) == 3)
-    assertthat::assert_that(length(gradient_point_end) == 3)
-    assertthat::assert_that(is.numeric(gradient_point_start))
-    assertthat::assert_that(is.numeric(gradient_point_end))
+    stopifnot(length(gradient_point_start) == 3)
+    stopifnot(length(gradient_point_end) == 3)
+    stopifnot(is.numeric(gradient_point_start))
+    stopifnot(is.numeric(gradient_point_end))
     gradient_point_info = c(gradient_point_start,gradient_point_end)
     is_world_gradient = TRUE
   } else {
@@ -888,10 +888,10 @@ glossy = function(color="white", gloss = 1, reflectance = 0.05, microfacet = "tb
     gradient_color = NA
   }
   if(!is.na(gradient_point_start) && !is.na(gradient_point_end) && !is.na(gradient_color)) {
-    assertthat::assert_that(length(gradient_point_start) == 3)
-    assertthat::assert_that(length(gradient_point_end) == 3)
-    assertthat::assert_that(is.numeric(gradient_point_start))
-    assertthat::assert_that(is.numeric(gradient_point_end))
+    stopifnot(length(gradient_point_start) == 3)
+    stopifnot(length(gradient_point_end) == 3)
+    stopifnot(is.numeric(gradient_point_start))
+    stopifnot(is.numeric(gradient_point_end))
     gradient_point_info = c(gradient_point_start,gradient_point_end)
     is_world_gradient = TRUE
   } else {

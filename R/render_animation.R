@@ -184,7 +184,9 @@ render_animation = function(scene, camera_motion, start_frame = 1,
                           "glossy" = 7, "spotlight" = 8, "hair" = 9))
   sigmavec = unlist(scene$sigma)
   
-  assertthat::assert_that(tonemap %in% c("gamma","reinhold","uncharted", "hbd", "raw"))
+  if(!tonemap %in% c("gamma","reinhold","uncharted", "hbd", "raw")) {
+    stop("tonemap value ", tonemap, " not recognized")
+  }
   toneval = switch(tonemap, "gamma" = 1,"reinhold" = 2,"uncharted" = 3,"hbd" = 4, "raw" = 5)
   movingvec = purrr::map_lgl(scene$velocity,.f = ~any(.x != 0))
   proplist = scene$properties
@@ -383,8 +385,6 @@ render_animation = function(scene, camera_motion, start_frame = 1,
   #scale handler
   scale_factor = scene$scale_factor
   
-  assertthat::assert_that(all(c(length(position_list$xvec),length(position_list$yvec),length(position_list$zvec),length(rvec),length(typevec),length(proplist)) == length(position_list$xvec)))
-  assertthat::assert_that(all(!is.null(typevec)))
   if(!is.null(options("cores")[[1]])) {
     numbercores = options("cores")[[1]]
   } else {
@@ -435,9 +435,13 @@ render_animation = function(scene, camera_motion, start_frame = 1,
   camera_info$light_direction = light_direction
   camera_info$bvh = switch(bvh_type,"sah" = 1, "equal" = 2, 1)
   
-  assertthat::assert_that(max_depth > 0)
-  assertthat::assert_that(roulette_active_depth > 0)
-  
+  if(max_depth <= 0) {
+    stop("max_depth must be greater than zero")
+  }
+  if(roulette_active_depth <= 0) {
+    stop("roulette_active_depth must be greater than zero")
+  }
+
   #Spotlight handler
   if(any(typevec == 8)) {
     if(any(shapevec[typevec == 8] > 4)) {
