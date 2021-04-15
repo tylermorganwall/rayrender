@@ -2362,7 +2362,11 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
   if(swap_yz) {
     vertices = vertices[,c(1,3,2)]
   }
-  indices = t(mesh$it)-1
+  ## there might be triangles, quads, or both
+  indices = NULL
+  if (!is.null(mesh$it)) {
+    indices = t(mesh$it)-1
+  }
   if(!is.null(mesh$ib)) {
     quads = mesh$ib
     tri_ind = t(matrix(rbind(quads[c(1L, 2L, 4L),], 
