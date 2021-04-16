@@ -790,7 +790,7 @@ cylinder = function(x = 0, y = 0, z = 0, radius = 1, length = 1,
 #' }
 segment = function(start = c(0, -1, 0), end = c(0, 1, 0), radius = 1, 
                    phi_min = 0, phi_max = 360, from_center = TRUE, direction = NA,
-                   material = diffuse(), 
+                   material = diffuse(), capped = TRUE, 
                    velocity = c(0, 0, 0), flipped = FALSE, scale = c(1,1,1)) {
   if(length(scale) == 1) {
     scale = c(scale, scale, scale)
@@ -813,6 +813,7 @@ segment = function(start = c(0, -1, 0), end = c(0, 1, 0), radius = 1,
   order_rotation = c(3, 2, 1)
   phi =  atan2( as.numeric(end[1]-start[1]), as.numeric(end[3]-start[3]))/pi*180 + 90
   
+  cap_int = ifelse(capped, 1, 0)
   length_xy = sqrt((end[1]-start[1])^2 + (end[3]-start[3])^2)
   if(end[1] == start[1] && end[3] == start[3]) {
     theta = 0
@@ -821,7 +822,7 @@ segment = function(start = c(0, -1, 0), end = c(0, 1, 0), radius = 1,
   }
   fulllength = sqrt(sum((end-start)^2))
   angle = c(0, phi, theta)
-  info = c(unlist(material$properties), fulllength, phi_min * pi / 180, phi_max * pi / 180)
+  info = c(unlist(material$properties), fulllength, phi_min * pi / 180, phi_max * pi / 180, cap_int)
   new_tibble_row(list(x = x, y = y, z = z, radius = radius, type = material$type, shape = "cylinder",
                  properties = list(info), velocity = list(velocity), 
                  checkercolor = material$checkercolor, 
