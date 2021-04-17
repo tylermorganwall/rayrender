@@ -13,6 +13,7 @@ segment(
   from_center = TRUE,
   direction = NA,
   material = diffuse(),
+  capped = TRUE,
   velocity = c(0, 0, 0),
   flipped = FALSE,
   scale = c(1, 1, 1)
@@ -38,6 +39,8 @@ determined by the magnitude of the direction vector.}
 
 \item{material}{Default  \code{\link{diffuse}}.The material, called from one of the material 
 functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}.}
+
+\item{capped}{Default `TRUE`. Whether to add caps to the segment. Turned off when using the `light()` material.}
 
 \item{velocity}{Default `c(0, 0, 0)`. Velocity of the segment.}
 

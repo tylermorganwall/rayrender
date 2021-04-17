@@ -185,7 +185,7 @@ trimesh::trimesh(std::string inputfile, std::string basedir, Float scale,
           } else {
             if(has_transparency[material_num]) {
               tex = std::make_shared<dielectric>(specular_materials[material_num], ior_materials[material_num], vec3(0,0,0), 
-                                   0,  rng);;
+                                   0);;
             } else if(has_diffuse[material_num]) {
               if(has_single_diffuse[material_num]) {
                 tex = std::make_shared<lambertian>(std::make_shared<constant_texture>(diffuse_materials[material_num]));
@@ -207,7 +207,7 @@ trimesh::trimesh(std::string inputfile, std::string basedir, Float scale,
           } else {
             if(has_transparency[material_num]) {
               tex = std::make_shared<dielectric>(specular_materials[material_num], ior_materials[material_num], vec3(0,0,0),
-                                   0,  rng);;
+                                   0);;
             } else if(has_diffuse[material_num]) {
               if(has_single_diffuse[material_num]) {
                 tex = std::make_shared<lambertian>(std::make_shared<constant_texture>(diffuse_materials[material_num]));
@@ -401,7 +401,7 @@ trimesh::trimesh(std::string inputfile, std::string basedir, Float scale, Float 
           } else {
             if(has_transparency[material_num]) {
               tex = std::make_shared<dielectric>(specular_materials[material_num], ior_materials[material_num], vec3(0,0,0), 
-                                   0,  rng);;
+                                   0);;
             } else if(has_diffuse[material_num]) {
               if(has_single_diffuse[material_num]) {
                 tex = std::make_shared<orennayar>(std::make_shared<constant_texture>(diffuse_materials[material_num]), sigma);
@@ -423,7 +423,7 @@ trimesh::trimesh(std::string inputfile, std::string basedir, Float scale, Float 
           } else {
             if(has_transparency[material_num]) {
               tex = std::make_shared<dielectric>(specular_materials[material_num], ior_materials[material_num], vec3(0,0,0), 
-                                   0,  rng);;
+                                   0);;
             } else if(has_diffuse[material_num]) {
               if(has_single_diffuse[material_num]) {
                 tex = std::make_shared<orennayar>(std::make_shared<constant_texture>(diffuse_materials[material_num]), sigma);

@@ -133,8 +133,8 @@ class metal : public material {
 
 class dielectric : public material {
   public:
-    dielectric(const vec3& a, Float ri, const vec3& atten, int priority2, random_gen& rng) : ref_idx(ri), 
-               albedo(a), attenuation(atten), priority(priority2), rng(rng) {};
+    dielectric(const vec3& a, Float ri, const vec3& atten, int priority2) : ref_idx(ri), 
+               albedo(a), attenuation(atten), priority(priority2) {};
     bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng);
     bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler);
     
@@ -145,7 +145,6 @@ class dielectric : public material {
     vec3 albedo;
     vec3 attenuation;
     size_t priority;
-    random_gen rng;
 };
 
 class diffuse_light : public material {

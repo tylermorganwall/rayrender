@@ -724,6 +724,7 @@ cylinder = function(x = 0, y = 0, z = 0, radius = 1, length = 1,
 #' @param scale Default `c(1, 1, 1)`. Scale transformation in the x, y, and z directions. If this is a single value,
 #' number, the object will be scaled uniformly. Notes: this will change the stated start/end position of the segment. 
 #' Emissive objects may not currently function correctly when scaled.
+#' @param capped Default `TRUE`. Whether to add caps to the segment. Turned off when using the `light()` material.
 #' 
 #' @importFrom  grDevices col2rgb
 #'

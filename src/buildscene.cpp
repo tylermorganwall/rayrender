@@ -237,7 +237,7 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
       } else if (type(i) == 3) {
         tex = std::make_shared<dielectric>(vec3(tempvector(0),tempvector(1),tempvector(2)), tempvector(3), 
                              vec3(tempvector(4),tempvector(5),tempvector(6)), 
-                             tempvector(7), rng);
+                             tempvector(7));
       } else if (type(i) == 4) {
         if(isimage(i)) {
           tex = std::make_shared<orennayar>(std::make_shared<image_texture>(textures[i],nvec[i][0],nvec[i][1],nvec[i][2], 

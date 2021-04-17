@@ -268,7 +268,7 @@ bool dielectric::scatter(const ray& r_in, const hit_record& hrec, scatter_record
       srec.attenuation = albedo;
     }
   }
-  if(rng.unif_rand() < reflect_prob) {
+  if(sampler->Get1D() < reflect_prob) {
     if(entering) {
       r_in.pri_stack->pop_back();
     }
