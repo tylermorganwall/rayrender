@@ -1,6 +1,8 @@
 #ifndef COLORH
 #define COLORH
 
+#include <cfloat>
+
 #include "ray.h"
 #include "hitablelist.h"
 #include "material.h"
