@@ -8,6 +8,7 @@
 #include "sampler.h"
 #include <Rcpp.h>
 #include <memory>
+#include <cfloat>
 
 class material;
 
