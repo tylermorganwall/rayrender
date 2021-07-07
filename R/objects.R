@@ -1029,7 +1029,7 @@ ellipsoid = function(x = 0, y = 0, z = 0, a = 1, b = 1, c = 1,
 #' }
 #' 
 #' #We can also directly pass in sf polygons:
-#' if("spData" %in% rownames(utils::installed.packages())) {
+#' if(length(find.package("spData",quiet=TRUE)) > 0) {
 #'   us_states = spData::us_states
 #'   texas = us_states[us_states$NAME == "Texas",]
 #'   #Fix no sfc class in us_states geometry data
@@ -1157,7 +1157,7 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
   base_poly = FALSE
   counter = 1
   if(inherits(polygon,"sf")) {
-    if(!"sf" %in% rownames(utils::installed.packages())) {
+    if(length(find.package("sf",quiet=TRUE)) == 0) {
       stop("sf package required when handling sf objects")
     }
     poly_info = sf::st_drop_geometry(polygon)
@@ -1387,7 +1387,7 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
       }
     }
   }
-  if("dplyr" %in% rownames(utils::installed.packages())) {
+  if(length(find.package("dplyr",quiet=TRUE)) > 0) {
     scenefull = dplyr::bind_rows(scenelist)
   } else {
     scenefull = do.call(rbind, scenelist)
@@ -2114,7 +2114,7 @@ path = function(points,
                                      flipped = flipped, scale = scale)
     }
   }
-  if("dplyr" %in% rownames(utils::installed.packages())) {
+  if(length(find.package("dplyr",quiet=TRUE)) > 0) {
     return(dplyr::bind_rows(curve_list))
   } else {
     return(do.call(rbind, curve_list))
@@ -2324,7 +2324,7 @@ ply_model = function(filename, x = 0, y = 0, z = 0, scale_ply = 1,
 #'
 #' @examples
 #' #Load a mesh3d object (from the Rvcg) and render it:
-#' if("Rcvg" %in% rownames(utils::installed.packages())) {
+#' if(length(find.package("Rcvg", quiet=TRUE)) > 0) {
 #'   library(Rvcg)
 #'   data(humface)
 #'   

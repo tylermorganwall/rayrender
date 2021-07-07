@@ -1,0 +1,3 @@
+src/pcg/* linguist-vendored
+src/tinyobj/* linguist-vendored
+src/stb_image.h linguist-vendored

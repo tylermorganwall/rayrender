@@ -10,10 +10,12 @@ editor_options:
 rayrender
 =========================================================
 
+<!-- badges: start -->
+[![R build status](https://github.com/tylermorganwall/rayrender/workflows/R-CMD-check/badge.svg)](https://github.com/tylermorganwall/rayrender/actions)
+<!-- badges: end -->
+
 <img src="man/figures/swordsmall.gif" ></img>
-  <!-- badges: start -->
-  [![R build status](https://github.com/tylermorganwall/rayrender/workflows/R-CMD-check/badge.svg)](https://github.com/tylermorganwall/rayrender/actions)
-  <!-- badges: end -->
+
 Overview
 --------
 

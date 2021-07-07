@@ -82,7 +82,7 @@ pig = function(x = 0, y = 0, z = 0, emotion = "neutral", spider = FALSE,
                           radius=0.05,
                           material = bodymat)
   }
-  if("dplyr" %in% rownames(utils::installed.packages())) {
+  if(length(find.package("dplyr",quiet=TRUE)) > 0) {
     spiralscene = dplyr::bind_rows(spiral)
   } else {
     spiralscene = do.call(rbind,spiral)

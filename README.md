@@ -1,10 +1,15 @@
 
 # rayrender
 
-<img src="man/figures/swordsmall.gif" ></img> <!-- badges: start -->
+<!-- badges: start -->
+
 [![R build
 status](https://github.com/tylermorganwall/rayrender/workflows/R-CMD-check/badge.svg)](https://github.com/tylermorganwall/rayrender/actions)
-<!-- badges: end --> Overview ——–
+<!-- badges: end -->
+
+<img src="man/figures/swordsmall.gif" ></img>
+
+## Overview
 
 **rayrender** is an open source R package for raytracing scenes in
 created in R. Based off of Peter Shirley’s three books “Ray Tracing in
@@ -222,9 +227,9 @@ Finally, rayrender supports environment lighting with the
 or a low-dynamic range image (`.jpg`,`.png`) and the image will be used
 to light the scene (along with any other lights). Here’s an example
 using an HDR image of Venice at sunset (obtained for free from
-hdrihaven.com), also using the Oren-Nayar diffuse model with `sigma
-= 90` for a more realistic diffuse surface. We also add an extruded
-polygon star, using the `extruded_polygon` object.
+hdrihaven.com), also using the Oren-Nayar diffuse model with
+`sigma = 90` for a more realistic diffuse surface. We also add an
+extruded polygon star, using the `extruded_polygon` object.
 
 ``` r
 tempfilehdr = tempfile(fileext = ".hdr")

@@ -15,7 +15,6 @@
 ^CONTRIBUTING\.md$
 ^README_cache$
 ^README_files$
-^tests$
 ^.*yml$
 ^docs$
 ^pkgdown$

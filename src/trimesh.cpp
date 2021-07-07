@@ -13,6 +13,10 @@ trimesh::trimesh(std::string inputfile, std::string basedir, Float scale,
   mat_ptr = nullptr;
   
   bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, inputfile.c_str(), basedir.c_str());
+  bool has_sep = true;
+  if(strlen(basedir.c_str()) == 0) {
+    has_sep = false;
+  }
   if(ret) {
     int n = 0;
     for (size_t s = 0; s < shapes.size(); s++) {
@@ -46,7 +50,18 @@ trimesh::trimesh(std::string inputfile, std::string basedir, Float scale,
     
     for (size_t i = 0; i < materials.size(); i++) {
       if(strlen(materials[i].diffuse_texname.c_str()) > 0) {
-        obj_materials.push_back(stbi_loadf((basedir + separator() + materials[i].diffuse_texname).c_str(), &nx, &ny, &nn, 0));
+        if(has_sep) {
+          obj_materials.push_back(stbi_loadf((basedir + separator() + materials[i].diffuse_texname).c_str(), &nx, &ny, &nn, 0));
+        } else {
+          obj_materials.push_back(stbi_loadf((materials[i].diffuse_texname).c_str(), &nx, &ny, &nn, 0));
+        }
+        if(nx == 0 || ny == 0 || nn == 0) {
+          if(has_sep) {
+            throw std::runtime_error("Could not find " + (basedir + separator() + materials[i].diffuse_texname));
+          } else {
+            throw std::runtime_error("Could not find " + materials[i].diffuse_texname);
+          }
+        }
         has_diffuse[i] = true;
         has_single_diffuse[i] = false;
         nx_mat[i] = nx;
@@ -92,7 +107,18 @@ trimesh::trimesh(std::string inputfile, std::string basedir, Float scale,
         has_transparency[i] = true; 
       }
       if(strlen(materials[i].bump_texname.c_str()) > 0) {
-        bump_materials[i] = stbi_loadf((basedir + separator() + materials[i].bump_texname).c_str(), &nx, &ny, &nn, 0);
+        if(has_sep) {
+          bump_materials[i] = stbi_loadf((basedir + separator() + materials[i].bump_texname).c_str(), &nx, &ny, &nn, 0);
+        } else {
+          bump_materials[i] = stbi_loadf(materials[i].bump_texname.c_str(), &nx, &ny, &nn, 0);
+        }
+        if(nx == 0 || ny == 0 || nn == 0) {
+          if(has_sep) {
+            throw std::runtime_error("Could not find " + basedir + separator() + materials[i].bump_texname);
+          } else {
+            throw std::runtime_error("Could not find " + materials[i].bump_texname);
+          }
+        }
         nx_mat_bump[i] = nx;
         ny_mat_bump[i] = ny;
         nn_mat_bump[i] = nn;
@@ -242,7 +268,10 @@ trimesh::trimesh(std::string inputfile, std::string basedir, Float scale, Float 
   mat_ptr = nullptr;
   
   bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, inputfile.c_str(), basedir.c_str());
-  
+  bool has_sep = true;
+  if(strlen(basedir.c_str()) == 0) {
+    has_sep = false;
+  }
   if(ret) {
     int n = 0;
     for (size_t s = 0; s < shapes.size(); s++) {
@@ -276,7 +305,18 @@ trimesh::trimesh(std::string inputfile, std::string basedir, Float scale, Float 
     
     for (size_t i = 0; i < materials.size(); i++) {
       if(strlen(materials[i].diffuse_texname.c_str()) > 0) {
-        obj_materials.push_back(stbi_loadf((basedir + separator() + materials[i].diffuse_texname).c_str(), &nx, &ny, &nn, 0));
+        if(has_sep) {
+          obj_materials.push_back(stbi_loadf((basedir + separator() + materials[i].diffuse_texname).c_str(), &nx, &ny, &nn, 0));
+        } else {
+          obj_materials.push_back(stbi_loadf((materials[i].diffuse_texname).c_str(), &nx, &ny, &nn, 0));
+        }
+        if(nx == 0 || ny == 0 || nn == 0) {
+          if(has_sep) {
+            throw std::runtime_error("Could not find " + (basedir + separator() + materials[i].diffuse_texname));
+          } else {
+            throw std::runtime_error("Could not find " + materials[i].diffuse_texname);
+          }
+        }
         has_diffuse[i] = true;
         has_single_diffuse[i] = false;
         nx_mat[i] = nx;
@@ -320,6 +360,19 @@ trimesh::trimesh(std::string inputfile, std::string basedir, Float scale, Float 
       }
       if(strlen(materials[i].bump_texname.c_str()) > 0) {
         bump_materials[i] = stbi_loadf((basedir + separator() + materials[i].bump_texname).c_str(), &nx, &ny, &nn, 0);
+        if(has_sep) {
+          bump_materials[i] = stbi_loadf((basedir + separator() + materials[i].bump_texname).c_str(), &nx, &ny, &nn, 0);
+        } else {
+          bump_materials[i] = stbi_loadf(materials[i].bump_texname.c_str(), &nx, &ny, &nn, 0);
+        }
+        
+        if(nx == 0 || ny == 0 || nn == 0) {
+          if(has_sep) {
+            throw std::runtime_error("Could not find " + basedir + separator() + materials[i].bump_texname);
+          } else {
+            throw std::runtime_error("Could not find " + materials[i].bump_texname);
+          }
+        }
         nx_mat_bump[i] = nx;
         ny_mat_bump[i] = ny;
         nn_mat_bump[i] = nn;
@@ -456,6 +509,10 @@ trimesh::trimesh(std::string inputfile, std::string basedir, std::shared_ptr<mat
   mat_ptr = mat;
   
   bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, inputfile.c_str(), basedir.c_str());
+  bool has_sep = true;
+  if(strlen(basedir.c_str()) == 0) {
+    has_sep = false;
+  }
   std::shared_ptr<alpha_texture> alpha = nullptr;
   std::shared_ptr<bump_texture> bump = nullptr;
   if(ret) {
@@ -534,6 +591,10 @@ trimesh::trimesh(std::string inputfile, std::string basedir, float vertex_color_
   std::shared_ptr<bump_texture> bump = nullptr;
   
   bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, inputfile.c_str(), basedir.c_str());
+  bool has_sep = true;
+  if(strlen(basedir.c_str()) == 0) {
+    has_sep = false;
+  }
   if(ret) {
     int n = 0;
     for (size_t s = 0; s < shapes.size(); s++) {

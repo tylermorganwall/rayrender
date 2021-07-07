@@ -65,7 +65,7 @@ Load an `mesh3d` (or `shapelist3d`) object, as specified in the `rgl` package.
 }
 \examples{
 #Load a mesh3d object (from the Rvcg) and render it:
-if("Rcvg" \%in\% rownames(utils::installed.packages())) {
+if(length(find.package("Rcvg", quiet=TRUE)) > 0) {
   library(Rvcg)
   data(humface)
   

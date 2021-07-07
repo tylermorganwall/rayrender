@@ -435,8 +435,16 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
                        collapse="\n")
                  ))
   }
-  objbasedirvec = purrr::map_chr(objfilenamevec, dirname)
-
+  base_dir = function(x) {
+    dirname_processed = dirname(x)
+    if(dirname_processed == ".") {
+      return("")
+    } else {
+      return(dirname_processed)
+    }
+  }
+  objbasedirvec = purrr::map_chr(objfilenamevec, base_dir)
+  
   #bg image handler
   if(!is.null(environment_light)) {
     hasbackground = TRUE

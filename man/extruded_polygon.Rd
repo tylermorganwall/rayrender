@@ -152,7 +152,7 @@ generate_ground(depth=-0.01,
 }
 
 #We can also directly pass in sf polygons:
-if("spData" \%in\% rownames(utils::installed.packages())) {
+if(length(find.package("spData",quiet=TRUE)) > 0) {
   us_states = spData::us_states
   texas = us_states[us_states$NAME == "Texas",]
   #Fix no sfc class in us_states geometry data
