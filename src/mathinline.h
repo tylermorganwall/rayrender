@@ -51,7 +51,7 @@ inline vec3f de_nan(const vec3f& c) {
 
 
 
-inline vec3f rand_to_unit(vec2 u) {
+inline vec3f rand_to_unit(vec2f u) {
   Float a = 2.0*u.x() - 1.0; 
   Float b = 2.0*u.y() - 1.0;
   if (b == 0) {
@@ -68,7 +68,7 @@ inline vec3f rand_to_unit(vec2 u) {
   return(vec3f(r*cos(phi),r*sin(phi),0));
 }
 
-inline vec3f rand_cosine_direction(vec2 u) {
+inline vec3f rand_cosine_direction(vec2f u) {
   Float r1 = u.x();
   Float r2 = u.y();
   Float z = std::sqrt(1.0-r2);
@@ -78,7 +78,7 @@ inline vec3f rand_cosine_direction(vec2 u) {
   return(vec3f(x, y, z));
 }
 
-inline vec3f rand_to_sphere(Float radius, Float distance_squared, vec2 u) {
+inline vec3f rand_to_sphere(Float radius, Float distance_squared, vec2f u) {
   Float r1 = u.x();
   Float r2 = u.y();
   Float z = 1.0 + r2 * (std::sqrt(1.0-radius * radius / distance_squared) - 1);
@@ -493,10 +493,10 @@ inline uint32_t Compact1By1(uint32_t x) {
   return(x);
 }
 
-inline vec2 DemuxFloat(Float f) {
+inline vec2f DemuxFloat(Float f) {
   uint64_t v = f * (1ull << 32);
   uint32_t bits[2] = {Compact1By1(v), Compact1By1(v >> 1)};
-  return(vec2(bits[0] / Float(1 << 16), bits[1] / Float(1 << 16)));
+  return(vec2f(bits[0] / Float(1 << 16), bits[1] / Float(1 << 16)));
 }
 
 inline Float I0(Float x) {

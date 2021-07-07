@@ -33,7 +33,7 @@ mesh3d::mesh3d(Rcpp::List mesh_info, std::shared_ptr<material> mat,
     vec3f tris[3];
     vec3f normals[3];
 
-    vec2 tx[3];
+    vec2f tx[3];
     
     int idx[3] = {indices(i,0),indices(i,1),indices(i,2)};
     tris[0] = vec3f(vertices(idx[0],0),vertices(idx[0],1),vertices(idx[0],2))*scale_mesh;
@@ -47,9 +47,9 @@ mesh3d::mesh3d(Rcpp::List mesh_info, std::shared_ptr<material> mat,
     }
     
     if(has_texcoords) {
-      tx[0] = vec2(txcoord(idx[0],0),txcoord(idx[0],1));
-      tx[1] = vec2(txcoord(idx[1],0),txcoord(idx[1],1));
-      tx[2] = vec2(txcoord(idx[2],0),txcoord(idx[2],1));
+      tx[0] = vec2f(txcoord(idx[0],0),txcoord(idx[0],1));
+      tx[1] = vec2f(txcoord(idx[1],0),txcoord(idx[1],1));
+      tx[2] = vec2f(txcoord(idx[2],0),txcoord(idx[2],1));
     }
     if(colortype == 1 && has_texcoords && has_texture) {
       tex = std::make_shared<lambertian>(std::make_shared<triangle_image_texture>(mesh_materials,

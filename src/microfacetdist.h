@@ -21,7 +21,7 @@ public:
     return(std::fmin(1.f, std::fmin((2.0f * NdotWh * NdotWo / WOdotWh), (2.0f * NdotWh * NdotWi / WOdotWh))));
   }
   virtual Float GetAlpha() const = 0;
-  virtual vec2 GetAlphas() const = 0;
+  virtual vec2f GetAlphas() const = 0;
   virtual bool GetType() const = 0;
   virtual vec3f Sample_wh(const vec3f &wi, const Float u1, const Float u2) const = 0;
   Float Pdf(const vec3f &wo,const vec3f &wi, const vec3f &wh) {
@@ -54,8 +54,8 @@ public:
   Float GetAlpha() const {
     return(std::sqrt(alphax * alphax + alphay * alphay));
   }
-  vec2 GetAlphas() const {
-    return(vec2(alphax, alphay));
+  vec2f GetAlphas() const {
+    return(vec2f(alphax, alphay));
   }
   bool GetType() const { 
     return(type);
@@ -88,8 +88,8 @@ public:
   Float GetAlpha() const {
     return(std::sqrt(alphax * alphax + alphay * alphay));
   }
-  vec2 GetAlphas() const {
-    return(vec2(alphax,alphay));
+  vec2f GetAlphas() const {
+    return(vec2f(alphax,alphay));
   }
   bool GetType() const { 
     return(type);

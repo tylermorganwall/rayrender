@@ -124,7 +124,7 @@ class csg_torus : public ImplicitShape {
       ring_radius(ring_radius), cross_radius(cross_radius) {} 
     float getDistance(const vec3f& from_old) const {
       vec3f from = from_old - center;
-      vec2 q = vec2(std::sqrt(from.x()*from.x() + from.z()*from.z()) - ring_radius, from.y());
+      vec2f q = vec2f(std::sqrt(from.x()*from.x() + from.z()*from.z()) - ring_radius, from.y());
       return(q.length()-cross_radius);
     } 
     virtual bool bbox(Float t0, Float t1, aabb& box) const {
@@ -251,11 +251,11 @@ class csg_cone : public ImplicitShape {
     float getDistance(const vec3f& from_old) const {
       vec3f from_trans = axis.world_to_local(from_old - start);
       vec3f from = from_trans - vec3f(0,height,0);
-      vec2 q = vec2(radius,-height);
+      vec2f q = vec2f(radius,-height);
       
-      vec2 w = vec2( std::sqrt(from.x() * from.x() +  from.z() *  from.z()), from.y() );
-      vec2 a = w - q*clamp( dot(w,q)/dot(q,q), 0.0, 1.0 );
-      vec2 b = w - q*vec2( clamp( w.x()/q.x(), 0.0, 1.0 ), 1.0 );
+      vec2f w = vec2f( std::sqrt(from.x() * from.x() +  from.z() *  from.z()), from.y() );
+      vec2f a = w - q*clamp( dot(w,q)/dot(q,q), 0.0, 1.0 );
+      vec2f b = w - q*vec2f( clamp( w.x()/q.x(), 0.0, 1.0 ), 1.0 );
       float k = sgn( q.y() );
       float d = std::min(dot( a, a ),dot(b, b));
       float s = std::max( k*(w.x()*q.y()-w.y()*q.x()),k*(w.y()-q.y()));

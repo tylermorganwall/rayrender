@@ -64,16 +64,16 @@ Float Distribution1D::DiscretePDF(int index) const {
 
 
 
-vec2 Distribution2D::SampleContinuous(const vec2 &u, Float *pdf) const {
+vec2f Distribution2D::SampleContinuous(const vec2f &u, Float *pdf) const {
   Float pdfs[2];
   int v;
   Float d1 = pMarginal->SampleContinuous(u[1], &pdfs[1], &v);
   Float d0 = pConditionalV[v]->SampleContinuous(u[0], &pdfs[0]);
   *pdf = pdfs[0] * pdfs[1];
-  return(vec2(d0, d1));
+  return(vec2f(d0, d1));
 }
 
-Float Distribution2D::Pdf(const vec2 &p) const {
+Float Distribution2D::Pdf(const vec2f &p) const {
   int iu = clamp(int(p[0] * pConditionalV[0]->Count()), 0,
                  pConditionalV[0]->Count() - 1);
   int iv = clamp(int(p[1] * pMarginal->Count()), 0, pMarginal->Count() - 1);

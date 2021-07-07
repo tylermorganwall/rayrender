@@ -367,7 +367,7 @@ vec3f cone::random(const vec3f& o, random_gen& rng, Float time) {
 }
 
 vec3f cone::random(const vec3f& o, Sampler* sampler, Float time) {
-  vec2 u = sampler->Get2D();
+  vec2f u = sampler->Get2D();
   Float r1 = sqrt(1.0 - u.x());
   Float phi_val = 2*M_PI*u.y();
   Float height_val = r1 * height;

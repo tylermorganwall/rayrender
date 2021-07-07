@@ -564,8 +564,8 @@ bool hair::scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec
   Float gammaO = SafeASin(h);
   
   // Derive four random samples from _u2_
-  vec2 u2 = vec2(rng.unif_rand(),rng.unif_rand());
-  vec2 u[2] = {DemuxFloat(u2.e[0]), DemuxFloat(u2.e[1])};
+  vec2f u2 = vec2f(rng.unif_rand(),rng.unif_rand());
+  vec2f u[2] = {DemuxFloat(u2.e[0]), DemuxFloat(u2.e[1])};
   
   // Determine which term $p$ to sample for hair scattering
   std::array<Float, pMax + 1> apPdf = ComputeApPdf(cosThetaO, h);
@@ -637,8 +637,8 @@ bool hair::scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec
   Float gammaO = SafeASin(h);
   
   // Derive four random samples from _u2_
-  vec2 u2 = vec2(sampler->Get1D(),sampler->Get1D());
-  vec2 u[2] = {DemuxFloat(u2.e[0]), DemuxFloat(u2.e[1])};
+  vec2f u2 = vec2f(sampler->Get1D(),sampler->Get1D());
+  vec2f u[2] = {DemuxFloat(u2.e[0]), DemuxFloat(u2.e[1])};
   
   // Determine which term $p$ to sample for hair scattering
   std::array<Float, pMax + 1> apPdf = ComputeApPdf(cosThetaO, h);

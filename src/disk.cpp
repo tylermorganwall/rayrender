@@ -131,7 +131,7 @@ vec3f disk::random(const vec3f& o, random_gen& rng, Float time) {
 }
 
 vec3f disk::random(const vec3f& o, Sampler* sampler, Float time) {
-  vec2 u = sampler->Get2D();
+  vec2f u = sampler->Get2D();
   Float r1 = u.x();
   Float r2 = sqrt(u.y());
   Float phi = 2 * M_PI * r1;

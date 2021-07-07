@@ -74,7 +74,7 @@ public:
     return(uvw.local_to_world(Reflect(wi, wh)));
   }
   virtual vec3f generate(Sampler* sampler, bool& diffuse_bounce, Float time = 0) {
-    vec2 u = sampler->Get2D();
+    vec2f u = sampler->Get2D();
     vec3f wh = distribution->Sample_wh(wi, u.x(), u.y());
     return(uvw.local_to_world(Reflect(wi, wh)));
   }
@@ -116,7 +116,7 @@ public:
   }
   virtual vec3f generate(Sampler* sampler, bool& diffuse_bounce, Float time = 0) {
     if(sampler->Get1D() < 0.5) {
-      vec2 u = sampler->Get2D();
+      vec2f u = sampler->Get2D();
       vec3f wh = distribution->Sample_wh(wi, u.x(), u.y());
       return(uvw.local_to_world(Reflect(wi, wh)));
     } else {

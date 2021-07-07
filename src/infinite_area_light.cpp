@@ -98,7 +98,7 @@ Float InfiniteAreaLight::pdf_value(const vec3f& o, const vec3f& v, random_gen& r
       return(0);
     }
     //u = phi, v = theta
-    return(distribution->Pdf(vec2(rec.u, rec.v)) /
+    return(distribution->Pdf(vec2f(rec.u, rec.v)) /
            (2 * M_PI * M_PI * sinTheta));
   } else {
     return(0);
@@ -117,7 +117,7 @@ Float InfiniteAreaLight::pdf_value(const vec3f& o, const vec3f& v, Sampler* samp
       return(0);
     }
     //u = phi, v = theta
-    return(distribution->Pdf(vec2(rec.u, rec.v)) /
+    return(distribution->Pdf(vec2f(rec.u, rec.v)) /
            (2 * M_PI * M_PI * sinTheta));
   } else {
     return(0);
@@ -126,9 +126,9 @@ Float InfiniteAreaLight::pdf_value(const vec3f& o, const vec3f& v, Sampler* samp
 
 
 vec3f InfiniteAreaLight::random(const vec3f& o, random_gen& rng, Float time) {
-  vec2 u(rng.unif_rand(), rng.unif_rand());
+  vec2f u(rng.unif_rand(), rng.unif_rand());
   Float mapPdf;
-  vec2 uv = distribution->SampleContinuous(u, &mapPdf);
+  vec2f uv = distribution->SampleContinuous(u, &mapPdf);
   if (mapPdf == 0) {
     return(vec3f(0.f,0.f,0.f));
   }
@@ -141,9 +141,9 @@ vec3f InfiniteAreaLight::random(const vec3f& o, random_gen& rng, Float time) {
 }
 
 vec3f InfiniteAreaLight::random(const vec3f& o, Sampler* sampler, Float time) {
-  vec2 u = sampler->Get2D();
+  vec2f u = sampler->Get2D();
   Float mapPdf;
-  vec2 uv = distribution->SampleContinuous(u, &mapPdf);
+  vec2f uv = distribution->SampleContinuous(u, &mapPdf);
   if (mapPdf == 0) {
     return(vec3f(0.f,0.f,0.f));
   }

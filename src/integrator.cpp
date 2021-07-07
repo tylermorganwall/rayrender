@@ -74,7 +74,7 @@ void pathtracer(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_c
                    &rngs, fov, &samplers,
                    &cam, &ocam, &ecam, &world, &hlist,
                    clampval, max_depth, roulette_active] (int k) {
-                     MitchellFilter fil(vec2(1.0),1./3.,1./3.);
+                     MitchellFilter fil(vec2f(1.0),1./3.,1./3.);
                      int nx_begin = adaptive_pixel_sampler.pixel_chunks[k].startx;
                      int ny_begin = adaptive_pixel_sampler.pixel_chunks[k].starty;
                      int nx_end = adaptive_pixel_sampler.pixel_chunks[k].endx;
@@ -84,7 +84,7 @@ void pathtracer(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_c
                      for(int i = nx_begin; i < nx_end; i++) {
                        for(int j = ny_begin; j < ny_end; j++) {
                          int index = j + ny * i;
-                         vec2 u2 = samplers[index]->Get2D();
+                         vec2f u2 = samplers[index]->Get2D();
                          Float u = (Float(i) + u2.x()) / Float(nx);
                          Float v = (Float(j) + u2.y()) / Float(ny);
                          ray r; 

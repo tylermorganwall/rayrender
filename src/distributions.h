@@ -35,8 +35,8 @@ class Distribution2D {
 public:
   // Distribution2D Public Methods
   Distribution2D(const Float *data, int nu, int nv);
-  vec2 SampleContinuous(const vec2 &u, Float *pdf) const;
-  Float Pdf(const vec2 &p) const;
+  vec2f SampleContinuous(const vec2f &u, Float *pdf) const;
+  Float Pdf(const vec2f &p) const;
   
 private:
   // Distribution2D Private Data

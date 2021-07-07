@@ -37,7 +37,7 @@ void StratifiedSample1D(Float *samp, int nSamples, random_gen &rng,
   }
 }
 
-void StratifiedSample2D(vec2 *samp, int nx, int ny, random_gen &rng,
+void StratifiedSample2D(vec2f *samp, int nx, int ny, random_gen &rng,
                         bool jitter) {
   Float dx = (Float)1 / nx, dy = (Float)1 / ny;
   for (int y = 0; y < ny; ++y) {
@@ -80,7 +80,7 @@ void Sampler::Request1DArray(int n) {
 
 void Sampler::Request2DArray(int n) {
   samples2DArraySizes.push_back(n);
-  sampleArray2D.push_back(std::vector<vec2>(n * samplesPerPixel));
+  sampleArray2D.push_back(std::vector<vec2f>(n * samplesPerPixel));
 }
 
 
@@ -92,7 +92,7 @@ const Float *Sampler::Get1DArray(int n) {
   return(&sampleArray1D[array1DOffset++][currentPixelSampleIndex * n]);
 }
 
-const vec2 *Sampler::Get2DArray(int n) {
+const vec2f *Sampler::Get2DArray(int n) {
   if (array2DOffset == sampleArray2D.size()) {
     return(nullptr);
   }
@@ -122,12 +122,12 @@ Float PixelSampler::Get1D() {
 }
 
 //This both fetches and increments `current2DDimension`
-vec2 PixelSampler::Get2D() {
+vec2f PixelSampler::Get2D() {
   if (current2DDimension < samples2D.size() && 
       currentPixelSampleIndex < samples2D[current2DDimension].size()) {
     return(samples2D[current2DDimension++][currentPixelSampleIndex]);
   } else {
-    return(vec2(rng.unif_rand(), rng.unif_rand()));
+    return(vec2f(rng.unif_rand(), rng.unif_rand()));
   }
 }
 
@@ -176,8 +176,8 @@ std::unique_ptr<Sampler> RandomSampler::Clone(int seed) {
 Float RandomSampler::Get1D() {
   return(rng.unif_rand());
 }
-vec2 RandomSampler::Get2D() {
-  return(vec2(rng.unif_rand(), rng.unif_rand()));
+vec2f RandomSampler::Get2D() {
+  return(vec2f(rng.unif_rand(), rng.unif_rand()));
 }
 bool RandomSampler::StartNextSample() {
   return(true);
@@ -192,8 +192,8 @@ static inline float sobol_calc_single(unsigned long long  i, unsigned int dim, u
   return(spacefillr::sobol_owen_single(i, dim, scramble));
 } 
 
-static inline vec2 sobol_calc_double(unsigned long long  i, unsigned int dim, unsigned int scramble) {
-  return(vec2(spacefillr::sobol_owen_single(i, dim, scramble), 
+static inline vec2f sobol_calc_double(unsigned long long  i, unsigned int dim, unsigned int scramble) {
+  return(vec2f(spacefillr::sobol_owen_single(i, dim, scramble), 
               spacefillr::sobol_owen_single(i, dim+1, scramble)));
 }
 
@@ -201,8 +201,8 @@ static inline double sobol_calc_single_bluenoise(int  x, int  y, int i, int dim)
   return(spacefillr::samplerBlueNoise(x,y, i, dim)); 
 }
 
-static inline vec2 sobol_calc_double_bluenoise(int  x, int  y, int i, int dim) {
-  return(vec2(spacefillr::samplerBlueNoise(x,y, i, dim), 
+static inline vec2f sobol_calc_double_bluenoise(int  x, int  y, int i, int dim) {
+  return(vec2f(spacefillr::samplerBlueNoise(x,y, i, dim), 
               spacefillr::samplerBlueNoise(x,y, i, dim+1)));
 }
 
@@ -233,8 +233,8 @@ Float SobolSampler::Get1D() {
 }
 
 
-vec2 SobolSampler::Get2D() {
-  vec2 temp = sobol_calc_double(current2Dsample,
+vec2f SobolSampler::Get2D() {
+  vec2f temp = sobol_calc_double(current2Dsample,
                                 0,
                                 pixelseed + current2DDimension
                                 );
@@ -270,8 +270,8 @@ Float SobolBlueNoiseSampler::Get1D() {
   return(temp);
 }
 
-vec2 SobolBlueNoiseSampler::Get2D() {
-  vec2 temp = sobol_calc_double_bluenoise(currentPixelx,
+vec2f SobolBlueNoiseSampler::Get2D() {
+  vec2f temp = sobol_calc_double_bluenoise(currentPixelx,
                                           currentPixely,
                                           current2Dsample,
                                           current2DDimension);

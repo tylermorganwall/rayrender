@@ -30,7 +30,7 @@ public:
     return(random_point - o);
   }
   virtual vec3f random(const vec3f& o, Sampler* sampler, Float time = 0) {
-    vec2 u = sampler->Get2D();
+    vec2f u = sampler->Get2D();
     vec3f random_point = vec3f(x0 + u.x() * (x1 - x0), y0 + u.y() * (y1-y0),k);
     return(random_point - o);
   }
@@ -85,7 +85,7 @@ public:
     return(random_point - o);
   }
   virtual vec3f random(const vec3f& o, Sampler* sampler, Float time = 0) {
-    vec2 u = sampler->Get2D();
+    vec2f u = sampler->Get2D();
     vec3f random_point = vec3f(x0 + u.x() * (x1 - x0), k, z0 + u.y()  * (z1-z0));
     return(random_point - o);
   }
@@ -143,7 +143,7 @@ public:
     return(random_point-o);
   }
   virtual vec3f random(const vec3f& o, Sampler* sampler, Float time = 0) {
-    vec2 u = sampler->Get2D();
+    vec2f u = sampler->Get2D();
     vec3f random_point = vec3f(k, y0 + u.x() * (y1 - y0), z0 + u.y() * (z1-z0));
     return(random_point - o);
   }

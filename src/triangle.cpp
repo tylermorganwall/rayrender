@@ -41,14 +41,14 @@ bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
   if(bump_tex) {
     //Get UV values + calculate dpdu/dpdv
     vec3f u_val, v_val;
-    vec2 uv[3];
+    vec2f uv[3];
     u_val = bump_tex->u_vec;
     v_val = bump_tex->v_vec;
-    uv[0] = vec2(u_val.x(), v_val.x());
-    uv[1] = vec2(u_val.y(), v_val.y());
-    uv[2] = vec2(u_val.z(), v_val.z());
-    vec2 duv02 = uv[0] - uv[2];
-    vec2 duv12 = uv[1] - uv[2];
+    uv[0] = vec2f(u_val.x(), v_val.x());
+    uv[1] = vec2f(u_val.y(), v_val.y());
+    uv[2] = vec2f(u_val.z(), v_val.z());
+    vec2f duv02 = uv[0] - uv[2];
+    vec2f duv12 = uv[1] - uv[2];
     vec3f dp02 = edge1;
     vec3f dp12 = edge2;
     
@@ -135,14 +135,14 @@ bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Samp
   if(bump_tex) {
     //Get UV values + calculate dpdu/dpdv
     vec3f u_val, v_val;
-    vec2 uv[3];
+    vec2f uv[3];
     u_val = bump_tex->u_vec;
     v_val = bump_tex->v_vec;
-    uv[0] = vec2(u_val.x(), v_val.x());
-    uv[1] = vec2(u_val.y(), v_val.y());
-    uv[2] = vec2(u_val.z(), v_val.z());
-    vec2 duv02 = uv[0] - uv[2];
-    vec2 duv12 = uv[1] - uv[2];
+    uv[0] = vec2f(u_val.x(), v_val.x());
+    uv[1] = vec2f(u_val.y(), v_val.y());
+    uv[2] = vec2f(u_val.z(), v_val.z());
+    vec2f duv02 = uv[0] - uv[2];
+    vec2f duv12 = uv[1] - uv[2];
     vec3f dp02 = edge1;
     vec3f dp12 = edge2;
     
@@ -234,7 +234,7 @@ vec3f triangle::random(const vec3f& origin, random_gen& rng, Float time) {
   return(random_point - origin); 
 }
 vec3f triangle::random(const vec3f& origin, Sampler* sampler, Float time) {
-  vec2 u = sampler->Get2D();
+  vec2f u = sampler->Get2D();
   Float r1 = u.x();
   Float r2 = u.y();
   Float sr1 = sqrt(r1);

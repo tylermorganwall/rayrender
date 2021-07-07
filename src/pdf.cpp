@@ -112,8 +112,8 @@ vec3f hair_pdf::generate(random_gen& rng, bool& diffuse_bounce, Float time) {
   Float phiO = std::atan2(wo.z(), wo.y());
   
   // Derive four random samples from _u2_
-  vec2 u2 = vec2(rng.unif_rand(),rng.unif_rand());
-  vec2 u[2] = {DemuxFloat(u2.e[0]), DemuxFloat(u2.e[1])};
+  vec2f u2 = vec2f(rng.unif_rand(),rng.unif_rand());
+  vec2f u[2] = {DemuxFloat(u2.e[0]), DemuxFloat(u2.e[1])};
   std::array<Float, pMax + 1> apPdf = ComputeApPdf(cosThetaO);
   int p;
   for (p = 0; p < pMax; ++p) {
@@ -171,8 +171,8 @@ vec3f hair_pdf::generate(Sampler* sampler, bool& diffuse_bounce, Float time) {
   Float phiO = std::atan2(wo.z(), wo.y());
   
   // Derive four random samples from _u2_
-  vec2 u2 = sampler->Get2D();
-  vec2 u[2] = {DemuxFloat(u2.e[0]), DemuxFloat(u2.e[1])};
+  vec2f u2 = sampler->Get2D();
+  vec2f u[2] = {DemuxFloat(u2.e[0]), DemuxFloat(u2.e[1])};
   std::array<Float, pMax + 1> apPdf = ComputeApPdf(cosThetaO);
   int p;
   for (p = 0; p < pMax; ++p) {

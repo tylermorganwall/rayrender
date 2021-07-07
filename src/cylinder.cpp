@@ -407,7 +407,7 @@ vec3f cylinder::random(const vec3f& o, random_gen& rng, Float time) {
 }
 
 vec3f cylinder::random(const vec3f& o, Sampler* sampler, Float time) {
-  vec2 u = sampler->Get2D();
+  vec2f u = sampler->Get2D();
   Float r1 = u.x();
   Float y1 = length*(u.y()-0.5);
   Float phi = (phi_max - phi_min) * r1 + phi_min;

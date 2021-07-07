@@ -323,12 +323,12 @@ bool curve::recursiveIntersect(const ray& r, Float tmin, Float tmax, hit_record&
     }
 
     // Compute line w that gives minimum distance to sample point
-    vec2 segmentDirection = vec2(cp[3]) - vec2(cp[0]);
+    vec2f segmentDirection = vec2f(cp[3]) - vec2f(cp[0]);
     Float denom = segmentDirection.squared_length();
     if (denom == 0) {
       return(false);
     }
-    Float w = dot(-vec2(cp[0]), segmentDirection) / denom;
+    Float w = dot(-vec2f(cp[0]), segmentDirection) / denom;
 
     // Compute u coordinate of curve intersection point and hitWidth
     Float u = clamp(lerp(w, u0, u1), u0, u1);

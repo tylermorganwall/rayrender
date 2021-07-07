@@ -6,10 +6,10 @@
 class GlobalSampler : public Sampler {
   public:
     bool StartNextSample();
-  void StartPixel(const vec2 &);
+  void StartPixel(const vec2f &);
   bool SetSampleNumber(int64_t sampleNum);
   Float Get1D();
-  vec2 Get2D();
+  vec2f Get2D();
   GlobalSampler(int64_t samplesPerPixel) : Sampler(samplesPerPixel) { }
   virtual int64_t GetIndexForSample(int64_t sampleNum) const = 0;
   virtual Float SampleDimension(int64_t index, int dimension) const = 0;
@@ -21,7 +21,7 @@ class GlobalSampler : public Sampler {
   int arrayEndDim;
 };
 
-void GlobalSampler::StartPixel(const vec2 &p) {
+void GlobalSampler::StartPixel(const vec2f &p) {
   Sampler::StartPixel(p);
   dimension = 0;
   intervalSampleIndex = GetIndexForSample(0);
@@ -69,11 +69,11 @@ Float GlobalSampler::Get1D() {
   return(SampleDimension(intervalSampleIndex, dimension++));
 }
 
-vec2 GlobalSampler::Get2D() {
+vec2f GlobalSampler::Get2D() {
   if (dimension + 1 >= arrayStartDim && dimension < arrayEndDim) {
     dimension = arrayEndDim;
   }
-  vec2 p(SampleDimension(intervalSampleIndex, dimension),
+  vec2f p(SampleDimension(intervalSampleIndex, dimension),
          SampleDimension(intervalSampleIndex, dimension + 1));
   dimension += 2;
   return(p);
