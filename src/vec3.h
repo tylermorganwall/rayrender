@@ -32,7 +32,7 @@ public:
   inline T b() const { return e[2]; }
   
   inline const vec3<T>& operator+() const { return *this; }
-  inline vec3<T> operator-() const { return vec3(-e[0], -e[1], -e[2]); }
+  inline vec3<T> operator-() const { return vec3<T>(-e[0], -e[1], -e[2]); }
   inline T operator[](int i) const { return e[i]; }
   inline T& operator[](int i) { return e[i]; }
   
@@ -40,6 +40,8 @@ public:
   inline vec3<T>& operator-=(const vec3<T> &v2);
   inline vec3<T>& operator*=(const vec3<T> &v2);
   inline vec3<T>& operator/=(const vec3<T> &v2);
+  inline vec3<T>& operator+=(const Float t);
+  inline vec3<T>& operator-=(const Float t);
   inline vec3<T>& operator*=(const Float t);
   inline vec3<T>& operator/=(const Float t);
   
@@ -96,6 +98,16 @@ inline vec3<T> operator/(const vec3<T> &v1, const vec3<T> &v2) {
 }
 
 template<typename T> 
+inline vec3<T> operator+(const vec3<T> &v, Float t) {
+  return vec3<T>(v.e[0] + t,v.e[1] + t,v.e[2] + t);
+}
+
+template<typename T> 
+inline vec3<T> operator-(const vec3<T> &v, Float t) {
+  return vec3<T>(v.e[0] - t,v.e[1] - t,v.e[2] - t);
+}
+
+template<typename T> 
 inline vec3<T> operator*(Float t, const vec3<T> &v) {
   return vec3<T>(t*v.e[0], t*v.e[1], t*v.e[2]);
 }
@@ -108,6 +120,11 @@ inline vec3<T> operator*(const vec3<T> &v, Float t) {
 template<typename T> 
 inline vec3<T> operator/(const vec3<T> &v, Float t) {
   return vec3<T>(v.e[0]/t, v.e[1]/t, v.e[2]/t);
+}
+
+template<typename T> 
+inline vec3<T> operator/(Float t,const vec3<T> &v) {
+  return vec3<T>(t/v.e[0], t/v.e[1], t/v.e[2]);
 }
 
 template<typename T> 
@@ -151,6 +168,14 @@ inline vec3<T>& vec3<T>::operator-=(const vec3<T> &v) {
   e[0] -= v.e[0];
   e[1] -= v.e[1];
   e[2] -= v.e[2];
+  return(*this);
+}
+
+template<typename T> 
+inline vec3<T>& vec3<T>::operator+=(const Float t) {
+  e[0] += t;
+  e[1] += t;
+  e[2] += t;
   return(*this);
 }
 

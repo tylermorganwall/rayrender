@@ -8,12 +8,12 @@
 class MicrofacetDistribution {
 public:
   virtual ~MicrofacetDistribution() {}
-  virtual Float D(const vec3 &wh) const = 0;
-  virtual Float Lambda(const vec3 &w) const = 0;
-  Float G1(const vec3 &w) const {
+  virtual Float D(const vec3f &wh) const = 0;
+  virtual Float Lambda(const vec3f &w) const = 0;
+  Float G1(const vec3f &w) const {
     return(1 / (1 + Lambda(w)));
   }
-  Float G(const vec3 &wo, const vec3 &wi, const vec3 &wh) const {
+  Float G(const vec3f &wo, const vec3f &wi, const vec3f &wh) const {
     Float NdotWh = AbsCosTheta(wh);
     Float NdotWo = AbsCosTheta(wo);
     Float NdotWi = AbsCosTheta(wi);
@@ -23,8 +23,8 @@ public:
   virtual Float GetAlpha() const = 0;
   virtual vec2 GetAlphas() const = 0;
   virtual bool GetType() const = 0;
-  virtual vec3 Sample_wh(const vec3 &wi, const Float u1, const Float u2) const = 0;
-  Float Pdf(const vec3 &wo,const vec3 &wi, const vec3 &wh) {
+  virtual vec3f Sample_wh(const vec3f &wi, const Float u1, const Float u2) const = 0;
+  Float Pdf(const vec3f &wo,const vec3f &wi, const vec3f &wh) {
     return(D(wh) * G(wo, wi, wh) * AbsDot(wo, wh) / AbsCosTheta(wo));
   }
 protected:
@@ -50,7 +50,7 @@ public:
     alphay *= alphay;
   }
   ~BeckmannDistribution() {}
-  Float D(const vec3 &wh) const;
+  Float D(const vec3f &wh) const;
   Float GetAlpha() const {
     return(std::sqrt(alphax * alphax + alphay * alphay));
   }
@@ -60,9 +60,9 @@ public:
   bool GetType() const { 
     return(type);
   };
-  vec3 Sample_wh(const vec3 &wi, const Float u1, const Float u2) const;
+  vec3f Sample_wh(const vec3f &wi, const Float u1, const Float u2) const;
 private:
-  Float Lambda(const vec3 &w) const;
+  Float Lambda(const vec3f &w) const;
   Float alphax, alphay;
   bool type;
 };
@@ -84,7 +84,7 @@ public:
     return(1.62142f + 0.819955f * x + 0.1734f * x * x +
            0.0171201f * x * x * x + 0.000640711f * x * x * x * x );
   }
-  Float D(const vec3 &w) const;
+  Float D(const vec3f &w) const;
   Float GetAlpha() const {
     return(std::sqrt(alphax * alphax + alphay * alphay));
   }
@@ -94,9 +94,9 @@ public:
   bool GetType() const { 
     return(type);
   };
-  vec3 Sample_wh(const vec3 &wi, const Float u1, const Float u2) const;
+  vec3f Sample_wh(const vec3f &wi, const Float u1, const Float u2) const;
 private:
-  Float Lambda(const vec3 &w) const;
+  Float Lambda(const vec3f &w) const;
   Float alphax, alphay;
   bool type;
 };

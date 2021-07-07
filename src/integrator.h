@@ -11,6 +11,7 @@
 #include "hitablelist.h"
 #include "color.h"
 #include "mathinline.h"
+#include "filter.h"
 
 void pathtracer(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_channel,
                 Float min_variance, size_t min_adaptive_size, 

@@ -132,29 +132,29 @@ plymesh::plymesh(std::string inputfile, std::string basedir, std::shared_ptr<mat
   }
   int number_faces = tri->numIndices / 3;
   
-  vec3 tris[3];
-  vec3 normals[3];
+  vec3f tris[3];
+  vec3f normals[3];
   for (int i = 0; i < number_faces; i++) {
     bool tempnormal = false;
     int idx = 3*i;
-    tris[0] = vec3(tri->pos[3*tri->indices[idx  ]+0],
+    tris[0] = vec3f(tri->pos[3*tri->indices[idx  ]+0],
                    tri->pos[3*tri->indices[idx  ]+1],
                            tri->pos[3*tri->indices[idx  ]+2])*scale;
-    tris[1] = vec3(tri->pos[3*tri->indices[idx+1]+0],
+    tris[1] = vec3f(tri->pos[3*tri->indices[idx+1]+0],
                    tri->pos[3*tri->indices[idx+1]+1],
                            tri->pos[3*tri->indices[idx+1]+2])*scale;
-    tris[2] = vec3(tri->pos[3*tri->indices[idx+2]+0],
+    tris[2] = vec3f(tri->pos[3*tri->indices[idx+2]+0],
                    tri->pos[3*tri->indices[idx+2]+1],
                            tri->pos[3*tri->indices[idx+2]+2])*scale;
     if(has_normals) {
       tempnormal = true;
-      normals[0] = vec3(tri->normal[3*tri->indices[idx  ]+0],
+      normals[0] = vec3f(tri->normal[3*tri->indices[idx  ]+0],
                         tri->normal[3*tri->indices[idx  ]+1],
                                    tri->normal[3*tri->indices[idx  ]+2]);
-      normals[1] = vec3(tri->normal[3*tri->indices[idx+1]+0],
+      normals[1] = vec3f(tri->normal[3*tri->indices[idx+1]+0],
                         tri->normal[3*tri->indices[idx+1]+1],
                                    tri->normal[3*tri->indices[idx+1]+2]);
-      normals[2] = vec3(tri->normal[3*tri->indices[idx+2]+0],
+      normals[2] = vec3f(tri->normal[3*tri->indices[idx+2]+0],
                         tri->normal[3*tri->indices[idx+2]+1],
                                    tri->normal[3*tri->indices[idx+2]+2]);
     }

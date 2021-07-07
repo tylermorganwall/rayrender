@@ -2,7 +2,7 @@
 
 
 bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
-  vec3 oc = r.origin() - center;
+  vec3f oc = r.origin() - center;
   Float a = dot(r.direction(), r.direction());
   Float b = 2 * dot(oc, r.direction()); 
   Float c = dot(oc,oc) - radius * radius;
@@ -16,18 +16,18 @@ bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random
     Float u;
     Float v;
     if(temp1 < t_max && temp1 > t_min) {
-      vec3 p1 = r.point_at_parameter(temp1);
+      vec3f p1 = r.point_at_parameter(temp1);
       p1 *= radius / p1.length(); 
-      vec3 normal = (p1 - center) / radius;
+      vec3f normal = (p1 - center) / radius;
       get_sphere_uv(normal, u, v);
       if(alpha_mask->value(u, v, rec.p).x() < rng.unif_rand()) {
         is_hit = false;
       }
     }
     if(temp2 < t_max && temp2 > t_min) {
-      vec3 p2 = r.point_at_parameter(temp2);
+      vec3f p2 = r.point_at_parameter(temp2);
       p2 *= radius / p2.length(); 
-      vec3 normal = (p2 - center) / radius;
+      vec3f normal = (p2 - center) / radius;
       get_sphere_uv(normal, u, v);
       if(alpha_mask->value(u, v, rec.p).x() < rng.unif_rand()) {
         if(!is_hit) {
@@ -49,13 +49,13 @@ bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random
     Float cosPhi = rec.p.x() * invZRadius;
     Float sinPhi = rec.p.z() * invZRadius;
     Float theta = std::acos(clamp(rec.p.z() / radius, -1, 1));
-    rec.dpdu = 2 * M_PI * vec3(-rec.p.z(), 0, rec.p.x());
-    rec.dpdv = 2 * M_PI * vec3(rec.p.z() * cosPhi, rec.p.z() * sinPhi, -radius * std::sin(theta));
+    rec.dpdu = 2 * M_PI * vec3f(-rec.p.z(), 0, rec.p.x());
+    rec.dpdv = 2 * M_PI * vec3f(rec.p.z() * cosPhi, rec.p.z() * sinPhi, -radius * std::sin(theta));
     get_sphere_uv(rec.normal, rec.u, rec.v);
     rec.has_bump = bump_tex ? true : false;
     
     if(bump_tex) {
-      vec3 bvbu = bump_tex->value(rec.u,rec.v, rec.p);
+      vec3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
       rec.bump_normal = rec.normal + bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv; 
       rec.bump_normal.make_unit_vector();
     }
@@ -75,13 +75,13 @@ bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random
     Float cosPhi = rec.p.x() * invZRadius;
     Float sinPhi = rec.p.z() * invZRadius;
     Float theta = std::acos(clamp(rec.p.z() / radius, -1, 1));
-    rec.dpdu = 2 * M_PI * vec3(-rec.p.z(), 0, rec.p.x());
-    rec.dpdv = 2 * M_PI * vec3(rec.p.z() * cosPhi, rec.p.z() * sinPhi, -radius * std::sin(theta));
+    rec.dpdu = 2 * M_PI * vec3f(-rec.p.z(), 0, rec.p.x());
+    rec.dpdv = 2 * M_PI * vec3f(rec.p.z() * cosPhi, rec.p.z() * sinPhi, -radius * std::sin(theta));
     get_sphere_uv(rec.normal, rec.u, rec.v);
     rec.has_bump = bump_tex ? true : false;
     
     if(bump_tex) {
-      vec3 bvbu = bump_tex->value(rec.u,rec.v, rec.p);
+      vec3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
       rec.bump_normal = rec.normal +  bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv; 
       rec.bump_normal.make_unit_vector();
     }
@@ -98,7 +98,7 @@ bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random
 
 
 bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) {
-  vec3 oc = r.origin() - center;
+  vec3f oc = r.origin() - center;
   Float a = dot(r.direction(), r.direction());
   Float b = 2 * dot(oc, r.direction()); 
   Float c = dot(oc,oc) - radius * radius;
@@ -112,18 +112,18 @@ bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sample
     Float u;
     Float v;
     if(temp1 < t_max && temp1 > t_min) {
-      vec3 p1 = r.point_at_parameter(temp1);
+      vec3f p1 = r.point_at_parameter(temp1);
       p1 *= radius / p1.length(); 
-      vec3 normal = (p1 - center) / radius;
+      vec3f normal = (p1 - center) / radius;
       get_sphere_uv(normal, u, v);
       if(alpha_mask->value(u, v, rec.p).x() < sampler->Get1D()) {
         is_hit = false;
       }
     }
     if(temp2 < t_max && temp2 > t_min) {
-      vec3 p2 = r.point_at_parameter(temp2);
+      vec3f p2 = r.point_at_parameter(temp2);
       p2 *= radius / p2.length(); 
-      vec3 normal = (p2 - center) / radius;
+      vec3f normal = (p2 - center) / radius;
       get_sphere_uv(normal, u, v);
       if(alpha_mask->value(u, v, rec.p).x() < sampler->Get1D()) {
         if(!is_hit) {
@@ -145,13 +145,13 @@ bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sample
     Float cosPhi = rec.p.x() * invZRadius;
     Float sinPhi = rec.p.z() * invZRadius;
     Float theta = std::acos(clamp(rec.p.z() / radius, -1, 1));
-    rec.dpdu = 2 * M_PI * vec3(-rec.p.z(), 0, rec.p.x());
-    rec.dpdv = 2 * M_PI * vec3(rec.p.z() * cosPhi, rec.p.z() * sinPhi, -radius * std::sin(theta));
+    rec.dpdu = 2 * M_PI * vec3f(-rec.p.z(), 0, rec.p.x());
+    rec.dpdv = 2 * M_PI * vec3f(rec.p.z() * cosPhi, rec.p.z() * sinPhi, -radius * std::sin(theta));
     get_sphere_uv(rec.normal, rec.u, rec.v);
     rec.has_bump = bump_tex ? true : false;
     
     if(bump_tex) {
-      vec3 bvbu = bump_tex->value(rec.u,rec.v, rec.p);
+      vec3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
       rec.bump_normal = rec.normal + bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv; 
       rec.bump_normal.make_unit_vector();
     }
@@ -171,13 +171,13 @@ bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sample
     Float cosPhi = rec.p.x() * invZRadius;
     Float sinPhi = rec.p.z() * invZRadius;
     Float theta = std::acos(clamp(rec.p.z() / radius, -1, 1));
-    rec.dpdu = 2 * M_PI * vec3(-rec.p.z(), 0, rec.p.x());
-    rec.dpdv = 2 * M_PI * vec3(rec.p.z() * cosPhi, rec.p.z() * sinPhi, -radius * std::sin(theta));
+    rec.dpdu = 2 * M_PI * vec3f(-rec.p.z(), 0, rec.p.x());
+    rec.dpdv = 2 * M_PI * vec3f(rec.p.z() * cosPhi, rec.p.z() * sinPhi, -radius * std::sin(theta));
     get_sphere_uv(rec.normal, rec.u, rec.v);
     rec.has_bump = bump_tex ? true : false;
     
     if(bump_tex) {
-      vec3 bvbu = bump_tex->value(rec.u,rec.v, rec.p);
+      vec3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
       rec.bump_normal = rec.normal +  bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv; 
       rec.bump_normal.make_unit_vector();
     }
@@ -193,7 +193,7 @@ bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sample
 }
 
 
-Float sphere::pdf_value(const vec3& o, const vec3& v, random_gen& rng, Float time) {
+Float sphere::pdf_value(const vec3f& o, const vec3f& v, random_gen& rng, Float time) {
   hit_record rec;
   if(this->hit(ray(o,v), 0.001, FLT_MAX, rec, rng)) {
     Float cos_theta_max = sqrt(1 - radius * radius/(center - o).squared_length());
@@ -205,7 +205,7 @@ Float sphere::pdf_value(const vec3& o, const vec3& v, random_gen& rng, Float tim
 }
 
 
-Float sphere::pdf_value(const vec3& o, const vec3& v, Sampler* sampler, Float time) {
+Float sphere::pdf_value(const vec3f& o, const vec3f& v, Sampler* sampler, Float time) {
   hit_record rec;
   if(this->hit(ray(o,v), 0.001, FLT_MAX, rec, sampler)) {
     Float cos_theta_max = sqrt(1 - radius * radius/(center - o).squared_length());
@@ -216,16 +216,16 @@ Float sphere::pdf_value(const vec3& o, const vec3& v, Sampler* sampler, Float ti
   }
 }
 
-vec3 sphere::random(const vec3& o, random_gen& rng, Float time) {
-  vec3 direction = center - o;
+vec3f sphere::random(const vec3f& o, random_gen& rng, Float time) {
+  vec3f direction = center - o;
   Float distance_squared = direction.squared_length();
   onb uvw;
   uvw.build_from_w(direction);
   return(uvw.local_to_world(rng.random_to_sphere(radius,distance_squared)));
 }
 
-vec3 sphere::random(const vec3& o, Sampler* sampler, Float time) {
-  vec3 direction = center - o;
+vec3f sphere::random(const vec3f& o, Sampler* sampler, Float time) {
+  vec3f direction = center - o;
   Float distance_squared = direction.squared_length();
   onb uvw;
   uvw.build_from_w(direction);
@@ -233,24 +233,24 @@ vec3 sphere::random(const vec3& o, Sampler* sampler, Float time) {
 }
 
 bool sphere::bounding_box(Float t0, Float t1, aabb& box) const {
-  box = aabb(center - vec3(radius,radius,radius), center + vec3(radius,radius,radius));
+  box = aabb(center - vec3f(radius,radius,radius), center + vec3f(radius,radius,radius));
   return(true);
 }
 
 
-vec3 moving_sphere::center(Float time) const {
+vec3f moving_sphere::center(Float time) const {
   return(center0 + ((time - time0) / (time1 - time0)) * (center1 - center0));
 }
 
 bool moving_sphere::bounding_box(Float t0, Float t1, aabb& box) const {
-  aabb box0(center(t0) - vec3(radius,radius,radius), center(t0) + vec3(radius,radius,radius));
-  aabb box1(center(t1) - vec3(radius,radius,radius), center(t1) + vec3(radius,radius,radius));
+  aabb box0(center(t0) - vec3f(radius,radius,radius), center(t0) + vec3f(radius,radius,radius));
+  aabb box1(center(t1) - vec3f(radius,radius,radius), center(t1) + vec3f(radius,radius,radius));
   box = surrounding_box(box0, box1);
   return(true);
 }
 
 bool moving_sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
-  vec3 oc = r.origin() - center(r.time());
+  vec3f oc = r.origin() - center(r.time());
   Float a = dot(r.direction(), r.direction());
   Float b = 2 * dot(oc, r.direction()); 
   Float c = dot(oc,oc) - radius * radius;
@@ -263,18 +263,18 @@ bool moving_sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec,
     Float u;
     Float v;
     if(temp1 < t_max && temp1 > t_min) {
-      vec3 p1 = r.point_at_parameter(temp1);
+      vec3f p1 = r.point_at_parameter(temp1);
       p1 *= radius / p1.length(); 
-      vec3 normal = (p1 - center(r.time())) / radius;
+      vec3f normal = (p1 - center(r.time())) / radius;
       get_sphere_uv(normal, u, v);
       if(alpha_mask->value(u, v, rec.p).x() < rng.unif_rand()) {
         is_hit = false;
       }
     }
     if(temp2 < t_max && temp2 > t_min) {
-      vec3 p2 = r.point_at_parameter(temp2);
+      vec3f p2 = r.point_at_parameter(temp2);
       p2 *= radius / p2.length(); 
-      vec3 normal = (p2 - center(r.time())) / radius;
+      vec3f normal = (p2 - center(r.time())) / radius;
       get_sphere_uv(normal, u, v);
       if(alpha_mask->value(u, v, rec.p).x() < rng.unif_rand()) {
         if(!is_hit) {
@@ -295,11 +295,11 @@ bool moving_sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec,
     Float cosPhi = rec.p.x() * invZRadius;
     Float sinPhi = rec.p.z() * invZRadius;
     Float theta = std::acos(clamp(rec.p.z() / radius, -1, 1));
-    rec.dpdu = 2 * M_PI * vec3(-rec.p.z(), 0, rec.p.x());
-    rec.dpdv = 2 * M_PI * vec3(rec.p.z() * cosPhi, rec.p.z() * sinPhi, -radius * std::sin(theta));
+    rec.dpdu = 2 * M_PI * vec3f(-rec.p.z(), 0, rec.p.x());
+    rec.dpdv = 2 * M_PI * vec3f(rec.p.z() * cosPhi, rec.p.z() * sinPhi, -radius * std::sin(theta));
     
     if(bump_tex) {
-      vec3 bvbu = bump_tex->value(rec.u,rec.v, rec.p);
+      vec3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
       rec.bump_normal = rec.normal + bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv; 
       rec.bump_normal.make_unit_vector();
     }
@@ -320,13 +320,13 @@ bool moving_sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec,
     Float cosPhi = rec.p.x() * invZRadius;
     Float sinPhi = rec.p.z() * invZRadius;
     Float theta = std::acos(clamp(rec.p.z() / radius, -1, 1));
-    rec.dpdu = 2 * M_PI * vec3(-rec.p.z(), 0, rec.p.x());
-    rec.dpdv = 2 * M_PI * vec3(rec.p.z() * cosPhi, rec.p.z() * sinPhi, -radius * std::sin(theta));
+    rec.dpdu = 2 * M_PI * vec3f(-rec.p.z(), 0, rec.p.x());
+    rec.dpdv = 2 * M_PI * vec3f(rec.p.z() * cosPhi, rec.p.z() * sinPhi, -radius * std::sin(theta));
     
     if(bump_tex) {
-      vec3 bvbu = bump_tex->value(rec.u,rec.v, rec.p);
-      vec3 o_u = cross(rec.normal, rec.dpdu);
-      vec3 o_v = cross(rec.normal, rec.dpdv);
+      vec3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
+      vec3f o_u = cross(rec.normal, rec.dpdu);
+      vec3f o_v = cross(rec.normal, rec.dpdv);
       rec.bump_normal = rec.normal + bvbu.x() * o_v - bvbu.y() * o_u; 
       rec.bump_normal.make_unit_vector();
     }
@@ -343,16 +343,16 @@ bool moving_sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec,
 }
 
 
-vec3 moving_sphere::random(const vec3& o, random_gen& rng, Float time) {
-  vec3 direction = center(time) - o;
+vec3f moving_sphere::random(const vec3f& o, random_gen& rng, Float time) {
+  vec3f direction = center(time) - o;
   Float distance_squared = direction.squared_length();
   onb uvw;
   uvw.build_from_w(direction);
   return(uvw.local_to_world(rng.random_to_sphere(radius,distance_squared)));
 }
 
-vec3 moving_sphere::random(const vec3& o, Sampler* sampler, Float time) {
-  vec3 direction = center(time) - o;
+vec3f moving_sphere::random(const vec3f& o, Sampler* sampler, Float time) {
+  vec3f direction = center(time) - o;
   Float distance_squared = direction.squared_length();
   onb uvw;
   uvw.build_from_w(direction);
@@ -361,7 +361,7 @@ vec3 moving_sphere::random(const vec3& o, Sampler* sampler, Float time) {
 
 
 bool moving_sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) {
-  vec3 oc = r.origin() - center(r.time());
+  vec3f oc = r.origin() - center(r.time());
   Float a = dot(r.direction(), r.direction());
   Float b = 2 * dot(oc, r.direction()); 
   Float c = dot(oc,oc) - radius * radius;
@@ -375,18 +375,18 @@ bool moving_sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec,
     Float u;
     Float v;
     if(temp1 < t_max && temp1 > t_min) {
-      vec3 p1 = r.point_at_parameter(temp1);
+      vec3f p1 = r.point_at_parameter(temp1);
       p1 *= radius / p1.length(); 
-      vec3 normal = (p1 - center(r.time())) / radius;
+      vec3f normal = (p1 - center(r.time())) / radius;
       get_sphere_uv(normal, u, v);
       if(alpha_mask->value(u, v, rec.p).x() < sampler->Get1D()) {
         is_hit = false;
       }
     }
     if(temp2 < t_max && temp2 > t_min) {
-      vec3 p2 = r.point_at_parameter(temp2);
+      vec3f p2 = r.point_at_parameter(temp2);
       p2 *= radius / p2.length(); 
-      vec3 normal = (p2 - center(r.time())) / radius;
+      vec3f normal = (p2 - center(r.time())) / radius;
       get_sphere_uv(normal, u, v);
       if(alpha_mask->value(u, v, rec.p).x() < sampler->Get1D()) {
         if(!is_hit) {
@@ -408,13 +408,13 @@ bool moving_sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec,
     Float cosPhi = rec.p.x() * invZRadius;
     Float sinPhi = rec.p.z() * invZRadius;
     Float theta = std::acos(clamp(rec.p.z() / radius, -1, 1));
-    rec.dpdu = 2 * M_PI * vec3(-rec.p.z(), 0, rec.p.x());
-    rec.dpdv = 2 * M_PI * vec3(rec.p.z() * cosPhi, rec.p.z() * sinPhi, -radius * std::sin(theta));
+    rec.dpdu = 2 * M_PI * vec3f(-rec.p.z(), 0, rec.p.x());
+    rec.dpdv = 2 * M_PI * vec3f(rec.p.z() * cosPhi, rec.p.z() * sinPhi, -radius * std::sin(theta));
     get_sphere_uv(rec.normal, rec.u, rec.v);
     rec.has_bump = bump_tex ? true : false;
     
     if(bump_tex) {
-      vec3 bvbu = bump_tex->value(rec.u,rec.v, rec.p);
+      vec3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
       rec.bump_normal = rec.normal + bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv; 
       rec.bump_normal.make_unit_vector();
     }
@@ -434,13 +434,13 @@ bool moving_sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec,
     Float cosPhi = rec.p.x() * invZRadius;
     Float sinPhi = rec.p.z() * invZRadius;
     Float theta = std::acos(clamp(rec.p.z() / radius, -1, 1));
-    rec.dpdu = 2 * M_PI * vec3(-rec.p.z(), 0, rec.p.x());
-    rec.dpdv = 2 * M_PI * vec3(rec.p.z() * cosPhi, rec.p.z() * sinPhi, -radius * std::sin(theta));
+    rec.dpdu = 2 * M_PI * vec3f(-rec.p.z(), 0, rec.p.x());
+    rec.dpdv = 2 * M_PI * vec3f(rec.p.z() * cosPhi, rec.p.z() * sinPhi, -radius * std::sin(theta));
     get_sphere_uv(rec.normal, rec.u, rec.v);
     rec.has_bump = bump_tex ? true : false;
     
     if(bump_tex) {
-      vec3 bvbu = bump_tex->value(rec.u,rec.v, rec.p);
+      vec3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
       rec.bump_normal = rec.normal +  bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv; 
       rec.bump_normal.make_unit_vector();
     }
@@ -455,7 +455,7 @@ bool moving_sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec,
   return(false);
 }
 
-Float moving_sphere::pdf_value(const vec3& o, const vec3& v, random_gen& rng, Float time) {
+Float moving_sphere::pdf_value(const vec3f& o, const vec3f& v, random_gen& rng, Float time) {
   hit_record rec;
   if(this->hit(ray(o,v,time), 0.001, FLT_MAX, rec, rng)) {
     Float cos_theta_max = sqrt(1 - radius * radius/(center(time) - o).squared_length());
@@ -467,7 +467,7 @@ Float moving_sphere::pdf_value(const vec3& o, const vec3& v, random_gen& rng, Fl
 }
 
 
-Float moving_sphere::pdf_value(const vec3& o, const vec3& v, Sampler* sampler, Float time) {
+Float moving_sphere::pdf_value(const vec3f& o, const vec3f& v, Sampler* sampler, Float time) {
   hit_record rec;
   if(this->hit(ray(o,v,time), 0.001, FLT_MAX, rec, sampler)) {
     Float cos_theta_max = sqrt(1 - radius * radius/(center(time) - o).squared_length());

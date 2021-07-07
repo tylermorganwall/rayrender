@@ -2,7 +2,7 @@
 
 //Translate implementation
 
-void get_sphere_uv(const vec3& p, Float& u, Float& v) {
+void get_sphere_uv(const vec3f& p, Float& u, Float& v) {
   Float phi = atan2(p.z(),p.x());
   Float theta = asin(p.y());
   u = 1 - (phi + M_PI) / (2*M_PI);
@@ -91,8 +91,8 @@ rotate_y::rotate_y(std::shared_ptr<hitable> p, Float angle) : ptr(p) {
   sin_theta = sin(radians);
   cos_theta = cos(radians);
   hasbox = ptr->bounding_box(0,1,bbox);
-  vec3 min(FLT_MAX, FLT_MAX, FLT_MAX);
-  vec3 max(-FLT_MAX, -FLT_MAX, -FLT_MAX);
+  vec3f min(FLT_MAX, FLT_MAX, FLT_MAX);
+  vec3f max(-FLT_MAX, -FLT_MAX, -FLT_MAX);
   for(int i = 0; i < 2; i++) {
     for(int j = 0; j < 2; j++) {
       for(int k = 0; k < 2; k++) {
@@ -101,7 +101,7 @@ rotate_y::rotate_y(std::shared_ptr<hitable> p, Float angle) : ptr(p) {
         Float z = k*bbox.max().z() + (1-k)*bbox.min().z();
         Float newx = cos_theta*x + sin_theta*z;
         Float newz = -sin_theta*x + cos_theta*z;
-        vec3 tester(newx,y,newz);
+        vec3f tester(newx,y,newz);
         for(int c = 0; c < 3; c++) {
           if(tester[c] > max[c]) {
             max.e[c] = tester[c];
@@ -117,16 +117,16 @@ rotate_y::rotate_y(std::shared_ptr<hitable> p, Float angle) : ptr(p) {
 }
 
 bool rotate_y::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
-  vec3 origin = r.origin();
-  vec3 direction = r.direction();
+  vec3f origin = r.origin();
+  vec3f direction = r.direction();
   origin.e[0] = cos_theta*r.origin()[0] - sin_theta*r.origin()[2];
   origin.e[2] = sin_theta*r.origin()[0] + cos_theta*r.origin()[2];
   direction.e[0] = cos_theta*r.direction()[0] - sin_theta*r.direction()[2];
   direction.e[2] = sin_theta*r.direction()[0] + cos_theta*r.direction()[2];
   ray rotated_r(origin, direction, r.time());
   if(ptr->hit(rotated_r, t_min, t_max, rec, rng)) {
-    vec3 p = rec.p;
-    vec3 normal = rec.normal;
+    vec3f p = rec.p;
+    vec3f normal = rec.normal;
     p.e[0] = cos_theta*rec.p.e[0] + sin_theta*rec.p.e[2];
     p.e[2] = -sin_theta*rec.p.e[0] + cos_theta*rec.p.e[2]; 
     normal.e[0] = cos_theta*rec.normal.e[0] + sin_theta*rec.normal.e[2];
@@ -147,16 +147,16 @@ bool rotate_y::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
 
 
 bool rotate_y::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) {
-  vec3 origin = r.origin();
-  vec3 direction = r.direction();
+  vec3f origin = r.origin();
+  vec3f direction = r.direction();
   origin.e[0] = cos_theta*r.origin()[0] - sin_theta*r.origin()[2];
   origin.e[2] = sin_theta*r.origin()[0] + cos_theta*r.origin()[2];
   direction.e[0] = cos_theta*r.direction()[0] - sin_theta*r.direction()[2];
   direction.e[2] = sin_theta*r.direction()[0] + cos_theta*r.direction()[2];
   ray rotated_r(origin, direction, r.time());
   if(ptr->hit(rotated_r, t_min, t_max, rec, sampler)) {
-    vec3 p = rec.p;
-    vec3 normal = rec.normal;
+    vec3f p = rec.p;
+    vec3f normal = rec.normal;
     p.e[0] = cos_theta*rec.p.e[0] + sin_theta*rec.p.e[2];
     p.e[2] = -sin_theta*rec.p.e[0] + cos_theta*rec.p.e[2]; 
     normal.e[0] = cos_theta*rec.normal.e[0] + sin_theta*rec.normal.e[2];
@@ -181,8 +181,8 @@ rotate_x::rotate_x(std::shared_ptr<hitable> p, Float angle) : ptr(p) {
   sin_theta = sin(radians);
   cos_theta = cos(radians);
   hasbox = ptr->bounding_box(0,1,bbox);
-  vec3 min(FLT_MAX, FLT_MAX, FLT_MAX);
-  vec3 max(-FLT_MAX, -FLT_MAX, -FLT_MAX);
+  vec3f min(FLT_MAX, FLT_MAX, FLT_MAX);
+  vec3f max(-FLT_MAX, -FLT_MAX, -FLT_MAX);
   for(int i = 0; i < 2; i++) {
     for(int j = 0; j < 2; j++) {
       for(int k = 0; k < 2; k++) {
@@ -191,7 +191,7 @@ rotate_x::rotate_x(std::shared_ptr<hitable> p, Float angle) : ptr(p) {
         Float z = k*bbox.max().z() + (1-k)*bbox.min().z();
         Float newy = cos_theta*y + sin_theta*z;
         Float newz = -sin_theta*y + cos_theta*z;
-        vec3 tester(x,newy,newz);
+        vec3f tester(x,newy,newz);
         for(int c = 0; c < 3; c++) {
           if(tester[c] > max[c]) {
             max.e[c] = tester[c];
@@ -207,16 +207,16 @@ rotate_x::rotate_x(std::shared_ptr<hitable> p, Float angle) : ptr(p) {
 }
 
 bool rotate_x::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
-  vec3 origin = r.origin();
-  vec3 direction = r.direction();
+  vec3f origin = r.origin();
+  vec3f direction = r.direction();
   origin.e[1] = cos_theta*r.origin()[1] - sin_theta*r.origin()[2];
   origin.e[2] = sin_theta*r.origin()[1] + cos_theta*r.origin()[2];
   direction.e[1] = cos_theta*r.direction()[1] - sin_theta*r.direction()[2];
   direction.e[2] = sin_theta*r.direction()[1] + cos_theta*r.direction()[2];
   ray rotated_r(origin, direction, r.time());
   if(ptr->hit(rotated_r, t_min, t_max, rec, rng)) {
-    vec3 p = rec.p;
-    vec3 normal = rec.normal;
+    vec3f p = rec.p;
+    vec3f normal = rec.normal;
     p.e[1] = cos_theta*rec.p.e[1] + sin_theta*rec.p.e[2];
     p.e[2] = -sin_theta*rec.p.e[1] + cos_theta*rec.p.e[2]; 
     normal.e[1] = cos_theta*rec.normal.e[1] + sin_theta*rec.normal.e[2];
@@ -237,16 +237,16 @@ bool rotate_x::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
 
 
 bool rotate_x::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) {
-  vec3 origin = r.origin();
-  vec3 direction = r.direction();
+  vec3f origin = r.origin();
+  vec3f direction = r.direction();
   origin.e[1] = cos_theta*r.origin()[1] - sin_theta*r.origin()[2];
   origin.e[2] = sin_theta*r.origin()[1] + cos_theta*r.origin()[2];
   direction.e[1] = cos_theta*r.direction()[1] - sin_theta*r.direction()[2];
   direction.e[2] = sin_theta*r.direction()[1] + cos_theta*r.direction()[2];
   ray rotated_r(origin, direction, r.time());
   if(ptr->hit(rotated_r, t_min, t_max, rec, sampler)) {
-    vec3 p = rec.p;
-    vec3 normal = rec.normal;
+    vec3f p = rec.p;
+    vec3f normal = rec.normal;
     p.e[1] = cos_theta*rec.p.e[1] + sin_theta*rec.p.e[2];
     p.e[2] = -sin_theta*rec.p.e[1] + cos_theta*rec.p.e[2]; 
     normal.e[1] = cos_theta*rec.normal.e[1] + sin_theta*rec.normal.e[2];
@@ -271,8 +271,8 @@ rotate_z::rotate_z(std::shared_ptr<hitable> p, Float angle) : ptr(p) {
   sin_theta = sin(radians);
   cos_theta = cos(radians);
   hasbox = ptr->bounding_box(0,1,bbox);
-  vec3 min(FLT_MAX, FLT_MAX, FLT_MAX);
-  vec3 max(-FLT_MAX, -FLT_MAX, -FLT_MAX);
+  vec3f min(FLT_MAX, FLT_MAX, FLT_MAX);
+  vec3f max(-FLT_MAX, -FLT_MAX, -FLT_MAX);
   for(int i = 0; i < 2; i++) {
     for(int j = 0; j < 2; j++) {
       for(int k = 0; k < 2; k++) {
@@ -281,7 +281,7 @@ rotate_z::rotate_z(std::shared_ptr<hitable> p, Float angle) : ptr(p) {
         Float z = k*bbox.max().z() + (1-k)*bbox.min().z();
         Float newx = cos_theta*x + sin_theta*y;
         Float newy = -sin_theta*x + cos_theta*y;
-        vec3 tester(newx,newy,z);
+        vec3f tester(newx,newy,z);
         for(int c = 0; c < 3; c++) {
           if(tester[c] > max[c]) {
             max.e[c] = tester[c];
@@ -297,16 +297,16 @@ rotate_z::rotate_z(std::shared_ptr<hitable> p, Float angle) : ptr(p) {
 }
 
 bool rotate_z::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
-  vec3 origin = r.origin();
-  vec3 direction = r.direction();
+  vec3f origin = r.origin();
+  vec3f direction = r.direction();
   origin.e[0] = cos_theta*r.origin()[0] - sin_theta*r.origin()[1];
   origin.e[1] = sin_theta*r.origin()[0] + cos_theta*r.origin()[1];
   direction.e[0] = cos_theta*r.direction()[0] - sin_theta*r.direction()[1];
   direction.e[1] = sin_theta*r.direction()[0] + cos_theta*r.direction()[1];
   ray rotated_r(origin, direction, r.time());
   if(ptr->hit(rotated_r, t_min, t_max, rec, rng)) {
-    vec3 p = rec.p;
-    vec3 normal = rec.normal;
+    vec3f p = rec.p;
+    vec3f normal = rec.normal;
     p.e[0] = cos_theta*rec.p.e[0] + sin_theta*rec.p.e[1];
     p.e[1] = -sin_theta*rec.p.e[0] + cos_theta*rec.p.e[1]; 
     normal.e[0] = cos_theta*rec.normal.e[0] + sin_theta*rec.normal.e[1];
@@ -327,16 +327,16 @@ bool rotate_z::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
 
 
 bool rotate_z::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) {
-  vec3 origin = r.origin();
-  vec3 direction = r.direction();
+  vec3f origin = r.origin();
+  vec3f direction = r.direction();
   origin.e[0] = cos_theta*r.origin()[0] - sin_theta*r.origin()[1];
   origin.e[1] = sin_theta*r.origin()[0] + cos_theta*r.origin()[1];
   direction.e[0] = cos_theta*r.direction()[0] - sin_theta*r.direction()[1];
   direction.e[1] = sin_theta*r.direction()[0] + cos_theta*r.direction()[1];
   ray rotated_r(origin, direction, r.time());
   if(ptr->hit(rotated_r, t_min, t_max, rec, sampler)) {
-    vec3 p = rec.p;
-    vec3 normal = rec.normal;
+    vec3f p = rec.p;
+    vec3f normal = rec.normal;
     p.e[0] = cos_theta*rec.p.e[0] + sin_theta*rec.p.e[1];
     p.e[1] = -sin_theta*rec.p.e[0] + cos_theta*rec.p.e[1]; 
     normal.e[0] = cos_theta*rec.normal.e[0] + sin_theta*rec.normal.e[1];

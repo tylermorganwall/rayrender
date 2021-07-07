@@ -131,10 +131,10 @@ List render_scene_rcpp(List camera_info, List scene_info) {
   NumericMatrix goutput(nx,ny);
   NumericMatrix boutput(nx,ny);
   
-  vec3 lookfrom(lookfromvec[0],lookfromvec[1],lookfromvec[2]);
-  vec3 lookat(lookatvec[0],lookatvec[1],lookatvec[2]);
-  vec3 backgroundhigh(bghigh[0],bghigh[1],bghigh[2]);
-  vec3 backgroundlow(bglow[0],bglow[1],bglow[2]);
+  vec3f lookfrom(lookfromvec[0],lookfromvec[1],lookfromvec[2]);
+  vec3f lookat(lookatvec[0],lookatvec[1],lookatvec[2]);
+  vec3f backgroundhigh(bghigh[0],bghigh[1],bghigh[2]);
+  vec3f backgroundlow(bglow[0],bglow[1],bglow[2]);
   float dist_to_focus = focus_distance;
   CharacterVector alpha_files = as<CharacterVector>(alphalist["alpha_temp_file_names"]);
   LogicalVector has_alpha = as<LogicalVector>(alphalist["alpha_tex_bool"]);
@@ -147,15 +147,15 @@ List render_scene_rcpp(List camera_info, List scene_info) {
   RcppThread::ThreadPool pool(numbercores);
   GetRNGstate();
   random_gen rng(unif_rand() * std::pow(2,32));
-  camera cam(lookfrom, lookat, vec3(camera_up(0),camera_up(1),camera_up(2)), fov, float(nx)/float(ny), 
+  camera cam(lookfrom, lookat, vec3f(camera_up(0),camera_up(1),camera_up(2)), fov, float(nx)/float(ny), 
              aperture, dist_to_focus,
              shutteropen, shutterclose);
   
-  ortho_camera ocam(lookfrom, lookat, vec3(camera_up(0),camera_up(1),camera_up(2)),
+  ortho_camera ocam(lookfrom, lookat, vec3f(camera_up(0),camera_up(1),camera_up(2)),
                     ortho_dimensions(0), ortho_dimensions(1),
                     shutteropen, shutterclose);
   
-  environment_camera ecam(lookfrom, lookat, vec3(camera_up(0),camera_up(1),camera_up(2)),
+  environment_camera ecam(lookfrom, lookat, vec3f(camera_up(0),camera_up(1),camera_up(2)),
                           shutteropen, shutterclose);
   int nx1, ny1, nn1;
   auto start = std::chrono::high_resolution_clock::now();
@@ -243,7 +243,7 @@ List render_scene_rcpp(List camera_info, List scene_info) {
   aabb bounding_box_world;
   worldbvh->bounding_box(0,0,bounding_box_world);
   Float world_radius = bounding_box_world.diag.length()/2 ;
-  vec3 world_center  = bounding_box_world.centroid;
+  vec3f world_center  = bounding_box_world.centroid;
   world_radius = world_radius > (lookfrom - world_center).length() ? world_radius : (lookfrom - world_center).length()*2;
   
   if(fov == 0) {
@@ -272,8 +272,8 @@ List render_scene_rcpp(List camera_info, List scene_info) {
   } else if(ambient_light) {
     //Check if both high and low are black, and set to FLT_MIN
     if(backgroundhigh.length() == 0 && backgroundlow.length() == 0) {
-      backgroundhigh = vec3(FLT_MIN,FLT_MIN,FLT_MIN);
-      backgroundlow = vec3(FLT_MIN,FLT_MIN,FLT_MIN);
+      backgroundhigh = vec3f(FLT_MIN,FLT_MIN,FLT_MIN);
+      backgroundlow = vec3f(FLT_MIN,FLT_MIN,FLT_MIN);
     }
     background_texture = std::make_shared<gradient_texture>(backgroundlow, backgroundhigh, false, false);
     background_material = std::make_shared<diffuse_light>(background_texture, 1.0, false);
@@ -281,7 +281,7 @@ List render_scene_rcpp(List camera_info, List scene_info) {
                                               background_texture, background_material);
   } else {
     //Minimum intensity FLT_MIN so the CDF isn't NAN
-    background_texture = std::make_shared<constant_texture>(vec3(FLT_MIN,FLT_MIN,FLT_MIN));
+    background_texture = std::make_shared<constant_texture>(vec3f(FLT_MIN,FLT_MIN,FLT_MIN));
     background_material = std::make_shared<diffuse_light>(background_texture, 1.0, false);
     background_sphere = std::make_shared<InfiniteAreaLight>(100, 100, world_radius*2, world_center,
                                               background_texture, background_material);

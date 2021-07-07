@@ -1,18 +1,18 @@
 #include "curve.h"
 
-static vec3 BlossomBezier(const vec3 p[4], Float u0, Float u1, Float u2) {
-  vec3 a[3] = { lerp(u0, p[0], p[1]),
+static vec3f BlossomBezier(const vec3f p[4], Float u0, Float u1, Float u2) {
+  vec3f a[3] = { lerp(u0, p[0], p[1]),
                 lerp(u0, p[1], p[2]),
                 lerp(u0, p[2], p[3]) };
-  vec3 b[2] = { lerp(u1, a[0], a[1]), lerp(u1, a[1], a[2]) };
+  vec3f b[2] = { lerp(u1, a[0], a[1]), lerp(u1, a[1], a[2]) };
   return(lerp(u2, b[0], b[1]));
 }
 
 
-static vec3 EvalBezier(const vec3 cp[4], Float u, vec3 *deriv = nullptr) {
-  vec3 cp1[3] = {lerp(u, cp[0], cp[1]), lerp(u, cp[1], cp[2]),
+static vec3f EvalBezier(const vec3f cp[4], Float u, vec3f *deriv = nullptr) {
+  vec3f cp1[3] = {lerp(u, cp[0], cp[1]), lerp(u, cp[1], cp[2]),
                     lerp(u, cp[2], cp[3])};
-  vec3 cp2[2] = {lerp(u, cp1[0], cp1[1]), lerp(u, cp1[1], cp1[2])};
+  vec3f cp2[2] = {lerp(u, cp1[0], cp1[1]), lerp(u, cp1[1], cp1[2])};
   if (deriv) {
     if ((cp2[1] - cp2[0]).squared_length() > 0) {
       *deriv = 3 * (cp2[1] - cp2[0]);
@@ -30,7 +30,7 @@ static vec3 EvalBezier(const vec3 cp[4], Float u, vec3 *deriv = nullptr) {
 }
 
 
-inline void SubdivideBezier(const vec3 cp[4], vec3 cpSplit[7]) {
+inline void SubdivideBezier(const vec3f cp[4], vec3f cpSplit[7]) {
   cpSplit[0] = cp[0];
   cpSplit[1] = (cp[0] + cp[1]) / 2;
   cpSplit[2] = (cp[0] + 2 * cp[1] + cp[2]) / 4;
@@ -41,8 +41,8 @@ inline void SubdivideBezier(const vec3 cp[4], vec3 cpSplit[7]) {
 }
 
 
-CurveCommon::CurveCommon(const vec3 c[4], Float width0, Float width1,
-                         CurveType type, const vec3 *norm)
+CurveCommon::CurveCommon(const vec3f c[4], Float width0, Float width1,
+                         CurveType type, const vec3f *norm)
   : type(type), cpObj{c[0], c[1], c[2], c[3]}, width{width0, width1} {
   width[0] = width0;
   width[1] = width1;
@@ -59,7 +59,7 @@ CurveCommon::CurveCommon(const vec3 c[4], Float width0, Float width1,
 
 bool curve::bounding_box(Float t0, Float t1, aabb& box) const {
   // Compute object-space control points for curve segment, cpObj
-  vec3 cpObj[4];
+  vec3f cpObj[4];
   cpObj[0] = BlossomBezier(common->cpObj, uMin, uMin, uMin);
   cpObj[1] = BlossomBezier(common->cpObj, uMin, uMin, uMax);
   cpObj[2] = BlossomBezier(common->cpObj, uMin, uMax, uMax);
@@ -74,16 +74,16 @@ bool curve::bounding_box(Float t0, Float t1, aabb& box) const {
 
 bool curve::hit(const ray& r, Float tmin, Float tmax, hit_record& rec, random_gen& rng) {
   // Compute object-space control points for curve segment, cpObj
-  vec3 cpObj[4];
+  vec3f cpObj[4];
   cpObj[0] = BlossomBezier(common->cpObj, uMin, uMin, uMin);
   cpObj[1] = BlossomBezier(common->cpObj, uMin, uMin, uMax);
   cpObj[2] = BlossomBezier(common->cpObj, uMin, uMax, uMax);
   cpObj[3] = BlossomBezier(common->cpObj, uMax, uMax, uMax);
   
   // Project curve control points to plane perpendicular to ray
-  vec3 unit_dir = unit_vector(r.direction()); 
-  vec3 dx = cross(unit_dir, cpObj[3] - cpObj[0]);
-  vec3 dy = cross(unit_dir, dx);
+  vec3f unit_dir = unit_vector(r.direction()); 
+  vec3f dx = cross(unit_dir, cpObj[3] - cpObj[0]);
+  vec3f dy = cross(unit_dir, dx);
   if (dx.squared_length() == 0) {
     // If the ray and the vector between the first and last control
     // points are parallel, dx will be zero.  Generate an arbitrary xy
@@ -99,7 +99,7 @@ bool curve::hit(const ray& r, Float tmin, Float tmax, hit_record& rec, random_ge
   }
   
   onb objectToRay(dx, dy, unit_dir); //Coordinate system must have ray parallel to z-axis
-  vec3 cp[4] = {objectToRay.world_to_local(cpObj[0] - r.origin()), objectToRay.world_to_local(cpObj[1] - r.origin()),
+  vec3f cp[4] = {objectToRay.world_to_local(cpObj[0] - r.origin()), objectToRay.world_to_local(cpObj[1] - r.origin()),
                 objectToRay.world_to_local(cpObj[2] - r.origin()), objectToRay.world_to_local(cpObj[3] - r.origin())};
   
   // Before going any further, see if the ray's bounding box intersects
@@ -164,16 +164,16 @@ bool curve::hit(const ray& r, Float tmin, Float tmax, hit_record& rec, random_ge
 
 bool curve::hit(const ray& r, Float tmin, Float tmax, hit_record& rec, Sampler* sampler) {
   // Compute object-space control points for curve segment, cpObj
-  vec3 cpObj[4];
+  vec3f cpObj[4];
   cpObj[0] = BlossomBezier(common->cpObj, uMin, uMin, uMin);
   cpObj[1] = BlossomBezier(common->cpObj, uMin, uMin, uMax);
   cpObj[2] = BlossomBezier(common->cpObj, uMin, uMax, uMax);
   cpObj[3] = BlossomBezier(common->cpObj, uMax, uMax, uMax);
   
   // Project curve control points to plane perpendicular to ray
-  vec3 unit_dir = unit_vector(r.direction()); 
-  vec3 dx = cross(unit_dir, cpObj[3] - cpObj[0]);
-  vec3 dy = cross(unit_dir, dx);
+  vec3f unit_dir = unit_vector(r.direction()); 
+  vec3f dx = cross(unit_dir, cpObj[3] - cpObj[0]);
+  vec3f dy = cross(unit_dir, dx);
   if (dx.squared_length() == 0) {
     // If the ray and the vector between the first and last control
     // points are parallel, dx will be zero.  Generate an arbitrary xy
@@ -189,7 +189,7 @@ bool curve::hit(const ray& r, Float tmin, Float tmax, hit_record& rec, Sampler* 
   }
   
   onb objectToRay(dx, dy, unit_dir); //Coordinate system must have ray parallel to z-axis
-  vec3 cp[4] = {objectToRay.world_to_local(cpObj[0] - r.origin()), objectToRay.world_to_local(cpObj[1] - r.origin()),
+  vec3f cp[4] = {objectToRay.world_to_local(cpObj[0] - r.origin()), objectToRay.world_to_local(cpObj[1] - r.origin()),
                 objectToRay.world_to_local(cpObj[2] - r.origin()), objectToRay.world_to_local(cpObj[3] - r.origin())};
   
   // Before going any further, see if the ray's bounding box intersects
@@ -252,12 +252,12 @@ bool curve::hit(const ray& r, Float tmin, Float tmax, hit_record& rec, Sampler* 
 }
 
 bool curve::recursiveIntersect(const ray& r, Float tmin, Float tmax, hit_record& rec, 
-                               const vec3 cp[4], Float u0, Float u1, int depth, onb& uvw) const {
+                               const vec3f cp[4], Float u0, Float u1, int depth, onb& uvw) const {
   Float rayLength = r.direction().length();
 
   if (depth > 0) {
     // Split curve segment into sub-segments and test for intersection
-    vec3 cpSplit[7];
+    vec3f cpSplit[7];
     SubdivideBezier(cp, cpSplit);
 
     // For each of the two segments, see if the ray's bounding box
@@ -266,7 +266,7 @@ bool curve::recursiveIntersect(const ray& r, Float tmin, Float tmax, hit_record&
     bool hit = false;
     Float u[3] = {u0, (u0 + u1) / 2.f, u1};
     // Pointer to the 4 control points for the current segment.
-    const vec3 *cps = cpSplit;
+    const vec3f *cps = cpSplit;
     for (int seg = 0; seg < 2; ++seg, cps += 3) {
       Float maxWidth =
         std::max(lerp(u[seg], common->width[0], common->width[1]),
@@ -333,7 +333,7 @@ bool curve::recursiveIntersect(const ray& r, Float tmin, Float tmax, hit_record&
     // Compute u coordinate of curve intersection point and hitWidth
     Float u = clamp(lerp(w, u0, u1), u0, u1);
     Float hitWidth = lerp(u, common->width[0], common->width[1]);
-    vec3 nHit; // specified in world space
+    vec3f nHit; // specified in world space
     bool flipped_n = false;
     if (common->type == CurveType::Ribbon) {
       // Scale hitWidth based on ribbon orientation
@@ -349,8 +349,8 @@ bool curve::recursiveIntersect(const ray& r, Float tmin, Float tmax, hit_record&
     }
 
     // Test intersection point against curve width
-    vec3 dpcdw;
-    vec3 pc = EvalBezier(cp, clamp(w, 0, 1), &dpcdw);
+    vec3f dpcdw;
+    vec3f pc = EvalBezier(cp, clamp(w, 0, 1), &dpcdw);
     Float ptCurveDist2 = pc.x() * pc.x() + pc.y() * pc.y();
     if (ptCurveDist2 > hitWidth * hitWidth * .25) {
       return(false);
@@ -404,19 +404,19 @@ bool curve::recursiveIntersect(const ray& r, Float tmin, Float tmax, hit_record&
   return(false);
 }
 
-vec3 curve::random(const vec3& o, random_gen& rng, Float time) {
-  return(vec3(0,0,0));
+vec3f curve::random(const vec3f& o, random_gen& rng, Float time) {
+  return(vec3f(0,0,0));
 };
 
-vec3 curve::random(const vec3& o, Sampler* sampler, Float time) {
-  return(vec3(0,0,0));
+vec3f curve::random(const vec3f& o, Sampler* sampler, Float time) {
+  return(vec3f(0,0,0));
 };
 
-Float curve::pdf_value(const vec3& o, const vec3& v, random_gen& rng, Float time) {
+Float curve::pdf_value(const vec3f& o, const vec3f& v, random_gen& rng, Float time) {
   return(0);
 }
 
-Float curve::pdf_value(const vec3& o, const vec3& v, Sampler* sampler, Float time) {
+Float curve::pdf_value(const vec3f& o, const vec3f& v, Sampler* sampler, Float time) {
   return(0);
 }
 

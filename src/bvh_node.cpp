@@ -126,7 +126,7 @@ bvh_node::bvh_node(std::vector<std::shared_ptr<hitable> >& l,
     }
   }
   
-  vec3 centroid_bounds_values = central_bounds.max() - central_bounds.min();
+  vec3f centroid_bounds_values = central_bounds.max() - central_bounds.min();
   
 #ifdef DEBUGBBOX
   if(centroid_bounds_values.x() < 0 || centroid_bounds_values.y() < 0 || centroid_bounds_values.z() < 0) {
@@ -261,20 +261,20 @@ bvh_node::bvh_node(std::vector<std::shared_ptr<hitable> >& l,
 }
   
   
-Float bvh_node::pdf_value(const vec3& o, const vec3& v, random_gen& rng, Float time) {
+Float bvh_node::pdf_value(const vec3f& o, const vec3f& v, random_gen& rng, Float time) {
   return(0.5*left->pdf_value(o,v, rng, time) + 0.5*right->pdf_value(o,v, rng, time));
 }
 
-Float bvh_node::pdf_value(const vec3& o, const vec3& v, Sampler* sampler, Float time) {
+Float bvh_node::pdf_value(const vec3f& o, const vec3f& v, Sampler* sampler, Float time) {
   return(0.5*left->pdf_value(o,v, sampler, time) + 0.5*right->pdf_value(o,v, sampler, time));
   
 }
 
-vec3 bvh_node::random(const vec3& o, random_gen& rng, Float time) {
+vec3f bvh_node::random(const vec3f& o, random_gen& rng, Float time) {
   return(rng.unif_rand() > 0.5 ? left->random(o, rng, time) : right->random(o, rng, time));
 }
 
-vec3 bvh_node::random(const vec3& o, Sampler* sampler, Float time) {
+vec3f bvh_node::random(const vec3f& o, Sampler* sampler, Float time) {
   return(sampler->Get1D() > 0.5 ? left->random(o, sampler, time) : right->random(o, sampler, time));
   
 }

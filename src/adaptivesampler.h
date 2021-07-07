@@ -158,13 +158,13 @@ public:
       it++;
     }
   }
-  void add_color_main(size_t i, size_t j, vec3 color) {
+  void add_color_main(size_t i, size_t j, vec3f color) {
     r(i,j) += color.r();
     g(i,j) += color.g();
     b(i,j) += color.b();
   }
   
-  void add_color_sec(size_t i, size_t j, vec3 color) {
+  void add_color_sec(size_t i, size_t j, vec3f color) {
     r2(i,j) += color.r();
     g2(i,j) += color.g();
     b2(i,j) += color.b();

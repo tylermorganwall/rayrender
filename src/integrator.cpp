@@ -74,6 +74,7 @@ void pathtracer(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_c
                    &rngs, fov, &samplers,
                    &cam, &ocam, &ecam, &world, &hlist,
                    clampval, max_depth, roulette_active] (int k) {
+                     MitchellFilter fil(vec2(1.0),1./3.,1./3.);
                      int nx_begin = adaptive_pixel_sampler.pixel_chunks[k].startx;
                      int ny_begin = adaptive_pixel_sampler.pixel_chunks[k].starty;
                      int nx_end = adaptive_pixel_sampler.pixel_chunks[k].endx;
@@ -98,9 +99,10 @@ void pathtracer(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_c
                          }
                          r.pri_stack = mat_stack;
                          
-                         vec3 col = clamp(de_nan(color(r, &world, &hlist, max_depth, 
+                         vec3f col = clamp(de_nan(color(r, &world, &hlist, max_depth, 
                                                        roulette_active, rngs[index], samplers[index].get())),
                                                        0, clampval);
+                         // col = col * fil.Evaluate(u2);
                          mat_stack->clear();
                          adaptive_pixel_sampler.add_color_main(i, j, col);
                          if(s % 2 == 0) {

@@ -30,20 +30,20 @@ mesh3d::mesh3d(Rcpp::List mesh_info, std::shared_ptr<material> mat,
   
   for (int i = 0; i < number_faces; i++) {
     bool tempnormal = false;
-    vec3 tris[3];
-    vec3 normals[3];
+    vec3f tris[3];
+    vec3f normals[3];
 
     vec2 tx[3];
     
     int idx[3] = {indices(i,0),indices(i,1),indices(i,2)};
-    tris[0] = vec3(vertices(idx[0],0),vertices(idx[0],1),vertices(idx[0],2))*scale_mesh;
-    tris[1] = vec3(vertices(idx[1],0),vertices(idx[1],1),vertices(idx[1],2))*scale_mesh;
-    tris[2] = vec3(vertices(idx[2],0),vertices(idx[2],1),vertices(idx[2],2))*scale_mesh;
+    tris[0] = vec3f(vertices(idx[0],0),vertices(idx[0],1),vertices(idx[0],2))*scale_mesh;
+    tris[1] = vec3f(vertices(idx[1],0),vertices(idx[1],1),vertices(idx[1],2))*scale_mesh;
+    tris[2] = vec3f(vertices(idx[2],0),vertices(idx[2],1),vertices(idx[2],2))*scale_mesh;
     
     if(has_normals) {
-      normals[0] = vec3(norms(idx[0],0),norms(idx[0],1),norms(idx[0],2));
-      normals[1] = vec3(norms(idx[1],0),norms(idx[1],1),norms(idx[1],2));
-      normals[2] = vec3(norms(idx[2],0),norms(idx[2],1),norms(idx[2],2));
+      normals[0] = vec3f(norms(idx[0],0),norms(idx[0],1),norms(idx[0],2));
+      normals[1] = vec3f(norms(idx[1],0),norms(idx[1],1),norms(idx[1],2));
+      normals[2] = vec3f(norms(idx[2],0),norms(idx[2],1),norms(idx[2],2));
     }
     
     if(has_texcoords) {
@@ -59,14 +59,14 @@ mesh3d::mesh3d(Rcpp::List mesh_info, std::shared_ptr<material> mat,
                                                       tx[2].x(),tx[2].y()));
     } else if(colortype == 2) {
       tex = std::make_shared<lambertian>(std::make_shared<triangle_texture>(
-        vec3(colors(i,0),colors(i,1),colors(i,2)),
-        vec3(colors(i,0),colors(i,1),colors(i,2)),
-        vec3(colors(i,0),colors(i,1),colors(i,2))));
+        vec3f(colors(i,0),colors(i,1),colors(i,2)),
+        vec3f(colors(i,0),colors(i,1),colors(i,2)),
+        vec3f(colors(i,0),colors(i,1),colors(i,2))));
     } else if(colortype == 4) {
       tex = std::make_shared<lambertian>(std::make_shared<triangle_texture>(
-        vec3(colors(idx[0],0),colors(idx[0],1),colors(idx[0],2)),
-        vec3(colors(idx[1],0),colors(idx[1],1),colors(idx[1],2)),
-        vec3(colors(idx[2],0),colors(idx[2],1),colors(idx[2],2))));
+        vec3f(colors(idx[0],0),colors(idx[0],1),colors(idx[0],2)),
+        vec3f(colors(idx[1],0),colors(idx[1],1),colors(idx[1],2)),
+        vec3f(colors(idx[2],0),colors(idx[2],1),colors(idx[2],2))));
     } else {
       tex = mat_ptr;
     }

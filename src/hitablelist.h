@@ -13,10 +13,10 @@ class hitable_list: public hitable {
     virtual bool hit(const ray& r, Float tmin, Float tmax, hit_record& rec, Sampler* sampler);
     
     virtual bool bounding_box(Float t0, Float t1, aabb& box) const;
-    virtual Float pdf_value(const vec3& o, const vec3& v, random_gen& rng, Float time = 0);
-    virtual Float pdf_value(const vec3& o, const vec3& v, Sampler* sampler, Float time = 0);
-    virtual vec3 random(const vec3& o, random_gen& rng, Float time = 0);
-    virtual vec3 random(const vec3& o, Sampler* sampler, Float time = 0);
+    virtual Float pdf_value(const vec3f& o, const vec3f& v, random_gen& rng, Float time = 0);
+    virtual Float pdf_value(const vec3f& o, const vec3f& v, Sampler* sampler, Float time = 0);
+    virtual vec3f random(const vec3f& o, random_gen& rng, Float time = 0);
+    virtual vec3f random(const vec3f& o, Sampler* sampler, Float time = 0);
     void add(std::shared_ptr<hitable> object) { objects.push_back(object); }
     int size() {return(objects.size());}
     std::vector<std::shared_ptr<hitable>> objects;

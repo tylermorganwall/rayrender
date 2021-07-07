@@ -38,8 +38,8 @@ bool aabb::hit(const ray &r, Float tmin, Float tmax, Sampler* sampler) {
   return(tmin <= tmax);
 }
 
-const vec3 aabb::offset(const vec3 p) {
-  vec3 o = p - min();
+const vec3f aabb::offset(const vec3f p) {
+  vec3f o = p - min();
   if (max().x() > min().x()) {
     o.e[0] /= (max().x() - min().x());
   }

@@ -23,11 +23,11 @@ inline Float add_ulp_magnitude(Float f, int ulps) {
 class ray {
   public: 
     ray() {}
-    ray(const vec3& a, const vec3& b, Float ti = 0.0) {
+    ray(const vec3f& a, const vec3f& b, Float ti = 0.0) {
       A = a;
       B = b;
       _time = ti;
-      inv_dir = vec3(1/b.x(), 1/b.y(), 1/b.z());
+      inv_dir = vec3f(1/b.x(), 1/b.y(), 1/b.z());
       inv_dir_pad.e[0] = add_ulp_magnitude(inv_dir.x(), 2);
       inv_dir_pad.e[1] = add_ulp_magnitude(inv_dir.y(), 2);
       inv_dir_pad.e[2] = add_ulp_magnitude(inv_dir.z(), 2);
@@ -35,12 +35,12 @@ class ray {
       sign[1] = (inv_dir.y() < 0);
       sign[2] = (inv_dir.z() < 0);
     }
-    ray(const vec3& a, const vec3& b,  std::vector<dielectric* > *priority2, 
+    ray(const vec3f& a, const vec3f& b,  std::vector<dielectric* > *priority2, 
         Float ti = 0.0) {
       A = a; 
       B = b; 
       _time = ti;
-      inv_dir = vec3(1/b.x(), 1/b.y(), 1/b.z());
+      inv_dir = vec3f(1/b.x(), 1/b.y(), 1/b.z());
       inv_dir_pad.e[0] = add_ulp_magnitude(inv_dir.x(), 2);
       inv_dir_pad.e[1] = add_ulp_magnitude(inv_dir.y(), 2);
       inv_dir_pad.e[2] = add_ulp_magnitude(inv_dir.z(), 2);
@@ -50,18 +50,18 @@ class ray {
       pri_stack = priority2;
     }
     
-    vec3 origin() const {return(A);}
-    vec3 direction() const {return(B);}
-    vec3 inverse_dir() const {return(inv_dir);}
+    vec3f origin() const {return(A);}
+    vec3f direction() const {return(B);}
+    vec3f inverse_dir() const {return(inv_dir);}
     Float time() const {return _time;}
-    vec3 point_at_parameter(Float t) const {return(A + t*B);}
+    vec3f point_at_parameter(Float t) const {return(A + t*B);}
     bool has_priority() const {return(pri_stack ? true : false);}
     size_t get_priority_size() const {return(pri_stack->size());}
     
-    vec3 A;
-    vec3 B;
-    vec3 inv_dir;
-    vec3 inv_dir_pad;
+    vec3f A;
+    vec3f B;
+    vec3f inv_dir;
+    vec3f inv_dir_pad;
     int sign[3];
     Float _time;
     std::vector<dielectric*> *pri_stack;

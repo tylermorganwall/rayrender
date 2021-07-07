@@ -1,6 +1,6 @@
 #include "box.h"
 
-box::box(const vec3& p0, const vec3& p1, std::shared_ptr<material> ptr, 
+box::box(const vec3f& p0, const vec3f& p1, std::shared_ptr<material> ptr, 
          std::shared_ptr<alpha_texture> alpha_mask, std::shared_ptr<bump_texture> bump_tex) {
   pmin = p0;
   pmax = p1;

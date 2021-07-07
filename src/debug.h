@@ -33,26 +33,26 @@ inline Float calculate_depth(const ray& r, hitable *world, random_gen &rng) {
   }
 }
 
-inline vec3 calculate_normals(const ray& r, hitable *world, random_gen &rng) {
+inline vec3f calculate_normals(const ray& r, hitable *world, random_gen &rng) {
   hit_record hrec;
   if(world->hit(r, 0.001, FLT_MAX, hrec, rng)) {
     hrec.normal.make_unit_vector();
-    return((vec3(1,1,1) + hrec.normal)/2);
+    return((vec3f(1,1,1) + hrec.normal)/2);
   } else {
-    return(vec3(0,0,0));
+    return(vec3f(0,0,0));
   }
 }
 
-inline vec3 calculate_uv(const ray& r, hitable *world, random_gen &rng) {
+inline vec3f calculate_uv(const ray& r, hitable *world, random_gen &rng) {
   hit_record hrec;
   if(world->hit(r, 0.001, FLT_MAX, hrec, rng)) {
-    return(vec3(hrec.u,hrec.v,1-hrec.u-hrec.v));
+    return(vec3f(hrec.u,hrec.v,1-hrec.u-hrec.v));
   } else {
-    return(vec3(0,0,0));
+    return(vec3f(0,0,0));
   }
 }
 
-inline vec3 calculate_dpduv(const ray& r, hitable *world, random_gen &rng, bool u) {
+inline vec3f calculate_dpduv(const ray& r, hitable *world, random_gen &rng, bool u) {
   hit_record hrec;
   if(world->hit(r, 0.001, FLT_MAX, hrec, rng)) {
     if(u) {
@@ -61,56 +61,56 @@ inline vec3 calculate_dpduv(const ray& r, hitable *world, random_gen &rng, bool 
       return((unit_vector(hrec.dpdv) + 1)/2);
     }
   } else {
-    return(vec3(0,0,0));
+    return(vec3f(0,0,0));
   }
 }
 
-inline vec3 calculate_color(const ray& r, hitable *world, random_gen &rng) {
+inline vec3f calculate_color(const ray& r, hitable *world, random_gen &rng) {
   hit_record hrec;
   scatter_record srec;
   ray r2 = r;
   bool invisible = false;
   if(world->hit(r2, 0.001, FLT_MAX, hrec, rng)) {
-    vec3 emit = hrec.mat_ptr->emitted(r2, hrec, hrec.u, hrec.v, hrec.p, invisible);
+    vec3f emit = hrec.mat_ptr->emitted(r2, hrec, hrec.u, hrec.v, hrec.p, invisible);
     if(emit.x() != 0 || emit.y() != 0 || emit.z() != 0) {
       return(emit);
     }
     if(hrec.mat_ptr->scatter(r2, hrec, srec, rng)) { //generates scatter record, world space
       if(srec.is_specular) { 
-        return(vec3(1,1,1));
+        return(vec3f(1,1,1));
       }
       return(hrec.mat_ptr->get_albedo(r2, hrec));
     } else {
-      return(vec3(0,0,0));
+      return(vec3f(0,0,0));
     }
   } else {
-    return(vec3(0,0,0));
+    return(vec3f(0,0,0));
   }
 }
 
-inline vec3 quick_render(const ray& r, hitable *world, random_gen &rng, vec3 lightdir, Float n) {
+inline vec3f quick_render(const ray& r, hitable *world, random_gen &rng, vec3f lightdir, Float n) {
   hit_record hrec;
   scatter_record srec;
   ray r2 = r;
   bool invisible = false;
   if(world->hit(r2, 0.001, FLT_MAX, hrec, rng)) {
-    vec3 emit = hrec.mat_ptr->emitted(r2, hrec, hrec.u, hrec.v, hrec.p, invisible);
+    vec3f emit = hrec.mat_ptr->emitted(r2, hrec, hrec.u, hrec.v, hrec.p, invisible);
     if(emit.x() != 0 || emit.y() != 0 || emit.z() != 0) {
       return(emit);
     }
     if(hrec.mat_ptr->scatter(r2, hrec, srec, rng)) { //generates scatter record, world space
       if(srec.is_specular) { 
-        return(vec3(1,1,1));
+        return(vec3f(1,1,1));
       }
-      vec3 normal = hrec.has_bump ? hrec.bump_normal : hrec.normal;
-      vec3 R = Reflect(lightdir, hrec.normal); 
+      vec3f normal = hrec.has_bump ? hrec.bump_normal : hrec.normal;
+      vec3f R = Reflect(lightdir, hrec.normal); 
       return(hrec.mat_ptr->get_albedo(r2, hrec) * (dot(normal, lightdir)+1)/2 + 
              std::pow(std::max(0.f, dot(R, -unit_vector(r.direction()))), n));
     } else {
-      return(vec3(0,0,0));
+      return(vec3f(0,0,0));
     }
   } else {
-    return(vec3(0,0,0));
+    return(vec3f(0,0,0));
   }
 }
 // //Does not take into account moving objects

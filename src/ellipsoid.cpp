@@ -16,9 +16,9 @@ bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, ran
     Float u;
     Float v;
     if(temp1 < t_max && temp1 > t_min) {
-      vec3 p1 = scaled_ray.point_at_parameter(temp1) ;
+      vec3f p1 = scaled_ray.point_at_parameter(temp1) ;
       p1 *= 1/p1.length() * axes;
-      vec3 normal = (p1 - center) * inv_axes;
+      vec3f normal = (p1 - center) * inv_axes;
       normal.make_unit_vector();
       get_sphere_uv(normal, u, v);
       if(alpha_mask->value(u, v, rec.p).x() < rng.unif_rand()) {
@@ -26,9 +26,9 @@ bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, ran
       }
     }
     if(temp2 < t_max && temp2 > t_min) {
-      vec3 p2 = scaled_ray.point_at_parameter(temp2) ;
+      vec3f p2 = scaled_ray.point_at_parameter(temp2) ;
       p2 *= 1/p2.length() * axes;
-      vec3 normal = (p2 - center) * inv_axes;
+      vec3f normal = (p2 - center) * inv_axes;
       normal.make_unit_vector();
       get_sphere_uv(normal, u, v);
       if(alpha_mask->value(u, v, rec.p).x() < rng.unif_rand()) {
@@ -44,7 +44,7 @@ bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, ran
     rec.p = scaled_ray.point_at_parameter(rec.t) ;
     rec.normal = (rec.p - center);
     rec.mat_ptr = mat_ptr.get();
-    vec3 trans_normal = rec.normal *  inv_axes;
+    vec3f trans_normal = rec.normal *  inv_axes;
     trans_normal.make_unit_vector();
     
     get_sphere_uv(trans_normal, rec.u, rec.v);
@@ -55,12 +55,12 @@ bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, ran
     Float cosPhi = rec.p.x() * invZRadius;
     Float sinPhi = rec.p.z() * invZRadius;
     Float theta = std::acos(clamp(rec.p.z(), -1, 1));
-    rec.dpdu = 2 * M_PI * vec3(-rec.p.z(), 0, rec.p.x());
-    rec.dpdv = 2 * M_PI * vec3(rec.p.z() * cosPhi, rec.p.z() * sinPhi, -std::sin(theta));
+    rec.dpdu = 2 * M_PI * vec3f(-rec.p.z(), 0, rec.p.x());
+    rec.dpdv = 2 * M_PI * vec3f(rec.p.z() * cosPhi, rec.p.z() * sinPhi, -std::sin(theta));
     rec.has_bump = bump_tex ? true : false;
     
     if(bump_tex) {
-      vec3 bvbu = bump_tex->value(rec.u, rec.v, rec.p);
+      vec3f bvbu = bump_tex->value(rec.u, rec.v, rec.p);
       rec.bump_normal = rec.normal + bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv; 
       rec.bump_normal *= inv_axes;
       rec.bump_normal.make_unit_vector();
@@ -76,7 +76,7 @@ bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, ran
     rec.p = scaled_ray.point_at_parameter(rec.t) ;
     rec.normal = (rec.p - center);
     rec.mat_ptr = mat_ptr.get();
-    vec3 trans_normal = rec.normal *  inv_axes;
+    vec3f trans_normal = rec.normal *  inv_axes;
     trans_normal.make_unit_vector();
     
     get_sphere_uv(trans_normal, rec.u, rec.v);
@@ -86,12 +86,12 @@ bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, ran
     Float cosPhi = rec.p.x() * invZRadius;
     Float sinPhi = rec.p.z() * invZRadius;
     Float theta = std::acos(clamp(rec.p.z(), -1, 1));
-    rec.dpdu = 2 * M_PI * vec3(-rec.p.z(), 0, rec.p.x());
-    rec.dpdv = 2 * M_PI * vec3(rec.p.z() * cosPhi, rec.p.z() * sinPhi, -std::sin(theta));
+    rec.dpdu = 2 * M_PI * vec3f(-rec.p.z(), 0, rec.p.x());
+    rec.dpdv = 2 * M_PI * vec3f(rec.p.z() * cosPhi, rec.p.z() * sinPhi, -std::sin(theta));
     rec.has_bump = bump_tex ? true : false;
     
     if(bump_tex) {
-      vec3 bvbu = bump_tex->value(rec.u, rec.v, rec.p);
+      vec3f bvbu = bump_tex->value(rec.u, rec.v, rec.p);
       rec.bump_normal = rec.normal + bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv; 
       rec.bump_normal *= inv_axes;
       rec.bump_normal.make_unit_vector();
@@ -125,9 +125,9 @@ bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sam
     Float u;
     Float v;
     if(temp1 < t_max && temp1 > t_min) {
-      vec3 p1 = scaled_ray.point_at_parameter(temp1) ;
+      vec3f p1 = scaled_ray.point_at_parameter(temp1) ;
       p1 *= 1/p1.length() * axes;
-      vec3 normal = (p1 - center) * inv_axes;
+      vec3f normal = (p1 - center) * inv_axes;
       normal.make_unit_vector();
       get_sphere_uv(normal, u, v);
       if(alpha_mask->value(u, v, rec.p).x() < sampler->Get1D()) {
@@ -135,9 +135,9 @@ bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sam
       }
     }
     if(temp2 < t_max && temp2 > t_min) {
-      vec3 p2 = scaled_ray.point_at_parameter(temp2) ;
+      vec3f p2 = scaled_ray.point_at_parameter(temp2) ;
       p2 *= 1/p2.length() * axes;
-      vec3 normal = (p2 - center) * inv_axes;
+      vec3f normal = (p2 - center) * inv_axes;
       normal.make_unit_vector();
       get_sphere_uv(normal, u, v);
       if(alpha_mask->value(u, v, rec.p).x() < sampler->Get1D()) {
@@ -153,7 +153,7 @@ bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sam
     rec.p = scaled_ray.point_at_parameter(rec.t) ;
     rec.normal = (rec.p - center);
     rec.mat_ptr = mat_ptr.get();
-    vec3 trans_normal = rec.normal *  inv_axes;
+    vec3f trans_normal = rec.normal *  inv_axes;
     trans_normal.make_unit_vector();
     
     get_sphere_uv(trans_normal, rec.u, rec.v);
@@ -164,12 +164,12 @@ bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sam
     Float cosPhi = rec.p.x() * invZRadius;
     Float sinPhi = rec.p.z() * invZRadius;
     Float theta = std::acos(clamp(rec.p.z(), -1, 1));
-    rec.dpdu = 2 * M_PI * vec3(-rec.p.z(), 0, rec.p.x());
-    rec.dpdv = 2 * M_PI * vec3(rec.p.z() * cosPhi, rec.p.z() * sinPhi, -std::sin(theta));
+    rec.dpdu = 2 * M_PI * vec3f(-rec.p.z(), 0, rec.p.x());
+    rec.dpdv = 2 * M_PI * vec3f(rec.p.z() * cosPhi, rec.p.z() * sinPhi, -std::sin(theta));
     rec.has_bump = bump_tex ? true : false;
     
     if(bump_tex) {
-      vec3 bvbu = bump_tex->value(rec.u, rec.v, rec.p);
+      vec3f bvbu = bump_tex->value(rec.u, rec.v, rec.p);
       rec.bump_normal = rec.normal + bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv; 
       rec.bump_normal *= inv_axes;
       rec.bump_normal.make_unit_vector();
@@ -185,7 +185,7 @@ bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sam
     rec.p = scaled_ray.point_at_parameter(rec.t) ;
     rec.normal = (rec.p - center);
     rec.mat_ptr = mat_ptr.get();
-    vec3 trans_normal = rec.normal *  inv_axes;
+    vec3f trans_normal = rec.normal *  inv_axes;
     trans_normal.make_unit_vector();
     
     get_sphere_uv(trans_normal, rec.u, rec.v);
@@ -195,12 +195,12 @@ bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sam
     Float cosPhi = rec.p.x() * invZRadius;
     Float sinPhi = rec.p.z() * invZRadius;
     Float theta = std::acos(clamp(rec.p.z(), -1, 1));
-    rec.dpdu = 2 * M_PI * vec3(-rec.p.z(), 0, rec.p.x());
-    rec.dpdv = 2 * M_PI * vec3(rec.p.z() * cosPhi, rec.p.z() * sinPhi, -std::sin(theta));
+    rec.dpdu = 2 * M_PI * vec3f(-rec.p.z(), 0, rec.p.x());
+    rec.dpdv = 2 * M_PI * vec3f(rec.p.z() * cosPhi, rec.p.z() * sinPhi, -std::sin(theta));
     rec.has_bump = bump_tex ? true : false;
     
     if(bump_tex) {
-      vec3 bvbu = bump_tex->value(rec.u, rec.v, rec.p);
+      vec3f bvbu = bump_tex->value(rec.u, rec.v, rec.p);
       rec.bump_normal = rec.normal + bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv; 
       rec.bump_normal *= inv_axes;
       rec.bump_normal.make_unit_vector();
@@ -219,7 +219,7 @@ bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sam
 }
 
 
-Float ellipsoid::pdf_value(const vec3& o, const vec3& v, random_gen& rng, Float time) {
+Float ellipsoid::pdf_value(const vec3f& o, const vec3f& v, random_gen& rng, Float time) {
   hit_record rec;
   if(this->hit(ray(o,v), 0.001, FLT_MAX, rec, rng)) {
     Float cos_theta_max = sqrt(1 - 1/(center - o).squared_length());
@@ -231,7 +231,7 @@ Float ellipsoid::pdf_value(const vec3& o, const vec3& v, random_gen& rng, Float 
 }
 
 
-Float ellipsoid::pdf_value(const vec3& o, const vec3& v, Sampler* sampler, Float time) {
+Float ellipsoid::pdf_value(const vec3f& o, const vec3f& v, Sampler* sampler, Float time) {
   hit_record rec;
   if(this->hit(ray(o,v), 0.001, FLT_MAX, rec, sampler)) {
     Float cos_theta_max = sqrt(1 - 1/(center - o).squared_length());
@@ -242,16 +242,16 @@ Float ellipsoid::pdf_value(const vec3& o, const vec3& v, Sampler* sampler, Float
   }
 }
 
-vec3 ellipsoid::random(const vec3& o, random_gen& rng, Float time) {
-  vec3 direction = center - o;
+vec3f ellipsoid::random(const vec3f& o, random_gen& rng, Float time) {
+  vec3f direction = center - o;
   Float distance_squared = direction.squared_length();
   onb uvw;
   uvw.build_from_w(direction);
   return(uvw.local_to_world(rng.random_to_sphere(radius,distance_squared) * inv_axes));
 }
 
-vec3 ellipsoid::random(const vec3& o, Sampler* sampler, Float time) {
-  vec3 direction = center - o;
+vec3f ellipsoid::random(const vec3f& o, Sampler* sampler, Float time) {
+  vec3f direction = center - o;
   Float distance_squared = direction.squared_length();
   onb uvw;
   uvw.build_from_w(direction);
@@ -259,6 +259,6 @@ vec3 ellipsoid::random(const vec3& o, Sampler* sampler, Float time) {
 }
 
 bool ellipsoid::bounding_box(Float t0, Float t1, aabb& box) const {
-  box = aabb(center - vec3(radius,radius,radius) * axes, center + vec3(radius,radius,radius) * axes);
+  box = aabb(center - vec3f(radius,radius,radius) * axes, center + vec3f(radius,radius,radius) * axes);
   return(true);
 }

@@ -1,7 +1,7 @@
 #include "pdf.h"
 #include "mathinline.h"
 
-Float hair_pdf::value(const vec3& direction, random_gen& rng, Float time) {
+Float hair_pdf::value(const vec3f& direction, random_gen& rng, Float time) {
   Float sinThetaO = wo.x();
   Float cosThetaO = SafeSqrt(1 - Sqr(sinThetaO));
   Float phiO = std::atan2(wo.z(), wo.y());
@@ -53,7 +53,7 @@ Float hair_pdf::value(const vec3& direction, random_gen& rng, Float time) {
 }
 
 
-Float hair_pdf::value(const vec3& direction, Sampler* sampler, Float time) {
+Float hair_pdf::value(const vec3f& direction, Sampler* sampler, Float time) {
   Float sinThetaO = wo.x();
   Float cosThetaO = SafeSqrt(1 - Sqr(sinThetaO));
   Float phiO = std::atan2(wo.z(), wo.y());
@@ -105,7 +105,7 @@ Float hair_pdf::value(const vec3& direction, Sampler* sampler, Float time) {
 }
 
 
-vec3 hair_pdf::generate(random_gen& rng, bool& diffuse_bounce, Float time) {
+vec3f hair_pdf::generate(random_gen& rng, bool& diffuse_bounce, Float time) {
   diffuse_bounce = true;
   Float sinThetaO = wo.x();
   Float cosThetaO = SafeSqrt(1 - Sqr(sinThetaO));
@@ -160,11 +160,11 @@ vec3 hair_pdf::generate(random_gen& rng, bool& diffuse_bounce, Float time) {
   }
   // Compute _wi_ from sampled hair scattering angles
   Float phiI = phiO + dphi;
-  return(uvw.local_to_world(vec3(sinThetaI, cosThetaI * std::cos(phiI),
+  return(uvw.local_to_world(vec3f(sinThetaI, cosThetaI * std::cos(phiI),
                                  cosThetaI * std::sin(phiI))));
 }
 
-vec3 hair_pdf::generate(Sampler* sampler, bool& diffuse_bounce, Float time) {
+vec3f hair_pdf::generate(Sampler* sampler, bool& diffuse_bounce, Float time) {
   diffuse_bounce = true;
   Float sinThetaO = wo.x();
   Float cosThetaO = SafeSqrt(1 - Sqr(sinThetaO));
@@ -219,7 +219,7 @@ vec3 hair_pdf::generate(Sampler* sampler, bool& diffuse_bounce, Float time) {
   }
   // Compute _wi_ from sampled hair scattering angles
   Float phiI = phiO + dphi;
-  return(uvw.local_to_world(vec3(sinThetaI, cosThetaI * std::cos(phiI),
+  return(uvw.local_to_world(vec3f(sinThetaI, cosThetaI * std::cos(phiI),
                                  cosThetaI * std::sin(phiI))));
 }
 
@@ -237,13 +237,13 @@ std::array<Float, pMax + 1> hair_pdf::ComputeApPdf(Float cosThetaO) const {
   Float cosGammaT = SafeSqrt(1 - Sqr(sinGammaT));
   
   // Compute the transmittance _T_ of a single path through the cylinder
-  vec3 T = Exp(-sigma_a * (2 * cosGammaT / cosThetaT));
-  std::array<vec3, pMax + 1> ap = Ap(cosThetaO, eta, h, T);
+  vec3f T = Exp(-sigma_a * (2 * cosGammaT / cosThetaT));
+  std::array<vec3f, pMax + 1> ap = Ap(cosThetaO, eta, h, T);
   
   // Compute $A_p$ PDF from individual $A_p$ terms
   std::array<Float, pMax + 1> apPdf;
   Float sumY = std::accumulate(ap.begin(), ap.end(), Float(0),
-                               [](Float s, const vec3 &ap) { return s + ap.y(); });
+                               [](Float s, const vec3f &ap) { return s + ap.y(); });
   for (int i = 0; i <= pMax; ++i) {
     apPdf[i] = ap[i].y() / sumY;
   }

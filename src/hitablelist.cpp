@@ -56,7 +56,7 @@ bool hitable_list::bounding_box(Float t0, Float t1, aabb& box) const {
   return(true);
 }
 
-Float hitable_list::pdf_value(const vec3& o, const vec3& v, random_gen& rng, Float time) {
+Float hitable_list::pdf_value(const vec3f& o, const vec3f& v, random_gen& rng, Float time) {
   Float weight = 1.0 / objects.size();
   Float sum = 0;
   for (const auto& object : objects) {
@@ -65,7 +65,7 @@ Float hitable_list::pdf_value(const vec3& o, const vec3& v, random_gen& rng, Flo
   return(sum);
 }
 
-Float hitable_list::pdf_value(const vec3& o, const vec3& v, Sampler* sampler, Float time) {
+Float hitable_list::pdf_value(const vec3f& o, const vec3f& v, Sampler* sampler, Float time) {
   Float weight = 1.0 / objects.size();
   Float sum = 0;
   for (const auto& object : objects) {
@@ -74,12 +74,12 @@ Float hitable_list::pdf_value(const vec3& o, const vec3& v, Sampler* sampler, Fl
   return(sum);
 }
 
-vec3 hitable_list::random(const vec3& o, random_gen& rng, Float time) {
+vec3f hitable_list::random(const vec3f& o, random_gen& rng, Float time) {
   int index = int(rng.unif_rand() * objects.size() * 0.99999999);
   return(objects[index]->random(o, rng, time));
 }
 
-vec3 hitable_list::random(const vec3& o, Sampler* sampler, Float time) {
+vec3f hitable_list::random(const vec3f& o, Sampler* sampler, Float time) {
   int index = int(sampler->Get1D() * objects.size() * 0.99999999);
   return(objects[index]->random(o, sampler, time));
 }

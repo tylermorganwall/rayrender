@@ -20,10 +20,10 @@ public:
   random_gen() : rng(pcg_extras::seed_seq_from<std::random_device>{}) { }
   ~random_gen();
   Float unif_rand();
-  vec3 random_in_unit_disk();
-  vec3 random_in_unit_sphere();
-  vec3 random_cosine_direction();
-  vec3 random_to_sphere(Float radius, Float distance_squared);
+  vec3f random_in_unit_disk();
+  vec3f random_in_unit_sphere();
+  vec3f random_cosine_direction();
+  vec3f random_to_sphere(Float radius, Float distance_squared);
 
   uint32_t UniformUInt32(uint32_t b);
   void SetSequence(unsigned int seed);

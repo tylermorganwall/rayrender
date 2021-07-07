@@ -17,10 +17,10 @@ public:
   virtual bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler);
   
   virtual bool bounding_box(Float t0, Float t1, aabb& box) const;
-  Float pdf_value(const vec3& o, const vec3& v, random_gen& rng, Float time = 0);
-  Float pdf_value(const vec3& o, const vec3& v, Sampler* sampler, Float time = 0);
-  vec3 random(const vec3& o, random_gen& rng, Float time = 0);
-  vec3 random(const vec3& o, Sampler* sampler, Float time = 0);
+  Float pdf_value(const vec3f& o, const vec3f& v, random_gen& rng, Float time = 0);
+  Float pdf_value(const vec3f& o, const vec3f& v, Sampler* sampler, Float time = 0);
+  vec3f random(const vec3f& o, random_gen& rng, Float time = 0);
+  vec3f random(const vec3f& o, Sampler* sampler, Float time = 0);
   
   std::shared_ptr<hitable> boundary;
   Float density;

@@ -15,21 +15,21 @@ public:
     delete distribution;
     // delete mat_ptr;
   }
-  InfiniteAreaLight(int width, int height, Float r, vec3 center, 
+  InfiniteAreaLight(int width, int height, Float r, vec3f center, 
                     std::shared_ptr<texture> image,  std::shared_ptr<material> mat);
   virtual bool hit(const ray& r, Float tmin, Float tmax, hit_record& rec, random_gen& rng);
   virtual bool hit(const ray& r, Float tmin, Float tmax, hit_record& rec, Sampler* sampler);
   
   virtual bool bounding_box(Float t0, Float t1, aabb& box) const;
-  virtual Float pdf_value(const vec3& o, const vec3& v, random_gen& rng, Float time = 0);
-  virtual Float pdf_value(const vec3& o, const vec3& v, Sampler* sampler, Float time = 0);
+  virtual Float pdf_value(const vec3f& o, const vec3f& v, random_gen& rng, Float time = 0);
+  virtual Float pdf_value(const vec3f& o, const vec3f& v, Sampler* sampler, Float time = 0);
   
-  virtual vec3 random(const vec3& o, random_gen& rng, Float time = 0);
-  virtual vec3 random(const vec3& o, Sampler* sampler, Float time = 0);
+  virtual vec3f random(const vec3f& o, random_gen& rng, Float time = 0);
+  virtual vec3f random(const vec3f& o, Sampler* sampler, Float time = 0);
   
   int width, height;
   Float radius;
-  vec3 center;
+  vec3f center;
   std::shared_ptr<material> mat_ptr;
   Distribution2D *distribution;
 };

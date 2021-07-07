@@ -36,13 +36,13 @@ template <typename T> int sgn(T val) {
   return (T(0) < val) - (val < T(0));
 }
 
-inline vec3 sgn(vec3 v) {
-  return(vec3(sgn(v.x()),sgn(v.y()),sgn(v.z())));
+inline vec3f sgn(vec3f v) {
+  return(vec3f(sgn(v.x()),sgn(v.y()),sgn(v.z())));
 }
 
 
-inline vec3 de_nan(const vec3& c) {
-  vec3 temp = c;
+inline vec3f de_nan(const vec3f& c) {
+  vec3f temp = c;
   if(std::isnan(c[0])) temp.e[0] = 0.0f;
   if(std::isnan(c[1])) temp.e[1] = 0.0f;
   if(std::isnan(c[2])) temp.e[2] = 0.0f;
@@ -51,7 +51,7 @@ inline vec3 de_nan(const vec3& c) {
 
 
 
-inline vec3 rand_to_unit(vec2 u) {
+inline vec3f rand_to_unit(vec2 u) {
   Float a = 2.0*u.x() - 1.0; 
   Float b = 2.0*u.y() - 1.0;
   if (b == 0) {
@@ -65,27 +65,27 @@ inline vec3 rand_to_unit(vec2 u) {
     r = b;
     phi = (M_PI_2) - (M_PI_4)*(a/b);
   }
-  return(vec3(r*cos(phi),r*sin(phi),0));
+  return(vec3f(r*cos(phi),r*sin(phi),0));
 }
 
-inline vec3 rand_cosine_direction(vec2 u) {
+inline vec3f rand_cosine_direction(vec2 u) {
   Float r1 = u.x();
   Float r2 = u.y();
   Float z = std::sqrt(1.0-r2);
   Float phi = 2.0 * M_PI * r1;
   Float x = cos(phi) * std::sqrt(r2);
   Float y = sin(phi) * std::sqrt(r2);
-  return(vec3(x, y, z));
+  return(vec3f(x, y, z));
 }
 
-inline vec3 rand_to_sphere(Float radius, Float distance_squared, vec2 u) {
+inline vec3f rand_to_sphere(Float radius, Float distance_squared, vec2 u) {
   Float r1 = u.x();
   Float r2 = u.y();
   Float z = 1.0 + r2 * (std::sqrt(1.0-radius * radius / distance_squared) - 1);
   Float phi = 2.0 * M_PI * r1;
   Float x = std::cos(phi) * std::sqrt(1-z*z);
   Float y = std::sin(phi) * std::sqrt(1-z*z);
-  return(vec3(x,y,z));
+  return(vec3f(x,y,z));
 }
 
 
@@ -101,15 +101,15 @@ inline Float saturate(Float v1) {
   return(v1);
 }
 
-inline vec3 saturate(vec3 v1) {
+inline vec3f saturate(vec3f v1) {
   v1.e[0] = saturate(v1.e[0]);
   v1.e[1] = saturate(v1.e[1]);
   v1.e[2] = saturate(v1.e[2]);
   return(v1);
 }
 
-inline vec3 clamp(const vec3& c, Float clamplow, Float clamphigh) {
-  vec3 temp = c;
+inline vec3f clamp(const vec3f& c, Float clamplow, Float clamphigh) {
+  vec3f temp = c;
   if(c.e[0] > clamphigh) {
     temp.e[0] = clamphigh;
   } else if(c[0] < clamplow) {
@@ -137,48 +137,48 @@ inline Float clamp(const Float& c, Float clamplow, Float clamphigh) {
   return(c);
 }
 
-inline vec3 clamp(vec3 input, vec3 low, vec3 high) {
-  vec3 final(clamp(input.x(), low.x(), high.x()),
+inline vec3f clamp(vec3f input, vec3f low, vec3f high) {
+  vec3f final(clamp(input.x(), low.x(), high.x()),
              clamp(input.y(), low.y(), high.y()),
              clamp(input.z(), low.z(), high.z()));
   return(final);
 }
 
-inline Float CosTheta(const vec3 &w) { return w.z(); }
-inline Float Cos2Theta(const vec3 &w) { return w.z() * w.z(); }
-inline Float AbsCosTheta(const vec3 &w) { return std::fabs(w.z()); }
+inline Float CosTheta(const vec3f &w) { return w.z(); }
+inline Float Cos2Theta(const vec3f &w) { return w.z() * w.z(); }
+inline Float AbsCosTheta(const vec3f &w) { return std::fabs(w.z()); }
 
-inline Float Sin2Theta(const vec3 &w) {
+inline Float Sin2Theta(const vec3f &w) {
   return(std::max((Float)0, (Float)1 - Cos2Theta(w)));
 }
 
-inline Float SinTheta(const vec3 &w) {
+inline Float SinTheta(const vec3f &w) {
   return(std::sqrt(Sin2Theta(w)));
 }
 
-inline Float CosPhi(const vec3 &w) {
+inline Float CosPhi(const vec3f &w) {
   Float sinTheta = SinTheta(w);
   return((sinTheta == 0) ? 1 : clamp(w.x() / sinTheta, -1, 1));
 }
 
-inline Float SinPhi(const vec3 &w) {
+inline Float SinPhi(const vec3f &w) {
   Float sinTheta = SinTheta(w);
   return((sinTheta == 0) ? 0 : clamp(w.y() / sinTheta, -1, 1));
 }
 
-inline Float Cos2Phi(const vec3 &w) {
+inline Float Cos2Phi(const vec3f &w) {
   return(CosPhi(w) * CosPhi(w));
 }
 
-inline Float Sin2Phi(const vec3 &w) {
+inline Float Sin2Phi(const vec3f &w) {
   return(SinPhi(w) * SinPhi(w));
 }
 
-inline Float TanTheta(const vec3 &w) {
+inline Float TanTheta(const vec3f &w) {
   return(SinTheta(w) / CosTheta(w));
 }
 
-inline Float Tan2Theta(const vec3 &w) {
+inline Float Tan2Theta(const vec3f &w) {
   return(Sin2Theta(w) / Cos2Theta(w));
 }
 
@@ -229,27 +229,27 @@ template <typename Predicate> int FindInterval(int size, const Predicate &pred) 
   return clamp(first - 1, 0, size - 2);
 }
 
-inline Float SphericalPhi(const vec3 &v) {
+inline Float SphericalPhi(const vec3f &v) {
   float p = atan2f(v.x(), v.y());
   return((p < 0.0f) ? p + 2.0f*M_PI : p);
 }
 
-inline Float SphericalTheta(const vec3 &v) {
+inline Float SphericalTheta(const vec3f &v) {
   return(acosf(clamp(v.z(), -1.0f, 1.0f)));
 }
 
-inline vec3 SphericalDirection(Float sinTheta, Float cosTheta, Float phi) {
-  return(vec3(sinTheta * std::cos(phi),
+inline vec3f SphericalDirection(Float sinTheta, Float cosTheta, Float phi) {
+  return(vec3f(sinTheta * std::cos(phi),
               sinTheta * std::sin(phi),
               cosTheta));
 }
 
-inline bool SameHemisphere(const vec3 &w, const vec3 &wp) {
+inline bool SameHemisphere(const vec3f &w, const vec3f &wp) {
   return(w.z() * wp.z() > 0);
 }
 
 
-inline Float AbsDot(const vec3 &v1, const vec3 &v2) {
+inline Float AbsDot(const vec3f &v1, const vec3f &v2) {
   return(std::fabs(dot(v1,v2)));
 } 
 
@@ -326,7 +326,7 @@ inline Float Erf(Float x) {
   return sign * y;
 }
 
-inline vec3 Reflect(const vec3 &wo, const vec3 &n) {
+inline vec3f Reflect(const vec3f &wo, const vec3f &n) {
   return(-wo + 2 * dot(wo, n) * n);
 }
 
@@ -346,12 +346,12 @@ constexpr Float origin() { return 1.0f / 32.0f; }
 constexpr Float float_scale() { return 1.0f / 65536.0f; }
 constexpr Float int_scale() { return 256.0f; }
 
-inline vec3 offset_ray(const vec3 p, const vec3 n) {
+inline vec3f offset_ray(const vec3f p, const vec3f n) {
   int of_i[3] = {(int)(int_scale() * n.x()), (int)(int_scale() * n.y()), (int)(int_scale() * n.z())};
-  vec3 p_i(int_to_float(float_to_int(p.x())+((p.x() < 0) ? -of_i[0] : of_i[0])),
+  vec3f p_i(int_to_float(float_to_int(p.x())+((p.x() < 0) ? -of_i[0] : of_i[0])),
            int_to_float(float_to_int(p.y())+((p.y() < 0) ? -of_i[1] : of_i[1])),
            int_to_float(float_to_int(p.z())+((p.z() < 0) ? -of_i[2] : of_i[2])));
-  return(vec3(std::fabs(p.x()) < origin() ? p.x() + float_scale()*n.x() : p_i.x(),
+  return(vec3f(std::fabs(p.x()) < origin() ? p.x() + float_scale()*n.x() : p_i.x(),
               std::fabs(p.y()) < origin() ? p.y() + float_scale()*n.y() : p_i.y(),
               std::fabs(p.z()) < origin() ? p.z() + float_scale()*n.z() : p_i.z()));
 }
@@ -361,11 +361,11 @@ inline Float Log2(Float x) {
   return(std::log(x) * invLog2);
 }
 
-inline vec3 RGBtoHSV(vec3& rgb) {
+inline vec3f RGBtoHSV(vec3f& rgb) {
   Float max_val = ffmax(ffmax(rgb.r(), rgb.g()), rgb.b());
   Float min_val = ffmin(ffmin(rgb.r(), rgb.g()), rgb.b());
   Float delta_val = max_val - min_val;
-  vec3 hsv;
+  vec3f hsv;
   
   if(delta_val > 0) {
     if(max_val == rgb.r()) {
@@ -393,38 +393,38 @@ inline vec3 RGBtoHSV(vec3& rgb) {
 }
 
 
-inline vec3 HSVtoRGB(vec3 hsv) {
+inline vec3f HSVtoRGB(vec3f hsv) {
   Float chroma = hsv.z() * hsv.y(); 
   Float fHPrime = fmod(hsv.x() / 60.0, 6);
   Float x_val = chroma * (1 - std::fabs(fmod(fHPrime, 2) - 1));
   Float m_val = hsv.z() - chroma;
 
   if(0 <= fHPrime && fHPrime < 1) {
-    vec3 rgb(chroma,x_val,0);
+    vec3f rgb(chroma,x_val,0);
     rgb += m_val;
     return(rgb);
   } else if(1 <= fHPrime && fHPrime < 2) {
-    vec3 rgb(x_val,chroma,0);
+    vec3f rgb(x_val,chroma,0);
     rgb += m_val;
     return(rgb);
   } else if(2 <= fHPrime && fHPrime < 3) {
-    vec3 rgb(0,chroma,x_val);
+    vec3f rgb(0,chroma,x_val);
     rgb += m_val;
     return(rgb);
   } else if(3 <= fHPrime && fHPrime < 4) {
-    vec3 rgb(0,x_val,chroma);
+    vec3f rgb(0,x_val,chroma);
     rgb += m_val;
     return(rgb);
   } else if(4 <= fHPrime && fHPrime < 5) {
-    vec3 rgb(x_val,0,chroma);
+    vec3f rgb(x_val,0,chroma);
     rgb += m_val;
     return(rgb);
   } else if(5 <= fHPrime && fHPrime < 6) {
-    vec3 rgb(chroma,0,x_val);
+    vec3f rgb(chroma,0,x_val);
     rgb += m_val;
     return(rgb);
   } else {
-    vec3 rgb(0,0,0);
+    vec3f rgb(0,0,0);
     rgb += m_val;
     return(rgb);
   }
@@ -456,8 +456,8 @@ inline Float SafeSqrt(Float x) {
   return(std::sqrt(std::max(Float(0), x)));
 }
 
-inline vec3 Exp(vec3 a) {
-  return(vec3(std::exp(a.x()),std::exp(a.y()),std::exp(a.z())));
+inline vec3f Exp(vec3f a) {
+  return(vec3f(std::exp(a.x()),std::exp(a.y()),std::exp(a.z())));
 }
 
 inline Float Logistic(Float x, Float s) {
@@ -524,9 +524,9 @@ inline Float LogI0(Float x) {
   }
 }
 
-inline std::array<vec3, pMax + 1> Ap(Float cosThetaO, Float eta, Float h,
-                                     const vec3 &T) {
-  std::array<vec3, pMax + 1> ap;
+inline std::array<vec3f, pMax + 1> Ap(Float cosThetaO, Float eta, Float h,
+                                     const vec3f &T) {
+  std::array<vec3f, pMax + 1> ap;
   // Compute $p=0$ attenuation at initial cylinder intersection
   Float cosGammaO = SafeSqrt(1 - h * h);
   Float cosTheta = cosThetaO * cosGammaO;
@@ -542,7 +542,7 @@ inline std::array<vec3, pMax + 1> Ap(Float cosThetaO, Float eta, Float h,
   }
   
   // Compute attenuation term accounting for remaining orders of scattering
-  ap[pMax] = ap[pMax - 1] * f * T / (vec3(1.0f,1.0f,1.0f) - T * f);
+  ap[pMax] = ap[pMax - 1] * f * T / (vec3f(1.0f,1.0f,1.0f) - T * f);
   return(ap);
 }
 

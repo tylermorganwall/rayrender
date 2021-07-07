@@ -118,8 +118,8 @@ void render_animation_rcpp(List camera_info, List scene_info, List camera_moveme
   NumericVector cam_orthoy   = as<NumericVector>(camera_movement["orthoy"]);
   int n_frames = cam_x.size();
   
-  vec3 backgroundhigh(bghigh[0],bghigh[1],bghigh[2]);
-  vec3 backgroundlow(bglow[0],bglow[1],bglow[2]);
+  vec3f backgroundhigh(bghigh[0],bghigh[1],bghigh[2]);
+  vec3f backgroundlow(bglow[0],bglow[1],bglow[2]);
   CharacterVector alpha_files = as<CharacterVector>(alphalist["alpha_temp_file_names"]);
   LogicalVector has_alpha = as<LogicalVector>(alphalist["alpha_tex_bool"]);
   
@@ -217,7 +217,7 @@ void render_animation_rcpp(List camera_info, List scene_info, List camera_moveme
   aabb bounding_box_world;
   worldbvh->bounding_box(0,0,bounding_box_world);
   Float world_radius = bounding_box_world.diag.length()/2 ;
-  vec3 world_center  = bounding_box_world.centroid;
+  vec3f world_center  = bounding_box_world.centroid;
   
   //Initialize background
   if(verbose && hasbackground) {
@@ -241,8 +241,8 @@ void render_animation_rcpp(List camera_info, List scene_info, List camera_moveme
   } else if(ambient_light) {
     //Check if both high and low are black, and set to FLT_MIN
     if(backgroundhigh.length() == 0 && backgroundlow.length() == 0) {
-      backgroundhigh = vec3(FLT_MIN,FLT_MIN,FLT_MIN);
-      backgroundlow = vec3(FLT_MIN,FLT_MIN,FLT_MIN);
+      backgroundhigh = vec3f(FLT_MIN,FLT_MIN,FLT_MIN);
+      backgroundlow = vec3f(FLT_MIN,FLT_MIN,FLT_MIN);
     }
     background_texture = std::make_shared<gradient_texture>(backgroundlow, backgroundhigh, false, false);
     background_material = std::make_shared<diffuse_light>(background_texture, 1.0, false);
@@ -250,7 +250,7 @@ void render_animation_rcpp(List camera_info, List scene_info, List camera_moveme
                                                             background_texture, background_material);
   } else {
     //Minimum intensity FLT_MIN so the CDF isn't NAN
-    background_texture = std::make_shared<constant_texture>(vec3(FLT_MIN,FLT_MIN,FLT_MIN));
+    background_texture = std::make_shared<constant_texture>(vec3f(FLT_MIN,FLT_MIN,FLT_MIN));
     background_material = std::make_shared<diffuse_light>(background_texture, 1.0, false);
     background_sphere = std::make_shared<InfiniteAreaLight>(100, 100, world_radius*2, world_center,
                                                             background_texture, background_material);
@@ -328,14 +328,14 @@ void render_animation_rcpp(List camera_info, List scene_info, List camera_moveme
       if(progress_bar) {
         pb_frames.tick();
       }
-      vec3 lookfrom = vec3(cam_x(i),cam_y(i),cam_z(i));
-      vec3 lookat = vec3(cam_dx(i),cam_dy(i),cam_dz(i));
+      vec3f lookfrom = vec3f(cam_x(i),cam_y(i),cam_z(i));
+      vec3f lookat = vec3f(cam_dx(i),cam_dy(i),cam_dz(i));
       Float fov = cam_fov(i);
       Float aperture = cam_aperture(i);
       Float dist_to_focus = cam_focal(i);
       Float orthox = cam_orthox(i);
       Float orthoy = cam_orthoy(i);
-      vec3 camera_up = vec3(cam_upx(i),cam_upy(i),cam_upz(i));
+      vec3f camera_up = vec3f(cam_upx(i),cam_upy(i),cam_upz(i));
       
       
       camera cam(lookfrom, lookat, camera_up, fov, float(nx)/float(ny), 
@@ -374,9 +374,9 @@ void render_animation_rcpp(List camera_info, List scene_info, List camera_moveme
       if(progress_bar) {
         pb_frames.tick();
       }
-      vec3 lookfrom = vec3(cam_x(i),cam_y(i),cam_z(i));
-      vec3 lookat = vec3(cam_dx(i),cam_dy(i),cam_dz(i));
-      vec3 camera_up = vec3(cam_upx(i),cam_upy(i),cam_upz(i));
+      vec3f lookfrom = vec3f(cam_x(i),cam_y(i),cam_z(i));
+      vec3f lookat = vec3f(cam_dx(i),cam_dy(i),cam_dz(i));
+      vec3f camera_up = vec3f(cam_upx(i),cam_upy(i),cam_upz(i));
       
       Float fov = cam_fov(i);
       Float aperture = cam_aperture(i);

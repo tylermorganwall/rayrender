@@ -13,13 +13,13 @@ bool csg::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_ge
   
   Float max_path = std::fmax(dist1,dist2) + box.diag.length()/2;
   
-  vec3 dir = unit_vector(r.direction());
+  vec3f dir = unit_vector(r.direction());
   Float max_t = max_path * r.direction().length();
   
   
   while (t < max_t) { 
     Float minDistance = INFINITY; 
-    vec3 from = r.origin() + t * dir; 
+    vec3f from = r.origin() + t * dir; 
     
     //Need distance from interior edge to support dielectrics
     float d =  std::fabs(shapes->getDistance(from)); 
@@ -38,10 +38,10 @@ bool csg::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_ge
     if (minDistance <= threshold) { 
       Float tval = t / r.direction().length();
       if(tval > t_min && tval < t_max) {
-        rec.normal = vec3( 
-          shapes->getDistance(from + vec3(delta, 0, 0)) - shapes->getDistance(from + vec3(-delta, 0, 0)), 
-          shapes->getDistance(from + vec3(0, delta, 0)) - shapes->getDistance(from + vec3(0, -delta, 0)), 
-          shapes->getDistance(from + vec3(0, 0, delta)) - shapes->getDistance(from + vec3(0, 0, -delta))
+        rec.normal = vec3f( 
+          shapes->getDistance(from + vec3f(delta, 0, 0)) - shapes->getDistance(from + vec3f(-delta, 0, 0)), 
+          shapes->getDistance(from + vec3f(0, delta, 0)) - shapes->getDistance(from + vec3f(0, -delta, 0)), 
+          shapes->getDistance(from + vec3f(0, 0, delta)) - shapes->getDistance(from + vec3f(0, 0, -delta))
         );
         //Deal with degenerate case by setting directly at camera--not ideal, need better fix
         if(rec.normal.x() == 0 && rec.normal.y() == 0 && rec.normal.z() == 0) {
@@ -74,13 +74,13 @@ bool csg::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* 
   Float delta = 10e-5 * max_dist/100; 
   Float t = 0; 
   bool first = true;
-  vec3 dir = unit_vector(r.direction());
+  vec3f dir = unit_vector(r.direction());
   Float max_t = t_max * r.direction().length();
   
   
   while (t < max_t) { 
     Float minDistance = INFINITY; 
-    vec3 from = r.origin() + t * dir; 
+    vec3f from = r.origin() + t * dir; 
     
     //Need distance from interior edge to support dielectrics
     float d =  std::fabs(shapes->getDistance(from)); 
@@ -99,10 +99,10 @@ bool csg::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* 
     if (minDistance <= threshold) { 
       Float tval = t / r.direction().length();
       if(tval > t_min && tval < t_max) {
-        rec.normal = vec3( 
-          shapes->getDistance(from + vec3(delta, 0, 0)) - shapes->getDistance(from + vec3(-delta, 0, 0)), 
-          shapes->getDistance(from + vec3(0, delta, 0)) - shapes->getDistance(from + vec3(0, -delta, 0)), 
-          shapes->getDistance(from + vec3(0, 0, delta)) - shapes->getDistance(from + vec3(0, 0, -delta))
+        rec.normal = vec3f( 
+          shapes->getDistance(from + vec3f(delta, 0, 0)) - shapes->getDistance(from + vec3f(-delta, 0, 0)), 
+          shapes->getDistance(from + vec3f(0, delta, 0)) - shapes->getDistance(from + vec3f(0, -delta, 0)), 
+          shapes->getDistance(from + vec3f(0, 0, delta)) - shapes->getDistance(from + vec3f(0, 0, -delta))
         );
         //Deal with degenerate case by setting directly at camera--not ideal, need better fix
         if(rec.normal.x() == 0 && rec.normal.y() == 0 && rec.normal.z() == 0) {

@@ -75,10 +75,10 @@ static void BeckmannSample11(Float cosThetaI, Float U1, Float U2,
 }
 
 
-static vec3 BeckmannSample(const vec3 &wi, Float alpha_x, Float alpha_y,
+static vec3f BeckmannSample(const vec3f &wi, Float alpha_x, Float alpha_y,
                            Float U1, Float U2) {
   // 1. stretch wi
-  vec3 wiStretched = unit_vector(vec3(alpha_x * wi.x(), alpha_y * wi.y(), wi.z()));
+  vec3f wiStretched = unit_vector(vec3f(alpha_x * wi.x(), alpha_y * wi.y(), wi.z()));
   
   // 2. simulate P22_{wi}(x_slope, y_slope, 1, 1)
   Float slope_x, slope_y;
@@ -94,7 +94,7 @@ static vec3 BeckmannSample(const vec3 &wi, Float alpha_x, Float alpha_y,
   slope_y = alpha_y * slope_y;
   
   // 5. compute normal
-  return(unit_vector(vec3(-slope_x, -slope_y, 1.f)));
+  return(unit_vector(vec3f(-slope_x, -slope_y, 1.f)));
 }
 
 
@@ -140,10 +140,10 @@ static void TrowbridgeReitzSample11(Float cosTheta, Float U1, Float U2,
   *slope_y = S * z * std::sqrt(1.f + *slope_x * *slope_x);
 }
 
-static vec3 TrowbridgeReitzSample(const vec3 &wi, Float alpha_x,
+static vec3f TrowbridgeReitzSample(const vec3f &wi, Float alpha_x,
                                   Float alpha_y, Float U1, Float U2) {
   // 1. stretch wi
-  vec3 wiStretched = unit_vector(vec3(alpha_x * wi.x(), alpha_y * wi.y(), wi.z()));
+  vec3f wiStretched = unit_vector(vec3f(alpha_x * wi.x(), alpha_y * wi.y(), wi.z()));
   
   // 2. simulate P22_{wi}(x_slope, y_slope, 1, 1)
   Float slope_x, slope_y;
@@ -159,10 +159,10 @@ static vec3 TrowbridgeReitzSample(const vec3 &wi, Float alpha_x,
   slope_y = alpha_y * slope_y;
   
   // 5. compute normal
-  return(unit_vector(vec3(-slope_x, -slope_y, 1.)));
+  return(unit_vector(vec3f(-slope_x, -slope_y, 1.)));
 }
 
-Float TrowbridgeReitzDistribution::D(const vec3 &normal) const {
+Float TrowbridgeReitzDistribution::D(const vec3f &normal) const {
   const Float tan2Theta = Tan2Theta(normal);
   if(std::isinf(tan2Theta)) {
     return(0.0);
@@ -173,7 +173,7 @@ Float TrowbridgeReitzDistribution::D(const vec3 &normal) const {
   return(1.0/(M_PI * alphax * alphay * cos4Theta * (1.0+e) * (1.0+e)));
 }
 
-Float TrowbridgeReitzDistribution::Lambda(const vec3 &w) const {
+Float TrowbridgeReitzDistribution::Lambda(const vec3f &w) const {
   Float absTanTheta = std::fabs(TanTheta(w));
   if (std::isinf(absTanTheta)) {
     return(0.0);
@@ -184,10 +184,10 @@ Float TrowbridgeReitzDistribution::Lambda(const vec3 &w) const {
 }
 
 
-vec3 TrowbridgeReitzDistribution::Sample_wh(const vec3 &wi,
+vec3f TrowbridgeReitzDistribution::Sample_wh(const vec3f &wi,
                                             const Float u1, const Float u2) const {
   bool flip = wi.z() < 0;
-  vec3 wh = TrowbridgeReitzSample(flip ? -wi : wi, alphax, alphay, u1, u2);
+  vec3f wh = TrowbridgeReitzSample(flip ? -wi : wi, alphax, alphay, u1, u2);
   if (flip) {
     wh = -wh;
   }
@@ -195,7 +195,7 @@ vec3 TrowbridgeReitzDistribution::Sample_wh(const vec3 &wi,
 }
 
 
-Float BeckmannDistribution::D(const vec3 &wh) const {
+Float BeckmannDistribution::D(const vec3f &wh) const {
   Float tan2Theta = Tan2Theta(wh);
   if(std::isinf(tan2Theta)) {
     return(0.0);
@@ -205,7 +205,7 @@ Float BeckmannDistribution::D(const vec3 &wh) const {
          Sin2Phi(wh) / (alphay * alphay))) / (M_PI * alphax * alphay * cos4Theta));
 }
 
-Float BeckmannDistribution::Lambda(const vec3 &w) const {
+Float BeckmannDistribution::Lambda(const vec3f &w) const {
   Float absTanTheta = std::fabs(TanTheta(w));
   if (std::isinf(absTanTheta)) {
     return(0.0);
@@ -219,10 +219,10 @@ Float BeckmannDistribution::Lambda(const vec3 &w) const {
 }
 
 
-vec3 BeckmannDistribution::Sample_wh(const vec3 &wi, const Float u1, const Float u2) const {
+vec3f BeckmannDistribution::Sample_wh(const vec3f &wi, const Float u1, const Float u2) const {
   // Sample visible area of normals for Beckmann distribution
   bool flip = wi.z() < 0;
-  vec3 wh = BeckmannSample(flip ? -wi : wi, alphax, alphay, u1, u2);
+  vec3f wh = BeckmannSample(flip ? -wi : wi, alphax, alphay, u1, u2);
   if (flip) {
     wh = -wh;
   }
