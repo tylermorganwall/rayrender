@@ -5,6 +5,11 @@
 
 using namespace Rcpp;
 
+#ifdef RCPP_USE_GLOBAL_ROSTREAM
+Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
+Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
+#endif
+
 // render_animation_rcpp
 void render_animation_rcpp(List camera_info, List scene_info, List camera_movement, int start_frame, CharacterVector filenames, Function post_process_frame, int toneval, bool bloom);
 RcppExport SEXP _rayrender_render_animation_rcpp(SEXP camera_infoSEXP, SEXP scene_infoSEXP, SEXP camera_movementSEXP, SEXP start_frameSEXP, SEXP filenamesSEXP, SEXP post_process_frameSEXP, SEXP tonevalSEXP, SEXP bloomSEXP) {

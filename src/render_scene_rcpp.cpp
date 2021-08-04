@@ -13,6 +13,9 @@ typedef float Float;
 
 #include "vec3.h"
 #include "vec2.h"
+#include "point3.h"
+#include "point2.h"
+#include "normal.h" 
 #include "mathinline.h"
 #include "camera.h"
 #include "float.h"
