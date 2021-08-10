@@ -64,6 +64,7 @@ class ray {
     vec3f inv_dir_pad;
     int sign[3];
     Float _time;
+    mutable Float tMax;
     std::vector<dielectric*> *pri_stack;
 };
 

@@ -14,16 +14,16 @@ class material;
 void get_sphere_uv(const vec3f& p, Float& u, Float& v);
 
 struct hit_record {
-  Float t;
-  Float u;
-  Float v;
+  vec3f p; //PBRT: In Interaction
+  Float t; //PBRT: In Interaction
+  Float u; //PBRT: In SurfaceInteraction
+  Float v; //PBRT: In SurfaceInteraction
 #ifdef DEBUGBVH
   Float bvh_nodes;
 #endif
-  vec3f p;
-  vec3f normal;
-  vec3f dpdu, dpdv;
-  vec3f bump_normal;
+  vec3f normal; //PBRT: In interaction
+  vec3f dpdu, dpdv; //PBRT: In SurfaceInteraction
+  vec3f bump_normal; 
   bool has_bump;
   material* mat_ptr;
 };
