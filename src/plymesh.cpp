@@ -113,7 +113,9 @@ static TriMesh* parse_file_with_miniply(const char* filename, bool assumeTriangl
 
 
 plymesh::plymesh(std::string inputfile, std::string basedir, std::shared_ptr<material> mat, 
-            Float scale, Float shutteropen, Float shutterclose, int bvh_type, random_gen rng) {
+            Float scale, Float shutteropen, Float shutterclose, int bvh_type, random_gen rng,
+            std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation) :
+  hitable(ObjectToWorld, WorldToObject, reverseOrientation) {
   TriMesh* tri = parse_file_with_miniply(inputfile.c_str(), false);
   mat_ptr = mat;
   
@@ -168,9 +170,11 @@ plymesh::plymesh(std::string inputfile, std::string basedir, std::shared_ptr<mat
       triangles.add(std::make_shared<triangle>(tris[0],tris[1],tris[2],
                                        normals[0],normals[1],normals[2],
                                                                     false,
-                                                                    mat_ptr, nullptr,  nullptr));
+                                                                    mat_ptr, nullptr,  nullptr, 
+                                                                    ObjectToWorld, WorldToObject, reverseOrientation));
     } else {
-      triangles.add(std::make_shared<triangle>(tris[0],tris[1],tris[2], false, mat_ptr, nullptr, nullptr));
+      triangles.add(std::make_shared<triangle>(tris[0],tris[1],tris[2], false, mat_ptr, nullptr, nullptr, 
+                                               ObjectToWorld, WorldToObject, reverseOrientation));
     }
   }
   ply_mesh_bvh = std::make_shared<bvh_node>(triangles, shutteropen, shutterclose, bvh_type, rng);

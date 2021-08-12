@@ -9,7 +9,10 @@ class disk : public hitable {
 public:
   disk() {}
   disk(vec3f cen, Float r, Float i_r, std::shared_ptr<material> mat, std::shared_ptr<alpha_texture> alpha_mask, 
-       std::shared_ptr<bump_texture> bump_tex) : center(cen), radius(r), 
+       std::shared_ptr<bump_texture> bump_tex,
+       std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation) : 
+      hitable(ObjectToWorld, WorldToObject, reverseOrientation), 
+      center(cen), radius(r), 
        inner_radius(i_r), mat_ptr(mat), alpha_mask(alpha_mask), bump_tex(bump_tex) {};
   ~disk() {}
   virtual bool hit(const ray& r, Float tmin, Float tmax, hit_record& rec, random_gen& rng);

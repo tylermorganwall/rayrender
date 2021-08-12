@@ -10,7 +10,9 @@ public:
   cone() {}
   ~cone() {}
   cone(Float r, Float h, std::shared_ptr<material>  mat, 
-       std::shared_ptr<alpha_texture> alpha_mask, std::shared_ptr<bump_texture> bump_tex) : 
+       std::shared_ptr<alpha_texture> alpha_mask, std::shared_ptr<bump_texture> bump_tex,
+       std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation) : 
+    hitable(ObjectToWorld, WorldToObject, reverseOrientation), 
      radius(r), height(h), mat_ptr(mat), alpha_mask(alpha_mask), bump_tex(bump_tex) {};
   virtual bool hit(const ray& r, Float tmin, Float tmax, hit_record& rec, random_gen& rng);
   virtual bool hit(const ray& r, Float tmin, Float tmax, hit_record& rec, Sampler* sampler);

@@ -9,7 +9,9 @@ class triangle : public hitable {
 public:
   triangle() {}
   triangle(vec3f _a, vec3f _b, vec3f _c, bool _single, std::shared_ptr<material> mat, 
-           std::shared_ptr<alpha_texture> alpha_mask, std::shared_ptr<bump_texture> bump_tex) :
+           std::shared_ptr<alpha_texture> alpha_mask, std::shared_ptr<bump_texture> bump_tex,
+             std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation) :
+    hitable(ObjectToWorld, WorldToObject, reverseOrientation), 
   a(_a), b(_b), c(_c), single(_single), mp(mat), alpha_mask(alpha_mask), bump_tex(bump_tex) {
     edge1 = b-a;
     edge2 = c-a;
@@ -19,7 +21,9 @@ public:
     normals_provided = false;
   };
   triangle(vec3f _a, vec3f _b, vec3f _c, vec3f _na, vec3f _nb, vec3f _nc, bool _single, 
-           std::shared_ptr<material> mat, std::shared_ptr<alpha_texture> alpha_mask, std::shared_ptr<bump_texture> bump_tex) :
+           std::shared_ptr<material> mat, std::shared_ptr<alpha_texture> alpha_mask, std::shared_ptr<bump_texture> bump_tex,
+           std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation) :
+    hitable(ObjectToWorld, WorldToObject, reverseOrientation), 
     a(_a), b(_b), c(_c), na(_na), nb(_nb), nc(_nc), single(_single), mp(mat), 
     alpha_mask(alpha_mask), bump_tex(bump_tex) {
     edge1 = b-a;

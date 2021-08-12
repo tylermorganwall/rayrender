@@ -5,7 +5,9 @@
 
 
 trimesh::trimesh(std::string inputfile, std::string basedir, Float scale, 
-        Float shutteropen, Float shutterclose, int bvh_type, random_gen rng) {
+        Float shutteropen, Float shutterclose, int bvh_type, random_gen rng,
+        std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation) : 
+  hitable(ObjectToWorld, WorldToObject, reverseOrientation) {
   tinyobj::attrib_t attrib;
   std::vector<tinyobj::shape_t > shapes;
   std::vector<tinyobj::material_t > materials;
@@ -226,7 +228,8 @@ trimesh::trimesh(std::string inputfile, std::string basedir, Float scale,
           }
           triangles.add(std::make_shared<triangle>(tris[0],tris[1],tris[2], 
                                            normals[0], normals[1], normals[2], true, 
-                                           tex, alpha, bump));
+                                           tex, alpha, bump, 
+                                           ObjectToWorld, WorldToObject, reverseOrientation));
         } else {
           if(material_num == -1) {
             tex = std::make_shared<lambertian>(std::make_shared<constant_texture>(diffuse_materials[material_num]));
@@ -248,7 +251,8 @@ trimesh::trimesh(std::string inputfile, std::string basedir, Float scale,
               tex = std::make_shared<lambertian>(std::make_shared<constant_texture>(vec3f(1,1,1)));
             }
           }
-          triangles.add(std::make_shared<triangle>(tris[0],tris[1],tris[2], true, tex, alpha, bump));
+          triangles.add(std::make_shared<triangle>(tris[0],tris[1],tris[2], true, tex, alpha, bump, 
+                                                   ObjectToWorld, WorldToObject, reverseOrientation));
         }
       }
     }
@@ -260,7 +264,9 @@ trimesh::trimesh(std::string inputfile, std::string basedir, Float scale,
 }
 
 trimesh::trimesh(std::string inputfile, std::string basedir, Float scale, Float sigma,
-        Float shutteropen, Float shutterclose, int bvh_type, random_gen rng) {
+        Float shutteropen, Float shutterclose, int bvh_type, random_gen rng,
+        std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation) :
+      hitable(ObjectToWorld, WorldToObject, reverseOrientation) {
   tinyobj::attrib_t attrib;
   std::vector<tinyobj::shape_t > shapes;
   std::vector<tinyobj::material_t > materials;
@@ -461,7 +467,7 @@ trimesh::trimesh(std::string inputfile, std::string basedir, Float scale, Float 
               } else {
                 tex = std::make_shared<orennayar>(std::make_shared<triangle_image_texture>(obj_materials[material_num],
                                                                nx_mat[material_num], ny_mat[material_num],nn_mat[material_num],
-                                                                                                                tx[0],ty[0], tx[1],ty[1],tx[2],ty[2]), sigma);
+                                                               tx[0],ty[0], tx[1],ty[1],tx[2],ty[2]), sigma);
               }
             } else {
               tex = std::make_shared<orennayar>(std::make_shared<constant_texture>(vec3f(1,1,1)), sigma);
@@ -469,7 +475,8 @@ trimesh::trimesh(std::string inputfile, std::string basedir, Float scale, Float 
           }
           triangles.add(std::make_shared<triangle>(tris[0],tris[1],tris[2], 
                                            normals[0], normals[1], normals[2], true, 
-                                           tex, alpha,  bump));
+                                           tex, alpha,  bump, 
+                                           ObjectToWorld, WorldToObject, reverseOrientation));
         } else {
           if(material_num == -1) {
             tex = std::make_shared<orennayar>(std::make_shared<constant_texture>(diffuse_materials[material_num]), sigma);
@@ -489,7 +496,8 @@ trimesh::trimesh(std::string inputfile, std::string basedir, Float scale, Float 
               tex = std::make_shared<orennayar>(std::make_shared<constant_texture>(vec3f(1,1,1)), sigma);
             }
           }
-          triangles.add(std::make_shared<triangle>(tris[0],tris[1],tris[2], true, tex, alpha, bump));
+          triangles.add(std::make_shared<triangle>(tris[0],tris[1],tris[2], true, tex, alpha, bump, 
+                                                   ObjectToWorld, WorldToObject, reverseOrientation));
         }
       }
     }
@@ -501,7 +509,9 @@ trimesh::trimesh(std::string inputfile, std::string basedir, Float scale, Float 
 }
 
 trimesh::trimesh(std::string inputfile, std::string basedir, std::shared_ptr<material> mat, 
-        Float scale, Float shutteropen, Float shutterclose, int bvh_type, random_gen rng) {
+        Float scale, Float shutteropen, Float shutterclose, int bvh_type, random_gen rng,
+        std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation) :
+    hitable(ObjectToWorld, WorldToObject, reverseOrientation) {
   tinyobj::attrib_t attrib;
   std::vector<tinyobj::shape_t > shapes;
   std::vector<tinyobj::material_t > materials;
@@ -563,10 +573,12 @@ trimesh::trimesh(std::string inputfile, std::string basedir, std::shared_ptr<mat
           triangles.add(std::make_shared<triangle>(tris[0],tris[1],tris[2],
                                            normals[0],normals[1],normals[2], 
                                            false,
-                                           mat_ptr, alpha,  bump));
+                                           mat_ptr, alpha,  bump, 
+                                           ObjectToWorld, WorldToObject, reverseOrientation));
         } else {
           triangles.add(std::make_shared<triangle>(tris[0],tris[1],tris[2], false, 
-                                                   mat_ptr, alpha, bump));
+                                                   mat_ptr, alpha, bump, 
+                                                   ObjectToWorld, WorldToObject, reverseOrientation));
         }
       }
     }
@@ -579,7 +591,8 @@ trimesh::trimesh(std::string inputfile, std::string basedir, std::shared_ptr<mat
 
 trimesh::trimesh(std::string inputfile, std::string basedir, float vertex_color_sigma,
         Float scale, bool is_vertex_color, Float shutteropen, Float shutterclose, int bvh_type, 
-        random_gen rng) {
+        random_gen rng,
+        std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation) : hitable(ObjectToWorld, WorldToObject, reverseOrientation) {
   tinyobj::attrib_t attrib;
   std::vector<tinyobj::shape_t > shapes;
   std::vector<tinyobj::material_t > materials;
@@ -651,9 +664,11 @@ trimesh::trimesh(std::string inputfile, std::string basedir, float vertex_color_
           triangles.add(std::make_shared<triangle>(tris[0],tris[1],tris[2],
                                            normals[0],normals[1],normals[2], 
                                           true,
-                                          tex, alpha, bump));
+                                          tex, alpha, bump, 
+                                          ObjectToWorld, WorldToObject, reverseOrientation));
         } else {
-          triangles.add(std::make_shared<triangle>(tris[0],tris[1],tris[2], true, tex, alpha, bump));
+          triangles.add(std::make_shared<triangle>(tris[0],tris[1],tris[2], true, tex, alpha, bump, 
+                                                   ObjectToWorld, WorldToObject, reverseOrientation));
         }
       }
     }

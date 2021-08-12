@@ -9,7 +9,9 @@ class ellipsoid: public hitable {
   public:
     ellipsoid() {}
     ellipsoid(vec3f cen, Float r, vec3f axes, std::shared_ptr<material> mat, 
-              std::shared_ptr<alpha_texture> alpha_mask, std::shared_ptr<bump_texture> bump_tex) : 
+              std::shared_ptr<alpha_texture> alpha_mask, std::shared_ptr<bump_texture> bump_tex,
+                std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation) : 
+      hitable(ObjectToWorld, WorldToObject, reverseOrientation), 
       center(cen), radius(r), axes(axes),  mat_ptr(mat), alpha_mask(alpha_mask), bump_tex(bump_tex) {
       inv_axes = vec3f(1.0f/axes.x(), 1.0f/axes.y(), 1.0f/axes.z());
       largest_proj_axis = axes.x() * axes.y() * axes.z() / ffmin(axes.x(), ffmin(axes.y(), axes.z()));

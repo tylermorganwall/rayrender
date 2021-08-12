@@ -21,6 +21,8 @@
 #include "csg.h"
 #include "plymesh.h"
 #include "mesh3d.h"
+#include "transform.h"
+#include "transformcache.h"
 #include <Rcpp.h>
 #include <memory>
 using namespace Rcpp;
@@ -57,6 +59,7 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
                                      IntegerVector& shared_id_mat, LogicalVector& is_shared_mat,
                                      std::vector<std::shared_ptr<material> >* shared_materials, List& image_repeat_list,
                                      List& csg_info, List& mesh_list, int bvh_type,
+                                     TransformCache &transformCache,
                                      random_gen& rng);
 
 std::shared_ptr<hitable> build_imp_sample(IntegerVector& type, 
@@ -69,6 +72,7 @@ std::shared_ptr<hitable> build_imp_sample(IntegerVector& type,
                                           List& group_pivot, List& group_translate,
                                           List& group_angle, List& group_order_rotation, List& group_scale,
                                           CharacterVector& fileinfo, CharacterVector& filebasedir,
+                                          TransformCache& transformCache,
                                           List& scale_list, List& mesh_list, int bvh_type, LogicalVector& moving,random_gen& rng);
 
 #endif

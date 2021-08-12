@@ -40,6 +40,13 @@ inline vec3f sgn(vec3f v) {
   return(vec3f(sgn(v.x()),sgn(v.y()),sgn(v.z())));
 }
 
+inline Float Radians(Float deg) { 
+  return (M_PI / 180) * deg; 
+}
+inline Float Degrees(Float rad) { 
+  return (180 / M_PI) * rad; 
+}
+
 
 inline vec3f de_nan(const vec3f& c) {
   vec3f temp = c;

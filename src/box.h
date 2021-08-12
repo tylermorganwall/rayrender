@@ -9,7 +9,8 @@ class box : public hitable {
 public:
   box() {}
   box(const vec3f& p0, const vec3f& p1, std::shared_ptr<material> ptr, 
-      std::shared_ptr<alpha_texture> alpha_mask, std::shared_ptr<bump_texture> bump_tex);
+      std::shared_ptr<alpha_texture> alpha_mask, std::shared_ptr<bump_texture> bump_tex,
+      std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation);
   virtual bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng);
   virtual bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler);
   

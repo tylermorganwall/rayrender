@@ -593,7 +593,10 @@ using Mix = CSG<mixFunc, float>;
 class csg: public hitable {
   public:
     csg() {}
-    csg(std::shared_ptr<material> mat, std::shared_ptr<ImplicitShape> shapes) : mat_ptr(mat), shapes(shapes) {
+    csg(std::shared_ptr<material> mat, std::shared_ptr<ImplicitShape> shapes,
+        std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation) : 
+          hitable(ObjectToWorld, WorldToObject, reverseOrientation), 
+          mat_ptr(mat), shapes(shapes) {
       aabb box;
       bool temp = shapes->bbox(0,1,box);
       if(temp) {

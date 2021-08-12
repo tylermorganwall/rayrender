@@ -30,14 +30,18 @@ public:
     }
   }
   trimesh(std::string inputfile, std::string basedir, Float scale, 
-          Float shutteropen, Float shutterclose, int bvh_type, random_gen rng);
+          Float shutteropen, Float shutterclose, int bvh_type, random_gen rng,
+          std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation);
   trimesh(std::string inputfile, std::string basedir, Float scale, Float sigma,
-          Float shutteropen, Float shutterclose, int bvh_type, random_gen rng);
+          Float shutteropen, Float shutterclose, int bvh_type, random_gen rng,
+          std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation);
   trimesh(std::string inputfile, std::string basedir, std::shared_ptr<material> mat, 
-          Float scale, Float shutteropen, Float shutterclose, int bvh_type, random_gen rng);
+          Float scale, Float shutteropen, Float shutterclose, int bvh_type, random_gen rng,
+          std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation);
   trimesh(std::string inputfile, std::string basedir, float vertex_color_sigma,
           Float scale, bool is_vertex_color, Float shutteropen, Float shutterclose, int bvh_type, 
-          random_gen rng);
+          random_gen rng,
+          std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation);
   virtual bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng);
   virtual bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler);
   
@@ -56,5 +60,6 @@ public:
   std::vector<std::shared_ptr<alpha_texture> > alpha_materials;
   hitable_list triangles;
 };
+
 
 #endif

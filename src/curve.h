@@ -24,7 +24,9 @@ class curve: public hitable {
       // delete mat_ptr;
     }
     curve(Float uMin, Float uMax, 
-          const std::shared_ptr<CurveCommon> common, std::shared_ptr<material> mat) : 
+          const std::shared_ptr<CurveCommon> common, std::shared_ptr<material> mat,
+          std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation) : 
+      hitable(ObjectToWorld, WorldToObject, reverseOrientation), 
       mat_ptr(mat), common(common), uMin(uMin), uMax(uMax) {};
     virtual bool hit(const ray& r, Float tmin, Float tmax, hit_record& rec, random_gen& rng);
     virtual bool hit(const ray& r, Float tmin, Float tmax, hit_record& rec, Sampler* sampler);

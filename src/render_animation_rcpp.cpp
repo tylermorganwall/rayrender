@@ -14,6 +14,9 @@
 #include "sampler.h"
 #include "color.h"
 #include "integrator.h"
+#include "matrix.h"
+#include "transform.h"
+#include "transformcache.h"
 #include "debug.h"
 using namespace Rcpp;
 #include "RcppThread.h"
@@ -187,6 +190,8 @@ void render_animation_rcpp(List camera_info, List scene_info, List camera_moveme
     }
   }
   
+  //Initialize transformation cache
+  TransformCache transformCache;
   
   std::shared_ptr<hitable> worldbvh = build_scene(type, radius, shape, position_list,
                                                   properties, velocity, moving,
@@ -206,7 +211,7 @@ void render_animation_rcpp(List camera_info, List scene_info, List camera_moveme
                                                   fileinfo, filebasedir, 
                                                   scale_list, sigmavec, glossyinfo,
                                                   shared_id_mat, is_shared_mat, shared_materials,
-                                                  image_repeat, csg_info, mesh_list, bvh_type, rng);
+                                                  image_repeat, csg_info, mesh_list, bvh_type, transformCache, rng);
   auto finish = std::chrono::high_resolution_clock::now();
   if(verbose) {
     std::chrono::duration<double> elapsed = finish - start;
@@ -235,9 +240,9 @@ void render_animation_rcpp(List camera_info, List scene_info, List camera_moveme
     background_material = std::make_shared<diffuse_light>(background_texture, 1.0, false);
     background_sphere = std::make_shared<InfiniteAreaLight>(nx1, ny1, world_radius*2, world_center,
                                                             background_texture, background_material);
-    if(rotate_env != 0) {
-      background_sphere = std::make_shared<rotate_y>(background_sphere, rotate_env);
-    }
+    // if(rotate_env != 0) {
+    //   background_sphere = std::make_shared<rotate_y>(background_sphere, rotate_env);
+    // }
   } else if(ambient_light) {
     //Check if both high and low are black, and set to FLT_MIN
     if(backgroundhigh.length() == 0 && backgroundlow.length() == 0) {
@@ -289,7 +294,7 @@ void render_animation_rcpp(List camera_info, List scene_info, List camera_moveme
                                  angle, i, order_rotation_list,
                                  isgrouped, group_pivot, group_translate,
                                  group_angle, group_order_rotation, group_scale,
-                                 fileinfo, filebasedir, scale_list, 
+                                 fileinfo, filebasedir,transformCache, scale_list, 
                                  mesh_list,bvh_type,  moving, rng));
     }
   }

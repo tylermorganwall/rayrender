@@ -3,6 +3,7 @@
 
 #include "ray.h"
 #include "rng.h"
+#include "point3.h"
 #include "mathinline.h"
 #include "sampler.h"
 
@@ -20,6 +21,12 @@ class aabb {
       bounds[0] = a;
       bounds[1] = a;
       centroid = a;
+      diag = vec3f(0);
+    }
+    aabb(point3f a) {
+      bounds[0] = (vec3f)a;
+      bounds[1] = (vec3f)a;
+      centroid = (vec3f)a;
       diag = vec3f(0);
     }
     aabb(const vec3f& a, const vec3f& b) { 

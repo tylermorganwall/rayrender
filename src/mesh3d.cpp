@@ -1,7 +1,9 @@
 #include "mesh3d.h"
 
 mesh3d::mesh3d(Rcpp::List mesh_info, std::shared_ptr<material> mat, 
-       Float shutteropen, Float shutterclose, int bvh_type, random_gen rng) {
+       Float shutteropen, Float shutterclose, int bvh_type, random_gen rng,
+       std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation) :
+  hitable(ObjectToWorld, WorldToObject, reverseOrientation) {
   Rcpp::NumericMatrix vertices = Rcpp::as<Rcpp::NumericMatrix>(mesh_info["vertices"]);
   Rcpp::IntegerMatrix indices = Rcpp::as<Rcpp::IntegerMatrix>(mesh_info["indices"]);
   Rcpp::NumericMatrix norms = Rcpp::as<Rcpp::NumericMatrix>(mesh_info["normals"]);
@@ -75,10 +77,12 @@ mesh3d::mesh3d(Rcpp::List mesh_info, std::shared_ptr<material> mat,
       triangles.add(std::make_shared<triangle>(tris[0],tris[1],tris[2],
                                        normals[0],normals[1],normals[2],
                                        single_tex,
-                                       tex, nullptr,  nullptr));
+                                       tex, nullptr,  nullptr, 
+                                       ObjectToWorld, WorldToObject, reverseOrientation));
     } else {
       triangles.add(std::make_shared<triangle>(tris[0],tris[1],tris[2], 
-                                       single_tex, tex, nullptr, nullptr));
+                                       single_tex, tex, nullptr, nullptr, 
+                                       ObjectToWorld, WorldToObject, reverseOrientation));
     }
   }
   mesh_bvh = std::make_shared<bvh_node>(triangles, shutteropen, shutterclose, bvh_type, rng);

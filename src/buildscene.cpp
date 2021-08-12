@@ -1,24 +1,46 @@
 #include "buildscene.h"
 
-std::shared_ptr<hitable> rotation_order(std::shared_ptr<hitable> entry, NumericVector temprotvec, NumericVector order_rotation) {
+// std::shared_ptr<hitable> rotation_order(std::shared_ptr<hitable> entry, NumericVector temprotvec, NumericVector order_rotation) {
+//   for(int i = 0; i < 3; i++) {
+//     if(order_rotation(i) == 1) {
+//       if(temprotvec(0) != 0) {
+//         entry = std::make_shared<rotate_x>(entry,temprotvec(0));
+//       }
+//     }
+//     if(order_rotation(i) == 2) {
+//       if(temprotvec(1) != 0) {
+//         entry = std::make_shared<rotate_y>(entry,temprotvec(1));
+//       }
+//     }
+//     if(order_rotation(i) == 3) {
+//       if(temprotvec(2) != 0) {
+//         entry = std::make_shared<rotate_z>(entry,temprotvec(2));
+//       }
+//     }
+//   }
+//   return(entry);
+// }
+
+Transform rotation_order_matrix(NumericVector temprotvec, NumericVector order_rotation) {
+  Transform M;
   for(int i = 0; i < 3; i++) {
     if(order_rotation(i) == 1) {
       if(temprotvec(0) != 0) {
-        entry = std::make_shared<rotate_x>(entry,temprotvec(0));
+        M = M *  RotateX(temprotvec(0));
       }
     }
     if(order_rotation(i) == 2) {
       if(temprotvec(1) != 0) {
-        entry = std::make_shared<rotate_y>(entry,temprotvec(1));
+        M = M *  RotateY(temprotvec(1));
       }
     }
     if(order_rotation(i) == 3) {
       if(temprotvec(2) != 0) {
-        entry = std::make_shared<rotate_z>(entry,temprotvec(2));
+        M = M *  RotateZ(temprotvec(2));
       }
     }
   }
-  return(entry);
+  return(M);
 }
 
 
@@ -50,6 +72,7 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
                      IntegerVector& shared_id_mat, LogicalVector& is_shared_mat,
                      std::vector<std::shared_ptr<material> >* shared_materials, List& image_repeat_list,
                      List& csg_info, List& mesh_list, int bvh_type,
+                     TransformCache& transformCache,
                      random_gen& rng) {
   hitable_list list;
   LogicalVector isgradient = gradient_info["isgradient"];
@@ -442,37 +465,47 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
     } else if(shape(i) == 17) {
       center = vec3f(x(i), y(i), z(i));
     }
-
+    
+    Transform GroupTransform;
+    Transform TempM = 
+      Scale(temp_scales[0], temp_scales[1], temp_scales[2]) *
+      rotation_order_matrix(temprotvec, order_rotation);
+    
+    std::shared_ptr<Transform> ObjToWorld = transformCache.Lookup(TempM);
+    std::shared_ptr<Transform> WorldToObj = transformCache.Lookup(TempM.GetInverseMatrix());
+    
     //Generate objects
     if (shape(i) == 1) {
       std::shared_ptr<hitable> entry;
       if(moving(i)) {
         entry = std::make_shared<moving_sphere>(vel * shutteropen, 
                                                 vel * shutterclose, 
-                                                shutteropen, shutterclose, radius(i), tex, alpha[i], bump[i]);
+                                                shutteropen, shutterclose, radius(i), tex, alpha[i], bump[i],
+                                                ObjToWorld,WorldToObj, isflipped(i));
       } else {
-        entry = std::make_shared<sphere>(vec3f(0,0,0), radius(i), tex, alpha[i], bump[i]);
+        entry = std::make_shared<sphere>(vec3f(0,0,0), radius(i), tex, alpha[i], bump[i],
+                                         ObjToWorld,WorldToObj, isflipped(i));
       }
-      if(is_scaled) {
-        entry = std::make_shared<scale>(entry, vec3f(temp_scales[0], temp_scales[1], temp_scales[2]));
-      }
-      entry = rotation_order(entry, temprotvec, order_rotation);
-      if(isgrouped(i)) {
-        entry = std::make_shared<translate>(entry, center - gpivot);
-        if(is_group_scaled) {
-          entry = std::make_shared<scale>(entry, vec3f(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
-        }
-        entry = rotation_order(entry, temp_gangle, temp_gorder);
-        entry = std::make_shared<translate>(entry, -center + gpivot );
-      }
-      if(!moving(i)) {
-        entry = std::make_shared<translate>(entry, center + gtrans + vel * shutteropen);
-      } else {
-        entry = std::make_shared<translate>(entry, center + gtrans);
-      }
-      if(isflipped(i)) {
-        entry = std::make_shared<flip_normals>(entry);
-      }
+      // if(is_scaled) {
+      //   entry = std::make_shared<scale>(entry, vec3f(temp_scales[0], temp_scales[1], temp_scales[2]));
+      // }
+      // entry = rotation_order(entry, temprotvec, order_rotation);
+      // if(isgrouped(i)) {
+      //   entry = std::make_shared<translate>(entry, center - gpivot);
+      //   if(is_group_scaled) {
+      //     entry = std::make_shared<scale>(entry, vec3f(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
+      //   }
+      //   entry = rotation_order(entry, temp_gangle, temp_gorder);
+      //   entry = std::make_shared<translate>(entry, -center + gpivot );
+      // }
+      // if(!moving(i)) {
+      //   entry = std::make_shared<translate>(entry, center + gtrans + vel * shutteropen);
+      // } else {
+      //   entry = std::make_shared<translate>(entry, center + gtrans);
+      // }
+      // if(isflipped(i)) {
+      //   entry = std::make_shared<flip_normals>(entry);
+      // }
       if(isvolume(i)) {
         list.add(std::make_shared<constant_medium>(entry, voldensity(i), 
                  std::make_shared<constant_texture>(vec3f(tempvector(0),tempvector(1),tempvector(2)))));
@@ -482,74 +515,78 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
     } else if (shape(i)  == 2) {
       std::shared_ptr<hitable> entry = std::make_shared<xy_rect>(-tempvector(prop_len+2)/2,tempvector(prop_len+2)/2,
                                    -tempvector(prop_len+4)/2,tempvector(prop_len+4)/2,
-                                   0, tex, alpha[i], bump[i], isflipped(i));
-      if(is_scaled) {
-        entry = std::make_shared<scale>(entry, vec3f(temp_scales[0], temp_scales[1], temp_scales[2]));
-      }
-      entry = rotation_order(entry, temprotvec, order_rotation);
-      if(isgrouped(i)) {
-        entry = std::make_shared<translate>(entry, center - gpivot);
-        if(is_group_scaled) {
-          entry = std::make_shared<scale>(entry, vec3f(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
-        }
-        entry = rotation_order(entry, temp_gangle, temp_gorder);
-        entry = std::make_shared<translate>(entry, -center + gpivot );
-      }
-      entry = std::make_shared<translate>(entry,center + gtrans + vel * shutteropen);
+                                   0, tex, alpha[i], bump[i], isflipped(i),
+                                   ObjToWorld,WorldToObj, isflipped(i));
+      // if(is_scaled) {
+      //   entry = std::make_shared<scale>(entry, vec3f(temp_scales[0], temp_scales[1], temp_scales[2]));
+      // }
+      // entry = rotation_order(entry, temprotvec, order_rotation);
+      // if(isgrouped(i)) {
+      //   entry = std::make_shared<translate>(entry, center - gpivot);
+      //   if(is_group_scaled) {
+      //     entry = std::make_shared<scale>(entry, vec3f(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
+      //   }
+      //   entry = rotation_order(entry, temp_gangle, temp_gorder);
+      //   entry = std::make_shared<translate>(entry, -center + gpivot );
+      // }
+      // entry = std::make_shared<translate>(entry,center + gtrans + vel * shutteropen);
       list.add(entry);;
     } else if (shape(i)  == 3) {
       std::shared_ptr<hitable> entry = std::make_shared<xz_rect>(-tempvector(prop_len+2)/2,tempvector(prop_len+2)/2,
                                    -tempvector(prop_len+4)/2,tempvector(prop_len+4)/2,
-                                   0, tex, alpha[i], bump[i], isflipped(i));
-      if(is_scaled) {
-        entry = std::make_shared<scale>(entry, vec3f(temp_scales[0], temp_scales[1], temp_scales[2]));
-      }
-      entry = rotation_order(entry, temprotvec, order_rotation);
-      if(isgrouped(i)) {
-        entry = std::make_shared<translate>(entry, center - gpivot);
-        if(is_group_scaled) {
-          entry = std::make_shared<scale>(entry, vec3f(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
-        }
-        entry = rotation_order(entry, temp_gangle, temp_gorder);
-        entry = std::make_shared<translate>(entry, -center + gpivot );
-      }
-      entry = std::make_shared<translate>(entry,center + gtrans + vel * shutteropen);
+                                   0, tex, alpha[i], bump[i], isflipped(i),
+                                   ObjToWorld,WorldToObj, isflipped(i));
+      // if(is_scaled) {
+      //   entry = std::make_shared<scale>(entry, vec3f(temp_scales[0], temp_scales[1], temp_scales[2]));
+      // }
+      // entry = rotation_order(entry, temprotvec, order_rotation);
+      // if(isgrouped(i)) {
+      //   entry = std::make_shared<translate>(entry, center - gpivot);
+      //   if(is_group_scaled) {
+      //     entry = std::make_shared<scale>(entry, vec3f(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
+      //   }
+      //   entry = rotation_order(entry, temp_gangle, temp_gorder);
+      //   entry = std::make_shared<translate>(entry, -center + gpivot );
+      // }
+      // entry = std::make_shared<translate>(entry,center + gtrans + vel * shutteropen);
       list.add(entry);;
     } else if (shape(i)  == 4) {
       std::shared_ptr<hitable> entry = std::make_shared<yz_rect>(-tempvector(prop_len+2)/2,tempvector(prop_len+2)/2,
                                    -tempvector(prop_len+4)/2,tempvector(prop_len+4)/2,
-                                   0, tex, alpha[i], bump[i], isflipped(i));
-      if(is_scaled) {
-        entry = std::make_shared<scale>(entry, vec3f(temp_scales[0], temp_scales[1], temp_scales[2]));
-      }
-      entry = rotation_order(entry, temprotvec, order_rotation);
-      if(isgrouped(i)) {
-        entry = std::make_shared<translate>(entry, center - gpivot);
-        if(is_group_scaled) {
-          entry = std::make_shared<scale>(entry, vec3f(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
-        }
-        entry = rotation_order(entry, temp_gangle, temp_gorder);
-        entry = std::make_shared<translate>(entry, -center + gpivot );
-      }
-      entry = std::make_shared<translate>(entry,center + gtrans + vel * shutteropen);
+                                   0, tex, alpha[i], bump[i], isflipped(i),
+                                   ObjToWorld,WorldToObj, isflipped(i));
+      // if(is_scaled) {
+      //   entry = std::make_shared<scale>(entry, vec3f(temp_scales[0], temp_scales[1], temp_scales[2]));
+      // }
+      // entry = rotation_order(entry, temprotvec, order_rotation);
+      // if(isgrouped(i)) {
+      //   entry = std::make_shared<translate>(entry, center - gpivot);
+      //   if(is_group_scaled) {
+      //     entry = std::make_shared<scale>(entry, vec3f(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
+      //   }
+      //   entry = rotation_order(entry, temp_gangle, temp_gorder);
+      //   entry = std::make_shared<translate>(entry, -center + gpivot );
+      // }
+      // entry = std::make_shared<translate>(entry,center + gtrans + vel * shutteropen);
       list.add(entry);;
     } else if (shape(i)  == 5) {
       std::shared_ptr<hitable> entry = std::make_shared<box>(-vec3f(tempvector(prop_len+1),tempvector(prop_len+2),tempvector(prop_len+3))/2, 
                                vec3f(tempvector(prop_len+1),tempvector(prop_len+2),tempvector(prop_len+3))/2, 
-                               tex, alpha[i], bump[i]);
-      if(is_scaled) {
-        entry = std::make_shared<scale>(entry, vec3f(temp_scales[0], temp_scales[1], temp_scales[2]));
-      }
-      entry = rotation_order(entry, temprotvec, order_rotation);
-      if(isgrouped(i)) {
-        entry = std::make_shared<translate>(entry, center - gpivot);
-        if(is_group_scaled) {
-          entry = std::make_shared<scale>(entry, vec3f(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
-        }
-        entry = rotation_order(entry, temp_gangle, temp_gorder);
-        entry = std::make_shared<translate>(entry, -center + gpivot );
-      }
-      entry = std::make_shared<translate>(entry, center + gtrans + vel * shutteropen);
+                               tex, alpha[i], bump[i],
+                               ObjToWorld,WorldToObj, isflipped(i));
+      // if(is_scaled) {
+      //   entry = std::make_shared<scale>(entry, vec3f(temp_scales[0], temp_scales[1], temp_scales[2]));
+      // }
+      // entry = rotation_order(entry, temprotvec, order_rotation);
+      // if(isgrouped(i)) {
+      //   entry = std::make_shared<translate>(entry, center - gpivot);
+      //   if(is_group_scaled) {
+      //     entry = std::make_shared<scale>(entry, vec3f(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
+      //   }
+      //   entry = rotation_order(entry, temp_gangle, temp_gorder);
+      //   entry = std::make_shared<translate>(entry, -center + gpivot );
+      // }
+      // entry = std::make_shared<translate>(entry, center + gtrans + vel * shutteropen);
       if(isvolume(i)) {
         if(!isnoise(i)) {
           list.add(std::make_shared<constant_medium>(entry,voldensity(i), std::make_shared<constant_texture>(vec3f(tempvector(0),tempvector(1),tempvector(2)))));;
@@ -573,29 +610,31 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
                             vec3f(tempvector(prop_len+13),tempvector(prop_len+14),tempvector(prop_len+15)),
                             vec3f(tempvector(prop_len+16),tempvector(prop_len+17),tempvector(prop_len+18)),
                             !is_shared_mat(i), //turn off if shared material (e.g. extruded polygon)
-                            tex, alpha[i], bump[i]);
+                            tex, alpha[i], bump[i],
+                            ObjToWorld,WorldToObj, isflipped(i));
       } else {
         entry= std::make_shared<triangle>(vec3f(tempvector(prop_len+1),tempvector(prop_len+2),tempvector(prop_len+3)),
                             vec3f(tempvector(prop_len+4),tempvector(prop_len+5),tempvector(prop_len+6)),
                             vec3f(tempvector(prop_len+7),tempvector(prop_len+8),tempvector(prop_len+9)),
                             !is_shared_mat(i), //turn off if shared material (e.g. extruded polygon)
-                            tex, alpha[i], bump[i]);
+                            tex, alpha[i], bump[i],
+                            ObjToWorld,WorldToObj, isflipped(i));
       }
-      if(is_scaled) {
-        entry = std::make_shared<scale>(entry, vec3f(temp_scales[0], temp_scales[1], temp_scales[2]));
-      }
-      entry = rotation_order(entry, temprotvec, order_rotation);
-      if(isgrouped(i)) {
-        entry = std::make_shared<translate>(entry, center - gpivot);
-        if(is_group_scaled) {
-          entry = std::make_shared<scale>(entry, vec3f(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
-        }
-        entry = rotation_order(entry, temp_gangle, temp_gorder);
-        entry = std::make_shared<translate>(entry, -center + gpivot );
-      }
-      entry = std::make_shared<translate>(entry, center + gtrans + vel * shutteropen);
+      // if(is_scaled) {
+      //   entry = std::make_shared<scale>(entry, vec3f(temp_scales[0], temp_scales[1], temp_scales[2]));
+      // }
+      // entry = rotation_order(entry, temprotvec, order_rotation);
+      // if(isgrouped(i)) {
+      //   entry = std::make_shared<translate>(entry, center - gpivot);
+      //   if(is_group_scaled) {
+      //     entry = std::make_shared<scale>(entry, vec3f(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
+      //   }
+      //   entry = rotation_order(entry, temp_gangle, temp_gorder);
+      //   entry = std::make_shared<translate>(entry, -center + gpivot );
+      // }
+      // entry = std::make_shared<translate>(entry, center + gtrans + vel * shutteropen);
       if(isflipped(i)) {
-        list.add(std::make_shared<flip_normals>(entry));
+        // list.add(std::make_shared<flip_normals>(entry));
       } else {
         list.add(entry);
       }
@@ -606,23 +645,24 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
       entry = std::make_shared<trimesh>(objfilename, objbasedirname, 
                          tex,
                          tempvector(prop_len+1),
-                         shutteropen, shutterclose, bvh_type, rng);
-      if(is_scaled) {
-        entry = std::make_shared<scale>(entry, vec3f(temp_scales[0], temp_scales[1], temp_scales[2]));
-      }
-      entry = rotation_order(entry, temprotvec, order_rotation);
-      if(isgrouped(i)) {
-        entry = std::make_shared<translate>(entry, center - gpivot);
-        if(is_group_scaled) {
-          entry = std::make_shared<scale>(entry, vec3f(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
-        }
-        entry = rotation_order(entry, temp_gangle, temp_gorder);
-        entry = std::make_shared<translate>(entry, -center + gpivot );
-      }
-      entry = std::make_shared<translate>(entry, center + gtrans + vel * shutteropen);
-      if(isflipped(i)) {
-        entry = std::make_shared<flip_normals>(entry);
-      } 
+                         shutteropen, shutterclose, bvh_type, rng,
+                         ObjToWorld,WorldToObj, isflipped(i));
+      // if(is_scaled) {
+      //   entry = std::make_shared<scale>(entry, vec3f(temp_scales[0], temp_scales[1], temp_scales[2]));
+      // }
+      // entry = rotation_order(entry, temprotvec, order_rotation);
+      // if(isgrouped(i)) {
+      //   entry = std::make_shared<translate>(entry, center - gpivot);
+      //   if(is_group_scaled) {
+      //     entry = std::make_shared<scale>(entry, vec3f(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
+      //   }
+      //   entry = rotation_order(entry, temp_gangle, temp_gorder);
+      //   entry = std::make_shared<translate>(entry, -center + gpivot );
+      // }
+      // entry = std::make_shared<translate>(entry, center + gtrans + vel * shutteropen);
+      // if(isflipped(i)) {
+      //   entry = std::make_shared<flip_normals>(entry);
+      // } 
       if(isvolume(i)) {
         list.add(std::make_shared<constant_medium>(entry, voldensity(i), 
                  std::make_shared<constant_texture>(vec3f(tempvector(0),tempvector(1),tempvector(2)))));
@@ -636,28 +676,30 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
       if(sigma(i) == 0) {
         entry = std::make_shared<trimesh>(objfilename, objbasedirname, 
                             tempvector(prop_len+1), 
-                            shutteropen, shutterclose, bvh_type, rng);
+                            shutteropen, shutterclose, bvh_type, rng,
+                            ObjToWorld,WorldToObj, isflipped(i));
       } else {
         entry = std::make_shared<trimesh>(objfilename, objbasedirname, 
                             tempvector(prop_len+1), sigma(i),
-                            shutteropen, shutterclose, bvh_type, rng);
+                            shutteropen, shutterclose, bvh_type, rng,
+                            ObjToWorld,WorldToObj, isflipped(i));
       }
-      if(is_scaled) {
-        entry = std::make_shared<scale>(entry, vec3f(temp_scales[0], temp_scales[1], temp_scales[2]));
-      }
-      entry = rotation_order(entry, temprotvec, order_rotation);
-      if(isgrouped(i)) {
-        entry = std::make_shared<translate>(entry, center - gpivot);
-        if(is_group_scaled) {
-          entry = std::make_shared<scale>(entry, vec3f(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
-        }
-        entry = rotation_order(entry, temp_gangle, temp_gorder);
-        entry = std::make_shared<translate>(entry, -center + gpivot );
-      }
-      entry = std::make_shared<translate>(entry, center + gtrans + vel * shutteropen);
-      if(isflipped(i)) {
-        entry = std::make_shared<flip_normals>(entry);
-      } 
+      // if(is_scaled) {
+      //   entry = std::make_shared<scale>(entry, vec3f(temp_scales[0], temp_scales[1], temp_scales[2]));
+      // }
+      // entry = rotation_order(entry, temprotvec, order_rotation);
+      // if(isgrouped(i)) {
+      //   entry = std::make_shared<translate>(entry, center - gpivot);
+      //   if(is_group_scaled) {
+      //     entry = std::make_shared<scale>(entry, vec3f(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
+      //   }
+      //   entry = rotation_order(entry, temp_gangle, temp_gorder);
+      //   entry = std::make_shared<translate>(entry, -center + gpivot );
+      // }
+      // entry = std::make_shared<translate>(entry, center + gtrans + vel * shutteropen);
+      // if(isflipped(i)) {
+      //   entry = std::make_shared<flip_normals>(entry);
+      // } 
       if(isvolume(i)) {
         list.add(std::make_shared<constant_medium>(entry, voldensity(i), 
                   std::make_shared<constant_texture>(vec3f(tempvector(0),tempvector(1),tempvector(2)))));
@@ -666,68 +708,71 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
       }
     } else if (shape(i) == 9) {
       std::shared_ptr<hitable> entry;
-      entry = std::make_shared<disk>(vec3f(0,0,0), radius(i), tempvector(prop_len+1), tex, alpha[i], bump[i]);
-      if(is_scaled) {
-        entry = std::make_shared<scale>(entry, vec3f(temp_scales[0], temp_scales[1], temp_scales[2]));
-      }
-      entry = rotation_order(entry, temprotvec, order_rotation);
-      if(isgrouped(i)) {
-        entry = std::make_shared<translate>(entry, center - gpivot);
-        if(is_group_scaled) {
-          entry = std::make_shared<scale>(entry, vec3f(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
-        }
-        entry = rotation_order(entry, temp_gangle, temp_gorder);
-        entry = std::make_shared<translate>(entry, -center + gpivot );
-      }
-      entry = std::make_shared<translate>(entry, center + gtrans + vel * shutteropen);
-      if(isflipped(i)) {
-        list.add(std::make_shared<flip_normals>(entry));
-      } else {
+      entry = std::make_shared<disk>(vec3f(0,0,0), radius(i), tempvector(prop_len+1), tex, alpha[i], bump[i],
+                                     ObjToWorld,WorldToObj, isflipped(i));
+      // if(is_scaled) {
+      //   entry = std::make_shared<scale>(entry, vec3f(temp_scales[0], temp_scales[1], temp_scales[2]));
+      // }
+      // entry = rotation_order(entry, temprotvec, order_rotation);
+      // if(isgrouped(i)) {
+      //   entry = std::make_shared<translate>(entry, center - gpivot);
+      //   if(is_group_scaled) {
+      //     entry = std::make_shared<scale>(entry, vec3f(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
+      //   }
+      //   entry = rotation_order(entry, temp_gangle, temp_gorder);
+      //   entry = std::make_shared<translate>(entry, -center + gpivot );
+      // }
+      // entry = std::make_shared<translate>(entry, center + gtrans + vel * shutteropen);
+      // if(isflipped(i)) {
+      //   list.add(std::make_shared<flip_normals>(entry));
+      // } else {
         list.add(entry);
-      }
+      // }
     } else if (shape(i) == 10) {
       bool has_caps = type(i) != 5 && type(i) != 8;
       bool has_cap_option = tempvector(prop_len+4) == 1;
       std::shared_ptr<hitable> entry = std::make_shared<cylinder>(radius(i), tempvector(prop_len+1), 
                                     tempvector(prop_len+2), tempvector(prop_len+3),has_caps && has_cap_option,
-                                    tex, alpha[i], bump[i]);
-      if(is_scaled) {
-        entry = std::make_shared<scale>(entry, vec3f(temp_scales[0], temp_scales[1], temp_scales[2]));
-      }
-      entry = rotation_order(entry, temprotvec, order_rotation);
-      if(isgrouped(i)) {
-        entry = std::make_shared<translate>(entry, center - gpivot);
-        if(is_group_scaled) {
-          entry = std::make_shared<scale>(entry, vec3f(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
-        }
-        entry = rotation_order(entry, temp_gangle, temp_gorder);
-        entry = std::make_shared<translate>(entry, -center + gpivot );
-      }
-      entry = std::make_shared<translate>(entry, center + gtrans + vel * shutteropen);
-      if(isflipped(i)) {
-        entry = std::make_shared<flip_normals>(entry);
-      }
+                                    tex, alpha[i], bump[i],
+                                    ObjToWorld,WorldToObj, isflipped(i));
+      // if(is_scaled) {
+      //   entry = std::make_shared<scale>(entry, vec3f(temp_scales[0], temp_scales[1], temp_scales[2]));
+      // }
+      // entry = rotation_order(entry, temprotvec, order_rotation);
+      // if(isgrouped(i)) {
+      //   entry = std::make_shared<translate>(entry, center - gpivot);
+      //   if(is_group_scaled) {
+      //     entry = std::make_shared<scale>(entry, vec3f(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
+      //   }
+      //   entry = rotation_order(entry, temp_gangle, temp_gorder);
+      //   entry = std::make_shared<translate>(entry, -center + gpivot );
+      // }
+      // entry = std::make_shared<translate>(entry, center + gtrans + vel * shutteropen);
+      // if(isflipped(i)) {
+      //   entry = std::make_shared<flip_normals>(entry);
+      // }
       list.add(entry);
     } else if (shape(i) == 11) {
       std::shared_ptr<hitable> entry = std::make_shared<ellipsoid>(vec3f(0,0,0), radius(i), 
                                      vec3f(tempvector(prop_len + 1), tempvector(prop_len + 2), tempvector(prop_len + 3)),
-                                     tex, alpha[i], bump[i]);
-      if(is_scaled) {
-        entry = std::make_shared<scale>(entry, vec3f(temp_scales[0], temp_scales[1], temp_scales[2]));
-      }
-      entry = rotation_order(entry, temprotvec, order_rotation);
-      if(isgrouped(i)) {
-        entry = std::make_shared<translate>(entry, center - gpivot);
-        if(is_group_scaled) {
-          entry = std::make_shared<scale>(entry, vec3f(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
-        }
-        entry = rotation_order(entry, temp_gangle, temp_gorder);
-        entry = std::make_shared<translate>(entry, -center + gpivot );
-      }
-      entry = std::make_shared<translate>(entry, center + gtrans + vel * shutteropen);
-      if(isflipped(i)) {
-        entry = std::make_shared<flip_normals>(entry);
-      }
+                                     tex, alpha[i], bump[i],
+                                      ObjToWorld,WorldToObj, isflipped(i));
+      // if(is_scaled) {
+      //   entry = std::make_shared<scale>(entry, vec3f(temp_scales[0], temp_scales[1], temp_scales[2]));
+      // }
+      // entry = rotation_order(entry, temprotvec, order_rotation);
+      // if(isgrouped(i)) {
+      //   entry = std::make_shared<translate>(entry, center - gpivot);
+      //   if(is_group_scaled) {
+      //     entry = std::make_shared<scale>(entry, vec3f(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
+      //   }
+      //   entry = rotation_order(entry, temp_gangle, temp_gorder);
+      //   entry = std::make_shared<translate>(entry, -center + gpivot );
+      // }
+      // entry = std::make_shared<translate>(entry, center + gtrans + vel * shutteropen);
+      // if(isflipped(i)) {
+      //   entry = std::make_shared<flip_normals>(entry);
+      // }
       if(isvolume(i)) {
         list.add(std::make_shared<constant_medium>(entry, voldensity(i), 
                 std::make_shared<constant_texture>(vec3f(tempvector(0),tempvector(1),tempvector(2)))));
@@ -741,23 +786,24 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
       entry = std::make_shared<trimesh>(objfilename, objbasedirname, 
                           sigma(i),
                           tempvector(prop_len+1), true,
-                          shutteropen, shutterclose, bvh_type, rng);
-      if(is_scaled) {
-        entry = std::make_shared<scale>(entry, vec3f(temp_scales[0], temp_scales[1], temp_scales[2]));
-      }
-      entry = rotation_order(entry, temprotvec, order_rotation);
-      if(isgrouped(i)) {
-        entry = std::make_shared<translate>(entry, center - gpivot);
-        if(is_group_scaled) {
-          entry = std::make_shared<scale>(entry, vec3f(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
-        }
-        entry = rotation_order(entry, temp_gangle, temp_gorder);
-        entry = std::make_shared<translate>(entry, -center + gpivot );
-      }
-      entry = std::make_shared<translate>(entry, center + gtrans + vel * shutteropen);
-      if(isflipped(i)) {
-        entry = std::make_shared<flip_normals>(entry);
-      } 
+                          shutteropen, shutterclose, bvh_type, rng,
+                          ObjToWorld,WorldToObj, isflipped(i));
+      // if(is_scaled) {
+      //   entry = std::make_shared<scale>(entry, vec3f(temp_scales[0], temp_scales[1], temp_scales[2]));
+      // }
+      // entry = rotation_order(entry, temprotvec, order_rotation);
+      // if(isgrouped(i)) {
+      //   entry = std::make_shared<translate>(entry, center - gpivot);
+      //   if(is_group_scaled) {
+      //     entry = std::make_shared<scale>(entry, vec3f(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
+      //   }
+      //   entry = rotation_order(entry, temp_gangle, temp_gorder);
+      //   entry = std::make_shared<translate>(entry, -center + gpivot );
+      // }
+      // entry = std::make_shared<translate>(entry, center + gtrans + vel * shutteropen);
+      // if(isflipped(i)) {
+      //   entry = std::make_shared<flip_normals>(entry);
+      // } 
       if(isvolume(i)) {
         list.add(std::make_shared<constant_medium>(entry, voldensity(i), 
                                                    std::make_shared<constant_texture>(vec3f(tempvector(0),tempvector(1),tempvector(2)))));
@@ -765,23 +811,24 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
         list.add(entry);
       }
     } else if (shape(i) == 13) {
-      std::shared_ptr<hitable> entry = std::make_shared<cone>(radius(i), tempvector(prop_len+1), tex, alpha[i], bump[i]);
-      if(is_scaled) {
-        entry = std::make_shared<scale>(entry, vec3f(temp_scales[0], temp_scales[1], temp_scales[2]));
-      }
-      entry = rotation_order(entry, temprotvec, order_rotation);
-      if(isgrouped(i)) {
-        entry = std::make_shared<translate>(entry, center - gpivot);
-        if(is_group_scaled) {
-          entry = std::make_shared<scale>(entry, vec3f(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
-        }
-        entry = rotation_order(entry, temp_gangle, temp_gorder);
-        entry = std::make_shared<translate>(entry, -center + gpivot );
-      }
-      entry = std::make_shared<translate>(entry, center + gtrans + vel * shutteropen);
-      if(isflipped(i)) {
-        entry = std::make_shared<flip_normals>(entry);
-      }
+      std::shared_ptr<hitable> entry = std::make_shared<cone>(radius(i), tempvector(prop_len+1), tex, alpha[i], bump[i],
+                                                              ObjToWorld,WorldToObj, isflipped(i));
+      // if(is_scaled) {
+      //   entry = std::make_shared<scale>(entry, vec3f(temp_scales[0], temp_scales[1], temp_scales[2]));
+      // }
+      // entry = rotation_order(entry, temprotvec, order_rotation);
+      // if(isgrouped(i)) {
+      //   entry = std::make_shared<translate>(entry, center - gpivot);
+      //   if(is_group_scaled) {
+      //     entry = std::make_shared<scale>(entry, vec3f(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
+      //   }
+      //   entry = rotation_order(entry, temp_gangle, temp_gorder);
+      //   entry = std::make_shared<translate>(entry, -center + gpivot );
+      // }
+      // entry = std::make_shared<translate>(entry, center + gtrans + vel * shutteropen);
+      // if(isflipped(i)) {
+      //   entry = std::make_shared<flip_normals>(entry);
+      // }
       list.add(entry);
     } else if (shape(i) == 14) {
       int pl = prop_len;
@@ -804,44 +851,46 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
       n[1] = vec3f(tempvector(pl+21), tempvector(pl+22), tempvector(pl+23));
       
       std::shared_ptr<CurveCommon> curve_data = std::make_shared<CurveCommon>(p, tempvector(pl+13), tempvector(pl+14), type_curve, n);
-      std::shared_ptr<hitable> entry = std::make_shared<curve>(tempvector(pl+15),tempvector(pl+16), curve_data, tex);
-      if(is_scaled) {
-        entry = std::make_shared<scale>(entry, vec3f(temp_scales[0], temp_scales[1], temp_scales[2]));
-      }
-      entry = rotation_order(entry, temprotvec, order_rotation);
-      if(isgrouped(i)) {
-        entry = std::make_shared<translate>(entry, center - gpivot);
-        if(is_group_scaled) {
-          entry = std::make_shared<scale>(entry, vec3f(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
-        }
-        entry = rotation_order(entry, temp_gangle, temp_gorder);
-        entry = std::make_shared<translate>(entry, -center + gpivot );
-      }
-      entry = std::make_shared<translate>(entry, center + gtrans + vel * shutteropen);
-      if(isflipped(i)) {
-        entry = std::make_shared<flip_normals>(entry);
-      }
+      std::shared_ptr<hitable> entry = std::make_shared<curve>(tempvector(pl+15),tempvector(pl+16), curve_data, tex,
+                                                               ObjToWorld,WorldToObj, isflipped(i));
+      // if(is_scaled) {
+      //   entry = std::make_shared<scale>(entry, vec3f(temp_scales[0], temp_scales[1], temp_scales[2]));
+      // }
+      // entry = rotation_order(entry, temprotvec, order_rotation);
+      // if(isgrouped(i)) {
+      //   entry = std::make_shared<translate>(entry, center - gpivot);
+      //   if(is_group_scaled) {
+      //     entry = std::make_shared<scale>(entry, vec3f(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
+      //   }
+      //   entry = rotation_order(entry, temp_gangle, temp_gorder);
+      //   entry = std::make_shared<translate>(entry, -center + gpivot );
+      // }
+      // entry = std::make_shared<translate>(entry, center + gtrans + vel * shutteropen);
+      // if(isflipped(i)) {
+      //   entry = std::make_shared<flip_normals>(entry);
+      // }
       list.add(entry);
     } else if (shape(i) == 15) {
       List temp_csg = csg_list(i);
       std::shared_ptr<ImplicitShape> shapes = parse_csg(temp_csg);
-      std::shared_ptr<hitable> entry = std::make_shared<csg>(tex, shapes);
-      if(is_scaled) {
-        entry = std::make_shared<scale>(entry, vec3f(temp_scales[0], temp_scales[1], temp_scales[2]));
-      }
-      entry = rotation_order(entry, temprotvec, order_rotation);
-      if(isgrouped(i)) {
-        entry = std::make_shared<translate>(entry, center - gpivot);
-        if(is_group_scaled) {
-          entry = std::make_shared<scale>(entry, vec3f(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
-        }
-        entry = rotation_order(entry, temp_gangle, temp_gorder);
-        entry = std::make_shared<translate>(entry, -center + gpivot );
-      }
-      entry = std::make_shared<translate>(entry, center + gtrans + vel * shutteropen);
-      if(isflipped(i)) {
-        entry = std::make_shared<flip_normals>(entry);
-      }
+      std::shared_ptr<hitable> entry = std::make_shared<csg>(tex, shapes,
+                                                             ObjToWorld,WorldToObj, isflipped(i));
+      // if(is_scaled) {
+      //   entry = std::make_shared<scale>(entry, vec3f(temp_scales[0], temp_scales[1], temp_scales[2]));
+      // }
+      // entry = rotation_order(entry, temprotvec, order_rotation);
+      // if(isgrouped(i)) {
+      //   entry = std::make_shared<translate>(entry, center - gpivot);
+      //   if(is_group_scaled) {
+      //     entry = std::make_shared<scale>(entry, vec3f(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
+      //   }
+      //   entry = rotation_order(entry, temp_gangle, temp_gorder);
+      //   entry = std::make_shared<translate>(entry, -center + gpivot );
+      // }
+      // entry = std::make_shared<translate>(entry, center + gtrans + vel * shutteropen);
+      // if(isflipped(i)) {
+      //   entry = std::make_shared<flip_normals>(entry);
+      // }
       list.add(entry);
     } else if (shape(i) == 16) {
       std::shared_ptr<hitable> entry;
@@ -850,26 +899,27 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
       entry = std::make_shared<plymesh>(objfilename, objbasedirname, 
                           tex,
                           tempvector(prop_len+1),
-                          shutteropen, shutterclose, bvh_type, rng);
+                          shutteropen, shutterclose, bvh_type, rng,
+                          ObjToWorld,WorldToObj, isflipped(i));
       if(entry == nullptr) {
         continue;
       }
-      if(is_scaled) {
-        entry = std::make_shared<scale>(entry, vec3f(temp_scales[0], temp_scales[1], temp_scales[2]));
-      }
-      entry = rotation_order(entry, temprotvec, order_rotation);
-      if(isgrouped(i)) {
-        entry = std::make_shared<translate>(entry, center - gpivot);
-        if(is_group_scaled) {
-          entry = std::make_shared<scale>(entry, vec3f(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
-        }
-        entry = rotation_order(entry, temp_gangle, temp_gorder);
-        entry = std::make_shared<translate>(entry, -center + gpivot );
-      }
-      entry = std::make_shared<translate>(entry, center + gtrans + vel * shutteropen);
-      if(isflipped(i)) {
-        entry = std::make_shared<flip_normals>(entry);
-      } 
+      // if(is_scaled) {
+      //   entry = std::make_shared<scale>(entry, vec3f(temp_scales[0], temp_scales[1], temp_scales[2]));
+      // }
+      // entry = rotation_order(entry, temprotvec, order_rotation);
+      // if(isgrouped(i)) {
+      //   entry = std::make_shared<translate>(entry, center - gpivot);
+      //   if(is_group_scaled) {
+      //     entry = std::make_shared<scale>(entry, vec3f(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
+      //   }
+      //   entry = rotation_order(entry, temp_gangle, temp_gorder);
+      //   entry = std::make_shared<translate>(entry, -center + gpivot );
+      // }
+      // entry = std::make_shared<translate>(entry, center + gtrans + vel * shutteropen);
+      // if(isflipped(i)) {
+      //   entry = std::make_shared<flip_normals>(entry);
+      // } 
       if(isvolume(i)) {
         list.add(std::make_shared<constant_medium>(entry, voldensity(i), 
                                                    std::make_shared<constant_texture>(vec3f(tempvector(0),tempvector(1),tempvector(2)))));
@@ -879,23 +929,24 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
     } else if (shape(i) == 17) {
       List mesh_entry = mesh_list(i);
       std::shared_ptr<hitable> entry = std::make_shared<mesh3d>(mesh_entry, tex,
-                                  shutteropen, shutterclose, bvh_type, rng);
-      if(is_scaled) {
-        entry = std::make_shared<scale>(entry, vec3f(temp_scales[0], temp_scales[1], temp_scales[2]));
-      }
-      entry = rotation_order(entry, temprotvec, order_rotation);
-      if(isgrouped(i)) {
-        entry = std::make_shared<translate>(entry, center - gpivot);
-        if(is_group_scaled) {
-          entry = std::make_shared<scale>(entry, vec3f(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
-        }
-        entry = rotation_order(entry, temp_gangle, temp_gorder);
-        entry = std::make_shared<translate>(entry, -center + gpivot );
-      }
-      entry = std::make_shared<translate>(entry, center + gtrans + vel * shutteropen);
-      if(isflipped(i)) {
-        entry = std::make_shared<flip_normals>(entry);
-      }
+                                  shutteropen, shutterclose, bvh_type, rng,
+                                  ObjToWorld,WorldToObj, isflipped(i));
+      // if(is_scaled) {
+      //   entry = std::make_shared<scale>(entry, vec3f(temp_scales[0], temp_scales[1], temp_scales[2]));
+      // }
+      // entry = rotation_order(entry, temprotvec, order_rotation);
+      // if(isgrouped(i)) {
+      //   entry = std::make_shared<translate>(entry, center - gpivot);
+      //   if(is_group_scaled) {
+      //     entry = std::make_shared<scale>(entry, vec3f(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
+      //   }
+      //   entry = rotation_order(entry, temp_gangle, temp_gorder);
+      //   entry = std::make_shared<translate>(entry, -center + gpivot );
+      // }
+      // entry = std::make_shared<translate>(entry, center + gtrans + vel * shutteropen);
+      // if(isflipped(i)) {
+      //   entry = std::make_shared<flip_normals>(entry);
+      // }
       list.add(entry);
     }
   }
@@ -913,6 +964,7 @@ std::shared_ptr<hitable> build_imp_sample(IntegerVector& type,
                           List& group_pivot, List& group_translate,
                           List& group_angle, List& group_order_rotation, List& group_scale,
                           CharacterVector& fileinfo, CharacterVector& filebasedir,
+                          TransformCache& transformCache,
                           List& scale_list, List& mesh_list, int bvh_type, LogicalVector& moving,random_gen& rng) {
   NumericVector x = position_list["xvec"];
   NumericVector y = position_list["yvec"];
@@ -1012,6 +1064,15 @@ std::shared_ptr<hitable> build_imp_sample(IntegerVector& type,
     center = vec3f(x(i), y(i), z(i));
   }
   
+  
+  Transform GroupTransform;
+  Transform TempM = 
+    Scale(temp_scales[0], temp_scales[1], temp_scales[2]) *
+    rotation_order_matrix(temprotvec, order_rotation);
+  
+  std::shared_ptr<Transform> ObjToWorld = transformCache.Lookup(TempM);
+  std::shared_ptr<Transform> WorldToObj = transformCache.Lookup(TempM.GetInverseMatrix());
+  
   std::shared_ptr<material> tex = nullptr;
   std::shared_ptr<alpha_texture> alpha = nullptr;
   std::shared_ptr<bump_texture> bump = nullptr;
@@ -1021,118 +1082,124 @@ std::shared_ptr<hitable> build_imp_sample(IntegerVector& type,
     if(moving(i)) {
       entry = std::make_shared<moving_sphere>(vel * shutteropen, 
                                               vel * shutterclose, 
-                                              shutteropen, shutterclose, radius(i), tex, alpha, bump);
+                                              shutteropen, shutterclose, radius(i), tex, alpha, bump,
+                                              ObjToWorld,WorldToObj, false);
     } else {
-      entry = std::make_shared<sphere>(vec3f(0,0,0), radius(i), tex, alpha,bump);
+      entry = std::make_shared<sphere>(vec3f(0,0,0), radius(i), tex, alpha,bump,
+                                       ObjToWorld,WorldToObj, false);
     }
-    if(is_scaled) {
-      entry = std::make_shared<scale>(entry, vec3f(temp_scales[0], temp_scales[1], temp_scales[2]));
-    }
-    if(isgrouped(i)) {
-      entry = std::make_shared<translate>(entry, center - gpivot);
-      if(is_group_scaled) {
-        entry = std::make_shared<scale>(entry, vec3f(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
-      }
-      entry = rotation_order(entry, temp_gangle, temp_gorder);
-      entry = std::make_shared<translate>(entry, -center + gpivot );
-    }
-    if(!moving(i)) {
-      entry = std::make_shared<translate>(entry, center + gtrans + vel * shutteropen);
-    } else {
-      entry = std::make_shared<translate>(entry, center + gtrans);
-    }
+    // if(is_scaled) {
+    //   entry = std::make_shared<scale>(entry, vec3f(temp_scales[0], temp_scales[1], temp_scales[2]));
+    // }
+    // if(isgrouped(i)) {
+    //   entry = std::make_shared<translate>(entry, center - gpivot);
+    //   if(is_group_scaled) {
+    //     entry = std::make_shared<scale>(entry, vec3f(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
+    //   }
+    //   entry = rotation_order(entry, temp_gangle, temp_gorder);
+    //   entry = std::make_shared<translate>(entry, -center + gpivot );
+    // }
+    // if(!moving(i)) {
+    //   entry = std::make_shared<translate>(entry, center + gtrans + vel * shutteropen);
+    // } else {
+    //   entry = std::make_shared<translate>(entry, center + gtrans);
+    // }
     return(entry);
   } else if (shape(i) == 2) {
     std::shared_ptr<hitable> entry = std::make_shared<xy_rect>(-tempvector(prop_len+2)/2,tempvector(prop_len+2)/2,
                                  -tempvector(prop_len+4)/2,tempvector(prop_len+4)/2,
-                                 0, tex, alpha, bump, false);
-    if(is_scaled) {
-      entry = std::make_shared<scale>(entry, vec3f(temp_scales[0], temp_scales[1], temp_scales[2]));
-    }
-    entry = rotation_order(entry, temprotvec, order_rotation);
-    if(isgrouped(i)) {
-      entry = std::make_shared<translate>(entry, center - gpivot);
-      if(is_group_scaled) {
-        entry = std::make_shared<scale>(entry, vec3f(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
-      }
-      entry = rotation_order(entry, temp_gangle, temp_gorder);
-      entry = std::make_shared<translate>(entry, -center + gpivot );
-    }
-    entry = std::make_shared<translate>(entry, center + gtrans + vel * shutteropen);
+                                 0, tex, alpha, bump, false,
+                                 ObjToWorld,WorldToObj, false);
+    // if(is_scaled) {
+    //   entry = std::make_shared<scale>(entry, vec3f(temp_scales[0], temp_scales[1], temp_scales[2]));
+    // }
+    // entry = rotation_order(entry, temprotvec, order_rotation);
+    // if(isgrouped(i)) {
+    //   entry = std::make_shared<translate>(entry, center - gpivot);
+    //   if(is_group_scaled) {
+    //     entry = std::make_shared<scale>(entry, vec3f(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
+    //   }
+    //   entry = rotation_order(entry, temp_gangle, temp_gorder);
+    //   entry = std::make_shared<translate>(entry, -center + gpivot );
+    // }
+    // entry = std::make_shared<translate>(entry, center + gtrans + vel * shutteropen);
     return(entry);
   } else if (shape(i) == 3) {
     std::shared_ptr<hitable> entry = std::make_shared<xz_rect>(-tempvector(prop_len+2)/2,tempvector(prop_len+2)/2,
                                  -tempvector(prop_len+4)/2,tempvector(prop_len+4)/2,
-                                 0, tex, alpha, bump, false);
-    if(is_scaled) {
-      entry = std::make_shared<scale>(entry, vec3f(temp_scales[0], temp_scales[1], temp_scales[2]));
-    }
-    entry = rotation_order(entry, temprotvec, order_rotation);
-    if(isgrouped(i)) {
-      entry = std::make_shared<translate>(entry, center - gpivot);
-      if(is_group_scaled) {
-        entry = std::make_shared<scale>(entry, vec3f(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
-      }
-      entry = rotation_order(entry, temp_gangle, temp_gorder);
-      entry = std::make_shared<translate>(entry, -center + gpivot );
-    }
-    entry = std::make_shared<translate>(entry, center + gtrans + vel * shutteropen);
+                                 0, tex, alpha, bump, false,
+                                 ObjToWorld,WorldToObj, false);
+    // if(is_scaled) {
+    //   entry = std::make_shared<scale>(entry, vec3f(temp_scales[0], temp_scales[1], temp_scales[2]));
+    // }
+    // entry = rotation_order(entry, temprotvec, order_rotation);
+    // if(isgrouped(i)) {
+    //   entry = std::make_shared<translate>(entry, center - gpivot);
+    //   if(is_group_scaled) {
+    //     entry = std::make_shared<scale>(entry, vec3f(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
+    //   }
+    //   entry = rotation_order(entry, temp_gangle, temp_gorder);
+    //   entry = std::make_shared<translate>(entry, -center + gpivot );
+    // }
+    // entry = std::make_shared<translate>(entry, center + gtrans + vel * shutteropen);
     return(entry);
   } else if (shape(i) == 4) {
     std::shared_ptr<hitable> entry = std::make_shared<yz_rect>(-tempvector(prop_len+2)/2,tempvector(prop_len+2)/2,
                                  -tempvector(prop_len+4)/2,tempvector(prop_len+4)/2,
-                                 0, tex, alpha, bump, false);
-    if(is_scaled) {
-      entry = std::make_shared<scale>(entry, vec3f(temp_scales[0], temp_scales[1], temp_scales[2]));
-    }
-    entry = rotation_order(entry, temprotvec, order_rotation);
-    if(isgrouped(i)) {
-      entry = std::make_shared<translate>(entry, center - gpivot);
-      if(is_group_scaled) {
-        entry = std::make_shared<scale>(entry, vec3f(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
-      }
-      entry = rotation_order(entry, temp_gangle, temp_gorder);
-      entry = std::make_shared<translate>(entry, -center + gpivot );
-    }
-    entry = std::make_shared<translate>(entry, center + gtrans + vel * shutteropen);
+                                 0, tex, alpha, bump, false,
+                                 ObjToWorld,WorldToObj, false);
+    // if(is_scaled) {
+    //   entry = std::make_shared<scale>(entry, vec3f(temp_scales[0], temp_scales[1], temp_scales[2]));
+    // }
+    // entry = rotation_order(entry, temprotvec, order_rotation);
+    // if(isgrouped(i)) {
+    //   entry = std::make_shared<translate>(entry, center - gpivot);
+    //   if(is_group_scaled) {
+    //     entry = std::make_shared<scale>(entry, vec3f(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
+    //   }
+    //   entry = rotation_order(entry, temp_gangle, temp_gorder);
+    //   entry = std::make_shared<translate>(entry, -center + gpivot );
+    // }
+    // entry = std::make_shared<translate>(entry, center + gtrans + vel * shutteropen);
     return(entry);
   } else if (shape(i) == 5) {
     std::shared_ptr<hitable> entry = std::make_shared<box>(-vec3f(tempvector(prop_len+1),tempvector(prop_len+2),tempvector(prop_len+3))/2, 
                              vec3f(tempvector(prop_len+1),tempvector(prop_len+2),tempvector(prop_len+3))/2, 
-                             tex, alpha,bump);
-    if(is_scaled) {
-      entry = std::make_shared<scale>(entry, vec3f(temp_scales[0], temp_scales[1], temp_scales[2]));
-    }
-    entry = rotation_order(entry, temprotvec, order_rotation);
-    if(isgrouped(i)) {
-      entry = std::make_shared<translate>(entry, center - gpivot);
-      if(is_group_scaled) {
-        entry = std::make_shared<scale>(entry, vec3f(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
-      }
-      entry = rotation_order(entry, temp_gangle, temp_gorder);
-      entry = std::make_shared<translate>(entry, -center + gpivot );
-    }
-    entry = std::make_shared<translate>(entry, center + gtrans + vel * shutteropen);
+                             tex, alpha,bump,
+                             ObjToWorld,WorldToObj, false);
+    // if(is_scaled) {
+    //   entry = std::make_shared<scale>(entry, vec3f(temp_scales[0], temp_scales[1], temp_scales[2]));
+    // }
+    // entry = rotation_order(entry, temprotvec, order_rotation);
+    // if(isgrouped(i)) {
+    //   entry = std::make_shared<translate>(entry, center - gpivot);
+    //   if(is_group_scaled) {
+    //     entry = std::make_shared<scale>(entry, vec3f(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
+    //   }
+    //   entry = rotation_order(entry, temp_gangle, temp_gorder);
+    //   entry = std::make_shared<translate>(entry, -center + gpivot );
+    // }
+    // entry = std::make_shared<translate>(entry, center + gtrans + vel * shutteropen);
     return(entry);
   } else if (shape(i) == 6) {
     std::shared_ptr<hitable> entry = std::make_shared<triangle>(vec3f(tempvector(prop_len+1),tempvector(prop_len+2),tempvector(prop_len+3)),
                                   vec3f(tempvector(prop_len+4),tempvector(prop_len+5),tempvector(prop_len+6)),
                                   vec3f(tempvector(prop_len+7),tempvector(prop_len+8),tempvector(prop_len+9)),
                                   false,
-                                  tex, alpha, bump);
-    if(is_scaled) {
-      entry = std::make_shared<scale>(entry, vec3f(temp_scales[0], temp_scales[1], temp_scales[2]));
-    }
-    entry = rotation_order(entry, temprotvec, order_rotation);
-    if(isgrouped(i)) {
-      entry = std::make_shared<translate>(entry, center - gpivot);
-      if(is_group_scaled) {
-        entry = std::make_shared<scale>(entry, vec3f(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
-      }
-      entry = rotation_order(entry, temp_gangle, temp_gorder);
-      entry = std::make_shared<translate>(entry, -center + gpivot );
-    }
-    entry = std::make_shared<translate>(entry, center + gtrans + vel * shutteropen);
+                                  tex, alpha, bump, ObjToWorld,WorldToObj, false);
+    // if(is_scaled) {
+    //   entry = std::make_shared<scale>(entry, vec3f(temp_scales[0], temp_scales[1], temp_scales[2]));
+    // }
+    // entry = rotation_order(entry, temprotvec, order_rotation);
+    // if(isgrouped(i)) {
+    //   entry = std::make_shared<translate>(entry, center - gpivot);
+    //   if(is_group_scaled) {
+    //     entry = std::make_shared<scale>(entry, vec3f(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
+    //   }
+    //   entry = rotation_order(entry, temp_gangle, temp_gorder);
+    //   entry = std::make_shared<translate>(entry, -center + gpivot );
+    // }
+    // entry = std::make_shared<translate>(entry, center + gtrans + vel * shutteropen);
     return(entry);
   } else if (shape(i) == 7 || shape(i) == 8 || shape(i) == 12) {
     std::shared_ptr<hitable> entry;
@@ -1140,92 +1207,96 @@ std::shared_ptr<hitable> build_imp_sample(IntegerVector& type,
     std::string objbasedirname = Rcpp::as<std::string>(filebasedir(i));
     entry = std::make_shared<trimesh>(objfilename, objbasedirname,
                         tempvector(prop_len+1),
-                        shutteropen, shutterclose, bvh_type, rng);
-    if(is_scaled) {
-      entry = std::make_shared<scale>(entry, vec3f(temp_scales[0], temp_scales[1], temp_scales[2]));
-    }
-    entry = rotation_order(entry, temprotvec, order_rotation);
-    if(isgrouped(i)) {
-      entry = std::make_shared<translate>(entry, center - gpivot);
-      if(is_group_scaled) {
-        entry = std::make_shared<scale>(entry, vec3f(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
-      }
-      entry = rotation_order(entry, temp_gangle, temp_gorder);
-      entry = std::make_shared<translate>(entry, -center + gpivot );
-    }
-    entry = std::make_shared<translate>(entry, center + gtrans + vel * shutteropen);
+                        shutteropen, shutterclose, bvh_type, rng, ObjToWorld,WorldToObj, false);
+    // if(is_scaled) {
+    //   entry = std::make_shared<scale>(entry, vec3f(temp_scales[0], temp_scales[1], temp_scales[2]));
+    // }
+    // entry = rotation_order(entry, temprotvec, order_rotation);
+    // if(isgrouped(i)) {
+    //   entry = std::make_shared<translate>(entry, center - gpivot);
+    //   if(is_group_scaled) {
+    //     entry = std::make_shared<scale>(entry, vec3f(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
+    //   }
+    //   entry = rotation_order(entry, temp_gangle, temp_gorder);
+    //   entry = std::make_shared<translate>(entry, -center + gpivot );
+    // }
+    // entry = std::make_shared<translate>(entry, center + gtrans + vel * shutteropen);
     return(entry);
   } else if (shape(i) == 9) {
     std::shared_ptr<hitable> entry;
-    entry = std::make_shared<disk>(vec3f(0,0,0), radius(i), tempvector(prop_len+1), tex, alpha,bump);
-    if(is_scaled) {
-      entry = std::make_shared<scale>(entry, vec3f(temp_scales[0], temp_scales[1], temp_scales[2]));
-    }
-    entry = rotation_order(entry, temprotvec, order_rotation);
-    if(isgrouped(i)) {
-      entry = std::make_shared<translate>(entry, center - gpivot);
-      if(is_group_scaled) {
-        entry = std::make_shared<scale>(entry, vec3f(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
-      }
-      entry = rotation_order(entry, temp_gangle, temp_gorder);
-      entry = std::make_shared<translate>(entry, -center + gpivot );
-    }
-    entry = std::make_shared<translate>(entry, center + gtrans + vel * shutteropen);
+    entry = std::make_shared<disk>(vec3f(0,0,0), radius(i), tempvector(prop_len+1), tex, alpha,bump, 
+                                   ObjToWorld,WorldToObj, false);
+    // if(is_scaled) {
+    //   entry = std::make_shared<scale>(entry, vec3f(temp_scales[0], temp_scales[1], temp_scales[2]));
+    // }
+    // entry = rotation_order(entry, temprotvec, order_rotation);
+    // if(isgrouped(i)) {
+    //   entry = std::make_shared<translate>(entry, center - gpivot);
+    //   if(is_group_scaled) {
+    //     entry = std::make_shared<scale>(entry, vec3f(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
+    //   }
+    //   entry = rotation_order(entry, temp_gangle, temp_gorder);
+    //   entry = std::make_shared<translate>(entry, -center + gpivot );
+    // }
+    // entry = std::make_shared<translate>(entry, center + gtrans + vel * shutteropen);
     return(entry);
   } else if (shape(i) == 10) {
     bool has_caps = type(i) != 5 && type(i) != 8;
     bool has_cap_option = tempvector(prop_len+4) == 1;
     std::shared_ptr<hitable> entry = std::make_shared<cylinder>(radius(i), tempvector(prop_len+1), 
                                   tempvector(prop_len+2), tempvector(prop_len+3),has_caps && has_cap_option, 
-                                  tex, alpha,bump);
-    if(is_scaled) {
-      entry = std::make_shared<scale>(entry, vec3f(temp_scales[0], temp_scales[1], temp_scales[2]));
-    }
-    entry = rotation_order(entry, temprotvec, order_rotation);
-    if(isgrouped(i)) {
-      entry = std::make_shared<translate>(entry, center - gpivot);
-      if(is_group_scaled) {
-        entry = std::make_shared<scale>(entry, vec3f(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
-      }
-      entry = rotation_order(entry, temp_gangle, temp_gorder);
-      entry = std::make_shared<translate>(entry, -center + gpivot );
-    }
-    entry = std::make_shared<translate>(entry, center + gtrans + vel * shutteropen);
+                                  tex, alpha,bump, 
+                                  ObjToWorld,WorldToObj, false);
+    // if(is_scaled) {
+    //   entry = std::make_shared<scale>(entry, vec3f(temp_scales[0], temp_scales[1], temp_scales[2]));
+    // }
+    // entry = rotation_order(entry, temprotvec, order_rotation);
+    // if(isgrouped(i)) {
+    //   entry = std::make_shared<translate>(entry, center - gpivot);
+    //   if(is_group_scaled) {
+    //     entry = std::make_shared<scale>(entry, vec3f(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
+    //   }
+    //   entry = rotation_order(entry, temp_gangle, temp_gorder);
+    //   entry = std::make_shared<translate>(entry, -center + gpivot );
+    // }
+    // entry = std::make_shared<translate>(entry, center + gtrans + vel * shutteropen);
     return(entry);
   } else if (shape(i) == 11) {
     std::shared_ptr<hitable> entry = std::make_shared<ellipsoid>(vec3f(0,0,0), radius(i), 
                                    vec3f(tempvector(prop_len + 1), tempvector(prop_len + 2), tempvector(prop_len + 3)),
-                                   tex, alpha,bump);
-    if(is_scaled) {
-      entry = std::make_shared<scale>(entry, vec3f(temp_scales[0], temp_scales[1], temp_scales[2]));
-    }
-    entry = rotation_order(entry, temprotvec, order_rotation);
-    if(isgrouped(i)) {
-      entry = std::make_shared<translate>(entry, center - gpivot);
-      if(is_group_scaled) {
-        entry = std::make_shared<scale>(entry, vec3f(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
-      }
-      entry = rotation_order(entry, temp_gangle, temp_gorder);
-      entry = std::make_shared<translate>(entry, -center + gpivot );
-    }
-    entry = std::make_shared<translate>(entry, center + gtrans + vel * shutteropen);
+                                   tex, alpha,bump, 
+                                   ObjToWorld,WorldToObj, false);
+    // if(is_scaled) {
+    //   entry = std::make_shared<scale>(entry, vec3f(temp_scales[0], temp_scales[1], temp_scales[2]));
+    // }
+    // entry = rotation_order(entry, temprotvec, order_rotation);
+    // if(isgrouped(i)) {
+    //   entry = std::make_shared<translate>(entry, center - gpivot);
+    //   if(is_group_scaled) {
+    //     entry = std::make_shared<scale>(entry, vec3f(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
+    //   }
+    //   entry = rotation_order(entry, temp_gangle, temp_gorder);
+    //   entry = std::make_shared<translate>(entry, -center + gpivot );
+    // }
+    // entry = std::make_shared<translate>(entry, center + gtrans + vel * shutteropen);
     return(entry);
   } else if (shape(i) == 13) {
     std::shared_ptr<hitable> entry = std::make_shared<cone>(radius(i), tempvector(prop_len+1), 
-                                                            tex, alpha, bump);
-    if(is_scaled) {
-      entry = std::make_shared<scale>(entry, vec3f(temp_scales[0], temp_scales[1], temp_scales[2]));
-    }
-    entry = rotation_order(entry, temprotvec, order_rotation);
-    if(isgrouped(i)) {
-      entry = std::make_shared<translate>(entry, center - gpivot);
-      if(is_group_scaled) {
-        entry = std::make_shared<scale>(entry, vec3f(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
-      }
-      entry = rotation_order(entry, temp_gangle, temp_gorder);
-      entry = std::make_shared<translate>(entry, -center + gpivot );
-    }
-    entry = std::make_shared<translate>(entry, center + gtrans + vel * shutteropen);
+                                                            tex, alpha, bump, 
+                                                            ObjToWorld,WorldToObj, false);
+    // if(is_scaled) {
+    //   entry = std::make_shared<scale>(entry, vec3f(temp_scales[0], temp_scales[1], temp_scales[2]));
+    // }
+    // entry = rotation_order(entry, temprotvec, order_rotation);
+    // if(isgrouped(i)) {
+    //   entry = std::make_shared<translate>(entry, center - gpivot);
+    //   if(is_group_scaled) {
+    //     entry = std::make_shared<scale>(entry, vec3f(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
+    //   }
+    //   entry = rotation_order(entry, temp_gangle, temp_gorder);
+    //   entry = std::make_shared<translate>(entry, -center + gpivot );
+    // }
+    // entry = std::make_shared<translate>(entry, center + gtrans + vel * shutteropen);
     return(entry);
   } else if (shape(i) == 14) {
     int pl = prop_len;
@@ -1235,36 +1306,38 @@ std::shared_ptr<hitable> build_imp_sample(IntegerVector& type,
     p[2] = vec3f(tempvector(pl+7),tempvector(pl+8),tempvector(pl+9));
     p[3] = vec3f(tempvector(pl+10),tempvector(pl+11),tempvector(pl+12));
     std::shared_ptr<CurveCommon> curve_data = std::make_shared<CurveCommon>(p, tempvector(pl+13), tempvector(pl+14), CurveType::Flat, nullptr);
-    std::shared_ptr<hitable> entry = std::make_shared<curve>(tempvector(pl+15),tempvector(pl+16), curve_data, tex);
-    if(is_scaled) {
-      entry = std::make_shared<scale>(entry, vec3f(temp_scales[0], temp_scales[1], temp_scales[2]));
-    }
-    entry = rotation_order(entry, temprotvec, order_rotation);
-    if(isgrouped(i)) {
-      entry = std::make_shared<translate>(entry, center - gpivot);
-      if(is_group_scaled) {
-        entry = std::make_shared<scale>(entry, vec3f(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
-      }
-      entry = rotation_order(entry, temp_gangle, temp_gorder);
-      entry = std::make_shared<translate>(entry, -center + gpivot );
-    }
-    entry = std::make_shared<translate>(entry, center + gtrans + vel * shutteropen);
+    std::shared_ptr<hitable> entry = std::make_shared<curve>(tempvector(pl+15),tempvector(pl+16), curve_data, tex, 
+                                                             ObjToWorld,WorldToObj, false);
+    // if(is_scaled) {
+    //   entry = std::make_shared<scale>(entry, vec3f(temp_scales[0], temp_scales[1], temp_scales[2]));
+    // }
+    // entry = rotation_order(entry, temprotvec, order_rotation);
+    // if(isgrouped(i)) {
+    //   entry = std::make_shared<translate>(entry, center - gpivot);
+    //   if(is_group_scaled) {
+    //     entry = std::make_shared<scale>(entry, vec3f(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
+    //   }
+    //   entry = rotation_order(entry, temp_gangle, temp_gorder);
+    //   entry = std::make_shared<translate>(entry, -center + gpivot );
+    // }
+    // entry = std::make_shared<translate>(entry, center + gtrans + vel * shutteropen);
     return(entry);
   } else if (shape(i) == 15) {
     std::shared_ptr<ImplicitShape> shapes;
-    std::shared_ptr<hitable> entry = std::make_shared<csg>(tex, shapes);
-    if(is_scaled) {
-      entry = std::make_shared<scale>(entry, vec3f(temp_scales[0], temp_scales[1], temp_scales[2]));
-    }
-    if(isgrouped(i)) {
-      entry = std::make_shared<translate>(entry, center - gpivot);
-      if(is_group_scaled) {
-        entry = std::make_shared<scale>(entry, vec3f(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
-      }
-      entry = rotation_order(entry, temp_gangle, temp_gorder);
-      entry = std::make_shared<translate>(entry, -center + gpivot );
-    }
-    entry = std::make_shared<translate>(entry, center + gtrans + vel * shutteropen);
+    std::shared_ptr<hitable> entry = std::make_shared<csg>(tex, shapes, 
+                                                           ObjToWorld,WorldToObj, false);
+    // if(is_scaled) {
+    //   entry = std::make_shared<scale>(entry, vec3f(temp_scales[0], temp_scales[1], temp_scales[2]));
+    // }
+    // if(isgrouped(i)) {
+    //   entry = std::make_shared<translate>(entry, center - gpivot);
+    //   if(is_group_scaled) {
+    //     entry = std::make_shared<scale>(entry, vec3f(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
+    //   }
+    //   entry = rotation_order(entry, temp_gangle, temp_gorder);
+    //   entry = std::make_shared<translate>(entry, -center + gpivot );
+    // }
+    // entry = std::make_shared<translate>(entry, center + gtrans + vel * shutteropen);
     return(entry);
   } else if (shape(i) == 16) {
     std::shared_ptr<hitable> entry;
@@ -1273,38 +1346,40 @@ std::shared_ptr<hitable> build_imp_sample(IntegerVector& type,
     entry = std::make_shared<plymesh>(objfilename, objbasedirname, 
                         tex,
                         tempvector(prop_len+1),
-                        shutteropen, shutterclose, bvh_type, rng);
-    if(is_scaled) {
-      entry = std::make_shared<scale>(entry, vec3f(temp_scales[0], temp_scales[1], temp_scales[2]));
-    }
-    entry = rotation_order(entry, temprotvec, order_rotation);
-    if(isgrouped(i)) {
-      entry = std::make_shared<translate>(entry, center - gpivot);
-      if(is_group_scaled) {
-        entry = std::make_shared<scale>(entry, vec3f(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
-      }
-      entry = rotation_order(entry, temp_gangle, temp_gorder);
-      entry = std::make_shared<translate>(entry, -center + gpivot );
-    }
-    entry = std::make_shared<translate>(entry, center + gtrans + vel * shutteropen);
+                        shutteropen, shutterclose, bvh_type, rng, 
+                        ObjToWorld,WorldToObj, false);
+    // if(is_scaled) {
+    //   entry = std::make_shared<scale>(entry, vec3f(temp_scales[0], temp_scales[1], temp_scales[2]));
+    // }
+    // entry = rotation_order(entry, temprotvec, order_rotation);
+    // if(isgrouped(i)) {
+    //   entry = std::make_shared<translate>(entry, center - gpivot);
+    //   if(is_group_scaled) {
+    //     entry = std::make_shared<scale>(entry, vec3f(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
+    //   }
+    //   entry = rotation_order(entry, temp_gangle, temp_gorder);
+    //   entry = std::make_shared<translate>(entry, -center + gpivot );
+    // }
+    // entry = std::make_shared<translate>(entry, center + gtrans + vel * shutteropen);
     return(entry);
   } else {
     List mesh_entry = mesh_list(i);
     std::shared_ptr<hitable> entry = std::make_shared<mesh3d>(mesh_entry, tex,
-                                shutteropen, shutterclose, bvh_type, rng);
-    if(is_scaled) {
-      entry = std::make_shared<scale>(entry, vec3f(temp_scales[0], temp_scales[1], temp_scales[2]));
-    }
-    entry = rotation_order(entry, temprotvec, order_rotation);
-    if(isgrouped(i)) {
-      entry = std::make_shared<translate>(entry, center - gpivot);
-      if(is_group_scaled) {
-        entry = std::make_shared<scale>(entry, vec3f(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
-      }
-      entry = rotation_order(entry, temp_gangle, temp_gorder);
-      entry = std::make_shared<translate>(entry, -center + gpivot );
-    }
-    entry = std::make_shared<translate>(entry, center + gtrans + vel * shutteropen);
+                                shutteropen, shutterclose, bvh_type, rng, 
+                                ObjToWorld,WorldToObj, false);
+    // if(is_scaled) {
+    //   entry = std::make_shared<scale>(entry, vec3f(temp_scales[0], temp_scales[1], temp_scales[2]));
+    // }
+    // entry = rotation_order(entry, temprotvec, order_rotation);
+    // if(isgrouped(i)) {
+    //   entry = std::make_shared<translate>(entry, center - gpivot);
+    //   if(is_group_scaled) {
+    //     entry = std::make_shared<scale>(entry, vec3f(temp_gscale[0], temp_gscale[1], temp_gscale[2]));
+    //   }
+    //   entry = rotation_order(entry, temp_gangle, temp_gorder);
+    //   entry = std::make_shared<translate>(entry, -center + gpivot );
+    // }
+    // entry = std::make_shared<translate>(entry, center + gtrans + vel * shutteropen);
     return(entry);
   }
 }

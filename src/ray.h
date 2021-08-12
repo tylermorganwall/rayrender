@@ -23,7 +23,8 @@ inline Float add_ulp_magnitude(Float f, int ulps) {
 class ray {
   public: 
     ray() {}
-    ray(const vec3f& a, const vec3f& b, Float ti = 0.0) {
+    ray(const vec3f& a, const vec3f& b, Float tmax = std::numeric_limits<Float>::infinity(), 
+        Float ti = 0.0) {
       A = a;
       B = b;
       _time = ti;
@@ -36,7 +37,7 @@ class ray {
       sign[2] = (inv_dir.z() < 0);
     }
     ray(const vec3f& a, const vec3f& b,  std::vector<dielectric* > *priority2, 
-        Float ti = 0.0) {
+        Float tmax = std::numeric_limits<Float>::infinity(), Float ti = 0.0) {
       A = a; 
       B = b; 
       _time = ti;
