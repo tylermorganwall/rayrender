@@ -4,7 +4,6 @@
 
 bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
   ray r2 = (*WorldToObject)(r);
-  // RcppThread::Rcout << r.origin()  << " " << r2.origin() << "\n";
   vec3f oc = r2.origin() - center;
   Float a = dot(r2.direction(), r2.direction());
   Float b = 2 * dot(oc, r2.direction()); 
@@ -71,7 +70,7 @@ bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random
   }
   if(temp2 < t_max && temp2 > t_min && second_is_hit) {
     rec.t = temp2;
-    rec.p = r.point_at_parameter(rec.t);
+    rec.p = r2.point_at_parameter(rec.t);
     rec.p *= radius / rec.p.length();
     rec.normal = (rec.p - center) / radius;
     
@@ -172,7 +171,7 @@ bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sample
   }
   if(temp2 < t_max && temp2 > t_min && second_is_hit) {
     rec.t = temp2;
-    rec.p = r.point_at_parameter(rec.t);
+    rec.p = r2.point_at_parameter(rec.t);
     rec.p *= radius / rec.p.length();
     rec.normal = (rec.p - center) / radius;
     
@@ -232,7 +231,7 @@ vec3f sphere::random(const point3f& o, random_gen& rng, Float time) {
   Float distance_squared = direction.squared_length();
   onb uvw;
   uvw.build_from_w(direction);
-  return(uvw.local_to_world(rng.random_to_sphere(radius,distance_squared)));
+  return((*ObjectToWorld)(rng.random_to_sphere(radius,distance_squared)));
 }
 
 vec3f sphere::random(const point3f& o, Sampler* sampler, Float time) {
@@ -240,11 +239,11 @@ vec3f sphere::random(const point3f& o, Sampler* sampler, Float time) {
   Float distance_squared = direction.squared_length();
   onb uvw;
   uvw.build_from_w(direction);
-  return(uvw.local_to_world(rand_to_sphere(radius,distance_squared, sampler->Get2D())));
+  return((*ObjectToWorld)(rand_to_sphere(radius,distance_squared, sampler->Get2D())));
 }
 
 bool sphere::bounding_box(Float t0, Float t1, aabb& box) const {
-  box = aabb(center - vec3f(radius,radius,radius), center + vec3f(radius,radius,radius));
+  box = (*ObjectToWorld)(aabb(center - vec3f(radius,radius,radius), center + vec3f(radius,radius,radius)));
   return(true);
 }
 

@@ -262,17 +262,21 @@ List render_scene_rcpp(List camera_info, List scene_info) {
   std::shared_ptr<material> background_material = nullptr;
   std::shared_ptr<hitable> background_sphere = nullptr;
   Float *background_texture_data = nullptr;
+  Matrix4x4 Identity;
+  Transform BackgroundAngle(Identity);
+  if(rotate_env != 0) {
+    BackgroundAngle = RotateY(rotate_env);
+  } 
+  std::shared_ptr<Transform> BackgroundTransform = transformCache.Lookup(BackgroundAngle);
+  std::shared_ptr<Transform> BackgroundTransformInv = transformCache.Lookup(BackgroundAngle.GetInverseMatrix());
   
   if(hasbackground) {
     background_texture_data = stbi_loadf(background[0], &nx1, &ny1, &nn1, 0);
     background_texture = std::make_shared<image_texture>(background_texture_data, nx1, ny1, nn1, 1, 1, intensity_env);
     background_material = std::make_shared<diffuse_light>(background_texture, 1.0, false);
     background_sphere = std::make_shared<InfiniteAreaLight>(nx1, ny1, world_radius*2, world_center,
-                                              background_texture, background_material);
-    ///FIX THIS ROTATE ENV
-    // if(rotate_env != 0) {
-    //   background_sphere = std::make_shared<rotate_y>(background_sphere, rotate_env);
-    // }
+                                              background_texture, background_material, BackgroundTransform,
+                                              BackgroundTransformInv, false);
   } else if(ambient_light) {
     //Check if both high and low are black, and set to FLT_MIN
     if(backgroundhigh.length() == 0 && backgroundlow.length() == 0) {
@@ -282,13 +286,15 @@ List render_scene_rcpp(List camera_info, List scene_info) {
     background_texture = std::make_shared<gradient_texture>(backgroundlow, backgroundhigh, false, false);
     background_material = std::make_shared<diffuse_light>(background_texture, 1.0, false);
     background_sphere = std::make_shared<InfiniteAreaLight>(100, 100, world_radius*2, world_center,
-                                              background_texture, background_material);
+                                              background_texture, background_material,
+                                              BackgroundTransform,BackgroundTransformInv,false);
   } else {
     //Minimum intensity FLT_MIN so the CDF isn't NAN
     background_texture = std::make_shared<constant_texture>(vec3f(FLT_MIN,FLT_MIN,FLT_MIN));
     background_material = std::make_shared<diffuse_light>(background_texture, 1.0, false);
     background_sphere = std::make_shared<InfiniteAreaLight>(100, 100, world_radius*2, world_center,
-                                              background_texture, background_material);
+                                              background_texture, background_material,
+                                              BackgroundTransform,BackgroundTransformInv,false);
   }
   finish = std::chrono::high_resolution_clock::now();
   if(verbose && hasbackground) {

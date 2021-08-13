@@ -16,7 +16,8 @@ public:
     // delete mat_ptr;
   }
   InfiniteAreaLight(int width, int height, Float r, vec3f center, 
-                    std::shared_ptr<texture> image,  std::shared_ptr<material> mat);
+                    std::shared_ptr<texture> image,  std::shared_ptr<material> mat,
+                    std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation);
   virtual bool hit(const ray& r, Float tmin, Float tmax, hit_record& rec, random_gen& rng);
   virtual bool hit(const ray& r, Float tmin, Float tmax, hit_record& rec, Sampler* sampler);
   
