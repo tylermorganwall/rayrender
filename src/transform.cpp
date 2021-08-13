@@ -98,8 +98,8 @@ Transform LookAt(const point3f &pos, const point3f &look, const vec3f &up) {
 
 aabb Transform::operator()(const aabb &b) const {
   const Transform &M = *this;
-  vec3f pMin = b.min();
-  vec3f pMax = b.max();
+  point3f pMin = b.min();
+  point3f pMax = b.max();
   
   aabb ret(M(pMin));
   ret = surrounding_box(ret, M(point3f(pMax.x(), pMin.y(), pMin.z())));

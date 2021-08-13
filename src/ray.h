@@ -2,6 +2,7 @@
 #define RAYH
 
 #include "vec3.h"
+#include "point3.h"
 #include <vector>
 #include "mathinline.h"
 
@@ -23,7 +24,7 @@ inline Float add_ulp_magnitude(Float f, int ulps) {
 class ray {
   public: 
     ray() {}
-    ray(const vec3f& a, const vec3f& b, Float tmax = std::numeric_limits<Float>::infinity(), 
+    ray(const point3f& a, const vec3f& b, Float tmax = std::numeric_limits<Float>::infinity(), 
         Float ti = 0.0) {
       A = a;
       B = b;
@@ -36,7 +37,7 @@ class ray {
       sign[1] = (inv_dir.y() < 0);
       sign[2] = (inv_dir.z() < 0);
     }
-    ray(const vec3f& a, const vec3f& b,  std::vector<dielectric* > *priority2, 
+    ray(const point3f& a, const vec3f& b,  std::vector<dielectric* > *priority2, 
         Float tmax = std::numeric_limits<Float>::infinity(), Float ti = 0.0) {
       A = a; 
       B = b; 
@@ -51,15 +52,15 @@ class ray {
       pri_stack = priority2;
     }
     
-    vec3f origin() const {return(A);}
+    point3f origin() const {return(A);}
     vec3f direction() const {return(B);}
     vec3f inverse_dir() const {return(inv_dir);}
     Float time() const {return _time;}
-    vec3f point_at_parameter(Float t) const {return(A + t*B);}
+    point3f point_at_parameter(Float t) const {return(A + t*B);}
     bool has_priority() const {return(pri_stack ? true : false);}
     size_t get_priority_size() const {return(pri_stack->size());}
     
-    vec3f A;
+    point3f A;
     vec3f B;
     vec3f inv_dir;
     vec3f inv_dir_pad;

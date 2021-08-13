@@ -99,8 +99,8 @@ bool curve::hit(const ray& r, Float tmin, Float tmax, hit_record& rec, random_ge
   }
   
   onb objectToRay(dx, dy, unit_dir); //Coordinate system must have ray parallel to z-axis
-  vec3f cp[4] = {objectToRay.world_to_local(cpObj[0] - r.origin()), objectToRay.world_to_local(cpObj[1] - r.origin()),
-                objectToRay.world_to_local(cpObj[2] - r.origin()), objectToRay.world_to_local(cpObj[3] - r.origin())};
+  vec3f cp[4] = {objectToRay.world_to_local(cpObj[0] - vec3f(r.origin())), objectToRay.world_to_local(cpObj[1] - vec3f(r.origin())),
+                 objectToRay.world_to_local(cpObj[2] - vec3f(r.origin())), objectToRay.world_to_local(cpObj[3] - vec3f(r.origin()))};
   
   // Before going any further, see if the ray's bounding box intersects
   // the curve's bounding box. We start with the y dimension, since the y
@@ -189,8 +189,8 @@ bool curve::hit(const ray& r, Float tmin, Float tmax, hit_record& rec, Sampler* 
   }
   
   onb objectToRay(dx, dy, unit_dir); //Coordinate system must have ray parallel to z-axis
-  vec3f cp[4] = {objectToRay.world_to_local(cpObj[0] - r.origin()), objectToRay.world_to_local(cpObj[1] - r.origin()),
-                objectToRay.world_to_local(cpObj[2] - r.origin()), objectToRay.world_to_local(cpObj[3] - r.origin())};
+  vec3f cp[4] = {objectToRay.world_to_local(cpObj[0] - vec3f(r.origin())), objectToRay.world_to_local(cpObj[1] - vec3f(r.origin())),
+                objectToRay.world_to_local(cpObj[2] - vec3f(r.origin())), objectToRay.world_to_local(cpObj[3] - vec3f(r.origin()))};
   
   // Before going any further, see if the ray's bounding box intersects
   // the curve's bounding box. We start with the y dimension, since the y
@@ -404,19 +404,19 @@ bool curve::recursiveIntersect(const ray& r, Float tmin, Float tmax, hit_record&
   return(false);
 }
 
-vec3f curve::random(const vec3f& o, random_gen& rng, Float time) {
+vec3f curve::random(const point3f& o, random_gen& rng, Float time) {
   return(vec3f(0,0,0));
 };
 
-vec3f curve::random(const vec3f& o, Sampler* sampler, Float time) {
+vec3f curve::random(const point3f& o, Sampler* sampler, Float time) {
   return(vec3f(0,0,0));
 };
 
-Float curve::pdf_value(const vec3f& o, const vec3f& v, random_gen& rng, Float time) {
+Float curve::pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Float time) {
   return(0);
 }
 
-Float curve::pdf_value(const vec3f& o, const vec3f& v, Sampler* sampler, Float time) {
+Float curve::pdf_value(const point3f& o, const vec3f& v, Sampler* sampler, Float time) {
   return(0);
 }
 

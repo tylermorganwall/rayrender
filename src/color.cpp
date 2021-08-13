@@ -1,16 +1,16 @@
 #include "color.h"
 #include "RcppThread.h"
 
-vec3f color(const ray& r, hitable *world, hitable_list *hlist,
+point3f color(const ray& r, hitable *world, hitable_list *hlist,
            size_t max_depth, size_t roulette_activate, random_gen& rng, Sampler* sampler) {
 #ifdef DEBUG
   ofstream myfile;
   myfile.open("rays.txt", ios::app | ios::out);
 #endif
-  vec3f final_color(0,0,0);
-  vec3f emit_color(0,0,0);
+  point3f final_color(0,0,0);
+  point3f emit_color(0,0,0);
   
-  vec3f throughput(1,1,1);
+  point3f throughput(1,1,1);
   float prev_t = 1;
   ray r1 = r;
   ray r2 = r;
@@ -33,7 +33,7 @@ vec3f color(const ray& r, hitable *world, hitable_list *hlist,
       }
       final_color += emit_color;
       if(throughput.x() == 0 && throughput.y() == 0 && throughput.z() == 0) {
-        return(vec3f(0,0,0));
+        return(point3f(0,0,0));
       }
       if(i > roulette_activate) {
         float t = std::max(throughput.x(), std::max(throughput.y(), throughput.z()));
@@ -61,7 +61,7 @@ vec3f color(const ray& r, hitable *world, hitable_list *hlist,
         
         //Translates the world space point into object space point, generates ray assuring intersection, and then translates 
         //ray back into world space
-        vec3f offset_p = offset_ray(hrec.p-r2.A, hrec.normal) + r2.A;
+        point3f offset_p = offset_ray(hrec.p-r2.A, hrec.normal) + r2.A;
         
         r1 = r2;
         if(!diffuse_bounce) {

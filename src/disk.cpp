@@ -16,7 +16,7 @@ bool disk::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_g
   }
   
   
-  vec3f p = r.point_at_parameter(t);
+  point3f p = r.point_at_parameter(t);
   p.e[1] = 0;
   
   Float u = p.x() / (2.0 * radius) + 0.5;
@@ -40,7 +40,7 @@ bool disk::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_g
   rec.has_bump = bump_tex ? true : false;
   
   if(bump_tex) {
-    vec3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
+    point3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
     rec.bump_normal = rec.normal + bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv; 
     rec.bump_normal.make_unit_vector();
   }
@@ -64,7 +64,7 @@ bool disk::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler*
   }
   
   
-  vec3f p = r.point_at_parameter(t);
+  point3f p = r.point_at_parameter(t);
   p.e[1] = 0;
   
   Float u = p.x() / (2.0 * radius) + 0.5;
@@ -88,7 +88,7 @@ bool disk::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler*
   rec.has_bump = bump_tex ? true : false;
   
   if(bump_tex) {
-    vec3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
+    point3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
     rec.bump_normal = rec.normal + bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv; 
     rec.bump_normal.make_unit_vector();
   }
@@ -97,7 +97,7 @@ bool disk::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler*
 }
 
 
-Float disk::pdf_value(const vec3f& o, const vec3f& v, random_gen& rng, Float time) {
+Float disk::pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Float time) {
   hit_record rec;
   if(this->hit(ray(o,v), 0.001, FLT_MAX, rec, rng)) {
     Float area =  M_PI * (radius * radius - inner_radius * inner_radius);
@@ -109,7 +109,7 @@ Float disk::pdf_value(const vec3f& o, const vec3f& v, random_gen& rng, Float tim
   }
 }
 
-Float disk::pdf_value(const vec3f& o, const vec3f& v, Sampler* sampler, Float time) {
+Float disk::pdf_value(const point3f& o, const vec3f& v, Sampler* sampler, Float time) {
   hit_record rec;
   if(this->hit(ray(o,v), 0.001, FLT_MAX, rec, sampler)) {
     Float area =  M_PI * (radius * radius - inner_radius * inner_radius);
@@ -121,26 +121,26 @@ Float disk::pdf_value(const vec3f& o, const vec3f& v, Sampler* sampler, Float ti
   }
 }
 
-vec3f disk::random(const vec3f& o, random_gen& rng, Float time) {
+vec3f disk::random(const point3f& o, random_gen& rng, Float time) {
   Float r1 = rng.unif_rand();
   Float r2 = sqrt(rng.unif_rand());
   Float phi = 2 * M_PI * r1;
   Float x = ((radius - inner_radius) * r2 + inner_radius) * cos(phi);
   Float z = ((radius - inner_radius) * r2 + inner_radius) * sin(phi);
-  return(vec3f(x,0,z)+center-o);
+  return(point3f(x,0,z)+center-o);
 }
 
-vec3f disk::random(const vec3f& o, Sampler* sampler, Float time) {
+vec3f disk::random(const point3f& o, Sampler* sampler, Float time) {
   vec2f u = sampler->Get2D();
   Float r1 = u.x();
   Float r2 = sqrt(u.y());
   Float phi = 2 * M_PI * r1;
   Float x = ((radius - inner_radius) * r2 + inner_radius) * cos(phi);
   Float z = ((radius - inner_radius) * r2 + inner_radius) * sin(phi);
-  return(vec3f(x,0,z)+center-o);
+  return(point3f(x,0,z)+center-o);
 }
 
 bool disk::bounding_box(Float t0, Float t1, aabb& box) const {
-  box = aabb(-vec3f(radius,0.001,radius), vec3f(radius,0.001,radius));
+  box = aabb(-point3f(radius,0.001,radius), point3f(radius,0.001,radius));
   return(true);
 }

@@ -2,7 +2,7 @@
 
 
 bool cone::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
-  vec3f oc = r.origin() - vec3f(0,height, 0);
+  vec3f oc = r.origin() - point3f(0,height, 0);
   Float k = radius / height;
   k = k*k;
   vec3f kvec = vec3f(1,-k,1);
@@ -60,8 +60,8 @@ bool cone::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_g
   //     }
   //   }
   // }
-  vec3f temp_point = r.point_at_parameter(temp1);
-  vec3f temp_point2 = r.point_at_parameter(temp2);
+  point3f temp_point = r.point_at_parameter(temp1);
+  point3f temp_point2 = r.point_at_parameter(temp2);
   
   Float x = r.origin().x() + t_cyl*r.direction().x();
   Float z = r.origin().z() + t_cyl*r.direction().z();
@@ -92,7 +92,7 @@ bool cone::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_g
     rec.has_bump = bump_tex ? true : false;
     
     if(bump_tex) {
-      vec3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
+      point3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
       rec.bump_normal = rec.normal + bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv;
       rec.bump_normal.make_unit_vector();
     }
@@ -106,7 +106,7 @@ bool cone::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_g
   }
   // if((t_cyl < temp2 || !second_is_hit) && t_cyl > t_min && t_cyl < t_max && radHit2 <= radius * radius && base_is_hit) {
   if(hit_base && t_cyl < temp2) {
-    vec3f p = r.point_at_parameter(t_cyl);
+    point3f p = r.point_at_parameter(t_cyl);
     p.e[1] = 0;
     
     Float u = p.x() / (2.0 * radius) + 0.5;
@@ -123,7 +123,7 @@ bool cone::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_g
     rec.has_bump = bump_tex ? true : false;
     
     if(bump_tex) {
-      vec3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
+      point3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
       rec.bump_normal = rec.normal + bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv;
       rec.bump_normal.make_unit_vector();
     }
@@ -151,7 +151,7 @@ bool cone::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_g
     rec.has_bump = bump_tex ? true : false;
     
     if(bump_tex) {
-      vec3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
+      point3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
       rec.bump_normal = rec.normal + bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv;
       rec.bump_normal.make_unit_vector();
     }
@@ -167,7 +167,7 @@ bool cone::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_g
 
 
 bool cone::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) {
-  vec3f oc = r.origin() - vec3f(0,height, 0);
+  vec3f oc = r.origin() - point3f(0,height, 0);
   Float k = radius / height;
   k = k*k;
   vec3f kvec = vec3f(1,-k,1);
@@ -225,8 +225,8 @@ bool cone::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler*
   //     }
   //   }
   // }
-  vec3f temp_point = r.point_at_parameter(temp1);
-  vec3f temp_point2 = r.point_at_parameter(temp2);
+  point3f temp_point = r.point_at_parameter(temp1);
+  point3f temp_point2 = r.point_at_parameter(temp2);
   
   Float x = r.origin().x() + t_cyl*r.direction().x();
   Float z = r.origin().z() + t_cyl*r.direction().z();
@@ -257,7 +257,7 @@ bool cone::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler*
     rec.has_bump = bump_tex ? true : false;
     
     if(bump_tex) {
-      vec3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
+      point3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
       rec.bump_normal = rec.normal + bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv;
       rec.bump_normal.make_unit_vector();
     }
@@ -271,7 +271,7 @@ bool cone::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler*
   }
   // if((t_cyl < temp2 || !second_is_hit) && t_cyl > t_min && t_cyl < t_max && radHit2 <= radius * radius && base_is_hit) {
   if(hit_base && t_cyl < temp2) {
-    vec3f p = r.point_at_parameter(t_cyl);
+    point3f p = r.point_at_parameter(t_cyl);
     p.e[1] = 0;
     
     Float u = p.x() / (2.0 * radius) + 0.5;
@@ -288,7 +288,7 @@ bool cone::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler*
     rec.has_bump = bump_tex ? true : false;
     
     if(bump_tex) {
-      vec3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
+      point3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
       rec.bump_normal = rec.normal + bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv;
       rec.bump_normal.make_unit_vector();
     }
@@ -316,7 +316,7 @@ bool cone::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler*
     rec.has_bump = bump_tex ? true : false;
     
     if(bump_tex) {
-      vec3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
+      point3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
       rec.bump_normal = rec.normal + bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv;
       rec.bump_normal.make_unit_vector();
     }
@@ -330,7 +330,7 @@ bool cone::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler*
   return(false);
 }
 
-Float cone::pdf_value(const vec3f& o, const vec3f& v, random_gen& rng, Float time) {
+Float cone::pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Float time) {
   hit_record rec;
   if(this->hit(ray(o,v), 0.001, FLT_MAX, rec, rng)) {
     Float maxval = ffmax(radius, 0.5f*height);
@@ -343,7 +343,7 @@ Float cone::pdf_value(const vec3f& o, const vec3f& v, random_gen& rng, Float tim
 }
 
 
-Float cone::pdf_value(const vec3f& o, const vec3f& v, Sampler* sampler, Float time) {
+Float cone::pdf_value(const point3f& o, const vec3f& v, Sampler* sampler, Float time) {
   hit_record rec;
   if(this->hit(ray(o,v), 0.001, FLT_MAX, rec, sampler)) {
     Float maxval = ffmax(radius, 0.5f*height);
@@ -355,7 +355,7 @@ Float cone::pdf_value(const vec3f& o, const vec3f& v, Sampler* sampler, Float ti
   }
 }
 
-vec3f cone::random(const vec3f& o, random_gen& rng, Float time) {
+vec3f cone::random(const point3f& o, random_gen& rng, Float time) {
   Float r1 = sqrt(1.0 - rng.unif_rand());
   Float phi_val = 2*M_PI*rng.unif_rand();
   Float height_val = r1 * height;
@@ -363,10 +363,10 @@ vec3f cone::random(const vec3f& o, random_gen& rng, Float time) {
   Float x = radius_val * cos(phi_val);
   Float y = height_val;
   Float z = radius_val * sin(phi_val);
-  return(vec3f(x,y,z)-o);
+  return(point3f(x,y,z)-o);
 }
 
-vec3f cone::random(const vec3f& o, Sampler* sampler, Float time) {
+vec3f cone::random(const point3f& o, Sampler* sampler, Float time) {
   vec2f u = sampler->Get2D();
   Float r1 = sqrt(1.0 - u.x());
   Float phi_val = 2*M_PI*u.y();
@@ -375,7 +375,7 @@ vec3f cone::random(const vec3f& o, Sampler* sampler, Float time) {
   Float x = radius_val * cos(phi_val);
   Float y = height_val;
   Float z = radius_val * sin(phi_val);
-  return(vec3f(x,y,z)-o);
+  return(point3f(x,y,z)-o);
 }
 
 bool cone::bounding_box(Float t0, Float t1, aabb& box) const {

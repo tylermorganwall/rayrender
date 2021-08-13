@@ -18,16 +18,16 @@ public:
     box = aabb(pmin, pmax);
     return(true);
   }
-  virtual Float pdf_value(const vec3f& o, const vec3f& v, random_gen& rng, Float time = 0) {
+  virtual Float pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Float time = 0) {
     return(list.pdf_value(o,v, rng, time));
   }
-  virtual Float pdf_value(const vec3f& o, const vec3f& v, Sampler* sampler, Float time = 0) {
+  virtual Float pdf_value(const point3f& o, const vec3f& v, Sampler* sampler, Float time = 0) {
     return(list.pdf_value(o,v, sampler, time));
   }
-  virtual vec3f random(const vec3f& o, random_gen& rng, Float time = 0) {
+  virtual vec3f random(const point3f& o, random_gen& rng, Float time = 0) {
     return(list.random(o, rng, time));
   }
-  virtual vec3f random(const vec3f& o, Sampler* sampler, Float time = 0) {
+  virtual vec3f random(const point3f& o, Sampler* sampler, Float time = 0) {
     return(list.random(o, sampler, time));
   }
   vec3f pmin, pmax;

@@ -164,3 +164,127 @@ tween = function(vals, n, ease = "cubic") {
   }
   return(unlist(final_vals))
 }
+
+#' Generate Translation Matrix
+#' 
+#' @param angles
+#' @param order_rotation
+#' @return number
+#'
+#' @keywords internal
+#' 
+generate_translation_matrix = function(delta) {
+  m = matrix(c(1, 0, 0, delta[1], 0, 1, 0, delta[2], 0, 0, 1, delta[3], 0, 0, 0,
+              1),4,4)
+  return(m)
+}
+
+#' Generate Rotation Matrix (order)
+#' 
+#' @param angles
+#' @param order_rotation
+#' @return number
+#'
+#' @keywords internal
+#' 
+generate_rotation_matrix = function(angles, order_rotation) {
+  M = diag(4)
+  for(i in 1:3) {
+    if(order_rotation[i] == 1) {
+      if(angles[1] != 0) {
+        M = M %*% RotateX(angles[1])
+      }
+    }
+    if(order_rotation[i] == 2) {
+      if(angles[2] != 0) {
+        M = M %*% RotateY(angles[2])
+      }
+    }
+    if(order_rotation[i] == 3) {
+      if(angles[3] != 0) {
+        M = M %*% RotateZ(angles[3])
+      }
+    }
+  }
+  return(M)
+}
+
+#' Generate Rotation Matrix X
+#' 
+#' @param angles
+#' @param order_rotation
+#' @return number
+#'
+#' @keywords internal
+#' 
+RotateX = function(theta) {
+  sinTheta = sinpi(theta/180)
+  cosTheta = cospi(theta/180)
+  M = matrix(c(1, 0, 0, 0, 0, cosTheta, -sinTheta, 0, 0, sinTheta, cosTheta, 0,
+              0, 0, 0, 1),4,4)
+  return(M)
+}
+
+#' Generate Rotation Matrix Y
+#' 
+#' @param angles
+#' @param order_rotation
+#' @return number
+#'
+#' @keywords internal
+#' 
+RotateY = function(theta) {
+  sinTheta = sinpi(theta/180)
+  cosTheta = cospi(theta/180)
+  M = matrix(c(cosTheta, 0, sinTheta, 0, 0, 1, 0, 0, -sinTheta, 0, cosTheta, 0,
+              0, 0, 0, 1),4,4)
+  return(M)
+}
+
+#' Generate Rotation Matrix Z
+#' 
+#' @param angles
+#' @param order_rotation
+#' @return number
+#'
+#' @keywords internal
+#' 
+RotateZ = function(theta) {
+  sinTheta = sinpi(theta/180)
+  cosTheta = cospi(theta/180)
+  M = matrix(c(cosTheta, -sinTheta, 0, 0, sinTheta, cosTheta, 0, 0, 0, 0, 1, 0,
+              0, 0, 0, 1),4,4)
+  return(M)
+}
+
+#' Generate Rotation Matrix Axis
+#' 
+#' @param angles
+#' @param axis
+#' @return matrix
+#'
+#' @keywords internal
+#' 
+RotateAxis = function(theta, axis) {
+  a = axis/sqrt(sum(axis*axis))
+  sinTheta = sinpi(theta/180)
+  cosTheta = cospi(theta/180)
+  m = diag(4)
+  # Compute rotation of first basis vector
+  m[1,1] = a[1] * a[1] + (1 - a[1] * a[1]) * cosTheta
+  m[1,2] = a[1] * a[2] * (1 - cosTheta) - a[3] * sinTheta
+  m[1,3] = a[1] * a[3] * (1 - cosTheta) + a[2] * sinTheta
+  m[1,4] = 0
+  
+  # Compute rotations of second and third basis vectors
+  m[2,1] = a[1] * a[2] * (1 - cosTheta) + a[3] * sinTheta
+  m[2,2] = a[2] * a[2] + (1 - a[2] * a[2]) * cosTheta
+  m[2,3] = a[2] * a[3] * (1 - cosTheta) - a[1] * sinTheta
+  m[2,4] = 0
+  
+  m[3,1] = a[1] * a[3] * (1 - cosTheta) - a[2] * sinTheta
+  m[3,2] = a[2] * a[3] * (1 - cosTheta) + a[1] * sinTheta
+  m[3,3] = a[3] * a[3] + (1 - a[3] * a[3]) * cosTheta
+  m[3,4] = 0
+  return(m)
+}

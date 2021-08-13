@@ -56,18 +56,42 @@
 #' }
 group_objects = function(scene, pivot_point=c(0,0,0), group_translate = c(0,0,0),
                          group_angle = c(0,0,0), group_order_rotation = c(1,2,3),
-                         group_scale = c(1,1,1)) {
+                         group_scale = c(1,1,1), axis_rotation = NA) {
   if(missing(pivot_point)) {
     pivot_point = c(mean(scene$x), mean(scene$y), mean(scene$z))
   }
   stopifnot(length(pivot_point) == 3)
   stopifnot(length(group_translate) == 3)
-  stopifnot(length(group_angle) == 3)
   stopifnot(length(group_order_rotation) == 3)
-  scene$pivot_point = list(pivot_point)
-  scene$group_translate = list(group_translate)
-  scene$group_angle = list(group_angle)
-  scene$group_order_rotation = list(group_order_rotation)
-  scene$group_scale = list(group_scale)
+  
+  PivotTranslateStart = generate_translation_matrix(-pivot_point)
+  Scale = diag(4) * c(group_scale,1)
+  PivotTranslateEnd = generate_translation_matrix(pivot_point)
+  Translation = generate_translation_matrix(group_translate)
+  if(any(is.na(axis_rotation))) {
+    stopifnot(length(group_angle) == 3)
+    Rotation = generate_rotation_matrix(group_angle,group_order_rotation)
+  } else {
+    stopifnot(length(group_angle) == 1)
+    stopifnot(length(axis_rotation) == 3)
+    stopifnot(sum(axis_rotation*axis_rotation) > 0)
+    Rotation = RotateAxis(group_angle,axis_rotation)
+  }
+  for(i in seq_len(nrow(scene))) {
+    if(is.na(scene$group_transform[i])) {
+      scene$group_transform[i] = list(PivotTranslateStart %*%
+        Scale %*%
+        Rotation %*%
+        PivotTranslateEnd %*%
+        Translation)
+    } else {
+      scene$group_transform[i] = list(scene$group_transform[i] %*% 
+        PivotTranslateStart %*%
+        Scale %*%
+        Rotation %*%
+        PivotTranslateEnd %*%
+        Translation)
+    }
+  }
   return(scene)
 }

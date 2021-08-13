@@ -6,6 +6,7 @@
 #include <cstring>
 #include "vec3.h"
 #include "vec2.h"
+#include "point3.h"
 #include <array>
 
 static const Float mpi_over_180 = M_PI/180;
@@ -48,8 +49,8 @@ inline Float Degrees(Float rad) {
 }
 
 
-inline vec3f de_nan(const vec3f& c) {
-  vec3f temp = c;
+inline point3f de_nan(const point3f& c) {
+  point3f temp = c;
   if(std::isnan(c[0])) temp.e[0] = 0.0f;
   if(std::isnan(c[1])) temp.e[1] = 0.0f;
   if(std::isnan(c[2])) temp.e[2] = 0.0f;
@@ -148,6 +149,13 @@ inline vec3f clamp(vec3f input, vec3f low, vec3f high) {
   vec3f final(clamp(input.x(), low.x(), high.x()),
              clamp(input.y(), low.y(), high.y()),
              clamp(input.z(), low.z(), high.z()));
+  return(final);
+}
+
+inline point3f clamp(point3f input, point3f low, point3f high) {
+  point3f final(clamp(input.x(), low.x(), high.x()),
+              clamp(input.y(), low.y(), high.y()),
+              clamp(input.z(), low.z(), high.z()));
   return(final);
 }
 
@@ -353,12 +361,12 @@ constexpr Float origin() { return 1.0f / 32.0f; }
 constexpr Float float_scale() { return 1.0f / 65536.0f; }
 constexpr Float int_scale() { return 256.0f; }
 
-inline vec3f offset_ray(const vec3f p, const vec3f n) {
+inline point3f offset_ray(const vec3f p, const vec3f n) {
   int of_i[3] = {(int)(int_scale() * n.x()), (int)(int_scale() * n.y()), (int)(int_scale() * n.z())};
   vec3f p_i(int_to_float(float_to_int(p.x())+((p.x() < 0) ? -of_i[0] : of_i[0])),
            int_to_float(float_to_int(p.y())+((p.y() < 0) ? -of_i[1] : of_i[1])),
            int_to_float(float_to_int(p.z())+((p.z() < 0) ? -of_i[2] : of_i[2])));
-  return(vec3f(std::fabs(p.x()) < origin() ? p.x() + float_scale()*n.x() : p_i.x(),
+  return(point3f(std::fabs(p.x()) < origin() ? p.x() + float_scale()*n.x() : p_i.x(),
               std::fabs(p.y()) < origin() ? p.y() + float_scale()*n.y() : p_i.y(),
               std::fabs(p.z()) < origin() ? p.z() + float_scale()*n.z() : p_i.z()));
 }
@@ -368,11 +376,11 @@ inline Float Log2(Float x) {
   return(std::log(x) * invLog2);
 }
 
-inline vec3f RGBtoHSV(vec3f& rgb) {
+inline point3f RGBtoHSV(point3f& rgb) {
   Float max_val = ffmax(ffmax(rgb.r(), rgb.g()), rgb.b());
   Float min_val = ffmin(ffmin(rgb.r(), rgb.g()), rgb.b());
   Float delta_val = max_val - min_val;
-  vec3f hsv;
+  point3f hsv;
   
   if(delta_val > 0) {
     if(max_val == rgb.r()) {
@@ -400,38 +408,38 @@ inline vec3f RGBtoHSV(vec3f& rgb) {
 }
 
 
-inline vec3f HSVtoRGB(vec3f hsv) {
+inline point3f HSVtoRGB(point3f hsv) {
   Float chroma = hsv.z() * hsv.y(); 
   Float fHPrime = fmod(hsv.x() / 60.0, 6);
   Float x_val = chroma * (1 - std::fabs(fmod(fHPrime, 2) - 1));
   Float m_val = hsv.z() - chroma;
 
   if(0 <= fHPrime && fHPrime < 1) {
-    vec3f rgb(chroma,x_val,0);
+    point3f rgb(chroma,x_val,0);
     rgb += m_val;
     return(rgb);
   } else if(1 <= fHPrime && fHPrime < 2) {
-    vec3f rgb(x_val,chroma,0);
+    point3f rgb(x_val,chroma,0);
     rgb += m_val;
     return(rgb);
   } else if(2 <= fHPrime && fHPrime < 3) {
-    vec3f rgb(0,chroma,x_val);
+    point3f rgb(0,chroma,x_val);
     rgb += m_val;
     return(rgb);
   } else if(3 <= fHPrime && fHPrime < 4) {
-    vec3f rgb(0,x_val,chroma);
+    point3f rgb(0,x_val,chroma);
     rgb += m_val;
     return(rgb);
   } else if(4 <= fHPrime && fHPrime < 5) {
-    vec3f rgb(x_val,0,chroma);
+    point3f rgb(x_val,0,chroma);
     rgb += m_val;
     return(rgb);
   } else if(5 <= fHPrime && fHPrime < 6) {
-    vec3f rgb(chroma,0,x_val);
+    point3f rgb(chroma,0,x_val);
     rgb += m_val;
     return(rgb);
   } else {
-    vec3f rgb(0,0,0);
+    point3f rgb(0,0,0);
     rgb += m_val;
     return(rgb);
   }
@@ -465,6 +473,10 @@ inline Float SafeSqrt(Float x) {
 
 inline vec3f Exp(vec3f a) {
   return(vec3f(std::exp(a.x()),std::exp(a.y()),std::exp(a.z())));
+}
+
+inline point3f Exp(point3f a) {
+  return(point3f(std::exp(a.x()),std::exp(a.y()),std::exp(a.z())));
 }
 
 inline Float Logistic(Float x, Float s) {
@@ -531,9 +543,9 @@ inline Float LogI0(Float x) {
   }
 }
 
-inline std::array<vec3f, pMax + 1> Ap(Float cosThetaO, Float eta, Float h,
-                                     const vec3f &T) {
-  std::array<vec3f, pMax + 1> ap;
+inline std::array<point3f, pMax + 1> Ap(Float cosThetaO, Float eta, Float h,
+                                     const point3f &T) {
+  std::array<point3f, pMax + 1> ap;
   // Compute $p=0$ attenuation at initial cylinder intersection
   Float cosGammaO = SafeSqrt(1 - h * h);
   Float cosTheta = cosThetaO * cosGammaO;
@@ -549,7 +561,7 @@ inline std::array<vec3f, pMax + 1> Ap(Float cosThetaO, Float eta, Float h,
   }
   
   // Compute attenuation term accounting for remaining orders of scattering
-  ap[pMax] = ap[pMax - 1] * f * T / (vec3f(1.0f,1.0f,1.0f) - T * f);
+  ap[pMax] = ap[pMax - 1] * f * T / (point3f(1.0f,1.0f,1.0f) + -T * f);
   return(ap);
 }
 

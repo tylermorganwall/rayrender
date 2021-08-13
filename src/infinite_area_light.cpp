@@ -10,7 +10,7 @@ InfiniteAreaLight::InfiniteAreaLight(int width, int height, Float r, vec3f cente
     Float sinTheta = std::sin(M_PI * Float(v + .5f) / Float(height));
     for (int u = 0; u < width; ++u) {
       Float up = (Float)u / (Float)width;
-      vec3f rgb = image->value(up, vp, center);
+      point3f rgb = image->value(up, vp, center);
       img[u + v * width] =  0.212671f*rgb.r() + 0.715160f*rgb.g() + 0.072169f*rgb.b();
       img[u + v * width] *= sinTheta;
     }
@@ -87,7 +87,7 @@ bool InfiniteAreaLight::hit(const ray& r, Float t_min, Float t_max, hit_record& 
   return(false);
 }
 
-Float InfiniteAreaLight::pdf_value(const vec3f& o, const vec3f& v, random_gen& rng, Float time) {
+Float InfiniteAreaLight::pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Float time) {
   hit_record rec;
   if(this->hit(ray(o,v), 0.001, FLT_MAX, rec, rng)) {
     vec3f v2(-v.z(),v.y(),v.x());
@@ -106,7 +106,7 @@ Float InfiniteAreaLight::pdf_value(const vec3f& o, const vec3f& v, random_gen& r
 }
 
 
-Float InfiniteAreaLight::pdf_value(const vec3f& o, const vec3f& v, Sampler* sampler, Float time) {
+Float InfiniteAreaLight::pdf_value(const point3f& o, const vec3f& v, Sampler* sampler, Float time) {
   hit_record rec;
   if(this->hit(ray(o,v), 0.001, FLT_MAX, rec, sampler)) {
     vec3f v2(-v.z(),v.y(),v.x());
@@ -125,7 +125,7 @@ Float InfiniteAreaLight::pdf_value(const vec3f& o, const vec3f& v, Sampler* samp
 }
 
 
-vec3f InfiniteAreaLight::random(const vec3f& o, random_gen& rng, Float time) {
+vec3f InfiniteAreaLight::random(const point3f& o, random_gen& rng, Float time) {
   vec2f u(rng.unif_rand(), rng.unif_rand());
   Float mapPdf;
   vec2f uv = distribution->SampleContinuous(u, &mapPdf);
@@ -140,7 +140,7 @@ vec3f InfiniteAreaLight::random(const vec3f& o, random_gen& rng, Float time) {
   return(d);
 }
 
-vec3f InfiniteAreaLight::random(const vec3f& o, Sampler* sampler, Float time) {
+vec3f InfiniteAreaLight::random(const point3f& o, Sampler* sampler, Float time) {
   vec2f u = sampler->Get2D();
   Float mapPdf;
   vec2f uv = distribution->SampleContinuous(u, &mapPdf);

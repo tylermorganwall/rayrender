@@ -64,9 +64,8 @@ sphere = function(x = 0, y = 0, z = 0, radius = 1, material = diffuse(),
                  flipped = flipped, fog = material$fog, fogdensity = material$fogdensity,
                  implicit_sample = material$implicit_sample, sigma = material$sigma, glossyinfo = material$glossyinfo,
                  order_rotation = list(order_rotation),
-                 pivot_point = list(NA), group_translate = list(NA),
-                 group_angle = list(NA), group_order_rotation = list(NA),
-                 tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA),
+                 group_transform = list(NA),
+                 tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), 
                  material_id = NA, csg_object = list(NA), mesh_info = list(NA)))
 }
 
@@ -145,9 +144,8 @@ cube = function(x = 0, y = 0, z = 0, width = 1, xwidth = 1, ywidth = 1, zwidth =
                  flipped = flipped, fog = material$fog, fogdensity = material$fogdensity,
                  implicit_sample = material$implicit_sample,  sigma = material$sigma, glossyinfo = material$glossyinfo,
                  order_rotation = list(order_rotation), 
-                 pivot_point = list(NA), group_translate = list(NA),
-                 group_angle = list(NA), group_order_rotation = list(NA),
-                 tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA),
+                 group_transform = list(NA),
+                 tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), 
                  material_id = NA, csg_object = list(NA), mesh_info = list(NA)))
 }
 
@@ -210,9 +208,8 @@ xy_rect = function(x = 0, y = 0, z = 0, xwidth = 1, ywidth = 1,
                  flipped = flipped, fog = material$fog, fogdensity = material$fogdensity,
                  implicit_sample = material$implicit_sample,  sigma = material$sigma, glossyinfo = material$glossyinfo,
                  order_rotation = list(order_rotation),
-                 pivot_point = list(NA), group_translate = list(NA),
-                 group_angle = list(NA), group_order_rotation = list(NA),
-                 tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA),
+                 group_transform = list(NA),
+                 tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), 
                  material_id = NA, csg_object = list(NA), mesh_info = list(NA)))
 }
 
@@ -274,9 +271,8 @@ yz_rect = function(x = 0, y = 0, z = 0, ywidth = 1, zwidth = 1, material = diffu
                  flipped = flipped, fog = material$fog, fogdensity = material$fogdensity,
                  implicit_sample = material$implicit_sample,  sigma = material$sigma, glossyinfo = material$glossyinfo,
                  order_rotation = list(order_rotation),
-                 pivot_point = list(NA), group_translate = list(NA),
-                 group_angle = list(NA), group_order_rotation = list(NA),
-                 tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA),
+                 group_transform = list(NA),
+                 tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), 
                  material_id = NA, csg_object = list(NA), mesh_info = list(NA)))
 }
 
@@ -340,9 +336,8 @@ xz_rect = function(x = 0, xwidth = 1, z = 0, zwidth = 1, y = 0, material = diffu
                  flipped = flipped, fog = material$fog, fogdensity = material$fogdensity,
                  implicit_sample = material$implicit_sample,  sigma = material$sigma, glossyinfo = material$glossyinfo,
                  order_rotation = list(order_rotation),
-                 pivot_point = list(NA), group_translate = list(NA),
-                 group_angle = list(NA), group_order_rotation = list(NA),
-                 tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA),
+                 group_transform = list(NA),
+                 tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), 
                  material_id = NA, csg_object = list(NA), mesh_info = list(NA)))
 }
 
@@ -442,9 +437,8 @@ triangle = function(v1 = c(1, 0, 0), v2 = c(0, 1, 0), v3 = c(-1, 0, 0),
                  flipped = flipped, fog = material$fog, fogdensity = material$fogdensity,
                  implicit_sample = material$implicit_sample,  sigma = material$sigma, glossyinfo = material$glossyinfo,
                  order_rotation = list(order_rotation),
-                 pivot_point = list(NA), group_translate = list(NA),
-                 group_angle = list(NA), group_order_rotation = list(NA),
-                 tricolorinfo = list(colorvec), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA),
+                 group_transform = list(NA),
+                 tricolorinfo = list(colorvec), fileinfo = NA, scale_factor = list(scale),
                  material_id = NA, csg_object = list(NA), mesh_info = list(NA)))
 }
 
@@ -517,9 +511,8 @@ disk = function(x = 0, y = 0, z = 0, radius = 1, inner_radius = 0, material = di
                  flipped = flipped, fog = material$fog, fogdensity = material$fogdensity,
                  implicit_sample = material$implicit_sample,  sigma = material$sigma, glossyinfo = material$glossyinfo,
                  order_rotation = list(order_rotation),
-                 pivot_point = list(NA), group_translate = list(NA),
-                 group_angle = list(NA), group_order_rotation = list(NA),
-                 tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA),
+                 group_transform = list(NA),
+                 tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), 
                  material_id = NA, csg_object = list(NA), mesh_info = list(NA)))
 }
 
@@ -613,9 +606,8 @@ obj_model = function(filename, x = 0, y = 0, z = 0, scale_obj = 1,
                  flipped = flipped, fog = material$fog, fogdensity = material$fogdensity,
                  implicit_sample = material$implicit_sample,  sigma = material$sigma, glossyinfo = material$glossyinfo,
                  order_rotation = list(order_rotation),
-                 pivot_point = list(NA), group_translate = list(NA),
-                 group_angle = list(NA), group_order_rotation = list(NA),
-                 tricolorinfo = list(NA), fileinfo = filename, scale_factor = list(scale), group_scale = list(NA),
+                 group_transform = list(NA),
+                 tricolorinfo = list(NA), fileinfo = filename, scale_factor = list(scale),
                  material_id = NA, csg_object = list(NA), mesh_info = list(NA)))
 }
 
@@ -697,9 +689,8 @@ cylinder = function(x = 0, y = 0, z = 0, radius = 1, length = 1,
                  flipped = flipped, fog = material$fog, fogdensity = material$fogdensity,
                  implicit_sample = material$implicit_sample,  sigma = material$sigma, glossyinfo = material$glossyinfo,
                  order_rotation = list(order_rotation),
-                 pivot_point = list(NA), group_translate = list(NA),
-                 group_angle = list(NA), group_order_rotation = list(NA),
-                 tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA),
+                 group_transform = list(NA),
+                 tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), 
                  material_id = NA, csg_object = list(NA), mesh_info = list(NA)))
 }
 
@@ -838,9 +829,7 @@ segment = function(start = c(0, -1, 0), end = c(0, 1, 0), radius = 1,
                  flipped = flipped, fog = material$fog, fogdensity = material$fogdensity,
                  implicit_sample = material$implicit_sample,  sigma = material$sigma, glossyinfo = material$glossyinfo,
                  order_rotation = list(order_rotation),
-                 pivot_point = list(NA), group_translate = list(NA),
-                 group_angle = list(NA), group_order_rotation = list(NA),
-                 tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA),
+                 tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale),
                  material_id = NA, csg_object = list(NA), mesh_info = list(NA)))
 }
 
@@ -919,9 +908,8 @@ ellipsoid = function(x = 0, y = 0, z = 0, a = 1, b = 1, c = 1,
                  flipped = flipped, fog = material$fog, fogdensity = material$fogdensity,
                  implicit_sample = material$implicit_sample,  sigma = material$sigma, glossyinfo = material$glossyinfo,
                  order_rotation = list(order_rotation),
-                 pivot_point = list(NA), group_translate = list(NA),
-                 group_angle = list(NA), group_order_rotation = list(NA),
-                 tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA),
+                 group_transform = list(NA),
+                 tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), 
                  material_id = NA, csg_object = list(NA), mesh_info = list(NA)))
 }
 
@@ -1593,9 +1581,8 @@ cone = function(start = c(0, 0, 0), end = c(0, 1, 0), radius = 0.5,
                       flipped = flipped, fog = material$fog, fogdensity = material$fogdensity,
                       implicit_sample = material$implicit_sample,  sigma = material$sigma, glossyinfo = material$glossyinfo,
                       order_rotation = list(order_rotation),
-                      pivot_point = list(NA), group_translate = list(NA),
-                      group_angle = list(NA), group_order_rotation = list(NA),
-                      tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA),
+                      group_transform = list(NA),
+                      tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), 
                       material_id = NA, csg_object = list(NA), mesh_info = list(NA)))
 }
 
@@ -1884,9 +1871,8 @@ bezier_curve = function(p1 = c(0,0,0), p2 = c(-1,0.33,0), p3 = c(1,0.66,0), p4=c
                       flipped = flipped, fog = material$fog, fogdensity = material$fogdensity,
                       implicit_sample = material$implicit_sample,  sigma = material$sigma, glossyinfo = material$glossyinfo,
                       order_rotation = list(order_rotation), 
-                      pivot_point = list(NA), group_translate = list(NA),
-                      group_angle = list(NA), group_order_rotation = list(NA),
-                      tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA),
+                      group_transform = list(NA),
+                      tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), 
                       material_id = NA, csg_object = list(NA), mesh_info = list(NA)))
 }
 
@@ -2287,9 +2273,8 @@ ply_model = function(filename, x = 0, y = 0, z = 0, scale_ply = 1,
                       flipped = flipped, fog = material$fog, fogdensity = material$fogdensity,
                       implicit_sample = material$implicit_sample,  sigma = material$sigma, glossyinfo = material$glossyinfo,
                       order_rotation = list(order_rotation),
-                      pivot_point = list(NA), group_translate = list(NA),
-                      group_angle = list(NA), group_order_rotation = list(NA),
-                      tricolorinfo = list(NA), fileinfo = filename, scale_factor = list(scale), group_scale = list(NA),
+                      group_transform = list(NA),
+                      tricolorinfo = list(NA), fileinfo = filename, scale_factor = list(scale), 
                       material_id = NA, csg_object = list(NA), mesh_info = list(NA)))
 }
 
@@ -2449,9 +2434,8 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
                       flipped = flipped, fog = material$fog, fogdensity = material$fogdensity,
                       implicit_sample = material$implicit_sample,  sigma = material$sigma, glossyinfo = material$glossyinfo,
                       order_rotation = list(order_rotation),
-                      pivot_point = list(NA), group_translate = list(NA),
-                      group_angle = list(NA), group_order_rotation = list(NA),
-                      tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA),
+                      group_transform = list(NA),
+                      tricolorinfo = list(N), fileinfo = NA, scale_factor = list(scale),
                       material_id = NA, csg_object = list(NA), mesh_info = list(mesh_info)))
 }
 

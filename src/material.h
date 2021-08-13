@@ -70,18 +70,18 @@ inline vec3f refract(const vec3f& uv, const vec3f& n, Float ni_over_nt) {
 struct scatter_record {
   ray specular_ray;
   bool is_specular;
-  vec3f attenuation;
+  point3f attenuation;
   pdf *pdf_ptr = nullptr;
   ~scatter_record() { if(pdf_ptr) delete pdf_ptr; }
 };
 
-inline vec3f FrCond(Float cosi, const vec3f &eta, const vec3f &k) {
-  vec3f tmp = (eta*eta + k*k) * cosi*cosi;
-  vec3f Rparl2 = (tmp - (2.0f * eta * cosi) + vec3f(1.0f)) /
+inline point3f FrCond(Float cosi, const point3f &eta, const point3f &k) {
+  point3f tmp = (eta*eta + k*k) * cosi*cosi;
+  point3f Rparl2 = (tmp + (-2.0f * eta * cosi) + point3f(1.0f)) /
     (tmp + (2.0f * eta * cosi) + vec3f(1.0f));
-  vec3f tmp_f = eta*eta + k*k;
-  vec3f Rperp2 = (tmp_f - (2.0f * eta * cosi) + vec3f(1)*cosi*cosi) /
-    (tmp_f + (2.0f * eta * cosi) + vec3f(1)*cosi*cosi);
+  point3f tmp_f = eta*eta + k*k;
+  point3f Rperp2 = (tmp_f + (-2.0f * eta * cosi) + point3f(1)*cosi*cosi) /
+    (tmp_f + (2.0f * eta * cosi) + point3f(1)*cosi*cosi);
   return((Rparl2 + Rperp2) / 2.0f);
 }
 
@@ -93,14 +93,14 @@ class material {
     virtual bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler) {
       return(false);
     };
-    virtual vec3f f(const ray& r_in, const hit_record& rec, const ray& scattered) const {
-      return(vec3f(0,0,0));
+    virtual point3f f(const ray& r_in, const hit_record& rec, const ray& scattered) const {
+      return(point3f(0,0,0));
     }
-    virtual vec3f emitted(const ray& r_in, const hit_record& rec, Float u, Float v, const vec3f& p, bool& is_invisible) {
-      return(vec3f(0,0,0));
+    virtual point3f emitted(const ray& r_in, const hit_record& rec, Float u, Float v, const point3f& p, bool& is_invisible) {
+      return(point3f(0,0,0));
     }
-    virtual vec3f get_albedo(const ray& r_in, const hit_record& rec) const {
-      return(vec3f(0,0,0));
+    virtual point3f get_albedo(const ray& r_in, const hit_record& rec) const {
+      return(point3f(0,0,0));
     }
     virtual ~material() {};
 };
@@ -109,41 +109,41 @@ class material {
 class lambertian : public material {
   public: 
     lambertian(std::shared_ptr<texture> a) : albedo(a) {}
-    vec3f f(const ray& r_in, const hit_record& rec, const ray& scattered) const;
+    point3f f(const ray& r_in, const hit_record& rec, const ray& scattered) const;
     bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng);
     bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler);
-    vec3f get_albedo(const ray& r_in, const hit_record& rec) const;
+    point3f get_albedo(const ray& r_in, const hit_record& rec) const;
     
     std::shared_ptr<texture> albedo;
 };
 
 class metal : public material {
   public:
-    metal(std::shared_ptr<texture> a, Float f, vec3f eta, vec3f k) : albedo(a), eta(eta), k(k) { 
+    metal(std::shared_ptr<texture> a, Float f, point3f eta, point3f k) : albedo(a), eta(eta), k(k) { 
       if (f < 1) fuzz = f; else fuzz = 1;
     }
     virtual bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng);
     virtual bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler);
-    vec3f get_albedo(const ray& r_in, const hit_record& rec) const;
+    point3f get_albedo(const ray& r_in, const hit_record& rec) const;
     std::shared_ptr<texture> albedo;
-    vec3f eta, k;
+    point3f eta, k;
     Float fuzz;
 };
 // 
 
 class dielectric : public material {
   public:
-    dielectric(const vec3f& a, Float ri, const vec3f& atten, int priority2) : ref_idx(ri), 
+    dielectric(const point3f& a, Float ri, const point3f& atten, int priority2) : ref_idx(ri), 
                albedo(a), attenuation(atten), priority(priority2) {};
     bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng);
     bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler);
     
-    vec3f get_albedo(const ray& r_in, const hit_record& rec) const {
-      return(vec3f(1,1,1));
+    point3f get_albedo(const ray& r_in, const hit_record& rec) const {
+      return(point3f(1,1,1));
     }
     Float ref_idx;
-    vec3f albedo;
-    vec3f attenuation;
+    point3f albedo;
+    point3f attenuation;
     size_t priority;
 };
 
@@ -158,8 +158,8 @@ public:
   bool scatter(const ray& r_in, const hit_record& rec, scatter_record& srec, Sampler* sampler) {
     return(false);
   }
-  vec3f emitted(const ray& r_in, const hit_record& rec, Float u, Float v, const vec3f& p, bool& is_invisible);
-  vec3f get_albedo(const ray& r_in, const hit_record& rec) const;
+  point3f emitted(const ray& r_in, const hit_record& rec, Float u, Float v, const point3f& p, bool& is_invisible);
+  point3f get_albedo(const ray& r_in, const hit_record& rec) const;
   std::shared_ptr<texture>  emit;
   Float intensity;
   bool invisible;
@@ -177,9 +177,9 @@ class spot_light : public material {
     bool scatter(const ray& r_in, const hit_record& rec, scatter_record& srec, Sampler* sampler) {
       return(false);
     }
-    vec3f emitted(const ray& r_in, const hit_record& rec, Float u, Float v, const vec3f& p, bool& is_invisible);
+    point3f emitted(const ray& r_in, const hit_record& rec, Float u, Float v, const point3f& p, bool& is_invisible);
     Float falloff(const vec3f &w) const;
-    vec3f get_albedo(const ray& r_in, const hit_record& rec) const;
+    point3f get_albedo(const ray& r_in, const hit_record& rec) const;
     std::shared_ptr<texture>  emit;
     vec3f spot_direction;
     const Float cosTotalWidth, cosFalloffStart;
@@ -192,8 +192,8 @@ public:
   ~isotropic() {}
   virtual bool scatter(const ray& r_in, const hit_record& rec, scatter_record& srec, random_gen& rng);
   virtual bool scatter(const ray& r_in, const hit_record& rec, scatter_record& srec, Sampler* sampler);
-  vec3f f(const ray& r_in, const hit_record& rec, const ray& scattered) const;
-  vec3f get_albedo(const ray& r_in, const hit_record& rec) const;
+  point3f f(const ray& r_in, const hit_record& rec, const ray& scattered) const;
+  point3f get_albedo(const ray& r_in, const hit_record& rec) const;
   std::shared_ptr<texture> albedo;
 };
 
@@ -207,8 +207,8 @@ public:
   ~orennayar() {}
   bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng);
   bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler);
-  vec3f f(const ray& r_in, const hit_record& rec, const ray& scattered) const;
-  vec3f get_albedo(const ray& r_in, const hit_record& rec) const;
+  point3f f(const ray& r_in, const hit_record& rec, const ray& scattered) const;
+  point3f get_albedo(const ray& r_in, const hit_record& rec) const;
   Float A, B;
   std::shared_ptr<texture> albedo;
 };
@@ -216,7 +216,7 @@ public:
 class MicrofacetReflection : public material {
 public:
   MicrofacetReflection(std::shared_ptr<texture> a, MicrofacetDistribution *distribution, 
-                       vec3f eta, vec3f k)
+                       point3f eta, point3f k)
     : albedo(a), distribution(distribution), eta(eta), k(k) {}
   ~MicrofacetReflection() {
     if(distribution) delete distribution;
@@ -224,40 +224,40 @@ public:
   
   bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng);
   bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler);
-  vec3f f(const ray& r_in, const hit_record& rec, const ray& scattered) const;
-  vec3f get_albedo(const ray& r_in, const hit_record& rec) const;
+  point3f f(const ray& r_in, const hit_record& rec, const ray& scattered) const;
+  point3f get_albedo(const ray& r_in, const hit_record& rec) const;
 private:
   std::shared_ptr<texture> albedo;
   MicrofacetDistribution *distribution;
-  vec3f eta;
-  vec3f k;
+  point3f eta;
+  point3f k;
 };
 
 class glossy : public material {
 public:
   glossy(std::shared_ptr<texture> a, MicrofacetDistribution *distribution, 
-         vec3f Rs, vec3f Rd2)
+         point3f Rs, point3f Rd2)
     : albedo(a), distribution(distribution), Rs(Rs) {}
   ~glossy() {
     if(distribution) delete distribution;
   }
   bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng);
   bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler);
-  vec3f f(const ray& r_in, const hit_record& rec, const ray& scattered) const;
-  vec3f SchlickFresnel(Float cosTheta) const;
-  vec3f get_albedo(const ray& r_in, const hit_record& rec) const;
+  point3f f(const ray& r_in, const hit_record& rec, const ray& scattered) const;
+  point3f SchlickFresnel(Float cosTheta) const;
+  point3f get_albedo(const ray& r_in, const hit_record& rec) const;
   
 private:
   std::shared_ptr<texture>  albedo;
   MicrofacetDistribution *distribution;
-  vec3f Rs;
+  point3f Rs;
 };
 
 // Hair Local Functions
 
 class hair : public material {
   public:
-    hair(vec3f sigma_a, 
+    hair(point3f sigma_a, 
          Float eta, Float beta_m, Float beta_n, Float alpha) :
       sigma_a(sigma_a), 
       eta(eta), 
@@ -285,9 +285,9 @@ class hair : public material {
     bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng);
     bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler);
     
-    vec3f f(const ray& r_in, const hit_record& rec, const ray& scattered) const;
+    point3f f(const ray& r_in, const hit_record& rec, const ray& scattered) const;
     
-    vec3f sigma_a;
+    point3f sigma_a;
     Float eta;
     Float beta_m, beta_n;
     Float alpha;

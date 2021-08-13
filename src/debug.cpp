@@ -127,7 +127,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
           r = ecam.get_ray(u,v, rng.unif_rand());
         }
         r.pri_stack = mat_stack;
-        vec3f dpd_val = calculate_color(r, &world, rng);
+        point3f dpd_val = calculate_color(r, &world, rng);
         mat_stack->clear();
         
         routput(i,j) = dpd_val.x();
@@ -157,7 +157,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                          r = ecam.get_ray(u,v, rng.unif_rand());
                        }
                        r.pri_stack = mat_stack;
-                       vec3f qr = quick_render(r, &world, rng, light_dir, n_exp);
+                       point3f qr = quick_render(r, &world, rng, light_dir, n_exp);
                        mat_stack->clear();
                        
                        routput(i,j) = qr.x();

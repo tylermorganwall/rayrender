@@ -5,19 +5,19 @@ bool constant_medium::bounding_box(Float t0, Float t1, aabb& box) const {
   return(boundary->bounding_box(t0,t1,box));
 }
 
-Float constant_medium::pdf_value(const vec3f& o, const vec3f& v, random_gen& rng, Float time) {
+Float constant_medium::pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Float time) {
   return(boundary->pdf_value(o,v, rng, time));
 }
 
-Float constant_medium::pdf_value(const vec3f& o, const vec3f& v, Sampler* sampler, Float time) {
+Float constant_medium::pdf_value(const point3f& o, const vec3f& v, Sampler* sampler, Float time) {
   return(boundary->pdf_value(o,v, sampler, time));
 }
 
-vec3f constant_medium::random(const vec3f& o, random_gen& rng, Float time) {
+vec3f constant_medium::random(const point3f& o, random_gen& rng, Float time) {
   return(boundary->random(o, rng, time));
 }
 
-vec3f constant_medium::random(const vec3f& o, Sampler* sampler, Float time) {
+vec3f constant_medium::random(const point3f& o, Sampler* sampler, Float time) {
   return(boundary->random(o, sampler, time));
 }
 

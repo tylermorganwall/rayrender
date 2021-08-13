@@ -17,6 +17,14 @@ Transform() { }
                   mat[3][0], mat[3][1], mat[3][2], mat[3][3]);
     mInv = Inverse(m);
   }
+  Transform(const Rcpp::NumericMatrix& mat) {
+    m = Matrix4x4(mat(0,0), mat(0,1), mat(0,2), mat(0,3),
+                  mat(1,0), mat(1,1), mat(1,2), mat(1,3),
+                  mat(2,0), mat(2,1), mat(2,2), mat(2,3),
+                  mat(3,0), mat(3,1), mat(3,2), mat(3,3));
+    mInv = Inverse(m);
+  }
+  
   Transform(const Matrix4x4 &m) : m(m), mInv(Inverse(m)) { }
   Transform(const Matrix4x4 &m, const Matrix4x4 &mInv) 
     : m(m), mInv(mInv) {
@@ -85,6 +93,9 @@ Transform() { }
   inline ray operator()(const ray &r, const vec3f &oErrorIn,
                       const vec3f &dErrorIn, vec3f *oErrorOut,
                       vec3f *dErrorOut) const;
+  friend std::ostream& operator<<(std::ostream& o, Transform const& t) {
+    return o << t.m;
+  }
   
 private:
   Matrix4x4 m, mInv;
@@ -140,7 +151,7 @@ inline normal3<T> Transform::operator()(const normal3<T> &n) const {
 
 inline ray Transform::operator()(const ray &r) const {
   vec3f oError;
-  vec3f o = (*this)(r.origin(), &oError);
+  point3f o = (*this)(r.origin(), &oError);
   vec3f d = (*this)(r.direction());
   // Offset ray origin to edge of error bounds and compute _tMax_
   Float lengthSquared = d.squared_length();
@@ -273,7 +284,7 @@ inline vec3<T> Transform::operator()(const vec3<T> &v,
 
 inline ray Transform::operator()(const ray &r, vec3f *oError,
                                vec3f *dError) const {
-  vec3f o = (*this)(r.origin(), oError);
+  point3f o = (*this)(r.origin(), oError);
   vec3f d = (*this)(r.direction(), dError);
   Float tMax = r.tMax;
   Float lengthSquared = d.squared_length();
@@ -288,7 +299,7 @@ inline ray Transform::operator()(const ray &r, vec3f *oError,
 inline ray Transform::operator()(const ray &r, const vec3f &oErrorIn,
                                const vec3f &dErrorIn, vec3f *oErrorOut,
                                vec3f *dErrorOut) const {
-  vec3f o = (*this)(r.origin(), oErrorIn, oErrorOut);
+  point3f o = (*this)(r.origin(), oErrorIn, oErrorOut);
   vec3f d = (*this)(r.direction(), dErrorIn, dErrorOut);
   Float tMax = r.tMax;
   Float lengthSquared = d.squared_length();

@@ -2,7 +2,7 @@
 
 
 bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
-  ray scaled_ray(r.origin() * inv_axes - center, r.direction() * inv_axes);
+  ray scaled_ray(r.origin() * point3f(inv_axes) + -center, r.direction() * inv_axes);
   Float a = dot(scaled_ray.direction(), scaled_ray.direction());
   Float b = 2 * dot(scaled_ray.origin(), scaled_ray.direction()); 
   Float c = dot(scaled_ray.origin(),scaled_ray.origin()) - 1;
@@ -16,7 +16,7 @@ bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, ran
     Float u;
     Float v;
     if(temp1 < t_max && temp1 > t_min) {
-      vec3f p1 = scaled_ray.point_at_parameter(temp1) ;
+      point3f p1 = scaled_ray.point_at_parameter(temp1) ;
       p1 *= 1/p1.length() * axes;
       vec3f normal = (p1 - center) * inv_axes;
       normal.make_unit_vector();
@@ -26,7 +26,7 @@ bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, ran
       }
     }
     if(temp2 < t_max && temp2 > t_min) {
-      vec3f p2 = scaled_ray.point_at_parameter(temp2) ;
+      point3f p2 = scaled_ray.point_at_parameter(temp2) ;
       p2 *= 1/p2.length() * axes;
       vec3f normal = (p2 - center) * inv_axes;
       normal.make_unit_vector();
@@ -60,7 +60,7 @@ bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, ran
     rec.has_bump = bump_tex ? true : false;
     
     if(bump_tex) {
-      vec3f bvbu = bump_tex->value(rec.u, rec.v, rec.p);
+      point3f bvbu = bump_tex->value(rec.u, rec.v, rec.p);
       rec.bump_normal = rec.normal + bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv; 
       rec.bump_normal *= inv_axes;
       rec.bump_normal.make_unit_vector();
@@ -91,7 +91,7 @@ bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, ran
     rec.has_bump = bump_tex ? true : false;
     
     if(bump_tex) {
-      vec3f bvbu = bump_tex->value(rec.u, rec.v, rec.p);
+      point3f bvbu = bump_tex->value(rec.u, rec.v, rec.p);
       rec.bump_normal = rec.normal + bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv; 
       rec.bump_normal *= inv_axes;
       rec.bump_normal.make_unit_vector();
@@ -111,7 +111,7 @@ bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, ran
 
 
 bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) {
-  ray scaled_ray(r.origin() * inv_axes - center, r.direction() * inv_axes);
+  ray scaled_ray(r.origin() * point3f(inv_axes) + -center, r.direction() * inv_axes);
   Float a = dot(scaled_ray.direction(), scaled_ray.direction());
   Float b = 2 * dot(scaled_ray.origin(), scaled_ray.direction()); 
   Float c = dot(scaled_ray.origin(),scaled_ray.origin()) - 1;
@@ -125,7 +125,7 @@ bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sam
     Float u;
     Float v;
     if(temp1 < t_max && temp1 > t_min) {
-      vec3f p1 = scaled_ray.point_at_parameter(temp1) ;
+      point3f p1 = scaled_ray.point_at_parameter(temp1) ;
       p1 *= 1/p1.length() * axes;
       vec3f normal = (p1 - center) * inv_axes;
       normal.make_unit_vector();
@@ -135,7 +135,7 @@ bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sam
       }
     }
     if(temp2 < t_max && temp2 > t_min) {
-      vec3f p2 = scaled_ray.point_at_parameter(temp2) ;
+      point3f p2 = scaled_ray.point_at_parameter(temp2) ;
       p2 *= 1/p2.length() * axes;
       vec3f normal = (p2 - center) * inv_axes;
       normal.make_unit_vector();
@@ -169,7 +169,7 @@ bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sam
     rec.has_bump = bump_tex ? true : false;
     
     if(bump_tex) {
-      vec3f bvbu = bump_tex->value(rec.u, rec.v, rec.p);
+      point3f bvbu = bump_tex->value(rec.u, rec.v, rec.p);
       rec.bump_normal = rec.normal + bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv; 
       rec.bump_normal *= inv_axes;
       rec.bump_normal.make_unit_vector();
@@ -200,7 +200,7 @@ bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sam
     rec.has_bump = bump_tex ? true : false;
     
     if(bump_tex) {
-      vec3f bvbu = bump_tex->value(rec.u, rec.v, rec.p);
+      point3f bvbu = bump_tex->value(rec.u, rec.v, rec.p);
       rec.bump_normal = rec.normal + bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv; 
       rec.bump_normal *= inv_axes;
       rec.bump_normal.make_unit_vector();
@@ -219,7 +219,7 @@ bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sam
 }
 
 
-Float ellipsoid::pdf_value(const vec3f& o, const vec3f& v, random_gen& rng, Float time) {
+Float ellipsoid::pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Float time) {
   hit_record rec;
   if(this->hit(ray(o,v), 0.001, FLT_MAX, rec, rng)) {
     Float cos_theta_max = sqrt(1 - 1/(center - o).squared_length());
@@ -231,7 +231,7 @@ Float ellipsoid::pdf_value(const vec3f& o, const vec3f& v, random_gen& rng, Floa
 }
 
 
-Float ellipsoid::pdf_value(const vec3f& o, const vec3f& v, Sampler* sampler, Float time) {
+Float ellipsoid::pdf_value(const point3f& o, const vec3f& v, Sampler* sampler, Float time) {
   hit_record rec;
   if(this->hit(ray(o,v), 0.001, FLT_MAX, rec, sampler)) {
     Float cos_theta_max = sqrt(1 - 1/(center - o).squared_length());
@@ -242,7 +242,7 @@ Float ellipsoid::pdf_value(const vec3f& o, const vec3f& v, Sampler* sampler, Flo
   }
 }
 
-vec3f ellipsoid::random(const vec3f& o, random_gen& rng, Float time) {
+vec3f ellipsoid::random(const point3f& o, random_gen& rng, Float time) {
   vec3f direction = center - o;
   Float distance_squared = direction.squared_length();
   onb uvw;
@@ -250,7 +250,7 @@ vec3f ellipsoid::random(const vec3f& o, random_gen& rng, Float time) {
   return(uvw.local_to_world(rng.random_to_sphere(radius,distance_squared) * inv_axes));
 }
 
-vec3f ellipsoid::random(const vec3f& o, Sampler* sampler, Float time) {
+vec3f ellipsoid::random(const point3f& o, Sampler* sampler, Float time) {
   vec3f direction = center - o;
   Float distance_squared = direction.squared_length();
   onb uvw;
@@ -259,6 +259,6 @@ vec3f ellipsoid::random(const vec3f& o, Sampler* sampler, Float time) {
 }
 
 bool ellipsoid::bounding_box(Float t0, Float t1, aabb& box) const {
-  box = aabb(center - vec3f(radius,radius,radius) * axes, center + vec3f(radius,radius,radius) * axes);
+  box = aabb(center + -point3f(radius,radius,radius) * axes, center + point3f(radius,radius,radius) * axes);
   return(true);
 }

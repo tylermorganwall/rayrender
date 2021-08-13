@@ -342,12 +342,8 @@ render_animation = function(scene, camera_motion, start_frame = 1,
   order_rotation_list = scene$order_rotation
   
   #group handler
-  group_bool = purrr::map_lgl(scene$pivot_point,.f = ~all(!is.na(.x)))
-  group_pivot = scene$pivot_point 
-  group_angle = scene$group_angle 
-  group_order_rotation = scene$group_order_rotation 
-  group_translate = scene$group_translate 
-  group_scale = scene$group_scale
+  group_bool = purrr::map_lgl(scene$group_transform,.f = ~all(!is.na(.x)))
+  group_transform = scene$group_transform
   
   #triangle normal handler
   tri_normal_bools = purrr::map2_lgl(shapevec,proplist,.f = ~.x == 6 && all(!is.na(.y)))
@@ -512,11 +508,7 @@ render_animation = function(scene, camera_motion, start_frame = 1,
   scene_info$order_rotation_list = order_rotation_list
   scene_info$clampval = clamp_value
   scene_info$isgrouped = group_bool
-  scene_info$group_pivot=group_pivot
-  scene_info$group_translate = group_translate
-  scene_info$group_angle = group_angle
-  scene_info$group_order_rotation = group_order_rotation
-  scene_info$group_scale = group_scale
+  scene_info$group_transform= group_transform
   scene_info$tri_normal_bools = tri_normal_bools
   scene_info$is_tri_color = is_tri_color
   scene_info$tri_color_vert= tri_color_vert

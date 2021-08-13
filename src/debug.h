@@ -65,52 +65,52 @@ inline vec3f calculate_dpduv(const ray& r, hitable *world, random_gen &rng, bool
   }
 }
 
-inline vec3f calculate_color(const ray& r, hitable *world, random_gen &rng) {
+inline point3f calculate_color(const ray& r, hitable *world, random_gen &rng) {
   hit_record hrec;
   scatter_record srec;
   ray r2 = r;
   bool invisible = false;
   if(world->hit(r2, 0.001, FLT_MAX, hrec, rng)) {
-    vec3f emit = hrec.mat_ptr->emitted(r2, hrec, hrec.u, hrec.v, hrec.p, invisible);
+    point3f emit = hrec.mat_ptr->emitted(r2, hrec, hrec.u, hrec.v, hrec.p, invisible);
     if(emit.x() != 0 || emit.y() != 0 || emit.z() != 0) {
       return(emit);
     }
     if(hrec.mat_ptr->scatter(r2, hrec, srec, rng)) { //generates scatter record, world space
       if(srec.is_specular) { 
-        return(vec3f(1,1,1));
+        return(point3f(1,1,1));
       }
       return(hrec.mat_ptr->get_albedo(r2, hrec));
     } else {
-      return(vec3f(0,0,0));
+      return(point3f(0,0,0));
     }
   } else {
-    return(vec3f(0,0,0));
+    return(point3f(0,0,0));
   }
 }
 
-inline vec3f quick_render(const ray& r, hitable *world, random_gen &rng, vec3f lightdir, Float n) {
+inline point3f quick_render(const ray& r, hitable *world, random_gen &rng, vec3f lightdir, Float n) {
   hit_record hrec;
   scatter_record srec;
   ray r2 = r;
   bool invisible = false;
   if(world->hit(r2, 0.001, FLT_MAX, hrec, rng)) {
-    vec3f emit = hrec.mat_ptr->emitted(r2, hrec, hrec.u, hrec.v, hrec.p, invisible);
+    point3f emit = hrec.mat_ptr->emitted(r2, hrec, hrec.u, hrec.v, hrec.p, invisible);
     if(emit.x() != 0 || emit.y() != 0 || emit.z() != 0) {
       return(emit);
     }
     if(hrec.mat_ptr->scatter(r2, hrec, srec, rng)) { //generates scatter record, world space
       if(srec.is_specular) { 
-        return(vec3f(1,1,1));
+        return(point3f(1,1,1));
       }
       vec3f normal = hrec.has_bump ? hrec.bump_normal : hrec.normal;
       vec3f R = Reflect(lightdir, hrec.normal); 
       return(hrec.mat_ptr->get_albedo(r2, hrec) * (dot(normal, lightdir)+1)/2 + 
              std::pow(std::max(0.f, dot(R, -unit_vector(r.direction()))), n));
     } else {
-      return(vec3f(0,0,0));
+      return(point3f(0,0,0));
     }
   } else {
-    return(vec3f(0,0,0));
+    return(point3f(0,0,0));
   }
 }
 // //Does not take into account moving objects

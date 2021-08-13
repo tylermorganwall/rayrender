@@ -24,16 +24,16 @@ public:
   virtual bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler);
   
   virtual bool bounding_box(Float t0, Float t1, aabb& box) const;
-  virtual Float pdf_value(const vec3f& o, const vec3f& v, random_gen& rng, Float time = 0);
-  virtual Float pdf_value(const vec3f& o, const vec3f& v, Sampler* sampler, Float time = 0);
+  virtual Float pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Float time = 0);
+  virtual Float pdf_value(const point3f& o, const vec3f& v, Sampler* sampler, Float time = 0);
   
-  virtual vec3f random(const vec3f& o, random_gen& rng, Float time = 0) {
-    vec3f random_point = vec3f(x0 + rng.unif_rand() * (x1 - x0), y0 + rng.unif_rand() * (y1-y0),k);
+  virtual vec3f random(const point3f& o, random_gen& rng, Float time = 0) {
+    point3f random_point = point3f(x0 + rng.unif_rand() * (x1 - x0), y0 + rng.unif_rand() * (y1-y0),k);
     return(random_point - o);
   }
-  virtual vec3f random(const vec3f& o, Sampler* sampler, Float time = 0) {
+  virtual vec3f random(const point3f& o, Sampler* sampler, Float time = 0) {
     vec2f u = sampler->Get2D();
-    vec3f random_point = vec3f(x0 + u.x() * (x1 - x0), y0 + u.y() * (y1-y0),k);
+    point3f random_point = point3f(x0 + u.x() * (x1 - x0), y0 + u.y() * (y1-y0),k);
     return(random_point - o);
   }
   Float x0, x1, y0, y1, k;
@@ -62,7 +62,7 @@ public:
     box = aabb(vec3f(x0,k-0.001,z0), vec3f(x1,k+0.001,z1));
     return(true);
   }
-  virtual Float pdf_value(const vec3f& o, const vec3f& v, random_gen& rng, Float time = 0) {
+  virtual Float pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Float time = 0) {
     hit_record rec;
     if(this->hit(ray(o,v), 0.001, FLT_MAX, rec, rng)) {
       Float area = (x1-x0)*(z1-z0);
@@ -73,7 +73,7 @@ public:
       return(0);
     }
   }
-  virtual Float pdf_value(const vec3f& o, const vec3f& v, Sampler* sampler, Float time = 0) {
+  virtual Float pdf_value(const point3f& o, const vec3f& v, Sampler* sampler, Float time = 0) {
     hit_record rec;
     if(this->hit(ray(o,v), 0.001, FLT_MAX, rec, sampler)) {
       Float area = (x1-x0)*(z1-z0);
@@ -84,13 +84,13 @@ public:
       return(0);
     }
   }
-  virtual vec3f random(const vec3f& o, random_gen& rng, Float time = 0) {
-    vec3f random_point = vec3f(x0 + rng.unif_rand() * (x1 - x0), k, z0 + rng.unif_rand() * (z1-z0));
+  virtual vec3f random(const point3f& o, random_gen& rng, Float time = 0) {
+    point3f random_point = point3f(x0 + rng.unif_rand() * (x1 - x0), k, z0 + rng.unif_rand() * (z1-z0));
     return(random_point - o);
   }
-  virtual vec3f random(const vec3f& o, Sampler* sampler, Float time = 0) {
+  virtual vec3f random(const point3f& o, Sampler* sampler, Float time = 0) {
     vec2f u = sampler->Get2D();
-    vec3f random_point = vec3f(x0 + u.x() * (x1 - x0), k, z0 + u.y()  * (z1-z0));
+    point3f random_point = point3f(x0 + u.x() * (x1 - x0), k, z0 + u.y()  * (z1-z0));
     return(random_point - o);
   }
   Float x0, x1, z0, z1, k;
@@ -122,7 +122,7 @@ public:
     box = aabb(vec3f(k-0.001,y0,z0), vec3f(k+0.001,y1,z1));
     return(true);
   }
-  virtual Float pdf_value(const vec3f& o, const vec3f& v, random_gen& rng, Float time = 0) {
+  virtual Float pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Float time = 0) {
     hit_record rec;
     if(this->hit(ray(o,v), 0.001, FLT_MAX, rec, rng)) {
       Float area = (y1-y0)*(z1-z0);
@@ -133,7 +133,7 @@ public:
       return(0);
     }
   }
-  virtual Float pdf_value(const vec3f& o, const vec3f& v, Sampler* sampler, Float time = 0) {
+  virtual Float pdf_value(const point3f& o, const vec3f& v, Sampler* sampler, Float time = 0) {
     hit_record rec;
     if(this->hit(ray(o,v), 0.001, FLT_MAX, rec, sampler)) {
       Float area = (y1-y0)*(z1-z0);
@@ -144,13 +144,13 @@ public:
       return(0);
     }
   }
-  virtual vec3f random(const vec3f& o, random_gen& rng, Float time = 0) {
-    vec3f random_point = vec3f(k, y0 + rng.unif_rand() * (y1 - y0), z0 + rng.unif_rand() * (z1-z0));
+  virtual vec3f random(const point3f& o, random_gen& rng, Float time = 0) {
+    point3f random_point = point3f(k, y0 + rng.unif_rand() * (y1 - y0), z0 + rng.unif_rand() * (z1-z0));
     return(random_point-o);
   }
-  virtual vec3f random(const vec3f& o, Sampler* sampler, Float time = 0) {
+  virtual vec3f random(const point3f& o, Sampler* sampler, Float time = 0) {
     vec2f u = sampler->Get2D();
-    vec3f random_point = vec3f(k, y0 + u.x() * (y1 - y0), z0 + u.y() * (z1-z0));
+    point3f random_point = point3f(k, y0 + u.x() * (y1 - y0), z0 + u.y() * (z1-z0));
     return(random_point - o);
   }
   Float y0, y1, z0, z1, k;

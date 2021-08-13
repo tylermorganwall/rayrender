@@ -88,9 +88,8 @@ csg_object = function(object, x = 0, y = 0, z = 0, radius = 1, material = diffus
                       flipped = flipped, fog = material$fog, fogdensity = material$fogdensity,
                       implicit_sample = material$implicit_sample, sigma = material$sigma, glossyinfo = material$glossyinfo,
                       order_rotation = list(order_rotation),
-                      pivot_point = list(NA), group_translate = list(NA),
-                      group_angle = list(NA), group_order_rotation = list(NA),
-                      tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), group_scale = list(NA),
+                      group_transform = list(NA),
+                      tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), 
                       material_id = NA, csg_object = list(object), mesh_info = list(NA)))
 }
 

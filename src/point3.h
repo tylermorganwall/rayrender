@@ -19,6 +19,7 @@ template <typename T> class point3 {
 public:
   point3() {}
   point3(T e0, T e1, T e2) {e[0] = e0; e[1] = e1; e[2] = e2;}
+  point3(vec3<T> e1) {e[0] = e1.x(); e[1] = e1.y(); e[2] = e1.z();}
   point3(T e0) {e[0] = e0; e[1] = e0; e[2] = e0;}
   template <typename U> explicit point3(const point3<U> &p) { 
     e[0] = x((T)p.x());
@@ -56,6 +57,7 @@ public:
   inline point3<T> operator-() const { return point3<T>(-e[0], -e[1], -e[2]); }
   inline T operator[](int i) const { return e[i]; }
   inline T& operator[](int i) { return e[i]; }
+  
   
   inline point3<T>& operator+=(const point3<T> &v2);
   inline point3<T>& operator-=(const point3<T> &v2);
@@ -281,6 +283,18 @@ template <typename T> point3<T> Floor(const point3<T> &p) {
 template <typename T> point3<T> Ceil(const point3<T> &p) {
   return point3<T>(std::ceil(p.x()), std::ceil(p.y()), std::ceil(p.z()));
 }
+
+
+template<typename T> 
+inline Float dot(const vec3<T> &v1, const point3<T> &v2) {
+  return (v1.e[0] * v2.e[0] + v1.e[1] * v2.e[1] + v1.e[2] * v2.e[2]);
+}
+
+template<typename T> 
+inline Float dot(const point3<T> &v1, const vec3<T> &v2) {
+  return (v1.e[0] * v2.e[0] + v1.e[1] * v2.e[1] + v1.e[2] * v2.e[2]);
+}
+
 
 
 typedef point3<Float> point3f;

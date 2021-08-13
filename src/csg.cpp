@@ -19,7 +19,7 @@ bool csg::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_ge
   
   while (t < max_t) { 
     Float minDistance = INFINITY; 
-    vec3f from = r.origin() + t * dir; 
+    point3f from = r.origin() + t * dir; 
     
     //Need distance from interior edge to support dielectrics
     float d =  std::fabs(shapes->getDistance(from)); 
@@ -80,7 +80,7 @@ bool csg::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* 
   
   while (t < max_t) { 
     Float minDistance = INFINITY; 
-    vec3f from = r.origin() + t * dir; 
+    point3f from = r.origin() + t * dir; 
     
     //Need distance from interior edge to support dielectrics
     float d =  std::fabs(shapes->getDistance(from)); 

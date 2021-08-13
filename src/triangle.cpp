@@ -10,7 +10,7 @@ bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
     return(false);
   }
   Float invdet = 1.0 / det;
-  vec3f tvec = r.origin() - a;
+  vec3f tvec = vec3f(r.origin()) - a;
   Float u = dot(pvec, tvec) * invdet;
   if (u < 0.0 || u > 1.0) {
     return(false);
@@ -83,7 +83,7 @@ bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
     }
   }
   if(bump_tex) {
-    vec3f bvbu = bump_tex->mesh_value(rec.u, rec.v, rec.p);
+    point3f bvbu = bump_tex->mesh_value(rec.u, rec.v, rec.p);
     rec.bump_normal = dot(r.direction(), normal) < 0 ? 
     rec.normal +  bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv :
       rec.normal -  bvbu.x() * rec.dpdu - bvbu.y() * rec.dpdv;
@@ -104,7 +104,7 @@ bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Samp
     return(false);
   }
   Float invdet = 1.0 / det;
-  vec3f tvec = r.origin() - a;
+  vec3f tvec = vec3f(r.origin()) - a;
   Float u = dot(pvec, tvec) * invdet;
   if (u < 0.0 || u > 1.0) {
     return(false);
@@ -177,7 +177,7 @@ bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Samp
     }
   }
   if(bump_tex) {
-    vec3f bvbu = bump_tex->mesh_value(rec.u, rec.v, rec.p);
+    point3f bvbu = bump_tex->mesh_value(rec.u, rec.v, rec.p);
     rec.bump_normal = dot(r.direction(), normal) < 0 ? 
     rec.normal +  bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv :
       rec.normal -  bvbu.x() * rec.dpdu - bvbu.y() * rec.dpdv;
@@ -189,14 +189,14 @@ bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Samp
 }
 
 bool triangle::bounding_box(Float t0, Float t1, aabb& box) const {
-  vec3f min_v(fmin(fmin(a.x(), b.x()), c.x()), 
+  point3f min_v(fmin(fmin(a.x(), b.x()), c.x()), 
              fmin(fmin(a.y(), b.y()), c.y()), 
              fmin(fmin(a.z(), b.z()), c.z()));
-  vec3f max_v(fmax(fmax(a.x(), b.x()), c.x()), 
+  point3f max_v(fmax(fmax(a.x(), b.x()), c.x()), 
              fmax(fmax(a.y(), b.y()), c.y()), 
              fmax(fmax(a.z(), b.z()), c.z()));
   
-  vec3f difference = max_v - min_v;
+  point3f difference = max_v + -min_v;
   
   if (difference.x() < 1E-5) max_v.e[0] += 1E-5;
   if (difference.y() < 1E-5) max_v.e[1] += 1E-5;
@@ -206,7 +206,7 @@ bool triangle::bounding_box(Float t0, Float t1, aabb& box) const {
   return(true);
 }
 
-Float triangle::pdf_value(const vec3f& o, const vec3f& v, random_gen& rng, Float time) { 
+Float triangle::pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Float time) { 
   hit_record rec;
   if (this->hit(ray(o, v), 0.001, FLT_MAX, rec, rng)) {
     Float distance = rec.t * rec.t * v.squared_length();;
@@ -216,7 +216,7 @@ Float triangle::pdf_value(const vec3f& o, const vec3f& v, random_gen& rng, Float
   return 0; 
 }
 
-Float triangle::pdf_value(const vec3f& o, const vec3f& v, Sampler* sampler, Float time) { 
+Float triangle::pdf_value(const point3f& o, const vec3f& v, Sampler* sampler, Float time) { 
   hit_record rec;
   if (this->hit(ray(o, v), 0.001, FLT_MAX, rec, sampler)) {
     Float distance = rec.t * rec.t * v.squared_length();;
@@ -226,18 +226,18 @@ Float triangle::pdf_value(const vec3f& o, const vec3f& v, Sampler* sampler, Floa
   return 0; 
 }
 
-vec3f triangle::random(const vec3f& origin, random_gen& rng, Float time) {
+vec3f triangle::random(const point3f& origin, random_gen& rng, Float time) {
   Float r1 = rng.unif_rand();
   Float r2 = rng.unif_rand();
   Float sr1 = sqrt(r1);
-  vec3f random_point((1.0 - sr1) * a + sr1 * (1.0 - r2) * b + sr1 * r2 * c);
+  point3f random_point((1.0 - sr1) * a + sr1 * (1.0 - r2) * b + sr1 * r2 * c);
   return(random_point - origin); 
 }
-vec3f triangle::random(const vec3f& origin, Sampler* sampler, Float time) {
+vec3f triangle::random(const point3f& origin, Sampler* sampler, Float time) {
   vec2f u = sampler->Get2D();
   Float r1 = u.x();
   Float r2 = u.y();
   Float sr1 = sqrt(r1);
-  vec3f random_point((1.0 - sr1) * a + sr1 * (1.0 - r2) * b + sr1 * r2 * c);
+  point3f random_point((1.0 - sr1) * a + sr1 * (1.0 - r2) * b + sr1 * r2 * c);
   return(random_point - origin); 
 }

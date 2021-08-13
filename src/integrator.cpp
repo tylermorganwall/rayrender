@@ -99,7 +99,7 @@ void pathtracer(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_c
                          }
                          r.pri_stack = mat_stack;
                          
-                         vec3f col = clamp(de_nan(color(r, &world, &hlist, max_depth, 
+                         point3f col = clamp(de_nan(color(r, &world, &hlist, max_depth, 
                                                        roulette_active, rngs[index], samplers[index].get())),
                                                        0, clampval);
                          // col = col * fil.Evaluate(u2);

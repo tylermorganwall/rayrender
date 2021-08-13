@@ -132,7 +132,7 @@ public:
 class hair_pdf : public pdf {
   public:
     hair_pdf(const onb uvw_, const vec3f& wi_, const vec3f& wo_, 
-             Float eta_, Float h_, Float gammaO_, Float s_, vec3f sigma_a_,
+             Float eta_, Float h_, Float gammaO_, Float s_, point3f sigma_a_,
              const Float cos2kAlpha_[3], const Float sin2kAlpha_[3], const Float v_[pMax + 1]) {
       uvw = uvw_;
       wi = wi_;
@@ -159,7 +159,7 @@ class hair_pdf : public pdf {
     vec3f wi;
     vec3f wo;
     Float eta, h, gammaO, s;
-    vec3f sigma_a;
+    point3f sigma_a;
     Float sin2kAlpha[3], cos2kAlpha[3];
   private:
     std::array<Float, pMax + 1> ComputeApPdf(Float cosThetaO) const;
@@ -169,7 +169,7 @@ class hair_pdf : public pdf {
 
 class hitable_pdf : public pdf {
 public:
-  hitable_pdf(hitable_list *p, const vec3f& origin) : ptr(p), o(origin) {}
+  hitable_pdf(hitable_list *p, const point3f& origin) : ptr(p), o(origin) {}
   virtual Float value(const vec3f& direction, random_gen& rng, Float time = 0) {
     return(ptr->pdf_value(o, direction, rng, time));
   }
@@ -185,7 +185,7 @@ public:
     return(ptr->random(o, sampler, time)); 
   }
   hitable_list *ptr;
-  vec3f o;
+  point3f o;
 };
 
 class mixture_pdf : public pdf {

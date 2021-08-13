@@ -5,7 +5,7 @@
 //Lambertian
 //
 
-vec3f lambertian::f(const ray& r_in, const hit_record& rec, const ray& scattered) const {
+point3f lambertian::f(const ray& r_in, const hit_record& rec, const ray& scattered) const {
   //unit_vector(scattered.direction()) == wo
   //r_in.direction() == wi
   vec3f wi = unit_vector(scattered.direction());
@@ -24,19 +24,21 @@ vec3f lambertian::f(const ray& r_in, const hit_record& rec, const ray& scattered
   }
   return(G * albedo->value(rec.u, rec.v, rec.p) * cosine * M_1_PI);
 }
+
 bool lambertian::scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng) {
   srec.is_specular = false;
   srec.attenuation = albedo->value(hrec.u, hrec.v, hrec.p);
   srec.pdf_ptr = new cosine_pdf(hrec.normal);
   return(true);
 }
+
 bool lambertian::scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler) {
   srec.is_specular = false;
   srec.attenuation = albedo->value(hrec.u, hrec.v, hrec.p);
   srec.pdf_ptr = new cosine_pdf(hrec.normal);
   return(true);
 }
-vec3f lambertian::get_albedo(const ray& r_in, const hit_record& rec) const {
+point3f lambertian::get_albedo(const ray& r_in, const hit_record& rec) const {
   return(albedo->value(rec.u, rec.v, rec.p));
 }
 
@@ -52,7 +54,7 @@ bool metal::scatter(const ray& r_in, const hit_record& hrec, scatter_record& sre
   if(cosine < 0) {
     cosine = 0;
   }
-  vec3f offset_p = offset_ray(hrec.p-r_in.A, hrec.normal) + r_in.A;
+  point3f offset_p = offset_ray(hrec.p-r_in.A, hrec.normal) + r_in.A;
   
   srec.specular_ray = ray(offset_p, reflected + fuzz * rng.random_in_unit_sphere(), r_in.pri_stack, r_in.time());
   srec.attenuation = albedo->value(hrec.u, hrec.v, hrec.p) * FrCond(cosine, eta, k);
@@ -68,7 +70,7 @@ bool metal::scatter(const ray& r_in, const hit_record& hrec, scatter_record& sre
   if(cosine < 0) {
     cosine = 0;
   }
-  vec3f offset_p = offset_ray(hrec.p-r_in.A, hrec.normal) + r_in.A;
+  point3f offset_p = offset_ray(hrec.p-r_in.A, hrec.normal) + r_in.A;
   
   srec.specular_ray = ray(offset_p, reflected + fuzz * rand_to_unit(sampler->Get2D()), r_in.pri_stack, r_in.time());
   srec.attenuation = albedo->value(hrec.u, hrec.v, hrec.p) * FrCond(cosine, eta, k);
@@ -76,7 +78,8 @@ bool metal::scatter(const ray& r_in, const hit_record& hrec, scatter_record& sre
   srec.pdf_ptr = 0;
   return(true);
 }
-vec3f metal::get_albedo(const ray& r_in, const hit_record& rec) const {
+
+point3f metal::get_albedo(const ray& r_in, const hit_record& rec) const {
   return(albedo->value(rec.u, rec.v, rec.p));
 }
 
@@ -101,7 +104,7 @@ bool dielectric::scatter(const ray& r_in, const hit_record& hrec, scatter_record
   
   bool entering = dot(hrec.normal, r_in.direction()) < 0;
   bool skip = false;
-  vec3f offset_p = hrec.p;
+  point3f offset_p = hrec.p;
   
   for(size_t i = 0; i < r_in.pri_stack->size(); i++) {
     if(r_in.pri_stack->at(i) == this) {
@@ -124,8 +127,8 @@ bool dielectric::scatter(const ray& r_in, const hit_record& hrec, scatter_record
   if(skip) {
     srec.specular_ray = ray(offset_p, r_in.direction(), r_in.pri_stack, r_in.time());
     Float distance = (offset_p-r_in.point_at_parameter(0)).length();
-    vec3f prev_atten = r_in.pri_stack->at(prev_active)->attenuation;
-    srec.attenuation = vec3f(std::exp(-distance * prev_atten.x()),
+    point3f prev_atten = r_in.pri_stack->at(prev_active)->attenuation;
+    srec.attenuation = point3f(std::exp(-distance * prev_atten.x()),
                             std::exp(-distance * prev_atten.y()),
                             std::exp(-distance * prev_atten.z()));
     if(!entering && current_layer != -1) {
@@ -153,15 +156,15 @@ bool dielectric::scatter(const ray& r_in, const hit_record& hrec, scatter_record
   }
   if(!entering) {
     Float distance = (offset_p-r_in.point_at_parameter(0)).length();
-    srec.attenuation = vec3f(std::exp(-distance * attenuation.x()),
+    srec.attenuation = point3f(std::exp(-distance * attenuation.x()),
                             std::exp(-distance * attenuation.y()),
                             std::exp(-distance * attenuation.z()));
   } else {
     if(prev_active != -1) {
       Float distance = (offset_p-r_in.point_at_parameter(0)).length();
-      vec3f prev_atten = r_in.pri_stack->at(prev_active)->attenuation;
+      point3f prev_atten = r_in.pri_stack->at(prev_active)->attenuation;
       
-      srec.attenuation = albedo * vec3f(std::exp(-distance * prev_atten.x()),
+      srec.attenuation = albedo * point3f(std::exp(-distance * prev_atten.x()),
                                        std::exp(-distance * prev_atten.y()),
                                        std::exp(-distance * prev_atten.z()));
     } else {
@@ -201,7 +204,7 @@ bool dielectric::scatter(const ray& r_in, const hit_record& hrec, scatter_record
   
   bool entering = dot(hrec.normal, r_in.direction()) < 0;
   bool skip = false;
-  vec3f offset_p = hrec.p;
+  point3f offset_p = hrec.p;
   
   for(size_t i = 0; i < r_in.pri_stack->size(); i++) {
     if(r_in.pri_stack->at(i) == this) {
@@ -224,8 +227,8 @@ bool dielectric::scatter(const ray& r_in, const hit_record& hrec, scatter_record
   if(skip) {
     srec.specular_ray = ray(offset_p, r_in.direction(), r_in.pri_stack, r_in.time());
     Float distance = (offset_p-r_in.point_at_parameter(0)).length();
-    vec3f prev_atten = r_in.pri_stack->at(prev_active)->attenuation;
-    srec.attenuation = vec3f(std::exp(-distance * prev_atten.x()),
+    point3f prev_atten = r_in.pri_stack->at(prev_active)->attenuation;
+    srec.attenuation = point3f(std::exp(-distance * prev_atten.x()),
                             std::exp(-distance * prev_atten.y()),
                             std::exp(-distance * prev_atten.z()));
     if(!entering && current_layer != -1) {
@@ -253,15 +256,15 @@ bool dielectric::scatter(const ray& r_in, const hit_record& hrec, scatter_record
   }
   if(!entering) {
     Float distance = (offset_p-r_in.point_at_parameter(0)).length();
-    srec.attenuation = vec3f(std::exp(-distance * attenuation.x()),
+    srec.attenuation = point3f(std::exp(-distance * attenuation.x()),
                             std::exp(-distance * attenuation.y()),
                             std::exp(-distance * attenuation.z()));
   } else {
     if(prev_active != -1) {
       Float distance = (offset_p-r_in.point_at_parameter(0)).length();
-      vec3f prev_atten = r_in.pri_stack->at(prev_active)->attenuation;
+      point3f prev_atten = r_in.pri_stack->at(prev_active)->attenuation;
       
-      srec.attenuation = albedo * vec3f(std::exp(-distance * prev_atten.x()),
+      srec.attenuation = albedo * point3f(std::exp(-distance * prev_atten.x()),
                                        std::exp(-distance * prev_atten.y()),
                                        std::exp(-distance * prev_atten.z()));
     } else {
@@ -287,16 +290,16 @@ bool dielectric::scatter(const ray& r_in, const hit_record& hrec, scatter_record
 //Diffuse Light
 //
 
-vec3f diffuse_light::emitted(const ray& r_in, const hit_record& rec, Float u, Float v, const vec3f& p, bool& is_invisible) {
+point3f diffuse_light::emitted(const ray& r_in, const hit_record& rec, Float u, Float v, const point3f& p, bool& is_invisible) {
   is_invisible = invisible;
   if(dot(rec.normal, r_in.direction()) < 0.0) {
     return(emit->value(u,v,p) * intensity);
   } else {
-    return(vec3f(0,0,0));
+    return(point3f(0,0,0));
   }
 }
 
-vec3f diffuse_light::get_albedo(const ray& r_in, const hit_record& rec) const {
+point3f diffuse_light::get_albedo(const ray& r_in, const hit_record& rec) const {
   return(emit->value(rec.u, rec.v, rec.p));
 }
 
@@ -304,7 +307,7 @@ vec3f diffuse_light::get_albedo(const ray& r_in, const hit_record& rec) const {
 //Spot Light
 //
 
-vec3f spot_light::emitted(const ray& r_in, const hit_record& rec, Float u, Float v, const vec3f& p, bool& is_invisible) {
+point3f spot_light::emitted(const ray& r_in, const hit_record& rec, Float u, Float v, const point3f& p, bool& is_invisible) {
   is_invisible = invisible;
   if(dot(rec.normal, r_in.direction()) < 0.0) {
     return(falloff(r_in.origin() - rec.p) * emit->value(u,v,p) );
@@ -325,7 +328,7 @@ Float spot_light::falloff(const vec3f &w) const {
   return((delta * delta) * (delta * delta));
 }
 
-vec3f spot_light::get_albedo(const ray& r_in, const hit_record& rec) const {
+point3f spot_light::get_albedo(const ray& r_in, const hit_record& rec) const {
   return(emit->value(rec.u, rec.v, rec.p));
 }
 
@@ -345,10 +348,11 @@ bool isotropic::scatter(const ray& r_in, const hit_record& rec, scatter_record& 
   srec.attenuation = albedo->value(rec.u,rec.v,rec.p);
   return(true);
 }
-vec3f isotropic::f(const ray& r_in, const hit_record& rec, const ray& scattered) const {
+
+point3f isotropic::f(const ray& r_in, const hit_record& rec, const ray& scattered) const {
   return(albedo->value(rec.u,rec.v,rec.p) * 0.25 * M_1_PI);
 }
-vec3f isotropic::get_albedo(const ray& r_in, const hit_record& rec) const {
+point3f isotropic::get_albedo(const ray& r_in, const hit_record& rec) const {
   return(albedo->value(rec.u, rec.v, rec.p));
 }
 
@@ -370,7 +374,7 @@ bool orennayar::scatter(const ray& r_in, const hit_record& hrec, scatter_record&
   return(true);
 }
 
-vec3f orennayar::f(const ray& r_in, const hit_record& rec, const ray& scattered) const {
+point3f orennayar::f(const ray& r_in, const hit_record& rec, const ray& scattered) const {
   onb uvw;
   if(!rec.has_bump) {
     uvw.build_from_w(rec.normal);
@@ -408,7 +412,7 @@ vec3f orennayar::f(const ray& r_in, const hit_record& rec, const ray& scattered)
   return(albedo->value(rec.u, rec.v, rec.p) * (A + B * maxCos * sinAlpha * tanBeta ) * cosine * M_1_PI );
 }
 
-vec3f orennayar::get_albedo(const ray& r_in, const hit_record& rec) const {
+point3f orennayar::get_albedo(const ray& r_in, const hit_record& rec) const {
   return(albedo->value(rec.u, rec.v, rec.p));
 }
 
@@ -439,7 +443,7 @@ bool MicrofacetReflection::scatter(const ray& r_in, const hit_record& hrec, scat
   return(true);
 }
 
-vec3f MicrofacetReflection::f(const ray& r_in, const hit_record& rec, const ray& scattered) const {
+point3f MicrofacetReflection::f(const ray& r_in, const hit_record& rec, const ray& scattered) const {
   onb uvw;
   if(!rec.has_bump) {
     uvw.build_from_w(rec.normal);
@@ -458,13 +462,13 @@ vec3f MicrofacetReflection::f(const ray& r_in, const hit_record& rec, const ray&
   if (normal.x() == 0 && normal.y() == 0 && normal.z() == 0) {
     return(vec3f(0,0,0));
   }
-  vec3f F = FrCond(cosThetaO, eta, k);
+  point3f F = FrCond(cosThetaO, eta, k);
   Float G = distribution->G(wo,wi,normal);
   Float D = distribution->D(normal);
   return(albedo->value(rec.u, rec.v, rec.p) * F * G * D  * cosThetaI / (4 * CosTheta(wo) * CosTheta(wi) ));
 }
 
-vec3f MicrofacetReflection::get_albedo(const ray& r_in, const hit_record& rec) const {
+point3f MicrofacetReflection::get_albedo(const ray& r_in, const hit_record& rec) const {
   return(albedo->value(rec.u, rec.v, rec.p));
 }
 
@@ -487,7 +491,7 @@ bool glossy::scatter(const ray& r_in, const hit_record& hrec, scatter_record& sr
   return(true);
 }
 
-vec3f glossy::f(const ray& r_in, const hit_record& rec, const ray& scattered) const {
+point3f glossy::f(const ray& r_in, const hit_record& rec, const ray& scattered) const {
   onb uvw;
   if(!rec.has_bump) {
     uvw.build_from_w(rec.normal);
@@ -498,8 +502,8 @@ vec3f glossy::f(const ray& r_in, const hit_record& rec, const ray& scattered) co
   vec3f wo = unit_vector(uvw.world_to_local(scattered.direction()));
   
   auto pow5 = [](Float v) { return (v * v) * (v * v) * v; };
-  vec3f diffuse = (28.0f/(23.0f*M_PI)) * albedo->value(rec.u, rec.v, rec.p) *
-    (vec3f(1.0f) - Rs) *
+  point3f diffuse = (28.0f/(23.0f*M_PI)) * albedo->value(rec.u, rec.v, rec.p) *
+    (point3f(1.0f) + -Rs) *
     (1.0 - pow5(1 - 0.5f * AbsCosTheta(wi))) *
     (1.0 - pow5(1 - 0.5f * AbsCosTheta(wo)));
   vec3f wh = unit_vector(wi + wo);
@@ -510,19 +514,19 @@ vec3f glossy::f(const ray& r_in, const hit_record& rec, const ray& scattered) co
   if(cosine < 0) {
     cosine = 0;
   }
-  vec3f specular = distribution->D(wh) /
+  point3f specular = distribution->D(wh) /
     (4 * AbsDot(wi, wh) *
       std::fmax(AbsCosTheta(wi), AbsCosTheta(wo))) *
       SchlickFresnel(dot(wo, wh));
   return((diffuse + specular) * cosine);
 }
 
-vec3f glossy::SchlickFresnel(Float cosTheta) const {
+point3f glossy::SchlickFresnel(Float cosTheta) const {
   auto pow5 = [](Float v) { return (v * v) * (v * v) * v; };
-  return Rs + pow5(1 - cosTheta) * (vec3f(1.0f) - Rs);
+  return Rs + pow5(1 - cosTheta) * (point3f(1.0f) + -Rs);
 }
 
-vec3f glossy::get_albedo(const ray& r_in, const hit_record& rec) const {
+point3f glossy::get_albedo(const ray& r_in, const hit_record& rec) const {
   return(albedo->value(rec.u, rec.v, rec.p));
 }
 
@@ -540,13 +544,13 @@ std::array<Float, pMax + 1> hair::ComputeApPdf(Float cosThetaO, Float h) const {
   Float cosGammaT = SafeSqrt(1 - Sqr(sinGammaT));
   
   // Compute the transmittance _T_ of a single path through the cylinder
-  vec3f T = Exp(-sigma_a * (2 * cosGammaT / cosThetaT));
-  std::array<vec3f, pMax + 1> ap = Ap(cosThetaO, eta, h, T);
+  point3f T = Exp(-sigma_a * (2 * cosGammaT / cosThetaT));
+  std::array<point3f, pMax + 1> ap = Ap(cosThetaO, eta, h, T);
   
   // Compute $A_p$ PDF from individual $A_p$ terms
   std::array<Float, pMax + 1> apPdf;
   Float sumY = std::accumulate(ap.begin(), ap.end(), Float(0),
-                               [](Float s, const vec3f &ap) { return s + ap.y(); });
+                               [](Float s, const point3f &ap) { return s + ap.y(); });
   for (int i = 0; i <= pMax; ++i) {
     apPdf[i] = ap[i].y() / sumY;
   }
@@ -699,7 +703,7 @@ bool hair::scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec
 }
 
 
-vec3f hair::f(const ray& r_in, const hit_record& rec, const ray& scattered) const {
+point3f hair::f(const ray& r_in, const hit_record& rec, const ray& scattered) const {
   onb uvw(rec.dpdu, rec.dpdv, rec.normal);
   // vec3f wo = -unit_vector(uvw.world_to_local(r_in.direction()));
   vec3f wo = -unit_vector(uvw.world_to_local(r_in.direction()));
@@ -729,12 +733,12 @@ vec3f hair::f(const ray& r_in, const hit_record& rec, const ray& scattered) cons
   Float gammaT = SafeASin(sinGammaT);
   
   // Compute the transmittance _T_ of a single path through the cylinder
-  vec3f T = Exp(-sigma_a * (2 * cosGammaT / cosThetaT));
+  point3f T = Exp(-sigma_a * (2 * cosGammaT / cosThetaT));
   
   // Evaluate hair BSDF
   Float phi = phiI - phiO;
-  std::array<vec3f, pMax + 1> ap = Ap(cosThetaO, eta, h, T);
-  vec3f fsum(0.0);
+  std::array<point3f, pMax + 1> ap = Ap(cosThetaO, eta, h, T);
+  point3f fsum(0.0);
   for (int p = 0; p < pMax; ++p) {
     // Compute $\sin \thetao$ and $\cos \thetao$ terms accounting for scales
     Float sinThetaOp, cosThetaOp;

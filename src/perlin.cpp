@@ -24,20 +24,20 @@ int* perlin_generate_perm() {
   return(p);
 }
 
-vec3f* perlin_generate() {
+point3f* perlin_generate() {
 #ifdef RAY_REPRODUCE_PERLIN
   random_gen rng(1);
 #else
   random_gen rng;
 #endif
-  vec3f *p  = new vec3f[256];
+  point3f *p  = new point3f[256];
   for(int i = 0; i < 256; i++) {
-    p[i] = unit_vector(vec3f(-1.0f + 2*rng.unif_rand(),-1.0f + 2*rng.unif_rand(),-1.0f + 2*rng.unif_rand()));
+    p[i] = unit_vector(point3f(-1.0f + 2*rng.unif_rand(),-1.0f + 2*rng.unif_rand(),-1.0f + 2*rng.unif_rand()));
   }
   return(p);
 }
 
-vec3f *perlin::ranvec = perlin_generate();
+point3f *perlin::ranvec = perlin_generate();
 int *perlin::perm_x = perlin_generate_perm();
 int *perlin::perm_y = perlin_generate_perm();
 int *perlin::perm_z = perlin_generate_perm();

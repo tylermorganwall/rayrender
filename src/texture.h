@@ -3,23 +3,24 @@
 
 #include "perlin.h"
 #include "Rcpp.h"
+#include "point3.h"
 #include "mathinline.h"
 #include <memory>
 
 class texture {
 public: 
-  virtual vec3f value(Float u, Float v, const vec3f& p) const = 0;
+  virtual point3f value(Float u, Float v, const point3f& p) const = 0;
   virtual ~texture() {};
 };
 
 class constant_texture : public texture {
 public: 
   constant_texture() {}
-  constant_texture(vec3f c) : color(c) {}
-  virtual vec3f value(Float u, Float v, const vec3f& p) const {
+  constant_texture(point3f c) : color(c) {}
+  virtual point3f value(Float u, Float v, const point3f& p) const {
     return(color);
   }
-  vec3f color;
+  point3f color;
 };
 
 class checker_texture : public texture {
@@ -30,7 +31,7 @@ public:
     // if(odd) delete odd;
   }
   checker_texture(std::shared_ptr<texture> t0, std::shared_ptr<texture> t1, Float p) : even(t0), odd(t1), period(p) {}
-  virtual vec3f value(Float u, Float v, const vec3f& p) const {
+  virtual point3f value(Float u, Float v, const point3f& p) const {
     Float invperiod = 1.0/period;
     Float sinx  = sin(invperiod*p.x()*M_PI);
     sinx = sinx == 0 ? 1 : sinx;
@@ -52,21 +53,21 @@ public:
 class noise_texture : public texture {
 public:
   noise_texture() {}
-  noise_texture(Float sc, vec3f c, vec3f c2, Float ph, Float inten) : 
+  noise_texture(Float sc, point3f c, point3f c2, Float ph, Float inten) : 
     scale(sc), color(c), color2(c2), phase(ph), intensity(inten) {
     noise = new perlin();
   }
   ~noise_texture() {
     if(noise) delete noise;
   }
-  virtual vec3f value(Float u, Float v, const vec3f& p) const {
-    Float weight = 0.5*(1+sin(scale*p.y()  + intensity*noise->turb(scale * p) + phase));
+  virtual point3f value(Float u, Float v, const point3f& p) const {
+    Float weight = 0.5*(1+sin(scale*p.y()  + intensity*noise->turb(scale * vec3f(p)) + phase));
     return(color * (1-weight) + color2 * weight);
   }
   perlin *noise;
   Float scale;
-  vec3f color;
-  vec3f color2;
+  point3f color;
+  point3f color2;
   Float phase;
   Float intensity;
 };
@@ -74,7 +75,7 @@ public:
 class world_gradient_texture : public texture {
 public:
   world_gradient_texture() {}
-  world_gradient_texture(vec3f p1, vec3f p2, vec3f c1, vec3f c2, bool hsv2) : 
+  world_gradient_texture(point3f p1, point3f p2, point3f c1, point3f c2, bool hsv2) : 
     point1(p1)  {
     gamma_color1 = hsv2 ? RGBtoHSV(c1) : c1;
     gamma_color2 = hsv2 ? RGBtoHSV(c2) : c2;
@@ -83,14 +84,14 @@ public:
     hsv = hsv2;
   }
   ~world_gradient_texture() {}
-  virtual vec3f value(Float u, Float v, const vec3f& p) const {
+  virtual point3f value(Float u, Float v, const point3f& p) const {
     vec3f offsetp = p - point1;
     Float mix = clamp(dot(offsetp, dir)*inv_trans_length, 0, 1);
-    vec3f color = gamma_color1 * (1-mix) + mix * gamma_color2;
+    point3f color = gamma_color1 * (1-mix) + mix * gamma_color2;
     return(hsv ? HSVtoRGB(color) : color);
   }
-  vec3f point1;
-  vec3f gamma_color1, gamma_color2;
+  point3f point1;
+  point3f gamma_color1, gamma_color2;
   Float inv_trans_length;
   vec3f dir;
   bool hsv;
@@ -101,7 +102,7 @@ public:
   image_texture() {}
   image_texture(Float *pixels, int A, int B, int nn, Float repeatu, Float repeatv, Float intensity) : 
     data(pixels), nx(A), ny(B), channels(nn), repeatu(repeatu), repeatv(repeatv), intensity(intensity) {}
-  virtual vec3f value(Float u, Float v, const vec3f& p) const;
+  virtual point3f value(Float u, Float v, const point3f& p) const;
   Float *data;
   int nx, ny, channels;
   Float repeatu, repeatv;
@@ -112,11 +113,11 @@ public:
 class triangle_texture : public texture {
 public:
   triangle_texture() {}
-  triangle_texture(vec3f a, vec3f b, vec3f c) : a(a), b(b), c(c) {}
-  virtual vec3f value(Float u, Float v, const vec3f& p) const {
+  triangle_texture(point3f a, point3f b, point3f c) : a(a), b(b), c(c) {}
+  virtual point3f value(Float u, Float v, const point3f& p) const {
     return((1 - u - v) * a + u * b + v * c);
   };
-  vec3f a,b,c;
+  point3f a,b,c;
 };
 
 class triangle_image_texture : public texture {
@@ -130,7 +131,7 @@ public:
                          a_u(tex_u_a), a_v(tex_v_a), 
                          b_u(tex_u_b), b_v(tex_v_b), 
                          c_u(tex_u_c), c_v(tex_v_c) {}
-  virtual vec3f value(Float u, Float v, const vec3f& p) const;
+  virtual point3f value(Float u, Float v, const point3f& p) const;
   
   Float *data;
   int nx, ny, channels;
@@ -140,17 +141,17 @@ public:
 class gradient_texture : public texture {
 public: 
   gradient_texture() {}
-  gradient_texture(vec3f c1, vec3f c2, bool v, bool hsv2) : 
+  gradient_texture(point3f c1, point3f c2, bool v, bool hsv2) : 
     aligned_v(v) {
     gamma_color1 = hsv2 ? RGBtoHSV(c1) : c1;
     gamma_color2 = hsv2 ? RGBtoHSV(c2) : c2;
     hsv = hsv2;
   }
-  virtual vec3f value(Float u, Float v, const vec3f& p) const {
-    vec3f final_color = aligned_v ? gamma_color1 * (1-u) + u * gamma_color2 : gamma_color1 * (1-v) + v * gamma_color2;
+  virtual point3f value(Float u, Float v, const point3f& p) const {
+    point3f final_color = aligned_v ? gamma_color1 * (1-u) + u * gamma_color2 : gamma_color1 * (1-v) + v * gamma_color2;
     return(hsv ? HSVtoRGB(final_color) : final_color);
   }
-  vec3f gamma_color1, gamma_color2;
+  point3f gamma_color1, gamma_color2;
   bool aligned_v;
   bool hsv;
 };
@@ -164,8 +165,8 @@ public:
   }
   alpha_texture(Float *pixels, int A, int B, int nn, vec3f u, vec3f v) : 
                 data(pixels), nx(A), ny(B), channels(nn), u_vec(u), v_vec(v) {}
-  vec3f value(Float u, Float v, const vec3f& p) const;
-  Float channel_value(Float u, Float v, const vec3f& p) const;
+  point3f value(Float u, Float v, const point3f& p) const;
+  Float channel_value(Float u, Float v, const point3f& p) const;
   Float *data;
   int nx, ny, channels;
   vec3f u_vec, v_vec;
@@ -182,8 +183,8 @@ public:
   }
   bump_texture(Float *pixels, int A, int B, int nn, vec3f u, vec3f v, Float intensity) : 
     data(pixels), nx(A), ny(B), channels(nn), u_vec(u), v_vec(v), intensity(intensity) {}
-  vec3f value(Float u, Float v, const vec3f& p) const;
-  vec3f mesh_value(Float u, Float v, const vec3f& p) const;
+  point3f value(Float u, Float v, const point3f& p) const;
+  point3f mesh_value(Float u, Float v, const point3f& p) const;
   Float *data;
   int nx, ny, channels;
   vec3f u_vec, v_vec;

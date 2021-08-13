@@ -6,10 +6,11 @@
 #include "mathinline.h"
 #include <algorithm>
 #include <cmath>
+#include "point3.h"
 
 class ImplicitShape { 
   public: 
-    virtual float getDistance(const vec3f& from) const = 0; 
+    virtual float getDistance(const point3f& from) const = 0; 
     virtual bool bbox(Float t0, Float t1, aabb& box) const = 0; 
     virtual ~ImplicitShape() {} 
 }; 
@@ -18,7 +19,7 @@ class csg_sphere : public ImplicitShape {
   public: 
     csg_sphere(const vec3f& c, const float& r) : 
       center(c), radius(r) {} 
-    float getDistance(const vec3f& from) const { 
+    float getDistance(const point3f& from) const { 
       return((from - center).length() - radius); 
     } 
     virtual bool bbox(Float t0, Float t1, aabb& box) const {
@@ -31,12 +32,12 @@ class csg_sphere : public ImplicitShape {
 
 class csg_plane : public ImplicitShape { 
   public: 
-    csg_plane(const vec3f nn, const vec3f pp, Float width_x, Float width_z) : 
+    csg_plane(const vec3f nn, const point3f pp, Float width_x, Float width_z) : 
       n(nn), pointOnPlane(pp), width_x(width_x), width_z(width_z) {
       axis.build_from_w(n);
       axis.swap_yz();
     } 
-    float getDistance(const vec3f& from) const {
+    float getDistance(const point3f& from) const {
       Float dist   = dot(axis.v(),from - pointOnPlane);
       Float dist_x = dot(axis.u(),from - pointOnPlane);
       Float dist_z = dot(axis.w(),from - pointOnPlane);
@@ -51,35 +52,36 @@ class csg_plane : public ImplicitShape {
                  pointOnPlane + vec3f(width_x,0.1,width_z));
       return(true);
     }
-    vec3f n, pointOnPlane;
+    vec3f n;
+    point3f pointOnPlane;
     Float width_x, width_z;
     onb axis;
 }; 
 
 class csg_box : public ImplicitShape { 
   public: 
-    csg_box(const vec3f& c, vec3f width_) :  center(c), width(width_) {} 
-    Float getDistance(const vec3f& from_old) const {
-      vec3f from = from_old - center;
-      vec3f q = Abs(from) - width/2;
-      const static vec3f zeros(0,0,0);
+    csg_box(const point3f& c, point3f width_) :  center(c), width(width_) {} 
+    Float getDistance(const point3f& from_old) const {
+      point3f from = from_old + -center;
+      point3f q = Abs(from) + -width/2;
+      const static point3f zeros(0,0,0);
       return(Max(q, zeros).length() + 
              fmin(MaxComponent(q),0.0)); 
     } 
     virtual bool bbox(Float t0, Float t1, aabb& box) const {
-      box = aabb(center-Abs(width)/2, center+Abs(width)/2);
+      box = aabb(center + -Abs(width)/2, center + Abs(width)/2);
       return(true);
     }
-    vec3f center;
-    vec3f width; 
+    point3f center;
+    point3f width; 
 }; 
 
 class csg_rounded_box : public ImplicitShape { 
   public: 
     csg_rounded_box(const vec3f& c, vec3f width_, Float radius) :  center(c), width(width_), radius(radius){} 
-    float getDistance(const vec3f& from_old) const {
-      vec3f from = from_old - center;
-      vec3f q = Abs(from) - width/2;
+    float getDistance(const point3f& from_old) const {
+      vec3f from = from_old  - center;
+      vec3f q = Abs(from)  - width/2;
       const static vec3f zeros(0,0,0);
       return(Max(q, zeros).length() + 
              fmin(MaxComponent(q),0.0)-radius); 
@@ -88,7 +90,7 @@ class csg_rounded_box : public ImplicitShape {
       box = aabb(center-Abs(width)/2, center+Abs(width)/2);
       return(true);
     }
-    vec3f center;
+    point3f center;
     vec3f width; 
     Float radius;
 }; 
@@ -96,7 +98,7 @@ class csg_rounded_box : public ImplicitShape {
 class csg_list : public ImplicitShape { 
   public: 
     csg_list(std::vector<std::shared_ptr<ImplicitShape> > shapes) : shapes(shapes) {} 
-    float getDistance(const vec3f& from) const {
+    float getDistance(const point3f& from) const {
       float min_dist = INFINITY;
       float temp;
       for(const auto& shape: shapes) {
@@ -120,9 +122,9 @@ class csg_list : public ImplicitShape {
 
 class csg_torus : public ImplicitShape { 
   public: 
-    csg_torus(const vec3f& c, float ring_radius, float cross_radius) : center(c), 
+    csg_torus(const point3f& c, float ring_radius, float cross_radius) : center(c), 
       ring_radius(ring_radius), cross_radius(cross_radius) {} 
-    float getDistance(const vec3f& from_old) const {
+    float getDistance(const point3f& from_old) const {
       vec3f from = from_old - center;
       vec2f q = vec2f(std::sqrt(from.x()*from.x() + from.z()*from.z()) - ring_radius, from.y());
       return(q.length()-cross_radius);
@@ -132,7 +134,7 @@ class csg_torus : public ImplicitShape {
                  center+vec3f(ring_radius+cross_radius,cross_radius,ring_radius+cross_radius));
       return(true);
     }
-    vec3f center;
+    point3f center;
     float ring_radius;
     float cross_radius;
     
@@ -140,8 +142,8 @@ class csg_torus : public ImplicitShape {
 
 class csg_capsule : public ImplicitShape { 
   public: 
-    csg_capsule(vec3f start, vec3f end, Float radius) :  start(start), end(end), radius(radius){} 
-    float getDistance(const vec3f& from) const {
+    csg_capsule(point3f start, point3f end, Float radius) :  start(start), end(end), radius(radius){} 
+    float getDistance(const point3f& from) const {
       vec3f pa = from - start; 
       vec3f ba = end - start;
       float h = clamp( dot(pa,ba)/dot(ba,ba), 0.0, 1.0 );
@@ -153,19 +155,19 @@ class csg_capsule : public ImplicitShape {
       box = aabb(min-radius, max+radius);
       return(true);
     }
-    vec3f start, end; 
+    point3f start, end; 
     Float radius;
 }; 
 
 class csg_cylinder : public ImplicitShape { 
   public: 
-    csg_cylinder(vec3f start, vec3f end, Float radius, Float corner_radius) :  start(start), end(end), 
+    csg_cylinder(point3f start, point3f end, Float radius, Float corner_radius) :  start(start), end(end), 
       radius(radius), corner_radius(corner_radius) {
       ba = end - start;
       baba = dot(ba,ba);
       inv_baba = 1.0/baba;
     } 
-    float getDistance(const vec3f& from) const {
+    float getDistance(const point3f& from) const {
       vec3f pa = from - start; 
       float paba = dot(pa,ba);
       float x = (pa*baba-ba*paba).length() - radius*baba;
@@ -181,17 +183,18 @@ class csg_cylinder : public ImplicitShape {
       box = aabb(min-radius, max+radius);
       return(true);
     }
-    vec3f start, end, ba; 
+    point3f start, end;
+    vec3f ba; 
     Float radius, corner_radius, baba, inv_baba;
 }; 
 
 class csg_ellipsoid : public ImplicitShape { 
   public: 
-    csg_ellipsoid(const vec3f& c, vec3f axes) : center(c), axes(axes)  {
-      inv_axes = 1.0/axes;
+    csg_ellipsoid(const point3f& c, point3f axes) : center(c), axes(axes)  {
+      inv_axes = point3f(1.0/axes.x(),1.0/axes.y(),1.0/axes.z());
     } 
-    float getDistance(const vec3f& from_old) const {
-      vec3f from = from_old - center; 
+    float getDistance(const point3f& from_old) const {
+      point3f from = point3f(from_old - center); 
       float k0 = (from * inv_axes).length();
       float k1 = (from * (inv_axes*inv_axes)).length();
       return(k0 < 1.0 ? (k0 - 1.0) * MinComponent(axes) : k0*(k0-1.0)/k1);
@@ -200,14 +203,14 @@ class csg_ellipsoid : public ImplicitShape {
       box = aabb(center-axes, center+axes);
       return(true);
     }
-    vec3f center, axes, inv_axes; 
+    point3f center, axes, inv_axes; 
 }; 
 
 class csg_rounded_cone : public ImplicitShape { 
   public: 
-    csg_rounded_cone(vec3f start, vec3f end, Float r1, Float r2) :  
+    csg_rounded_cone(point3f start, point3f end, Float r1, Float r2) :  
       start(start), end(end), r1(r1), r2(r2) {} 
-    float getDistance(const vec3f& from) const {
+    float getDistance(const point3f& from) const {
       vec3f pa = from - start; 
       vec3f ba = end - start;
       float l2 = dot(ba,ba);
@@ -231,24 +234,24 @@ class csg_rounded_cone : public ImplicitShape {
       return((std::sqrt(x2*a2*il2)+y*rr)*il2 - r1);
     } 
     virtual bool bbox(Float t0, Float t1, aabb& box) const {
-      vec3f min = vec3f(ffmin(start.x(),end.x()),ffmin(start.y(),end.y()),ffmin(start.z(),end.z()));
-      vec3f max = vec3f(ffmax(start.x(),end.x()),ffmax(start.y(),end.y()),ffmax(start.z(),end.z()));
+      point3f min = point3f(ffmin(start.x(),end.x()),ffmin(start.y(),end.y()),ffmin(start.z(),end.z()));
+      point3f max = point3f(ffmax(start.x(),end.x()),ffmax(start.y(),end.y()),ffmax(start.z(),end.z()));
       box = aabb(min-r1-r2, max+r1+r2);
       return(true);
     }
-    vec3f start, end; 
+    point3f start, end; 
     Float r1, r2;
 }; 
 
 class csg_cone : public ImplicitShape { 
   public: 
-    csg_cone(vec3f start, vec3f end, Float radius) :  start(start), end(end), 
+    csg_cone(point3f start, point3f end, Float radius) :  start(start), end(end), 
       radius(radius){
       height = (end - start).length();
       axis.build_from_w(end - start);
       axis.swap_yz();
     } 
-    float getDistance(const vec3f& from_old) const {
+    float getDistance(const point3f& from_old) const {
       vec3f from_trans = axis.world_to_local(from_old - start);
       vec3f from = from_trans - vec3f(0,height,0);
       vec2f q = vec2f(radius,-height);
@@ -262,25 +265,25 @@ class csg_cone : public ImplicitShape {
       return(std::sqrt(d)*sgn(s));
     } 
     virtual bool bbox(Float t0, Float t1, aabb& box) const {
-      vec3f min = vec3f(ffmin(start.x(),end.x()),ffmin(start.y(),end.y()),ffmin(start.z(),end.z()));
-      vec3f max = vec3f(ffmax(start.x(),end.x()),ffmax(start.y(),end.y()),ffmax(start.z(),end.z()));
+      point3f min = point3f(ffmin(start.x(),end.x()),ffmin(start.y(),end.y()),ffmin(start.z(),end.z()));
+      point3f max = point3f(ffmax(start.x(),end.x()),ffmax(start.y(),end.y()),ffmax(start.z(),end.z()));
       box = aabb(min-radius, max+radius);
       return(true);
     }
-    vec3f start, end; 
+    point3f start, end; 
     Float radius, height;
     onb axis;
 }; 
 
 class csg_pyramid : public ImplicitShape { 
   public: 
-    csg_pyramid(const vec3f& c, float h, float base) : center_bottom(c), h(h), base(base) {
+    csg_pyramid(const point3f& c, float h, float base) : center_bottom(c), h(h), base(base) {
       base_inv = vec3f(1.0/base,1,1.0/base);
       m2 = h*h + 0.25;
       m2_inv = 1/m2;
       m2_inv_buff = 1 / (m2+0.25);
     } 
-    float getDistance(const vec3f& from_old) const {
+    float getDistance(const point3f& from_old) const {
       vec3f from = from_old - center_bottom;
       from = from * base_inv;
       from.e[0] = std::fabs(from.e[0]); 
@@ -304,19 +307,20 @@ class csg_pyramid : public ImplicitShape {
       box = aabb(center_bottom-vec3f(base,0,base), center_bottom+vec3f(base,h,base));
       return(true);
     }
-    vec3f center_bottom, base_inv;
+    point3f center_bottom;
+    vec3f base_inv;
     float h, base, m2, m2_inv, m2_inv_buff;
 }; 
 
 class csg_triangle : public ImplicitShape { 
   public: 
-    csg_triangle(vec3f v1,vec3f v2,vec3f v3) : a(v1), b(v2), c(v3) {
+    csg_triangle(point3f v1,point3f v2,point3f v3) : a(v1), b(v2), c(v3) {
       ba = b - a; 
       cb = c - b; 
       ac = a - c; 
       nor = cross( ba, ac );
     } 
-    float getDistance(const vec3f& from) const {
+    float getDistance(const point3f& from) const {
       vec3f pa = from - a;
       vec3f pb = from - b;
       vec3f pc = from - c;
@@ -330,27 +334,27 @@ class csg_triangle : public ImplicitShape {
               dot(nor,pa)*dot(nor,pa)/nor.squared_length() ));
     } 
     virtual bool bbox(Float t0, Float t1, aabb& box) const {
-      vec3f min = vec3f(ffmin(ffmin(a.x(),b.x()),c.x()),
+      point3f min = point3f(ffmin(ffmin(a.x(),b.x()),c.x()),
                       ffmin(ffmin(a.y(),b.y()),c.y()),
                       ffmin(ffmin(a.z(),b.z()),c.z()));
       
-      vec3f max = vec3f(ffmax(ffmax(a.x(),b.x()),c.x()),
+      point3f max = point3f(ffmax(ffmax(a.x(),b.x()),c.x()),
                       ffmax(ffmax(a.y(),b.y()),c.y()),
                       ffmax(ffmax(a.z(),b.z()),c.z()));
       box = Expand(aabb(min, max),0.01);
       return(true);
     }
-    vec3f a,b,c;
+    point3f a,b,c;
     vec3f ba, cb, ac, nor;
 }; 
 
 class csg_elongate : public ImplicitShape { 
   public: 
-    csg_elongate(std::shared_ptr<ImplicitShape> shape, vec3f center,vec3f elongate) : 
+    csg_elongate(std::shared_ptr<ImplicitShape> shape, point3f center,vec3f elongate) : 
       shape(shape),center(center), elongate(elongate) {} 
-    float getDistance(const vec3f& from_old) const {
+    float getDistance(const point3f& from_old) const {
       vec3f from = from_old - center;
-      vec3f q = from - clamp(from, -elongate, elongate);
+      point3f q = from - clamp(from, -elongate, elongate);
       return(shape->getDistance(q + center));
     } 
     virtual bool bbox(Float t0, Float t1, aabb& box) const {
@@ -359,19 +363,20 @@ class csg_elongate : public ImplicitShape {
       return(true);
     }
     std::shared_ptr<ImplicitShape> shape;
-    vec3f center, elongate;
+    point3f center;
+    vec3f elongate;
 }; 
 
 class csg_elongate_robust : public ImplicitShape { 
   public: 
-    csg_elongate_robust(std::shared_ptr<ImplicitShape> shape, vec3f center, vec3f elongate) : 
+    csg_elongate_robust(std::shared_ptr<ImplicitShape> shape, point3f center, vec3f elongate) : 
       shape(shape),center(center),elongate(elongate) {} 
-    float getDistance(const vec3f& from_old) const {
+    float getDistance(const point3f& from_old) const {
       vec3f from = from_old - center;
       const static vec3f zeros(0,0,0);
       const static vec3f inf(INFINITY,INFINITY,INFINITY);
       vec3f q = Abs(from)-elongate;
-      return(shape->getDistance(sgn(from) * clamp(q,zeros,inf) + center) + 
+      return(shape->getDistance(sgn(from) * clamp(q,zeros,inf) + vec3f(center)) + 
              std::fmin(MaxComponent(q),0.0));
     } 
     virtual bool bbox(Float t0, Float t1, aabb& box) const {
@@ -380,14 +385,15 @@ class csg_elongate_robust : public ImplicitShape {
       return(true);
     }
     std::shared_ptr<ImplicitShape> shape;
-    vec3f center, elongate;
+    point3f center;
+    vec3f elongate;
 }; 
 
 class csg_round : public ImplicitShape { 
   public: 
     csg_round(std::shared_ptr<ImplicitShape> shape, Float r) : 
       shape(shape),r(r) {} 
-    float getDistance(const vec3f& from) const {
+    float getDistance(const point3f& from) const {
       return(shape->getDistance(from) - r);
     } 
     virtual bool bbox(Float t0, Float t1, aabb& box) const {
@@ -403,7 +409,7 @@ class csg_onion : public ImplicitShape {
   public: 
     csg_onion(std::shared_ptr<ImplicitShape> shape, Float thickness) : 
     shape(shape),thickness(thickness) {} 
-    float getDistance(const vec3f& from) const {
+    float getDistance(const point3f& from) const {
       return(fabs(shape->getDistance(from)) - thickness);
     } 
     virtual bool bbox(Float t0, Float t1, aabb& box) const {
@@ -419,7 +425,7 @@ class csg_scale : public ImplicitShape {
   public: 
     csg_scale(std::shared_ptr<ImplicitShape> shape, Float scale) : 
       shape(shape),scale(scale) {} 
-    float getDistance(const vec3f& from) const {
+    float getDistance(const point3f& from) const {
       return(shape->getDistance(from/scale)*scale);
     } 
     virtual bool bbox(Float t0, Float t1, aabb& box) const {
@@ -441,14 +447,14 @@ class csg_rotate : public ImplicitShape {
       aabb box2;
       shape->bbox(0,0,box2); //Pre-compute rotated bbox
       vec3f corners[8];
-      corners[0] = axis.local_to_world(box2.min()- pivot_point) + pivot_point;
+      corners[0] = axis.local_to_world(vec3f(box2.min()) - pivot_point) + pivot_point;
       corners[1] = axis.local_to_world(vec3f(box2.min().x(), box2.min().y(), box2.max().z())- pivot_point) + pivot_point;
       corners[2] = axis.local_to_world(vec3f(box2.min().x(), box2.max().y(), box2.min().z())- pivot_point) + pivot_point;
       corners[3] = axis.local_to_world(vec3f(box2.max().x(), box2.min().y(), box2.min().z())- pivot_point) + pivot_point;
       corners[4] = axis.local_to_world(vec3f(box2.min().x(), box2.max().y(), box2.max().z())- pivot_point) + pivot_point;
       corners[5] = axis.local_to_world(vec3f(box2.max().x(), box2.min().y(), box2.max().z())- pivot_point) + pivot_point;
       corners[6] = axis.local_to_world(vec3f(box2.max().x(), box2.max().y(), box2.min().z())- pivot_point) + pivot_point;
-      corners[7] = axis.local_to_world(box2.max()- pivot_point) + pivot_point;
+      corners[7] = axis.local_to_world(vec3f(box2.max()) - pivot_point) + pivot_point;
       vec3f temp_min = corners[0];
       vec3f temp_max = corners[7];
       
@@ -472,14 +478,14 @@ class csg_rotate : public ImplicitShape {
       aabb box2;
       shape->bbox(0,0,box2); //Pre-compute rotated bbox
       vec3f corners[8];
-      corners[0] = axis.local_to_world(box2.min()- pivot_point) + pivot_point;
+      corners[0] = axis.local_to_world(vec3f(box2.min()) - pivot_point) + pivot_point;
       corners[1] = axis.local_to_world(vec3f(box2.min().x(), box2.min().y(), box2.max().z())- pivot_point) + pivot_point;
       corners[2] = axis.local_to_world(vec3f(box2.min().x(), box2.max().y(), box2.min().z())- pivot_point) + pivot_point;
       corners[3] = axis.local_to_world(vec3f(box2.max().x(), box2.min().y(), box2.min().z())- pivot_point) + pivot_point;
       corners[4] = axis.local_to_world(vec3f(box2.min().x(), box2.max().y(), box2.max().z())- pivot_point) + pivot_point;
       corners[5] = axis.local_to_world(vec3f(box2.max().x(), box2.min().y(), box2.max().z())- pivot_point) + pivot_point;
       corners[6] = axis.local_to_world(vec3f(box2.max().x(), box2.max().y(), box2.min().z())- pivot_point) + pivot_point;
-      corners[7] = axis.local_to_world(box2.max()- pivot_point) + pivot_point;
+      corners[7] = axis.local_to_world(vec3f(box2.max()) - pivot_point) + pivot_point;
       vec3f temp_min = corners[0];
       vec3f temp_max = corners[7];
       
@@ -494,15 +500,16 @@ class csg_rotate : public ImplicitShape {
       aabb new_box(temp_min,temp_max);
       box_cache = new_box;
     } 
-    float getDistance(const vec3f& from) const {
-      return(shape->getDistance(axis.world_to_local(from - pivot_point) + pivot_point));
+    float getDistance(const point3f& from) const {
+      return(shape->getDistance(axis.world_to_local(from - pivot_point) + vec3f(pivot_point)));
     } 
     virtual bool bbox(Float t0, Float t1, aabb& box) const {
       box = box_cache;
       return(true);
     }
     std::shared_ptr<ImplicitShape> shape;
-    vec3f pivot_point, up;
+    point3f pivot_point;
+    vec3f up;
     onb axis; 
     aabb box_cache;
 }; 
@@ -511,7 +518,7 @@ class csg_translate : public ImplicitShape {
   public: 
     csg_translate(std::shared_ptr<ImplicitShape> shape, vec3f translate) : 
       shape(shape),translate(translate) {} 
-    float getDistance(const vec3f& from) const {
+    float getDistance(const point3f& from) const {
       return(shape->getDistance(from - translate));
     } 
     virtual bool bbox(Float t0, Float t1, aabb& box) const {
@@ -569,7 +576,7 @@ class CSG : public ImplicitShape {
       const std::shared_ptr<ImplicitShape> s1, 
       const std::shared_ptr<ImplicitShape> s2, 
       Args&& ... args) : op(std::forward<Args>(args) ...), shape1(s1), shape2(s2) {} 
-    float getDistance(const vec3f& from) const { 
+    float getDistance(const point3f& from) const { 
       return(op(shape1->getDistance(from), shape2->getDistance(from))); 
     } 
     virtual bool bbox(Float t0, Float t1, aabb& box) const {
@@ -612,16 +619,16 @@ class csg: public hitable {
     virtual bool hit(const ray& r, Float tmin, Float tmax, hit_record& rec, Sampler* sampler);
     
     virtual bool bounding_box(Float t0, Float t1, aabb& box) const;
-    virtual Float pdf_value(const vec3f& o, const vec3f& v, random_gen& rng, Float time) {
+    virtual Float pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Float time) {
       return(1);
     }
-    virtual Float pdf_value(const vec3f& o, const vec3f& v, Sampler* sampler, Float time) {
+    virtual Float pdf_value(const point3f& o, const vec3f& v, Sampler* sampler, Float time) {
       return(1);
     }
-    virtual vec3f random(const vec3f& o, random_gen& rng, Float time) {
+    virtual vec3f random(const point3f& o, random_gen& rng, Float time) {
       return(vec3f(0,1,0));
     }
-    virtual vec3f random(const vec3f& o, Sampler* sampler, Float time) {
+    virtual vec3f random(const point3f& o, Sampler* sampler, Float time) {
       return(vec3f(0,1,0));
     }
     std::shared_ptr<material> mat_ptr;

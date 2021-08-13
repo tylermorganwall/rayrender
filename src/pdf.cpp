@@ -237,13 +237,13 @@ std::array<Float, pMax + 1> hair_pdf::ComputeApPdf(Float cosThetaO) const {
   Float cosGammaT = SafeSqrt(1 - Sqr(sinGammaT));
   
   // Compute the transmittance _T_ of a single path through the cylinder
-  vec3f T = Exp(-sigma_a * (2 * cosGammaT / cosThetaT));
-  std::array<vec3f, pMax + 1> ap = Ap(cosThetaO, eta, h, T);
+  point3f T = Exp(-sigma_a * (2 * cosGammaT / cosThetaT));
+  std::array<point3f, pMax + 1> ap = Ap(cosThetaO, eta, h, T);
   
   // Compute $A_p$ PDF from individual $A_p$ terms
   std::array<Float, pMax + 1> apPdf;
   Float sumY = std::accumulate(ap.begin(), ap.end(), Float(0),
-                               [](Float s, const vec3f &ap) { return s + ap.y(); });
+                               [](Float s, const point3f &ap) { return s + ap.y(); });
   for (int i = 0; i <= pMax; ++i) {
     apPdf[i] = ap[i].y() / sumY;
   }

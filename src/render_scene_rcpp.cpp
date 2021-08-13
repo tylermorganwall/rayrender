@@ -80,11 +80,7 @@ List render_scene_rcpp(List camera_info, List scene_info) {
   List order_rotation_list = as<List>(scene_info["order_rotation_list"]);
   float clampval = as<float>(scene_info["clampval"]);
   LogicalVector isgrouped = as<LogicalVector>(scene_info["isgrouped"]);
-  List group_pivot = as<List>(scene_info["group_pivot"]);
-  List group_translate = as<List>(scene_info["group_translate"]);
-  List group_angle = as<List>(scene_info["group_angle"]);
-  List group_order_rotation = as<List>(scene_info["group_order_rotation"]);
-  List group_scale = as<List>(scene_info["group_scale"]);
+  List group_transform = as<List>(scene_info["group_transform"]);
   LogicalVector tri_normal_bools = as<LogicalVector>(scene_info["tri_normal_bools"]);
   LogicalVector is_tri_color = as<LogicalVector>(scene_info["is_tri_color"]);
   List tri_color_vert = as<List>(scene_info["tri_color_vert"]);
@@ -234,8 +230,7 @@ List render_scene_rcpp(List camera_info, List scene_info) {
                                 bump_intensity,
                                 lightintensity, isflipped,
                                 isvolume, voldensity, order_rotation_list, 
-                                isgrouped, group_pivot, group_translate,
-                                group_angle, group_order_rotation, group_scale,
+                                isgrouped, group_transform,
                                 tri_normal_bools, is_tri_color, tri_color_vert, 
                                 fileinfo, filebasedir, 
                                 scale_list, sigmavec, glossyinfo,
@@ -327,8 +322,7 @@ List render_scene_rcpp(List camera_info, List scene_info) {
                                properties, velocity,
                                n, shutteropen, shutterclose,
                                angle, i, order_rotation_list,
-                               isgrouped, group_pivot, group_translate,
-                               group_angle, group_order_rotation, group_scale,
+                               isgrouped, group_transform,
                                fileinfo, filebasedir,
                                transformCache ,scale_list, 
                                mesh_list,bvh_type,  moving, rng));
