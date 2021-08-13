@@ -107,7 +107,6 @@ bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random
 
 bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) {
   ray r2 = (*WorldToObject)(r);
-  Rcpp::Rcout << r.origin() << " " << r2.origin() << "\n";
   vec3f oc = r2.origin() - center;
   Float a = dot(r2.direction(), r2.direction());
   Float b = 2 * dot(oc, r2.direction()); 
@@ -205,8 +204,11 @@ bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sample
 
 Float sphere::pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Float time) {
   hit_record rec;
-  if(this->hit(ray(o,v), 0.001, FLT_MAX, rec, rng)) {
-    Float cos_theta_max = sqrt(1 - radius * radius/(center - o).squared_length());
+  point3f o2 = (*WorldToObject)(o);
+  vec3f d = (*WorldToObject)(v);
+  
+  if(this->hit(ray(o2,d), 0.001, FLT_MAX, rec, rng)) {
+    Float cos_theta_max = sqrt(1 - radius * radius/(center - o2).squared_length());
     Float solid_angle = 2 * M_PI * (1-cos_theta_max);
     return(1/solid_angle);
   } else {
@@ -217,8 +219,11 @@ Float sphere::pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Float
 
 Float sphere::pdf_value(const point3f& o, const vec3f& v, Sampler* sampler, Float time) {
   hit_record rec;
-  if(this->hit(ray(o,v), 0.001, FLT_MAX, rec, sampler)) {
-    Float cos_theta_max = sqrt(1 - radius * radius/(center - o).squared_length());
+  point3f o2 = (*WorldToObject)(o);
+  vec3f d = (*WorldToObject)(v);
+  
+  if(this->hit(ray(o2,d), 0.001, FLT_MAX, rec, sampler)) {
+    Float cos_theta_max = sqrt(1 - radius * radius/(center - o2).squared_length());
     Float solid_angle = 2 * M_PI * (1-cos_theta_max);
     return(1/solid_angle);
   } else {
@@ -227,18 +232,18 @@ Float sphere::pdf_value(const point3f& o, const vec3f& v, Sampler* sampler, Floa
 }
 
 vec3f sphere::random(const point3f& o, random_gen& rng, Float time) {
-  vec3f direction = center - o;
+  vec3f direction = center - (*WorldToObject)(o);
   Float distance_squared = direction.squared_length();
-  onb uvw;
-  uvw.build_from_w(direction);
+  // onb uvw;
+  // uvw.build_from_w(direction);
   return((*ObjectToWorld)(rng.random_to_sphere(radius,distance_squared)));
 }
 
 vec3f sphere::random(const point3f& o, Sampler* sampler, Float time) {
-  vec3f direction = center - o;
+  vec3f direction = center - (*WorldToObject)(o);
   Float distance_squared = direction.squared_length();
-  onb uvw;
-  uvw.build_from_w(direction);
+  // onb uvw;
+  // uvw.build_from_w(direction);
   return((*ObjectToWorld)(rand_to_sphere(radius,distance_squared, sampler->Get2D())));
 }
 

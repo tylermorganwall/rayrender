@@ -431,9 +431,6 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
       GroupTransform;
     std::shared_ptr<Transform> ObjToWorld = transformCache.Lookup(TempM);
     std::shared_ptr<Transform> WorldToObj = transformCache.Lookup(TempM.GetInverseMatrix());
-    Rcpp::Rcout << *ObjToWorld << "\n""\n";
-    Rcpp::Rcout << *WorldToObj << "\n";
-    Rcpp::Rcout << (*WorldToObj)(vec3f(0,0,1)) << "\n";
     
     //Generate objects
     if (shape(i) == 1) {
@@ -442,7 +439,7 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
         entry = std::make_shared<moving_sphere>(vel * shutteropen, 
                                                 vel * shutterclose, 
                                                 shutteropen, shutterclose, radius(i), tex, alpha[i], bump[i],
-                                                ObjToWorld,WorldToObj, isflipped(i));
+                                                ObjToWorld, WorldToObj, isflipped(i));
       } else {
         entry = std::make_shared<sphere>(vec3f(0,0,0), radius(i), tex, alpha[i], bump[i],
                                          ObjToWorld, WorldToObj, isflipped(i));
@@ -743,11 +740,12 @@ std::shared_ptr<hitable> build_imp_sample(IntegerVector& type,
   }
   
   
-  Transform GroupTransform;
+  Transform GroupTransform(temp_group_transform);
   Transform TempM = 
     Scale(temp_scales[0], temp_scales[1], temp_scales[2]) *
-    rotation_order_matrix(temprotvec, order_rotation);
-  
+    rotation_order_matrix(temprotvec, order_rotation) * 
+    Translate(center) * 
+    GroupTransform;
   std::shared_ptr<Transform> ObjToWorld = transformCache.Lookup(TempM);
   std::shared_ptr<Transform> WorldToObj = transformCache.Lookup(TempM.GetInverseMatrix());
   

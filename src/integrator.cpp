@@ -74,7 +74,7 @@ void pathtracer(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_c
                    &rngs, fov, &samplers,
                    &cam, &ocam, &ecam, &world, &hlist,
                    clampval, max_depth, roulette_active] (int k) {
-                     MitchellFilter fil(vec2f(1.0),1./3.,1./3.);
+                     // MitchellFilter fil(vec2f(1.0),1./3.,1./3.);
                      int nx_begin = adaptive_pixel_sampler.pixel_chunks[k].startx;
                      int ny_begin = adaptive_pixel_sampler.pixel_chunks[k].starty;
                      int nx_end = adaptive_pixel_sampler.pixel_chunks[k].endx;
