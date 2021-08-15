@@ -85,8 +85,8 @@ bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
   if(bump_tex) {
     point3f bvbu = bump_tex->mesh_value(rec.u, rec.v, rec.p);
     rec.bump_normal = dot(r.direction(), normal) < 0 ? 
-    rec.normal +  bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv :
-      rec.normal -  bvbu.x() * rec.dpdu - bvbu.y() * rec.dpdv;
+    rec.normal + normal3f( bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv) :
+      rec.normal -  normal3f(bvbu.x() * rec.dpdu - bvbu.y() * rec.dpdv);
     rec.bump_normal.make_unit_vector();
     rec.has_bump = true;
   }
@@ -179,8 +179,8 @@ bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Samp
   if(bump_tex) {
     point3f bvbu = bump_tex->mesh_value(rec.u, rec.v, rec.p);
     rec.bump_normal = dot(r.direction(), normal) < 0 ? 
-    rec.normal +  bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv :
-      rec.normal -  bvbu.x() * rec.dpdu - bvbu.y() * rec.dpdv;
+    rec.normal + normal3f( bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv) :
+      rec.normal -  normal3f(bvbu.x() * rec.dpdu - bvbu.y() * rec.dpdv);
     rec.bump_normal.make_unit_vector();
     rec.has_bump = true;
   }

@@ -26,7 +26,7 @@ class aabb {
     aabb(point3f a) {
       bounds[0] = a;
       bounds[1] = a;
-      centroid = vec3f(a);
+      centroid = vec3f(a.x(),a.y(),a.z());
       diag = vec3f(0);
     }
     aabb(const vec3f& a, const vec3f& b) { 
@@ -38,7 +38,8 @@ class aabb {
     aabb(const point3f& a, const point3f& b) { 
       bounds[0] = point3f(fmin(a.x(), b.x()), fmin(a.y(), b.y()),fmin(a.z(), b.z()));
       bounds[1] = point3f(fmax(a.x(), b.x()), fmax(a.y(), b.y()),fmax(a.z(), b.z()));
-      centroid = vec3f(a + b)/2;
+      point3f temp = (a + b)/2;
+      centroid = vec3f(temp.x(),temp.y(),temp.z());
       diag = b - a;
     }
     aabb(const aabb &box) {

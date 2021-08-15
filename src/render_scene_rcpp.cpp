@@ -242,7 +242,7 @@ List render_scene_rcpp(List camera_info, List scene_info) {
     Rcpp::Rcout << elapsed.count() << " seconds" << "\n";
   }
   
-  //Calculate world bounds
+  //Calculate world bounds and ensure camera is inside infinite area light
   aabb bounding_box_world;
   worldbvh->bounding_box(0,0,bounding_box_world);
   Float world_radius = bounding_box_world.diag.length()/2 ;
@@ -253,6 +253,7 @@ List render_scene_rcpp(List camera_info, List scene_info) {
     Float ortho_diag = sqrt(pow(ortho_dimensions(0),2) + pow(ortho_dimensions(1),2));
     world_radius += ortho_diag;
   }
+  
   //Initialize background
   if(verbose && hasbackground) {
     Rcpp::Rcout << "Loading Environment Image: ";
@@ -262,6 +263,8 @@ List render_scene_rcpp(List camera_info, List scene_info) {
   std::shared_ptr<material> background_material = nullptr;
   std::shared_ptr<hitable> background_sphere = nullptr;
   Float *background_texture_data = nullptr;
+  
+  //Background rotation
   Matrix4x4 Identity;
   Transform BackgroundAngle(Identity);
   if(rotate_env != 0) {

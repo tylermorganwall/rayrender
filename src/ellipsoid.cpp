@@ -44,7 +44,7 @@ bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, ran
     rec.p = scaled_ray.point_at_parameter(rec.t) ;
     rec.normal = (rec.p - center);
     rec.mat_ptr = mat_ptr.get();
-    vec3f trans_normal = rec.normal *  inv_axes;
+    normal3f trans_normal = rec.normal *  normal3f(inv_axes);
     trans_normal.make_unit_vector();
     
     get_sphere_uv(trans_normal, rec.u, rec.v);
@@ -61,7 +61,7 @@ bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, ran
     
     if(bump_tex) {
       point3f bvbu = bump_tex->value(rec.u, rec.v, rec.p);
-      rec.bump_normal = rec.normal + bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv; 
+      rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
       rec.bump_normal *= inv_axes;
       rec.bump_normal.make_unit_vector();
     }
@@ -76,7 +76,7 @@ bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, ran
     rec.p = scaled_ray.point_at_parameter(rec.t) ;
     rec.normal = (rec.p - center);
     rec.mat_ptr = mat_ptr.get();
-    vec3f trans_normal = rec.normal *  inv_axes;
+    normal3f trans_normal = rec.normal *  normal3f(inv_axes);
     trans_normal.make_unit_vector();
     
     get_sphere_uv(trans_normal, rec.u, rec.v);
@@ -92,7 +92,7 @@ bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, ran
     
     if(bump_tex) {
       point3f bvbu = bump_tex->value(rec.u, rec.v, rec.p);
-      rec.bump_normal = rec.normal + bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv; 
+      rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
       rec.bump_normal *= inv_axes;
       rec.bump_normal.make_unit_vector();
     }
@@ -153,7 +153,7 @@ bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sam
     rec.p = scaled_ray.point_at_parameter(rec.t) ;
     rec.normal = (rec.p - center);
     rec.mat_ptr = mat_ptr.get();
-    vec3f trans_normal = rec.normal *  inv_axes;
+    normal3f trans_normal = rec.normal *  normal3f(inv_axes);
     trans_normal.make_unit_vector();
     
     get_sphere_uv(trans_normal, rec.u, rec.v);
@@ -170,7 +170,7 @@ bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sam
     
     if(bump_tex) {
       point3f bvbu = bump_tex->value(rec.u, rec.v, rec.p);
-      rec.bump_normal = rec.normal + bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv; 
+      rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
       rec.bump_normal *= inv_axes;
       rec.bump_normal.make_unit_vector();
     }
@@ -185,7 +185,7 @@ bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sam
     rec.p = scaled_ray.point_at_parameter(rec.t) ;
     rec.normal = (rec.p - center);
     rec.mat_ptr = mat_ptr.get();
-    vec3f trans_normal = rec.normal *  inv_axes;
+    normal3f trans_normal = rec.normal *  normal3f(inv_axes);
     trans_normal.make_unit_vector();
     
     get_sphere_uv(trans_normal, rec.u, rec.v);
@@ -201,7 +201,7 @@ bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sam
     
     if(bump_tex) {
       point3f bvbu = bump_tex->value(rec.u, rec.v, rec.p);
-      rec.bump_normal = rec.normal + bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv; 
+      rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
       rec.bump_normal *= inv_axes;
       rec.bump_normal.make_unit_vector();
     }

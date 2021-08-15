@@ -67,6 +67,14 @@ inline vec3f refract(const vec3f& uv, const vec3f& n, Float ni_over_nt) {
   return(r_out_parallel + r_out_perp);
 }
 
+inline vec3f refract(const vec3f& uv, const normal3f& n, Float ni_over_nt) {
+  vec3f n2 = vec3f(n.x(),n.y(),n.z());
+  Float cos_theta = dot(-uv, n2);
+  vec3f r_out_parallel =  ni_over_nt * (uv + cos_theta*n2);
+  vec3f r_out_perp = -sqrt(1.0 - r_out_parallel.squared_length()) * n2;
+  return(r_out_parallel + r_out_perp);
+}
+
 struct scatter_record {
   ray specular_ray;
   bool is_specular;

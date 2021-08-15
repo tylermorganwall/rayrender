@@ -200,7 +200,7 @@ class csg_ellipsoid : public ImplicitShape {
       return(k0 < 1.0 ? (k0 - 1.0) * MinComponent(axes) : k0*(k0-1.0)/k1);
     } 
     virtual bool bbox(Float t0, Float t1, aabb& box) const {
-      box = aabb(center-axes, center+axes);
+      box = aabb(center+-axes, center+axes);
       return(true);
     }
     point3f center, axes, inv_axes; 

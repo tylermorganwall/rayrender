@@ -34,7 +34,7 @@ bool InfiniteAreaLight::hit(const ray& r, Float t_min, Float t_max, hit_record& 
     rec.t = temp1;
     rec.p = r2.point_at_parameter(rec.t);
     rec.p *= radius / rec.p.length(); 
-    rec.normal = (rec.p - center) / radius;
+    rec.normal = -(rec.p - center) / radius;
     vec3f v2(-r2.direction().z(),r2.direction().y(),r2.direction().x());
     get_sphere_uv(unit_vector(v2), rec.u, rec.v);
     rec.u = 1 - rec.u;
@@ -44,10 +44,10 @@ bool InfiniteAreaLight::hit(const ray& r, Float t_min, Float t_max, hit_record& 
     return(true);
   }
   if(temp2 < t_max && temp2 > t_min) {
-    rec.t = temp1;
-    rec.p = r2.point_at_parameter(rec.t);
+    rec.t = temp2;
+    rec.p = r.point_at_parameter(rec.t);
     rec.p *= radius / rec.p.length(); 
-    rec.normal = (rec.p - center) / radius;
+    rec.normal = -(rec.p - center) / radius;
     vec3f v2(-r2.direction().z(),r2.direction().y(),r2.direction().x());
     get_sphere_uv(unit_vector(v2), rec.u, rec.v);
     rec.u = 1 - rec.u;
@@ -74,7 +74,7 @@ bool InfiniteAreaLight::hit(const ray& r, Float t_min, Float t_max, hit_record& 
     rec.t = temp1;
     rec.p = r2.point_at_parameter(rec.t);
     rec.p *= radius / rec.p.length(); 
-    rec.normal = (rec.p - center) / radius;
+    rec.normal = -(rec.p - center) / radius;
     vec3f v2(-r2.direction().z(),r2.direction().y(),r2.direction().x());
     get_sphere_uv(unit_vector(v2), rec.u, rec.v);
     rec.u = 1 - rec.u;
@@ -84,10 +84,10 @@ bool InfiniteAreaLight::hit(const ray& r, Float t_min, Float t_max, hit_record& 
     return(true);
   }
   if(temp2 < t_max && temp2 > t_min) {
-    rec.t = temp1;
+    rec.t = temp2;
     rec.p = r2.point_at_parameter(rec.t);
     rec.p *= radius / rec.p.length(); 
-    rec.normal = (rec.p - center) / radius;
+    rec.normal = -(rec.p - center) / radius;
     vec3f v2(-r2.direction().z(),r2.direction().y(),r2.direction().x());
     get_sphere_uv(unit_vector(v2), rec.u, rec.v);
     rec.u = 1 - rec.u;
@@ -101,11 +101,8 @@ bool InfiniteAreaLight::hit(const ray& r, Float t_min, Float t_max, hit_record& 
 
 Float InfiniteAreaLight::pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Float time) {
   hit_record rec;
-  point3f o2 = (*WorldToObject)(o);
-  vec3f d = (*WorldToObject)(v);
-  
-  rec.normal = (*ObjectToWorld)(rec.normal);
-  if(this->hit(ray(o2,d), 0.001, FLT_MAX, rec, rng)) {
+  if(this->hit(ray(o,v), 0.001, FLT_MAX, rec, rng)) {
+    vec3f d = (*WorldToObject)(v);
     vec3f v2(-d.z(),d.y(),d.x());
     get_sphere_uv(unit_vector(v2), rec.u, rec.v);
     rec.u = 1 - rec.u;
@@ -124,9 +121,8 @@ Float InfiniteAreaLight::pdf_value(const point3f& o, const vec3f& v, random_gen&
 
 Float InfiniteAreaLight::pdf_value(const point3f& o, const vec3f& v, Sampler* sampler, Float time) {
   hit_record rec;
-  point3f o2 = (*WorldToObject)(o);
-  vec3f d = (*WorldToObject)(v);
-  if(this->hit(ray(o,d), 0.001, FLT_MAX, rec, sampler)) {
+  if(this->hit(ray(o,v), 0.001, FLT_MAX, rec, sampler)) {
+    vec3f d = (*WorldToObject)(v);
     vec3f v2(-d.z(),d.y(),d.x());
     get_sphere_uv(unit_vector(v2), rec.u, rec.v);
     rec.u = 1 - rec.u;
@@ -141,7 +137,6 @@ Float InfiniteAreaLight::pdf_value(const point3f& o, const vec3f& v, Sampler* sa
     return(0);
   }
 }
-
 
 vec3f InfiniteAreaLight::random(const point3f& o, random_gen& rng, Float time) {
   vec2f u(rng.unif_rand(), rng.unif_rand());
@@ -175,6 +170,6 @@ vec3f InfiniteAreaLight::random(const point3f& o, Sampler* sampler, Float time) 
 
 
 bool InfiniteAreaLight::bounding_box(Float t0, Float t1, aabb& box) const {
-  box = (*ObjectToWorld)(aabb(center - vec3f(radius,radius,radius), center + vec3f(radius,radius,radius)));
+  box = (aabb(center - vec3f(radius,radius,radius), center + vec3f(radius,radius,radius)));
   return(true);
 }

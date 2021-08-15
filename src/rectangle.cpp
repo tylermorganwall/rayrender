@@ -35,7 +35,7 @@ bool xy_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
   if(bump_tex) {
     point3f bvbu = bump_tex->value(u,v, rec.p);
     bvbu.e[0] *= flipped ? -1 : 1;
-    rec.bump_normal = rec.normal + bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv; 
+    rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
     rec.bump_normal.make_unit_vector();
   }
   
@@ -80,7 +80,7 @@ bool xy_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampl
   if(bump_tex) {
     point3f bvbu = bump_tex->value(u,v, rec.p);
     bvbu.e[0] *= flipped ? -1 : 1;
-    rec.bump_normal = rec.normal + bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv; 
+    rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
     rec.bump_normal.make_unit_vector();
   }
   
@@ -155,7 +155,7 @@ bool xz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
   if(bump_tex) {
     point3f bvbu = bump_tex->value(u,v, rec.p);
     bvbu.e[0] *= flipped ? -1 : 1;
-    rec.bump_normal = rec.normal + bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv; 
+    rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
     rec.bump_normal.make_unit_vector();
   }
   
@@ -202,7 +202,7 @@ bool xz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampl
   if(bump_tex) {
     point3f bvbu = bump_tex->value(u,v, rec.p);
     bvbu.e[0] *= flipped ? -1 : 1;
-    rec.bump_normal = rec.normal + bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv; 
+    rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
     rec.bump_normal.make_unit_vector();
   }
   
@@ -247,7 +247,7 @@ bool yz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
   if(bump_tex) {
     point3f bvbu = bump_tex->value(u,v, rec.p);
     bvbu.e[0] *= flipped ? -1 : 1;
-    rec.bump_normal = rec.normal + bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv; 
+    rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
     rec.bump_normal.make_unit_vector();
   }
   
@@ -293,7 +293,7 @@ bool yz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampl
   if(bump_tex) {
     point3f bvbu = bump_tex->value(u,v, rec.p);
     bvbu.e[0] *= flipped ? -1 : 1;
-    rec.bump_normal = rec.normal + bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv; 
+    rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
     rec.bump_normal.make_unit_vector();
   }
   

@@ -37,7 +37,7 @@ inline vec3f calculate_normals(const ray& r, hitable *world, random_gen &rng) {
   hit_record hrec;
   if(world->hit(r, 0.001, FLT_MAX, hrec, rng)) {
     hrec.normal.make_unit_vector();
-    return((vec3f(1,1,1) + hrec.normal)/2);
+    return((vec3f(1,1,1) + vec3f(hrec.normal.x(),hrec.normal.y(),hrec.normal.z()))/2);
   } else {
     return(vec3f(0,0,0));
   }
@@ -102,7 +102,7 @@ inline point3f quick_render(const ray& r, hitable *world, random_gen &rng, vec3f
       if(srec.is_specular) { 
         return(point3f(1,1,1));
       }
-      vec3f normal = hrec.has_bump ? hrec.bump_normal : hrec.normal;
+      normal3f normal = hrec.has_bump ? hrec.bump_normal : hrec.normal;
       vec3f R = Reflect(lightdir, hrec.normal); 
       return(hrec.mat_ptr->get_albedo(r2, hrec) * (dot(normal, lightdir)+1)/2 + 
              std::pow(std::max(0.f, dot(R, -unit_vector(r.direction()))), n));

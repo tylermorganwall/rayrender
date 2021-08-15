@@ -7,6 +7,7 @@
 #include "vec3.h"
 #include "vec2.h"
 #include "point3.h"
+#include "normal.h"
 #include <array>
 
 static const Float mpi_over_180 = M_PI/180;
@@ -96,6 +97,20 @@ inline vec3f rand_to_sphere(Float radius, Float distance_squared, vec2f u) {
   return(vec3f(x,y,z));
 }
 
+inline vec3f SphericalDirection(Float sinTheta, 
+                                   Float cosTheta, Float phi) {
+  return vec3f(sinTheta * std::cos(phi), 
+                  sinTheta * std::sin(phi),
+                  cosTheta);
+}
+
+inline vec3f SphericalDirection(Float sinTheta, Float cosTheta, 
+                                   Float phi, const vec3f &x, const vec3f &y,
+                                   const vec3f &z) {
+  return sinTheta * std::cos(phi) * x +
+    sinTheta * std::sin(phi) * y + cosTheta * z;
+}
+
 
 
 // template<class T>
@@ -136,6 +151,26 @@ inline vec3f clamp(const vec3f& c, Float clamplow, Float clamphigh) {
   return(temp);
 }
 
+inline point3f clamp_point(const point3f& c, Float clamplow, Float clamphigh) {
+  point3f temp = c;
+  if(c.e[0] > clamphigh) {
+    temp.e[0] = clamphigh;
+  } else if(c[0] < clamplow) {
+    temp.e[0] = clamplow;
+  }
+  if(c.e[1] > clamphigh) {
+    temp.e[1] = clamphigh;
+  } else if(c[1] < clamplow) {
+    temp.e[1] = clamplow;
+  }
+  if(c.e[2] > clamphigh) {
+    temp.e[2] = clamphigh;
+  } else if(c[2] < clamplow) {
+    temp.e[2] = clamplow;
+  }
+  return(temp);
+}
+
 inline Float clamp(const Float& c, Float clamplow, Float clamphigh) {
   if(c > clamphigh) {
     return(clamphigh);
@@ -158,6 +193,7 @@ inline point3f clamp(point3f input, point3f low, point3f high) {
               clamp(input.z(), low.z(), high.z()));
   return(final);
 }
+
 
 inline Float CosTheta(const vec3f &w) { return w.z(); }
 inline Float Cos2Theta(const vec3f &w) { return w.z() * w.z(); }
@@ -253,12 +289,6 @@ inline Float SphericalTheta(const vec3f &v) {
   return(acosf(clamp(v.z(), -1.0f, 1.0f)));
 }
 
-inline vec3f SphericalDirection(Float sinTheta, Float cosTheta, Float phi) {
-  return(vec3f(sinTheta * std::cos(phi),
-              sinTheta * std::sin(phi),
-              cosTheta));
-}
-
 inline bool SameHemisphere(const vec3f &w, const vec3f &wp) {
   return(w.z() * wp.z() > 0);
 }
@@ -341,8 +371,9 @@ inline Float Erf(Float x) {
   return sign * y;
 }
 
-inline vec3f Reflect(const vec3f &wo, const vec3f &n) {
-  return(-wo + 2 * dot(wo, n) * n);
+inline vec3f Reflect(const vec3f &wo, const normal3f &n) {
+  normal3f n2 = 2 * dot(wo, n) * n;
+  return(-wo + vec3f(n2.x(),n2.y(),n2.z()));
 }
 
 inline uint32_t FloatToBits(float f) {
@@ -361,14 +392,14 @@ constexpr Float origin() { return 1.0f / 32.0f; }
 constexpr Float float_scale() { return 1.0f / 65536.0f; }
 constexpr Float int_scale() { return 256.0f; }
 
-inline point3f offset_ray(const vec3f p, const vec3f n) {
+inline point3f offset_ray(const vec3f p, const normal3f n) {
   int of_i[3] = {(int)(int_scale() * n.x()), (int)(int_scale() * n.y()), (int)(int_scale() * n.z())};
-  vec3f p_i(int_to_float(float_to_int(p.x())+((p.x() < 0) ? -of_i[0] : of_i[0])),
-           int_to_float(float_to_int(p.y())+((p.y() < 0) ? -of_i[1] : of_i[1])),
-           int_to_float(float_to_int(p.z())+((p.z() < 0) ? -of_i[2] : of_i[2])));
+  point3f p_i(int_to_float(float_to_int(p.x())+((p.x() < 0) ? -of_i[0] : of_i[0])),
+              int_to_float(float_to_int(p.y())+((p.y() < 0) ? -of_i[1] : of_i[1])),
+              int_to_float(float_to_int(p.z())+((p.z() < 0) ? -of_i[2] : of_i[2])));
   return(point3f(std::fabs(p.x()) < origin() ? p.x() + float_scale()*n.x() : p_i.x(),
-              std::fabs(p.y()) < origin() ? p.y() + float_scale()*n.y() : p_i.y(),
-              std::fabs(p.z()) < origin() ? p.z() + float_scale()*n.z() : p_i.z()));
+                 std::fabs(p.y()) < origin() ? p.y() + float_scale()*n.y() : p_i.y(),
+                 std::fabs(p.z()) < origin() ? p.z() + float_scale()*n.z() : p_i.z()));
 }
 
 inline Float Log2(Float x) {

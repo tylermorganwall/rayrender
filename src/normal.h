@@ -14,17 +14,20 @@ typedef float Float;
 #endif
 
 #include "vec3.h"
+#include "point3.h"
 
 template <typename T> class normal3 {
 public:
   normal3() {}
   normal3(T e0, T e1, T e2) {e[0] = e0; e[1] = e1; e[2] = e2;}
   normal3(T e0) {e[0] = e0; e[1] = e0; e[2] = e0;}
-  template <typename U> explicit normal3(const vec3<U> &p) { 
-    e[0] = x((T)p.x());
-    e[1] = y((T)p.y());
-    e[2] = z((T)p.z());
+  template <typename U> normal3<T>(const vec3<U> &p) { 
+    e[0] = (T)p.x();
+    e[1] = (T)p.y();
+    e[2] = (T)p.z();
   }
+  
+  
   inline T x() const { return e[0]; }
   inline T y() const { return e[1]; }
   inline T z() const { return e[2]; }
@@ -33,6 +36,7 @@ public:
   inline T b() const { return e[2]; }
   
   inline const normal3<T>& operator+() const { return *this; }
+  
   inline normal3<T> operator-() const { return normal3<T>(-e[0], -e[1], -e[2]); }
   inline T operator[](int i) const { return e[i]; }
   inline T& operator[](int i) { return e[i]; }
@@ -159,6 +163,14 @@ inline normal3<T> cross(const normal3<T> &v1, const normal3<T> &v2) {
                  DifferenceOfProducts(v1.z(), v2.x(), v1.x(), v2.z()),
                  DifferenceOfProducts(v1.x(), v2.y(), v1.y(), v2.x())));
 }
+
+template<typename T> 
+inline normal3<T> cross(const vec3<T> &v1, const normal3<T> &v2) {
+  return(normal3<T>(DifferenceOfProducts(v1.y(), v2.z(), v1.z(), v2.y()),
+                    DifferenceOfProducts(v1.z(), v2.x(), v1.x(), v2.z()),
+                    DifferenceOfProducts(v1.x(), v2.y(), v1.y(), v2.x())));
+}
+
 
 template<typename T> 
 inline normal3<T>& normal3<T>::operator+=(const normal3<T> &v) {

@@ -47,7 +47,7 @@ point3f lambertian::get_albedo(const ray& r_in, const hit_record& rec) const {
 //
 
 bool metal::scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng) {
-  vec3f normal = !hrec.has_bump ? hrec.normal : hrec.bump_normal;
+  normal3f normal = !hrec.has_bump ? hrec.normal : hrec.bump_normal;
   vec3f wi = -unit_vector(r_in.direction());
   vec3f reflected = Reflect(wi,unit_vector(normal));
   Float cosine = AbsDot(unit_vector(reflected), unit_vector(normal));
@@ -63,7 +63,7 @@ bool metal::scatter(const ray& r_in, const hit_record& hrec, scatter_record& sre
   return(true);
 }
 bool metal::scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler) {
-  vec3f normal = !hrec.has_bump ? hrec.normal : hrec.bump_normal;
+  normal3f normal = !hrec.has_bump ? hrec.normal : hrec.bump_normal;
   vec3f wi = -unit_vector(r_in.direction());
   vec3f reflected = Reflect(wi,unit_vector(normal));
   Float cosine = AbsDot(unit_vector(reflected), unit_vector(normal));
@@ -89,10 +89,10 @@ point3f metal::get_albedo(const ray& r_in, const hit_record& rec) const {
 
 bool dielectric::scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng) {
   srec.is_specular = true;
-  vec3f outward_normal;
-  vec3f normal = !hrec.has_bump ? hrec.normal : hrec.bump_normal;
+  normal3f outward_normal;
+  normal3f normal = !hrec.has_bump ? hrec.normal : hrec.bump_normal;
   
-  vec3f reflected = reflect(r_in.direction(), normal);
+  vec3f reflected = Reflect(r_in.direction(), normal);
   Float ni_over_nt;
   srec.attenuation = albedo;
   Float current_ref_idx = 1.0;
@@ -189,10 +189,10 @@ bool dielectric::scatter(const ray& r_in, const hit_record& hrec, scatter_record
 
 bool dielectric::scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler) {
   srec.is_specular = true;
-  vec3f outward_normal;
-  vec3f normal = !hrec.has_bump ? hrec.normal : hrec.bump_normal;
+  normal3f outward_normal;
+  normal3f normal = !hrec.has_bump ? hrec.normal : hrec.bump_normal;
   
-  vec3f reflected = reflect(r_in.direction(), normal);
+  vec3f reflected = Reflect(r_in.direction(), normal);
   Float ni_over_nt;
   srec.attenuation = albedo;
   Float current_ref_idx = 1.0;

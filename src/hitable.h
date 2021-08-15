@@ -15,6 +15,7 @@ class hitable;
 
 
 void get_sphere_uv(const vec3f& p, Float& u, Float& v);
+void get_sphere_uv(const normal3f& p, Float& u, Float& v);
 
 struct hit_record {
   point3f p; //PBRT: In Interaction
@@ -24,11 +25,11 @@ struct hit_record {
 #ifdef DEBUGBVH
   Float bvh_nodes;
 #endif
-  vec3f normal; //PBRT: In interaction
+  normal3f normal; //PBRT: In interaction
   vec3f dpdu, dpdv; //PBRT: In SurfaceInteraction
   vec3f pError; //PBRT: In Interaction
   vec3f wo; //PBRT: In Interaction, negative ray direction
-  vec3f bump_normal; 
+  normal3f bump_normal; 
   bool has_bump; 
   const hitable* hitable = nullptr; //PBRT: In SurfaceInteraction, const Shape *shape
   material* mat_ptr; //PBRT: In SurfaceInteraction as bsdf or bssrdf

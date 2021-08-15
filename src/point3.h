@@ -14,6 +14,7 @@ typedef float Float;
 #endif
 
 #include "vec3.h" 
+#include "normal.h"
 
 template <typename T> class point3 {
 public:
@@ -21,12 +22,7 @@ public:
   point3(T e0, T e1, T e2) {e[0] = e0; e[1] = e1; e[2] = e2;}
   point3(vec3<T> e1) {e[0] = e1.x(); e[1] = e1.y(); e[2] = e1.z();}
   point3(T e0) {e[0] = e0; e[1] = e0; e[2] = e0;}
-  template <typename U> explicit point3(const point3<U> &p) { 
-    e[0] = x((T)p.x());
-    e[1] = y((T)p.y());
-    e[2] = z((T)p.z());
-  }
-  template <typename U> explicit operator vec3<U>() const {
+  template <typename U> operator vec3<U>() const {
     return vec3<U>(x(), y(), z());
   }
   point3<T> operator+(const vec3<T> &v) const {

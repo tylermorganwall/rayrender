@@ -61,7 +61,7 @@ public:
     if(noise) delete noise;
   }
   virtual point3f value(Float u, Float v, const point3f& p) const {
-    Float weight = 0.5*(1+sin(scale*p.y()  + intensity*noise->turb(scale * vec3f(p)) + phase));
+    Float weight = 0.5*(1+sin(scale*p.y()  + intensity*noise->turb(scale * vec3f(p.x(),p.y(),p.z())) + phase));
     return(color * (1-weight) + color2 * weight);
   }
   perlin *noise;

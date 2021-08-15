@@ -150,19 +150,10 @@ inline normal3<T> Transform::operator()(const normal3<T> &n) const {
 }
 
 inline ray Transform::operator()(const ray &r) const {
-  vec3f oError;
-  // point3f o = (*this)(r.origin(), &oError);
   point3f o = (*this)(r.origin());
   vec3f d = (*this)(r.direction());
-  // Offset ray origin to edge of error bounds and compute _tMax_
-  // Float lengthSquared = d.squared_length();
   Float tMax = r.tMax;
-  // if (lengthSquared > 0) {
-  //   Float dt = dot(Abs(d), oError) / lengthSquared;
-  //   o += d * dt;
-  //   // tMax -= dt;
-  // }
-  return ray(o, d, r.pri_stack, tMax, r.time());
+  return ray(o, d, r.pri_stack, r.time(), tMax);
 }
 
 // inline rayDifferential Transform::operator()(const rayDifferential &r) const {
@@ -294,7 +285,7 @@ inline ray Transform::operator()(const ray &r, vec3f *oError,
     o += d * dt;
     //        tMax -= dt;
   }
-  return ray(o, d, r.pri_stack, tMax, r.time());
+  return ray(o, d, r.pri_stack, r.time(),tMax);
 }
 
 inline ray Transform::operator()(const ray &r, const vec3f &oErrorIn,
@@ -309,7 +300,7 @@ inline ray Transform::operator()(const ray &r, const vec3f &oErrorIn,
     o += d * dt;
     //        tMax -= dt;
   }
-  return ray(o, d, r.pri_stack, tMax, r.time());
+  return ray(o, d, r.pri_stack, r.time(), tMax);
 }
 
 // AnimatedTransform Declarations

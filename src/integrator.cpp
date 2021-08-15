@@ -1,5 +1,7 @@
 #include "integrator.h"
 
+// #define DEBUG
+
 void pathtracer(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_channel,
                 Float min_variance, size_t min_adaptive_size, 
                 Rcpp::NumericMatrix& routput, Rcpp::NumericMatrix& goutput, Rcpp::NumericMatrix& boutput,
@@ -16,6 +18,9 @@ void pathtracer(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_c
     pb_sampler.set_total(ny);
     pb.set_total(ns);
   }
+#ifdef DEBUG
+  std::remove("rays.txt");
+#endif
   Rcpp::NumericMatrix routput2(nx,ny);
   Rcpp::NumericMatrix goutput2(nx,ny);
   Rcpp::NumericMatrix boutput2(nx,ny);
@@ -99,9 +104,9 @@ void pathtracer(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_c
                          }
                          r.pri_stack = mat_stack;
                          
-                         point3f col = clamp(de_nan(color(r, &world, &hlist, max_depth, 
+                         point3f col = clamp_point(de_nan(color(r, &world, &hlist, max_depth, 
                                                        roulette_active, rngs[index], samplers[index].get())),
-                                                       0, clampval);
+                                             0, clampval);
                          // col = col * fil.Evaluate(u2);
                          mat_stack->clear();
                          adaptive_pixel_sampler.add_color_main(i, j, col);

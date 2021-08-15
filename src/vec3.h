@@ -238,6 +238,8 @@ inline vec3<T> Abs(const vec3<T> &v) {
 }
 
 
+
+
 typedef vec3<Float> vec3f;
 typedef vec3<int>   vec3i;
 

@@ -6,6 +6,7 @@
 #include "pcg/pcg_random.hpp"
 #undef extended
 #include "vec3.h"
+#include "point3.h"
 
 #ifdef RAY_FLOAT_AS_DOUBLE
 static const Float OneMinusEpsilon = 0x1.fffffffffffffp-1;
