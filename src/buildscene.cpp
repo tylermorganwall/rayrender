@@ -424,11 +424,9 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
     }
     
     Transform GroupTransform(temp_group_transform);
-    Transform TempM = 
-      Scale(temp_scales[0], temp_scales[1], temp_scales[2]) *
+    Transform TempM = GroupTransform * Translate(center) *
       rotation_order_matrix(temprotvec, order_rotation) * 
-      Translate(center) * 
-      GroupTransform;
+      Scale(temp_scales[0], temp_scales[1], temp_scales[2]);
     std::shared_ptr<Transform> ObjToWorld = transformCache.Lookup(TempM);
     std::shared_ptr<Transform> WorldToObj = transformCache.Lookup(TempM.GetInverseMatrix());
     
@@ -741,11 +739,9 @@ std::shared_ptr<hitable> build_imp_sample(IntegerVector& type,
   
   
   Transform GroupTransform(temp_group_transform);
-  Transform TempM = 
-    Scale(temp_scales[0], temp_scales[1], temp_scales[2]) *
+  Transform TempM = GroupTransform * Translate(center) *
     rotation_order_matrix(temprotvec, order_rotation) * 
-    Translate(center) * 
-    GroupTransform;
+    Scale(temp_scales[0], temp_scales[1], temp_scales[2]);
   std::shared_ptr<Transform> ObjToWorld = transformCache.Lookup(TempM);
   std::shared_ptr<Transform> WorldToObj = transformCache.Lookup(TempM.GetInverseMatrix());
   

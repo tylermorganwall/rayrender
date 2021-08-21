@@ -175,7 +175,7 @@ tween = function(vals, n, ease = "cubic") {
 #' 
 generate_translation_matrix = function(delta) {
   m = matrix(c(1, 0, 0, delta[1], 0, 1, 0, delta[2], 0, 0, 1, delta[3], 0, 0, 0,
-              1),4,4)
+              1),4,4,byrow=T)
   return(m)
 }
 
@@ -221,7 +221,7 @@ RotateX = function(theta) {
   sinTheta = sinpi(theta/180)
   cosTheta = cospi(theta/180)
   M = matrix(c(1, 0, 0, 0, 0, cosTheta, -sinTheta, 0, 0, sinTheta, cosTheta, 0,
-              0, 0, 0, 1),4,4)
+              0, 0, 0, 1),4,4,byrow=T)
   return(M)
 }
 
@@ -237,7 +237,7 @@ RotateY = function(theta) {
   sinTheta = sinpi(theta/180)
   cosTheta = cospi(theta/180)
   M = matrix(c(cosTheta, 0, sinTheta, 0, 0, 1, 0, 0, -sinTheta, 0, cosTheta, 0,
-              0, 0, 0, 1),4,4)
+              0, 0, 0, 1),4,4,byrow=T)
   return(M)
 }
 

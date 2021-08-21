@@ -79,18 +79,17 @@ group_objects = function(scene, pivot_point=c(0,0,0), group_translate = c(0,0,0)
   }
   for(i in seq_len(nrow(scene))) {
     if(is.na(scene$group_transform[i])) {
-      scene$group_transform[i] = list(PivotTranslateStart %*%
-        Scale %*%
-        Rotation %*%
-        PivotTranslateEnd %*%
-        Translation)
+      scene$group_transform[i] = list(Translation %*% 
+                                      PivotTranslateEnd %*% 
+                                      Rotation %*% 
+                                      Scale %*% 
+                                      PivotTranslateStart)
     } else {
-      scene$group_transform[i] = list(scene$group_transform[i] %*% 
-        PivotTranslateStart %*%
-        Scale %*%
-        Rotation %*%
-        PivotTranslateEnd %*%
-        Translation)
+      scene$group_transform[i] = list(Translation %*% 
+                                      PivotTranslateEnd %*% 
+                                      Rotation %*% 
+                                      Scale %*% 
+                                      PivotTranslateStart %*% scene$group_transform[[i]])
     }
   }
   return(scene)
