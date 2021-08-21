@@ -7,6 +7,8 @@
 #include "vec3.h"
 #include "vec2.h"
 #include "point3.h"
+#include "point2.h"
+
 #include "normal.h"
 #include <array>
 
@@ -111,6 +113,25 @@ inline vec3f SphericalDirection(Float sinTheta, Float cosTheta,
     sinTheta * std::sin(phi) * y + cosTheta * z;
 }
 
+// 
+// point2f ConcentricSampleDisk(const point2f &u) {
+//   point2f uOffset = 2.f * u - vec2f(1, 1);
+//   
+//   if (uOffset.x() == 0 && uOffset.y() == 0) {
+//     return(point2f(0, 0));
+//   }
+//   
+//   Float theta, r;
+//   if (std::fabs(uOffset.x()) > std::fabs(uOffset.y())) {
+//     r = uOffset.x();
+//     theta = M_PI_4 * (uOffset.y() / uOffset.x());
+//   } else {
+//     r = uOffset.y();
+//     theta = M_PI_2 - M_PI_4 * (uOffset.x() / uOffset.y());
+//   }
+//   return(r * point2f(std::cos(theta), std::sin(theta)));
+//   
+// }
 
 
 // template<class T>

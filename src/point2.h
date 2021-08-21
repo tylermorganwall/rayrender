@@ -16,6 +16,8 @@ typedef float Float;
 #include "vec3.h"
 #include "point3.h"
 
+#include "vec2.h"
+
 template <typename T> class point2 {
 public:
   point2() {}
@@ -30,6 +32,7 @@ public:
   
   inline const point2<T>& operator+() const { return *this; }
   inline point2<T> operator-() const { return point2<T>(-e[0], -e[1]); }
+  
   inline T operator[](int i) const { return e[i]; }
   
   inline point2<T>& operator+=(const point2<T> &v2);
@@ -78,8 +81,8 @@ inline point2<T> operator-(const point2<T> &v1, const point2<T> &v2) {
 }
 
 template<typename T> 
-inline point2<T> operator*(const point2<T> &v1, const point2<T> &v2) {
-  return point2<T>(v1.e[0] * v2.e[0],v1.e[1] * v2.e[1]);
+inline point2<T> operator-(const point2<T> &v1, const vec2<T> &v2) {
+  return point2<T>(v1.e[0] - v2.e[0],v1.e[1] - v2.e[1]);
 }
 
 template<typename T> 

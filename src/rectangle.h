@@ -14,7 +14,9 @@ public:
             std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation) : 
     hitable(ObjectToWorld, WorldToObject, reverseOrientation), 
     x0(_x0), x1(_x1), y0(_y0), y1(_y1), k(_k), mp(mat), alpha_mask(alpha_mask),
-    bump_tex(bump_tex), flipped(flipped) {};
+    bump_tex(bump_tex), flipped(flipped) {
+    k_world = (*ObjectToWorld)(point3f(0,0,k)).z();
+  };
   ~xy_rect() {
     // delete bump_tex;
     // delete alpha_mask;
@@ -28,15 +30,15 @@ public:
   virtual Float pdf_value(const point3f& o, const vec3f& v, Sampler* sampler, Float time = 0);
   
   virtual vec3f random(const point3f& o, random_gen& rng, Float time = 0) {
-    point3f random_point = point3f(x0 + rng.unif_rand() * (x1 - x0), y0 + rng.unif_rand() * (y1-y0),k);
+    point3f random_point = (*ObjectToWorld)(point3f(x0 + rng.unif_rand() * (x1 - x0), y0 + rng.unif_rand() * (y1-y0),k));
     return(random_point - o);
   }
   virtual vec3f random(const point3f& o, Sampler* sampler, Float time = 0) {
     vec2f u = sampler->Get2D();
-    point3f random_point = point3f(x0 + u.x() * (x1 - x0), y0 + u.y() * (y1-y0),k);
+    point3f random_point = (*ObjectToWorld)(point3f(x0 + u.x() * (x1 - x0), y0 + u.y() * (y1-y0),k));
     return(random_point - o);
   }
-  Float x0, x1, y0, y1, k;
+  Float x0, x1, y0, y1, k, k_world;
   std::shared_ptr<material> mp;
   std::shared_ptr<alpha_texture> alpha_mask;
   std::shared_ptr<bump_texture> bump_tex;
@@ -53,13 +55,15 @@ public:
           std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation) : 
     hitable(ObjectToWorld, WorldToObject, reverseOrientation), 
   x0(_x0), x1(_x1), z0(_z0), z1(_z1), k(_k), mp(mat), alpha_mask(alpha_mask), 
-  bump_tex(bump_tex), flipped(flipped) {};
+  bump_tex(bump_tex), flipped(flipped) {
+    k_world = (*ObjectToWorld)(point3f(0,k,0)).y();
+  };
   ~xz_rect() {}
   virtual bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng);
   virtual bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler);
   
   virtual bool bounding_box(Float t0, Float t1, aabb& box) const {
-    box = aabb(vec3f(x0,k-0.001,z0), vec3f(x1,k+0.001,z1));
+    box = (*ObjectToWorld)(aabb(vec3f(x0,k-0.001,z0), vec3f(x1,k+0.001,z1)));
     return(true);
   }
   virtual Float pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Float time = 0) {
@@ -85,15 +89,15 @@ public:
     }
   }
   virtual vec3f random(const point3f& o, random_gen& rng, Float time = 0) {
-    point3f random_point = point3f(x0 + rng.unif_rand() * (x1 - x0), k, z0 + rng.unif_rand() * (z1-z0));
+    point3f random_point = (*ObjectToWorld)(point3f(x0 + rng.unif_rand() * (x1 - x0), k, z0 + rng.unif_rand() * (z1-z0)));
     return(random_point - o);
   }
   virtual vec3f random(const point3f& o, Sampler* sampler, Float time = 0) {
     vec2f u = sampler->Get2D();
-    point3f random_point = point3f(x0 + u.x() * (x1 - x0), k, z0 + u.y()  * (z1-z0));
+    point3f random_point = (*ObjectToWorld)(point3f(x0 + u.x() * (x1 - x0), k, z0 + u.y()  * (z1-z0)));
     return(random_point - o);
   }
-  Float x0, x1, z0, z1, k;
+  Float x0, x1, z0, z1, k, k_world;
   std::shared_ptr<material> mp;
   std::shared_ptr<alpha_texture> alpha_mask;
   std::shared_ptr<bump_texture> bump_tex;
@@ -109,7 +113,9 @@ public:
           std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation) : 
     hitable(ObjectToWorld, WorldToObject, reverseOrientation), 
   y0(_y0), y1(_y1), z0(_z0), z1(_z1), k(_k), mp(mat), alpha_mask(alpha_mask), 
-  bump_tex(bump_tex), flipped(flipped) {};
+  bump_tex(bump_tex), flipped(flipped) {
+    k_world = (*ObjectToWorld)(point3f(k,0,0)).x();
+  };
   ~yz_rect() {
     // delete bump_tex;
     // delete alpha_mask;
@@ -119,7 +125,7 @@ public:
   virtual bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler);
   
   virtual bool bounding_box(Float t0, Float t1, aabb& box) const {
-    box = aabb(vec3f(k-0.001,y0,z0), vec3f(k+0.001,y1,z1));
+    box = (*ObjectToWorld)(aabb(vec3f(k-0.001,y0,z0), vec3f(k+0.001,y1,z1)));
     return(true);
   }
   virtual Float pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Float time = 0) {
@@ -145,15 +151,15 @@ public:
     }
   }
   virtual vec3f random(const point3f& o, random_gen& rng, Float time = 0) {
-    point3f random_point = point3f(k, y0 + rng.unif_rand() * (y1 - y0), z0 + rng.unif_rand() * (z1-z0));
+    point3f random_point = (*ObjectToWorld)(point3f(k, y0 + rng.unif_rand() * (y1 - y0), z0 + rng.unif_rand() * (z1-z0)));
     return(random_point-o);
   }
   virtual vec3f random(const point3f& o, Sampler* sampler, Float time = 0) {
     vec2f u = sampler->Get2D();
-    point3f random_point = point3f(k, y0 + u.x() * (y1 - y0), z0 + u.y() * (z1-z0));
+    point3f random_point = (*ObjectToWorld)(point3f(k, y0 + u.x() * (y1 - y0), z0 + u.y() * (z1-z0)));
     return(random_point - o);
   }
-  Float y0, y1, z0, z1, k;
+  Float y0, y1, z0, z1, k, k_world;
   std::shared_ptr<material> mp;
   std::shared_ptr<alpha_texture> alpha_mask;
   std::shared_ptr<bump_texture> bump_tex;

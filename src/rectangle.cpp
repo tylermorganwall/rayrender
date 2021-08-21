@@ -1,12 +1,13 @@
 #include "rectangle.h"
 
 bool xy_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
-  Float t = (k-r.origin().z()) / r.direction().z();
+  ray r2 = (*WorldToObject)(r);
+  Float t = (k-r2.origin().z()) / r2.direction().z();
   if(t < t_min || t > t_max) {
     return(false);
   }
-  Float x = r.origin().x() + t*r.direction().x();
-  Float y = r.origin().y() + t*r.direction().y();
+  Float x = r2.origin().x() + t*r2.direction().x();
+  Float y = r2.origin().y() + t*r2.direction().y();
   if(x < x0 || x > x1 || y < y0 || y > y1) {
     return(false);
   }
@@ -19,7 +20,7 @@ bool xy_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
     if(alpha_mask->value(u, v, rec.p).x() < rng.unif_rand()) {
       return(false);
     }
-    rec.normal = dot(r.direction(),vec3f(0,0,1)) < 0 ? vec3f(0,0,1) : vec3f(0,0,-1);
+    rec.normal = dot(r2.direction(),vec3f(0,0,1)) < 0 ? vec3f(0,0,1) : vec3f(0,0,-1);
   } else {
     rec.normal = flipped ? vec3f(0,0,-1) : vec3f(0,0,1);
   }
@@ -37,22 +38,25 @@ bool xy_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
     bvbu.e[0] *= flipped ? -1 : 1;
     rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
     rec.bump_normal.make_unit_vector();
+    rec.bump_normal = (*ObjectToWorld)(rec.bump_normal);
   }
   
   rec.mat_ptr = mp.get();
   rec.p = r.point_at_parameter(t);
-  rec.p.e[2] = k;
-  
+  rec.p.e[2] = k_world;
+  rec.normal = (*ObjectToWorld)(rec.normal);
   return(true);
 }
 
 bool xy_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) {
-  Float t = (k-r.origin().z()) / r.direction().z();
+  ray r2 = (*WorldToObject)(r);
+  
+  Float t = (k-r2.origin().z()) / r2.direction().z();
   if(t < t_min || t > t_max) {
     return(false);
   }
-  Float x = r.origin().x() + t*r.direction().x();
-  Float y = r.origin().y() + t*r.direction().y();
+  Float x = r2.origin().x() + t*r2.direction().x();
+  Float y = r2.origin().y() + t*r2.direction().y();
   if(x < x0 || x > x1 || y < y0 || y > y1) {
     return(false);
   }
@@ -65,7 +69,7 @@ bool xy_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampl
     if(alpha_mask->value(u, v, rec.p).x() < sampler->Get1D()) {
       return(false);
     }
-    rec.normal = dot(r.direction(),vec3f(0,0,1)) < 0 ? vec3f(0,0,1) : vec3f(0,0,-1);
+    rec.normal = dot(r2.direction(),vec3f(0,0,1)) < 0 ? vec3f(0,0,1) : vec3f(0,0,-1);
   } else {
     rec.normal = flipped ? vec3f(0,0,-1) : vec3f(0,0,1);
   }
@@ -82,17 +86,19 @@ bool xy_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampl
     bvbu.e[0] *= flipped ? -1 : 1;
     rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
     rec.bump_normal.make_unit_vector();
+    rec.bump_normal = (*ObjectToWorld)(rec.bump_normal);
   }
   
   rec.mat_ptr = mp.get();
   rec.p = r.point_at_parameter(t);
-  rec.p.e[2] = k;
+  rec.p.e[2] = k_world;
+  rec.normal = (*ObjectToWorld)(rec.normal);
   
   return(true);
 }
 
 bool xy_rect::bounding_box(Float t0, Float t1, aabb& box) const {
-  box = aabb(vec3f(x0,y0,k-0.001), vec3f(x1,y1,k+0.001));
+  box = (*ObjectToWorld)(aabb(vec3f(x0,y0,k-0.001), vec3f(x1,y1,k+0.001)));
   return(true);
 }
 
@@ -121,12 +127,14 @@ Float xy_rect::pdf_value(const point3f& o, const vec3f& v, Sampler* sampler, Flo
 }
 
 bool xz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
-  Float t = (k-r.origin().y()) / r.direction().y();
+  ray r2 = (*WorldToObject)(r);
+  
+  Float t = (k-r2.origin().y()) / r2.direction().y();
   if(t < t_min || t > t_max) {
     return(false);
   }
-  Float x = r.origin().x() + t*r.direction().x();
-  Float z = r.origin().z() + t*r.direction().z();
+  Float x = r2.origin().x() + t*r2.direction().x();
+  Float z = r2.origin().z() + t*r2.direction().z();
   if(x < x0 || x > x1 || z < z0 || z > z1) {
     return(false);
   }
@@ -139,7 +147,7 @@ bool xz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
     if(alpha_mask->value(u, v, rec.p).x() < rng.unif_rand()) {
       return(false);
     }
-    rec.normal =  dot(r.direction(),vec3f(0,1,0)) < 0 ? vec3f(0,1,0) : vec3f(0,-1,0);
+    rec.normal =  dot(r2.direction(),vec3f(0,1,0)) < 0 ? vec3f(0,1,0) : vec3f(0,-1,0);
   } else {
     rec.normal =  flipped ? vec3f(0,-1,0) : vec3f(0,1,0);
   }
@@ -157,23 +165,26 @@ bool xz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
     bvbu.e[0] *= flipped ? -1 : 1;
     rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
     rec.bump_normal.make_unit_vector();
+    rec.bump_normal = (*ObjectToWorld)(rec.bump_normal);
   }
   
   rec.mat_ptr = mp.get();
   rec.p = r.point_at_parameter(t);
-  rec.p.e[1] = k;
-  
+  rec.p.e[1] = k_world;
+  rec.normal = (*ObjectToWorld)(rec.normal);
   return(true);
 }
 
 
 bool xz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) {
-  Float t = (k-r.origin().y()) / r.direction().y();
+  ray r2 = (*WorldToObject)(r);
+  
+  Float t = (k-r2.origin().y()) / r2.direction().y();
   if(t < t_min || t > t_max) {
     return(false);
   }
-  Float x = r.origin().x() + t*r.direction().x();
-  Float z = r.origin().z() + t*r.direction().z();
+  Float x = r2.origin().x() + t*r2.direction().x();
+  Float z = r2.origin().z() + t*r2.direction().z();
   if(x < x0 || x > x1 || z < z0 || z > z1) {
     return(false);
   }
@@ -186,7 +197,7 @@ bool xz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampl
     if(alpha_mask->value(u, v, rec.p).x() < sampler->Get1D()) {
       return(false);
     }
-    rec.normal =  dot(r.direction(),vec3f(0,1,0)) < 0 ? vec3f(0,1,0) : vec3f(0,-1,0);
+    rec.normal =  dot(r2.direction(),vec3f(0,1,0)) < 0 ? vec3f(0,1,0) : vec3f(0,-1,0);
   } else {
     rec.normal =  flipped ? vec3f(0,-1,0) : vec3f(0,1,0);
   }
@@ -204,22 +215,26 @@ bool xz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampl
     bvbu.e[0] *= flipped ? -1 : 1;
     rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
     rec.bump_normal.make_unit_vector();
+    rec.bump_normal = (*ObjectToWorld)(rec.bump_normal);
   }
   
   rec.mat_ptr = mp.get();
   rec.p = r.point_at_parameter(t);
-  rec.p.e[1] = k;
+  rec.p.e[1] = k_world;
+  rec.normal = (*ObjectToWorld)(rec.normal);
   
   return(true);
 }
 
 bool yz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
-  Float t = (k-r.origin().x()) / r.direction().x();
+  ray r2 = (*WorldToObject)(r);
+  
+  Float t = (k-r2.origin().x()) / r2.direction().x();
   if(t < t_min || t > t_max) {
     return(false);
   }
-  Float z = r.origin().z() + t*r.direction().z();
-  Float y = r.origin().y() + t*r.direction().y();
+  Float z = r2.origin().z() + t*r2.direction().z();
+  Float y = r2.origin().y() + t*r2.direction().y();
   if(z < z0 || z > z1 || y < y0 || y > y1) {
     return(false);
   }
@@ -232,7 +247,7 @@ bool yz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
     if(alpha_mask->value(u, v, rec.p).x() < rng.unif_rand()) {
       return(false);
     }
-    rec.normal =  dot(r.direction(),vec3f(1,0,0)) < 0 ? vec3f(1,0,0) : vec3f(-1,0,0);
+    rec.normal =  dot(r2.direction(),vec3f(1,0,0)) < 0 ? vec3f(1,0,0) : vec3f(-1,0,0);
   } else {
     rec.normal =  flipped ? vec3f(-1,0,0) : vec3f(1,0,0);
   }
@@ -249,23 +264,27 @@ bool yz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
     bvbu.e[0] *= flipped ? -1 : 1;
     rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
     rec.bump_normal.make_unit_vector();
+    rec.bump_normal = (*ObjectToWorld)(rec.bump_normal);
   }
   
   rec.mat_ptr = mp.get();
   rec.p = r.point_at_parameter(t);
-  rec.p.e[0] = k;
+  rec.p.e[0] = k_world;
+  rec.normal = (*ObjectToWorld)(rec.normal);
   
   return(true);
 }
 
 
 bool yz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) {
-  Float t = (k-r.origin().x()) / r.direction().x();
+  ray r2 = (*WorldToObject)(r);
+  
+  Float t = (k-r2.origin().x()) / r2.direction().x();
   if(t < t_min || t > t_max) {
     return(false);
   }
-  Float z = r.origin().z() + t*r.direction().z();
-  Float y = r.origin().y() + t*r.direction().y();
+  Float z = r2.origin().z() + t*r2.direction().z();
+  Float y = r2.origin().y() + t*r2.direction().y();
   if(z < z0 || z > z1 || y < y0 || y > y1) {
     return(false);
   }
@@ -278,7 +297,7 @@ bool yz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampl
     if(alpha_mask->value(u, v, rec.p).x() < sampler->Get1D()) {
       return(false);
     }
-    rec.normal =  dot(r.direction(),vec3f(1,0,0)) < 0 ? vec3f(1,0,0) : vec3f(-1,0,0);
+    rec.normal =  dot(r2.direction(),vec3f(1,0,0)) < 0 ? vec3f(1,0,0) : vec3f(-1,0,0);
   } else {
     rec.normal =  flipped ? vec3f(-1,0,0) : vec3f(1,0,0);
   }
@@ -295,11 +314,13 @@ bool yz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampl
     bvbu.e[0] *= flipped ? -1 : 1;
     rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
     rec.bump_normal.make_unit_vector();
+    rec.bump_normal = (*ObjectToWorld)(rec.bump_normal);
   }
   
   rec.mat_ptr = mp.get();
   rec.p = r.point_at_parameter(t);
-  rec.p.e[0] = k;
+  rec.p.e[0] = k_world;
+  rec.normal = (*ObjectToWorld)(rec.normal);
   
   return(true);
 }
