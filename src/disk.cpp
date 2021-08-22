@@ -2,23 +2,25 @@
 
 
 bool disk::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
+  ray r2 = (*WorldToObject)(r);
   vec3f n(0.0, 1.0, 0.0);
   // First we intersect with the plane containing the disk
-  Float t = -r.origin().y() / r.direction().y();
+  Float t = -r2.origin().y() / r2.direction().y();
   if(t < t_min || t > t_max) {
     return(false);
   }
-  Float x = r.origin().x() + t*r.direction().x();
-  Float z = r.origin().z() + t*r.direction().z();
+  Float x = r2.origin().x() + t*r2.direction().x();
+  Float z = r2.origin().z() + t*r2.direction().z();
   Float radHit2 = x*x + z*z;
   if(radHit2 >= radius * radius || radHit2 <= inner_radius * inner_radius) {
     return(false);
   }
   
   
-  point3f p = r.point_at_parameter(t);
+  point3f p = r2.point_at_parameter(t);
   p.e[1] = 0;
-  
+  rec.p = (*ObjectToWorld)(rec.p);
+
   Float u = p.x() / (2.0 * radius) + 0.5;
   Float v = p.z() / (2.0 * radius) + 0.5;
   u = 1 - u;
@@ -28,7 +30,7 @@ bool disk::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_g
     }
   }
   rec.p = p;
-  rec.normal = n;
+  rec.normal = (*ObjectToWorld)(n);
   rec.t = t;
   rec.mat_ptr = mat_ptr.get();
   rec.u = u;
@@ -43,6 +45,8 @@ bool disk::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_g
     point3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
     rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
     rec.bump_normal.make_unit_vector();
+    rec.bump_normal = (*ObjectToWorld)(rec.bump_normal);
+    
   }
   
   return(true);
@@ -50,22 +54,24 @@ bool disk::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_g
 
 
 bool disk::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) {
+  ray r2 = (*WorldToObject)(r);
   vec3f n(0.0, 1.0, 0.0);
   // First we intersect with the plane containing the disk
-  Float t = -r.origin().y() / r.direction().y();
+  Float t = -r2.origin().y() / r2.direction().y();
   if(t < t_min || t > t_max) {
     return(false);
   }
-  Float x = r.origin().x() + t*r.direction().x();
-  Float z = r.origin().z() + t*r.direction().z();
+  Float x = r2.origin().x() + t*r2.direction().x();
+  Float z = r2.origin().z() + t*r2.direction().z();
   Float radHit2 = x*x + z*z;
   if(radHit2 >= radius * radius || radHit2 <= inner_radius * inner_radius) {
     return(false);
   }
   
   
-  point3f p = r.point_at_parameter(t);
+  point3f p = r2.point_at_parameter(t);
   p.e[1] = 0;
+  rec.p = (*ObjectToWorld)(rec.p);
   
   Float u = p.x() / (2.0 * radius) + 0.5;
   Float v = p.z() / (2.0 * radius) + 0.5;
@@ -91,6 +97,7 @@ bool disk::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler*
     point3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
     rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
     rec.bump_normal.make_unit_vector();
+    rec.bump_normal = (*ObjectToWorld)(rec.bump_normal);
   }
   
   return(true);
@@ -127,7 +134,7 @@ vec3f disk::random(const point3f& o, random_gen& rng, Float time) {
   Float phi = 2 * M_PI * r1;
   Float x = ((radius - inner_radius) * r2 + inner_radius) * cos(phi);
   Float z = ((radius - inner_radius) * r2 + inner_radius) * sin(phi);
-  return(point3f(x,0,z)+center-o);
+  return((*ObjectToWorld)(point3f(x,0,z))+center-o);
 }
 
 vec3f disk::random(const point3f& o, Sampler* sampler, Float time) {
@@ -137,10 +144,10 @@ vec3f disk::random(const point3f& o, Sampler* sampler, Float time) {
   Float phi = 2 * M_PI * r1;
   Float x = ((radius - inner_radius) * r2 + inner_radius) * cos(phi);
   Float z = ((radius - inner_radius) * r2 + inner_radius) * sin(phi);
-  return(point3f(x,0,z)+center-o);
+  return((*ObjectToWorld)(point3f(x,0,z))+center-o);
 }
 
 bool disk::bounding_box(Float t0, Float t1, aabb& box) const {
-  box = aabb(-point3f(radius,0.001,radius), point3f(radius,0.001,radius));
+  box = (*ObjectToWorld)(aabb(-point3f(radius,0.001,radius), point3f(radius,0.001,radius)));
   return(true);
 }
