@@ -69,7 +69,7 @@ bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
   }
   // Use that to calculate normals
   if(normals_provided) {
-    vec3f normal_temp = w * na + u * nb + v * nc;
+    normal3f normal_temp = w * na + u * nb + v * nc;
     if(alpha_mask) {
       rec.normal = dot(r.direction(), normal_temp) < 0 ? normal_temp : -normal_temp;
     } else {
@@ -163,7 +163,7 @@ bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Samp
   }
   // Use that to calculate normals
   if(normals_provided) {
-    vec3f normal_temp = w * na + u * nb + v * nc;
+    normal3f normal_temp = w * na + u * nb + v * nc;
     if(alpha_mask) {
       rec.normal = dot(r.direction(), normal_temp) < 0 ? normal_temp : -normal_temp;
     } else {
@@ -190,11 +190,11 @@ bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Samp
 
 bool triangle::bounding_box(Float t0, Float t1, aabb& box) const {
   point3f min_v(fmin(fmin(a.x(), b.x()), c.x()), 
-             fmin(fmin(a.y(), b.y()), c.y()), 
-             fmin(fmin(a.z(), b.z()), c.z()));
+                fmin(fmin(a.y(), b.y()), c.y()), 
+                fmin(fmin(a.z(), b.z()), c.z()));
   point3f max_v(fmax(fmax(a.x(), b.x()), c.x()), 
-             fmax(fmax(a.y(), b.y()), c.y()), 
-             fmax(fmax(a.z(), b.z()), c.z()));
+                fmax(fmax(a.y(), b.y()), c.y()), 
+                fmax(fmax(a.z(), b.z()), c.z()));
   
   point3f difference = max_v + -min_v;
   

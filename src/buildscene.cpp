@@ -490,9 +490,9 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
         entry= std::make_shared<triangle>(vec3f(tempvector(prop_len+1),tempvector(prop_len+2),tempvector(prop_len+3)),
                             vec3f(tempvector(prop_len+4),tempvector(prop_len+5),tempvector(prop_len+6)),
                             vec3f(tempvector(prop_len+7),tempvector(prop_len+8),tempvector(prop_len+9)),
-                            vec3f(tempvector(prop_len+10),tempvector(prop_len+11),tempvector(prop_len+12)),
-                            vec3f(tempvector(prop_len+13),tempvector(prop_len+14),tempvector(prop_len+15)),
-                            vec3f(tempvector(prop_len+16),tempvector(prop_len+17),tempvector(prop_len+18)),
+                            normal3f(tempvector(prop_len+10),tempvector(prop_len+11),tempvector(prop_len+12)),
+                            normal3f(tempvector(prop_len+13),tempvector(prop_len+14),tempvector(prop_len+15)),
+                            normal3f(tempvector(prop_len+16),tempvector(prop_len+17),tempvector(prop_len+18)),
                             !is_shared_mat(i), //turn off if shared material (e.g. extruded polygon)
                             tex, alpha[i], bump[i],
                             ObjToWorld,WorldToObj, isflipped(i));

@@ -8,11 +8,12 @@
 class triangle : public hitable {
 public:
   triangle() {}
-  triangle(vec3f _a, vec3f _b, vec3f _c, bool _single, std::shared_ptr<material> mat, 
+  triangle(point3f _a, point3f _b, point3f _c, bool _single, std::shared_ptr<material> mat, 
            std::shared_ptr<alpha_texture> alpha_mask, std::shared_ptr<bump_texture> bump_tex,
              std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation) :
     hitable(ObjectToWorld, WorldToObject, reverseOrientation), 
-  a(_a), b(_b), c(_c), single(_single), mp(mat), alpha_mask(alpha_mask), bump_tex(bump_tex) {
+  a((*ObjectToWorld)(_a)), b((*ObjectToWorld)(_b)), c((*ObjectToWorld)(_c)), 
+  single(_single), mp(mat), alpha_mask(alpha_mask), bump_tex(bump_tex) {
     edge1 = b-a;
     edge2 = c-a;
     normal = cross(edge1, edge2);
@@ -20,11 +21,12 @@ public:
     normal.make_unit_vector();
     normals_provided = false;
   };
-  triangle(vec3f _a, vec3f _b, vec3f _c, vec3f _na, vec3f _nb, vec3f _nc, bool _single, 
+  triangle(point3f _a, point3f _b, point3f _c, normal3f _na, normal3f _nb, normal3f _nc, bool _single, 
            std::shared_ptr<material> mat, std::shared_ptr<alpha_texture> alpha_mask, std::shared_ptr<bump_texture> bump_tex,
            std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation) :
     hitable(ObjectToWorld, WorldToObject, reverseOrientation), 
-    a(_a), b(_b), c(_c), na(_na), nb(_nb), nc(_nc), single(_single), mp(mat), 
+    a((*ObjectToWorld)(_a)), b((*ObjectToWorld)(_b)), c((*ObjectToWorld)(_c)), 
+    na((*ObjectToWorld)(_na)), nb((*ObjectToWorld)(_nb)), nc((*ObjectToWorld)(_nc)), single(_single), mp(mat), 
     alpha_mask(alpha_mask), bump_tex(bump_tex) {
     edge1 = b-a;
     edge2 = c-a;
@@ -43,7 +45,8 @@ public:
   virtual vec3f random(const point3f& origin, Sampler* sampler, Float time = 0);
   
   vec3f normal;
-  vec3f a, b, c, na, nb, nc;
+  vec3f a, b, c;
+  normal3f na, nb, nc;
   vec3f edge1, edge2;
   Float area;
   bool normals_provided;
