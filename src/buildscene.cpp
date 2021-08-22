@@ -5,17 +5,17 @@ Transform rotation_order_matrix(NumericVector temprotvec, NumericVector order_ro
   for(int i = 0; i < 3; i++) {
     if(order_rotation(i) == 1) {
       if(temprotvec(0) != 0) {
-        M = M *  RotateX(temprotvec(0));
+        M = RotateX(temprotvec(0)) * M ;
       }
     }
     if(order_rotation(i) == 2) {
       if(temprotvec(1) != 0) {
-        M = M *  RotateY(temprotvec(1));
+        M = RotateY(temprotvec(1)) * M;
       }
     }
     if(order_rotation(i) == 3) {
       if(temprotvec(2) != 0) {
-        M = M *  RotateZ(temprotvec(2));
+        M = RotateZ(temprotvec(2)) * M;
       }
     }
   }

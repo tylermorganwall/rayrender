@@ -780,7 +780,7 @@ cylinder = function(x = 0, y = 0, z = 0, radius = 1, length = 1,
 #'   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
 #'                ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
 #' }
-segment = function(start = c(0, -1, 0), end = c(0, 1, 0), radius = 1, 
+segment = function(start = c(0, -1, 0), end = c(0, 1, 0), radius = 0.1, 
                    phi_min = 0, phi_max = 360, from_center = TRUE, direction = NA,
                    material = diffuse(), capped = TRUE, 
                    velocity = c(0, 0, 0), flipped = FALSE, scale = c(1,1,1)) {
@@ -810,7 +810,7 @@ segment = function(start = c(0, -1, 0), end = c(0, 1, 0), radius = 1,
   if(end[1] == start[1] && end[3] == start[3]) {
     theta = 0
   } else {
-    theta = atan2(-length_xy, (end[2]-start[2]))/pi*180
+    theta = atan2(length_xy, (end[2]-start[2]))/pi*180
   }
   fulllength = sqrt(sum((end-start)^2))
   angle = c(0, phi, theta)
@@ -829,6 +829,7 @@ segment = function(start = c(0, -1, 0), end = c(0, 1, 0), radius = 1,
                  flipped = flipped, fog = material$fog, fogdensity = material$fogdensity,
                  implicit_sample = material$implicit_sample,  sigma = material$sigma, glossyinfo = material$glossyinfo,
                  order_rotation = list(order_rotation),
+                 group_transform = list(NA),
                  tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale),
                  material_id = NA, csg_object = list(NA), mesh_info = list(NA)))
 }
