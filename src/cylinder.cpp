@@ -8,8 +8,10 @@ void cylinder::get_cylinder_uv(const point3f& p, Float& u, Float& v) {
 };
 
 bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
-  vec3f oc = r.origin() - point3f(0.0);
-  vec3f dir = r.direction();
+  ray r2 = (*WorldToObject)(r);
+  
+  vec3f oc = r2.origin() - point3f(0.0);
+  vec3f dir = r2.direction();
   dir.e[1] = 0;
   oc.e[1] = 0;
   Float a = dot(dir, dir);
@@ -22,7 +24,7 @@ bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
   bool is_hit = true;
   bool second_is_hit = true;
   if(alpha_mask) {
-    point3f temppoint = r.point_at_parameter(temp1);
+    point3f temppoint = r2.point_at_parameter(temp1);
     Float phi = atan2(temppoint.z(),temppoint.x());
     phi = phi < 0 ? phi + 2 * M_PI : phi;
     Float u;
@@ -37,7 +39,7 @@ bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
         is_hit = false;
       }
     }
-    temppoint = r.point_at_parameter(temp2);
+    temppoint = r2.point_at_parameter(temp2);
     phi = atan2(temppoint.z(),temppoint.x());
     phi = phi < 0 ? phi + 2 * M_PI : phi;
     if(temp2 < t_max && temp2 > t_min && 
@@ -54,7 +56,7 @@ bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
       } 
     }
   }
-  point3f temppoint = r.point_at_parameter(temp1);
+  point3f temppoint = r2.point_at_parameter(temp1);
   Float phi = atan2(temppoint.z(),temppoint.x());
   phi = phi < 0 ? phi + 2 * M_PI : phi;
   if(is_hit && temp1 < t_max && temp1 > t_min && 
@@ -79,22 +81,26 @@ bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
       rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
       rec.bump_normal.make_unit_vector();
       rec.bump_normal *= dot(temppoint, dir) > 0 ? -1 : 1;
+      rec.bump_normal = (*ObjectToWorld)(rec.bump_normal);
       
     }
+    rec.p = (*ObjectToWorld)(rec.p);
+    rec.normal = (*ObjectToWorld)(rec.normal);
+    
     rec.mat_ptr = mat_ptr.get();
     return(true);
   }
-  Float t_cyl = -(r.origin().y()-length/2) / r.direction().y();
-  Float t_cyl2 = -(r.origin().y()+length/2) / r.direction().y();
-  Float x = r.origin().x() + t_cyl*r.direction().x();
-  Float z = r.origin().z() + t_cyl*r.direction().z();
+  Float t_cyl = -(r2.origin().y()-length/2) / r2.direction().y();
+  Float t_cyl2 = -(r2.origin().y()+length/2) / r2.direction().y();
+  Float x = r2.origin().x() + t_cyl*r2.direction().x();
+  Float z = r2.origin().z() + t_cyl*r2.direction().z();
   
   Float phi2 = atan2(z,x);
   phi2 = phi2 < 0 ? phi2 + 2 * M_PI : phi2;
   Float radHit2 = x*x + z*z;
   if(has_caps && t_cyl < temp2 && t_cyl > t_min && t_cyl < t_max && t_cyl < t_cyl2 && 
      radHit2 <= radius * radius && phi2 <= phi_max && phi2 >= phi_min) {
-    point3f p = r.point_at_parameter(t_cyl);
+    point3f p = r2.point_at_parameter(t_cyl);
     p.e[1] = length/2;
     
     Float u = p.x() / (2.0 * radius) + 0.5;
@@ -118,18 +124,21 @@ bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
     if(bump_tex) {
       point3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
       rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv);
-      rec.bump_normal.make_unit_vector();
+      rec.bump_normal.make_unit_vector(); 
+      rec.bump_normal = (*ObjectToWorld)(rec.bump_normal);
     }
+    rec.p = (*ObjectToWorld)(rec.p);
+    rec.normal = (*ObjectToWorld)(rec.normal);
     return(true);
   }
-  Float x2 = r.origin().x() + t_cyl2*r.direction().x();
-  Float z2 = r.origin().z() + t_cyl2*r.direction().z();
+  Float x2 = r2.origin().x() + t_cyl2*r2.direction().x();
+  Float z2 = r2.origin().z() + t_cyl2*r2.direction().z();
   
   Float phi3 = atan2(z2,x2);
   phi3 = phi3 < 0 ? phi3 + 2 * M_PI : phi3;
   Float radHit3 = x2*x2 + z2*z2;
   if(has_caps && t_cyl2 < temp2 && t_cyl2 > t_min && t_cyl2 < t_max && radHit3 <= radius * radius && phi3 <= phi_max && phi3 >= phi_min) {
-    point3f p = r.point_at_parameter(t_cyl2);
+    point3f p = r2.point_at_parameter(t_cyl2);
     p.e[1] = -length/2;
     
     Float u = p.x() / (2.0 * radius) + 0.5;
@@ -154,10 +163,13 @@ bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
       point3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
       rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv);
       rec.bump_normal.make_unit_vector();
+      rec.bump_normal = (*ObjectToWorld)(rec.bump_normal);
     }
+    rec.p = (*ObjectToWorld)(rec.p);
+    rec.normal = (*ObjectToWorld)(rec.normal);
     return(true);
   }
-  temppoint = r.point_at_parameter(temp2);
+  temppoint = r2.point_at_parameter(temp2);
   phi = atan2(temppoint.z(),temppoint.x());
   phi = phi < 0 ? phi + 2 * M_PI : phi;
   if(second_is_hit && temp2 < t_max && temp2 > t_min && 
@@ -181,8 +193,10 @@ bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
       point3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
       rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
       rec.bump_normal.make_unit_vector();
+      rec.bump_normal = (*ObjectToWorld)(rec.bump_normal);
     }
-    
+    rec.p = (*ObjectToWorld)(rec.p);
+    rec.normal = (*ObjectToWorld)(rec.normal);
     rec.mat_ptr = mat_ptr.get();
     return(true);
   }
@@ -191,8 +205,10 @@ bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
 
 
 bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) {
-  vec3f oc = r.origin()-point3f(0.);
-  vec3f dir = r.direction();
+  ray r2 = (*WorldToObject)(r);
+  
+  vec3f oc = r2.origin()-point3f(0.);
+  vec3f dir = r2.direction();
   dir.e[1] = 0;
   oc.e[1] = 0;
   Float a = dot(dir, dir);
@@ -205,7 +221,7 @@ bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Samp
   bool is_hit = true;
   bool second_is_hit = true;
   if(alpha_mask) {
-    point3f temppoint = r.point_at_parameter(temp1);
+    point3f temppoint = r2.point_at_parameter(temp1);
     Float phi = atan2(temppoint.z(),temppoint.x());
     phi = phi < 0 ? phi + 2 * M_PI : phi;
     Float u;
@@ -220,7 +236,7 @@ bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Samp
         is_hit = false;
       }
     }
-    temppoint = r.point_at_parameter(temp2);
+    temppoint = r2.point_at_parameter(temp2);
     phi = atan2(temppoint.z(),temppoint.x());
     phi = phi < 0 ? phi + 2 * M_PI : phi;
     if(temp2 < t_max && temp2 > t_min && 
@@ -237,7 +253,7 @@ bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Samp
       } 
     }
   }
-  point3f temppoint = r.point_at_parameter(temp1);
+  point3f temppoint = r2.point_at_parameter(temp1);
   Float phi = atan2(temppoint.z(),temppoint.x());
   phi = phi < 0 ? phi + 2 * M_PI : phi;
   if(is_hit && temp1 < t_max && temp1 > t_min && 
@@ -262,22 +278,24 @@ bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Samp
       rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
       rec.bump_normal.make_unit_vector();
       rec.bump_normal *= dot(temppoint, dir) > 0 ? -1 : 1;
-      
+      rec.bump_normal = (*ObjectToWorld)(rec.bump_normal);
     }
+    rec.p = (*ObjectToWorld)(rec.p);
+    rec.normal = (*ObjectToWorld)(rec.normal);
     rec.mat_ptr = mat_ptr.get();
     return(true);
   }
-  Float t_cyl = -(r.origin().y()-length/2) / r.direction().y();
-  Float t_cyl2 = -(r.origin().y()+length/2) / r.direction().y();
-  Float x = r.origin().x() + t_cyl*r.direction().x();
-  Float z = r.origin().z() + t_cyl*r.direction().z();
+  Float t_cyl = -(r2.origin().y()-length/2) / r2.direction().y();
+  Float t_cyl2 = -(r2.origin().y()+length/2) / r2.direction().y();
+  Float x = r2.origin().x() + t_cyl*r2.direction().x();
+  Float z = r2.origin().z() + t_cyl*r2.direction().z();
   
   Float phi2 = atan2(z,x);
   phi2 = phi2 < 0 ? phi2 + 2 * M_PI : phi2;
   Float radHit2 = x*x + z*z;
   if(has_caps && t_cyl < temp2 && t_cyl > t_min && t_cyl < t_max && t_cyl < t_cyl2 && 
      radHit2 <= radius * radius && phi2 <= phi_max && phi2 >= phi_min) {
-    point3f p = r.point_at_parameter(t_cyl);
+    point3f p = r2.point_at_parameter(t_cyl);
     p.e[1] = length/2;
     
     Float u = p.x() / (2.0 * radius) + 0.5;
@@ -302,17 +320,20 @@ bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Samp
       point3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
       rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv);
       rec.bump_normal.make_unit_vector();
+      rec.bump_normal = (*ObjectToWorld)(rec.bump_normal);
     }
+    rec.p = (*ObjectToWorld)(rec.p);
+    rec.normal = (*ObjectToWorld)(rec.normal);
     return(true);
   }
-  Float x2 = r.origin().x() + t_cyl2*r.direction().x();
-  Float z2 = r.origin().z() + t_cyl2*r.direction().z();
+  Float x2 = r2.origin().x() + t_cyl2*r2.direction().x();
+  Float z2 = r2.origin().z() + t_cyl2*r2.direction().z();
   
   Float phi3 = atan2(z2,x2);
   phi3 = phi3 < 0 ? phi3 + 2 * M_PI : phi3;
   Float radHit3 = x2*x2 + z2*z2;
   if(has_caps && t_cyl2 < temp2 && t_cyl2 > t_min && t_cyl2 < t_max && radHit3 <= radius * radius && phi3 <= phi_max && phi3 >= phi_min) {
-    point3f p = r.point_at_parameter(t_cyl2);
+    point3f p = r2.point_at_parameter(t_cyl2);
     p.e[1] = -length/2;
     
     Float u = p.x() / (2.0 * radius) + 0.5;
@@ -337,10 +358,13 @@ bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Samp
       point3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
       rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv);
       rec.bump_normal.make_unit_vector();
+      rec.bump_normal = (*ObjectToWorld)(rec.bump_normal);
     }
+    rec.p = (*ObjectToWorld)(rec.p);
+    rec.normal = (*ObjectToWorld)(rec.normal);
     return(true);
   }
-  temppoint = r.point_at_parameter(temp2);
+  temppoint = r2.point_at_parameter(temp2);
   phi = atan2(temppoint.z(),temppoint.x());
   phi = phi < 0 ? phi + 2 * M_PI : phi;
   if(second_is_hit && temp2 < t_max && temp2 > t_min && 
@@ -364,8 +388,10 @@ bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Samp
       point3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
       rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
       rec.bump_normal.make_unit_vector();
+      rec.bump_normal = (*ObjectToWorld)(rec.bump_normal);
     }
-    
+    rec.p = (*ObjectToWorld)(rec.p);
+    rec.normal = (*ObjectToWorld)(rec.normal);
     rec.mat_ptr = mat_ptr.get();
     return(true);
   }
@@ -403,7 +429,7 @@ vec3f cylinder::random(const point3f& o, random_gen& rng, Float time) {
   Float phi = (phi_max - phi_min) * r1 + phi_min;
   Float x = radius * cos(phi);
   Float z = radius * sin(phi);
-  return(point3f(x,y1,z)-o);
+  return((*ObjectToWorld)(point3f(x,y1,z))-o);
 }
 
 vec3f cylinder::random(const point3f& o, Sampler* sampler, Float time) {
@@ -413,11 +439,11 @@ vec3f cylinder::random(const point3f& o, Sampler* sampler, Float time) {
   Float phi = (phi_max - phi_min) * r1 + phi_min;
   Float x = radius * cos(phi);
   Float z = radius * sin(phi);
-  return(point3f(x,y1,z)-o);
+  return((*ObjectToWorld)(point3f(x,y1,z))-o);
 }
 
 
 bool cylinder::bounding_box(Float t0, Float t1, aabb& box) const {
-  box = aabb(-vec3f(radius,length/2,radius), vec3f(radius,length/2,radius));
+  box = (*ObjectToWorld)(aabb(-vec3f(radius,length/2,radius), vec3f(radius,length/2,radius)));
   return(true);
 }
