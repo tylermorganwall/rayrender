@@ -15,7 +15,7 @@ public:
   virtual bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler);
   
   virtual bool bounding_box(Float t0, Float t1, aabb& box) const {
-    box = aabb(pmin, pmax);
+    box = (*ObjectToWorld)(aabb(pmin, pmax));
     return(true);
   }
   virtual Float pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Float time = 0) {

@@ -7,10 +7,11 @@
 group_objects(
   scene,
   pivot_point = c(0, 0, 0),
-  group_translate = c(0, 0, 0),
-  group_angle = c(0, 0, 0),
-  group_order_rotation = c(1, 2, 3),
-  group_scale = c(1, 1, 1)
+  translate = c(0, 0, 0),
+  angle = c(0, 0, 0),
+  order_rotation = c(1, 2, 3),
+  scale = c(1, 1, 1),
+  axis_rotation = NA
 )
 }
 \arguments{
@@ -19,15 +20,15 @@ group_objects(
 \item{pivot_point}{Defaults to the mean location of all the objects. 
 The point about which to pivot and move the group.}
 
-\item{group_translate}{Default `c(0,0,0)`. Vector indicating where to offset the group.}
+\item{translate}{Default `c(0,0,0)`. Vector indicating where to offset the group.}
 
-\item{group_angle}{Default `c(0,0,0)`. Angle of rotation around the x, y, and z axes, 
+\item{angle}{Default `c(0,0,0)`. Angle of rotation around the x, y, and z axes, 
 applied in the order specified in `order_rotation`.}
 
-\item{group_order_rotation}{Default `c(1,2,3)`. The order to apply the rotations, 
+\item{order_rotation}{Default `c(1,2,3)`. The order to apply the rotations, 
 referring to "x", "y", and "z".}
 
-\item{group_scale}{Default `c(1,1,1)`. Scaling factor for x, y, and z directions for all objects in group.}
+\item{scale}{Default `c(1,1,1)`. Scaling factor for x, y, and z directions for all objects in group.}
 }
 \value{
 Tibble of grouped object locations and properties.

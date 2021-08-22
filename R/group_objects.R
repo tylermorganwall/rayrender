@@ -5,12 +5,12 @@
 #' @param scene Tibble of pre-existing object locations and properties to group together.
 #' @param pivot_point Defaults to the mean location of all the objects. 
 #' The point about which to pivot and move the group.
-#' @param group_translate Default `c(0,0,0)`. Vector indicating where to offset the group.
-#' @param group_angle Default `c(0,0,0)`. Angle of rotation around the x, y, and z axes, 
+#' @param translate Default `c(0,0,0)`. Vector indicating where to offset the group.
+#' @param angle Default `c(0,0,0)`. Angle of rotation around the x, y, and z axes, 
 #' applied in the order specified in `order_rotation`.
-#' @param group_order_rotation Default `c(1,2,3)`. The order to apply the rotations, 
+#' @param order_rotation Default `c(1,2,3)`. The order to apply the rotations, 
 #' referring to "x", "y", and "z".
-#' @param group_scale Default `c(1,1,1)`. Scaling factor for x, y, and z directions for all objects in group.
+#' @param scale Default `c(1,1,1)`. Scaling factor for x, y, and z directions for all objects in group.
 #'
 #' @return Tibble of grouped object locations and properties.
 #' @export
@@ -54,28 +54,28 @@
 #' render_scene(scene4,lookfrom=c(278,278,-800),lookat = c(278,278,0), aperture=0,
 #'              samples=500, fov=50, parallel=TRUE, clamp_value=5)
 #' }
-group_objects = function(scene, pivot_point=c(0,0,0), group_translate = c(0,0,0),
-                         group_angle = c(0,0,0), group_order_rotation = c(1,2,3),
-                         group_scale = c(1,1,1), axis_rotation = NA) {
+group_objects = function(scene, pivot_point=c(0,0,0), translate = c(0,0,0),
+                         angle = c(0,0,0), order_rotation = c(1,2,3),
+                         scale = c(1,1,1), axis_rotation = NA) {
   if(missing(pivot_point)) {
     pivot_point = c(mean(scene$x), mean(scene$y), mean(scene$z))
   }
   stopifnot(length(pivot_point) == 3)
-  stopifnot(length(group_translate) == 3)
-  stopifnot(length(group_order_rotation) == 3)
+  stopifnot(length(translate) == 3)
+  stopifnot(length(order_rotation) == 3)
   
   PivotTranslateStart = generate_translation_matrix(-pivot_point)
-  Scale = diag(4) * c(group_scale,1)
+  Scale = diag(4) * c(scale,1)
   PivotTranslateEnd = generate_translation_matrix(pivot_point)
-  Translation = generate_translation_matrix(group_translate)
+  Translation = generate_translation_matrix(translate)
   if(any(is.na(axis_rotation))) {
-    stopifnot(length(group_angle) == 3)
-    Rotation = generate_rotation_matrix(group_angle,group_order_rotation)
+    stopifnot(length(angle) == 3)
+    Rotation = generate_rotation_matrix(angle,order_rotation)
   } else {
-    stopifnot(length(group_angle) == 1)
+    stopifnot(length(angle) == 1)
     stopifnot(length(axis_rotation) == 3)
     stopifnot(sum(axis_rotation*axis_rotation) > 0)
-    Rotation = RotateAxis(group_angle,axis_rotation)
+    Rotation = RotateAxis(angle,axis_rotation)
   }
   for(i in seq_len(nrow(scene))) {
     if(is.na(scene$group_transform[i])) {

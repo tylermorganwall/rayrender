@@ -2,9 +2,10 @@
 
 box::box(const vec3f& p0, const vec3f& p1, std::shared_ptr<material> ptr, 
          std::shared_ptr<alpha_texture> alpha_mask, std::shared_ptr<bump_texture> bump_tex,
-         std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation) {
-  pmin = p0;
-  pmax = p1;
+         std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation) :
+  hitable(ObjectToWorld, WorldToObject, reverseOrientation) {
+  pmin = (p0);
+  pmax = (p1);
   list.add(std::make_shared<xy_rect>(p0.x(), p1.x(), p0.y(), p1.y(), p1.z(), ptr, alpha_mask, bump_tex, false,
                                      ObjectToWorld, WorldToObject, false));
   list.add(std::make_shared<xy_rect>(p0.x(), p1.x(), p0.y(), p1.y(), p0.z(), ptr, alpha_mask, bump_tex, true,
