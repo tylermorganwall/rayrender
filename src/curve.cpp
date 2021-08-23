@@ -67,12 +67,13 @@ bool curve::bounding_box(Float t0, Float t1, aabb& box) const {
   box = surrounding_box(aabb(cpObj[0], cpObj[1]), aabb(cpObj[2], cpObj[3]));
   Float width[2] = {lerp(uMin, common->width[0], common->width[1]),
                     lerp(uMax, common->width[0], common->width[1])};
-  box = Expand(box, std::max(width[0], width[1]) * 0.5f);
+  box = (*ObjectToWorld)(Expand(box, std::max(width[0], width[1]) * 0.5f));
   return(true);
 }
 
 
 bool curve::hit(const ray& r, Float tmin, Float tmax, hit_record& rec, random_gen& rng) {
+  ray r2 = (*WorldToObject)(r);
   // Compute object-space control points for curve segment, cpObj
   vec3f cpObj[4];
   cpObj[0] = BlossomBezier(common->cpObj, uMin, uMin, uMin);
@@ -81,7 +82,7 @@ bool curve::hit(const ray& r, Float tmin, Float tmax, hit_record& rec, random_ge
   cpObj[3] = BlossomBezier(common->cpObj, uMax, uMax, uMax);
   
   // Project curve control points to plane perpendicular to ray
-  vec3f unit_dir = unit_vector(r.direction()); 
+  vec3f unit_dir = unit_vector(r2.direction()); 
   vec3f dx = cross(unit_dir, cpObj[3] - cpObj[0]);
   vec3f dy = cross(unit_dir, dx);
   if (dx.squared_length() == 0) {
@@ -99,8 +100,8 @@ bool curve::hit(const ray& r, Float tmin, Float tmax, hit_record& rec, random_ge
   }
   
   onb objectToRay(dx, dy, unit_dir); //Coordinate system must have ray parallel to z-axis
-  vec3f cp[4] = {objectToRay.world_to_local(cpObj[0] - vec3f(r.origin())), objectToRay.world_to_local(cpObj[1] - vec3f(r.origin())),
-                 objectToRay.world_to_local(cpObj[2] - vec3f(r.origin())), objectToRay.world_to_local(cpObj[3] - vec3f(r.origin()))};
+  vec3f cp[4] = {objectToRay.world_to_local(cpObj[0] - vec3f(r2.origin())), objectToRay.world_to_local(cpObj[1] - vec3f(r2.origin())),
+                 objectToRay.world_to_local(cpObj[2] - vec3f(r2.origin())), objectToRay.world_to_local(cpObj[3] - vec3f(r2.origin()))};
   
   // Before going any further, see if the ray's bounding box intersects
   // the curve's bounding box. We start with the y dimension, since the y
@@ -124,7 +125,7 @@ bool curve::hit(const ray& r, Float tmin, Float tmax, hit_record& rec, random_ge
   }
   
   // Check for non-overlap in z.
-  Float rayLength = r.direction().length();
+  Float rayLength = r2.direction().length();
   Float zMax = rayLength * tmax;
   if (std::max(std::max(cp[0].z(), cp[1].z()), std::max(cp[2].z(), cp[3].z())) +
       0.5f * maxWidth < 0 ||
@@ -163,6 +164,8 @@ bool curve::hit(const ray& r, Float tmin, Float tmax, hit_record& rec, random_ge
 
 
 bool curve::hit(const ray& r, Float tmin, Float tmax, hit_record& rec, Sampler* sampler) {
+  ray r2 = (*WorldToObject)(r);
+  
   // Compute object-space control points for curve segment, cpObj
   vec3f cpObj[4];
   cpObj[0] = BlossomBezier(common->cpObj, uMin, uMin, uMin);
@@ -171,7 +174,7 @@ bool curve::hit(const ray& r, Float tmin, Float tmax, hit_record& rec, Sampler* 
   cpObj[3] = BlossomBezier(common->cpObj, uMax, uMax, uMax);
   
   // Project curve control points to plane perpendicular to ray
-  vec3f unit_dir = unit_vector(r.direction()); 
+  vec3f unit_dir = unit_vector(r2.direction()); 
   vec3f dx = cross(unit_dir, cpObj[3] - cpObj[0]);
   vec3f dy = cross(unit_dir, dx);
   if (dx.squared_length() == 0) {
@@ -189,8 +192,8 @@ bool curve::hit(const ray& r, Float tmin, Float tmax, hit_record& rec, Sampler* 
   }
   
   onb objectToRay(dx, dy, unit_dir); //Coordinate system must have ray parallel to z-axis
-  vec3f cp[4] = {objectToRay.world_to_local(cpObj[0] - vec3f(r.origin())), objectToRay.world_to_local(cpObj[1] - vec3f(r.origin())),
-                objectToRay.world_to_local(cpObj[2] - vec3f(r.origin())), objectToRay.world_to_local(cpObj[3] - vec3f(r.origin()))};
+  vec3f cp[4] = {objectToRay.world_to_local(cpObj[0] - vec3f(r2.origin())), objectToRay.world_to_local(cpObj[1] - vec3f(r2.origin())),
+                objectToRay.world_to_local(cpObj[2] - vec3f(r2.origin())), objectToRay.world_to_local(cpObj[3] - vec3f(r2.origin()))};
   
   // Before going any further, see if the ray's bounding box intersects
   // the curve's bounding box. We start with the y dimension, since the y
@@ -214,7 +217,7 @@ bool curve::hit(const ray& r, Float tmin, Float tmax, hit_record& rec, Sampler* 
   }
   
   // Check for non-overlap in z.
-  Float rayLength = r.direction().length();
+  Float rayLength = r2.direction().length();
   Float zMax = rayLength * tmax;
   if (std::max(std::max(cp[0].z(), cp[1].z()), std::max(cp[2].z(), cp[3].z())) +
       0.5f * maxWidth < 0 ||
@@ -381,16 +384,21 @@ bool curve::recursiveIntersect(const ray& r, Float tmin, Float tmax, hit_record&
       Float sinTheta = std::sin(theta);
       Float cosTheta = std::cos(theta);
       //Rodrigues' rotation formula
+      rec.normal = (*ObjectToWorld)(rec.normal);
+      
       rec.normal = rec.normal * cosTheta + cross(unit_vector(rec.dpdu),rec.normal) * sinTheta;
       offset_scale = offset_scale * cosTheta;
     } else if (common->type == CurveType::Ribbon) {
       rec.dpdv = unit_vector(cross(nHit, rec.dpdu)) * hitWidth;
       rec.normal = !flipped_n ? nHit : -nHit;
+      rec.normal = (*ObjectToWorld)(rec.normal);
     } else if (common->type == CurveType::Flat) {
       //Compute curve dpdv for flat and cylinder curves
       //Assumes z-axis faces directly at viewer
       rec.dpdv = unit_vector(cross(rec.dpdu,-r.direction()));
       rec.normal = unit_vector(-r.direction());
+      rec.normal = (*ObjectToWorld)(rec.normal);
+      
     } 
     rec.dpdu.make_unit_vector();
     
@@ -400,6 +408,7 @@ bool curve::recursiveIntersect(const ray& r, Float tmin, Float tmax, hit_record&
     rec.has_bump = false;
     normal3f temp_normal =  rec.normal * hitWidth * 0.5 * offset_scale;
     rec.p = r.point_at_parameter(rec.t) + point3f(temp_normal.x(),temp_normal.y(),temp_normal.z());
+
     return(true);
   }
   return(false);

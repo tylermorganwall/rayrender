@@ -2,18 +2,19 @@
 
 
 bool cone::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
-  vec3f oc = r.origin() - point3f(0,height, 0);
+  ray r2 = (*WorldToObject)(r);
+  vec3f oc = r2.origin() - point3f(0,height, 0);
   Float k = radius / height;
   k = k*k;
   vec3f kvec = vec3f(1,-k,1);
-  Float a = dot(r.direction(), r.direction() * kvec);
-  Float b = 2 * dot(oc, r.direction() * kvec); 
+  Float a = dot(r2.direction(), r2.direction() * kvec);
+  Float b = 2 * dot(oc, r2.direction() * kvec); 
   Float c = dot(oc,oc * kvec);
   Float temp1, temp2;
   if (!quadratic(a, b, c, &temp1, &temp2)) {
     return(false);
   }
-  Float t_cyl = -r.origin().y() / r.direction().y();
+  Float t_cyl = -r2.origin().y() / r2.direction().y();
   Float phi;
   // Float phi;
   // bool is_hit = true;
@@ -60,11 +61,11 @@ bool cone::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_g
   //     }
   //   }
   // }
-  point3f temp_point = r.point_at_parameter(temp1);
-  point3f temp_point2 = r.point_at_parameter(temp2);
+  point3f temp_point = r2.point_at_parameter(temp1);
+  point3f temp_point2 = r2.point_at_parameter(temp2);
   
-  Float x = r.origin().x() + t_cyl*r.direction().x();
-  Float z = r.origin().z() + t_cyl*r.direction().z();
+  Float x = r2.origin().x() + t_cyl*r2.direction().x();
+  Float z = r2.origin().z() + t_cyl*r2.direction().z();
   Float radHit2 = x*x + z*z;
   bool hit_first  = temp1 < t_max && temp1 > t_min && 
     temp_point.y() > 0.0 && temp_point.y() < height;
@@ -95,18 +96,22 @@ bool cone::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_g
       point3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
       rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv);
       rec.bump_normal.make_unit_vector();
+      rec.bump_normal = (*ObjectToWorld)(rec.bump_normal);
+      
     }
     // if((!base_is_hit && t_cyl < temp1) || (already_inside && alpha_mask)) {
     //   rec.normal = -rec.normal;
     //   rec.bump_normal = -rec.bump_normal;
     // }
+    rec.p = (*ObjectToWorld)(rec.p);
+    rec.normal = (*ObjectToWorld)(rec.normal);
     
     rec.mat_ptr = mat_ptr.get();
     return(true);
   }
   // if((t_cyl < temp2 || !second_is_hit) && t_cyl > t_min && t_cyl < t_max && radHit2 <= radius * radius && base_is_hit) {
   if(hit_base && t_cyl < temp2) {
-    point3f p = r.point_at_parameter(t_cyl);
+    point3f p = r2.point_at_parameter(t_cyl);
     p.e[1] = 0;
     
     Float u = p.x() / (2.0 * radius) + 0.5;
@@ -126,11 +131,15 @@ bool cone::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_g
       point3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
       rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv);
       rec.bump_normal.make_unit_vector();
+      rec.bump_normal = (*ObjectToWorld)(rec.bump_normal);
+      
     }
     // if((!second_is_hit && t_cyl > temp2) || (!is_hit && t_cyl > temp1) || (already_inside && alpha_mask)) {
     //   rec.normal = -rec.normal;
     //   rec.bump_normal = -rec.bump_normal;
     // }
+    rec.p = (*ObjectToWorld)(rec.p);
+    rec.normal = (*ObjectToWorld)(rec.normal);
     return(true);
   }
   // // if(temp2 < t_max && temp2 > t_min && second_is_hit && temp_point.y() >= 0.0 && temp_point.y() <= height) {
@@ -154,11 +163,15 @@ bool cone::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_g
       point3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
       rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv);
       rec.bump_normal.make_unit_vector();
+      rec.bump_normal = (*ObjectToWorld)(rec.bump_normal);
+      
     }
     // if((!is_hit && temp2 < t_cyl) || (already_inside && alpha_mask)) {// || (!base_is_hit && temp2 > t_cyl)) {
     //   rec.normal = -rec.normal;
     //   rec.bump_normal = -rec.bump_normal;
     // }
+    rec.p = (*ObjectToWorld)(rec.p);
+    rec.normal = (*ObjectToWorld)(rec.normal);
     rec.mat_ptr = mat_ptr.get();
     return(true);
   }
@@ -167,18 +180,20 @@ bool cone::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_g
 
 
 bool cone::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) {
-  vec3f oc = r.origin() - point3f(0,height, 0);
+  ray r2 = (*WorldToObject)(r);
+  
+  vec3f oc = r2.origin() - point3f(0,height, 0);
   Float k = radius / height;
   k = k*k;
   vec3f kvec = vec3f(1,-k,1);
-  Float a = dot(r.direction(), r.direction() * kvec);
-  Float b = 2 * dot(oc, r.direction() * kvec); 
+  Float a = dot(r2.direction(), r2.direction() * kvec);
+  Float b = 2 * dot(oc, r2.direction() * kvec); 
   Float c = dot(oc,oc * kvec);
   Float temp1, temp2;
   if (!quadratic(a, b, c, &temp1, &temp2)) {
     return(false);
   }
-  Float t_cyl = -r.origin().y() / r.direction().y();
+  Float t_cyl = -r2.origin().y() / r2.direction().y();
   Float phi;
   // Float phi;
   // bool is_hit = true;
@@ -225,11 +240,11 @@ bool cone::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler*
   //     }
   //   }
   // }
-  point3f temp_point = r.point_at_parameter(temp1);
-  point3f temp_point2 = r.point_at_parameter(temp2);
+  point3f temp_point = r2.point_at_parameter(temp1);
+  point3f temp_point2 = r2.point_at_parameter(temp2);
   
-  Float x = r.origin().x() + t_cyl*r.direction().x();
-  Float z = r.origin().z() + t_cyl*r.direction().z();
+  Float x = r2.origin().x() + t_cyl*r2.direction().x();
+  Float z = r2.origin().z() + t_cyl*r2.direction().z();
   Float radHit2 = x*x + z*z;
   bool hit_first  = temp1 < t_max && temp1 > t_min && 
     temp_point.y() > 0.0 && temp_point.y() < height;
@@ -260,18 +275,22 @@ bool cone::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler*
       point3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
       rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv);
       rec.bump_normal.make_unit_vector();
+      rec.bump_normal = (*ObjectToWorld)(rec.bump_normal);
+      
     }
     // if((!base_is_hit && t_cyl < temp1) || (already_inside && alpha_mask)) {
     //   rec.normal = -rec.normal;
     //   rec.bump_normal = -rec.bump_normal;
     // }
     
+    rec.p = (*ObjectToWorld)(rec.p);
+    rec.normal = (*ObjectToWorld)(rec.normal);
     rec.mat_ptr = mat_ptr.get();
     return(true);
   }
   // if((t_cyl < temp2 || !second_is_hit) && t_cyl > t_min && t_cyl < t_max && radHit2 <= radius * radius && base_is_hit) {
   if(hit_base && t_cyl < temp2) {
-    point3f p = r.point_at_parameter(t_cyl);
+    point3f p = r2.point_at_parameter(t_cyl);
     p.e[1] = 0;
     
     Float u = p.x() / (2.0 * radius) + 0.5;
@@ -291,11 +310,15 @@ bool cone::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler*
       point3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
       rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv);
       rec.bump_normal.make_unit_vector();
+      rec.bump_normal = (*ObjectToWorld)(rec.bump_normal);
+      
     }
     // if((!second_is_hit && t_cyl > temp2) || (!is_hit && t_cyl > temp1) || (already_inside && alpha_mask)) {
     //   rec.normal = -rec.normal;
     //   rec.bump_normal = -rec.bump_normal;
     // }
+    rec.p = (*ObjectToWorld)(rec.p);
+    rec.normal = (*ObjectToWorld)(rec.normal);
     return(true);
   }
   // // if(temp2 < t_max && temp2 > t_min && second_is_hit && temp_point.y() >= 0.0 && temp_point.y() <= height) {
@@ -319,11 +342,15 @@ bool cone::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler*
       point3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
       rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv);
       rec.bump_normal.make_unit_vector();
+      rec.bump_normal = (*ObjectToWorld)(rec.bump_normal);
+      
     }
     // if((!is_hit && temp2 < t_cyl) || (already_inside && alpha_mask)) {// || (!base_is_hit && temp2 > t_cyl)) {
     //   rec.normal = -rec.normal;
     //   rec.bump_normal = -rec.bump_normal;
     // }
+    rec.p = (*ObjectToWorld)(rec.p);
+    rec.normal = (*ObjectToWorld)(rec.normal);
     rec.mat_ptr = mat_ptr.get();
     return(true);
   }
@@ -333,8 +360,10 @@ bool cone::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler*
 Float cone::pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Float time) {
   hit_record rec;
   if(this->hit(ray(o,v), 0.001, FLT_MAX, rec, rng)) {
+    point3f o2 = (*WorldToObject)(o);
+    
     Float maxval = ffmax(radius, 0.5f*height);
-    Float cos_theta_max = sqrt(1 - maxval * maxval/o.squared_length());
+    Float cos_theta_max = sqrt(1 - maxval * maxval/o2.squared_length());
     Float solid_angle = 2 * M_PI * (1-cos_theta_max);
     return(1/solid_angle);
   } else {
@@ -346,8 +375,9 @@ Float cone::pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Float t
 Float cone::pdf_value(const point3f& o, const vec3f& v, Sampler* sampler, Float time) {
   hit_record rec;
   if(this->hit(ray(o,v), 0.001, FLT_MAX, rec, sampler)) {
+    point3f o2 = (*WorldToObject)(o);
     Float maxval = ffmax(radius, 0.5f*height);
-    Float cos_theta_max = sqrt(1 - maxval * maxval/o.squared_length());
+    Float cos_theta_max = sqrt(1 - maxval * maxval/o2.squared_length());
     Float solid_angle = 2 * M_PI * (1-cos_theta_max);
     return(1/solid_angle);
   } else {
@@ -363,7 +393,7 @@ vec3f cone::random(const point3f& o, random_gen& rng, Float time) {
   Float x = radius_val * cos(phi_val);
   Float y = height_val;
   Float z = radius_val * sin(phi_val);
-  return(point3f(x,y,z)-o);
+  return((*ObjectToWorld)(point3f(x,y,z)-o));
 }
 
 vec3f cone::random(const point3f& o, Sampler* sampler, Float time) {
@@ -375,10 +405,10 @@ vec3f cone::random(const point3f& o, Sampler* sampler, Float time) {
   Float x = radius_val * cos(phi_val);
   Float y = height_val;
   Float z = radius_val * sin(phi_val);
-  return(point3f(x,y,z)-o);
+  return((*ObjectToWorld)(point3f(x,y,z)-o));
 }
 
 bool cone::bounding_box(Float t0, Float t1, aabb& box) const {
-  box = aabb(vec3f(-radius,0,-radius), vec3f(radius,height,radius));
+  box = (*ObjectToWorld)(aabb(vec3f(-radius,0,-radius), vec3f(radius,height,radius)));
   return(true);
 }

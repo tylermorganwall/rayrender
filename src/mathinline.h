@@ -677,5 +677,16 @@ inline uint64_t ReverseBits64(uint64_t n) {
   return (n0 << 32) | n1;
 }
 
+template <typename T> inline void
+CoordinateSystem(const vec3<T> &v1, vec3<T> *v2, vec3<T> *v3) {
+  if (std::fabs(v1.x()) > std::fabs(v1.y())) {
+    *v2 = vec3<T>(-v1.z(), 0, v1.x()) /
+      std::sqrt(v1.x() * v1.x() + v1.z() * v1.z());
+  } else {
+    *v2 = vec3<T>(0, v1.z(), -v1.y()) /
+      std::sqrt(v1.y() * v1.y() + v1.z() * v1.z());
+  }
+  *v3 = cross(v1, *v2);
+}
 
 #endif

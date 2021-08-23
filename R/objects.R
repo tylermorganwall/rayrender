@@ -1563,7 +1563,7 @@ cone = function(start = c(0, 0, 0), end = c(0, 1, 0), radius = 0.5,
       theta = 0
     }
   } else {
-    theta = atan2(-length_xy, (end[2]-start[2]))/pi*180
+    theta = atan2(length_xy, (end[2]-start[2]))/pi*180
   }
   fulllength = sqrt(sum((end-start)^2))
   angle = c(0, phi, theta) + angle
