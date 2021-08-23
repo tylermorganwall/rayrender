@@ -2436,7 +2436,7 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
                       implicit_sample = material$implicit_sample,  sigma = material$sigma, glossyinfo = material$glossyinfo,
                       order_rotation = list(order_rotation),
                       group_transform = list(NA),
-                      tricolorinfo = list(N), fileinfo = NA, scale_factor = list(scale),
+                      tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale),
                       material_id = NA, csg_object = list(NA), mesh_info = list(mesh_info)))
 }
 
