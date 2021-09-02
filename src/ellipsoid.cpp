@@ -72,7 +72,7 @@ bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, ran
     rec.p *= 1/rec.p.length() * axes;
     
     rec.p = (*ObjectToWorld)(rec.p);
-    rec.normal = (*ObjectToWorld)(rec.normal);
+    rec.normal = !reverseOrientation ? (*ObjectToWorld)(rec.normal) : -(*ObjectToWorld)(rec.normal);
     return(true);
   }
   if(temp2 < t_max && temp2 > t_min && second_is_hit) {
@@ -110,7 +110,7 @@ bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, ran
       rec.bump_normal = -rec.bump_normal;
     }
     rec.p = (*ObjectToWorld)(rec.p);
-    rec.normal = (*ObjectToWorld)(rec.normal);
+    rec.normal = !reverseOrientation ? (*ObjectToWorld)(rec.normal) : -(*ObjectToWorld)(rec.normal);
     return(true);
   }
   return(false);
@@ -187,7 +187,7 @@ bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sam
     rec.p *= 1/rec.p.length() * axes;
     
     rec.p = (*ObjectToWorld)(rec.p);
-    rec.normal = (*ObjectToWorld)(rec.normal);
+    rec.normal = !reverseOrientation ? (*ObjectToWorld)(rec.normal) : -(*ObjectToWorld)(rec.normal);
     return(true);
   }
   if(temp2 < t_max && temp2 > t_min && second_is_hit) {
@@ -225,7 +225,7 @@ bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sam
       rec.bump_normal = -rec.bump_normal;
     }
     rec.p = (*ObjectToWorld)(rec.p);
-    rec.normal = (*ObjectToWorld)(rec.normal);
+    rec.normal = !reverseOrientation ? (*ObjectToWorld)(rec.normal) : -(*ObjectToWorld)(rec.normal);
     return(true);
   }
   return(false);

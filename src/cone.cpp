@@ -104,7 +104,7 @@ bool cone::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_g
     //   rec.bump_normal = -rec.bump_normal;
     // }
     rec.p = (*ObjectToWorld)(rec.p);
-    rec.normal = (*ObjectToWorld)(rec.normal);
+    rec.normal = !reverseOrientation ? (*ObjectToWorld)(rec.normal) : -(*ObjectToWorld)(rec.normal);
     
     rec.mat_ptr = mat_ptr.get();
     return(true);
@@ -139,7 +139,7 @@ bool cone::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_g
     //   rec.bump_normal = -rec.bump_normal;
     // }
     rec.p = (*ObjectToWorld)(rec.p);
-    rec.normal = (*ObjectToWorld)(rec.normal);
+    rec.normal = !reverseOrientation ? (*ObjectToWorld)(rec.normal) : -(*ObjectToWorld)(rec.normal);
     return(true);
   }
   // // if(temp2 < t_max && temp2 > t_min && second_is_hit && temp_point.y() >= 0.0 && temp_point.y() <= height) {
@@ -171,7 +171,7 @@ bool cone::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_g
     //   rec.bump_normal = -rec.bump_normal;
     // }
     rec.p = (*ObjectToWorld)(rec.p);
-    rec.normal = (*ObjectToWorld)(rec.normal);
+    rec.normal = !reverseOrientation ? (*ObjectToWorld)(rec.normal) : -(*ObjectToWorld)(rec.normal);
     rec.mat_ptr = mat_ptr.get();
     return(true);
   }
@@ -284,7 +284,7 @@ bool cone::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler*
     // }
     
     rec.p = (*ObjectToWorld)(rec.p);
-    rec.normal = (*ObjectToWorld)(rec.normal);
+    rec.normal = !reverseOrientation ? (*ObjectToWorld)(rec.normal) : -(*ObjectToWorld)(rec.normal);
     rec.mat_ptr = mat_ptr.get();
     return(true);
   }
@@ -318,7 +318,7 @@ bool cone::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler*
     //   rec.bump_normal = -rec.bump_normal;
     // }
     rec.p = (*ObjectToWorld)(rec.p);
-    rec.normal = (*ObjectToWorld)(rec.normal);
+    rec.normal = !reverseOrientation ? (*ObjectToWorld)(rec.normal) : -(*ObjectToWorld)(rec.normal);
     return(true);
   }
   // // if(temp2 < t_max && temp2 > t_min && second_is_hit && temp_point.y() >= 0.0 && temp_point.y() <= height) {
@@ -350,7 +350,7 @@ bool cone::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler*
     //   rec.bump_normal = -rec.bump_normal;
     // }
     rec.p = (*ObjectToWorld)(rec.p);
-    rec.normal = (*ObjectToWorld)(rec.normal);
+    rec.normal = !reverseOrientation ? (*ObjectToWorld)(rec.normal) : -(*ObjectToWorld)(rec.normal);
     rec.mat_ptr = mat_ptr.get();
     return(true);
   }

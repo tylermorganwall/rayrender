@@ -446,26 +446,26 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
         list.add(std::make_shared<constant_medium>(entry, voldensity(i), 
                  std::make_shared<constant_texture>(point3f(tempvector(0),tempvector(1),tempvector(2)))));
       } else {
-        list.add(entry);;
+        list.add(entry);
       }
     } else if (shape(i)  == 2) {
       std::shared_ptr<hitable> entry = std::make_shared<xy_rect>(-tempvector(prop_len+2)/2,tempvector(prop_len+2)/2,
                                    -tempvector(prop_len+4)/2,tempvector(prop_len+4)/2,
-                                   0, tex, alpha[i], bump[i], isflipped(i),
+                                   0, tex, alpha[i], bump[i], 
                                    ObjToWorld,WorldToObj, isflipped(i));
-      list.add(entry);;
+      list.add(entry);
     } else if (shape(i)  == 3) {
       std::shared_ptr<hitable> entry = std::make_shared<xz_rect>(-tempvector(prop_len+2)/2,tempvector(prop_len+2)/2,
                                    -tempvector(prop_len+4)/2,tempvector(prop_len+4)/2,
-                                   0, tex, alpha[i], bump[i], isflipped(i),
+                                   0, tex, alpha[i], bump[i],
                                    ObjToWorld,WorldToObj, isflipped(i));
-      list.add(entry);;
+      list.add(entry);
     } else if (shape(i)  == 4) {
       std::shared_ptr<hitable> entry = std::make_shared<yz_rect>(-tempvector(prop_len+2)/2,tempvector(prop_len+2)/2,
                                    -tempvector(prop_len+4)/2,tempvector(prop_len+4)/2,
-                                   0, tex, alpha[i], bump[i], isflipped(i),
+                                   0, tex, alpha[i], bump[i], 
                                    ObjToWorld,WorldToObj, isflipped(i));
-      list.add(entry);;
+      list.add(entry);
     } else if (shape(i)  == 5) {
       std::shared_ptr<hitable> entry = std::make_shared<box>(-vec3f(tempvector(prop_len+1),tempvector(prop_len+2),tempvector(prop_len+3))/2, 
                                vec3f(tempvector(prop_len+1),tempvector(prop_len+2),tempvector(prop_len+3))/2, 
@@ -473,7 +473,7 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
                                ObjToWorld,WorldToObj, isflipped(i));
       if(isvolume(i)) {
         if(!isnoise(i)) {
-          list.add(std::make_shared<constant_medium>(entry,voldensity(i), std::make_shared<constant_texture>(point3f(tempvector(0),tempvector(1),tempvector(2)))));;
+          list.add(std::make_shared<constant_medium>(entry,voldensity(i), std::make_shared<constant_texture>(point3f(tempvector(0),tempvector(1),tempvector(2)))));
         } else {
           list.add(std::make_shared<constant_medium>(entry,voldensity(i), 
                                                      std::make_shared<noise_texture>(noise(i),
@@ -482,7 +482,7 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
                                                           noisephase(i), noiseintensity(i))));
         }
       } else {
-        list.add(entry);;
+        list.add(entry);
       }
     } else if (shape(i)  == 6) {
       std::shared_ptr<hitable> entry;
@@ -764,19 +764,19 @@ std::shared_ptr<hitable> build_imp_sample(IntegerVector& type,
   } else if (shape(i) == 2) {
     std::shared_ptr<hitable> entry = std::make_shared<xy_rect>(-tempvector(prop_len+2)/2,tempvector(prop_len+2)/2,
                                  -tempvector(prop_len+4)/2,tempvector(prop_len+4)/2,
-                                 0, tex, alpha, bump, false,
+                                 0, tex, alpha, bump, 
                                  ObjToWorld,WorldToObj, false);
     return(entry);
   } else if (shape(i) == 3) {
     std::shared_ptr<hitable> entry = std::make_shared<xz_rect>(-tempvector(prop_len+2)/2,tempvector(prop_len+2)/2,
                                  -tempvector(prop_len+4)/2,tempvector(prop_len+4)/2,
-                                 0, tex, alpha, bump, false,
+                                 0, tex, alpha, bump, 
                                  ObjToWorld,WorldToObj, false);
     return(entry);
   } else if (shape(i) == 4) {
     std::shared_ptr<hitable> entry = std::make_shared<yz_rect>(-tempvector(prop_len+2)/2,tempvector(prop_len+2)/2,
                                  -tempvector(prop_len+4)/2,tempvector(prop_len+4)/2,
-                                 0, tex, alpha, bump, false,
+                                 0, tex, alpha, bump, 
                                  ObjToWorld,WorldToObj, false);
     return(entry);
   } else if (shape(i) == 5) {

@@ -19,7 +19,6 @@ bool disk::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_g
   
   point3f p = r2.point_at_parameter(t);
   p.e[1] = 0;
-  rec.p = (*ObjectToWorld)(rec.p);
 
   Float u = p.x() / (2.0 * radius) + 0.5;
   Float v = p.z() / (2.0 * radius) + 0.5;
@@ -30,6 +29,8 @@ bool disk::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_g
     }
   }
   rec.p = p;
+  rec.p = (*ObjectToWorld)(rec.p);
+  
   rec.normal = (*ObjectToWorld)(n);
   rec.t = t;
   rec.mat_ptr = mat_ptr.get();
@@ -71,8 +72,7 @@ bool disk::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler*
   
   point3f p = r2.point_at_parameter(t);
   p.e[1] = 0;
-  rec.p = (*ObjectToWorld)(rec.p);
-  
+
   Float u = p.x() / (2.0 * radius) + 0.5;
   Float v = p.z() / (2.0 * radius) + 0.5;
   u = 1 - u;
@@ -82,6 +82,8 @@ bool disk::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler*
     }
   }
   rec.p = p;
+  rec.p = (*ObjectToWorld)(rec.p);
+  
   rec.normal = n;
   rec.t = t;
   rec.mat_ptr = mat_ptr.get();

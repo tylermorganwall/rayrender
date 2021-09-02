@@ -13,7 +13,7 @@ bool xy_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
   }
   Float u = (x-x0)/(x1-x0);
   Float v = (y-y0)/(y1-y0);
-  if(flipped) {
+  if(reverseOrientation) {
     u = 1 - u;
   }
   if(alpha_mask) {
@@ -22,7 +22,7 @@ bool xy_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
     }
     rec.normal = dot(r2.direction(),vec3f(0,0,1)) < 0 ? vec3f(0,0,1) : vec3f(0,0,-1);
   } else {
-    rec.normal = flipped ? vec3f(0,0,-1) : vec3f(0,0,1);
+    rec.normal = vec3f(0,0,1);
   }
   rec.u = u;
   rec.v = v;
@@ -35,17 +35,17 @@ bool xy_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
   
   if(bump_tex) {
     point3f bvbu = bump_tex->value(u,v, rec.p);
-    bvbu.e[0] *= flipped ? -1 : 1;
     rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
     rec.bump_normal.make_unit_vector();
-    rec.bump_normal = (*ObjectToWorld)(rec.bump_normal);
+    rec.bump_normal = !reverseOrientation ? (*ObjectToWorld)(rec.bump_normal) : -(*ObjectToWorld)(rec.bump_normal);
   }
   
   rec.mat_ptr = mp.get();
   rec.p = r2.point_at_parameter(t);
   rec.p.e[2] = k;
   rec.p = (*ObjectToWorld)(rec.p);
-  rec.normal = (*ObjectToWorld)(rec.normal);
+  rec.normal = !reverseOrientation ? (*ObjectToWorld)(rec.normal) : -(*ObjectToWorld)(rec.normal);
+  
   return(true);
 }
 
@@ -63,7 +63,7 @@ bool xy_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampl
   }
   Float u = (x-x0)/(x1-x0);
   Float v = (y-y0)/(y1-y0);
-  if(flipped) {
+  if(reverseOrientation) {
     u = 1 - u;
   }
   if(alpha_mask) {
@@ -72,7 +72,7 @@ bool xy_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampl
     }
     rec.normal = dot(r2.direction(),vec3f(0,0,1)) < 0 ? vec3f(0,0,1) : vec3f(0,0,-1);
   } else {
-    rec.normal = flipped ? vec3f(0,0,-1) : vec3f(0,0,1);
+    rec.normal = vec3f(0,0,1);
   }
   rec.u = u;
   rec.v = v;
@@ -84,17 +84,16 @@ bool xy_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampl
   
   if(bump_tex) {
     point3f bvbu = bump_tex->value(u,v, rec.p);
-    bvbu.e[0] *= flipped ? -1 : 1;
     rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
     rec.bump_normal.make_unit_vector();
-    rec.bump_normal = (*ObjectToWorld)(rec.bump_normal);
+    rec.bump_normal = !reverseOrientation ? (*ObjectToWorld)(rec.bump_normal) : -(*ObjectToWorld)(rec.bump_normal);
   }
   
   rec.mat_ptr = mp.get();
   rec.p = r2.point_at_parameter(t);
   rec.p.e[2] = k;
   rec.p = (*ObjectToWorld)(rec.p);
-  rec.normal = (*ObjectToWorld)(rec.normal);
+  rec.normal = !reverseOrientation ? (*ObjectToWorld)(rec.normal) : -(*ObjectToWorld)(rec.normal);
   
   return(true);
 }
@@ -142,7 +141,7 @@ bool xz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
   }
   Float u = 1-(x-x0)/(x1-x0);
   Float v = (z-z0)/(z1-z0);
-  if(flipped) {
+  if(reverseOrientation) {
     u = 1 - u;
   }
   if(alpha_mask) {
@@ -151,8 +150,9 @@ bool xz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
     }
     rec.normal =  dot(r2.direction(),vec3f(0,1,0)) < 0 ? vec3f(0,1,0) : vec3f(0,-1,0);
   } else {
-    rec.normal =  flipped ? vec3f(0,-1,0) : vec3f(0,1,0);
+    rec.normal =  vec3f(0,1,0);
   }
+           
   rec.u = u;
   rec.v = v;
   rec.t = t;
@@ -164,17 +164,16 @@ bool xz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
   
   if(bump_tex) {
     point3f bvbu = bump_tex->value(u,v, rec.p);
-    bvbu.e[0] *= flipped ? -1 : 1;
     rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
     rec.bump_normal.make_unit_vector();
-    rec.bump_normal = (*ObjectToWorld)(rec.bump_normal);
+    rec.bump_normal = !reverseOrientation ? (*ObjectToWorld)(rec.bump_normal) : -(*ObjectToWorld)(rec.bump_normal);
   }
   
   rec.mat_ptr = mp.get();
   rec.p = r2.point_at_parameter(t);
   rec.p.e[1] = k;
   rec.p = (*ObjectToWorld)(rec.p);
-  rec.normal = (*ObjectToWorld)(rec.normal);
+  rec.normal = !reverseOrientation ? (*ObjectToWorld)(rec.normal) : -(*ObjectToWorld)(rec.normal);
   return(true);
 }
 
@@ -193,7 +192,7 @@ bool xz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampl
   }
   Float u = 1-(x-x0)/(x1-x0);
   Float v = (z-z0)/(z1-z0);
-  if(flipped) {
+  if(reverseOrientation) {
     u = 1 - u;
   }
   if(alpha_mask) {
@@ -202,7 +201,7 @@ bool xz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampl
     }
     rec.normal =  dot(r2.direction(),vec3f(0,1,0)) < 0 ? vec3f(0,1,0) : vec3f(0,-1,0);
   } else {
-    rec.normal =  flipped ? vec3f(0,-1,0) : vec3f(0,1,0);
+    rec.normal =  vec3f(0,1,0);
   }
   rec.u = u;
   rec.v = v;
@@ -215,17 +214,16 @@ bool xz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampl
   
   if(bump_tex) {
     point3f bvbu = bump_tex->value(u,v, rec.p);
-    bvbu.e[0] *= flipped ? -1 : 1;
     rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
     rec.bump_normal.make_unit_vector();
-    rec.bump_normal = (*ObjectToWorld)(rec.bump_normal);
+    rec.bump_normal = !reverseOrientation ? (*ObjectToWorld)(rec.bump_normal) : -(*ObjectToWorld)(rec.bump_normal);
   }
   
   rec.mat_ptr = mp.get();
   rec.p = r2.point_at_parameter(t);
   rec.p.e[1] = k;
   rec.p = (*ObjectToWorld)(rec.p);
-  rec.normal = (*ObjectToWorld)(rec.normal);
+  rec.normal = !reverseOrientation ? (*ObjectToWorld)(rec.normal) : -(*ObjectToWorld)(rec.normal);
   
   return(true);
 }
@@ -244,7 +242,7 @@ bool yz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
   }
   Float u = 1-(z-z0)/(z1-z0);
   Float v = (y-y0)/(y1-y0);
-  if(flipped) {
+  if(reverseOrientation) {
     u = 1 - u;
   }
   if(alpha_mask) {
@@ -253,7 +251,7 @@ bool yz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
     }
     rec.normal =  dot(r2.direction(),vec3f(1,0,0)) < 0 ? vec3f(1,0,0) : vec3f(-1,0,0);
   } else {
-    rec.normal =  flipped ? vec3f(-1,0,0) : vec3f(1,0,0);
+    rec.normal =  vec3f(1,0,0);
   }
   rec.u = u;
   rec.v = v;
@@ -265,17 +263,16 @@ bool yz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
   rec.has_bump = bump_tex ? true : false;
   if(bump_tex) {
     point3f bvbu = bump_tex->value(u,v, rec.p);
-    bvbu.e[0] *= flipped ? -1 : 1;
     rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
     rec.bump_normal.make_unit_vector();
-    rec.bump_normal = (*ObjectToWorld)(rec.bump_normal);
+    rec.bump_normal = !reverseOrientation ? (*ObjectToWorld)(rec.bump_normal) : -(*ObjectToWorld)(rec.bump_normal);
   }
   
   rec.mat_ptr = mp.get();
   rec.p = r2.point_at_parameter(t);
   rec.p.e[0] = k;
   rec.p = (*ObjectToWorld)(rec.p);
-  rec.normal = (*ObjectToWorld)(rec.normal);
+  rec.normal = !reverseOrientation ? (*ObjectToWorld)(rec.normal) : -(*ObjectToWorld)(rec.normal);
   
   return(true);
 }
@@ -295,7 +292,7 @@ bool yz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampl
   }
   Float u = 1-(z-z0)/(z1-z0);
   Float v = (y-y0)/(y1-y0);
-  if(flipped) {
+  if(reverseOrientation) {
     u = 1 - u;
   }
   if(alpha_mask) {
@@ -304,7 +301,7 @@ bool yz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampl
     }
     rec.normal =  dot(r2.direction(),vec3f(1,0,0)) < 0 ? vec3f(1,0,0) : vec3f(-1,0,0);
   } else {
-    rec.normal =  flipped ? vec3f(-1,0,0) : vec3f(1,0,0);
+    rec.normal =  vec3f(1,0,0);
   }
   rec.u = u;
   rec.v = v;
@@ -316,17 +313,16 @@ bool yz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampl
   rec.has_bump = bump_tex ? true : false;
   if(bump_tex) {
     point3f bvbu = bump_tex->value(u,v, rec.p);
-    bvbu.e[0] *= flipped ? -1 : 1;
     rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
     rec.bump_normal.make_unit_vector();
-    rec.bump_normal = (*ObjectToWorld)(rec.bump_normal);
+    rec.bump_normal = !reverseOrientation ? (*ObjectToWorld)(rec.bump_normal) : -(*ObjectToWorld)(rec.bump_normal);
   }
   
   rec.mat_ptr = mp.get();
   rec.p = r2.point_at_parameter(t);
   rec.p.e[0] = k;
   rec.p = (*ObjectToWorld)(rec.p);
-  rec.normal = (*ObjectToWorld)(rec.normal);
+  rec.normal = !reverseOrientation ? (*ObjectToWorld)(rec.normal) : -(*ObjectToWorld)(rec.normal);
   
   return(true);
 }

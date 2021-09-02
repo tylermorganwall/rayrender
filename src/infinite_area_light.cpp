@@ -39,7 +39,7 @@ bool InfiniteAreaLight::hit(const ray& r, Float t_min, Float t_max, hit_record& 
     get_sphere_uv(unit_vector(v2), rec.u, rec.v);
     rec.u = 1 - rec.u;
     rec.p = (*ObjectToWorld)(rec.p);
-    rec.normal = (*ObjectToWorld)(rec.normal);
+    rec.normal = !reverseOrientation ? (*ObjectToWorld)(rec.normal) : -(*ObjectToWorld)(rec.normal);
     rec.mat_ptr = mat_ptr.get();
     return(true);
   }
@@ -52,7 +52,7 @@ bool InfiniteAreaLight::hit(const ray& r, Float t_min, Float t_max, hit_record& 
     get_sphere_uv(unit_vector(v2), rec.u, rec.v);
     rec.u = 1 - rec.u;
     rec.p = (*ObjectToWorld)(rec.p);
-    rec.normal = (*ObjectToWorld)(rec.normal);
+    rec.normal = !reverseOrientation ? (*ObjectToWorld)(rec.normal) : -(*ObjectToWorld)(rec.normal);
     rec.mat_ptr = mat_ptr.get();
     return(true);
   }
@@ -79,7 +79,7 @@ bool InfiniteAreaLight::hit(const ray& r, Float t_min, Float t_max, hit_record& 
     get_sphere_uv(unit_vector(v2), rec.u, rec.v);
     rec.u = 1 - rec.u;
     rec.p = (*ObjectToWorld)(rec.p);
-    rec.normal = (*ObjectToWorld)(rec.normal);
+    rec.normal = !reverseOrientation ? (*ObjectToWorld)(rec.normal) : -(*ObjectToWorld)(rec.normal);
     rec.mat_ptr = mat_ptr.get();
     return(true);
   }
@@ -92,7 +92,7 @@ bool InfiniteAreaLight::hit(const ray& r, Float t_min, Float t_max, hit_record& 
     get_sphere_uv(unit_vector(v2), rec.u, rec.v);
     rec.u = 1 - rec.u;
     rec.p = (*ObjectToWorld)(rec.p);
-    rec.normal = (*ObjectToWorld)(rec.normal);
+    rec.normal = !reverseOrientation ? (*ObjectToWorld)(rec.normal) : -(*ObjectToWorld)(rec.normal);
     rec.mat_ptr = mat_ptr.get();
     return(true);
   }

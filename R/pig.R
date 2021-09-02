@@ -151,7 +151,7 @@ pig = function(x = 0, y = 0, z = 0, emotion = "neutral", spider = FALSE,
     add_object(segment(start = c(2,2.8 + eyebrow_offset_left[2],-0.5), end = c(2,2.8+ eyebrow_offset_left[1],-0.1),
                        radius=0.05,material = diffuse(color="black"))) %>%
     add_object(segment(start = c(2,2.8 + eyebrow_offset_right[1],0.5), end = c(2,2.8+eyebrow_offset_right[2],0.1),
-                       radius=0.05,material = diffuse(color="black"))), group_scale = scale,
-    group_translate = c(x,y,z), group_angle = angle, group_order_rotation = order_rotation, pivot_point = c(0,1,0))
+                       radius=0.05,material = diffuse(color="black"))), scale = scale,
+    translate = c(x,y,z), angle = angle, order_rotation = order_rotation, pivot_point = c(0,1,0))
   return(pig)
 }

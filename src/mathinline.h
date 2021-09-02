@@ -107,10 +107,9 @@ inline vec3f SphericalDirection(Float sinTheta,
 }
 
 inline vec3f SphericalDirection(Float sinTheta, Float cosTheta, 
-                                   Float phi, const vec3f &x, const vec3f &y,
-                                   const vec3f &z) {
-  return sinTheta * std::cos(phi) * x +
-    sinTheta * std::sin(phi) * y + cosTheta * z;
+                                Float phi, const vec3f &x, const vec3f &y,
+                                const vec3f &z) {
+  return sinTheta * std::cos(phi) * x + sinTheta * std::sin(phi) ;//* y + cosTheta * z;
 }
 
 // 
@@ -314,10 +313,11 @@ inline bool SameHemisphere(const vec3f &w, const vec3f &wp) {
   return(w.z() * wp.z() > 0);
 }
 
-
-inline Float AbsDot(const vec3f &v1, const vec3f &v2) {
+template <typename T>
+inline Float AbsDot(const vec3<T> &v1, const vec3<T> &v2) {
   return(std::fabs(dot(v1,v2)));
 } 
+
 
 template <typename IN_T, typename OUT_T>
 inline OUT_T reinterpret_type(const IN_T in) {
@@ -392,9 +392,15 @@ inline Float Erf(Float x) {
   return sign * y;
 }
 
-inline vec3f Reflect(const vec3f &wo, const normal3f &n) {
-  normal3f n2 = 2 * dot(wo, n) * n;
-  return(-wo + vec3f(n2.x(),n2.y(),n2.z()));
+template <typename T>
+inline vec3<T> Reflect(const vec3<T> &wo, const normal3<T> &n) {
+  normal3<T> n2 = 2 * dot(wo, n) * n;
+  return(-wo + vec3<T>(n2.x(),n2.y(),n2.z()));
+}
+
+template <typename T>
+inline vec3<T> Reflect(const vec3<T> &wo, const vec3<T> &n) {
+  return(-wo + 2 * dot(wo, n) * n);
 }
 
 inline uint32_t FloatToBits(float f) {

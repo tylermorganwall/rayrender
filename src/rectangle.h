@@ -10,11 +10,11 @@ public:
   xy_rect(Float _x0, Float _x1, Float _y0, Float _y1, Float _k, 
           std::shared_ptr<material> mat, 
           std::shared_ptr<alpha_texture> alpha_mask, 
-          std::shared_ptr<bump_texture> bump_tex, bool flipped,
+          std::shared_ptr<bump_texture> bump_tex, 
             std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation) : 
     hitable(ObjectToWorld, WorldToObject, reverseOrientation), 
     x0(_x0), x1(_x1), y0(_y0), y1(_y1), k(_k), mp(mat), alpha_mask(alpha_mask),
-    bump_tex(bump_tex), flipped(flipped) {
+    bump_tex(bump_tex) {
     k_world = (*ObjectToWorld)(point3f(0,0,k)).z();
   };
   ~xy_rect() {
@@ -42,7 +42,6 @@ public:
   std::shared_ptr<material> mp;
   std::shared_ptr<alpha_texture> alpha_mask;
   std::shared_ptr<bump_texture> bump_tex;
-  bool flipped;
 };
 
 class xz_rect : public hitable {
@@ -51,11 +50,11 @@ public:
   xz_rect(Float _x0, Float _x1, Float _z0, Float _z1, Float _k, 
           std::shared_ptr<material> mat, 
           std::shared_ptr<alpha_texture> alpha_mask, 
-          std::shared_ptr<bump_texture> bump_tex, bool flipped,
+          std::shared_ptr<bump_texture> bump_tex, 
           std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation) : 
     hitable(ObjectToWorld, WorldToObject, reverseOrientation), 
   x0(_x0), x1(_x1), z0(_z0), z1(_z1), k(_k), mp(mat), alpha_mask(alpha_mask), 
-  bump_tex(bump_tex), flipped(flipped) {
+  bump_tex(bump_tex) {
     k_world = (*ObjectToWorld)(point3f(0,k,0)).y();
   };
   ~xz_rect() {}
@@ -101,7 +100,6 @@ public:
   std::shared_ptr<material> mp;
   std::shared_ptr<alpha_texture> alpha_mask;
   std::shared_ptr<bump_texture> bump_tex;
-  bool flipped;
 };
 
 class yz_rect : public hitable {
@@ -109,11 +107,11 @@ public:
   yz_rect() {}
   yz_rect(Float _y0, Float _y1, Float _z0, Float _z1, Float _k, 
           std::shared_ptr<material> mat, 
-          std::shared_ptr<alpha_texture> alpha_mask, std::shared_ptr<bump_texture> bump_tex, bool flipped,
+          std::shared_ptr<alpha_texture> alpha_mask, std::shared_ptr<bump_texture> bump_tex, 
           std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation) : 
     hitable(ObjectToWorld, WorldToObject, reverseOrientation), 
   y0(_y0), y1(_y1), z0(_z0), z1(_z1), k(_k), mp(mat), alpha_mask(alpha_mask), 
-  bump_tex(bump_tex), flipped(flipped) {
+  bump_tex(bump_tex) {
     k_world = (*ObjectToWorld)(point3f(k,0,0)).x();
   };
   ~yz_rect() {
@@ -163,7 +161,6 @@ public:
   std::shared_ptr<material> mp;
   std::shared_ptr<alpha_texture> alpha_mask;
   std::shared_ptr<bump_texture> bump_tex;
-  bool flipped;
 };
 
 #endif

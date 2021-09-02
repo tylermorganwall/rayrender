@@ -59,10 +59,11 @@ public:
   inline point3<T>& operator-=(const point3<T> &v2);
   inline point3<T>& operator*=(const point3<T> &v2);
   inline point3<T>& operator/=(const point3<T> &v2);
-  inline point3<T>& operator+=(const Float t);
-  inline point3<T>& operator-=(const Float t);
-  inline point3<T>& operator*=(const Float t);
-  inline point3<T>& operator/=(const Float t);
+  
+  inline point3<T>& operator+=(const Float& t);
+  inline point3<T>& operator-=(const Float& t);
+  inline point3<T>& operator*=(const Float& t);
+  inline point3<T>& operator/=(const Float& t);
   
   bool HasNaNs() const {
     return(std::isnan(e[0]) || std::isnan(e[1]) || std::isnan(e[2]));
@@ -167,6 +168,14 @@ inline point3<T>& point3<T>::operator+=(const point3<T> &v) {
 }
 
 template<typename T> 
+inline point3<T>& point3<T>::operator-=(const point3<T> &v) {
+  e[0] -= v.e[0];
+  e[1] -= v.e[1];
+  e[2] -= v.e[2];
+  return(*this);
+}
+
+template<typename T> 
 inline point3<T>& point3<T>::operator*=(const point3<T> &v) {
   e[0] *= v.e[0];
   e[1] *= v.e[1];
@@ -183,15 +192,15 @@ inline point3<T>& point3<T>::operator/=(const point3<T> &v) {
 }
 
 template<typename T> 
-inline point3<T>& point3<T>::operator-=(const point3<T> &v) {
-  e[0] -= v.e[0];
-  e[1] -= v.e[1];
-  e[2] -= v.e[2];
+inline point3<T>& point3<T>::operator-=(const Float& t) {
+  e[0] -= t;
+  e[1] -= t;
+  e[2] -= t;
   return(*this);
 }
 
 template<typename T> 
-inline point3<T>& point3<T>::operator+=(const Float t) {
+inline point3<T>& point3<T>::operator+=(const Float& t) {
   e[0] += t;
   e[1] += t;
   e[2] += t;
@@ -199,7 +208,7 @@ inline point3<T>& point3<T>::operator+=(const Float t) {
 }
 
 template<typename T> 
-inline point3<T>& point3<T>::operator*=(const Float t) {
+inline point3<T>& point3<T>::operator*=(const Float& t) {
   e[0] *= t;
   e[1] *= t;
   e[2] *= t;
@@ -207,7 +216,7 @@ inline point3<T>& point3<T>::operator*=(const Float t) {
 }
 
 template<typename T> 
-inline point3<T>& point3<T>::operator/=(const Float t) {
+inline point3<T>& point3<T>::operator/=(const Float& t) {
   Float k = 1.0/t;
   
   e[0] *= k;

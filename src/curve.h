@@ -11,7 +11,7 @@ struct CurveCommon {
   CurveCommon(const vec3f c[4], Float w0, Float w1, CurveType type,
               const vec3f *norm);
   const CurveType type;
-  vec3f cpObj[4];
+  point3f cpObj[4];
   Float width[2];
   vec3f n[2];
   Float normalAngle, invSinNormalAngle;
@@ -40,7 +40,8 @@ class curve: public hitable {
     std::shared_ptr<material> mat_ptr;
   private:
     bool recursiveIntersect(const ray& r, Float tmin, Float tmax, hit_record& rec,
-                            const vec3f cp[4], Float u0, Float u1, int depth, onb& uvw) const;
+                            const point3f cp[4], Float u0, Float u1, int depth,
+                            const Transform &rayToObject) const;
 
     const std::shared_ptr<CurveCommon> common;
     Float uMin, uMax;
