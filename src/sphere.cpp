@@ -60,10 +60,10 @@ bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random
       point3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
       rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
       rec.bump_normal.make_unit_vector();
-      rec.bump_normal = (*ObjectToWorld)(rec.bump_normal);
     }
-    rec.p = (*ObjectToWorld)(rec.p);
-    rec.normal = !reverseOrientation ? (*ObjectToWorld)(rec.normal) : -(*ObjectToWorld)(rec.normal);
+    rec = (*ObjectToWorld)(rec);
+    rec.normal *= reverseOrientation  ? -1 : 1;
+    rec.bump_normal *= reverseOrientation  ? -1 : 1;
     
     rec.mat_ptr = mat_ptr.get();
     return(true);
@@ -89,15 +89,16 @@ bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random
       point3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
       rec.bump_normal = rec.normal +  normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
       rec.bump_normal.make_unit_vector();
-      rec.bump_normal = (*ObjectToWorld)(rec.bump_normal);
     }
     
     if(alpha_mask) {
       rec.normal = -rec.normal;
       rec.bump_normal = -rec.bump_normal;
     }
-    rec.p = (*ObjectToWorld)(rec.p);
-    rec.normal = !reverseOrientation ? (*ObjectToWorld)(rec.normal) : -(*ObjectToWorld)(rec.normal);
+    rec = (*ObjectToWorld)(rec);
+    rec.normal *= reverseOrientation  ? -1 : 1;
+    rec.bump_normal *= reverseOrientation  ? -1 : 1;
+    
     rec.mat_ptr = mat_ptr.get();
     return(true);
   }
@@ -163,10 +164,10 @@ bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sample
       point3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
       rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
       rec.bump_normal.make_unit_vector();
-      rec.bump_normal = (*ObjectToWorld)(rec.bump_normal);
     }
-    rec.p = (*ObjectToWorld)(rec.p);
-    rec.normal = !reverseOrientation ? (*ObjectToWorld)(rec.normal) : -(*ObjectToWorld)(rec.normal);
+    rec = (*ObjectToWorld)(rec);
+    rec.normal *= reverseOrientation  ? -1 : 1;
+    rec.bump_normal *= reverseOrientation  ? -1 : 1;
     
     rec.mat_ptr = mat_ptr.get();
     return(true);
@@ -192,15 +193,16 @@ bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sample
       point3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
       rec.bump_normal = rec.normal +  normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
       rec.bump_normal.make_unit_vector();
-      rec.bump_normal = (*ObjectToWorld)(rec.bump_normal);
     }
     
     if(alpha_mask) {
       rec.normal = -rec.normal;
       rec.bump_normal = -rec.bump_normal;
     }
-    rec.p = (*ObjectToWorld)(rec.p);
-    rec.normal = !reverseOrientation ? (*ObjectToWorld)(rec.normal) : -(*ObjectToWorld)(rec.normal);
+    rec = (*ObjectToWorld)(rec);
+    rec.normal *= reverseOrientation  ? -1 : 1;
+    rec.bump_normal *= reverseOrientation  ? -1 : 1;
+    
     rec.mat_ptr = mat_ptr.get();
     return(true);
   }
@@ -413,13 +415,13 @@ bool moving_sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec,
       point3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
       rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
       rec.bump_normal.make_unit_vector();
-      rec.bump_normal = (*ObjectToWorld)(rec.bump_normal);
-      
     }
     
     get_sphere_uv(rec.normal, rec.u, rec.v);
-    rec.p = (*ObjectToWorld)(rec.p);
-    rec.normal = !reverseOrientation ? (*ObjectToWorld)(rec.normal) : -(*ObjectToWorld)(rec.normal);
+    rec = (*ObjectToWorld)(rec);
+    rec.normal *= reverseOrientation  ? -1 : 1;
+    rec.bump_normal *= reverseOrientation  ? -1 : 1;
+    
     rec.mat_ptr = mat_ptr.get();
     return(true);
   }
@@ -444,8 +446,7 @@ bool moving_sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec,
       vec3f o_v = cross(vec3f(rec.normal.x(),rec.normal.y(),rec.normal.z()), rec.dpdv);
       rec.bump_normal = rec.normal + normal3f(bvbu.x() * o_v - bvbu.y() * o_u); 
       rec.bump_normal.make_unit_vector();
-      rec.bump_normal = (*ObjectToWorld)(rec.bump_normal);
-      
+
     }
     
     get_sphere_uv(rec.normal, rec.u, rec.v);
@@ -453,8 +454,10 @@ bool moving_sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec,
       rec.normal = -rec.normal;
       rec.bump_normal = -rec.bump_normal;
     }
-    rec.p = (*ObjectToWorld)(rec.p);
-    rec.normal = !reverseOrientation ? (*ObjectToWorld)(rec.normal) : -(*ObjectToWorld)(rec.normal);
+    rec = (*ObjectToWorld)(rec);
+    rec.normal *= reverseOrientation  ? -1 : 1;
+    rec.bump_normal *= reverseOrientation  ? -1 : 1;
+    
     rec.mat_ptr = mat_ptr.get();
     return(true);
   }
@@ -537,11 +540,12 @@ bool moving_sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec,
       point3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
       rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
       rec.bump_normal.make_unit_vector();
-      rec.bump_normal = (*ObjectToWorld)(rec.bump_normal);
-      
+
     }
-    rec.p = (*ObjectToWorld)(rec.p);
-    rec.normal = !reverseOrientation ? (*ObjectToWorld)(rec.normal) : -(*ObjectToWorld)(rec.normal);
+    rec = (*ObjectToWorld)(rec);
+    rec.normal *= reverseOrientation  ? -1 : 1;
+    rec.bump_normal *= reverseOrientation  ? -1 : 1;
+    
     rec.mat_ptr = mat_ptr.get();
     return(true);
   }
@@ -566,16 +570,16 @@ bool moving_sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec,
       point3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
       rec.bump_normal = rec.normal +  normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
       rec.bump_normal.make_unit_vector();
-      rec.bump_normal = (*ObjectToWorld)(rec.bump_normal);
-      
     }
     
     if(alpha_mask) {
       rec.normal = -rec.normal;
       rec.bump_normal = -rec.bump_normal;
     }
-    rec.p = (*ObjectToWorld)(rec.p);
-    rec.normal = !reverseOrientation ? (*ObjectToWorld)(rec.normal) : -(*ObjectToWorld)(rec.normal);
+    rec = (*ObjectToWorld)(rec);
+    rec.normal *= reverseOrientation  ? -1 : 1;
+    rec.bump_normal *= reverseOrientation  ? -1 : 1;
+    
     rec.mat_ptr = mat_ptr.get();
     return(true);
   }

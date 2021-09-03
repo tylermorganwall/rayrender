@@ -215,6 +215,8 @@ hit_record Transform::operator()(const hit_record &r) const {
   hr.has_bump = r.has_bump;
   hr.u = r.u;
   hr.v = r.v;
+  hr.t = r.t;
+  
   //Need to transform more if pError and wo used
   return(hr);
 }
@@ -230,6 +232,8 @@ hit_record Transform::operator()(hit_record &r) const {
   hr.has_bump = r.has_bump;
   hr.u = r.u;
   hr.v = r.v;
+  hr.t = r.t;
+  
   //Need to transform more if pError and wo used
   return(hr);
 }
