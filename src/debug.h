@@ -105,7 +105,7 @@ inline point3f quick_render(const ray& r, hitable *world, random_gen &rng, vec3f
       normal3f normal = hrec.has_bump ? hrec.bump_normal : hrec.normal;
       vec3f R = Reflect(lightdir, hrec.normal); 
       return(hrec.mat_ptr->get_albedo(r2, hrec) * (dot(normal, lightdir)+1)/2 + 
-             std::pow(std::max(0.f, dot(R, -unit_vector(r.direction()))), n));
+             std::pow(std::fmax(0.f, dot(R, -unit_vector(r.direction()))), n));
     } else {
       return(point3f(0,0,0));
     }
@@ -139,6 +139,94 @@ inline point3f quick_render(const ray& r, hitable *world, random_gen &rng, vec3f
 //   } 
 // }
 
+inline point3f calculate_position(const ray& r, hitable *world, random_gen &rng) {
+  hit_record hrec;
+  if(world->hit(r, 0.001, FLT_MAX, hrec, rng)) {
+    return(hrec.p);
+  } else {
+    return(INFINITY);
+  }
+}
+
+inline point3f calculate_bounce_dir(const ray& r, hitable *world, hitable_list *hlist,
+              size_t max_depth, random_gen& rng) {
+  point3f final_color(0,0,0);
+  ray r1 = r;
+  ray r2 = r;
+  bool diffuse_bounce = false;
+  for(size_t i = 0; i < 2; i++) {
+    bool is_invisible = false;
+    hit_record hrec;
+    if(world->hit(r2, 0.001, FLT_MAX, hrec, rng)) { //generated hit record, world space
+      scatter_record srec;
+      //Some lights can be invisible until after diffuse bounce
+      //If so, generate new ray with intersection point and continue ray
+      if(is_invisible && !diffuse_bounce) {
+        r2.A = hrec.p;
+        continue;
+      }
+      if(hrec.mat_ptr->scatter(r2, hrec, srec, rng)) { //generates scatter record, world space
+        if(srec.is_specular) { //returns specular ray
+          return(unit_vector(srec.specular_ray.direction()));
+        }
+        hitable_pdf p_imp(hlist, hrec.p); //creates pdf of all objects to be sampled
+        mixture_pdf p(&p_imp, srec.pdf_ptr); //creates mixture pdf of surface intersected at hrec.p and all sampled objects/lights
+        
+        r1 = r2;
+        vec3f dir;
+        // if(!diffuse_bounce) {
+        //   dir = p.generate(sampler, diffuse_bounce, r2.time());
+        // } else {
+          dir = p.generate(rng, diffuse_bounce, r2.time());
+        // }
+        return(unit_vector(dir));
+      } else {
+        return(vec3f(0,0,0));
+      }
+    } else {
+      return(vec3f(0,0,0));
+    }
+  }
+  return(vec3f(0,0,0));
+}
+
+inline Float calculate_time(const ray& r, hitable *world, hitable_list *hlist,
+                                    size_t max_depth, random_gen& rng) {
+  hit_record hrec;
+  if(world->hit(r, 0.001, FLT_MAX, hrec, rng)) {
+    return(hrec.t);
+  } else {
+    return(INFINITY);
+  }
+}
+
+inline uint32_t hash32(uint32_t x) {
+    x ^= x >> 16;
+    x *= 0x45d9f3bU;
+    x ^= x >> 16;
+    x *= 0x45d9f3bU;
+    x ^= x >> 16;
+    return x;
+}
+
+inline point3f calculate_shape(const ray& r, hitable *world, hitable_list *hlist,
+                            size_t max_depth, random_gen& rng) {
+  hit_record hrec;
+  if(world->hit(r, 0.001, FLT_MAX, hrec, rng)) {
+    uint32_t r =  reinterpret_type<material*, uint32_t>(hrec.mat_ptr) % 65536;
+    uint32_t g = (reinterpret_type<material*, uint32_t>(hrec.mat_ptr) % 65536) + 1;
+    uint32_t b = (reinterpret_type<material*, uint32_t>(hrec.mat_ptr) % 65536) + 2;
+    r = hash32(r) % 128;
+    g = hash32(g) % 128;
+    b = hash32(b) % 128;
+    Float r2 = (Float)r/128;
+    Float g2 = (Float)g/128;
+    Float b2 = (Float)b/128;
+    return(vec3f(r2,g2,b2));
+  } else {
+    return(vec3f(0,0,0));
+  }
+}
 
 void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_channel,
                  Float min_variance, size_t min_adaptive_size, 

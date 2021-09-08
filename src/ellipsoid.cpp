@@ -273,7 +273,7 @@ vec3f ellipsoid::random(const point3f& o, random_gen& rng, Float time) {
   Float sinThetaMax2 = sinThetaMax * sinThetaMax;
   Float invSinThetaMax = 1 / sinThetaMax;
   
-  Float cosThetaMax = std::sqrt(std::max((Float)0.f, 1 - sinThetaMax2));
+  Float cosThetaMax = std::sqrt(std::fmax((Float)0.f, 1 - sinThetaMax2));
   
   Float cosTheta  = (cosThetaMax - 1) * u[0] + 1;
   Float sinTheta2 = 1 - cosTheta * cosTheta;
@@ -311,7 +311,7 @@ vec3f ellipsoid::random(const point3f& o, Sampler* sampler, Float time) {
   Float sinThetaMax2 = sinThetaMax * sinThetaMax;
   Float invSinThetaMax = 1 / sinThetaMax;
   
-  Float cosThetaMax = std::sqrt(std::max((Float)0.f, 1 - sinThetaMax2));
+  Float cosThetaMax = std::sqrt(std::fmax((Float)0.f, 1 - sinThetaMax2));
   
   Float cosTheta  = (cosThetaMax - 1) * u[0] + 1;
   Float sinTheta2 = 1 - cosTheta * cosTheta;

@@ -2,6 +2,7 @@
 
 bool xy_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
   ray r2 = (*WorldToObject)(r);
+  
   Float t = (k-r2.origin().z()) / r2.direction().z();
   if(t < t_min || t > t_max) {
     return(false);
@@ -43,8 +44,8 @@ bool xy_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
   rec.mat_ptr = mp.get();
   rec.p = r2.point_at_parameter(t);
   rec.p.e[2] = k;
-  rec.p = (*ObjectToWorld)(rec.p);
-  rec.normal = !reverseOrientation ? (*ObjectToWorld)(rec.normal) : -(*ObjectToWorld)(rec.normal);
+  rec = (*ObjectToWorld)(rec);
+  rec.normal = !reverseOrientation ? (rec.normal) : -(rec.normal);
   
   return(true);
 }
@@ -92,8 +93,8 @@ bool xy_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampl
   rec.mat_ptr = mp.get();
   rec.p = r2.point_at_parameter(t);
   rec.p.e[2] = k;
-  rec.p = (*ObjectToWorld)(rec.p);
-  rec.normal = !reverseOrientation ? (*ObjectToWorld)(rec.normal) : -(*ObjectToWorld)(rec.normal);
+  rec = (*ObjectToWorld)(rec);
+  rec.normal = !reverseOrientation ? (rec.normal) : -(rec.normal);
   
   return(true);
 }
@@ -172,8 +173,8 @@ bool xz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
   rec.mat_ptr = mp.get();
   rec.p = r2.point_at_parameter(t);
   rec.p.e[1] = k;
-  rec.p = (*ObjectToWorld)(rec.p);
-  rec.normal = !reverseOrientation ? (*ObjectToWorld)(rec.normal) : -(*ObjectToWorld)(rec.normal);
+  rec = (*ObjectToWorld)(rec);
+  rec.normal = !reverseOrientation ? (rec.normal) : -(rec.normal);
   return(true);
 }
 
@@ -222,8 +223,8 @@ bool xz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampl
   rec.mat_ptr = mp.get();
   rec.p = r2.point_at_parameter(t);
   rec.p.e[1] = k;
-  rec.p = (*ObjectToWorld)(rec.p);
-  rec.normal = !reverseOrientation ? (*ObjectToWorld)(rec.normal) : -(*ObjectToWorld)(rec.normal);
+  rec = (*ObjectToWorld)(rec);
+  rec.normal = !reverseOrientation ? (rec.normal) : -(rec.normal);
   
   return(true);
 }
@@ -271,8 +272,8 @@ bool yz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
   rec.mat_ptr = mp.get();
   rec.p = r2.point_at_parameter(t);
   rec.p.e[0] = k;
-  rec.p = (*ObjectToWorld)(rec.p);
-  rec.normal = !reverseOrientation ? (*ObjectToWorld)(rec.normal) : -(*ObjectToWorld)(rec.normal);
+  rec = (*ObjectToWorld)(rec);
+  rec.normal = !reverseOrientation ? (rec.normal) : -(rec.normal);
   
   return(true);
 }
@@ -321,8 +322,8 @@ bool yz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampl
   rec.mat_ptr = mp.get();
   rec.p = r2.point_at_parameter(t);
   rec.p.e[0] = k;
-  rec.p = (*ObjectToWorld)(rec.p);
-  rec.normal = !reverseOrientation ? (*ObjectToWorld)(rec.normal) : -(*ObjectToWorld)(rec.normal);
+  rec = (*ObjectToWorld)(rec);
+  rec.normal = !reverseOrientation ? (rec.normal) : -(rec.normal);
   
   return(true);
 }

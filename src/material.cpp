@@ -596,7 +596,7 @@ bool hair::scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec
   }
   
   // Sample $M_p$ to compute $\thetai$
-  u[1].e[0] = std::max(u[1].e[0], Float(1e-5));
+  u[1].e[0] = std::fmax(u[1].e[0], Float(1e-5));
   Float cosTheta = 1 + v[p] * std::log(u[1].e[0] + (1 - u[1].e[0]) * std::exp(-2 / v[p]));
   Float sinTheta = SafeSqrt(1 - Sqr(cosTheta));
   Float cosPhi = std::cos(2 * M_PI * u[1].e[1]);
@@ -669,7 +669,7 @@ bool hair::scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec
   }
   
   // Sample $M_p$ to compute $\thetai$
-  u[1].e[0] = std::max(u[1].e[0], Float(1e-5));
+  u[1].e[0] = std::fmax(u[1].e[0], Float(1e-5));
   Float cosTheta = 1 + v[p] * std::log(u[1].e[0] + (1 - u[1].e[0]) * std::exp(-2 / v[p]));
   Float sinTheta = SafeSqrt(1 - Sqr(cosTheta));
   Float cosPhi = std::cos(2 * M_PI * u[1].e[1]);
@@ -760,7 +760,7 @@ point3f hair::f(const ray& r_in, const hit_record& rec, const ray& scattered) co
     }
     
     // Handle out-of-range $\cos \thetao$ from scale adjustment
-    cosThetaOp = std::abs(cosThetaOp);
+    cosThetaOp = std::fabs(cosThetaOp);
     fsum += Mp(cosThetaI, cosThetaOp, sinThetaI, sinThetaOp, v[p]) * ap[p] *
       Np(phi, p, s, gammaO, gammaT);
   }

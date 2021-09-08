@@ -261,7 +261,7 @@ class csg_cone : public ImplicitShape {
       vec2f b = w - q*vec2f( clamp( w.x()/q.x(), 0.0, 1.0 ), 1.0 );
       float k = sgn( q.y() );
       float d = std::min(dot( a, a ),dot(b, b));
-      float s = std::max( k*(w.x()*q.y()-w.y()*q.x()),k*(w.y()-q.y()));
+      float s = std::fmax( k*(w.x()*q.y()-w.y()*q.x()),k*(w.y()-q.y()));
       return(std::sqrt(d)*sgn(s));
     } 
     virtual bool bbox(Float t0, Float t1, aabb& box) const {
@@ -536,11 +536,11 @@ struct unionFunc {
 }; 
 
 struct subtractFunc { 
-  float operator() (float a, float b) const { return std::max(a, -b); } 
+  float operator() (float a, float b) const { return std::fmax(a, -b); } 
 }; 
 
 struct intersectionFunc { 
-  float operator() (float a, float b) const { return std::max(a, b); } 
+  float operator() (float a, float b) const { return std::fmax(a, b); } 
 }; 
 
 struct blendFunc { 

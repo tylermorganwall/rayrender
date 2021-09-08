@@ -67,7 +67,7 @@ bool curve::bounding_box(Float t0, Float t1, aabb& box) const {
   box = surrounding_box(aabb(cpObj[0], cpObj[1]), aabb(cpObj[2], cpObj[3]));
   Float width[2] = {lerp(uMin, common->width[0], common->width[1]),
                     lerp(uMax, common->width[0], common->width[1])};
-  box = (*ObjectToWorld)(Expand(box, std::max(width[0], width[1]) * 0.5f));
+  box = (*ObjectToWorld)(Expand(box, std::fmax(width[0], width[1]) * 0.5f));
   return(true);
 }
 
@@ -104,19 +104,19 @@ bool curve::hit(const ray& r, Float tmin, Float tmax, hit_record& rec, random_ge
   // the curve's bounding box. We start with the y dimension, since the y
   // extent is generally the smallest (and is often tiny) due to our
   // careful orientation of the ray coordinate system above.
-  Float maxWidth = std::max(lerp(uMin, common->width[0], common->width[1]),
-                            lerp(uMax, common->width[0], common->width[1]));
-  if (std::max(std::max(cp[0].y(), cp[1].y()), std::max(cp[2].y(), cp[3].y())) +
+  Float maxWidth = std::fmax(lerp(uMin, common->width[0], common->width[1]),
+                             lerp(uMax, common->width[0], common->width[1]));
+  if (std::fmax(std::fmax(cp[0].y(), cp[1].y()), std::fmax(cp[2].y(), cp[3].y())) +
       0.5f * maxWidth < 0 ||
-      std::min(std::min(cp[0].y(), cp[1].y()), std::min(cp[2].y(), cp[3].y())) -
+      std::fmin(std::fmin(cp[0].y(), cp[1].y()), std::fmin(cp[2].y(), cp[3].y())) -
       0.5f * maxWidth > 0) {
     return false;
   }
   
   // Check for non-overlap in x.
-  if (std::max(std::max(cp[0].x(), cp[1].x()), std::max(cp[2].x(), cp[3].x())) +
+  if (std::fmax(std::fmax(cp[0].x(), cp[1].x()), std::fmax(cp[2].x(), cp[3].x())) +
       0.5f * maxWidth < 0 ||
-      std::min(std::min(cp[0].x(), cp[1].x()), std::min(cp[2].x(), cp[3].x())) -
+      std::fmin(std::fmin(cp[0].x(), cp[1].x()), std::fmin(cp[2].x(), cp[3].x())) -
       0.5f * maxWidth > 0) {
     return false;
   }
@@ -124,9 +124,9 @@ bool curve::hit(const ray& r, Float tmin, Float tmax, hit_record& rec, random_ge
   // Check for non-overlap in z.
   Float rayLength = r2.direction().length();
   Float zMax = rayLength * tmax;
-  if (std::max(std::max(cp[0].z(), cp[1].z()), std::max(cp[2].z(), cp[3].z())) +
+  if (std::fmax(std::fmax(cp[0].z(), cp[1].z()), std::fmax(cp[2].z(), cp[3].z())) +
       0.5f * maxWidth < 0 ||
-      std::min(std::min(cp[0].z(), cp[1].z()), std::min(cp[2].z(), cp[3].z())) -
+      std::fmin(std::fmin(cp[0].z(), cp[1].z()), std::fmin(cp[2].z(), cp[3].z())) -
       0.5f * maxWidth > zMax) {
     return false;
   }
@@ -134,14 +134,14 @@ bool curve::hit(const ray& r, Float tmin, Float tmax, hit_record& rec, random_ge
   // Compute refinement depth for curve, maxDepth
   Float L0 = 0;
   for (int i = 0; i < 2; ++i) {
-    L0 = std::max(
-      L0, std::max(
-          std::max(std::abs(cp[i].x() - 2 * cp[i + 1].x() + cp[i + 2].x()),
-                   std::abs(cp[i].y() - 2 * cp[i + 1].y() + cp[i + 2].y())),
-                   std::abs(cp[i].z() - 2 * cp[i + 1].z() + cp[i + 2].z())));
+    L0 = std::fmax(
+      L0, std::fmax(
+          std::fmax(std::fabs(cp[i].x() - 2 * cp[i + 1].x() + cp[i + 2].x()),
+                   std::fabs(cp[i].y() - 2 * cp[i + 1].y() + cp[i + 2].y())),
+                   std::fabs(cp[i].z() - 2 * cp[i + 1].z() + cp[i + 2].z())));
   }
   
-  Float eps = std::max(common->width[0], common->width[1]) * .05f;  // width / 20
+  Float eps = std::fmax(common->width[0], common->width[1]) * .05f;  // width / 20
   auto Log2 = [](float v) -> int {
     if (v < 1) {
       return 0;
@@ -192,19 +192,19 @@ bool curve::hit(const ray& r, Float tmin, Float tmax, hit_record& rec, Sampler* 
   // the curve's bounding box. We start with the y dimension, since the y
   // extent is generally the smallest (and is often tiny) due to our
   // careful orientation of the ray coordinate system above.
-  Float maxWidth = std::max(lerp(uMin, common->width[0], common->width[1]),
+  Float maxWidth = std::fmax(lerp(uMin, common->width[0], common->width[1]),
                             lerp(uMax, common->width[0], common->width[1]));
-  if (std::max(std::max(cp[0].y(), cp[1].y()), std::max(cp[2].y(), cp[3].y())) +
+  if (std::fmax(std::fmax(cp[0].y(), cp[1].y()), std::fmax(cp[2].y(), cp[3].y())) +
       0.5f * maxWidth < 0 ||
-      std::min(std::min(cp[0].y(), cp[1].y()), std::min(cp[2].y(), cp[3].y())) -
+      std::fmin(std::fmin(cp[0].y(), cp[1].y()), std::fmin(cp[2].y(), cp[3].y())) -
       0.5f * maxWidth > 0) {
     return false;
   }
   
   // Check for non-overlap in x.
-  if (std::max(std::max(cp[0].x(), cp[1].x()), std::max(cp[2].x(), cp[3].x())) +
+  if (std::fmax(std::fmax(cp[0].x(), cp[1].x()), std::fmax(cp[2].x(), cp[3].x())) +
       0.5f * maxWidth < 0 ||
-      std::min(std::min(cp[0].x(), cp[1].x()), std::min(cp[2].x(), cp[3].x())) -
+      std::fmin(std::fmin(cp[0].x(), cp[1].x()), std::fmin(cp[2].x(), cp[3].x())) -
       0.5f * maxWidth > 0) {
     return false;
   }
@@ -212,9 +212,9 @@ bool curve::hit(const ray& r, Float tmin, Float tmax, hit_record& rec, Sampler* 
   // Check for non-overlap in z.
   Float rayLength = r2.direction().length();
   Float zMax = rayLength * tmax;
-  if (std::max(std::max(cp[0].z(), cp[1].z()), std::max(cp[2].z(), cp[3].z())) +
+  if (std::fmax(std::fmax(cp[0].z(), cp[1].z()), std::fmax(cp[2].z(), cp[3].z())) +
       0.5f * maxWidth < 0 ||
-      std::min(std::min(cp[0].z(), cp[1].z()), std::min(cp[2].z(), cp[3].z())) -
+      std::fmin(std::fmin(cp[0].z(), cp[1].z()), std::fmin(cp[2].z(), cp[3].z())) -
       0.5f * maxWidth > zMax) {
     return false;
   }
@@ -222,14 +222,14 @@ bool curve::hit(const ray& r, Float tmin, Float tmax, hit_record& rec, Sampler* 
   // Compute refinement depth for curve, maxDepth
   Float L0 = 0;
   for (int i = 0; i < 2; ++i) {
-    L0 = std::max(
-      L0, std::max(
-          std::max(std::abs(cp[i].x() - 2 * cp[i + 1].x() + cp[i + 2].x()),
-                   std::abs(cp[i].y() - 2 * cp[i + 1].y() + cp[i + 2].y())),
-                   std::abs(cp[i].z() - 2 * cp[i + 1].z() + cp[i + 2].z())));
+    L0 = std::fmax(
+      L0, std::fmax(
+          std::fmax(std::fabs(cp[i].x() - 2 * cp[i + 1].x() + cp[i + 2].x()),
+                   std::fabs(cp[i].y() - 2 * cp[i + 1].y() + cp[i + 2].y())),
+                   std::fabs(cp[i].z() - 2 * cp[i + 1].z() + cp[i + 2].z())));
   }
   
-  Float eps = std::max(common->width[0], common->width[1]) * .05f;  // width / 20
+  Float eps = std::fmax(common->width[0], common->width[1]) * .05f;  // width / 20
   auto Log2 = [](float v) -> int {
     if (v < 1) {
       return 0;
@@ -266,33 +266,33 @@ bool curve::recursiveIntersect(const ray& r, Float tmin, Float tmax, hit_record&
     const point3f *cps = cpSplit;
     for (int seg = 0; seg < 2; ++seg, cps += 3) {
       Float maxWidth =
-        std::max(lerp(u[seg], common->width[0], common->width[1]),
+        std::fmax(lerp(u[seg], common->width[0], common->width[1]),
                  lerp(u[seg + 1], common->width[0], common->width[1]));
 
       // As above, check y first, since it most commonly lets us exit
       // out early.
-      if (std::max(std::max(cps[0].y(), cps[1].y()),
-                   std::max(cps[2].y(), cps[3].y())) +
+      if (std::fmax(std::fmax(cps[0].y(), cps[1].y()),
+                   std::fmax(cps[2].y(), cps[3].y())) +
                      0.5 * maxWidth < 0 ||
-                     std::min(std::min(cps[0].y(), cps[1].y()),
-                              std::min(cps[2].y(), cps[3].y())) -
+                     std::fmin(std::fmin(cps[0].y(), cps[1].y()),
+                              std::fmin(cps[2].y(), cps[3].y())) -
                                 0.5 * maxWidth > 0) {
         continue;
       }
-      if (std::max(std::max(cps[0].x(), cps[1].x()),
-                   std::max(cps[2].x(), cps[3].x())) +
+      if (std::fmax(std::fmax(cps[0].x(), cps[1].x()),
+                   std::fmax(cps[2].x(), cps[3].x())) +
                      0.5 * maxWidth < 0 ||
-                     std::min(std::min(cps[0].x(), cps[1].x()),
-                              std::min(cps[2].x(), cps[3].x())) -
+                     std::fmin(std::fmin(cps[0].x(), cps[1].x()),
+                              std::fmin(cps[2].x(), cps[3].x())) -
                                 0.5 * maxWidth > 0) {
         continue;
       }
       Float zMax = rayLength * tmax;
-      if (std::max(std::max(cps[0].z(), cps[1].z()),
-                   std::max(cps[2].z(), cps[3].z())) +
+      if (std::fmax(std::fmax(cps[0].z(), cps[1].z()),
+                   std::fmax(cps[2].z(), cps[3].z())) +
                      0.5 * maxWidth < 0 ||
-                     std::min(std::min(cps[0].z(), cps[1].z()),
-                              std::min(cps[2].z(), cps[3].z())) -
+                     std::fmin(std::fmin(cps[0].z(), cps[1].z()),
+                              std::fmin(cps[2].z(), cps[3].z())) -
                                 0.5 * maxWidth > zMax) {
         continue;
       }
@@ -398,8 +398,9 @@ bool curve::recursiveIntersect(const ray& r, Float tmin, Float tmax, hit_record&
     rec.v = v;
     rec.mat_ptr = mat_ptr.get();
     rec.has_bump = false;
-    normal3f temp_normal =  rec.normal * hitWidth * 0.5 * offset_scale;
-    rec.p = r.point_at_parameter(rec.t) + vec3f(temp_normal.x(),temp_normal.y(),temp_normal.z());
+    // normal3f temp_normal =  rec.normal * hitWidth * 0.5 * offset_scale;
+    rec.pError = vec3f(hitWidth, hitWidth, hitWidth);
+    rec.p = r.point_at_parameter(rec.t);// + vec3f(temp_normal.x(),temp_normal.y(),temp_normal.z());
     rec = (*ObjectToWorld)(rec);
     
     return(true);

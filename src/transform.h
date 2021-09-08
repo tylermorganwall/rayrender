@@ -75,17 +75,18 @@ Transform() { }
   
   // inline rayDifferential operator()(const rayDifferential &r) const;
   // SurfaceInteraction operator()(const SurfaceInteraction &si) const;
-  // template <typename T> point3<T> operator()(const point3<T> &pt, vec3<T> *absError) const;
-  // template <typename T> point3<T> operator()(const point3<T> &p, const vec3<T> &pError,
-  //          vec3<T> *pTransError) const;
-  // template <typename T> vec3<T> operator()(const vec3<T> &v, vec3<T> *vTransError) const;
-  // template <typename T> vec3<T> operator()(const vec3<T> &v, const vec3<T> &vError,
-  //          vec3<T> *vTransError) const;
+  template <typename T> point3<T> operator()(const point3<T> &pt, vec3<T> *absError) const;
+  template <typename T> point3<T> operator()(const point3<T> &p, const vec3<T> &pError,
+           vec3<T> *pTransError) const;
+  template <typename T> vec3<T> operator()(const vec3<T> &v, vec3<T> *vTransError) const;
+  template <typename T> vec3<T> operator()(const vec3<T> &v, const vec3<T> &vError,
+           vec3<T> *vTransError) const;
+
+  ray operator()(const ray &r, vec3f *oError,vec3f *dError) const;
+  ray operator()(const ray &r, const vec3f &oErrorIn,
+                 const vec3f &dErrorIn, vec3f *oErrorOut,
+                 vec3f *dErrorOut) const;
   
-  // ray operator()(const ray &r, vec3f *oError,vec3f *dError) const;
-  // ray operator()(const ray &r, const vec3f &oErrorIn,
-  //                const vec3f &dErrorIn, vec3f *oErrorOut,
-  //                vec3f *dErrorOut) const;
   
   friend std::ostream& operator<<(std::ostream& o, Transform const& t) {
     return o << t.m;

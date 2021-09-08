@@ -6,6 +6,7 @@
 #include "mathinline.h"
 #include "transform.h"
 #include "matrix.h"
+#include "efloat.h"
 
 class sphere: public hitable {
   public:

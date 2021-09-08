@@ -173,7 +173,7 @@ Float hair_pdf::value(const vec3f& direction, random_gen& rng, Float time) {
     }
     
     // Handle out-of-range $\cos \thetao$ from scale adjustment
-    cosThetaOp = std::abs(cosThetaOp);
+    cosThetaOp = std::fabs(cosThetaOp);
     pdf += Mp(cosThetaI, cosThetaOp, sinThetaI, sinThetaOp, v[p]) *
       apPdf[p] * Np(phi, p, s, gammaO, gammaT);
   }
@@ -225,7 +225,7 @@ Float hair_pdf::value(const vec3f& direction, Sampler* sampler, Float time) {
     }
     
     // Handle out-of-range $\cos \thetao$ from scale adjustment
-    cosThetaOp = std::abs(cosThetaOp);
+    cosThetaOp = std::fabs(cosThetaOp);
     pdf += Mp(cosThetaI, cosThetaOp, sinThetaI, sinThetaOp, v[p]) *
       apPdf[p] * Np(phi, p, s, gammaO, gammaT);
   }
@@ -269,7 +269,7 @@ vec3f hair_pdf::generate(random_gen& rng, bool& diffuse_bounce, Float time) {
   }
   
   // Sample $M_p$ to compute $\thetai$
-  u[1].e[0] = std::max(u[1].e[0], Float(1e-5));
+  u[1].e[0] = std::fmax(u[1].e[0], Float(1e-5));
   Float cosTheta = 1 + v[p] * std::log(u[1].e[0] + (1 - u[1].e[0]) * std::exp(-2 / v[p]));
   Float sinTheta = SafeSqrt(1 - Sqr(cosTheta));
   Float cosPhi = std::cos(2 * M_PI * u[1].e[1]);
@@ -328,7 +328,7 @@ vec3f hair_pdf::generate(Sampler* sampler, bool& diffuse_bounce, Float time) {
   }
   
   // Sample $M_p$ to compute $\thetai$
-  u[1].e[0] = std::max(u[1].e[0], Float(1e-5));
+  u[1].e[0] = std::fmax(u[1].e[0], Float(1e-5));
   Float cosTheta = 1 + v[p] * std::log(u[1].e[0] + (1 - u[1].e[0]) * std::exp(-2 / v[p]));
   Float sinTheta = SafeSqrt(1 - Sqr(cosTheta));
   Float cosPhi = std::cos(2 * M_PI * u[1].e[1]);

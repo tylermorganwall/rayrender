@@ -84,6 +84,8 @@ bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
       rec.bump_normal = (*ObjectToWorld)(rec.bump_normal);
       
     }
+    rec.pError = gamma(3) * Abs(vec3f(rec.p.x(), 0, rec.p.z()));
+    
     rec.p = (*ObjectToWorld)(rec.p);
     rec.normal = !reverseOrientation ? (*ObjectToWorld)(rec.normal) : -(*ObjectToWorld)(rec.normal);
     
@@ -127,6 +129,8 @@ bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
       rec.bump_normal.make_unit_vector(); 
       rec.bump_normal = (*ObjectToWorld)(rec.bump_normal);
     }
+    rec.pError = gamma(3) * Abs(vec3f(rec.p.x(), 0, rec.p.z()));
+    
     rec.p = (*ObjectToWorld)(rec.p);
     rec.normal = !reverseOrientation ? (*ObjectToWorld)(rec.normal) : -(*ObjectToWorld)(rec.normal);
     return(true);
@@ -165,6 +169,7 @@ bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
       rec.bump_normal.make_unit_vector();
       rec.bump_normal = (*ObjectToWorld)(rec.bump_normal);
     }
+    rec.pError = gamma(3) * Abs(vec3f(rec.p.x(), 0, rec.p.z()));
     rec.p = (*ObjectToWorld)(rec.p);
     rec.normal = !reverseOrientation ? (*ObjectToWorld)(rec.normal) : -(*ObjectToWorld)(rec.normal);
     return(true);
@@ -195,6 +200,8 @@ bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
       rec.bump_normal.make_unit_vector();
       rec.bump_normal = (*ObjectToWorld)(rec.bump_normal);
     }
+    rec.pError = gamma(3) * Abs(vec3f(rec.p.x(), 0, rec.p.z()));
+    
     rec.p = (*ObjectToWorld)(rec.p);
     rec.normal = !reverseOrientation ? (*ObjectToWorld)(rec.normal) : -(*ObjectToWorld)(rec.normal);
     rec.mat_ptr = mat_ptr.get();
@@ -280,6 +287,8 @@ bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Samp
       rec.bump_normal *= dot(temppoint, dir) > 0 ? -1 : 1;
       rec.bump_normal = (*ObjectToWorld)(rec.bump_normal);
     }
+    rec.pError = gamma(3) * Abs(vec3f(rec.p.x(), 0, rec.p.z()));
+    
     rec.p = (*ObjectToWorld)(rec.p);
     rec.normal = !reverseOrientation ? (*ObjectToWorld)(rec.normal) : -(*ObjectToWorld)(rec.normal);
     rec.mat_ptr = mat_ptr.get();
@@ -322,6 +331,8 @@ bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Samp
       rec.bump_normal.make_unit_vector();
       rec.bump_normal = (*ObjectToWorld)(rec.bump_normal);
     }
+    rec.pError = gamma(3) * Abs(vec3f(rec.p.x(), 0, rec.p.z()));
+    
     rec.p = (*ObjectToWorld)(rec.p);
     rec.normal = !reverseOrientation ? (*ObjectToWorld)(rec.normal) : -(*ObjectToWorld)(rec.normal);
     return(true);
@@ -360,6 +371,8 @@ bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Samp
       rec.bump_normal.make_unit_vector();
       rec.bump_normal = (*ObjectToWorld)(rec.bump_normal);
     }
+    rec.pError = gamma(3) * Abs(vec3f(rec.p.x(), 0, rec.p.z()));
+    
     rec.p = (*ObjectToWorld)(rec.p);
     rec.normal = !reverseOrientation ? (*ObjectToWorld)(rec.normal) : -(*ObjectToWorld)(rec.normal);
     return(true);
@@ -390,6 +403,8 @@ bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Samp
       rec.bump_normal.make_unit_vector();
       rec.bump_normal = (*ObjectToWorld)(rec.bump_normal);
     }
+    rec.pError = gamma(3) * Abs(vec3f(rec.p.x(), 0, rec.p.z()));
+    
     rec.p = (*ObjectToWorld)(rec.p);
     rec.normal = !reverseOrientation ? (*ObjectToWorld)(rec.normal) : -(*ObjectToWorld)(rec.normal);
     rec.mat_ptr = mat_ptr.get();

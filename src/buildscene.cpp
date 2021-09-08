@@ -606,7 +606,7 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
       
       std::shared_ptr<CurveCommon> curve_data = std::make_shared<CurveCommon>(p, tempvector(pl+13), tempvector(pl+14), type_curve, n);
       std::shared_ptr<hitable> entry = std::make_shared<curve>(tempvector(pl+15),tempvector(pl+16), curve_data, tex,
-                                                               ObjToWorld,WorldToObj, isflipped(i));
+                                                               ObjToWorld, WorldToObj, isflipped(i));
       list.add(entry);
     } else if (shape(i) == 15) {
       List temp_csg = csg_list(i);

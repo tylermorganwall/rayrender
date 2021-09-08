@@ -197,16 +197,63 @@ Transform Transform::operator*(const Transform &t2) const {
 }
 
 
-ray Transform::operator()(const ray &r) const {
-  point3f o = (*this)(r.origin());
+// ray Transform::operator()(const ray &r) const {
+//   point3f o = (*this)(r.origin());
+//   vec3f d = (*this)(r.direction());
+//   Float tMax = r.tMax;
+//   return ray(o, d, r.pri_stack, r.time(), tMax);
+// }
+
+
+ ray Transform::operator()(const ray &r) const {
+  vec3f oError;
+  point3f o = (*this)(r.origin(), &oError);
   vec3f d = (*this)(r.direction());
+  // Offset ray origin to edge of error bounds and compute _tMax_
+  Float lengthSquared = d.squared_length();
   Float tMax = r.tMax;
+  if (lengthSquared > 0) {
+    Float dt = dot(Abs(d), oError) / lengthSquared;
+    o += d * dt;
+    tMax -= dt;
+  }
   return ray(o, d, r.pri_stack, r.time(), tMax);
 }
 
+
+ ray Transform::operator()(const ray &r, vec3f *oError,
+                               vec3f *dError) const {
+  point3f o = (*this)(r.origin(), oError);
+  vec3f d = (*this)(r.direction(), dError);
+  Float tMax = r.tMax;
+  Float lengthSquared = d.squared_length();
+  if (lengthSquared > 0) {
+    Float dt = dot(Abs(d), *oError) / lengthSquared;
+    o += d * dt;
+    //        tMax -= dt;
+  }
+  return ray(o, d, r.pri_stack, r.time(), tMax);
+}
+
+ ray Transform::operator()(const ray &r, const vec3f &oErrorIn,
+                               const vec3f &dErrorIn, vec3f *oErrorOut,
+                               vec3f *dErrorOut) const {
+  point3f o = (*this)(r.origin(), oErrorIn, oErrorOut);
+  vec3f d = (*this)(r.direction(), dErrorIn, dErrorOut);
+  Float tMax = r.tMax;
+  Float lengthSquared = d.squared_length();
+  if (lengthSquared > 0) {
+    Float dt = dot(Abs(d), *oErrorOut) / lengthSquared;
+    o += d * dt;
+    //        tMax -= dt;
+  }
+  return ray(o, d, r.pri_stack, r.time(), tMax);
+}
+
+
 hit_record Transform::operator()(const hit_record &r) const {
   hit_record hr;
-  hr.p = (*this)(r.p);
+  hr.p = (*this)(r.p, r.pError, &hr.pError);
   hr.normal = (*this)(r.normal);
   hr.bump_normal = (*this)(r.bump_normal);
   hr.dpdu = (*this)(r.dpdu);
@@ -217,13 +264,14 @@ hit_record Transform::operator()(const hit_record &r) const {
   hr.v = r.v;
   hr.t = r.t;
   
-  //Need to transform more if pError and wo used
+  
+  //Need to transform wo if used
   return(hr);
 }
 
 hit_record Transform::operator()(hit_record &r) const {
   hit_record hr;
-  hr.p = (*this)(r.p);
+  hr.p = (*this)(r.p, r.pError, &hr.pError);
   hr.normal = (*this)(r.normal);
   hr.bump_normal = (*this)(r.bump_normal);
   hr.dpdu = (*this)(r.dpdu);
@@ -233,14 +281,15 @@ hit_record Transform::operator()(hit_record &r) const {
   hr.u = r.u;
   hr.v = r.v;
   hr.t = r.t;
+
   
-  //Need to transform more if pError and wo used
+  //Need to transform wo if used
   return(hr);
 }
 
 // inline rayDifferential Transform::operator()(const rayDifferential &r) const {
 //   ray tr = (*this)(ray(r));
-//   RayDifferential ret(tr.o, tr.d, tr.tMax, tr.time, tr.medium);
+//   rayDifferential ret(tr.o, tr.d, tr.tMax, tr.time, tr.medium);
 //   ret.hasDifferentials = r.hasDifferentials;
 //   ret.rxOrigin = (*this)(r.rxOrigin);
 //   ret.ryOrigin = (*this)(r.ryOrigin);
@@ -249,138 +298,115 @@ hit_record Transform::operator()(hit_record &r) const {
 //   return ret;
 // }
 
-// template <typename T>
-// point3<T> Transform::operator()(const point3<T> &p,
-//                                 vec3<T> *pError) const {
-//   T x = p.x(), y = p.y(), z = p.z();
-//   // Compute transformed coordinates from point _pt_
-//   T xp = (m.m[0][0] * x + m.m[0][1] * y) + (m.m[0][2] * z + m.m[0][3]);
-//   T yp = (m.m[1][0] * x + m.m[1][1] * y) + (m.m[1][2] * z + m.m[1][3]);
-//   T zp = (m.m[2][0] * x + m.m[2][1] * y) + (m.m[2][2] * z + m.m[2][3]);
-//   T wp = (m.m[3][0] * x + m.m[3][1] * y) + (m.m[3][2] * z + m.m[3][3]);
-//   
-//   // Compute absolute error for transformed point
-//   T xAbsSum = (std::fabs(m.m[0][0] * x) + std::fabs(m.m[0][1] * y) +
-//     std::fabs(m.m[0][2] * z) + std::fabs(m.m[0][3]));
-//   T yAbsSum = (std::fabs(m.m[1][0] * x) + std::fabs(m.m[1][1] * y) +
-//     std::fabs(m.m[1][2] * z) + std::fabs(m.m[1][3]));
-//   T zAbsSum = (std::fabs(m.m[2][0] * x) + std::fabs(m.m[2][1] * y) +
-//     std::fabs(m.m[2][2] * z) + std::fabs(m.m[2][3]));
-//   *pError = tgamma(3) * vec3<T>(xAbsSum, yAbsSum, zAbsSum);
-//   // CHECK_NE(wp, 0);
-//   if (wp == 1) {
-//     return point3<T>(xp, yp, zp);
-//   } else {
-//     return point3<T>(xp, yp, zp) / wp;
-//   }
-// }
+template <typename T>
+point3<T> Transform::operator()(const point3<T> &p,
+                                vec3<T> *pError) const {
+  T x = p.x(), y = p.y(), z = p.z();
+  // Compute transformed coordinates from point _pt_
+  T xp = (m.m[0][0] * x + m.m[0][1] * y) + (m.m[0][2] * z + m.m[0][3]);
+  T yp = (m.m[1][0] * x + m.m[1][1] * y) + (m.m[1][2] * z + m.m[1][3]);
+  T zp = (m.m[2][0] * x + m.m[2][1] * y) + (m.m[2][2] * z + m.m[2][3]);
+  T wp = (m.m[3][0] * x + m.m[3][1] * y) + (m.m[3][2] * z + m.m[3][3]);
 
-// template <typename T>
-// point3<T> Transform::operator()(const point3<T> &pt,
-//                                 const vec3<T> &ptError,
-//                                 vec3<T> *absError) const {
-//   T x = pt.x(), y = pt.y(), z = pt.z();
-//   T xp = (m.m[0][0] * x + m.m[0][1] * y) + (m.m[0][2] * z + m.m[0][3]);
-//   T yp = (m.m[1][0] * x + m.m[1][1] * y) + (m.m[1][2] * z + m.m[1][3]);
-//   T zp = (m.m[2][0] * x + m.m[2][1] * y) + (m.m[2][2] * z + m.m[2][3]);
-//   T wp = (m.m[3][0] * x + m.m[3][1] * y) + (m.m[3][2] * z + m.m[3][3]);
-//   absError->e[0] =
-//     (tgamma(3) + (T)1) *
-//     (std::fabs(m.m[0][0]) * ptError.x() + std::fabs(m.m[0][1]) * ptError.y() +
-//     std::fabs(m.m[0][2]) * ptError.z()) +
-//     tgamma(3) * (std::fabs(m.m[0][0] * x) + std::fabs(m.m[0][1] * y) +
-//     std::fabs(m.m[0][2] * z) + std::fabs(m.m[0][3]));
-//   absError->e[1] =
-//     (tgamma(3) + (T)1) *
-//     (std::fabs(m.m[1][0]) * ptError.x() + std::fabs(m.m[1][1]) * ptError.y() +
-//     std::fabs(m.m[1][2]) * ptError.z()) +
-//     tgamma(3) * (std::fabs(m.m[1][0] * x) + std::fabs(m.m[1][1] * y) +
-//     std::fabs(m.m[1][2] * z) + std::fabs(m.m[1][3]));
-//   absError->e[2] =
-//     (tgamma(3) + (T)1) *
-//     (std::fabs(m.m[2][0]) * ptError.x() + std::fabs(m.m[2][1]) * ptError.y() +
-//     std::fabs(m.m[2][2]) * ptError.z()) +
-//     tgamma(3) * (std::fabs(m.m[2][0] * x) + std::fabs(m.m[2][1] * y) +
-//     std::fabs(m.m[2][2] * z) + std::fabs(m.m[2][3]));
-//   // CHECK_NE(wp, 0);
-//   if (wp == 1.) {
-//     return point3<T>(xp, yp, zp);
-//   } else {
-//     return point3<T>(xp, yp, zp) / wp;
-//   }
-// }
+  // Compute absolute error for transformed point
+  T xAbsSum = (std::fabs(m.m[0][0] * x) + std::fabs(m.m[0][1] * y) +
+    std::fabs(m.m[0][2] * z) + std::fabs(m.m[0][3]));
+  T yAbsSum = (std::fabs(m.m[1][0] * x) + std::fabs(m.m[1][1] * y) +
+    std::fabs(m.m[1][2] * z) + std::fabs(m.m[1][3]));
+  T zAbsSum = (std::fabs(m.m[2][0] * x) + std::fabs(m.m[2][1] * y) +
+    std::fabs(m.m[2][2] * z) + std::fabs(m.m[2][3]));
+  *pError = gamma(3) * vec3<T>(xAbsSum, yAbsSum, zAbsSum);
+  // CHECK_NE(wp, 0);
+  if (wp == 1) {
+    return point3<T>(xp, yp, zp);
+  } else {
+    return point3<T>(xp, yp, zp) / wp;
+  }
+}
 
-// template <typename T>
-// vec3<T> Transform::operator()(const vec3<T> &v,
-//                               vec3<T> *absError) const {
-//   T x = v.x(), y = v.y(), z = v.z();
-//   absError->e[0] =
-//     tgamma(3) * (std::fabs(m.m[0][0] * v.x()) + std::fabs(m.m[0][1] * v.y()) +
-//     std::fabs(m.m[0][2] * v.z()));
-//   absError->e[1] =
-//     tgamma(3) * (std::fabs(m.m[1][0] * v.x()) + std::fabs(m.m[1][1] * v.y()) +
-//     std::fabs(m.m[1][2] * v.z()));
-//   absError->e[2] =
-//     tgamma(3) * (std::fabs(m.m[2][0] * v.x()) + std::fabs(m.m[2][1] * v.y()) +
-//     std::fabs(m.m[2][2] * v.z()));
-//   return vec3<T>(m.m[0][0] * x + m.m[0][1] * y + m.m[0][2] * z,
-//                  m.m[1][0] * x + m.m[1][1] * y + m.m[1][2] * z,
-//                  m.m[2][0] * x + m.m[2][1] * y + m.m[2][2] * z);
-// }
-// 
-// template <typename T>
-// vec3<T> Transform::operator()(const vec3<T> &v,
-//                               const vec3<T> &vError,
-//                               vec3<T> *absError) const {
-//   T x = v.x(), y = v.y(), z = v.z();
-//   absError->e[0] =
-//     (tgamma(3) + (T)1) *
-//     (std::fabs(m.m[0][0]) * vError.x() + std::fabs(m.m[0][1]) * vError.y() +
-//     std::fabs(m.m[0][2]) * vError.z()) +
-//     tgamma(3) * (std::fabs(m.m[0][0] * v.x()) + std::fabs(m.m[0][1] * v.y()) +
-//     std::fabs(m.m[0][2] * v.z()));
-//   absError->e[1] =
-//     (tgamma(3) + (T)1) *
-//     (std::fabs(m.m[1][0]) * vError.x() + std::fabs(m.m[1][1]) * vError.y() +
-//     std::fabs(m.m[1][2]) * vError.z()) +
-//     tgamma(3) * (std::fabs(m.m[1][0] * v.x()) + std::fabs(m.m[1][1] * v.y()) +
-//     std::fabs(m.m[1][2] * v.z()));
-//   absError->e[2] =
-//     (tgamma(3) + (T)1) *
-//     (std::fabs(m.m[2][0]) * vError.x() + std::fabs(m.m[2][1]) * vError.y() +
-//     std::fabs(m.m[2][2]) * vError.z()) +
-//     tgamma(3) * (std::fabs(m.m[2][0] * v.x()) + std::fabs(m.m[2][1] * v.y()) +
-//     std::fabs(m.m[2][2] * v.z()));
-//   return vec3<T>(m.m[0][0] * x + m.m[0][1] * y + m.m[0][2] * z,
-//                  m.m[1][0] * x + m.m[1][1] * y + m.m[1][2] * z,
-//                  m.m[2][0] * x + m.m[2][1] * y + m.m[2][2] * z);
-// }
+template <typename T>
+point3<T> Transform::operator()(const point3<T> &pt,
+                                const vec3<T> &ptError,
+                                vec3<T> *absError) const {
+  T x = pt.x(), y = pt.y(), z = pt.z();
+  T xp = (m.m[0][0] * x + m.m[0][1] * y) + (m.m[0][2] * z + m.m[0][3]);
+  T yp = (m.m[1][0] * x + m.m[1][1] * y) + (m.m[1][2] * z + m.m[1][3]);
+  T zp = (m.m[2][0] * x + m.m[2][1] * y) + (m.m[2][2] * z + m.m[2][3]);
+  T wp = (m.m[3][0] * x + m.m[3][1] * y) + (m.m[3][2] * z + m.m[3][3]);
+  absError->e[0] =
+    (gamma(3) + (T)1) *
+    (std::fabs(m.m[0][0]) * ptError.x()  + 
+     std::fabs(m.m[0][1]) * ptError.y()  +
+     std::fabs(m.m[0][2]) * ptError.z()) +
+    gamma(3) * (std::fabs(m.m[0][0] * x) + 
+                std::fabs(m.m[0][1] * y) +
+                std::fabs(m.m[0][2] * z) + std::fabs(m.m[0][3]));
+  absError->e[1] =
+    (gamma(3) + (T)1) *
+    (std::fabs(m.m[1][0]) * ptError.x()  + 
+     std::fabs(m.m[1][1]) * ptError.y()  +
+     std::fabs(m.m[1][2]) * ptError.z()) +
+    gamma(3) * (std::fabs(m.m[1][0] * x) + 
+                std::fabs(m.m[1][1] * y) +
+                std::fabs(m.m[1][2] * z) + std::fabs(m.m[1][3]));
+  absError->e[2] =
+    (gamma(3) + (T)1) *
+    (std::fabs(m.m[2][0]) * ptError.x()  + 
+     std::fabs(m.m[2][1]) * ptError.y()  +
+     std::fabs(m.m[2][2]) * ptError.z()) +
+    gamma(3) * (std::fabs(m.m[2][0] * x) + 
+                std::fabs(m.m[2][1] * y) +
+                std::fabs(m.m[2][2] * z) + std::fabs(m.m[2][3]));
+  // CHECK_NE(wp, 0);
+  if (wp == 1.) {
+    return point3<T>(xp, yp, zp);
+  } else {
+    return point3<T>(xp, yp, zp) / wp;
+  }
+}
 
-// ray Transform::operator()(const ray &r, vec3f *oError,
-//                           vec3f *dError) const {
-//   point3f o = (*this)(r.origin(), oError);
-//   vec3f d = (*this)(r.direction(), dError);
-//   Float tMax = r.tMax;
-//   Float lengthSquared = d.squared_length();
-//   if (lengthSquared > 0) {
-//     Float dt = dot(Abs(d), *oError) / lengthSquared;
-//     o += d * dt;
-//     //        tMax -= dt;
-//   }
-//   return ray(o, d, r.pri_stack, r.time(),tMax);
-// }
-// 
-// ray Transform::operator()(const ray &r, const vec3f &oErrorIn,
-//                           const vec3f &dErrorIn, vec3f *oErrorOut,
-//                           vec3f *dErrorOut) const {
-//   point3f o = (*this)(r.origin(), oErrorIn, oErrorOut);
-//   vec3f d = (*this)(r.direction(), dErrorIn, dErrorOut);
-//   Float tMax = r.tMax;
-//   Float lengthSquared = d.squared_length();
-//   if (lengthSquared > 0) {
-//     Float dt = dot(Abs(d), *oErrorOut) / lengthSquared;
-//     o += d * dt;
-//     //        tMax -= dt;
-//   }
-//   return ray(o, d, r.pri_stack, r.time(), tMax);
-// }
+template <typename T>
+vec3<T> Transform::operator()(const vec3<T> &v,
+                              vec3<T> *absError) const {
+  T x = v.x(), y = v.y(), z = v.z();
+  absError->e[0] =
+    gamma(3) * (std::fabs(m.m[0][0] * v.x()) + std::fabs(m.m[0][1] * v.y()) +
+    std::fabs(m.m[0][2] * v.z()));
+  absError->e[1] =
+    gamma(3) * (std::fabs(m.m[1][0] * v.x()) + std::fabs(m.m[1][1] * v.y()) +
+    std::fabs(m.m[1][2] * v.z()));
+  absError->e[2] =
+    gamma(3) * (std::fabs(m.m[2][0] * v.x()) + std::fabs(m.m[2][1] * v.y()) +
+    std::fabs(m.m[2][2] * v.z()));
+  return vec3<T>(m.m[0][0] * x + m.m[0][1] * y + m.m[0][2] * z,
+                 m.m[1][0] * x + m.m[1][1] * y + m.m[1][2] * z,
+                 m.m[2][0] * x + m.m[2][1] * y + m.m[2][2] * z);
+}
+
+template <typename T>
+vec3<T> Transform::operator()(const vec3<T> &v,
+                              const vec3<T> &vError,
+                              vec3<T> *absError) const {
+  T x = v.x(), y = v.y(), z = v.z();
+  absError->e[0] =
+    (gamma(3) + (T)1) *
+    (std::fabs(m.m[0][0]) * vError.x() + std::fabs(m.m[0][1]) * vError.y() +
+    std::fabs(m.m[0][2]) * vError.z()) +
+    gamma(3) * (std::fabs(m.m[0][0] * v.x()) + std::fabs(m.m[0][1] * v.y()) +
+    std::fabs(m.m[0][2] * v.z()));
+  absError->e[1] =
+    (gamma(3) + (T)1) *
+    (std::fabs(m.m[1][0]) * vError.x() + std::fabs(m.m[1][1]) * vError.y() +
+    std::fabs(m.m[1][2]) * vError.z()) +
+    gamma(3) * (std::fabs(m.m[1][0] * v.x()) + std::fabs(m.m[1][1] * v.y()) +
+    std::fabs(m.m[1][2] * v.z()));
+  absError->e[2] =
+    (gamma(3) + (T)1) *
+    (std::fabs(m.m[2][0]) * vError.x() + std::fabs(m.m[2][1]) * vError.y() +
+    std::fabs(m.m[2][2]) * vError.z()) +
+    gamma(3) * (std::fabs(m.m[2][0] * v.x()) + std::fabs(m.m[2][1] * v.y()) +
+    std::fabs(m.m[2][2] * v.z()));
+  return vec3<T>(m.m[0][0] * x + m.m[0][1] * y + m.m[0][2] * z,
+                 m.m[1][0] * x + m.m[1][1] * y + m.m[1][2] * z,
+                 m.m[2][0] * x + m.m[2][1] * y + m.m[2][2] * z);
+}

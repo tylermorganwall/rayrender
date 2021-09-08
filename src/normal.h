@@ -242,7 +242,7 @@ inline Float MinComponent(const normal3<T> &v) {
 
 template<typename T> 
 inline Float MaxComponent(const normal3<T> &v) {
-  return(std::max(v.x(), std::max(v.y(), v.z())));
+  return(std::fmax(v.x(), std::fmax(v.y(), v.z())));
 }
 
 template<typename T> 

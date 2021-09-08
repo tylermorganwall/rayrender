@@ -1,5 +1,6 @@
 #include "color.h"
 #include "RcppThread.h"
+#include "mathinline.h"
 
 // #include "fstream"
 // #define DEBUG
@@ -39,7 +40,7 @@ point3f color(const ray& r, hitable *world, hitable_list *hlist,
         return(point3f(0,0,0));
       }
       if(i > roulette_activate) {
-        float t = std::max(throughput.x(), std::max(throughput.y(), throughput.z()));
+        float t = std::fmax(throughput.x(), std::fmax(throughput.y(), throughput.z()));
         //From Szecsi, Szirmay-Kalos, and Kelemen
         float prob_continue = std::min(1.0f, std::sqrt(t/prev_t));
         prev_t = t;
@@ -64,15 +65,20 @@ point3f color(const ray& r, hitable *world, hitable_list *hlist,
         
         //Translates the world space point into object space point, generates ray assuring intersection, and then translates 
         //ray back into world space
+        //Remove this when error analysis fully implemented
         point3f offset_p = offset_ray(hrec.p-r2.A, hrec.normal) + r2.A;
-        
+
         r1 = r2;
+        vec3f dir;
         if(!diffuse_bounce) {
-          r2 = ray(offset_p, p.generate(sampler, diffuse_bounce, r2.time()), r2.pri_stack, r2.time()); //scatters a ray from hit point to stratified direction
+          diffuse_bounce = true;
+          dir = p.generate(sampler, diffuse_bounce, r2.time());
         } else {
-          r2 = ray(offset_p, p.generate(rng, diffuse_bounce, r2.time()), r2.pri_stack, r2.time()); //scatters a ray from hit point to direction
+          dir = p.generate(rng, diffuse_bounce, r2.time());
         }
-        pdf_val = p.value(r2.direction(), sampler, r2.time()); //generates a pdf value based the intersection point and the mixture pdf
+        r2 = ray(OffsetRayOrigin(offset_p, hrec.pError, hrec.normal, dir), dir, r2.pri_stack, r2.time());
+        
+        pdf_val = p.value(dir, sampler, r2.time()); //generates a pdf value based the intersection point and the mixture pdf
         throughput *= hrec.mat_ptr->f(r1, hrec, r2) / pdf_val;
       } else {
         return(final_color);

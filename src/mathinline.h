@@ -15,6 +15,7 @@
 static const Float mpi_over_180 = M_PI/180;
 static const Float SqrtPiOver8 = 0.626657069f;
 static const Float ONE_OVER_2_PI = 1 / (2 * M_PI);
+static const Float Infinity =  Infinity;
 
 #ifndef FLOATDEF
 #define FLOATDEF
@@ -24,6 +25,12 @@ typedef double Float;
 typedef float Float;
 #endif 
 #endif
+
+static constexpr Float MachineEpsilon = std::numeric_limits<Float>::epsilon() * 0.5;
+
+inline constexpr Float gamma(int n) {
+  return (n * MachineEpsilon) / (1 - n * MachineEpsilon);
+}
 
 template<class T>
 inline T ffmin(T a, T b) { return(a < b ? a : b);}
@@ -109,7 +116,7 @@ inline vec3f SphericalDirection(Float sinTheta,
 inline vec3f SphericalDirection(Float sinTheta, Float cosTheta, 
                                 Float phi, const vec3f &x, const vec3f &y,
                                 const vec3f &z) {
-  return sinTheta * std::cos(phi) * x + sinTheta * std::sin(phi) ;//* y + cosTheta * z;
+  return sinTheta * std::cos(phi) * x + sinTheta * std::sin(phi) * y + cosTheta * z;
 }
 
 // 
@@ -220,7 +227,7 @@ inline Float Cos2Theta(const vec3f &w) { return w.z() * w.z(); }
 inline Float AbsCosTheta(const vec3f &w) { return std::fabs(w.z()); }
 
 inline Float Sin2Theta(const vec3f &w) {
-  return(std::max((Float)0, (Float)1 - Cos2Theta(w)));
+  return(std::fmax((Float)0, (Float)1 - Cos2Theta(w)));
 }
 
 inline Float SinTheta(const vec3f &w) {
@@ -415,6 +422,33 @@ inline float BitsToFloat(uint32_t ui) {
   return f;
 }
 
+
+inline float NextFloatUp(float v) {
+  // Handle infinity and negative zero for _NextFloatUp()_
+  if (std::isinf(v) && v > 0.) return v;
+  if (v == -0.f) v = 0.f;
+  
+  // Advance _v_ to next higher float
+  uint32_t ui = FloatToBits(v);
+  if (v >= 0)
+    ++ui;
+  else
+    --ui;
+  return BitsToFloat(ui);
+}
+
+inline float NextFloatDown(float v) {
+  // Handle infinity and positive zero for _NextFloatDown()_
+  if (std::isinf(v) && v < 0.) return v;
+  if (v == 0.f) v = -0.f;
+  uint32_t ui = FloatToBits(v);
+  if (v > 0)
+    --ui;
+  else
+    ++ui;
+  return BitsToFloat(ui);
+}
+
 constexpr Float origin() { return 1.0f / 32.0f; }
 constexpr Float float_scale() { return 1.0f / 65536.0f; }
 constexpr Float int_scale() { return 256.0f; }
@@ -526,7 +560,7 @@ inline Float SafeASin(Float x) {
 }
 
 inline Float SafeSqrt(Float x) {
-  return(std::sqrt(std::max(Float(0), x)));
+  return(std::sqrt(std::fmax(Float(0), x)));
 }
 
 inline vec3f Exp(vec3f a) {
@@ -693,6 +727,72 @@ CoordinateSystem(const vec3<T> &v1, vec3<T> *v2, vec3<T> *v3) {
       std::sqrt(v1.y() * v1.y() + v1.z() * v1.z());
   }
   *v3 = cross(v1, *v2);
+}
+
+inline point3f OffsetRayOrigin(const point3f &p, const vec3f &pError,
+                               const normal3f &n, const vec3f &w) {
+  Float d = dot(Abs(n), pError);
+  vec3f offset = d * vec3f(n.x(),n.y(),n.z());
+  if (dot(w, n) < 0) {
+    offset = -offset;
+  }
+  point3f po = p + offset;
+  for (int i = 0; i < 3; ++i) {
+    if (offset[i] > 0) {
+      po[i] = NextFloatUp(po[i]);
+    } else if (offset[i] < 0)  {
+      po[i] = NextFloatDown(po[i]);
+    }
+  }
+  
+  return po;
+}
+
+
+inline Float UniformConePdf(Float cosThetaMax) {
+  return 1 / (2 * M_PI * (1 - cosThetaMax));
+}
+
+inline vec3f UniformSampleCone(const point2f &u, Float cosThetaMax) {
+  Float cosTheta = ((Float)1 - u[0]) + u[0] * cosThetaMax;
+  Float sinTheta = std::sqrt((Float)1 - cosTheta * cosTheta);
+  Float phi = u[1] * 2 * M_PI;
+  return vec3f(std::cos(phi) * sinTheta, std::sin(phi) * sinTheta,
+               cosTheta);
+}
+
+inline vec3f UniformSampleCone(const point2f &u, Float cosThetaMax,
+                        const vec3f &x, const vec3f &y,
+                        const vec3f &z) {
+  Float cosTheta = lerp(u[0], cosThetaMax, 1.f);
+  Float sinTheta = std::sqrt((Float)1. - cosTheta * cosTheta);
+  Float phi = u[1] * 2 * M_PI;
+  return std::cos(phi) * sinTheta * x + std::sin(phi) * sinTheta * y +
+    cosTheta * z;
+}
+
+inline vec3f UniformSampleHemisphere(const vec2f &u) {
+  Float z = u[0];
+  Float r = std::sqrt(std::fmax((Float)0, (Float)1. - z * z));
+  Float phi = 2 * M_PI * u[1];
+  return vec3f(r * std::cos(phi), r * std::sin(phi), z);
+}
+
+inline Float UniformHemispherePdf() { return 0.5*M_1_PI; }
+
+inline vec3f UniformSampleSphere(const vec2f &u) {
+  Float z = 1 - 2 * u[0];
+  Float r = std::sqrt(std::fmax((Float)0, (Float)1 - z * z));
+  Float phi = 2 * M_PI * u[1];
+  return vec3f(r * std::cos(phi), r * std::sin(phi), z);
+}
+
+inline Float UniformSpherePdf() { return 0.25*M_1_PI; }
+
+inline point2f UniformSampleDisk(const vec2f &u) {
+  Float r = std::sqrt(u[0]);
+  Float theta = 2 * M_PI * u[1];
+  return point2f(r * std::cos(theta), r * std::sin(theta));
 }
 
 #endif

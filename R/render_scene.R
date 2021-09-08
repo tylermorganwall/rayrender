@@ -481,6 +481,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
     debug_channel = unlist(lapply(tolower(debug_channel),switch,
                             "none" = 0,"depth" = 1,"normals" = 2, "uv" = 3, "bvh" = 4,
                             "variance" = 5, "normal" = 2, "dpdu" = 6, "dpdv" = 7, "color" = 8, 
+                            "position" = 10, "direction" = 11, "time" = 12, "shape" = 13,
                             0))
     light_direction = c(0,1,0)
   } else {
@@ -665,7 +666,29 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
       save_png(full_array,filename)
       return(invisible(full_array))
     }
-  } 
+  } else if (debug_channel %in% c(10,13)) {
+    full_array[,,1][is.infinite(full_array[,,1])] = max(full_array[,,1][!is.infinite(full_array[,,1])])
+    full_array[,,2][is.infinite(full_array[,,2])] = max(full_array[,,2][!is.infinite(full_array[,,2])])
+    full_array[,,3][is.infinite(full_array[,,3])] = max(full_array[,,3][!is.infinite(full_array[,,3])])
+    
+    full_array[,,1] = (full_array[,,1] - min(full_array[,,1]))/(max(full_array[,,1]) - min(full_array[,,1]))
+    full_array[,,2] = (full_array[,,2] - min(full_array[,,2]))/(max(full_array[,,2]) - min(full_array[,,2]))
+    full_array[,,3] = (full_array[,,3] - min(full_array[,,3]))/(max(full_array[,,3]) - min(full_array[,,3]))
+    plot_map(full_array)
+    return(invisible(full_array))
+  } else if (debug_channel == 11) {
+    full_array[,,1] = full_array[,,1]/2+1
+    full_array[,,2] = full_array[,,2]/2+1
+    full_array[,,3] = full_array[,,3]/2+1
+    plot_map(full_array)
+    return(invisible(full_array))
+  } else if (debug_channel == 12) {
+    full_array[is.infinite(full_array)] = max(full_array[!is.infinite(full_array)])
+    
+    full_array = (full_array - min(full_array))/(max(full_array) - min(full_array))
+    plot_map(full_array)
+    return(invisible(full_array))
+  }
   if(!is.matrix(bloom)) {
     if(is.numeric(bloom) && length(bloom) == 1) {
       kernel = rayimage::generate_2d_exponential(0.1,11,3*1/bloom)
