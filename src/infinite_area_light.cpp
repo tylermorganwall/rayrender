@@ -35,7 +35,8 @@ bool InfiniteAreaLight::hit(const ray& r, Float t_min, Float t_max, hit_record& 
     rec.t = temp1;
     rec.p = r2.point_at_parameter(rec.t);
     rec.p *= radius / rec.p.length(); 
-    rec.normal = -(rec.p - center) / radius;
+    rec.normal = -unit_vector(r2.direction());
+    
     vec3f v2(-r2.direction().z(),r2.direction().y(),r2.direction().x());
     get_sphere_uv(unit_vector(v2), rec.u, rec.v);
     rec.u = 1 - rec.u;
@@ -50,6 +51,7 @@ bool InfiniteAreaLight::hit(const ray& r, Float t_min, Float t_max, hit_record& 
     rec.dpdv = 2 * M_PI * vec3f(rec.p.z() * cosPhi, rec.p.z() * sinPhi, -radius * std::sin(theta));
     
     rec = (*ObjectToWorld)(rec);
+
     rec.mat_ptr = mat_ptr.get();
     return(true);
   }
@@ -57,7 +59,8 @@ bool InfiniteAreaLight::hit(const ray& r, Float t_min, Float t_max, hit_record& 
     rec.t = temp2;
     rec.p = r.point_at_parameter(rec.t);
     rec.p *= radius / rec.p.length(); 
-    rec.normal = -(rec.p - center) / radius;
+    rec.normal = -unit_vector(r2.direction());
+    
     vec3f v2(-r2.direction().z(),r2.direction().y(),r2.direction().x());
     get_sphere_uv(unit_vector(v2), rec.u, rec.v);
     rec.u = 1 - rec.u;
@@ -72,6 +75,7 @@ bool InfiniteAreaLight::hit(const ray& r, Float t_min, Float t_max, hit_record& 
     rec.dpdu = 2 * M_PI * vec3f(-rec.p.z(), 0, rec.p.x());
     rec.dpdv = 2 * M_PI * vec3f(rec.p.z() * cosPhi, rec.p.z() * sinPhi, -radius * std::sin(theta));
     rec = (*ObjectToWorld)(rec);
+
 
     rec.mat_ptr = mat_ptr.get();
     return(true);
@@ -94,7 +98,8 @@ bool InfiniteAreaLight::hit(const ray& r, Float t_min, Float t_max, hit_record& 
     rec.t = temp1;
     rec.p = r2.point_at_parameter(rec.t);
     rec.p *= radius / rec.p.length(); 
-    rec.normal = -(rec.p - center) / radius;
+    rec.normal = -unit_vector(r2.direction());
+    
     vec3f v2(-r2.direction().z(),r2.direction().y(),r2.direction().x());
     get_sphere_uv(unit_vector(v2), rec.u, rec.v);
     rec.u = 1 - rec.u;    
@@ -117,7 +122,8 @@ bool InfiniteAreaLight::hit(const ray& r, Float t_min, Float t_max, hit_record& 
     rec.t = temp2;
     rec.p = r2.point_at_parameter(rec.t);
     rec.p *= radius / rec.p.length(); 
-    rec.normal = -(rec.p - center) / radius;
+    rec.normal = -unit_vector(r2.direction());
+    
     vec3f v2(-r2.direction().z(),r2.direction().y(),r2.direction().x());
     get_sphere_uv(unit_vector(v2), rec.u, rec.v);
     rec.u = 1 - rec.u;
@@ -132,6 +138,7 @@ bool InfiniteAreaLight::hit(const ray& r, Float t_min, Float t_max, hit_record& 
     rec.dpdv = 2 * M_PI * vec3f(rec.p.z() * cosPhi, rec.p.z() * sinPhi, -radius * std::sin(theta));
     
     rec = (*ObjectToWorld)(rec);
+
     rec.mat_ptr = mat_ptr.get();
     return(true);
   }

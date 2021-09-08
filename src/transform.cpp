@@ -53,24 +53,30 @@ Transform Scale(Float x, Float y, Float z) {
 Transform RotateX(Float theta) {
   Float sinTheta = std::sin(Radians(theta));
   Float cosTheta = std::cos(Radians(theta));
-  Matrix4x4 m(1, 0, 0, 0, 0, cosTheta, -sinTheta, 0, 0, sinTheta, cosTheta, 0,
-              0, 0, 0, 1);
+  Matrix4x4 m(1,        0,         0, 0, 
+              0, cosTheta, -sinTheta, 0, 
+              0, sinTheta,  cosTheta, 0,
+              0,        0,         0, 1);
   return Transform(m, Transpose(m));
 }
 
 Transform RotateY(Float theta) {
   Float sinTheta = std::sin(Radians(theta));
   Float cosTheta = std::cos(Radians(theta));
-  Matrix4x4 m(cosTheta, 0, sinTheta, 0, 0, 1, 0, 0, -sinTheta, 0, cosTheta, 0,
-              0, 0, 0, 1);
+  Matrix4x4 m(cosTheta,  0, sinTheta, 0, 
+              0,         1,        0, 0, 
+              -sinTheta, 0, cosTheta, 0,
+              0,         0,        0, 1);
   return Transform(m, Transpose(m));
 }
 
 Transform RotateZ(Float theta) {
   Float sinTheta = std::sin(Radians(theta));
   Float cosTheta = std::cos(Radians(theta));
-  Matrix4x4 m(cosTheta, -sinTheta, 0, 0, sinTheta, cosTheta, 0, 0, 0, 0, 1, 0,
-              0, 0, 0, 1);
+  Matrix4x4 m(cosTheta, -sinTheta, 0, 0, 
+              sinTheta,  cosTheta, 0, 0, 
+                     0,         0, 1, 0,
+                     0,         0, 0, 1);
   return Transform(m, Transpose(m));
 }
 
