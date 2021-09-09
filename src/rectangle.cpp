@@ -21,9 +21,9 @@ bool xy_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
     if(alpha_mask->value(u, v, rec.p).x() < rng.unif_rand()) {
       return(false);
     }
-    rec.normal = dot(r2.direction(),vec3f(0,0,1)) < 0 ? vec3f(0,0,1) : vec3f(0,0,-1);
+    rec.normal = dot(r2.direction(),normal3f(0,0,1)) < 0 ? normal3f(0,0,1) : normal3f(0,0,-1);
   } else {
-    rec.normal = vec3f(0,0,1);
+    rec.normal = normal3f(0,0,1);
   }
   rec.u = u;
   rec.v = v;
@@ -43,7 +43,7 @@ bool xy_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
   
   rec.mat_ptr = mp.get();
   rec.p = r2.point_at_parameter(t);
-  rec.p.e[2] = k;
+  rec.p.e[2] = 0;
   rec = (*ObjectToWorld)(rec);
   rec.normal = !reverseOrientation ? (rec.normal) : -(rec.normal);
   
@@ -92,7 +92,7 @@ bool xy_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampl
   
   rec.mat_ptr = mp.get();
   rec.p = r2.point_at_parameter(t);
-  rec.p.e[2] = k;
+  rec.p.e[2] = 0;
   rec = (*ObjectToWorld)(rec);
   rec.normal = !reverseOrientation ? (rec.normal) : -(rec.normal);
   
@@ -135,6 +135,7 @@ bool xz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
   if(t < t_min || t > t_max) {
     return(false);
   }
+  
   Float x = r2.origin().x() + t*r2.direction().x();
   Float z = r2.origin().z() + t*r2.direction().z();
   if(x < x0 || x > x1 || z < z0 || z > z1) {
@@ -149,9 +150,9 @@ bool xz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
     if(alpha_mask->value(u, v, rec.p).x() < rng.unif_rand()) {
       return(false);
     }
-    rec.normal =  dot(r2.direction(),vec3f(0,1,0)) < 0 ? vec3f(0,1,0) : vec3f(0,-1,0);
+    rec.normal =  dot(r2.direction(),normal3f(0,1,0)) < 0 ? normal3f(0,1,0) : normal3f(0,-1,0);
   } else {
-    rec.normal =  vec3f(0,1,0);
+    rec.normal =  normal3f(0,1,0);
   }
            
   rec.u = u;
@@ -172,7 +173,7 @@ bool xz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
   
   rec.mat_ptr = mp.get();
   rec.p = r2.point_at_parameter(t);
-  rec.p.e[1] = k;
+  rec.p.e[1] = 0;
   rec = (*ObjectToWorld)(rec);
   rec.normal = !reverseOrientation ? (rec.normal) : -(rec.normal);
   return(true);
@@ -200,9 +201,9 @@ bool xz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampl
     if(alpha_mask->value(u, v, rec.p).x() < sampler->Get1D()) {
       return(false);
     }
-    rec.normal =  dot(r2.direction(),vec3f(0,1,0)) < 0 ? vec3f(0,1,0) : vec3f(0,-1,0);
+    rec.normal =  dot(r2.direction(),normal3f(0,1,0)) < 0 ? normal3f(0,1,0) : normal3f(0,-1,0);
   } else {
-    rec.normal =  vec3f(0,1,0);
+    rec.normal =  normal3f(0,1,0);
   }
   rec.u = u;
   rec.v = v;
@@ -222,11 +223,47 @@ bool xz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampl
   
   rec.mat_ptr = mp.get();
   rec.p = r2.point_at_parameter(t);
-  rec.p.e[1] = k;
+  rec.p.e[1] = 0;
   rec = (*ObjectToWorld)(rec);
   rec.normal = !reverseOrientation ? (rec.normal) : -(rec.normal);
   
   return(true);
+}
+
+bool xz_rect::bounding_box(Float t0, Float t1, aabb& box) const {
+  box = (*ObjectToWorld)(aabb(vec3f(x0,k-0.001,z0), vec3f(x1,k+0.001,z1)));
+  return(true);
+}
+Float xz_rect::pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Float time) {
+  hit_record rec;
+  if(this->hit(ray(o,v), 0.001, FLT_MAX, rec, rng)) {
+    Float area = (x1-x0)*(z1-z0);
+    Float distance_squared = rec.t * rec.t * v.squared_length();
+    Float cosine = fabs(dot(v, rec.normal)/v.length());
+    return(distance_squared / (cosine * area));
+  } else {
+    return(0);
+  }
+}
+Float xz_rect::pdf_value(const point3f& o, const vec3f& v, Sampler* sampler, Float time) {
+  hit_record rec;
+  if(this->hit(ray(o,v), 0.001, FLT_MAX, rec, sampler)) {
+    Float area = (x1-x0)*(z1-z0);
+    Float distance_squared = rec.t * rec.t * v.squared_length();
+    Float cosine = fabs(dot(v, rec.normal)/v.length());
+    return(distance_squared / (cosine * area));
+  } else {
+    return(0);
+  }
+}
+vec3f xz_rect::random(const point3f& o, random_gen& rng, Float time) {
+  point3f random_point = (*ObjectToWorld)(point3f(x0 + rng.unif_rand() * (x1 - x0), 0, z0 + rng.unif_rand() * (z1-z0)));
+  return(random_point - o);
+}
+vec3f xz_rect::random(const point3f& o, Sampler* sampler, Float time) {
+  vec2f u = sampler->Get2D();
+  point3f random_point = (*ObjectToWorld)(point3f(x0 + u.x() * (x1 - x0), 0, z0 + u.y()  * (z1-z0)));
+  return(random_point - o);
 }
 
 bool yz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
@@ -250,9 +287,9 @@ bool yz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
     if(alpha_mask->value(u, v, rec.p).x() < rng.unif_rand()) {
       return(false);
     }
-    rec.normal =  dot(r2.direction(),vec3f(1,0,0)) < 0 ? vec3f(1,0,0) : vec3f(-1,0,0);
+    rec.normal =  dot(r2.direction(),normal3f(1,0,0)) < 0 ? normal3f(1,0,0) : normal3f(-1,0,0);
   } else {
-    rec.normal =  vec3f(1,0,0);
+    rec.normal =  normal3f(1,0,0);
   }
   rec.u = u;
   rec.v = v;
@@ -271,7 +308,7 @@ bool yz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
   
   rec.mat_ptr = mp.get();
   rec.p = r2.point_at_parameter(t);
-  rec.p.e[0] = k;
+  rec.p.e[0] = 0;
   rec = (*ObjectToWorld)(rec);
   rec.normal = !reverseOrientation ? (rec.normal) : -(rec.normal);
   
@@ -300,9 +337,9 @@ bool yz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampl
     if(alpha_mask->value(u, v, rec.p).x() < sampler->Get1D()) {
       return(false);
     }
-    rec.normal =  dot(r2.direction(),vec3f(1,0,0)) < 0 ? vec3f(1,0,0) : vec3f(-1,0,0);
+    rec.normal =  dot(r2.direction(),normal3f(1,0,0)) < 0 ? normal3f(1,0,0) : normal3f(-1,0,0);
   } else {
-    rec.normal =  vec3f(1,0,0);
+    rec.normal =  normal3f(1,0,0);
   }
   rec.u = u;
   rec.v = v;
@@ -321,9 +358,49 @@ bool yz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampl
   
   rec.mat_ptr = mp.get();
   rec.p = r2.point_at_parameter(t);
-  rec.p.e[0] = k;
+  rec.p.e[0] = 0;
   rec = (*ObjectToWorld)(rec);
   rec.normal = !reverseOrientation ? (rec.normal) : -(rec.normal);
   
   return(true);
+}
+
+bool yz_rect::bounding_box(Float t0, Float t1, aabb& box) const {
+  box = (*ObjectToWorld)(aabb(vec3f(k-0.001,y0,z0), vec3f(k+0.001,y1,z1)));
+  return(true);
+}
+
+Float yz_rect::pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Float time) {
+  hit_record rec;
+  if(this->hit(ray(o,v), 0.001, FLT_MAX, rec, rng)) {
+    Float area = (y1-y0)*(z1-z0);
+    Float distance_squared = rec.t * rec.t * v.squared_length();
+    Float cosine = fabs(dot(v,rec.normal)/v.length());
+    return(distance_squared / (cosine * area));
+  } else {
+    return(0);
+  }
+}
+
+Float yz_rect::pdf_value(const point3f& o, const vec3f& v, Sampler* sampler, Float time) {
+  hit_record rec;
+  if(this->hit(ray(o,v), 0.001, FLT_MAX, rec, sampler)) {
+    Float area = (y1-y0)*(z1-z0);
+    Float distance_squared = rec.t * rec.t * v.squared_length();
+    Float cosine = fabs(dot(v,rec.normal)/v.length());
+    return(distance_squared / (cosine * area));
+  } else {
+    return(0);
+  }
+}
+
+vec3f yz_rect::random(const point3f& o, random_gen& rng, Float time) {
+  point3f random_point = (*ObjectToWorld)(point3f(k, y0 + rng.unif_rand() * (y1 - y0), z0 + rng.unif_rand() * (z1-z0)));
+  return(random_point-o);
+}
+
+vec3f yz_rect::random(const point3f& o, Sampler* sampler, Float time) {
+  vec2f u = sampler->Get2D();
+  point3f random_point = (*ObjectToWorld)(point3f(k, y0 + u.x() * (y1 - y0), z0 + u.y() * (z1-z0)));
+  return(random_point - o);
 }

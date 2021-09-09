@@ -482,6 +482,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
                             "none" = 0,"depth" = 1,"normals" = 2, "uv" = 3, "bvh" = 4,
                             "variance" = 5, "normal" = 2, "dpdu" = 6, "dpdv" = 7, "color" = 8, 
                             "position" = 10, "direction" = 11, "time" = 12, "shape" = 13,
+                            "pdf" = 14,
                             0))
     light_direction = c(0,1,0)
   } else {
@@ -682,7 +683,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
     full_array[,,3] = full_array[,,3]/2+1
     plot_map(full_array)
     return(invisible(full_array))
-  } else if (debug_channel == 12) {
+  } else if (debug_channel %in% c(12,14)) {
     full_array[is.infinite(full_array)] = max(full_array[!is.infinite(full_array)])
     
     full_array = (full_array - min(full_array))/(max(full_array) - min(full_array))

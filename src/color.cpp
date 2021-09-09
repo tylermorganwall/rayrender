@@ -22,10 +22,6 @@ point3f color(const ray& r, hitable *world, hitable_list *hlist,
   for(size_t i = 0; i < max_depth; i++) {
     bool is_invisible = false;
     hit_record hrec;
-#ifdef DEBUG
-    myfile << i << ", " << r2.A << " ";
-    myfile << ", " << hrec.p << ", " << hrec.normal << ", " << r2.direction() << "\n ";
-#endif
     if(world->hit(r2, 0.001, FLT_MAX, hrec, rng)) { //generated hit record, world space
       scatter_record srec;
       emit_color = throughput * hrec.mat_ptr->emitted(r2, hrec, hrec.u, hrec.v, hrec.p, is_invisible);
@@ -49,8 +45,15 @@ point3f color(const ray& r, hitable *world, hitable_list *hlist,
         }
         throughput *= 1 / prob_continue;
       }
+#ifdef DEBUG
+      if(i > 0) {
+        myfile << i << ", " << r1.A << " ";
+        myfile << ", " << hrec.p << ", " << hrec.normal << ", " << r2.direction() << ", " << throughput << "\n ";
+      }
+#endif
       float pdf_val;
-      if(hrec.mat_ptr->scatter(r2, hrec, srec, sampler)) { //generates scatter record, world space
+      //generates scatter record and sends out new ray, otherwise exits out with accumulated color
+      if(hrec.mat_ptr->scatter(r2, hrec, srec, sampler)) { 
         if(srec.is_specular) { //returns specular ray
           r2 = srec.specular_ray;
           throughput *= srec.attenuation;
@@ -71,14 +74,14 @@ point3f color(const ray& r, hitable *world, hitable_list *hlist,
         r1 = r2;
         vec3f dir;
         if(!diffuse_bounce) {
-          diffuse_bounce = true;
-          dir = p.generate(sampler, diffuse_bounce, r2.time());
+          //Diffuse bounce changed by generate()
+          dir = p.generate(sampler, diffuse_bounce, r2.time()); //scatters a ray from hit point to stratified direction
         } else {
-          dir = p.generate(rng, diffuse_bounce, r2.time());
+          dir = p.generate(rng, diffuse_bounce, r2.time()); //scatters a ray from hit point to random direction
         }
-        r2 = ray(OffsetRayOrigin(offset_p, hrec.pError, hrec.normal, dir), dir, r2.pri_stack, r2.time());
-        
-        pdf_val = p.value(dir, sampler, r2.time()); //generates a pdf value based the intersection point and the mixture pdf
+        r2 = ray(OffsetRayOrigin(hrec.p, hrec.pError, hrec.normal, dir), dir, r2.pri_stack, r2.time());
+
+        pdf_val = p.value(dir, rng, r2.time()); //generates a pdf value based the intersection point and the mixture pdf
         throughput *= hrec.mat_ptr->f(r1, hrec, r2) / pdf_val;
       } else {
         return(final_color);

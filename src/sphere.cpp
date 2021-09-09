@@ -229,10 +229,10 @@ bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sample
 
 
 Float sphere::pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Float time) {
-  // hit_record rec;
-  // if(!this->hit(ray(o,v), 0.001, FLT_MAX, rec, rng)) {
-  //   return(0);
-  // }
+  hit_record rec;
+  if(!this->hit(ray(o,v), 0.001, FLT_MAX, rec, rng)) {
+    return(0);
+  }
   point3f pCenter = (*ObjectToWorld)(point3f(0.f, 0.f, 0.f));
   // Return uniform PDF if point is inside sphere
   // point3f pOrigin =
@@ -248,10 +248,10 @@ Float sphere::pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Float
 
 
 Float sphere::pdf_value(const point3f& o, const vec3f& v, Sampler* sampler, Float time) {
-  // hit_record rec;
-  // if(!this->hit(ray(o,v), 0.001, FLT_MAX, rec, sampler)) {
-  //   return(0);
-  // }
+  hit_record rec;
+  if(!this->hit(ray(o,v), 0.001, FLT_MAX, rec, sampler)) {
+    return(0);
+  }
   point3f pCenter = (*ObjectToWorld)(point3f(0.f, 0.f, 0.f));
   // Return uniform PDF if point is inside sphere
   // point3f pOrigin =

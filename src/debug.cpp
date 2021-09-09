@@ -304,5 +304,39 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
       pool.push(worker,j);
     }
     pool.join();
+  } else if (debug_channel == 14) {
+    RcppThread::ThreadPool pool(numbercores);
+    
+    auto worker = [&routput, &goutput, &boutput, &rng, 
+                   nx, ny,  fov, &hlist, max_depth,
+                   &cam, &ocam, &ecam, &world] (int j) {
+                     std::vector<dielectric*> *mat_stack = new std::vector<dielectric*>;
+                     random_gen rng(j);
+                     for(unsigned int i = 0; i < nx; i++) {
+                       Float u = Float(i) / Float(nx);
+                       Float v = Float(j) / Float(ny);
+                       ray r;
+                       if(fov != 0 && fov != 360) {
+                         r = cam.get_ray(u,v, vec3f(0,0,0), 0);
+                       } else if (fov == 0){
+                         r = ocam.get_ray(u,v, rng.unif_rand());
+                       } else {
+                         r = ecam.get_ray(u,v, rng.unif_rand());
+                       }
+                       r.pri_stack = mat_stack;
+                       Float qr = calculate_pdf(r, &world, &hlist,
+                                                    max_depth, rng);
+                       mat_stack->clear();
+                       
+                       routput(i,j) = qr;
+                       goutput(i,j) = qr;
+                       boutput(i,j) = qr;
+                     }
+                     delete mat_stack;
+                   };
+    for(int j = ny - 1; j >= 0; j--) {
+      pool.push(worker,j);
+    }
+    pool.join();
   }
 }
