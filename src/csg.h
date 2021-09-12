@@ -631,6 +631,9 @@ class csg: public hitable {
     virtual vec3f random(const point3f& o, Sampler* sampler, Float time) {
       return(vec3f(0,1,0));
     }
+    virtual std::string GetName() const {
+      return(std::string("CSG"));
+    }
     std::shared_ptr<material> mat_ptr;
     std::shared_ptr<ImplicitShape> shapes;
     Float max_dist;

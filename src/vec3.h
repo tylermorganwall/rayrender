@@ -243,7 +243,7 @@ inline vec3<T> Permute(const vec3<T> &v, int x, int y, int z) {
 
 template<typename T> 
 inline vec3<T> Abs(const vec3<T> &v) {
-  return(vec3<T>(fabs(v.x()), fabs(v.y()), fabs(v.z())));
+  return(vec3<T>(std::fabs(v.x()), std::fabs(v.y()), std::fabs(v.z())));
 }
 
 

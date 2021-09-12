@@ -1,5 +1,5 @@
 #include "cone.h"
-
+#include "efloat.h"
 
 bool cone::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
   ray r2 = (*WorldToObject)(r);
@@ -96,15 +96,22 @@ bool cone::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_g
       point3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
       rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv);
       rec.bump_normal.make_unit_vector();
-      rec.bump_normal = (*ObjectToWorld)(rec.bump_normal);
-      
+
     }
     // if((!base_is_hit && t_cyl < temp1) || (already_inside && alpha_mask)) {
     //   rec.normal = -rec.normal;
     //   rec.bump_normal = -rec.bump_normal;
     // }
-    rec.p = (*ObjectToWorld)(rec.p);
-    rec.normal = !reverseOrientation ? (*ObjectToWorld)(rec.normal) : -(*ObjectToWorld)(rec.normal);
+    EFloat px = r2.origin().x() + rec.t * r2.direction().x();
+    EFloat py = r2.origin().y() + rec.t * r2.direction().y();
+    EFloat pz = r2.origin().z() + rec.t * r2.direction().z();
+    rec.pError = vec3f(px.GetAbsoluteError(), py.GetAbsoluteError(),
+                       pz.GetAbsoluteError());
+    
+    rec = (*ObjectToWorld)(rec);
+    rec.normal *= reverseOrientation  ? -1 : 1;
+    rec.bump_normal *= reverseOrientation  ? -1 : 1;
+    rec.hitable = this;
     
     rec.mat_ptr = mat_ptr.get();
     return(true);
@@ -131,15 +138,23 @@ bool cone::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_g
       point3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
       rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv);
       rec.bump_normal.make_unit_vector();
-      rec.bump_normal = (*ObjectToWorld)(rec.bump_normal);
-      
+
     }
     // if((!second_is_hit && t_cyl > temp2) || (!is_hit && t_cyl > temp1) || (already_inside && alpha_mask)) {
     //   rec.normal = -rec.normal;
     //   rec.bump_normal = -rec.bump_normal;
     // }
-    rec.p = (*ObjectToWorld)(rec.p);
-    rec.normal = !reverseOrientation ? (*ObjectToWorld)(rec.normal) : -(*ObjectToWorld)(rec.normal);
+    EFloat px = r2.origin().x() + rec.t * r2.direction().x();
+    EFloat py = r2.origin().y() + rec.t * r2.direction().y();
+    EFloat pz = r2.origin().z() + rec.t * r2.direction().z();
+    rec.pError = vec3f(px.GetAbsoluteError(), py.GetAbsoluteError(),
+                       pz.GetAbsoluteError());
+    
+    rec = (*ObjectToWorld)(rec);
+    rec.normal *= reverseOrientation  ? -1 : 1;
+    rec.bump_normal *= reverseOrientation  ? -1 : 1;
+    rec.hitable = this;
+    
     return(true);
   }
   // // if(temp2 < t_max && temp2 > t_min && second_is_hit && temp_point.y() >= 0.0 && temp_point.y() <= height) {
@@ -163,15 +178,23 @@ bool cone::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_g
       point3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
       rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv);
       rec.bump_normal.make_unit_vector();
-      rec.bump_normal = (*ObjectToWorld)(rec.bump_normal);
-      
+
     }
     // if((!is_hit && temp2 < t_cyl) || (already_inside && alpha_mask)) {// || (!base_is_hit && temp2 > t_cyl)) {
     //   rec.normal = -rec.normal;
     //   rec.bump_normal = -rec.bump_normal;
     // }
-    rec.p = (*ObjectToWorld)(rec.p);
-    rec.normal = !reverseOrientation ? (*ObjectToWorld)(rec.normal) : -(*ObjectToWorld)(rec.normal);
+    EFloat px = r2.origin().x() + rec.t * r2.direction().x();
+    EFloat py = r2.origin().y() + rec.t * r2.direction().y();
+    EFloat pz = r2.origin().z() + rec.t * r2.direction().z();
+    rec.pError = vec3f(px.GetAbsoluteError(), py.GetAbsoluteError(),
+                       pz.GetAbsoluteError());
+    
+    rec = (*ObjectToWorld)(rec);
+    rec.normal *= reverseOrientation  ? -1 : 1;
+    rec.bump_normal *= reverseOrientation  ? -1 : 1;
+    rec.hitable = this;
+    
     rec.mat_ptr = mat_ptr.get();
     return(true);
   }
@@ -275,16 +298,24 @@ bool cone::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler*
       point3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
       rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv);
       rec.bump_normal.make_unit_vector();
-      rec.bump_normal = (*ObjectToWorld)(rec.bump_normal);
-      
+
     }
     // if((!base_is_hit && t_cyl < temp1) || (already_inside && alpha_mask)) {
     //   rec.normal = -rec.normal;
     //   rec.bump_normal = -rec.bump_normal;
     // }
     
-    rec.p = (*ObjectToWorld)(rec.p);
-    rec.normal = !reverseOrientation ? (*ObjectToWorld)(rec.normal) : -(*ObjectToWorld)(rec.normal);
+    EFloat px = r2.origin().x() + rec.t * r2.direction().x();
+    EFloat py = r2.origin().y() + rec.t * r2.direction().y();
+    EFloat pz = r2.origin().z() + rec.t * r2.direction().z();
+    rec.pError = vec3f(px.GetAbsoluteError(), py.GetAbsoluteError(),
+                       pz.GetAbsoluteError());
+    
+    rec = (*ObjectToWorld)(rec);
+    rec.normal *= reverseOrientation  ? -1 : 1;
+    rec.bump_normal *= reverseOrientation  ? -1 : 1;
+    rec.hitable = this;
+    
     rec.mat_ptr = mat_ptr.get();
     return(true);
   }
@@ -310,15 +341,23 @@ bool cone::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler*
       point3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
       rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv);
       rec.bump_normal.make_unit_vector();
-      rec.bump_normal = (*ObjectToWorld)(rec.bump_normal);
-      
+
     }
     // if((!second_is_hit && t_cyl > temp2) || (!is_hit && t_cyl > temp1) || (already_inside && alpha_mask)) {
     //   rec.normal = -rec.normal;
     //   rec.bump_normal = -rec.bump_normal;
     // }
-    rec.p = (*ObjectToWorld)(rec.p);
-    rec.normal = !reverseOrientation ? (*ObjectToWorld)(rec.normal) : -(*ObjectToWorld)(rec.normal);
+    EFloat px = r2.origin().x() + rec.t * r2.direction().x();
+    EFloat py = r2.origin().y() + rec.t * r2.direction().y();
+    EFloat pz = r2.origin().z() + rec.t * r2.direction().z();
+    rec.pError = vec3f(px.GetAbsoluteError(), py.GetAbsoluteError(),
+                       pz.GetAbsoluteError());
+    
+    rec = (*ObjectToWorld)(rec);
+    rec.normal *= reverseOrientation  ? -1 : 1;
+    rec.bump_normal *= reverseOrientation  ? -1 : 1;
+    rec.hitable = this;
+    
     return(true);
   }
   // // if(temp2 < t_max && temp2 > t_min && second_is_hit && temp_point.y() >= 0.0 && temp_point.y() <= height) {
@@ -349,8 +388,17 @@ bool cone::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler*
     //   rec.normal = -rec.normal;
     //   rec.bump_normal = -rec.bump_normal;
     // }
-    rec.p = (*ObjectToWorld)(rec.p);
-    rec.normal = !reverseOrientation ? (*ObjectToWorld)(rec.normal) : -(*ObjectToWorld)(rec.normal);
+    EFloat px = r2.origin().x() + rec.t * r2.direction().x();
+    EFloat py = r2.origin().y() + rec.t * r2.direction().y();
+    EFloat pz = r2.origin().z() + rec.t * r2.direction().z();
+    rec.pError = vec3f(px.GetAbsoluteError(), py.GetAbsoluteError(),
+                       pz.GetAbsoluteError());
+    
+    rec = (*ObjectToWorld)(rec);
+    rec.normal *= reverseOrientation  ? -1 : 1;
+    rec.bump_normal *= reverseOrientation  ? -1 : 1;
+    rec.hitable = this;
+    
     rec.mat_ptr = mat_ptr.get();
     return(true);
   }

@@ -30,6 +30,9 @@ public:
   virtual vec3f random(const point3f& o, Sampler* sampler, Float time = 0) {
     return(list.random(o, sampler, time));
   }
+  virtual std::string GetName() const {
+    return(std::string("Box"));
+  }
   vec3f pmin, pmax;
   hitable_list list;
 };

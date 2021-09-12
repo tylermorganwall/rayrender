@@ -27,7 +27,9 @@ public:
   
   virtual vec3f random(const point3f& o, random_gen& rng, Float time = 0);
   virtual vec3f random(const point3f& o, Sampler* sampler, Float time = 0);
-  
+  virtual std::string GetName() const {
+    return(std::string("EnvironmentLight"));
+  }
   int width, height;
   Float radius;
   point3f center;

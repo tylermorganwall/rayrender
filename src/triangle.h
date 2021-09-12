@@ -43,7 +43,9 @@ public:
   
   virtual vec3f random(const point3f& origin, random_gen& rng, Float time = 0);
   virtual vec3f random(const point3f& origin, Sampler* sampler, Float time = 0);
-  
+  virtual std::string GetName() const {
+    return(std::string("Triangle"));
+  }
   vec3f normal;
   vec3f a, b, c;
   normal3f na, nb, nc;

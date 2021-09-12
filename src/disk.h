@@ -24,7 +24,9 @@ public:
   
   virtual vec3f random(const point3f& o, random_gen& rng, Float time = 0);
   virtual vec3f random(const point3f& o, Sampler* sampler, Float time = 0);
-  
+  virtual std::string GetName() const {
+    return(std::string("Disk"));
+  }
   vec3f center;
   Float radius;
   Float inner_radius;

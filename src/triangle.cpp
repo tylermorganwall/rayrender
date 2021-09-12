@@ -36,6 +36,10 @@ bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
   rec.p = r.point_at_parameter(t);
   rec.u = u;
   rec.v = v;
+  
+  //Add error calc
+  rec.pError = vec3f(0,0,0);
+  
   rec.has_bump = false;
   
   if(bump_tex) {
@@ -131,6 +135,7 @@ bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Samp
   rec.u = u;
   rec.v = v;
   rec.has_bump = false;
+  rec.pError = vec3f(0,0,0);
   
   if(bump_tex) {
     //Get UV values + calculate dpdu/dpdv

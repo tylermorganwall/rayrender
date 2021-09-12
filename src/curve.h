@@ -13,7 +13,7 @@ struct CurveCommon {
   const CurveType type;
   point3f cpObj[4];
   Float width[2];
-  vec3f n[2];
+  normal3f n[2];
   Float normalAngle, invSinNormalAngle;
 };
 
@@ -37,6 +37,9 @@ class curve: public hitable {
     
     virtual vec3f random(const point3f& o, random_gen& rng, Float time = 0);
     virtual vec3f random(const point3f& o, Sampler* sampler, Float time = 0);
+    virtual std::string GetName() const {
+      return(std::string("Curve"));
+    }
     std::shared_ptr<material> mat_ptr;
   private:
     bool recursiveIntersect(const ray& r, Float tmin, Float tmax, hit_record& rec,

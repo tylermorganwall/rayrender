@@ -71,9 +71,9 @@ bool curve::bounding_box(Float t0, Float t1, aabb& box) const {
   return(true);
 }
 
-
 bool curve::hit(const ray& r, Float tmin, Float tmax, hit_record& rec, random_gen& rng) {
-  ray r2 = (*WorldToObject)(r);
+  ray r2 = (*WorldToObject)(r); 
+  
   // Compute object-space control points for curve segment, cpObj
   point3f cpObj[4];
   cpObj[0] = BlossomBezier(common->cpObj, uMin, uMin, uMin);
@@ -95,11 +95,9 @@ bool curve::hit(const ray& r, Float tmin, Float tmax, hit_record& rec, random_ge
   } else {
     dx.make_unit_vector();
   }
-  
-  Transform objectToRay = LookAt(r2.origin(), r2.origin() + r2.direction(), dx);
+  Transform objectToRay = LookAt(r2.origin(), r2.origin() + unit_dir, dx);
   point3f cp[4] = {objectToRay(cpObj[0]), objectToRay(cpObj[1]),
                    objectToRay(cpObj[2]), objectToRay(cpObj[3])};
-  
   // Before going any further, see if the ray's bounding box intersects
   // the curve's bounding box. We start with the y dimension, since the y
   // extent is generally the smallest (and is often tiny) due to our
@@ -155,13 +153,13 @@ bool curve::hit(const ray& r, Float tmin, Float tmax, hit_record& rec, random_ge
   // Compute log base 4 by dividing log2 in half.
   int r0 = Log2(1.41421356237f * 6.f * L0 / (8.f * eps)) / 2;
   int maxDepth = clamp(r0, 0, 10);
-  return(recursiveIntersect(r, tmin, tmax, rec, cp, uMin,
+  return(recursiveIntersect(r2, tmin, tmax, rec, cp, uMin,
                             uMax, maxDepth, Inverse(objectToRay)));
 }
 
 
 bool curve::hit(const ray& r, Float tmin, Float tmax, hit_record& rec, Sampler* sampler) {
-  ray r2 = (*WorldToObject)(r);
+  ray r2 = (*WorldToObject)(r); 
   
   // Compute object-space control points for curve segment, cpObj
   point3f cpObj[4];
@@ -184,8 +182,8 @@ bool curve::hit(const ray& r, Float tmin, Float tmax, hit_record& rec, Sampler* 
   } else {
     dx.make_unit_vector();
   }
-  
-  Transform objectToRay = LookAt(r2.origin(), r2.origin() + r2.direction(), dx);
+
+  Transform objectToRay = LookAt(r2.origin(), r2.origin() + unit_dir, dx);
   point3f cp[4] = {objectToRay(cpObj[0]), objectToRay(cpObj[1]),
                    objectToRay(cpObj[2]), objectToRay(cpObj[3])};
   // Before going any further, see if the ray's bounding box intersects
@@ -193,7 +191,7 @@ bool curve::hit(const ray& r, Float tmin, Float tmax, hit_record& rec, Sampler* 
   // extent is generally the smallest (and is often tiny) due to our
   // careful orientation of the ray coordinate system above.
   Float maxWidth = std::fmax(lerp(uMin, common->width[0], common->width[1]),
-                            lerp(uMax, common->width[0], common->width[1]));
+                             lerp(uMax, common->width[0], common->width[1]));
   if (std::fmax(std::fmax(cp[0].y(), cp[1].y()), std::fmax(cp[2].y(), cp[3].y())) +
       0.5f * maxWidth < 0 ||
       std::fmin(std::fmin(cp[0].y(), cp[1].y()), std::fmin(cp[2].y(), cp[3].y())) -
@@ -225,8 +223,8 @@ bool curve::hit(const ray& r, Float tmin, Float tmax, hit_record& rec, Sampler* 
     L0 = std::fmax(
       L0, std::fmax(
           std::fmax(std::fabs(cp[i].x() - 2 * cp[i + 1].x() + cp[i + 2].x()),
-                   std::fabs(cp[i].y() - 2 * cp[i + 1].y() + cp[i + 2].y())),
-                   std::fabs(cp[i].z() - 2 * cp[i + 1].z() + cp[i + 2].z())));
+                    std::fabs(cp[i].y() - 2 * cp[i + 1].y() + cp[i + 2].y())),
+                    std::fabs(cp[i].z() - 2 * cp[i + 1].z() + cp[i + 2].z())));
   }
   
   Float eps = std::fmax(common->width[0], common->width[1]) * .05f;  // width / 20
@@ -266,16 +264,16 @@ bool curve::recursiveIntersect(const ray& r, Float tmin, Float tmax, hit_record&
     const point3f *cps = cpSplit;
     for (int seg = 0; seg < 2; ++seg, cps += 3) {
       Float maxWidth =
-        std::fmax(lerp(u[seg], common->width[0], common->width[1]),
-                 lerp(u[seg + 1], common->width[0], common->width[1]));
+        std::fmax(lerp(u[seg],     common->width[0], common->width[1]),
+                  lerp(u[seg + 1], common->width[0], common->width[1]));
 
       // As above, check y first, since it most commonly lets us exit
       // out early.
       if (std::fmax(std::fmax(cps[0].y(), cps[1].y()),
-                   std::fmax(cps[2].y(), cps[3].y())) +
+                    std::fmax(cps[2].y(), cps[3].y())) +
                      0.5 * maxWidth < 0 ||
                      std::fmin(std::fmin(cps[0].y(), cps[1].y()),
-                              std::fmin(cps[2].y(), cps[3].y())) -
+                               std::fmin(cps[2].y(), cps[3].y())) -
                                 0.5 * maxWidth > 0) {
         continue;
       }
@@ -289,10 +287,10 @@ bool curve::recursiveIntersect(const ray& r, Float tmin, Float tmax, hit_record&
       }
       Float zMax = rayLength * tmax;
       if (std::fmax(std::fmax(cps[0].z(), cps[1].z()),
-                   std::fmax(cps[2].z(), cps[3].z())) +
+                    std::fmax(cps[2].z(), cps[3].z())) +
                      0.5 * maxWidth < 0 ||
                      std::fmin(std::fmin(cps[0].z(), cps[1].z()),
-                              std::fmin(cps[2].z(), cps[3].z())) -
+                               std::fmin(cps[2].z(), cps[3].z())) -
                                 0.5 * maxWidth > zMax) {
         continue;
       }
@@ -330,7 +328,7 @@ bool curve::recursiveIntersect(const ray& r, Float tmin, Float tmax, hit_record&
     // Compute u coordinate of curve intersection point and hitWidth
     Float u = clamp(lerp(w, u0, u1), u0, u1);
     Float hitWidth = lerp(u, common->width[0], common->width[1]);
-    vec3f nHit; // specified in world space
+    normal3f nHit; // specified in world space
     bool flipped_n = false;
     if (common->type == CurveType::Ribbon) {
       // Scale hitWidth based on ribbon orientation
@@ -371,7 +369,6 @@ bool curve::recursiveIntersect(const ray& r, Float tmin, Float tmax, hit_record&
     vec3f dpdu, dpdv;
     EvalBezier(common->cpObj, u, &rec.dpdu);
     
-    Float offset_scale = 1;
     if (common->type == CurveType::Cylinder) {
       vec3f dpduPlane = (Inverse(rayToObject))(rec.dpdu);
       vec3f dpdvPlane = unit_vector(vec3f(-dpduPlane.y(), dpduPlane.x(), 0)) * hitWidth;
@@ -380,11 +377,8 @@ bool curve::recursiveIntersect(const ray& r, Float tmin, Float tmax, hit_record&
       dpdvPlane = rot(dpdvPlane);
       rec.dpdv = rayToObject(dpdvPlane);
       rec.normal = unit_vector(-cross(rec.dpdu ,rec.dpdv));
-      
-      Float cosTheta = std::cos(Radians(theta));
-      offset_scale = offset_scale * cosTheta;
     } else if (common->type == CurveType::Ribbon) {
-      rec.dpdv = unit_vector(cross(nHit, rec.dpdu)) * hitWidth;
+      rec.dpdv = unit_vector(cross(vec3f(nHit.x(),nHit.y(),nHit.z()), rec.dpdu)) * hitWidth;
       rec.normal = !flipped_n ? nHit : -nHit;
     } else if (common->type == CurveType::Flat) {
       //Compute curve dpdv for flat and cylinder curves
@@ -398,10 +392,11 @@ bool curve::recursiveIntersect(const ray& r, Float tmin, Float tmax, hit_record&
     rec.v = v;
     rec.mat_ptr = mat_ptr.get();
     rec.has_bump = false;
-    // normal3f temp_normal =  rec.normal * hitWidth * 0.5 * offset_scale;
     rec.pError = vec3f(hitWidth, hitWidth, hitWidth);
-    rec.p = r.point_at_parameter(rec.t);// + vec3f(temp_normal.x(),temp_normal.y(),temp_normal.z());
+    rec.p = r.point_at_parameter(rec.t);
+    rec.hitable = this;
     rec = (*ObjectToWorld)(rec);
+
     
     return(true);
   }

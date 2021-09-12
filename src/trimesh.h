@@ -51,7 +51,9 @@ public:
   vec3f random(const point3f& o, Sampler* sampler, Float time = 0);
   
   virtual bool bounding_box(Float t0, Float t1, aabb& box) const;
-  
+  virtual std::string GetName() const {
+    return(std::string("TriangleMesh"));
+  }
   std::shared_ptr<bvh_node> tri_mesh_bvh;
   std::shared_ptr<material> mat_ptr;
   std::vector<Float* > obj_materials;

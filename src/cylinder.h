@@ -24,6 +24,9 @@ public:
   
   virtual vec3f random(const point3f& o, random_gen& rng, Float time = 0);
   virtual vec3f random(const point3f& o, Sampler* sampler, Float time = 0);
+  virtual std::string GetName() const {
+    return(std::string("Cylinder"));
+  }
   void get_cylinder_uv(const point3f& p, Float& u, Float& v);
   Float radius;
   Float length;

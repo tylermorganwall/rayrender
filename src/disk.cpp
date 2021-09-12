@@ -3,7 +3,6 @@
 
 bool disk::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
   ray r2 = (*WorldToObject)(r);
-  vec3f n(0.0, 1.0, 0.0);
   // First we intersect with the plane containing the disk
   Float t = -r2.origin().y() / r2.direction().y();
   if(t < t_min || t > t_max) {
@@ -29,13 +28,12 @@ bool disk::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_g
     }
   }
   rec.p = p;
-  rec.p = (*ObjectToWorld)(rec.p);
   
-  rec.normal = (*ObjectToWorld)(n);
   rec.t = t;
   rec.mat_ptr = mat_ptr.get();
   rec.u = u;
   rec.v = v;
+  rec.normal = normal3f(0,1,0);
   
   //Interaction information
   rec.dpdu = vec3f(1, 0, 0);
@@ -46,9 +44,13 @@ bool disk::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_g
     point3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
     rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
     rec.bump_normal.make_unit_vector();
-    rec.bump_normal = (*ObjectToWorld)(rec.bump_normal);
-    
+
   }
+  rec.pError = vec3f(0,0,0);
+  rec = (*ObjectToWorld)(rec);
+  rec.normal *= reverseOrientation  ? -1 : 1;
+  rec.bump_normal *= reverseOrientation  ? -1 : 1;
+  rec.hitable = this;
   
   return(true);
 }
@@ -56,7 +58,6 @@ bool disk::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_g
 
 bool disk::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) {
   ray r2 = (*WorldToObject)(r);
-  vec3f n(0.0, 1.0, 0.0);
   // First we intersect with the plane containing the disk
   Float t = -r2.origin().y() / r2.direction().y();
   if(t < t_min || t > t_max) {
@@ -82,9 +83,8 @@ bool disk::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler*
     }
   }
   rec.p = p;
-  rec.p = (*ObjectToWorld)(rec.p);
-  
-  rec.normal = n;
+
+  rec.normal = normal3f(0,1,0);
   rec.t = t;
   rec.mat_ptr = mat_ptr.get();
   rec.u = u;
@@ -99,8 +99,12 @@ bool disk::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler*
     point3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
     rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
     rec.bump_normal.make_unit_vector();
-    rec.bump_normal = (*ObjectToWorld)(rec.bump_normal);
   }
+  rec.pError = vec3f(0,0,0);
+  rec = (*ObjectToWorld)(rec);
+  rec.normal *= reverseOrientation  ? -1 : 1;
+  rec.bump_normal *= reverseOrientation  ? -1 : 1;
+  rec.hitable = this;
   
   return(true);
 }

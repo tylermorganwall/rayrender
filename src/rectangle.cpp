@@ -38,14 +38,17 @@ bool xy_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
     point3f bvbu = bump_tex->value(u,v, rec.p);
     rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
     rec.bump_normal.make_unit_vector();
-    rec.bump_normal = !reverseOrientation ? (*ObjectToWorld)(rec.bump_normal) : -(*ObjectToWorld)(rec.bump_normal);
   }
   
   rec.mat_ptr = mp.get();
   rec.p = r2.point_at_parameter(t);
   rec.p.e[2] = 0;
+  rec.pError = vec3f(0,0,0);
+  
   rec = (*ObjectToWorld)(rec);
-  rec.normal = !reverseOrientation ? (rec.normal) : -(rec.normal);
+  rec.normal *= reverseOrientation  ? -1 : 1;
+  rec.bump_normal *= reverseOrientation  ? -1 : 1;
+  rec.hitable = this;
   
   return(true);
 }
@@ -87,15 +90,17 @@ bool xy_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampl
     point3f bvbu = bump_tex->value(u,v, rec.p);
     rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
     rec.bump_normal.make_unit_vector();
-    rec.bump_normal = !reverseOrientation ? (*ObjectToWorld)(rec.bump_normal) : -(*ObjectToWorld)(rec.bump_normal);
   }
   
   rec.mat_ptr = mp.get();
   rec.p = r2.point_at_parameter(t);
   rec.p.e[2] = 0;
-  rec = (*ObjectToWorld)(rec);
-  rec.normal = !reverseOrientation ? (rec.normal) : -(rec.normal);
+  rec.pError = vec3f(0,0,0);
   
+  rec = (*ObjectToWorld)(rec);
+  rec.normal *= reverseOrientation  ? -1 : 1;
+  rec.bump_normal *= reverseOrientation  ? -1 : 1;
+  rec.hitable = this;
   return(true);
 }
 
@@ -131,7 +136,7 @@ Float xy_rect::pdf_value(const point3f& o, const vec3f& v, Sampler* sampler, Flo
 bool xz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
   ray r2 = (*WorldToObject)(r);
   
-  Float t = (k-r2.origin().y()) / r2.direction().y();
+  Float t = -r2.origin().y() / r2.direction().y();
   if(t < t_min || t > t_max) {
     return(false);
   }
@@ -168,14 +173,17 @@ bool xz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
     point3f bvbu = bump_tex->value(u,v, rec.p);
     rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
     rec.bump_normal.make_unit_vector();
-    rec.bump_normal = !reverseOrientation ? (*ObjectToWorld)(rec.bump_normal) : -(*ObjectToWorld)(rec.bump_normal);
   }
   
   rec.mat_ptr = mp.get();
   rec.p = r2.point_at_parameter(t);
   rec.p.e[1] = 0;
+  rec.pError = vec3f(0,0,0);
   rec = (*ObjectToWorld)(rec);
-  rec.normal = !reverseOrientation ? (rec.normal) : -(rec.normal);
+  rec.normal *= reverseOrientation  ? -1 : 1;
+  rec.bump_normal *= reverseOrientation  ? -1 : 1;
+  rec.hitable = this;
+  
   return(true);
 }
 
@@ -183,7 +191,7 @@ bool xz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
 bool xz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) {
   ray r2 = (*WorldToObject)(r);
   
-  Float t = (k-r2.origin().y()) / r2.direction().y();
+  Float t = -r2.origin().y() / r2.direction().y();
   if(t < t_min || t > t_max) {
     return(false);
   }
@@ -218,15 +226,17 @@ bool xz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampl
     point3f bvbu = bump_tex->value(u,v, rec.p);
     rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
     rec.bump_normal.make_unit_vector();
-    rec.bump_normal = !reverseOrientation ? (*ObjectToWorld)(rec.bump_normal) : -(*ObjectToWorld)(rec.bump_normal);
   }
   
   rec.mat_ptr = mp.get();
   rec.p = r2.point_at_parameter(t);
   rec.p.e[1] = 0;
-  rec = (*ObjectToWorld)(rec);
-  rec.normal = !reverseOrientation ? (rec.normal) : -(rec.normal);
+  rec.pError = vec3f(0,0,0);
   
+  rec = (*ObjectToWorld)(rec);
+  rec.normal *= reverseOrientation  ? -1 : 1;
+  rec.bump_normal *= reverseOrientation  ? -1 : 1;
+  rec.hitable = this;
   return(true);
 }
 
@@ -269,7 +279,7 @@ vec3f xz_rect::random(const point3f& o, Sampler* sampler, Float time) {
 bool yz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
   ray r2 = (*WorldToObject)(r);
   
-  Float t = (k-r2.origin().x()) / r2.direction().x();
+  Float t = -r2.origin().x() / r2.direction().x();
   if(t < t_min || t > t_max) {
     return(false);
   }
@@ -303,15 +313,17 @@ bool yz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
     point3f bvbu = bump_tex->value(u,v, rec.p);
     rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
     rec.bump_normal.make_unit_vector();
-    rec.bump_normal = !reverseOrientation ? (*ObjectToWorld)(rec.bump_normal) : -(*ObjectToWorld)(rec.bump_normal);
   }
   
   rec.mat_ptr = mp.get();
   rec.p = r2.point_at_parameter(t);
   rec.p.e[0] = 0;
-  rec = (*ObjectToWorld)(rec);
-  rec.normal = !reverseOrientation ? (rec.normal) : -(rec.normal);
+  rec.pError = vec3f(0,0,0);
   
+  rec = (*ObjectToWorld)(rec);
+  rec.normal *= reverseOrientation  ? -1 : 1;
+  rec.bump_normal *= reverseOrientation  ? -1 : 1;
+  rec.hitable = this;
   return(true);
 }
 
@@ -319,7 +331,7 @@ bool yz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
 bool yz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) {
   ray r2 = (*WorldToObject)(r);
   
-  Float t = (k-r2.origin().x()) / r2.direction().x();
+  Float t = -r2.origin().x() / r2.direction().x();
   if(t < t_min || t > t_max) {
     return(false);
   }
@@ -353,15 +365,17 @@ bool yz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampl
     point3f bvbu = bump_tex->value(u,v, rec.p);
     rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
     rec.bump_normal.make_unit_vector();
-    rec.bump_normal = !reverseOrientation ? (*ObjectToWorld)(rec.bump_normal) : -(*ObjectToWorld)(rec.bump_normal);
   }
   
   rec.mat_ptr = mp.get();
   rec.p = r2.point_at_parameter(t);
   rec.p.e[0] = 0;
-  rec = (*ObjectToWorld)(rec);
-  rec.normal = !reverseOrientation ? (rec.normal) : -(rec.normal);
+  rec.pError = vec3f(0,0,0);
   
+  rec = (*ObjectToWorld)(rec);
+  rec.normal *= reverseOrientation  ? -1 : 1;
+  rec.bump_normal *= reverseOrientation  ? -1 : 1;
+  rec.hitable = this;
   return(true);
 }
 

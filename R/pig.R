@@ -147,7 +147,7 @@ pig = function(x = 0, y = 0, z = 0, emotion = "neutral", spider = FALSE,
     add_object(ellipsoid(x = 1.98+0.02, y = 1.6, z = 0, a= 0.2, b= 0.2, c= 0.3,material = diffuse(color="black"))) %>%
     add_object(ellipsoid(x = 2.5, y = 2, z = 0.1, a= 0.05, b= 0.1, c= 0.05,material = diffuse(color="black"))) %>%
     add_object(ellipsoid(x = 2.5, y = 2, z = -0.1, a= 0.05, b= 0.1, c= 0.05,material = diffuse(color="black"))) %>%
-    add_object(disk(x = 2.5, y = 2, z = 0, radius=0.3, angle = c(0,0,90),material = bodymat)) %>%
+    add_object(disk(x = 2.5, y = 2, z = 0, radius=0.3, angle = c(0,0,-90),material = bodymat)) %>%
     add_object(segment(start = c(2,2.8 + eyebrow_offset_left[2],-0.5), end = c(2,2.8+ eyebrow_offset_left[1],-0.1),
                        radius=0.05,material = diffuse(color="black"))) %>%
     add_object(segment(start = c(2,2.8 + eyebrow_offset_right[1],0.5), end = c(2,2.8+eyebrow_offset_right[2],0.1),

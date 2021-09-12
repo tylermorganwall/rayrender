@@ -51,7 +51,9 @@ bool InfiniteAreaLight::hit(const ray& r, Float t_min, Float t_max, hit_record& 
     rec.dpdv = 2 * M_PI * vec3f(rec.p.z() * cosPhi, rec.p.z() * sinPhi, -radius * std::sin(theta));
     
     rec = (*ObjectToWorld)(rec);
-
+    rec.hitable = this;
+    rec.pError = vec3f(0,0,0);
+    
     rec.mat_ptr = mat_ptr.get();
     return(true);
   }
@@ -75,7 +77,8 @@ bool InfiniteAreaLight::hit(const ray& r, Float t_min, Float t_max, hit_record& 
     rec.dpdu = 2 * M_PI * vec3f(-rec.p.z(), 0, rec.p.x());
     rec.dpdv = 2 * M_PI * vec3f(rec.p.z() * cosPhi, rec.p.z() * sinPhi, -radius * std::sin(theta));
     rec = (*ObjectToWorld)(rec);
-
+    rec.hitable = this;
+    rec.pError = vec3f(0,0,0);
 
     rec.mat_ptr = mat_ptr.get();
     return(true);
@@ -115,6 +118,8 @@ bool InfiniteAreaLight::hit(const ray& r, Float t_min, Float t_max, hit_record& 
     rec.dpdv = 2 * M_PI * vec3f(rec.p.z() * cosPhi, rec.p.z() * sinPhi, -radius * std::sin(theta));
     
     rec = (*ObjectToWorld)(rec);
+    rec.hitable = this;
+    rec.pError = vec3f(0,0,0);
     rec.mat_ptr = mat_ptr.get();
     return(true);
   }
@@ -138,7 +143,9 @@ bool InfiniteAreaLight::hit(const ray& r, Float t_min, Float t_max, hit_record& 
     rec.dpdv = 2 * M_PI * vec3f(rec.p.z() * cosPhi, rec.p.z() * sinPhi, -radius * std::sin(theta));
     
     rec = (*ObjectToWorld)(rec);
-
+    rec.hitable = this;
+    rec.pError = vec3f(0,0,0);
+    
     rec.mat_ptr = mat_ptr.get();
     return(true);
   }

@@ -71,8 +71,12 @@ bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, ran
     rec.normal.make_unit_vector();
     rec.p *= 1/rec.p.length() * axes;
     
-    rec.p = (*ObjectToWorld)(rec.p);
-    rec.normal = !reverseOrientation ? (*ObjectToWorld)(rec.normal) : -(*ObjectToWorld)(rec.normal);
+    rec.pError = gamma(5) * Abs(rec.p);
+    rec = (*ObjectToWorld)(rec);
+    rec.normal *= reverseOrientation  ? -1 : 1;
+    rec.bump_normal *= reverseOrientation  ? -1 : 1;
+    rec.hitable = this;
+    
     return(true);
   }
   if(temp2 < t_max && temp2 > t_min && second_is_hit) {
@@ -109,8 +113,12 @@ bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, ran
       rec.normal = -rec.normal;
       rec.bump_normal = -rec.bump_normal;
     }
-    rec.p = (*ObjectToWorld)(rec.p);
-    rec.normal = !reverseOrientation ? (*ObjectToWorld)(rec.normal) : -(*ObjectToWorld)(rec.normal);
+    rec.pError = gamma(5) * Abs(rec.p);
+    rec = (*ObjectToWorld)(rec);
+    rec.normal *= reverseOrientation  ? -1 : 1;
+    rec.bump_normal *= reverseOrientation  ? -1 : 1;
+    rec.hitable = this;
+    
     return(true);
   }
   return(false);
@@ -186,8 +194,12 @@ bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sam
     rec.normal.make_unit_vector();
     rec.p *= 1/rec.p.length() * axes;
     
-    rec.p = (*ObjectToWorld)(rec.p);
-    rec.normal = !reverseOrientation ? (*ObjectToWorld)(rec.normal) : -(*ObjectToWorld)(rec.normal);
+    rec.pError = gamma(5) * Abs(rec.p);
+    rec = (*ObjectToWorld)(rec);
+    rec.normal *= reverseOrientation  ? -1 : 1;
+    rec.bump_normal *= reverseOrientation  ? -1 : 1;
+    rec.hitable = this;
+    
     return(true);
   }
   if(temp2 < t_max && temp2 > t_min && second_is_hit) {
@@ -224,8 +236,13 @@ bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sam
       rec.normal = -rec.normal;
       rec.bump_normal = -rec.bump_normal;
     }
-    rec.p = (*ObjectToWorld)(rec.p);
-    rec.normal = !reverseOrientation ? (*ObjectToWorld)(rec.normal) : -(*ObjectToWorld)(rec.normal);
+    rec.pError = gamma(5) * Abs(rec.p);
+    rec = (*ObjectToWorld)(rec);
+    rec.normal *= reverseOrientation  ? -1 : 1;
+    rec.bump_normal *= reverseOrientation  ? -1 : 1;
+    rec.hitable = this;
+    
+    
     return(true);
   }
   return(false);

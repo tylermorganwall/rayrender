@@ -171,6 +171,14 @@ inline normal3<T> cross(const vec3<T> &v1, const normal3<T> &v2) {
                     DifferenceOfProducts(v1.x(), v2.y(), v1.y(), v2.x())));
 }
 
+template<typename T> 
+inline normal3<T> cross(const normal3<T> &v1, const vec3<T> &v2) {
+  return(normal3<T>(DifferenceOfProducts(v1.y(), v2.z(), v1.z(), v2.y()),
+                    DifferenceOfProducts(v1.z(), v2.x(), v1.x(), v2.z()),
+                    DifferenceOfProducts(v1.x(), v2.y(), v1.y(), v2.x())));
+}
+
+
 
 template<typename T> 
 inline normal3<T>& normal3<T>::operator+=(const normal3<T> &v) {

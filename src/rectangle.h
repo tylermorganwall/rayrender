@@ -32,6 +32,9 @@ public:
     point3f random_point = (*ObjectToWorld)(point3f(x0 + u.x() * (x1 - x0), y0 + u.y() * (y1-y0),k));
     return(random_point - o);
   }
+  virtual std::string GetName() const {
+    return(std::string("XY Rectangle"));
+  }
   Float x0, x1, y0, y1, k;
   std::shared_ptr<material> mp;
   std::shared_ptr<alpha_texture> alpha_mask;
@@ -58,6 +61,9 @@ public:
   virtual Float pdf_value(const point3f& o, const vec3f& v, Sampler* sampler, Float time = 0);
   virtual vec3f random(const point3f& o, random_gen& rng, Float time = 0);
   virtual vec3f random(const point3f& o, Sampler* sampler, Float time = 0);
+  virtual std::string GetName() const {
+    return(std::string("XZ Rectangle"));
+  }
   Float x0, x1, z0, z1, k;
   std::shared_ptr<material> mp;
   std::shared_ptr<alpha_texture> alpha_mask;
@@ -83,7 +89,9 @@ public:
   virtual Float pdf_value(const point3f& o, const vec3f& v, Sampler* sampler, Float time = 0);
   virtual vec3f random(const point3f& o, random_gen& rng, Float time = 0);
   virtual vec3f random(const point3f& o, Sampler* sampler, Float time = 0);
-  
+  virtual std::string GetName() const {
+    return(std::string("YZ Rectangle"));
+  }
   Float y0, y1, z0, z1, k;
   std::shared_ptr<material> mp;
   std::shared_ptr<alpha_texture> alpha_mask;

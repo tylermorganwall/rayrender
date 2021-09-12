@@ -68,10 +68,11 @@ bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random
       rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
       rec.bump_normal.make_unit_vector();
     }
+    rec.pError = gamma(5) * Abs(rec.p);
     rec = (*ObjectToWorld)(rec);
     rec.normal *= reverseOrientation  ? -1 : 1;
     rec.bump_normal *= reverseOrientation  ? -1 : 1;
-    rec.pError = gamma(5) * Abs(rec.p);
+    rec.hitable = this;
     
     rec.mat_ptr = mat_ptr.get();
     return(true);
@@ -103,10 +104,11 @@ bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random
       rec.normal = -rec.normal;
       rec.bump_normal = -rec.bump_normal;
     }
+    rec.pError = gamma(5) * Abs(rec.p);
     rec = (*ObjectToWorld)(rec);
     rec.normal *= reverseOrientation  ? -1 : 1;
     rec.bump_normal *= reverseOrientation  ? -1 : 1;
-    rec.pError = gamma(5) * Abs(rec.p);
+    rec.hitable = this;
     
     rec.mat_ptr = mat_ptr.get();
     return(true);
@@ -181,10 +183,11 @@ bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sample
       rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
       rec.bump_normal.make_unit_vector();
     }
+    rec.pError = gamma(5) * Abs(rec.p);
     rec = (*ObjectToWorld)(rec);
     rec.normal *= reverseOrientation  ? -1 : 1;
     rec.bump_normal *= reverseOrientation  ? -1 : 1;
-    rec.pError = gamma(5) * Abs(rec.p);
+    rec.hitable = this;
     
     rec.mat_ptr = mat_ptr.get();
     return(true);
@@ -216,10 +219,11 @@ bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sample
       rec.normal = -rec.normal;
       rec.bump_normal = -rec.bump_normal;
     }
+    rec.pError = gamma(5) * Abs(rec.p);
     rec = (*ObjectToWorld)(rec);
     rec.normal *= reverseOrientation  ? -1 : 1;
     rec.bump_normal *= reverseOrientation  ? -1 : 1;
-    rec.pError = gamma(5) * Abs(rec.p);
+    rec.hitable = this;
     
     rec.mat_ptr = mat_ptr.get();
     return(true);
@@ -446,11 +450,12 @@ bool moving_sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec,
       rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
       rec.bump_normal.make_unit_vector();
     }
-    
+    rec.pError = gamma(5) * Abs(rec.p);
     get_sphere_uv(rec.normal, rec.u, rec.v);
     rec = (*ObjectToWorld)(rec);
     rec.normal *= reverseOrientation  ? -1 : 1;
     rec.bump_normal *= reverseOrientation  ? -1 : 1;
+    rec.hitable = this;
     
     rec.mat_ptr = mat_ptr.get();
     return(true);
@@ -484,9 +489,11 @@ bool moving_sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec,
       rec.normal = -rec.normal;
       rec.bump_normal = -rec.bump_normal;
     }
+    rec.pError = gamma(5) * Abs(rec.p);
     rec = (*ObjectToWorld)(rec);
     rec.normal *= reverseOrientation  ? -1 : 1;
     rec.bump_normal *= reverseOrientation  ? -1 : 1;
+    rec.hitable = this;
     
     rec.mat_ptr = mat_ptr.get();
     return(true);
@@ -572,9 +579,11 @@ bool moving_sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec,
       rec.bump_normal.make_unit_vector();
 
     }
+    rec.pError = gamma(5) * Abs(rec.p);
     rec = (*ObjectToWorld)(rec);
     rec.normal *= reverseOrientation  ? -1 : 1;
     rec.bump_normal *= reverseOrientation  ? -1 : 1;
+    rec.hitable = this;
     
     rec.mat_ptr = mat_ptr.get();
     return(true);
@@ -606,9 +615,11 @@ bool moving_sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec,
       rec.normal = -rec.normal;
       rec.bump_normal = -rec.bump_normal;
     }
+    rec.pError = gamma(5) * Abs(rec.p);
     rec = (*ObjectToWorld)(rec);
     rec.normal *= reverseOrientation  ? -1 : 1;
     rec.bump_normal *= reverseOrientation  ? -1 : 1;
+    rec.hitable = this;
     
     rec.mat_ptr = mat_ptr.get();
     return(true);

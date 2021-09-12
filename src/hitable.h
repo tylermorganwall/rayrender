@@ -63,6 +63,9 @@ class hitable {
     virtual vec3f random(const point3f& o, Sampler* sampler, Float time = 0) {
       return(vec3f(0,1,0));
     }
+    virtual std::string GetName() const {
+      return(std::string("Hitable"));
+    }
     virtual ~hitable() {}
     const std::shared_ptr<Transform> ObjectToWorld, WorldToObject;
     const bool reverseOrientation;

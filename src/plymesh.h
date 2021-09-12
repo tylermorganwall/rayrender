@@ -20,6 +20,9 @@ class plymesh : public hitable {
   virtual bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler);
   
   virtual bool bounding_box(Float t0, Float t1, aabb& box) const;
+  virtual std::string GetName() const {
+    return(std::string("Plymesh"));
+  }
   std::shared_ptr<bvh_node> ply_mesh_bvh;
   std::shared_ptr<material> mat_ptr;
   hitable_list triangles;

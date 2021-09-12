@@ -24,6 +24,8 @@ Matrix4x4::Matrix4x4(Float t00, Float t01, Float t02, Float t03, Float t10,
   m[3][3] = t33;
 }
 
+#include "RcppThread.h"
+
 Matrix4x4 Inverse(const Matrix4x4 &m) {
   int indxc[4], indxr[4];
   int ipiv[4] = {0, 0, 0, 0};
@@ -43,6 +45,7 @@ Matrix4x4 Inverse(const Matrix4x4 &m) {
               icol = k;
             }
           } else if (ipiv[k] > 1) {
+            RcppThread::Rcout << "Singular Matrix:\n" << m << "\n";
             throw std::runtime_error("Singular matrix in MatrixInvert");          }
         }
       }
@@ -55,6 +58,7 @@ Matrix4x4 Inverse(const Matrix4x4 &m) {
     indxr[i] = irow;
     indxc[i] = icol;
     if (minv[icol][icol] == 0.f) {
+      RcppThread::Rcout << "Singular Matrix:\n" << m << "\n";
       throw std::runtime_error("Singular matrix in MatrixInvert");
     }
     

@@ -57,10 +57,12 @@ bool csg::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_ge
         rec.dpdv = 0.5;
         rec.mat_ptr = mat_ptr.get();
         rec.has_bump = false;
-        rec.p = (*ObjectToWorld)(rec.p);
-        rec.normal = !reverseOrientation ? (*ObjectToWorld)(rec.normal) : -(*ObjectToWorld)(rec.normal);
+        rec.pError = vec3f(threshold,threshold,threshold);
+        rec = (*ObjectToWorld)(rec);
+        rec.normal *= reverseOrientation  ? -1 : 1;
+        rec.bump_normal *= reverseOrientation  ? -1 : 1;
+        rec.hitable = this;
         
-        // rec.bump_normal =  rec.normal;
         return(true);
       } else {
         return(false);
@@ -123,8 +125,12 @@ bool csg::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* 
         rec.mat_ptr = mat_ptr.get();
         rec.has_bump = false;
         
-        rec.p = (*ObjectToWorld)(rec.p);
-        rec.normal = !reverseOrientation ? (*ObjectToWorld)(rec.normal) : -(*ObjectToWorld)(rec.normal);
+        rec.pError = vec3f(threshold,threshold,threshold);
+        rec = (*ObjectToWorld)(rec);
+        rec.normal *= reverseOrientation  ? -1 : 1;
+        rec.bump_normal *= reverseOrientation  ? -1 : 1;
+        rec.hitable = this;
+        
         // rec.bump_normal =  rec.normal;
         return(true);
       } else {

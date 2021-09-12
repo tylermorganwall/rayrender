@@ -430,10 +430,11 @@ inline float NextFloatUp(float v) {
   
   // Advance _v_ to next higher float
   uint32_t ui = FloatToBits(v);
-  if (v >= 0)
+  if (v >= 0) {
     ++ui;
-  else
+  } else {
     --ui;
+  }
   return BitsToFloat(ui);
 }
 
@@ -738,10 +739,10 @@ inline point3f OffsetRayOrigin(const point3f &p, const vec3f &pError,
   }
   point3f po = p + offset;
   for (int i = 0; i < 3; ++i) {
-    if (offset[i] > 0) {
-      po[i] = NextFloatUp(po[i]);
-    } else if (offset[i] < 0)  {
-      po[i] = NextFloatDown(po[i]);
+    if (offset.e[i] > 0) {
+      po.e[i] = NextFloatUp(po.e[i]);
+    } else if (offset.e[i] < 0)  {
+      po.e[i] = NextFloatDown(po.e[i]);
     }
   }
   
@@ -793,6 +794,21 @@ inline point2f UniformSampleDisk(const vec2f &u) {
   Float r = std::sqrt(u[0]);
   Float theta = 2 * M_PI * u[1];
   return point2f(r * std::cos(theta), r * std::sin(theta));
+}
+
+template <typename T>
+inline normal3<T> Faceforward(const normal3<T> &n, const normal3<T> &n2) {
+  return (dot(n, n2) < 0.f) ? -n : n;
+}
+
+template <typename T>
+inline vec3<T> Faceforward(const vec3<T> &v, const vec3<T> &v2) {
+  return (dot(v, v2) < 0.f) ? -v : v;
+}
+
+template <typename T>
+inline vec3<T> Faceforward(const vec3<T> &v, const normal3<T> &n2) {
+  return (dot(v, n2) < 0.f) ? -v : v;
 }
 
 #endif

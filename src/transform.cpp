@@ -37,16 +37,26 @@ bool Transform::operator<(const Transform &t2) const {
 }
 
 Transform Translate(const vec3f &delta) {
-  Matrix4x4 m(1, 0, 0, delta.x(), 0, 1, 0, delta.y(), 0, 0, 1, delta.z(), 0, 0, 0,
-              1);
-  Matrix4x4 minv(1, 0, 0, -delta.x(), 0, 1, 0, -delta.y(), 0, 0, 1, -delta.z(), 0,
-                 0, 0, 1);
+  Matrix4x4 m(1, 0, 0, delta.x(), 
+              0, 1, 0, delta.y(), 
+              0, 0, 1, delta.z(), 
+              0, 0, 0, 1);
+  Matrix4x4 minv(1, 0, 0, -delta.x(), 
+                 0, 1, 0, -delta.y(), 
+                 0, 0, 1, -delta.z(), 
+                 0, 0, 0, 1);
   return Transform(m, minv);
 }
 
 Transform Scale(Float x, Float y, Float z) {
-  Matrix4x4 m(x, 0, 0, 0, 0, y, 0, 0, 0, 0, z, 0, 0, 0, 0, 1);
-  Matrix4x4 minv(1 / x, 0, 0, 0, 0, 1 / y, 0, 0, 0, 0, 1 / z, 0, 0, 0, 0, 1);
+  Matrix4x4 m(x, 0, 0, 0, 
+              0, y, 0, 0, 
+              0, 0, z, 0, 
+              0, 0, 0, 1);
+  Matrix4x4 minv(1 / x, 0, 0, 0, 
+                 0, 1 / y, 0, 0, 
+                 0, 0, 1 / z, 0, 
+                 0, 0, 0,     1);
   return Transform(m, minv);
 }
 
@@ -142,7 +152,9 @@ Transform Orthographic(Float zNear, Float zFar) {
 
 Transform Perspective(Float fov, Float n, Float f) {
   // Perform projective divide for perspective projection
-  Matrix4x4 persp(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, f / (f - n), -f * n / (f - n),
+  Matrix4x4 persp(1, 0, 0, 0, 
+                  0, 1, 0, 0, 
+                  0, 0, f / (f - n), -f * n / (f - n),
                   0, 0, 1, 0);
   
   // Scale canonical perspective view to specified field of view
@@ -269,6 +281,7 @@ hit_record Transform::operator()(const hit_record &r) const {
   hr.u = r.u;
   hr.v = r.v;
   hr.t = r.t;
+  hr.hitable = r.hitable;
   
   
   //Need to transform wo if used
@@ -278,6 +291,7 @@ hit_record Transform::operator()(const hit_record &r) const {
 hit_record Transform::operator()(hit_record &r) const {
   hit_record hr;
   hr.p = (*this)(r.p, r.pError, &hr.pError);
+
   hr.normal = (*this)(r.normal);
   hr.bump_normal = (*this)(r.bump_normal);
   hr.dpdu = (*this)(r.dpdu);
@@ -287,7 +301,8 @@ hit_record Transform::operator()(hit_record &r) const {
   hr.u = r.u;
   hr.v = r.v;
   hr.t = r.t;
-
+  hr.hitable = r.hitable;
+  
   
   //Need to transform wo if used
   return(hr);
@@ -376,14 +391,17 @@ vec3<T> Transform::operator()(const vec3<T> &v,
                               vec3<T> *absError) const {
   T x = v.x(), y = v.y(), z = v.z();
   absError->e[0] =
-    gamma(3) * (std::fabs(m.m[0][0] * v.x()) + std::fabs(m.m[0][1] * v.y()) +
-    std::fabs(m.m[0][2] * v.z()));
+    gamma(3) * (std::fabs(m.m[0][0] * v.x()) + 
+                std::fabs(m.m[0][1] * v.y()) +
+                std::fabs(m.m[0][2] * v.z()));
   absError->e[1] =
-    gamma(3) * (std::fabs(m.m[1][0] * v.x()) + std::fabs(m.m[1][1] * v.y()) +
-    std::fabs(m.m[1][2] * v.z()));
+    gamma(3) * (std::fabs(m.m[1][0] * v.x()) + 
+                std::fabs(m.m[1][1] * v.y()) +
+                std::fabs(m.m[1][2] * v.z()));
   absError->e[2] =
-    gamma(3) * (std::fabs(m.m[2][0] * v.x()) + std::fabs(m.m[2][1] * v.y()) +
-    std::fabs(m.m[2][2] * v.z()));
+    gamma(3) * (std::fabs(m.m[2][0] * v.x()) + 
+                std::fabs(m.m[2][1] * v.y()) +
+                std::fabs(m.m[2][2] * v.z()));
   return vec3<T>(m.m[0][0] * x + m.m[0][1] * y + m.m[0][2] * z,
                  m.m[1][0] * x + m.m[1][1] * y + m.m[1][2] * z,
                  m.m[2][0] * x + m.m[2][1] * y + m.m[2][2] * z);
@@ -396,22 +414,28 @@ vec3<T> Transform::operator()(const vec3<T> &v,
   T x = v.x(), y = v.y(), z = v.z();
   absError->e[0] =
     (gamma(3) + (T)1) *
-    (std::fabs(m.m[0][0]) * vError.x() + std::fabs(m.m[0][1]) * vError.y() +
-    std::fabs(m.m[0][2]) * vError.z()) +
-    gamma(3) * (std::fabs(m.m[0][0] * v.x()) + std::fabs(m.m[0][1] * v.y()) +
-    std::fabs(m.m[0][2] * v.z()));
+    (std::fabs(m.m[0][0]) * vError.x() + 
+     std::fabs(m.m[0][1]) * vError.y() +
+     std::fabs(m.m[0][2]) * vError.z()) +
+    gamma(3) * (std::fabs(m.m[0][0] * v.x()) + 
+                std::fabs(m.m[0][1] * v.y()) +
+                std::fabs(m.m[0][2] * v.z()));
   absError->e[1] =
     (gamma(3) + (T)1) *
-    (std::fabs(m.m[1][0]) * vError.x() + std::fabs(m.m[1][1]) * vError.y() +
-    std::fabs(m.m[1][2]) * vError.z()) +
-    gamma(3) * (std::fabs(m.m[1][0] * v.x()) + std::fabs(m.m[1][1] * v.y()) +
-    std::fabs(m.m[1][2] * v.z()));
+    (std::fabs(m.m[1][0]) * vError.x() + 
+     std::fabs(m.m[1][1]) * vError.y() +
+     std::fabs(m.m[1][2]) * vError.z()) +
+    gamma(3) * (std::fabs(m.m[1][0] * v.x()) + 
+                std::fabs(m.m[1][1] * v.y()) +
+                std::fabs(m.m[1][2] * v.z()));
   absError->e[2] =
     (gamma(3) + (T)1) *
-    (std::fabs(m.m[2][0]) * vError.x() + std::fabs(m.m[2][1]) * vError.y() +
-    std::fabs(m.m[2][2]) * vError.z()) +
-    gamma(3) * (std::fabs(m.m[2][0] * v.x()) + std::fabs(m.m[2][1] * v.y()) +
-    std::fabs(m.m[2][2] * v.z()));
+    (std::fabs(m.m[2][0]) * vError.x() + 
+     std::fabs(m.m[2][1]) * vError.y() +
+     std::fabs(m.m[2][2]) * vError.z()) +
+    gamma(3) * (std::fabs(m.m[2][0] * v.x()) + 
+                std::fabs(m.m[2][1] * v.y()) +
+                std::fabs(m.m[2][2] * v.z()));
   return vec3<T>(m.m[0][0] * x + m.m[0][1] * y + m.m[0][2] * z,
                  m.m[1][0] * x + m.m[1][1] * y + m.m[1][2] * z,
                  m.m[2][0] * x + m.m[2][1] * y + m.m[2][2] * z);
