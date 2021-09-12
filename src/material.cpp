@@ -91,8 +91,8 @@ bool dielectric::scatter(const ray& r_in, const hit_record& hrec, scatter_record
   srec.is_specular = true;
   normal3f outward_normal;
   normal3f normal = !hrec.has_bump ? hrec.normal : hrec.bump_normal;
+  vec3f unit_direction = unit_vector(r_in.direction());
   
-  vec3f reflected = Reflect(r_in.direction(), normal);
   Float ni_over_nt;
   srec.attenuation = albedo;
   Float current_ref_idx = 1.0;
@@ -129,8 +129,8 @@ bool dielectric::scatter(const ray& r_in, const hit_record& hrec, scatter_record
     Float distance = (offset_p-r_in.point_at_parameter(0)).length();
     point3f prev_atten = r_in.pri_stack->at(prev_active)->attenuation;
     srec.attenuation = point3f(std::exp(-distance * prev_atten.x()),
-                            std::exp(-distance * prev_atten.y()),
-                            std::exp(-distance * prev_atten.z()));
+                               std::exp(-distance * prev_atten.y()),
+                               std::exp(-distance * prev_atten.z()));
     if(!entering && current_layer != -1) {
       r_in.pri_stack->erase(r_in.pri_stack->begin() + static_cast<size_t>(current_layer));
     }
@@ -145,7 +145,6 @@ bool dielectric::scatter(const ray& r_in, const hit_record& hrec, scatter_record
     outward_normal = normal;
     ni_over_nt = current_ref_idx / ref_idx;
   }
-  vec3f unit_direction = unit_vector(r_in.direction());
   Float cos_theta = ffmin(dot(-unit_direction, outward_normal), (Float)1.0);
   Float sin_theta = sqrt(1.0 - cos_theta*cos_theta);
   if(ni_over_nt * sin_theta <= 1.0 ) {
@@ -154,19 +153,19 @@ bool dielectric::scatter(const ray& r_in, const hit_record& hrec, scatter_record
   } else {
     reflect_prob = 1.0;
   }
-  if(!entering) {
+  if(entering) {
     Float distance = (offset_p-r_in.point_at_parameter(0)).length();
     srec.attenuation = point3f(std::exp(-distance * attenuation.x()),
-                            std::exp(-distance * attenuation.y()),
-                            std::exp(-distance * attenuation.z()));
+                               std::exp(-distance * attenuation.y()),
+                               std::exp(-distance * attenuation.z()));
   } else {
     if(prev_active != -1) {
       Float distance = (offset_p-r_in.point_at_parameter(0)).length();
       point3f prev_atten = r_in.pri_stack->at(prev_active)->attenuation;
       
       srec.attenuation = albedo * point3f(std::exp(-distance * prev_atten.x()),
-                                       std::exp(-distance * prev_atten.y()),
-                                       std::exp(-distance * prev_atten.z()));
+                                          std::exp(-distance * prev_atten.y()),
+                                          std::exp(-distance * prev_atten.z()));
     } else {
       srec.attenuation = albedo;
     }
@@ -175,6 +174,7 @@ bool dielectric::scatter(const ray& r_in, const hit_record& hrec, scatter_record
     if(entering) {
       r_in.pri_stack->pop_back();
     }
+    vec3f reflected = Reflect(-unit_direction, unit_vector(normal));
     srec.specular_ray = ray(offset_p, reflected, r_in.pri_stack, r_in.time());
   } else {
     if(!entering && current_layer != -1) {
@@ -190,9 +190,10 @@ bool dielectric::scatter(const ray& r_in, const hit_record& hrec, scatter_record
 bool dielectric::scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler) {
   srec.is_specular = true;
   normal3f outward_normal;
+  vec3f unit_direction = unit_vector(r_in.direction());
+  
   normal3f normal = !hrec.has_bump ? hrec.normal : hrec.bump_normal;
   
-  vec3f reflected = Reflect(r_in.direction(), normal);
   Float ni_over_nt;
   srec.attenuation = albedo;
   Float current_ref_idx = 1.0;
@@ -203,8 +204,11 @@ bool dielectric::scatter(const ray& r_in, const hit_record& hrec, scatter_record
   int prev_active = -1;  //keeping track of index of active material (higher priority)
   
   bool entering = dot(hrec.normal, r_in.direction()) < 0;
+
   bool skip = false;
   point3f offset_p = hrec.p;
+  // point3f offset_p = OffsetRayOrigin(hrec.p, hrec.pError, hrec.normal, reflected);
+  
   
   for(size_t i = 0; i < r_in.pri_stack->size(); i++) {
     if(r_in.pri_stack->at(i) == this) {
@@ -245,7 +249,6 @@ bool dielectric::scatter(const ray& r_in, const hit_record& hrec, scatter_record
     outward_normal = normal;
     ni_over_nt = current_ref_idx / ref_idx;
   }
-  vec3f unit_direction = unit_vector(r_in.direction());
   Float cos_theta = ffmin(dot(-unit_direction, outward_normal), (Float)1.0);
   Float sin_theta = sqrt(1.0 - cos_theta*cos_theta);
   if(ni_over_nt * sin_theta <= 1.0 ) {
@@ -257,16 +260,16 @@ bool dielectric::scatter(const ray& r_in, const hit_record& hrec, scatter_record
   if(!entering) {
     Float distance = (offset_p-r_in.point_at_parameter(0)).length();
     srec.attenuation = point3f(std::exp(-distance * attenuation.x()),
-                            std::exp(-distance * attenuation.y()),
-                            std::exp(-distance * attenuation.z()));
+                               std::exp(-distance * attenuation.y()),
+                               std::exp(-distance * attenuation.z()));
   } else {
     if(prev_active != -1) {
       Float distance = (offset_p-r_in.point_at_parameter(0)).length();
       point3f prev_atten = r_in.pri_stack->at(prev_active)->attenuation;
       
       srec.attenuation = albedo * point3f(std::exp(-distance * prev_atten.x()),
-                                       std::exp(-distance * prev_atten.y()),
-                                       std::exp(-distance * prev_atten.z()));
+                                          std::exp(-distance * prev_atten.y()),
+                                          std::exp(-distance * prev_atten.z()));
     } else {
       srec.attenuation = albedo;
     }
@@ -275,6 +278,7 @@ bool dielectric::scatter(const ray& r_in, const hit_record& hrec, scatter_record
     if(entering) {
       r_in.pri_stack->pop_back();
     }
+    vec3f reflected = Reflect(-unit_direction, unit_vector(normal));
     srec.specular_ray = ray(offset_p, reflected, r_in.pri_stack, r_in.time());
   } else {
     if(!entering && current_layer != -1) {

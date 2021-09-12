@@ -42,7 +42,7 @@ bool xy_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
   
   rec.mat_ptr = mp.get();
   rec.p = r2.point_at_parameter(t);
-  rec.p.e[2] = 0;
+  rec.p.e[2] = k;
   rec.pError = vec3f(0,0,0);
   
   rec = (*ObjectToWorld)(rec);
@@ -94,7 +94,7 @@ bool xy_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampl
   
   rec.mat_ptr = mp.get();
   rec.p = r2.point_at_parameter(t);
-  rec.p.e[2] = 0;
+  rec.p.e[2] = k;
   rec.pError = vec3f(0,0,0);
   
   rec = (*ObjectToWorld)(rec);
@@ -136,7 +136,7 @@ Float xy_rect::pdf_value(const point3f& o, const vec3f& v, Sampler* sampler, Flo
 bool xz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
   ray r2 = (*WorldToObject)(r);
   
-  Float t = -r2.origin().y() / r2.direction().y();
+  Float t = (k-r2.origin().y()) / r2.direction().y();
   if(t < t_min || t > t_max) {
     return(false);
   }
@@ -177,7 +177,7 @@ bool xz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
   
   rec.mat_ptr = mp.get();
   rec.p = r2.point_at_parameter(t);
-  rec.p.e[1] = 0;
+  rec.p.e[1] = k;
   rec.pError = vec3f(0,0,0);
   rec = (*ObjectToWorld)(rec);
   rec.normal *= reverseOrientation  ? -1 : 1;
@@ -191,7 +191,7 @@ bool xz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
 bool xz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) {
   ray r2 = (*WorldToObject)(r);
   
-  Float t = -r2.origin().y() / r2.direction().y();
+  Float t = (k-r2.origin().y()) / r2.direction().y();
   if(t < t_min || t > t_max) {
     return(false);
   }
@@ -230,7 +230,7 @@ bool xz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampl
   
   rec.mat_ptr = mp.get();
   rec.p = r2.point_at_parameter(t);
-  rec.p.e[1] = 0;
+  rec.p.e[1] = k;
   rec.pError = vec3f(0,0,0);
   
   rec = (*ObjectToWorld)(rec);
@@ -279,7 +279,7 @@ vec3f xz_rect::random(const point3f& o, Sampler* sampler, Float time) {
 bool yz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
   ray r2 = (*WorldToObject)(r);
   
-  Float t = -r2.origin().x() / r2.direction().x();
+  Float t = (k-r2.origin().x()) / r2.direction().x();
   if(t < t_min || t > t_max) {
     return(false);
   }
@@ -317,7 +317,7 @@ bool yz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
   
   rec.mat_ptr = mp.get();
   rec.p = r2.point_at_parameter(t);
-  rec.p.e[0] = 0;
+  rec.p.e[0] = k;
   rec.pError = vec3f(0,0,0);
   
   rec = (*ObjectToWorld)(rec);
@@ -331,7 +331,7 @@ bool yz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
 bool yz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) {
   ray r2 = (*WorldToObject)(r);
   
-  Float t = -r2.origin().x() / r2.direction().x();
+  Float t = (k-r2.origin().x()) / r2.direction().x();
   if(t < t_min || t > t_max) {
     return(false);
   }
@@ -369,7 +369,7 @@ bool yz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampl
   
   rec.mat_ptr = mp.get();
   rec.p = r2.point_at_parameter(t);
-  rec.p.e[0] = 0;
+  rec.p.e[0] = k;
   rec.pError = vec3f(0,0,0);
   
   rec = (*ObjectToWorld)(rec);
