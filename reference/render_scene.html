@@ -77,7 +77,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">rayrender</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.21.6</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.22.0</span>
       </span>
     </div>
 
@@ -165,7 +165,7 @@
   samples <span class='op'>=</span> <span class='fl'>100</span>,
   min_variance <span class='op'>=</span> <span class='fl'>5e-05</span>,
   min_adaptive_size <span class='op'>=</span> <span class='fl'>8</span>,
-  sample_method <span class='op'>=</span> <span class='st'>"sobol_blue"</span>,
+  sample_method <span class='op'>=</span> <span class='st'>"sobol"</span>,
   max_depth <span class='op'>=</span> <span class='fl'>50</span>,
   roulette_active_depth <span class='op'>=</span> <span class='fl'>10</span>,
   ambient_light <span class='op'>=</span> <span class='cn'>FALSE</span>,
@@ -234,11 +234,10 @@ will use the maximum number of samples everywhere.</p></td>
     </tr>
     <tr>
       <th>sample_method</th>
-      <td><p>Default `sobol_blue`. The type of sampling method used to generate
-random numbers. The other options are `random` (worst quality but simple), 
-`stratified` (only implemented for completion), 
-and `sobol_blue` (best option for sample counts below 256), and `sobol` (better than `sobol_blue` for 
-sample counts greater than 256).</p></td>
+      <td><p>Default `sobol`. The type of sampling method used to generate
+random numbers. The other options are `random` (worst quality but fastest), 
+`stratified` (only implemented for completion), `sobol_blue` (best option for sample counts below 256), 
+and `sobol` (slowest but best quality, better than `sobol_blue` for sample counts greater than 256).</p></td>
     </tr>
     <tr>
       <th>max_depth</th>

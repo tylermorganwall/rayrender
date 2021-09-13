@@ -77,7 +77,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">rayrender</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.21.6</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.22.0</span>
       </span>
     </div>
 
@@ -347,7 +347,7 @@ all triangles that make up the extruded polygon. Required if the material is `di
 </div><div class='img'><img src='extruded_polygon-4.png' alt='' width='700' height='433' /></div><div class='input'><span class='co'># }</span>
 
 <span class='co'>#We can also directly pass in sf polygons:</span>
-<span class='kw'>if</span><span class='op'>(</span><span class='st'>"spData"</span> <span class='op'>%in%</span> <span class='fu'><a href='https://rdrr.io/r/base/colnames.html'>rownames</a></span><span class='op'>(</span><span class='fu'>utils</span><span class='fu'>::</span><span class='fu'><a href='https://rdrr.io/r/utils/installed.packages.html'>installed.packages</a></span><span class='op'>(</span><span class='op'>)</span><span class='op'>)</span><span class='op'>)</span> <span class='op'>{</span>
+<span class='kw'>if</span><span class='op'>(</span><span class='fu'><a href='https://rdrr.io/r/base/length.html'>length</a></span><span class='op'>(</span><span class='fu'><a href='https://rdrr.io/r/base/find.package.html'>find.package</a></span><span class='op'>(</span><span class='st'>"spData"</span>,quiet<span class='op'>=</span><span class='cn'>TRUE</span><span class='op'>)</span><span class='op'>)</span> <span class='op'>&gt;</span> <span class='fl'>0</span><span class='op'>)</span> <span class='op'>{</span>
   <span class='va'>us_states</span> <span class='op'>=</span> <span class='fu'>spData</span><span class='fu'>::</span><span class='va'><a href='https://nowosad.github.io/spData/reference/us_states.html'>us_states</a></span>
   <span class='va'>texas</span> <span class='op'>=</span> <span class='va'>us_states</span><span class='op'>[</span><span class='va'>us_states</span><span class='op'>$</span><span class='va'>NAME</span> <span class='op'>==</span> <span class='st'>"Texas"</span>,<span class='op'>]</span>
   <span class='co'>#Fix no sfc class in us_states geometry data</span>

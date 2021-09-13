@@ -77,7 +77,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">rayrender</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.21.6</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.22.0</span>
       </span>
     </div>
 
@@ -160,10 +160,11 @@
     <pre class="usage"><span class='fu'>group_objects</span><span class='op'>(</span>
   <span class='va'>scene</span>,
   pivot_point <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>0</span>, <span class='fl'>0</span>, <span class='fl'>0</span><span class='op'>)</span>,
-  group_translate <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>0</span>, <span class='fl'>0</span>, <span class='fl'>0</span><span class='op'>)</span>,
-  group_angle <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>0</span>, <span class='fl'>0</span>, <span class='fl'>0</span><span class='op'>)</span>,
-  group_order_rotation <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>1</span>, <span class='fl'>2</span>, <span class='fl'>3</span><span class='op'>)</span>,
-  group_scale <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>1</span>, <span class='fl'>1</span>, <span class='fl'>1</span><span class='op'>)</span>
+  translate <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>0</span>, <span class='fl'>0</span>, <span class='fl'>0</span><span class='op'>)</span>,
+  angle <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>0</span>, <span class='fl'>0</span>, <span class='fl'>0</span><span class='op'>)</span>,
+  order_rotation <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>1</span>, <span class='fl'>2</span>, <span class='fl'>3</span><span class='op'>)</span>,
+  scale <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>1</span>, <span class='fl'>1</span>, <span class='fl'>1</span><span class='op'>)</span>,
+  axis_rotation <span class='op'>=</span> <span class='cn'>NA</span>
 <span class='op'>)</span></pre>
 
     <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
@@ -179,22 +180,27 @@
 The point about which to pivot and move the group.</p></td>
     </tr>
     <tr>
-      <th>group_translate</th>
+      <th>translate</th>
       <td><p>Default `c(0,0,0)`. Vector indicating where to offset the group.</p></td>
     </tr>
     <tr>
-      <th>group_angle</th>
+      <th>angle</th>
       <td><p>Default `c(0,0,0)`. Angle of rotation around the x, y, and z axes, 
 applied in the order specified in `order_rotation`.</p></td>
     </tr>
     <tr>
-      <th>group_order_rotation</th>
+      <th>order_rotation</th>
       <td><p>Default `c(1,2,3)`. The order to apply the rotations, 
 referring to "x", "y", and "z".</p></td>
     </tr>
     <tr>
-      <th>group_scale</th>
+      <th>scale</th>
       <td><p>Default `c(1,1,1)`. Scaling factor for x, y, and z directions for all objects in group.</p></td>
+    </tr>
+    <tr>
+      <th>axis_rotation</th>
+      <td><p>Default `NA`. Provide an axis of rotation and a single angle (via `angle`) of rotation
+around that axis.</p></td>
     </tr>
     </table>
 
@@ -215,7 +221,7 @@ referring to "x", "y", and "z".</p></td>
 <span class='co'>#Group the entire room and rotate around its center, but keep the cubes in the same place.</span>
 <span class='va'>scene2</span> <span class='op'>=</span> <span class='fu'>group_objects</span><span class='op'>(</span><span class='fu'><a href='generate_cornell.html'>generate_cornell</a></span><span class='op'>(</span><span class='op'>)</span>, 
                        pivot_point<span class='op'>=</span><span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>555</span><span class='op'>/</span><span class='fl'>2</span>,<span class='fl'>555</span><span class='op'>/</span><span class='fl'>2</span>,<span class='fl'>555</span><span class='op'>/</span><span class='fl'>2</span><span class='op'>)</span>,
-                       group_angle<span class='op'>=</span><span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>0</span>,<span class='fl'>30</span>,<span class='fl'>0</span><span class='op'>)</span><span class='op'>)</span> <span class='op'>%&gt;%</span>
+                       angle<span class='op'>=</span><span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>0</span>,<span class='fl'>30</span>,<span class='fl'>0</span><span class='op'>)</span><span class='op'>)</span> <span class='op'>%&gt;%</span>
          <span class='fu'><a href='add_object.html'>add_object</a></span><span class='op'>(</span><span class='fu'><a href='cube.html'>cube</a></span><span class='op'>(</span>x<span class='op'>=</span><span class='fl'>555</span><span class='op'>/</span><span class='fl'>2</span>,y<span class='op'>=</span><span class='fl'>555</span><span class='op'>/</span><span class='fl'>8</span>,z<span class='op'>=</span><span class='fl'>555</span><span class='op'>/</span><span class='fl'>2</span>,width<span class='op'>=</span><span class='fl'>555</span><span class='op'>/</span><span class='fl'>4</span><span class='op'>)</span><span class='op'>)</span> <span class='op'>%&gt;%</span>
         <span class='fu'><a href='add_object.html'>add_object</a></span><span class='op'>(</span><span class='fu'><a href='cube.html'>cube</a></span><span class='op'>(</span>x<span class='op'>=</span><span class='fl'>555</span><span class='op'>/</span><span class='fl'>2</span>,y<span class='op'>=</span><span class='fl'>555</span><span class='op'>/</span><span class='fl'>4</span><span class='op'>+</span><span class='fl'>555</span><span class='op'>/</span><span class='fl'>16</span>,z<span class='op'>=</span><span class='fl'>555</span><span class='op'>/</span><span class='fl'>2</span>,width<span class='op'>=</span><span class='fl'>555</span><span class='op'>/</span><span class='fl'>8</span><span class='op'>)</span><span class='op'>)</span>
                        
@@ -228,7 +234,7 @@ referring to "x", "y", and "z".</p></td>
 <span class='va'>twocubes</span> <span class='op'>=</span> <span class='fu'><a href='cube.html'>cube</a></span><span class='op'>(</span>x<span class='op'>=</span><span class='fl'>555</span><span class='op'>/</span><span class='fl'>2</span>,y<span class='op'>=</span><span class='fl'>555</span><span class='op'>/</span><span class='fl'>8</span>,z<span class='op'>=</span><span class='fl'>555</span><span class='op'>/</span><span class='fl'>2</span>,width<span class='op'>=</span><span class='fl'>555</span><span class='op'>/</span><span class='fl'>4</span><span class='op'>)</span> <span class='op'>%&gt;%</span>
            <span class='fu'><a href='add_object.html'>add_object</a></span><span class='op'>(</span><span class='fu'><a href='cube.html'>cube</a></span><span class='op'>(</span>x<span class='op'>=</span><span class='fl'>555</span><span class='op'>/</span><span class='fl'>2</span>, y<span class='op'>=</span><span class='fl'>555</span><span class='op'>/</span><span class='fl'>4</span> <span class='op'>+</span> <span class='fl'>555</span><span class='op'>/</span><span class='fl'>16</span>, z<span class='op'>=</span><span class='fl'>555</span><span class='op'>/</span><span class='fl'>2</span>, width<span class='op'>=</span><span class='fl'>555</span><span class='op'>/</span><span class='fl'>8</span><span class='op'>)</span><span class='op'>)</span>
 <span class='va'>scene3</span> <span class='op'>=</span> <span class='fu'><a href='generate_cornell.html'>generate_cornell</a></span><span class='op'>(</span><span class='op'>)</span> <span class='op'>%&gt;%</span>
-         <span class='fu'><a href='add_object.html'>add_object</a></span><span class='op'>(</span><span class='fu'>group_objects</span><span class='op'>(</span><span class='va'>twocubes</span>, group_translate <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>0</span>,<span class='fl'>50</span>,<span class='fl'>0</span><span class='op'>)</span>,group_angle <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>0</span>,<span class='fl'>45</span>,<span class='fl'>0</span><span class='op'>)</span><span class='op'>)</span><span class='op'>)</span>
+         <span class='fu'><a href='add_object.html'>add_object</a></span><span class='op'>(</span><span class='fu'>group_objects</span><span class='op'>(</span><span class='va'>twocubes</span>, translate <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>0</span>,<span class='fl'>50</span>,<span class='fl'>0</span><span class='op'>)</span>,angle <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>0</span>,<span class='fl'>45</span>,<span class='fl'>0</span><span class='op'>)</span><span class='op'>)</span><span class='op'>)</span>
 <span class='co'># \donttest{</span>
 <span class='fu'><a href='render_scene.html'>render_scene</a></span><span class='op'>(</span><span class='va'>scene3</span>,lookfrom<span class='op'>=</span><span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>278</span>,<span class='fl'>278</span>,<span class='op'>-</span><span class='fl'>800</span><span class='op'>)</span>,lookat <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>278</span>,<span class='fl'>278</span>,<span class='fl'>0</span><span class='op'>)</span>, aperture<span class='op'>=</span><span class='fl'>0</span>,
              samples<span class='op'>=</span><span class='fl'>500</span>, fov<span class='op'>=</span><span class='fl'>50</span>, parallel<span class='op'>=</span><span class='cn'>TRUE</span>, clamp_value<span class='op'>=</span><span class='fl'>5</span><span class='op'>)</span>
@@ -236,8 +242,8 @@ referring to "x", "y", and "z".</p></td>
 
 <span class='co'>#Flatten and stretch the cubes together on two axes</span>
 <span class='va'>scene4</span> <span class='op'>=</span> <span class='fu'><a href='generate_cornell.html'>generate_cornell</a></span><span class='op'>(</span><span class='op'>)</span> <span class='op'>%&gt;%</span>
-         <span class='fu'><a href='add_object.html'>add_object</a></span><span class='op'>(</span><span class='fu'>group_objects</span><span class='op'>(</span><span class='va'>twocubes</span>, group_translate <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>0</span>,<span class='op'>-</span><span class='fl'>40</span>,<span class='fl'>0</span><span class='op'>)</span>, 
-                                  group_angle <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>0</span>,<span class='fl'>45</span>,<span class='fl'>0</span><span class='op'>)</span>, group_scale <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>2</span>,<span class='fl'>0.5</span>,<span class='fl'>1</span><span class='op'>)</span><span class='op'>)</span><span class='op'>)</span>
+         <span class='fu'><a href='add_object.html'>add_object</a></span><span class='op'>(</span><span class='fu'>group_objects</span><span class='op'>(</span><span class='va'>twocubes</span>, translate <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>0</span>,<span class='op'>-</span><span class='fl'>40</span>,<span class='fl'>0</span><span class='op'>)</span>, 
+                                  angle <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>0</span>,<span class='fl'>45</span>,<span class='fl'>0</span><span class='op'>)</span>, scale <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>2</span>,<span class='fl'>0.5</span>,<span class='fl'>1</span><span class='op'>)</span><span class='op'>)</span><span class='op'>)</span>
 <span class='co'># \donttest{</span>
 <span class='fu'><a href='render_scene.html'>render_scene</a></span><span class='op'>(</span><span class='va'>scene4</span>,lookfrom<span class='op'>=</span><span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>278</span>,<span class='fl'>278</span>,<span class='op'>-</span><span class='fl'>800</span><span class='op'>)</span>,lookat <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>278</span>,<span class='fl'>278</span>,<span class='fl'>0</span><span class='op'>)</span>, aperture<span class='op'>=</span><span class='fl'>0</span>,
              samples<span class='op'>=</span><span class='fl'>500</span>, fov<span class='op'>=</span><span class='fl'>50</span>, parallel<span class='op'>=</span><span class='cn'>TRUE</span>, clamp_value<span class='op'>=</span><span class='fl'>5</span><span class='op'>)</span>
