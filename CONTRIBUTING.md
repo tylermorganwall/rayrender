@@ -14,6 +14,10 @@ Please note the code of conduct, please follow it in all your interactions with 
 external data (unless the data is included in an R package, or can be easily requested via one, e.g. the
 elevatr package). I recommend using the reprex package.  Be sure to include your system information via the `Sys.info()` function.
 
+## Documentation
+
+1. This one's easy! Just update the Roxygen comments and rebuild the documentation, and include both changed filed (.man and .R) in your pull request.
+
 ## Pull Request Process
 
 1. Be sure to have opened an issue describing your intended changes first. 

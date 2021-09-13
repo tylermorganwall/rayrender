@@ -9,6 +9,7 @@
 #include <Rcpp.h>
 #include "transform.h"
 #include <memory>
+#include <cfloat>
 
 class material;
 class hitable;
