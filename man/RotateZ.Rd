@@ -6,6 +6,9 @@
 \usage{
 RotateZ(theta)
 }
+\arguments{
+\item{theta}{Angle}
+}
 \value{
 number
 }

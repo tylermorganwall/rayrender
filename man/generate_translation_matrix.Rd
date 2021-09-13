@@ -6,6 +6,9 @@
 \usage{
 generate_translation_matrix(delta)
 }
+\arguments{
+\item{delta}{Distance}
+}
 \value{
 number
 }

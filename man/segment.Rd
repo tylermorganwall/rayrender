@@ -7,7 +7,7 @@
 segment(
   start = c(0, -1, 0),
   end = c(0, 1, 0),
-  radius = 1,
+  radius = 0.1,
   phi_min = 0,
   phi_max = 360,
   from_center = TRUE,

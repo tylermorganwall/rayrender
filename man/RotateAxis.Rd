@@ -6,6 +6,11 @@
 \usage{
 RotateAxis(theta, axis)
 }
+\arguments{
+\item{theta}{Angle}
+
+\item{axis}{The rotation axis}
+}
 \value{
 matrix
 }

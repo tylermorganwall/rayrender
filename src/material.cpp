@@ -9,13 +9,15 @@ point3f lambertian::f(const ray& r_in, const hit_record& rec, const ray& scatter
   //unit_vector(scattered.direction()) == wo
   //r_in.direction() == wi
   vec3f wi = unit_vector(scattered.direction());
-  Float cosine = dot(rec.normal, wi);
+  normal3f n = unit_vector(rec.normal);
+  Float cosine = dot(n, wi);
   //Shadow terminator if bump map
   Float G = 1.0f;
   if(rec.has_bump) {
+    
     Float NsNlight = dot(rec.bump_normal, wi);
-    Float NsNg = dot(rec.bump_normal, rec.normal);
-    G = NsNlight > 0.0 && NsNg > 0.0 ? std::fmin(1.0, dot(wi, rec.normal) / (NsNlight * NsNg)) : 0;
+    Float NsNg = dot(rec.bump_normal, n);
+    G = NsNlight > 0.0 && NsNg > 0.0 ? std::fmin(1.0, dot(wi, n) / (NsNlight * NsNg)) : 0;
     G = G > 0.0f ? -G * G * G + G * G + G : 0.0f;
     cosine = dot(rec.bump_normal, wi);
   }

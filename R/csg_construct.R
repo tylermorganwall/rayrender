@@ -10,7 +10,6 @@
 #' @param x Default `0`. x-offset of the center of the object.
 #' @param y Default `0`. y-offset of the center of the object.
 #' @param z Default `0`. z-offset of the center of the object.
-#' @param radius Default `1`. Radius of the sphere..
 #' @param material Default  \code{\link{diffuse}}. The material, called from one of the material 
 #' functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}.
 #' @param angle Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.

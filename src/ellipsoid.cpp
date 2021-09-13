@@ -65,7 +65,6 @@ bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, ran
       rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
       rec.bump_normal *= inv_axes;
       rec.bump_normal.make_unit_vector();
-      rec.bump_normal = (*ObjectToWorld)(rec.bump_normal);
     }
     rec.normal *= inv_axes;
     rec.normal.make_unit_vector();
@@ -103,7 +102,6 @@ bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, ran
       rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
       rec.bump_normal *= inv_axes;
       rec.bump_normal.make_unit_vector();
-      rec.bump_normal = (*ObjectToWorld)(rec.bump_normal);
     }
     rec.normal *= inv_axes;
     rec.normal.make_unit_vector();
@@ -126,7 +124,9 @@ bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, ran
 
 
 bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) {
-  ray scaled_ray(r.origin() * point3f(inv_axes) + -center, r.direction() * inv_axes);
+  ray r2 = (*WorldToObject)(r);
+  
+  ray scaled_ray(r2.origin() * point3f(inv_axes) + -center, r2.direction() * inv_axes);
   Float a = dot(scaled_ray.direction(), scaled_ray.direction());
   Float b = 2 * dot(scaled_ray.origin(), scaled_ray.direction()); 
   Float c = dot(scaled_ray.origin(),scaled_ray.origin()) - 1;
@@ -188,7 +188,6 @@ bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sam
       rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
       rec.bump_normal *= inv_axes;
       rec.bump_normal.make_unit_vector();
-      rec.bump_normal = (*ObjectToWorld)(rec.bump_normal);
     }
     rec.normal *= inv_axes;
     rec.normal.make_unit_vector();
@@ -226,7 +225,6 @@ bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sam
       rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
       rec.bump_normal *= inv_axes;
       rec.bump_normal.make_unit_vector();
-      rec.bump_normal = (*ObjectToWorld)(rec.bump_normal);
     }
     rec.normal *= inv_axes;
     rec.normal.make_unit_vector();

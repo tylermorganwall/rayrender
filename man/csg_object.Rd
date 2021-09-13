@@ -9,7 +9,6 @@ csg_object(
   x = 0,
   y = 0,
   z = 0,
-  radius = 1,
   material = diffuse(),
   angle = c(0, 0, 0),
   order_rotation = c(1, 2, 3),
@@ -26,8 +25,6 @@ csg_object(
 \item{y}{Default `0`. y-offset of the center of the object.}
 
 \item{z}{Default `0`. z-offset of the center of the object.}
-
-\item{radius}{Default `1`. Radius of the sphere..}
 
 \item{material}{Default  \code{\link{diffuse}}. The material, called from one of the material 
 functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}.}

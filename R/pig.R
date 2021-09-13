@@ -19,7 +19,8 @@
 #' 
 #' \donttest{
 #' generate_cornell() %>%
-#'   add_object(pig(x=555/2,z=555/2,y=120,scale=c(80,80,80), angle = c(0,135,0))) %>%
+#'   add_object(pig(x=555/2,z=555/2,y=120,
+#'   scale=c(80,80,80), angle = c(0,135,0))) %>%
 #'   render_scene(parallel=TRUE, samples=400,clamp_value=10)
 #' 
 #' # Show the pig staring into a mirror, worried 
@@ -40,11 +41,10 @@
 #' 
 #' many_pigs_scene = do.call(rbind, lots_of_pigs) %>%
 #'  add_object(generate_cornell(lightintensity=30, lightwidth=100)) %>%
-#'  add_object(pig(z=500,x=555/2,y=400, emotion = "angry",
-#'             scale=c(100,100,100),angle=c(30,90,0), order_rotation=c(2,1,3)))
+#'  add_object(pig(z=500,x=555/2,y=350, emotion = "angry",
+#'             scale=c(100,100,100),angle=c(-30,90,0)))
 #'             
-#' render_scene(many_pigs_scene,parallel=TRUE,clamp_value=10, samples=500, 
-#'              sample_method="stratified")
+#' render_scene(many_pigs_scene,parallel=TRUE,clamp_value=10, samples=500)
 #' 
 #' #Render spiderpig
 #' generate_studio() %>%  
@@ -62,7 +62,7 @@ pig = function(x = 0, y = 0, z = 0, emotion = "neutral", spider = FALSE,
   tail_angles = seq(0,500,length.out = 33)
   if(spider) {
     eyemat = glossy(color="red")
-    bodymat = glossy(color="grey10")
+    bodymat = diffuse(color="grey10")
   } else {
     eyemat = glossy(color="white")
     bodymat = diffuse(color="#f09089")

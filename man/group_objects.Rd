@@ -29,6 +29,9 @@ applied in the order specified in `order_rotation`.}
 referring to "x", "y", and "z".}
 
 \item{scale}{Default `c(1,1,1)`. Scaling factor for x, y, and z directions for all objects in group.}
+
+\item{axis_rotation}{Default `NA`. Provide an axis of rotation and a single angle (via `angle`) of rotation
+around that axis.}
 }
 \value{
 Tibble of grouped object locations and properties.
@@ -49,7 +52,7 @@ render_scene(scene,lookfrom=c(278,278,-800),lookat = c(278,278,0), aperture=0,
 #Group the entire room and rotate around its center, but keep the cubes in the same place.
 scene2 = group_objects(generate_cornell(), 
                        pivot_point=c(555/2,555/2,555/2),
-                       group_angle=c(0,30,0)) \%>\%
+                       angle=c(0,30,0)) \%>\%
          add_object(cube(x=555/2,y=555/8,z=555/2,width=555/4)) \%>\%
         add_object(cube(x=555/2,y=555/4+555/16,z=555/2,width=555/8))
                        
@@ -62,7 +65,7 @@ render_scene(scene2,lookfrom=c(278,278,-800),lookat = c(278,278,0), aperture=0,
 twocubes = cube(x=555/2,y=555/8,z=555/2,width=555/4) \%>\%
            add_object(cube(x=555/2, y=555/4 + 555/16, z=555/2, width=555/8))
 scene3 = generate_cornell() \%>\%
-         add_object(group_objects(twocubes, group_translate = c(0,50,0),group_angle = c(0,45,0)))
+         add_object(group_objects(twocubes, translate = c(0,50,0),angle = c(0,45,0)))
 \donttest{
 render_scene(scene3,lookfrom=c(278,278,-800),lookat = c(278,278,0), aperture=0,
              samples=500, fov=50, parallel=TRUE, clamp_value=5)
@@ -70,8 +73,8 @@ render_scene(scene3,lookfrom=c(278,278,-800),lookat = c(278,278,0), aperture=0,
 
 #Flatten and stretch the cubes together on two axes
 scene4 = generate_cornell() \%>\%
-         add_object(group_objects(twocubes, group_translate = c(0,-40,0), 
-                                  group_angle = c(0,45,0), group_scale = c(2,0.5,1)))
+         add_object(group_objects(twocubes, translate = c(0,-40,0), 
+                                  angle = c(0,45,0), scale = c(2,0.5,1)))
 \donttest{
 render_scene(scene4,lookfrom=c(278,278,-800),lookat = c(278,278,0), aperture=0,
              samples=500, fov=50, parallel=TRUE, clamp_value=5)

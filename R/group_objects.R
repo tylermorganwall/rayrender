@@ -11,6 +11,8 @@
 #' @param order_rotation Default `c(1,2,3)`. The order to apply the rotations, 
 #' referring to "x", "y", and "z".
 #' @param scale Default `c(1,1,1)`. Scaling factor for x, y, and z directions for all objects in group.
+#' @param axis_rotation Default `NA`. Provide an axis of rotation and a single angle (via `angle`) of rotation
+#' around that axis.
 #'
 #' @return Tibble of grouped object locations and properties.
 #' @export

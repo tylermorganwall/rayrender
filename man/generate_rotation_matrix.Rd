@@ -6,6 +6,11 @@
 \usage{
 generate_rotation_matrix(angles, order_rotation)
 }
+\arguments{
+\item{angles}{Angles}
+
+\item{order_rotation}{Order of Rotation}
+}
 \value{
 number
 }

@@ -551,15 +551,16 @@ disk = function(x = 0, y = 0, z = 0, radius = 1, inner_radius = 0, material = di
 #' \donttest{
 #' generate_ground(material = diffuse(checkercolor = "grey50")) %>%
 #'   add_object(obj_model(y = -0.8, filename = r_obj(),
-#'                        material = metal(color = "gold", fuzz = 0.025))) %>%
+#'                        material = microfacet(color = "gold", roughness = 0.1))) %>%
 #'   add_object(obj_model(x = 1.8, y = -0.8, filename = r_obj(), 
 #'                        material = diffuse(color = "lightblue"))) %>%
 #'   add_object(obj_model(x = -1.8, y = -0.8, filename = r_obj() , 
-#'                        material = dielectric(color = "pink"))) %>%
+#'                        material = dielectric(attenuation = c(1,0.3,1)*2))) %>%
 #'   add_object(sphere(z = 20, x = 20, y = 20, radius = 10,
 #'                     material = light(intensity = 20))) %>%
-#'   render_scene(parallel = TRUE, samples = 500, 
-#'                tonemap = "reinhold", aperture = 0.05, fov = 32, lookfrom = c(0, 2, 10))
+#'   render_scene(parallel = TRUE, samples = 500, aperture = 0.05, 
+#'                fov = 32, lookfrom = c(0, 2, 10))
+#' 
 #' }
 #' 
 #' #Use scale_obj to make objects bigger--this is more robust than the generic scale argument.
@@ -659,7 +660,7 @@ obj_model = function(filename, x = 0, y = 0, z = 0, scale_obj = 1,
 #' # Only render a subtended arc of the cylinder,
 #' \donttest{
 #' generate_cornell(lightintensity=3) %>%
-#'   add_object(cylinder(x = 555/2, y = 250, z = 555/2, 
+#'   add_object(cylinder(x = 555/2, y = 250, z = 555/2, capped = FALSE,
 #'                       length = 300, radius = 100, angle = c(45, 0, 0), phi_min = 0, phi_max = 180,
 #'                       material = diffuse())) %>%
 #'   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
@@ -1753,7 +1754,7 @@ arrow = function(start = c(0,0,0), end = c(0,1,0),
 #' @examples
 #' #Generate the default curve:
 #' \donttest{
-#' generate_studio(depth=-0.1) %>%
+#' generate_studio(depth=-0.2) %>%
 #'   add_object(bezier_curve(material=diffuse(color="red"))) %>%
 #'   add_object(sphere(y=3,z=5,x=2,radius=0.3,
 #'                     material=light(intensity=200, spotlight_focus = c(0,0.5,0)))) %>%
@@ -1762,7 +1763,7 @@ arrow = function(start = c(0,0,0), end = c(0,1,0),
 #' 
 #' #Change the control points to change the direction of the curve. Here, we place spheres
 #' #at the control point locations.
-#' generate_studio(depth=-0.1) %>%
+#' generate_studio(depth=-0.2) %>%
 #'   add_object(bezier_curve(material=diffuse(color="red"))) %>%
 #'   add_object(sphere(radius=0.075,material=glossy(color="green"))) %>% 
 #'   add_object(sphere(radius=0.075,x=-1,y=0.33,material=glossy(color="green"))) %>% 
@@ -1774,7 +1775,7 @@ arrow = function(start = c(0,0,0), end = c(0,1,0),
 #'                samples=500)
 #'                
 #' #We can make the curve flat (always facing the camera) by setting the type to `flat`
-#' generate_studio(depth=-0.1) %>%
+#' generate_studio(depth=-0.2) %>%
 #'   add_object(bezier_curve(type="flat", material=glossy(color="red"))) %>%
 #'   add_object(sphere(y=3,z=5,x=2,radius=0.3,
 #'                     material=light(intensity=200, spotlight_focus = c(0,0.5,0)))) %>%
@@ -1784,7 +1785,7 @@ arrow = function(start = c(0,0,0), end = c(0,1,0),
 #' 
 #' #We can also plot a ribbon, which is further specified by a start and end orientation with
 #' #two surface normals.
-#' generate_studio(depth=-0.1) %>%
+#' generate_studio(depth=-0.2) %>%
 #'   add_object(bezier_curve(type="ribbon", width=0.2,
 #'                    p1 = c(0,0,0), p2 = c(0,0.33,0), p3 = c(0,0.66,0), p4 = c(0.3,1,0),
 #'                    normal_end = c(0,0,1),
@@ -1958,25 +1959,25 @@ bezier_curve = function(p1 = c(0,0,0), p2 = c(-1,0.33,0), p3 = c(1,0.66,0), p4=c
 #'                c(0.6,-0.5,-0.1),c(0.5,0.5,-0.1), c(0,0.3,-0.1),c(-0,-0.2,0.1), c(0.8,-0.5,0.1))
 #'                
 #' #Render the full pretzel:
-#' generate_studio() %>% 
+#' generate_studio(depth = -1.1) %>% 
 #'   add_object(path(pretzel, width=0.17,  material = glossy(color="#db5b00"))) %>% 
 #'   add_object(sphere(y=5,x=2,z=4,material=light(intensity=20,spotlight_focus = c(0,0,0)))) %>% 
 #'   render_scene(samples=500, clamp_value=10)
 #'   
 #' #Here, we'll render only the first third of the pretzel by setting `u_max = 0.33`
-#' generate_studio() %>% 
+#' generate_studio(depth = -1.1) %>% 
 #'   add_object(path(pretzel, width=0.17, u_max=0.33, material = glossy(color="#db5b00"))) %>% 
 #'   add_object(sphere(y=5,x=2,z=4,material=light(intensity=20,spotlight_focus = c(0,0,0)))) %>% 
 #'   render_scene(samples=500, clamp_value=10)
 #'   
 #' #Here's the last third, by setting `u_min = 0.66`
-#' generate_studio() %>% 
+#' generate_studio(depth = -1.1) %>% 
 #'   add_object(path(pretzel, width=0.17, u_min=0.66, material = glossy(color="#db5b00"))) %>% 
 #'   add_object(sphere(y=5,x=2,z=4,material=light(intensity=20,spotlight_focus = c(0,0,0)))) %>% 
 #'   render_scene(samples=500, clamp_value=10)
 #'   
 #' #Here's the full pretzel, decomposed into thirds using the u_min and u_max coordinates
-#' generate_studio() %>% 
+#' generate_studio(depth = -1.1) %>% 
 #'   add_object(path(pretzel, width=0.17, u_max=0.33, x = -0.8, y =0.6,
 #'                   material = glossy(color="#db5b00"))) %>% 
 #'   add_object(path(pretzel, width=0.17, u_min=0.66, x = 0.8, y =0.6,

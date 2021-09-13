@@ -79,7 +79,7 @@ generate_cornell() \%>\%
 \donttest{
 generate_cornell() \%>\%
   add_object(cube(x = 555/2, y = 200, z = 555/2, 
-                  xwidth = 200, ywidth = 100, zwidth = 200, angle = c(30, 30, 30),
+                  xwidth = 200, ywidth = 100, zwidth = 200, angle = c(-30, 30, -30),
                   material = dielectric())) \%>\%
   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40,  
                ambient_light = FALSE, samples = 500, parallel = TRUE, clamp_value = 5) 

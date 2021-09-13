@@ -167,8 +167,7 @@ tween = function(vals, n, ease = "cubic") {
 
 #' Generate Translation Matrix
 #' 
-#' @param angles
-#' @param order_rotation
+#' @param delta Distance 
 #' @return number
 #'
 #' @keywords internal
@@ -181,8 +180,8 @@ generate_translation_matrix = function(delta) {
 
 #' Generate Rotation Matrix (order)
 #' 
-#' @param angles
-#' @param order_rotation
+#' @param angles Angles
+#' @param order_rotation Order of Rotation
 #' @return number
 #'
 #' @keywords internal
@@ -211,8 +210,7 @@ generate_rotation_matrix = function(angles, order_rotation) {
 
 #' Generate Rotation Matrix X
 #' 
-#' @param angles
-#' @param order_rotation
+#' @param theta Angle
 #' @return number
 #'
 #' @keywords internal
@@ -227,8 +225,7 @@ RotateX = function(theta) {
 
 #' Generate Rotation Matrix Y
 #' 
-#' @param angles
-#' @param order_rotation
+#' @param theta Angle
 #' @return number
 #'
 #' @keywords internal
@@ -243,8 +240,7 @@ RotateY = function(theta) {
 
 #' Generate Rotation Matrix Z
 #' 
-#' @param angles
-#' @param order_rotation
+#' @param theta Angle
 #' @return number
 #'
 #' @keywords internal
@@ -259,8 +255,8 @@ RotateZ = function(theta) {
 
 #' Generate Rotation Matrix Axis
 #' 
-#' @param angles
-#' @param axis
+#' @param theta Angle
+#' @param axis The rotation axis
 #' @return matrix
 #'
 #' @keywords internal
