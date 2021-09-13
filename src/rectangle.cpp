@@ -133,6 +133,17 @@ Float xy_rect::pdf_value(const point3f& o, const vec3f& v, Sampler* sampler, Flo
   }
 }
 
+vec3f xy_rect::random(const point3f& o, random_gen& rng, Float time) {
+  point3f random_point = (*ObjectToWorld)(point3f(x0 + rng.unif_rand() * (x1 - x0), y0 + rng.unif_rand() * (y1-y0),k));
+  return(random_point - o);
+}
+
+vec3f xy_rect::random(const point3f& o, Sampler* sampler, Float time) {
+  vec2f u = sampler->Get2D();
+  point3f random_point = (*ObjectToWorld)(point3f(x0 + u.x() * (x1 - x0), y0 + u.y() * (y1-y0),k));
+  return(random_point - o);
+}
+
 bool xz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
   ray r2 = (*WorldToObject)(r);
   
@@ -247,9 +258,10 @@ bool xz_rect::bounding_box(Float t0, Float t1, aabb& box) const {
 Float xz_rect::pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Float time) {
   hit_record rec;
   if(this->hit(ray(o,v), 0.001, FLT_MAX, rec, rng)) {
+    vec3f v2 = (*WorldToObject)(v);
     Float area = (x1-x0)*(z1-z0);
-    Float distance_squared = rec.t * rec.t * v.squared_length();
-    Float cosine = fabs(dot(v, rec.normal)/v.length());
+    Float distance_squared = rec.t * rec.t * v2.squared_length();
+    Float cosine = fabs(dot(v, rec.normal)/v2.length());
     return(distance_squared / (cosine * area));
   } else {
     return(0);
@@ -258,21 +270,23 @@ Float xz_rect::pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Floa
 Float xz_rect::pdf_value(const point3f& o, const vec3f& v, Sampler* sampler, Float time) {
   hit_record rec;
   if(this->hit(ray(o,v), 0.001, FLT_MAX, rec, sampler)) {
+    vec3f v2 = (*WorldToObject)(v);
+    
     Float area = (x1-x0)*(z1-z0);
-    Float distance_squared = rec.t * rec.t * v.squared_length();
-    Float cosine = fabs(dot(v, rec.normal)/v.length());
+    Float distance_squared = rec.t * rec.t * v2.squared_length();
+    Float cosine = fabs(dot(v, rec.normal)/v2.length());
     return(distance_squared / (cosine * area));
   } else {
     return(0);
   }
 }
 vec3f xz_rect::random(const point3f& o, random_gen& rng, Float time) {
-  point3f random_point = (*ObjectToWorld)(point3f(x0 + rng.unif_rand() * (x1 - x0), 0, z0 + rng.unif_rand() * (z1-z0)));
+  point3f random_point = (*ObjectToWorld)(point3f(x0 + rng.unif_rand() * (x1 - x0), k, z0 + rng.unif_rand() * (z1-z0)));
   return(random_point - o);
 }
 vec3f xz_rect::random(const point3f& o, Sampler* sampler, Float time) {
   vec2f u = sampler->Get2D();
-  point3f random_point = (*ObjectToWorld)(point3f(x0 + u.x() * (x1 - x0), 0, z0 + u.y()  * (z1-z0)));
+  point3f random_point = (*ObjectToWorld)(point3f(x0 + u.x() * (x1 - x0), k, z0 + u.y()  * (z1-z0)));
   return(random_point - o);
 }
 
