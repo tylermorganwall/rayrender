@@ -2,6 +2,7 @@
 #define MATRIXH
 
 #include "vec3.h"
+#include <cstring>
 
 struct Matrix4x4 {
   Matrix4x4() {
