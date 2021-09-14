@@ -32,7 +32,7 @@ struct hit_record {
   vec3f wo; //PBRT: In Interaction, negative ray direction
   normal3f bump_normal; 
   bool has_bump; 
-  const hitable* hitable = nullptr; //PBRT: In SurfaceInteraction, const Shape *shape
+  const hitable* shape = nullptr; //PBRT: In SurfaceInteraction, const Shape *shape
   material* mat_ptr; //PBRT: In SurfaceInteraction as bsdf or bssrdf
   //Missing from PBRT: 
   //mutable Float dudx, dvdx, dudy, dvdy (for texture sampling)

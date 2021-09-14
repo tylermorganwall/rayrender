@@ -281,7 +281,7 @@ hit_record Transform::operator()(const hit_record &r) const {
   hr.u = r.u;
   hr.v = r.v;
   hr.t = r.t;
-  hr.hitable = r.hitable;
+  hr.shape = r.shape;
   
   
   //Need to transform wo if used
@@ -301,7 +301,7 @@ hit_record Transform::operator()(hit_record &r) const {
   hr.u = r.u;
   hr.v = r.v;
   hr.t = r.t;
-  hr.hitable = r.hitable;
+  hr.shape = r.shape;
   
   
   //Need to transform wo if used

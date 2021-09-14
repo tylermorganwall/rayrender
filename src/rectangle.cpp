@@ -48,7 +48,7 @@ bool xy_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
   rec = (*ObjectToWorld)(rec);
   rec.normal *= reverseOrientation  ? -1 : 1;
   rec.bump_normal *= reverseOrientation  ? -1 : 1;
-  rec.hitable = this;
+  rec.shape = this;
   
   return(true);
 }
@@ -100,7 +100,7 @@ bool xy_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampl
   rec = (*ObjectToWorld)(rec);
   rec.normal *= reverseOrientation  ? -1 : 1;
   rec.bump_normal *= reverseOrientation  ? -1 : 1;
-  rec.hitable = this;
+  rec.shape = this;
   return(true);
 }
 
@@ -193,7 +193,7 @@ bool xz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
   rec = (*ObjectToWorld)(rec);
   rec.normal *= reverseOrientation  ? -1 : 1;
   rec.bump_normal *= reverseOrientation  ? -1 : 1;
-  rec.hitable = this;
+  rec.shape = this;
   
   return(true);
 }
@@ -247,7 +247,7 @@ bool xz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampl
   rec = (*ObjectToWorld)(rec);
   rec.normal *= reverseOrientation  ? -1 : 1;
   rec.bump_normal *= reverseOrientation  ? -1 : 1;
-  rec.hitable = this;
+  rec.shape = this;
   return(true);
 }
 
@@ -337,7 +337,7 @@ bool yz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
   rec = (*ObjectToWorld)(rec);
   rec.normal *= reverseOrientation  ? -1 : 1;
   rec.bump_normal *= reverseOrientation  ? -1 : 1;
-  rec.hitable = this;
+  rec.shape = this;
   return(true);
 }
 
@@ -389,7 +389,7 @@ bool yz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampl
   rec = (*ObjectToWorld)(rec);
   rec.normal *= reverseOrientation  ? -1 : 1;
   rec.bump_normal *= reverseOrientation  ? -1 : 1;
-  rec.hitable = this;
+  rec.shape = this;
   return(true);
 }
 

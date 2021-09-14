@@ -91,7 +91,7 @@ bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
     rec.bump_normal *= reverseOrientation  ? -1 : 1;
     rec.normal.make_unit_vector();
     
-    rec.hitable = this;
+    rec.shape = this;
     
     rec.mat_ptr = mat_ptr.get();
     return(true);
@@ -139,7 +139,7 @@ bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
     rec.bump_normal *= reverseOrientation  ? -1 : 1;
     rec.normal.make_unit_vector();
     
-    rec.hitable = this;
+    rec.shape = this;
     return(true);
   }
   Float x2 = r2.origin().x() + t_cyl2*r2.direction().x();
@@ -181,7 +181,7 @@ bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
     rec.bump_normal *= reverseOrientation  ? -1 : 1;
     rec.normal.make_unit_vector();
     
-    rec.hitable = this;
+    rec.shape = this;
 
     return(true);
   }
@@ -217,7 +217,7 @@ bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
     rec.bump_normal *= reverseOrientation  ? -1 : 1;
     rec.normal.make_unit_vector();
     
-    rec.hitable = this;
+    rec.shape = this;
     rec.mat_ptr = mat_ptr.get();
     return(true);
   }
@@ -307,7 +307,7 @@ bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Samp
     rec.bump_normal *= reverseOrientation  ? -1 : 1;
     rec.normal.make_unit_vector();
     
-    rec.hitable = this;
+    rec.shape = this;
     rec.mat_ptr = mat_ptr.get();
     return(true);
   }
@@ -354,7 +354,7 @@ bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Samp
     rec.bump_normal *= reverseOrientation  ? -1 : 1;
     rec.normal.make_unit_vector();
     
-    rec.hitable = this;
+    rec.shape = this;
     
     return(true);
   }
@@ -397,7 +397,7 @@ bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Samp
     rec.normal *= reverseOrientation  ? -1 : 1;
     rec.bump_normal *= reverseOrientation  ? -1 : 1;
     rec.normal.make_unit_vector();
-    rec.hitable = this;
+    rec.shape = this;
     
     rec.normal = !reverseOrientation ? (*ObjectToWorld)(rec.normal) : -(*ObjectToWorld)(rec.normal);
     return(true);
@@ -433,7 +433,7 @@ bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Samp
     rec = (*ObjectToWorld)(rec);
     rec.normal *= reverseOrientation  ? -1 : 1;
     rec.bump_normal *= reverseOrientation  ? -1 : 1;
-    rec.hitable = this;
+    rec.shape = this;
     rec.mat_ptr = mat_ptr.get();
     return(true);
   }

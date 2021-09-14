@@ -74,7 +74,7 @@ bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, ran
     rec = (*ObjectToWorld)(rec);
     rec.normal *= reverseOrientation  ? -1 : 1;
     rec.bump_normal *= reverseOrientation  ? -1 : 1;
-    rec.hitable = this;
+    rec.shape = this;
     
     return(true);
   }
@@ -115,7 +115,7 @@ bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, ran
     rec = (*ObjectToWorld)(rec);
     rec.normal *= reverseOrientation  ? -1 : 1;
     rec.bump_normal *= reverseOrientation  ? -1 : 1;
-    rec.hitable = this;
+    rec.shape = this;
     
     return(true);
   }
@@ -197,7 +197,7 @@ bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sam
     rec = (*ObjectToWorld)(rec);
     rec.normal *= reverseOrientation  ? -1 : 1;
     rec.bump_normal *= reverseOrientation  ? -1 : 1;
-    rec.hitable = this;
+    rec.shape = this;
     
     return(true);
   }
@@ -238,7 +238,7 @@ bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sam
     rec = (*ObjectToWorld)(rec);
     rec.normal *= reverseOrientation  ? -1 : 1;
     rec.bump_normal *= reverseOrientation  ? -1 : 1;
-    rec.hitable = this;
+    rec.shape = this;
     
     
     return(true);

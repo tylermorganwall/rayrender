@@ -47,9 +47,15 @@ jobs:
             libgdal-dev \
             libgeos-dev \
             libproj-dev
+      - name: Install macOS system dependencies
+        if: matrix.config.os == 'macOS-latest'
+        run: |
+          brew install imagemagick@6
       - name: Install dependencies
         run: |
           remotes::install_deps(dependencies = TRUE)
+          install.packages("magick")
+          install.packages("Rcvg")
           install.packages("pkgdown", type = "binary")
         shell: Rscript {0}
 

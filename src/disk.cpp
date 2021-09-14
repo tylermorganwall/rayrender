@@ -50,7 +50,7 @@ bool disk::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_g
   rec = (*ObjectToWorld)(rec);
   rec.normal *= reverseOrientation  ? -1 : 1;
   rec.bump_normal *= reverseOrientation  ? -1 : 1;
-  rec.hitable = this;
+  rec.shape = this;
   
   return(true);
 }
@@ -104,7 +104,7 @@ bool disk::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler*
   rec = (*ObjectToWorld)(rec);
   rec.normal *= reverseOrientation  ? -1 : 1;
   rec.bump_normal *= reverseOrientation  ? -1 : 1;
-  rec.hitable = this;
+  rec.shape = this;
   
   return(true);
 }

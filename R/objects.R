@@ -551,13 +551,13 @@ disk = function(x = 0, y = 0, z = 0, radius = 1, inner_radius = 0, material = di
 #' \donttest{
 #' generate_ground(material = diffuse(checkercolor = "grey50")) %>%
 #'   add_object(obj_model(y = -0.8, filename = r_obj(),
-#'                        material = microfacet(color = "gold", roughness = 0.1))) %>%
+#'                        material = microfacet(color = "gold", roughness = 0.05))) %>%
 #'   add_object(obj_model(x = 1.8, y = -0.8, filename = r_obj(), 
-#'                        material = diffuse(color = "lightblue"))) %>%
+#'                        material = diffuse(color = "dodgerblue"))) %>%
 #'   add_object(obj_model(x = -1.8, y = -0.8, filename = r_obj() , 
 #'                        material = dielectric(attenuation = c(1,0.3,1)*2))) %>%
 #'   add_object(sphere(z = 20, x = 20, y = 20, radius = 10,
-#'                     material = light(intensity = 20))) %>%
+#'                     material = light(intensity = 10))) %>%
 #'   render_scene(parallel = TRUE, samples = 500, aperture = 0.05, 
 #'                fov = 32, lookfrom = c(0, 2, 10))
 #' 
@@ -777,7 +777,7 @@ cylinder = function(x = 0, y = 0, z = 0, radius = 1, length = 1,
 #' \donttest{
 #' generate_cornell() %>%
 #'   add_object(group_objects(cube_outline, pivot_point = c(555/2, 555/2, 555/2),
-#'                            group_angle = c(45,45,45), group_scale = c(0.5,0.5,0.5))) %>%
+#'                            angle = c(45,45,45), scale = c(0.5,0.5,0.5))) %>%
 #'   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
 #'                ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
 #' }
