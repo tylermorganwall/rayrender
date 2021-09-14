@@ -40,7 +40,7 @@
 
 
 <meta property="og:title" content="Group Objects — group_objects" />
-<meta property="og:description" content="Group and transform objects together. Currently only supports a single level of grouping." />
+<meta property="og:description" content="Group and transform objects together." />
 <meta property="og:image" content="/reference/figures/website_rayrender.jpg" />
 <meta property="og:image:alt" content="Picture of a golden 3D ggplot with a description of rayrender" />
 <meta name="twitter:card" content="summary_large_image" />
@@ -154,7 +154,7 @@
     </div>
 
     <div class="ref-description">
-    <p>Group and transform objects together. Currently only supports a single level of grouping.</p>
+    <p>Group and transform objects together.</p>
     </div>
 
     <pre class="usage"><span class='fu'>group_objects</span><span class='op'>(</span>
@@ -176,8 +176,7 @@
     </tr>
     <tr>
       <th>pivot_point</th>
-      <td><p>Defaults to the mean location of all the objects. 
-The point about which to pivot and move the group.</p></td>
+      <td><p>Default `c(0,0,0)`. The point about which to pivot, scale, and move the group.</p></td>
     </tr>
     <tr>
       <th>translate</th>
@@ -248,6 +247,14 @@ around that axis.</p></td>
 <span class='fu'><a href='render_scene.html'>render_scene</a></span><span class='op'>(</span><span class='va'>scene4</span>,lookfrom<span class='op'>=</span><span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>278</span>,<span class='fl'>278</span>,<span class='op'>-</span><span class='fl'>800</span><span class='op'>)</span>,lookat <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>278</span>,<span class='fl'>278</span>,<span class='fl'>0</span><span class='op'>)</span>, aperture<span class='op'>=</span><span class='fl'>0</span>,
              samples<span class='op'>=</span><span class='fl'>500</span>, fov<span class='op'>=</span><span class='fl'>50</span>, parallel<span class='op'>=</span><span class='cn'>TRUE</span>, clamp_value<span class='op'>=</span><span class='fl'>5</span><span class='op'>)</span>
 </div><div class='img'><img src='group_objects-4.png' alt='' width='700' height='433' /></div><div class='input'><span class='co'># }</span>
+
+<span class='co'>#Add another layer of grouping, including the Cornell box</span>
+<span class='co'># \donttest{</span>
+<span class='va'>scene4</span> <span class='op'>%&gt;%</span> 
+  <span class='fu'>group_objects</span><span class='op'>(</span>pivot_point <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>555</span><span class='op'>/</span><span class='fl'>2</span>,<span class='fl'>555</span><span class='op'>/</span><span class='fl'>2</span>,<span class='fl'>555</span><span class='op'>/</span><span class='fl'>2</span><span class='op'>)</span>,scale<span class='op'>=</span><span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>1.5</span>,<span class='fl'>0.5</span>,<span class='fl'>0.3</span><span class='op'>)</span>, angle<span class='op'>=</span><span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='op'>-</span><span class='fl'>20</span>,<span class='fl'>0</span>,<span class='fl'>20</span><span class='op'>)</span><span class='op'>)</span> <span class='op'>%&gt;%</span> 
+  <span class='fu'><a href='render_scene.html'>render_scene</a></span><span class='op'>(</span>lookfrom<span class='op'>=</span><span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>278</span>,<span class='fl'>278</span>,<span class='op'>-</span><span class='fl'>800</span><span class='op'>)</span>,lookat <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>278</span>,<span class='fl'>278</span>,<span class='fl'>0</span><span class='op'>)</span>, aperture<span class='op'>=</span><span class='fl'>0</span>,
+             samples<span class='op'>=</span><span class='fl'>50</span>, fov<span class='op'>=</span><span class='fl'>50</span>, parallel<span class='op'>=</span><span class='cn'>TRUE</span>, clamp_value<span class='op'>=</span><span class='fl'>5</span><span class='op'>)</span>
+</div><div class='img'><img src='group_objects-5.png' alt='' width='700' height='433' /></div><div class='input'><span class='co'># }</span>
 </div></pre>
   </div>
   <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">
