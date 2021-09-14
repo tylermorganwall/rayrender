@@ -3,8 +3,7 @@
 #' Group and transform objects together. 
 #'
 #' @param scene Tibble of pre-existing object locations and properties to group together.
-#' @param pivot_point Defaults to the mean location of all the objects. 
-#' The point about which to pivot and move the group.
+#' @param pivot_point Default `c(0,0,0)`. The point about which to pivot, scale, and move the group.
 #' @param translate Default `c(0,0,0)`. Vector indicating where to offset the group.
 #' @param angle Default `c(0,0,0)`. Angle of rotation around the x, y, and z axes, 
 #' applied in the order specified in `order_rotation`.
@@ -68,7 +67,7 @@ group_objects = function(scene, pivot_point=c(0,0,0), translate = c(0,0,0),
                          angle = c(0,0,0), order_rotation = c(1,2,3),
                          scale = c(1,1,1), axis_rotation = NA) {
   if(missing(pivot_point)) {
-    pivot_point = c(mean(scene$x), mean(scene$y), mean(scene$z))
+    pivot_point = c(0,0,0)
   }
   stopifnot(length(pivot_point) == 3)
   stopifnot(length(translate) == 3)

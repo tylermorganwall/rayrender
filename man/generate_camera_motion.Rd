@@ -143,10 +143,11 @@ generate_ground(material=diffuse(checkercolor="grey20"),depth=-10) \%>\%
   add_object(obj_model(r_obj(),x=10,y=-10,scale_obj=3, angle=c(0,-45,0),
                        material=dielectric(attenuation=c(1,1,0.3)))) \%>\% 
   add_object(pig(x=-7,y=10,z=-5,scale=1,angle=c(0,-45,80),emotion="angry")) \%>\% 
-  add_object(pig(x=0,y=-0.25,z=-15,scale=1,angle=c(0,225,-20), order_rotation=c(3,2,1),
+  add_object(pig(x=0,y=-0.25,z=-15,scale=1,angle=c(0,225,-20),
                  emotion="angry", spider=TRUE)) \%>\% 
   add_object(path(camera_pos, y=-0.2,material=diffuse(color="red"))) \%>\% 
-  render_animation(filename = NA, camera_motion = camera_motion, 
+  render_animation(filename = NA, camera_motion = camera_motion, samples=100,
+                   sample_method="sobol_blue",  
                    clamp_value=10, width=400, height=400)
 
 }

@@ -12,36 +12,11 @@
 #include <cfloat>
 
 class material;
-class hitable;
-
 
 void get_sphere_uv(const vec3f& p, Float& u, Float& v);
 void get_sphere_uv(const normal3f& p, Float& u, Float& v);
 
-struct hit_record {
-  point3f p; //PBRT: In Interaction
-  Float t; //PBRT: In Interaction
-  Float u; //PBRT: In SurfaceInteraction
-  Float v; //PBRT: In SurfaceInteraction
-#ifdef DEBUGBVH
-  Float bvh_nodes;
-#endif
-  normal3f normal; //PBRT: In interaction
-  vec3f dpdu, dpdv; //PBRT: In SurfaceInteraction
-  vec3f pError; //PBRT: In Interaction
-  vec3f wo; //PBRT: In Interaction, negative ray direction
-  normal3f bump_normal; 
-  bool has_bump; 
-  const hitable* shape = nullptr; //PBRT: In SurfaceInteraction, const Shape *shape
-  material* mat_ptr; //PBRT: In SurfaceInteraction as bsdf or bssrdf
-  //Missing from PBRT: 
-  //mutable Float dudx, dvdx, dudy, dvdy (for texture sampling)
-  //mutable vec3 dpdx, dpdy
-  //const Shape *shape (recording the shape)
-  //const Primitive *primitive (recording the primitive)
-  //int faceIndex (for ptex lookups)
-  
-};
+struct hit_record;
 
 class hitable {
   public:
@@ -71,6 +46,32 @@ class hitable {
     const std::shared_ptr<Transform> ObjectToWorld, WorldToObject;
     const bool reverseOrientation;
     const bool transformSwapsHandedness;
+};
+
+
+struct hit_record {
+  point3f p; //PBRT: In Interaction
+  Float t; //PBRT: In Interaction
+  Float u; //PBRT: In SurfaceInteraction
+  Float v; //PBRT: In SurfaceInteraction
+#ifdef DEBUGBVH
+  Float bvh_nodes;
+#endif
+  normal3f normal; //PBRT: In interaction
+  vec3f dpdu, dpdv; //PBRT: In SurfaceInteraction
+  vec3f pError; //PBRT: In Interaction
+  vec3f wo; //PBRT: In Interaction, negative ray direction
+  normal3f bump_normal; 
+  bool has_bump; 
+  const hitable* shape = nullptr; //PBRT: In SurfaceInteraction, const Shape *shape
+  material* mat_ptr; //PBRT: In SurfaceInteraction as bsdf or bssrdf
+  //Missing from PBRT: 
+  //mutable Float dudx, dvdx, dudy, dvdy (for texture sampling)
+  //mutable vec3 dpdx, dpdy
+  //const Shape *shape (recording the shape)
+  //const Primitive *primitive (recording the primitive)
+  //int faceIndex (for ptex lookups)
+  
 };
 
 #endif

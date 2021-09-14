@@ -110,7 +110,7 @@ generate_cornell() \%>\%
 \donttest{
 generate_cornell() \%>\%
   add_object(group_objects(cube_outline, pivot_point = c(555/2, 555/2, 555/2),
-                           group_angle = c(45,45,45), group_scale = c(0.5,0.5,0.5))) \%>\%
+                           angle = c(45,45,45), scale = c(0.5,0.5,0.5))) \%>\%
   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
                ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
 }

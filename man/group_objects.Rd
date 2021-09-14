@@ -17,8 +17,7 @@ group_objects(
 \arguments{
 \item{scene}{Tibble of pre-existing object locations and properties to group together.}
 
-\item{pivot_point}{Defaults to the mean location of all the objects. 
-The point about which to pivot and move the group.}
+\item{pivot_point}{Default `c(0,0,0)`. The point about which to pivot, scale, and move the group.}
 
 \item{translate}{Default `c(0,0,0)`. Vector indicating where to offset the group.}
 
@@ -37,7 +36,7 @@ around that axis.}
 Tibble of grouped object locations and properties.
 }
 \description{
-Group and transform objects together. Currently only supports a single level of grouping.
+Group and transform objects together.
 }
 \examples{
 #Generate the ground and add some objects
@@ -78,5 +77,13 @@ scene4 = generate_cornell() \%>\%
 \donttest{
 render_scene(scene4,lookfrom=c(278,278,-800),lookat = c(278,278,0), aperture=0,
              samples=500, fov=50, parallel=TRUE, clamp_value=5)
+}
+
+#Add another layer of grouping, including the Cornell box
+\donttest{
+scene4 \%>\% 
+  group_objects(pivot_point = c(555/2,555/2,555/2),scale=c(1.5,0.5,0.3), angle=c(-20,0,20)) \%>\% 
+  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), aperture=0,
+             samples=50, fov=50, parallel=TRUE, clamp_value=5)
 }
 }

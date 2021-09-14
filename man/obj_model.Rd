@@ -65,13 +65,13 @@ Note: light importance sampling currently not supported for this shape.
 \donttest{
 generate_ground(material = diffuse(checkercolor = "grey50")) \%>\%
   add_object(obj_model(y = -0.8, filename = r_obj(),
-                       material = microfacet(color = "gold", roughness = 0.1))) \%>\%
+                       material = microfacet(color = "gold", roughness = 0.05))) \%>\%
   add_object(obj_model(x = 1.8, y = -0.8, filename = r_obj(), 
-                       material = diffuse(color = "lightblue"))) \%>\%
+                       material = diffuse(color = "dodgerblue"))) \%>\%
   add_object(obj_model(x = -1.8, y = -0.8, filename = r_obj() , 
                        material = dielectric(attenuation = c(1,0.3,1)*2))) \%>\%
   add_object(sphere(z = 20, x = 20, y = 20, radius = 10,
-                    material = light(intensity = 20))) \%>\%
+                    material = light(intensity = 10))) \%>\%
   render_scene(parallel = TRUE, samples = 500, aperture = 0.05, 
                fov = 32, lookfrom = c(0, 2, 10))
 
