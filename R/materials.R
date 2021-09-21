@@ -546,14 +546,14 @@ dielectric = function(color="white", refraction = 1.5,  attenuation = c(0,0,0),
 #'  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
 #'              aperture=0, fov=40, parallel=TRUE,clamp_value=10)
 #' }
-microfacet = function(color="white", roughness = 0.0001, 
-                      eta = 0, kappa = 0, microfacet = "tbr", 
+microfacet = function(color="white", roughness = 0.0001, transmission = FALSE,
+                      eta = 1, kappa = 0, microfacet = "tbr", 
                       checkercolor = NA, checkerperiod = 3,
                       noise = 0, noisephase = 0, noiseintensity = 10, noisecolor = "#000000",
                       gradient_color = NA, gradient_transpose = FALSE,
                       gradient_point_start = NA, gradient_point_end = NA, gradient_type = "hsv",
                       image_texture = NA, image_repeat = 1, alpha_texture = NA,
-                      bump_texture = NA, bump_intensity = 1,
+                      bump_texture = NA, roughness_texture = NA,  bump_intensity = 1,
                       importance_sample = FALSE) {
   microtype = switch(microfacet, "tbr" = 1,"beckmann" = 2, 1)
   roughness[roughness <= 0] = 0
@@ -630,7 +630,12 @@ microfacet = function(color="white", roughness = 0.0001,
                         sigma = 0, glossyinfo = glossyinfo, bump_texture = list(bump_texture),
                         bump_intensity = bump_intensity))
   } else {
-    new_tibble_row(list(type = "microfacet", 
+    if(transmission) {
+      typeval = "microfacet_transmission"
+    } else {
+      typeval = "microfacet"
+    }
+    new_tibble_row(list(type = typeval, 
                    properties = list(c(color)), 
                    gradient_color = list(gradient_color), gradient_transpose = FALSE,
                    world_gradient = is_world_gradient,gradient_point_info = list(gradient_point_info),
@@ -860,8 +865,8 @@ glossy = function(color="white", gloss = 1, reflectance = 0.05, microfacet = "tb
                   noise = 0, noisephase = 0, noiseintensity = 10, noisecolor = "#000000",
                   gradient_color = NA, gradient_transpose = FALSE,
                   gradient_point_start = NA, gradient_point_end = NA, gradient_type = "hsv",
-                  image_texture = NA, image_repeat = 1, alpha_texture = NA,
-                  bump_texture = NA, bump_intensity = 1,
+                  image_texture = NA, image_repeat = 1, alpha_texture = NA, 
+                  bump_texture = NA, roughness_texture = NA, bump_intensity = 1,
                   importance_sample = FALSE) {
   microtype = switch(microfacet, "tbr" = 1,"beckmann" = 2, 1)
   gloss[gloss <= 0] = 0

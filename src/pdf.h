@@ -48,6 +48,23 @@ public:
   MicrofacetDistribution *distribution;
 };
 
+class micro_transmission_pdf : public pdf {
+public:
+  micro_transmission_pdf(const normal3f& w, const vec3f& wi_, MicrofacetDistribution* distribution,
+                         Float eta) : distribution(distribution), eta(eta) {
+    uvw.build_from_w(w);
+    wi = -unit_vector(uvw.world_to_local(wi_));;
+  }
+  virtual Float value(const vec3f& direction, random_gen& rng, Float time = 0);
+  virtual Float value(const vec3f& direction, Sampler* sampler, Float time = 0);
+  virtual vec3f generate(random_gen& rng, bool& diffuse_bounce, Float time = 0);
+  virtual vec3f generate(Sampler* sampler, bool& diffuse_bounce, Float time = 0);
+  onb uvw;
+  vec3f wi;
+  Float eta;
+  MicrofacetDistribution *distribution;
+};
+
 class glossy_pdf : public pdf {
 public:
   glossy_pdf(const normal3f& w, const vec3f& wi_, MicrofacetDistribution* distribution) : distribution(distribution) {

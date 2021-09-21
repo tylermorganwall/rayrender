@@ -1,6 +1,18 @@
 #include "pdf.h"
 #include "mathinline.h"
 
+inline vec3f Refract(const vec3f &wi, const normal3f &n, Float eta) {
+  // Compute $\cos \theta_\roman{t}$ using Snell's law
+  Float cosThetaI = dot(n, wi);
+  Float sin2ThetaI = std::fmax(Float(0), Float(1 - cosThetaI * cosThetaI));
+  Float sin2ThetaT = eta * eta * sin2ThetaI;
+  
+  // Handle total internal reflection for transmission
+  if (sin2ThetaT >= 1) return false;
+  Float cosThetaT = std::sqrt(1 - sin2ThetaT);
+  return(eta * -wi + (eta * cosThetaI - cosThetaT) * vec3f(n.x(),n.y(),n.z()));
+}
+
 Float cosine_pdf::value(const vec3f& direction, random_gen& rng, Float time) {
   Float cosine = dot(unit_vector(direction), uvw.w());
   if(cosine > 0) {
@@ -50,6 +62,55 @@ vec3f micro_pdf::generate(Sampler* sampler, bool& diffuse_bounce, Float time) {
   vec2f u = sampler->Get2D();
   vec3f wh = distribution->Sample_wh(wi, u.x(), u.y());
   return(uvw.local_to_world(Reflect(wi, wh)));
+}
+
+Float micro_transmission_pdf::value(const vec3f& direction, random_gen& rng, Float time) {
+  vec3f wo = unit_vector(uvw.world_to_local(direction));
+  if (SameHemisphere(wo, wi)) return 0;
+  // Compute $\wh$ from $\wo$ and $\wi$ for microfacet transmission
+  // Float eta2 = CosTheta(wo) > 0 ? (eta / 1.0) : (1.0 / eta);
+  
+  Float eta2 = CosTheta(wo) > 0 ? (1.0 / eta) : (eta / 1.0);
+  vec3f wh = unit_vector(wo + wi * eta2);
+  
+  if (dot(wo, wh) * dot(wi, wh) > 0) return 0;
+  
+  // Compute change of variables _dwh\_dwi_ for microfacet transmission
+  Float sqrtDenom = dot(wo, wh) + eta2 * dot(wi, wh);
+  Float dwh_dwi = std::fabs((eta2 * eta2 * dot(wi, wh)) / (sqrtDenom * sqrtDenom));
+  return distribution->Pdf(wo, wi, wh) * dwh_dwi;
+}
+
+Float micro_transmission_pdf::value(const vec3f& direction, Sampler* sampler, Float time) {
+  vec3f wo = unit_vector(uvw.world_to_local(direction));
+  if (SameHemisphere(wo, wi)) return 0;
+  // Compute $\wh$ from $\wo$ and $\wi$ for microfacet transmission
+  // Float eta2 = CosTheta(wo) > 0 ? (eta / 1.0) : (1.0 / eta);
+  Float eta2 = CosTheta(wo) > 0 ? (1.0 / eta) : (eta / 1.0);
+  
+  vec3f wh = unit_vector(wo + wi * eta2);
+  
+  if (dot(wo, wh) * dot(wi, wh) > 0) return 0;
+  
+  // Compute change of variables _dwh\_dwi_ for microfacet transmission
+  Float sqrtDenom = dot(wo, wh) + eta2 * dot(wi, wh);
+  Float dwh_dwi = std::fabs((eta2 * eta2 * dot(wi, wh)) / (sqrtDenom * sqrtDenom));
+  return distribution->Pdf(wo, wi, wh) * dwh_dwi;
+}
+
+vec3f micro_transmission_pdf::generate(random_gen& rng, bool& diffuse_bounce, Float time) {
+  vec3f wh = distribution->Sample_wh(wi, rng.unif_rand(), rng.unif_rand());
+  Float eta2 = SameHemisphere(wi,wh) ? (1.0 / eta) : (eta / 1.0);
+  
+  return(uvw.local_to_world(Refract(wi, wh, eta2)));
+}
+
+vec3f micro_transmission_pdf::generate(Sampler* sampler, bool& diffuse_bounce, Float time) {
+  vec2f u = sampler->Get2D();
+  vec3f wh = distribution->Sample_wh(wi, u.x(), u.y());
+  Float eta2 = SameHemisphere(wi,wh) ? (1.0 / eta) : (eta / 1.0);
+  
+  return(uvw.local_to_world(Refract(wi, wh, eta2)));
 }
 
 

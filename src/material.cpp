@@ -5,6 +5,7 @@
 //Lambertian
 //
 
+
 point3f lambertian::f(const ray& r_in, const hit_record& rec, const ray& scattered) const {
   //unit_vector(scattered.direction()) == wo
   //r_in.direction() == wi
@@ -476,6 +477,86 @@ point3f MicrofacetReflection::f(const ray& r_in, const hit_record& rec, const ra
 
 point3f MicrofacetReflection::get_albedo(const ray& r_in, const hit_record& rec) const {
   return(albedo->value(rec.u, rec.v, rec.p));
+}
+
+//
+//MicrofacetTransmission
+//
+
+
+bool MicrofacetTransmission::scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng) {
+  srec.is_specular = false;
+  srec.attenuation = albedo->value(hrec.u, hrec.v, hrec.p);
+  if(!hrec.has_bump) {
+    srec.pdf_ptr = new micro_transmission_pdf(hrec.normal, r_in.direction(), distribution, eta);
+  } else {
+    srec.pdf_ptr = new micro_transmission_pdf(hrec.bump_normal, r_in.direction(), distribution, eta);
+  }
+  return(true);
+}
+
+bool MicrofacetTransmission::scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler) {
+  srec.is_specular = false;
+  srec.attenuation = albedo->value(hrec.u, hrec.v, hrec.p);
+  if(!hrec.has_bump) {
+    srec.pdf_ptr = new micro_transmission_pdf(hrec.normal, r_in.direction(), distribution, eta);
+  } else {
+    srec.pdf_ptr = new micro_transmission_pdf(hrec.bump_normal, r_in.direction(), distribution, eta);
+  }
+  return(true);
+}
+
+#include "RcppThread.h" 
+
+point3f MicrofacetTransmission::f(const ray& r_in, const hit_record& rec, const ray& scattered) const {
+  onb uvw;
+  if(!rec.has_bump) {
+    uvw.build_from_w(rec.normal);
+  } else {
+    uvw.build_from_w(rec.bump_normal);
+  }
+  vec3f wi = -unit_vector(uvw.world_to_local(r_in.direction()));
+  vec3f wo = unit_vector(uvw.world_to_local(scattered.direction()));
+  if (SameHemisphere(wo, wi)) return point3f(0);  // transmission only
+
+  Float cosThetaO = CosTheta(wo);
+  Float cosThetaI = CosTheta(wi);
+  if (cosThetaI == 0 || cosThetaO == 0) {
+    return(point3f(0,0,0));
+  }
+  // Compute $\wh$ from $\wo$ and $\wi$ for microfacet transmission
+  // Float eta = CosTheta(wo) > 0 ? (etaB / etaA) : (etaA / etaB);
+  Float eta2 = cosThetaO > 0 ? (1.0 / eta) : (eta / 1.0);
+  
+  vec3f wh = unit_vector(wo + wi * eta2);
+  if (wh.z() < 0) wh = -wh;
+  if (dot(wo, wh) * dot(wi, wh) > 0) return point3f(0);
+  
+  
+  // if (normal.x() == 0 && normal.y() == 0 && normal.z() == 0) {
+  //   return(point3f(0,0,0));
+  // }
+
+  point3f F = FrDielectric(cosThetaO, 1.0, eta2);
+  Float G = distribution->G(wo,wi,wh);
+  Float D = distribution->D(wh);
+  // Float factor = (mode == TransportMode::Radiance) ? (1 / eta) : 1;
+  
+  Float sqrtDenom = dot(wo, wh) + eta2 * dot(wi, wh);
+// RcppThread::Rcout << "F: " << F << " " << "D: " << D  << " " << "G: " << G << " " << "eta: " << eta2;
+  return ((point3f(1.f) + -F) * albedo->value(rec.u, rec.v, rec.p) *
+      std::fabs(D * G * eta2 * eta2 *
+      AbsDot(wi, wh) * AbsDot(wo, wh)  /
+      (cosThetaI * cosThetaO * sqrtDenom * sqrtDenom)));
+}
+
+point3f MicrofacetTransmission::get_albedo(const ray& r_in, const hit_record& rec) const {
+  return(albedo->value(rec.u, rec.v, rec.p));
+}
+
+point3f MicrofacetTransmission::SchlickFresnel(Float cosTheta) const {
+  auto pow5 = [](Float v) { return (v * v) * (v * v) * v; };
+  return pow5(1 - cosTheta) * (point3f(1.0f));
 }
 
 //

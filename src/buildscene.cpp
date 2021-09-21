@@ -381,6 +381,54 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
       } else if (type(i) == 9) {
         tex = std::make_shared<hair>(point3f(tempvector(0),tempvector(1),tempvector(2)), 
                        tempvector(3),tempvector(4),tempvector(5),tempvector(6));
+      } else if (type(i) == 10) {
+        MicrofacetDistribution *dist;
+        if(temp_glossy(0) == 1) {
+          dist = new TrowbridgeReitzDistribution(temp_glossy(1), temp_glossy(2), true, true);
+        } else {
+          dist = new BeckmannDistribution(temp_glossy(1), temp_glossy(2), false, true);
+        }
+        if(isimage(i)) {
+          tex = std::make_shared<MicrofacetTransmission>(std::make_shared<image_texture>(textures[i],nvec[i][0],nvec[i][1],nvec[i][2], 
+                                                                                       temp_repeat[0], temp_repeat[1], 1.0), dist, 
+                                                                                       point3f(temp_glossy(3), temp_glossy(4), temp_glossy(5)), 
+                                                                                       point3f(temp_glossy(6),temp_glossy(7),temp_glossy(8)));
+        } else if (isnoise(i)) {
+          tex = std::make_shared<MicrofacetTransmission>(std::make_shared<noise_texture>(noise(i),point3f(tempvector(0),tempvector(1),tempvector(2)),
+                                                                                       point3f(tempnoisecolor(0),tempnoisecolor(1),tempnoisecolor(2)),
+                                                                                       noisephase(i), noiseintensity(i)), dist, 
+                                                                                       point3f(temp_glossy(3), temp_glossy(4), temp_glossy(5)), 
+                                                                                       point3f(temp_glossy(6),temp_glossy(7),temp_glossy(8)));
+        } else if (ischeckered(i)) {
+          tex = std::make_shared<MicrofacetTransmission>(std::make_shared<checker_texture>(std::make_shared<constant_texture>(point3f(tempchecker(0),tempchecker(1),tempchecker(2))),
+                                                                                         std::make_shared<constant_texture>(point3f(tempvector(0),tempvector(1),tempvector(2))),tempchecker(3)), 
+                                                                                         dist, 
+                                                                                         point3f(temp_glossy(3), temp_glossy(4), temp_glossy(5)), 
+                                                                                         point3f(temp_glossy(6),temp_glossy(7),temp_glossy(8)));
+        }  else if (isgradient(i) && !is_world_gradient(i)) {
+          tex = std::make_shared<MicrofacetTransmission>(std::make_shared<gradient_texture>(point3f(tempvector(0),tempvector(1),tempvector(2)),
+                                                                                          point3f(tempgradient(0),tempgradient(1),tempgradient(2)),
+                                                                                          gradient_trans(i), gradient_is_hsv(i)), dist, 
+                                                                                          point3f(temp_glossy(3), temp_glossy(4), temp_glossy(5)), 
+                                                                                          point3f(temp_glossy(6),temp_glossy(7),temp_glossy(8)));
+        } else if (is_tri_color(i)) {
+          tex = std::make_shared<MicrofacetTransmission>(std::make_shared<triangle_texture>(point3f(temp_tri_color(0),temp_tri_color(1),temp_tri_color(2)),
+                                                                                          point3f(temp_tri_color(3),temp_tri_color(4),temp_tri_color(5)),
+                                                                                          point3f(temp_tri_color(6),temp_tri_color(7),temp_tri_color(8))), dist, 
+                                                                                          point3f(temp_glossy(3), temp_glossy(4), temp_glossy(5)), 
+                                                                                          point3f(temp_glossy(6),temp_glossy(7),temp_glossy(8)));
+        } else if (is_world_gradient(i)) {
+          tex = std::make_shared<MicrofacetTransmission>(std::make_shared<world_gradient_texture>(point3f(temp_gradient_control(0),temp_gradient_control(1),temp_gradient_control(2)),
+                                                                                                point3f(temp_gradient_control(3),temp_gradient_control(4),temp_gradient_control(5)),
+                                                                                                point3f(tempvector(0),tempvector(1),tempvector(2)),
+                                                                                                point3f(tempgradient(0),tempgradient(1),tempgradient(2)), gradient_is_hsv(i)), dist, 
+                                                                                                point3f(temp_glossy(3), temp_glossy(4), temp_glossy(5)), 
+                                                                                                point3f(temp_glossy(6),temp_glossy(7),temp_glossy(8)));
+        } else {
+          tex = std::make_shared<MicrofacetTransmission>(std::make_shared<constant_texture>(point3f(tempvector(0),tempvector(1),tempvector(2))), dist, 
+                                                       point3f(temp_glossy(3), temp_glossy(4), temp_glossy(5)), 
+                                                       point3f(temp_glossy(6),temp_glossy(7),temp_glossy(8)));
+        }
       }
     }
     if(is_shared_mat(i) && shared_materials->size() <= static_cast<size_t>(shared_id_mat(i)) ) {

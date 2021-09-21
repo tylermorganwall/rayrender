@@ -241,6 +241,28 @@ private:
   point3f k;
 };
 
+class MicrofacetTransmission : public material {
+public:
+  MicrofacetTransmission(std::shared_ptr<texture> a, MicrofacetDistribution *distribution, 
+                         point3f eta2, point3f k) : 
+    albedo(a), distribution(distribution), eta(eta2[0]), k(k) {}
+  ~MicrofacetTransmission() {
+    if(distribution) delete distribution;
+  }
+  
+  bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng);
+  bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler);
+  point3f f(const ray& r_in, const hit_record& rec, const ray& scattered) const;
+  point3f get_albedo(const ray& r_in, const hit_record& rec) const;
+  point3f SchlickFresnel(Float cosTheta) const;
+  
+private:
+  std::shared_ptr<texture> albedo;
+  MicrofacetDistribution *distribution;
+  Float eta;
+  point3f k;
+};
+
 class glossy : public material {
 public:
   glossy(std::shared_ptr<texture> a, MicrofacetDistribution *distribution, 

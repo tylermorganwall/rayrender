@@ -251,7 +251,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
   typevec = unlist(lapply(tolower(scene$type),switch,
                           "diffuse" = 1,"metal" = 2,"dielectric" = 3, 
                           "oren-nayar" = 4, "light" = 5, "microfacet" = 6, 
-                          "glossy" = 7, "spotlight" = 8, "hair" = 9))
+                          "glossy" = 7, "spotlight" = 8, "hair" = 9, "microfacet_transmission" = 10))
   sigmavec = unlist(scene$sigma)
   
   if(!tonemap %in% c("gamma","reinhold","uncharted", "hbd", "raw")) {
@@ -682,9 +682,9 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
     }
     return(invisible(full_array_ret))
   } else if (debug_channel == 11) {
-    full_array[,,1] = full_array[,,1]/2+1
-    full_array[,,2] = full_array[,,2]/2+1
-    full_array[,,3] = full_array[,,3]/2+1
+    full_array[,,1] = (full_array[,,1]+1)/2
+    full_array[,,2] = (full_array[,,2]+1)/2
+    full_array[,,3] = (full_array[,,3]+1)/2
     if(is.null(filename)) {
       plot_map(full_array)
     } else {
