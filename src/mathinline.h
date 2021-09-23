@@ -61,9 +61,9 @@ inline Float Degrees(Float rad) {
 
 inline point3f de_nan(const point3f& c) {
   point3f temp = c;
-  if(std::isnan(c[0])) temp.e[0] = 0.0f;
+  if(std::isnan(c[0])) temp.e[0] = 1.0f;
   if(std::isnan(c[1])) temp.e[1] = 0.0f;
-  if(std::isnan(c[2])) temp.e[2] = 0.0f;
+  if(std::isnan(c[2])) temp.e[2] = 1.0f;
   return(temp);
 }
 
@@ -319,6 +319,42 @@ inline Float SphericalTheta(const vec3f &v) {
 inline bool SameHemisphere(const vec3f &w, const vec3f &wp) {
   return(w.z() * wp.z() > 0);
 }
+
+inline bool SameHemisphere(const normal3f &w, const vec3f &wp) {
+  return(w.z() * wp.z() > 0);
+}
+
+inline bool SameHemisphere(const vec3f &w, const normal3f &wp) {
+  return(w.z() * wp.z() > 0);
+}
+
+inline bool refract(const vec3f& v, const vec3f& n, Float ni_over_nt, vec3f& refracted) {
+  vec3f uv = unit_vector(v);
+  Float dt = dot(uv, n);
+  Float discriminant = 1.0 - ni_over_nt * ni_over_nt * (1 - dt * dt);
+  if(discriminant > 0) {
+    refracted = ni_over_nt * (uv - n * dt) - n * sqrt(discriminant);
+    return(true);
+  } else {
+    return(false);
+  }
+}
+
+inline vec3f refract(const vec3f& uv, const vec3f& n, Float ni_over_nt) {
+  Float cos_theta = dot(-uv, n);
+  vec3f r_out_parallel =  ni_over_nt * (uv + cos_theta*n);
+  vec3f r_out_perp = -sqrt(1.0 - r_out_parallel.squared_length()) * n;
+  return(r_out_parallel + r_out_perp);
+}
+
+inline vec3f refract(const vec3f& uv, const normal3f& n, Float ni_over_nt) {
+  vec3f n2 = vec3f(n.x(),n.y(),n.z());
+  Float cos_theta = dot(-uv, n);
+  vec3f r_out_parallel =  ni_over_nt * (uv + cos_theta*n2);
+  vec3f r_out_perp = -sqrt(1.0 - r_out_parallel.squared_length()) * n2;
+  return(r_out_parallel + r_out_perp);
+}
+
 
 template <typename T>
 inline Float AbsDot(const vec3<T> &v1, const vec3<T> &v2) {
