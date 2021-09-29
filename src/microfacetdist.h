@@ -22,7 +22,6 @@ public:
   }
   virtual Float GetAlpha() const = 0;
   virtual vec2f GetAlphas() const = 0;
-  virtual bool GetType() const = 0;
   virtual vec3f Sample_wh(const vec3f &wi, const Float u1, const Float u2) const = 0;
   Float Pdf(const vec3f &wo,const vec3f &wi, const vec3f &wh) {
     return(D(wh) * G(wo, wi, wh) * AbsDot(wo, wh) / AbsCosTheta(wo));
@@ -31,7 +30,6 @@ protected:
   MicrofacetDistribution(bool sampleVisibleArea) 
       : sampleVisibleArea(sampleVisibleArea) {}
   const bool sampleVisibleArea;
-  bool type;
 };
 
 class BeckmannDistribution : public MicrofacetDistribution {
@@ -42,7 +40,7 @@ public:
     return(1.62142f + 0.819955f * x + 0.1734f * x * x +
            0.0171201f * x * x * x + 0.000640711f * x * x * x * x );
   }
-  BeckmannDistribution(Float alphax_, Float alphay_, bool type, bool samplevis = true)
+  BeckmannDistribution(Float alphax_, Float alphay_, bool samplevis = true)
     : MicrofacetDistribution(samplevis), type(type) {
     alphax = RoughnessToAlpha(alphax_);
     alphay = RoughnessToAlpha(alphay_);
@@ -57,9 +55,6 @@ public:
   vec2f GetAlphas() const {
     return(vec2f(alphax, alphay));
   }
-  bool GetType() const { 
-    return(type);
-  };
   vec3f Sample_wh(const vec3f &wi, const Float u1, const Float u2) const;
 private:
   Float Lambda(const vec3f &w) const;
@@ -69,13 +64,12 @@ private:
 
 class TrowbridgeReitzDistribution : public MicrofacetDistribution {
 public:
-  TrowbridgeReitzDistribution(const Float alphax_, const Float alphay_, const bool type_, bool samplevis = true)
+  TrowbridgeReitzDistribution(const Float alphax_, const Float alphay_, bool samplevis = true)
     : MicrofacetDistribution(samplevis) {
     alphax = RoughnessToAlpha(alphax_);
     alphay = RoughnessToAlpha(alphay_);
     alphax *= alphax;
     alphay *= alphay;
-    type = type_;
   }
   ~TrowbridgeReitzDistribution() {}
   static Float RoughnessToAlpha(Float roughness) {
@@ -91,9 +85,6 @@ public:
   vec2f GetAlphas() const {
     return(vec2f(alphax,alphay));
   }
-  bool GetType() const { 
-    return(type);
-  };
   vec3f Sample_wh(const vec3f &wi, const Float u1, const Float u2) const;
 private:
   Float Lambda(const vec3f &w) const;

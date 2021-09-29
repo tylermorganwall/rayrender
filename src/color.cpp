@@ -79,13 +79,20 @@ point3f color(const ray& r, hitable *world, hitable_list *hlist,
         }
         
         r2 = ray(OffsetRayOrigin(offset_p, hrec.pError, hrec.normal, dir), dir, r2.pri_stack, r2.time());
-
+        
         pdf_val = p.value(dir, rng, r2.time()); //generates a pdf value based the intersection point and the mixture pdf
-        if((dir.x() == 0 && dir.y() == 0 && dir.z() == 0) || pdf_val == 0) {
+        // RcppThread::Rcout << i << " " << hrec.shape->GetName() << " " <<  throughput << " " << pdf_val << "\n";
+        
+        if(pdf_val == 0) {
+          throughput *= hrec.mat_ptr->f(r1, hrec, r2);
+          continue;
+        }
+        if(dir.x() == 0 && dir.y() == 0 && dir.z() == 0) {
           break;
         }
         
         throughput *= hrec.mat_ptr->f(r1, hrec, r2) / pdf_val;
+
       } else {
         return(final_color);
       }

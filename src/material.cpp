@@ -65,6 +65,7 @@ bool metal::scatter(const ray& r_in, const hit_record& hrec, scatter_record& sre
   srec.pdf_ptr = 0;
   return(true);
 }
+
 bool metal::scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler) {
   normal3f normal = !hrec.has_bump ? hrec.normal : hrec.bump_normal;
   vec3f wi = -unit_vector(r_in.direction());
@@ -498,6 +499,7 @@ bool MicrofacetTransmission::scatter(const ray& r_in, const hit_record& hrec, sc
 bool MicrofacetTransmission::scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler) {
   srec.is_specular = false;
   srec.attenuation = albedo->value(hrec.u, hrec.v, hrec.p);
+
   if(!hrec.has_bump) {
     srec.pdf_ptr = new micro_transmission_pdf(hrec.normal, r_in.direction(), distribution, eta);
   } else {
@@ -526,26 +528,22 @@ point3f MicrofacetTransmission::f(const ray& r_in, const hit_record& rec, const 
   }
   // Compute $\wh$ from $\wo$ and $\wi$ for microfacet transmission
   // Float eta = CosTheta(wo) > 0 ? (etaB / etaA) : (etaA / etaB);
-  Float eta2 = cosThetaO > 0 ? (1.0 / eta) : (eta / 1.0);
-  
+  Float eta2 = cosThetaO < 0 ? (1.0 / eta) : (eta / 1.0);
+
   vec3f wh = unit_vector(wo + wi * eta2);
   if (wh.z() < 0) wh = -wh;
   if (dot(wo, wh) * dot(wi, wh) > 0) return point3f(0);
-  
-  
-  // if (normal.x() == 0 && normal.y() == 0 && normal.z() == 0) {
-  //   return(point3f(0,0,0));
-  // }
 
-  point3f F = FrDielectric(cosThetaO, 1.0, eta2);
+  point3f F = FrDielectric(dot(wo,wh), 1.0, eta2);
   Float G = distribution->G(wo,wi,wh);
   Float D = distribution->D(wh);
   // Float factor = (mode == TransportMode::Radiance) ? (1 / eta) : 1;
-  
   Float sqrtDenom = dot(wo, wh) + eta2 * dot(wi, wh);
-// RcppThread::Rcout << "F: " << F << " " << "D: " << D  << " " << "G: " << G << " " << "eta: " << eta2;
-  return ((point3f(1.f) + -F) * albedo->value(rec.u, rec.v, rec.p) *
-      std::fabs(D * G * eta2 * eta2 *
+  
+  return ((point3f(1.f) + -F) *
+          albedo->value(rec.u, rec.v, rec.p) *
+      std::fabs(D * G *
+      eta2 * eta2 *
       AbsDot(wi, wh) * AbsDot(wo, wh)  /
       (cosThetaI * cosThetaO * sqrtDenom * sqrtDenom)));
 }

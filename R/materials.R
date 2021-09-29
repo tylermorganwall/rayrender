@@ -547,7 +547,7 @@ dielectric = function(color="white", refraction = 1.5,  attenuation = c(0,0,0),
 #'              aperture=0, fov=40, parallel=TRUE,clamp_value=10)
 #' }
 microfacet = function(color="white", roughness = 0.0001, transmission = FALSE,
-                      eta = 1, kappa = 0, microfacet = "tbr", 
+                      eta = 0, kappa = 0, microfacet = "tbr", 
                       checkercolor = NA, checkerperiod = 3,
                       noise = 0, noisephase = 0, noiseintensity = 10, noisecolor = "#000000",
                       gradient_color = NA, gradient_transpose = FALSE,
@@ -616,19 +616,34 @@ microfacet = function(color="white", roughness = 0.0001, transmission = FALSE,
     image_repeat = c(image_repeat,image_repeat)
   }
   glossyinfo = list(c(microtype, alphax, alphay, eta, kappa));
-  if(alphax == 0 && alphay == 0) {
-    new_tibble_row(list(type = "metal", 
-                        properties = list(c(color, 0)), 
-                        gradient_color = list(gradient_color), gradient_transpose = FALSE,
-                        world_gradient = is_world_gradient, gradient_point_info = list(gradient_point_info),
-                        gradient_type = gradient_type,
-                        checkercolor=list(c(checkercolor,checkerperiod)), 
-                        noise=noise, noisephase = noisephase, noiseintensity = noiseintensity, noisecolor = list(noisecolor),
-                        image = list(image_texture), image_repeat = list(image_repeat), 
-                        alphaimage = list(alpha_texture), lightintensity = NA, 
-                        fog=FALSE, fogdensity=NA, implicit_sample = importance_sample, 
-                        sigma = 0, glossyinfo = glossyinfo, bump_texture = list(bump_texture),
-                        bump_intensity = bump_intensity))
+  if(alphax == 0 && alphay == 0 ) {
+    if(!transmission) {
+      new_tibble_row(list(type = "metal", 
+                          properties = list(c(color, 0)), 
+                          gradient_color = list(gradient_color), gradient_transpose = FALSE,
+                          world_gradient = is_world_gradient, gradient_point_info = list(gradient_point_info),
+                          gradient_type = gradient_type,
+                          checkercolor=list(c(checkercolor,checkerperiod)), 
+                          noise=noise, noisephase = noisephase, noiseintensity = noiseintensity, noisecolor = list(noisecolor),
+                          image = list(image_texture), image_repeat = list(image_repeat), 
+                          alphaimage = list(alpha_texture), lightintensity = NA, 
+                          fog=FALSE, fogdensity=NA, implicit_sample = importance_sample, 
+                          sigma = 0, glossyinfo = glossyinfo, bump_texture = list(bump_texture),
+                          bump_intensity = bump_intensity))
+    } else {
+      new_tibble_row(list(type = "dielectric", 
+                          properties = list(c(color, eta[1], c(0,0,0), 0)), 
+                          gradient_color = list(gradient_color), gradient_transpose = FALSE,
+                          world_gradient = is_world_gradient, gradient_point_info = list(gradient_point_info),
+                          gradient_type = gradient_type,
+                          checkercolor=list(c(checkercolor,checkerperiod)), 
+                          noise=noise, noisephase = noisephase, noiseintensity = noiseintensity, noisecolor = list(noisecolor),
+                          image = list(image_texture), image_repeat = list(image_repeat), 
+                          alphaimage = list(alpha_texture), lightintensity = NA, 
+                          fog=FALSE, fogdensity=NA, implicit_sample = importance_sample, 
+                          sigma = 0, glossyinfo = glossyinfo, bump_texture = list(bump_texture),
+                          bump_intensity = bump_intensity))
+    }
   } else {
     if(transmission) {
       typeval = "microfacet_transmission"

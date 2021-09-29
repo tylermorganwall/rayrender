@@ -682,6 +682,8 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
     }
     return(invisible(full_array_ret))
   } else if (debug_channel == 11) {
+    full_array_ret = full_array
+    
     full_array[,,1] = (full_array[,,1]+1)/2
     full_array[,,2] = (full_array[,,2]+1)/2
     full_array[,,3] = (full_array[,,3]+1)/2
@@ -690,7 +692,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
     } else {
       save_png(full_array,filename)
     }
-    return(invisible(full_array))
+    return(invisible(full_array_ret))
   } else if (debug_channel %in% c(12,14,15,16)) {
     full_array_ret = full_array
     full_array[is.infinite(full_array)] = max(full_array[!is.infinite(full_array)])

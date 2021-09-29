@@ -31,8 +31,11 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
     }
   } else if(debug_channel == 2) {
     vec3f normal_map(0,0,0);
+    
     for(unsigned int j = 0; j < ny; j++) {
       for(unsigned int i = 0; i < nx; i++) {
+        std::vector<dielectric*> *mat_stack = new std::vector<dielectric*>;
+        
         normal_map = vec3f(0,0,0);
         Float u = Float(i) / Float(nx);
         Float v = Float(j) / Float(ny);
@@ -44,10 +47,12 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
         } else {
           r = ecam.get_ray(u,v, rng.unif_rand());
         }
-        normal_map = calculate_normals(r, &world, rng);
+        r.pri_stack = mat_stack;
+        normal_map = calculate_normals(r, &world, max_depth, rng);
         routput(i,j) = normal_map.x();
         goutput(i,j) = normal_map.y();
         boutput(i,j) = normal_map.z();
+        delete mat_stack;
       }
     }
   } else if(debug_channel == 3) {
@@ -173,7 +178,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
   } else if (debug_channel == 10) {
     RcppThread::ThreadPool pool(numbercores);
     auto worker = [&routput, &goutput, &boutput,
-                   nx, ny,  fov, 
+                   nx, ny,  fov, max_depth, &hlist,
                    &cam, &ocam, &ecam, &world] (int j) {
                      std::vector<dielectric*> *mat_stack = new std::vector<dielectric*>;
                      random_gen rng(j);
@@ -189,7 +194,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                          r = ecam.get_ray(u,v, rng.unif_rand());
                        }
                        r.pri_stack = mat_stack;
-                       point3f qr = calculate_position(r, &world, rng);
+                       point3f qr = calculate_position(r, &world, &hlist, max_depth, rng);
                        mat_stack->clear();
                        
                        routput(i,j) = qr.x();

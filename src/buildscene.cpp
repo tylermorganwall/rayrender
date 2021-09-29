@@ -281,9 +281,9 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
       } else if (type(i) == 6) {
         MicrofacetDistribution *dist;
         if(temp_glossy(0) == 1) {
-          dist = new TrowbridgeReitzDistribution(temp_glossy(1), temp_glossy(2), true, true);
+          dist = new TrowbridgeReitzDistribution(temp_glossy(1), temp_glossy(2), true);
         } else {
-          dist = new BeckmannDistribution(temp_glossy(1), temp_glossy(2), false, true);
+          dist = new BeckmannDistribution(temp_glossy(1), temp_glossy(2), true);
         }
         if(isimage(i)) {
           tex = std::make_shared<MicrofacetReflection>(std::make_shared<image_texture>(textures[i],nvec[i][0],nvec[i][1],nvec[i][2], 
@@ -329,9 +329,9 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
       } if (type(i) == 7) {
         MicrofacetDistribution *dist;
         if(temp_glossy(0) == 1) {
-          dist = new TrowbridgeReitzDistribution(temp_glossy(1), temp_glossy(2), true, true);
+          dist = new TrowbridgeReitzDistribution(temp_glossy(1), temp_glossy(2), true);
         } else {
-          dist = new BeckmannDistribution(temp_glossy(1), temp_glossy(2), false, true);
+          dist = new BeckmannDistribution(temp_glossy(1), temp_glossy(2), true);
         }
         if(isimage(i)) {
           tex = std::make_shared<glossy>(std::make_shared<image_texture>(textures[i],nvec[i][0],nvec[i][1],nvec[i][2], 
@@ -384,9 +384,9 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
       } else if (type(i) == 10) {
         MicrofacetDistribution *dist;
         if(temp_glossy(0) == 1) {
-          dist = new TrowbridgeReitzDistribution(temp_glossy(1), temp_glossy(2), true, true);
+          dist = new TrowbridgeReitzDistribution(temp_glossy(1), temp_glossy(2), true);
         } else {
-          dist = new BeckmannDistribution(temp_glossy(1), temp_glossy(2), false, true);
+          dist = new BeckmannDistribution(temp_glossy(1), temp_glossy(2), true);
         }
         if(isimage(i)) {
           tex = std::make_shared<MicrofacetTransmission>(std::make_shared<image_texture>(textures[i],nvec[i][0],nvec[i][1],nvec[i][2], 

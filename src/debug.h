@@ -33,14 +33,59 @@ inline Float calculate_depth(const ray& r, hitable *world, random_gen &rng) {
   }
 }
 
-inline vec3f calculate_normals(const ray& r, hitable *world, random_gen &rng) {
-  hit_record hrec;
-  if(world->hit(r, 0.001, FLT_MAX, hrec, rng)) {
-    hrec.normal.make_unit_vector();
-    return((vec3f(1,1,1) + vec3f(hrec.normal.x(),hrec.normal.y(),hrec.normal.z()))/2);
-  } else {
-    return(vec3f(0,0,0));
+inline vec3f calculate_normals(const ray& r, hitable *world, size_t max_depth, random_gen &rng) {
+  point3f final_color(0,0,0);
+  ray r1 = r;
+  ray r2 = r;
+  bool diffuse_bounce = false;
+  
+  for(size_t i = 0; i < max_depth; i++) {
+    bool is_invisible = false;
+    hit_record hrec;
+    if(world->hit(r2, 0.001, FLT_MAX, hrec, rng)) { //generated hit record, world space
+      scatter_record srec;
+      //Some lights can be invisible until after diffuse bounce
+      //If so, generate new ray with intersection point and continue ray
+      if(is_invisible && !diffuse_bounce) {
+        r2.A = hrec.p;
+        continue;
+      }
+      if(hrec.mat_ptr->scatter(r2, hrec, srec, rng)) { //generates scatter record, world space
+        if(srec.is_specular) { //returns specular ray
+          if(i == max_depth-1) {
+            hrec.normal.make_unit_vector();
+            return((vec3f(1,1,1) + vec3f(hrec.normal.x(),hrec.normal.y(),hrec.normal.z()))/2);
+          }
+          r2 = srec.specular_ray;
+          continue;
+        }
+        // hitable_pdf p_imp(hlist, hrec.p); //creates pdf of all objects to be sampled
+        // mixture_pdf p(&p_imp, srec.pdf_ptr); //creates mixture pdf of surface intersected at hrec.p and all sampled objects/lights
+        
+        point3f offset_p = offset_ray(hrec.p-r2.A, hrec.normal) + r2.A;
+        
+        r1 = r2;
+        vec3f dir;
+        dir = srec.pdf_ptr->generate(rng, diffuse_bounce, r2.time());
+        if((dir.x() == 0 && dir.y() == 0 && dir.z() == 0)) {
+          hrec.normal.make_unit_vector();
+          return((vec3f(1,1,1) + vec3f(hrec.normal.x(),hrec.normal.y(),hrec.normal.z()))/2);
+        }
+        r2 = ray(OffsetRayOrigin(offset_p, hrec.pError, hrec.normal, dir), dir, r2.pri_stack, r2.time());
+        
+        if(i == max_depth-1) {
+          hrec.normal.make_unit_vector();
+          return((vec3f(1,1,1) + vec3f(hrec.normal.x(),hrec.normal.y(),hrec.normal.z()))/2);
+        }
+      } else {
+        hrec.normal.make_unit_vector();
+        return((vec3f(1,1,1) + vec3f(hrec.normal.x(),hrec.normal.y(),hrec.normal.z()))/2);
+      }
+    } else {
+      return(vec3f(0,0,0));
+    }
   }
+  return(vec3f(0,0,0));
 }
 
 inline vec3f calculate_uv(const ray& r, hitable *world, random_gen &rng) {
@@ -139,22 +184,13 @@ inline point3f quick_render(const ray& r, hitable *world, random_gen &rng, vec3f
 //   } 
 // }
 
-inline point3f calculate_position(const ray& r, hitable *world, random_gen &rng) {
-  hit_record hrec;
-  if(world->hit(r, 0.001, FLT_MAX, hrec, rng)) {
-    return(hrec.p);
-  } else {
-    return(INFINITY);
-  }
-}
-
-inline point3f calculate_bounce_dir(const ray& r, hitable *world, hitable_list *hlist,
-              size_t max_depth, random_gen& rng) {
+inline point3f calculate_position(const ray& r, hitable *world, hitable_list *hlist,
+                                  size_t max_depth, random_gen &rng) {
   point3f final_color(0,0,0);
   ray r1 = r;
   ray r2 = r;
   bool diffuse_bounce = false;
-  for(size_t i = 0; i < 2; i++) {
+  for(size_t i = 0; i < max_depth; i++) {
     bool is_invisible = false;
     hit_record hrec;
     if(world->hit(r2, 0.001, FLT_MAX, hrec, rng)) { //generated hit record, world space
@@ -167,15 +203,79 @@ inline point3f calculate_bounce_dir(const ray& r, hitable *world, hitable_list *
       }
       if(hrec.mat_ptr->scatter(r2, hrec, srec, rng)) { //generates scatter record, world space
         if(srec.is_specular) { //returns specular ray
-          return(unit_vector(srec.specular_ray.direction()));
+          if(i == max_depth-1) {
+            return(hrec.p);
+          }
+          r2 = srec.specular_ray;
+          continue;
         }
         hitable_pdf p_imp(hlist, hrec.p); //creates pdf of all objects to be sampled
         mixture_pdf p(&p_imp, srec.pdf_ptr); //creates mixture pdf of surface intersected at hrec.p and all sampled objects/lights
         
+        point3f offset_p = offset_ray(hrec.p-r2.A, hrec.normal) + r2.A;
+        
         r1 = r2;
         vec3f dir;
         dir = p.generate(rng, diffuse_bounce, r2.time());
-        return(unit_vector(dir));
+        if((dir.x() == 0 && dir.y() == 0 && dir.z() == 0)) {
+          return(hrec.p);
+        }
+        r2 = ray(OffsetRayOrigin(offset_p, hrec.pError, hrec.normal, dir), dir, r2.pri_stack, r2.time());
+        
+        if(i == max_depth-1) {
+          return(hrec.p);
+        }
+      } else {
+        return(hrec.p);
+      }
+    } else {
+      return(vec3f(0,0,0));
+    }
+  }
+  return(vec3f(0,0,0));
+}
+
+inline point3f calculate_bounce_dir(const ray& r, hitable *world, hitable_list *hlist,
+              size_t max_depth, random_gen& rng) {
+  point3f final_color(0,0,0);
+  ray r1 = r;
+  ray r2 = r;
+  bool diffuse_bounce = false;
+  for(size_t i = 0; i < max_depth; i++) {
+    bool is_invisible = false;
+    hit_record hrec;
+    if(world->hit(r2, 0.001, FLT_MAX, hrec, rng)) { //generated hit record, world space
+      scatter_record srec;
+      //Some lights can be invisible until after diffuse bounce
+      //If so, generate new ray with intersection point and continue ray
+      if(is_invisible && !diffuse_bounce) {
+        r2.A = hrec.p;
+        continue;
+      }
+      if(hrec.mat_ptr->scatter(r2, hrec, srec, rng)) { //generates scatter record, world space
+        if(srec.is_specular) { //returns specular ray
+          if(i == max_depth-1) {
+            return(unit_vector(srec.specular_ray.direction()));
+          }
+          r2 = srec.specular_ray;
+          continue;
+        }
+        hitable_pdf p_imp(hlist, hrec.p); //creates pdf of all objects to be sampled
+        mixture_pdf p(&p_imp, srec.pdf_ptr); //creates mixture pdf of surface intersected at hrec.p and all sampled objects/lights
+        
+        point3f offset_p = offset_ray(hrec.p-r2.A, hrec.normal) + r2.A;
+        
+        r1 = r2;
+        vec3f dir;
+        dir = p.generate(rng, diffuse_bounce, r2.time());
+        if((dir.x() == 0 && dir.y() == 0 && dir.z() == 0)) {
+          return(dir);
+        }
+        r2 = ray(OffsetRayOrigin(offset_p, hrec.pError, hrec.normal, dir), dir, r2.pri_stack, r2.time());
+        
+        if(i == max_depth-1) {
+          return(unit_vector(dir));
+        }
       } else {
         return(vec3f(0,0,0));
       }
@@ -230,7 +330,7 @@ inline Float calculate_pdf(const ray& r, hitable *world, hitable_list *hlist,
   ray r1 = r;
   ray r2 = r;
   bool diffuse_bounce = false;
-  for(size_t i = 0; i < 2; i++) {
+  for(size_t i = 0; i < max_depth; i++) {
     bool is_invisible = false;
     hit_record hrec;
     if(world->hit(r2, 0.001, FLT_MAX, hrec, rng)) { //generated hit record, world space
@@ -243,17 +343,27 @@ inline Float calculate_pdf(const ray& r, hitable *world, hitable_list *hlist,
       }
       if(hrec.mat_ptr->scatter(r2, hrec, srec, rng)) { //generates scatter record, world space
         if(srec.is_specular) { //returns specular ray
-          return(0);
+          if(i == max_depth-1) {
+            return(0);
+          }
+          r2 = srec.specular_ray;
+          continue;
         }
         hitable_pdf p_imp(hlist, hrec.p); //creates pdf of all objects to be sampled
         mixture_pdf p(&p_imp, srec.pdf_ptr); //creates mixture pdf of surface intersected at hrec.p and all sampled objects/lights
+        point3f offset_p = offset_ray(hrec.p-r2.A, hrec.normal) + r2.A;
         
         r1 = r2;
         vec3f dir;
         dir = p.generate(rng, diffuse_bounce, r2.time());
         Float pdf_val = p.value(dir, rng, r2.time()); //generates a pdf value based the intersection point and the mixture pdf
-        
-        return(pdf_val);
+        if(i == max_depth-1) {
+          return(pdf_val);
+        }
+        if((dir.x() == 0 && dir.y() == 0 && dir.z() == 0)) {
+          return(0);
+        }
+        r2 = ray(OffsetRayOrigin(offset_p, hrec.pError, hrec.normal, dir), dir, r2.pri_stack, r2.time());
       } else {
         return(0);
       }

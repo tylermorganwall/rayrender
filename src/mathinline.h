@@ -109,8 +109,8 @@ inline vec3f rand_to_sphere(Float radius, Float distance_squared, vec2f u) {
 inline vec3f SphericalDirection(Float sinTheta, 
                                    Float cosTheta, Float phi) {
   return vec3f(sinTheta * std::cos(phi), 
-                  sinTheta * std::sin(phi),
-                  cosTheta);
+               sinTheta * std::sin(phi),
+               cosTheta);
 }
 
 inline vec3f SphericalDirection(Float sinTheta, Float cosTheta, 
@@ -330,6 +330,19 @@ inline bool SameHemisphere(const vec3f &w, const normal3f &wp) {
 
 inline bool refract(const vec3f& v, const vec3f& n, Float ni_over_nt, vec3f& refracted) {
   vec3f uv = unit_vector(v);
+  Float dt = dot(uv, n);
+  Float discriminant = 1.0 - ni_over_nt * ni_over_nt * (1 - dt * dt);
+  if(discriminant > 0) {
+    refracted = ni_over_nt * (uv - n * dt) - n * sqrt(discriminant);
+    return(true);
+  } else {
+    return(false);
+  }
+}
+
+inline bool refract(const vec3f& v, const normal3f& n2, Float ni_over_nt, vec3f& refracted) {
+  vec3f uv = unit_vector(v);
+  vec3f n = vec3f(n2.x(),n2.y(),n2.z());
   Float dt = dot(uv, n);
   Float discriminant = 1.0 - ni_over_nt * ni_over_nt * (1 - dt * dt);
   if(discriminant > 0) {
