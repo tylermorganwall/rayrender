@@ -519,33 +519,46 @@ point3f MicrofacetTransmission::f(const ray& r_in, const hit_record& rec, const 
   }
   vec3f wi = -unit_vector(uvw.world_to_local(r_in.direction()));
   vec3f wo = unit_vector(uvw.world_to_local(scattered.direction()));
-  if (SameHemisphere(wo, wi)) return point3f(0);  // transmission only
 
   Float cosThetaO = CosTheta(wo);
   Float cosThetaI = CosTheta(wi);
   if (cosThetaI == 0 || cosThetaO == 0) {
     return(point3f(0,0,0));
   }
-  // Compute $\wh$ from $\wo$ and $\wi$ for microfacet transmission
-  // Float eta = CosTheta(wo) > 0 ? (etaB / etaA) : (etaA / etaB);
-  Float eta2 = cosThetaO < 0 ? (1.0 / eta) : (eta / 1.0);
+  
+  Float eta2 = 1.0;
+  if (!SameHemisphere(wo, wi)) {
+    eta2 = cosThetaO < 0 ? (1.0 / eta) : (eta / 1.0);
+  }
 
+  // Compute $\wh$ from $\wo$ and $\wi$ for microfacet transmission
   vec3f wh = unit_vector(wo + wi * eta2);
   if (wh.z() < 0) wh = -wh;
-  if (dot(wo, wh) * dot(wi, wh) > 0) return point3f(0);
-
-  point3f F = FrDielectric(dot(wo,wh), 1.0, eta2);
+         
+  Float F = FrDielectric(dot(wo,wh), 1.0, eta2);
   Float G = distribution->G(wo,wi,wh);
   Float D = distribution->D(wh);
+  
+  if (wh.x() == 0 && wh.y() == 0 && wh.z() == 0) {
+    return(point3f(0,0,0));
+  }
+  
+  if (dot(wo, wh) * dot(wi, wh) > 0) {
+    return(albedo->value(rec.u, rec.v, rec.p) * F * G * D  * cosThetaI / (4 * CosTheta(wo) * CosTheta(wi) ));
+  }
+// 
+  if (SameHemisphere(wo, wi)) {
+    return(albedo->value(rec.u, rec.v, rec.p) * F * G * D  * cosThetaI / (4 * CosTheta(wo) * CosTheta(wi) ));
+  }
   // Float factor = (mode == TransportMode::Radiance) ? (1 / eta) : 1;
   Float sqrtDenom = dot(wo, wh) + eta2 * dot(wi, wh);
-  
-  return ((point3f(1.f) + -F) *
+
+  return ((1 - F) * 
           albedo->value(rec.u, rec.v, rec.p) *
-      std::fabs(D * G *
-      eta2 * eta2 *
-      AbsDot(wi, wh) * AbsDot(wo, wh)  /
-      (cosThetaI * cosThetaO * sqrtDenom * sqrtDenom)));
+          std::fabs(D * G *
+          eta2 * eta2 *
+          AbsDot(wi, wh) * AbsDot(wo, wh)  /
+          (cosThetaI * cosThetaO * sqrtDenom * sqrtDenom)));
 }
 
 point3f MicrofacetTransmission::get_albedo(const ray& r_in, const hit_record& rec) const {
