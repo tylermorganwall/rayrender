@@ -59,6 +59,7 @@ inline Float Degrees(Float rad) {
 }
 
 
+
 inline point3f de_nan(const point3f& c) {
   point3f temp = c;
   if(std::isnan(c[0])) temp.e[0] = 1.0f;
@@ -178,6 +179,8 @@ inline vec3f clamp(const vec3f& c, Float clamplow, Float clamphigh) {
   return(temp);
 }
 
+
+
 inline point3f clamp_point(const point3f& c, Float clamplow, Float clamphigh) {
   point3f temp = c;
   if(c.e[0] > clamphigh) {
@@ -209,16 +212,66 @@ inline Float clamp(const Float& c, Float clamplow, Float clamphigh) {
 
 inline vec3f clamp(vec3f input, vec3f low, vec3f high) {
   vec3f final(clamp(input.x(), low.x(), high.x()),
-             clamp(input.y(), low.y(), high.y()),
-             clamp(input.z(), low.z(), high.z()));
+              clamp(input.y(), low.y(), high.y()),
+              clamp(input.z(), low.z(), high.z()));
   return(final);
 }
 
 inline point3f clamp(point3f input, point3f low, point3f high) {
   point3f final(clamp(input.x(), low.x(), high.x()),
-              clamp(input.y(), low.y(), high.y()),
-              clamp(input.z(), low.z(), high.z()));
+                clamp(input.y(), low.y(), high.y()),
+                clamp(input.z(), low.z(), high.z()));
   return(final);
+}
+
+
+
+// General Utility Functions
+inline Float Sqr(Float v) { return v * v; }
+template <int n>
+static Float Pow(Float v) {
+  static_assert(n > 0, "Power can't be negative");
+  Float n2 = Pow<n / 2>(v);
+  return n2 * n2 * Pow<n & 1>(v);
+}
+
+template <>
+inline Float Pow<1>(Float v) {
+  return(v);
+}
+
+template <>
+inline Float Pow<0>(Float v) {
+  return(1);
+}
+
+inline Float SafeASin(Float x) {
+  return(std::asin(clamp(x, -1, 1)));
+}
+
+inline Float SafeSqrt(Float x) {
+  return(std::sqrt(std::fmax(Float(0), x)));
+}
+
+inline vec3f Exp(vec3f a) {
+  return(vec3f(std::exp(a.x()),std::exp(a.y()),std::exp(a.z())));
+}
+
+inline point3f Exp(point3f a) {
+  return(point3f(std::exp(a.x()),std::exp(a.y()),std::exp(a.z())));
+}
+
+inline Float Logistic(Float x, Float s) {
+  x = std::abs(x);
+  return(std::exp(-x / s) / (s * Sqr(1 + std::exp(-x / s))));
+}
+
+inline Float LogisticCDF(Float x, Float s) {
+  return(1 / (1 + std::exp(-x / s)));
+}
+
+inline Float TrimmedLogistic(Float x, Float s, Float a, Float b) {
+  return(Logistic(x, s) / (LogisticCDF(b, s) - LogisticCDF(a, s)));
 }
 
 
@@ -275,6 +328,27 @@ inline Float FrDielectric(Float cosThetaI, Float etaI, Float etaT) {
   Float Rperp = ((etaI * cosThetaI) - (etaT * cosThetaT)) /
     ((etaI * cosThetaI) + (etaT * cosThetaT));
   return((Rparl * Rparl + Rperp * Rperp) / 2);
+}
+
+
+
+inline Float FrDielectric(Float cosThetaI, Float eta) {
+  cosThetaI = clamp(cosThetaI, -1, 1);
+  // Potentially flip interface orientation for Fresnel equations
+  if (cosThetaI < 0) {
+    eta = 1 / eta;
+    cosThetaI = -cosThetaI;
+  }
+  
+  // Compute $\cos\,\theta_\roman{t}$ for Fresnel equations using Snell's law
+  Float sin2Theta_i = 1 - Sqr(cosThetaI);
+  Float sin2Theta_t = sin2Theta_i * Sqr(eta);
+  if (sin2Theta_t >= 1) return 1.0f;
+  Float cosTheta_t = SafeSqrt(1 - sin2Theta_t);
+  
+  Float r_parl = (cosThetaI - eta * cosTheta_t) / (cosThetaI + eta * cosTheta_t);
+  Float r_perp = (eta * cosThetaI - cosTheta_t) / (eta * cosThetaI + cosTheta_t);
+  return (r_parl * r_parl + r_perp * r_perp) / 2;
 }
 
 inline bool quadratic(Float a, Float b, Float c, Float *t0, Float *t1) {
@@ -587,52 +661,6 @@ inline point3f HSVtoRGB(point3f hsv) {
   }
 }
 
-// General Utility Functions
-inline Float Sqr(Float v) { return v * v; }
-template <int n>
-static Float Pow(Float v) {
-  static_assert(n > 0, "Power can't be negative");
-  Float n2 = Pow<n / 2>(v);
-  return n2 * n2 * Pow<n & 1>(v);
-}
-
-template <>
-inline Float Pow<1>(Float v) {
-  return(v);
-}
-
-template <>
-inline Float Pow<0>(Float v) {
-  return(1);
-}
-inline Float SafeASin(Float x) {
-  return(std::asin(clamp(x, -1, 1)));
-}
-
-inline Float SafeSqrt(Float x) {
-  return(std::sqrt(std::fmax(Float(0), x)));
-}
-
-inline vec3f Exp(vec3f a) {
-  return(vec3f(std::exp(a.x()),std::exp(a.y()),std::exp(a.z())));
-}
-
-inline point3f Exp(point3f a) {
-  return(point3f(std::exp(a.x()),std::exp(a.y()),std::exp(a.z())));
-}
-
-inline Float Logistic(Float x, Float s) {
-  x = std::abs(x);
-  return(std::exp(-x / s) / (s * Sqr(1 + std::exp(-x / s))));
-}
-
-inline Float LogisticCDF(Float x, Float s) {
-  return(1 / (1 + std::exp(-x / s)));
-}
-
-inline Float TrimmedLogistic(Float x, Float s, Float a, Float b) {
-  return(Logistic(x, s) / (LogisticCDF(b, s) - LogisticCDF(a, s)));
-}
 
 //Hair utilities
 static const int pMax = 3;

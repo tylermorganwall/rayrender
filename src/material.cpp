@@ -5,6 +5,23 @@
 //Lambertian
 //
 
+inline bool Refract(const vec3f &wi, const normal3f &n, Float eta, vec3f *wt) {
+  // Compute $\cos \theta_\roman{t}$ using Snell's law
+  if(eta == 1) {
+    *wt = wi;
+    return(true);
+  }
+  Float cosThetaI = dot(n, wi);
+  Float sin2ThetaI = std::fmax(Float(0), Float(1 - cosThetaI * cosThetaI));
+  Float sin2ThetaT = eta * eta * sin2ThetaI;
+  
+  // Handle total internal reflection for transmission
+  if (sin2ThetaT >= 1) return(false);
+  Float cosThetaT = std::sqrt(1 - sin2ThetaT);
+  *wt = eta * -wi + (eta * cosThetaI - cosThetaT) * vec3f(n.x(),n.y(),n.z());
+  return(true);
+}
+
 
 point3f lambertian::f(const ray& r_in, const hit_record& rec, const ray& scattered) const {
   //unit_vector(scattered.direction()) == wo
@@ -94,8 +111,10 @@ point3f metal::get_albedo(const ray& r_in, const hit_record& rec) const {
 bool dielectric::scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng) {
   srec.is_specular = true;
   normal3f outward_normal;
-  normal3f normal = !hrec.has_bump ? hrec.normal : hrec.bump_normal;
-  vec3f unit_direction = unit_vector(r_in.direction());
+  normal3f wh = !hrec.has_bump ? hrec.normal : hrec.bump_normal;
+  wh.make_unit_vector();
+  
+  vec3f wi = -unit_vector(r_in.direction());
   
   Float ni_over_nt;
   srec.attenuation = albedo;
@@ -141,22 +160,13 @@ bool dielectric::scatter(const ray& r_in, const hit_record& hrec, scatter_record
     return(true);
   }
   
-  Float reflect_prob;
-  if(!entering) {
-    outward_normal = -normal;
-    ni_over_nt = ref_idx / current_ref_idx ;
-  } else {
-    outward_normal = normal;
-    ni_over_nt = current_ref_idx / ref_idx;
-  }
-  Float cos_theta = ffmin(dot(-unit_direction, outward_normal), (Float)1.0);
-  Float sin_theta = sqrt(1.0 - cos_theta*cos_theta);
-  if(ni_over_nt * sin_theta <= 1.0 ) {
-    reflect_prob = schlick(cos_theta, ref_idx, current_ref_idx);
-    reflect_prob = ni_over_nt == 1 ? 0 : reflect_prob;
-  } else {
-    reflect_prob = 1.0;
-  }
+  outward_normal = entering ? wh : -wh;
+  ni_over_nt = entering ? current_ref_idx / ref_idx : ref_idx / current_ref_idx ;
+
+  //Never reflect if ni_over_nt == 1
+  Float reflect_prob = ni_over_nt != 1 ? FrDielectric(dot(wi, wh), ni_over_nt) : 0.0;
+  
+  //Calculate attenuation color
   if(entering) {
     Float distance = (offset_p-r_in.point_at_parameter(0)).length();
     srec.attenuation = point3f(std::exp(-distance * attenuation.x()),
@@ -178,13 +188,14 @@ bool dielectric::scatter(const ray& r_in, const hit_record& hrec, scatter_record
     if(entering) {
       r_in.pri_stack->pop_back();
     }
-    vec3f reflected = Reflect(-unit_direction, unit_vector(normal));
+    vec3f reflected = Reflect(wi, outward_normal);
     srec.specular_ray = ray(offset_p, reflected, r_in.pri_stack, r_in.time());
   } else {
     if(!entering && current_layer != -1) {
       r_in.pri_stack->erase(r_in.pri_stack->begin() + current_layer);
     }
-    vec3f refracted = refract(unit_direction, outward_normal, ni_over_nt);
+    vec3f refracted;
+    Refract(wi, outward_normal, ni_over_nt, &refracted);
     srec.specular_ray = ray(offset_p, refracted, r_in.pri_stack, r_in.time());
   }
   return(true);
@@ -194,9 +205,10 @@ bool dielectric::scatter(const ray& r_in, const hit_record& hrec, scatter_record
 bool dielectric::scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler) {
   srec.is_specular = true;
   normal3f outward_normal;
-  vec3f unit_direction = unit_vector(r_in.direction());
+  vec3f wi = -unit_vector(r_in.direction());
   
-  normal3f normal = !hrec.has_bump ? hrec.normal : hrec.bump_normal;
+  normal3f wh = !hrec.has_bump ? hrec.normal : hrec.bump_normal;
+  wh.make_unit_vector();
   
   Float ni_over_nt;
   srec.attenuation = albedo;
@@ -244,23 +256,12 @@ bool dielectric::scatter(const ray& r_in, const hit_record& hrec, scatter_record
     }
     return(true);
   }
-  
-  Float reflect_prob;
-  if(!entering) {
-    outward_normal = -normal;
-    ni_over_nt = ref_idx / current_ref_idx ;
-  } else {
-    outward_normal = normal;
-    ni_over_nt = current_ref_idx / ref_idx;
-  }
-  Float cos_theta = ffmin(dot(-unit_direction, outward_normal), (Float)1.0);
-  Float sin_theta = sqrt(1.0 - cos_theta*cos_theta);
-  if(ni_over_nt * sin_theta <= 1.0 ) {
-    reflect_prob = schlick(cos_theta, ref_idx, current_ref_idx);
-    reflect_prob = ni_over_nt == 1 ? 0 : reflect_prob;
-  } else {
-    reflect_prob = 1.0;
-  }
+  outward_normal = entering ? wh : -wh;
+  ni_over_nt = entering ? current_ref_idx / ref_idx : ref_idx / current_ref_idx ;
+  //Never reflect if ni_over_nt == 1
+  Float reflect_prob = ni_over_nt != 1 ? FrDielectric(dot(wi, wh), ni_over_nt) : 0.0;
+
+  //Calculate attenuation color
   if(!entering) {
     Float distance = (offset_p-r_in.point_at_parameter(0)).length();
     srec.attenuation = point3f(std::exp(-distance * attenuation.x()),
@@ -282,13 +283,14 @@ bool dielectric::scatter(const ray& r_in, const hit_record& hrec, scatter_record
     if(entering) {
       r_in.pri_stack->pop_back();
     }
-    vec3f reflected = Reflect(-unit_direction, unit_vector(normal));
+    vec3f reflected = Reflect(wi, outward_normal);
     srec.specular_ray = ray(offset_p, reflected, r_in.pri_stack, r_in.time());
   } else {
     if(!entering && current_layer != -1) {
       r_in.pri_stack->erase(r_in.pri_stack->begin() + current_layer);
     }
-    vec3f refracted = refract(unit_direction, outward_normal, ni_over_nt);
+    vec3f refracted;
+    Refract(wi, outward_normal, ni_over_nt, &refracted);
     srec.specular_ray = ray(offset_p, refracted, r_in.pri_stack, r_in.time());
   }
   return(true);
@@ -508,34 +510,36 @@ bool MicrofacetTransmission::scatter(const ray& r_in, const hit_record& hrec, sc
   return(true);
 }
 
-#include "RcppThread.h" 
-
 point3f MicrofacetTransmission::f(const ray& r_in, const hit_record& rec, const ray& scattered) const {
   onb uvw;
+  bool entering = dot(rec.normal, r_in.direction()) < 0;
+  
   if(!rec.has_bump) {
     uvw.build_from_w(rec.normal);
   } else {
     uvw.build_from_w(rec.bump_normal);
   }
+  
   vec3f wi = -unit_vector(uvw.world_to_local(r_in.direction()));
   vec3f wo = unit_vector(uvw.world_to_local(scattered.direction()));
 
-  Float cosThetaO = CosTheta(wo);
-  Float cosThetaI = CosTheta(wi);
+  Float cosThetaO = AbsCosTheta(wo);
+  Float cosThetaI = AbsCosTheta(wi);
   if (cosThetaI == 0 || cosThetaO == 0) {
     return(point3f(0,0,0));
   }
   
-  Float eta2 = 1.0;
-  if (!SameHemisphere(wo, wi)) {
-    eta2 = cosThetaO < 0 ? (1.0 / eta) : (eta / 1.0);
-  }
+  
+  // Float eta2 = 1.0;
+  // if (!SameHemisphere(wo, wi)) {
+  //   eta2 = CosTheta(wo) < 0 ? (1.0 / eta) : (eta / 1.0);
+  // }
 
   // Compute $\wh$ from $\wo$ and $\wi$ for microfacet transmission
-  vec3f wh = unit_vector(wo + wi * eta2);
+  vec3f wh = unit_vector(wo + wi * eta);
   if (wh.z() < 0) wh = -wh;
-         
-  Float F = FrDielectric(dot(wo,wh), 1.0, eta2);
+  
+  Float F = FrDielectric(dot(wi,wh), eta);
   Float G = distribution->G(wo,wi,wh);
   Float D = distribution->D(wh);
   
@@ -546,17 +550,17 @@ point3f MicrofacetTransmission::f(const ray& r_in, const hit_record& rec, const 
   if (dot(wo, wh) * dot(wi, wh) > 0) {
     return(albedo->value(rec.u, rec.v, rec.p) * F * G * D  * cosThetaI / (4 * CosTheta(wo) * CosTheta(wi) ));
   }
-// 
+
   if (SameHemisphere(wo, wi)) {
     return(albedo->value(rec.u, rec.v, rec.p) * F * G * D  * cosThetaI / (4 * CosTheta(wo) * CosTheta(wi) ));
   }
   // Float factor = (mode == TransportMode::Radiance) ? (1 / eta) : 1;
-  Float sqrtDenom = dot(wo, wh) + eta2 * dot(wi, wh);
+  Float sqrtDenom = dot(wo, wh) + eta * dot(wi, wh);
 
   return ((1 - F) * 
           albedo->value(rec.u, rec.v, rec.p) *
           std::fabs(D * G *
-          eta2 * eta2 *
+          eta * eta *
           AbsDot(wi, wh) * AbsDot(wo, wh)  /
           (cosThetaI * cosThetaO * sqrtDenom * sqrtDenom)));
 }
