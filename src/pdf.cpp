@@ -1,6 +1,5 @@
 #include "pdf.h"
 #include "mathinline.h"
-#include "RcppThread.h" 
 
 
 inline bool Refract(const vec3f &wi, const normal3f &n, Float eta, vec3f *wt) {
@@ -146,40 +145,41 @@ inline Float schlick(Float cosine, Float ref_idx, Float ref_idx2) {
   return(r0 + (1-r0) * pow((1-cosine),5));
 }
 
-
 vec3f micro_transmission_pdf::generate(random_gen& rng, bool& diffuse_bounce, Float time) {
   vec3f wh = distribution->Sample_wh(wi, rng.unif_rand(),rng.unif_rand());
-  // Float eta2 = CosTheta(wi) > 0 ? (1.0 / eta) : (eta / 1.0);
-  Float R = FrDielectric(dot(wi, wh), eta);
-  Float T = 1 - R;
-  // Compute probabilities _pr_ and _pt_ for sampling reflection and transmission
-  Float pr = R, pt = T;
+
+  bool entering = CosTheta(wi) < 0;
+  Float ni_over_nt = entering ? eta : 1 / eta ;
   
+  //Never reflect if eta == 1
+  Float R = eta != 1 ? FrDielectric(dot(wi, wh), ni_over_nt) : 0.0;
+  
+  vec3f dir;
   if(rng.unif_rand() < R) {
-    vec3f dir;
-    Refract(wi, wh, eta, &dir);
-    return(uvw.local_to_world(dir));
+    dir = Reflect(wi, wh);
   } else {
-    return(uvw.local_to_world(Reflect(wi, wh)));
+    Refract(wi, wh, ni_over_nt, &dir);
   }
+  return(uvw.local_to_world(dir));
 }
 
 vec3f micro_transmission_pdf::generate(Sampler* sampler, bool& diffuse_bounce, Float time) {
   vec2f u = sampler->Get2D();
   normal3f wh = distribution->Sample_wh(wi, u.x(), u.y());
-  // Float eta2 = CosTheta(wi) > 0 ? (1.0 / eta) : (eta / 1.0);
-  Float R = FrDielectric(dot(wi, wh), eta);
-  Float T = 1 - R;
-  // Compute probabilities _pr_ and _pt_ for sampling reflection and transmission
-  Float pr = R, pt = T;
 
+  bool entering = CosTheta(wi) < 0;
+  Float ni_over_nt = entering ? eta : 1/eta ;
+  
+  //Never reflect if eta == 1
+  Float R = eta != 1 ? FrDielectric(dot(wi, wh), ni_over_nt) : 0.0;
+
+  vec3f dir;
   if(sampler->Get1D() < R) {
-    vec3f dir;
-    Refract(wi, wh, eta, &dir);
-    return(uvw.local_to_world(dir));
+    dir = Reflect(wi, wh);
   } else {
-    return(uvw.local_to_world(Reflect(wi, wh)));
+    Refract(wi, wh, ni_over_nt, &dir);
   }
+  return(uvw.local_to_world(dir));
 }
 
 

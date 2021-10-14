@@ -458,8 +458,10 @@ dielectric = function(color="white", refraction = 1.5,  attenuation = c(0,0,0),
 #' above that is a rough satin-like material). 
 #' Two numbers will specify the x and y roughness separately (e.g. `roughness = c(0.01, 0.001)` gives an 
 #' etched metal effect). If `0`, this defaults to the `metal()` material for faster evaluation.
+#' @param transmission Default `FALSE`. If `TRUE`, this material will be a rough dielectric instead of a rough metallic surface.
 #' @param eta Default `0`. Wavelength dependent refractivity of the material (red, green, and blue channels).
-#' If single number, will be repeated across all three channels.
+#' If single number, will be repeated across all three channels. If `transmission = TRUE`, this is a single value representing the
+#' index of refraction of the material.
 #' @param kappa Default `0`. Wavelength dependent absorption of the material (red, green, and blue channels).
 #' If single number, will be repeated across all three channels.
 #' @param microfacet Default `tbr`.  Type of microfacet distribution. Alternative option `beckmann`.

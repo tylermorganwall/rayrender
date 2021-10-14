@@ -24,6 +24,7 @@ glossy(
   image_repeat = 1,
   alpha_texture = NA,
   bump_texture = NA,
+  roughness_texture = NA,
   bump_intensity = 1,
   importance_sample = FALSE
 )

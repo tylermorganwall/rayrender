@@ -7,6 +7,7 @@
 microfacet(
   color = "white",
   roughness = 1e-04,
+  transmission = FALSE,
   eta = 0,
   kappa = 0,
   microfacet = "tbr",
@@ -25,6 +26,7 @@ microfacet(
   image_repeat = 1,
   alpha_texture = NA,
   bump_texture = NA,
+  roughness_texture = NA,
   bump_intensity = 1,
   importance_sample = FALSE
 )
@@ -41,8 +43,11 @@ above that is a rough satin-like material).
 Two numbers will specify the x and y roughness separately (e.g. `roughness = c(0.01, 0.001)` gives an 
 etched metal effect). If `0`, this defaults to the `metal()` material for faster evaluation.}
 
+\item{transmission}{Default `FALSE`. If `TRUE`, this material will be a rough dielectric instead of a rough metallic surface.}
+
 \item{eta}{Default `0`. Wavelength dependent refractivity of the material (red, green, and blue channels).
-If single number, will be repeated across all three channels.}
+If single number, will be repeated across all three channels. If `transmission = TRUE`, this is a single value representing the
+index of refraction of the material.}
 
 \item{kappa}{Default `0`. Wavelength dependent absorption of the material (red, green, and blue channels).
 If single number, will be repeated across all three channels.}
