@@ -539,7 +539,7 @@ point3f MicrofacetTransmission::f(const ray& r_in, const hit_record& rec, const 
   vec3f wh = unit_vector(wo + wi * eta2);
   if (wh.z() < 0) wh = -wh;
   
-  Float F = FrDielectric(dot(wi,wh), eta2);
+  Float F = FrDielectric(-dot(wi,wh), eta);
   Float G = distribution->G(wo,wi,wh);
   Float D = distribution->D(wh);
   
@@ -555,13 +555,13 @@ point3f MicrofacetTransmission::f(const ray& r_in, const hit_record& rec, const 
     return(albedo->value(rec.u, rec.v, rec.p) * F * G * D  * cosThetaI / (4 * CosTheta(wo) * CosTheta(wi) ));
   }
   // Float factor = (mode == TransportMode::Radiance) ? (1 / eta) : 1;
-  Float sqrtDenom = dot(wo, wh) + eta2 * dot(wi, wh);
+  Float sqrtDenom = dot(wo, wh) + dot(wi, wh) / eta2;
 
   return ((1 - F) * 
           albedo->value(rec.u, rec.v, rec.p) *
           std::fabs(D * G *
           eta2 * eta2 *
-          AbsDot(wi, wh) * AbsDot(wo, wh)  /
+          dot(wi, wh) * dot(wo, wh)  /
           (cosThetaI * cosThetaO * sqrtDenom * sqrtDenom)));
 }
 

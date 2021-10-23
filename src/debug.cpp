@@ -315,29 +315,31 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
     RcppThread::ThreadPool pool(numbercores);
     
     auto worker = [&routput, &goutput, &boutput, &rng, 
-                   nx, ny,  fov, &hlist, max_depth,
+                   nx, ny,  fov, &hlist, max_depth,ns,
                    &cam, &ocam, &ecam, &world] (int j) {
                      std::vector<dielectric*> *mat_stack = new std::vector<dielectric*>;
                      random_gen rng(j);
                      for(unsigned int i = 0; i < nx; i++) {
-                       Float u = Float(i) / Float(nx);
-                       Float v = Float(j) / Float(ny);
-                       ray r;
-                       if(fov != 0 && fov != 360) {
-                         r = cam.get_ray(u,v, vec3f(0,0,0), 0);
-                       } else if (fov == 0){
-                         r = ocam.get_ray(u,v, rng.unif_rand());
-                       } else {
-                         r = ecam.get_ray(u,v, rng.unif_rand());
+                       for(size_t s = 0; s < static_cast<size_t>(ns); s++) {
+                         Float u = Float(i) / Float(nx);
+                         Float v = Float(j) / Float(ny);
+                         ray r;
+                         if(fov != 0 && fov != 360) {
+                           r = cam.get_ray(u,v, vec3f(0,0,0), 0);
+                         } else if (fov == 0){
+                           r = ocam.get_ray(u,v, rng.unif_rand());
+                         } else {
+                           r = ecam.get_ray(u,v, rng.unif_rand());
+                         }
+                         r.pri_stack = mat_stack;
+                         Float qr = calculate_pdf(r, &world, &hlist,
+                                                      max_depth, rng);
+                         mat_stack->clear();
+                         
+                         routput(i,j) += qr/(Float)ns;
+                         goutput(i,j) += qr/(Float)ns;
+                         boutput(i,j) += qr/(Float)ns;
                        }
-                       r.pri_stack = mat_stack;
-                       Float qr = calculate_pdf(r, &world, &hlist,
-                                                    max_depth, rng);
-                       mat_stack->clear();
-                       
-                       routput(i,j) = qr;
-                       goutput(i,j) = qr;
-                       boutput(i,j) = qr;
                      }
                      delete mat_stack;
                    };
@@ -349,7 +351,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
     RcppThread::ThreadPool pool(numbercores);
     
     auto worker = [&routput, &goutput, &boutput, &rng, 
-                   nx, ny,  fov, &hlist, max_depth,
+                   nx, ny,  fov, &hlist, max_depth, ns,
                    &cam, &ocam, &ecam, &world] (int j) {
                      std::vector<dielectric*> *mat_stack = new std::vector<dielectric*>;
                      random_gen rng(j);
@@ -383,29 +385,31 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
     RcppThread::ThreadPool pool(numbercores);
     
     auto worker = [&routput, &goutput, &boutput, &rng, 
-                   nx, ny,  fov, &hlist, max_depth,
+                   nx, ny,  fov, &hlist, max_depth, ns,
                    &cam, &ocam, &ecam, &world] (int j) {
                      std::vector<dielectric*> *mat_stack = new std::vector<dielectric*>;
                      random_gen rng(j);
                      for(unsigned int i = 0; i < nx; i++) {
-                       Float u = Float(i) / Float(nx);
-                       Float v = Float(j) / Float(ny);
-                       ray r;
-                       if(fov != 0 && fov != 360) {
-                         r = cam.get_ray(u,v, vec3f(0,0,0), 0);
-                       } else if (fov == 0){
-                         r = ocam.get_ray(u,v, rng.unif_rand());
-                       } else {
-                         r = ecam.get_ray(u,v, rng.unif_rand());
+                       for(size_t s = 0; s < static_cast<size_t>(ns); s++) {
+                         Float u = Float(i) / Float(nx);
+                         Float v = Float(j) / Float(ny);
+                         ray r;
+                         if(fov != 0 && fov != 360) {
+                           r = cam.get_ray(u,v, vec3f(0,0,0), 0);
+                         } else if (fov == 0){
+                           r = ocam.get_ray(u,v, rng.unif_rand());
+                         } else {
+                           r = ecam.get_ray(u,v, rng.unif_rand());
+                         }
+                         r.pri_stack = mat_stack;
+                         Float qr = calculate_bounces(r, &world, &hlist,
+                                                    max_depth, rng);
+                         mat_stack->clear();
+                         
+                         routput(i,j) += qr/ns;
+                         goutput(i,j) += qr/ns;
+                         boutput(i,j) += qr/ns;
                        }
-                       r.pri_stack = mat_stack;
-                       Float qr = calculate_bounces(r, &world, &hlist,
-                                                  max_depth, rng);
-                       mat_stack->clear();
-                       
-                       routput(i,j) = qr;
-                       goutput(i,j) = qr;
-                       boutput(i,j) = qr;
                      }
                      delete mat_stack;
                    };

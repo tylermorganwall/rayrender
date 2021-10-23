@@ -82,8 +82,7 @@ Float micro_transmission_pdf::value(const vec3f& direction, random_gen& rng, Flo
     eta2 = CosTheta(wo) > 0 ? eta :  1.0/eta;
   }
   vec3f wh = unit_vector(wo + wi * eta2);
-  
-  Float R = FrDielectric(dot(wi,wh), 1.0, eta2);
+  Float R = FrDielectric(dot(wi,wh), eta);
   Float T = 1 - R;
   
   if (dot(wo, wh) * dot(wi, wh) > 0) {
@@ -93,13 +92,9 @@ Float micro_transmission_pdf::value(const vec3f& direction, random_gen& rng, Flo
   if (reflect) {
     return distribution->Pdf(wo, wi, wh) / ( 4 * dot(wo, wh) ) * R;
   }
-
-  // Compute $\wh$ from $\wo$ and $\wi$ for microfacet transmission
-  // Float eta2 = CosTheta(wo) > 0 ? (eta / 1.0) : (1.0 / eta);
-  
   
   // Compute change of variables _dwh\_dwi_ for microfacet transmission
-  Float sqrtDenom = dot(wo, wh) / eta2 + dot(wi, wh);
+  Float sqrtDenom = dot(wo, wh) + dot(wi, wh) / eta2;
   Float dwh_dwi = 1.0 / (sqrtDenom * sqrtDenom);
   return distribution->Pdf(wo, wi, wh) * dwh_dwi * T ;
 }
@@ -115,26 +110,20 @@ Float micro_transmission_pdf::value(const vec3f& direction, Sampler* sampler, Fl
   }
   
   vec3f wh = unit_vector(wo + wi * eta2);
-  Float R = FrDielectric(dot(wi,wh), 1.0, eta2);
+  Float R = FrDielectric(dot(wi,wh), eta);
   Float T = 1 - R;
-  
-  // if (dot(wo, wh) * dot(wi, wh) > 0) return 0;
   
   
   if (reflect) {
     return distribution->Pdf(wo, wi, wh) / ( 4 * dot(wo, wh) ) * R;
   }
-  // Compute $\wh$ from $\wo$ and $\wi$ for microfacet transmission
-  // Float eta2 = CosTheta(wo) > 0 ? (eta / 1.0) : (1.0 / eta);
-
 
   if (dot(wo, wh) * dot(wi, wh) > 0)  {
     return distribution->Pdf(wo, wi, wh) / ( 4 * dot(wo, wh) ) * R;
-
   }
 
   // Compute change of variables _dwh\_dwi_ for microfacet transmission
-  Float sqrtDenom = dot(wo, wh) / eta2 + dot(wi, wh);
+  Float sqrtDenom = dot(wo, wh) + dot(wi, wh) / eta2;
   Float dwh_dwi = 1.0 / (sqrtDenom * sqrtDenom);
   return distribution->Pdf(wo, wi, wh) * dwh_dwi * T ;
 }
@@ -152,7 +141,7 @@ vec3f micro_transmission_pdf::generate(random_gen& rng, bool& diffuse_bounce, Fl
   Float ni_over_nt = entering ? eta : 1 / eta ;
   
   //Never reflect if eta == 1
-  Float R = eta != 1 ? FrDielectric(dot(wi, wh), ni_over_nt) : 0.0;
+  Float R = eta != 1 ? FrDielectric(-dot(wi, wh), eta) : 0.0;
   
   vec3f dir;
   if(rng.unif_rand() < R) {
@@ -171,7 +160,7 @@ vec3f micro_transmission_pdf::generate(Sampler* sampler, bool& diffuse_bounce, F
   Float ni_over_nt = entering ? eta : 1/eta ;
   
   //Never reflect if eta == 1
-  Float R = eta != 1 ? FrDielectric(dot(wi, wh), ni_over_nt) : 0.0;
+  Float R = eta != 1 ? FrDielectric(-dot(wi, wh), eta) : 0.0;
 
   vec3f dir;
   if(sampler->Get1D() < R) {
