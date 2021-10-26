@@ -74,87 +74,51 @@ micro_transmission_pdf::micro_transmission_pdf(const normal3f& w, const vec3f& w
 
 Float micro_transmission_pdf::value(const vec3f& direction, random_gen& rng, Float time) {
   vec3f wo = unit_vector(uvw.world_to_local(direction));
-  // Float cosTheta_o = CosTheta(wo), cosTheta_i = CosTheta(wi);
-  // bool reflect = cosTheta_i * cosTheta_o > 0;
-  // 
-  // Float eta2 = 1.0;
-  // if (!reflect) {
-  //   eta2 = CosTheta(wo) > 0 ? eta :  1.0/eta;
-  // }
-  // vec3f wh = unit_vector(wo + wi * eta2);
-  // Float R = FrDielectric(dot(wi,wh), eta);
-  // Float T = 1 - R;
-  // 
-  // if (dot(wo, wh) * dot(wi, wh) > 0) {
-  //   return distribution->Pdf(wo, wi, wh) / ( 4 * dot(wo, wh) ) * R;
-  // }
-  // 
-  // if (reflect) {
-  //   return distribution->Pdf(wo, wi, wh) / ( 4 * dot(wo, wh) ) * R;
-  // }
-  // 
-  // // Compute change of variables _dwh\_dwi_ for microfacet transmission
-  // Float sqrtDenom = dot(wo, wh) + dot(wi, wh) / eta2;
-  // Float dwh_dwi = 1.0 / (sqrtDenom * sqrtDenom);
-  // return distribution->Pdf(wo, wi, wh) * dwh_dwi * T ;
+  Float cosTheta_o = CosTheta(wo), cosTheta_i = CosTheta(wi);
+  bool reflect = cosTheta_i * cosTheta_o > 0;
   bool entering = CosTheta(wi) > 0;
-  // if (SameHemisphere(wo, wi)) return 0;
   // Compute $\wh$ from $\wo$ and $\wi$ for microfacet transmission
-  Float eta2 = entering ? (1.0/eta) : (eta);
+  Float eta2 = 1;
+  if (!reflect) {
+    eta2 = entering ? (1.0/eta) : (eta);
+  }
   vec3f wh = unit_vector(wi * eta2 + wo);
+  wh = Faceforward(wh, normal3f(0, 0, 1));
+  Float R = FrDielectric(-dot(wo,wh), eta);
   
-  // if (dot(wo, wh) * dot(wi, wh) > 0) return 0;
-  
+  if (dot(wo, wh) * dot(wi, wh) > 0)  {
+    return distribution->Pdf(wo, wi, wh) / ( 4 * AbsDot(wo,wh) ) * R;
+  } 
+
   // Compute change of variables _dwh\_dwi_ for microfacet transmission
-  Float sqrtDenom = dot(wo, wh) + eta2 * dot(wi, wh);
-  Float F = FrDielectric(dot(wo,wh), eta2);
-  Float dwh_dwi =
-    std::fabs((eta2 * eta2 * 
-        dot(wo, wh)) / (sqrtDenom * sqrtDenom));
-  return distribution->Pdf(wo, wi, wh) * dwh_dwi * (1.0-F);
+  Float sqrtDenom = eta2 * dot(wo, wh) + dot(wi, wh);
+  Float dwh_dwi = std::fabs(eta2 * eta2 * dot(wo, wh) / (sqrtDenom * sqrtDenom));
+  return distribution->Pdf(wo, wi, wh) * dwh_dwi * (1.0-R);
 }
 
 Float micro_transmission_pdf::value(const vec3f& direction, Sampler* sampler, Float time) {
   vec3f wo = unit_vector(uvw.world_to_local(direction));
-  // Float cosTheta_o = CosTheta(wo), cosTheta_i = CosTheta(wi);
-  // bool reflect = cosTheta_i * cosTheta_o > 0;
-  // 
-  // Float eta2 = 1.0;
-  // if (!reflect) {
-  //   eta2 = CosTheta(wo) > 0 ? eta : ( 1.0/ eta);
-  // }
-  // 
-  // vec3f wh = unit_vector(wo + wi * eta2);
-  // Float R = FrDielectric(dot(wi,wh), eta);
-  // Float T = 1 - R;
-  // 
-  // 
-  // if (reflect) {
-  //   return distribution->Pdf(wo, wi, wh) / ( 4 * dot(wo, wh) ) * R;
-  // }
-  // 
-  // if (dot(wo, wh) * dot(wi, wh) > 0)  {
-  //   return distribution->Pdf(wo, wi, wh) / ( 4 * dot(wo, wh) ) * R;
-  // }
-  // 
-  // // Compute change of variables _dwh\_dwi_ for microfacet transmission
-  // Float sqrtDenom = dot(wo, wh) + dot(wi, wh) / eta2;
-  // Float dwh_dwi = 1.0 / (sqrtDenom * sqrtDenom);
-  // return distribution->Pdf(wo, wi, wh) * dwh_dwi * T ;
+  Float cosTheta_o = CosTheta(wo), cosTheta_i = CosTheta(wi);
+  bool reflect = cosTheta_i * cosTheta_o > 0;
   bool entering = CosTheta(wi) > 0;
-  // if (SameHemisphere(wo, wi)) return 0;
   // Compute $\wh$ from $\wo$ and $\wi$ for microfacet transmission
-  Float eta2 = entering ? (1.0/eta) : (eta);
+  Float eta2 = 1;
+  if (!reflect) {
+    eta2 = entering ? (1.0/eta) : (eta);
+  }
   vec3f wh = unit_vector(wi  * eta2 + wo);
+  wh = Faceforward(wh, normal3f(0, 0, 1));
+  Float R = FrDielectric(-dot(wo,wh), eta);
   
-  // if (dot(wo, wh) * dot(wi, wh) > 0) return 0;
   
+  if (dot(wo, wh) * dot(wi, wh) > 0)  {
+    return distribution->Pdf(wo, wi, wh) / ( 4 * AbsDot(wo,wh) ) * R;
+  }
+
   // Compute change of variables _dwh\_dwi_ for microfacet transmission
-  Float sqrtDenom = dot(wo, wh) + eta2 * dot(wi, wh);
-  Float dwh_dwi =
-    std::fabs((eta2 * eta2 * 
-    dot(wo, wh)) / (sqrtDenom * sqrtDenom));
-  return distribution->Pdf(wo, wi, wh) * dwh_dwi;
+  Float sqrtDenom = eta2 * dot(wo, wh) + dot(wi, wh);
+  Float dwh_dwi = std::fabs(eta2 * eta2 * dot(wo, wh) / (sqrtDenom * sqrtDenom));
+  return distribution->Pdf(wo, wi, wh) * dwh_dwi * (1.0-R);
 }
 
 inline Float schlick(Float cosine, Float ref_idx, Float ref_idx2) {
@@ -165,48 +129,27 @@ inline Float schlick(Float cosine, Float ref_idx, Float ref_idx2) {
 
 vec3f micro_transmission_pdf::generate(random_gen& rng, bool& diffuse_bounce, Float time) {
   vec3f wh = distribution->Sample_wh(wi, rng.unif_rand(),rng.unif_rand());
-
-  // bool entering = CosTheta(wi) < 0;
-  // Float ni_over_nt = entering ? eta : 1 / eta ;
-  // 
-  // //Never reflect if eta == 1
-  // Float R = eta != 1 ? FrDielectric(-dot(wi, wh), eta) : 0.0;
-  // 
-  // vec3f dir;
-  // if(rng.unif_rand() < R) {
-  //   dir = Reflect(wi, wh);
-  // } else {
-  //   Refract(wi, wh, ni_over_nt, &dir);
-  // }
-  // return(uvw.local_to_world(dir));
   bool entering = CosTheta(wi) > 0;
   Float eta2 = entering ? (1.0/eta) : (eta);  
+  Float R = FrDielectric(dot(wi,wh), eta2);
   vec3f dir;
-  if (!Refract(wi, wh, eta2, &dir)) return vec3f(0);
+  if (!Refract(wi, wh, eta2, &dir) || rng.unif_rand() < R) {
+    dir = Reflect(wi,wh);
+  }
   return(uvw.local_to_world(dir));
 }
 
 vec3f micro_transmission_pdf::generate(Sampler* sampler, bool& diffuse_bounce, Float time) {
   vec2f u = sampler->Get2D();
   normal3f wh = distribution->Sample_wh(wi, u.x(), u.y());
-
-  // bool entering = CosTheta(wi) < 0;
-  // Float ni_over_nt = entering ? eta : 1/eta ;
-  // 
-  // //Never reflect if eta == 1
-  // Float R = eta != 1 ? FrDielectric(-dot(wi, wh), eta) : 0.0;
-  // 
-  // vec3f dir;
-  // if(sampler->Get1D() < R) {
-  //   dir = Reflect(wi, wh);
-  // } else {
-  //   Refract(wi, wh, ni_over_nt, &dir);
-  // }
-  // return(uvw.local_to_world(dir));
   bool entering = CosTheta(wi) > 0;
   Float eta2 = entering ? (1.0/eta) : (eta);  
+  Float R = FrDielectric(dot(wi,wh), eta2);
+  
   vec3f dir;
-  if (!Refract(wi, wh, eta2, &dir)) return vec3f(0);
+  if (!Refract(wi, wh, eta2, &dir) || sampler->Get1D() < R) {
+    dir = Reflect(wi,wh);
+  }
   return(uvw.local_to_world(dir));
 }
 

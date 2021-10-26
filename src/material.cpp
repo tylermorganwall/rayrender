@@ -486,7 +486,6 @@ point3f MicrofacetReflection::get_albedo(const ray& r_in, const hit_record& rec)
 //MicrofacetTransmission
 //
 
-
 bool MicrofacetTransmission::scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng) {
   srec.is_specular = false;
   srec.attenuation = albedo->value(hrec.u, hrec.v, hrec.p);
@@ -512,8 +511,6 @@ bool MicrofacetTransmission::scatter(const ray& r_in, const hit_record& hrec, sc
 
 point3f MicrofacetTransmission::f(const ray& r_in, const hit_record& rec, const ray& scattered) const {
   onb uvw;
-  // bool entering = dot(rec.normal, r_in.direction()) < 0;
-  
   if(!rec.has_bump) {
     uvw.build_from_w(rec.normal);
   } else {
@@ -523,71 +520,33 @@ point3f MicrofacetTransmission::f(const ray& r_in, const hit_record& rec, const 
   vec3f wi = -unit_vector(uvw.world_to_local(r_in.direction()));
   vec3f wo = unit_vector(uvw.world_to_local(scattered.direction()));
   bool entering = CosTheta(wi) > 0;
-  
-  // Float cosThetaO = AbsCosTheta(wo);
-  // Float cosThetaI = AbsCosTheta(wi);
-  // if (cosThetaI == 0 || cosThetaO == 0) {
-  //   return(point3f(0,0,0));
-  // }
-  // 
-  // 
-  // Float eta2 = 1.0;
-  // if (!SameHemisphere(wo, wi)) {
-  //   eta2 = CosTheta(wo) < 0 ? (1.0 / eta) : (eta / 1.0);
-  // }
-  // 
-  // // Compute $\wh$ from $\wo$ and $\wi$ for microfacet transmission
-  // vec3f wh = unit_vector(wo + wi * eta2);
-  // if (wh.z() < 0) wh = -wh;
-  // 
-  // Float F = FrDielectric(-dot(wi,wh), eta);
-  // Float G = distribution->G(wo,wi,wh);
-  // Float D = distribution->D(wh);
-  // 
-  // if (wh.x() == 0 && wh.y() == 0 && wh.z() == 0) {
-  //   return(point3f(0,0,0));
-  // }
-  // 
-  // if (dot(wo, wh) * dot(wi, wh) > 0) {
-  //   return(albedo->value(rec.u, rec.v, rec.p) * F * G * D  * cosThetaI / (4 * CosTheta(wo) * CosTheta(wi) ));
-  // }
-  // 
-  // if (SameHemisphere(wo, wi)) {
-  //   return(albedo->value(rec.u, rec.v, rec.p) * F * G * D  * cosThetaI / (4 * CosTheta(wo) * CosTheta(wi) ));
-  // }
-  // // Float factor = (mode == TransportMode::Radiance) ? (1 / eta) : 1;
-  // Float sqrtDenom = dot(wo, wh) + dot(wi, wh) / eta2;
-  // 
-  // return ((1 - F) * 
-  //         albedo->value(rec.u, rec.v, rec.p) *
-  //         std::fabs(D * G *
-  //         eta2 * eta2 *
-  //         dot(wi, wh) * dot(wo, wh)  /
-  //         (cosThetaI * cosThetaO * sqrtDenom * sqrtDenom)));
-  if (SameHemisphere(wo, wi)) return point3f(0);  // transmission only
   Float cosThetaO = CosTheta(wo);
   Float cosThetaI = CosTheta(wi);
   if (cosThetaI == 0 || cosThetaO == 0) return point3f(0);
-  
+  bool reflect = cosThetaI * cosThetaO > 0;
   
   // Compute $\wh$ from $\wo$ and $\wi$ for microfacet transmission
   //From pbrt: etaA is incident (etaI) direction if entering, otherwise etaB is
   // Float eta = CosTheta(wo) > 0 ? (etaB / etaA) : (etaA / etaB); 
-  
-  Float eta2 = entering ? (1.0/eta) : (eta);
+  Float eta2 = 1;
+  if (!reflect) {
+    eta2 = entering ? (1.0/eta) : (eta);
+  }
   vec3f wh = unit_vector(wi * eta2 + wo);
-  if (wh.z() < 0) wh = -wh;
+  wh = Faceforward(wh, normal3f(0, 0, 1));
+  Float F = FrDielectric(-dot(wo,wh), eta);
+  Float G = distribution->G(wo,wi,wh);
+  Float D = distribution->D(wh);
   
   // Same side?
-  if (dot(wo, wh) * dot(wi, wh) > 0) return point3f(0);
-  
-  Float F = FrDielectric(dot(wi,wh), eta2);
-  
-  Float sqrtDenom = dot(wi, wh) * eta2  + dot(wo, wh);
-  
-  return ((1. - F) *
+  if (reflect) {
+    return(F * G * D / (4  * AbsDot(wo,wh)) );
+  }
+
+  Float sqrtDenom = dot(wi, wh)  + dot(wo, wh)* eta2 ;
+  return ((1.0 - F) *
           albedo->value(rec.u, rec.v, rec.p) * 
-          distribution->D(wh) * distribution->G(wi,wo,wh) * AbsCosTheta(wo) *
+          D * G * AbsCosTheta(wo) *
         std::fabs(eta2 * eta2 *
        dot(wi, wh) * dot(wo, wh)) /
       (cosThetaI * cosThetaO * sqrtDenom * sqrtDenom));
