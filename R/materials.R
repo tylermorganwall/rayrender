@@ -163,7 +163,7 @@ diffuse = function(color = "#ffffff",
                  alphaimage = list(alpha_texture), lightintensity = NA,
                  fog=fog, fogdensity=fogdensity,implicit_sample = importance_sample, 
                  sigma = sigma, glossyinfo = list(NA), bump_texture = list(bump_texture),
-                 bump_intensity = bump_intensity))
+                 bump_intensity = bump_intensity, rough_texture = list(NA)))
 }
 
 #' Metallic Material
@@ -327,7 +327,7 @@ metal = function(color = "#ffffff",
                  lightintensity = NA,fog=FALSE,fogdensity=0.01,
                  implicit_sample = importance_sample, 
                  sigma = 0, glossyinfo = glossyinfo, bump_texture = list(bump_texture),
-                 bump_intensity = bump_intensity))
+                 bump_intensity = bump_intensity, rough_texture = list(NA)))
 }
 
 #' Dielectric (glass) Material
@@ -444,7 +444,7 @@ dielectric = function(color="white", refraction = 1.5,  attenuation = c(0,0,0),
                       alphaimage = list(NA), lightintensity = NA, 
                       fog=FALSE, fogdensity=NA, implicit_sample = importance_sample, 
                       sigma = 0, glossyinfo = list(NA), bump_texture = list(bump_texture),
-                      bump_intensity = bump_intensity))
+                      bump_intensity = bump_intensity, rough_texture = list(NA)))
 }
 
 #' Microfacet Material
@@ -493,6 +493,8 @@ dielectric = function(color="white", refraction = 1.5,  attenuation = c(0,0,0),
 #' @param bump_texture Default `NA`. A matrix, array, or filename (specifying a greyscale image) to 
 #' be used to specify a bump map for the surface.
 #' @param bump_intensity Default `1`. Intensity of the bump map. High values may lead to unphysical results.
+#' @param roughness_texture Default `NA`. A matrix, array, or filename (specifying a greyscale image) to 
+#' be used to specify a roughness map for the surface.
 #' @param importance_sample Default `FALSE`. If `TRUE`, the object will be sampled explicitly during 
 #' the rendering process. If the object is particularly important in contributing to the light paths
 #' in the image (e.g. light sources, refracting glass ball with caustics, metal objects concentrating light),
@@ -555,7 +557,8 @@ microfacet = function(color="white", roughness = 0.0001, transmission = FALSE,
                       gradient_color = NA, gradient_transpose = FALSE,
                       gradient_point_start = NA, gradient_point_end = NA, gradient_type = "hsv",
                       image_texture = NA, image_repeat = 1, alpha_texture = NA,
-                      bump_texture = NA, roughness_texture = NA,  bump_intensity = 1,
+                      bump_texture = NA, bump_intensity = 1, roughness_texture = NA,
+                      roughness_range = c(0.0001, 0.2), roughness_flip = FALSE,
                       importance_sample = FALSE) {
   microtype = switch(microfacet, "tbr" = 1,"beckmann" = 2, 1)
   roughness[roughness <= 0] = 0
@@ -566,6 +569,16 @@ microfacet = function(color="white", roughness = 0.0001, transmission = FALSE,
   } else {
     alphax = roughness[1]^2
     alphay = roughness[2]^2
+  }
+  if(length(roughness_range) != 2) {
+    stop("length of roughness_range must be 2")
+  }
+  if(roughness_range[1] > roughness_range[2]) {
+    roughness_range = rev(roughness_range)
+  }
+  if(roughness_range[1] == roughness_range[2] && !is.na(roughness_texture)) {
+    roughness_texture = NA
+    roughness = roughness_range[1]
   }
   if(length(eta) == 1) {
     eta = c(eta,eta,eta)
@@ -614,10 +627,15 @@ microfacet = function(color="white", roughness = 0.0001, transmission = FALSE,
     bump_texture = NA
     warning("Bump texture not in recognized format (array, matrix, or filename), ignoring.")
   }
+  if(!is.array(roughness_texture) && !is.na(roughness_texture) && !is.character(roughness_texture)) {
+    roughness_texture = NA
+    warning("Roughness texture not in recognized format (array, matrix, or filename), ignoring.")
+  }
   if(length(image_repeat) == 1) {
     image_repeat = c(image_repeat,image_repeat)
   }
-  glossyinfo = list(c(microtype, alphax, alphay, eta, kappa));
+  roughness_flip = ifelse(roughness_flip,1,0)
+  glossyinfo = list(c(microtype, alphax, alphay, eta, kappa, roughness_range,roughness_flip));
   if(alphax == 0 && alphay == 0 ) {
     if(!transmission) {
       new_tibble_row(list(type = "metal", 
@@ -631,7 +649,7 @@ microfacet = function(color="white", roughness = 0.0001, transmission = FALSE,
                           alphaimage = list(alpha_texture), lightintensity = NA, 
                           fog=FALSE, fogdensity=NA, implicit_sample = importance_sample, 
                           sigma = 0, glossyinfo = glossyinfo, bump_texture = list(bump_texture),
-                          bump_intensity = bump_intensity))
+                          bump_intensity = bump_intensity, rough_texture = list(NA)))
     } else {
       new_tibble_row(list(type = "dielectric", 
                           properties = list(c(color, eta[1], c(0,0,0), 0)), 
@@ -644,7 +662,7 @@ microfacet = function(color="white", roughness = 0.0001, transmission = FALSE,
                           alphaimage = list(alpha_texture), lightintensity = NA, 
                           fog=FALSE, fogdensity=NA, implicit_sample = importance_sample, 
                           sigma = 0, glossyinfo = glossyinfo, bump_texture = list(bump_texture),
-                          bump_intensity = bump_intensity))
+                          bump_intensity = bump_intensity, rough_texture = list(NA)))
     }
   } else {
     if(transmission) {
@@ -663,7 +681,7 @@ microfacet = function(color="white", roughness = 0.0001, transmission = FALSE,
                    alphaimage = list(alpha_texture), lightintensity = NA, 
                    fog=FALSE, fogdensity=NA, implicit_sample = importance_sample, 
                    sigma = 0, glossyinfo = glossyinfo, bump_texture = list(bump_texture),
-                   bump_intensity = bump_intensity))
+                   bump_intensity = bump_intensity, rough_texture = list(roughness_texture)))
   }
 }
 
@@ -776,7 +794,7 @@ light = function(color = "#ffffff", intensity = 10, importance_sample = TRUE,
                         alphaimage = list(NA), lightintensity = intensity,
                         fog=FALSE, fogdensity=0.01, implicit_sample = importance_sample, 
                         sigma = 0, glossyinfo = list(NA), bump_texture = list(NA),
-                        bump_intensity = 1))
+                        bump_intensity = 1, rough_texture = list(NA)))
   } else {
     info = c(info, invisible)
     new_tibble_row(list(type = "light", 
@@ -789,7 +807,7 @@ light = function(color = "#ffffff", intensity = 10, importance_sample = TRUE,
                         alphaimage = list(NA), lightintensity = intensity,
                         fog=FALSE, fogdensity=0.01, implicit_sample = importance_sample, 
                         sigma = 0, glossyinfo = list(NA), bump_texture = list(NA),
-                        bump_intensity = 1))
+                        bump_intensity = 1, rough_texture = list(NA)))
   }
 }
 
@@ -829,6 +847,8 @@ light = function(color = "#ffffff", intensity = 10, importance_sample = TRUE,
 #' @param bump_texture Default `NA`. A matrix, array, or filename (specifying a greyscale image) to 
 #' be used to specify a bump map for the surface.
 #' @param bump_intensity Default `1`. Intensity of the bump map. High values may lead to unphysical results.
+#' @param roughness_texture Default `NA`. A matrix, array, or filename (specifying a greyscale image) to 
+#' be used to specify a roughness map for the surface.
 #' @param importance_sample Default `FALSE`. If `TRUE`, the object will be sampled explicitly during 
 #' the rendering process. If the object is particularly important in contributing to the light paths
 #' in the image (e.g. light sources, refracting glass ball with caustics, metal objects concentrating light),
@@ -884,6 +904,7 @@ glossy = function(color="white", gloss = 1, reflectance = 0.05, microfacet = "tb
                   gradient_point_start = NA, gradient_point_end = NA, gradient_type = "hsv",
                   image_texture = NA, image_repeat = 1, alpha_texture = NA, 
                   bump_texture = NA, roughness_texture = NA, bump_intensity = 1,
+                  roughness_range = c(0.0001, 0.2), roughness_flip = FALSE,
                   importance_sample = FALSE) {
   microtype = switch(microfacet, "tbr" = 1,"beckmann" = 2, 1)
   gloss[gloss <= 0] = 0
@@ -896,6 +917,16 @@ glossy = function(color="white", gloss = 1, reflectance = 0.05, microfacet = "tb
   } else {
     alphax = gloss[1]^2
     alphay = gloss[2]^2
+  }
+  if(length(roughness_range) != 2) {
+    stop("length of roughness_range must be 2")
+  }
+  if(roughness_range[1] > roughness_range[2]) {
+    roughness_range = rev(roughness_range)
+  }
+  if(roughness_range[1] == roughness_range[2] && !is.na(roughness_texture)) {
+    roughness_texture = NA
+    gloss = 1-roughness_range[1]
   }
   color = convert_color(color)
   reflectance = rep(reflectance,3)
@@ -933,10 +964,16 @@ glossy = function(color="white", gloss = 1, reflectance = 0.05, microfacet = "tb
     bump_texture = NA
     warning("Bump texture not in recognized format (array, matrix, or filename), ignoring.")
   }
+  if(!is.array(roughness_texture) && !is.na(roughness_texture) && !is.character(roughness_texture)) {
+    roughness_texture = NA
+    warning("Roughness texture not in recognized format (array, matrix, or filename), ignoring.")
+  }
   if(length(image_repeat) == 1) {
     image_repeat = c(image_repeat,image_repeat)
   }
-  glossyinfo = list(c(microtype, alphax, alphay, reflectance, c(0,0,0)));
+  roughness_flip = ifelse(roughness_flip,1,0)
+  
+  glossyinfo = list(c(microtype, alphax, alphay, reflectance, c(0,0,0), roughness_range, roughness_flip));
   new_tibble_row(list(type = "glossy", 
                       properties = list(c(color)), 
                       gradient_color = list(gradient_color), gradient_transpose = FALSE,
@@ -948,7 +985,7 @@ glossy = function(color="white", gloss = 1, reflectance = 0.05, microfacet = "tb
                       alphaimage = list(alpha_texture), lightintensity = NA, 
                       fog=FALSE, fogdensity=NA, implicit_sample = importance_sample, 
                       sigma = 0, glossyinfo = glossyinfo, bump_texture = list(bump_texture),
-                      bump_intensity = bump_intensity))
+                      bump_intensity = bump_intensity, rough_texture = list(roughness_texture)))
 }
 
 
@@ -1059,7 +1096,7 @@ hair = function(pigment = 1.3, red_pigment = 0, color = NA, sigma_a = NA,
                       alphaimage = list(NA), lightintensity = NA,
                       fog=FALSE, fogdensity=NA, implicit_sample = FALSE, 
                       sigma = NA, glossyinfo = list(NA), bump_texture = list(NA),
-                      bump_intensity = NA))
+                      bump_intensity = NA, rough_texture = list(NA)))
 }
 
 #' Lambertian Material (deprecated)

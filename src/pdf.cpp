@@ -46,28 +46,29 @@ vec3f cosine_pdf::generate(Sampler* sampler, bool& diffuse_bounce, Float time) {
 Float micro_pdf::value(const vec3f& direction, random_gen& rng, Float time) {
   vec3f wo = unit_vector(uvw.world_to_local(direction));
   vec3f wh = unit_vector(wi + wo);
-  return(distribution->Pdf(wo, wi, wh) / ( 4 * dot(wo, wh) ));
+  return(distribution->Pdf(wo, wi, wh, u, v) / ( 4 * dot(wo, wh) ));
 }
 
 Float micro_pdf::value(const vec3f& direction, Sampler* sampler, Float time) {
   vec3f wo = unit_vector(uvw.world_to_local(direction));
   vec3f wh = unit_vector(wi + wo);
-  return(distribution->Pdf(wo, wi, wh) / ( 4 * dot(wo, wh) ));
+  return(distribution->Pdf(wo, wi, wh, u, v) / ( 4 * dot(wo, wh) ));
 }
 
 vec3f micro_pdf::generate(random_gen& rng, bool& diffuse_bounce, Float time) {
-  vec3f wh = distribution->Sample_wh(wi, rng.unif_rand(), rng.unif_rand());
+  vec3f wh = distribution->Sample_wh(wi, rng.unif_rand(), rng.unif_rand(), u, v);
   return(uvw.local_to_world(Reflect(wi, wh)));
 }
 
 vec3f micro_pdf::generate(Sampler* sampler, bool& diffuse_bounce, Float time) {
-  vec2f u = sampler->Get2D();
-  vec3f wh = distribution->Sample_wh(wi, u.x(), u.y());
+  vec2f u_r = sampler->Get2D();
+  vec3f wh = distribution->Sample_wh(wi, u_r.x(), u_r.y(), u, v);
   return(uvw.local_to_world(Reflect(wi, wh)));
 }
 
 micro_transmission_pdf::micro_transmission_pdf(const normal3f& w, const vec3f& wi_, MicrofacetDistribution* distribution,
-                       Float eta) : distribution(distribution), eta(eta) {
+                       Float eta, Float uu, Float vv) : distribution(distribution), eta(eta),
+                       u(uu), v(vv) {
   uvw.build_from_w(w);
   wi = -unit_vector(uvw.world_to_local(wi_));
 }
@@ -83,17 +84,19 @@ Float micro_transmission_pdf::value(const vec3f& direction, random_gen& rng, Flo
     eta2 = entering ? (1.0/eta) : (eta);
   }
   vec3f wh = unit_vector(wi * eta2 + wo);
+
   wh = Faceforward(wh, normal3f(0, 0, 1));
+
   Float R = FrDielectric(-dot(wo,wh), eta);
-  
+
   if (dot(wo, wh) * dot(wi, wh) > 0)  {
-    return distribution->Pdf(wo, wi, wh) / ( 4 * AbsDot(wo,wh) ) * R;
+    return distribution->Pdf(wo, wi, wh, u, v) / ( 4 * AbsDot(wo,wh) ) * R;
   } 
 
   // Compute change of variables _dwh\_dwi_ for microfacet transmission
   Float sqrtDenom = eta2 * dot(wo, wh) + dot(wi, wh);
   Float dwh_dwi = std::fabs(eta2 * eta2 * dot(wo, wh) / (sqrtDenom * sqrtDenom));
-  return distribution->Pdf(wo, wi, wh) * dwh_dwi * (1.0-R);
+  return distribution->Pdf(wo, wi, wh, u, v) * dwh_dwi * (1.0-R);
 }
 
 Float micro_transmission_pdf::value(const vec3f& direction, Sampler* sampler, Float time) {
@@ -109,16 +112,15 @@ Float micro_transmission_pdf::value(const vec3f& direction, Sampler* sampler, Fl
   vec3f wh = unit_vector(wi  * eta2 + wo);
   wh = Faceforward(wh, normal3f(0, 0, 1));
   Float R = FrDielectric(-dot(wo,wh), eta);
-  
-  
+
   if (dot(wo, wh) * dot(wi, wh) > 0)  {
-    return distribution->Pdf(wo, wi, wh) / ( 4 * AbsDot(wo,wh) ) * R;
+    return distribution->Pdf(wo, wi, wh, u, v) / ( 4 * AbsDot(wo,wh) ) * R;
   }
 
   // Compute change of variables _dwh\_dwi_ for microfacet transmission
   Float sqrtDenom = eta2 * dot(wo, wh) + dot(wi, wh);
   Float dwh_dwi = std::fabs(eta2 * eta2 * dot(wo, wh) / (sqrtDenom * sqrtDenom));
-  return distribution->Pdf(wo, wi, wh) * dwh_dwi * (1.0-R);
+  return distribution->Pdf(wo, wi, wh, u, v) * dwh_dwi * (1.0-R);
 }
 
 inline Float schlick(Float cosine, Float ref_idx, Float ref_idx2) {
@@ -128,7 +130,8 @@ inline Float schlick(Float cosine, Float ref_idx, Float ref_idx2) {
 }
 
 vec3f micro_transmission_pdf::generate(random_gen& rng, bool& diffuse_bounce, Float time) {
-  vec3f wh = distribution->Sample_wh(wi, rng.unif_rand(),rng.unif_rand());
+  vec3f wh = distribution->Sample_wh(wi, rng.unif_rand(),rng.unif_rand(), u, v);
+
   bool entering = CosTheta(wi) > 0;
   Float eta2 = entering ? (1.0/eta) : (eta);  
   Float R = FrDielectric(dot(wi,wh), eta2);
@@ -140,12 +143,12 @@ vec3f micro_transmission_pdf::generate(random_gen& rng, bool& diffuse_bounce, Fl
 }
 
 vec3f micro_transmission_pdf::generate(Sampler* sampler, bool& diffuse_bounce, Float time) {
-  vec2f u = sampler->Get2D();
-  normal3f wh = distribution->Sample_wh(wi, u.x(), u.y());
+  vec2f u_r = sampler->Get2D();
+  normal3f wh = distribution->Sample_wh(wi, u_r.x(), u_r.y(), u, v);
+
   bool entering = CosTheta(wi) > 0;
   Float eta2 = entering ? (1.0/eta) : (eta);  
   Float R = FrDielectric(dot(wi,wh), eta2);
-  
   vec3f dir;
   if (!Refract(wi, wh, eta2, &dir) || sampler->Get1D() < R) {
     dir = Reflect(wi,wh);
@@ -160,7 +163,7 @@ Float glossy_pdf::value(const vec3f& direction, random_gen& rng, Float time) {
     return(INFINITY);
   }
   vec3f wh = unit_vector(wi + wo);
-  return(0.5f * (AbsCosTheta(wi) * M_1_PI + distribution->Pdf(wo, wi, wh) / (4 * dot(wo, wh))));
+  return(0.5f * (AbsCosTheta(wi) * M_1_PI + distribution->Pdf(wo, wi, wh, u, v) / (4 * dot(wo, wh))));
 }
 
 Float glossy_pdf::value(const vec3f& direction, Sampler* sampler, Float time) {
@@ -169,12 +172,12 @@ Float glossy_pdf::value(const vec3f& direction, Sampler* sampler, Float time) {
     return(INFINITY);
   }
   vec3f wh = unit_vector(wi + wo);
-  return(0.5f * (AbsCosTheta(wi) * M_1_PI + distribution->Pdf(wo, wi, wh) / (4 * dot(wo, wh))));
+  return(0.5f * (AbsCosTheta(wi) * M_1_PI + distribution->Pdf(wo, wi, wh, u, v) / (4 * dot(wo, wh))));
 }
 
 vec3f glossy_pdf::generate(random_gen& rng, bool& diffuse_bounce, Float time) {
   if(rng.unif_rand() < 0.5) {
-    vec3f wh = distribution->Sample_wh(wi, rng.unif_rand(), rng.unif_rand());
+    vec3f wh = distribution->Sample_wh(wi, rng.unif_rand(), rng.unif_rand(), u, v);
     return(uvw.local_to_world(Reflect(wi, wh)));
   } else {
     diffuse_bounce = true;
@@ -183,8 +186,8 @@ vec3f glossy_pdf::generate(random_gen& rng, bool& diffuse_bounce, Float time) {
 }
 vec3f glossy_pdf::generate(Sampler* sampler, bool& diffuse_bounce, Float time) {
   if(sampler->Get1D() < 0.5) {
-    vec2f u = sampler->Get2D();
-    vec3f wh = distribution->Sample_wh(wi, u.x(), u.y());
+    vec2f u_r = sampler->Get2D();
+    vec3f wh = distribution->Sample_wh(wi, u_r.x(), u_r.y(), u, v);
     return(uvw.local_to_world(Reflect(wi, wh)));
   } else {
     diffuse_bounce = true;

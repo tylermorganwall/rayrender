@@ -97,3 +97,22 @@ point3f bump_texture::mesh_value(Float u, Float v, const point3f& p) const {
   Float bv = (data[channels*i + channels*nx*(j+1)] - data[channels*i + channels*nx*(j-1)])/2;
   return(point3f(intensity*bu,intensity*bv,0));
 }
+
+point2f roughness_texture::value(Float u, Float v) const {
+  int i = u * nx;
+  int j = (1-v) * ny;
+  if (i < 0) i = 0;
+  if (j < 0) j = 0;
+  if (i > nx-1) i = nx-1;
+  if (j > ny-1) j = ny-1;
+  Float alphax = RoughnessToAlpha(data[channels*i + channels*nx*j]);
+  Float alphay = channels > 1 ? RoughnessToAlpha(data[channels*i + channels*nx*j+1]) : alphax;
+  return(point2f(alphax * alphax, alphay * alphay));
+}
+
+Float roughness_texture::RoughnessToAlpha(Float roughness) {
+  roughness = std::fmax(roughness, (Float)0.0001550155);
+  Float x = std::log(roughness);
+  return(1.62142f + 0.819955f * x + 0.1734f * x * x +
+         0.0171201f * x * x * x + 0.000640711f * x * x * x * x );
+}

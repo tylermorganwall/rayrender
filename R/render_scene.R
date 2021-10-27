@@ -407,6 +407,35 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
   alphalist$bump_tex_bool = bump_tex_bool
   alphalist$bump_intensity = bump_intensity
   
+  #alpha texture handler
+  roughness_array_list = scene$roughness_texture
+  rough_tex_bool = purrr::map_lgl(roughness_array_list,.f = ~is.array(.x[[1]]))
+  rough_filename_bool = purrr::map_lgl(roughness_array_list,.f = ~is.character(.x[[1]]))
+  rough_temp_file_names = purrr::map_chr(rough_tex_bool, .f = (function(.x) tempfile(fileext = ".png")))
+  for(i in 1:length(roughness_array_list)) {
+    if(rough_tex_bool[i]) {
+      tempgloss = glossyinfo[[i]]
+      if(length(dim(roughness_array_list[[i]][[1]])) == 2) {
+        png::writePNG(fliplr(t(roughness_array_list[[i]][[1]])), rough_temp_file_names[i])
+      } else if(dim(roughness_array_list[[i]][[1]])[3] == 3) {
+        png::writePNG(fliplr(aperm(roughness_array_list[[i]][[1]],c(2,1,3))), rough_temp_file_names[i])
+      } else {
+        stop("alpha texture dims: c(", paste(dim(roughness_array_list[[i]][[1]]),collapse=", "), ") not valid for texture.")
+      }
+    }
+    if(rough_filename_bool[i]) {
+      if(any(!file.exists(path.expand(roughness_array_list[[i]][[1]])) & nchar(roughness_array_list[[i]][[1]]) > 0)) {
+        stop(paste0("Cannot find the following texture file:\n",
+                    paste(roughness_array_list[[i]][[1]], collapse="\n")))
+      }
+      rough_temp_file_names[i] = path.expand(roughness_array_list[[i]][[1]])
+    }
+  }
+  rough_tex_bool = rough_tex_bool | rough_filename_bool
+  roughness_list = list()
+  roughness_list$rough_temp_file_names = rough_temp_file_names
+  roughness_list$rough_tex_bool = rough_tex_bool
+  
   #movement handler
   if(shutteropen == shutterclose) {
     movingvec = rep(FALSE,length(movingvec))
@@ -640,6 +669,8 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
   scene_info$image_repeat = image_repeat
   scene_info$csg_info = csg_info
   scene_info$mesh_list=mesh_list
+  scene_info$roughness_list = roughness_list
+  
 
   #Pathrace Scene
   rgb_mat = render_scene_rcpp(camera_info = camera_info, scene_info = scene_info) 

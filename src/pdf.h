@@ -35,7 +35,8 @@ public:
 
 class micro_pdf : public pdf {
 public:
-  micro_pdf(const normal3f& w, const vec3f& wi_, MicrofacetDistribution* distribution) : distribution(distribution) {
+  micro_pdf(const normal3f& w, const vec3f& wi_, MicrofacetDistribution* distribution, 
+            Float uu, Float vv) : distribution(distribution),  u(uu), v(vv) {
     uvw.build_from_w(w);
     wi = -unit_vector(uvw.world_to_local(wi_));;
   }
@@ -46,12 +47,14 @@ public:
   onb uvw;
   vec3f wi;
   MicrofacetDistribution *distribution;
+  Float u,v;
+  
 };
 
 class micro_transmission_pdf : public pdf {
 public:
   micro_transmission_pdf(const normal3f& w, const vec3f& wi_, MicrofacetDistribution* distribution,
-                         Float eta);
+                         Float eta, Float uu, Float vv);
   virtual Float value(const vec3f& direction, random_gen& rng, Float time = 0);
   virtual Float value(const vec3f& direction, Sampler* sampler, Float time = 0);
   virtual vec3f generate(random_gen& rng, bool& diffuse_bounce, Float time = 0);
@@ -60,11 +63,13 @@ public:
   vec3f wi;
   Float eta;
   MicrofacetDistribution *distribution;
+  Float u,v;
 };
 
 class glossy_pdf : public pdf {
 public:
-  glossy_pdf(const normal3f& w, const vec3f& wi_, MicrofacetDistribution* distribution) : distribution(distribution) {
+  glossy_pdf(const normal3f& w, const vec3f& wi_, MicrofacetDistribution* distribution, 
+             Float uu, Float vv) : distribution(distribution), u(uu), v(vv) {
     uvw.build_from_w(w);
     wi = -unit_vector(uvw.world_to_local(wi_));;
   }
@@ -75,6 +80,8 @@ public:
   onb uvw;
   vec3f wi;
   MicrofacetDistribution *distribution;
+  Float u,v;
+  
 };
 
 class hair_pdf : public pdf {

@@ -104,6 +104,8 @@ List render_scene_rcpp(List camera_info, List scene_info) {
   List image_repeat = as<List>(scene_info["image_repeat"]);
   List csg_info = as<List>(scene_info["csg_info"]);
   List mesh_list = as<List>(scene_info["mesh_list"]);
+  List roughness_list = as<List>(scene_info["roughness_list"]);
+  
 
   
   auto startfirst = std::chrono::high_resolution_clock::now();
@@ -144,6 +146,8 @@ List render_scene_rcpp(List camera_info, List scene_info) {
   LogicalVector has_bump = as<LogicalVector>(alphalist["bump_tex_bool"]);
   NumericVector bump_intensity = as<NumericVector>(alphalist["bump_intensity"]);
   
+  CharacterVector roughness_files = as<CharacterVector>(roughness_list["rough_temp_file_names"]);
+  LogicalVector has_roughness = as<LogicalVector>(roughness_list["rough_tex_bool"]);
   
   RcppThread::ThreadPool pool(numbercores);
   GetRNGstate();
@@ -172,6 +176,9 @@ List render_scene_rcpp(List camera_info, List scene_info) {
   
   std::vector<Float* > bump_textures;
   std::vector<int* > nx_ny_nn_bump;
+  
+  std::vector<Float* > roughness_textures;
+  std::vector<int* > nx_ny_nn_roughness;
   //Shared material vector
   std::vector<std::shared_ptr<material> >* shared_materials = new std::vector<std::shared_ptr<material> >;
   
@@ -212,6 +219,54 @@ List render_scene_rcpp(List camera_info, List scene_info) {
       bump_textures.push_back(nullptr);
       nx_ny_nn_bump.push_back(nullptr);
     }
+    if(has_roughness(i)) {
+      NumericVector temp_glossy = as<NumericVector>(glossyinfo(i));
+      int nxr, nyr, nnr;
+      Float* tex_data_roughness = stbi_loadf(roughness_files(i), &nxr, &nyr, &nnr, 0);
+      Float min = temp_glossy(9), max = temp_glossy(10);
+      Float rough_range = max-min;
+      Float maxr = 0, minr = 1;
+      for(int ii = 0; ii < nxr; ii++) {
+        for(int jj = 0; jj < nyr; jj++) {
+          Float temp_rough = tex_data_roughness[nnr*ii + nnr*nxr*jj];
+          maxr = maxr < temp_rough ? temp_rough : maxr;
+          minr = minr > temp_rough ? temp_rough : minr;
+          if(nnr > 1) {
+            temp_rough = tex_data_roughness[nnr*ii + nnr*nxr*jj+1];
+            maxr = maxr < temp_rough ? temp_rough : maxr;
+            minr = minr > temp_rough ? temp_rough : minr;
+          }
+        }
+      }
+      Float data_range = maxr-minr;
+      for(int ii = 0; ii < nxr; ii++) {
+        for(int jj = 0; jj < nyr; jj++) {
+          if(!temp_glossy(11)) {
+            tex_data_roughness[nnr*ii + nnr*nxr*jj] = 
+              (tex_data_roughness[nnr*ii + nnr*nxr*jj]-minr)/data_range * rough_range + min;
+            if(nnr > 1) {
+              tex_data_roughness[nnr*ii + nnr*nxr*jj+1] = 
+                (tex_data_roughness[nnr*ii + nnr*nxr*jj+1]-minr)/data_range * rough_range + min;
+            }
+          } else {
+            tex_data_roughness[nnr*ii + nnr*nxr*jj] = 
+              (1.0-(tex_data_roughness[nnr*ii + nnr*nxr*jj]-minr)/data_range) * rough_range + min;
+            if(nnr > 1) {
+              tex_data_roughness[nnr*ii + nnr*nxr*jj+1] = 
+                (1.0-(tex_data_roughness[nnr*ii + nnr*nxr*jj+1]-minr)/data_range) * rough_range + min;
+            }
+          }
+        }
+      }
+      roughness_textures.push_back(tex_data_roughness);
+      nx_ny_nn_roughness.push_back(new int[3]);
+      nx_ny_nn_roughness[i][0] = nxr;
+      nx_ny_nn_roughness[i][1] = nyr;
+      nx_ny_nn_roughness[i][2] = nnr;
+    } else {
+      roughness_textures.push_back(nullptr);
+      nx_ny_nn_roughness.push_back(nullptr);
+    }
   }
   
   //Initialize transformation cache
@@ -228,6 +283,7 @@ List render_scene_rcpp(List camera_info, List scene_info) {
                                 isimage, has_alpha, alpha_textures, nx_ny_nn_alpha,
                                 textures, nx_ny_nn, has_bump, bump_textures, nx_ny_nn_bump,
                                 bump_intensity,
+                                roughness_textures, nx_ny_nn_roughness, has_roughness,
                                 lightintensity, isflipped,
                                 isvolume, voldensity, order_rotation_list, 
                                 isgrouped, group_transform,
@@ -401,6 +457,10 @@ List render_scene_rcpp(List camera_info, List scene_info) {
     if(has_bump(i)) {
       stbi_image_free(bump_textures[i]);
       delete nx_ny_nn_bump[i];
+    }
+    if(has_roughness(i)) {
+      stbi_image_free(roughness_textures[i]);
+      delete nx_ny_nn_roughness[i];
     }
   }
   delete shared_materials;

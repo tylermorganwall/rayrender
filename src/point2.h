@@ -32,7 +32,7 @@ public:
   
   inline const point2<T>& operator+() const { return *this; }
   inline point2<T> operator-() const { return point2<T>(-e[0], -e[1]); }
-  
+
   inline T operator[](int i) const { return e[i]; }
   
   inline point2<T>& operator+=(const point2<T> &v2);
@@ -90,15 +90,13 @@ inline point2<T> operator/(const point2<T> &v1, const point2<T> &v2) {
   return point2<T>(v1.e[0] / v2.e[0],v1.e[1] / v2.e[1]);
 }
 
+
+
 template<typename T> 
-inline point2<T> operator*(Float t, const point2<T> &v) {
+inline point2<T> operator*(const point2<T> &v, const Float t) {
   return point2<T>(t*v.e[0], t*v.e[1]);
 }
 
-template<typename T> 
-inline point2<T> operator*(const point2<T> &v, Float t) {
-  return point2<T>(t*v.e[0], t*v.e[1]);
-}
 
 template<typename T> 
 inline point2<T> operator/(const point2<T> &v, Float t) {

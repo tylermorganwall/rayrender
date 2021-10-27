@@ -191,4 +191,16 @@ public:
   Float intensity;
 };
 
+class roughness_texture {
+public:
+  roughness_texture() {}
+  roughness_texture(Float *pixels, int A, int B, int nn) : data(pixels), nx(A), ny(B), channels(nn) {};
+  point2f value(Float u, Float v) const;
+  static Float RoughnessToAlpha(Float roughness);
+  Float *data;
+  int nx, ny, channels;
+  vec3f u_vec, v_vec;
+};
+
+
 #endif

@@ -435,9 +435,9 @@ bool MicrofacetReflection::scatter(const ray& r_in, const hit_record& hrec, scat
   srec.is_specular = false;
   srec.attenuation = albedo->value(hrec.u, hrec.v, hrec.p);
   if(!hrec.has_bump) {
-    srec.pdf_ptr = new micro_pdf(hrec.normal, r_in.direction(), distribution);
+    srec.pdf_ptr = new micro_pdf(hrec.normal, r_in.direction(), distribution, hrec.u, hrec.v);
   } else {
-    srec.pdf_ptr = new micro_pdf(hrec.bump_normal, r_in.direction(), distribution);
+    srec.pdf_ptr = new micro_pdf(hrec.bump_normal, r_in.direction(), distribution, hrec.u, hrec.v);
   }
   return(true);
 }
@@ -446,9 +446,9 @@ bool MicrofacetReflection::scatter(const ray& r_in, const hit_record& hrec, scat
   srec.is_specular = false;
   srec.attenuation = albedo->value(hrec.u, hrec.v, hrec.p);
   if(!hrec.has_bump) {
-    srec.pdf_ptr = new micro_pdf(hrec.normal, r_in.direction(), distribution);
+    srec.pdf_ptr = new micro_pdf(hrec.normal, r_in.direction(), distribution, hrec.u, hrec.v);
   } else {
-    srec.pdf_ptr = new micro_pdf(hrec.bump_normal, r_in.direction(), distribution);
+    srec.pdf_ptr = new micro_pdf(hrec.bump_normal, r_in.direction(), distribution, hrec.u, hrec.v);
   }
   return(true);
 }
@@ -474,7 +474,7 @@ point3f MicrofacetReflection::f(const ray& r_in, const hit_record& rec, const ra
   }
   point3f F = FrCond(cosThetaO, eta, k);
   Float G = distribution->G(wo,wi,normal);
-  Float D = distribution->D(normal);
+  Float D = distribution->D(normal, rec.u, rec.v);
   return(albedo->value(rec.u, rec.v, rec.p) * F * G * D  * cosThetaI / (4 * CosTheta(wo) * CosTheta(wi) ));
 }
 
@@ -490,9 +490,9 @@ bool MicrofacetTransmission::scatter(const ray& r_in, const hit_record& hrec, sc
   srec.is_specular = false;
   srec.attenuation = albedo->value(hrec.u, hrec.v, hrec.p);
   if(!hrec.has_bump) {
-    srec.pdf_ptr = new micro_transmission_pdf(hrec.normal, r_in.direction(), distribution, eta);
+    srec.pdf_ptr = new micro_transmission_pdf(hrec.normal, r_in.direction(), distribution, eta, hrec.u, hrec.v);
   } else {
-    srec.pdf_ptr = new micro_transmission_pdf(hrec.bump_normal, r_in.direction(), distribution, eta);
+    srec.pdf_ptr = new micro_transmission_pdf(hrec.bump_normal, r_in.direction(), distribution, eta, hrec.u, hrec.v);
   }
   return(true);
 }
@@ -502,9 +502,9 @@ bool MicrofacetTransmission::scatter(const ray& r_in, const hit_record& hrec, sc
   srec.attenuation = albedo->value(hrec.u, hrec.v, hrec.p);
 
   if(!hrec.has_bump) {
-    srec.pdf_ptr = new micro_transmission_pdf(hrec.normal, r_in.direction(), distribution, eta);
+    srec.pdf_ptr = new micro_transmission_pdf(hrec.normal, r_in.direction(), distribution, eta, hrec.u, hrec.v);
   } else {
-    srec.pdf_ptr = new micro_transmission_pdf(hrec.bump_normal, r_in.direction(), distribution, eta);
+    srec.pdf_ptr = new micro_transmission_pdf(hrec.bump_normal, r_in.direction(), distribution, eta, hrec.u, hrec.v);
   }
   return(true);
 }
@@ -536,7 +536,7 @@ point3f MicrofacetTransmission::f(const ray& r_in, const hit_record& rec, const 
   wh = Faceforward(wh, normal3f(0, 0, 1));
   Float F = FrDielectric(-dot(wo,wh), eta);
   Float G = distribution->G(wo,wi,wh);
-  Float D = distribution->D(wh);
+  Float D = distribution->D(wh, rec.u, rec.v);
   
   // Same side?
   if (reflect) {
@@ -569,14 +569,14 @@ point3f MicrofacetTransmission::SchlickFresnel(Float cosTheta) const {
 bool glossy::scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng) {
   srec.is_specular = false;
   srec.attenuation = albedo->value(hrec.u, hrec.v, hrec.p);
-  srec.pdf_ptr = new glossy_pdf(hrec.normal, r_in.direction(), distribution);
+  srec.pdf_ptr = new glossy_pdf(hrec.normal, r_in.direction(), distribution, hrec.u, hrec.v);
   return(true);
 }
 
 bool glossy::scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler) {
   srec.is_specular = false;
   srec.attenuation = albedo->value(hrec.u, hrec.v, hrec.p);
-  srec.pdf_ptr = new glossy_pdf(hrec.normal, r_in.direction(), distribution);
+  srec.pdf_ptr = new glossy_pdf(hrec.normal, r_in.direction(), distribution, hrec.u, hrec.v);
   return(true);
 }
 
@@ -603,7 +603,7 @@ point3f glossy::f(const ray& r_in, const hit_record& rec, const ray& scattered) 
   if(cosine < 0) {
     cosine = 0;
   }
-  point3f specular = distribution->D(wh) /
+  point3f specular = distribution->D(wh, rec.u, rec.v) /
     (4 * AbsDot(wi, wh) *
       std::fmax(AbsCosTheta(wi), AbsCosTheta(wo))) *
       SchlickFresnel(dot(wo, wh));

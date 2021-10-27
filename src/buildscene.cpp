@@ -39,6 +39,8 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
                      LogicalVector has_bump,
                      std::vector<Float* >& bump_textures, std::vector<int* >& nvecb,
                      NumericVector& bump_intensity,
+                     std::vector<Float* >& roughness_textures,  std::vector<int* >& nvecr,
+                     LogicalVector has_roughness,
                      NumericVector& lightintensity,
                      LogicalVector& isflipped,
                      LogicalVector& isvolume, NumericVector& voldensity,
@@ -88,6 +90,8 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
   vec3f vel(x(0), y(0), z(0));
   std::vector<std::shared_ptr<alpha_texture> > alpha(n);
   std::vector<std::shared_ptr<bump_texture> > bump(n);
+  std::vector<std::shared_ptr<roughness_texture> > roughness(n);
+  
   for(int i = 0; i < n; i++) {
     tempvector = as<NumericVector>(properties(i));
     tempgradient = as<NumericVector>(gradient_colors(i));
@@ -119,6 +123,10 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
       bump[i] = std::make_shared<bump_texture>(bump_textures[i], 
                                                nvecb[i][0], nvecb[i][1], nvecb[i][2], 
                               bump_intensity(i));
+    }
+    if(has_roughness(i)) {
+      roughness[i] = std::make_shared<roughness_texture>(roughness_textures[i], 
+                                                         nvecr[i][0], nvecr[i][1], nvecr[i][2]);
     }
     if(type(i) == 2) {
       prop_len = 3;
@@ -281,9 +289,9 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
       } else if (type(i) == 6) {
         MicrofacetDistribution *dist;
         if(temp_glossy(0) == 1) {
-          dist = new TrowbridgeReitzDistribution(temp_glossy(1), temp_glossy(2), true);
+          dist = new TrowbridgeReitzDistribution(temp_glossy(1), temp_glossy(2),roughness[i], has_roughness(i),  true);
         } else {
-          dist = new BeckmannDistribution(temp_glossy(1), temp_glossy(2), true);
+          dist = new BeckmannDistribution(temp_glossy(1), temp_glossy(2),roughness[i], has_roughness(i), true);
         }
         if(isimage(i)) {
           tex = std::make_shared<MicrofacetReflection>(std::make_shared<image_texture>(textures[i],nvec[i][0],nvec[i][1],nvec[i][2], 
@@ -329,9 +337,9 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
       } if (type(i) == 7) {
         MicrofacetDistribution *dist;
         if(temp_glossy(0) == 1) {
-          dist = new TrowbridgeReitzDistribution(temp_glossy(1), temp_glossy(2), true);
+          dist = new TrowbridgeReitzDistribution(temp_glossy(1), temp_glossy(2),roughness[i], has_roughness(i), true);
         } else {
-          dist = new BeckmannDistribution(temp_glossy(1), temp_glossy(2), true);
+          dist = new BeckmannDistribution(temp_glossy(1), temp_glossy(2),roughness[i], has_roughness(i), true);
         }
         if(isimage(i)) {
           tex = std::make_shared<glossy>(std::make_shared<image_texture>(textures[i],nvec[i][0],nvec[i][1],nvec[i][2], 
@@ -384,9 +392,9 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
       } else if (type(i) == 10) {
         MicrofacetDistribution *dist;
         if(temp_glossy(0) == 1) {
-          dist = new TrowbridgeReitzDistribution(temp_glossy(1), temp_glossy(2), true);
+          dist = new TrowbridgeReitzDistribution(temp_glossy(1), temp_glossy(2),roughness[i], has_roughness(i), true);
         } else {
-          dist = new BeckmannDistribution(temp_glossy(1), temp_glossy(2), true);
+          dist = new BeckmannDistribution(temp_glossy(1), temp_glossy(2),roughness[i], has_roughness(i), true);
         }
         if(isimage(i)) {
           tex = std::make_shared<MicrofacetTransmission>(std::make_shared<image_texture>(textures[i],nvec[i][0],nvec[i][1],nvec[i][2], 

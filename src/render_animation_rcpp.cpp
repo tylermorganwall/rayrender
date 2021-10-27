@@ -84,6 +84,7 @@ void render_animation_rcpp(List camera_info, List scene_info, List camera_moveme
   List image_repeat = as<List>(scene_info["image_repeat"]);
   List csg_info = as<List>(scene_info["csg_info"]);
   List mesh_list = as<List>(scene_info["mesh_list"]);
+  List roughness_list = as<List>(scene_info["roughness_list"]);
   
   
   auto startfirst = std::chrono::high_resolution_clock::now();
@@ -126,6 +127,8 @@ void render_animation_rcpp(List camera_info, List scene_info, List camera_moveme
   LogicalVector has_bump = as<LogicalVector>(alphalist["bump_tex_bool"]);
   NumericVector bump_intensity = as<NumericVector>(alphalist["bump_intensity"]);
   
+  CharacterVector roughness_files = as<CharacterVector>(roughness_list["rough_temp_file_names"]);
+  LogicalVector has_roughness = as<LogicalVector>(roughness_list["rough_tex_bool"]);
   
   RcppThread::ThreadPool pool(numbercores);
   GetRNGstate();
@@ -144,6 +147,9 @@ void render_animation_rcpp(List camera_info, List scene_info, List camera_moveme
   
   std::vector<Float* > bump_textures;
   std::vector<int* > nx_ny_nn_bump;
+  
+  std::vector<Float* > roughness_textures;
+  std::vector<int* > nx_ny_nn_roughness;
   //Shared material vector
   std::vector<std::shared_ptr<material> >* shared_materials = new std::vector<std::shared_ptr<material> >;
   
@@ -184,6 +190,18 @@ void render_animation_rcpp(List camera_info, List scene_info, List camera_moveme
       bump_textures.push_back(nullptr);
       nx_ny_nn_bump.push_back(nullptr);
     }
+    if(has_roughness(i)) {
+      int nxr, nyr, nnr;
+      Float* tex_data_roughness = stbi_loadf(roughness_files(i), &nxr, &nyr, &nnr, 0);
+      roughness_textures.push_back(tex_data_roughness);
+      nx_ny_nn_roughness.push_back(new int[3]);
+      nx_ny_nn_roughness[i][0] = nxr;
+      nx_ny_nn_roughness[i][1] = nyr;
+      nx_ny_nn_roughness[i][2] = nnr;
+    } else {
+      roughness_textures.push_back(nullptr);
+      nx_ny_nn_roughness.push_back(nullptr);
+    }
   }
   
   //Initialize transformation cache
@@ -199,6 +217,7 @@ void render_animation_rcpp(List camera_info, List scene_info, List camera_moveme
                                                   isimage, has_alpha, alpha_textures, nx_ny_nn_alpha,
                                                   textures, nx_ny_nn, has_bump, bump_textures, nx_ny_nn_bump,
                                                   bump_intensity,
+                                                  roughness_textures, nx_ny_nn_roughness, has_roughness,
                                                   lightintensity, isflipped,
                                                   isvolume, voldensity, order_rotation_list, 
                                                   isgrouped, group_transform,
