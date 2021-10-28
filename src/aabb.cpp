@@ -66,3 +66,9 @@ const point3f aabb::offset(const vec3f p) {
   return(o);
 }
 
+const point3f aabb::Corner(int corner) const {
+  return point3f((*this).bounds[(corner & 1)].x(),
+                 (*this).bounds[(corner & 2) ? 1 : 0].y(),
+                 (*this).bounds[(corner & 4) ? 1 : 0].z());
+}
+

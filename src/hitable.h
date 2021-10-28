@@ -8,6 +8,7 @@
 #include "sampler.h"
 #include <Rcpp.h>
 #include "transform.h"
+#include "animatedtransform.h"
 #include <memory>
 #include <cfloat>
 
@@ -44,6 +45,7 @@ class hitable {
     }
     virtual ~hitable() {}
     const std::shared_ptr<Transform> ObjectToWorld, WorldToObject;
+    const std::shared_ptr<AnimatedTransform> AnimatedTransform;
     const bool reverseOrientation;
     const bool transformSwapsHandedness;
 };

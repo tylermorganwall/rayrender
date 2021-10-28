@@ -58,6 +58,8 @@ class aabb {
     const point3f offset(const point3f o);
     const point3f offset(const vec3f o);
     
+    const point3f Corner(int corner) const;
+    
     Float surface_area();
     Float Volume();
     
