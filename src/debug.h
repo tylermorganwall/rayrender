@@ -419,7 +419,6 @@ inline Float calculate_bounces(const ray& r, hitable *world, hitable_list *hlist
   point3f emit_color(0,0,0);
   
   point3f throughput(1,1,1);
-  float prev_t = 1;
   ray r1 = r;
   ray r2 = r;
   bool diffuse_bounce = false;
@@ -458,7 +457,7 @@ inline Float calculate_bounces(const ray& r, hitable *world, hitable_list *hlist
         //Translates the world space point into object space point, generates ray assuring intersection, and then translates 
         //ray back into world space
         //Remove this when error analysis fully implemented
-        point3f offset_p = offset_ray(hrec.p-r2.A, hrec.normal) + r2.A;
+        // point3f offset_p = offset_ray(hrec.p-r2.A, hrec.normal) + r2.A;
         
         r1 = r2;
         vec3f dir;

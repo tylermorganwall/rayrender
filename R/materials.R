@@ -463,7 +463,8 @@ dielectric = function(color="white", refraction = 1.5,  attenuation = c(0,0,0),
 #' If single number, will be repeated across all three channels. If `transmission = TRUE`, this is a single value representing the
 #' index of refraction of the material.
 #' @param kappa Default `0`. Wavelength dependent absorption of the material (red, green, and blue channels).
-#' If single number, will be repeated across all three channels.
+#' If single number, will be repeated across all three channels. If `transmission = TRUE`, this length-3 vector specifies 
+#' the attenuation of the dielectric (analogous to the dielectric `attenuation` argument).
 #' @param microfacet Default `tbr`.  Type of microfacet distribution. Alternative option `beckmann`.
 #' @param checkercolor Default `NA`. If not `NA`, determines the secondary color of the checkered surface. 
 #' Can be either a hexadecimal code, or a numeric rgb vector listing three intensities between `0` and `1`.
@@ -495,6 +496,10 @@ dielectric = function(color="white", refraction = 1.5,  attenuation = c(0,0,0),
 #' @param bump_intensity Default `1`. Intensity of the bump map. High values may lead to unphysical results.
 #' @param roughness_texture Default `NA`. A matrix, array, or filename (specifying a greyscale image) to 
 #' be used to specify a roughness map for the surface.
+#' @param roughness_range Default ` c(0.0001, 0.2)`. This is a length-2 vector that specifies the range of roughness values 
+#' that the `roughness_texture` can take. 
+#' @param roughness_flip Default `FALSE`. Setting this to `TRUE` flips the roughness values specified in the `roughness_texture`
+#' so high values are now low values and vice versa.
 #' @param importance_sample Default `FALSE`. If `TRUE`, the object will be sampled explicitly during 
 #' the rendering process. If the object is particularly important in contributing to the light paths
 #' in the image (e.g. light sources, refracting glass ball with caustics, metal objects concentrating light),
@@ -849,6 +854,10 @@ light = function(color = "#ffffff", intensity = 10, importance_sample = TRUE,
 #' @param bump_intensity Default `1`. Intensity of the bump map. High values may lead to unphysical results.
 #' @param roughness_texture Default `NA`. A matrix, array, or filename (specifying a greyscale image) to 
 #' be used to specify a roughness map for the surface.
+#' @param roughness_range Default ` c(0.0001, 0.2)`. This is a length-2 vector that specifies the range of roughness values 
+#' that the `roughness_texture` can take. 
+#' @param roughness_flip Default `FALSE`. Setting this to `TRUE` flips the roughness values specified in the `roughness_texture`
+#' so high values are now low values and vice versa.
 #' @param importance_sample Default `FALSE`. If `TRUE`, the object will be sampled explicitly during 
 #' the rendering process. If the object is particularly important in contributing to the light paths
 #' in the image (e.g. light sources, refracting glass ball with caustics, metal objects concentrating light),

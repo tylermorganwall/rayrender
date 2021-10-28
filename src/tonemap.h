@@ -12,11 +12,6 @@ static const Float E = 0.02;
 static const Float F = 0.30;
 static const Float W = 11.2;
 
-static Float reinhard(Float color, Float sum);
-static Float uncharted(Float x);
-static Float hable(Float color);
-static Float hbd(Float color);
-
 // [[Rcpp::export]]
 Rcpp::List tonemap_image(Rcpp::NumericMatrix routput, Rcpp::NumericMatrix goutput, Rcpp::NumericMatrix boutput, 
                          int toneval);

@@ -67,7 +67,7 @@ vec3f micro_pdf::generate(Sampler* sampler, bool& diffuse_bounce, Float time) {
 }
 
 micro_transmission_pdf::micro_transmission_pdf(const normal3f& w, const vec3f& wi_, MicrofacetDistribution* distribution,
-                       Float eta, Float uu, Float vv) : distribution(distribution), eta(eta),
+                       Float eta, Float uu, Float vv) : eta(eta), distribution(distribution), 
                        u(uu), v(vv) {
   uvw.build_from_w(w);
   wi = -unit_vector(uvw.world_to_local(wi_));

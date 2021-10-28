@@ -101,8 +101,6 @@ class SobolSampler : public PixelSampler {
     const unsigned int xPixelSamples, yPixelSamples;
     unsigned int current1Dsample, current2Dsample;
     unsigned int pixelseed;
-    unsigned int pixeloffset;
-    
 };
 
 class SobolBlueNoiseSampler : public PixelSampler {
@@ -116,7 +114,6 @@ class SobolBlueNoiseSampler : public PixelSampler {
     std::unique_ptr<Sampler> Clone(int seed);
     private:
       unsigned int current1Dsample, current2Dsample;
-      unsigned int pixelseed;
 
 };
 

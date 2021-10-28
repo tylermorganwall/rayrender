@@ -210,7 +210,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
   } else if (debug_channel == 11) {
     RcppThread::ThreadPool pool(numbercores);
     
-    auto worker = [&routput, &goutput, &boutput, &rng, 
+    auto worker = [&routput, &goutput, &boutput, 
                    nx, ny,  fov, &hlist, max_depth,ns,
                    &cam, &ocam, &ecam, &world] (int j) {
                      std::vector<dielectric*> *mat_stack = new std::vector<dielectric*>;
@@ -246,7 +246,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
   } else if (debug_channel == 12) {
     RcppThread::ThreadPool pool(numbercores);
     
-    auto worker = [&routput, &goutput, &boutput, &rng, 
+    auto worker = [&routput, &goutput, &boutput, 
                    nx, ny,  fov, &hlist, max_depth,
                    &cam, &ocam, &ecam, &world] (int j) {
                      std::vector<dielectric*> *mat_stack = new std::vector<dielectric*>;
@@ -280,7 +280,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
   } else if (debug_channel == 13) {
     RcppThread::ThreadPool pool(numbercores);
     
-    auto worker = [&routput, &goutput, &boutput, &rng, 
+    auto worker = [&routput, &goutput, &boutput, 
                    nx, ny,  fov, &hlist, max_depth,
                    &cam, &ocam, &ecam, &world] (int j) {
                      std::vector<dielectric*> *mat_stack = new std::vector<dielectric*>;
@@ -314,7 +314,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
   } else if (debug_channel == 14) {
     RcppThread::ThreadPool pool(numbercores);
     
-    auto worker = [&routput, &goutput, &boutput, &rng, 
+    auto worker = [&routput, &goutput, &boutput,
                    nx, ny,  fov, &hlist, max_depth,ns,
                    &cam, &ocam, &ecam, &world] (int j) {
                      std::vector<dielectric*> *mat_stack = new std::vector<dielectric*>;
@@ -350,8 +350,8 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
   } else if (debug_channel == 15) {
     RcppThread::ThreadPool pool(numbercores);
     
-    auto worker = [&routput, &goutput, &boutput, &rng, 
-                   nx, ny,  fov, &hlist, max_depth, ns,
+    auto worker = [&routput, &goutput, &boutput,
+                   nx, ny,  fov, &hlist, max_depth, 
                    &cam, &ocam, &ecam, &world] (int j) {
                      std::vector<dielectric*> *mat_stack = new std::vector<dielectric*>;
                      random_gen rng(j);
@@ -384,7 +384,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
   } else if (debug_channel == 16) {
     RcppThread::ThreadPool pool(numbercores);
     
-    auto worker = [&routput, &goutput, &boutput, &rng, 
+    auto worker = [&routput, &goutput, &boutput, 
                    nx, ny,  fov, &hlist, max_depth, ns,
                    &cam, &ocam, &ecam, &world] (int j) {
                      std::vector<dielectric*> *mat_stack = new std::vector<dielectric*>;

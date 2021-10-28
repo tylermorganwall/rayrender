@@ -538,6 +538,13 @@ point3f MicrofacetTransmission::f(const ray& r_in, const hit_record& rec, const 
   Float G = distribution->G(wo,wi,wh);
   Float D = distribution->D(wh, rec.u, rec.v);
   
+  Float distance = (rec.p-r_in.point_at_parameter(0)).length();
+  
+  point3f atten = !entering ? point3f(std::exp(-distance * k.x()),
+                                      std::exp(-distance * k.y()),
+                                      std::exp(-distance * k.z())) :
+    point3f(1.0);
+  
   // Same side?
   if (reflect) {
     return(F * G * D / (4  * AbsDot(wo,wh)) );
@@ -545,7 +552,7 @@ point3f MicrofacetTransmission::f(const ray& r_in, const hit_record& rec, const 
 
   Float sqrtDenom = dot(wi, wh)  + dot(wo, wh)* eta2 ;
   return ((1.0 - F) *
-          albedo->value(rec.u, rec.v, rec.p) * 
+          albedo->value(rec.u, rec.v, rec.p) * atten *
           D * G * AbsCosTheta(wo) *
         std::fabs(eta2 * eta2 *
        dot(wi, wh) * dot(wo, wh)) /
