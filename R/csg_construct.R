@@ -90,7 +90,9 @@ csg_object = function(object, x = 0, y = 0, z = 0, material = diffuse(),
                       order_rotation = list(order_rotation),
                       group_transform = list(NA),
                       tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), 
-                      material_id = NA, csg_object = list(object), mesh_info = list(NA)))
+                      material_id = NA, csg_object = list(object), mesh_info = list(NA),
+                      start_transform_animation = list(NA), end_transform_animation = list(NA),
+                      start_time = 0, end_time = 1))
 }
 
 #' CSG Sphere

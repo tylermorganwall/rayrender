@@ -45,7 +45,6 @@ class hitable {
     }
     virtual ~hitable() {}
     const std::shared_ptr<Transform> ObjectToWorld, WorldToObject;
-    const std::shared_ptr<AnimatedTransform> AnimatedTransform;
     const bool reverseOrientation;
     const bool transformSwapsHandedness;
 };
@@ -75,5 +74,36 @@ struct hit_record {
   //int faceIndex (for ptex lookups)
   
 };
+
+
+class AnimatedHitable: public hitable {
+public:
+  AnimatedHitable(std::shared_ptr<hitable> &primitive,
+                  const AnimatedTransform &PrimitiveToWorld)
+    : primitive(primitive), PrimitiveToWorld(PrimitiveToWorld) {} 
+  ~AnimatedHitable() {}
+  bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng);
+  bool hit(const ray& r, Float tmin, Float tmax, hit_record& rec, Sampler* sampler);
+  Float pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Float time = 0) {
+    return(0.0);
+  }
+  Float pdf_value(const point3f& o, const vec3f& v, Sampler* sampler, Float time = 0) {
+    return(0.0);
+  }
+  vec3f random(const point3f& o, random_gen& rng, Float time = 0) {
+    return(vec3f(0,1,0));
+  }
+  vec3f random(const point3f& o, Sampler* sampler, Float time = 0) {
+    return(vec3f(0,1,0));
+  }
+  std::string GetName() const {
+    return(std::string("AnimatedHitable"));
+  }
+  bool bounding_box(Float t0, Float t1, aabb& box) const;
+  std::shared_ptr<hitable> primitive;
+  const AnimatedTransform PrimitiveToWorld;
+};
+
+
 
 #endif

@@ -20,6 +20,26 @@ box::box(const vec3f& p0, const vec3f& p1, std::shared_ptr<material> ptr,
                                      ObjectToWorld, WorldToObject, true));
 }
 
+bool box::bounding_box(Float t0, Float t1, aabb& box) const {
+  box = (*ObjectToWorld)(aabb(pmin, pmax));
+  return(true);
+}
+Float box::pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Float time) {
+  return(list.pdf_value(o,v, rng, time));
+}
+Float box::pdf_value(const point3f& o, const vec3f& v, Sampler* sampler, Float time ) {
+  return(list.pdf_value(o,v, sampler, time));
+}
+vec3f box::random(const point3f& o, random_gen& rng, Float time) {
+  return(list.random(o, rng, time));
+}
+vec3f box::random(const point3f& o, Sampler* sampler, Float time) {
+  return(list.random(o, sampler, time));
+}
+std::string box::GetName() const {
+  return(std::string("Box"));
+}
+
 bool box::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
   return(list.hit(r,t_min,t_max,rec, rng));
 }

@@ -1,15 +1,15 @@
 #include "animatedtransform.h"
 
 // AnimatedTransform Method Definitions
-AnimatedTransform::AnimatedTransform(const Transform *startTransform,
+AnimatedTransform::AnimatedTransform(const std::shared_ptr<Transform> startTransform,
                                      Float startTime,
-                                     const Transform *endTransform,
+                                     const std::shared_ptr<Transform> endTransform,
                                      Float endTime)
                                      : startTransform(startTransform),
                                        endTransform(endTransform),
                                        startTime(startTime),
                                        endTime(endTime),
-                                       actuallyAnimated(*startTransform != *endTransform) {
+                                       actuallyAnimated(*(startTransform.get()) != *(endTransform.get())) {
   if (!actuallyAnimated) {
     return;
   }

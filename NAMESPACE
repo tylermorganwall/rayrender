@@ -2,6 +2,7 @@
 
 export("%>%")
 export(add_object)
+export(animate_objects)
 export(arrow)
 export(bezier_curve)
 export(cone)

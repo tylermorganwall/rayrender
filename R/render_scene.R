@@ -451,6 +451,15 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
   group_bool = purrr::map_lgl(scene$group_transform,.f = ~all(!is.na(.x)))
   group_transform = scene$group_transform
   
+  
+  #animation handler
+  animation_bool = purrr::map_lgl(scene$start_transform_animation,.f = ~all(!is.na(.x))) & 
+    purrr::map_lgl(scene$end_transform_animation,.f = ~all(!is.na(.x)))
+  start_transform_animation = scene$start_transform_animation
+  end_transform_animation = scene$end_transform_animation
+  animation_start_time = scene$start_time
+  animation_end_time = scene$end_time
+  
   #triangle normal handler
   tri_normal_bools = purrr::map2_lgl(shapevec,proplist,.f = ~.x == 6 && all(!is.na(.y)))
   tri_color_vert = scene$tricolorinfo
@@ -568,6 +577,13 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
   camera_info$light_direction = light_direction
   camera_info$bvh = switch(bvh_type,"sah" = 1, "equal" = 2, 1)
   
+  animation_info = list()
+  animation_info$animation_bool            = animation_bool            
+  animation_info$start_transform_animation = start_transform_animation 
+  animation_info$end_transform_animation   = end_transform_animation   
+  animation_info$animation_start_time      = animation_start_time      
+  animation_info$animation_end_time        = animation_end_time        
+  
   if(max_depth <= 0) {
     stop("max_depth must be greater than zero")
   }
@@ -670,7 +686,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
   scene_info$csg_info = csg_info
   scene_info$mesh_list=mesh_list
   scene_info$roughness_list = roughness_list
-  
+  scene_info$animation_info = animation_info
 
   #Pathrace Scene
   rgb_mat = render_scene_rcpp(camera_info = camera_info, scene_info = scene_info) 

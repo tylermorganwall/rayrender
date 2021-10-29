@@ -10,8 +10,8 @@
 class AnimatedTransform {
 public:
   // AnimatedTransform Public Methods
-  AnimatedTransform(const Transform *startTransform, Float startTime,
-                    const Transform *endTransform, Float endTime);
+  AnimatedTransform(const std::shared_ptr<Transform> startTransform, Float startTime,
+                    const std::shared_ptr<Transform>  endTransform, Float endTime);
   static void Decompose(const Matrix4x4 &m, vec3f *T, Quaternion *R,
                         Matrix4x4 *S);
   void Interpolate(Float time, Transform *t) const;
@@ -27,7 +27,7 @@ public:
   
 private:
   // AnimatedTransform Private Data
-  const Transform *startTransform, *endTransform;
+  const std::shared_ptr<Transform> startTransform, endTransform;
   const Float startTime, endTime;
   const bool actuallyAnimated;
   vec3f T[2];

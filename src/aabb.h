@@ -79,6 +79,26 @@ inline aabb surrounding_box(aabb box0, aabb box1) {
   return(aabb(small,big));
 }
 
+inline aabb surrounding_box(aabb box0, point3f point1) {
+  point3f small(fmin(box0.min().x(), point1.x()),
+                fmin(box0.min().y(), point1.y()),
+                fmin(box0.min().z(), point1.z()));
+  point3f big(fmax(box0.max().x(), point1.x()),
+              fmax(box0.max().y(), point1.y()),
+              fmax(box0.max().z(), point1.z()));
+  return(aabb(small,big));
+}
+
+inline aabb surrounding_box(aabb box0, vec3f point1) {
+  point3f small(fmin(box0.min().x(), point1.x()),
+                fmin(box0.min().y(), point1.y()),
+                fmin(box0.min().z(), point1.z()));
+  point3f big(fmax(box0.max().x(), point1.x()),
+              fmax(box0.max().y(), point1.y()),
+              fmax(box0.max().z(), point1.z()));
+  return(aabb(small,big));
+}
+
 inline aabb Expand(aabb box, Float delta) {
   return(aabb(box.min() + -point3f(delta, delta, delta),
               box.max() + point3f(delta, delta, delta)));

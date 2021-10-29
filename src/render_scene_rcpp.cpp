@@ -105,6 +105,7 @@ List render_scene_rcpp(List camera_info, List scene_info) {
   List csg_info = as<List>(scene_info["csg_info"]);
   List mesh_list = as<List>(scene_info["mesh_list"]);
   List roughness_list = as<List>(scene_info["roughness_list"]);
+  List animation_info = as<List>(scene_info["animation_info"]);
   
 
   
@@ -291,7 +292,8 @@ List render_scene_rcpp(List camera_info, List scene_info) {
                                 fileinfo, filebasedir, 
                                 scale_list, sigmavec, glossyinfo,
                                 shared_id_mat, is_shared_mat, shared_materials,
-                                image_repeat, csg_info, mesh_list, bvh_type, transformCache, rng);
+                                image_repeat, csg_info, mesh_list, bvh_type, transformCache, 
+                                animation_info, rng);
   auto finish = std::chrono::high_resolution_clock::now();
   if(verbose) {
     std::chrono::duration<double> elapsed = finish - start;

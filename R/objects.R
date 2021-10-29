@@ -67,7 +67,9 @@ sphere = function(x = 0, y = 0, z = 0, radius = 1, material = diffuse(),
                  order_rotation = list(order_rotation),
                  group_transform = list(NA),
                  tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), 
-                 material_id = NA, csg_object = list(NA), mesh_info = list(NA)))
+                 material_id = NA, csg_object = list(NA), mesh_info = list(NA),
+                 start_transform_animation = list(NA), end_transform_animation = list(NA),
+                 start_time = 0, end_time = 1))
 }
 
 #' Cube Object
@@ -148,7 +150,9 @@ cube = function(x = 0, y = 0, z = 0, width = 1, xwidth = 1, ywidth = 1, zwidth =
                  order_rotation = list(order_rotation), 
                  group_transform = list(NA),
                  tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), 
-                 material_id = NA, csg_object = list(NA), mesh_info = list(NA)))
+                 material_id = NA, csg_object = list(NA), mesh_info = list(NA),
+                 start_transform_animation = list(NA), end_transform_animation = list(NA),
+                 start_time = 0, end_time = 1))
 }
 
 #' Rectangular XY Plane Object 
@@ -213,7 +217,9 @@ xy_rect = function(x = 0, y = 0, z = 0, xwidth = 1, ywidth = 1,
                  order_rotation = list(order_rotation),
                  group_transform = list(NA),
                  tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), 
-                 material_id = NA, csg_object = list(NA), mesh_info = list(NA)))
+                 material_id = NA, csg_object = list(NA), mesh_info = list(NA),
+                 start_transform_animation = list(NA), end_transform_animation = list(NA),
+                 start_time = 0, end_time = 1))
 }
 
 #' Rectangular YZ Plane Object
@@ -277,7 +283,9 @@ yz_rect = function(x = 0, y = 0, z = 0, ywidth = 1, zwidth = 1, material = diffu
                  order_rotation = list(order_rotation),
                  group_transform = list(NA),
                  tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), 
-                 material_id = NA, csg_object = list(NA), mesh_info = list(NA)))
+                 material_id = NA, csg_object = list(NA), mesh_info = list(NA),
+                 start_transform_animation = list(NA), end_transform_animation = list(NA),
+                 start_time = 0, end_time = 1))
 }
 
 #' Rectangular XZ Plane Object
@@ -343,7 +351,9 @@ xz_rect = function(x = 0, xwidth = 1, z = 0, zwidth = 1, y = 0, material = diffu
                  order_rotation = list(order_rotation),
                  group_transform = list(NA),
                  tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), 
-                 material_id = NA, csg_object = list(NA), mesh_info = list(NA)))
+                 material_id = NA, csg_object = list(NA), mesh_info = list(NA),
+                 start_transform_animation = list(NA), end_transform_animation = list(NA),
+                 start_time = 0, end_time = 1))
 }
 
 #' Triangle Object
@@ -445,7 +455,9 @@ triangle = function(v1 = c(1, 0, 0), v2 = c(0, 1, 0), v3 = c(-1, 0, 0),
                  order_rotation = list(order_rotation),
                  group_transform = list(NA),
                  tricolorinfo = list(colorvec), fileinfo = NA, scale_factor = list(scale),
-                 material_id = NA, csg_object = list(NA), mesh_info = list(NA)))
+                 material_id = NA, csg_object = list(NA), mesh_info = list(NA),
+                 start_transform_animation = list(NA), end_transform_animation = list(NA),
+                 start_time = 0, end_time = 1))
 }
 
 #' Disk Object
@@ -520,7 +532,9 @@ disk = function(x = 0, y = 0, z = 0, radius = 1, inner_radius = 0, material = di
                  order_rotation = list(order_rotation),
                  group_transform = list(NA),
                  tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), 
-                 material_id = NA, csg_object = list(NA), mesh_info = list(NA)))
+                 material_id = NA, csg_object = list(NA), mesh_info = list(NA),
+                 start_transform_animation = list(NA), end_transform_animation = list(NA),
+                 start_time = 0, end_time = 1))
 }
 
 #' `obj` File Object
@@ -617,7 +631,9 @@ obj_model = function(filename, x = 0, y = 0, z = 0, scale_obj = 1,
                  order_rotation = list(order_rotation),
                  group_transform = list(NA),
                  tricolorinfo = list(NA), fileinfo = filename, scale_factor = list(scale),
-                 material_id = NA, csg_object = list(NA), mesh_info = list(NA)))
+                 material_id = NA, csg_object = list(NA), mesh_info = list(NA),
+                 start_transform_animation = list(NA), end_transform_animation = list(NA),
+                 start_time = 0, end_time = 1))
 }
 
 #' Cylinder Object
@@ -701,7 +717,9 @@ cylinder = function(x = 0, y = 0, z = 0, radius = 1, length = 1,
                  order_rotation = list(order_rotation),
                  group_transform = list(NA),
                  tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), 
-                 material_id = NA, csg_object = list(NA), mesh_info = list(NA)))
+                 material_id = NA, csg_object = list(NA), mesh_info = list(NA),
+                 start_transform_animation = list(NA), end_transform_animation = list(NA),
+                 start_time = 0, end_time = 1))
 }
 
 #' Segment Object
@@ -842,7 +860,9 @@ segment = function(start = c(0, -1, 0), end = c(0, 1, 0), radius = 0.1,
                  order_rotation = list(order_rotation),
                  group_transform = list(NA),
                  tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale),
-                 material_id = NA, csg_object = list(NA), mesh_info = list(NA)))
+                 material_id = NA, csg_object = list(NA), mesh_info = list(NA),
+                 start_transform_animation = list(NA), end_transform_animation = list(NA),
+                 start_time = 0, end_time = 1))
 }
 
 #' Ellipsoid Object
@@ -923,7 +943,9 @@ ellipsoid = function(x = 0, y = 0, z = 0, a = 1, b = 1, c = 1,
                  order_rotation = list(order_rotation),
                  group_transform = list(NA),
                  tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), 
-                 material_id = NA, csg_object = list(NA), mesh_info = list(NA)))
+                 material_id = NA, csg_object = list(NA), mesh_info = list(NA),
+                 start_transform_animation = list(NA), end_transform_animation = list(NA),
+                 start_time = 0, end_time = 1))
 }
 
 #' Extruded Polygon Object
@@ -1597,7 +1619,9 @@ cone = function(start = c(0, 0, 0), end = c(0, 1, 0), radius = 0.5,
                       order_rotation = list(order_rotation),
                       group_transform = list(NA),
                       tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), 
-                      material_id = NA, csg_object = list(NA), mesh_info = list(NA)))
+                      material_id = NA, csg_object = list(NA), mesh_info = list(NA),
+                      start_transform_animation = list(NA), end_transform_animation = list(NA),
+                      start_time = 0, end_time = 1))
 }
 
 #' Arrow Object
@@ -1888,7 +1912,9 @@ bezier_curve = function(p1 = c(0,0,0), p2 = c(-1,0.33,0), p3 = c(1,0.66,0), p4=c
                       order_rotation = list(order_rotation), 
                       group_transform = list(NA),
                       tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), 
-                      material_id = NA, csg_object = list(NA), mesh_info = list(NA)))
+                      material_id = NA, csg_object = list(NA), mesh_info = list(NA),
+                      start_transform_animation = list(NA), end_transform_animation = list(NA),
+                      start_time = 0, end_time = 1))
 }
 
 #' Path Object
@@ -2291,7 +2317,9 @@ ply_model = function(filename, x = 0, y = 0, z = 0, scale_ply = 1,
                       order_rotation = list(order_rotation),
                       group_transform = list(NA),
                       tricolorinfo = list(NA), fileinfo = filename, scale_factor = list(scale), 
-                      material_id = NA, csg_object = list(NA), mesh_info = list(NA)))
+                      material_id = NA, csg_object = list(NA), mesh_info = list(NA),
+                      start_transform_animation = list(NA), end_transform_animation = list(NA),
+                      start_time = 0, end_time = 1))
 }
 
 #' `mesh3d` model
@@ -2453,6 +2481,8 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
                       order_rotation = list(order_rotation),
                       group_transform = list(NA),
                       tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale),
-                      material_id = NA, csg_object = list(NA), mesh_info = list(mesh_info)))
+                      material_id = NA, csg_object = list(NA), mesh_info = list(mesh_info),
+                      start_transform_animation = list(NA), end_transform_animation = list(NA),
+                      start_time = 0, end_time = 1))
 }
 
