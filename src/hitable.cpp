@@ -16,6 +16,35 @@ void get_sphere_uv(const normal3f& p, Float& u, Float& v) {
   v = (theta + M_PI/2) / M_PI;
 }
 
+Float AnimatedHitable::pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Float time) {
+  Transform InterpolatedPrimToWorld;
+  PrimitiveToWorld.Interpolate(time, &InterpolatedPrimToWorld);
+  return(primitive->pdf_value(Inverse(InterpolatedPrimToWorld)(o),
+                              Inverse(InterpolatedPrimToWorld)(v),
+                              rng, time));
+}
+Float AnimatedHitable::pdf_value(const point3f& o, const vec3f& v, Sampler* sampler, Float time) {
+  Transform InterpolatedPrimToWorld;
+  PrimitiveToWorld.Interpolate(time, &InterpolatedPrimToWorld);
+  return(primitive->pdf_value(Inverse(InterpolatedPrimToWorld)(o),
+                              Inverse(InterpolatedPrimToWorld)(v),
+                              sampler, time));
+}
+vec3f AnimatedHitable::random(const point3f& o, random_gen& rng, Float time) {
+  Transform InterpolatedPrimToWorld;
+  PrimitiveToWorld.Interpolate(time, &InterpolatedPrimToWorld);
+  return(InterpolatedPrimToWorld(primitive->random(Inverse(InterpolatedPrimToWorld)(o), rng, time)));
+}
+vec3f AnimatedHitable::random(const point3f& o, Sampler* sampler, Float time) {
+  Transform InterpolatedPrimToWorld;
+  PrimitiveToWorld.Interpolate(time, &InterpolatedPrimToWorld);
+  
+  return(InterpolatedPrimToWorld(primitive->random(Inverse(InterpolatedPrimToWorld)(o), sampler, time)));
+}
+std::string AnimatedHitable::GetName() const {
+  return(std::string("AnimatedHitable"));
+}
+
 
 
 bool AnimatedHitable::bounding_box(Float t0, Float t1, aabb& box) const {

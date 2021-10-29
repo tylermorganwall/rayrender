@@ -36,7 +36,6 @@ void render_animation_rcpp(List camera_info, List scene_info, List camera_moveme
   List position_list = as<List>(scene_info["position_list"]);
   List properties = as<List>(scene_info["properties"]);
   List velocity = as<List>(scene_info["velocity"]);
-  LogicalVector moving = as<LogicalVector>(scene_info["moving"]);
   int n = as<int>(scene_info["n"]);
   NumericVector bghigh  = as<NumericVector>(scene_info["bghigh"]);
   NumericVector bglow = as<NumericVector>(scene_info["bglow"]);
@@ -209,7 +208,7 @@ void render_animation_rcpp(List camera_info, List scene_info, List camera_moveme
   TransformCache transformCache;
   
   std::shared_ptr<hitable> worldbvh = build_scene(type, radius, shape, position_list,
-                                                  properties, velocity, moving,
+                                                  properties, velocity, 
                                                   n,shutteropen,shutterclose,
                                                   ischeckered, checkercolors, 
                                                   gradient_info,
@@ -317,7 +316,8 @@ void render_animation_rcpp(List camera_info, List scene_info, List camera_moveme
                                  angle, i, order_rotation_list,
                                  isgrouped, group_transform,
                                  fileinfo, filebasedir,transformCache, scale_list, 
-                                 mesh_list,bvh_type,  moving, rng));
+                                 mesh_list,bvh_type,  animation_info,
+                                 rng));
     }
   }
   finish = std::chrono::high_resolution_clock::now();

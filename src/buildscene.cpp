@@ -26,7 +26,7 @@ Transform rotation_order_matrix(NumericVector temprotvec, NumericVector order_ro
 std::shared_ptr<hitable> build_scene(IntegerVector& type, 
                      NumericVector& radius, IntegerVector& shape,
                      List& position_list,
-                     List& properties, List& velocity, LogicalVector& moving,
+                     List& properties, List& velocity, 
                      int n, Float shutteropen, Float shutterclose,
                      LogicalVector& ischeckered, List& checkercolors, 
                      List gradient_info,
@@ -517,15 +517,8 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
     //Generate objects
     if (shape(i) == 1) {
       std::shared_ptr<hitable> entry;
-      if(moving(i)) {
-        entry = std::make_shared<moving_sphere>(vel * shutteropen, 
-                                                vel * shutterclose, 
-                                                shutteropen, shutterclose, radius(i), tex, alpha[i], bump[i],
-                                                ObjToWorld, WorldToObj, isflipped(i));
-      } else {
-        entry = std::make_shared<sphere>(vec3f(0,0,0), radius(i), tex, alpha[i], bump[i],
-                                         ObjToWorld, WorldToObj, isflipped(i));
-      }
+      entry = std::make_shared<sphere>(vec3f(0,0,0), radius(i), tex, alpha[i], bump[i],
+                                       ObjToWorld, WorldToObj, isflipped(i));
       if(isvolume(i)) {
         entry = std::make_shared<constant_medium>(entry, voldensity(i), 
                                                   std::make_shared<constant_texture>(point3f(tempvector(0),tempvector(1),tempvector(2))));
@@ -651,6 +644,9 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
       std::shared_ptr<hitable> entry;
       entry = std::make_shared<disk>(vec3f(0,0,0), radius(i), tempvector(prop_len+1), tex, alpha[i], bump[i],
                                      ObjToWorld,WorldToObj, isflipped(i));
+      if(has_animation(i)) {
+        entry = std::make_shared<AnimatedHitable>(entry, Animate);
+      }
       list.add(entry);
     } else if (shape(i) == 10) {
       bool has_caps = type(i) != 5 && type(i) != 8;
@@ -781,7 +777,8 @@ std::shared_ptr<hitable> build_imp_sample(IntegerVector& type,
                           List& group_transform,
                           CharacterVector& fileinfo, CharacterVector& filebasedir,
                           TransformCache& transformCache,
-                          List& scale_list, List& mesh_list, int bvh_type, LogicalVector& moving,random_gen& rng) {
+                          List& scale_list, List& mesh_list, int bvh_type, 
+                          List& animation_info, random_gen& rng) {
   NumericVector x = position_list["xvec"];
   NumericVector y = position_list["yvec"];
   NumericVector z = position_list["zvec"];
@@ -794,6 +791,15 @@ std::shared_ptr<hitable> build_imp_sample(IntegerVector& type,
   NumericVector order_rotation;
   NumericVector temp_scales;
   NumericMatrix temp_group_transform;
+  NumericMatrix temp_animation_transform_start;
+  NumericMatrix temp_animation_transform_end;
+  
+  //Animation
+  LogicalVector has_animation        = animation_info["animation_bool"];
+  List start_transform_animation     = animation_info["start_transform_animation"];
+  List end_transform_animation       = animation_info["end_transform_animation"];
+  NumericVector animation_start_time = animation_info["animation_start_time"];
+  NumericVector animation_end_time   = animation_info["animation_end_time"];   
   
   vec3f gpivot;
   vec3f gtrans;
@@ -815,6 +821,13 @@ std::shared_ptr<hitable> build_imp_sample(IntegerVector& type,
     temp_group_transform = as<NumericMatrix>(group_transform(i));
   } else {
     temp_group_transform = IdentityMat;
+  }
+  if(has_animation(i)) {
+    temp_animation_transform_start = as<NumericMatrix>(start_transform_animation(i));
+    temp_animation_transform_end = as<NumericMatrix>(end_transform_animation(i));
+  } else {
+    temp_animation_transform_start = IdentityMat;
+    temp_animation_transform_end = IdentityMat;
   }
   if(type(i) == 3) {
     prop_len = 7;
@@ -872,20 +885,24 @@ std::shared_ptr<hitable> build_imp_sample(IntegerVector& type,
   std::shared_ptr<Transform> ObjToWorld = transformCache.Lookup(TempM);
   std::shared_ptr<Transform> WorldToObj = transformCache.Lookup(TempM.GetInverseMatrix());
   
+  Transform AnimationStartTransform(temp_animation_transform_start);
+  Transform AnimationEndTransform(temp_animation_transform_end);
+  std::shared_ptr<Transform> StartAnim = transformCache.Lookup(AnimationStartTransform);
+  std::shared_ptr<Transform> EndAnim = transformCache.Lookup(AnimationEndTransform);
+  
+  AnimatedTransform Animate(StartAnim, animation_start_time(i), 
+                            EndAnim, animation_end_time(i));
+  
   std::shared_ptr<material> tex = nullptr;
   std::shared_ptr<alpha_texture> alpha = nullptr;
   std::shared_ptr<bump_texture> bump = nullptr;
 
   if(shape(i) == 1) {
     std::shared_ptr<hitable> entry;
-    if(moving(i)) {
-      entry = std::make_shared<moving_sphere>(vel * shutteropen, 
-                                              vel * shutterclose, 
-                                              shutteropen, shutterclose, radius(i), tex, alpha, bump,
-                                              ObjToWorld,WorldToObj, false);
-    } else {
-      entry = std::make_shared<sphere>(vec3f(0,0,0), radius(i), tex, alpha,bump,
-                                       ObjToWorld,WorldToObj, false);
+    entry = std::make_shared<sphere>(vec3f(0,0,0), radius(i), tex, alpha,bump,
+                                     ObjToWorld,WorldToObj, false);
+    if(has_animation(i)) {
+      entry = std::make_shared<AnimatedHitable>(entry, Animate);
     }
     return(entry);
   } else if (shape(i) == 2) {
@@ -893,24 +910,36 @@ std::shared_ptr<hitable> build_imp_sample(IntegerVector& type,
                                  -tempvector(prop_len+4)/2,tempvector(prop_len+4)/2,
                                  0, tex, alpha, bump, 
                                  ObjToWorld,WorldToObj, false);
+    if(has_animation(i)) {
+      entry = std::make_shared<AnimatedHitable>(entry, Animate);
+    }
     return(entry);
   } else if (shape(i) == 3) {
     std::shared_ptr<hitable> entry = std::make_shared<xz_rect>(-tempvector(prop_len+2)/2,tempvector(prop_len+2)/2,
                                  -tempvector(prop_len+4)/2,tempvector(prop_len+4)/2,
                                  0, tex, alpha, bump, 
                                  ObjToWorld,WorldToObj, false);
+    if(has_animation(i)) {
+      entry = std::make_shared<AnimatedHitable>(entry, Animate);
+    }
     return(entry);
   } else if (shape(i) == 4) {
     std::shared_ptr<hitable> entry = std::make_shared<yz_rect>(-tempvector(prop_len+2)/2,tempvector(prop_len+2)/2,
                                  -tempvector(prop_len+4)/2,tempvector(prop_len+4)/2,
                                  0, tex, alpha, bump, 
                                  ObjToWorld,WorldToObj, false);
+    if(has_animation(i)) {
+      entry = std::make_shared<AnimatedHitable>(entry, Animate);
+    }
     return(entry);
   } else if (shape(i) == 5) {
     std::shared_ptr<hitable> entry = std::make_shared<box>(-vec3f(tempvector(prop_len+1),tempvector(prop_len+2),tempvector(prop_len+3))/2, 
                              vec3f(tempvector(prop_len+1),tempvector(prop_len+2),tempvector(prop_len+3))/2, 
                              tex, alpha,bump,
                              ObjToWorld,WorldToObj, false);
+    if(has_animation(i)) {
+      entry = std::make_shared<AnimatedHitable>(entry, Animate);
+    }
     return(entry);
   } else if (shape(i) == 6) {
     std::shared_ptr<hitable> entry = std::make_shared<triangle>(vec3f(tempvector(prop_len+1),tempvector(prop_len+2),tempvector(prop_len+3)),
@@ -918,6 +947,9 @@ std::shared_ptr<hitable> build_imp_sample(IntegerVector& type,
                                   vec3f(tempvector(prop_len+7),tempvector(prop_len+8),tempvector(prop_len+9)),
                                   false,
                                   tex, alpha, bump, ObjToWorld,WorldToObj, false);
+    if(has_animation(i)) {
+      entry = std::make_shared<AnimatedHitable>(entry, Animate);
+    }
     return(entry);
   } else if (shape(i) == 7 || shape(i) == 8 || shape(i) == 12) {
     std::shared_ptr<hitable> entry;
@@ -926,11 +958,17 @@ std::shared_ptr<hitable> build_imp_sample(IntegerVector& type,
     entry = std::make_shared<trimesh>(objfilename, objbasedirname,
                         tempvector(prop_len+1),
                         shutteropen, shutterclose, bvh_type, rng, ObjToWorld,WorldToObj, false);
+    if(has_animation(i)) {
+      entry = std::make_shared<AnimatedHitable>(entry, Animate);
+    }
     return(entry);
   } else if (shape(i) == 9) {
     std::shared_ptr<hitable> entry;
     entry = std::make_shared<disk>(vec3f(0,0,0), radius(i), tempvector(prop_len+1), tex, alpha,bump, 
                                    ObjToWorld,WorldToObj, false);
+    if(has_animation(i)) {
+      entry = std::make_shared<AnimatedHitable>(entry, Animate);
+    }
     return(entry);
   } else if (shape(i) == 10) {
     bool has_caps = type(i) != 5 && type(i) != 8;
@@ -939,17 +977,26 @@ std::shared_ptr<hitable> build_imp_sample(IntegerVector& type,
                                   tempvector(prop_len+2), tempvector(prop_len+3),has_caps && has_cap_option, 
                                   tex, alpha,bump, 
                                   ObjToWorld,WorldToObj, false);
+    if(has_animation(i)) {
+      entry = std::make_shared<AnimatedHitable>(entry, Animate);
+    }
     return(entry);
   } else if (shape(i) == 11) {
     std::shared_ptr<hitable> entry = std::make_shared<ellipsoid>(vec3f(0,0,0), radius(i), 
                                    vec3f(tempvector(prop_len + 1), tempvector(prop_len + 2), tempvector(prop_len + 3)),
                                    tex, alpha,bump, 
                                    ObjToWorld,WorldToObj, false);
+    if(has_animation(i)) {
+      entry = std::make_shared<AnimatedHitable>(entry, Animate);
+    }
     return(entry);
   } else if (shape(i) == 13) {
     std::shared_ptr<hitable> entry = std::make_shared<cone>(radius(i), tempvector(prop_len+1), 
                                                             tex, alpha, bump, 
                                                             ObjToWorld,WorldToObj, false);
+    if(has_animation(i)) {
+      entry = std::make_shared<AnimatedHitable>(entry, Animate);
+    }
     return(entry);
   } else if (shape(i) == 14) {
     int pl = prop_len;
@@ -961,11 +1008,17 @@ std::shared_ptr<hitable> build_imp_sample(IntegerVector& type,
     std::shared_ptr<CurveCommon> curve_data = std::make_shared<CurveCommon>(p, tempvector(pl+13), tempvector(pl+14), CurveType::Flat, nullptr);
     std::shared_ptr<hitable> entry = std::make_shared<curve>(tempvector(pl+15),tempvector(pl+16), curve_data, tex, 
                                                              ObjToWorld,WorldToObj, false);
+    if(has_animation(i)) {
+      entry = std::make_shared<AnimatedHitable>(entry, Animate);
+    }
     return(entry);
   } else if (shape(i) == 15) {
     std::shared_ptr<ImplicitShape> shapes;
     std::shared_ptr<hitable> entry = std::make_shared<csg>(tex, shapes, 
                                                            ObjToWorld,WorldToObj, false);
+    if(has_animation(i)) {
+      entry = std::make_shared<AnimatedHitable>(entry, Animate);
+    }
     return(entry);
   } else if (shape(i) == 16) {
     std::shared_ptr<hitable> entry;
@@ -976,12 +1029,18 @@ std::shared_ptr<hitable> build_imp_sample(IntegerVector& type,
                         tempvector(prop_len+1),
                         shutteropen, shutterclose, bvh_type, rng, 
                         ObjToWorld,WorldToObj, false);
+    if(has_animation(i)) {
+      entry = std::make_shared<AnimatedHitable>(entry, Animate);
+    }
     return(entry);
   } else {
     List mesh_entry = mesh_list(i);
     std::shared_ptr<hitable> entry = std::make_shared<mesh3d>(mesh_entry, tex,
                                 shutteropen, shutterclose, bvh_type, rng, 
                                 ObjToWorld,WorldToObj, false);
+    if(has_animation(i)) {
+      entry = std::make_shared<AnimatedHitable>(entry, Animate);
+    }
     return(entry);
   }
 }

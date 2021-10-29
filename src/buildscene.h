@@ -34,7 +34,7 @@ std::shared_ptr<hitable> rotation_order(std::shared_ptr<hitable> entry, NumericV
 std::shared_ptr<hitable> build_scene(IntegerVector& type, 
                                      NumericVector& radius, IntegerVector& shape,
                                      List& position_list,
-                                     List& properties, List& velocity, LogicalVector& moving,
+                                     List& properties, List& velocity,
                                      int n, Float shutteropen, Float shutterclose,
                                      LogicalVector& ischeckered, List& checkercolors, 
                                      List gradient_info,
@@ -73,6 +73,7 @@ std::shared_ptr<hitable> build_imp_sample(IntegerVector& type,
                                           List& group_transform,
                                           CharacterVector& fileinfo, CharacterVector& filebasedir,
                                           TransformCache& transformCache,
-                                          List& scale_list, List& mesh_list, int bvh_type, LogicalVector& moving,random_gen& rng);
+                                          List& scale_list, List& mesh_list, int bvh_type, 
+                                          List& animation_info, random_gen& rng);
 
 #endif

@@ -265,7 +265,6 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
     stop("tonemap value ", tonemap, " not recognized")
   }
   toneval = switch(tonemap, "gamma" = 1,"reinhold" = 2,"uncharted" = 3,"hbd" = 4, "raw" = 5)
-  movingvec = purrr::map_lgl(scene$velocity,.f = ~any(.x != 0))
   proplist = scene$properties
   vel_list = scene$velocity
   
@@ -436,10 +435,6 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
   roughness_list$rough_temp_file_names = rough_temp_file_names
   roughness_list$rough_tex_bool = rough_tex_bool
   
-  #movement handler
-  if(shutteropen == shutterclose) {
-    movingvec = rep(FALSE,length(movingvec))
-  }
   
   #implicit sampling handler
   implicit_vec = scene$implicit_sample
@@ -637,7 +632,6 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
   scene_info$position_list = position_list
   scene_info$properties = proplist
   scene_info$velocity = vel_list
-  scene_info$moving = movingvec
   scene_info$n = length(typevec)
   scene_info$bghigh = backgroundhigh
   scene_info$bglow = backgroundlow
