@@ -77,7 +77,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">rayrender</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.22.0</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.23.0</span>
       </span>
     </div>
 
@@ -160,6 +160,7 @@
     <pre class="usage"><span class='fu'>microfacet</span><span class='op'>(</span>
   color <span class='op'>=</span> <span class='st'>"white"</span>,
   roughness <span class='op'>=</span> <span class='fl'>1e-04</span>,
+  transmission <span class='op'>=</span> <span class='cn'>FALSE</span>,
   eta <span class='op'>=</span> <span class='fl'>0</span>,
   kappa <span class='op'>=</span> <span class='fl'>0</span>,
   microfacet <span class='op'>=</span> <span class='st'>"tbr"</span>,
@@ -179,6 +180,9 @@
   alpha_texture <span class='op'>=</span> <span class='cn'>NA</span>,
   bump_texture <span class='op'>=</span> <span class='cn'>NA</span>,
   bump_intensity <span class='op'>=</span> <span class='fl'>1</span>,
+  roughness_texture <span class='op'>=</span> <span class='cn'>NA</span>,
+  roughness_range <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>1e-04</span>, <span class='fl'>0.2</span><span class='op'>)</span>,
+  roughness_flip <span class='op'>=</span> <span class='cn'>FALSE</span>,
   importance_sample <span class='op'>=</span> <span class='cn'>FALSE</span>
 <span class='op'>)</span></pre>
 
@@ -201,14 +205,20 @@ Two numbers will specify the x and y roughness separately (e.g. `roughness = c(0
 etched metal effect). If `0`, this defaults to the `metal()` material for faster evaluation.</p></td>
     </tr>
     <tr>
+      <th>transmission</th>
+      <td><p>Default `FALSE`. If `TRUE`, this material will be a rough dielectric instead of a rough metallic surface.</p></td>
+    </tr>
+    <tr>
       <th>eta</th>
       <td><p>Default `0`. Wavelength dependent refractivity of the material (red, green, and blue channels).
-If single number, will be repeated across all three channels.</p></td>
+If single number, will be repeated across all three channels. If `transmission = TRUE`, this is a single value representing the
+index of refraction of the material.</p></td>
     </tr>
     <tr>
       <th>kappa</th>
       <td><p>Default `0`. Wavelength dependent absorption of the material (red, green, and blue channels).
-If single number, will be repeated across all three channels.</p></td>
+If single number, will be repeated across all three channels. If `transmission = TRUE`, this length-3 vector specifies 
+the attenuation of the dielectric (analogous to the dielectric `attenuation` argument).</p></td>
     </tr>
     <tr>
       <th>microfacet</th>
@@ -289,6 +299,21 @@ be used to specify a bump map for the surface.</p></td>
     <tr>
       <th>bump_intensity</th>
       <td><p>Default `1`. Intensity of the bump map. High values may lead to unphysical results.</p></td>
+    </tr>
+    <tr>
+      <th>roughness_texture</th>
+      <td><p>Default `NA`. A matrix, array, or filename (specifying a greyscale image) to 
+be used to specify a roughness map for the surface.</p></td>
+    </tr>
+    <tr>
+      <th>roughness_range</th>
+      <td><p>Default ` c(0.0001, 0.2)`. This is a length-2 vector that specifies the range of roughness values 
+that the `roughness_texture` can take.</p></td>
+    </tr>
+    <tr>
+      <th>roughness_flip</th>
+      <td><p>Default `FALSE`. Setting this to `TRUE` flips the roughness values specified in the `roughness_texture`
+so high values are now low values and vice versa.</p></td>
     </tr>
     <tr>
       <th>importance_sample</th>

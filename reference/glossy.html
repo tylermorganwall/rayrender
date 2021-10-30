@@ -77,7 +77,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">rayrender</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.22.0</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.23.0</span>
       </span>
     </div>
 
@@ -177,7 +177,10 @@
   image_repeat <span class='op'>=</span> <span class='fl'>1</span>,
   alpha_texture <span class='op'>=</span> <span class='cn'>NA</span>,
   bump_texture <span class='op'>=</span> <span class='cn'>NA</span>,
+  roughness_texture <span class='op'>=</span> <span class='cn'>NA</span>,
   bump_intensity <span class='op'>=</span> <span class='fl'>1</span>,
+  roughness_range <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>1e-04</span>, <span class='fl'>0.2</span><span class='op'>)</span>,
+  roughness_flip <span class='op'>=</span> <span class='cn'>FALSE</span>,
   importance_sample <span class='op'>=</span> <span class='cn'>FALSE</span>
 <span class='op'>)</span></pre>
 
@@ -275,8 +278,23 @@ begins with value `gradient_color`.</p></td>
 be used to specify a bump map for the surface.</p></td>
     </tr>
     <tr>
+      <th>roughness_texture</th>
+      <td><p>Default `NA`. A matrix, array, or filename (specifying a greyscale image) to 
+be used to specify a roughness map for the surface.</p></td>
+    </tr>
+    <tr>
       <th>bump_intensity</th>
       <td><p>Default `1`. Intensity of the bump map. High values may lead to unphysical results.</p></td>
+    </tr>
+    <tr>
+      <th>roughness_range</th>
+      <td><p>Default ` c(0.0001, 0.2)`. This is a length-2 vector that specifies the range of roughness values 
+that the `roughness_texture` can take.</p></td>
+    </tr>
+    <tr>
+      <th>roughness_flip</th>
+      <td><p>Default `FALSE`. Setting this to `TRUE` flips the roughness values specified in the `roughness_texture`
+so high values are now low values and vice versa.</p></td>
     </tr>
     <tr>
       <th>importance_sample</th>

@@ -78,7 +78,7 @@ a data.frame that can be passed to `render_animation()`." />
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">rayrender</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.22.0</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.23.0</span>
       </span>
     </div>
 
@@ -368,12 +368,7 @@ or towards the derivative of the Bezier curve.</p></td>
   <span class='fu'><a href='render_animation.html'>render_animation</a></span><span class='op'>(</span>filename <span class='op'>=</span> <span class='cn'>NA</span>, camera_motion <span class='op'>=</span> <span class='va'>camera_motion</span>, samples<span class='op'>=</span><span class='fl'>100</span>,
                    sample_method<span class='op'>=</span><span class='st'>"sobol_blue"</span>,  
                    clamp_value<span class='op'>=</span><span class='fl'>10</span>, width<span class='op'>=</span><span class='fl'>400</span>, height<span class='op'>=</span><span class='fl'>400</span><span class='op'>)</span>
-</div><div class='img'><img src='generate_camera_motion-4.png' alt='' width='700' height='433' /></div><div class='img'><img src='generate_camera_motion-5.png' alt='' width='700' height='433' /></div><div class='output co'>#&gt; Singular Matrix:
-#&gt; nan nan nan 0.321851
-#&gt; nan nan nan -9.15857
-#&gt; nan nan nan -19.3703
-#&gt; 0 0 0 1
-#&gt; </div><div class='output co'>#&gt; <span class='error'>Error in render_animation_rcpp(camera_info = camera_info, scene_info = scene_info,     camera_movement = camera_motion, start_frame = start_frame -         1, filenames = filename_str, post_process_frame = post_process_frame,     toneval = toneval, bloom = bloom): Singular matrix in MatrixInvert</span></div><div class='img'><img src='generate_camera_motion-6.png' alt='' width='700' height='433' /></div><div class='input'>
+</div><div class='output co'>#&gt; <span class='error'>Error in render_animation_rcpp(camera_info = camera_info, scene_info = scene_info,     camera_movement = camera_motion, start_frame = start_frame -         1, filenames = filename_str, post_process_frame = post_process_frame,     toneval = toneval, bloom = bloom): Index out of bounds: [index='roughness_list'].</span></div><div class='input'>
 <span class='co'># }</span>
 </div></pre>
   </div>
