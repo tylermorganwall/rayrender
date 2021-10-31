@@ -63,12 +63,6 @@ point3f color(const ray& r, hitable *world, hitable_list *hlist,
         //Generates a scatter direction (with origin hrec.p) from the mixture 
         //and saves surface normal from light to use in pdf_value calculation
         //(along with the scatter direction)
-        
-        //Translates the world space point into object space point, generates ray assuring intersection, and then translates 
-        //ray back into world space
-        //Remove this when error analysis fully implemented
-        point3f offset_p = offset_ray(hrec.p-r2.A, hrec.normal) + r2.A;
-
         r1 = r2;
         vec3f dir;
         if(!diffuse_bounce) {
@@ -78,7 +72,7 @@ point3f color(const ray& r, hitable *world, hitable_list *hlist,
           dir = p.generate(rng, diffuse_bounce, r2.time()); //scatters a ray from hit point to random direction
         }
         
-        r2 = ray(OffsetRayOrigin(offset_p, hrec.pError, hrec.normal, dir), dir, r2.pri_stack, r2.time());
+        r2 = ray(OffsetRayOrigin(hrec.p, hrec.pError, hrec.normal, dir), dir, r2.pri_stack, r2.time());
         
         pdf_val = p.value(dir, rng, r2.time()); //generates a pdf value based the intersection point and the mixture pdf
 

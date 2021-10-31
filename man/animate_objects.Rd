@@ -68,7 +68,7 @@ open/close options in `render_scene()`.
 }
 \examples{
 #Render a pig
-\dontrun{
+\donttest{
 generate_studio() \%>\% 
   add_object(pig(y=-1.2,scale=0.5,angle=c(0,-70,0)))\%>\% 
   add_object(sphere(y=5,x=5,z=5,radius=2,material=light())) \%>\% 
