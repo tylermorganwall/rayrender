@@ -333,7 +333,12 @@ Note: emissive objects may not currently function correctly when scaled.</p></td
   <span class='fu'><a href='add_object.html'>add_object</a></span><span class='op'>(</span><span class='fu'><a href='sphere.html'>sphere</a></span><span class='op'>(</span>y<span class='op'>=</span><span class='fl'>7</span>,z<span class='op'>=</span><span class='fl'>0</span>,x<span class='op'>=</span><span class='fl'>0</span>,material<span class='op'>=</span><span class='fu'><a href='light.html'>light</a></span><span class='op'>(</span>intensity<span class='op'>=</span><span class='fl'>100</span><span class='op'>)</span><span class='op'>)</span><span class='op'>)</span> <span class='op'>%&gt;%</span> 
   <span class='fu'><a href='render_scene.html'>render_scene</a></span><span class='op'>(</span>lookfrom <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>12</span>,<span class='fl'>20</span>,<span class='fl'>50</span><span class='op'>)</span>,samples<span class='op'>=</span><span class='fl'>100</span>,
                lookat<span class='op'>=</span><span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>0</span>,<span class='fl'>1</span>,<span class='fl'>0</span><span class='op'>)</span>, fov<span class='op'>=</span><span class='fl'>15</span>, clamp_value <span class='op'>=</span> <span class='fl'>10</span><span class='op'>)</span>
-</div><div class='img'><img src='bezier_curve-5.png' alt='' width='700' height='433' /></div><div class='input'>
+</div><div class='output co'>#&gt; Singular Matrix:
+#&gt; nan nan nan -2.98539
+#&gt; nan nan nan 3.85287
+#&gt; nan nan nan 0.0572807
+#&gt; 0 0 0 1
+#&gt; </div><div class='output co'>#&gt; <span class='error'>Error in render_scene_rcpp(camera_info = camera_info, scene_info = scene_info): Singular matrix in MatrixInvert</span></div><div class='input'>
 <span class='co'># }</span>
 </div></pre>
   </div>
