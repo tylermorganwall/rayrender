@@ -72,7 +72,7 @@ open/close options in `render_scene()`.
 generate_studio() \%>\% 
   add_object(pig(y=-1.2,scale=0.5,angle=c(0,-70,0)))\%>\% 
   add_object(sphere(y=5,x=5,z=5,radius=2,material=light())) \%>\% 
-  render_scene(samples=16,sample_method = "sobol_blue")
+  render_scene(samples=256,sample_method = "sobol_blue")
 
 #Render a moving pig
 generate_studio() \%>\% 

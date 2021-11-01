@@ -330,6 +330,37 @@ render_animation = function(scene, camera_motion, start_frame = 1,
   alphalist$bump_tex_bool = bump_tex_bool
   alphalist$bump_intensity = bump_intensity
   
+  
+  #roughness texture handler
+  roughness_array_list = scene$roughness_texture
+  rough_tex_bool = purrr::map_lgl(roughness_array_list,.f = ~is.array(.x[[1]]))
+  rough_filename_bool = purrr::map_lgl(roughness_array_list,.f = ~is.character(.x[[1]]))
+  rough_temp_file_names = purrr::map_chr(rough_tex_bool, .f = (function(.x) tempfile(fileext = ".png")))
+  for(i in 1:length(roughness_array_list)) {
+    if(rough_tex_bool[i]) {
+      tempgloss = glossyinfo[[i]]
+      if(length(dim(roughness_array_list[[i]][[1]])) == 2) {
+        png::writePNG(fliplr(t(roughness_array_list[[i]][[1]])), rough_temp_file_names[i])
+      } else if(dim(roughness_array_list[[i]][[1]])[3] == 3) {
+        png::writePNG(fliplr(aperm(roughness_array_list[[i]][[1]],c(2,1,3))), rough_temp_file_names[i])
+      } else {
+        stop("alpha texture dims: c(", paste(dim(roughness_array_list[[i]][[1]]),collapse=", "), ") not valid for texture.")
+      }
+    }
+    if(rough_filename_bool[i]) {
+      if(any(!file.exists(path.expand(roughness_array_list[[i]][[1]])) & nchar(roughness_array_list[[i]][[1]]) > 0)) {
+        stop(paste0("Cannot find the following texture file:\n",
+                    paste(roughness_array_list[[i]][[1]], collapse="\n")))
+      }
+      rough_temp_file_names[i] = path.expand(roughness_array_list[[i]][[1]])
+    }
+  }
+  rough_tex_bool = rough_tex_bool | rough_filename_bool
+  roughness_list = list()
+  roughness_list$rough_temp_file_names = rough_temp_file_names
+  roughness_list$rough_tex_bool = rough_tex_bool
+  
+  
   #movement handler
   if(shutteropen == shutterclose) {
     movingvec = rep(FALSE,length(movingvec))
@@ -430,6 +461,13 @@ render_animation = function(scene, camera_motion, start_frame = 1,
   camera_info$stratified_dim = strat_dim
   camera_info$light_direction = light_direction
   camera_info$bvh = switch(bvh_type,"sah" = 1, "equal" = 2, 1)
+  
+  animation_info = list()
+  animation_info$animation_bool            = animation_bool            
+  animation_info$start_transform_animation = start_transform_animation 
+  animation_info$end_transform_animation   = end_transform_animation   
+  animation_info$animation_start_time      = animation_start_time      
+  animation_info$animation_end_time        = animation_end_time     
   
   if(max_depth <= 0) {
     stop("max_depth must be greater than zero")
@@ -532,6 +570,8 @@ render_animation = function(scene, camera_motion, start_frame = 1,
   scene_info$image_repeat = image_repeat
   scene_info$csg_info = csg_info
   scene_info$mesh_list=mesh_list
+  scene_info$roughness_list = roughness_list
+  scene_info$animation_info = animation_info
   
   #Camera Movement Info
   if(filename != "") {

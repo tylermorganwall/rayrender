@@ -63,7 +63,8 @@ generate_ground(material=diffuse(checkercolor="grey20")) \%>\%
                    csg_cylinder(start=c(0,0,-1), end=c(0,0,1), radius=0.4))),
                    material=glossy(color="blue"))) \%>\% 
   add_object(sphere(y=5,x=3,radius=1,material=light(intensity=30))) \%>\%
-  render_scene(clamp_value=10, fov=15,lookfrom=c(5,5,10))
+  render_scene(clamp_value=10, fov=15,lookfrom=c(5,5,10), 
+               samples=256, sample_method="sobol_blue")
 
 #Standard CSG sphere + box - crossed cylinder combination:
 generate_ground(material=diffuse(checkercolor="grey20")) \%>\%
@@ -78,7 +79,8 @@ generate_ground(material=diffuse(checkercolor="grey20")) \%>\%
     operation="subtract"),
     material=glossy(color="red"))) \%>\%
   add_object(sphere(y=5,x=3,radius=1,material=light(intensity=30))) \%>\%
-  render_scene(clamp_value=10, fov=10,lookfrom=c(5,5,10))
+  render_scene(clamp_value=10, fov=10,lookfrom=c(5,5,10),
+               samples=256, sample_method="sobol_blue"))
   
 #Blend them all instead:
 generate_ground(material=diffuse(checkercolor="grey20")) \%>\%
@@ -93,6 +95,7 @@ generate_ground(material=diffuse(checkercolor="grey20")) \%>\%
     operation="blend"),
     material=glossy(color="purple"))) \%>\%
   add_object(sphere(y=5,x=3,radius=1,material=light(intensity=30))) \%>\%
-  render_scene(clamp_value=10, fov=15,lookfrom=c(5,5,10))
+  render_scene(clamp_value=10, fov=15,lookfrom=c(5,5,10), 
+               samples=256, sample_method="sobol_blue"))
 }
 }

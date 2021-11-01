@@ -406,7 +406,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
   alphalist$bump_tex_bool = bump_tex_bool
   alphalist$bump_intensity = bump_intensity
   
-  #alpha texture handler
+  #roughness texture handler
   roughness_array_list = scene$roughness_texture
   rough_tex_bool = purrr::map_lgl(roughness_array_list,.f = ~is.array(.x[[1]]))
   rough_filename_bool = purrr::map_lgl(roughness_array_list,.f = ~is.character(.x[[1]]))

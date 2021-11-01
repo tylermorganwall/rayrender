@@ -563,7 +563,7 @@ dielectric = function(color="white", refraction = 1.5,  attenuation = c(0,0,0),
 #'  add_object(ellipsoid(x=200,z=200,y=80, a=50,b=80,c=50,
 #'              material=microfacet(roughness=0.3, transmission=T, eta=1.6))) %>% 
 #'  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
-#'              aperture=0, fov=40, parallel=TRUE,clamp_value=10)
+#'              aperture=0, fov=40, parallel=TRUE,clamp_value=10 min_variance=1e-6)
 #' }
 microfacet = function(color="white", roughness = 0.0001, transmission = FALSE,
                       eta = 0, kappa = 0, microfacet = "tbr", 

@@ -195,7 +195,11 @@ bool dielectric::scatter(const ray& r_in, const hit_record& hrec, scatter_record
       r_in.pri_stack->erase(r_in.pri_stack->begin() + current_layer);
     }
     vec3f refracted;
-    Refract(wi, outward_normal, ni_over_nt, &refracted);
+    if(ni_over_nt != 1) {
+      Refract(wi, outward_normal, ni_over_nt, &refracted);
+    } else {
+      refracted = -wi;
+    }
     srec.specular_ray = ray(offset_p, refracted, r_in.pri_stack, r_in.time());
   }
   return(true);
@@ -289,8 +293,12 @@ bool dielectric::scatter(const ray& r_in, const hit_record& hrec, scatter_record
     if(!entering && current_layer != -1) {
       r_in.pri_stack->erase(r_in.pri_stack->begin() + current_layer);
     }
-    vec3f refracted;
-    Refract(wi, outward_normal, ni_over_nt, &refracted);
+    vec3f refracted;    
+    if(ni_over_nt != 1) {
+      Refract(wi, outward_normal, ni_over_nt, &refracted);
+    } else {
+      refracted = -wi;
+    }
     srec.specular_ray = ray(offset_p, refracted, r_in.pri_stack, r_in.time());
   }
   return(true);
