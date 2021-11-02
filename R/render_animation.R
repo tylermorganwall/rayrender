@@ -188,10 +188,8 @@ render_animation = function(scene, camera_motion, start_frame = 1,
     stop("tonemap value ", tonemap, " not recognized")
   }
   toneval = switch(tonemap, "gamma" = 1,"reinhold" = 2,"uncharted" = 3,"hbd" = 4, "raw" = 5)
-  movingvec = purrr::map_lgl(scene$velocity,.f = ~any(.x != 0))
   proplist = scene$properties
-  vel_list = scene$velocity
-  
+
   checkeredlist = scene$checkercolor
   checkeredbool = purrr::map_lgl(checkeredlist,.f = ~all(!is.na(.x)))
   
@@ -376,6 +374,15 @@ render_animation = function(scene, camera_motion, start_frame = 1,
   group_bool = purrr::map_lgl(scene$group_transform,.f = ~all(!is.na(.x)))
   group_transform = scene$group_transform
   
+  
+  #animation handler
+  animation_bool = purrr::map_lgl(scene$start_transform_animation,.f = ~all(!is.na(.x))) & 
+    purrr::map_lgl(scene$end_transform_animation,.f = ~all(!is.na(.x)))
+  start_transform_animation = scene$start_transform_animation
+  end_transform_animation = scene$end_transform_animation
+  animation_start_time = scene$start_time
+  animation_end_time = scene$end_time
+  
   #triangle normal handler
   tri_normal_bools = purrr::map2_lgl(shapevec,proplist,.f = ~.x == 6 && all(!is.na(.y)))
   tri_color_vert = scene$tricolorinfo
@@ -521,7 +528,6 @@ render_animation = function(scene, camera_motion, start_frame = 1,
   scene_info$radius = rvec
   scene_info$position_list = position_list
   scene_info$properties = proplist
-  scene_info$velocity = vel_list
   scene_info$moving = movingvec
   scene_info$n = length(typevec)
   scene_info$bghigh = backgroundhigh

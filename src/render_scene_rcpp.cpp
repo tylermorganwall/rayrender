@@ -55,7 +55,6 @@ List render_scene_rcpp(List camera_info, List scene_info) {
   IntegerVector shape = as<IntegerVector>(scene_info["shape"]);
   List position_list = as<List>(scene_info["position_list"]);
   List properties = as<List>(scene_info["properties"]);
-  List velocity = as<List>(scene_info["velocity"]);
   int n = as<int>(scene_info["n"]);
   NumericVector bghigh  = as<NumericVector>(scene_info["bghigh"]);
   NumericVector bglow = as<NumericVector>(scene_info["bglow"]);
@@ -274,7 +273,7 @@ List render_scene_rcpp(List camera_info, List scene_info) {
   
   
   std::shared_ptr<hitable> worldbvh = build_scene(type, radius, shape, position_list,
-                                properties, velocity, 
+                                properties, 
                                 n,shutteropen,shutterclose,
                                 ischeckered, checkercolors, 
                                 gradient_info,
@@ -387,7 +386,7 @@ List render_scene_rcpp(List camera_info, List scene_info) {
   for(int i = 0; i < n; i++)  {
     if(implicit_sample(i)) {
       hlist.add(build_imp_sample(type, radius, shape, position_list,
-                               properties, velocity,
+                               properties, 
                                n, shutteropen, shutterclose,
                                angle, i, order_rotation_list,
                                isgrouped, group_transform,

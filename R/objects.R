@@ -8,7 +8,6 @@
 #' functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}.
 #' @param angle Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.
 #' @param order_rotation Default `c(1, 2, 3)`. The order to apply the rotations, referring to "x", "y", and "z".
-#' @param velocity Default `c(0, 0, 0)`. Velocity of the sphere, used for motion blur.
 #' @param flipped Default `FALSE`. Whether to flip the normals.
 #' @param scale Default `c(1, 1, 1)`. Scale transformation in the x, y, and z directions. If this is a single value,
 #' number, the object will be scaled uniformly.
@@ -35,23 +34,14 @@
 #'   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
 #'                ambient_light = FALSE, samples = 400, clamp_value = 5)
 #' }
-#'   
-#' #Add motion blur and show the sphere moving
-#' \donttest{
-#' generate_cornell() %>%
-#'   add_object(sphere(x = 555/2, y = 100, z = 555/2, radius = 100,
-#'              material = microfacet(color = "gold"), velocity = c(50, 0, 0))) %>%
-#'   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
-#'                ambient_light = FALSE, samples = 400, clamp_value = 5)
-#' }
 sphere = function(x = 0, y = 0, z = 0, radius = 1, material = diffuse(), 
-                  angle = c(0, 0, 0), order_rotation = c(1, 2, 3), velocity = c(0, 0, 0), 
+                  angle = c(0, 0, 0), order_rotation = c(1, 2, 3), 
                   flipped = FALSE, scale = c(1,1,1)) {
   if(length(scale) == 1) {
     scale = c(scale, scale, scale)
   }
   new_tibble_row(list(x = x, y = y, z = z, radius = radius, type = material$type, shape = "sphere",
-                 properties = material$properties, velocity = list(velocity), 
+                 properties = material$properties, 
                  checkercolor = material$checkercolor, 
                  gradient_color = material$gradient_color, gradient_transpose = material$gradient_transpose, 
                  world_gradient = material$world_gradient, gradient_point_info = material$gradient_point_info,
@@ -85,7 +75,6 @@ sphere = function(x = 0, y = 0, z = 0, radius = 1, material = diffuse(),
 #' functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}.
 #' @param angle Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.
 #' @param order_rotation Default `c(1, 2, 3)`. The order to apply the rotations, referring to "x", "y", and "z".
-#' @param velocity Default `c(0, 0, 0)`. Velocity of the cube.
 #' @param flipped Default `FALSE`. Whether to flip the normals.
 #' @param scale Default `c(1, 1, 1)`. Scale transformation in the x, y, and z directions. If this is a single value,
 #' number, the object will be scaled uniformly.
@@ -124,7 +113,7 @@ sphere = function(x = 0, y = 0, z = 0, radius = 1, material = diffuse(),
 #'                ambient_light = FALSE, samples = 500, parallel = TRUE, clamp_value = 5) 
 #' }
 cube = function(x = 0, y = 0, z = 0, width = 1, xwidth = 1, ywidth = 1, zwidth = 1, 
-                material = diffuse(), angle = c(0, 0, 0), order_rotation = c(1, 2, 3), velocity = c(0, 0, 0),
+                material = diffuse(), angle = c(0, 0, 0), order_rotation = c(1, 2, 3), 
                 flipped = FALSE, scale = c(1,1,1)) {
   if(length(scale) == 1) {
     scale = c(scale, scale, scale)
@@ -134,7 +123,7 @@ cube = function(x = 0, y = 0, z = 0, width = 1, xwidth = 1, ywidth = 1, zwidth =
   zwidth = ifelse(missing(zwidth), width, zwidth)
   boxinfo = c(unlist(material$properties), xwidth, ywidth, zwidth)
   new_tibble_row(list(x = x, y = y, z = z, radius = NA, type = material$type, shape = "box",
-                 properties = list(boxinfo), velocity = list(velocity), 
+                 properties = list(boxinfo), 
                  checkercolor = material$checkercolor, 
                  gradient_color = material$gradient_color, gradient_transpose = material$gradient_transpose, 
                  world_gradient = material$world_gradient, gradient_point_info = material$gradient_point_info,
@@ -201,7 +190,7 @@ xy_rect = function(x = 0, y = 0, z = 0, xwidth = 1, ywidth = 1,
   }
   rectinfo = c(unlist(material$properties), x, xwidth, y, ywidth, z)
   new_tibble_row(list(x = x, y = y, z = z, radius = NA, type = material$type, shape = "xy_rect",
-                 properties = list(rectinfo), velocity = list(c(0, 0, 0)),
+                 properties = list(rectinfo), 
                  checkercolor = material$checkercolor, 
                  gradient_color = material$gradient_color, gradient_transpose = material$gradient_transpose, 
                  world_gradient = material$world_gradient, gradient_point_info = material$gradient_point_info,
@@ -267,7 +256,7 @@ yz_rect = function(x = 0, y = 0, z = 0, ywidth = 1, zwidth = 1, material = diffu
   }
   rectinfo = c(unlist(material$properties), y, ywidth, z, zwidth, x)
   new_tibble_row(list(x = x, y = y, z = z, radius = NA, type = material$type, shape = "yz_rect",
-                 properties = list(rectinfo), velocity = list(c(0, 0, 0)),
+                 properties = list(rectinfo), 
                  checkercolor = material$checkercolor, 
                  gradient_color = material$gradient_color, gradient_transpose = material$gradient_transpose, 
                  world_gradient = material$world_gradient, gradient_point_info = material$gradient_point_info,
@@ -335,7 +324,7 @@ xz_rect = function(x = 0, xwidth = 1, z = 0, zwidth = 1, y = 0, material = diffu
   rectinfo = c(unlist(material$properties), x, xwidth, z, zwidth, y)
   new_tibble_row(list(x = x, y = y, z = z, radius = NA, 
                  type = material$type, shape = "xz_rect",
-                 properties = list(rectinfo), velocity = list(c(0, 0, 0)),
+                 properties = list(rectinfo), 
                  checkercolor = material$checkercolor, 
                  gradient_color = material$gradient_color, gradient_transpose = material$gradient_transpose, 
                  world_gradient = material$world_gradient, gradient_point_info = material$gradient_point_info,
@@ -439,7 +428,7 @@ triangle = function(v1 = c(1, 0, 0), v2 = c(0, 1, 0), v3 = c(-1, 0, 0),
   colorvec = c(color1, color2, color3)
   new_tibble_row(list(x = 0, y = 0, z = 0, radius = NA, 
                  type = material$type, shape = "triangle",
-                 properties = list(info), velocity = list(c(0, 0, 0)),
+                 properties = list(info), 
                  checkercolor = material$checkercolor, 
                  gradient_color = material$gradient_color, gradient_transpose = material$gradient_transpose, 
                  world_gradient = material$world_gradient, gradient_point_info = material$gradient_point_info,
@@ -471,7 +460,6 @@ triangle = function(v1 = c(1, 0, 0), v2 = c(0, 1, 0), v3 = c(-1, 0, 0),
 #' functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}.
 #' @param angle Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.
 #' @param order_rotation Default `c(1, 2, 3)`. The order to apply the rotations, referring to "x", "y", and "z".
-#' @param velocity Default `c(0, 0, 0)`. Velocity of the disk.
 #' @param flipped Default `FALSE`. Whether to flip the normals.
 #' @param scale Default `c(1, 1, 1)`. Scale transformation in the x, y, and z directions. If this is a single value,
 #' number, the object will be scaled uniformly.
@@ -509,14 +497,14 @@ triangle = function(v1 = c(1, 0, 0), v2 = c(0, 1, 0), v3 = c(-1, 0, 0),
 #'                ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
 #' }
 disk = function(x = 0, y = 0, z = 0, radius = 1, inner_radius = 0, material = diffuse(), 
-                angle = c(0, 0, 0), order_rotation = c(1, 2, 3), velocity = c(0, 0, 0), 
+                angle = c(0, 0, 0), order_rotation = c(1, 2, 3), 
                 flipped = FALSE, scale = c(1,1,1)) {
   if(length(scale) == 1) {
     scale = c(scale, scale, scale)
   }
   info = c(unlist(material$properties), inner_radius)
   new_tibble_row(list(x = x, y = y, z = z, radius = radius, type = material$type, shape = "disk",
-                 properties = list(info), velocity = list(velocity), 
+                 properties = list(info), 
                  checkercolor = material$checkercolor, 
                  gradient_color = material$gradient_color, gradient_transpose = material$gradient_transpose, 
                  world_gradient = material$world_gradient, gradient_point_info = material$gradient_point_info,
@@ -615,7 +603,7 @@ obj_model = function(filename, x = 0, y = 0, z = 0, scale_obj = 1,
   }
   new_tibble_row(list(x = x, y = y, z = z, radius = NA, 
                  type = material$type, shape = shape,
-                 properties = list(info), velocity = list(c(0, 0, 0)),
+                 properties = list(info), 
                  checkercolor = material$checkercolor, 
                  gradient_color = material$gradient_color, gradient_transpose = material$gradient_transpose, 
                  world_gradient = material$world_gradient, gradient_point_info = material$gradient_point_info,
@@ -649,7 +637,6 @@ obj_model = function(filename, x = 0, y = 0, z = 0, scale_obj = 1,
 #' functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}.
 #' @param angle Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.
 #' @param order_rotation Default `c(1, 2, 3)`. The order to apply the rotations, referring to "x", "y", and "z".
-#' @param velocity Default `c(0, 0, 0)`. Velocity of the cylinder.
 #' @param flipped Default `FALSE`. Whether to flip the normals.
 #' @param scale Default `c(1, 1, 1)`. Scale transformation in the x, y, and z directions. If this is a single value,
 #' number, the object will be scaled uniformly.
@@ -692,7 +679,7 @@ obj_model = function(filename, x = 0, y = 0, z = 0, scale_obj = 1,
 #' }
 cylinder = function(x = 0, y = 0, z = 0, radius = 1, length = 1, 
                     phi_min = 0, phi_max = 360, material = diffuse(), 
-                    angle = c(0, 0, 0), order_rotation = c(1, 2, 3), velocity = c(0, 0, 0), 
+                    angle = c(0, 0, 0), order_rotation = c(1, 2, 3), 
                     flipped = FALSE, scale = c(1,1,1), capped = TRUE) {
   if(length(scale) == 1) {
     scale = c(scale, scale, scale)
@@ -701,7 +688,7 @@ cylinder = function(x = 0, y = 0, z = 0, radius = 1, length = 1,
   cap_int = ifelse(capped, 1, 0)
   info = c(unlist(material$properties), length, phi_min * pi / 180, phi_max * pi / 180, cap_int)
   new_tibble_row(list(x = x, y = y, z = z, radius = radius, type = material$type, shape = "cylinder",
-                 properties = list(info), velocity = list(velocity), 
+                 properties = list(info), 
                  checkercolor = material$checkercolor, 
                  gradient_color = material$gradient_color, gradient_transpose = material$gradient_transpose, 
                  world_gradient = material$world_gradient, gradient_point_info = material$gradient_point_info,
@@ -738,7 +725,6 @@ cylinder = function(x = 0, y = 0, z = 0, radius = 1, length = 1,
 #' to `FALSE` will make `start` specify the bottom of the segment, instead of the middle.
 #' @param material Default  \code{\link{diffuse}}.The material, called from one of the material 
 #' functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}.
-#' @param velocity Default `c(0, 0, 0)`. Velocity of the segment.
 #' @param flipped Default `FALSE`. Whether to flip the normals.
 #' @param scale Default `c(1, 1, 1)`. Scale transformation in the x, y, and z directions. If this is a single value,
 #' number, the object will be scaled uniformly. Notes: this will change the stated start/end position of the segment. 
@@ -811,7 +797,7 @@ cylinder = function(x = 0, y = 0, z = 0, radius = 1, length = 1,
 segment = function(start = c(0, -1, 0), end = c(0, 1, 0), radius = 0.1, 
                    phi_min = 0, phi_max = 360, from_center = TRUE, direction = NA,
                    material = diffuse(), capped = TRUE, 
-                   velocity = c(0, 0, 0), flipped = FALSE, scale = c(1,1,1)) {
+                   flipped = FALSE, scale = c(1,1,1)) {
   if(length(scale) == 1) {
     scale = c(scale, scale, scale)
   }
@@ -844,7 +830,7 @@ segment = function(start = c(0, -1, 0), end = c(0, 1, 0), radius = 0.1,
   angle = c(0, phi, theta)
   info = c(unlist(material$properties), fulllength, phi_min * pi / 180, phi_max * pi / 180, cap_int)
   new_tibble_row(list(x = x, y = y, z = z, radius = radius, type = material$type, shape = "cylinder",
-                 properties = list(info), velocity = list(velocity), 
+                 properties = list(info), 
                  checkercolor = material$checkercolor, 
                  gradient_color = material$gradient_color, gradient_transpose = material$gradient_transpose, 
                  world_gradient = material$world_gradient, gradient_point_info = material$gradient_point_info,
@@ -880,7 +866,6 @@ segment = function(start = c(0, -1, 0), end = c(0, 1, 0), radius = 0.1,
 #' functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}.
 #' @param angle Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.
 #' @param order_rotation Default `c(1, 2, 3)`. The order to apply the rotations, referring to "x", "y", and "z".
-#' @param velocity Default `c(0, 0, 0)`. Velocity of the segment.
 #' @param flipped Default `FALSE`. Whether to flip the normals.
 #' @param scale Default `c(1, 1, 1)`. Scale transformation in the x, y, and z directions. If this is a single value,
 #' number, the object will be scaled uniformly. Note: emissive objects may not currently function correctly when scaled.
@@ -920,14 +905,14 @@ segment = function(start = c(0, -1, 0), end = c(0, 1, 0), radius = 0.1,
 ellipsoid = function(x = 0, y = 0, z = 0, a = 1, b = 1, c = 1,
                   material = diffuse(), 
                   angle = c(0, 0, 0), order_rotation = c(1, 2, 3), 
-                  velocity = c(0, 0, 0), flipped = FALSE, scale = c(1,1,1)) {
+                  flipped = FALSE, scale = c(1,1,1)) {
   if(length(scale) == 1) {
     scale = c(scale, scale, scale)
   }
   radius = 1
   info = c(unlist(material$properties), a, b, c)
   new_tibble_row(list(x = x, y = y, z = z, radius = radius, type = material$type, shape = "ellipsoid",
-                 properties = list(info), velocity = list(velocity), 
+                 properties = list(info), 
                  checkercolor = material$checkercolor, 
                  gradient_color = material$gradient_color, gradient_transpose = material$gradient_transpose, 
                  world_gradient = material$world_gradient, gradient_point_info = material$gradient_point_info,
@@ -1492,7 +1477,6 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
 #' @param material Default  \code{\link{diffuse}}.The material, called from one of the material 
 #' functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}.
 #' @param angle Default `c(0, 0, 0)`. Rotation angle. Note: This will change the `start` and `end` coordinates.
-#' @param velocity Default `c(0, 0, 0)`. Velocity of the segment.
 #' @param flipped Default `FALSE`. Whether to flip the normals.
 #' @param scale Default `c(1, 1, 1)`. Scale transformation in the x, y, and z directions. If this is a single value,
 #' number, the object will be scaled uniformly. Notes: this will change the stated start/end position of the cone. 
@@ -1560,7 +1544,7 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
 cone = function(start = c(0, 0, 0), end = c(0, 1, 0), radius = 0.5, 
                 direction = NA, from_center = TRUE,
                 material = diffuse(), angle = c(0,0,0),
-                velocity = c(0, 0, 0), flipped = FALSE, scale = c(1,1,1)) {
+                flipped = FALSE, scale = c(1,1,1)) {
   if(length(scale) == 1) {
     scale = c(scale, scale, scale)
   }
@@ -1603,7 +1587,7 @@ cone = function(start = c(0, 0, 0), end = c(0, 1, 0), radius = 0.5,
   angle = c(0, phi, theta) + angle
   info = c(unlist(material$properties), fulllength)
   new_tibble_row(list(x = x, y = y, z = z, radius = radius, type = material$type, shape = "cone",
-                      properties = list(info), velocity = list(velocity), 
+                      properties = list(info), 
                       checkercolor = material$checkercolor, 
                       gradient_color = material$gradient_color, gradient_transpose = material$gradient_transpose, 
                       world_gradient = material$world_gradient, gradient_point_info = material$gradient_point_info,
@@ -1640,7 +1624,6 @@ cone = function(start = c(0, 0, 0), end = c(0, 1, 0), radius = 0.5,
 #' to `FALSE` will make `start` specify the bottom of the cone, instead of the middle.
 #' @param material Default  \code{\link{diffuse}}.The material, called from one of the material 
 #' functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}.
-#' @param velocity Default `c(0, 0, 0)`. Velocity of the segment.
 #' @param flipped Default `FALSE`. Whether to flip the normals.
 #' @param scale Default `c(1, 1, 1)`. Scale transformation in the x, y, and z directions. If this is a single value,
 #' number, the object will be scaled uniformly. Notes: this will change the stated start/end position of the cone. 
@@ -1725,7 +1708,7 @@ cone = function(start = c(0, 0, 0), end = c(0, 1, 0), radius = 0.5,
 arrow = function(start = c(0,0,0), end = c(0,1,0), 
                  radius_top = 0.2, radius_tail = 0.1, tail_proportion = 0.5,
                  direction = NA,  from_center = TRUE, 
-                 material = diffuse(), velocity = c(0,0,0),
+                 material = diffuse(), 
                  flipped = FALSE, scale = c(1,1,1)) {
   stopifnot(tail_proportion > 0 && tail_proportion < 1)
   head_proportion = 1 - tail_proportion
@@ -1745,12 +1728,12 @@ arrow = function(start = c(0,0,0), end = c(0,1,0),
           end = end_segment,
           radius = radius_tail, 
           material = material, 
-          flipped = flipped, scale = scale, velocity = velocity) %>%
+          flipped = flipped, scale = scale) %>%
     add_object(cone(start = start_tip, 
                     end = end_tip,
                     radius = radius_top, 
                     material = material, 
-                    flipped = flipped, scale = scale, velocity = velocity))
+                    flipped = flipped, scale = scale))
 }
 
 #' Bezier Curve Object
@@ -1777,7 +1760,6 @@ arrow = function(start = c(0,0,0), end = c(0,1,0),
 #' functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}.
 #' @param angle Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.
 #' @param order_rotation Default `c(1, 2, 3)`. The order to apply the rotations, referring to "x", "y", and "z".
-#' @param velocity Default `c(0, 0, 0)`. Velocity of the cube.
 #' @param flipped Default `FALSE`. Whether to flip the normals.
 #' @param scale Default `c(1, 1, 1)`. Scale transformation in the x, y, and z directions. If this is a single value,
 #' number, the object will be scaled uniformly.
@@ -1853,7 +1835,7 @@ bezier_curve = function(p1 = c(0,0,0), p2 = c(-1,0.33,0), p3 = c(1,0.66,0), p4=c
                         width = 0.1, width_end = NA, u_min = 0, u_max = 1, type = "cylinder",
                         normal = c(0,0,-1), normal_end = NA, 
                         material = diffuse(), angle = c(0, 0, 0),
-                        order_rotation = c(1, 2, 3), velocity = c(0, 0, 0),
+                        order_rotation = c(1, 2, 3), 
                         flipped = FALSE, scale = c(1,1,1)) {
   if(inherits(p1,"list")) {
     stopifnot(length(p1) == 4 && all(lapply(p1, (function(x) length(x) == 3))))
@@ -1896,7 +1878,7 @@ bezier_curve = function(p1 = c(0,0,0), p2 = c(-1,0.33,0), p3 = c(1,0.66,0), p4=c
   curve_info = c(unlist(material$properties), p1, p2, p3, p4, width, width_end, 
                  u_min, u_max, curvetype, normal, normal_end)
   new_tibble_row(list(x = x, y = y, z = z, radius = NA, type = material$type, shape = "curve",
-                      properties = list(curve_info), velocity = list(velocity), 
+                      properties = list(curve_info), 
                       checkercolor = material$checkercolor, 
                       gradient_color = material$gradient_color, gradient_transpose = material$gradient_transpose, 
                       world_gradient = material$world_gradient, gradient_point_info = material$gradient_point_info,
@@ -1946,7 +1928,6 @@ bezier_curve = function(p1 = c(0,0,0), p2 = c(-1,0.33,0), p3 = c(1,0.66,0), p4=c
 #' functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}.
 #' @param angle Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.
 #' @param order_rotation Default `c(1, 2, 3)`. The order to apply the rotations, referring to "x", "y", and "z".
-#' @param velocity Default `c(0, 0, 0)`. Velocity of the cube.
 #' @param flipped Default `FALSE`. Whether to flip the normals.
 #' @param scale Default `c(1, 1, 1)`. Scale transformation in the x, y, and z directions. If this is a single value,
 #' number, the object will be scaled uniformly.
@@ -2031,7 +2012,7 @@ path = function(points,
                 width = 0.1, width_end = NA, u_min = 0, u_max = 1, type = "cylinder",
                 normal = c(0,0,-1), normal_end = NA, 
                 material = diffuse(), angle = c(0, 0, 0),
-                order_rotation = c(1, 2, 3), velocity = c(0, 0, 0),
+                order_rotation = c(1, 2, 3),
                 flipped = FALSE, scale = c(1,1,1)) {
   if(is.na(width_end)) {
     width_end = width
@@ -2137,7 +2118,7 @@ path = function(points,
                                      width = temp_width_start, width_end = temp_width_end,
                                      normal = temp_normal_start, normal_end = temp_normal_end,
                                      material = material, angle = angle,
-                                     order_rotation = order_rotation, velocity = velocity,
+                                     order_rotation = order_rotation, 
                                      flipped = flipped, scale = scale)
     }
   }
@@ -2160,7 +2141,6 @@ path = function(points,
 #' functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}.
 #' @param angle Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.
 #' @param order_rotation Default `c(1, 2, 3)`. The order to apply the rotations, referring to "x", "y", and "z".
-#' @param velocity Default `c(0, 0, 0)`. Velocity of the sphere, used for motion blur.
 #' @param flipped Default `FALSE`. Whether to flip the normals.
 #' @param scale Default `c(1, 1, 1)`. Scale transformation in the x, y, and z directions. If this is a single value,
 #' number, the object will be scaled uniformly.
@@ -2218,7 +2198,7 @@ path = function(points,
 #' }
 text3d = function(label, x = 0, y = 0, z = 0, text_height = 1, orientation = "xy",
                   material = diffuse(), 
-                  angle = c(0, 0, 0), order_rotation = c(1, 2, 3), velocity = c(0, 0, 0), 
+                  angle = c(0, 0, 0), order_rotation = c(1, 2, 3), 
                   flipped = FALSE, scale = c(1,1,1)) {
   labelfile = tempfile(fileext = ".png")
   rayimage::add_title(matrix(0,ncol = nchar(label)*60, nrow=60*1.2), 
@@ -2301,7 +2281,7 @@ ply_model = function(filename, x = 0, y = 0, z = 0, scale_ply = 1,
   info = c(unlist(material$properties), scale_ply)
   new_tibble_row(list(x = x, y = y, z = z, radius = NA, 
                       type = material$type, shape = "ply",
-                      properties = list(info), velocity = list(c(0, 0, 0)),
+                      properties = list(info), 
                       checkercolor = material$checkercolor, 
                       gradient_color = material$gradient_color, gradient_transpose = material$gradient_transpose, 
                       world_gradient = material$world_gradient, gradient_point_info = material$gradient_point_info,
@@ -2465,7 +2445,7 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
   }
   new_tibble_row(list(x = x, y = y, z = z, radius = NA, 
                       type = material$type, shape = "mesh3d",
-                      properties = list(info), velocity = list(c(0, 0, 0)),
+                      properties = list(info), 
                       checkercolor = material$checkercolor, 
                       gradient_color = material$gradient_color, gradient_transpose = material$gradient_transpose, 
                       world_gradient = material$world_gradient, gradient_point_info = material$gradient_point_info,

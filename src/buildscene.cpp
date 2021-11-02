@@ -26,7 +26,7 @@ Transform rotation_order_matrix(NumericVector temprotvec, NumericVector order_ro
 std::shared_ptr<hitable> build_scene(IntegerVector& type, 
                      NumericVector& radius, IntegerVector& shape,
                      List& position_list,
-                     List& properties, List& velocity, 
+                     List& properties, 
                      int n, Float shutteropen, Float shutterclose,
                      LogicalVector& ischeckered, List& checkercolors, 
                      List gradient_info,
@@ -80,7 +80,6 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
   NumericVector tempvector;
   NumericVector tempchecker;
   NumericVector tempgradient;
-  NumericVector tempvel;
   NumericVector tempnoisecolor;
   NumericVector temprotvec;
   NumericVector order_rotation;
@@ -99,7 +98,6 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
   
   List templist;
   vec3f center(x(0), y(0), z(0));
-  vec3f vel(x(0), y(0), z(0));
   std::vector<std::shared_ptr<alpha_texture> > alpha(n);
   std::vector<std::shared_ptr<bump_texture> > bump(n);
   std::vector<std::shared_ptr<roughness_texture> > roughness(n);
@@ -108,7 +106,6 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
     tempvector = as<NumericVector>(properties(i));
     tempgradient = as<NumericVector>(gradient_colors(i));
     tempchecker = as<NumericVector>(checkercolors(i));
-    tempvel = as<NumericVector>(velocity(i));
     tempnoisecolor = as<NumericVector>(noisecolorlist(i));
     temprotvec = as<NumericVector>(angle(i));
     temp_tri_color = as<NumericVector>(tri_color_vert(i));
@@ -131,7 +128,6 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
       temp_animation_transform_end = IdentityMat;
     }
     prop_len=2;
-    vel = vec3f(tempvel(0),tempvel(1),tempvel(2));
     //Generate texture
     std::shared_ptr<material> tex = nullptr;
     if(has_alpha(i)) {
@@ -770,7 +766,7 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
 std::shared_ptr<hitable> build_imp_sample(IntegerVector& type, 
                           NumericVector& radius, IntegerVector& shape,
                           List& position_list,
-                          List& properties, List& velocity, 
+                          List& properties, 
                           int n, Float shutteropen, Float shutterclose, 
                           List& angle, int i, List& order_rotation_list,
                           LogicalVector& isgrouped, 
@@ -787,7 +783,6 @@ std::shared_ptr<hitable> build_imp_sample(IntegerVector& type,
   IdentityMat.fill_diag(1);
   NumericVector tempvector;
   NumericVector temprotvec;
-  NumericVector tempvel;
   NumericVector order_rotation;
   NumericVector temp_scales;
   NumericMatrix temp_group_transform;
@@ -809,13 +804,11 @@ std::shared_ptr<hitable> build_imp_sample(IntegerVector& type,
   List templist;
   int prop_len;
   tempvector = as<NumericVector>(properties(i));
-  tempvel = as<NumericVector>(velocity(i));
   temprotvec =  as<NumericVector>(angle(i));
   order_rotation = as<NumericVector>(order_rotation_list(i));
   temp_scales = as<NumericVector>(scale_list(i));
   
   vec3f center(x(i), y(i), z(i));
-  vec3f vel(tempvel(0),tempvel(1),tempvel(2));
   prop_len=2;
   if(isgrouped(i)) {
     temp_group_transform = as<NumericMatrix>(group_transform(i));

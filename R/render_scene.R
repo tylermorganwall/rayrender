@@ -266,8 +266,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
   }
   toneval = switch(tonemap, "gamma" = 1,"reinhold" = 2,"uncharted" = 3,"hbd" = 4, "raw" = 5)
   proplist = scene$properties
-  vel_list = scene$velocity
-  
+
   checkeredlist = scene$checkercolor
   checkeredbool = purrr::map_lgl(checkeredlist,.f = ~all(!is.na(.x)))
   
@@ -631,7 +630,6 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
   scene_info$radius = rvec
   scene_info$position_list = position_list
   scene_info$properties = proplist
-  scene_info$velocity = vel_list
   scene_info$n = length(typevec)
   scene_info$bghigh = backgroundhigh
   scene_info$bglow = backgroundlow

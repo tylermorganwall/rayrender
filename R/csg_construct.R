@@ -52,7 +52,7 @@
 #'     material=glossy(color="red"))) %>%
 #'   add_object(sphere(y=5,x=3,radius=1,material=light(intensity=30))) %>%
 #'   render_scene(clamp_value=10, fov=10,lookfrom=c(5,5,10),
-#'                samples=256, sample_method="sobol_blue"))
+#'                samples=256, sample_method="sobol_blue")
 #'   
 #' #Blend them all instead:
 #' generate_ground(material=diffuse(checkercolor="grey20")) %>%
@@ -68,16 +68,16 @@
 #'     material=glossy(color="purple"))) %>%
 #'   add_object(sphere(y=5,x=3,radius=1,material=light(intensity=30))) %>%
 #'   render_scene(clamp_value=10, fov=15,lookfrom=c(5,5,10), 
-#'                samples=256, sample_method="sobol_blue"))
+#'                samples=256, sample_method="sobol_blue")
 #' }
 csg_object = function(object, x = 0, y = 0, z = 0, material = diffuse(), 
-                      angle = c(0, 0, 0), order_rotation = c(1, 2, 3), velocity = c(0, 0, 0), 
+                      angle = c(0, 0, 0), order_rotation = c(1, 2, 3), 
                       flipped = FALSE, scale = c(1,1,1)) {
   if(!inherits(object,"ray_csg")) {
     stop("`object` must be constructed with rayrender csg_* functions")
   }
   new_tibble_row(list(x = x, y = y, z = z, radius = 1, type = material$type, shape = "csg_object",
-                      properties = material$properties, velocity = list(velocity), 
+                      properties = material$properties, 
                       checkercolor = material$checkercolor, 
                       gradient_color = material$gradient_color, gradient_transpose = material$gradient_transpose, 
                       world_gradient = material$world_gradient, gradient_point_info = material$gradient_point_info,

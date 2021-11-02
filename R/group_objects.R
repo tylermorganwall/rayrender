@@ -35,7 +35,7 @@
 #' \donttest{
 #' render_scene(scene2,lookfrom=c(278,278,-800),lookat = c(278,278,0), aperture=0,
 #'              samples=500, fov=50, parallel=TRUE, clamp_value=5)
-#' }
+#' }.
 #' 
 #' #Now group the cubes instead of the Cornell box, and rotate/translate them together
 #' twocubes = cube(x=555/2,y=555/8,z=555/2,width=555/4) %>%

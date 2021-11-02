@@ -8,7 +8,7 @@
 inline bool Refract(const vec3f &wi, const normal3f &n, Float eta, vec3f *wt) {
   // Compute $\cos \theta_\roman{t}$ using Snell's law
   if(eta == 1) {
-    *wt = wi;
+    *wt = -wi;
     return(true);
   }
   Float cosThetaI = dot(n, wi);
@@ -164,7 +164,8 @@ bool dielectric::scatter(const ray& r_in, const hit_record& hrec, scatter_record
   ni_over_nt = entering ? current_ref_idx / ref_idx : ref_idx / current_ref_idx ;
 
   //Never reflect if ni_over_nt == 1
-  Float reflect_prob = ni_over_nt != 1 ? FrDielectric(dot(wi, wh), ni_over_nt) : 0.0;
+  // Float reflect_prob = ni_over_nt != 1 ? FrDielectric(dot(wi, wh), ni_over_nt) : 0.0;
+  Float reflect_prob = FrDielectric(dot(wi, outward_normal), ni_over_nt);
   
   //Calculate attenuation color
   if(entering) {
@@ -195,11 +196,7 @@ bool dielectric::scatter(const ray& r_in, const hit_record& hrec, scatter_record
       r_in.pri_stack->erase(r_in.pri_stack->begin() + current_layer);
     }
     vec3f refracted;
-    if(ni_over_nt != 1) {
-      Refract(wi, outward_normal, ni_over_nt, &refracted);
-    } else {
-      refracted = -wi;
-    }
+    Refract(wi, outward_normal, ni_over_nt, &refracted);
     srec.specular_ray = ray(offset_p, refracted, r_in.pri_stack, r_in.time());
   }
   return(true);
@@ -263,8 +260,9 @@ bool dielectric::scatter(const ray& r_in, const hit_record& hrec, scatter_record
   outward_normal = entering ? wh : -wh;
   ni_over_nt = entering ? current_ref_idx / ref_idx : ref_idx / current_ref_idx ;
   //Never reflect if ni_over_nt == 1
-  Float reflect_prob = ni_over_nt != 1 ? FrDielectric(dot(wi, wh), ni_over_nt) : 0.0;
-
+  // Float reflect_prob = ni_over_nt != 1 ? FrDielectric(dot(wi, wh), ni_over_nt) : 0.0;
+  Float reflect_prob = FrDielectric(dot(wi, outward_normal), ni_over_nt);
+  
   //Calculate attenuation color
   if(!entering) {
     Float distance = (offset_p-r_in.point_at_parameter(0)).length();
@@ -294,11 +292,7 @@ bool dielectric::scatter(const ray& r_in, const hit_record& hrec, scatter_record
       r_in.pri_stack->erase(r_in.pri_stack->begin() + current_layer);
     }
     vec3f refracted;    
-    if(ni_over_nt != 1) {
-      Refract(wi, outward_normal, ni_over_nt, &refracted);
-    } else {
-      refracted = -wi;
-    }
+    Refract(wi, outward_normal, ni_over_nt, &refracted);
     srec.specular_ray = ray(offset_p, refracted, r_in.pri_stack, r_in.time());
   }
   return(true);
