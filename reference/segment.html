@@ -77,7 +77,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">rayrender</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.23.1</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.23.2</span>
       </span>
     </div>
 
@@ -167,7 +167,6 @@
   direction <span class='op'>=</span> <span class='cn'>NA</span>,
   material <span class='op'>=</span> <span class='fu'><a href='diffuse.html'>diffuse</a></span><span class='op'>(</span><span class='op'>)</span>,
   capped <span class='op'>=</span> <span class='cn'>TRUE</span>,
-  velocity <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>0</span>, <span class='fl'>0</span>, <span class='fl'>0</span><span class='op'>)</span>,
   flipped <span class='op'>=</span> <span class='cn'>FALSE</span>,
   scale <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>1</span>, <span class='fl'>1</span>, <span class='fl'>1</span><span class='op'>)</span>
 <span class='op'>)</span></pre>
@@ -214,10 +213,6 @@ functions <code><a href='diffuse.html'>diffuse</a></code>, <code><a href='metal.
     <tr>
       <th>capped</th>
       <td><p>Default `TRUE`. Whether to add caps to the segment. Turned off when using the `light()` material.</p></td>
-    </tr>
-    <tr>
-      <th>velocity</th>
-      <td><p>Default `c(0, 0, 0)`. Velocity of the segment.</p></td>
     </tr>
     <tr>
       <th>flipped</th>
