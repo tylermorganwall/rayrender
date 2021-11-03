@@ -12,7 +12,6 @@ csg_object(
   material = diffuse(),
   angle = c(0, 0, 0),
   order_rotation = c(1, 2, 3),
-  velocity = c(0, 0, 0),
   flipped = FALSE,
   scale = c(1, 1, 1)
 )
@@ -33,13 +32,13 @@ functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}
 
 \item{order_rotation}{Default `c(1, 2, 3)`. The order to apply the rotations, referring to "x", "y", and "z".}
 
-\item{velocity}{Default `c(0, 0, 0)`. Velocity of the sphere, used for motion blur.}
-
 \item{flipped}{Default `FALSE`. Whether to flip the normals.}
 
 \item{scale}{Default `c(1, 1, 1)`. Scale transformation in the x, y, and z directions. If this is a single value,
 number, the object will be scaled uniformly.
 Note: emissive objects may not currently function correctly when scaled.}
+
+\item{velocity}{Default `c(0, 0, 0)`. Velocity of the sphere, used for motion blur.}
 }
 \value{
 Single row of a tibble describing the sphere in the scene.
@@ -80,7 +79,7 @@ generate_ground(material=diffuse(checkercolor="grey20")) \%>\%
     material=glossy(color="red"))) \%>\%
   add_object(sphere(y=5,x=3,radius=1,material=light(intensity=30))) \%>\%
   render_scene(clamp_value=10, fov=10,lookfrom=c(5,5,10),
-               samples=256, sample_method="sobol_blue"))
+               samples=256, sample_method="sobol_blue")
   
 #Blend them all instead:
 generate_ground(material=diffuse(checkercolor="grey20")) \%>\%
@@ -96,6 +95,6 @@ generate_ground(material=diffuse(checkercolor="grey20")) \%>\%
     material=glossy(color="purple"))) \%>\%
   add_object(sphere(y=5,x=3,radius=1,material=light(intensity=30))) \%>\%
   render_scene(clamp_value=10, fov=15,lookfrom=c(5,5,10), 
-               samples=256, sample_method="sobol_blue"))
+               samples=256, sample_method="sobol_blue")
 }
 }

@@ -15,7 +15,6 @@ cube(
   material = diffuse(),
   angle = c(0, 0, 0),
   order_rotation = c(1, 2, 3),
-  velocity = c(0, 0, 0),
   flipped = FALSE,
   scale = c(1, 1, 1)
 )
@@ -41,8 +40,6 @@ functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}
 \item{angle}{Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.}
 
 \item{order_rotation}{Default `c(1, 2, 3)`. The order to apply the rotations, referring to "x", "y", and "z".}
-
-\item{velocity}{Default `c(0, 0, 0)`. Velocity of the cube.}
 
 \item{flipped}{Default `FALSE`. Whether to flip the normals.}
 

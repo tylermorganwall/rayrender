@@ -13,7 +13,6 @@ arrow(
   direction = NA,
   from_center = TRUE,
   material = diffuse(),
-  velocity = c(0, 0, 0),
   flipped = FALSE,
   scale = c(1, 1, 1)
 )
@@ -38,8 +37,6 @@ to `FALSE` will make `start` specify the bottom of the cone, instead of the midd
 
 \item{material}{Default  \code{\link{diffuse}}.The material, called from one of the material 
 functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}.}
-
-\item{velocity}{Default `c(0, 0, 0)`. Velocity of the segment.}
 
 \item{flipped}{Default `FALSE`. Whether to flip the normals.}
 

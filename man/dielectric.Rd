@@ -108,7 +108,7 @@ generate_ground(depth=-0.51,material=diffuse(checkercolor="grey30",checkerperiod
 # Here I make a concave lens by subtracting two spheres from a cube.
 \donttest{
 generate_ground(depth=-0.51,material=diffuse(checkercolor="grey30",checkerperiod=2,sigma=90)) \%>\%
-  add_object(cube(material = dielectric(attenuation = c(6,6,2),priority=1))) \%>\%
+  add_object(cube(material = dielectric(attenuation = c(3,3,1),priority=1))) \%>\%
   add_object(sphere(radius=1,x=1.01,
                     material = dielectric(priority=0,refraction=1))) \%>\%
   add_object(sphere(radius=1,x=-1.01, 

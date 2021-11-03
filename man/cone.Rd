@@ -12,7 +12,6 @@ cone(
   from_center = TRUE,
   material = diffuse(),
   angle = c(0, 0, 0),
-  velocity = c(0, 0, 0),
   flipped = FALSE,
   scale = c(1, 1, 1)
 )
@@ -35,8 +34,6 @@ to `FALSE` will make `start` specify the bottom of the cone, instead of the midd
 functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}.}
 
 \item{angle}{Default `c(0, 0, 0)`. Rotation angle. Note: This will change the `start` and `end` coordinates.}
-
-\item{velocity}{Default `c(0, 0, 0)`. Velocity of the segment.}
 
 \item{flipped}{Default `FALSE`. Whether to flip the normals.}
 

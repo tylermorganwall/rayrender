@@ -14,7 +14,6 @@ segment(
   direction = NA,
   material = diffuse(),
   capped = TRUE,
-  velocity = c(0, 0, 0),
   flipped = FALSE,
   scale = c(1, 1, 1)
 )
@@ -41,8 +40,6 @@ determined by the magnitude of the direction vector.}
 functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}.}
 
 \item{capped}{Default `TRUE`. Whether to add caps to the segment. Turned off when using the `light()` material.}
-
-\item{velocity}{Default `c(0, 0, 0)`. Velocity of the segment.}
 
 \item{flipped}{Default `FALSE`. Whether to flip the normals.}
 

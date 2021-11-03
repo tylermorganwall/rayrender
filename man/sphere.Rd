@@ -12,7 +12,6 @@ sphere(
   material = diffuse(),
   angle = c(0, 0, 0),
   order_rotation = c(1, 2, 3),
-  velocity = c(0, 0, 0),
   flipped = FALSE,
   scale = c(1, 1, 1)
 )
@@ -32,8 +31,6 @@ functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}
 \item{angle}{Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.}
 
 \item{order_rotation}{Default `c(1, 2, 3)`. The order to apply the rotations, referring to "x", "y", and "z".}
-
-\item{velocity}{Default `c(0, 0, 0)`. Velocity of the sphere, used for motion blur.}
 
 \item{flipped}{Default `FALSE`. Whether to flip the normals.}
 
@@ -61,15 +58,6 @@ generate_cornell() \%>\%
 generate_cornell() \%>\%
   add_object(sphere(x = 555/2, y = 100, z = 555/2, radius = 100, 
                     material = microfacet(color = "gold"))) \%>\%
-  render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
-               ambient_light = FALSE, samples = 400, clamp_value = 5)
-}
-  
-#Add motion blur and show the sphere moving
-\donttest{
-generate_cornell() \%>\%
-  add_object(sphere(x = 555/2, y = 100, z = 555/2, radius = 100,
-             material = microfacet(color = "gold"), velocity = c(50, 0, 0))) \%>\%
   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
                ambient_light = FALSE, samples = 400, clamp_value = 5)
 }
