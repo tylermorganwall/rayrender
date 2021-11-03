@@ -37,8 +37,6 @@ functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}
 \item{scale}{Default `c(1, 1, 1)`. Scale transformation in the x, y, and z directions. If this is a single value,
 number, the object will be scaled uniformly.
 Note: emissive objects may not currently function correctly when scaled.}
-
-\item{velocity}{Default `c(0, 0, 0)`. Velocity of the sphere, used for motion blur.}
 }
 \value{
 Single row of a tibble describing the sphere in the scene.
