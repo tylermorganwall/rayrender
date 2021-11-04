@@ -306,29 +306,6 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
     ambient_light = TRUE
   }
   
-  #texture handler
-  image_array_list = scene$image
-  image_tex_bool = purrr::map_lgl(image_array_list,.f = ~is.array(.x))
-  image_filename_bool = purrr::map_lgl(image_array_list,.f = ~is.character(.x))
-  temp_file_names = purrr::map_chr(image_tex_bool,.f = ~ifelse(.x, tempfile(fileext = ".png"),""))
-  for(i in 1:length(image_array_list)) {
-    if(image_tex_bool[i]) {
-      if(dim(image_array_list[[i]])[3] == 4) {
-        png::writePNG(fliplr(aperm(image_array_list[[i]][,,1:3],c(2,1,3))),temp_file_names[i])
-      } else if(dim(image_array_list[[i]])[3] == 3){
-        png::writePNG(fliplr(aperm(image_array_list[[i]],c(2,1,3))),temp_file_names[i])
-      }
-    }
-    if(image_filename_bool[i]) {
-      if(any(!file.exists(path.expand(image_array_list[[i]])) & nchar(image_array_list[[i]]) > 0)) {
-        stop(paste0("Cannot find the following texture file:\n",
-                    paste(image_array_list[[i]], collapse="\n")))
-      }
-      temp_file_names[i] = path.expand(image_array_list[[i]])
-    }
-  }
-  image_tex_bool = image_tex_bool | image_filename_bool
-  image_repeat = scene$image_repeat
   #alpha texture handler
   alpha_array_list = scene$alphaimage
   alpha_tex_bool = purrr::map_lgl(alpha_array_list,.f = ~is.array(.x[[1]]))
@@ -367,6 +344,38 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
   alphalist = list()
   alphalist$alpha_temp_file_names = alpha_temp_file_names
   alphalist$alpha_tex_bool = alpha_tex_bool
+  
+  #texture handler
+  image_array_list = scene$image
+  image_tex_bool = purrr::map_lgl(image_array_list,.f = ~is.array(.x))
+  image_filename_bool = purrr::map_lgl(image_array_list,.f = ~is.character(.x))
+  temp_file_names = purrr::map_chr(image_tex_bool,.f = ~ifelse(.x, tempfile(fileext = ".png"),""))
+  for(i in 1:length(image_array_list)) {
+    if(image_tex_bool[i]) {
+      if(dim(image_array_list[[i]])[3] == 4) {
+        png::writePNG(fliplr(aperm(image_array_list[[i]][,,1:3],c(2,1,3))),temp_file_names[i])
+        #Handle PNG with alpha
+        if(!alpha_tex_bool[i] && any(image_array_list[[i]][,,4] != 1)) {
+          image_array_list[[i]][,,1] = image_array_list[[i]][,,4]
+          image_array_list[[i]][,,2] = image_array_list[[i]][,,4]
+          image_array_list[[i]][,,3] = image_array_list[[i]][,,4]
+          png::writePNG(fliplr(aperm(image_array_list[[i]][,,1:3],c(2,1,3))), alpha_temp_file_names[i])
+          alphalist$alpha_tex_bool[i] = TRUE
+        }
+      } else if(dim(image_array_list[[i]])[3] == 3){
+        png::writePNG(fliplr(aperm(image_array_list[[i]],c(2,1,3))),temp_file_names[i])
+      }
+    }
+    if(image_filename_bool[i]) {
+      if(any(!file.exists(path.expand(image_array_list[[i]])) & nchar(image_array_list[[i]]) > 0)) {
+        stop(paste0("Cannot find the following texture file:\n",
+                    paste(image_array_list[[i]], collapse="\n")))
+      }
+      temp_file_names[i] = path.expand(image_array_list[[i]])
+    }
+  }
+  image_tex_bool = image_tex_bool | image_filename_bool
+  image_repeat = scene$image_repeat
   
   #bump texture handler
   bump_array_list = scene$bump_texture
