@@ -191,17 +191,17 @@ generate_rotation_matrix = function(angles, order_rotation) {
   for(i in 1:3) {
     if(order_rotation[i] == 1) {
       if(angles[1] != 0) {
-        M = M %*% RotateX(angles[1])
+        M = RotateX(angles[1]) %*% M
       }
     }
     if(order_rotation[i] == 2) {
       if(angles[2] != 0) {
-        M = M %*% RotateY(angles[2])
+        M = RotateY(angles[2])  %*% M
       }
     }
     if(order_rotation[i] == 3) {
       if(angles[3] != 0) {
-        M = M %*% RotateZ(angles[3])
+        M = RotateZ(angles[3])  %*% M
       }
     }
   }
