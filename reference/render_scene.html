@@ -77,7 +77,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">rayrender</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.23.4</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.23.5</span>
       </span>
     </div>
 
@@ -167,7 +167,7 @@
   min_adaptive_size <span class='op'>=</span> <span class='fl'>8</span>,
   sample_method <span class='op'>=</span> <span class='st'>"sobol"</span>,
   max_depth <span class='op'>=</span> <span class='cn'>NA</span>,
-  roulette_active_depth <span class='op'>=</span> <span class='fl'>10</span>,
+  roulette_active_depth <span class='op'>=</span> <span class='fl'>100</span>,
   ambient_light <span class='op'>=</span> <span class='cn'>FALSE</span>,
   lookfrom <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>0</span>, <span class='fl'>1</span>, <span class='fl'>10</span><span class='op'>)</span>,
   lookat <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>0</span>, <span class='fl'>0</span>, <span class='fl'>0</span><span class='op'>)</span>,
@@ -246,7 +246,7 @@ if a debugging option is chosen, this sets the bounce to query the debugging par
     </tr>
     <tr>
       <th>roulette_active_depth</th>
-      <td><p>Default `10`. Number of ray bounces until a ray can stop bouncing via
+      <td><p>Default `100`. Number of ray bounces until a ray can stop bouncing via
 Russian roulette.</p></td>
     </tr>
     <tr>
