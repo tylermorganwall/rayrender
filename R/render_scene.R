@@ -22,7 +22,7 @@
 #' and `sobol` (slowest but best quality, better than `sobol_blue` for sample counts greater than 256).
 #' @param max_depth Default `NA`, automatically sets to 50. Maximum number of bounces a ray can make in a scene. Alternatively,
 #' if a debugging option is chosen, this sets the bounce to query the debugging parameter (only for some options).
-#' @param roulette_active_depth Default `10`. Number of ray bounces until a ray can stop bouncing via
+#' @param roulette_active_depth Default `100`. Number of ray bounces until a ray can stop bouncing via
 #' Russian roulette.
 #' @param ambient_light Default `FALSE`, unless there are no emitting objects in the scene. 
 #' If `TRUE`, the background will be a gradient varying from `backgroundhigh` directly up (+y) to 
@@ -188,7 +188,7 @@
 render_scene = function(scene, width = 400, height = 400, fov = 20, 
                         samples = 100, min_variance = 0.00005, min_adaptive_size = 8,
                         sample_method = "sobol",
-                        max_depth = NA, roulette_active_depth = 10,
+                        max_depth = NA, roulette_active_depth = 100,
                         ambient_light = FALSE, 
                         lookfrom = c(0,1,10), lookat = c(0,0,0), camera_up = c(0,1,0), 
                         aperture = 0.1, clamp_value = Inf,
@@ -688,7 +688,6 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
   scene_info$mesh_list=mesh_list
   scene_info$roughness_list = roughness_list
   scene_info$animation_info = animation_info
-
   #Pathrace Scene
   rgb_mat = render_scene_rcpp(camera_info = camera_info, scene_info = scene_info) 
   

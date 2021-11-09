@@ -23,6 +23,7 @@ bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
   }
   bool is_hit = true;
   bool second_is_hit = true;
+  bool alpha_miss = false;
   if(alpha_mask) {
     point3f temppoint = r2.point_at_parameter(temp1);
     Float phi = atan2(temppoint.z(),temppoint.x());
@@ -50,7 +51,7 @@ bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
       get_cylinder_uv(temppoint, u, v);
       if(alpha_mask->value(u, v, rec.p).x() < rng.unif_rand()) {
         if(!is_hit) {
-          return(false);
+          alpha_miss = true;
         }
         second_is_hit = false;
       } 
@@ -92,7 +93,8 @@ bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
     rec.normal.make_unit_vector();
     
     rec.shape = this;
-    
+    rec.alpha_miss = alpha_miss;
+      
     rec.mat_ptr = mat_ptr.get();
     return(true);
   }
@@ -114,7 +116,7 @@ bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
     u = 1 - u;
     if(alpha_mask) {
       if(alpha_mask->value(u, v, rec.p).x() < 1) {
-        return(false);
+        alpha_miss = true;
       }
     }
     rec.p = p;
@@ -138,6 +140,7 @@ bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
     rec.normal *= reverseOrientation  ? -1 : 1;
     rec.bump_normal *= reverseOrientation  ? -1 : 1;
     rec.normal.make_unit_vector();
+    rec.alpha_miss = alpha_miss;
     
     rec.shape = this;
     return(true);
@@ -157,7 +160,7 @@ bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
     u = 1 - u;
     if(alpha_mask) {
       if(alpha_mask->value(u, v, rec.p).x() < 1) {
-        return(false);
+        alpha_miss = true;
       }
     }
     rec.p = p;
@@ -180,6 +183,7 @@ bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
     rec.normal *= reverseOrientation  ? -1 : 1;
     rec.bump_normal *= reverseOrientation  ? -1 : 1;
     rec.normal.make_unit_vector();
+    rec.alpha_miss = alpha_miss;
     
     rec.shape = this;
 
@@ -216,6 +220,7 @@ bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
     rec.normal *= reverseOrientation  ? -1 : 1;
     rec.bump_normal *= reverseOrientation  ? -1 : 1;
     rec.normal.make_unit_vector();
+    rec.alpha_miss = alpha_miss;
     
     rec.shape = this;
     rec.mat_ptr = mat_ptr.get();

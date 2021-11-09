@@ -14,7 +14,7 @@ render_scene(
   min_adaptive_size = 8,
   sample_method = "sobol",
   max_depth = NA,
-  roulette_active_depth = 10,
+  roulette_active_depth = 100,
   ambient_light = FALSE,
   lookfrom = c(0, 1, 10),
   lookat = c(0, 0, 0),
@@ -71,7 +71,7 @@ and `sobol` (slowest but best quality, better than `sobol_blue` for sample count
 \item{max_depth}{Default `NA`, automatically sets to 50. Maximum number of bounces a ray can make in a scene. Alternatively,
 if a debugging option is chosen, this sets the bounce to query the debugging parameter (only for some options).}
 
-\item{roulette_active_depth}{Default `10`. Number of ray bounces until a ray can stop bouncing via
+\item{roulette_active_depth}{Default `100`. Number of ray bounces until a ray can stop bouncing via
 Russian roulette.}
 
 \item{ambient_light}{Default `FALSE`, unless there are no emitting objects in the scene. 

@@ -12,13 +12,13 @@
 
 
 #ifdef DEBUGBVH
-inline double debug_bvh(const ray& r, hitable *world, random_gen &rng) {
+inline Float debug_bvh(const ray& r, hitable *world, random_gen &rng) {
   hit_record hrec;
   hrec.bvh_nodes = 0.0;
   if(world->hit(r, 0.001, FLT_MAX, hrec, rng)) {
     return(hrec.bvh_nodes);
   } else {
-    return(0.0);
+    return(0);
   }
 }
 #endif
@@ -338,7 +338,7 @@ inline Float calculate_pdf(const ray& r, hitable *world, hitable_list *hlist,
       //Some lights can be invisible until after diffuse bounce
       //If so, generate new ray with intersection point and continue ray
       if(is_invisible && !diffuse_bounce) {
-        r2.A = hrec.p;
+        r2.A = OffsetRayOrigin(hrec.p, hrec.pError, hrec.normal, r2.direction());
         continue;
       }
       if(hrec.mat_ptr->scatter(r2, hrec, srec, rng)) { //generates scatter record, world space
@@ -432,7 +432,7 @@ inline Float calculate_bounces(const ray& r, hitable *world, hitable_list *hlist
       //Some lights can be invisible until after diffuse bounce
       //If so, generate new ray with intersection point and continue ray
       if(is_invisible && !diffuse_bounce) {
-        r2.A = hrec.p;
+        r2.A = OffsetRayOrigin(hrec.p, hrec.pError, hrec.normal, r2.direction());
         continue;
       }
       final_color += emit_color;

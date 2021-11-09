@@ -359,11 +359,6 @@ render_animation = function(scene, camera_motion, start_frame = 1,
   roughness_list$rough_tex_bool = rough_tex_bool
   
   
-  #movement handler
-  if(shutteropen == shutterclose) {
-    movingvec = rep(FALSE,length(movingvec))
-  }
-  
   #implicit sampling handler
   implicit_vec = scene$implicit_sample
   
@@ -528,7 +523,6 @@ render_animation = function(scene, camera_motion, start_frame = 1,
   scene_info$radius = rvec
   scene_info$position_list = position_list
   scene_info$properties = proplist
-  scene_info$moving = movingvec
   scene_info$n = length(typevec)
   scene_info$bghigh = backgroundhigh
   scene_info$bglow = backgroundlow

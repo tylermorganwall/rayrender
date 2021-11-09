@@ -21,6 +21,8 @@ bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random
   }
   bool is_hit = true;
   bool second_is_hit = true;
+  bool alpha_miss = false;
+
   if(alpha_mask) {
     Float u;
     Float v;
@@ -74,6 +76,7 @@ bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random
     rec.bump_normal *= reverseOrientation  ? -1 : 1;
     rec.normal.make_unit_vector();
     rec.shape = this;
+    rec.alpha_miss = alpha_miss;
     
     rec.mat_ptr = mat_ptr.get();
     return(true);
@@ -112,6 +115,7 @@ bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random
     rec.normal.make_unit_vector();
     
     rec.shape = this;
+    rec.alpha_miss = alpha_miss;
     
     rec.mat_ptr = mat_ptr.get();
     return(true);
@@ -139,6 +143,7 @@ bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sample
   }
   bool is_hit = true;
   bool second_is_hit = true;
+  bool alpha_miss = false;
   if(alpha_mask) {
     Float u;
     Float v;
@@ -158,7 +163,7 @@ bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sample
       get_sphere_uv(normal, u, v);
       if(alpha_mask->value(u, v, rec.p).x() < sampler->Get1D()) {
         if(!is_hit) {
-          return(false);
+          alpha_miss = true;
         }
         second_is_hit = false;
       } 
@@ -193,6 +198,7 @@ bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sample
     rec.normal.make_unit_vector();
     
     rec.shape = this;
+    rec.alpha_miss = alpha_miss;
     
     rec.mat_ptr = mat_ptr.get();
     return(true);
@@ -231,6 +237,7 @@ bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sample
     rec.normal.make_unit_vector();
     
     rec.shape = this;
+    rec.alpha_miss = alpha_miss;
     
     rec.mat_ptr = mat_ptr.get();
     return(true);

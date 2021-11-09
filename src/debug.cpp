@@ -90,7 +90,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
         } else {
           r = ecam.get_ray(u,v, rng.unif_rand());
         }
-        double bvh_intersections = debug_bvh(r, &world, rng);
+        Float bvh_intersections = debug_bvh(r, &world, rng);
         routput(i,j) = bvh_intersections;
         goutput(i,j) = bvh_intersections;
         boutput(i,j) = bvh_intersections;

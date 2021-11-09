@@ -4,6 +4,7 @@ bool xy_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
   ray r2 = (*WorldToObject)(r);
   
   Float t = (k-r2.origin().z()) / r2.direction().z();
+
   if(t < t_min || t > t_max) {
     return(false);
   }
@@ -17,9 +18,10 @@ bool xy_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
   if(reverseOrientation) {
     u = 1 - u;
   }
+  bool alpha_miss = false;
   if(alpha_mask) {
     if(alpha_mask->value(u, v, rec.p).x() < rng.unif_rand()) {
-      return(false);
+      alpha_miss = true;
     }
     rec.normal = dot(r2.direction(),normal3f(0,0,1)) < 0 ? normal3f(0,0,1) : normal3f(0,0,-1);
   } else {
@@ -46,9 +48,13 @@ bool xy_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
   rec.pError = vec3f(0,0,0);
   
   rec = (*ObjectToWorld)(rec);
-  rec.normal *= reverseOrientation  ? -1 : 1;
-  rec.bump_normal *= reverseOrientation  ? -1 : 1;
+  if(!alpha_mask) {
+    rec.normal *= reverseOrientation  ? -1 : 1;
+    rec.bump_normal *= reverseOrientation  ? -1 : 1;
+  }
   rec.shape = this;
+  rec.alpha_miss = alpha_miss;
+  
   
   return(true);
 }
@@ -57,6 +63,7 @@ bool xy_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampl
   ray r2 = (*WorldToObject)(r);
   
   Float t = (k-r2.origin().z()) / r2.direction().z();
+
   if(t < t_min || t > t_max) {
     return(false);
   }
@@ -70,13 +77,15 @@ bool xy_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampl
   if(reverseOrientation) {
     u = 1 - u;
   }
+  bool alpha_miss = false;
+  
   if(alpha_mask) {
     if(alpha_mask->value(u, v, rec.p).x() < sampler->Get1D()) {
-      return(false);
+      alpha_miss = true;
     }
     rec.normal = dot(r2.direction(),vec3f(0,0,1)) < 0 ? vec3f(0,0,1) : vec3f(0,0,-1);
   } else {
-    rec.normal = vec3f(0,0,1);
+    rec.normal = normal3f(0,0,1);
   }
   rec.u = u;
   rec.v = v;
@@ -98,9 +107,13 @@ bool xy_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampl
   rec.pError = vec3f(0,0,0);
   
   rec = (*ObjectToWorld)(rec);
-  rec.normal *= reverseOrientation  ? -1 : 1;
-  rec.bump_normal *= reverseOrientation  ? -1 : 1;
+  if(!alpha_mask) {
+    rec.normal *= reverseOrientation  ? -1 : 1;
+    rec.bump_normal *= reverseOrientation  ? -1 : 1;
+  }
   rec.shape = this;
+  rec.alpha_miss = alpha_miss;
+  
   return(true);
 }
 
@@ -148,9 +161,11 @@ bool xz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
   ray r2 = (*WorldToObject)(r);
   
   Float t = (k-r2.origin().y()) / r2.direction().y();
+
   if(t < t_min || t > t_max) {
     return(false);
   }
+
   
   Float x = r2.origin().x() + t*r2.direction().x();
   Float z = r2.origin().z() + t*r2.direction().z();
@@ -162,15 +177,16 @@ bool xz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
   if(reverseOrientation) {
     u = 1 - u;
   }
+  bool alpha_miss = false;
+  
   if(alpha_mask) {
     if(alpha_mask->value(u, v, rec.p).x() < rng.unif_rand()) {
-      return(false);
+      alpha_miss = true;
     }
     rec.normal =  dot(r2.direction(),normal3f(0,1,0)) < 0 ? normal3f(0,1,0) : normal3f(0,-1,0);
   } else {
     rec.normal =  normal3f(0,1,0);
   }
-           
   rec.u = u;
   rec.v = v;
   rec.t = t;
@@ -191,9 +207,13 @@ bool xz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
   rec.p.e[1] = k;
   rec.pError = vec3f(0,0,0);
   rec = (*ObjectToWorld)(rec);
-  rec.normal *= reverseOrientation  ? -1 : 1;
-  rec.bump_normal *= reverseOrientation  ? -1 : 1;
+  if(!alpha_mask) {
+    rec.normal *= reverseOrientation  ? -1 : 1;
+    rec.bump_normal *= reverseOrientation  ? -1 : 1;
+  }
   rec.shape = this;
+  rec.alpha_miss = alpha_miss;
+  
   
   return(true);
 }
@@ -203,6 +223,7 @@ bool xz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampl
   ray r2 = (*WorldToObject)(r);
   
   Float t = (k-r2.origin().y()) / r2.direction().y();
+
   if(t < t_min || t > t_max) {
     return(false);
   }
@@ -216,9 +237,11 @@ bool xz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampl
   if(reverseOrientation) {
     u = 1 - u;
   }
+  bool alpha_miss = false;
+  
   if(alpha_mask) {
     if(alpha_mask->value(u, v, rec.p).x() < sampler->Get1D()) {
-      return(false);
+      alpha_miss = true;
     }
     rec.normal =  dot(r2.direction(),normal3f(0,1,0)) < 0 ? normal3f(0,1,0) : normal3f(0,-1,0);
   } else {
@@ -245,9 +268,13 @@ bool xz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampl
   rec.pError = vec3f(0,0,0);
   
   rec = (*ObjectToWorld)(rec);
-  rec.normal *= reverseOrientation  ? -1 : 1;
-  rec.bump_normal *= reverseOrientation  ? -1 : 1;
+  if(!alpha_mask) {
+    rec.normal *= reverseOrientation  ? -1 : 1;
+    rec.bump_normal *= reverseOrientation  ? -1 : 1;
+  }
   rec.shape = this;
+  rec.alpha_miss = alpha_miss;
+  
   return(true);
 }
 
@@ -294,6 +321,7 @@ bool yz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
   ray r2 = (*WorldToObject)(r);
   
   Float t = (k-r2.origin().x()) / r2.direction().x();
+
   if(t < t_min || t > t_max) {
     return(false);
   }
@@ -307,9 +335,11 @@ bool yz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
   if(reverseOrientation) {
     u = 1 - u;
   }
+  bool alpha_miss = false;
+  
   if(alpha_mask) {
     if(alpha_mask->value(u, v, rec.p).x() < rng.unif_rand()) {
-      return(false);
+      alpha_miss = true;
     }
     rec.normal =  dot(r2.direction(),normal3f(1,0,0)) < 0 ? normal3f(1,0,0) : normal3f(-1,0,0);
   } else {
@@ -335,9 +365,13 @@ bool yz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
   rec.pError = vec3f(0,0,0);
   
   rec = (*ObjectToWorld)(rec);
-  rec.normal *= reverseOrientation  ? -1 : 1;
-  rec.bump_normal *= reverseOrientation  ? -1 : 1;
+  if(!alpha_mask) {
+    rec.normal *= reverseOrientation  ? -1 : 1;
+    rec.bump_normal *= reverseOrientation  ? -1 : 1;
+  }
   rec.shape = this;
+  rec.alpha_miss = alpha_miss;
+  
   return(true);
 }
 
@@ -346,6 +380,7 @@ bool yz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampl
   ray r2 = (*WorldToObject)(r);
   
   Float t = (k-r2.origin().x()) / r2.direction().x();
+
   if(t < t_min || t > t_max) {
     return(false);
   }
@@ -359,9 +394,11 @@ bool yz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampl
   if(reverseOrientation) {
     u = 1 - u;
   }
+  bool alpha_miss = false;
+  
   if(alpha_mask) {
     if(alpha_mask->value(u, v, rec.p).x() < sampler->Get1D()) {
-      return(false);
+      alpha_miss = true;
     }
     rec.normal =  dot(r2.direction(),normal3f(1,0,0)) < 0 ? normal3f(1,0,0) : normal3f(-1,0,0);
   } else {
@@ -387,9 +424,13 @@ bool yz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampl
   rec.pError = vec3f(0,0,0);
   
   rec = (*ObjectToWorld)(rec);
-  rec.normal *= reverseOrientation  ? -1 : 1;
-  rec.bump_normal *= reverseOrientation  ? -1 : 1;
+  if(!alpha_mask) {
+    rec.normal *= reverseOrientation  ? -1 : 1;
+    rec.bump_normal *= reverseOrientation  ? -1 : 1;
+  }
   rec.shape = this;
+  rec.alpha_miss = alpha_miss;
+  
   return(true);
 }
 

@@ -27,7 +27,7 @@ bool bvh_node::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
 #endif
 #ifdef DEBUGBVH
   if(box.hit(r, t_min, t_max, rng)) {
-    rec.bvh_nodes++;
+    rec.bvh_nodes += 1.0;
     if(left->hit(r,t_min,t_max,rec, rng)) {
       right->hit(r,t_min,rec.t,rec, rng);
       return(true);
@@ -53,7 +53,7 @@ bool bvh_node::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Samp
 #endif
 #ifdef DEBUGBVH
   if(box.hit(r, t_min, t_max, sampler)) {
-    rec.bvh_nodes++;
+    rec.bvh_nodes += 1.0;
     if(left->hit(r,t_min,t_max,rec, sampler)) {
       right->hit(r,t_min,rec.t,rec, sampler);
       return(true);
@@ -127,28 +127,33 @@ bvh_node::bvh_node(std::vector<std::shared_ptr<hitable> >& l,
   }
   
   vec3f centroid_bounds_values = central_bounds.max() - central_bounds.min();
-  
+
 #ifdef DEBUGBBOX
   if(centroid_bounds_values.x() < 0 || centroid_bounds_values.y() < 0 || centroid_bounds_values.z() < 0) {
     throw std::runtime_error("centroid extent less than 0");
   }
       ofstream myfile;
       myfile.open("bbox.txt", ios::app | ios::out);
-      myfile << central_bounds.min() << "," << central_bounds.max() << 
-        "," << central_bounds.Volume() << "," << n << "," << depth << "\n";
+      myfile << "Min: " << central_bounds.min() << ", Max: " << central_bounds.max() << 
+        ", Diag: " << central_bounds.diag << ", Vol: " << central_bounds.Volume() << ", N: " << n << ", Depth:" << depth << "\n";
       myfile.close();
   #endif
-
+  
   int axis = centroid_bounds_values.x() > centroid_bounds_values.y() ? 0 : 1;
   if(axis == 0) {
     axis = centroid_bounds_values.x() > centroid_bounds_values.z() ? 0 : 2;
   } else {
     axis = centroid_bounds_values.y() > centroid_bounds_values.z() ? 1 : 2;
   }
+  // int axis = 0;
   auto comparator = (axis == 0) ? box_x_compare
     : (axis == 1) ? box_y_compare
     : box_z_compare;
 
+  if(central_bounds.Volume() < 1e-6) {
+    sah = false;
+    bvh_type = 2;
+  }
   if (n == 1) {
     left = right = l[start];
   } else if (n == 2) {
@@ -165,7 +170,7 @@ bvh_node::bvh_node(std::vector<std::shared_ptr<hitable> >& l,
     if(central_bounds.diag.e[axis] == 0 ) {
       sah = false;
       bvh_type = 2;
-    }
+    }      
     
     if(n <= 4) {
       sah = false;

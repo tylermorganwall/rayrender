@@ -112,6 +112,7 @@ bool cone::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_g
     rec.normal *= reverseOrientation  ? -1 : 1;
     rec.bump_normal *= reverseOrientation  ? -1 : 1;
     rec.shape = this;
+    rec.alpha_miss = false;
     
     rec.mat_ptr = mat_ptr.get();
     return(true);
@@ -154,7 +155,7 @@ bool cone::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_g
     rec.normal *= reverseOrientation  ? -1 : 1;
     rec.bump_normal *= reverseOrientation  ? -1 : 1;
     rec.shape = this;
-    
+    rec.alpha_miss = false;
     return(true);
   }
   // // if(temp2 < t_max && temp2 > t_min && second_is_hit && temp_point.y() >= 0.0 && temp_point.y() <= height) {
@@ -194,6 +195,7 @@ bool cone::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_g
     rec.normal *= reverseOrientation  ? -1 : 1;
     rec.bump_normal *= reverseOrientation  ? -1 : 1;
     rec.shape = this;
+    rec.alpha_miss = false;
     
     rec.mat_ptr = mat_ptr.get();
     return(true);
@@ -315,6 +317,7 @@ bool cone::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler*
     rec.normal *= reverseOrientation  ? -1 : 1;
     rec.bump_normal *= reverseOrientation  ? -1 : 1;
     rec.shape = this;
+    rec.alpha_miss = false;
     
     rec.mat_ptr = mat_ptr.get();
     return(true);
@@ -357,6 +360,7 @@ bool cone::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler*
     rec.normal *= reverseOrientation  ? -1 : 1;
     rec.bump_normal *= reverseOrientation  ? -1 : 1;
     rec.shape = this;
+    rec.alpha_miss = false;
     
     return(true);
   }
@@ -398,6 +402,7 @@ bool cone::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler*
     rec.normal *= reverseOrientation  ? -1 : 1;
     rec.bump_normal *= reverseOrientation  ? -1 : 1;
     rec.shape = this;
+    rec.alpha_miss = false;
     
     rec.mat_ptr = mat_ptr.get();
     return(true);

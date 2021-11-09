@@ -5,6 +5,7 @@ bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
   vec3f pvec = cross(r.direction(), edge2);
   Float det = dot(pvec, edge1);
   
+  bool alpha_miss = false;
   // no culling
   if (std::fabs(det) < 1E-15) {
     return(false);
@@ -28,7 +29,7 @@ bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
   }
   if(alpha_mask) {
     if(alpha_mask->channel_value(u, v, rec.p) < rng.unif_rand()) {
-      return(false);
+      alpha_miss = true;
     }
   }
   Float w = 1 - u - v;
@@ -95,6 +96,7 @@ bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
     rec.has_bump = true;
   }
   rec.mat_ptr = mp.get();
+  rec.alpha_miss = alpha_miss;
   return(true);
 }
 
@@ -102,6 +104,7 @@ bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
 bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) {
   vec3f pvec = cross(r.direction(), edge2);
   Float det = dot(pvec, edge1);
+  bool alpha_miss = false;
   
   // no culling
   if (std::fabs(det) < 1E-15) {
@@ -126,7 +129,7 @@ bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Samp
   }
   if(alpha_mask) {
     if(alpha_mask->channel_value(u, v, rec.p) < sampler->Get1D()) {
-      return(false);
+      alpha_miss = true;
     }
   }
   Float w = 1 - u - v;
@@ -190,6 +193,8 @@ bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Samp
     rec.has_bump = true;
   }
   rec.mat_ptr = mp.get();
+  rec.alpha_miss = alpha_miss;
+  
   return(true);
 }
 

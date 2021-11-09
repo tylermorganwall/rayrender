@@ -62,6 +62,7 @@ bool csg::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_ge
         rec.normal *= reverseOrientation  ? -1 : 1;
         rec.bump_normal *= reverseOrientation  ? -1 : 1;
         rec.shape = this;
+        rec.alpha_miss = false;
         
         return(true);
       } else {
@@ -130,6 +131,7 @@ bool csg::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* 
         rec.normal *= reverseOrientation  ? -1 : 1;
         rec.bump_normal *= reverseOrientation  ? -1 : 1;
         rec.shape = this;
+        rec.alpha_miss = false;
         
         // rec.bump_normal =  rec.normal;
         return(true);

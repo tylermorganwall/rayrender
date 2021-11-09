@@ -166,6 +166,7 @@ void render_animation_rcpp(List camera_info, List scene_info, List camera_moveme
       nx_ny_nn.push_back(nullptr);
     }
     if(has_alpha(i)) {
+      stbi_ldr_to_hdr_gamma(1.0f);
       int nxa, nya, nna;
       Float* tex_data_alpha = stbi_loadf(alpha_files(i), &nxa, &nya, &nna, 0);
       alpha_textures.push_back(tex_data_alpha);
@@ -173,6 +174,7 @@ void render_animation_rcpp(List camera_info, List scene_info, List camera_moveme
       nx_ny_nn_alpha[i][0] = nxa;
       nx_ny_nn_alpha[i][1] = nya;
       nx_ny_nn_alpha[i][2] = nna;
+      stbi_ldr_to_hdr_gamma(2.2f);
     } else {
       alpha_textures.push_back(nullptr);
       nx_ny_nn_alpha.push_back(nullptr);

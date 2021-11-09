@@ -70,7 +70,7 @@ for(i in 1:10) {
 many_pigs_scene = do.call(rbind, lots_of_pigs) \%>\%
  add_object(generate_cornell(lightintensity=30, lightwidth=100)) \%>\%
  add_object(pig(z=500,x=555/2,y=350, emotion = "angry",
-            scale=c(100,100,100),angle=c(-30,90,0)))
+            scale=c(100,100,100),angle=c(-30,90,0), order_rotation=c(3,2,1)))
             
 render_scene(many_pigs_scene,parallel=TRUE,clamp_value=10, samples=500)
 

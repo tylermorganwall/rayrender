@@ -278,10 +278,15 @@ hit_record Transform::operator()(const hit_record &r) const {
   hr.dpdv = (*this)(r.dpdv);
   hr.mat_ptr = r.mat_ptr;
   hr.has_bump = r.has_bump;
+#ifdef DEBUGBVH
+  hr.bvh_nodes = r.bvh_nodes;
+#endif
   hr.u = r.u;
   hr.v = r.v;
   hr.t = r.t;
   hr.shape = r.shape;
+  hr.alpha_miss = r.alpha_miss;
+  
   
   
   //Need to transform wo if used
@@ -298,10 +303,14 @@ hit_record Transform::operator()(hit_record &r) const {
   hr.dpdv = (*this)(r.dpdv);
   hr.mat_ptr = r.mat_ptr;
   hr.has_bump = r.has_bump;
+#ifdef DEBUGBVH
+  hr.bvh_nodes = r.bvh_nodes;
+#endif
   hr.u = r.u;
   hr.v = r.v;
   hr.t = r.t;
   hr.shape = r.shape;
+  hr.alpha_miss = r.alpha_miss;
   
   
   //Need to transform wo if used

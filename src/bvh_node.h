@@ -42,6 +42,9 @@ class bvh_node : public hitable {
     vec3f random(const point3f& o, random_gen& rng, Float time = 0);
     vec3f random(const point3f& o, Sampler* sampler, Float time = 0);
     
+    std::string GetName() const {
+      return(std::string("BVH Node"));
+    }
     std::shared_ptr<hitable> left;
     std::shared_ptr<hitable> right;
     aabb box;

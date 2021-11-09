@@ -13,6 +13,7 @@ bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, ran
   }
   bool is_hit = true;
   bool second_is_hit = true;
+  bool alpha_miss = false;
   if(alpha_mask) {
     Float u;
     Float v;
@@ -34,7 +35,7 @@ bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, ran
       get_sphere_uv(normal, u, v);
       if(alpha_mask->value(u, v, rec.p).x() < rng.unif_rand()) {
         if(!is_hit) {
-          return(false);
+          alpha_miss = true;
         }
         second_is_hit = false;
       } 
@@ -75,6 +76,7 @@ bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, ran
     rec.normal *= reverseOrientation  ? -1 : 1;
     rec.bump_normal *= reverseOrientation  ? -1 : 1;
     rec.shape = this;
+    rec.alpha_miss = alpha_miss;
     
     return(true);
   }
@@ -116,6 +118,7 @@ bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, ran
     rec.normal *= reverseOrientation  ? -1 : 1;
     rec.bump_normal *= reverseOrientation  ? -1 : 1;
     rec.shape = this;
+    rec.alpha_miss = alpha_miss;
     
     return(true);
   }
@@ -136,6 +139,8 @@ bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sam
   }
   bool is_hit = true;
   bool second_is_hit = true;
+  bool alpha_miss = false;
+  
   if(alpha_mask) {
     Float u;
     Float v;
@@ -157,6 +162,7 @@ bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sam
       get_sphere_uv(normal, u, v);
       if(alpha_mask->value(u, v, rec.p).x() < sampler->Get1D()) {
         if(!is_hit) {
+          alpha_miss = true;
           return(false);
         }
         second_is_hit = false;
@@ -198,6 +204,7 @@ bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sam
     rec.normal *= reverseOrientation  ? -1 : 1;
     rec.bump_normal *= reverseOrientation  ? -1 : 1;
     rec.shape = this;
+    rec.alpha_miss = alpha_miss;
     
     return(true);
   }
@@ -239,6 +246,7 @@ bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sam
     rec.normal *= reverseOrientation  ? -1 : 1;
     rec.bump_normal *= reverseOrientation  ? -1 : 1;
     rec.shape = this;
+    rec.alpha_miss = alpha_miss;
     
     
     return(true);

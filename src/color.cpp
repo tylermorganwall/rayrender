@@ -24,11 +24,15 @@ point3f color(const ray& r, hitable *world, hitable_list *hlist,
     hit_record hrec;
     if(world->hit(r2, 0.001, FLT_MAX, hrec, rng)) { //generated hit record, world space
       scatter_record srec;
+      if(hrec.alpha_miss) {
+        r2.A = hrec.p;
+        continue;
+      }
       emit_color = throughput * hrec.mat_ptr->emitted(r2, hrec, hrec.u, hrec.v, hrec.p, is_invisible);
       //Some lights can be invisible until after diffuse bounce
       //If so, generate new ray with intersection point and continue ray
       if(is_invisible && !diffuse_bounce) {
-        r2.A = hrec.p;
+        r2.A = OffsetRayOrigin(hrec.p, hrec.pError, hrec.normal, r2.direction());
         continue;
       }
       final_color += emit_color;

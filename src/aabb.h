@@ -109,4 +109,9 @@ inline aabb Expand(aabb box, vec3f delta) {
               box.max() + delta));
 }
 
+inline std::ostream& operator<<(std::ostream &os, const aabb &t) {
+  os << "Low: " << t.bounds[0] <<  " High: " << t.bounds[1];
+  return os;
+}
+
 #endif

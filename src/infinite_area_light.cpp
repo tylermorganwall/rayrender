@@ -31,6 +31,7 @@ bool InfiniteAreaLight::hit(const ray& r, Float t_min, Float t_max, hit_record& 
   if (!quadratic(a, b, c, &temp1, &temp2)) {
     return(false);
   }
+
   if(temp1 < t_max && temp1 > t_min) {
     rec.t = temp1;
     rec.p = r2.point_at_parameter(rec.t);
@@ -55,6 +56,8 @@ bool InfiniteAreaLight::hit(const ray& r, Float t_min, Float t_max, hit_record& 
     rec.pError = vec3f(0,0,0);
     
     rec.mat_ptr = mat_ptr.get();
+    rec.alpha_miss = false;
+    
     return(true);
   }
   if(temp2 < t_max && temp2 > t_min) {
@@ -81,6 +84,8 @@ bool InfiniteAreaLight::hit(const ray& r, Float t_min, Float t_max, hit_record& 
     rec.pError = vec3f(0,0,0);
 
     rec.mat_ptr = mat_ptr.get();
+    rec.alpha_miss = false;
+    
     return(true);
   }
   return(false);
@@ -97,6 +102,7 @@ bool InfiniteAreaLight::hit(const ray& r, Float t_min, Float t_max, hit_record& 
   if (!quadratic(a, b, c, &temp1, &temp2)) {
     return(false);
   }
+
   if(temp1 < t_max && temp1 > t_min) {
     rec.t = temp1;
     rec.p = r2.point_at_parameter(rec.t);
@@ -121,6 +127,8 @@ bool InfiniteAreaLight::hit(const ray& r, Float t_min, Float t_max, hit_record& 
     rec.shape = this;
     rec.pError = vec3f(0,0,0);
     rec.mat_ptr = mat_ptr.get();
+    rec.alpha_miss = false;
+    
     return(true);
   }
   if(temp2 < t_max && temp2 > t_min) {
@@ -147,6 +155,8 @@ bool InfiniteAreaLight::hit(const ray& r, Float t_min, Float t_max, hit_record& 
     rec.pError = vec3f(0,0,0);
     
     rec.mat_ptr = mat_ptr.get();
+    rec.alpha_miss = false;
+    
     return(true);
   }
   return(false);

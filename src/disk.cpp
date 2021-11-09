@@ -5,6 +5,8 @@ bool disk::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_g
   ray r2 = (*WorldToObject)(r);
   // First we intersect with the plane containing the disk
   Float t = -r2.origin().y() / r2.direction().y();
+  bool alpha_miss = false;
+  
   if(t < t_min || t > t_max) {
     return(false);
   }
@@ -24,8 +26,11 @@ bool disk::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_g
   u = 1 - u;
   if(alpha_mask) {
     if(alpha_mask->value(u, v, rec.p).x() < rng.unif_rand()) {
-      return(false);
+      alpha_miss = true;
     }
+    rec.normal =  dot(r2.direction(),normal3f(0,1,0)) < 0 ? normal3f(0,1,0) : normal3f(0,-1,0);
+  } else {
+    rec.normal = normal3f(0,1,0);  
   }
   rec.p = p;
   
@@ -33,8 +38,7 @@ bool disk::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_g
   rec.mat_ptr = mat_ptr.get();
   rec.u = u;
   rec.v = v;
-  rec.normal = normal3f(0,1,0);
-  
+
   //Interaction information
   rec.dpdu = vec3f(1, 0, 0);
   rec.dpdv = vec3f(0, 0, 1);
@@ -48,9 +52,12 @@ bool disk::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_g
   }
   rec.pError = vec3f(0,0,0);
   rec = (*ObjectToWorld)(rec);
-  rec.normal *= reverseOrientation  ? -1 : 1;
-  rec.bump_normal *= reverseOrientation  ? -1 : 1;
+  if(!alpha_mask) {
+    rec.normal *= reverseOrientation  ? -1 : 1;
+    rec.bump_normal *= reverseOrientation  ? -1 : 1;
+  }
   rec.shape = this;
+  rec.alpha_miss = alpha_miss;
   
   return(true);
 }
@@ -60,6 +67,8 @@ bool disk::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler*
   ray r2 = (*WorldToObject)(r);
   // First we intersect with the plane containing the disk
   Float t = -r2.origin().y() / r2.direction().y();
+  bool alpha_miss = false;
+  
   if(t < t_min || t > t_max) {
     return(false);
   }
@@ -79,12 +88,14 @@ bool disk::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler*
   u = 1 - u;
   if(alpha_mask) {
     if(alpha_mask->value(u, v, rec.p).x() < sampler->Get1D()) {
-      return(false);
+      alpha_miss = true;
     }
+    rec.normal =  dot(r2.direction(),normal3f(0,1,0)) < 0 ? normal3f(0,1,0) : normal3f(0,-1,0);
+  } else {
+    rec.normal = normal3f(0,1,0);  
   }
   rec.p = p;
 
-  rec.normal = normal3f(0,1,0);
   rec.t = t;
   rec.mat_ptr = mat_ptr.get();
   rec.u = u;
@@ -102,9 +113,12 @@ bool disk::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler*
   }
   rec.pError = vec3f(0,0,0);
   rec = (*ObjectToWorld)(rec);
-  rec.normal *= reverseOrientation  ? -1 : 1;
-  rec.bump_normal *= reverseOrientation  ? -1 : 1;
+  if(!alpha_mask) {
+    rec.normal *= reverseOrientation  ? -1 : 1;
+    rec.bump_normal *= reverseOrientation  ? -1 : 1;
+  }
   rec.shape = this;
+  rec.alpha_miss = alpha_miss;
   
   return(true);
 }
