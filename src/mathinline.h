@@ -10,6 +10,7 @@
 #include "point2.h"
 
 #include "normal.h"
+#include <limits>
 #include <array>
 
 static const Float mpi_over_180 = M_PI/180;
