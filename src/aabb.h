@@ -52,6 +52,10 @@ class aabb {
     point3f min() const {return(bounds[0]);}
     point3f max() const {return(bounds[1]);}
     
+    
+    const Float surface_area() const;
+    const Float Volume() const;
+    
     bool hit(const ray& r, Float tmin, Float tmax, random_gen& rng);
     bool hit(const ray& r, Float tmin, Float tmax, Sampler* sampler);
     
@@ -59,9 +63,8 @@ class aabb {
     const point3f offset(const vec3f o);
     
     const point3f Corner(int corner) const;
-    
-    Float surface_area();
-    Float Volume();
+    const point3f Lerp(const point3f &t) const;
+    const point2f Lerp(const point2f &t) const;
     
     void Expand(Float delta);
     point3f bounds[2];
@@ -109,9 +112,22 @@ inline aabb Expand(aabb box, vec3f delta) {
               box.max() + delta));
 }
 
+
+inline bool Inside(const point3f &p, const aabb &b) {
+  return (p.x() >= b.min().x() && p.x() <= b.max().x() && 
+          p.y() >= b.min().y() && p.y() <= b.max().y() && 
+          p.z() >= b.min().z() && p.z() <= b.max().z());
+}
+
+inline bool InsideExclusive(const point3f &p, const aabb &b) {
+  return (p.x() >= b.min().x() && p.x()  < b.max().x() && p.y() >= b.min().y() &&
+          p.y() <  b.max().y() && p.z() >= b.min().z() && p.z()  < b.max().z());
+}
+
 inline std::ostream& operator<<(std::ostream &os, const aabb &t) {
   os << "Low: " << t.bounds[0] <<  " High: " << t.bounds[1];
   return os;
 }
+
 
 #endif

@@ -10,6 +10,10 @@ render_scene(
   height = 400,
   fov = 20,
   samples = 100,
+  camera_description_file = NA,
+  camera_scale = 1,
+  iso = 100,
+  film_size = 22,
   min_variance = 5e-05,
   min_adaptive_size = 8,
   sample_method = "sobol",
@@ -55,6 +59,17 @@ projections. If this value is `360`, a 360 degree environment image will be rend
 \item{samples}{Default `100`. The maximum number of samples for each pixel. If this is a length-2
 vector and the `sample_method` is `stratified`, this will control the number of strata in each dimension.
 The total number of samples in this case will be the product of the two numbers.}
+
+\item{camera_description_file}{Default `NA`. Filename of a camera description file for rendering with
+a realistic camera. Several camera files are built-in: `"50mm"`,`"wide"`,`"fisheye"`, and `"telephoto"`.}
+
+\item{camera_scale}{Default `1`. Amount to scale the camera up or down in size. Use this rather than scaling a 
+scene.}
+
+\item{iso}{Default `100`. Camera exposure.}
+
+\item{film_size}{Default `22`, in `mm` (scene units in `m`. Size of the film if using a realistic camera, otherwise
+ignored.}
 
 \item{min_variance}{Default `0.00005`. Minimum acceptable variance for a block of pixels for the 
 adaptive sampler. Smaller numbers give higher quality images, at the expense of longer rendering times.
@@ -159,106 +174,4 @@ Raytraced plot to current device, or an image saved to a file.
 }
 \description{
 Takes the scene description and renders an image, either to the device or to a filename.
-}
-\examples{
-#Generate a large checkered sphere as the ground
-\donttest{
-scene = generate_ground(depth=-0.5, material = diffuse(color="white", checkercolor="darkgreen"))
-render_scene(scene,parallel=TRUE,samples=500,sample_method="sobol")
-}
-
-#Add a sphere to the center
-\donttest{
-scene = scene \%>\%
-  add_object(sphere(x=0,y=0,z=0,radius=0.5,material = diffuse(color=c(1,0,1))))
-render_scene(scene,fov=20,parallel=TRUE,samples=500)
-}
-
-#Add a marbled cube 
-\donttest{
-scene = scene \%>\%
-  add_object(cube(x=1.1,y=0,z=0,material = diffuse(noise=3)))
-render_scene(scene,fov=20,parallel=TRUE,samples=500)
-}
-
-#Add a metallic gold sphere, using stratified sampling for a higher quality render
-\donttest{
-scene = scene \%>\%
-  add_object(sphere(x=-1.1,y=0,z=0,radius=0.5,material = metal(color="gold",fuzz=0.1)))
-render_scene(scene,fov=20,parallel=TRUE,samples=500)
-}
-
-#Lower the number of samples to render more quickly (here, we also use only one core).
-\donttest{
-render_scene(scene, samples=4)
-}
-
-#Add a floating R plot using the iris dataset as a png onto a floating 2D rectangle
-
-\donttest{
-tempfileplot = tempfile()
-png(filename=tempfileplot,height=400,width=800)
-plot(iris$Petal.Length,iris$Sepal.Width,col=iris$Species,pch=18,cex=4)
-dev.off()
-
-image_array = aperm(png::readPNG(tempfileplot),c(2,1,3))
-scene = scene \%>\%
-  add_object(xy_rect(x=0,y=1.1,z=0,xwidth=2,angle = c(0,180,0),
-                     material = diffuse(image_texture = image_array)))
-render_scene(scene,fov=20,parallel=TRUE,samples=500)
-}
-
-#Move the camera
-\donttest{
-render_scene(scene,lookfrom = c(7,1.5,10),lookat = c(0,0.5,0),fov=15,parallel=TRUE)
-}
-
-#Change the background gradient to a night time ambiance
-\donttest{
-render_scene(scene,lookfrom = c(7,1.5,10),lookat = c(0,0.5,0),fov=15,
-             backgroundhigh = "#282375", backgroundlow = "#7e77ea", parallel=TRUE,
-             samples=500)
-}
-                 
-#Increase the aperture to blur objects that are further from the focal plane.
-\donttest{
-render_scene(scene,lookfrom = c(7,1.5,10),lookat = c(0,0.5,0),fov=15,
-             aperture = 0.5,parallel=TRUE,samples=500)
-}
-
-#We can also capture a 360 environment image by setting `fov = 360` (can be used for VR)
-\donttest{
-generate_cornell() \%>\%
-  add_object(ellipsoid(x=555/2,y=100,z=555/2,a=50,b=100,c=50, 
-             material = metal(color="lightblue"))) \%>\%
-  add_object(cube(x=100,y=130/2,z=200,xwidth = 130,ywidth=130,zwidth = 130,
-                  material=diffuse(checkercolor="purple", 
-                                   checkerperiod = 30),angle=c(0,10,0))) \%>\%
-  add_object(pig(x=100,y=190,z=200,scale=40,angle=c(0,30,0))) \%>\%
-  add_object(sphere(x=420,y=555/8,z=100,radius=555/8,
-                    material = dielectric(color="orange"))) \%>\%
-  add_object(xz_rect(x=555/2,z=555/2, y=1,xwidth=555,zwidth=555,
-                     material = glossy(checkercolor = "white",
-                                       checkerperiod=10,color="dodgerblue"))) \%>\%
-  render_scene(lookfrom=c(278,278,30), lookat=c(278,278,500), clamp_value=10,
-               fov = 360,  samples = 500, width=800, height=400)
-}
-                 
-#Spin the camera around the scene, decreasing the number of samples to render faster. To make 
-#an animation, specify the a filename in `render_scene` for each frame and use the `av` package
-#or ffmpeg to combine them all into a movie.
-
-t=1:30 
-xpos = 10 * sin(t*12*pi/180+pi/2)
-zpos = 10 * cos(t*12*pi/180+pi/2)
-\donttest{
-#Save old par() settings
-old.par = par(no.readonly = TRUE)
-on.exit(par(old.par))
-par(mfrow=c(5,6))
-for(i in 1:30) {
- render_scene(scene, samples=16, 
-   lookfrom = c(xpos[i],1.5,zpos[i]),lookat = c(0,0.5,0), parallel=TRUE)
-}
-}
 }

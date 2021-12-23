@@ -126,7 +126,14 @@ List render_scene_rcpp(List camera_info, List scene_info) {
   int sample_method = as<int>(camera_info["sample_method"]);
   NumericVector stratified_dim = as<NumericVector>(camera_info["stratified_dim"]);
   NumericVector light_direction = as<NumericVector>(camera_info["light_direction"]);
+  NumericMatrix realCameraInfo = as<NumericMatrix>(camera_info["real_camera_info"]);
+  Float film_size = as<Float>(camera_info["film_size"]);
+  Float camera_scale = as<Float>(camera_info["camera_scale"]);
+  
   int bvh_type = as<int>(camera_info["bvh"]);
+  
+  //Initialize transformation cache
+  TransformCache transformCache;
   
   //Initialize output matrices
   NumericMatrix routput(nx,ny);
@@ -158,6 +165,27 @@ List render_scene_rcpp(List camera_info, List scene_info) {
   ortho_camera ocam(lookfrom, lookat, vec3f(camera_up(0),camera_up(1),camera_up(2)),
                     ortho_dimensions(0), ortho_dimensions(1),
                     shutteropen, shutterclose);
+  
+  
+  std::shared_ptr<Transform> CameraTransform = transformCache.Lookup(LookAt(lookfrom,
+                                                                            lookat,
+                                                                            vec3f(camera_up(0),camera_up(1),camera_up(2))).GetInverseMatrix());
+  AnimatedTransform CamTr(CameraTransform,0,CameraTransform,0);
+  
+  std::vector<Float> lensData;
+  for(int i = 0; i < realCameraInfo.rows(); i++) {
+    for(int j = 0; j < realCameraInfo.cols(); j++) {
+      lensData.push_back(realCameraInfo.at(i,j));
+    }
+  }
+  
+  if(fov < 0 && lensData.size() == 0) {
+    throw std::runtime_error("No lense data passed in lens descriptor file.");
+  }
+  
+  RealisticCamera rcam(CamTr,shutteropen, shutterclose,
+                       aperture, nx,ny, focus_distance, false, lensData,
+                       film_size, camera_scale);
   
   environment_camera ecam(lookfrom, lookat, vec3f(camera_up(0),camera_up(1),camera_up(2)),
                           shutteropen, shutterclose);
@@ -270,9 +298,6 @@ List render_scene_rcpp(List camera_info, List scene_info) {
     }
   }
   
-  //Initialize transformation cache
-  TransformCache transformCache;
-  
   
   std::shared_ptr<hitable> worldbvh = build_scene(type, radius, shape, position_list,
                                 properties, 
@@ -305,8 +330,8 @@ List render_scene_rcpp(List camera_info, List scene_info) {
   worldbvh->bounding_box(0,0,bounding_box_world);
   Float world_radius = bounding_box_world.diag.length()/2 ;
   vec3f world_center  = bounding_box_world.centroid;
-  world_radius = world_radius > (lookfrom - world_center).length() ? world_radius : (lookfrom - world_center).length()*2;
-  
+  world_radius = world_radius > (lookfrom - world_center).length() ? world_radius : (lookfrom - world_center ).length();
+
   if(fov == 0) {
     Float ortho_diag = sqrt(pow(ortho_dimensions(0),2) + pow(ortho_dimensions(1),2));
     world_radius += ortho_diag;
@@ -327,7 +352,9 @@ List render_scene_rcpp(List camera_info, List scene_info) {
   Transform BackgroundAngle(Identity);
   if(rotate_env != 0) {
     BackgroundAngle = Translate(world_center) * RotateY(rotate_env);
-  } 
+  } else {
+    BackgroundAngle = Translate(world_center);
+  }
   std::shared_ptr<Transform> BackgroundTransform = transformCache.Lookup(BackgroundAngle);
   std::shared_ptr<Transform> BackgroundTransformInv = transformCache.Lookup(BackgroundAngle.GetInverseMatrix());
   
@@ -427,7 +454,7 @@ List render_scene_rcpp(List camera_info, List scene_info) {
                 min_variance, min_adaptive_size, 
                 routput, goutput,boutput,
                 progress_bar, sample_method, stratified_dim,
-                verbose, ocam, cam, ecam, fov,
+                verbose, ocam, cam, ecam, rcam, fov,
                 world, hlist,
                 clampval, max_depth, roulette_active, 
                 light_direction, rng);
@@ -436,7 +463,7 @@ List render_scene_rcpp(List camera_info, List scene_info) {
                min_variance, min_adaptive_size, 
                routput, goutput,boutput,
                progress_bar, sample_method, stratified_dim,
-               verbose, ocam, cam, ecam, fov,
+               verbose, ocam, cam, ecam, rcam, fov, 
                world, hlist,
                clampval, max_depth, roulette_active);
   }

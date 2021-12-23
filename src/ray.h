@@ -51,6 +51,7 @@ class ray {
       sign[2] = (inv_dir.z() < 0);
       pri_stack = priority2;
     }
+    point3f operator()(Float t) const { return A + B * t; }
     
     point3f origin() const {return(A);}
     vec3f direction() const {return(B);}

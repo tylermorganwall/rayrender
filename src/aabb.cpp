@@ -1,12 +1,12 @@
 #include "aabb.h"
 
-Float aabb::surface_area() {
+const Float aabb::surface_area() const {
   return(min().x() <= max().x() ? 
          2*(diag.x() * diag.y() + diag.x() * diag.z() + diag.y()*diag.z()):
          10E20);
 }
 
-Float aabb::Volume() {
+const Float aabb::Volume() const {
   return(min().x() <= max().x() ? 
          diag.x() * diag.y() * diag.z():
          10E20);
@@ -71,4 +71,16 @@ const point3f aabb::Corner(int corner) const {
                  (*this).bounds[(corner & 2) ? 1 : 0].y(),
                  (*this).bounds[(corner & 4) ? 1 : 0].z());
 }
+
+const point3f aabb::Lerp(const point3f &t) const {
+  return point3f(lerp(t.x(), min().x(), max().x()),
+                 lerp(t.y(), min().y(), max().y()),
+                 lerp(t.z(), min().z(), max().z()));
+}
+
+const point2f aabb::Lerp(const point2f &t) const {
+  return point2f(lerp(t.x(), min().x(), max().x()),
+                 lerp(t.y(), min().y(), max().y()));
+}
+
 

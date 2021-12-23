@@ -76,8 +76,13 @@ inline point2<T> operator+(const point2<T> &v1, const point2<T> &v2) {
 }
 
 template<typename T> 
-inline point2<T> operator-(const point2<T> &v1, const point2<T> &v2) {
-  return point2<T>(v1.e[0] - v2.e[0],v1.e[1] - v2.e[1]);
+inline point2<T> operator+(const point2<T> &v1, const vec2<T> &v2) {
+  return point2<T>(v1.e[0] + v2.e[0],v1.e[1] + v2.e[1]);
+}
+
+template<typename T> 
+inline vec2<T> operator-(const point2<T> &v1, const point2<T> &v2) {
+  return vec2<T>(v1.e[0] - v2.e[0],v1.e[1] - v2.e[1]);
 }
 
 template<typename T> 

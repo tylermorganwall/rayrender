@@ -223,7 +223,7 @@ Transform Transform::operator*(const Transform &t2) const {
 // }
 
 
- ray Transform::operator()(const ray &r) const {
+ray Transform::operator()(const ray &r) const {
   vec3f oError;
   point3f o = (*this)(r.origin(), &oError);
   vec3f d = (*this)(r.direction());

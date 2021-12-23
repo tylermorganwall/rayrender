@@ -11,6 +11,13 @@
 #' @param samples Default `100`. The maximum number of samples for each pixel. If this is a length-2
 #' vector and the `sample_method` is `stratified`, this will control the number of strata in each dimension.
 #' The total number of samples in this case will be the product of the two numbers.
+#' @param camera_description_file Default `NA`. Filename of a camera description file for rendering with
+#' a realistic camera. Several camera files are built-in: `"50mm"`,`"wide"`,`"fisheye"`, and `"telephoto"`.
+#' @param camera_scale Default `1`. Amount to scale the camera up or down in size. Use this rather than scaling a 
+#' scene.
+#' @param iso Default `100`. Camera exposure.
+#' @param film_size Default `22`, in `mm` (scene units in `m`. Size of the film if using a realistic camera, otherwise
+#' ignored.
 #' @param min_variance Default `0.00005`. Minimum acceptable variance for a block of pixels for the 
 #' adaptive sampler. Smaller numbers give higher quality images, at the expense of longer rendering times.
 #' If this is set to zero, the adaptive sampler will be turned off and the renderer
@@ -167,6 +174,26 @@
 #'   render_scene(lookfrom=c(278,278,30), lookat=c(278,278,500), clamp_value=10,
 #'                fov = 360,  samples = 500, width=800, height=400)
 #'}
+#'
+#'#We can also use a realistic camera by specifying a camera description file (several of which
+#'#are built-in to rayrender. Note the curvature introduced by the fisheye lens:
+#'generate_cornell() %>%
+#'   add_object(ellipsoid(x=555/2,y=100,z=555/2,a=50,b=100,c=50, 
+#'              material = metal(color="lightblue"))) %>%
+#'   add_object(cube(x=100,y=130/2,z=200,xwidth = 130,ywidth=130,zwidth = 130,
+#'                   material=diffuse(checkercolor="purple", 
+#'                                    checkerperiod = 30),angle=c(0,10,0))) %>%
+#'   add_object(pig(x=100,y=190,z=200,scale=40,angle=c(0,30,0))) %>%
+#'   add_object(sphere(x=420,y=555/8,z=100,radius=555/8,
+#'                     material = dielectric(color="orange"))) %>%
+#'   add_object(xz_rect(x=555/2,z=555/2, y=1,xwidth=555,zwidth=555,
+#'                      material = glossy(checkercolor = "white",
+#'                                        checkerperiod=10,color="dodgerblue"))) %>%
+#'   render_scene(lookfrom=c(278,278,-300), lookat=c(278,278,500), clamp_value=10,
+#'                camera_description_file = "fisheye", samples = 500, width=800, height=400)
+#'}
+#'
+#'
 #'                  
 #'#Spin the camera around the scene, decreasing the number of samples to render faster. To make 
 #'#an animation, specify the a filename in `render_scene` for each frame and use the `av` package
@@ -186,8 +213,10 @@
 #'}
 #'}
 render_scene = function(scene, width = 400, height = 400, fov = 20, 
-                        samples = 100, min_variance = 0.00005, min_adaptive_size = 8,
-                        sample_method = "sobol",
+                        samples = 100,  camera_description_file = NA, 
+                        camera_scale = 1, iso = 100, film_size = 22,
+                        min_variance = 0.00005, min_adaptive_size = 8,
+                        sample_method = "sobol", 
                         max_depth = NA, roulette_active_depth = 100,
                         ambient_light = FALSE, 
                         lookfrom = c(0,1,10), lookat = c(0,0,0), camera_up = c(0,1,0), 
@@ -222,12 +251,12 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
       corn_message = paste0(corn_message, "lookat `c(278,278,0)` ")
       missing_corn = TRUE
     }
-    if(missing(fov)) {
+    if(missing(fov) && is.na(camera_description_file)) {
       fov=40
       corn_message = paste0(corn_message, "fov `40` ")
       missing_corn = TRUE
     }
-    if(fov == 0 && missing(ortho_dimensions)) {
+    if(fov == 0 && missing(ortho_dimensions) && is.na(camera_description_file)) {
       ortho_dimensions = c(580,580)
       corn_message = paste0(corn_message, "ortho_dimensions `c(580, 580)` ")
       missing_corn = TRUE
@@ -237,6 +266,8 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
       message(corn_message)
     }
   }
+  iso = iso/100
+  film_size = film_size/1000
   lookvec = (lookat - lookfrom)
   i1 = c(2,3,1)
   i2 = c(3,1,2)
@@ -529,7 +560,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
                             "none" = 0,"depth" = 1,"normals" = 2, "uv" = 3, "bvh" = 4,
                             "variance" = 5, "normal" = 2, "dpdu" = 6, "dpdv" = 7, "color" = 8, 
                             "position" = 10, "direction" = 11, "time" = 12, "shape" = 13,
-                            "pdf" = 14, "error" = 15, "bounces" = 16,
+                            "pdf" = 14, "error" = 15, "bounces" = 16, "camera" = 17,
                             0))
     light_direction = c(0,1,0)
   } else {
@@ -561,6 +592,31 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
     strat_dim = rep(min(floor(sqrt(samples)),8),2)
   }
   
+  fov = ifelse(fov < 0, 0, fov);
+  if(!is.na(camera_description_file)) {
+    camera_description_file = switch(camera_description_file, 
+                                     "50mm" = system.file("extdata","dgauss.50mm.txt",
+                                                           package="rayrender"),
+                                     "wide" = system.file("extdata","wide.22mm.txt",
+                                                           package="rayrender"),
+                                     "fisheye" = system.file("extdata","fisheye.10mm.txt",
+                                                           package="rayrender"),
+                                     "telephoto" = system.file("extdata","telephoto.250mm.txt",
+                                                              package="rayrender"),
+                                     camera_description_file)
+                                     
+    if(file.exists(camera_description_file)) {
+      real_camera_info = as.matrix(utils::read.delim(camera_description_file, header=FALSE, comment.char="#"))
+      fov = -1
+    } else {
+      warning("Camera description file `", camera_description_file, "` not found. Ignoring.")
+      camera_description_file = NA
+      real_camera_info = matrix(nrow=0,ncol=4)
+    }
+  } else {
+    real_camera_info = matrix(nrow=0,ncol=4)
+  }
+  
   camera_info$nx = width
   camera_info$ny = height
   camera_info$ns = samples
@@ -579,6 +635,9 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
   camera_info$stratified_dim = strat_dim
   camera_info$light_direction = light_direction
   camera_info$bvh = switch(bvh_type,"sah" = 1, "equal" = 2, 1)
+  camera_info$real_camera_info = real_camera_info
+  camera_info$film_size = film_size
+  camera_info$camera_scale = camera_scale
   
   animation_info = list()
   animation_info$animation_bool            = animation_bool            
@@ -706,7 +765,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
                filename)
       return(invisible(returnmat))
     }
-  } else if (debug_channel %in% c(2,3,4,5)) {
+  } else if (debug_channel %in% c(2,3,4,5,17)) {
     if(is.null(filename)) {
       if(!return_raw_array) {
         if(debug_channel == 4) {
@@ -792,7 +851,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
     return(full_array)
   }
 
-  array_from_mat = array(full_array,dim=c(nrow(full_array),ncol(full_array),3))
+  array_from_mat = array(full_array,dim=c(nrow(full_array),ncol(full_array),3)) * iso
   if(any(is.na(array_from_mat ))) {
     array_from_mat[is.na(array_from_mat)] = 0
   }

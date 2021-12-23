@@ -10,6 +10,10 @@ render_animation(
   start_frame = 1,
   width = 400,
   height = 400,
+  camera_description_file = NA,
+  camera_scale = 1,
+  iso = 100,
+  film_size = 22,
   samples = 100,
   min_variance = 5e-05,
   min_adaptive_size = 8,
@@ -50,6 +54,17 @@ render_animation(
 \item{width}{Default `400`. Width of the render, in pixels.}
 
 \item{height}{Default `400`. Height of the render, in pixels.}
+
+\item{camera_description_file}{Default `NA`. Filename of a camera description file for rendering with
+a realistic camera. Several camera files are built-in: `"50mm"`,`"wide"`,`"fisheye"`, and `"telephoto"`.}
+
+\item{camera_scale}{Default `1`. Amount to scale the camera up or down in size. Use this rather than scaling a 
+scene.}
+
+\item{iso}{Default `100`. Camera exposure.}
+
+\item{film_size}{Default `22`, in `mm` (scene units in `m`. Size of the film if using a realistic camera, otherwise
+ignored.}
 
 \item{samples}{Default `100`. The maximum number of samples for each pixel. If this is a length-2
 vector and the `sample_method` is `stratified`, this will control the number of strata in each dimension.
@@ -211,7 +226,7 @@ generate_ground(material=diffuse(checkercolor="grey20"),depth=-10) \%>\%
   add_object(obj_model(r_obj(),x=10,y=-10,scale_obj=3, angle=c(0,-45,0),
                        material=dielectric(attenuation=c(1,1,0.3)))) \%>\% 
   add_object(pig(x=-7,y=10,z=-5,scale=1,angle=c(0,-45,80),emotion="angry")) \%>\% 
-  add_object(pig(x=0,y=-0.25,z=-15,scale=1,angle=c(0,225,-20),
+  add_object(pig(x=0,y=-0.25,z=-15,scale=1,angle=c(30,225,30),
                  emotion="angry", spider=TRUE)) \%>\% 
   add_object(path(camera_pos, y=-0.2,material=diffuse(color="red"))) \%>\% 
   render_animation(filename = NA, camera_motion = camera_motion, samples=100,

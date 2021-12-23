@@ -10,6 +10,13 @@
 #' @param samples Default `100`. The maximum number of samples for each pixel. If this is a length-2
 #' vector and the `sample_method` is `stratified`, this will control the number of strata in each dimension.
 #' The total number of samples in this case will be the product of the two numbers.
+#' @param camera_description_file Default `NA`. Filename of a camera description file for rendering with
+#' a realistic camera. Several camera files are built-in: `"50mm"`,`"wide"`,`"fisheye"`, and `"telephoto"`.
+#' @param camera_scale Default `1`. Amount to scale the camera up or down in size. Use this rather than scaling a 
+#' scene.
+#' @param iso Default `100`. Camera exposure.
+#' @param film_size Default `22`, in `mm` (scene units in `m`. Size of the film if using a realistic camera, otherwise
+#' ignored.
 #' @param min_variance Default `0.00005`. Minimum acceptable variance for a block of pixels for the 
 #' adaptive sampler. Smaller numbers give higher quality images, at the expense of longer rendering times.
 #' If this is set to zero, the adaptive sampler will be turned off and the renderer
@@ -137,7 +144,7 @@
 #'   add_object(obj_model(r_obj(),x=10,y=-10,scale_obj=3, angle=c(0,-45,0),
 #'                        material=dielectric(attenuation=c(1,1,0.3)))) %>% 
 #'   add_object(pig(x=-7,y=10,z=-5,scale=1,angle=c(0,-45,80),emotion="angry")) %>% 
-#'   add_object(pig(x=0,y=-0.25,z=-15,scale=1,angle=c(0,225,-20),
+#'   add_object(pig(x=0,y=-0.25,z=-15,scale=1,angle=c(30,225,30),
 #'                  emotion="angry", spider=TRUE)) %>% 
 #'   add_object(path(camera_pos, y=-0.2,material=diffuse(color="red"))) %>% 
 #'   render_animation(filename = NA, camera_motion = camera_motion, samples=100,
@@ -146,7 +153,8 @@
 #' 
 #' }
 render_animation = function(scene, camera_motion, start_frame = 1,
-                            width = 400, height = 400, 
+                            width = 400, height = 400, camera_description_file = NA, 
+                            camera_scale = 1, iso = 100, film_size = 22,
                             samples = 100, min_variance = 0.00005, min_adaptive_size = 8,
                             sample_method = "sobol",
                             max_depth = 50, roulette_active_depth = 10,
@@ -452,6 +460,32 @@ render_animation = function(scene, camera_motion, start_frame = 1,
     strat_dim = rep(min(floor(sqrt(samples)),8),2)
   }
   
+  
+  camera_motion$fov = ifelse(camera_motion$fov < 0, 0, camera_motion$fov);
+  if(!is.na(camera_description_file)) {
+    camera_description_file = switch(camera_description_file, 
+                                     "50mm" = system.file("extdata","dgauss.50mm.txt",
+                                                          package="rayrender"),
+                                     "wide" = system.file("extdata","wide.22mm.txt",
+                                                          package="rayrender"),
+                                     "fisheye" = system.file("extdata","fisheye.10mm.txt",
+                                                             package="rayrender"),
+                                     "telephoto" = system.file("extdata","telephoto.250mm.txt",
+                                                               package="rayrender"),
+                                     camera_description_file)
+    
+    if(file.exists(camera_description_file)) {
+      real_camera_info = as.matrix(utils::read.delim(camera_description_file, header=FALSE, comment.char="#"))
+      fov = -1
+    } else {
+      warning("Camera description file `", camera_description_file, "` not found. Ignoring.")
+      camera_description_file = NA
+      real_camera_info = matrix(nrow=0,ncol=4)
+    }
+  } else {
+    real_camera_info = matrix(nrow=0,ncol=4)
+  }
+  
   camera_info$nx = width
   camera_info$ny = height
   camera_info$ns = samples
@@ -463,6 +497,9 @@ render_animation = function(scene, camera_motion, start_frame = 1,
   camera_info$stratified_dim = strat_dim
   camera_info$light_direction = light_direction
   camera_info$bvh = switch(bvh_type,"sah" = 1, "equal" = 2, 1)
+  camera_info$real_camera_info = real_camera_info
+  camera_info$film_size = film_size
+  camera_info$camera_scale = camera_scale
   
   animation_info = list()
   animation_info$animation_bool            = animation_bool            
