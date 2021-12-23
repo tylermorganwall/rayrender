@@ -34,4 +34,6 @@ LinkingTo: Rcpp, RcppThread, progress, spacefillr
 URL: https://www.rayrender.net, https://github.com/tylermorganwall/rayrender
 RoxygenNote: 7.1.2
 SystemRequirements: C++11
+Remotes: tylermorganwall/spacefillr
 Config/testthat/edition: 3
+
