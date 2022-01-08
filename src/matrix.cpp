@@ -39,8 +39,8 @@ Matrix4x4 Inverse(const Matrix4x4 &m) {
       if (ipiv[j] != 1) {
         for (int k = 0; k < 4; k++) {
           if (ipiv[k] == 0) {
-            if (std::abs(minv[j][k]) >= big) {
-              big = Float(std::abs(minv[j][k]));
+            if (std::fabs(minv[j][k]) >= big) {
+              big = Float(std::fabs(minv[j][k]));
               irow = j;
               icol = k;
             }

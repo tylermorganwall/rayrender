@@ -5,6 +5,7 @@
 #define extended extended_rng
 #include "pcg/pcg_random.hpp"
 #undef extended
+#include "float.h"
 #include "vec3.h"
 #include "point3.h"
 

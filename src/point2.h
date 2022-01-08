@@ -4,18 +4,9 @@
 #include <iostream>
 #include <cmath>
 
-#ifndef FLOATDEF
-#define FLOATDEF
-#ifdef RAY_FLOAT_AS_DOUBLE
-typedef double Float;
-#else
-typedef float Float;
-#endif 
-#endif
-
+#include "float.h"
 #include "vec3.h"
 #include "point3.h"
-
 #include "vec2.h"
 
 template <typename T> class point2 {
@@ -106,6 +97,17 @@ inline point2<T> operator*(const point2<T> &v, const Float t) {
 template<typename T> 
 inline point2<T> operator/(const point2<T> &v, Float t) {
   return point2<T>(v.e[0]/t, v.e[1]/t);
+}
+
+template<typename T> 
+inline point2<T> operator*(const Float t,const point2<T> &v) {
+  return point2<T>(t*v.e[0], t*v.e[1]);
+}
+
+
+template<typename T> 
+inline point2<T> operator/(Float t,const point2<T> &v) {
+  return point2<T>(t/v.e[0], t/v.e[1]);
 }
 
 template<typename T> 

@@ -2,15 +2,7 @@
 #define STB_IMAGE_IMPLEMENTATION 
 #endif
 
-#ifndef FLOATDEF
-#define FLOATDEF
-#ifdef RAY_FLOAT_AS_DOUBLE
-typedef double Float;
-#else
-typedef float Float;
-#endif 
-#endif
-
+#include "float.h"
 #include "vec3.h"
 #include "vec2.h"
 #include "point3.h"
@@ -76,7 +68,7 @@ List render_scene_rcpp(List camera_info, List scene_info) {
   NumericVector voldensity = as<NumericVector>(scene_info["voldensity"]);
   LogicalVector implicit_sample = as<LogicalVector>(scene_info["implicit_sample"]);
   List order_rotation_list = as<List>(scene_info["order_rotation_list"]);
-  float clampval = as<float>(scene_info["clampval"]);
+  Float clampval = as<Float>(scene_info["clampval"]);
   LogicalVector isgrouped = as<LogicalVector>(scene_info["isgrouped"]);
   List group_transform = as<List>(scene_info["group_transform"]);
   LogicalVector tri_normal_bools = as<LogicalVector>(scene_info["tri_normal_bools"]);
@@ -90,13 +82,13 @@ List render_scene_rcpp(List camera_info, List scene_info) {
   CharacterVector background = as<CharacterVector>(scene_info["background"]);
   List scale_list = as<List>(scene_info["scale_list"]);
   NumericVector sigmavec = as<NumericVector>(scene_info["sigmavec"]);
-  float rotate_env = as<float>(scene_info["rotate_env"]);
-  float intensity_env = as<float>(scene_info["intensity_env"]);
+  Float rotate_env = as<Float>(scene_info["rotate_env"]);
+  Float intensity_env = as<Float>(scene_info["intensity_env"]);
   bool verbose = as<bool>(scene_info["verbose"]);
   int debug_channel = as<int>(scene_info["debug_channel"]);
   IntegerVector shared_id_mat = as<IntegerVector>(scene_info["shared_id_mat"]);
   LogicalVector is_shared_mat = as<LogicalVector>(scene_info["is_shared_mat"]);
-  float min_variance = as<float>(scene_info["min_variance"]);
+  Float min_variance = as<Float>(scene_info["min_variance"]);
   int min_adaptive_size = as<int>(scene_info["min_adaptive_size"]);
   List glossyinfo = as<List>(scene_info["glossyinfo"]);
   List image_repeat = as<List>(scene_info["image_repeat"]);
@@ -104,9 +96,9 @@ List render_scene_rcpp(List camera_info, List scene_info) {
   List mesh_list = as<List>(scene_info["mesh_list"]);
   List roughness_list = as<List>(scene_info["roughness_list"]);
   List animation_info = as<List>(scene_info["animation_info"]);
-  
 
-  
+
+
   auto startfirst = std::chrono::high_resolution_clock::now();
   //Unpack Camera Info
   int nx = as<int>(camera_info["nx"]);
@@ -121,72 +113,72 @@ List render_scene_rcpp(List camera_info, List scene_info) {
   Float shutterclose = as<Float>(camera_info["shutterclose"]);
   Float focus_distance = as<Float>(camera_info["focal_distance"]);
   NumericVector ortho_dimensions = as<NumericVector>(camera_info["ortho_dimensions"]);
-  size_t max_depth = as<size_t>(camera_info["max_depth"]);
-  size_t roulette_active = as<size_t>(camera_info["roulette_active_depth"]);
+  std::size_t max_depth = as<std::size_t>(camera_info["max_depth"]);
+  std::size_t roulette_active = as<std::size_t>(camera_info["roulette_active_depth"]);
   int sample_method = as<int>(camera_info["sample_method"]);
   NumericVector stratified_dim = as<NumericVector>(camera_info["stratified_dim"]);
   NumericVector light_direction = as<NumericVector>(camera_info["light_direction"]);
   NumericMatrix realCameraInfo = as<NumericMatrix>(camera_info["real_camera_info"]);
   Float film_size = as<Float>(camera_info["film_size"]);
   Float camera_scale = as<Float>(camera_info["camera_scale"]);
-  
+
   int bvh_type = as<int>(camera_info["bvh"]);
-  
+
   //Initialize transformation cache
   TransformCache transformCache;
-  
+
   //Initialize output matrices
   NumericMatrix routput(nx,ny);
   NumericMatrix goutput(nx,ny);
   NumericMatrix boutput(nx,ny);
-  
+
   vec3f lookfrom(lookfromvec[0],lookfromvec[1],lookfromvec[2]);
   vec3f lookat(lookatvec[0],lookatvec[1],lookatvec[2]);
   vec3f backgroundhigh(bghigh[0],bghigh[1],bghigh[2]);
   vec3f backgroundlow(bglow[0],bglow[1],bglow[2]);
-  float dist_to_focus = focus_distance;
+  Float dist_to_focus = focus_distance;
   CharacterVector alpha_files = as<CharacterVector>(alphalist["alpha_temp_file_names"]);
   LogicalVector has_alpha = as<LogicalVector>(alphalist["alpha_tex_bool"]);
-  
+
   CharacterVector bump_files = as<CharacterVector>(alphalist["bump_temp_file_names"]);
   LogicalVector has_bump = as<LogicalVector>(alphalist["bump_tex_bool"]);
   NumericVector bump_intensity = as<NumericVector>(alphalist["bump_intensity"]);
-  
+
   CharacterVector roughness_files = as<CharacterVector>(roughness_list["rough_temp_file_names"]);
   LogicalVector has_roughness = as<LogicalVector>(roughness_list["rough_tex_bool"]);
-  
+
   RcppThread::ThreadPool pool(numbercores);
   GetRNGstate();
   random_gen rng(unif_rand() * std::pow(2,32));
-  camera cam(lookfrom, lookat, vec3f(camera_up(0),camera_up(1),camera_up(2)), fov, float(nx)/float(ny), 
+  camera cam(lookfrom, lookat, vec3f(camera_up(0),camera_up(1),camera_up(2)), fov, Float(nx)/Float(ny),
              aperture, dist_to_focus,
              shutteropen, shutterclose);
-  
+
   ortho_camera ocam(lookfrom, lookat, vec3f(camera_up(0),camera_up(1),camera_up(2)),
                     ortho_dimensions(0), ortho_dimensions(1),
                     shutteropen, shutterclose);
-  
-  
+
+
   std::shared_ptr<Transform> CameraTransform = transformCache.Lookup(LookAt(lookfrom,
                                                                             lookat,
                                                                             vec3f(camera_up(0),camera_up(1),camera_up(2))).GetInverseMatrix());
   AnimatedTransform CamTr(CameraTransform,0,CameraTransform,0);
-  
+
   std::vector<Float> lensData;
   for(int i = 0; i < realCameraInfo.rows(); i++) {
     for(int j = 0; j < realCameraInfo.cols(); j++) {
       lensData.push_back(realCameraInfo.at(i,j));
     }
   }
-  
+
   if(fov < 0 && lensData.size() == 0) {
     throw std::runtime_error("No lense data passed in lens descriptor file.");
   }
-  
+
   RealisticCamera rcam(CamTr,shutteropen, shutterclose,
                        aperture, nx,ny, focus_distance, false, lensData,
                        film_size, camera_scale);
-  
+
   environment_camera ecam(lookfrom, lookat, vec3f(camera_up(0),camera_up(1),camera_up(2)),
                           shutteropen, shutterclose);
   int nx1, ny1, nn1;
@@ -194,21 +186,21 @@ List render_scene_rcpp(List camera_info, List scene_info) {
   if(verbose) {
     Rcpp::Rcout << "Building BVH: ";
   }
-  
+
   std::vector<Float* > textures;
   std::vector<int* > nx_ny_nn;
-  
+
   std::vector<Float* > alpha_textures;
   std::vector<int* > nx_ny_nn_alpha;
-  
+
   std::vector<Float* > bump_textures;
   std::vector<int* > nx_ny_nn_bump;
-  
+
   std::vector<Float* > roughness_textures;
   std::vector<int* > nx_ny_nn_roughness;
   //Shared material vector
   std::vector<std::shared_ptr<material> >* shared_materials = new std::vector<std::shared_ptr<material> >;
-  
+
   for(int i = 0; i < n; i++) {
     if(isimage(i)) {
       int nx, ny, nn;
@@ -271,17 +263,17 @@ List render_scene_rcpp(List camera_info, List scene_info) {
       for(int ii = 0; ii < nxr; ii++) {
         for(int jj = 0; jj < nyr; jj++) {
           if(!temp_glossy(11)) {
-            tex_data_roughness[nnr*ii + nnr*nxr*jj] = 
+            tex_data_roughness[nnr*ii + nnr*nxr*jj] =
               (tex_data_roughness[nnr*ii + nnr*nxr*jj]-minr)/data_range * rough_range + min;
             if(nnr > 1) {
-              tex_data_roughness[nnr*ii + nnr*nxr*jj+1] = 
+              tex_data_roughness[nnr*ii + nnr*nxr*jj+1] =
                 (tex_data_roughness[nnr*ii + nnr*nxr*jj+1]-minr)/data_range * rough_range + min;
             }
           } else {
-            tex_data_roughness[nnr*ii + nnr*nxr*jj] = 
+            tex_data_roughness[nnr*ii + nnr*nxr*jj] =
               (1.0-(tex_data_roughness[nnr*ii + nnr*nxr*jj]-minr)/data_range) * rough_range + min;
             if(nnr > 1) {
-              tex_data_roughness[nnr*ii + nnr*nxr*jj+1] = 
+              tex_data_roughness[nnr*ii + nnr*nxr*jj+1] =
                 (1.0-(tex_data_roughness[nnr*ii + nnr*nxr*jj+1]-minr)/data_range) * rough_range + min;
             }
           }
@@ -297,34 +289,34 @@ List render_scene_rcpp(List camera_info, List scene_info) {
       nx_ny_nn_roughness.push_back(nullptr);
     }
   }
-  
-  
+
+
   std::shared_ptr<hitable> worldbvh = build_scene(type, radius, shape, position_list,
-                                properties, 
+                                properties,
                                 n,shutteropen,shutterclose,
-                                ischeckered, checkercolors, 
+                                ischeckered, checkercolors,
                                 gradient_info,
                                 noise, isnoise, noisephase, noiseintensity, noisecolorlist,
-                                angle, 
+                                angle,
                                 isimage, has_alpha, alpha_textures, nx_ny_nn_alpha,
                                 textures, nx_ny_nn, has_bump, bump_textures, nx_ny_nn_bump,
                                 bump_intensity,
                                 roughness_textures, nx_ny_nn_roughness, has_roughness,
                                 lightintensity, isflipped,
-                                isvolume, voldensity, order_rotation_list, 
+                                isvolume, voldensity, order_rotation_list,
                                 isgrouped, group_transform,
-                                tri_normal_bools, is_tri_color, tri_color_vert, 
-                                fileinfo, filebasedir, 
+                                tri_normal_bools, is_tri_color, tri_color_vert,
+                                fileinfo, filebasedir,
                                 scale_list, sigmavec, glossyinfo,
                                 shared_id_mat, is_shared_mat, shared_materials,
-                                image_repeat, csg_info, mesh_list, bvh_type, transformCache, 
+                                image_repeat, csg_info, mesh_list, bvh_type, transformCache,
                                 animation_info, rng);
   auto finish = std::chrono::high_resolution_clock::now();
   if(verbose) {
     std::chrono::duration<double> elapsed = finish - start;
     Rcpp::Rcout << elapsed.count() << " seconds" << "\n";
   }
-  
+
   //Calculate world bounds and ensure camera is inside infinite area light
   aabb bounding_box_world;
   worldbvh->bounding_box(0,0,bounding_box_world);
@@ -336,7 +328,7 @@ List render_scene_rcpp(List camera_info, List scene_info) {
     Float ortho_diag = sqrt(pow(ortho_dimensions(0),2) + pow(ortho_dimensions(1),2));
     world_radius += ortho_diag;
   }
-  
+
   //Initialize background
   if(verbose && hasbackground) {
     Rcpp::Rcout << "Loading Environment Image: ";
@@ -346,7 +338,7 @@ List render_scene_rcpp(List camera_info, List scene_info) {
   std::shared_ptr<material> background_material = nullptr;
   std::shared_ptr<hitable> background_sphere = nullptr;
   Float *background_texture_data = nullptr;
-  
+
   //Background rotation
   Matrix4x4 Identity;
   Transform BackgroundAngle(Identity);
@@ -357,13 +349,13 @@ List render_scene_rcpp(List camera_info, List scene_info) {
   }
   std::shared_ptr<Transform> BackgroundTransform = transformCache.Lookup(BackgroundAngle);
   std::shared_ptr<Transform> BackgroundTransformInv = transformCache.Lookup(BackgroundAngle.GetInverseMatrix());
-  
+
   if(hasbackground) {
     background_texture_data = stbi_loadf(background[0], &nx1, &ny1, &nn1, 0);
     background_texture = std::make_shared<image_texture>(background_texture_data, nx1, ny1, nn1, 1, 1, intensity_env);
     background_material = std::make_shared<diffuse_light>(background_texture, 1.0, false);
     background_sphere = std::make_shared<InfiniteAreaLight>(nx1, ny1, world_radius*2, vec3f(0.f),
-                                              background_texture, background_material, 
+                                              background_texture, background_material,
                                               BackgroundTransform,
                                               BackgroundTransformInv, false);
   } else if(ambient_light) {
@@ -398,9 +390,9 @@ List render_scene_rcpp(List camera_info, List scene_info) {
     }
   }
   hitable_list world;
-  
+
   world.add(worldbvh);
-  
+
   bool impl_only_bg = false;
   if(numbertosample == 0 || hasbackground || ambient_light) {
     world.add(background_sphere);
@@ -415,12 +407,12 @@ List render_scene_rcpp(List camera_info, List scene_info) {
   for(int i = 0; i < n; i++)  {
     if(implicit_sample(i)) {
       hlist.add(build_imp_sample(type, radius, shape, position_list,
-                               properties, 
+                               properties,
                                n, shutteropen, shutterclose,
                                angle, i, order_rotation_list,
                                isgrouped, group_transform,
                                fileinfo, filebasedir,
-                               transformCache ,scale_list, 
+                               transformCache ,scale_list,
                                mesh_list,bvh_type, animation_info,  rng));
     }
   }
@@ -451,19 +443,19 @@ List render_scene_rcpp(List camera_info, List scene_info) {
   }
   if(debug_channel != 0) {
     debug_scene(numbercores, nx, ny, ns, debug_channel,
-                min_variance, min_adaptive_size, 
+                min_variance, min_adaptive_size,
                 routput, goutput,boutput,
                 progress_bar, sample_method, stratified_dim,
                 verbose, ocam, cam, ecam, rcam, fov,
                 world, hlist,
-                clampval, max_depth, roulette_active, 
+                clampval, max_depth, roulette_active,
                 light_direction, rng);
   } else {
     pathtracer(numbercores, nx, ny, ns, debug_channel,
-               min_variance, min_adaptive_size, 
+               min_variance, min_adaptive_size,
                routput, goutput,boutput,
                progress_bar, sample_method, stratified_dim,
-               verbose, ocam, cam, ecam, rcam, fov, 
+               verbose, ocam, cam, ecam, rcam, fov,
                world, hlist,
                clampval, max_depth, roulette_active);
   }
@@ -478,7 +470,7 @@ List render_scene_rcpp(List camera_info, List scene_info) {
     if(isimage(i)) {
       stbi_image_free(textures[i]);
       delete nx_ny_nn[i];
-    } 
+    }
     if(has_alpha(i)) {
       stbi_image_free(alpha_textures[i]);
       delete nx_ny_nn_alpha[i];

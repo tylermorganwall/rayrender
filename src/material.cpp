@@ -127,7 +127,7 @@ bool dielectric::scatter(const ray& r_in, const hit_record& hrec, scatter_record
   
   bool entering = dot(hrec.normal, r_in.direction()) < 0;
   bool skip = false;
-  point3f offset_p = hrec.p;
+  point3f offset_p = OffsetRayOrigin(hrec.p, hrec.pError, hrec.normal, r_in.direction());
   
   for(size_t i = 0; i < r_in.pri_stack->size(); i++) {
     if(r_in.pri_stack->at(i) == this) {

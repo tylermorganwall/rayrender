@@ -1,6 +1,7 @@
 #ifndef RAYH
 #define RAYH
 
+#include "float.h"
 #include "vec3.h"
 #include "point3.h"
 #include <vector>
@@ -8,11 +9,19 @@
 
 class dielectric;
 
+#ifdef RAY_FLOAT_AS_DOUBLE
+inline Float add_ulp_magnitude(Float f, int ulps) {
+  if (!std::isfinite(f)) return f;
+  const unsigned long long bits = reinterpret_type<Float, unsigned long long>(f);
+  return reinterpret_type<unsigned long long, Float>(bits + ulps);
+}
+#else
 inline Float add_ulp_magnitude(Float f, int ulps) {
   if (!std::isfinite(f)) return f;
   const unsigned bits = reinterpret_type<Float, unsigned>(f);
   return reinterpret_type<unsigned, Float>(bits + ulps);
 }
+#endif
 
 // static constexpr Float MachineEpsilon =
 //   std::numeric_limits<Float>::epsilon() * 0.5;
@@ -70,5 +79,15 @@ class ray {
     mutable Float tMax;
     std::vector<dielectric*> *pri_stack;
 };
+
+inline std::istream& operator>>(std::istream &is, ray &r) {
+  is >> r.A.e[0] >> r.A.e[1] >> r.A.e[2];
+  return is;
+}
+
+inline std::ostream& operator<<(std::ostream &os, const ray &r) {
+  os << "Origin: " << r.A.e[0] << ", " << r.A.e[1] << ", " << r.A.e[2] << " Dir: " << r.B.e[0] << ", " << r.B.e[1] << ", " << r.B.e[2] ;
+  return os;
+}
 
 #endif

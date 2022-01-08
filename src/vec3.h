@@ -3,20 +3,13 @@
 
 #include <iostream>
 #include <cmath>
+#include "float.h"
 
-#ifndef FLOATDEF
-#define FLOATDEF
-#ifdef RAY_FLOAT_AS_DOUBLE
-typedef double Float;
-#else
-typedef float Float;
-#endif 
-#endif
 
-inline float DifferenceOfProducts(float a, float b, float c, float d) {
-  float cd = c * d;
-  float err = std::fma(-c, d, cd);
-  float dop = std::fma(a, b, -cd);
+inline Float DifferenceOfProducts(Float a, Float b, Float c, Float d) {
+  Float cd = c * d;
+  Float err = std::fma(-c, d, cd);
+  Float dop = std::fma(a, b, -cd);
   return(dop + err);
 }
 template <typename T> class vec3 {

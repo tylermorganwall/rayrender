@@ -10,7 +10,7 @@ void cylinder::get_cylinder_uv(const point3f& p, Float& u, Float& v) {
 bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
   ray r2 = (*WorldToObject)(r);
   
-  vec3f oc = r2.origin() - point3f(0.0);
+  vec3f oc = r2.origin();
   vec3f dir = r2.direction();
   dir.e[1] = 0;
   oc.e[1] = 0;

@@ -1,9 +1,8 @@
 #ifndef CAMERAH
 #define CAMERAH
 
-#include "ray.h"
-#include "rng.h"
-#include "Rcpp.h"
+#include "vec3.h"
+#include "point3.h"
 #include "onbh.h"
 #include "animatedtransform.h"
 #include "bounds.h"

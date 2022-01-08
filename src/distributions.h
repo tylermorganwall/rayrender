@@ -1,17 +1,7 @@
 #ifndef DISTRIBUTIONSH
 #define DISTRIBUTIONSH
 
-
-#ifndef FLOATDEF
-#define FLOATDEF
-#ifdef RAY_FLOAT_AS_DOUBLE
-typedef double Float;
-#else
-typedef float Float;
-#endif 
-#endif
-
-
+#include "float.h"
 #include "vec2.h"
 #include "mathinline.h"
 #include <vector>

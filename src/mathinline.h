@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstring>
+#include "float.h"
 #include "vec3.h"
 #include "vec2.h"
 #include "point3.h"
@@ -17,15 +18,6 @@ static const Float mpi_over_180 = M_PI/180;
 static const Float SqrtPiOver8 = 0.626657069f;
 static const Float ONE_OVER_2_PI = 1 / (2 * M_PI);
 static const Float Infinity =  Infinity;
-
-#ifndef FLOATDEF
-#define FLOATDEF
-#ifdef RAY_FLOAT_AS_DOUBLE
-typedef double Float;
-#else
-typedef float Float;
-#endif 
-#endif
 
 static constexpr Float MachineEpsilon = std::numeric_limits<Float>::epsilon() * 0.5;
 
@@ -574,6 +566,40 @@ inline float NextFloatDown(float v) {
   return BitsToFloat(ui);
 }
 
+inline uint64_t FloatToBits(double f) {
+  uint64_t ui;
+  memcpy(&ui, &f, sizeof(double));
+  return ui;
+}
+
+inline double BitsToFloat(uint64_t ui) {
+  double f;
+  memcpy(&f, &ui, sizeof(uint64_t));
+  return f;
+}
+
+inline double NextFloatUp(double v, int delta = 1) {
+  if (std::isinf(v) && v > 0.) return v;
+  if (v == -0.f) v = 0.f;
+  uint64_t ui = FloatToBits(v);
+  if (v >= 0.)
+    ui += delta;
+  else
+    ui -= delta;
+  return BitsToFloat(ui);
+}
+
+inline double NextFloatDown(double v, int delta = 1) {
+  if (std::isinf(v) && v < 0.) return v;
+  if (v == 0.f) v = -0.f;
+  uint64_t ui = FloatToBits(v);
+  if (v > 0.)
+    ui -= delta;
+  else
+    ui += delta;
+  return BitsToFloat(ui);
+}
+
 constexpr Float origin() { return 1.0f / 32.0f; }
 constexpr Float float_scale() { return 1.0f / 65536.0f; }
 constexpr Float int_scale() { return 256.0f; }
@@ -843,7 +869,7 @@ inline vec3f UniformSampleCone(const point2f &u, Float cosThetaMax) {
 inline vec3f UniformSampleCone(const point2f &u, Float cosThetaMax,
                         const vec3f &x, const vec3f &y,
                         const vec3f &z) {
-  Float cosTheta = lerp(u[0], cosThetaMax, 1.f);
+  Float cosTheta = lerp(u[0], cosThetaMax, (Float)1.);
   Float sinTheta = std::sqrt((Float)1. - cosTheta * cosTheta);
   Float phi = u[1] * 2 * M_PI;
   return std::cos(phi) * sinTheta * x + std::sin(phi) * sinTheta * y +

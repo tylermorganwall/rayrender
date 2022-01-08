@@ -1,16 +1,24 @@
 #include "integrator.h"
 
+#include "float.h"
 // #define DEBUG
+#include "RcppThread.h"
+#include "RProgress.h"
+#include "adaptivesampler.h"
+#include "color.h"
+#include "mathinline.h"
+#include "filter.h"
+#include "sampler.h"
 
-void pathtracer(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_channel,
-                Float min_variance, size_t min_adaptive_size, 
+void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::size_t ns, int debug_channel,
+                Float min_variance, std::size_t min_adaptive_size, 
                 Rcpp::NumericMatrix& routput, Rcpp::NumericMatrix& goutput, Rcpp::NumericMatrix& boutput,
                 bool progress_bar, int sample_method, Rcpp::NumericVector& stratified_dim,
                 bool verbose, ortho_camera& ocam, camera &cam, environment_camera &ecam, 
                 RealisticCamera &rcam,
                 Float fov,
                 hitable_list& world, hitable_list& hlist,
-                Float clampval, size_t max_depth, size_t roulette_active) {
+                Float clampval, std::size_t max_depth, std::size_t roulette_active) {
   RProgress::RProgress pb_sampler("Generating Samples [:bar] :percent%");
   pb_sampler.set_width(70);
   RProgress::RProgress pb("Adaptive Raytracing [:bar] :percent%");

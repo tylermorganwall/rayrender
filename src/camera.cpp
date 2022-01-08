@@ -1,7 +1,5 @@
-
 #include "camera.h"
 #include "low_discrepancy.h"
-#include "RcppThread.h"
 
 camera::camera(point3f lookfrom, point3f lookat, vec3f vup, Float vfov, 
                Float aspect, Float aperture, Float focus_dist,
@@ -68,8 +66,6 @@ ray environment_camera::get_ray(Float s, Float t, Float u1) {
   dir = uvw.local_to_world(dir);
   return(ray(origin, dir, time)); 
 }
-
-using namespace Rcpp;
 
 RealisticCamera::RealisticCamera(const AnimatedTransform &CameraToWorld,
                                  Float shutterOpen, Float shutterClose, 

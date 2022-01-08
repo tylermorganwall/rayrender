@@ -4,15 +4,7 @@
 #include <iostream>
 #include <cmath>
 
-#ifndef FLOATDEF
-#define FLOATDEF
-#ifdef RAY_FLOAT_AS_DOUBLE
-typedef double Float;
-#else
-typedef float Float;
-#endif 
-#endif
-
+#include "float.h"
 #include "vec3.h" 
 #include "normal.h"
 

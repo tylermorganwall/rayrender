@@ -5,6 +5,8 @@
 // #include "fstream"
 // #define DEBUG
 
+static Float MaxT = NextFloatDown(std::numeric_limits<Float>::infinity());
+
 point3f color(const ray& r, hitable *world, hitable_list *hlist,
            size_t max_depth, size_t roulette_activate, random_gen& rng, Sampler* sampler) {
 #ifdef DEBUG
@@ -22,10 +24,10 @@ point3f color(const ray& r, hitable *world, hitable_list *hlist,
   for(size_t i = 0; i < max_depth; i++) {
     bool is_invisible = false;
     hit_record hrec;
-    if(world->hit(r2, 0.001, FLT_MAX, hrec, rng)) { //generated hit record, world space
+    if(world->hit(r2, 0.000, MaxT, hrec, rng)) { //generated hit record, world space
       scatter_record srec;
       if(hrec.alpha_miss) {
-        r2.A = hrec.p;
+        r2.A = OffsetRayOrigin(hrec.p, hrec.pError, hrec.normal, r2.direction());
         continue;
       }
       emit_color = throughput * hrec.mat_ptr->emitted(r2, hrec, hrec.u, hrec.v, hrec.p, is_invisible);
@@ -42,7 +44,7 @@ point3f color(const ray& r, hitable *world, hitable_list *hlist,
       if(i > roulette_activate) {
         float t = std::fmax(throughput.x(), std::fmax(throughput.y(), throughput.z()));
         //From Szecsi, Szirmay-Kalos, and Kelemen
-        float prob_continue = std::min(1.0f, std::sqrt(t/prev_t));
+        float prob_continue = std::fmin(1.0f, std::sqrt(t/prev_t));
         prev_t = t;
         if(rng.unif_rand() > prob_continue) {
           return(final_color);
@@ -77,7 +79,6 @@ point3f color(const ray& r, hitable *world, hitable_list *hlist,
         }
         
         r2 = ray(OffsetRayOrigin(hrec.p, hrec.pError, hrec.normal, dir), dir, r2.pri_stack, r2.time());
-        
         pdf_val = p.value(dir, rng, r2.time()); //generates a pdf value based the intersection point and the mixture pdf
 
         if(pdf_val == 0) {

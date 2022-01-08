@@ -2,19 +2,24 @@
 #include "efloat.h"
 
 bool cone::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
-  ray r2 = (*WorldToObject)(r);
-  vec3f oc = r2.origin() - point3f(0,height, 0);
+  vec3f oErr, dErr;
+  ray r2 = (*WorldToObject)(r, &oErr, &dErr);
+  EFloat ox(r2.origin().x(), oErr.x()), oy(r2.origin().y(), oErr.y()), oz(r2.origin().z(), oErr.z());
+  EFloat dx(r2.direction().x(), dErr.x()), dy(r2.direction().y(), dErr.y()), dz(r2.direction().z(), dErr.z());
+  
+  EFloat ocx = ox;
+  EFloat ocy = oy - EFloat(height);
+  EFloat ocz = oz;
   Float k = radius / height;
   k = k*k;
-  vec3f kvec = vec3f(1,-k,1);
-  Float a = dot(r2.direction(), r2.direction() * kvec);
-  Float b = 2 * dot(oc, r2.direction() * kvec); 
-  Float c = dot(oc,oc * kvec);
-  Float temp1, temp2;
-  if (!quadratic(a, b, c, &temp1, &temp2)) {
+  EFloat a = dx * dx - dy * dy * EFloat(k) + dz * dz;
+  EFloat b = 2 * (ocx * dx - ocy * dy * EFloat(k) + ocz * dz);
+  EFloat c =  (ocx * ocx - ocy * ocy * EFloat(k) + ocz * ocz);
+  EFloat temp1, temp2;
+  if (!Quadratic(a, b, c, &temp1, &temp2)) {
     return(false);
   }
-  Float t_cyl = -r2.origin().y() / r2.direction().y();
+  EFloat t_cyl = -oy / dy;
   Float phi;
   // Float phi;
   // bool is_hit = true;
@@ -61,24 +66,31 @@ bool cone::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_g
   //     }
   //   }
   // }
-  point3f temp_point = r2.point_at_parameter(temp1);
-  point3f temp_point2 = r2.point_at_parameter(temp2);
+  EFloat px1 = ox + temp1 * dx;
+  EFloat py1 = oy + temp1 * dy;
+  EFloat pz1 = oz + temp1 * dz;
+  EFloat px2 = ox + temp2 * dx;
+  EFloat py2 = oy + temp2 * dy;
+  EFloat pz2 = oz + temp2 * dz;
   
-  Float x = r2.origin().x() + t_cyl*r2.direction().x();
-  Float z = r2.origin().z() + t_cyl*r2.direction().z();
-  Float radHit2 = x*x + z*z;
+  EFloat x = ox + t_cyl*dx;
+  EFloat z = oz + t_cyl*dz;
+  EFloat radHit2 = x*x + z*z;
+  
   bool hit_first  = temp1 < t_max && temp1 > t_min && 
-    temp_point.y() > 0.0 && temp_point.y() < height;
+    py1 > 0.0 && py1 < height;
   bool hit_second = temp2 < t_max && temp2 > t_min && 
-    temp_point2.y() > 0.0 && temp_point2.y() < height;
+    py2 > 0.0 && py2 < height;
   bool hit_base   = t_cyl < t_max && t_cyl > t_min && 
-    radHit2 <= radius * radius;
+    (float)radHit2 <= radius * radius;
   // bool already_inside = (t_cyl < 0 || temp1 < 0) && r.origin().y() > 0.0 && r.origin().y() < height;
   
   // if(temp1 < t_max && temp1 > t_min && is_hit && (t_cyl > temp1 || !base_is_hit) && temp_point.y() > 0.0 && temp_point.y() < height) {
-  if(hit_first && (t_cyl > temp1 || !hit_base)) {
-    rec.t = temp1;
-    rec.p = temp_point;
+  if(hit_first && (t_cyl > (float)temp1 || !hit_base)) {
+    rec.t = (float)temp1;
+    rec.p = vec3f((float)px1, (float)py1, (float)pz1);
+    vec3f pError = vec3f(px1.GetAbsoluteError(), py1.GetAbsoluteError(),
+                         pz1.GetAbsoluteError());
     phi = std::atan2(rec.p.z(), rec.p.x());
     phi += phi < 0 ? 2 * M_PI : 0;
     
@@ -102,11 +114,7 @@ bool cone::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_g
     //   rec.normal = -rec.normal;
     //   rec.bump_normal = -rec.bump_normal;
     // }
-    EFloat px = r2.origin().x() + rec.t * r2.direction().x();
-    EFloat py = r2.origin().y() + rec.t * r2.direction().y();
-    EFloat pz = r2.origin().z() + rec.t * r2.direction().z();
-    rec.pError = vec3f(px.GetAbsoluteError(), py.GetAbsoluteError(),
-                       pz.GetAbsoluteError());
+    rec.pError = pError;
     
     rec = (*ObjectToWorld)(rec);
     rec.normal *= reverseOrientation  ? -1 : 1;
@@ -118,16 +126,19 @@ bool cone::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_g
     return(true);
   }
   // if((t_cyl < temp2 || !second_is_hit) && t_cyl > t_min && t_cyl < t_max && radHit2 <= radius * radius && base_is_hit) {
-  if(hit_base && t_cyl < temp2) {
-    point3f p = r2.point_at_parameter(t_cyl);
-    p.e[1] = 0;
+  if(hit_base && t_cyl < (float)temp2) {
+    rec.t = (float)t_cyl;
+    rec.p = vec3f((float)x, 0, (float)z);
+    vec3f pError = vec3f(px1.GetAbsoluteError(), 0,
+                         pz1.GetAbsoluteError());
+    // point3f p = r2.point_at_parameter(t_cyl);
+    // p.e[1] = 0;
     
-    Float u = p.x() / (2.0 * radius) + 0.5;
-    Float v = p.z() / (2.0 * radius) + 0.5;
+    Float u = (float)x / (2.0 * radius) + 0.5;
+    Float v = (float)z / (2.0 * radius) + 0.5;
     u = 1 - u;
-    rec.p = p;
+    // rec.p = p;
     rec.normal = vec3f(0,-1,0);
-    rec.t = t_cyl;
     rec.mat_ptr = mat_ptr.get();
     rec.u = u;
     rec.v = v;
@@ -145,11 +156,7 @@ bool cone::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_g
     //   rec.normal = -rec.normal;
     //   rec.bump_normal = -rec.bump_normal;
     // }
-    EFloat px = r2.origin().x() + rec.t * r2.direction().x();
-    EFloat py = r2.origin().y() + rec.t * r2.direction().y();
-    EFloat pz = r2.origin().z() + rec.t * r2.direction().z();
-    rec.pError = vec3f(px.GetAbsoluteError(), py.GetAbsoluteError(),
-                       pz.GetAbsoluteError());
+    rec.pError = vec3f(0,0,0);
     
     rec = (*ObjectToWorld)(rec);
     rec.normal *= reverseOrientation  ? -1 : 1;
@@ -160,8 +167,9 @@ bool cone::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_g
   }
   // // if(temp2 < t_max && temp2 > t_min && second_is_hit && temp_point.y() >= 0.0 && temp_point.y() <= height) {
   if(hit_second) {
-    rec.t = temp2;
-    rec.p = temp_point2;
+    rec.p = vec3f((float)px2, (float)py2, (float)pz2);
+    vec3f pError = vec3f(px2.GetAbsoluteError(), py2.GetAbsoluteError(),
+                         pz2.GetAbsoluteError());
     phi = std::atan2(rec.p.z(), rec.p.x());
     phi += phi < 0 ? 2 * M_PI : 0;
     
@@ -185,11 +193,7 @@ bool cone::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_g
     //   rec.normal = -rec.normal;
     //   rec.bump_normal = -rec.bump_normal;
     // }
-    EFloat px = r2.origin().x() + rec.t * r2.direction().x();
-    EFloat py = r2.origin().y() + rec.t * r2.direction().y();
-    EFloat pz = r2.origin().z() + rec.t * r2.direction().z();
-    rec.pError = vec3f(px.GetAbsoluteError(), py.GetAbsoluteError(),
-                       pz.GetAbsoluteError());
+    rec.pError = pError;
     
     rec = (*ObjectToWorld)(rec);
     rec.normal *= reverseOrientation  ? -1 : 1;
@@ -205,20 +209,24 @@ bool cone::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_g
 
 
 bool cone::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) {
-  ray r2 = (*WorldToObject)(r);
+  vec3f oErr, dErr;
+  ray r2 = (*WorldToObject)(r, &oErr, &dErr);
+  EFloat ox(r2.origin().x(), oErr.x()), oy(r2.origin().y(), oErr.y()), oz(r2.origin().z(), oErr.z());
+  EFloat dx(r2.direction().x(), dErr.x()), dy(r2.direction().y(), dErr.y()), dz(r2.direction().z(), dErr.z());
   
-  vec3f oc = r2.origin() - point3f(0,height, 0);
+  EFloat ocx = ox;
+  EFloat ocy = oy - EFloat(height);
+  EFloat ocz = oz;
   Float k = radius / height;
   k = k*k;
-  vec3f kvec = vec3f(1,-k,1);
-  Float a = dot(r2.direction(), r2.direction() * kvec);
-  Float b = 2 * dot(oc, r2.direction() * kvec); 
-  Float c = dot(oc,oc * kvec);
-  Float temp1, temp2;
-  if (!quadratic(a, b, c, &temp1, &temp2)) {
+  EFloat a = dx * dx - dy * dy * EFloat(k) + dz * dz;
+  EFloat b = 2 * (ocx * dx - ocy * dy * EFloat(k) + ocz * dz);
+  EFloat c =  (ocx * ocx - ocy * ocy * EFloat(k) + ocz * ocz);
+  EFloat temp1, temp2;
+  if (!Quadratic(a, b, c, &temp1, &temp2)) {
     return(false);
   }
-  Float t_cyl = -r2.origin().y() / r2.direction().y();
+  EFloat t_cyl = -oy / dy;
   Float phi;
   // Float phi;
   // bool is_hit = true;
@@ -265,24 +273,31 @@ bool cone::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler*
   //     }
   //   }
   // }
-  point3f temp_point = r2.point_at_parameter(temp1);
-  point3f temp_point2 = r2.point_at_parameter(temp2);
+  EFloat px1 = ox + temp1 * dx;
+  EFloat py1 = oy + temp1 * dy;
+  EFloat pz1 = oz + temp1 * dz;
+  EFloat px2 = ox + temp2 * dx;
+  EFloat py2 = oy + temp2 * dy;
+  EFloat pz2 = oz + temp2 * dz;
   
-  Float x = r2.origin().x() + t_cyl*r2.direction().x();
-  Float z = r2.origin().z() + t_cyl*r2.direction().z();
-  Float radHit2 = x*x + z*z;
+  EFloat x = ox + t_cyl*dx;
+  EFloat z = oz + t_cyl*dz;
+  EFloat radHit2 = x*x + z*z;
+  
   bool hit_first  = temp1 < t_max && temp1 > t_min && 
-    temp_point.y() > 0.0 && temp_point.y() < height;
+    py1 > 0.0 && py1 < height;
   bool hit_second = temp2 < t_max && temp2 > t_min && 
-    temp_point2.y() > 0.0 && temp_point2.y() < height;
+    py2 > 0.0 && py2 < height;
   bool hit_base   = t_cyl < t_max && t_cyl > t_min && 
-    radHit2 <= radius * radius;
+    (float)radHit2 <= radius * radius;
   // bool already_inside = (t_cyl < 0 || temp1 < 0) && r.origin().y() > 0.0 && r.origin().y() < height;
   
   // if(temp1 < t_max && temp1 > t_min && is_hit && (t_cyl > temp1 || !base_is_hit) && temp_point.y() > 0.0 && temp_point.y() < height) {
-  if(hit_first && (t_cyl > temp1 || !hit_base)) {
-    rec.t = temp1;
-    rec.p = temp_point;
+  if(hit_first && (t_cyl > (float)temp1 || !hit_base)) {
+    rec.t = (float)temp1;
+    rec.p = vec3f((float)px1, (float)py1, (float)pz1);
+    vec3f pError = vec3f(px1.GetAbsoluteError(), py1.GetAbsoluteError(),
+                         pz1.GetAbsoluteError());
     phi = std::atan2(rec.p.z(), rec.p.x());
     phi += phi < 0 ? 2 * M_PI : 0;
     
@@ -300,18 +315,13 @@ bool cone::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler*
       point3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
       rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv);
       rec.bump_normal.make_unit_vector();
-
+      
     }
     // if((!base_is_hit && t_cyl < temp1) || (already_inside && alpha_mask)) {
     //   rec.normal = -rec.normal;
     //   rec.bump_normal = -rec.bump_normal;
     // }
-    
-    EFloat px = r2.origin().x() + rec.t * r2.direction().x();
-    EFloat py = r2.origin().y() + rec.t * r2.direction().y();
-    EFloat pz = r2.origin().z() + rec.t * r2.direction().z();
-    rec.pError = vec3f(px.GetAbsoluteError(), py.GetAbsoluteError(),
-                       pz.GetAbsoluteError());
+    rec.pError = pError;
     
     rec = (*ObjectToWorld)(rec);
     rec.normal *= reverseOrientation  ? -1 : 1;
@@ -323,16 +333,19 @@ bool cone::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler*
     return(true);
   }
   // if((t_cyl < temp2 || !second_is_hit) && t_cyl > t_min && t_cyl < t_max && radHit2 <= radius * radius && base_is_hit) {
-  if(hit_base && t_cyl < temp2) {
-    point3f p = r2.point_at_parameter(t_cyl);
-    p.e[1] = 0;
+  if(hit_base && t_cyl < (float)temp2) {
+    rec.t = (float)t_cyl;
+    rec.p = vec3f((float)x, 0, (float)z);
+    vec3f pError = vec3f(px1.GetAbsoluteError(), 0,
+                         pz1.GetAbsoluteError());
+    // point3f p = r2.point_at_parameter(t_cyl);
+    // p.e[1] = 0;
     
-    Float u = p.x() / (2.0 * radius) + 0.5;
-    Float v = p.z() / (2.0 * radius) + 0.5;
+    Float u = (float)x / (2.0 * radius) + 0.5;
+    Float v = (float)z / (2.0 * radius) + 0.5;
     u = 1 - u;
-    rec.p = p;
+    // rec.p = p;
     rec.normal = vec3f(0,-1,0);
-    rec.t = t_cyl;
     rec.mat_ptr = mat_ptr.get();
     rec.u = u;
     rec.v = v;
@@ -344,30 +357,26 @@ bool cone::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler*
       point3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
       rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv);
       rec.bump_normal.make_unit_vector();
-
+      
     }
     // if((!second_is_hit && t_cyl > temp2) || (!is_hit && t_cyl > temp1) || (already_inside && alpha_mask)) {
     //   rec.normal = -rec.normal;
     //   rec.bump_normal = -rec.bump_normal;
     // }
-    EFloat px = r2.origin().x() + rec.t * r2.direction().x();
-    EFloat py = r2.origin().y() + rec.t * r2.direction().y();
-    EFloat pz = r2.origin().z() + rec.t * r2.direction().z();
-    rec.pError = vec3f(px.GetAbsoluteError(), py.GetAbsoluteError(),
-                       pz.GetAbsoluteError());
+    rec.pError = vec3f(0,0,0);
     
     rec = (*ObjectToWorld)(rec);
     rec.normal *= reverseOrientation  ? -1 : 1;
     rec.bump_normal *= reverseOrientation  ? -1 : 1;
     rec.shape = this;
     rec.alpha_miss = false;
-    
     return(true);
   }
   // // if(temp2 < t_max && temp2 > t_min && second_is_hit && temp_point.y() >= 0.0 && temp_point.y() <= height) {
   if(hit_second) {
-    rec.t = temp2;
-    rec.p = temp_point2;
+    rec.p = vec3f((float)px2, (float)py2, (float)pz2);
+    vec3f pError = vec3f(px2.GetAbsoluteError(), py2.GetAbsoluteError(),
+                         pz2.GetAbsoluteError());
     phi = std::atan2(rec.p.z(), rec.p.x());
     phi += phi < 0 ? 2 * M_PI : 0;
     
@@ -385,18 +394,13 @@ bool cone::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler*
       point3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
       rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv);
       rec.bump_normal.make_unit_vector();
-      rec.bump_normal = (*ObjectToWorld)(rec.bump_normal);
       
     }
     // if((!is_hit && temp2 < t_cyl) || (already_inside && alpha_mask)) {// || (!base_is_hit && temp2 > t_cyl)) {
     //   rec.normal = -rec.normal;
     //   rec.bump_normal = -rec.bump_normal;
     // }
-    EFloat px = r2.origin().x() + rec.t * r2.direction().x();
-    EFloat py = r2.origin().y() + rec.t * r2.direction().y();
-    EFloat pz = r2.origin().z() + rec.t * r2.direction().z();
-    rec.pError = vec3f(px.GetAbsoluteError(), py.GetAbsoluteError(),
-                       pz.GetAbsoluteError());
+    rec.pError = pError;
     
     rec = (*ObjectToWorld)(rec);
     rec.normal *= reverseOrientation  ? -1 : 1;
