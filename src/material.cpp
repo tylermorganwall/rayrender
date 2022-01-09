@@ -130,19 +130,24 @@ bool dielectric::scatter(const ray& r_in, const hit_record& hrec, scatter_record
   point3f offset_p = OffsetRayOrigin(hrec.p, hrec.pError, hrec.normal, r_in.direction());
   
   for(size_t i = 0; i < r_in.pri_stack->size(); i++) {
+    //Determine current layer and continue to iterate through stack
     if(r_in.pri_stack->at(i) == this) {
       current_layer = i;
       continue;
     }
+    //If layer's priority value less than active priority value, skip the layer
     if(r_in.pri_stack->at(i)->priority < active_priority_value) {
       active_priority_value = r_in.pri_stack->at(i)->priority;
       skip = true;
     }
+    //If layer's priority value less than next_down_priority and the current layer isn't this material,
+    //set the previous active layer to the current iterator on the stack
     if(r_in.pri_stack->at(i)->priority < next_down_priority && r_in.pri_stack->at(i) != this) {
       prev_active = i;
       next_down_priority = r_in.pri_stack->at(i)->priority;
     }
   }
+  //If entering, push current layer to stack
   if(entering) {
     r_in.pri_stack->push_back(this);
   }
