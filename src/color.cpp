@@ -5,9 +5,6 @@
 // #include "fstream"
 // #define DEBUG
 
-static Float MaxT = NextFloatDown(std::numeric_limits<Float>::infinity());
-static Float MinT = NextFloatUp((Float)0);
-
 point3f color(const ray& r, hitable *world, hitable_list *hlist,
            size_t max_depth, size_t roulette_activate, random_gen& rng, Sampler* sampler) {
 #ifdef DEBUG
@@ -25,7 +22,7 @@ point3f color(const ray& r, hitable *world, hitable_list *hlist,
   for(size_t i = 0; i < max_depth; i++) {
     bool is_invisible = false;
     hit_record hrec;
-    if(world->hit(r2, MinT, MaxT, hrec, rng)) { //generated hit record, world space
+    if(world->hit(r2, 0.001, MaxT, hrec, rng)) { //generated hit record, world space
       scatter_record srec;
       if(hrec.alpha_miss) {
         r2.A = OffsetRayOrigin(hrec.p, hrec.pError, hrec.normal, r2.direction());

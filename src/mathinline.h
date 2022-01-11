@@ -600,6 +600,8 @@ inline double NextFloatDown(double v, int delta = 1) {
   return BitsToFloat(ui);
 }
 
+static const Float MaxT = NextFloatDown(std::numeric_limits<Float>::infinity());
+static const Float MinT = NextFloatUp((Float)0);
 constexpr Float origin() { return 1.0f / 32.0f; }
 constexpr Float float_scale() { return 1.0f / 65536.0f; }
 constexpr Float int_scale() { return 256.0f; }
