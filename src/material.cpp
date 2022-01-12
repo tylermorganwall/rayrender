@@ -146,13 +146,20 @@ bool dielectric::scatter(const ray& r_in, const hit_record& hrec, scatter_record
       next_down_priority = r_in.pri_stack->at(i)->priority;
     }
   }
-  point3f offset_p = OffsetRayOrigin(hrec.p, hrec.pError, hrec.normal, r_in.direction());
   current_ref_idx = prev_active != -1 ? r_in.pri_stack->at(prev_active)->ref_idx : 1;
+  
+  outward_normal = entering ? wh : -wh;
+  ni_over_nt = entering ? current_ref_idx / ref_idx : ref_idx / current_ref_idx ;
+  
+  //Never reflect if ni_over_nt == 1
+  Float reflect_prob = FrDielectric(dot(wi, outward_normal), ni_over_nt);
   
   //If entering, push current layer to stack
   if(entering) {
     r_in.pri_stack->push_back(this);
   }
+  // point3f offset_p = OffsetRayOrigin(hrec.p, hrec.pError, hrec.normal, r_in.direction());
+  point3f offset_p = hrec.p;
   
   if(skip) {
     srec.specular_ray = ray(offset_p, r_in.direction(), r_in.pri_stack, r_in.time());
@@ -167,11 +174,6 @@ bool dielectric::scatter(const ray& r_in, const hit_record& hrec, scatter_record
     return(true);
   }
   
-  outward_normal = entering ? wh : -wh;
-  ni_over_nt = entering ? current_ref_idx / ref_idx : ref_idx / current_ref_idx ;
-  //Never reflect if ni_over_nt == 1
-  // Float reflect_prob = ni_over_nt != 1 ? FrDielectric(dot(wi, wh), ni_over_nt) : 0.0;
-  Float reflect_prob = FrDielectric(dot(wi, wh), ni_over_nt);
   
   //Calculate attenuation color
   if(!entering) {
@@ -270,9 +272,10 @@ bool dielectric::scatter(const ray& r_in, const hit_record& hrec, scatter_record
   
   outward_normal = entering ? wh : -wh;
   ni_over_nt = entering ? current_ref_idx / ref_idx : ref_idx / current_ref_idx ;
+  
   //Never reflect if ni_over_nt == 1
   // Float reflect_prob = ni_over_nt != 1 ? FrDielectric(dot(wi, wh), ni_over_nt) : 0.0;
-  Float reflect_prob = FrDielectric(dot(wi, wh), ni_over_nt);
+  Float reflect_prob = FrDielectric(dot(wi, outward_normal), ni_over_nt);
   
   //Calculate attenuation color
   if(!entering) {
