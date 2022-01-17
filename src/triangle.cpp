@@ -121,30 +121,32 @@ bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
   
   point3f pHit = b0 * a + b1 * b + b2 * c;
   point2f uvHit = b0 * uv[0] + b1 * uv[1] + b2 * uv[2];
-  Float u = uvHit[0];
-  Float v = uvHit[1];
+  // Float u = uvHit[0];
+  // Float v = uvHit[1];
   
   bool alpha_miss = false;
   
-  // vec3f pvec = cross(r.direction(), edge2);
-  // det = dot(pvec, edge1);
   
+  //Calculate UV's using old method
+  vec3f pvec = cross(r.direction(), edge2);
+  det = dot(pvec, edge1);
+
   // no culling
-  // if (std::fabs(det) < 1E-15) {
-  //   return(false);
-  // }
-  // Float invdet = 1.0 / det;
-  // vec3f tvec = vec3f(r.origin()) - a;
-  // Float u = dot(pvec, tvec) * invdet;
-  // if (u < 0.0 || u > 1.0) {
-  //   return(false);
-  // }
-  // // 
-  // vec3f qvec = cross(tvec, edge1);
-  // Float v = dot(qvec, r.direction()) * invdet;
-  // if (v < 0 || u + v > 1.0) {
-  //   return(false);
-  // }
+  if (std::fabs(det) < 1E-15) {
+    return(false);
+  }
+  Float invdet = 1.0 / det;
+  vec3f tvec = vec3f(r.origin()) - a;
+  Float u = dot(pvec, tvec) * invdet;
+  if (u < 0.0 || u > 1.0) {
+    return(false);
+  }
+  //
+  vec3f qvec = cross(tvec, edge1);
+  Float v = dot(qvec, r.direction()) * invdet;
+  if (v < 0 || u + v > 1.0) {
+    return(false);
+  }
   // Float t = dot(qvec, edge2) * invdet;
   
   if (t < t_min || t > t_max) {
