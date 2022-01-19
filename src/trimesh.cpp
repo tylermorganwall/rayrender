@@ -51,11 +51,26 @@ trimesh::trimesh(std::string inputfile, std::string basedir, Float scale,
     int nx, ny, nn;
     
     for (size_t i = 0; i < materials.size(); i++) {
+      nx = 0; ny = 0; nn = 0;
       if(strlen(materials[i].diffuse_texname.c_str()) > 0) {
+        int ok;
         if(has_sep) {
-          obj_materials.push_back(stbi_loadf((basedir + separator() + materials[i].diffuse_texname).c_str(), &nx, &ny, &nn, 0));
+          ok = stbi_info((basedir + separator() + materials[i].diffuse_texname).c_str(), &nx, &ny, &nn);
+          obj_materials.push_back(stbi_loadf((basedir + separator() + materials[i].diffuse_texname).c_str(), &nx, &ny, &nn, 4));
         } else {
-          obj_materials.push_back(stbi_loadf((materials[i].diffuse_texname).c_str(), &nx, &ny, &nn, 0));
+          ok = stbi_info((materials[i].diffuse_texname).c_str(), &nx, &ny, &nn);
+          obj_materials.push_back(stbi_loadf((materials[i].diffuse_texname).c_str(), &nx, &ny, &nn, 4));
+        }
+
+        if(!obj_materials[i] || !ok) {
+          REprintf("Load failed: %s\n", stbi_failure_reason());
+          if(has_sep) {
+            throw std::runtime_error("Loading failed of: " + (basedir + separator() + materials[i].diffuse_texname) + 
+                                     "-- nx/ny/channels :"  + std::to_string(nx)  +  "/"  +  std::to_string(ny)  +  "/"  +  std::to_string(nn));
+          } else {
+            throw std::runtime_error("Loading failed of: " + materials[i].diffuse_texname + 
+                                     "-- nx/ny/channels :" + std::to_string(nx)  +  "/"  +  std::to_string(ny)  +  "/"  +  std::to_string(nn));
+          }
         }
         if(nx == 0 || ny == 0 || nn == 0) {
           if(has_sep) {
@@ -91,15 +106,7 @@ trimesh::trimesh(std::string inputfile, std::string basedir, Float scale,
         has_diffuse[i] = true;
         has_alpha[i] = false;
         has_single_diffuse[i] = true;
-      } else {
-        obj_materials.push_back(nullptr);
-        alpha_materials.push_back(nullptr);
-        
-        has_diffuse[i] = false;
-        has_alpha[i] = false;
-        has_single_diffuse[i] = false;
-      }
-      if(materials[i].dissolve < 1) {
+      } else if(materials[i].dissolve < 1) {
         obj_materials.push_back(nullptr);
         alpha_materials.push_back(nullptr);
         
@@ -107,6 +114,13 @@ trimesh::trimesh(std::string inputfile, std::string basedir, Float scale,
         ior_materials[i] = materials[i].ior;
         has_alpha[i] = false;
         has_transparency[i] = true; 
+      } else {
+        obj_materials.push_back(nullptr);
+        alpha_materials.push_back(nullptr);
+        
+        has_diffuse[i] = false;
+        has_alpha[i] = false;
+        has_single_diffuse[i] = false;
       }
       if(strlen(materials[i].bump_texname.c_str()) > 0) {
         if(has_sep) {
@@ -349,20 +363,19 @@ trimesh::trimesh(std::string inputfile, std::string basedir, Float scale, Float 
         diffuse_materials[i] = vec3f(materials[i].diffuse[0],materials[i].diffuse[1],materials[i].diffuse[2]);
         has_diffuse[i] = true;
         has_single_diffuse[i] = true;
-      } else {
-        obj_materials.push_back(nullptr);
-        alpha_materials.push_back(nullptr);
-        
-        has_diffuse[i] = false;
-        has_single_diffuse[i] = false;
-      }
-      if(materials[i].dissolve < 1) {
+      } else if(materials[i].dissolve < 1) {
         obj_materials.push_back(nullptr);
         alpha_materials.push_back(nullptr);
         
         specular_materials[i] = vec3f(materials[i].diffuse[0],materials[i].diffuse[1],materials[i].diffuse[2]);
         ior_materials[i] = materials[i].ior;
         has_transparency[i] = true; 
+      } else {
+        obj_materials.push_back(nullptr);
+        alpha_materials.push_back(nullptr);
+        
+        has_diffuse[i] = false;
+        has_single_diffuse[i] = false;
       }
       if(strlen(materials[i].bump_texname.c_str()) > 0) {
         bump_materials[i] = stbi_loadf((basedir + separator() + materials[i].bump_texname).c_str(), &nx, &ny, &nn, 0);
