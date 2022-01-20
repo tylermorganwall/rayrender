@@ -56,10 +56,10 @@ trimesh::trimesh(std::string inputfile, std::string basedir, Float scale,
         int ok;
         if(has_sep) {
           ok = stbi_info((basedir + separator() + materials[i].diffuse_texname).c_str(), &nx, &ny, &nn);
-          obj_materials.push_back(stbi_loadf((basedir + separator() + materials[i].diffuse_texname).c_str(), &nx, &ny, &nn, 4));
+          obj_materials.push_back(stbi_loadf((basedir + separator() + materials[i].diffuse_texname).c_str(), &nx, &ny, &nn, 0));
         } else {
           ok = stbi_info((materials[i].diffuse_texname).c_str(), &nx, &ny, &nn);
-          obj_materials.push_back(stbi_loadf((materials[i].diffuse_texname).c_str(), &nx, &ny, &nn, 4));
+          obj_materials.push_back(stbi_loadf((materials[i].diffuse_texname).c_str(), &nx, &ny, &nn, 0));
         }
 
         if(!obj_materials[i] || !ok) {
