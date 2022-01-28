@@ -98,7 +98,7 @@ trimesh::trimesh(std::string inputfile, std::string basedir, Float scale,
             }
           }
         } 
-      } else if (sizeof(materials[i].diffuse) == 12) {
+      } else if (sizeof(materials[i].diffuse) == 12 && materials[i].dissolve == 1) {
         obj_materials.push_back(nullptr);
         alpha_materials.push_back(nullptr);
         
