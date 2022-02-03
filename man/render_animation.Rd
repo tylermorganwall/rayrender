@@ -40,6 +40,7 @@ render_animation(
   return_raw_array = FALSE,
   progress = interactive(),
   verbose = FALSE,
+  sample_dist = 10,
   preview_light_direction = c(0, -1, 0),
   preview_exponent = 6
 )
@@ -149,7 +150,7 @@ If `uv`, function will return an image of the uv coords. If `variance`, function
 showing the number of samples needed to take for each block to converge. If `dpdu` or `dpdv`, function will return
 an image showing the differential `u` and `u` coordinates. If `color`, function will return the raw albedo
 values (with white for `metal` and `dielectric` materials). If `preview`, an image rendered with `render_preview()` 
-will be returned.}
+will be returned. Can set to `ao` to render an animation with the ambient occlusion renderer.}
 
 \item{return_raw_array}{Default `FALSE`. If `TRUE`, function will return raw array with RGB intensity
 information.}
@@ -158,6 +159,8 @@ information.}
 
 \item{verbose}{Default `FALSE`. Prints information and timing information about scene
 construction and raytracing progress.}
+
+\item{sample_dist}{Default `10`. Sample distance if `debug_channel = "ao"`.}
 
 \item{preview_light_direction}{Default `c(0,-1,0)`. Vector specifying the orientation for the global light using for phong shading.}
 

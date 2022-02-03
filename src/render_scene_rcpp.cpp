@@ -121,7 +121,9 @@ List render_scene_rcpp(List camera_info, List scene_info) {
   NumericMatrix realCameraInfo = as<NumericMatrix>(camera_info["real_camera_info"]);
   Float film_size = as<Float>(camera_info["film_size"]);
   Float camera_scale = as<Float>(camera_info["camera_scale"]);
-
+  Float sample_dist = as<Float>(camera_info["sample_dist"]);
+  bool keep_colors = as<bool>(camera_info["keep_colors"]);
+  
   int bvh_type = as<int>(camera_info["bvh"]);
 
   //Initialize transformation cache
@@ -394,7 +396,7 @@ List render_scene_rcpp(List camera_info, List scene_info) {
   world.add(worldbvh);
 
   bool impl_only_bg = false;
-  if(numbertosample == 0 || hasbackground || ambient_light) {
+  if((numbertosample == 0 || hasbackground || ambient_light) && debug_channel != 18) {
     world.add(background_sphere);
     impl_only_bg = true;
   }
@@ -449,7 +451,7 @@ List render_scene_rcpp(List camera_info, List scene_info) {
                 verbose, ocam, cam, ecam, rcam, fov,
                 world, hlist,
                 clampval, max_depth, roulette_active,
-                light_direction, rng);
+                light_direction, rng, sample_dist, keep_colors);
   } else {
     pathtracer(numbercores, nx, ny, ns, debug_channel,
                min_variance, min_adaptive_size,

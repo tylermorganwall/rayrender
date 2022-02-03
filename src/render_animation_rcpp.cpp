@@ -103,7 +103,9 @@ void render_animation_rcpp(List camera_info, List scene_info, List camera_moveme
   NumericMatrix realCameraInfo = as<NumericMatrix>(camera_info["real_camera_info"]);
   Float film_size = as<Float>(camera_info["film_size"]);
   Float camera_scale = as<Float>(camera_info["camera_scale"]);
-
+  Float sample_dist = as<Float>(camera_info["sample_dist"]);
+  bool keep_colors = as<bool>(camera_info["keep_colors"]);
+  
 
   //unpack motion info
   NumericVector cam_x        = as<NumericVector>(camera_movement["x"]);
@@ -423,7 +425,7 @@ void render_animation_rcpp(List camera_info, List scene_info, List camera_moveme
                   verbose, ocam, cam, ecam, rcam, fov,
                   world, hlist,
                   clampval, max_depth, roulette_active,
-                  light_direction, rng);
+                  light_direction, rng, sample_dist, keep_colors);
       List temp = List::create(_["r"] = routput, _["g"] = goutput, _["b"] = boutput);
       post_process_frame(temp, debug_channel, as<std::string>(filenames(i)), toneval);
     }

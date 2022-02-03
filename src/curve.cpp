@@ -157,6 +157,7 @@ bool curve::hit(const ray& r, Float tmin, Float tmax, hit_record& rec, random_ge
                             uMax, maxDepth, Inverse(objectToRay)));
 }
 
+#include "RcppThread.h"
 
 bool curve::hit(const ray& r, Float tmin, Float tmax, hit_record& rec, Sampler* sampler) {
   ray r2 = (*WorldToObject)(r); 
@@ -184,6 +185,7 @@ bool curve::hit(const ray& r, Float tmin, Float tmax, hit_record& rec, Sampler* 
   }
 
   Transform objectToRay = LookAt(r2.origin(), r2.origin() + unit_dir, dx);
+
   point3f cp[4] = {objectToRay(cpObj[0]), objectToRay(cpObj[1]),
                    objectToRay(cpObj[2]), objectToRay(cpObj[3])};
   // Before going any further, see if the ray's bounding box intersects
@@ -370,6 +372,10 @@ bool curve::recursiveIntersect(const ray& r, Float tmin, Float tmax, hit_record&
     EvalBezier(common->cpObj, u, &rec.dpdu);
     
     if (common->type == CurveType::Cylinder) {
+      // if(std::isnan(rayToObject.GetMatrix().m[0][0])) {
+      //   RcppThread::Rcout << rayToObject << "\n";
+      // }
+      //This occasionally singulars out
       vec3f dpduPlane = (Inverse(rayToObject))(rec.dpdu);
       vec3f dpdvPlane = unit_vector(vec3f(-dpduPlane.y(), dpduPlane.x(), 0)) * hitWidth;
       Float theta = lerp(v, -90.0, 90.0);

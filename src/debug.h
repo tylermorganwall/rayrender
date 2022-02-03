@@ -476,6 +476,46 @@ inline Float calculate_bounces(const ray& r, hitable *world, hitable_list *hlist
   return(max_depth);
 }
 
+inline point3f calculate_ao(const ray& r, hitable *world, hitable_list *hlist,
+                          Float sample_distance, random_gen& rng, Sampler* sampler,
+                          bool keep_colors) {
+  ray r1 = r;
+  ray r2 = r;
+  point3f final_color(1.0f);
+  Float t_max = FLT_MAX;
+  bool diffuse_bounce = false;
+  for(size_t i = 0; i < 2; i++) {
+    hit_record hrec;
+    if(world->hit(r2, 0.001, t_max, hrec, rng)) { //generated hit record, world space
+      if(i == 1) {
+        return(point3f(0.0f));
+      }
+      scatter_record srec;
+      cosine_pdf p(hrec.normal); 
+      
+      vec3f dir;
+      dir = p.generate(sampler, diffuse_bounce, r2.time()); 
+      dir.make_unit_vector();
+      r1 = r2;
+      
+      t_max = sample_distance;
+      r2 = ray(OffsetRayOrigin(hrec.p, hrec.pError, hrec.normal, dir), dir, r2.pri_stack, r2.time());
+      if(keep_colors && hrec.mat_ptr->scatter(r2, hrec, srec, rng)) { 
+        if(!srec.is_specular) {
+          Float pdf_val = p.value(dir, rng, r2.time());
+          final_color = hrec.mat_ptr->f(r1, hrec, r2) / pdf_val;
+        }
+      }
+    } else {
+      if(i == 1) {
+        return(final_color);
+      }
+      return(point3f(1.0f));
+    }
+  }
+  return(point3f(1.0f));
+}
+
 void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_channel,
                  Float min_variance, size_t min_adaptive_size, 
                  Rcpp::NumericMatrix& routput, Rcpp::NumericMatrix& goutput, Rcpp::NumericMatrix& boutput,
@@ -485,7 +525,8 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                  Float fov,
                  hitable_list& world, hitable_list& hlist,
                  Float clampval, size_t max_depth, size_t roulette_active,
-                 Rcpp::NumericVector& light_direction, random_gen& rng);
+                 Rcpp::NumericVector& light_direction, random_gen& rng, Float sample_dist,
+                 bool keep_colors);
 
 
 
