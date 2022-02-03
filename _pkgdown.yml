@@ -51,7 +51,7 @@ reference:
       - starts_with("glossy")
       - starts_with("light")
       - starts_with("hair")
-     - starts_with("lambertian")
+      - starts_with("lambertian")
   - title: "Composing Scenes"
     desc: "Function for adding objects together to form a scene."
     contents:
