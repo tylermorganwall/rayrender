@@ -36,6 +36,7 @@ reference:
       - starts_with("pig")
       - starts_with("text")
       - starts_with("csg_object")
+      - starts_with("r_obj")
   - title: "Constructive Solid Geometry (CSG) Interface"
     desc: "Functions to model and build objects using CSG"
     contents: 
@@ -56,6 +57,8 @@ reference:
       - starts_with("add")
       - starts_with("group")
       - starts_with("animate")
+  - title: internal
+      - starts_with("lambertian")
   - title: "Render Raytraced Scene"
     desc: "Function to render the current scene."
     contents:
