@@ -51,14 +51,13 @@ reference:
       - starts_with("glossy")
       - starts_with("light")
       - starts_with("hair")
+     - starts_with("lambertian")
   - title: "Composing Scenes"
     desc: "Function for adding objects together to form a scene."
     contents:
       - starts_with("add")
       - starts_with("group")
       - starts_with("animate")
-  - title: internal
-      - starts_with("lambertian")
   - title: "Render Raytraced Scene"
     desc: "Function to render the current scene."
     contents:
