@@ -5,6 +5,7 @@
 #' @param scene Tibble of object locations and properties. 
 #' @param camera_motion Data frame of camera motion vectors, calculated with `generate_camera_motion()`.
 #' @param start_frame Default `1`. Frame to start the animation. 
+#' @param end_frame Default `NA`. By default, this is set to `nrow(camera_motion)`, the full number of frames.
 #' @param width Default `400`. Width of the render, in pixels.
 #' @param height Default `400`. Height of the render, in pixels.
 #' @param samples Default `100`. The maximum number of samples for each pixel. If this is a length-2
@@ -26,6 +27,10 @@
 #' random numbers. The other options are `random` (worst quality but simple), 
 #' `stratified` (only implemented for completion), 
 #' and `sobol_blue` (best option for sample counts below 256). 
+#' @param ambient_occlusion Default `FALSE`. If `TRUE`, the animation will be rendered with the ambient
+#' occlusion renderer. This uses the background color specified in `backgroundhigh`
+#' @param sample_dist Default `10`. Ambient occlusion sampling distance.
+#' @param keep_colors Default `FALSE`. Whether to keep the diffuse material colors.
 #' @param max_depth Default `50`. Maximum number of bounces a ray can make in a scene.
 #' @param roulette_active_depth Default `10`. Number of ray bounces until a ray can stop bouncing via
 #' Russian roulette.
@@ -37,7 +42,7 @@
 #' can be removed (at the cost of slightly darkening the image) by setting this to a small number greater than 1. 
 #' @param filename Default `NULL`. If present, the renderer will write to the filename instead
 #' of the current device.
-#' @param backgroundhigh Default `#80b4ff`. The "high" color in the background gradient. Can be either
+#' @param backgroundhigh Default `#ffffff`. The "high" color in the background gradient. Can be either
 #' a hexadecimal code, or a numeric rgb vector listing three intensities between `0` and `1`.
 #' @param backgroundlow Default `#ffffff`. The "low" color in the background gradient. Can be either
 #' a hexadecimal code, or a numeric rgb vector listing three intensities between `0` and `1`.
@@ -153,11 +158,12 @@
 #'                    clamp_value=10, width=400, height=400)
 #' 
 #' }
-render_animation = function(scene, camera_motion, start_frame = 1,
+render_animation = function(scene, camera_motion, start_frame = 1, end_frame = NA,
                             width = 400, height = 400, camera_description_file = NA, 
                             camera_scale = 1, iso = 100, film_size = 22,
                             samples = 100, min_variance = 0.00005, min_adaptive_size = 8,
-                            sample_method = "sobol",
+                            sample_method = "sobol", 
+                            ambient_occlusion = FALSE, keep_colors = FALSE,  sample_dist = 10,
                             max_depth = 50, roulette_active_depth = 10,
                             ambient_light = FALSE, 
                             clamp_value = Inf,
@@ -166,8 +172,11 @@ render_animation = function(scene, camera_motion, start_frame = 1,
                             tonemap ="gamma", bloom = TRUE, parallel=TRUE, bvh_type = "sah",
                             environment_light = NULL, rotate_env = 0, intensity_env = 1,
                             debug_channel = "none", return_raw_array = FALSE,
-                            progress = interactive(), verbose = FALSE, sample_dist = 10,
+                            progress = interactive(), verbose = FALSE,
                             preview_light_direction = c(0,-1,0), preview_exponent = 6) { 
+  if(ambient_occlusion) {
+    debug_channel = "ao"
+  }
   scene_list = prepare_scene_list(scene = scene, width = width, height = height, fov = 0, 
                                   samples = samples,  camera_description_file = camera_description_file, 
                                   camera_scale = camera_scale, iso = iso, film_size = film_size,
@@ -184,9 +193,11 @@ render_animation = function(scene, camera_motion, start_frame = 1,
                                   environment_light = environment_light, rotate_env = rotate_env, 
                                   intensity_env = intensity_env,
                                   debug_channel = debug_channel, return_raw_array = return_raw_array,
-                                  progress = progress, verbose = verbose, sample_dist = sample_dist)
+                                  progress = progress, verbose = verbose, sample_dist = sample_dist,
+                                  keep_colors = keep_colors)
   
   camera_info = scene_list$camera_info
+  
   scene_info = scene_list$scene_info
   
   if(is.na(filename)) {
@@ -201,8 +212,12 @@ render_animation = function(scene, camera_motion, start_frame = 1,
   camera_motion$fov = ifelse(camera_motion$fov < 0, 0, camera_motion$fov);
   
   toneval = switch(tonemap, "gamma" = 1,"reinhold" = 2,"uncharted" = 3,"hbd" = 4, "raw" = 5)
+  if(is.na(end_frame)) {
+    end_frame = nrow(camera_motion)
+  }
+  stopifnot(end_frame <= nrow(camera_motion))
   #Pathrace Scene
   rgb_mat = render_animation_rcpp(camera_info = camera_info, scene_info = scene_info, camera_movement = camera_motion,
-                              start_frame = start_frame - 1, filenames = filename_str, post_process_frame  = post_process_frame,
+                              start_frame = start_frame - 1, end_frame = end_frame, filenames = filename_str, post_process_frame  = post_process_frame,
                               toneval=toneval, bloom = bloom) 
 }

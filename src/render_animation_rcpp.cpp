@@ -25,7 +25,8 @@ using namespace Rcpp;
 using namespace std;
 
 // [[Rcpp::export]]
-void render_animation_rcpp(List camera_info, List scene_info, List camera_movement, int start_frame,
+void render_animation_rcpp(List camera_info, List scene_info, List camera_movement, 
+                           int start_frame, int end_frame,
                            CharacterVector filenames, Function post_process_frame, int toneval,
                            bool bloom) {
   
@@ -122,7 +123,7 @@ void render_animation_rcpp(List camera_info, List scene_info, List camera_moveme
   NumericVector cam_focal    = as<NumericVector>(camera_movement["focal"]);
   NumericVector cam_orthox   = as<NumericVector>(camera_movement["orthox"]);
   NumericVector cam_orthoy   = as<NumericVector>(camera_movement["orthoy"]);
-  int n_frames = cam_x.size();
+  int n_frames = end_frame;
 
   vec3f backgroundhigh(bghigh[0],bghigh[1],bghigh[2]);
   vec3f backgroundlow(bglow[0],bglow[1],bglow[2]);
@@ -312,7 +313,7 @@ void render_animation_rcpp(List camera_info, List scene_info, List camera_moveme
   world.add(worldbvh);
 
   bool impl_only_bg = false;
-  if(numbertosample == 0 || hasbackground || ambient_light) {
+  if((numbertosample == 0 || hasbackground || ambient_light)  && debug_channel != 18) {
     world.add(background_sphere);
     impl_only_bg = true;
   }
@@ -425,7 +426,7 @@ void render_animation_rcpp(List camera_info, List scene_info, List camera_moveme
                   verbose, ocam, cam, ecam, rcam, fov,
                   world, hlist,
                   clampval, max_depth, roulette_active,
-                  light_direction, rng, sample_dist, keep_colors);
+                  light_direction, rng, sample_dist, keep_colors, backgroundhigh);
       List temp = List::create(_["r"] = routput, _["g"] = goutput, _["b"] = boutput);
       post_process_frame(temp, debug_channel, as<std::string>(filenames(i)), toneval);
     }

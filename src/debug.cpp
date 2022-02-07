@@ -12,7 +12,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                 hitable_list& world, hitable_list& hlist,
                 Float clampval, size_t max_depth, size_t roulette_active,
                 Rcpp::NumericVector& light_direction, random_gen& rng, Float sample_dist,
-                bool keep_colors) {
+                bool keep_colors, vec3f backgroundhigh) {
   if(debug_channel == 1) {
     Float depth_into_scene = 0.0;
     for(unsigned int j = 0; j < ny; j++) {
@@ -670,7 +670,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
       auto worker = [&adaptive_pixel_sampler,
                      nx, ny, s, sample_method,
                      &rngs, fov, &samplers,
-                     &cam, &ocam, &ecam, &rcam, &world, &hlist,
+                     &cam, &ocam, &ecam, &rcam, &world, &hlist, backgroundhigh, 
                      clampval, sample_dist, roulette_active, keep_colors] (int k) {
                        int nx_begin = adaptive_pixel_sampler.pixel_chunks[k].startx;
                        int ny_begin = adaptive_pixel_sampler.pixel_chunks[k].starty;
@@ -700,7 +700,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                            }
                            point3f col = clamp_point(calculate_ao(r, &world, &hlist,
                                                       sample_dist, rngs[index], samplers[index].get(),
-                                                      keep_colors),0.f,1.f);
+                                                      keep_colors, backgroundhigh),0.f,1.f);
                            adaptive_pixel_sampler.add_color_main(i, j, col);
                            if(s % 2 == 0) {
                              adaptive_pixel_sampler.add_color_sec(i, j, col);

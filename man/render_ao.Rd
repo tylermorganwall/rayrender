@@ -10,6 +10,7 @@ render_ao(
   height = 400,
   fov = 20,
   sample_dist = 10,
+  keep_colors = FALSE,
   samples = 100,
   camera_description_file = NA,
   camera_scale = 1,
@@ -18,6 +19,7 @@ render_ao(
   min_variance = 0,
   min_adaptive_size = 8,
   sample_method = "sobol",
+  background_color = "white",
   lookfrom = c(0, 1, 10),
   lookat = c(0, 0, 0),
   camera_up = c(0, 1, 0),
@@ -47,6 +49,8 @@ projections. If this value is `360`, a 360 degree environment image will be rend
 
 \item{sample_dist}{Default `10`. Ambient occlusion sampling distance.}
 
+\item{keep_colors}{Default `FALSE`. Whether to keep the diffuse material colors.}
+
 \item{samples}{Default `100`. The maximum number of samples for each pixel. If this is a length-2
 vector and the `sample_method` is `stratified`, this will control the number of strata in each dimension.
 The total number of samples in this case will be the product of the two numbers.}
@@ -73,6 +77,8 @@ will use the maximum number of samples everywhere.}
 random numbers. The other options are `random` (worst quality but fastest), 
 `stratified` (only implemented for completion), `sobol_blue` (best option for sample counts below 256), 
 and `sobol` (slowest but best quality, better than `sobol_blue` for sample counts greater than 256).}
+
+\item{background_color}{Default `"white"`. Background color.}
 
 \item{lookfrom}{Default `c(0,1,10)`. Location of the camera.}
 
@@ -121,7 +127,7 @@ either to the device or to a filename.
 }
 \examples{
 #Generate and render a regular scene and an ambient occlusion version of that scene
-\donttest{
+\dontrun{
 angles = seq(0,360,by=36)
 xx = rev(c(rep(c(1,0.5),5),1) * sinpi(angles/180))
 yy = rev(c(rep(c(1,0.5),5),1) * cospi(angles/180))
@@ -149,7 +155,7 @@ generate_ground(material = diffuse(color="grey20", checkercolor = "grey50",sigma
                              hole = nrow(star_polygon),
                              material=diffuse(color="red",sigma=90))) \%>\%
  render_ao(parallel = TRUE,width=800,height=800, sample_dist=10,
-           fov=70,samples=16, aperture=0.1,
+           fov=70,samples=256, aperture=0.1,
            lookfrom=c(-0.9,1.2,-4.5),lookat=c(0,-1,0))
            
 #Decrease the ray occlusion search distance
@@ -161,7 +167,19 @@ generate_ground(material = diffuse(color="grey20", checkercolor = "grey50",sigma
                              hole = nrow(star_polygon),
                              material=diffuse(color="red",sigma=90))) \%>\%
  render_ao(parallel = TRUE,width=800,height=800, sample_dist=1,
-           fov=70,samples=16, aperture=0.1,
+           fov=70,samples=256, aperture=0.1,
+           lookfrom=c(-0.9,1.2,-4.5),lookat=c(0,-1,0))
+           
+#Turn on colors
+generate_ground(material = diffuse(color="grey20", checkercolor = "grey50",sigma=90)) \%>\%
+ add_object(sphere(material=metal())) \%>\%
+ add_object(obj_model(y=-1,x=-1.8,r_obj(), angle=c(0,135,0),material = diffuse(sigma=90))) \%>\%
+ add_object(pig(x=1.8,y=-1.2,scale=0.5,angle=c(0,90,0),diffuse_sigma = 90)) \%>\%
+ add_object(extruded_polygon(hollow_star,top=-0.5,bottom=-1, z=-2,
+                             hole = nrow(star_polygon),
+                             material=diffuse(color="red",sigma=90))) \%>\%
+ render_ao(parallel = TRUE,width=800,height=800, sample_dist=1,
+           fov=70,samples=256, aperture=0.1, keep_colors = TRUE,
            lookfrom=c(-0.9,1.2,-4.5),lookat=c(0,-1,0))
 
 }

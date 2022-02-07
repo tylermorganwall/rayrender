@@ -478,7 +478,7 @@ inline Float calculate_bounces(const ray& r, hitable *world, hitable_list *hlist
 
 inline point3f calculate_ao(const ray& r, hitable *world, hitable_list *hlist,
                           Float sample_distance, random_gen& rng, Sampler* sampler,
-                          bool keep_colors) {
+                          bool keep_colors, vec3f bg) {
   ray r1 = r;
   ray r2 = r;
   point3f final_color(1.0f);
@@ -489,6 +489,10 @@ inline point3f calculate_ao(const ray& r, hitable *world, hitable_list *hlist,
     if(world->hit(r2, 0.001, t_max, hrec, rng)) { //generated hit record, world space
       if(i == 1) {
         return(point3f(0.0f));
+      }
+      
+      if(dot(r2.direction(),hrec.normal) > 0) {
+        hrec.normal *= -1;
       }
       scatter_record srec;
       cosine_pdf p(hrec.normal); 
@@ -510,10 +514,10 @@ inline point3f calculate_ao(const ray& r, hitable *world, hitable_list *hlist,
       if(i == 1) {
         return(final_color);
       }
-      return(point3f(1.0f));
+      return(bg);
     }
   }
-  return(point3f(1.0f));
+  return(bg);
 }
 
 void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_channel,
@@ -526,7 +530,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                  hitable_list& world, hitable_list& hlist,
                  Float clampval, size_t max_depth, size_t roulette_active,
                  Rcpp::NumericVector& light_direction, random_gen& rng, Float sample_dist,
-                 bool keep_colors);
+                 bool keep_colors, vec3f backgroundhigh);
 
 
 

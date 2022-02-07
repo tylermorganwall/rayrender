@@ -8,6 +8,7 @@ render_animation(
   scene,
   camera_motion,
   start_frame = 1,
+  end_frame = NA,
   width = 400,
   height = 400,
   camera_description_file = NA,
@@ -18,6 +19,9 @@ render_animation(
   min_variance = 5e-05,
   min_adaptive_size = 8,
   sample_method = "sobol",
+  ambient_occlusion = FALSE,
+  keep_colors = FALSE,
+  sample_dist = 10,
   max_depth = 50,
   roulette_active_depth = 10,
   ambient_light = FALSE,
@@ -40,7 +44,6 @@ render_animation(
   return_raw_array = FALSE,
   progress = interactive(),
   verbose = FALSE,
-  sample_dist = 10,
   preview_light_direction = c(0, -1, 0),
   preview_exponent = 6
 )
@@ -51,6 +54,8 @@ render_animation(
 \item{camera_motion}{Data frame of camera motion vectors, calculated with `generate_camera_motion()`.}
 
 \item{start_frame}{Default `1`. Frame to start the animation.}
+
+\item{end_frame}{Default `NA`. By default, this is set to `nrow(camera_motion)`, the full number of frames.}
 
 \item{width}{Default `400`. Width of the render, in pixels.}
 
@@ -83,6 +88,13 @@ random numbers. The other options are `random` (worst quality but simple),
 `stratified` (only implemented for completion), 
 and `sobol_blue` (best option for sample counts below 256).}
 
+\item{ambient_occlusion}{Default `FALSE`. If `TRUE`, the animation will be rendered with the ambient
+occlusion renderer. This uses the background color specified in `backgroundhigh`}
+
+\item{keep_colors}{Default `FALSE`. Whether to keep the diffuse material colors.}
+
+\item{sample_dist}{Default `10`. Sample distance if `debug_channel = "ao"`.}
+
 \item{max_depth}{Default `50`. Maximum number of bounces a ray can make in a scene.}
 
 \item{roulette_active_depth}{Default `10`. Number of ray bounces until a ray can stop bouncing via
@@ -99,7 +111,7 @@ can be removed (at the cost of slightly darkening the image) by setting this to 
 \item{filename}{Default `NULL`. If present, the renderer will write to the filename instead
 of the current device.}
 
-\item{backgroundhigh}{Default `#80b4ff`. The "high" color in the background gradient. Can be either
+\item{backgroundhigh}{Default `#ffffff`. The "high" color in the background gradient. Can be either
 a hexadecimal code, or a numeric rgb vector listing three intensities between `0` and `1`.}
 
 \item{backgroundlow}{Default `#ffffff`. The "low" color in the background gradient. Can be either
@@ -159,8 +171,6 @@ information.}
 
 \item{verbose}{Default `FALSE`. Prints information and timing information about scene
 construction and raytracing progress.}
-
-\item{sample_dist}{Default `10`. Sample distance if `debug_channel = "ao"`.}
 
 \item{preview_light_direction}{Default `c(0,-1,0)`. Vector specifying the orientation for the global light using for phong shading.}
 

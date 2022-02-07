@@ -449,9 +449,10 @@ List render_scene_rcpp(List camera_info, List scene_info) {
                 routput, goutput,boutput,
                 progress_bar, sample_method, stratified_dim,
                 verbose, ocam, cam, ecam, rcam, fov,
-                world, hlist,
+                world, hlist, 
                 clampval, max_depth, roulette_active,
-                light_direction, rng, sample_dist, keep_colors);
+                light_direction, rng, sample_dist, keep_colors,
+                backgroundhigh);
   } else {
     pathtracer(numbercores, nx, ny, ns, debug_channel,
                min_variance, min_adaptive_size,

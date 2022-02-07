@@ -127,7 +127,6 @@ generate_camera_motion = function(positions,
                                  "none" = 0,"position" = 1,"lookats" = 2, "both" = 3, 0))
   curvature_adjust_pos = curve_adj_type %in% c(1,3)
   curvature_adjust_look = curve_adj_type %in% c(2,3)
-  
   if(type=="bezier") {
     position_control_points = process_point_series(positions,closed=closed,straight=FALSE)
     points_dist = calculate_distance_along_bezier_curve(position_control_points, breaks = 50)
@@ -504,7 +503,11 @@ calculate_distance_along_bezier_curve = function(cps,breaks=20) {
   prev_pos = eval_bezier(cps[[1]], 0)
   temp_deriv = eval_bezier_deriv(cps[[1]], 0)
   temp_second_deriv = eval_bezier_2nd_deriv(cps[[1]], 0)
-  curve = sqrt(sum(cross_prod(temp_deriv,temp_second_deriv)^2))/sum(temp_deriv^2)^(3/2)
+  if(any(temp_deriv != 0)) {
+    curve = sqrt(sum(cross_prod(temp_deriv,temp_second_deriv)^2))/sum(temp_deriv^2)^(3/2)
+  } else {
+    curve = Inf
+  }
   
   distance_list[[1]] = data.frame(dist=0,segment=1,t=0, x=prev_pos[1],y=prev_pos[2],z=prev_pos[3],
                                   curvature = curve,
@@ -515,11 +518,20 @@ calculate_distance_along_bezier_curve = function(cps,breaks=20) {
       temp_pos = eval_bezier(cps[[seg]], t)
       temp_deriv = eval_bezier_deriv(cps[[seg]], t)
       temp_second_deriv = eval_bezier_2nd_deriv(cps[[seg]], t)
-      curve = sqrt(sum(cross_prod(temp_deriv,temp_second_deriv)^2))/sum(temp_deriv^2)^(3/2)
-      distance_list[[counter]] = data.frame(dist=sqrt(sum((temp_pos-prev_pos)^2)),
-                                            segment=seg,t=(seg+t-1)/length(cps), x=temp_pos[1],y=temp_pos[2],z=temp_pos[3],
-                                            curvature = curve,
-                                            dx=temp_deriv[1],dy=temp_deriv[2],dz=temp_deriv[3])
+      if(any(temp_deriv != 0)) {
+        curve = sqrt(sum(cross_prod(temp_deriv,temp_second_deriv)^2))/sum(temp_deriv^2)^(3/2)
+        distance_list[[counter]] = data.frame(dist=sqrt(sum((temp_pos-prev_pos)^2)),
+                                              segment=seg,t=(seg+t-1)/length(cps), x=temp_pos[1],y=temp_pos[2],z=temp_pos[3],
+                                              curvature = curve,
+                                              dx=temp_deriv[1],dy=temp_deriv[2],dz=temp_deriv[3])
+      } else {
+        curve = Inf
+        distance_list[[counter]] = data.frame(dist=sqrt(sum((temp_pos-prev_pos)^2)),
+                                              segment=seg,t=(seg+t-1)/length(cps), x=temp_pos[1],y=temp_pos[2],z=temp_pos[3],
+                                              curvature = curve,
+                                              dx=temp_deriv[1],dy=temp_deriv[2],dz=temp_deriv[3])
+      }
+      
       prev_pos = temp_pos
       counter = counter + 1
     }
@@ -541,6 +553,12 @@ calculate_distance_along_bezier_curve = function(cps,breaks=20) {
 calculate_final_path = function(linearized_cp, steps, constant_step = TRUE, 
                                 curvature_adjust = FALSE, curvature_scale = 1, offset = 0,
                                 progress = FALSE, string = "") {
+  if(max(linearized_cp$total_dist) < 1e-12) {
+    single_row = linearized_cp[1,c("x","y","z")]
+    single_df = as.data.frame(matrix(as.numeric(single_row),nrow=steps,ncol=3, byrow=T))
+    colnames(single_df) = c("x","y","z")
+    return(single_df)
+  }
   if(constant_step) {
     stepsize = max(linearized_cp$total_dist)/steps
     final_points = list()

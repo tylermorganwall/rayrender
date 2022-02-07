@@ -43,7 +43,8 @@ prepare_scene_list(
   return_raw_array = FALSE,
   progress = interactive(),
   verbose = FALSE,
-  sample_dist = Inf
+  sample_dist = Inf,
+  keep_colors = FALSE
 )
 }
 \description{

@@ -10,6 +10,8 @@
 #' used to create the orthographic projection is given in argument `ortho_dimensions`. From `0` to `180`, this uses a perspective
 #' projections. If this value is `360`, a 360 degree environment image will be rendered. 
 #' @param sample_dist Default `10`. Ambient occlusion sampling distance.
+#' @param keep_colors Default `FALSE`. Whether to keep the diffuse material colors.
+#' @param background_color Default `"white"`. Background color.
 #' @param samples Default `100`. The maximum number of samples for each pixel. If this is a length-2
 #' vector and the `sample_method` is `stratified`, this will control the number of strata in each dimension.
 #' The total number of samples in this case will be the product of the two numbers.
@@ -59,7 +61,7 @@
 #'
 #' @examples
 #' #Generate and render a regular scene and an ambient occlusion version of that scene
-#' \donttest{
+#' \dontrun{
 #'angles = seq(0,360,by=36)
 #'xx = rev(c(rep(c(1,0.5),5),1) * sinpi(angles/180))
 #'yy = rev(c(rep(c(1,0.5),5),1) * cospi(angles/180))
@@ -87,7 +89,7 @@
 #'                              hole = nrow(star_polygon),
 #'                              material=diffuse(color="red",sigma=90))) %>%
 #'  render_ao(parallel = TRUE,width=800,height=800, sample_dist=10,
-#'            fov=70,samples=16, aperture=0.1,
+#'            fov=70,samples=256, aperture=0.1,
 #'            lookfrom=c(-0.9,1.2,-4.5),lookat=c(0,-1,0))
 #'            
 #'#Decrease the ray occlusion search distance
@@ -99,7 +101,19 @@
 #'                              hole = nrow(star_polygon),
 #'                              material=diffuse(color="red",sigma=90))) %>%
 #'  render_ao(parallel = TRUE,width=800,height=800, sample_dist=1,
-#'            fov=70,samples=16, aperture=0.1,
+#'            fov=70,samples=256, aperture=0.1,
+#'            lookfrom=c(-0.9,1.2,-4.5),lookat=c(0,-1,0))
+#'            
+#'#Turn on colors
+#'generate_ground(material = diffuse(color="grey20", checkercolor = "grey50",sigma=90)) %>%
+#'  add_object(sphere(material=metal())) %>%
+#'  add_object(obj_model(y=-1,x=-1.8,r_obj(), angle=c(0,135,0),material = diffuse(sigma=90))) %>%
+#'  add_object(pig(x=1.8,y=-1.2,scale=0.5,angle=c(0,90,0),diffuse_sigma = 90)) %>%
+#'  add_object(extruded_polygon(hollow_star,top=-0.5,bottom=-1, z=-2,
+#'                              hole = nrow(star_polygon),
+#'                              material=diffuse(color="red",sigma=90))) %>%
+#'  render_ao(parallel = TRUE,width=800,height=800, sample_dist=1,
+#'            fov=70,samples=256, aperture=0.1, keep_colors = TRUE,
 #'            lookfrom=c(-0.9,1.2,-4.5),lookat=c(0,-1,0))
 #'
 #' }
@@ -108,7 +122,7 @@ render_ao = function(scene, width = 400, height = 400, fov = 20,
                      samples = 100,  camera_description_file = NA, 
                      camera_scale = 1, iso = 100, film_size = 22,
                      min_variance = 0.0000, min_adaptive_size = 8,
-                     sample_method = "sobol", 
+                     sample_method = "sobol", background_color = "white",
                      lookfrom = c(0,1,10), lookat = c(0,0,0), camera_up = c(0,1,0), 
                      aperture = 0.1, clamp_value = Inf,
                      filename = NULL, 
@@ -148,6 +162,7 @@ render_ao = function(scene, width = 400, height = 400, fov = 20,
   tonemap = "gamma"
   bloom = FALSE
   
+  background_color = convert_color(background_color)
   scene_list = prepare_scene_list(scene = scene, width = width, height = height, fov = fov, 
                                   samples = samples,  camera_description_file = camera_description_file, 
                                   camera_scale = camera_scale, iso = iso, film_size = film_size,
@@ -157,7 +172,7 @@ render_ao = function(scene, width = 400, height = 400, fov = 20,
                                   ambient_light = FALSE, 
                                   lookfrom = lookfrom, lookat = lookat, camera_up = camera_up, 
                                   aperture = aperture, clamp_value = clamp_value,
-                                  filename = filename, backgroundhigh = "white", backgroundlow = "white",
+                                  filename = filename, backgroundhigh = background_color, backgroundlow = background_color,
                                   shutteropen = shutteropen, shutterclose = shutterclose, 
                                   focal_distance = focal_distance, ortho_dimensions = ortho_dimensions,
                                   tonemap = "gamma", bloom = FALSE, parallel=parallel, bvh_type = bvh_type,

@@ -127,6 +127,9 @@ expInOut = function(t) {
 #'
 #' @keywords internal
 tween = function(vals, n, ease = "cubic") {
+  if(length(vals) == 1) {
+    return(rep(vals,n))
+  }
   len_vals = rep(0, length(vals)-1)
   free_vals = n - length(vals)
   counter = 1

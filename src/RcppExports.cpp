@@ -11,19 +11,20 @@ Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
 // render_animation_rcpp
-void render_animation_rcpp(List camera_info, List scene_info, List camera_movement, int start_frame, CharacterVector filenames, Function post_process_frame, int toneval, bool bloom);
-RcppExport SEXP _rayrender_render_animation_rcpp(SEXP camera_infoSEXP, SEXP scene_infoSEXP, SEXP camera_movementSEXP, SEXP start_frameSEXP, SEXP filenamesSEXP, SEXP post_process_frameSEXP, SEXP tonevalSEXP, SEXP bloomSEXP) {
+void render_animation_rcpp(List camera_info, List scene_info, List camera_movement, int start_frame, int end_frame, CharacterVector filenames, Function post_process_frame, int toneval, bool bloom);
+RcppExport SEXP _rayrender_render_animation_rcpp(SEXP camera_infoSEXP, SEXP scene_infoSEXP, SEXP camera_movementSEXP, SEXP start_frameSEXP, SEXP end_frameSEXP, SEXP filenamesSEXP, SEXP post_process_frameSEXP, SEXP tonevalSEXP, SEXP bloomSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< List >::type camera_info(camera_infoSEXP);
     Rcpp::traits::input_parameter< List >::type scene_info(scene_infoSEXP);
     Rcpp::traits::input_parameter< List >::type camera_movement(camera_movementSEXP);
     Rcpp::traits::input_parameter< int >::type start_frame(start_frameSEXP);
+    Rcpp::traits::input_parameter< int >::type end_frame(end_frameSEXP);
     Rcpp::traits::input_parameter< CharacterVector >::type filenames(filenamesSEXP);
     Rcpp::traits::input_parameter< Function >::type post_process_frame(post_process_frameSEXP);
     Rcpp::traits::input_parameter< int >::type toneval(tonevalSEXP);
     Rcpp::traits::input_parameter< bool >::type bloom(bloomSEXP);
-    render_animation_rcpp(camera_info, scene_info, camera_movement, start_frame, filenames, post_process_frame, toneval, bloom);
+    render_animation_rcpp(camera_info, scene_info, camera_movement, start_frame, end_frame, filenames, post_process_frame, toneval, bloom);
     return R_NilValue;
 END_RCPP
 }
@@ -55,7 +56,7 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_rayrender_render_animation_rcpp", (DL_FUNC) &_rayrender_render_animation_rcpp, 8},
+    {"_rayrender_render_animation_rcpp", (DL_FUNC) &_rayrender_render_animation_rcpp, 9},
     {"_rayrender_render_scene_rcpp", (DL_FUNC) &_rayrender_render_scene_rcpp, 2},
     {"_rayrender_tonemap_image", (DL_FUNC) &_rayrender_tonemap_image, 4},
     {NULL, NULL, 0}
