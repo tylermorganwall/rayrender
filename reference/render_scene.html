@@ -17,7 +17,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">rayrender</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.24.5</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.26.0</span>
       </span>
     </div>
 
@@ -104,7 +104,7 @@
   sample_method <span class="op">=</span> <span class="st">"sobol"</span>,
   max_depth <span class="op">=</span> <span class="cn">NA</span>,
   roulette_active_depth <span class="op">=</span> <span class="fl">100</span>,
-  ambient_light <span class="op">=</span> <span class="cn">FALSE</span>,
+  ambient_light <span class="op">=</span> <span class="cn">NULL</span>,
   lookfrom <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">1</span>, <span class="fl">10</span><span class="op">)</span>,
   lookat <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">0</span>, <span class="fl">0</span><span class="op">)</span>,
   camera_up <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">1</span>, <span class="fl">0</span><span class="op">)</span>,
@@ -259,7 +259,8 @@ construction and raytracing progress.</p></dd>
 </dl></div>
     <div id="value">
     <h2>Value</h2>
-    <p>Raytraced plot to current device, or an image saved to a file.</p>
+    <p>Raytraced plot to current device, or an image saved to a file. Invisibly returns the
+array (containing either debug data or the RGB)</p>
     </div>
 
   </div>

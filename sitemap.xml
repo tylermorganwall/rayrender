@@ -238,6 +238,12 @@
     <loc>/reference/post_process_frame.html</loc>
   </url>
   <url>
+    <loc>/reference/post_process_scene.html</loc>
+  </url>
+  <url>
+    <loc>/reference/prepare_scene_list.html</loc>
+  </url>
+  <url>
     <loc>/reference/process_point_series.html</loc>
   </url>
   <url>
@@ -254,6 +260,9 @@
   </url>
   <url>
     <loc>/reference/render_animation.html</loc>
+  </url>
+  <url>
+    <loc>/reference/render_ao.html</loc>
   </url>
   <url>
     <loc>/reference/render_preview.html</loc>

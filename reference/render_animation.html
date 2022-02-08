@@ -17,7 +17,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">rayrender</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.24.5</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.26.0</span>
       </span>
     </div>
 
@@ -93,6 +93,7 @@
   <span class="va">scene</span>,
   <span class="va">camera_motion</span>,
   start_frame <span class="op">=</span> <span class="fl">1</span>,
+  end_frame <span class="op">=</span> <span class="cn">NA</span>,
   width <span class="op">=</span> <span class="fl">400</span>,
   height <span class="op">=</span> <span class="fl">400</span>,
   camera_description_file <span class="op">=</span> <span class="cn">NA</span>,
@@ -103,6 +104,9 @@
   min_variance <span class="op">=</span> <span class="fl">5e-05</span>,
   min_adaptive_size <span class="op">=</span> <span class="fl">8</span>,
   sample_method <span class="op">=</span> <span class="st">"sobol"</span>,
+  ambient_occlusion <span class="op">=</span> <span class="cn">FALSE</span>,
+  keep_colors <span class="op">=</span> <span class="cn">FALSE</span>,
+  sample_dist <span class="op">=</span> <span class="fl">10</span>,
   max_depth <span class="op">=</span> <span class="fl">50</span>,
   roulette_active_depth <span class="op">=</span> <span class="fl">10</span>,
   ambient_light <span class="op">=</span> <span class="cn">FALSE</span>,
@@ -138,6 +142,8 @@
 <dd><p>Data frame of camera motion vectors, calculated with `generate_camera_motion()`.</p></dd>
 <dt>start_frame</dt>
 <dd><p>Default `1`. Frame to start the animation.</p></dd>
+<dt>end_frame</dt>
+<dd><p>Default `NA`. By default, this is set to `nrow(camera_motion)`, the full number of frames.</p></dd>
 <dt>width</dt>
 <dd><p>Default `400`. Width of the render, in pixels.</p></dd>
 <dt>height</dt>
@@ -169,6 +175,13 @@ will use the maximum number of samples everywhere.</p></dd>
 random numbers. The other options are `random` (worst quality but simple), 
 `stratified` (only implemented for completion), 
 and `sobol_blue` (best option for sample counts below 256).</p></dd>
+<dt>ambient_occlusion</dt>
+<dd><p>Default `FALSE`. If `TRUE`, the animation will be rendered with the ambient
+occlusion renderer. This uses the background color specified in `backgroundhigh`</p></dd>
+<dt>keep_colors</dt>
+<dd><p>Default `FALSE`. Whether to keep the diffuse material colors.</p></dd>
+<dt>sample_dist</dt>
+<dd><p>Default `10`. Sample distance if `debug_channel = "ao"`.</p></dd>
 <dt>max_depth</dt>
 <dd><p>Default `50`. Maximum number of bounces a ray can make in a scene.</p></dd>
 <dt>roulette_active_depth</dt>
@@ -186,7 +199,7 @@ can be removed (at the cost of slightly darkening the image) by setting this to 
 <dd><p>Default `NULL`. If present, the renderer will write to the filename instead
 of the current device.</p></dd>
 <dt>backgroundhigh</dt>
-<dd><p>Default `#80b4ff`. The "high" color in the background gradient. Can be either
+<dd><p>Default `#ffffff`. The "high" color in the background gradient. Can be either
 a hexadecimal code, or a numeric rgb vector listing three intensities between `0` and `1`.</p></dd>
 <dt>backgroundlow</dt>
 <dd><p>Default `#ffffff`. The "low" color in the background gradient. Can be either
@@ -237,7 +250,7 @@ If `uv`, function will return an image of the uv coords. If `variance`, function
 showing the number of samples needed to take for each block to converge. If `dpdu` or `dpdv`, function will return
 an image showing the differential `u` and `u` coordinates. If `color`, function will return the raw albedo
 values (with white for `metal` and `dielectric` materials). If `preview`, an image rendered with `render_preview()` 
-will be returned.</p></dd>
+will be returned. Can set to `ao` to render an animation with the ambient occlusion renderer.</p></dd>
 <dt>return_raw_array</dt>
 <dd><p>Default `FALSE`. If `TRUE`, function will return raw array with RGB intensity
 information.</p></dd>
