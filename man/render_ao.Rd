@@ -127,7 +127,7 @@ either to the device or to a filename.
 }
 \examples{
 #Generate and render a regular scene and an ambient occlusion version of that scene
-\dontrun{
+\donttest{
 angles = seq(0,360,by=36)
 xx = rev(c(rep(c(1,0.5),5),1) * sinpi(angles/180))
 yy = rev(c(rep(c(1,0.5),5),1) * cospi(angles/180))
