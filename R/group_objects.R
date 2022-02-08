@@ -89,12 +89,12 @@ group_objects = function(scene, pivot_point=c(0,0,0), translate = c(0,0,0),
     Rotation = RotateAxis(angle,axis_rotation)
   }
 
-  na_ts <- is.na(scene$group_transform)
-  scene$group_transform[na_ts] <- lapply(scene$group_transform[na_ts], function(x) {
+  na_ts = is.na(scene$group_transform)
+  scene$group_transform[na_ts] = lapply(scene$group_transform[na_ts], function(x) {
       Translation %*% PivotTranslateEnd %*% 
           Rotation %*% Scale %*% PivotTranslateStart
   })
-  scene$group_transform[!na_ts] <- lapply(scene$group_transform[!na_ts], function(x) {
+  scene$group_transform[!na_ts] = lapply(scene$group_transform[!na_ts], function(x) {
       Translation %*% PivotTranslateEnd %*% 
           Rotation %*% Scale %*% PivotTranslateStart %*% x
   })
