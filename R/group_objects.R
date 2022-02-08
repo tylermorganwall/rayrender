@@ -88,20 +88,16 @@ group_objects = function(scene, pivot_point=c(0,0,0), translate = c(0,0,0),
     stopifnot(sum(axis_rotation*axis_rotation) > 0)
     Rotation = RotateAxis(angle,axis_rotation)
   }
-  for(i in seq_len(nrow(scene))) {
-    if(is.na(scene$group_transform[i])) {
-      scene$group_transform[i] = list(Translation %*% 
-                                      PivotTranslateEnd %*% 
-                                      Rotation %*% 
-                                      Scale %*% 
-                                      PivotTranslateStart)
-    } else {
-      scene$group_transform[i] = list(Translation %*% 
-                                      PivotTranslateEnd %*% 
-                                      Rotation %*% 
-                                      Scale %*% 
-                                      PivotTranslateStart %*% scene$group_transform[[i]])
-    }
-  }
+
+  na_ts = is.na(scene$group_transform)
+  scene$group_transform[na_ts] = lapply(scene$group_transform[na_ts], function(x) {
+      Translation %*% PivotTranslateEnd %*% 
+          Rotation %*% Scale %*% PivotTranslateStart
+  })
+  scene$group_transform[!na_ts] = lapply(scene$group_transform[!na_ts], function(x) {
+      Translation %*% PivotTranslateEnd %*% 
+          Rotation %*% Scale %*% PivotTranslateStart %*% x
+  })
+
   return(scene)
 }
