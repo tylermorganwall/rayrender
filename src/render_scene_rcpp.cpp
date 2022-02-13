@@ -27,6 +27,8 @@ using namespace Rcpp;
 // [[Rcpp::plugins(cpp11)]]
 // [[Rcpp::depends(RcppThread)]]
 #include "RcppThread.h"
+#include "PreviewDisplay.h"
+
 
 // #define DEBUG
 
@@ -39,7 +41,6 @@ using namespace std;
 
 // [[Rcpp::export]]
 List render_scene_rcpp(List camera_info, List scene_info) {
-  
   //Unpack scene info
   bool ambient_light = as<bool>(scene_info["ambient_light"]);
   IntegerVector type = as<IntegerVector>(scene_info["type"]);
@@ -126,6 +127,9 @@ List render_scene_rcpp(List camera_info, List scene_info) {
   
   int bvh_type = as<int>(camera_info["bvh"]);
 
+  PreviewDisplay Display(nx,ny);
+                     
+  
   //Initialize transformation cache
   TransformCache transformCache;
 
@@ -460,7 +464,7 @@ List render_scene_rcpp(List camera_info, List scene_info) {
                progress_bar, sample_method, stratified_dim,
                verbose, ocam, cam, ecam, rcam, fov,
                world, hlist,
-               clampval, max_depth, roulette_active);
+               clampval, max_depth, roulette_active, Display);
   }
 
   if(verbose) {

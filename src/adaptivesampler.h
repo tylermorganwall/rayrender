@@ -29,6 +29,7 @@ public:
     size_t ny_chunk = ny / numbercores;
     size_t bonus_x = nx - nx_chunk * numbercores;
     size_t bonus_y = ny - ny_chunk * numbercores;
+    finalized.resize(nx*ny, false);
     for(size_t i = 0; i < numbercores; i++) {
       for(size_t j = 0; j < numbercores ; j++) {
         size_t extra_x = i == numbercores - 1 ? bonus_x : 0;
@@ -110,6 +111,7 @@ public:
               g(i,j) = (float)(s+1)/(float)ns;
               b(i,j) = (float)(s+1)/(float)ns;
             }
+            finalized[i + nx*j] = true;
           }
         }
       } else if(it->split &&
@@ -179,6 +181,7 @@ public:
   size_t min_adaptive_size;
   NumericMatrix &r, &g, &b, &r2, &g2, &b2;
   std::vector<pixel_block> pixel_chunks;
+  std::vector<bool> finalized;
 };
 
 #endif

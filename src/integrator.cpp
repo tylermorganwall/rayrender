@@ -9,6 +9,7 @@
 #include "mathinline.h"
 #include "filter.h"
 #include "sampler.h"
+#include "PreviewDisplay.h"
 
 void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::size_t ns, int debug_channel,
                 Float min_variance, std::size_t min_adaptive_size, 
@@ -18,7 +19,8 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
                 RealisticCamera &rcam,
                 Float fov,
                 hitable_list& world, hitable_list& hlist,
-                Float clampval, std::size_t max_depth, std::size_t roulette_active) {
+                Float clampval, std::size_t max_depth, std::size_t roulette_active,
+                PreviewDisplay& display) {
   RProgress::RProgress pb_sampler("Generating Samples [:bar] :percent%");
   pb_sampler.set_width(70);
   RProgress::RProgress pb("Adaptive Raytracing [:bar] :percent%");
@@ -143,6 +145,8 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
       adaptive_pixel_sampler.split_remove_chunks(s);
     }
     adaptive_pixel_sampler.max_s++;
+    display.DrawImage(adaptive_pixel_sampler.r,adaptive_pixel_sampler.g,adaptive_pixel_sampler.b,s,
+                      adaptive_pixel_sampler.finalized);
   }
   adaptive_pixel_sampler.write_final_pixels();
 }

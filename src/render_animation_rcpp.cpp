@@ -21,6 +21,7 @@
 #include "debug.h"
 using namespace Rcpp;
 #include "RcppThread.h"
+#include "PreviewDisplay.h"
 
 using namespace std;
 
@@ -107,6 +108,7 @@ void render_animation_rcpp(List camera_info, List scene_info, List camera_moveme
   Float sample_dist = as<Float>(camera_info["sample_dist"]);
   bool keep_colors = as<bool>(camera_info["keep_colors"]);
   
+  PreviewDisplay d(nx,ny);
 
   //unpack motion info
   NumericVector cam_x        = as<NumericVector>(camera_movement["x"]);
@@ -486,7 +488,7 @@ void render_animation_rcpp(List camera_info, List scene_info, List camera_moveme
                  progress_bar, sample_method, stratified_dim,
                  verbose, ocam, cam, ecam, rcam, fov,
                  world, hlist,
-                 clampval, max_depth, roulette_active);
+                 clampval, max_depth, roulette_active, d);
       List temp = List::create(_["r"] = routput, _["g"] = goutput, _["b"] = boutput);
       post_process_frame(temp, debug_channel, as<std::string>(filenames(i)), toneval, bloom);
     }
