@@ -1,14 +1,13 @@
+#ifdef RAY_HAS_X11
 #include "PreviewDisplay.h"
 #include <string.h>
-#include <X11/Xutil.h>
 #include "mathinline.h"
 #include "Rcpp.h"
-
-
-#ifdef RAY_HAS_X11
+#include <X11/Xutil.h>
+#include "X11/keysym.h"
 
 void PreviewDisplay::DrawImage(Rcpp::NumericMatrix& r, Rcpp::NumericMatrix& g, Rcpp::NumericMatrix& b,
-                               int ns, std::vector<bool>& finalized) {
+                               size_t &ns, std::vector<bool>& finalized, RProgress::RProgress &pb) {
   if (d) {
     for(unsigned int i = 0; i < 4*width; i += 4 ) {
       for(unsigned int j = 0; j < height; j++) {
@@ -23,18 +22,35 @@ void PreviewDisplay::DrawImage(Rcpp::NumericMatrix& r, Rcpp::NumericMatrix& g, R
         data[i + 4*width*j+2] = 255.999*sqrt(clamp(r(i/4,height-1-j)/samples,0,1));
       }
     }
+    KeySym esc = XKeysymToKeycode(d, XK_Escape);
     // while (1) {
-      XFlush(d);
       XPutImage(d,w,DefaultGC(d,s),
                 img,0,0,0,0,width,height);
-      // if(XCheckWindowEvent(d, w, KeyPressMask, &e)) {
-      //   if (e.type == KeyPress) break;
-      // }
+      if(XCheckWindowEvent(d, w, KeyPressMask, &e)) {
+        if (e.type == KeyPress) {
+          if (e.xkey.keycode == esc ) {
+            terminate = true;
+          }
+          ns = 0;
+          std::fill(finalized.begin(), finalized.end(), false);
+          std::fill(r.begin(), r.end(), 0);
+          std::fill(g.begin(), g.end(), 0);
+          std::fill(b.begin(), b.end(), 0);
+          pb.update(0);
+          while(XPending(d)) {
+            XNextEvent(d, &e);
+            if (e.xkey.keycode == esc ) {
+              terminate = true;
+            }
+          }
+        }
+      }
     // }
   }
 }
 
 PreviewDisplay::PreviewDisplay(unsigned int _width, unsigned int _height) {
+  terminate = false;
   d = XOpenDisplay(NULL);
   if (d) {
     s = DefaultScreen(d);
@@ -62,25 +78,6 @@ PreviewDisplay::PreviewDisplay(unsigned int _width, unsigned int _height) {
     XSelectInput(d, w, ExposureMask | KeyPressMask);
     XMapWindow(d, w);
     XFlush(d);
-    
-    // XFillRectangle(d, w, DefaultGC(d, s),
-    //                0, 0, width, height);
-    // XPutImage(d,w,DefaultGC(d,s),
-    //           img,0,0,0,0,width,height);
-    // while (1) {
-    //   XNextEvent(d, &e);
-    //   if (e.type == Expose) {
-    //     XPutImage(d,w,DefaultGC(d,s),
-    //               img,0,0,0,0,width,height);
-    //     // XFillRectangle(d, w, DefaultGC(d, s),
-    //     //                20, 20, 10, 10);
-    //     // XDrawString(d, w, DefaultGC(d, s),
-    //     //             10, 50, msg, strlen(msg));
-    //   }
-    //   if (e.type == KeyPress)
-    //     break;
-    // }
-    
   }
 }
 

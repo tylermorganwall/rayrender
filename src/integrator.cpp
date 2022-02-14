@@ -145,8 +145,11 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
       adaptive_pixel_sampler.split_remove_chunks(s);
     }
     adaptive_pixel_sampler.max_s++;
-    display.DrawImage(adaptive_pixel_sampler.r,adaptive_pixel_sampler.g,adaptive_pixel_sampler.b,s,
-                      adaptive_pixel_sampler.finalized);
+    display.DrawImage(adaptive_pixel_sampler.r,adaptive_pixel_sampler.g,adaptive_pixel_sampler.b, s,
+                      adaptive_pixel_sampler.finalized, pb);
+    if(display.terminate) {
+      break;
+    }
   }
   adaptive_pixel_sampler.write_final_pixels();
 }

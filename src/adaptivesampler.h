@@ -18,13 +18,31 @@ struct pixel_block {
 
 class adaptive_sampler {
 public:
-  adaptive_sampler(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_channel,
+  adaptive_sampler(size_t _numbercores, size_t nx, size_t ny, size_t ns, int debug_channel,
                    float min_variance, size_t min_adaptive_size, 
                    NumericMatrix& r, NumericMatrix& g, NumericMatrix& b,
                    NumericMatrix& r2, NumericMatrix& g2, NumericMatrix& b2) : 
-                   nx(nx), ny(ny), ns(ns), max_s(0), debug_channel(debug_channel), 
+                   numbercores(_numbercores), nx(nx), ny(ny), ns(ns), max_s(0), debug_channel(debug_channel), 
                    min_variance(min_variance), min_adaptive_size(min_adaptive_size),
                    r(r), g(g), b(b), r2(r2), g2(g2), b2(b2) {
+    size_t nx_chunk = nx / numbercores;
+    size_t ny_chunk = ny / numbercores;
+    size_t bonus_x = nx - nx_chunk * numbercores;
+    size_t bonus_y = ny - ny_chunk * numbercores;
+    finalized.resize(nx*ny, false);
+    for(size_t i = 0; i < numbercores; i++) {
+      for(size_t j = 0; j < numbercores ; j++) {
+        size_t extra_x = i == numbercores - 1 ? bonus_x : 0;
+        size_t extra_y = j == numbercores - 1 ? bonus_y : 0;
+        pixel_block chunk = {i*nx_chunk, j*ny_chunk,
+                             (i+1)*nx_chunk + extra_x, (j+1)*ny_chunk  + extra_y,
+                             0, 0, false, false, 0};
+        pixel_chunks.push_back(chunk);
+      }
+    }
+  }
+  void reset() {
+    pixel_chunks.clear();
     size_t nx_chunk = nx / numbercores;
     size_t ny_chunk = ny / numbercores;
     size_t bonus_x = nx - nx_chunk * numbercores;
@@ -176,6 +194,7 @@ public:
 
   size_t nx, ny, ns;
   size_t max_s;
+  size_t numbercores;
   int debug_channel;
   float min_variance;
   size_t min_adaptive_size;
