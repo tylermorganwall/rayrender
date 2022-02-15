@@ -7,13 +7,16 @@
 #include <memory>
 #include "Rcpp.h"
 #include "RProgress.h"
+#include "adaptivesampler.h"
+#include "camera.h"
 
 class PreviewDisplay {
 public: 
-  PreviewDisplay(unsigned int _width, unsigned int _height);
+  PreviewDisplay(unsigned int _width, unsigned int _height, bool preview, bool _interactive);
   ~PreviewDisplay();
   void DrawImage(Rcpp::NumericMatrix& r, Rcpp::NumericMatrix& g, Rcpp::NumericMatrix& b, size_t &ns,
-                 std::vector<bool>& finalized, RProgress::RProgress &pb);
+                 std::vector<bool>& finalized, RProgress::RProgress &pb,
+                 camera& cam, adaptive_sampler& adaptive_pixel_sampler);
   Display *d;
   XImage *img;
   std::unique_ptr<char[]> data;
@@ -23,6 +26,8 @@ public:
   unsigned int height;
   int s;
   bool terminate;
+  Float speed;
+  bool interactive;
 };
 
 #else
@@ -32,7 +37,8 @@ public:
   PreviewDisplay(unsigned int _width, unsigned int _height);
   ~PreviewDisplay();
   void DrawImage(Rcpp::NumericMatrix& r, Rcpp::NumericMatrix& g, Rcpp::NumericMatrix& b, size_t &ns,
-                 std::vector<bool>& finalized, RProgress::RProgress &pb) {};
+                 std::vector<bool>& finalized, RProgress::RProgress &pb,
+                 camera& cam) {};
   bool terminate;
 };
 

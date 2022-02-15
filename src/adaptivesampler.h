@@ -192,9 +192,9 @@ public:
   }
   size_t size() {return(pixel_chunks.size());}
 
+  size_t numbercores;
   size_t nx, ny, ns;
   size_t max_s;
-  size_t numbercores;
   int debug_channel;
   float min_variance;
   size_t min_adaptive_size;

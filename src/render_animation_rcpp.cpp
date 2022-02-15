@@ -107,8 +107,9 @@ void render_animation_rcpp(List camera_info, List scene_info, List camera_moveme
   Float camera_scale = as<Float>(camera_info["camera_scale"]);
   Float sample_dist = as<Float>(camera_info["sample_dist"]);
   bool keep_colors = as<bool>(camera_info["keep_colors"]);
+  bool preview = as<bool>(camera_info["preview"]);
   
-  PreviewDisplay d(nx,ny);
+  PreviewDisplay d(nx,ny, preview, false);
 
   //unpack motion info
   NumericVector cam_x        = as<NumericVector>(camera_movement["x"]);

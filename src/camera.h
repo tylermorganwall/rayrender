@@ -9,17 +9,27 @@
 
 class camera {
   public:
-    camera(point3f lookfrom, point3f lookat, vec3f vup, Float vfov, Float aspect, Float aperture, Float focus_dist,
+    camera(point3f lookfrom, point3f _lookat, vec3f _vup, Float vfov, Float aspect, Float aperture, Float _focus_dist,
            Float t0, Float t1);
     ray get_ray(Float s, Float t, point3f u3, Float u1);
+    void update_position(vec3f delta);
+    void reset();
     
+    
+    Float half_height;
+    Float half_width;
     point3f origin;
+    point3f lookat;
+    Float focus_dist;
+    vec3f vup;
     point3f lower_left_corner;
     vec3f horizontal;
     vec3f vertical;
     vec3f u, v, w;
     Float time0, time1;
     Float lens_radius;
+    point3f start_origin;
+    Float start_focus_dist;
 };
 
 class ortho_camera {

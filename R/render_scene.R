@@ -11,6 +11,11 @@
 #' @param samples Default `100`. The maximum number of samples for each pixel. If this is a length-2
 #' vector and the `sample_method` is `stratified`, this will control the number of strata in each dimension.
 #' The total number of samples in this case will be the product of the two numbers.
+#' @param preview Default `TRUE`. Whether to display a real-time progressive preview of the render. Press ESC to cancel the render.
+#' @param interactive Default `TRUE`. Whether the scene preview should be interactive. Camera movement orbits around the 
+#' lookat point, with the following control mapping:
+#' W = Forward, S = Backward, A = Left, D = Right, Q = Orbit Up, Z = Orbit Down, 
+#' E = 2x Step Distance, C = 0.5x Step Distance, R = Reset Camera
 #' @param camera_description_file Default `NA`. Filename of a camera description file for rendering with
 #' a realistic camera. Several camera files are built-in: `"50mm"`,`"wide"`,`"fisheye"`, and `"telephoto"`.
 #' @param camera_scale Default `1`. Amount to scale the camera up or down in size. Use this rather than scaling a 
@@ -215,6 +220,7 @@
 #'}
 render_scene = function(scene, width = 400, height = 400, fov = 20, 
                         samples = 100,  camera_description_file = NA, 
+                        preview = TRUE, interactive = TRUE,
                         camera_scale = 1, iso = 100, film_size = 22,
                         min_variance = 0.00005, min_adaptive_size = 8,
                         sample_method = "sobol", 
@@ -278,6 +284,10 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
   
   camera_info = scene_list$camera_info
   scene_info = scene_list$scene_info
+  
+  camera_info$preview = preview
+  camera_info$interactive = interactive
+  
   
   #Pathrace Scene
   rgb_mat = render_scene_rcpp(camera_info = camera_info, scene_info = scene_info) 

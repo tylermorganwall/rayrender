@@ -1,16 +1,21 @@
 #include "camera.h"
 #include "low_discrepancy.h"
 
-camera::camera(point3f lookfrom, point3f lookat, vec3f vup, Float vfov, 
-               Float aspect, Float aperture, Float focus_dist,
+camera::camera(point3f lookfrom, point3f _lookat, vec3f _vup, Float vfov, 
+               Float aspect, Float aperture, Float _focus_dist,
                Float t0, Float t1) {
   time0 = t0;
   time1 = t1;
   lens_radius = aperture / 2;
   Float theta = vfov * M_PI/180;
-  Float half_height = tan(theta/2);
-  Float half_width = aspect * half_height;
+  half_height = tan(theta/2);
+  half_width = aspect * half_height;
   origin = lookfrom;
+  start_origin = origin;
+  lookat = _lookat;
+  vup = _vup;
+  focus_dist = _focus_dist;
+  start_focus_dist = focus_dist;
   w = unit_vector(lookfrom - lookat);
   u = unit_vector(cross(vup, w));
   v = cross(w, u);
@@ -25,6 +30,29 @@ ray camera::get_ray(Float s, Float t, point3f u3, Float u1) {
   Float time = time0 + u1 * (time1 - time0);
   return(ray(origin + offset, lower_left_corner + s * horizontal + t * vertical - origin - offset, time)); 
 }
+
+void camera::update_position(vec3f delta) {
+  origin += delta;
+  focus_dist = (origin - lookat).length();
+  w = unit_vector(origin - lookat);
+  u = unit_vector(cross(vup, w));
+  v = cross(w, u);
+  lower_left_corner = origin - half_width * focus_dist *  u - half_height * focus_dist * v - focus_dist * w;
+  horizontal = 2.0f * half_width * focus_dist * u;
+  vertical = 2.0f * half_height * focus_dist * v;
+}
+
+void camera::reset() {
+  origin = start_origin;
+  focus_dist = start_focus_dist;
+  w = unit_vector(origin - lookat);
+  u = unit_vector(cross(vup, w));
+  v = cross(w, u);
+  lower_left_corner = origin - half_width * focus_dist *  u - half_height * focus_dist * v - focus_dist * w;
+  horizontal = 2.0f * half_width * focus_dist * u;
+  vertical = 2.0f * half_height * focus_dist * v;
+}
+
 
 ortho_camera::ortho_camera(point3f lookfrom, point3f lookat, vec3f vup, 
              Float cam_width, Float cam_height, 

@@ -124,10 +124,12 @@ List render_scene_rcpp(List camera_info, List scene_info) {
   Float camera_scale = as<Float>(camera_info["camera_scale"]);
   Float sample_dist = as<Float>(camera_info["sample_dist"]);
   bool keep_colors = as<bool>(camera_info["keep_colors"]);
+  bool preview     = as<bool>(camera_info["preview"]);
+  bool interactive = as<bool>(camera_info["interactive"]);
   
   int bvh_type = as<int>(camera_info["bvh"]);
 
-  PreviewDisplay Display(nx,ny);
+  PreviewDisplay Display(nx,ny, preview, interactive);
                      
   
   //Initialize transformation cache

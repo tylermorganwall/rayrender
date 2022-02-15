@@ -11,6 +11,8 @@ render_scene(
   fov = 20,
   samples = 100,
   camera_description_file = NA,
+  preview = TRUE,
+  interactive = TRUE,
   camera_scale = 1,
   iso = 100,
   film_size = 22,
@@ -62,6 +64,13 @@ The total number of samples in this case will be the product of the two numbers.
 
 \item{camera_description_file}{Default `NA`. Filename of a camera description file for rendering with
 a realistic camera. Several camera files are built-in: `"50mm"`,`"wide"`,`"fisheye"`, and `"telephoto"`.}
+
+\item{preview}{Default `TRUE`. Whether to display a real-time progressive preview of the render. Press ESC to cancel the render.}
+
+\item{interactive}{Default `TRUE`. Whether the scene preview should be interactive. Camera movement orbits around the 
+lookat point, with the following control mapping:
+W = Forward, S = Backward, A = Left, D = Right, Q = Orbit Up, Z = Orbit Down, 
+E = 2x Step Distance, C = 0.5x Step Distance, R = Reset Camera}
 
 \item{camera_scale}{Default `1`. Amount to scale the camera up or down in size. Use this rather than scaling a 
 scene.}

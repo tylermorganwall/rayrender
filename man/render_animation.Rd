@@ -11,6 +11,7 @@ render_animation(
   end_frame = NA,
   width = 400,
   height = 400,
+  preview = TRUE,
   camera_description_file = NA,
   camera_scale = 1,
   iso = 100,
@@ -60,6 +61,8 @@ render_animation(
 \item{width}{Default `400`. Width of the render, in pixels.}
 
 \item{height}{Default `400`. Height of the render, in pixels.}
+
+\item{preview}{Default `TRUE`. Whether to display a realtime progressive preview of the render. Press ESC to cancel the render.}
 
 \item{camera_description_file}{Default `NA`. Filename of a camera description file for rendering with
 a realistic camera. Several camera files are built-in: `"50mm"`,`"wide"`,`"fisheye"`, and `"telephoto"`.}
