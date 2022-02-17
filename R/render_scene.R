@@ -15,7 +15,9 @@
 #' @param interactive Default `TRUE`. Whether the scene preview should be interactive. Camera movement orbits around the 
 #' lookat point, with the following control mapping:
 #' W = Forward, S = Backward, A = Left, D = Right, Q = Orbit Up, Z = Orbit Down, 
-#' E = 2x Step Distance, C = 0.5x Step Distance, R = Reset Camera
+#' E = 2x Step Distance, C = 0.5x Step Distance, Up Key = Increase FOV, Down Key = Decrease FOV,
+#' Left Key = Decrease Aperture, Right Key = Increase Aperture, 1 = Decrease Focal Distance, 2 = Increase Focal Distance,
+#' R = Reset Camera
 #' @param camera_description_file Default `NA`. Filename of a camera description file for rendering with
 #' a realistic camera. Several camera files are built-in: `"50mm"`,`"wide"`,`"fisheye"`, and `"telephoto"`.
 #' @param camera_scale Default `1`. Amount to scale the camera up or down in size. Use this rather than scaling a 

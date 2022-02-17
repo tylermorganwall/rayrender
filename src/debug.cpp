@@ -6,8 +6,8 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                 Float min_variance, size_t min_adaptive_size, 
                 Rcpp::NumericMatrix& routput, Rcpp::NumericMatrix& goutput, Rcpp::NumericMatrix& boutput,
                 bool progress_bar, int sample_method, Rcpp::NumericVector& stratified_dim,
-                bool verbose, ortho_camera& ocam, camera &cam, environment_camera &ecam, 
-                RealisticCamera &rcam,
+                bool verbose, 
+                RayCamera* cam, 
                 Float fov,
                 hitable_list& world, hitable_list& hlist,
                 Float clampval, size_t max_depth, size_t roulette_active,
@@ -18,25 +18,17 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
     for(unsigned int j = 0; j < ny; j++) {
       for(unsigned int i = 0; i < nx; i++) {
         depth_into_scene = 0;
-        Float u = Float(i) / Float(nx);
-        Float v = Float(j) / Float(ny);
         ray r;
         Float weight;
         if(fov >= 0) {
           Float u = (Float(i)) / Float(nx);
           Float v = (Float(j)) / Float(ny);
-          if(fov > 0 && fov < 360) {
-            r = cam.get_ray(u,v, vec3f(0,0,0), 0);
-          } else if (fov == 0) {
-            r = ocam.get_ray(u,v, rng.unif_rand());
-          } else if (fov == 360) {
-            r = ecam.get_ray(u,v, rng.unif_rand());
-          }
+          r = cam->get_ray(u,v, vec3f(0,0,0), rng.unif_rand());
         } else {
           point2f u(rng.unif_rand(),rng.unif_rand());
           point2f u2(rng.unif_rand(),rng.unif_rand());
           CameraSample samp(u, u2, rng.unif_rand());
-          weight = rcam.GenerateRay(samp, &r);
+          weight = cam->GenerateRay(samp, &r);
         }
         depth_into_scene = calculate_depth(r, &world, rng);
         routput(i,j) = depth_into_scene;
@@ -52,25 +44,17 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
         std::vector<dielectric*> *mat_stack = new std::vector<dielectric*>;
         
         normal_map = vec3f(0,0,0);
-        Float u = Float(i) / Float(nx);
-        Float v = Float(j) / Float(ny);
         ray r;
         Float weight;
         if(fov >= 0) {
           Float u = (Float(i)) / Float(nx);
           Float v = (Float(j)) / Float(ny);
-          if(fov > 0 && fov < 360) {
-            r = cam.get_ray(u,v, vec3f(0,0,0), 0);
-          } else if (fov == 0) {
-            r = ocam.get_ray(u,v, rng.unif_rand());
-          } else if (fov == 360) {
-            r = ecam.get_ray(u,v, rng.unif_rand());
-          }
+          r = cam->get_ray(u,v, vec3f(0,0,0), rng.unif_rand());
         } else {
           point2f u(rng.unif_rand(),rng.unif_rand());
           point2f u2(rng.unif_rand(),rng.unif_rand());
           CameraSample samp(u, u2, rng.unif_rand());
-          weight = rcam.GenerateRay(samp, &r);
+          weight = cam->GenerateRay(samp, &r);
         }
         r.pri_stack = mat_stack;
         normal_map = calculate_normals(r, &world, max_depth, rng);
@@ -85,25 +69,17 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
     for(unsigned int j = 0; j < ny; j++) {
       for(unsigned int i = 0; i < nx; i++) {
         uv_map = vec3f(0,0,0);
-        Float u = Float(i) / Float(nx);
-        Float v = Float(j) / Float(ny);
         ray r;
         Float weight;
         if(fov >= 0) {
           Float u = (Float(i)) / Float(nx);
           Float v = (Float(j)) / Float(ny);
-          if(fov > 0 && fov < 360) {
-            r = cam.get_ray(u,v, vec3f(0,0,0), 0);
-          } else if (fov == 0) {
-            r = ocam.get_ray(u,v, rng.unif_rand());
-          } else if (fov == 360) {
-            r = ecam.get_ray(u,v, rng.unif_rand());
-          }
+          r = cam->get_ray(u,v, vec3f(0,0,0), rng.unif_rand());
         } else {
           point2f u(rng.unif_rand(),rng.unif_rand());
           point2f u2(rng.unif_rand(),rng.unif_rand());
           CameraSample samp(u, u2, rng.unif_rand());
-          weight = rcam.GenerateRay(samp, &r);
+          weight = cam->GenerateRay(samp, &r);
         }
         uv_map = calculate_uv(r, &world, rng);
         routput(i,j) = uv_map.x();
@@ -122,18 +98,12 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
         if(fov >= 0) {
           Float u = (Float(i)) / Float(nx);
           Float v = (Float(j)) / Float(ny);
-          if(fov > 0 && fov < 360) {
-            r = cam.get_ray(u,v, vec3f(0,0,0), 0);
-          } else if (fov == 0) {
-            r = ocam.get_ray(u,v, rng.unif_rand());
-          } else if (fov == 360) {
-            r = ecam.get_ray(u,v, rng.unif_rand());
-          }
+          r = cam->get_ray(u,v, vec3f(0,0,0), rng.unif_rand());
         } else {
           point2f u(rng.unif_rand(),rng.unif_rand());
           point2f u2(rng.unif_rand(),rng.unif_rand());
           CameraSample samp(u, u2, rng.unif_rand());
-          weight = rcam.GenerateRay(samp, &r);
+          weight = cam->GenerateRay(samp, &r);
         }
         Float bvh_intersections = debug_bvh(r, &world, rng);
         routput(i,j) = bvh_intersections;
@@ -145,25 +115,17 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
   } else if (debug_channel == 6 || debug_channel == 7) {
     for(unsigned int j = 0; j < ny; j++) {
       for(unsigned int i = 0; i < nx; i++) {
-        Float u = Float(i) / Float(nx);
-        Float v = Float(j) / Float(ny);
         ray r;
         Float weight;
         if(fov >= 0) {
           Float u = (Float(i)) / Float(nx);
           Float v = (Float(j)) / Float(ny);
-          if(fov > 0 && fov < 360) {
-            r = cam.get_ray(u,v, vec3f(0,0,0), 0);
-          } else if (fov == 0) {
-            r = ocam.get_ray(u,v, rng.unif_rand());
-          } else if (fov == 360) {
-            r = ecam.get_ray(u,v, rng.unif_rand());
-          }
+          r = cam->get_ray(u,v, vec3f(0,0,0), rng.unif_rand());
         } else {
           point2f u(rng.unif_rand(),rng.unif_rand());
           point2f u2(rng.unif_rand(),rng.unif_rand());
           CameraSample samp(u, u2, rng.unif_rand());
-          weight = rcam.GenerateRay(samp, &r);
+          weight = cam->GenerateRay(samp, &r);
         }
         vec3f dpd_val = calculate_dpduv(r, &world, rng, debug_channel == 6);
         routput(i,j) = dpd_val.x();
@@ -176,25 +138,17 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
     
     for(unsigned int j = 0; j < ny; j++) {
       for(unsigned int i = 0; i < nx; i++) {
-        Float u = Float(i) / Float(nx);
-        Float v = Float(j) / Float(ny);
         ray r;
         Float weight;
         if(fov >= 0) {
           Float u = (Float(i)) / Float(nx);
           Float v = (Float(j)) / Float(ny);
-          if(fov > 0 && fov < 360) {
-            r = cam.get_ray(u,v, vec3f(0,0,0), 0);
-          } else if (fov == 0) {
-            r = ocam.get_ray(u,v, rng.unif_rand());
-          } else if (fov == 360) {
-            r = ecam.get_ray(u,v, rng.unif_rand());
-          }
+          r = cam->get_ray(u,v, vec3f(0,0,0), rng.unif_rand());
         } else {
           point2f u(rng.unif_rand(),rng.unif_rand());
           point2f u2(rng.unif_rand(),rng.unif_rand());
           CameraSample samp(u, u2, rng.unif_rand());
-          weight = rcam.GenerateRay(samp, &r);
+          weight = cam->GenerateRay(samp, &r);
         }
         r.pri_stack = mat_stack;
         point3f dpd_val = calculate_color(r, &world, rng);
@@ -212,29 +166,21 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
     RcppThread::ThreadPool pool(numbercores);
     auto worker = [&routput, &goutput, &boutput,
                    nx, ny,  fov, light_dir, n_exp,
-                   &cam, &ocam, &ecam, &rcam, &world] (int j) {
+                   cam, &world] (int j) {
                      std::vector<dielectric*> *mat_stack = new std::vector<dielectric*>;
                      random_gen rng(j);
                      for(unsigned int i = 0; i < nx; i++) {
-                       Float u = Float(i) / Float(nx);
-                       Float v = Float(j) / Float(ny);
                        ray r;
                        Float weight;
                        if(fov >= 0) {
                          Float u = (Float(i)) / Float(nx);
                          Float v = (Float(j)) / Float(ny);
-                         if(fov > 0 && fov < 360) {
-                           r = cam.get_ray(u,v, vec3f(0,0,0), 0);
-                         } else if (fov == 0) {
-                           r = ocam.get_ray(u,v, rng.unif_rand());
-                         } else if (fov == 360) {
-                           r = ecam.get_ray(u,v, rng.unif_rand());
-                         }
+                         r = cam->get_ray(u,v, vec3f(0,0,0), rng.unif_rand());
                        } else {
                          point2f u(rng.unif_rand(),rng.unif_rand());
                          point2f u2(rng.unif_rand(),rng.unif_rand());
                          CameraSample samp(u, u2, rng.unif_rand());
-                         weight = rcam.GenerateRay(samp, &r);
+                         weight = cam->GenerateRay(samp, &r);
                        }
                        r.pri_stack = mat_stack;
                        point3f qr = quick_render(r, &world, rng, light_dir, n_exp);
@@ -254,29 +200,21 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
     RcppThread::ThreadPool pool(numbercores);
     auto worker = [&routput, &goutput, &boutput,
                    nx, ny,  fov, max_depth, &hlist,
-                   &cam, &ocam, &ecam, &rcam, &world] (int j) {
+                   cam, &world] (int j) {
                      std::vector<dielectric*> *mat_stack = new std::vector<dielectric*>;
                      random_gen rng(j);
                      for(unsigned int i = 0; i < nx; i++) {
-                       Float u = Float(i) / Float(nx);
-                       Float v = Float(j) / Float(ny);
                        ray r;
                        Float weight;
                        if(fov >= 0) {
                          Float u = (Float(i)) / Float(nx);
                          Float v = (Float(j)) / Float(ny);
-                         if(fov > 0 && fov < 360) {
-                           r = cam.get_ray(u,v, vec3f(0,0,0), 0);
-                         } else if (fov == 0) {
-                           r = ocam.get_ray(u,v, rng.unif_rand());
-                         } else if (fov == 360) {
-                           r = ecam.get_ray(u,v, rng.unif_rand());
-                         }
+                         r = cam->get_ray(u,v, vec3f(0,0,0), rng.unif_rand());
                        } else {
                          point2f u(rng.unif_rand(),rng.unif_rand());
                          point2f u2(rng.unif_rand(),rng.unif_rand());
                          CameraSample samp(u, u2, rng.unif_rand());
-                         weight = rcam.GenerateRay(samp, &r);
+                         weight = cam->GenerateRay(samp, &r);
                        }
                        r.pri_stack = mat_stack;
                        point3f qr = calculate_position(r, &world, &hlist, max_depth, rng);
@@ -297,30 +235,22 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
     
     auto worker = [&routput, &goutput, &boutput, 
                    nx, ny,  fov, &hlist, max_depth,ns,
-                   &cam, &ocam, &ecam, &rcam, &world] (int j) {
+                   cam, &world] (int j) {
                      std::vector<dielectric*> *mat_stack = new std::vector<dielectric*>;
                      random_gen rng(j);
                      for(unsigned int i = 0; i < nx; i++) {
                        for(size_t s = 0; s < static_cast<size_t>(ns); s++) {
-                         Float u = Float(i) / Float(nx);
-                         Float v = Float(j) / Float(ny);
                          ray r;
                          Float weight;
                          if(fov >= 0) {
                            Float u = (Float(i)) / Float(nx);
                            Float v = (Float(j)) / Float(ny);
-                           if(fov > 0 && fov < 360) {
-                             r = cam.get_ray(u,v, vec3f(0,0,0), 0);
-                           } else if (fov == 0) {
-                             r = ocam.get_ray(u,v, rng.unif_rand());
-                           } else if (fov == 360) {
-                             r = ecam.get_ray(u,v, rng.unif_rand());
-                           }
+                           r = cam->get_ray(u,v, vec3f(0,0,0), rng.unif_rand());
                          } else {
                            point2f u(rng.unif_rand(),rng.unif_rand());
                            point2f u2(rng.unif_rand(),rng.unif_rand());
                            CameraSample samp(u, u2, rng.unif_rand());
-                           weight = rcam.GenerateRay(samp, &r);
+                           weight = cam->GenerateRay(samp, &r);
                          }
                          r.pri_stack = mat_stack;
                          point3f qr = calculate_bounce_dir(r, &world, &hlist,
@@ -343,29 +273,21 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
     
     auto worker = [&routput, &goutput, &boutput, 
                    nx, ny,  fov, &hlist, max_depth,
-                   &cam, &ocam, &ecam, &rcam, &world] (int j) {
+                   cam, &world] (int j) {
                      std::vector<dielectric*> *mat_stack = new std::vector<dielectric*>;
                      random_gen rng(j);
                      for(unsigned int i = 0; i < nx; i++) {
-                       Float u = Float(i) / Float(nx);
-                       Float v = Float(j) / Float(ny);
                        ray r;
                        Float weight;
                        if(fov >= 0) {
                          Float u = (Float(i)) / Float(nx);
                          Float v = (Float(j)) / Float(ny);
-                         if(fov > 0 && fov < 360) {
-                           r = cam.get_ray(u,v, vec3f(0,0,0), 0);
-                         } else if (fov == 0) {
-                           r = ocam.get_ray(u,v, rng.unif_rand());
-                         } else if (fov == 360) {
-                           r = ecam.get_ray(u,v, rng.unif_rand());
-                         }
+                         r = cam->get_ray(u,v, vec3f(0,0,0), rng.unif_rand());
                        } else {
                          point2f u(rng.unif_rand(),rng.unif_rand());
                          point2f u2(rng.unif_rand(),rng.unif_rand());
                          CameraSample samp(u, u2, rng.unif_rand());
-                         weight = rcam.GenerateRay(samp, &r);
+                         weight = cam->GenerateRay(samp, &r);
                        }
                        r.pri_stack = mat_stack;
                        Float qr = calculate_time(r, &world, &hlist,
@@ -387,29 +309,21 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
     
     auto worker = [&routput, &goutput, &boutput, 
                    nx, ny,  fov, &hlist, max_depth,
-                   &cam, &ocam, &ecam, &rcam, &world] (int j) {
+                   cam, &world] (int j) {
                      std::vector<dielectric*> *mat_stack = new std::vector<dielectric*>;
                      random_gen rng(j);
                      for(unsigned int i = 0; i < nx; i++) {
-                       Float u = Float(i) / Float(nx);
-                       Float v = Float(j) / Float(ny);
                        ray r;
                        Float weight;
                        if(fov >= 0) {
                          Float u = (Float(i)) / Float(nx);
                          Float v = (Float(j)) / Float(ny);
-                         if(fov > 0 && fov < 360) {
-                           r = cam.get_ray(u,v, vec3f(0,0,0), 0);
-                         } else if (fov == 0) {
-                           r = ocam.get_ray(u,v, rng.unif_rand());
-                         } else if (fov == 360) {
-                           r = ecam.get_ray(u,v, rng.unif_rand());
-                         }
+                         r = cam->get_ray(u,v, vec3f(0,0,0), rng.unif_rand());
                        } else {
                          point2f u(rng.unif_rand(),rng.unif_rand());
                          point2f u2(rng.unif_rand(),rng.unif_rand());
                          CameraSample samp(u, u2, rng.unif_rand());
-                         weight = rcam.GenerateRay(samp, &r);
+                         weight = cam->GenerateRay(samp, &r);
                        }
                        r.pri_stack = mat_stack;
                        point3f qr = calculate_shape(r, &world, &hlist,
@@ -431,30 +345,22 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
     
     auto worker = [&routput, &goutput, &boutput,
                    nx, ny,  fov, &hlist, max_depth,ns,
-                   &cam, &ocam, &ecam, &rcam, &world] (int j) {
+                   cam,&world] (int j) {
                      std::vector<dielectric*> *mat_stack = new std::vector<dielectric*>;
                      random_gen rng(j);
                      for(unsigned int i = 0; i < nx; i++) {
                        for(size_t s = 0; s < static_cast<size_t>(ns); s++) {
-                         Float u = Float(i) / Float(nx);
-                         Float v = Float(j) / Float(ny);
                          ray r;
                          Float weight;
                          if(fov >= 0) {
                            Float u = (Float(i)) / Float(nx);
                            Float v = (Float(j)) / Float(ny);
-                           if(fov > 0 && fov < 360) {
-                             r = cam.get_ray(u,v, vec3f(0,0,0), 0);
-                           } else if (fov == 0) {
-                             r = ocam.get_ray(u,v, rng.unif_rand());
-                           } else if (fov == 360) {
-                             r = ecam.get_ray(u,v, rng.unif_rand());
-                           }
+                           r = cam->get_ray(u,v, vec3f(0,0,0), rng.unif_rand());
                          } else {
                            point2f u(rng.unif_rand(),rng.unif_rand());
                            point2f u2(rng.unif_rand(),rng.unif_rand());
                            CameraSample samp(u, u2, rng.unif_rand());
-                           weight = rcam.GenerateRay(samp, &r);
+                           weight = cam->GenerateRay(samp, &r);
                          }
                          r.pri_stack = mat_stack;
                          Float qr = calculate_pdf(r, &world, &hlist,
@@ -477,29 +383,21 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
     
     auto worker = [&routput, &goutput, &boutput,
                    nx, ny,  fov, &hlist, max_depth, 
-                   &cam, &ocam, &ecam, &rcam, &world] (int j) {
+                   cam, &world] (int j) {
                      std::vector<dielectric*> *mat_stack = new std::vector<dielectric*>;
                      random_gen rng(j);
                      for(unsigned int i = 0; i < nx; i++) {
-                       Float u = Float(i) / Float(nx);
-                       Float v = Float(j) / Float(ny);
                        ray r;
                        Float weight;
                        if(fov >= 0) {
                          Float u = (Float(i)) / Float(nx);
                          Float v = (Float(j)) / Float(ny);
-                         if(fov > 0 && fov < 360) {
-                           r = cam.get_ray(u,v, vec3f(0,0,0), 0);
-                         } else if (fov == 0) {
-                           r = ocam.get_ray(u,v, rng.unif_rand());
-                         } else if (fov == 360) {
-                           r = ecam.get_ray(u,v, rng.unif_rand());
-                         }
+                         r = cam->get_ray(u,v, vec3f(0,0,0), rng.unif_rand());
                        } else {
                          point2f u(rng.unif_rand(),rng.unif_rand());
                          point2f u2(rng.unif_rand(),rng.unif_rand());
                          CameraSample samp(u, u2, rng.unif_rand());
-                         weight = rcam.GenerateRay(samp, &r);
+                         weight = cam->GenerateRay(samp, &r);
                        }
                        r.pri_stack = mat_stack;
                        Float qr = calculate_error(r, &world, &hlist,
@@ -521,30 +419,22 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
     
     auto worker = [&routput, &goutput, &boutput, 
                    nx, ny,  fov, &hlist, max_depth, ns,
-                   &cam, &ocam, &ecam, &rcam, &world] (int j) {
+                   cam,&world] (int j) {
                      std::vector<dielectric*> *mat_stack = new std::vector<dielectric*>;
                      random_gen rng(j);
                      for(unsigned int i = 0; i < nx; i++) {
                        for(size_t s = 0; s < static_cast<size_t>(ns); s++) {
-                         Float u = Float(i) / Float(nx);
-                         Float v = Float(j) / Float(ny);
                          ray r;
                          Float weight;
                          if(fov >= 0) {
                            Float u = (Float(i)) / Float(nx);
                            Float v = (Float(j)) / Float(ny);
-                           if(fov > 0 && fov < 360) {
-                             r = cam.get_ray(u,v, vec3f(0,0,0), 0);
-                           } else if (fov == 0) {
-                             r = ocam.get_ray(u,v, rng.unif_rand());
-                           } else if (fov == 360) {
-                             r = ecam.get_ray(u,v, rng.unif_rand());
-                           }
+                           r = cam->get_ray(u,v, vec3f(0,0,0), rng.unif_rand());
                          } else {
                            point2f u(rng.unif_rand(),rng.unif_rand());
                            point2f u2(rng.unif_rand(),rng.unif_rand());
                            CameraSample samp(u, u2, rng.unif_rand());
-                           weight = rcam.GenerateRay(samp, &r);
+                           weight = cam->GenerateRay(samp, &r);
                          }
                          r.pri_stack = mat_stack;
                          Float qr = calculate_bounces(r, &world, &hlist,
@@ -566,30 +456,22 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
     RcppThread::ThreadPool pool(numbercores);
     
     auto worker = [&routput, &goutput, &boutput, 
-                   nx, ny,  fov, &hlist, max_depth, ns,
-                   &cam, &ocam, &ecam, &rcam, &world] (int j) {
+                   nx, ny,  fov, ns,
+                   cam] (int j) {
                      random_gen rng(j);
                      for(unsigned int i = 0; i < nx; i++) {
                        for(size_t s = 0; s < static_cast<size_t>(ns); s++) {
-                         Float u = Float(i) / Float(nx);
-                         Float v = Float(j) / Float(ny);
                          ray r;
-                         Float weight;
+                         Float weight = 1;
                          if(fov >= 0) {
                            Float u = (Float(i)) / Float(nx);
                            Float v = (Float(j)) / Float(ny);
-                           if(fov > 0 && fov < 360) {
-                             r = cam.get_ray(u,v, vec3f(0,0,0), 0);
-                           } else if (fov == 0) {
-                             r = ocam.get_ray(u,v, rng.unif_rand());
-                           } else if (fov == 360) {
-                             r = ecam.get_ray(u,v, rng.unif_rand());
-                           }
+                           r = cam->get_ray(u,v, vec3f(0,0,0), rng.unif_rand());
                          } else {
                            point2f u(rng.unif_rand(),rng.unif_rand());
                            point2f u2(rng.unif_rand(),rng.unif_rand());
                            CameraSample samp(u, u2, rng.unif_rand());
-                           weight = rcam.GenerateRay(samp, &r);
+                           weight = cam->GenerateRay(samp, &r);
                          }
                          vec3f v2 = unit_vector(r.direction());
                          
@@ -670,8 +552,8 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
       auto worker = [&adaptive_pixel_sampler,
                      nx, ny, s, sample_method,
                      &rngs, fov, &samplers,
-                     &cam, &ocam, &ecam, &rcam, &world, &hlist, backgroundhigh, 
-                     clampval, sample_dist, roulette_active, keep_colors] (int k) {
+                     cam, &world, &hlist, backgroundhigh, 
+                     sample_dist, keep_colors] (int k) {
                        int nx_begin = adaptive_pixel_sampler.pixel_chunks[k].startx;
                        int ny_begin = adaptive_pixel_sampler.pixel_chunks[k].starty;
                        int nx_end = adaptive_pixel_sampler.pixel_chunks[k].endx;
@@ -686,18 +568,15 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                            Float u = (Float(i) + u2.x()) / Float(nx);
                            Float v = (Float(j) + u2.y()) / Float(ny);
                            if(fov >= 0) {
-                             if(fov > 0 && fov < 360) {
-                               r = cam.get_ray(u, v,rand_to_unit(samplers[index]->Get2D()),
-                                               samplers[index]->Get1D());
-                             } else if (fov == 0) {
-                               r = ocam.get_ray(u,v, samplers[index]->Get1D());
-                             } else if (fov == 360) {
-                               r = ecam.get_ray(u,v, samplers[index]->Get1D());
-                             }
+                             Float u = (Float(i)) / Float(nx);
+                             Float v = (Float(j)) / Float(ny);
+                             r = cam->get_ray(u,v, rand_to_unit(samplers[index]->Get2D()),
+                                              samplers[index]->Get1D());
                            } else {
                              CameraSample samp({1-u,1-v},samplers[index]->Get2D(), samplers[index]->Get1D());
-                             weight = rcam.GenerateRay(samp, &r);
+                             weight = cam->GenerateRay(samp, &r);
                            }
+                           
                            point3f col = clamp_point(calculate_ao(r, &world, &hlist,
                                                       sample_dist, rngs[index], samplers[index].get(),
                                                       keep_colors, backgroundhigh),0.f,1.f);

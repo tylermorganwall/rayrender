@@ -7,14 +7,62 @@
 #include "animatedtransform.h"
 #include "bounds.h"
 
-class camera {
+
+struct CameraSample {
+  point2f pFilm;
+  point2f pLens;
+  Float time;
+  CameraSample(point2f pFilm_, point2f pLens_, Float time_) : 
+    pFilm(pFilm_), pLens(pLens_), time(time_) {};
+  CameraSample(vec2f pFilm_, vec2f pLens_, Float time_) : 
+    pFilm(point2f(pFilm_.x(),pFilm_.y())), pLens(point2f(pLens_.x(),pLens_.y())), time(time_) {};
+};
+
+class RayCamera {
+  public:
+    RayCamera() {};
+    virtual ~RayCamera() {};
+    virtual ray get_ray(Float s, Float t, point3f u3, Float u) {
+      return(ray());
+    };
+    virtual void update_position(vec3f delta) = 0;
+    virtual void update_fov(Float delta_fov)  = 0;
+    virtual void update_aperture(Float delta_aperture)  = 0;
+    virtual void update_focal_distance(Float delta_focus)  = 0;
+    virtual void reset()  = 0;
+    virtual Float GenerateRay(const CameraSample &sample, ray* ray2) const {
+      return(0.0);
+    };
+    virtual vec3f get_w() = 0;
+    virtual vec3f get_u() = 0;
+    virtual vec3f get_v() = 0;
+    virtual Float get_fov() = 0;
+    virtual Float get_aperture() = 0;
+    virtual Float get_focal_distance() = 0;
+    virtual point3f get_origin() = 0;
+    virtual Float get_iso() {return(1.f);}
+    
+    
+};
+
+class camera : public RayCamera {
   public:
     camera(point3f lookfrom, point3f _lookat, vec3f _vup, Float vfov, Float aspect, Float aperture, Float _focus_dist,
            Float t0, Float t1);
-    ray get_ray(Float s, Float t, point3f u3, Float u1);
+    ray get_ray(Float s, Float t, point3f u3, Float u);
+
     void update_position(vec3f delta);
+    void update_fov(Float delta_fov);
+    void update_aperture(Float delta_aperture);
+    void update_focal_distance(Float delta_focus);
     void reset();
-    
+    vec3f get_w() {return(w);}
+    vec3f get_u() {return(u);}
+    vec3f get_v() {return(v);}
+    Float get_fov() {return(fov);}
+    Float get_aperture() {return(lens_radius * 2);}
+    Float get_focal_distance() {return(focus_dist);}
+    point3f get_origin() {return(origin);}
     
     Float half_height;
     Float half_width;
@@ -28,59 +76,97 @@ class camera {
     vec3f u, v, w;
     Float time0, time1;
     Float lens_radius;
+    Float start_lens_radius;
     point3f start_origin;
     Float start_focus_dist;
+    Float aspect;
+    Float fov;
+    Float start_fov;
+    
 };
 
-class ortho_camera {
+class ortho_camera : public RayCamera {
 public:
-  ortho_camera(point3f lookfrom, point3f lookat, vec3f vup, 
-               Float cam_width, Float cam_height, 
+  ortho_camera(point3f lookfrom, point3f _lookat, vec3f _vup, 
+               Float _cam_width, Float _cam_height, 
                Float t0, Float t1);
-  ray get_ray(Float s, Float t, Float u);
+  ray get_ray(Float s, Float t, point3f u3, Float u);
+  void update_position(vec3f delta);
+  void update_fov(Float delta_fov);
+  void update_aperture(Float delta_aperture);
+  void update_focal_distance(Float delta_focus);
+  void reset();
+  vec3f get_w() {return(w);}
+  vec3f get_u() {return(u);}
+  vec3f get_v() {return(v);}
+  Float get_fov() {return(0);}
+  Float get_aperture() {return(0);}
+  Float get_focal_distance() {return(0);}
+  point3f get_origin() {return(origin);}
   
   point3f origin;
   point3f lower_left_corner;
+  point3f start_origin;
+  point3f lookat;
+  vec3f vup;
   vec3f horizontal;
   vec3f vertical;
   vec3f u, v, w;
   Float time0, time1;
+  Float cam_width, cam_height;
+  Float start_cam_width, start_cam_height;
 };
 
 
-class environment_camera {
+class environment_camera : public RayCamera {
   public:
     environment_camera(point3f lookfrom, point3f lookat, vec3f vup, 
                        Float t0, Float t1);
-    ray get_ray(Float s, Float t, Float u1);
+    ray get_ray(Float s, Float t, point3f u3, Float u);
+    void update_position(vec3f delta);
+    void update_fov(Float delta_fov);
+    void update_aperture(Float delta_aperture);
+    void update_focal_distance(Float delta_focus);
+    void reset();
+    vec3f get_w() {return(w);}
+    vec3f get_u() {return(u);}
+    vec3f get_v() {return(v);}
+    Float get_fov() {return(360);}
+    Float get_aperture() {return(0);}
+    Float get_focal_distance() {return(0);}
+    point3f get_origin() {return(origin);}
     
     point3f origin;
+    point3f start_origin;
     vec3f u, v, w;
     Float nx, ny;
     Float time0, time1;
     onb uvw;
 };
 
-struct CameraSample {
-  point2f pFilm;
-  point2f pLens;
-  Float time;
-  CameraSample(point2f pFilm_, point2f pLens_, Float time_) : 
-    pFilm(pFilm_), pLens(pLens_), time(time_) {};
-  CameraSample(vec2f pFilm_, vec2f pLens_, Float time_) : 
-    pFilm(point2f(pFilm_.x(),pFilm_.y())), pLens(point2f(pLens_.x(),pLens_.y())), time(time_) {};
-};
-
-class RealisticCamera  {
+class RealisticCamera  : public RayCamera {
 public:
   // RealisticCamera Public Methods
   RealisticCamera(const AnimatedTransform &CameraToWorld, Float shutterOpen,
                   Float shutterClose, Float apertureDiameter, Float cam_width, Float cam_height,
                   Float focusDistance, bool simpleWeighting,
                   std::vector<Float> &lensData,
-                  Float film_size, Float camera_scale
+                  Float film_size, Float camera_scale, Float _iso
                   );
   Float GenerateRay(const CameraSample &sample, ray* ray2) const;
+  void update_position(vec3f delta);
+  void update_fov(Float delta_fov);
+  void update_aperture(Float delta_aperture);
+  void update_focal_distance(Float delta_focus);
+  void reset();
+  vec3f get_w() {return(vec3f(0));}
+  vec3f get_u() {return(vec3f(0));}
+  vec3f get_v() {return(vec3f(0));}
+  Float get_fov() {return(-1);}
+  Float get_aperture() {return(0);}
+  Float get_focal_distance() {return(0);}
+  point3f get_origin() {return(CameraToWorld(0, point3f(0.f)));}
+  Float get_iso() {return(iso);}
   
 private:
   // RealisticCamera Private Declarations
@@ -124,7 +210,10 @@ private:
   Float FocusBinarySearch(Float focusDistance);
   Float FocusDistance(Float filmDistance);
   Bounds2f GetPhysicalExtent() const;
+  
   AnimatedTransform CameraToWorld;
+  Transform CameraMovement;
+  
   Float shutterOpen;
   Float shutterClose;
   const bool simpleWeighting;
@@ -133,6 +222,7 @@ private:
   Float diag;
   Float min_aperture;
   bool init;
+  Float iso;
 };
 
 

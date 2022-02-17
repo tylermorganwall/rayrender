@@ -407,6 +407,7 @@ prepare_scene_list = function(scene, width = 400, height = 400, fov = 20,
   camera_info$camera_scale = camera_scale
   camera_info$sample_dist = sample_dist
   camera_info$keep_colors = keep_colors
+  camera_info$iso = iso
   
   animation_info = list()
   animation_info$animation_bool            = animation_bool            

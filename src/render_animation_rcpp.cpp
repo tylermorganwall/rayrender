@@ -108,6 +108,7 @@ void render_animation_rcpp(List camera_info, List scene_info, List camera_moveme
   Float sample_dist = as<Float>(camera_info["sample_dist"]);
   bool keep_colors = as<bool>(camera_info["keep_colors"]);
   bool preview = as<bool>(camera_info["preview"]);
+  Float iso = as<Float>(camera_info["iso"]);
   
   PreviewDisplay d(nx,ny, preview, false);
 
@@ -377,39 +378,45 @@ void render_animation_rcpp(List camera_info, List scene_info, List camera_moveme
       vec3f lookat = vec3f(cam_dx(i),cam_dy(i),cam_dz(i));
       Float fov = cam_fov(i);
       Float aperture = cam_aperture(i);
-      Float dist_to_focus = cam_focal(i);
+      Float focus_distance = cam_focal(i);
       Float orthox = cam_orthox(i);
       Float orthoy = cam_orthoy(i);
       vec3f camera_up = vec3f(cam_upx(i),cam_upy(i),cam_upz(i));
 
 
-      camera cam(lookfrom, lookat, camera_up, fov, Float(nx)/Float(ny),
-                 aperture, dist_to_focus,
-                 shutteropen, shutterclose);
-      ortho_camera ocam(lookfrom, lookat, camera_up,
-                        orthox, orthoy,
-                        shutteropen, shutterclose);
-      std::shared_ptr<Transform> CameraTransform = transformCache.Lookup(Inverse(LookAt(lookfrom,
-                                                                                        lookat,
-                                                                                        camera_up)));
-      AnimatedTransform CamTr(CameraTransform,0,CameraTransform,0);
-
-      std::vector<Float> lensData;
-      for(int i = 0; i < realCameraInfo.rows(); i++) {
-        for(int j = 0; j < realCameraInfo.cols(); j++) {
-          lensData.push_back(realCameraInfo.at(i,j));
+      std::unique_ptr<RayCamera> cam;
+      if(fov < 0) {
+        std::shared_ptr<Transform> CameraTransform = transformCache.Lookup(LookAt(lookfrom,
+                                                                                  lookat,
+                                                                                  camera_up).GetInverseMatrix());
+        AnimatedTransform CamTr(CameraTransform,0,CameraTransform,0);
+        
+        std::vector<Float> lensData;
+        for(int i = 0; i < realCameraInfo.rows(); i++) {
+          for(int j = 0; j < realCameraInfo.cols(); j++) {
+            lensData.push_back(realCameraInfo.at(i,j));
+          }
         }
+        
+        if(fov < 0 && lensData.size() == 0) {
+          throw std::runtime_error("No lense data passed in lens descriptor file.");
+        }
+        
+        cam = std::unique_ptr<RayCamera>(new RealisticCamera(CamTr,shutteropen, shutterclose,
+                                                             aperture, nx,ny, focus_distance, false, lensData,
+                                                             film_size, camera_scale, iso));
+      } else if(fov == 0) {
+        cam = std::unique_ptr<RayCamera>(new ortho_camera(lookfrom, lookat, camera_up,
+                                                          orthox, orthoy,
+                                                          shutteropen, shutterclose));
+      } else if (fov == 360) {
+        cam = std::unique_ptr<RayCamera>(new environment_camera(lookfrom, lookat, camera_up,
+                                                                shutteropen, shutterclose));
+      } else {
+        cam = std::unique_ptr<RayCamera>(new camera(lookfrom, lookat, camera_up, fov, Float(nx)/Float(ny),
+                                                    aperture, focus_distance,
+                                                    shutteropen, shutterclose));
       }
-
-      if(fov < 0 && lensData.size() == 0) {
-        throw std::runtime_error("No lense data passed in lens descriptor file.");
-      }
-
-      RealisticCamera rcam(CamTr,shutteropen, shutterclose,
-                           aperture, nx,ny, dist_to_focus, false, lensData, film_size, camera_scale);
-
-      environment_camera ecam(lookfrom, lookat, camera_up,
-                              shutteropen, shutterclose);
 
       // world_radius = world_radius > (lookfrom - world_center).length() ? world_radius : (lookfrom - world_center).length()*2;
 
@@ -426,7 +433,7 @@ void render_animation_rcpp(List camera_info, List scene_info, List camera_moveme
                   min_variance, min_adaptive_size,
                   routput, goutput,boutput,
                   progress_bar, sample_method, stratified_dim,
-                  verbose, ocam, cam, ecam, rcam, fov,
+                  verbose, cam.get(), fov,
                   world, hlist,
                   clampval, max_depth, roulette_active,
                   light_direction, rng, sample_dist, keep_colors, backgroundhigh);
@@ -444,33 +451,43 @@ void render_animation_rcpp(List camera_info, List scene_info, List camera_moveme
 
       Float fov = cam_fov(i);
       Float aperture = cam_aperture(i);
-      Float dist_to_focus = cam_focal(i);
+      Float focus_distance = cam_focal(i);
       Float orthox = cam_orthox(i);
       Float orthoy = cam_orthoy(i);
 
-      camera cam(lookfrom, lookat, camera_up, fov, Float(nx)/Float(ny),
-                 aperture, dist_to_focus,
-                 shutteropen, shutterclose);
-      ortho_camera ocam(lookfrom, lookat, camera_up,
-                        orthox, orthoy,
-                        shutteropen, shutterclose);
-      environment_camera ecam(lookfrom, lookat, camera_up,
-                              shutteropen, shutterclose);
-
-      std::shared_ptr<Transform> CameraTransform = transformCache.Lookup(LookAt(lookfrom,lookat,
-                                                                                camera_up));
-      AnimatedTransform CamTr(CameraTransform,0,CameraTransform,0);
-
-      std::vector<Float> lensData;
-      for(int i = 0; i < realCameraInfo.rows(); i++) {
-        for(int j = 0; j < realCameraInfo.cols(); j++) {
-          lensData.push_back(realCameraInfo(i,j));
+      std::unique_ptr<RayCamera> cam;
+      if(fov < 0) {
+        std::shared_ptr<Transform> CameraTransform = transformCache.Lookup(LookAt(lookfrom,
+                                                                                  lookat,
+                                                                                  camera_up).GetInverseMatrix());
+        AnimatedTransform CamTr(CameraTransform,0,CameraTransform,0);
+        
+        std::vector<Float> lensData;
+        for(int i = 0; i < realCameraInfo.rows(); i++) {
+          for(int j = 0; j < realCameraInfo.cols(); j++) {
+            lensData.push_back(realCameraInfo.at(i,j));
+          }
         }
+        
+        if(fov < 0 && lensData.size() == 0) {
+          throw std::runtime_error("No lense data passed in lens descriptor file.");
+        }
+        
+        cam = std::unique_ptr<RayCamera>(new RealisticCamera(CamTr,shutteropen, shutterclose,
+                                                             aperture, nx,ny, focus_distance, false, lensData,
+                                                             film_size, camera_scale, iso));
+      } else if(fov == 0) {
+        cam = std::unique_ptr<RayCamera>(new ortho_camera(lookfrom, lookat, camera_up,
+                                                          orthox, orthoy,
+                                                          shutteropen, shutterclose));
+      } else if (fov == 360) {
+        cam = std::unique_ptr<RayCamera>(new environment_camera(lookfrom, lookat, camera_up,
+                                                                shutteropen, shutterclose));
+      } else {
+        cam = std::unique_ptr<RayCamera>(new camera(lookfrom, lookat, camera_up, fov, Float(nx)/Float(ny),
+                                                    aperture, focus_distance,
+                                                    shutteropen, shutterclose));
       }
-
-      RealisticCamera rcam(CamTr,shutteropen, shutterclose,
-                           aperture,
-                           nx,ny, dist_to_focus, false, lensData, film_size, camera_scale);
 
       world_radius = world_radius > (lookfrom - world_center).length() ? world_radius : (lookfrom - world_center).length()*2;
 
@@ -487,7 +504,7 @@ void render_animation_rcpp(List camera_info, List scene_info, List camera_moveme
                  min_variance, min_adaptive_size,
                  routput, goutput,boutput,
                  progress_bar, sample_method, stratified_dim,
-                 verbose, ocam, cam, ecam, rcam, fov,
+                 verbose, cam.get(),  fov,
                  world, hlist,
                  clampval, max_depth, roulette_active, d);
       List temp = List::create(_["r"] = routput, _["g"] = goutput, _["b"] = boutput);

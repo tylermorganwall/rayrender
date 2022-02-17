@@ -126,6 +126,7 @@ List render_scene_rcpp(List camera_info, List scene_info) {
   bool keep_colors = as<bool>(camera_info["keep_colors"]);
   bool preview     = as<bool>(camera_info["preview"]);
   bool interactive = as<bool>(camera_info["interactive"]);
+  Float iso = as<Float>(camera_info["iso"]);
   
   int bvh_type = as<int>(camera_info["bvh"]);
 
@@ -158,37 +159,40 @@ List render_scene_rcpp(List camera_info, List scene_info) {
   RcppThread::ThreadPool pool(numbercores);
   GetRNGstate();
   random_gen rng(unif_rand() * std::pow(2,32));
-  camera cam(lookfrom, lookat, vec3f(camera_up(0),camera_up(1),camera_up(2)), fov, Float(nx)/Float(ny),
-             aperture, dist_to_focus,
-             shutteropen, shutterclose);
-
-  ortho_camera ocam(lookfrom, lookat, vec3f(camera_up(0),camera_up(1),camera_up(2)),
-                    ortho_dimensions(0), ortho_dimensions(1),
-                    shutteropen, shutterclose);
-
-
-  std::shared_ptr<Transform> CameraTransform = transformCache.Lookup(LookAt(lookfrom,
-                                                                            lookat,
-                                                                            vec3f(camera_up(0),camera_up(1),camera_up(2))).GetInverseMatrix());
-  AnimatedTransform CamTr(CameraTransform,0,CameraTransform,0);
-
-  std::vector<Float> lensData;
-  for(int i = 0; i < realCameraInfo.rows(); i++) {
-    for(int j = 0; j < realCameraInfo.cols(); j++) {
-      lensData.push_back(realCameraInfo.at(i,j));
+  std::unique_ptr<RayCamera> cam;
+  if(fov < 0) {
+    std::shared_ptr<Transform> CameraTransform = transformCache.Lookup(LookAt(lookfrom,
+                                                                              lookat,
+                                                                              vec3f(camera_up(0),camera_up(1),camera_up(2))).GetInverseMatrix());
+    AnimatedTransform CamTr(CameraTransform,0,CameraTransform,0);
+    
+    std::vector<Float> lensData;
+    for(int i = 0; i < realCameraInfo.rows(); i++) {
+      for(int j = 0; j < realCameraInfo.cols(); j++) {
+        lensData.push_back(realCameraInfo.at(i,j));
+      }
     }
+    
+    if(fov < 0 && lensData.size() == 0) {
+      throw std::runtime_error("No lense data passed in lens descriptor file.");
+    }
+    
+    cam = std::unique_ptr<RayCamera>(new RealisticCamera(CamTr,shutteropen, shutterclose,
+                         aperture, nx,ny, focus_distance, false, lensData,
+                         film_size, camera_scale, iso));
+  } else if(fov == 0) {
+    cam = std::unique_ptr<RayCamera>(new ortho_camera(lookfrom, lookat, vec3f(camera_up(0),camera_up(1),camera_up(2)),
+                      ortho_dimensions(0), ortho_dimensions(1),
+                      shutteropen, shutterclose));
+  } else if (fov == 360) {
+    cam = std::unique_ptr<RayCamera>(new environment_camera(lookfrom, lookat, vec3f(camera_up(0),camera_up(1),camera_up(2)),
+                            shutteropen, shutterclose));
+  } else {
+    cam = std::unique_ptr<RayCamera>(new camera(lookfrom, lookat, vec3f(camera_up(0),camera_up(1),camera_up(2)), fov, Float(nx)/Float(ny),
+                                     aperture, dist_to_focus,
+                                     shutteropen, shutterclose));
   }
 
-  if(fov < 0 && lensData.size() == 0) {
-    throw std::runtime_error("No lense data passed in lens descriptor file.");
-  }
-
-  RealisticCamera rcam(CamTr,shutteropen, shutterclose,
-                       aperture, nx,ny, focus_distance, false, lensData,
-                       film_size, camera_scale);
-
-  environment_camera ecam(lookfrom, lookat, vec3f(camera_up(0),camera_up(1),camera_up(2)),
-                          shutteropen, shutterclose);
   int nx1, ny1, nn1;
   auto start = std::chrono::high_resolution_clock::now();
   if(verbose) {
@@ -454,7 +458,7 @@ List render_scene_rcpp(List camera_info, List scene_info) {
                 min_variance, min_adaptive_size,
                 routput, goutput,boutput,
                 progress_bar, sample_method, stratified_dim,
-                verbose, ocam, cam, ecam, rcam, fov,
+                verbose, cam.get(), fov,
                 world, hlist, 
                 clampval, max_depth, roulette_active,
                 light_direction, rng, sample_dist, keep_colors,
@@ -464,7 +468,7 @@ List render_scene_rcpp(List camera_info, List scene_info) {
                min_variance, min_adaptive_size,
                routput, goutput,boutput,
                progress_bar, sample_method, stratified_dim,
-               verbose, ocam, cam, ecam, rcam, fov,
+               verbose, cam.get(),  fov,
                world, hlist,
                clampval, max_depth, roulette_active, Display);
   }

@@ -2,11 +2,15 @@
 #include "low_discrepancy.h"
 
 camera::camera(point3f lookfrom, point3f _lookat, vec3f _vup, Float vfov, 
-               Float aspect, Float aperture, Float _focus_dist,
+               Float _aspect, Float aperture, Float _focus_dist,
                Float t0, Float t1) {
   time0 = t0;
   time1 = t1;
+  aspect = _aspect;
+  fov = vfov;
+  start_fov = fov;
   lens_radius = aperture / 2;
+  start_lens_radius = lens_radius;
   Float theta = vfov * M_PI/180;
   half_height = tan(theta/2);
   half_width = aspect * half_height;
@@ -40,11 +44,44 @@ void camera::update_position(vec3f delta) {
   lower_left_corner = origin - half_width * focus_dist *  u - half_height * focus_dist * v - focus_dist * w;
   horizontal = 2.0f * half_width * focus_dist * u;
   vertical = 2.0f * half_height * focus_dist * v;
+  if(w.length() == 0 && u.length() == 0) {
+    reset();
+  } 
 }
+
+void camera::update_fov(Float delta_fov) {
+  fov += delta_fov;
+  fov = std::fmax(std::fmin(fov,179.9f),0.1f);
+  Float theta = fov * M_PI/180;
+  half_height = tan(theta/2);
+  half_width = aspect * half_height;
+  lower_left_corner = origin - half_width * focus_dist *  u - half_height * focus_dist * v - focus_dist * w;
+  horizontal = 2.0f * half_width * focus_dist * u;
+  vertical = 2.0f * half_height * focus_dist * v;
+}
+
+void camera::update_aperture(Float delta_aperture) {
+  lens_radius += delta_aperture / 2;
+  lens_radius = std::fmax(lens_radius,0);
+}
+
+void camera::update_focal_distance(Float delta_focus) {
+  focus_dist += delta_focus;
+  focus_dist = std::fmax(0.001,focus_dist);
+  lower_left_corner = origin - half_width * focus_dist *  u - half_height * focus_dist * v - focus_dist * w;
+  horizontal = 2.0f * half_width * focus_dist * u;
+  vertical = 2.0f * half_height * focus_dist * v;
+}
+
+
 
 void camera::reset() {
   origin = start_origin;
   focus_dist = start_focus_dist;
+  Float theta = start_fov * M_PI/180;
+  half_height = tan(theta/2);
+  half_width = aspect * half_height;
+  lens_radius = start_lens_radius;
   w = unit_vector(origin - lookat);
   u = unit_vector(cross(vup, w));
   v = cross(w, u);
@@ -54,12 +91,16 @@ void camera::reset() {
 }
 
 
-ortho_camera::ortho_camera(point3f lookfrom, point3f lookat, vec3f vup, 
-             Float cam_width, Float cam_height, 
+ortho_camera::ortho_camera(point3f lookfrom, point3f _lookat, vec3f _vup, 
+             Float _cam_width, Float _cam_height, 
              Float t0, Float t1) {
   time0 = t0;
   time1 = t1;
   origin = lookfrom;
+  cam_width = _cam_width;
+  cam_height = _cam_height;
+  lookat = _lookat;
+  vup = _vup;
   w = unit_vector(lookfrom - lookat);
   u = unit_vector(cross(vup, w));
   v = cross(w, u);
@@ -68,23 +109,66 @@ ortho_camera::ortho_camera(point3f lookfrom, point3f lookat, vec3f vup,
   vertical = cam_height * v;
 }
 
-ray ortho_camera::get_ray(Float s, Float t, Float u) {
+ray ortho_camera::get_ray(Float s, Float t, point3f u3, Float u) {
   Float time = time0 + u * (time1 - time0);
   return(ray(lower_left_corner + s * horizontal + t * vertical, -w, time)); 
 }
+
+void ortho_camera::update_position(vec3f delta) {
+  origin += delta;
+  w = unit_vector(origin - lookat);
+  u = unit_vector(cross(vup, w));
+  v = cross(w, u);
+  lower_left_corner = origin - cam_width/2 *  u - cam_height/2 * v;
+  horizontal = cam_width * u;
+  vertical = cam_height * v;
+  if(w.length() == 0 && u.length() == 0) {
+    reset();
+  } 
+}
+
+void ortho_camera::update_fov(Float delta_fov) {
+  cam_width += delta_fov;
+  cam_height += delta_fov;
+  lower_left_corner = origin - cam_width/2 *  u - cam_height/2 * v;
+  horizontal = cam_width * u;
+  vertical = cam_height * v;
+}
+
+void ortho_camera::update_aperture(Float delta_aperture) {
+}
+
+void ortho_camera::update_focal_distance(Float delta_focus) {
+}
+
+
+
+void ortho_camera::reset() {
+  origin = start_origin;
+  cam_width = start_cam_width;
+  cam_height = start_cam_height;
+  w = unit_vector(origin - lookat);
+  u = unit_vector(cross(vup, w));
+  v = cross(w, u);
+  lower_left_corner = origin - cam_width/2 *  u - cam_height/2 * v;
+  horizontal = cam_width * u;
+  vertical = cam_height * v;
+}
+
 
 environment_camera::environment_camera(point3f lookfrom, point3f lookat, vec3f vup, 
                    Float t0, Float t1) {
   time0 = t0;
   time1 = t1;
   origin = lookfrom;
+  start_origin = lookfrom;
   w = unit_vector(lookfrom - lookat);
   v = unit_vector(-cross(vup, w));
   u = cross(w, v);
   uvw = onb(w,v,u);
 }
 
-ray environment_camera::get_ray(Float s, Float t, Float u1) {
+ray environment_camera::get_ray(Float s, Float t, point3f u3, Float u1) {
   Float time = time0 + u1 * (time1 - time0);
   Float theta = M_PI * t;
   Float phi = 2 * M_PI * s;
@@ -95,6 +179,23 @@ ray environment_camera::get_ray(Float s, Float t, Float u1) {
   return(ray(origin, dir, time)); 
 }
 
+void environment_camera::update_position(vec3f delta) {
+  origin += delta;
+}
+
+void environment_camera::update_fov(Float delta_fov) {
+}
+
+void environment_camera::update_aperture(Float delta_aperture) {
+}
+
+void environment_camera::update_focal_distance(Float delta_focus) {
+}
+
+void environment_camera::reset() {
+  origin = start_origin;
+}
+
 RealisticCamera::RealisticCamera(const AnimatedTransform &CameraToWorld,
                                  Float shutterOpen, Float shutterClose, 
                                  Float apertureDiameter, 
@@ -102,11 +203,16 @@ RealisticCamera::RealisticCamera(const AnimatedTransform &CameraToWorld,
                                  Float focusDistance,
                                  bool simpleWeighting,
                                  std::vector<Float> &lensData,
-                                 Float film_size, Float camera_scale)
+                                 Float film_size, Float camera_scale,
+                                 Float _iso)
   : CameraToWorld(CameraToWorld), 
     shutterOpen(shutterOpen), shutterClose(shutterClose), 
     simpleWeighting(simpleWeighting), cam_width(cam_width), cam_height(cam_height),
-    diag(film_size * camera_scale) {
+    diag(film_size * camera_scale), iso(_iso) {
+  CameraMovement = Transform(Matrix4x4(1,0,0,0,
+                                       0,1,0,0,
+                                       0,0,1,0,
+                                       0,0,0,1));
   if(lensData.size() == 0) {
     init = false;
   } else {
@@ -567,3 +673,20 @@ Float RealisticCamera::GenerateRay(const CameraSample &sample, ray *ray2) const 
   }
   return(0);
 }
+
+void RealisticCamera::update_position(vec3f delta) {
+}
+
+void RealisticCamera::update_fov(Float delta_fov) {
+}
+
+void RealisticCamera::update_aperture(Float delta_aperture) {
+}
+
+void RealisticCamera::update_focal_distance(Float delta_focus) {
+}
+
+void RealisticCamera::reset() {
+}
+
+

@@ -31,7 +31,6 @@ mesh3d::mesh3d(Rcpp::List mesh_info, std::shared_ptr<material> mat,
   bool single_tex = colortype != 3;
   
   for (int i = 0; i < number_faces; i++) {
-    bool tempnormal = false;
     vec3f tris[3];
     vec3f normals[3];
 

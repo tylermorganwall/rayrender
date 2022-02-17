@@ -15,8 +15,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
                 Float min_variance, std::size_t min_adaptive_size, 
                 Rcpp::NumericMatrix& routput, Rcpp::NumericMatrix& goutput, Rcpp::NumericMatrix& boutput,
                 bool progress_bar, int sample_method, Rcpp::NumericVector& stratified_dim,
-                bool verbose, ortho_camera& ocam, camera &cam, environment_camera &ecam, 
-                RealisticCamera &rcam,
+                bool verbose, RayCamera* cam, 
                 Float fov,
                 hitable_list& world, hitable_list& hlist,
                 Float clampval, std::size_t max_depth, std::size_t roulette_active,
@@ -89,7 +88,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
     auto worker = [&adaptive_pixel_sampler,
                    nx, ny, s, sample_method,
                    &rngs, fov, &samplers,
-                   &cam, &ocam, &ecam, &rcam, &world, &hlist,
+                   cam, &world, &hlist,
                    clampval, max_depth, roulette_active] (int k) {
                      // MitchellFilter fil(vec2f(1.0),1./3.,1./3.);
                      int nx_begin = adaptive_pixel_sampler.pixel_chunks[k].startx;
@@ -106,18 +105,13 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
                          Float weight(1.0);
                          Float u = (Float(i) + u2.x()) / Float(nx);
                          Float v = (Float(j) + u2.y()) / Float(ny);
+                         
                          if(fov >= 0) {
-                           if(fov > 0 && fov < 360) {
-                             r = cam.get_ray(u, v,rand_to_unit(samplers[index]->Get2D()),
-                                             samplers[index]->Get1D());
-                           } else if (fov == 0) {
-                             r = ocam.get_ray(u,v, samplers[index]->Get1D());
-                           } else if (fov == 360) {
-                             r = ecam.get_ray(u,v, samplers[index]->Get1D());
-                           }
+                           r = cam->get_ray(u,v, rand_to_unit(samplers[index]->Get2D()),
+                                            samplers[index]->Get1D());
                          } else {
                            CameraSample samp({1-u,1-v},samplers[index]->Get2D(), samplers[index]->Get1D());
-                           weight = rcam.GenerateRay(samp, &r);
+                           weight = cam->GenerateRay(samp, &r);
                          }
                          r.pri_stack = mat_stack;
                          point3f col = weight != 0 ? clamp_point(de_nan(color(r, &world, &hlist, max_depth, 
@@ -146,7 +140,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
     }
     adaptive_pixel_sampler.max_s++;
     display.DrawImage(adaptive_pixel_sampler.r,adaptive_pixel_sampler.g,adaptive_pixel_sampler.b, s,
-                      adaptive_pixel_sampler.finalized, pb, cam, adaptive_pixel_sampler);
+                      adaptive_pixel_sampler.finalized, pb, progress_bar, cam, adaptive_pixel_sampler);
     if(display.terminate) {
       adaptive_pixel_sampler.ns = s;
       break;

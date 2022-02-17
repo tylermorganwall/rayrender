@@ -156,7 +156,7 @@ bool cone::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_g
     //   rec.normal = -rec.normal;
     //   rec.bump_normal = -rec.bump_normal;
     // }
-    rec.pError = vec3f(0,0,0);
+    rec.pError = pError;
     
     rec = (*ObjectToWorld)(rec);
     rec.normal *= reverseOrientation  ? -1 : 1;
@@ -363,7 +363,7 @@ bool cone::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler*
     //   rec.normal = -rec.normal;
     //   rec.bump_normal = -rec.bump_normal;
     // }
-    rec.pError = vec3f(0,0,0);
+    rec.pError = pError;
     
     rec = (*ObjectToWorld)(rec);
     rec.normal *= reverseOrientation  ? -1 : 1;
