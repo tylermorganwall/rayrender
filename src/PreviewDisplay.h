@@ -16,7 +16,7 @@ public:
   ~PreviewDisplay();
   void DrawImage(Rcpp::NumericMatrix& r, Rcpp::NumericMatrix& g, Rcpp::NumericMatrix& b, size_t &ns,
                  std::vector<bool>& finalized, RProgress::RProgress &pb, bool progress,
-                 RayCamera* cam, adaptive_sampler& adaptive_pixel_sampler);
+                 RayCamera* cam, adaptive_sampler& adaptive_pixel_sampler, Float percent_done);
   Display *d;
   XImage *img;
   std::unique_ptr<char[]> data;
@@ -39,8 +39,9 @@ public:
   ~PreviewDisplay();
   void DrawImage(Rcpp::NumericMatrix& r, Rcpp::NumericMatrix& g, Rcpp::NumericMatrix& b, size_t &ns,
                  std::vector<bool>& finalized, RProgress::RProgress &pb, bool progress,
-                 RayCamera* cam) {};
+                 RayCamera* cam, adaptive_sampler& adaptive_pixel_sampler, Float percent_done) {};
   bool terminate;
+  bool interactive;
 };
 
 #endif

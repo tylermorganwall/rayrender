@@ -9,7 +9,7 @@
 
 void PreviewDisplay::DrawImage(Rcpp::NumericMatrix& r, Rcpp::NumericMatrix& g, Rcpp::NumericMatrix& b,
                                size_t &ns, std::vector<bool>& finalized, RProgress::RProgress &pb, bool progress,
-                               RayCamera* cam, adaptive_sampler& adaptive_pixel_sampler) {
+                               RayCamera* cam, adaptive_sampler& adaptive_pixel_sampler, Float percent_done) {
   if (d) {
     for(unsigned int i = 0; i < 4*width; i += 4 ) {
       for(unsigned int j = 0; j < height; j++) {
@@ -19,9 +19,18 @@ void PreviewDisplay::DrawImage(Rcpp::NumericMatrix& r, Rcpp::NumericMatrix& g, R
         } else {
           samples = ns+1;
         }
-        data[i + 4*width*j]   = 255.999*sqrt(clamp(b(i/4,height-1-j)*cam->get_iso()/samples,0,1));
-        data[i + 4*width*j+1] = 255.999*sqrt(clamp(g(i/4,height-1-j)*cam->get_iso()/samples,0,1));
-        data[i + 4*width*j+2] = 255.999*sqrt(clamp(r(i/4,height-1-j)*cam->get_iso()/samples,0,1));
+        data[i + 4*width*j]   = 255*sqrt(clamp(b(i/4,height-1-j)*cam->get_iso()/samples,0,1));
+        data[i + 4*width*j+1] = 255*sqrt(clamp(g(i/4,height-1-j)*cam->get_iso()/samples,0,1));
+        data[i + 4*width*j+2] = 255*sqrt(clamp(r(i/4,height-1-j)*cam->get_iso()/samples,0,1));
+      }
+    }
+    if(progress) {
+      for(unsigned int i = 0; i < 4*width*percent_done; i += 4 ) {
+        for(unsigned int j = 0; j < 2; j++) {
+          data[i + 4*width*j]   = 0;
+          data[i + 4*width*j+1] = 0;
+          data[i + 4*width*j+2] = 255;
+        }
       }
     }
     KeyCode tab = XKeysymToKeycode(d, XK_Tab);
@@ -74,7 +83,7 @@ void PreviewDisplay::DrawImage(Rcpp::NumericMatrix& r, Rcpp::NumericMatrix& g, R
         vec3f w = orbit ? cam->get_w() : vec3f(0,0,1);
         vec3f u = orbit ? cam->get_u() : vec3f(1,0,0);
         vec3f v = orbit ? cam->get_v() : vec3f(0,1,0);
-        
+        bool blanked = false;
         if(interactive) {
           if (e.xkey.keycode == W_key ) {
             cam->update_position(-speed * w);
@@ -96,6 +105,7 @@ void PreviewDisplay::DrawImage(Rcpp::NumericMatrix& r, Rcpp::NumericMatrix& g, R
           }
           if (e.xkey.keycode == E_key ) {
             speed = 2 * speed;
+            speed = std::fmin(speed,128);
           }
           if (e.xkey.keycode == C_key ) {
             speed = 0.5 * speed;
@@ -120,21 +130,26 @@ void PreviewDisplay::DrawImage(Rcpp::NumericMatrix& r, Rcpp::NumericMatrix& g, R
           }
           if (e.xkey.keycode == R_key ) {
             cam->reset();
+            speed = 1;
           }
           if (e.xkey.keycode == P_key ) {
             point3f origin = cam->get_origin();
             Rprintf("\nCamera Position: c(%.2f, %.2f, %.2f) FOV: %.1f Aperture: %0.1f Focal Dist: %.1f Step Multiplier: %.2f",
                     origin.x(), origin.y(), origin.z(), cam->get_fov(), 
                     cam->get_aperture(), cam->get_focal_distance(), speed);
-          }
-          ns = 0;
-          std::fill(finalized.begin(), finalized.end(), false);
-          std::fill(r.begin(), r.end(), 0);
-          std::fill(g.begin(), g.end(), 0);
-          std::fill(b.begin(), b.end(), 0);
-          adaptive_pixel_sampler.reset();
-          if(progress) {
-            pb.update(0);
+          } else {
+            if(!blanked) {
+              blanked = true;
+              ns = 0;
+              std::fill(finalized.begin(), finalized.end(), false);
+              std::fill(r.begin(), r.end(), 0);
+              std::fill(g.begin(), g.end(), 0);
+              std::fill(b.begin(), b.end(), 0);
+              adaptive_pixel_sampler.reset();
+              if(progress && !interactive) {
+                pb.update(0);
+              }
+            }
           }
           while(XPending(d)) {
             XNextEvent(d, &e);
@@ -173,6 +188,7 @@ void PreviewDisplay::DrawImage(Rcpp::NumericMatrix& r, Rcpp::NumericMatrix& g, R
             }
             if (e.xkey.keycode == C_key ) {
               speed = 0.5 * speed;
+              speed = std::fmin(speed,128);
             }
             if (e.xkey.keycode == Up_key ) {
               cam->update_fov(speed*1.f);
@@ -194,12 +210,26 @@ void PreviewDisplay::DrawImage(Rcpp::NumericMatrix& r, Rcpp::NumericMatrix& g, R
             }
             if (e.xkey.keycode == R_key ) {
               cam->reset();
+              speed = 1;
             }
             if (e.xkey.keycode == P_key ) {
               point3f origin = cam->get_origin();
               Rprintf("\nCamera Position: c(%.2f, %.2f, %.2f) FOV: %.1f Aperture: %0.1f Focal Dist: %.1f Step Multiplier: %.2f",
                       origin.x(), origin.y(), origin.z(), cam->get_fov(), 
                       cam->get_aperture(), cam->get_focal_distance(), speed);
+            } else {
+              if(!blanked) {
+                blanked = true;
+                ns = 0;
+                std::fill(finalized.begin(), finalized.end(), false);
+                std::fill(r.begin(), r.end(), 0);
+                std::fill(g.begin(), g.end(), 0);
+                std::fill(b.begin(), b.end(), 0);
+                adaptive_pixel_sampler.reset();
+                if(progress && !interactive) {
+                  pb.update(0);
+                }
+              }
             }
           }
         }

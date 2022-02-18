@@ -81,7 +81,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
   }
   for(size_t s = 0; s < static_cast<size_t>(ns); s++) {
     Rcpp::checkUserInterrupt();
-    if(progress_bar) {
+    if(progress_bar && !display.interactive) {
       pb.tick();
     }
     RcppThread::ThreadPool pool(numbercores);
@@ -140,7 +140,8 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
     }
     adaptive_pixel_sampler.max_s++;
     display.DrawImage(adaptive_pixel_sampler.r,adaptive_pixel_sampler.g,adaptive_pixel_sampler.b, s,
-                      adaptive_pixel_sampler.finalized, pb, progress_bar, cam, adaptive_pixel_sampler);
+                      adaptive_pixel_sampler.finalized, pb, progress_bar, cam, adaptive_pixel_sampler,
+                      (Float)s/(Float)ns);
     if(display.terminate) {
       adaptive_pixel_sampler.ns = s;
       break;

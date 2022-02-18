@@ -1,6 +1,7 @@
 #' Render Scene
 #' 
-#' Takes the scene description and renders an image, either to the device or to a filename. 
+#' Takes the scene description and renders an image, either to the device or to a filename. The
+#' user can also interactively fly around the 3D scene if they have X11 support on their system.
 #'
 #' @param scene Tibble of object locations and properties. 
 #' @param width Default `400`. Width of the render, in pixels.
@@ -15,9 +16,11 @@
 #' @param interactive Default `TRUE`. Whether the scene preview should be interactive. Camera movement orbits around the 
 #' lookat point, with the following control mapping:
 #' W = Forward, S = Backward, A = Left, D = Right, Q = Orbit Up, Z = Orbit Down, 
-#' E = 2x Step Distance, C = 0.5x Step Distance, Up Key = Increase FOV, Down Key = Decrease FOV,
+#' E = 2x Step Distance (max 128), C = 0.5x Step Distance, Up Key = Increase FOV, Down Key = Decrease FOV,
 #' Left Key = Decrease Aperture, Right Key = Increase Aperture, 1 = Decrease Focal Distance, 2 = Increase Focal Distance,
-#' R = Reset Camera
+#' R = Reset Camera, TAB: Toggle Orbit Mode
+#' 
+#' Note: Some options aren't available all cameras.
 #' @param camera_description_file Default `NA`. Filename of a camera description file for rendering with
 #' a realistic camera. Several camera files are built-in: `"50mm"`,`"wide"`,`"fisheye"`, and `"telephoto"`.
 #' @param camera_scale Default `1`. Amount to scale the camera up or down in size. Use this rather than scaling a 
@@ -264,6 +267,13 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
     if(missing_corn) {
       message(corn_message)
     }
+  }
+  if(interactive) {
+    message(
+"--------------------------Interactive Mode Controls--------------------------
+W/A/S/D: Horizontal Movement: | Q/Z: Vertical Movement | E/C: Adjust Step Size 
+Up/Down: Adjust FOV | Left/Right: Adjust Aperture | 1/2: Adjust Focal Distance
+P: Print Camera Info | R: Reset Camera |  TAB: Toggle Orbit Mode  | ESC: Close")
   }
   
   scene_list = prepare_scene_list(scene = scene, width = width, height = height, fov = fov, 
