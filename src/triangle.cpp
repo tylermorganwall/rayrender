@@ -221,6 +221,8 @@ bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
   }
   rec.mat_ptr = mp.get();
   rec.alpha_miss = alpha_miss;
+  rec.shape = this;
+  
   return(true);
 }
 
@@ -439,6 +441,7 @@ bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Samp
   }
   rec.mat_ptr = mp.get();
   rec.alpha_miss = alpha_miss;
+  rec.shape = this;
   
   return(true);
 }

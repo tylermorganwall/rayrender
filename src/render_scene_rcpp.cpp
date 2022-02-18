@@ -174,12 +174,12 @@ List render_scene_rcpp(List camera_info, List scene_info) {
     }
     
     if(fov < 0 && lensData.size() == 0) {
-      throw std::runtime_error("No lense data passed in lens descriptor file.");
+      throw std::runtime_error("No lens data passed in lens descriptor file.");
     }
     
     cam = std::unique_ptr<RayCamera>(new RealisticCamera(CamTr,shutteropen, shutterclose,
                          aperture, nx,ny, focus_distance, false, lensData,
-                         film_size, camera_scale, iso));
+                         film_size, camera_scale, iso, vec3f(camera_up(0),camera_up(1),camera_up(2))));
   } else if(fov == 0) {
     cam = std::unique_ptr<RayCamera>(new ortho_camera(lookfrom, lookat, vec3f(camera_up(0),camera_up(1),camera_up(2)),
                       ortho_dimensions(0), ortho_dimensions(1),

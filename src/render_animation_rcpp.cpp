@@ -404,7 +404,7 @@ void render_animation_rcpp(List camera_info, List scene_info, List camera_moveme
         
         cam = std::unique_ptr<RayCamera>(new RealisticCamera(CamTr,shutteropen, shutterclose,
                                                              aperture, nx,ny, focus_distance, false, lensData,
-                                                             film_size, camera_scale, iso));
+                                                             film_size, camera_scale, iso, camera_up));
       } else if(fov == 0) {
         cam = std::unique_ptr<RayCamera>(new ortho_camera(lookfrom, lookat, camera_up,
                                                           orthox, orthoy,
@@ -475,7 +475,7 @@ void render_animation_rcpp(List camera_info, List scene_info, List camera_moveme
         
         cam = std::unique_ptr<RayCamera>(new RealisticCamera(CamTr,shutteropen, shutterclose,
                                                              aperture, nx,ny, focus_distance, false, lensData,
-                                                             film_size, camera_scale, iso));
+                                                             film_size, camera_scale, iso,camera_up));
       } else if(fov == 0) {
         cam = std::unique_ptr<RayCamera>(new ortho_camera(lookfrom, lookat, camera_up,
                                                           orthox, orthoy,

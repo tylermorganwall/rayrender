@@ -9,6 +9,7 @@
 #include "RProgress.h"
 #include "adaptivesampler.h"
 #include "camera.h"
+#include "hitable.h"
 
 class PreviewDisplay {
 public: 
@@ -16,7 +17,8 @@ public:
   ~PreviewDisplay();
   void DrawImage(Rcpp::NumericMatrix& r, Rcpp::NumericMatrix& g, Rcpp::NumericMatrix& b, size_t &ns,
                  std::vector<bool>& finalized, RProgress::RProgress &pb, bool progress,
-                 RayCamera* cam, adaptive_sampler& adaptive_pixel_sampler, Float percent_done);
+                 RayCamera* cam, adaptive_sampler& adaptive_pixel_sampler, Float percent_done,
+                 hitable* world, random_gen& rng);
   Display *d;
   XImage *img;
   std::unique_ptr<char[]> data;
@@ -39,7 +41,8 @@ public:
   ~PreviewDisplay();
   void DrawImage(Rcpp::NumericMatrix& r, Rcpp::NumericMatrix& g, Rcpp::NumericMatrix& b, size_t &ns,
                  std::vector<bool>& finalized, RProgress::RProgress &pb, bool progress,
-                 RayCamera* cam, adaptive_sampler& adaptive_pixel_sampler, Float percent_done) {};
+                 RayCamera* cam, adaptive_sampler& adaptive_pixel_sampler, Float percent_done,
+                 hitable* world) {};
   bool terminate;
   bool interactive;
 };

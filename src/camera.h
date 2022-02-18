@@ -29,6 +29,7 @@ class RayCamera {
     virtual void update_fov(Float delta_fov)  = 0;
     virtual void update_aperture(Float delta_aperture)  = 0;
     virtual void update_focal_distance(Float delta_focus)  = 0;
+    virtual void update_look_direction(vec3f dir) = 0;
     virtual void reset()  = 0;
     virtual Float GenerateRay(const CameraSample &sample, ray* ray2) const {
       return(0.0);
@@ -55,6 +56,8 @@ class camera : public RayCamera {
     void update_fov(Float delta_fov);
     void update_aperture(Float delta_aperture);
     void update_focal_distance(Float delta_focus);
+    void update_look_direction(vec3f dir);
+    
     void reset();
     vec3f get_w() {return(w);}
     vec3f get_u() {return(u);}
@@ -63,7 +66,7 @@ class camera : public RayCamera {
     Float get_aperture() {return(lens_radius * 2);}
     Float get_focal_distance() {return(focus_dist);}
     point3f get_origin() {return(origin);}
-    
+
     Float half_height;
     Float half_width;
     point3f origin;
@@ -95,6 +98,8 @@ public:
   void update_fov(Float delta_fov);
   void update_aperture(Float delta_aperture);
   void update_focal_distance(Float delta_focus);
+  void update_look_direction(vec3f dir);
+  
   void reset();
   vec3f get_w() {return(w);}
   vec3f get_u() {return(u);}
@@ -120,17 +125,19 @@ public:
 
 class environment_camera : public RayCamera {
   public:
-    environment_camera(point3f lookfrom, point3f lookat, vec3f vup, 
+    environment_camera(point3f lookfrom, point3f lookat, vec3f _vup, 
                        Float t0, Float t1);
     ray get_ray(Float s, Float t, point3f u3, Float u);
     void update_position(vec3f delta);
     void update_fov(Float delta_fov);
     void update_aperture(Float delta_aperture);
     void update_focal_distance(Float delta_focus);
+    void update_look_direction(vec3f dir);
+    
     void reset();
-    vec3f get_w() {return(w);}
-    vec3f get_u() {return(u);}
-    vec3f get_v() {return(v);}
+    vec3f get_w();
+    vec3f get_u();
+    vec3f get_v();
     Float get_fov() {return(360);}
     Float get_aperture() {return(0);}
     Float get_focal_distance() {return(0);}
@@ -142,6 +149,7 @@ class environment_camera : public RayCamera {
     Float nx, ny;
     Float time0, time1;
     onb uvw;
+    vec3f vup;
 };
 
 class RealisticCamera  : public RayCamera {
@@ -151,13 +159,15 @@ public:
                   Float shutterClose, Float apertureDiameter, Float cam_width, Float cam_height,
                   Float focusDistance, bool simpleWeighting,
                   std::vector<Float> &lensData,
-                  Float film_size, Float camera_scale, Float _iso
-                  );
+                  Float film_size, Float camera_scale, Float _iso,
+                  vec3f _camera_up);
   Float GenerateRay(const CameraSample &sample, ray* ray2) const;
   void update_position(vec3f delta);
   void update_fov(Float delta_fov);
   void update_aperture(Float delta_aperture);
   void update_focal_distance(Float delta_focus);
+  void update_look_direction(vec3f dir);
+  
   void reset();
   vec3f get_w() {return(vec3f(0));}
   vec3f get_u() {return(vec3f(0));}
@@ -223,6 +233,7 @@ private:
   Float min_aperture;
   bool init;
   Float iso;
+  vec3f camera_up;
 };
 
 

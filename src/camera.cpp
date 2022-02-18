@@ -73,6 +73,18 @@ void camera::update_focal_distance(Float delta_focus) {
   vertical = 2.0f * half_height * focus_dist * v;
 }
 
+void camera::update_look_direction(vec3f dir) {
+  w = unit_vector(dir);
+  u = unit_vector(cross(vup, w));
+  v = cross(w, u);
+  lower_left_corner = origin - half_width * focus_dist *  u - half_height * focus_dist * v - focus_dist * w;
+  horizontal = 2.0f * half_width * focus_dist * u;
+  vertical = 2.0f * half_height * focus_dist * v;
+  if(w.length() == 0 && u.length() == 0) {
+    reset();
+  } 
+}
+
 
 
 void camera::reset() {
@@ -97,8 +109,11 @@ ortho_camera::ortho_camera(point3f lookfrom, point3f _lookat, vec3f _vup,
   time0 = t0;
   time1 = t1;
   origin = lookfrom;
+  start_origin = origin;
   cam_width = _cam_width;
   cam_height = _cam_height;
+  start_cam_width= cam_width;
+  start_cam_height= cam_height;
   lookat = _lookat;
   vup = _vup;
   w = unit_vector(lookfrom - lookat);
@@ -141,6 +156,18 @@ void ortho_camera::update_aperture(Float delta_aperture) {
 void ortho_camera::update_focal_distance(Float delta_focus) {
 }
 
+void ortho_camera::update_look_direction(vec3f dir) {
+  w = unit_vector(dir);
+  u = unit_vector(cross(vup, w));
+  v = cross(w, u);
+  lower_left_corner = origin - cam_width/2 *  u - cam_height/2 * v;
+  horizontal = cam_width * u;
+  vertical = cam_height * v;
+  if(w.length() == 0 && u.length() == 0) {
+    reset();
+  } 
+}
+
 
 
 void ortho_camera::reset() {
@@ -156,12 +183,13 @@ void ortho_camera::reset() {
 }
 
 
-environment_camera::environment_camera(point3f lookfrom, point3f lookat, vec3f vup, 
+environment_camera::environment_camera(point3f lookfrom, point3f lookat, vec3f _vup, 
                    Float t0, Float t1) {
   time0 = t0;
   time1 = t1;
   origin = lookfrom;
   start_origin = lookfrom;
+  vup = _vup;
   w = unit_vector(lookfrom - lookat);
   v = unit_vector(-cross(vup, w));
   u = cross(w, v);
@@ -192,6 +220,17 @@ void environment_camera::update_aperture(Float delta_aperture) {
 void environment_camera::update_focal_distance(Float delta_focus) {
 }
 
+void environment_camera::update_look_direction(vec3f dir) {
+  w = unit_vector(dir);
+  v = unit_vector(-cross(vup, w));
+  u = cross(w, v);
+  uvw = onb(w,v,u);
+}
+
+vec3f environment_camera::get_w() {return(w);}
+vec3f environment_camera::get_u() {return(-v);}
+vec3f environment_camera::get_v() {return(-u);}
+
 void environment_camera::reset() {
   origin = start_origin;
 }
@@ -204,15 +243,17 @@ RealisticCamera::RealisticCamera(const AnimatedTransform &CameraToWorld,
                                  bool simpleWeighting,
                                  std::vector<Float> &lensData,
                                  Float film_size, Float camera_scale,
-                                 Float _iso)
+                                 Float _iso,
+                                 vec3f _camera_up)
   : CameraToWorld(CameraToWorld), 
     shutterOpen(shutterOpen), shutterClose(shutterClose), 
     simpleWeighting(simpleWeighting), cam_width(cam_width), cam_height(cam_height),
-    diag(film_size * camera_scale), iso(_iso) {
+    diag(film_size * camera_scale), iso(_iso), camera_up(_camera_up) {
   CameraMovement = Transform(Matrix4x4(1,0,0,0,
                                        0,1,0,0,
                                        0,0,1,0,
                                        0,0,0,1));
+  
   if(lensData.size() == 0) {
     init = false;
   } else {
@@ -659,7 +700,7 @@ Float RealisticCamera::GenerateRay(const CameraSample &sample, ray *ray2) const 
     return 0;
   }
   // Finish initialization of _RealisticCamera_ ray
-  *ray2 = CameraToWorld(*ray2);
+  *ray2 = CameraMovement(CameraToWorld(*ray2));
   ray2->B = unit_vector(ray2->direction());
   
   // Return weighting for _RealisticCamera_ ray
@@ -675,6 +716,7 @@ Float RealisticCamera::GenerateRay(const CameraSample &sample, ray *ray2) const 
 }
 
 void RealisticCamera::update_position(vec3f delta) {
+  CameraMovement = Translate(delta) * CameraMovement;
 }
 
 void RealisticCamera::update_fov(Float delta_fov) {
@@ -686,7 +728,15 @@ void RealisticCamera::update_aperture(Float delta_aperture) {
 void RealisticCamera::update_focal_distance(Float delta_focus) {
 }
 
+void RealisticCamera::update_look_direction(vec3f dir) {
+  CameraMovement = CameraMovement;
+}
+
 void RealisticCamera::reset() {
+  CameraMovement = Transform(Matrix4x4(1,0,0,0,
+                                       0,1,0,0,
+                                       0,0,1,0,
+                                       0,0,0,1));
 }
 
 

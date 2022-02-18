@@ -9,7 +9,8 @@
 
 void PreviewDisplay::DrawImage(Rcpp::NumericMatrix& r, Rcpp::NumericMatrix& g, Rcpp::NumericMatrix& b,
                                size_t &ns, std::vector<bool>& finalized, RProgress::RProgress &pb, bool progress,
-                               RayCamera* cam, adaptive_sampler& adaptive_pixel_sampler, Float percent_done) {
+                               RayCamera* cam, adaptive_sampler& adaptive_pixel_sampler, Float percent_done,
+                               hitable *world, random_gen& rng) {
   if (d) {
     for(unsigned int i = 0; i < 4*width; i += 4 ) {
       for(unsigned int j = 0; j < height; j++) {
@@ -29,7 +30,7 @@ void PreviewDisplay::DrawImage(Rcpp::NumericMatrix& r, Rcpp::NumericMatrix& g, R
         for(unsigned int j = 0; j < 2; j++) {
           data[i + 4*width*j]   = 0;
           data[i + 4*width*j+1] = 0;
-          data[i + 4*width*j+2] = 255;
+          data[i + 4*width*j+2] = (char)255;
         }
       }
     }
@@ -69,7 +70,7 @@ void PreviewDisplay::DrawImage(Rcpp::NumericMatrix& r, Rcpp::NumericMatrix& g, R
     
     XPutImage(d,w,DefaultGC(d,s),
               img,0,0,0,0,width,height);
-    if(XCheckWindowEvent(d, w, KeyPressMask, &e)) {
+    if(XCheckWindowEvent(d, w, KeyPressMask | ButtonPress, &e)) {
       if (e.type == KeyPress) {
         if (e.xkey.keycode == esc ) {
           terminate = true;
@@ -134,9 +135,17 @@ void PreviewDisplay::DrawImage(Rcpp::NumericMatrix& r, Rcpp::NumericMatrix& g, R
           }
           if (e.xkey.keycode == P_key ) {
             point3f origin = cam->get_origin();
-            Rprintf("\nCamera Position: c(%.2f, %.2f, %.2f) FOV: %.1f Aperture: %0.1f Focal Dist: %.1f Step Multiplier: %.2f",
-                    origin.x(), origin.y(), origin.z(), cam->get_fov(), 
-                    cam->get_aperture(), cam->get_focal_distance(), speed);
+            Float fov =  cam->get_fov();
+            point3f cam_direction = -cam->get_w();
+            Float fd = cam->get_focal_distance();
+            
+            if(fov >= 0) {
+              Rprintf("\nPosition: c(%.2f, %.2f, %.2f) Lookat: c(%.2f, %.2f, %.2f) FOV: %.1f Aperture: %0.1f Focal Dist: %.1f Step Multiplier: %.2f",
+                      origin.x(), origin.y(), origin.z(), 
+                      origin.x()+cam_direction.x()*fd, origin.y()+cam_direction.y()*fd, origin.z()+cam_direction.z()*fd, 
+                      fov, 
+                      cam->get_aperture(), cam->get_focal_distance(), speed);
+            } 
           } else {
             if(!blanked) {
               blanked = true;
@@ -214,9 +223,17 @@ void PreviewDisplay::DrawImage(Rcpp::NumericMatrix& r, Rcpp::NumericMatrix& g, R
             }
             if (e.xkey.keycode == P_key ) {
               point3f origin = cam->get_origin();
-              Rprintf("\nCamera Position: c(%.2f, %.2f, %.2f) FOV: %.1f Aperture: %0.1f Focal Dist: %.1f Step Multiplier: %.2f",
-                      origin.x(), origin.y(), origin.z(), cam->get_fov(), 
-                      cam->get_aperture(), cam->get_focal_distance(), speed);
+              Float fov =  cam->get_fov();
+              point3f cam_direction = -cam->get_w();
+              Float fd = cam->get_focal_distance();
+              
+              if(fov >= 0) {
+                Rprintf("\nPosition: c(%.2f, %.2f, %.2f) Dir: c(%.2f, %.2f, %.2f) FOV: %.1f Aperture: %0.1f Focal Dist: %.1f Step Multiplier: %.2f",
+                        origin.x(), origin.y(), origin.z(), 
+                        origin.x()+cam_direction.x()*fd, origin.y()+cam_direction.y()*fd, origin.z()+cam_direction.z()*fd, 
+                        fov, 
+                        cam->get_aperture(), cam->get_focal_distance(), speed);
+              } 
             } else {
               if(!blanked) {
                 blanked = true;
@@ -232,6 +249,49 @@ void PreviewDisplay::DrawImage(Rcpp::NumericMatrix& r, Rcpp::NumericMatrix& g, R
               }
             }
           }
+        }
+      } else if (e.type == ButtonPress) {
+        Float x = e.xbutton.x;
+        Float y = e.xbutton.y;
+        // Rcpp::Rcout << e.xbutton.x << " " << e.xbutton.y << "\n";
+        Float fov = cam->get_fov();
+        Float u = (Float(x)) / Float(width);
+        Float v = (Float(y)) / Float(height);
+        vec3f dir;
+        hit_record hrec;
+        if(fov < 0) {
+          CameraSample samp({u,v},point2f(0.5,0.5), 0.5);
+          ray r;
+          cam->GenerateRay(samp,&r);
+          if(world->hit(r, 0.001, FLT_MAX, hrec, rng)) {
+            dir = cam->get_origin()-hrec.p;
+          }
+        } else if (fov > 0) {
+          ray r = cam->get_ray(u,1-v, point3f(0.5),
+                               0.5f);
+          dir = r.direction();
+        } else {
+          ray r = cam->get_ray(u,1-v, point3f(0.5),
+                               0.5f);
+          if(world->hit(r, 0.001, FLT_MAX, hrec, rng)) {
+            if( hrec.shape->GetName() != "EnvironmentLight") {
+              dir = -(cam->get_origin()-hrec.p);
+            } else {
+              dir = -cam->get_w();
+            }
+          } else {
+            dir = -cam->get_w();
+          }
+        }
+        cam->update_look_direction(-dir);
+        ns = 0;
+        std::fill(finalized.begin(), finalized.end(), false);
+        std::fill(r.begin(), r.end(), 0);
+        std::fill(g.begin(), g.end(), 0);
+        std::fill(b.begin(), b.end(), 0);
+        adaptive_pixel_sampler.reset();
+        if(progress && !interactive) {
+          pb.update(0);
         }
       }
     }
@@ -272,7 +332,7 @@ PreviewDisplay::PreviewDisplay(unsigned int _width, unsigned int _height,
     
     w = XCreateSimpleWindow(d, RootWindow(d, s), 100, 100, width, height, 1,
                             BlackPixel(d, s),  BlackPixel(d, s));
-    XSelectInput(d, w, ExposureMask | KeyPressMask);
+    XSelectInput(d, w, ExposureMask | KeyPressMask | ButtonPress);
     XMapWindow(d, w);
     XFlush(d);
   }
