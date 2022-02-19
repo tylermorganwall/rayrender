@@ -386,9 +386,10 @@ void render_animation_rcpp(List camera_info, List scene_info, List camera_moveme
 
       std::unique_ptr<RayCamera> cam;
       if(fov < 0) {
-        std::shared_ptr<Transform> CameraTransform = transformCache.Lookup(LookAt(lookfrom,
-                                                                                  lookat,
-                                                                                  camera_up).GetInverseMatrix());
+        Transform CamTransform = LookAt(lookfrom,
+                                        lookat,
+                                        camera_up).GetInverseMatrix();
+        std::shared_ptr<Transform> CameraTransform = transformCache.Lookup(CamTransform);
         AnimatedTransform CamTr(CameraTransform,0,CameraTransform,0);
         
         std::vector<Float> lensData;
@@ -404,7 +405,7 @@ void render_animation_rcpp(List camera_info, List scene_info, List camera_moveme
         
         cam = std::unique_ptr<RayCamera>(new RealisticCamera(CamTr,shutteropen, shutterclose,
                                                              aperture, nx,ny, focus_distance, false, lensData,
-                                                             film_size, camera_scale, iso, camera_up));
+                                                             film_size, camera_scale, iso, camera_up, CamTransform));
       } else if(fov == 0) {
         cam = std::unique_ptr<RayCamera>(new ortho_camera(lookfrom, lookat, camera_up,
                                                           orthox, orthoy,
@@ -457,9 +458,11 @@ void render_animation_rcpp(List camera_info, List scene_info, List camera_moveme
 
       std::unique_ptr<RayCamera> cam;
       if(fov < 0) {
-        std::shared_ptr<Transform> CameraTransform = transformCache.Lookup(LookAt(lookfrom,
-                                                                                  lookat,
-                                                                                  camera_up).GetInverseMatrix());
+        Transform CamTransform = LookAt(lookfrom,
+                                        lookat,
+                                        camera_up).GetInverseMatrix();
+        std::shared_ptr<Transform> CameraTransform = transformCache.Lookup(CamTransform);
+        
         AnimatedTransform CamTr(CameraTransform,0,CameraTransform,0);
         
         std::vector<Float> lensData;
@@ -475,7 +478,7 @@ void render_animation_rcpp(List camera_info, List scene_info, List camera_moveme
         
         cam = std::unique_ptr<RayCamera>(new RealisticCamera(CamTr,shutteropen, shutterclose,
                                                              aperture, nx,ny, focus_distance, false, lensData,
-                                                             film_size, camera_scale, iso,camera_up));
+                                                             film_size, camera_scale, iso,camera_up,CamTransform));
       } else if(fov == 0) {
         cam = std::unique_ptr<RayCamera>(new ortho_camera(lookfrom, lookat, camera_up,
                                                           orthox, orthoy,

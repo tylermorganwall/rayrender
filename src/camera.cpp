@@ -35,12 +35,14 @@ ray camera::get_ray(Float s, Float t, point3f u3, Float u1) {
   return(ray(origin + offset, lower_left_corner + s * horizontal + t * vertical - origin - offset, time)); 
 }
 
-void camera::update_position(vec3f delta) {
+void camera::update_position(vec3f delta, bool update_uvw) {
   origin += delta;
-  focus_dist = (origin - lookat).length();
-  w = unit_vector(origin - lookat);
-  u = unit_vector(cross(vup, w));
-  v = cross(w, u);
+  if(update_uvw) {
+    focus_dist = (origin - lookat).length();
+    w = unit_vector(origin - lookat);
+    u = unit_vector(cross(vup, w));
+    v = cross(w, u);
+  }
   lower_left_corner = origin - half_width * focus_dist *  u - half_height * focus_dist * v - focus_dist * w;
   horizontal = 2.0f * half_width * focus_dist * u;
   vertical = 2.0f * half_height * focus_dist * v;
@@ -129,11 +131,13 @@ ray ortho_camera::get_ray(Float s, Float t, point3f u3, Float u) {
   return(ray(lower_left_corner + s * horizontal + t * vertical, -w, time)); 
 }
 
-void ortho_camera::update_position(vec3f delta) {
+void ortho_camera::update_position(vec3f delta, bool update_uvw) {
   origin += delta;
-  w = unit_vector(origin - lookat);
-  u = unit_vector(cross(vup, w));
-  v = cross(w, u);
+  if(update_uvw) {
+    w = unit_vector(origin - lookat);
+    u = unit_vector(cross(vup, w));
+    v = cross(w, u);
+  }
   lower_left_corner = origin - cam_width/2 *  u - cam_height/2 * v;
   horizontal = cam_width * u;
   vertical = cam_height * v;
@@ -145,6 +149,9 @@ void ortho_camera::update_position(vec3f delta) {
 void ortho_camera::update_fov(Float delta_fov) {
   cam_width += delta_fov;
   cam_height += delta_fov;
+  cam_width = std::fmax(cam_width,0.001);
+  cam_height = std::fmax(cam_height,0.001);
+  
   lower_left_corner = origin - cam_width/2 *  u - cam_height/2 * v;
   horizontal = cam_width * u;
   vertical = cam_height * v;
@@ -207,7 +214,7 @@ ray environment_camera::get_ray(Float s, Float t, point3f u3, Float u1) {
   return(ray(origin, dir, time)); 
 }
 
-void environment_camera::update_position(vec3f delta) {
+void environment_camera::update_position(vec3f delta, bool update_uvw) {
   origin += delta;
 }
 
@@ -239,16 +246,17 @@ RealisticCamera::RealisticCamera(const AnimatedTransform &CameraToWorld,
                                  Float shutterOpen, Float shutterClose, 
                                  Float apertureDiameter, 
                                  Float cam_width, Float cam_height,
-                                 Float focusDistance,
+                                 Float _focusDistance,
                                  bool simpleWeighting,
                                  std::vector<Float> &lensData,
                                  Float film_size, Float camera_scale,
                                  Float _iso,
-                                 vec3f _camera_up)
+                                 vec3f _camera_up, Transform _CamTransform)
   : CameraToWorld(CameraToWorld), 
     shutterOpen(shutterOpen), shutterClose(shutterClose), 
     simpleWeighting(simpleWeighting), cam_width(cam_width), cam_height(cam_height),
-    diag(film_size * camera_scale), iso(_iso), camera_up(_camera_up) {
+    diag(film_size * camera_scale), iso(_iso), camera_up(_camera_up), CamTransform(_CamTransform),
+    focusDistance(_focusDistance), start_focusDistance(_focusDistance) {
   CameraMovement = Transform(Matrix4x4(1,0,0,0,
                                        0,1,0,0,
                                        0,0,1,0,
@@ -593,7 +601,7 @@ void RealisticCamera::ComputeThickLensApproximation(Float pz[2],
 
 
 //I believe this is working correctly 
-Float RealisticCamera::FocusThickLens(Float focusDistance) {
+Float RealisticCamera::FocusThickLens(Float focusDistance, bool throw_error) {
   Float pz[2], fz[2];
   ComputeThickLensApproximation(pz, fz);
   // LOG(INFO) << StringPrintf("Cardinal points: p' = %f f' = %f, p = %f f = %f.\n",
@@ -605,7 +613,11 @@ Float RealisticCamera::FocusThickLens(Float focusDistance) {
   Float z = -focusDistance;
   Float c = (pz[1] - z - pz[0]) * (pz[1] - z - 4 * f - pz[0]);
   if(c < 0) {
-    throw std::runtime_error("Coefficient must be positive. It looks focusDistance is too short for a given lenses configuration");
+    if(throw_error) {
+      throw std::runtime_error("Coefficient must be positive. It looks focusDistance is too short for a given lenses configuration");
+    } else {
+      return(0.f);
+    }
   }
   Float delta = 0.5f * (pz[1] - z + pz[0] - std::sqrt(c));
   return elementInterfaces.back().thickness + delta;
@@ -700,7 +712,7 @@ Float RealisticCamera::GenerateRay(const CameraSample &sample, ray *ray2) const 
     return 0;
   }
   // Finish initialization of _RealisticCamera_ ray
-  *ray2 = CameraMovement(CameraToWorld(*ray2));
+  *ray2 = (CamTransform(*ray2));
   ray2->B = unit_vector(ray2->direction());
   
   // Return weighting for _RealisticCamera_ ray
@@ -715,8 +727,12 @@ Float RealisticCamera::GenerateRay(const CameraSample &sample, ray *ray2) const 
   return(0);
 }
 
-void RealisticCamera::update_position(vec3f delta) {
-  CameraMovement = Translate(delta) * CameraMovement;
+point3f RealisticCamera::get_origin() {
+  return(CamTransform(point3f(0.f)));
+}
+
+void RealisticCamera::update_position(vec3f delta, bool update_uvw) {
+  CamTransform = Translate(delta) * CamTransform;
 }
 
 void RealisticCamera::update_fov(Float delta_fov) {
@@ -726,17 +742,30 @@ void RealisticCamera::update_aperture(Float delta_aperture) {
 }
 
 void RealisticCamera::update_focal_distance(Float delta_focus) {
+  Float new_fd = FocusThickLens(focusDistance + delta_focus, false);
+  if(new_fd > 0) {
+    focusDistance = focusDistance + delta_focus;
+    elementInterfaces.back().thickness = new_fd;
+  } else {
+    Rprintf("Cannot focus to distance %.2f; Maintaining focal distance of %.2f\n",focusDistance + delta_focus,focusDistance);
+  }
 }
 
+//This actually takes the position of the intersection
 void RealisticCamera::update_look_direction(vec3f dir) {
-  CameraMovement = CameraMovement;
+  CamTransform = Transform(LookAt(get_origin(), dir, camera_up).GetInverseMatrix());
+  
 }
 
 void RealisticCamera::reset() {
-  CameraMovement = Transform(Matrix4x4(1,0,0,0,
-                                       0,1,0,0,
-                                       0,0,1,0,
-                                       0,0,0,1));
+  CamTransform = (*CameraToWorld.GetStartTransform());
+  focusDistance = start_focusDistance;
+  elementInterfaces.back().thickness =  FocusThickLens(focusDistance);
 }
+
+
+vec3f RealisticCamera::get_w() {return(-CamTransform.w());}
+vec3f RealisticCamera::get_u() {return(-CamTransform.u());}
+vec3f RealisticCamera::get_v() {return(CamTransform.v());}
 
 

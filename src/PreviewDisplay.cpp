@@ -81,28 +81,29 @@ void PreviewDisplay::DrawImage(Rcpp::NumericMatrix& r, Rcpp::NumericMatrix& g, R
           one_orbit = true;
         }
         
-        vec3f w = orbit ? cam->get_w() : vec3f(0,0,1);
-        vec3f u = orbit ? cam->get_u() : vec3f(1,0,0);
-        vec3f v = orbit ? cam->get_v() : vec3f(0,1,0);
+        vec3f w = cam->get_w();
+        vec3f u = cam->get_u();
+        vec3f v = cam->get_v();
+        
         bool blanked = false;
         if(interactive) {
           if (e.xkey.keycode == W_key ) {
-            cam->update_position(-speed * w);
+            cam->update_position(-speed * w, orbit);
           }
           if (e.xkey.keycode == A_key ) {
-            cam->update_position(-speed * u);
+            cam->update_position(-speed * u, orbit);
           }
           if (e.xkey.keycode == S_key ) {
-            cam->update_position(speed * w);
+            cam->update_position(speed * w, orbit);
           }
           if (e.xkey.keycode == D_key ) {
-            cam->update_position(speed * u);
+            cam->update_position(speed * u, orbit);
           }
           if (e.xkey.keycode == Q_key ) {
-            cam->update_position(speed * v);
+            cam->update_position(speed * v, orbit);
           }
           if (e.xkey.keycode == Z_key ) {
-            cam->update_position(-speed * v);
+            cam->update_position(-speed * v, orbit);
           }
           if (e.xkey.keycode == E_key ) {
             speed = 2 * speed;
@@ -140,12 +141,17 @@ void PreviewDisplay::DrawImage(Rcpp::NumericMatrix& r, Rcpp::NumericMatrix& g, R
             Float fd = cam->get_focal_distance();
             
             if(fov >= 0) {
-              Rprintf("\nPosition: c(%.2f, %.2f, %.2f) Lookat: c(%.2f, %.2f, %.2f) FOV: %.1f Aperture: %0.1f Focal Dist: %.1f Step Multiplier: %.2f",
+              Rprintf("\nPosition: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f) FOV: %.1f Aperture: %0.1f Focal Dist: %.1f Step Multiplier: %.2f",
                       origin.x(), origin.y(), origin.z(), 
                       origin.x()+cam_direction.x()*fd, origin.y()+cam_direction.y()*fd, origin.z()+cam_direction.z()*fd, 
                       fov, 
-                      cam->get_aperture(), cam->get_focal_distance(), speed);
-            } 
+                      cam->get_aperture(), fd, speed);
+            }  else {
+              Rprintf("\nPosition: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f)  Focal Dist: %0.1f Step Multiplier: %.2f",
+                      origin.x(), origin.y(), origin.z(), 
+                      origin.x()+cam_direction.x()*fd, origin.y()+cam_direction.y()*fd, origin.z()+cam_direction.z()*fd, 
+                      fd, speed);
+            }
           } else {
             if(!blanked) {
               blanked = true;
@@ -170,27 +176,27 @@ void PreviewDisplay::DrawImage(Rcpp::NumericMatrix& r, Rcpp::NumericMatrix& g, R
               one_orbit = true;
             }
             
-            w = orbit ? cam->get_w() : vec3f(0,0,1);
-            u = orbit ? cam->get_u() : vec3f(1,0,0);
-            v = orbit ? cam->get_v() : vec3f(0,1,0);
+            w = cam->get_w();
+            u = cam->get_u();
+            v = cam->get_v();
             
             if (e.xkey.keycode == W_key ) {
-              cam->update_position(-speed * w);
+              cam->update_position(-speed * w, orbit);
             }
             if (e.xkey.keycode == A_key ) {
-              cam->update_position(-speed * u);
+              cam->update_position(-speed * u, orbit);
             }
             if (e.xkey.keycode == S_key ) {
-              cam->update_position(speed * w);
+              cam->update_position(speed * w, orbit);
             }
             if (e.xkey.keycode == D_key ) {
-              cam->update_position(speed * u);
+              cam->update_position(speed * u, orbit);
             }
             if (e.xkey.keycode == Q_key ) {
-              cam->update_position(speed * v);
+              cam->update_position(speed * v, orbit);
             }
             if (e.xkey.keycode == Z_key ) {
-              cam->update_position(-speed * v);
+              cam->update_position(-speed * v, orbit);
             }
             if (e.xkey.keycode == E_key ) {
               speed = 2 * speed;
@@ -228,12 +234,17 @@ void PreviewDisplay::DrawImage(Rcpp::NumericMatrix& r, Rcpp::NumericMatrix& g, R
               Float fd = cam->get_focal_distance();
               
               if(fov >= 0) {
-                Rprintf("\nPosition: c(%.2f, %.2f, %.2f) Dir: c(%.2f, %.2f, %.2f) FOV: %.1f Aperture: %0.1f Focal Dist: %.1f Step Multiplier: %.2f",
+                Rprintf("\nPosition: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f) FOV: %.1f Aperture: %0.1f Focal Dist: %.1f Step Multiplier: %.2f",
                         origin.x(), origin.y(), origin.z(), 
                         origin.x()+cam_direction.x()*fd, origin.y()+cam_direction.y()*fd, origin.z()+cam_direction.z()*fd, 
                         fov, 
-                        cam->get_aperture(), cam->get_focal_distance(), speed);
-              } 
+                        cam->get_aperture(), fd, speed);
+              }  else {
+                Rprintf("\nPosition: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f)  Focal Dist: %0.1f Step Multiplier: %.2f",
+                        origin.x(), origin.y(), origin.z(), 
+                        origin.x()+cam_direction.x()*fd, origin.y()+cam_direction.y()*fd, origin.z()+cam_direction.z()*fd, 
+                        fd, speed);
+              }
             } else {
               if(!blanked) {
                 blanked = true;
@@ -253,18 +264,21 @@ void PreviewDisplay::DrawImage(Rcpp::NumericMatrix& r, Rcpp::NumericMatrix& g, R
       } else if (e.type == ButtonPress) {
         Float x = e.xbutton.x;
         Float y = e.xbutton.y;
-        // Rcpp::Rcout << e.xbutton.x << " " << e.xbutton.y << "\n";
         Float fov = cam->get_fov();
         Float u = (Float(x)) / Float(width);
         Float v = (Float(y)) / Float(height);
         vec3f dir;
         hit_record hrec;
         if(fov < 0) {
-          CameraSample samp({u,v},point2f(0.5,0.5), 0.5);
+          CameraSample samp({1-u,v},point2f(0.5,0.5), 0.5);
           ray r;
           cam->GenerateRay(samp,&r);
           if(world->hit(r, 0.001, FLT_MAX, hrec, rng)) {
-            dir = cam->get_origin()-hrec.p;
+            if( hrec.shape->GetName() != "EnvironmentLight") {
+              dir = -hrec.p;
+            }  else {
+              return;
+            }
           }
         } else if (fov > 0) {
           ray r = cam->get_ray(u,1-v, point3f(0.5),

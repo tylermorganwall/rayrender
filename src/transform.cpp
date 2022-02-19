@@ -449,3 +449,19 @@ vec3<T> Transform::operator()(const vec3<T> &v,
                  m.m[1][0] * x + m.m[1][1] * y + m.m[1][2] * z,
                  m.m[2][0] * x + m.m[2][1] * y + m.m[2][2] * z);
 }
+
+vec3f Transform::w() {
+  return(vec3f(m.m[0][2],
+               m.m[1][2],
+               m.m[2][2]));
+}
+vec3f Transform::u() {
+  return(vec3f(m.m[0][0],
+               m.m[1][0],
+               m.m[2][0]));
+}
+vec3f Transform::v() {
+  return(vec3f(m.m[0][1],
+               m.m[1][1],
+               m.m[2][1]));
+}

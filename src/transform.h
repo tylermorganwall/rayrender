@@ -34,6 +34,9 @@ Transform() { }
   const Matrix4x4& GetInverseMatrix() const;
   bool HasScale() const;
   bool SwapsHandedness() const;
+  vec3f w();
+  vec3f u();
+  vec3f v();
   
   //Transformations
   aabb operator()(const aabb &b) const;

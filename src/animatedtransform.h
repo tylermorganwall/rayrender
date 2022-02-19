@@ -24,6 +24,13 @@ public:
   }
   aabb MotionBounds(const aabb &b) const;
   aabb BoundPointMotion(const point3f &p) const;
+  std::shared_ptr<Transform> GetStartTransform() {return(startTransform);};
+  std::shared_ptr<Transform> GetEndTransform() {return(endTransform);};
+  
+  vec3f w();
+  vec3f u();
+  vec3f v();
+  
   
 private:
   // AnimatedTransform Private Data

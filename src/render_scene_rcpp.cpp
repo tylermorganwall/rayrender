@@ -161,9 +161,11 @@ List render_scene_rcpp(List camera_info, List scene_info) {
   random_gen rng(unif_rand() * std::pow(2,32));
   std::unique_ptr<RayCamera> cam;
   if(fov < 0) {
-    std::shared_ptr<Transform> CameraTransform = transformCache.Lookup(LookAt(lookfrom,
-                                                                              lookat,
-                                                                              vec3f(camera_up(0),camera_up(1),camera_up(2))).GetInverseMatrix());
+    Transform CamTransform = LookAt(lookfrom,
+                                    lookat,
+                                    vec3f(camera_up(0),camera_up(1),camera_up(2))).GetInverseMatrix();
+    std::shared_ptr<Transform> CameraTransform = transformCache.Lookup(CamTransform);
+    
     AnimatedTransform CamTr(CameraTransform,0,CameraTransform,0);
     
     std::vector<Float> lensData;
@@ -179,7 +181,8 @@ List render_scene_rcpp(List camera_info, List scene_info) {
     
     cam = std::unique_ptr<RayCamera>(new RealisticCamera(CamTr,shutteropen, shutterclose,
                          aperture, nx,ny, focus_distance, false, lensData,
-                         film_size, camera_scale, iso, vec3f(camera_up(0),camera_up(1),camera_up(2))));
+                         film_size, camera_scale, iso, vec3f(camera_up(0),camera_up(1),camera_up(2)),
+                         CamTransform));
   } else if(fov == 0) {
     cam = std::unique_ptr<RayCamera>(new ortho_camera(lookfrom, lookat, vec3f(camera_up(0),camera_up(1),camera_up(2)),
                       ortho_dimensions(0), ortho_dimensions(1),

@@ -899,3 +899,19 @@ aabb AnimatedTransform::BoundPointMotion(const point3f &p) const {
   }
   return bounds;
 }
+
+vec3f AnimatedTransform::w() {
+  return(vec3f(startTransform->m.m[0][2],
+               startTransform->m.m[1][2],
+               startTransform->m.m[2][2]));
+}
+vec3f AnimatedTransform::u() {
+  return(vec3f(startTransform->m.m[0][0],
+               startTransform->m.m[1][0],
+               startTransform->m.m[2][0]));
+}
+vec3f AnimatedTransform::v() {
+  return(vec3f(startTransform->m.m[0][1],
+               startTransform->m.m[1][1],
+               startTransform->m.m[2][1]));
+}

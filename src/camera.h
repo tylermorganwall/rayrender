@@ -25,7 +25,7 @@ class RayCamera {
     virtual ray get_ray(Float s, Float t, point3f u3, Float u) {
       return(ray());
     };
-    virtual void update_position(vec3f delta) = 0;
+    virtual void update_position(vec3f delta, bool update_uvw) = 0;
     virtual void update_fov(Float delta_fov)  = 0;
     virtual void update_aperture(Float delta_aperture)  = 0;
     virtual void update_focal_distance(Float delta_focus)  = 0;
@@ -52,7 +52,7 @@ class camera : public RayCamera {
            Float t0, Float t1);
     ray get_ray(Float s, Float t, point3f u3, Float u);
 
-    void update_position(vec3f delta);
+    void update_position(vec3f delta, bool update_uvw);
     void update_fov(Float delta_fov);
     void update_aperture(Float delta_aperture);
     void update_focal_distance(Float delta_focus);
@@ -94,7 +94,7 @@ public:
                Float _cam_width, Float _cam_height, 
                Float t0, Float t1);
   ray get_ray(Float s, Float t, point3f u3, Float u);
-  void update_position(vec3f delta);
+  void update_position(vec3f delta, bool update_uvw);
   void update_fov(Float delta_fov);
   void update_aperture(Float delta_aperture);
   void update_focal_distance(Float delta_focus);
@@ -128,7 +128,7 @@ class environment_camera : public RayCamera {
     environment_camera(point3f lookfrom, point3f lookat, vec3f _vup, 
                        Float t0, Float t1);
     ray get_ray(Float s, Float t, point3f u3, Float u);
-    void update_position(vec3f delta);
+    void update_position(vec3f delta, bool update_uvw);
     void update_fov(Float delta_fov);
     void update_aperture(Float delta_aperture);
     void update_focal_distance(Float delta_focus);
@@ -160,23 +160,25 @@ public:
                   Float focusDistance, bool simpleWeighting,
                   std::vector<Float> &lensData,
                   Float film_size, Float camera_scale, Float _iso,
-                  vec3f _camera_up);
+                  vec3f _camera_up, Transform _CamTransform);
   Float GenerateRay(const CameraSample &sample, ray* ray2) const;
-  void update_position(vec3f delta);
+  void update_position(vec3f delta, bool update_uvw);
   void update_fov(Float delta_fov);
   void update_aperture(Float delta_aperture);
   void update_focal_distance(Float delta_focus);
   void update_look_direction(vec3f dir);
   
   void reset();
-  vec3f get_w() {return(vec3f(0));}
-  vec3f get_u() {return(vec3f(0));}
-  vec3f get_v() {return(vec3f(0));}
+  vec3f get_w();
+  vec3f get_u();
+  vec3f get_v();
   Float get_fov() {return(-1);}
   Float get_aperture() {return(0);}
-  Float get_focal_distance() {return(0);}
-  point3f get_origin() {return(CameraToWorld(0, point3f(0.f)));}
+  Float get_focal_distance() {return(focusDistance);}
+  point3f get_origin();
   Float get_iso() {return(iso);}
+  
+  Transform CamTransform;
   
 private:
   // RealisticCamera Private Declarations
@@ -213,7 +215,7 @@ private:
   static void ComputeCardinalPoints(const ray &rIn, const ray &rOut, Float *p,
                                     Float *f);
   void ComputeThickLensApproximation(Float pz[2], Float f[2]) const;
-  Float FocusThickLens(Float focusDistance);
+  Float FocusThickLens(Float focusDistance, bool throw_error = true);
   Bounds2f BoundExitPupil(Float pFilmX0, Float pFilmX1) const;
   point3f SampleExitPupil(const point2f &pFilm, const point2f &lensSample,
                           Float *sampleBoundsArea) const;
@@ -234,6 +236,9 @@ private:
   bool init;
   Float iso;
   vec3f camera_up;
+  point3f origin;
+  Float focusDistance;
+  Float start_focusDistance;
 };
 
 
