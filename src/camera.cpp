@@ -251,12 +251,13 @@ RealisticCamera::RealisticCamera(const AnimatedTransform &CameraToWorld,
                                  std::vector<Float> &lensData,
                                  Float film_size, Float camera_scale,
                                  Float _iso,
-                                 vec3f _camera_up, Transform _CamTransform)
+                                 vec3f _camera_up, Transform _CamTransform, 
+                                 point3f lookat)
   : CameraToWorld(CameraToWorld), 
     shutterOpen(shutterOpen), shutterClose(shutterClose), 
     simpleWeighting(simpleWeighting), cam_width(cam_width), cam_height(cam_height),
     diag(film_size * camera_scale), iso(_iso), camera_up(_camera_up), CamTransform(_CamTransform),
-    focusDistance(_focusDistance), start_focusDistance(_focusDistance) {
+    focusDistance(_focusDistance), start_focusDistance(_focusDistance), start_lookat(lookat) {
   CameraMovement = Transform(Matrix4x4(1,0,0,0,
                                        0,1,0,0,
                                        0,0,1,0,
@@ -732,7 +733,13 @@ point3f RealisticCamera::get_origin() {
 }
 
 void RealisticCamera::update_position(vec3f delta, bool update_uvw) {
-  CamTransform = Translate(delta) * CamTransform;
+  if(update_uvw) {
+    point3f old_lookfrom =  CamTransform(point3f(0.f));
+    vec3f old_lookat = -focusDistance * get_w();
+    CamTransform = Inverse(LookAt(old_lookfrom + delta, start_lookat, camera_up));
+  } else {
+    CamTransform = Translate(delta) * CamTransform;
+  }
 }
 
 void RealisticCamera::update_fov(Float delta_fov) {
@@ -754,7 +761,6 @@ void RealisticCamera::update_focal_distance(Float delta_focus) {
 //This actually takes the position of the intersection
 void RealisticCamera::update_look_direction(vec3f dir) {
   CamTransform = Transform(LookAt(get_origin(), dir, camera_up).GetInverseMatrix());
-  
 }
 
 void RealisticCamera::reset() {

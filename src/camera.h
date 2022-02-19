@@ -160,7 +160,8 @@ public:
                   Float focusDistance, bool simpleWeighting,
                   std::vector<Float> &lensData,
                   Float film_size, Float camera_scale, Float _iso,
-                  vec3f _camera_up, Transform _CamTransform);
+                  vec3f _camera_up, Transform _CamTransform, 
+                  point3f lookat);
   Float GenerateRay(const CameraSample &sample, ray* ray2) const;
   void update_position(vec3f delta, bool update_uvw);
   void update_fov(Float delta_fov);
@@ -239,6 +240,7 @@ private:
   point3f origin;
   Float focusDistance;
   Float start_focusDistance;
+  point3f start_lookat;
 };
 
 
