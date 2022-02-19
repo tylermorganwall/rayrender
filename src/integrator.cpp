@@ -117,7 +117,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
                          r.pri_stack = mat_stack;
                          point3f col = weight != 0 ? clamp_point(de_nan(color(r, &world, &hlist, max_depth, 
                                                        roulette_active, rngs[index], samplers[index].get())),
-                                             0, clampval) * weight : 0;
+                                             0, clampval) * weight * cam->get_iso() : 0;
                          // col = col * fil.Evaluate(u2);
                          mat_stack->clear();
                          adaptive_pixel_sampler.add_color_main(i, j, col);
@@ -140,11 +140,11 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
       adaptive_pixel_sampler.split_remove_chunks(s);
     }
     adaptive_pixel_sampler.max_s++;
-    display.DrawImage(adaptive_pixel_sampler.r,adaptive_pixel_sampler.g,adaptive_pixel_sampler.b, s,
-                      adaptive_pixel_sampler.finalized, pb, progress_bar, cam, adaptive_pixel_sampler,
+    display.DrawImage(adaptive_pixel_sampler, s, pb, progress_bar, cam,
                       (Float)s/(Float)ns, &world, rng_interactive);
     if(display.terminate) {
       adaptive_pixel_sampler.ns = s;
+      adaptive_pixel_sampler.max_s = s;
       break;
     }
   }

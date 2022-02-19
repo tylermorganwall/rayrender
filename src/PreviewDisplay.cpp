@@ -7,27 +7,50 @@
 #include "X11/keysym.h"
 
 
-void PreviewDisplay::DrawImage(Rcpp::NumericMatrix& r, Rcpp::NumericMatrix& g, Rcpp::NumericMatrix& b,
-                               size_t &ns, std::vector<bool>& finalized, RProgress::RProgress &pb, bool progress,
-                               RayCamera* cam, adaptive_sampler& adaptive_pixel_sampler, Float percent_done,
+void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
+                               size_t &ns, RProgress::RProgress &pb, bool progress,
+                               RayCamera* cam,  Float percent_done,
                                hitable *world, random_gen& rng) {
   if (d) {
+    Rcpp::NumericMatrix &r  = adaptive_pixel_sampler.r;
+    Rcpp::NumericMatrix &g  = adaptive_pixel_sampler.g;
+    Rcpp::NumericMatrix &b  = adaptive_pixel_sampler.b;
+    std::vector<bool>& finalized = adaptive_pixel_sampler.finalized;
+    std::vector<bool>& just_finalized = adaptive_pixel_sampler.just_finalized;
+    
     for(unsigned int i = 0; i < 4*width; i += 4 ) {
       for(unsigned int j = 0; j < height; j++) {
         int samples;
+        Float r_col,g_col,b_col;
         if(finalized[i/4 + width * (height-1-j)]) {
           samples = 1;
+          if(just_finalized[i/4 + width * (height-1-j)] ) {
+            r_col = 0;
+            g_col = 1;
+            b_col = 0;
+          } else {
+            r_col = interactive ? std::pow((r(i/4,height-1-j)),1.0/2.2) : std::pow((r(i/4,height-1-j))/4,1.0/2.2);
+            g_col = interactive ? std::pow((g(i/4,height-1-j)),1.0/2.2) : std::pow((g(i/4,height-1-j))/4,1.0/2.2);
+            b_col = interactive ? std::pow((b(i/4,height-1-j)),1.0/2.2) : std::pow((b(i/4,height-1-j))/4,1.0/2.2);
+          }
         } else {
           samples = ns+1;
+          r_col = std::pow((r(i/4,height-1-j))/samples,1.0/2.2);
+          g_col = std::pow((g(i/4,height-1-j))/samples,1.0/2.2);
+          b_col = std::pow((b(i/4,height-1-j))/samples,1.0/2.2);
         }
-        data[i + 4*width*j]   = 255*sqrt(clamp(b(i/4,height-1-j)*cam->get_iso()/samples,0,1));
-        data[i + 4*width*j+1] = 255*sqrt(clamp(g(i/4,height-1-j)*cam->get_iso()/samples,0,1));
-        data[i + 4*width*j+2] = 255*sqrt(clamp(r(i/4,height-1-j)*cam->get_iso()/samples,0,1));
+        
+        data[i + 4*width*j]   = 255*clamp(b_col,0,1);
+        data[i + 4*width*j+1] = 255*clamp(g_col,0,1);
+        data[i + 4*width*j+2] = 255*clamp(r_col,0,1);
+        if(finalized[i/4 + width * (height-1-j)]) {
+          just_finalized[i/4 + width * (height-1-j)] = false;
+        }
       }
     }
     if(progress) {
       for(unsigned int i = 0; i < 4*width*percent_done; i += 4 ) {
-        for(unsigned int j = 0; j < 2; j++) {
+        for(unsigned int j = 0; j < 3; j++) {
           data[i + 4*width*j]   = 0;
           data[i + 4*width*j+1] = 0;
           data[i + 4*width*j+2] = (char)255;
@@ -153,13 +176,9 @@ void PreviewDisplay::DrawImage(Rcpp::NumericMatrix& r, Rcpp::NumericMatrix& g, R
                       fd, speed);
             }
           } else {
-            if(!blanked) {
+            if(!blanked && !terminate) {
               blanked = true;
               ns = 0;
-              std::fill(finalized.begin(), finalized.end(), false);
-              std::fill(r.begin(), r.end(), 0);
-              std::fill(g.begin(), g.end(), 0);
-              std::fill(b.begin(), b.end(), 0);
               adaptive_pixel_sampler.reset();
               if(progress && !interactive) {
                 pb.update(0);
@@ -246,13 +265,9 @@ void PreviewDisplay::DrawImage(Rcpp::NumericMatrix& r, Rcpp::NumericMatrix& g, R
                         fd, speed);
               }
             } else {
-              if(!blanked) {
+              if(!blanked && !terminate) {
                 blanked = true;
                 ns = 0;
-                std::fill(finalized.begin(), finalized.end(), false);
-                std::fill(r.begin(), r.end(), 0);
-                std::fill(g.begin(), g.end(), 0);
-                std::fill(b.begin(), b.end(), 0);
                 adaptive_pixel_sampler.reset();
                 if(progress && !interactive) {
                   pb.update(0);
@@ -299,10 +314,6 @@ void PreviewDisplay::DrawImage(Rcpp::NumericMatrix& r, Rcpp::NumericMatrix& g, R
         }
         cam->update_look_direction(-dir);
         ns = 0;
-        std::fill(finalized.begin(), finalized.end(), false);
-        std::fill(r.begin(), r.end(), 0);
-        std::fill(g.begin(), g.end(), 0);
-        std::fill(b.begin(), b.end(), 0);
         adaptive_pixel_sampler.reset();
         if(progress && !interactive) {
           pb.update(0);

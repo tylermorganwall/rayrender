@@ -30,6 +30,7 @@ public:
     size_t bonus_x = nx - nx_chunk * numbercores;
     size_t bonus_y = ny - ny_chunk * numbercores;
     finalized.resize(nx*ny, false);
+    just_finalized.resize(nx*ny, true);
     for(size_t i = 0; i < numbercores; i++) {
       for(size_t j = 0; j < numbercores ; j++) {
         size_t extra_x = i == numbercores - 1 ? bonus_x : 0;
@@ -48,6 +49,8 @@ public:
     size_t bonus_x = nx - nx_chunk * numbercores;
     size_t bonus_y = ny - ny_chunk * numbercores;
     finalized.resize(nx*ny, false);
+    just_finalized.resize(nx*ny, true);
+    
     for(size_t i = 0; i < numbercores; i++) {
       for(size_t j = 0; j < numbercores ; j++) {
         size_t extra_x = i == numbercores - 1 ? bonus_x : 0;
@@ -58,6 +61,14 @@ public:
         pixel_chunks.push_back(chunk);
       }
     }
+    std::fill(finalized.begin(), finalized.end(), false);
+    std::fill(just_finalized.begin(), just_finalized.end(), true);
+    std::fill(r.begin(), r.end(), 0);
+    std::fill(g.begin(), g.end(), 0);
+    std::fill(b.begin(), b.end(), 0);
+    std::fill(r2.begin(), r2.end(), 0);
+    std::fill(g2.begin(), g2.end(), 0);
+    std::fill(b2.begin(), b2.end(), 0);
   }
   ~adaptive_sampler() {}
   void test_for_convergence(size_t k, size_t s,
@@ -201,6 +212,8 @@ public:
   NumericMatrix &r, &g, &b, &r2, &g2, &b2;
   std::vector<pixel_block> pixel_chunks;
   std::vector<bool> finalized;
+  std::vector<bool> just_finalized;
+  
 };
 
 #endif

@@ -4,9 +4,6 @@
 #'@examples
 #'#internal
 post_process_scene = function(rgb_mat, iso, tonemap, debug_channel, filename, return_raw_array, bloom) {
-  #Prepare post-processing 
-  iso = iso/100
-  
   toneval = switch(tonemap, "gamma" = 1,"reinhold" = 2,"uncharted" = 3,"hbd" = 4, "raw" = 5)
   
   if(!is.numeric(debug_channel)) {
@@ -123,7 +120,7 @@ post_process_scene = function(rgb_mat, iso, tonemap, debug_channel, filename, re
     return(full_array)
   }
   
-  array_from_mat = array(full_array,dim=c(nrow(full_array),ncol(full_array),3)) * iso
+  array_from_mat = array(full_array,dim=c(nrow(full_array),ncol(full_array),3))
   if(any(is.na(array_from_mat ))) {
     array_from_mat[is.na(array_from_mat)] = 0
   }

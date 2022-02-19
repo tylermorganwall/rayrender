@@ -15,9 +15,9 @@ class PreviewDisplay {
 public: 
   PreviewDisplay(unsigned int _width, unsigned int _height, bool preview, bool _interactive);
   ~PreviewDisplay();
-  void DrawImage(Rcpp::NumericMatrix& r, Rcpp::NumericMatrix& g, Rcpp::NumericMatrix& b, size_t &ns,
-                 std::vector<bool>& finalized, RProgress::RProgress &pb, bool progress,
-                 RayCamera* cam, adaptive_sampler& adaptive_pixel_sampler, Float percent_done,
+  void DrawImage(adaptive_sampler& adaptive_pixel_sampler, size_t &ns,
+                 RProgress::RProgress &pb, bool progress,
+                 RayCamera* cam,Float percent_done,
                  hitable* world, random_gen& rng);
   Display *d;
   XImage *img;
@@ -39,10 +39,10 @@ class PreviewDisplay {
 public: 
   PreviewDisplay(unsigned int _width, unsigned int _height);
   ~PreviewDisplay();
-  void DrawImage(Rcpp::NumericMatrix& r, Rcpp::NumericMatrix& g, Rcpp::NumericMatrix& b, size_t &ns,
-                 std::vector<bool>& finalized, RProgress::RProgress &pb, bool progress,
-                 RayCamera* cam, adaptive_sampler& adaptive_pixel_sampler, Float percent_done,
-                 hitable* world) {};
+  void DrawImage(adaptive_sampler& adaptive_pixel_sampler, size_t &ns,
+                 RProgress::RProgress &pb, bool progress,
+                 RayCamera* cam,Float percent_done,
+                 hitable* world, random_gen& rng) {};
   bool terminate;
   bool interactive;
 };
