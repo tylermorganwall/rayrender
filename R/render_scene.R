@@ -275,7 +275,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
 W/A/S/D: Horizontal Movement: | Q/Z: Vertical Movement | E/C: Adjust Step Size 
 Up/Down: Adjust FOV | Left/Right: Adjust Aperture | 1/2: Adjust Focal Distance
 P: Print Camera Info | R: Reset Camera |  TAB: Toggle Orbit Mode  | ESC: Close
-                  Left Mouse Click: Change Look Direction")
+Left Mouse: Change Look At (new focal distance) |  Right Mouse: Change Look At ")
   }
   
   scene_list = prepare_scene_list(scene = scene, width = width, height = height, fov = fov, 

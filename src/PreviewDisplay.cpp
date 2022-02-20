@@ -29,15 +29,15 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
             g_col = 1;
             b_col = 0;
           } else {
-            r_col = interactive ? std::pow((r(i/4,height-1-j)),1.0/2.2) : std::pow((r(i/4,height-1-j))/4,1.0/2.2);
-            g_col = interactive ? std::pow((g(i/4,height-1-j)),1.0/2.2) : std::pow((g(i/4,height-1-j))/4,1.0/2.2);
-            b_col = interactive ? std::pow((b(i/4,height-1-j)),1.0/2.2) : std::pow((b(i/4,height-1-j))/4,1.0/2.2);
+            r_col = interactive ? std::sqrt((r(i/4,height-1-j))) : std::sqrt((r(i/4,height-1-j))/4);
+            g_col = interactive ? std::sqrt((g(i/4,height-1-j))) : std::sqrt((g(i/4,height-1-j))/4);
+            b_col = interactive ? std::sqrt((b(i/4,height-1-j))) : std::sqrt((b(i/4,height-1-j))/4);
           }
         } else {
           samples = ns+1;
-          r_col = std::pow((r(i/4,height-1-j))/samples,1.0/2.2);
-          g_col = std::pow((g(i/4,height-1-j))/samples,1.0/2.2);
-          b_col = std::pow((b(i/4,height-1-j))/samples,1.0/2.2);
+          r_col = std::sqrt((r(i/4,height-1-j))/samples);
+          g_col = std::sqrt((g(i/4,height-1-j))/samples);
+          b_col = std::sqrt((b(i/4,height-1-j))/samples);
         }
         
         data[i + 4*width*j]   = 255*clamp(b_col,0,1);
@@ -277,6 +277,11 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
           }
         }
       } else if (e.type == ButtonPress) {
+        bool left = e.xbutton.button == Button1;
+        bool right = e.xbutton.button == Button3;
+        if(!left && !right) {
+          return;
+        }
         Float x = e.xbutton.x;
         Float y = e.xbutton.y;
         Float fov = cam->get_fov();
@@ -286,9 +291,9 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
         hit_record hrec;
         if(fov < 0) {
           CameraSample samp({1-u,v},point2f(0.5,0.5), 0.5);
-          ray r;
-          cam->GenerateRay(samp,&r);
-          if(world->hit(r, 0.001, FLT_MAX, hrec, rng)) {
+          ray r2;
+          cam->GenerateRay(samp,&r2);
+          if(world->hit(r2, 0.001, FLT_MAX, hrec, rng)) {
             if( hrec.shape->GetName() != "EnvironmentLight") {
               dir = -hrec.p;
             }  else {
@@ -296,13 +301,16 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
             }
           }
         } else if (fov > 0) {
-          ray r = cam->get_ray(u,1-v, point3f(0.5),
+          ray r2 = cam->get_ray(u,1-v, point3f(0.5),
                                0.5f);
-          dir = r.direction();
+          if(left) {
+            world->hit(r2, 0.001, FLT_MAX, hrec, rng);
+          }
+          dir = r2.direction();
         } else {
-          ray r = cam->get_ray(u,1-v, point3f(0.5),
+          ray r2 = cam->get_ray(u,1-v, point3f(0.5),
                                0.5f);
-          if(world->hit(r, 0.001, FLT_MAX, hrec, rng)) {
+          if(world->hit(r2, 0.001, FLT_MAX, hrec, rng)) {
             if( hrec.shape->GetName() != "EnvironmentLight") {
               dir = -(cam->get_origin()-hrec.p);
             } else {
@@ -311,6 +319,11 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
           } else {
             dir = -cam->get_w();
           }
+        }
+        if(left && !right) {
+          Float current_fd = cam->get_focal_distance();
+          Float new_fd = (hrec.p-cam->get_origin()).length();
+          cam->update_focal_distance(new_fd- current_fd);
         }
         cam->update_look_direction(-dir);
         ns = 0;
@@ -349,7 +362,6 @@ PreviewDisplay::PreviewDisplay(unsigned int _width, unsigned int _height,
         data[i + 4*width*j+2] = 0;
       }
     }
-    
     img = XCreateImage(d,visual,
                        DefaultDepth(d, s),
                        ZPixmap,
