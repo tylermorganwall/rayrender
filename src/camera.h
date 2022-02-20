@@ -88,6 +88,7 @@ class camera : public RayCamera {
     Float aspect;
     Float fov;
     Float start_fov;
+    point3f start_lookat;
     
 };
 
@@ -124,6 +125,7 @@ public:
   Float time0, time1;
   Float cam_width, cam_height;
   Float start_cam_width, start_cam_height;
+  point3f start_lookat;
 };
 
 
@@ -155,6 +157,9 @@ class environment_camera : public RayCamera {
     Float time0, time1;
     onb uvw;
     vec3f vup;
+    point3f lookat;
+    point3f start_lookat;
+    
 };
 
 class RealisticCamera  : public RayCamera {

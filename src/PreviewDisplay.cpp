@@ -25,7 +25,7 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
         Float r_col,g_col,b_col;
         if(finalized[i/4 + width * (height-1-j)]) {
           samples = 1;
-          if(just_finalized[i/4 + width * (height-1-j)] ) {
+          if(just_finalized[i/4 + width * (height-1-j)] && !interactive ) {
             r_col = 0;
             g_col = 1;
             b_col = 0;

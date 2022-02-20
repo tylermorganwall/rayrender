@@ -17,6 +17,7 @@ camera::camera(point3f lookfrom, point3f _lookat, vec3f _vup, Float vfov,
   origin = lookfrom;
   start_origin = origin;
   lookat = _lookat;
+  start_lookat = lookat;
   vup = _vup;
   focus_dist = _focus_dist;
   start_focus_dist = focus_dist;
@@ -95,6 +96,7 @@ void camera::update_lookat(point3f point) {
 
 void camera::reset() {
   origin = start_origin;
+  lookat = start_lookat;
   focus_dist = start_focus_dist;
   Float theta = start_fov * M_PI/180;
   half_height = tan(theta/2);
@@ -121,6 +123,7 @@ ortho_camera::ortho_camera(point3f lookfrom, point3f _lookat, vec3f _vup,
   start_cam_width= cam_width;
   start_cam_height= cam_height;
   lookat = _lookat;
+  start_lookat = lookat;
   vup = _vup;
   w = unit_vector(lookfrom - lookat);
   u = unit_vector(cross(vup, w));
@@ -187,6 +190,7 @@ void ortho_camera::update_lookat(point3f point) {
 
 void ortho_camera::reset() {
   origin = start_origin;
+  lookat = start_lookat;
   cam_width = start_cam_width;
   cam_height = start_cam_height;
   w = unit_vector(origin - lookat);
@@ -204,6 +208,7 @@ environment_camera::environment_camera(point3f lookfrom, point3f lookat, vec3f _
   time1 = t1;
   origin = lookfrom;
   start_origin = lookfrom;
+  start_lookat = lookat;
   vup = _vup;
   w = unit_vector(lookfrom - lookat);
   v = unit_vector(-cross(vup, w));
@@ -253,6 +258,11 @@ vec3f environment_camera::get_v() {return(-u);}
 
 void environment_camera::reset() {
   origin = start_origin;
+  lookat = start_lookat;
+  w = unit_vector(origin - lookat);
+  v = unit_vector(-cross(vup, w));
+  u = cross(w, v);
+  uvw = onb(w,v,u);
 }
 
 RealisticCamera::RealisticCamera(const AnimatedTransform &CameraToWorld,
