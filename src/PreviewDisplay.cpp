@@ -164,13 +164,13 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
             Float fd = cam->get_focal_distance();
             
             if(fov >= 0) {
-              Rprintf("\nPosition: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f) FOV: %.1f Aperture: %0.1f Focal Dist: %.1f Step Multiplier: %.2f",
+              Rprintf("\nLookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f) FOV: %.1f Aperture: %0.3f Focal Dist: %.1f Step Multiplier: %.2f",
                       origin.x(), origin.y(), origin.z(), 
                       origin.x()+cam_direction.x()*fd, origin.y()+cam_direction.y()*fd, origin.z()+cam_direction.z()*fd, 
                       fov, 
                       cam->get_aperture(), fd, speed);
             }  else {
-              Rprintf("\nPosition: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f)  Focal Dist: %0.1f Step Multiplier: %.2f",
+              Rprintf("\nLookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f)  Focal Dist: %0.3f Step Multiplier: %.2f",
                       origin.x(), origin.y(), origin.z(), 
                       origin.x()+cam_direction.x()*fd, origin.y()+cam_direction.y()*fd, origin.z()+cam_direction.z()*fd, 
                       fd, speed);
@@ -253,13 +253,13 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
               Float fd = cam->get_focal_distance();
               
               if(fov >= 0) {
-                Rprintf("\nPosition: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f) FOV: %.1f Aperture: %0.1f Focal Dist: %.1f Step Multiplier: %.2f",
+                Rprintf("\nLookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f) FOV: %.1f Aperture: %0.3f Focal Dist: %.1f Step Multiplier: %.2f",
                         origin.x(), origin.y(), origin.z(), 
                         origin.x()+cam_direction.x()*fd, origin.y()+cam_direction.y()*fd, origin.z()+cam_direction.z()*fd, 
                         fov, 
                         cam->get_aperture(), fd, speed);
               }  else {
-                Rprintf("\nPosition: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f)  Focal Dist: %0.1f Step Multiplier: %.2f",
+                Rprintf("\nLookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f)  Focal Dist: %0.3f Step Multiplier: %.2f",
                         origin.x(), origin.y(), origin.z(), 
                         origin.x()+cam_direction.x()*fd, origin.y()+cam_direction.y()*fd, origin.z()+cam_direction.z()*fd, 
                         fd, speed);
