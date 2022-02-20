@@ -110,7 +110,7 @@ void render_animation_rcpp(List camera_info, List scene_info, List camera_moveme
   bool preview = as<bool>(camera_info["preview"]);
   Float iso = as<Float>(camera_info["iso"]);
   
-  PreviewDisplay d(nx,ny, preview, false);
+  PreviewDisplay d(nx,ny, preview, false, 20.0f);
 
   //unpack motion info
   NumericVector cam_x        = as<NumericVector>(camera_movement["x"]);

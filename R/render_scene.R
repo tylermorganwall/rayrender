@@ -14,11 +14,13 @@
 #' The total number of samples in this case will be the product of the two numbers.
 #' @param preview Default `TRUE`. Whether to display a real-time progressive preview of the render. Press ESC to cancel the render.
 #' @param interactive Default `TRUE`. Whether the scene preview should be interactive. Camera movement orbits around the 
-#' lookat point, with the following control mapping:
+#' lookat point (unless the mode is switched to free flying), with the following control mapping:
 #' W = Forward, S = Backward, A = Left, D = Right, Q = Up, Z = Down, 
-#' E = 2x Step Distance (max 128), C = 0.5x Step Distance, Up Key = Increase FOV, Down Key = Decrease FOV,
+#' E = 2x Step Distance (max 128), C = 0.5x Step Distance, Up Key = Zoom In (decrease FOV), Down Key = Zoom Out (increase FOV),
 #' Left Key = Decrease Aperture, Right Key = Increase Aperture, 1 = Decrease Focal Distance, 2 = Increase Focal Distance,
 #' R = Reset Camera, TAB: Toggle Orbit Mode, Left Mouse Click: Change Look Direction
+#' 
+#' Initial step size is 1/20th of the distance from `lookat` to `lookfrom`.
 #' 
 #' Note: Some options aren't available all cameras. When in orbit mode, changes in the look
 #' direction from clicking will be reset when the camera moves. 

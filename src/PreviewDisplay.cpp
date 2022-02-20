@@ -5,6 +5,7 @@
 #include "Rcpp.h"
 #include <X11/Xutil.h>
 #include "X11/keysym.h"
+#include "X11/Xatom.h"
 
 
 void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
@@ -93,7 +94,8 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
     
     XPutImage(d,w,DefaultGC(d,s),
               img,0,0,0,0,width,height);
-    if(XCheckWindowEvent(d, w, KeyPressMask | ButtonPress, &e)) {
+    while (XPending(d)) {
+      XNextEvent(d, &e);
       if (e.type == KeyPress) {
         if (e.xkey.keycode == esc ) {
           terminate = true;
@@ -111,22 +113,22 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
         bool blanked = false;
         if(interactive) {
           if (e.xkey.keycode == W_key ) {
-            cam->update_position(-speed * w, orbit);
+            cam->update_position(-speed * w * base_step, orbit);
           }
           if (e.xkey.keycode == A_key ) {
-            cam->update_position(-speed * u, orbit);
+            cam->update_position(-speed * u * base_step, orbit);
           }
           if (e.xkey.keycode == S_key ) {
-            cam->update_position(speed * w, orbit);
+            cam->update_position(speed * w * base_step, orbit);
           }
           if (e.xkey.keycode == D_key ) {
-            cam->update_position(speed * u, orbit);
+            cam->update_position(speed * u * base_step, orbit);
           }
           if (e.xkey.keycode == Q_key ) {
-            cam->update_position(speed * v, orbit);
+            cam->update_position(speed * v * base_step, orbit);
           }
           if (e.xkey.keycode == Z_key ) {
-            cam->update_position(-speed * v, orbit);
+            cam->update_position(-speed * v * base_step, orbit);
           }
           if (e.xkey.keycode == E_key ) {
             speed = 2 * speed;
@@ -135,10 +137,10 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
           if (e.xkey.keycode == C_key ) {
             speed = 0.5 * speed;
           }
-          if (e.xkey.keycode == Up_key ) {
+          if (e.xkey.keycode == Down_key ) {
             cam->update_fov(speed*1.f);
           }
-          if (e.xkey.keycode == Down_key ) {
+          if (e.xkey.keycode == Up_key ) {
             cam->update_fov(speed*-1.f);
           }
           if (e.xkey.keycode == Left_key ) {
@@ -200,22 +202,22 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
             v = cam->get_v();
             
             if (e.xkey.keycode == W_key ) {
-              cam->update_position(-speed * w, orbit);
+              cam->update_position(-speed * w * base_step, orbit);
             }
             if (e.xkey.keycode == A_key ) {
-              cam->update_position(-speed * u, orbit);
+              cam->update_position(-speed * u * base_step, orbit);
             }
             if (e.xkey.keycode == S_key ) {
-              cam->update_position(speed * w, orbit);
+              cam->update_position(speed * w * base_step, orbit);
             }
             if (e.xkey.keycode == D_key ) {
-              cam->update_position(speed * u, orbit);
+              cam->update_position(speed * u * base_step, orbit);
             }
             if (e.xkey.keycode == Q_key ) {
-              cam->update_position(speed * v, orbit);
+              cam->update_position(speed * v * base_step, orbit);
             }
             if (e.xkey.keycode == Z_key ) {
-              cam->update_position(-speed * v, orbit);
+              cam->update_position(-speed * v * base_step, orbit);
             }
             if (e.xkey.keycode == E_key ) {
               speed = 2 * speed;
@@ -224,10 +226,10 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
               speed = 0.5 * speed;
               speed = std::fmin(speed,128);
             }
-            if (e.xkey.keycode == Up_key ) {
+            if (e.xkey.keycode == Down_key ) {
               cam->update_fov(speed*1.f);
             }
-            if (e.xkey.keycode == Down_key ) {
+            if (e.xkey.keycode == Up_key ) {
               cam->update_fov(speed*-1.f);
             }
             if (e.xkey.keycode == Left_key ) {
@@ -324,6 +326,7 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
           Float current_fd = cam->get_focal_distance();
           Float new_fd = (hrec.p-cam->get_origin()).length();
           cam->update_focal_distance(new_fd- current_fd);
+          cam->update_lookat(hrec.p);
         }
         cam->update_look_direction(-dir);
         ns = 0;
@@ -331,17 +334,21 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
         if(progress && !interactive) {
           pb.update(0);
         }
-      }
+      } else if (e.type == ClientMessage) {
+        terminate = true;
+      } 
     }
   }
 }
 
 PreviewDisplay::PreviewDisplay(unsigned int _width, unsigned int _height, 
-                               bool preview, bool _interactive) {
+                               bool preview, bool _interactive,
+                               Float initial_lookat_distance) {
   speed = 1.f;
   interactive = _interactive;
   orbit = true;
   terminate = false;
+  base_step = initial_lookat_distance/20;
   if(preview) {
     d = XOpenDisplay(NULL);
   } else {
@@ -371,6 +378,8 @@ PreviewDisplay::PreviewDisplay(unsigned int _width, unsigned int _height,
                             BlackPixel(d, s),  BlackPixel(d, s));
     XSelectInput(d, w, ExposureMask | KeyPressMask | ButtonPress);
     XMapWindow(d, w);
+    Atom WM_DELETE_WINDOW = XInternAtom(d, "WM_DELETE_WINDOW", False); 
+    XSetWMProtocols(d, w, &WM_DELETE_WINDOW, 1);
     XFlush(d);
   }
 }

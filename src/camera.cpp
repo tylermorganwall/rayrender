@@ -87,6 +87,10 @@ void camera::update_look_direction(vec3f dir) {
   } 
 }
 
+void camera::update_lookat(point3f point) {
+  lookat = point;
+}
+
 
 
 void camera::reset() {
@@ -175,6 +179,10 @@ void ortho_camera::update_look_direction(vec3f dir) {
   } 
 }
 
+void ortho_camera::update_lookat(point3f point) {
+  lookat = point;
+}
+
 
 
 void ortho_camera::reset() {
@@ -202,6 +210,7 @@ environment_camera::environment_camera(point3f lookfrom, point3f lookat, vec3f _
   u = cross(w, v);
   uvw = onb(w,v,u);
 }
+
 
 ray environment_camera::get_ray(Float s, Float t, point3f u3, Float u1) {
   Float time = time0 + u1 * (time1 - time0);
@@ -232,6 +241,10 @@ void environment_camera::update_look_direction(vec3f dir) {
   v = unit_vector(-cross(vup, w));
   u = cross(w, v);
   uvw = onb(w,v,u);
+}
+
+void environment_camera::update_lookat(point3f point) {
+  
 }
 
 vec3f environment_camera::get_w() {return(w);}
@@ -761,6 +774,10 @@ void RealisticCamera::update_focal_distance(Float delta_focus) {
 //This actually takes the position of the intersection
 void RealisticCamera::update_look_direction(vec3f dir) {
   CamTransform = Transform(LookAt(get_origin(), dir, camera_up).GetInverseMatrix());
+}
+
+void RealisticCamera::update_lookat(point3f point) {
+  CamTransform = Transform(LookAt(get_origin(), point, camera_up).GetInverseMatrix());
 }
 
 void RealisticCamera::reset() {

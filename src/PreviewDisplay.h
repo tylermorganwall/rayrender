@@ -13,7 +13,8 @@
 
 class PreviewDisplay {
 public: 
-  PreviewDisplay(unsigned int _width, unsigned int _height, bool preview, bool _interactive);
+  PreviewDisplay(unsigned int _width, unsigned int _height, bool preview, bool _interactive,
+                 Float initial_lookat_distance);
   ~PreviewDisplay();
   void DrawImage(adaptive_sampler& adaptive_pixel_sampler, size_t &ns,
                  RProgress::RProgress &pb, bool progress,
@@ -31,13 +32,15 @@ public:
   Float speed;
   bool interactive;
   bool orbit;
+  Float base_step;
 };
 
 #else
 
 class PreviewDisplay {
 public: 
-  PreviewDisplay(unsigned int _width, unsigned int _height);
+  PreviewDisplay(unsigned int _width, unsigned int _height, bool preview, bool _interactive,
+                 Float initial_lookat_distance);
   ~PreviewDisplay();
   void DrawImage(adaptive_sampler& adaptive_pixel_sampler, size_t &ns,
                  RProgress::RProgress &pb, bool progress,

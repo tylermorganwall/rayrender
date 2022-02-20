@@ -130,8 +130,6 @@ List render_scene_rcpp(List camera_info, List scene_info) {
   
   int bvh_type = as<int>(camera_info["bvh"]);
 
-  PreviewDisplay Display(nx,ny, preview, interactive);
-                     
   
   //Initialize transformation cache
   TransformCache transformCache;
@@ -155,6 +153,9 @@ List render_scene_rcpp(List camera_info, List scene_info) {
 
   CharacterVector roughness_files = as<CharacterVector>(roughness_list["rough_temp_file_names"]);
   LogicalVector has_roughness = as<LogicalVector>(roughness_list["rough_tex_bool"]);
+  
+  PreviewDisplay Display(nx,ny, preview, interactive, (lookat-lookfrom).length());
+  
 
   RcppThread::ThreadPool pool(numbercores);
   GetRNGstate();

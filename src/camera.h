@@ -30,6 +30,8 @@ class RayCamera {
     virtual void update_aperture(Float delta_aperture)  = 0;
     virtual void update_focal_distance(Float delta_focus)  = 0;
     virtual void update_look_direction(vec3f dir) = 0;
+    virtual void update_lookat(point3f point) = 0;
+    
     virtual void reset()  = 0;
     virtual Float GenerateRay(const CameraSample &sample, ray* ray2) const {
       return(0.0);
@@ -57,6 +59,7 @@ class camera : public RayCamera {
     void update_aperture(Float delta_aperture);
     void update_focal_distance(Float delta_focus);
     void update_look_direction(vec3f dir);
+    void update_lookat(point3f point);
     
     void reset();
     vec3f get_w() {return(w);}
@@ -99,6 +102,7 @@ public:
   void update_aperture(Float delta_aperture);
   void update_focal_distance(Float delta_focus);
   void update_look_direction(vec3f dir);
+  void update_lookat(point3f point);
   
   void reset();
   vec3f get_w() {return(w);}
@@ -133,6 +137,7 @@ class environment_camera : public RayCamera {
     void update_aperture(Float delta_aperture);
     void update_focal_distance(Float delta_focus);
     void update_look_direction(vec3f dir);
+    void update_lookat(point3f point);
     
     void reset();
     vec3f get_w();
@@ -168,6 +173,7 @@ public:
   void update_aperture(Float delta_aperture);
   void update_focal_distance(Float delta_focus);
   void update_look_direction(vec3f dir);
+  void update_lookat(point3f point);
   
   void reset();
   vec3f get_w();
