@@ -40,10 +40,11 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
           g_col = std::sqrt((g(i/4,height-1-j))/samples);
           b_col = std::sqrt((b(i/4,height-1-j))/samples);
         }
-        
-        data[i + 4*width*j]   = 255*clamp(b_col,0,1);
-        data[i + 4*width*j+1] = 255*clamp(g_col,0,1);
-        data[i + 4*width*j+2] = 255*clamp(r_col,0,1);
+
+        data[i + 4*width*j]   = (unsigned char)(255*clamp(b_col,0,1));
+        data[i + 4*width*j+1] = (unsigned char)(255*clamp(g_col,0,1));
+        data[i + 4*width*j+2] = (unsigned char)(255*clamp(r_col,0,1));
+
         if(finalized[i/4 + width * (height-1-j)]) {
           just_finalized[i/4 + width * (height-1-j)] = false;
         }
@@ -52,9 +53,9 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
     if(progress) {
       for(unsigned int i = 0; i < 4*width*percent_done; i += 4 ) {
         for(unsigned int j = 0; j < 3; j++) {
-          data[i + 4*width*j]   = 0;
-          data[i + 4*width*j+1] = 0;
-          data[i + 4*width*j+2] = (char)255;
+          data[i + 4*width*j]   = (unsigned char)0;
+          data[i + 4*width*j+1] = (unsigned char)0;
+          data[i + 4*width*j+2] = (unsigned char)255;
         }
       }
     }
@@ -356,7 +357,14 @@ PreviewDisplay::PreviewDisplay(unsigned int _width, unsigned int _height,
   }
   if (d) {
     s = DefaultScreen(d);
-    Visual *visual = DefaultVisual(d,s);
+    XVisualInfo vinfo;
+    if (!XMatchVisualInfo(d, s, 24, TrueColor, &vinfo)) {
+      Rprintf("No X11 `visual` object found matching display requirements (24 bit depth and True Color)");
+      d = nullptr;
+      XCloseDisplay(d);
+      return;
+    }
+    Visual *visual = vinfo.visual;
     
     width = _width;
     height = _height;

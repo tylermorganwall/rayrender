@@ -190,8 +190,6 @@ public:
   point3f get_origin();
   Float get_iso() {return(iso);}
   
-  Transform CamTransform;
-  
 private:
   // RealisticCamera Private Declarations
   struct LensElementInterface {
@@ -248,6 +246,7 @@ private:
   bool init;
   Float iso;
   vec3f camera_up;
+  Transform CamTransform;
   point3f origin;
   Float focusDistance;
   Float start_focusDistance;
