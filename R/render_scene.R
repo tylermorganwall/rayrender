@@ -271,7 +271,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
       message(corn_message)
     }
   }
-  if(interactive) {
+  if(interactive && has_gui_capability()) {
     message(
 "--------------------------Interactive Mode Controls---------------------------
 W/A/S/D: Horizontal Movement: | Q/Z: Vertical Movement | E/C: Adjust Step Size 

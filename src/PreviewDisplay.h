@@ -41,12 +41,13 @@ public:
 class PreviewDisplay {
 public: 
   PreviewDisplay(unsigned int _width, unsigned int _height, bool preview, bool _interactive,
-                 Float initial_lookat_distance) {};
+                 Float initial_lookat_distance) preview(false), interactive(false) {};
   void DrawImage(adaptive_sampler& adaptive_pixel_sampler, size_t &ns,
                  RProgress::RProgress &pb, bool progress,
                  RayCamera* cam,Float percent_done,
                  hitable* world, random_gen& rng) {};
   bool terminate;
+  bool preview;
   bool interactive;
 };
 
