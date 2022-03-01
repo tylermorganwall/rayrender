@@ -154,13 +154,12 @@ List render_scene_rcpp(List camera_info, List scene_info) {
   CharacterVector roughness_files = as<CharacterVector>(roughness_list["rough_temp_file_names"]);
   LogicalVector has_roughness = as<LogicalVector>(roughness_list["rough_tex_bool"]);
   
-  PreviewDisplay Display(nx,ny, preview, interactive, (lookat-lookfrom).length());
-  
+  std::unique_ptr<RayCamera> cam;
+
 
   RcppThread::ThreadPool pool(numbercores);
   GetRNGstate();
   random_gen rng(unif_rand() * std::pow(2,32));
-  std::unique_ptr<RayCamera> cam;
   if(fov < 0) {
     Transform CamTransform = LookAt(lookfrom,
                                     lookat,
@@ -196,6 +195,8 @@ List render_scene_rcpp(List camera_info, List scene_info) {
                                      aperture, dist_to_focus,
                                      shutteropen, shutterclose));
   }
+  PreviewDisplay Display(nx,ny, preview, interactive, (lookat-lookfrom).length(), cam.get());
+  
 
   int nx1, ny1, nn1;
   auto start = std::chrono::high_resolution_clock::now();

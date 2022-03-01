@@ -139,8 +139,9 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
     if(s % 2 == 1 && s > 1) {
       adaptive_pixel_sampler.split_remove_chunks(s);
     }
+
     adaptive_pixel_sampler.max_s++;
-    display.DrawImage(adaptive_pixel_sampler, s, pb, progress_bar, cam,
+    display.DrawImage(adaptive_pixel_sampler, s, pb, progress_bar,
                       (Float)s/(Float)ns, &world, rng_interactive);
     if(display.terminate) {
       adaptive_pixel_sampler.ns = s;

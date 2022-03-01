@@ -110,7 +110,9 @@ void render_animation_rcpp(List camera_info, List scene_info, List camera_moveme
   bool preview = as<bool>(camera_info["preview"]);
   Float iso = as<Float>(camera_info["iso"]);
   
-  PreviewDisplay d(nx,ny, preview, false, 20.0f);
+  
+  std::unique_ptr<RayCamera> cam;
+  PreviewDisplay d(nx,ny, preview, false, 20.0f, cam.get());
 
   //unpack motion info
   NumericVector cam_x        = as<NumericVector>(camera_movement["x"]);
@@ -384,7 +386,6 @@ void render_animation_rcpp(List camera_info, List scene_info, List camera_moveme
       vec3f camera_up = vec3f(cam_upx(i),cam_upy(i),cam_upz(i));
 
 
-      std::unique_ptr<RayCamera> cam;
       if(fov < 0) {
         Transform CamTransform = LookAt(lookfrom,
                                         lookat,

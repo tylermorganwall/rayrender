@@ -1,17 +1,54 @@
-#ifdef RAY_HAS_X11
 #include "PreviewDisplay.h"
-#include <string.h>
 #include "mathinline.h"
 #include "Rcpp.h"
+
+#ifdef RAY_HAS_X11
+
+#include <string.h>
 #include <X11/Xutil.h>
 #include "X11/keysym.h"
 #include "X11/Xatom.h"
 
+#endif
+
+#ifdef RAY_WINDOWS
+
+#include <windows.h>
+#include <winuser.h>
+#include "float.h"
+#include <wingdi.h>
+#include <windowsx.h>
+#include "RProgress.h"
+
+static unsigned int width;
+static unsigned int height;
+static bool term;
+
+static std::vector<Float> rgb;
+static RayCamera* cam_w;
+static Float speed;
+static bool preview;
+static bool orbit;
+static Float base_step;
+static bool blanked;
+static bool interactive_w;
+static adaptive_sampler* aps;
+static size_t* ns_w;
+static hitable* world_w;
+static random_gen* rng_w;
+static RProgress::RProgress* pb_w;
+static bool progress_w;
+
+LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+
+#endif
+
 
 void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
                                size_t &ns, RProgress::RProgress &pb, bool progress,
-                               RayCamera* cam,  Float percent_done,
+                               Float percent_done,
                                hitable *world, random_gen& rng) {
+#ifdef RAY_HAS_X11
   if (d) {
     Rcpp::NumericMatrix &r  = adaptive_pixel_sampler.r;
     Rcpp::NumericMatrix &g  = adaptive_pixel_sampler.g;
@@ -340,16 +377,83 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
       } 
     }
   }
+#endif
+#ifdef RAY_WINDOWS
+  aps = &adaptive_pixel_sampler;
+  ns_w = &ns;
+  pb_w = &pb;
+  progress_w = progress;
+  interactive_w = interactive;
+  Rcpp::NumericMatrix &r  = adaptive_pixel_sampler.r;
+  Rcpp::NumericMatrix &g  = adaptive_pixel_sampler.g;
+  Rcpp::NumericMatrix &b  = adaptive_pixel_sampler.b;
+  std::vector<bool>& finalized = adaptive_pixel_sampler.finalized;
+  std::vector<bool>& just_finalized = adaptive_pixel_sampler.just_finalized;
+  world_w = world;
+  rng_w = &rng;
+  height = (unsigned int)r.cols();
+  width = (unsigned int)r.rows();
+  rgb.resize(width*height*3);
+  for(unsigned int i = 0; i < width*3; i += 3) {
+    for(unsigned int j = 0; j < height; j++) {
+      Float samples;
+      Float r_col,g_col,b_col;
+      if(finalized[i/3 + width * (height-1-j)]) {
+        if(just_finalized[i/3 + width * (height-1-j)] && !interactive ) {
+          r_col = 0.f;
+          g_col = 1.f;
+          b_col = 0.f;
+        } else {
+          r_col = interactive ? std::sqrt((r(i/3,height-1-j))) : std::sqrt((r(i/3,height-1-j))/4.f);
+          g_col = interactive ? std::sqrt((g(i/3,height-1-j))) : std::sqrt((g(i/3,height-1-j))/4.f);
+          b_col = interactive ? std::sqrt((b(i/3,height-1-j))) : std::sqrt((b(i/3,height-1-j))/4.f);
+        }
+      } else {
+        samples = (Float)ns+1.f;
+        r_col = std::sqrt((r(i/3,height-1-j))/samples);
+        g_col = std::sqrt((g(i/3,height-1-j))/samples);
+        b_col = std::sqrt((b(i/3,height-1-j))/samples);
+      }
+      rgb[i+3*width*j]   = clamp(r_col,0.f,1.f);
+      rgb[i+3*width*j+1] = clamp(g_col,0.f,1.f);
+      rgb[i+3*width*j+2] = clamp(b_col,0.f,1.f);
+      
+      if(finalized[i/3 + width * (height-1-j)]) {
+        just_finalized[i/3 + width * (height-1-j)] = false;
+      }
+    }
+  }
+  blanked = false;
+  
+  if(progress) {
+    for(unsigned int i = 0; i < 3*width*percent_done; i += 3 ) {
+      for(unsigned int j = 0; j < 3; j++) {
+        rgb[i + 3*width*j]   = 1.f;
+        rgb[i + 3*width*j+1] = 0.f;
+        rgb[i + 3*width*j+2] = 0.f;
+      }
+    }
+  }
+  
+  InvalidateRect(hwnd, NULL, 0);
+  while (PeekMessage (&msg, NULL, 0, 0, PM_REMOVE) > 0) {
+    TranslateMessage(&msg);
+    DispatchMessage(&msg); 
+  }
+  terminate = term;
+#endif
 }
 
 PreviewDisplay::PreviewDisplay(unsigned int _width, unsigned int _height, 
                                bool preview, bool _interactive,
-                               Float initial_lookat_distance) {
+                               Float initial_lookat_distance, RayCamera* _cam) {
+#ifdef RAY_HAS_X11
   speed = 1.f;
   interactive = _interactive;
   orbit = true;
   terminate = false;
   base_step = initial_lookat_distance/20;
+  cam = _cam;
   if(preview) {
     d = XOpenDisplay(NULL);
   } else {
@@ -390,14 +494,402 @@ PreviewDisplay::PreviewDisplay(unsigned int _width, unsigned int _height,
     XSetWMProtocols(d, w, &WM_DELETE_WINDOW, 1);
     XFlush(d);
   }
+#endif
+#ifdef RAY_WINDOWS
+  speed = 1.f;
+  interactive = _interactive;
+  orbit = true;
+  terminate = false;
+  term = false;
+  width = _width;
+  height = _height;
+  base_step = initial_lookat_distance/20;
+  rgb.resize(width*height*3);
+  cam_w = _cam;
+  hInstance = (HINSTANCE)GetModuleHandle(NULL);
+  // Register the window class.
+  const wchar_t CLASS_NAME[]  = L"Rayrender";
+
+  wc = { };
+
+  wc.lpfnWndProc   = WindowProc;
+  wc.hInstance     = hInstance;
+  wc.lpszClassName = CLASS_NAME;
+
+  RegisterClass(&wc);
+
+  // Create the window.
+  RECT rect = {0, 0, (long int)width, (long int)height};
+  AdjustWindowRect(&rect, WS_THICKFRAME | WS_VISIBLE | WS_SYSMENU, true);
+  
+  hwnd = CreateWindowEx(
+    0,                              // Optional window styles.
+    CLASS_NAME,                     // Window class
+    L"Rayrender",    // Window text
+    WS_THICKFRAME | WS_VISIBLE | WS_SYSMENU ,            // Window style
+
+    // Size and position
+    0, 0, rect.right - rect.left, rect.bottom - rect.top, 
+
+    NULL,       // Parent window
+    NULL,       // Menu
+    hInstance,  // Instance handle
+    NULL        // Additional application data
+  );
+
+
+  if (hwnd == NULL) {
+    throw std::runtime_error("Can't open window");
+  }
+  ShowWindow(hwnd, SW_SHOW);
+  // SetForegroundWindow(hwnd)
+  // BringWindowToTop(hwnd);
+#endif
 }
 
 PreviewDisplay::~PreviewDisplay() {
+#ifdef RAY_HAS_X11
   if (d) {
     XDestroyWindow(d, w);
     XCloseDisplay(d);
-    // XDestroyImage(img);
   }
+#endif
+#ifdef RAY_WINDOWS
+  if (hwnd != NULL) {
+    DestroyWindow(hwnd);
+  }
+  rgb.resize(0);
+#endif
 }
 
+#ifdef RAY_WINDOWS
+
+#define VK_KEY_0 48
+#define VK_KEY_1 49
+#define VK_KEY_2 50
+#define VK_KEY_3 51
+#define VK_KEY_4 52
+#define VK_KEY_5 53
+#define VK_KEY_6 54
+#define VK_KEY_7 55
+#define VK_KEY_8 56
+#define VK_KEY_9 57
+//These are lower case
+#define VK_KEY_A 65
+#define VK_KEY_B 66
+#define VK_KEY_C 67
+#define VK_KEY_D 68
+#define VK_KEY_E 69
+#define VK_KEY_F 70
+#define VK_KEY_G 71
+#define VK_KEY_H 72
+#define VK_KEY_I 73
+#define VK_KEY_J 74
+#define VK_KEY_K 75
+#define VK_KEY_L 76
+#define VK_KEY_M 77
+#define VK_KEY_N 78
+#define VK_KEY_O 79
+#define VK_KEY_P 80
+#define VK_KEY_Q 81
+#define VK_KEY_R 82
+#define VK_KEY_S 83
+#define VK_KEY_T 84
+#define VK_KEY_U 85
+#define VK_KEY_V 86
+#define VK_KEY_W 87
+#define VK_KEY_X 88
+#define VK_KEY_Y 89
+#define VK_KEY_Z 90
+
+LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+  switch (uMsg) {
+    case WM_DESTROY: {
+      PostQuitMessage(0);
+      term = true;
+      DestroyWindow(hwnd);
+      return 0;
+    }
+    case WM_KEYDOWN: {
+      vec3f w = cam_w->get_w();
+      vec3f u = cam_w->get_u();
+      vec3f v = cam_w->get_v();
+
+      switch (wParam) {
+        case VK_ESCAPE: {
+          PostQuitMessage(0);
+          term = true;
+          DestroyWindow(hwnd);
+          return 0;
+        }
+        case VK_TAB: {
+          orbit = !orbit;
+          break;
+        }
+        case VK_KEY_W: {
+          if(interactive_w) {
+            cam_w->update_position(-speed * w * base_step, orbit);
+          }
+          break;
+        }
+
+        case VK_KEY_A: {
+          if(interactive_w) {
+          cam_w->update_position(-speed * u * base_step, orbit);
+        }
+          break;
+        }
+        case VK_KEY_S: {
+          if(interactive_w) {
+          cam_w->update_position(speed * w * base_step, orbit);
+        }
+          break;
+        }
+        case VK_KEY_D: {
+          if(interactive_w) {
+          cam_w->update_position(speed * u * base_step, orbit);
+        }
+          break;
+        }
+        case VK_KEY_Q: { 
+          if(interactive_w) {
+            cam_w->update_position(speed * v * base_step, orbit);
+        }
+          break;
+          }
+        case VK_KEY_Z: { 
+          if(interactive_w) {
+            cam_w->update_position(-speed * v * base_step, orbit);
+        }
+          break;
+          }
+        case VK_KEY_E: { 
+          if(interactive_w) {
+            speed = 2 * speed;
+            speed = std::fmin(speed,128);
+            break;
+        }
+          }
+        case VK_KEY_C: { 
+          if(interactive_w) {
+            speed = 0.5 * speed;
+        }
+          break;
+          }
+        case VK_DOWN: {
+          if(interactive_w) {
+            cam_w->update_fov(speed*1.f);
+        }
+          break;
+          }
+        case VK_UP: {
+          if(interactive_w) {
+            cam_w->update_fov(speed*-1.f);
+        }
+          break;
+          }
+        case VK_LEFT: {
+          if(interactive_w) {
+            cam_w->update_aperture(speed*-0.1f);
+        }
+          break;
+          }
+        case VK_RIGHT: {
+          if(interactive_w) {
+            cam_w->update_aperture(speed*0.1f);
+        }
+          break;
+          }
+        case VK_KEY_1: {
+          if(interactive_w) {
+            cam_w->update_focal_distance(speed*-1.f);
+        }
+          break;
+          }
+        case VK_KEY_2: {
+          if(interactive_w) {
+            cam_w->update_focal_distance(speed*1.f);
+        }
+          break;
+          }
+        case VK_KEY_R: {
+          if(interactive_w) {
+            cam_w->reset();
+            speed = 1;
+        }
+          break;
+          }
+        case VK_KEY_P: {
+            point3f origin = cam_w->get_origin();
+            Float fov =  cam_w->get_fov();
+            point3f cam_direction = -cam_w->get_w();
+            Float fd = cam_w->get_focal_distance();
+  
+            if(fov >= 0) {
+              Rprintf("\nLookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f) FOV: %.1f Aperture: %0.3f Focal Dist: %.1f Step Multiplier: %.2f",
+                      origin.x(), origin.y(), origin.z(),
+                      origin.x()+cam_direction.x()*fd, origin.y()+cam_direction.y()*fd, origin.z()+cam_direction.z()*fd,
+                      fov,
+                      cam_w->get_aperture(), fd, speed);
+            }  else {
+              Rprintf("\nLookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f)  Focal Dist: %0.3f Step Multiplier: %.2f",
+                      origin.x(), origin.y(), origin.z(),
+                      origin.x()+cam_direction.x()*fd, origin.y()+cam_direction.y()*fd, origin.z()+cam_direction.z()*fd,
+                      fd, speed);
+            }
+            break;
+          } 
+          default: 
+            break;
+      }
+      if(interactive_w) {
+        if(wParam != VK_KEY_P) {
+          if(!blanked && !term) {
+            blanked = true;
+            *ns_w = 0;
+            aps->reset();
+            if(progress_w && !interactive_w) {
+              pb_w->update(0);
+            }
+          }
+        }
+      }
+      break;
+    }
+  case WM_LBUTTONDOWN: {
+    if(interactive_w) {
+        Float x = GET_X_LPARAM(lParam);
+        Float y = GET_Y_LPARAM(lParam);
+        Float fov = cam_w->get_fov();
+        Float u = (Float(x)) / Float(width);
+        Float v = (Float(y)) / Float(height);
+        vec3f dir;
+        hit_record hrec;
+        if(fov < 0) {
+          CameraSample samp({1-u,v},point2f(0.5,0.5), 0.5);
+          ray r2;
+          cam_w->GenerateRay(samp,&r2);
+          if(world_w->hit(r2, 0.001, FLT_MAX, hrec, *rng_w)) {
+            if( hrec.shape->GetName() != "EnvironmentLight") {
+              dir = -hrec.p;
+            }  else {
+              break ;
+            }
+          }
+        } else if (fov > 0) {
+          ray r2 = cam_w->get_ray(u,1-v, point3f(0.5),
+                                0.5f);
+          world_w->hit(r2, 0.001, FLT_MAX, hrec, *rng_w);
+          dir = r2.direction();
+        } else {
+          ray r2 = cam_w->get_ray(u,1-v, point3f(0.5),
+                                0.5f);
+          if(world_w->hit(r2, 0.001, FLT_MAX, hrec, *rng_w)) {
+            if( hrec.shape->GetName() != "EnvironmentLight") {
+              dir = -(cam_w->get_origin()-hrec.p);
+            } else {
+              dir = -cam_w->get_w();
+            }
+          } else {
+            dir = -cam_w->get_w();
+          }
+        }
+        Float current_fd = cam_w->get_focal_distance();
+        Float new_fd = (hrec.p-cam_w->get_origin()).length();
+        cam_w->update_focal_distance(new_fd- current_fd);
+        cam_w->update_lookat(hrec.p);
+        // cam_w->update_look_direction(-dir);
+        *ns_w = 0;
+        aps->reset();
+        if(progress_w && !interactive_w) {
+          pb_w->update(0);
+        }
+      }
+  }
+  case WM_RBUTTONDOWN: {
+    if(interactive_w) {
+    Float x = GET_X_LPARAM(lParam);
+    Float y = GET_Y_LPARAM(lParam);
+    Float fov = cam_w->get_fov();
+    Float u = (Float(x)) / Float(width);
+    Float v = (Float(y)) / Float(height);
+    vec3f dir;
+    hit_record hrec;
+    if(fov < 0) {
+      CameraSample samp({1-u,v},point2f(0.5,0.5), 0.5);
+      ray r2;
+      cam_w->GenerateRay(samp,&r2);
+      if(world_w->hit(r2, 0.001, FLT_MAX, hrec, *rng_w)) {
+        if( hrec.shape->GetName() != "EnvironmentLight") {
+          dir = -hrec.p;
+        }  else {
+          break ;
+        }
+      }
+    } else if (fov > 0) {
+      ray r2 = cam_w->get_ray(u,1-v, point3f(0.5),
+                              0.5f);
+      dir = r2.direction();
+    } else {
+      ray r2 = cam_w->get_ray(u,1-v, point3f(0.5),
+                            0.5f);
+      if(world_w->hit(r2, 0.001, FLT_MAX, hrec, *rng_w)) {
+        if( hrec.shape->GetName() != "EnvironmentLight") {
+          dir = -(cam_w->get_origin()-hrec.p);
+        } else {
+          dir = -cam_w->get_w();
+        }
+      } else {
+        dir = -cam_w->get_w();
+      }
+    }
+    cam_w->update_look_direction(-dir);
+    *ns_w = 0;
+    aps->reset();
+    if(progress_w && !interactive_w) {
+      pb_w->update(0);
+    }
+    }
+  }
+    case WM_PAINT: {
+  
+      PAINTSTRUCT ps;
+      HDC hdc = BeginPaint(hwnd, &ps);
+
+      COLORREF *arr = (COLORREF*) calloc(width*height, sizeof(COLORREF));
+
+      for(unsigned int i = 0; i < width*height*3; i += 3) {
+        arr[i/3] = ((unsigned int)(255*rgb[i]) << 16) | ((unsigned int)(255*rgb[i+1]) << 8) | (unsigned int)(255*rgb[i+2]);
+      }
+
+      HBITMAP map = CreateBitmap(width,
+                                 height,
+                                 1,
+                                 8*4,
+                                 (void*) arr);
+
+      HDC src = CreateCompatibleDC(hdc);
+      SelectObject(src, map);
+
+      // Copy image from temp HDC to window
+      BitBlt(hdc,
+             0,
+             0,
+             width,
+             height,
+             src,
+             0,
+             0,
+             SRCCOPY); // Defined DWORD to just copy pixels.
+      DeleteDC(src);
+      DeleteObject(map);
+      free(arr);
+
+      EndPaint(hwnd, &ps);
+    }
+  return 0;
+  }
+  return DefWindowProc(hwnd, uMsg, wParam, lParam);
+}
 #endif
+
