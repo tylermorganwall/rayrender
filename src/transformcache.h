@@ -16,7 +16,7 @@ private:
   static uint64_t Hash(const Transform &t);
   // TransformCache Private Data
   std::vector<std::shared_ptr<Transform> > hashTable;
-  int hashTableOccupancy;
+  unsigned int hashTableOccupancy;
   // MemoryArena arena;
 };
 

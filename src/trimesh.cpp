@@ -532,10 +532,6 @@ trimesh::trimesh(std::string inputfile, std::string basedir, std::shared_ptr<mat
   mat_ptr = mat;
   
   bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, inputfile.c_str(), basedir.c_str());
-  bool has_sep = true;
-  if(strlen(basedir.c_str()) == 0) {
-    has_sep = false;
-  }
   std::shared_ptr<alpha_texture> alpha = nullptr;
   std::shared_ptr<bump_texture> bump = nullptr;
   if(ret) {
@@ -617,10 +613,6 @@ trimesh::trimesh(std::string inputfile, std::string basedir, float vertex_color_
   std::shared_ptr<bump_texture> bump = nullptr;
   
   bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, inputfile.c_str(), basedir.c_str());
-  bool has_sep = true;
-  if(strlen(basedir.c_str()) == 0) {
-    has_sep = false;
-  }
   if(ret) {
     int n = 0;
     for (size_t s = 0; s < shapes.size(); s++) {

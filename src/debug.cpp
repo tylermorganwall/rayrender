@@ -19,7 +19,6 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
       for(unsigned int i = 0; i < nx; i++) {
         depth_into_scene = 0;
         ray r;
-        Float weight;
         if(fov >= 0) {
           Float u = (Float(i)) / Float(nx);
           Float v = (Float(j)) / Float(ny);
@@ -28,7 +27,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
           point2f u(rng.unif_rand(),rng.unif_rand());
           point2f u2(rng.unif_rand(),rng.unif_rand());
           CameraSample samp(u, u2, rng.unif_rand());
-          weight = cam->GenerateRay(samp, &r);
+          cam->GenerateRay(samp, &r);
         }
         depth_into_scene = calculate_depth(r, &world, rng);
         routput(i,j) = depth_into_scene;
@@ -45,7 +44,6 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
         
         normal_map = vec3f(0,0,0);
         ray r;
-        Float weight;
         if(fov >= 0) {
           Float u = (Float(i)) / Float(nx);
           Float v = (Float(j)) / Float(ny);
@@ -54,7 +52,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
           point2f u(rng.unif_rand(),rng.unif_rand());
           point2f u2(rng.unif_rand(),rng.unif_rand());
           CameraSample samp(u, u2, rng.unif_rand());
-          weight = cam->GenerateRay(samp, &r);
+          cam->GenerateRay(samp, &r);
         }
         r.pri_stack = mat_stack;
         normal_map = calculate_normals(r, &world, max_depth, rng);
@@ -70,7 +68,6 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
       for(unsigned int i = 0; i < nx; i++) {
         uv_map = vec3f(0,0,0);
         ray r;
-        Float weight;
         if(fov >= 0) {
           Float u = (Float(i)) / Float(nx);
           Float v = (Float(j)) / Float(ny);
@@ -79,7 +76,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
           point2f u(rng.unif_rand(),rng.unif_rand());
           point2f u2(rng.unif_rand(),rng.unif_rand());
           CameraSample samp(u, u2, rng.unif_rand());
-          weight = cam->GenerateRay(samp, &r);
+          cam->GenerateRay(samp, &r);
         }
         uv_map = calculate_uv(r, &world, rng);
         routput(i,j) = uv_map.x();
@@ -94,7 +91,6 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
         Float u = Float(i) / Float(nx);
         Float v = Float(j) / Float(ny);
         ray r;
-        Float weight;
         if(fov >= 0) {
           Float u = (Float(i)) / Float(nx);
           Float v = (Float(j)) / Float(ny);
@@ -103,7 +99,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
           point2f u(rng.unif_rand(),rng.unif_rand());
           point2f u2(rng.unif_rand(),rng.unif_rand());
           CameraSample samp(u, u2, rng.unif_rand());
-          weight = cam->GenerateRay(samp, &r);
+          cam->GenerateRay(samp, &r);
         }
         Float bvh_intersections = debug_bvh(r, &world, rng);
         routput(i,j) = bvh_intersections;
@@ -116,7 +112,6 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
     for(unsigned int j = 0; j < ny; j++) {
       for(unsigned int i = 0; i < nx; i++) {
         ray r;
-        Float weight;
         if(fov >= 0) {
           Float u = (Float(i)) / Float(nx);
           Float v = (Float(j)) / Float(ny);
@@ -125,7 +120,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
           point2f u(rng.unif_rand(),rng.unif_rand());
           point2f u2(rng.unif_rand(),rng.unif_rand());
           CameraSample samp(u, u2, rng.unif_rand());
-          weight = cam->GenerateRay(samp, &r);
+          cam->GenerateRay(samp, &r);
         }
         vec3f dpd_val = calculate_dpduv(r, &world, rng, debug_channel == 6);
         routput(i,j) = dpd_val.x();
@@ -139,7 +134,6 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
     for(unsigned int j = 0; j < ny; j++) {
       for(unsigned int i = 0; i < nx; i++) {
         ray r;
-        Float weight;
         if(fov >= 0) {
           Float u = (Float(i)) / Float(nx);
           Float v = (Float(j)) / Float(ny);
@@ -148,7 +142,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
           point2f u(rng.unif_rand(),rng.unif_rand());
           point2f u2(rng.unif_rand(),rng.unif_rand());
           CameraSample samp(u, u2, rng.unif_rand());
-          weight = cam->GenerateRay(samp, &r);
+          cam->GenerateRay(samp, &r);
         }
         r.pri_stack = mat_stack;
         point3f dpd_val = calculate_color(r, &world, rng);
@@ -171,7 +165,6 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                      random_gen rng(j);
                      for(unsigned int i = 0; i < nx; i++) {
                        ray r;
-                       Float weight;
                        if(fov >= 0) {
                          Float u = (Float(i)) / Float(nx);
                          Float v = (Float(j)) / Float(ny);
@@ -180,7 +173,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                          point2f u(rng.unif_rand(),rng.unif_rand());
                          point2f u2(rng.unif_rand(),rng.unif_rand());
                          CameraSample samp(u, u2, rng.unif_rand());
-                         weight = cam->GenerateRay(samp, &r);
+                         cam->GenerateRay(samp, &r);
                        }
                        r.pri_stack = mat_stack;
                        point3f qr = quick_render(r, &world, rng, light_dir, n_exp);
@@ -205,7 +198,6 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                      random_gen rng(j);
                      for(unsigned int i = 0; i < nx; i++) {
                        ray r;
-                       Float weight;
                        if(fov >= 0) {
                          Float u = (Float(i)) / Float(nx);
                          Float v = (Float(j)) / Float(ny);
@@ -214,7 +206,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                          point2f u(rng.unif_rand(),rng.unif_rand());
                          point2f u2(rng.unif_rand(),rng.unif_rand());
                          CameraSample samp(u, u2, rng.unif_rand());
-                         weight = cam->GenerateRay(samp, &r);
+                         cam->GenerateRay(samp, &r);
                        }
                        r.pri_stack = mat_stack;
                        point3f qr = calculate_position(r, &world, &hlist, max_depth, rng);
@@ -241,7 +233,6 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                      for(unsigned int i = 0; i < nx; i++) {
                        for(size_t s = 0; s < static_cast<size_t>(ns); s++) {
                          ray r;
-                         Float weight;
                          if(fov >= 0) {
                            Float u = (Float(i)) / Float(nx);
                            Float v = (Float(j)) / Float(ny);
@@ -250,7 +241,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                            point2f u(rng.unif_rand(),rng.unif_rand());
                            point2f u2(rng.unif_rand(),rng.unif_rand());
                            CameraSample samp(u, u2, rng.unif_rand());
-                           weight = cam->GenerateRay(samp, &r);
+                           cam->GenerateRay(samp, &r);
                          }
                          r.pri_stack = mat_stack;
                          point3f qr = calculate_bounce_dir(r, &world, &hlist,
@@ -278,7 +269,6 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                      random_gen rng(j);
                      for(unsigned int i = 0; i < nx; i++) {
                        ray r;
-                       Float weight;
                        if(fov >= 0) {
                          Float u = (Float(i)) / Float(nx);
                          Float v = (Float(j)) / Float(ny);
@@ -287,7 +277,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                          point2f u(rng.unif_rand(),rng.unif_rand());
                          point2f u2(rng.unif_rand(),rng.unif_rand());
                          CameraSample samp(u, u2, rng.unif_rand());
-                         weight = cam->GenerateRay(samp, &r);
+                         cam->GenerateRay(samp, &r);
                        }
                        r.pri_stack = mat_stack;
                        Float qr = calculate_time(r, &world, &hlist,
@@ -314,7 +304,6 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                      random_gen rng(j);
                      for(unsigned int i = 0; i < nx; i++) {
                        ray r;
-                       Float weight;
                        if(fov >= 0) {
                          Float u = (Float(i)) / Float(nx);
                          Float v = (Float(j)) / Float(ny);
@@ -323,7 +312,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                          point2f u(rng.unif_rand(),rng.unif_rand());
                          point2f u2(rng.unif_rand(),rng.unif_rand());
                          CameraSample samp(u, u2, rng.unif_rand());
-                         weight = cam->GenerateRay(samp, &r);
+                         cam->GenerateRay(samp, &r);
                        }
                        r.pri_stack = mat_stack;
                        point3f qr = calculate_shape(r, &world, &hlist,
@@ -351,7 +340,6 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                      for(unsigned int i = 0; i < nx; i++) {
                        for(size_t s = 0; s < static_cast<size_t>(ns); s++) {
                          ray r;
-                         Float weight;
                          if(fov >= 0) {
                            Float u = (Float(i)) / Float(nx);
                            Float v = (Float(j)) / Float(ny);
@@ -360,7 +348,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                            point2f u(rng.unif_rand(),rng.unif_rand());
                            point2f u2(rng.unif_rand(),rng.unif_rand());
                            CameraSample samp(u, u2, rng.unif_rand());
-                           weight = cam->GenerateRay(samp, &r);
+                           cam->GenerateRay(samp, &r);
                          }
                          r.pri_stack = mat_stack;
                          Float qr = calculate_pdf(r, &world, &hlist,
@@ -388,7 +376,6 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                      random_gen rng(j);
                      for(unsigned int i = 0; i < nx; i++) {
                        ray r;
-                       Float weight;
                        if(fov >= 0) {
                          Float u = (Float(i)) / Float(nx);
                          Float v = (Float(j)) / Float(ny);
@@ -397,7 +384,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                          point2f u(rng.unif_rand(),rng.unif_rand());
                          point2f u2(rng.unif_rand(),rng.unif_rand());
                          CameraSample samp(u, u2, rng.unif_rand());
-                         weight = cam->GenerateRay(samp, &r);
+                         cam->GenerateRay(samp, &r);
                        }
                        r.pri_stack = mat_stack;
                        Float qr = calculate_error(r, &world, &hlist,
@@ -425,7 +412,6 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                      for(unsigned int i = 0; i < nx; i++) {
                        for(size_t s = 0; s < static_cast<size_t>(ns); s++) {
                          ray r;
-                         Float weight;
                          if(fov >= 0) {
                            Float u = (Float(i)) / Float(nx);
                            Float v = (Float(j)) / Float(ny);
@@ -434,7 +420,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                            point2f u(rng.unif_rand(),rng.unif_rand());
                            point2f u2(rng.unif_rand(),rng.unif_rand());
                            CameraSample samp(u, u2, rng.unif_rand());
-                           weight = cam->GenerateRay(samp, &r);
+                           cam->GenerateRay(samp, &r);
                          }
                          r.pri_stack = mat_stack;
                          Float qr = calculate_bounces(r, &world, &hlist,
@@ -507,11 +493,11 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
     std::vector<std::unique_ptr<Sampler> > samplers;
     auto start = std::chrono::high_resolution_clock::now();
     
-    for(int j = 0; j < ny; j++) {
+    for(unsigned int j = 0; j < ny; j++) {
       if(progress_bar) {
         pb_sampler.tick();
       }
-      for(int i = 0; i < nx; i++) {
+      for(unsigned int i = 0; i < nx; i++) {
         random_gen rng_single(unif_rand() * std::pow(2,32));
         rngs.push_back(rng_single);
         if(sample_method == 0) {
@@ -564,7 +550,6 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                            int index = j + ny * i;
                            ray r; 
                            vec2f u2 = samplers[index]->Get2D();
-                           Float weight(1.0);
                            Float u = (Float(i) + u2.x()) / Float(nx);
                            Float v = (Float(j) + u2.y()) / Float(ny);
                            if(fov >= 0) {
@@ -574,7 +559,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                                               samplers[index]->Get1D());
                            } else {
                              CameraSample samp({1-u,1-v},samplers[index]->Get2D(), samplers[index]->Get1D());
-                             weight = cam->GenerateRay(samp, &r);
+                             cam->GenerateRay(samp, &r);
                            }
                            
                            point3f col = clamp_point(calculate_ao(r, &world, &hlist,

@@ -11,7 +11,7 @@ render_scene(
   fov = 20,
   samples = 100,
   camera_description_file = NA,
-  preview = TRUE,
+  preview = interactive(),
   interactive = TRUE,
   camera_scale = 1,
   iso = 100,
@@ -67,7 +67,7 @@ a realistic camera. Several camera files are built-in: `"50mm"`,`"wide"`,`"fishe
 
 \item{preview}{Default `TRUE`. Whether to display a real-time progressive preview of the render. Press ESC to cancel the render.}
 
-\item{interactive}{Default `TRUE`. Whether the scene preview should be interactive. Camera movement orbits around the 
+\item{interactive}{Default `interactive()`. Whether the scene preview should be interactive. Camera movement orbits around the 
 lookat point (unless the mode is switched to free flying), with the following control mapping:
 W = Forward, S = Backward, A = Left, D = Right, Q = Up, Z = Down, 
 E = 2x Step Distance (max 128), C = 0.5x Step Distance, Up Key = Zoom In (decrease FOV), Down Key = Zoom Out (increase FOV),

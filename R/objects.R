@@ -976,10 +976,12 @@ ellipsoid = function(x = 0, y = 0, z = 0, a = 1, b = 1, c = 1,
 #' @examples
 #' #Manually create a polygon object, here a star:
 #' 
+#' \donttest{
 #' angles = seq(0,360,by=36)
 #' xx = rev(c(rep(c(1,0.5),5),1) * sinpi(angles/180))
 #' yy = rev(c(rep(c(1,0.5),5),1) * cospi(angles/180))
 #' star_polygon = data.frame(x=xx,y=yy)
+#' }
 #' 
 #' \donttest{
 #' generate_ground(depth=0,
@@ -995,7 +997,9 @@ ellipsoid = function(x = 0, y = 0, z = 0, a = 1, b = 1, c = 1,
 #' #and specify with the `holes` argument that everything after `nrow(star_polygon)`
 #' #in the following should be used to draw a hole:
 #' 
+#' \donttest{
 #' hollow_star = rbind(star_polygon,0.8*star_polygon)
+#' }
 #' 
 #' \donttest{
 #' generate_ground(depth=-0.01,
@@ -1037,11 +1041,13 @@ ellipsoid = function(x = 0, y = 0, z = 0, a = 1, b = 1, c = 1,
 #' }
 #' 
 #' #We can also directly pass in sf polygons:
+#' \donttest{
 #' if(length(find.package("spData",quiet=TRUE)) > 0) {
 #'   us_states = spData::us_states
 #'   texas = us_states[us_states$NAME == "Texas",]
 #'   #Fix no sfc class in us_states geometry data
 #'   class(texas$geometry) = c("list","sfc")
+#' }
 #' }
 #' 
 #' #This uses the raw coordinates, unless `center = TRUE`, which centers the bounding box

@@ -140,29 +140,29 @@ plymesh::plymesh(std::string inputfile, std::string basedir, std::shared_ptr<mat
     bool tempnormal = false;
     int idx = 3*i;
     tris[0] = vec3f(tri->pos[3*tri->indices[idx  ]+0],
-                   tri->pos[3*tri->indices[idx  ]+1],
-                           tri->pos[3*tri->indices[idx  ]+2])*scale;
+                    tri->pos[3*tri->indices[idx  ]+1],
+                    tri->pos[3*tri->indices[idx  ]+2])*scale;
     tris[1] = vec3f(tri->pos[3*tri->indices[idx+1]+0],
-                   tri->pos[3*tri->indices[idx+1]+1],
-                           tri->pos[3*tri->indices[idx+1]+2])*scale;
+                    tri->pos[3*tri->indices[idx+1]+1],
+                    tri->pos[3*tri->indices[idx+1]+2])*scale;
     tris[2] = vec3f(tri->pos[3*tri->indices[idx+2]+0],
-                   tri->pos[3*tri->indices[idx+2]+1],
-                           tri->pos[3*tri->indices[idx+2]+2])*scale;
+                    tri->pos[3*tri->indices[idx+2]+1],
+                    tri->pos[3*tri->indices[idx+2]+2])*scale;
     if(has_normals) {
       tempnormal = true;
       normals[0] = vec3f(tri->normal[3*tri->indices[idx  ]+0],
-                        tri->normal[3*tri->indices[idx  ]+1],
-                                   tri->normal[3*tri->indices[idx  ]+2]);
+                         tri->normal[3*tri->indices[idx  ]+1],
+                         tri->normal[3*tri->indices[idx  ]+2]);
       normals[1] = vec3f(tri->normal[3*tri->indices[idx+1]+0],
-                        tri->normal[3*tri->indices[idx+1]+1],
-                                   tri->normal[3*tri->indices[idx+1]+2]);
+                         tri->normal[3*tri->indices[idx+1]+1],
+                         tri->normal[3*tri->indices[idx+1]+2]);
       normals[2] = vec3f(tri->normal[3*tri->indices[idx+2]+0],
-                        tri->normal[3*tri->indices[idx+2]+1],
-                                   tri->normal[3*tri->indices[idx+2]+2]);
+                         tri->normal[3*tri->indices[idx+2]+1],
+                         tri->normal[3*tri->indices[idx+2]+2]);
     }
-    if((normals[0].x() == 0 && normals[0].y() == 0 && normals[0].z() == 0) ||
-       (normals[1].x() == 0 && normals[1].y() == 0 && normals[1].z() == 0) ||
-       (normals[2].x() == 0 && normals[2].y() == 0 && normals[2].z() == 0)) {
+    if(has_normals && ((normals[0].x() == 0 && normals[0].y() == 0 && normals[0].z() == 0) ||
+                       (normals[1].x() == 0 && normals[1].y() == 0 && normals[1].z() == 0) ||
+                       (normals[2].x() == 0 && normals[2].y() == 0 && normals[2].z() == 0))) {
       tempnormal = false;
     }
     

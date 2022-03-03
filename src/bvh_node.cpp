@@ -117,7 +117,7 @@ bvh_node::bvh_node(std::vector<std::shared_ptr<hitable> >& l,
   aabb central_bounds;
 
 
-  for (int i = start; i < end; ++i) {
+  for (unsigned int i = start; i < end; ++i) {
     aabb tempbox;
     if(l[i]->bounding_box(time0,time1,tempbox)) {
       centroid_bounds = surrounding_box(centroid_bounds, tempbox);
@@ -186,7 +186,7 @@ bvh_node::bvh_node(std::vector<std::shared_ptr<hitable> >& l,
       BucketInfo buckets[nBuckets];
       
       //Count number of objects in each bin and calculate bounding box for each bin.
-      for (int i = 0; i < n; ++i) {
+      for (unsigned int i = 0; i < n; ++i) {
         int b = nBuckets * central_bounds.offset(primitiveBounds[i].centroid)[axis];
         if (b == nBuckets) {
           b = nBuckets - 1;
@@ -220,7 +220,7 @@ bvh_node::bvh_node(std::vector<std::shared_ptr<hitable> >& l,
       Float minCost = INFINITY;
       Float costs[nBuckets];
       
-      for (int i = 0; i < nSplits; ++i) {
+      for (unsigned int i = 0; i < nSplits; ++i) {
         if (countBelow[i] == 0 || countAbove[i] == 0) {
           continue;
         }

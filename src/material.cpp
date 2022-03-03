@@ -305,7 +305,7 @@ bool dielectric::scatter(const ray& r_in, const hit_record& hrec, scatter_record
     if(!entering && current_layer != -1) {
       r_in.pri_stack->erase(r_in.pri_stack->begin() + current_layer);
     }
-    vec3f refracted;    
+    vec3f refracted(-wi);    
     Refract(wi, outward_normal, ni_over_nt, &refracted);
     srec.specular_ray = ray(offset_p, refracted, r_in.pri_stack, r_in.time());
   }

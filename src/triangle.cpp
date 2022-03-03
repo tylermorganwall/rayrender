@@ -120,7 +120,7 @@ bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
   rec.pError = gamma(7) * vec3f(xAbsSum, yAbsSum, zAbsSum);
   
   point3f pHit = b0 * a + b1 * b + b2 * c;
-  point2f uvHit = b0 * uv[0] + b1 * uv[1] + b2 * uv[2];
+  // point2f uvHit = b0 * uv[0] + b1 * uv[1] + b2 * uv[2];
   // Float u = uvHit[0];
   // Float v = uvHit[1];
   

@@ -275,12 +275,13 @@ RealisticCamera::RealisticCamera(const AnimatedTransform &CameraToWorld,
                                  Float film_size, Float camera_scale,
                                  Float _iso,
                                  vec3f _camera_up, Transform _CamTransform, 
-                                 point3f lookat)
+                                 point3f _lookat)
   : CameraToWorld(CameraToWorld), 
     shutterOpen(shutterOpen), shutterClose(shutterClose), 
     simpleWeighting(simpleWeighting), cam_width(cam_width), cam_height(cam_height),
     diag(film_size * camera_scale), iso(_iso), camera_up(_camera_up), CamTransform(_CamTransform),
-    focusDistance(_focusDistance), start_focusDistance(_focusDistance), start_lookat(lookat) {
+    focusDistance(_focusDistance), start_focusDistance(_focusDistance), start_lookat(_lookat),
+    lookat(_lookat) {
   CameraMovement = Transform(Matrix4x4(1,0,0,0,
                                        0,1,0,0,
                                        0,0,1,0,
@@ -306,7 +307,7 @@ RealisticCamera::RealisticCamera(const AnimatedTransform &CameraToWorld,
        lensData[i + 2], lensData[i + 3] * Float(.001) / Float(2.) * camera_scale}));
     }
     min_aperture = elementInterfaces[0].apertureRadius * camera_scale;
-    for(int i = 1; i < elementInterfaces.size(); i++) {
+    for(unsigned int i = 1; i < elementInterfaces.size(); i++) {
       min_aperture = elementInterfaces[i].apertureRadius < min_aperture ? elementInterfaces[i].apertureRadius : min_aperture;
     }
     elementInterfaces.back().thickness = FocusThickLens(focusDistance);
@@ -758,8 +759,12 @@ point3f RealisticCamera::get_origin() {
 void RealisticCamera::update_position(vec3f delta, bool update_uvw) {
   if(update_uvw) {
     point3f old_lookfrom =  CamTransform(point3f(0.f));
-    vec3f old_lookat = -focusDistance * get_w();
-    CamTransform = Inverse(LookAt(old_lookfrom + delta, start_lookat, camera_up));
+    try{
+      CamTransform = Inverse(LookAt(old_lookfrom + delta, lookat, camera_up));
+    } catch (const std::runtime_error& error) {
+      Rprintf("Can't move there, singular inverse matrix--moving back to previous position.\n");
+      CamTransform = Inverse(LookAt(old_lookfrom, lookat, camera_up));
+    }
   } else {
     CamTransform = Translate(delta) * CamTransform;
   }
@@ -783,16 +788,19 @@ void RealisticCamera::update_focal_distance(Float delta_focus) {
 
 //This actually takes the position of the intersection
 void RealisticCamera::update_look_direction(vec3f dir) {
+  lookat = dir;
   CamTransform = Transform(LookAt(get_origin(), dir, camera_up).GetInverseMatrix());
 }
 
 void RealisticCamera::update_lookat(point3f point) {
+  lookat = point;
   CamTransform = Transform(LookAt(get_origin(), point, camera_up).GetInverseMatrix());
 }
 
 void RealisticCamera::reset() {
   CamTransform = (*CameraToWorld.GetStartTransform());
   focusDistance = start_focusDistance;
+  lookat = start_lookat;
   elementInterfaces.back().thickness =  FocusThickLens(focusDistance);
 }
 

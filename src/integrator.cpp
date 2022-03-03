@@ -43,11 +43,11 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
   std::vector<std::unique_ptr<Sampler> > samplers;
   auto start = std::chrono::high_resolution_clock::now();
   
-  for(int j = 0; j < ny; j++) {
+  for(unsigned int j = 0; j < ny; j++) {
     if(progress_bar) {
       pb_sampler.tick();
     }
-    for(int i = 0; i < nx; i++) {
+    for(unsigned int i = 0; i < nx; i++) {
       random_gen rng_single(unif_rand() * std::pow(2,32));
       rngs.push_back(rng_single);
       if(sample_method == 0) {

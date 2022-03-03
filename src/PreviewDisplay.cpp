@@ -379,68 +379,70 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
   }
 #endif
 #ifdef RAY_WINDOWS
-  aps = &adaptive_pixel_sampler;
-  ns_w = &ns;
-  pb_w = &pb;
-  progress_w = progress;
-  interactive_w = interactive;
-  Rcpp::NumericMatrix &r  = adaptive_pixel_sampler.r;
-  Rcpp::NumericMatrix &g  = adaptive_pixel_sampler.g;
-  Rcpp::NumericMatrix &b  = adaptive_pixel_sampler.b;
-  std::vector<bool>& finalized = adaptive_pixel_sampler.finalized;
-  std::vector<bool>& just_finalized = adaptive_pixel_sampler.just_finalized;
-  world_w = world;
-  rng_w = &rng;
-  height = (unsigned int)r.cols();
-  width = (unsigned int)r.rows();
-  rgb.resize(width*height*3);
-  for(unsigned int i = 0; i < width*3; i += 3) {
-    for(unsigned int j = 0; j < height; j++) {
-      Float samples;
-      Float r_col,g_col,b_col;
-      if(finalized[i/3 + width * (height-1-j)]) {
-        if(just_finalized[i/3 + width * (height-1-j)] && !interactive ) {
-          r_col = 0.f;
-          g_col = 1.f;
-          b_col = 0.f;
+  if(hwnd) {
+    aps = &adaptive_pixel_sampler;
+    ns_w = &ns;
+    pb_w = &pb;
+    progress_w = progress;
+    interactive_w = interactive;
+    Rcpp::NumericMatrix &r  = adaptive_pixel_sampler.r;
+    Rcpp::NumericMatrix &g  = adaptive_pixel_sampler.g;
+    Rcpp::NumericMatrix &b  = adaptive_pixel_sampler.b;
+    std::vector<bool>& finalized = adaptive_pixel_sampler.finalized;
+    std::vector<bool>& just_finalized = adaptive_pixel_sampler.just_finalized;
+    world_w = world;
+    rng_w = &rng;
+    height = (unsigned int)r.cols();
+    width = (unsigned int)r.rows();
+    rgb.resize(width*height*3);
+    for(unsigned int i = 0; i < width*3; i += 3) {
+      for(unsigned int j = 0; j < height; j++) {
+        Float samples;
+        Float r_col,g_col,b_col;
+        if(finalized[i/3 + width * (height-1-j)]) {
+          if(just_finalized[i/3 + width * (height-1-j)] && !interactive ) {
+            r_col = 0.f;
+            g_col = 1.f;
+            b_col = 0.f;
+          } else {
+            r_col = interactive ? std::sqrt((r(i/3,height-1-j))) : std::sqrt((r(i/3,height-1-j))/4.f);
+            g_col = interactive ? std::sqrt((g(i/3,height-1-j))) : std::sqrt((g(i/3,height-1-j))/4.f);
+            b_col = interactive ? std::sqrt((b(i/3,height-1-j))) : std::sqrt((b(i/3,height-1-j))/4.f);
+          }
         } else {
-          r_col = interactive ? std::sqrt((r(i/3,height-1-j))) : std::sqrt((r(i/3,height-1-j))/4.f);
-          g_col = interactive ? std::sqrt((g(i/3,height-1-j))) : std::sqrt((g(i/3,height-1-j))/4.f);
-          b_col = interactive ? std::sqrt((b(i/3,height-1-j))) : std::sqrt((b(i/3,height-1-j))/4.f);
+          samples = (Float)ns+1.f;
+          r_col = std::sqrt((r(i/3,height-1-j))/samples);
+          g_col = std::sqrt((g(i/3,height-1-j))/samples);
+          b_col = std::sqrt((b(i/3,height-1-j))/samples);
         }
-      } else {
-        samples = (Float)ns+1.f;
-        r_col = std::sqrt((r(i/3,height-1-j))/samples);
-        g_col = std::sqrt((g(i/3,height-1-j))/samples);
-        b_col = std::sqrt((b(i/3,height-1-j))/samples);
-      }
-      rgb[i+3*width*j]   = clamp(r_col,0.f,1.f);
-      rgb[i+3*width*j+1] = clamp(g_col,0.f,1.f);
-      rgb[i+3*width*j+2] = clamp(b_col,0.f,1.f);
-      
-      if(finalized[i/3 + width * (height-1-j)]) {
-        just_finalized[i/3 + width * (height-1-j)] = false;
+        rgb[i+3*width*j]   = clamp(r_col,0.f,1.f);
+        rgb[i+3*width*j+1] = clamp(g_col,0.f,1.f);
+        rgb[i+3*width*j+2] = clamp(b_col,0.f,1.f);
+        
+        if(finalized[i/3 + width * (height-1-j)]) {
+          just_finalized[i/3 + width * (height-1-j)] = false;
+        }
       }
     }
-  }
-  blanked = false;
-  
-  if(progress) {
-    for(unsigned int i = 0; i < 3*width*percent_done; i += 3 ) {
-      for(unsigned int j = 0; j < 3; j++) {
-        rgb[i + 3*width*j]   = 1.f;
-        rgb[i + 3*width*j+1] = 0.f;
-        rgb[i + 3*width*j+2] = 0.f;
+    blanked = false;
+    
+    if(progress) {
+      for(unsigned int i = 0; i < 3*width*percent_done; i += 3 ) {
+        for(unsigned int j = 0; j < 3; j++) {
+          rgb[i + 3*width*j]   = 1.f;
+          rgb[i + 3*width*j+1] = 0.f;
+          rgb[i + 3*width*j+2] = 0.f;
+        }
       }
     }
+    
+    InvalidateRect(hwnd, NULL, 0);
+    while (PeekMessage (&msg, NULL, 0, 0, PM_REMOVE) > 0) {
+      TranslateMessage(&msg);
+      DispatchMessage(&msg); 
+    }
+    terminate = term;
   }
-  
-  InvalidateRect(hwnd, NULL, 0);
-  while (PeekMessage (&msg, NULL, 0, 0, PM_REMOVE) > 0) {
-    TranslateMessage(&msg);
-    DispatchMessage(&msg); 
-  }
-  terminate = term;
 #endif
 }
 
@@ -501,49 +503,53 @@ PreviewDisplay::PreviewDisplay(unsigned int _width, unsigned int _height,
   orbit = true;
   terminate = false;
   term = false;
-  width = _width;
-  height = _height;
-  base_step = initial_lookat_distance/20;
-  rgb.resize(width*height*3);
-  cam_w = _cam;
-  hInstance = (HINSTANCE)GetModuleHandle(NULL);
-  // Register the window class.
-  const wchar_t CLASS_NAME[]  = L"Rayrender";
-
-  wc = { };
-
-  wc.lpfnWndProc   = WindowProc;
-  wc.hInstance     = hInstance;
-  wc.lpszClassName = CLASS_NAME;
-
-  RegisterClass(&wc);
-
-  // Create the window.
-  RECT rect = {0, 0, (long int)width, (long int)height};
-  AdjustWindowRect(&rect, WS_THICKFRAME | WS_VISIBLE | WS_SYSMENU, true);
+  if(preview) {
+    width = _width;
+    height = _height;
+    base_step = initial_lookat_distance/20;
+    rgb.resize(width*height*3);
+    cam_w = _cam;
+    hInstance = (HINSTANCE)GetModuleHandle(NULL);
+    // Register the window class.
+    const wchar_t CLASS_NAME[]  = L"Rayrender";
   
-  hwnd = CreateWindowEx(
-    0,                              // Optional window styles.
-    CLASS_NAME,                     // Window class
-    L"Rayrender",    // Window text
-    WS_THICKFRAME | WS_VISIBLE | WS_SYSMENU ,            // Window style
-
-    // Size and position
-    0, 0, rect.right - rect.left, rect.bottom - rect.top, 
-
-    NULL,       // Parent window
-    NULL,       // Menu
-    hInstance,  // Instance handle
-    NULL        // Additional application data
-  );
-
-
-  if (hwnd == NULL) {
-    throw std::runtime_error("Can't open window");
+    wc = { };
+  
+    wc.lpfnWndProc   = WindowProc;
+    wc.hInstance     = hInstance;
+    wc.lpszClassName = CLASS_NAME;
+  
+    RegisterClass(&wc);
+  
+    // Create the window.
+    RECT rect = {0, 0, (long int)width, (long int)height};
+    AdjustWindowRect(&rect, WS_THICKFRAME | WS_VISIBLE | WS_SYSMENU, true);
+    
+    hwnd = CreateWindowEx(
+      0,                              // Optional window styles.
+      CLASS_NAME,                     // Window class
+      L"Rayrender",    // Window text
+      WS_THICKFRAME | WS_VISIBLE | WS_SYSMENU ,            // Window style
+  
+      // Size and position
+      0, 0, rect.right - rect.left, rect.bottom - rect.top, 
+  
+      NULL,       // Parent window
+      NULL,       // Menu
+      hInstance,  // Instance handle
+      NULL        // Additional application data
+    );
+  
+  
+    if (hwnd == NULL) {
+      throw std::runtime_error("Can't open window");
+    }
+    ShowWindow(hwnd, SW_SHOW);
+    // SetForegroundWindow(hwnd)
+    // BringWindowToTop(hwnd);
+  } else {
+    hwnd = nullptr;
   }
-  ShowWindow(hwnd, SW_SHOW);
-  // SetForegroundWindow(hwnd)
-  // BringWindowToTop(hwnd);
 #endif
 }
 

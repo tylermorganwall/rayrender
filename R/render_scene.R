@@ -13,12 +13,12 @@
 #' vector and the `sample_method` is `stratified`, this will control the number of strata in each dimension.
 #' The total number of samples in this case will be the product of the two numbers.
 #' @param preview Default `TRUE`. Whether to display a real-time progressive preview of the render. Press ESC to cancel the render.
-#' @param interactive Default `TRUE`. Whether the scene preview should be interactive. Camera movement orbits around the 
+#' @param interactive Default `interactive()`. Whether the scene preview should be interactive. Camera movement orbits around the 
 #' lookat point (unless the mode is switched to free flying), with the following control mapping:
 #' W = Forward, S = Backward, A = Left, D = Right, Q = Up, Z = Down, 
 #' E = 2x Step Distance (max 128), C = 0.5x Step Distance, Up Key = Zoom In (decrease FOV), Down Key = Zoom Out (increase FOV),
 #' Left Key = Decrease Aperture, Right Key = Increase Aperture, 1 = Decrease Focal Distance, 2 = Increase Focal Distance,
-#' R = Reset Camera, TAB: Toggle Orbit Mode, Left Mouse Click: Change Look Direction
+#' R = Reset Camera, TAB: Toggle Orbit Mode, Left Mouse Click: Change Look Direction, Right Mouse Click: Change Look At 
 #' 
 #' Initial step size is 1/20th of the distance from `lookat` to `lookfrom`.
 #' 
@@ -229,7 +229,7 @@
 #'}
 render_scene = function(scene, width = 400, height = 400, fov = 20, 
                         samples = 100,  camera_description_file = NA, 
-                        preview = TRUE, interactive = TRUE,
+                        preview = interactive(), interactive = TRUE,
                         camera_scale = 1, iso = 100, film_size = 22,
                         min_variance = 0.00005, min_adaptive_size = 8,
                         sample_method = "sobol", 
