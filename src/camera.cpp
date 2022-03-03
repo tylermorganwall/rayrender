@@ -788,7 +788,6 @@ void RealisticCamera::update_focal_distance(Float delta_focus) {
 
 //This actually takes the position of the intersection
 void RealisticCamera::update_look_direction(vec3f dir) {
-  lookat = dir;
   CamTransform = Transform(LookAt(get_origin(), dir, camera_up).GetInverseMatrix());
 }
 

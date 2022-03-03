@@ -72,7 +72,7 @@ lookat point (unless the mode is switched to free flying), with the following co
 W = Forward, S = Backward, A = Left, D = Right, Q = Up, Z = Down, 
 E = 2x Step Distance (max 128), C = 0.5x Step Distance, Up Key = Zoom In (decrease FOV), Down Key = Zoom Out (increase FOV),
 Left Key = Decrease Aperture, Right Key = Increase Aperture, 1 = Decrease Focal Distance, 2 = Increase Focal Distance,
-R = Reset Camera, TAB: Toggle Orbit Mode, Left Mouse Click: Change Look Direction
+R = Reset Camera, TAB: Toggle Orbit Mode, Left Mouse Click: Change Look Direction, Right Mouse Click: Change Look At 
 
 Initial step size is 1/20th of the distance from `lookat` to `lookfrom`.
 
