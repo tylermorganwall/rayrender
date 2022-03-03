@@ -191,6 +191,7 @@
 #'
 #'#We can also use a realistic camera by specifying a camera description file (several of which
 #'#are built-in to rayrender. Note the curvature introduced by the fisheye lens:
+#'\donttest{
 #'generate_cornell() %>%
 #'   add_object(ellipsoid(x=555/2,y=100,z=555/2,a=50,b=100,c=50, 
 #'              material = metal(color="lightblue"))) %>%

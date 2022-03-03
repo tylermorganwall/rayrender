@@ -193,3 +193,126 @@ array (containing either debug data or the RGB)
 Takes the scene description and renders an image, either to the device or to a filename. The
 user can also interactively fly around the 3D scene if they have X11 support on their system.
 }
+\examples{
+#Generate a large checkered sphere as the ground
+\donttest{
+scene = generate_ground(depth=-0.5, material = diffuse(color="white", checkercolor="darkgreen"))
+render_scene(scene,parallel=TRUE,samples=500,sample_method="sobol")
+}
+
+#Add a sphere to the center
+\donttest{
+scene = scene \%>\%
+  add_object(sphere(x=0,y=0,z=0,radius=0.5,material = diffuse(color=c(1,0,1))))
+render_scene(scene,fov=20,parallel=TRUE,samples=500)
+}
+
+#Add a marbled cube 
+\donttest{
+scene = scene \%>\%
+  add_object(cube(x=1.1,y=0,z=0,material = diffuse(noise=3)))
+render_scene(scene,fov=20,parallel=TRUE,samples=500)
+}
+
+#Add a metallic gold sphere, using stratified sampling for a higher quality render
+\donttest{
+scene = scene \%>\%
+  add_object(sphere(x=-1.1,y=0,z=0,radius=0.5,material = metal(color="gold",fuzz=0.1)))
+render_scene(scene,fov=20,parallel=TRUE,samples=500)
+}
+
+#Lower the number of samples to render more quickly (here, we also use only one core).
+\donttest{
+render_scene(scene, samples=4)
+}
+
+#Add a floating R plot using the iris dataset as a png onto a floating 2D rectangle
+
+\donttest{
+tempfileplot = tempfile()
+png(filename=tempfileplot,height=400,width=800)
+plot(iris$Petal.Length,iris$Sepal.Width,col=iris$Species,pch=18,cex=4)
+dev.off()
+
+image_array = aperm(png::readPNG(tempfileplot),c(2,1,3))
+scene = scene \%>\%
+  add_object(xy_rect(x=0,y=1.1,z=0,xwidth=2,angle = c(0,180,0),
+                     material = diffuse(image_texture = image_array)))
+render_scene(scene,fov=20,parallel=TRUE,samples=500)
+}
+
+#Move the camera
+\donttest{
+render_scene(scene,lookfrom = c(7,1.5,10),lookat = c(0,0.5,0),fov=15,parallel=TRUE)
+}
+
+#Change the background gradient to a night time ambiance
+\donttest{
+render_scene(scene,lookfrom = c(7,1.5,10),lookat = c(0,0.5,0),fov=15,
+             backgroundhigh = "#282375", backgroundlow = "#7e77ea", parallel=TRUE,
+             samples=500)
+}
+                 
+#Increase the aperture to blur objects that are further from the focal plane.
+\donttest{
+render_scene(scene,lookfrom = c(7,1.5,10),lookat = c(0,0.5,0),fov=15,
+             aperture = 0.5,parallel=TRUE,samples=500)
+}
+
+#We can also capture a 360 environment image by setting `fov = 360` (can be used for VR)
+\donttest{
+generate_cornell() \%>\%
+  add_object(ellipsoid(x=555/2,y=100,z=555/2,a=50,b=100,c=50, 
+             material = metal(color="lightblue"))) \%>\%
+  add_object(cube(x=100,y=130/2,z=200,xwidth = 130,ywidth=130,zwidth = 130,
+                  material=diffuse(checkercolor="purple", 
+                                   checkerperiod = 30),angle=c(0,10,0))) \%>\%
+  add_object(pig(x=100,y=190,z=200,scale=40,angle=c(0,30,0))) \%>\%
+  add_object(sphere(x=420,y=555/8,z=100,radius=555/8,
+                    material = dielectric(color="orange"))) \%>\%
+  add_object(xz_rect(x=555/2,z=555/2, y=1,xwidth=555,zwidth=555,
+                     material = glossy(checkercolor = "white",
+                                       checkerperiod=10,color="dodgerblue"))) \%>\%
+  render_scene(lookfrom=c(278,278,30), lookat=c(278,278,500), clamp_value=10,
+               fov = 360,  samples = 500, width=800, height=400)
+}
+
+#We can also use a realistic camera by specifying a camera description file (several of which
+#are built-in to rayrender. Note the curvature introduced by the fisheye lens:
+\donttest{
+generate_cornell() \%>\%
+  add_object(ellipsoid(x=555/2,y=100,z=555/2,a=50,b=100,c=50, 
+             material = metal(color="lightblue"))) \%>\%
+  add_object(cube(x=100,y=130/2,z=200,xwidth = 130,ywidth=130,zwidth = 130,
+                  material=diffuse(checkercolor="purple", 
+                                   checkerperiod = 30),angle=c(0,10,0))) \%>\%
+  add_object(pig(x=100,y=190,z=200,scale=40,angle=c(0,30,0))) \%>\%
+  add_object(sphere(x=420,y=555/8,z=100,radius=555/8,
+                    material = dielectric(color="orange"))) \%>\%
+  add_object(xz_rect(x=555/2,z=555/2, y=1,xwidth=555,zwidth=555,
+                     material = glossy(checkercolor = "white",
+                                       checkerperiod=10,color="dodgerblue"))) \%>\%
+  render_scene(lookfrom=c(278,278,-300), lookat=c(278,278,500), clamp_value=10,
+               camera_description_file = "fisheye", samples = 500, width=800, height=400)
+}
+
+
+                 
+#Spin the camera around the scene, decreasing the number of samples to render faster. To make 
+#an animation, specify the a filename in `render_scene` for each frame and use the `av` package
+#or ffmpeg to combine them all into a movie.
+
+t=1:30 
+xpos = 10 * sin(t*12*pi/180+pi/2)
+zpos = 10 * cos(t*12*pi/180+pi/2)
+\donttest{
+#Save old par() settings
+old.par = par(no.readonly = TRUE)
+on.exit(par(old.par))
+par(mfrow=c(5,6))
+for(i in 1:30) {
+ render_scene(scene, samples=16, 
+   lookfrom = c(xpos[i],1.5,zpos[i]),lookat = c(0,0.5,0), parallel=TRUE)
+}
+}
+}
