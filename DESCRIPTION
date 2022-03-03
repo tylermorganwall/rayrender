@@ -30,7 +30,7 @@ Suggests:
     dplyr,
     Rvcg,
     testthat (>= 3.0.0)
-LinkingTo: Rcpp, RcppThread, progress, spacefillr
+LinkingTo: Rcpp, RcppThread, progress, spacefillr (>= 0.3.0)
 URL: https://www.rayrender.net, https://github.com/tylermorganwall/rayrender
 RoxygenNote: 7.1.2
 SystemRequirements: C++11
