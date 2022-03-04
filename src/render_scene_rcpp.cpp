@@ -340,7 +340,8 @@ List render_scene_rcpp(List camera_info, List scene_info) {
   Float world_radius = bounding_box_world.diag.length()/2 ;
   vec3f world_center  = bounding_box_world.centroid;
   world_radius = world_radius > (lookfrom - world_center).length() ? world_radius : (lookfrom - world_center ).length();
-
+  world_radius *= interactive ? 100 : 1;
+  
   if(fov == 0) {
     Float ortho_diag = sqrt(pow(ortho_dimensions(0),2) + pow(ortho_dimensions(1),2));
     world_radius += ortho_diag;

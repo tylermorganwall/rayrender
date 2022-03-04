@@ -826,55 +826,56 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
           pb_w->update(0);
         }
       }
+    break;
   }
   case WM_RBUTTONDOWN: {
     if(interactive_w) {
-    Float x = GET_X_LPARAM(lParam);
-    Float y = GET_Y_LPARAM(lParam);
-    Float fov = cam_w->get_fov();
-    Float u = (Float(x)) / Float(width);
-    Float v = (Float(y)) / Float(height);
-    vec3f dir;
-    hit_record hrec;
-    if(fov < 0) {
-      CameraSample samp({1-u,v},point2f(0.5,0.5), 0.5);
-      ray r2;
-      cam_w->GenerateRay(samp,&r2);
-      if(world_w->hit(r2, 0.001, FLT_MAX, hrec, *rng_w)) {
-        if( hrec.shape->GetName() != "EnvironmentLight") {
-          dir = -hrec.p;
-        }  else {
-          break ;
+      Float x = GET_X_LPARAM(lParam);
+      Float y = GET_Y_LPARAM(lParam);
+      Float fov = cam_w->get_fov();
+      Float u = (Float(x)) / Float(width);
+      Float v = (Float(y)) / Float(height);
+      vec3f dir;
+      hit_record hrec;
+      if(fov < 0) {
+        CameraSample samp({1-u,v},point2f(0.5,0.5), 0.5);
+        ray r2;
+        cam_w->GenerateRay(samp,&r2);
+        if(world_w->hit(r2, 0.001, FLT_MAX, hrec, *rng_w)) {
+          if( hrec.shape->GetName() != "EnvironmentLight") {
+            dir = -hrec.p;
+          }  else {
+            dir = -hrec.p;
+          }
         }
-      }
-    } else if (fov > 0) {
-      ray r2 = cam_w->get_ray(u,1-v, point3f(0.5),
+      } else if (fov > 0) {
+        ray r2 = cam_w->get_ray(u,1-v, point3f(0.5),
+                                0.5f);
+        dir = r2.direction();
+      } else {
+        ray r2 = cam_w->get_ray(u,1-v, point3f(0.5),
                               0.5f);
-      dir = r2.direction();
-    } else {
-      ray r2 = cam_w->get_ray(u,1-v, point3f(0.5),
-                            0.5f);
-      if(world_w->hit(r2, 0.001, FLT_MAX, hrec, *rng_w)) {
-        if( hrec.shape->GetName() != "EnvironmentLight") {
-          dir = -(cam_w->get_origin()-hrec.p);
+        if(world_w->hit(r2, 0.001, FLT_MAX, hrec, *rng_w)) {
+          if( hrec.shape->GetName() != "EnvironmentLight") {
+            dir = -(cam_w->get_origin()-hrec.p);
+          } else {
+            Rprintf("Clicking on the environment light while using a orthographic camera does not change the view.\n");
+            dir = -cam_w->get_w();
+          }
         } else {
-          Rprintf("Clicking on the environment light while using a orthographic camera does not change the view.\n");
           dir = -cam_w->get_w();
         }
-      } else {
-        dir = -cam_w->get_w();
+      }
+      cam_w->update_look_direction(-dir);
+      *ns_w = 0;
+      aps->reset();
+      if(progress_w && !interactive_w) {
+        pb_w->update(0);
       }
     }
-    cam_w->update_look_direction(-dir);
-    *ns_w = 0;
-    aps->reset();
-    if(progress_w && !interactive_w) {
-      pb_w->update(0);
-    }
-    }
+    break;
   }
     case WM_PAINT: {
-  
       PAINTSTRUCT ps;
       HDC hdc = BeginPaint(hwnd, &ps);
 
