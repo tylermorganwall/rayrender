@@ -8,6 +8,7 @@
 #include <X11/Xutil.h>
 #include "X11/keysym.h"
 #include "X11/Xatom.h"
+static Float env_y_angle;;
 
 #endif
 
@@ -123,6 +124,11 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
     KeyCode One_key = XKeysymToKeycode(d,XStringToKeysym("1"));
     KeyCode Two_key = XKeysymToKeycode(d,XStringToKeysym("2"));
     
+    
+    //Environment Rotate control
+    KeyCode Three_key = XKeysymToKeycode(d,XStringToKeysym("3"));
+    KeyCode Four_key = XKeysymToKeycode(d,XStringToKeysym("4"));
+    
     //Reset
     KeyCode R_key = XKeysymToKeycode(d,XStringToKeysym("r"));
     
@@ -171,9 +177,11 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
           if (e.xkey.keycode == E_key ) {
             speed = 2 * speed;
             speed = std::fmin(speed,128);
+            Rprintf("Step Multiplier: %.3f\n", speed);
           }
           if (e.xkey.keycode == C_key ) {
             speed = 0.5 * speed;
+            Rprintf("Step Multiplier: %.3f\n", speed);
           }
           if (e.xkey.keycode == Down_key ) {
             cam->update_fov(speed*1.f);
@@ -193,9 +201,21 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
           if (e.xkey.keycode == Two_key ) {
             cam->update_focal_distance(speed*1.f);
           }
+          if (e.xkey.keycode == Three_key ) {
+            (*EnvObjectToWorld) =  RotateY(-speed*8) * (*EnvObjectToWorld);
+            (*EnvWorldToObject) =  RotateY(speed*8) * (*EnvWorldToObject);
+            env_y_angle -= speed*8;
+          }
+          if (e.xkey.keycode == Four_key ) {
+            (*EnvObjectToWorld) =  RotateY(speed*8) * (*EnvObjectToWorld);
+            (*EnvWorldToObject) =  RotateY(-speed*8) * (*EnvWorldToObject);
+            env_y_angle += speed*8;
+          }
           if (e.xkey.keycode == R_key ) {
             cam->reset();
             speed = 1;
+            (*EnvWorldToObject) = Start_EnvWorldToObject;
+            (*EnvObjectToWorld) = Start_EnvObjectToWorld;
           }
           if (e.xkey.keycode == P_key ) {
             point3f origin = cam->get_origin();
@@ -204,19 +224,19 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
             Float fd = cam->get_focal_distance();
             
             if(fov >= 0) {
-              Rprintf("\nLookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f) FOV: %.1f Aperture: %0.3f Focal Dist: %.1f Step Multiplier: %.2f",
+              Rprintf("\nLookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f) FOV: %.1f Aperture: %0.3f Focal Dist: %0.3f Env Rotation: %.2f",
                       origin.x(), origin.y(), origin.z(), 
                       origin.x()+cam_direction.x()*fd, origin.y()+cam_direction.y()*fd, origin.z()+cam_direction.z()*fd, 
                       fov, 
-                      cam->get_aperture(), fd, speed);
+                      cam->get_aperture(), fd, env_y_angle);
             }  else {
-              Rprintf("\nLookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f)  Focal Dist: %0.3f Step Multiplier: %.2f",
+              Rprintf("\nLookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f)  Focal Dist: %0.3f Env Rotation: %.2f",
                       origin.x(), origin.y(), origin.z(), 
                       origin.x()+cam_direction.x()*fd, origin.y()+cam_direction.y()*fd, origin.z()+cam_direction.z()*fd, 
-                      fd, speed);
+                      fd, env_y_angle);
             }
           } else {
-            if(!blanked && !terminate) {
+            if(!blanked && !terminate && e.xkey.keycode != C_key && e.xkey.keycode != E_key) {
               blanked = true;
               ns = 0;
               adaptive_pixel_sampler.reset();
@@ -263,9 +283,13 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
             if (e.xkey.keycode == C_key ) {
               speed = 0.5 * speed;
               speed = std::fmin(speed,128);
+              Rprintf("Step Multiplier: %.3f\n", speed);
+              
             }
             if (e.xkey.keycode == Down_key ) {
               cam->update_fov(speed*1.f);
+              Rprintf("Step Multiplier: %.3f\n", speed);
+              
             }
             if (e.xkey.keycode == Up_key ) {
               cam->update_fov(speed*-1.f);
@@ -282,9 +306,23 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
             if (e.xkey.keycode == Two_key ) {
               cam->update_focal_distance(speed*1.f);
             }
+            if (e.xkey.keycode == Three_key ) {
+              (*EnvObjectToWorld) =  RotateY(-speed*8) * (*EnvObjectToWorld);
+              (*EnvWorldToObject) =  RotateY(speed*8) * (*EnvWorldToObject);
+              env_y_angle -= speed*8;
+              
+            }
+            if (e.xkey.keycode == Four_key ) {
+              (*EnvObjectToWorld) =  RotateY(speed*8) * (*EnvObjectToWorld);
+              (*EnvWorldToObject) =  RotateY(-speed*8) * (*EnvWorldToObject);
+              env_y_angle += speed*8;
+              
+            }
             if (e.xkey.keycode == R_key ) {
               cam->reset();
               speed = 1;
+              (*EnvWorldToObject) = Start_EnvWorldToObject;
+              (*EnvObjectToWorld) = Start_EnvObjectToWorld;
             }
             if (e.xkey.keycode == P_key ) {
               point3f origin = cam->get_origin();
@@ -293,19 +331,19 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
               Float fd = cam->get_focal_distance();
               
               if(fov >= 0) {
-                Rprintf("\nLookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f) FOV: %.1f Aperture: %0.3f Focal Dist: %.1f Step Multiplier: %.2f",
+                Rprintf("\nLookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f) FOV: %.1f Aperture: %0.3f Focal Dist: %.1f Env Rotation: %.2f",
                         origin.x(), origin.y(), origin.z(), 
                         origin.x()+cam_direction.x()*fd, origin.y()+cam_direction.y()*fd, origin.z()+cam_direction.z()*fd, 
                         fov, 
-                        cam->get_aperture(), fd, speed);
+                        cam->get_aperture(), fd, env_y_angle);
               }  else {
-                Rprintf("\nLookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f)  Focal Dist: %0.3f Step Multiplier: %.2f",
+                Rprintf("\nLookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f)  Focal Dist: %0.3f Env Rotation: %.2f",
                         origin.x(), origin.y(), origin.z(), 
                         origin.x()+cam_direction.x()*fd, origin.y()+cam_direction.y()*fd, origin.z()+cam_direction.z()*fd, 
-                        fd, speed);
+                        fd, env_y_angle);
               }
             } else {
-              if(!blanked && !terminate) {
+              if(!blanked && !terminate && e.xkey.keycode != C_key && e.xkey.keycode != E_key) {
                 blanked = true;
                 ns = 0;
                 adaptive_pixel_sampler.reset();
@@ -456,12 +494,16 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
 
 PreviewDisplay::PreviewDisplay(unsigned int _width, unsigned int _height, 
                                bool preview, bool _interactive,
-                               Float initial_lookat_distance, RayCamera* _cam) {
+                               Float initial_lookat_distance, RayCamera* _cam,
+                               Transform* _EnvObjectToWorld, Transform* _EnvWorldToObject) :
+  EnvObjectToWorld(_EnvObjectToWorld), EnvWorldToObject(_EnvWorldToObject),
+  Start_EnvObjectToWorld(*_EnvObjectToWorld), Start_EnvWorldToObject(*_EnvWorldToObject) {
 #ifdef RAY_HAS_X11
   speed = 1.f;
   interactive = _interactive;
   orbit = true;
   terminate = false;
+  env_y_angle = 0;
   base_step = initial_lookat_distance/20;
   cam = _cam;
   if(preview) {
@@ -511,6 +553,7 @@ PreviewDisplay::PreviewDisplay(unsigned int _width, unsigned int _height,
   orbit = true;
   terminate = false;
   term = false;
+  env_y_angle = 0;
   if(preview) {
     width = _width;
     height = _height;
@@ -681,13 +724,15 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
           if(interactive_w) {
             speed = 2 * speed;
             speed = std::fmin(speed,128);
-            break;
-        }
+            Rprintf("Step Multiplier: %.3f\n", speed);
+          }
+          break;
           }
         case VK_KEY_C: { 
           if(interactive_w) {
             speed = 0.5 * speed;
-        }
+            Rprintf("Step Multiplier: %.3f\n", speed);
+          }
           break;
           }
         case VK_DOWN: {
@@ -717,19 +762,35 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         case VK_KEY_1: {
           if(interactive_w) {
             cam_w->update_focal_distance(speed*-1.f);
-        }
+          }
           break;
           }
         case VK_KEY_2: {
           if(interactive_w) {
             cam_w->update_focal_distance(speed*1.f);
-        }
+          }
           break;
           }
+        case VK_KEY_3: {
+          if(interactive_w) {
+            (*EnvObjectToWorld) =  RotateY(-speed*8) * (*EnvObjectToWorld);
+            (*EnvWorldToObject) =  RotateY(speed*8) * (*EnvWorldToObject);
+          }
+          break;
+        }
+        case VK_KEY_4: {
+          if(interactive_w) {
+          (*EnvObjectToWorld) =  RotateY(speed*8) * (*EnvObjectToWorld);
+          (*EnvWorldToObject) =  RotateY(-speed*8) * (*EnvWorldToObject);
+          }
+          break;
+        }
         case VK_KEY_R: {
           if(interactive_w) {
             cam_w->reset();
             speed = 1;
+            (*EnvWorldToObject) = Start_EnvWorldToObject;
+            (*EnvObjectToWorld) = Start_EnvObjectToWorld;
         }
           break;
           }
@@ -740,16 +801,16 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             Float fd = cam_w->get_focal_distance();
   
             if(fov >= 0) {
-              Rprintf("\nLookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f) FOV: %.1f Aperture: %0.3f Focal Dist: %.1f Step Multiplier: %.2f",
+              Rprintf("\nLookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f) FOV: %.1f Aperture: %0.3f Focal Dist: %0.3f Env Rotation: %.2f",
                       origin.x(), origin.y(), origin.z(),
                       origin.x()+cam_direction.x()*fd, origin.y()+cam_direction.y()*fd, origin.z()+cam_direction.z()*fd,
                       fov,
-                      cam_w->get_aperture(), fd, speed);
+                      cam_w->get_aperture(), fd, env_y_angle);
             }  else {
-              Rprintf("\nLookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f)  Focal Dist: %0.3f Step Multiplier: %.2f",
+              Rprintf("\nLookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f)  Focal Dist: %0.3f Env Rotation: %.2f",
                       origin.x(), origin.y(), origin.z(),
                       origin.x()+cam_direction.x()*fd, origin.y()+cam_direction.y()*fd, origin.z()+cam_direction.z()*fd,
-                      fd, speed);
+                      fd, env_y_angle);
             }
             break;
           } 

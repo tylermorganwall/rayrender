@@ -28,7 +28,8 @@
 class PreviewDisplay {
 public: 
   PreviewDisplay(unsigned int _width, unsigned int _height, bool preview, bool _interactive,
-                 Float initial_lookat_distance, RayCamera* _cam);
+                 Float initial_lookat_distance, RayCamera* _cam,
+                 Transform* _EnvObjectToWorld, Transform* _EnvWorldToObject);
   ~PreviewDisplay();
   void DrawImage(adaptive_sampler& adaptive_pixel_sampler, size_t &ns,
                  RProgress::RProgress &pb, bool progress,
@@ -57,6 +58,11 @@ public:
   bool interactive;
   bool terminate;
   RayCamera* cam;
+  Transform* EnvObjectToWorld;
+  Transform* EnvWorldToObject;
+  Transform Start_EnvObjectToWorld;
+  Transform Start_EnvWorldToObject;
+  
 };
 
 #endif

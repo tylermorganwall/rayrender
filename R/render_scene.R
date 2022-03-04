@@ -18,6 +18,7 @@
 #' W = Forward, S = Backward, A = Left, D = Right, Q = Up, Z = Down, 
 #' E = 2x Step Distance (max 128), C = 0.5x Step Distance, Up Key = Zoom In (decrease FOV), Down Key = Zoom Out (increase FOV),
 #' Left Key = Decrease Aperture, Right Key = Increase Aperture, 1 = Decrease Focal Distance, 2 = Increase Focal Distance,
+#' 3/4 = Rotate Environment Light,
 #' R = Reset Camera, TAB: Toggle Orbit Mode, Left Mouse Click: Change Look Direction, Right Mouse Click: Change Look At 
 #' 
 #' Initial step size is 1/20th of the distance from `lookat` to `lookfrom`.
@@ -280,6 +281,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
 "--------------------------Interactive Mode Controls---------------------------
 W/A/S/D: Horizontal Movement: | Q/Z: Vertical Movement | E/C: Adjust Step Size 
 Up/Down: Adjust FOV | Left/Right: Adjust Aperture | 1/2: Adjust Focal Distance
+3/4: Rotate Environment Light | 
 P: Print Camera Info | R: Reset Camera |  TAB: Toggle Orbit Mode  | ESC: Close
 Left Mouse: Change Look At (new focal distance) |  Right Mouse: Change Look At ")
   }

@@ -112,7 +112,6 @@ void render_animation_rcpp(List camera_info, List scene_info, List camera_moveme
   
   
   std::unique_ptr<RayCamera> cam;
-  PreviewDisplay d(nx,ny, preview, false, 20.0f, cam.get());
 
   //unpack motion info
   NumericVector cam_x        = as<NumericVector>(camera_movement["x"]);
@@ -323,6 +322,11 @@ void render_animation_rcpp(List camera_info, List scene_info, List camera_moveme
     world.add(background_sphere);
     impl_only_bg = true;
   }
+  
+  PreviewDisplay d(nx,ny, preview, false, 20.0f, cam.get(), 
+                   background_sphere->ObjectToWorld.get(),
+                   background_sphere->WorldToObject.get());
+  
 
   hitable_list hlist;
   if(verbose) {

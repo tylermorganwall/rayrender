@@ -195,8 +195,7 @@ List render_scene_rcpp(List camera_info, List scene_info) {
                                      aperture, dist_to_focus,
                                      shutteropen, shutterclose));
   }
-  PreviewDisplay Display(nx,ny, preview, interactive, (lookat-lookfrom).length(), cam.get());
-  
+
 
   int nx1, ny1, nn1;
   auto start = std::chrono::high_resolution_clock::now();
@@ -407,6 +406,7 @@ List render_scene_rcpp(List camera_info, List scene_info) {
       numbertosample++;
     }
   }
+
   hitable_list world;
 
   world.add(worldbvh);
@@ -416,6 +416,10 @@ List render_scene_rcpp(List camera_info, List scene_info) {
     world.add(background_sphere);
     impl_only_bg = true;
   }
+  PreviewDisplay Display(nx,ny, preview, interactive, (lookat-lookfrom).length(), cam.get(),
+                         background_sphere->ObjectToWorld.get(),
+                         background_sphere->WorldToObject.get());
+  
 
   hitable_list hlist;
   if(verbose) {
