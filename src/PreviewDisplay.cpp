@@ -337,7 +337,9 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
             if( hrec.shape->GetName() != "EnvironmentLight") {
               dir = -hrec.p;
             }  else {
-              return;
+              left = false;
+              right = true;
+              dir = -hrec.p;
             }
           }
         } else if (fov > 0) {
@@ -345,6 +347,9 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
                                0.5f);
           if(left) {
             world->hit(r2, 0.001, FLT_MAX, hrec, rng);
+            if( hrec.shape->GetName() == "EnvironmentLight") {
+              right = true;
+            }
           }
           dir = r2.direction();
         } else {
@@ -354,6 +359,7 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
             if( hrec.shape->GetName() != "EnvironmentLight") {
               dir = -(cam->get_origin()-hrec.p);
             } else {
+              Rprintf("Clicking on the environment light while using a orthographic camera does not change the view.\n");
               dir = -cam->get_w();
             }
           } else {
@@ -361,9 +367,11 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
           }
         }
         if(left && !right) {
-          Float current_fd = cam->get_focal_distance();
-          Float new_fd = (hrec.p-cam->get_origin()).length();
-          cam->update_focal_distance(new_fd- current_fd);
+          if(fov != 0 && fov != 360) {
+            Float current_fd = cam->get_focal_distance();
+            Float new_fd = (hrec.p-cam->get_origin()).length();
+            cam->update_focal_distance(new_fd- current_fd);
+          }
           cam->update_lookat(hrec.p);
         }
         cam->update_look_direction(-dir);
@@ -770,6 +778,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         Float u = (Float(x)) / Float(width);
         Float v = (Float(y)) / Float(height);
         vec3f dir;
+        bool just_direction = false;
         hit_record hrec;
         if(fov < 0) {
           CameraSample samp({1-u,v},point2f(0.5,0.5), 0.5);
@@ -779,7 +788,8 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             if( hrec.shape->GetName() != "EnvironmentLight") {
               dir = -hrec.p;
             }  else {
-              break ;
+              dir = -hrec.p;
+              just_direction = true;
             }
           }
         } else if (fov > 0) {
@@ -800,11 +810,16 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             dir = -cam_w->get_w();
           }
         }
-        Float current_fd = cam_w->get_focal_distance();
-        Float new_fd = (hrec.p-cam_w->get_origin()).length();
-        cam_w->update_focal_distance(new_fd- current_fd);
-        cam_w->update_lookat(hrec.p);
-        // cam_w->update_look_direction(-dir);
+        if(!just_direction) {
+          if(fov != 0 && fov != 360) {
+            Float current_fd = cam_w->get_focal_distance();
+            Float new_fd = (hrec.p-cam_w->get_origin()).length();
+            cam_w->update_focal_distance(new_fd- current_fd);
+          }
+          cam_w->update_lookat(hrec.p);
+        } else {
+          cam_w->update_look_direction(-dir);
+        }
         *ns_w = 0;
         aps->reset();
         if(progress_w && !interactive_w) {
@@ -843,6 +858,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         if( hrec.shape->GetName() != "EnvironmentLight") {
           dir = -(cam_w->get_origin()-hrec.p);
         } else {
+          Rprintf("Clicking on the environment light while using a orthographic camera does not change the view.\n");
           dir = -cam_w->get_w();
         }
       } else {

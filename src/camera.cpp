@@ -165,9 +165,11 @@ void ortho_camera::update_fov(Float delta_fov) {
 }
 
 void ortho_camera::update_aperture(Float delta_aperture) {
+  Rprintf("Cannot change aperture while using an orthographic camera.\n");
 }
 
 void ortho_camera::update_focal_distance(Float delta_focus) {
+  Rprintf("Cannot change focal distance while using an orthographic camera.\n");
 }
 
 void ortho_camera::update_look_direction(vec3f dir) {
@@ -222,23 +224,35 @@ ray environment_camera::get_ray(Float s, Float t, point3f u3, Float u1) {
   Float theta = M_PI * t;
   Float phi = 2 * M_PI * s;
   vec3f dir(std::sin(theta) * std::cos(phi), 
-           std::sin(theta) * std::sin(phi),
-           std::cos(theta));
+            std::sin(theta) * std::sin(phi),
+            std::cos(theta));
   dir = uvw.local_to_world(dir);
   return(ray(origin, dir, time)); 
 }
 
 void environment_camera::update_position(vec3f delta, bool update_uvw) {
   origin += delta;
+  if(update_uvw) {
+    w = unit_vector(origin - lookat);
+    v = unit_vector(-cross(vup, w));
+    u = cross(w, v);
+    uvw = onb(w,v,u);
+  }
+  if(w.length() == 0 && u.length() == 0) {
+    reset();
+  } 
 }
 
 void environment_camera::update_fov(Float delta_fov) {
+  Rprintf("Cannot change FOV while using an environment camera.\n");
 }
 
 void environment_camera::update_aperture(Float delta_aperture) {
+  Rprintf("Cannot change aperture while using an environment camera.\n");
 }
 
 void environment_camera::update_focal_distance(Float delta_focus) {
+  Rprintf("Cannot change focal distance while using an environment camera.\n");
 }
 
 void environment_camera::update_look_direction(vec3f dir) {
@@ -249,7 +263,7 @@ void environment_camera::update_look_direction(vec3f dir) {
 }
 
 void environment_camera::update_lookat(point3f point) {
-  
+  lookat = point;
 }
 
 vec3f environment_camera::get_w() {return(w);}
@@ -771,9 +785,11 @@ void RealisticCamera::update_position(vec3f delta, bool update_uvw) {
 }
 
 void RealisticCamera::update_fov(Float delta_fov) {
+  Rprintf("Cannot adjust FOV using a realistic camera.\n");
 }
 
 void RealisticCamera::update_aperture(Float delta_aperture) {
+  Rprintf("Cannot interactively adjust aperture using a realistic camera.\n");
 }
 
 void RealisticCamera::update_focal_distance(Float delta_focus) {

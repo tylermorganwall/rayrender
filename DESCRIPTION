@@ -1,7 +1,7 @@
 Package: rayrender
 Type: Package
 Title: Build and Raytrace 3D Scenes
-Version: 0.25.2
+Version: 0.26.0
 Date: 2022-02-07
 Authors@R: c(person("Tyler", "Morgan-Wall", email = "tylermw@gmail.com", 
     role = c("aut", "cph", "cre"), comment = c(ORCID = "0000-0002-3131-3814")),
@@ -12,6 +12,7 @@ Maintainer: Tyler Morgan-Wall <tylermw@gmail.com>
 Description: Render scenes using pathtracing. Build 3D scenes out of spheres, cubes, planes, disks, triangles, cones, curves, line segments, cylinders, ellipsoids, and 3D models in the 'Wavefront' OBJ file format or the PLY Polygon File Format. Supports several material types, textures, multicore rendering, and tone-mapping. Based on the "Ray Tracing in One Weekend" book series. Peter Shirley (2018) <https://raytracing.github.io>.
 License: GPL-3
 Copyright: file inst/COPYRIGHTS 
+Depends: R (>= 3.0.2)
 Imports: 
     Rcpp (>= 1.0.0),
     parallel,

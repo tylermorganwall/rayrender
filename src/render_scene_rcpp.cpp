@@ -411,7 +411,7 @@ List render_scene_rcpp(List camera_info, List scene_info) {
   world.add(worldbvh);
 
   bool impl_only_bg = false;
-  if((numbertosample == 0 || hasbackground || ambient_light) && debug_channel != 18) {
+  if((numbertosample == 0 || hasbackground || ambient_light || interactive) && debug_channel != 18) {
     world.add(background_sphere);
     impl_only_bg = true;
   }

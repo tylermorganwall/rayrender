@@ -22,8 +22,11 @@
 #' 
 #' Initial step size is 1/20th of the distance from `lookat` to `lookfrom`.
 #' 
-#' Note: Some options aren't available all cameras. When in orbit mode, changes in the look
-#' direction from clicking will be reset when the camera moves. 
+#' Note: Clicking on the environment image will only redirect the view direction, not change the orbit point.
+#' Some options aren't available all cameras. When using a realistic camera,
+#' the aperture and field of view cannot be changed from their initial settings. Additionally,
+#' clicking to direct the camera at the background environment image while using a realistic camera will
+#' not always point to the exact position selected. 
 #' @param camera_description_file Default `NA`. Filename of a camera description file for rendering with
 #' a realistic camera. Several camera files are built-in: `"50mm"`,`"wide"`,`"fisheye"`, and `"telephoto"`.
 #' @param camera_scale Default `1`. Amount to scale the camera up or down in size. Use this rather than scaling a 
