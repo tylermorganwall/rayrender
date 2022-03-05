@@ -279,11 +279,10 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
   if(preview && interactive && has_gui_capability()) {
     message(
 "--------------------------Interactive Mode Controls---------------------------
-W/A/S/D: Horizontal Movement: | Q/Z: Vertical Movement | E/C: Adjust Step Size 
-Up/Down: Adjust FOV | Left/Right: Adjust Aperture | 1/2: Adjust Focal Distance
-3/4: Rotate Environment Light | 
-P: Print Camera Info | R: Reset Camera |  TAB: Toggle Orbit Mode  | ESC: Close
-Left Mouse: Change Look At (new focal distance) |  Right Mouse: Change Look At ")
+W/A/S/D: Horizontal Movement: | Q/Z: Vertical Movement | Up/Down: Adjust FOV | ESC: Close
+Left/Right: Adjust Aperture  | 1/2: Adjust Focal Distance | 3/4: Rotate Environment Light 
+P: Print Camera Info | R: Reset Camera |  TAB: Toggle Orbit Mode |  E/C: Adjust Step Size
+Left Mouse Click: Change Look At (new focal distance) | Right Mouse Click: Change Look At ")
   }
   
   scene_list = prepare_scene_list(scene = scene, width = width, height = height, fov = fov, 

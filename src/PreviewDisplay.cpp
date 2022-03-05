@@ -381,7 +381,7 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
             }
           }
         } else if (fov > 0) {
-          ray r2 = cam->get_ray(u,1-v, point3f(0.5),
+          ray r2 = cam->get_ray(u,1-v, point3f(0),
                                0.5f);
           if(left) {
             world->hit(r2, 0.001, FLT_MAX, hrec, rng);
@@ -854,7 +854,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             }
           }
         } else if (fov > 0) {
-          ray r2 = cam_w->get_ray(u,1-v, point3f(0.5),
+          ray r2 = cam_w->get_ray(u,1-v, point3f(0),
                                 0.5f);
           world_w->hit(r2, 0.001, FLT_MAX, hrec, *rng_w);
           dir = r2.direction();
