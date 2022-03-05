@@ -185,6 +185,9 @@ render_ao = function(scene, width = 400, height = 400, fov = 20,
   camera_info = scene_list$camera_info
   scene_info = scene_list$scene_info
   
+  camera_info$preview = FALSE
+  camera_info$interactive = FALSE
+  
   #Pathrace Scene
   rgb_mat = render_scene_rcpp(camera_info = camera_info, scene_info = scene_info) 
   
