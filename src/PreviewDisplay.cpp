@@ -279,6 +279,8 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
             }
             if (e.xkey.keycode == E_key ) {
               speed = 2 * speed;
+              Rprintf("Step Multiplier: %.3f\n", speed);
+              
             }
             if (e.xkey.keycode == C_key ) {
               speed = 0.5 * speed;
@@ -288,8 +290,7 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
             }
             if (e.xkey.keycode == Down_key ) {
               cam->update_fov(speed*1.f);
-              Rprintf("Step Multiplier: %.3f\n", speed);
-              
+
             }
             if (e.xkey.keycode == Up_key ) {
               cam->update_fov(speed*-1.f);
