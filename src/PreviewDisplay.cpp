@@ -39,6 +39,12 @@ static hitable* world_w;
 static random_gen* rng_w;
 static RProgress::RProgress* pb_w;
 static bool progress_w;
+static Float env_y_angle;;
+static Transform* EnvWorldToObject_w;
+static Transform* EnvObjectToWorld_w;
+static Transform Start_EnvWorldToObject_w;
+static Transform Start_EnvObjectToWorld_w;
+
 
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
@@ -435,6 +441,10 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
     Rcpp::NumericMatrix &r  = adaptive_pixel_sampler.r;
     Rcpp::NumericMatrix &g  = adaptive_pixel_sampler.g;
     Rcpp::NumericMatrix &b  = adaptive_pixel_sampler.b;
+    EnvWorldToObject_w = EnvWorldToObject;
+    EnvObjectToWorld_w = EnvObjectToWorld;
+    Start_EnvWorldToObject_w = Start_EnvWorldToObject;
+    Start_EnvObjectToWorld_w = Start_EnvObjectToWorld;
     std::vector<bool>& finalized = adaptive_pixel_sampler.finalized;
     std::vector<bool>& just_finalized = adaptive_pixel_sampler.just_finalized;
     world_w = world;
@@ -555,6 +565,7 @@ PreviewDisplay::PreviewDisplay(unsigned int _width, unsigned int _height,
   terminate = false;
   term = false;
   env_y_angle = 0;
+  
   if(preview) {
     width = _width;
     height = _height;
@@ -774,15 +785,15 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
           }
         case VK_KEY_3: {
           if(interactive_w) {
-            (*EnvObjectToWorld) =  RotateY(-speed*8) * (*EnvObjectToWorld);
-            (*EnvWorldToObject) =  RotateY(speed*8) * (*EnvWorldToObject);
+            (*EnvObjectToWorld_w) =  RotateY(-speed*8) * (*EnvObjectToWorld_w);
+            (*EnvWorldToObject_w) =  RotateY(speed*8) * (*EnvWorldToObject_w);
           }
           break;
         }
         case VK_KEY_4: {
           if(interactive_w) {
-          (*EnvObjectToWorld) =  RotateY(speed*8) * (*EnvObjectToWorld);
-          (*EnvWorldToObject) =  RotateY(-speed*8) * (*EnvWorldToObject);
+          (*EnvObjectToWorld_w) =  RotateY(speed*8) * (*EnvObjectToWorld_w);
+          (*EnvWorldToObject_w) =  RotateY(-speed*8) * (*EnvWorldToObject_w);
           }
           break;
         }
@@ -790,8 +801,8 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
           if(interactive_w) {
             cam_w->reset();
             speed = 1;
-            (*EnvWorldToObject) = Start_EnvWorldToObject;
-            (*EnvObjectToWorld) = Start_EnvObjectToWorld;
+            (*EnvWorldToObject_w) = Start_EnvWorldToObject_w;
+            (*EnvObjectToWorld_w) = Start_EnvObjectToWorld_w;
         }
           break;
           }
