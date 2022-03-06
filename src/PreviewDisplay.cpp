@@ -870,14 +870,18 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
                                 0.5f);
           world_w->hit(r2, 0.001, FLT_MAX, hrec, *rng_w);
           dir = r2.direction();
+          if( hrec.shape->GetName() == "EnvironmentLight") {
+            just_direction = true;
+          } 
         } else {
-          ray r2 = cam_w->get_ray(u,1-v, point3f(0.5),
+          ray r2 = cam_w->get_ray(u,1-v, point3f(0),
                                 0.5f);
           if(world_w->hit(r2, 0.001, FLT_MAX, hrec, *rng_w)) {
             if( hrec.shape->GetName() != "EnvironmentLight") {
               dir = -(cam_w->get_origin()-hrec.p);
             } else {
               dir = -cam_w->get_w();
+              just_direction = true;
             }
           } else {
             dir = -cam_w->get_w();
@@ -922,11 +926,11 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
           }
         }
       } else if (fov > 0) {
-        ray r2 = cam_w->get_ray(u,1-v, point3f(0.5),
+        ray r2 = cam_w->get_ray(u,1-v, point3f(0),
                                 0.5f);
         dir = r2.direction();
       } else {
-        ray r2 = cam_w->get_ray(u,1-v, point3f(0.5),
+        ray r2 = cam_w->get_ray(u,1-v, point3f(0),
                               0.5f);
         if(world_w->hit(r2, 0.001, FLT_MAX, hrec, *rng_w)) {
           if( hrec.shape->GetName() != "EnvironmentLight") {

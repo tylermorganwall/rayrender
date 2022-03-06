@@ -90,6 +90,15 @@ void camera::update_look_direction(vec3f dir) {
 
 void camera::update_lookat(point3f point) {
   lookat = point;
+  w = unit_vector(origin-lookat);
+  u = unit_vector(cross(vup, w));
+  v = cross(w, u);
+  lower_left_corner = origin - half_width * focus_dist *  u - half_height * focus_dist * v - focus_dist * w;
+  horizontal = 2.0f * half_width * focus_dist * u;
+  vertical = 2.0f * half_height * focus_dist * v;
+  if(w.length() == 0 && u.length() == 0) {
+    reset();
+  } 
 }
 
 
