@@ -29,12 +29,10 @@ using namespace Rcpp;
 #include "RcppThread.h"
 #include "PreviewDisplay.h"
 
-
 // #define DEBUG
 
 #ifdef DEBUG
 #include <iostream>
-#include <fstream>
 #endif
 
 using namespace std;
@@ -369,12 +367,29 @@ List render_scene_rcpp(List camera_info, List scene_info) {
 
   if(hasbackground) {
     background_texture_data = stbi_loadf(background[0], &nx1, &ny1, &nn1, 0);
-    background_texture = std::make_shared<image_texture>(background_texture_data, nx1, ny1, nn1, 1, 1, intensity_env);
-    background_material = std::make_shared<diffuse_light>(background_texture, 1.0, false);
-    background_sphere = std::make_shared<InfiniteAreaLight>(nx1, ny1, world_radius*2, vec3f(0.f),
-                                              background_texture, background_material,
-                                              BackgroundTransform,
-                                              BackgroundTransformInv, false);
+    if(background_texture_data) {
+      background_texture = std::make_shared<image_texture>(background_texture_data, nx1, ny1, nn1, 1, 1, intensity_env);
+      background_material = std::make_shared<diffuse_light>(background_texture, 1.0, false);
+      background_sphere = std::make_shared<InfiniteAreaLight>(nx1, ny1, world_radius*2, vec3f(0.f),
+                                                background_texture, background_material,
+                                                BackgroundTransform,
+                                                BackgroundTransformInv, false);
+    } else {
+      
+      Rcpp::Rcout << "Failed to load background image at " << background(0) << "\n";
+      if(stbi_failure_reason()) {
+        Rcpp::Rcout << stbi_failure_reason() << "\n";
+      }
+      hasbackground = false;
+      ambient_light = true;
+      backgroundhigh = vec3f(FLT_MIN,FLT_MIN,FLT_MIN);
+      backgroundlow = vec3f(FLT_MIN,FLT_MIN,FLT_MIN);
+      background_texture = std::make_shared<gradient_texture>(backgroundlow, backgroundhigh, false, false);
+      background_material = std::make_shared<diffuse_light>(background_texture, 1.0, false);
+      background_sphere = std::make_shared<InfiniteAreaLight>(100, 100, world_radius*2, vec3f(0.f),
+                                                              background_texture, background_material,
+                                                              BackgroundTransform,BackgroundTransformInv,false);
+    }
   } else if(ambient_light) {
     //Check if both high and low are black, and set to FLT_MIN
     if(backgroundhigh.length() == 0 && backgroundlow.length() == 0) {
