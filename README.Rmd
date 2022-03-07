@@ -192,7 +192,7 @@ Finally, rayrender supports environment lighting with the `environment_light` ar
 
 ```{r README_hdr, cache=TRUE, message=FALSE}
 tempfilehdr = tempfile(fileext = ".hdr")
-download.file("https://www.tylermw.com/data/venice_sunset_2k.hdr",tempfilehdr)
+download.file("https://www.tylermw.com/data/venice_sunset_2k.hdr",tempfilehdr, mode="wb")
 
 #Create star polygon
 angles = seq(0,360,by=36)
