@@ -208,13 +208,13 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
             cam->update_focal_distance(speed*1.f);
           }
           if (e.xkey.keycode == Three_key ) {
-            (*EnvObjectToWorld) =  RotateY(-speed*8) * (*EnvObjectToWorld);
-            (*EnvWorldToObject) =  RotateY(speed*8) * (*EnvWorldToObject);
+            (*EnvObjectToWorld) =  RotateY(speed*8) * (*EnvObjectToWorld);
+            (*EnvWorldToObject) =  RotateY(-speed*8) * (*EnvWorldToObject);
             env_y_angle -= speed*8;
           }
           if (e.xkey.keycode == Four_key ) {
-            (*EnvObjectToWorld) =  RotateY(speed*8) * (*EnvObjectToWorld);
-            (*EnvWorldToObject) =  RotateY(-speed*8) * (*EnvWorldToObject);
+            (*EnvObjectToWorld) =  RotateY(-speed*8) * (*EnvObjectToWorld);
+            (*EnvWorldToObject) =  RotateY(speed*8) * (*EnvWorldToObject);
             env_y_angle += speed*8;
           }
           if (e.xkey.keycode == R_key ) {
@@ -314,14 +314,14 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
               cam->update_focal_distance(speed*1.f);
             }
             if (e.xkey.keycode == Three_key ) {
-              (*EnvObjectToWorld) =  RotateY(-speed*8) * (*EnvObjectToWorld);
-              (*EnvWorldToObject) =  RotateY(speed*8) * (*EnvWorldToObject);
+              (*EnvObjectToWorld) =  RotateY(speed*8) * (*EnvObjectToWorld);
+              (*EnvWorldToObject) =  RotateY(-speed*8) * (*EnvWorldToObject);
               env_y_angle -= speed*8;
               
             }
             if (e.xkey.keycode == Four_key ) {
-              (*EnvObjectToWorld) =  RotateY(speed*8) * (*EnvObjectToWorld);
-              (*EnvWorldToObject) =  RotateY(-speed*8) * (*EnvWorldToObject);
+              (*EnvObjectToWorld) =  RotateY(-speed*8) * (*EnvObjectToWorld);
+              (*EnvWorldToObject) =  RotateY(speed*8) * (*EnvWorldToObject);
               env_y_angle += speed*8;
               
             }
@@ -785,15 +785,15 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
           }
         case VK_KEY_3: {
           if(interactive_w) {
-            (*EnvObjectToWorld_w) =  RotateY(-speed*8) * (*EnvObjectToWorld_w);
-            (*EnvWorldToObject_w) =  RotateY(speed*8) * (*EnvWorldToObject_w);
+            (*EnvObjectToWorld_w) =  RotateY(speed*8) * (*EnvObjectToWorld_w);
+            (*EnvWorldToObject_w) =  RotateY(-speed*8) * (*EnvWorldToObject_w);
           }
           break;
         }
         case VK_KEY_4: {
           if(interactive_w) {
-          (*EnvObjectToWorld_w) =  RotateY(speed*8) * (*EnvObjectToWorld_w);
-          (*EnvWorldToObject_w) =  RotateY(-speed*8) * (*EnvWorldToObject_w);
+          (*EnvObjectToWorld_w) =  RotateY(-speed*8) * (*EnvObjectToWorld_w);
+          (*EnvWorldToObject_w) =  RotateY(speed*8) * (*EnvWorldToObject_w);
           }
           break;
         }
