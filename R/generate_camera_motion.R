@@ -4,7 +4,8 @@
 #' a data.frame that can be passed to `render_animation()`.
 #' 
 #' @param positions A list or 3-column XYZ matrix of camera positions. 
-#' These will serve as key frames for the camera position.
+#' These will serve as key frames for the camera position. Alternatively, this can also be the a 
+#' dataframe of the keyframe output from an interactive rayrender session (`ray_keyframes`).
 #' @param lookats Default `NULL`, which sets the camera lookat to the origin `c(0,0,0)` 
 #' for the animation. A list or 3-column XYZ matrix
 #' of `lookat` points. Must be the same number of points as `positions`.
@@ -127,6 +128,16 @@ generate_camera_motion = function(positions,
                                  "none" = 0,"position" = 1,"lookats" = 2, "both" = 3, 0))
   curvature_adjust_pos = curve_adj_type %in% c(1,3)
   curvature_adjust_look = curve_adj_type %in% c(2,3)
+  if(ncol(positions) == 14) {
+    temp = positions
+    positions = temp[,1:3]
+    lookats = temp[,4:6]
+    apertures = temp[,7]
+    fovs = temp[,8]
+    focal_distances = temp[,9]
+    ortho_dims = temp[,10:11]
+    camera_ups = temp[,12:14]
+  }
   if(type=="bezier") {
     position_control_points = process_point_series(positions,closed=closed,straight=FALSE)
     points_dist = calculate_distance_along_bezier_curve(position_control_points, breaks = 50)
@@ -194,7 +205,7 @@ generate_camera_motion = function(positions,
         if(length(focal_distances) == 1) {
           focal_final = rep(focal_distances,nrow(points_final))
         } else {
-          focal_final = focal_distances
+          focal_final = tween(focal_distances,n=frames,ease="linear")
         }
       } else {
         focal_control_lookats = process_point_series_1d(focal_distances,closed=closed,straight=focal_linear)
@@ -253,8 +264,8 @@ generate_camera_motion = function(positions,
     
     if(is.null(focal_distances)) {
       focal_distances = sqrt((positions$x - lookats$x)^2 + 
-                               (positions$y - lookats$y)^2 + 
-                               (positions$z - lookats$z)^2)
+                             (positions$y - lookats$y)^2 + 
+                             (positions$z - lookats$z)^2)
     } else if (length(focal_distances) == 1) {
       focal_distances = rep(focal_distances,length(positions$x))
     }
@@ -262,10 +273,16 @@ generate_camera_motion = function(positions,
       ortho_dims = matrix(c(1,1),ncol=2,nrow=length(positions$x),byrow=TRUE)
     }
     ortho = grDevices::xy.coords(ortho_dims)
+    if(length(apertures) == 1) {
+      apertures = rep(apertures,length(positions$x))
+    }
+    if(length(apertures) == 1) {
+      fovs = rep(fovs,length(positions$x))
+    }
     tween_df = data.frame(x=positions$x, y=positions$y, z=positions$z,
                           dx=lookats$x, dy=lookats$y, dz=lookats$z,
-                          aperture = rep(apertures,length(positions$x)),
-                          fov = rep(fovs,length(positions$x)),
+                          aperture = apertures,
+                          fov = fovs,
                           focal = focal_distances,
                           orthox = ortho$x, orthoy = ortho$y,
                           upx =camera_ups$x, upy = camera_ups$y ,upz = camera_ups$z)
@@ -428,7 +445,7 @@ process_point_series_1d = function(values, closed=FALSE, straight=FALSE) {
 #' 
 #' @keywords internal
 process_point_series_2d = function(values, closed=FALSE, straight=FALSE) {
-  mat_values = matrix(0,ncol=3,nrow=length(values))
+  mat_values = matrix(0,ncol=3,nrow=nrow(values))
   mat_values[,1] = values[,1]
   mat_values[,2] = values[,2]
   if(!straight) {

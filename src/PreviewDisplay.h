@@ -35,6 +35,7 @@ public:
                  RProgress::RProgress &pb, bool progress,
                  Float percent_done,
                  hitable* world, random_gen& rng);
+  std::vector<Rcpp::List> GetKeyframes() {return(Keyframes);}
 #ifdef RAY_HAS_X11
   Display *d;
   XImage *img;
@@ -62,6 +63,7 @@ public:
   Transform* EnvWorldToObject;
   Transform Start_EnvObjectToWorld;
   Transform Start_EnvWorldToObject;
+  std::vector<Rcpp::List> Keyframes;
   
 };
 

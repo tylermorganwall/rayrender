@@ -29,7 +29,7 @@ using namespace std;
 void render_animation_rcpp(List camera_info, List scene_info, List camera_movement, 
                            int start_frame, int end_frame,
                            CharacterVector filenames, Function post_process_frame, int toneval,
-                           bool bloom) {
+                           bool bloom, bool write_image) {
   
   //Unpack scene info
   bool ambient_light = as<bool>(scene_info["ambient_light"]);
@@ -517,8 +517,13 @@ void render_animation_rcpp(List camera_info, List scene_info, List camera_moveme
                  verbose, cam.get(),  fov,
                  world, hlist,
                  clampval, max_depth, roulette_active, d);
+      if(d.terminate) {
+        break;
+      }
       List temp = List::create(_["r"] = routput, _["g"] = goutput, _["b"] = boutput);
-      post_process_frame(temp, debug_channel, as<std::string>(filenames(i)), toneval, bloom);
+      if(write_image) {
+        post_process_frame(temp, debug_channel, as<std::string>(filenames(i)), toneval, bloom);
+      }
     }
   }
 

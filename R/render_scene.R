@@ -257,8 +257,8 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
       missing_corn = TRUE
     }
     if(missing(lookat)) {
-      lookat = c(278, 278, 0)
-      corn_message = paste0(corn_message, "lookat `c(278,278,0)` ")
+      lookat = c(278, 278, 555/2)
+      corn_message = paste0(corn_message, "lookat `c(278,278,555/2)` ")
       missing_corn = TRUE
     }
     if(missing(fov) && is.na(camera_description_file)) {
@@ -282,6 +282,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
 W/A/S/D: Horizontal Movement: | Q/Z: Vertical Movement | Up/Down: Adjust FOV | ESC: Close
 Left/Right: Adjust Aperture  | 1/2: Adjust Focal Distance | 3/4: Rotate Environment Light 
 P: Print Camera Info | R: Reset Camera |  TAB: Toggle Orbit Mode |  E/C: Adjust Step Size
+K: Save Keyframe (saves `ray_keyframes` dataframe at end, see `generate_camera_motion()`)
 Left Mouse Click: Change Look At (new focal distance) | Right Mouse Click: Change Look At ")
   }
   
@@ -312,7 +313,11 @@ Left Mouse Click: Change Look At (new focal distance) | Right Mouse Click: Chang
   
   #Pathrace Scene
   rgb_mat = render_scene_rcpp(camera_info = camera_info, scene_info = scene_info) 
-  
+  if(!is.null(attr(rgb_mat,"keyframes"))) {
+    message("Saving camera motion dataframe to `ray_animation_df`")
+    keyframes = do.call(rbind,lapply(attr(rgb_mat,"keyframes"),as.data.frame))
+    assign("ray_keyframes",keyframes, env  = .GlobalEnv)
+  }
   return_array = post_process_scene(rgb_mat, iso, tonemap, debug_channel, filename, return_raw_array, bloom)
   return(invisible(return_array))
 }

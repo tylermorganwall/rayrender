@@ -529,5 +529,13 @@ List render_scene_rcpp(List camera_info, List scene_info) {
     std::chrono::duration<double> elapsed = finish - startfirst;
     Rcpp::Rcout << "Total time elapsed: " << elapsed.count() << " seconds" << "\n";
   }
-  return(List::create(_["r"] = routput, _["g"] = goutput, _["b"] = boutput));
+  List final_image = List::create(_["r"] = routput, _["g"] = goutput, _["b"] = boutput);
+  if(Display.Keyframes.size() > 0) {
+    List keyframes(Display.Keyframes.size());
+    for(unsigned int i = 0; i < Display.Keyframes.size(); i++ ) {
+      keyframes(i) = Display.Keyframes[i];
+    }
+    final_image.attr("keyframes") = keyframes;
+  }
+  return(final_image);
 }

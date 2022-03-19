@@ -169,7 +169,7 @@ render_animation = function(scene, camera_motion, start_frame = 1, end_frame = N
                             max_depth = 50, roulette_active_depth = 10,
                             ambient_light = FALSE, 
                             clamp_value = Inf,
-                            filename = "rayimage", backgroundhigh = "#80b4ff",backgroundlow = "#ffffff",
+                            filename = NA, backgroundhigh = "#80b4ff",backgroundlow = "#ffffff",
                             shutteropen = 0.0, shutterclose = 1.0, focal_distance=NULL, ortho_dimensions = c(1,1),
                             tonemap ="gamma", bloom = TRUE, parallel=TRUE, bvh_type = "sah",
                             environment_light = NULL, rotate_env = 0, intensity_env = 1,
@@ -178,6 +178,10 @@ render_animation = function(scene, camera_motion, start_frame = 1, end_frame = N
                             preview_light_direction = c(0,-1,0), preview_exponent = 6) { 
   if(ambient_occlusion) {
     debug_channel = "ao"
+  }
+  write_file = TRUE
+  if(is.na(filename)) {
+    write_file = FALSE
   }
   scene_list = prepare_scene_list(scene = scene, width = width, height = height, fov = 0, 
                                   samples = samples,  camera_description_file = camera_description_file, 
@@ -222,5 +226,5 @@ render_animation = function(scene, camera_motion, start_frame = 1, end_frame = N
   #Pathrace Scene
   rgb_mat = render_animation_rcpp(camera_info = camera_info, scene_info = scene_info, camera_movement = camera_motion,
                               start_frame = start_frame - 1, end_frame = end_frame, filenames = filename_str, post_process_frame  = post_process_frame,
-                              toneval=toneval, bloom = bloom) 
+                              toneval=toneval, bloom = bloom, write_image = write_file) 
 }

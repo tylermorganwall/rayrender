@@ -139,8 +139,8 @@ render_ao = function(scene, width = 400, height = 400, fov = 20,
       missing_corn = TRUE
     }
     if(missing(lookat)) {
-      lookat = c(278, 278, 0)
-      corn_message = paste0(corn_message, "lookat `c(278,278,0)` ")
+      lookat = c(278, 278, 555/2)
+      corn_message = paste0(corn_message, "lookat `c(278,278,555/2)` ")
       missing_corn = TRUE
     }
     if(missing(fov) && is.na(camera_description_file)) {
