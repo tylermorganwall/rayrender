@@ -28,7 +28,8 @@ generate_camera_motion(
 }
 \arguments{
 \item{positions}{A list or 3-column XYZ matrix of camera positions. 
-These will serve as key frames for the camera position.}
+These will serve as key frames for the camera position. Alternatively, this can also be the a 
+dataframe of the keyframe output from an interactive rayrender session (`ray_keyframes`).}
 
 \item{lookats}{Default `NULL`, which sets the camera lookat to the origin `c(0,0,0)` 
 for the animation. A list or 3-column XYZ matrix

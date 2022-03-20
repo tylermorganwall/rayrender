@@ -18,8 +18,10 @@
 #' W = Forward, S = Backward, A = Left, D = Right, Q = Up, Z = Down, 
 #' E = 2x Step Distance (max 128), C = 0.5x Step Distance, Up Key = Zoom In (decrease FOV), Down Key = Zoom Out (increase FOV),
 #' Left Key = Decrease Aperture, Right Key = Increase Aperture, 1 = Decrease Focal Distance, 2 = Increase Focal Distance,
-#' 3/4 = Rotate Environment Light,
+#' 3/4 = Rotate Environment Light, 
 #' R = Reset Camera, TAB: Toggle Orbit Mode, Left Mouse Click: Change Look Direction, Right Mouse Click: Change Look At 
+#' K: Save Keyframe (at the conclusion of the render, this will create the `ray_keyframes`
+#' data.frame in the global environment, which can be passed to `generate_camera_motion()` to tween between those saved positions.
 #' 
 #' Initial step size is 1/20th of the distance from `lookat` to `lookfrom`.
 #' 
@@ -314,7 +316,7 @@ Left Mouse Click: Change Look At (new focal distance) | Right Mouse Click: Chang
   #Pathrace Scene
   rgb_mat = render_scene_rcpp(camera_info = camera_info, scene_info = scene_info) 
   if(!is.null(attr(rgb_mat,"keyframes"))) {
-    message("Saving camera motion dataframe to `ray_animation_df`")
+    message("Saving camera motion dataframe to `ray_keyframes`")
     keyframes = do.call(rbind,lapply(attr(rgb_mat,"keyframes"),as.data.frame))
     assign("ray_keyframes",keyframes, env  = .GlobalEnv)
   }

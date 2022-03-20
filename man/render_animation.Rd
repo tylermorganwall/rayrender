@@ -27,7 +27,7 @@ render_animation(
   roulette_active_depth = 10,
   ambient_light = FALSE,
   clamp_value = Inf,
-  filename = "rayimage",
+  filename = NA,
   backgroundhigh = "#80b4ff",
   backgroundlow = "#ffffff",
   shutteropen = 0,
