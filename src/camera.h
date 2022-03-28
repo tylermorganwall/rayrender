@@ -111,8 +111,8 @@ public:
   vec3f get_w() {return(w);}
   vec3f get_u() {return(u);}
   vec3f get_v() {return(v);}
-  Float get_fov() {return(cam_width);} //This returns cam_width
-  Float get_aperture() {return(cam_height);} //This returns cam_height
+  Float get_fov() {return(0);} 
+  Float get_aperture() {return(0);} 
   Float get_focal_distance() {return(0);}
   point3f get_origin() {return(origin);}
   vec3f get_up() {return(vup);}
