@@ -45,6 +45,7 @@ class RayCamera {
     virtual point3f get_origin() = 0;
     virtual Float get_iso() {return(1.f);}
     virtual vec3f get_up() {return(vec3f(0,1,0));}
+    virtual point3f get_lookat() {return(vec3f(0,0,0));}
     
     
 };
@@ -71,6 +72,7 @@ class camera : public RayCamera {
     Float get_focal_distance() {return(focus_dist);}
     point3f get_origin() {return(origin);}
     vec3f get_up() {return(vup);}
+    point3f get_lookat() {return(lookat);}
     
     Float half_height;
     Float half_width;
@@ -116,6 +118,7 @@ public:
   Float get_focal_distance() {return(0);}
   point3f get_origin() {return(origin);}
   vec3f get_up() {return(vup);}
+  point3f get_lookat() {return(lookat);}
   
   point3f origin;
   point3f lower_left_corner;
@@ -153,6 +156,7 @@ class environment_camera : public RayCamera {
     Float get_focal_distance() {return(0);}
     point3f get_origin() {return(origin);}
     vec3f get_up() {return(vup);}
+    point3f get_lookat() {return(lookat);}
     
     point3f origin;
     point3f start_origin;
@@ -194,6 +198,7 @@ public:
   point3f get_origin();
   Float get_iso() {return(iso);}
   vec3f get_up() {return(camera_up);}
+  point3f get_lookat() {return(lookat);}
   
 private:
   // RealisticCamera Private Declarations

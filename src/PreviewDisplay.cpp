@@ -169,7 +169,15 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
         bool blanked = false;
         if(interactive) {
           if (e.xkey.keycode == W_key ) {
-            cam->update_position(-speed * w * base_step, orbit);
+            vec3f step = -speed * w * base_step;
+            if(orbit) {
+              Float dist_to_orbit = (cam->get_origin() - cam->get_lookat()).length();
+              if(dist_to_orbit <= base_step * speed) {
+                Rprintf("Moving forward will overstep orbit point, stopping (decrease step size to move closer).\n");
+                step = vec3f(0);
+              }
+            } 
+            cam->update_position(step, orbit);
           }
           if (e.xkey.keycode == A_key ) {
             cam->update_position(-speed * u * base_step, orbit);
@@ -308,7 +316,15 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
             v = cam->get_v();
             
             if (e.xkey.keycode == W_key ) {
-              cam->update_position(-speed * w * base_step, orbit);
+              vec3f step = -speed * w * base_step;
+              if(orbit) {
+                Float dist_to_orbit = (cam->get_origin() - cam->get_lookat()).length();
+                if(dist_to_orbit <= base_step * speed) {
+                  Rprintf("Moving forward will overstep orbit point, stopping (decrease step size to move closer).\n");
+                  step = vec3f(0);
+                }
+              } 
+              cam->update_position(step, orbit);
             }
             if (e.xkey.keycode == A_key ) {
               cam->update_position(-speed * u * base_step, orbit);
@@ -740,7 +756,15 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         }
         case VK_KEY_W: {
           if(interactive_w) {
-            cam_w->update_position(-speed * w * base_step, orbit);
+            vec3f step = -speed * w * base_step;
+            if(orbit) {
+              Float dist_to_orbit = (cam_w->get_origin() - cam_w->get_lookat()).length();
+              if(dist_to_orbit <= base_step * speed) {
+                Rprintf("Moving forward will overstep orbit point, stopping (decrease step size to move closer).\n");
+                step = vec3f(0);
+              }
+            } 
+            cam_w->update_position(step, orbit);
           }
           break;
         }
