@@ -901,38 +901,36 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             Float fd = cam_w->get_focal_distance();
             vec3f cam_up = cam_w->get_up();
             
-            if(e.xkey.keycode == K_key) {
-              if(fov > 0) {
-                Keyframes_w->push_back(Rcpp::List::create(Named("x")  = origin.x(),
-                                                       Named("y")  = origin.y(),
-                                                       Named("z")  = origin.z(),
-                                                       Named("dx") = origin.x()+cam_direction.x()*fd,
-                                                       Named("dy") = origin.y()+cam_direction.y()*fd,
-                                                       Named("dz") = origin.z()+cam_direction.z()*fd,
-                                                       Named("aperture") = cam_aperture,
-                                                       Named("fov") = fov,
-                                                       Named("focal") = fd,
-                                                       Named("orthox") = 1,
-                                                       Named("orthoy") = 1,
-                                                       Named("upx")  = cam_up.x(),
-                                                       Named("upy")  = cam_up.y(),
-                                                       Named("upz")  = cam_up.z()));
-              } else {
-                Keyframes_w->push_back(Rcpp::List::create(Named("x")  = origin.x(),
-                                                       Named("y")  = origin.y(),
-                                                       Named("z")  = origin.z(),
-                                                       Named("dx") = origin.x()+cam_direction.x()*fd,
-                                                       Named("dy") = origin.y()+cam_direction.y()*fd,
-                                                       Named("dz") = origin.z()+cam_direction.z()*fd,
-                                                       Named("aperture") = 0,
-                                                       Named("fov") = 0,
-                                                       Named("focal") = fd,
-                                                       Named("orthox") = fov,
-                                                       Named("orthoy") = cam_aperture,
-                                                       Named("upx")  = cam_up.x(),
-                                                       Named("upy")  = cam_up.y(),
-                                                       Named("upz")  = cam_up.z()));
-              }
+            if(fov > 0) {
+              Keyframes_w->push_back(Rcpp::List::create(Named("x")  = origin.x(),
+                                                     Named("y")  = origin.y(),
+                                                     Named("z")  = origin.z(),
+                                                     Named("dx") = origin.x()+cam_direction.x()*fd,
+                                                     Named("dy") = origin.y()+cam_direction.y()*fd,
+                                                     Named("dz") = origin.z()+cam_direction.z()*fd,
+                                                     Named("aperture") = cam_aperture,
+                                                     Named("fov") = fov,
+                                                     Named("focal") = fd,
+                                                     Named("orthox") = 1,
+                                                     Named("orthoy") = 1,
+                                                     Named("upx")  = cam_up.x(),
+                                                     Named("upy")  = cam_up.y(),
+                                                     Named("upz")  = cam_up.z()));
+            } else {
+              Keyframes_w->push_back(Rcpp::List::create(Named("x")  = origin.x(),
+                                                     Named("y")  = origin.y(),
+                                                     Named("z")  = origin.z(),
+                                                     Named("dx") = origin.x()+cam_direction.x()*fd,
+                                                     Named("dy") = origin.y()+cam_direction.y()*fd,
+                                                     Named("dz") = origin.z()+cam_direction.z()*fd,
+                                                     Named("aperture") = 0,
+                                                     Named("fov") = 0,
+                                                     Named("focal") = fd,
+                                                     Named("orthox") = fov,
+                                                     Named("orthoy") = cam_aperture,
+                                                     Named("upx")  = cam_up.x(),
+                                                     Named("upy")  = cam_up.y(),
+                                                     Named("upz")  = cam_up.z()));
             }
             if(fov >= 0) {
               Rprintf("Lookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f) FOV: %.1f Aperture: %0.3f Focal Dist: %0.3f Env Rotation: %.2f\n",
