@@ -235,7 +235,7 @@
 #'}
 render_scene = function(scene, width = 400, height = 400, fov = 20, 
                         samples = 100,  camera_description_file = NA, 
-                        preview = interactive(), interactive = TRUE,
+                        preview = interactive(), interactive = TRUE, 
                         camera_scale = 1, iso = 100, film_size = 22,
                         min_variance = 0.00005, min_adaptive_size = 8,
                         sample_method = "sobol", 
@@ -278,6 +278,9 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
       message(corn_message)
     }
   }
+  if(width < 3 || height < 3) {
+    stop("Must specify a minimum width/height of 3 or more pixels")
+  }
   if(preview && interactive && has_gui_capability()) {
     message(
 "--------------------------Interactive Mode Controls---------------------------
@@ -311,7 +314,7 @@ Left Mouse Click: Change Look At (new focal distance) | Right Mouse Click: Chang
   
   camera_info$preview = preview
   camera_info$interactive = interactive
-  
+
   
   #Pathrace Scene
   rgb_mat = render_scene_rcpp(camera_info = camera_info, scene_info = scene_info) 
