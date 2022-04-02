@@ -3,6 +3,7 @@
 
 #include "vec3.h"
 #include "point3.h"
+#include "RayMatrix.h"
 
 using namespace Rcpp;
 
@@ -20,8 +21,8 @@ class adaptive_sampler {
 public:
   adaptive_sampler(size_t _numbercores, size_t nx, size_t ny, size_t ns, int debug_channel,
                    float min_variance, size_t min_adaptive_size, 
-                   NumericMatrix& r, NumericMatrix& g, NumericMatrix& b,
-                   NumericMatrix& r2, NumericMatrix& g2, NumericMatrix& b2) : 
+                   RayMatrix& r, RayMatrix& g, RayMatrix& b,
+                   RayMatrix& r2, RayMatrix& g2, RayMatrix& b2) : 
                    numbercores(_numbercores), nx(nx), ny(ny), ns(ns), max_s(0), debug_channel(debug_channel), 
                    min_variance(min_variance), min_adaptive_size(min_adaptive_size),
                    r(r), g(g), b(b), r2(r2), g2(g2), b2(b2) {
@@ -201,6 +202,12 @@ public:
     g2(i,j) += color.g();
     b2(i,j) += color.b();
   }
+  //For use when s = 1 in small image preview
+  void set_color_main(size_t i, size_t j, point3f color) {
+    r(i,j) = color.r();
+    g(i,j) = color.g();
+    b(i,j) = color.b();
+  }
   size_t size() {return(pixel_chunks.size());}
 
   size_t numbercores;
@@ -209,7 +216,7 @@ public:
   int debug_channel;
   float min_variance;
   size_t min_adaptive_size;
-  NumericMatrix &r, &g, &b, &r2, &g2, &b2;
+  RayMatrix &r, &g, &b, &r2, &g2, &b2;
   std::vector<pixel_block> pixel_chunks;
   std::vector<bool> finalized;
   std::vector<bool> just_finalized;

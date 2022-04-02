@@ -2,6 +2,7 @@
 #include "mathinline.h"
 #include "Rcpp.h"
 
+
 #ifdef RAY_HAS_X11
 
 #include <string.h>
@@ -54,14 +55,15 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
 
 void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
+                               adaptive_sampler& adaptive_pixel_sampler_small,
                                size_t &ns, RProgress::RProgress &pb, bool progress,
                                Float percent_done,
                                hitable *world, random_gen& rng) {
 #ifdef RAY_HAS_X11
   if (d) {
-    Rcpp::NumericMatrix &r  = adaptive_pixel_sampler.r;
-    Rcpp::NumericMatrix &g  = adaptive_pixel_sampler.g;
-    Rcpp::NumericMatrix &b  = adaptive_pixel_sampler.b;
+    RayMatrix &r  = adaptive_pixel_sampler.r;
+    RayMatrix &g  = adaptive_pixel_sampler.g;
+    RayMatrix &b  = adaptive_pixel_sampler.b;
     std::vector<bool>& finalized = adaptive_pixel_sampler.finalized;
     std::vector<bool>& just_finalized = adaptive_pixel_sampler.just_finalized;
     
@@ -146,6 +148,9 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
     //Save Keyframe
     KeyCode K_key = XKeysymToKeycode(d,XStringToKeysym("k"));
     
+    //Fast Movement Key
+    KeyCode F_key = XKeysymToKeycode(d,XStringToKeysym("f"));
+    
     
     XPutImage(d,w,DefaultGC(d,s),
               img,0,0,0,0,width,height);
@@ -157,11 +162,18 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
           break;
         }
         bool one_orbit = false;
+        bool one_fast = false;
+        
         if (e.xkey.keycode == tab ) {
           orbit = !orbit;
           one_orbit = true;
         }
         
+        if (e.xkey.keycode == F_key ) {
+          write_fast_output = !write_fast_output;
+          one_fast  = true;
+        }
+
         vec3f w = cam->get_w();
         vec3f u = cam->get_u();
         vec3f v = cam->get_v();
@@ -296,6 +308,7 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
               blanked = true;
               ns = 0;
               adaptive_pixel_sampler.reset();
+              adaptive_pixel_sampler_small.reset();
               if(progress && !interactive) {
                 pb.update(0);
               }
@@ -309,6 +322,11 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
             if (e.xkey.keycode == tab && !one_orbit) {
               orbit = !orbit;
               one_orbit = true;
+            }
+            
+            if (e.xkey.keycode == F_key && !one_fast) {
+              write_fast_output = !write_fast_output;
+              one_fast  = true;
             }
             
             w = cam->get_w();
@@ -412,6 +430,7 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
                 blanked = true;
                 ns = 0;
                 adaptive_pixel_sampler.reset();
+                adaptive_pixel_sampler_small.reset();
                 if(progress && !interactive) {
                   pb.update(0);
                 }
@@ -480,6 +499,8 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
         cam->update_look_direction(-dir);
         ns = 0;
         adaptive_pixel_sampler.reset();
+        adaptive_pixel_sampler_small.reset();
+        
         if(progress && !interactive) {
           pb.update(0);
         }
@@ -496,9 +517,9 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
     pb_w = &pb;
     progress_w = progress;
     interactive_w = interactive;
-    Rcpp::NumericMatrix &r  = adaptive_pixel_sampler.r;
-    Rcpp::NumericMatrix &g  = adaptive_pixel_sampler.g;
-    Rcpp::NumericMatrix &b  = adaptive_pixel_sampler.b;
+    RayMatrix &r  = adaptive_pixel_sampler.r;
+    RayMatrix &g  = adaptive_pixel_sampler.g;
+    RayMatrix &b  = adaptive_pixel_sampler.b;
     EnvWorldToObject_w = EnvWorldToObject;
     EnvObjectToWorld_w = EnvObjectToWorld;
     Start_EnvWorldToObject_w = Start_EnvWorldToObject;
@@ -568,6 +589,7 @@ PreviewDisplay::PreviewDisplay(unsigned int _width, unsigned int _height,
   EnvObjectToWorld(_EnvObjectToWorld), EnvWorldToObject(_EnvWorldToObject),
   Start_EnvObjectToWorld(*_EnvObjectToWorld), Start_EnvWorldToObject(*_EnvWorldToObject) {
   Keyframes.clear();
+  write_fast_output = false;
 #ifdef RAY_HAS_X11
   speed = 1.f;
   interactive = _interactive;

@@ -4,7 +4,7 @@
 
 void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_channel,
                 Float min_variance, size_t min_adaptive_size, 
-                Rcpp::NumericMatrix& routput, Rcpp::NumericMatrix& goutput, Rcpp::NumericMatrix& boutput,
+                RayMatrix& routput, RayMatrix& goutput, RayMatrix& boutput,
                 bool progress_bar, int sample_method, Rcpp::NumericVector& stratified_dim,
                 bool verbose, 
                 RayCamera* cam, 
@@ -482,9 +482,9 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
       pb_sampler.set_total(ny);
       pb.set_total(ns);
     }
-    Rcpp::NumericMatrix routput2(nx,ny);
-    Rcpp::NumericMatrix goutput2(nx,ny);
-    Rcpp::NumericMatrix boutput2(nx,ny);
+    RayMatrix routput2(nx,ny);
+    RayMatrix goutput2(nx,ny);
+    RayMatrix boutput2(nx,ny);
     adaptive_sampler adaptive_pixel_sampler(numbercores, nx, ny, ns, debug_channel,
                                             min_variance, min_adaptive_size,
                                             routput, goutput, boutput,

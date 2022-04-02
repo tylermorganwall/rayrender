@@ -8,6 +8,7 @@
 #include "point3.h"
 #include "point2.h"
 #include "normal.h" 
+#include "RayMatrix.h"
 #include "mathinline.h"
 #include "transform.h"
 #include "transformcache.h"
@@ -133,9 +134,9 @@ List render_scene_rcpp(List camera_info, List scene_info) {
   TransformCache transformCache;
 
   //Initialize output matrices
-  NumericMatrix routput(nx,ny);
-  NumericMatrix goutput(nx,ny);
-  NumericMatrix boutput(nx,ny);
+  RayMatrix routput(nx,ny);
+  RayMatrix goutput(nx,ny);
+  RayMatrix boutput(nx,ny);
 
   vec3f lookfrom(lookfromvec[0],lookfromvec[1],lookfromvec[2]);
   vec3f lookat(lookatvec[0],lookatvec[1],lookatvec[2]);
@@ -529,7 +530,9 @@ List render_scene_rcpp(List camera_info, List scene_info) {
     std::chrono::duration<double> elapsed = finish - startfirst;
     Rcpp::Rcout << "Total time elapsed: " << elapsed.count() << " seconds" << "\n";
   }
-  List final_image = List::create(_["r"] = routput, _["g"] = goutput, _["b"] = boutput);
+  List final_image = List::create(_["r"] = routput.ConvertRcpp(), 
+                                  _["g"] = goutput.ConvertRcpp(), 
+                                  _["b"] = boutput.ConvertRcpp());
   if(Display.Keyframes.size() > 0) {
     List keyframes(Display.Keyframes.size());
     for(unsigned int i = 0; i < Display.Keyframes.size(); i++ ) {

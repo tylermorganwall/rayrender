@@ -9,6 +9,7 @@
 #include "material.h"
 #include "RcppThread.h"
 #include "rng.h"
+#include "RayMatrix.h"
 
 
 #ifdef DEBUGBVH
@@ -522,7 +523,7 @@ inline point3f calculate_ao(const ray& r, hitable *world, hitable_list *hlist,
 
 void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_channel,
                  Float min_variance, size_t min_adaptive_size, 
-                 Rcpp::NumericMatrix& routput, Rcpp::NumericMatrix& goutput, Rcpp::NumericMatrix& boutput,
+                 RayMatrix& routput, RayMatrix& goutput, RayMatrix& boutput,
                  bool progress_bar, int sample_method, Rcpp::NumericVector& stratified_dim,
                  bool verbose, RayCamera *cam,
                  Float fov,

@@ -3,6 +3,7 @@
 #include "float.h"
 #include "vec3.h"
 #include "vec2.h"
+#include "RayMatrix.h"
 #include "mathinline.h"
 #include "camera.h"
 #include "float.h"
@@ -433,9 +434,9 @@ void render_animation_rcpp(List camera_info, List scene_info, List camera_moveme
       }
 
       //Initialize output matrices
-      NumericMatrix routput(nx,ny);
-      NumericMatrix goutput(nx,ny);
-      NumericMatrix boutput(nx,ny);
+      RayMatrix routput(nx,ny);
+      RayMatrix goutput(nx,ny);
+      RayMatrix boutput(nx,ny);
       debug_scene(numbercores, nx, ny, ns, debug_channel,
                   min_variance, min_adaptive_size,
                   routput, goutput,boutput,
@@ -444,7 +445,9 @@ void render_animation_rcpp(List camera_info, List scene_info, List camera_moveme
                   world, hlist,
                   clampval, max_depth, roulette_active,
                   light_direction, rng, sample_dist, keep_colors, backgroundhigh);
-      List temp = List::create(_["r"] = routput, _["g"] = goutput, _["b"] = boutput);
+      List temp = List::create(_["r"] = routput.ConvertRcpp(), 
+                               _["g"] = goutput.ConvertRcpp(), 
+                               _["b"] = boutput.ConvertRcpp());
       post_process_frame(temp, debug_channel, as<std::string>(filenames(i)), toneval);
     }
   } else {
@@ -507,9 +510,9 @@ void render_animation_rcpp(List camera_info, List scene_info, List camera_moveme
       }
 
       //Initialize output matrices
-      NumericMatrix routput(nx,ny);
-      NumericMatrix goutput(nx,ny);
-      NumericMatrix boutput(nx,ny);
+      RayMatrix routput(nx,ny);
+      RayMatrix goutput(nx,ny);
+      RayMatrix boutput(nx,ny);
       pathtracer(numbercores, nx, ny, ns, debug_channel,
                  min_variance, min_adaptive_size,
                  routput, goutput,boutput,
@@ -520,7 +523,9 @@ void render_animation_rcpp(List camera_info, List scene_info, List camera_moveme
       if(d.terminate) {
         break;
       }
-      List temp = List::create(_["r"] = routput, _["g"] = goutput, _["b"] = boutput);
+      List temp = List::create(_["r"] = routput.ConvertRcpp(), 
+                               _["g"] = goutput.ConvertRcpp(), 
+                               _["b"] = boutput.ConvertRcpp());
       if(write_image) {
         post_process_frame(temp, debug_channel, as<std::string>(filenames(i)), toneval, bloom);
       }

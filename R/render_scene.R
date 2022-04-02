@@ -21,6 +21,7 @@
 #' 3/4 = Rotate Environment Light, 
 #' R = Reset Camera, TAB: Toggle Orbit Mode, Left Mouse Click: Change Look Direction, Right Mouse Click: Change Look At 
 #' K: Save Keyframe (at the conclusion of the render, this will create the `ray_keyframes`
+#' F: Toggle Fast Travel Mode
 #' data.frame in the global environment, which can be passed to `generate_camera_motion()` to tween between those saved positions.
 #' 
 #' Initial step size is 1/20th of the distance from `lookat` to `lookfrom`.
@@ -235,7 +236,7 @@
 #'}
 render_scene = function(scene, width = 400, height = 400, fov = 20, 
                         samples = 100,  camera_description_file = NA, 
-                        preview = interactive(), interactive = TRUE, 
+                        preview = interactive(), interactive = TRUE,
                         camera_scale = 1, iso = 100, film_size = 22,
                         min_variance = 0.00005, min_adaptive_size = 8,
                         sample_method = "sobol", 
@@ -287,7 +288,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
 W/A/S/D: Horizontal Movement: | Q/Z: Vertical Movement | Up/Down: Adjust FOV | ESC: Close
 Left/Right: Adjust Aperture  | 1/2: Adjust Focal Distance | 3/4: Rotate Environment Light 
 P: Print Camera Info | R: Reset Camera |  TAB: Toggle Orbit Mode |  E/C: Adjust Step Size
-K: Save Keyframe (saves `ray_keyframes` dataframe at end, see `generate_camera_motion()`)
+K: Save Keyframe  (saves `ray_keyframes` dataframe at end)  |  F: Toggle Fast Travel Mode
 Left Mouse Click: Change Look At (new focal distance) | Right Mouse Click: Change Look At ")
   }
   

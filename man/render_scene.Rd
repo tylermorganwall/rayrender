@@ -75,6 +75,7 @@ Left Key = Decrease Aperture, Right Key = Increase Aperture, 1 = Decrease Focal 
 3/4 = Rotate Environment Light, 
 R = Reset Camera, TAB: Toggle Orbit Mode, Left Mouse Click: Change Look Direction, Right Mouse Click: Change Look At 
 K: Save Keyframe (at the conclusion of the render, this will create the `ray_keyframes`
+F: Toggle Fast Travel Mode
 data.frame in the global environment, which can be passed to `generate_camera_motion()` to tween between those saved positions.
 
 Initial step size is 1/20th of the distance from `lookat` to `lookfrom`.

@@ -31,7 +31,9 @@ public:
                  Float initial_lookat_distance, RayCamera* _cam,
                  Transform* _EnvObjectToWorld, Transform* _EnvWorldToObject);
   ~PreviewDisplay();
-  void DrawImage(adaptive_sampler& adaptive_pixel_sampler, size_t &ns,
+  void DrawImage(adaptive_sampler& adaptive_pixel_sampler, 
+                 adaptive_sampler& adaptive_pixel_sampler_small,
+                 size_t &ns,
                  RProgress::RProgress &pb, bool progress,
                  Float percent_done,
                  hitable* world, random_gen& rng);
@@ -49,6 +51,7 @@ public:
   bool orbit;
   Float base_step;
   int s;
+  bool write_fast_output;
 #endif
 #ifdef RAY_WINDOWS
   HWND hwnd;
