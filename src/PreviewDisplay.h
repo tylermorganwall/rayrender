@@ -51,7 +51,6 @@ public:
   bool orbit;
   Float base_step;
   int s;
-  bool write_fast_output;
 #endif
 #ifdef RAY_WINDOWS
   HWND hwnd;
@@ -59,6 +58,7 @@ public:
   MSG msg;
   WNDCLASS wc;
 #endif
+  bool write_fast_output;
   bool interactive;
   bool terminate;
   RayCamera* cam;
