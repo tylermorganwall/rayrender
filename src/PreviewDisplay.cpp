@@ -304,7 +304,7 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
             }
             
           } else {
-            if(!blanked && !terminate && e.xkey.keycode != C_key && e.xkey.keycode != E_key) {
+            if(!blanked && !terminate && e.xkey.keycode != C_key && e.xkey.keycode != E_key && e.xkey.keycode != tab) {
               blanked = true;
               ns = 0;
               adaptive_pixel_sampler.reset();
@@ -426,7 +426,7 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
                         fd, env_y_angle);
               }
             } else {
-              if(!blanked && !terminate && e.xkey.keycode != C_key && e.xkey.keycode != E_key) {
+              if(!blanked && !terminate && e.xkey.keycode != C_key && e.xkey.keycode != E_key && e.xkey.keycode != tab) {
                 blanked = true;
                 ns = 0;
                 adaptive_pixel_sampler.reset();
@@ -983,7 +983,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             break;
       }
       if(interactive_w) {
-        if(wParam != VK_KEY_P || wParam != VK_KEY_K) {
+        if(wParam != VK_KEY_P && wParam != VK_KEY_K && wParam != VK_TAB) {
           if(!blanked && !term) {
             blanked = true;
             *ns_w = 0;
