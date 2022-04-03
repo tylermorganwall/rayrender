@@ -46,6 +46,7 @@ static Transform* EnvObjectToWorld_w;
 static Transform Start_EnvWorldToObject_w;
 static Transform Start_EnvObjectToWorld_w;
 static std::vector<Rcpp::List>* Keyframes_w;
+static bool write_fast_output_w;
 
 
 
@@ -161,25 +162,23 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
           terminate = true;
           break;
         }
-        bool one_orbit = false;
-        bool one_fast = false;
-        
-        if (e.xkey.keycode == tab ) {
-          orbit = !orbit;
-          one_orbit = true;
-        }
-        
-        if (e.xkey.keycode == F_key ) {
-          write_fast_output = !write_fast_output;
-          one_fast  = true;
-        }
-
-        vec3f w = cam->get_w();
-        vec3f u = cam->get_u();
-        vec3f v = cam->get_v();
-        
-        bool blanked = false;
         if(interactive) {
+          vec3f w = cam->get_w();
+          vec3f u = cam->get_u();
+          vec3f v = cam->get_v();
+        
+          bool blanked = false;
+          bool one_orbit = false;
+          bool one_fast = false;
+          
+          if (e.xkey.keycode == tab ) {
+            orbit = !orbit;
+            one_orbit = true;
+          }
+          if (e.xkey.keycode == F_key ) {
+            write_fast_output = !write_fast_output;
+            one_fast  = true;
+          }
           if (e.xkey.keycode == W_key ) {
             vec3f step = -speed * w * base_step;
             if(orbit) {
@@ -256,6 +255,7 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
             Float cam_aperture = cam->get_aperture();
             Float fd = cam->get_focal_distance();
             vec3f cam_up = cam->get_up();
+            point2f ortho = cam->get_ortho();
             
             if(e.xkey.keycode == K_key) {
               if(fov > 0) {
@@ -268,8 +268,8 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
                                                        Named("aperture") = cam_aperture,
                                                        Named("fov") = fov,
                                                        Named("focal") = fd,
-                                                       Named("orthox") = 1,
-                                                       Named("orthoy") = 1,
+                                                       Named("orthox") = ortho.x(),
+                                                       Named("orthoy") = ortho.y(),
                                                        Named("upx")  = cam_up.x(),
                                                        Named("upy")  = cam_up.y(),
                                                        Named("upz")  = cam_up.z()));
@@ -283,8 +283,8 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
                                                        Named("aperture") = 0,
                                                        Named("fov") = 0,
                                                        Named("focal") = fd,
-                                                       Named("orthox") = fov,
-                                                       Named("orthoy") = cam_aperture,
+                                                       Named("orthox") = ortho.x(),
+                                                       Named("orthoy") = ortho.y(),
                                                        Named("upx")  = cam_up.x(),
                                                        Named("upy")  = cam_up.y(),
                                                        Named("upz")  = cam_up.z()));
@@ -439,70 +439,72 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
           }
         }
       } else if (e.type == ButtonPress) {
-        bool left = e.xbutton.button == Button1;
-        bool right = e.xbutton.button == Button3;
-        if(!left && !right) {
-          return;
-        }
-        Float x = e.xbutton.x;
-        Float y = e.xbutton.y;
-        Float fov = cam->get_fov();
-        Float u = (Float(x)) / Float(width);
-        Float v = (Float(y)) / Float(height);
-        vec3f dir;
-        hit_record hrec;
-        if(fov < 0) {
-          CameraSample samp({1-u,v},point2f(0.5,0.5), 0.5);
-          ray r2;
-          cam->GenerateRay(samp,&r2);
-          if(world->hit(r2, 0.001, FLT_MAX, hrec, rng)) {
-            if( hrec.shape->GetName() != "EnvironmentLight") {
-              dir = -hrec.p;
-            }  else {
-              left = false;
-              right = true;
-              dir = -hrec.p;
-            }
+        if(interactive) {
+          bool left = e.xbutton.button == Button1;
+          bool right = e.xbutton.button == Button3;
+          if(!left && !right) {
+            return;
           }
-        } else if (fov > 0) {
-          ray r2 = cam->get_ray(u,1-v, point3f(0),
-                               0.5f);
-          if(left) {
-            world->hit(r2, 0.001, FLT_MAX, hrec, rng);
-            if( hrec.shape->GetName() == "EnvironmentLight") {
-              right = true;
+          Float x = e.xbutton.x;
+          Float y = e.xbutton.y;
+          Float fov = cam->get_fov();
+          Float u = (Float(x)) / Float(width);
+          Float v = (Float(y)) / Float(height);
+          vec3f dir;
+          hit_record hrec;
+          if(fov < 0) {
+            CameraSample samp({1-u,v},point2f(0.5,0.5), 0.5);
+            ray r2;
+            cam->GenerateRay(samp,&r2);
+            if(world->hit(r2, 0.001, FLT_MAX, hrec, rng)) {
+              if( hrec.shape->GetName() != "EnvironmentLight") {
+                dir = -hrec.p;
+              }  else {
+                left = false;
+                right = true;
+                dir = -hrec.p;
+              }
             }
-          }
-          dir = r2.direction();
-        } else {
-          ray r2 = cam->get_ray(u,1-v, point3f(0.5),
-                               0.5f);
-          if(world->hit(r2, 0.001, FLT_MAX, hrec, rng)) {
-            if( hrec.shape->GetName() != "EnvironmentLight") {
-              dir = -(cam->get_origin()-hrec.p);
+          } else if (fov > 0) {
+            ray r2 = cam->get_ray(u,1-v, point3f(0),
+                                 0.5f);
+            if(left) {
+              world->hit(r2, 0.001, FLT_MAX, hrec, rng);
+              if( hrec.shape->GetName() == "EnvironmentLight") {
+                right = true;
+              }
+            }
+            dir = r2.direction();
+          } else {
+            ray r2 = cam->get_ray(u,1-v, point3f(0.5),
+                                 0.5f);
+            if(world->hit(r2, 0.001, FLT_MAX, hrec, rng)) {
+              if( hrec.shape->GetName() != "EnvironmentLight") {
+                dir = -(cam->get_origin()-hrec.p);
+              } else {
+                Rprintf("Clicking on the environment light while using a orthographic camera does not change the view.\n");
+                dir = -cam->get_w();
+              }
             } else {
-              Rprintf("Clicking on the environment light while using a orthographic camera does not change the view.\n");
               dir = -cam->get_w();
             }
-          } else {
-            dir = -cam->get_w();
           }
-        }
-        if(left && !right) {
-          if(fov != 0 && fov != 360) {
-            Float current_fd = cam->get_focal_distance();
-            Float new_fd = (hrec.p-cam->get_origin()).length();
-            cam->update_focal_distance(new_fd- current_fd);
+          if(left && !right) {
+            if(fov != 0 && fov != 360) {
+              Float current_fd = cam->get_focal_distance();
+              Float new_fd = (hrec.p-cam->get_origin()).length();
+              cam->update_focal_distance(new_fd- current_fd);
+            }
+            cam->update_lookat(hrec.p);
           }
-          cam->update_lookat(hrec.p);
-        }
-        cam->update_look_direction(-dir);
-        ns = 0;
-        adaptive_pixel_sampler.reset();
-        adaptive_pixel_sampler_small.reset();
-        
-        if(progress && !interactive) {
-          pb.update(0);
+          cam->update_look_direction(-dir);
+          ns = 0;
+          adaptive_pixel_sampler.reset();
+          adaptive_pixel_sampler_small.reset();
+          
+          if(progress && !interactive) {
+            pb.update(0);
+          }
         }
       } else if (e.type == ClientMessage) {
         terminate = true;
@@ -526,6 +528,7 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
     Start_EnvObjectToWorld_w = Start_EnvObjectToWorld;
     std::vector<bool>& finalized = adaptive_pixel_sampler.finalized;
     std::vector<bool>& just_finalized = adaptive_pixel_sampler.just_finalized;
+    write_fast_output_w = &write_fast_output;
     world_w = world;
     rng_w = &rng;
     height = (unsigned int)r.cols();
@@ -776,6 +779,12 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
           orbit = !orbit;
           break;
         }
+        case VK_KEY_F: {
+          if(interactive_w) {
+            write_fast_output_w = !write_fast_output_w;
+          }
+          break;
+        }
         case VK_KEY_W: {
           if(interactive_w) {
             vec3f step = -speed * w * base_step;
@@ -922,7 +931,8 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             Float cam_aperture = cam_w->get_aperture();
             Float fd = cam_w->get_focal_distance();
             vec3f cam_up = cam_w->get_up();
-            
+            point2f ortho = cam_w->get_ortho();
+              
             if(fov > 0) {
               Keyframes_w->push_back(Rcpp::List::create(Named("x")  = origin.x(),
                                                      Named("y")  = origin.y(),
@@ -933,8 +943,8 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
                                                      Named("aperture") = cam_aperture,
                                                      Named("fov") = fov,
                                                      Named("focal") = fd,
-                                                     Named("orthox") = 1,
-                                                     Named("orthoy") = 1,
+                                                     Named("orthox") = ortho.x(),
+                                                     Named("orthoy") = ortho.y(),
                                                      Named("upx")  = cam_up.x(),
                                                      Named("upy")  = cam_up.y(),
                                                      Named("upz")  = cam_up.z()));
@@ -948,8 +958,8 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
                                                      Named("aperture") = 0,
                                                      Named("fov") = 0,
                                                      Named("focal") = fd,
-                                                     Named("orthox") = fov,
-                                                     Named("orthoy") = cam_aperture,
+                                                     Named("orthox") = ortho.x(),
+                                                     Named("orthoy") = ortho.y(),
                                                      Named("upx")  = cam_up.x(),
                                                      Named("upy")  = cam_up.y(),
                                                      Named("upz")  = cam_up.z()));

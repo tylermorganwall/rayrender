@@ -46,6 +46,7 @@ class RayCamera {
     virtual Float get_iso() {return(1.f);}
     virtual vec3f get_up() {return(vec3f(0,1,0));}
     virtual point3f get_lookat() {return(vec3f(0,0,0));}
+    virtual point2f get_ortho() {return(point2f(1.f,1.f));}
     
     
 };
@@ -73,6 +74,7 @@ class camera : public RayCamera {
     point3f get_origin() {return(origin);}
     vec3f get_up() {return(vup);}
     point3f get_lookat() {return(lookat);}
+    point2f get_ortho() {return(point2f(1.f,1.f));}
     
     Float half_height;
     Float half_width;
@@ -119,6 +121,7 @@ public:
   point3f get_origin() {return(origin);}
   vec3f get_up() {return(vup);}
   point3f get_lookat() {return(lookat);}
+  point2f get_ortho() {return(point2f(cam_width,cam_height));}
   
   point3f origin;
   point3f lower_left_corner;
@@ -157,6 +160,7 @@ class environment_camera : public RayCamera {
     point3f get_origin() {return(origin);}
     vec3f get_up() {return(vup);}
     point3f get_lookat() {return(lookat);}
+    point2f get_ortho() {return(point2f(1.f,1.f));}
     
     point3f origin;
     point3f start_origin;
@@ -199,6 +203,7 @@ public:
   Float get_iso() {return(iso);}
   vec3f get_up() {return(camera_up);}
   point3f get_lookat() {return(lookat);}
+  point2f get_ortho() {return(point2f(1.f,1.f));}
   
 private:
   // RealisticCamera Private Declarations

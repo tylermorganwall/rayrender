@@ -16,8 +16,8 @@
 #' @param ortho_dims Default `NULL`, which results in `c(1,1)` orthographic dimensions.  A list or 2-column matrix
 #' of orthographic dimensions.
 #' @param camera_ups Default `NULL`, which gives at up vector of `c(0,1,0)`. Camera up orientation.
-#' @param type Default `bezier`. Type of transition between keyframes. 
-#' Other options are `linear`, `quad`, `cubic`, `exp`, and `manual`. `manual` just returns the values 
+#' @param type Default `cubic`. Type of transition between keyframes. 
+#' Other options are `linear`, `quad`, `bezier`, `exp`, and `manual`. `manual` just returns the values 
 #' passed in, properly formatted to be passed to `render_animation()`.
 #' @param frames Default `30`. Total number of frames.
 #' @param closed Default `FALSE`. Whether to close the camera curve so the first position matches the last. Set this to `TRUE` for perfect loops.
@@ -112,7 +112,7 @@ generate_camera_motion = function(positions,
                                   focal_distances = NULL, 
                                   ortho_dims = NULL, 
                                   camera_ups = NULL,
-                                  type = "bezier",
+                                  type = "cubic",
                                   frames = 30, 
                                   closed = FALSE, 
                                   aperture_linear = TRUE,  
@@ -570,7 +570,7 @@ calculate_distance_along_bezier_curve = function(cps,breaks=20) {
 calculate_final_path = function(linearized_cp, steps, constant_step = TRUE, 
                                 curvature_adjust = FALSE, curvature_scale = 1, offset = 0,
                                 progress = FALSE, string = "") {
-  if(max(linearized_cp$total_dist) < 1e-12) {
+  if(max(linearized_cp$total_dist) < 1e-7) {
     single_row = linearized_cp[1,c("x","y","z")]
     single_df = as.data.frame(matrix(as.numeric(single_row),nrow=steps,ncol=3, byrow=T))
     colnames(single_df) = c("x","y","z")

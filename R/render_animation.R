@@ -206,6 +206,8 @@ render_animation = function(scene, camera_motion, start_frame = 1, end_frame = N
   scene_info = scene_list$scene_info
   
   camera_info$preview = preview
+  camera_info$interactive = FALSE
+  
   
   if(is.na(filename)) {
     filename = ""

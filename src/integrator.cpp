@@ -36,6 +36,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
   RayMatrix routput2(nx,ny);
   RayMatrix goutput2(nx,ny);
   RayMatrix boutput2(nx,ny);
+  display.write_fast_output = false;
   adaptive_sampler adaptive_pixel_sampler(numbercores, nx, ny, ns, debug_channel,
                                           min_variance, min_adaptive_size,
                                           routput, goutput, boutput,
