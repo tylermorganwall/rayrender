@@ -322,7 +322,7 @@ Left Mouse Click: Change Look At (new focal distance) | Right Mouse Click: Chang
   if(!is.null(attr(rgb_mat,"keyframes"))) {
     message("Saving camera keyframes: Call `get_saved_keyframes()` function to return them.")
     keyframes = do.call(rbind,lapply(attr(rgb_mat,"keyframes"),as.data.frame))
-    assign("keyframes",keyframes, env = ray_environment)
+    assign("keyframes",keyframes, envir = ray_environment)
   }
   return_array = post_process_scene(rgb_mat, iso, tonemap, debug_channel, filename, return_raw_array, bloom)
   return(invisible(return_array))
