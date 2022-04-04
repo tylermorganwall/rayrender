@@ -19,7 +19,9 @@ reference:
       - starts_with("sphere")
       - starts_with("cube")
       - ends_with("rect")
-      - starts_with("generate")
+      - ends_with("cornell")
+      - ends_with("ground")
+      - ends_with("studio")
       - starts_with("segment")
       - starts_with("cylinder")
       - starts_with("triangle")
@@ -57,6 +59,11 @@ reference:
     contents:
       - starts_with("add")
       - starts_with("group")
+  - title: "Animating Scenes"
+    desc: "Function for animating objects or the camera through a scene."
+    contents:
+      - starts_with("get")
+      - starts_with("generate_camera_motion")
       - starts_with("animate")
   - title: "Render Raytraced Scene"
     desc: "Function to render the current scene."

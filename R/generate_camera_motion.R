@@ -663,3 +663,21 @@ calculate_final_path = function(linearized_cp, steps, constant_step = TRUE,
   }
   return(do.call(rbind,final_points))
 }
+
+#' Get Saved Keyframes
+#'
+#' @description Get a dataframe of the saved keyframes (using the interactive renderer) to pass to `generate_camera_motion()`
+#' @return Data frame of keyframes
+#' 
+#' @export
+#' @examples 
+#' #This will return an empty data frame if no keyframes have been set.
+#' get_saved_keyframes()
+get_saved_keyframes = function() {
+  keyframes = get("keyframes",  envir = ray_environment)
+  if(nrow(keyframes) == 0) {
+    message("No keyframes saved: press K when using interactive preview to save keyframe")
+    return(keyframes)
+  }
+  return(keyframes)
+}
