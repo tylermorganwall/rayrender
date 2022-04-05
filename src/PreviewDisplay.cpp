@@ -35,6 +35,7 @@ static Float base_step;
 static bool blanked;
 static bool interactive_w;
 static adaptive_sampler* aps;
+static adaptive_sampler* aps_small;
 static size_t* ns_w;
 static hitable* world_w;
 static random_gen* rng_w;
@@ -46,7 +47,7 @@ static Transform* EnvObjectToWorld_w;
 static Transform Start_EnvWorldToObject_w;
 static Transform Start_EnvObjectToWorld_w;
 static std::vector<Rcpp::List>* Keyframes_w;
-static bool write_fast_output_w;
+static bool* write_fast_output_w;
 
 
 
@@ -515,6 +516,7 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
 #ifdef RAY_WINDOWS
   if(hwnd) {
     aps = &adaptive_pixel_sampler;
+    aps_small = &adaptive_pixel_sampler_small;
     ns_w = &ns;
     pb_w = &pb;
     progress_w = progress;
@@ -781,7 +783,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         }
         case VK_KEY_F: {
           if(interactive_w) {
-            write_fast_output_w = !write_fast_output_w;
+            (*write_fast_output_w) = !(*write_fast_output_w);
           }
           break;
         }
@@ -988,6 +990,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             blanked = true;
             *ns_w = 0;
             aps->reset();
+            aps_small->reset();
             if(progress_w && !interactive_w) {
               pb_w->update(0);
             }
@@ -1052,6 +1055,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         }
         *ns_w = 0;
         aps->reset();
+        aps_small->reset();
         if(progress_w && !interactive_w) {
           pb_w->update(0);
         }
@@ -1099,6 +1103,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
       cam_w->update_look_direction(-dir);
       *ns_w = 0;
       aps->reset();
+      aps_small->reset();
       if(progress_w && !interactive_w) {
         pb_w->update(0);
       }
