@@ -36,11 +36,15 @@ ray camera::get_ray(Float s, Float t, point3f u3, Float u1) {
   return(ray(origin + offset, lower_left_corner + s * horizontal + t * vertical - origin - offset, time)); 
 }
 
-void camera::update_position(vec3f delta, bool update_uvw) {
+void camera::update_position(vec3f delta, bool update_uvw, bool update_focal) {
   origin += delta;
   if(update_uvw) {
-    focus_dist = (origin - lookat).length();
     w = unit_vector(origin - lookat);
+    if(update_focal) {
+      origin += w * (focus_dist - (origin - lookat).length());
+    } else {
+      focus_dist = (origin - lookat).length();
+    }
     u = unit_vector(cross(vup, w));
     v = cross(w, u);
   }
@@ -147,10 +151,14 @@ ray ortho_camera::get_ray(Float s, Float t, point3f u3, Float u) {
   return(ray(lower_left_corner + s * horizontal + t * vertical, -w, time)); 
 }
 
-void ortho_camera::update_position(vec3f delta, bool update_uvw) {
+void ortho_camera::update_position(vec3f delta, bool update_uvw, bool update_focal) {
+  Float focus_dist = (origin - lookat).length();
   origin += delta;
   if(update_uvw) {
     w = unit_vector(origin - lookat);
+    if(update_focal) {
+      origin += w * (focus_dist - (origin - lookat).length());
+    } 
     u = unit_vector(cross(vup, w));
     v = cross(w, u);
   }
@@ -239,10 +247,16 @@ ray environment_camera::get_ray(Float s, Float t, point3f u3, Float u1) {
   return(ray(origin, dir, time)); 
 }
 
-void environment_camera::update_position(vec3f delta, bool update_uvw) {
+void environment_camera::update_position(vec3f delta, bool update_uvw, bool update_focal) {
+  Float focus_dist = (origin - lookat).length();
   origin += delta;
   if(update_uvw) {
     w = unit_vector(origin - lookat);
+    if(update_focal) {
+      origin += w * (focus_dist - (origin - lookat).length());
+    } else {
+      focus_dist = (origin - lookat).length();
+    }
     v = unit_vector(-cross(vup, w));
     u = cross(w, v);
     uvw = onb(w,v,u);
@@ -779,7 +793,7 @@ point3f RealisticCamera::get_origin() {
   return(CamTransform(point3f(0.f)));
 }
 
-void RealisticCamera::update_position(vec3f delta, bool update_uvw) {
+void RealisticCamera::update_position(vec3f delta, bool update_uvw, bool update_focal) {
   if(update_uvw) {
     point3f old_lookfrom =  CamTransform(point3f(0.f));
     try{

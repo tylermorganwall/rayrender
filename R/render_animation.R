@@ -207,7 +207,23 @@ render_animation = function(scene, camera_motion, start_frame = 1, end_frame = N
   
   camera_info$preview = preview
   camera_info$interactive = FALSE
-  
+  if(!is.na(camera_description_file)) {
+    camera_description_file = switch(camera_description_file, 
+                                     "50mm" = system.file("extdata","dgauss.50mm.txt",
+                                                          package="rayrender"),
+                                     "wide" = system.file("extdata","wide.22mm.txt",
+                                                          package="rayrender"),
+                                     "fisheye" = system.file("extdata","fisheye.10mm.txt",
+                                                             package="rayrender"),
+                                     "telephoto" = system.file("extdata","telephoto.250mm.txt",
+                                                               package="rayrender"),
+                                     camera_description_file)
+    if(file.exists(camera_description_file)) {
+      camera_motion$fov = -1
+    } else {
+      warning("Camera description file `", camera_description_file, "` not found. Ignoring.")
+    }
+  }
   
   if(is.na(filename)) {
     filename = ""
@@ -218,8 +234,7 @@ render_animation = function(scene, camera_motion, start_frame = 1, end_frame = N
   } else {
     filename_str = rep("", length(1:nrow(camera_motion)))
   }
-  camera_motion$fov = ifelse(camera_motion$fov < 0, 0, camera_motion$fov);
-  
+
   toneval = switch(tonemap, "gamma" = 1,"reinhold" = 2,"uncharted" = 3,"hbd" = 4, "raw" = 5)
   if(is.na(end_frame)) {
     end_frame = nrow(camera_motion)

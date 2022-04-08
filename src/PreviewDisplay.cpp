@@ -189,13 +189,13 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
                 step = vec3f(0);
               }
             } 
-            cam->update_position(step, orbit);
+            cam->update_position(step, orbit, false);
           }
           if (e.xkey.keycode == A_key ) {
             cam->update_position(-speed * u * base_step, orbit);
           }
           if (e.xkey.keycode == S_key ) {
-            cam->update_position(speed * w * base_step, orbit);
+            cam->update_position(speed * w * base_step, orbit, false);
           }
           if (e.xkey.keycode == D_key ) {
             cam->update_position(speed * u * base_step, orbit);
@@ -343,13 +343,13 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
                   step = vec3f(0);
                 }
               } 
-              cam->update_position(step, orbit);
+              cam->update_position(step, orbit, false);
             }
             if (e.xkey.keycode == A_key ) {
               cam->update_position(-speed * u * base_step, orbit);
             }
             if (e.xkey.keycode == S_key ) {
-              cam->update_position(speed * w * base_step, orbit);
+              cam->update_position(speed * w * base_step, orbit, false);
             }
             if (e.xkey.keycode == D_key ) {
               cam->update_position(speed * u * base_step, orbit);
@@ -797,7 +797,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
                 step = vec3f(0);
               }
             } 
-            cam_w->update_position(step, orbit);
+            cam_w->update_position(step, orbit, false);
           }
           break;
         }
@@ -810,7 +810,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         }
         case VK_KEY_S: {
           if(interactive_w) {
-          cam_w->update_position(speed * w * base_step, orbit);
+          cam_w->update_position(speed * w * base_step, orbit, false);
         }
           break;
         }

@@ -25,7 +25,7 @@ class RayCamera {
     virtual ray get_ray(Float s, Float t, point3f u3, Float u) {
       return(ray());
     };
-    virtual void update_position(vec3f delta, bool update_uvw) = 0;
+    virtual void update_position(vec3f delta, bool update_uvw, bool update_focal = true) = 0;
     virtual void update_fov(Float delta_fov)  = 0;
     virtual void update_aperture(Float delta_aperture)  = 0;
     virtual void update_focal_distance(Float delta_focus)  = 0;
@@ -57,7 +57,7 @@ class camera : public RayCamera {
            Float t0, Float t1);
     ray get_ray(Float s, Float t, point3f u3, Float u);
 
-    void update_position(vec3f delta, bool update_uvw);
+    void update_position(vec3f delta, bool update_uvw, bool update_focal = true);
     void update_fov(Float delta_fov);
     void update_aperture(Float delta_aperture);
     void update_focal_distance(Float delta_focus);
@@ -104,7 +104,7 @@ public:
                Float _cam_width, Float _cam_height, 
                Float t0, Float t1);
   ray get_ray(Float s, Float t, point3f u3, Float u);
-  void update_position(vec3f delta, bool update_uvw);
+  void update_position(vec3f delta, bool update_uvw, bool update_focal = true);
   void update_fov(Float delta_fov);
   void update_aperture(Float delta_aperture);
   void update_focal_distance(Float delta_focus);
@@ -143,7 +143,7 @@ class environment_camera : public RayCamera {
     environment_camera(point3f lookfrom, point3f lookat, vec3f _vup, 
                        Float t0, Float t1);
     ray get_ray(Float s, Float t, point3f u3, Float u);
-    void update_position(vec3f delta, bool update_uvw);
+    void update_position(vec3f delta, bool update_uvw, bool update_focal = true);
     void update_fov(Float delta_fov);
     void update_aperture(Float delta_aperture);
     void update_focal_distance(Float delta_focus);
@@ -185,7 +185,7 @@ public:
                   vec3f _camera_up, Transform _CamTransform, 
                   point3f _lookat);
   Float GenerateRay(const CameraSample &sample, ray* ray2) const;
-  void update_position(vec3f delta, bool update_uvw);
+  void update_position(vec3f delta, bool update_uvw, bool update_focal = true);
   void update_fov(Float delta_fov);
   void update_aperture(Float delta_aperture);
   void update_focal_distance(Float delta_focus);
