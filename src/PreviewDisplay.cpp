@@ -591,7 +591,7 @@ PreviewDisplay::PreviewDisplay(unsigned int _width, unsigned int _height,
                                bool preview, bool _interactive,
                                Float initial_lookat_distance, RayCamera* _cam,
                                Transform* _EnvObjectToWorld, Transform* _EnvWorldToObject) :
-  EnvObjectToWorld(_EnvObjectToWorld), EnvWorldToObject(_EnvWorldToObject),
+  preview(preview), EnvObjectToWorld(_EnvObjectToWorld), EnvWorldToObject(_EnvWorldToObject),
   Start_EnvObjectToWorld(*_EnvObjectToWorld), Start_EnvWorldToObject(*_EnvWorldToObject) {
   Keyframes.clear();
   write_fast_output = false;

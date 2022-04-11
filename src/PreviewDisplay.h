@@ -47,7 +47,6 @@ public:
   unsigned int width;
   unsigned int height;
   Float speed;
-  bool preview;
   bool orbit;
   Float base_step;
   int s;
@@ -58,6 +57,7 @@ public:
   MSG msg;
   WNDCLASS wc;
 #endif
+  bool preview;
   bool write_fast_output;
   bool interactive;
   bool terminate;

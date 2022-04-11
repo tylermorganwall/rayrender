@@ -126,7 +126,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
   }
   for(size_t s = 0; s < static_cast<size_t>(ns); s++) {
     Rcpp::checkUserInterrupt();
-    if(progress_bar && !display.interactive) {
+    if(progress_bar && !display.preview) {
       pb.tick();
     }
     RcppThread::ThreadPool pool(numbercores);
