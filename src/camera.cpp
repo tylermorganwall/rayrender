@@ -105,12 +105,54 @@ void camera::update_lookat(point3f point) {
   } 
 }
 
+void camera::update_position_absolute(point3f point) {
+  origin = point;
+  w = unit_vector(origin - lookat);
+  u = unit_vector(cross(vup, w));
+  v = cross(w, u);
+  lower_left_corner = origin - half_width * focus_dist *  u - half_height * focus_dist * v - focus_dist * w;
+  horizontal = 2.0f * half_width * focus_dist * u;
+  vertical = 2.0f * half_height * focus_dist * v;
+  if(w.length() == 0 && u.length() == 0) {
+    reset();
+  } 
+}
+
+void camera::update_ortho_absolute(vec2f o_size) {
+}
+
+void camera::update_aperture_absolute(Float aperture) {
+  lens_radius = aperture;
+}
+
+void camera::update_focal_absolute(Float focal_length) {
+  focus_dist = focal_length;
+  lower_left_corner = origin - half_width * focus_dist *  u - half_height * focus_dist * v - focus_dist * w;
+  horizontal = 2.0f * half_width * focus_dist * u;
+  vertical = 2.0f * half_height * focus_dist * v;
+  if(w.length() == 0 && u.length() == 0) {
+    reset();
+  } 
+}
+
+void camera::update_fov_absolute(Float fov_new) {
+  fov = fov_new;
+  fov = std::fmax(std::fmin(fov,179.9f),0.1f);
+  Float theta = fov * M_PI/180;
+  half_height = tan(theta/2);
+  half_width = aspect * half_height;
+  lower_left_corner = origin - half_width * focus_dist *  u - half_height * focus_dist * v - focus_dist * w;
+  horizontal = 2.0f * half_width * focus_dist * u;
+  vertical = 2.0f * half_height * focus_dist * v;
+}
+
 
 
 void camera::reset() {
   origin = start_origin;
   lookat = start_lookat;
   focus_dist = start_focus_dist;
+  fov = start_fov;
   Float theta = start_fov * M_PI/180;
   half_height = tan(theta/2);
   half_width = aspect * half_height;
@@ -138,6 +180,7 @@ ortho_camera::ortho_camera(point3f lookfrom, point3f _lookat, vec3f _vup,
   lookat = _lookat;
   start_lookat = lookat;
   vup = _vup;
+  focus_dist = (lookfrom-lookat).length();
   w = unit_vector(lookfrom - lookat);
   u = unit_vector(cross(vup, w));
   v = cross(w, u);
@@ -152,7 +195,6 @@ ray ortho_camera::get_ray(Float s, Float t, point3f u3, Float u) {
 }
 
 void ortho_camera::update_position(vec3f delta, bool update_uvw, bool update_focal) {
-  Float focus_dist = (origin - lookat).length();
   origin += delta;
   if(update_uvw) {
     w = unit_vector(origin - lookat);
@@ -162,6 +204,7 @@ void ortho_camera::update_position(vec3f delta, bool update_uvw, bool update_foc
     u = unit_vector(cross(vup, w));
     v = cross(w, u);
   }
+  focus_dist = (origin - lookat).length();
   lower_left_corner = origin - cam_width/2 *  u - cam_height/2 * v;
   horizontal = cam_width * u;
   vertical = cam_height * v;
@@ -203,6 +246,39 @@ void ortho_camera::update_look_direction(vec3f dir) {
 
 void ortho_camera::update_lookat(point3f point) {
   lookat = point;
+  focus_dist = (origin-lookat).length();
+}
+
+void ortho_camera::update_position_absolute(point3f point) {
+  origin = point;
+  w = unit_vector(origin - lookat);
+  u = unit_vector(cross(vup, w));
+  v = cross(w, u);
+  lower_left_corner = origin - cam_width/2 *  u - cam_height/2 * v;
+  horizontal = cam_width * u;
+  vertical = cam_height * v;
+  if(w.length() == 0 && u.length() == 0) {
+    reset();
+  } 
+}
+
+void ortho_camera::update_ortho_absolute(vec2f o_size) {
+  cam_width = std::fmax(o_size.x(),0.001);
+  cam_height = std::fmax(o_size.y(),0.001);
+  
+  lower_left_corner = origin - cam_width/2 *  u - cam_height/2 * v;
+  horizontal = cam_width * u;
+  vertical = cam_height * v;
+}
+
+void ortho_camera::update_aperture_absolute(Float aperture) {
+}
+
+void ortho_camera::update_focal_absolute(Float focal_length) {
+  focus_dist = focal_length;
+}
+
+void ortho_camera::update_fov_absolute(Float fov_new) {
 }
 
 
@@ -287,6 +363,29 @@ void environment_camera::update_look_direction(vec3f dir) {
 
 void environment_camera::update_lookat(point3f point) {
   lookat = point;
+}
+
+void environment_camera::update_position_absolute(point3f point) {
+  origin = point;
+  w = unit_vector(origin - lookat);
+  v = unit_vector(-cross(vup, w));
+  u = cross(w, v);
+  uvw = onb(w,v,u);
+  if(w.length() == 0 && u.length() == 0) {
+    reset();
+  } 
+}
+
+void environment_camera::update_ortho_absolute(vec2f o_size) {
+}
+
+void environment_camera::update_aperture_absolute(Float aperture) {
+}
+
+void environment_camera::update_focal_absolute(Float focal_length) {
+}
+
+void environment_camera::update_fov_absolute(Float fov_new) {
 }
 
 vec3f environment_camera::get_w() {return(w);}
@@ -833,6 +932,20 @@ void RealisticCamera::update_look_direction(vec3f dir) {
 void RealisticCamera::update_lookat(point3f point) {
   lookat = point;
   CamTransform = Transform(LookAt(get_origin(), point, camera_up).GetInverseMatrix());
+}
+
+void RealisticCamera::update_position_absolute(point3f point) {
+}
+
+void RealisticCamera::update_ortho_absolute(vec2f o_size) {
+}
+
+void RealisticCamera::update_aperture_absolute(Float aperture) {
+}
+
+void RealisticCamera::update_focal_absolute(Float focal_length) {
+}
+void RealisticCamera::update_fov_absolute(Float fov_new) {
 }
 
 void RealisticCamera::reset() {

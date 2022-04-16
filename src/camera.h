@@ -31,6 +31,11 @@ class RayCamera {
     virtual void update_focal_distance(Float delta_focus)  = 0;
     virtual void update_look_direction(vec3f dir) = 0;
     virtual void update_lookat(point3f point) = 0;
+    virtual void update_position_absolute(point3f point) = 0;
+    virtual void update_ortho_absolute(vec2f o_size) = 0;
+    virtual void update_aperture_absolute(Float aperture) = 0;
+    virtual void update_focal_absolute(Float focal_length) = 0;
+    virtual void update_fov_absolute(Float fov) = 0;
     
     virtual void reset()  = 0;
     virtual Float GenerateRay(const CameraSample &sample, ray* ray2) const {
@@ -63,6 +68,11 @@ class camera : public RayCamera {
     void update_focal_distance(Float delta_focus);
     void update_look_direction(vec3f dir);
     void update_lookat(point3f point);
+    void update_position_absolute(point3f point);
+    void update_ortho_absolute(vec2f o_size);
+    void update_aperture_absolute(Float aperture);
+    void update_focal_absolute(Float focal_length);
+    void update_fov_absolute(Float fov_new);
     
     void reset();
     vec3f get_w() {return(w);}
@@ -71,6 +81,7 @@ class camera : public RayCamera {
     Float get_fov() {return(fov);}
     Float get_aperture() {return(lens_radius * 2);}
     Float get_focal_distance() {return(focus_dist);}
+
     point3f get_origin() {return(origin);}
     vec3f get_up() {return(vup);}
     point3f get_lookat() {return(lookat);}
@@ -110,6 +121,11 @@ public:
   void update_focal_distance(Float delta_focus);
   void update_look_direction(vec3f dir);
   void update_lookat(point3f point);
+  void update_position_absolute(point3f point);
+  void update_ortho_absolute(vec2f o_size);
+  void update_aperture_absolute(Float aperture);
+  void update_focal_absolute(Float focal_length);
+  void update_fov_absolute(Float fov_new);
   
   void reset();
   vec3f get_w() {return(w);}
@@ -135,6 +151,7 @@ public:
   Float cam_width, cam_height;
   Float start_cam_width, start_cam_height;
   point3f start_lookat;
+  Float focus_dist;
 };
 
 
@@ -149,6 +166,11 @@ class environment_camera : public RayCamera {
     void update_focal_distance(Float delta_focus);
     void update_look_direction(vec3f dir);
     void update_lookat(point3f point);
+    void update_position_absolute(point3f point);
+    void update_ortho_absolute(vec2f o_size);
+    void update_aperture_absolute(Float aperture);
+    void update_focal_absolute(Float focal_length);
+    void update_fov_absolute(Float fov_new);
     
     void reset();
     vec3f get_w();
@@ -191,6 +213,11 @@ public:
   void update_focal_distance(Float delta_focus);
   void update_look_direction(vec3f dir);
   void update_lookat(point3f point);
+  void update_position_absolute(point3f point);
+  void update_ortho_absolute(vec2f o_size);
+  void update_aperture_absolute(Float aperture);
+  void update_focal_absolute(Float focal_length);
+  void update_fov_absolute(Float fov_new);
   
   void reset();
   vec3f get_w();

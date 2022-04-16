@@ -150,6 +150,9 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
     //Save Keyframe
     KeyCode K_key = XKeysymToKeycode(d,XStringToKeysym("k"));
     
+    //Move to Last Keyframe
+    KeyCode L_key = XKeysymToKeycode(d,XStringToKeysym("l"));
+    
     //Fast Movement Key
     KeyCode F_key = XKeysymToKeycode(d,XStringToKeysym("f"));
     
@@ -249,6 +252,30 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
             (*EnvWorldToObject) = Start_EnvWorldToObject;
             (*EnvObjectToWorld) = Start_EnvObjectToWorld;
           }
+          if (e.xkey.keycode == L_key) {
+            if(Keyframes.size() > 0) {
+              Rcpp::List LastKeyframe = Keyframes.at(Keyframes.size()-1);
+              point3f last_pos = point3f(Rcpp::as<Float>(LastKeyframe["x"]),
+                                       Rcpp::as<Float>(LastKeyframe["y"]),
+                                       Rcpp::as<Float>(LastKeyframe["z"]));
+              point3f last_lookat = point3f(Rcpp::as<Float>(LastKeyframe["dx"]),
+                                            Rcpp::as<Float>(LastKeyframe["dy"]),
+                                            Rcpp::as<Float>(LastKeyframe["dz"]));
+              Float last_aperture = Rcpp::as<Float>(LastKeyframe["aperture"]);
+              Float last_fov = Rcpp::as<Float>(LastKeyframe["fov"]);
+              Float last_focal = Rcpp::as<Float>(LastKeyframe["focal"]);
+              vec2f last_ortho = vec2f(Rcpp::as<Float>(LastKeyframe["orthox"]),
+                                       Rcpp::as<Float>(LastKeyframe["orthoy"]));
+              cam->update_focal_absolute(last_focal);
+              cam->update_position_absolute(last_pos);
+              cam->update_lookat(last_lookat);
+              cam->update_aperture_absolute(last_aperture);
+              cam->update_fov_absolute(last_fov);
+              cam->update_ortho_absolute(last_ortho);
+            } else {
+              Rprintf("Can't reset to last keyframe: No keyframes have been saved. Use the R key to reset camera.");
+            }
+          }
           if (e.xkey.keycode == P_key || e.xkey.keycode == K_key ) {
             point3f origin = cam->get_origin();
             Float fov =  cam->get_fov();
@@ -257,6 +284,7 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
             Float fd = cam->get_focal_distance();
             vec3f cam_up = cam->get_up();
             point2f ortho = cam->get_ortho();
+            point3f cam_lookat = cam->get_lookat();
             
             if(e.xkey.keycode == K_key) {
               if(fov > 0) {
@@ -274,7 +302,7 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
                                                        Named("upx")  = cam_up.x(),
                                                        Named("upy")  = cam_up.y(),
                                                        Named("upz")  = cam_up.z()));
-              } else {
+              } else if (fov < 0) {
                 Keyframes.push_back(Rcpp::List::create(Named("x")  = origin.x(),
                                                        Named("y")  = origin.y(),
                                                        Named("z")  = origin.z(),
@@ -289,18 +317,38 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
                                                        Named("upx")  = cam_up.x(),
                                                        Named("upy")  = cam_up.y(),
                                                        Named("upz")  = cam_up.z()));
+              } else {
+                Keyframes.push_back(Rcpp::List::create(Named("x")  = origin.x(),
+                                                       Named("y")  = origin.y(),
+                                                       Named("z")  = origin.z(),
+                                                       Named("dx") = cam_lookat.x(),
+                                                       Named("dy") = cam_lookat.y(),
+                                                       Named("dz") = cam_lookat.z(),
+                                                       Named("aperture") = 0,
+                                                       Named("fov") = 0,
+                                                       Named("focal") = fd,
+                                                       Named("orthox") = ortho.x(),
+                                                       Named("orthoy") = ortho.y(),
+                                                       Named("upx")  = cam_up.x(),
+                                                       Named("upy")  = cam_up.y(),
+                                                       Named("upz")  = cam_up.z()));
               }
             }
-            if(fov >= 0) {
+            if(fov > 0) {
               Rprintf("Lookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f) FOV: %.1f Aperture: %0.3f Focal Dist: %0.3f Env Rotation: %.2f\n",
                       origin.x(), origin.y(), origin.z(), 
                       origin.x()+cam_direction.x()*fd, origin.y()+cam_direction.y()*fd, origin.z()+cam_direction.z()*fd, 
                       fov, 
                       cam_aperture, fd, env_y_angle);
-            }  else {
+            } else if (fov < 0) {
               Rprintf("Lookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f) Focal Dist: %0.3f Env Rotation: %.2f\n",
                       origin.x(), origin.y(), origin.z(), 
                       origin.x()+cam_direction.x()*fd, origin.y()+cam_direction.y()*fd, origin.z()+cam_direction.z()*fd, 
+                      fd, env_y_angle);
+            } else {
+              Rprintf("Lookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f) Focal Dist: %0.3f Env Rotation: %.2f\n",
+                      origin.x(), origin.y(), origin.z(), 
+                      cam_lookat.x(), cam_lookat.y(), cam_lookat.z(), 
                       fd, env_y_angle);
             }
             
@@ -413,17 +461,23 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
               Float fov =  cam->get_fov();
               point3f cam_direction = -cam->get_w();
               Float fd = cam->get_focal_distance();
-              
-              if(fov >= 0) {
-                Rprintf("Lookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f) FOV: %.1f Aperture: %0.3f Focal Dist: %.1f Env Rotation: %.2f\n",
+              point3f cam_lookat = cam->get_lookat();
+              Float cam_aperture = cam->get_aperture();
+              if(fov > 0) {
+                Rprintf("Lookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f) FOV: %.1f Aperture: %0.3f Focal Dist: %0.3f Env Rotation: %.2f\n",
                         origin.x(), origin.y(), origin.z(), 
                         origin.x()+cam_direction.x()*fd, origin.y()+cam_direction.y()*fd, origin.z()+cam_direction.z()*fd, 
                         fov, 
-                        cam->get_aperture(), fd, env_y_angle);
-              }  else {
-                Rprintf("Lookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f)  Focal Dist: %0.3f Env Rotation: %.2f\n",
+                        cam_aperture, fd, env_y_angle);
+              } else if (fov < 0) {
+                Rprintf("Lookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f) Focal Dist: %0.3f Env Rotation: %.2f\n",
                         origin.x(), origin.y(), origin.z(), 
                         origin.x()+cam_direction.x()*fd, origin.y()+cam_direction.y()*fd, origin.z()+cam_direction.z()*fd, 
+                        fd, env_y_angle);
+              } else {
+                Rprintf("Lookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f) Focal Dist: %0.3f Env Rotation: %.2f\n",
+                        origin.x(), origin.y(), origin.z(), 
+                        cam_lookat.x(), cam_lookat.y(), cam_lookat.z(), 
                         fd, env_y_angle);
               }
             } else {
@@ -907,25 +961,58 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
           break;
           }
         case VK_KEY_P: {
-            point3f origin = cam_w->get_origin();
-            Float fov =  cam_w->get_fov();
-            point3f cam_direction = -cam_w->get_w();
-            Float fd = cam_w->get_focal_distance();
-  
-            if(fov >= 0) {
-              Rprintf("Lookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f) FOV: %.1f Aperture: %0.3f Focal Dist: %0.3f Env Rotation: %.2f\n",
-                      origin.x(), origin.y(), origin.z(),
-                      origin.x()+cam_direction.x()*fd, origin.y()+cam_direction.y()*fd, origin.z()+cam_direction.z()*fd,
-                      fov,
-                      cam_w->get_aperture(), fd, env_y_angle);
-            }  else {
-              Rprintf("Lookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f)  Focal Dist: %0.3f Env Rotation: %.2f\n",
-                      origin.x(), origin.y(), origin.z(),
-                      origin.x()+cam_direction.x()*fd, origin.y()+cam_direction.y()*fd, origin.z()+cam_direction.z()*fd,
-                      fd, env_y_angle);
-            }
+          point3f origin = cam_w->get_origin();
+          Float fov =  cam_w->get_fov();
+          point3f cam_direction = -cam_w->get_w();
+          Float cam_aperture = cam_w->get_aperture();
+          Float fd = cam_w->get_focal_distance();
+          vec3f cam_up = cam_w->get_up();
+          point2f ortho = cam_w->get_ortho();
+          point3f cam_lookat = cam_w->get_lookat();
+          if(fov > 0) {
+            Rprintf("Lookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f) FOV: %.1f Aperture: %0.3f Focal Dist: %0.3f Env Rotation: %.2f\n",
+                    origin.x(), origin.y(), origin.z(), 
+                    origin.x()+cam_direction.x()*fd, origin.y()+cam_direction.y()*fd, origin.z()+cam_direction.z()*fd, 
+                    fov, 
+                    cam_aperture, fd, env_y_angle);
+          } else if (fov < 0) {
+            Rprintf("Lookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f) Focal Dist: %0.3f Env Rotation: %.2f\n",
+                    origin.x(), origin.y(), origin.z(), 
+                    origin.x()+cam_direction.x()*fd, origin.y()+cam_direction.y()*fd, origin.z()+cam_direction.z()*fd, 
+                    fd, env_y_angle);
+          } else {
+            Rprintf("Lookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f) Focal Dist: %0.3f Env Rotation: %.2f\n",
+                    origin.x(), origin.y(), origin.z(), 
+                    cam_lookat.x(), cam_lookat.y(), cam_lookat.z(), 
+                    fd, env_y_angle);
+          }
             break;
           } 
+          case VK_KEY_L: {
+            if(Keyframes_w.size() > 0) {
+              Rcpp::List LastKeyframe = Keyframes_w.at(Keyframes_w.size()-1);
+              point3f last_pos = point3f(Rcpp::as<Float>(LastKeyframe["x"]),
+                                         Rcpp::as<Float>(LastKeyframe["y"]),
+                                         Rcpp::as<Float>(LastKeyframe["z"]));
+              point3f last_lookat = point3f(Rcpp::as<Float>(LastKeyframe["dx"]),
+                                            Rcpp::as<Float>(LastKeyframe["dy"]),
+                                            Rcpp::as<Float>(LastKeyframe["dz"]));
+              Float last_aperture = Rcpp::as<Float>(LastKeyframe["aperture"]);
+              Float last_fov = Rcpp::as<Float>(LastKeyframe["fov"]);
+              Float last_focal = Rcpp::as<Float>(LastKeyframe["focal"]);
+              vec2f last_ortho = vec2f(Rcpp::as<Float>(LastKeyframe["orthox"]),
+                                       Rcpp::as<Float>(LastKeyframe["orthoy"]));
+              cam_w->update_focal_absolute(last_focal);
+              cam_w->update_position_absolute(last_pos);
+              cam_w->update_lookat(last_lookat);
+              cam_w->update_aperture_absolute(last_aperture);
+              cam_w->update_fov_absolute(last_fov);
+              cam_w->update_ortho_absolute(last_ortho);
+            } else {
+              Rprintf("Can't reset to last keyframe: No keyframes have been saved. Use the R key to reset camera.");
+            }
+            break;
+          }
           case VK_KEY_K: {
             point3f origin = cam_w->get_origin();
             Float fov =  cam_w->get_fov();
@@ -934,9 +1021,10 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             Float fd = cam_w->get_focal_distance();
             vec3f cam_up = cam_w->get_up();
             point2f ortho = cam_w->get_ortho();
-              
+            point3f cam_lookat = cam_w->get_lookat();
+            
             if(fov > 0) {
-              Keyframes_w->push_back(Rcpp::List::create(Named("x")  = origin.x(),
+              Keyframes_w.push_back(Rcpp::List::create(Named("x")  = origin.x(),
                                                      Named("y")  = origin.y(),
                                                      Named("z")  = origin.z(),
                                                      Named("dx") = origin.x()+cam_direction.x()*fd,
@@ -950,8 +1038,8 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
                                                      Named("upx")  = cam_up.x(),
                                                      Named("upy")  = cam_up.y(),
                                                      Named("upz")  = cam_up.z()));
-            } else {
-              Keyframes_w->push_back(Rcpp::List::create(Named("x")  = origin.x(),
+            } else if (fov < 0) {
+              Keyframes_w.push_back(Rcpp::List::create(Named("x")  = origin.x(),
                                                      Named("y")  = origin.y(),
                                                      Named("z")  = origin.z(),
                                                      Named("dx") = origin.x()+cam_direction.x()*fd,
@@ -965,17 +1053,37 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
                                                      Named("upx")  = cam_up.x(),
                                                      Named("upy")  = cam_up.y(),
                                                      Named("upz")  = cam_up.z()));
+            } else {
+              Keyframes_w.push_back(Rcpp::List::create(Named("x")  = origin.x(),
+                                                     Named("y")  = origin.y(),
+                                                     Named("z")  = origin.z(),
+                                                     Named("dx") = cam_lookat.x(),
+                                                     Named("dy") = cam_lookat.y(),
+                                                     Named("dz") = cam_lookat.z(),
+                                                     Named("aperture") = 0,
+                                                     Named("fov") = 0,
+                                                     Named("focal") = fd,
+                                                     Named("orthox") = ortho.x(),
+                                                     Named("orthoy") = ortho.y(),
+                                                     Named("upx")  = cam_up.x(),
+                                                     Named("upy")  = cam_up.y(),
+                                                     Named("upz")  = cam_up.z()));
             }
-            if(fov >= 0) {
+            if(fov > 0) {
               Rprintf("Lookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f) FOV: %.1f Aperture: %0.3f Focal Dist: %0.3f Env Rotation: %.2f\n",
                       origin.x(), origin.y(), origin.z(), 
                       origin.x()+cam_direction.x()*fd, origin.y()+cam_direction.y()*fd, origin.z()+cam_direction.z()*fd, 
                       fov, 
                       cam_aperture, fd, env_y_angle);
-            }  else {
+            } else if (fov < 0) {
               Rprintf("Lookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f) Focal Dist: %0.3f Env Rotation: %.2f\n",
                       origin.x(), origin.y(), origin.z(), 
                       origin.x()+cam_direction.x()*fd, origin.y()+cam_direction.y()*fd, origin.z()+cam_direction.z()*fd, 
+                      fd, env_y_angle);
+            } else {
+              Rprintf("Lookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f) Focal Dist: %0.3f Env Rotation: %.2f\n",
+                      origin.x(), origin.y(), origin.z(), 
+                      cam_lookat.x(), cam_lookat.y(), cam_lookat.z(), 
                       fd, env_y_angle);
             }
             break;
