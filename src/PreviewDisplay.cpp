@@ -966,7 +966,6 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
           point3f cam_direction = -cam_w->get_w();
           Float cam_aperture = cam_w->get_aperture();
           Float fd = cam_w->get_focal_distance();
-          vec3f cam_up = cam_w->get_up();
           point2f ortho = cam_w->get_ortho();
           point3f cam_lookat = cam_w->get_lookat();
           if(fov > 0) {
@@ -989,8 +988,8 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             break;
           } 
           case VK_KEY_L: {
-            if(Keyframes_w.size() > 0) {
-              Rcpp::List LastKeyframe = Keyframes_w.at(Keyframes_w.size()-1);
+            if(Keyframes_w->size() > 0) {
+              Rcpp::List LastKeyframe = Keyframes_w->at(Keyframes_w->size()-1);
               point3f last_pos = point3f(Rcpp::as<Float>(LastKeyframe["x"]),
                                          Rcpp::as<Float>(LastKeyframe["y"]),
                                          Rcpp::as<Float>(LastKeyframe["z"]));
@@ -1024,7 +1023,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             point3f cam_lookat = cam_w->get_lookat();
             
             if(fov > 0) {
-              Keyframes_w.push_back(Rcpp::List::create(Named("x")  = origin.x(),
+              Keyframes_w->push_back(Rcpp::List::create(Named("x")  = origin.x(),
                                                      Named("y")  = origin.y(),
                                                      Named("z")  = origin.z(),
                                                      Named("dx") = origin.x()+cam_direction.x()*fd,
@@ -1039,7 +1038,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
                                                      Named("upy")  = cam_up.y(),
                                                      Named("upz")  = cam_up.z()));
             } else if (fov < 0) {
-              Keyframes_w.push_back(Rcpp::List::create(Named("x")  = origin.x(),
+              Keyframes_w->push_back(Rcpp::List::create(Named("x")  = origin.x(),
                                                      Named("y")  = origin.y(),
                                                      Named("z")  = origin.z(),
                                                      Named("dx") = origin.x()+cam_direction.x()*fd,
@@ -1054,7 +1053,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
                                                      Named("upy")  = cam_up.y(),
                                                      Named("upz")  = cam_up.z()));
             } else {
-              Keyframes_w.push_back(Rcpp::List::create(Named("x")  = origin.x(),
+              Keyframes_w->push_back(Rcpp::List::create(Named("x")  = origin.x(),
                                                      Named("y")  = origin.y(),
                                                      Named("z")  = origin.z(),
                                                      Named("dx") = cam_lookat.x(),
