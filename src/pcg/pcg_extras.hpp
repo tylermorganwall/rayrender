@@ -591,19 +591,20 @@ public:
  * value.
  */
 
-template <typename IntType>
-struct static_arbitrary_seed {
-private:
-    static constexpr IntType fnv(IntType hash, const char* pos) {
-        return *pos == '\0'
-             ? hash
-             : fnv((hash * IntType(16777619U)) ^ *pos, (pos+1));
-    }
-
-public:
-    static constexpr IntType value = fnv(IntType(2166136261U ^ sizeof(IntType)),
-                        __DATE__ __TIME__ __FILE__);
-};
+// Tyler: Remove this to stop warnings on Ubuntu
+// template <typename IntType>
+// struct static_arbitrary_seed {
+// private:
+//     static constexpr IntType fnv(IntType hash, const char* pos) {
+//         return *pos == '\0'
+//              ? hash
+//              : fnv((hash * IntType(16777619U)) ^ *pos, (pos+1));
+//     }
+// 
+// public:
+//     static constexpr IntType value = fnv(IntType(2166136261U ^ sizeof(IntType)),
+//                         __DATE__ __TIME__ __FILE__);
+// };
 
 // Sometimes, when debugging or testing, it's handy to be able print the name
 // of a (in human-readable form).  This code allows the idiom:
