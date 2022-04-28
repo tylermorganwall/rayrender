@@ -820,9 +820,15 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
       return 0;
     }
     case WM_KEYDOWN: {
-      vec3f w = cam_w->get_w();
-      vec3f u = cam_w->get_u();
-      vec3f v = cam_w->get_v();
+      vec3f w(1,0,0);
+      vec3f u(0,1,0);
+      vec3f v(0,0,1);
+      
+      if(interactive_w) {
+        w = cam_w->get_w();
+        u = cam_w->get_u();
+        v = cam_w->get_v();
+      }
 
       switch (wParam) {
         case VK_ESCAPE: {
