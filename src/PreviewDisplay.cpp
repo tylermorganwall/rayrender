@@ -5,11 +5,14 @@
 
 #ifdef RAY_HAS_X11
 
+//Had to undefine Xlib.h's Status because RcppThread also defines Status 
+#define Status int
 #include <string.h>
 #include <X11/Xutil.h>
 #include "X11/keysym.h"
 #include "X11/Xatom.h"
 static Float env_y_angle;;
+#undef Status
 
 #endif
 

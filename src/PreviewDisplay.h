@@ -10,6 +10,8 @@
 
 #ifdef RAY_HAS_X11
 #include <X11/Xlib.h>
+#undef Status
+
 #endif
 
 #ifdef RAY_WINDOWS
