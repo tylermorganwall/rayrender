@@ -129,7 +129,7 @@ generate_camera_motion = function(positions,
                                  "none" = 0,"position" = 1,"lookats" = 2, "both" = 3, 0))
   curvature_adjust_pos = curve_adj_type %in% c(1,3)
   curvature_adjust_look = curve_adj_type %in% c(2,3)
-  if(!is.null(dim(camera_pos)) && ncol(positions) == 14) {
+  if(!is.null(dim(positions)) && ncol(positions) == 14) {
     temp = positions
     positions = temp[,1:3]
     lookats = temp[,4:6]
