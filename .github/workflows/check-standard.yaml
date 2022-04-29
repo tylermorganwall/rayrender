@@ -68,7 +68,7 @@ jobs:
       - name: Install macOS system dependencies
         if: runner.os == 'macOS'
         run: |
-          brew install autoconf
+          brew install autoconf automake libtool
 
       - name: Install dependencies
         run: |
