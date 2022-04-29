@@ -17,7 +17,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">rayrender</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.25.2</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.26.0</span>
       </span>
     </div>
 
@@ -29,7 +29,7 @@
   </a>
 </li>
 <li class="dropdown">
-  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">
+  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
     Tutorials/Demos
      
     <span class="caret"></span>
@@ -138,7 +138,7 @@ number, the object will be scaled uniformly.</p></dd>
 <span class="r-in">  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu">pig</span><span class="op">(</span>x<span class="op">=</span><span class="fl">555</span><span class="op">/</span><span class="fl">2</span>,z<span class="op">=</span><span class="fl">555</span><span class="op">/</span><span class="fl">2</span>,y<span class="op">=</span><span class="fl">120</span>,</span>
 <span class="r-in">  scale<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">80</span>,<span class="fl">80</span>,<span class="fl">80</span><span class="op">)</span>, angle <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">135</span>,<span class="fl">0</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span></span>
 <span class="r-in">  <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>parallel<span class="op">=</span><span class="cn">TRUE</span>, samples<span class="op">=</span><span class="fl">400</span>,clamp_value<span class="op">=</span><span class="fl">10</span><span class="op">)</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Setting default values for Cornell box: lookfrom `c(278,278,-800)` lookat `c(278,278,0)` fov `40` .</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Setting default values for Cornell box: lookfrom `c(278,278,-800)` lookat `c(278,278,555/2)` fov `40` .</span>
 <span class="r-plt img"><img src="pig-1.png" alt="" width="700" height="433"></span>
 <span class="r-in"></span>
 <span class="r-in"><span class="co"># Show the pig staring into a mirror, worried </span></span>
@@ -148,7 +148,7 @@ number, the object will be scaled uniformly.</p></dd>
 <span class="r-in">  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="cube.html">cube</a></span><span class="op">(</span>x<span class="op">=</span><span class="fl">450</span>,z<span class="op">=</span><span class="fl">450</span>,y<span class="op">=</span><span class="fl">250</span>, ywidth<span class="op">=</span><span class="fl">500</span>, xwidth<span class="op">=</span><span class="fl">200</span>,</span>
 <span class="r-in">                  angle <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">45</span>,<span class="fl">0</span><span class="op">)</span>, material <span class="op">=</span> <span class="fu"><a href="metal.html">metal</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span></span>
 <span class="r-in">  <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>parallel<span class="op">=</span><span class="cn">TRUE</span>, samples<span class="op">=</span><span class="fl">500</span>,clamp_value<span class="op">=</span><span class="fl">10</span><span class="op">)</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Setting default values for Cornell box: lookfrom `c(278,278,-800)` lookat `c(278,278,0)` fov `40` .</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Setting default values for Cornell box: lookfrom `c(278,278,-800)` lookat `c(278,278,555/2)` fov `40` .</span>
 <span class="r-plt img"><img src="pig-2.png" alt="" width="700" height="433"></span>
 <span class="r-in"></span>
 <span class="r-in"><span class="co"># Render many small pigs facing random directions, with an evil pig overlord</span></span>
@@ -165,7 +165,7 @@ number, the object will be scaled uniformly.</p></dd>
 <span class="r-in">            scale<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">100</span>,<span class="fl">100</span>,<span class="fl">100</span><span class="op">)</span>,angle<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">-</span><span class="fl">30</span>,<span class="fl">90</span>,<span class="fl">0</span><span class="op">)</span>, order_rotation<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">3</span>,<span class="fl">2</span>,<span class="fl">1</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
 <span class="r-in">            </span>
 <span class="r-in"><span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span><span class="va">many_pigs_scene</span>,parallel<span class="op">=</span><span class="cn">TRUE</span>,clamp_value<span class="op">=</span><span class="fl">10</span>, samples<span class="op">=</span><span class="fl">500</span><span class="op">)</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Setting default values for Cornell box: lookfrom `c(278,278,-800)` lookat `c(278,278,0)` fov `40` .</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Setting default values for Cornell box: lookfrom `c(278,278,-800)` lookat `c(278,278,555/2)` fov `40` .</span>
 <span class="r-plt img"><img src="pig-3.png" alt="" width="700" height="433"></span>
 <span class="r-in"></span>
 <span class="r-in"><span class="co">#Render spiderpig</span></span>
@@ -189,7 +189,7 @@ number, the object will be scaled uniformly.</p></dd>
 </div>
 
 <div class="pkgdown">
-  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.2.</p>
+  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.3.</p>
 </div>
 
       </footer></div>

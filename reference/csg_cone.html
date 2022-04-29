@@ -17,7 +17,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">rayrender</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.25.2</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.26.0</span>
       </span>
     </div>
 
@@ -29,7 +29,7 @@
   </a>
 </li>
 <li class="dropdown">
-  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">
+  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
     Tutorials/Demos
      
     <span class="caret"></span>
@@ -140,7 +140,7 @@
 <span class="r-in">    <span class="fu">csg_cone</span><span class="op">(</span>start <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">555</span><span class="op">/</span><span class="fl">2</span>,<span class="fl">0</span>,<span class="fl">555</span><span class="op">/</span><span class="fl">2</span><span class="op">)</span>, end <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">555</span><span class="op">/</span><span class="fl">2</span>,<span class="fl">555</span><span class="op">/</span><span class="fl">2</span><span class="op">+</span><span class="fl">100</span>,<span class="fl">555</span><span class="op">/</span><span class="fl">2</span><span class="op">)</span>, radius<span class="op">=</span><span class="fl">100</span><span class="op">)</span>,</span>
 <span class="r-in">    material<span class="op">=</span><span class="fu"><a href="dielectric.html">dielectric</a></span><span class="op">(</span>attenuation<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>,<span class="fl">1</span>,<span class="fl">0.3</span><span class="op">)</span><span class="op">/</span><span class="fl">100</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span> </span>
 <span class="r-in">  <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>clamp_value<span class="op">=</span><span class="fl">10</span><span class="op">)</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Setting default values for Cornell box: lookfrom `c(278,278,-800)` lookat `c(278,278,0)` fov `40` .</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Setting default values for Cornell box: lookfrom `c(278,278,-800)` lookat `c(278,278,555/2)` fov `40` .</span>
 <span class="r-plt img"><img src="csg_cone-4.png" alt="" width="700" height="433"></span>
 <span class="r-in"><span class="co"># }</span></span>
 </code></pre></div>
@@ -157,7 +157,7 @@
 </div>
 
 <div class="pkgdown">
-  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.2.</p>
+  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.3.</p>
 </div>
 
       </footer></div>

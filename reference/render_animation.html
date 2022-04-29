@@ -17,7 +17,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">rayrender</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.25.2</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.26.0</span>
       </span>
     </div>
 
@@ -29,7 +29,7 @@
   </a>
 </li>
 <li class="dropdown">
-  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">
+  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
     Tutorials/Demos
      
     <span class="caret"></span>
@@ -96,6 +96,7 @@
   end_frame <span class="op">=</span> <span class="cn">NA</span>,
   width <span class="op">=</span> <span class="fl">400</span>,
   height <span class="op">=</span> <span class="fl">400</span>,
+  preview <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/interactive.html" class="external-link">interactive</a></span><span class="op">(</span><span class="op">)</span>,
   camera_description_file <span class="op">=</span> <span class="cn">NA</span>,
   camera_scale <span class="op">=</span> <span class="fl">1</span>,
   iso <span class="op">=</span> <span class="fl">100</span>,
@@ -111,7 +112,7 @@
   roulette_active_depth <span class="op">=</span> <span class="fl">10</span>,
   ambient_light <span class="op">=</span> <span class="cn">FALSE</span>,
   clamp_value <span class="op">=</span> <span class="cn">Inf</span>,
-  filename <span class="op">=</span> <span class="st">"rayimage"</span>,
+  filename <span class="op">=</span> <span class="cn">NA</span>,
   backgroundhigh <span class="op">=</span> <span class="st">"#80b4ff"</span>,
   backgroundlow <span class="op">=</span> <span class="st">"#ffffff"</span>,
   shutteropen <span class="op">=</span> <span class="fl">0</span>,
@@ -148,6 +149,8 @@
 <dd><p>Default `400`. Width of the render, in pixels.</p></dd>
 <dt>height</dt>
 <dd><p>Default `400`. Height of the render, in pixels.</p></dd>
+<dt>preview</dt>
+<dd><p>Default `interactive()`. Whether to display a realtime progressive preview of the render. Press ESC to cancel the render.</p></dd>
 <dt>camera_description_file</dt>
 <dd><p>Default `NA`. Filename of a camera description file for rendering with
 a realistic camera. Several camera files are built-in: `"50mm"`,`"wide"`,`"fisheye"`, and `"telephoto"`.</p></dd>
@@ -317,7 +320,8 @@ construction and raytracing progress.</p></dd>
 <span class="r-in"><span class="co">#slightly in front. We'll render 12 frames, but you'd likely want more in a real animation.</span></span>
 <span class="r-in"></span>
 <span class="r-in"><span class="va">camera_motion</span> <span class="op">=</span>  <span class="fu"><a href="generate_camera_motion.html">generate_camera_motion</a></span><span class="op">(</span>positions <span class="op">=</span> <span class="va">camera_pos</span>, lookats <span class="op">=</span> <span class="va">camera_pos</span>, </span>
-<span class="r-in">                                        offset_lookat <span class="op">=</span> <span class="fl">1</span>, fovs<span class="op">=</span><span class="fl">80</span>, frames<span class="op">=</span><span class="fl">12</span><span class="op">)</span> </span>
+<span class="r-in">                                        offset_lookat <span class="op">=</span> <span class="fl">1</span>, fovs<span class="op">=</span><span class="fl">80</span>, frames<span class="op">=</span><span class="fl">12</span>,</span>
+<span class="r-in">                                        type<span class="op">=</span><span class="st">"bezier"</span><span class="op">)</span> </span>
 <span class="r-in">                                        </span>
 <span class="r-in"><span class="co">#This returns a data frame of individual camera positions, interpolated by cubic bezier curves.</span></span>
 <span class="r-in"><span class="va">camera_motion</span></span>
@@ -362,18 +366,6 @@ construction and raytracing progress.</p></dd>
 <span class="r-in">  <span class="fu">render_animation</span><span class="op">(</span>filename <span class="op">=</span> <span class="cn">NA</span>, camera_motion <span class="op">=</span> <span class="va">camera_motion</span>, samples<span class="op">=</span><span class="fl">100</span>,</span>
 <span class="r-in">                   sample_method<span class="op">=</span><span class="st">"sobol_blue"</span>,  </span>
 <span class="r-in">                   clamp_value<span class="op">=</span><span class="fl">10</span>, width<span class="op">=</span><span class="fl">400</span>, height<span class="op">=</span><span class="fl">400</span><span class="op">)</span></span>
-<span class="r-plt img"><img src="render_animation-4.png" alt="" width="700" height="433"></span>
-<span class="r-plt img"><img src="render_animation-5.png" alt="" width="700" height="433"></span>
-<span class="r-plt img"><img src="render_animation-6.png" alt="" width="700" height="433"></span>
-<span class="r-plt img"><img src="render_animation-7.png" alt="" width="700" height="433"></span>
-<span class="r-plt img"><img src="render_animation-8.png" alt="" width="700" height="433"></span>
-<span class="r-plt img"><img src="render_animation-9.png" alt="" width="700" height="433"></span>
-<span class="r-plt img"><img src="render_animation-10.png" alt="" width="700" height="433"></span>
-<span class="r-plt img"><img src="render_animation-11.png" alt="" width="700" height="433"></span>
-<span class="r-plt img"><img src="render_animation-12.png" alt="" width="700" height="433"></span>
-<span class="r-plt img"><img src="render_animation-13.png" alt="" width="700" height="433"></span>
-<span class="r-plt img"><img src="render_animation-14.png" alt="" width="700" height="433"></span>
-<span class="r-plt img"><img src="render_animation-15.png" alt="" width="700" height="433"></span>
 <span class="r-in"></span>
 <span class="r-in"><span class="co"># }</span></span>
 </code></pre></div>
@@ -390,7 +382,7 @@ construction and raytracing progress.</p></dd>
 </div>
 
 <div class="pkgdown">
-  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.2.</p>
+  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.3.</p>
 </div>
 
       </footer></div>
