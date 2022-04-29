@@ -85,7 +85,8 @@
 #' #slightly in front. We'll render 12 frames, but you'd likely want more in a real animation.
 #' 
 #' camera_motion =  generate_camera_motion(positions = camera_pos, lookats = camera_pos, 
-#'                                         offset_lookat = 1, fovs=80, frames=12) 
+#'                                         offset_lookat = 1, fovs=80, frames=12,
+#'                                         type="bezier") 
 #'                                         
 #' #This returns a data frame of individual camera positions, interpolated by cubic bezier curves.
 #' camera_motion
