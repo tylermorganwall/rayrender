@@ -5,3 +5,4 @@ rm -rf autom4te.cache
 rm -f src/*.o.tmp
 rm -f src/Makevars
 rm -f configure.ac
+rm -f configure.in
