@@ -6,3 +6,4 @@ rm -f src/*.o.tmp
 rm -f src/Makevars
 rm -f configure.ac
 rm -f configure.in
+rm -f configure
