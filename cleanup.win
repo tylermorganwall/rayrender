@@ -1,0 +1,6 @@
+#!/bin/sh
+
+rm -f config.*
+rm -rf autom4te.cache
+rm -f src/*.o.tmp
+rm -f src/Makevars
