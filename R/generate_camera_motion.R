@@ -234,6 +234,7 @@ generate_camera_motion = function(positions,
     }
     return_values = as.data.frame(cbind(points_final,lookats_final,apertures_final,fovs_final,focal_final,ortho_final,
                                         up_final))
+    rownames(return_values) = NULL
     colnames(return_values) = c("x","y","z",
                                 "dx","dy","dz",
                                 "aperture","fov","focal","orthox","orthoy",
@@ -294,6 +295,7 @@ generate_camera_motion = function(positions,
       focal_distances = c(focal_distances,focal_distances[1])
     }
     return_values = as.data.frame(apply(tween_df,2,tween, n = frames,ease=type))
+    rownames(return_values) = NULL
     if(aperture_linear) {
       return_values$aperture =tween(apertures,n=frames,ease="linear")
     }
