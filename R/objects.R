@@ -2583,7 +2583,7 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
 extruded_path = function(points, polygon = NA, breaks=NA,
                         x=0,y=0,z=0, closed = FALSE, 
                         straight = FALSE, precomputed_control_points = FALSE,
-                        width = 0.1, width_end = NA, u_min = 0, u_max = 1, 
+                        width = 1, width_end = NA, u_min = 0, u_max = 1, 
                         material = diffuse(), angle = c(0, 0, 0),
                         order_rotation = c(1, 2, 3),
                         flipped = FALSE, scale = c(1,1,1)) {
@@ -2659,13 +2659,18 @@ extruded_path = function(points, polygon = NA, breaks=NA,
     breaks = length(full_control_points) * 10
   }
   t_vals = seq(0, length(full_control_points), length.out=breaks)
+  width_vals = seq(width, width_end, length.out=breaks)
+  
   t_init = 0
-  initial_2nd_deriv = eval_bezier_2nd_deriv(full_control_points[[1]],t_init)
-  if(all(initial_2nd_deriv == 0)) {
-    t_init = 0.0001
-    initial_2nd_deriv = eval_bezier_2nd_deriv(full_control_points[[1]],t_init)
-  }
   initial_deriv = eval_bezier_deriv(full_control_points[[1]],t_init)
+  initial_2nd_deriv = eval_bezier_2nd_deriv(full_control_points[[1]],t_init)
+  if(all(abs(initial_2nd_deriv) < 1e-12)) {
+    if(any(cross_prod(c(1,0,0),initial_deriv) != 0)) {
+      initial_2nd_deriv = cross_prod(c(1,0,0),initial_deriv)
+    } else {
+      initial_2nd_deriv = cross_prod(c(0,1,0),initial_deriv)
+    }
+  } 
   t_vec = initial_deriv/sqrt(sum(initial_deriv*initial_deriv))
   s_vec = cross_prod(initial_deriv,initial_2nd_deriv)
   s_vec = s_vec/sqrt(sum(s_vec*s_vec))
@@ -2675,6 +2680,7 @@ extruded_path = function(points, polygon = NA, breaks=NA,
   for(i in seq_len(breaks-1)) {
     t_val0 = t_vals[i]
     t_val1 = t_vals[i+1]
+    width_temp = width_vals[i]
     
     rot_mat = matrix(c(s_vec,r_vec,t_vec),3,3)
     
@@ -2702,7 +2708,7 @@ extruded_path = function(points, polygon = NA, breaks=NA,
     x0 = eval_bezier(cp0,t_temp0)
     x1 = eval_bezier(cp1,t_temp1)
     
-    vertices[[counter]] = matrix(x0,ncol=3,nrow=nrow(polygon), byrow=T) + t((rot_mat %*% t(polygon)))
+    vertices[[counter]] = matrix(x0,ncol=3,nrow=nrow(polygon), byrow=T) + t((rot_mat %*% t(polygon*width_temp)))
     counter = counter + 1
     
     #Evaluate next set of vectors
@@ -2719,6 +2725,27 @@ extruded_path = function(points, polygon = NA, breaks=NA,
     r_vec = rl - (2 / c2) * sum(v2*rl) * v2
     s_vec = cross_prod(t_vec,r_vec)
   }
-  return(vertices)
+  rot_mat = matrix(c(s_vec,r_vec,t_vec),3,3)
+  vertices[[counter]] = matrix(x1,ncol=3,nrow=nrow(polygon), byrow=T) + t((rot_mat %*% t(polygon*width_end)))
+  
+  mesh = list()
+  vb = do.call(rbind,vertices)
+  faces = (nrow(polygon)-1)*2*(length(vertices)-1)
+  band_faces  = (nrow(polygon)-1)*2
+  it = matrix(0,nrow=3,ncol=faces)
+  polyadd = c(0,0,nrow(polygon),nrow(polygon),0,nrow(polygon))
+  single_structure = c(1,2,1,1,2,2)
+  single_band = matrix(0,nrow=6,ncol=band_faces/2)
+  for(i in seq_len((nrow(polygon)-1))) {
+    single_band[,i] = polyadd + single_structure + (i-1)
+  }
+  single_band = matrix(as.vector(single_band),nrow=3)
+  for(i in seq_len(length(vertices)-1)) {
+    it[,(1+(i-1)*band_faces):(i*band_faces)] = single_band + (i-1) * nrow(polygon)
+  }
+  mesh$vb = t(cbind(vb,rep(1,nrow(vb))))
+  mesh$it = it
+  class(mesh) = "mesh3d"
+  return(mesh)
 }
 
