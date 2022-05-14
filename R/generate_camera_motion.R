@@ -507,7 +507,7 @@ eval_bezier_2nd_deriv = function(cp,t) {
 #' @keywords internal
 cross_prod = function(x,y) {
   return(c(x[2]*y[3]-x[3]*y[2],
-           x[1]*y[3]-x[3]*y[1],
+           -(x[1]*y[3]-x[3]*y[1]),
            x[1]*y[2]-x[2]*y[1]))
 }
 

@@ -2472,3 +2472,256 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
                       start_time = 0, end_time = 1))
 }
 
+#' Path Object
+#' 
+#' Either a closed or open path made up of bezier curves that go through the specified points 
+#' (with continuous first and second derivatives), or straight line segments.
+#'
+#' @param points Either a list of length-3 numeric vectors or 3-column matrix/data.frame specifying
+#' the x/y/z points that the path should go through.
+#' @param x Default `0`. x-coordinate offset for the path.
+#' @param y Default `0`. y-coordinate offset for the path.
+#' @param z Default `0`. z-coordinate offset for the path.
+#' @param closed Default `FALSE`. If `TRUE`, a final segment will be added that connects the first
+#' and last points (unless they are already the same). Note: This final connection does not have 
+#' continuous 1st and 2nd derivatives.
+#' @param straight Default `FALSE`. If `TRUE`, straight lines will be used to connect the points instead
+#' of bezier curves. 
+#' @param precomputed_control_points Default `FALSE`. If `TRUE`, `points` argument will expect
+#' a list of control points calculated with the internal rayrender function `rayrender:::calculate_control_points()`.
+#' @param width Default `0.1`. Curve width.
+#' @param width_end Default `NA`. Width at end of path. Same as `width`, unless specified.
+#' @param u_min Default `0`. Minimum parametric coordinate for the path.
+#' @param u_max Default `1`. Maximum parametric coordinate for the path.
+#' @param type Default `cylinder`. Other options are `flat` and `ribbon`.
+#' @param normal Default `c(0,0,-1)`. Orientation surface normal for the start of ribbon curves.
+#' @param normal_end Default `NA`. Orientation surface normal for the start of ribbon curves. If not
+#' specified, same as `normal`.
+#' @param material Default  \code{\link{diffuse}}.The material, called from one of the material 
+#' functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}.
+#' @param angle Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.
+#' @param order_rotation Default `c(1, 2, 3)`. The order to apply the rotations, referring to "x", "y", and "z".
+#' @param flipped Default `FALSE`. Whether to flip the normals.
+#' @param scale Default `c(1, 1, 1)`. Scale transformation in the x, y, and z directions. If this is a single value,
+#' number, the object will be scaled uniformly.
+#' Note: emissive objects may not currently function correctly when scaled.
+#' @importFrom  grDevices col2rgb
+#'
+#' @return Single row of a tibble describing the cube in the scene.
+#' @export
+#'
+#' @examples
+#' \donttest{
+#' #Generate a wavy line, showing the line goes through the specified points:
+#' wave = list(c(-2,1,0),c(-1,-1,0),c(0,1,0),c(1,-1,0),c(2,1,0))
+#' point_mat = glossy(color="green")
+#' generate_studio(depth=-1.5) %>% 
+#'   add_object(path(points = wave,material=glossy(color="red"))) %>% 
+#'   add_object(sphere(x=-2,y=1,radius=0.1,material=point_mat)) %>% 
+#'   add_object(sphere(x=-1,y=-1,radius=0.1,material=point_mat)) %>% 
+#'   add_object(sphere(x=0,y=1,radius=0.1,material=point_mat)) %>% 
+#'   add_object(sphere(x=1,y=-1,radius=0.1,material=point_mat)) %>% 
+#'   add_object(sphere(x=2,y=1,radius=0.1,material=point_mat)) %>% 
+#'   add_object(sphere(z=5,x=5,y=5,radius=2,material=light(intensity=15))) %>% 
+#'   render_scene(samples=500, clamp_value=10,fov=30)
+#'   
+#' #Here we use straight lines by setting `straight = TRUE`:
+#' generate_studio(depth=-1.5) %>% 
+#'   add_object(path(points = wave,straight = TRUE, material=glossy(color="red"))) %>% 
+#'   add_object(sphere(z=5,x=5,y=5,radius=2,material=light(intensity=15))) %>% 
+#'   render_scene(samples=500, clamp_value=10,fov=30)
+#'   
+#' #We can also pass a matrix of values, specifying the x/y/z coordinates. Here,
+#' #we'll create a random curve:
+#' set.seed(21)
+#' random_mat = matrix(runif(3*9)*2-1, ncol=3)
+#' generate_studio(depth=-1.5) %>% 
+#'   add_object(path(points=random_mat, material=glossy(color="red"))) %>% 
+#'   add_object(sphere(y=5,radius=1,material=light(intensity=30))) %>% 
+#'   render_scene(samples=500, clamp_value=10)
+#'   
+#' #We can ensure the curve is closed by setting `closed = TRUE`
+#' generate_studio(depth=-1.5) %>% 
+#'   add_object(path(points=random_mat, closed = TRUE, material=glossy(color="red"))) %>% 
+#'   add_object(sphere(y=5,radius=1,material=light(intensity=30))) %>% 
+#'   render_scene(samples=500, clamp_value=10)
+#'   
+#' #Finally, let's render a pretzel to show how you can render just a subset of the curve:
+#' pretzel = list(c(-0.8,-0.5,0.1),c(0,-0.2,-0.1),c(0,0.3,0.1),c(-0.5,0.5,0.1), c(-0.6,-0.5,-0.1),
+#'                c(0,-0.8,-0.1),
+#'                c(0.6,-0.5,-0.1),c(0.5,0.5,-0.1), c(0,0.3,-0.1),c(-0,-0.2,0.1), c(0.8,-0.5,0.1))
+#'                
+#' #Render the full pretzel:
+#' generate_studio(depth = -1.1) %>% 
+#'   add_object(path(pretzel, width=0.17,  material = glossy(color="#db5b00"))) %>% 
+#'   add_object(sphere(y=5,x=2,z=4,material=light(intensity=20,spotlight_focus = c(0,0,0)))) %>% 
+#'   render_scene(samples=500, clamp_value=10)
+#'   
+#' #Here, we'll render only the first third of the pretzel by setting `u_max = 0.33`
+#' generate_studio(depth = -1.1) %>% 
+#'   add_object(path(pretzel, width=0.17, u_max=0.33, material = glossy(color="#db5b00"))) %>% 
+#'   add_object(sphere(y=5,x=2,z=4,material=light(intensity=20,spotlight_focus = c(0,0,0)))) %>% 
+#'   render_scene(samples=500, clamp_value=10)
+#'   
+#' #Here's the last third, by setting `u_min = 0.66`
+#' generate_studio(depth = -1.1) %>% 
+#'   add_object(path(pretzel, width=0.17, u_min=0.66, material = glossy(color="#db5b00"))) %>% 
+#'   add_object(sphere(y=5,x=2,z=4,material=light(intensity=20,spotlight_focus = c(0,0,0)))) %>% 
+#'   render_scene(samples=500, clamp_value=10)
+#'   
+#' #Here's the full pretzel, decomposed into thirds using the u_min and u_max coordinates
+#' generate_studio(depth = -1.1) %>% 
+#'   add_object(path(pretzel, width=0.17, u_max=0.33, x = -0.8, y =0.6,
+#'                   material = glossy(color="#db5b00"))) %>% 
+#'   add_object(path(pretzel, width=0.17, u_min=0.66, x = 0.8, y =0.6,
+#'                   material = glossy(color="#db5b00"))) %>% 
+#'   add_object(path(pretzel, width=0.17, u_min=0.33, u_max=0.66, x=0,
+#'                   material = glossy(color="#db5b00"))) %>% 
+#'   add_object(sphere(y=5,x=2,z=4,material=light(intensity=20,spotlight_focus = c(0,0,0)))) %>% 
+#'   render_scene(samples=500, clamp_value=10, lookfrom=c(0,3,10))
+#' }
+extruded_path = function(points, polygon = NA, breaks=NA,
+                        x=0,y=0,z=0, closed = FALSE, 
+                        straight = FALSE, precomputed_control_points = FALSE,
+                        width = 0.1, width_end = NA, u_min = 0, u_max = 1, 
+                        material = diffuse(), angle = c(0, 0, 0),
+                        order_rotation = c(1, 2, 3),
+                        flipped = FALSE, scale = c(1,1,1)) {
+  if(is.na(polygon)) {
+    angles = seq(0,360,length.out=12)
+    xx = width / 2 * sinpi(angles/180)
+    yy = width / 2 * cospi(angles/180)
+    polygon = data.frame(x=xx,y=yy)
+  }
+  if(is.na(width_end)) {
+    width_end = width
+  }
+  if(u_min == u_max) {
+    return()
+  }
+  stopifnot(u_min <= u_max)
+  stopifnot(length(width) == 1 && is.numeric(width))
+  stopifnot(length(width_end) == 1 && is.numeric(width_end))
+  
+  if(inherits(points,"numeric")) {
+    stop("Input must either be list, matrix, or data.frame, not numeric.")
+  }
+  if(inherits(points,"list") && !precomputed_control_points) {
+    if(any(unlist(lapply(points,(function(x) length(x) != 3))))) {
+      stop("If `points` is a list, each entry must be a length-3 vector")
+    }
+    points = do.call(rbind,points)
+  }
+  if(inherits(points,"data.frame")) {
+    points = as.matrix(points)
+  }
+  if(is.array(points)) {
+    if(nrow(points) == 1) {
+      stop("Only one point passed, no path specified.")
+    }
+    if(nrow(points) == 2 && closed) {
+      closed=FALSE
+    }
+    if(closed && all(points[1,] != points[nrow(points),])) {
+      points = rbind(points,points[1,])
+    }
+  }
+  if(!precomputed_control_points) {
+    if(inherits(points,"matrix")) {
+      if(ncol(points) == 3) {
+        if(!straight) {
+          full_control_points = calculate_control_points(points)
+        } else {
+          full_control_points = calculate_control_points_straight(points)
+        }
+      } else {
+        stop("If points a matrix or data.frame, must have 3 columns")
+      }
+    } else {
+      stop("points not of supported type (function expects matrix/data.frame/list, got ", class(points),")")
+    }
+  } else {
+    full_control_points = points
+  }
+  if(closed) {
+    first_point = full_control_points[[1]]
+    last_point = full_control_points[[length(full_control_points)]]
+    full_control_points[[length(full_control_points) + 1]] = last_point
+    full_control_points[[length(full_control_points)]][4,] = first_point[1,]
+    full_control_points[[length(full_control_points)]][3,] = 2*first_point[1,] - first_point[2,]
+    full_control_points[[length(full_control_points)]][2,] = 2*last_point[4,]  - last_point[3,]
+    full_control_points[[length(full_control_points)]][1,] = last_point[4,]
+  }
+  if(is.na(breaks)) {
+    breaks = length(full_control_points) * 10
+  }
+  t_vals = seq(0, length(full_control_points), length.out=breaks)
+  t_init = 0
+  initial_2nd_deriv = eval_bezier_2nd_deriv(full_control_points[[1]],t_init)
+  if(all(initial_2nd_deriv == 0)) {
+    t_init = 0.0001
+    initial_2nd_deriv = eval_bezier_2nd_deriv(full_control_points[[1]],t_init)
+  }
+  initial_deriv = eval_bezier_deriv(full_control_points[[1]],t_init)
+  t_vec = initial_deriv/sqrt(sum(initial_deriv*initial_deriv))
+  s_vec = cross_prod(initial_deriv,initial_2nd_deriv)
+  s_vec = s_vec/sqrt(sum(s_vec*s_vec))
+  r_vec = cross_prod(s_vec,t_vec)
+  vertices = list()
+  rgl::open3d(windowRect=c(0,0,1000,1000))
+  for(i in seq_len(breaks-1)) {
+    t_val0 = t_vals[i]
+    t_val1 = t_vals[i+1]
+    
+    t_temp0 = t_val0-floor(t_val0)
+    if(i != breaks-1) {
+      t_temp1 = t_val1-floor(t_val1)
+    } else {
+      t_temp1 = 1
+    }
+    
+    
+    i0 = floor(t_val0) + 1
+    if(i != breaks-1) {
+      i1 = floor(t_val1) + 1
+    } else {
+      i1 = floor(t_val1)
+    }
+    
+    cp0 = full_control_points[[i0]]
+    if(i1 <= length(full_control_points)) {
+      cp1 = full_control_points[[i1]]
+    } else {
+      cp1 = cp0
+    }
+    
+    x0 = eval_bezier(cp0,t_temp0)
+    x1 = eval_bezier(cp1,t_temp1)
+    
+    rgl::segments3d(matrix(c(x0,x0+t_vec*0.1,
+                             x0,x0+s_vec*0.1,
+                             x0,x0+r_vec*0.1),byrow=TRUE,ncol=3))
+    rgl::segments3d(matrix(c(x0,x1),byrow=TRUE,ncol=3),col="red")
+    rgl::snapshot3d(sprintf("coordinatesystem%i.png",i))
+    rgl::rgl.viewpoint(theta=i)
+    v1 = x1-x0
+    c1 = sum(v1*v1)
+    rl = r_vec - (2 / c1) * sum(v1*r_vec) * v1
+    tl = t_vec - (2 / c1) * sum(v1*t_vec) * v1
+    
+    next_deriv = eval_bezier_deriv(cp1,t_temp1)
+    t_vec = next_deriv/sqrt(sum(next_deriv*next_deriv))
+
+    v2 = t_vec - tl
+    c2 = sum(v2*v2)
+    r_vec = rl - (2 / c2) * sum(v2*rl) * v2
+    s_vec = cross_prod(t_vec,r_vec)
+      
+    
+    
+
+    # x_verts = x0 + polygon[,1] * matrix(s_vec,nrow=nrow(polygon),ncol=3,byrow=T)
+    # y_verts = polygon[,2] * matrix(r_vec,nrow=nrow(polygon),ncol=3,byrow=T)
+  }
+}
+
