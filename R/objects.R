@@ -2587,11 +2587,14 @@ extruded_path = function(points, polygon = NA, breaks=NA,
                         material = diffuse(), angle = c(0, 0, 0),
                         order_rotation = c(1, 2, 3),
                         flipped = FALSE, scale = c(1,1,1)) {
-  if(is.na(polygon)) {
+  if(is.null(dim(polygon))) {
     angles = seq(0,360,length.out=12)
     xx = width / 2 * sinpi(angles/180)
     yy = width / 2 * cospi(angles/180)
-    polygon = data.frame(x=xx,y=yy)
+    polygon = as.matrix(data.frame(x=xx,y=yy,z=0))
+  }
+  if(ncol(polygon) == 2) {
+    polygon = cbind(polygon,rep(0,nrow(polygon)))
   }
   if(is.na(width_end)) {
     width_end = width
@@ -2668,10 +2671,12 @@ extruded_path = function(points, polygon = NA, breaks=NA,
   s_vec = s_vec/sqrt(sum(s_vec*s_vec))
   r_vec = cross_prod(s_vec,t_vec)
   vertices = list()
-  rgl::open3d(windowRect=c(0,0,1000,1000))
+  counter = 1
   for(i in seq_len(breaks-1)) {
     t_val0 = t_vals[i]
     t_val1 = t_vals[i+1]
+    
+    rot_mat = matrix(c(s_vec,r_vec,t_vec),3,3)
     
     t_temp0 = t_val0-floor(t_val0)
     if(i != breaks-1) {
@@ -2679,7 +2684,6 @@ extruded_path = function(points, polygon = NA, breaks=NA,
     } else {
       t_temp1 = 1
     }
-    
     
     i0 = floor(t_val0) + 1
     if(i != breaks-1) {
@@ -2698,12 +2702,10 @@ extruded_path = function(points, polygon = NA, breaks=NA,
     x0 = eval_bezier(cp0,t_temp0)
     x1 = eval_bezier(cp1,t_temp1)
     
-    rgl::segments3d(matrix(c(x0,x0+t_vec*0.1,
-                             x0,x0+s_vec*0.1,
-                             x0,x0+r_vec*0.1),byrow=TRUE,ncol=3))
-    rgl::segments3d(matrix(c(x0,x1),byrow=TRUE,ncol=3),col="red")
-    rgl::snapshot3d(sprintf("coordinatesystem%i.png",i))
-    rgl::rgl.viewpoint(theta=i)
+    vertices[[counter]] = matrix(x0,ncol=3,nrow=nrow(polygon), byrow=T) + t((rot_mat %*% t(polygon)))
+    counter = counter + 1
+    
+    #Evaluate next set of vectors
     v1 = x1-x0
     c1 = sum(v1*v1)
     rl = r_vec - (2 / c1) * sum(v1*r_vec) * v1
@@ -2716,12 +2718,7 @@ extruded_path = function(points, polygon = NA, breaks=NA,
     c2 = sum(v2*v2)
     r_vec = rl - (2 / c2) * sum(v2*rl) * v2
     s_vec = cross_prod(t_vec,r_vec)
-      
-    
-    
-
-    # x_verts = x0 + polygon[,1] * matrix(s_vec,nrow=nrow(polygon),ncol=3,byrow=T)
-    # y_verts = polygon[,2] * matrix(r_vec,nrow=nrow(polygon),ncol=3,byrow=T)
   }
+  return(vertices)
 }
 
