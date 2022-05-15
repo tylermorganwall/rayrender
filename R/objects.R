@@ -2607,6 +2607,20 @@ extruded_path = function(points, polygon = NA, polygon_end = NA, breaks=NA,
   if(ncol(polygon_end) == 2) {
     polygon_end = cbind(polygon_end,rep(0,nrow(polygon_end)))
   }
+  #Process polygon orientation
+  i = seq_len(nrow(polygon) - 1)
+  reverse_poly = sum(polygon[i,1] * polygon[i+1,2] - 
+                     polygon[i+1,1] * polygon[i,2]) > 0
+  if(reverse_poly) {
+    polygon = polygon[nrow(polygon):1,]
+  }
+  i = seq_len(nrow(polygon_end) - 1)
+  reverse_poly = sum(polygon_end[i,1] * polygon_end[i+1,2] - 
+                     polygon_end[i+1,1] * polygon_end[i,2]) > 0
+  if(reverse_poly) {
+    polygon_end = polygon_end[nrow(polygon_end):1,]
+  }
+  
   if(is.na(width_end)) {
     width_end = width
   }
