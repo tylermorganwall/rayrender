@@ -2580,7 +2580,7 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
 #'   add_object(sphere(y=5,x=2,z=4,material=light(intensity=20,spotlight_focus = c(0,0,0)))) %>% 
 #'   render_scene(samples=500, clamp_value=10, lookfrom=c(0,3,10))
 #' }
-extruded_path = function(points, polygon = NA, breaks=NA,
+extruded_path = function(points, polygon = NA, polygon_end = NA, breaks=NA,
                         x=0,y=0,z=0, closed = FALSE, 
                         straight = FALSE, precomputed_control_points = FALSE,
                         width = 1, width_end = NA, u_min = 0, u_max = 1, 
@@ -2593,8 +2593,18 @@ extruded_path = function(points, polygon = NA, breaks=NA,
     yy = width / 2 * cospi(angles/180)
     polygon = as.matrix(data.frame(x=xx,y=yy,z=0))
   }
+  if(is.null(dim(polygon_end))) {
+    polygon_end = polygon
+  } else {
+    if(nrow(polygon_end) != nrow(polygon)) {
+      stop("`polygon` and `polygon_end` must have same number of vertices")
+    }
+  }
   if(ncol(polygon) == 2) {
     polygon = cbind(polygon,rep(0,nrow(polygon)))
+  }
+  if(ncol(polygon_end) == 2) {
+    polygon_end = cbind(polygon_end,rep(0,nrow(polygon_end)))
   }
   if(is.na(width_end)) {
     width_end = width
@@ -2660,6 +2670,7 @@ extruded_path = function(points, polygon = NA, breaks=NA,
   }
   t_vals = seq(0, length(full_control_points), length.out=breaks)
   width_vals = seq(width, width_end, length.out=breaks)
+  morph_vals = seq(0, 1, length.out=breaks)
   
   t_init = 0
   initial_deriv = eval_bezier_deriv(full_control_points[[1]],t_init)
@@ -2682,6 +2693,7 @@ extruded_path = function(points, polygon = NA, breaks=NA,
     t_val1 = t_vals[i+1]
     width_temp = width_vals[i]
     
+    temp_poly = morph_vals[i] * polygon_end + (1-morph_vals[i]) * polygon
     rot_mat = matrix(c(s_vec,r_vec,t_vec),3,3)
     
     t_temp0 = t_val0-floor(t_val0)
@@ -2708,7 +2720,7 @@ extruded_path = function(points, polygon = NA, breaks=NA,
     x0 = eval_bezier(cp0,t_temp0)
     x1 = eval_bezier(cp1,t_temp1)
     
-    vertices[[counter]] = matrix(x0,ncol=3,nrow=nrow(polygon), byrow=T) + t((rot_mat %*% t(polygon*width_temp)))
+    vertices[[counter]] = matrix(x0,ncol=3,nrow=nrow(polygon), byrow=T) + t((rot_mat %*% t(temp_poly*width_temp)))
     counter = counter + 1
     
     #Evaluate next set of vectors
@@ -2726,7 +2738,7 @@ extruded_path = function(points, polygon = NA, breaks=NA,
     s_vec = cross_prod(t_vec,r_vec)
   }
   rot_mat = matrix(c(s_vec,r_vec,t_vec),3,3)
-  vertices[[counter]] = matrix(x1,ncol=3,nrow=nrow(polygon), byrow=T) + t((rot_mat %*% t(polygon*width_end)))
+  vertices[[counter]] = matrix(x1,ncol=3,nrow=nrow(polygon), byrow=T) + t((rot_mat %*% t(polygon_end*width_end)))
   
   mesh = list()
   vb = do.call(rbind,vertices)
