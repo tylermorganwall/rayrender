@@ -2581,7 +2581,7 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
 #'   render_scene(samples=500, clamp_value=10, lookfrom=c(0,3,10))
 #' }
 extruded_path = function(points, polygon = NA, polygon_end = NA, breaks=NA,
-                        x=0,y=0,z=0, closed = FALSE, 
+                        x=0,y=0,z=0, closed = FALSE, twists = 0,
                         straight = FALSE, precomputed_control_points = FALSE,
                         width = 1, width_end = NA, u_min = 0, u_max = 1, 
                         material = diffuse(), angle = c(0, 0, 0),
@@ -2600,6 +2600,7 @@ extruded_path = function(points, polygon = NA, polygon_end = NA, breaks=NA,
       stop("`polygon` and `polygon_end` must have same number of vertices")
     }
   }
+  end_angle = twists*2*pi
   if(ncol(polygon) == 2) {
     polygon = cbind(polygon,rep(0,nrow(polygon)))
   }
@@ -2694,6 +2695,11 @@ extruded_path = function(points, polygon = NA, polygon_end = NA, breaks=NA,
     width_temp = width_vals[i]
     
     temp_poly = morph_vals[i] * polygon_end + (1-morph_vals[i]) * polygon
+    temp_angle = morph_vals[i] * end_angle
+    twist_mat = matrix(c(cos(temp_angle),-sin(temp_angle),0,
+                         sin(temp_angle), cos(temp_angle),0,
+                         0,            0,                 1), nrow=3,ncol=3,byrow=T)
+    
     rot_mat = matrix(c(s_vec,r_vec,t_vec),3,3)
     
     t_temp0 = t_val0-floor(t_val0)
@@ -2720,7 +2726,7 @@ extruded_path = function(points, polygon = NA, polygon_end = NA, breaks=NA,
     x0 = eval_bezier(cp0,t_temp0)
     x1 = eval_bezier(cp1,t_temp1)
     
-    vertices[[counter]] = matrix(x0,ncol=3,nrow=nrow(polygon), byrow=T) + t((rot_mat %*% t(temp_poly*width_temp)))
+    vertices[[counter]] = matrix(x0,ncol=3,nrow=nrow(polygon), byrow=T) + t((rot_mat %*% twist_mat %*% t(temp_poly*width_temp)))
     counter = counter + 1
     
     #Evaluate next set of vectors
@@ -2738,7 +2744,10 @@ extruded_path = function(points, polygon = NA, polygon_end = NA, breaks=NA,
     s_vec = cross_prod(t_vec,r_vec)
   }
   rot_mat = matrix(c(s_vec,r_vec,t_vec),3,3)
-  vertices[[counter]] = matrix(x1,ncol=3,nrow=nrow(polygon), byrow=T) + t((rot_mat %*% t(polygon_end*width_end)))
+  twist_mat = matrix(c(cos(end_angle),-sin(end_angle),0,
+                       sin(end_angle), cos(end_angle),0,
+                       0,            0,                 1), nrow=3,ncol=3,byrow=T)
+  vertices[[counter]] = matrix(x1,ncol=3,nrow=nrow(polygon), byrow=T) + t((rot_mat %*% twist_mat %*% t(polygon_end*width_end)))
   
   mesh = list()
   vb = do.call(rbind,vertices)
@@ -2755,6 +2764,11 @@ extruded_path = function(points, polygon = NA, polygon_end = NA, breaks=NA,
   for(i in seq_len(length(vertices)-1)) {
     it[,(1+(i-1)*band_faces):(i*band_faces)] = single_band + (i-1) * nrow(polygon)
   }
+  cap_it_start = matrix(decido::earcut(polygon[,1:2]),nrow=3)
+  cap_it_end = matrix(
+    rev(decido::earcut(polygon_end[,1:2])) + nrow(polygon)*(length(vertices)-1),
+    nrow=3)
+  it = cbind(it, cap_it_start, cap_it_end)
   mesh$vb = t(cbind(vb,rep(1,nrow(vb))))
   mesh$it = it
   class(mesh) = "mesh3d"
