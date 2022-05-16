@@ -2472,10 +2472,12 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
                       start_time = 0, end_time = 1))
 }
 
-#' Path Object
+#' Extruded Path Object
 #' 
 #' Either a closed or open path made up of bezier curves that go through the specified points 
 #' (with continuous first and second derivatives), or straight line segments.
+#' 
+#' Note: Only a basic diffuse texture is supported, via the `image_texture` parameter in the material function.
 #'
 #' @param points Either a list of length-3 numeric vectors or 3-column matrix/data.frame specifying
 #' the x/y/z points that the path should go through.
@@ -2515,80 +2517,16 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
 #' #Generate a wavy line, showing the line goes through the specified points:
 #' wave = list(c(-2,1,0),c(-1,-1,0),c(0,1,0),c(1,-1,0),c(2,1,0))
 #' point_mat = glossy(color="green")
-#' generate_studio(depth=-1.5) %>% 
-#'   add_object(path(points = wave,material=glossy(color="red"))) %>% 
-#'   add_object(sphere(x=-2,y=1,radius=0.1,material=point_mat)) %>% 
-#'   add_object(sphere(x=-1,y=-1,radius=0.1,material=point_mat)) %>% 
-#'   add_object(sphere(x=0,y=1,radius=0.1,material=point_mat)) %>% 
-#'   add_object(sphere(x=1,y=-1,radius=0.1,material=point_mat)) %>% 
-#'   add_object(sphere(x=2,y=1,radius=0.1,material=point_mat)) %>% 
-#'   add_object(sphere(z=5,x=5,y=5,radius=2,material=light(intensity=15))) %>% 
-#'   render_scene(samples=500, clamp_value=10,fov=30)
-#'   
-#' #Here we use straight lines by setting `straight = TRUE`:
-#' generate_studio(depth=-1.5) %>% 
-#'   add_object(path(points = wave,straight = TRUE, material=glossy(color="red"))) %>% 
-#'   add_object(sphere(z=5,x=5,y=5,radius=2,material=light(intensity=15))) %>% 
-#'   render_scene(samples=500, clamp_value=10,fov=30)
-#'   
-#' #We can also pass a matrix of values, specifying the x/y/z coordinates. Here,
-#' #we'll create a random curve:
-#' set.seed(21)
-#' random_mat = matrix(runif(3*9)*2-1, ncol=3)
-#' generate_studio(depth=-1.5) %>% 
-#'   add_object(path(points=random_mat, material=glossy(color="red"))) %>% 
-#'   add_object(sphere(y=5,radius=1,material=light(intensity=30))) %>% 
-#'   render_scene(samples=500, clamp_value=10)
-#'   
-#' #We can ensure the curve is closed by setting `closed = TRUE`
-#' generate_studio(depth=-1.5) %>% 
-#'   add_object(path(points=random_mat, closed = TRUE, material=glossy(color="red"))) %>% 
-#'   add_object(sphere(y=5,radius=1,material=light(intensity=30))) %>% 
-#'   render_scene(samples=500, clamp_value=10)
-#'   
-#' #Finally, let's render a pretzel to show how you can render just a subset of the curve:
-#' pretzel = list(c(-0.8,-0.5,0.1),c(0,-0.2,-0.1),c(0,0.3,0.1),c(-0.5,0.5,0.1), c(-0.6,-0.5,-0.1),
-#'                c(0,-0.8,-0.1),
-#'                c(0.6,-0.5,-0.1),c(0.5,0.5,-0.1), c(0,0.3,-0.1),c(-0,-0.2,0.1), c(0.8,-0.5,0.1))
-#'                
-#' #Render the full pretzel:
-#' generate_studio(depth = -1.1) %>% 
-#'   add_object(path(pretzel, width=0.17,  material = glossy(color="#db5b00"))) %>% 
-#'   add_object(sphere(y=5,x=2,z=4,material=light(intensity=20,spotlight_focus = c(0,0,0)))) %>% 
-#'   render_scene(samples=500, clamp_value=10)
-#'   
-#' #Here, we'll render only the first third of the pretzel by setting `u_max = 0.33`
-#' generate_studio(depth = -1.1) %>% 
-#'   add_object(path(pretzel, width=0.17, u_max=0.33, material = glossy(color="#db5b00"))) %>% 
-#'   add_object(sphere(y=5,x=2,z=4,material=light(intensity=20,spotlight_focus = c(0,0,0)))) %>% 
-#'   render_scene(samples=500, clamp_value=10)
-#'   
-#' #Here's the last third, by setting `u_min = 0.66`
-#' generate_studio(depth = -1.1) %>% 
-#'   add_object(path(pretzel, width=0.17, u_min=0.66, material = glossy(color="#db5b00"))) %>% 
-#'   add_object(sphere(y=5,x=2,z=4,material=light(intensity=20,spotlight_focus = c(0,0,0)))) %>% 
-#'   render_scene(samples=500, clamp_value=10)
-#'   
-#' #Here's the full pretzel, decomposed into thirds using the u_min and u_max coordinates
-#' generate_studio(depth = -1.1) %>% 
-#'   add_object(path(pretzel, width=0.17, u_max=0.33, x = -0.8, y =0.6,
-#'                   material = glossy(color="#db5b00"))) %>% 
-#'   add_object(path(pretzel, width=0.17, u_min=0.66, x = 0.8, y =0.6,
-#'                   material = glossy(color="#db5b00"))) %>% 
-#'   add_object(path(pretzel, width=0.17, u_min=0.33, u_max=0.66, x=0,
-#'                   material = glossy(color="#db5b00"))) %>% 
-#'   add_object(sphere(y=5,x=2,z=4,material=light(intensity=20,spotlight_focus = c(0,0,0)))) %>% 
-#'   render_scene(samples=500, clamp_value=10, lookfrom=c(0,3,10))
 #' }
 extruded_path = function(points, polygon = NA, polygon_end = NA, breaks=NA,
-                        x=0,y=0,z=0, closed = FALSE, twists = 0,
-                        straight = FALSE, precomputed_control_points = FALSE,
-                        width = 1, width_end = NA, u_min = 0, u_max = 1, 
-                        material = diffuse(), angle = c(0, 0, 0),
-                        order_rotation = c(1, 2, 3),
-                        flipped = FALSE, scale = c(1,1,1)) {
+                         x=0,y=0,z=0, closed = FALSE, twists = 0, texture_repeats = 1,
+                         straight = FALSE, precomputed_control_points = FALSE,
+                         width = 1, width_end = NA, u_min = 0, u_max = 1, 
+                         material = diffuse(), angle = c(0, 0, 0),
+                         order_rotation = c(1, 2, 3),
+                         flipped = FALSE, scale = c(1,1,1)) {
   if(is.null(dim(polygon))) {
-    angles = seq(0,360,length.out=12)
+    angles = seq(0,360,length.out=30)
     xx = width / 2 * sinpi(angles/180)
     yy = width / 2 * cospi(angles/180)
     polygon = as.matrix(data.frame(x=xx,y=yy,z=0))
@@ -2702,6 +2640,8 @@ extruded_path = function(points, polygon = NA, polygon_end = NA, breaks=NA,
   s_vec = s_vec/sqrt(sum(s_vec*s_vec))
   r_vec = cross_prod(s_vec,t_vec)
   vertices = list()
+  texcoords = list()
+  poly_tex = seq(0,1,length.out=nrow(polygon))
   counter = 1
   for(i in seq_len(breaks-1)) {
     t_val0 = t_vals[i]
@@ -2740,9 +2680,13 @@ extruded_path = function(points, polygon = NA, polygon_end = NA, breaks=NA,
     x0 = eval_bezier(cp0,t_temp0)
     x1 = eval_bezier(cp1,t_temp1)
     
-    vertices[[counter]] = matrix(x0,ncol=3,nrow=nrow(polygon), byrow=T) + t((rot_mat %*% twist_mat %*% t(temp_poly*width_temp)))
-    counter = counter + 1
+    vertices[[counter]] = matrix(x0,ncol=3,nrow=nrow(polygon), byrow=T) + 
+      t((rot_mat %*% twist_mat %*% t(temp_poly*width_temp)))
+    texcoords[[counter]] = matrix(c(poly_tex,rep(morph_vals[i] * texture_repeats,nrow(polygon))), 
+                                  ncol=2,nrow=nrow(polygon))
     
+    counter = counter + 1
+
     #Evaluate next set of vectors
     v1 = x1-x0
     c1 = sum(v1*v1)
@@ -2761,10 +2705,13 @@ extruded_path = function(points, polygon = NA, polygon_end = NA, breaks=NA,
   twist_mat = matrix(c(cos(end_angle),-sin(end_angle),0,
                        sin(end_angle), cos(end_angle),0,
                        0,            0,                 1), nrow=3,ncol=3,byrow=T)
-  vertices[[counter]] = matrix(x1,ncol=3,nrow=nrow(polygon), byrow=T) + t((rot_mat %*% twist_mat %*% t(polygon_end*width_end)))
-  
+  vertices[[counter]] = matrix(x1,ncol=3,nrow=nrow(polygon), byrow=T) + 
+    t((rot_mat %*% twist_mat %*% t(polygon_end*width_end)))
+  texcoords[[counter]] = matrix(c(poly_tex,rep(1 * texture_repeats,nrow(polygon))), 
+                                ncol=2,nrow=nrow(polygon))
   mesh = list()
   vb = do.call(rbind,vertices)
+  tex = do.call(rbind,texcoords)
   faces = (nrow(polygon)-1)*2*(length(vertices)-1)
   band_faces  = (nrow(polygon)-1)*2
   it = matrix(0,nrow=3,ncol=faces)
@@ -2785,7 +2732,14 @@ extruded_path = function(points, polygon = NA, polygon_end = NA, breaks=NA,
   it = cbind(it, cap_it_start, cap_it_end)
   mesh$vb = t(cbind(vb,rep(1,nrow(vb))))
   mesh$it = it
+  mesh$texcoords = t(tex)
+  if(!is.na(material$image[[1]])) {
+    mesh$material$texture = material$image[[1]]
+    mesh$meshColor = "vertices"
+  }
   class(mesh) = "mesh3d"
-  return(mesh)
+  return(mesh3d_model(mesh,x=x,y=y,z=z,
+                      angle=angle, order_rotation = order_rotation, flipped=flipped,
+                      scale=scale))
 }
 
