@@ -2408,6 +2408,14 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
   } else {
     texture = ""
   }
+  bump_texture = mesh$material$bump_texture
+  
+  if(!is.null(bump_texture)) {
+    bump_texture = path.expand(bump_texture)
+    bump_intensity = mesh$material$bump_intensity
+  } else {
+    bump_texture = ""
+  }
   face_color_vals = mesh$material$color
   if(!is.null(face_color_vals)) {
     if(length(face_color_vals) == 1 && texture == "") {
@@ -2441,7 +2449,9 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
   }
   mesh_info = list(vertices=vertices,indices=indices,
                    normals=normals,texcoords=texcoords,
-                   texture=texture,color_vals=color_vals,
+                   texture=texture,bump_texture=bump_texture,
+                   bump_intensity=bump_intensity,
+                   color_vals=color_vals,
                    color_type=color_type,scale_mesh=scale_mesh)
   info = c(unlist(material$properties))
   if(verbose) {
@@ -2518,10 +2528,12 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
 #' wave = list(c(-2,1,0),c(-1,-1,0),c(0,1,0),c(1,-1,0),c(2,1,0))
 #' point_mat = glossy(color="green")
 #' }
-extruded_path = function(points, polygon = NA, polygon_end = NA, breaks=NA,
-                         x=0,y=0,z=0, closed = FALSE, twists = 0, texture_repeats = 1,
-                         straight = FALSE, precomputed_control_points = FALSE,
-                         width = 1, width_end = NA, u_min = 0, u_max = 1, 
+extruded_path = function(points, x = 0, y = 0, z = 0, 
+                         polygon = NA, polygon_end = NA, breaks=NA,
+                         closed = FALSE, twists = 0, texture_repeats = 1,
+                         straight = FALSE, precomputed_control_points = FALSE, 
+                         width = 1, width_end = NA, 
+                         u_min = 0, u_max = 1, linear_step = FALSE,
                          material = diffuse(), angle = c(0, 0, 0),
                          order_rotation = c(1, 2, 3),
                          flipped = FALSE, scale = c(1,1,1)) {
@@ -2566,6 +2578,8 @@ extruded_path = function(points, polygon = NA, polygon_end = NA, breaks=NA,
     return()
   }
   stopifnot(u_min <= u_max)
+  stopifnot(u_min >= 0)
+  stopifnot(u_max <= 1)
   stopifnot(length(width) == 1 && is.numeric(width))
   stopifnot(length(width_end) == 1 && is.numeric(width_end))
   
@@ -2618,14 +2632,29 @@ extruded_path = function(points, polygon = NA, polygon_end = NA, breaks=NA,
     full_control_points[[length(full_control_points)]][2,] = 2*last_point[4,]  - last_point[3,]
     full_control_points[[length(full_control_points)]][1,] = last_point[4,]
   }
+  u_min_segment = floor(breaks * u_min)
+  u_max_segment = floor(breaks * u_max)
+  
+  seg_begin = u_min_segment + 1
+  seg_end = u_max_segment + 1
+  if(seg_end > breaks-1) {
+    seg_end = breaks-1
+  }
+  
   if(is.na(breaks)) {
     breaks = length(full_control_points) * 10
   }
-  t_vals = seq(0, length(full_control_points), length.out=breaks)
+  if(linear_step) {
+    dist_df = calculate_distance_along_bezier_curve(full_control_points,20)
+    t_vals = stats::predict(stats::smooth.spline(dist_df$total_dist,dist_df$t),
+                            seq(0,max(dist_df$total_dist),length.out=breaks))$y * length(full_control_points)
+  } else {
+    t_vals = seq(0, length(full_control_points), length.out=breaks)
+  }
   width_vals = seq(width, width_end, length.out=breaks)
   morph_vals = seq(0, 1, length.out=breaks)
   
-  t_init = 0
+  t_init = t_vals[seg_begin]
   initial_deriv = eval_bezier_deriv(full_control_points[[1]],t_init)
   initial_2nd_deriv = eval_bezier_2nd_deriv(full_control_points[[1]],t_init)
   if(all(abs(initial_2nd_deriv) < 1e-12)) {
@@ -2643,9 +2672,15 @@ extruded_path = function(points, polygon = NA, polygon_end = NA, breaks=NA,
   texcoords = list()
   poly_tex = seq(0,1,length.out=nrow(polygon))
   counter = 1
-  for(i in seq_len(breaks-1)) {
+  for(i in seq(seg_begin,seg_end,by=1)) {
     t_val0 = t_vals[i]
+    if(t_val0 < 0) {
+      t_val0 = 0
+    }
     t_val1 = t_vals[i+1]
+    if(t_val1 < 0) {
+      t_val1 = 0
+    }
     width_temp = width_vals[i]
     
     temp_poly = morph_vals[i] * polygon_end + (1-morph_vals[i]) * polygon
@@ -2736,6 +2771,14 @@ extruded_path = function(points, polygon = NA, polygon_end = NA, breaks=NA,
   if(!is.na(material$image[[1]])) {
     mesh$material$texture = material$image[[1]]
     mesh$meshColor = "vertices"
+  }
+  if(!is.na(material$bump_texture[[1]])) {
+    mesh$material$bump_texture = material$bump_texture[[1]]
+    mesh$material$bump_intensity =  material$bump_intensity
+    mesh$meshColor = "vertices"
+  } else {
+    mesh$material$bump_texture = ""
+    mesh$material$bump_intensity =  1
   }
   class(mesh) = "mesh3d"
   return(mesh3d_model(mesh,x=x,y=y,z=z,

@@ -16,6 +16,9 @@ class mesh3d : public hitable {
       if(mesh_materials) {
         stbi_image_free(mesh_materials);
       }
+      if(bump) {
+        stbi_image_free(bump);
+      }
     }
     mesh3d(Rcpp::List mesh_info, std::shared_ptr<material>  mat, 
            Float shutteropen, Float shutterclose, int bvh_type, random_gen rng,
@@ -31,6 +34,7 @@ class mesh3d : public hitable {
     std::shared_ptr<material>  mat_ptr;
     hitable_list triangles;
     Float* mesh_materials;
+    Float* bump;
 };
 
 

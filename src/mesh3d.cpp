@@ -1,4 +1,5 @@
 #include "mesh3d.h"
+#include "texture.h"
 
 mesh3d::mesh3d(Rcpp::List mesh_info, std::shared_ptr<material> mat, 
        Float shutteropen, Float shutterclose, int bvh_type, random_gen rng,
@@ -11,17 +12,30 @@ mesh3d::mesh3d(Rcpp::List mesh_info, std::shared_ptr<material> mat,
   float scale_mesh = Rcpp::as<float>(mesh_info["scale_mesh"]);
   
   std::string texture = Rcpp::as<std::string>(mesh_info["texture"]);
+  std::string bump_text_location = Rcpp::as<std::string>(mesh_info["bump_texture"]);
+  Float bump_intensity = Rcpp::as<Float>(mesh_info["bump_intensity"]);
+  
   
   Rcpp::NumericMatrix colors = Rcpp::as<Rcpp::NumericMatrix>(mesh_info["color_vals"]);
   int colortype = Rcpp::as<int>(mesh_info["color_type"]);
   
   int nx,ny,nn;
   bool has_texture = false;
+  bool has_bump = false;
+  
   if(strlen(texture.c_str()) > 0) {
     mesh_materials = stbi_loadf(texture.c_str(), &nx, &ny, &nn, 0);
     has_texture = true;
   } else {
     mesh_materials = nullptr;
+  }
+  int nxb,nyb,nnb;
+  
+  if(strlen(bump_text_location.c_str()) > 0) {
+    bump = stbi_loadf(bump_text_location.c_str(), &nxb, &nyb, &nnb, 0);
+    has_bump = true;
+  } else {
+    bump = nullptr;
   }
   mat_ptr = mat;
   int number_faces = indices.nrow();
@@ -71,16 +85,24 @@ mesh3d::mesh3d(Rcpp::List mesh_info, std::shared_ptr<material> mat,
     } else {
       tex = mat_ptr;
     }
+    std::shared_ptr<bump_texture> bump_tex = nullptr;
+    if(has_bump) {
+      bump_tex = std::make_shared<bump_texture>(bump, nxb, nyb, nnb,
+                                                vec3f(tx[0].x(), tx[1].x(), tx[2].x()),
+                                                vec3f(tx[0].y(), tx[1].y(), tx[2].y()),
+                                                bump_intensity);
+    }
     
     if(has_normals) {
       triangles.add(std::make_shared<triangle>(tris[0],tris[1],tris[2],
                                        normals[0],normals[1],normals[2],
                                        single_tex,
-                                       tex, nullptr,  nullptr, 
+                                       tex, nullptr,  bump_tex, 
                                        ObjectToWorld, WorldToObject, reverseOrientation));
     } else {
       triangles.add(std::make_shared<triangle>(tris[0],tris[1],tris[2], 
-                                       single_tex, tex, nullptr, nullptr, 
+                                       single_tex, 
+                                       tex, nullptr, bump_tex, 
                                        ObjectToWorld, WorldToObject, reverseOrientation));
     }
   }
