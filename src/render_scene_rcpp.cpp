@@ -132,6 +132,8 @@ List render_scene_rcpp(List camera_info, List scene_info) {
   
   //Initialize transformation cache
   TransformCache transformCache;
+  TransformCache transformCacheBg;
+  
 
   //Initialize output matrices
   RayMatrix routput(nx,ny);
@@ -363,8 +365,8 @@ List render_scene_rcpp(List camera_info, List scene_info) {
   } else {
     BackgroundAngle = Translate(world_center);
   }
-  std::shared_ptr<Transform> BackgroundTransform = transformCache.Lookup(BackgroundAngle);
-  std::shared_ptr<Transform> BackgroundTransformInv = transformCache.Lookup(BackgroundAngle.GetInverseMatrix());
+  std::shared_ptr<Transform> BackgroundTransform = transformCacheBg.Lookup(BackgroundAngle);
+  std::shared_ptr<Transform> BackgroundTransformInv = transformCacheBg.Lookup(BackgroundAngle.GetInverseMatrix());
 
   if(hasbackground) {
     background_texture_data = stbi_loadf(background[0], &nx1, &ny1, &nn1, 0);
