@@ -17,6 +17,7 @@ public:
     e[1] = (T)p.y();
     e[2] = (T)p.z();
   }
+ 
   
   
   inline T x() const { return e[0]; }
@@ -49,6 +50,9 @@ public:
   inline Float squared_length() const { return e[0]*e[0] + e[1]*e[1] + e[2]*e[2]; }
   inline normal3<T> pow(Float exponent) const {
     return(normal3<T>(std::pow(e[0],exponent),std::pow(e[1],exponent),std::pow(e[2],exponent)));
+  }
+  inline vec3<T> convert_to_vec3() const {
+    return(vec3<T>(e[0],e[1],e[2]));
   }
   inline void make_unit_vector();
   
