@@ -180,7 +180,7 @@ bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
     vec2f duv12 = uv[1] - uv[2];
     vec3f dp02 = edge1;
     vec3f dp12 = edge2;
-    
+
     Float determinant = DifferenceOfProducts(duv02[0],duv12[1],duv02[1],duv12[0]);
     if (determinant == 0) {
       onb uvw;
@@ -189,13 +189,14 @@ bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
       rec.dpdv = uvw.v();
     } else {
       Float invdet = 1 / determinant;
-      rec.dpdu = -( duv12[1] * dp02 - duv02[1] * dp12) * invdet;
-      rec.dpdv = -(-duv12[0] * dp02 + duv02[0] * dp12) * invdet;
+      rec.dpdu = ( duv12[1] * dp02 - duv02[1] * dp12) * invdet;
+      rec.dpdv = (-duv12[0] * dp02 + duv02[0] * dp12) * invdet;
     }
   } else {
     rec.dpdu = vec3f(0,0,0);
     rec.dpdv = vec3f(0,0,0);
   }
+  
   // Use that to calculate normals
   if(normals_provided) {
     normal3f normal_temp = w * na + u * nb + v * nc;
@@ -213,9 +214,8 @@ bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
   }
   if(bump_tex) {
     point3f bvbu = bump_tex->mesh_value(rec.u, rec.v, rec.p);
-    rec.bump_normal = dot(r.direction(), normal) < 0 ? 
-    rec.normal + normal3f( bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv) :
-      rec.normal -  normal3f(bvbu.x() * rec.dpdu - bvbu.y() * rec.dpdv);
+    rec.bump_normal = cross(dpdu + bvbu.x() * rec.normal.convert_to_vec3() , 
+                            dpdv - bvbu.y() * rec.normal.convert_to_vec3() );
     rec.bump_normal.make_unit_vector();
     rec.has_bump = true;
   }
@@ -433,9 +433,8 @@ bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Samp
   }
   if(bump_tex) {
     point3f bvbu = bump_tex->mesh_value(rec.u, rec.v, rec.p);
-    rec.bump_normal = dot(r.direction(), normal) < 0 ? 
-    rec.normal + normal3f( bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv) :
-      rec.normal -  normal3f(bvbu.x() * rec.dpdu - bvbu.y() * rec.dpdv);
+    rec.bump_normal = cross(dpdu + bvbu.x() * rec.normal.convert_to_vec3() , 
+                            dpdv - bvbu.y() * rec.normal.convert_to_vec3() );
     rec.bump_normal.make_unit_vector();
     rec.has_bump = true;
   }
