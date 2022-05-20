@@ -137,7 +137,7 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
     if(has_bump(i)) {
       bump[i] = std::make_shared<bump_texture>(bump_textures[i], 
                                                nvecb[i][0], nvecb[i][1], nvecb[i][2], 
-                              bump_intensity(i));
+                              bump_intensity(i),temp_repeat[0], temp_repeat[1]);
     }
     if(has_roughness(i)) {
       roughness[i] = std::make_shared<roughness_texture>(roughness_textures[i], 

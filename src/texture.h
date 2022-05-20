@@ -176,8 +176,8 @@ public:
 class bump_texture {
 public:
   bump_texture() {}
-  bump_texture(Float *pixels, int A, int B, int nn, Float intensity) : 
-    data(pixels), nx(A), ny(B), channels(nn), intensity(intensity) { 
+  bump_texture(Float *pixels, int A, int B, int nn, Float intensity, Float repeatu = 1.f, Float repeatv = 1.f) : 
+    data(pixels), nx(A), ny(B), channels(nn), intensity(intensity), repeatu(repeatu), repeatv(repeatv) { 
     u_vec = vec3f(0,1,0);
     v_vec = vec3f(0,0,1);
   }
@@ -189,6 +189,7 @@ public:
   int nx, ny, channels;
   vec3f u_vec, v_vec;
   Float intensity;
+  Float repeatu, repeatv;
 };
 
 class roughness_texture {

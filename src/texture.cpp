@@ -69,6 +69,8 @@ point3f bump_texture::value(Float u, Float v, const point3f& p) const {
   while(v < 0) v += 1;
   while(u > 1) u -= 1;
   while(v > 1) v -= 1;
+  u = fmod(u * repeatu,1);
+  v = fmod(v * repeatv,1);
   int i = u * (nx-1);
   int j = (1-v) * (ny-1);
   if (i < 1) i = 1;
