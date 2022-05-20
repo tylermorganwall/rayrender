@@ -2532,23 +2532,25 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
                          polygon = NA, polygon_end = NA, breaks=NA,
                          closed = FALSE, twists = 0, texture_repeats = 1,
                          straight = FALSE, precomputed_control_points = FALSE, 
-                         width = 1, width_end = NA, 
+                         width = 1, width_end = NA, smooth_normals = FALSE,
                          u_min = 0, u_max = 1, linear_step = FALSE,
                          material = diffuse(), angle = c(0, 0, 0),
                          order_rotation = c(1, 2, 3),
                          flipped = FALSE, scale = c(1,1,1)) {
   if(is.null(dim(polygon))) {
-    angles = seq(0,360,length.out=30)
+    angles = seq(0,360,length.out=31)
     xx = width / 2 * sinpi(angles/180)
     yy = width / 2 * cospi(angles/180)
     polygon = as.matrix(data.frame(x=xx,y=yy,z=0))
   }
+  same_polygon = TRUE
   if(is.null(dim(polygon_end))) {
     polygon_end = polygon
   } else {
     if(nrow(polygon_end) != nrow(polygon)) {
       stop("`polygon` and `polygon_end` must have same number of vertices")
     }
+    same_polygon = FALSE
   }
   end_angle = twists*2*pi
   if(ncol(polygon) == 2) {
@@ -2569,6 +2571,46 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
                      polygon_end[i+1,1] * polygon_end[i,2]) > 0
   if(reverse_poly) {
     polygon_end = polygon_end[nrow(polygon_end):1,]
+  }
+  if(any(polygon[1,] != polygon[nrow(polygon),])) {
+    polygon = rbind(polygon,polygon[1,])
+  }
+  if(any(polygon_end[1,] != polygon_end[nrow(polygon_end),])) {
+    polygon_end = rbind(polygon_end,polygon_end[1,])
+  }
+  normal_poly = list()
+  normal_poly_end = list()
+  if(smooth_normals) {
+    for(i in seq_len(nrow(polygon))) {
+      if(i == 1 || i == nrow(polygon)) {
+        vert1 = nrow(polygon)-1
+        vert2 = 1
+        vert3 = 2
+      } else if (i < nrow(polygon)) {
+        vert1 = i-1
+        vert2 = i
+        vert3 = i+1
+      } 
+      normal_poly[[i]] = -matrix(as.numeric(polygon[vert1,] - polygon[vert2,] + polygon[vert3,] - polygon[vert2,]), 
+                                 nrow=1,ncol=3)
+      normal_poly[[i]] = normal_poly[[i]] / sqrt(sum(normal_poly[[i]]^2))
+    }
+    for(i in seq_len(nrow(polygon_end))) {
+      if(i == 1 || i == nrow(polygon_end)) {
+        vert1 = nrow(polygon_end)-1
+        vert2 = 1
+        vert3 = 2
+      } else if (i < nrow(polygon_end)) {
+        vert1 = i-1
+        vert2 = i
+        vert3 = i+1
+      } 
+      normal_poly_end[[i]] = -matrix(as.numeric(polygon_end[vert1,] - polygon_end[vert2,] + polygon_end[vert3,] - polygon_end[vert2,]), 
+                                 nrow=1,ncol=3)
+      normal_poly_end[[i]] = normal_poly_end[[i]] / sqrt(sum(normal_poly_end[[i]]^2))
+    }
+    normal_polys = do.call(rbind,normal_poly)
+    normal_polys_end = do.call(rbind,normal_poly_end)
   }
   
   if(is.na(width_end)) {
@@ -2670,6 +2712,7 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
   r_vec = cross_prod(s_vec,t_vec)
   vertices = list()
   texcoords = list()
+  normals = list()
   poly_tex = seq(0,1,length.out=nrow(polygon))
   counter = 1
   for(i in seq(seg_begin,seg_end,by=1)) {
@@ -2687,7 +2730,7 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
     temp_angle = morph_vals[i] * end_angle
     twist_mat = matrix(c(cos(temp_angle),-sin(temp_angle),0,
                          sin(temp_angle), cos(temp_angle),0,
-                         0,            0,                 1), nrow=3,ncol=3,byrow=T)
+                         0,            0,                 1), nrow=3,ncol=3,byrow=TRUE)
     
     rot_mat = matrix(c(s_vec,r_vec,t_vec),3,3)
     
@@ -2715,10 +2758,28 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
     x0 = eval_bezier(cp0,t_temp0)
     x1 = eval_bezier(cp1,t_temp1)
     
-    vertices[[counter]] = matrix(x0,ncol=3,nrow=nrow(polygon), byrow=T) + 
+    #Offset slightly from first end cap to specify a constant normal
+    if(i == seg_begin && smooth_normals) {
+      step = sqrt(sum((x1 - x0)^2))/100
+      
+      vertices[[counter]] = matrix(x0-t_vec*step,ncol=3,nrow=nrow(polygon), byrow=TRUE) + 
+        t((rot_mat %*% twist_mat %*% t(polygon_end*width_end)))
+      texcoords[[counter]] = matrix(c(poly_tex,rep(0,nrow(polygon))), 
+                                    ncol=2,nrow=nrow(polygon))
+      norm_transform = t(solve(rot_mat %*% twist_mat))
+      normals[[counter]] = -matrix(norm_transform %*% t_vec,nrow=nrow(polygon),ncol=3,byrow=TRUE)
+      counter = counter + 1
+    }
+
+    vertices[[counter]] = matrix(x0,ncol=3,nrow=nrow(polygon), byrow=TRUE) + 
       t((rot_mat %*% twist_mat %*% t(temp_poly*width_temp)))
     texcoords[[counter]] = matrix(c(poly_tex,rep(morph_vals[i] * texture_repeats,nrow(polygon))), 
                                   ncol=2,nrow=nrow(polygon))
+    if(smooth_normals) {
+      temp_norm = morph_vals[i] * normal_polys_end + (1-morph_vals[i]) * normal_polys
+      norm_transform = t(solve(rot_mat %*% twist_mat))
+      normals[[counter]] = t((norm_transform %*% t(temp_norm)))
+    }
     
     counter = counter + 1
 
@@ -2739,14 +2800,32 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
   rot_mat = matrix(c(s_vec,r_vec,t_vec),3,3)
   twist_mat = matrix(c(cos(end_angle),-sin(end_angle),0,
                        sin(end_angle), cos(end_angle),0,
-                       0,            0,                 1), nrow=3,ncol=3,byrow=T)
-  vertices[[counter]] = matrix(x1,ncol=3,nrow=nrow(polygon), byrow=T) + 
+                       0,            0,                 1), nrow=3,ncol=3,byrow=TRUE)
+  vertices[[counter]] = matrix(x1,ncol=3,nrow=nrow(polygon), byrow=TRUE) + 
     t((rot_mat %*% twist_mat %*% t(polygon_end*width_end)))
   texcoords[[counter]] = matrix(c(poly_tex,rep(1 * texture_repeats,nrow(polygon))), 
                                 ncol=2,nrow=nrow(polygon))
+  
+  #Offset slightly from last end cap to specify a constant normal
+  if(smooth_normals) {
+    norm_transform = t(solve(rot_mat %*% twist_mat))
+    normals[[counter]] = t((norm_transform %*% t(normal_polys_end)))
+    counter = counter + 1
+    step = sqrt(sum(v1^2))/1000
+    
+    vertices[[counter]] = matrix(x1+t_vec*step,ncol=3,nrow=nrow(polygon), byrow=TRUE) + 
+      t((rot_mat %*% twist_mat %*% t(polygon_end*width_end)))
+    texcoords[[counter]] = matrix(c(poly_tex,rep(1 * texture_repeats,nrow(polygon))), 
+                                  ncol=2,nrow=nrow(polygon))
+    normals[[counter]] = matrix(norm_transform %*% t_vec,nrow=nrow(normals[[counter-1]]),ncol=3,byrow=TRUE)
+  }
   mesh = list()
   vb = do.call(rbind,vertices)
   tex = do.call(rbind,texcoords)
+  if(smooth_normals) {
+    normal_mat = do.call(rbind,normals)
+  }
+  
   faces = (nrow(polygon)-1)*2*(length(vertices)-1)
   band_faces  = (nrow(polygon)-1)*2
   it = matrix(0,nrow=3,ncol=faces)
@@ -2767,6 +2846,9 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
   it = cbind(it, cap_it_start, cap_it_end)
   mesh$vb = t(cbind(vb,rep(1,nrow(vb))))
   mesh$it = it
+  if(smooth_normals) {
+    mesh$normals = t(normal_mat)
+  }
   mesh$texcoords = t(tex)
   if(!is.na(material$image[[1]])) {
     mesh$material$texture = material$image[[1]]
