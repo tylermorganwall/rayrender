@@ -2409,10 +2409,15 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
     texture = ""
   }
   bump_texture = mesh$material$bump_texture
+  bump_intensity = 1
   
   if(!is.null(bump_texture)) {
     bump_texture = path.expand(bump_texture)
-    bump_intensity = mesh$material$bump_intensity
+    if(!is.null(mesh$material$bump_intensity)) {
+      bump_intensity = mesh$material$bump_intensity
+    } else {
+      bump_intensity = 1
+    }
   } else {
     bump_texture = ""
   }
@@ -2534,7 +2539,7 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
                          straight = FALSE, precomputed_control_points = FALSE, 
                          width = 1, width_end = NA, smooth_normals = FALSE,
                          u_min = 0, u_max = 1, linear_step = FALSE,
-                         material = diffuse(), angle = c(0, 0, 0),
+                         material = diffuse(), material_caps = NA, angle = c(0, 0, 0),
                          order_rotation = c(1, 2, 3),
                          flipped = FALSE, scale = c(1,1,1)) {
   if(is.null(dim(polygon))) {
@@ -2757,19 +2762,6 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
     
     x0 = eval_bezier(cp0,t_temp0)
     x1 = eval_bezier(cp1,t_temp1)
-    
-    #Offset slightly from first end cap to specify a constant normal
-    if(i == seg_begin && smooth_normals) {
-      step = sqrt(sum((x1 - x0)^2))/100
-      
-      vertices[[counter]] = matrix(x0-t_vec*step,ncol=3,nrow=nrow(polygon), byrow=TRUE) + 
-        t((rot_mat %*% twist_mat %*% t(polygon_end*width_end)))
-      texcoords[[counter]] = matrix(c(poly_tex,rep(0,nrow(polygon))), 
-                                    ncol=2,nrow=nrow(polygon))
-      norm_transform = t(solve(rot_mat %*% twist_mat))
-      normals[[counter]] = -matrix(norm_transform %*% t_vec,nrow=nrow(polygon),ncol=3,byrow=TRUE)
-      counter = counter + 1
-    }
 
     vertices[[counter]] = matrix(x0,ncol=3,nrow=nrow(polygon), byrow=TRUE) + 
       t((rot_mat %*% twist_mat %*% t(temp_poly*width_temp)))
@@ -2810,16 +2802,10 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
   if(smooth_normals) {
     norm_transform = t(solve(rot_mat %*% twist_mat))
     normals[[counter]] = t((norm_transform %*% t(normal_polys_end)))
-    counter = counter + 1
-    step = sqrt(sum(v1^2))/1000
-    
-    vertices[[counter]] = matrix(x1+t_vec*step,ncol=3,nrow=nrow(polygon), byrow=TRUE) + 
-      t((rot_mat %*% twist_mat %*% t(polygon_end*width_end)))
-    texcoords[[counter]] = matrix(c(poly_tex,rep(1 * texture_repeats,nrow(polygon))), 
-                                  ncol=2,nrow=nrow(polygon))
-    normals[[counter]] = matrix(norm_transform %*% t_vec,nrow=nrow(normals[[counter-1]]),ncol=3,byrow=TRUE)
   }
   mesh = list()
+  mesh_caps = list()
+  
   vb = do.call(rbind,vertices)
   tex = do.call(rbind,texcoords)
   if(smooth_normals) {
@@ -2840,10 +2826,17 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
     it[,(1+(i-1)*band_faces):(i*band_faces)] = single_band + (i-1) * nrow(polygon)
   }
   cap_it_start = matrix(decido::earcut(polygon[,1:2]),nrow=3)
-  cap_it_end = matrix(
-    rev(decido::earcut(polygon_end[,1:2])) + nrow(polygon)*(length(vertices)-1),
+  end_poly_triangulated = decido::earcut(polygon_end[,1:2])
+  cap_it_end_full = matrix(
+    rev(end_poly_triangulated) + nrow(polygon)*(length(vertices)-1),
     nrow=3)
-  it = cbind(it, cap_it_start, cap_it_end)
+  cap_it_end = matrix(rev(end_poly_triangulated) + max(cap_it_start)-min(cap_it_start)+1,
+                      nrow=3)
+  vb_ends = rbind(vb[seq(1,max(cap_it_start)),], vb[seq(min(cap_it_end_full), max(cap_it_end_full)),]) 
+  it_ends = cbind(cap_it_start, cap_it_end)
+  mesh_caps$vb = t(cbind(vb_ends,rep(1,nrow(vb_ends))))
+  mesh_caps$it = it_ends
+  
   mesh$vb = t(cbind(vb,rep(1,nrow(vb))))
   mesh$it = it
   if(smooth_normals) {
@@ -2863,8 +2856,16 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
     mesh$material$bump_intensity =  1
   }
   class(mesh) = "mesh3d"
-  return(mesh3d_model(mesh,x=x,y=y,z=z,
-                      angle=angle, order_rotation = order_rotation, flipped=flipped,
-                      scale=scale))
+  class(mesh_caps) = "mesh3d"
+  if(is.na(material_caps)) {
+    material_caps = material
+  }
+  return_scene = add_object(mesh3d_model(mesh,x=x,y=y,z=z, 
+                              angle=angle, order_rotation = order_rotation, flipped=flipped,
+                              scale=scale),
+                            mesh3d_model(mesh_caps,x=x,y=y,z=z, material = material_caps,
+                                         angle=angle, order_rotation = order_rotation, flipped=flipped,
+                                         scale=scale))
+  return(return_scene)
 }
 
