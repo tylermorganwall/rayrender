@@ -32,13 +32,16 @@ bool xy_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
   rec.t = t;
   
   //Interaction information
-  rec.dpdu = vec3f(-1, 0, 0);
+  rec.dpdu = reverseOrientation ? vec3f(-1, 0, 0) : vec3f(1, 0, 0);
   rec.dpdv = vec3f(0, 1, 0);
   rec.has_bump = bump_tex ? true : false;
-  
+  if(!alpha_mask) {
+    rec.normal *= reverseOrientation  ? -1 : 1;
+  }
   if(bump_tex) {
     point3f bvbu = bump_tex->value(u,v, rec.p);
-    rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
+    rec.bump_normal = cross(rec.dpdu + bvbu.x() * rec.normal.convert_to_vec3() , 
+                            rec.dpdv - bvbu.y() * rec.normal.convert_to_vec3() );
     rec.bump_normal.make_unit_vector();
   }
   
@@ -48,10 +51,6 @@ bool xy_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
   rec.pError = vec3f(0,0,0);
   
   rec = (*ObjectToWorld)(rec);
-  if(!alpha_mask) {
-    rec.normal *= reverseOrientation  ? -1 : 1;
-    rec.bump_normal *= reverseOrientation  ? -1 : 1;
-  }
   rec.shape = this;
   rec.alpha_miss = alpha_miss;
   
@@ -91,13 +90,16 @@ bool xy_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampl
   rec.v = v;
   rec.t = t;
   //Interaction information
-  rec.dpdu = vec3f(-1, 0, 0);
+  rec.dpdu = reverseOrientation ? vec3f(-1, 0, 0) : vec3f(1, 0, 0);
   rec.dpdv = vec3f(0, 1, 0);
   rec.has_bump = bump_tex ? true : false;
-  
+  if(!alpha_mask) {
+    rec.normal *= reverseOrientation  ? -1 : 1;
+  }
   if(bump_tex) {
     point3f bvbu = bump_tex->value(u,v, rec.p);
-    rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
+    rec.bump_normal = cross(rec.dpdu + bvbu.x() * rec.normal.convert_to_vec3() , 
+                            rec.dpdv - bvbu.y() * rec.normal.convert_to_vec3() );
     rec.bump_normal.make_unit_vector();
   }
   
@@ -107,10 +109,6 @@ bool xy_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampl
   rec.pError = vec3f(0,0,0);
   
   rec = (*ObjectToWorld)(rec);
-  if(!alpha_mask) {
-    rec.normal *= reverseOrientation  ? -1 : 1;
-    rec.bump_normal *= reverseOrientation  ? -1 : 1;
-  }
   rec.shape = this;
   rec.alpha_miss = alpha_miss;
   
@@ -192,13 +190,16 @@ bool xz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
   rec.t = t;
   
   //Interaction information
-  rec.dpdu = vec3f(1, 0, 0);
+  rec.dpdu = reverseOrientation ? vec3f(1, 0, 0) : vec3f(-1, 0, 0);
   rec.dpdv = vec3f(0, 0, 1);
   rec.has_bump = bump_tex ? true : false;
-  
+  if(!alpha_mask) {
+    rec.normal *= reverseOrientation  ? -1 : 1;
+  }
   if(bump_tex) {
     point3f bvbu = bump_tex->value(u,v, rec.p);
-    rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
+    rec.bump_normal = cross(rec.dpdu + bvbu.x() * rec.normal.convert_to_vec3() , 
+                            rec.dpdv - bvbu.y() * rec.normal.convert_to_vec3() );
     rec.bump_normal.make_unit_vector();
   }
   
@@ -207,10 +208,6 @@ bool xz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
   rec.p.e[1] = k;
   rec.pError = vec3f(0,0,0);
   rec = (*ObjectToWorld)(rec);
-  if(!alpha_mask) {
-    rec.normal *= reverseOrientation  ? -1 : 1;
-    rec.bump_normal *= reverseOrientation  ? -1 : 1;
-  }
   rec.shape = this;
   rec.alpha_miss = alpha_miss;
   
@@ -252,13 +249,16 @@ bool xz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampl
   rec.t = t;
   
   //Interaction information
-  rec.dpdu = vec3f(1, 0, 0);
+  rec.dpdu = reverseOrientation ? vec3f(1, 0, 0) : vec3f(-1, 0, 0);
   rec.dpdv = vec3f(0, 0, 1);
   rec.has_bump = bump_tex ? true : false;
-  
+  if(!alpha_mask) {
+    rec.normal *= reverseOrientation  ? -1 : 1;
+  }
   if(bump_tex) {
     point3f bvbu = bump_tex->value(u,v, rec.p);
-    rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
+    rec.bump_normal = cross(rec.dpdu + bvbu.x() * rec.normal.convert_to_vec3() , 
+                            rec.dpdv - bvbu.y() * rec.normal.convert_to_vec3() );
     rec.bump_normal.make_unit_vector();
   }
   
@@ -268,10 +268,6 @@ bool xz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampl
   rec.pError = vec3f(0,0,0);
   
   rec = (*ObjectToWorld)(rec);
-  if(!alpha_mask) {
-    rec.normal *= reverseOrientation  ? -1 : 1;
-    rec.bump_normal *= reverseOrientation  ? -1 : 1;
-  }
   rec.shape = this;
   rec.alpha_miss = alpha_miss;
   
@@ -350,14 +346,9 @@ bool yz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
   rec.t = t;
   
   //Interaction information
-  rec.dpdu = vec3f(0, 0, 1);
+  rec.dpdu = reverseOrientation ? vec3f(0, 0, 1) : vec3f(0, 0, -1);
   rec.dpdv = vec3f(0, 1, 0);
   rec.has_bump = bump_tex ? true : false;
-  if(bump_tex) {
-    point3f bvbu = bump_tex->value(u,v, rec.p);
-    rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
-    rec.bump_normal.make_unit_vector();
-  }
   
   rec.mat_ptr = mp.get();
   rec.p = r2.point_at_parameter(t);
@@ -367,7 +358,12 @@ bool yz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
   rec = (*ObjectToWorld)(rec);
   if(!alpha_mask) {
     rec.normal *= reverseOrientation  ? -1 : 1;
-    rec.bump_normal *= reverseOrientation  ? -1 : 1;
+  }
+  if(bump_tex) {
+    point3f bvbu = bump_tex->value(u,v, rec.p);
+    rec.bump_normal = cross(rec.dpdu + bvbu.x() * rec.normal.convert_to_vec3() , 
+                            rec.dpdv - bvbu.y() * rec.normal.convert_to_vec3() );
+    rec.bump_normal.make_unit_vector();
   }
   rec.shape = this;
   rec.alpha_miss = alpha_miss;
@@ -409,12 +405,16 @@ bool yz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampl
   rec.t = t;
   
   //Interaction information
-  rec.dpdu = vec3f(0, 0, 1);
+  rec.dpdu = reverseOrientation ? vec3f(0, 0, 1) : vec3f(0, 0, -1);
   rec.dpdv = vec3f(0, 1, 0);
   rec.has_bump = bump_tex ? true : false;
+  if(!alpha_mask) {
+    rec.normal *= reverseOrientation  ? -1 : 1;
+  }
   if(bump_tex) {
     point3f bvbu = bump_tex->value(u,v, rec.p);
-    rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
+    rec.bump_normal = cross(rec.dpdu + bvbu.x() * rec.normal.convert_to_vec3() , 
+                            rec.dpdv - bvbu.y() * rec.normal.convert_to_vec3() );
     rec.bump_normal.make_unit_vector();
   }
   
@@ -424,10 +424,7 @@ bool yz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampl
   rec.pError = vec3f(0,0,0);
   
   rec = (*ObjectToWorld)(rec);
-  if(!alpha_mask) {
-    rec.normal *= reverseOrientation  ? -1 : 1;
-    rec.bump_normal *= reverseOrientation  ? -1 : 1;
-  }
+  
   rec.shape = this;
   rec.alpha_miss = alpha_miss;
   
