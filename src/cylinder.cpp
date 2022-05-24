@@ -75,21 +75,20 @@ bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
     
     //Interaction information
     rec.dpdu = vec3f(-temppoint.z(),0,  temppoint.x());
-    rec.dpdv = vec3f(0, length, 0);
+    rec.dpdv = vec3f(0, -length, 0);
     rec.has_bump = bump_tex ? true : false;
+    rec.normal *= reverseOrientation  ? -1 : 1;
     
     if(bump_tex) {
       point3f bvbu = bump_tex->value(rec.u, rec.v, rec.p);
-      rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
+      rec.bump_normal = cross(rec.dpdu - bvbu.x() * rec.normal.convert_to_vec3() , 
+                              rec.dpdv + bvbu.y() * rec.normal.convert_to_vec3() );
       rec.bump_normal.make_unit_vector();
-      rec.bump_normal *= dot(temppoint, dir) > 0 ? -1 : 1;
-
+      rec.has_bump = true;
     }
     rec.pError = gamma(3) * Abs(vec3f(rec.p.x(), 0, rec.p.z()));
     
     rec = (*ObjectToWorld)(rec);
-    rec.normal *= reverseOrientation  ? -1 : 1;
-    rec.bump_normal *= reverseOrientation  ? -1 : 1;
     rec.normal.make_unit_vector();
     
     rec.shape = this;
@@ -208,17 +207,18 @@ bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
     rec.dpdu = vec3f(-phi_max * temppoint.z(), 0,  phi_max * temppoint.x());
     rec.dpdv = vec3f(0, length, 0);
     rec.has_bump = bump_tex ? true : false;
+    rec.normal *= reverseOrientation  ? -1 : 1;
     
     if(bump_tex) {
-      point3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
-      rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
+      point3f bvbu = bump_tex->value(rec.u, rec.v, rec.p);
+      rec.bump_normal = cross(rec.dpdu + bvbu.x() * rec.normal.convert_to_vec3() , 
+                              rec.dpdv - bvbu.y() * rec.normal.convert_to_vec3() );
       rec.bump_normal.make_unit_vector();
+      rec.has_bump = true;
     }
     rec.pError = gamma(3) * Abs(vec3f(rec.p.x(), 0, rec.p.z()));
     
     rec = (*ObjectToWorld)(rec);
-    rec.normal *= reverseOrientation  ? -1 : 1;
-    rec.bump_normal *= reverseOrientation  ? -1 : 1;
     rec.normal.make_unit_vector();
     rec.alpha_miss = alpha_miss;
     
