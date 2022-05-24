@@ -2452,12 +2452,18 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
   if(reverse) {
     indices = indices[,c(3,2,1)]
   }
+  material_type = switch(material$type,
+                         "diffuse" = 1,"metal" = 2,"dielectric" = 3, 
+                         "oren-nayar" = 4, "light" = 5, "microfacet" = 6, 
+                         "glossy" = 7, "spotlight" = 8, "hair" = 9, "microfacet_transmission" = 10)
+
   mesh_info = list(vertices=vertices,indices=indices,
                    normals=normals,texcoords=texcoords,
                    texture=texture,bump_texture=bump_texture,
                    bump_intensity=bump_intensity,
                    color_vals=color_vals,
-                   color_type=color_type,scale_mesh=scale_mesh)
+                   color_type=color_type,scale_mesh=scale_mesh,
+                   material_type = material_type)
   info = c(unlist(material$properties))
   if(verbose) {
     bbox = apply(vertices,2,range)
@@ -2595,9 +2601,15 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
         vert1 = i-1
         vert2 = i
         vert3 = i+1
-      } 
-      normal_poly[[i]] = -matrix(as.numeric(polygon[vert1,] - polygon[vert2,] + polygon[vert3,] - polygon[vert2,]), 
-                                 nrow=1,ncol=3)
+      }
+      edge1 = polygon[vert1,] - polygon[vert2,]
+      edge2 = polygon[vert3,] - polygon[vert2,]
+      
+      temp_norm = as.numeric(edge1 + edge2)
+      if(cross_prod(edge1,temp_norm)[3] > 0) {
+        temp_norm = -temp_norm
+      }
+      normal_poly[[i]] = matrix(temp_norm, nrow=1,ncol=3)
       normal_poly[[i]] = normal_poly[[i]] / sqrt(sum(normal_poly[[i]]^2))
     }
     for(i in seq_len(nrow(polygon_end))) {
@@ -2609,9 +2621,15 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
         vert1 = i-1
         vert2 = i
         vert3 = i+1
-      } 
-      normal_poly_end[[i]] = -matrix(as.numeric(polygon_end[vert1,] - polygon_end[vert2,] + polygon_end[vert3,] - polygon_end[vert2,]), 
-                                 nrow=1,ncol=3)
+      }
+      edge1 = polygon[vert1,] - polygon[vert2,]
+      edge2 = polygon[vert3,] - polygon[vert2,]
+      
+      temp_norm = as.numeric(edge1 + edge2)
+      if(cross_prod(edge1,temp_norm)[3] > 0) {
+        temp_norm = -temp_norm
+      }
+      normal_poly_end[[i]] = matrix(temp_norm, nrow=1,ncol=3)
       normal_poly_end[[i]] = normal_poly_end[[i]] / sqrt(sum(normal_poly_end[[i]]^2))
     }
     normal_polys = do.call(rbind,normal_poly)
@@ -2860,10 +2878,11 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
   if(is.na(material_caps)) {
     material_caps = material
   }
-  return_scene = add_object(mesh3d_model(mesh,x=x,y=y,z=z, 
+  return_scene = add_object(mesh3d_model(mesh,x=x,y=y,z=z, override_material = FALSE,
                               angle=angle, order_rotation = order_rotation, flipped=flipped,
-                              scale=scale),
+                              scale=scale, material = material),
                             mesh3d_model(mesh_caps,x=x,y=y,z=z, material = material_caps,
+                                         override_material = FALSE,
                                          angle=angle, order_rotation = order_rotation, flipped=flipped,
                                          scale=scale))
   return(return_scene)
