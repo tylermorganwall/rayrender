@@ -200,11 +200,7 @@ bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
   // Use that to calculate normals
   if(normals_provided) {
     normal3f normal_temp = w * na + u * nb + v * nc;
-    if(alpha_mask) {
-      rec.normal = dot(r.direction(), normal_temp) < 0 ? normal_temp : -normal_temp;
-    } else {
-      rec.normal = normal_temp;
-    }
+    rec.normal = dot(r.direction(), normal) < 0 ? normal_temp : -normal_temp;
   } else {
     if(alpha_mask) {
       rec.normal = dot(r.direction(), normal) < 0 ? normal : -normal;
@@ -212,6 +208,7 @@ bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
       rec.normal = normal;
     }
   }
+
   if(bump_tex) {
     point3f bvbu = bump_tex->mesh_value(rec.u, rec.v, rec.p);
     rec.bump_normal = cross(dpdu + bvbu.x() * rec.normal.convert_to_vec3() , 
@@ -419,11 +416,7 @@ bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Samp
   // Use that to calculate normals
   if(normals_provided) {
     normal3f normal_temp = w * na + u * nb + v * nc;
-    if(alpha_mask) {
-      rec.normal = dot(r.direction(), normal_temp) < 0 ? normal_temp : -normal_temp;
-    } else {
-      rec.normal = normal_temp;
-    }
+    rec.normal = dot(r.direction(), normal) < 0 ? normal_temp : -normal_temp;
   } else {
     if(alpha_mask) {
       rec.normal = dot(r.direction(), normal) < 0 ? normal : -normal;
