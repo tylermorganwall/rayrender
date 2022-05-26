@@ -752,7 +752,9 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
       List mesh_entry = mesh_list(i);
       std::shared_ptr<hitable> entry = std::make_shared<mesh3d>(mesh_entry, tex,
                                   shutteropen, shutterclose, bvh_type, rng,
-                                  ObjToWorld,WorldToObj, isflipped(i));
+                                  ObjToWorld,WorldToObj, isflipped(i),
+                                  prop_len, tempvector, temp_glossy, sigma(i),
+                                  lightintensity(i));
       if(has_animation(i)) {
         entry = std::make_shared<AnimatedHitable>(entry, Animate);
       }
@@ -1028,9 +1030,12 @@ std::shared_ptr<hitable> build_imp_sample(IntegerVector& type,
     return(entry);
   } else {
     List mesh_entry = mesh_list(i);
+    NumericVector temp_glossy(9);
     std::shared_ptr<hitable> entry = std::make_shared<mesh3d>(mesh_entry, tex,
                                 shutteropen, shutterclose, bvh_type, rng, 
-                                ObjToWorld,WorldToObj, false);
+                                ObjToWorld, WorldToObj, false,
+                                prop_len, tempvector, temp_glossy,1.0f,
+                                0);
     if(has_animation(i)) {
       entry = std::make_shared<AnimatedHitable>(entry, Animate);
     }

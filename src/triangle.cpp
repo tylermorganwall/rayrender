@@ -26,9 +26,9 @@ bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
   p2t[0] += Sx * p2t.z();
   p2t[1] += Sy * p2t.z();
   // Compute edge function coefficients _e0_, _e1_, and _e2_
-  Float e0 = p1t.x() * p2t.y() - p1t.y() * p2t.x();
-  Float e1 = p2t.x() * p0t.y() - p2t.y() * p0t.x();
-  Float e2 = p0t.x() * p1t.y() - p0t.y() * p1t.x();
+  Float e0 = DifferenceOfProducts(p1t.x(), p2t.y(), p1t.y(), p2t.x());
+  Float e1 = DifferenceOfProducts(p2t.x(), p0t.y(), p2t.y(), p0t.x());
+  Float e2 = DifferenceOfProducts(p0t.x(), p1t.y(), p0t.y(), p1t.x());
   
   // Fall back to double precision test at triangle edges
   if (sizeof(Float) == sizeof(float) &&
@@ -86,21 +86,27 @@ bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
   
   vec3f dpdu, dpdv;
   point2f uv[3];
-  uv[0] = point2f(0, 0);
-  uv[1] = point2f(1, 0);
-  uv[2] = point2f(1, 1);
+  if(uv_provided) {
+    uv[0] = uv_a;
+    uv[1] = uv_b;
+    uv[2] = uv_c;
+  } else {
+    uv[0] = point2f(0, 0);
+    uv[1] = point2f(1, 0);
+    uv[2] = point2f(1, 1);
+  }
   
   // Compute deltas for triangle partial derivatives
   vec2f duv02 = uv[0] - uv[2], duv12 = uv[1] - uv[2];
   vec3f dp02 = a - c, dp12 = b - c;
-  Float determinant = duv02[0] * duv12[1] - duv02[1] * duv12[0];
+  Float determinant = DifferenceOfProducts(duv02[0],duv12[1],duv02[1],duv12[0]);
   bool degenerateUV = std::fabs(determinant) < 1e-8;
   if (!degenerateUV) {
     Float invdet = 1 / determinant;
-    dpdu = (duv12[1] * dp02 - duv02[1] * dp12) * invdet;
-    dpdv = (-duv12[0] * dp02 + duv02[0] * dp12) * invdet;
+    rec.dpdu = (duv12[1] * dp02 - duv02[1] * dp12) * invdet;
+    rec.dpdv = (-duv12[0] * dp02 + duv02[0] * dp12) * invdet;
   }
-  if (degenerateUV || cross(dpdu, dpdv).squared_length() == 0) {
+  if (degenerateUV || cross(rec.dpdu, rec.dpdv).squared_length() == 0) {
     // Handle zero determinant for triangle partial derivative matrix
     vec3f ng = cross(c - a, b - a);
     if (ng.squared_length() == 0) {
@@ -108,7 +114,7 @@ bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
       // bogus.
       return false;
     }
-    CoordinateSystem(unit_vector(ng), &dpdu, &dpdv);
+    CoordinateSystem(unit_vector(ng), &rec.dpdu, &rec.dpdv);
   }
   //Add error calc
   Float xAbsSum = (std::abs(b0 * a.x()) + std::abs(b1 * b.x()) +
@@ -120,9 +126,13 @@ bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
   rec.pError = gamma(7) * vec3f(xAbsSum, yAbsSum, zAbsSum);
   
   point3f pHit = b0 * a + b1 * b + b2 * c;
-  // point2f uvHit = b0 * uv[0] + b1 * uv[1] + b2 * uv[2];
-  // Float u = uvHit[0];
-  // Float v = uvHit[1];
+  point2f uvHit = b0 * uv[0] + b1 * uv[1] + b2 * uv[2];
+  point2f uvHit2 = b0 *  point2f(0, 0) + b1 * point2f(1, 0) + b2 * point2f(1, 1);
+  
+  Float u = uvHit[0];
+  Float v = uvHit[1];
+  Float u1 = uvHit2[0];
+  Float v1 = uvHit2[1];
   
   bool alpha_miss = false;
   
@@ -137,69 +147,36 @@ bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
   }
   Float invdet = 1.0 / det;
   vec3f tvec = vec3f(r.origin()) - a;
-  Float u = dot(pvec, tvec) * invdet;
-  if (u < 0.0 || u > 1.0) {
+   u1 = dot(pvec, tvec) * invdet;
+  if (u1 < 0.0 || u1 > 1.0) {
     return(false);
   }
   //
   vec3f qvec = cross(tvec, edge1);
-  Float v = dot(qvec, r.direction()) * invdet;
-  if (v < 0 || u + v > 1.0) {
+   v1 = dot(qvec, r.direction()) * invdet;
+  if (v1 < 0 || u1 + v1 > 1.0) {
     return(false);
   }
-  // Float t = dot(qvec, edge2) * invdet;
-  
-  if (t < t_min || t > t_max) {
+  Float t1 = dot(qvec, edge2) * invdet;
+
+  if (t1 < t_min || t1 > t_max) {
     return(false);
   }
   if(alpha_mask) {
-    if(alpha_mask->channel_value(u, v, rec.p) < rng.unif_rand()) {
+    if(alpha_mask->channel_value(u1, v1, rec.p) < rng.unif_rand()) {
       alpha_miss = true;
     }
   }
-  Float w = 1 - u - v;
+  Float w = 1 - u1 - v1;
   rec.t = t;
   rec.p = pHit;
-  rec.u = u;
-  rec.v = v;
   rec.pError = gamma(7) * vec3f(xAbsSum, yAbsSum, zAbsSum);
-
 
   rec.has_bump = false;
   
-  if(bump_tex) {
-    //Get UV values + calculate dpdu/dpdv
-    vec3f u_val, v_val;
-    vec2f uv[3];
-    u_val = bump_tex->u_vec;
-    v_val = bump_tex->v_vec;
-    uv[0] = vec2f(u_val.x(), v_val.x());
-    uv[1] = vec2f(u_val.y(), v_val.y());
-    uv[2] = vec2f(u_val.z(), v_val.z());
-    vec2f duv02 = uv[0] - uv[2];
-    vec2f duv12 = uv[1] - uv[2];
-    vec3f dp02 = edge1;
-    vec3f dp12 = edge2;
-
-    Float determinant = DifferenceOfProducts(duv02[0],duv12[1],duv02[1],duv12[0]);
-    if (determinant == 0) {
-      onb uvw;
-      uvw.build_from_w(cross(edge2,edge1));
-      rec.dpdu = uvw.u();
-      rec.dpdv = uvw.v();
-    } else {
-      Float invdet = 1 / determinant;
-      rec.dpdu = ( duv12[1] * dp02 - duv02[1] * dp12) * invdet;
-      rec.dpdv = (-duv12[0] * dp02 + duv02[0] * dp12) * invdet;
-    }
-  } else {
-    rec.dpdu = vec3f(0,0,0);
-    rec.dpdv = vec3f(0,0,0);
-  }
-  
   // Use that to calculate normals
   if(normals_provided) {
-    normal3f normal_temp = w * na + u * nb + v * nc;
+    normal3f normal_temp = unit_vector(w * na + u1 * nb + v1 * nc);
     rec.normal = dot(r.direction(), normal) < 0 ? normal_temp : -normal_temp;
   } else {
     if(alpha_mask) {
@@ -210,12 +187,14 @@ bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
   }
 
   if(bump_tex) {
-    point3f bvbu = bump_tex->mesh_value(rec.u, rec.v, rec.p);
-    rec.bump_normal = cross(dpdu + bvbu.x() * rec.normal.convert_to_vec3() , 
-                            dpdv - bvbu.y() * rec.normal.convert_to_vec3() );
+    point3f bvbu = bump_tex->mesh_value(u1, v1, rec.p);
+    rec.bump_normal = cross(rec.dpdu + bvbu.x() * rec.normal.convert_to_vec3() ,
+                            rec.dpdv - bvbu.y() * rec.normal.convert_to_vec3() );
     rec.bump_normal.make_unit_vector();
     rec.has_bump = true;
   }
+  rec.u = u;
+  rec.v = v;
   rec.mat_ptr = mp.get();
   rec.alpha_miss = alpha_miss;
   rec.shape = this;
@@ -309,9 +288,15 @@ bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Samp
   
   vec3f dpdu, dpdv;
   point2f uv[3];
-  uv[0] = point2f(0, 0);
-  uv[1] = point2f(1, 0);
-  uv[2] = point2f(1, 1);
+  if(uv_provided) {
+    uv[0] = uv_a;
+    uv[1] = uv_b;
+    uv[2] = uv_c;
+  } else {
+    uv[0] = point2f(0, 0);
+    uv[1] = point2f(1, 0);
+    uv[2] = point2f(1, 1);
+  }
   
   // Compute deltas for triangle partial derivatives
   vec2f duv02 = uv[0] - uv[2], duv12 = uv[1] - uv[2];
@@ -345,6 +330,8 @@ bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Samp
   point2f uvHit = b0 * uv[0] + b1 * uv[1] + b2 * uv[2];
   Float u = uvHit[0];
   Float v = uvHit[1];
+  
+  
   
   bool alpha_miss = false;
   // vec3f pvec = cross(r.direction(), edge2);

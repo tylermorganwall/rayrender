@@ -2410,7 +2410,6 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
   }
   bump_texture = mesh$material$bump_texture
   bump_intensity = 1
-  
   if(!is.null(bump_texture)) {
     bump_texture = path.expand(bump_texture)
     if(!is.null(mesh$material$bump_intensity)) {
@@ -2437,8 +2436,8 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
       if(is.null(texcoords) && nrow(color_vals) == nrow(vertices)) {
         color_type = 4
       } else {
-        if(texture == "") {
-          warning("material set as vertex color but no texture image passed--ignoring mesh3d material.")
+        if(texture == "" && bump_texture == "") {
+          warning("material set as vertex color but no texture or bump map passed--ignoring mesh3d material.")
           color_type = 3
         }
       }
@@ -2495,10 +2494,7 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
 
 #' Extruded Path Object
 #' 
-#' Either a closed or open path made up of bezier curves that go through the specified points 
-#' (with continuous first and second derivatives), or straight line segments.
-#' 
-#' Note: Only a basic diffuse texture is supported, via the `image_texture` parameter in the material function.
+#' Note: Bump mapping with non-diffuse materials is currently broken.
 #'
 #' @param points Either a list of length-3 numeric vectors or 3-column matrix/data.frame specifying
 #' the x/y/z points that the path should go through.
@@ -2878,11 +2874,11 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
   if(is.na(material_caps)) {
     material_caps = material
   }
-  return_scene = add_object(mesh3d_model(mesh,x=x,y=y,z=z, override_material = FALSE,
+  return_scene = add_object(mesh3d_model(mesh,x=x,y=y,z=z, override_material = TRUE,
                               angle=angle, order_rotation = order_rotation, flipped=flipped,
                               scale=scale, material = material),
                             mesh3d_model(mesh_caps,x=x,y=y,z=z, material = material_caps,
-                                         override_material = FALSE,
+                                         override_material = TRUE,
                                          angle=angle, order_rotation = order_rotation, flipped=flipped,
                                          scale=scale))
   return(return_scene)
