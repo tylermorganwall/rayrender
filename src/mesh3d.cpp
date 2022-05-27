@@ -71,11 +71,9 @@ mesh3d::mesh3d(Rcpp::List mesh_info, std::shared_ptr<material> mat,
     }
     std::shared_ptr<texture> tex = nullptr;
     if(colortype == 3 && has_texcoords && has_texture) {
+      
       tex = std::make_shared<triangle_image_texture>(mesh_materials,
-                                                     nx,ny,nn,
-                                                     tx[0].x(),tx[0].y(),
-                                                     tx[1].x(),tx[1].y(),
-                                                     tx[2].x(),tx[2].y());
+                                                     nx,ny,nn);
       MicrofacetDistribution *dist;
       switch(material_type) {
         case 1: {

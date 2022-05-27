@@ -131,6 +131,10 @@ public:
                          a_u(tex_u_a), a_v(tex_v_a), 
                          b_u(tex_u_b), b_v(tex_v_b), 
                          c_u(tex_u_c), c_v(tex_v_c) {}
+  triangle_image_texture(Float *pixels, int A, int B, int nn) : data(pixels),  nx(A), ny(B), channels(nn),
+                         a_u(1.0), a_v(0.0), 
+                         b_u(0.0), b_v(0.0), 
+                         c_u(1.0), c_v(1.0) {}
   virtual point3f value(Float u, Float v, const point3f& p) const;
   
   Float *data;
