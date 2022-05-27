@@ -2,25 +2,29 @@
 % Please edit documentation in R/objects.R
 \name{extruded_path}
 \alias{extruded_path}
-\title{Path Object}
+\title{Extruded Path Object}
 \usage{
 extruded_path(
   points,
-  polygon = NA,
-  polygon_end = NA,
-  breaks = NA,
   x = 0,
   y = 0,
   z = 0,
+  polygon = NA,
+  polygon_end = NA,
+  breaks = NA,
   closed = FALSE,
   twists = 0,
+  texture_repeats = 1,
   straight = FALSE,
   precomputed_control_points = FALSE,
   width = 1,
   width_end = NA,
+  smooth_normals = FALSE,
   u_min = 0,
   u_max = 1,
+  linear_step = FALSE,
   material = diffuse(),
+  material_caps = NA,
   angle = c(0, 0, 0),
   order_rotation = c(1, 2, 3),
   flipped = FALSE,
@@ -37,9 +41,21 @@ the x/y/z points that the path should go through.}
 
 \item{z}{Default `0`. z-coordinate offset for the path.}
 
+\item{polygon}{Defaults to a circle. A polygon with no holes, specified by a data.frame() parsable by `xy.coords()`. Vertices
+are taken as sequential rows. If the polygon isn't closed (the last vertex equal to the first), it will be closed automatically.}
+
+\item{polygon_end}{Defaults to `polygon`. If specified, the number of vertices should equal the to the number of vertices 
+of the polygon set in `polygon`. Vertices are taken as sequential rows. If the polygon isn't closed (the last vertex equal to the first), it will be closed automatically.}
+
+\item{breaks}{Defaults to `20` times the number of control points in the bezier curve.}
+
 \item{closed}{Default `FALSE`. If `TRUE`, a final segment will be added that connects the first
 and last points (unless they are already the same). Note: This final connection does not have 
 continuous 1st and 2nd derivatives.}
+
+\item{twists}{Default `0`. Number of twists in the polygon from one end to another.}
+
+\item{texture_repeats}{Default `1`. Number of times to repeat the texture along the length of the path.}
 
 \item{straight}{Default `FALSE`. If `TRUE`, straight lines will be used to connect the points instead
 of bezier curves.}
@@ -51,12 +67,20 @@ a list of control points calculated with the internal rayrender function `rayren
 
 \item{width_end}{Default `NA`. Width at end of path. Same as `width`, unless specified.}
 
+\item{smooth_normals}{Default `FALSE`. Whether to smooth the normals of the polygon to remove sharp angles.}
+
 \item{u_min}{Default `0`. Minimum parametric coordinate for the path.}
 
 \item{u_max}{Default `1`. Maximum parametric coordinate for the path.}
 
-\item{material}{Default  \code{\link{diffuse}}.The material, called from one of the material 
-functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}.}
+\item{linear_step}{Default `FALSE`. Whether the polygon intervals should be set at linear intervals,
+rather than intervals based on the underlying bezier curve parameterization.}
+
+\item{material}{Default  \code{\link{diffuse}}. The material, called from one of the material 
+functions.}
+
+\item{material_caps}{Defaults to the same material set in `material`.
+Note: emissive objects may not currently function correctly when scaled.}
 
 \item{angle}{Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.}
 
@@ -65,91 +89,20 @@ functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}
 \item{flipped}{Default `FALSE`. Whether to flip the normals.}
 
 \item{scale}{Default `c(1, 1, 1)`. Scale transformation in the x, y, and z directions. If this is a single value,
-number, the object will be scaled uniformly.
-Note: emissive objects may not currently function correctly when scaled.}
-
-\item{type}{Default `cylinder`. Other options are `flat` and `ribbon`.}
-
-\item{normal}{Default `c(0,0,-1)`. Orientation surface normal for the start of ribbon curves.}
-
-\item{normal_end}{Default `NA`. Orientation surface normal for the start of ribbon curves. If not
-specified, same as `normal`.}
+number, the object will be scaled uniformly.}
 }
 \value{
 Single row of a tibble describing the cube in the scene.
 }
 \description{
-Either a closed or open path made up of bezier curves that go through the specified points 
-(with continuous first and second derivatives), or straight line segments.
+Note: Bump mapping with non-diffuse materials does not work correctly, and smoothed normals will be flat when
+using a bump map.
 }
 \examples{
 \donttest{
-#Generate a wavy line, showing the line goes through the specified points:
-wave = list(c(-2,1,0),c(-1,-1,0),c(0,1,0),c(1,-1,0),c(2,1,0))
-point_mat = glossy(color="green")
-generate_studio(depth=-1.5) \%>\% 
-  add_object(path(points = wave,material=glossy(color="red"))) \%>\% 
-  add_object(sphere(x=-2,y=1,radius=0.1,material=point_mat)) \%>\% 
-  add_object(sphere(x=-1,y=-1,radius=0.1,material=point_mat)) \%>\% 
-  add_object(sphere(x=0,y=1,radius=0.1,material=point_mat)) \%>\% 
-  add_object(sphere(x=1,y=-1,radius=0.1,material=point_mat)) \%>\% 
-  add_object(sphere(x=2,y=1,radius=0.1,material=point_mat)) \%>\% 
-  add_object(sphere(z=5,x=5,y=5,radius=2,material=light(intensity=15))) \%>\% 
-  render_scene(samples=500, clamp_value=10,fov=30)
-  
-#Here we use straight lines by setting `straight = TRUE`:
-generate_studio(depth=-1.5) \%>\% 
-  add_object(path(points = wave,straight = TRUE, material=glossy(color="red"))) \%>\% 
-  add_object(sphere(z=5,x=5,y=5,radius=2,material=light(intensity=15))) \%>\% 
-  render_scene(samples=500, clamp_value=10,fov=30)
-  
-#We can also pass a matrix of values, specifying the x/y/z coordinates. Here,
-#we'll create a random curve:
-set.seed(21)
-random_mat = matrix(runif(3*9)*2-1, ncol=3)
-generate_studio(depth=-1.5) \%>\% 
-  add_object(path(points=random_mat, material=glossy(color="red"))) \%>\% 
-  add_object(sphere(y=5,radius=1,material=light(intensity=30))) \%>\% 
-  render_scene(samples=500, clamp_value=10)
-  
-#We can ensure the curve is closed by setting `closed = TRUE`
-generate_studio(depth=-1.5) \%>\% 
-  add_object(path(points=random_mat, closed = TRUE, material=glossy(color="red"))) \%>\% 
-  add_object(sphere(y=5,radius=1,material=light(intensity=30))) \%>\% 
-  render_scene(samples=500, clamp_value=10)
-  
-#Finally, let's render a pretzel to show how you can render just a subset of the curve:
-pretzel = list(c(-0.8,-0.5,0.1),c(0,-0.2,-0.1),c(0,0.3,0.1),c(-0.5,0.5,0.1), c(-0.6,-0.5,-0.1),
-               c(0,-0.8,-0.1),
-               c(0.6,-0.5,-0.1),c(0.5,0.5,-0.1), c(0,0.3,-0.1),c(-0,-0.2,0.1), c(0.8,-0.5,0.1))
-               
-#Render the full pretzel:
-generate_studio(depth = -1.1) \%>\% 
-  add_object(path(pretzel, width=0.17,  material = glossy(color="#db5b00"))) \%>\% 
-  add_object(sphere(y=5,x=2,z=4,material=light(intensity=20,spotlight_focus = c(0,0,0)))) \%>\% 
-  render_scene(samples=500, clamp_value=10)
-  
-#Here, we'll render only the first third of the pretzel by setting `u_max = 0.33`
-generate_studio(depth = -1.1) \%>\% 
-  add_object(path(pretzel, width=0.17, u_max=0.33, material = glossy(color="#db5b00"))) \%>\% 
-  add_object(sphere(y=5,x=2,z=4,material=light(intensity=20,spotlight_focus = c(0,0,0)))) \%>\% 
-  render_scene(samples=500, clamp_value=10)
-  
-#Here's the last third, by setting `u_min = 0.66`
-generate_studio(depth = -1.1) \%>\% 
-  add_object(path(pretzel, width=0.17, u_min=0.66, material = glossy(color="#db5b00"))) \%>\% 
-  add_object(sphere(y=5,x=2,z=4,material=light(intensity=20,spotlight_focus = c(0,0,0)))) \%>\% 
-  render_scene(samples=500, clamp_value=10)
-  
-#Here's the full pretzel, decomposed into thirds using the u_min and u_max coordinates
-generate_studio(depth = -1.1) \%>\% 
-  add_object(path(pretzel, width=0.17, u_max=0.33, x = -0.8, y =0.6,
-                  material = glossy(color="#db5b00"))) \%>\% 
-  add_object(path(pretzel, width=0.17, u_min=0.66, x = 0.8, y =0.6,
-                  material = glossy(color="#db5b00"))) \%>\% 
-  add_object(path(pretzel, width=0.17, u_min=0.33, u_max=0.66, x=0,
-                  material = glossy(color="#db5b00"))) \%>\% 
-  add_object(sphere(y=5,x=2,z=4,material=light(intensity=20,spotlight_focus = c(0,0,0)))) \%>\% 
-  render_scene(samples=500, clamp_value=10, lookfrom=c(0,3,10))
+#Generate the basic circle polygon through a small spiral
+points = list(c(0,0,0),c(0,1,0),c(1,1,0))
+generate_studio(depth=0) |> 
+  add_object(
 }
 }

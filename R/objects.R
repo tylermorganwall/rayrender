@@ -2494,16 +2494,23 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
 
 #' Extruded Path Object
 #' 
-#' Note: Bump mapping with non-diffuse materials is currently broken.
+#' Note: Bump mapping with non-diffuse materials does not work correctly, and smoothed normals will be flat when
+#' using a bump map.
 #'
 #' @param points Either a list of length-3 numeric vectors or 3-column matrix/data.frame specifying
 #' the x/y/z points that the path should go through.
 #' @param x Default `0`. x-coordinate offset for the path.
 #' @param y Default `0`. y-coordinate offset for the path.
 #' @param z Default `0`. z-coordinate offset for the path.
+#' @param polygon Defaults to a circle. A polygon with no holes, specified by a data.frame() parsable by `xy.coords()`. Vertices
+#' are taken as sequential rows. If the polygon isn't closed (the last vertex equal to the first), it will be closed automatically.
+#' @param polygon_end Defaults to `polygon`. If specified, the number of vertices should equal the to the number of vertices 
+#' of the polygon set in `polygon`. Vertices are taken as sequential rows. If the polygon isn't closed (the last vertex equal to the first), it will be closed automatically.
+#' @param breaks Defaults to `20` times the number of control points in the bezier curve.
 #' @param closed Default `FALSE`. If `TRUE`, a final segment will be added that connects the first
 #' and last points (unless they are already the same). Note: This final connection does not have 
 #' continuous 1st and 2nd derivatives.
+#' @param twists Default `0`. Number of twists in the polygon from one end to another.
 #' @param straight Default `FALSE`. If `TRUE`, straight lines will be used to connect the points instead
 #' of bezier curves. 
 #' @param precomputed_control_points Default `FALSE`. If `TRUE`, `points` argument will expect
@@ -2512,18 +2519,19 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
 #' @param width_end Default `NA`. Width at end of path. Same as `width`, unless specified.
 #' @param u_min Default `0`. Minimum parametric coordinate for the path.
 #' @param u_max Default `1`. Maximum parametric coordinate for the path.
-#' @param type Default `cylinder`. Other options are `flat` and `ribbon`.
-#' @param normal Default `c(0,0,-1)`. Orientation surface normal for the start of ribbon curves.
-#' @param normal_end Default `NA`. Orientation surface normal for the start of ribbon curves. If not
-#' specified, same as `normal`.
-#' @param material Default  \code{\link{diffuse}}.The material, called from one of the material 
-#' functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}.
+#' @param material Default  \code{\link{diffuse}}. The material, called from one of the material 
+#' functions.
+#' @param material_caps Defaults to the same material set in `material`.
+#' Note: emissive objects may not currently function correctly when scaled.
 #' @param angle Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.
 #' @param order_rotation Default `c(1, 2, 3)`. The order to apply the rotations, referring to "x", "y", and "z".
 #' @param flipped Default `FALSE`. Whether to flip the normals.
 #' @param scale Default `c(1, 1, 1)`. Scale transformation in the x, y, and z directions. If this is a single value,
 #' number, the object will be scaled uniformly.
-#' Note: emissive objects may not currently function correctly when scaled.
+#' @param texture_repeats Default `1`. Number of times to repeat the texture along the length of the path.
+#' @param smooth_normals Default `FALSE`. Whether to smooth the normals of the polygon to remove sharp angles.
+#' @param linear_step Default `FALSE`. Whether the polygon intervals should be set at linear intervals,
+#' rather than intervals based on the underlying bezier curve parameterization.
 #' @importFrom  grDevices col2rgb
 #'
 #' @return Single row of a tibble describing the cube in the scene.
@@ -2531,9 +2539,10 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
 #'
 #' @examples
 #' \donttest{
-#' #Generate a wavy line, showing the line goes through the specified points:
-#' wave = list(c(-2,1,0),c(-1,-1,0),c(0,1,0),c(1,-1,0),c(2,1,0))
-#' point_mat = glossy(color="green")
+#' #Generate the basic circle polygon through a small spiral
+#' points = list(c(0,0,0),c(0,1,0),c(1,1,0))
+#' generate_studio(depth=0) |> 
+#'   add_object(
 #' }
 extruded_path = function(points, x = 0, y = 0, z = 0, 
                          polygon = NA, polygon_end = NA, breaks=NA,
@@ -2549,6 +2558,9 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
     xx = width / 2 * sinpi(angles/180)
     yy = width / 2 * cospi(angles/180)
     polygon = as.matrix(data.frame(x=xx,y=yy,z=0))
+  } else {
+    polygon = xy.coords(polygon)
+    polygon = data.frame(x=polygon$x,y=polygon$y,z=0)
   }
   same_polygon = TRUE
   if(is.null(dim(polygon_end))) {
@@ -2558,6 +2570,8 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
       stop("`polygon` and `polygon_end` must have same number of vertices")
     }
     same_polygon = FALSE
+    polygon_end = xy.coords(polygon_end)
+    polygon_end = data.frame(x=polygon_end$x,y=polygon_end$y,z=0)
   }
   end_angle = twists*2*pi
   if(ncol(polygon) == 2) {
@@ -2693,6 +2707,9 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
     full_control_points[[length(full_control_points)]][2,] = 2*last_point[4,]  - last_point[3,]
     full_control_points[[length(full_control_points)]][1,] = last_point[4,]
   }
+  if(is.na(breaks)) {
+    breaks = length(full_control_points) * 20
+  }
   u_min_segment = floor(breaks * u_min)
   u_max_segment = floor(breaks * u_max)
   
@@ -2702,9 +2719,6 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
     seg_end = breaks-1
   }
   
-  if(is.na(breaks)) {
-    breaks = length(full_control_points) * 10
-  }
   if(linear_step) {
     dist_df = calculate_distance_along_bezier_curve(full_control_points,20)
     t_vals = stats::predict(stats::smooth.spline(dist_df$total_dist,dist_df$t),
