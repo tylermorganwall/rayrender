@@ -2871,7 +2871,7 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
   }
   class(mesh) = "mesh3d"
   class(mesh_caps) = "mesh3d"
-  if(is.na(material_caps)) {
+  if(is.null(dim(material_caps))) {
     material_caps = material
   }
   return_scene = add_object(mesh3d_model(mesh,x=x,y=y,z=z, override_material = TRUE,
