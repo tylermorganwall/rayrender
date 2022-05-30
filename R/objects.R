@@ -961,8 +961,6 @@ ellipsoid = function(x = 0, y = 0, z = 0, a = 1, b = 1, c = 1,
 #' to specify the bottom of the extruded polygon.
 #' @param scale_data Default `1`. If specifying `data_column_top` or `data_column_bottom`, how
 #' much to scale that value when rendering.
-#' @param material_id Default `NA`. A unique label/number to ensure the material is shared between
-#' all triangles that make up the extruded polygon. Required if the material is `dielectric()`.
 #' @param angle Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.
 #' @param order_rotation Default `c(1, 2, 3)`. The order to apply the rotations, referring to "x", "y", and "z".
 #' @param pivot_point Default `c(0,0,0)`. Point at which to rotate the polygon around.
@@ -1097,7 +1095,7 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
                    pivot_point = c(0,0,0), material = diffuse(),
                    center = FALSE, flip_horizontal = FALSE, flip_vertical = FALSE,
                    data_column_top = NULL, data_column_bottom = NULL, scale_data = 1,
-                   scale = c(1,1,1), material_id = NA) {
+                   scale = c(1,1,1)) {
   if(length(scale) == 1) {
     scale = c(scale, scale, scale)
   }
@@ -1125,9 +1123,9 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
   } else {
     stop("Plane ", plane, " not recognized.")
   }
-  if(material$type == "dielectric" && is.na(material_id)) {
-    stop("If an extruded polygon has a dielectric material, user must supply a unique material_id")
-  }
+  material_id = get("max_material_id", envir = ray_environment)
+  material_id = material_id + 1
+  assign("max_material_id", material_id, envir = ray_environment)
   rot_coords = function(x1,x2,theta) {
     cos_theta = cospi(theta/180)
     sin_theta = sinpi(theta/180)
@@ -2351,7 +2349,7 @@ ply_model = function(filename, x = 0, y = 0, z = 0, scale_ply = 1,
 #'                  lookat = c(0,0.5,1), aperture=0.0)
 #' }
 mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FALSE,
-                        scale_mesh = 1, verbose = FALSE,
+                        scale_mesh = 1, verbose = FALSE, 
                         override_material = FALSE, material = diffuse(), 
                         angle = c(0, 0, 0), order_rotation = c(1, 2, 3), 
                         flipped = FALSE, scale = c(1,1,1)) {
@@ -2888,6 +2886,9 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
   if(is.null(dim(material_caps))) {
     material_caps = material
   }
+  material_id = get("max_material_id", envir = ray_environment)
+  material_id = material_id + 1
+  assign("max_material_id", material_id, envir = ray_environment)
   return_scene = add_object(mesh3d_model(mesh,x=x,y=y,z=z, override_material = TRUE,
                               angle=angle, order_rotation = order_rotation, flipped=flipped,
                               scale=scale, material = material),
@@ -2895,6 +2896,7 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
                                          override_material = TRUE,
                                          angle=angle, order_rotation = order_rotation, flipped=flipped,
                                          scale=scale))
+  return_scene$material_id = c(material_id, material_id)
   return(return_scene)
 }
 

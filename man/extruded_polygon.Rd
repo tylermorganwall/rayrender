@@ -23,8 +23,7 @@ extruded_polygon(
   data_column_top = NULL,
   data_column_bottom = NULL,
   scale_data = 1,
-  scale = c(1, 1, 1),
-  material_id = NA
+  scale = c(1, 1, 1)
 )
 }
 \arguments{
@@ -78,9 +77,6 @@ much to scale that value when rendering.}
 \item{scale}{Default `c(1, 1, 1)`. Scale transformation in the x, y, and z directions. If this is a single value,
 number, the object will be scaled uniformly.
 Note: emissive objects may not currently function correctly when scaled.}
-
-\item{material_id}{Default `NA`. A unique label/number to ensure the material is shared between
-all triangles that make up the extruded polygon. Required if the material is `dielectric()`.}
 }
 \value{
 Multiple row tibble describing the extruded polygon in the scene.
