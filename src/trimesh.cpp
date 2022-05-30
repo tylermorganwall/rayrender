@@ -175,6 +175,24 @@ trimesh::trimesh(std::string inputfile, std::string basedir, Float scale,
           if(idx.texcoord_index != -1) {
             tx[v] = attrib.texcoords[2*idx.texcoord_index+0];
             ty[v] = attrib.texcoords[2*idx.texcoord_index+1];
+          } else {
+            switch(v) {
+              case 0: {
+                tx[v] = 0;
+                ty[v] = 0;
+                break;
+              } 
+              case 1: {
+                tx[v] = 1;
+                ty[v] = 0;
+                break;
+              } 
+              case 2: {
+                tx[v] = 1;
+                ty[v] = 1;
+                break;
+              } 
+            }
           }
         }
         index_offset += 3;
@@ -197,9 +215,7 @@ trimesh::trimesh(std::string inputfile, std::string basedir, Float scale,
         if(material_num > -1) {
           if(has_alpha[material_num]) {
             alpha = std::make_shared<alpha_texture>(obj_materials[material_num], 
-                                      nx_mat[material_num], ny_mat[material_num], nn_mat[material_num], 
-                                      vec3f(tx[0], tx[1], tx[2]), 
-                                      vec3f(ty[0], ty[1], ty[2]));
+                                      nx_mat[material_num], ny_mat[material_num], nn_mat[material_num]);
             alpha_materials.push_back(alpha);
           } else {
             alpha = nullptr;
@@ -207,8 +223,7 @@ trimesh::trimesh(std::string inputfile, std::string basedir, Float scale,
           if(has_bump[material_num]) {
             bump = std::make_shared<bump_texture>(bump_materials[material_num],
                                     nx_mat_bump[material_num], ny_mat_bump[material_num], nn_mat_bump[material_num],
-                                    vec3f(tx[0], tx[1], tx[2]),
-                                    vec3f(ty[0], ty[1], ty[2]), bump_intensity[material_num]);
+                                    bump_intensity[material_num]);
             bump_textures.push_back(bump);
           } else {
             bump = nullptr;
@@ -232,16 +247,18 @@ trimesh::trimesh(std::string inputfile, std::string basedir, Float scale,
               if(has_single_diffuse[material_num]) {
                 tex = std::make_shared<lambertian>(std::make_shared<constant_texture>(diffuse_materials[material_num]));
               } else {
-                tex = std::make_shared<lambertian>(std::make_shared<triangle_image_texture>(obj_materials[material_num],
-                                                                nx_mat[material_num], ny_mat[material_num],nn_mat[material_num],
-                                                                tx[0],ty[0], tx[1],ty[1],tx[2],ty[2]));
+                tex = std::make_shared<lambertian>(std::make_shared<image_texture>(obj_materials[material_num],
+                                                                nx_mat[material_num], ny_mat[material_num],
+                                                                nn_mat[material_num]));
               }
             } else {
               tex = std::make_shared<lambertian>(std::make_shared<constant_texture>(vec3f(1,1,1)));
             }
           }
           triangles.add(std::make_shared<triangle>(tris[0],tris[1],tris[2], 
-                                           normals[0], normals[1], normals[2], true, 
+                                           normals[0], normals[1], normals[2], 
+                                           point2f(tx[0],ty[0]),point2f(tx[1],ty[1]),point2f(tx[2],ty[2]),
+                                           true, 
                                            tex, alpha, bump, 
                                            ObjectToWorld, WorldToObject, reverseOrientation));
         } else {
@@ -255,17 +272,16 @@ trimesh::trimesh(std::string inputfile, std::string basedir, Float scale,
               if(has_single_diffuse[material_num]) {
                 tex = std::make_shared<lambertian>(std::make_shared<constant_texture>(diffuse_materials[material_num]));
               } else {
-                tex = std::make_shared<lambertian>(std::make_shared<triangle_image_texture>(obj_materials[material_num],
-                                                                nx_mat[material_num],ny_mat[material_num],nn_mat[material_num],
-                                                                tx[0],ty[0],
-                                                                tx[1],ty[1],
-                                                                tx[2],ty[2]));
+                tex = std::make_shared<lambertian>(std::make_shared<image_texture>(obj_materials[material_num],
+                                                                nx_mat[material_num],ny_mat[material_num],nn_mat[material_num]));
               }
             } else {
               tex = std::make_shared<lambertian>(std::make_shared<constant_texture>(vec3f(1,1,1)));
             }
           }
-          triangles.add(std::make_shared<triangle>(tris[0],tris[1],tris[2], true, tex, alpha, bump, 
+          triangles.add(std::make_shared<triangle>(tris[0],tris[1],tris[2], 
+                                                   point2f(tx[0],ty[0]),point2f(tx[1],ty[1]),point2f(tx[2],ty[2]),
+                                                   true, tex, alpha, bump, 
                                                    ObjectToWorld, WorldToObject, reverseOrientation));
         }
       }
@@ -430,6 +446,24 @@ trimesh::trimesh(std::string inputfile, std::string basedir, Float scale, Float 
           if(idx.texcoord_index != -1) {
             tx[v] = attrib.texcoords[2*idx.texcoord_index+0];
             ty[v] = attrib.texcoords[2*idx.texcoord_index+1];
+          } else {
+            switch(v) {
+              case 0: {
+                tx[v] = 0;
+                ty[v] = 0;
+                break;
+              } 
+              case 1: {
+                tx[v] = 1;
+                ty[v] = 0;
+                break;
+              } 
+              case 2: {
+                tx[v] = 1;
+                ty[v] = 1;
+                break;
+              } 
+            }
           }
         }
         
@@ -445,9 +479,7 @@ trimesh::trimesh(std::string inputfile, std::string basedir, Float scale, Float 
         int material_num = shapes[s].mesh.material_ids[f];
         if(material_num > -1) {
           if(has_alpha[material_num]) {
-            alpha = std::make_shared<alpha_texture>(obj_materials[material_num], nx, ny, nn, 
-                                      vec3f(tx[0], tx[1], tx[2]), 
-                                      vec3f(ty[0], ty[1], ty[2]));
+            alpha = std::make_shared<alpha_texture>(obj_materials[material_num], nx, ny, nn);
             alpha_materials.push_back(alpha);
           } else {
             alpha = nullptr;
@@ -456,8 +488,7 @@ trimesh::trimesh(std::string inputfile, std::string basedir, Float scale, Float 
           if(has_bump[material_num]) {
             bump = std::make_shared<bump_texture>(bump_materials[material_num],
                                     nx_mat_bump[material_num], ny_mat_bump[material_num], nn_mat_bump[material_num],
-                                                                                                     vec3f(tx[0], tx[1], tx[2]),
-                                                                                                     vec3f(ty[0], ty[1], ty[2]), bump_intensity[material_num]);
+                                                bump_intensity[material_num]);
             bump_textures.push_back(bump);
           } else {
             bump = nullptr;
@@ -478,16 +509,18 @@ trimesh::trimesh(std::string inputfile, std::string basedir, Float scale, Float 
               if(has_single_diffuse[material_num]) {
                 tex = std::make_shared<orennayar>(std::make_shared<constant_texture>(diffuse_materials[material_num]), sigma);
               } else {
-                tex = std::make_shared<orennayar>(std::make_shared<triangle_image_texture>(obj_materials[material_num],
-                                                               nx_mat[material_num], ny_mat[material_num],nn_mat[material_num],
-                                                               tx[0],ty[0], tx[1],ty[1],tx[2],ty[2]), sigma);
+                tex = std::make_shared<orennayar>(std::make_shared<image_texture>(obj_materials[material_num],
+                                                               nx_mat[material_num], ny_mat[material_num],nn_mat[material_num]), 
+                                                               sigma);
               }
             } else {
               tex = std::make_shared<orennayar>(std::make_shared<constant_texture>(vec3f(1,1,1)), sigma);
             }
           }
           triangles.add(std::make_shared<triangle>(tris[0],tris[1],tris[2], 
-                                           normals[0], normals[1], normals[2], true, 
+                                           normals[0], normals[1], normals[2], 
+                                           point2f(tx[0],ty[0]),point2f(tx[1],ty[1]),point2f(tx[2],ty[2]),
+                                           true, 
                                            tex, alpha,  bump, 
                                            ObjectToWorld, WorldToObject, reverseOrientation));
         } else {
@@ -501,15 +534,17 @@ trimesh::trimesh(std::string inputfile, std::string basedir, Float scale, Float 
               if(has_single_diffuse[material_num]) {
                 tex = std::make_shared<orennayar>(std::make_shared<constant_texture>(diffuse_materials[material_num]), sigma);
               } else {
-                tex = std::make_shared<orennayar>(std::make_shared<triangle_image_texture>(obj_materials[material_num],
-                                                               nx_mat[material_num],ny_mat[material_num],nn_mat[material_num],
-                                                                                                               tx[0],ty[0],tx[1],ty[1],tx[2],ty[2]), sigma);
+                tex = std::make_shared<orennayar>(std::make_shared<image_texture>(obj_materials[material_num],
+                                                               nx_mat[material_num],ny_mat[material_num],nn_mat[material_num]), 
+                                                               sigma);
               }
             } else {
               tex = std::make_shared<orennayar>(std::make_shared<constant_texture>(vec3f(1,1,1)), sigma);
             }
           }
-          triangles.add(std::make_shared<triangle>(tris[0],tris[1],tris[2], true, tex, alpha, bump, 
+          triangles.add(std::make_shared<triangle>(tris[0],tris[1],tris[2], 
+                                                   point2f(tx[0],ty[0]),point2f(tx[1],ty[1]),point2f(tx[2],ty[2]),
+                                                   true, tex, alpha, bump, 
                                                    ObjectToWorld, WorldToObject, reverseOrientation));
         }
       }

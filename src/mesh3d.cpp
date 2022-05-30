@@ -72,7 +72,7 @@ mesh3d::mesh3d(Rcpp::List mesh_info, std::shared_ptr<material> mat,
     std::shared_ptr<texture> tex = nullptr;
     if(colortype == 3 && has_texcoords && has_texture) {
       
-      tex = std::make_shared<triangle_image_texture>(mesh_materials,
+      tex = std::make_shared<image_texture>(mesh_materials,
                                                      nx,ny,nn);
       MicrofacetDistribution *dist;
       switch(material_type) {
@@ -157,8 +157,6 @@ mesh3d::mesh3d(Rcpp::List mesh_info, std::shared_ptr<material> mat,
     std::shared_ptr<bump_texture> bump_tex = nullptr;
     if(has_bump) {
       bump_tex = std::make_shared<bump_texture>(bump, nxb, nyb, nnb,
-                                                vec3f(tx[0].x(), tx[1].x(), tx[2].x()),
-                                                vec3f(tx[0].y(), tx[1].y(), tx[2].y()),
                                                 bump_intensity);
     }
     

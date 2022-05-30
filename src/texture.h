@@ -100,7 +100,8 @@ public:
 class image_texture : public texture {
 public:
   image_texture() {}
-  image_texture(Float *pixels, int A, int B, int nn, Float repeatu, Float repeatv, Float intensity) : 
+  image_texture(Float *pixels, int A, int B, int nn, 
+                Float repeatu = 1.0f, Float repeatv = 1.0f, Float intensity = 1.0f) : 
     data(pixels), nx(A), ny(B), channels(nn), repeatu(repeatu), repeatv(repeatv), intensity(intensity) {}
   virtual point3f value(Float u, Float v, const point3f& p) const;
   Float *data;
@@ -120,27 +121,6 @@ public:
   point3f a,b,c;
 };
 
-class triangle_image_texture : public texture {
-public:
-  triangle_image_texture() {}
-  ~triangle_image_texture() {}
-  triangle_image_texture(Float *pixels, int A, int B, int nn,
-                         Float tex_u_a, Float tex_v_a,
-                         Float tex_u_b, Float tex_v_b,
-                         Float tex_u_c, Float tex_v_c) : data(pixels),  nx(A), ny(B), channels(nn),
-                         a_u(tex_u_a), a_v(tex_v_a), 
-                         b_u(tex_u_b), b_v(tex_v_b), 
-                         c_u(tex_u_c), c_v(tex_v_c) {}
-  triangle_image_texture(Float *pixels, int A, int B, int nn) : data(pixels),  nx(A), ny(B), channels(nn),
-                         a_u(1.0), a_v(0.0), 
-                         b_u(0.0), b_v(0.0), 
-                         c_u(1.0), c_v(1.0) {}
-  virtual point3f value(Float u, Float v, const point3f& p) const;
-  
-  Float *data;
-  int nx, ny, channels;
-  Float a_u, a_v, b_u, b_v, c_u, c_v;
-};
 
 class gradient_texture : public texture {
 public: 
@@ -163,17 +143,10 @@ public:
 class alpha_texture {
 public:
   alpha_texture() {}
-  alpha_texture(Float *pixels, int A, int B, int nn) : data(pixels), nx(A), ny(B), channels(nn) {
-    u_vec = vec3f(0,1,0);
-    v_vec = vec3f(0,0,1);
-  }
-  alpha_texture(Float *pixels, int A, int B, int nn, vec3f u, vec3f v) : 
-                data(pixels), nx(A), ny(B), channels(nn), u_vec(u), v_vec(v) {}
+  alpha_texture(Float *pixels, int A, int B, int nn) : data(pixels), nx(A), ny(B), channels(nn) {}
   Float value(Float u, Float v, const point3f& p) const;
-  Float channel_value(Float u, Float v, const point3f& p) const;
   Float *data;
   int nx, ny, channels;
-  vec3f u_vec, v_vec;
 };
 
 
@@ -181,19 +154,12 @@ class bump_texture {
 public:
   bump_texture() {}
   bump_texture(Float *pixels, int A, int B, int nn, Float intensity, Float repeatu = 1.f, Float repeatv = 1.f) : 
-    data(pixels), nx(A), ny(B), channels(nn), intensity(intensity), repeatu(repeatu), repeatv(repeatv) { 
-    u_vec = vec3f(0,1,0);
-    v_vec = vec3f(0,0,1);
-  }
-  bump_texture(Float *pixels, int A, int B, int nn, vec3f u, vec3f v, Float intensity) : 
-    data(pixels), nx(A), ny(B), channels(nn), u_vec(u), v_vec(v), intensity(intensity) {}
+    data(pixels), nx(A), ny(B), channels(nn), intensity(intensity), repeatu(repeatu), repeatv(repeatv) {}
   point3f value(Float u, Float v, const point3f& p) const;
   Float raw_value(Float u, Float v, const point3f& p) const;
   
-  point3f mesh_value(Float u, Float v, const point3f& p) const;
   Float *data;
   int nx, ny, channels;
-  vec3f u_vec, v_vec;
   Float intensity;
   Float repeatu, repeatv;
 };
