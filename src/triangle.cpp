@@ -135,33 +135,7 @@ bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
   Float v1 = uvHit2[1];
   
   bool alpha_miss = false;
-  
-  
-  //Calculate UV's using old method
-  vec3f pvec = cross(r.direction(), edge2);
-  det = dot(pvec, edge1);
 
-  // no culling
-  if (std::fabs(det) < 1E-15) {
-    return(false);
-  }
-  Float invdet = 1.0 / det;
-  vec3f tvec = vec3f(r.origin()) - a;
-   u1 = dot(pvec, tvec) * invdet;
-  if (u1 < 0.0 || u1 > 1.0) {
-    return(false);
-  }
-  //
-  vec3f qvec = cross(tvec, edge1);
-   v1 = dot(qvec, r.direction()) * invdet;
-  if (v1 < 0 || u1 + v1 > 1.0) {
-    return(false);
-  }
-  Float t1 = dot(qvec, edge2) * invdet;
-
-  if (t1 < t_min || t1 > t_max) {
-    return(false);
-  }
   if(alpha_mask) {
     if(alpha_mask->channel_value(u1, v1, rec.p) < rng.unif_rand()) {
       alpha_miss = true;
@@ -187,7 +161,7 @@ bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
   }
 
   if(bump_tex) {
-    point3f bvbu = bump_tex->mesh_value(u1, v1, rec.p);
+    point3f bvbu = bump_tex->value(u, v, rec.p);
     rec.bump_normal = cross(rec.dpdu + bvbu.x() * rec.normal.convert_to_vec3() ,
                             rec.dpdv - bvbu.y() * rec.normal.convert_to_vec3() );
     rec.bump_normal.make_unit_vector();
@@ -478,3 +452,4 @@ vec3f triangle::random(const point3f& origin, Sampler* sampler, Float time) {
   point3f random_point((1.0 - sr1) * a + sr1 * (1.0 - r2) * b + sr1 * r2 * c);
   return(random_point - origin); 
 }
+

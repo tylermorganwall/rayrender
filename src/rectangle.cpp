@@ -20,7 +20,7 @@ bool xy_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
   }
   bool alpha_miss = false;
   if(alpha_mask) {
-    if(alpha_mask->value(u, v, rec.p).x() < rng.unif_rand()) {
+    if(alpha_mask->value(u, v, rec.p) < rng.unif_rand()) {
       alpha_miss = true;
     }
     rec.normal = dot(r2.direction(),normal3f(0,0,1)) < 0 ? normal3f(0,0,1) : normal3f(0,0,-1);
@@ -79,7 +79,7 @@ bool xy_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampl
   bool alpha_miss = false;
   
   if(alpha_mask) {
-    if(alpha_mask->value(u, v, rec.p).x() < sampler->Get1D()) {
+    if(alpha_mask->value(u, v, rec.p) < sampler->Get1D()) {
       alpha_miss = true;
     }
     rec.normal = dot(r2.direction(),vec3f(0,0,1)) < 0 ? vec3f(0,0,1) : vec3f(0,0,-1);
@@ -178,7 +178,7 @@ bool xz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
   bool alpha_miss = false;
   
   if(alpha_mask) {
-    if(alpha_mask->value(u, v, rec.p).x() < rng.unif_rand()) {
+    if(alpha_mask->value(u, v, rec.p) < rng.unif_rand()) {
       alpha_miss = true;
     }
     rec.normal =  dot(r2.direction(),normal3f(0,1,0)) < 0 ? normal3f(0,1,0) : normal3f(0,-1,0);
@@ -237,7 +237,7 @@ bool xz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampl
   bool alpha_miss = false;
   
   if(alpha_mask) {
-    if(alpha_mask->value(u, v, rec.p).x() < sampler->Get1D()) {
+    if(alpha_mask->value(u, v, rec.p) < sampler->Get1D()) {
       alpha_miss = true;
     }
     rec.normal =  dot(r2.direction(),normal3f(0,1,0)) < 0 ? normal3f(0,1,0) : normal3f(0,-1,0);
@@ -334,7 +334,7 @@ bool yz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
   bool alpha_miss = false;
   
   if(alpha_mask) {
-    if(alpha_mask->value(u, v, rec.p).x() < rng.unif_rand()) {
+    if(alpha_mask->value(u, v, rec.p) < rng.unif_rand()) {
       alpha_miss = true;
     }
     rec.normal =  dot(r2.direction(),normal3f(1,0,0)) < 0 ? normal3f(1,0,0) : normal3f(-1,0,0);
@@ -393,7 +393,7 @@ bool yz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampl
   bool alpha_miss = false;
   
   if(alpha_mask) {
-    if(alpha_mask->value(u, v, rec.p).x() < sampler->Get1D()) {
+    if(alpha_mask->value(u, v, rec.p) < sampler->Get1D()) {
       alpha_miss = true;
     }
     rec.normal =  dot(r2.direction(),normal3f(1,0,0)) < 0 ? normal3f(1,0,0) : normal3f(-1,0,0);

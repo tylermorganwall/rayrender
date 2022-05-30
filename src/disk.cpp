@@ -25,7 +25,7 @@ bool disk::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_g
   Float v = p.z() / (2.0 * radius) + 0.5;
   u = 1 - u;
   if(alpha_mask) {
-    if(alpha_mask->value(u, v, rec.p).x() < rng.unif_rand()) {
+    if(alpha_mask->value(u, v, rec.p) < rng.unif_rand()) {
       alpha_miss = true;
     }
     rec.normal =  dot(r2.direction(),normal3f(0,1,0)) < 0 ? normal3f(0,1,0) : normal3f(0,-1,0);
@@ -87,7 +87,7 @@ bool disk::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler*
   Float v = p.z() / (2.0 * radius) + 0.5;
   u = 1 - u;
   if(alpha_mask) {
-    if(alpha_mask->value(u, v, rec.p).x() < sampler->Get1D()) {
+    if(alpha_mask->value(u, v, rec.p) < sampler->Get1D()) {
       alpha_miss = true;
     }
     rec.normal =  dot(r2.direction(),normal3f(0,1,0)) < 0 ? normal3f(0,1,0) : normal3f(0,-1,0);

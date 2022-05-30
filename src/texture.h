@@ -169,7 +169,7 @@ public:
   }
   alpha_texture(Float *pixels, int A, int B, int nn, vec3f u, vec3f v) : 
                 data(pixels), nx(A), ny(B), channels(nn), u_vec(u), v_vec(v) {}
-  point3f value(Float u, Float v, const point3f& p) const;
+  Float value(Float u, Float v, const point3f& p) const;
   Float channel_value(Float u, Float v, const point3f& p) const;
   Float *data;
   int nx, ny, channels;
@@ -188,6 +188,8 @@ public:
   bump_texture(Float *pixels, int A, int B, int nn, vec3f u, vec3f v, Float intensity) : 
     data(pixels), nx(A), ny(B), channels(nn), u_vec(u), v_vec(v), intensity(intensity) {}
   point3f value(Float u, Float v, const point3f& p) const;
+  Float raw_value(Float u, Float v, const point3f& p) const;
+  
   point3f mesh_value(Float u, Float v, const point3f& p) const;
   Float *data;
   int nx, ny, channels;

@@ -36,15 +36,14 @@ point3f triangle_image_texture::value(Float u, Float v, const point3f& p) const 
 }
 
 
-point3f alpha_texture::value(Float u, Float v, const point3f& p) const {
+Float alpha_texture::value(Float u, Float v, const point3f& p) const {
   int i = u * nx;
   int j = (1-v) * ny;
   if (i < 0) i = 0;
   if (j < 0) j = 0;
   if (i > nx-1) i = nx-1;
   if (j > ny-1) j = ny-1;
-  Float r = data[channels*i + channels*nx*j];
-  return(point3f(r,r,r));
+  return(data[channels*i + channels*nx*j]);
 }
 
 Float alpha_texture::channel_value(Float u, Float v, const point3f& p) const {
@@ -64,6 +63,22 @@ Float alpha_texture::channel_value(Float u, Float v, const point3f& p) const {
 }
 
 
+Float bump_texture::raw_value(Float u, Float v, const point3f& p) const {
+  while(u < 0) u += 1;
+  while(v < 0) v += 1;
+  while(u > 1) u -= 1;
+  while(v > 1) v -= 1;
+  u = fmod(u * repeatu,1);
+  v = fmod(v * repeatv,1);
+  int i = u * (nx-1);
+  int j = (1-v) * (ny-1);
+  if (i < 1) i = 1;
+  if (j < 1) j = 1;
+  if (i > nx-2) i = nx-2;
+  if (j > ny-2) j = ny-2;
+  return(data[channels*i + channels*nx*j]);
+}
+
 point3f bump_texture::value(Float u, Float v, const point3f& p) const {
   while(u < 0) u += 1;
   while(v < 0) v += 1;
@@ -77,10 +92,11 @@ point3f bump_texture::value(Float u, Float v, const point3f& p) const {
   if (j < 1) j = 1;
   if (i > nx-2) i = nx-2;
   if (j > ny-2) j = ny-2;
-  Float bu = (data[channels*(i+1) + channels*nx*j] - data[channels*(i-1) + channels*nx*j])/2;
-  Float bv = (data[channels*i + channels*nx*(j+1)] - data[channels*i + channels*nx*(j-1)])/2;
+  Float bu = (data[channels*(i+1) + channels*nx*j] - data[channels*(i-1) + channels*nx*j])/2*(Float)nx;
+  Float bv = (data[channels*i + channels*nx*(j+1)] - data[channels*i + channels*nx*(j-1)])/2*(Float)ny;
   return(point3f(intensity*bu,intensity*bv,0));
 }
+
 
 point3f bump_texture::mesh_value(Float u, Float v, const point3f& p) const {
   Float uu = ((1 - u - v) * u_vec.x() + u * u_vec.y() + v * u_vec.z());
@@ -95,8 +111,8 @@ point3f bump_texture::mesh_value(Float u, Float v, const point3f& p) const {
   if (j < 1) j = 1;
   if (i > nx-2) i = nx-2;
   if (j > ny-2) j = ny-2;
-  Float bu = (data[channels*(i+1) + channels*nx*j] - data[channels*(i-1) + channels*nx*j])/2;
-  Float bv = (data[channels*i + channels*nx*(j+1)] - data[channels*i + channels*nx*(j-1)])/2;
+  Float bu = (data[channels*(i+1) + channels*nx*j] - data[channels*(i-1) + channels*nx*j])/2*(Float)nx;
+  Float bv = (data[channels*i + channels*nx*(j+1)] - data[channels*i + channels*nx*(j-1)])/2*(Float)ny;
   return(point3f(intensity*bu,intensity*bv,0));
 }
 

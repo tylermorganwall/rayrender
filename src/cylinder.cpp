@@ -36,7 +36,7 @@ bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
       temppoint.e[0] *= radius / hitRad;
       temppoint.e[2] *= radius / hitRad;
       get_cylinder_uv(temppoint, u, v);
-      if(alpha_mask->value(u, v, rec.p).x() < rng.unif_rand()) {
+      if(alpha_mask->value(u, v, rec.p) < rng.unif_rand()) {
         is_hit = false;
       }
     }
@@ -49,7 +49,7 @@ bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
       temppoint.e[0] *= radius / hitRad;
       temppoint.e[2] *= radius / hitRad;
       get_cylinder_uv(temppoint, u, v);
-      if(alpha_mask->value(u, v, rec.p).x() < rng.unif_rand()) {
+      if(alpha_mask->value(u, v, rec.p) < rng.unif_rand()) {
         if(!is_hit) {
           alpha_miss = true;
         }
@@ -114,7 +114,7 @@ bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
     Float v = p.z() / (2.0 * radius) + 0.5;
     u = 1 - u;
     if(alpha_mask) {
-      if(alpha_mask->value(u, v, rec.p).x() < 1) {
+      if(alpha_mask->value(u, v, rec.p) < 1) {
         alpha_miss = true;
       }
     }
@@ -158,7 +158,7 @@ bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
     Float v = p.z() / (2.0 * radius) + 0.5;
     u = 1 - u;
     if(alpha_mask) {
-      if(alpha_mask->value(u, v, rec.p).x() < 1) {
+      if(alpha_mask->value(u, v, rec.p) < 1) {
         alpha_miss = true;
       }
     }
@@ -258,7 +258,7 @@ bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Samp
       temppoint.e[0] *= radius / hitRad;
       temppoint.e[2] *= radius / hitRad;
       get_cylinder_uv(temppoint, u, v);
-      if(alpha_mask->value(u, v, rec.p).x() < sampler->Get1D()) {
+      if(alpha_mask->value(u, v, rec.p) < sampler->Get1D()) {
         is_hit = false;
       }
     }
@@ -271,7 +271,7 @@ bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Samp
       temppoint.e[0] *= radius / hitRad;
       temppoint.e[2] *= radius / hitRad;
       get_cylinder_uv(temppoint, u, v);
-      if(alpha_mask->value(u, v, rec.p).x() < sampler->Get1D()) {
+      if(alpha_mask->value(u, v, rec.p) < sampler->Get1D()) {
         if(!is_hit) {
           return(false);
         }
@@ -333,7 +333,7 @@ bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Samp
     Float v = p.z() / (2.0 * radius) + 0.5;
     u = 1 - u;
     if(alpha_mask) {
-      if(alpha_mask->value(u, v, rec.p).x() < 1) {
+      if(alpha_mask->value(u, v, rec.p) < 1) {
         return(false);
       }
     }
@@ -377,7 +377,7 @@ bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Samp
     Float v = p.z() / (2.0 * radius) + 0.5;
     u = 1 - u;
     if(alpha_mask) {
-      if(alpha_mask->value(u, v, rec.p).x() < 1) {
+      if(alpha_mask->value(u, v, rec.p) < 1) {
         return(false);
       }
     }

@@ -23,7 +23,7 @@ bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, ran
       vec3f normal = (p1 - center) * inv_axes;
       normal.make_unit_vector();
       get_sphere_uv(normal, u, v);
-      if(alpha_mask->value(u, v, rec.p).x() < rng.unif_rand()) {
+      if(alpha_mask->value(u, v, rec.p) < rng.unif_rand()) {
         is_hit = false;
       }
     }
@@ -33,7 +33,7 @@ bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, ran
       vec3f normal = (p2 - center) * inv_axes;
       normal.make_unit_vector();
       get_sphere_uv(normal, u, v);
-      if(alpha_mask->value(u, v, rec.p).x() < rng.unif_rand()) {
+      if(alpha_mask->value(u, v, rec.p) < rng.unif_rand()) {
         if(!is_hit) {
           alpha_miss = true;
         }
@@ -150,7 +150,7 @@ bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sam
       vec3f normal = (p1 - center) * inv_axes;
       normal.make_unit_vector();
       get_sphere_uv(normal, u, v);
-      if(alpha_mask->value(u, v, rec.p).x() < sampler->Get1D()) {
+      if(alpha_mask->value(u, v, rec.p) < sampler->Get1D()) {
         is_hit = false;
       }
     }
@@ -160,7 +160,7 @@ bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sam
       vec3f normal = (p2 - center) * inv_axes;
       normal.make_unit_vector();
       get_sphere_uv(normal, u, v);
-      if(alpha_mask->value(u, v, rec.p).x() < sampler->Get1D()) {
+      if(alpha_mask->value(u, v, rec.p) < sampler->Get1D()) {
         if(!is_hit) {
           alpha_miss = true;
           return(false);
