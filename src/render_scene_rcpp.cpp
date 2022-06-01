@@ -434,6 +434,8 @@ List render_scene_rcpp(List camera_info, List scene_info) {
     world.add(background_sphere);
     impl_only_bg = true;
   }
+  preview = preview && debug_channel == 0;
+  
   PreviewDisplay Display(nx,ny, preview, interactive, (lookat-lookfrom).length(), cam.get(),
                          background_sphere->ObjectToWorld.get(),
                          background_sphere->WorldToObject.get());

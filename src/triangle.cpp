@@ -127,21 +127,17 @@ bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
   
   point3f pHit = b0 * a + b1 * b + b2 * c;
   point2f uvHit = b0 * uv[0] + b1 * uv[1] + b2 * uv[2];
-  point2f uvHit2 = b0 *  point2f(0, 0) + b1 * point2f(1, 0) + b2 * point2f(1, 1);
-  
+
   Float u = uvHit[0];
   Float v = uvHit[1];
-  Float u1 = uvHit2[0];
-  Float v1 = uvHit2[1];
   
   bool alpha_miss = false;
 
   if(alpha_mask) {
-    if(alpha_mask->value(u1, v1, rec.p) < rng.unif_rand()) {
+    if(alpha_mask->value(u, v, rec.p) < rng.unif_rand()) {
       alpha_miss = true;
     }
   }
-  Float w = 1 - u1 - v1;
   rec.t = t;
   rec.p = pHit;
   rec.pError = gamma(7) * vec3f(xAbsSum, yAbsSum, zAbsSum);
@@ -150,8 +146,16 @@ bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
   
   // Use that to calculate normals
   if(normals_provided) {
+    point2f uvHit2 = b0 *  point2f(0, 0) + b1 * point2f(1, 0) + b2 * point2f(1, 1);
+    Float u1 = uvHit2[0];
+    Float v1 = uvHit2[1];
+    Float w = 1 - u1 - v1;
+    
     normal3f normal_temp = unit_vector(w * na + u1 * nb + v1 * nc);
     rec.normal = dot(r.direction(), normal) < 0 ? normal_temp : -normal_temp;
+    vec3f dpdu_temp = cross(rec.dpdv,rec.normal.convert_to_vec3());
+    rec.dpdu = dpdu_temp;
+    
   } else {
     if(alpha_mask) {
       rec.normal = dot(r.direction(), normal) < 0 ? normal : -normal;
@@ -163,11 +167,11 @@ bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
   if(bump_tex) {
     point3f bvbu = bump_tex->value(u, v, rec.p);
     rec.bump_normal = cross(rec.dpdu + bvbu.x() * rec.normal.convert_to_vec3() ,
-                            rec.dpdv - bvbu.y() * rec.normal.convert_to_vec3() );
+                            rec.dpdv - bvbu.y() * rec.normal.convert_to_vec3());
     rec.bump_normal.make_unit_vector();
     rec.has_bump = true;
   }
-  rec.u = 1-u;
+  rec.u = u;
   rec.v = v;
   rec.mat_ptr = mp.get();
   rec.alpha_miss = alpha_miss;
@@ -303,21 +307,17 @@ bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Samp
   
   point3f pHit = b0 * a + b1 * b + b2 * c;
   point2f uvHit = b0 * uv[0] + b1 * uv[1] + b2 * uv[2];
-  point2f uvHit2 = b0 *  point2f(0, 0) + b1 * point2f(1, 0) + b2 * point2f(1, 1);
-  
+
   Float u = uvHit[0];
   Float v = uvHit[1];
-  Float u1 = uvHit2[0];
-  Float v1 = uvHit2[1];
   
   bool alpha_miss = false;
   
   if(alpha_mask) {
-    if(alpha_mask->value(u1, v1, rec.p) < sampler->Get1D()) {
+    if(alpha_mask->value(u, v, rec.p) < sampler->Get1D()) {
       alpha_miss = true;
     }
   }
-  Float w = 1 - u1 - v1;
   rec.t = t;
   rec.p = pHit;
   rec.pError = gamma(7) * vec3f(xAbsSum, yAbsSum, zAbsSum);
@@ -326,6 +326,11 @@ bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Samp
   
   // Use that to calculate normals
   if(normals_provided) {
+    point2f uvHit2 = b0 *  point2f(0, 0) + b1 * point2f(1, 0) + b2 * point2f(1, 1);
+    Float u1 = uvHit2[0];
+    Float v1 = uvHit2[1];
+    Float w = 1 - u1 - v1;
+
     normal3f normal_temp = unit_vector(w * na + u1 * nb + v1 * nc);
     rec.normal = dot(r.direction(), normal) < 0 ? normal_temp : -normal_temp;
   } else {
@@ -343,7 +348,7 @@ bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Samp
     rec.bump_normal.make_unit_vector();
     rec.has_bump = true;
   }
-  rec.u = 1-u;
+  rec.u = u;
   rec.v = v;
   rec.mat_ptr = mp.get();
   rec.alpha_miss = alpha_miss;

@@ -282,7 +282,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
   if(width < 3 || height < 3) {
     stop("Must specify a minimum width/height of 3 or more pixels")
   }
-  if(preview && interactive && has_gui_capability()) {
+  if(preview && interactive && has_gui_capability() && debug_channel == "none") {
     message(
 "--------------------------Interactive Mode Controls---------------------------
 W/A/S/D: Horizontal Movement: | Q/Z: Vertical Movement | Up/Down: Adjust FOV | ESC: Close

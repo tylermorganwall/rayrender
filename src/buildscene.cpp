@@ -137,7 +137,7 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
     if(has_bump(i)) {
       bump[i] = std::make_shared<bump_texture>(bump_textures[i], 
                                                nvecb[i][0], nvecb[i][1], nvecb[i][2], 
-                              bump_intensity(i),temp_repeat[0], temp_repeat[1]);
+                                               bump_intensity(i),temp_repeat[0], temp_repeat[1]);
     }
     if(has_roughness(i)) {
       roughness[i] = std::make_shared<roughness_texture>(roughness_textures[i], 
@@ -154,8 +154,8 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
     } else if (type(i) == 9) {
       prop_len = 6;
     }
-    if(is_shared_mat(i) && shared_materials->size() > static_cast<size_t>(shared_id_mat(i))) {
-      tex = shared_materials->at(shared_id_mat(i));
+    if(is_shared_mat(i) && shared_materials->size() > static_cast<int>(shared_id_mat(i)-1)) {
+      tex = shared_materials->at(shared_id_mat(i)-1);
     } else {
       if(type(i) == 1) {
         if(isimage(i)) {
@@ -169,7 +169,7 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
           tex = std::make_shared<lambertian>(std::make_shared<checker_texture>(
             std::make_shared<constant_texture>(point3f(tempchecker(0),tempchecker(1),tempchecker(2))),
             std::make_shared<constant_texture>(point3f(tempvector(0),tempvector(1),tempvector(2))),
-                                                   tempchecker(3)));
+                                             tempchecker(3)));
         } else if (isgradient(i) && !is_world_gradient(i)) {
           tex = std::make_shared<lambertian>(std::make_shared<gradient_texture>(point3f(tempvector(0),tempvector(1),tempvector(2)),
                                                                                 point3f(tempgradient(0),tempgradient(1),tempgradient(2)),

@@ -2772,13 +2772,14 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
       t_temp1 = 1
     }
     
+
     i0 = floor(t_val0) + 1
     if(i != breaks-1) {
       i1 = floor(t_val1) + 1
     } else {
-      i1 = floor(t_val1)
+      i1 = max(c(1,floor(t_val1)))
     }
-    
+
     cp0 = full_control_points[[i0]]
     if(i1 <= length(full_control_points)) {
       cp1 = full_control_points[[i1]]
@@ -2860,7 +2861,7 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
                       nrow=3)
   vb_ends = rbind(vb[seq(1,max(cap_it_start)),], vb[seq(min(cap_it_end_full), max(cap_it_end_full)),]) 
   it_ends = cbind(cap_it_start, cap_it_end)
-  mesh_caps$vb = t(cbind(vb_ends,rep(1,nrow(vb_ends))))
+  mesh_caps$vb = t(cbind(vb_ends,rep(1,nrow(vb_ends))))          
   mesh_caps$it = it_ends
   
   mesh$vb = t(cbind(vb,rep(1,nrow(vb))))

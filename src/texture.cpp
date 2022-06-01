@@ -55,8 +55,8 @@ point3f bump_texture::value(Float u, Float v, const point3f& p) const {
   if (j < 1) j = 1;
   if (i > nx-2) i = nx-2;
   if (j > ny-2) j = ny-2;
-  Float bu = (data[channels*(i+1) + channels*nx*j] - data[channels*(i-1) + channels*nx*j])/2*(Float)nx;
-  Float bv = (data[channels*i + channels*nx*(j+1)] - data[channels*i + channels*nx*(j-1)])/2*(Float)ny;
+  Float bu = (data[channels*(i+1) + channels*nx*j] - data[channels*(i-1) + channels*nx*j])/2;
+  Float bv = (data[channels*i + channels*nx*(j+1)] - data[channels*i + channels*nx*(j-1)])/2;
   return(point3f(intensity*bu,intensity*bv,0));
 }
 
