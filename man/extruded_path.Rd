@@ -19,6 +19,7 @@ extruded_path(
   precomputed_control_points = FALSE,
   width = 1,
   width_end = NA,
+  width_ease = "linear",
   smooth_normals = FALSE,
   u_min = 0,
   u_max = 1,
@@ -63,9 +64,12 @@ of bezier curves.}
 \item{precomputed_control_points}{Default `FALSE`. If `TRUE`, `points` argument will expect
 a list of control points calculated with the internal rayrender function `rayrender:::calculate_control_points()`.}
 
-\item{width}{Default `0.1`. Curve width.}
+\item{width}{Default `0.1`. Curve width. If a numeric vector, specifies the different values of the width along the curve,
+and `width_end` will be ignored.}
 
 \item{width_end}{Default `NA`. Width at end of path. Same as `width`, unless specified.}
+
+\item{width_ease}{Default `linear`. Ease function between width values. Other options: `quad`, `cubic`, `exp`.}
 
 \item{smooth_normals}{Default `FALSE`. Whether to smooth the normals of the polygon to remove sharp angles.}
 

@@ -2513,8 +2513,10 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
 #' of bezier curves. 
 #' @param precomputed_control_points Default `FALSE`. If `TRUE`, `points` argument will expect
 #' a list of control points calculated with the internal rayrender function `rayrender:::calculate_control_points()`.
-#' @param width Default `0.1`. Curve width.
+#' @param width Default `0.1`. Curve width. If a numeric vector, specifies the different values of the width along the curve,
+#' and `width_end` will be ignored.
 #' @param width_end Default `NA`. Width at end of path. Same as `width`, unless specified.
+#' @param width_ease Default `linear`. Ease function between width values. Other options: `quad`, `cubic`, `exp`.
 #' @param u_min Default `0`. Minimum parametric coordinate for the path.
 #' @param u_max Default `1`. Maximum parametric coordinate for the path.
 #' @param material Default  \code{\link{diffuse}}. The material, called from one of the material 
@@ -2546,15 +2548,22 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
                          polygon = NA, polygon_end = NA, breaks=NA,
                          closed = FALSE, twists = 0, texture_repeats = 1,
                          straight = FALSE, precomputed_control_points = FALSE, 
-                         width = 1, width_end = NA, smooth_normals = FALSE,
+                         width = 1, width_end = NA, width_ease = "linear",
+                         smooth_normals = FALSE,
                          u_min = 0, u_max = 1, linear_step = FALSE,
                          material = diffuse(), material_caps = NA, angle = c(0, 0, 0),
                          order_rotation = c(1, 2, 3),
                          flipped = FALSE, scale = c(1,1,1)) {
+  if(is.na(width_end)) {
+    width_end = width[1]
+  }
+  if(length(width) == 1) {
+    width =  c(width,width_end)
+  }
   if(is.null(dim(polygon))) {
     angles = seq(0,360,length.out=31)
-    xx = width / 2 * sinpi(angles/180)
-    yy = width / 2 * cospi(angles/180)
+    xx = width[1] / 2 * sinpi(angles/180)
+    yy = width[1] / 2 * cospi(angles/180)
     polygon = as.matrix(data.frame(x=xx,y=yy,z=0))
   } else {
     polygon = xy.coords(polygon)
@@ -2643,18 +2652,12 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
     normal_polys = do.call(rbind,normal_poly)
     normal_polys_end = do.call(rbind,normal_poly_end)
   }
-  
-  if(is.na(width_end)) {
-    width_end = width
-  }
   if(u_min == u_max) {
     return()
   }
   stopifnot(u_min <= u_max)
   stopifnot(u_min >= 0)
   stopifnot(u_max <= 1)
-  stopifnot(length(width) == 1 && is.numeric(width))
-  stopifnot(length(width_end) == 1 && is.numeric(width_end))
   
   if(inherits(points,"numeric")) {
     stop("Input must either be list, matrix, or data.frame, not numeric.")
@@ -2724,13 +2727,13 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
   } else {
     t_vals = seq(0, length(full_control_points), length.out=breaks)
   }
-  width_vals = seq(width, width_end, length.out=breaks)
+  width_vals = tween(width, n = breaks,  ease = width_ease)
   morph_vals = seq(0, 1, length.out=breaks)
   
   t_init = t_vals[seg_begin]
   initial_deriv = eval_bezier_deriv(full_control_points[[1]],t_init)
   initial_2nd_deriv = eval_bezier_2nd_deriv(full_control_points[[1]],t_init)
-  if(all(abs(initial_2nd_deriv) < 1e-12)) {
+  if(all(abs(initial_2nd_deriv) < 1e-6)) {
     if(any(cross_prod(c(1,0,0),initial_deriv) != 0)) {
       initial_2nd_deriv = cross_prod(c(1,0,0),initial_deriv)
     } else {
@@ -2764,21 +2767,20 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
                          0,            0,                 1), nrow=3,ncol=3,byrow=TRUE)
     
     rot_mat = matrix(c(s_vec,r_vec,t_vec),3,3)
-    
     t_temp0 = t_val0-floor(t_val0)
     if(i != breaks-1) {
       t_temp1 = t_val1-floor(t_val1)
     } else {
       t_temp1 = 1
     }
-    
 
     i0 = floor(t_val0) + 1
     if(i != breaks-1) {
       i1 = floor(t_val1) + 1
     } else {
-      i1 = max(c(1,floor(t_val1)))
+      i1 = max(c(1,floor(t_val1+1e-8)))
     }
+
 
     cp0 = full_control_points[[i0]]
     if(i1 <= length(full_control_points)) {
@@ -2789,6 +2791,7 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
     
     x0 = eval_bezier(cp0,t_temp0)
     x1 = eval_bezier(cp1,t_temp1)
+    
 
     vertices[[counter]] = matrix(x0,ncol=3,nrow=nrow(polygon), byrow=TRUE) + 
       t((rot_mat %*% twist_mat %*% t(temp_poly*width_temp)))
@@ -2801,7 +2804,6 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
     }
     
     counter = counter + 1
-
     #Evaluate next set of vectors
     v1 = x1-x0
     c1 = sum(v1*v1)
@@ -2809,23 +2811,25 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
     tl = t_vec - (2 / c1) * sum(v1*t_vec) * v1
     
     next_deriv = eval_bezier_deriv(cp1,t_temp1)
-    t_vec = next_deriv/sqrt(sum(next_deriv*next_deriv))
+    t_vec_prev = next_deriv/sqrt(sum(next_deriv*next_deriv))
 
-    v2 = t_vec - tl
+    v2 = t_vec_prev - tl
     c2 = sum(v2*v2)
-    r_vec = rl - (2 / c2) * sum(v2*rl) * v2
-    s_vec = cross_prod(t_vec,r_vec)
+    if(c2 != 0) {
+      t_vec = t_vec_prev
+      r_vec = rl - (2 / c2) * sum(v2*rl) * v2
+      s_vec = cross_prod(t_vec,r_vec)
+    }
   }
   rot_mat = matrix(c(s_vec,r_vec,t_vec),3,3)
   twist_mat = matrix(c(cos(end_angle),-sin(end_angle),0,
                        sin(end_angle), cos(end_angle),0,
                        0,            0,                 1), nrow=3,ncol=3,byrow=TRUE)
   vertices[[counter]] = matrix(x1,ncol=3,nrow=nrow(polygon), byrow=TRUE) + 
-    t((rot_mat %*% twist_mat %*% t(polygon_end*width_end)))
+    t((rot_mat %*% twist_mat %*% t(polygon_end*width[length(width)])))
   texcoords[[counter]] = matrix(c(poly_tex,rep(1 * texture_repeats,nrow(polygon))), 
                                 ncol=2,nrow=nrow(polygon))
   
-  #Offset slightly from last end cap to specify a constant normal
   if(smooth_normals) {
     norm_transform = t(solve(rot_mat %*% twist_mat))
     normals[[counter]] = t((norm_transform %*% t(normal_polys_end)))

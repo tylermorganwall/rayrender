@@ -153,9 +153,6 @@ bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
     
     normal3f normal_temp = unit_vector(w * na + u1 * nb + v1 * nc);
     rec.normal = dot(r.direction(), normal) < 0 ? normal_temp : -normal_temp;
-    vec3f dpdu_temp = cross(rec.dpdv,rec.normal.convert_to_vec3());
-    rec.dpdu = dpdu_temp;
-    
   } else {
     if(alpha_mask) {
       rec.normal = dot(r.direction(), normal) < 0 ? normal : -normal;
