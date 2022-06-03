@@ -2554,19 +2554,24 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
                          material = diffuse(), material_caps = NA, angle = c(0, 0, 0),
                          order_rotation = c(1, 2, 3),
                          flipped = FALSE, scale = c(1,1,1)) {
-  if(is.na(width_end)) {
+  if(is.na(width_end) && is.numeric(width)) {
     width_end = width[1]
   }
-  if(length(width) == 1) {
+  if(length(width) == 1 && is.numeric(width)) {
     width =  c(width,width_end)
   }
+  if(is.null(dim(width))) {
+    width = data.frame(x=seq(0,1,length.out=length(width)),y=width)
+  }
+  width = grDevices::xy.coords(width)
+  
   if(is.null(dim(polygon))) {
     angles = seq(0,360,length.out=31)
-    xx = width[1] / 2 * sinpi(angles/180)
-    yy = width[1] / 2 * cospi(angles/180)
+    xx = 1 / 2 * sinpi(angles/180)
+    yy = 1 / 2 * cospi(angles/180)
     polygon = as.matrix(data.frame(x=xx,y=yy,z=0))
   } else {
-    polygon = xy.coords(polygon)
+    polygon = grDevices::xy.coords(polygon)
     polygon = data.frame(x=polygon$x,y=polygon$y,z=0)
   }
   same_polygon = TRUE
@@ -2727,7 +2732,11 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
   } else {
     t_vals = seq(0, length(full_control_points), length.out=breaks)
   }
-  width_vals = tween(width, n = breaks,  ease = width_ease)
+  if(width_ease != "spline") {
+    width_vals = tween(width$y, n = breaks,  ease = width_ease)
+  } else {
+    width_vals = stats::spline(width, n = breaks)$y
+  }
   morph_vals = seq(0, 1, length.out=breaks)
   
   t_init = t_vals[seg_begin]
@@ -2826,7 +2835,7 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
                        sin(end_angle), cos(end_angle),0,
                        0,            0,                 1), nrow=3,ncol=3,byrow=TRUE)
   vertices[[counter]] = matrix(x1,ncol=3,nrow=nrow(polygon), byrow=TRUE) + 
-    t((rot_mat %*% twist_mat %*% t(polygon_end*width[length(width)])))
+    t((rot_mat %*% twist_mat %*% t(polygon_end*width_vals[length(width_vals)])))
   texcoords[[counter]] = matrix(c(poly_tex,rep(1 * texture_repeats,nrow(polygon))), 
                                 ncol=2,nrow=nrow(polygon))
   
