@@ -69,7 +69,7 @@ bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
     rec.p = temppoint;
     
     temppoint.e[1] = 0;
-    rec.normal = dot(temppoint, dir) > 0 ? vec3f(-temppoint) / radius : vec3f(temppoint) / radius;
+    rec.normal = vec3f(temppoint) / radius;
     
     get_cylinder_uv(rec.p, rec.u, rec.v);
     
@@ -200,7 +200,8 @@ bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
     rec.p = temppoint;
     
     temppoint.e[1] = 0;
-    rec.normal = dot(temppoint,dir) > 0 ? vec3f(-temppoint) / radius : vec3f(temppoint) / radius;
+    rec.normal = vec3f(temppoint) / radius;
+    
     get_cylinder_uv(rec.p, rec.u, rec.v);
     
     //Interaction information
@@ -291,7 +292,7 @@ bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Samp
     rec.p = temppoint;
     
     temppoint.e[1] = 0;
-    rec.normal = dot(temppoint, dir) > 0 ? vec3f(-temppoint) / radius : vec3f(temppoint) / radius;
+    rec.normal = vec3f(temppoint) / radius;
     get_cylinder_uv(rec.p, rec.u, rec.v);
     
     //Interaction information
@@ -419,7 +420,7 @@ bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Samp
     rec.p = temppoint;
     
     temppoint.e[1] = 0;
-    rec.normal = dot(temppoint,dir) > 0 ? vec3f(-temppoint) / radius : vec3f(temppoint) / radius;
+    rec.normal = vec3f(temppoint) / radius;
     get_cylinder_uv(rec.p, rec.u, rec.v);
     
     //Interaction information
