@@ -2444,7 +2444,7 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
     color_type = 3
   }
   if(override_material) {
-    color_type = 3
+    color_type = 1
   }
   if(reverse) {
     indices = indices[,c(3,2,1)]
@@ -2801,6 +2801,11 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
     x0 = eval_bezier(cp0,t_temp0)
     x1 = eval_bezier(cp1,t_temp1)
     
+    if(i < length(width_vals)) {
+      width_norm = -(width_vals[i+1]-width_vals[i])/sqrt(sum((x1-x0)^2))
+    } else if (i == length(width_vals)) {
+      width_norm = -(width_vals[i]-width_vals[i-1])/sqrt(sum((x1-x0)^2))
+    }
 
     vertices[[counter]] = matrix(x0,ncol=3,nrow=nrow(polygon), byrow=TRUE) + 
       t((rot_mat %*% twist_mat %*% t(temp_poly*width_temp)))
@@ -2808,6 +2813,7 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
                                   ncol=2,nrow=nrow(polygon))
     if(smooth_normals) {
       temp_norm = morph_vals[i] * normal_polys_end + (1-morph_vals[i]) * normal_polys
+      temp_norm[,3] = width_norm
       norm_transform = t(solve(rot_mat %*% twist_mat))
       normals[[counter]] = t((norm_transform %*% t(temp_norm)))
     }
