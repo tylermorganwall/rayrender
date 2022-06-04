@@ -2513,10 +2513,13 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
 #' of bezier curves. 
 #' @param precomputed_control_points Default `FALSE`. If `TRUE`, `points` argument will expect
 #' a list of control points calculated with the internal rayrender function `rayrender:::calculate_control_points()`.
-#' @param width Default `0.1`. Curve width. If a numeric vector, specifies the different values of the width along the curve,
-#' and `width_end` will be ignored.
-#' @param width_end Default `NA`. Width at end of path. Same as `width`, unless specified.
-#' @param width_ease Default `linear`. Ease function between width values. Other options: `quad`, `cubic`, `exp`.
+#' @param width Default `0.1`. Curve width. If `width_ease == "spline"`, `width` is specified in a format that can be read by 
+#' `xy.coords()` (with `y` as the width), and the `x` coordinate is between `0` and `1`, this can also specify the exact 
+#' positions along the curve for the corresponding width values. If a numeric vector, specifies the different values of the width evenly along the curve.
+#' If not a single value, `width_end` will be ignored.
+#' @param width_end Default `NA`. Width at end of path. Same as `width`, unless specified. Ignored if multiple width values 
+#' specified in `width`.
+#' @param width_ease Default `spline`. Ease function between width values. Other options: `linear`, `quad`, `cubic`, `exp`.
 #' @param u_min Default `0`. Minimum parametric coordinate for the path.
 #' @param u_max Default `1`. Maximum parametric coordinate for the path.
 #' @param material Default  \code{\link{diffuse}}. The material, called from one of the material 

@@ -64,12 +64,15 @@ of bezier curves.}
 \item{precomputed_control_points}{Default `FALSE`. If `TRUE`, `points` argument will expect
 a list of control points calculated with the internal rayrender function `rayrender:::calculate_control_points()`.}
 
-\item{width}{Default `0.1`. Curve width. If a numeric vector, specifies the different values of the width along the curve,
-and `width_end` will be ignored.}
+\item{width}{Default `0.1`. Curve width. If `width_ease == "spline"`, `width` is specified in a format that can be read by 
+`xy.coords()` (with `y` as the width), and the `x` coordinate is between `0` and `1`, this can also specify the exact 
+positions along the curve for the corresponding width values. If a numeric vector, specifies the different values of the width evenly along the curve.
+If not a single value, `width_end` will be ignored.}
 
-\item{width_end}{Default `NA`. Width at end of path. Same as `width`, unless specified.}
+\item{width_end}{Default `NA`. Width at end of path. Same as `width`, unless specified. Ignored if multiple width values 
+specified in `width`.}
 
-\item{width_ease}{Default `linear`. Ease function between width values. Other options: `quad`, `cubic`, `exp`.}
+\item{width_ease}{Default `spline`. Ease function between width values. Other options: `linear`, `quad`, `cubic`, `exp`.}
 
 \item{smooth_normals}{Default `FALSE`. Whether to smooth the normals of the polygon to remove sharp angles.}
 
