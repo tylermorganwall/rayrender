@@ -151,8 +151,7 @@ bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
     Float v1 = uvHit2[1];
     Float w = 1 - u1 - v1;
     
-    normal3f normal_temp = unit_vector(w * na + u1 * nb + v1 * nc);
-    rec.normal = dot(r.direction(), normal) < 0 ? normal_temp : -normal_temp;
+    rec.normal = unit_vector(w * na + u1 * nb + v1 * nc);
   } else {
     if(alpha_mask) {
       rec.normal = dot(r.direction(), normal) < 0 ? normal : -normal;
@@ -162,9 +161,11 @@ bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
   }
 
   if(bump_tex) {
+    vec3f norm_bump = dot(r.direction(), normal) < 0 ? rec.normal.convert_to_vec3() : -rec.normal.convert_to_vec3();
+    
     point3f bvbu = bump_tex->value(u, v, rec.p);
-    rec.bump_normal = cross(rec.dpdu + bvbu.x() * rec.normal.convert_to_vec3() ,
-                            rec.dpdv - bvbu.y() * rec.normal.convert_to_vec3());
+    rec.bump_normal = cross(rec.dpdu + bvbu.x() * norm_bump ,
+                            rec.dpdv - bvbu.y() * norm_bump);
     rec.bump_normal.make_unit_vector();
     rec.has_bump = true;
   }
@@ -328,8 +329,7 @@ bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Samp
     Float v1 = uvHit2[1];
     Float w = 1 - u1 - v1;
 
-    normal3f normal_temp = unit_vector(w * na + u1 * nb + v1 * nc);
-    rec.normal = dot(r.direction(), normal) < 0 ? normal_temp : -normal_temp;
+    rec.normal = unit_vector(w * na + u1 * nb + v1 * nc);
   } else {
     if(alpha_mask) {
       rec.normal = dot(r.direction(), normal) < 0 ? normal : -normal;
@@ -339,9 +339,11 @@ bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Samp
   }
   
   if(bump_tex) {
+    vec3f norm_bump = dot(r.direction(), normal) < 0 ? rec.normal.convert_to_vec3() : -rec.normal.convert_to_vec3();
+    
     point3f bvbu = bump_tex->value(u, v, rec.p);
-    rec.bump_normal = cross(rec.dpdu + bvbu.x() * rec.normal.convert_to_vec3() ,
-                            rec.dpdv - bvbu.y() * rec.normal.convert_to_vec3() );
+    rec.bump_normal = cross(rec.dpdu + bvbu.x() * norm_bump ,
+                            rec.dpdv - bvbu.y() * norm_bump );
     rec.bump_normal.make_unit_vector();
     rec.has_bump = true;
   }

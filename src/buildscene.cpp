@@ -154,6 +154,7 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
     } else if (type(i) == 9) {
       prop_len = 6;
     }
+
     if(is_shared_mat(i) && shared_materials->size() > static_cast<int>(shared_id_mat(i)-1)) {
       tex = shared_materials->at(shared_id_mat(i)-1);
     } else {
@@ -454,7 +455,7 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
         }
       }
     }
-    if(is_shared_mat(i) && shared_materials->size() <= static_cast<size_t>(shared_id_mat(i)) ) {
+    if(is_shared_mat(i) && shared_materials->size() < static_cast<size_t>(shared_id_mat(i)) ) {
       shared_materials->push_back(tex);
     }
     //Generate center vector
