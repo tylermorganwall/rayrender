@@ -2544,8 +2544,7 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
 #' \donttest{
 #' #Generate the basic circle polygon through a small spiral
 #' points = list(c(0,0,0),c(0,1,0),c(1,1,0))
-#' generate_studio(depth=0) |> 
-#'   add_object(
+#' generate_studio(depth=0)
 #' }
 extruded_path = function(points, x = 0, y = 0, z = 0, 
                          polygon = NA, polygon_end = NA, breaks=NA,
@@ -2574,7 +2573,7 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
       stop("`polygon` and `polygon_end` must have same number of vertices")
     }
     same_polygon = FALSE
-    polygon_end = xy.coords(polygon_end)
+    polygon_end = grDevices::xy.coords(polygon_end)
     polygon_end = data.frame(x=polygon_end$x,y=polygon_end$y,z=0)
   }
   end_angle = twists*2*pi

@@ -109,7 +109,6 @@ using a bump map.
 \donttest{
 #Generate the basic circle polygon through a small spiral
 points = list(c(0,0,0),c(0,1,0),c(1,1,0))
-generate_studio(depth=0) |> 
-  add_object(
+generate_studio(depth=0)
 }
 }
