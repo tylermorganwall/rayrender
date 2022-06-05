@@ -2887,6 +2887,9 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
   mesh_caps$it = it_ends
   
   mesh$vb = t(cbind(vb,rep(1,nrow(vb))))
+  if(any(is.nan(mesh$vb))) {
+    stop("NaN coordinates in mesh generated.")
+  }
   mesh$it = it
   if(smooth_normals) {
     mesh$normals = t(normal_mat)

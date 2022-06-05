@@ -36,7 +36,7 @@ generate_studio = function(depth = -1, distance = -10, width = 100, height = 100
                        ywidth= height,
                        material=material)) %>%
     add_object(cylinder(z=distance + curvature, y = depth + curvature, radius=curvature,
-                        phi_min = 0, phi_max = 90, 
+                        phi_min = 0, phi_max = 90,  flipped = T,
                         angle=c(90,90,0), capped = FALSE,
                         material=material, length = width))
   
