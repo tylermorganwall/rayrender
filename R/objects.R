@@ -2550,7 +2550,7 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
                          polygon = NA, polygon_end = NA, breaks=NA,
                          closed = FALSE, twists = 0, texture_repeats = 1,
                          straight = FALSE, precomputed_control_points = FALSE, 
-                         width = 1, width_end = NA, width_ease = "linear",
+                         width = 1, width_end = NA, width_ease = "spline",
                          smooth_normals = FALSE,
                          u_min = 0, u_max = 1, linear_step = FALSE,
                          material = diffuse(), material_caps = NA, angle = c(0, 0, 0),
@@ -2635,8 +2635,8 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
         vert2 = i
         vert3 = i+1
       }
-      edge1 = polygon[vert1,] - polygon[vert2,]
-      edge2 = polygon[vert3,] - polygon[vert2,]
+      edge1 = polygon_end[vert1,] - polygon_end[vert2,]
+      edge2 = polygon_end[vert3,] - polygon_end[vert2,]
       
       temp_norm = as.numeric(edge1 + edge2)
       if(cross_prod(edge1,temp_norm)[3] > 0) {
@@ -2726,8 +2726,7 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
     width = data.frame(x=seq(0,1,length.out=length(width)),y=width)
   }
   width = grDevices::xy.coords(width)
-  
-  
+
   if(linear_step) {
     dist_df = calculate_distance_along_bezier_curve(full_control_points,20)
     t_vals = stats::predict(stats::smooth.spline(dist_df$total_dist,dist_df$t),
@@ -2740,6 +2739,7 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
   } else {
     width_vals = stats::spline(width, n = breaks)$y
   }
+  width_vals = abs(width_vals)
   morph_vals = seq(0, 1, length.out=breaks)
   
   t_init = t_vals[seg_begin]
@@ -2840,8 +2840,8 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
     }
   }
   rot_mat = matrix(c(s_vec,r_vec,t_vec),3,3)
-  twist_mat = matrix(c(cos(end_angle),-sin(end_angle),0,
-                       sin(end_angle), cos(end_angle),0,
+  twist_mat = matrix(c(cos(end_angle*morph_vals[seg_end]),-sin(end_angle*morph_vals[seg_end]),0,
+                       sin(end_angle*morph_vals[seg_end]), cos(end_angle*morph_vals[seg_end]),0,
                        0,            0,                 1), nrow=3,ncol=3,byrow=TRUE)
   vertices[[counter]] = matrix(x1,ncol=3,nrow=nrow(polygon), byrow=TRUE) + 
     t((rot_mat %*% twist_mat %*% t(polygon_end*width_vals[seg_end+1])))
@@ -2909,8 +2909,10 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
   }
   class(mesh) = "mesh3d"
   class(mesh_caps) = "mesh3d"
+  same_material = FALSE
   if(is.null(dim(material_caps))) {
     material_caps = material
+    same_material = TRUE
   }
   material_id = get("max_material_id", envir = ray_environment)
   material_id = material_id + 1
@@ -2922,7 +2924,9 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
                                          override_material = TRUE,
                                          angle=angle, order_rotation = order_rotation, flipped=flipped,
                                          scale=scale))
-  return_scene$material_id = c(material_id, material_id)
+  if(same_material) {
+    return_scene$material_id = c(material_id, material_id)
+  }
   return(return_scene)
 }
 
