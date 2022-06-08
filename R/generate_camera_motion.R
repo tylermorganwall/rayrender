@@ -391,9 +391,6 @@ process_point_series = function(points, closed=FALSE, straight=FALSE) {
     if(nrow(points) == 2 && closed) {
       closed=FALSE
     }
-    if(closed && all(points[1,] != points[nrow(points),])) {
-      points = rbind(points,points[1,])
-    }
   }
   if(inherits(points,"matrix")) {
     if(ncol(points) == 3) {

@@ -2058,9 +2058,6 @@ path = function(points,
     if(nrow(points) == 2 && closed) {
       closed=FALSE
     }
-    if(closed && all(points[1,] != points[nrow(points),])) {
-      points = rbind(points,points[1,])
-    }
   }
   if(!precomputed_control_points) {
     if(inherits(points,"matrix")) {
