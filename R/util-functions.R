@@ -287,3 +287,73 @@ RotateAxis = function(theta, axis) {
   m[3,4] = 0
   return(m)
 }
+
+#' Calculate Final Angle
+#'
+#' @keywords internal
+calculate_final_twist = function(full_control_points, 
+                                 breaks, t_vals, morph_vals, width_vals, 
+                                 t_vec, s_vec, r_vec, end_angle) {
+  r_vec0 = r_vec
+  for(i in seq_len(breaks-1)) {
+    t_val0 = t_vals[i]
+    if(t_val0 < 0) {
+      t_val0 = 0
+    }
+    t_val1 = t_vals[i+1]
+    if(t_val1 < 0) {
+      t_val1 = 0
+    }
+    width_temp = width_vals[i]
+    
+    temp_angle = morph_vals[i] * end_angle
+    twist_mat = matrix(c(cos(temp_angle),-sin(temp_angle),0,
+                         sin(temp_angle), cos(temp_angle),0,
+                         0,            0,                 1), nrow=3,ncol=3,byrow=TRUE)
+    
+    rot_mat = matrix(c(s_vec,r_vec,t_vec),3,3)
+    t_temp0 = t_val0-floor(t_val0)
+    if(i != breaks-1) {
+      t_temp1 = t_val1-floor(t_val1)
+    } else {
+      t_temp1 = 1
+    }
+    
+    i0 = floor(t_val0) + 1
+    if(i != breaks-1) {
+      i1 = floor(t_val1) + 1
+    } else {
+      i1 = max(c(1,floor(t_val1+1e-8)))
+    }
+    
+    
+    cp0 = full_control_points[[i0]]
+    if(i1 <= length(full_control_points)) {
+      cp1 = full_control_points[[i1]]
+    } else {
+      cp1 = cp0
+    }
+    
+    x0 = eval_bezier(cp0,t_temp0)
+    x1 = eval_bezier(cp1,t_temp1)
+    
+    #Evaluate next set of vectors
+    v1 = x1-x0
+    c1 = sum(v1*v1)
+    rl = r_vec - (2 / c1) * sum(v1*r_vec) * v1
+    tl = t_vec - (2 / c1) * sum(v1*t_vec) * v1
+    
+    next_deriv = eval_bezier_deriv(cp1,t_temp1)
+    t_vec_prev = next_deriv/sqrt(sum(next_deriv*next_deriv))
+    
+    v2 = t_vec_prev - tl
+    c2 = sum(v2*v2)
+    if(c2 != 0) {
+      t_vec = t_vec_prev
+      r_vec = rl - (2 / c2) * sum(v2*rl) * v2
+      s_vec = cross_prod(t_vec,r_vec)
+    }
+  }
+  angle = acos(sum(r_vec0*r_vec))
+  return(angle)
+}

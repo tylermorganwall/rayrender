@@ -2645,7 +2645,8 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
 #'   render_scene(lookat=c(0.3,0.5,0),fov=12, width=800,height=800, clamp_value = 10,
 #'                aperture=0.025, samples=256, sample_method="sobol_blue")
 #' 
-#' #Create a glass tube with the dielectric priority interface
+#' #Create a green glass tube with the dielectric priority interface
+#' #and fill it with a purple neon tube light
 #' generate_ground(depth=-0.4,material=diffuse(color="grey50",
 #'                                             checkercolor = "grey20",checkerperiod = 1.5)) |>
 #'   add_object(extruded_path(points = points, width=0.7, linear_step = T, 
@@ -2656,7 +2657,10 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
 #'   add_object(extruded_path(points = points, width=0.4, linear_step = T,
 #'                            polygon = circ_polygon,twists = 2,
 #'                            polygon_end = star_polygon,
-#'                            material=dielectric(priority = 0,refraction = 1))) |>
+#'                            material=dielectric(priority = 0,refraction = 1))) |>  
+#'   add_object(extruded_path(points = points, width=0.05, closed = T,
+#'                            material=light(color="purple", intensity = 5,
+#'                                           importance_sample = FALSE))) |>
 #'   add_object(sphere(y=10,z=-5,x=0,radius=5,material=light(color = "white",intensity = 5))) |>
 #'   render_scene(lookat=c(0.3,0.5,1),fov=12, 
 #'                width=800,height=800, clamp_value = 10,
@@ -2696,7 +2700,6 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
     polygon_end = grDevices::xy.coords(polygon_end)
     polygon_end = data.frame(x=polygon_end$x,y=polygon_end$y,z=0)
   }
-  end_angle = twists*2*pi
   if(ncol(polygon) == 2) {
     polygon = cbind(polygon,rep(0,nrow(polygon)))
   }
@@ -2882,6 +2885,14 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
   normals = list()
   poly_tex = seq(0,1,length.out=nrow(polygon))
   counter = 1
+  if(closed) {
+    end_angle = twists*2*pi + calculate_final_twist(full_control_points, 
+                                                    breaks, t_vals, morph_vals, width_vals, 
+                                                    t_vec, s_vec, r_vec, twists*2*pi)
+  } else {
+    end_angle = twists*2*pi
+  }
+  
   for(i in seq(seg_begin,seg_end,by=1)) {
     t_val0 = t_vals[i]
     if(t_val0 < 0) {
