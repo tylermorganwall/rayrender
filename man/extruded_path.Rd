@@ -213,7 +213,8 @@ generate_studio(depth=-0.4,material=ground_mat) |>
   render_scene(lookat=c(0.3,0.5,0),fov=12, width=800,height=800, clamp_value = 10,
                aperture=0.025, samples=256, sample_method="sobol_blue")
 
-#Create a glass tube with the dielectric priority interface
+#Create a green glass tube with the dielectric priority interface
+#and fill it with a purple neon tube light
 generate_ground(depth=-0.4,material=diffuse(color="grey50",
                                             checkercolor = "grey20",checkerperiod = 1.5)) |>
   add_object(extruded_path(points = points, width=0.7, linear_step = T, 
@@ -224,7 +225,10 @@ generate_ground(depth=-0.4,material=diffuse(color="grey50",
   add_object(extruded_path(points = points, width=0.4, linear_step = T,
                            polygon = circ_polygon,twists = 2,
                            polygon_end = star_polygon,
-                           material=dielectric(priority = 0,refraction = 1))) |>
+                           material=dielectric(priority = 0,refraction = 1))) |>  
+  add_object(extruded_path(points = points, width=0.05, closed = T,
+                           material=light(color="purple", intensity = 5,
+                                          importance_sample = FALSE))) |>
   add_object(sphere(y=10,z=-5,x=0,radius=5,material=light(color = "white",intensity = 5))) |>
   render_scene(lookat=c(0.3,0.5,1),fov=12, 
                width=800,height=800, clamp_value = 10,

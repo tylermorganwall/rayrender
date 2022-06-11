@@ -25,7 +25,7 @@ light(
 \item{color}{Default `white`. The color of the light Can be either
 a hexadecimal code, R color string, or a numeric rgb vector listing three intensities between `0` and `1`.}
 
-\item{intensity}{Default `NA`. If a positive value, this will turn this object into a light emitting the value specified
+\item{intensity}{Default `10`. If a positive value, this will turn this object into a light emitting the value specified
 in `color` (ignoring other properties). Higher values will produce a brighter light.}
 
 \item{importance_sample}{Default `TRUE`. Keeping this on for lights improves the convergence of the rendering 
