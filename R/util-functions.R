@@ -118,7 +118,26 @@ expInOut = function(t) {
   ifelse(t * 2 <= 1, 2^(-10 * (1-2*t))/2, (2 - 2^(-10 * (2*t-1)))/2)
 }
 
-#' Cubic-in-out
+#' Slerp
+#' 
+#' @param vec1 Value
+#' @param vec2 Value
+#' @param n Value
+#' @return number
+#'
+#' @keywords internal
+slerp = function(vec1, vec2, n) {
+  t = seq(0,1,length.out = n+2)
+  subtended_angle = acos(sum(vec1*vec2))
+  return_vecs = list()
+  for(i in 1:(n+2)) {
+    return_vecs[[i]] = sin((1-t[i])*subtended_angle)/sin(subtended_angle) * vec1 + 
+      sin(t[i]*subtended_angle)/sin(subtended_angle) * vec2
+  }
+  return(return_vecs)
+}
+
+#' Tween
 #' 
 #' @param vals Numeric values
 #' @param n Frames
@@ -350,4 +369,20 @@ calculate_final_twist = function(full_control_points,
   }
   angle = acos(sum(r_vec0*r_vec))
   return(angle)
+}
+
+#' Add Points to Polygon
+#' 
+#' @param polygon Polygon
+#' @param added_points Default `0`
+#' @return matrix
+#'
+#' @keywords internal
+add_points_polygon = function(polygon, added_points = 0L) {
+  existing_verts = nrow(polygon)
+  total_verts = existing_verts + (existing_verts-1L) * added_points
+  return_polygon = matrix(0, ncol=3,nrow=total_verts)
+  return_polygon[,1] = tween(polygon[,1], n = total_verts, ease = "linear")
+  return_polygon[,2] = tween(polygon[,2], n = total_verts, ease = "linear")
+  return(return_polygon)
 }

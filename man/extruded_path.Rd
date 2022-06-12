@@ -15,6 +15,7 @@ extruded_path(
   closed = FALSE,
   closed_join_ends = FALSE,
   closed_smooth = TRUE,
+  polygon_add_points = 0,
   twists = 0,
   texture_repeats = 1,
   straight = FALSE,
@@ -61,6 +62,9 @@ set of vertices in the path.}
 \item{closed_smooth}{Default `TRUE`. If `closed = TRUE`, this will ensure C2 (second derivative) 
 continuity between the ends. If `closed = FALSE`, the curve will only have C1 (first derivative)
 continuity between the ends.}
+
+\item{polygon_add_points}{Default `0`. Positive integer specifying the number of points to fill in between polygon
+vertices. Higher numbers can give smoother results (especially when combined with `smooth_normals = TRUE`.}
 
 \item{twists}{Default `0`. Number of twists in the polygon from one end to another.}
 

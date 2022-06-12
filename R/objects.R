@@ -2522,6 +2522,8 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
 #' @param closed_smooth Default `TRUE`. If `closed = TRUE`, this will ensure C2 (second derivative) 
 #' continuity between the ends. If `closed = FALSE`, the curve will only have C1 (first derivative)
 #' continuity between the ends.
+#' @param polygon_add_points Default `0`. Positive integer specifying the number of points to fill in between polygon
+#' vertices. Higher numbers can give smoother results (especially when combined with `smooth_normals = TRUE`.
 #' @param twists Default `0`. Number of twists in the polygon from one end to another.
 #' @param straight Default `FALSE`. If `TRUE`, straight lines will be used to connect the points instead
 #' of bezier curves. 
@@ -2708,7 +2710,8 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
 extruded_path = function(points, x = 0, y = 0, z = 0, 
                          polygon = NA, polygon_end = NA, breaks=NA,
                          closed = FALSE, closed_join_ends = FALSE, closed_smooth = TRUE, 
-                         twists = 0,
+                         polygon_add_points = 0,
+                         twists = 0, 
                          texture_repeats = 1,
                          straight = FALSE, precomputed_control_points = FALSE, 
                          width = 1, width_end = NA, width_ease = "spline",
@@ -2762,9 +2765,14 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
   if(any(polygon_end[1,] != polygon_end[nrow(polygon_end),])) {
     polygon_end = rbind(polygon_end,polygon_end[1,])
   }
+  if(polygon_add_points > 0) {
+    polygon = add_points_polygon(polygon,polygon_add_points)
+    polygon_end = add_points_polygon(polygon_end,polygon_add_points)
+  }
   normal_poly = list()
   normal_poly_end = list()
   if(smooth_normals) {
+    revisit = rep(FALSE, nrow(polygon))
     for(i in seq_len(nrow(polygon))) {
       if(i == 1 || i == nrow(polygon)) {
         vert1 = nrow(polygon)-1
@@ -2777,14 +2785,61 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
       }
       edge1 = polygon[vert1,] - polygon[vert2,]
       edge2 = polygon[vert3,] - polygon[vert2,]
+      edge1 = edge1 / sqrt(sum(edge1^2))
+      edge2 = edge2 / sqrt(sum(edge2^2))
       
-      temp_norm = as.numeric(edge1 + edge2)
-      if(cross_prod(edge1,temp_norm)[3] > 0) {
-        temp_norm = -temp_norm
+      if(abs(abs(sum(edge1*edge2))-1) < 1e-8) {
+        temp_norm = NA
+        revisit[i] = TRUE
+      } else {
+        temp_norm = as.numeric(edge1 + edge2)
       }
+      if(!revisit[i] && cross_prod(edge1,temp_norm)[3] > 0) {
+        temp_norm = -temp_norm
+      } 
       normal_poly[[i]] = matrix(temp_norm, nrow=1,ncol=3)
-      normal_poly[[i]] = normal_poly[[i]] / sqrt(sum(normal_poly[[i]]^2))
+      if(!revisit[i]) {
+        normal_poly[[i]] = normal_poly[[i]] / sqrt(sum(normal_poly[[i]]^2))
+        if(any(is.nan(normal_poly[[i]]))) {
+          browser()
+        }
+      }
     }
+    if(any(revisit)) {
+      for(i in seq_len(nrow(polygon))) {
+        if(revisit[i]) {
+          idx1 = i
+          idx2 = i
+          n = 0L
+
+          inds = c(i)
+          while(revisit[idx1]) {
+            idx1 = idx1 - 1L
+            if(idx1 == 0L) {
+              idx1 = nrow(polygon)
+            }
+            inds = c(idx1,inds)
+            n = n + 1L
+          }
+          while(revisit[idx2]) {
+            idx2 = idx2 + 1L
+            if(idx2 == nrow(polygon)+1L) {
+              idx2 = 1L
+            }
+            inds = c(inds,idx2)
+            n = n + 1L
+          }
+          norm_prev = normal_poly[[idx1]]
+          norm_next = normal_poly[[idx2]]
+          tween_norms = slerp(norm_prev, norm_next, n = n+1)
+          for(idx in seq_len(length(inds)-1)[-1]) {
+            normal_poly[[inds[idx] ]] = tween_norms[[idx]]
+            revisit[inds[idx]] = FALSE
+          }
+        }
+      }
+    }
+    revisit = rep(FALSE, nrow(polygon_end))
     for(i in seq_len(nrow(polygon_end))) {
       if(i == 1 || i == nrow(polygon_end)) {
         vert1 = nrow(polygon_end)-1
@@ -2797,13 +2852,56 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
       }
       edge1 = polygon_end[vert1,] - polygon_end[vert2,]
       edge2 = polygon_end[vert3,] - polygon_end[vert2,]
+      edge1 = edge1 / sqrt(sum(edge1^2))
+      edge2 = edge2 / sqrt(sum(edge2^2))
       
-      temp_norm = as.numeric(edge1 + edge2)
-      if(cross_prod(edge1,temp_norm)[3] > 0) {
-        temp_norm = -temp_norm
+      if(abs(abs(sum(edge1*edge2))-1) < 1e-8) {
+        temp_norm = NA
+        revisit[i] = TRUE
+      } else {
+        temp_norm = as.numeric(edge1 + edge2)
       }
+      if(!revisit[i] && cross_prod(edge1,temp_norm)[3] > 0) {
+        temp_norm = -temp_norm
+      } 
       normal_poly_end[[i]] = matrix(temp_norm, nrow=1,ncol=3)
-      normal_poly_end[[i]] = normal_poly_end[[i]] / sqrt(sum(normal_poly_end[[i]]^2))
+      if(!revisit[i]) {
+        normal_poly_end[[i]] = normal_poly_end[[i]] / sqrt(sum(normal_poly_end[[i]]^2))
+      }
+    }
+    if(any(revisit)) {
+      for(i in seq_len(nrow(polygon_end))) {
+        if(revisit[i]) {
+          idx1 = i
+          idx2 = i
+          n = 0L
+          
+          inds = c(i)
+          while(revisit[idx1]) {
+            idx1 = idx1 - 1L
+            if(idx1 == 0L) {
+              idx1 = nrow(polygon_end)
+            }
+            inds = c(idx1,inds)
+            n = n + 1L
+          }
+          while(revisit[idx2]) {
+            idx2 = idx2 + 1L
+            if(idx2 == nrow(polygon_end)+1L) {
+              idx2 = 1L
+            }
+            inds = c(inds,idx2)
+            n = n + 1L
+          }
+          norm_prev = normal_poly_end[[idx1]]
+          norm_next = normal_poly_end[[idx2]]
+          tween_norms = slerp(norm_prev, norm_next, n = n+1)
+          for(idx in seq_len(length(inds)-1)[-1]) {
+            normal_poly_end[[inds[idx] ]] = tween_norms[[idx]]
+            revisit[inds[idx]] = FALSE
+          }
+        }
+      }
     }
     normal_polys = do.call(rbind,normal_poly)
     normal_polys_end = do.call(rbind,normal_poly_end)
