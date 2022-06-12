@@ -13,7 +13,7 @@ extruded_path(
   polygon_end = NA,
   breaks = NA,
   closed = FALSE,
-  closed_join_ends = TRUE,
+  closed_join_ends = FALSE,
   closed_smooth = TRUE,
   twists = 0,
   texture_repeats = 1,
@@ -55,7 +55,7 @@ of the polygon set in `polygon`. Vertices are taken as sequential rows. If the p
 \item{closed}{Default `FALSE`. If `TRUE`, the path will be closed by smoothly connecting the first
 and last points, also ensuring the final polygon is aligned to the first.}
 
-\item{closed_join_ends}{Default `TRUE`. If `closed = TRUE`, this will average and combine the last and first
+\item{closed_join_ends}{Default `FALSE`. If `closed = TRUE`, this will average and combine the last and first
 set of vertices in the path.}
 
 \item{closed_smooth}{Default `TRUE`. If `closed = TRUE`, this will ensure C2 (second derivative) 

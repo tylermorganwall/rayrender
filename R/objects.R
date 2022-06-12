@@ -2517,7 +2517,7 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
 #' @param breaks Defaults to `20` times the number of control points in the bezier curve.
 #' @param closed Default `FALSE`. If `TRUE`, the path will be closed by smoothly connecting the first
 #' and last points, also ensuring the final polygon is aligned to the first.
-#' @param closed_join_ends Default `TRUE`. If `closed = TRUE`, this will average and combine the last and first
+#' @param closed_join_ends Default `FALSE`. If `closed = TRUE`, this will average and combine the last and first
 #' set of vertices in the path.
 #' @param closed_smooth Default `TRUE`. If `closed = TRUE`, this will ensure C2 (second derivative) 
 #' continuity between the ends. If `closed = FALSE`, the curve will only have C1 (first derivative)
@@ -2707,7 +2707,7 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
 #' }
 extruded_path = function(points, x = 0, y = 0, z = 0, 
                          polygon = NA, polygon_end = NA, breaks=NA,
-                         closed = FALSE, closed_join_ends = TRUE, closed_smooth = TRUE, 
+                         closed = FALSE, closed_join_ends = FALSE, closed_smooth = TRUE, 
                          twists = 0,
                          texture_repeats = 1,
                          straight = FALSE, precomputed_control_points = FALSE, 
