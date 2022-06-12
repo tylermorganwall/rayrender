@@ -4,7 +4,7 @@
 \alias{add_object}
 \title{Add Object}
 \usage{
-add_object(scene, objects)
+add_object(scene, objects = NULL)
 }
 \arguments{
 \item{scene}{Tibble of pre-existing object locations and properties.}

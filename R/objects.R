@@ -1913,9 +1913,11 @@ bezier_curve = function(p1 = c(0,0,0), p2 = c(-1,0.33,0), p3 = c(1,0.66,0), p4=c
 #' @param x Default `0`. x-coordinate offset for the path.
 #' @param y Default `0`. y-coordinate offset for the path.
 #' @param z Default `0`. z-coordinate offset for the path.
-#' @param closed Default `FALSE`. If `TRUE`, a final segment will be added that connects the first
-#' and last points (unless they are already the same). Note: This final connection does not have 
-#' continuous 1st and 2nd derivatives.
+#' @param closed Default `FALSE`. If `TRUE`, the path will be closed by smoothly connecting the first
+#' and last points.
+#' @param closed_smooth Default `TRUE`. If `closed = TRUE`, this will ensure C2 (second derivative) 
+#' continuity between the ends. If `closed = FALSE`, the curve will only have C1 (first derivative)
+#' continuity between the ends.
 #' @param straight Default `FALSE`. If `TRUE`, straight lines will be used to connect the points instead
 #' of bezier curves. 
 #' @param precomputed_control_points Default `FALSE`. If `TRUE`, `points` argument will expect
@@ -2012,7 +2014,8 @@ bezier_curve = function(p1 = c(0,0,0), p2 = c(-1,0.33,0), p3 = c(1,0.66,0), p4=c
 #'   render_scene(samples=500, clamp_value=10, lookfrom=c(0,3,10))
 #' }
 path = function(points,
-                x=0,y=0,z=0, closed = FALSE, straight = FALSE, precomputed_control_points = FALSE,
+                x=0,y=0,z=0, closed = FALSE, closed_smooth = TRUE, 
+                straight = FALSE, precomputed_control_points = FALSE,
                 width = 0.1, width_end = NA, u_min = 0, u_max = 1, type = "cylinder",
                 normal = c(0,0,-1), normal_end = NA, 
                 material = diffuse(), angle = c(0, 0, 0),
@@ -2062,10 +2065,20 @@ path = function(points,
   if(!precomputed_control_points) {
     if(inherits(points,"matrix")) {
       if(ncol(points) == 3) {
+        if(closed && closed_smooth) {
+          points = rbind(points[c(nrow(points)-2,nrow(points)-1,nrow(points)),], points, points[1:3,])
+        }
         if(!straight) {
           full_control_points = calculate_control_points(points)
         } else {
           full_control_points = calculate_control_points_straight(points)
+        }
+        if(closed && closed_smooth) {
+          full_control_points[[length(full_control_points)]] = NULL
+          full_control_points[[length(full_control_points)]] = NULL
+          full_control_points[[1]] = NULL
+          full_control_points[[1]] = NULL
+          full_control_points[[1]] = NULL
         }
       } else {
         stop("If points a matrix or data.frame, must have 3 columns")
@@ -2076,7 +2089,7 @@ path = function(points,
   } else {
     full_control_points = points
   }
-  if(closed) {
+  if(closed && !closed_smooth) {
     first_point = full_control_points[[1]]
     last_point = full_control_points[[length(full_control_points)]]
     full_control_points[[length(full_control_points) + 1]] = last_point
@@ -2502,9 +2515,13 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
 #' @param polygon_end Defaults to `polygon`. If specified, the number of vertices should equal the to the number of vertices 
 #' of the polygon set in `polygon`. Vertices are taken as sequential rows. If the polygon isn't closed (the last vertex equal to the first), it will be closed automatically.
 #' @param breaks Defaults to `20` times the number of control points in the bezier curve.
-#' @param closed Default `FALSE`. If `TRUE`, a final segment will be added that connects the first
-#' and last points (unless they are already the same). Note: This final connection does not have 
-#' continuous 1st and 2nd derivatives.
+#' @param closed Default `FALSE`. If `TRUE`, the path will be closed by smoothly connecting the first
+#' and last points, also ensuring the final polygon is aligned to the first.
+#' @param closed_join_ends Default `TRUE`. If `closed = TRUE`, this will average and combine the last and first
+#' set of vertices in the path.
+#' @param closed_smooth Default `TRUE`. If `closed = TRUE`, this will ensure C2 (second derivative) 
+#' continuity between the ends. If `closed = FALSE`, the curve will only have C1 (first derivative)
+#' continuity between the ends.
 #' @param twists Default `0`. Number of twists in the polygon from one end to another.
 #' @param straight Default `FALSE`. If `TRUE`, straight lines will be used to connect the points instead
 #' of bezier curves. 
@@ -2614,7 +2631,7 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
 #' #Add three and a half twists along the path, and make sure the breaks are evenly spaced
 #' generate_studio(depth=-0.4,material=ground_mat) |>
 #'   add_object(extruded_path(points = points, width=0.5, twists = 3.5,
-#'                            polygon=star_polygon, linear_step = T, breaks=360,
+#'                            polygon=star_polygon, linear_step = TRUE, breaks=360,
 #'                            material_cap  = diffuse(color="white"),
 #'                            material=diffuse(color="red"))) |> 
 #'   add_object(sphere(y=3,z=5,x=2,material=light(intensity=15))) |> 
@@ -2625,8 +2642,8 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
 #' generate_studio(depth=-0.4,material=ground_mat) |>
 #'   add_object(extruded_path(points = points, width=0.5, twists = 3.5,
 #'                            polygon=star_polygon, 
-#'                            linear_step = T, breaks=360,
-#'                            smooth_normals = T,
+#'                            linear_step = TRUE, breaks=360,
+#'                            smooth_normals = TRUE,
 #'                            material_cap  = diffuse(color="white"),
 #'                            material=diffuse(color="red"))) |> 
 #'   add_object(sphere(y=3,z=5,x=2,material=light(intensity=15))) |> 
@@ -2638,27 +2655,45 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
 #' generate_studio(depth=-0.4,material=ground_mat) |>
 #'   add_object(extruded_path(points = points, width=0.5, twists = 3.5,
 #'                            u_min = 0.2, u_max = 0.8,
-#'                            polygon=star_polygon, linear_step = T, breaks=360,
+#'                            polygon=star_polygon, linear_step = TRUE, breaks=360,
 #'                            material_cap  = diffuse(color="white"),
 #'                            material=diffuse(color="red"))) |> 
 #'   add_object(sphere(y=3,z=5,x=2,material=light(intensity=15))) |> 
 #'   render_scene(lookat=c(0.3,0.5,0),fov=12, width=800,height=800, clamp_value = 10,
 #'                aperture=0.025, samples=256, sample_method="sobol_blue")
+#'              
+#' #Render a Mobius strip with 1.5 turns 
+#' points = list(c(0,0,0),c(0.5,0.5,0),c(0,1,0),c(-0.5,0.5,0))
+#' square_polygon = matrix(c(-1, -0.1, 0,
+#'                            1, -0.1, 0,
+#'                            1,  0.1, 0,
+#'                           -1,  0.1, 0)/10, ncol=3,byrow = T)
+#'
+#' generate_studio(depth=-0.2,
+#'                material=diffuse(color = "dodgerblue4", checkercolor = "#002a61",
+#'                                 checkerperiod = 1)) |>
+#'  add_object(extruded_path(points = points,  polygon=square_polygon, closed = TRUE,
+#'                           linear_step = TRUE, twists = 1.5, breaks = 720, 
+#'                           material = diffuse(noisecolor = "black", noise = 10, 
+#'                                              noiseintensity = 10))) |>
+#'  add_object(sphere(y=20,x=0,z=21,material=light(intensity = 1000))) |> 
+#'  render_scene(lookat=c(0,0.5,0), fov=10, samples=256, sample_method = "sobol_blue",
+#'               width = 800, height=800)
 #' 
 #' #Create a green glass tube with the dielectric priority interface
 #' #and fill it with a purple neon tube light
 #' generate_ground(depth=-0.4,material=diffuse(color="grey50",
 #'                                             checkercolor = "grey20",checkerperiod = 1.5)) |>
-#'   add_object(extruded_path(points = points, width=0.7, linear_step = T, 
+#'   add_object(extruded_path(points = points, width=0.7, linear_step = TRUE, 
 #'                            polygon = circ_polygon, twists = 2,
 #'                            polygon_end = star_polygon,
 #'                            material=dielectric(priority = 1, refraction = 1.2, 
 #'                                                attenuation=c(1,0.3,1)*10))) |> 
-#'   add_object(extruded_path(points = points, width=0.4, linear_step = T,
+#'   add_object(extruded_path(points = points, width=0.4, linear_step = TRUE,
 #'                            polygon = circ_polygon,twists = 2,
 #'                            polygon_end = star_polygon,
 #'                            material=dielectric(priority = 0,refraction = 1))) |>  
-#'   add_object(extruded_path(points = points, width=0.05, closed = T,
+#'   add_object(extruded_path(points = points, width=0.05, closed = TRUE,
 #'                            material=light(color="purple", intensity = 5,
 #'                                           importance_sample = FALSE))) |>
 #'   add_object(sphere(y=10,z=-5,x=0,radius=5,material=light(color = "white",intensity = 5))) |>
@@ -2672,7 +2707,9 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
 #' }
 extruded_path = function(points, x = 0, y = 0, z = 0, 
                          polygon = NA, polygon_end = NA, breaks=NA,
-                         closed = FALSE, twists = 0, texture_repeats = 1,
+                         closed = FALSE, closed_join_ends = TRUE, closed_smooth = TRUE, 
+                         twists = 0,
+                         texture_repeats = 1,
                          straight = FALSE, precomputed_control_points = FALSE, 
                          width = 1, width_end = NA, width_ease = "spline",
                          smooth_normals = FALSE,
@@ -2801,10 +2838,20 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
   if(!precomputed_control_points) {
     if(inherits(points,"matrix")) {
       if(ncol(points) == 3) {
+        if(closed && closed_smooth) {
+          points = rbind(points[c(nrow(points)-2,nrow(points)-1,nrow(points)),], points, points[1:3,])
+        }
         if(!straight) {
           full_control_points = calculate_control_points(points)
         } else {
           full_control_points = calculate_control_points_straight(points)
+        }
+        if(closed && closed_smooth) {
+          full_control_points[[length(full_control_points)]] = NULL
+          full_control_points[[length(full_control_points)]] = NULL
+          full_control_points[[1]] = NULL
+          full_control_points[[1]] = NULL
+          full_control_points[[1]] = NULL
         }
       } else {
         stop("If points a matrix or data.frame, must have 3 columns")
@@ -2815,7 +2862,7 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
   } else {
     full_control_points = points
   }
-  if(closed) {
+  if(closed && !closed_smooth) {
     first_point = full_control_points[[1]]
     last_point = full_control_points[[length(full_control_points)]]
     full_control_points[[length(full_control_points) + 1]] = last_point
@@ -2865,8 +2912,10 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
   }
   width_vals = abs(width_vals)
   morph_vals = seq(0, 1, length.out=breaks)
-  
   t_init = t_vals[seg_begin]
+  if(t_init < 0) {
+    t_init = 0
+  }
   initial_deriv = eval_bezier_deriv(full_control_points[[1]],t_init)
   initial_2nd_deriv = eval_bezier_2nd_deriv(full_control_points[[1]],t_init)
   if(all(abs(initial_2nd_deriv) < 1e-6)) {
@@ -2886,9 +2935,9 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
   poly_tex = seq(0,1,length.out=nrow(polygon))
   counter = 1
   if(closed) {
-    end_angle = twists*2*pi + calculate_final_twist(full_control_points, 
-                                                    breaks, t_vals, morph_vals, width_vals, 
-                                                    t_vec, s_vec, r_vec, twists*2*pi)
+    end_angle = twists*2*pi + calculate_final_twist(full_control_points,
+                                                    breaks, t_vals,
+                                                    t_vec, s_vec, r_vec)
   } else {
     end_angle = twists*2*pi
   }
@@ -2979,7 +3028,13 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
     t((rot_mat %*% twist_mat %*% t(polygon_end*width_vals[seg_end+1])))
   texcoords[[counter]] = matrix(c(poly_tex,rep(1 * texture_repeats,nrow(polygon))),
                                 ncol=2,nrow=nrow(polygon))
-  
+  if(closed && closed_join_ends) {
+    last_verts =  vertices[[counter]]
+    first_verts =  vertices[[1]]
+    avg_verts = (last_verts + first_verts)/2
+    vertices[[1]] = avg_verts
+    vertices[[counter]] = avg_verts
+  }
   if(smooth_normals) {
     norm_transform = t(solve(rot_mat %*% twist_mat))
     normals[[counter]] = t((norm_transform %*% t(normal_polys_end)))

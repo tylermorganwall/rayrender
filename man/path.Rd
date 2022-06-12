@@ -10,6 +10,7 @@ path(
   y = 0,
   z = 0,
   closed = FALSE,
+  closed_smooth = TRUE,
   straight = FALSE,
   precomputed_control_points = FALSE,
   width = 0.1,
@@ -36,9 +37,12 @@ the x/y/z points that the path should go through.}
 
 \item{z}{Default `0`. z-coordinate offset for the path.}
 
-\item{closed}{Default `FALSE`. If `TRUE`, a final segment will be added that connects the first
-and last points (unless they are already the same). Note: This final connection does not have 
-continuous 1st and 2nd derivatives.}
+\item{closed}{Default `FALSE`. If `TRUE`, the path will be closed by smoothly connecting the first
+and last points.}
+
+\item{closed_smooth}{Default `TRUE`. If `closed = TRUE`, this will ensure C2 (second derivative) 
+continuity between the ends. If `closed = FALSE`, the curve will only have C1 (first derivative)
+continuity between the ends.}
 
 \item{straight}{Default `FALSE`. If `TRUE`, straight lines will be used to connect the points instead
 of bezier curves.}

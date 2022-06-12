@@ -13,6 +13,8 @@ extruded_path(
   polygon_end = NA,
   breaks = NA,
   closed = FALSE,
+  closed_join_ends = TRUE,
+  closed_smooth = TRUE,
   twists = 0,
   texture_repeats = 1,
   straight = FALSE,
@@ -50,9 +52,15 @@ of the polygon set in `polygon`. Vertices are taken as sequential rows. If the p
 
 \item{breaks}{Defaults to `20` times the number of control points in the bezier curve.}
 
-\item{closed}{Default `FALSE`. If `TRUE`, a final segment will be added that connects the first
-and last points (unless they are already the same). Note: This final connection does not have 
-continuous 1st and 2nd derivatives.}
+\item{closed}{Default `FALSE`. If `TRUE`, the path will be closed by smoothly connecting the first
+and last points, also ensuring the final polygon is aligned to the first.}
+
+\item{closed_join_ends}{Default `TRUE`. If `closed = TRUE`, this will average and combine the last and first
+set of vertices in the path.}
+
+\item{closed_smooth}{Default `TRUE`. If `closed = TRUE`, this will ensure C2 (second derivative) 
+continuity between the ends. If `closed = FALSE`, the curve will only have C1 (first derivative)
+continuity between the ends.}
 
 \item{twists}{Default `0`. Number of twists in the polygon from one end to another.}
 
@@ -182,7 +190,7 @@ generate_studio(depth=-0.4,material=ground_mat) |>
 #Add three and a half twists along the path, and make sure the breaks are evenly spaced
 generate_studio(depth=-0.4,material=ground_mat) |>
   add_object(extruded_path(points = points, width=0.5, twists = 3.5,
-                           polygon=star_polygon, linear_step = T, breaks=360,
+                           polygon=star_polygon, linear_step = TRUE, breaks=360,
                            material_cap  = diffuse(color="white"),
                            material=diffuse(color="red"))) |> 
   add_object(sphere(y=3,z=5,x=2,material=light(intensity=15))) |> 
@@ -193,8 +201,8 @@ generate_studio(depth=-0.4,material=ground_mat) |>
 generate_studio(depth=-0.4,material=ground_mat) |>
   add_object(extruded_path(points = points, width=0.5, twists = 3.5,
                            polygon=star_polygon, 
-                           linear_step = T, breaks=360,
-                           smooth_normals = T,
+                           linear_step = TRUE, breaks=360,
+                           smooth_normals = TRUE,
                            material_cap  = diffuse(color="white"),
                            material=diffuse(color="red"))) |> 
   add_object(sphere(y=3,z=5,x=2,material=light(intensity=15))) |> 
@@ -206,27 +214,45 @@ generate_studio(depth=-0.4,material=ground_mat) |>
 generate_studio(depth=-0.4,material=ground_mat) |>
   add_object(extruded_path(points = points, width=0.5, twists = 3.5,
                            u_min = 0.2, u_max = 0.8,
-                           polygon=star_polygon, linear_step = T, breaks=360,
+                           polygon=star_polygon, linear_step = TRUE, breaks=360,
                            material_cap  = diffuse(color="white"),
                            material=diffuse(color="red"))) |> 
   add_object(sphere(y=3,z=5,x=2,material=light(intensity=15))) |> 
   render_scene(lookat=c(0.3,0.5,0),fov=12, width=800,height=800, clamp_value = 10,
                aperture=0.025, samples=256, sample_method="sobol_blue")
+             
+#Render a Mobius strip with 1.5 turns 
+points = list(c(0,0,0),c(0.5,0.5,0),c(0,1,0),c(-0.5,0.5,0))
+square_polygon = matrix(c(-1, -0.1, 0,
+                           1, -0.1, 0,
+                           1,  0.1, 0,
+                          -1,  0.1, 0)/10, ncol=3,byrow = T)
+
+generate_studio(depth=-0.2,
+               material=diffuse(color = "dodgerblue4", checkercolor = "#002a61",
+                                checkerperiod = 1)) |>
+ add_object(extruded_path(points = points,  polygon=square_polygon, closed = TRUE,
+                          linear_step = TRUE, twists = 1.5, breaks = 720, 
+                          material = diffuse(noisecolor = "black", noise = 10, 
+                                             noiseintensity = 10))) |>
+ add_object(sphere(y=20,x=0,z=21,material=light(intensity = 1000))) |> 
+ render_scene(lookat=c(0,0.5,0), fov=10, samples=256, sample_method = "sobol_blue",
+              width = 800, height=800)
 
 #Create a green glass tube with the dielectric priority interface
 #and fill it with a purple neon tube light
 generate_ground(depth=-0.4,material=diffuse(color="grey50",
                                             checkercolor = "grey20",checkerperiod = 1.5)) |>
-  add_object(extruded_path(points = points, width=0.7, linear_step = T, 
+  add_object(extruded_path(points = points, width=0.7, linear_step = TRUE, 
                            polygon = circ_polygon, twists = 2,
                            polygon_end = star_polygon,
                            material=dielectric(priority = 1, refraction = 1.2, 
                                                attenuation=c(1,0.3,1)*10))) |> 
-  add_object(extruded_path(points = points, width=0.4, linear_step = T,
+  add_object(extruded_path(points = points, width=0.4, linear_step = TRUE,
                            polygon = circ_polygon,twists = 2,
                            polygon_end = star_polygon,
                            material=dielectric(priority = 0,refraction = 1))) |>  
-  add_object(extruded_path(points = points, width=0.05, closed = T,
+  add_object(extruded_path(points = points, width=0.05, closed = TRUE,
                            material=light(color="purple", intensity = 5,
                                           importance_sample = FALSE))) |>
   add_object(sphere(y=10,z=-5,x=0,radius=5,material=light(color = "white",intensity = 5))) |>

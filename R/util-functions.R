@@ -292,8 +292,8 @@ RotateAxis = function(theta, axis) {
 #'
 #' @keywords internal
 calculate_final_twist = function(full_control_points, 
-                                 breaks, t_vals, morph_vals, width_vals, 
-                                 t_vec, s_vec, r_vec, end_angle) {
+                                 breaks, t_vals, 
+                                 t_vec, s_vec, r_vec) {
   r_vec0 = r_vec
   for(i in seq_len(breaks-1)) {
     t_val0 = t_vals[i]
@@ -304,12 +304,6 @@ calculate_final_twist = function(full_control_points,
     if(t_val1 < 0) {
       t_val1 = 0
     }
-    width_temp = width_vals[i]
-    
-    temp_angle = morph_vals[i] * end_angle
-    twist_mat = matrix(c(cos(temp_angle),-sin(temp_angle),0,
-                         sin(temp_angle), cos(temp_angle),0,
-                         0,            0,                 1), nrow=3,ncol=3,byrow=TRUE)
     
     rot_mat = matrix(c(s_vec,r_vec,t_vec),3,3)
     t_temp0 = t_val0-floor(t_val0)
