@@ -3202,15 +3202,24 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
   material_id = get("max_material_id", envir = ray_environment)
   material_id = material_id + 1
   assign("max_material_id", material_id, envir = ray_environment)
-  return_scene = add_object(mesh3d_model(mesh,x=x,y=y,z=z, override_material = TRUE,
-                              angle=angle, order_rotation = order_rotation, flipped=flipped,
-                              scale=scale, material = material),
-                            mesh3d_model(mesh_caps,x=x,y=y,z=z, material = material_caps,
-                                         override_material = TRUE,
-                                         angle=angle, order_rotation = order_rotation, flipped=flipped,
-                                         scale=scale))
-  if(same_material) {
-    return_scene$material_id = c(material_id, material_id)
+  if(!closed_join_ends) {
+    return_scene = add_object(mesh3d_model(mesh,x=x,y=y,z=z, override_material = TRUE,
+                                angle=angle, order_rotation = order_rotation, flipped=flipped,
+                                scale=scale, material = material),
+                              mesh3d_model(mesh_caps,x=x,y=y,z=z, material = material_caps,
+                                           override_material = TRUE,
+                                           angle=angle, order_rotation = order_rotation, flipped=flipped,
+                                           scale=scale))
+    if(same_material) {
+      return_scene$material_id = c(material_id, material_id)
+    }
+  } else {
+    return_scene = mesh3d_model(mesh,x=x,y=y,z=z, override_material = TRUE,
+                                           angle=angle, order_rotation = order_rotation, flipped=flipped,
+                                           scale=scale, material = material)
+    if(same_material) {
+      return_scene$material_id = material_id
+    }
   }
   return(return_scene)
 }
