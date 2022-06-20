@@ -3160,13 +3160,6 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
     t((rot_mat %*% twist_mat %*% t(polygon_end*width_vals[seg_end+1])))
   texcoords[[counter]] = matrix(c(poly_tex,rep(1 * texture_repeats,nrow(polygon))),
                                 ncol=2,nrow=nrow(polygon))
-  if(closed) {
-    last_verts =  vertices[[counter]]
-    first_verts =  vertices[[1]]
-    avg_verts = (last_verts + first_verts)/2
-    vertices[[1]] = avg_verts
-    vertices[[counter]] = avg_verts
-  }
   if(smooth_normals) {
     norm_transform = t(solve(rot_mat %*% twist_mat))
     normals[[counter]] = t((norm_transform %*% t(normal_polys_end)))
