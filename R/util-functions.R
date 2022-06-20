@@ -314,6 +314,8 @@ calculate_final_twist = function(full_control_points,
                                  breaks, t_vals, 
                                  t_vec, s_vec, r_vec) {
   r_vec0 = r_vec
+  s_vec0 = s_vec
+  t_vec0 = t_vec
   for(i in seq_len(breaks-1)) {
     t_val0 = t_vals[i]
     if(t_val0 < 0) {
@@ -367,8 +369,11 @@ calculate_final_twist = function(full_control_points,
       s_vec = cross_prod(t_vec,r_vec)
     }
   }
-  angle = acos(sum(r_vec0*r_vec))
-  return(angle)
+  angle_r = acos(sum(r_vec0*r_vec))
+  angle_s = acos(sum(s_vec0*s_vec))
+  angle_t = acos(sum(t_vec0*t_vec))
+  
+  return(c(angle_r,angle_s,angle_t))
 }
 
 #' Add Points to Polygon

@@ -2517,8 +2517,6 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
 #' @param breaks Defaults to `20` times the number of control points in the bezier curve.
 #' @param closed Default `FALSE`. If `TRUE`, the path will be closed by smoothly connecting the first
 #' and last points, also ensuring the final polygon is aligned to the first.
-#' @param closed_join_ends Default `FALSE`. If `closed = TRUE`, this will average and combine the last and first
-#' set of vertices in the path.
 #' @param closed_smooth Default `TRUE`. If `closed = TRUE`, this will ensure C2 (second derivative) 
 #' continuity between the ends. If `closed = FALSE`, the curve will only have C1 (first derivative)
 #' continuity between the ends.
@@ -2709,7 +2707,7 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
 #' }
 extruded_path = function(points, x = 0, y = 0, z = 0, 
                          polygon = NA, polygon_end = NA, breaks=NA,
-                         closed = FALSE, closed_join_ends = FALSE, closed_smooth = TRUE, 
+                         closed = FALSE, closed_smooth = TRUE, 
                          polygon_add_points = 0,
                          twists = 0, 
                          texture_repeats = 1,
@@ -3027,17 +3025,26 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
   s_vec = cross_prod(initial_deriv,initial_2nd_deriv)
   s_vec = s_vec/sqrt(sum(s_vec*s_vec))
   r_vec = cross_prod(s_vec,t_vec)
+  t_vec0 = t_vec
+  s_vec0 = s_vec
+  r_vec0 = r_vec
+  
   vertices = list()
   texcoords = list()
   normals = list()
   poly_tex = seq(0,1,length.out=nrow(polygon))
   counter = 1
-  if(closed) {
-    end_angle = twists*2*pi + calculate_final_twist(full_control_points,
-                                                    breaks, t_vals,
-                                                    t_vec, s_vec, r_vec)
+  if(closed && !closed_smooth) {
+    twist_amount = -calculate_final_twist(full_control_points,
+                                         breaks, t_vals,
+                                         t_vec, s_vec, r_vec)
+    end_angle_r = twists*2*pi + twist_amount[1]
+    end_angle_s = twist_amount[2]
+    end_angle_t = twist_amount[3]
   } else {
-    end_angle = twists*2*pi
+    end_angle_r = twists*2*pi
+    end_angle_s = 0
+    end_angle_t = 0
   }
   
   for(i in seq(seg_begin,seg_end,by=1)) {
@@ -3052,10 +3059,20 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
     width_temp = width_vals[i]
     
     temp_poly = morph_vals[i] * polygon_end + (1-morph_vals[i]) * polygon
-    temp_angle = morph_vals[i] * end_angle
-    twist_mat = matrix(c(cos(temp_angle),-sin(temp_angle),0,
-                         sin(temp_angle), cos(temp_angle),0,
-                         0,            0,                 1), nrow=3,ncol=3,byrow=TRUE)
+    temp_angle_r = morph_vals[i] * end_angle_r
+    temp_angle_s = morph_vals[i] * end_angle_s
+    temp_angle_t = morph_vals[i] * end_angle_t
+    
+    ca = cos(temp_angle_t)
+    sa = sin(temp_angle_t)
+    cb = cos(temp_angle_s)
+    sb = sin(temp_angle_s)
+    cc = cos(temp_angle_r)
+    sc = sin(temp_angle_r)
+    
+    twist_mat = matrix(c(cb*cc, sa*sb*cc-ca*sc, ca*sb*cc + sa*sc,
+                         cb*sc, sa*sb*sc+ca*cc, ca*sb*sc - sa*cc,
+                         -sb,              sa*cb,            ca*cb), nrow=3,ncol=3,byrow=TRUE)
     
     rot_mat = matrix(c(s_vec,r_vec,t_vec),3,3)
     t_temp0 = t_val0-floor(t_val0)
@@ -3113,20 +3130,37 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
     v2 = t_vec_prev - tl
     c2 = sum(v2*v2)
     if(c2 != 0) {
-      t_vec = t_vec_prev
-      r_vec = rl - (2 / c2) * sum(v2*rl) * v2
-      s_vec = cross_prod(t_vec,r_vec)
+      if(i != seg_end || !closed) {
+        t_vec = t_vec_prev
+        r_vec = rl - (2 / c2) * sum(v2*rl) * v2
+        s_vec = cross_prod(t_vec,r_vec)
+      } else {
+        t_vec = t_vec0
+        s_vec = s_vec0
+        r_vec = r_vec0
+      }
     }
   }
   rot_mat = matrix(c(s_vec,r_vec,t_vec),3,3)
-  twist_mat = matrix(c(cos(end_angle*morph_vals[seg_end]),-sin(end_angle*morph_vals[seg_end]),0,
-                       sin(end_angle*morph_vals[seg_end]), cos(end_angle*morph_vals[seg_end]),0,
-                       0,            0,                 1), nrow=3,ncol=3,byrow=TRUE)
+  
+  temp_angle_r = morph_vals[seg_end] * end_angle_r
+  temp_angle_s = morph_vals[seg_end] * end_angle_s
+  temp_angle_t = morph_vals[seg_end] * end_angle_t
+  ca = cos(temp_angle_t)
+  sa = sin(temp_angle_t)
+  cb = cos(temp_angle_s)
+  sb = sin(temp_angle_s)
+  cc = cos(temp_angle_r)
+  sc = sin(temp_angle_r)
+  
+  twist_mat = matrix(c(cb*cc, sa*sb*cc-ca*sc, ca*sb*cc + sa*sc,
+                       cb*sc, sa*sb*sc+ca*cc, ca*sb*sc - sa*cc,
+                       -sb,              sa*cb,         ca*cb), nrow=3,ncol=3,byrow=TRUE)
   vertices[[counter]] = matrix(x1,ncol=3,nrow=nrow(polygon), byrow=TRUE) +
     t((rot_mat %*% twist_mat %*% t(polygon_end*width_vals[seg_end+1])))
   texcoords[[counter]] = matrix(c(poly_tex,rep(1 * texture_repeats,nrow(polygon))),
                                 ncol=2,nrow=nrow(polygon))
-  if(closed && closed_join_ends) {
+  if(closed) {
     last_verts =  vertices[[counter]]
     first_verts =  vertices[[1]]
     avg_verts = (last_verts + first_verts)/2
@@ -3202,7 +3236,7 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
   material_id = get("max_material_id", envir = ray_environment)
   material_id = material_id + 1
   assign("max_material_id", material_id, envir = ray_environment)
-  if(!closed_join_ends) {
+  if(!closed) {
     return_scene = add_object(mesh3d_model(mesh,x=x,y=y,z=z, override_material = TRUE,
                                 angle=angle, order_rotation = order_rotation, flipped=flipped,
                                 scale=scale, material = material),
