@@ -3222,6 +3222,9 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
   }
   
   faces = (nrow(polygon)-1)*2*(length(vertices)-1)
+  if(faces == 0) {
+    return()
+  }
   band_faces  = (nrow(polygon)-1)*2
   it = matrix(0,nrow=3,ncol=faces)
   polyadd = c(0,0,nrow(polygon),nrow(polygon),0,nrow(polygon))
