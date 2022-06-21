@@ -2534,8 +2534,10 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
 #' @param width_end Default `NA`. Width at end of path. Same as `width`, unless specified. Ignored if multiple width values 
 #' specified in `width`.
 #' @param width_ease Default `spline`. Ease function between width values. Other options: `linear`, `quad`, `cubic`, `exp`.
-#' @param u_min Default `0`. Minimum parametric coordinate for the path.
-#' @param u_max Default `1`. Maximum parametric coordinate for the path.
+#' @param u_min Default `0`. Minimum parametric coordinate for the path. If `closed = TRUE`, values greater than one will refer to the beginning 
+#' of the loop (but the path will be generated as two objects).
+#' @param u_max Default `1`. Maximum parametric coordinate for the path. If `closed = TRUE`, values greater than one will refer to the beginning 
+#' of the loop (but the path will be generated as two objects).
 #' @param material Default  \code{\link{diffuse}}. The material, called from one of the material 
 #' functions.
 #' @param material_caps Defaults to the same material set in `material`.
@@ -2549,6 +2551,7 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
 #' @param smooth_normals Default `FALSE`. Whether to smooth the normals of the polygon to remove sharp angles.
 #' @param linear_step Default `FALSE`. Whether the polygon intervals should be set at linear intervals,
 #' rather than intervals based on the underlying bezier curve parameterization.
+#' @param end_caps Default `c(TRUE, TRUE)`. Specifies whether to add an end cap to the beginning and end of a path.
 #' @importFrom  grDevices col2rgb
 #'
 #' @return Single row of a tibble describing the cube in the scene.
@@ -2710,14 +2713,62 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
                          closed = FALSE, closed_smooth = TRUE, 
                          polygon_add_points = 0,
                          twists = 0, 
-                         texture_repeats = 1,
+                         texture_repeats = 1, 
                          straight = FALSE, precomputed_control_points = FALSE, 
                          width = 1, width_end = NA, width_ease = "spline",
                          smooth_normals = FALSE,
-                         u_min = 0, u_max = 1, linear_step = FALSE,
+                         u_min = 0, u_max = 1, linear_step = FALSE, end_caps = c(TRUE, TRUE),
                          material = diffuse(), material_caps = NA, angle = c(0, 0, 0),
                          order_rotation = c(1, 2, 3),
                          flipped = FALSE, scale = c(1,1,1)) {
+  if(closed) {
+    if((u_max - u_min) >= 1) {
+      u_min = 0
+      u_max = 1
+      end_caps = c(FALSE, FALSE)
+    } else {
+      u_min = u_min %% 1
+      if(u_max != 1) {
+        u_max = u_max %% 1
+      }
+      if(u_max == 0 && u_min > 0) {
+        u_max = 1
+      }
+    }
+    if(u_max < u_min) {
+      combined_return = add_object(
+        extruded_path(points=points,x=x,y=y,z=z,polygon=polygon,polygon_end=polygon_end,
+                                                 breaks=breaks,closed = closed, closed_smooth = closed_smooth,
+                                                 polygon_add_points = polygon_add_points,
+                                                 twists = twists,
+                                                 texture_repeats = texture_repeats,
+                                                 straight = straight, precomputed_control_points = precomputed_control_points,
+                                                 width = width, width_end = width_end, width_ease = width_ease,
+                                                 smooth_normals = smooth_normals,
+                                                 u_min = 0, u_max = u_max, linear_step = linear_step, end_caps = c(FALSE, TRUE),
+                                                 material = material, material_caps = material_caps, angle = angle,
+                                                 order_rotation = order_rotation,
+                                                 flipped = flipped, scale = scale),
+                                   extruded_path(points=points,x=x,y=y,z=z,polygon=polygon,polygon_end=polygon_end,
+                                                 breaks=breaks,closed = closed, closed_smooth = closed_smooth,
+                                                 polygon_add_points = polygon_add_points,
+                                                 twists = twists,
+                                                 texture_repeats = texture_repeats,
+                                                 straight = straight, precomputed_control_points = precomputed_control_points,
+                                                 width = width, width_end = width_end, width_ease = width_ease,
+                                                 smooth_normals = smooth_normals,
+                                                 u_min = u_min, u_max = 1, linear_step = linear_step, end_caps = c(TRUE, FALSE),
+                                                 material = material, material_caps = material_caps, angle = angle,
+                                                 order_rotation = order_rotation,
+                                                 flipped = flipped, scale = scale)
+                                   )
+      material_id = get("max_material_id", envir = ray_environment)
+      material_id = material_id + 1
+      assign("max_material_id", material_id, envir = ray_environment)
+      combined_return$material_id = rep(material_id,nrow(combined_return))
+      return(combined_return)
+    }
+  }
   if(is.null(dim(polygon))) {
     angles = seq(0,360,length.out=31)
     xx = 1 / 2 * sinpi(angles/180)
@@ -2799,7 +2850,7 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
       if(!revisit[i]) {
         normal_poly[[i]] = normal_poly[[i]] / sqrt(sum(normal_poly[[i]]^2))
         if(any(is.nan(normal_poly[[i]]))) {
-          browser()
+          stop("NaN coordinates found in smoothed normals--is polygon correct?")
         }
       }
     }
@@ -2865,6 +2916,9 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
       normal_poly_end[[i]] = matrix(temp_norm, nrow=1,ncol=3)
       if(!revisit[i]) {
         normal_poly_end[[i]] = normal_poly_end[[i]] / sqrt(sum(normal_poly_end[[i]]^2))
+        if(any(is.nan(normal_poly_end[[i]]))) {
+          stop("NaN coordinates found in smoothed normals--is polygon_end correct?")
+        }
       }
     }
     if(any(revisit)) {
@@ -2907,9 +2961,6 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
   if(u_min == u_max) {
     return()
   }
-  stopifnot(u_min <= u_max)
-  stopifnot(u_min >= 0)
-  stopifnot(u_max <= 1)
   
   if(inherits(points,"numeric")) {
     stop("Input must either be list, matrix, or data.frame, not numeric.")
@@ -3009,7 +3060,7 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
   width_vals = abs(width_vals)
   morph_vals = seq(0, 1, length.out=breaks)
   t_init = t_vals[seg_begin]
-  if(t_init < 0) {
+  if(t_init < 0 || closed) {
     t_init = 0
   }
   initial_deriv = eval_bezier_deriv(full_control_points[[1]],t_init)
@@ -3047,7 +3098,7 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
     end_angle_t = 0
   }
   
-  for(i in seq(seg_begin,seg_end,by=1)) {
+  for(i in seq(1,seg_end,by=1)) {
     t_val0 = t_vals[i]
     if(t_val0 < 0) {
       t_val0 = 0
@@ -3105,19 +3156,20 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
     } else if (i == length(width_vals)) {
       width_norm = -(width_vals[i]-width_vals[i-1])/sqrt(sum((x1-x0)^2))
     }
-
-    vertices[[counter]] = matrix(x0,ncol=3,nrow=nrow(polygon), byrow=TRUE) + 
-      t((rot_mat %*% twist_mat %*% t(temp_poly*width_temp)))
-    texcoords[[counter]] = matrix(c(poly_tex,rep(morph_vals[i] * texture_repeats,nrow(polygon))), 
-                                  ncol=2,nrow=nrow(polygon))
-    if(smooth_normals) {
-      temp_norm = morph_vals[i] * normal_polys_end + (1-morph_vals[i]) * normal_polys
-      temp_norm[,3] = width_norm
-      norm_transform = t(solve(rot_mat %*% twist_mat))
-      normals[[counter]] = t((norm_transform %*% t(temp_norm)))
+    if(i >= seg_begin) {
+      vertices[[counter]] = matrix(x0,ncol=3,nrow=nrow(polygon), byrow=TRUE) + 
+        t((rot_mat %*% twist_mat %*% t(temp_poly*width_temp)))
+      texcoords[[counter]] = matrix(c(poly_tex,rep(morph_vals[i] * texture_repeats,nrow(polygon))), 
+                                    ncol=2,nrow=nrow(polygon))
+      if(smooth_normals) {
+        temp_norm = morph_vals[i] * normal_polys_end + (1-morph_vals[i]) * normal_polys
+        temp_norm[,3] = width_norm
+        norm_transform = t(solve(rot_mat %*% twist_mat))
+        normals[[counter]] = t((norm_transform %*% t(temp_norm)))
+      }
+      
+      counter = counter + 1
     }
-    
-    counter = counter + 1
     #Evaluate next set of vectors
     v1 = x1-x0
     c1 = sum(v1*v1)
@@ -3130,15 +3182,9 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
     v2 = t_vec_prev - tl
     c2 = sum(v2*v2)
     if(c2 != 0) {
-      if(i != seg_end || !closed) {
-        t_vec = t_vec_prev
-        r_vec = rl - (2 / c2) * sum(v2*rl) * v2
-        s_vec = cross_prod(t_vec,r_vec)
-      } else {
-        t_vec = t_vec0
-        s_vec = s_vec0
-        r_vec = r_vec0
-      }
+      t_vec = t_vec_prev
+      r_vec = rl - (2 / c2) * sum(v2*rl) * v2
+      s_vec = cross_prod(t_vec,r_vec)
     }
   }
   rot_mat = matrix(c(s_vec,r_vec,t_vec),3,3)
@@ -3188,15 +3234,33 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
   }
   cap_it_start = matrix(decido::earcut(polygon[,1:2]),nrow=3)
   end_poly_triangulated = decido::earcut(polygon_end[,1:2])
-  cap_it_end_full = matrix(
-    rev(end_poly_triangulated) + nrow(polygon)*(length(vertices)-1),
-    nrow=3)
-  cap_it_end = matrix(rev(end_poly_triangulated) + max(cap_it_start)-min(cap_it_start)+1,
-                      nrow=3)
-  vb_ends = rbind(vb[seq(1,max(cap_it_start)),], vb[seq(min(cap_it_end_full), max(cap_it_end_full)),]) 
-  it_ends = cbind(cap_it_start, cap_it_end)
-  mesh_caps$vb = t(cbind(vb_ends,rep(1,nrow(vb_ends))))          
-  mesh_caps$it = it_ends
+  if(all(end_caps)) {
+    cap_it_end_full = matrix(
+      rev(end_poly_triangulated) + nrow(polygon)*(length(vertices)-1),
+      nrow=3)
+    cap_it_end = matrix(rev(end_poly_triangulated) + max(cap_it_start)-min(cap_it_start)+1,
+                        nrow=3)
+    vb_ends = rbind(vb[seq(1,max(cap_it_start)),], vb[seq(min(cap_it_end_full), max(cap_it_end_full)),]) 
+    it_ends = cbind(cap_it_start, cap_it_end)
+  } else if (end_caps[1]) {
+    vb_ends = vb[seq(1,max(cap_it_start)),]
+    it_ends = cap_it_start
+  } else if (end_caps[2]) {
+    cap_it_end_full = matrix(
+      rev(end_poly_triangulated) + nrow(polygon)*(length(vertices)-1),
+      nrow=3)
+    cap_it_end = matrix(rev(end_poly_triangulated),
+                        nrow=3)
+    if(min(cap_it_end) == 2) {
+      cap_it_end = cap_it_end - 1
+    }
+    vb_ends = vb[seq(min(cap_it_end_full), max(cap_it_end_full)),]
+    it_ends = cap_it_end
+  }
+  if(any(end_caps)) {
+    mesh_caps$vb = t(cbind(vb_ends,rep(1,nrow(vb_ends))))          
+    mesh_caps$it = it_ends
+  }
   
   mesh$vb = t(cbind(vb,rep(1,nrow(vb))))
   if(any(is.nan(mesh$vb))) {
@@ -3229,7 +3293,7 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
   material_id = get("max_material_id", envir = ray_environment)
   material_id = material_id + 1
   assign("max_material_id", material_id, envir = ray_environment)
-  if(!closed) {
+  if(any(end_caps)) {
     return_scene = add_object(mesh3d_model(mesh,x=x,y=y,z=z, override_material = TRUE,
                                 angle=angle, order_rotation = order_rotation, flipped=flipped,
                                 scale=scale, material = material),

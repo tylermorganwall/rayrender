@@ -13,7 +13,6 @@ extruded_path(
   polygon_end = NA,
   breaks = NA,
   closed = FALSE,
-  closed_join_ends = FALSE,
   closed_smooth = TRUE,
   polygon_add_points = 0,
   twists = 0,
@@ -27,6 +26,7 @@ extruded_path(
   u_min = 0,
   u_max = 1,
   linear_step = FALSE,
+  end_caps = c(TRUE, TRUE),
   material = diffuse(),
   material_caps = NA,
   angle = c(0, 0, 0),
@@ -55,9 +55,6 @@ of the polygon set in `polygon`. Vertices are taken as sequential rows. If the p
 
 \item{closed}{Default `FALSE`. If `TRUE`, the path will be closed by smoothly connecting the first
 and last points, also ensuring the final polygon is aligned to the first.}
-
-\item{closed_join_ends}{Default `FALSE`. If `closed = TRUE`, this will average and combine the last and first
-set of vertices in the path.}
 
 \item{closed_smooth}{Default `TRUE`. If `closed = TRUE`, this will ensure C2 (second derivative) 
 continuity between the ends. If `closed = FALSE`, the curve will only have C1 (first derivative)
@@ -88,12 +85,16 @@ specified in `width`.}
 
 \item{smooth_normals}{Default `FALSE`. Whether to smooth the normals of the polygon to remove sharp angles.}
 
-\item{u_min}{Default `0`. Minimum parametric coordinate for the path.}
+\item{u_min}{Default `0`. Minimum parametric coordinate for the path. If `closed = TRUE`, values greater than one will refer to the beginning 
+of the loop (but the path will be generated as two objects).}
 
-\item{u_max}{Default `1`. Maximum parametric coordinate for the path.}
+\item{u_max}{Default `1`. Maximum parametric coordinate for the path. If `closed = TRUE`, values greater than one will refer to the beginning 
+of the loop (but the path will be generated as two objects).}
 
 \item{linear_step}{Default `FALSE`. Whether the polygon intervals should be set at linear intervals,
 rather than intervals based on the underlying bezier curve parameterization.}
+
+\item{end_caps}{Default `c(TRUE, TRUE)`. Specifies whether to add an end cap to the beginning and end of a path.}
 
 \item{material}{Default  \code{\link{diffuse}}. The material, called from one of the material 
 functions.}
