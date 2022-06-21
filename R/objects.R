@@ -2727,9 +2727,11 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
       u_max = 1
       end_caps = c(FALSE, FALSE)
     } else {
-      u_min = u_min %% 1
-      if(u_max != 1) {
-        u_max = u_max %% 1
+      while(u_min >= 1) {
+        u_min = u_min - 1
+      }
+      while(u_max > 1) {
+        u_max = u_max - 1
       }
       if(u_max == 0 && u_min > 0) {
         u_max = 1
