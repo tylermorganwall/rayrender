@@ -2538,6 +2538,11 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
 #' of the loop (but the path will be generated as two objects).
 #' @param u_max Default `1`. Maximum parametric coordinate for the path. If `closed = TRUE`, values greater than one will refer to the beginning 
 #' of the loop (but the path will be generated as two objects).
+#' @param texture_repeats Default `1`. Number of times to repeat the texture along the length of the path.
+#' @param smooth_normals Default `FALSE`. Whether to smooth the normals of the polygon to remove sharp angles.
+#' @param linear_step Default `FALSE`. Whether the polygon intervals should be set at linear intervals,
+#' rather than intervals based on the underlying bezier curve parameterization.
+#' @param end_caps Default `c(TRUE, TRUE)`. Specifies whether to add an end cap to the beginning and end of a path.
 #' @param material Default  \code{\link{diffuse}}. The material, called from one of the material 
 #' functions.
 #' @param material_caps Defaults to the same material set in `material`.
@@ -2547,11 +2552,6 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
 #' @param flipped Default `FALSE`. Whether to flip the normals.
 #' @param scale Default `c(1, 1, 1)`. Scale transformation in the x, y, and z directions. If this is a single value,
 #' number, the object will be scaled uniformly.
-#' @param texture_repeats Default `1`. Number of times to repeat the texture along the length of the path.
-#' @param smooth_normals Default `FALSE`. Whether to smooth the normals of the polygon to remove sharp angles.
-#' @param linear_step Default `FALSE`. Whether the polygon intervals should be set at linear intervals,
-#' rather than intervals based on the underlying bezier curve parameterization.
-#' @param end_caps Default `c(TRUE, TRUE)`. Specifies whether to add an end cap to the beginning and end of a path.
 #' @importFrom  grDevices col2rgb
 #'
 #' @return Single row of a tibble describing the cube in the scene.
