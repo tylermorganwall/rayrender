@@ -18,7 +18,7 @@ ray marching/sphere tracing."><meta property="og:image" content="/reference/figu
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">rayrender</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.26.0</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.27.0</span>
       </span>
     </div>
 
@@ -108,29 +108,48 @@ ray marching/sphere tracing.</p>
     <h2>Arguments</h2>
     <dl><dt>object</dt>
 <dd><p>Object created with CSG interface.</p></dd>
+
+
 <dt>x</dt>
 <dd><p>Default `0`. x-offset of the center of the object.</p></dd>
+
+
 <dt>y</dt>
 <dd><p>Default `0`. y-offset of the center of the object.</p></dd>
+
+
 <dt>z</dt>
 <dd><p>Default `0`. z-offset of the center of the object.</p></dd>
+
+
 <dt>material</dt>
 <dd><p>Default  <code><a href="diffuse.html">diffuse</a></code>. The material, called from one of the material 
 functions <code><a href="diffuse.html">diffuse</a></code>, <code><a href="metal.html">metal</a></code>, or <code><a href="dielectric.html">dielectric</a></code>.</p></dd>
+
+
 <dt>angle</dt>
 <dd><p>Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.</p></dd>
+
+
 <dt>order_rotation</dt>
 <dd><p>Default `c(1, 2, 3)`. The order to apply the rotations, referring to "x", "y", and "z".</p></dd>
+
+
 <dt>flipped</dt>
 <dd><p>Default `FALSE`. Whether to flip the normals.</p></dd>
+
+
 <dt>scale</dt>
 <dd><p>Default `c(1, 1, 1)`. Scale transformation in the x, y, and z directions. If this is a single value,
 number, the object will be scaled uniformly.
 Note: emissive objects may not currently function correctly when scaled.</p></dd>
+
 </dl></div>
     <div id="value">
     <h2>Value</h2>
-    <p>Single row of a tibble describing the sphere in the scene.</p>
+    
+
+<p>Single row of a tibble describing the sphere in the scene.</p>
     </div>
     <div id="details">
     <h2>Details</h2>
@@ -152,7 +171,7 @@ nested inside will be ignored.</p>
 <span class="r-in">  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="sphere.html">sphere</a></span><span class="op">(</span>y<span class="op">=</span><span class="fl">5</span>,x<span class="op">=</span><span class="fl">3</span>,radius<span class="op">=</span><span class="fl">1</span>,material<span class="op">=</span><span class="fu"><a href="light.html">light</a></span><span class="op">(</span>intensity<span class="op">=</span><span class="fl">30</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span></span>
 <span class="r-in">  <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>clamp_value<span class="op">=</span><span class="fl">10</span>, fov<span class="op">=</span><span class="fl">15</span>,lookfrom<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">5</span>,<span class="fl">5</span>,<span class="fl">10</span><span class="op">)</span>, </span>
 <span class="r-in">               samples<span class="op">=</span><span class="fl">256</span>, sample_method<span class="op">=</span><span class="st">"sobol_blue"</span><span class="op">)</span></span>
-<span class="r-plt img"><img src="csg_object-1.png" alt="" width="700" height="433"></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in loadNamespace(i, c(lib.loc, .libPaths()), versionCheck = vI[[i]]):</span> there is no package called ‘terra’</span>
 <span class="r-in"></span>
 <span class="r-in"><span class="co">#Standard CSG sphere + box - crossed cylinder combination:</span></span>
 <span class="r-in"><span class="fu"><a href="generate_ground.html">generate_ground</a></span><span class="op">(</span>material<span class="op">=</span><span class="fu"><a href="diffuse.html">diffuse</a></span><span class="op">(</span>checkercolor<span class="op">=</span><span class="st">"grey20"</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span></span>
@@ -169,7 +188,7 @@ nested inside will be ignored.</p>
 <span class="r-in">  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="sphere.html">sphere</a></span><span class="op">(</span>y<span class="op">=</span><span class="fl">5</span>,x<span class="op">=</span><span class="fl">3</span>,radius<span class="op">=</span><span class="fl">1</span>,material<span class="op">=</span><span class="fu"><a href="light.html">light</a></span><span class="op">(</span>intensity<span class="op">=</span><span class="fl">30</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span></span>
 <span class="r-in">  <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>clamp_value<span class="op">=</span><span class="fl">10</span>, fov<span class="op">=</span><span class="fl">10</span>,lookfrom<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">5</span>,<span class="fl">5</span>,<span class="fl">10</span><span class="op">)</span>,</span>
 <span class="r-in">               samples<span class="op">=</span><span class="fl">256</span>, sample_method<span class="op">=</span><span class="st">"sobol_blue"</span><span class="op">)</span></span>
-<span class="r-plt img"><img src="csg_object-2.png" alt="" width="700" height="433"></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in loadNamespace(i, c(lib.loc, .libPaths()), versionCheck = vI[[i]]):</span> there is no package called ‘terra’</span>
 <span class="r-in">  </span>
 <span class="r-in"><span class="co">#Blend them all instead:</span></span>
 <span class="r-in"><span class="fu"><a href="generate_ground.html">generate_ground</a></span><span class="op">(</span>material<span class="op">=</span><span class="fu"><a href="diffuse.html">diffuse</a></span><span class="op">(</span>checkercolor<span class="op">=</span><span class="st">"grey20"</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span></span>
@@ -186,7 +205,7 @@ nested inside will be ignored.</p>
 <span class="r-in">  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="sphere.html">sphere</a></span><span class="op">(</span>y<span class="op">=</span><span class="fl">5</span>,x<span class="op">=</span><span class="fl">3</span>,radius<span class="op">=</span><span class="fl">1</span>,material<span class="op">=</span><span class="fu"><a href="light.html">light</a></span><span class="op">(</span>intensity<span class="op">=</span><span class="fl">30</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span></span>
 <span class="r-in">  <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>clamp_value<span class="op">=</span><span class="fl">10</span>, fov<span class="op">=</span><span class="fl">15</span>,lookfrom<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">5</span>,<span class="fl">5</span>,<span class="fl">10</span><span class="op">)</span>, </span>
 <span class="r-in">               samples<span class="op">=</span><span class="fl">256</span>, sample_method<span class="op">=</span><span class="st">"sobol_blue"</span><span class="op">)</span></span>
-<span class="r-plt img"><img src="csg_object-3.png" alt="" width="700" height="433"></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in loadNamespace(i, c(lib.loc, .libPaths()), versionCheck = vI[[i]]):</span> there is no package called ‘terra’</span>
 <span class="r-in"><span class="co"># }</span></span>
 </code></pre></div>
     </div>
@@ -202,7 +221,7 @@ nested inside will be ignored.</p>
 </div>
 
 <div class="pkgdown">
-  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.3.</p>
+  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.4.</p>
 </div>
 
       </footer></div>

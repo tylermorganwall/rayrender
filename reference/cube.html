@@ -17,7 +17,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">rayrender</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.26.0</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.27.0</span>
       </span>
     </div>
 
@@ -109,35 +109,60 @@
     <h2>Arguments</h2>
     <dl><dt>x</dt>
 <dd><p>Default `0`. x-coordinate of the center of the cube</p></dd>
+
+
 <dt>y</dt>
 <dd><p>Default `0`. y-coordinate of the center of the cube</p></dd>
+
+
 <dt>z</dt>
 <dd><p>Default `0`. z-coordinate of the center of the cube</p></dd>
+
+
 <dt>width</dt>
 <dd><p>Default `1`. Cube width.</p></dd>
+
+
 <dt>xwidth</dt>
 <dd><p>Default `1`. x-width of the cube. Overrides `width` argument for x-axis.</p></dd>
+
+
 <dt>ywidth</dt>
 <dd><p>Default `1`. y-width of the cube. Overrides `width` argument for y-axis.</p></dd>
+
+
 <dt>zwidth</dt>
 <dd><p>Default `1`. z-width of the cube. Overrides `width` argument for z-axis.</p></dd>
+
+
 <dt>material</dt>
 <dd><p>Default  <code><a href="diffuse.html">diffuse</a></code>.The material, called from one of the material 
 functions <code><a href="diffuse.html">diffuse</a></code>, <code><a href="metal.html">metal</a></code>, or <code><a href="dielectric.html">dielectric</a></code>.</p></dd>
+
+
 <dt>angle</dt>
 <dd><p>Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.</p></dd>
+
+
 <dt>order_rotation</dt>
 <dd><p>Default `c(1, 2, 3)`. The order to apply the rotations, referring to "x", "y", and "z".</p></dd>
+
+
 <dt>flipped</dt>
 <dd><p>Default `FALSE`. Whether to flip the normals.</p></dd>
+
+
 <dt>scale</dt>
 <dd><p>Default `c(1, 1, 1)`. Scale transformation in the x, y, and z directions. If this is a single value,
 number, the object will be scaled uniformly.
 Note: emissive objects may not currently function correctly when scaled.</p></dd>
+
 </dl></div>
     <div id="value">
     <h2>Value</h2>
-    <p>Single row of a tibble describing the cube in the scene.</p>
+    
+
+<p>Single row of a tibble describing the cube in the scene.</p>
     </div>
 
     <div id="ref-examples">
@@ -149,7 +174,7 @@ Note: emissive objects may not currently function correctly when scaled.</p></dd
 <span class="r-in">                  xwidth <span class="op">=</span> <span class="fl">200</span>, ywidth <span class="op">=</span> <span class="fl">200</span>, zwidth <span class="op">=</span> <span class="fl">200</span>, angle <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">30</span>, <span class="fl">0</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span></span>
 <span class="r-in">  <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>lookfrom <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">278</span>, <span class="fl">278</span>, <span class="op">-</span><span class="fl">800</span><span class="op">)</span> ,lookat <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">278</span>, <span class="fl">278</span>, <span class="fl">0</span><span class="op">)</span>, fov <span class="op">=</span> <span class="fl">40</span>, </span>
 <span class="r-in">               ambient_light <span class="op">=</span> <span class="cn">FALSE</span>, samples <span class="op">=</span> <span class="fl">500</span>, parallel <span class="op">=</span> <span class="cn">TRUE</span>, clamp_value <span class="op">=</span> <span class="fl">5</span><span class="op">)</span></span>
-<span class="r-plt img"><img src="cube-1.png" alt="" width="700" height="433"></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in loadNamespace(i, c(lib.loc, .libPaths()), versionCheck = vI[[i]]):</span> there is no package called ‘terra’</span>
 <span class="r-in"><span class="co"># }</span></span>
 <span class="r-in"><span class="co">#Generate a gold cube in the cornell box</span></span>
 <span class="r-in"><span class="co"># \donttest{</span></span>
@@ -159,7 +184,7 @@ Note: emissive objects may not currently function correctly when scaled.</p></dd
 <span class="r-in">                  material <span class="op">=</span> <span class="fu"><a href="metal.html">metal</a></span><span class="op">(</span>color <span class="op">=</span> <span class="st">"gold"</span>, fuzz <span class="op">=</span> <span class="fl">0.2</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span></span>
 <span class="r-in">  <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>lookfrom <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">278</span>, <span class="fl">278</span>, <span class="op">-</span><span class="fl">800</span><span class="op">)</span> ,lookat <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">278</span>, <span class="fl">278</span>, <span class="fl">0</span><span class="op">)</span>, fov <span class="op">=</span> <span class="fl">40</span>, </span>
 <span class="r-in">               ambient_light <span class="op">=</span> <span class="cn">FALSE</span>, samples <span class="op">=</span> <span class="fl">500</span>, parallel <span class="op">=</span> <span class="cn">TRUE</span>, clamp_value <span class="op">=</span> <span class="fl">5</span><span class="op">)</span></span>
-<span class="r-plt img"><img src="cube-2.png" alt="" width="700" height="433"></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in loadNamespace(i, c(lib.loc, .libPaths()), versionCheck = vI[[i]]):</span> there is no package called ‘terra’</span>
 <span class="r-in"><span class="co"># }</span></span>
 <span class="r-in"></span>
 <span class="r-in"><span class="co">#Generate a rotated dielectric box in the cornell box</span></span>
@@ -170,7 +195,7 @@ Note: emissive objects may not currently function correctly when scaled.</p></dd
 <span class="r-in">                  material <span class="op">=</span> <span class="fu"><a href="dielectric.html">dielectric</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span></span>
 <span class="r-in">  <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>lookfrom <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">278</span>, <span class="fl">278</span>, <span class="op">-</span><span class="fl">800</span><span class="op">)</span> ,lookat <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">278</span>, <span class="fl">278</span>, <span class="fl">0</span><span class="op">)</span>, fov <span class="op">=</span> <span class="fl">40</span>,  </span>
 <span class="r-in">               ambient_light <span class="op">=</span> <span class="cn">FALSE</span>, samples <span class="op">=</span> <span class="fl">500</span>, parallel <span class="op">=</span> <span class="cn">TRUE</span>, clamp_value <span class="op">=</span> <span class="fl">5</span><span class="op">)</span> </span>
-<span class="r-plt img"><img src="cube-3.png" alt="" width="700" height="433"></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in loadNamespace(i, c(lib.loc, .libPaths()), versionCheck = vI[[i]]):</span> there is no package called ‘terra’</span>
 <span class="r-in"><span class="co"># }</span></span>
 </code></pre></div>
     </div>
@@ -186,7 +211,7 @@ Note: emissive objects may not currently function correctly when scaled.</p></dd
 </div>
 
 <div class="pkgdown">
-  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.3.</p>
+  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.4.</p>
 </div>
 
       </footer></div>

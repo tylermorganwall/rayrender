@@ -18,7 +18,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">rayrender</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.26.0</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.27.0</span>
       </span>
     </div>
 
@@ -97,6 +97,7 @@
   y <span class="op">=</span> <span class="fl">0</span>,
   z <span class="op">=</span> <span class="fl">0</span>,
   closed <span class="op">=</span> <span class="cn">FALSE</span>,
+  closed_smooth <span class="op">=</span> <span class="cn">TRUE</span>,
   straight <span class="op">=</span> <span class="cn">FALSE</span>,
   precomputed_control_points <span class="op">=</span> <span class="cn">FALSE</span>,
   width <span class="op">=</span> <span class="fl">0.1</span>,
@@ -119,54 +120,98 @@
     <dl><dt>points</dt>
 <dd><p>Either a list of length-3 numeric vectors or 3-column matrix/data.frame specifying
 the x/y/z points that the path should go through.</p></dd>
+
+
 <dt>x</dt>
 <dd><p>Default `0`. x-coordinate offset for the path.</p></dd>
+
+
 <dt>y</dt>
 <dd><p>Default `0`. y-coordinate offset for the path.</p></dd>
+
+
 <dt>z</dt>
 <dd><p>Default `0`. z-coordinate offset for the path.</p></dd>
+
+
 <dt>closed</dt>
-<dd><p>Default `FALSE`. If `TRUE`, a final segment will be added that connects the first
-and last points (unless they are already the same). Note: This final connection does not have 
-continuous 1st and 2nd derivatives.</p></dd>
+<dd><p>Default `FALSE`. If `TRUE`, the path will be closed by smoothly connecting the first
+and last points.</p></dd>
+
+
+<dt>closed_smooth</dt>
+<dd><p>Default `TRUE`. If `closed = TRUE`, this will ensure C2 (second derivative) 
+continuity between the ends. If `closed = FALSE`, the curve will only have C1 (first derivative)
+continuity between the ends.</p></dd>
+
+
 <dt>straight</dt>
 <dd><p>Default `FALSE`. If `TRUE`, straight lines will be used to connect the points instead
 of bezier curves.</p></dd>
+
+
 <dt>precomputed_control_points</dt>
 <dd><p>Default `FALSE`. If `TRUE`, `points` argument will expect
 a list of control points calculated with the internal rayrender function `rayrender:::calculate_control_points()`.</p></dd>
+
+
 <dt>width</dt>
 <dd><p>Default `0.1`. Curve width.</p></dd>
+
+
 <dt>width_end</dt>
 <dd><p>Default `NA`. Width at end of path. Same as `width`, unless specified.</p></dd>
+
+
 <dt>u_min</dt>
 <dd><p>Default `0`. Minimum parametric coordinate for the path.</p></dd>
+
+
 <dt>u_max</dt>
 <dd><p>Default `1`. Maximum parametric coordinate for the path.</p></dd>
+
+
 <dt>type</dt>
 <dd><p>Default `cylinder`. Other options are `flat` and `ribbon`.</p></dd>
+
+
 <dt>normal</dt>
 <dd><p>Default `c(0,0,-1)`. Orientation surface normal for the start of ribbon curves.</p></dd>
+
+
 <dt>normal_end</dt>
 <dd><p>Default `NA`. Orientation surface normal for the start of ribbon curves. If not
 specified, same as `normal`.</p></dd>
+
+
 <dt>material</dt>
 <dd><p>Default  <code><a href="diffuse.html">diffuse</a></code>.The material, called from one of the material 
 functions <code><a href="diffuse.html">diffuse</a></code>, <code><a href="metal.html">metal</a></code>, or <code><a href="dielectric.html">dielectric</a></code>.</p></dd>
+
+
 <dt>angle</dt>
 <dd><p>Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.</p></dd>
+
+
 <dt>order_rotation</dt>
 <dd><p>Default `c(1, 2, 3)`. The order to apply the rotations, referring to "x", "y", and "z".</p></dd>
+
+
 <dt>flipped</dt>
 <dd><p>Default `FALSE`. Whether to flip the normals.</p></dd>
+
+
 <dt>scale</dt>
 <dd><p>Default `c(1, 1, 1)`. Scale transformation in the x, y, and z directions. If this is a single value,
 number, the object will be scaled uniformly.
 Note: emissive objects may not currently function correctly when scaled.</p></dd>
+
 </dl></div>
     <div id="value">
     <h2>Value</h2>
-    <p>Single row of a tibble describing the cube in the scene.</p>
+    
+
+<p>Single row of a tibble describing the cube in the scene.</p>
     </div>
 
     <div id="ref-examples">
@@ -184,14 +229,14 @@ Note: emissive objects may not currently function correctly when scaled.</p></dd
 <span class="r-in">  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="sphere.html">sphere</a></span><span class="op">(</span>x<span class="op">=</span><span class="fl">2</span>,y<span class="op">=</span><span class="fl">1</span>,radius<span class="op">=</span><span class="fl">0.1</span>,material<span class="op">=</span><span class="va">point_mat</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span> </span>
 <span class="r-in">  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="sphere.html">sphere</a></span><span class="op">(</span>z<span class="op">=</span><span class="fl">5</span>,x<span class="op">=</span><span class="fl">5</span>,y<span class="op">=</span><span class="fl">5</span>,radius<span class="op">=</span><span class="fl">2</span>,material<span class="op">=</span><span class="fu"><a href="light.html">light</a></span><span class="op">(</span>intensity<span class="op">=</span><span class="fl">15</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span> </span>
 <span class="r-in">  <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>samples<span class="op">=</span><span class="fl">500</span>, clamp_value<span class="op">=</span><span class="fl">10</span>,fov<span class="op">=</span><span class="fl">30</span><span class="op">)</span></span>
-<span class="r-plt img"><img src="path-1.png" alt="" width="700" height="433"></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in loadNamespace(i, c(lib.loc, .libPaths()), versionCheck = vI[[i]]):</span> there is no package called ‘terra’</span>
 <span class="r-in">  </span>
 <span class="r-in"><span class="co">#Here we use straight lines by setting `straight = TRUE`:</span></span>
 <span class="r-in"><span class="fu"><a href="generate_studio.html">generate_studio</a></span><span class="op">(</span>depth<span class="op">=</span><span class="op">-</span><span class="fl">1.5</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span> </span>
 <span class="r-in">  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu">path</span><span class="op">(</span>points <span class="op">=</span> <span class="va">wave</span>,straight <span class="op">=</span> <span class="cn">TRUE</span>, material<span class="op">=</span><span class="fu"><a href="glossy.html">glossy</a></span><span class="op">(</span>color<span class="op">=</span><span class="st">"red"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span> </span>
 <span class="r-in">  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="sphere.html">sphere</a></span><span class="op">(</span>z<span class="op">=</span><span class="fl">5</span>,x<span class="op">=</span><span class="fl">5</span>,y<span class="op">=</span><span class="fl">5</span>,radius<span class="op">=</span><span class="fl">2</span>,material<span class="op">=</span><span class="fu"><a href="light.html">light</a></span><span class="op">(</span>intensity<span class="op">=</span><span class="fl">15</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span> </span>
 <span class="r-in">  <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>samples<span class="op">=</span><span class="fl">500</span>, clamp_value<span class="op">=</span><span class="fl">10</span>,fov<span class="op">=</span><span class="fl">30</span><span class="op">)</span></span>
-<span class="r-plt img"><img src="path-2.png" alt="" width="700" height="433"></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in loadNamespace(i, c(lib.loc, .libPaths()), versionCheck = vI[[i]]):</span> there is no package called ‘terra’</span>
 <span class="r-in">  </span>
 <span class="r-in"><span class="co">#We can also pass a matrix of values, specifying the x/y/z coordinates. Here,</span></span>
 <span class="r-in"><span class="co">#we'll create a random curve:</span></span>
@@ -201,14 +246,14 @@ Note: emissive objects may not currently function correctly when scaled.</p></dd
 <span class="r-in">  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu">path</span><span class="op">(</span>points<span class="op">=</span><span class="va">random_mat</span>, material<span class="op">=</span><span class="fu"><a href="glossy.html">glossy</a></span><span class="op">(</span>color<span class="op">=</span><span class="st">"red"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span> </span>
 <span class="r-in">  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="sphere.html">sphere</a></span><span class="op">(</span>y<span class="op">=</span><span class="fl">5</span>,radius<span class="op">=</span><span class="fl">1</span>,material<span class="op">=</span><span class="fu"><a href="light.html">light</a></span><span class="op">(</span>intensity<span class="op">=</span><span class="fl">30</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span> </span>
 <span class="r-in">  <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>samples<span class="op">=</span><span class="fl">500</span>, clamp_value<span class="op">=</span><span class="fl">10</span><span class="op">)</span></span>
-<span class="r-plt img"><img src="path-3.png" alt="" width="700" height="433"></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in loadNamespace(i, c(lib.loc, .libPaths()), versionCheck = vI[[i]]):</span> there is no package called ‘terra’</span>
 <span class="r-in">  </span>
 <span class="r-in"><span class="co">#We can ensure the curve is closed by setting `closed = TRUE`</span></span>
 <span class="r-in"><span class="fu"><a href="generate_studio.html">generate_studio</a></span><span class="op">(</span>depth<span class="op">=</span><span class="op">-</span><span class="fl">1.5</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span> </span>
 <span class="r-in">  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu">path</span><span class="op">(</span>points<span class="op">=</span><span class="va">random_mat</span>, closed <span class="op">=</span> <span class="cn">TRUE</span>, material<span class="op">=</span><span class="fu"><a href="glossy.html">glossy</a></span><span class="op">(</span>color<span class="op">=</span><span class="st">"red"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span> </span>
 <span class="r-in">  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="sphere.html">sphere</a></span><span class="op">(</span>y<span class="op">=</span><span class="fl">5</span>,radius<span class="op">=</span><span class="fl">1</span>,material<span class="op">=</span><span class="fu"><a href="light.html">light</a></span><span class="op">(</span>intensity<span class="op">=</span><span class="fl">30</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span> </span>
 <span class="r-in">  <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>samples<span class="op">=</span><span class="fl">500</span>, clamp_value<span class="op">=</span><span class="fl">10</span><span class="op">)</span></span>
-<span class="r-plt img"><img src="path-4.png" alt="" width="700" height="433"></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in loadNamespace(i, c(lib.loc, .libPaths()), versionCheck = vI[[i]]):</span> there is no package called ‘terra’</span>
 <span class="r-in">  </span>
 <span class="r-in"><span class="co">#Finally, let's render a pretzel to show how you can render just a subset of the curve:</span></span>
 <span class="r-in"><span class="va">pretzel</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">-</span><span class="fl">0.8</span>,<span class="op">-</span><span class="fl">0.5</span>,<span class="fl">0.1</span><span class="op">)</span>,<span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>,<span class="op">-</span><span class="fl">0.2</span>,<span class="op">-</span><span class="fl">0.1</span><span class="op">)</span>,<span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">0.3</span>,<span class="fl">0.1</span><span class="op">)</span>,<span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">-</span><span class="fl">0.5</span>,<span class="fl">0.5</span>,<span class="fl">0.1</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">-</span><span class="fl">0.6</span>,<span class="op">-</span><span class="fl">0.5</span>,<span class="op">-</span><span class="fl">0.1</span><span class="op">)</span>,</span>
@@ -220,21 +265,21 @@ Note: emissive objects may not currently function correctly when scaled.</p></dd
 <span class="r-in">  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu">path</span><span class="op">(</span><span class="va">pretzel</span>, width<span class="op">=</span><span class="fl">0.17</span>,  material <span class="op">=</span> <span class="fu"><a href="glossy.html">glossy</a></span><span class="op">(</span>color<span class="op">=</span><span class="st">"#db5b00"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span> </span>
 <span class="r-in">  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="sphere.html">sphere</a></span><span class="op">(</span>y<span class="op">=</span><span class="fl">5</span>,x<span class="op">=</span><span class="fl">2</span>,z<span class="op">=</span><span class="fl">4</span>,material<span class="op">=</span><span class="fu"><a href="light.html">light</a></span><span class="op">(</span>intensity<span class="op">=</span><span class="fl">20</span>,spotlight_focus <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">0</span>,<span class="fl">0</span><span class="op">)</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span> </span>
 <span class="r-in">  <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>samples<span class="op">=</span><span class="fl">500</span>, clamp_value<span class="op">=</span><span class="fl">10</span><span class="op">)</span></span>
-<span class="r-plt img"><img src="path-5.png" alt="" width="700" height="433"></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in loadNamespace(i, c(lib.loc, .libPaths()), versionCheck = vI[[i]]):</span> there is no package called ‘terra’</span>
 <span class="r-in">  </span>
 <span class="r-in"><span class="co">#Here, we'll render only the first third of the pretzel by setting `u_max = 0.33`</span></span>
 <span class="r-in"><span class="fu"><a href="generate_studio.html">generate_studio</a></span><span class="op">(</span>depth <span class="op">=</span> <span class="op">-</span><span class="fl">1.1</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span> </span>
 <span class="r-in">  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu">path</span><span class="op">(</span><span class="va">pretzel</span>, width<span class="op">=</span><span class="fl">0.17</span>, u_max<span class="op">=</span><span class="fl">0.33</span>, material <span class="op">=</span> <span class="fu"><a href="glossy.html">glossy</a></span><span class="op">(</span>color<span class="op">=</span><span class="st">"#db5b00"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span> </span>
 <span class="r-in">  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="sphere.html">sphere</a></span><span class="op">(</span>y<span class="op">=</span><span class="fl">5</span>,x<span class="op">=</span><span class="fl">2</span>,z<span class="op">=</span><span class="fl">4</span>,material<span class="op">=</span><span class="fu"><a href="light.html">light</a></span><span class="op">(</span>intensity<span class="op">=</span><span class="fl">20</span>,spotlight_focus <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">0</span>,<span class="fl">0</span><span class="op">)</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span> </span>
 <span class="r-in">  <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>samples<span class="op">=</span><span class="fl">500</span>, clamp_value<span class="op">=</span><span class="fl">10</span><span class="op">)</span></span>
-<span class="r-plt img"><img src="path-6.png" alt="" width="700" height="433"></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in loadNamespace(i, c(lib.loc, .libPaths()), versionCheck = vI[[i]]):</span> there is no package called ‘terra’</span>
 <span class="r-in">  </span>
 <span class="r-in"><span class="co">#Here's the last third, by setting `u_min = 0.66`</span></span>
 <span class="r-in"><span class="fu"><a href="generate_studio.html">generate_studio</a></span><span class="op">(</span>depth <span class="op">=</span> <span class="op">-</span><span class="fl">1.1</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span> </span>
 <span class="r-in">  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu">path</span><span class="op">(</span><span class="va">pretzel</span>, width<span class="op">=</span><span class="fl">0.17</span>, u_min<span class="op">=</span><span class="fl">0.66</span>, material <span class="op">=</span> <span class="fu"><a href="glossy.html">glossy</a></span><span class="op">(</span>color<span class="op">=</span><span class="st">"#db5b00"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span> </span>
 <span class="r-in">  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="sphere.html">sphere</a></span><span class="op">(</span>y<span class="op">=</span><span class="fl">5</span>,x<span class="op">=</span><span class="fl">2</span>,z<span class="op">=</span><span class="fl">4</span>,material<span class="op">=</span><span class="fu"><a href="light.html">light</a></span><span class="op">(</span>intensity<span class="op">=</span><span class="fl">20</span>,spotlight_focus <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">0</span>,<span class="fl">0</span><span class="op">)</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span> </span>
 <span class="r-in">  <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>samples<span class="op">=</span><span class="fl">500</span>, clamp_value<span class="op">=</span><span class="fl">10</span><span class="op">)</span></span>
-<span class="r-plt img"><img src="path-7.png" alt="" width="700" height="433"></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in loadNamespace(i, c(lib.loc, .libPaths()), versionCheck = vI[[i]]):</span> there is no package called ‘terra’</span>
 <span class="r-in">  </span>
 <span class="r-in"><span class="co">#Here's the full pretzel, decomposed into thirds using the u_min and u_max coordinates</span></span>
 <span class="r-in"><span class="fu"><a href="generate_studio.html">generate_studio</a></span><span class="op">(</span>depth <span class="op">=</span> <span class="op">-</span><span class="fl">1.1</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span> </span>
@@ -246,7 +291,7 @@ Note: emissive objects may not currently function correctly when scaled.</p></dd
 <span class="r-in">                  material <span class="op">=</span> <span class="fu"><a href="glossy.html">glossy</a></span><span class="op">(</span>color<span class="op">=</span><span class="st">"#db5b00"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span> </span>
 <span class="r-in">  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="sphere.html">sphere</a></span><span class="op">(</span>y<span class="op">=</span><span class="fl">5</span>,x<span class="op">=</span><span class="fl">2</span>,z<span class="op">=</span><span class="fl">4</span>,material<span class="op">=</span><span class="fu"><a href="light.html">light</a></span><span class="op">(</span>intensity<span class="op">=</span><span class="fl">20</span>,spotlight_focus <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">0</span>,<span class="fl">0</span><span class="op">)</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span> </span>
 <span class="r-in">  <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>samples<span class="op">=</span><span class="fl">500</span>, clamp_value<span class="op">=</span><span class="fl">10</span>, lookfrom<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">3</span>,<span class="fl">10</span><span class="op">)</span><span class="op">)</span></span>
-<span class="r-plt img"><img src="path-8.png" alt="" width="700" height="433"></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in loadNamespace(i, c(lib.loc, .libPaths()), versionCheck = vI[[i]]):</span> there is no package called ‘terra’</span>
 <span class="r-in"><span class="co"># }</span></span>
 </code></pre></div>
     </div>
@@ -262,7 +307,7 @@ Note: emissive objects may not currently function correctly when scaled.</p></dd
 </div>
 
 <div class="pkgdown">
-  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.3.</p>
+  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.4.</p>
 </div>
 
       </footer></div>

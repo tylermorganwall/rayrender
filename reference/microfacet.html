@@ -17,7 +17,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">rayrender</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.26.0</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.27.0</span>
       </span>
     </div>
 
@@ -124,6 +124,8 @@
     <dl><dt>color</dt>
 <dd><p>Default `white`. The color of the surface. Can be either
 a hexadecimal code, R color string, or a numeric rgb vector listing three intensities between `0` and `1`.</p></dd>
+
+
 <dt>roughness</dt>
 <dd><p>Default `0.0001`. Roughness of the surface, between `0` (smooth) and `1` (diffuse). 
 Can be either a single number, or two numbers indicating an anisotropic distribution of normals. `0` is a smooth surface, while
@@ -132,80 +134,131 @@ metal, `0.02`-`0.1` is brushed metal, `0.1`-`0.3` is a rough metallic surface , 
 above that is a rough satin-like material). 
 Two numbers will specify the x and y roughness separately (e.g. `roughness = c(0.01, 0.001)` gives an 
 etched metal effect). If `0`, this defaults to the `metal()` material for faster evaluation.</p></dd>
+
+
 <dt>transmission</dt>
 <dd><p>Default `FALSE`. If `TRUE`, this material will be a rough dielectric instead of a rough metallic surface.</p></dd>
+
+
 <dt>eta</dt>
 <dd><p>Default `0`. Wavelength dependent refractivity of the material (red, green, and blue channels).
 If single number, will be repeated across all three channels. If `transmission = TRUE`, this is a single value representing the
 index of refraction of the material.</p></dd>
+
+
 <dt>kappa</dt>
 <dd><p>Default `0`. Wavelength dependent absorption of the material (red, green, and blue channels).
 If single number, will be repeated across all three channels. If `transmission = TRUE`, this length-3 vector specifies 
 the attenuation of the dielectric (analogous to the dielectric `attenuation` argument).</p></dd>
+
+
 <dt>microfacet</dt>
 <dd><p>Default `tbr`.  Type of microfacet distribution. Alternative option `beckmann`.</p></dd>
+
+
 <dt>checkercolor</dt>
 <dd><p>Default `NA`. If not `NA`, determines the secondary color of the checkered surface. 
 Can be either a hexadecimal code, or a numeric rgb vector listing three intensities between `0` and `1`.</p></dd>
+
+
 <dt>checkerperiod</dt>
 <dd><p>Default `3`. The period of the checker pattern. Increasing this value makes the checker 
 pattern bigger, and decreasing it makes it smaller</p></dd>
+
+
 <dt>noise</dt>
 <dd><p>Default `0`. If not `0`, covers the surface in a turbulent marble pattern. This value will determine
 the amount of turbulence in the texture.</p></dd>
+
+
 <dt>noisephase</dt>
 <dd><p>Default `0`. The phase of the noise. The noise will repeat at `360`.</p></dd>
+
+
 <dt>noiseintensity</dt>
 <dd><p>Default `10`. Intensity of the noise.</p></dd>
+
+
 <dt>noisecolor</dt>
 <dd><p>Default `#000000`. The secondary color of the noise pattern.
 Can be either a hexadecimal code, or a numeric rgb vector listing three intensities between `0` and `1`.</p></dd>
+
+
 <dt>gradient_color</dt>
 <dd><p>Default `NA`. If not `NA`, creates a secondary color for a linear gradient 
 between the this color and color specified in `color`. Direction is determined by `gradient_transpose`.</p></dd>
+
+
 <dt>gradient_transpose</dt>
 <dd><p>Default `FALSE`. If `TRUE`, this will use the `v` coordinate texture instead
 of the `u` coordinate texture to map the gradient.</p></dd>
+
+
 <dt>gradient_point_start</dt>
 <dd><p>Default `NA`. If not `NA`, this changes the behavior from mapping texture coordinates to 
 mapping to world space coordinates. This should be a length-3 vector specifying the x,y, and z points where the gradient
 begins with value `color`.</p></dd>
+
+
 <dt>gradient_point_end</dt>
 <dd><p>Default `NA`. If not `NA`, this changes the behavior from mapping texture coordinates to 
 mapping to world space coordinates. This should be a length-3 vector specifying the x,y, and z points where the gradient
 begins with value `gradient_color`.</p></dd>
+
+
 <dt>gradient_type</dt>
 <dd><p>Default `hsv`. Colorspace to calculate the gradient. Alternative `rgb`.</p></dd>
+
+
 <dt>image_texture</dt>
 <dd><p>Default `NA`. A 3-layer RGB array or filename to be used as the texture on the surface of the object.</p></dd>
+
+
 <dt>image_repeat</dt>
 <dd><p>Default `1`. Number of times to repeat the image across the surface.
 `u` and `v` repeat amount can be set independently if user passes in a length-2 vector.</p></dd>
+
+
 <dt>alpha_texture</dt>
 <dd><p>Default `NA`. A matrix or filename (specifying a greyscale image) to be used to specify the transparency.</p></dd>
+
+
 <dt>bump_texture</dt>
 <dd><p>Default `NA`. A matrix, array, or filename (specifying a greyscale image) to 
 be used to specify a bump map for the surface.</p></dd>
+
+
 <dt>bump_intensity</dt>
 <dd><p>Default `1`. Intensity of the bump map. High values may lead to unphysical results.</p></dd>
+
+
 <dt>roughness_texture</dt>
 <dd><p>Default `NA`. A matrix, array, or filename (specifying a greyscale image) to 
 be used to specify a roughness map for the surface.</p></dd>
+
+
 <dt>roughness_range</dt>
 <dd><p>Default ` c(0.0001, 0.2)`. This is a length-2 vector that specifies the range of roughness values 
 that the `roughness_texture` can take.</p></dd>
+
+
 <dt>roughness_flip</dt>
 <dd><p>Default `FALSE`. Setting this to `TRUE` flips the roughness values specified in the `roughness_texture`
 so high values are now low values and vice versa.</p></dd>
+
+
 <dt>importance_sample</dt>
 <dd><p>Default `FALSE`. If `TRUE`, the object will be sampled explicitly during 
 the rendering process. If the object is particularly important in contributing to the light paths
 in the image (e.g. light sources, refracting glass ball with caustics, metal objects concentrating light),
 this will help with the convergence of the image.</p></dd>
+
 </dl></div>
     <div id="value">
     <h2>Value</h2>
-    <p>Single row of a tibble describing the microfacet material.</p>
+    
+
+<p>Single row of a tibble describing the microfacet material.</p>
     </div>
 
     <div id="ref-examples">
@@ -220,7 +273,7 @@ this will help with the convergence of the image.</p></dd>
 <span class="r-in">                                 eta<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.216</span>,<span class="fl">0.42833</span>,<span class="fl">1.3184</span><span class="op">)</span>, kappa<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">3.239</span>,<span class="fl">2.4599</span>,<span class="fl">1.8661</span><span class="op">)</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span> </span>
 <span class="r-in"> <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>lookfrom<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">278</span>,<span class="fl">278</span>,<span class="op">-</span><span class="fl">800</span><span class="op">)</span>,lookat <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">278</span>,<span class="fl">278</span>,<span class="fl">0</span><span class="op">)</span>, samples<span class="op">=</span><span class="fl">500</span>,</span>
 <span class="r-in">             aperture<span class="op">=</span><span class="fl">0</span>, fov<span class="op">=</span><span class="fl">40</span>, parallel<span class="op">=</span><span class="cn">TRUE</span>,clamp_value<span class="op">=</span><span class="fl">10</span><span class="op">)</span></span>
-<span class="r-plt img"><img src="microfacet-1.png" alt="" width="700" height="433"></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in loadNamespace(i, c(lib.loc, .libPaths()), versionCheck = vI[[i]]):</span> there is no package called ‘terra’</span>
 <span class="r-in"> </span>
 <span class="r-in"><span class="co">#Make the roughness anisotropic (either horizontal or vertical), adding an extra light in front</span></span>
 <span class="r-in"><span class="co">#to show off the different microfacet orientations</span></span>
@@ -234,7 +287,7 @@ this will help with the convergence of the image.</p></dd>
 <span class="r-in">                                 eta<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.216</span>,<span class="fl">0.42833</span>,<span class="fl">1.3184</span><span class="op">)</span>, kappa<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">3.239</span>,<span class="fl">2.4599</span>,<span class="fl">1.8661</span><span class="op">)</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span>  </span>
 <span class="r-in"> <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>lookfrom<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">278</span>,<span class="fl">278</span>,<span class="op">-</span><span class="fl">800</span><span class="op">)</span>,lookat <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">278</span>,<span class="fl">278</span>,<span class="fl">0</span><span class="op">)</span>, samples<span class="op">=</span><span class="fl">500</span>,</span>
 <span class="r-in">             aperture<span class="op">=</span><span class="fl">0</span>, fov<span class="op">=</span><span class="fl">40</span>,  parallel<span class="op">=</span><span class="cn">TRUE</span>,clamp_value<span class="op">=</span><span class="fl">10</span><span class="op">)</span></span>
-<span class="r-plt img"><img src="microfacet-2.png" alt="" width="700" height="433"></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in loadNamespace(i, c(lib.loc, .libPaths()), versionCheck = vI[[i]]):</span> there is no package called ‘terra’</span>
 <span class="r-in"></span>
 <span class="r-in"><span class="co">#Render a rough silver R with a smaller golden egg in front</span></span>
 <span class="r-in"><span class="fu"><a href="generate_cornell.html">generate_cornell</a></span><span class="op">(</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span></span>
@@ -246,7 +299,7 @@ this will help with the convergence of the image.</p></dd>
 <span class="r-in">                                 eta<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.216</span>,<span class="fl">0.42833</span>,<span class="fl">1.3184</span><span class="op">)</span>, kappa<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">3.239</span>,<span class="fl">2.4599</span>,<span class="fl">1.8661</span><span class="op">)</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span> </span>
 <span class="r-in"> <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>lookfrom<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">278</span>,<span class="fl">278</span>,<span class="op">-</span><span class="fl">800</span><span class="op">)</span>,lookat <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">278</span>,<span class="fl">278</span>,<span class="fl">0</span><span class="op">)</span>, samples<span class="op">=</span><span class="fl">500</span>,</span>
 <span class="r-in">             aperture<span class="op">=</span><span class="fl">0</span>, fov<span class="op">=</span><span class="fl">40</span>, parallel<span class="op">=</span><span class="cn">TRUE</span>,clamp_value<span class="op">=</span><span class="fl">10</span><span class="op">)</span></span>
-<span class="r-plt img"><img src="microfacet-3.png" alt="" width="700" height="433"></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in loadNamespace(i, c(lib.loc, .libPaths()), versionCheck = vI[[i]]):</span> there is no package called ‘terra’</span>
 <span class="r-in"> </span>
 <span class="r-in"><span class="co">#Increase the roughness</span></span>
 <span class="r-in"><span class="fu"><a href="generate_cornell.html">generate_cornell</a></span><span class="op">(</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span></span>
@@ -258,7 +311,7 @@ this will help with the convergence of the image.</p></dd>
 <span class="r-in">                                 eta<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.216</span>,<span class="fl">0.42833</span>,<span class="fl">1.3184</span><span class="op">)</span>, kappa<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">3.239</span>,<span class="fl">2.4599</span>,<span class="fl">1.8661</span><span class="op">)</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span> </span>
 <span class="r-in"> <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>lookfrom<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">278</span>,<span class="fl">278</span>,<span class="op">-</span><span class="fl">800</span><span class="op">)</span>,lookat <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">278</span>,<span class="fl">278</span>,<span class="fl">0</span><span class="op">)</span>, samples<span class="op">=</span><span class="fl">500</span>,</span>
 <span class="r-in">             aperture<span class="op">=</span><span class="fl">0</span>, fov<span class="op">=</span><span class="fl">40</span>, parallel<span class="op">=</span><span class="cn">TRUE</span>,clamp_value<span class="op">=</span><span class="fl">10</span><span class="op">)</span></span>
-<span class="r-plt img"><img src="microfacet-4.png" alt="" width="700" height="433"></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in loadNamespace(i, c(lib.loc, .libPaths()), versionCheck = vI[[i]]):</span> there is no package called ‘terra’</span>
 <span class="r-in">             </span>
 <span class="r-in"> <span class="co">#Use transmission for a rough dielectric</span></span>
 <span class="r-in"> </span>
@@ -269,7 +322,7 @@ this will help with the convergence of the image.</p></dd>
 <span class="r-in">             material<span class="op">=</span><span class="fu">microfacet</span><span class="op">(</span>roughness<span class="op">=</span><span class="fl">0.3</span>, transmission<span class="op">=</span><span class="cn">T</span>, eta<span class="op">=</span><span class="fl">1.6</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span> </span>
 <span class="r-in"> <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>lookfrom<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">278</span>,<span class="fl">278</span>,<span class="op">-</span><span class="fl">800</span><span class="op">)</span>,lookat <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">278</span>,<span class="fl">278</span>,<span class="fl">0</span><span class="op">)</span>, samples<span class="op">=</span><span class="fl">500</span>,</span>
 <span class="r-in">             aperture<span class="op">=</span><span class="fl">0</span>, fov<span class="op">=</span><span class="fl">40</span>, parallel<span class="op">=</span><span class="cn">TRUE</span>,clamp_value<span class="op">=</span><span class="fl">10</span>, min_variance<span class="op">=</span><span class="fl">1e-6</span><span class="op">)</span></span>
-<span class="r-plt img"><img src="microfacet-5.png" alt="" width="700" height="433"></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in loadNamespace(i, c(lib.loc, .libPaths()), versionCheck = vI[[i]]):</span> there is no package called ‘terra’</span>
 <span class="r-in"><span class="co"># }</span></span>
 </code></pre></div>
     </div>
@@ -285,7 +338,7 @@ this will help with the convergence of the image.</p></dd>
 </div>
 
 <div class="pkgdown">
-  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.3.</p>
+  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.4.</p>
 </div>
 
       </footer></div>

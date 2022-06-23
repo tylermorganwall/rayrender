@@ -17,7 +17,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">rayrender</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.26.0</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.27.0</span>
       </span>
     </div>
 
@@ -139,83 +139,141 @@
     <h2>Arguments</h2>
     <dl><dt>scene</dt>
 <dd><p>Tibble of object locations and properties.</p></dd>
+
+
 <dt>camera_motion</dt>
 <dd><p>Data frame of camera motion vectors, calculated with `generate_camera_motion()`.</p></dd>
+
+
 <dt>start_frame</dt>
 <dd><p>Default `1`. Frame to start the animation.</p></dd>
+
+
 <dt>end_frame</dt>
 <dd><p>Default `NA`. By default, this is set to `nrow(camera_motion)`, the full number of frames.</p></dd>
+
+
 <dt>width</dt>
 <dd><p>Default `400`. Width of the render, in pixels.</p></dd>
+
+
 <dt>height</dt>
 <dd><p>Default `400`. Height of the render, in pixels.</p></dd>
+
+
 <dt>preview</dt>
 <dd><p>Default `interactive()`. Whether to display a realtime progressive preview of the render. Press ESC to cancel the render.</p></dd>
+
+
 <dt>camera_description_file</dt>
 <dd><p>Default `NA`. Filename of a camera description file for rendering with
 a realistic camera. Several camera files are built-in: `"50mm"`,`"wide"`,`"fisheye"`, and `"telephoto"`.</p></dd>
+
+
 <dt>camera_scale</dt>
 <dd><p>Default `1`. Amount to scale the camera up or down in size. Use this rather than scaling a 
 scene.</p></dd>
+
+
 <dt>iso</dt>
 <dd><p>Default `100`. Camera exposure.</p></dd>
+
+
 <dt>film_size</dt>
 <dd><p>Default `22`, in `mm` (scene units in `m`. Size of the film if using a realistic camera, otherwise
 ignored.</p></dd>
+
+
 <dt>samples</dt>
 <dd><p>Default `100`. The maximum number of samples for each pixel. If this is a length-2
 vector and the `sample_method` is `stratified`, this will control the number of strata in each dimension.
 The total number of samples in this case will be the product of the two numbers.</p></dd>
+
+
 <dt>min_variance</dt>
 <dd><p>Default `0.00005`. Minimum acceptable variance for a block of pixels for the 
 adaptive sampler. Smaller numbers give higher quality images, at the expense of longer rendering times.
 If this is set to zero, the adaptive sampler will be turned off and the renderer
 will use the maximum number of samples everywhere.</p></dd>
+
+
 <dt>min_adaptive_size</dt>
 <dd><p>Default `8`. Width of the minimum block size in the adaptive sampler.</p></dd>
+
+
 <dt>sample_method</dt>
 <dd><p>Default `sobol`. The type of sampling method used to generate
 random numbers. The other options are `random` (worst quality but simple), 
 `stratified` (only implemented for completion), 
 and `sobol_blue` (best option for sample counts below 256).</p></dd>
+
+
 <dt>ambient_occlusion</dt>
 <dd><p>Default `FALSE`. If `TRUE`, the animation will be rendered with the ambient
 occlusion renderer. This uses the background color specified in `backgroundhigh`</p></dd>
+
+
 <dt>keep_colors</dt>
 <dd><p>Default `FALSE`. Whether to keep the diffuse material colors.</p></dd>
+
+
 <dt>sample_dist</dt>
 <dd><p>Default `10`. Sample distance if `debug_channel = "ao"`.</p></dd>
+
+
 <dt>max_depth</dt>
 <dd><p>Default `50`. Maximum number of bounces a ray can make in a scene.</p></dd>
+
+
 <dt>roulette_active_depth</dt>
 <dd><p>Default `10`. Number of ray bounces until a ray can stop bouncing via
 Russian roulette.</p></dd>
+
+
 <dt>ambient_light</dt>
 <dd><p>Default `FALSE`, unless there are no emitting objects in the scene. 
 If `TRUE`, the background will be a gradient varying from `backgroundhigh` directly up (+y) to 
 `backgroundlow` directly down (-y).</p></dd>
+
+
 <dt>clamp_value</dt>
 <dd><p>Default `Inf`. If a bright light or a reflective material is in the scene, occasionally
 there will be bright spots that will not go away even with a large number of samples. These 
 can be removed (at the cost of slightly darkening the image) by setting this to a small number greater than 1.</p></dd>
+
+
 <dt>filename</dt>
 <dd><p>Default `NULL`. If present, the renderer will write to the filename instead
 of the current device.</p></dd>
+
+
 <dt>backgroundhigh</dt>
 <dd><p>Default `#ffffff`. The "high" color in the background gradient. Can be either
 a hexadecimal code, or a numeric rgb vector listing three intensities between `0` and `1`.</p></dd>
+
+
 <dt>backgroundlow</dt>
 <dd><p>Default `#ffffff`. The "low" color in the background gradient. Can be either
 a hexadecimal code, or a numeric rgb vector listing three intensities between `0` and `1`.</p></dd>
+
+
 <dt>shutteropen</dt>
 <dd><p>Default `0`. Time at which the shutter is open. Only affects moving objects.</p></dd>
+
+
 <dt>shutterclose</dt>
 <dd><p>Default `1`. Time at which the shutter is open. Only affects moving objects.</p></dd>
+
+
 <dt>focal_distance</dt>
 <dd><p>Default `NULL`, automatically set to the `lookfrom-lookat` distance unless
 otherwise specified.</p></dd>
+
+
 <dt>ortho_dimensions</dt>
 <dd><p>Default `c(1,1)`. Width and height of the orthographic camera. Will only be used if `fov = 0`.</p></dd>
+
+
 <dt>tonemap</dt>
 <dd><p>Default `gamma`. Choose the tone mapping function,
 Default `gamma` solely adjusts for gamma and clamps values greater than 1 to 1. 
@@ -224,6 +282,8 @@ gamma adjustment. `uncharted` uses the mapping developed for Uncharted 2 by John
 optimized formula by Jim Hejl and Richard Burgess-Dawson. Note: If set to anything other than `gamma`,
 objects with material `light()` may not be anti-aliased. If `raw`, the raw array of HDR values will be
 returned, rather than an image or a plot.</p></dd>
+
+
 <dt>bloom</dt>
 <dd><p>Default `TRUE`. Set to `FALSE` to get the raw, pathtraced image. Otherwise,
 this performs a convolution of the HDR image of the scene with a sharp, long-tailed
@@ -231,21 +291,33 @@ exponential kernel, which does not visibly affect dimly pixels, but does result 
 slightly bleeding into adjacent pixels. This provides an antialiasing effect for lights, even when
 tonemapping the image. Pass in a matrix to specify the convolution kernel manually, or a positive number
 to control the intensity of the bloom (higher number = more bloom).</p></dd>
+
+
 <dt>parallel</dt>
 <dd><p>Default `FALSE`. If `TRUE`, it will use all available cores to render the image
 (or the number specified in `options("cores")` if that option is not `NULL`).</p></dd>
+
+
 <dt>bvh_type</dt>
 <dd><p>Default `"sah"`, "surface area heuristic". Method of building the bounding volume
 hierarchy structure used when rendering. Other option is "equal", which splits tree into groups
 of equal size.</p></dd>
+
+
 <dt>environment_light</dt>
 <dd><p>Default `NULL`. An image to be used for the background for rays that escape
 the scene. Supports both HDR (`.hdr`) and low-dynamic range (`.png`, `.jpg`) images.</p></dd>
+
+
 <dt>rotate_env</dt>
 <dd><p>Default `0`. The number of degrees to rotate the environment map around the scene.</p></dd>
+
+
 <dt>intensity_env</dt>
 <dd><p>Default `1`. The amount to increase the intensity of the environment lighting. Useful
 if using a LDR (JPEG or PNG) image as an environment map.</p></dd>
+
+
 <dt>debug_channel</dt>
 <dd><p>Default `none`. If `depth`, function will return a depth map of rays into the scene 
 instead of an image. If `normals`, function will return an image of scene normals, mapped from 0 to 1.
@@ -254,22 +326,35 @@ showing the number of samples needed to take for each block to converge. If `dpd
 an image showing the differential `u` and `u` coordinates. If `color`, function will return the raw albedo
 values (with white for `metal` and `dielectric` materials). If `preview`, an image rendered with `render_preview()` 
 will be returned. Can set to `ao` to render an animation with the ambient occlusion renderer.</p></dd>
+
+
 <dt>return_raw_array</dt>
 <dd><p>Default `FALSE`. If `TRUE`, function will return raw array with RGB intensity
 information.</p></dd>
+
+
 <dt>progress</dt>
 <dd><p>Default `TRUE` if interactive session, `FALSE` otherwise.</p></dd>
+
+
 <dt>verbose</dt>
 <dd><p>Default `FALSE`. Prints information and timing information about scene
 construction and raytracing progress.</p></dd>
+
+
 <dt>preview_light_direction</dt>
 <dd><p>Default `c(0,-1,0)`. Vector specifying the orientation for the global light using for phong shading.</p></dd>
+
+
 <dt>preview_exponent</dt>
 <dd><p>Default `6`. Phong exponent.</p></dd>
+
 </dl></div>
     <div id="value">
     <h2>Value</h2>
-    <p>Raytraced plot to current device, or an image saved to a file.</p>
+    
+
+<p>Raytraced plot to current device, or an image saved to a file.</p>
     </div>
 
     <div id="ref-examples">
@@ -296,7 +381,7 @@ construction and raytracing progress.</p></dd>
 <span class="r-in">  <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>lookfrom<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">20</span>,<span class="fl">0</span><span class="op">)</span>, width<span class="op">=</span><span class="fl">800</span>,height<span class="op">=</span><span class="fl">800</span>,samples<span class="op">=</span><span class="fl">32</span>,</span>
 <span class="r-in">               camera_up <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">0</span>,<span class="fl">1</span><span class="op">)</span>,</span>
 <span class="r-in">               fov<span class="op">=</span><span class="fl">80</span><span class="op">)</span></span>
-<span class="r-plt img"><img src="render_animation-1.png" alt="" width="700" height="433"></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in loadNamespace(i, c(lib.loc, .libPaths()), versionCheck = vI[[i]]):</span> there is no package called ‘terra’</span>
 <span class="r-in">            </span>
 <span class="r-in"><span class="co">#Side view     </span></span>
 <span class="r-in"><span class="fu"><a href="generate_ground.html">generate_ground</a></span><span class="op">(</span>material<span class="op">=</span><span class="fu"><a href="diffuse.html">diffuse</a></span><span class="op">(</span>checkercolor<span class="op">=</span><span class="st">"grey20"</span><span class="op">)</span>,depth<span class="op">=</span><span class="op">-</span><span class="fl">10</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span> </span>
@@ -305,7 +390,7 @@ construction and raytracing progress.</p></dd>
 <span class="r-in">  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="path.html">path</a></span><span class="op">(</span><span class="va">camera_pos</span>, material<span class="op">=</span><span class="fu"><a href="diffuse.html">diffuse</a></span><span class="op">(</span>color<span class="op">=</span><span class="st">"red"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span> </span>
 <span class="r-in">  <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>lookfrom<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">20</span>,<span class="fl">0</span>,<span class="fl">0</span><span class="op">)</span>,width<span class="op">=</span><span class="fl">800</span>,height<span class="op">=</span><span class="fl">800</span>,samples<span class="op">=</span><span class="fl">32</span>,</span>
 <span class="r-in">                 fov<span class="op">=</span><span class="fl">80</span><span class="op">)</span></span>
-<span class="r-plt img"><img src="render_animation-2.png" alt="" width="700" height="433"></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in loadNamespace(i, c(lib.loc, .libPaths()), versionCheck = vI[[i]]):</span> there is no package called ‘terra’</span>
 <span class="r-in"> </span>
 <span class="r-in"><span class="co">#View from the start        </span></span>
 <span class="r-in"><span class="fu"><a href="generate_ground.html">generate_ground</a></span><span class="op">(</span>material<span class="op">=</span><span class="fu"><a href="diffuse.html">diffuse</a></span><span class="op">(</span>checkercolor<span class="op">=</span><span class="st">"grey20"</span><span class="op">)</span>,depth<span class="op">=</span><span class="op">-</span><span class="fl">10</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span> </span>
@@ -314,7 +399,7 @@ construction and raytracing progress.</p></dd>
 <span class="r-in">  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="path.html">path</a></span><span class="op">(</span><span class="va">camera_pos</span>, material<span class="op">=</span><span class="fu"><a href="diffuse.html">diffuse</a></span><span class="op">(</span>color<span class="op">=</span><span class="st">"red"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span> </span>
 <span class="r-in">  <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>lookfrom<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">1.5</span>,<span class="fl">16</span><span class="op">)</span>,width<span class="op">=</span><span class="fl">800</span>,height<span class="op">=</span><span class="fl">800</span>,samples<span class="op">=</span><span class="fl">32</span>,</span>
 <span class="r-in">                 fov<span class="op">=</span><span class="fl">80</span><span class="op">)</span></span>
-<span class="r-plt img"><img src="render_animation-3.png" alt="" width="700" height="433"></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in loadNamespace(i, c(lib.loc, .libPaths()), versionCheck = vI[[i]]):</span> there is no package called ‘terra’</span>
 <span class="r-in">                 </span>
 <span class="r-in"><span class="co">#Generate Camera movement, setting the lookat position to be same as camera position, but offset</span></span>
 <span class="r-in"><span class="co">#slightly in front. We'll render 12 frames, but you'd likely want more in a real animation.</span></span>
@@ -325,32 +410,32 @@ construction and raytracing progress.</p></dd>
 <span class="r-in">                                        </span>
 <span class="r-in"><span class="co">#This returns a data frame of individual camera positions, interpolated by cubic bezier curves.</span></span>
 <span class="r-in"><span class="va">camera_motion</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>              x          y           z         dx         dy          dz</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1    0.0000000  1.0000000  15.0000000  0.5540753  0.3793760  14.4451790</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 12   2.0426788 -1.2913413  12.9130580  2.5799782 -1.8970825  12.3261865</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 23   3.9656263 -3.4752799  10.6121427  4.4319830 -4.0162782   9.9123005</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 38   5.3641317 -5.1657043   7.6624089  5.4433167 -5.3265227   6.6815832</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 55   4.5735555 -4.6134636   4.2864210  4.0394085 -4.1113644   3.6067639</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 66   2.4543547 -2.5796685   2.0300934  1.8473580 -1.9839746   1.5040677</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 76   0.1811561 -0.3313301   0.1449713 -0.4339193  0.2845633  -0.3473272</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 85  -2.0849691  1.9522779  -1.7065252 -2.6813261  2.5607910  -2.2301639</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 96  -4.2136709  4.1500150  -3.8037431 -4.7114121  4.6821070  -4.4889171</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 111 -5.4478102  5.5801044  -6.8775827 -5.3230057  5.5394471  -7.8670199</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 127 -4.2534993  4.6985864 -10.1903391 -3.7368466  4.2614804 -10.9263454</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 140 -2.2089084  2.9392277 -12.7334457 -1.6207842  2.4245362 -13.3572923</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     aperture fov     focal orthox orthoy upx upy upz</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1          0  80 1.0000000      1      1   0   1   0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 12         0  80 1.0000157      1      1   0   1   0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 23         0  80 0.9999735      1      1   0   1   0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 38         0  80 0.9970717      1      1   0   1   0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 55         0  80 0.9996751      1      1   0   1   0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 66         0  80 0.9999997      1      1   0   1   0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 76         0  80 1.0000001      1      1   0   1   0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 85         0  80 1.0000637      1      1   0   1   0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 96         0  80 1.0001658      1      1   0   1   0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 111        0  80 0.9981058      1      1   0   1   0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 127        0  80 0.9998484      1      1   0   1   0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 140        0  80 0.9999911      1      1   0   1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>             x          y           z         dx         dy          dz aperture</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1   0.0000000  1.0000000  15.0000000  0.5540753  0.3793760  14.4451790        0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2   2.0426788 -1.2913413  12.9130580  2.5799782 -1.8970825  12.3261865        0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3   3.9656263 -3.4752799  10.6121427  4.4319830 -4.0162782   9.9123005        0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4   5.3641317 -5.1657043   7.6624089  5.4433167 -5.3265227   6.6815832        0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5   4.5735555 -4.6134636   4.2864210  4.0394085 -4.1113644   3.6067639        0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 6   2.4543547 -2.5796685   2.0300934  1.8473580 -1.9839746   1.5040677        0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 7   0.1811561 -0.3313301   0.1449713 -0.4339193  0.2845633  -0.3473272        0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 8  -2.0849691  1.9522779  -1.7065252 -2.6813261  2.5607910  -2.2301639        0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 9  -4.2136709  4.1500150  -3.8037431 -4.7114121  4.6821070  -4.4889171        0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 10 -5.4478102  5.5801044  -6.8775827 -5.3230057  5.5394471  -7.8670199        0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 11 -4.2534993  4.6985864 -10.1903391 -3.7368466  4.2614804 -10.9263454        0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 12 -2.2089084  2.9392277 -12.7334457 -1.6207842  2.4245362 -13.3572923        0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    fov     focal orthox orthoy upx upy upz</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1   80 1.0000000      1      1   0   1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2   80 1.0000157      1      1   0   1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3   80 0.9999735      1      1   0   1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4   80 0.9970717      1      1   0   1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5   80 0.9996751      1      1   0   1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 6   80 0.9999997      1      1   0   1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 7   80 1.0000001      1      1   0   1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 8   80 1.0000637      1      1   0   1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 9   80 1.0001658      1      1   0   1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 10  80 0.9981058      1      1   0   1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 11  80 0.9998484      1      1   0   1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 12  80 0.9999911      1      1   0   1   0</span>
 <span class="r-in"></span>
 <span class="r-in"><span class="co">#Pass NA filename to plot to the device. We'll keep the path and offset it slightly to see</span></span>
 <span class="r-in"><span class="co">#where we're going. This results in a "roller coaster" effect.</span></span>
@@ -382,7 +467,7 @@ construction and raytracing progress.</p></dd>
 </div>
 
 <div class="pkgdown">
-  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.3.</p>
+  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.4.</p>
 </div>
 
       </footer></div>

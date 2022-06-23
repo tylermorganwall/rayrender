@@ -18,7 +18,7 @@ user can also interactively fly around the 3D scene if they have X11 support on 
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">rayrender</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.26.0</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.27.0</span>
       </span>
     </div>
 
@@ -139,23 +139,37 @@ user can also interactively fly around the 3D scene if they have X11 support on 
     <h2>Arguments</h2>
     <dl><dt>scene</dt>
 <dd><p>Tibble of object locations and properties.</p></dd>
+
+
 <dt>width</dt>
 <dd><p>Default `400`. Width of the render, in pixels.</p></dd>
+
+
 <dt>height</dt>
 <dd><p>Default `400`. Height of the render, in pixels.</p></dd>
+
+
 <dt>fov</dt>
 <dd><p>Default `20`. Field of view, in degrees. If this is `0`, the camera will use an orthographic projection. The size of the plane
 used to create the orthographic projection is given in argument `ortho_dimensions`. From `0` to `180`, this uses a perspective
 projections. If this value is `360`, a 360 degree environment image will be rendered.</p></dd>
+
+
 <dt>samples</dt>
 <dd><p>Default `100`. The maximum number of samples for each pixel. If this is a length-2
 vector and the `sample_method` is `stratified`, this will control the number of strata in each dimension.
 The total number of samples in this case will be the product of the two numbers.</p></dd>
+
+
 <dt>camera_description_file</dt>
 <dd><p>Default `NA`. Filename of a camera description file for rendering with
 a realistic camera. Several camera files are built-in: `"50mm"`,`"wide"`,`"fisheye"`, and `"telephoto"`.</p></dd>
+
+
 <dt>preview</dt>
 <dd><p>Default `TRUE`. Whether to display a real-time progressive preview of the render. Press ESC to cancel the render.</p></dd>
+
+
 <dt>interactive</dt>
 <dd><p>Default `interactive()`. Whether the scene preview should be interactive. Camera movement orbits around the 
 lookat point (unless the mode is switched to free flying), with the following control mapping:
@@ -173,67 +187,111 @@ Some options aren't available all cameras. When using a realistic camera,
 the aperture and field of view cannot be changed from their initial settings. Additionally,
 clicking to direct the camera at the background environment image while using a realistic camera will
 not always point to the exact position selected.</p></dd>
+
+
 <dt>camera_scale</dt>
 <dd><p>Default `1`. Amount to scale the camera up or down in size. Use this rather than scaling a 
 scene.</p></dd>
+
+
 <dt>iso</dt>
 <dd><p>Default `100`. Camera exposure.</p></dd>
+
+
 <dt>film_size</dt>
 <dd><p>Default `22`, in `mm` (scene units in `m`. Size of the film if using a realistic camera, otherwise
 ignored.</p></dd>
+
+
 <dt>min_variance</dt>
 <dd><p>Default `0.00005`. Minimum acceptable variance for a block of pixels for the 
 adaptive sampler. Smaller numbers give higher quality images, at the expense of longer rendering times.
 If this is set to zero, the adaptive sampler will be turned off and the renderer
 will use the maximum number of samples everywhere.</p></dd>
+
+
 <dt>min_adaptive_size</dt>
 <dd><p>Default `8`. Width of the minimum block size in the adaptive sampler.</p></dd>
+
+
 <dt>sample_method</dt>
 <dd><p>Default `sobol`. The type of sampling method used to generate
 random numbers. The other options are `random` (worst quality but fastest), 
 `stratified` (only implemented for completion), `sobol_blue` (best option for sample counts below 256), 
 and `sobol` (slowest but best quality, better than `sobol_blue` for sample counts greater than 256).</p></dd>
+
+
 <dt>max_depth</dt>
 <dd><p>Default `NA`, automatically sets to 50. Maximum number of bounces a ray can make in a scene. Alternatively,
 if a debugging option is chosen, this sets the bounce to query the debugging parameter (only for some options).</p></dd>
+
+
 <dt>roulette_active_depth</dt>
 <dd><p>Default `100`. Number of ray bounces until a ray can stop bouncing via
 Russian roulette.</p></dd>
+
+
 <dt>ambient_light</dt>
 <dd><p>Default `FALSE`, unless there are no emitting objects in the scene. 
 If `TRUE`, the background will be a gradient varying from `backgroundhigh` directly up (+y) to 
 `backgroundlow` directly down (-y).</p></dd>
+
+
 <dt>lookfrom</dt>
 <dd><p>Default `c(0,1,10)`. Location of the camera.</p></dd>
+
+
 <dt>lookat</dt>
 <dd><p>Default `c(0,0,0)`. Location where the camera is pointed.</p></dd>
+
+
 <dt>camera_up</dt>
 <dd><p>Default `c(0,1,0)`. Vector indicating the "up" position of the camera.</p></dd>
+
+
 <dt>aperture</dt>
 <dd><p>Default `0.1`. Aperture of the camera. Smaller numbers will increase depth of field, causing
 less blurring in areas not in focus.</p></dd>
+
+
 <dt>clamp_value</dt>
 <dd><p>Default `Inf`. If a bright light or a reflective material is in the scene, occasionally
 there will be bright spots that will not go away even with a large number of samples. These 
 can be removed (at the cost of slightly darkening the image) by setting this to a small number greater than 1.</p></dd>
+
+
 <dt>filename</dt>
 <dd><p>Default `NULL`. If present, the renderer will write to the filename instead
 of the current device.</p></dd>
+
+
 <dt>backgroundhigh</dt>
 <dd><p>Default `#80b4ff`. The "high" color in the background gradient. Can be either
 a hexadecimal code, or a numeric rgb vector listing three intensities between `0` and `1`.</p></dd>
+
+
 <dt>backgroundlow</dt>
 <dd><p>Default `#ffffff`. The "low" color in the background gradient. Can be either
 a hexadecimal code, or a numeric rgb vector listing three intensities between `0` and `1`.</p></dd>
+
+
 <dt>shutteropen</dt>
 <dd><p>Default `0`. Time at which the shutter is open. Only affects moving objects.</p></dd>
+
+
 <dt>shutterclose</dt>
 <dd><p>Default `1`. Time at which the shutter is open. Only affects moving objects.</p></dd>
+
+
 <dt>focal_distance</dt>
 <dd><p>Default `NULL`, automatically set to the `lookfrom-lookat` distance unless
 otherwise specified.</p></dd>
+
+
 <dt>ortho_dimensions</dt>
 <dd><p>Default `c(1,1)`. Width and height of the orthographic camera. Will only be used if `fov = 0`.</p></dd>
+
+
 <dt>tonemap</dt>
 <dd><p>Default `gamma`. Choose the tone mapping function,
 Default `gamma` solely adjusts for gamma and clamps values greater than 1 to 1. 
@@ -242,6 +300,8 @@ gamma adjustment. `uncharted` uses the mapping developed for Uncharted 2 by John
 optimized formula by Jim Hejl and Richard Burgess-Dawson. Note: If set to anything other than `gamma`,
 objects with material `light()` may not be anti-aliased. If `raw`, the raw array of HDR values will be
 returned, rather than an image or a plot.</p></dd>
+
+
 <dt>bloom</dt>
 <dd><p>Default `TRUE`. Set to `FALSE` to get the raw, pathtraced image. Otherwise,
 this performs a convolution of the HDR image of the scene with a sharp, long-tailed
@@ -249,21 +309,33 @@ exponential kernel, which does not visibly affect dimly pixels, but does result 
 slightly bleeding into adjacent pixels. This provides an antialiasing effect for lights, even when
 tonemapping the image. Pass in a matrix to specify the convolution kernel manually, or a positive number
 to control the intensity of the bloom (higher number = more bloom).</p></dd>
+
+
 <dt>parallel</dt>
 <dd><p>Default `FALSE`. If `TRUE`, it will use all available cores to render the image
 (or the number specified in `options("cores")` if that option is not `NULL`).</p></dd>
+
+
 <dt>bvh_type</dt>
 <dd><p>Default `"sah"`, "surface area heuristic". Method of building the bounding volume
 hierarchy structure used when rendering. Other option is "equal", which splits tree into groups
 of equal size.</p></dd>
+
+
 <dt>environment_light</dt>
 <dd><p>Default `NULL`. An image to be used for the background for rays that escape
 the scene. Supports both HDR (`.hdr`) and low-dynamic range (`.png`, `.jpg`) images.</p></dd>
+
+
 <dt>rotate_env</dt>
 <dd><p>Default `0`. The number of degrees to rotate the environment map around the scene.</p></dd>
+
+
 <dt>intensity_env</dt>
 <dd><p>Default `1`. The amount to increase the intensity of the environment lighting. Useful
 if using a LDR (JPEG or PNG) image as an environment map.</p></dd>
+
+
 <dt>debug_channel</dt>
 <dd><p>Default `none`. If `depth`, function will return a depth map of rays into the scene 
 instead of an image. If `normals`, function will return an image of scene normals, mapped from 0 to 1.
@@ -271,18 +343,27 @@ If `uv`, function will return an image of the uv coords. If `variance`, function
 showing the number of samples needed to take for each block to converge. If `dpdu` or `dpdv`, function will return
 an image showing the differential `u` and `u` coordinates. If `color`, function will return the raw albedo
 values (with white for `metal` and `dielectric` materials).</p></dd>
+
+
 <dt>return_raw_array</dt>
 <dd><p>Default `FALSE`. If `TRUE`, function will return raw array with RGB intensity
 information.</p></dd>
+
+
 <dt>progress</dt>
 <dd><p>Default `TRUE` if interactive session, `FALSE` otherwise.</p></dd>
+
+
 <dt>verbose</dt>
 <dd><p>Default `FALSE`. Prints information and timing information about scene
 construction and raytracing progress.</p></dd>
+
 </dl></div>
     <div id="value">
     <h2>Value</h2>
-    <p>Raytraced plot to current device, or an image saved to a file. Invisibly returns the
+    
+
+<p>Raytraced plot to current device, or an image saved to a file. Invisibly returns the
 array (containing either debug data or the RGB)</p>
     </div>
 
@@ -292,7 +373,7 @@ array (containing either debug data or the RGB)</p>
 <span class="r-in"><span class="co"># \donttest{</span></span>
 <span class="r-in"><span class="va">scene</span> <span class="op">=</span> <span class="fu"><a href="generate_ground.html">generate_ground</a></span><span class="op">(</span>depth<span class="op">=</span><span class="op">-</span><span class="fl">0.5</span>, material <span class="op">=</span> <span class="fu"><a href="diffuse.html">diffuse</a></span><span class="op">(</span>color<span class="op">=</span><span class="st">"white"</span>, checkercolor<span class="op">=</span><span class="st">"darkgreen"</span><span class="op">)</span><span class="op">)</span></span>
 <span class="r-in"><span class="fu">render_scene</span><span class="op">(</span><span class="va">scene</span>,parallel<span class="op">=</span><span class="cn">TRUE</span>,samples<span class="op">=</span><span class="fl">500</span>,sample_method<span class="op">=</span><span class="st">"sobol"</span><span class="op">)</span></span>
-<span class="r-plt img"><img src="render_scene-1.png" alt="" width="700" height="433"></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in loadNamespace(i, c(lib.loc, .libPaths()), versionCheck = vI[[i]]):</span> there is no package called ‘terra’</span>
 <span class="r-in"><span class="co"># }</span></span>
 <span class="r-in"></span>
 <span class="r-in"><span class="co">#Add a sphere to the center</span></span>
@@ -300,7 +381,7 @@ array (containing either debug data or the RGB)</p>
 <span class="r-in"><span class="va">scene</span> <span class="op">=</span> <span class="va">scene</span> <span class="op"><a href="pipe.html">%&gt;%</a></span></span>
 <span class="r-in">  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="sphere.html">sphere</a></span><span class="op">(</span>x<span class="op">=</span><span class="fl">0</span>,y<span class="op">=</span><span class="fl">0</span>,z<span class="op">=</span><span class="fl">0</span>,radius<span class="op">=</span><span class="fl">0.5</span>,material <span class="op">=</span> <span class="fu"><a href="diffuse.html">diffuse</a></span><span class="op">(</span>color<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>,<span class="fl">0</span>,<span class="fl">1</span><span class="op">)</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
 <span class="r-in"><span class="fu">render_scene</span><span class="op">(</span><span class="va">scene</span>,fov<span class="op">=</span><span class="fl">20</span>,parallel<span class="op">=</span><span class="cn">TRUE</span>,samples<span class="op">=</span><span class="fl">500</span><span class="op">)</span></span>
-<span class="r-plt img"><img src="render_scene-2.png" alt="" width="700" height="433"></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in loadNamespace(i, c(lib.loc, .libPaths()), versionCheck = vI[[i]]):</span> there is no package called ‘terra’</span>
 <span class="r-in"><span class="co"># }</span></span>
 <span class="r-in"></span>
 <span class="r-in"><span class="co">#Add a marbled cube </span></span>
@@ -308,7 +389,7 @@ array (containing either debug data or the RGB)</p>
 <span class="r-in"><span class="va">scene</span> <span class="op">=</span> <span class="va">scene</span> <span class="op"><a href="pipe.html">%&gt;%</a></span></span>
 <span class="r-in">  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="cube.html">cube</a></span><span class="op">(</span>x<span class="op">=</span><span class="fl">1.1</span>,y<span class="op">=</span><span class="fl">0</span>,z<span class="op">=</span><span class="fl">0</span>,material <span class="op">=</span> <span class="fu"><a href="diffuse.html">diffuse</a></span><span class="op">(</span>noise<span class="op">=</span><span class="fl">3</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
 <span class="r-in"><span class="fu">render_scene</span><span class="op">(</span><span class="va">scene</span>,fov<span class="op">=</span><span class="fl">20</span>,parallel<span class="op">=</span><span class="cn">TRUE</span>,samples<span class="op">=</span><span class="fl">500</span><span class="op">)</span></span>
-<span class="r-plt img"><img src="render_scene-3.png" alt="" width="700" height="433"></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in loadNamespace(i, c(lib.loc, .libPaths()), versionCheck = vI[[i]]):</span> there is no package called ‘terra’</span>
 <span class="r-in"><span class="co"># }</span></span>
 <span class="r-in"></span>
 <span class="r-in"><span class="co">#Add a metallic gold sphere, using stratified sampling for a higher quality render</span></span>
@@ -316,13 +397,13 @@ array (containing either debug data or the RGB)</p>
 <span class="r-in"><span class="va">scene</span> <span class="op">=</span> <span class="va">scene</span> <span class="op"><a href="pipe.html">%&gt;%</a></span></span>
 <span class="r-in">  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="sphere.html">sphere</a></span><span class="op">(</span>x<span class="op">=</span><span class="op">-</span><span class="fl">1.1</span>,y<span class="op">=</span><span class="fl">0</span>,z<span class="op">=</span><span class="fl">0</span>,radius<span class="op">=</span><span class="fl">0.5</span>,material <span class="op">=</span> <span class="fu"><a href="metal.html">metal</a></span><span class="op">(</span>color<span class="op">=</span><span class="st">"gold"</span>,fuzz<span class="op">=</span><span class="fl">0.1</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
 <span class="r-in"><span class="fu">render_scene</span><span class="op">(</span><span class="va">scene</span>,fov<span class="op">=</span><span class="fl">20</span>,parallel<span class="op">=</span><span class="cn">TRUE</span>,samples<span class="op">=</span><span class="fl">500</span><span class="op">)</span></span>
-<span class="r-plt img"><img src="render_scene-4.png" alt="" width="700" height="433"></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in loadNamespace(i, c(lib.loc, .libPaths()), versionCheck = vI[[i]]):</span> there is no package called ‘terra’</span>
 <span class="r-in"><span class="co"># }</span></span>
 <span class="r-in"></span>
 <span class="r-in"><span class="co">#Lower the number of samples to render more quickly (here, we also use only one core).</span></span>
 <span class="r-in"><span class="co"># \donttest{</span></span>
 <span class="r-in"><span class="fu">render_scene</span><span class="op">(</span><span class="va">scene</span>, samples<span class="op">=</span><span class="fl">4</span><span class="op">)</span></span>
-<span class="r-plt img"><img src="render_scene-5.png" alt="" width="700" height="433"></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in loadNamespace(i, c(lib.loc, .libPaths()), versionCheck = vI[[i]]):</span> there is no package called ‘terra’</span>
 <span class="r-in"><span class="co"># }</span></span>
 <span class="r-in"></span>
 <span class="r-in"><span class="co">#Add a floating R plot using the iris dataset as a png onto a floating 2D rectangle</span></span>
@@ -340,13 +421,13 @@ array (containing either debug data or the RGB)</p>
 <span class="r-in">  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="xy_rect.html">xy_rect</a></span><span class="op">(</span>x<span class="op">=</span><span class="fl">0</span>,y<span class="op">=</span><span class="fl">1.1</span>,z<span class="op">=</span><span class="fl">0</span>,xwidth<span class="op">=</span><span class="fl">2</span>,angle <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">180</span>,<span class="fl">0</span><span class="op">)</span>,</span>
 <span class="r-in">                     material <span class="op">=</span> <span class="fu"><a href="diffuse.html">diffuse</a></span><span class="op">(</span>image_texture <span class="op">=</span> <span class="va">image_array</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
 <span class="r-in"><span class="fu">render_scene</span><span class="op">(</span><span class="va">scene</span>,fov<span class="op">=</span><span class="fl">20</span>,parallel<span class="op">=</span><span class="cn">TRUE</span>,samples<span class="op">=</span><span class="fl">500</span><span class="op">)</span></span>
-<span class="r-plt img"><img src="render_scene-6.png" alt="" width="700" height="433"></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in loadNamespace(i, c(lib.loc, .libPaths()), versionCheck = vI[[i]]):</span> there is no package called ‘terra’</span>
 <span class="r-in"><span class="co"># }</span></span>
 <span class="r-in"></span>
 <span class="r-in"><span class="co">#Move the camera</span></span>
 <span class="r-in"><span class="co"># \donttest{</span></span>
 <span class="r-in"><span class="fu">render_scene</span><span class="op">(</span><span class="va">scene</span>,lookfrom <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">7</span>,<span class="fl">1.5</span>,<span class="fl">10</span><span class="op">)</span>,lookat <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">0.5</span>,<span class="fl">0</span><span class="op">)</span>,fov<span class="op">=</span><span class="fl">15</span>,parallel<span class="op">=</span><span class="cn">TRUE</span><span class="op">)</span></span>
-<span class="r-plt img"><img src="render_scene-7.png" alt="" width="700" height="433"></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in loadNamespace(i, c(lib.loc, .libPaths()), versionCheck = vI[[i]]):</span> there is no package called ‘terra’</span>
 <span class="r-in"><span class="co"># }</span></span>
 <span class="r-in"></span>
 <span class="r-in"><span class="co">#Change the background gradient to a night time ambiance</span></span>
@@ -354,14 +435,14 @@ array (containing either debug data or the RGB)</p>
 <span class="r-in"><span class="fu">render_scene</span><span class="op">(</span><span class="va">scene</span>,lookfrom <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">7</span>,<span class="fl">1.5</span>,<span class="fl">10</span><span class="op">)</span>,lookat <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">0.5</span>,<span class="fl">0</span><span class="op">)</span>,fov<span class="op">=</span><span class="fl">15</span>,</span>
 <span class="r-in">             backgroundhigh <span class="op">=</span> <span class="st">"#282375"</span>, backgroundlow <span class="op">=</span> <span class="st">"#7e77ea"</span>, parallel<span class="op">=</span><span class="cn">TRUE</span>,</span>
 <span class="r-in">             samples<span class="op">=</span><span class="fl">500</span><span class="op">)</span></span>
-<span class="r-plt img"><img src="render_scene-8.png" alt="" width="700" height="433"></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in loadNamespace(i, c(lib.loc, .libPaths()), versionCheck = vI[[i]]):</span> there is no package called ‘terra’</span>
 <span class="r-in"><span class="co"># }</span></span>
 <span class="r-in">                 </span>
 <span class="r-in"><span class="co">#Increase the aperture to blur objects that are further from the focal plane.</span></span>
 <span class="r-in"><span class="co"># \donttest{</span></span>
 <span class="r-in"><span class="fu">render_scene</span><span class="op">(</span><span class="va">scene</span>,lookfrom <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">7</span>,<span class="fl">1.5</span>,<span class="fl">10</span><span class="op">)</span>,lookat <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">0.5</span>,<span class="fl">0</span><span class="op">)</span>,fov<span class="op">=</span><span class="fl">15</span>,</span>
 <span class="r-in">             aperture <span class="op">=</span> <span class="fl">0.5</span>,parallel<span class="op">=</span><span class="cn">TRUE</span>,samples<span class="op">=</span><span class="fl">500</span><span class="op">)</span></span>
-<span class="r-plt img"><img src="render_scene-9.png" alt="" width="700" height="433"></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in loadNamespace(i, c(lib.loc, .libPaths()), versionCheck = vI[[i]]):</span> there is no package called ‘terra’</span>
 <span class="r-in"><span class="co"># }</span></span>
 <span class="r-in"></span>
 <span class="r-in"><span class="co">#We can also capture a 360 environment image by setting `fov = 360` (can be used for VR)</span></span>
@@ -380,7 +461,7 @@ array (containing either debug data or the RGB)</p>
 <span class="r-in">                                       checkerperiod<span class="op">=</span><span class="fl">10</span>,color<span class="op">=</span><span class="st">"dodgerblue"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span></span>
 <span class="r-in">  <span class="fu">render_scene</span><span class="op">(</span>lookfrom<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">278</span>,<span class="fl">278</span>,<span class="fl">30</span><span class="op">)</span>, lookat<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">278</span>,<span class="fl">278</span>,<span class="fl">500</span><span class="op">)</span>, clamp_value<span class="op">=</span><span class="fl">10</span>,</span>
 <span class="r-in">               fov <span class="op">=</span> <span class="fl">360</span>,  samples <span class="op">=</span> <span class="fl">500</span>, width<span class="op">=</span><span class="fl">800</span>, height<span class="op">=</span><span class="fl">400</span><span class="op">)</span></span>
-<span class="r-plt img"><img src="render_scene-10.png" alt="" width="700" height="433"></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in loadNamespace(i, c(lib.loc, .libPaths()), versionCheck = vI[[i]]):</span> there is no package called ‘terra’</span>
 <span class="r-in"><span class="co"># }</span></span>
 <span class="r-in"></span>
 <span class="r-in"><span class="co">#We can also use a realistic camera by specifying a camera description file (several of which</span></span>
@@ -400,7 +481,7 @@ array (containing either debug data or the RGB)</p>
 <span class="r-in">                                       checkerperiod<span class="op">=</span><span class="fl">10</span>,color<span class="op">=</span><span class="st">"dodgerblue"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span></span>
 <span class="r-in">  <span class="fu">render_scene</span><span class="op">(</span>lookfrom<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">278</span>,<span class="fl">278</span>,<span class="op">-</span><span class="fl">300</span><span class="op">)</span>, lookat<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">278</span>,<span class="fl">278</span>,<span class="fl">500</span><span class="op">)</span>, clamp_value<span class="op">=</span><span class="fl">10</span>,</span>
 <span class="r-in">               camera_description_file <span class="op">=</span> <span class="st">"fisheye"</span>, samples <span class="op">=</span> <span class="fl">500</span>, width<span class="op">=</span><span class="fl">800</span>, height<span class="op">=</span><span class="fl">400</span><span class="op">)</span></span>
-<span class="r-plt img"><img src="render_scene-11.png" alt="" width="700" height="433"></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in loadNamespace(i, c(lib.loc, .libPaths()), versionCheck = vI[[i]]):</span> there is no package called ‘terra’</span>
 <span class="r-in"><span class="co"># }</span></span>
 <span class="r-in"></span>
 <span class="r-in"></span>
@@ -421,7 +502,7 @@ array (containing either debug data or the RGB)</p>
 <span class="r-in"> <span class="fu">render_scene</span><span class="op">(</span><span class="va">scene</span>, samples<span class="op">=</span><span class="fl">16</span>, </span>
 <span class="r-in">   lookfrom <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">xpos</span><span class="op">[</span><span class="va">i</span><span class="op">]</span>,<span class="fl">1.5</span>,<span class="va">zpos</span><span class="op">[</span><span class="va">i</span><span class="op">]</span><span class="op">)</span>,lookat <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">0.5</span>,<span class="fl">0</span><span class="op">)</span>, parallel<span class="op">=</span><span class="cn">TRUE</span><span class="op">)</span></span>
 <span class="r-in"><span class="op">}</span></span>
-<span class="r-plt img"><img src="render_scene-12.png" alt="" width="700" height="433"></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in loadNamespace(i, c(lib.loc, .libPaths()), versionCheck = vI[[i]]):</span> there is no package called ‘terra’</span>
 <span class="r-in"><span class="co"># }</span></span>
 </code></pre></div>
     </div>
@@ -437,7 +518,7 @@ array (containing either debug data or the RGB)</p>
 </div>
 
 <div class="pkgdown">
-  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.3.</p>
+  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.4.</p>
 </div>
 
       </footer></div>

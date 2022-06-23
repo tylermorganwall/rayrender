@@ -17,7 +17,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">rayrender</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.26.0</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.27.0</span>
       </span>
     </div>
 
@@ -107,28 +107,49 @@
     <h2>Arguments</h2>
     <dl><dt>light</dt>
 <dd><p>Default `TRUE`. Whether to include a light on the ceiling of the box.</p></dd>
+
+
 <dt>lightintensity</dt>
 <dd><p>Default `5`. The intensity of the light.</p></dd>
+
+
 <dt>lightcolor</dt>
 <dd><p>Default `white`. The color the of the light.</p></dd>
+
+
 <dt>lightwidth</dt>
 <dd><p>Default `332`. Width (z) of the light.</p></dd>
+
+
 <dt>lightdepth</dt>
 <dd><p>Default `343`. Depth (x) of the light.</p></dd>
+
+
 <dt>sigma</dt>
 <dd><p>Default `0`. Oren-Nayar microfacet angle.</p></dd>
+
+
 <dt>leftcolor</dt>
 <dd><p>Default `#1f7326` (green).</p></dd>
+
+
 <dt>rightcolor</dt>
 <dd><p>Default `#a60d0d` (red).</p></dd>
+
+
 <dt>roomcolor</dt>
 <dd><p>Default `#bababa` (light grey).</p></dd>
+
+
 <dt>importance_sample</dt>
 <dd><p>Default `TRUE`. Importance sample the light in the room.</p></dd>
+
 </dl></div>
     <div id="value">
     <h2>Value</h2>
-    <p>Tibble containing the scene description of the Cornell box.</p>
+    
+
+<p>Tibble containing the scene description of the Cornell box.</p>
     </div>
 
     <div id="ref-examples">
@@ -138,7 +159,7 @@
 <span class="r-in"><span class="co"># \donttest{</span></span>
 <span class="r-in"><span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span><span class="va">scene</span>, samples<span class="op">=</span><span class="fl">400</span>,aperture<span class="op">=</span><span class="fl">0</span>, fov<span class="op">=</span><span class="fl">40</span>, ambient_light<span class="op">=</span><span class="cn">FALSE</span>, parallel<span class="op">=</span><span class="cn">TRUE</span><span class="op">)</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Setting default values for Cornell box: lookfrom `c(278,278,-800)` lookat `c(278,278,555/2)` .</span>
-<span class="r-plt img"><img src="generate_cornell-1.png" alt="" width="700" height="433"></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in loadNamespace(i, c(lib.loc, .libPaths()), versionCheck = vI[[i]]):</span> there is no package called ‘terra’</span>
 <span class="r-in"><span class="co"># }</span></span>
 <span class="r-in"></span>
 <span class="r-in"><span class="co">#Make a much smaller light in the center of the room.</span></span>
@@ -146,7 +167,7 @@
 <span class="r-in"><span class="co"># \donttest{</span></span>
 <span class="r-in"><span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span><span class="va">scene</span>, samples<span class="op">=</span><span class="fl">400</span>,aperture<span class="op">=</span><span class="fl">0</span>, fov<span class="op">=</span><span class="fl">40</span>, ambient_light<span class="op">=</span><span class="cn">FALSE</span>, parallel<span class="op">=</span><span class="cn">TRUE</span><span class="op">)</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Setting default values for Cornell box: lookfrom `c(278,278,-800)` lookat `c(278,278,555/2)` .</span>
-<span class="r-plt img"><img src="generate_cornell-2.png" alt="" width="700" height="433"></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in loadNamespace(i, c(lib.loc, .libPaths()), versionCheck = vI[[i]]):</span> there is no package called ‘terra’</span>
 <span class="r-in"><span class="co"># }</span></span>
 <span class="r-in"></span>
 <span class="r-in"><span class="co">#Place a sphere in the middle of the box.</span></span>
@@ -155,7 +176,7 @@
 <span class="r-in"><span class="co"># \donttest{</span></span>
 <span class="r-in"><span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span><span class="va">scene</span>, samples<span class="op">=</span><span class="fl">400</span>,aperture<span class="op">=</span><span class="fl">0</span>, fov<span class="op">=</span><span class="fl">40</span>, ambient_light<span class="op">=</span><span class="cn">FALSE</span>, parallel<span class="op">=</span><span class="cn">TRUE</span><span class="op">)</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Setting default values for Cornell box: lookfrom `c(278,278,-800)` lookat `c(278,278,555/2)` .</span>
-<span class="r-plt img"><img src="generate_cornell-3.png" alt="" width="700" height="433"></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in loadNamespace(i, c(lib.loc, .libPaths()), versionCheck = vI[[i]]):</span> there is no package called ‘terra’</span>
 <span class="r-in"><span class="co"># }</span></span>
 <span class="r-in"></span>
 <span class="r-in"><span class="co">#Reduce "fireflies" by setting a clamp_value in render_scene()</span></span>
@@ -163,7 +184,7 @@
 <span class="r-in"><span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span><span class="va">scene</span>, samples<span class="op">=</span><span class="fl">400</span>,aperture<span class="op">=</span><span class="fl">0</span>, fov<span class="op">=</span><span class="fl">40</span>, ambient_light<span class="op">=</span><span class="cn">FALSE</span>, </span>
 <span class="r-in">             parallel<span class="op">=</span><span class="cn">TRUE</span>,clamp_value<span class="op">=</span><span class="fl">3</span><span class="op">)</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Setting default values for Cornell box: lookfrom `c(278,278,-800)` lookat `c(278,278,555/2)` .</span>
-<span class="r-plt img"><img src="generate_cornell-4.png" alt="" width="700" height="433"></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in loadNamespace(i, c(lib.loc, .libPaths()), versionCheck = vI[[i]]):</span> there is no package called ‘terra’</span>
 <span class="r-in"><span class="co"># }</span></span>
 <span class="r-in"><span class="co"># Change the color scheme of the cornell box</span></span>
 <span class="r-in"><span class="co"># \donttest{</span></span>
@@ -171,7 +192,7 @@
 <span class="r-in"><span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span><span class="va">new_cornell</span>, samples<span class="op">=</span><span class="fl">400</span>,aperture<span class="op">=</span><span class="fl">0</span>, fov<span class="op">=</span><span class="fl">40</span>, ambient_light<span class="op">=</span><span class="cn">FALSE</span>, </span>
 <span class="r-in">             parallel<span class="op">=</span><span class="cn">TRUE</span>,clamp_value<span class="op">=</span><span class="fl">3</span><span class="op">)</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Setting default values for Cornell box: lookfrom `c(278,278,-800)` lookat `c(278,278,555/2)` .</span>
-<span class="r-plt img"><img src="generate_cornell-5.png" alt="" width="700" height="433"></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in loadNamespace(i, c(lib.loc, .libPaths()), versionCheck = vI[[i]]):</span> there is no package called ‘terra’</span>
 <span class="r-in"><span class="co"># }</span></span>
 </code></pre></div>
     </div>
@@ -187,7 +208,7 @@
 </div>
 
 <div class="pkgdown">
-  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.3.</p>
+  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.4.</p>
 </div>
 
       </footer></div>

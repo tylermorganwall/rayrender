@@ -17,7 +17,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">rayrender</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.26.0</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.27.0</span>
       </span>
     </div>
 
@@ -96,16 +96,25 @@
     <h2>Arguments</h2>
     <dl><dt>object1</dt>
 <dd><p>First CSG object</p></dd>
+
+
 <dt>object2</dt>
 <dd><p>Second CSG object</p></dd>
+
+
 <dt>operation</dt>
 <dd><p>Default `union`. Can be `union`, `subtract`, `intersection`, `blend`, `subtractblend`, or `mix`.</p></dd>
+
+
 <dt>radius</dt>
 <dd><p>Default `0.5`. Blending radius.</p></dd>
+
 </dl></div>
     <div id="value">
     <h2>Value</h2>
-    <p>List describing the combined csg object in the scene.</p>
+    
+
+<p>List describing the combined csg object in the scene.</p>
     </div>
 
     <div id="ref-examples">
@@ -119,7 +128,7 @@
 <span class="r-in">  material<span class="op">=</span><span class="fu"><a href="glossy.html">glossy</a></span><span class="op">(</span>color<span class="op">=</span><span class="st">"dodgerblue4"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span></span>
 <span class="r-in">  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="sphere.html">sphere</a></span><span class="op">(</span>y<span class="op">=</span><span class="fl">5</span>,x<span class="op">=</span><span class="fl">5</span>,radius<span class="op">=</span><span class="fl">3</span>,material<span class="op">=</span><span class="fu"><a href="light.html">light</a></span><span class="op">(</span>intensity<span class="op">=</span><span class="fl">10</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span>  </span>
 <span class="r-in">  <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>clamp_value<span class="op">=</span><span class="fl">10</span>,fov<span class="op">=</span><span class="fl">20</span>,lookfrom<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">-</span><span class="fl">3</span>,<span class="fl">5</span>,<span class="fl">10</span><span class="op">)</span><span class="op">)</span></span>
-<span class="r-plt img"><img src="csg_combine-1.png" alt="" width="700" height="433"></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in loadNamespace(i, c(lib.loc, .libPaths()), versionCheck = vI[[i]]):</span> there is no package called ‘terra’</span>
 <span class="r-in">  </span>
 <span class="r-in"><span class="co">#Subtract one sphere from another:</span></span>
 <span class="r-in"><span class="fu"><a href="generate_ground.html">generate_ground</a></span><span class="op">(</span>material<span class="op">=</span><span class="fu"><a href="diffuse.html">diffuse</a></span><span class="op">(</span>checkercolor<span class="op">=</span><span class="st">"grey20"</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span> </span>
@@ -129,7 +138,7 @@
 <span class="r-in">  material<span class="op">=</span><span class="fu"><a href="glossy.html">glossy</a></span><span class="op">(</span>color<span class="op">=</span><span class="st">"dodgerblue4"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span></span>
 <span class="r-in">  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="sphere.html">sphere</a></span><span class="op">(</span>y<span class="op">=</span><span class="fl">5</span>,x<span class="op">=</span><span class="fl">5</span>,radius<span class="op">=</span><span class="fl">3</span>,material<span class="op">=</span><span class="fu"><a href="light.html">light</a></span><span class="op">(</span>intensity<span class="op">=</span><span class="fl">10</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span>  </span>
 <span class="r-in">  <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>clamp_value<span class="op">=</span><span class="fl">10</span>,fov<span class="op">=</span><span class="fl">20</span>,lookfrom<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">-</span><span class="fl">3</span>,<span class="fl">5</span>,<span class="fl">10</span><span class="op">)</span><span class="op">)</span></span>
-<span class="r-plt img"><img src="csg_combine-2.png" alt="" width="700" height="433"></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in loadNamespace(i, c(lib.loc, .libPaths()), versionCheck = vI[[i]]):</span> there is no package called ‘terra’</span>
 <span class="r-in">  </span>
 <span class="r-in"><span class="co">#Get the intersection of two spheres:</span></span>
 <span class="r-in"><span class="fu"><a href="generate_ground.html">generate_ground</a></span><span class="op">(</span>material<span class="op">=</span><span class="fu"><a href="diffuse.html">diffuse</a></span><span class="op">(</span>checkercolor<span class="op">=</span><span class="st">"grey20"</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span> </span>
@@ -139,7 +148,7 @@
 <span class="r-in">  material<span class="op">=</span><span class="fu"><a href="glossy.html">glossy</a></span><span class="op">(</span>color<span class="op">=</span><span class="st">"dodgerblue4"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span></span>
 <span class="r-in">  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="sphere.html">sphere</a></span><span class="op">(</span>y<span class="op">=</span><span class="fl">5</span>,x<span class="op">=</span><span class="fl">5</span>,radius<span class="op">=</span><span class="fl">3</span>,material<span class="op">=</span><span class="fu"><a href="light.html">light</a></span><span class="op">(</span>intensity<span class="op">=</span><span class="fl">10</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span>  </span>
 <span class="r-in">  <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>clamp_value<span class="op">=</span><span class="fl">10</span>,fov<span class="op">=</span><span class="fl">20</span>,lookfrom<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">-</span><span class="fl">3</span>,<span class="fl">5</span>,<span class="fl">10</span><span class="op">)</span><span class="op">)</span></span>
-<span class="r-plt img"><img src="csg_combine-3.png" alt="" width="700" height="433"></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in loadNamespace(i, c(lib.loc, .libPaths()), versionCheck = vI[[i]]):</span> there is no package called ‘terra’</span>
 <span class="r-in">  </span>
 <span class="r-in"><span class="co">#Get the blended union of two spheres:</span></span>
 <span class="r-in"><span class="fu"><a href="generate_ground.html">generate_ground</a></span><span class="op">(</span>material<span class="op">=</span><span class="fu"><a href="diffuse.html">diffuse</a></span><span class="op">(</span>checkercolor<span class="op">=</span><span class="st">"grey20"</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span> </span>
@@ -149,7 +158,7 @@
 <span class="r-in">  material<span class="op">=</span><span class="fu"><a href="glossy.html">glossy</a></span><span class="op">(</span>color<span class="op">=</span><span class="st">"dodgerblue4"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span></span>
 <span class="r-in">  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="sphere.html">sphere</a></span><span class="op">(</span>y<span class="op">=</span><span class="fl">5</span>,x<span class="op">=</span><span class="fl">5</span>,radius<span class="op">=</span><span class="fl">3</span>,material<span class="op">=</span><span class="fu"><a href="light.html">light</a></span><span class="op">(</span>intensity<span class="op">=</span><span class="fl">10</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span>  </span>
 <span class="r-in">  <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>clamp_value<span class="op">=</span><span class="fl">10</span>,fov<span class="op">=</span><span class="fl">20</span>,lookfrom<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">-</span><span class="fl">3</span>,<span class="fl">5</span>,<span class="fl">10</span><span class="op">)</span><span class="op">)</span></span>
-<span class="r-plt img"><img src="csg_combine-4.png" alt="" width="700" height="433"></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in loadNamespace(i, c(lib.loc, .libPaths()), versionCheck = vI[[i]]):</span> there is no package called ‘terra’</span>
 <span class="r-in">  </span>
 <span class="r-in"><span class="co">#Get the blended subtraction of two spheres:</span></span>
 <span class="r-in"><span class="fu"><a href="generate_ground.html">generate_ground</a></span><span class="op">(</span>material<span class="op">=</span><span class="fu"><a href="diffuse.html">diffuse</a></span><span class="op">(</span>checkercolor<span class="op">=</span><span class="st">"grey20"</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span> </span>
@@ -159,7 +168,7 @@
 <span class="r-in">  material<span class="op">=</span><span class="fu"><a href="glossy.html">glossy</a></span><span class="op">(</span>color<span class="op">=</span><span class="st">"dodgerblue4"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span></span>
 <span class="r-in">  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="sphere.html">sphere</a></span><span class="op">(</span>y<span class="op">=</span><span class="fl">5</span>,x<span class="op">=</span><span class="fl">5</span>,radius<span class="op">=</span><span class="fl">3</span>,material<span class="op">=</span><span class="fu"><a href="light.html">light</a></span><span class="op">(</span>intensity<span class="op">=</span><span class="fl">10</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span>  </span>
 <span class="r-in">  <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>clamp_value<span class="op">=</span><span class="fl">10</span>,fov<span class="op">=</span><span class="fl">20</span>,lookfrom<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">-</span><span class="fl">3</span>,<span class="fl">5</span>,<span class="fl">10</span><span class="op">)</span><span class="op">)</span></span>
-<span class="r-plt img"><img src="csg_combine-5.png" alt="" width="700" height="433"></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in loadNamespace(i, c(lib.loc, .libPaths()), versionCheck = vI[[i]]):</span> there is no package called ‘terra’</span>
 <span class="r-in">  </span>
 <span class="r-in"><span class="co">#Change the blending radius:</span></span>
 <span class="r-in"><span class="fu"><a href="generate_ground.html">generate_ground</a></span><span class="op">(</span>material<span class="op">=</span><span class="fu"><a href="diffuse.html">diffuse</a></span><span class="op">(</span>checkercolor<span class="op">=</span><span class="st">"grey20"</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span> </span>
@@ -169,7 +178,7 @@
 <span class="r-in">  material<span class="op">=</span><span class="fu"><a href="glossy.html">glossy</a></span><span class="op">(</span>color<span class="op">=</span><span class="st">"dodgerblue4"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span></span>
 <span class="r-in">  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="sphere.html">sphere</a></span><span class="op">(</span>y<span class="op">=</span><span class="fl">5</span>,x<span class="op">=</span><span class="fl">5</span>,radius<span class="op">=</span><span class="fl">3</span>,material<span class="op">=</span><span class="fu"><a href="light.html">light</a></span><span class="op">(</span>intensity<span class="op">=</span><span class="fl">10</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span>  </span>
 <span class="r-in">  <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>clamp_value<span class="op">=</span><span class="fl">10</span>,fov<span class="op">=</span><span class="fl">20</span>,lookfrom<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">-</span><span class="fl">3</span>,<span class="fl">5</span>,<span class="fl">10</span><span class="op">)</span><span class="op">)</span></span>
-<span class="r-plt img"><img src="csg_combine-6.png" alt="" width="700" height="433"></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in loadNamespace(i, c(lib.loc, .libPaths()), versionCheck = vI[[i]]):</span> there is no package called ‘terra’</span>
 <span class="r-in">  </span>
 <span class="r-in"><span class="co">#Change the subtract blending radius:</span></span>
 <span class="r-in"><span class="fu"><a href="generate_ground.html">generate_ground</a></span><span class="op">(</span>material<span class="op">=</span><span class="fu"><a href="diffuse.html">diffuse</a></span><span class="op">(</span>checkercolor<span class="op">=</span><span class="st">"grey20"</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span> </span>
@@ -179,7 +188,7 @@
 <span class="r-in">  material<span class="op">=</span><span class="fu"><a href="glossy.html">glossy</a></span><span class="op">(</span>color<span class="op">=</span><span class="st">"dodgerblue4"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span></span>
 <span class="r-in">  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="sphere.html">sphere</a></span><span class="op">(</span>y<span class="op">=</span><span class="fl">5</span>,x<span class="op">=</span><span class="fl">5</span>,radius<span class="op">=</span><span class="fl">3</span>,material<span class="op">=</span><span class="fu"><a href="light.html">light</a></span><span class="op">(</span>intensity<span class="op">=</span><span class="fl">10</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span>  </span>
 <span class="r-in">  <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>clamp_value<span class="op">=</span><span class="fl">10</span>,fov<span class="op">=</span><span class="fl">20</span>,lookfrom<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">-</span><span class="fl">3</span>,<span class="fl">5</span>,<span class="fl">10</span><span class="op">)</span><span class="op">)</span></span>
-<span class="r-plt img"><img src="csg_combine-7.png" alt="" width="700" height="433"></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in loadNamespace(i, c(lib.loc, .libPaths()), versionCheck = vI[[i]]):</span> there is no package called ‘terra’</span>
 <span class="r-in">  </span>
 <span class="r-in"><span class="co">#Get the mixture of various objects:</span></span>
 <span class="r-in"><span class="fu"><a href="generate_ground.html">generate_ground</a></span><span class="op">(</span>material<span class="op">=</span><span class="fu"><a href="diffuse.html">diffuse</a></span><span class="op">(</span>checkercolor<span class="op">=</span><span class="st">"grey20"</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span> </span>
@@ -197,7 +206,7 @@
 <span class="r-in">  material<span class="op">=</span><span class="fu"><a href="glossy.html">glossy</a></span><span class="op">(</span>color<span class="op">=</span><span class="st">"green"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span></span>
 <span class="r-in">  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="sphere.html">sphere</a></span><span class="op">(</span>y<span class="op">=</span><span class="fl">10</span>,x<span class="op">=</span><span class="op">-</span><span class="fl">5</span>,radius<span class="op">=</span><span class="fl">3</span>,material<span class="op">=</span><span class="fu"><a href="light.html">light</a></span><span class="op">(</span>intensity<span class="op">=</span><span class="fl">10</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span>  </span>
 <span class="r-in">  <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>clamp_value<span class="op">=</span><span class="fl">10</span>,fov<span class="op">=</span><span class="fl">20</span>,lookfrom<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">-</span><span class="fl">15</span>,<span class="fl">10</span>,<span class="fl">10</span><span class="op">)</span><span class="op">)</span></span>
-<span class="r-plt img"><img src="csg_combine-8.png" alt="" width="700" height="433"></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in loadNamespace(i, c(lib.loc, .libPaths()), versionCheck = vI[[i]]):</span> there is no package called ‘terra’</span>
 <span class="r-in"><span class="co"># }</span></span>
 </code></pre></div>
     </div>
@@ -213,7 +222,7 @@
 </div>
 
 <div class="pkgdown">
-  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.3.</p>
+  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.4.</p>
 </div>
 
       </footer></div>

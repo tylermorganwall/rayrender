@@ -17,7 +17,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">rayrender</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.26.0</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.27.0</span>
       </span>
     </div>
 
@@ -114,40 +114,69 @@
 normals, and material information. If the material references an image texture, the 
 `mesh$material$texture` argument should be set to the image filename. The `mesh3d` format
 only supports one image texture per mesh. All quads will be triangulated.</p></dd>
+
+
 <dt>x</dt>
 <dd><p>Default `0`. x-coordinate to offset the model.</p></dd>
+
+
 <dt>y</dt>
 <dd><p>Default `0`. y-coordinate to offset the model.</p></dd>
+
+
 <dt>z</dt>
 <dd><p>Default `0`. z-coordinate to offset the model.</p></dd>
+
+
 <dt>swap_yz</dt>
 <dd><p>Default `FALSE`. Swap the Y and Z coordinates.</p></dd>
+
+
 <dt>reverse</dt>
 <dd><p>Default `FALSE`. Reverse the orientation of the indices, flipping their normals.</p></dd>
+
+
 <dt>scale_mesh</dt>
 <dd><p>Default `1`. Amount to scale the size of the mesh in all directions.</p></dd>
+
+
 <dt>verbose</dt>
 <dd><p>Default `FALSE`. If `TRUE`, prints information about the mesh to the console.</p></dd>
+
+
 <dt>override_material</dt>
 <dd><p>Default `FALSE`. If `TRUE`, overrides the material specified in the 
 `mesh3d` object with the one specified in `material`.</p></dd>
+
+
 <dt>material</dt>
 <dd><p>Default  <code><a href="diffuse.html">diffuse</a></code>.The material, called from one of the material 
 functions <code><a href="diffuse.html">diffuse</a></code>, <code><a href="metal.html">metal</a></code>, or <code><a href="dielectric.html">dielectric</a></code>.</p></dd>
+
+
 <dt>angle</dt>
 <dd><p>Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.</p></dd>
+
+
 <dt>order_rotation</dt>
 <dd><p>Default `c(1, 2, 3)`. The order to apply the rotations, referring to "x", "y", and "z".</p></dd>
+
+
 <dt>flipped</dt>
 <dd><p>Default `FALSE`. Whether to flip the normals.</p></dd>
+
+
 <dt>scale</dt>
 <dd><p>Default `c(1, 1, 1)`. Scale transformation in the x, y, and z directions. If this is a single value,
 number, the object will be scaled uniformly.
 Note: emissive objects may not currently function correctly when scaled.</p></dd>
+
 </dl></div>
     <div id="value">
     <h2>Value</h2>
-    <p>Single row of a tibble describing the mesh3d model in the scene.</p>
+    
+
+<p>Single row of a tibble describing the mesh3d model in the scene.</p>
     </div>
 
     <div id="ref-examples">
@@ -178,7 +207,7 @@ Note: emissive objects may not currently function correctly when scaled.</p></dd
 </div>
 
 <div class="pkgdown">
-  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.3.</p>
+  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.4.</p>
 </div>
 
       </footer></div>

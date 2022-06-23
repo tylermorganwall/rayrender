@@ -17,7 +17,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">rayrender</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.26.0</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.27.0</span>
       </span>
     </div>
 
@@ -101,16 +101,25 @@
     <h2>Arguments</h2>
     <dl><dt>start</dt>
 <dd><p>Default `c(0, 0, 0)`. Start point of the cylinder, specifing `x`, `y`, `z`.</p></dd>
+
+
 <dt>end</dt>
 <dd><p>Default `c(0, 1, 0)`. End point of the cylinder, specifing `x`, `y`, `z`.</p></dd>
+
+
 <dt>radius</dt>
 <dd><p>Default `1`. Cylinder radius.</p></dd>
+
+
 <dt>corner_radius</dt>
 <dd><p>Default `0`. Radius if rounded cylinder.</p></dd>
+
 </dl></div>
     <div id="value">
     <h2>Value</h2>
-    <p>List describing the cylinder in the scene.</p>
+    
+
+<p>List describing the cylinder in the scene.</p>
     </div>
 
     <div id="ref-examples">
@@ -120,7 +129,7 @@
 <span class="r-in"><span class="fu"><a href="generate_ground.html">generate_ground</a></span><span class="op">(</span>material<span class="op">=</span><span class="fu"><a href="diffuse.html">diffuse</a></span><span class="op">(</span>checkercolor<span class="op">=</span><span class="st">"grey20"</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span> </span>
 <span class="r-in">  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="csg_object.html">csg_object</a></span><span class="op">(</span><span class="fu">csg_cylinder</span><span class="op">(</span>radius<span class="op">=</span><span class="fl">0.25</span><span class="op">)</span>,material<span class="op">=</span><span class="fu"><a href="glossy.html">glossy</a></span><span class="op">(</span>color<span class="op">=</span><span class="st">"red"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span> </span>
 <span class="r-in">  <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>clamp_value<span class="op">=</span><span class="fl">10</span>,fov<span class="op">=</span><span class="fl">20</span><span class="op">)</span></span>
-<span class="r-plt img"><img src="csg_cylinder-1.png" alt="" width="700" height="433"></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in loadNamespace(i, c(lib.loc, .libPaths()), versionCheck = vI[[i]]):</span> there is no package called ‘terra’</span>
 <span class="r-in">  </span>
 <span class="r-in"><span class="co">#Change the orientation by specifying a start and end</span></span>
 <span class="r-in"><span class="fu"><a href="generate_ground.html">generate_ground</a></span><span class="op">(</span>material<span class="op">=</span><span class="fu"><a href="diffuse.html">diffuse</a></span><span class="op">(</span>color<span class="op">=</span><span class="st">"dodgerblue4"</span>,checkercolor<span class="op">=</span><span class="st">"grey10"</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span> </span>
@@ -128,7 +137,7 @@
 <span class="r-in">    radius<span class="op">=</span><span class="fl">0.5</span><span class="op">)</span>,material<span class="op">=</span><span class="fu"><a href="glossy.html">glossy</a></span><span class="op">(</span>checkercolor<span class="op">=</span><span class="st">"red"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span> </span>
 <span class="r-in">  <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>clamp_value<span class="op">=</span><span class="fl">10</span>,fov<span class="op">=</span><span class="fl">20</span>,</span>
 <span class="r-in">               lookat<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">0.5</span>,<span class="op">-</span><span class="fl">2</span><span class="op">)</span>,lookfrom<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">3</span>,<span class="fl">3</span>,<span class="fl">10</span><span class="op">)</span><span class="op">)</span></span>
-<span class="r-plt img"><img src="csg_cylinder-2.png" alt="" width="700" height="433"></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in loadNamespace(i, c(lib.loc, .libPaths()), versionCheck = vI[[i]]):</span> there is no package called ‘terra’</span>
 <span class="r-in"> </span>
 <span class="r-in"><span class="co">#Show the effect of changing the radius</span></span>
 <span class="r-in"><span class="fu"><a href="generate_ground.html">generate_ground</a></span><span class="op">(</span>material<span class="op">=</span><span class="fu"><a href="diffuse.html">diffuse</a></span><span class="op">(</span>color<span class="op">=</span><span class="st">"dodgerblue4"</span>,checkercolor<span class="op">=</span><span class="st">"grey10"</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span> </span>
@@ -139,7 +148,7 @@
 <span class="r-in">    material<span class="op">=</span><span class="fu"><a href="glossy.html">glossy</a></span><span class="op">(</span>checkercolor<span class="op">=</span><span class="st">"red"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span> </span>
 <span class="r-in">  <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>clamp_value<span class="op">=</span><span class="fl">10</span>,fov<span class="op">=</span><span class="fl">20</span>,</span>
 <span class="r-in">               lookat<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">0.5</span>,<span class="op">-</span><span class="fl">2</span><span class="op">)</span>,lookfrom<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">-</span><span class="fl">3</span>,<span class="fl">3</span>,<span class="fl">10</span><span class="op">)</span><span class="op">)</span></span>
-<span class="r-plt img"><img src="csg_cylinder-3.png" alt="" width="700" height="433"></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in loadNamespace(i, c(lib.loc, .libPaths()), versionCheck = vI[[i]]):</span> there is no package called ‘terra’</span>
 <span class="r-in">               </span>
 <span class="r-in"><span class="co">#Render a red marble cylinder in a Cornell box</span></span>
 <span class="r-in"><span class="fu"><a href="generate_cornell.html">generate_cornell</a></span><span class="op">(</span>light<span class="op">=</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span> </span>
@@ -151,7 +160,7 @@
 <span class="r-in">                              spotlight_focus <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">555</span><span class="op">/</span><span class="fl">2</span>,<span class="fl">555</span><span class="op">/</span><span class="fl">2</span>,<span class="fl">555</span><span class="op">/</span><span class="fl">2</span><span class="op">)</span>,spotlight_width <span class="op">=</span> <span class="fl">45</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span> </span>
 <span class="r-in">  <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>clamp_value<span class="op">=</span><span class="fl">4</span><span class="op">)</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Setting default values for Cornell box: lookfrom `c(278,278,-800)` lookat `c(278,278,555/2)` fov `40` .</span>
-<span class="r-plt img"><img src="csg_cylinder-4.png" alt="" width="700" height="433"></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in loadNamespace(i, c(lib.loc, .libPaths()), versionCheck = vI[[i]]):</span> there is no package called ‘terra’</span>
 <span class="r-in"><span class="co"># }</span></span>
 </code></pre></div>
     </div>
@@ -167,7 +176,7 @@
 </div>
 
 <div class="pkgdown">
-  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.3.</p>
+  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.4.</p>
 </div>
 
       </footer></div>

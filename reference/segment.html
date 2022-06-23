@@ -17,7 +17,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">rayrender</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.26.0</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.27.0</span>
       </span>
     </div>
 
@@ -108,36 +108,59 @@
     <h2>Arguments</h2>
     <dl><dt>start</dt>
 <dd><p>Default `c(0, -1, 0)`. Start point of the cylinder segment, specifing `x`, `y`, `z`.</p></dd>
+
+
 <dt>end</dt>
 <dd><p>Default `c(0, 1, 0)`. End point of the cylinder segment, specifing `x`, `y`, `z`.</p></dd>
+
+
 <dt>radius</dt>
 <dd><p>Default `1`. Radius of the segment.</p></dd>
+
+
 <dt>phi_min</dt>
 <dd><p>Default `0`. Minimum angle around the segment.</p></dd>
+
+
 <dt>phi_max</dt>
 <dd><p>Default `360`. Maximum angle around the segment.</p></dd>
+
+
 <dt>from_center</dt>
 <dd><p>Default `TRUE`. If orientation specified via `direction`, setting this argument
 to `FALSE` will make `start` specify the bottom of the segment, instead of the middle.</p></dd>
+
+
 <dt>direction</dt>
 <dd><p>Default `NA`. Alternative to `start` and `end`, specify the direction (via 
 a length-3 vector) of the segment. Segment will be centered at `start`, and the length will be
 determined by the magnitude of the direction vector.</p></dd>
+
+
 <dt>material</dt>
 <dd><p>Default  <code><a href="diffuse.html">diffuse</a></code>.The material, called from one of the material 
 functions <code><a href="diffuse.html">diffuse</a></code>, <code><a href="metal.html">metal</a></code>, or <code><a href="dielectric.html">dielectric</a></code>.</p></dd>
+
+
 <dt>capped</dt>
 <dd><p>Default `TRUE`. Whether to add caps to the segment. Turned off when using the `light()` material.</p></dd>
+
+
 <dt>flipped</dt>
 <dd><p>Default `FALSE`. Whether to flip the normals.</p></dd>
+
+
 <dt>scale</dt>
 <dd><p>Default `c(1, 1, 1)`. Scale transformation in the x, y, and z directions. If this is a single value,
 number, the object will be scaled uniformly. Notes: this will change the stated start/end position of the segment. 
 Emissive objects may not currently function correctly when scaled.</p></dd>
+
 </dl></div>
     <div id="value">
     <h2>Value</h2>
-    <p>Single row of a tibble describing the segment in the scene.</p>
+    
+
+<p>Single row of a tibble describing the segment in the scene.</p>
     </div>
 
     <div id="ref-examples">
@@ -148,7 +171,7 @@ Emissive objects may not currently function correctly when scaled.</p></dd>
 <span class="r-in">  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu">segment</span><span class="op">(</span>start <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">100</span>, <span class="fl">100</span>, <span class="fl">100</span><span class="op">)</span>, end <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">455</span>, <span class="fl">455</span>, <span class="fl">455</span><span class="op">)</span>, radius <span class="op">=</span> <span class="fl">50</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span></span>
 <span class="r-in">  <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>lookfrom <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">278</span>, <span class="fl">278</span>, <span class="op">-</span><span class="fl">800</span><span class="op">)</span> ,lookat <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">278</span>, <span class="fl">278</span>, <span class="fl">0</span><span class="op">)</span>, fov <span class="op">=</span> <span class="fl">40</span>, </span>
 <span class="r-in">               ambient_light <span class="op">=</span> <span class="cn">FALSE</span>, samples <span class="op">=</span> <span class="fl">400</span>, parallel <span class="op">=</span> <span class="cn">TRUE</span>, clamp_value <span class="op">=</span> <span class="fl">5</span><span class="op">)</span></span>
-<span class="r-plt img"><img src="segment-1.png" alt="" width="700" height="433"></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in loadNamespace(i, c(lib.loc, .libPaths()), versionCheck = vI[[i]]):</span> there is no package called ‘terra’</span>
 <span class="r-in"><span class="co"># }</span></span>
 <span class="r-in"></span>
 <span class="r-in"><span class="co"># Draw a line graph representing a normal distribution, but with metal:</span></span>
@@ -168,7 +191,7 @@ Emissive objects may not currently function correctly when scaled.</p></dd>
 <span class="r-in">  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="va">scene_segments</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span></span>
 <span class="r-in">  <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>lookfrom <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">278</span>, <span class="fl">278</span>, <span class="op">-</span><span class="fl">800</span><span class="op">)</span> ,lookat <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">278</span>, <span class="fl">278</span>, <span class="fl">0</span><span class="op">)</span>, fov <span class="op">=</span> <span class="fl">40</span>, </span>
 <span class="r-in">               ambient_light <span class="op">=</span> <span class="cn">FALSE</span>, samples <span class="op">=</span> <span class="fl">400</span>, parallel <span class="op">=</span> <span class="cn">TRUE</span>, clamp_value <span class="op">=</span> <span class="fl">5</span><span class="op">)</span></span>
-<span class="r-plt img"><img src="segment-2.png" alt="" width="700" height="433"></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in loadNamespace(i, c(lib.loc, .libPaths()), versionCheck = vI[[i]]):</span> there is no package called ‘terra’</span>
 <span class="r-in"><span class="co"># }</span></span>
 <span class="r-in"></span>
 <span class="r-in"><span class="co">#Draw the outline of a cube:</span></span>
@@ -191,7 +214,7 @@ Emissive objects may not currently function correctly when scaled.</p></dd>
 <span class="r-in">  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="va">cube_outline</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span></span>
 <span class="r-in">  <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>lookfrom <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">278</span>, <span class="fl">278</span>, <span class="op">-</span><span class="fl">800</span><span class="op">)</span> ,lookat <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">278</span>, <span class="fl">278</span>, <span class="fl">0</span><span class="op">)</span>, fov <span class="op">=</span> <span class="fl">40</span>, </span>
 <span class="r-in">               ambient_light <span class="op">=</span> <span class="cn">FALSE</span>, samples <span class="op">=</span> <span class="fl">400</span>, parallel <span class="op">=</span> <span class="cn">TRUE</span>, clamp_value <span class="op">=</span> <span class="fl">5</span><span class="op">)</span></span>
-<span class="r-plt img"><img src="segment-3.png" alt="" width="700" height="433"></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in loadNamespace(i, c(lib.loc, .libPaths()), versionCheck = vI[[i]]):</span> there is no package called ‘terra’</span>
 <span class="r-in"><span class="co"># }</span></span>
 <span class="r-in"></span>
 <span class="r-in"><span class="co">#Shrink and rotate the cube</span></span>
@@ -201,7 +224,7 @@ Emissive objects may not currently function correctly when scaled.</p></dd>
 <span class="r-in">                           angle <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">45</span>,<span class="fl">45</span>,<span class="fl">45</span><span class="op">)</span>, scale <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.5</span>,<span class="fl">0.5</span>,<span class="fl">0.5</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span></span>
 <span class="r-in">  <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>lookfrom <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">278</span>, <span class="fl">278</span>, <span class="op">-</span><span class="fl">800</span><span class="op">)</span> ,lookat <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">278</span>, <span class="fl">278</span>, <span class="fl">0</span><span class="op">)</span>, fov <span class="op">=</span> <span class="fl">40</span>, </span>
 <span class="r-in">               ambient_light <span class="op">=</span> <span class="cn">FALSE</span>, samples <span class="op">=</span> <span class="fl">400</span>, parallel <span class="op">=</span> <span class="cn">TRUE</span>, clamp_value <span class="op">=</span> <span class="fl">5</span><span class="op">)</span></span>
-<span class="r-plt img"><img src="segment-4.png" alt="" width="700" height="433"></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in loadNamespace(i, c(lib.loc, .libPaths()), versionCheck = vI[[i]]):</span> there is no package called ‘terra’</span>
 <span class="r-in"><span class="co"># }</span></span>
 </code></pre></div>
     </div>
@@ -217,7 +240,7 @@ Emissive objects may not currently function correctly when scaled.</p></dd>
 </div>
 
 <div class="pkgdown">
-  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.3.</p>
+  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.4.</p>
 </div>
 
       </footer></div>

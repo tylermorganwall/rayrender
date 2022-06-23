@@ -31,6 +31,9 @@
     <loc>/reference/add_object.html</loc>
   </url>
   <url>
+    <loc>/reference/add_points_polygon.html</loc>
+  </url>
+  <url>
     <loc>/reference/animate_objects.html</loc>
   </url>
   <url>
@@ -50,6 +53,9 @@
   </url>
   <url>
     <loc>/reference/calculate_final_path.html</loc>
+  </url>
+  <url>
+    <loc>/reference/calculate_final_twist.html</loc>
   </url>
   <url>
     <loc>/reference/clamp.html</loc>
@@ -155,6 +161,9 @@
   </url>
   <url>
     <loc>/reference/expInOut.html</loc>
+  </url>
+  <url>
+    <loc>/reference/extruded_path.html</loc>
   </url>
   <url>
     <loc>/reference/extruded_polygon.html</loc>
@@ -278,6 +287,9 @@
   </url>
   <url>
     <loc>/reference/segment.html</loc>
+  </url>
+  <url>
+    <loc>/reference/slerp.html</loc>
   </url>
   <url>
     <loc>/reference/sphere.html</loc>

@@ -17,7 +17,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">rayrender</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.26.0</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.27.0</span>
       </span>
     </div>
 
@@ -103,22 +103,35 @@
     <h2>Arguments</h2>
     <dl><dt>depth</dt>
 <dd><p>Default `-1`. Depth of the ground in the scene.</p></dd>
+
+
 <dt>distance</dt>
 <dd><p>Default `-10`. Distance to the backdrop in the scene from the origin, on the z-axis.</p></dd>
+
+
 <dt>width</dt>
 <dd><p>Default `100`. Width of the backdrop.</p></dd>
+
+
 <dt>height</dt>
 <dd><p>Default `100`. height of the backdrop.</p></dd>
+
+
 <dt>curvature</dt>
 <dd><p>Default `2`. Radius of the curvature connecting the bottom plane to the vertical
 backdrop.</p></dd>
+
+
 <dt>material</dt>
 <dd><p>Default  <code><a href="diffuse.html">diffuse</a></code> with `color= "#ccff00"`.The material, called from one of the material 
 functions <code><a href="diffuse.html">diffuse</a></code>, <code><a href="metal.html">metal</a></code>, or <code><a href="dielectric.html">dielectric</a></code>.</p></dd>
+
 </dl></div>
     <div id="value">
     <h2>Value</h2>
-    <p>Tibble representing the scene.</p>
+    
+
+<p>Tibble representing the scene.</p>
     </div>
 
     <div id="ref-examples">
@@ -130,13 +143,13 @@ functions <code><a href="diffuse.html">diffuse</a></code>, <code><a href="metal.
 <span class="r-in">  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="sphere.html">sphere</a></span><span class="op">(</span>y<span class="op">=</span><span class="fl">3</span>,x<span class="op">=</span><span class="op">-</span><span class="fl">2</span>,z<span class="op">=</span><span class="fl">20</span>,material<span class="op">=</span><span class="fu"><a href="light.html">light</a></span><span class="op">(</span>intensity<span class="op">=</span><span class="fl">600</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
 <span class="r-in"><span class="co"># \donttest{</span></span>
 <span class="r-in"><span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span><span class="va">scene</span>, parallel<span class="op">=</span><span class="cn">TRUE</span>,lookfrom<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">2</span>,<span class="fl">10</span><span class="op">)</span>,fov<span class="op">=</span><span class="fl">20</span>,clamp_value<span class="op">=</span><span class="fl">10</span>,samples<span class="op">=</span><span class="fl">500</span><span class="op">)</span></span>
-<span class="r-plt img"><img src="generate_studio-1.png" alt="" width="700" height="433"></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in loadNamespace(i, c(lib.loc, .libPaths()), versionCheck = vI[[i]]):</span> there is no package called ‘terra’</span>
 <span class="r-in"><span class="co"># }</span></span>
 <span class="r-in"></span>
 <span class="r-in"><span class="co">#Zooming out to show the full default scene</span></span>
 <span class="r-in"><span class="co"># \donttest{</span></span>
 <span class="r-in"><span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span><span class="va">scene</span>, parallel<span class="op">=</span><span class="cn">TRUE</span>,lookfrom<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">200</span>,<span class="fl">400</span><span class="op">)</span>,clamp_value<span class="op">=</span><span class="fl">10</span>,samples<span class="op">=</span><span class="fl">500</span><span class="op">)</span></span>
-<span class="r-plt img"><img src="generate_studio-2.png" alt="" width="700" height="433"></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in loadNamespace(i, c(lib.loc, .libPaths()), versionCheck = vI[[i]]):</span> there is no package called ‘terra’</span>
 <span class="r-in"><span class="co"># }</span></span>
 </code></pre></div>
     </div>
@@ -152,7 +165,7 @@ functions <code><a href="diffuse.html">diffuse</a></code>, <code><a href="metal.
 </div>
 
 <div class="pkgdown">
-  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.3.</p>
+  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.4.</p>
 </div>
 
       </footer></div>

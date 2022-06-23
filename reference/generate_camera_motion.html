@@ -18,7 +18,7 @@ a data.frame that can be passed to `render_animation()`."><meta property="og:ima
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">rayrender</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.26.0</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.27.0</span>
       </span>
     </div>
 
@@ -120,59 +120,98 @@ a data.frame that can be passed to `render_animation()`.</p>
 <dd><p>A list or 3-column XYZ matrix of camera positions. 
 These will serve as key frames for the camera position. Alternatively, this can also be the a 
 dataframe of the keyframe output from an interactive rayrender session (`ray_keyframes`).</p></dd>
+
+
 <dt>lookats</dt>
 <dd><p>Default `NULL`, which sets the camera lookat to the origin `c(0,0,0)` 
 for the animation. A list or 3-column XYZ matrix
 of `lookat` points. Must be the same number of points as `positions`.</p></dd>
+
+
 <dt>apertures</dt>
 <dd><p>Default `0`. A numeric vector of aperture values.</p></dd>
+
+
 <dt>fovs</dt>
 <dd><p>Default `40`. A numeric vector of field of view values.</p></dd>
+
+
 <dt>focal_distances</dt>
 <dd><p>Default `NULL`, automatically the distance between positions and lookats. 
 Numeric vector of focal distances.</p></dd>
+
+
 <dt>ortho_dims</dt>
 <dd><p>Default `NULL`, which results in `c(1,1)` orthographic dimensions.  A list or 2-column matrix
 of orthographic dimensions.</p></dd>
+
+
 <dt>camera_ups</dt>
 <dd><p>Default `NULL`, which gives at up vector of `c(0,1,0)`. Camera up orientation.</p></dd>
+
+
 <dt>type</dt>
 <dd><p>Default `cubic`. Type of transition between keyframes. 
 Other options are `linear`, `quad`, `bezier`, `exp`, and `manual`. `manual` just returns the values 
 passed in, properly formatted to be passed to `render_animation()`.</p></dd>
+
+
 <dt>frames</dt>
 <dd><p>Default `30`. Total number of frames.</p></dd>
+
+
 <dt>closed</dt>
 <dd><p>Default `FALSE`. Whether to close the camera curve so the first position matches the last. Set this to `TRUE` for perfect loops.</p></dd>
+
+
 <dt>aperture_linear</dt>
 <dd><p>Default `TRUE`. This linearly interpolates focal distances, rather than using a smooth Bezier curve  or easing function.</p></dd>
+
+
 <dt>fov_linear</dt>
 <dd><p>Default `TRUE`. This linearly interpolates focal distances, rather than using a smooth Bezier curve  or easing function.</p></dd>
+
+
 <dt>focal_linear</dt>
 <dd><p>Default `TRUE`. This linearly interpolates focal distances, rather than using a smooth Bezier curve or easing function.</p></dd>
+
+
 <dt>ortho_linear</dt>
 <dd><p>Default `TRUE`. This linearly interpolates orthographic dimensions, rather than using a smooth Bezier curve or easing function.</p></dd>
+
+
 <dt>constant_step</dt>
 <dd><p>Default `TRUE`. This will make the camera travel at a constant speed.</p></dd>
+
+
 <dt>curvature_adjust</dt>
 <dd><p>Default `none`. Other options are `position`, `lookat`, and `both`. Whether to slow down the camera at areas of high curvature
 to prevent fast swings. Only used for curve `type = bezier`. This does not preserve key frame positions.
 Note: This feature will likely result in the `lookat` and `position` diverging if they do not 
 have similar curvatures at each point. This feature is best used when passing the same set of points to `positions` and `lookats` 
 and providing an `offset_lookat` value, which ensures the curvature will be the same.</p></dd>
+
+
 <dt>curvature_scale</dt>
 <dd><p>Default `30`. Constant dividing factor for curvature. Higher values will subdivide the
 path more, potentially finding a smoother path, but increasing the calculation time. Only used for curve `type = bezier`.
 Increasing this value after a certain point will not increase the quality of the path, but it is scene-dependent.</p></dd>
+
+
 <dt>offset_lookat</dt>
 <dd><p>Default `0`. Amount to offset the lookat position, either along the path (if `constant_step = TRUE`)
 or towards the derivative of the Bezier curve.</p></dd>
+
+
 <dt>progress</dt>
 <dd><p>Default `TRUE`. Whether to display a progress bar.</p></dd>
+
 </dl></div>
     <div id="value">
     <h2>Value</h2>
-    <p>Data frame of camera positions, orientations, apertures, focal distances, and field of views</p>
+    
+
+<p>Data frame of camera positions, orientations, apertures, focal distances, and field of views</p>
     </div>
 
     <div id="ref-examples">
@@ -199,7 +238,7 @@ or towards the derivative of the Bezier curve.</p></dd>
 <span class="r-in">  <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>lookfrom<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">20</span>,<span class="fl">0</span><span class="op">)</span>, width<span class="op">=</span><span class="fl">800</span>,height<span class="op">=</span><span class="fl">800</span>,samples<span class="op">=</span><span class="fl">32</span>,</span>
 <span class="r-in">               camera_up <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">0</span>,<span class="fl">1</span><span class="op">)</span>,</span>
 <span class="r-in">               fov<span class="op">=</span><span class="fl">80</span><span class="op">)</span></span>
-<span class="r-plt img"><img src="generate_camera_motion-1.png" alt="" width="700" height="433"></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in loadNamespace(i, c(lib.loc, .libPaths()), versionCheck = vI[[i]]):</span> there is no package called ‘terra’</span>
 <span class="r-in">            </span>
 <span class="r-in"><span class="co">#Side view     </span></span>
 <span class="r-in"><span class="fu"><a href="generate_ground.html">generate_ground</a></span><span class="op">(</span>material<span class="op">=</span><span class="fu"><a href="diffuse.html">diffuse</a></span><span class="op">(</span>checkercolor<span class="op">=</span><span class="st">"grey20"</span><span class="op">)</span>,depth<span class="op">=</span><span class="op">-</span><span class="fl">10</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span> </span>
@@ -208,7 +247,7 @@ or towards the derivative of the Bezier curve.</p></dd>
 <span class="r-in">  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="path.html">path</a></span><span class="op">(</span><span class="va">camera_pos</span>, material<span class="op">=</span><span class="fu"><a href="diffuse.html">diffuse</a></span><span class="op">(</span>color<span class="op">=</span><span class="st">"red"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span> </span>
 <span class="r-in">  <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>lookfrom<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">20</span>,<span class="fl">0</span>,<span class="fl">0</span><span class="op">)</span>,width<span class="op">=</span><span class="fl">800</span>,height<span class="op">=</span><span class="fl">800</span>,samples<span class="op">=</span><span class="fl">32</span>,</span>
 <span class="r-in">                 fov<span class="op">=</span><span class="fl">80</span><span class="op">)</span></span>
-<span class="r-plt img"><img src="generate_camera_motion-2.png" alt="" width="700" height="433"></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in loadNamespace(i, c(lib.loc, .libPaths()), versionCheck = vI[[i]]):</span> there is no package called ‘terra’</span>
 <span class="r-in"> </span>
 <span class="r-in"><span class="co">#View from the start        </span></span>
 <span class="r-in"><span class="fu"><a href="generate_ground.html">generate_ground</a></span><span class="op">(</span>material<span class="op">=</span><span class="fu"><a href="diffuse.html">diffuse</a></span><span class="op">(</span>checkercolor<span class="op">=</span><span class="st">"grey20"</span><span class="op">)</span>,depth<span class="op">=</span><span class="op">-</span><span class="fl">10</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span> </span>
@@ -217,7 +256,7 @@ or towards the derivative of the Bezier curve.</p></dd>
 <span class="r-in">  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="path.html">path</a></span><span class="op">(</span><span class="va">camera_pos</span>, material<span class="op">=</span><span class="fu"><a href="diffuse.html">diffuse</a></span><span class="op">(</span>color<span class="op">=</span><span class="st">"red"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span> </span>
 <span class="r-in">  <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>lookfrom<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">1.5</span>,<span class="fl">16</span><span class="op">)</span>,width<span class="op">=</span><span class="fl">800</span>,height<span class="op">=</span><span class="fl">800</span>,samples<span class="op">=</span><span class="fl">32</span>,</span>
 <span class="r-in">                 fov<span class="op">=</span><span class="fl">80</span><span class="op">)</span></span>
-<span class="r-plt img"><img src="generate_camera_motion-3.png" alt="" width="700" height="433"></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in loadNamespace(i, c(lib.loc, .libPaths()), versionCheck = vI[[i]]):</span> there is no package called ‘terra’</span>
 <span class="r-in">                 </span>
 <span class="r-in"><span class="co">#Generate Camera movement, setting the lookat position to be same as camera position, but offset</span></span>
 <span class="r-in"><span class="co">#slightly in front. We'll render 12 frames, but you'd likely want more in a real animation.</span></span>
@@ -228,32 +267,32 @@ or towards the derivative of the Bezier curve.</p></dd>
 <span class="r-in">                                        </span>
 <span class="r-in"><span class="co">#This returns a data frame of individual camera positions, interpolated by cubic bezier curves.</span></span>
 <span class="r-in"><span class="va">camera_motion</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>              x          y           z         dx         dy          dz</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1    0.0000000  1.0000000  15.0000000  0.5540753  0.3793760  14.4451790</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 12   2.0426788 -1.2913413  12.9130580  2.5799782 -1.8970825  12.3261865</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 23   3.9656263 -3.4752799  10.6121427  4.4319830 -4.0162782   9.9123005</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 38   5.3641317 -5.1657043   7.6624089  5.4433167 -5.3265227   6.6815832</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 55   4.5735555 -4.6134636   4.2864210  4.0394085 -4.1113644   3.6067639</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 66   2.4543547 -2.5796685   2.0300934  1.8473580 -1.9839746   1.5040677</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 76   0.1811561 -0.3313301   0.1449713 -0.4339193  0.2845633  -0.3473272</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 85  -2.0849691  1.9522779  -1.7065252 -2.6813261  2.5607910  -2.2301639</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 96  -4.2136709  4.1500150  -3.8037431 -4.7114121  4.6821070  -4.4889171</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 111 -5.4478102  5.5801044  -6.8775827 -5.3230057  5.5394471  -7.8670199</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 127 -4.2534993  4.6985864 -10.1903391 -3.7368466  4.2614804 -10.9263454</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 140 -2.2089084  2.9392277 -12.7334457 -1.6207842  2.4245362 -13.3572923</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     aperture fov     focal orthox orthoy upx upy upz</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1          0  80 1.0000000      1      1   0   1   0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 12         0  80 1.0000157      1      1   0   1   0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 23         0  80 0.9999735      1      1   0   1   0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 38         0  80 0.9970717      1      1   0   1   0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 55         0  80 0.9996751      1      1   0   1   0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 66         0  80 0.9999997      1      1   0   1   0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 76         0  80 1.0000001      1      1   0   1   0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 85         0  80 1.0000637      1      1   0   1   0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 96         0  80 1.0001658      1      1   0   1   0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 111        0  80 0.9981058      1      1   0   1   0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 127        0  80 0.9998484      1      1   0   1   0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 140        0  80 0.9999911      1      1   0   1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>             x          y           z         dx         dy          dz aperture</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1   0.0000000  1.0000000  15.0000000  0.5540753  0.3793760  14.4451790        0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2   2.0426788 -1.2913413  12.9130580  2.5799782 -1.8970825  12.3261865        0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3   3.9656263 -3.4752799  10.6121427  4.4319830 -4.0162782   9.9123005        0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4   5.3641317 -5.1657043   7.6624089  5.4433167 -5.3265227   6.6815832        0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5   4.5735555 -4.6134636   4.2864210  4.0394085 -4.1113644   3.6067639        0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 6   2.4543547 -2.5796685   2.0300934  1.8473580 -1.9839746   1.5040677        0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 7   0.1811561 -0.3313301   0.1449713 -0.4339193  0.2845633  -0.3473272        0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 8  -2.0849691  1.9522779  -1.7065252 -2.6813261  2.5607910  -2.2301639        0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 9  -4.2136709  4.1500150  -3.8037431 -4.7114121  4.6821070  -4.4889171        0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 10 -5.4478102  5.5801044  -6.8775827 -5.3230057  5.5394471  -7.8670199        0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 11 -4.2534993  4.6985864 -10.1903391 -3.7368466  4.2614804 -10.9263454        0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 12 -2.2089084  2.9392277 -12.7334457 -1.6207842  2.4245362 -13.3572923        0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    fov     focal orthox orthoy upx upy upz</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1   80 1.0000000      1      1   0   1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2   80 1.0000157      1      1   0   1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3   80 0.9999735      1      1   0   1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4   80 0.9970717      1      1   0   1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5   80 0.9996751      1      1   0   1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 6   80 0.9999997      1      1   0   1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 7   80 1.0000001      1      1   0   1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 8   80 1.0000637      1      1   0   1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 9   80 1.0001658      1      1   0   1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 10  80 0.9981058      1      1   0   1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 11  80 0.9998484      1      1   0   1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 12  80 0.9999911      1      1   0   1   0</span>
 <span class="r-in"></span>
 <span class="r-in"><span class="co">#Pass NA filename to plot to the device. We'll keep the path and offset it slightly to see</span></span>
 <span class="r-in"><span class="co">#where we're going. This results in a "roller coaster" effect.</span></span>
@@ -285,7 +324,7 @@ or towards the derivative of the Bezier curve.</p></dd>
 </div>
 
 <div class="pkgdown">
-  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.3.</p>
+  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.4.</p>
 </div>
 
       </footer></div>

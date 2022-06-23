@@ -17,7 +17,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">rayrender</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.26.0</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.27.0</span>
       </span>
     </div>
 
@@ -105,24 +105,41 @@
     <h2>Arguments</h2>
     <dl><dt>pigment</dt>
 <dd><p>Default `1.3`. Concentration of the eumelanin pigment in the hair. Blonde hair has concentrations around 0.3, brown around 1.3, and black around 8.</p></dd>
+
+
 <dt>red_pigment</dt>
 <dd><p>Default `0`.Concentration of the pheomelanin pigment in the hair. Pheomelanin makes red hair red.</p></dd>
+
+
 <dt>color</dt>
 <dd><p>Default `NA`. Approximate color. Overrides `pigment`/`redness` arguments.</p></dd>
+
+
 <dt>sigma_a</dt>
 <dd><p>Default `NA`. Attenuation. Overrides `color` and `pigment`/`redness` arguments.</p></dd>
+
+
 <dt>eta</dt>
 <dd><p>Default `1.55`. Index of refraction of the hair medium.</p></dd>
+
+
 <dt>beta_m</dt>
 <dd><p>Default `0.3`. Longitudinal roughness of the hair. Should be between 0 and 1. This roughness controls the size and shape of the hair highlight.</p></dd>
+
+
 <dt>beta_n</dt>
 <dd><p>Default `0.3`. Azimuthal roughness of the hair. Should be between 0 and 1.</p></dd>
+
+
 <dt>alpha</dt>
 <dd><p>Default `2`. Angle of scales on the hair surface, in degrees.</p></dd>
+
 </dl></div>
     <div id="value">
     <h2>Value</h2>
-    <p>Single row of a tibble describing the hair material.</p>
+    
+
+<p>Single row of a tibble describing the hair material.</p>
     </div>
 
     <div id="ref-examples">
@@ -157,7 +174,7 @@
 <span class="r-in">  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="sphere.html">sphere</a></span><span class="op">(</span>y<span class="op">=</span><span class="fl">20</span>,z<span class="op">=</span><span class="fl">20</span>,radius<span class="op">=</span><span class="fl">5</span>,material<span class="op">=</span><span class="fu"><a href="light.html">light</a></span><span class="op">(</span>color<span class="op">=</span><span class="st">"white"</span>,intensity <span class="op">=</span> <span class="fl">100</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span></span>
 <span class="r-in">  <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>samples<span class="op">=</span><span class="fl">64</span>, lookfrom<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">3</span>,<span class="fl">10</span><span class="op">)</span>,clamp_value <span class="op">=</span> <span class="fl">10</span>,</span>
 <span class="r-in">               fov<span class="op">=</span><span class="fl">20</span><span class="op">)</span></span>
-<span class="r-plt img"><img src="hair-1.png" alt="" width="700" height="433"></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in loadNamespace(i, c(lib.loc, .libPaths()), versionCheck = vI[[i]]):</span> there is no package called ‘terra’</span>
 <span class="r-in">               </span>
 <span class="r-in">               </span>
 <span class="r-in"><span class="co">#Specify the color directly and increase hair roughness</span></span>
@@ -181,7 +198,7 @@
 <span class="r-in">  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="sphere.html">sphere</a></span><span class="op">(</span>y<span class="op">=</span><span class="fl">20</span>,z<span class="op">=</span><span class="fl">20</span>,radius<span class="op">=</span><span class="fl">5</span>,material<span class="op">=</span><span class="fu"><a href="light.html">light</a></span><span class="op">(</span>color<span class="op">=</span><span class="st">"white"</span>,intensity <span class="op">=</span> <span class="fl">100</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span></span>
 <span class="r-in">  <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>samples<span class="op">=</span><span class="fl">64</span>, lookfrom<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">3</span>,<span class="fl">10</span><span class="op">)</span>,clamp_value <span class="op">=</span> <span class="fl">10</span>,</span>
 <span class="r-in">               fov<span class="op">=</span><span class="fl">20</span><span class="op">)</span></span>
-<span class="r-plt img"><img src="hair-2.png" alt="" width="700" height="433"></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in loadNamespace(i, c(lib.loc, .libPaths()), versionCheck = vI[[i]]):</span> there is no package called ‘terra’</span>
 <span class="r-in"><span class="co"># }</span></span>
 </code></pre></div>
     </div>
@@ -197,7 +214,7 @@
 </div>
 
 <div class="pkgdown">
-  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.3.</p>
+  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.4.</p>
 </div>
 
       </footer></div>
