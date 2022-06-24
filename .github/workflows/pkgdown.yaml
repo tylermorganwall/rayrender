@@ -51,6 +51,7 @@ jobs:
         if: matrix.config.os == 'macOS-latest'
         run: |
           brew install imagemagick@6
+          brew install gdal
       - name: Install dependencies
         run: |
           remotes::install_deps(dependencies = TRUE)
