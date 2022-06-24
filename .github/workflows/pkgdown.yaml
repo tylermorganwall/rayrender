@@ -18,11 +18,10 @@ jobs:
 
       - uses: r-lib/actions/setup-pandoc@v1
       - name: Install macOS system dependencies
-        if: matrix.config.os == 'macOS-latest'
+        if: runner.os == 'macOS'
         run: |
           brew install imagemagick@6
           brew install gdal
-          
       - name: Query dependencies
         run: |
           install.packages('remotes')
