@@ -36,7 +36,7 @@ List describing the triangle in the scene.
 CSG Rotate
 }
 \examples{
-\donttest{
+if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 #Rotate a pyramid (translating it upwards because the object is scaled from the center):
 generate_ground(material=diffuse(checkercolor="grey20")) \%>\% 
   add_object(csg_object(csg_pyramid(z=1,y=-0.99),

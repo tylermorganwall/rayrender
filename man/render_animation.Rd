@@ -187,7 +187,7 @@ Takes the scene description and renders an image, either to the device or to a f
 }
 \examples{
 #Create and animate flying through a scene on a simulated roller coaster
-\donttest{
+if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 set.seed(3)
 elliplist = list()
 ellip_colors = rainbow(8)

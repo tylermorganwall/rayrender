@@ -50,7 +50,7 @@ Note: For dielectric objects, any other objects not included in the CSG object a
 nested inside will be ignored.
 }
 \examples{
-\donttest{
+if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 #We will combine these three objects:
 generate_ground(material=diffuse(checkercolor="grey20")) \%>\%
   add_object(csg_object(csg_box(), material=glossy(color="red"))) \%>\% 

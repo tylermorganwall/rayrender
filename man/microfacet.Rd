@@ -125,7 +125,7 @@ Microfacet Material
 # Generate a golden egg, using eta and kappa taken from physical measurements
 # See the website refractiveindex.info for eta and k data, use 
 # wavelengths 580nm (R), 530nm (G), and 430nm (B).
-\donttest{
+if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 generate_cornell() \%>\%
   add_object(ellipsoid(x=555/2,555/2,y=150, a=100,b=150,c=100,
              material=microfacet(roughness=0.1,

@@ -52,7 +52,7 @@ Composite object (cone + segment)
 }
 \examples{
 #Draw a simple arrow from x = -1 to x = 1
-\donttest{
+if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 generate_studio() \%>\% 
   add_object(arrow(start = c(-1,0,0), end = c(1,0,0), material=glossy(color="red"))) \%>\% 
   add_object(sphere(y=5,material=light(intensity=20))) \%>\% 

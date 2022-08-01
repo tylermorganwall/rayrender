@@ -40,7 +40,7 @@ Hair Material
 }
 \examples{
 #Create a hairball
-\donttest{
+if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 #Generate rendom points on a sphere
 lengthval = 0.5
 theta = acos(2*runif(10000)-1.0);

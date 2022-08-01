@@ -20,7 +20,7 @@ regions on the interior. Thus, you will only see an effect with a transparent ma
 you carve into the object.
 }
 \examples{
-\donttest{
+if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 #Cut and onion a sphere:
 generate_ground(material=diffuse(checkercolor="grey20")) \%>\%
   add_object(csg_object(csg_combine(

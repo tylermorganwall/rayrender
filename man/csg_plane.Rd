@@ -27,7 +27,7 @@ Note: This shape isn't closed, so there may be odd lighting issues if it's orien
 way.
 }
 \examples{
-\donttest{
+if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 #Generate a plane
 csg_object(csg_plane(width_x=4, width_z=4), material=diffuse(checkercolor="purple")) \%>\% 
   add_object(sphere(y=5,x=5,material=light(intensity=40))) \%>\% 

@@ -86,7 +86,7 @@ Either a closed or open path made up of bezier curves that go through the specif
 (with continuous first and second derivatives), or straight line segments.
 }
 \examples{
-\donttest{
+if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 #Generate a wavy line, showing the line goes through the specified points:
 wave = list(c(-2,1,0),c(-1,-1,0),c(0,1,0),c(1,-1,0),c(2,1,0))
 point_mat = glossy(color="green")

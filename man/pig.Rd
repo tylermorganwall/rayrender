@@ -45,7 +45,7 @@ Pig Object
 \examples{
 #Generate a pig in the cornell box.
 
-\donttest{
+if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 generate_cornell() \%>\%
   add_object(pig(x=555/2,z=555/2,y=120,
   scale=c(80,80,80), angle = c(0,135,0))) \%>\%

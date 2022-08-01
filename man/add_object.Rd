@@ -24,7 +24,7 @@ scene = generate_ground(depth=-0.5,material = diffuse(checkercolor="blue")) \%>\
                   material=diffuse(noise=5,noisecolor="purple",color="black",noisephase=45),
                   angle=c(0,-30,0))) \%>\%
   add_object(sphere(x=-0.7,radius=0.5,material=metal(color="gold")))
-\donttest{
+if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 render_scene(scene,parallel=TRUE)
 }
 }

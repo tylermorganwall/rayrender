@@ -20,7 +20,7 @@ Raytraced plot to current device, or an image saved to a file.
 Takes the scene description and renders an image, either to the device or to a filename.
 }
 \examples{
-\donttest{
+if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 generate_ground(material=diffuse(color="darkgreen")) \%>\% 
   add_object(sphere(material=diffuse(checkercolor="red"))) \%>\% 
   render_preview()

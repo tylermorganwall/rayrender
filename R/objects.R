@@ -19,7 +19,7 @@
 #'
 #' @examples
 #' #Generate a sphere in the cornell box.
-#' \donttest{
+#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 #' generate_cornell() %>%
 #'   add_object(sphere(x = 555/2, y = 555/2, z = 555/2, radius = 100)) %>%
 #'   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
@@ -27,7 +27,7 @@
 #' }
 #' 
 #' #Generate a gold sphere in the cornell box
-#' \donttest{
+#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 #' generate_cornell() %>%
 #'   add_object(sphere(x = 555/2, y = 100, z = 555/2, radius = 100, 
 #'                     material = microfacet(color = "gold"))) %>%
@@ -86,7 +86,7 @@ sphere = function(x = 0, y = 0, z = 0, radius = 1, material = diffuse(),
 #'
 #' @examples
 #' #Generate a cube in the cornell box.
-#' \donttest{
+#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 #' generate_cornell() %>%
 #'   add_object(cube(x = 555/2, y = 100, z = 555/2, 
 #'                   xwidth = 200, ywidth = 200, zwidth = 200, angle = c(0, 30, 0))) %>%
@@ -94,7 +94,7 @@ sphere = function(x = 0, y = 0, z = 0, radius = 1, material = diffuse(),
 #'                ambient_light = FALSE, samples = 500, parallel = TRUE, clamp_value = 5)
 #' }
 #' #Generate a gold cube in the cornell box
-#' \donttest{
+#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 #' generate_cornell() %>%
 #'   add_object(cube(x = 555/2, y = 100, z = 555/2, 
 #'                   xwidth = 200, ywidth = 200, zwidth = 200, angle = c(0, 30, 0),
@@ -104,7 +104,7 @@ sphere = function(x = 0, y = 0, z = 0, radius = 1, material = diffuse(),
 #' }
 #' 
 #' #Generate a rotated dielectric box in the cornell box
-#' \donttest{
+#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 #' generate_cornell() %>%
 #'   add_object(cube(x = 555/2, y = 200, z = 555/2, 
 #'                   xwidth = 200, ywidth = 100, zwidth = 200, angle = c(-30, 30, -30),
@@ -165,7 +165,7 @@ cube = function(x = 0, y = 0, z = 0, width = 1, xwidth = 1, ywidth = 1, zwidth =
 #'
 #' @examples
 #' #Generate a purple rectangle in the cornell box.
-#' \donttest{
+#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 #' generate_cornell() %>%
 #'   add_object(xy_rect(x = 555/2, y = 100, z = 555/2, xwidth = 200, ywidth = 200,
 #'              material = diffuse(color = "purple"))) %>%
@@ -174,7 +174,7 @@ cube = function(x = 0, y = 0, z = 0, width = 1, xwidth = 1, ywidth = 1, zwidth =
 #' }
 #' 
 #' #Generate a gold plane in the cornell box
-#' \donttest{
+#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 #' generate_cornell() %>%
 #'   add_object(xy_rect(x = 555/2, y = 100, z = 555/2, 
 #'                      xwidth = 200, ywidth = 200, angle = c(0, 30, 0),
@@ -232,7 +232,7 @@ xy_rect = function(x = 0, y = 0, z = 0, xwidth = 1, ywidth = 1,
 #'
 #' @examples
 #' #Generate a purple rectangle in the cornell box.
-#' \donttest{
+#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 #' generate_cornell() %>%
 #'   add_object(yz_rect(x = 100, y = 100, z = 555/2, ywidth = 200, zwidth = 200,
 #'                      material = diffuse(color = "purple"))) %>%
@@ -240,7 +240,7 @@ xy_rect = function(x = 0, y = 0, z = 0, xwidth = 1, ywidth = 1,
 #'                ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
 #' }
 #' #Generate a gold plane in the cornell box
-#' \donttest{
+#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 #' generate_cornell() %>%
 #'   add_object(yz_rect(x = 100, y = 100, z = 555/2, 
 #'                      ywidth = 200, zwidth = 200, angle = c(0, 30, 0),
@@ -298,7 +298,7 @@ yz_rect = function(x = 0, y = 0, z = 0, ywidth = 1, zwidth = 1, material = diffu
 #'
 #' @examples
 #' #Generate a purple rectangle in the cornell box.
-#' \donttest{
+#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 #' generate_cornell() %>%
 #'   add_object(xz_rect(x = 555/2, y = 100, z = 555/2, xwidth = 200, zwidth = 200,
 #'              material = diffuse(color = "purple"))) %>%
@@ -307,7 +307,7 @@ yz_rect = function(x = 0, y = 0, z = 0, ywidth = 1, zwidth = 1, material = diffu
 #' }
 #' 
 #' #Generate a gold plane in the cornell box
-#' \donttest{
+#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 #' generate_cornell() %>%
 #'   add_object(xz_rect(x = 555/2, y = 100, z = 555/2, 
 #'              xwidth = 200, zwidth = 200, angle = c(0, 30, 0),
@@ -375,7 +375,7 @@ xz_rect = function(x = 0, xwidth = 1, z = 0, zwidth = 1, y = 0, material = diffu
 #'
 #' @examples
 #' #Generate a triangle in the Cornell box.
-#' \donttest{
+#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 #' generate_cornell() %>%
 #'   add_object(triangle(v1 = c(100, 100, 100), v2 = c(555/2, 455, 455), v3 = c(455, 100, 100),
 #'                       material = diffuse(color = "purple"))) %>%
@@ -383,7 +383,7 @@ xz_rect = function(x = 0, xwidth = 1, z = 0, zwidth = 1, y = 0, material = diffu
 #'                ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
 #' }
 #' #Pass individual colors to each vertex: 
-#' \donttest{
+#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 #' generate_cornell() %>%
 #'   add_object(triangle(v1 = c(100, 100, 100), v2 = c(555/2, 455, 455), v3 = c(455, 100, 100),
 #'                       color1 = "green", color2 = "yellow", color3 = "red")) %>%
@@ -472,7 +472,7 @@ triangle = function(v1 = c(1, 0, 0), v2 = c(0, 1, 0), v3 = c(-1, 0, 0),
 #'
 #' @examples
 #' #Generate a disk in the cornell box.
-#' \donttest{
+#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 #' generate_cornell() %>%
 #'   add_object(disk(x = 555/2, y = 50, z = 555/2, radius = 150, 
 #'                   material = diffuse(color = "orange"))) %>%
@@ -480,7 +480,7 @@ triangle = function(v1 = c(1, 0, 0), v2 = c(0, 1, 0), v3 = c(-1, 0, 0),
 #'                ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
 #' }
 #' #Rotate the disk.
-#' \donttest{
+#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 #' generate_cornell() %>%
 #'   add_object(disk(x = 555/2, y = 555/2, z = 555/2, radius = 150, angle = c(-45, 0, 0), 
 #'                   material = diffuse(color = "orange"))) %>%
@@ -488,7 +488,7 @@ triangle = function(v1 = c(1, 0, 0), v2 = c(0, 1, 0), v3 = c(-1, 0, 0),
 #'                ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
 #' }
 #' #Pass a value for the inner radius.
-#' \donttest{
+#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 #' generate_cornell() %>% 
 #'   add_object(disk(x = 555/2, y = 555/2, z = 555/2, 
 #'                   radius = 150, inner_radius = 75, angle = c(-45, 0, 0), 
@@ -557,7 +557,7 @@ disk = function(x = 0, y = 0, z = 0, radius = 1, inner_radius = 0, material = di
 #' #due to package constraints, but the file contents are identical and it does not 
 #' #affect the function.
 #' 
-#' \donttest{
+#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 #' generate_ground(material = diffuse(checkercolor = "grey50")) %>%
 #'   add_object(obj_model(y = -0.8, filename = r_obj(),
 #'                        material = microfacet(color = "gold", roughness = 0.05))) %>%
@@ -573,7 +573,7 @@ disk = function(x = 0, y = 0, z = 0, radius = 1, inner_radius = 0, material = di
 #' }
 #' 
 #' #Use scale_obj to make objects bigger--this is more robust than the generic scale argument.
-#' \donttest{
+#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 #' generate_ground(material = diffuse(checkercolor = "grey50")) %>%
 #'   add_object(obj_model(y = -0.8, filename = r_obj(), scale_obj = 2,
 #'                        material = diffuse(noise = TRUE, noiseintensity = 10,noisephase=45))) %>%
@@ -651,7 +651,7 @@ obj_model = function(filename, x = 0, y = 0, z = 0, scale_obj = 1,
 #' @examples
 #' #Generate a cylinder in the cornell box. Add a cap to both ends.
 #' 
-#' \donttest{
+#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 #' generate_cornell() %>%
 #'   add_object(cylinder(x = 555/2, y = 250, z = 555/2, 
 #'                       length = 300, radius = 100, material = metal())) %>%
@@ -659,7 +659,7 @@ obj_model = function(filename, x = 0, y = 0, z = 0, scale_obj = 1,
 #'                ambient_light = FALSE, samples = 400, parallel = TRUE, clamp_value = 5)
 #' }
 #' #Rotate the cylinder
-#' \donttest{
+#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 #' generate_cornell() %>%
 #'   add_object(cylinder(x = 555/2, y = 250, z = 555/2, 
 #'                       length = 300, radius = 100, angle = c(0, 0, 45),
@@ -669,7 +669,7 @@ obj_model = function(filename, x = 0, y = 0, z = 0, scale_obj = 1,
 #' }
 #' 
 #' # Only render a subtended arc of the cylinder,
-#' \donttest{
+#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 #' generate_cornell(lightintensity=3) %>%
 #'   add_object(cylinder(x = 555/2, y = 250, z = 555/2, capped = FALSE,
 #'                       length = 300, radius = 100, angle = c(45, 0, 0), phi_min = 0, phi_max = 180,
@@ -738,7 +738,7 @@ cylinder = function(x = 0, y = 0, z = 0, radius = 1, length = 1,
 #'
 #' @examples
 #' #Generate a segment in the cornell box. 
-#' \donttest{
+#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 #' generate_cornell() %>%
 #'   add_object(segment(start = c(100, 100, 100), end = c(455, 455, 455), radius = 50)) %>%
 #'   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
@@ -757,7 +757,7 @@ cylinder = function(x = 0, y = 0, z = 0, radius = 1, length = 1,
 #'                             material = metal())
 #' }
 #' scene_segments = do.call(rbind,scene_list)
-#' \donttest{
+#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 #' generate_cornell() %>% 
 #'   add_object(scene_segments) %>%
 #'   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
@@ -779,7 +779,7 @@ cylinder = function(x = 0, y = 0, z = 0, radius = 1, length = 1,
 #'   add_object(segment(start = c(455, 100, 455), end = c(455, 455, 455), radius = 10)) %>%
 #'   add_object(segment(start = c(100, 455, 100), end = c(455, 455, 100), radius = 10))
 #' 
-#' \donttest{
+#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 #' generate_cornell() %>%
 #'   add_object(cube_outline) %>%
 #'   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
@@ -787,7 +787,7 @@ cylinder = function(x = 0, y = 0, z = 0, radius = 1, length = 1,
 #' }
 #' 
 #' #Shrink and rotate the cube
-#' \donttest{
+#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 #' generate_cornell() %>%
 #'   add_object(group_objects(cube_outline, pivot_point = c(555/2, 555/2, 555/2),
 #'                            angle = c(45,45,45), scale = c(0.5,0.5,0.5))) %>%
@@ -876,7 +876,7 @@ segment = function(start = c(0, -1, 0), end = c(0, 1, 0), radius = 0.1,
 #' @export
 #' @examples
 #' #Generate an ellipsoid in a Cornell box
-#' \donttest{
+#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 #' generate_cornell() %>%
 #'   add_object(ellipsoid(x = 555/2, y = 555/2, z = 555/2, 
 #'                        a = 100, b = 50, c = 50)) %>%
@@ -885,7 +885,7 @@ segment = function(start = c(0, -1, 0), end = c(0, 1, 0), radius = 0.1,
 #' }
 #' 
 #' #Change the axes to make it taller rather than wide:
-#' \donttest{
+#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 #' generate_cornell() %>%
 #'   add_object(ellipsoid(x = 555/2, y = 555/2, z = 555/2, 
 #'                        a = 100, b = 200, c = 100, material = metal())) %>%
@@ -894,7 +894,7 @@ segment = function(start = c(0, -1, 0), end = c(0, 1, 0), radius = 0.1,
 #' }
 #' 
 #' #Rotate it and make it dielectric:
-#' \donttest{
+#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 #' generate_cornell() %>%
 #'   add_object(ellipsoid(x = 555/2, y = 555/2, z = 555/2, 
 #'                        a = 100, b = 200, c = 100, angle = c(0, 0, 45),
@@ -974,14 +974,14 @@ ellipsoid = function(x = 0, y = 0, z = 0, a = 1, b = 1, c = 1,
 #' @examples
 #' #Manually create a polygon object, here a star:
 #' 
-#' \donttest{
+#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 #' angles = seq(0,360,by=36)
 #' xx = rev(c(rep(c(1,0.5),5),1) * sinpi(angles/180))
 #' yy = rev(c(rep(c(1,0.5),5),1) * cospi(angles/180))
 #' star_polygon = data.frame(x=xx,y=yy)
 #' }
 #' 
-#' \donttest{
+#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 #' generate_ground(depth=0,
 #'                 material = diffuse(color="grey50",checkercolor="grey20")) %>%
 #'   add_object(extruded_polygon(star_polygon,top=0.5,bottom=0,
@@ -995,11 +995,11 @@ ellipsoid = function(x = 0, y = 0, z = 0, a = 1, b = 1, c = 1,
 #' #and specify with the `holes` argument that everything after `nrow(star_polygon)`
 #' #in the following should be used to draw a hole:
 #' 
-#' \donttest{
+#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 #' hollow_star = rbind(star_polygon,0.8*star_polygon)
 #' }
 #' 
-#' \donttest{
+#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 #' generate_ground(depth=-0.01,
 #'                 material = diffuse(color="grey50",checkercolor="grey20")) %>%
 #'   add_object(extruded_polygon(hollow_star,top=0.25,bottom=0, holes = nrow(star_polygon) + 1,
@@ -1010,7 +1010,7 @@ ellipsoid = function(x = 0, y = 0, z = 0, a = 1, b = 1, c = 1,
 #' 
 #' # Render one in the y-x plane as well by changing the `plane` argument,
 #' # as well as offset it slightly.
-#' \donttest{
+#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 #' generate_ground(depth=-0.01,
 #'                 material = diffuse(color="grey50",checkercolor="grey20")) %>%
 #'   add_object(extruded_polygon(hollow_star,top=0.25,bottom=0, holes = nrow(star_polygon),
@@ -1023,7 +1023,7 @@ ellipsoid = function(x = 0, y = 0, z = 0, a = 1, b = 1, c = 1,
 #' }
 #' 
 #' # Now add the zy plane:
-#' \donttest{
+#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 #' generate_ground(depth=-0.01,
 #'                 material = diffuse(color="grey50",checkercolor="grey20")) %>%
 #'   add_object(extruded_polygon(hollow_star,top=0.25,bottom=0, holes = nrow(star_polygon) + 1,
@@ -1039,7 +1039,7 @@ ellipsoid = function(x = 0, y = 0, z = 0, a = 1, b = 1, c = 1,
 #' }
 #' 
 #' #We can also directly pass in sf polygons:
-#' \donttest{
+#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 #' if(length(find.package("spData",quiet=TRUE)) > 0) {
 #'   us_states = spData::us_states
 #'   texas = us_states[us_states$NAME == "Texas",]
@@ -1050,7 +1050,7 @@ ellipsoid = function(x = 0, y = 0, z = 0, a = 1, b = 1, c = 1,
 #' 
 #' #This uses the raw coordinates, unless `center = TRUE`, which centers the bounding box
 #' #of the polygon at the origin.
-#' \donttest{
+#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 #' generate_ground(depth=-0.01,
 #'                 material = diffuse(color="grey50",checkercolor="grey20")) %>%
 #'   add_object(extruded_polygon(texas, center = TRUE,
@@ -1061,7 +1061,7 @@ ellipsoid = function(x = 0, y = 0, z = 0, a = 1, b = 1, c = 1,
 #' }
 #' 
 #' #Here we use the raw coordinates, but offset the polygon manually.
-#' \donttest{
+#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 #' generate_ground(depth=-0.01,
 #'                 material = diffuse(color="grey50",checkercolor="grey20")) %>%
 #'   add_object(extruded_polygon(us_states, x=-96,z=-40, top=2,
@@ -1076,7 +1076,7 @@ ellipsoid = function(x = 0, y = 0, z = 0, a = 1, b = 1, c = 1,
 #' #We can also set the map the height of each polygon to a column in the sf object,
 #' #scaling it down by the maximum population state.
 #' 
-#' \donttest{
+#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 #' generate_ground(depth=0,
 #'                 material = diffuse(color="grey50",checkercolor="grey20",sigma=90)) %>%
 #'   add_object(extruded_polygon(us_states, x=-96,z=-45, data_column_top = "total_pop_15",
@@ -1493,7 +1493,7 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
 #'
 #' @examples
 #' #Generate a cone in a studio, pointing upwards:
-#' \donttest{
+#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 #' generate_studio() %>% 
 #'  add_object(cone(start=c(0,-1,0), end=c(0,1,0), radius=1,material=diffuse(color="red"))) %>% 
 #'  add_object(sphere(y=5,x=5,material=light(intensity=40))) %>% 
@@ -1640,7 +1640,7 @@ cone = function(start = c(0, 0, 0), end = c(0, 1, 0), radius = 0.5,
 #'
 #' @examples
 #' #Draw a simple arrow from x = -1 to x = 1
-#' \donttest{
+#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 #' generate_studio() %>% 
 #'   add_object(arrow(start = c(-1,0,0), end = c(1,0,0), material=glossy(color="red"))) %>% 
 #'   add_object(sphere(y=5,material=light(intensity=20))) %>% 
@@ -1775,7 +1775,7 @@ arrow = function(start = c(0,0,0), end = c(0,1,0),
 #'
 #' @examples
 #' #Generate the default curve:
-#' \donttest{
+#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 #' generate_studio(depth=-0.2) %>%
 #'   add_object(bezier_curve(material=diffuse(color="red"))) %>%
 #'   add_object(sphere(y=3,z=5,x=2,radius=0.3,
@@ -1944,7 +1944,7 @@ bezier_curve = function(p1 = c(0,0,0), p2 = c(-1,0.33,0), p3 = c(1,0.66,0), p4=c
 #' @export
 #'
 #' @examples
-#' \donttest{
+#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 #' #Generate a wavy line, showing the line goes through the specified points:
 #' wave = list(c(-2,1,0),c(-1,-1,0),c(0,1,0),c(1,-1,0),c(2,1,0))
 #' point_mat = glossy(color="green")
@@ -2166,7 +2166,7 @@ path = function(points,
 #'
 #' @examples
 #' #Generate a label in the cornell box.
-#' \donttest{
+#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 #' generate_cornell() %>% 
 #'   add_object(text3d(label="Cornell Box", x=555/2,y=555/2,z=555/2,text_height=60,
 #'                     material=diffuse(color="grey10"), angle=c(0,180,0))) %>% 
@@ -2558,7 +2558,7 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
 #' @export
 #'
 #' @examples
-#' \donttest{
+#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 #' #Specify the points for the path to travel though and the ground material
 #' points = list(c(0,0,1),c(-0.5,0,-1),c(0,1,-1),c(1,0.5,0),c(0.6,0.3,1))
 #' ground_mat = material=diffuse(color="grey50",

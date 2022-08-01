@@ -52,7 +52,7 @@ for ellipsoids with large differences between axes.
 }
 \examples{
 #Generate an ellipsoid in a Cornell box
-\donttest{
+if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 generate_cornell() \%>\%
   add_object(ellipsoid(x = 555/2, y = 555/2, z = 555/2, 
                        a = 100, b = 50, c = 50)) \%>\%
@@ -61,7 +61,7 @@ generate_cornell() \%>\%
 }
 
 #Change the axes to make it taller rather than wide:
-\donttest{
+if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 generate_cornell() \%>\%
   add_object(ellipsoid(x = 555/2, y = 555/2, z = 555/2, 
                        a = 100, b = 200, c = 100, material = metal())) \%>\%
@@ -70,7 +70,7 @@ generate_cornell() \%>\%
 }
 
 #Rotate it and make it dielectric:
-\donttest{
+if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 generate_cornell() \%>\%
   add_object(ellipsoid(x = 555/2, y = 555/2, z = 555/2, 
                        a = 100, b = 200, c = 100, angle = c(0, 0, 45),

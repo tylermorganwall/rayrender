@@ -26,7 +26,7 @@ List describing the triangle in the scene.
 This operation elongates an existing CSG object in a direction.
 }
 \examples{
-\donttest{
+if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 #Elongate a sphere to create a capsule in 1D or a rounded rectangle in 2D:
 generate_ground(material=diffuse(checkercolor="grey20",color="dodgerblue4")) \%>\% 
  add_object(csg_object(csg_sphere(z=-3,x=-3),

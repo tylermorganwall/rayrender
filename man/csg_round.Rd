@@ -18,7 +18,7 @@ List describing the triangle in the scene.
 CSG Round
 }
 \examples{
-\donttest{
+if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 #Generate a rounded pyramid:
 generate_ground(material=diffuse(checkercolor="grey20")) \%>\% 
   add_object(csg_object(csg_pyramid(x=-1,y=-0.99,z=1),

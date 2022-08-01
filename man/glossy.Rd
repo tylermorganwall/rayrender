@@ -107,7 +107,7 @@ Single row of a tibble describing the glossy material.
 Glossy Material
 }
 \examples{
-\donttest{
+if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 #Generate a glossy sphere
 generate_ground(material=diffuse(sigma=90)) \%>\%
   add_object(sphere(y=0.2,material=glossy(color="#2b6eff"))) \%>\% 

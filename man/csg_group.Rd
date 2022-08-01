@@ -17,7 +17,7 @@ List describing the group in the scene.
 CSG Group
 }
 \examples{
-\donttest{
+if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 #Group four spheres together and merge them with a box:
 generate_ground(material=diffuse(checkercolor="grey20")) \%>\% 
   add_object(csg_object(csg_combine(

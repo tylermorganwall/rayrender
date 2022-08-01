@@ -119,7 +119,7 @@ Note: Bump mapping with non-diffuse materials does not work correctly, and smoot
 using a bump map.
 }
 \examples{
-\donttest{
+if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 #Specify the points for the path to travel though and the ground material
 points = list(c(0,0,1),c(-0.5,0,-1),c(0,1,-1),c(1,0.5,0),c(0.6,0.3,1))
 ground_mat = material=diffuse(color="grey50",

@@ -52,7 +52,7 @@ Text Object
 }
 \examples{
 #Generate a label in the cornell box.
-\donttest{
+if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 generate_cornell() \%>\% 
   add_object(text3d(label="Cornell Box", x=555/2,y=555/2,z=555/2,text_height=60,
                     material=diffuse(color="grey10"), angle=c(0,180,0))) \%>\% 

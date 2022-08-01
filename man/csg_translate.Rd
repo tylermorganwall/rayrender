@@ -22,7 +22,7 @@ List describing the triangle in the scene.
 CSG Translate
 }
 \examples{
-\donttest{
+if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 #Translate a simple object:
 generate_ground(material=diffuse(checkercolor="grey20")) \%>\% 
   add_object(csg_object(csg_torus(), material=glossy(color="dodgerblue4"))) \%>\%

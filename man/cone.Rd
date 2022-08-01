@@ -49,7 +49,7 @@ Cone Object
 }
 \examples{
 #Generate a cone in a studio, pointing upwards:
-\donttest{
+if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 generate_studio() \%>\% 
  add_object(cone(start=c(0,-1,0), end=c(0,1,0), radius=1,material=diffuse(color="red"))) \%>\% 
  add_object(sphere(y=5,x=5,material=light(intensity=40))) \%>\% 

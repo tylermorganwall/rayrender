@@ -202,40 +202,40 @@ user can also interactively fly around the 3D scene if they have X11 support on 
 }
 \examples{
 #Generate a large checkered sphere as the ground
-\donttest{
+if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 scene = generate_ground(depth=-0.5, material = diffuse(color="white", checkercolor="darkgreen"))
 render_scene(scene,parallel=TRUE,samples=500,sample_method="sobol")
 }
 
 #Add a sphere to the center
-\donttest{
+if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 scene = scene \%>\%
   add_object(sphere(x=0,y=0,z=0,radius=0.5,material = diffuse(color=c(1,0,1))))
 render_scene(scene,fov=20,parallel=TRUE,samples=500)
 }
 
 #Add a marbled cube 
-\donttest{
+if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 scene = scene \%>\%
   add_object(cube(x=1.1,y=0,z=0,material = diffuse(noise=3)))
 render_scene(scene,fov=20,parallel=TRUE,samples=500)
 }
 
 #Add a metallic gold sphere, using stratified sampling for a higher quality render
-\donttest{
+if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 scene = scene \%>\%
   add_object(sphere(x=-1.1,y=0,z=0,radius=0.5,material = metal(color="gold",fuzz=0.1)))
 render_scene(scene,fov=20,parallel=TRUE,samples=500)
 }
 
 #Lower the number of samples to render more quickly (here, we also use only one core).
-\donttest{
+if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 render_scene(scene, samples=4)
 }
 
 #Add a floating R plot using the iris dataset as a png onto a floating 2D rectangle
 
-\donttest{
+if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 tempfileplot = tempfile()
 png(filename=tempfileplot,height=400,width=800)
 plot(iris$Petal.Length,iris$Sepal.Width,col=iris$Species,pch=18,cex=4)
@@ -249,25 +249,25 @@ render_scene(scene,fov=20,parallel=TRUE,samples=500)
 }
 
 #Move the camera
-\donttest{
+if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 render_scene(scene,lookfrom = c(7,1.5,10),lookat = c(0,0.5,0),fov=15,parallel=TRUE)
 }
 
 #Change the background gradient to a night time ambiance
-\donttest{
+if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 render_scene(scene,lookfrom = c(7,1.5,10),lookat = c(0,0.5,0),fov=15,
              backgroundhigh = "#282375", backgroundlow = "#7e77ea", parallel=TRUE,
              samples=500)
 }
                  
 #Increase the aperture to blur objects that are further from the focal plane.
-\donttest{
+if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 render_scene(scene,lookfrom = c(7,1.5,10),lookat = c(0,0.5,0),fov=15,
              aperture = 0.5,parallel=TRUE,samples=500)
 }
 
 #We can also capture a 360 environment image by setting `fov = 360` (can be used for VR)
-\donttest{
+if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 generate_cornell() \%>\%
   add_object(ellipsoid(x=555/2,y=100,z=555/2,a=50,b=100,c=50, 
              material = metal(color="lightblue"))) \%>\%
@@ -286,7 +286,7 @@ generate_cornell() \%>\%
 
 #We can also use a realistic camera by specifying a camera description file (several of which
 #are built-in to rayrender. Note the curvature introduced by the fisheye lens:
-\donttest{
+if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 generate_cornell() \%>\%
   add_object(ellipsoid(x=555/2,y=100,z=555/2,a=50,b=100,c=50, 
              material = metal(color="lightblue"))) \%>\%
@@ -312,7 +312,7 @@ generate_cornell() \%>\%
 t=1:30 
 xpos = 10 * sin(t*12*pi/180+pi/2)
 zpos = 10 * cos(t*12*pi/180+pi/2)
-\donttest{
+if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 #Save old par() settings
 old.par = par(no.readonly = TRUE)
 on.exit(par(old.par))

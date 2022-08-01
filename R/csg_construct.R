@@ -24,7 +24,7 @@
 #' @export
 #'
 #' @examples
-#' \donttest{
+#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 #' #We will combine these three objects:
 #' generate_ground(material=diffuse(checkercolor="grey20")) %>%
 #'   add_object(csg_object(csg_box(), material=glossy(color="red"))) %>% 
@@ -107,7 +107,7 @@ csg_object = function(object, x = 0, y = 0, z = 0, material = diffuse(),
 #' @export
 #'
 #' @examples
-#' \donttest{
+#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 #' #Generate a simple sphere:
 #' generate_ground() %>% 
 #'   add_object(csg_object(csg_sphere(),
@@ -170,7 +170,7 @@ csg_sphere = function(x=0,y=0,z=0, radius=1) {
 #' @export
 #'
 #' @examples
-#' \donttest{
+#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 #' #Generate a plane
 #' csg_object(csg_plane(width_x=4, width_z=4), material=diffuse(checkercolor="purple")) %>% 
 #'   add_object(sphere(y=5,x=5,material=light(intensity=40))) %>% 
@@ -209,7 +209,7 @@ csg_plane = function(x=0,y=0,z=0, normal=c(0,1,0),width_x=4, width_z=4) {
 #' @export
 #'
 #' @examples
-#' \donttest{
+#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 #' #Generate a box
 #' generate_ground(material=diffuse(checkercolor="grey20")) %>% 
 #'   add_object(csg_object(csg_box(), material=glossy(color="#FF69B4"))) %>%
@@ -254,7 +254,7 @@ csg_box = function(x=0,y=0,z=0, width=c(1,1,1), corner_radius = 0) {
 #' @export
 #'
 #' @examples
-#' \donttest{
+#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 #' #Generate a torus:
 #' generate_ground(material=diffuse(checkercolor="grey20")) %>% 
 #'   add_object(csg_object(csg_torus(), material=glossy(color="dodgerblue4"))) %>%
@@ -297,7 +297,7 @@ csg_torus = function(x=0,y=0,z=0, radius=1, minor_radius=0.5) {
 #' @export
 #'
 #' @examples
-#' \donttest{
+#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 #' #Generate a basic capsule:
 #' generate_ground(material=diffuse(checkercolor="grey20")) %>% 
 #'   add_object(csg_object(csg_capsule(radius=0.5),material=glossy(color="red"))) %>% 
@@ -343,7 +343,7 @@ csg_capsule = function(start = c(0,0,0), end = c(0,1,0), radius=1) {
 #' @export
 #'
 #' @examples
-#' \donttest{
+#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 #' #Generate a basic cylinder:
 #' generate_ground(material=diffuse(checkercolor="grey20")) %>% 
 #'   add_object(csg_object(csg_cylinder(radius=0.25),material=glossy(color="red"))) %>% 
@@ -392,7 +392,7 @@ csg_cylinder = function(start = c(0,0,0), end = c(0,1,0), radius=1, corner_radiu
 #' @export
 #'
 #' @examples
-#' \donttest{
+#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 #' #Generate a basic ellipsoid:
 #' generate_ground(material=diffuse(checkercolor="grey20")) %>% 
 #'   add_object(csg_object(csg_ellipsoid(),material=glossy(color="red"))) %>% 
@@ -434,7 +434,7 @@ csg_ellipsoid = function(x=0,y=0,z=0,axes=c(0.5,1,0.5)) {
 #' @export
 #'
 #' @examples
-#' \donttest{
+#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 #' #Generate a basic rounded cone:
 #' generate_ground(material=diffuse(checkercolor="grey20")) %>% 
 #'   add_object(csg_object(csg_rounded_cone(),material=glossy(color="red"))) %>% 
@@ -480,7 +480,7 @@ csg_rounded_cone = function(start = c(0,0,0), end = c(0,1,0), radius=0.5, upper_
 #' @export
 #'
 #' @examples
-#' \donttest{
+#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 #' #Generate a basic cone:
 #' generate_ground(material=diffuse(checkercolor="grey20")) %>% 
 #'   add_object(csg_object(csg_cone(),material=glossy(color="red"))) %>% 
@@ -531,7 +531,7 @@ csg_cone = function(start = c(0,0,0), end = c(0,1,0), radius=0.5) {
 #' @export
 #'
 #' @examples
-#' \donttest{
+#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 #' #Generate a simple pyramid:
 #' generate_ground() %>% 
 #'   add_object(csg_object(csg_pyramid(y=-0.99),
@@ -572,7 +572,7 @@ csg_pyramid = function(x=0,y=0,z=0,height=1,base=1) {
 #' @export
 #'
 #' @examples
-#' \donttest{
+#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 #' #Generate a basic triangle:
 #' generate_ground(material=diffuse(checkercolor="grey20")) %>% 
 #'   add_object(csg_object(csg_triangle(),material=diffuse(color="red"))) %>% 
@@ -612,7 +612,7 @@ csg_triangle = function(v1=c(0,1,0),v2=c(1,0,0),v3=c(-1,0,0)) {
 #' @export
 #'
 #' @examples
-#' \donttest{
+#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 #' #Elongate a sphere to create a capsule in 1D or a rounded rectangle in 2D:
 #' generate_ground(material=diffuse(checkercolor="grey20",color="dodgerblue4")) %>% 
 #'  add_object(csg_object(csg_sphere(z=-3,x=-3),
@@ -692,7 +692,7 @@ csg_elongate = function(object, x=0,y=0,z=0, elongate = c(0,0,0), robust = TRUE)
 #' @export
 #'
 #' @examples
-#' \donttest{
+#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 #' #Generate a rounded pyramid:
 #' generate_ground(material=diffuse(checkercolor="grey20")) %>% 
 #'   add_object(csg_object(csg_pyramid(x=-1,y=-0.99,z=1),
@@ -740,7 +740,7 @@ csg_round = function(object, radius=0.1) {
 #' @export
 #'
 #' @examples
-#' \donttest{
+#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 #' #Cut and onion a sphere:
 #' generate_ground(material=diffuse(checkercolor="grey20")) %>%
 #'   add_object(csg_object(csg_combine(
@@ -800,7 +800,7 @@ csg_onion = function(object, thickness=0.1) {
 #' @export
 #'
 #' @examples
-#' \donttest{
+#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 #' #Scale a pyramid (translating it upwards because the object is scaled from the center):
 #' generate_ground(material=diffuse(checkercolor="grey20")) %>% 
 #'   add_object(csg_object(csg_pyramid(z=1,y=-0.99),
@@ -836,7 +836,7 @@ csg_scale = function(object, scale=1) {
 #' @export
 #'
 #' @examples
-#' \donttest{
+#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 #' #Rotate a pyramid (translating it upwards because the object is scaled from the center):
 #' generate_ground(material=diffuse(checkercolor="grey20")) %>% 
 #'   add_object(csg_object(csg_pyramid(z=1,y=-0.99),
@@ -899,7 +899,7 @@ csg_rotate = function(object, pivot_point = c(0,0,0),
 #' @export
 #'
 #' @examples
-#' \donttest{
+#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 #' #Translate a simple object:
 #' generate_ground(material=diffuse(checkercolor="grey20")) %>% 
 #'   add_object(csg_object(csg_torus(), material=glossy(color="dodgerblue4"))) %>%
@@ -946,7 +946,7 @@ csg_translate = function(object, x=0,y=0,z=0) {
 #' @export
 #'
 #' @examples
-#' \donttest{
+#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 #' #Combine two spheres:
 #' generate_ground(material=diffuse(checkercolor="grey20")) %>% 
 #'   add_object(csg_object(csg_combine(
@@ -1052,7 +1052,7 @@ csg_combine = function(object1, object2, operation = "union", radius = 0.5) {
 #' @export
 #'
 #' @examples
-#' \donttest{
+#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 #' #Group four spheres together and merge them with a box:
 #' generate_ground(material=diffuse(checkercolor="grey20")) %>% 
 #'   add_object(csg_object(csg_combine(

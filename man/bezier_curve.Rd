@@ -78,7 +78,7 @@ Bezier curve, defined by 4 control points.
 }
 \examples{
 #Generate the default curve:
-\donttest{
+if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 generate_studio(depth=-0.2) \%>\%
   add_object(bezier_curve(material=diffuse(color="red"))) \%>\%
   add_object(sphere(y=3,z=5,x=2,radius=0.3,
