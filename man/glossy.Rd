@@ -107,12 +107,12 @@ Single row of a tibble describing the glossy material.
 Glossy Material
 }
 \examples{
-if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
+if(rayrender:::run_documentation()) {
 #Generate a glossy sphere
 generate_ground(material=diffuse(sigma=90)) \%>\%
   add_object(sphere(y=0.2,material=glossy(color="#2b6eff"))) \%>\% 
   add_object(sphere(y=2.8,material=light())) \%>\%
-  render_scene(parallel=TRUE,clamp_value=10,samples=256,sample_method="sobol_blue")
+  render_scene(parallel=TRUE,clamp_value=10,samples=128,sample_method="sobol_blue")
  
 #Change the color of the underlying diffuse layer
 generate_ground(material=diffuse(sigma=90)) \%>\%
@@ -120,7 +120,7 @@ generate_ground(material=diffuse(sigma=90)) \%>\%
   add_object(sphere(y=0.2,material=glossy(color="#2b6eff"))) \%>\% 
   add_object(sphere(y=0.2,x=2.1,material=glossy(color="#2fed4f"))) \%>\% 
   add_object(sphere(y=8,z=-5,radius=3,material=light(intensity=20))) \%>\%
-  render_scene(parallel=TRUE,clamp_value=10,samples=256,fov=40,sample_method="sobol_blue")
+  render_scene(parallel=TRUE,clamp_value=10,samples=128,fov=40,sample_method="sobol_blue")
  
 #Change the amount of gloss 
 generate_ground(material=diffuse(sigma=90)) \%>\%
@@ -128,7 +128,7 @@ generate_ground(material=diffuse(sigma=90)) \%>\%
   add_object(sphere(y=0.2,material=glossy(gloss=0.5,color="#2b6eff"))) \%>\% 
   add_object(sphere(y=0.2,x=2.1,material=glossy(gloss=0,color="#2fed4f"))) \%>\% 
   add_object(sphere(y=8,z=-5,radius=3,material=light(intensity=20))) \%>\%
-  render_scene(parallel=TRUE,clamp_value=10,samples=256,fov=40,sample_method="sobol_blue")
+  render_scene(parallel=TRUE,clamp_value=10,samples=128,fov=40,sample_method="sobol_blue")
  
 #Add gloss to a pattern 
 generate_ground(material=diffuse(sigma=90)) \%>\%
@@ -136,7 +136,7 @@ generate_ground(material=diffuse(sigma=90)) \%>\%
   add_object(sphere(y=0.2,material=glossy(color="#ff365a",checkercolor="#2b6eff"))) \%>\% 
   add_object(sphere(y=0.2,x=2.1,material=glossy(color="blue",gradient_color="#2fed4f"))) \%>\% 
   add_object(sphere(y=8,z=-5,radius=3,material=light(intensity=20))) \%>\%
-  render_scene(parallel=TRUE,clamp_value=10,samples=256,fov=40,sample_method="sobol_blue")
+  render_scene(parallel=TRUE,clamp_value=10,samples=128,fov=40,sample_method="sobol_blue")
  
 #Add an R and a fill light (this may look familiar)
 generate_ground(material=diffuse()) \%>\%
@@ -144,6 +144,6 @@ generate_ground(material=diffuse()) \%>\%
   add_object(obj_model(r_obj(),z=1,y=-0.05,scale_obj=0.45,material=diffuse())) \%>\%
   add_object(sphere(y=6,z=1,radius=4,material=light(intensity=3))) \%>\%
   add_object(sphere(z=15,material=light(intensity=50))) \%>\%
-  render_scene(parallel=TRUE,clamp_value=10,samples=256,sample_method="sobol_blue")
+  render_scene(parallel=TRUE,clamp_value=10,samples=128,sample_method="sobol_blue")
 }
 }

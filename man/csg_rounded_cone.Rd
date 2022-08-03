@@ -27,7 +27,7 @@ List describing the box in the scene.
 CSG Rounded Cone
 }
 \examples{
-if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
+if(rayrender:::run_documentation()) {
 #Generate a basic rounded cone:
 generate_ground(material=diffuse(checkercolor="grey20")) \%>\% 
   add_object(csg_object(csg_rounded_cone(),material=glossy(color="red"))) \%>\% 

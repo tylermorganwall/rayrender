@@ -20,7 +20,7 @@ List describing the triangle in the scene.
 CSG Triangle
 }
 \examples{
-if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
+if(rayrender:::run_documentation()) {
 #Generate a basic triangle:
 generate_ground(material=diffuse(checkercolor="grey20")) \%>\% 
   add_object(csg_object(csg_triangle(),material=diffuse(color="red"))) \%>\% 

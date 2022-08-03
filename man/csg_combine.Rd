@@ -22,7 +22,7 @@ List describing the combined csg object in the scene.
 Note: Subtract operations aren't commutative: the second object is subtracted from the first.
 }
 \examples{
-if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
+if(rayrender:::run_documentation()) {
 #Combine two spheres:
 generate_ground(material=diffuse(checkercolor="grey20")) \%>\% 
   add_object(csg_object(csg_combine(

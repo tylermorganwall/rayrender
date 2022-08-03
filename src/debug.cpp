@@ -508,7 +508,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                                                                             true, 5, rng_single)));
           samplers.back()->StartPixel(0,0);
         } else if (sample_method == 2) {
-          samplers.push_back(std::unique_ptr<Sampler>(new SobolSampler(nx, ny, ns, rng_single)));
+          samplers.push_back(std::unique_ptr<Sampler>(new SobolSampler(ns, rng_single)));
           samplers.back()->StartPixel(i,j);
         } else {
           samplers.push_back(std::unique_ptr<Sampler>(new SobolBlueNoiseSampler(rng_single)));

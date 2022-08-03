@@ -49,8 +49,8 @@
 #' #Generate the cornell box and add a single white sphere to the center
 #' scene = generate_cornell() %>%
 #'   add_object(sphere(x=555/2,y=555/2,z=555/2,radius=555/8,material=diffuse()))
-#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
-#' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
+#' if(rayrender:::run_documentation()) {
+#' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=128,
 #'              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 #' }
 #' 
@@ -58,8 +58,8 @@
 #' scene = scene %>%
 #'   add_object(cube(x=555/2,y=555/8,z=555/2,xwidth=555/2,ywidth=555/4,zwidth=555/2,
 #'   material = diffuse(checkercolor="purple",checkerperiod=20)))
-#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
-#' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
+#' if(rayrender:::run_documentation()) {
+#' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=128,
 #'              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 #' }
 #'   
@@ -67,8 +67,8 @@
 #' scene = scene %>%
 #'   add_object(sphere(x=555/2+555/4,y=555/2,z=555/2,radius=555/8,
 #'   material = diffuse(noise=1/20)))
-#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
-#' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
+#' if(rayrender:::run_documentation()) {
+#' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=128,
 #'              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 #' }
 #' 
@@ -76,8 +76,8 @@
 #' scene = scene %>%
 #'   add_object(cube(x=555/2-555/4,y=555/2,z=555/2,xwidth=555/4,ywidth=555/4,zwidth=555/4,
 #'   material = diffuse(fog=TRUE, fogdensity=0.05,color="orange")))
-#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
-#' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
+#' if(rayrender:::run_documentation()) {
+#' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=128,
 #'              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 #' }
 #' 
@@ -85,8 +85,8 @@
 #' scene = scene %>%
 #'   add_object(segment(start = c(555,450,450),end=c(0,450,450),radius = 50, 
 #'                      material = diffuse(color="#1f7326", gradient_color = "#a60d0d")))
-#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
-#' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
+#' if(rayrender:::run_documentation()) {
+#' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=128,
 #'              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 #' }
 diffuse = function(color = "#ffffff", 
@@ -220,7 +220,7 @@ diffuse = function(color = "#ffffff",
 #' scene = generate_cornell() %>%
 #'   add_object(sphere(x=555/2,y=555/2,z=555/2,radius=555/8,
 #'   material=metal(eta=c(3.2176,3.1029,2.1839), k = c(3.3018,3.33,3.0339))))
-#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
+#' if(rayrender:::run_documentation()) {
 #' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=50,
 #'              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 #' }
@@ -228,8 +228,8 @@ diffuse = function(color = "#ffffff",
 #' scene = scene %>%
 #'   add_object(cube(x=380,y=150/2,z=200,xwidth=150,ywidth=150,zwidth=150,
 #'   material = metal(eta = c(1.07,0.8946,0.523), k = c(6.7144,6.188,4.95)),angle=c(0,45,0)))
-#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
-#' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
+#' if(rayrender:::run_documentation()) {
+#' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=128,
 #'              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 #' }
 #' #Add a copper metal cube      
@@ -238,8 +238,8 @@ diffuse = function(color = "#ffffff",
 #'                   material = metal(eta = c(0.497,0.8231,1.338), 
 #'                                    k = c(2.898,2.476,2.298)),
 #'                   angle=c(0,-30,0)))
-#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
-#' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
+#' if(rayrender:::run_documentation()) {
+#' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=128,
 #'              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 #' }
 #' 
@@ -249,8 +249,8 @@ diffuse = function(color = "#ffffff",
 #'                   material = metal(eta = c(1.44,1.78,1.9), 
 #'                                    k = c(3.18,3.36,3.43)),
 #'                   angle=c(0,-30,0)))
-#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
-#' render_scene(scene2, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
+#' if(rayrender:::run_documentation()) {
+#' render_scene(scene2, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=128,
 #'              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 #' }
 metal = function(color = "#ffffff", 
@@ -356,27 +356,27 @@ metal = function(color = "#ffffff",
 #' @examples
 #' #Generate a checkered ground
 #' scene = generate_ground(depth=-0.5, material = diffuse(checkercolor="grey30",checkerperiod=2))
-#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
+#' if(rayrender:::run_documentation()) {
 #' render_scene(scene,parallel=TRUE)
 #' }
 #' 
 #' #Add a glass sphere
-#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
+#' if(rayrender:::run_documentation()) {
 #' scene %>%
 #'   add_object(sphere(x=-0.5,radius=0.5,material=dielectric())) %>%
-#'   render_scene(parallel=TRUE,samples=400)
+#'   render_scene(parallel=TRUE,samples=128)
 #' }
 #' 
 #' #Add a rotated colored glass cube
-#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
+#' if(rayrender:::run_documentation()) {
 #' scene %>%
 #'   add_object(sphere(x=-0.5,radius=0.5,material=dielectric())) %>%
 #'   add_object(cube(x=0.5,xwidth=0.5,material=dielectric(color="darkgreen"),angle=c(0,-45,0))) %>%
-#'   render_scene(parallel=TRUE,samples=400)
+#'   render_scene(parallel=TRUE,samples=128)
 #' }
 #' 
 #' #Add an area light behind and at an angle and turn off the ambient lighting
-#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
+#' if(rayrender:::run_documentation()) {
 #' scene %>%
 #'   add_object(sphere(x=-0.5,radius=0.5,material=dielectric())) %>%
 #'   add_object(cube(x=0.5,xwidth=0.5,material=dielectric(color="darkgreen"),angle=c(0,-45,0))) %>%
@@ -390,7 +390,7 @@ metal = function(color = "#ffffff",
 #' #basis as it travels through the material. This effect is what gives some types of glass
 #' #a green glow at the edges. We will get this effect by setting a lower attenuation value 
 #' #for the `green` (second) channel in the dielectric `attenuation` argument.
-#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
+#' if(rayrender:::run_documentation()) {
 #' generate_ground(depth=-0.5,material=diffuse(checkercolor="grey30",checkerperiod=2)) %>%
 #'   add_object(sphere(z=-5,x=-0.5,y=1,material=light(intensity=10))) %>%
 #'   add_object(cube(y=0.3,ywidth=0.1,xwidth=2,zwidth=2,
@@ -401,7 +401,7 @@ metal = function(color = "#ffffff",
 #' #If you have overlapping dielectrics, the `priority` value can help disambiguate what 
 #' #object wins. Here, I place a bubble inside a cube by setting a lower priority value and
 #' #making the inner sphere have a index of refraction of 1. I also place spheres at the corners.
-#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
+#' if(rayrender:::run_documentation()) {
 #' generate_ground(depth=-0.51,material=diffuse(checkercolor="grey30",checkerperiod=2)) %>%
 #'   add_object(cube(material = dielectric(priority=2, attenuation = c(10,3,10)))) %>%
 #'   add_object(sphere(radius=0.49,material = dielectric(priority=1, refraction=1))) %>%
@@ -409,13 +409,13 @@ metal = function(color = "#ffffff",
 #'                     material = dielectric(priority=0,attenuation = c(10,3,10) ))) %>%
 #'   add_object(sphere(radius=0.25,x=-0.5,z=0.5,y=0.5,
 #'                     material = dielectric(priority=0,attenuation = c(10,3,10)))) %>%
-#'   render_scene(parallel=TRUE, samples = 400,lookfrom=c(5,1,5)) 
+#'   render_scene(parallel=TRUE, samples = 128,lookfrom=c(5,1,5)) 
 #' }
 #' 
 #' # We can also use this as a basic Constructive Solid Geometry interface by setting 
 #' # the index of refraction equal to empty space, 1. This will subtract out those regions.
 #' # Here I make a concave lens by subtracting two spheres from a cube.
-#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
+#' if(rayrender:::run_documentation()) {
 #' generate_ground(depth=-0.51,material=diffuse(checkercolor="grey30",checkerperiod=2,sigma=90)) %>%
 #'   add_object(cube(material = dielectric(attenuation = c(3,3,1),priority=1))) %>%
 #'   add_object(sphere(radius=1,x=1.01,
@@ -423,7 +423,7 @@ metal = function(color = "#ffffff",
 #'   add_object(sphere(radius=1,x=-1.01, 
 #'                     material = dielectric(priority=0,refraction=1))) %>%
 #'   add_object(sphere(y=10,x=3,material=light(intensit=150))) %>%
-#'   render_scene(parallel=TRUE, samples = 400,lookfrom=c(5,3,5))
+#'   render_scene(parallel=TRUE, samples = 128,lookfrom=c(5,3,5))
 #' }
 dielectric = function(color="white", refraction = 1.5,  attenuation = c(0,0,0), 
                       priority = 0, importance_sample = FALSE,
@@ -512,12 +512,12 @@ dielectric = function(color="white", refraction = 1.5,  attenuation = c(0,0,0),
 #' # Generate a golden egg, using eta and kappa taken from physical measurements
 #' # See the website refractiveindex.info for eta and k data, use 
 #' # wavelengths 580nm (R), 530nm (G), and 430nm (B).
-#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
+#' if(rayrender:::run_documentation()) {
 #' generate_cornell() %>%
 #'   add_object(ellipsoid(x=555/2,555/2,y=150, a=100,b=150,c=100,
 #'              material=microfacet(roughness=0.1,
 #'                                  eta=c(0.216,0.42833,1.3184), kappa=c(3.239,2.4599,1.8661)))) %>% 
-#'  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
+#'  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=128,
 #'              aperture=0, fov=40, parallel=TRUE,clamp_value=10)
 #'  
 #' #Make the roughness anisotropic (either horizontal or vertical), adding an extra light in front
@@ -530,7 +530,7 @@ dielectric = function(color="white", refraction = 1.5,  attenuation = c(0,0,0),
 #'  add_object(ellipsoid(x=150,555/2,y=150, a=100,b=150,c=100,
 #'              material=microfacet(roughness=c(0.1,0.3),
 #'                                  eta=c(0.216,0.42833,1.3184), kappa=c(3.239,2.4599,1.8661)))) %>%  
-#'  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
+#'  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=128,
 #'              aperture=0, fov=40,  parallel=TRUE,clamp_value=10)
 #'
 #' #Render a rough silver R with a smaller golden egg in front
@@ -541,7 +541,7 @@ dielectric = function(color="white", refraction = 1.5,  attenuation = c(0,0,0),
 #'  add_object(ellipsoid(x=200,z=200,y=80, a=50,b=80,c=50,
 #'              material=microfacet(roughness=0.1,
 #'                                  eta=c(0.216,0.42833,1.3184), kappa=c(3.239,2.4599,1.8661)))) %>% 
-#'  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
+#'  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=128,
 #'              aperture=0, fov=40, parallel=TRUE,clamp_value=10)
 #'  
 #' #Increase the roughness
@@ -552,7 +552,7 @@ dielectric = function(color="white", refraction = 1.5,  attenuation = c(0,0,0),
 #'  add_object(ellipsoid(x=200,z=200,y=80, a=50,b=80,c=50,
 #'              material=microfacet(roughness=0.3,
 #'                                  eta=c(0.216,0.42833,1.3184), kappa=c(3.239,2.4599,1.8661)))) %>% 
-#'  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
+#'  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=128,
 #'              aperture=0, fov=40, parallel=TRUE,clamp_value=10)
 #'              
 #'  #Use transmission for a rough dielectric
@@ -562,7 +562,7 @@ dielectric = function(color="white", refraction = 1.5,  attenuation = c(0,0,0),
 #'              material=microfacet(roughness=0.3, transmission=T, eta=1.6))) %>% 
 #'  add_object(ellipsoid(x=200,z=200,y=80, a=50,b=80,c=50,
 #'              material=microfacet(roughness=0.3, transmission=T, eta=1.6))) %>% 
-#'  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
+#'  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=128,
 #'              aperture=0, fov=40, parallel=TRUE,clamp_value=10, min_variance=1e-6)
 #' }
 microfacet = function(color="white", roughness = 0.0001, transmission = FALSE,
@@ -738,8 +738,8 @@ microfacet = function(color="white", roughness = 0.0001, transmission = FALSE,
 #' #Generate the cornell box without a light and add a single white sphere to the center
 #' scene = generate_cornell(light=FALSE) %>%
 #'   add_object(sphere(x=555/2,y=555/2,z=555/2,radius=555/8,material=light()))
-#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
-#' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
+#' if(rayrender:::run_documentation()) {
+#' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=128,
 #'              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 #' }
 #' 
@@ -747,8 +747,8 @@ microfacet = function(color="white", roughness = 0.0001, transmission = FALSE,
 #' scene = generate_cornell(light=FALSE) %>%
 #'   add_object(sphere(x=555/2,y=555/2,z=555/2,radius=555/8,
 #'              material=light(intensity=15,invisible=TRUE)))
-#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
-#' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=500,
+#' if(rayrender:::run_documentation()) {
+#' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=128,
 #'              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 #' }
 #' 
@@ -757,8 +757,8 @@ microfacet = function(color="white", roughness = 0.0001, transmission = FALSE,
 #'   add_object(sphere(radius=0.5,material=light(intensity=5,color="red"))) %>%
 #'   add_object(obj_model(r_obj(), z=-3,x=-1.5,y=-1, angle=c(0,45,0))) %>%
 #'   add_object(pig(scale=0.3, x=1.5,z=-2,y=-1.5,angle=c(0,-135,0)))
-#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
-#' render_scene(scene, samples=500, parallel=TRUE, clamp_value=10)
+#' if(rayrender:::run_documentation()) {
+#' render_scene(scene, samples=128, parallel=TRUE, clamp_value=10)
 #' }
 light = function(color = "#ffffff", intensity = 10, importance_sample = TRUE, 
                  spotlight_focus = NA, spotlight_width = 30, spotlight_start_falloff = 15,
@@ -877,12 +877,12 @@ light = function(color = "#ffffff", intensity = 10, importance_sample = TRUE,
 #' @export
 #'
 #' @examples
-#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
+#' if(rayrender:::run_documentation()) {
 #' #Generate a glossy sphere
 #' generate_ground(material=diffuse(sigma=90)) %>%
 #'   add_object(sphere(y=0.2,material=glossy(color="#2b6eff"))) %>% 
 #'   add_object(sphere(y=2.8,material=light())) %>%
-#'   render_scene(parallel=TRUE,clamp_value=10,samples=256,sample_method="sobol_blue")
+#'   render_scene(parallel=TRUE,clamp_value=10,samples=128,sample_method="sobol_blue")
 #'  
 #' #Change the color of the underlying diffuse layer
 #' generate_ground(material=diffuse(sigma=90)) %>%
@@ -890,7 +890,7 @@ light = function(color = "#ffffff", intensity = 10, importance_sample = TRUE,
 #'   add_object(sphere(y=0.2,material=glossy(color="#2b6eff"))) %>% 
 #'   add_object(sphere(y=0.2,x=2.1,material=glossy(color="#2fed4f"))) %>% 
 #'   add_object(sphere(y=8,z=-5,radius=3,material=light(intensity=20))) %>%
-#'   render_scene(parallel=TRUE,clamp_value=10,samples=256,fov=40,sample_method="sobol_blue")
+#'   render_scene(parallel=TRUE,clamp_value=10,samples=128,fov=40,sample_method="sobol_blue")
 #'  
 #' #Change the amount of gloss 
 #' generate_ground(material=diffuse(sigma=90)) %>%
@@ -898,7 +898,7 @@ light = function(color = "#ffffff", intensity = 10, importance_sample = TRUE,
 #'   add_object(sphere(y=0.2,material=glossy(gloss=0.5,color="#2b6eff"))) %>% 
 #'   add_object(sphere(y=0.2,x=2.1,material=glossy(gloss=0,color="#2fed4f"))) %>% 
 #'   add_object(sphere(y=8,z=-5,radius=3,material=light(intensity=20))) %>%
-#'   render_scene(parallel=TRUE,clamp_value=10,samples=256,fov=40,sample_method="sobol_blue")
+#'   render_scene(parallel=TRUE,clamp_value=10,samples=128,fov=40,sample_method="sobol_blue")
 #'  
 #' #Add gloss to a pattern 
 #' generate_ground(material=diffuse(sigma=90)) %>%
@@ -906,7 +906,7 @@ light = function(color = "#ffffff", intensity = 10, importance_sample = TRUE,
 #'   add_object(sphere(y=0.2,material=glossy(color="#ff365a",checkercolor="#2b6eff"))) %>% 
 #'   add_object(sphere(y=0.2,x=2.1,material=glossy(color="blue",gradient_color="#2fed4f"))) %>% 
 #'   add_object(sphere(y=8,z=-5,radius=3,material=light(intensity=20))) %>%
-#'   render_scene(parallel=TRUE,clamp_value=10,samples=256,fov=40,sample_method="sobol_blue")
+#'   render_scene(parallel=TRUE,clamp_value=10,samples=128,fov=40,sample_method="sobol_blue")
 #'  
 #' #Add an R and a fill light (this may look familiar)
 #' generate_ground(material=diffuse()) %>%
@@ -914,7 +914,7 @@ light = function(color = "#ffffff", intensity = 10, importance_sample = TRUE,
 #'   add_object(obj_model(r_obj(),z=1,y=-0.05,scale_obj=0.45,material=diffuse())) %>%
 #'   add_object(sphere(y=6,z=1,radius=4,material=light(intensity=3))) %>%
 #'   add_object(sphere(z=15,material=light(intensity=50))) %>%
-#'   render_scene(parallel=TRUE,clamp_value=10,samples=256,sample_method="sobol_blue")
+#'   render_scene(parallel=TRUE,clamp_value=10,samples=128,sample_method="sobol_blue")
 #' }
 glossy = function(color="white", gloss = 1, reflectance = 0.05, microfacet = "tbr", 
                   checkercolor = NA, checkerperiod = 3,
@@ -1039,7 +1039,7 @@ SigmaAFromReflectance = function(c, beta_n) {
 #'
 #' @examples
 #' #Create a hairball
-#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
+#' if(rayrender:::run_documentation()) {
 #' #Generate rendom points on a sphere
 #' lengthval = 0.5
 #' theta = acos(2*runif(10000)-1.0);
@@ -1128,7 +1128,7 @@ hair = function(pigment = 1.3, red_pigment = 0, color = NA, sigma_a = NA,
 #'
 #' @examples
 #' #Deprecated lambertian material. Will display a warning.
-#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
+#' if(rayrender:::run_documentation()) {
 #' scene = generate_cornell() %>%
 #'   add_object(sphere(x=555/2,y=555/2,z=555/2,radius=555/8,material=lambertian()))
 #'   render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=10,

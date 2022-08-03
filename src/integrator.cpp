@@ -77,7 +77,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
                                       true, 5, rng_single)));
         samplers.back()->StartPixel(0,0);
       } else if (sample_method == 2) {
-        samplers.push_back(std::unique_ptr<Sampler>(new SobolSampler(nx, ny, ns, rng_single)));
+        samplers.push_back(std::unique_ptr<Sampler>(new SobolSampler(ns, rng_single)));
         samplers.back()->StartPixel(i,j);
       } else {
         samplers.push_back(std::unique_ptr<Sampler>(new SobolBlueNoiseSampler(rng_single)));
@@ -102,7 +102,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
                                                                           true, 5, rng_single)));
         samplers_small.back()->StartPixel(0,0);
       } else if (sample_method == 2) {
-        samplers_small.push_back(std::unique_ptr<Sampler>(new SobolSampler(nx, ny, ns, rng_single)));
+        samplers_small.push_back(std::unique_ptr<Sampler>(new SobolSampler(ns, rng_single)));
         samplers_small.back()->StartPixel(i,j);
       } else {
         samplers_small.push_back(std::unique_ptr<Sampler>(new SobolBlueNoiseSampler(rng_single)));

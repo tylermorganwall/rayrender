@@ -17,11 +17,11 @@
 #' @examples
 #' #Generate a pig in the cornell box.
 #' 
-#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
+#' if(rayrender:::run_documentation()) {
 #' generate_cornell() %>%
 #'   add_object(pig(x=555/2,z=555/2,y=120,
 #'   scale=c(80,80,80), angle = c(0,135,0))) %>%
-#'   render_scene(parallel=TRUE, samples=400,clamp_value=10)
+#'   render_scene(parallel=TRUE, samples=128,clamp_value=10)
 #' 
 #' # Show the pig staring into a mirror, worried 
 #' generate_cornell() %>%
@@ -29,7 +29,7 @@
 #'                  angle = c(0,-40,0), emotion = "worried")) %>%
 #'   add_object(cube(x=450,z=450,y=250, ywidth=500, xwidth=200,
 #'                   angle = c(0,45,0), material = metal())) %>%
-#'   render_scene(parallel=TRUE, samples=500,clamp_value=10)
+#'   render_scene(parallel=TRUE, samples=128,clamp_value=10)
 #' 
 #' # Render many small pigs facing random directions, with an evil pig overlord
 #' set.seed(1)
@@ -44,13 +44,13 @@
 #'  add_object(pig(z=500,x=555/2,y=350, emotion = "angry",
 #'             scale=c(100,100,100),angle=c(-30,90,0), order_rotation=c(3,2,1)))
 #'             
-#' render_scene(many_pigs_scene,parallel=TRUE,clamp_value=10, samples=500)
+#' render_scene(many_pigs_scene,parallel=TRUE,clamp_value=10, samples=128)
 #' 
 #' #Render spiderpig
 #' generate_studio() %>%  
 #'   add_object(pig(y=-1,angle=c(0,-100,0), scale=1/2,spider=TRUE)) %>% 
 #'   add_object(sphere(y=5,z=5,x=5,material=light(intensity=100))) %>% 
-#'   render_scene(samples=500,lookfrom=c(0,2,10),clamp_value=10)
+#'   render_scene(samples=128,lookfrom=c(0,2,10),clamp_value=10)
 #' }
 pig = function(x = 0, y = 0, z = 0, emotion = "neutral", spider = FALSE,
                angle = c(0, 0, 0), order_rotation = c(1, 2, 3), 

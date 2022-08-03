@@ -61,7 +61,7 @@
 #'
 #' @examples
 #' #Generate and render a regular scene and an ambient occlusion version of that scene
-#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
+#' if(rayrender:::run_documentation()) {
 #'angles = seq(0,360,by=36)
 #'xx = rev(c(rep(c(1,0.5),5),1) * sinpi(angles/180))
 #'yy = rev(c(rep(c(1,0.5),5),1) * cospi(angles/180))
@@ -76,7 +76,7 @@
 #'                              hole = nrow(star_polygon),
 #'                              material=diffuse(color="red",sigma=90))) %>%
 #'  render_scene(parallel = TRUE,width=800,height=800,
-#'               fov=70,clamp_value=10,samples=256, aperture=0.1,
+#'               fov=70,clamp_value=10,samples=128, aperture=0.1,
 #'               lookfrom=c(-0.9,1.2,-4.5),lookat=c(0,-1,0))
 #'
 #'
@@ -89,7 +89,7 @@
 #'                              hole = nrow(star_polygon),
 #'                              material=diffuse(color="red",sigma=90))) %>%
 #'  render_ao(parallel = TRUE,width=800,height=800, sample_dist=10,
-#'            fov=70,samples=256, aperture=0.1,
+#'            fov=70,samples=128, aperture=0.1,
 #'            lookfrom=c(-0.9,1.2,-4.5),lookat=c(0,-1,0))
 #'            
 #'#Decrease the ray occlusion search distance
@@ -101,7 +101,7 @@
 #'                              hole = nrow(star_polygon),
 #'                              material=diffuse(color="red",sigma=90))) %>%
 #'  render_ao(parallel = TRUE,width=800,height=800, sample_dist=1,
-#'            fov=70,samples=256, aperture=0.1,
+#'            fov=70,samples=128, aperture=0.1,
 #'            lookfrom=c(-0.9,1.2,-4.5),lookat=c(0,-1,0))
 #'            
 #'#Turn on colors
@@ -113,7 +113,7 @@
 #'                              hole = nrow(star_polygon),
 #'                              material=diffuse(color="red",sigma=90))) %>%
 #'  render_ao(parallel = TRUE,width=800,height=800, sample_dist=1,
-#'            fov=70,samples=256, aperture=0.1, keep_colors = TRUE,
+#'            fov=70,samples=128, aperture=0.1, keep_colors = TRUE,
 #'            lookfrom=c(-0.9,1.2,-4.5),lookat=c(0,-1,0))
 #'
 #' }

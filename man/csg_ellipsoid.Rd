@@ -22,7 +22,7 @@ List describing the ellipsoid in the scene.
 CSG Ellipsoid
 }
 \examples{
-if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
+if(rayrender:::run_documentation()) {
 #Generate a basic ellipsoid:
 generate_ground(material=diffuse(checkercolor="grey20")) \%>\% 
   add_object(csg_object(csg_ellipsoid(),material=glossy(color="red"))) \%>\% 

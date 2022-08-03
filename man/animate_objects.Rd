@@ -68,11 +68,11 @@ open/close options in `render_scene()`.
 }
 \examples{
 #Render a pig
-if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
+if(rayrender:::run_documentation()) {
 generate_studio() \%>\% 
   add_object(pig(y=-1.2,scale=0.5,angle=c(0,-70,0)))\%>\% 
   add_object(sphere(y=5,x=5,z=5,radius=2,material=light())) \%>\% 
-  render_scene(samples=256,sample_method = "sobol_blue")
+  render_scene(samples=128,sample_method = "sobol_blue")
 
 #Render a moving pig
 generate_studio() \%>\% 
@@ -82,7 +82,7 @@ generate_studio() \%>\%
       start_position = c(-0.1,0,0), end_position = c(0.1,0.2,0))
   ) \%>\% 
   add_object(sphere(y=5,x=5,z=5,radius=2,material=light())) \%>\% 
-  render_scene(samples=256,sample_method = "sobol_blue",clamp_value = 10)
+  render_scene(samples=128,sample_method = "sobol_blue",clamp_value = 10)
 
 
 #Render a shrinking pig
@@ -93,7 +93,7 @@ generate_studio() \%>\%
       start_scale = c(1,1,1), end_scale = c(0.5,0.5,0.5))
   ) \%>\% 
   add_object(sphere(y=5,x=5,z=5,radius=2,material=light())) \%>\% 
-  render_scene(samples=256,sample_method = "sobol_blue",clamp_value = 10)
+  render_scene(samples=128,sample_method = "sobol_blue",clamp_value = 10)
 
 #Render a spinning pig
 generate_studio() \%>\% 
@@ -103,7 +103,7 @@ generate_studio() \%>\%
       start_angle = c(0,-30,0), end_angle = c(0,30,0))
   ) \%>\% 
   add_object(sphere(y=5,x=5,z=5,radius=2,material=light())) \%>\% 
-  render_scene(samples=256,sample_method = "sobol_blue",clamp_value = 10)
+  render_scene(samples=128,sample_method = "sobol_blue",clamp_value = 10)
 
 
 #Shorten the open shutter time frame
@@ -114,7 +114,7 @@ generate_studio() \%>\%
       start_angle = c(0,-30,0), end_angle = c(0,30,0))
   ) \%>\% 
   add_object(sphere(y=5,x=5,z=5,radius=2,material=light())) \%>\% 
-  render_scene(samples=256,sample_method = "sobol_blue",clamp_value = 10, 
+  render_scene(samples=128,sample_method = "sobol_blue",clamp_value = 10, 
                shutteropen=0.4, shutterclose = 0.6)
 
 #Change the time frame when the shutter is open
@@ -125,7 +125,7 @@ generate_studio() \%>\%
       start_angle = c(0,-30,0), end_angle = c(0,30,0))
   ) \%>\% 
   add_object(sphere(y=5,x=5,z=5,radius=2,material=light())) \%>\% 
-  render_scene(samples=256,sample_method = "sobol_blue",clamp_value = 10, 
+  render_scene(samples=128,sample_method = "sobol_blue",clamp_value = 10, 
                shutteropen=0, shutterclose = 0.1)
                
 #Shorten the time span in which the movement occurs (which, in effect, 
@@ -137,7 +137,7 @@ generate_studio() \%>\%
       start_angle = c(0,-30,0), end_angle = c(0,30,0))
   ) \%>\% 
   add_object(sphere(y=5,x=5,z=5,radius=2,material=light())) \%>\% 
-  render_scene(samples=256,sample_method = "sobol_blue",clamp_value = 10, 
+  render_scene(samples=128,sample_method = "sobol_blue",clamp_value = 10, 
                shutteropen=0, shutterclose = 0.1)
 }
 }

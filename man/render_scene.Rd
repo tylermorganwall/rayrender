@@ -202,40 +202,30 @@ user can also interactively fly around the 3D scene if they have X11 support on 
 }
 \examples{
 #Generate a large checkered sphere as the ground
-if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
+if(rayrender:::run_documentation()) {
 scene = generate_ground(depth=-0.5, material = diffuse(color="white", checkercolor="darkgreen"))
-render_scene(scene,parallel=TRUE,samples=500,sample_method="sobol")
-}
+render_scene(scene,parallel=TRUE,samples=128,sample_method="sobol")
 
 #Add a sphere to the center
-if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 scene = scene \%>\%
   add_object(sphere(x=0,y=0,z=0,radius=0.5,material = diffuse(color=c(1,0,1))))
-render_scene(scene,fov=20,parallel=TRUE,samples=500)
-}
+render_scene(scene,fov=20,parallel=TRUE,samples=128)
 
 #Add a marbled cube 
-if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 scene = scene \%>\%
   add_object(cube(x=1.1,y=0,z=0,material = diffuse(noise=3)))
-render_scene(scene,fov=20,parallel=TRUE,samples=500)
-}
+render_scene(scene,fov=20,parallel=TRUE,samples=128)
 
 #Add a metallic gold sphere, using stratified sampling for a higher quality render
-if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 scene = scene \%>\%
   add_object(sphere(x=-1.1,y=0,z=0,radius=0.5,material = metal(color="gold",fuzz=0.1)))
-render_scene(scene,fov=20,parallel=TRUE,samples=500)
-}
+render_scene(scene,fov=20,parallel=TRUE,samples=128)
 
 #Lower the number of samples to render more quickly (here, we also use only one core).
-if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
-render_scene(scene, samples=4)
-}
+render_scene(scene, samples=4, parallel=FALSE)
 
 #Add a floating R plot using the iris dataset as a png onto a floating 2D rectangle
 
-if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 tempfileplot = tempfile()
 png(filename=tempfileplot,height=400,width=800)
 plot(iris$Petal.Length,iris$Sepal.Width,col=iris$Species,pch=18,cex=4)
@@ -245,29 +235,21 @@ image_array = aperm(png::readPNG(tempfileplot),c(2,1,3))
 scene = scene \%>\%
   add_object(xy_rect(x=0,y=1.1,z=0,xwidth=2,angle = c(0,180,0),
                      material = diffuse(image_texture = image_array)))
-render_scene(scene,fov=20,parallel=TRUE,samples=500)
-}
+render_scene(scene,fov=20,parallel=TRUE,samples=128)
 
 #Move the camera
-if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 render_scene(scene,lookfrom = c(7,1.5,10),lookat = c(0,0.5,0),fov=15,parallel=TRUE)
-}
 
 #Change the background gradient to a night time ambiance
-if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 render_scene(scene,lookfrom = c(7,1.5,10),lookat = c(0,0.5,0),fov=15,
              backgroundhigh = "#282375", backgroundlow = "#7e77ea", parallel=TRUE,
-             samples=500)
-}
+             samples=128)
                  
 #Increase the aperture to blur objects that are further from the focal plane.
-if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 render_scene(scene,lookfrom = c(7,1.5,10),lookat = c(0,0.5,0),fov=15,
-             aperture = 0.5,parallel=TRUE,samples=500)
-}
+             aperture = 0.5,parallel=TRUE,samples=128)
 
 #We can also capture a 360 environment image by setting `fov = 360` (can be used for VR)
-if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 generate_cornell() \%>\%
   add_object(ellipsoid(x=555/2,y=100,z=555/2,a=50,b=100,c=50, 
              material = metal(color="lightblue"))) \%>\%
@@ -281,12 +263,10 @@ generate_cornell() \%>\%
                      material = glossy(checkercolor = "white",
                                        checkerperiod=10,color="dodgerblue"))) \%>\%
   render_scene(lookfrom=c(278,278,30), lookat=c(278,278,500), clamp_value=10,
-               fov = 360,  samples = 500, width=800, height=400)
-}
+               fov = 360,  samples = 128, width=800, height=400)
 
 #We can also use a realistic camera by specifying a camera description file (several of which
 #are built-in to rayrender. Note the curvature introduced by the fisheye lens:
-if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 generate_cornell() \%>\%
   add_object(ellipsoid(x=555/2,y=100,z=555/2,a=50,b=100,c=50, 
              material = metal(color="lightblue"))) \%>\%
@@ -300,10 +280,7 @@ generate_cornell() \%>\%
                      material = glossy(checkercolor = "white",
                                        checkerperiod=10,color="dodgerblue"))) \%>\%
   render_scene(lookfrom=c(278,278,-300), lookat=c(278,278,500), clamp_value=10,
-               camera_description_file = "fisheye", samples = 500, width=800, height=400)
-}
-
-
+               camera_description_file = "fisheye", samples = 128, width=800, height=400)
                  
 #Spin the camera around the scene, decreasing the number of samples to render faster. To make 
 #an animation, specify the a filename in `render_scene` for each frame and use the `av` package
@@ -312,7 +289,6 @@ generate_cornell() \%>\%
 t=1:30 
 xpos = 10 * sin(t*12*pi/180+pi/2)
 zpos = 10 * cos(t*12*pi/180+pi/2)
-if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
 #Save old par() settings
 old.par = par(no.readonly = TRUE)
 on.exit(par(old.par))

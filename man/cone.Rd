@@ -49,17 +49,17 @@ Cone Object
 }
 \examples{
 #Generate a cone in a studio, pointing upwards:
-if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
+if(rayrender:::run_documentation()) {
 generate_studio() \%>\% 
  add_object(cone(start=c(0,-1,0), end=c(0,1,0), radius=1,material=diffuse(color="red"))) \%>\% 
  add_object(sphere(y=5,x=5,material=light(intensity=40))) \%>\% 
- render_scene(samples=400,clamp_value=10)
+ render_scene(samples=128,clamp_value=10)
  
  #Change the radius, length, and direction
 generate_studio() \%>\% 
  add_object(cone(start=c(0,0,0), end=c(0,-1,0), radius=0.5,material=diffuse(color="red"))) \%>\% 
  add_object(sphere(y=5,x=5,material=light(intensity=40))) \%>\% 
- render_scene(samples=400,clamp_value=10)
+ render_scene(samples=128,clamp_value=10)
  
 #Give custom start and end points (and customize the color/texture)
 generate_studio() \%>\% 
@@ -69,7 +69,7 @@ generate_studio() \%>\%
  add_object(cone(start=c(-1,-0.5,0), end=c(1,-0.5,0), radius=0.25,
    material = diffuse(color="red",gradient_color="green"))) \%>\% 
  add_object(sphere(y=5,x=5,material=light(intensity=40))) \%>\% 
- render_scene(samples=400,clamp_value=10)
+ render_scene(samples=128,clamp_value=10)
  
  
 #Specify cone via direction and location, instead of start and end positions
@@ -83,7 +83,7 @@ generate_studio() \%>\%
   add_object(sphere(y=5,material=light())) \%>\% 
   add_object(sphere(y=3,x=-3,z=-3,material=light(color="red"))) \%>\% 
   add_object(sphere(y=3,x=3,z=-3,material=light(color="green"))) \%>\% 
-  render_scene(lookfrom=c(0,4,10), clamp_value=10, samples=400)
+  render_scene(lookfrom=c(0,4,10), clamp_value=10, samples=128)
   
  #Render the position from the base, instead of the center of the cone:
  noise_mat = material = glossy(color="purple",noisecolor="blue", noise=5)
@@ -97,7 +97,7 @@ generate_studio() \%>\%
   add_object(cone(start = c(0,-1,1.5), from_center = FALSE, radius=0.5, direction = c(0,1,0), 
     material = noise_mat)) \%>\% 
   add_object(sphere(y=5,x=5,material=light(intensity=40))) \%>\% 
-  render_scene(lookfrom=c(0,4,10), clamp_value=10,fov=25, samples=400)
+  render_scene(lookfrom=c(0,4,10), clamp_value=10,fov=25, samples=128)
   
 }
 

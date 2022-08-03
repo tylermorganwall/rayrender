@@ -24,7 +24,7 @@ List describing the torus in the scene.
 CSG Torus
 }
 \examples{
-if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
+if(rayrender:::run_documentation()) {
 #Generate a torus:
 generate_ground(material=diffuse(checkercolor="grey20")) \%>\% 
   add_object(csg_object(csg_torus(), material=glossy(color="dodgerblue4"))) \%>\%

@@ -119,7 +119,7 @@ Note: Bump mapping with non-diffuse materials does not work correctly, and smoot
 using a bump map.
 }
 \examples{
-if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
+if(rayrender:::run_documentation()) {
 #Specify the points for the path to travel though and the ground material
 points = list(c(0,0,1),c(-0.5,0,-1),c(0,1,-1),c(1,0.5,0),c(0.6,0.3,1))
 ground_mat = material=diffuse(color="grey50",
@@ -131,7 +131,7 @@ generate_studio(depth=-0.4,material=ground_mat) |>
                            material=diffuse(color="red"))) |> 
   add_object(sphere(y=3,z=5,x=2,material=light(intensity=15))) |> 
   render_scene(lookat=c(0.3,0.5,0.5),fov=12, width=800,height=800, clamp_value = 10,
-               aperture=0.025, samples=256, sample_method="sobol_blue")
+               aperture=0.025, samples=128, sample_method="sobol_blue")
 
 #Change the width evenly along the tube
 generate_studio(depth=-0.4,material=ground_mat) |>
@@ -140,7 +140,7 @@ generate_studio(depth=-0.4,material=ground_mat) |>
                            material=diffuse(color="red"))) |> 
   add_object(sphere(y=3,z=5,x=2,material=light(intensity=15))) |> 
   render_scene(lookat=c(0.3,0.5,0.5),fov=12, width=800,height=800, clamp_value = 10,
-               aperture=0.025, samples=256, sample_method="sobol_blue")
+               aperture=0.025, samples=128, sample_method="sobol_blue")
 
 #Change the width along the full length of the tube
 generate_studio(depth=-0.4,material=ground_mat) |>
@@ -149,7 +149,7 @@ generate_studio(depth=-0.4,material=ground_mat) |>
                            material=diffuse(color="red"))) |> 
   add_object(sphere(y=3,z=5,x=2,material=light(intensity=15))) |> 
   render_scene(lookat=c(0.3,0.5,0.5),fov=12, width=800,height=800, clamp_value = 10,
-               aperture=0.025, samples=256, sample_method="sobol_blue")
+               aperture=0.025, samples=128, sample_method="sobol_blue")
 
 #Specify the exact parametric x positions for the width values:
 custom_width = data.frame(x=c(0,0.2,0.5,0.8,1), y=c(0.25,0.5,0,0.5,0.25))
@@ -159,7 +159,7 @@ generate_studio(depth=-0.4,material=ground_mat) |>
                            material=diffuse(color="red"))) |> 
   add_object(sphere(y=3,z=5,x=2,material=light(intensity=15))) |> 
   render_scene(lookat=c(0.3,0.5,0.5),fov=12, width=800,height=800, clamp_value = 10,
-               aperture=0.025, samples=256, sample_method="sobol_blue")
+               aperture=0.025, samples=128, sample_method="sobol_blue")
 
 #Generate a star polygon
 angles = seq(360,0,length.out=21)
@@ -174,7 +174,7 @@ generate_studio(depth=-0.4,material=ground_mat) |>
                            material=diffuse(color="red"))) |> 
   add_object(sphere(y=3,z=5,x=2,material=light(intensity=15))) |> 
   render_scene(lookat=c(0.3,0.5,1),fov=12, width=800,height=800, clamp_value = 10,
-               aperture=0.025, samples=256, sample_method="sobol_blue")
+               aperture=0.025, samples=128, sample_method="sobol_blue")
 
 #Specify a circle polygon
 angles = seq(360,0,length.out=21)
@@ -190,7 +190,7 @@ generate_studio(depth=-0.4,material=ground_mat) |>
                            material=diffuse(color="red"))) |> 
   add_object(sphere(y=3,z=5,x=2,material=light(intensity=15))) |> 
   render_scene(lookat=c(0.3,0.5,0.5),fov=12, width=800,height=800, clamp_value = 10,
-               aperture=0.025, samples=256, sample_method="sobol_blue")
+               aperture=0.025, samples=128, sample_method="sobol_blue")
 
 #Add three and a half twists along the path, and make sure the breaks are evenly spaced
 generate_studio(depth=-0.4,material=ground_mat) |>
@@ -200,7 +200,7 @@ generate_studio(depth=-0.4,material=ground_mat) |>
                            material=diffuse(color="red"))) |> 
   add_object(sphere(y=3,z=5,x=2,material=light(intensity=15))) |> 
   render_scene(lookat=c(0.3,0.5,0),fov=12, width=800,height=800, clamp_value = 10,
-               aperture=0.025, samples=256, sample_method="sobol_blue")
+               aperture=0.025, samples=128, sample_method="sobol_blue")
 
 #Smooth the normals for a less sharp appearance:
 generate_studio(depth=-0.4,material=ground_mat) |>
@@ -212,7 +212,7 @@ generate_studio(depth=-0.4,material=ground_mat) |>
                            material=diffuse(color="red"))) |> 
   add_object(sphere(y=3,z=5,x=2,material=light(intensity=15))) |> 
   render_scene(lookat=c(0.3,0.5,0),fov=12, width=800,height=800, clamp_value = 10,
-               aperture=0.025, samples=256, sample_method="sobol_blue")
+               aperture=0.025, samples=128, sample_method="sobol_blue")
 
 
 #Only generate part of the curve, specified by the u_min and u_max arguments
@@ -224,7 +224,7 @@ generate_studio(depth=-0.4,material=ground_mat) |>
                            material=diffuse(color="red"))) |> 
   add_object(sphere(y=3,z=5,x=2,material=light(intensity=15))) |> 
   render_scene(lookat=c(0.3,0.5,0),fov=12, width=800,height=800, clamp_value = 10,
-               aperture=0.025, samples=256, sample_method="sobol_blue")
+               aperture=0.025, samples=128, sample_method="sobol_blue")
              
 #Render a Mobius strip with 1.5 turns 
 points = list(c(0,0,0),c(0.5,0.5,0),c(0,1,0),c(-0.5,0.5,0))
@@ -241,7 +241,7 @@ generate_studio(depth=-0.2,
                           material = diffuse(noisecolor = "black", noise = 10, 
                                              noiseintensity = 10))) |>
  add_object(sphere(y=20,x=0,z=21,material=light(intensity = 1000))) |> 
- render_scene(lookat=c(0,0.5,0), fov=10, samples=256, sample_method = "sobol_blue",
+ render_scene(lookat=c(0,0.5,0), fov=10, samples=128, sample_method = "sobol_blue",
               width = 800, height=800)
 
 #Create a green glass tube with the dielectric priority interface
@@ -263,7 +263,7 @@ generate_ground(depth=-0.4,material=diffuse(color="grey50",
   add_object(sphere(y=10,z=-5,x=0,radius=5,material=light(color = "white",intensity = 5))) |>
   render_scene(lookat=c(0.3,0.5,1),fov=12, 
                width=800,height=800, clamp_value = 10,
-               aperture=0.025, samples=256, sample_method="sobol_blue")
+               aperture=0.025, samples=128, sample_method="sobol_blue")
 
 
 

@@ -73,7 +73,7 @@ if(length(find.package("Rcvg", quiet=TRUE)) > 0) {
     add_object(mesh3d_model(humface,y=-0.3,x=0,z=0,
                           material=glossy(color="dodgerblue4"), scale_mesh = 1/70)) \%>\%
     add_object(sphere(y=5,x=5,z=5,material=light(intensity=50))) \%>\% 
-    render_scene(samples=500,width=800,height=800,
+    render_scene(samples=128,width=800,height=800,
                  lookat = c(0,0.5,1), aperture=0.0)
 }
 }

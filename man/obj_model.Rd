@@ -62,7 +62,7 @@ Note: light importance sampling currently not supported for this shape.
 #due to package constraints, but the file contents are identical and it does not 
 #affect the function.
 
-if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
+if(rayrender:::run_documentation()) {
 generate_ground(material = diffuse(checkercolor = "grey50")) \%>\%
   add_object(obj_model(y = -0.8, filename = r_obj(),
                        material = microfacet(color = "gold", roughness = 0.05))) \%>\%
@@ -72,19 +72,19 @@ generate_ground(material = diffuse(checkercolor = "grey50")) \%>\%
                        material = dielectric(attenuation = c(1,0.3,1)*2))) \%>\%
   add_object(sphere(z = 20, x = 20, y = 20, radius = 10,
                     material = light(intensity = 10))) \%>\%
-  render_scene(parallel = TRUE, samples = 500, aperture = 0.05, 
+  render_scene(parallel = TRUE, samples = 128, aperture = 0.05, 
                fov = 32, lookfrom = c(0, 2, 10))
 
 }
 
 #Use scale_obj to make objects bigger--this is more robust than the generic scale argument.
-if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
+if(rayrender:::run_documentation()) {
 generate_ground(material = diffuse(checkercolor = "grey50")) \%>\%
   add_object(obj_model(y = -0.8, filename = r_obj(), scale_obj = 2,
                        material = diffuse(noise = TRUE, noiseintensity = 10,noisephase=45))) \%>\%
   add_object(sphere(z = 20, x = 20, y = 20, radius = 10,
                     material = light(intensity = 10))) \%>\%
-  render_scene(parallel = TRUE, samples = 500, ambient = TRUE, 
+  render_scene(parallel = TRUE, samples = 128, ambient = TRUE, 
                backgroundhigh="blue", backgroundlow="red",
                aperture = 0.05, fov = 32, lookfrom = c(0, 2, 10),
                lookat = c(0,1,0)) 

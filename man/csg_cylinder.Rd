@@ -27,7 +27,7 @@ List describing the cylinder in the scene.
 CSG Cylinder
 }
 \examples{
-if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
+if(rayrender:::run_documentation()) {
 #Generate a basic cylinder:
 generate_ground(material=diffuse(checkercolor="grey20")) \%>\% 
   add_object(csg_object(csg_cylinder(radius=0.25),material=glossy(color="red"))) \%>\% 

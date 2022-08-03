@@ -88,8 +88,7 @@ public:
 
 class SobolSampler : public PixelSampler {
   public:
-    SobolSampler(unsigned int xPixelSamples, unsigned int yPixelSamples,
-                 unsigned int maxSamples,
+    SobolSampler(unsigned int maxSamples,
                  random_gen& rng);
     void StartPixel( unsigned int i,  unsigned int j);
     Float Get1D();
@@ -98,7 +97,6 @@ class SobolSampler : public PixelSampler {
     bool SetSampleNumber(size_t);
     std::unique_ptr<Sampler> Clone(int seed);
   private:
-    const unsigned int xPixelSamples, yPixelSamples;
     unsigned int current1Dsample, current2Dsample;
     unsigned int pixelseed;
 };

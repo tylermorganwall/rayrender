@@ -7,7 +7,7 @@
 #'
 #' @examples
 #' #Load and render the included example R object file.
-#' if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
+#' if(rayrender:::run_documentation()) {
 #' generate_ground(material = diffuse(noise = TRUE, noisecolor = "grey20")) %>%
 #'   add_object(sphere(x = 2, y = 3, z = 2, radius = 1,
 #'                     material = light(intensity = 10))) %>%

@@ -20,7 +20,7 @@ List describing the capsule in the scene.
 CSG Capsule
 }
 \examples{
-if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
+if(rayrender:::run_documentation()) {
 #Generate a basic capsule:
 generate_ground(material=diffuse(checkercolor="grey20")) \%>\% 
   add_object(csg_object(csg_capsule(radius=0.5),material=glossy(color="red"))) \%>\% 

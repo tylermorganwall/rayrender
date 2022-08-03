@@ -24,7 +24,7 @@ List describing the box in the scene.
 CSG Box
 }
 \examples{
-if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
+if(rayrender:::run_documentation()) {
 #Generate a box
 generate_ground(material=diffuse(checkercolor="grey20")) \%>\% 
   add_object(csg_object(csg_box(), material=glossy(color="#FF69B4"))) \%>\%

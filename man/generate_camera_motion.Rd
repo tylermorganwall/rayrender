@@ -89,7 +89,7 @@ a data.frame that can be passed to `render_animation()`.
 }
 \examples{
 #Create and animate flying through a scene on a simulated roller coaster
-if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
+if(rayrender:::run_documentation()) {
 set.seed(3)
 elliplist = list()
 ellip_colors = rainbow(8)

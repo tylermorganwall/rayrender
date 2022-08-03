@@ -22,7 +22,7 @@ List describing the sphere in the scene.
 CSG Sphere
 }
 \examples{
-if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
+if(rayrender:::run_documentation()) {
 #Generate a simple sphere:
 generate_ground() \%>\% 
   add_object(csg_object(csg_sphere(),

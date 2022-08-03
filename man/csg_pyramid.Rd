@@ -25,7 +25,7 @@ Note: This primitive slows down immensely for large values of base and height. T
 with this object for large pyramids instead.
 }
 \examples{
-if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
+if(rayrender:::run_documentation()) {
 #Generate a simple pyramid:
 generate_ground() \%>\% 
   add_object(csg_object(csg_pyramid(y=-0.99),

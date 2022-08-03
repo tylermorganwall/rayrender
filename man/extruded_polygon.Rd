@@ -87,20 +87,20 @@ Extruded Polygon Object
 \examples{
 #Manually create a polygon object, here a star:
 
-if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
+if(rayrender:::run_documentation()) {
 angles = seq(0,360,by=36)
 xx = rev(c(rep(c(1,0.5),5),1) * sinpi(angles/180))
 yy = rev(c(rep(c(1,0.5),5),1) * cospi(angles/180))
 star_polygon = data.frame(x=xx,y=yy)
 }
 
-if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
+if(rayrender:::run_documentation()) {
 generate_ground(depth=0,
                 material = diffuse(color="grey50",checkercolor="grey20")) \%>\%
   add_object(extruded_polygon(star_polygon,top=0.5,bottom=0,
                               material=diffuse(color="red",sigma=90))) \%>\%
   add_object(sphere(y=4,x=-3,z=-3,material=light(intensity=30))) \%>\%
-  render_scene(parallel=TRUE,lookfrom = c(0,2,3),samples=400,lookat=c(0,0.5,0),fov=60)
+  render_scene(parallel=TRUE,lookfrom = c(0,2,3),samples=128,lookat=c(0,0.5,0),fov=60)
 }
 
 #Now, let's add a hole to the center of the polygon. We'll make the polygon
@@ -108,22 +108,22 @@ generate_ground(depth=0,
 #and specify with the `holes` argument that everything after `nrow(star_polygon)`
 #in the following should be used to draw a hole:
 
-if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
+if(rayrender:::run_documentation()) {
 hollow_star = rbind(star_polygon,0.8*star_polygon)
 }
 
-if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
+if(rayrender:::run_documentation()) {
 generate_ground(depth=-0.01,
                 material = diffuse(color="grey50",checkercolor="grey20")) \%>\%
   add_object(extruded_polygon(hollow_star,top=0.25,bottom=0, holes = nrow(star_polygon) + 1,
                               material=diffuse(color="red",sigma=90))) \%>\%
   add_object(sphere(y=4,x=-3,z=-3,material=light(intensity=30))) \%>\%
-  render_scene(parallel=TRUE,lookfrom = c(0,2,4),samples=400,lookat=c(0,0,0),fov=30)
+  render_scene(parallel=TRUE,lookfrom = c(0,2,4),samples=128,lookat=c(0,0,0),fov=30)
 }
 
 # Render one in the y-x plane as well by changing the `plane` argument,
 # as well as offset it slightly.
-if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
+if(rayrender:::run_documentation()) {
 generate_ground(depth=-0.01,
                 material = diffuse(color="grey50",checkercolor="grey20")) \%>\%
   add_object(extruded_polygon(hollow_star,top=0.25,bottom=0, holes = nrow(star_polygon),
@@ -132,11 +132,11 @@ generate_ground(depth=-0.01,
                               holes = nrow(star_polygon) + 1, plane = "yx", 
                               material=diffuse(color="green",sigma=90))) \%>\%
   add_object(sphere(y=4,x=-3,material=light(intensity=30))) \%>\%
-  render_scene(parallel=TRUE,lookfrom = c(0,2,4),samples=400,lookat=c(0,0.9,0),fov=40)
+  render_scene(parallel=TRUE,lookfrom = c(0,2,4),samples=128,lookat=c(0,0.9,0),fov=40)
 }
 
 # Now add the zy plane:
-if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
+if(rayrender:::run_documentation()) {
 generate_ground(depth=-0.01,
                 material = diffuse(color="grey50",checkercolor="grey20")) \%>\%
   add_object(extruded_polygon(hollow_star,top=0.25,bottom=0, holes = nrow(star_polygon) + 1,
@@ -148,11 +148,11 @@ generate_ground(depth=-0.01,
                               holes = nrow(star_polygon) + 1, plane = "zy", 
                               material=diffuse(color="blue",sigma=90))) \%>\%
   add_object(sphere(y=4,x=-3,material=light(intensity=30))) \%>\%
-  render_scene(parallel=TRUE,lookfrom = c(-4,2,4),samples=400,lookat=c(0,0.9,0),fov=40)
+  render_scene(parallel=TRUE,lookfrom = c(-4,2,4),samples=128,lookat=c(0,0.9,0),fov=40)
 }
 
 #We can also directly pass in sf polygons:
-if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
+if(rayrender:::run_documentation()) {
 if(length(find.package("spData",quiet=TRUE)) > 0) {
   us_states = spData::us_states
   texas = us_states[us_states$NAME == "Texas",]
@@ -163,18 +163,18 @@ if(length(find.package("spData",quiet=TRUE)) > 0) {
 
 #This uses the raw coordinates, unless `center = TRUE`, which centers the bounding box
 #of the polygon at the origin.
-if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
+if(rayrender:::run_documentation()) {
 generate_ground(depth=-0.01,
                 material = diffuse(color="grey50",checkercolor="grey20")) \%>\%
   add_object(extruded_polygon(texas, center = TRUE,
                               material=diffuse(color="#ff2222",sigma=90))) \%>\%
   add_object(sphere(y=30,x=-30,radius=10,
                     material=light(color="lightblue",intensity=40))) \%>\%
-  render_scene(parallel=TRUE,lookfrom = c(0,10,-10),samples=400,fov=60)
+  render_scene(parallel=TRUE,lookfrom = c(0,10,-10),samples=128,fov=60)
 }
 
 #Here we use the raw coordinates, but offset the polygon manually.
-if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
+if(rayrender:::run_documentation()) {
 generate_ground(depth=-0.01,
                 material = diffuse(color="grey50",checkercolor="grey20")) \%>\%
   add_object(extruded_polygon(us_states, x=-96,z=-40, top=2,
@@ -183,13 +183,13 @@ generate_ground(depth=-0.01,
                     material=light(color="lightblue",intensity=200))) \%>\%
   add_object(sphere(y=30,x=100,radius=10,
                     material=light(color="orange",intensity=200))) \%>\%
-  render_scene(parallel=TRUE,lookfrom = c(0,120,-120),samples=400,fov=20)
+  render_scene(parallel=TRUE,lookfrom = c(0,120,-120),samples=128,fov=20)
 }
 
 #We can also set the map the height of each polygon to a column in the sf object,
 #scaling it down by the maximum population state.
 
-if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
+if(rayrender:::run_documentation()) {
 generate_ground(depth=0,
                 material = diffuse(color="grey50",checkercolor="grey20",sigma=90)) \%>\%
   add_object(extruded_polygon(us_states, x=-96,z=-45, data_column_top = "total_pop_15",
@@ -199,7 +199,7 @@ generate_ground(depth=0,
                     material=light(color="lightblue",intensity=250))) \%>\%
   add_object(sphere(y=30,x=100,z=-60,radius=10,
                     material=light(color="orange",intensity=250))) \%>\%
-  render_scene(parallel=TRUE,lookfrom = c(-60,50,-40),lookat=c(0,-5,0),samples=400,fov=30)
+  render_scene(parallel=TRUE,lookfrom = c(-60,50,-40),lookat=c(0,-5,0),samples=128,fov=30)
 }
 
 }

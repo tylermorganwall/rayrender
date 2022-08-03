@@ -391,3 +391,12 @@ add_points_polygon = function(polygon, added_points = 0L) {
   return_polygon[,2] = tween(polygon[,2], n = total_verts, ease = "linear")
   return(return_polygon)
 }
+
+#' Run Documentation
+#' 
+#' @return bool
+#'
+#' @keywords internal
+run_documentation = function() {
+  return(identical(Sys.getenv("IN_PKGDOWN"), "true"))
+}

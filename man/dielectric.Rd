@@ -47,27 +47,27 @@ Dielectric (glass) Material
 \examples{
 #Generate a checkered ground
 scene = generate_ground(depth=-0.5, material = diffuse(checkercolor="grey30",checkerperiod=2))
-if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
+if(rayrender:::run_documentation()) {
 render_scene(scene,parallel=TRUE)
 }
 
 #Add a glass sphere
-if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
+if(rayrender:::run_documentation()) {
 scene \%>\%
   add_object(sphere(x=-0.5,radius=0.5,material=dielectric())) \%>\%
-  render_scene(parallel=TRUE,samples=400)
+  render_scene(parallel=TRUE,samples=128)
 }
 
 #Add a rotated colored glass cube
-if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
+if(rayrender:::run_documentation()) {
 scene \%>\%
   add_object(sphere(x=-0.5,radius=0.5,material=dielectric())) \%>\%
   add_object(cube(x=0.5,xwidth=0.5,material=dielectric(color="darkgreen"),angle=c(0,-45,0))) \%>\%
-  render_scene(parallel=TRUE,samples=400)
+  render_scene(parallel=TRUE,samples=128)
 }
 
 #Add an area light behind and at an angle and turn off the ambient lighting
-if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
+if(rayrender:::run_documentation()) {
 scene \%>\%
   add_object(sphere(x=-0.5,radius=0.5,material=dielectric())) \%>\%
   add_object(cube(x=0.5,xwidth=0.5,material=dielectric(color="darkgreen"),angle=c(0,-45,0))) \%>\%
@@ -81,7 +81,7 @@ scene \%>\%
 #basis as it travels through the material. This effect is what gives some types of glass
 #a green glow at the edges. We will get this effect by setting a lower attenuation value 
 #for the `green` (second) channel in the dielectric `attenuation` argument.
-if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
+if(rayrender:::run_documentation()) {
 generate_ground(depth=-0.5,material=diffuse(checkercolor="grey30",checkerperiod=2)) \%>\%
   add_object(sphere(z=-5,x=-0.5,y=1,material=light(intensity=10))) \%>\%
   add_object(cube(y=0.3,ywidth=0.1,xwidth=2,zwidth=2,
@@ -92,7 +92,7 @@ generate_ground(depth=-0.5,material=diffuse(checkercolor="grey30",checkerperiod=
 #If you have overlapping dielectrics, the `priority` value can help disambiguate what 
 #object wins. Here, I place a bubble inside a cube by setting a lower priority value and
 #making the inner sphere have a index of refraction of 1. I also place spheres at the corners.
-if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
+if(rayrender:::run_documentation()) {
 generate_ground(depth=-0.51,material=diffuse(checkercolor="grey30",checkerperiod=2)) \%>\%
   add_object(cube(material = dielectric(priority=2, attenuation = c(10,3,10)))) \%>\%
   add_object(sphere(radius=0.49,material = dielectric(priority=1, refraction=1))) \%>\%
@@ -100,13 +100,13 @@ generate_ground(depth=-0.51,material=diffuse(checkercolor="grey30",checkerperiod
                     material = dielectric(priority=0,attenuation = c(10,3,10) ))) \%>\%
   add_object(sphere(radius=0.25,x=-0.5,z=0.5,y=0.5,
                     material = dielectric(priority=0,attenuation = c(10,3,10)))) \%>\%
-  render_scene(parallel=TRUE, samples = 400,lookfrom=c(5,1,5)) 
+  render_scene(parallel=TRUE, samples = 128,lookfrom=c(5,1,5)) 
 }
 
 # We can also use this as a basic Constructive Solid Geometry interface by setting 
 # the index of refraction equal to empty space, 1. This will subtract out those regions.
 # Here I make a concave lens by subtracting two spheres from a cube.
-if(identical(Sys.getenv("IN_PKGDOWN"), "true")) {
+if(rayrender:::run_documentation()) {
 generate_ground(depth=-0.51,material=diffuse(checkercolor="grey30",checkerperiod=2,sigma=90)) \%>\%
   add_object(cube(material = dielectric(attenuation = c(3,3,1),priority=1))) \%>\%
   add_object(sphere(radius=1,x=1.01,
@@ -114,6 +114,6 @@ generate_ground(depth=-0.51,material=diffuse(checkercolor="grey30",checkerperiod
   add_object(sphere(radius=1,x=-1.01, 
                     material = dielectric(priority=0,refraction=1))) \%>\%
   add_object(sphere(y=10,x=3,material=light(intensit=150))) \%>\%
-  render_scene(parallel=TRUE, samples = 400,lookfrom=c(5,3,5))
+  render_scene(parallel=TRUE, samples = 128,lookfrom=c(5,3,5))
 }
 }
