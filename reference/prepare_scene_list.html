@@ -17,7 +17,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">rayrender</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.27.0</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.27.1</span>
       </span>
     </div>
 
@@ -89,54 +89,54 @@
     </div>
 
     <div id="ref-usage">
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="fu">prepare_scene_list</span><span class="op">(</span>
-  <span class="va">scene</span>,
-  width <span class="op">=</span> <span class="fl">400</span>,
-  height <span class="op">=</span> <span class="fl">400</span>,
-  fov <span class="op">=</span> <span class="fl">20</span>,
-  lookfrom <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">1</span>, <span class="fl">10</span><span class="op">)</span>,
-  lookat <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">0</span>, <span class="fl">0</span><span class="op">)</span>,
-  camera_up <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">1</span>, <span class="fl">0</span><span class="op">)</span>,
-  samples <span class="op">=</span> <span class="fl">100</span>,
-  camera_description_file <span class="op">=</span> <span class="cn">NA</span>,
-  camera_scale <span class="op">=</span> <span class="fl">1</span>,
-  iso <span class="op">=</span> <span class="fl">100</span>,
-  film_size <span class="op">=</span> <span class="fl">22</span>,
-  min_variance <span class="op">=</span> <span class="fl">5e-05</span>,
-  min_adaptive_size <span class="op">=</span> <span class="fl">8</span>,
-  sample_method <span class="op">=</span> <span class="st">"sobol"</span>,
-  max_depth <span class="op">=</span> <span class="cn">NA</span>,
-  roulette_active_depth <span class="op">=</span> <span class="fl">100</span>,
-  ambient_light <span class="op">=</span> <span class="cn">FALSE</span>,
-  aperture <span class="op">=</span> <span class="fl">0.1</span>,
-  clamp_value <span class="op">=</span> <span class="cn">Inf</span>,
-  filename <span class="op">=</span> <span class="cn">NULL</span>,
-  backgroundhigh <span class="op">=</span> <span class="st">"#80b4ff"</span>,
-  backgroundlow <span class="op">=</span> <span class="st">"#ffffff"</span>,
-  shutteropen <span class="op">=</span> <span class="fl">0</span>,
-  shutterclose <span class="op">=</span> <span class="fl">1</span>,
-  focal_distance <span class="op">=</span> <span class="cn">NULL</span>,
-  ortho_dimensions <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">1</span><span class="op">)</span>,
-  tonemap <span class="op">=</span> <span class="st">"gamma"</span>,
-  bloom <span class="op">=</span> <span class="cn">TRUE</span>,
-  parallel <span class="op">=</span> <span class="cn">TRUE</span>,
-  bvh_type <span class="op">=</span> <span class="st">"sah"</span>,
-  environment_light <span class="op">=</span> <span class="cn">NULL</span>,
-  rotate_env <span class="op">=</span> <span class="fl">0</span>,
-  intensity_env <span class="op">=</span> <span class="fl">1</span>,
-  debug_channel <span class="op">=</span> <span class="st">"none"</span>,
-  return_raw_array <span class="op">=</span> <span class="cn">FALSE</span>,
-  progress <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/interactive.html" class="external-link">interactive</a></span><span class="op">(</span><span class="op">)</span>,
-  verbose <span class="op">=</span> <span class="cn">FALSE</span>,
-  sample_dist <span class="op">=</span> <span class="cn">Inf</span>,
-  keep_colors <span class="op">=</span> <span class="cn">FALSE</span>
-<span class="op">)</span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">prepare_scene_list</span><span class="op">(</span></span>
+<span>  <span class="va">scene</span>,</span>
+<span>  width <span class="op">=</span> <span class="fl">400</span>,</span>
+<span>  height <span class="op">=</span> <span class="fl">400</span>,</span>
+<span>  fov <span class="op">=</span> <span class="fl">20</span>,</span>
+<span>  lookfrom <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">1</span>, <span class="fl">10</span><span class="op">)</span>,</span>
+<span>  lookat <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">0</span>, <span class="fl">0</span><span class="op">)</span>,</span>
+<span>  camera_up <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">1</span>, <span class="fl">0</span><span class="op">)</span>,</span>
+<span>  samples <span class="op">=</span> <span class="fl">100</span>,</span>
+<span>  camera_description_file <span class="op">=</span> <span class="cn">NA</span>,</span>
+<span>  camera_scale <span class="op">=</span> <span class="fl">1</span>,</span>
+<span>  iso <span class="op">=</span> <span class="fl">100</span>,</span>
+<span>  film_size <span class="op">=</span> <span class="fl">22</span>,</span>
+<span>  min_variance <span class="op">=</span> <span class="fl">5e-05</span>,</span>
+<span>  min_adaptive_size <span class="op">=</span> <span class="fl">8</span>,</span>
+<span>  sample_method <span class="op">=</span> <span class="st">"sobol"</span>,</span>
+<span>  max_depth <span class="op">=</span> <span class="cn">NA</span>,</span>
+<span>  roulette_active_depth <span class="op">=</span> <span class="fl">100</span>,</span>
+<span>  ambient_light <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  aperture <span class="op">=</span> <span class="fl">0.1</span>,</span>
+<span>  clamp_value <span class="op">=</span> <span class="cn">Inf</span>,</span>
+<span>  filename <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  backgroundhigh <span class="op">=</span> <span class="st">"#80b4ff"</span>,</span>
+<span>  backgroundlow <span class="op">=</span> <span class="st">"#ffffff"</span>,</span>
+<span>  shutteropen <span class="op">=</span> <span class="fl">0</span>,</span>
+<span>  shutterclose <span class="op">=</span> <span class="fl">1</span>,</span>
+<span>  focal_distance <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  ortho_dimensions <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">1</span><span class="op">)</span>,</span>
+<span>  tonemap <span class="op">=</span> <span class="st">"gamma"</span>,</span>
+<span>  bloom <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  parallel <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  bvh_type <span class="op">=</span> <span class="st">"sah"</span>,</span>
+<span>  environment_light <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  rotate_env <span class="op">=</span> <span class="fl">0</span>,</span>
+<span>  intensity_env <span class="op">=</span> <span class="fl">1</span>,</span>
+<span>  debug_channel <span class="op">=</span> <span class="st">"none"</span>,</span>
+<span>  return_raw_array <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  progress <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/interactive.html" class="external-link">interactive</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  verbose <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  sample_dist <span class="op">=</span> <span class="cn">Inf</span>,</span>
+<span>  keep_colors <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span><span class="op">)</span></span></code></pre></div>
     </div>
 
 
     <div id="ref-examples">
     <h2>Examples</h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span class="co">#internal</span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co">#internal</span></span></span>
 <span class="r-in"></span>
 </code></pre></div>
     </div>
@@ -152,7 +152,7 @@
 </div>
 
 <div class="pkgdown">
-  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.4.</p>
+  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.6.</p>
 </div>
 
       </footer></div>

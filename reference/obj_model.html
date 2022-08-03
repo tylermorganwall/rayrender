@@ -18,7 +18,7 @@ Note: light importance sampling currently not supported for this shape."><meta p
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">rayrender</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.27.0</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.27.1</span>
       </span>
     </div>
 
@@ -91,20 +91,20 @@ Note: light importance sampling currently not supported for this shape.</p>
     </div>
 
     <div id="ref-usage">
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="fu">obj_model</span><span class="op">(</span>
-  <span class="va">filename</span>,
-  x <span class="op">=</span> <span class="fl">0</span>,
-  y <span class="op">=</span> <span class="fl">0</span>,
-  z <span class="op">=</span> <span class="fl">0</span>,
-  scale_obj <span class="op">=</span> <span class="fl">1</span>,
-  texture <span class="op">=</span> <span class="cn">FALSE</span>,
-  vertex_colors <span class="op">=</span> <span class="cn">FALSE</span>,
-  material <span class="op">=</span> <span class="fu"><a href="diffuse.html">diffuse</a></span><span class="op">(</span><span class="op">)</span>,
-  angle <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">0</span>, <span class="fl">0</span><span class="op">)</span>,
-  order_rotation <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">2</span>, <span class="fl">3</span><span class="op">)</span>,
-  flipped <span class="op">=</span> <span class="cn">FALSE</span>,
-  scale <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">1</span>, <span class="fl">1</span><span class="op">)</span>
-<span class="op">)</span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">obj_model</span><span class="op">(</span></span>
+<span>  <span class="va">filename</span>,</span>
+<span>  x <span class="op">=</span> <span class="fl">0</span>,</span>
+<span>  y <span class="op">=</span> <span class="fl">0</span>,</span>
+<span>  z <span class="op">=</span> <span class="fl">0</span>,</span>
+<span>  scale_obj <span class="op">=</span> <span class="fl">1</span>,</span>
+<span>  texture <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  vertex_colors <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  material <span class="op">=</span> <span class="fu"><a href="diffuse.html">diffuse</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  angle <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">0</span>, <span class="fl">0</span><span class="op">)</span>,</span>
+<span>  order_rotation <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">2</span>, <span class="fl">3</span><span class="op">)</span>,</span>
+<span>  flipped <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  scale <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">1</span>, <span class="fl">1</span><span class="op">)</span></span>
+<span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div id="arguments">
@@ -171,40 +171,40 @@ Note: emissive objects may not currently function correctly when scaled.</p></dd
 
     <div id="ref-examples">
     <h2>Examples</h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span class="co">#Load the included example R object file, by calling the r_obj() function. This</span></span>
-<span class="r-in"><span class="co">#returns the local file path to the `r.txt` obj file. The file extension is "txt" </span></span>
-<span class="r-in"><span class="co">#due to package constraints, but the file contents are identical and it does not </span></span>
-<span class="r-in"><span class="co">#affect the function.</span></span>
-<span class="r-in"></span>
-<span class="r-in"><span class="co"># \donttest{</span></span>
-<span class="r-in"><span class="fu"><a href="generate_ground.html">generate_ground</a></span><span class="op">(</span>material <span class="op">=</span> <span class="fu"><a href="diffuse.html">diffuse</a></span><span class="op">(</span>checkercolor <span class="op">=</span> <span class="st">"grey50"</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span></span>
-<span class="r-in">  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu">obj_model</span><span class="op">(</span>y <span class="op">=</span> <span class="op">-</span><span class="fl">0.8</span>, filename <span class="op">=</span> <span class="fu"><a href="r_obj.html">r_obj</a></span><span class="op">(</span><span class="op">)</span>,</span>
-<span class="r-in">                       material <span class="op">=</span> <span class="fu"><a href="microfacet.html">microfacet</a></span><span class="op">(</span>color <span class="op">=</span> <span class="st">"gold"</span>, roughness <span class="op">=</span> <span class="fl">0.05</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span></span>
-<span class="r-in">  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu">obj_model</span><span class="op">(</span>x <span class="op">=</span> <span class="fl">1.8</span>, y <span class="op">=</span> <span class="op">-</span><span class="fl">0.8</span>, filename <span class="op">=</span> <span class="fu"><a href="r_obj.html">r_obj</a></span><span class="op">(</span><span class="op">)</span>, </span>
-<span class="r-in">                       material <span class="op">=</span> <span class="fu"><a href="diffuse.html">diffuse</a></span><span class="op">(</span>color <span class="op">=</span> <span class="st">"dodgerblue"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span></span>
-<span class="r-in">  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu">obj_model</span><span class="op">(</span>x <span class="op">=</span> <span class="op">-</span><span class="fl">1.8</span>, y <span class="op">=</span> <span class="op">-</span><span class="fl">0.8</span>, filename <span class="op">=</span> <span class="fu"><a href="r_obj.html">r_obj</a></span><span class="op">(</span><span class="op">)</span> , </span>
-<span class="r-in">                       material <span class="op">=</span> <span class="fu"><a href="dielectric.html">dielectric</a></span><span class="op">(</span>attenuation <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>,<span class="fl">0.3</span>,<span class="fl">1</span><span class="op">)</span><span class="op">*</span><span class="fl">2</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span></span>
-<span class="r-in">  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="sphere.html">sphere</a></span><span class="op">(</span>z <span class="op">=</span> <span class="fl">20</span>, x <span class="op">=</span> <span class="fl">20</span>, y <span class="op">=</span> <span class="fl">20</span>, radius <span class="op">=</span> <span class="fl">10</span>,</span>
-<span class="r-in">                    material <span class="op">=</span> <span class="fu"><a href="light.html">light</a></span><span class="op">(</span>intensity <span class="op">=</span> <span class="fl">10</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span></span>
-<span class="r-in">  <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>parallel <span class="op">=</span> <span class="cn">TRUE</span>, samples <span class="op">=</span> <span class="fl">500</span>, aperture <span class="op">=</span> <span class="fl">0.05</span>, </span>
-<span class="r-in">               fov <span class="op">=</span> <span class="fl">32</span>, lookfrom <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">2</span>, <span class="fl">10</span><span class="op">)</span><span class="op">)</span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co">#Load the included example R object file, by calling the r_obj() function. This</span></span></span>
+<span class="r-in"><span><span class="co">#returns the local file path to the `r.txt` obj file. The file extension is "txt" </span></span></span>
+<span class="r-in"><span><span class="co">#due to package constraints, but the file contents are identical and it does not </span></span></span>
+<span class="r-in"><span><span class="co">#affect the function.</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="kw">if</span><span class="op">(</span><span class="fu">rayrender</span><span class="fu">:::</span><span class="fu"><a href="run_documentation.html">run_documentation</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="generate_ground.html">generate_ground</a></span><span class="op">(</span>material <span class="op">=</span> <span class="fu"><a href="diffuse.html">diffuse</a></span><span class="op">(</span>checkercolor <span class="op">=</span> <span class="st">"grey50"</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu">obj_model</span><span class="op">(</span>y <span class="op">=</span> <span class="op">-</span><span class="fl">0.8</span>, filename <span class="op">=</span> <span class="fu"><a href="r_obj.html">r_obj</a></span><span class="op">(</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>                       material <span class="op">=</span> <span class="fu"><a href="microfacet.html">microfacet</a></span><span class="op">(</span>color <span class="op">=</span> <span class="st">"gold"</span>, roughness <span class="op">=</span> <span class="fl">0.05</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu">obj_model</span><span class="op">(</span>x <span class="op">=</span> <span class="fl">1.8</span>, y <span class="op">=</span> <span class="op">-</span><span class="fl">0.8</span>, filename <span class="op">=</span> <span class="fu"><a href="r_obj.html">r_obj</a></span><span class="op">(</span><span class="op">)</span>, </span></span>
+<span class="r-in"><span>                       material <span class="op">=</span> <span class="fu"><a href="diffuse.html">diffuse</a></span><span class="op">(</span>color <span class="op">=</span> <span class="st">"dodgerblue"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu">obj_model</span><span class="op">(</span>x <span class="op">=</span> <span class="op">-</span><span class="fl">1.8</span>, y <span class="op">=</span> <span class="op">-</span><span class="fl">0.8</span>, filename <span class="op">=</span> <span class="fu"><a href="r_obj.html">r_obj</a></span><span class="op">(</span><span class="op">)</span> , </span></span>
+<span class="r-in"><span>                       material <span class="op">=</span> <span class="fu"><a href="dielectric.html">dielectric</a></span><span class="op">(</span>attenuation <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>,<span class="fl">0.3</span>,<span class="fl">1</span><span class="op">)</span><span class="op">*</span><span class="fl">2</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="sphere.html">sphere</a></span><span class="op">(</span>z <span class="op">=</span> <span class="fl">20</span>, x <span class="op">=</span> <span class="fl">20</span>, y <span class="op">=</span> <span class="fl">20</span>, radius <span class="op">=</span> <span class="fl">10</span>,</span></span>
+<span class="r-in"><span>                    material <span class="op">=</span> <span class="fu"><a href="light.html">light</a></span><span class="op">(</span>intensity <span class="op">=</span> <span class="fl">10</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>parallel <span class="op">=</span> <span class="cn">TRUE</span>, samples <span class="op">=</span> <span class="fl">128</span>, aperture <span class="op">=</span> <span class="fl">0.05</span>, </span></span>
+<span class="r-in"><span>               fov <span class="op">=</span> <span class="fl">32</span>, lookfrom <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">2</span>, <span class="fl">10</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="op">}</span></span></span>
 <span class="r-plt img"><img src="obj_model-1.png" alt="" width="700" height="433"></span>
-<span class="r-in"></span>
-<span class="r-in"><span class="co"># }</span></span>
-<span class="r-in"></span>
-<span class="r-in"><span class="co">#Use scale_obj to make objects bigger--this is more robust than the generic scale argument.</span></span>
-<span class="r-in"><span class="co"># \donttest{</span></span>
-<span class="r-in"><span class="fu"><a href="generate_ground.html">generate_ground</a></span><span class="op">(</span>material <span class="op">=</span> <span class="fu"><a href="diffuse.html">diffuse</a></span><span class="op">(</span>checkercolor <span class="op">=</span> <span class="st">"grey50"</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span></span>
-<span class="r-in">  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu">obj_model</span><span class="op">(</span>y <span class="op">=</span> <span class="op">-</span><span class="fl">0.8</span>, filename <span class="op">=</span> <span class="fu"><a href="r_obj.html">r_obj</a></span><span class="op">(</span><span class="op">)</span>, scale_obj <span class="op">=</span> <span class="fl">2</span>,</span>
-<span class="r-in">                       material <span class="op">=</span> <span class="fu"><a href="diffuse.html">diffuse</a></span><span class="op">(</span>noise <span class="op">=</span> <span class="cn">TRUE</span>, noiseintensity <span class="op">=</span> <span class="fl">10</span>,noisephase<span class="op">=</span><span class="fl">45</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span></span>
-<span class="r-in">  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="sphere.html">sphere</a></span><span class="op">(</span>z <span class="op">=</span> <span class="fl">20</span>, x <span class="op">=</span> <span class="fl">20</span>, y <span class="op">=</span> <span class="fl">20</span>, radius <span class="op">=</span> <span class="fl">10</span>,</span>
-<span class="r-in">                    material <span class="op">=</span> <span class="fu"><a href="light.html">light</a></span><span class="op">(</span>intensity <span class="op">=</span> <span class="fl">10</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span></span>
-<span class="r-in">  <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>parallel <span class="op">=</span> <span class="cn">TRUE</span>, samples <span class="op">=</span> <span class="fl">500</span>, ambient <span class="op">=</span> <span class="cn">TRUE</span>, </span>
-<span class="r-in">               backgroundhigh<span class="op">=</span><span class="st">"blue"</span>, backgroundlow<span class="op">=</span><span class="st">"red"</span>,</span>
-<span class="r-in">               aperture <span class="op">=</span> <span class="fl">0.05</span>, fov <span class="op">=</span> <span class="fl">32</span>, lookfrom <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">2</span>, <span class="fl">10</span><span class="op">)</span>,</span>
-<span class="r-in">               lookat <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">1</span>,<span class="fl">0</span><span class="op">)</span><span class="op">)</span> </span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co">#Use scale_obj to make objects bigger--this is more robust than the generic scale argument.</span></span></span>
+<span class="r-in"><span><span class="kw">if</span><span class="op">(</span><span class="fu">rayrender</span><span class="fu">:::</span><span class="fu"><a href="run_documentation.html">run_documentation</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="generate_ground.html">generate_ground</a></span><span class="op">(</span>material <span class="op">=</span> <span class="fu"><a href="diffuse.html">diffuse</a></span><span class="op">(</span>checkercolor <span class="op">=</span> <span class="st">"grey50"</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu">obj_model</span><span class="op">(</span>y <span class="op">=</span> <span class="op">-</span><span class="fl">0.8</span>, filename <span class="op">=</span> <span class="fu"><a href="r_obj.html">r_obj</a></span><span class="op">(</span><span class="op">)</span>, scale_obj <span class="op">=</span> <span class="fl">2</span>,</span></span>
+<span class="r-in"><span>                       material <span class="op">=</span> <span class="fu"><a href="diffuse.html">diffuse</a></span><span class="op">(</span>noise <span class="op">=</span> <span class="cn">TRUE</span>, noiseintensity <span class="op">=</span> <span class="fl">10</span>,noisephase<span class="op">=</span><span class="fl">45</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="sphere.html">sphere</a></span><span class="op">(</span>z <span class="op">=</span> <span class="fl">20</span>, x <span class="op">=</span> <span class="fl">20</span>, y <span class="op">=</span> <span class="fl">20</span>, radius <span class="op">=</span> <span class="fl">10</span>,</span></span>
+<span class="r-in"><span>                    material <span class="op">=</span> <span class="fu"><a href="light.html">light</a></span><span class="op">(</span>intensity <span class="op">=</span> <span class="fl">10</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>parallel <span class="op">=</span> <span class="cn">TRUE</span>, samples <span class="op">=</span> <span class="fl">128</span>, ambient <span class="op">=</span> <span class="cn">TRUE</span>, </span></span>
+<span class="r-in"><span>               backgroundhigh<span class="op">=</span><span class="st">"blue"</span>, backgroundlow<span class="op">=</span><span class="st">"red"</span>,</span></span>
+<span class="r-in"><span>               aperture <span class="op">=</span> <span class="fl">0.05</span>, fov <span class="op">=</span> <span class="fl">32</span>, lookfrom <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">2</span>, <span class="fl">10</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>               lookat <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">1</span>,<span class="fl">0</span><span class="op">)</span><span class="op">)</span> </span></span>
+<span class="r-in"><span><span class="op">}</span></span></span>
 <span class="r-plt img"><img src="obj_model-2.png" alt="" width="700" height="433"></span>
-<span class="r-in"><span class="co"># }</span></span>
 </code></pre></div>
     </div>
   </div>
@@ -219,7 +219,7 @@ Note: emissive objects may not currently function correctly when scaled.</p></dd
 </div>
 
 <div class="pkgdown">
-  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.4.</p>
+  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.6.</p>
 </div>
 
       </footer></div>
