@@ -125,13 +125,18 @@
 <span class="r-in"><span>  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="csg_object.html">csg_object</a></span><span class="op">(</span><span class="fu">csg_sphere</span><span class="op">(</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>                        material<span class="op">=</span><span class="fu"><a href="glossy.html">glossy</a></span><span class="op">(</span>color<span class="op">=</span><span class="st">"purple"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span> </span></span>
 <span class="r-in"><span>  <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>clamp_value<span class="op">=</span><span class="fl">10</span><span class="op">)</span></span></span>
-<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="op">}</span></span></span>
+<span class="r-plt img"><img src="csg_sphere-1.png" alt="" width="700" height="433"></span>
+<span class="r-in"><span><span class="kw">if</span><span class="op">(</span><span class="fu">rayrender</span><span class="fu">:::</span><span class="fu"><a href="run_documentation.html">run_documentation</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span></span>
 <span class="r-in"><span><span class="co">#Generate a bigger sphere in the cornell box.</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="generate_cornell.html">generate_cornell</a></span><span class="op">(</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span> </span></span>
 <span class="r-in"><span>  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="csg_object.html">csg_object</a></span><span class="op">(</span><span class="fu">csg_sphere</span><span class="op">(</span>x<span class="op">=</span><span class="fl">555</span><span class="op">/</span><span class="fl">2</span>,y<span class="op">=</span><span class="fl">555</span><span class="op">/</span><span class="fl">2</span>,z<span class="op">=</span><span class="fl">555</span><span class="op">/</span><span class="fl">2</span>,radius<span class="op">=</span><span class="fl">100</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>                        material<span class="op">=</span><span class="fu"><a href="glossy.html">glossy</a></span><span class="op">(</span>checkercolor<span class="op">=</span><span class="st">"purple"</span>, checkerperiod<span class="op">=</span><span class="fl">100</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span> </span></span>
 <span class="r-in"><span>  <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>clamp_value<span class="op">=</span><span class="fl">10</span><span class="op">)</span></span></span>
-<span class="r-in"><span>  </span></span>
+<span class="r-in"><span><span class="op">}</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Setting default values for Cornell box: lookfrom `c(278,278,-800)` lookat `c(278,278,555/2)` fov `40` .</span>
+<span class="r-plt img"><img src="csg_sphere-2.png" alt="" width="700" height="433"></span>
+<span class="r-in"><span><span class="kw">if</span><span class="op">(</span><span class="fu">rayrender</span><span class="fu">:::</span><span class="fu"><a href="run_documentation.html">run_documentation</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span></span>
 <span class="r-in"><span><span class="co">#Combine two spheres of different sizes</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="generate_cornell.html">generate_cornell</a></span><span class="op">(</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span> </span></span>
 <span class="r-in"><span>  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="csg_object.html">csg_object</a></span><span class="op">(</span></span></span>
@@ -140,7 +145,10 @@
 <span class="r-in"><span>      <span class="fu">csg_sphere</span><span class="op">(</span>x<span class="op">=</span><span class="fl">555</span><span class="op">/</span><span class="fl">2</span>,y<span class="op">=</span><span class="fl">555</span><span class="op">/</span><span class="fl">2</span><span class="op">+</span><span class="fl">50</span>,z<span class="op">=</span><span class="fl">555</span><span class="op">/</span><span class="fl">2</span>,radius<span class="op">=</span><span class="fl">80</span><span class="op">)</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>    material<span class="op">=</span><span class="fu"><a href="glossy.html">glossy</a></span><span class="op">(</span>color<span class="op">=</span><span class="st">"purple"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span> </span></span>
 <span class="r-in"><span>  <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>clamp_value<span class="op">=</span><span class="fl">10</span><span class="op">)</span></span></span>
-<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="op">}</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Setting default values for Cornell box: lookfrom `c(278,278,-800)` lookat `c(278,278,555/2)` fov `40` .</span>
+<span class="r-plt img"><img src="csg_sphere-3.png" alt="" width="700" height="433"></span>
+<span class="r-in"><span><span class="kw">if</span><span class="op">(</span><span class="fu">rayrender</span><span class="fu">:::</span><span class="fu"><a href="run_documentation.html">run_documentation</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span></span>
 <span class="r-in"><span><span class="co">#Subtract two spheres to create an indented region</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="generate_cornell.html">generate_cornell</a></span><span class="op">(</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span> </span></span>
 <span class="r-in"><span>  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="csg_object.html">csg_object</a></span><span class="op">(</span></span></span>
@@ -150,7 +158,10 @@
 <span class="r-in"><span>      operation<span class="op">=</span><span class="st">"subtract"</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>    material<span class="op">=</span><span class="fu"><a href="glossy.html">glossy</a></span><span class="op">(</span>color<span class="op">=</span><span class="st">"grey20"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span> </span></span>
 <span class="r-in"><span>  <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>clamp_value<span class="op">=</span><span class="fl">10</span><span class="op">)</span></span></span>
-<span class="r-in"><span>  </span></span>
+<span class="r-in"><span><span class="op">}</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Setting default values for Cornell box: lookfrom `c(278,278,-800)` lookat `c(278,278,555/2)` fov `40` .</span>
+<span class="r-plt img"><img src="csg_sphere-4.png" alt="" width="700" height="433"></span>
+<span class="r-in"><span><span class="kw">if</span><span class="op">(</span><span class="fu">rayrender</span><span class="fu">:::</span><span class="fu"><a href="run_documentation.html">run_documentation</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span></span>
 <span class="r-in"><span><span class="co">#Use csg_combine(operation="blend") to melt the two together</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="generate_cornell.html">generate_cornell</a></span><span class="op">(</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span> </span></span>
 <span class="r-in"><span>  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="csg_object.html">csg_object</a></span><span class="op">(</span></span></span>
@@ -162,13 +173,6 @@
 <span class="r-in"><span>  <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>clamp_value<span class="op">=</span><span class="fl">10</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Setting default values for Cornell box: lookfrom `c(278,278,-800)` lookat `c(278,278,555/2)` fov `40` .</span>
-<span class="r-plt img"><img src="csg_sphere-1.png" alt="" width="700" height="433"></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Setting default values for Cornell box: lookfrom `c(278,278,-800)` lookat `c(278,278,555/2)` fov `40` .</span>
-<span class="r-plt img"><img src="csg_sphere-2.png" alt="" width="700" height="433"></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Setting default values for Cornell box: lookfrom `c(278,278,-800)` lookat `c(278,278,555/2)` fov `40` .</span>
-<span class="r-plt img"><img src="csg_sphere-3.png" alt="" width="700" height="433"></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Setting default values for Cornell box: lookfrom `c(278,278,-800)` lookat `c(278,278,555/2)` fov `40` .</span>
-<span class="r-plt img"><img src="csg_sphere-4.png" alt="" width="700" height="433"></span>
 <span class="r-plt img"><img src="csg_sphere-5.png" alt="" width="700" height="433"></span>
 </code></pre></div>
     </div>

@@ -238,7 +238,9 @@ or towards the derivative of the Bezier curve.</p></dd>
 <span class="r-in"><span>  <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>lookfrom<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">20</span>,<span class="fl">0</span><span class="op">)</span>, width<span class="op">=</span><span class="fl">800</span>,height<span class="op">=</span><span class="fl">800</span>,samples<span class="op">=</span><span class="fl">32</span>,</span></span>
 <span class="r-in"><span>               camera_up <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">0</span>,<span class="fl">1</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>               fov<span class="op">=</span><span class="fl">80</span><span class="op">)</span></span></span>
-<span class="r-in"><span>            </span></span>
+<span class="r-in"><span><span class="op">}</span></span></span>
+<span class="r-plt img"><img src="generate_camera_motion-1.png" alt="" width="700" height="433"></span>
+<span class="r-in"><span><span class="kw">if</span><span class="op">(</span><span class="fu">rayrender</span><span class="fu">:::</span><span class="fu"><a href="run_documentation.html">run_documentation</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span> </span></span>
 <span class="r-in"><span><span class="co">#Side view     </span></span></span>
 <span class="r-in"><span><span class="fu"><a href="generate_ground.html">generate_ground</a></span><span class="op">(</span>material<span class="op">=</span><span class="fu"><a href="diffuse.html">diffuse</a></span><span class="op">(</span>checkercolor<span class="op">=</span><span class="st">"grey20"</span><span class="op">)</span>,depth<span class="op">=</span><span class="op">-</span><span class="fl">10</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span> </span></span>
 <span class="r-in"><span>  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="va">ellip_scene</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span> </span></span>
@@ -246,7 +248,9 @@ or towards the derivative of the Bezier curve.</p></dd>
 <span class="r-in"><span>  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="path.html">path</a></span><span class="op">(</span><span class="va">camera_pos</span>, material<span class="op">=</span><span class="fu"><a href="diffuse.html">diffuse</a></span><span class="op">(</span>color<span class="op">=</span><span class="st">"red"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span> </span></span>
 <span class="r-in"><span>  <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>lookfrom<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">20</span>,<span class="fl">0</span>,<span class="fl">0</span><span class="op">)</span>,width<span class="op">=</span><span class="fl">800</span>,height<span class="op">=</span><span class="fl">800</span>,samples<span class="op">=</span><span class="fl">32</span>,</span></span>
 <span class="r-in"><span>                 fov<span class="op">=</span><span class="fl">80</span><span class="op">)</span></span></span>
-<span class="r-in"><span> </span></span>
+<span class="r-in"><span> <span class="op">}</span></span></span>
+<span class="r-plt img"><img src="generate_camera_motion-2.png" alt="" width="700" height="433"></span>
+<span class="r-in"><span><span class="kw">if</span><span class="op">(</span><span class="fu">rayrender</span><span class="fu">:::</span><span class="fu"><a href="run_documentation.html">run_documentation</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span></span>
 <span class="r-in"><span><span class="co">#View from the start        </span></span></span>
 <span class="r-in"><span><span class="fu"><a href="generate_ground.html">generate_ground</a></span><span class="op">(</span>material<span class="op">=</span><span class="fu"><a href="diffuse.html">diffuse</a></span><span class="op">(</span>checkercolor<span class="op">=</span><span class="st">"grey20"</span><span class="op">)</span>,depth<span class="op">=</span><span class="op">-</span><span class="fl">10</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span> </span></span>
 <span class="r-in"><span>  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="va">ellip_scene</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span> </span></span>
@@ -254,7 +258,9 @@ or towards the derivative of the Bezier curve.</p></dd>
 <span class="r-in"><span>  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="path.html">path</a></span><span class="op">(</span><span class="va">camera_pos</span>, material<span class="op">=</span><span class="fu"><a href="diffuse.html">diffuse</a></span><span class="op">(</span>color<span class="op">=</span><span class="st">"red"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span> </span></span>
 <span class="r-in"><span>  <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>lookfrom<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">1.5</span>,<span class="fl">16</span><span class="op">)</span>,width<span class="op">=</span><span class="fl">800</span>,height<span class="op">=</span><span class="fl">800</span>,samples<span class="op">=</span><span class="fl">32</span>,</span></span>
 <span class="r-in"><span>                 fov<span class="op">=</span><span class="fl">80</span><span class="op">)</span></span></span>
-<span class="r-in"><span>                 </span></span>
+<span class="r-in"><span> <span class="op">}</span></span></span>
+<span class="r-plt img"><img src="generate_camera_motion-3.png" alt="" width="700" height="433"></span>
+<span class="r-in"><span><span class="kw">if</span><span class="op">(</span><span class="fu">rayrender</span><span class="fu">:::</span><span class="fu"><a href="run_documentation.html">run_documentation</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span>  </span></span>
 <span class="r-in"><span><span class="co">#Generate Camera movement, setting the lookat position to be same as camera position, but offset</span></span></span>
 <span class="r-in"><span><span class="co">#slightly in front. We'll render 12 frames, but you'd likely want more in a real animation.</span></span></span>
 <span class="r-in"><span></span></span>
@@ -281,9 +287,6 @@ or towards the derivative of the Bezier curve.</p></dd>
 <span class="r-in"><span>                   clamp_value<span class="op">=</span><span class="fl">10</span>, width<span class="op">=</span><span class="fl">400</span>, height<span class="op">=</span><span class="fl">400</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="op">}</span></span></span>
-<span class="r-plt img"><img src="generate_camera_motion-1.png" alt="" width="700" height="433"></span>
-<span class="r-plt img"><img src="generate_camera_motion-2.png" alt="" width="700" height="433"></span>
-<span class="r-plt img"><img src="generate_camera_motion-3.png" alt="" width="700" height="433"></span>
 </code></pre></div>
     </div>
   </div>
