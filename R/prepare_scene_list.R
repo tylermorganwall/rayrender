@@ -23,10 +23,25 @@ prepare_scene_list = function(scene, width = 400, height = 400, fov = 20,
     currenttime = proc.time()
     cat("Building Scene: ")
   }
-  if(debug_channel == "none" && is.na(max_depth)) {
+  if(!is.numeric(debug_channel)) {
+    debug_channel = unlist(lapply(tolower(debug_channel),switch,
+                                  "none" = 0,"depth" = 1,"normals" = 2, "uv" = 3, "bvh" = 4,
+                                  "variance" = 5, "normal" = 2, "dpdu" = 6, "dpdv" = 7, "color" = 8, 
+                                  "position" = 10, "direction" = 11, "time" = 12, "shape" = 13,
+                                  "pdf" = 14, "error" = 15, "bounces" = 16, "camera" = 17,
+                                  "ao" = 18, 0))
+    light_direction = c(0,1,0)
+  } else {
+    light_direction = debug_channel
+    debug_channel = 9
+  }
+  if(debug_channel == 4) {
+    message("rayrender must be compiled with option DEBUGBVH for this debug option to work")
+  }
+  if(debug_channel == 0 && is.na(max_depth)) {
     max_depth = 50
   }
-  if(debug_channel != "none" && is.na(max_depth)) {
+  if(debug_channel != 0 && is.na(max_depth)) {
     max_depth = 1
   }
   iso = iso/100
@@ -321,21 +336,6 @@ prepare_scene_list = function(scene, width = 400, height = 400, fov = 20,
   }
   if(!parallel) {
     numbercores = 1
-  }
-  if(!is.numeric(debug_channel)) {
-    debug_channel = unlist(lapply(tolower(debug_channel),switch,
-                                  "none" = 0,"depth" = 1,"normals" = 2, "uv" = 3, "bvh" = 4,
-                                  "variance" = 5, "normal" = 2, "dpdu" = 6, "dpdv" = 7, "color" = 8, 
-                                  "position" = 10, "direction" = 11, "time" = 12, "shape" = 13,
-                                  "pdf" = 14, "error" = 15, "bounces" = 16, "camera" = 17,
-                                  "ao" = 18, 0))
-    light_direction = c(0,1,0)
-  } else {
-    light_direction = debug_channel
-    debug_channel = 9
-  }
-  if(debug_channel == 4) {
-    message("rayrender must be compiled with option DEBUGBVH for this debug option to work")
   }
   
   if(fov == 0) {
