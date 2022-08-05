@@ -30,20 +30,23 @@ generate_ground(material=diffuse(checkercolor="grey20")) \%>\%
   add_object(csg_object(csg_torus(), material=glossy(color="dodgerblue4"))) \%>\%
   add_object(sphere(y=5,x=5,radius=3,material=light(intensity=10))) \%>\%  
   render_scene(clamp_value=10,lookfrom=c(0,5,10),fov=30)
-  
+}
+if(rayrender:::run_documentation()) {
 #Change the radius of the torus:
 generate_ground(material=diffuse(checkercolor="grey20")) \%>\% 
   add_object(csg_object(csg_torus(radius=2), material=glossy(color="dodgerblue4"))) \%>\%
   add_object(sphere(y=5,x=5,radius=3,material=light(intensity=10))) \%>\%  
   render_scene(clamp_value=10,lookfrom=c(0,5,10),fov=30)
-
+}
+if(rayrender:::run_documentation()) {
 #Change the minor radius of the torus:
 generate_ground(material=diffuse(checkercolor="grey20")) \%>\% 
   add_object(csg_object(csg_torus(radius=2, minor_radius=0.25), 
                         material=glossy(color="dodgerblue4"))) \%>\%
   add_object(sphere(y=5,x=5,radius=3,material=light(intensity=10))) \%>\%  
   render_scene(clamp_value=10,lookfrom=c(0,5,10),fov=30)
-  
+  }
+if(rayrender:::run_documentation()) {
 #Generate a rotated torus in the Cornell Box
 generate_cornell() \%>\% 
   add_object(csg_object(csg_rotate(

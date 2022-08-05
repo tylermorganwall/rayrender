@@ -144,7 +144,8 @@ generate_ground(material = diffuse(color="grey20", checkercolor = "grey50",sigma
  render_scene(parallel = TRUE,width=800,height=800,
               fov=70,clamp_value=10,samples=128, aperture=0.1,
               lookfrom=c(-0.9,1.2,-4.5),lookat=c(0,-1,0))
-
+}
+if(rayrender:::run_documentation()) {
 
 #Render the scene with ambient occlusion
 generate_ground(material = diffuse(color="grey20", checkercolor = "grey50",sigma=90)) \%>\%
@@ -157,7 +158,8 @@ generate_ground(material = diffuse(color="grey20", checkercolor = "grey50",sigma
  render_ao(parallel = TRUE,width=800,height=800, sample_dist=10,
            fov=70,samples=128, aperture=0.1,
            lookfrom=c(-0.9,1.2,-4.5),lookat=c(0,-1,0))
-           
+ }
+if(rayrender:::run_documentation()) {
 #Decrease the ray occlusion search distance
 generate_ground(material = diffuse(color="grey20", checkercolor = "grey50",sigma=90)) \%>\%
  add_object(sphere(material=metal())) \%>\%
@@ -169,7 +171,8 @@ generate_ground(material = diffuse(color="grey20", checkercolor = "grey50",sigma
  render_ao(parallel = TRUE,width=800,height=800, sample_dist=1,
            fov=70,samples=128, aperture=0.1,
            lookfrom=c(-0.9,1.2,-4.5),lookat=c(0,-1,0))
-           
+}
+if(rayrender:::run_documentation()) {
 #Turn on colors
 generate_ground(material = diffuse(color="grey20", checkercolor = "grey50",sigma=90)) \%>\%
  add_object(sphere(material=metal())) \%>\%

@@ -31,7 +31,8 @@ generate_ground(material=diffuse(checkercolor="grey20")) \%>\%
   material=glossy(color="dodgerblue4"))) \%>\%
   add_object(sphere(y=5,x=5,radius=3,material=light(intensity=10))) \%>\%  
   render_scene(clamp_value=10,fov=20,lookfrom=c(-3,5,10))
-  
+  }
+if(rayrender:::run_documentation()) {
 #Subtract one sphere from another:
 generate_ground(material=diffuse(checkercolor="grey20")) \%>\% 
   add_object(csg_object(csg_combine(
@@ -40,7 +41,8 @@ generate_ground(material=diffuse(checkercolor="grey20")) \%>\%
   material=glossy(color="dodgerblue4"))) \%>\%
   add_object(sphere(y=5,x=5,radius=3,material=light(intensity=10))) \%>\%  
   render_scene(clamp_value=10,fov=20,lookfrom=c(-3,5,10))
-  
+  }
+if(rayrender:::run_documentation()) {
 #Get the intersection of two spheres:
 generate_ground(material=diffuse(checkercolor="grey20")) \%>\% 
   add_object(csg_object(csg_combine(
@@ -49,7 +51,8 @@ generate_ground(material=diffuse(checkercolor="grey20")) \%>\%
   material=glossy(color="dodgerblue4"))) \%>\%
   add_object(sphere(y=5,x=5,radius=3,material=light(intensity=10))) \%>\%  
   render_scene(clamp_value=10,fov=20,lookfrom=c(-3,5,10))
-  
+  }
+if(rayrender:::run_documentation()) {
 #Get the blended union of two spheres:
 generate_ground(material=diffuse(checkercolor="grey20")) \%>\% 
   add_object(csg_object(csg_combine(
@@ -58,7 +61,8 @@ generate_ground(material=diffuse(checkercolor="grey20")) \%>\%
   material=glossy(color="dodgerblue4"))) \%>\%
   add_object(sphere(y=5,x=5,radius=3,material=light(intensity=10))) \%>\%  
   render_scene(clamp_value=10,fov=20,lookfrom=c(-3,5,10))
-  
+  }
+if(rayrender:::run_documentation()) {
 #Get the blended subtraction of two spheres:
 generate_ground(material=diffuse(checkercolor="grey20")) \%>\% 
   add_object(csg_object(csg_combine(
@@ -67,7 +71,8 @@ generate_ground(material=diffuse(checkercolor="grey20")) \%>\%
   material=glossy(color="dodgerblue4"))) \%>\%
   add_object(sphere(y=5,x=5,radius=3,material=light(intensity=10))) \%>\%  
   render_scene(clamp_value=10,fov=20,lookfrom=c(-3,5,10))
-  
+  }
+if(rayrender:::run_documentation()) {
 #Change the blending radius:
 generate_ground(material=diffuse(checkercolor="grey20")) \%>\% 
   add_object(csg_object(csg_combine(
@@ -76,7 +81,8 @@ generate_ground(material=diffuse(checkercolor="grey20")) \%>\%
   material=glossy(color="dodgerblue4"))) \%>\%
   add_object(sphere(y=5,x=5,radius=3,material=light(intensity=10))) \%>\%  
   render_scene(clamp_value=10,fov=20,lookfrom=c(-3,5,10))
-  
+  }
+if(rayrender:::run_documentation()) {
 #Change the subtract blending radius:
 generate_ground(material=diffuse(checkercolor="grey20")) \%>\% 
   add_object(csg_object(csg_combine(
@@ -85,7 +91,8 @@ generate_ground(material=diffuse(checkercolor="grey20")) \%>\%
   material=glossy(color="dodgerblue4"))) \%>\%
   add_object(sphere(y=5,x=5,radius=3,material=light(intensity=10))) \%>\%  
   render_scene(clamp_value=10,fov=20,lookfrom=c(-3,5,10))
-  
+  }
+if(rayrender:::run_documentation()) {
 #Get the mixture of various objects:
 generate_ground(material=diffuse(checkercolor="grey20")) \%>\% 
   add_object(csg_object(csg_combine(

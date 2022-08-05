@@ -33,7 +33,8 @@ generate_ground() \%>\%
   add_object(sphere(y=5,x=5,z=5,material=light(intensity=20))) \%>\% 
   render_scene(clamp_value=10,lookfrom=c(-3,1,10), 
                fov=15, lookat=c(0,-0.5,0))
-
+}
+if(rayrender:::run_documentation()) {
 #Make a taller pyramid
 generate_ground() \%>\% 
   add_object(csg_object(csg_pyramid(y=-0.95, height=1.5),
@@ -41,7 +42,8 @@ generate_ground() \%>\%
   add_object(sphere(y=5,x=5,z=5,material=light(intensity=20))) \%>\% 
   render_scene(clamp_value=10,lookfrom=c(-3,1,10), 
                fov=15, lookat=c(0,-0.5,0))
-  
+  }
+if(rayrender:::run_documentation()) {
 #Make a wider pyramid
 generate_ground() \%>\% 
   add_object(csg_object(csg_pyramid(y=-0.95, base=1.5),

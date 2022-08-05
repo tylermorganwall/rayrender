@@ -14,12 +14,14 @@
 #' generate_ground(material=diffuse(color="darkgreen")) %>% 
 #'   add_object(sphere(material=diffuse(checkercolor="red"))) %>% 
 #'   render_preview()
-#'   
+#'   }
+#' if(rayrender:::run_documentation()) {
 #' #Change the light direction
 #' generate_ground(material=diffuse(color="darkgreen")) %>% 
 #'   add_object(sphere(material=diffuse(checkercolor="red"))) %>% 
 #'   render_preview(light_direction = c(-1,-1,0))
-#'   
+#'}
+#' if(rayrender:::run_documentation()) {
 #' #Change the Phong exponent
 #' generate_ground(material=diffuse(color="darkgreen")) %>% 
 #'   add_object(sphere(material=diffuse(checkercolor="red"))) %>% 

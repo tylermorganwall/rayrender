@@ -31,7 +31,8 @@ generate_ground(material=diffuse(checkercolor="grey20")) \%>\%
   add_object(sphere(y=5,x=5,radius=3,material=light(intensity=10))) \%>\%  
   render_scene(clamp_value=10,lookfrom=c(0,5,10),fov=30,
                lookat=c(-1,0.5,-1))
-
+}
+if(rayrender:::run_documentation()) {
 #Translate a blended object:
 generate_ground(material=diffuse(checkercolor="grey20")) \%>\% 
   add_object(csg_object(csg_combine(

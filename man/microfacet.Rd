@@ -132,7 +132,8 @@ generate_cornell() \%>\%
                                  eta=c(0.216,0.42833,1.3184), kappa=c(3.239,2.4599,1.8661)))) \%>\% 
  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=128,
              aperture=0, fov=40, parallel=TRUE,clamp_value=10)
- 
+ }
+if(rayrender:::run_documentation()) {
 #Make the roughness anisotropic (either horizontal or vertical), adding an extra light in front
 #to show off the different microfacet orientations
 generate_cornell() \%>\%
@@ -145,7 +146,8 @@ generate_cornell() \%>\%
                                  eta=c(0.216,0.42833,1.3184), kappa=c(3.239,2.4599,1.8661)))) \%>\%  
  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=128,
              aperture=0, fov=40,  parallel=TRUE,clamp_value=10)
-
+}
+if(rayrender:::run_documentation()) {
 #Render a rough silver R with a smaller golden egg in front
 generate_cornell() \%>\%
   add_object(obj_model(r_obj(),x=555/2,z=350,y=0, scale_obj = 200, angle=c(0,200,0),
@@ -156,7 +158,8 @@ generate_cornell() \%>\%
                                  eta=c(0.216,0.42833,1.3184), kappa=c(3.239,2.4599,1.8661)))) \%>\% 
  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=128,
              aperture=0, fov=40, parallel=TRUE,clamp_value=10)
- 
+ }
+if(rayrender:::run_documentation()) {
 #Increase the roughness
 generate_cornell() \%>\%
   add_object(obj_model(r_obj(),x=555/2,z=350,y=0, scale_obj = 200, angle=c(0,200,0),
@@ -167,9 +170,9 @@ generate_cornell() \%>\%
                                  eta=c(0.216,0.42833,1.3184), kappa=c(3.239,2.4599,1.8661)))) \%>\% 
  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=128,
              aperture=0, fov=40, parallel=TRUE,clamp_value=10)
-             
+ }
+if(rayrender:::run_documentation()) {
  #Use transmission for a rough dielectric
- 
 generate_cornell() \%>\%
   add_object(obj_model(r_obj(),x=555/2,z=350,y=0, scale_obj = 200, angle=c(0,200,0),
              material=microfacet(roughness=0.3, transmission=T, eta=1.6))) \%>\% 

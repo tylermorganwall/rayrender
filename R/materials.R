@@ -519,7 +519,8 @@ dielectric = function(color="white", refraction = 1.5,  attenuation = c(0,0,0),
 #'                                  eta=c(0.216,0.42833,1.3184), kappa=c(3.239,2.4599,1.8661)))) %>% 
 #'  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=128,
 #'              aperture=0, fov=40, parallel=TRUE,clamp_value=10)
-#'  
+#'  }
+#' if(rayrender:::run_documentation()) {
 #' #Make the roughness anisotropic (either horizontal or vertical), adding an extra light in front
 #' #to show off the different microfacet orientations
 #' generate_cornell() %>%
@@ -532,7 +533,8 @@ dielectric = function(color="white", refraction = 1.5,  attenuation = c(0,0,0),
 #'                                  eta=c(0.216,0.42833,1.3184), kappa=c(3.239,2.4599,1.8661)))) %>%  
 #'  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=128,
 #'              aperture=0, fov=40,  parallel=TRUE,clamp_value=10)
-#'
+#'}
+#' if(rayrender:::run_documentation()) {
 #' #Render a rough silver R with a smaller golden egg in front
 #' generate_cornell() %>%
 #'   add_object(obj_model(r_obj(),x=555/2,z=350,y=0, scale_obj = 200, angle=c(0,200,0),
@@ -543,7 +545,8 @@ dielectric = function(color="white", refraction = 1.5,  attenuation = c(0,0,0),
 #'                                  eta=c(0.216,0.42833,1.3184), kappa=c(3.239,2.4599,1.8661)))) %>% 
 #'  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=128,
 #'              aperture=0, fov=40, parallel=TRUE,clamp_value=10)
-#'  
+#'  }
+#' if(rayrender:::run_documentation()) {
 #' #Increase the roughness
 #' generate_cornell() %>%
 #'   add_object(obj_model(r_obj(),x=555/2,z=350,y=0, scale_obj = 200, angle=c(0,200,0),
@@ -554,9 +557,9 @@ dielectric = function(color="white", refraction = 1.5,  attenuation = c(0,0,0),
 #'                                  eta=c(0.216,0.42833,1.3184), kappa=c(3.239,2.4599,1.8661)))) %>% 
 #'  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=128,
 #'              aperture=0, fov=40, parallel=TRUE,clamp_value=10)
-#'              
+#'  }
+#' if(rayrender:::run_documentation()) {
 #'  #Use transmission for a rough dielectric
-#'  
 #' generate_cornell() %>%
 #'   add_object(obj_model(r_obj(),x=555/2,z=350,y=0, scale_obj = 200, angle=c(0,200,0),
 #'              material=microfacet(roughness=0.3, transmission=T, eta=1.6))) %>% 
@@ -883,7 +886,8 @@ light = function(color = "#ffffff", intensity = 10, importance_sample = TRUE,
 #'   add_object(sphere(y=0.2,material=glossy(color="#2b6eff"))) %>% 
 #'   add_object(sphere(y=2.8,material=light())) %>%
 #'   render_scene(parallel=TRUE,clamp_value=10,samples=128,sample_method="sobol_blue")
-#'  
+#'  }
+#' if(rayrender:::run_documentation()) {
 #' #Change the color of the underlying diffuse layer
 #' generate_ground(material=diffuse(sigma=90)) %>%
 #'   add_object(sphere(y=0.2,x=-2.1,material=glossy(color="#fc3d03"))) %>% 
@@ -891,7 +895,8 @@ light = function(color = "#ffffff", intensity = 10, importance_sample = TRUE,
 #'   add_object(sphere(y=0.2,x=2.1,material=glossy(color="#2fed4f"))) %>% 
 #'   add_object(sphere(y=8,z=-5,radius=3,material=light(intensity=20))) %>%
 #'   render_scene(parallel=TRUE,clamp_value=10,samples=128,fov=40,sample_method="sobol_blue")
-#'  
+#'  }
+#' if(rayrender:::run_documentation()) {
 #' #Change the amount of gloss 
 #' generate_ground(material=diffuse(sigma=90)) %>%
 #'   add_object(sphere(y=0.2,x=-2.1,material=glossy(gloss=1,color="#fc3d03"))) %>% 
@@ -899,7 +904,8 @@ light = function(color = "#ffffff", intensity = 10, importance_sample = TRUE,
 #'   add_object(sphere(y=0.2,x=2.1,material=glossy(gloss=0,color="#2fed4f"))) %>% 
 #'   add_object(sphere(y=8,z=-5,radius=3,material=light(intensity=20))) %>%
 #'   render_scene(parallel=TRUE,clamp_value=10,samples=128,fov=40,sample_method="sobol_blue")
-#'  
+#'  }
+#' if(rayrender:::run_documentation()) {
 #' #Add gloss to a pattern 
 #' generate_ground(material=diffuse(sigma=90)) %>%
 #'   add_object(sphere(y=0.2,x=-2.1,material=glossy(noise=2,noisecolor="black"))) %>% 
@@ -907,7 +913,8 @@ light = function(color = "#ffffff", intensity = 10, importance_sample = TRUE,
 #'   add_object(sphere(y=0.2,x=2.1,material=glossy(color="blue",gradient_color="#2fed4f"))) %>% 
 #'   add_object(sphere(y=8,z=-5,radius=3,material=light(intensity=20))) %>%
 #'   render_scene(parallel=TRUE,clamp_value=10,samples=128,fov=40,sample_method="sobol_blue")
-#'  
+#'  }
+#' if(rayrender:::run_documentation()) {
 #' #Add an R and a fill light (this may look familiar)
 #' generate_ground(material=diffuse()) %>%
 #'   add_object(sphere(y=0.2,material=glossy(color="#2b6eff",reflectance=0.05))) %>% 
@@ -1068,7 +1075,8 @@ SigmaAFromReflectance = function(c, beta_n) {
 #'   add_object(sphere(y=20,z=20,radius=5,material=light(color="white",intensity = 100))) %>%
 #'   render_scene(samples=64, lookfrom=c(0,3,10),clamp_value = 10,
 #'                fov=20)
-#'                
+#' }
+#' if(rayrender:::run_documentation()) {         
 #'                
 #' #Specify the color directly and increase hair roughness
 #' for(i in 1:length(phi)) {

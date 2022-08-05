@@ -38,7 +38,8 @@ generate_ground(material=diffuse(checkercolor="grey20")) \%>\%
  add_object(sphere(y=5,x=5,radius=2,material=light())) \%>\% 
  render_scene(clamp_value=10,lookat=c(0,-0.5,0),
               lookfrom=c(3,5,10),fov=35)
-
+}
+if(rayrender:::run_documentation()) {
 #Multiple onion layers:
 generate_ground(material=diffuse(checkercolor="grey20")) \%>\%
   add_object(csg_object(csg_combine(
@@ -48,14 +49,16 @@ generate_ground(material=diffuse(checkercolor="grey20")) \%>\%
   add_object(sphere(y=5,x=5,radius=2,material=light())) \%>\% 
   render_scene(clamp_value=10,lookat=c(0,-0.5,0),
                lookfrom=c(3,5,10),fov=20)
-  
+  }
+if(rayrender:::run_documentation()) {
 #Onion with dielectric sphere to make a bubble:
 generate_cornell() \%>\%
   add_object(csg_object(
     csg_onion(csg_sphere(x=555/2,y=555/2,z=555/2, radius=150), 5),
     material=dielectric(attenuation=c(1,1,0.3)/100))) \%>\%
   render_scene(clamp_value=10)
-  
+  }
+if(rayrender:::run_documentation()) {
 #Multiple onion operations to make a bubble within a bubble:
 generate_cornell() \%>\%
   add_object(csg_object(

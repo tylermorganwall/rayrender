@@ -36,4 +36,5 @@ URL: https://www.rayrender.net, https://github.com/tylermorganwall/rayrender
 RoxygenNote: 7.2.1
 SystemRequirements: C++11
 Biarch: true
+Encoding: UTF-8
 Config/testthat/edition: 3
