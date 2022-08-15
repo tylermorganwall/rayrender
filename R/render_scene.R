@@ -270,7 +270,8 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
   if(width < 3 || height < 3) {
     stop("Must specify a minimum width/height of 3 or more pixels")
   }
-  if(preview && interactive && has_gui_capability() && debug_channel == "none") {
+  if(preview && interactive && has_gui_capability() &&
+     !is.numeric(debug_channel) && debug_channel ==  "none") {
     message(
 "--------------------------Interactive Mode Controls---------------------------
 W/A/S/D: Horizontal Movement: | Q/Z: Vertical Movement | Up/Down: Adjust FOV | ESC: Close
@@ -303,7 +304,7 @@ Left Mouse Click: Change Look At (new focal distance) | Right Mouse Click: Chang
   
   camera_info$preview = preview
   camera_info$interactive = interactive
-
+  debug_channel = scene_info$debug_channel  # converted to numeric
   
   #Pathrace Scene
   rgb_mat = render_scene_rcpp(camera_info = camera_info, scene_info = scene_info) 
