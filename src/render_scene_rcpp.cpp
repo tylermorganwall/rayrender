@@ -97,9 +97,10 @@ List render_scene_rcpp(List camera_info, List scene_info) {
   List roughness_list = as<List>(scene_info["roughness_list"]);
   List animation_info = as<List>(scene_info["animation_info"]);
 
+  Environment pkg = Environment::namespace_env("rayrender");
+  Function print_time = pkg["print_time"];
+  
 
-
-  auto startfirst = std::chrono::high_resolution_clock::now();
   //Unpack Camera Info
   int nx = as<int>(camera_info["nx"]);
   int ny = as<int>(camera_info["ny"]);
@@ -196,13 +197,11 @@ List render_scene_rcpp(List camera_info, List scene_info) {
                                      aperture, dist_to_focus,
                                      shutteropen, shutterclose));
   }
+  print_time(verbose, "Generated Camera" );
+  
 
 
   int nx1, ny1, nn1;
-  auto start = std::chrono::high_resolution_clock::now();
-  if(verbose) {
-    Rcpp::Rcout << "Building BVH: ";
-  }
 
   std::vector<Float* > textures;
   std::vector<int* > nx_ny_nn;
@@ -306,7 +305,8 @@ List render_scene_rcpp(List camera_info, List scene_info) {
       nx_ny_nn_roughness.push_back(nullptr);
     }
   }
-
+  print_time(verbose, "Loaded Textures" );
+  
 
   std::shared_ptr<hitable> worldbvh = build_scene(type, radius, shape, position_list,
                                 properties,
@@ -328,11 +328,8 @@ List render_scene_rcpp(List camera_info, List scene_info) {
                                 shared_id_mat, is_shared_mat, shared_materials,
                                 image_repeat, csg_info, mesh_list, bvh_type, transformCache,
                                 animation_info, rng);
-  auto finish = std::chrono::high_resolution_clock::now();
-  if(verbose) {
-    std::chrono::duration<double> elapsed = finish - start;
-    Rcpp::Rcout << elapsed.count() << " seconds" << "\n";
-  }
+  print_time(verbose, "Built Scene BVH" );
+  
 
   //Calculate world bounds and ensure camera is inside infinite area light
   aabb bounding_box_world;
@@ -347,11 +344,6 @@ List render_scene_rcpp(List camera_info, List scene_info) {
     world_radius += ortho_diag;
   }
 
-  //Initialize background
-  if(verbose && hasbackground) {
-    Rcpp::Rcout << "Loading Environment Image: ";
-  }
-  start = std::chrono::high_resolution_clock::now();
   std::shared_ptr<texture> background_texture = nullptr;
   std::shared_ptr<material> background_material = nullptr;
   std::shared_ptr<hitable> background_sphere = nullptr;
@@ -413,10 +405,8 @@ List render_scene_rcpp(List camera_info, List scene_info) {
                                               BackgroundTransform,
                                               BackgroundTransformInv,false);
   }
-  finish = std::chrono::high_resolution_clock::now();
   if(verbose && hasbackground) {
-    std::chrono::duration<double> elapsed = finish - start;
-    Rcpp::Rcout << elapsed.count() << " seconds" << "\n";
+    print_time(verbose, "Loaded background" );
   }
   int numbertosample = 0;
   for(int i = 0; i < implicit_sample.size(); i++) {
@@ -442,10 +432,6 @@ List render_scene_rcpp(List camera_info, List scene_info) {
   
 
   hitable_list hlist;
-  if(verbose) {
-    Rcpp::Rcout << "Building Importance Sampling List: ";
-  }
-  start = std::chrono::high_resolution_clock::now();
   for(int i = 0; i < n; i++)  {
     if(implicit_sample(i)) {
       hlist.add(build_imp_sample(type, radius, shape, position_list,
@@ -458,17 +444,10 @@ List render_scene_rcpp(List camera_info, List scene_info) {
                                mesh_list,bvh_type, animation_info,  rng));
     }
   }
-  finish = std::chrono::high_resolution_clock::now();
-  if(verbose) {
-    std::chrono::duration<double> elapsed = finish - start;
-    Rcpp::Rcout << elapsed.count() << " seconds" << "\n";
-  }
+  print_time(verbose, "Built Importance Sampler" );
+  
   if(impl_only_bg || hasbackground) {
     hlist.add(background_sphere);
-  }
-
-  if(verbose && !progress_bar) {
-    Rcpp::Rcout << "Starting Raytracing:\n ";
   }
   RProgress::RProgress pb_sampler("Generating Samples [:bar] :percent%");
   pb_sampler.set_width(70);
@@ -503,9 +482,6 @@ List render_scene_rcpp(List camera_info, List scene_info) {
                clampval, max_depth, roulette_active, Display);
   }
 
-  if(verbose) {
-    Rcpp::Rcout << "Cleaning up memory..." << "\n";
-  }
   if(hasbackground) {
     stbi_image_free(background_texture_data);
   }
@@ -529,11 +505,8 @@ List render_scene_rcpp(List camera_info, List scene_info) {
   }
   delete shared_materials;
   PutRNGstate();
-  finish = std::chrono::high_resolution_clock::now();
-  if(verbose) {
-    std::chrono::duration<double> elapsed = finish - startfirst;
-    Rcpp::Rcout << "Total time elapsed: " << elapsed.count() << " seconds" << "\n";
-  }
+  print_time(verbose, "Finished rendering" );
+  
   List final_image = List::create(_["r"] = routput.ConvertRcpp(), 
                                   _["g"] = goutput.ConvertRcpp(), 
                                   _["b"] = boutput.ConvertRcpp());

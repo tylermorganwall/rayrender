@@ -19,10 +19,6 @@ prepare_scene_list = function(scene, width = 400, height = 400, fov = 20,
                               debug_channel = "none", return_raw_array = FALSE,
                               progress = interactive(), verbose = FALSE, sample_dist = Inf,
                               keep_colors = FALSE) {
-  if(verbose) {
-    currenttime = proc.time()
-    cat("Building Scene: ")
-  }
   if(!is.numeric(debug_channel)) {
     debug_channel = unlist(lapply(tolower(debug_channel),switch,
                                   "none" = 0,"depth" = 1,"normals" = 2, "uv" = 3, "bvh" = 4,
@@ -342,10 +338,6 @@ prepare_scene_list = function(scene, width = 400, height = 400, fov = 20,
     if(length(ortho_dimensions) != 2) {
       stop("ortho_dimensions must be length-2 numeric vector")
     }
-  }
-  if(verbose) {
-    buildingtime = proc.time() - currenttime
-    cat(sprintf("%0.3f seconds \n",buildingtime[3]))
   }
   sample_method = unlist(lapply(tolower(sample_method),switch,
                                 "random" = 0,"stratified" = 1, "sobol" = 2,"sobol_blue" = 3, 0))

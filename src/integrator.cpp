@@ -26,6 +26,9 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
   RProgress::RProgress pb("Adaptive Raytracing [:bar] :percent%");
   pb.set_width(70);
   
+  Environment pkg = Environment::namespace_env("rayrender");
+  Function print_time = pkg["print_time"];
+  
   if(progress_bar) {
     pb_sampler.set_total(ny);
     pb.set_total(ns);
@@ -113,17 +116,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
   }
   random_gen rng_interactive(unif_rand() * std::pow(2,32));
   
-  if(verbose) {
-    auto finish = std::chrono::high_resolution_clock::now();
-    if(sample_method == 0) {
-      Rcpp::Rcout << "Allocating random sampler: ";
-    } else {
-      Rcpp::Rcout << "Allocating stratified (" << 
-        stratified_dim(0)<< "x" << stratified_dim(1) << ") sampler: ";
-    }
-    std::chrono::duration<double> elapsed = finish - start;
-    Rcpp::Rcout << elapsed.count() << " seconds" << "\n";
-  }
+  print_time(verbose, "Allocating sampler" );
   for(size_t s = 0; s < static_cast<size_t>(ns); s++) {
     Rcpp::checkUserInterrupt();
     if(progress_bar && !display.preview) {

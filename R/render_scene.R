@@ -238,6 +238,8 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
                         environment_light = NULL, rotate_env = 0, intensity_env = 1,
                         debug_channel = "none", return_raw_array = FALSE,
                         progress = interactive(), verbose = FALSE) { 
+  init_time()
+  
   #Check if Cornell Box scene and set camera if user did not:
   if(!is.null(attr(scene,"cornell"))) {
     corn_message = "Setting default values for Cornell box: "
@@ -280,7 +282,7 @@ P: Print Camera Info | R: Reset Camera |  TAB: Toggle Orbit Mode |  E/C: Adjust 
 K: Save Keyframe | L: Reset Camera to Last Keyframe (if set) | F: Toggle Fast Travel Mode
 Left Mouse Click: Change Look At (new focal distance) | Right Mouse Click: Change Look At ")
   }
-  
+  print_time(verbose, "Pre-processing scene")
   scene_list = prepare_scene_list(scene = scene, width = width, height = height, fov = fov, 
                                   samples = samples,  camera_description_file = camera_description_file, 
                                   camera_scale = camera_scale, iso = iso, film_size = film_size,
@@ -298,6 +300,7 @@ Left Mouse Click: Change Look At (new focal distance) | Right Mouse Click: Chang
                                   intensity_env = intensity_env,
                                   debug_channel = debug_channel, return_raw_array = return_raw_array,
                                   progress = progress, verbose = verbose, sample_dist = Inf)
+  print_time(verbose, "Pre-processed  scene")
   
   camera_info = scene_list$camera_info
   scene_info = scene_list$scene_info
@@ -314,5 +317,7 @@ Left Mouse Click: Change Look At (new focal distance) | Right Mouse Click: Chang
     assign("keyframes",keyframes, envir = ray_environment)
   }
   return_array = post_process_scene(rgb_mat, iso, tonemap, debug_channel, filename, return_raw_array, bloom)
+  print_time(verbose, "Post-processed image" );
+  
   return(invisible(return_array))
 }

@@ -13,6 +13,8 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                 Float clampval, size_t max_depth, size_t roulette_active,
                 Rcpp::NumericVector& light_direction, random_gen& rng, Float sample_dist,
                 bool keep_colors, vec3f backgroundhigh) {
+  Environment pkg = Environment::namespace_env("rayrender");
+  Function print_time = pkg["print_time"];
   if(debug_channel == 1) {
     Float depth_into_scene = 0.0;
     for(unsigned int j = 0; j < ny; j++) {
@@ -491,8 +493,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                                             routput2, goutput2, boutput2);
     std::vector<random_gen > rngs;
     std::vector<std::unique_ptr<Sampler> > samplers;
-    auto start = std::chrono::high_resolution_clock::now();
-    
+
     for(unsigned int j = 0; j < ny; j++) {
       if(progress_bar) {
         pb_sampler.tick();
@@ -518,17 +519,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
       }
     }
     
-    if(verbose) {
-      auto finish = std::chrono::high_resolution_clock::now();
-      if(sample_method == 0) {
-        Rcpp::Rcout << "Allocating random sampler: ";
-      } else {
-        Rcpp::Rcout << "Allocating stratified (" << 
-          stratified_dim(0)<< "x" << stratified_dim(1) << ") sampler: ";
-      }
-      std::chrono::duration<double> elapsed = finish - start;
-      Rcpp::Rcout << elapsed.count() << " seconds" << "\n";
-    }
+    print_time(verbose, "Allocating sampler");
     for(size_t s = 0; s < static_cast<size_t>(ns); s++) {
       Rcpp::checkUserInterrupt();
       if(progress_bar) {
