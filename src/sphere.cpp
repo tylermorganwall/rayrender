@@ -29,7 +29,7 @@ bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random
     if(temp1 < t_max && temp1 > t_min) {
       point3f p1 = r2.point_at_parameter((Float)temp1);
       p1 *= radius / p1.length(); 
-      vec3f normal = (p1 - center) / radius;
+      vec3f normal = p1 / radius;
       get_sphere_uv(normal, u, v);
       if(alpha_mask->value(u, v, rec.p) < rng.unif_rand()) {
         is_hit = false;
@@ -38,7 +38,7 @@ bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random
     if(temp2 < t_max && temp2 > t_min) {
       point3f p2 = r2.point_at_parameter((Float)temp2);
       p2 *= radius / p2.length(); 
-      vec3f normal = (p2 - center) / radius;
+      vec3f normal = p2 / radius;
       get_sphere_uv(normal, u, v);
       if(alpha_mask->value(u, v, rec.p) < rng.unif_rand()) {
         if(!is_hit) {
@@ -52,7 +52,7 @@ bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random
     rec.t = (Float)temp1;
     rec.p = r2.point_at_parameter(rec.t);
     rec.p *= radius / rec.p.length(); 
-    rec.normal = (rec.p - center) / radius;
+    rec.normal = vec3f(rec.p) / radius;
     
     //Interaction information
     Float zRadius = std::sqrt(rec.p.x() * rec.p.x()  + rec.p.z()  * rec.p.z() );
@@ -85,7 +85,7 @@ bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random
     rec.t = (Float)temp2;
     rec.p = r2.point_at_parameter(rec.t);
     rec.p *= radius / rec.p.length();
-    rec.normal = (rec.p - center) / radius;
+    rec.normal = vec3f(rec.p) / radius;
     
     //Interaction information
     Float zRadius = std::sqrt(rec.p.x() * rec.p.x()  + rec.p.z()  * rec.p.z() );
@@ -150,7 +150,7 @@ bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sample
     if(temp1 < t_max && temp1 > t_min) {
       point3f p1 = r2.point_at_parameter((Float)temp1);
       p1 *= radius / p1.length(); 
-      vec3f normal = (p1 - center) / radius;
+      vec3f normal = p1 / radius;
       get_sphere_uv(normal, u, v);
       if(alpha_mask->value(u, v, rec.p) < sampler->Get1D()) {
         is_hit = false;
@@ -159,7 +159,7 @@ bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sample
     if(temp2 < t_max && temp2 > t_min) {
       point3f p2 = r2.point_at_parameter((Float)temp2);
       p2 *= radius / p2.length(); 
-      vec3f normal = (p2 - center) / radius;
+      vec3f normal = p2 / radius;
       get_sphere_uv(normal, u, v);
       if(alpha_mask->value(u, v, rec.p) < sampler->Get1D()) {
         if(!is_hit) {
@@ -173,7 +173,7 @@ bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sample
     rec.t = (Float)temp1;
     rec.p = r2.point_at_parameter(rec.t);
     rec.p *= radius / rec.p.length(); 
-    rec.normal = (rec.p - center) / radius;
+    rec.normal = vec3f(rec.p) / radius;
     
     //Interaction information
     Float zRadius = std::sqrt(rec.p.x() * rec.p.x()  + rec.p.z()  * rec.p.z() );
@@ -207,7 +207,7 @@ bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sample
     rec.t = (Float)temp2;
     rec.p = r2.point_at_parameter(rec.t);
     rec.p *= radius / rec.p.length();
-    rec.normal = (rec.p - center) / radius;
+    rec.normal = vec3f(rec.p) / radius;
     
     //Interaction information
     Float zRadius = std::sqrt(rec.p.x() * rec.p.x()  + rec.p.z()  * rec.p.z() );
@@ -362,6 +362,6 @@ vec3f sphere::random(const point3f& o, Sampler* sampler, Float time) {
 }
 
 bool sphere::bounding_box(Float t0, Float t1, aabb& box) const {
-  box = (*ObjectToWorld)(aabb(center - vec3f(radius,radius,radius), center + vec3f(radius,radius,radius)));
+  box = (*ObjectToWorld)(aabb(-vec3f(radius,radius,radius), vec3f(radius,radius,radius)));
   return(true);
 }

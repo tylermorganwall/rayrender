@@ -12,11 +12,11 @@ class sphere: public hitable {
   public:
     sphere() {}
     ~sphere() {}
-    sphere(vec3f cen, Float r, std::shared_ptr<material> mat, 
+    sphere(Float r, std::shared_ptr<material> mat, 
            std::shared_ptr<alpha_texture> alpha_mask, std::shared_ptr<bump_texture> bump_tex,
            std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation) : 
             hitable(ObjectToWorld, WorldToObject, reverseOrientation), 
-            center(cen), radius(r), 
+            radius(r), 
             mat_ptr(mat), alpha_mask(alpha_mask), bump_tex(bump_tex) {};
     virtual bool hit(const ray& r, Float tmin, Float tmax, hit_record& rec, random_gen& rng);
     virtual bool hit(const ray& r, Float tmin, Float tmax, hit_record& rec, Sampler* sampler);
@@ -30,7 +30,6 @@ class sphere: public hitable {
     virtual std::string GetName() const {
       return(std::string("Sphere"));
     }
-    point3f center;
     Float radius;
     std::shared_ptr<material> mat_ptr;
     std::shared_ptr<alpha_texture> alpha_mask;

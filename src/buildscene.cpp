@@ -514,7 +514,7 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
     //Generate objects
     if (shape(i) == 1) {
       std::shared_ptr<hitable> entry;
-      entry = std::make_shared<sphere>(vec3f(0,0,0), radius(i), tex, alpha[i], bump[i],
+      entry = std::make_shared<sphere>(radius(i), tex, alpha[i], bump[i],
                                        ObjToWorld, WorldToObj, isflipped(i));
       if(isvolume(i)) {
         entry = std::make_shared<constant_medium>(entry, voldensity(i), 
@@ -895,7 +895,7 @@ std::shared_ptr<hitable> build_imp_sample(IntegerVector& type,
 
   if(shape(i) == 1) {
     std::shared_ptr<hitable> entry;
-    entry = std::make_shared<sphere>(vec3f(0,0,0), radius(i), tex, alpha,bump,
+    entry = std::make_shared<sphere>(radius(i), tex, alpha,bump,
                                      ObjToWorld,WorldToObj, false);
     if(has_animation(i)) {
       entry = std::make_shared<AnimatedHitable>(entry, Animate);
