@@ -96,11 +96,16 @@ void PrintClassSizes() {
   Rcpp::Rcout << "---csg                   : " << sizeof(csg) << "\n";
   Rcpp::Rcout << "---plymesh               : " << sizeof(plymesh) << "\n";
   Rcpp::Rcout << "---mesh3d                : " << sizeof(mesh3d) << "\n\n";
+  
+  Rcpp::Rcout << "Float                    : " << sizeof(Float) << "\n";
+
   Rcpp::Rcout << "RayMatrix                : " << sizeof(RayMatrix) << "\n";
   Rcpp::Rcout << "Transform                : " << sizeof(Transform) << "\n";
   Rcpp::Rcout << "TransformCache           : " << sizeof(TransformCache) << "\n";
   Rcpp::Rcout << "vec3f                    : " << sizeof(vec3f) << "\n";
   Rcpp::Rcout << "vec3i                    : " << sizeof(vec3i) << "\n";
+  Rcpp::Rcout << "point3f                  : " << sizeof(point3f) << "\n";
+  Rcpp::Rcout << "point3f                  : " << sizeof(point3f) << "\n";
   Rcpp::Rcout << "vec2f                    : " << sizeof(vec2f) << "\n";
   Rcpp::Rcout << "vec2i                    : " << sizeof(vec2i) << "\n";
   Rcpp::Rcout << "random_gen               : " << sizeof(random_gen) << "\n";
