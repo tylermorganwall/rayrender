@@ -20,6 +20,9 @@ public:
   virtual vec3f random(const point3f& o, random_gen& rng, Float time = 0);
   virtual vec3f random(const point3f& o, Sampler* sampler, Float time = 0);
   virtual std::string GetName() const;
+  size_t GetSize()  {
+    return(sizeof(*this));
+  }
   vec3f pmin, pmax;
   hitable_list list;
 };

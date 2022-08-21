@@ -15,7 +15,7 @@ struct Distribution1D {
   int SampleDiscrete(Float u, Float *pdf = nullptr,
                      Float *uRemapped = nullptr) const;
   Float DiscretePDF(int index) const;
-  
+  size_t GetSize();
   // Distribution1D Public Data
   std::vector<Float> func, cdf;
   Float funcInt;
@@ -27,7 +27,7 @@ public:
   Distribution2D(const Float *data, int nu, int nv);
   vec2f SampleContinuous(const vec2f &u, Float *pdf) const;
   Float Pdf(const vec2f &p) const;
-  
+  size_t GetSize();
 private:
   // Distribution2D Private Data
   std::vector<std::unique_ptr<Distribution1D>> pConditionalV;

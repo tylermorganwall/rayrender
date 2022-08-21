@@ -45,6 +45,9 @@ class bvh_node : public hitable {
     std::string GetName() const {
       return(std::string("BVH Node"));
     }
+    size_t GetSize();
+    std::pair<size_t,size_t> CountNodeLeaf();
+    
     std::shared_ptr<hitable> left;
     std::shared_ptr<hitable> right;
     aabb box;

@@ -2,44 +2,61 @@
 #define STB_IMAGE_IMPLEMENTATION 
 #endif
 
+#include <Rcpp.h>
+
+// #define DEBUG_MEMORY
+#ifdef DEBUG_MEMORY
 
 #include <cstdlib>
 #include <iostream>
 #include <new>
 
+
 static std::size_t alloc{0};
 static std::size_t dealloc{0};
 static std::size_t memory_used{0};
+static std::size_t mem_counter(0);
 
 void* operator new(std::size_t sz){
-  alloc+= 1;
+  alloc += 1;
   memory_used += sz;
+  Rcpp::Rcout << alloc << " : " << sz << " : " << memory_used << "\n";
   return std::malloc(sz);
 }
 
 void operator delete(void* ptr) noexcept{
-  dealloc+= 1;
+  dealloc += 1;
+  std::free(ptr);
+}
+
+void* operator new[](std::size_t sz){
+  alloc += 1;
+  memory_used += sz;
+  // Rcpp::Rcout << alloc << " : " << sz << " : " << memory_used << "\n";
+  
+  return std::malloc(sz);
+}
+
+void operator delete[](void* ptr) noexcept {
+  dealloc += 1;
   std::free(ptr);
 }
 
 void getInfo(){
-  
-  std::cout << std::endl;
-  
-  std::cout << "Number of allocations  : " << alloc << std::endl;
-  std::cout << "Number of deallocations: " << dealloc << std::endl;
-  std::cout << "Total memory used      : " << memory_used <<      " bytes (";
-  
+  Rcpp::Rcout << "Number of allocations  : " << alloc << std::endl;
+  // Rcpp::Rcout << "Number of deallocations: " << dealloc << std::endl;
+  Rcpp::Rcout << "Total memory used      : " << memory_used <<      " bytes (";
+
   if(memory_used < 1024) {
   } else if (memory_used <= 1024*1024) {
-    std::cout << (float)memory_used/(float)1024 << " KB)" << std::endl;
+    Rcpp::Rcout << (float)memory_used/(float)1024 << " KB)" << std::endl;
   } else if (memory_used <= 1024*1024*1024) {
-    std::cout << (float)memory_used/(float)(1024*1024) <<      " MB)" << std::endl;
+    Rcpp::Rcout << (float)memory_used/(float)(1024*1024) <<      " MB)" << std::endl;
   } else {
-    std::cout << (float)memory_used/float(1024*1024*1024) <<      " GB)" << std::endl;
+    Rcpp::Rcout << (float)memory_used/float(1024*1024*1024) <<      " GB)" << std::endl;
   }
-  std::cout << std::endl;
 }
+#endif
 
 #include "float.h"
 #include "vec3.h"
@@ -77,64 +94,14 @@ using namespace Rcpp;
 
 using namespace std;
 
-// [[Rcpp::export]] 
-void PrintClassSizes() {
-  Rcpp::Rcout << "hitable                  : " << sizeof(hitable) << "\n";
-  Rcpp::Rcout << "---sphere                : " << sizeof(sphere) << "\n";
-  Rcpp::Rcout << "---xy_rect               : " << sizeof(xy_rect) << "\n";
-  Rcpp::Rcout << "---xz_rect               : " << sizeof(xz_rect) << "\n";
-  Rcpp::Rcout << "---yz_rect               : " << sizeof(yz_rect) << "\n";
-  Rcpp::Rcout << "---box                   : " << sizeof(box) << "\n";
-  Rcpp::Rcout << "---AnimatedHitable       : " << sizeof(AnimatedHitable) << "\n";
-  Rcpp::Rcout << "---triangle              : " << sizeof(triangle) << "\n";
-  Rcpp::Rcout << "---trimesh               : " << sizeof(trimesh) << "\n";
-  Rcpp::Rcout << "---disk                  : " << sizeof(disk) << "\n";
-  Rcpp::Rcout << "---cylinder              : " << sizeof(cylinder) << "\n";
-  Rcpp::Rcout << "---ellipsoid             : " << sizeof(ellipsoid) << "\n";
-  Rcpp::Rcout << "---cone                  : " << sizeof(cone) << "\n";
-  Rcpp::Rcout << "---curve                 : " << sizeof(curve) << "\n";
-  Rcpp::Rcout << "---csg                   : " << sizeof(csg) << "\n";
-  Rcpp::Rcout << "---plymesh               : " << sizeof(plymesh) << "\n";
-  Rcpp::Rcout << "---mesh3d                : " << sizeof(mesh3d) << "\n\n";
-  
-  Rcpp::Rcout << "Float                    : " << sizeof(Float) << "\n";
-
-  Rcpp::Rcout << "RayMatrix                : " << sizeof(RayMatrix) << "\n";
-  Rcpp::Rcout << "Transform                : " << sizeof(Transform) << "\n";
-  Rcpp::Rcout << "TransformCache           : " << sizeof(TransformCache) << "\n";
-  Rcpp::Rcout << "vec3f                    : " << sizeof(vec3f) << "\n";
-  Rcpp::Rcout << "vec3i                    : " << sizeof(vec3i) << "\n";
-  Rcpp::Rcout << "point3f                  : " << sizeof(point3f) << "\n";
-  Rcpp::Rcout << "point3f                  : " << sizeof(point3f) << "\n";
-  Rcpp::Rcout << "vec2f                    : " << sizeof(vec2f) << "\n";
-  Rcpp::Rcout << "vec2i                    : " << sizeof(vec2i) << "\n";
-  Rcpp::Rcout << "random_gen               : " << sizeof(random_gen) << "\n";
-  Rcpp::Rcout << "aabb                     : " << sizeof(aabb) << "\n\n";
-  
-  Rcpp::Rcout << "RayCamera                : " << sizeof(RayCamera) << "\n";
-  Rcpp::Rcout << "---camera                : " << sizeof(camera) << "\n";
-  Rcpp::Rcout << "---ortho_camera          : " << sizeof(ortho_camera) << "\n";
-  Rcpp::Rcout << "---environment_camera    : " << sizeof(RayCamera) << "\n";
-  Rcpp::Rcout << "---RealisticCamera       : " << sizeof(RealisticCamera) << "\n\n";
-  Rcpp::Rcout << "material                 : " << sizeof(material) << "\n";
-  Rcpp::Rcout << "---lambertian            : " << sizeof(lambertian) << "\n";
-  Rcpp::Rcout << "---metal                 : " << sizeof(metal) << "\n";
-  Rcpp::Rcout << "---dielectric            : " << sizeof(dielectric) << "\n";
-  Rcpp::Rcout << "---diffuse_light         : " << sizeof(diffuse_light) << "\n";
-  Rcpp::Rcout << "---spot_light            : " << sizeof(spot_light) << "\n";
-  Rcpp::Rcout << "---isotropic             : " << sizeof(isotropic) << "\n";
-  Rcpp::Rcout << "---orennayar             : " << sizeof(orennayar) << "\n";
-  Rcpp::Rcout << "---MicrofacetReflection  : " << sizeof(MicrofacetReflection) << "\n";
-  Rcpp::Rcout << "---MicrofacetTransmission: " << sizeof(MicrofacetTransmission) << "\n";
-  Rcpp::Rcout << "---glossy                : " << sizeof(glossy) << "\n";
-  Rcpp::Rcout << "---hair                  : " << sizeof(hair) << "\n";
-}
-
 // [[Rcpp::export]]
 List render_scene_rcpp(List camera_info, List scene_info) {
+#ifdef DEBUG_MEMORY
   alloc = 0;
-  dealloc = 0;
+  // dealloc = 0;
   memory_used = 0;
+  mem_counter = 0;
+#endif
 
   //Unpack scene info
   bool ambient_light = as<bool>(scene_info["ambient_light"]);
@@ -294,7 +261,6 @@ List render_scene_rcpp(List camera_info, List scene_info) {
                                      shutteropen, shutterclose));
   }
   print_time(verbose, "Generated Camera" );
-  
 
 
   int nx1, ny1, nn1;
@@ -402,7 +368,6 @@ List render_scene_rcpp(List camera_info, List scene_info) {
     }
   }
   print_time(verbose, "Loaded Textures" );
-  
 
   std::shared_ptr<hitable> worldbvh = build_scene(type, radius, shape, position_list,
                                 properties,
@@ -425,7 +390,6 @@ List render_scene_rcpp(List camera_info, List scene_info) {
                                 image_repeat, csg_info, mesh_list, bvh_type, transformCache,
                                 animation_info, rng);
   print_time(verbose, "Built Scene BVH" );
-  
 
   //Calculate world bounds and ensure camera is inside infinite area light
   aabb bounding_box_world;
@@ -455,7 +419,6 @@ List render_scene_rcpp(List camera_info, List scene_info) {
   }
   std::shared_ptr<Transform> BackgroundTransform = transformCacheBg.Lookup(BackgroundAngle);
   std::shared_ptr<Transform> BackgroundTransformInv = transformCacheBg.Lookup(BackgroundAngle.GetInverseMatrix());
-
   if(hasbackground) {
     background_texture_data = stbi_loadf(background[0], &nx1, &ny1, &nn1, 0);
     if(background_texture_data) {
@@ -492,6 +455,7 @@ List render_scene_rcpp(List camera_info, List scene_info) {
     background_sphere = std::make_shared<InfiniteAreaLight>(100, 100, world_radius*2, vec3f(0.f),
                                               background_texture, background_material,
                                               BackgroundTransform,BackgroundTransformInv,false);
+
   } else {
     //Minimum intensity FLT_MIN so the CDF isn't NAN
     background_texture = std::make_shared<constant_texture>(vec3f(FLT_MIN,FLT_MIN,FLT_MIN));
@@ -501,18 +465,14 @@ List render_scene_rcpp(List camera_info, List scene_info) {
                                               BackgroundTransform,
                                               BackgroundTransformInv,false);
   }
-  if(verbose && hasbackground) {
-    print_time(verbose, "Loaded background" );
-  }
+  print_time(verbose, "Loaded background" );
   int numbertosample = 0;
   for(int i = 0; i < implicit_sample.size(); i++) {
     if(implicit_sample(i)) {
       numbertosample++;
     }
   }
-
   hitable_list world;
-
   world.add(worldbvh);
 
   bool impl_only_bg = false;
@@ -541,7 +501,6 @@ List render_scene_rcpp(List camera_info, List scene_info) {
     }
   }
   print_time(verbose, "Built Importance Sampler" );
-  
   if(impl_only_bg || hasbackground) {
     hlist.add(background_sphere);
   }
@@ -558,6 +517,7 @@ List render_scene_rcpp(List camera_info, List scene_info) {
     min_adaptive_size = 1;
     min_variance = 10E-8;
   }
+  Rcpp::Rcout << "Total world size: " << world.GetSize() << "\n";
   if(debug_channel != 0) {
     debug_scene(numbercores, nx, ny, ns, debug_channel,
                 min_variance, min_adaptive_size,
@@ -602,7 +562,6 @@ List render_scene_rcpp(List camera_info, List scene_info) {
   delete shared_materials;
   PutRNGstate();
   print_time(verbose, "Finished rendering" );
-  
   List final_image = List::create(_["r"] = routput.ConvertRcpp(), 
                                   _["g"] = goutput.ConvertRcpp(), 
                                   _["b"] = boutput.ConvertRcpp());
@@ -613,6 +572,68 @@ List render_scene_rcpp(List camera_info, List scene_info) {
     }
     final_image.attr("keyframes") = keyframes;
   }
+#ifdef DEBUG_MEMORY
+  Rcpp::Rcout << "Test alloc #" << mem_counter << "\n";
+  mem_counter++;
   getInfo();
+#endif
   return(final_image);
 }
+
+
+// [[Rcpp::export]] 
+void PrintClassSizes() {
+  Rcpp::Rcout << "hitable                  : " << sizeof(hitable) << "\n";
+  Rcpp::Rcout << "---sphere                : " << sizeof(sphere) << "\n";
+  Rcpp::Rcout << "---xy_rect               : " << sizeof(xy_rect) << "\n";
+  Rcpp::Rcout << "---xz_rect               : " << sizeof(xz_rect) << "\n";
+  Rcpp::Rcout << "---yz_rect               : " << sizeof(yz_rect) << "\n";
+  Rcpp::Rcout << "---box                   : " << sizeof(box) << "\n";
+  Rcpp::Rcout << "---AnimatedHitable       : " << sizeof(AnimatedHitable) << "\n";
+  Rcpp::Rcout << "---triangle              : " << sizeof(triangle) << "\n";
+  Rcpp::Rcout << "---trimesh               : " << sizeof(trimesh) << "\n";
+  Rcpp::Rcout << "---disk                  : " << sizeof(disk) << "\n";
+  Rcpp::Rcout << "---cylinder              : " << sizeof(cylinder) << "\n";
+  Rcpp::Rcout << "---ellipsoid             : " << sizeof(ellipsoid) << "\n";
+  Rcpp::Rcout << "---cone                  : " << sizeof(cone) << "\n";
+  Rcpp::Rcout << "---curve                 : " << sizeof(curve) << "\n";
+  Rcpp::Rcout << "---csg                   : " << sizeof(csg) << "\n";
+  Rcpp::Rcout << "---plymesh               : " << sizeof(plymesh) << "\n";
+  Rcpp::Rcout << "---mesh3d                : " << sizeof(mesh3d) << "\n\n";
+  Rcpp::Rcout << "---InfiniteAreaLight     : " << sizeof(InfiniteAreaLight) << "\n\n";
+  
+  Rcpp::Rcout << "Float                    : " << sizeof(Float) << "\n";
+  Rcpp::Rcout << "Matrix4x4                : " << sizeof(Matrix4x4) << "\n";
+  Rcpp::Rcout << "Transform                : " << sizeof(Transform) << "\n";
+  Rcpp::Rcout << "TransformCache           : " << sizeof(TransformCache) << "\n";
+  Rcpp::Rcout << "RayMatrix                : " << sizeof(RayMatrix) << "\n";
+  Rcpp::Rcout << "vec3f                    : " << sizeof(vec3f) << "\n";
+  Rcpp::Rcout << "vec3i                    : " << sizeof(vec3i) << "\n";
+  Rcpp::Rcout << "point3f                  : " << sizeof(point3f) << "\n";
+  Rcpp::Rcout << "point3f                  : " << sizeof(point3f) << "\n";
+  Rcpp::Rcout << "vec2f                    : " << sizeof(vec2f) << "\n";
+  Rcpp::Rcout << "vec2i                    : " << sizeof(vec2i) << "\n";
+  Rcpp::Rcout << "random_gen               : " << sizeof(random_gen) << "\n";
+  Rcpp::Rcout << "aabb                     : " << sizeof(aabb) << "\n\n";
+  Rcpp::Rcout << "bvh_node                 : " << sizeof(bvh_node) << "\n\n";
+  Rcpp::Rcout << "hitable_list             : " << sizeof(hitable_list) << "\n\n";
+  
+  Rcpp::Rcout << "RayCamera                : " << sizeof(RayCamera) << "\n";
+  Rcpp::Rcout << "---camera                : " << sizeof(camera) << "\n";
+  Rcpp::Rcout << "---ortho_camera          : " << sizeof(ortho_camera) << "\n";
+  Rcpp::Rcout << "---environment_camera    : " << sizeof(RayCamera) << "\n";
+  Rcpp::Rcout << "---RealisticCamera       : " << sizeof(RealisticCamera) << "\n\n";
+  Rcpp::Rcout << "material                 : " << sizeof(material) << "\n";
+  Rcpp::Rcout << "---lambertian            : " << sizeof(lambertian) << "\n";
+  Rcpp::Rcout << "---metal                 : " << sizeof(metal) << "\n";
+  Rcpp::Rcout << "---dielectric            : " << sizeof(dielectric) << "\n";
+  Rcpp::Rcout << "---diffuse_light         : " << sizeof(diffuse_light) << "\n";
+  Rcpp::Rcout << "---spot_light            : " << sizeof(spot_light) << "\n";
+  Rcpp::Rcout << "---isotropic             : " << sizeof(isotropic) << "\n";
+  Rcpp::Rcout << "---orennayar             : " << sizeof(orennayar) << "\n";
+  Rcpp::Rcout << "---MicrofacetReflection  : " << sizeof(MicrofacetReflection) << "\n";
+  Rcpp::Rcout << "---MicrofacetTransmission: " << sizeof(MicrofacetTransmission) << "\n";
+  Rcpp::Rcout << "---glossy                : " << sizeof(glossy) << "\n";
+  Rcpp::Rcout << "---hair                  : " << sizeof(hair) << "\n";
+}
+

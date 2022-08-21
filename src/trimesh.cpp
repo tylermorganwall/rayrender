@@ -13,6 +13,7 @@ trimesh::trimesh(std::string inputfile, std::string basedir, Float scale,
   std::vector<tinyobj::material_t > materials;
   std::string warn, err;
   mat_ptr = nullptr;
+  texture_size = 0;
   
   bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, inputfile.c_str(), basedir.c_str());
   bool has_sep = true;
@@ -79,6 +80,8 @@ trimesh::trimesh(std::string inputfile, std::string basedir, Float scale,
             throw std::runtime_error("Could not find " + materials[i].diffuse_texname);
           }
         }
+        Rcpp::Rcout << nx << " " << ny << " " << nn << "\n";
+        texture_size += sizeof(Float) * nx * ny * nn;
         has_diffuse[i] = true;
         has_single_diffuse[i] = false;
         nx_mat[i] = nx;
@@ -128,6 +131,7 @@ trimesh::trimesh(std::string inputfile, std::string basedir, Float scale,
         } else {
           bump_materials[i] = stbi_loadf(materials[i].bump_texname.c_str(), &nx, &ny, &nn, 0);
         }
+        texture_size += sizeof(Float) * nx * ny * nn;
         if(nx == 0 || ny == 0 || nn == 0) {
           if(has_sep) {
             throw std::runtime_error("Could not find " + basedir + separator() + materials[i].bump_texname);
@@ -302,6 +306,7 @@ trimesh::trimesh(std::string inputfile, std::string basedir, Float scale, Float 
   std::vector<tinyobj::material_t > materials;
   std::string warn, err;
   mat_ptr = nullptr;
+  texture_size = 0;
   
   bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, inputfile.c_str(), basedir.c_str());
   bool has_sep = true;
@@ -565,6 +570,7 @@ trimesh::trimesh(std::string inputfile, std::string basedir, std::shared_ptr<mat
   std::vector<tinyobj::material_t > materials;
   std::string warn, err;
   mat_ptr = mat;
+  texture_size = 0;
   
   bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, inputfile.c_str(), basedir.c_str());
   std::shared_ptr<alpha_texture> alpha = nullptr;
@@ -642,6 +648,7 @@ trimesh::trimesh(std::string inputfile, std::string basedir, float vertex_color_
   std::vector<tinyobj::material_t > materials;
   std::string warn, err;
   mat_ptr = nullptr;
+  texture_size = 0;
   
   bool is_lamb = vertex_color_sigma == 0 ? true : false;
   std::shared_ptr<alpha_texture> alpha = nullptr;
@@ -748,4 +755,15 @@ vec3f trimesh::random(const point3f& o, random_gen& rng, Float time) {
 vec3f trimesh::random(const point3f& o, Sampler* sampler, Float time) {
   return(triangles.random(o, sampler, time));
   
+}
+
+size_t trimesh::GetSize() {
+  size_t total_size = tri_mesh_bvh->GetSize() + sizeof(*this) + texture_size;
+  total_size += sizeof(Float*) * bump_textures.size();
+  total_size += sizeof(Float*) * alpha_materials.size();
+  return(total_size);
+}
+
+std::pair<size_t,size_t> trimesh::CountNodeLeaf() {
+  return(tri_mesh_bvh->CountNodeLeaf());
 }

@@ -7,6 +7,7 @@
 #include "texture.h"
 #include "onbh.h"
 #include "vec3.h"
+#include "material.h"
 
 class InfiniteAreaLight: public hitable {
 public:
@@ -30,6 +31,7 @@ public:
   virtual std::string GetName() const {
     return(std::string("EnvironmentLight"));
   }
+  size_t GetSize();
   int width, height;
   Float radius;
   point3f center;

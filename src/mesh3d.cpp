@@ -205,3 +205,7 @@ bool mesh3d::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sample
 bool mesh3d::bounding_box(Float t0, Float t1, aabb& box) const {
   return(mesh_bvh->bounding_box(t0,t1,box));
 };
+
+std::pair<size_t,size_t> mesh3d::CountNodeLeaf() {
+  return(mesh_bvh->CountNodeLeaf());
+}

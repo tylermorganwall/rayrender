@@ -32,6 +32,10 @@ class mesh3d : public hitable {
     virtual std::string GetName() const {
       return(std::string("Mesh3d"));
     }
+    size_t GetSize()  {
+      return(sizeof(*this) + mesh_bvh->GetSize() + sizeof(*mesh_materials) + sizeof(*bump));
+    }
+    std::pair<size_t,size_t> CountNodeLeaf();
     std::shared_ptr<bvh_node> mesh_bvh;
     std::shared_ptr<material>  mat_ptr;
     hitable_list triangles;

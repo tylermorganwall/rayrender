@@ -54,6 +54,8 @@ public:
   virtual std::string GetName() const {
     return(std::string("TriangleMesh"));
   }
+  size_t GetSize();
+  std::pair<size_t,size_t> CountNodeLeaf();
   std::shared_ptr<bvh_node> tri_mesh_bvh;
   std::shared_ptr<material> mat_ptr;
   std::vector<Float* > obj_materials;
@@ -61,6 +63,7 @@ public:
   std::vector<std::shared_ptr<bump_texture> > bump_textures;
   std::vector<std::shared_ptr<alpha_texture> > alpha_materials;
   hitable_list triangles;
+  size_t texture_size;
 };
 
 

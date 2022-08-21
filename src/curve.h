@@ -40,6 +40,9 @@ class curve: public hitable {
     virtual std::string GetName() const {
       return(std::string("Curve"));
     }
+    size_t GetSize()  {
+      return(sizeof(*this) + sizeof(*common));
+    }
     std::shared_ptr<material> mat_ptr;
   private:
     bool recursiveIntersect(const ray& r, Float tmin, Float tmax, hit_record& rec,

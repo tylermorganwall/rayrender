@@ -9,12 +9,12 @@ render_animation_rcpp <- function(camera_info, scene_info, camera_movement, star
     invisible(.Call(`_rayrender_render_animation_rcpp`, camera_info, scene_info, camera_movement, start_frame, end_frame, filenames, post_process_frame, toneval, bloom, write_image))
 }
 
-PrintClassSizes <- function() {
-    invisible(.Call(`_rayrender_PrintClassSizes`))
-}
-
 render_scene_rcpp <- function(camera_info, scene_info) {
     .Call(`_rayrender_render_scene_rcpp`, camera_info, scene_info)
+}
+
+PrintClassSizes <- function() {
+    invisible(.Call(`_rayrender_PrintClassSizes`))
 }
 
 tonemap_image <- function(routput, goutput, boutput, toneval) {

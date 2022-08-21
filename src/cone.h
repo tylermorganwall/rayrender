@@ -25,6 +25,9 @@ public:
   virtual std::string GetName() const {
     return(std::string("Cone"));
   }
+  size_t GetSize()  {
+    return(sizeof(*this));
+  }
   Float radius;
   Float height;
   //Float phi2; //unwrapped cone in a circle, angle around origin (radians)

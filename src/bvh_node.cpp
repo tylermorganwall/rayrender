@@ -283,3 +283,25 @@ vec3f bvh_node::random(const point3f& o, Sampler* sampler, Float time) {
   return(sampler->Get1D() > 0.5 ? left->random(o, sampler, time) : right->random(o, sampler, time));
   
 }
+  
+size_t bvh_node::GetSize()  {
+  return(left != right ? sizeof(*this) + left->GetSize() + right->GetSize() :
+           sizeof(*this) + left->GetSize());
+}
+  
+std::pair<size_t,size_t> operator+(const std::pair<size_t,size_t> & l,const std::pair<size_t,size_t> & r) {   
+  return {l.first+r.first,l.second+r.second};                                    
+}   
+
+std::pair<size_t,size_t> bvh_node::CountNodeLeaf()  {
+  std::pair<size_t,size_t> count(1,0);
+  if(left != right) {
+    count = count + (left->CountNodeLeaf() + right->CountNodeLeaf());
+  } else {
+    count = count + left->CountNodeLeaf();
+  }
+  return count;
+}
+  
+  
+  

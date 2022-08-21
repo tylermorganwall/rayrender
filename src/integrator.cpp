@@ -63,8 +63,6 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
   std::vector<std::unique_ptr<Sampler> > samplers;
   std::vector<std::unique_ptr<Sampler> > samplers_small;
   
-  auto start = std::chrono::high_resolution_clock::now();
-  
   for(unsigned int j = 0; j < ny; j++) {
     if(progress_bar) {
       pb_sampler.tick();

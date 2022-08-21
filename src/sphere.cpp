@@ -365,3 +365,7 @@ bool sphere::bounding_box(Float t0, Float t1, aabb& box) const {
   box = (*ObjectToWorld)(aabb(-vec3f(radius,radius,radius), vec3f(radius,radius,radius)));
   return(true);
 }
+
+size_t sphere::GetSize()  {
+  return(mat_ptr ? sizeof(*this) + mat_ptr->GetSize() : sizeof(*this));
+}

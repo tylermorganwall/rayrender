@@ -43,6 +43,11 @@ class hitable {
     virtual std::string GetName() const {
       return(std::string("Hitable"));
     }
+    virtual size_t GetSize() = 0;
+    virtual std::pair<size_t,size_t> CountNodeLeaf() {
+      return(std::pair<size_t,size_t>(0,1));
+    }
+    
     virtual ~hitable() {}
     const std::shared_ptr<Transform> ObjectToWorld, WorldToObject;
     const bool reverseOrientation;
@@ -69,9 +74,9 @@ struct hit_record {
   const hitable* shape = nullptr; //PBRT: In SurfaceInteraction, const Shape *shape
   material* mat_ptr; //PBRT: In SurfaceInteraction as bsdf or bssrdf
   bool alpha_miss;
-  //Missing from PBRT: 
-  //mutable Float dudx, dvdx, dudy, dvdy (for texture sampling)
-  //mutable vec3 dpdx, dpdy
+  mutable Float dudx, dvdx, dudy, dvdy;
+  mutable vec3f dpdx, dpdy;
+  mutable normal3f dndu, dndv;
   //const Shape *shape (recording the shape)
   //const Primitive *primitive (recording the primitive)
   //int faceIndex (for ptex lookups)
@@ -91,6 +96,9 @@ public:
   vec3f random(const point3f& o, random_gen& rng, Float time = 0);
   vec3f random(const point3f& o, Sampler* sampler, Float time = 0);
   std::string GetName() const;
+  size_t GetSize() {
+    return(sizeof(*this));
+  }
   bool bounding_box(Float t0, Float t1, aabb& box) const;
   std::shared_ptr<hitable> primitive;
   const AnimatedTransform PrimitiveToWorld;

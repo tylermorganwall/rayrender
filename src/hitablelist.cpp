@@ -83,3 +83,15 @@ vec3f hitable_list::random(const point3f& o, Sampler* sampler, Float time) {
   int index = int(sampler->Get1D() * objects.size() * 0.99999999);
   return(objects[index]->random(o, sampler, time));
 }
+
+std::string hitable_list::GetName() const {
+  return(std::string("Hitable List"));
+}
+
+size_t hitable_list::GetSize() {
+  size_t total_size = sizeof(*this) + objects.size() * sizeof(std::shared_ptr<hitable>);
+  for(size_t i = 0; i < objects.size(); i++) {
+    total_size += objects[i]->GetSize();;
+  }
+  return(total_size);
+}

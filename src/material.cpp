@@ -62,6 +62,10 @@ point3f lambertian::get_albedo(const ray& r_in, const hit_record& rec) const {
   return(albedo->value(rec.u, rec.v, rec.p));
 }
 
+size_t lambertian::GetSize()  {
+  return(sizeof(*this));
+}
+
 //
 //Metal
 //
@@ -102,6 +106,10 @@ bool metal::scatter(const ray& r_in, const hit_record& hrec, scatter_record& sre
 
 point3f metal::get_albedo(const ray& r_in, const hit_record& rec) const {
   return(albedo->value(rec.u, rec.v, rec.p));
+}
+
+size_t metal::GetSize()  {
+  return(sizeof(*this));
 }
 
 //
@@ -312,6 +320,10 @@ bool dielectric::scatter(const ray& r_in, const hit_record& hrec, scatter_record
   return(true);
 }
 
+size_t dielectric::GetSize()  {
+  return(sizeof(*this));
+}
+
 //
 //Diffuse Light
 //
@@ -327,6 +339,10 @@ point3f diffuse_light::emitted(const ray& r_in, const hit_record& rec, Float u, 
 
 point3f diffuse_light::get_albedo(const ray& r_in, const hit_record& rec) const {
   return(emit->value(rec.u, rec.v, rec.p));
+}
+
+size_t diffuse_light::GetSize()  {
+  return(sizeof(*this));
 }
 
 //
@@ -358,6 +374,10 @@ point3f spot_light::get_albedo(const ray& r_in, const hit_record& rec) const {
   return(emit->value(rec.u, rec.v, rec.p));
 }
 
+size_t spot_light::GetSize()  {
+  return(sizeof(*this));
+}
+
 //
 //Isotropic
 //
@@ -380,6 +400,10 @@ point3f isotropic::f(const ray& r_in, const hit_record& rec, const ray& scattere
 }
 point3f isotropic::get_albedo(const ray& r_in, const hit_record& rec) const {
   return(albedo->value(rec.u, rec.v, rec.p));
+}
+
+size_t isotropic::GetSize()  {
+  return(sizeof(*this));
 }
 
 //
@@ -442,6 +466,10 @@ point3f orennayar::get_albedo(const ray& r_in, const hit_record& rec) const {
   return(albedo->value(rec.u, rec.v, rec.p));
 }
 
+size_t orennayar::GetSize()  {
+  return(sizeof(*this));
+}
+
 //
 //MicrofacetReflection
 //
@@ -497,6 +525,12 @@ point3f MicrofacetReflection::f(const ray& r_in, const hit_record& rec, const ra
 point3f MicrofacetReflection::get_albedo(const ray& r_in, const hit_record& rec) const {
   return(albedo->value(rec.u, rec.v, rec.p));
 }
+
+size_t MicrofacetReflection::GetSize()  {
+  return(sizeof(*this));
+}
+
+
 
 //
 //MicrofacetTransmission
@@ -584,6 +618,10 @@ point3f MicrofacetTransmission::SchlickFresnel(Float cosTheta) const {
   return pow5(1 - cosTheta) * (point3f(1.0f));
 }
 
+size_t MicrofacetTransmission::GetSize()  {
+  return(sizeof(*this));
+}
+
 //
 //Glossy
 //
@@ -641,6 +679,15 @@ point3f glossy::SchlickFresnel(Float cosTheta) const {
 point3f glossy::get_albedo(const ray& r_in, const hit_record& rec) const {
   return(albedo->value(rec.u, rec.v, rec.p));
 }
+
+
+size_t glossy::GetSize()  {
+  return(sizeof(*this));
+}
+
+//
+//Hair
+//
 
 std::array<Float, pMax + 1> hair::ComputeApPdf(Float cosThetaO, Float h) const {
   // Compute array of $A_p$ values for _cosThetaO_
@@ -883,6 +930,10 @@ point3f hair::f(const ray& r_in, const hit_record& rec, const ray& scattered) co
     fsum /= AbsCosTheta(wi);
   }
   return(fsum);
+}
+
+size_t hair::GetSize()  {
+  return(sizeof(*this));
 }
 
 // vec3f hair::SigmaAFromConcentration(Float ce, Float cp) {

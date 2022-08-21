@@ -20,6 +20,8 @@ class hitable_list: public hitable {
     void add(std::shared_ptr<hitable> object) { objects.push_back(object); }
     int size() {return(objects.size());}
     std::vector<std::shared_ptr<hitable>> objects;
+    std::string GetName() const;
+    size_t GetSize();
 };
 
 #endif

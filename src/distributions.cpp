@@ -62,6 +62,10 @@ Float Distribution1D::DiscretePDF(int index) const {
   return(func[index] / (funcInt * Count()));
 }
 
+size_t Distribution1D::GetSize()  {
+  return(sizeof(*this) + sizeof(Float)*func.size() + sizeof(Float)*cdf.size());
+}
+
 
 
 vec2f Distribution2D::SampleContinuous(const vec2f &u, Float *pdf) const {
@@ -92,4 +96,13 @@ Distribution2D::Distribution2D(const Float *func, int nu, int nv) {
   for (int v = 0; v < nv; ++v)
     marginalFunc.push_back(pConditionalV[v]->funcInt);
   pMarginal.reset(new Distribution1D(&marginalFunc[0], nv));
+}
+
+size_t Distribution2D::GetSize()  {
+  size_t total_size = 0;
+  for(int i = 0; i < pConditionalV.size(); i++) {
+    total_size += pConditionalV[i]->GetSize();
+  }
+  total_size += pMarginal->GetSize();
+  return(sizeof(*this) + total_size);
 }

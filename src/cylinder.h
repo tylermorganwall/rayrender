@@ -27,6 +27,9 @@ public:
   virtual std::string GetName() const {
     return(std::string("Cylinder"));
   }
+  size_t GetSize()  {
+    return(sizeof(*this));
+  }
   void get_cylinder_uv(const point3f& p, Float& u, Float& v);
   Float radius;
   Float length;

@@ -30,6 +30,7 @@ class sphere: public hitable {
     virtual std::string GetName() const {
       return(std::string("Sphere"));
     }
+    size_t GetSize();
     Float radius;
     std::shared_ptr<material> mat_ptr;
     std::shared_ptr<alpha_texture> alpha_mask;

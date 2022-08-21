@@ -83,6 +83,9 @@ public:
   virtual std::string GetName() const {
     return(std::string("Triangle"));
   }
+  size_t GetSize()  {
+    return(sizeof(*this));
+  }
   vec3f normal;
   vec3f a, b, c;
   point2f uv_a, uv_b, uv_c;

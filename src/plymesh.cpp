@@ -194,3 +194,6 @@ bool plymesh::bounding_box(Float t0, Float t1, aabb& box) const {
   return(ply_mesh_bvh->bounding_box(t0,t1,box));
 };
 
+std::pair<size_t,size_t> plymesh::CountNodeLeaf() {
+  return(ply_mesh_bvh->CountNodeLeaf());
+}

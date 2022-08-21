@@ -13,6 +13,7 @@ class ImplicitShape {
     virtual Float getDistance(const point3f& from) const = 0; 
     virtual bool bbox(Float t0, Float t1, aabb& box) const = 0; 
     virtual ~ImplicitShape() {} 
+    virtual size_t GetSize()  = 0;
 }; 
 
 class csg_sphere : public ImplicitShape {
@@ -25,6 +26,9 @@ class csg_sphere : public ImplicitShape {
     virtual bool bbox(Float t0, Float t1, aabb& box) const {
       box = aabb(center - vec3f(radius,radius,radius), center + vec3f(radius,radius,radius));
       return(true);
+    }
+    size_t GetSize()  {
+      return(sizeof(*this));
     }
     vec3f center;
     float radius; 
@@ -52,6 +56,9 @@ class csg_plane : public ImplicitShape {
                  pointOnPlane + vec3f(width_x,0.1,width_z));
       return(true);
     }
+    size_t GetSize()  {
+      return(sizeof(*this));
+    }
     vec3f n;
     point3f pointOnPlane;
     Float width_x, width_z;
@@ -72,6 +79,9 @@ class csg_box : public ImplicitShape {
       box = aabb(center + -Abs(width)/2, center + Abs(width)/2);
       return(true);
     }
+    size_t GetSize()  {
+      return(sizeof(*this));
+    }
     point3f center;
     point3f width; 
 }; 
@@ -89,6 +99,9 @@ class csg_rounded_box : public ImplicitShape {
     virtual bool bbox(Float t0, Float t1, aabb& box) const {
       box = aabb(center-Abs(width)/2, center+Abs(width)/2);
       return(true);
+    }
+    size_t GetSize()  {
+      return(sizeof(*this));
     }
     point3f center;
     vec3f width; 
@@ -117,6 +130,9 @@ class csg_list : public ImplicitShape {
       box = temp1;
       return(true);
     }
+    size_t GetSize()  {
+      return(sizeof(*this));
+    }
     std::vector<std::shared_ptr<ImplicitShape> > shapes;
 }; 
 
@@ -133,6 +149,9 @@ class csg_torus : public ImplicitShape {
       box = aabb(center-vec3f(ring_radius+cross_radius,cross_radius,ring_radius+cross_radius), 
                  center+vec3f(ring_radius+cross_radius,cross_radius,ring_radius+cross_radius));
       return(true);
+    }
+    size_t GetSize()  {
+      return(sizeof(*this));
     }
     point3f center;
     float ring_radius;
@@ -154,6 +173,9 @@ class csg_capsule : public ImplicitShape {
       vec3f max = vec3f(ffmax(start.x(),end.x()),ffmax(start.y(),end.y()),ffmax(start.z(),end.z()));
       box = aabb(min-radius, max+radius);
       return(true);
+    }
+    size_t GetSize()  {
+      return(sizeof(*this));
     }
     point3f start, end; 
     Float radius;
@@ -183,6 +205,9 @@ class csg_cylinder : public ImplicitShape {
       box = aabb(min-radius, max+radius);
       return(true);
     }
+    size_t GetSize()  {
+      return(sizeof(*this));
+    }
     point3f start, end;
     vec3f ba; 
     Float radius, corner_radius, baba, inv_baba;
@@ -202,6 +227,9 @@ class csg_ellipsoid : public ImplicitShape {
     virtual bool bbox(Float t0, Float t1, aabb& box) const {
       box = aabb(center+-axes, center+axes);
       return(true);
+    }
+    size_t GetSize()  {
+      return(sizeof(*this));
     }
     point3f center, axes, inv_axes; 
 }; 
@@ -239,6 +267,9 @@ class csg_rounded_cone : public ImplicitShape {
       box = aabb(min-r1-r2, max+r1+r2);
       return(true);
     }
+    size_t GetSize()  {
+      return(sizeof(*this));
+    }
     point3f start, end; 
     Float r1, r2;
 }; 
@@ -269,6 +300,9 @@ class csg_cone : public ImplicitShape {
       point3f max = point3f(ffmax(start.x(),end.x()),ffmax(start.y(),end.y()),ffmax(start.z(),end.z()));
       box = aabb(min-radius, max+radius);
       return(true);
+    }
+    size_t GetSize()  {
+      return(sizeof(*this));
     }
     point3f start, end; 
     Float radius, height;
@@ -307,6 +341,9 @@ class csg_pyramid : public ImplicitShape {
       box = aabb(center_bottom-vec3f(base,0,base), center_bottom+vec3f(base,h,base));
       return(true);
     }
+    size_t GetSize()  {
+      return(sizeof(*this));
+    }
     point3f center_bottom;
     vec3f base_inv;
     float h, base, m2, m2_inv, m2_inv_buff;
@@ -344,6 +381,9 @@ class csg_triangle : public ImplicitShape {
       box = Expand(aabb(min, max),0.01);
       return(true);
     }
+    size_t GetSize()  {
+      return(sizeof(*this));
+    }
     point3f a,b,c;
     vec3f ba, cb, ac, nor;
 }; 
@@ -361,6 +401,9 @@ class csg_elongate : public ImplicitShape {
       shape->bbox(t0,t1,box);
       box = Expand(box, elongate);
       return(true);
+    }
+    size_t GetSize()  {
+      return(sizeof(*this) + shape->GetSize());
     }
     std::shared_ptr<ImplicitShape> shape;
     point3f center;
@@ -384,6 +427,9 @@ class csg_elongate_robust : public ImplicitShape {
       box = Expand(box, elongate);
       return(true);
     }
+    size_t GetSize()  {
+      return(sizeof(*this) + shape->GetSize());
+    }
     std::shared_ptr<ImplicitShape> shape;
     point3f center;
     vec3f elongate;
@@ -401,6 +447,9 @@ class csg_round : public ImplicitShape {
       box = Expand(box, r);
       return(true);
     }
+    size_t GetSize()  {
+      return(sizeof(*this) + shape->GetSize());
+    }
     std::shared_ptr<ImplicitShape> shape;
     Float r;
 }; 
@@ -417,6 +466,9 @@ class csg_onion : public ImplicitShape {
       box = Expand(box,thickness);
       return(true);
     }
+    size_t GetSize()  {
+      return(sizeof(*this) + shape->GetSize());
+    }
     std::shared_ptr<ImplicitShape> shape;
     Float thickness;
 }; 
@@ -432,6 +484,9 @@ class csg_scale : public ImplicitShape {
       shape->bbox(t0,t1,box);
       box = aabb(box.min() * scale, box.max() * scale);
       return(true);
+    }
+    size_t GetSize()  {
+      return(sizeof(*this) + shape->GetSize());
     }
     std::shared_ptr<ImplicitShape> shape;
     Float scale;
@@ -507,6 +562,9 @@ class csg_rotate : public ImplicitShape {
       box = box_cache;
       return(true);
     }
+    size_t GetSize()  {
+      return(sizeof(*this) + shape->GetSize());
+    }
     std::shared_ptr<ImplicitShape> shape;
     point3f pivot_point;
     vec3f up;
@@ -526,6 +584,9 @@ class csg_translate : public ImplicitShape {
       box.bounds[0] += translate; 
       box.bounds[1] += translate; 
       return(true);
+    }
+    size_t GetSize()  {
+      return(sizeof(*this) + shape->GetSize());
     }
     std::shared_ptr<ImplicitShape> shape;
     vec3f translate;
@@ -586,6 +647,9 @@ class CSG : public ImplicitShape {
       box = surrounding_box(temp1,temp2);
       return(true); 
     } 
+    size_t GetSize()  {
+      return(sizeof(*this) + shape1->GetSize() + shape2->GetSize());
+    }
     Op op; 
     const std::shared_ptr<ImplicitShape> shape1, shape2; 
 }; 
@@ -633,6 +697,9 @@ class csg: public hitable {
     }
     virtual std::string GetName() const {
       return(std::string("CSG"));
+    }
+    size_t GetSize()  {
+      return(sizeof(*this) + shapes->GetSize());
     }
     std::shared_ptr<material> mat_ptr;
     std::shared_ptr<ImplicitShape> shapes;

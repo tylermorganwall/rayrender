@@ -28,6 +28,9 @@ class ellipsoid: public hitable {
     virtual std::string GetName() const {
       return(std::string("Ellipsoid"));
     }
+    size_t GetSize()  {
+      return(sizeof(*this));
+    }
     point3f center;
     Float radius;
     point3f axes;

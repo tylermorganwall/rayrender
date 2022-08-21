@@ -22,6 +22,10 @@ public:
   vec3f random(const point3f& o, random_gen& rng, Float time = 0);
   vec3f random(const point3f& o, Sampler* sampler, Float time = 0);
   
+  size_t GetSize()  {
+    return(sizeof(*this) + boundary->GetSize());
+  }
+  
   std::shared_ptr<hitable> boundary;
   Float density;
   std::shared_ptr<material> phase_function;

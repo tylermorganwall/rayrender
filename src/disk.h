@@ -27,6 +27,9 @@ public:
   virtual std::string GetName() const {
     return(std::string("Disk"));
   }
+  size_t GetSize()  {
+    return(sizeof(*this));
+  }
   vec3f center;
   Float radius;
   Float inner_radius;

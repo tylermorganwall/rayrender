@@ -29,6 +29,9 @@ public:
   virtual std::string GetName() const {
     return(std::string("XY Rectangle"));
   }
+  size_t GetSize() {
+    return(sizeof(*this));
+  }
   Float x0, x1, y0, y1, k;
   std::shared_ptr<material> mp;
   std::shared_ptr<alpha_texture> alpha_mask;
@@ -58,6 +61,9 @@ public:
   virtual std::string GetName() const {
     return(std::string("XZ Rectangle"));
   }
+  size_t GetSize() {
+    return(sizeof(*this));
+  }
   Float x0, x1, z0, z1, k;
   std::shared_ptr<material> mp;
   std::shared_ptr<alpha_texture> alpha_mask;
@@ -85,6 +91,9 @@ public:
   virtual vec3f random(const point3f& o, Sampler* sampler, Float time = 0);
   virtual std::string GetName() const {
     return(std::string("YZ Rectangle"));
+  }
+  size_t GetSize() {
+    return(sizeof(*this));
   }
   Float y0, y1, z0, z1, k;
   std::shared_ptr<material> mp;
