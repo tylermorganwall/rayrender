@@ -1,6 +1,10 @@
 #include "texture.h"
 
 point3f image_texture::value(Float u, Float v, const point3f& p) const {
+  while(u < 0) u += 1;
+  while(v < 0) v += 1;
+  while(u > 1) u -= 1;
+  while(v > 1) v -= 1;
   u = fmod(u * repeatu,1);
   v = fmod(v * repeatv,1);
   int i = u * nx;

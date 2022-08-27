@@ -4,72 +4,45 @@
 #include "hitable.h"
 #include "material.h"
 #include "onbh.h"
+#include "trianglemesh.h"
 
 class triangle : public hitable {
 public:
   triangle() {}
-  triangle(point3f _a, point3f _b, point3f _c, bool _single, std::shared_ptr<material> mat, 
+  triangle(TriangleMesh* mesh, const int *v, const int *n, const int *t,
+           std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation) : 
+    hitable(ObjectToWorld, WorldToObject, reverseOrientation), mesh(mesh), v(v), n(n), t(t) {
+    
+  }
+  triangle(std::shared_ptr<material> mat,
            std::shared_ptr<alpha_texture> alpha_mask, std::shared_ptr<bump_texture> bump_tex,
              std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation) :
-    hitable(ObjectToWorld, WorldToObject, reverseOrientation), 
-  a((*ObjectToWorld)(_a)), b((*ObjectToWorld)(_b)), c((*ObjectToWorld)(_c)), 
-  single(_single), mp(mat), alpha_mask(alpha_mask), bump_tex(bump_tex) {
-    edge1 = b-a;
-    edge2 = c-a;
-    normal = cross(edge1, edge2);
-    area = normal.length()/2;
-    normal.make_unit_vector();
-    normals_provided = false;
-    uv_provided = false;
+    hitable(ObjectToWorld, WorldToObject, reverseOrientation) {
   };
-  triangle(point3f _a, point3f _b, point3f _c, normal3f _na, normal3f _nb, normal3f _nc, bool _single, 
+  triangle(point3f _a, point3f _b, point3f _c, bool _single, std::shared_ptr<material> mat,
+           std::shared_ptr<alpha_texture> alpha_mask, std::shared_ptr<bump_texture> bump_tex,
+             std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation) :
+    hitable(ObjectToWorld, WorldToObject, reverseOrientation) {
+  };
+  triangle(point3f _a, point3f _b, point3f _c, normal3f _na, normal3f _nb, normal3f _nc, bool _single,
            std::shared_ptr<material> mat, std::shared_ptr<alpha_texture> alpha_mask, std::shared_ptr<bump_texture> bump_tex,
            std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation) :
-    hitable(ObjectToWorld, WorldToObject, reverseOrientation), 
-    a((*ObjectToWorld)(_a)), b((*ObjectToWorld)(_b)), c((*ObjectToWorld)(_c)), 
-    na((*ObjectToWorld)(_na)), nb((*ObjectToWorld)(_nb)), nc((*ObjectToWorld)(_nc)), single(_single), mp(mat), 
-    alpha_mask(alpha_mask), bump_tex(bump_tex) {
-    edge1 = b-a;
-    edge2 = c-a;
-    normal = cross(edge1, edge2);
-    area = normal.length()/2;
-    normals_provided = true;
-    uv_provided = false;
+    hitable(ObjectToWorld, WorldToObject, reverseOrientation) {
   };
-  triangle(point3f _a, point3f _b, point3f _c, 
+  triangle(point3f _a, point3f _b, point3f _c,
            point2f uva, point2f uvb, point2f uvc,
-           bool _single, 
+           bool _single,
            std::shared_ptr<material> mat, std::shared_ptr<alpha_texture> alpha_mask, std::shared_ptr<bump_texture> bump_tex,
            std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation) :
-    hitable(ObjectToWorld, WorldToObject, reverseOrientation), 
-    a((*ObjectToWorld)(_a)), b((*ObjectToWorld)(_b)), c((*ObjectToWorld)(_c)), 
-    uv_a(uva), uv_b(uvb), uv_c(uvc), 
-    single(_single), mp(mat), 
-    alpha_mask(alpha_mask), bump_tex(bump_tex) {
-    edge1 = b-a;
-    edge2 = c-a;
-    normal = cross(edge1, edge2);
-    area = normal.length()/2;
-    normals_provided = false;
-    uv_provided = true;
+    hitable(ObjectToWorld, WorldToObject, reverseOrientation) {
   };
-  triangle(point3f _a, point3f _b, point3f _c, 
-           normal3f _na, normal3f _nb, normal3f _nc, 
+  triangle(point3f _a, point3f _b, point3f _c,
+           normal3f _na, normal3f _nb, normal3f _nc,
            point2f uva, point2f uvb, point2f uvc,
-           bool _single, 
+           bool _single,
            std::shared_ptr<material> mat, std::shared_ptr<alpha_texture> alpha_mask, std::shared_ptr<bump_texture> bump_tex,
            std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation) :
-    hitable(ObjectToWorld, WorldToObject, reverseOrientation), 
-    a((*ObjectToWorld)(_a)), b((*ObjectToWorld)(_b)), c((*ObjectToWorld)(_c)), 
-    uv_a(uva), uv_b(uvb), uv_c(uvc), 
-    na((*ObjectToWorld)(_na)), nb((*ObjectToWorld)(_nb)), nc((*ObjectToWorld)(_nc)), single(_single), mp(mat), 
-    alpha_mask(alpha_mask), bump_tex(bump_tex) {
-    edge1 = b-a;
-    edge2 = c-a;
-    normal = cross(edge1, edge2);
-    area = normal.length()/2;
-    normals_provided = true;
-    uv_provided = true;
+    hitable(ObjectToWorld, WorldToObject, reverseOrientation) {
   };
   virtual bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng);
   virtual bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler);
@@ -80,24 +53,20 @@ public:
   
   virtual vec3f random(const point3f& origin, random_gen& rng, Float time = 0);
   virtual vec3f random(const point3f& origin, Sampler* sampler, Float time = 0);
+  void GetUVs(point2f uv[3]) const;
+  Float Area() const;
+  
   virtual std::string GetName() const {
     return(std::string("Triangle"));
   }
   size_t GetSize()  {
     return(sizeof(*this));
   }
-  vec3f normal;
-  vec3f a, b, c;
-  point2f uv_a, uv_b, uv_c;
-  normal3f na, nb, nc;
-  vec3f edge1, edge2;
-  Float area;
-  bool normals_provided;
-  bool uv_provided;
-  bool single;
-  std::shared_ptr<material> mp;
-  std::shared_ptr<alpha_texture> alpha_mask;
-  std::shared_ptr<bump_texture> bump_tex;
+  TriangleMesh* mesh;
+  const int *v;
+  const int *n;
+  const int *t;
+  
 };
 
 #endif
