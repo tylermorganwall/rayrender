@@ -7,14 +7,15 @@
 
 
 void LoadMtlMaterials(std::vector<std::shared_ptr<material> > &mtl_materials,
-                      const std::vector<tinyobj::material_t > &materials,
+                      std::vector<tinyobj::material_t > &materials,
                       std::vector<Float* > &obj_texture_data,
                       std::vector<Float* > &bump_texture_data,
                       std::vector<std::shared_ptr<bump_texture> > &bump_textures,
                       std::vector<std::shared_ptr<alpha_texture> > &alpha_textures,
                       size_t &texture_size,
                       const std::string inputfile, const std::string basedir, bool has_sep,
-                      std::shared_ptr<material> default_material) {
+                      std::shared_ptr<material> default_material, bool load_materials,
+                      bool load_textures) {
   mtl_materials.reserve(materials.size()+1);
   obj_texture_data.reserve(materials.size()+1);
   bump_texture_data.reserve(materials.size()+1);
@@ -40,117 +41,122 @@ void LoadMtlMaterials(std::vector<std::shared_ptr<material> > &mtl_materials,
   std::vector<int > nn_mat_bump(materials.size()+1);
   int nx, ny, nn;
   
-  for (size_t i = 0; i < materials.size(); i++) {
-    nx = 0; ny = 0; nn = 0;
-    if(strlen(materials[i].diffuse_texname.c_str()) > 0) {
-      int ok;
-      if(has_sep) {
-        ok = stbi_info((basedir + separator() + materials[i].diffuse_texname).c_str(), &nx, &ny, &nn);
-        obj_texture_data.push_back(stbi_loadf((basedir + separator() + materials[i].diffuse_texname).c_str(), &nx, &ny, &nn, 0));
-      } else {
-        ok = stbi_info((materials[i].diffuse_texname).c_str(), &nx, &ny, &nn);
-        obj_texture_data.push_back(stbi_loadf((materials[i].diffuse_texname).c_str(), &nx, &ny, &nn, 0));
-      }
-      
-      if(!obj_texture_data[i] || !ok) {
-        REprintf("Load failed: %s\n", stbi_failure_reason());
+  if(load_materials) {
+    for (size_t i = 0; i < materials.size(); i++) {
+      nx = 0; ny = 0; nn = 0;
+      if(strlen(materials[i].diffuse_texname.c_str()) > 0 && load_textures) {
+        int ok;
+        std::replace(materials[i].diffuse_texname.begin(), materials[i].diffuse_texname.end(), '\\', separator());
         if(has_sep) {
-          throw std::runtime_error("Loading failed of: " + (basedir + separator() + materials[i].diffuse_texname) + 
-                                   "-- nx/ny/channels :"  + std::to_string(nx)  +  "/"  +  std::to_string(ny)  +  "/"  +  std::to_string(nn));
+          ok = stbi_info((basedir + separator() + materials[i].diffuse_texname).c_str(), &nx, &ny, &nn);
+          obj_texture_data.push_back(stbi_loadf((basedir + separator() + materials[i].diffuse_texname).c_str(), &nx, &ny, &nn, 0));
         } else {
-          throw std::runtime_error("Loading failed of: " + materials[i].diffuse_texname + 
-                                   "-- nx/ny/channels :" + std::to_string(nx)  +  "/"  +  std::to_string(ny)  +  "/"  +  std::to_string(nn));
+          ok = stbi_info((materials[i].diffuse_texname).c_str(), &nx, &ny, &nn);
+          obj_texture_data.push_back(stbi_loadf((materials[i].diffuse_texname).c_str(), &nx, &ny, &nn, 0));
         }
-      }
-      if(nx == 0 || ny == 0 || nn == 0) {
-        if(has_sep) {
-          throw std::runtime_error("Could not find " + (basedir + separator() + materials[i].diffuse_texname));
-        } else {
-          throw std::runtime_error("Could not find " + materials[i].diffuse_texname);
+        
+        if(!obj_texture_data[i] || !ok) {
+          REprintf("Load failed: %s\n", stbi_failure_reason());
+          if(has_sep) {
+            throw std::runtime_error("Loading failed of: " + (basedir + separator() + materials[i].diffuse_texname) + 
+                                     "-- nx/ny/channels :"  + std::to_string(nx)  +  "/"  +  std::to_string(ny)  +  "/"  +  std::to_string(nn));
+          } else {
+            throw std::runtime_error("Loading failed of: " + materials[i].diffuse_texname + 
+                                     "-- nx/ny/channels :" + std::to_string(nx)  +  "/"  +  std::to_string(ny)  +  "/"  +  std::to_string(nn));
+          }
         }
-      }
-      texture_size += sizeof(Float) * nx * ny * nn;
-      has_diffuse[i] = true;
-      has_single_diffuse[i] = false;
-      nx_mat[i] = nx;
-      ny_mat[i] = ny;
-      nn_mat[i] = nn;
-      has_alpha[i] = false;
-      if(nn == 4) {
-        for(int j = 0; j < nx - 1; j++) {
-          for(int k = 0; k < ny - 1; k++) {
-            if(obj_texture_data[i][4*j + 4*nx*k + 3] != 1.0) {
-              has_alpha[i] = true;
+        if(nx == 0 || ny == 0 || nn == 0) {
+          if(has_sep) {
+            throw std::runtime_error("Could not find " + (basedir + separator() + materials[i].diffuse_texname));
+          } else {
+            throw std::runtime_error("Could not find " + materials[i].diffuse_texname);
+          }
+        }
+        texture_size += sizeof(Float) * nx * ny * nn;
+        has_diffuse[i] = true;
+        has_single_diffuse[i] = false;
+        nx_mat[i] = nx;
+        ny_mat[i] = ny;
+        nn_mat[i] = nn;
+        has_alpha[i] = false;
+        if(nn == 4) {
+          for(int j = 0; j < nx - 1; j++) {
+            for(int k = 0; k < ny - 1; k++) {
+              if(obj_texture_data[i][4*j + 4*nx*k + 3] != 1.0) {
+                has_alpha[i] = true;
+                break;
+              }
+            }
+            if(has_alpha[i]) {
               break;
             }
           }
-          if(has_alpha[i]) {
-            break;
+        } 
+      } else if (sizeof(materials[i].diffuse) == 12 && materials[i].dissolve == 1) {
+        obj_texture_data.push_back(nullptr);
+        alpha_textures.push_back(nullptr);
+        
+        diffuse_materials[i] = vec3f(materials[i].diffuse[0],materials[i].diffuse[1],materials[i].diffuse[2]);
+        has_diffuse[i] = true;
+        has_alpha[i] = false;
+        has_single_diffuse[i] = true;
+      } else if(materials[i].dissolve < 1) {
+        obj_texture_data.push_back(nullptr);
+        alpha_textures.push_back(nullptr);
+        
+        specular_materials[i] = vec3f(materials[i].diffuse[0],materials[i].diffuse[1],materials[i].diffuse[2]);
+        ior_materials[i] = materials[i].ior;
+        has_alpha[i] = false;
+        has_transparency[i] = true; 
+      } else {
+        obj_texture_data.push_back(nullptr);
+        alpha_textures.push_back(nullptr);
+        
+        has_diffuse[i] = false;
+        has_alpha[i] = false;
+        has_single_diffuse[i] = false;
+      }
+      if(strlen(materials[i].bump_texname.c_str()) > 0 && load_textures) {
+        std::replace(materials[i].bump_texname.begin(), materials[i].bump_texname.end(), '\\', separator());
+        
+        if(has_sep) {
+          bump_texture_data[i] = stbi_loadf((basedir + separator() + materials[i].bump_texname).c_str(), &nx, &ny, &nn, 0);
+        } else {
+          bump_texture_data[i] = stbi_loadf(materials[i].bump_texname.c_str(), &nx, &ny, &nn, 0);
+        }
+        texture_size += sizeof(Float) * nx * ny * nn;
+        if(nx == 0 || ny == 0 || nn == 0) {
+          if(has_sep) {
+            throw std::runtime_error("Could not find " + basedir + separator() + materials[i].bump_texname);
+          } else {
+            throw std::runtime_error("Could not find " + materials[i].bump_texname);
           }
         }
-      } 
-    } else if (sizeof(materials[i].diffuse) == 12 && materials[i].dissolve == 1) {
-      obj_texture_data.push_back(nullptr);
-      alpha_textures.push_back(nullptr);
-      
-      diffuse_materials[i] = vec3f(materials[i].diffuse[0],materials[i].diffuse[1],materials[i].diffuse[2]);
-      has_diffuse[i] = true;
-      has_alpha[i] = false;
-      has_single_diffuse[i] = true;
-    } else if(materials[i].dissolve < 1) {
-      obj_texture_data.push_back(nullptr);
-      alpha_textures.push_back(nullptr);
-      
-      specular_materials[i] = vec3f(materials[i].diffuse[0],materials[i].diffuse[1],materials[i].diffuse[2]);
-      ior_materials[i] = materials[i].ior;
-      has_alpha[i] = false;
-      has_transparency[i] = true; 
-    } else {
-      obj_texture_data.push_back(nullptr);
-      alpha_textures.push_back(nullptr);
-      
-      has_diffuse[i] = false;
-      has_alpha[i] = false;
-      has_single_diffuse[i] = false;
-    }
-    if(strlen(materials[i].bump_texname.c_str()) > 0) {
-      if(has_sep) {
-        bump_texture_data[i] = stbi_loadf((basedir + separator() + materials[i].bump_texname).c_str(), &nx, &ny, &nn, 0);
+        nx_mat_bump[i] = nx;
+        ny_mat_bump[i] = ny;
+        nn_mat_bump[i] = nn;
+        bump_intensity[i] = materials[i].bump_texopt.bump_multiplier;
+        has_bump[i] = true;
       } else {
-        bump_texture_data[i] = stbi_loadf(materials[i].bump_texname.c_str(), &nx, &ny, &nn, 0);
+        bump_texture_data.push_back(nullptr);
+        bump_intensity[i] = 1.0f;
+        has_bump[i] = false;
       }
-      texture_size += sizeof(Float) * nx * ny * nn;
-      if(nx == 0 || ny == 0 || nn == 0) {
-        if(has_sep) {
-          throw std::runtime_error("Could not find " + basedir + separator() + materials[i].bump_texname);
-        } else {
-          throw std::runtime_error("Could not find " + materials[i].bump_texname);
-        }
-      }
-      nx_mat_bump[i] = nx;
-      ny_mat_bump[i] = ny;
-      nn_mat_bump[i] = nn;
-      bump_intensity[i] = materials[i].bump_texopt.bump_multiplier;
-      has_bump[i] = true;
-    } else {
-      bump_texture_data.push_back(nullptr);
-      bump_intensity[i] = 1.0f;
-      has_bump[i] = false;
+      std::shared_ptr<alpha_texture> alpha = nullptr;
+      std::shared_ptr<bump_texture> bump = nullptr;
+      
+      if(has_alpha[i]) {
+        alpha = std::make_shared<alpha_texture>(obj_texture_data[i], 
+                                                nx_mat[i], ny_mat[i], nn_mat[i]);
+      } 
+      if(has_bump[i]) {
+        bump = std::make_shared<bump_texture>(bump_texture_data[i],
+                                              nx_mat_bump[i], ny_mat_bump[i], nn_mat_bump[i],
+                                              bump_intensity[i]);
+      } 
+      alpha_textures.push_back(alpha);
+      bump_textures.push_back(bump);
     }
-    std::shared_ptr<alpha_texture> alpha = nullptr;
-    std::shared_ptr<bump_texture> bump = nullptr;
-    
-    if(has_alpha[i]) {
-      alpha = std::make_shared<alpha_texture>(obj_texture_data[i], 
-                                              nx_mat[i], ny_mat[i], nn_mat[i]);
-    } 
-    if(has_bump[i]) {
-      bump = std::make_shared<bump_texture>(bump_texture_data[i],
-                                            nx_mat_bump[i], ny_mat_bump[i], nn_mat_bump[i],
-                                                                                       bump_intensity[i]);
-    } 
-    alpha_textures.push_back(alpha);
-    bump_textures.push_back(bump);
   }
   
   //First texture is default (when shapes[s].mesh.material_ids[f] == -1)
@@ -181,6 +187,7 @@ void LoadMtlMaterials(std::vector<std::shared_ptr<material> > &mtl_materials,
 
 TriangleMesh::TriangleMesh(std::string inputfile, std::string basedir,
                            std::shared_ptr<material> default_material, 
+                           bool load_materials, bool load_textures,
                            std::shared_ptr<Transform> ObjectToWorld, 
                            std::shared_ptr<Transform> WorldToObject, 
                            bool reverseOrientation) : nTriangles(0) {
@@ -210,8 +217,8 @@ TriangleMesh::TriangleMesh(std::string inputfile, std::string basedir,
       }
     }
     
-    size_t nNormals = attrib.normals.size();
-    size_t nTex = attrib.texcoords.size();
+    nNormals = attrib.normals.size();
+    nTex = attrib.texcoords.size();
     p.reset(new point3f[nVertices / 3]);
     for (size_t i = 0; i < nVertices; i += 3) {
       p[i / 3] = (*ObjectToWorld)(point3f(attrib.vertices[i+0],
@@ -243,7 +250,8 @@ TriangleMesh::TriangleMesh(std::string inputfile, std::string basedir,
     
     LoadMtlMaterials(mtl_materials, materials, obj_texture_data,
                      bump_texture_data, bump_textures, alpha_textures,
-                     texture_size, inputfile, basedir, has_sep, default_material);
+                     texture_size, inputfile, basedir, has_sep, default_material,
+                     load_materials, load_textures);
     for (size_t s = 0; s < shapes.size(); s++) {
       // Loop over faces(polygon)
       for (size_t f = 0; f < shapes[s].mesh.num_face_vertices.size(); f++) {
@@ -256,4 +264,26 @@ TriangleMesh::TriangleMesh(std::string inputfile, std::string basedir,
     std::string mes = "Error reading " + inputfile + ": ";
     throw std::runtime_error(mes + warn + err);
   }
+}
+
+size_t TriangleMesh::GetSize() {
+  size_t size = sizeof(*this);
+  size += nTex / 2 * sizeof(point2f) + 
+          nNormals / 3 * sizeof(normal3f) + 
+          nVertices / 3 * sizeof(point3f);
+  for(size_t i = 0; i < mtl_materials.size(); i++) {
+    size += mtl_materials[i]->GetSize();
+  }
+  size += face_material_id.size()*sizeof(size_t);
+  size += sizeof(Float*) * bump_texture_data.size();
+  size += sizeof(Float*) * obj_texture_data.size();
+  size += sizeof(std::shared_ptr<alpha_texture>) * alpha_textures.size();
+  size += sizeof(std::shared_ptr<bump_texture>)  * bump_textures.size();
+  size += sizeof(int) * vertexIndices.size();
+  size += sizeof(int) * normalIndices.size();
+  size += sizeof(int) * texIndices.size();
+  Rcpp::Rcout << "Trimesh Storage Size: " << size << "\n";
+  
+  size += texture_size;
+  return(size);
 }

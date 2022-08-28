@@ -536,7 +536,9 @@ disk = function(x = 0, y = 0, z = 0, radius = 1, inner_radius = 0, material = di
 #' @param z Default `0`. z-coordinate to offset the model.
 #' @param scale_obj Default `1`. Amount to scale the model. Use this to scale the object up or down on all axes, as it is
 #' more robust to numerical precision errors than the generic scale option.
-#' @param texture Default `FALSE`. Whether to load the obj file texture.
+#' @param load_material Default `FALSE`. Whether to load the obj file material (MTL file).
+#' @param load_textures Default `TRUE`. If `load_material = TRUE`, whether to load textures in the MTL file (versus
+#' just using the colors specified for each material).
 #' @param vertex_colors Default `FALSE`. Set to `TRUE` if the OBJ file has vertex colors to apply them
 #' to the model.
 #' @param material Default  \code{\link{diffuse}}.The material, called from one of the material 
@@ -585,15 +587,15 @@ disk = function(x = 0, y = 0, z = 0, radius = 1, inner_radius = 0, material = di
 #'                lookat = c(0,1,0)) 
 #' }
 obj_model = function(filename, x = 0, y = 0, z = 0, scale_obj = 1, 
-                     texture = FALSE, vertex_colors = FALSE,
+                     load_material = FALSE, load_textures = TRUE, vertex_colors = FALSE,
                      material = diffuse(), 
                      angle = c(0, 0, 0), order_rotation = c(1, 2, 3), 
                      flipped = FALSE, scale = c(1,1,1)) {
   if(length(scale) == 1) {
     scale = c(scale, scale, scale)
   }
-  info = c(unlist(material$properties), scale_obj)
-  if(texture) {
+  info = c(unlist(material$properties), scale_obj, load_textures)
+  if(load_material) {
     shape = "objcolor"
   } else {
     shape = "obj"

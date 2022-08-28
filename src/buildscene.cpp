@@ -602,7 +602,7 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
       std::string objfilename = Rcpp::as<std::string>(fileinfo(i));
       std::string objbasedirname = Rcpp::as<std::string>(filebasedir(i));
       entry = std::make_shared<trimesh>(objfilename, objbasedirname, 
-                                        1, 0, tex,
+                                        1, 0, tex, false, false,
                                         shutteropen, shutterclose, bvh_type, rng,
                                         ObjToWorld,WorldToObj, isflipped(i));
       if(isvolume(i)) {
@@ -617,10 +617,10 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
       std::shared_ptr<hitable> entry;
       std::string objfilename = Rcpp::as<std::string>(fileinfo(i));
       std::string objbasedirname = Rcpp::as<std::string>(filebasedir(i));
-        entry = std::make_shared<trimesh>(objfilename, objbasedirname, 
-                                          tempvector(prop_len+1), sigma(i), tex,
-                                          shutteropen, shutterclose, bvh_type, rng,
-                                          ObjToWorld,WorldToObj, isflipped(i));
+      entry = std::make_shared<trimesh>(objfilename, objbasedirname, 
+                                        tempvector(prop_len+1), sigma(i), tex, true, (bool)tempvector(prop_len+2),
+                                        shutteropen, shutterclose, bvh_type, rng,
+                                        ObjToWorld,WorldToObj, isflipped(i));
       if(isvolume(i)) {
         entry = std::make_shared<constant_medium>(entry, voldensity(i), 
                                                   std::make_shared<constant_texture>(point3f(tempvector(0),tempvector(1),tempvector(2))));
@@ -666,7 +666,7 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
       std::string objfilename = Rcpp::as<std::string>(fileinfo(i));
       std::string objbasedirname = Rcpp::as<std::string>(filebasedir(i));
       entry = std::make_shared<trimesh>(objfilename, objbasedirname, 
-                                        tempvector(prop_len+1), sigma(i), tex,
+                                        tempvector(prop_len+1), sigma(i), tex, true, false,
                                         shutteropen, shutterclose, bvh_type, rng,
                                         ObjToWorld,WorldToObj, isflipped(i));
       if(isvolume(i)) {
@@ -753,10 +753,10 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
       list.add(entry);
     }
   }
-  auto fff = std::make_shared<bvh_node>(list, shutteropen, shutterclose, bvh_type, rng);
-  auto ggg = fff->CountNodeLeaf();
-  Rcpp::Rcout << "Node/Leaf: " << ggg.first << " " << ggg.second << " " << fff->GetSize() << "\n";
-  return(fff);
+  auto world_bvh = std::make_shared<bvh_node>(list, shutteropen, shutterclose, bvh_type, rng);
+  auto nodeleaf = world_bvh->CountNodeLeaf();
+  Rcpp::Rcout << "Node/Leaf: " << nodeleaf.first << " " << nodeleaf.second << " " << world_bvh->GetSize() << "\n";
+  return(world_bvh);
 }
 
 std::shared_ptr<hitable> build_imp_sample(IntegerVector& type, 
@@ -945,7 +945,7 @@ std::shared_ptr<hitable> build_imp_sample(IntegerVector& type,
     std::string objfilename = Rcpp::as<std::string>(fileinfo(i));
     std::string objbasedirname = Rcpp::as<std::string>(filebasedir(i));
     entry = std::make_shared<trimesh>(objfilename, objbasedirname,
-                                      tempvector(prop_len+1), 0, tex, 
+                                      tempvector(prop_len+1), 0, tex, false, false,
                                       shutteropen, shutterclose, bvh_type, rng, ObjToWorld,WorldToObj, false);
     if(has_animation(i)) {
       entry = std::make_shared<AnimatedHitable>(entry, Animate);

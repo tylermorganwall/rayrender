@@ -10,7 +10,8 @@ obj_model(
   y = 0,
   z = 0,
   scale_obj = 1,
-  texture = FALSE,
+  load_material = FALSE,
+  load_textures = TRUE,
   vertex_colors = FALSE,
   material = diffuse(),
   angle = c(0, 0, 0),
@@ -31,7 +32,10 @@ obj_model(
 \item{scale_obj}{Default `1`. Amount to scale the model. Use this to scale the object up or down on all axes, as it is
 more robust to numerical precision errors than the generic scale option.}
 
-\item{texture}{Default `FALSE`. Whether to load the obj file texture.}
+\item{load_material}{Default `FALSE`. Whether to load the obj file material (MTL file).}
+
+\item{load_textures}{Default `TRUE`. If `load_material = TRUE`, whether to load textures in the MTL file (versus
+just using the colors specified for each material).}
 
 \item{vertex_colors}{Default `FALSE`. Set to `TRUE` if the OBJ file has vertex colors to apply them
 to the model.}

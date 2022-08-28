@@ -14,7 +14,6 @@ public:
   InfiniteAreaLight() {}
   ~InfiniteAreaLight() {
     delete distribution;
-    // delete mat_ptr;
   }
   InfiniteAreaLight(int width, int height, Float r, vec3f center, 
                     std::shared_ptr<texture> image,  std::shared_ptr<material> mat,

@@ -23,6 +23,7 @@ struct TriangleMesh {
   // TriangleMesh Public Methods
   TriangleMesh(std::string inputfile, std::string basedir,
                std::shared_ptr<material> default_material, 
+               bool load_materials, bool load_textures,
                std::shared_ptr<Transform> ObjectToWorld, 
                std::shared_ptr<Transform> WorldToObject, 
                bool reverseOrientation);
@@ -34,18 +35,19 @@ struct TriangleMesh {
       if(bump) stbi_image_free(bump);
     }
   }
+  size_t GetSize();
+    
   // TriangleMesh Data
-  size_t nTriangles, nVertices;
+  size_t nTriangles, nVertices, nNormals, nTex;
   std::vector<int> vertexIndices;
   std::vector<int> normalIndices;
   std::vector<int> texIndices;
 
   std::unique_ptr<point3f[]>  p;
   std::unique_ptr<normal3f[]> n;
-  std::unique_ptr<vec3f[]>    s;
+  // std::unique_ptr<vec3f[]>    s;
   std::unique_ptr<point2f[]>  uv;
-  hitable_list triangles;
-  
+
   // std::shared_ptr<alpha_texture> alphaMask;
   // std::vector<int> faceIndices;
   std::vector<std::shared_ptr<material> > mtl_materials;

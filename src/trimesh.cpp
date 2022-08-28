@@ -1,11 +1,12 @@
 #include "trimesh.h"
 
 trimesh::trimesh(std::string inputfile, std::string basedir, Float scale, Float sigma,
-                 std::shared_ptr<material> default_material,
+                 std::shared_ptr<material> default_material, bool load_materials, bool load_textures,
         Float shutteropen, Float shutterclose, int bvh_type, random_gen rng,
         std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation) : 
   hitable(ObjectToWorld, WorldToObject, reverseOrientation) {
-  mesh = std::unique_ptr<TriangleMesh>(new TriangleMesh(inputfile, basedir, default_material,
+  mesh = std::unique_ptr<TriangleMesh>(new TriangleMesh(inputfile, basedir, default_material, 
+                                                        load_materials, load_textures,
                                                         ObjectToWorld, WorldToObject, reverseOrientation));
   size_t n = mesh->nTriangles;
   for(size_t i = 0; i < n; i += 3) {
@@ -16,6 +17,8 @@ trimesh::trimesh(std::string inputfile, std::string basedir, Float scale, Float 
                                              ObjectToWorld, WorldToObject, reverseOrientation));
   }
   tri_mesh_bvh = std::make_shared<bvh_node>(triangles, shutteropen, shutterclose, bvh_type, rng);
+  triangles.objects.clear();
+  Rcpp::Rcout << "List size: " << triangles.GetSize() << " Trisize: " << tri_mesh_bvh->GetSize() << "\n";
 }
 
 bool trimesh::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
@@ -50,9 +53,8 @@ vec3f trimesh::random(const point3f& o, Sampler* sampler, Float time) {
 }
 
 size_t trimesh::GetSize() {
-  size_t total_size = tri_mesh_bvh->GetSize() + sizeof(*this) + mesh->texture_size;
-  total_size += sizeof(Float*) * mesh->bump_texture_data.size();
-  total_size += sizeof(Float*) * mesh->obj_texture_data.size();
+  size_t total_size = tri_mesh_bvh->GetSize() + sizeof(*this);
+  total_size += mesh->GetSize();
   return(total_size);
 }
 

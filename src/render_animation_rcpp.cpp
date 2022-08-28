@@ -551,6 +551,10 @@ void render_animation_rcpp(List camera_info, List scene_info, List camera_moveme
       stbi_image_free(bump_textures[i]);
       delete nx_ny_nn_bump[i];
     }
+    if(has_roughness(i)) {
+      stbi_image_free(roughness_textures[i]);
+      delete nx_ny_nn_roughness[i];
+    }
   }
   delete shared_materials;
   PutRNGstate();
