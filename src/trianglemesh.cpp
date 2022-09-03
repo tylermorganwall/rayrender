@@ -48,8 +48,6 @@ void LoadMtlMaterials(std::vector<std::shared_ptr<material> > &mtl_materials,
   if(load_materials) {
     for (size_t i = 0; i < materials.size(); i++) {
       nx = 0; ny = 0; nn = 0;
-      // Rprintf("(%i/%i) Loading OBJ Material %s\n", i+1, materials.size(),materials[i].name.c_str());
-      // Rcpp::Rcout << "Loading " << materials[i].name << ": " << i+1 << "/" << materials.size() << " materials.\n";
       if(strlen(materials[i].diffuse_texname.c_str()) > 0 && load_textures) {
         int ok;
         std::replace(materials[i].diffuse_texname.begin(), materials[i].diffuse_texname.end(), '\\', separator());
@@ -78,6 +76,8 @@ void LoadMtlMaterials(std::vector<std::shared_ptr<material> > &mtl_materials,
             throw std::runtime_error("Could not find " + materials[i].diffuse_texname);
           }
         }
+        Rprintf("(%i/%i) Loading OBJ Material %s Dims: (%i/%i/%i) \n", i+1, materials.size(),materials[i].name.c_str(),nx,ny,nn);
+        
 
         texture_size += sizeof(unsigned char) * nx * ny * nn;
         has_diffuse[i] = true;
@@ -101,24 +101,18 @@ void LoadMtlMaterials(std::vector<std::shared_ptr<material> > &mtl_materials,
         } 
       } else if (sizeof(materials[i].diffuse) == 12 && materials[i].dissolve == 1) {
         obj_texture_data.push_back(nullptr);
-        alpha_textures.push_back(nullptr);
-        
         diffuse_materials[i] = vec3f(materials[i].diffuse[0],materials[i].diffuse[1],materials[i].diffuse[2]);
         has_diffuse[i] = true;
         has_alpha[i] = false;
         has_single_diffuse[i] = true;
       } else if(materials[i].dissolve < 1) {
         obj_texture_data.push_back(nullptr);
-        alpha_textures.push_back(nullptr);
-        
         specular_materials[i] = vec3f(materials[i].diffuse[0],materials[i].diffuse[1],materials[i].diffuse[2]);
         ior_materials[i] = materials[i].ior;
         has_alpha[i] = false;
         has_transparency[i] = true; 
       } else {
         obj_texture_data.push_back(nullptr);
-        alpha_textures.push_back(nullptr);
-        
         has_diffuse[i] = false;
         has_alpha[i] = false;
         has_single_diffuse[i] = false;

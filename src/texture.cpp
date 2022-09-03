@@ -37,7 +37,7 @@ point3f image_texture_char::value(Float u, Float v, const point3f& p) const {
   Float r = Float(data[channels*i + channels*nx*j])   * intensity * rescale;
   Float g = Float(data[channels*i + channels*nx*j+1]) * intensity * rescale;
   Float b = Float(data[channels*i + channels*nx*j+2]) * intensity * rescale;
-  return(point3f(r,g,b));
+  return(point3f(r*r,g*g,b*b));
 }
 
 Float alpha_texture::value(Float u, Float v, const point3f& p) const {

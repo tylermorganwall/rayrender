@@ -157,16 +157,17 @@ bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
       rec.normal = normal;
     }
   }
+  bump_texture* bump_tex = mesh->bump_textures[mat_id].get();
+  
+  if(bump_tex) {
+    vec3f norm_bump = dot(r.direction(), normal) < 0 ? rec.normal.convert_to_vec3() : -rec.normal.convert_to_vec3();
 
-  // if(bump_tex) {
-  //   vec3f norm_bump = dot(r.direction(), normal) < 0 ? rec.normal.convert_to_vec3() : -rec.normal.convert_to_vec3();
-  // 
-  //   point3f bvbu = bump_tex->value(u, v, rec.p);
-  //   rec.bump_normal = cross(rec.dpdu + bvbu.x() * norm_bump ,
-  //                           rec.dpdv - bvbu.y() * norm_bump);
-  //   rec.bump_normal.make_unit_vector();
-  //   rec.has_bump = true;
-  // }
+    point3f bvbu = bump_tex->value(uHit, vHit, rec.p);
+    rec.bump_normal = cross(rec.dpdu + bvbu.x() * norm_bump ,
+                            rec.dpdv - bvbu.y() * norm_bump);
+    rec.bump_normal.make_unit_vector();
+    rec.has_bump = true;
+  }
   rec.u = uHit;
   rec.v = vHit;
   
