@@ -166,18 +166,18 @@ plymesh::plymesh(std::string inputfile, std::string basedir, std::shared_ptr<mat
       tempnormal = false;
     }
     
-    if(has_normals && tempnormal) {
-      triangles.add(std::make_shared<triangle>(tris[0],tris[1],tris[2],
-                                       normals[0],normals[1],normals[2],
-                                                                    false,
-                                                                    mat_ptr, nullptr,  nullptr, 
-                                                                    ObjectToWorld, WorldToObject, reverseOrientation));
-    } else {
-      triangles.add(std::make_shared<triangle>(tris[0],tris[1],tris[2], false, mat_ptr, nullptr, nullptr, 
-                                               ObjectToWorld, WorldToObject, reverseOrientation));
-    }
+    // if(has_normals && tempnormal) {
+    //   triangles.add(std::make_shared<triangle>(tris[0],tris[1],tris[2],
+    //                                    normals[0],normals[1],normals[2],
+    //                                                                 false,
+    //                                                                 mat_ptr, nullptr,  nullptr, 
+    //                                                                 ObjectToWorld, WorldToObject, reverseOrientation));
+    // } else {
+    //   triangles.add(std::make_shared<triangle>(tris[0],tris[1],tris[2], false, mat_ptr, nullptr, nullptr, 
+    //                                            ObjectToWorld, WorldToObject, reverseOrientation));
+    // }
   }
-  ply_mesh_bvh = std::make_shared<bvh_node>(triangles, shutteropen, shutterclose, bvh_type, rng);
+  // ply_mesh_bvh = std::make_shared<bvh_node>(triangles, shutteropen, shutterclose, bvh_type, rng);
   delete tri;
 };
 

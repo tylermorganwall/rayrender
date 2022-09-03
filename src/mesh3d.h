@@ -12,14 +12,7 @@
 class mesh3d : public hitable {
   public:
     mesh3d() {}
-    ~mesh3d() {
-      if(mesh_materials) {
-        stbi_image_free(mesh_materials);
-      }
-      if(bump) {
-        stbi_image_free(bump);
-      }
-    }
+    ~mesh3d() {}
     mesh3d(Rcpp::List mesh_info, std::shared_ptr<material>  mat, 
            Float shutteropen, Float shutterclose, int bvh_type, random_gen rng,
            std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation,
@@ -33,14 +26,18 @@ class mesh3d : public hitable {
       return(std::string("Mesh3d"));
     }
     size_t GetSize()  {
-      return(sizeof(*this) + mesh_bvh->GetSize() + sizeof(*mesh_materials) + sizeof(*bump));
+      return(sizeof(*this) + mesh_bvh->GetSize());
     }
     std::pair<size_t,size_t> CountNodeLeaf();
-    std::shared_ptr<bvh_node> mesh_bvh;
-    std::shared_ptr<material>  mat_ptr;
+    
+    
+    //Data Members
+    std::unique_ptr<TriangleMesh> mesh;
     hitable_list triangles;
-    Float* mesh_materials;
-    unsigned char *bump;
+    
+    //Hitable extras
+    std::shared_ptr<material> mat_ptr;
+    std::shared_ptr<bvh_node> mesh_bvh;
 };
 
 

@@ -27,6 +27,20 @@ struct TriangleMesh {
                std::shared_ptr<Transform> ObjectToWorld, 
                std::shared_ptr<Transform> WorldToObject, 
                bool reverseOrientation);
+  TriangleMesh(Rcpp::NumericMatrix vertices, 
+               Rcpp::IntegerMatrix indices, 
+               Rcpp::NumericMatrix normals, 
+               Rcpp::NumericMatrix texcoords,
+               unsigned char * mesh_texture_data,
+               unsigned char * bump_texture_data,
+               std::shared_ptr<alpha_texture> alpha,
+               std::shared_ptr<bump_texture> bump,
+               std::shared_ptr<material> default_material, 
+               bool load_materials, bool load_textures,
+               std::shared_ptr<Transform> ObjectToWorld, 
+               std::shared_ptr<Transform> WorldToObject, 
+               bool reverseOrientation);
+  
   ~TriangleMesh() {
     for(auto tex : obj_texture_data) {
       if(tex) stbi_image_free(tex);
@@ -48,8 +62,6 @@ struct TriangleMesh {
   // std::unique_ptr<vec3f[]>    s;
   std::unique_ptr<point2f[]>  uv;
 
-  // std::shared_ptr<alpha_texture> alphaMask;
-  // std::vector<int> faceIndices;
   std::vector<std::shared_ptr<material> > mtl_materials;
   std::vector<int > face_material_id;
   

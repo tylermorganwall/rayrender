@@ -574,29 +574,29 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
       }
       list.add(entry);
     } else if (shape(i)  == 6) {
-      std::shared_ptr<hitable> entry;
-      if(tri_normal_bools(i)) {
-        entry= std::make_shared<triangle>(vec3f(tempvector(prop_len+1),tempvector(prop_len+2),tempvector(prop_len+3)),
-                            vec3f(tempvector(prop_len+4),tempvector(prop_len+5),tempvector(prop_len+6)),
-                            vec3f(tempvector(prop_len+7),tempvector(prop_len+8),tempvector(prop_len+9)),
-                            normal3f(tempvector(prop_len+10),tempvector(prop_len+11),tempvector(prop_len+12)),
-                            normal3f(tempvector(prop_len+13),tempvector(prop_len+14),tempvector(prop_len+15)),
-                            normal3f(tempvector(prop_len+16),tempvector(prop_len+17),tempvector(prop_len+18)),
-                            !is_shared_mat(i), //turn off if shared material (e.g. extruded polygon)
-                            tex, alpha[i], bump[i],
-                            ObjToWorld,WorldToObj, isflipped(i));
-      } else {
-        entry= std::make_shared<triangle>(vec3f(tempvector(prop_len+1),tempvector(prop_len+2),tempvector(prop_len+3)),
-                            vec3f(tempvector(prop_len+4),tempvector(prop_len+5),tempvector(prop_len+6)),
-                            vec3f(tempvector(prop_len+7),tempvector(prop_len+8),tempvector(prop_len+9)),
-                            !is_shared_mat(i), //turn off if shared material (e.g. extruded polygon)
-                            tex, alpha[i], bump[i],
-                            ObjToWorld,WorldToObj, isflipped(i));
-      }
-      if(has_animation(i)) {
-        entry = std::make_shared<AnimatedHitable>(entry, Animate);
-      }
-      list.add(entry);
+      // std::shared_ptr<hitable> entry;
+      // if(tri_normal_bools(i)) {
+      //   entry= std::make_shared<triangle>(vec3f(tempvector(prop_len+1),tempvector(prop_len+2),tempvector(prop_len+3)),
+      //                       vec3f(tempvector(prop_len+4),tempvector(prop_len+5),tempvector(prop_len+6)),
+      //                       vec3f(tempvector(prop_len+7),tempvector(prop_len+8),tempvector(prop_len+9)),
+      //                       normal3f(tempvector(prop_len+10),tempvector(prop_len+11),tempvector(prop_len+12)),
+      //                       normal3f(tempvector(prop_len+13),tempvector(prop_len+14),tempvector(prop_len+15)),
+      //                       normal3f(tempvector(prop_len+16),tempvector(prop_len+17),tempvector(prop_len+18)),
+      //                       !is_shared_mat(i), //turn off if shared material (e.g. extruded polygon)
+      //                       tex, alpha[i], bump[i],
+      //                       ObjToWorld,WorldToObj, isflipped(i));
+      // } else {
+      //   entry= std::make_shared<triangle>(vec3f(tempvector(prop_len+1),tempvector(prop_len+2),tempvector(prop_len+3)),
+      //                       vec3f(tempvector(prop_len+4),tempvector(prop_len+5),tempvector(prop_len+6)),
+      //                       vec3f(tempvector(prop_len+7),tempvector(prop_len+8),tempvector(prop_len+9)),
+      //                       !is_shared_mat(i), //turn off if shared material (e.g. extruded polygon)
+      //                       tex, alpha[i], bump[i],
+      //                       ObjToWorld,WorldToObj, isflipped(i));
+      // }
+      // if(has_animation(i)) {
+      //   entry = std::make_shared<AnimatedHitable>(entry, Animate);
+      // }
+      // list.add(entry);
     } else if (shape(i) == 7) {
       std::shared_ptr<hitable> entry;
       std::string objfilename = Rcpp::as<std::string>(fileinfo(i));
@@ -931,15 +931,15 @@ std::shared_ptr<hitable> build_imp_sample(IntegerVector& type,
     }
     return(entry);
   } else if (shape(i) == 6) {
-    std::shared_ptr<hitable> entry = std::make_shared<triangle>(vec3f(tempvector(prop_len+1),tempvector(prop_len+2),tempvector(prop_len+3)),
-                                  vec3f(tempvector(prop_len+4),tempvector(prop_len+5),tempvector(prop_len+6)),
-                                  vec3f(tempvector(prop_len+7),tempvector(prop_len+8),tempvector(prop_len+9)),
-                                  false,
-                                  tex, alpha, bump, ObjToWorld,WorldToObj, false);
-    if(has_animation(i)) {
-      entry = std::make_shared<AnimatedHitable>(entry, Animate);
-    }
-    return(entry);
+    // std::shared_ptr<hitable> entry = std::make_shared<triangle>(vec3f(tempvector(prop_len+1),tempvector(prop_len+2),tempvector(prop_len+3)),
+    //                               vec3f(tempvector(prop_len+4),tempvector(prop_len+5),tempvector(prop_len+6)),
+    //                               vec3f(tempvector(prop_len+7),tempvector(prop_len+8),tempvector(prop_len+9)),
+    //                               false,
+    //                               tex, alpha, bump, ObjToWorld,WorldToObj, false);
+    // if(has_animation(i)) {
+    //   entry = std::make_shared<AnimatedHitable>(entry, Animate);
+    // }
+    // return(entry);
   } else if (shape(i) == 7 || shape(i) == 8 || shape(i) == 12) {
     std::shared_ptr<hitable> entry;
     std::string objfilename = Rcpp::as<std::string>(fileinfo(i));

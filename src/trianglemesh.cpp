@@ -282,6 +282,86 @@ TriangleMesh::TriangleMesh(std::string inputfile, std::string basedir,
   }
 }
 
+TriangleMesh::TriangleMesh(Rcpp::NumericMatrix vertices, 
+                           Rcpp::IntegerMatrix indices, 
+                           Rcpp::NumericMatrix normals, 
+                           Rcpp::NumericMatrix texcoords,
+                           unsigned char * mesh_texture_data,
+                           unsigned char * bump_texture_data_,
+                           std::shared_ptr<alpha_texture> alpha,
+                           std::shared_ptr<bump_texture> bump,
+                           std::shared_ptr<material> default_material, 
+                           bool load_materials, bool load_textures,
+                           std::shared_ptr<Transform> ObjectToWorld, 
+                           std::shared_ptr<Transform> WorldToObject, 
+                           bool reverseOrientation) : nTriangles(0) {
+  texture_size = 0;
+  vertexIndices.clear();
+  normalIndices.clear();
+  texIndices.clear();
+  face_material_id.clear();
+  
+  nTriangles = 0;
+  for (size_t s = 0; s < indices.nrow(); s++) {
+    nTriangles++;
+    vertexIndices.push_back(indices(s,0));
+    vertexIndices.push_back(indices(s,1));
+    vertexIndices.push_back(indices(s,2));
+    normalIndices.push_back(indices(s,0));
+    normalIndices.push_back(indices(s,1));
+    normalIndices.push_back(indices(s,2));
+    texIndices.push_back(indices(s,0));
+    texIndices.push_back(indices(s,1));
+    texIndices.push_back(indices(s,2));
+  }
+  
+  nVertices = vertices.nrow();
+  nNormals = normals.nrow();
+  nTex = texcoords.nrow();
+  p.reset(new point3f[nVertices]);
+  for (size_t i = 0; i < nVertices; i += 1) {
+    p[i] = (*ObjectToWorld)(point3f(vertices(i,0),
+                                    vertices(i,1),
+                                    vertices(i,2)));
+  }
+  
+  
+  if(nNormals > 0) {
+    n.reset(new normal3f[nNormals]);
+    for (size_t i = 0; i < nNormals; i++) {
+      n[i] = (*ObjectToWorld)(normal3f(normals(i,0),
+                                       normals(i,1),
+                                       normals(i,2)));
+    }
+  } else {
+    n = nullptr;
+  }
+  
+  if(nTex > 0) {
+    uv.reset(new point2f[nTex]);
+    for (size_t i = 0; i < nTex; i++) {
+      uv[i] = point2f(texcoords(i,0),
+                      texcoords(i,1));
+    }
+  } else {
+    uv = nullptr;
+  }
+  
+  //Material stuff
+  for (size_t s = 0; s < indices.nrow(); s++) {
+    face_material_id.push_back(0);
+  }
+  mtl_materials.push_back(default_material);
+  if(mesh_texture_data) {
+    obj_texture_data.push_back(mesh_texture_data);
+  }
+  if(bump_texture_data_) {
+    bump_texture_data.push_back(bump_texture_data_);
+  }
+  alpha_textures.push_back(alpha);
+  bump_textures.push_back(bump);
+}
+
 size_t TriangleMesh::GetSize() {
   size_t size = sizeof(*this);
   size += nTex / 2 * sizeof(point2f) + 
@@ -298,8 +378,6 @@ size_t TriangleMesh::GetSize() {
   size += sizeof(int) * vertexIndices.size();
   size += sizeof(int) * normalIndices.size();
   size += sizeof(int) * texIndices.size();
-  Rcpp::Rcout << "Trimesh Storage Size: " << size << "\n";
-  
   size += texture_size;
   return(size);
 }
