@@ -131,11 +131,13 @@ bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
   bool alpha_miss = false;
   normal3f normal = normal3f(unit_vector(cross(dp02, dp12)));
   
-  // if(alpha_mask) {
-  //   if(alpha_mask->value(u, v, rec.p) < rng.unif_rand()) {
-  //     alpha_miss = true;
-  //   }
-  // }
+  int mat_id = mesh->face_material_id[face_number];
+  alpha_texture* alpha_mask = mesh->alpha_textures[mat_id].get();
+  if(alpha_mask) {
+    if(alpha_mask->value(uHit, vHit, rec.p) < rng.unif_rand()) {
+      alpha_miss = true;
+    }
+  }
   rec.t = t;
   rec.p = pHit;
   rec.pError = gamma(7) * vec3f(xAbsSum, yAbsSum, zAbsSum);
@@ -149,11 +151,11 @@ bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
     normal3f n3 = mesh->n[n[2]];
     rec.normal = unit_vector(b0 * n1 + b1 * n2 + b2 * n3);
   } else {
-    // if(alpha_mask) {
-    //   rec.normal = dot(r.direction(), normal) < 0 ? normal : -normal;
-    // } else {
+    if(alpha_mask) {
+      rec.normal = dot(r.direction(), normal) < 0 ? normal : -normal;
+    } else {
       rec.normal = normal;
-    // }
+    }
   }
 
   // if(bump_tex) {
@@ -168,7 +170,7 @@ bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
   rec.u = uHit;
   rec.v = vHit;
   
-  rec.mat_ptr = mesh->mtl_materials[mesh->face_material_id[*v / 3]].get();
+  rec.mat_ptr = mesh->mtl_materials[mesh->face_material_id[face_number]].get();
   rec.alpha_miss = alpha_miss;
   rec.shape = this;
   

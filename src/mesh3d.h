@@ -40,7 +40,7 @@ class mesh3d : public hitable {
     std::shared_ptr<material>  mat_ptr;
     hitable_list triangles;
     Float* mesh_materials;
-    Float* bump;
+    unsigned char *bump;
 };
 
 

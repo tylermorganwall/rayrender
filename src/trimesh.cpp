@@ -13,12 +13,11 @@ trimesh::trimesh(std::string inputfile, std::string basedir, Float scale, Float 
     triangles.add(std::make_shared<triangle>(mesh.get(), 
                                              &mesh->vertexIndices[i], 
                                              &mesh->normalIndices[i],
-                                             &mesh->texIndices[i],
+                                             &mesh->texIndices[i], i / 3,
                                              ObjectToWorld, WorldToObject, reverseOrientation));
   }
   tri_mesh_bvh = std::make_shared<bvh_node>(triangles, shutteropen, shutterclose, bvh_type, rng);
   triangles.objects.clear();
-  Rcpp::Rcout << "List size: " << triangles.GetSize() << " Trisize: " << tri_mesh_bvh->GetSize() << "\n";
 }
 
 bool trimesh::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {

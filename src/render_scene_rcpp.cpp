@@ -268,13 +268,13 @@ List render_scene_rcpp(List camera_info, List scene_info) {
   std::vector<Float* > textures;
   std::vector<int* > nx_ny_nn;
 
-  std::vector<Float* > alpha_textures;
+  std::vector<unsigned char * > alpha_textures;
   std::vector<int* > nx_ny_nn_alpha;
 
-  std::vector<Float* > bump_textures;
+  std::vector<unsigned char * > bump_textures;
   std::vector<int* > nx_ny_nn_bump;
 
-  std::vector<Float* > roughness_textures;
+  std::vector<unsigned char * > roughness_textures;
   std::vector<int* > nx_ny_nn_roughness;
   //Shared material vector
   std::vector<std::shared_ptr<material> >* shared_materials = new std::vector<std::shared_ptr<material> >;
@@ -296,9 +296,8 @@ List render_scene_rcpp(List camera_info, List scene_info) {
       nx_ny_nn.push_back(nullptr);
     }
     if(has_alpha(i)) {
-      stbi_ldr_to_hdr_gamma(1.0f);
       int nxa, nya, nna;
-      Float* tex_data_alpha = stbi_loadf(alpha_files(i), &nxa, &nya, &nna, 0);
+      unsigned char * tex_data_alpha = stbi_load(alpha_files(i), &nxa, &nya, &nna, 0);
       texture_bytes += nxa * nya * nna;
       
       alpha_textures.push_back(tex_data_alpha);
@@ -306,14 +305,13 @@ List render_scene_rcpp(List camera_info, List scene_info) {
       nx_ny_nn_alpha[i][0] = nxa;
       nx_ny_nn_alpha[i][1] = nya;
       nx_ny_nn_alpha[i][2] = nna;
-      stbi_ldr_to_hdr_gamma(2.2f);
     } else {
       alpha_textures.push_back(nullptr);
       nx_ny_nn_alpha.push_back(nullptr);
     }
     if(has_bump(i)) {
       int nxb, nyb, nnb;
-      Float* tex_data_bump = stbi_loadf(bump_files(i), &nxb, &nyb, &nnb, 0);
+      unsigned char * tex_data_bump = stbi_load(bump_files(i), &nxb, &nyb, &nnb, 0);
       bump_textures.push_back(tex_data_bump);
       nx_ny_nn_bump.push_back(new int[3]);
       nx_ny_nn_bump[i][0] = nxb;
@@ -326,7 +324,7 @@ List render_scene_rcpp(List camera_info, List scene_info) {
     if(has_roughness(i)) {
       NumericVector temp_glossy = as<NumericVector>(glossyinfo(i));
       int nxr, nyr, nnr;
-      Float* tex_data_roughness = stbi_loadf(roughness_files(i), &nxr, &nyr, &nnr, 0);
+      unsigned char * tex_data_roughness = stbi_load(roughness_files(i), &nxr, &nyr, &nnr, 0);
       texture_bytes += nxr * nyr * nnr;
       
       Float min = temp_glossy(9), max = temp_glossy(10);
@@ -401,8 +399,8 @@ List render_scene_rcpp(List camera_info, List scene_info) {
   //Calculate world bounds and ensure camera is inside infinite area light
   aabb bounding_box_world;
   worldbvh->bounding_box(0,0,bounding_box_world);
-  Float world_radius = bounding_box_world.diag.length()/2 ;
-  vec3f world_center  = bounding_box_world.centroid;
+  Float world_radius = bounding_box_world.Diag().length()/2 ;
+  vec3f world_center  = bounding_box_world.Centroid();
   world_radius = world_radius > (lookfrom - world_center).length() ? world_radius : (lookfrom - world_center ).length();
   world_radius *= interactive ? 100 : 1;
   
@@ -431,7 +429,7 @@ List render_scene_rcpp(List camera_info, List scene_info) {
     texture_bytes += nx1 * ny1 * nn1;
     
     if(background_texture_data) {
-      background_texture = std::make_shared<image_texture>(background_texture_data, nx1, ny1, nn1, 1, 1, intensity_env);
+      background_texture = std::make_shared<image_texture_float>(background_texture_data, nx1, ny1, nn1, 1, 1, intensity_env);
       background_material = std::make_shared<diffuse_light>(background_texture, 1.0, false);
       background_sphere = std::make_shared<InfiniteAreaLight>(nx1, ny1, world_radius*2, vec3f(0.f),
                                                 background_texture, background_material,
@@ -526,7 +524,7 @@ List render_scene_rcpp(List camera_info, List scene_info) {
     min_adaptive_size = 1;
     min_variance = 10E-8;
   }
-  Rcpp::Rcout << "Total world size: " << world.GetSize() + texture_bytes << " (Textures: " << texture_bytes << ") \n";
+  // Rcpp::Rcout << "Total world size: " << world.GetSize() + texture_bytes << " (Textures: " << texture_bytes << ") \n";
   if(debug_channel != 0) {
     debug_scene(numbercores, nx, ny, ns, debug_channel,
                 min_variance, min_adaptive_size,
@@ -553,19 +551,19 @@ List render_scene_rcpp(List camera_info, List scene_info) {
   for(int i = 0; i < n; i++) {
     if(isimage(i)) {
       stbi_image_free(textures[i]);
-      delete nx_ny_nn[i];
+      delete[] nx_ny_nn[i];
     }
     if(has_alpha(i)) {
       stbi_image_free(alpha_textures[i]);
-      delete nx_ny_nn_alpha[i];
+      delete[] nx_ny_nn_alpha[i];
     }
     if(has_bump(i)) {
       stbi_image_free(bump_textures[i]);
-      delete nx_ny_nn_bump[i];
+      delete[] nx_ny_nn_bump[i];
     }
     if(has_roughness(i)) {
       stbi_image_free(roughness_textures[i]);
-      delete nx_ny_nn_roughness[i];
+      delete[] nx_ny_nn_roughness[i];
     }
   }
   delete shared_materials;

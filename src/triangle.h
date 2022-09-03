@@ -8,33 +8,33 @@
 
 class triangle : public hitable {
 public:
-  triangle() {}
-  triangle(TriangleMesh* mesh, const int *v, const int *n, const int *t,
+  triangle() : face_number(0) {}
+  triangle(TriangleMesh* mesh, const int *v, const int *n, const int *t, const int face_number,
            std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation) : 
-    hitable(ObjectToWorld, WorldToObject, reverseOrientation), mesh(mesh), v(v), n(n), t(t) {
+    hitable(ObjectToWorld, WorldToObject, reverseOrientation), mesh(mesh), v(v), n(n), t(t), face_number(face_number) {
     
   }
   triangle(std::shared_ptr<material> mat,
            std::shared_ptr<alpha_texture> alpha_mask, std::shared_ptr<bump_texture> bump_tex,
              std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation) :
-    hitable(ObjectToWorld, WorldToObject, reverseOrientation) {
+    hitable(ObjectToWorld, WorldToObject, reverseOrientation), face_number(0) {
   };
   triangle(point3f _a, point3f _b, point3f _c, bool _single, std::shared_ptr<material> mat,
            std::shared_ptr<alpha_texture> alpha_mask, std::shared_ptr<bump_texture> bump_tex,
              std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation) :
-    hitable(ObjectToWorld, WorldToObject, reverseOrientation) {
+    hitable(ObjectToWorld, WorldToObject, reverseOrientation), face_number(0) {
   };
   triangle(point3f _a, point3f _b, point3f _c, normal3f _na, normal3f _nb, normal3f _nc, bool _single,
            std::shared_ptr<material> mat, std::shared_ptr<alpha_texture> alpha_mask, std::shared_ptr<bump_texture> bump_tex,
            std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation) :
-    hitable(ObjectToWorld, WorldToObject, reverseOrientation) {
+    hitable(ObjectToWorld, WorldToObject, reverseOrientation), face_number(0) {
   };
   triangle(point3f _a, point3f _b, point3f _c,
            point2f uva, point2f uvb, point2f uvc,
            bool _single,
            std::shared_ptr<material> mat, std::shared_ptr<alpha_texture> alpha_mask, std::shared_ptr<bump_texture> bump_tex,
            std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation) :
-    hitable(ObjectToWorld, WorldToObject, reverseOrientation) {
+    hitable(ObjectToWorld, WorldToObject, reverseOrientation), face_number(0) {
   };
   triangle(point3f _a, point3f _b, point3f _c,
            normal3f _na, normal3f _nb, normal3f _nc,
@@ -42,7 +42,7 @@ public:
            bool _single,
            std::shared_ptr<material> mat, std::shared_ptr<alpha_texture> alpha_mask, std::shared_ptr<bump_texture> bump_tex,
            std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation) :
-    hitable(ObjectToWorld, WorldToObject, reverseOrientation) {
+    hitable(ObjectToWorld, WorldToObject, reverseOrientation), face_number(0) {
   };
   virtual bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng);
   virtual bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler);
@@ -66,7 +66,7 @@ public:
   const int *v;
   const int *n;
   const int *t;
-  
+  const int face_number;
 };
 
 #endif

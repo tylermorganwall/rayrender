@@ -12,7 +12,7 @@ bool csg::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_ge
   Float dist1 = (box.min()-r2.origin()).length();
   Float dist2 = (box.max()-r2.origin()).length();
   
-  Float max_path = std::fmax(dist1,dist2) + box.diag.length()/2;
+  Float max_path = std::fmax(dist1,dist2) + box.Diag().length()/2;
   
   vec3f dir = unit_vector(r2.direction());
   Float max_t = max_path * r2.direction().length();

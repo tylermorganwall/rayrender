@@ -51,11 +51,11 @@ struct TriangleMesh {
   // std::shared_ptr<alpha_texture> alphaMask;
   // std::vector<int> faceIndices;
   std::vector<std::shared_ptr<material> > mtl_materials;
-  std::vector<size_t > face_material_id;
+  std::vector<int > face_material_id;
   
   //Texture Data (from MTL)
-  std::vector<Float* > obj_texture_data;
-  std::vector<Float* > bump_texture_data;
+  std::vector<unsigned char * > obj_texture_data;
+  std::vector<unsigned char * > bump_texture_data;
   std::vector<std::shared_ptr<bump_texture> > bump_textures;
   std::vector<std::shared_ptr<alpha_texture> > alpha_textures;
   size_t texture_size;

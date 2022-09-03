@@ -34,12 +34,12 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
                      NumericVector& noisephase, NumericVector& noiseintensity, List noisecolorlist,
                      List& angle, 
                      LogicalVector& isimage, LogicalVector has_alpha,
-                     std::vector<Float* >& alpha_textures, std::vector<int* >& nveca,
+                     std::vector<unsigned char * >& alpha_textures, std::vector<int* >& nveca,
                      std::vector<Float* >& textures, std::vector<int* >& nvec,
                      LogicalVector has_bump,
-                     std::vector<Float* >& bump_textures, std::vector<int* >& nvecb,
+                     std::vector<unsigned char * >& bump_textures, std::vector<int* >& nvecb,
                      NumericVector& bump_intensity,
-                     std::vector<Float* >& roughness_textures,  std::vector<int* >& nvecr,
+                     std::vector<unsigned char * >& roughness_textures,  std::vector<int* >& nvecr,
                      LogicalVector has_roughness,
                      NumericVector& lightintensity,
                      LogicalVector& isflipped,
@@ -160,7 +160,7 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
     } else {
       if(type(i) == 1) {
         if(isimage(i)) {
-          tex = std::make_shared<lambertian>(std::make_shared<image_texture>(textures[i],nvec[i][0],nvec[i][1],nvec[i][2], 
+          tex = std::make_shared<lambertian>(std::make_shared<image_texture_float>(textures[i],nvec[i][0],nvec[i][1],nvec[i][2], 
                                                  temp_repeat[0], temp_repeat[1], 1.0));
         } else if (isnoise(i)) {
           tex = std::make_shared<lambertian>(std::make_shared<noise_texture>(noise(i),point3f(tempvector(0),tempvector(1),tempvector(2)),
@@ -190,7 +190,7 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
         }
       } else if (type(i) == 2) {
         if(isimage(i)) {
-          tex = std::make_shared<metal>(std::make_shared<image_texture>(textures[i],nvec[i][0],nvec[i][1],nvec[i][2], 
+          tex = std::make_shared<metal>(std::make_shared<image_texture_float>(textures[i],nvec[i][0],nvec[i][1],nvec[i][2], 
                                             temp_repeat[0], temp_repeat[1], 1.0),
                           tempvector(3), 
                           point3f(temp_glossy(3), temp_glossy(4), temp_glossy(5)), 
@@ -244,7 +244,7 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
                              tempvector(7));
       } else if (type(i) == 4) {
         if(isimage(i)) {
-          tex = std::make_shared<orennayar>(std::make_shared<image_texture>(textures[i],nvec[i][0],nvec[i][1],nvec[i][2], 
+          tex = std::make_shared<orennayar>(std::make_shared<image_texture_float>(textures[i],nvec[i][0],nvec[i][1],nvec[i][2], 
                                                 temp_repeat[0], temp_repeat[1], 1.0), sigma(i));
         } else if (isnoise(i)) {
           tex = std::make_shared<orennayar>(std::make_shared<noise_texture>(noise(i),point3f(tempvector(0),tempvector(1),tempvector(2)),
@@ -274,7 +274,7 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
       } else if (type(i) == 5) {
         std::shared_ptr<texture> light_tex = nullptr;
         if(isimage(i)) {
-          light_tex = std::make_shared<image_texture>(textures[i],nvec[i][0],nvec[i][1],nvec[i][2], 
+          light_tex = std::make_shared<image_texture_float>(textures[i],nvec[i][0],nvec[i][1],nvec[i][2], 
                                         temp_repeat[0], temp_repeat[1], 1.0);
         } else if (isnoise(i)) {
           light_tex = std::make_shared<noise_texture>(noise(i),point3f(tempvector(0),tempvector(1),tempvector(2)),
@@ -310,7 +310,7 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
           dist = new BeckmannDistribution(temp_glossy(1), temp_glossy(2),roughness[i], has_roughness(i), true);
         }
         if(isimage(i)) {
-          tex = std::make_shared<MicrofacetReflection>(std::make_shared<image_texture>(textures[i],nvec[i][0],nvec[i][1],nvec[i][2], 
+          tex = std::make_shared<MicrofacetReflection>(std::make_shared<image_texture_float>(textures[i],nvec[i][0],nvec[i][1],nvec[i][2], 
                                                            temp_repeat[0], temp_repeat[1], 1.0), dist, 
                                          point3f(temp_glossy(3), temp_glossy(4), temp_glossy(5)), 
                                          point3f(temp_glossy(6),temp_glossy(7),temp_glossy(8)));
@@ -358,7 +358,7 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
           dist = new BeckmannDistribution(temp_glossy(1), temp_glossy(2),roughness[i], has_roughness(i), true);
         }
         if(isimage(i)) {
-          tex = std::make_shared<glossy>(std::make_shared<image_texture>(textures[i],nvec[i][0],nvec[i][1],nvec[i][2], 
+          tex = std::make_shared<glossy>(std::make_shared<image_texture_float>(textures[i],nvec[i][0],nvec[i][1],nvec[i][2], 
                                              temp_repeat[0], temp_repeat[1], 1.0), dist, 
                            point3f(temp_glossy(3), temp_glossy(4), temp_glossy(5)), 
                            point3f(temp_glossy(6),temp_glossy(7),temp_glossy(8)));
@@ -413,7 +413,7 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
           dist = new BeckmannDistribution(temp_glossy(1), temp_glossy(2),roughness[i], has_roughness(i), true);
         }
         if(isimage(i)) {
-          tex = std::make_shared<MicrofacetTransmission>(std::make_shared<image_texture>(textures[i],nvec[i][0],nvec[i][1],nvec[i][2], 
+          tex = std::make_shared<MicrofacetTransmission>(std::make_shared<image_texture_float>(textures[i],nvec[i][0],nvec[i][1],nvec[i][2], 
                                                                                        temp_repeat[0], temp_repeat[1], 1.0), dist, 
                                                                                        point3f(temp_glossy(3), temp_glossy(4), temp_glossy(5)), 
                                                                                        point3f(temp_glossy(6),temp_glossy(7),temp_glossy(8)));
@@ -754,8 +754,8 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
     }
   }
   auto world_bvh = std::make_shared<bvh_node>(list, shutteropen, shutterclose, bvh_type, rng);
-  auto nodeleaf = world_bvh->CountNodeLeaf();
-  Rcpp::Rcout << "Node/Leaf: " << nodeleaf.first << " " << nodeleaf.second << " " << world_bvh->GetSize() << "\n";
+  // auto nodeleaf = world_bvh->CountNodeLeaf();
+  // Rcpp::Rcout << "Node/Leaf: " << nodeleaf.first << " " << nodeleaf.second << " " << world_bvh->GetSize() << "\n";
   return(world_bvh);
 }
 

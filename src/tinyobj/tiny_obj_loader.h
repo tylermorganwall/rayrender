@@ -542,9 +542,9 @@ class ObjReader {
 
   const attrib_t &GetAttrib() const { return attrib_; }
 
-  const std::vector<shape_t> &GetShapes() const { return shapes_; }
+  std::vector<shape_t> &GetShapes() { return shapes_; }
 
-  const std::vector<material_t> &GetMaterials() const { return materials_; }
+  std::vector<material_t> &GetMaterials() { return materials_; }
 
   ///
   /// Warning message(may be filled after `Load` or `Parse`)
@@ -2177,6 +2177,7 @@ void LoadMtl(std::map<std::string, int> *material_map,
     if (!_space) {
       _space = strchr(token, '\t');
     }
+    
     if (_space) {
       std::ptrdiff_t len = _space - token;
       std::string key(token, static_cast<size_t>(len));

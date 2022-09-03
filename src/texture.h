@@ -97,14 +97,28 @@ public:
   bool hsv;
 };
 
-class image_texture : public texture {
+
+class image_texture_float : public texture {
 public:
-  image_texture() {}
-  image_texture(Float *pixels, int A, int B, int nn, 
+  image_texture_float() {}
+  image_texture_float(Float *pixels, int A, int B, int nn, 
                 Float repeatu = 1.0f, Float repeatv = 1.0f, Float intensity = 1.0f) : 
     data(pixels), nx(A), ny(B), channels(nn), repeatu(repeatu), repeatv(repeatv), intensity(intensity) {}
   virtual point3f value(Float u, Float v, const point3f& p) const;
   Float *data;
+  int nx, ny, channels;
+  Float repeatu, repeatv;
+  Float intensity;
+};
+
+class image_texture_char : public texture {
+public:
+  image_texture_char() {}
+  image_texture_char(unsigned char * pixels, int A, int B, int nn, 
+                Float repeatu = 1.0f, Float repeatv = 1.0f, Float intensity = 1.0f) : 
+    data(pixels), nx(A), ny(B), channels(nn), repeatu(repeatu), repeatv(repeatv), intensity(intensity) {}
+  virtual point3f value(Float u, Float v, const point3f& p) const;
+  unsigned char * data;
   int nx, ny, channels;
   Float repeatu, repeatv;
   Float intensity;
@@ -143,9 +157,10 @@ public:
 class alpha_texture {
 public:
   alpha_texture() {}
-  alpha_texture(Float *pixels, int A, int B, int nn) : data(pixels), nx(A), ny(B), channels(nn) {}
+  alpha_texture(unsigned char *pixels, int A, int B, int nn) : 
+    data(pixels), nx(A), ny(B), channels(nn) {}
   Float value(Float u, Float v, const point3f& p) const;
-  Float *data;
+  unsigned char *data;
   int nx, ny, channels;
 };
 
@@ -153,12 +168,14 @@ public:
 class bump_texture {
 public:
   bump_texture() {}
-  bump_texture(Float *pixels, int A, int B, int nn, Float intensity, Float repeatu = 1.f, Float repeatv = 1.f) : 
-    data(pixels), nx(A), ny(B), channels(nn), intensity(intensity), repeatu(repeatu), repeatv(repeatv) {}
+  bump_texture(unsigned char *pixels, int A, int B, int nn, Float intensity, 
+               Float repeatu = 1.f, Float repeatv = 1.f) : 
+    data(pixels), nx(A), ny(B), channels(nn), intensity(intensity), 
+    repeatu(repeatu), repeatv(repeatv) {}
   point3f value(Float u, Float v, const point3f& p) const;
   Float raw_value(Float u, Float v, const point3f& p) const;
   
-  Float *data;
+  unsigned char *data;
   int nx, ny, channels;
   Float intensity;
   Float repeatu, repeatv;
@@ -167,10 +184,11 @@ public:
 class roughness_texture {
 public:
   roughness_texture() {}
-  roughness_texture(Float *pixels, int A, int B, int nn) : data(pixels), nx(A), ny(B), channels(nn) {};
+  roughness_texture(unsigned char *pixels, int A, int B, int nn) : 
+    data(pixels), nx(A), ny(B), channels(nn) {}
   point2f value(Float u, Float v) const;
   static Float RoughnessToAlpha(Float roughness);
-  Float *data;
+  unsigned char *data;
   int nx, ny, channels;
   vec3f u_vec, v_vec;
 };

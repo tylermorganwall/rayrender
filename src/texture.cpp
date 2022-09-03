@@ -1,6 +1,8 @@
 #include "texture.h"
 
-point3f image_texture::value(Float u, Float v, const point3f& p) const {
+static constexpr Float rescale = 1.f/255.f;
+
+point3f image_texture_float::value(Float u, Float v, const point3f& p) const {
   while(u < 0) u += 1;
   while(v < 0) v += 1;
   while(u > 1) u -= 1;
@@ -13,20 +15,43 @@ point3f image_texture::value(Float u, Float v, const point3f& p) const {
   if (j < 0) j = 0;
   if (i > nx-1) i = nx-1;
   if (j > ny-1) j = ny-1;
-  Float r = data[channels*i + channels*nx*j] * intensity;
+  Float r = data[channels*i + channels*nx*j]   * intensity;
   Float g = data[channels*i + channels*nx*j+1] * intensity;
   Float b = data[channels*i + channels*nx*j+2] * intensity;
   return(point3f(r,g,b));
 }
 
-Float alpha_texture::value(Float u, Float v, const point3f& p) const {
+point3f image_texture_char::value(Float u, Float v, const point3f& p) const {
+  while(u < 0) u += 1;
+  while(v < 0) v += 1;
+  while(u > 1) u -= 1;
+  while(v > 1) v -= 1;
+  u = fmod(u * repeatu,1);
+  v = fmod(v * repeatv,1);
   int i = u * nx;
   int j = (1-v) * ny;
   if (i < 0) i = 0;
   if (j < 0) j = 0;
   if (i > nx-1) i = nx-1;
   if (j > ny-1) j = ny-1;
-  return(data[channels*i + channels*nx*j]);
+  Float r = Float(data[channels*i + channels*nx*j])   * intensity * rescale;
+  Float g = Float(data[channels*i + channels*nx*j+1]) * intensity * rescale;
+  Float b = Float(data[channels*i + channels*nx*j+2]) * intensity * rescale;
+  return(point3f(r,g,b));
+}
+
+Float alpha_texture::value(Float u, Float v, const point3f& p) const {
+  while(u < 0) u += 1;
+  while(v < 0) v += 1;
+  while(u > 1) u -= 1;
+  while(v > 1) v -= 1;
+  int i = u * nx;
+  int j = (1-v) * ny;
+  if (i < 0) i = 0;
+  if (j < 0) j = 0;
+  if (i > nx-1) i = nx-1;
+  if (j > ny-1) j = ny-1;
+  return((Float)data[channels*i + channels*nx*j+channels-1] * rescale);
 }
 
 
@@ -43,7 +68,7 @@ Float bump_texture::raw_value(Float u, Float v, const point3f& p) const {
   if (j < 1) j = 1;
   if (i > nx-2) i = nx-2;
   if (j > ny-2) j = ny-2;
-  return(data[channels*i + channels*nx*j]);
+  return((Float)data[channels*i + channels*nx*j] * rescale);
 }
 
 point3f bump_texture::value(Float u, Float v, const point3f& p) const {
@@ -59,20 +84,24 @@ point3f bump_texture::value(Float u, Float v, const point3f& p) const {
   if (j < 1) j = 1;
   if (i > nx-2) i = nx-2;
   if (j > ny-2) j = ny-2;
-  Float bu = (data[channels*(i+1) + channels*nx*j] - data[channels*(i-1) + channels*nx*j])/2;
-  Float bv = (data[channels*i + channels*nx*(j+1)] - data[channels*i + channels*nx*(j-1)])/2;
+  Float bu = Float(data[channels*(i+1) + channels*nx*j] - data[channels*(i-1) + channels*nx*j])/2 * rescale;
+  Float bv = Float(data[channels*i + channels*nx*(j+1)] - data[channels*i + channels*nx*(j-1)])/2 * rescale;
   return(point3f(intensity*bu,intensity*bv,0));
 }
 
 point2f roughness_texture::value(Float u, Float v) const {
+  while(u < 0) u += 1;
+  while(v < 0) v += 1;
+  while(u > 1) u -= 1;
+  while(v > 1) v -= 1;
   int i = u * nx;
   int j = (1-v) * ny;
   if (i < 0) i = 0;
   if (j < 0) j = 0;
   if (i > nx-1) i = nx-1;
   if (j > ny-1) j = ny-1;
-  Float alphax = RoughnessToAlpha(data[channels*i + channels*nx*j]);
-  Float alphay = channels > 1 ? RoughnessToAlpha(data[channels*i + channels*nx*j+1]) : alphax;
+  Float alphax = RoughnessToAlpha((Float)data[channels*i + channels*nx*j] * rescale);
+  Float alphay = channels > 1 ? RoughnessToAlpha((Float)data[channels*i + channels*nx*j+1] * rescale) : alphax;
   return(point2f(alphax * alphax, alphay * alphay));
 }
 

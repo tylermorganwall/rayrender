@@ -14,39 +14,26 @@ class aabb {
       Float maxNum = std::numeric_limits<Float>::max();
       bounds[0] = point3f(maxNum, maxNum, maxNum);
       bounds[1] = point3f(minNum, minNum, minNum);
-      centroid = vec3f(0,0,0);
-      diag = vec3f(0);
     }
     aabb(vec3f a) {
       bounds[0] = point3f(a.x(),a.y(),a.z());
       bounds[1] = point3f(a.x(),a.y(),a.z());
-      centroid  = a;
-      diag = vec3f(0);
     }
     aabb(point3f a) {
       bounds[0] = a;
       bounds[1] = a;
-      centroid = vec3f(a.x(),a.y(),a.z());
-      diag = vec3f(0);
     }
     aabb(const vec3f& a, const vec3f& b) { 
       bounds[0] = point3f(fmin(a.x(), b.x()), fmin(a.y(), b.y()),fmin(a.z(), b.z()));
       bounds[1] = point3f(fmax(a.x(), b.x()), fmax(a.y(), b.y()),fmax(a.z(), b.z()));
-      centroid = (a + b)/2;
-      diag = b - a;
     }
     aabb(const point3f& a, const point3f& b) { 
       bounds[0] = point3f(fmin(a.x(), b.x()), fmin(a.y(), b.y()),fmin(a.z(), b.z()));
       bounds[1] = point3f(fmax(a.x(), b.x()), fmax(a.y(), b.y()),fmax(a.z(), b.z()));
-      point3f temp = (a + b)/2;
-      centroid = vec3f(temp.x(),temp.y(),temp.z());
-      diag = b - a;
     }
     aabb(const aabb &box) {
       bounds[0] = box.bounds[0]; 
       bounds[1] = box.bounds[1];
-      centroid = box.centroid;
-      diag = box.diag;
     } 
     
     point3f min() const {return(bounds[0]);}
@@ -55,6 +42,8 @@ class aabb {
     
     const Float surface_area() const;
     const Float Volume() const;
+    const point3f Centroid() const;
+    const point3f Diag() const;
     
     bool hit(const ray& r, Float tmin, Float tmax, random_gen& rng);
     bool hit(const ray& r, Float tmin, Float tmax, Sampler* sampler);
@@ -68,8 +57,6 @@ class aabb {
     
     void Expand(Float delta);
     point3f bounds[2];
-    vec3f centroid;
-    vec3f diag;
 };
 
 inline aabb surrounding_box(aabb box0, aabb box1) {

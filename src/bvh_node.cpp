@@ -71,7 +71,7 @@ inline bool box_compare(const std::shared_ptr<hitable> a, const std::shared_ptr<
   
   if (!a->bounding_box(0,0, box_a) || !b->bounding_box(0,0, box_b)){}
 
-  return(box_a.centroid.e[axis] < box_b.centroid.e[axis]);
+  return(box_a.Centroid().e[axis] < box_b.Centroid().e[axis]);
 }
 
 
@@ -121,7 +121,7 @@ bvh_node::bvh_node(std::vector<std::shared_ptr<hitable> >& l,
     aabb tempbox;
     if(l[i]->bounding_box(time0,time1,tempbox)) {
       centroid_bounds = surrounding_box(centroid_bounds, tempbox);
-      central_bounds = surrounding_box(central_bounds, tempbox.centroid);
+      central_bounds = surrounding_box(central_bounds, tempbox.Centroid());
       primitiveBounds[i-start] = tempbox;
     }
   }
@@ -167,7 +167,7 @@ bvh_node::bvh_node(std::vector<std::shared_ptr<hitable> >& l,
   } else {
     std::sort(l.begin() + start, l.begin() + end, comparator);
     //Handle case where all shapes share the same centroid
-    if(central_bounds.diag.e[axis] == 0 ) {
+    if(central_bounds.Diag().e[axis] == 0 ) {
       sah = false;
       bvh_type = 2;
     }      
@@ -187,7 +187,7 @@ bvh_node::bvh_node(std::vector<std::shared_ptr<hitable> >& l,
       
       //Count number of objects in each bin and calculate bounding box for each bin.
       for (unsigned int i = 0; i < n; ++i) {
-        int b = nBuckets * central_bounds.offset(primitiveBounds[i].centroid)[axis];
+        int b = nBuckets * central_bounds.offset(primitiveBounds[i].Centroid())[axis];
         if (b == nBuckets) {
           b = nBuckets - 1;
         }

@@ -35,7 +35,7 @@ mesh3d::mesh3d(Rcpp::List mesh_info, std::shared_ptr<material> mat,
   int nxb,nyb,nnb;
   
   if(strlen(bump_text_location.c_str()) > 0) {
-    bump = stbi_loadf(bump_text_location.c_str(), &nxb, &nyb, &nnb, 0);
+    bump = stbi_load(bump_text_location.c_str(), &nxb, &nyb, &nnb, 0);
     has_bump = nxb != 0 && nyb != 0 && nnb != 0;
   } else {
     bump = nullptr;
@@ -72,7 +72,7 @@ mesh3d::mesh3d(Rcpp::List mesh_info, std::shared_ptr<material> mat,
     std::shared_ptr<texture> tex = nullptr;
     if(colortype == 3 && has_texcoords && has_texture) {
       
-      tex = std::make_shared<image_texture>(mesh_materials,
+      tex = std::make_shared<image_texture_float>(mesh_materials,
                                                      nx,ny,nn);
       MicrofacetDistribution *dist;
       switch(material_type) {

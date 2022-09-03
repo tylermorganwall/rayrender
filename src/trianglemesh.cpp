@@ -8,8 +8,8 @@
 
 void LoadMtlMaterials(std::vector<std::shared_ptr<material> > &mtl_materials,
                       std::vector<tinyobj::material_t > &materials,
-                      std::vector<Float* > &obj_texture_data,
-                      std::vector<Float* > &bump_texture_data,
+                      std::vector<unsigned char * > &obj_texture_data,
+                      std::vector<unsigned char * > &bump_texture_data,
                       std::vector<std::shared_ptr<bump_texture> > &bump_textures,
                       std::vector<std::shared_ptr<alpha_texture> > &alpha_textures,
                       size_t &texture_size,
@@ -22,14 +22,18 @@ void LoadMtlMaterials(std::vector<std::shared_ptr<material> > &mtl_materials,
   bump_textures.reserve(materials.size()+1);
   alpha_textures.reserve(materials.size()+1);
   
+  //For default texture
+  alpha_textures.push_back(nullptr);
+  bump_textures.push_back(nullptr);
+  
   std::vector<vec3f > diffuse_materials(materials.size()+1);
   std::vector<vec3f > specular_materials(materials.size()+1);
   std::vector<Float > ior_materials(materials.size()+1);
-  std::vector<bool > has_diffuse(materials.size()+1);
-  std::vector<bool > has_transparency(materials.size()+1);
-  std::vector<bool > has_single_diffuse(materials.size()+1);
-  std::vector<bool > has_alpha(materials.size()+1);
-  std::vector<bool > has_bump(materials.size()+1);
+  std::vector<bool > has_diffuse(materials.size()+1, false);
+  std::vector<bool > has_transparency(materials.size()+1, false);
+  std::vector<bool > has_single_diffuse(materials.size()+1, false);
+  std::vector<bool > has_alpha(materials.size()+1, false);
+  std::vector<bool > has_bump(materials.size()+1, false);
   std::vector<Float > bump_intensity(materials.size()+1);
   
   std::vector<int > nx_mat(materials.size()+1);
@@ -44,17 +48,19 @@ void LoadMtlMaterials(std::vector<std::shared_ptr<material> > &mtl_materials,
   if(load_materials) {
     for (size_t i = 0; i < materials.size(); i++) {
       nx = 0; ny = 0; nn = 0;
+      // Rprintf("(%i/%i) Loading OBJ Material %s\n", i+1, materials.size(),materials[i].name.c_str());
+      // Rcpp::Rcout << "Loading " << materials[i].name << ": " << i+1 << "/" << materials.size() << " materials.\n";
       if(strlen(materials[i].diffuse_texname.c_str()) > 0 && load_textures) {
         int ok;
         std::replace(materials[i].diffuse_texname.begin(), materials[i].diffuse_texname.end(), '\\', separator());
         if(has_sep) {
           ok = stbi_info((basedir + separator() + materials[i].diffuse_texname).c_str(), &nx, &ny, &nn);
-          obj_texture_data.push_back(stbi_loadf((basedir + separator() + materials[i].diffuse_texname).c_str(), &nx, &ny, &nn, 0));
+          obj_texture_data.push_back(stbi_load((basedir + separator() + materials[i].diffuse_texname).c_str(), &nx, &ny, &nn, 0));
         } else {
           ok = stbi_info((materials[i].diffuse_texname).c_str(), &nx, &ny, &nn);
-          obj_texture_data.push_back(stbi_loadf((materials[i].diffuse_texname).c_str(), &nx, &ny, &nn, 0));
+          obj_texture_data.push_back(stbi_load((materials[i].diffuse_texname).c_str(), &nx, &ny, &nn, 0));
         }
-        
+
         if(!obj_texture_data[i] || !ok) {
           REprintf("Load failed: %s\n", stbi_failure_reason());
           if(has_sep) {
@@ -72,7 +78,8 @@ void LoadMtlMaterials(std::vector<std::shared_ptr<material> > &mtl_materials,
             throw std::runtime_error("Could not find " + materials[i].diffuse_texname);
           }
         }
-        texture_size += sizeof(Float) * nx * ny * nn;
+
+        texture_size += sizeof(unsigned char) * nx * ny * nn;
         has_diffuse[i] = true;
         has_single_diffuse[i] = false;
         nx_mat[i] = nx;
@@ -82,7 +89,7 @@ void LoadMtlMaterials(std::vector<std::shared_ptr<material> > &mtl_materials,
         if(nn == 4) {
           for(int j = 0; j < nx - 1; j++) {
             for(int k = 0; k < ny - 1; k++) {
-              if(obj_texture_data[i][4*j + 4*nx*k + 3] != 1.0) {
+              if(obj_texture_data[i][4*j + 4*nx*k + 3] != 255) {
                 has_alpha[i] = true;
                 break;
               }
@@ -120,11 +127,11 @@ void LoadMtlMaterials(std::vector<std::shared_ptr<material> > &mtl_materials,
         std::replace(materials[i].bump_texname.begin(), materials[i].bump_texname.end(), '\\', separator());
         
         if(has_sep) {
-          bump_texture_data[i] = stbi_loadf((basedir + separator() + materials[i].bump_texname).c_str(), &nx, &ny, &nn, 0);
+          bump_texture_data[i] = stbi_load((basedir + separator() + materials[i].bump_texname).c_str(), &nx, &ny, &nn, 0);
         } else {
-          bump_texture_data[i] = stbi_loadf(materials[i].bump_texname.c_str(), &nx, &ny, &nn, 0);
+          bump_texture_data[i] = stbi_load(materials[i].bump_texname.c_str(), &nx, &ny, &nn, 0);
         }
-        texture_size += sizeof(Float) * nx * ny * nn;
+        texture_size += sizeof(unsigned char) * nx * ny * nn;
         if(nx == 0 || ny == 0 || nn == 0) {
           if(has_sep) {
             throw std::runtime_error("Could not find " + basedir + separator() + materials[i].bump_texname);
@@ -173,7 +180,7 @@ void LoadMtlMaterials(std::vector<std::shared_ptr<material> > &mtl_materials,
       if(has_single_diffuse[material_num]) {
         tex = std::make_shared<lambertian>(std::make_shared<constant_texture>(diffuse_materials[material_num]));
       } else {
-        tex = std::make_shared<lambertian>(std::make_shared<image_texture>(obj_texture_data[material_num],
+        tex = std::make_shared<lambertian>(std::make_shared<image_texture_char>(obj_texture_data[material_num],
                                                                            nx_mat[material_num], 
                                                                            ny_mat[material_num],
                                                                            nn_mat[material_num]));
@@ -191,17 +198,32 @@ TriangleMesh::TriangleMesh(std::string inputfile, std::string basedir,
                            std::shared_ptr<Transform> ObjectToWorld, 
                            std::shared_ptr<Transform> WorldToObject, 
                            bool reverseOrientation) : nTriangles(0) {
-  tinyobj::attrib_t attrib;
-  std::vector<tinyobj::shape_t > shapes;
-  std::vector<tinyobj::material_t > materials;
   std::string warn, err;
   texture_size = 0;
   vertexIndices.clear();
   normalIndices.clear();
   texIndices.clear();
-
-  bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, inputfile.c_str(), basedir.c_str());
+  face_material_id.clear();
+  
   bool has_sep = true;
+  bool ret = true;
+  
+  tinyobj::ObjReaderConfig reader_config;
+  reader_config.mtl_search_path = basedir.c_str(); // Path to material files
+  
+  tinyobj::ObjReader reader;
+  
+  if (!reader.ParseFromFile(inputfile, reader_config)) {
+    ret = false;
+  }
+  
+  if (!reader.Warning().empty()) {
+    Rcpp::Rcout << "TinyObjReader Warning: " << reader.Warning();
+  }
+  
+  auto& attrib = reader.GetAttrib();
+  auto& shapes = reader.GetShapes();
+  auto& materials = reader.GetMaterials();
   
   if(strlen(basedir.c_str()) == 0) {
     has_sep = false;
@@ -262,7 +284,7 @@ TriangleMesh::TriangleMesh(std::string inputfile, std::string basedir,
     }
   } else {
     std::string mes = "Error reading " + inputfile + ": ";
-    throw std::runtime_error(mes + warn + err);
+    throw std::runtime_error(mes + reader.Error());
   }
 }
 
@@ -274,9 +296,9 @@ size_t TriangleMesh::GetSize() {
   for(size_t i = 0; i < mtl_materials.size(); i++) {
     size += mtl_materials[i]->GetSize();
   }
-  size += face_material_id.size()*sizeof(size_t);
-  size += sizeof(Float*) * bump_texture_data.size();
-  size += sizeof(Float*) * obj_texture_data.size();
+  size += face_material_id.size()*sizeof(int);
+  size += sizeof(unsigned char *) * bump_texture_data.size();
+  size += sizeof(unsigned char *) * obj_texture_data.size();
   size += sizeof(std::shared_ptr<alpha_texture>) * alpha_textures.size();
   size += sizeof(std::shared_ptr<bump_texture>)  * bump_textures.size();
   size += sizeof(int) * vertexIndices.size();
