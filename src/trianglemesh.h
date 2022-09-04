@@ -53,6 +53,7 @@ struct TriangleMesh {
     
   // TriangleMesh Data
   size_t nTriangles, nVertices, nNormals, nTex;
+  bool has_normals, has_tex;
   std::vector<int> vertexIndices;
   std::vector<int> normalIndices;
   std::vector<int> texIndices;

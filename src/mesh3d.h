@@ -35,8 +35,7 @@ class mesh3d : public hitable {
     std::unique_ptr<TriangleMesh> mesh;
     hitable_list triangles;
     
-    //Hitable extras
-    std::shared_ptr<material> mat_ptr;
+    //Hitable extra
     std::shared_ptr<bvh_node> mesh_bvh;
 };
 

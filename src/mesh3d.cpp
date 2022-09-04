@@ -56,7 +56,6 @@ mesh3d::mesh3d(Rcpp::List mesh_info, std::shared_ptr<material> mat,
   } else {
     bump_texture_data = nullptr;
   }
-  mat_ptr = mat;
   
   std::shared_ptr<alpha_texture> alpha = nullptr;
   std::shared_ptr<bump_texture> bump = nullptr;
@@ -235,7 +234,9 @@ mesh3d::mesh3d(Rcpp::List mesh_info, std::shared_ptr<material> mat,
     //   }
     // }
     // }
+    
   mesh_bvh = std::make_shared<bvh_node>(triangles, shutteropen, shutterclose, bvh_type, rng);
+  triangles.objects.clear();
 }
 
 bool mesh3d::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {

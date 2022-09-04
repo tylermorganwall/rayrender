@@ -218,6 +218,8 @@ TriangleMesh::TriangleMesh(std::string inputfile, std::string basedir,
   auto& attrib = reader.GetAttrib();
   auto& shapes = reader.GetShapes();
   auto& materials = reader.GetMaterials();
+  has_normals = false;
+  has_tex = false;
   
   if(strlen(basedir.c_str()) == 0) {
     has_sep = false;
@@ -244,6 +246,7 @@ TriangleMesh::TriangleMesh(std::string inputfile, std::string basedir,
     
     
     if(nNormals > 0) {
+      has_normals = true;
       n.reset(new normal3f[nNormals / 3]);
       for (size_t i = 0; i < nNormals; i += 3) {
         n[i / 3] = (*ObjectToWorld)(normal3f(attrib.normals[i+0],
@@ -255,6 +258,7 @@ TriangleMesh::TriangleMesh(std::string inputfile, std::string basedir,
     }
     
     if(nTex > 0) {
+      has_tex = true;
       uv.reset(new point2f[nTex / 2]);
       for (size_t i = 0; i < nTex; i += 2) {
         uv[i / 2] = point2f(attrib.texcoords[i+0],
@@ -300,20 +304,9 @@ TriangleMesh::TriangleMesh(Rcpp::NumericMatrix vertices,
   normalIndices.clear();
   texIndices.clear();
   face_material_id.clear();
-  
-  nTriangles = 0;
-  for (size_t s = 0; s < indices.nrow(); s++) {
-    nTriangles++;
-    vertexIndices.push_back(indices(s,0));
-    vertexIndices.push_back(indices(s,1));
-    vertexIndices.push_back(indices(s,2));
-    normalIndices.push_back(indices(s,0));
-    normalIndices.push_back(indices(s,1));
-    normalIndices.push_back(indices(s,2));
-    texIndices.push_back(indices(s,0));
-    texIndices.push_back(indices(s,1));
-    texIndices.push_back(indices(s,2));
-  }
+  has_normals = false;
+  has_tex = false;
+
   
   nVertices = vertices.nrow();
   nNormals = normals.nrow();
@@ -326,7 +319,8 @@ TriangleMesh::TriangleMesh(Rcpp::NumericMatrix vertices,
   }
   
   
-  if(nNormals > 0) {
+  if(nNormals > 1) {
+    has_normals = true;
     n.reset(new normal3f[nNormals]);
     for (size_t i = 0; i < nNormals; i++) {
       n[i] = (*ObjectToWorld)(normal3f(normals(i,0),
@@ -337,7 +331,8 @@ TriangleMesh::TriangleMesh(Rcpp::NumericMatrix vertices,
     n = nullptr;
   }
   
-  if(nTex > 0) {
+  if(nTex > 1) {
+    has_tex = true;
     uv.reset(new point2f[nTex]);
     for (size_t i = 0; i < nTex; i++) {
       uv[i] = point2f(texcoords(i,0),
@@ -345,6 +340,24 @@ TriangleMesh::TriangleMesh(Rcpp::NumericMatrix vertices,
     }
   } else {
     uv = nullptr;
+  }
+  
+  nTriangles = 0;
+  for (size_t s = 0; s < indices.nrow(); s++) {
+    nTriangles++;
+    vertexIndices.push_back(indices(s,0));
+    vertexIndices.push_back(indices(s,1));
+    vertexIndices.push_back(indices(s,2));
+    if(has_normals) {
+      normalIndices.push_back(indices(s,0));
+      normalIndices.push_back(indices(s,1));
+      normalIndices.push_back(indices(s,2));
+    }
+    if(has_tex) {
+      texIndices.push_back(indices(s,0));
+      texIndices.push_back(indices(s,1));
+      texIndices.push_back(indices(s,2));
+    }
   }
   
   //Material stuff
