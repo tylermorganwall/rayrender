@@ -2402,13 +2402,13 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
   }
   normals = mesh$normals
   if(is.null(normals)) {
-    normals = matrix()
+    normals = matrix(nrow=0,ncol=3)
   } else {
     normals = t(normals)
   }
   texcoords = mesh$texcoords
   if(is.null(texcoords)) {
-    texcoords = matrix()
+    texcoords = matrix(nrow=0,ncol=2)
   } else {
     texcoords = t(texcoords)
   }

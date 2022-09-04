@@ -319,7 +319,7 @@ TriangleMesh::TriangleMesh(Rcpp::NumericMatrix vertices,
   }
   
   
-  if(nNormals > 1) {
+  if(nNormals > 0) {
     has_normals = true;
     n.reset(new normal3f[nNormals]);
     for (size_t i = 0; i < nNormals; i++) {
@@ -331,7 +331,7 @@ TriangleMesh::TriangleMesh(Rcpp::NumericMatrix vertices,
     n = nullptr;
   }
   
-  if(nTex > 1) {
+  if(nTex > 0) {
     has_tex = true;
     uv.reset(new point2f[nTex]);
     for (size_t i = 0; i < nTex; i++) {
