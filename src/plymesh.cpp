@@ -59,7 +59,7 @@ struct TriMesh {
 static TriMesh* parse_file_with_miniply(const char* filename, bool assumeTriangles) {
   miniply::PLYReader reader(filename);
   if (!reader.valid()) {
-    Rcpp::Rcout << "Not valid reader \n";
+    Rprintf("Not valid PLY reader for file: '%s' \n",filename);
     return nullptr;
   }
   
@@ -113,71 +113,32 @@ static TriMesh* parse_file_with_miniply(const char* filename, bool assumeTriangl
 
 
 plymesh::plymesh(std::string inputfile, std::string basedir, std::shared_ptr<material> mat, 
-            Float scale, Float shutteropen, Float shutterclose, int bvh_type, random_gen rng,
-            std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation) :
+                 std::shared_ptr<alpha_texture> alpha, std::shared_ptr<bump_texture> bump,
+                 Float scale, Float shutteropen, Float shutterclose, int bvh_type, random_gen rng,
+                 std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation) :
   hitable(ObjectToWorld, WorldToObject, reverseOrientation) {
   TriMesh* tri = parse_file_with_miniply(inputfile.c_str(), false);
-  mat_ptr = mat;
-  
+
   if(tri == nullptr) {
     std::string err = inputfile;
     throw std::runtime_error("No mesh loaded: " + err);
   }
-  bool has_normals = false;
-  if(tri->normal != nullptr) {
-    has_normals = true;
+
+  mesh = std::unique_ptr<TriangleMesh>(new TriangleMesh(tri->pos, tri->indices, tri->normal, tri->uv, 
+                                                        tri->numVerts, tri->numIndices,
+                                                        alpha, bump, 
+                                                        mat,
+                                                        ObjectToWorld, WorldToObject, reverseOrientation));
+  size_t n = mesh->nTriangles * 3;
+  for(size_t i = 0; i < n; i += 3) {
+    triangles.add(std::make_shared<triangle>(mesh.get(), 
+                                             &mesh->vertexIndices[i], 
+                                             &mesh->normalIndices[i],
+                                             &mesh->texIndices[i], i / 3,
+                                             ObjectToWorld, WorldToObject, reverseOrientation));
   }
-  
-  bool has_uv = false;
-  if(tri->uv != nullptr) {
-    has_uv = true;
-  }
-  int number_faces = tri->numIndices / 3;
-  
-  vec3f tris[3];
-  vec3f normals[3];
-  for (int i = 0; i < number_faces; i++) {
-    bool tempnormal = false;
-    int idx = 3*i;
-    tris[0] = vec3f(tri->pos[3*tri->indices[idx  ]+0],
-                    tri->pos[3*tri->indices[idx  ]+1],
-                    tri->pos[3*tri->indices[idx  ]+2])*scale;
-    tris[1] = vec3f(tri->pos[3*tri->indices[idx+1]+0],
-                    tri->pos[3*tri->indices[idx+1]+1],
-                    tri->pos[3*tri->indices[idx+1]+2])*scale;
-    tris[2] = vec3f(tri->pos[3*tri->indices[idx+2]+0],
-                    tri->pos[3*tri->indices[idx+2]+1],
-                    tri->pos[3*tri->indices[idx+2]+2])*scale;
-    if(has_normals) {
-      tempnormal = true;
-      normals[0] = vec3f(tri->normal[3*tri->indices[idx  ]+0],
-                         tri->normal[3*tri->indices[idx  ]+1],
-                         tri->normal[3*tri->indices[idx  ]+2]);
-      normals[1] = vec3f(tri->normal[3*tri->indices[idx+1]+0],
-                         tri->normal[3*tri->indices[idx+1]+1],
-                         tri->normal[3*tri->indices[idx+1]+2]);
-      normals[2] = vec3f(tri->normal[3*tri->indices[idx+2]+0],
-                         tri->normal[3*tri->indices[idx+2]+1],
-                         tri->normal[3*tri->indices[idx+2]+2]);
-    }
-    if(has_normals && ((normals[0].x() == 0 && normals[0].y() == 0 && normals[0].z() == 0) ||
-                       (normals[1].x() == 0 && normals[1].y() == 0 && normals[1].z() == 0) ||
-                       (normals[2].x() == 0 && normals[2].y() == 0 && normals[2].z() == 0))) {
-      tempnormal = false;
-    }
-    
-    // if(has_normals && tempnormal) {
-    //   triangles.add(std::make_shared<triangle>(tris[0],tris[1],tris[2],
-    //                                    normals[0],normals[1],normals[2],
-    //                                                                 false,
-    //                                                                 mat_ptr, nullptr,  nullptr, 
-    //                                                                 ObjectToWorld, WorldToObject, reverseOrientation));
-    // } else {
-    //   triangles.add(std::make_shared<triangle>(tris[0],tris[1],tris[2], false, mat_ptr, nullptr, nullptr, 
-    //                                            ObjectToWorld, WorldToObject, reverseOrientation));
-    // }
-  }
-  // ply_mesh_bvh = std::make_shared<bvh_node>(triangles, shutteropen, shutterclose, bvh_type, rng);
+  ply_mesh_bvh = std::make_shared<bvh_node>(triangles, shutteropen, shutterclose, bvh_type, rng);
+  triangles.objects.clear();
   delete tri;
 };
 

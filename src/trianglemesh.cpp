@@ -375,6 +375,85 @@ TriangleMesh::TriangleMesh(Rcpp::NumericMatrix vertices,
   bump_textures.push_back(bump);
 }
 
+
+TriangleMesh::TriangleMesh(float* vertices, 
+                           int* indices, 
+                           float* normals, 
+                           float* texcoords,
+                           int numVerts, int numIndices,
+                           std::shared_ptr<alpha_texture> alpha,
+                           std::shared_ptr<bump_texture> bump,
+                           std::shared_ptr<material> default_material, 
+                           std::shared_ptr<Transform> ObjectToWorld, 
+                           std::shared_ptr<Transform> WorldToObject, 
+                           bool reverseOrientation) : nTriangles(0) {
+  texture_size = 0;
+  vertexIndices.clear();
+  normalIndices.clear();
+  texIndices.clear();
+  face_material_id.clear();
+  has_normals = false;
+  has_tex = false;
+  
+  nVertices = numVerts * 3;
+  nNormals = normals ? numVerts * 3 : 0;
+  nTex = texcoords ? numVerts * 2 : 0;
+  p.reset(new point3f[nVertices]);
+  for (size_t i = 0; i < nVertices; i += 3) {
+    p[i / 3] = (*ObjectToWorld)(point3f((Float)vertices[i+0],
+                                    (Float)vertices[i+1],
+                                    (Float)vertices[i+2]));
+  }
+  
+  if(nNormals > 0) {
+    has_normals = true;
+    n.reset(new normal3f[nNormals]);
+    for (size_t i = 0; i < nNormals; i += 3) {
+      n[i / 3] = (*ObjectToWorld)(normal3f((Float)normals[i+0],
+                                       (Float)normals[i+1],
+                                       (Float)normals[i+2]));
+    }
+  } else {
+    n = nullptr;
+  }
+  
+  if(nTex > 0) {
+    has_tex = true;
+    uv.reset(new point2f[nTex]);
+    for (size_t i = 0; i < nTex; i += 2) {
+      uv[i / 2] = point2f((Float)texcoords[i+0],
+                      (Float)texcoords[i+1]);
+    }
+  } else {
+    uv = nullptr;
+  }
+  
+  nTriangles = 0;
+  for (size_t s = 0; s < numIndices; s += 3) {
+    vertexIndices.push_back(indices[s]);
+    vertexIndices.push_back(indices[s+1]);
+    vertexIndices.push_back(indices[s+2]);
+    
+    // if(has_normals) {
+      normalIndices.push_back(indices[s+0]);
+      normalIndices.push_back(indices[s+1]);
+      normalIndices.push_back(indices[s+2]);
+    // }
+    // if(has_tex) {
+      texIndices.push_back(indices[s+0]);
+      texIndices.push_back(indices[s+1]);
+      texIndices.push_back(indices[s+2]);
+    // }
+    nTriangles++;
+    face_material_id.push_back(0);
+  }
+  
+  //Material stuff
+  mtl_materials.push_back(default_material);
+  alpha_textures.push_back(alpha);
+  bump_textures.push_back(bump);
+}
+
 size_t TriangleMesh::GetSize() {
   size_t size = sizeof(*this);
   size += nTex / 2 * sizeof(point2f) + 

@@ -650,8 +650,8 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
       list.add(entry);
     } else if (shape(i) == 11) {
       std::shared_ptr<hitable> entry = std::make_shared<ellipsoid>(vec3f(0,0,0), radius(i), 
-                                     vec3f(tempvector(prop_len + 1), tempvector(prop_len + 2), tempvector(prop_len + 3)),
-                                     tex, alpha[i], bump[i],
+                                      vec3f(tempvector(prop_len + 1), tempvector(prop_len + 2), tempvector(prop_len + 3)),
+                                      tex, alpha[i], bump[i],
                                       ObjToWorld,WorldToObj, isflipped(i));
       if(isvolume(i)) {
         entry = std::make_shared<constant_medium>(entry, voldensity(i), 
@@ -725,10 +725,10 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
       std::string objfilename = Rcpp::as<std::string>(fileinfo(i));
       std::string objbasedirname = Rcpp::as<std::string>(filebasedir(i));
       entry = std::make_shared<plymesh>(objfilename, objbasedirname, 
-                          tex,
-                          tempvector(prop_len+1),
-                          shutteropen, shutterclose, bvh_type, rng,
-                          ObjToWorld,WorldToObj, isflipped(i));
+                                        tex, alpha[i], bump[i], 
+                                        tempvector(prop_len+1),
+                                        shutteropen, shutterclose, bvh_type, rng,
+                                        ObjToWorld,WorldToObj, isflipped(i));
       if(entry == nullptr) {
         continue;
       }
@@ -1014,10 +1014,10 @@ std::shared_ptr<hitable> build_imp_sample(IntegerVector& type,
     std::string objfilename = Rcpp::as<std::string>(fileinfo(i));
     std::string objbasedirname = Rcpp::as<std::string>(filebasedir(i));
     entry = std::make_shared<plymesh>(objfilename, objbasedirname, 
-                        tex,
-                        tempvector(prop_len+1),
-                        shutteropen, shutterclose, bvh_type, rng, 
-                        ObjToWorld,WorldToObj, false);
+                                      tex, alpha, bump, 
+                                      tempvector(prop_len+1),
+                                      shutteropen, shutterclose, bvh_type, rng, 
+                                      ObjToWorld,WorldToObj, false);
     if(has_animation(i)) {
       entry = std::make_shared<AnimatedHitable>(entry, Animate);
     }

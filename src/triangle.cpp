@@ -418,7 +418,7 @@ vec3f triangle::random(const point3f& origin, Sampler* sampler, Float time) {
 }
 
 void triangle::GetUVs(point2f uv[3]) const {
-  if (mesh->uv) {
+  if (mesh->has_tex) {
     uv[0] = mesh->uv[t[0]];
     uv[1] = mesh->uv[t[1]];
     uv[2] = mesh->uv[t[2]];

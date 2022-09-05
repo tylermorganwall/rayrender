@@ -40,6 +40,17 @@ struct TriangleMesh {
                std::shared_ptr<Transform> ObjectToWorld, 
                std::shared_ptr<Transform> WorldToObject, 
                bool reverseOrientation);
+  TriangleMesh(float* vertices, 
+               int* indices, 
+               float* normals, 
+               float* texcoords,
+               int numVerts, int numIndices,
+               std::shared_ptr<alpha_texture> alpha,
+               std::shared_ptr<bump_texture> bump,
+               std::shared_ptr<material> default_material, 
+               std::shared_ptr<Transform> ObjectToWorld, 
+               std::shared_ptr<Transform> WorldToObject, 
+               bool reverseOrientation);
   
   ~TriangleMesh() {
     for(auto tex : obj_texture_data) {
