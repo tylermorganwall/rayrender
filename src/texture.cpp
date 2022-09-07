@@ -2,6 +2,10 @@
 
 static constexpr Float rescale = 1.f/255.f;
 
+point3f triangle_texture::value(Float u, Float v, const point3f& p) const {
+    return(u * a + v * b + (1 - u - v) * c);
+}
+
 point3f image_texture_float::value(Float u, Float v, const point3f& p) const {
   while(u < 0) u += 1;
   while(v < 0) v += 1;

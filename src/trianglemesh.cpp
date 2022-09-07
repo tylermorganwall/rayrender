@@ -201,7 +201,7 @@ TriangleMesh::TriangleMesh(std::string inputfile, std::string basedir,
   
   bool has_sep = true;
   bool ret = true;
-  
+
   tinyobj::ObjReaderConfig reader_config;
   reader_config.mtl_search_path = basedir.c_str(); // Path to material files
   
@@ -221,6 +221,8 @@ TriangleMesh::TriangleMesh(std::string inputfile, std::string basedir,
   has_normals = false;
   has_tex = false;
   
+  has_vertex_colors = attrib.colors.size() > 0 ? true : false;
+  
   if(strlen(basedir.c_str()) == 0) {
     has_sep = false;
   }
@@ -233,10 +235,15 @@ TriangleMesh::TriangleMesh(std::string inputfile, std::string basedir,
         normalIndices.push_back(shapes[s].mesh.indices[m].normal_index);
         texIndices.push_back(shapes[s].mesh.indices[m].texcoord_index);
       }
+      if(!has_vertex_colors) {
+        for(size_t i = 0; i < shapes[s].mesh.material_ids.size(); i++ ) {
+          face_material_id.push_back(shapes[s].mesh.material_ids[i] + 1);
+        } 
+      } 
     }
     
     nNormals = attrib.normals.size();
-    nTex = attrib.texcoords.size();
+    nTex = !has_vertex_colors ? attrib.texcoords.size() : 0;
     p.reset(new point3f[nVertices / 3]);
     for (size_t i = 0; i < nVertices; i += 3) {
       p[i / 3] = (*ObjectToWorld)(point3f(attrib.vertices[i+0],
@@ -268,16 +275,35 @@ TriangleMesh::TriangleMesh(std::string inputfile, std::string basedir,
       uv = nullptr;
     }
     
-    LoadMtlMaterials(mtl_materials, materials, obj_texture_data,
-                     bump_texture_data, bump_textures, alpha_textures,
-                     texture_size, inputfile, basedir, has_sep, default_material,
-                     load_materials, load_textures);
-    for (size_t s = 0; s < shapes.size(); s++) {
-      // Loop over faces(polygon)
-      for (size_t f = 0; f < shapes[s].mesh.num_face_vertices.size(); f++) {
-        // per-face material (-1 is default material, which is indexed at 0, hence the +1)
-        int material_num = shapes[s].mesh.material_ids[f] + 1;
-        face_material_id.push_back(material_num);
+    if(has_vertex_colors) {
+      vc.reset(new point3f[nVertices / 3]);
+      for (size_t i = 0; i < nVertices; i += 3) {
+        vc[i / 3] = point3f(attrib.colors[i+0],
+                            attrib.colors[i+1],
+                            attrib.colors[i+2]);
+      }
+    } else {
+      vc = nullptr;
+    }
+    
+    if(!has_vertex_colors) {
+      LoadMtlMaterials(mtl_materials, materials, obj_texture_data,
+                       bump_texture_data, bump_textures, alpha_textures,
+                       texture_size, inputfile, basedir, has_sep, default_material,
+                       load_materials, load_textures);
+    } else {
+      mtl_materials.push_back(default_material);
+      alpha_textures.push_back(nullptr);
+      bump_textures.push_back(nullptr);
+      for (size_t s = 0; s < vertexIndices.size(); s += 3) {
+        std::shared_ptr<texture> tex = std::shared_ptr<triangle_texture>(
+          new triangle_texture(vc[vertexIndices[s]],
+                               vc[vertexIndices[s+1]],
+                               vc[vertexIndices[s+2]]));
+        mtl_materials.push_back(std::shared_ptr<material>(new lambertian(tex)));
+        face_material_id.push_back(s / 3 + 1);
+        alpha_textures.push_back(nullptr);
+        bump_textures.push_back(nullptr);
       }
     }
   } else {
@@ -306,6 +332,7 @@ TriangleMesh::TriangleMesh(Rcpp::NumericMatrix vertices,
   face_material_id.clear();
   has_normals = false;
   has_tex = false;
+  has_vertex_colors = false;
 
   
   nVertices = vertices.nrow();

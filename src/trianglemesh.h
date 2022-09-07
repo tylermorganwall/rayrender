@@ -64,7 +64,7 @@ struct TriangleMesh {
     
   // TriangleMesh Data
   size_t nTriangles, nVertices, nNormals, nTex;
-  bool has_normals, has_tex;
+  bool has_normals, has_tex, has_vertex_colors;
   std::vector<int> vertexIndices;
   std::vector<int> normalIndices;
   std::vector<int> texIndices;
@@ -73,7 +73,8 @@ struct TriangleMesh {
   std::unique_ptr<normal3f[]> n;
   // std::unique_ptr<vec3f[]>    s;
   std::unique_ptr<point2f[]>  uv;
-
+  std::unique_ptr<point3f[]>  vc;
+  
   std::vector<std::shared_ptr<material> > mtl_materials;
   std::vector<int > face_material_id;
   

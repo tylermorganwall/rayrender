@@ -124,10 +124,14 @@ bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
 
   point3f pHit = b0 * p0 + b1 * p1 + b2 * p2;
   point2f uvHit = b0 * uv[0] + b1 * uv[1] + b2 * uv[2];
-
+  
   Float uHit = uvHit[0];
   Float vHit = uvHit[1];
-
+  if(mesh->has_vertex_colors) {
+    uHit = b0;
+    vHit = b1;
+  } 
+  
   bool alpha_miss = false;
   normal3f normal = normal3f(unit_vector(cross(dp02, dp12)));
   

@@ -129,9 +129,7 @@ class triangle_texture : public texture {
 public:
   triangle_texture() {}
   triangle_texture(point3f a, point3f b, point3f c) : a(a), b(b), c(c) {}
-  virtual point3f value(Float u, Float v, const point3f& p) const {
-    return((1 - u - v) * a + u * b + v * c);
-  };
+  virtual point3f value(Float u, Float v, const point3f& p) const;
   point3f a,b,c;
 };
 
