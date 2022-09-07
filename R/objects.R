@@ -396,9 +396,6 @@ triangle = function(v1 = c(1, 0, 0), v2 = c(0, 1, 0), v3 = c(-1, 0, 0),
                     material = diffuse(), 
                     angle = c(0, 0, 0), order_rotation = c(1, 2, 3), 
                     flipped = FALSE, reversed = FALSE, scale = c(1,1,1)) {
-  if(length(scale) == 1) {
-    scale = c(scale, scale, scale)
-  }
   if(!reversed) {
     vertex_vec = c(v1, v2, v3)
     normal_vec = c(n1, n2, n3)
@@ -406,47 +403,51 @@ triangle = function(v1 = c(1, 0, 0), v2 = c(0, 1, 0), v3 = c(-1, 0, 0),
     vertex_vec = c(v3, v2, v1)
     normal_vec = c(n3, n2, n1)
   }
-  info = c(unlist(material$properties), vertex_vec, normal_vec)
+  vb = matrix(vertex_vec,nrow=3,ncol=3)
+  it = matrix(c(1,2,3),nrow=3,ncol=1)
+  if(all(!is.na(normal_vec))) {
+    normals = matrix(normal_vec,nrow=3,ncol=3)
+  } else {
+    normals = matrix(0,nrow=3,ncol=0)
+  }
+  
+  if(length(scale) == 1) {
+    scale = c(scale, scale, scale)
+  }
+  vertex_colors = FALSE
   if(all(!is.na(color1))) {
+    vertex_colors = TRUE
     color1 = convert_color(color1)
   }
   if(all(!is.na(color2))) {
+    vertex_colors = TRUE
     color2 = convert_color(color2)
   }
   if(all(!is.na(color3))) {
+    vertex_colors = TRUE
     color3 = convert_color(color3)
   }
   if(any(is.na(color1)) && any(!is.na(c(color2, color3)))) {
-    color1 = info[1:3]
+    color1 = unlist(material$properties)[1:3]
   }
   if(any(is.na(color2)) && any(!is.na(c(color1, color3)))) {
-    color2 = info[1:3]
+    color2 = unlist(material$properties)[1:3]
   }
   if(any(is.na(color3)) && any(!is.na(c(color1, color2)))) {
-    color3 = info[1:3]
+    color3 = unlist(material$properties)[1:3]
   }
-  colorvec = c(color1, color2, color3)
-  new_tibble_row(list(x = 0, y = 0, z = 0, radius = NA, 
-                 type = material$type, shape = "triangle",
-                 properties = list(info), 
-                 checkercolor = material$checkercolor, 
-                 gradient_color = material$gradient_color, gradient_transpose = material$gradient_transpose, 
-                 world_gradient = material$world_gradient, gradient_point_info = material$gradient_point_info,
-                 gradient_type = material$gradient_type,
-                 noise = material$noise, noisephase = material$noisephase, 
-                 noiseintensity = material$noiseintensity, noisecolor = material$noisecolor,
-                 angle = list(angle), image = material$image, image_repeat = material$image_repeat,
-                 alphaimage = list(material$alphaimage), bump_texture = list(material$bump_texture),
-                 roughness_texture = list(material$rough_texture),
-                 bump_intensity = material$bump_intensity, lightintensity = material$lightintensity,
-                 flipped = flipped, fog = material$fog, fogdensity = material$fogdensity,
-                 implicit_sample = material$implicit_sample,  sigma = material$sigma, glossyinfo = material$glossyinfo,
-                 order_rotation = list(order_rotation),
-                 group_transform = list(NA),
-                 tricolorinfo = list(colorvec), fileinfo = NA, scale_factor = list(scale),
-                 material_id = NA, csg_object = list(NA), mesh_info = list(NA),
-                 start_transform_animation = list(NA), end_transform_animation = list(NA),
-                 start_time = 0, end_time = 1))
+  color_matrix = matrix(c(color1, color2, color3),nrow=3,ncol=3,byrow=TRUE)
+  mesh_obj = list(vb=vb,it=it,normals=normals)
+  if(vertex_colors) {
+    mesh_obj$material$color = color_matrix 
+  } else {
+    mesh_obj$material$color = matrix(nrow=0,ncol=0)
+  }
+  class(mesh_obj) = "mesh3d"
+  mesh_obj$meshColor = ifelse(vertex_colors, "default", "vertex")
+  mesh3d_model(mesh_obj,material = material, 
+         angle = angle, order_rotation = order_rotation, 
+         flipped = flipped, scale = scale)
 }
 
 #' Disk Object
@@ -2436,9 +2437,13 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
       face_color_vals = rep(face_color_vals, nrow(indices))
       mesh$meshColor = "faces"
     }
-    color_vals = matrix(convert_color(face_color_vals), ncol=3, byrow=TRUE)
+    if(!is.matrix(face_color_vals)) {
+      color_vals = matrix(convert_color(face_color_vals), ncol=3, byrow=TRUE)
+    } else {
+      color_vals = face_color_vals
+    }
   } else {
-    color_vals = matrix()
+    color_vals = matrix(nrow=0,ncol=0)
   }
   if(!is.null(mesh$meshColor)) {
     color_type = switch(mesh$meshColor,"vertices" = 1, "faces" = 2, 3)

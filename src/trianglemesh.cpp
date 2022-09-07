@@ -316,6 +316,7 @@ TriangleMesh::TriangleMesh(Rcpp::NumericMatrix vertices,
                            Rcpp::IntegerMatrix indices, 
                            Rcpp::NumericMatrix normals, 
                            Rcpp::NumericMatrix texcoords,
+                           Rcpp::NumericMatrix vertexcolors,
                            unsigned char * mesh_texture_data,
                            unsigned char * bump_texture_data_,
                            std::shared_ptr<alpha_texture> alpha,
@@ -332,12 +333,13 @@ TriangleMesh::TriangleMesh(Rcpp::NumericMatrix vertices,
   face_material_id.clear();
   has_normals = false;
   has_tex = false;
-  has_vertex_colors = false;
+  has_vertex_colors = vertexcolors.nrow() > 0;
 
   
   nVertices = vertices.nrow();
   nNormals = normals.nrow();
   nTex = texcoords.nrow();
+  int nVertexColors = vertexcolors.nrow();
   p.reset(new point3f[nVertices]);
   for (size_t i = 0; i < nVertices; i += 1) {
     p[i] = (*ObjectToWorld)(point3f(vertices(i,0),
@@ -368,6 +370,16 @@ TriangleMesh::TriangleMesh(Rcpp::NumericMatrix vertices,
   } else {
     uv = nullptr;
   }
+  if(has_vertex_colors) {
+    vc.reset(new point3f[nVertexColors]);
+    for (size_t i = 0; i < nVertexColors; i++) {
+      vc[i] = point3f(vertexcolors(i,0),
+                      vertexcolors(i,1),
+                      vertexcolors(i,2));
+    }
+  } else {
+    vc = nullptr;
+  }
   
   nTriangles = 0;
   for (size_t s = 0; s < indices.nrow(); s++) {
@@ -387,19 +399,36 @@ TriangleMesh::TriangleMesh(Rcpp::NumericMatrix vertices,
     }
   }
   
+  
   //Material stuff
-  for (size_t s = 0; s < indices.nrow(); s++) {
-    face_material_id.push_back(0);
+  if(!has_vertex_colors) {
+    for (size_t s = 0; s < indices.nrow(); s++) {
+      face_material_id.push_back(0);
+    }
+    mtl_materials.push_back(default_material);
+    if(mesh_texture_data) {
+      obj_texture_data.push_back(mesh_texture_data);
+    }
+    if(bump_texture_data_) {
+      bump_texture_data.push_back(bump_texture_data_);
+    }
+    alpha_textures.push_back(alpha);
+    bump_textures.push_back(bump);
+  } else {
+    mtl_materials.push_back(default_material);
+    alpha_textures.push_back(nullptr);
+    bump_textures.push_back(nullptr);
+    for (size_t s = 0; s < vertexIndices.size(); s += 3) {
+      std::shared_ptr<texture> tex = std::shared_ptr<triangle_texture>(
+        new triangle_texture(vc[vertexIndices[s]],
+                             vc[vertexIndices[s+1]],
+                             vc[vertexIndices[s+2]]));
+      mtl_materials.push_back(std::shared_ptr<material>(new lambertian(tex)));
+      face_material_id.push_back(s / 3 + 1);
+      alpha_textures.push_back(nullptr);
+      bump_textures.push_back(nullptr);
+    }
   }
-  mtl_materials.push_back(default_material);
-  if(mesh_texture_data) {
-    obj_texture_data.push_back(mesh_texture_data);
-  }
-  if(bump_texture_data_) {
-    bump_texture_data.push_back(bump_texture_data_);
-  }
-  alpha_textures.push_back(alpha);
-  bump_textures.push_back(bump);
 }
 
 

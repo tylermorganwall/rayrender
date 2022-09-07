@@ -71,7 +71,7 @@ mesh3d::mesh3d(Rcpp::List mesh_info, std::shared_ptr<material> mat,
   } 
   
   
-  mesh = std::unique_ptr<TriangleMesh>(new TriangleMesh(vertices, indices, norms, txcoord, 
+  mesh = std::unique_ptr<TriangleMesh>(new TriangleMesh(vertices, indices, norms, txcoord, colors,
                                                         mesh_material_data, bump_texture_data,
                                                         alpha, bump,
                                                         mat, true, true, 
@@ -87,17 +87,6 @@ mesh3d::mesh3d(Rcpp::List mesh_info, std::shared_ptr<material> mat,
                                              &mesh->texIndices[i], i / 3,
                                              ObjectToWorld, WorldToObject, reverseOrientation));
   }
-  //   } else if(colortype == 2) {
-  //     tex = std::make_shared<triangle_texture>(
-  //       vec3f(colors(i,0),colors(i,1),colors(i,2)),
-  //       vec3f(colors(i,0),colors(i,1),colors(i,2)),
-  //       vec3f(colors(i,0),colors(i,1),colors(i,2)));
-  //   } else if(colortype == 4) {
-  //     tex = std::make_shared<triangle_texture>(
-  //       vec3f(colors(idx[0],0),colors(idx[0],1),colors(idx[0],2)),
-  //       vec3f(colors(idx[1],0),colors(idx[1],1),colors(idx[1],2)),
-  //       vec3f(colors(idx[2],0),colors(idx[2],1),colors(idx[2],2)));
-  //   } 
     
   mesh_bvh = std::make_shared<bvh_node>(triangles, shutteropen, shutterclose, bvh_type, rng);
   triangles.objects.clear();

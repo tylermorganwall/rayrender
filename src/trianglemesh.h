@@ -31,6 +31,7 @@ struct TriangleMesh {
                Rcpp::IntegerMatrix indices, 
                Rcpp::NumericMatrix normals, 
                Rcpp::NumericMatrix texcoords,
+               Rcpp::NumericMatrix vertexcolors,
                unsigned char * mesh_texture_data,
                unsigned char * bump_texture_data,
                std::shared_ptr<alpha_texture> alpha,
