@@ -15,7 +15,7 @@ void LoadMtlMaterials(std::vector<std::shared_ptr<material> > &mtl_materials,
                       size_t &texture_size,
                       const std::string inputfile, const std::string basedir, bool has_sep,
                       std::shared_ptr<material> default_material, bool load_materials,
-                      bool load_textures) {
+                      bool load_textures, bool verbose) {
   mtl_materials.reserve(materials.size()+1);
   obj_texture_data.reserve(materials.size()+1);
   bump_texture_data.reserve(materials.size()+1);
@@ -76,8 +76,9 @@ void LoadMtlMaterials(std::vector<std::shared_ptr<material> > &mtl_materials,
             throw std::runtime_error("Could not find " + materials[i].diffuse_texname);
           }
         }
-        Rprintf("(%i/%i) Loading OBJ Material %s Dims: (%i/%i/%i) \n", i+1, materials.size(),materials[i].name.c_str(),nx,ny,nn);
-        
+        if(verbose) {
+          Rprintf("(%i/%i) Loading Material Texture %s (%i/%i/%i) \n", i+1, materials.size(),materials[i].name.c_str(),nx,ny,nn);
+        }
 
         texture_size += sizeof(unsigned char) * nx * ny * nn;
         has_diffuse[i] = true;
@@ -188,7 +189,7 @@ void LoadMtlMaterials(std::vector<std::shared_ptr<material> > &mtl_materials,
 
 TriangleMesh::TriangleMesh(std::string inputfile, std::string basedir,
                            std::shared_ptr<material> default_material, 
-                           bool load_materials, bool load_textures,
+                           bool load_materials, bool load_textures, bool verbose,
                            std::shared_ptr<Transform> ObjectToWorld, 
                            std::shared_ptr<Transform> WorldToObject, 
                            bool reverseOrientation) : nTriangles(0) {
@@ -204,6 +205,7 @@ TriangleMesh::TriangleMesh(std::string inputfile, std::string basedir,
 
   tinyobj::ObjReaderConfig reader_config;
   reader_config.mtl_search_path = basedir.c_str(); // Path to material files
+  reader_config.vertex_color = false;
   
   tinyobj::ObjReader reader;
   
@@ -222,7 +224,6 @@ TriangleMesh::TriangleMesh(std::string inputfile, std::string basedir,
   has_tex = false;
   
   has_vertex_colors = attrib.colors.size() > 0 ? true : false;
-  
   if(strlen(basedir.c_str()) == 0) {
     has_sep = false;
   }
@@ -290,7 +291,7 @@ TriangleMesh::TriangleMesh(std::string inputfile, std::string basedir,
       LoadMtlMaterials(mtl_materials, materials, obj_texture_data,
                        bump_texture_data, bump_textures, alpha_textures,
                        texture_size, inputfile, basedir, has_sep, default_material,
-                       load_materials, load_textures);
+                       load_materials, load_textures, verbose);
     } else {
       mtl_materials.push_back(default_material);
       alpha_textures.push_back(nullptr);

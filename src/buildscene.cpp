@@ -53,6 +53,7 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
                      std::vector<std::shared_ptr<material> >* shared_materials, List& image_repeat_list,
                      List& csg_info, List& mesh_list, int bvh_type,
                      TransformCache& transformCache, List& animation_info, 
+                     bool verbose,
                      random_gen& rng) {
   hitable_list list;
   NumericMatrix IdentityMat(4,4);
@@ -578,8 +579,8 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
       std::string objfilename = Rcpp::as<std::string>(fileinfo(i));
       std::string objbasedirname = Rcpp::as<std::string>(filebasedir(i));
       entry = std::make_shared<trimesh>(objfilename, objbasedirname, 
-                                        1, 0, tex, false, false,
-                                        shutteropen, shutterclose, bvh_type, rng,
+                                        1, 0, tex, false, false, 
+                                        shutteropen, shutterclose, bvh_type, rng, verbose,
                                         ObjToWorld,WorldToObj, isflipped(i));
       if(isvolume(i)) {
         entry = std::make_shared<constant_medium>(entry, voldensity(i), 
@@ -595,7 +596,7 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
       std::string objbasedirname = Rcpp::as<std::string>(filebasedir(i));
       entry = std::make_shared<trimesh>(objfilename, objbasedirname, 
                                         tempvector(prop_len+1), sigma(i), tex, true, (bool)tempvector(prop_len+2),
-                                        shutteropen, shutterclose, bvh_type, rng,
+                                        shutteropen, shutterclose, bvh_type, rng, verbose,
                                         ObjToWorld,WorldToObj, isflipped(i));
       if(isvolume(i)) {
         entry = std::make_shared<constant_medium>(entry, voldensity(i), 
@@ -643,7 +644,7 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
       std::string objbasedirname = Rcpp::as<std::string>(filebasedir(i));
       entry = std::make_shared<trimesh>(objfilename, objbasedirname, 
                                         tempvector(prop_len+1), sigma(i), tex, true, false,
-                                        shutteropen, shutterclose, bvh_type, rng,
+                                        shutteropen, shutterclose, bvh_type, rng, verbose,
                                         ObjToWorld,WorldToObj, isflipped(i));
       if(isvolume(i)) {
         entry = std::make_shared<constant_medium>(entry, voldensity(i), 
@@ -912,7 +913,8 @@ std::shared_ptr<hitable> build_imp_sample(IntegerVector& type,
     std::string objbasedirname = Rcpp::as<std::string>(filebasedir(i));
     entry = std::make_shared<trimesh>(objfilename, objbasedirname,
                                       tempvector(prop_len+1), 0, tex, false, false,
-                                      shutteropen, shutterclose, bvh_type, rng, ObjToWorld,WorldToObj, false);
+                                      shutteropen, shutterclose, bvh_type, rng, false, 
+                                      ObjToWorld,WorldToObj, false);
     if(has_animation(i)) {
       entry = std::make_shared<AnimatedHitable>(entry, Animate);
     }

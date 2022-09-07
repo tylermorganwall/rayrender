@@ -17,7 +17,7 @@ public:
   trimesh() {}
   trimesh(std::string inputfile, std::string basedir, Float scale, Float sigma,
           std::shared_ptr<material> default_material, bool load_materials, bool load_textures,
-          Float shutteropen, Float shutterclose, int bvh_type, random_gen rng,
+          Float shutteropen, Float shutterclose, int bvh_type, random_gen rng, bool verbose,
           std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation);
   
   virtual bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng);

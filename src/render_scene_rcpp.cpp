@@ -393,7 +393,7 @@ List render_scene_rcpp(List camera_info, List scene_info) {
                                 scale_list, sigmavec, glossyinfo,
                                 shared_id_mat, is_shared_mat, shared_materials,
                                 image_repeat, csg_info, mesh_list, bvh_type, transformCache,
-                                animation_info, rng);
+                                animation_info, verbose, rng);
   print_time(verbose, "Built Scene BVH" );
 
   //Calculate world bounds and ensure camera is inside infinite area light
@@ -511,15 +511,7 @@ List render_scene_rcpp(List camera_info, List scene_info) {
   if(impl_only_bg || hasbackground) {
     hlist.add(background_sphere);
   }
-  RProgress::RProgress pb_sampler("Generating Samples [:bar] :percent%");
-  pb_sampler.set_width(70);
-  RProgress::RProgress pb("Adaptive Raytracing [:bar] :percent%");
-  pb.set_width(70);
 
-  if(progress_bar) {
-    pb_sampler.set_total(ny);
-    pb.set_total(ns);
-  }
   if(min_variance == 0) {
     min_adaptive_size = 1;
     min_variance = 10E-8;

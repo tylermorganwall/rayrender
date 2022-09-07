@@ -239,7 +239,7 @@ void render_animation_rcpp(List camera_info, List scene_info, List camera_moveme
                                                   scale_list, sigmavec, glossyinfo,
                                                   shared_id_mat, is_shared_mat, shared_materials,
                                                   image_repeat, csg_info, mesh_list, bvh_type, transformCache,
-                                                  animation_info, rng);
+                                                  animation_info, verbose, rng);
   auto finish = std::chrono::high_resolution_clock::now();
   if(verbose) {
     std::chrono::duration<double> elapsed = finish - start;
