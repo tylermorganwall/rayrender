@@ -159,31 +159,36 @@ void LoadMtlMaterials(std::vector<std::shared_ptr<material> > &mtl_materials,
       alpha_textures.push_back(alpha);
       bump_textures.push_back(bump);
     }
+  } else {
+    alpha_textures.push_back(nullptr);
+    bump_textures.push_back(nullptr);
   }
   
   //First texture is default (when shapes[s].mesh.material_ids[f] == -1)
   mtl_materials.push_back(default_material);
   
-  for(int material_num = 0; material_num < materials.size(); material_num++) {
-    std::shared_ptr<material> tex = nullptr;
-    
-    if(has_transparency[material_num]) {
-      tex = std::make_shared<dielectric>(specular_materials[material_num], 
-                                         ior_materials[material_num], vec3f(0,0,0), 
-                                         0);
-    } else if(has_diffuse[material_num]) {
-      if(has_single_diffuse[material_num]) {
-        tex = std::make_shared<lambertian>(std::make_shared<constant_texture>(diffuse_materials[material_num]));
+  if(load_materials) {
+    for(int material_num = 0; material_num < materials.size(); material_num++) {
+      std::shared_ptr<material> tex = nullptr;
+      
+      if(has_transparency[material_num]) {
+        tex = std::make_shared<dielectric>(specular_materials[material_num], 
+                                           ior_materials[material_num], vec3f(0,0,0), 
+                                           0);
+      } else if(has_diffuse[material_num]) {
+        if(has_single_diffuse[material_num]) {
+          tex = std::make_shared<lambertian>(std::make_shared<constant_texture>(diffuse_materials[material_num]));
+        } else {
+          tex = std::make_shared<lambertian>(std::make_shared<image_texture_char>(obj_texture_data[material_num],
+                                                                             nx_mat[material_num], 
+                                                                             ny_mat[material_num],
+                                                                             nn_mat[material_num]));
+        }
       } else {
-        tex = std::make_shared<lambertian>(std::make_shared<image_texture_char>(obj_texture_data[material_num],
-                                                                           nx_mat[material_num], 
-                                                                           ny_mat[material_num],
-                                                                           nn_mat[material_num]));
+        tex = default_material;
       }
-    } else {
-      tex = default_material;
+      mtl_materials.push_back(tex);
     }
-    mtl_materials.push_back(tex);
   }
 }
 
@@ -237,9 +242,15 @@ TriangleMesh::TriangleMesh(std::string inputfile, std::string basedir,
         texIndices.push_back(shapes[s].mesh.indices[m].texcoord_index);
       }
       if(!has_vertex_colors) {
-        for(size_t i = 0; i < shapes[s].mesh.material_ids.size(); i++ ) {
-          face_material_id.push_back(shapes[s].mesh.material_ids[i] + 1);
-        } 
+        if(load_materials) {
+          for(size_t i = 0; i < shapes[s].mesh.material_ids.size(); i++ ) {
+            face_material_id.push_back(shapes[s].mesh.material_ids[i] + 1);
+          } 
+        } else {
+          for(size_t i = 0; i < shapes[s].mesh.material_ids.size(); i++ ) {
+            face_material_id.push_back(0);
+          } 
+        }
       } 
     }
     

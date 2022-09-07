@@ -595,17 +595,12 @@ obj_model = function(filename, x = 0, y = 0, z = 0, scale_obj = 1,
   if(length(scale) == 1) {
     scale = c(scale, scale, scale)
   }
+  if(!load_material) {
+    load_textures = FALSE
+  }
   info = c(unlist(material$properties), scale_obj, load_textures)
-  if(load_material) {
-    shape = "objcolor"
-  } else {
-    shape = "obj"
-  }
-  if(vertex_colors) {
-    shape = "objvertexcolor"
-  }
   new_tibble_row(list(x = x, y = y, z = z, radius = NA, 
-                 type = material$type, shape = shape,
+                 type = material$type, shape = "obj",
                  properties = list(info), 
                  checkercolor = material$checkercolor, 
                  gradient_color = material$gradient_color, gradient_transpose = material$gradient_transpose, 
