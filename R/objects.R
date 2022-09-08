@@ -598,9 +598,9 @@ obj_model = function(filename, x = 0, y = 0, z = 0, scale_obj = 1,
   if(!load_material) {
     load_textures = FALSE
   }
-  info = c(unlist(material$properties), scale_obj, load_textures)
+  info = c(unlist(material$properties), scale_obj, load_textures, load_material, vertex_colors)
   new_tibble_row(list(x = x, y = y, z = z, radius = NA, 
-                 type = material$type, shape = "obj",
+                 type = material$type, shape = "objcolor",
                  properties = list(info), 
                  checkercolor = material$checkercolor, 
                  gradient_color = material$gradient_color, gradient_transpose = material$gradient_transpose, 

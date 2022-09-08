@@ -194,7 +194,7 @@ void LoadMtlMaterials(std::vector<std::shared_ptr<material> > &mtl_materials,
 
 TriangleMesh::TriangleMesh(std::string inputfile, std::string basedir,
                            std::shared_ptr<material> default_material, 
-                           bool load_materials, bool load_textures, bool verbose,
+                           bool load_materials, bool load_textures, bool load_vertex_colors, bool verbose, 
                            std::shared_ptr<Transform> ObjectToWorld, 
                            std::shared_ptr<Transform> WorldToObject, 
                            bool reverseOrientation) : nTriangles(0) {
@@ -210,7 +210,7 @@ TriangleMesh::TriangleMesh(std::string inputfile, std::string basedir,
 
   tinyobj::ObjReaderConfig reader_config;
   reader_config.mtl_search_path = basedir.c_str(); // Path to material files
-  reader_config.vertex_color = false;
+  reader_config.vertex_color = load_vertex_colors;
   
   tinyobj::ObjReader reader;
   

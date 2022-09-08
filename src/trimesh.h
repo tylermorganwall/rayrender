@@ -16,7 +16,7 @@ class trimesh : public hitable {
 public:
   trimesh() {}
   trimesh(std::string inputfile, std::string basedir, Float scale, Float sigma,
-          std::shared_ptr<material> default_material, bool load_materials, bool load_textures,
+          std::shared_ptr<material> default_material, bool load_materials, bool load_textures, bool load_vertex_colors,
           Float shutteropen, Float shutterclose, int bvh_type, random_gen rng, bool verbose,
           std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation);
   

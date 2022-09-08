@@ -574,28 +574,13 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
         entry = std::make_shared<AnimatedHitable>(entry, Animate);
       }
       list.add(entry);
-    } else if (shape(i) == 7) {
-      std::shared_ptr<hitable> entry;
-      std::string objfilename = Rcpp::as<std::string>(fileinfo(i));
-      std::string objbasedirname = Rcpp::as<std::string>(filebasedir(i));
-      entry = std::make_shared<trimesh>(objfilename, objbasedirname, 
-                                        1, 0, tex, false, false, 
-                                        shutteropen, shutterclose, bvh_type, rng, verbose,
-                                        ObjToWorld,WorldToObj, isflipped(i));
-      if(isvolume(i)) {
-        entry = std::make_shared<constant_medium>(entry, voldensity(i), 
-                                                  std::make_shared<constant_texture>(point3f(tempvector(0),tempvector(1),tempvector(2))));
-      }
-      if(has_animation(i)) {
-        entry = std::make_shared<AnimatedHitable>(entry, Animate);
-      }
-      list.add(entry);
     } else if (shape(i) == 8) {
       std::shared_ptr<hitable> entry;
       std::string objfilename = Rcpp::as<std::string>(fileinfo(i));
       std::string objbasedirname = Rcpp::as<std::string>(filebasedir(i));
       entry = std::make_shared<trimesh>(objfilename, objbasedirname, 
-                                        tempvector(prop_len+1), sigma(i), tex, true, (bool)tempvector(prop_len+2),
+                                        tempvector(prop_len+1), sigma(i), tex, 
+                                        (bool)tempvector(prop_len+3), (bool)tempvector(prop_len+2), (bool)tempvector(prop_len+4),
                                         shutteropen, shutterclose, bvh_type, rng, verbose,
                                         ObjToWorld,WorldToObj, isflipped(i));
       if(isvolume(i)) {
@@ -630,22 +615,6 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
                                       vec3f(tempvector(prop_len + 1), tempvector(prop_len + 2), tempvector(prop_len + 3)),
                                       tex, alpha[i], bump[i],
                                       ObjToWorld,WorldToObj, isflipped(i));
-      if(isvolume(i)) {
-        entry = std::make_shared<constant_medium>(entry, voldensity(i), 
-                                                  std::make_shared<constant_texture>(point3f(tempvector(0),tempvector(1),tempvector(2))));
-      }
-      if(has_animation(i)) {
-        entry = std::make_shared<AnimatedHitable>(entry, Animate);
-      }
-      list.add(entry);
-    } else if (shape(i) == 12) {
-      std::shared_ptr<hitable> entry;
-      std::string objfilename = Rcpp::as<std::string>(fileinfo(i));
-      std::string objbasedirname = Rcpp::as<std::string>(filebasedir(i));
-      entry = std::make_shared<trimesh>(objfilename, objbasedirname, 
-                                        tempvector(prop_len+1), sigma(i), tex, true, false,
-                                        shutteropen, shutterclose, bvh_type, rng, verbose,
-                                        ObjToWorld,WorldToObj, isflipped(i));
       if(isvolume(i)) {
         entry = std::make_shared<constant_medium>(entry, voldensity(i), 
                                                   std::make_shared<constant_texture>(point3f(tempvector(0),tempvector(1),tempvector(2))));
@@ -907,12 +876,12 @@ std::shared_ptr<hitable> build_imp_sample(IntegerVector& type,
       entry = std::make_shared<AnimatedHitable>(entry, Animate);
     }
     return(entry);
-  } else if (shape(i) == 7 || shape(i) == 8 || shape(i) == 12) {
+  } else if (shape(i) == 8) {
     std::shared_ptr<hitable> entry;
     std::string objfilename = Rcpp::as<std::string>(fileinfo(i));
     std::string objbasedirname = Rcpp::as<std::string>(filebasedir(i));
     entry = std::make_shared<trimesh>(objfilename, objbasedirname,
-                                      tempvector(prop_len+1), 0, tex, false, false,
+                                      tempvector(prop_len+1), 0, tex, false, false, false,
                                       shutteropen, shutterclose, bvh_type, rng, false, 
                                       ObjToWorld,WorldToObj, false);
     if(has_animation(i)) {
