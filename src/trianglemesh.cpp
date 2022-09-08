@@ -2,6 +2,7 @@
 
 #ifndef TINYOBJLOADER_IMPLEMENTATION
 #define TINYOBJLOADER_IMPLEMENTATION
+#define TINYOBJLOADER_USE_MAPBOX_EARCUT
 #include "tinyobj/tiny_obj_loader.h"
 #endif
 
@@ -169,6 +170,10 @@ void LoadMtlMaterials(std::vector<std::shared_ptr<material> > &mtl_materials,
   
   if(load_materials) {
     for(int material_num = 0; material_num < materials.size(); material_num++) {
+      if(verbose) {
+        Rprintf("(%i/%i) Loading Material %s \n", material_num+1, 
+                materials.size(),materials[material_num].name.c_str());
+      }
       std::shared_ptr<material> tex = nullptr;
       
       if(has_transparency[material_num]) {
@@ -180,9 +185,9 @@ void LoadMtlMaterials(std::vector<std::shared_ptr<material> > &mtl_materials,
           tex = std::make_shared<lambertian>(std::make_shared<constant_texture>(diffuse_materials[material_num]));
         } else {
           tex = std::make_shared<lambertian>(std::make_shared<image_texture_char>(obj_texture_data[material_num],
-                                                                             nx_mat[material_num], 
-                                                                             ny_mat[material_num],
-                                                                             nn_mat[material_num]));
+                                                                                  nx_mat[material_num], 
+                                                                                  ny_mat[material_num],
+                                                                                  nn_mat[material_num]));
         }
       } else {
         tex = default_material;
@@ -211,6 +216,7 @@ TriangleMesh::TriangleMesh(std::string inputfile, std::string basedir,
   tinyobj::ObjReaderConfig reader_config;
   reader_config.mtl_search_path = basedir.c_str(); // Path to material files
   reader_config.vertex_color = load_vertex_colors;
+  reader_config.triangulate = true;
   
   tinyobj::ObjReader reader;
   
@@ -253,6 +259,8 @@ TriangleMesh::TriangleMesh(std::string inputfile, std::string basedir,
         }
       } 
     }
+    Rcpp::Rcout << "min: " << *min_element(vertexIndices.begin(), vertexIndices.end()) << " max: " << 
+                *max_element(vertexIndices.begin(), vertexIndices.end()) << "\n";
     
     nNormals = attrib.normals.size();
     nTex = !has_vertex_colors ? attrib.texcoords.size() : 0;
