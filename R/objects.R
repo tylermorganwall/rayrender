@@ -446,8 +446,8 @@ triangle = function(v1 = c(1, 0, 0), v2 = c(0, 1, 0), v3 = c(-1, 0, 0),
   class(mesh_obj) = "mesh3d"
   mesh_obj$meshColor = ifelse(vertex_colors, "default", "vertex")
   mesh3d_model(mesh_obj,material = material, 
-         angle = angle, order_rotation = order_rotation, 
-         flipped = flipped, scale = scale)
+               angle = angle, order_rotation = order_rotation, 
+               flipped = flipped, scale = scale)
 }
 
 #' Disk Object
@@ -961,7 +961,6 @@ ellipsoid = function(x = 0, y = 0, z = 0, a = 1, b = 1, c = 1,
 #' much to scale that value when rendering.
 #' @param angle Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.
 #' @param order_rotation Default `c(1, 2, 3)`. The order to apply the rotations, referring to "x", "y", and "z".
-#' @param pivot_point Default `c(0,0,0)`. Point at which to rotate the polygon around.
 #' @param scale Default `c(1, 1, 1)`. Scale transformation in the x, y, and z directions. If this is a single value,
 #' number, the object will be scaled uniformly.
 #' Note: emissive objects may not currently function correctly when scaled.
@@ -1090,7 +1089,7 @@ ellipsoid = function(x = 0, y = 0, z = 0, a = 1, b = 1, c = 1,
 extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
                    top = 1, bottom = 0, holes = NULL, 
                    angle = c(0, 0, 0), order_rotation = c(1, 2, 3), 
-                   pivot_point = c(0,0,0), material = diffuse(),
+                   material = diffuse(),
                    center = FALSE, flip_horizontal = FALSE, flip_vertical = FALSE,
                    data_column_top = NULL, data_column_bottom = NULL, scale_data = 1,
                    scale = c(1,1,1)) {
@@ -1324,7 +1323,11 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
   }
   scenelist= list()
   counter = 1
-
+  
+  vert_list = list()
+  idx_list = list()
+  idx_counter = rev(c(1,2,3))
+  
   for(poly in 1:length(poly_list)) {
     x=poly_list[[poly]][,1]
     y=poly_list[[poly]][,2]
@@ -1332,17 +1335,22 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
     height_poly = height_list[[poly]]
     bottom_poly = bottom_list[[poly]]
     
+    
     for(i in 1:nrow(vertices)) {
-      scenelist[[counter]] = triangle(v1=scale*permute_axes(c(x[vertices[i,3]],bottom_poly,y[vertices[i,3]]),planeval),
-                                      v2=scale*permute_axes(c(x[vertices[i,2]],bottom_poly,y[vertices[i,2]]),planeval),
-                                      v3=scale*permute_axes(c(x[vertices[i,1]],bottom_poly,y[vertices[i,1]]),planeval),
-                                      material = material, reversed = reversed)
+      vert_list[[counter]] = matrix(c(scale*permute_axes(c(x[vertices[i,3]],bottom_poly,y[vertices[i,3]]),planeval),
+                                      scale*permute_axes(c(x[vertices[i,2]],bottom_poly,y[vertices[i,2]]),planeval),
+                                      scale*permute_axes(c(x[vertices[i,1]],bottom_poly,y[vertices[i,1]]),planeval)),
+                                    ncol=3,nrow=3,byrow=TRUE)
+      idx_list[[counter]] = matrix(idx_counter,nrow=1,ncol=3)
+      idx_counter = idx_counter + 3
       counter = counter + 1
       if(extruded) {
-        scenelist[[counter]] = triangle(v1=scale*permute_axes(c(x[vertices[i,1]],height_poly,y[vertices[i,1]]),planeval),
-                                        v2=scale*permute_axes(c(x[vertices[i,2]],height_poly,y[vertices[i,2]]),planeval),
-                                        v3=scale*permute_axes(c(x[vertices[i,3]],height_poly,y[vertices[i,3]]),planeval),
-                                        material = material, reversed = reversed)
+        vert_list[[counter]] = matrix(c(scale*permute_axes(c(x[vertices[i,1]],height_poly,y[vertices[i,1]]),planeval),
+                                        scale*permute_axes(c(x[vertices[i,2]],height_poly,y[vertices[i,2]]),planeval),
+                                        scale*permute_axes(c(x[vertices[i,3]],height_poly,y[vertices[i,3]]),planeval)),
+                                      ncol=3,nrow=3,byrow=TRUE)
+        idx_list[[counter]] = matrix(idx_counter,nrow=1,ncol=3)
+        idx_counter = idx_counter + 3
         counter = counter + 1
       }
     }
@@ -1382,16 +1390,27 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
           yi = y[polyv[i]]
           xii = x[polyv[i + 1L]]  # vertex i + 1
           yii = y[polyv[i + 1L]]
-
-          scenelist[[counter]] = triangle(v1=scale*permute_axes(c(xi,height_poly,yi),planeval),
-                                          v2=scale*permute_axes(c(xi,bottom_poly,yi),planeval),
-                                          v3=scale*permute_axes(c(xii,bottom_poly,yii),planeval),
-                                          material = material, reversed = xor(reversed, side_rev))
+          vert_list[[counter]] = matrix(c(scale*permute_axes(c(xi,height_poly ,yi),planeval),
+                                          scale*permute_axes(c(xi,bottom_poly ,yi),planeval),
+                                          scale*permute_axes(c(xii,bottom_poly,yii),planeval)),
+                                        ncol=3,nrow=3,byrow=TRUE)
+          if(!xor(reversed, side_rev)) {
+            idx_list[[counter]] = matrix(rev(idx_counter),nrow=1,ncol=3)
+          } else {
+            idx_list[[counter]] = matrix(idx_counter,nrow=1,ncol=3)
+          }
+          idx_counter = idx_counter + 3
           counter = counter + 1
-          scenelist[[counter]] = triangle(v1=scale*permute_axes(c(xi,height_poly,yi),planeval),
-                                          v2=scale*permute_axes(c(xii,bottom_poly,yii),planeval),
-                                          v3=scale*permute_axes(c(xii,height_poly,yii),planeval),
-                                          material = material, reversed = xor(reversed, side_rev))
+          vert_list[[counter]] = matrix(c(scale*permute_axes(c(xi,height_poly ,yi),planeval),
+                                          scale*permute_axes(c(xii,bottom_poly ,yii),planeval),
+                                          scale*permute_axes(c(xii,height_poly,yii),planeval)),
+                                        ncol=3,nrow=3,byrow=TRUE)
+          if(!xor(reversed, side_rev)) {
+            idx_list[[counter]] = matrix(rev(idx_counter),nrow=1,ncol=3)
+          } else {
+            idx_list[[counter]] = matrix(idx_counter,nrow=1,ncol=3)
+          }
+          idx_counter = idx_counter + 3
           counter = counter + 1
         }
       }
@@ -1402,67 +1421,16 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
   } else {
     scenefull = do.call(rbind, scenelist)
   }
-  if(any(angle != 0)) {
-    if(any(pivot_point != 0)) {
-      sceneprop = scenefull$properties
-      add_at_indices = function(x, indices, off) {
-        x[indices] = x[indices] + off
-        x
-      }
-      sceneprop = lapply(sceneprop,add_at_indices,indices=c(proplen + 1,proplen + 4, proplen + 7), off = -pivot_point[1])
-      sceneprop = lapply(sceneprop,add_at_indices,indices=c(proplen + 2,proplen + 5, proplen + 8), off = -pivot_point[2])
-      sceneprop = lapply(sceneprop,add_at_indices,indices=c(proplen + 3,proplen + 6, proplen + 9), off = -pivot_point[3])
-      scenefull$properties = sceneprop
-    }
-    rot_at_indices = function(x, indices, angle) {
-      x[indices[1:2]] = rot_coords(x[indices[1]], x[indices[2]], angle)
-      x[indices[3:4]] = rot_coords(x[indices[3]], x[indices[4]], angle)
-      x[indices[5:6]] = rot_coords(x[indices[5]], x[indices[6]], angle)
-      x
-    }
-    for(i in 1:3) {
-      if(order_rotation[i] == 1) {
-        sceneprop = scenefull$properties
-        sceneprop = lapply(sceneprop, rot_at_indices, indices = proplen + c(2, 3, 5, 6, 8, 9), angle = angle[1])
-        scenefull$properties = sceneprop
-      }
-      if(order_rotation[i] == 2) {
-        sceneprop = scenefull$properties
-        sceneprop = lapply(sceneprop, rot_at_indices, indices = proplen + c(1, 3, 4, 6, 7, 9), angle = angle[2])
-        scenefull$properties = sceneprop
-      }
-      if(order_rotation[i] == 3) {
-        sceneprop = scenefull$properties
-        sceneprop = lapply(sceneprop, rot_at_indices, indices = proplen + c(1, 2, 4, 5, 7, 8), angle = angle[3])
-        scenefull$properties = sceneprop
-      }
-    }
-    if(any(pivot_point != 0)) {
-      sceneprop = scenefull$properties
-      add_at_indices = function(x, indices, off) {
-        x[indices] = x[indices] + off
-        x
-      }
-      sceneprop = lapply(sceneprop,add_at_indices,indices=c(proplen + 1,proplen + 4, proplen + 7), off = pivot_point[1])
-      sceneprop = lapply(sceneprop,add_at_indices,indices=c(proplen + 2,proplen + 5, proplen + 8), off = pivot_point[2])
-      sceneprop = lapply(sceneprop,add_at_indices,indices=c(proplen + 3,proplen + 6, proplen + 9), off = pivot_point[3])
-      scenefull$properties = sceneprop
-    }
-  }
-  if(any(x_off != 0 || y_off != 0 || z_off != 0)) {
-    sceneprop = scenefull$properties
-    add_at_indices = function(x, indices, off) {
-      x[indices] = x[indices] + off
-      x
-    }
-    sceneprop = lapply(sceneprop,add_at_indices,indices=c(proplen + 1,proplen + 4, proplen + 7), off = x_off)
-    sceneprop = lapply(sceneprop,add_at_indices,indices=c(proplen + 2,proplen + 5, proplen + 8), off = y_off)
-    sceneprop = lapply(sceneprop,add_at_indices,indices=c(proplen + 3,proplen + 6, proplen + 9), off = z_off)
-    scenefull$properties = sceneprop
-  }
-  scenefull$material_id = rep(material_id, nrow(scenefull))
-  tibble::validate_tibble(scenefull)
-  return(scenefull)
+  
+  v_mat = do.call(rbind,vert_list)
+  i_mat = do.call(rbind,idx_list)
+  mesh = list()
+  mesh$vb = t(v_mat)
+  mesh$it = t(i_mat)
+  class(mesh) = "mesh3d"
+  return(mesh3d_model(mesh, x=x_off,y=y_off,z=z_off,
+                      angle = angle, order_rotation = order_rotation,
+                      override_material=TRUE, material=material))
 }
 
 #' Cone Object
