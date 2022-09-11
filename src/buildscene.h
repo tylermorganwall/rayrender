@@ -61,20 +61,9 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
                                      std::vector<std::shared_ptr<material> >* shared_materials, List& image_repeat_list,
                                      List& csg_info, List& mesh_list, int bvh_type,
                                      TransformCache &transformCache, List& animation_info,
+                                     LogicalVector& implicit_sample, hitable_list& imp_sample_objects,
                                      bool verbose,
                                      random_gen& rng);
 
-std::shared_ptr<hitable> build_imp_sample(IntegerVector& type, 
-                                          NumericVector& radius, IntegerVector& shape,
-                                          List& position_list,
-                                          List& properties, 
-                                          int n, Float shutteropen, Float shutterclose, 
-                                          List& angle, int i, List& order_rotation_list,
-                                          LogicalVector& isgrouped, 
-                                          List& group_transform,
-                                          CharacterVector& fileinfo, CharacterVector& filebasedir,
-                                          TransformCache& transformCache,
-                                          List& scale_list, List& mesh_list, int bvh_type, 
-                                          List& animation_info, random_gen& rng);
 
 #endif

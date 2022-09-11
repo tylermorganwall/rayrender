@@ -85,6 +85,7 @@ struct TriangleMesh {
   std::vector<std::shared_ptr<bump_texture> > bump_textures;
   std::vector<std::shared_ptr<alpha_texture> > alpha_textures;
   size_t texture_size;
+  std::vector<bool> material_is_light;
 };
 
 #endif

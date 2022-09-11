@@ -373,7 +373,8 @@ List render_scene_rcpp(List camera_info, List scene_info) {
     }
   }
   print_time(verbose, "Loaded Textures" );
-
+  
+  hitable_list imp_sample_objects;
   std::shared_ptr<hitable> worldbvh = build_scene(type, radius, shape, position_list,
                                 properties,
                                 n,shutteropen,shutterclose,
@@ -393,7 +394,8 @@ List render_scene_rcpp(List camera_info, List scene_info) {
                                 scale_list, sigmavec, glossyinfo,
                                 shared_id_mat, is_shared_mat, shared_materials,
                                 image_repeat, csg_info, mesh_list, bvh_type, transformCache,
-                                animation_info, verbose, rng);
+                                animation_info, implicit_sample, imp_sample_objects,
+                                verbose, rng);
   print_time(verbose, "Built Scene BVH" );
 
   //Calculate world bounds and ensure camera is inside infinite area light
@@ -493,23 +495,8 @@ List render_scene_rcpp(List camera_info, List scene_info) {
                          background_sphere->ObjectToWorld.get(),
                          background_sphere->WorldToObject.get());
   
-
-  hitable_list hlist;
-  for(int i = 0; i < n; i++)  {
-    if(implicit_sample(i)) {
-      hlist.add(build_imp_sample(type, radius, shape, position_list,
-                               properties,
-                               n, shutteropen, shutterclose,
-                               angle, i, order_rotation_list,
-                               isgrouped, group_transform,
-                               fileinfo, filebasedir,
-                               transformCache ,scale_list,
-                               mesh_list,bvh_type, animation_info,  rng));
-    }
-  }
-  print_time(verbose, "Built Importance Sampler" );
   if(impl_only_bg || hasbackground) {
-    hlist.add(background_sphere);
+    imp_sample_objects.add(background_sphere);
   }
 
   if(min_variance == 0) {
@@ -523,7 +510,7 @@ List render_scene_rcpp(List camera_info, List scene_info) {
                 routput, goutput,boutput,
                 progress_bar, sample_method, stratified_dim,
                 verbose, cam.get(), fov,
-                world, hlist, 
+                world, imp_sample_objects, 
                 clampval, max_depth, roulette_active,
                 light_direction, rng, sample_dist, keep_colors,
                 backgroundhigh);
@@ -533,7 +520,7 @@ List render_scene_rcpp(List camera_info, List scene_info) {
                routput, goutput,boutput,
                progress_bar, sample_method, stratified_dim,
                verbose, cam.get(),  fov,
-               world, hlist,
+               world, imp_sample_objects,
                clampval, max_depth, roulette_active, Display);
   }
 

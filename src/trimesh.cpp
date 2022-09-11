@@ -2,7 +2,9 @@
 #include "RProgress.h"
 
 trimesh::trimesh(std::string inputfile, std::string basedir, Float scale, Float sigma,
-                 std::shared_ptr<material> default_material, bool load_materials, bool load_textures, bool load_vertex_colors,
+                 std::shared_ptr<material> default_material, bool load_materials, 
+                 bool load_textures, bool load_vertex_colors,
+                 hitable_list& imp_sample_objects,
         Float shutteropen, Float shutterclose, int bvh_type, random_gen rng, bool verbose,
         std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation) : 
   hitable(ObjectToWorld, WorldToObject, reverseOrientation) {
@@ -16,6 +18,9 @@ trimesh::trimesh(std::string inputfile, std::string basedir, Float scale, Float 
                                              &mesh->normalIndices[i],
                                              &mesh->texIndices[i], i / 3,
                                              ObjectToWorld, WorldToObject, reverseOrientation));
+    if(mesh->material_is_light[mesh->face_material_id[i / 3]]) {
+      imp_sample_objects.add(triangles.back());
+    }
   }
   tri_mesh_bvh = std::make_shared<bvh_node>(triangles, shutteropen, shutterclose, bvh_type, rng);
   triangles.objects.clear();

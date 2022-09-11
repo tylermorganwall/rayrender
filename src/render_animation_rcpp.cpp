@@ -219,7 +219,8 @@ void render_animation_rcpp(List camera_info, List scene_info, List camera_moveme
 
   //Initialize transformation cache
   TransformCache transformCache;
-
+  hitable_list imp_sample_objects;
+  
   std::shared_ptr<hitable> worldbvh = build_scene(type, radius, shape, position_list,
                                                   properties,
                                                   n,shutteropen,shutterclose,
@@ -239,7 +240,8 @@ void render_animation_rcpp(List camera_info, List scene_info, List camera_moveme
                                                   scale_list, sigmavec, glossyinfo,
                                                   shared_id_mat, is_shared_mat, shared_materials,
                                                   image_repeat, csg_info, mesh_list, bvh_type, transformCache,
-                                                  animation_info, verbose, rng);
+                                                  animation_info, implicit_sample, imp_sample_objects,
+                                                  verbose, rng);
   auto finish = std::chrono::high_resolution_clock::now();
   if(verbose) {
     std::chrono::duration<double> elapsed = finish - start;
@@ -326,31 +328,12 @@ void render_animation_rcpp(List camera_info, List scene_info, List camera_moveme
                    background_sphere->ObjectToWorld.get(),
                    background_sphere->WorldToObject.get());
   
-
-  hitable_list hlist;
-  if(verbose) {
-    Rcpp::Rcout << "Building Importance Sampling List: ";
-  }
-  start = std::chrono::high_resolution_clock::now();
-  for(int i = 0; i < n; i++)  {
-    if(implicit_sample(i)) {
-      hlist.add(build_imp_sample(type, radius, shape, position_list,
-                                 properties,
-                                 n, shutteropen, shutterclose,
-                                 angle, i, order_rotation_list,
-                                 isgrouped, group_transform,
-                                 fileinfo, filebasedir,transformCache, scale_list,
-                                 mesh_list,bvh_type,  animation_info,
-                                 rng));
-    }
-  }
-  finish = std::chrono::high_resolution_clock::now();
   if(verbose) {
     std::chrono::duration<double> elapsed = finish - start;
     Rcpp::Rcout << elapsed.count() << " seconds" << "\n";
   }
   if(impl_only_bg || hasbackground) {
-    hlist.add(background_sphere);
+    imp_sample_objects.add(background_sphere);
   }
 
   if(verbose && !progress_bar) {
@@ -440,7 +423,7 @@ void render_animation_rcpp(List camera_info, List scene_info, List camera_moveme
                   routput, goutput,boutput,
                   progress_bar, sample_method, stratified_dim,
                   verbose, cam.get(), fov,
-                  world, hlist,
+                  world, imp_sample_objects,
                   clampval, max_depth, roulette_active,
                   light_direction, rng, sample_dist, keep_colors, backgroundhigh);
       List temp = List::create(_["r"] = routput.ConvertRcpp(), 
@@ -516,7 +499,7 @@ void render_animation_rcpp(List camera_info, List scene_info, List camera_moveme
                  routput, goutput,boutput,
                  progress_bar, sample_method, stratified_dim,
                  verbose, cam.get(),  fov,
-                 world, hlist,
+                 world, imp_sample_objects,
                  clampval, max_depth, roulette_active, d);
       if(d.terminate) {
         break;
