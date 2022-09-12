@@ -25,6 +25,7 @@ public:
   virtual vec3f random(const point3f& origin, Sampler* sampler, Float time = 0);
   void GetUVs(point2f uv[3]) const;
   Float Area() const;
+  Float SolidAngle(point3f p) const;
   
   virtual std::string GetName() const {
     return(std::string("Triangle"));

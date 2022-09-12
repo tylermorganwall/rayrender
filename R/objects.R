@@ -542,6 +542,8 @@ disk = function(x = 0, y = 0, z = 0, radius = 1, inner_radius = 0, material = di
 #' just using the colors specified for each material).
 #' @param vertex_colors Default `FALSE`. Set to `TRUE` if the OBJ file has vertex colors to apply them
 #' to the model.
+#' @param importance_sample_lights Default `FALSE`. Whether to importance sample lights specified in the OBJ material
+#' (objects with a non-zero Ke MTL material).
 #' @param material Default  \code{\link{diffuse}}.The material, called from one of the material 
 #' functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}. 
 #' @param angle Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.
@@ -589,6 +591,7 @@ disk = function(x = 0, y = 0, z = 0, radius = 1, inner_radius = 0, material = di
 #' }
 obj_model = function(filename, x = 0, y = 0, z = 0, scale_obj = 1, 
                      load_material = FALSE, load_textures = TRUE, vertex_colors = FALSE,
+                     importance_sample_lights = FALSE,
                      material = diffuse(), 
                      angle = c(0, 0, 0), order_rotation = c(1, 2, 3), 
                      flipped = FALSE, scale = c(1,1,1)) {
@@ -598,7 +601,7 @@ obj_model = function(filename, x = 0, y = 0, z = 0, scale_obj = 1,
   if(!load_material) {
     load_textures = FALSE
   }
-  info = c(unlist(material$properties), scale_obj, load_textures, load_material, vertex_colors)
+  info = c(unlist(material$properties), scale_obj, load_textures, load_material, vertex_colors, importance_sample_lights)
   new_tibble_row(list(x = x, y = y, z = z, radius = NA, 
                  type = material$type, shape = "objcolor",
                  properties = list(info), 

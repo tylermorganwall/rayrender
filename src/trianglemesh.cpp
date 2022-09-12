@@ -170,14 +170,11 @@ void LoadMtlMaterials(std::vector<std::shared_ptr<material> > &mtl_materials,
   
   //First texture is default (when shapes[s].mesh.material_ids[f] == -1)
   mtl_materials.push_back(default_material);
+  material_is_light.push_back(false);
   
   if(load_materials) {
     for(int material_num = 0; material_num < materials.size(); material_num++) {
       bool imp_sample_obj = false;
-      if(verbose) {
-        Rprintf("(%i/%i) Loading Material %s \n", material_num+1, 
-                materials.size(),materials[material_num].name.c_str());
-      }
       std::shared_ptr<material> tex = nullptr;
       
       if(materials[material_num].illum <= 4) {
@@ -221,6 +218,10 @@ void LoadMtlMaterials(std::vector<std::shared_ptr<material> > &mtl_materials,
                                              materials[material_num].ior, atten, 
                                              0);
         }
+      }
+      if(verbose) {
+        Rprintf("(%i/%i) Loading Material %s (Imp Sample: %s) \n", material_num+1, 
+                materials.size(),materials[material_num].name.c_str(), imp_sample_obj ? "true" : "false");
       }
       mtl_materials.push_back(tex);
       material_is_light.push_back(imp_sample_obj);

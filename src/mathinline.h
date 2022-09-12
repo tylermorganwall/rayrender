@@ -902,6 +902,10 @@ inline point2f UniformSampleDisk(const vec2f &u) {
   return point2f(r * std::cos(theta), r * std::sin(theta));
 }
 
+inline Float SphericalTriangleArea(vec3f a, vec3f b, vec3f c) {
+  return(std::abs(2 * std::atan2(dot(a, cross(b, c)), 1 + dot(a, b) + dot(a, c) + dot(b, c))));
+}
+
 template <typename T>
 inline normal3<T> Faceforward(const normal3<T> &n, const normal3<T> &n2) {
   return (dot(n, n2) < 0.f) ? -n : n;

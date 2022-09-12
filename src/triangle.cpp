@@ -1,6 +1,9 @@
 #include "triangle.h"
 #include "RcppThread.h"
 
+static constexpr Float MinSphericalSampleArea = 3e-4;
+static constexpr Float MaxSphericalSampleArea = 6.22;
+
 bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
   const point3f &p0 = mesh->p[v[0]];
   const point3f &p1 = mesh->p[v[1]];
@@ -382,9 +385,7 @@ bool triangle::bounding_box(Float t0, Float t1, aabb& box) const {
 Float triangle::pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Float time) { 
   hit_record rec;
   if (this->hit(ray(o, v), 0.001, FLT_MAX, rec, rng)) {
-    Float distance = rec.t * rec.t * v.squared_length();;
-    Float cosine = dot(v, rec.normal);
-    return(distance / (cosine * Area()));
+    return(1 / SolidAngle(o));
   }
   return 0; 
 }
@@ -392,21 +393,29 @@ Float triangle::pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Flo
 Float triangle::pdf_value(const point3f& o, const vec3f& v, Sampler* sampler, Float time) { 
   hit_record rec;
   if (this->hit(ray(o, v), 0.001, FLT_MAX, rec, sampler)) {
-    Float distance = rec.t * rec.t * v.squared_length();;
-    Float cosine = dot(v, rec.normal);
-    return(distance / (cosine * Area()));
+    return(1 / SolidAngle(o));
   }
   return 0; 
+}
+
+Float triangle::SolidAngle(point3f p) const {
+  const point3f &a = mesh->p[v[0]];
+  const point3f &b = mesh->p[v[1]];
+  const point3f &c = mesh->p[v[2]];
+  return SphericalTriangleArea(unit_vector(a - p), 
+                               unit_vector(b - p),
+                               unit_vector(c - p));
 }
 
 vec3f triangle::random(const point3f& origin, random_gen& rng, Float time) {
   const point3f &a = mesh->p[v[0]];
   const point3f &b = mesh->p[v[1]];
   const point3f &c = mesh->p[v[2]];
-  Float r1 = rng.unif_rand();
+  Float r1 = sqrt(rng.unif_rand());
   Float r2 = rng.unif_rand();
-  Float sr1 = sqrt(r1);
-  point3f random_point((1.0 - sr1) * a + sr1 * (1.0 - r2) * b + sr1 * r2 * c);
+  Float u1 = 1.0f-r1;
+  Float u2 = r2*r1;
+  point3f random_point = (u1 * a + u2 * b + (1 - u1 - u2) * c);
   return(random_point - origin);
 }
 vec3f triangle::random(const point3f& origin, Sampler* sampler, Float time) {
@@ -414,10 +423,11 @@ vec3f triangle::random(const point3f& origin, Sampler* sampler, Float time) {
   const point3f &b = mesh->p[v[1]];
   const point3f &c = mesh->p[v[2]];
   vec2f u = sampler->Get2D();
-  Float r1 = u.x();
+  Float r1 = sqrt(u.x());
   Float r2 = u.y();
-  Float sr1 = sqrt(r1);
-  point3f random_point((1.0 - sr1) * a + sr1 * (1.0 - r2) * b + sr1 * r2 * c);
+  Float u1 = 1.0f-r1;
+  Float u2 = r2*r1;
+  point3f random_point = (u1 * a + u2 * b + (1 - u1 - u2) * c);
   return(random_point - origin);
 }
 

@@ -4,9 +4,10 @@
 trimesh::trimesh(std::string inputfile, std::string basedir, Float scale, Float sigma,
                  std::shared_ptr<material> default_material, bool load_materials, 
                  bool load_textures, bool load_vertex_colors,
+                 bool importance_sample_lights,
                  hitable_list& imp_sample_objects,
-        Float shutteropen, Float shutterclose, int bvh_type, random_gen rng, bool verbose,
-        std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation) : 
+                 Float shutteropen, Float shutterclose, int bvh_type, random_gen rng, bool verbose,
+                 std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation) : 
   hitable(ObjectToWorld, WorldToObject, reverseOrientation) {
   mesh = std::unique_ptr<TriangleMesh>(new TriangleMesh(inputfile, basedir, default_material, 
                                                         load_materials, load_textures, load_vertex_colors, verbose,
@@ -18,7 +19,7 @@ trimesh::trimesh(std::string inputfile, std::string basedir, Float scale, Float 
                                              &mesh->normalIndices[i],
                                              &mesh->texIndices[i], i / 3,
                                              ObjectToWorld, WorldToObject, reverseOrientation));
-    if(mesh->material_is_light[mesh->face_material_id[i / 3]]) {
+   if(mesh->material_is_light[mesh->face_material_id[i / 3]] && importance_sample_lights) {
       imp_sample_objects.add(triangles.back());
     }
   }
