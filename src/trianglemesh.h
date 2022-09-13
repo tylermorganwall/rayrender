@@ -23,7 +23,7 @@ struct TriangleMesh {
   // TriangleMesh Public Methods
   TriangleMesh(std::string inputfile, std::string basedir,
                std::shared_ptr<material> default_material, 
-               bool load_materials, bool load_textures, bool load_vertex_colors, bool verbose,
+               bool load_materials, bool load_textures, bool load_vertex_colors,  bool load_normals, bool verbose, 
                std::shared_ptr<Transform> ObjectToWorld, 
                std::shared_ptr<Transform> WorldToObject, 
                bool reverseOrientation);

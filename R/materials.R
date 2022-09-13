@@ -918,7 +918,7 @@ light = function(color = "#ffffff", intensity = 10, importance_sample = TRUE,
 #' #Add an R and a fill light (this may look familiar)
 #' generate_ground(material=diffuse()) %>%
 #'   add_object(sphere(y=0.2,material=glossy(color="#2b6eff",reflectance=0.05))) %>% 
-#'   add_object(obj_model(r_obj(),z=1,y=-0.05,scale_obj=0.45,material=diffuse())) %>%
+#'   add_object(obj_model(r_obj(),z=1,y=-0.05,scale=0.45,material=diffuse())) %>%
 #'   add_object(sphere(y=6,z=1,radius=4,material=light(intensity=3))) %>%
 #'   add_object(sphere(z=15,material=light(intensity=50))) %>%
 #'   render_scene(parallel=TRUE,clamp_value=10,samples=128,sample_method="sobol_blue")
@@ -999,7 +999,7 @@ glossy = function(color="white", gloss = 1, reflectance = 0.05, microfacet = "tb
   }
   roughness_flip = ifelse(roughness_flip,1,0)
   
-  glossyinfo = list(c(microtype, alphax, alphay, reflectance, c(0,0,0), roughness_range, roughness_flip));
+  glossyinfo = list(c(microtype, alphax, alphay, reflectance, c(1,1,1), roughness_range, roughness_flip));
   new_tibble_row(list(type = "glossy", 
                       properties = list(c(color)), 
                       gradient_color = list(gradient_color), gradient_transpose = FALSE,

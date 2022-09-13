@@ -652,7 +652,7 @@ point3f glossy::f(const ray& r_in, const hit_record& rec, const ray& scattered) 
   vec3f wo = unit_vector(uvw.world_to_local(scattered.direction()));
   
   auto pow5 = [](Float v) { return (v * v) * (v * v) * v; };
-  point3f diffuse = (28.0f/(23.0f*M_PI)) * albedo->value(rec.u, rec.v, rec.p) *
+  point3f diffuse = (28.0f / (23.0f * M_PI)) * Rd * albedo->value(rec.u, rec.v,rec.p) *
     (point3f(1.0f) + -Rs) *
     (1.0 - pow5(1 - 0.5f * AbsCosTheta(wi))) *
     (1.0 - pow5(1 - 0.5f * AbsCosTheta(wo)));
@@ -665,10 +665,10 @@ point3f glossy::f(const ray& r_in, const hit_record& rec, const ray& scattered) 
     cosine = 0;
   }
   point3f specular = distribution->D(wh, rec.u, rec.v) /
-    (4 * AbsDot(wi, wh) *
+      (4 * AbsDot(wi, wh) *
       std::fmax(AbsCosTheta(wi), AbsCosTheta(wo))) *
       SchlickFresnel(dot(wo, wh));
-  return((diffuse + specular) * cosine);
+  return((diffuse + specular) * cosine );
 }
 
 point3f glossy::SchlickFresnel(Float cosTheta) const {

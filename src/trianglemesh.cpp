@@ -189,50 +189,17 @@ void LoadMtlMaterials(std::vector<std::shared_ptr<material> > &mtl_materials,
           tex = std::make_shared<diffuse_light>(std::make_shared<constant_texture>(ke), 1.0, false);
           imp_sample_obj = true;
         } else {
-          if(materials[material_num].shininess <= 10 || materials[material_num].illum == 1) {
-            if(has_diffuse[material_num]) {
-              if(has_single_diffuse[material_num]) {
-                tex = std::make_shared<lambertian>(std::make_shared<constant_texture>(diffuse_materials[material_num]));
-              } else {
-                tex = std::make_shared<lambertian>(std::make_shared<image_texture_char>(obj_texture_data[material_num],
-                                                                                        nx_mat[material_num], 
-                                                                                              ny_mat[material_num],
-                                                                                                    nn_mat[material_num]));
-              }
+          if(has_diffuse[material_num]) {
+            if(has_single_diffuse[material_num]) {
+              tex = std::make_shared<lambertian>(std::make_shared<constant_texture>(diffuse_materials[material_num]));
             } else {
-              tex = default_material;
+              tex = std::make_shared<lambertian>(std::make_shared<image_texture_char>(obj_texture_data[material_num],
+                                                                                      nx_mat[material_num], 
+                                                                                      ny_mat[material_num],
+                                                                                      nn_mat[material_num]));
             }
           } else {
-            point3f spec = point3f(materials[material_num].specular[0],
-                                   materials[material_num].specular[1],
-                                   materials[material_num].specular[2]);
-            point3f diffuse_col = point3f(materials[material_num].diffuse[0],
-                                          materials[material_num].diffuse[1],
-                                          materials[material_num].diffuse[2]);
-            Float specularIntensity = luminance(spec);
-            Float roughness = 1000.0f - materials[material_num].shininess;
-            roughness /= 1000.0f;
-            roughness = clamp(roughness, 0.0f, 1.0f);
-            
-            // Low specular intensity values should produce a rough material even if shininess is high.
-            if (specularIntensity < 0.1) {
-              roughness *= (1.0 - specularIntensity);
-            }
-            if(has_diffuse[material_num]) {
-              MicrofacetDistribution* dist = new TrowbridgeReitzDistribution(1-roughness, 1-roughness, nullptr, false, true);
-              if(has_single_diffuse[material_num]) {
-                tex = std::make_shared<glossy>(std::make_shared<constant_texture>(diffuse_materials[material_num]), dist,
-                                               spec, diffuse_col);
-              } else {
-                tex = std::make_shared<glossy>(std::make_shared<image_texture_char>(obj_texture_data[material_num],
-                                                                                    nx_mat[material_num], 
-                                                                                    ny_mat[material_num],
-                                                                                    nn_mat[material_num]),
-                                               dist,spec, diffuse_col);
-              }
-            } else {
-              tex = default_material;
-            }
+            tex = default_material;
           }
         }
       } else {
@@ -265,7 +232,8 @@ void LoadMtlMaterials(std::vector<std::shared_ptr<material> > &mtl_materials,
 
 TriangleMesh::TriangleMesh(std::string inputfile, std::string basedir,
                            std::shared_ptr<material> default_material, 
-                           bool load_materials, bool load_textures, bool load_vertex_colors, bool verbose, 
+                           bool load_materials, bool load_textures, bool load_vertex_colors, 
+                           bool load_normals, bool verbose, 
                            std::shared_ptr<Transform> ObjectToWorld, 
                            std::shared_ptr<Transform> WorldToObject, 
                            bool reverseOrientation) : nTriangles(0) {
@@ -326,7 +294,7 @@ TriangleMesh::TriangleMesh(std::string inputfile, std::string basedir,
       } 
     }
     
-    nNormals = attrib.normals.size();
+    nNormals = load_normals ? attrib.normals.size() : 0;
     nTex = !has_vertex_colors ? attrib.texcoords.size() : 0;
     p.reset(new point3f[nVertices / 3]);
     for (size_t i = 0; i < nVertices; i += 3) {

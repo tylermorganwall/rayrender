@@ -259,7 +259,7 @@ class glossy : public material {
 public:
   glossy(std::shared_ptr<texture> a, MicrofacetDistribution *distribution, 
          point3f Rs, point3f Rd2)
-    : albedo(a), distribution(distribution), Rs(Rs) {}
+    : albedo(a), distribution(distribution), Rs(Rs), Rd(Rd2) {}
   ~glossy() {
     if(distribution) delete distribution;
   }
@@ -275,6 +275,7 @@ private:
   std::shared_ptr<texture>  albedo;
   MicrofacetDistribution *distribution;
   point3f Rs;
+  point3f Rd;
 };
 
 // Hair Local Functions

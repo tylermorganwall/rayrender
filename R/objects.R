@@ -590,7 +590,8 @@ disk = function(x = 0, y = 0, z = 0, radius = 1, inner_radius = 0, material = di
 #'                lookat = c(0,1,0)) 
 #' }
 obj_model = function(filename, x = 0, y = 0, z = 0, scale_obj = 1, 
-                     load_material = FALSE, load_textures = TRUE, vertex_colors = FALSE,
+                     load_material = FALSE, load_textures = TRUE, load_normals = TRUE,
+                     vertex_colors = FALSE,
                      importance_sample_lights = TRUE,
                      material = diffuse(), 
                      angle = c(0, 0, 0), order_rotation = c(1, 2, 3), 
@@ -601,7 +602,8 @@ obj_model = function(filename, x = 0, y = 0, z = 0, scale_obj = 1,
   if(!load_material) {
     load_textures = FALSE
   }
-  info = c(unlist(material$properties), scale_obj, load_textures, load_material, vertex_colors, importance_sample_lights)
+  info = c(unlist(material$properties), scale_obj, load_textures, load_material, vertex_colors, 
+           importance_sample_lights, load_normals)
   new_tibble_row(list(x = x, y = y, z = z, radius = NA, 
                  type = material$type, shape = "objcolor",
                  properties = list(info), 

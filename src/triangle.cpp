@@ -178,7 +178,7 @@ bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
   rec.u = uHit;
   rec.v = vHit;
   
-  rec.mat_ptr = mesh->mtl_materials[mesh->face_material_id[face_number]].get();
+  rec.mat_ptr = mesh->mtl_materials[mat_id].get();
   rec.alpha_miss = alpha_miss;
   rec.shape = this;
   
