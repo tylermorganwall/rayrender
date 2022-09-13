@@ -160,7 +160,7 @@ vec3f micro_transmission_pdf::generate(Sampler* sampler, bool& diffuse_bounce, F
 Float glossy_pdf::value(const vec3f& direction, random_gen& rng, Float time) {
   vec3f wo = unit_vector(uvw.world_to_local(direction));
   if(wo.z() * wi.z() < 0) {
-    return(INFINITY);
+    return(0);
   }
   vec3f wh = unit_vector(wi + wo);
   return(0.5f * (AbsCosTheta(wi) * M_1_PI + distribution->Pdf(wo, wi, wh, u, v) / (4 * dot(wo, wh))));
@@ -169,7 +169,7 @@ Float glossy_pdf::value(const vec3f& direction, random_gen& rng, Float time) {
 Float glossy_pdf::value(const vec3f& direction, Sampler* sampler, Float time) {
   vec3f wo = unit_vector(uvw.world_to_local(direction));
   if(wo.z() * wi.z() < 0) {
-    return(INFINITY);
+    return(0);
   }
   vec3f wh = unit_vector(wi + wo);
   return(0.5f * (AbsCosTheta(wi) * M_1_PI + distribution->Pdf(wo, wi, wh, u, v) / (4 * dot(wo, wh))));

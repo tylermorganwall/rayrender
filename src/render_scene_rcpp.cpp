@@ -475,17 +475,11 @@ List render_scene_rcpp(List camera_info, List scene_info) {
                                               BackgroundTransformInv,false);
   }
   print_time(verbose, "Loaded background" );
-  int numbertosample = 0;
-  for(int i = 0; i < implicit_sample.size(); i++) {
-    if(implicit_sample(i)) {
-      numbertosample++;
-    }
-  }
   hitable_list world;
   world.add(worldbvh);
 
   bool impl_only_bg = false;
-  if((numbertosample == 0 || hasbackground || ambient_light || interactive) && debug_channel != 18) {
+  if((imp_sample_objects.size() == 0 || hasbackground || ambient_light || interactive) && debug_channel != 18) {
     world.add(background_sphere);
     impl_only_bg = true;
   }

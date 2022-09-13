@@ -7,6 +7,10 @@
 #endif
 
 
+inline Float luminance(point3f& color) {
+  return(dot(color,point3f(0.2125,0.7154,0.0721)));
+}
+
 void LoadMtlMaterials(std::vector<std::shared_ptr<material> > &mtl_materials,
                       std::vector<tinyobj::material_t > &materials,
                       std::vector<unsigned char * > &obj_texture_data,
@@ -185,24 +189,57 @@ void LoadMtlMaterials(std::vector<std::shared_ptr<material> > &mtl_materials,
           tex = std::make_shared<diffuse_light>(std::make_shared<constant_texture>(ke), 1.0, false);
           imp_sample_obj = true;
         } else {
-          if(has_diffuse[material_num]) {
-            if(has_single_diffuse[material_num]) {
-              tex = std::make_shared<lambertian>(std::make_shared<constant_texture>(diffuse_materials[material_num]));
+          if(materials[material_num].shininess <= 10 || materials[material_num].illum == 1) {
+            if(has_diffuse[material_num]) {
+              if(has_single_diffuse[material_num]) {
+                tex = std::make_shared<lambertian>(std::make_shared<constant_texture>(diffuse_materials[material_num]));
+              } else {
+                tex = std::make_shared<lambertian>(std::make_shared<image_texture_char>(obj_texture_data[material_num],
+                                                                                        nx_mat[material_num], 
+                                                                                              ny_mat[material_num],
+                                                                                                    nn_mat[material_num]));
+              }
             } else {
-              tex = std::make_shared<lambertian>(std::make_shared<image_texture_char>(obj_texture_data[material_num],
-                                                                                      nx_mat[material_num], 
-                                                                                      ny_mat[material_num],
-                                                                                      nn_mat[material_num]));
+              tex = default_material;
             }
           } else {
-            tex = default_material;
+            point3f spec = point3f(materials[material_num].specular[0],
+                                   materials[material_num].specular[1],
+                                   materials[material_num].specular[2]);
+            point3f diffuse_col = point3f(materials[material_num].diffuse[0],
+                                          materials[material_num].diffuse[1],
+                                          materials[material_num].diffuse[2]);
+            Float specularIntensity = luminance(spec);
+            Float roughness = 1000.0f - materials[material_num].shininess;
+            roughness /= 1000.0f;
+            roughness = clamp(roughness, 0.0f, 1.0f);
+            
+            // Low specular intensity values should produce a rough material even if shininess is high.
+            if (specularIntensity < 0.1) {
+              roughness *= (1.0 - specularIntensity);
+            }
+            if(has_diffuse[material_num]) {
+              MicrofacetDistribution* dist = new TrowbridgeReitzDistribution(1-roughness, 1-roughness, nullptr, false, true);
+              if(has_single_diffuse[material_num]) {
+                tex = std::make_shared<glossy>(std::make_shared<constant_texture>(diffuse_materials[material_num]), dist,
+                                               spec, diffuse_col);
+              } else {
+                tex = std::make_shared<glossy>(std::make_shared<image_texture_char>(obj_texture_data[material_num],
+                                                                                    nx_mat[material_num], 
+                                                                                    ny_mat[material_num],
+                                                                                    nn_mat[material_num]),
+                                               dist,spec, diffuse_col);
+              }
+            } else {
+              tex = default_material;
+            }
           }
         }
       } else {
+        point3f spec = point3f(materials[material_num].specular[0],
+                               materials[material_num].specular[1],
+                               materials[material_num].specular[2]);
         if(materials[material_num].shininess == 1000) {
-          point3f spec = point3f(materials[material_num].specular[0],
-                                 materials[material_num].specular[1],
-                                 materials[material_num].specular[2]);
           tex = std::make_shared<metal>(std::make_shared<constant_texture>(spec),
                                         0., 
                                         point3f(0), 
@@ -211,9 +248,6 @@ void LoadMtlMaterials(std::vector<std::shared_ptr<material> > &mtl_materials,
           point3f atten = point3f(materials[material_num].transmittance[0],
                                   materials[material_num].transmittance[1],
                                   materials[material_num].transmittance[2]);
-          point3f spec = point3f(materials[material_num].specular[0],
-                                  materials[material_num].specular[1],
-                                  materials[material_num].specular[2]);
           tex = std::make_shared<dielectric>(spec, 
                                              materials[material_num].ior, atten, 
                                              0);

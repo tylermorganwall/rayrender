@@ -542,7 +542,7 @@ disk = function(x = 0, y = 0, z = 0, radius = 1, inner_radius = 0, material = di
 #' just using the colors specified for each material).
 #' @param vertex_colors Default `FALSE`. Set to `TRUE` if the OBJ file has vertex colors to apply them
 #' to the model.
-#' @param importance_sample_lights Default `FALSE`. Whether to importance sample lights specified in the OBJ material
+#' @param importance_sample_lights Default `TRUE`. Whether to importance sample lights specified in the OBJ material
 #' (objects with a non-zero Ke MTL material).
 #' @param material Default  \code{\link{diffuse}}.The material, called from one of the material 
 #' functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}. 
@@ -591,7 +591,7 @@ disk = function(x = 0, y = 0, z = 0, radius = 1, inner_radius = 0, material = di
 #' }
 obj_model = function(filename, x = 0, y = 0, z = 0, scale_obj = 1, 
                      load_material = FALSE, load_textures = TRUE, vertex_colors = FALSE,
-                     importance_sample_lights = FALSE,
+                     importance_sample_lights = TRUE,
                      material = diffuse(), 
                      angle = c(0, 0, 0), order_rotation = c(1, 2, 3), 
                      flipped = FALSE, scale = c(1,1,1)) {
