@@ -11,6 +11,7 @@ trimesh::trimesh(std::string inputfile, std::string basedir, Float scale, Float 
   hitable(ObjectToWorld, WorldToObject, reverseOrientation) {
   mesh = std::unique_ptr<TriangleMesh>(new TriangleMesh(inputfile, basedir, default_material, 
                                                         load_materials, load_textures, load_vertex_colors, load_normals, verbose,
+                                                        scale,
                                                         ObjectToWorld, WorldToObject, reverseOrientation));
   size_t n = mesh->nTriangles;
   for(size_t i = 0; i < n; i += 3) {

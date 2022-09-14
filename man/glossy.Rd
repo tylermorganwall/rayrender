@@ -145,7 +145,7 @@ if(rayrender:::run_documentation()) {
 #Add an R and a fill light (this may look familiar)
 generate_ground(material=diffuse()) \%>\%
   add_object(sphere(y=0.2,material=glossy(color="#2b6eff",reflectance=0.05))) \%>\% 
-  add_object(obj_model(r_obj(),z=1,y=-0.05,scale_obj=0.45,material=diffuse())) \%>\%
+  add_object(obj_model(r_obj(),z=1,y=-0.05,scale=0.45,material=diffuse())) \%>\%
   add_object(sphere(y=6,z=1,radius=4,material=light(intensity=3))) \%>\%
   add_object(sphere(z=15,material=light(intensity=50))) \%>\%
   render_scene(parallel=TRUE,clamp_value=10,samples=128,sample_method="sobol_blue")

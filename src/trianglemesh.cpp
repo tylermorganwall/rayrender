@@ -236,7 +236,7 @@ void LoadMtlMaterials(std::vector<std::shared_ptr<material> > &mtl_materials,
 TriangleMesh::TriangleMesh(std::string inputfile, std::string basedir,
                            std::shared_ptr<material> default_material, 
                            bool load_materials, bool load_textures, bool load_vertex_colors, 
-                           bool load_normals, bool verbose, 
+                           bool load_normals, bool verbose, Float scale,
                            std::shared_ptr<Transform> ObjectToWorld, 
                            std::shared_ptr<Transform> WorldToObject, 
                            bool reverseOrientation) : nTriangles(0) {
@@ -303,7 +303,7 @@ TriangleMesh::TriangleMesh(std::string inputfile, std::string basedir,
     for (size_t i = 0; i < nVertices; i += 3) {
       p[i / 3] = (*ObjectToWorld)(point3f(attrib.vertices[i+0],
                                           attrib.vertices[i+1],
-                                          attrib.vertices[i+2]));
+                                          attrib.vertices[i+2]) * scale);
     }
     
     

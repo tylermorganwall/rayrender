@@ -1,9 +1,6 @@
 #include "triangle.h"
 #include "RcppThread.h"
 
-static constexpr Float MinSphericalSampleArea = 3e-4;
-static constexpr Float MaxSphericalSampleArea = 6.22;
-
 bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
   const point3f &p0 = mesh->p[v[0]];
   const point3f &p1 = mesh->p[v[1]];

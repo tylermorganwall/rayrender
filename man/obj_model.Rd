@@ -12,7 +12,9 @@ obj_model(
   scale_obj = 1,
   load_material = FALSE,
   load_textures = TRUE,
+  load_normals = TRUE,
   vertex_colors = FALSE,
+  importance_sample_lights = TRUE,
   material = diffuse(),
   angle = c(0, 0, 0),
   order_rotation = c(1, 2, 3),
@@ -32,13 +34,18 @@ obj_model(
 \item{scale_obj}{Default `1`. Amount to scale the model. Use this to scale the object up or down on all axes, as it is
 more robust to numerical precision errors than the generic scale option.}
 
-\item{load_material}{Default `FALSE`. Whether to load the obj file material (MTL file).}
+\item{load_material}{Default `TRUE`. Whether to load the obj file material (MTL file).}
 
 \item{load_textures}{Default `TRUE`. If `load_material = TRUE`, whether to load textures in the MTL file (versus
 just using the colors specified for each material).}
 
+\item{load_normals}{Default `TRUE`. Whether to load the vertex normals if they exist in the OBJ file.}
+
 \item{vertex_colors}{Default `FALSE`. Set to `TRUE` if the OBJ file has vertex colors to apply them
 to the model.}
+
+\item{importance_sample_lights}{Default `TRUE`. Whether to importance sample lights specified in the OBJ material
+(objects with a non-zero Ke MTL material).}
 
 \item{material}{Default  \code{\link{diffuse}}.The material, called from one of the material 
 functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}.}

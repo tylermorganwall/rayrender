@@ -16,7 +16,6 @@ Depends: R (>= 3.0.2)
 Imports: 
     Rcpp (>= 1.0.0),
     parallel,
-    tibble,
     magrittr,
     purrr,
     png,

@@ -537,9 +537,11 @@ disk = function(x = 0, y = 0, z = 0, radius = 1, inner_radius = 0, material = di
 #' @param z Default `0`. z-coordinate to offset the model.
 #' @param scale_obj Default `1`. Amount to scale the model. Use this to scale the object up or down on all axes, as it is
 #' more robust to numerical precision errors than the generic scale option.
-#' @param load_material Default `FALSE`. Whether to load the obj file material (MTL file).
+#' @param load_material Default `TRUE`. Whether to load the obj file material (MTL file). If material for faces
+#' aren't specified, the default material will be used (specified by the user in `material`).
 #' @param load_textures Default `TRUE`. If `load_material = TRUE`, whether to load textures in the MTL file (versus
 #' just using the colors specified for each material).
+#' @param load_normals Default `TRUE`. Whether to load the vertex normals if they exist in the OBJ file.
 #' @param vertex_colors Default `FALSE`. Set to `TRUE` if the OBJ file has vertex colors to apply them
 #' to the model.
 #' @param importance_sample_lights Default `TRUE`. Whether to importance sample lights specified in the OBJ material
@@ -590,7 +592,7 @@ disk = function(x = 0, y = 0, z = 0, radius = 1, inner_radius = 0, material = di
 #'                lookat = c(0,1,0)) 
 #' }
 obj_model = function(filename, x = 0, y = 0, z = 0, scale_obj = 1, 
-                     load_material = FALSE, load_textures = TRUE, load_normals = TRUE,
+                     load_material = TRUE, load_textures = TRUE, load_normals = TRUE,
                      vertex_colors = FALSE,
                      importance_sample_lights = TRUE,
                      material = diffuse(), 

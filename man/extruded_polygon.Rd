@@ -15,7 +15,6 @@ extruded_polygon(
   holes = NULL,
   angle = c(0, 0, 0),
   order_rotation = c(1, 2, 3),
-  pivot_point = c(0, 0, 0),
   material = diffuse(),
   center = FALSE,
   flip_horizontal = FALSE,
@@ -53,8 +52,6 @@ the holes in the polygon. See the `earcut` function in the `decido` package for 
 \item{angle}{Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.}
 
 \item{order_rotation}{Default `c(1, 2, 3)`. The order to apply the rotations, referring to "x", "y", and "z".}
-
-\item{pivot_point}{Default `c(0,0,0)`. Point at which to rotate the polygon around.}
 
 \item{material}{Default  \code{\link{diffuse}}.The material, called from one of the material 
 functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}.}
