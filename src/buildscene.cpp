@@ -581,7 +581,7 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
       entry = std::make_shared<trimesh>(objfilename, objbasedirname, 
                                         tempvector(prop_len+1), sigma(i), tex, 
                                         (bool)tempvector(prop_len+3), (bool)tempvector(prop_len+2), (bool)tempvector(prop_len+4),
-                                        (bool)tempvector(prop_len+5), (bool)tempvector(prop_len+6),
+                                        (bool)tempvector(prop_len+5), (bool)tempvector(prop_len+6), (bool)tempvector(prop_len+7),
                                         imp_sample_objects,
                                         shutteropen, shutterclose, bvh_type, rng, verbose,
                                         ObjToWorld,WorldToObj, isflipped(i));

@@ -542,6 +542,8 @@ disk = function(x = 0, y = 0, z = 0, radius = 1, inner_radius = 0, material = di
 #' @param load_textures Default `TRUE`. If `load_material = TRUE`, whether to load textures in the MTL file (versus
 #' just using the colors specified for each material).
 #' @param load_normals Default `TRUE`. Whether to load the vertex normals if they exist in the OBJ file.
+#' @param calculate_consistent_normals Default `TRUE`. Whether to calculate consistent vertex normals to prevent energy 
+#' loss at edges.
 #' @param vertex_colors Default `FALSE`. Set to `TRUE` if the OBJ file has vertex colors to apply them
 #' to the model.
 #' @param importance_sample_lights Default `TRUE`. Whether to importance sample lights specified in the OBJ material
@@ -593,7 +595,7 @@ disk = function(x = 0, y = 0, z = 0, radius = 1, inner_radius = 0, material = di
 #' }
 obj_model = function(filename, x = 0, y = 0, z = 0, scale_obj = 1, 
                      load_material = TRUE, load_textures = TRUE, load_normals = TRUE,
-                     vertex_colors = FALSE,
+                     vertex_colors = FALSE, calculate_consistent_normals = TRUE,
                      importance_sample_lights = TRUE,
                      material = diffuse(), 
                      angle = c(0, 0, 0), order_rotation = c(1, 2, 3), 
@@ -605,7 +607,7 @@ obj_model = function(filename, x = 0, y = 0, z = 0, scale_obj = 1,
     load_textures = FALSE
   }
   info = c(unlist(material$properties), scale_obj, load_textures, load_material, vertex_colors, 
-           importance_sample_lights, load_normals)
+           importance_sample_lights, load_normals, calculate_consistent_normals)
   new_tibble_row(list(x = x, y = y, z = z, radius = NA, 
                  type = material$type, shape = "objcolor",
                  properties = list(info), 

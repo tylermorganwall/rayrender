@@ -4,14 +4,14 @@
 trimesh::trimesh(std::string inputfile, std::string basedir, Float scale, Float sigma,
                  std::shared_ptr<material> default_material, bool load_materials, 
                  bool load_textures, bool load_vertex_colors,
-                 bool importance_sample_lights, bool load_normals,
+                 bool importance_sample_lights, bool load_normals, bool calculate_consistent_normals,
                  hitable_list& imp_sample_objects,
                  Float shutteropen, Float shutterclose, int bvh_type, random_gen rng, bool verbose,
                  std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation) : 
   hitable(ObjectToWorld, WorldToObject, reverseOrientation) {
   mesh = std::unique_ptr<TriangleMesh>(new TriangleMesh(inputfile, basedir, default_material, 
                                                         load_materials, load_textures, load_vertex_colors, load_normals, verbose,
-                                                        scale,
+                                                        scale, calculate_consistent_normals,
                                                         ObjectToWorld, WorldToObject, reverseOrientation));
   size_t n = mesh->nTriangles;
   for(size_t i = 0; i < n; i += 3) {

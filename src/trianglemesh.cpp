@@ -236,7 +236,8 @@ void LoadMtlMaterials(std::vector<std::shared_ptr<material> > &mtl_materials,
 TriangleMesh::TriangleMesh(std::string inputfile, std::string basedir,
                            std::shared_ptr<material> default_material, 
                            bool load_materials, bool load_textures, bool load_vertex_colors, 
-                           bool load_normals, bool verbose, Float scale,
+                           bool load_normals, bool verbose, Float scale, 
+                           bool calculate_consistent_normals,
                            std::shared_ptr<Transform> ObjectToWorld, 
                            std::shared_ptr<Transform> WorldToObject, 
                            bool reverseOrientation) : nTriangles(0) {
@@ -249,7 +250,8 @@ TriangleMesh::TriangleMesh(std::string inputfile, std::string basedir,
   
   bool has_sep = true;
   bool ret = true;
-
+  has_consistent_normals = calculate_consistent_normals;
+  
   tinyobj::ObjReaderConfig reader_config;
   reader_config.mtl_search_path = basedir.c_str(); // Path to material files
   reader_config.vertex_color = load_vertex_colors;
@@ -315,34 +317,35 @@ TriangleMesh::TriangleMesh(std::string inputfile, std::string basedir,
                                              attrib.normals[i+1],
                                              attrib.normals[i+2]));
       }
-      face_n.reset(new normal3f[normalIndices.size() / 3]);
-      std::map<int, std::priority_queue<Float> > alpha_values;
-      for (size_t i = 0; i < normalIndices.size(); i += 3) {
-        int idx_n1 = normalIndices[i];
-        int idx_n2 = normalIndices[i+1];
-        int idx_n3 = normalIndices[i+2];
-        
-        normal3f n1 = unit_vector(n[idx_n1]);
-        normal3f n2 = unit_vector(n[idx_n2]);
-        normal3f n3 = unit_vector(n[idx_n3]);
-        
-        normal3f face_normal = unit_vector(n1 + n2 + n3);
-        face_n[i / 3] = face_normal;
-        Float av1 = dot(n1,face_normal);
-        Float av2 = dot(n2,face_normal);
-        Float av3 = dot(n3,face_normal);
-        alpha_values[idx_n1].push(-av1);
-        alpha_values[idx_n2].push(-av2);
-        alpha_values[idx_n3].push(-av3);
+      if(has_consistent_normals) {
+        face_n.reset(new normal3f[normalIndices.size() / 3]);
+        std::map<int, std::priority_queue<Float> > alpha_values;
+        for (size_t i = 0; i < normalIndices.size(); i += 3) {
+          int idx_n1 = normalIndices[i];
+          int idx_n2 = normalIndices[i+1];
+          int idx_n3 = normalIndices[i+2];
+          
+          normal3f n1 = unit_vector(n[idx_n1]);
+          normal3f n2 = unit_vector(n[idx_n2]);
+          normal3f n3 = unit_vector(n[idx_n3]);
+          
+          normal3f face_normal = unit_vector(n1 + n2 + n3);
+          face_n[i / 3] = face_normal;
+          Float av1 = dot(n1,face_normal);
+          Float av2 = dot(n2,face_normal);
+          Float av3 = dot(n3,face_normal);
+          alpha_values[idx_n1].push(-av1);
+          alpha_values[idx_n2].push(-av2);
+          alpha_values[idx_n3].push(-av3);
+        }
+        for (auto const& x : alpha_values) {
+          alpha_v.push_back(-x.second.top());
+        }
+        for(int i = 0; i < alpha_v.size(); i++) {
+          Float temp_av = clamp(alpha_v[i],-1,1);
+          alpha_v[i] = std::acos(temp_av) * (1 + 0.03632 * (1 - temp_av) * (1 - temp_av));
+        }
       }
-      for (auto const& x : alpha_values) {
-        alpha_v.push_back(-x.second.top());
-      }
-      for(int i = 0; i < alpha_v.size(); i++) {
-        Float temp_av = clamp(alpha_v[i],-1,1);
-        alpha_v[i] = std::acos(temp_av) * (1 + 0.03632 * (1 - temp_av) * (1 - temp_av));
-      }
-      
     } else {
       n = nullptr;
     }
@@ -420,7 +423,7 @@ TriangleMesh::TriangleMesh(Rcpp::NumericMatrix vertices,
   has_normals = false;
   has_tex = false;
   has_vertex_colors = vertexcolors.nrow() > 0;
-
+  has_consistent_normals = false;
   
   nVertices = vertices.nrow();
   nNormals = normals.nrow();
@@ -536,6 +539,8 @@ TriangleMesh::TriangleMesh(float* vertices,
   face_material_id.clear();
   has_normals = false;
   has_tex = false;
+  has_consistent_normals = false;
+  
   
   nVertices = numVerts * 3;
   nNormals = normals ? numVerts * 3 : 0;

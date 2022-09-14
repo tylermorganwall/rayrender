@@ -25,6 +25,7 @@ struct TriangleMesh {
                std::shared_ptr<material> default_material, 
                bool load_materials, bool load_textures, bool load_vertex_colors,  bool load_normals,
                bool verbose, Float scale, 
+               bool calculate_consistent_normals,
                std::shared_ptr<Transform> ObjectToWorld, 
                std::shared_ptr<Transform> WorldToObject, 
                bool reverseOrientation);
@@ -66,7 +67,7 @@ struct TriangleMesh {
     
   // TriangleMesh Data
   size_t nTriangles, nVertices, nNormals, nTex;
-  bool has_normals, has_tex, has_vertex_colors;
+  bool has_normals, has_tex, has_vertex_colors, has_consistent_normals;
   std::vector<int> vertexIndices;
   std::vector<int> normalIndices;
   std::vector<int> texIndices;
