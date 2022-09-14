@@ -10,10 +10,11 @@ obj_model(
   y = 0,
   z = 0,
   scale_obj = 1,
-  load_material = FALSE,
+  load_material = TRUE,
   load_textures = TRUE,
   load_normals = TRUE,
   vertex_colors = FALSE,
+  calculate_consistent_normals = TRUE,
   importance_sample_lights = TRUE,
   material = diffuse(),
   angle = c(0, 0, 0),
@@ -34,7 +35,8 @@ obj_model(
 \item{scale_obj}{Default `1`. Amount to scale the model. Use this to scale the object up or down on all axes, as it is
 more robust to numerical precision errors than the generic scale option.}
 
-\item{load_material}{Default `TRUE`. Whether to load the obj file material (MTL file).}
+\item{load_material}{Default `TRUE`. Whether to load the obj file material (MTL file). If material for faces
+aren't specified, the default material will be used (specified by the user in `material`).}
 
 \item{load_textures}{Default `TRUE`. If `load_material = TRUE`, whether to load textures in the MTL file (versus
 just using the colors specified for each material).}
@@ -43,6 +45,9 @@ just using the colors specified for each material).}
 
 \item{vertex_colors}{Default `FALSE`. Set to `TRUE` if the OBJ file has vertex colors to apply them
 to the model.}
+
+\item{calculate_consistent_normals}{Default `TRUE`. Whether to calculate consistent vertex normals to prevent energy 
+loss at edges.}
 
 \item{importance_sample_lights}{Default `TRUE`. Whether to importance sample lights specified in the OBJ material
 (objects with a non-zero Ke MTL material).}
