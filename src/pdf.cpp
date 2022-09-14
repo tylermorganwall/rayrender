@@ -159,7 +159,7 @@ vec3f micro_transmission_pdf::generate(Sampler* sampler, bool& diffuse_bounce, F
 
 Float glossy_pdf::value(const vec3f& direction, random_gen& rng, Float time) {
   vec3f wo = unit_vector(uvw.world_to_local(direction));
-  if(wo.z() * wi.z() < 0) {
+  if(!SameHemisphere(wo,wi)) {
     return(0);
   }
   vec3f wh = unit_vector(wi + wo);
@@ -168,11 +168,11 @@ Float glossy_pdf::value(const vec3f& direction, random_gen& rng, Float time) {
 
 Float glossy_pdf::value(const vec3f& direction, Sampler* sampler, Float time) {
   vec3f wo = unit_vector(uvw.world_to_local(direction));
-  if(wo.z() * wi.z() < 0) {
+  if(!SameHemisphere(wo,wi)) {
     return(0);
   }
   vec3f wh = unit_vector(wi + wo);
-  return(0.5f * (AbsCosTheta(wi) * M_1_PI + distribution->Pdf(wo, wi, wh, u, v) / (4 * dot(wo, wh))));
+  return(0.5f * (AbsCosTheta(wi) * M_1_PI + distribution->Pdf(wo, wi, wh, u, v) / (4 * dot(wo, wh))) );
 }
 
 vec3f glossy_pdf::generate(random_gen& rng, bool& diffuse_bounce, Float time) {
@@ -181,7 +181,9 @@ vec3f glossy_pdf::generate(random_gen& rng, bool& diffuse_bounce, Float time) {
     return(uvw.local_to_world(Reflect(wi, wh)));
   } else {
     diffuse_bounce = true;
-    return(uvw.local_to_world(rng.random_cosine_direction()));
+    vec3f wo = uvw.local_to_world(rng.random_cosine_direction());
+    if (wi.z() < 0) wo.e[2] *= -1;
+    return(wo);
   }
 }
 vec3f glossy_pdf::generate(Sampler* sampler, bool& diffuse_bounce, Float time) {
@@ -191,7 +193,9 @@ vec3f glossy_pdf::generate(Sampler* sampler, bool& diffuse_bounce, Float time) {
     return(uvw.local_to_world(Reflect(wi, wh)));
   } else {
     diffuse_bounce = true;
-    return(uvw.local_to_world(rand_cosine_direction(sampler->Get2D())));
+    vec3f wo = uvw.local_to_world(rand_cosine_direction(sampler->Get2D()));
+    if (wi.z() < 0) wo.e[2] *= -1;
+    return(wo);
   }
 }
 

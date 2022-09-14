@@ -6,6 +6,9 @@
 #include "tinyobj/tiny_obj_loader.h"
 #endif
 
+#include <queue>
+
+
 
 inline Float luminance(point3f& color) {
   return(dot(color,point3f(0.2125,0.7154,0.0721)));
@@ -312,9 +315,38 @@ TriangleMesh::TriangleMesh(std::string inputfile, std::string basedir,
                                              attrib.normals[i+1],
                                              attrib.normals[i+2]));
       }
+      face_n.reset(new normal3f[normalIndices.size() / 3]);
+      std::map<int, std::priority_queue<Float> > alpha_values;
+      for (size_t i = 0; i < normalIndices.size(); i += 3) {
+        int idx_n1 = normalIndices[i];
+        int idx_n2 = normalIndices[i+1];
+        int idx_n3 = normalIndices[i+2];
+        
+        normal3f n1 = unit_vector(n[idx_n1]);
+        normal3f n2 = unit_vector(n[idx_n2]);
+        normal3f n3 = unit_vector(n[idx_n3]);
+        
+        normal3f face_normal = unit_vector(n1 + n2 + n3);
+        face_n[i / 3] = face_normal;
+        Float av1 = dot(n1,face_normal);
+        Float av2 = dot(n2,face_normal);
+        Float av3 = dot(n3,face_normal);
+        alpha_values[idx_n1].push(-av1);
+        alpha_values[idx_n2].push(-av2);
+        alpha_values[idx_n3].push(-av3);
+      }
+      for (auto const& x : alpha_values) {
+        alpha_v.push_back(-x.second.top());
+      }
+      for(int i = 0; i < alpha_v.size(); i++) {
+        Float temp_av = clamp(alpha_v[i],-1,1);
+        alpha_v[i] = std::acos(temp_av) * (1 + 0.03632 * (1 - temp_av) * (1 - temp_av));
+      }
+      
     } else {
       n = nullptr;
     }
+
     
     if(nTex > 0) {
       has_tex = true;

@@ -72,6 +72,9 @@ struct TriangleMesh {
 
   std::unique_ptr<point3f[]>  p;
   std::unique_ptr<normal3f[]> n;
+  std::unique_ptr<normal3f[]> face_n; //For consistent normals
+  std::vector<Float> alpha_v; //For consistent normals
+  
   // std::unique_ptr<vec3f[]>    s;
   std::unique_ptr<point2f[]>  uv;
   std::unique_ptr<point3f[]>  vc;

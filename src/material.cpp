@@ -661,8 +661,8 @@ point3f glossy::f(const ray& r_in, const hit_record& rec, const ray& scattered) 
     return(vec3f(0.0f));
   }
   Float cosine  = dot(wh,wi);
-  if(cosine < 0) {
-    cosine = 0;
+  if(cosine < 0 || !SameHemisphere(wi,wo)) {
+    return(point3f(0));
   }
   point3f specular = distribution->D(wh, rec.u, rec.v) /
       (4 * AbsDot(wi, wh) *
