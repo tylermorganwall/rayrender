@@ -291,6 +291,7 @@ generate_cornell() \%>\%
                      material = glossy(checkercolor = "white",
                                        checkerperiod=10,color="dodgerblue"))) \%>\%
   render_scene(lookfrom=c(278,278,-300), lookat=c(278,278,500), clamp_value=10,
+               aperture=1, iso = 100000,
                camera_description_file = "fisheye", samples = 128, width=800, height=400)
 }
 if(rayrender:::run_documentation()) {            
