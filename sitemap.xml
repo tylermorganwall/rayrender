@@ -196,6 +196,9 @@
     <loc>/reference/get_saved_keyframes.html</loc>
   </url>
   <url>
+    <loc>/reference/get_time.html</loc>
+  </url>
+  <url>
     <loc>/reference/glossy.html</loc>
   </url>
   <url>
@@ -206,6 +209,9 @@
   </url>
   <url>
     <loc>/reference/index.html</loc>
+  </url>
+  <url>
+    <loc>/reference/init_time.html</loc>
   </url>
   <url>
     <loc>/reference/lambertian.html</loc>
@@ -254,6 +260,9 @@
   </url>
   <url>
     <loc>/reference/prepare_scene_list.html</loc>
+  </url>
+  <url>
+    <loc>/reference/print_time.html</loc>
   </url>
   <url>
     <loc>/reference/process_point_series.html</loc>

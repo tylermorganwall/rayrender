@@ -18,7 +18,7 @@ Note: light importance sampling currently not supported for this shape."><meta p
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">rayrender</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.27.2</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.28.0</span>
       </span>
     </div>
 
@@ -97,8 +97,12 @@ Note: light importance sampling currently not supported for this shape.</p>
 <span>  y <span class="op">=</span> <span class="fl">0</span>,</span>
 <span>  z <span class="op">=</span> <span class="fl">0</span>,</span>
 <span>  scale_obj <span class="op">=</span> <span class="fl">1</span>,</span>
-<span>  texture <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  load_material <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  load_textures <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  load_normals <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  vertex_colors <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  calculate_consistent_normals <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  importance_sample_lights <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  material <span class="op">=</span> <span class="fu"><a href="diffuse.html">diffuse</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  angle <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">0</span>, <span class="fl">0</span><span class="op">)</span>,</span>
 <span>  order_rotation <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">2</span>, <span class="fl">3</span><span class="op">)</span>,</span>
@@ -130,13 +134,33 @@ Note: light importance sampling currently not supported for this shape.</p>
 more robust to numerical precision errors than the generic scale option.</p></dd>
 
 
-<dt>texture</dt>
-<dd><p>Default `FALSE`. Whether to load the obj file texture.</p></dd>
+<dt>load_material</dt>
+<dd><p>Default `TRUE`. Whether to load the obj file material (MTL file). If material for faces
+aren't specified, the default material will be used (specified by the user in `material`).</p></dd>
+
+
+<dt>load_textures</dt>
+<dd><p>Default `TRUE`. If `load_material = TRUE`, whether to load textures in the MTL file (versus
+just using the colors specified for each material).</p></dd>
+
+
+<dt>load_normals</dt>
+<dd><p>Default `TRUE`. Whether to load the vertex normals if they exist in the OBJ file.</p></dd>
 
 
 <dt>vertex_colors</dt>
 <dd><p>Default `FALSE`. Set to `TRUE` if the OBJ file has vertex colors to apply them
 to the model.</p></dd>
+
+
+<dt>calculate_consistent_normals</dt>
+<dd><p>Default `TRUE`. Whether to calculate consistent vertex normals to prevent energy 
+loss at edges.</p></dd>
+
+
+<dt>importance_sample_lights</dt>
+<dd><p>Default `TRUE`. Whether to importance sample lights specified in the OBJ material
+(objects with a non-zero Ke MTL material).</p></dd>
 
 
 <dt>material</dt>
