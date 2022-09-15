@@ -85,7 +85,9 @@ generate_studio(depth=-0.2) \%>\%
                     material=light(intensity=200, spotlight_focus = c(0,0.5,0)))) \%>\%
   render_scene(clamp_value = 10, lookat = c(0,0.5,0), fov=13,
                samples=128)
+}
 
+if(rayrender:::run_documentation()) {
 #Change the control points to change the direction of the curve. Here, we place spheres
 #at the control point locations.
 generate_studio(depth=-0.2) \%>\%
@@ -98,7 +100,8 @@ generate_studio(depth=-0.2) \%>\%
                     material=light(intensity=200, spotlight_focus = c(0,0.5,0)))) \%>\%
   render_scene(clamp_value = 10, lookat = c(0,0.5,0), fov=15,
                samples=128)
-               
+}
+if(rayrender:::run_documentation()) {
 #We can make the curve flat (always facing the camera) by setting the type to `flat`
 generate_studio(depth=-0.2) \%>\%
   add_object(bezier_curve(type="flat", material=glossy(color="red"))) \%>\%
@@ -106,8 +109,8 @@ generate_studio(depth=-0.2) \%>\%
                     material=light(intensity=200, spotlight_focus = c(0,0.5,0)))) \%>\%
   render_scene(clamp_value = 10, lookat = c(0,0.5,0), fov=13,
                samples=128)
-
-
+}
+if(rayrender:::run_documentation()) {
 #We can also plot a ribbon, which is further specified by a start and end orientation with
 #two surface normals.
 generate_studio(depth=-0.2) \%>\%
@@ -119,8 +122,8 @@ generate_studio(depth=-0.2) \%>\%
                     material=light(intensity=200, spotlight_focus = c(0,0.5,0)))) \%>\%
   render_scene(clamp_value = 10, lookat = c(0,0.5,0), fov=13,
                samples=128)
-
-
+}
+if(rayrender:::run_documentation()) {
 #Create a single curve and copy and rotate it around the y-axis to create a wavy fountain effect:
 scene_curves = list()
 for(i in 1:90) {

@@ -57,7 +57,8 @@ generate_cornell() \%>\%
   add_object(text3d(label="Cornell Box", x=555/2,y=555/2,z=555/2,text_height=60,
                     material=diffuse(color="grey10"), angle=c(0,180,0))) \%>\% 
   render_scene(samples=128, clamp_value=10)
-  
+}
+if(rayrender:::run_documentation()) {
 #Change the orientation
 generate_cornell() \%>\% 
   add_object(text3d(label="YZ Plane", x=550,y=555/2,z=555/2,text_height=100,
@@ -70,7 +71,8 @@ generate_cornell() \%>\%
                     orientation = "xz",
                     material=diffuse(color="grey10"))) \%>\% 
   render_scene(samples=128, clamp_value=10)
-  
+}
+if(rayrender:::run_documentation()) {
 #Add an label in front of a sphere
 generate_cornell() \%>\% 
   add_object(text3d(label="Cornell Box", x=555/2,y=555/2,z=555/2,text_height=60,
@@ -83,8 +85,9 @@ generate_cornell() \%>\%
                     material=light(intensity=100,
                                    spotlight_focus=c(555/2,100,100)))) \%>\%                   
   render_scene(samples=128, clamp_value=10)
+}
   
-  
+if(rayrender:::run_documentation()) {
 #A room full of bees
 bee_list = list()
 for(i in 1:100) {

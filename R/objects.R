@@ -1473,13 +1473,15 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
 #'  add_object(cone(start=c(0,-1,0), end=c(0,1,0), radius=1,material=diffuse(color="red"))) %>% 
 #'  add_object(sphere(y=5,x=5,material=light(intensity=40))) %>% 
 #'  render_scene(samples=128,clamp_value=10)
-#'  
+#' }
+#' if(rayrender:::run_documentation()) {
 #'  #Change the radius, length, and direction
 #' generate_studio() %>% 
 #'  add_object(cone(start=c(0,0,0), end=c(0,-1,0), radius=0.5,material=diffuse(color="red"))) %>% 
 #'  add_object(sphere(y=5,x=5,material=light(intensity=40))) %>% 
 #'  render_scene(samples=128,clamp_value=10)
-#'  
+#' }
+#' if(rayrender:::run_documentation()) {
 #' #Give custom start and end points (and customize the color/texture)
 #' generate_studio() %>% 
 #'  add_object(cone(start=c(-1,0.5,-1), end=c(0,0,0), radius=0.5,material=diffuse(color="red"))) %>%
@@ -1489,8 +1491,8 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
 #'    material = diffuse(color="red",gradient_color="green"))) %>% 
 #'  add_object(sphere(y=5,x=5,material=light(intensity=40))) %>% 
 #'  render_scene(samples=128,clamp_value=10)
-#'  
-#'  
+#' }
+#' if(rayrender:::run_documentation()) {  
 #' #Specify cone via direction and location, instead of start and end positions
 #' #Length is derived from the magnitude of the direction.
 #' gold_mat = microfacet(roughness=0.1,eta=c(0.216,0.42833,1.3184), kappa=c(3.239,2.4599,1.8661))
@@ -1503,7 +1505,8 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
 #'   add_object(sphere(y=3,x=-3,z=-3,material=light(color="red"))) %>% 
 #'   add_object(sphere(y=3,x=3,z=-3,material=light(color="green"))) %>% 
 #'   render_scene(lookfrom=c(0,4,10), clamp_value=10, samples=128)
-#'   
+#' }
+#' if(rayrender:::run_documentation()) {
 #'  #Render the position from the base, instead of the center of the cone:
 #'  noise_mat = material = glossy(color="purple",noisecolor="blue", noise=5)
 #'  generate_studio() %>% 
@@ -1517,9 +1520,7 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
 #'     material = noise_mat)) %>% 
 #'   add_object(sphere(y=5,x=5,material=light(intensity=40))) %>% 
 #'   render_scene(lookfrom=c(0,4,10), clamp_value=10,fov=25, samples=128)
-#'   
 #' }
-#' 
 cone = function(start = c(0, 0, 0), end = c(0, 1, 0), radius = 0.5, 
                 direction = NA, from_center = TRUE,
                 material = diffuse(), angle = c(0,0,0),
@@ -1620,7 +1621,8 @@ cone = function(start = c(0, 0, 0), end = c(0, 1, 0), radius = 0.5,
 #'   add_object(arrow(start = c(-1,0,0), end = c(1,0,0), material=glossy(color="red"))) %>% 
 #'   add_object(sphere(y=5,material=light(intensity=20))) %>% 
 #'   render_scene(clamp_value=10,  samples=128)
-#' 
+#' }
+#' if(rayrender:::run_documentation()) {
 #' #Change the proportion of tail to top
 #' generate_studio(depth=-2) %>% 
 #'   add_object(arrow(start = c(-1,-1,0), end = c(1,-1,0), tail_proportion = 0.5,
@@ -1631,7 +1633,8 @@ cone = function(start = c(0, 0, 0), end = c(0, 1, 0), radius = 0.5,
 #'                    material=glossy(color="red"))) %>% 
 #'   add_object(sphere(y=5,z=5,x=2,material=light(intensity=30))) %>% 
 #'   render_scene(clamp_value=10, fov=25,  samples=128)
-#'   
+#' }
+#' if(rayrender:::run_documentation()) {
 #' #Change the radius of the tail/top segments
 #' generate_studio(depth=-1.5) %>% 
 #'   add_object(arrow(start = c(-1,-1,0), end = c(1,-1,0), tail_proportion = 0.75,
@@ -1645,8 +1648,8 @@ cone = function(start = c(0, 0, 0), end = c(0, 1, 0), radius = 0.5,
 #'                    material=glossy(color="red"))) %>% 
 #'   add_object(sphere(y=5,z=5,x=2,material=light(intensity=30))) %>% 
 #'   render_scene(clamp_value=10, samples=128)
-#'   
-#'   
+#' }
+#' if(rayrender:::run_documentation()) {
 #' #We can also specify arrows via a midpoint and direction:
 #' generate_studio(depth=-1) %>% 
 #'   add_object(arrow(start = c(-1,-0.5,0), direction = c(0,0,1),
@@ -1660,7 +1663,8 @@ cone = function(start = c(0, 0, 0), end = c(0, 1, 0), radius = 0.5,
 #'   add_object(sphere(y=5,z=5,x=2,material=light(intensity=30))) %>% 
 #'   render_scene(clamp_value=10, samples=128, 
 #'                lookfrom=c(0,5,10), lookat=c(0,-0.5,0), fov=16)
-#' 
+#' }
+#' if(rayrender:::run_documentation()) {
 #' #Plot a 3D vector field for a gravitational well:
 #' 
 #' r = 1.5
@@ -1757,7 +1761,9 @@ arrow = function(start = c(0,0,0), end = c(0,1,0),
 #'                     material=light(intensity=200, spotlight_focus = c(0,0.5,0)))) %>%
 #'   render_scene(clamp_value = 10, lookat = c(0,0.5,0), fov=13,
 #'                samples=128)
+#' }
 #' 
+#' if(rayrender:::run_documentation()) {
 #' #Change the control points to change the direction of the curve. Here, we place spheres
 #' #at the control point locations.
 #' generate_studio(depth=-0.2) %>%
@@ -1770,7 +1776,8 @@ arrow = function(start = c(0,0,0), end = c(0,1,0),
 #'                     material=light(intensity=200, spotlight_focus = c(0,0.5,0)))) %>%
 #'   render_scene(clamp_value = 10, lookat = c(0,0.5,0), fov=15,
 #'                samples=128)
-#'                
+#' }
+#' if(rayrender:::run_documentation()) {
 #' #We can make the curve flat (always facing the camera) by setting the type to `flat`
 #' generate_studio(depth=-0.2) %>%
 #'   add_object(bezier_curve(type="flat", material=glossy(color="red"))) %>%
@@ -1778,8 +1785,8 @@ arrow = function(start = c(0,0,0), end = c(0,1,0),
 #'                     material=light(intensity=200, spotlight_focus = c(0,0.5,0)))) %>%
 #'   render_scene(clamp_value = 10, lookat = c(0,0.5,0), fov=13,
 #'                samples=128)
-#' 
-#' 
+#' }
+#' if(rayrender:::run_documentation()) {
 #' #We can also plot a ribbon, which is further specified by a start and end orientation with
 #' #two surface normals.
 #' generate_studio(depth=-0.2) %>%
@@ -1791,8 +1798,8 @@ arrow = function(start = c(0,0,0), end = c(0,1,0),
 #'                     material=light(intensity=200, spotlight_focus = c(0,0.5,0)))) %>%
 #'   render_scene(clamp_value = 10, lookat = c(0,0.5,0), fov=13,
 #'                samples=128)
-#' 
-#' 
+#' }
+#' if(rayrender:::run_documentation()) {
 #' #Create a single curve and copy and rotate it around the y-axis to create a wavy fountain effect:
 #' scene_curves = list()
 #' for(i in 1:90) {
@@ -1932,13 +1939,15 @@ bezier_curve = function(p1 = c(0,0,0), p2 = c(-1,0.33,0), p3 = c(1,0.66,0), p4=c
 #'   add_object(sphere(x=2,y=1,radius=0.1,material=point_mat)) %>% 
 #'   add_object(sphere(z=5,x=5,y=5,radius=2,material=light(intensity=15))) %>% 
 #'   render_scene(samples=128, clamp_value=10,fov=30)
-#'   
+#' }
+#' if(rayrender:::run_documentation()) {
 #' #Here we use straight lines by setting `straight = TRUE`:
 #' generate_studio(depth=-1.5) %>% 
 #'   add_object(path(points = wave,straight = TRUE, material=glossy(color="red"))) %>% 
 #'   add_object(sphere(z=5,x=5,y=5,radius=2,material=light(intensity=15))) %>% 
 #'   render_scene(samples=128, clamp_value=10,fov=30)
-#'   
+#' }
+#' if(rayrender:::run_documentation()) {
 #' #We can also pass a matrix of values, specifying the x/y/z coordinates. Here,
 #' #we'll create a random curve:
 #' set.seed(21)
@@ -1947,13 +1956,15 @@ bezier_curve = function(p1 = c(0,0,0), p2 = c(-1,0.33,0), p3 = c(1,0.66,0), p4=c
 #'   add_object(path(points=random_mat, material=glossy(color="red"))) %>% 
 #'   add_object(sphere(y=5,radius=1,material=light(intensity=30))) %>% 
 #'   render_scene(samples=128, clamp_value=10)
-#'   
+#' }
+#' if(rayrender:::run_documentation()) {
 #' #We can ensure the curve is closed by setting `closed = TRUE`
 #' generate_studio(depth=-1.5) %>% 
 #'   add_object(path(points=random_mat, closed = TRUE, material=glossy(color="red"))) %>% 
 #'   add_object(sphere(y=5,radius=1,material=light(intensity=30))) %>% 
 #'   render_scene(samples=128, clamp_value=10)
-#'   
+#' }
+#' if(rayrender:::run_documentation()) {
 #' #Finally, let's render a pretzel to show how you can render just a subset of the curve:
 #' pretzel = list(c(-0.8,-0.5,0.1),c(0,-0.2,-0.1),c(0,0.3,0.1),c(-0.5,0.5,0.1), c(-0.6,-0.5,-0.1),
 #'                c(0,-0.8,-0.1),
@@ -1964,19 +1975,22 @@ bezier_curve = function(p1 = c(0,0,0), p2 = c(-1,0.33,0), p3 = c(1,0.66,0), p4=c
 #'   add_object(path(pretzel, width=0.17,  material = glossy(color="#db5b00"))) %>% 
 #'   add_object(sphere(y=5,x=2,z=4,material=light(intensity=20,spotlight_focus = c(0,0,0)))) %>% 
 #'   render_scene(samples=128, clamp_value=10)
-#'   
+#' }
+#' if(rayrender:::run_documentation()) {
 #' #Here, we'll render only the first third of the pretzel by setting `u_max = 0.33`
 #' generate_studio(depth = -1.1) %>% 
 #'   add_object(path(pretzel, width=0.17, u_max=0.33, material = glossy(color="#db5b00"))) %>% 
 #'   add_object(sphere(y=5,x=2,z=4,material=light(intensity=20,spotlight_focus = c(0,0,0)))) %>% 
 #'   render_scene(samples=128, clamp_value=10)
-#'   
+#' }
+#' if(rayrender:::run_documentation()) {
 #' #Here's the last third, by setting `u_min = 0.66`
 #' generate_studio(depth = -1.1) %>% 
 #'   add_object(path(pretzel, width=0.17, u_min=0.66, material = glossy(color="#db5b00"))) %>% 
 #'   add_object(sphere(y=5,x=2,z=4,material=light(intensity=20,spotlight_focus = c(0,0,0)))) %>% 
 #'   render_scene(samples=128, clamp_value=10)
-#'   
+#' }
+#' if(rayrender:::run_documentation()) {
 #' #Here's the full pretzel, decomposed into thirds using the u_min and u_max coordinates
 #' generate_studio(depth = -1.1) %>% 
 #'   add_object(path(pretzel, width=0.17, u_max=0.33, x = -0.8, y =0.6,
@@ -2146,7 +2160,8 @@ path = function(points,
 #'   add_object(text3d(label="Cornell Box", x=555/2,y=555/2,z=555/2,text_height=60,
 #'                     material=diffuse(color="grey10"), angle=c(0,180,0))) %>% 
 #'   render_scene(samples=128, clamp_value=10)
-#'   
+#' }
+#' if(rayrender:::run_documentation()) {
 #' #Change the orientation
 #' generate_cornell() %>% 
 #'   add_object(text3d(label="YZ Plane", x=550,y=555/2,z=555/2,text_height=100,
@@ -2159,7 +2174,8 @@ path = function(points,
 #'                     orientation = "xz",
 #'                     material=diffuse(color="grey10"))) %>% 
 #'   render_scene(samples=128, clamp_value=10)
-#'   
+#' }
+#' if(rayrender:::run_documentation()) {
 #' #Add an label in front of a sphere
 #' generate_cornell() %>% 
 #'   add_object(text3d(label="Cornell Box", x=555/2,y=555/2,z=555/2,text_height=60,
@@ -2172,8 +2188,9 @@ path = function(points,
 #'                     material=light(intensity=100,
 #'                                    spotlight_focus=c(555/2,100,100)))) %>%                   
 #'   render_scene(samples=128, clamp_value=10)
+#' }
 #'   
-#'   
+#' if(rayrender:::run_documentation()) {
 #' #A room full of bees
 #' bee_list = list()
 #' for(i in 1:100) {
@@ -2542,7 +2559,8 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
 #' points = list(c(0,0,1),c(-0.5,0,-1),c(0,1,-1),c(1,0.5,0),c(0.6,0.3,1))
 #' ground_mat = material=diffuse(color="grey50",
 #'                               checkercolor = "grey20",checkerperiod = 1.5)
-#' 
+#' }
+#' if(rayrender:::run_documentation()) {
 #' #Default path shape is a circle
 #' generate_studio(depth=-0.4,material=ground_mat) |>
 #'   add_object(extruded_path(points = points, width=0.25, 
@@ -2550,7 +2568,8 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
 #'   add_object(sphere(y=3,z=5,x=2,material=light(intensity=15))) |> 
 #'   render_scene(lookat=c(0.3,0.5,0.5),fov=12, width=800,height=800, clamp_value = 10,
 #'                aperture=0.025, samples=128, sample_method="sobol_blue")
-#' 
+#' }
+#' if(rayrender:::run_documentation()) {
 #' #Change the width evenly along the tube
 #' generate_studio(depth=-0.4,material=ground_mat) |>
 #'   add_object(extruded_path(points = points, width=0.25, 
@@ -2559,7 +2578,8 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
 #'   add_object(sphere(y=3,z=5,x=2,material=light(intensity=15))) |> 
 #'   render_scene(lookat=c(0.3,0.5,0.5),fov=12, width=800,height=800, clamp_value = 10,
 #'                aperture=0.025, samples=128, sample_method="sobol_blue")
-#' 
+#' }
+#' if(rayrender:::run_documentation()) {
 #' #Change the width along the full length of the tube
 #' generate_studio(depth=-0.4,material=ground_mat) |>
 #'   add_object(extruded_path(points = points, 
@@ -2568,7 +2588,8 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
 #'   add_object(sphere(y=3,z=5,x=2,material=light(intensity=15))) |> 
 #'   render_scene(lookat=c(0.3,0.5,0.5),fov=12, width=800,height=800, clamp_value = 10,
 #'                aperture=0.025, samples=128, sample_method="sobol_blue")
-#' 
+#' }
+#' if(rayrender:::run_documentation()) {
 #' #Specify the exact parametric x positions for the width values:
 #' custom_width = data.frame(x=c(0,0.2,0.5,0.8,1), y=c(0.25,0.5,0,0.5,0.25))
 #' generate_studio(depth=-0.4,material=ground_mat) |>
@@ -2578,7 +2599,8 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
 #'   add_object(sphere(y=3,z=5,x=2,material=light(intensity=15))) |> 
 #'   render_scene(lookat=c(0.3,0.5,0.5),fov=12, width=800,height=800, clamp_value = 10,
 #'                aperture=0.025, samples=128, sample_method="sobol_blue")
-#' 
+#' }
+#' if(rayrender:::run_documentation()) {
 #' #Generate a star polygon
 #' angles = seq(360,0,length.out=21)
 #' xx = c(rep(c(1,0.75,0.5,0.75),5),1) * sinpi(angles/180)/4
@@ -2593,7 +2615,8 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
 #'   add_object(sphere(y=3,z=5,x=2,material=light(intensity=15))) |> 
 #'   render_scene(lookat=c(0.3,0.5,1),fov=12, width=800,height=800, clamp_value = 10,
 #'                aperture=0.025, samples=128, sample_method="sobol_blue")
-#' 
+#' }
+#' if(rayrender:::run_documentation()) {
 #' #Specify a circle polygon
 #' angles = seq(360,0,length.out=21)
 #' xx = sinpi(angles/180)/4
@@ -2609,7 +2632,8 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
 #'   add_object(sphere(y=3,z=5,x=2,material=light(intensity=15))) |> 
 #'   render_scene(lookat=c(0.3,0.5,0.5),fov=12, width=800,height=800, clamp_value = 10,
 #'                aperture=0.025, samples=128, sample_method="sobol_blue")
-#' 
+#' }
+#' if(rayrender:::run_documentation()) {
 #' #Add three and a half twists along the path, and make sure the breaks are evenly spaced
 #' generate_studio(depth=-0.4,material=ground_mat) |>
 #'   add_object(extruded_path(points = points, width=0.5, twists = 3.5,
@@ -2619,7 +2643,8 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
 #'   add_object(sphere(y=3,z=5,x=2,material=light(intensity=15))) |> 
 #'   render_scene(lookat=c(0.3,0.5,0),fov=12, width=800,height=800, clamp_value = 10,
 #'                aperture=0.025, samples=128, sample_method="sobol_blue")
-#' 
+#' }
+#' if(rayrender:::run_documentation()) {
 #' #Smooth the normals for a less sharp appearance:
 #' generate_studio(depth=-0.4,material=ground_mat) |>
 #'   add_object(extruded_path(points = points, width=0.5, twists = 3.5,
@@ -2631,8 +2656,8 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
 #'   add_object(sphere(y=3,z=5,x=2,material=light(intensity=15))) |> 
 #'   render_scene(lookat=c(0.3,0.5,0),fov=12, width=800,height=800, clamp_value = 10,
 #'                aperture=0.025, samples=128, sample_method="sobol_blue")
-#' 
-#' 
+#' }
+#' if(rayrender:::run_documentation()) {
 #' #Only generate part of the curve, specified by the u_min and u_max arguments
 #' generate_studio(depth=-0.4,material=ground_mat) |>
 #'   add_object(extruded_path(points = points, width=0.5, twists = 3.5,
@@ -2643,7 +2668,8 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
 #'   add_object(sphere(y=3,z=5,x=2,material=light(intensity=15))) |> 
 #'   render_scene(lookat=c(0.3,0.5,0),fov=12, width=800,height=800, clamp_value = 10,
 #'                aperture=0.025, samples=128, sample_method="sobol_blue")
-#'              
+#' }
+#' if(rayrender:::run_documentation()) {
 #' #Render a Mobius strip with 1.5 turns 
 #' points = list(c(0,0,0),c(0.5,0.5,0),c(0,1,0),c(-0.5,0.5,0))
 #' square_polygon = matrix(c(-1, -0.1, 0,
@@ -2661,31 +2687,28 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
 #'  add_object(sphere(y=20,x=0,z=21,material=light(intensity = 1000))) |> 
 #'  render_scene(lookat=c(0,0.5,0), fov=10, samples=128, sample_method = "sobol_blue",
 #'               width = 800, height=800)
-#' 
+#' }
+#' if(rayrender:::run_documentation()) {
 #' #Create a green glass tube with the dielectric priority interface
 #' #and fill it with a purple neon tube light
 #' generate_ground(depth=-0.4,material=diffuse(color="grey50",
 #'                                             checkercolor = "grey20",checkerperiod = 1.5)) |>
 #'   add_object(extruded_path(points = points, width=0.7, linear_step = TRUE, 
-#'                            polygon = circ_polygon, twists = 2,
+#'                            polygon = circ_polygon, twists = 2, closed = TRUE,
 #'                            polygon_end = star_polygon,
 #'                            material=dielectric(priority = 1, refraction = 1.2, 
 #'                                                attenuation=c(1,0.3,1)*10))) |> 
 #'   add_object(extruded_path(points = points, width=0.4, linear_step = TRUE,
-#'                            polygon = circ_polygon,twists = 2,
+#'                            polygon = circ_polygon,twists = 2, closed = TRUE,
 #'                            polygon_end = star_polygon,
 #'                            material=dielectric(priority = 0,refraction = 1))) |>  
 #'   add_object(extruded_path(points = points, width=0.05, closed = TRUE,
 #'                            material=light(color="purple", intensity = 5,
 #'                                           importance_sample = FALSE))) |>
 #'   add_object(sphere(y=10,z=-5,x=0,radius=5,material=light(color = "white",intensity = 5))) |>
-#'   render_scene(lookat=c(0.3,0.5,1),fov=12, 
+#'   render_scene(lookat=c(0,0.5,1),fov=12, 
 #'                width=800,height=800, clamp_value = 10,
 #'                aperture=0.025, samples=128, sample_method="sobol_blue")
-#' 
-#' 
-#' 
-#' 
 #' }
 extruded_path = function(points, x = 0, y = 0, z = 0, 
                          polygon = NA, polygon_end = NA, breaks=NA,

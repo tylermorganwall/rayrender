@@ -57,7 +57,8 @@ generate_studio() \%>\%
   add_object(arrow(start = c(-1,0,0), end = c(1,0,0), material=glossy(color="red"))) \%>\% 
   add_object(sphere(y=5,material=light(intensity=20))) \%>\% 
   render_scene(clamp_value=10,  samples=128)
-
+}
+if(rayrender:::run_documentation()) {
 #Change the proportion of tail to top
 generate_studio(depth=-2) \%>\% 
   add_object(arrow(start = c(-1,-1,0), end = c(1,-1,0), tail_proportion = 0.5,
@@ -68,7 +69,8 @@ generate_studio(depth=-2) \%>\%
                    material=glossy(color="red"))) \%>\% 
   add_object(sphere(y=5,z=5,x=2,material=light(intensity=30))) \%>\% 
   render_scene(clamp_value=10, fov=25,  samples=128)
-  
+}
+if(rayrender:::run_documentation()) {
 #Change the radius of the tail/top segments
 generate_studio(depth=-1.5) \%>\% 
   add_object(arrow(start = c(-1,-1,0), end = c(1,-1,0), tail_proportion = 0.75,
@@ -82,8 +84,8 @@ generate_studio(depth=-1.5) \%>\%
                    material=glossy(color="red"))) \%>\% 
   add_object(sphere(y=5,z=5,x=2,material=light(intensity=30))) \%>\% 
   render_scene(clamp_value=10, samples=128)
-  
-  
+}
+if(rayrender:::run_documentation()) {
 #We can also specify arrows via a midpoint and direction:
 generate_studio(depth=-1) \%>\% 
   add_object(arrow(start = c(-1,-0.5,0), direction = c(0,0,1),
@@ -97,7 +99,8 @@ generate_studio(depth=-1) \%>\%
   add_object(sphere(y=5,z=5,x=2,material=light(intensity=30))) \%>\% 
   render_scene(clamp_value=10, samples=128, 
                lookfrom=c(0,5,10), lookat=c(0,-0.5,0), fov=16)
-
+}
+if(rayrender:::run_documentation()) {
 #Plot a 3D vector field for a gravitational well:
 
 r = 1.5
