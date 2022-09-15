@@ -577,5 +577,40 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
       adaptive_pixel_sampler.max_s++;
     }
     adaptive_pixel_sampler.write_final_pixels();
-  }
+  } else if (debug_channel == 19) {
+    RcppThread::ThreadPool pool(numbercores);
+    
+    auto worker = [&routput, &goutput, &boutput, 
+                   nx, ny,  fov, &hlist, max_depth,
+                   cam, &world] (int j) {
+                     std::vector<dielectric*> *mat_stack = new std::vector<dielectric*>;
+                     random_gen rng(j);
+                     for(unsigned int i = 0; i < nx; i++) {
+                       ray r;
+                       if(fov >= 0) {
+                         Float u = (Float(i)) / Float(nx);
+                         Float v = (Float(j)) / Float(ny);
+                         r = cam->get_ray(u,v, vec3f(0,0,0), rng.unif_rand());
+                       } else {
+                         point2f u(rng.unif_rand(),rng.unif_rand());
+                         point2f u2(rng.unif_rand(),rng.unif_rand());
+                         CameraSample samp(u, u2, rng.unif_rand());
+                         cam->GenerateRay(samp, &r);
+                       }
+                       r.pri_stack = mat_stack;
+                       point3f qr = calculate_material(r, &world, &hlist,
+                                                    max_depth, rng);
+                       mat_stack->clear();
+                       
+                       routput(i,j) = qr.x();
+                       goutput(i,j) = qr.y();
+                       boutput(i,j) = qr.z();
+                     }
+                     delete mat_stack;
+                   };
+    for(int j = ny - 1; j >= 0; j--) {
+      pool.push(worker,j);
+    }
+    pool.join();
+  } 
 }

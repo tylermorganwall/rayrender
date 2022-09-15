@@ -85,6 +85,7 @@ class material {
       return(point3f(0,0,0));
     }
     virtual ~material() {};
+    virtual const std::string GetName() = 0;
     virtual size_t GetSize() = 0;
 };
 
@@ -97,7 +98,9 @@ class lambertian : public material {
     bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler);
     point3f get_albedo(const ray& r_in, const hit_record& rec) const;
     size_t GetSize();
-    
+    const std::string GetName() {
+      return(std::string("diffuse"));
+    };
     std::shared_ptr<texture> albedo;
 };
 
@@ -110,7 +113,9 @@ class metal : public material {
     virtual bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler);
     point3f get_albedo(const ray& r_in, const hit_record& rec) const;
     size_t GetSize();
-    
+    const std::string GetName() {
+      return(std::string("metal"));
+    };
     std::shared_ptr<texture> albedo;
     point3f eta, k;
     Float fuzz;
@@ -128,7 +133,9 @@ class dielectric : public material {
       return(point3f(1,1,1));
     }
     size_t GetSize();
-    
+    const std::string GetName() {
+      return(std::string("dielectric"));
+    };
     Float ref_idx;
     point3f albedo;
     point3f attenuation;
@@ -149,7 +156,9 @@ public:
   point3f emitted(const ray& r_in, const hit_record& rec, Float u, Float v, const point3f& p, bool& is_invisible);
   point3f get_albedo(const ray& r_in, const hit_record& rec) const;
   size_t GetSize();
-  
+  const std::string GetName() {
+    return(std::string("diffuse_light"));
+  };
   std::shared_ptr<texture>  emit;
   Float intensity;
   bool invisible;
@@ -171,7 +180,9 @@ class spot_light : public material {
     Float falloff(const vec3f &w) const;
     point3f get_albedo(const ray& r_in, const hit_record& rec) const;
     size_t GetSize();
-    
+    const std::string GetName() {
+      return(std::string("spot_light"));
+    };
     std::shared_ptr<texture>  emit;
     vec3f spot_direction;
     const Float cosTotalWidth, cosFalloffStart;
@@ -187,7 +198,9 @@ public:
   point3f f(const ray& r_in, const hit_record& rec, const ray& scattered) const;
   point3f get_albedo(const ray& r_in, const hit_record& rec) const;
   size_t GetSize();
-  
+  const std::string GetName() {
+    return(std::string("isotropic"));
+  };
   std::shared_ptr<texture> albedo;
 };
 
@@ -204,7 +217,9 @@ public:
   point3f f(const ray& r_in, const hit_record& rec, const ray& scattered) const;
   point3f get_albedo(const ray& r_in, const hit_record& rec) const;
   size_t GetSize();
-  
+  const std::string GetName() {
+    return(std::string("orennayer"));
+  };
   Float A, B;
   std::shared_ptr<texture> albedo;
 };
@@ -223,7 +238,9 @@ public:
   point3f f(const ray& r_in, const hit_record& rec, const ray& scattered) const;
   point3f get_albedo(const ray& r_in, const hit_record& rec) const;
   size_t GetSize();
-  
+  const std::string GetName() {
+    return(std::string("MicrofacetReflection"));
+  };
 private:
   std::shared_ptr<texture> albedo;
   MicrofacetDistribution *distribution;
@@ -246,7 +263,9 @@ public:
   point3f get_albedo(const ray& r_in, const hit_record& rec) const;
   point3f SchlickFresnel(Float cosTheta) const;
   size_t GetSize();
-  
+  const std::string GetName() {
+    return(std::string("MicrofacetTransmission"));
+  };
   
 private:
   std::shared_ptr<texture> albedo;
@@ -269,7 +288,9 @@ public:
   point3f SchlickFresnel(Float cosTheta) const;
   point3f get_albedo(const ray& r_in, const hit_record& rec) const;
   size_t GetSize();
-  
+  const std::string GetName() {
+    return(std::string("glossy"));
+  };
   
 private:
   std::shared_ptr<texture>  albedo;
@@ -312,7 +333,9 @@ class hair : public material {
     
     point3f f(const ray& r_in, const hit_record& rec, const ray& scattered) const;
     size_t GetSize();
-    
+    const std::string GetName() {
+      return(std::string("hair"));
+    };
     
     point3f sigma_a;
     Float eta;

@@ -325,6 +325,25 @@ inline point3f calculate_shape(const ray& r, hitable *world, hitable_list *hlist
   }
 }
 
+inline point3f calculate_material(const ray& r, hitable *world, hitable_list *hlist,
+                                  size_t max_depth, random_gen& rng) {
+  hit_record hrec;
+  if(world->hit(r, 0.001, FLT_MAX, hrec, rng)) {
+    uint32_t r =  reinterpret_type<std::string, uint32_t>(hrec.mat_ptr->GetName()) % 65536;
+    uint32_t g = (reinterpret_type<std::string, uint32_t>(hrec.mat_ptr->GetName()) % 65536) + 1;
+    uint32_t b = (reinterpret_type<std::string, uint32_t>(hrec.mat_ptr->GetName()) % 65536) + 2;
+    r = hash32(r) % 128;
+    g = hash32(g) % 128;
+    b = hash32(b) % 128;
+    Float r2 = (Float)r/128;
+    Float g2 = (Float)g/128;
+    Float b2 = (Float)b/128;
+    return(vec3f(r2,g2,b2));
+  } else {
+    return(vec3f(0,0,0));
+  }
+}
+
 inline Float calculate_pdf(const ray& r, hitable *world, hitable_list *hlist,
                                     size_t max_depth, random_gen& rng) {
   point3f final_color(0,0,0);
