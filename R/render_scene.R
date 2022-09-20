@@ -108,6 +108,8 @@
 #' @param progress Default `TRUE` if interactive session, `FALSE` otherwise. 
 #' @param verbose Default `FALSE`. Prints information and timing information about scene
 #' construction and raytracing progress.
+#' @param new_page Default `TRUE`. Whether to call `grid::grid.newpage()` when plotting the image (if
+#' no filename specified). Set to `FALSE` for faster plotting (does not affect render time).
 #' @export
 #' @importFrom  grDevices col2rgb
 #' @return Raytraced plot to current device, or an image saved to a file. Invisibly returns the
@@ -238,7 +240,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
                         tonemap ="gamma", bloom = TRUE, parallel=TRUE, bvh_type = "sah",
                         environment_light = NULL, rotate_env = 0, intensity_env = 1,
                         debug_channel = "none", return_raw_array = FALSE,
-                        progress = interactive(), verbose = FALSE) { 
+                        progress = interactive(), verbose = FALSE, new_page = TRUE) { 
   init_time()
   
   #Check if Cornell Box scene and set camera if user did not:
@@ -317,7 +319,8 @@ Left Mouse Click: Change Look At (new focal distance) | Right Mouse Click: Chang
     keyframes = do.call(rbind,lapply(attr(rgb_mat,"keyframes"),as.data.frame))
     assign("keyframes",keyframes, envir = ray_environment)
   }
-  return_array = post_process_scene(rgb_mat, iso, tonemap, debug_channel, filename, return_raw_array, bloom)
+  return_array = post_process_scene(rgb_mat, iso, tonemap, debug_channel, filename, return_raw_array, bloom,
+                                    new_page)
   print_time(verbose, "Post-processed image" );
   
   return(invisible(return_array))

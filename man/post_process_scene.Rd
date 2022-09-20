@@ -11,7 +11,8 @@ post_process_scene(
   debug_channel,
   filename,
   return_raw_array,
-  bloom
+  bloom,
+  new_page = TRUE
 )
 }
 \description{

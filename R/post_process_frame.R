@@ -37,6 +37,6 @@ post_process_frame = function(rgb_mat, debug_channel, filename, toneval, bloom =
   if(filename != "") {
     save_png(array_from_mat,filename)
   } else {
-    plot_map(array_from_mat)
+    rayimage::plot_image(array_from_mat, new_page = TRUE)
   }
 }

@@ -44,7 +44,8 @@ render_scene(
   debug_channel = "none",
   return_raw_array = FALSE,
   progress = interactive(),
-  verbose = FALSE
+  verbose = FALSE,
+  new_page = TRUE
 )
 }
 \arguments{
@@ -191,6 +192,9 @@ information.}
 
 \item{verbose}{Default `FALSE`. Prints information and timing information about scene
 construction and raytracing progress.}
+
+\item{new_page}{Default `TRUE`. Whether to call `grid::grid.newpage()` when plotting the image (if
+no filename specified). Set to `FALSE` for faster plotting (does not affect render time).}
 }
 \value{
 Raytraced plot to current device, or an image saved to a file. Invisibly returns the

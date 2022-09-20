@@ -3,7 +3,7 @@
 #'@keywords internal
 #'@examples
 #'#internal
-post_process_scene = function(rgb_mat, iso, tonemap, debug_channel, filename, return_raw_array, bloom) {
+post_process_scene = function(rgb_mat, iso, tonemap, debug_channel, filename, return_raw_array, bloom, new_page = TRUE) {
   toneval = switch(tonemap, "gamma" = 1,"reinhold" = 2,"uncharted" = 3,"hbd" = 4, "raw" = 5)
   
   if(!is.numeric(debug_channel)) {
@@ -27,7 +27,7 @@ post_process_scene = function(rgb_mat, iso, tonemap, debug_channel, filename, re
     returnmat = fliplr(t(full_array[,,1]))
     returnmat[is.infinite(returnmat)] = NA
     if(is.null(filename)) {
-      plot_map((returnmat-min(returnmat,na.rm=TRUE))/(max(returnmat,na.rm=TRUE) - min(returnmat,na.rm=TRUE)))
+      rayimage::plot_image((returnmat-min(returnmat,na.rm=TRUE))/(max(returnmat,na.rm=TRUE) - min(returnmat,na.rm=TRUE)), new_page = new_page)
       return(invisible(returnmat))
     } else {
       save_png((returnmat-min(returnmat,na.rm=TRUE))/(max(returnmat,na.rm=TRUE) - min(returnmat,na.rm=TRUE)),
@@ -38,9 +38,9 @@ post_process_scene = function(rgb_mat, iso, tonemap, debug_channel, filename, re
     if(is.null(filename)) {
       if(!return_raw_array) {
         if(debug_channel == 4) {
-          plot_map(full_array/(max(full_array,na.rm=TRUE)))
+          rayimage::plot_image(full_array/(max(full_array,na.rm=TRUE)), new_page = new_page)
         } else {
-          plot_map(full_array)
+          rayimage::plot_image(full_array, new_page = new_page)
         }
       }
       return(invisible(full_array))
@@ -58,7 +58,7 @@ post_process_scene = function(rgb_mat, iso, tonemap, debug_channel, filename, re
     full_array[,,2] = (full_array[,,2] - min(full_array[,,2]))/(max(full_array[,,2]) - min(full_array[,,2]))
     full_array[,,3] = (full_array[,,3] - min(full_array[,,3]))/(max(full_array[,,3]) - min(full_array[,,3]))
     if(is.null(filename)) {
-      plot_map(full_array)
+      rayimage::plot_image(full_array, new_page = new_page)
     } else {
       save_png(full_array,filename)
     }
@@ -70,7 +70,7 @@ post_process_scene = function(rgb_mat, iso, tonemap, debug_channel, filename, re
     full_array[,,2] = (full_array[,,2]+1)/2
     full_array[,,3] = (full_array[,,3]+1)/2
     if(is.null(filename)) {
-      plot_map(full_array)
+      rayimage::plot_image(full_array, new_page = new_page)
     } else {
       save_png(full_array,filename)
     }
@@ -81,7 +81,7 @@ post_process_scene = function(rgb_mat, iso, tonemap, debug_channel, filename, re
     
     full_array = (full_array - min(full_array))/(max(full_array) - min(full_array))
     if(is.null(filename)) {
-      plot_map(full_array)
+      rayimage::plot_image(full_array, new_page = new_page)
     } else {
       save_png(full_array,filename)
     }
@@ -130,7 +130,7 @@ post_process_scene = function(rgb_mat, iso, tonemap, debug_channel, filename, re
   }
   if(is.null(filename)) {
     if(!return_raw_array) {
-      plot_map(array_from_mat)
+      rayimage::plot_image(array_from_mat, new_page = new_page)
     }
   } else {
     save_png(array_from_mat,filename)
