@@ -54,6 +54,7 @@ jobs:
       - name: Install dependencies
         run: |
           remotes::install_deps(dependencies = TRUE)
+          remotes::install_github("tylermorganwall/rayimage")
           install.packages("magick")
           install.packages("Rcvg")
           install.packages("pkgdown", type = "binary")
