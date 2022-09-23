@@ -21,9 +21,10 @@ Imports:
     png,
     raster,
     decido,
-    rayimage (>= 0.6.2),
+    rayimage (>= 0.7.1),
     stats,
     progress
+Remotes: tylermorganwall/rayimage
 Suggests:
     sf,
     spData,
