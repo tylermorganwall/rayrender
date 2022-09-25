@@ -1404,7 +1404,7 @@ static bool exportGroupsToShape(shape_t *shape, const PrimGroup &prim_group,
         continue;
       }
 
-      if (triangulate) {
+      if (triangulate && npolys != 3) {
         if (npolys == 4) {
           vertex_index_t i0 = face.vertex_indices[0];
           vertex_index_t i1 = face.vertex_indices[1];
@@ -1806,7 +1806,7 @@ static bool exportGroupsToShape(shape_t *shape, const PrimGroup &prim_group,
           idx.texcoord_index = face.vertex_indices[k].vt_idx;
           shape->mesh.indices.push_back(idx);
         }
-
+        
         shape->mesh.num_face_vertices.push_back(
             static_cast<unsigned char>(npolys));
         shape->mesh.material_ids.push_back(material_id);  // per face

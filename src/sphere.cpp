@@ -358,7 +358,7 @@ vec3f sphere::random(const point3f& o, Sampler* sampler, Float time) {
   // Compute surface normal and sampled point on sphere
   vec3f nWorld = SphericalDirection(sinAlpha, cosAlpha, phi, -uvw.u(), -uvw.v(), -uvw.w());
   point3f pWorld = pCenter + radius * point3f(nWorld.x(), nWorld.y(), nWorld.z());
-  return (pWorld-o);
+  return unit_vector(pWorld-o);
 }
 
 bool sphere::bounding_box(Float t0, Float t1, aabb& box) const {
