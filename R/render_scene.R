@@ -187,7 +187,7 @@
 #'                      material = glossy(checkercolor = "white",
 #'                                        checkerperiod=10,color="dodgerblue"))) %>%
 #'   render_scene(lookfrom=c(278,278,30), lookat=c(278,278,500), clamp_value=10,
-#'                fov = 360,  samples = 128, width=800, height=400)
+#'                fov = 360,  samples = 128, width=800, height=800)
 #' }
 #' if(rayrender:::run_documentation()) {
 #'#We can also use a realistic camera by specifying a camera description file (several of which
