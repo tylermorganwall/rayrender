@@ -128,9 +128,6 @@ namespace tinyobj {
 //   'sRGB` or 'linear'
 //
 
-#include "../vec3.h"
-#include "../onbh.h"
-
 #ifdef TINYOBJLOADER_USE_DOUBLE
 typedef double real_t;
 #else
@@ -1379,6 +1376,37 @@ static int pnpoly(int nvert, T *vertx, T *verty, T testx, T testy) {
   return c;
 }
 
+
+inline std::array<real_t, 3> cross(const std::array<real_t, 3> &v1, const std::array<real_t, 3> &v2) {
+  std::array<real_t, 3> crossed = {v1[1] * v2[2] - v1[2] * v2[1],
+                                   v1[2] * v2[0] - v1[0] * v2[2],
+                                   v1[0] * v2[1] - v1[1] * v2[0]};
+  return(crossed);
+}
+
+inline Float dot(const std::array<real_t, 3> &v1, const std::array<real_t, 3> &v2) {
+  return (v1[0] * v2[0] + v1[1] * v2[1] + v1[2] * v2[2]);
+}
+
+inline Float GetLength(std::array<real_t, 3> &e) { 
+	return std::sqrt(e[0]*e[0] + e[1]*e[1] + e[2]*e[2]); 
+}
+
+inline std::array<real_t, 3> Normalize(std::array<real_t, 3> e) { 
+	real_t inv_length = 1.0 / GetLength(e);
+	return {e[0] * inv_length, e[1] * inv_length, e[2] * inv_length }; 
+}
+
+
+inline std::array<real_t, 3> WorldToLocal(const std::array<real_t, 3>& a,
+                    										  const std::array<real_t, 3>& u, 
+                    										  const std::array<real_t, 3>& v, 
+                    										  const std::array<real_t, 3>& w) {
+	std::array<real_t, 3> projected = {dot(a,u),dot(a,v),dot(a,w)};
+  return(projected);
+}
+
+
 // TODO(syoyo): refactor function.
 static bool exportGroupsToShape(shape_t *shape, const PrimGroup &prim_group,
                                 const std::vector<tag_t> &tags,
@@ -1398,7 +1426,7 @@ static bool exportGroupsToShape(shape_t *shape, const PrimGroup &prim_group,
       const face_t &face = prim_group.faceGroup[i];
 
       size_t npolys = face.vertex_indices.size();
-      
+
       if (npolys < 3) {
         // Face must have 3+ vertices.
         if (warn) {
@@ -1516,16 +1544,13 @@ static bool exportGroupsToShape(shape_t *shape, const PrimGroup &prim_group,
           shape->mesh.smoothing_group_ids.push_back(face.smoothing_group_id);
 
         } else {
+#ifdef TINYOBJLOADER_USE_MAPBOX_EARCUT
           vertex_index_t i0 = face.vertex_indices[0];
-          vertex_index_t i1(-1);
-          vertex_index_t i2 = face.vertex_indices[1];
-          
           vertex_index_t i0_2 = i0;
-          vertex_index_t i1_2(-1);
-          vertex_index_t i2_2 = i2;
-
+          
           // TMW change: Find the normal axis of the polygon using Newell's method
-          vec3f n(0, 0, 0);
+          using Point3 = std::array<real_t, 3>;
+          Point3 n = {0, 0, 0};
           for (size_t k = 0; k < npolys; ++k) {
             i0 = face.vertex_indices[k % npolys];
             size_t vi0 = size_t(i0.v_idx);
@@ -1542,46 +1567,64 @@ static bool exportGroupsToShape(shape_t *shape, const PrimGroup &prim_group,
             real_t v0y_2 = v[vi0_2 * 3 + 1];
             real_t v0z_2 = v[vi0_2 * 3 + 2];
             
-            vec3f point1(v0x,v0y,v0z);
-            vec3f point2(v0x_2,v0y_2,v0z_2);
+            const Point3 point1 = {v0x,v0y,v0z};
+            const Point3 point2 = {v0x_2,v0y_2,v0z_2};
             
-            vec3f a = point1 - point2;
-            vec3f b = point1 + point2;
+            Point3 a = {point1[0] - point2[0], point1[1] - point2[1], point1[2] - point2[2]};
+            Point3 b = {point1[0] + point2[0], point1[1] + point2[1], point1[2] + point2[2]};
             
-            n.e[0] += (a.y() * b.z());
-            n.e[1] += (a.z() * b.x());
-            n.e[2] += (a.x() * b.y());
+            n[0] += (a[1] * b[2]);
+            n[1] += (a[2] * b[0]);
+            n[2] += (a[0] * b[1]);
           }
-          n.make_unit_vector();
-          onb polygon_normal_projection;
-          polygon_normal_projection.build_from_w(-n);
-#ifdef TINYOBJLOADER_USE_MAPBOX_EARCUT
-          using Point = std::array<real_t, 2>;
-
+          real_t length_n = GetLength(n);
+          //Check if zero length normal
+          if(length_n <= 0) {
+            continue;
+          }
+          //Negative is to flip the normal to the correct direction
+          real_t inv_length = -1.0f / length_n;
+          n[0] *= inv_length;
+          n[1] *= inv_length;
+          n[2] *= inv_length;
+          
+          Point3 axis_w, axis_v, axis_u;
+          axis_w = n;
+          Point3 a;
+          if(abs(axis_w[0]) > 0.9999999) {
+            a = {0,1,0};
+          } else {
+            a = {1,0,0};
+          }
+          axis_v = Normalize(cross(axis_w, a));
+          axis_u = cross(axis_w, axis_v);
+    		  using Point = std::array<real_t, 2>;
+    		  
           // first polyline define the main polygon.
           // following polylines define holes(not used in tinyobj).
           std::vector<std::vector<Point> > polygon;
 
           std::vector<Point> polyline;
-          
+
           //TMW change: Find best normal and project v0x and v0y to those coordinates, instead of
-          //picking a plane aligned with an axis (which can flip polygons).
-
-          // Fill polygon data(facevarying vertices).
-          for (size_t k = 0; k < npolys; k++) {
-            i0 = face.vertex_indices[k];
-            size_t vi0 = size_t(i0.v_idx);
-
-            assert(((3 * vi0 + 2) < v.size()));
-            
-            Float v0x = v[vi0 * 3 + 0];
-            Float v0y = v[vi0 * 3 + 1];
-            Float v0z = v[vi0 * 3 + 2];
-            
-            vec3f loc = polygon_normal_projection.world_to_local(vec3f((Float)v0x,(Float)v0y,(Float)v0z));
-
-            polyline.push_back({loc.x(), loc.y()});
-          }
+    		  //picking a plane aligned with an axis (which can flip polygons).
+    
+    		  // Fill polygon data(facevarying vertices).
+    		  for (size_t k = 0; k < npolys; k++) {
+    		    i0 = face.vertex_indices[k];
+    		    size_t vi0 = size_t(i0.v_idx);
+              
+    		    assert(((3 * vi0 + 2) < v.size()));
+              
+    		    real_t v0x = v[vi0 * 3 + 0];
+    		    real_t v0y = v[vi0 * 3 + 1];
+    		    real_t v0z = v[vi0 * 3 + 2];
+    		
+    			  Point3 polypoint = {v0x,v0y,v0z};
+    		    Point3 loc = WorldToLocal(polypoint, axis_u, axis_v, axis_w);
+              
+    		    polyline.push_back({loc[0], loc[1]});
+    		  }
 
           polygon.push_back(polyline);
           std::vector<uint32_t> indices = mapbox::earcut<uint32_t>(polygon);
@@ -1621,7 +1664,64 @@ static bool exportGroupsToShape(shape_t *shape, const PrimGroup &prim_group,
           }
 
 #else  // Built-in ear clipping triangulation
-
+          vertex_index_t i0 = face.vertex_indices[0];
+          vertex_index_t i1(-1);
+          vertex_index_t i2 = face.vertex_indices[1];
+          
+          // find the two axes to work in
+          size_t axes[2] = {1, 2};
+          for (size_t k = 0; k < npolys; ++k) {
+            i0 = face.vertex_indices[(k + 0) % npolys];
+            i1 = face.vertex_indices[(k + 1) % npolys];
+            i2 = face.vertex_indices[(k + 2) % npolys];
+            size_t vi0 = size_t(i0.v_idx);
+            size_t vi1 = size_t(i1.v_idx);
+            size_t vi2 = size_t(i2.v_idx);
+            
+            if (((3 * vi0 + 2) >= v.size()) || ((3 * vi1 + 2) >= v.size()) ||
+                ((3 * vi2 + 2) >= v.size())) {
+              // Invalid triangle.
+              // FIXME(syoyo): Is it ok to simply skip this invalid triangle?
+              continue;
+            }
+            real_t v0x = v[vi0 * 3 + 0];
+            real_t v0y = v[vi0 * 3 + 1];
+            real_t v0z = v[vi0 * 3 + 2];
+            real_t v1x = v[vi1 * 3 + 0];
+            real_t v1y = v[vi1 * 3 + 1];
+            real_t v1z = v[vi1 * 3 + 2];
+            real_t v2x = v[vi2 * 3 + 0];
+            real_t v2y = v[vi2 * 3 + 1];
+            real_t v2z = v[vi2 * 3 + 2];
+            real_t e0x = v1x - v0x;
+            real_t e0y = v1y - v0y;
+            real_t e0z = v1z - v0z;
+            real_t e1x = v2x - v1x;
+            real_t e1y = v2y - v1y;
+            real_t e1z = v2z - v1z;
+            real_t cx = std::fabs(e0y * e1z - e0z * e1y);
+            real_t cy = std::fabs(e0z * e1x - e0x * e1z);
+            real_t cz = std::fabs(e0x * e1y - e0y * e1x);
+            const real_t epsilon = std::numeric_limits<real_t>::epsilon();
+            // std::cout << "cx " << cx << ", cy " << cy << ", cz " << cz <<
+            // "\n";
+            if (cx > epsilon || cy > epsilon || cz > epsilon) {
+              // std::cout << "corner\n";
+              // found a corner
+              if (cx > cy && cx > cz) {
+                // std::cout << "pattern0\n";
+              } else {
+                // std::cout << "axes[0] = 0\n";
+                axes[0] = 0;
+                if (cz > cx && cz > cy) {
+                  // std::cout << "axes[1] = 1\n";
+                  axes[1] = 1;
+                }
+              }
+              break;
+            }
+          }
+          
 
           face_t remainingFace = face;  // copy
           size_t guess_vert = 0;
@@ -1796,7 +1896,7 @@ static bool exportGroupsToShape(shape_t *shape, const PrimGroup &prim_group,
           idx.texcoord_index = face.vertex_indices[k].vt_idx;
           shape->mesh.indices.push_back(idx);
         }
-        
+
         shape->mesh.num_face_vertices.push_back(
             static_cast<unsigned char>(npolys));
         shape->mesh.material_ids.push_back(material_id);  // per face
