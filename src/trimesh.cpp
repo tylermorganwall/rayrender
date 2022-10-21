@@ -24,8 +24,12 @@ trimesh::trimesh(std::string inputfile, std::string basedir, Float scale, Float 
       imp_sample_objects.add(triangles.back());
     }
   }
-  tri_mesh_bvh = std::make_shared<bvh_node>(triangles, shutteropen, shutterclose, bvh_type, rng);
-  triangles.objects.clear();
+  if(n > 0) {
+    tri_mesh_bvh = std::make_shared<bvh_node>(triangles, shutteropen, shutterclose, bvh_type, rng);
+    triangles.objects.clear();
+  } else {
+    throw std::runtime_error(inputfile + ": No triangles loaded.");
+  }
 }
 
 bool trimesh::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
