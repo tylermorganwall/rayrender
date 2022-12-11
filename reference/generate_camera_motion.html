@@ -18,7 +18,7 @@ a data.frame that can be passed to `render_animation()`."><meta property="og:ima
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">rayrender</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.28.8</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.29.0</span>
       </span>
     </div>
 
@@ -110,6 +110,8 @@ a data.frame that can be passed to `render_animation()`.</p>
 <span>  curvature_adjust <span class="op">=</span> <span class="st">"none"</span>,</span>
 <span>  curvature_scale <span class="op">=</span> <span class="fl">30</span>,</span>
 <span>  offset_lookat <span class="op">=</span> <span class="fl">0</span>,</span>
+<span>  damp_motion <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  damp_magnitude <span class="op">=</span> <span class="fl">0.1</span>,</span>
 <span>  progress <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -201,6 +203,18 @@ Increasing this value after a certain point will not increase the quality of the
 <dt>offset_lookat</dt>
 <dd><p>Default `0`. Amount to offset the lookat position, either along the path (if `constant_step = TRUE`)
 or towards the derivative of the Bezier curve.</p></dd>
+
+
+<dt>damp_motion</dt>
+<dd><p>Default `FALSE`. Whether to damp the motion of the camera, so that quick movements are damped
+and don't result in shakey motion. This function tracks the current position, and linearly interpolates between
+that point and the next point using value `damp_magnitude`. 
+The equation for the position is `cam_current = cam_current * damp_magnitude + cam_next_point * (1 - damp_magnitude)`.</p></dd>
+
+
+<dt>damp_magnitude</dt>
+<dd><p>Default `0.1`. Amount to damp the motion, a numeric value greater than `0` (no damping) and
+less than `1`.</p></dd>
 
 
 <dt>progress</dt>
