@@ -36,6 +36,12 @@
 #' Increasing this value after a certain point will not increase the quality of the path, but it is scene-dependent.
 #' @param offset_lookat Default `0`. Amount to offset the lookat position, either along the path (if `constant_step = TRUE`)
 #' or towards the derivative of the Bezier curve. 
+#' @param damp_motion Default `FALSE`. Whether to damp the motion of the camera, so that quick movements are damped
+#' and don't result in shakey motion. This function tracks the current position, and linearly interpolates between
+#' that point and the next point using value `damp_magnitude`. 
+#' The equation for the position is `cam_current = cam_current * damp_magnitude + cam_next_point * (1 - damp_magnitude)`.
+#' @param damp_magnitude Default `0.1`. Amount to damp the motion, a numeric value greater than `0` (no damping) and
+#' less than `1`.
 #' @param progress Default `TRUE`. Whether to display a progress bar.
 #' 
 #' @export
@@ -127,7 +133,14 @@ generate_camera_motion = function(positions,
                                   curvature_adjust = "none", 
                                   curvature_scale = 30,
                                   offset_lookat = 0, 
+                                  damp_motion = FALSE,
+                                  damp_magnitude = 0.1,
                                   progress = TRUE) {
+  damp_magnitude = 1 - damp_magnitude
+  stopifnot(damp_magnitude >= 0 && damp_magnitude < 1)
+  if(damp_magnitude == 0) {
+    damp_motion = FALSE
+  }
   curve_adj_type = unlist(lapply(tolower(curvature_adjust),switch,
                                  "none" = 0,"position" = 1,"lookats" = 2, "both" = 3, 0))
   curvature_adjust_pos = curve_adj_type %in% c(1,3)
@@ -235,14 +248,26 @@ generate_camera_motion = function(positions,
     } else {
       up_final = matrix(c(0,1,0), nrow = nrow(points_final), ncol=3, byrow=TRUE)
     }
-    return_values = as.data.frame(cbind(points_final,lookats_final,apertures_final,fovs_final,focal_final,ortho_final,
+    final_motion = as.data.frame(cbind(points_final,lookats_final,apertures_final,fovs_final,focal_final,ortho_final,
                                         up_final))
-    rownames(return_values) = NULL
-    colnames(return_values) = c("x","y","z",
+    rownames(final_motion) = NULL
+    colnames(final_motion) = c("x","y","z",
                                 "dx","dy","dz",
                                 "aperture","fov","focal","orthox","orthoy",
                                 "upx","upy","upz")
-    return(return_values)
+    if(damp_motion) {
+      current_pos = final_motion[1,]
+      temp_list = list()
+      temp_list[[1]] = current_pos
+      for(i in seq_len(nrow(final_motion))[-1]) {
+        temp_pos = current_pos * damp_magnitude + final_motion[i,] * (1 - damp_magnitude)
+        temp_list[[i]] = temp_pos 
+        current_pos = temp_pos
+      }
+      final_motion = do.call(rbind,temp_list)
+    }
+    
+    return(final_motion)
   } else if (type %in% c("exp", "quad",  "cubic", "linear")) {
     if(inherits(positions,"list")) {
       positions = do.call(rbind,positions)
@@ -297,22 +322,33 @@ generate_camera_motion = function(positions,
       fovs = c(fovs,fovs[1])
       focal_distances = c(focal_distances,focal_distances[1])
     }
-    return_values = as.data.frame(apply(tween_df,2,tween, n = frames,ease=type))
-    rownames(return_values) = NULL
+    final_motion = as.data.frame(apply(tween_df,2,tween, n = frames,ease=type))
+    rownames(final_motion) = NULL
     if(aperture_linear) {
-      return_values$aperture =tween(apertures,n=frames,ease="linear")
+      final_motion$aperture =tween(apertures,n=frames,ease="linear")
     }
     if(fov_linear) {
-      return_values$fov = tween(fovs,n=frames,ease="linear")
+      final_motion$fov = tween(fovs,n=frames,ease="linear")
     }
     if(focal_linear) {
-      return_values$focal = tween(focal_distances,n=frames,ease="linear")
+      final_motion$focal = tween(focal_distances,n=frames,ease="linear")
     }
     if(ortho_linear) {
-      return_values$orthox = tween(ortho$x,n=frames,ease="linear")
-      return_values$orthoy = tween(ortho$y,n=frames,ease="linear")
+      final_motion$orthox = tween(ortho$x,n=frames,ease="linear")
+      final_motion$orthoy = tween(ortho$y,n=frames,ease="linear")
     }
-    return(return_values)
+    if(damp_motion) {
+      current_pos = final_motion[1,]
+      temp_list = list()
+      temp_list[[1]] = current_pos
+      for(i in seq_len(nrow(final_motion))[-1]) {
+        temp_pos = current_pos * damp_magnitude + final_motion[i,] * (1 - damp_magnitude)
+        temp_list[[i]] = temp_pos 
+        current_pos = temp_pos
+      }
+      final_motion = do.call(rbind,temp_list)
+    }
+    return(final_motion)
   } else if (type == "manual") {
     if(inherits(positions,"list")) {
       positions = do.call(rbind,positions)
@@ -354,13 +390,25 @@ generate_camera_motion = function(positions,
       ortho_dims = matrix(c(1,1),ncol=2,nrow=length(positions$x),byrow=TRUE)
     }
     ortho = grDevices::xy.coords(ortho_dims)
-    return(data.frame(x=positions$x, y=positions$y, z=positions$z,
-                      dx=lookats$x, dy=lookats$y, dz=lookats$z,
-                      aperture = rep(apertures,length(positions$x)),
-                      fov = rep(fovs,length(positions$x)),
-                      focal = focal_distances,
-                      orthox = ortho$x, orthoy = ortho$y,
-                      upx =camera_ups$x, upy = camera_ups$y ,upz = camera_ups$z))
+    final_motion = data.frame(x=positions$x, y=positions$y, z=positions$z,
+                              dx=lookats$x, dy=lookats$y, dz=lookats$z,
+                              aperture = rep(apertures,length(positions$x)),
+                              fov = rep(fovs,length(positions$x)),
+                              focal = focal_distances,
+                              orthox = ortho$x, orthoy = ortho$y,
+                              upx =camera_ups$x, upy = camera_ups$y ,upz = camera_ups$z)
+    if(damp_motion) {
+      current_pos = final_motion[1,]
+      temp_list = list()
+      temp_list[[1]] = current_pos
+      for(i in seq_len(nrow(final_motion))[-1]) {
+        temp_pos = current_pos * damp_magnitude + final_motion[i,] * (1 - damp_magnitude)
+        temp_list[[i]] = temp_pos 
+        current_pos = temp_pos
+      }
+      final_motion = do.call(rbind,temp_list)
+    }
+    return(final_motion)
   } else {
     stop("type '", type, "' not recognized")
   }

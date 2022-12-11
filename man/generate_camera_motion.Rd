@@ -23,6 +23,8 @@ generate_camera_motion(
   curvature_adjust = "none",
   curvature_scale = 30,
   offset_lookat = 0,
+  damp_motion = FALSE,
+  damp_magnitude = 0.1,
   progress = TRUE
 )
 }
@@ -77,6 +79,14 @@ Increasing this value after a certain point will not increase the quality of the
 
 \item{offset_lookat}{Default `0`. Amount to offset the lookat position, either along the path (if `constant_step = TRUE`)
 or towards the derivative of the Bezier curve.}
+
+\item{damp_motion}{Default `FALSE`. Whether to damp the motion of the camera, so that quick movements are damped
+and don't result in shakey motion. This function tracks the current position, and linearly interpolates between
+that point and the next point using value `damp_magnitude`. 
+The equation for the position is `cam_current = cam_current * damp_magnitude + cam_next_point * (1 - damp_magnitude)`.}
+
+\item{damp_magnitude}{Default `0.1`. Amount to damp the motion, a numeric value greater than `0` (no damping) and
+less than `1`.}
 
 \item{progress}{Default `TRUE`. Whether to display a progress bar.}
 }
