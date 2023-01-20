@@ -3216,6 +3216,8 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
   }
   mesh = list()
   mesh_caps = list()
+  end_caps[1] = end_caps[1] & width_vals[1] > 0
+  end_caps[2] = end_caps[2] & width_vals[length(width_vals)] > 0
   
   vb = do.call(rbind,vertices)
   tex = do.call(rbind,texcoords)
