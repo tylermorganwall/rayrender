@@ -157,7 +157,7 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
       prop_len = 6;
     }
 
-    if(is_shared_mat(i) && shared_materials->size() > static_cast<int>(shared_id_mat(i)-1)) {
+    if(is_shared_mat(i) && shared_materials->size() > static_cast<size_t>(shared_id_mat(i)-1)) {
       tex = shared_materials->at(shared_id_mat(i)-1);
     } else {
       if(type(i) == 1) {

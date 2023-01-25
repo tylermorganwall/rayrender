@@ -280,12 +280,12 @@ List render_scene_rcpp(List camera_info, List scene_info) {
   std::vector<std::shared_ptr<material> >* shared_materials = new std::vector<std::shared_ptr<material> >;
 
   
-  size_t texture_bytes = 0;
+  // size_t texture_bytes = 0;
   for(int i = 0; i < n; i++) {
     if(isimage(i)) {
       int nx, ny, nn;
       Float* tex_data = stbi_loadf(filelocation(i), &nx, &ny, &nn, 0);
-      texture_bytes += nx * ny * nn;
+      // texture_bytes += nx * ny * nn;
       textures.push_back(tex_data);
       nx_ny_nn.push_back(new int[3]);
       nx_ny_nn[i][0] = nx;
@@ -298,7 +298,7 @@ List render_scene_rcpp(List camera_info, List scene_info) {
     if(has_alpha(i)) {
       int nxa, nya, nna;
       unsigned char * tex_data_alpha = stbi_load(alpha_files(i), &nxa, &nya, &nna, 0);
-      texture_bytes += nxa * nya * nna;
+      // texture_bytes += nxa * nya * nna;
       
       alpha_textures.push_back(tex_data_alpha);
       nx_ny_nn_alpha.push_back(new int[3]);
@@ -325,7 +325,7 @@ List render_scene_rcpp(List camera_info, List scene_info) {
       NumericVector temp_glossy = as<NumericVector>(glossyinfo(i));
       int nxr, nyr, nnr;
       unsigned char * tex_data_roughness = stbi_load(roughness_files(i), &nxr, &nyr, &nnr, 0);
-      texture_bytes += nxr * nyr * nnr;
+      // texture_bytes += nxr * nyr * nnr;
       
       Float min = temp_glossy(9), max = temp_glossy(10);
       Float rough_range = max-min;
@@ -428,7 +428,7 @@ List render_scene_rcpp(List camera_info, List scene_info) {
   std::shared_ptr<Transform> BackgroundTransformInv = transformCacheBg.Lookup(BackgroundAngle.GetInverseMatrix());
   if(hasbackground) {
     background_texture_data = stbi_loadf(background[0], &nx1, &ny1, &nn1, 0);
-    texture_bytes += nx1 * ny1 * nn1;
+    // texture_bytes += nx1 * ny1 * nn1;
     
     if(background_texture_data) {
       background_texture = std::make_shared<image_texture_float>(background_texture_data, nx1, ny1, nn1, 1, 1, intensity_env);

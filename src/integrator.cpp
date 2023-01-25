@@ -45,8 +45,8 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
                                           routput, goutput, boutput,
                                           routput2, goutput2, boutput2);
   
-  int nx_small = nx*0.25;
-  int ny_small = ny*0.25;
+  size_t nx_small = nx*0.25;
+  size_t ny_small = ny*0.25;
   RayMatrix routput_small(nx_small,ny_small);
   RayMatrix goutput_small(nx_small,ny_small);
   RayMatrix boutput_small(nx_small,ny_small);
@@ -88,11 +88,11 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
     }
   }
   
-  for(unsigned int j = 0; j < ny_small; j++) {
+  for(size_t j = 0; j < ny_small; j++) {
     if(progress_bar) {
       pb_sampler.tick();
     }
-    for(unsigned int i = 0; i < nx_small; i++) {
+    for(size_t i = 0; i < nx_small; i++) {
       random_gen rng_single(unif_rand() * std::pow(2,32));
       rngs_small.push_back(rng_single);
       if(sample_method == 0) {
@@ -237,8 +237,8 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
       Float ratio_x = (Float)nx_small/(Float)nx;
       Float ratio_y = (Float)ny_small/(Float)ny;
       
-      for(int ii = 0; ii < nx; ii++) {
-        for(int jj = 0; jj < ny; jj++) {
+      for(size_t ii = 0; ii < nx; ii++) {
+        for(size_t jj = 0; jj < ny; jj++) {
           adaptive_pixel_sampler.r(ii,jj) = adaptive_pixel_sampler_small.r((Float)ii * ratio_x,(Float)jj * ratio_y);
           adaptive_pixel_sampler.g(ii,jj) = adaptive_pixel_sampler_small.g((Float)ii * ratio_x,(Float)jj * ratio_y);
           adaptive_pixel_sampler.b(ii,jj) = adaptive_pixel_sampler_small.b((Float)ii * ratio_x,(Float)jj * ratio_y);

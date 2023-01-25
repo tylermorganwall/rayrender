@@ -11,25 +11,25 @@ mesh3d::mesh3d(Rcpp::List mesh_info, std::shared_ptr<material> mat,
   Rcpp::IntegerMatrix indices = Rcpp::as<Rcpp::IntegerMatrix>(mesh_info["indices"]);
   Rcpp::NumericMatrix norms = Rcpp::as<Rcpp::NumericMatrix>(mesh_info["normals"]);
   Rcpp::NumericMatrix txcoord = Rcpp::as<Rcpp::NumericMatrix>(mesh_info["texcoords"]);
-  float scale_mesh = Rcpp::as<float>(mesh_info["scale_mesh"]);
+  // float scale_mesh = Rcpp::as<float>(mesh_info["scale_mesh"]);
   
   
   std::string texture_location = Rcpp::as<std::string>(mesh_info["texture"]);
   std::string bump_text_location = Rcpp::as<std::string>(mesh_info["bump_texture"]);
   Float bump_intensity = Rcpp::as<Float>(mesh_info["bump_intensity"]);
-  int material_type = Rcpp::as<Float>(mesh_info["material_type"]);
+  // int material_type = Rcpp::as<Float>(mesh_info["material_type"]);
   
   Rcpp::NumericMatrix colors = Rcpp::as<Rcpp::NumericMatrix>(mesh_info["color_vals"]);
-  int colortype = Rcpp::as<int>(mesh_info["color_type"]);
+  // int colortype = Rcpp::as<int>(mesh_info["color_type"]);
   
   int nx = 0, ny = 0,nn = 0;
-  bool has_texture = false;
+  // bool has_texture = false;
   bool has_bump = false;
   unsigned char* mesh_material_data;
   unsigned char* bump_texture_data;
   if(strlen(texture_location.c_str()) > 0) {
     mesh_material_data = stbi_load(texture_location.c_str(), &nx, &ny, &nn, 0);
-    has_texture = nx != 0 && ny != 0 && nn != 0;
+    // has_texture = nx != 0 && ny != 0 && nn != 0;
   } else {
     mesh_material_data = nullptr;
   }

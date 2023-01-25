@@ -180,7 +180,7 @@ void LoadMtlMaterials(std::vector<std::shared_ptr<material> > &mtl_materials,
   material_is_light.push_back(false);
   
   if(load_materials) {
-    for(int material_num = 0; material_num < materials.size(); material_num++) {
+    for(size_t material_num = 0; material_num < materials.size(); material_num++) {
       bool imp_sample_obj = false;
       std::shared_ptr<material> tex = nullptr;
       
@@ -341,7 +341,7 @@ TriangleMesh::TriangleMesh(std::string inputfile, std::string basedir,
         for (auto const& x : alpha_values) {
           alpha_v.push_back(-x.second.top());
         }
-        for(int i = 0; i < alpha_v.size(); i++) {
+        for(size_t i = 0; i < alpha_v.size(); i++) {
           Float temp_av = clamp(alpha_v[i],-1,1);
           alpha_v[i] = std::acos(temp_av) * (1 + 0.03632 * (1 - temp_av) * (1 - temp_av));
         }
@@ -428,7 +428,7 @@ TriangleMesh::TriangleMesh(Rcpp::NumericMatrix vertices,
   nVertices = vertices.nrow();
   nNormals = normals.nrow();
   nTex = texcoords.nrow();
-  int nVertexColors = vertexcolors.nrow();
+  size_t nVertexColors = vertexcolors.nrow();
   p.reset(new point3f[nVertices]);
   for (size_t i = 0; i < nVertices; i += 1) {
     p[i] = (*ObjectToWorld)(point3f(vertices(i,0),
@@ -471,7 +471,7 @@ TriangleMesh::TriangleMesh(Rcpp::NumericMatrix vertices,
   }
   
   nTriangles = 0;
-  for (size_t s = 0; s < indices.nrow(); s++) {
+  for (size_t s = 0; s < static_cast<size_t>(indices.nrow()); s++) {
     nTriangles++;
     vertexIndices.push_back(indices(s,0));
     vertexIndices.push_back(indices(s,1));
@@ -491,7 +491,7 @@ TriangleMesh::TriangleMesh(Rcpp::NumericMatrix vertices,
   
   //Material stuff
   if(!has_vertex_colors) {
-    for (size_t s = 0; s < indices.nrow(); s++) {
+    for (size_t s = 0; s < static_cast<size_t>(indices.nrow()); s++) {
       face_material_id.push_back(0);
     }
     mtl_materials.push_back(default_material);
@@ -576,7 +576,7 @@ TriangleMesh::TriangleMesh(float* vertices,
   }
   
   nTriangles = 0;
-  for (size_t s = 0; s < numIndices; s += 3) {
+  for (size_t s = 0; s < static_cast<size_t>(numIndices); s += 3) {
     vertexIndices.push_back(indices[s]);
     vertexIndices.push_back(indices[s+1]);
     vertexIndices.push_back(indices[s+2]);

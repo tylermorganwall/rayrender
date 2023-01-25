@@ -100,7 +100,7 @@ Distribution2D::Distribution2D(const Float *func, int nu, int nv) {
 
 size_t Distribution2D::GetSize()  {
   size_t total_size = 0;
-  for(int i = 0; i < pConditionalV.size(); i++) {
+  for(size_t i = 0; i < pConditionalV.size(); i++) {
     total_size += pConditionalV[i]->GetSize();
   }
   total_size += pMarginal->GetSize();
