@@ -25,8 +25,8 @@ else
   darwin="no"
 fi
 
-CXX=`"${R_HOME}/bin/R" CMD config CXX`
-CXXFLAGS=`"${R_HOME}/bin/R" CMD config CXXFLAGS`
+CXX=`"${R_HOME}/bin/R" CMD config CXX17`
+CXXFLAGS=`"${R_HOME}/bin/R" CMD config CXX17FLAGS`
 CPPFLAGS=`"${R_HOME}/bin/R" CMD config CPPFLAGS`
 DEFINES="-D RAY_REPRODUCE_PERLIN -DSTRICT_R_HEADERS"
 
