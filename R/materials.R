@@ -108,7 +108,7 @@ diffuse = function(color = "#ffffff",
   } else {
     gradient_color = NA
   }
-  if(!is.na(gradient_point_start) && !is.na(gradient_point_end) && !is.na(gradient_color)) {
+  if(!any(is.na(gradient_point_start)) && !any(is.na(gradient_point_end)) && !any(is.na(gradient_color))) {
     stopifnot(length(gradient_point_start) == 3)
     stopifnot(length(gradient_point_end) == 3)
     stopifnot(is.numeric(gradient_point_start))
@@ -273,7 +273,7 @@ metal = function(color = "#ffffff",
   } else {
     gradient_color = NA
   }
-  if(!is.na(gradient_point_start) && !is.na(gradient_point_end) && !is.na(gradient_color)) {
+  if(!any(is.na(gradient_point_start)) && !any(is.na(gradient_point_end)) && !any(is.na(gradient_color))) {
     stopifnot(length(gradient_point_start) == 3)
     stopifnot(length(gradient_point_end) == 3)
     stopifnot(is.numeric(gradient_point_start))
@@ -621,7 +621,7 @@ microfacet = function(color="white", roughness = 0.0001, transmission = FALSE,
   } else {
     gradient_color = NA
   }
-  if(!is.na(gradient_point_start) && !is.na(gradient_point_end) && !is.na(gradient_color)) {
+  if(!any(is.na(gradient_point_start)) && !any(is.na(gradient_point_end)) && !any(is.na(gradient_color))) {
     stopifnot(length(gradient_point_start) == 3)
     stopifnot(length(gradient_point_end) == 3)
     stopifnot(is.numeric(gradient_point_start))
@@ -781,7 +781,7 @@ light = function(color = "#ffffff", intensity = 10, importance_sample = TRUE,
   } else {
     gradient_color = NA
   }
-  if(!is.na(gradient_point_start) && !is.na(gradient_point_end) && !is.na(gradient_color)) {
+  if(!any(is.na(gradient_point_start)) && !any(is.na(gradient_point_end)) && !any(is.na(gradient_color))) {
     stopifnot(length(gradient_point_start) == 3)
     stopifnot(length(gradient_point_end) == 3)
     stopifnot(is.numeric(gradient_point_start))
@@ -966,7 +966,7 @@ glossy = function(color="white", gloss = 1, reflectance = 0.05, microfacet = "tb
   } else {
     gradient_color = NA
   }
-  if(!is.na(gradient_point_start) && !is.na(gradient_point_end) && !is.na(gradient_color)) {
+  if(!any(is.na(gradient_point_start)) && !any(is.na(gradient_point_end)) && !any(is.na(gradient_color))) {
     stopifnot(length(gradient_point_start) == 3)
     stopifnot(length(gradient_point_end) == 3)
     stopifnot(is.numeric(gradient_point_start))

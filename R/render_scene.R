@@ -78,8 +78,7 @@
 #' Default `gamma` solely adjusts for gamma and clamps values greater than 1 to 1. 
 #' `reinhold` scales values by their individual color channels `color/(1+color)` and then performs the 
 #' gamma adjustment. `uncharted` uses the mapping developed for Uncharted 2 by John Hable. `hbd` uses an
-#' optimized formula by Jim Hejl and Richard Burgess-Dawson. Note: If set to anything other than `gamma`,
-#' objects with material `light()` may not be anti-aliased. If `raw`, the raw array of HDR values will be
+#' optimized formula by Jim Hejl and Richard Burgess-Dawson. If `raw`, the raw array of HDR values will be
 #' returned, rather than an image or a plot.
 #' @param bloom Default `TRUE`. Set to `FALSE` to get the raw, pathtraced image. Otherwise,
 #' this performs a convolution of the HDR image of the scene with a sharp, long-tailed
