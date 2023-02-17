@@ -15,9 +15,9 @@ run_tests = function(func, argument_grid, plot_prefix="", ...) {
   for(i in seq_len(nrow(argument_grid))){
     set.seed(123)
     args = unlist(argument_grid[i,], recursive = FALSE)
-    test_filename = paste0(sprintf("%s-%s", names(args), args),collapse="_")
-    test_filename = sprintf("%s_test%i_%s.png",
-                            plot_prefix , i, test_filename)
+    test_filename = paste0(sprintf("%s-%s", substr(names(args),1,5), args),collapse="_")
+    test_filename = sprintf("%s_test%i.png",
+                            plot_prefix , i)
     path = tempfile(fileext = ".png")
     
     args = append(args, ...)
@@ -59,7 +59,7 @@ test_that("plot_3d plots basic options", {
                                   clamp_value   = list(Inf, 10),
                                   parallel      = list(TRUE, FALSE))
   
-  run_tests("render_scene", render_args_basic, plot_prefix = "render_basic", 
+  run_tests("render_scene", render_args_basic, plot_prefix = "basic", 
             list(scene = scene1,
                  samples = 16,
                  ortho_dimensions = c(3,3),
@@ -72,7 +72,7 @@ test_that("plot_3d plots basic options", {
                                         focal_distance = list(NULL, 5),
                                         fov           = list(0,40,360))
   
-  run_tests("render_scene", render_args_camera_info, plot_prefix = "render_camera_info", 
+  run_tests("render_scene", render_args_camera_info, plot_prefix = "cam_info", 
             list(scene = scene1,
                  samples = 16,
                  ortho_dimensions = c(3,3),
@@ -84,7 +84,7 @@ test_that("plot_3d plots basic options", {
                                                  tonemap     = list("gamma","reinhold",
                                                                     "uncharted","hbd"))
   
-  run_tests("render_scene", render_args_post_processing_info, plot_prefix = "render_post", 
+  run_tests("render_scene", render_args_post_processing_info, plot_prefix = "post", 
             list(scene = scene1,
                  samples = 16,
                  ortho_dimensions = c(3,3),
@@ -95,7 +95,7 @@ test_that("plot_3d plots basic options", {
                                                       "variance","dpdu","dpdv","color"),
                                                  return_raw_array = list(TRUE, FALSE))
   
-  run_tests("render_scene", render_args_debug, plot_prefix = "render_debug", 
+  run_tests("render_scene", render_args_debug, plot_prefix = "debug", 
             list(scene = scene1,
                  samples = 16,
                  ortho_dimensions = c(3,3),
@@ -108,7 +108,7 @@ test_that("plot_3d plots basic options", {
                                      min_adaptive_size = list(1,11),
                                      ambient = list(TRUE, FALSE))
   
-  run_tests("render_scene", render_sampling_args, plot_prefix = "render_sampling", 
+  run_tests("render_scene", render_sampling_args, plot_prefix = "sampling", 
             list(scene = scene1,
                  width = 200,
                  height = 200,
@@ -118,7 +118,7 @@ test_that("plot_3d plots basic options", {
   render_termination_args = expand.grid(max_depth     = list(NA, 10, 100),
                                         roulette_active_depth = list(100,10,3))
   
-  run_tests("render_scene", render_termination_args, plot_prefix = "render_termination", 
+  run_tests("render_scene", render_termination_args, plot_prefix = "termination", 
             list(scene = scene1,
                  samples = 16,
                  width = 200,
@@ -131,10 +131,9 @@ test_that("plot_3d plots basic options", {
                                              camera_scale = list(1,3),
                                              film_size = list(22,40))
   #Only include a few examples of 40mm film
-  render_realistic_camera_args = subset(render_realistic_camera_args, 
-                                        film_size == 22 | (camera_scale == 1 & aperture == 10))
+  render_realistic_camera_args = render_realistic_camera_args[c(1,4:8,16,25,30),]
   
-  run_tests("render_scene", render_realistic_camera_args, plot_prefix = "render_realistic_camera", 
+  run_tests("render_scene", render_realistic_camera_args, plot_prefix = "real_cam", 
             list(scene = scene1,
                  samples = 16,
                  iso = 10000,
