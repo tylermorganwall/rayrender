@@ -47,12 +47,7 @@ test_that("plot_3d plots basic options", {
     add_object(pig(y=0.5,x=1,scale = 0.3,angle=c(0,-70,0))) |> 
     add_object(sphere(x=10,y=5,z=10,radius=2,material = light(intensity = 40))) |> 
     add_object(sphere(x=-0.4,y=2,z=-3,radius=0.02,material = light(intensity = 10000))) 
-  old_cores = options("cores")
-  on.exit(options("cores" = old_cores))
-  num_cores = parallel::detectCores()
-  if(num_cores > 2) {
-    options("cores" = num_cores - 1)
-  }
+  options("cores" = 1)
   
   render_args_basic = expand.grid(width         = list(50,100),
                                   height        = list(50,100),
