@@ -945,7 +945,8 @@ ellipsoid = function(x = 0, y = 0, z = 0, a = 1, b = 1, c = 1,
 #' @param polygon `sf` object, "SpatialPolygon" `sp` object,  or xy coordinates
 #'   of polygon represented in a way that can be processed by `xy.coords()`.  If
 #'   xy-coordinate based polygons are open, they will be closed by adding an
-#'   edge from the last point to the first.
+#'   edge from the last point to the first. If the `sf` object contains MULTIPOLYGONZ data, it will
+#'   flattened.
 #' @param x Default `0`. x-coordinate to offset the extruded model.
 #' @param y Default `0`. y-coordinate to offset the extruded model.
 #' @param z Default `0`. z-coordinate to offset the extruded model.
@@ -1179,7 +1180,12 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
       stop("sf package required when handling sf objects")
     }
     poly_info = sf::st_drop_geometry(polygon)
-    polygon = sf::as_Spatial(polygon)
+    #Remove z dimension from multipolygon z geometry
+    if(ncol(as.matrix(sf::st_geometry(polygon)[[1]])) == 3) {
+      polygon = sf::as_Spatial(sf::st_zm(polygon))
+    } else {
+      polygon = sf::as_Spatial(polygon)
+    }
     if(!is.null(data_column_top)) {
       if(data_column_top %in% colnames(poly_info)) {
         data_vals_top = poly_info[[data_column_top]] * scale_data
@@ -1262,7 +1268,7 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
     xylist = grDevices::xy.coords(polygon)
     x = xylist$x
     y = xylist$y
-    if(is.null(holes)) {
+    if(is.null(holes) || holes == 0) {
       holes = 0
     } else if (
       !is.numeric(holes) || anyNA(holes <- as.integer(holes))
