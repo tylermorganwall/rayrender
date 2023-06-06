@@ -38,7 +38,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="index.html">rayrender</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.29.5</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.29.6</span>
       </span>
     </div>
 
@@ -112,6 +112,7 @@
 <div class="page-header"><h1 id="rayrender">rayrender<a class="anchor" aria-label="anchor" href="#rayrender"></a>
 </h1></div>
 <!-- badges: start -->
+
 <p><img src="reference/figures/swordsmall.gif"></p>
 <div class="section level2">
 <h2 id="overview">Overview<a class="anchor" aria-label="anchor" href="#overview"></a>
@@ -183,8 +184,8 @@
 <span><span class="fu"><a href="https://rdrr.io/r/grDevices/png.html" class="external-link">png</a></span><span class="op">(</span>filename<span class="op">=</span><span class="va">tempfileplot</span>,height<span class="op">=</span><span class="fl">1600</span>,width<span class="op">=</span><span class="fl">1600</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">iris</span><span class="op">$</span><span class="va">Petal.Length</span>,<span class="va">iris</span><span class="op">$</span><span class="va">Sepal.Width</span>,col<span class="op">=</span><span class="va">iris</span><span class="op">$</span><span class="va">Species</span>,pch<span class="op">=</span><span class="fl">18</span>,cex<span class="op">=</span><span class="fl">12</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/grDevices/dev.html" class="external-link">dev.off</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
-<div class="sourceCode" id="cb9"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1"></a><span class="co">## quartz_off_screen </span></span>
-<span id="cb9-2"><a href="#cb9-2"></a><span class="co">##                 2</span></span></code></pre></div>
+<div class="sourceCode" id="cb9"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="do">## quartz_off_screen </span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="do">##                 2</span></span></code></pre></div>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">image_array</span> <span class="op">=</span> <span class="fu">png</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/png/man/readPNG.html" class="external-link">readPNG</a></span><span class="op">(</span><span class="va">tempfileplot</span><span class="op">)</span></span>
 <span></span>
