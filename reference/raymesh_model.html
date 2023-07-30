@@ -94,8 +94,6 @@
 <span>  x <span class="op">=</span> <span class="fl">0</span>,</span>
 <span>  y <span class="op">=</span> <span class="fl">0</span>,</span>
 <span>  z <span class="op">=</span> <span class="fl">0</span>,</span>
-<span>  swap_yz <span class="op">=</span> <span class="cn">FALSE</span>,</span>
-<span>  reverse <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  flip_transmittance <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  verbose <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  importance_sample_lights <span class="op">=</span> <span class="cn">FALSE</span>,</span>
@@ -129,14 +127,6 @@ normals, and material information.</p></dd>
 <dd><p>Default `0`. z-coordinate to offset the model.</p></dd>
 
 
-<dt>swap_yz</dt>
-<dd><p>Default `FALSE`. Swap the Y and Z coordinates.</p></dd>
-
-
-<dt>reverse</dt>
-<dd><p>Default `FALSE`. Reverse the orientation of the indices, flipping their normals.</p></dd>
-
-
 <dt>flip_transmittance</dt>
 <dd><p>Default `TRUE`. Flips `(1-t)` the transmittance values to match the way the colors
 would be interpreted in a rasterizer (where it specifies the transmitted color). Turn off to specify
@@ -145,6 +135,16 @@ the attenuation values directly.</p></dd>
 
 <dt>verbose</dt>
 <dd><p>Default `FALSE`. If `TRUE`, prints information about the mesh to the console.</p></dd>
+
+
+<dt>importance_sample_lights</dt>
+<dd><p>Default `TRUE`. Whether to importance sample lights specified in the OBJ material
+(objects with a non-zero Ke MTL material).</p></dd>
+
+
+<dt>calculate_consistent_normals</dt>
+<dd><p>Default `TRUE`. Whether to calculate consistent vertex normals to prevent energy 
+loss at edges.</p></dd>
 
 
 <dt>override_material</dt>
@@ -174,6 +174,12 @@ functions <code><a href="diffuse.html">diffuse</a></code>, <code><a href="metal.
 number, the object will be scaled uniformly.
 Note: emissive objects may not currently function correctly when scaled.</p></dd>
 
+
+<dt>validate_mesh</dt>
+<dd><p>Default `TRUE`. Validates the `raymesh` object using `rayvertex::validate_mesh()` 
+before parsing to ensure correct parsing. Set to `FALSE` to speed up scene construction if `raymesh_model()` 
+is taking a long time (Note: this does not affect rendering time).</p></dd>
+
 </dl></div>
     <div id="value">
     <h2>Value</h2>
@@ -197,7 +203,7 @@ Note: emissive objects may not currently function correctly when scaled.</p></dd
 <span class="r-in"><span>  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="generate_ground.html">generate_ground</a></span><span class="op">(</span>material <span class="op">=</span> <span class="fu"><a href="diffuse.html">diffuse</a></span><span class="op">(</span>checkercolor<span class="op">=</span><span class="st">"grey20"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>fov <span class="op">=</span> <span class="fl">30</span>, samples<span class="op">=</span><span class="fl">128</span>, sample_method<span class="op">=</span><span class="st">"sobol_blue"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> 'validate_mesh' is not an exported object from 'namespace:rayvertex'</span>
+<span class="r-plt img"><img src="raymesh_model-1.png" alt="" width="768" height="768"></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># We create a complex rayvertex mesh, using the `rayvertex::add_shape` function which</span></span></span>
 <span class="r-in"><span><span class="co"># creates a new `raymesh` object out of individual `raymesh` objects</span></span></span>
@@ -213,7 +219,7 @@ Note: emissive objects may not currently function correctly when scaled.</p></dd
 <span class="r-in"><span>  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="generate_ground.html">generate_ground</a></span><span class="op">(</span>material <span class="op">=</span> <span class="fu"><a href="diffuse.html">diffuse</a></span><span class="op">(</span>checkercolor<span class="op">=</span><span class="st">"grey20"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>fov <span class="op">=</span> <span class="fl">30</span>, samples<span class="op">=</span><span class="fl">128</span>, sample_method<span class="op">=</span><span class="st">"sobol_blue"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> 'validate_mesh' is not an exported object from 'namespace:rayvertex'</span>
+<span class="r-plt img"><img src="raymesh_model-2.png" alt="" width="768" height="768"></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Set `flip_transmittance = FALSE` argument to specify attenuation coefficients directly</span></span></span>
 <span class="r-in"><span><span class="co"># (as specified in the `dielectric()` material). We change the material's numerical attenuation</span></span></span>
@@ -225,7 +231,7 @@ Note: emissive objects may not currently function correctly when scaled.</p></dd
 <span class="r-in"><span>  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="generate_ground.html">generate_ground</a></span><span class="op">(</span>material <span class="op">=</span> <span class="fu"><a href="diffuse.html">diffuse</a></span><span class="op">(</span>checkercolor<span class="op">=</span><span class="st">"grey20"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>fov <span class="op">=</span> <span class="fl">30</span>, samples<span class="op">=</span><span class="fl">128</span>, sample_method<span class="op">=</span><span class="st">"sobol_blue"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> 'validate_mesh' is not an exported object from 'namespace:rayvertex'</span>
+<span class="r-plt img"><img src="raymesh_model-3.png" alt="" width="768" height="768"></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Override the material specified in the `raymesh` object and render the scene</span></span></span>
 <span class="r-in"><span><span class="kw">if</span><span class="op">(</span><span class="fu"><a href="run_documentation.html">run_documentation</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span></span>
@@ -235,7 +241,7 @@ Note: emissive objects may not currently function correctly when scaled.</p></dd
 <span class="r-in"><span>  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="generate_ground.html">generate_ground</a></span><span class="op">(</span>material <span class="op">=</span> <span class="fu"><a href="diffuse.html">diffuse</a></span><span class="op">(</span>checkercolor<span class="op">=</span><span class="st">"grey20"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>fov <span class="op">=</span> <span class="fl">30</span>, samples<span class="op">=</span><span class="fl">128</span>, sample_method<span class="op">=</span><span class="st">"sobol_blue"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> 'validate_mesh' is not an exported object from 'namespace:rayvertex'</span>
+<span class="r-plt img"><img src="raymesh_model-4.png" alt="" width="768" height="768"></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Adjusting the scale, position, and rotation parameters of the `raymesh` model</span></span></span>
 <span class="r-in"><span><span class="kw">if</span><span class="op">(</span><span class="fu"><a href="run_documentation.html">run_documentation</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span></span>
@@ -244,7 +250,7 @@ Note: emissive objects may not currently function correctly when scaled.</p></dd
 <span class="r-in"><span>  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="generate_ground.html">generate_ground</a></span><span class="op">(</span>material <span class="op">=</span> <span class="fu"><a href="diffuse.html">diffuse</a></span><span class="op">(</span>checkercolor<span class="op">=</span><span class="st">"grey20"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>fov <span class="op">=</span> <span class="fl">30</span>,lookat<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">0.5</span>,<span class="fl">0</span><span class="op">)</span>, samples<span class="op">=</span><span class="fl">128</span>, sample_method<span class="op">=</span><span class="st">"sobol_blue"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> 'validate_mesh' is not an exported object from 'namespace:rayvertex'</span>
+<span class="r-plt img"><img src="raymesh_model-5.png" alt="" width="768" height="768"></span>
 </code></pre></div>
     </div>
   </div>
