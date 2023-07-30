@@ -23,7 +23,8 @@ Imports:
     decido,
     rayimage (>= 0.9.0),
     stats,
-    progress
+    progress,
+    rayvertex
 Suggests:
     sf,
     spData,

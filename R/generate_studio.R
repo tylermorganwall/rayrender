@@ -20,12 +20,12 @@
 #'   add_object(obj_model(r_obj(),y=-1,x=0.7,material=glossy(color="darkred"),angle=c(0,-20,0))) %>%
 #'   add_object(sphere(x=-0.7,radius=0.5,material=dielectric())) %>% 
 #'   add_object(sphere(y=3,x=-2,z=20,material=light(intensity=600)))
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' render_scene(scene, parallel=TRUE,lookfrom=c(0,2,10),fov=20,clamp_value=10,samples=128)
 #' }
 #' 
 #' #Zooming out to show the full default scene
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' render_scene(scene, parallel=TRUE,lookfrom=c(0,200,400),clamp_value=10,samples=128)
 #' }
 generate_studio = function(depth = -1, distance = -10, width = 100, height = 100,

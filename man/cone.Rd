@@ -49,20 +49,20 @@ Cone Object
 }
 \examples{
 #Generate a cone in a studio, pointing upwards:
-if(rayrender:::run_documentation()) {
+if(run_documentation()) {
 generate_studio() \%>\% 
  add_object(cone(start=c(0,-1,0), end=c(0,1,0), radius=1,material=diffuse(color="red"))) \%>\% 
  add_object(sphere(y=5,x=5,material=light(intensity=40))) \%>\% 
  render_scene(samples=128,clamp_value=10)
 }
-if(rayrender:::run_documentation()) {
+if(run_documentation()) {
  #Change the radius, length, and direction
 generate_studio() \%>\% 
  add_object(cone(start=c(0,0,0), end=c(0,-1,0), radius=0.5,material=diffuse(color="red"))) \%>\% 
  add_object(sphere(y=5,x=5,material=light(intensity=40))) \%>\% 
  render_scene(samples=128,clamp_value=10)
 }
-if(rayrender:::run_documentation()) {
+if(run_documentation()) {
 #Give custom start and end points (and customize the color/texture)
 generate_studio() \%>\% 
  add_object(cone(start=c(-1,0.5,-1), end=c(0,0,0), radius=0.5,material=diffuse(color="red"))) \%>\%
@@ -73,7 +73,7 @@ generate_studio() \%>\%
  add_object(sphere(y=5,x=5,material=light(intensity=40))) \%>\% 
  render_scene(samples=128,clamp_value=10)
 }
-if(rayrender:::run_documentation()) {  
+if(run_documentation()) {  
 #Specify cone via direction and location, instead of start and end positions
 #Length is derived from the magnitude of the direction.
 gold_mat = microfacet(roughness=0.1,eta=c(0.216,0.42833,1.3184), kappa=c(3.239,2.4599,1.8661))
@@ -87,7 +87,7 @@ generate_studio() \%>\%
   add_object(sphere(y=3,x=3,z=-3,material=light(color="green"))) \%>\% 
   render_scene(lookfrom=c(0,4,10), clamp_value=10, samples=128)
 }
-if(rayrender:::run_documentation()) {
+if(run_documentation()) {
  #Render the position from the base, instead of the center of the cone:
  noise_mat = material = glossy(color="purple",noisecolor="blue", noise=5)
  generate_studio() \%>\% 

@@ -50,7 +50,7 @@ Note: For dielectric objects, any other objects not included in the CSG object a
 nested inside will be ignored.
 }
 \examples{
-if(rayrender:::run_documentation()) {
+if(run_documentation()) {
 #We will combine these three objects:
 generate_ground(material=diffuse(checkercolor="grey20")) \%>\%
   add_object(csg_object(csg_box(), material=glossy(color="red"))) \%>\% 
@@ -63,7 +63,7 @@ generate_ground(material=diffuse(checkercolor="grey20")) \%>\%
   render_scene(clamp_value=10, fov=15,lookfrom=c(5,5,10), 
                samples=128, sample_method="sobol_blue")
 }
-if(rayrender:::run_documentation()) {
+if(run_documentation()) {
 #Standard CSG sphere + box - crossed cylinder combination:
 generate_ground(material=diffuse(checkercolor="grey20")) \%>\%
   add_object(csg_object(csg_combine(
@@ -80,7 +80,7 @@ generate_ground(material=diffuse(checkercolor="grey20")) \%>\%
   render_scene(clamp_value=10, fov=10,lookfrom=c(5,5,10),
                samples=128, sample_method="sobol_blue")
   }
-if(rayrender:::run_documentation()) {
+if(run_documentation()) {
 #Blend them all instead:
 generate_ground(material=diffuse(checkercolor="grey20")) \%>\%
   add_object(csg_object(csg_combine(

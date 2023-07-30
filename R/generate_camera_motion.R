@@ -49,7 +49,7 @@
 #'
 #' @examples
 #' #Create and animate flying through a scene on a simulated roller coaster
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' set.seed(3)
 #' elliplist = list()
 #' ellip_colors = rainbow(8)
@@ -71,7 +71,7 @@
 #'                camera_up = c(0,0,1),
 #'                fov=80)
 #' }
-#' if(rayrender:::run_documentation()) { 
+#' if(run_documentation()) { 
 #' #Side view     
 #' generate_ground(material=diffuse(checkercolor="grey20"),depth=-10) %>% 
 #'   add_object(ellip_scene) %>% 
@@ -80,7 +80,7 @@
 #'   render_scene(lookfrom=c(20,0,0),width=800,height=800,samples=32,
 #'                  fov=80)
 #'  }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #View from the start        
 #' generate_ground(material=diffuse(checkercolor="grey20"),depth=-10) %>% 
 #'   add_object(ellip_scene) %>% 
@@ -89,7 +89,7 @@
 #'   render_scene(lookfrom=c(0,1.5,16),width=800,height=800,samples=32,
 #'                  fov=80)
 #'  }
-#' if(rayrender:::run_documentation()) {  
+#' if(run_documentation()) {  
 #' #Generate Camera movement, setting the lookat position to be same as camera position, but offset
 #' #slightly in front. We'll render 12 frames, but you'd likely want more in a real animation.
 #' 

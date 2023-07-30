@@ -22,7 +22,7 @@ List describing the triangle in the scene.
 CSG Translate
 }
 \examples{
-if(rayrender:::run_documentation()) {
+if(run_documentation()) {
 #Translate a simple object:
 generate_ground(material=diffuse(checkercolor="grey20")) \%>\% 
   add_object(csg_object(csg_torus(), material=glossy(color="dodgerblue4"))) \%>\%
@@ -32,7 +32,7 @@ generate_ground(material=diffuse(checkercolor="grey20")) \%>\%
   render_scene(clamp_value=10,lookfrom=c(0,5,10),fov=30,
                lookat=c(-1,0.5,-1))
 }
-if(rayrender:::run_documentation()) {
+if(run_documentation()) {
 #Translate a blended object:
 generate_ground(material=diffuse(checkercolor="grey20")) \%>\% 
   add_object(csg_object(csg_combine(

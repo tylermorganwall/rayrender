@@ -86,7 +86,7 @@ Either a closed or open path made up of bezier curves that go through the specif
 (with continuous first and second derivatives), or straight line segments.
 }
 \examples{
-if(rayrender:::run_documentation()) {
+if(run_documentation()) {
 #Generate a wavy line, showing the line goes through the specified points:
 wave = list(c(-2,1,0),c(-1,-1,0),c(0,1,0),c(1,-1,0),c(2,1,0))
 point_mat = glossy(color="green")
@@ -100,14 +100,14 @@ generate_studio(depth=-1.5) \%>\%
   add_object(sphere(z=5,x=5,y=5,radius=2,material=light(intensity=15))) \%>\% 
   render_scene(samples=128, clamp_value=10,fov=30)
 }
-if(rayrender:::run_documentation()) {
+if(run_documentation()) {
 #Here we use straight lines by setting `straight = TRUE`:
 generate_studio(depth=-1.5) \%>\% 
   add_object(path(points = wave,straight = TRUE, material=glossy(color="red"))) \%>\% 
   add_object(sphere(z=5,x=5,y=5,radius=2,material=light(intensity=15))) \%>\% 
   render_scene(samples=128, clamp_value=10,fov=30)
 }
-if(rayrender:::run_documentation()) {
+if(run_documentation()) {
 #We can also pass a matrix of values, specifying the x/y/z coordinates. Here,
 #we'll create a random curve:
 set.seed(21)
@@ -117,14 +117,14 @@ generate_studio(depth=-1.5) \%>\%
   add_object(sphere(y=5,radius=1,material=light(intensity=30))) \%>\% 
   render_scene(samples=128, clamp_value=10)
 }
-if(rayrender:::run_documentation()) {
+if(run_documentation()) {
 #We can ensure the curve is closed by setting `closed = TRUE`
 generate_studio(depth=-1.5) \%>\% 
   add_object(path(points=random_mat, closed = TRUE, material=glossy(color="red"))) \%>\% 
   add_object(sphere(y=5,radius=1,material=light(intensity=30))) \%>\% 
   render_scene(samples=128, clamp_value=10)
 }
-if(rayrender:::run_documentation()) {
+if(run_documentation()) {
 #Finally, let's render a pretzel to show how you can render just a subset of the curve:
 pretzel = list(c(-0.8,-0.5,0.1),c(0,-0.2,-0.1),c(0,0.3,0.1),c(-0.5,0.5,0.1), c(-0.6,-0.5,-0.1),
                c(0,-0.8,-0.1),
@@ -136,21 +136,21 @@ generate_studio(depth = -1.1) \%>\%
   add_object(sphere(y=5,x=2,z=4,material=light(intensity=20,spotlight_focus = c(0,0,0)))) \%>\% 
   render_scene(samples=128, clamp_value=10)
 }
-if(rayrender:::run_documentation()) {
+if(run_documentation()) {
 #Here, we'll render only the first third of the pretzel by setting `u_max = 0.33`
 generate_studio(depth = -1.1) \%>\% 
   add_object(path(pretzel, width=0.17, u_max=0.33, material = glossy(color="#db5b00"))) \%>\% 
   add_object(sphere(y=5,x=2,z=4,material=light(intensity=20,spotlight_focus = c(0,0,0)))) \%>\% 
   render_scene(samples=128, clamp_value=10)
 }
-if(rayrender:::run_documentation()) {
+if(run_documentation()) {
 #Here's the last third, by setting `u_min = 0.66`
 generate_studio(depth = -1.1) \%>\% 
   add_object(path(pretzel, width=0.17, u_min=0.66, material = glossy(color="#db5b00"))) \%>\% 
   add_object(sphere(y=5,x=2,z=4,material=light(intensity=20,spotlight_focus = c(0,0,0)))) \%>\% 
   render_scene(samples=128, clamp_value=10)
 }
-if(rayrender:::run_documentation()) {
+if(run_documentation()) {
 #Here's the full pretzel, decomposed into thirds using the u_min and u_max coordinates
 generate_studio(depth = -1.1) \%>\% 
   add_object(path(pretzel, width=0.17, u_max=0.33, x = -0.8, y =0.6,

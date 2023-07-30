@@ -49,7 +49,7 @@
 #' #Generate the cornell box and add a single white sphere to the center
 #' scene = generate_cornell() %>%
 #'   add_object(sphere(x=555/2,y=555/2,z=555/2,radius=555/8,material=diffuse()))
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=128,
 #'              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 #' }
@@ -58,7 +58,7 @@
 #' scene = scene %>%
 #'   add_object(cube(x=555/2,y=555/8,z=555/2,xwidth=555/2,ywidth=555/4,zwidth=555/2,
 #'   material = diffuse(checkercolor="purple",checkerperiod=20)))
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=128,
 #'              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 #' }
@@ -67,7 +67,7 @@
 #' scene = scene %>%
 #'   add_object(sphere(x=555/2+555/4,y=555/2,z=555/2,radius=555/8,
 #'   material = diffuse(noise=1/20)))
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=128,
 #'              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 #' }
@@ -76,7 +76,7 @@
 #' scene = scene %>%
 #'   add_object(cube(x=555/2-555/4,y=555/2,z=555/2,xwidth=555/4,ywidth=555/4,zwidth=555/4,
 #'   material = diffuse(fog=TRUE, fogdensity=0.05,color="orange")))
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=128,
 #'              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 #' }
@@ -85,7 +85,7 @@
 #' scene = scene %>%
 #'   add_object(segment(start = c(555,450,450),end=c(0,450,450),radius = 50, 
 #'                      material = diffuse(color="#1f7326", gradient_color = "#a60d0d")))
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=128,
 #'              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 #' }
@@ -220,7 +220,7 @@ diffuse = function(color = "#ffffff",
 #' scene = generate_cornell() %>%
 #'   add_object(sphere(x=555/2,y=555/2,z=555/2,radius=555/8,
 #'   material=metal(eta=c(3.2176,3.1029,2.1839), k = c(3.3018,3.33,3.0339))))
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=50,
 #'              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 #' }
@@ -228,7 +228,7 @@ diffuse = function(color = "#ffffff",
 #' scene = scene %>%
 #'   add_object(cube(x=380,y=150/2,z=200,xwidth=150,ywidth=150,zwidth=150,
 #'   material = metal(eta = c(1.07,0.8946,0.523), k = c(6.7144,6.188,4.95)),angle=c(0,45,0)))
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=128,
 #'              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 #' }
@@ -238,7 +238,7 @@ diffuse = function(color = "#ffffff",
 #'                   material = metal(eta = c(0.497,0.8231,1.338), 
 #'                                    k = c(2.898,2.476,2.298)),
 #'                   angle=c(0,-30,0)))
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=128,
 #'              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 #' }
@@ -249,7 +249,7 @@ diffuse = function(color = "#ffffff",
 #'                   material = metal(eta = c(1.44,1.78,1.9), 
 #'                                    k = c(3.18,3.36,3.43)),
 #'                   angle=c(0,-30,0)))
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' render_scene(scene2, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=128,
 #'              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 #' }
@@ -337,8 +337,12 @@ metal = function(color = "#ffffff",
 #' a hexadecimal code, R color string, or a numeric rgb vector listing three intensities between `0` and `1`.
 #' @param refraction Default `1.5`. The index of refraction.
 #' @param attenuation Default `c(0,0,0)`. The Beer-Lambert color-channel specific exponential attenuation 
-#' through the material. Higher numbers will result in less of that color making it through the material.
+#' through the material. Higher numbers will result in less of that color making it through the material. If a character string
+#' is provided (either as a named R color or a hex string), this will be converted to a length-3 vector equal to one minus the RGB
+#' color vector, which should approximate the color being passed.
 #' Note: This assumes the object has a closed surface. 
+#' @param attenuation_intensity Default `1`. Changes the attenuation by a multiplicative factor. Values lower than one will make the 
+#' dielectric more transparent, while values greater than one will make the glass more opaque.
 #' @param priority Default `0`. When two dielectric materials overlap, the one with the lower priority value
 #' is used for intersection. NOTE: If the camera is placed inside a dielectric object, its priority value
 #' will not be taken into account when determining hits to other objects also inside the object.
@@ -356,19 +360,19 @@ metal = function(color = "#ffffff",
 #' @examples
 #' #Generate a checkered ground
 #' scene = generate_ground(depth=-0.5, material = diffuse(checkercolor="grey30",checkerperiod=2))
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' render_scene(scene,parallel=TRUE)
 #' }
 #' 
 #' #Add a glass sphere
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' scene %>%
 #'   add_object(sphere(x=-0.5,radius=0.5,material=dielectric())) %>%
 #'   render_scene(parallel=TRUE,samples=128)
 #' }
 #' 
 #' #Add a rotated colored glass cube
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' scene %>%
 #'   add_object(sphere(x=-0.5,radius=0.5,material=dielectric())) %>%
 #'   add_object(cube(x=0.5,xwidth=0.5,material=dielectric(color="darkgreen"),angle=c(0,-45,0))) %>%
@@ -376,7 +380,7 @@ metal = function(color = "#ffffff",
 #' }
 #' 
 #' #Add an area light behind and at an angle and turn off the ambient lighting
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' scene %>%
 #'   add_object(sphere(x=-0.5,radius=0.5,material=dielectric())) %>%
 #'   add_object(cube(x=0.5,xwidth=0.5,material=dielectric(color="darkgreen"),angle=c(0,-45,0))) %>%
@@ -390,7 +394,7 @@ metal = function(color = "#ffffff",
 #' #basis as it travels through the material. This effect is what gives some types of glass
 #' #a green glow at the edges. We will get this effect by setting a lower attenuation value 
 #' #for the `green` (second) channel in the dielectric `attenuation` argument.
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' generate_ground(depth=-0.5,material=diffuse(checkercolor="grey30",checkerperiod=2)) %>%
 #'   add_object(sphere(z=-5,x=-0.5,y=1,material=light(intensity=10))) %>%
 #'   add_object(cube(y=0.3,ywidth=0.1,xwidth=2,zwidth=2,
@@ -401,7 +405,7 @@ metal = function(color = "#ffffff",
 #' #If you have overlapping dielectrics, the `priority` value can help disambiguate what 
 #' #object wins. Here, I place a bubble inside a cube by setting a lower priority value and
 #' #making the inner sphere have a index of refraction of 1. I also place spheres at the corners.
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' generate_ground(depth=-0.51,material=diffuse(checkercolor="grey30",checkerperiod=2)) %>%
 #'   add_object(cube(material = dielectric(priority=2, attenuation = c(10,3,10)))) %>%
 #'   add_object(sphere(radius=0.49,material = dielectric(priority=1, refraction=1))) %>%
@@ -415,7 +419,7 @@ metal = function(color = "#ffffff",
 #' # We can also use this as a basic Constructive Solid Geometry interface by setting 
 #' # the index of refraction equal to empty space, 1. This will subtract out those regions.
 #' # Here I make a concave lens by subtracting two spheres from a cube.
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' generate_ground(depth=-0.51,material=diffuse(checkercolor="grey30",checkerperiod=2,sigma=90)) %>%
 #'   add_object(cube(material = dielectric(attenuation = c(3,3,1),priority=1))) %>%
 #'   add_object(sphere(radius=1,x=1.01,
@@ -425,10 +429,20 @@ metal = function(color = "#ffffff",
 #'   add_object(sphere(y=10,x=3,material=light(intensit=150))) %>%
 #'   render_scene(parallel=TRUE, samples = 128,lookfrom=c(5,3,5))
 #' }
-dielectric = function(color="white", refraction = 1.5,  attenuation = c(0,0,0), 
+dielectric = function(color="white", refraction = 1.5,  
+                      attenuation = c(0,0,0), attenuation_intensity = 1,
                       priority = 0, importance_sample = FALSE,
                       bump_texture = NA, bump_intensity = 1) {
   color = convert_color(color)
+  stopifnot(attenuation_intensity >= 0 && 
+            is.numeric(attenuation_intensity) && 
+            !is.na(attenuation_intensity) &&
+            !is.infinite(attenuation_intensity))
+  if(is.character(attenuation)) {
+    attenuation = 1 - convert_color(attenuation) 
+  } 
+  attenuation = attenuation * attenuation_intensity
+  
   if(!is.array(bump_texture) && !is.na(bump_texture) && !is.character(bump_texture)) {
     bump_texture = NA
     warning("Bump texture not in recognized format (array, matrix, or filename), ignoring.")
@@ -512,7 +526,7 @@ dielectric = function(color="white", refraction = 1.5,  attenuation = c(0,0,0),
 #' # Generate a golden egg, using eta and kappa taken from physical measurements
 #' # See the website refractiveindex.info for eta and k data, use 
 #' # wavelengths 580nm (R), 530nm (G), and 430nm (B).
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' generate_cornell() %>%
 #'   add_object(ellipsoid(x=555/2,555/2,y=150, a=100,b=150,c=100,
 #'              material=microfacet(roughness=0.1,
@@ -520,7 +534,7 @@ dielectric = function(color="white", refraction = 1.5,  attenuation = c(0,0,0),
 #'  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=128,
 #'              aperture=0, fov=40, parallel=TRUE,clamp_value=10)
 #'  }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Make the roughness anisotropic (either horizontal or vertical), adding an extra light in front
 #' #to show off the different microfacet orientations
 #' generate_cornell() %>%
@@ -534,7 +548,7 @@ dielectric = function(color="white", refraction = 1.5,  attenuation = c(0,0,0),
 #'  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=128,
 #'              aperture=0, fov=40,  parallel=TRUE,clamp_value=10)
 #'}
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Render a rough silver R with a smaller golden egg in front
 #' generate_cornell() %>%
 #'   add_object(obj_model(r_obj(),x=555/2,z=350,y=0, scale_obj = 200, angle=c(0,200,0),
@@ -546,7 +560,7 @@ dielectric = function(color="white", refraction = 1.5,  attenuation = c(0,0,0),
 #'  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=128,
 #'              aperture=0, fov=40, parallel=TRUE,clamp_value=10)
 #'  }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Increase the roughness
 #' generate_cornell() %>%
 #'   add_object(obj_model(r_obj(),x=555/2,z=350,y=0, scale_obj = 200, angle=c(0,200,0),
@@ -558,7 +572,7 @@ dielectric = function(color="white", refraction = 1.5,  attenuation = c(0,0,0),
 #'  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=128,
 #'              aperture=0, fov=40, parallel=TRUE,clamp_value=10)
 #'  }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #'  #Use transmission for a rough dielectric
 #' generate_cornell() %>%
 #'   add_object(obj_model(r_obj(),x=555/2,z=350,y=0, scale_obj = 200, angle=c(0,200,0),
@@ -741,7 +755,7 @@ microfacet = function(color="white", roughness = 0.0001, transmission = FALSE,
 #' #Generate the cornell box without a light and add a single white sphere to the center
 #' scene = generate_cornell(light=FALSE) %>%
 #'   add_object(sphere(x=555/2,y=555/2,z=555/2,radius=555/8,material=light()))
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=128,
 #'              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 #' }
@@ -750,7 +764,7 @@ microfacet = function(color="white", roughness = 0.0001, transmission = FALSE,
 #' scene = generate_cornell(light=FALSE) %>%
 #'   add_object(sphere(x=555/2,y=555/2,z=555/2,radius=555/8,
 #'              material=light(intensity=15,invisible=TRUE)))
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=128,
 #'              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 #' }
@@ -760,7 +774,7 @@ microfacet = function(color="white", roughness = 0.0001, transmission = FALSE,
 #'   add_object(sphere(radius=0.5,material=light(intensity=5,color="red"))) %>%
 #'   add_object(obj_model(r_obj(), z=-3,x=-1.5,y=-1, angle=c(0,45,0))) %>%
 #'   add_object(pig(scale=0.3, x=1.5,z=-2,y=-1.5,angle=c(0,-135,0)))
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' render_scene(scene, samples=128, parallel=TRUE, clamp_value=10)
 #' }
 light = function(color = "#ffffff", intensity = 10, importance_sample = TRUE, 
@@ -880,14 +894,14 @@ light = function(color = "#ffffff", intensity = 10, importance_sample = TRUE,
 #' @export
 #'
 #' @examples
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Generate a glossy sphere
 #' generate_ground(material=diffuse(sigma=90)) %>%
 #'   add_object(sphere(y=0.2,material=glossy(color="#2b6eff"))) %>% 
 #'   add_object(sphere(y=2.8,material=light())) %>%
 #'   render_scene(parallel=TRUE,clamp_value=10,samples=128,sample_method="sobol_blue")
 #'  }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Change the color of the underlying diffuse layer
 #' generate_ground(material=diffuse(sigma=90)) %>%
 #'   add_object(sphere(y=0.2,x=-2.1,material=glossy(color="#fc3d03"))) %>% 
@@ -896,7 +910,7 @@ light = function(color = "#ffffff", intensity = 10, importance_sample = TRUE,
 #'   add_object(sphere(y=8,z=-5,radius=3,material=light(intensity=20))) %>%
 #'   render_scene(parallel=TRUE,clamp_value=10,samples=128,fov=40,sample_method="sobol_blue")
 #'  }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Change the amount of gloss 
 #' generate_ground(material=diffuse(sigma=90)) %>%
 #'   add_object(sphere(y=0.2,x=-2.1,material=glossy(gloss=1,color="#fc3d03"))) %>% 
@@ -905,7 +919,7 @@ light = function(color = "#ffffff", intensity = 10, importance_sample = TRUE,
 #'   add_object(sphere(y=8,z=-5,radius=3,material=light(intensity=20))) %>%
 #'   render_scene(parallel=TRUE,clamp_value=10,samples=128,fov=40,sample_method="sobol_blue")
 #'  }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Add gloss to a pattern 
 #' generate_ground(material=diffuse(sigma=90)) %>%
 #'   add_object(sphere(y=0.2,x=-2.1,material=glossy(noise=2,noisecolor="black"))) %>% 
@@ -914,7 +928,7 @@ light = function(color = "#ffffff", intensity = 10, importance_sample = TRUE,
 #'   add_object(sphere(y=8,z=-5,radius=3,material=light(intensity=20))) %>%
 #'   render_scene(parallel=TRUE,clamp_value=10,samples=128,fov=40,sample_method="sobol_blue")
 #'  }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Add an R and a fill light (this may look familiar)
 #' generate_ground(material=diffuse()) %>%
 #'   add_object(sphere(y=0.2,material=glossy(color="#2b6eff",reflectance=0.05))) %>% 
@@ -1046,7 +1060,7 @@ SigmaAFromReflectance = function(c, beta_n) {
 #'
 #' @examples
 #' #Create a hairball
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Generate rendom points on a sphere
 #' lengthval = 0.5
 #' theta = acos(2*runif(10000)-1.0);
@@ -1076,7 +1090,7 @@ SigmaAFromReflectance = function(c, beta_n) {
 #'   render_scene(samples=64, lookfrom=c(0,3,10),clamp_value = 10,
 #'                fov=20)
 #' }
-#' if(rayrender:::run_documentation()) {         
+#' if(run_documentation()) {         
 #'                
 #' #Specify the color directly and increase hair roughness
 #' for(i in 1:length(phi)) {
@@ -1136,7 +1150,7 @@ hair = function(pigment = 1.3, red_pigment = 0, color = NA, sigma_a = NA,
 #'
 #' @examples
 #' #Deprecated lambertian material. Will display a warning.
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' scene = generate_cornell() %>%
 #'   add_object(sphere(x=555/2,y=555/2,z=555/2,radius=555/8,material=lambertian()))
 #'   render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=10,

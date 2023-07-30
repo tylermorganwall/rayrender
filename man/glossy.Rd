@@ -107,14 +107,14 @@ Single row of a tibble describing the glossy material.
 Glossy Material
 }
 \examples{
-if(rayrender:::run_documentation()) {
+if(run_documentation()) {
 #Generate a glossy sphere
 generate_ground(material=diffuse(sigma=90)) \%>\%
   add_object(sphere(y=0.2,material=glossy(color="#2b6eff"))) \%>\% 
   add_object(sphere(y=2.8,material=light())) \%>\%
   render_scene(parallel=TRUE,clamp_value=10,samples=128,sample_method="sobol_blue")
  }
-if(rayrender:::run_documentation()) {
+if(run_documentation()) {
 #Change the color of the underlying diffuse layer
 generate_ground(material=diffuse(sigma=90)) \%>\%
   add_object(sphere(y=0.2,x=-2.1,material=glossy(color="#fc3d03"))) \%>\% 
@@ -123,7 +123,7 @@ generate_ground(material=diffuse(sigma=90)) \%>\%
   add_object(sphere(y=8,z=-5,radius=3,material=light(intensity=20))) \%>\%
   render_scene(parallel=TRUE,clamp_value=10,samples=128,fov=40,sample_method="sobol_blue")
  }
-if(rayrender:::run_documentation()) {
+if(run_documentation()) {
 #Change the amount of gloss 
 generate_ground(material=diffuse(sigma=90)) \%>\%
   add_object(sphere(y=0.2,x=-2.1,material=glossy(gloss=1,color="#fc3d03"))) \%>\% 
@@ -132,7 +132,7 @@ generate_ground(material=diffuse(sigma=90)) \%>\%
   add_object(sphere(y=8,z=-5,radius=3,material=light(intensity=20))) \%>\%
   render_scene(parallel=TRUE,clamp_value=10,samples=128,fov=40,sample_method="sobol_blue")
  }
-if(rayrender:::run_documentation()) {
+if(run_documentation()) {
 #Add gloss to a pattern 
 generate_ground(material=diffuse(sigma=90)) \%>\%
   add_object(sphere(y=0.2,x=-2.1,material=glossy(noise=2,noisecolor="black"))) \%>\% 
@@ -141,7 +141,7 @@ generate_ground(material=diffuse(sigma=90)) \%>\%
   add_object(sphere(y=8,z=-5,radius=3,material=light(intensity=20))) \%>\%
   render_scene(parallel=TRUE,clamp_value=10,samples=128,fov=40,sample_method="sobol_blue")
  }
-if(rayrender:::run_documentation()) {
+if(run_documentation()) {
 #Add an R and a fill light (this may look familiar)
 generate_ground(material=diffuse()) \%>\%
   add_object(sphere(y=0.2,material=glossy(color="#2b6eff",reflectance=0.05))) \%>\% 

@@ -54,6 +54,12 @@ struct TriangleMesh {
                std::shared_ptr<Transform> ObjectToWorld, 
                std::shared_ptr<Transform> WorldToObject, 
                bool reverseOrientation);
+  TriangleMesh(Rcpp::List raymesh, bool verbose, bool calculate_consistent_normals,
+               bool override_material, bool flip_transmittance,
+               std::shared_ptr<material> default_material, 
+               std::shared_ptr<Transform> ObjectToWorld, 
+               std::shared_ptr<Transform> WorldToObject, 
+               bool reverseOrientation);
   
   ~TriangleMesh() {
     for(auto tex : obj_texture_data) {
@@ -81,7 +87,9 @@ struct TriangleMesh {
   std::unique_ptr<point2f[]>  uv;
   std::unique_ptr<point3f[]>  vc;
   
-  std::vector<std::shared_ptr<material> > mtl_materials;
+  std::vector<std::shared_ptr<material> > mesh_materials;
+  std::vector<Rcpp::List > ray_materials;
+  
   std::vector<int > face_material_id;
   
   //Texture Data (from MTL)

@@ -125,7 +125,7 @@ Microfacet Material
 # Generate a golden egg, using eta and kappa taken from physical measurements
 # See the website refractiveindex.info for eta and k data, use 
 # wavelengths 580nm (R), 530nm (G), and 430nm (B).
-if(rayrender:::run_documentation()) {
+if(run_documentation()) {
 generate_cornell() \%>\%
   add_object(ellipsoid(x=555/2,555/2,y=150, a=100,b=150,c=100,
              material=microfacet(roughness=0.1,
@@ -133,7 +133,7 @@ generate_cornell() \%>\%
  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=128,
              aperture=0, fov=40, parallel=TRUE,clamp_value=10)
  }
-if(rayrender:::run_documentation()) {
+if(run_documentation()) {
 #Make the roughness anisotropic (either horizontal or vertical), adding an extra light in front
 #to show off the different microfacet orientations
 generate_cornell() \%>\%
@@ -147,7 +147,7 @@ generate_cornell() \%>\%
  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=128,
              aperture=0, fov=40,  parallel=TRUE,clamp_value=10)
 }
-if(rayrender:::run_documentation()) {
+if(run_documentation()) {
 #Render a rough silver R with a smaller golden egg in front
 generate_cornell() \%>\%
   add_object(obj_model(r_obj(),x=555/2,z=350,y=0, scale_obj = 200, angle=c(0,200,0),
@@ -159,7 +159,7 @@ generate_cornell() \%>\%
  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=128,
              aperture=0, fov=40, parallel=TRUE,clamp_value=10)
  }
-if(rayrender:::run_documentation()) {
+if(run_documentation()) {
 #Increase the roughness
 generate_cornell() \%>\%
   add_object(obj_model(r_obj(),x=555/2,z=350,y=0, scale_obj = 200, angle=c(0,200,0),
@@ -171,7 +171,7 @@ generate_cornell() \%>\%
  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=128,
              aperture=0, fov=40, parallel=TRUE,clamp_value=10)
  }
-if(rayrender:::run_documentation()) {
+if(run_documentation()) {
  #Use transmission for a rough dielectric
 generate_cornell() \%>\%
   add_object(obj_model(r_obj(),x=555/2,z=350,y=0, scale_obj = 200, angle=c(0,200,0),

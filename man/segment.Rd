@@ -55,7 +55,7 @@ Similar to the cylinder object, but specified by start and end points.
 }
 \examples{
 #Generate a segment in the cornell box. 
-if(rayrender:::run_documentation()) {
+if(run_documentation()) {
 generate_cornell() \%>\%
   add_object(segment(start = c(100, 100, 100), end = c(455, 455, 455), radius = 50)) \%>\%
   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
@@ -74,7 +74,7 @@ for(i in 1:(length(xvals) - 1)) {
                             material = metal())
 }
 scene_segments = do.call(rbind,scene_list)
-if(rayrender:::run_documentation()) {
+if(run_documentation()) {
 generate_cornell() \%>\% 
   add_object(scene_segments) \%>\%
   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
@@ -96,7 +96,7 @@ cube_outline = segment(start = c(100, 100, 100), end = c(100, 100, 455), radius 
   add_object(segment(start = c(455, 100, 455), end = c(455, 455, 455), radius = 10)) \%>\%
   add_object(segment(start = c(100, 455, 100), end = c(455, 455, 100), radius = 10))
 
-if(rayrender:::run_documentation()) {
+if(run_documentation()) {
 generate_cornell() \%>\%
   add_object(cube_outline) \%>\%
   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
@@ -104,7 +104,7 @@ generate_cornell() \%>\%
 }
 
 #Shrink and rotate the cube
-if(rayrender:::run_documentation()) {
+if(run_documentation()) {
 generate_cornell() \%>\%
   add_object(group_objects(cube_outline, pivot_point = c(555/2, 555/2, 555/2),
                            angle = c(45,45,45), scale = c(0.5,0.5,0.5))) \%>\%

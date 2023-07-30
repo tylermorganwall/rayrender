@@ -1,5 +1,9 @@
 #include "RayMatrix.h"
 
+RayMatrix::RayMatrix() : ncol(0), nrow(0) {
+  data.resize(0);
+};
+
 RayMatrix::RayMatrix(unsigned int _rows, unsigned int _cols, float start_value) : nrow(_rows), ncol(_cols) {
   data.resize(nrow*ncol);
   std::fill(data.begin(), data.end(), start_value);

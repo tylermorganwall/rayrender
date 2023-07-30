@@ -24,7 +24,7 @@
 #' @export
 #'
 #' @examples
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #We will combine these three objects:
 #' generate_ground(material=diffuse(checkercolor="grey20")) %>%
 #'   add_object(csg_object(csg_box(), material=glossy(color="red"))) %>% 
@@ -37,7 +37,7 @@
 #'   render_scene(clamp_value=10, fov=15,lookfrom=c(5,5,10), 
 #'                samples=128, sample_method="sobol_blue")
 #' }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Standard CSG sphere + box - crossed cylinder combination:
 #' generate_ground(material=diffuse(checkercolor="grey20")) %>%
 #'   add_object(csg_object(csg_combine(
@@ -54,7 +54,7 @@
 #'   render_scene(clamp_value=10, fov=10,lookfrom=c(5,5,10),
 #'                samples=128, sample_method="sobol_blue")
 #'   }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Blend them all instead:
 #' generate_ground(material=diffuse(checkercolor="grey20")) %>%
 #'   add_object(csg_object(csg_combine(
@@ -109,21 +109,21 @@ csg_object = function(object, x = 0, y = 0, z = 0, material = diffuse(),
 #' @export
 #'
 #' @examples
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Generate a simple sphere:
 #' generate_ground() %>% 
 #'   add_object(csg_object(csg_sphere(),
 #'                         material=glossy(color="purple"))) %>% 
 #'   render_scene(clamp_value=10)
 #' }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Generate a bigger sphere in the cornell box.
 #' generate_cornell() %>% 
 #'   add_object(csg_object(csg_sphere(x=555/2,y=555/2,z=555/2,radius=100),
 #'                         material=glossy(checkercolor="purple", checkerperiod=100))) %>% 
 #'   render_scene(clamp_value=10)
 #' }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Combine two spheres of different sizes
 #' generate_cornell() %>% 
 #'   add_object(csg_object(
@@ -133,7 +133,7 @@ csg_object = function(object, x = 0, y = 0, z = 0, material = diffuse(),
 #'     material=glossy(color="purple"))) %>% 
 #'   render_scene(clamp_value=10)
 #' }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #'#Subtract two spheres to create an indented region
 #' generate_cornell() %>% 
 #'   add_object(csg_object(
@@ -144,7 +144,7 @@ csg_object = function(object, x = 0, y = 0, z = 0, material = diffuse(),
 #'     material=glossy(color="grey20"))) %>% 
 #'   render_scene(clamp_value=10)
 #' }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #'#Use csg_combine(operation="blend") to melt the two together
 #' generate_cornell() %>% 
 #'   add_object(csg_object(
@@ -176,13 +176,13 @@ csg_sphere = function(x=0,y=0,z=0, radius=1) {
 #' @export
 #'
 #' @examples
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Generate a plane
 #' csg_object(csg_plane(width_x=4, width_z=4), material=diffuse(checkercolor="purple")) %>% 
 #'   add_object(sphere(y=5,x=5,material=light(intensity=40))) %>% 
 #'   render_scene(clamp_value=10)
 #'  }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Combine the plane with a sphere
 #' csg_object(csg_combine(
 #'     csg_sphere(radius=0.5),
@@ -191,7 +191,7 @@ csg_sphere = function(x=0,y=0,z=0, radius=1) {
 #'   add_object(sphere(y=5,x=5,material=light(intensity=40))) %>% 
 #'   render_scene(clamp_value=10)
 #'   }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Re-orient the plane using the normal and 
 #' csg_object(csg_combine(
 #'     csg_sphere(radius=0.5),
@@ -217,21 +217,21 @@ csg_plane = function(x=0,y=0,z=0, normal=c(0,1,0),width_x=4, width_z=4) {
 #' @export
 #'
 #' @examples
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Generate a box
 #' generate_ground(material=diffuse(checkercolor="grey20")) %>% 
 #'   add_object(csg_object(csg_box(), material=glossy(color="#FF69B4"))) %>%
 #'   add_object(sphere(y=5,x=5,radius=3,material=light(intensity=5))) %>%  
 #'   render_scene(clamp_value=10,lookfrom=c(7,3,7))
 #'   }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Change the width
 #' generate_ground(material=diffuse(checkercolor="grey20")) %>% 
 #'   add_object(csg_object(csg_box(width = c(2,1,0.5)), material=glossy(color="#FF69B4"))) %>%
 #'   add_object(sphere(y=5,x=5,radius=3,material=light(intensity=5))) %>%  
 #'   render_scene(clamp_value=10,lookfrom=c(7,3,7))
 #'}
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Subtract two boxes to make stairs
 #' generate_ground(material=diffuse(checkercolor="grey20")) %>% 
 #'   add_object(csg_object(csg_combine(
@@ -264,21 +264,21 @@ csg_box = function(x=0,y=0,z=0, width=c(1,1,1), corner_radius = 0) {
 #' @export
 #'
 #' @examples
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Generate a torus:
 #' generate_ground(material=diffuse(checkercolor="grey20")) %>% 
 #'   add_object(csg_object(csg_torus(), material=glossy(color="dodgerblue4"))) %>%
 #'   add_object(sphere(y=5,x=5,radius=3,material=light(intensity=10))) %>%  
 #'   render_scene(clamp_value=10,lookfrom=c(0,5,10),fov=30)
 #' }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Change the radius of the torus:
 #' generate_ground(material=diffuse(checkercolor="grey20")) %>% 
 #'   add_object(csg_object(csg_torus(radius=2), material=glossy(color="dodgerblue4"))) %>%
 #'   add_object(sphere(y=5,x=5,radius=3,material=light(intensity=10))) %>%  
 #'   render_scene(clamp_value=10,lookfrom=c(0,5,10),fov=30)
 #' }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #'#Change the minor radius of the torus:
 #' generate_ground(material=diffuse(checkercolor="grey20")) %>% 
 #'   add_object(csg_object(csg_torus(radius=2, minor_radius=0.25), 
@@ -286,7 +286,7 @@ csg_box = function(x=0,y=0,z=0, width=c(1,1,1), corner_radius = 0) {
 #'   add_object(sphere(y=5,x=5,radius=3,material=light(intensity=10))) %>%  
 #'   render_scene(clamp_value=10,lookfrom=c(0,5,10),fov=30)
 #'   }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #'#Generate a rotated torus in the Cornell Box
 #' generate_cornell() %>% 
 #'   add_object(csg_object(csg_rotate(
@@ -310,13 +310,13 @@ csg_torus = function(x=0,y=0,z=0, radius=1, minor_radius=0.5) {
 #' @export
 #'
 #' @examples
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Generate a basic capsule:
 #' generate_ground(material=diffuse(checkercolor="grey20")) %>% 
 #'   add_object(csg_object(csg_capsule(radius=0.5),material=glossy(color="red"))) %>% 
 #'   render_scene(clamp_value=10,fov=20)
 #'   }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Change the orientation by specifying a start and end
 #' generate_ground(material=diffuse(color="dodgerblue4",checkercolor="grey10")) %>% 
 #'   add_object(csg_object(csg_capsule(start = c(-1,0.5,-2), end = c(1,0.5,-2),
@@ -324,7 +324,7 @@ csg_torus = function(x=0,y=0,z=0, radius=1, minor_radius=0.5) {
 #'   render_scene(clamp_value=10,fov=20,
 #'                lookat=c(0,0.5,-2),lookfrom=c(3,3,10))
 #'  }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Show the effect of changing the radius
 #' generate_ground(material=diffuse(color="dodgerblue4",checkercolor="grey10")) %>% 
 #'   add_object(csg_object(
@@ -335,7 +335,7 @@ csg_torus = function(x=0,y=0,z=0, radius=1, minor_radius=0.5) {
 #'   render_scene(clamp_value=10,fov=20,
 #'                lookat=c(0,0.5,-2),lookfrom=c(-3,3,10))
 #'    }
-#' if(rayrender:::run_documentation()) {            
+#' if(run_documentation()) {            
 #' #Render a capsule in a Cornell box
 #' generate_cornell() %>% 
 #'   add_object(csg_object(
@@ -359,13 +359,13 @@ csg_capsule = function(start = c(0,0,0), end = c(0,1,0), radius=1) {
 #' @export
 #'
 #' @examples
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Generate a basic cylinder:
 #' generate_ground(material=diffuse(checkercolor="grey20")) %>% 
 #'   add_object(csg_object(csg_cylinder(radius=0.25),material=glossy(color="red"))) %>% 
 #'   render_scene(clamp_value=10,fov=20)
 #'   }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Change the orientation by specifying a start and end
 #' generate_ground(material=diffuse(color="dodgerblue4",checkercolor="grey10")) %>% 
 #'   add_object(csg_object(csg_cylinder(start = c(-1,0.5,-2), end = c(1,0.5,-2),
@@ -373,7 +373,7 @@ csg_capsule = function(start = c(0,0,0), end = c(0,1,0), radius=1) {
 #'   render_scene(clamp_value=10,fov=20,
 #'                lookat=c(0,0.5,-2),lookfrom=c(3,3,10))
 #'  }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Show the effect of changing the radius
 #' generate_ground(material=diffuse(color="dodgerblue4",checkercolor="grey10")) %>% 
 #'   add_object(csg_object(
@@ -384,7 +384,7 @@ csg_capsule = function(start = c(0,0,0), end = c(0,1,0), radius=1) {
 #'   render_scene(clamp_value=10,fov=20,
 #'                lookat=c(0,0.5,-2),lookfrom=c(-3,3,10))
 #'     }
-#' if(rayrender:::run_documentation()) {           
+#' if(run_documentation()) {           
 #' #Render a red marble cylinder in a Cornell box
 #' generate_cornell(light=FALSE) %>% 
 #'   add_object(csg_object(
@@ -411,13 +411,13 @@ csg_cylinder = function(start = c(0,0,0), end = c(0,1,0), radius=1, corner_radiu
 #' @export
 #'
 #' @examples
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Generate a basic ellipsoid:
 #' generate_ground(material=diffuse(checkercolor="grey20")) %>% 
 #'   add_object(csg_object(csg_ellipsoid(),material=glossy(color="red"))) %>% 
 #'   render_scene(clamp_value=10,fov=20)
 #'   }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Three different ellipsoids:
 #'generate_ground(material=diffuse(checkercolor="grey20")) %>% 
 #'  add_object(csg_object(csg_group(list(
@@ -427,13 +427,13 @@ csg_cylinder = function(start = c(0,0,0), end = c(0,1,0), radius=1, corner_radiu
 #'    material=glossy(color="red"))) %>% 
 #'  render_scene(clamp_value=10,fov=20,lookfrom=c(0,5,10))
 #'  }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Generate a glass ellipsoid:
 #' generate_ground(material=diffuse(checkercolor="grey20")) %>% 
 #'   add_object(csg_object(csg_ellipsoid(),material=dielectric(attenuation = c(1,1,0.3)))) %>% 
 #'   render_scene(clamp_value=10,fov=20)
 #'   }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Generate a glass ellipsoid in a Cornell box:
 #' generate_cornell() %>% 
 #'   add_object(csg_object(csg_ellipsoid(x=555/2,y=555/2,z=555/2,axes=c(100,150,200)),
@@ -456,13 +456,13 @@ csg_ellipsoid = function(x=0,y=0,z=0,axes=c(0.5,1,0.5)) {
 #' @export
 #'
 #' @examples
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Generate a basic rounded cone:
 #' generate_ground(material=diffuse(checkercolor="grey20")) %>% 
 #'   add_object(csg_object(csg_rounded_cone(),material=glossy(color="red"))) %>% 
 #'   render_scene(clamp_value=10,fov=20)
 #'   }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Change the orientation by specifying a start and end
 #' generate_ground(material=diffuse(color="dodgerblue4",checkercolor="grey10")) %>% 
 #'   add_object(csg_object(csg_rounded_cone(start = c(-1,0.5,-2), end = c(1,0.5,-2),
@@ -470,7 +470,7 @@ csg_ellipsoid = function(x=0,y=0,z=0,axes=c(0.5,1,0.5)) {
 #'   render_scene(clamp_value=10,fov=20,
 #'                lookat=c(0,0.5,-2),lookfrom=c(3,3,10))
 #'  }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Show the effect of changing the radius
 #' generate_ground(material=diffuse(color="dodgerblue4",checkercolor="grey10")) %>% 
 #'   add_object(csg_object(
@@ -481,7 +481,7 @@ csg_ellipsoid = function(x=0,y=0,z=0,axes=c(0.5,1,0.5)) {
 #'   render_scene(clamp_value=10,fov=20,
 #'                lookat=c(0,0.5,-2),lookfrom=c(-3,3,10))
 #' }
-#' if(rayrender:::run_documentation()) {         
+#' if(run_documentation()) {         
 #' #Render a glass rounded cone in a Cornell box
 #' generate_cornell() %>% 
 #'   add_object(csg_object(
@@ -505,13 +505,13 @@ csg_rounded_cone = function(start = c(0,0,0), end = c(0,1,0), radius=0.5, upper_
 #' @export
 #'
 #' @examples
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Generate a basic cone:
 #' generate_ground(material=diffuse(checkercolor="grey20")) %>% 
 #'   add_object(csg_object(csg_cone(),material=glossy(color="red"))) %>% 
 #'   render_scene(clamp_value=10,fov=20)
 #'   }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Change the orientation by specifying a start and end
 #' generate_ground(material=diffuse(color="dodgerblue4",checkercolor="grey10")) %>% 
 #'   add_object(csg_object(csg_cone(start = c(-1,0.5,-2), end = c(1,0.5,-2),
@@ -519,7 +519,7 @@ csg_rounded_cone = function(start = c(0,0,0), end = c(0,1,0), radius=0.5, upper_
 #'   render_scene(clamp_value=10,fov=20,
 #'                lookat=c(0,0.5,-2),lookfrom=c(3,3,10))
 #'  }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Show the effect of changing the radius
 #' generate_ground(material=diffuse(color="dodgerblue4",checkercolor="grey10")) %>% 
 #'   add_object(csg_object(
@@ -530,7 +530,7 @@ csg_rounded_cone = function(start = c(0,0,0), end = c(0,1,0), radius=0.5, upper_
 #'   render_scene(clamp_value=10,fov=20,
 #'                lookat=c(0,0.5,-2),lookfrom=c(-3,3,10))
 #'     }
-#' if(rayrender:::run_documentation()) {           
+#' if(run_documentation()) {           
 #' #Render a glass cone in a Cornell box
 #' generate_cornell() %>% 
 #'   add_object(csg_object(
@@ -559,7 +559,7 @@ csg_cone = function(start = c(0,0,0), end = c(0,1,0), radius=0.5) {
 #' @export
 #'
 #' @examples
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Generate a simple pyramid:
 #' generate_ground() %>% 
 #'   add_object(csg_object(csg_pyramid(y=-0.99),
@@ -568,7 +568,7 @@ csg_cone = function(start = c(0,0,0), end = c(0,1,0), radius=0.5) {
 #'   render_scene(clamp_value=10,lookfrom=c(-3,1,10), 
 #'                fov=15, lookat=c(0,-0.5,0))
 #' }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Make a taller pyramid
 #' generate_ground() %>% 
 #'   add_object(csg_object(csg_pyramid(y=-0.95, height=1.5),
@@ -577,7 +577,7 @@ csg_cone = function(start = c(0,0,0), end = c(0,1,0), radius=0.5) {
 #'   render_scene(clamp_value=10,lookfrom=c(-3,1,10), 
 #'                fov=15, lookat=c(0,-0.5,0))
 #'   }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Make a wider pyramid
 #' generate_ground() %>% 
 #'   add_object(csg_object(csg_pyramid(y=-0.95, base=1.5),
@@ -602,21 +602,21 @@ csg_pyramid = function(x=0,y=0,z=0,height=1,base=1) {
 #' @export
 #'
 #' @examples
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Generate a basic triangle:
 #' generate_ground(material=diffuse(checkercolor="grey20")) %>% 
 #'   add_object(csg_object(csg_triangle(),material=diffuse(color="red"))) %>% 
 #'   add_object(sphere(y=5,z=3,material=light(intensity=30))) %>% 
 #'   render_scene(clamp_value=10,fov=20)
 #'   }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Change a vertex:
 #' generate_ground(material=diffuse(checkercolor="grey20")) %>% 
 #'   add_object(csg_object(csg_triangle(v1 = c(1,1,0)),material=diffuse(color="green"))) %>% 
 #'   add_object(sphere(y=5,z=3,material=light(intensity=30))) %>% 
 #'   render_scene(clamp_value=10,fov=20)
 #'   }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Change all three vertices:
 #' generate_ground(material=diffuse(checkercolor="grey20")) %>% 
 #'   add_object(csg_object(csg_triangle(v1 = c(0.5,1,0), v2 = c(1,-0.5,0), v3 = c(-1,0.5,0)),
@@ -644,7 +644,7 @@ csg_triangle = function(v1=c(0,1,0),v2=c(1,0,0),v3=c(-1,0,0)) {
 #' @export
 #'
 #' @examples
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Elongate a sphere to create a capsule in 1D or a rounded rectangle in 2D:
 #' generate_ground(material=diffuse(checkercolor="grey20",color="dodgerblue4")) %>% 
 #'  add_object(csg_object(csg_sphere(z=-3,x=-3),
@@ -656,7 +656,7 @@ csg_triangle = function(v1=c(0,1,0),v2=c(1,0,0),v3=c(-1,0,0)) {
 #'  add_object(sphere(y=10,radius=3,material=light(intensity=8))) %>% 
 #'  render_scene(clamp_value=10,fov=40,lookfrom=c(0,10,10))
 #'   }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Elongate a torus:
 #' generate_ground(material=diffuse(checkercolor="grey20",color="dodgerblue4")) %>% 
 #'  add_object(csg_object(csg_torus(z=-3,x=-3),
@@ -668,7 +668,7 @@ csg_triangle = function(v1=c(0,1,0),v2=c(1,0,0),v3=c(-1,0,0)) {
 #'  add_object(sphere(y=10,radius=3,material=light(intensity=8))) %>% 
 #'  render_scene(clamp_value=10,fov=40,lookfrom=c(0,10,10))
 #'  }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Elongate a cylinder:
 #' generate_ground(material=diffuse(checkercolor="grey20",color="dodgerblue4")) %>% 
 #'  add_object(csg_object(csg_cylinder(start=c(-3,0,-3), end = c(-3,1,-3)),
@@ -682,7 +682,7 @@ csg_triangle = function(v1=c(0,1,0),v2=c(1,0,0),v3=c(-1,0,0)) {
 #'  add_object(sphere(y=10,radius=3,material=light(intensity=8))) %>% 
 #'  render_scene(clamp_value=10,fov=40,lookfrom=c(0,10,10))
 #'  }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Elongate a pyramid:
 #' generate_ground(material=diffuse(checkercolor="grey20",color="dodgerblue4")) %>% 
 #'  add_object(csg_object(csg_pyramid(z=-3,x=-3),
@@ -694,7 +694,7 @@ csg_triangle = function(v1=c(0,1,0),v2=c(1,0,0),v3=c(-1,0,0)) {
 #'  add_object(sphere(y=10,radius=3,material=light(intensity=8))) %>% 
 #'  render_scene(clamp_value=10,fov=40,lookfrom=c(0,10,10))
 #'}
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Change the elongation point to start the elongation on the side of the pyramid:
 #' generate_ground(material=diffuse(checkercolor="grey20",color="dodgerblue4")) %>% 
 #'  add_object(csg_object(csg_pyramid(z=-3,x=-3),
@@ -728,7 +728,7 @@ csg_elongate = function(object, x=0,y=0,z=0, elongate = c(0,0,0), robust = TRUE)
 #' @export
 #'
 #' @examples
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Generate a rounded pyramid:
 #' generate_ground(material=diffuse(checkercolor="grey20")) %>% 
 #'   add_object(csg_object(csg_pyramid(x=-1,y=-0.99,z=1),
@@ -741,7 +741,7 @@ csg_elongate = function(object, x=0,y=0,z=0, elongate = c(0,0,0), robust = TRUE)
 #'   render_scene(lookfrom=c(-3,4,10), fov=22, 
 #'                lookat=c(0,-0.5,0),clamp_value=10)
 #'}
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Round a blend of two objects
 #' generate_ground(material=diffuse(checkercolor="grey20")) %>% 
 #'   add_object(csg_object(csg_round(csg_combine(
@@ -777,7 +777,7 @@ csg_round = function(object, radius=0.1) {
 #' @export
 #'
 #' @examples
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Cut and onion a sphere:
 #' generate_ground(material=diffuse(checkercolor="grey20")) %>%
 #'   add_object(csg_object(csg_combine(
@@ -796,7 +796,7 @@ csg_round = function(object, radius=0.1) {
 #'  render_scene(clamp_value=10,lookat=c(0,-0.5,0),
 #'               lookfrom=c(3,5,10),fov=35)
 #'}
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #'#Multiple onion layers:
 #' generate_ground(material=diffuse(checkercolor="grey20")) %>%
 #'   add_object(csg_object(csg_combine(
@@ -807,7 +807,7 @@ csg_round = function(object, radius=0.1) {
 #'   render_scene(clamp_value=10,lookat=c(0,-0.5,0),
 #'                lookfrom=c(3,5,10),fov=20)
 #'   }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #'#Onion with dielectric sphere to make a bubble:
 #' generate_cornell() %>%
 #'   add_object(csg_object(
@@ -815,7 +815,7 @@ csg_round = function(object, radius=0.1) {
 #'     material=dielectric(attenuation=c(1,1,0.3)/100))) %>%
 #'   render_scene(clamp_value=10)
 #'   }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #'#Multiple onion operations to make a bubble within a bubble:
 #' generate_cornell() %>%
 #'   add_object(csg_object(
@@ -840,7 +840,7 @@ csg_onion = function(object, thickness=0.1) {
 #' @export
 #'
 #' @examples
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Scale a pyramid (translating it upwards because the object is scaled from the center):
 #' generate_ground(material=diffuse(checkercolor="grey20")) %>% 
 #'   add_object(csg_object(csg_pyramid(z=1,y=-0.99),
@@ -876,7 +876,7 @@ csg_scale = function(object, scale=1) {
 #' @export
 #'
 #' @examples
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Rotate a pyramid (translating it upwards because the object is scaled from the center):
 #' generate_ground(material=diffuse(checkercolor="grey20")) %>% 
 #'   add_object(csg_object(csg_pyramid(z=1,y=-0.99),
@@ -888,7 +888,7 @@ csg_scale = function(object, scale=1) {
 #'   render_scene(lookfrom=c(-3,4,10), fov=15, 
 #'                lookat=c(0,-0.5,0),clamp_value=10)
 #'   }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Rotate by specifying a new up vector:
 #' generate_ground(material=diffuse(checkercolor="grey20")) %>% 
 #'   add_object(csg_object(csg_pyramid(z=1,y=-0.99),
@@ -940,7 +940,7 @@ csg_rotate = function(object, pivot_point = c(0,0,0),
 #' @export
 #'
 #' @examples
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Translate a simple object:
 #' generate_ground(material=diffuse(checkercolor="grey20")) %>% 
 #'   add_object(csg_object(csg_torus(), material=glossy(color="dodgerblue4"))) %>%
@@ -950,7 +950,7 @@ csg_rotate = function(object, pivot_point = c(0,0,0),
 #'   render_scene(clamp_value=10,lookfrom=c(0,5,10),fov=30,
 #'                lookat=c(-1,0.5,-1))
 #' }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Translate a blended object:
 #' generate_ground(material=diffuse(checkercolor="grey20")) %>% 
 #'   add_object(csg_object(csg_combine(
@@ -988,7 +988,7 @@ csg_translate = function(object, x=0,y=0,z=0) {
 #' @export
 #'
 #' @examples
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Combine two spheres:
 #' generate_ground(material=diffuse(checkercolor="grey20")) %>% 
 #'   add_object(csg_object(csg_combine(
@@ -998,7 +998,7 @@ csg_translate = function(object, x=0,y=0,z=0) {
 #'   add_object(sphere(y=5,x=5,radius=3,material=light(intensity=10))) %>%  
 #'   render_scene(clamp_value=10,fov=20,lookfrom=c(-3,5,10))
 #'   }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Subtract one sphere from another:
 #' generate_ground(material=diffuse(checkercolor="grey20")) %>% 
 #'   add_object(csg_object(csg_combine(
@@ -1008,7 +1008,7 @@ csg_translate = function(object, x=0,y=0,z=0) {
 #'   add_object(sphere(y=5,x=5,radius=3,material=light(intensity=10))) %>%  
 #'   render_scene(clamp_value=10,fov=20,lookfrom=c(-3,5,10))
 #'   }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Get the intersection of two spheres:
 #' generate_ground(material=diffuse(checkercolor="grey20")) %>% 
 #'   add_object(csg_object(csg_combine(
@@ -1018,7 +1018,7 @@ csg_translate = function(object, x=0,y=0,z=0) {
 #'   add_object(sphere(y=5,x=5,radius=3,material=light(intensity=10))) %>%  
 #'   render_scene(clamp_value=10,fov=20,lookfrom=c(-3,5,10))
 #'   }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Get the blended union of two spheres:
 #' generate_ground(material=diffuse(checkercolor="grey20")) %>% 
 #'   add_object(csg_object(csg_combine(
@@ -1028,7 +1028,7 @@ csg_translate = function(object, x=0,y=0,z=0) {
 #'   add_object(sphere(y=5,x=5,radius=3,material=light(intensity=10))) %>%  
 #'   render_scene(clamp_value=10,fov=20,lookfrom=c(-3,5,10))
 #'   }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Get the blended subtraction of two spheres:
 #' generate_ground(material=diffuse(checkercolor="grey20")) %>% 
 #'   add_object(csg_object(csg_combine(
@@ -1038,7 +1038,7 @@ csg_translate = function(object, x=0,y=0,z=0) {
 #'   add_object(sphere(y=5,x=5,radius=3,material=light(intensity=10))) %>%  
 #'   render_scene(clamp_value=10,fov=20,lookfrom=c(-3,5,10))
 #'   }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Change the blending radius:
 #' generate_ground(material=diffuse(checkercolor="grey20")) %>% 
 #'   add_object(csg_object(csg_combine(
@@ -1048,7 +1048,7 @@ csg_translate = function(object, x=0,y=0,z=0) {
 #'   add_object(sphere(y=5,x=5,radius=3,material=light(intensity=10))) %>%  
 #'   render_scene(clamp_value=10,fov=20,lookfrom=c(-3,5,10))
 #'   }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Change the subtract blending radius:
 #' generate_ground(material=diffuse(checkercolor="grey20")) %>% 
 #'   add_object(csg_object(csg_combine(
@@ -1058,7 +1058,7 @@ csg_translate = function(object, x=0,y=0,z=0) {
 #'   add_object(sphere(y=5,x=5,radius=3,material=light(intensity=10))) %>%  
 #'   render_scene(clamp_value=10,fov=20,lookfrom=c(-3,5,10))
 #'   }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Get the mixture of various objects:
 #' generate_ground(material=diffuse(checkercolor="grey20")) %>% 
 #'   add_object(csg_object(csg_combine(
@@ -1101,7 +1101,7 @@ csg_combine = function(object1, object2, operation = "union", radius = 0.5) {
 #' @export
 #'
 #' @examples
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Group four spheres together and merge them with a box:
 #' generate_ground(material=diffuse(checkercolor="grey20")) %>% 
 #'   add_object(csg_object(csg_combine(

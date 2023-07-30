@@ -19,7 +19,7 @@
 #'
 #' @examples
 #' #Generate a sphere in the cornell box.
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' generate_cornell() %>%
 #'   add_object(sphere(x = 555/2, y = 555/2, z = 555/2, radius = 100)) %>%
 #'   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
@@ -27,7 +27,7 @@
 #' }
 #' 
 #' #Generate a gold sphere in the cornell box
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' generate_cornell() %>%
 #'   add_object(sphere(x = 555/2, y = 100, z = 555/2, radius = 100, 
 #'                     material = microfacet(color = "gold"))) %>%
@@ -86,7 +86,7 @@ sphere = function(x = 0, y = 0, z = 0, radius = 1, material = diffuse(),
 #'
 #' @examples
 #' #Generate a cube in the cornell box.
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' generate_cornell() %>%
 #'   add_object(cube(x = 555/2, y = 100, z = 555/2, 
 #'                   xwidth = 200, ywidth = 200, zwidth = 200, angle = c(0, 30, 0))) %>%
@@ -94,7 +94,7 @@ sphere = function(x = 0, y = 0, z = 0, radius = 1, material = diffuse(),
 #'                ambient_light = FALSE, samples = 128, parallel = TRUE, clamp_value = 5)
 #' }
 #' #Generate a gold cube in the cornell box
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' generate_cornell() %>%
 #'   add_object(cube(x = 555/2, y = 100, z = 555/2, 
 #'                   xwidth = 200, ywidth = 200, zwidth = 200, angle = c(0, 30, 0),
@@ -104,7 +104,7 @@ sphere = function(x = 0, y = 0, z = 0, radius = 1, material = diffuse(),
 #' }
 #' 
 #' #Generate a rotated dielectric box in the cornell box
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' generate_cornell() %>%
 #'   add_object(cube(x = 555/2, y = 200, z = 555/2, 
 #'                   xwidth = 200, ywidth = 100, zwidth = 200, angle = c(-30, 30, -30),
@@ -165,7 +165,7 @@ cube = function(x = 0, y = 0, z = 0, width = 1, xwidth = 1, ywidth = 1, zwidth =
 #'
 #' @examples
 #' #Generate a purple rectangle in the cornell box.
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' generate_cornell() %>%
 #'   add_object(xy_rect(x = 555/2, y = 100, z = 555/2, xwidth = 200, ywidth = 200,
 #'              material = diffuse(color = "purple"))) %>%
@@ -174,7 +174,7 @@ cube = function(x = 0, y = 0, z = 0, width = 1, xwidth = 1, ywidth = 1, zwidth =
 #' }
 #' 
 #' #Generate a gold plane in the cornell box
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' generate_cornell() %>%
 #'   add_object(xy_rect(x = 555/2, y = 100, z = 555/2, 
 #'                      xwidth = 200, ywidth = 200, angle = c(0, 30, 0),
@@ -232,7 +232,7 @@ xy_rect = function(x = 0, y = 0, z = 0, xwidth = 1, ywidth = 1,
 #'
 #' @examples
 #' #Generate a purple rectangle in the cornell box.
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' generate_cornell() %>%
 #'   add_object(yz_rect(x = 100, y = 100, z = 555/2, ywidth = 200, zwidth = 200,
 #'                      material = diffuse(color = "purple"))) %>%
@@ -240,7 +240,7 @@ xy_rect = function(x = 0, y = 0, z = 0, xwidth = 1, ywidth = 1,
 #'                ambient_light = FALSE, samples = 128, parallel = TRUE, clamp_value = 5)
 #' }
 #' #Generate a gold plane in the cornell box
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' generate_cornell() %>%
 #'   add_object(yz_rect(x = 100, y = 100, z = 555/2, 
 #'                      ywidth = 200, zwidth = 200, angle = c(0, 30, 0),
@@ -298,7 +298,7 @@ yz_rect = function(x = 0, y = 0, z = 0, ywidth = 1, zwidth = 1, material = diffu
 #'
 #' @examples
 #' #Generate a purple rectangle in the cornell box.
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' generate_cornell() %>%
 #'   add_object(xz_rect(x = 555/2, y = 100, z = 555/2, xwidth = 200, zwidth = 200,
 #'              material = diffuse(color = "purple"))) %>%
@@ -307,7 +307,7 @@ yz_rect = function(x = 0, y = 0, z = 0, ywidth = 1, zwidth = 1, material = diffu
 #' }
 #' 
 #' #Generate a gold plane in the cornell box
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' generate_cornell() %>%
 #'   add_object(xz_rect(x = 555/2, y = 100, z = 555/2, 
 #'              xwidth = 200, zwidth = 200, angle = c(0, 30, 0),
@@ -375,7 +375,7 @@ xz_rect = function(x = 0, xwidth = 1, z = 0, zwidth = 1, y = 0, material = diffu
 #'
 #' @examples
 #' #Generate a triangle in the Cornell box.
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' generate_cornell() %>%
 #'   add_object(triangle(v1 = c(100, 100, 100), v2 = c(555/2, 455, 455), v3 = c(455, 100, 100),
 #'                       material = diffuse(color = "purple"))) %>%
@@ -383,7 +383,7 @@ xz_rect = function(x = 0, xwidth = 1, z = 0, zwidth = 1, y = 0, material = diffu
 #'                ambient_light = FALSE, samples = 128, parallel = TRUE, clamp_value = 5)
 #' }
 #' #Pass individual colors to each vertex: 
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' generate_cornell() %>%
 #'   add_object(triangle(v1 = c(100, 100, 100), v2 = c(555/2, 455, 455), v3 = c(455, 100, 100),
 #'                       color1 = "green", color2 = "yellow", color3 = "red")) %>%
@@ -473,7 +473,7 @@ triangle = function(v1 = c(1, 0, 0), v2 = c(0, 1, 0), v3 = c(-1, 0, 0),
 #'
 #' @examples
 #' #Generate a disk in the cornell box.
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' generate_cornell() %>%
 #'   add_object(disk(x = 555/2, y = 50, z = 555/2, radius = 150, 
 #'                   material = diffuse(color = "orange"))) %>%
@@ -481,7 +481,7 @@ triangle = function(v1 = c(1, 0, 0), v2 = c(0, 1, 0), v3 = c(-1, 0, 0),
 #'                ambient_light = FALSE, samples = 128, parallel = TRUE, clamp_value = 5)
 #' }
 #' #Rotate the disk.
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' generate_cornell() %>%
 #'   add_object(disk(x = 555/2, y = 555/2, z = 555/2, radius = 150, angle = c(-45, 0, 0), 
 #'                   material = diffuse(color = "orange"))) %>%
@@ -489,7 +489,7 @@ triangle = function(v1 = c(1, 0, 0), v2 = c(0, 1, 0), v3 = c(-1, 0, 0),
 #'                ambient_light = FALSE, samples = 128, parallel = TRUE, clamp_value = 5)
 #' }
 #' #Pass a value for the inner radius.
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' generate_cornell() %>% 
 #'   add_object(disk(x = 555/2, y = 555/2, z = 555/2, 
 #'                   radius = 150, inner_radius = 75, angle = c(-45, 0, 0), 
@@ -566,7 +566,7 @@ disk = function(x = 0, y = 0, z = 0, radius = 1, inner_radius = 0, material = di
 #' #due to package constraints, but the file contents are identical and it does not 
 #' #affect the function.
 #' 
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' generate_ground(material = diffuse(checkercolor = "grey50")) %>%
 #'   add_object(obj_model(y = -0.8, filename = r_obj(),
 #'                        material = microfacet(color = "gold", roughness = 0.05))) %>%
@@ -582,7 +582,7 @@ disk = function(x = 0, y = 0, z = 0, radius = 1, inner_radius = 0, material = di
 #' }
 #' 
 #' #Use scale_obj to make objects bigger--this is more robust than the generic scale argument.
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' generate_ground(material = diffuse(checkercolor = "grey50")) %>%
 #'   add_object(obj_model(y = -0.8, filename = r_obj(), scale_obj = 2,
 #'                        material = diffuse(noise = TRUE, noiseintensity = 10,noisephase=45))) %>%
@@ -658,7 +658,7 @@ obj_model = function(filename, x = 0, y = 0, z = 0, scale_obj = 1,
 #' @examples
 #' #Generate a cylinder in the cornell box. Add a cap to both ends.
 #' 
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' generate_cornell() %>%
 #'   add_object(cylinder(x = 555/2, y = 250, z = 555/2, 
 #'                       length = 300, radius = 100, material = metal())) %>%
@@ -666,7 +666,7 @@ obj_model = function(filename, x = 0, y = 0, z = 0, scale_obj = 1,
 #'                ambient_light = FALSE, samples = 128, parallel = TRUE, clamp_value = 5)
 #' }
 #' #Rotate the cylinder
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' generate_cornell() %>%
 #'   add_object(cylinder(x = 555/2, y = 250, z = 555/2, 
 #'                       length = 300, radius = 100, angle = c(0, 0, 45),
@@ -676,7 +676,7 @@ obj_model = function(filename, x = 0, y = 0, z = 0, scale_obj = 1,
 #' }
 #' 
 #' # Only render a subtended arc of the cylinder,
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' generate_cornell(lightintensity=3) %>%
 #'   add_object(cylinder(x = 555/2, y = 250, z = 555/2, capped = FALSE,
 #'                       length = 300, radius = 100, angle = c(45, 0, 0), phi_min = 0, phi_max = 180,
@@ -745,7 +745,7 @@ cylinder = function(x = 0, y = 0, z = 0, radius = 1, length = 1,
 #'
 #' @examples
 #' #Generate a segment in the cornell box. 
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' generate_cornell() %>%
 #'   add_object(segment(start = c(100, 100, 100), end = c(455, 455, 455), radius = 50)) %>%
 #'   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
@@ -764,7 +764,7 @@ cylinder = function(x = 0, y = 0, z = 0, radius = 1, length = 1,
 #'                             material = metal())
 #' }
 #' scene_segments = do.call(rbind,scene_list)
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' generate_cornell() %>% 
 #'   add_object(scene_segments) %>%
 #'   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
@@ -786,7 +786,7 @@ cylinder = function(x = 0, y = 0, z = 0, radius = 1, length = 1,
 #'   add_object(segment(start = c(455, 100, 455), end = c(455, 455, 455), radius = 10)) %>%
 #'   add_object(segment(start = c(100, 455, 100), end = c(455, 455, 100), radius = 10))
 #' 
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' generate_cornell() %>%
 #'   add_object(cube_outline) %>%
 #'   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
@@ -794,7 +794,7 @@ cylinder = function(x = 0, y = 0, z = 0, radius = 1, length = 1,
 #' }
 #' 
 #' #Shrink and rotate the cube
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' generate_cornell() %>%
 #'   add_object(group_objects(cube_outline, pivot_point = c(555/2, 555/2, 555/2),
 #'                            angle = c(45,45,45), scale = c(0.5,0.5,0.5))) %>%
@@ -883,7 +883,7 @@ segment = function(start = c(0, -1, 0), end = c(0, 1, 0), radius = 0.1,
 #' @export
 #' @examples
 #' #Generate an ellipsoid in a Cornell box
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' generate_cornell() %>%
 #'   add_object(ellipsoid(x = 555/2, y = 555/2, z = 555/2, 
 #'                        a = 100, b = 50, c = 50)) %>%
@@ -892,7 +892,7 @@ segment = function(start = c(0, -1, 0), end = c(0, 1, 0), radius = 0.1,
 #' }
 #' 
 #' #Change the axes to make it taller rather than wide:
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' generate_cornell() %>%
 #'   add_object(ellipsoid(x = 555/2, y = 555/2, z = 555/2, 
 #'                        a = 100, b = 200, c = 100, material = metal())) %>%
@@ -901,7 +901,7 @@ segment = function(start = c(0, -1, 0), end = c(0, 1, 0), radius = 0.1,
 #' }
 #' 
 #' #Rotate it and make it dielectric:
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' generate_cornell() %>%
 #'   add_object(ellipsoid(x = 555/2, y = 555/2, z = 555/2, 
 #'                        a = 100, b = 200, c = 100, angle = c(0, 0, 45),
@@ -981,14 +981,14 @@ ellipsoid = function(x = 0, y = 0, z = 0, a = 1, b = 1, c = 1,
 #' @examples
 #' #Manually create a polygon object, here a star:
 #' 
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' angles = seq(0,360,by=36)
 #' xx = rev(c(rep(c(1,0.5),5),1) * sinpi(angles/180))
 #' yy = rev(c(rep(c(1,0.5),5),1) * cospi(angles/180))
 #' star_polygon = data.frame(x=xx,y=yy)
 #' }
 #' 
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' generate_ground(depth=0,
 #'                 material = diffuse(color="grey50",checkercolor="grey20")) %>%
 #'   add_object(extruded_polygon(star_polygon,top=0.5,bottom=0,
@@ -1002,11 +1002,11 @@ ellipsoid = function(x = 0, y = 0, z = 0, a = 1, b = 1, c = 1,
 #' #and specify with the `holes` argument that everything after `nrow(star_polygon)`
 #' #in the following should be used to draw a hole:
 #' 
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' hollow_star = rbind(star_polygon,0.8*star_polygon)
 #' }
 #' 
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' generate_ground(depth=-0.01,
 #'                 material = diffuse(color="grey50",checkercolor="grey20")) %>%
 #'   add_object(extruded_polygon(hollow_star,top=0.25,bottom=0, holes = nrow(star_polygon) + 1,
@@ -1017,7 +1017,7 @@ ellipsoid = function(x = 0, y = 0, z = 0, a = 1, b = 1, c = 1,
 #' 
 #' # Render one in the y-x plane as well by changing the `plane` argument,
 #' # as well as offset it slightly.
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' generate_ground(depth=-0.01,
 #'                 material = diffuse(color="grey50",checkercolor="grey20")) %>%
 #'   add_object(extruded_polygon(hollow_star,top=0.25,bottom=0, holes = nrow(star_polygon),
@@ -1030,7 +1030,7 @@ ellipsoid = function(x = 0, y = 0, z = 0, a = 1, b = 1, c = 1,
 #' }
 #' 
 #' # Now add the zy plane:
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' generate_ground(depth=-0.01,
 #'                 material = diffuse(color="grey50",checkercolor="grey20")) %>%
 #'   add_object(extruded_polygon(hollow_star,top=0.25,bottom=0, holes = nrow(star_polygon) + 1,
@@ -1046,7 +1046,7 @@ ellipsoid = function(x = 0, y = 0, z = 0, a = 1, b = 1, c = 1,
 #' }
 #' 
 #' #We can also directly pass in sf polygons:
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' if(length(find.package("spData",quiet=TRUE)) > 0) {
 #'   us_states = spData::us_states
 #'   texas = us_states[us_states$NAME == "Texas",]
@@ -1057,7 +1057,7 @@ ellipsoid = function(x = 0, y = 0, z = 0, a = 1, b = 1, c = 1,
 #' 
 #' #This uses the raw coordinates, unless `center = TRUE`, which centers the bounding box
 #' #of the polygon at the origin.
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' generate_ground(depth=-0.01,
 #'                 material = diffuse(color="grey50",checkercolor="grey20")) %>%
 #'   add_object(extruded_polygon(texas, center = TRUE,
@@ -1068,7 +1068,7 @@ ellipsoid = function(x = 0, y = 0, z = 0, a = 1, b = 1, c = 1,
 #' }
 #' 
 #' #Here we use the raw coordinates, but offset the polygon manually.
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' generate_ground(depth=-0.01,
 #'                 material = diffuse(color="grey50",checkercolor="grey20")) %>%
 #'   add_object(extruded_polygon(us_states, x=-96,z=-40, top=2,
@@ -1083,7 +1083,7 @@ ellipsoid = function(x = 0, y = 0, z = 0, a = 1, b = 1, c = 1,
 #' #We can also set the map the height of each polygon to a column in the sf object,
 #' #scaling it down by the maximum population state.
 #' 
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' generate_ground(depth=0,
 #'                 material = diffuse(color="grey50",checkercolor="grey20",sigma=90)) %>%
 #'   add_object(extruded_polygon(us_states, x=-96,z=-45, data_column_top = "total_pop_15",
@@ -1474,20 +1474,20 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
 #'
 #' @examples
 #' #Generate a cone in a studio, pointing upwards:
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' generate_studio() %>% 
 #'  add_object(cone(start=c(0,-1,0), end=c(0,1,0), radius=1,material=diffuse(color="red"))) %>% 
 #'  add_object(sphere(y=5,x=5,material=light(intensity=40))) %>% 
 #'  render_scene(samples=128,clamp_value=10)
 #' }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #'  #Change the radius, length, and direction
 #' generate_studio() %>% 
 #'  add_object(cone(start=c(0,0,0), end=c(0,-1,0), radius=0.5,material=diffuse(color="red"))) %>% 
 #'  add_object(sphere(y=5,x=5,material=light(intensity=40))) %>% 
 #'  render_scene(samples=128,clamp_value=10)
 #' }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Give custom start and end points (and customize the color/texture)
 #' generate_studio() %>% 
 #'  add_object(cone(start=c(-1,0.5,-1), end=c(0,0,0), radius=0.5,material=diffuse(color="red"))) %>%
@@ -1498,7 +1498,7 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
 #'  add_object(sphere(y=5,x=5,material=light(intensity=40))) %>% 
 #'  render_scene(samples=128,clamp_value=10)
 #' }
-#' if(rayrender:::run_documentation()) {  
+#' if(run_documentation()) {  
 #' #Specify cone via direction and location, instead of start and end positions
 #' #Length is derived from the magnitude of the direction.
 #' gold_mat = microfacet(roughness=0.1,eta=c(0.216,0.42833,1.3184), kappa=c(3.239,2.4599,1.8661))
@@ -1512,7 +1512,7 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
 #'   add_object(sphere(y=3,x=3,z=-3,material=light(color="green"))) %>% 
 #'   render_scene(lookfrom=c(0,4,10), clamp_value=10, samples=128)
 #' }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #'  #Render the position from the base, instead of the center of the cone:
 #'  noise_mat = material = glossy(color="purple",noisecolor="blue", noise=5)
 #'  generate_studio() %>% 
@@ -1622,13 +1622,13 @@ cone = function(start = c(0, 0, 0), end = c(0, 1, 0), radius = 0.5,
 #'
 #' @examples
 #' #Draw a simple arrow from x = -1 to x = 1
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' generate_studio() %>% 
 #'   add_object(arrow(start = c(-1,0,0), end = c(1,0,0), material=glossy(color="red"))) %>% 
 #'   add_object(sphere(y=5,material=light(intensity=20))) %>% 
 #'   render_scene(clamp_value=10,  samples=128)
 #' }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Change the proportion of tail to top
 #' generate_studio(depth=-2) %>% 
 #'   add_object(arrow(start = c(-1,-1,0), end = c(1,-1,0), tail_proportion = 0.5,
@@ -1640,7 +1640,7 @@ cone = function(start = c(0, 0, 0), end = c(0, 1, 0), radius = 0.5,
 #'   add_object(sphere(y=5,z=5,x=2,material=light(intensity=30))) %>% 
 #'   render_scene(clamp_value=10, fov=25,  samples=128)
 #' }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Change the radius of the tail/top segments
 #' generate_studio(depth=-1.5) %>% 
 #'   add_object(arrow(start = c(-1,-1,0), end = c(1,-1,0), tail_proportion = 0.75,
@@ -1655,7 +1655,7 @@ cone = function(start = c(0, 0, 0), end = c(0, 1, 0), radius = 0.5,
 #'   add_object(sphere(y=5,z=5,x=2,material=light(intensity=30))) %>% 
 #'   render_scene(clamp_value=10, samples=128)
 #' }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #We can also specify arrows via a midpoint and direction:
 #' generate_studio(depth=-1) %>% 
 #'   add_object(arrow(start = c(-1,-0.5,0), direction = c(0,0,1),
@@ -1670,7 +1670,7 @@ cone = function(start = c(0, 0, 0), end = c(0, 1, 0), radius = 0.5,
 #'   render_scene(clamp_value=10, samples=128, 
 #'                lookfrom=c(0,5,10), lookat=c(0,-0.5,0), fov=16)
 #' }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Plot a 3D vector field for a gravitational well:
 #' 
 #' r = 1.5
@@ -1760,7 +1760,7 @@ arrow = function(start = c(0,0,0), end = c(0,1,0),
 #'
 #' @examples
 #' #Generate the default curve:
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' generate_studio(depth=-0.2) %>%
 #'   add_object(bezier_curve(material=diffuse(color="red"))) %>%
 #'   add_object(sphere(y=3,z=5,x=2,radius=0.3,
@@ -1769,7 +1769,7 @@ arrow = function(start = c(0,0,0), end = c(0,1,0),
 #'                samples=128)
 #' }
 #' 
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Change the control points to change the direction of the curve. Here, we place spheres
 #' #at the control point locations.
 #' generate_studio(depth=-0.2) %>%
@@ -1783,7 +1783,7 @@ arrow = function(start = c(0,0,0), end = c(0,1,0),
 #'   render_scene(clamp_value = 10, lookat = c(0,0.5,0), fov=15,
 #'                samples=128)
 #' }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #We can make the curve flat (always facing the camera) by setting the type to `flat`
 #' generate_studio(depth=-0.2) %>%
 #'   add_object(bezier_curve(type="flat", material=glossy(color="red"))) %>%
@@ -1792,7 +1792,7 @@ arrow = function(start = c(0,0,0), end = c(0,1,0),
 #'   render_scene(clamp_value = 10, lookat = c(0,0.5,0), fov=13,
 #'                samples=128)
 #' }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #We can also plot a ribbon, which is further specified by a start and end orientation with
 #' #two surface normals.
 #' generate_studio(depth=-0.2) %>%
@@ -1805,7 +1805,7 @@ arrow = function(start = c(0,0,0), end = c(0,1,0),
 #'   render_scene(clamp_value = 10, lookat = c(0,0.5,0), fov=13,
 #'                samples=128)
 #' }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Create a single curve and copy and rotate it around the y-axis to create a wavy fountain effect:
 #' scene_curves = list()
 #' for(i in 1:90) {
@@ -1932,7 +1932,7 @@ bezier_curve = function(p1 = c(0,0,0), p2 = c(-1,0.33,0), p3 = c(1,0.66,0), p4=c
 #' @export
 #'
 #' @examples
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Generate a wavy line, showing the line goes through the specified points:
 #' wave = list(c(-2,1,0),c(-1,-1,0),c(0,1,0),c(1,-1,0),c(2,1,0))
 #' point_mat = glossy(color="green")
@@ -1946,14 +1946,14 @@ bezier_curve = function(p1 = c(0,0,0), p2 = c(-1,0.33,0), p3 = c(1,0.66,0), p4=c
 #'   add_object(sphere(z=5,x=5,y=5,radius=2,material=light(intensity=15))) %>% 
 #'   render_scene(samples=128, clamp_value=10,fov=30)
 #' }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Here we use straight lines by setting `straight = TRUE`:
 #' generate_studio(depth=-1.5) %>% 
 #'   add_object(path(points = wave,straight = TRUE, material=glossy(color="red"))) %>% 
 #'   add_object(sphere(z=5,x=5,y=5,radius=2,material=light(intensity=15))) %>% 
 #'   render_scene(samples=128, clamp_value=10,fov=30)
 #' }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #We can also pass a matrix of values, specifying the x/y/z coordinates. Here,
 #' #we'll create a random curve:
 #' set.seed(21)
@@ -1963,14 +1963,14 @@ bezier_curve = function(p1 = c(0,0,0), p2 = c(-1,0.33,0), p3 = c(1,0.66,0), p4=c
 #'   add_object(sphere(y=5,radius=1,material=light(intensity=30))) %>% 
 #'   render_scene(samples=128, clamp_value=10)
 #' }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #We can ensure the curve is closed by setting `closed = TRUE`
 #' generate_studio(depth=-1.5) %>% 
 #'   add_object(path(points=random_mat, closed = TRUE, material=glossy(color="red"))) %>% 
 #'   add_object(sphere(y=5,radius=1,material=light(intensity=30))) %>% 
 #'   render_scene(samples=128, clamp_value=10)
 #' }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Finally, let's render a pretzel to show how you can render just a subset of the curve:
 #' pretzel = list(c(-0.8,-0.5,0.1),c(0,-0.2,-0.1),c(0,0.3,0.1),c(-0.5,0.5,0.1), c(-0.6,-0.5,-0.1),
 #'                c(0,-0.8,-0.1),
@@ -1982,21 +1982,21 @@ bezier_curve = function(p1 = c(0,0,0), p2 = c(-1,0.33,0), p3 = c(1,0.66,0), p4=c
 #'   add_object(sphere(y=5,x=2,z=4,material=light(intensity=20,spotlight_focus = c(0,0,0)))) %>% 
 #'   render_scene(samples=128, clamp_value=10)
 #' }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Here, we'll render only the first third of the pretzel by setting `u_max = 0.33`
 #' generate_studio(depth = -1.1) %>% 
 #'   add_object(path(pretzel, width=0.17, u_max=0.33, material = glossy(color="#db5b00"))) %>% 
 #'   add_object(sphere(y=5,x=2,z=4,material=light(intensity=20,spotlight_focus = c(0,0,0)))) %>% 
 #'   render_scene(samples=128, clamp_value=10)
 #' }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Here's the last third, by setting `u_min = 0.66`
 #' generate_studio(depth = -1.1) %>% 
 #'   add_object(path(pretzel, width=0.17, u_min=0.66, material = glossy(color="#db5b00"))) %>% 
 #'   add_object(sphere(y=5,x=2,z=4,material=light(intensity=20,spotlight_focus = c(0,0,0)))) %>% 
 #'   render_scene(samples=128, clamp_value=10)
 #' }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Here's the full pretzel, decomposed into thirds using the u_min and u_max coordinates
 #' generate_studio(depth = -1.1) %>% 
 #'   add_object(path(pretzel, width=0.17, u_max=0.33, x = -0.8, y =0.6,
@@ -2161,13 +2161,13 @@ path = function(points,
 #'
 #' @examples
 #' #Generate a label in the cornell box.
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' generate_cornell() %>% 
 #'   add_object(text3d(label="Cornell Box", x=555/2,y=555/2,z=555/2,text_height=60,
 #'                     material=diffuse(color="grey10"), angle=c(0,180,0))) %>% 
 #'   render_scene(samples=128, clamp_value=10)
 #' }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Change the orientation
 #' generate_cornell() %>% 
 #'   add_object(text3d(label="YZ Plane", x=550,y=555/2,z=555/2,text_height=100,
@@ -2181,7 +2181,7 @@ path = function(points,
 #'                     material=diffuse(color="grey10"))) %>% 
 #'   render_scene(samples=128, clamp_value=10)
 #' }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Add an label in front of a sphere
 #' generate_cornell() %>% 
 #'   add_object(text3d(label="Cornell Box", x=555/2,y=555/2,z=555/2,text_height=60,
@@ -2196,7 +2196,7 @@ path = function(points,
 #'   render_scene(samples=128, clamp_value=10)
 #' }
 #'   
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #A room full of bees
 #' bee_list = list()
 #' for(i in 1:100) {
@@ -2560,13 +2560,13 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
 #' @export
 #'
 #' @examples
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Specify the points for the path to travel though and the ground material
 #' points = list(c(0,0,1),c(-0.5,0,-1),c(0,1,-1),c(1,0.5,0),c(0.6,0.3,1))
 #' ground_mat = material=diffuse(color="grey50",
 #'                               checkercolor = "grey20",checkerperiod = 1.5)
 #' }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Default path shape is a circle
 #' generate_studio(depth=-0.4,material=ground_mat) |>
 #'   add_object(extruded_path(points = points, width=0.25, 
@@ -2575,7 +2575,7 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
 #'   render_scene(lookat=c(0.3,0.5,0.5),fov=12, width=800,height=800, clamp_value = 10,
 #'                aperture=0.025, samples=128, sample_method="sobol_blue")
 #' }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Change the width evenly along the tube
 #' generate_studio(depth=-0.4,material=ground_mat) |>
 #'   add_object(extruded_path(points = points, width=0.25, 
@@ -2585,7 +2585,7 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
 #'   render_scene(lookat=c(0.3,0.5,0.5),fov=12, width=800,height=800, clamp_value = 10,
 #'                aperture=0.025, samples=128, sample_method="sobol_blue")
 #' }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Change the width along the full length of the tube
 #' generate_studio(depth=-0.4,material=ground_mat) |>
 #'   add_object(extruded_path(points = points, 
@@ -2595,7 +2595,7 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
 #'   render_scene(lookat=c(0.3,0.5,0.5),fov=12, width=800,height=800, clamp_value = 10,
 #'                aperture=0.025, samples=128, sample_method="sobol_blue")
 #' }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Specify the exact parametric x positions for the width values:
 #' custom_width = data.frame(x=c(0,0.2,0.5,0.8,1), y=c(0.25,0.5,0,0.5,0.25))
 #' generate_studio(depth=-0.4,material=ground_mat) |>
@@ -2606,7 +2606,7 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
 #'   render_scene(lookat=c(0.3,0.5,0.5),fov=12, width=800,height=800, clamp_value = 10,
 #'                aperture=0.025, samples=128, sample_method="sobol_blue")
 #' }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Generate a star polygon
 #' angles = seq(360,0,length.out=21)
 #' xx = c(rep(c(1,0.75,0.5,0.75),5),1) * sinpi(angles/180)/4
@@ -2622,7 +2622,7 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
 #'   render_scene(lookat=c(0.3,0.5,1),fov=12, width=800,height=800, clamp_value = 10,
 #'                aperture=0.025, samples=128, sample_method="sobol_blue")
 #' }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Specify a circle polygon
 #' angles = seq(360,0,length.out=21)
 #' xx = sinpi(angles/180)/4
@@ -2639,7 +2639,7 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
 #'   render_scene(lookat=c(0.3,0.5,0.5),fov=12, width=800,height=800, clamp_value = 10,
 #'                aperture=0.025, samples=128, sample_method="sobol_blue")
 #' }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Add three and a half twists along the path, and make sure the breaks are evenly spaced
 #' generate_studio(depth=-0.4,material=ground_mat) |>
 #'   add_object(extruded_path(points = points, width=0.5, twists = 3.5,
@@ -2650,7 +2650,7 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
 #'   render_scene(lookat=c(0.3,0.5,0),fov=12, width=800,height=800, clamp_value = 10,
 #'                aperture=0.025, samples=128, sample_method="sobol_blue")
 #' }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Smooth the normals for a less sharp appearance:
 #' generate_studio(depth=-0.4,material=ground_mat) |>
 #'   add_object(extruded_path(points = points, width=0.5, twists = 3.5,
@@ -2663,7 +2663,7 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
 #'   render_scene(lookat=c(0.3,0.5,0),fov=12, width=800,height=800, clamp_value = 10,
 #'                aperture=0.025, samples=128, sample_method="sobol_blue")
 #' }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Only generate part of the curve, specified by the u_min and u_max arguments
 #' generate_studio(depth=-0.4,material=ground_mat) |>
 #'   add_object(extruded_path(points = points, width=0.5, twists = 3.5,
@@ -2675,7 +2675,7 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
 #'   render_scene(lookat=c(0.3,0.5,0),fov=12, width=800,height=800, clamp_value = 10,
 #'                aperture=0.025, samples=128, sample_method="sobol_blue")
 #' }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Render a Mobius strip with 1.5 turns 
 #' points = list(c(0,0,0),c(0.5,0.5,0),c(0,1,0),c(-0.5,0.5,0))
 #' square_polygon = matrix(c(-1, -0.1, 0,
@@ -2694,7 +2694,7 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
 #'  render_scene(lookat=c(0,0.5,0), fov=10, samples=128, sample_method = "sobol_blue",
 #'               width = 800, height=800)
 #' }
-#' if(rayrender:::run_documentation()) {
+#' if(run_documentation()) {
 #' #Create a green glass tube with the dielectric priority interface
 #' #and fill it with a purple neon tube light
 #' generate_ground(depth=-0.4,material=diffuse(color="grey50",
@@ -3330,3 +3330,126 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
   return(return_scene)
 }
 
+#' `raymesh` model
+#' 
+#' Load an `raymesh` object, as specified in the `rayvertex` package. 
+#'
+#' @param mesh A `raymesh` object. Pulls the vertex, index, texture coordinates, 
+#' normals, and material information. 
+#' @param x Default `0`. x-coordinate to offset the model.
+#' @param y Default `0`. y-coordinate to offset the model.
+#' @param z Default `0`. z-coordinate to offset the model.
+#' @param swap_yz Default `FALSE`. Swap the Y and Z coordinates.
+#' @param reverse Default `FALSE`. Reverse the orientation of the indices, flipping their normals.
+#' @param verbose Default `FALSE`. If `TRUE`, prints information about the mesh to the console.
+#' @param override_material Default `FALSE`. If `TRUE`, overrides the material specified in the 
+#' `raymesh` object with the one specified in `material`.
+#' @param flip_transmittance Default `TRUE`. Flips `(1-t)` the transmittance values to match the way the colors
+#' would be interpreted in a rasterizer (where it specifies the transmitted color). Turn off to specify
+#' the attenuation values directly.
+#' @param material Default  \code{\link{diffuse}}, but ignored unless `override_material = TRUE`. The material, called from one of the material 
+#' functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}. 
+#' @param angle Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.
+#' @param order_rotation Default `c(1, 2, 3)`. The order to apply the rotations, referring to "x", "y", and "z".
+#' @param flipped Default `FALSE`. Whether to flip the normals.
+#' @param scale Default `c(1, 1, 1)`. Scale transformation in the x, y, and z directions. If this is a single value,
+#' number, the object will be scaled uniformly.
+#' Note: emissive objects may not currently function correctly when scaled.
+#' 
+#' @return Single row of a tibble describing the raymesh model in the scene.
+#' @export
+#'
+#' @examples
+#' #Render a simple raymesh object
+#' library(rayvertex)
+#' if(run_documentation()) {
+#' raymesh_model(sphere_mesh(position = c(-1, 0, 0),
+#'               material = material_list(transmittance = "red"))) %>%
+#'   add_object(generate_ground(material = diffuse(checkercolor="grey20"))) %>%
+#'   render_scene(fov = 30, samples=128, sample_method="sobol_blue")
+#' }
+#' 
+#' # We create a complex rayvertex mesh, using the `rayvertex::add_shape` function which
+#' # creates a new `raymesh` object out of individual `raymesh` objects
+#' rm_scene = sphere_mesh(position = c(-1, 0, 0),
+#'             material = material_list(transmittance = "red")) |> 
+#'     add_shape(sphere_mesh(position = c(1, 0, 0),
+#'             material = material_list(transmittance = "green", ior = 1.5)))
+#'
+#' # Pass the single raymesh object to `raymesh_model()`
+#' # `raymesh_model()`
+#' if(run_documentation()) {
+#' raymesh_model(rm_scene) %>%
+#'   add_object(generate_ground(material = diffuse(checkercolor="grey20"))) %>%
+#'   render_scene(fov = 30, samples=128, sample_method="sobol_blue")
+#' }
+#' 
+#' # Set `flip_transmittance = FALSE` argument to specify attenuation coefficients directly
+#' # (as specified in the `dielectric()` material). We change the material's numerical attenuation
+#' # constants using `rayvertex::change_material`
+#' rm_scene_new= change_material(rm_scene, transmittance = c(1,2,0.3), id = 1) |> 
+#'   change_material(transmittance = c(3,1,2), id = 2)
+#' if(run_documentation()) {
+#' raymesh_model(rm_scene_new, flip_transmittance = FALSE) %>%
+#'   add_object(generate_ground(material = diffuse(checkercolor="grey20"))) %>%
+#'   render_scene(fov = 30, samples=128, sample_method="sobol_blue")
+#' }
+#'
+#' # Override the material specified in the `raymesh` object and render the scene
+#' if(run_documentation()) {
+#' raymesh_model(rm_scene,
+#'               material = dielectric(attenuation = "dodgerblue2", attenuation_intensity = 4), 
+#'   override_material = TRUE) %>%
+#'   add_object(generate_ground(material = diffuse(checkercolor="grey20"))) %>%
+#'   render_scene(fov = 30, samples=128, sample_method="sobol_blue")
+#' }
+#'
+#' # Adjusting the scale, position, and rotation parameters of the `raymesh` model
+#' if(run_documentation()) {
+#' raymesh_model(rm_scene,
+#'               x = 0, y = 0.5, z = -1, angle = c(0, 0, 20)) %>%
+#'   add_object(generate_ground(material = diffuse(checkercolor="grey20"))) %>%
+#'   render_scene(fov = 30,lookat=c(0,0.5,0), samples=128, sample_method="sobol_blue")
+#' }
+raymesh_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FALSE,
+                         flip_transmittance = TRUE, verbose = FALSE, 
+                         importance_sample_lights = FALSE,
+                         calculate_consistent_normals = TRUE,
+                         override_material = FALSE, material = diffuse(), 
+                         angle = c(0, 0, 0), order_rotation = c(1, 2, 3), 
+                         flipped = FALSE, scale = c(1,1,1), validate_mesh = TRUE) {
+  if(length(scale) == 1) {
+    scale = c(scale, scale, scale)
+  }
+  if(!inherits(mesh,"ray_mesh")) {
+    stop("mesh must be of class 'ray_mesh': actual class is ", class(mesh))
+  }
+  if(validate_mesh) {
+    raymesh = rayvertex::validate_mesh(mesh)
+  }
+  
+  mesh_info = list(raymesh)
+  info = c(unlist(material$properties), importance_sample_lights, calculate_consistent_normals, 
+           override_material, flip_transmittance)
+  new_tibble_row(list(x = x, y = y, z = z, radius = NA, 
+                      type = material$type, shape = "raymesh",
+                      properties = list(info), 
+                      checkercolor = material$checkercolor, 
+                      gradient_color = material$gradient_color, gradient_transpose = material$gradient_transpose, 
+                      world_gradient = material$world_gradient, gradient_point_info = material$gradient_point_info,
+                      gradient_type = material$gradient_type,
+                      noise = material$noise, noisephase = material$noisephase, 
+                      noiseintensity = material$noiseintensity, noisecolor = material$noisecolor,
+                      angle = list(angle), image = material$image, image_repeat = material$image_repeat,
+                      alphaimage = list(material$alphaimage), bump_texture = list(material$bump_texture),
+                      roughness_texture = list(material$rough_texture),
+                      bump_intensity = material$bump_intensity, lightintensity = material$lightintensity,
+                      flipped = flipped, fog = material$fog, fogdensity = material$fogdensity,
+                      implicit_sample = material$implicit_sample,  sigma = material$sigma, glossyinfo = material$glossyinfo,
+                      order_rotation = list(order_rotation),
+                      group_transform = list(NA),
+                      tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale),
+                      material_id = NA, csg_object = list(NA), mesh_info = mesh_info,
+                      start_transform_animation = list(NA), end_transform_animation = list(NA),
+                      start_time = 0, end_time = 1))
+}

@@ -21,6 +21,7 @@
 #include "csg.h"
 #include "plymesh.h"
 #include "mesh3d.h"
+#include "raymesh.h"
 #include "transform.h"
 #include "transformcache.h"
 #include <Rcpp.h>

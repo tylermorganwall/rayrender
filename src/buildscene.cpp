@@ -155,7 +155,7 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
       prop_len = 8;
     } else if (type(i) == 9) {
       prop_len = 6;
-    }
+    } 
 
     if(is_shared_mat(i) && shared_materials->size() > static_cast<size_t>(shared_id_mat(i)-1)) {
       tex = shared_materials->at(shared_id_mat(i)-1);
@@ -495,6 +495,8 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
       center = vec3f(x(i), y(i), z(i));
     } else if(shape(i) == 17) {
       center = vec3f(x(i), y(i), z(i));
+    } else if(shape(i) == 18) {
+      center = vec3f(x(i), y(i), z(i));
     }
     
     Transform GroupTransform(temp_group_transform);
@@ -693,6 +695,24 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
                                        ObjToWorld,WorldToObj, isflipped(i),
                                        prop_len, tempvector, temp_glossy, sigma(i),
                                        lightintensity(i));
+      if(has_animation(i)) {
+        entry = std::make_shared<AnimatedHitable>(entry, Animate);
+      }
+      list.add(entry);
+    } else if (shape(i) == 18) {
+      List raymesh_object = mesh_list(i);
+      //importance sample lights--need to change
+      ////calculate consistent normals--need to change
+      entry = std::make_shared<raymesh>(raymesh_object,
+                                        tex,
+                                        tempvector(prop_len+1), 
+                                        tempvector(prop_len+2), 
+                                        tempvector(prop_len+3),
+                                        tempvector(prop_len+4),
+                                        imp_sample_objects, 
+                                        verbose,
+                                        shutteropen, shutterclose, bvh_type, rng, 
+                                        ObjToWorld, WorldToObj, isflipped(i));
       if(has_animation(i)) {
         entry = std::make_shared<AnimatedHitable>(entry, Animate);
       }

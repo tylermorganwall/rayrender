@@ -59,7 +59,7 @@ prepare_scene_list = function(scene, width = 400, height = 400, fov = 20,
                            "sphere" = 1,"xy_rect" = 2, "xz_rect" = 3,"yz_rect" = 4,"box" = 5, "triangle" = 6, 
                            "obj" = 7, "objcolor" = 8, "disk" = 9, "cylinder" = 10, "ellipsoid" = 11,
                            "objvertexcolor" = 12, "cone" = 13, "curve" = 14, "csg_object" = 15, "ply" = 16,
-                           "mesh3d" = 17))
+                           "mesh3d" = 17, "raymesh" = 18))
   typevec = unlist(lapply(tolower(scene$type),switch,
                           "diffuse" = 1,"metal" = 2,"dielectric" = 3, 
                           "oren-nayar" = 4, "light" = 5, "microfacet" = 6, 
@@ -449,7 +449,7 @@ prepare_scene_list = function(scene, width = 400, height = 400, fov = 20,
   csg_info = list()
   csg_info$csg = csg_list
   
-  #mesh3d handler
+  #mesh3d/raymesh handler
   mesh_list = scene$mesh_info
   
   

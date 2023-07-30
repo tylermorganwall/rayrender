@@ -49,7 +49,7 @@ Rectangular XZ Plane Object
 }
 \examples{
 #Generate a purple rectangle in the cornell box.
-if(rayrender:::run_documentation()) {
+if(run_documentation()) {
 generate_cornell() \%>\%
   add_object(xz_rect(x = 555/2, y = 100, z = 555/2, xwidth = 200, zwidth = 200,
              material = diffuse(color = "purple"))) \%>\%
@@ -58,7 +58,7 @@ generate_cornell() \%>\%
 }
 
 #Generate a gold plane in the cornell box
-if(rayrender:::run_documentation()) {
+if(run_documentation()) {
 generate_cornell() \%>\%
   add_object(xz_rect(x = 555/2, y = 100, z = 555/2, 
              xwidth = 200, zwidth = 200, angle = c(0, 30, 0),

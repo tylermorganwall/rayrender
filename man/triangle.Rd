@@ -68,7 +68,7 @@ Triangle Object
 }
 \examples{
 #Generate a triangle in the Cornell box.
-if(rayrender:::run_documentation()) {
+if(run_documentation()) {
 generate_cornell() \%>\%
   add_object(triangle(v1 = c(100, 100, 100), v2 = c(555/2, 455, 455), v3 = c(455, 100, 100),
                       material = diffuse(color = "purple"))) \%>\%
@@ -76,7 +76,7 @@ generate_cornell() \%>\%
                ambient_light = FALSE, samples = 128, parallel = TRUE, clamp_value = 5)
 }
 #Pass individual colors to each vertex: 
-if(rayrender:::run_documentation()) {
+if(run_documentation()) {
 generate_cornell() \%>\%
   add_object(triangle(v1 = c(100, 100, 100), v2 = c(555/2, 455, 455), v3 = c(455, 100, 100),
                       color1 = "green", color2 = "yellow", color3 = "red")) \%>\%

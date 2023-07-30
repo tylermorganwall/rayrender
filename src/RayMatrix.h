@@ -5,6 +5,7 @@
 
 class RayMatrix {
 public: 
+  RayMatrix();
   RayMatrix(unsigned int _rows, unsigned int _cols, float start_value = 0);
   inline float& operator()(unsigned int x, unsigned int y) { 
     return data[x + nrow * y]; 

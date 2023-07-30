@@ -22,13 +22,13 @@ List describing the ellipsoid in the scene.
 CSG Ellipsoid
 }
 \examples{
-if(rayrender:::run_documentation()) {
+if(run_documentation()) {
 #Generate a basic ellipsoid:
 generate_ground(material=diffuse(checkercolor="grey20")) \%>\% 
   add_object(csg_object(csg_ellipsoid(),material=glossy(color="red"))) \%>\% 
   render_scene(clamp_value=10,fov=20)
   }
-if(rayrender:::run_documentation()) {
+if(run_documentation()) {
 #Three different ellipsoids:
 generate_ground(material=diffuse(checkercolor="grey20")) \%>\% 
  add_object(csg_object(csg_group(list(
@@ -38,13 +38,13 @@ generate_ground(material=diffuse(checkercolor="grey20")) \%>\%
    material=glossy(color="red"))) \%>\% 
  render_scene(clamp_value=10,fov=20,lookfrom=c(0,5,10))
  }
-if(rayrender:::run_documentation()) {
+if(run_documentation()) {
 #Generate a glass ellipsoid:
 generate_ground(material=diffuse(checkercolor="grey20")) \%>\% 
   add_object(csg_object(csg_ellipsoid(),material=dielectric(attenuation = c(1,1,0.3)))) \%>\% 
   render_scene(clamp_value=10,fov=20)
   }
-if(rayrender:::run_documentation()) {
+if(run_documentation()) {
 #Generate a glass ellipsoid in a Cornell box:
 generate_cornell() \%>\% 
   add_object(csg_object(csg_ellipsoid(x=555/2,y=555/2,z=555/2,axes=c(100,150,200)),

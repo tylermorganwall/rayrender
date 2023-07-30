@@ -194,7 +194,7 @@ bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
   rec.u = uHit;
   rec.v = vHit;
   
-  rec.mat_ptr = mesh->mtl_materials[mat_id].get();
+  rec.mat_ptr = mesh->mesh_materials[mat_id].get();
   rec.alpha_miss = alpha_miss;
   rec.shape = this;
   
@@ -395,7 +395,7 @@ bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Samp
   rec.u = uHit;
   rec.v = vHit;
   
-  rec.mat_ptr = mesh->mtl_materials[mat_id].get();
+  rec.mat_ptr = mesh->mesh_materials[mat_id].get();
   rec.alpha_miss = alpha_miss;
   rec.shape = this;
   

@@ -103,7 +103,7 @@ Metallic Material
 scene = generate_cornell() \%>\%
   add_object(sphere(x=555/2,y=555/2,z=555/2,radius=555/8,
   material=metal(eta=c(3.2176,3.1029,2.1839), k = c(3.3018,3.33,3.0339))))
-if(rayrender:::run_documentation()) {
+if(run_documentation()) {
 render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=50,
              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 }
@@ -111,7 +111,7 @@ render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=50,
 scene = scene \%>\%
   add_object(cube(x=380,y=150/2,z=200,xwidth=150,ywidth=150,zwidth=150,
   material = metal(eta = c(1.07,0.8946,0.523), k = c(6.7144,6.188,4.95)),angle=c(0,45,0)))
-if(rayrender:::run_documentation()) {
+if(run_documentation()) {
 render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=128,
              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 }
@@ -121,7 +121,7 @@ scene = scene \%>\%
                   material = metal(eta = c(0.497,0.8231,1.338), 
                                    k = c(2.898,2.476,2.298)),
                   angle=c(0,-30,0)))
-if(rayrender:::run_documentation()) {
+if(run_documentation()) {
 render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=128,
              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 }
@@ -132,7 +132,7 @@ scene2 = scene \%>\%
                   material = metal(eta = c(1.44,1.78,1.9), 
                                    k = c(3.18,3.36,3.43)),
                   angle=c(0,-30,0)))
-if(rayrender:::run_documentation()) {
+if(run_documentation()) {
 render_scene(scene2, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=128,
              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 }

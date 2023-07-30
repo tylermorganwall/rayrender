@@ -40,7 +40,7 @@ Hair Material
 }
 \examples{
 #Create a hairball
-if(rayrender:::run_documentation()) {
+if(run_documentation()) {
 #Generate rendom points on a sphere
 lengthval = 0.5
 theta = acos(2*runif(10000)-1.0);
@@ -70,7 +70,7 @@ generate_ground(depth=-2,material=diffuse(color="grey20")) \%>\%
   render_scene(samples=64, lookfrom=c(0,3,10),clamp_value = 10,
                fov=20)
 }
-if(rayrender:::run_documentation()) {         
+if(run_documentation()) {         
                
 #Specify the color directly and increase hair roughness
 for(i in 1:length(phi)) {

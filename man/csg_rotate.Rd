@@ -36,7 +36,7 @@ List describing the triangle in the scene.
 CSG Rotate
 }
 \examples{
-if(rayrender:::run_documentation()) {
+if(run_documentation()) {
 #Rotate a pyramid (translating it upwards because the object is scaled from the center):
 generate_ground(material=diffuse(checkercolor="grey20")) \%>\% 
   add_object(csg_object(csg_pyramid(z=1,y=-0.99),
@@ -48,7 +48,7 @@ generate_ground(material=diffuse(checkercolor="grey20")) \%>\%
   render_scene(lookfrom=c(-3,4,10), fov=15, 
                lookat=c(0,-0.5,0),clamp_value=10)
   }
-if(rayrender:::run_documentation()) {
+if(run_documentation()) {
 #Rotate by specifying a new up vector:
 generate_ground(material=diffuse(checkercolor="grey20")) \%>\% 
   add_object(csg_object(csg_pyramid(z=1,y=-0.99),

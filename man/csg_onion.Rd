@@ -20,7 +20,7 @@ regions on the interior. Thus, you will only see an effect with a transparent ma
 you carve into the object.
 }
 \examples{
-if(rayrender:::run_documentation()) {
+if(run_documentation()) {
 #Cut and onion a sphere:
 generate_ground(material=diffuse(checkercolor="grey20")) \%>\%
   add_object(csg_object(csg_combine(
@@ -39,7 +39,7 @@ generate_ground(material=diffuse(checkercolor="grey20")) \%>\%
  render_scene(clamp_value=10,lookat=c(0,-0.5,0),
               lookfrom=c(3,5,10),fov=35)
 }
-if(rayrender:::run_documentation()) {
+if(run_documentation()) {
 #Multiple onion layers:
 generate_ground(material=diffuse(checkercolor="grey20")) \%>\%
   add_object(csg_object(csg_combine(
@@ -50,7 +50,7 @@ generate_ground(material=diffuse(checkercolor="grey20")) \%>\%
   render_scene(clamp_value=10,lookat=c(0,-0.5,0),
                lookfrom=c(3,5,10),fov=20)
   }
-if(rayrender:::run_documentation()) {
+if(run_documentation()) {
 #Onion with dielectric sphere to make a bubble:
 generate_cornell() \%>\%
   add_object(csg_object(
@@ -58,7 +58,7 @@ generate_cornell() \%>\%
     material=dielectric(attenuation=c(1,1,0.3)/100))) \%>\%
   render_scene(clamp_value=10)
   }
-if(rayrender:::run_documentation()) {
+if(run_documentation()) {
 #Multiple onion operations to make a bubble within a bubble:
 generate_cornell() \%>\%
   add_object(csg_object(

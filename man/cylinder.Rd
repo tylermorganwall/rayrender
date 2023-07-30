@@ -59,7 +59,7 @@ Cylinder Object
 \examples{
 #Generate a cylinder in the cornell box. Add a cap to both ends.
 
-if(rayrender:::run_documentation()) {
+if(run_documentation()) {
 generate_cornell() \%>\%
   add_object(cylinder(x = 555/2, y = 250, z = 555/2, 
                       length = 300, radius = 100, material = metal())) \%>\%
@@ -67,7 +67,7 @@ generate_cornell() \%>\%
                ambient_light = FALSE, samples = 128, parallel = TRUE, clamp_value = 5)
 }
 #Rotate the cylinder
-if(rayrender:::run_documentation()) {
+if(run_documentation()) {
 generate_cornell() \%>\%
   add_object(cylinder(x = 555/2, y = 250, z = 555/2, 
                       length = 300, radius = 100, angle = c(0, 0, 45),
@@ -77,7 +77,7 @@ generate_cornell() \%>\%
 }
 
 # Only render a subtended arc of the cylinder,
-if(rayrender:::run_documentation()) {
+if(run_documentation()) {
 generate_cornell(lightintensity=3) \%>\%
   add_object(cylinder(x = 555/2, y = 250, z = 555/2, capped = FALSE,
                       length = 300, radius = 100, angle = c(45, 0, 0), phi_min = 0, phi_max = 180,

@@ -20,13 +20,13 @@ List describing the capsule in the scene.
 CSG Capsule
 }
 \examples{
-if(rayrender:::run_documentation()) {
+if(run_documentation()) {
 #Generate a basic capsule:
 generate_ground(material=diffuse(checkercolor="grey20")) \%>\% 
   add_object(csg_object(csg_capsule(radius=0.5),material=glossy(color="red"))) \%>\% 
   render_scene(clamp_value=10,fov=20)
   }
-if(rayrender:::run_documentation()) {
+if(run_documentation()) {
 #Change the orientation by specifying a start and end
 generate_ground(material=diffuse(color="dodgerblue4",checkercolor="grey10")) \%>\% 
   add_object(csg_object(csg_capsule(start = c(-1,0.5,-2), end = c(1,0.5,-2),
@@ -34,7 +34,7 @@ generate_ground(material=diffuse(color="dodgerblue4",checkercolor="grey10")) \%>
   render_scene(clamp_value=10,fov=20,
                lookat=c(0,0.5,-2),lookfrom=c(3,3,10))
  }
-if(rayrender:::run_documentation()) {
+if(run_documentation()) {
 #Show the effect of changing the radius
 generate_ground(material=diffuse(color="dodgerblue4",checkercolor="grey10")) \%>\% 
   add_object(csg_object(
@@ -45,7 +45,7 @@ generate_ground(material=diffuse(color="dodgerblue4",checkercolor="grey10")) \%>
   render_scene(clamp_value=10,fov=20,
                lookat=c(0,0.5,-2),lookfrom=c(-3,3,10))
    }
-if(rayrender:::run_documentation()) {            
+if(run_documentation()) {            
 #Render a capsule in a Cornell box
 generate_cornell() \%>\% 
   add_object(csg_object(

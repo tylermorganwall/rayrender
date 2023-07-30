@@ -26,7 +26,7 @@ List describing the triangle in the scene.
 This operation elongates an existing CSG object in a direction.
 }
 \examples{
-if(rayrender:::run_documentation()) {
+if(run_documentation()) {
 #Elongate a sphere to create a capsule in 1D or a rounded rectangle in 2D:
 generate_ground(material=diffuse(checkercolor="grey20",color="dodgerblue4")) \%>\% 
  add_object(csg_object(csg_sphere(z=-3,x=-3),
@@ -38,7 +38,7 @@ generate_ground(material=diffuse(checkercolor="grey20",color="dodgerblue4")) \%>
  add_object(sphere(y=10,radius=3,material=light(intensity=8))) \%>\% 
  render_scene(clamp_value=10,fov=40,lookfrom=c(0,10,10))
   }
-if(rayrender:::run_documentation()) {
+if(run_documentation()) {
 #Elongate a torus:
 generate_ground(material=diffuse(checkercolor="grey20",color="dodgerblue4")) \%>\% 
  add_object(csg_object(csg_torus(z=-3,x=-3),
@@ -50,7 +50,7 @@ generate_ground(material=diffuse(checkercolor="grey20",color="dodgerblue4")) \%>
  add_object(sphere(y=10,radius=3,material=light(intensity=8))) \%>\% 
  render_scene(clamp_value=10,fov=40,lookfrom=c(0,10,10))
  }
-if(rayrender:::run_documentation()) {
+if(run_documentation()) {
 #Elongate a cylinder:
 generate_ground(material=diffuse(checkercolor="grey20",color="dodgerblue4")) \%>\% 
  add_object(csg_object(csg_cylinder(start=c(-3,0,-3), end = c(-3,1,-3)),
@@ -64,7 +64,7 @@ generate_ground(material=diffuse(checkercolor="grey20",color="dodgerblue4")) \%>
  add_object(sphere(y=10,radius=3,material=light(intensity=8))) \%>\% 
  render_scene(clamp_value=10,fov=40,lookfrom=c(0,10,10))
  }
-if(rayrender:::run_documentation()) {
+if(run_documentation()) {
 #Elongate a pyramid:
 generate_ground(material=diffuse(checkercolor="grey20",color="dodgerblue4")) \%>\% 
  add_object(csg_object(csg_pyramid(z=-3,x=-3),
@@ -76,7 +76,7 @@ generate_ground(material=diffuse(checkercolor="grey20",color="dodgerblue4")) \%>
  add_object(sphere(y=10,radius=3,material=light(intensity=8))) \%>\% 
  render_scene(clamp_value=10,fov=40,lookfrom=c(0,10,10))
 }
-if(rayrender:::run_documentation()) {
+if(run_documentation()) {
 #Change the elongation point to start the elongation on the side of the pyramid:
 generate_ground(material=diffuse(checkercolor="grey20",color="dodgerblue4")) \%>\% 
  add_object(csg_object(csg_pyramid(z=-3,x=-3),

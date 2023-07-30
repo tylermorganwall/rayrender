@@ -17,7 +17,7 @@ Lambertian Material (deprecated)
 }
 \examples{
 #Deprecated lambertian material. Will display a warning.
-if(rayrender:::run_documentation()) {
+if(run_documentation()) {
 scene = generate_cornell() \%>\%
   add_object(sphere(x=555/2,y=555/2,z=555/2,radius=555/8,material=lambertian()))
   render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=10,

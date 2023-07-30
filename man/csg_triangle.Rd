@@ -20,21 +20,21 @@ List describing the triangle in the scene.
 CSG Triangle
 }
 \examples{
-if(rayrender:::run_documentation()) {
+if(run_documentation()) {
 #Generate a basic triangle:
 generate_ground(material=diffuse(checkercolor="grey20")) \%>\% 
   add_object(csg_object(csg_triangle(),material=diffuse(color="red"))) \%>\% 
   add_object(sphere(y=5,z=3,material=light(intensity=30))) \%>\% 
   render_scene(clamp_value=10,fov=20)
   }
-if(rayrender:::run_documentation()) {
+if(run_documentation()) {
 #Change a vertex:
 generate_ground(material=diffuse(checkercolor="grey20")) \%>\% 
   add_object(csg_object(csg_triangle(v1 = c(1,1,0)),material=diffuse(color="green"))) \%>\% 
   add_object(sphere(y=5,z=3,material=light(intensity=30))) \%>\% 
   render_scene(clamp_value=10,fov=20)
   }
-if(rayrender:::run_documentation()) {
+if(run_documentation()) {
 #Change all three vertices:
 generate_ground(material=diffuse(checkercolor="grey20")) \%>\% 
   add_object(csg_object(csg_triangle(v1 = c(0.5,1,0), v2 = c(1,-0.5,0), v3 = c(-1,0.5,0)),

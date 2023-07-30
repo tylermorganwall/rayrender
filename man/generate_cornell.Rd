@@ -47,26 +47,26 @@ Generate Cornell Box
 \examples{
 #Generate and render the default Cornell box.
 scene = generate_cornell()
-if(rayrender:::run_documentation()) {
+if(run_documentation()) {
 render_scene(scene, samples=128,aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 }
-if(rayrender:::run_documentation()) {
+if(run_documentation()) {
 #Make a much smaller light in the center of the room.
 scene = generate_cornell(lightwidth=200,lightdepth=200)
 render_scene(scene, samples=128,aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 }
-if(rayrender:::run_documentation()) {
+if(run_documentation()) {
 #Place a sphere in the middle of the box.
 scene = scene \%>\%
   add_object(sphere(x=555/2,y=555/2,z=555/2,radius=555/4))
 render_scene(scene, samples=128,aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 }
-if(rayrender:::run_documentation()) {
+if(run_documentation()) {
 #Reduce "fireflies" by setting a clamp_value in render_scene()
 render_scene(scene, samples=128,aperture=0, fov=40, ambient_light=FALSE, 
              parallel=TRUE,clamp_value=3)
 }
-if(rayrender:::run_documentation()) {
+if(run_documentation()) {
 # Change the color scheme of the cornell box
 new_cornell = generate_cornell(leftcolor="purple", rightcolor="yellow")
 render_scene(new_cornell, samples=128,aperture=0, fov=40, ambient_light=FALSE, 

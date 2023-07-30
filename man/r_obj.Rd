@@ -14,7 +14,7 @@ File location of the R.obj file (saved with a .txt extension)
 }
 \examples{
 #Load and render the included example R object file.
-if(rayrender:::run_documentation()) {
+if(run_documentation()) {
 generate_ground(material = diffuse(noise = TRUE, noisecolor = "grey20")) \%>\%
   add_object(sphere(x = 2, y = 3, z = 2, radius = 1,
                     material = light(intensity = 10))) \%>\%
