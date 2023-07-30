@@ -9,8 +9,6 @@ raymesh_model(
   x = 0,
   y = 0,
   z = 0,
-  swap_yz = FALSE,
-  reverse = FALSE,
   flip_transmittance = TRUE,
   verbose = FALSE,
   importance_sample_lights = FALSE,
@@ -34,15 +32,17 @@ normals, and material information.}
 
 \item{z}{Default `0`. z-coordinate to offset the model.}
 
-\item{swap_yz}{Default `FALSE`. Swap the Y and Z coordinates.}
-
-\item{reverse}{Default `FALSE`. Reverse the orientation of the indices, flipping their normals.}
-
 \item{flip_transmittance}{Default `TRUE`. Flips `(1-t)` the transmittance values to match the way the colors
 would be interpreted in a rasterizer (where it specifies the transmitted color). Turn off to specify
 the attenuation values directly.}
 
 \item{verbose}{Default `FALSE`. If `TRUE`, prints information about the mesh to the console.}
+
+\item{importance_sample_lights}{Default `TRUE`. Whether to importance sample lights specified in the OBJ material
+(objects with a non-zero Ke MTL material).}
+
+\item{calculate_consistent_normals}{Default `TRUE`. Whether to calculate consistent vertex normals to prevent energy 
+loss at edges.}
 
 \item{override_material}{Default `FALSE`. If `TRUE`, overrides the material specified in the 
 `raymesh` object with the one specified in `material`.}
@@ -59,6 +59,10 @@ functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}
 \item{scale}{Default `c(1, 1, 1)`. Scale transformation in the x, y, and z directions. If this is a single value,
 number, the object will be scaled uniformly.
 Note: emissive objects may not currently function correctly when scaled.}
+
+\item{validate_mesh}{Default `TRUE`. Validates the `raymesh` object using `rayvertex::validate_mesh()` 
+before parsing to ensure correct parsing. Set to `FALSE` to speed up scene construction if `raymesh_model()` 
+is taking a long time (Note: this does not affect rendering time).}
 }
 \value{
 Single row of a tibble describing the raymesh model in the scene.

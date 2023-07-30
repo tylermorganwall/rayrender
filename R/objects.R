@@ -3339,14 +3339,19 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
 #' @param x Default `0`. x-coordinate to offset the model.
 #' @param y Default `0`. y-coordinate to offset the model.
 #' @param z Default `0`. z-coordinate to offset the model.
-#' @param swap_yz Default `FALSE`. Swap the Y and Z coordinates.
-#' @param reverse Default `FALSE`. Reverse the orientation of the indices, flipping their normals.
 #' @param verbose Default `FALSE`. If `TRUE`, prints information about the mesh to the console.
 #' @param override_material Default `FALSE`. If `TRUE`, overrides the material specified in the 
 #' `raymesh` object with the one specified in `material`.
 #' @param flip_transmittance Default `TRUE`. Flips `(1-t)` the transmittance values to match the way the colors
 #' would be interpreted in a rasterizer (where it specifies the transmitted color). Turn off to specify
 #' the attenuation values directly.
+#' @param calculate_consistent_normals Default `TRUE`. Whether to calculate consistent vertex normals to prevent energy 
+#' loss at edges.
+#' @param importance_sample_lights Default `TRUE`. Whether to importance sample lights specified in the OBJ material
+#' (objects with a non-zero Ke MTL material).
+#' @param validate_mesh Default `TRUE`. Validates the `raymesh` object using `rayvertex::validate_mesh()` 
+#' before parsing to ensure correct parsing. Set to `FALSE` to speed up scene construction if `raymesh_model()` 
+#' is taking a long time (Note: this does not affect rendering time).
 #' @param material Default  \code{\link{diffuse}}, but ignored unless `override_material = TRUE`. The material, called from one of the material 
 #' functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}. 
 #' @param angle Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.
@@ -3411,7 +3416,7 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
 #'   add_object(generate_ground(material = diffuse(checkercolor="grey20"))) %>%
 #'   render_scene(fov = 30,lookat=c(0,0.5,0), samples=128, sample_method="sobol_blue")
 #' }
-raymesh_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FALSE,
+raymesh_model = function(mesh, x = 0, y = 0, z = 0, 
                          flip_transmittance = TRUE, verbose = FALSE, 
                          importance_sample_lights = FALSE,
                          calculate_consistent_normals = TRUE,

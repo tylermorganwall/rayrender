@@ -24,7 +24,7 @@ Imports:
     rayimage (>= 0.9.0),
     stats,
     progress,
-    rayvertex
+    rayvertex (>= 0.8.2)
 Suggests:
     sf,
     spData,
@@ -37,5 +37,5 @@ RoxygenNote: 7.2.3
 SystemRequirements: C++17
 Biarch: true
 Encoding: UTF-8
-Remotes: tylermorganwall/rayimage
+Remotes: tylermorganwall/rayimage, tylermorganwall/rayvertex
 Config/testthat/edition: 3
