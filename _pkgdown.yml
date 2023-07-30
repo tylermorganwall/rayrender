@@ -50,6 +50,7 @@ reference:
       - starts_with("text")
       - starts_with("csg_object")
       - starts_with("r_obj")
+      - starts_with("raymesh")
   - title: "Constructive Solid Geometry (CSG) Interface"
     desc: "Functions to model and build objects using CSG"
     contents: 
@@ -80,6 +81,10 @@ reference:
     desc: "Function to render the current scene."
     contents:
       - starts_with("render")
+  - title: "pkgdown utils"
+    desc: "Internal but must be exported to meet CRAN guidelines"
+    contents:
+      - starts_with("run")
 
      
 navbar: 
