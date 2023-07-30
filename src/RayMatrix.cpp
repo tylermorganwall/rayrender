@@ -1,6 +1,6 @@
 #include "RayMatrix.h"
 
-RayMatrix::RayMatrix() : ncol(0), nrow(0) {
+RayMatrix::RayMatrix() : nrow(0), ncol(0) {
   data.resize(0);
 };
 
