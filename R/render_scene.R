@@ -99,7 +99,7 @@
 #' values (with white for `metal` and `dielectric` materials).
 #' @param return_raw_array Default `FALSE`. If `TRUE`, function will return raw array with RGB intensity
 #' information.
-#' @param parallel Default `FALSE`. If `TRUE`, it will use all available cores to render the image
+#' @param parallel Default `TRUE`. If `TRUE`, it will use all available cores to render the image
 #'  (or the number specified in `options("cores")` if that option is not `NULL`).
 #' @param bvh_type Default `"sah"`, "surface area heuristic". Method of building the bounding volume
 #' hierarchy structure used when rendering. Other option is "equal", which splits tree into groups

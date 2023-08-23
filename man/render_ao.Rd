@@ -105,7 +105,7 @@ otherwise specified.}
 
 \item{ortho_dimensions}{Default `c(1,1)`. Width and height of the orthographic camera. Will only be used if `fov = 0`.}
 
-\item{parallel}{Default `FALSE`. If `TRUE`, it will use all available cores to render the image
+\item{parallel}{Default `TRUE`. If `TRUE`, it will use all available cores to render the image
 (or the number specified in `options("cores")` if that option is not `NULL`).}
 
 \item{bvh_type}{Default `"sah"`, "surface area heuristic". Method of building the bounding volume

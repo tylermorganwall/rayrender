@@ -46,7 +46,7 @@
 #' @param focal_distance Default `NULL`, automatically set to the `lookfrom-lookat` distance unless
 #' otherwise specified.
 #' @param ortho_dimensions Default `c(1,1)`. Width and height of the orthographic camera. Will only be used if `fov = 0`. 
-#' @param parallel Default `FALSE`. If `TRUE`, it will use all available cores to render the image
+#' @param parallel Default `TRUE`. If `TRUE`, it will use all available cores to render the image
 #'  (or the number specified in `options("cores")` if that option is not `NULL`).
 #' @param bvh_type Default `"sah"`, "surface area heuristic". Method of building the bounding volume
 #' hierarchy structure used when rendering. Other option is "equal", which splits tree into groups

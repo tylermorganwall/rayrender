@@ -144,7 +144,7 @@ slightly bleeding into adjacent pixels. This provides an antialiasing effect for
 tonemapping the image. Pass in a matrix to specify the convolution kernel manually, or a positive number
 to control the intensity of the bloom (higher number = more bloom).}
 
-\item{parallel}{Default `FALSE`. If `TRUE`, it will use all available cores to render the image
+\item{parallel}{Default `TRUE`. If `TRUE`, it will use all available cores to render the image
 (or the number specified in `options("cores")` if that option is not `NULL`).}
 
 \item{bvh_type}{Default `"sah"`, "surface area heuristic". Method of building the bounding volume
