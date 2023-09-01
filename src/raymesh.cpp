@@ -17,6 +17,9 @@ raymesh::raymesh(Rcpp::List raymesh_list,
                                                         flip_transmittance,
                                                         default_material, 
                                                         ObjectToWorld, WorldToObject, reverseOrientation));
+#ifdef FULL_DEBUG
+  mesh->ValidateMesh();
+#endif
   size_t n = mesh->nTriangles;
   for(size_t i = 0; i < 3*n; i += 3) {
     triangles.add(std::make_shared<triangle>(mesh.get(), 
@@ -30,6 +33,9 @@ raymesh::raymesh(Rcpp::List raymesh_list,
   }
   if(n > 0) {
     tri_mesh_bvh = std::make_shared<bvh_node>(triangles, shutteropen, shutterclose, bvh_type, rng);
+#ifdef FULL_DEBUG
+    tri_mesh_bvh->validate_bvh();
+#endif
     triangles.objects.clear();
   } else {
     throw std::runtime_error("raymesh object not loaded (no triangles)");

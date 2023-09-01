@@ -843,6 +843,8 @@ TriangleMesh::TriangleMesh(Rcpp::List raymesh, bool verbose, bool calculate_cons
   size_t loaded_tex = 0;
   size_t max_mat_id = 0;
   
+  bool any_normal_missing = !has_normals;
+  
   for(size_t j = 0; j < number_shapes; j++) {
     Rcpp::List shape = Rcpp::as<Rcpp::List>(shape_container(j));
     Rcpp::NumericMatrix vertices = vertices_shapes[j];
@@ -854,43 +856,47 @@ TriangleMesh::TriangleMesh(Rcpp::List raymesh, bool verbose, bool calculate_cons
     Rcpp::IntegerMatrix indices = Rcpp::as<Rcpp::IntegerMatrix>(shape["indices"]); 
     Rcpp::IntegerMatrix tex_indices = Rcpp::as<Rcpp::IntegerMatrix>(shape["tex_indices"]); 
     Rcpp::IntegerMatrix norm_indices = Rcpp::as<Rcpp::IntegerMatrix>(shape["norm_indices"]); 
+    Rcpp::LogicalVector has_vertex_tex = Rcpp::as<Rcpp::LogicalVector>(shape["has_vertex_tex"]); 
+    Rcpp::LogicalVector has_vertex_normals = Rcpp::as<Rcpp::LogicalVector>(shape["has_vertex_normals"]); 
     
     size_t single_shape_verts = vertices.nrow();
     size_t single_shape_normals = normals.nrow();
     size_t single_shape_tex = texcoords.nrow();
 
-    for (size_t i = 0; i < single_shape_verts; i += 1) {
-      p[i + loaded_verts] = (*ObjectToWorld)(point3f(vertices(i,0),
-                                                      vertices(i,1),
-                                                      vertices(i,2)));
+    for (size_t ii = 0; ii < single_shape_verts; ii += 1) {
+      p[ii + loaded_verts] = (*ObjectToWorld)(point3f(vertices(ii,0),
+                                                      vertices(ii,1),
+                                                      vertices(ii,2)));
     }
 
     if(single_shape_normals > 0) {
-      for (size_t i = 0; i < single_shape_normals; i++) {
-        n[i + loaded_norms] = (*ObjectToWorld)(normal3f(normals(i,0),
-                                                         normals(i,1),
-                                                         normals(i,2)));
+      for (size_t ii = 0; ii < single_shape_normals; ii++) {
+        n[ii + loaded_norms] = (*ObjectToWorld)(normal3f(normals(ii,0),
+                                                        normals(ii,1),
+                                                        normals(ii,2)));
       }
     }
 
     if(single_shape_tex > 0) {
-      for (size_t i = 0; i < single_shape_tex; i++) {
-        uv[i + loaded_tex] = point2f(texcoords(i,0),
-                                     texcoords(i,1));
+      for (size_t ii = 0; ii < single_shape_tex; ii++) {
+        uv[ii + loaded_tex] = point2f(texcoords(ii,0),
+                                     texcoords(ii,1));
       }
-    } 
+    }
 
     for (size_t s = 0; s < static_cast<size_t>(indices.nrow()); s++) {
       nTriangles++;
       vertexIndices.push_back(indices(s,0) + loaded_verts);
       vertexIndices.push_back(indices(s,1) + loaded_verts);
       vertexIndices.push_back(indices(s,2) + loaded_verts);
-      if(has_normals) {
-        normalIndices.push_back(norm_indices(s,0)+ loaded_norms);
-        normalIndices.push_back(norm_indices(s,1)+ loaded_norms);
-        normalIndices.push_back(norm_indices(s,2)+ loaded_norms);
+      if(has_normals && has_vertex_normals(s)) {
+        normalIndices.push_back(norm_indices(s,0) + loaded_norms);
+        normalIndices.push_back(norm_indices(s,1) + loaded_norms);
+        normalIndices.push_back(norm_indices(s,2) + loaded_norms);
+      } else {
+        any_normal_missing = true;
       }
-      if(has_tex) {
+      if(has_tex && has_vertex_tex(s)) {
         texIndices.push_back(tex_indices(s,0)+ loaded_tex);
         texIndices.push_back(tex_indices(s,1)+ loaded_tex);
         texIndices.push_back(tex_indices(s,2)+ loaded_tex);
@@ -910,20 +916,20 @@ TriangleMesh::TriangleMesh(Rcpp::List raymesh, bool verbose, bool calculate_cons
       max_mat_id = 0;
     }
   }
-  if(has_consistent_normals) {
+  if(has_consistent_normals && !any_normal_missing) {
     face_n.reset(new normal3f[normalIndices.size() / 3]);
     std::map<int, std::priority_queue<Float> > alpha_values;
-    for (size_t i = 0; i < normalIndices.size(); i += 3) {
-      int idx_n1 = normalIndices[i];
-      int idx_n2 = normalIndices[i+1];
-      int idx_n3 = normalIndices[i+2];
+    for (size_t ii = 0; ii < normalIndices.size(); ii += 3) {
+      int idx_n1 = normalIndices[ii];
+      int idx_n2 = normalIndices[ii+1];
+      int idx_n3 = normalIndices[ii+2];
       
       normal3f n1 = unit_vector(n[idx_n1]);
       normal3f n2 = unit_vector(n[idx_n2]);
       normal3f n3 = unit_vector(n[idx_n3]);
       
       normal3f face_normal = unit_vector(n1 + n2 + n3);
-      face_n[i / 3] = face_normal;
+      face_n[ii / 3] = face_normal;
       Float av1 = dot(n1,face_normal);
       Float av2 = dot(n2,face_normal);
       Float av3 = dot(n3,face_normal);
@@ -934,9 +940,9 @@ TriangleMesh::TriangleMesh(Rcpp::List raymesh, bool verbose, bool calculate_cons
     for (auto const& x : alpha_values) {
       alpha_v.push_back(-x.second.top());
     }
-    for(size_t i = 0; i < alpha_v.size(); i++) {
-      Float temp_av = clamp(alpha_v[i],-1,1);
-      alpha_v[i] = std::acos(temp_av) * (1 + 0.03632 * (1 - temp_av) * (1 - temp_av));
+    for(size_t ii = 0; ii < alpha_v.size(); ii++) {
+      Float temp_av = clamp(alpha_v[ii],-1,1);
+      alpha_v[ii] = std::acos(temp_av) * (1 + 0.03632 * (1 - temp_av) * (1 - temp_av));
     }
   }
 
@@ -1031,6 +1037,61 @@ TriangleMesh::TriangleMesh(float* vertices,
   bump_textures.push_back(bump);
 }
 
+void TriangleMesh::ValidateMesh() {
+  // 1. Check vertexIndices
+  for (const int idx : vertexIndices) {
+    if (idx < 0 || idx >= static_cast<int>(nVertices)) {
+      throw std::runtime_error("Vertex index out of bounds");
+    }
+  }
+  
+  // 2. Check normalIndices
+  if (has_normals) {
+    for (const int idx : normalIndices) {
+      if (idx < 0 || idx >= static_cast<int>(nNormals)) {
+        throw std::runtime_error("Normal index out of bounds");
+      }
+    }
+  }
+  
+  // 3. Check texIndices
+  if (has_tex) {
+    for (const int idx : texIndices) {
+      if (idx < 0 || idx >= static_cast<int>(nTex)) {
+        throw std::runtime_error("Texture index out of bounds");
+      }
+    }
+  }
+  
+  // 4. Check for NaN or Inf in vertex data
+  for (size_t i = 0; i < nVertices; ++i) {
+    if (std::isnan(p[i].x()) || std::isnan(p[i].y()) || std::isnan(p[i].z()) ||
+        std::isinf(p[i].x()) || std::isinf(p[i].y()) || std::isinf(p[i].z())) {
+      throw std::runtime_error("Vertex data contains NaN or Inf values");
+    }
+  }
+  
+  // 5. Check for NaN or Inf in normal data
+  if (has_normals) {
+    for (size_t i = 0; i < nNormals; ++i) {
+      if (std::isnan(n[i].x()) || std::isnan(n[i].y()) || std::isnan(n[i].z()) ||
+          std::isinf(n[i].x()) || std::isinf(n[i].y()) || std::isinf(n[i].z())) {
+        throw std::runtime_error("Normal data contains NaN or Inf values");
+      }
+    }
+  }
+  
+  // 6. Check for NaN or Inf in texture coordinate data
+  if (has_tex) {
+    for (size_t i = 0; i < nTex; ++i) {
+      if (std::isnan(uv[i].x()) || std::isnan(uv[i].y()) ||
+          std::isinf(uv[i].x()) || std::isinf(uv[i].y())) {
+        throw std::runtime_error("Texture coordinate data contains NaN or Inf values");
+      }
+    }
+  }
+}
+ 
 size_t TriangleMesh::GetSize() {
   size_t size = sizeof(*this);
   size += nTex / 2 * sizeof(point2f) + 

@@ -95,3 +95,12 @@ size_t hitable_list::GetSize() {
   }
   return(total_size);
 }
+
+void hitable_list::validate() const {
+  // Objects Vector Validation
+  for (const auto& object : objects) {
+    if (!object) {
+      throw std::runtime_error("Detected a null or uninitialized object in hitable_list.");
+    }
+  }
+}

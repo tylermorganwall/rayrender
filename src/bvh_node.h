@@ -41,6 +41,7 @@ class bvh_node : public hitable {
     Float pdf_value(const point3f& o, const vec3f& v, Sampler* sampler, Float time = 0);
     vec3f random(const point3f& o, random_gen& rng, Float time = 0);
     vec3f random(const point3f& o, Sampler* sampler, Float time = 0);
+    void validate_bvh();
     
     std::string GetName() const {
       return(std::string("BVH Node"));
@@ -55,6 +56,8 @@ class bvh_node : public hitable {
 #ifdef DEBUGBBOX
     int depth;
 #endif
+  private:
+    void validate_bvh_node(const bvh_node* node);
 };
 
 #endif

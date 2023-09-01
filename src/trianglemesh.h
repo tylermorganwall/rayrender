@@ -70,6 +70,7 @@ struct TriangleMesh {
     }
   }
   size_t GetSize();
+  void ValidateMesh();
     
   // TriangleMesh Data
   size_t nTriangles, nVertices, nNormals, nTex;

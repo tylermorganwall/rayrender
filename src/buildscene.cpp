@@ -723,6 +723,9 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
     }
   }
   auto world_bvh = std::make_shared<bvh_node>(list, shutteropen, shutterclose, bvh_type, rng);
+#ifdef FULL_DEBUG
+  world_bvh->validate_bvh();
+#endif
   // auto nodeleaf = world_bvh->CountNodeLeaf();
   // Rcpp::Rcout << "Node/Leaf: " << nodeleaf.first << " " << nodeleaf.second << " " << world_bvh->GetSize() << "\n";
   return(world_bvh);

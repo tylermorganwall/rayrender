@@ -19,6 +19,7 @@ class hitable_list: public hitable {
     virtual vec3f random(const point3f& o, Sampler* sampler, Float time = 0);
     void add(std::shared_ptr<hitable> object) { objects.push_back(object); }
     std::shared_ptr<hitable> back() {return(objects.back());}
+    void validate() const;
     
     int size() {return(objects.size());}
     std::vector<std::shared_ptr<hitable>> objects;

@@ -303,5 +303,42 @@ std::pair<size_t,size_t> bvh_node::CountNodeLeaf()  {
   return count;
 }
   
+void bvh_node::validate_bvh() {
+  if (!this) {
+    throw std::runtime_error("Root node of BVH is nullptr.");
+  }
+  validate_bvh_node(this);
+}
+
+void bvh_node::validate_bvh_node(const bvh_node* node) {
+  if (!node) {
+    throw std::runtime_error("Encountered a nullptr node in BVH.");
+  }
+  
+  // Retrieve bounding boxes
+  aabb box_left, box_right;
+  bool has_left_bbox = node->left->bounding_box(0, 0, box_left);  // Using 0 for time as a placeholder
+  bool has_right_bbox = node->right->bounding_box(0, 0, box_right); // Using 0 for time as a placeholder
+  
+  // Ensure both children have valid bounding boxes
+  if (!has_left_bbox || !has_right_bbox) {
+    throw std::runtime_error("A child node doesn't have a valid bounding box.");
+  }
+  
+  // If a node has only one child, both left and right should be the same
+  if ((node->left == node->right) && !node->left) {
+    throw std::runtime_error("Node with single child doesn't set both left and right pointers to the same child.");
+  }
+  
+  // If it's not a leaf node, continue validating the left and right children
+  if (node->left != node->right) {
+    if (auto left_bvh = dynamic_cast<const bvh_node*>(node->left.get())) {
+      validate_bvh_node(left_bvh);
+    }
+    if (auto right_bvh = dynamic_cast<const bvh_node*>(node->right.get())) {
+      validate_bvh_node(right_bvh);
+    }
+  }
+}
   
   
