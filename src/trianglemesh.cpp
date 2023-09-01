@@ -880,7 +880,7 @@ TriangleMesh::TriangleMesh(Rcpp::List raymesh, bool verbose, bool calculate_cons
     if(single_shape_tex > 0) {
       for (size_t ii = 0; ii < single_shape_tex; ii++) {
         uv[ii + loaded_tex] = point2f(texcoords(ii,0),
-                                     texcoords(ii,1));
+                                      texcoords(ii,1));
       }
     }
 
@@ -894,12 +894,19 @@ TriangleMesh::TriangleMesh(Rcpp::List raymesh, bool verbose, bool calculate_cons
         normalIndices.push_back(norm_indices(s,1) + loaded_norms);
         normalIndices.push_back(norm_indices(s,2) + loaded_norms);
       } else {
+        normalIndices.push_back(-1);
+        normalIndices.push_back(-1);
+        normalIndices.push_back(-1);
         any_normal_missing = true;
       }
       if(has_tex && has_vertex_tex(s)) {
         texIndices.push_back(tex_indices(s,0)+ loaded_tex);
         texIndices.push_back(tex_indices(s,1)+ loaded_tex);
         texIndices.push_back(tex_indices(s,2)+ loaded_tex);
+      } else {
+        texIndices.push_back(-1);
+        texIndices.push_back(-1);
+        texIndices.push_back(-1);
       }
     }
     loaded_verts += single_shape_verts;
