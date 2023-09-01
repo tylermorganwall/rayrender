@@ -304,9 +304,6 @@ std::pair<size_t,size_t> bvh_node::CountNodeLeaf()  {
 }
   
 void bvh_node::validate_bvh() {
-  if (!this) {
-    throw std::runtime_error("Root node of BVH is nullptr.");
-  }
   validate_bvh_node(this);
 }
 
