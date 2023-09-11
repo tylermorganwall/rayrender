@@ -325,11 +325,7 @@ prepare_scene_list = function(scene, width = 400, height = 400, fov = 20,
   if(is.null(focal_distance)) {
     focal_distance = sqrt(sum((lookfrom-lookat)^2))
   }
-  if(!is.null(options("cores")[[1]])) {
-    numbercores = options("cores")[[1]]
-  } else {
-    numbercores = parallel::detectCores()
-  }
+  numbercores = getOption("cores", default = getOption("Ncpus", default = parallel::detectCores()))
   if(!parallel) {
     numbercores = 1
   }

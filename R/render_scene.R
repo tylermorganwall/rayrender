@@ -99,8 +99,8 @@
 #' values (with white for `metal` and `dielectric` materials).
 #' @param return_raw_array Default `FALSE`. If `TRUE`, function will return raw array with RGB intensity
 #' information.
-#' @param parallel Default `FALSE`. If `TRUE`, it will use all available cores to render the image
-#'  (or the number specified in `options("cores")` if that option is not `NULL`).
+#' @param parallel Default `TRUE`. If `FALSE`, it will use all available cores to render the image
+#'  (or the number specified in `options("cores")` or `options("Ncpus")` if that option is not `NULL`).
 #' @param bvh_type Default `"sah"`, "surface area heuristic". Method of building the bounding volume
 #' hierarchy structure used when rendering. Other option is "equal", which splits tree into groups
 #' of equal size.
@@ -111,119 +111,99 @@
 #' no filename specified). Set to `FALSE` for faster plotting (does not affect render time).
 #' @export
 #' @importFrom  grDevices col2rgb
-#' @return Raytraced plot to current device, or an image saved to a file. Invisibly returns the
-#' array (containing either debug data or the RGB)
+#' @return A pathtraced image to the current device, or an image saved to a file. Invisibly returns the
+#' array (containing either debug data or the RGB).
 #'
 #' @examples
-#' #Generate a large checkered sphere as the ground
-#' if(run_documentation()) {
-#' scene = generate_ground(depth=-0.5, material = diffuse(color="white", checkercolor="darkgreen"))
-#' render_scene(scene,parallel=TRUE,samples=128,sample_method="sobol")
+#' # Generate a large checkered sphere as the ground
+#' if (run_documentation()) {
+#'   scene = generate_ground(depth = -0.5, 
+#'                           material = diffuse(color = "white", checkercolor = "darkgreen"))
+#'   render_scene(scene, parallel = TRUE, samples = 128, sample_method = "sobol")
 #' }
-#' if(run_documentation()) {
-#' #Add a sphere to the center
-#' scene = scene %>%
-#'   add_object(sphere(x=0,y=0,z=0,radius=0.5,material = diffuse(color=c(1,0,1))))
-#' render_scene(scene,fov=20,parallel=TRUE,samples=128)
+#' if (run_documentation()) {
+#'   # Add a sphere to the center
+#'   scene = scene %>%
+#'     add_object(sphere(x = 0, y = 0, z = 0, radius = 0.5, material = diffuse(color = c(1, 0, 1))))
+#'   render_scene(scene, fov = 20, parallel = TRUE, samples = 128)
 #' }
-#' if(run_documentation()) {
-#' #Add a marbled cube 
-#' scene = scene %>%
-#'   add_object(cube(x=1.1,y=0,z=0,material = diffuse(noise=3)))
-#' render_scene(scene,fov=20,parallel=TRUE,samples=128)
+#' if (run_documentation()) {
+#'   # Add a marbled cube
+#'   scene = scene %>%
+#'     add_object(cube(x = 1.1, y = 0, z = 0, material = diffuse(noise = 3)))
+#'   render_scene(scene, fov = 20, parallel = TRUE, samples = 128)
 #' }
-#' if(run_documentation()) {
-#' #Add a metallic gold sphere, using stratified sampling for a higher quality render
-#' scene = scene %>%
-#'   add_object(sphere(x=-1.1,y=0,z=0,radius=0.5,material = metal(color="gold",fuzz=0.1)))
-#' render_scene(scene,fov=20,parallel=TRUE,samples=128)
+#' if (run_documentation()) {
+#'   # Add a metallic gold sphere, using stratified sampling for a higher quality render
+#'   scene = scene %>%
+#'     add_object(sphere(x = -1.1, y = 0, z = 0, radius = 0.5, 
+#'                       material = metal(color = "gold", fuzz = 0.1)))
+#'   render_scene(scene, fov = 20, parallel = TRUE, samples = 128)
 #' }
-#' if(run_documentation()) {
-#' #Lower the number of samples to render more quickly (here, we also use only one core).
-#' render_scene(scene, samples=4, parallel=FALSE)
+#' if (run_documentation()) {
+#'   # Lower the number of samples to render more quickly (here, we also use only one core).
+#'   render_scene(scene, samples = 4, parallel = FALSE)
 #' }
-#' if(run_documentation()) {
-#' #Add a floating R plot using the iris dataset as a png onto a floating 2D rectangle
-#' 
-#' tempfileplot = tempfile()
-#' png(filename=tempfileplot,height=400,width=800)
-#' plot(iris$Petal.Length,iris$Sepal.Width,col=iris$Species,pch=18,cex=4)
-#' dev.off()
-#' 
-#' image_array = aperm(png::readPNG(tempfileplot),c(2,1,3))
-#' scene = scene %>%
-#'   add_object(xy_rect(x=0,y=1.1,z=0,xwidth=2,angle = c(0,180,0),
-#'                      material = diffuse(image_texture = image_array)))
-#' render_scene(scene,fov=20,parallel=TRUE,samples=128)
+#' if (run_documentation()) {
+#'   # Add a floating R plot using the iris dataset as a png onto a floating 2D rectangle
+#'   tempfileplot = tempfile()
+#'   png(filename = tempfileplot, height = 400, width = 800)
+#'   plot(iris$Petal.Length, iris$Sepal.Width, col = iris$Species, pch = 18, cex = 4)
+#'   dev.off()
+#'   image_array = aperm(png::readPNG(tempfileplot), c(2, 1, 3))
+#'   scene = scene %>%
+#'     add_object(xy_rect(x = 0, y = 1.1, z = 0, xwidth = 2, angle = c(0, 180, 0),
+#'                        material = diffuse(image_texture = image_array)))
+#'   render_scene(scene, fov = 20, parallel = TRUE, samples = 128)
 #' }
-#' if(run_documentation()) {
-#' #Move the camera
-#' render_scene(scene,lookfrom = c(7,1.5,10),lookat = c(0,0.5,0),fov=15,parallel=TRUE)
+#' if (run_documentation()) {
+#'   # Move the camera
+#'   render_scene(scene, lookfrom = c(7, 1.5, 10), lookat = c(0, 0.5, 0), fov = 15, parallel = TRUE)
 #' }
-#' if(run_documentation()) {
-#' #Change the background gradient to a night time ambiance
-#' render_scene(scene,lookfrom = c(7,1.5,10),lookat = c(0,0.5,0),fov=15,
-#'              backgroundhigh = "#282375", backgroundlow = "#7e77ea", parallel=TRUE,
-#'              samples=128)
+#' if (run_documentation()) {
+#'   # Change the background gradient to a night time ambiance
+#'   render_scene(scene, lookfrom = c(7, 1.5, 10), lookat = c(0, 0.5, 0), fov = 15,
+#'                backgroundhigh = "#282375", backgroundlow = "#7e77ea", parallel = TRUE,
+#'                samples = 128)
 #' }
-#' if(run_documentation()) {    
-#'#Increase the aperture to blur objects that are further from the focal plane.
-#' render_scene(scene,lookfrom = c(7,1.5,10),lookat = c(0,0.5,0),fov=15,
-#'              aperture = 0.5,parallel=TRUE,samples=128)
+#' if (run_documentation()) {    
+#'   # Increase the aperture to blur objects that are further from the focal plane.
+#'   render_scene(scene, lookfrom = c(7, 1.5, 10), lookat = c(0, 0.5, 0), fov = 15,
+#'                aperture = 0.5, parallel = TRUE, samples = 128)
 #' }
-#' if(run_documentation()) {
-#'#We can also capture a 360 environment image by setting `fov = 360` (can be used for VR)
-#' generate_cornell() %>%
-#'   add_object(ellipsoid(x=555/2,y=100,z=555/2,a=50,b=100,c=50, 
-#'              material = metal(color="lightblue"))) %>%
-#'   add_object(cube(x=100,y=130/2,z=200,xwidth = 130,ywidth=130,zwidth = 130,
-#'                   material=diffuse(checkercolor="purple", 
-#'                                    checkerperiod = 30),angle=c(0,10,0))) %>%
-#'   add_object(pig(x=100,y=190,z=200,scale=40,angle=c(0,30,0))) %>%
-#'   add_object(sphere(x=420,y=555/8,z=100,radius=555/8,
-#'                     material = dielectric(color="orange"))) %>%
-#'   add_object(xz_rect(x=555/2,z=555/2, y=1,xwidth=555,zwidth=555,
-#'                      material = glossy(checkercolor = "white",
-#'                                        checkerperiod=10,color="dodgerblue"))) %>%
-#'   render_scene(lookfrom=c(278,278,30), lookat=c(278,278,500), clamp_value=10,
-#'                fov = 360,  samples = 128, width=800, height=800)
+#' if (run_documentation()) {
+#'   # We can also capture a 360 environment image by setting `fov = 360` (can be used for VR)
+#'   generate_cornell() %>%
+#'     add_object(ellipsoid(x = 555 / 2, y = 100, z = 555 / 2, a = 50, b = 100, c = 50, 
+#'                           material = metal(color = "lightblue"))) %>%
+#'     add_object(cube(x = 100, y = 130 / 2, z = 200, xwidth = 130, ywidth = 130, zwidth = 130,
+#'                      material = diffuse(checkercolor = "purple", 
+#'                                         checkerperiod = 30), angle = c(0, 10, 0))) %>%
+#'     add_object(pig(x = 100, y = 190, z = 200, scale = 40, angle = c(0, 30, 0))) %>%
+#'     add_object(sphere(x = 420, y = 555 / 8, z = 100, radius = 555 / 8,
+#'                        material = dielectric(color = "orange"))) %>%
+#'     add_object(xz_rect(x = 555 / 2, z = 555 / 2, y = 1, xwidth = 555, zwidth = 555,
+#'                        material = glossy(checkercolor = "white",
+#'                                          checkerperiod = 10, color = "dodgerblue"))) %>%
+#'     render_scene(lookfrom = c(278, 278, 30), lookat = c(278, 278, 500), clamp_value = 10,
+#'                  fov = 360,  samples = 128, width = 800, height = 800)
 #' }
-#' if(run_documentation()) {
-#'#We can also use a realistic camera by specifying a camera description file (several of which
-#'#are built-in to rayrender. Note the curvature introduced by the fisheye lens:
-#'generate_cornell() %>%
-#'   add_object(ellipsoid(x=555/2,y=100,z=555/2,a=50,b=100,c=50, 
-#'              material = metal(color="lightblue"))) %>%
-#'   add_object(cube(x=100,y=130/2,z=200,xwidth = 130,ywidth=130,zwidth = 130,
-#'                   material=diffuse(checkercolor="purple", 
-#'                                    checkerperiod = 30),angle=c(0,10,0))) %>%
-#'   add_object(pig(x=100,y=190,z=200,scale=40,angle=c(0,30,0))) %>%
-#'   add_object(sphere(x=420,y=555/8,z=100,radius=555/8,
-#'                     material = dielectric(color="orange"))) %>%
-#'   add_object(xz_rect(x=555/2,z=555/2, y=1,xwidth=555,zwidth=555,
-#'                      material = glossy(checkercolor = "white",
-#'                                        checkerperiod=10,color="dodgerblue"))) %>%
-#'   render_scene(lookfrom=c(278,278,-300), lookat=c(278,278,500), clamp_value=10,
-#'                aperture=1, iso = 100000,
-#'                camera_description_file = "fisheye", samples = 128, width=800, height=400)
+#' if (run_documentation()) {            
+#'   # Spin the camera around the scene, decreasing the number of samples to render faster. To make 
+#'   # an animation, specify the a filename in `render_scene` for each frame and use the `av` package
+#'   # or ffmpeg to combine them all into a movie.
+#'   t = 1:30 
+#'   xpos = 10 * sin(t * 12 * pi / 180 + pi / 2)
+#'   zpos = 10 * cos(t * 12 * pi / 180 + pi / 2)
+#'   # Save old par() settings
+#'   old.par = par(no.readonly = TRUE)
+#'   on.exit(par(old.par))
+#'   par(mfrow = c(5, 6))
+#'   for (i in 1:30) {
+#'     render_scene(scene, samples = 16, 
+#'                  lookfrom = c(xpos[i], 1.5, zpos[i]), lookat = c(0, 0.5, 0), parallel = TRUE)
+#'   }
 #' }
-#' if(run_documentation()) {            
-#'#Spin the camera around the scene, decreasing the number of samples to render faster. To make 
-#'#an animation, specify the a filename in `render_scene` for each frame and use the `av` package
-#'#or ffmpeg to combine them all into a movie.
-#'
-#'t=1:30 
-#'xpos = 10 * sin(t*12*pi/180+pi/2)
-#'zpos = 10 * cos(t*12*pi/180+pi/2)
-#'#Save old par() settings
-#'old.par = par(no.readonly = TRUE)
-#'on.exit(par(old.par))
-#'par(mfrow=c(5,6))
-#'for(i in 1:30) {
-#'  render_scene(scene, samples=16, 
-#'    lookfrom = c(xpos[i],1.5,zpos[i]),lookat = c(0,0.5,0), parallel=TRUE)
-#'}
-#'}
 render_scene = function(scene, width = 400, height = 400, fov = 20, 
                         samples = 100,  camera_description_file = NA, 
                         preview = interactive(), interactive = TRUE,
@@ -236,7 +216,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
                         aperture = 0.1, clamp_value = Inf,
                         filename = NULL, backgroundhigh = "#80b4ff",backgroundlow = "#ffffff",
                         shutteropen = 0.0, shutterclose = 1.0, focal_distance=NULL, ortho_dimensions = c(1,1),
-                        tonemap ="gamma", bloom = TRUE, parallel=TRUE, bvh_type = "sah",
+                        tonemap ="gamma", bloom = TRUE, parallel = TRUE, bvh_type = "sah",
                         environment_light = NULL, rotate_env = 0, intensity_env = 1,
                         debug_channel = "none", return_raw_array = FALSE,
                         progress = interactive(), verbose = FALSE, new_page = TRUE) { 

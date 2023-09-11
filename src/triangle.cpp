@@ -350,7 +350,7 @@ bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Samp
   rec.has_bump = false;
   
   // Use that to calculate normals
-  if(mesh->has_normals) {
+  if(mesh->has_normals && n[0] != -1 && n[1] != -1 && n[2] != -1) {
     normal3f n1 = mesh->n[n[0]];
     normal3f n2 = mesh->n[n[1]];
     normal3f n3 = mesh->n[n[2]];
