@@ -129,6 +129,7 @@ plymesh::plymesh(std::string inputfile, std::string basedir, std::shared_ptr<mat
                                                         alpha, bump, 
                                                         mat,
                                                         ObjectToWorld, WorldToObject, reverseOrientation));
+  mesh->ValidateMesh();
   size_t n = mesh->nTriangles * 3;
   for(size_t i = 0; i < n; i += 3) {
     triangles.add(std::make_shared<triangle>(mesh.get(), 
