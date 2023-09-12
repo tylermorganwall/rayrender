@@ -990,6 +990,7 @@ TriangleMesh::TriangleMesh(float* vertices,
   nTex = texcoords ? numVerts * 2 : 0;
   p.reset(new point3f[nVertices]);
   for (size_t i = 0; i < nVertices; i += 3) {
+    Rcpp::Rcout << "Vertices: " << vertices[i+0] << " " << vertices[i+1] <<  " " << vertices[i+2] << "\n";
     p[i / 3] = (*ObjectToWorld)(point3f((Float)vertices[i+0],
                                         (Float)vertices[i+1],
                                         (Float)vertices[i+2]));
@@ -999,6 +1000,7 @@ TriangleMesh::TriangleMesh(float* vertices,
     has_normals = true;
     n.reset(new normal3f[nNormals]);
     for (size_t i = 0; i < nNormals; i += 3) {
+      Rcpp::Rcout << "Normals: " << normals[i+0] << " " << normals[i+1] << " " << normals[i+2] << "\n";
       n[i / 3] = (*ObjectToWorld)(normal3f((Float)normals[i+0],
                                            (Float)normals[i+1],
                                            (Float)normals[i+2]));
@@ -1011,8 +1013,10 @@ TriangleMesh::TriangleMesh(float* vertices,
     has_tex = true;
     uv.reset(new point2f[nTex]);
     for (size_t i = 0; i < nTex; i += 2) {
+      Rcpp::Rcout << "Texcoords: " << texcoords[i+0] << " " << texcoords[i+1] << "\n";
+      
       uv[i / 2] = point2f((Float)texcoords[i+0],
-                      (Float)texcoords[i+1]);
+                          (Float)texcoords[i+1]);
     }
   } else {
     uv = nullptr;
@@ -1023,6 +1027,7 @@ TriangleMesh::TriangleMesh(float* vertices,
     vertexIndices.push_back(indices[s]);
     vertexIndices.push_back(indices[s+1]);
     vertexIndices.push_back(indices[s+2]);
+    Rcpp::Rcout << "Indices: " << has_normals << " " << has_tex << " : " << indices[s+0] << " " << indices[s+1] <<  " " << indices[s+2] << "\n";
     
     if(has_normals) {
       normalIndices.push_back(indices[s+0]);
