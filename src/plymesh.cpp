@@ -117,21 +117,28 @@ plymesh::plymesh(std::string inputfile, std::string basedir, std::shared_ptr<mat
                  Float scale, Float shutteropen, Float shutterclose, int bvh_type, random_gen rng,
                  std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation) :
   hitable(ObjectToWorld, WorldToObject, reverseOrientation) {
+  Rcpp::Rcout << "Parsing miniply" << "\n";
   TriMesh* tri = parse_file_with_miniply(inputfile.c_str(), false);
 
   if(tri == nullptr) {
     std::string err = inputfile;
     throw std::runtime_error("No mesh loaded: " + err);
   }
-
+  Rcpp::Rcout << "Creating Mesh" << "\n";
+  
   mesh = std::unique_ptr<TriangleMesh>(new TriangleMesh(tri->pos, tri->indices, tri->normal, tri->uv, 
                                                         tri->numVerts, tri->numIndices,
                                                         alpha, bump, 
                                                         mat,
                                                         ObjectToWorld, WorldToObject, reverseOrientation));
+  Rcpp::Rcout << "Validating Mesh" << "\n";
   mesh->ValidateMesh();
   size_t n = mesh->nTriangles * 3;
+  Rcpp::Rcout << "Creating Triangles" << "\n";
+  
   for(size_t i = 0; i < n; i += 3) {
+    Rcpp::Rcout << "Tri: " << i << "/" << n << "\n";
+    
     triangles.add(std::make_shared<triangle>(mesh.get(), 
                                              &mesh->vertexIndices[i], 
                                              &mesh->normalIndices[i],
@@ -139,6 +146,8 @@ plymesh::plymesh(std::string inputfile, std::string basedir, std::shared_ptr<mat
                                              ObjectToWorld, WorldToObject, reverseOrientation));
   }
   ply_mesh_bvh = std::make_shared<bvh_node>(triangles, shutteropen, shutterclose, bvh_type, rng);
+  Rcpp::Rcout << "Validating BVH" << "\n";
+  ply_mesh_bvh->validate_bvh();
   triangles.objects.clear();
   delete tri;
 };
