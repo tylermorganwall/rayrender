@@ -90,8 +90,12 @@ static TriMesh* parse_file_with_miniply(const char* filename, bool assumeTriangl
         reader.extract_triangles(indexes[0], trimesh->pos, trimesh->numVerts, miniply::PLYPropertyType::Int, trimesh->indices);
       } else {
         trimesh->numIndices = reader.num_rows() * 3;
-        trimesh->indices = new int[trimesh->numIndices];
-        reader.extract_list_property(indexes[0], miniply::PLYPropertyType::Int, trimesh->indices);
+        Rcpp::Rcout << "Numindices: " << trimesh->numIndices << "\n";
+        
+        if(trimesh->numIndices != 0) {
+          trimesh->indices = new int[trimesh->numIndices];
+          reader.extract_list_property(indexes[0], miniply::PLYPropertyType::Int, trimesh->indices);
+        }
       }
       gotFaces = true;
     }
