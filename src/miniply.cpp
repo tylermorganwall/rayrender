@@ -1044,7 +1044,6 @@ namespace miniply {
 
     const PLYProperty& prop = element()->properties[propIdx];
     if (prop.listData.data() == nullptr || prop.listData.size() == 0) {
-      throw std::runtime_error("Error: Source data is invalid.\n");
       return false;
     }
     if (compatible_types(prop.type, destType)) {

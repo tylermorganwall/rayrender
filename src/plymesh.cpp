@@ -77,19 +77,17 @@ static TriMesh* parse_file_with_miniply(const char* filename, bool assumeTriangl
         reader.extract_properties(indexes, 2, miniply::PLYPropertyType::Float, trimesh->uv);
       }
       gotVerts = true;
-    }
-    else if (reader.element_is(miniply::kPLYFaceElement) && reader.load_element() && reader.find_indices(indexes)) {
+    } else if (reader.element_is(miniply::kPLYFaceElement) && reader.load_element() && reader.find_indices(indexes)) {
       bool polys = reader.requires_triangulation(indexes[0]);
       if (polys && !gotVerts) {
-        fprintf(stderr, "Error: need vertex positions to triangulate faces.\n");
+        Rcpp::Rcout << "Error: need vertex positions to triangulate faces.\n";
         break;
       }
       if (polys) {
         trimesh->numIndices = reader.num_triangles(indexes[0]) * 3;
         trimesh->indices = new int[trimesh->numIndices];
         reader.extract_triangles(indexes[0], trimesh->pos, trimesh->numVerts, miniply::PLYPropertyType::Int, trimesh->indices);
-      }
-      else {
+      } else {
         trimesh->numIndices = reader.num_rows() * 3;
         uint32_t propIdx = indexes[0];
         trimesh->indices = new int[trimesh->numIndices];
@@ -97,8 +95,6 @@ static TriMesh* parse_file_with_miniply(const char* filename, bool assumeTriangl
         if (trimesh->numIndices * sizeof(int) < prop.listData.size()) {
           delete[] trimesh->indices;
           delete trimesh;
-          throw std::runtime_error("Error: allocated memory size for trimesh->indices is too small.\n");
-          
           return nullptr;
         }
         reader.extract_list_property(indexes[0], miniply::PLYPropertyType::Int, trimesh->indices);
