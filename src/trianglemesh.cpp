@@ -1012,7 +1012,7 @@ TriangleMesh::TriangleMesh(float* vertices,
     uv.reset(new point2f[nTex]);
     for (size_t i = 0; i < nTex; i += 2) {
       uv[i / 2] = point2f((Float)texcoords[i+0],
-                      (Float)texcoords[i+1]);
+                          (Float)texcoords[i+1]);
     }
   } else {
     uv = nullptr;
@@ -1023,17 +1023,24 @@ TriangleMesh::TriangleMesh(float* vertices,
     vertexIndices.push_back(indices[s]);
     vertexIndices.push_back(indices[s+1]);
     vertexIndices.push_back(indices[s+2]);
-    
-    // if(has_normals) {
+    if(has_normals) {
       normalIndices.push_back(indices[s+0]);
       normalIndices.push_back(indices[s+1]);
       normalIndices.push_back(indices[s+2]);
-    // }
-    // if(has_tex) {
+    } else {
+      normalIndices.push_back(-1);
+      normalIndices.push_back(-1);
+      normalIndices.push_back(-1);
+    }
+    if(has_tex) {
       texIndices.push_back(indices[s+0]);
       texIndices.push_back(indices[s+1]);
       texIndices.push_back(indices[s+2]);
-    // }
+    } else {
+      texIndices.push_back(-1);
+      texIndices.push_back(-1);
+      texIndices.push_back(-1);
+    }
     nTriangles++;
     face_material_id.push_back(0);
   }

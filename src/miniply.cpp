@@ -76,6 +76,8 @@ namespace miniply {
     { "int",    PLYPropertyType::Int    },
     { "uint",   PLYPropertyType::UInt   },
     { "float",  PLYPropertyType::Float  },
+    { "float32",PLYPropertyType::Float  },
+    { "float64",PLYPropertyType::Double  },
     { "double", PLYPropertyType::Double },
 
     { "uint8",  PLYPropertyType::UChar  },
@@ -1041,6 +1043,9 @@ namespace miniply {
     }
 
     const PLYProperty& prop = element()->properties[propIdx];
+    if (prop.listData.data() == nullptr || prop.listData.size() == 0) {
+      return false;
+    }
     if (compatible_types(prop.type, destType)) {
       // If no type conversion is required, we can just copy the list data
       // directly over with a single memcpy.
@@ -1497,7 +1502,7 @@ namespace miniply {
 
   bool PLYReader::load_fixed_size_element(PLYElement& elem)
   {
-    size_t numBytes = elem.count * elem.rowStride;
+    size_t numBytes = static_cast<size_t>(elem.count) * elem.rowStride;
 
     m_elementData.resize(numBytes);
 
@@ -1568,7 +1573,7 @@ namespace miniply {
 
   bool PLYReader::load_variable_size_element(PLYElement& elem)
   {
-    m_elementData.resize(elem.count * elem.rowStride);
+    m_elementData.resize(static_cast<size_t>(elem.count) * elem.rowStride);
 
     // Preallocate enough space for each row in the property to contain three
     // items. This is based on the assumptions that (a) the most common use for

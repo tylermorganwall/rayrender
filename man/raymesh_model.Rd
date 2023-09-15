@@ -13,7 +13,7 @@ raymesh_model(
   verbose = FALSE,
   importance_sample_lights = FALSE,
   calculate_consistent_normals = TRUE,
-  override_material = FALSE,
+  override_material = TRUE,
   material = diffuse(),
   angle = c(0, 0, 0),
   order_rotation = c(1, 2, 3),
@@ -44,7 +44,7 @@ the attenuation values directly.}
 \item{calculate_consistent_normals}{Default `TRUE`. Whether to calculate consistent vertex normals to prevent energy 
 loss at edges.}
 
-\item{override_material}{Default `FALSE`. If `TRUE`, overrides the material specified in the 
+\item{override_material}{Default `TRUE`. If `TRUE`, overrides the material specified in the 
 `raymesh` object with the one specified in `material`.}
 
 \item{material}{Default  \code{\link{diffuse}}, but ignored unless `override_material = TRUE`. The material, called from one of the material 

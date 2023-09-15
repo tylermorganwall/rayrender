@@ -78,8 +78,7 @@ static TriMesh* parse_file_with_miniply(const char* filename, bool assumeTriangl
       }
       gotVerts = true;
     } else if (reader.element_is(miniply::kPLYFaceElement) && reader.load_element() && reader.find_indices(indexes)) {
-      uint32_t propIdx = 1; 
-      bool polys = reader.requires_triangulation(propIdx);
+      bool polys = reader.requires_triangulation(indexes[0]);
       if (polys && !gotVerts) {
         Rcpp::Rcout << "Error: need vertex positions to triangulate faces.\n";
         break;
@@ -90,7 +89,9 @@ static TriMesh* parse_file_with_miniply(const char* filename, bool assumeTriangl
         reader.extract_triangles(indexes[0], trimesh->pos, trimesh->numVerts, miniply::PLYPropertyType::Int, trimesh->indices);
       } else {
         trimesh->numIndices = reader.num_rows() * 3;
+        uint32_t propIdx = indexes[0];
         trimesh->indices = new int[trimesh->numIndices];
+        const miniply::PLYProperty& prop = reader.element()->properties[propIdx];
         reader.extract_list_property(indexes[0], miniply::PLYPropertyType::Int, trimesh->indices);
       }
       gotFaces = true;
@@ -129,7 +130,9 @@ plymesh::plymesh(std::string inputfile, std::string basedir, std::shared_ptr<mat
                                                         alpha, bump, 
                                                         mat,
                                                         ObjectToWorld, WorldToObject, reverseOrientation));
+  // mesh->ValidateMesh();
   size_t n = mesh->nTriangles * 3;
+  
   for(size_t i = 0; i < n; i += 3) {
     triangles.add(std::make_shared<triangle>(mesh.get(), 
                                              &mesh->vertexIndices[i], 
@@ -138,6 +141,7 @@ plymesh::plymesh(std::string inputfile, std::string basedir, std::shared_ptr<mat
                                              ObjectToWorld, WorldToObject, reverseOrientation));
   }
   ply_mesh_bvh = std::make_shared<bvh_node>(triangles, shutteropen, shutterclose, bvh_type, rng);
+  // ply_mesh_bvh->validate_bvh();
   triangles.objects.clear();
   delete tri;
 };
