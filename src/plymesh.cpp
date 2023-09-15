@@ -67,7 +67,7 @@ static TriMesh* parse_file_with_miniply(const char* filename, bool assumeTriangl
   bool gotVerts = false, gotFaces = false;
   
   TriMesh* trimesh = new TriMesh();
- while (reader.has_element() && (!gotVerts || !gotFaces)) {
+  while (reader.has_element() && (!gotVerts || !gotFaces)) {
     if (reader.element_is(miniply::kPLYVertexElement) && reader.load_element() && reader.find_pos(indexes)) {
       trimesh->numVerts = reader.num_rows();
       trimesh->pos = new float[trimesh->numVerts * 3];
@@ -92,11 +92,6 @@ static TriMesh* parse_file_with_miniply(const char* filename, bool assumeTriangl
         uint32_t propIdx = indexes[0];
         trimesh->indices = new int[trimesh->numIndices];
         const miniply::PLYProperty& prop = reader.element()->properties[propIdx];
-        if (trimesh->numIndices * sizeof(int) < prop.listData.size()) {
-          delete[] trimesh->indices;
-          delete trimesh;
-          return nullptr;
-        }
         reader.extract_list_property(indexes[0], miniply::PLYPropertyType::Int, trimesh->indices);
       }
       gotFaces = true;
