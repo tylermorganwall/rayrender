@@ -56,7 +56,7 @@ class hitable {
 
 
 struct hit_record {
-  hit_record() : has_bump(false), alpha_miss(false) {};
+  hit_record() : has_bump(false), alpha_miss(false), infinite_area_hit(false) {};
   
   point3f p; //PBRT: In Interaction
   Float t; //PBRT: In Interaction
@@ -77,6 +77,7 @@ struct hit_record {
   mutable Float dudx, dvdx, dudy, dvdy;
   mutable vec3f dpdx, dpdy;
   mutable normal3f dndu, dndv;
+  bool infinite_area_hit;
   //const Shape *shape (recording the shape)
   //const Primitive *primitive (recording the primitive)
   //int faceIndex (for ptex lookups)

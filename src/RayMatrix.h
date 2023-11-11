@@ -10,6 +10,9 @@ public:
   inline float& operator()(unsigned int x, unsigned int y) { 
     return data[x + nrow * y]; 
   }
+  inline void add_one(unsigned int x, unsigned int y) { 
+    data[x + nrow * y] += 1;
+  }
   unsigned int rows() {return(nrow);}
   unsigned int cols() {return(ncol);}
   unsigned int nrows() {return(nrow);}
@@ -25,10 +28,9 @@ public:
   std::vector<float> data;
   unsigned int nrow;
   unsigned int ncol;
-  
-  
-  
 };
+
+
 
 
 #endif

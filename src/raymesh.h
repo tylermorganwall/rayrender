@@ -17,6 +17,7 @@ public:
   raymesh() {}
   raymesh(Rcpp::List raymesh_list, 
           std::shared_ptr<material> default_material, 
+          std::shared_ptr<alpha_texture> alpha_mask, std::shared_ptr<bump_texture> bump_tex,
           bool importance_sample_lights, bool calculate_consistent_normals, bool override_material,
           bool flip_transmittance,
           hitable_list& imp_sample_objects, bool verbose,

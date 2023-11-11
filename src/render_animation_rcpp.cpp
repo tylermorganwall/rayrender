@@ -30,7 +30,7 @@ using namespace std;
 void render_animation_rcpp(List camera_info, List scene_info, List camera_movement, 
                            int start_frame, int end_frame,
                            CharacterVector filenames, Function post_process_frame, int toneval,
-                           bool bloom, bool write_image) {
+                           bool bloom, bool write_image, bool transparent_background) {
   
   //Unpack scene info
   bool ambient_light = as<bool>(scene_info["ambient_light"]);
@@ -169,7 +169,8 @@ void render_animation_rcpp(List camera_info, List scene_info, List camera_moveme
   for(int i = 0; i < n; i++) {
     if(isimage(i)) {
       int nx, ny, nn;
-      Float* tex_data = stbi_loadf(filelocation(i), &nx, &ny, &nn, 0);
+      Float* tex_data = stbi_loadf(filelocation(i), &nx, &ny, &nn, 4);
+      nn = 4;
       textures.push_back(tex_data);
       nx_ny_nn.push_back(new int[3]);
       nx_ny_nn[i][0] = nx;
@@ -193,7 +194,8 @@ void render_animation_rcpp(List camera_info, List scene_info, List camera_moveme
     }
     if(has_bump(i)) {
       int nxb, nyb, nnb;
-      unsigned char * tex_data_bump = stbi_load(bump_files(i), &nxb, &nyb, &nnb, 0);
+      unsigned char * tex_data_bump = stbi_load(bump_files(i), &nxb, &nyb, &nnb, 4);
+      nnb = 4;
       bump_textures.push_back(tex_data_bump);
       nx_ny_nn_bump.push_back(new int[3]);
       nx_ny_nn_bump[i][0] = nxb;
@@ -205,7 +207,8 @@ void render_animation_rcpp(List camera_info, List scene_info, List camera_moveme
     }
     if(has_roughness(i)) {
       int nxr, nyr, nnr;
-      unsigned char * tex_data_roughness = stbi_load(roughness_files(i), &nxr, &nyr, &nnr, 0);
+      unsigned char * tex_data_roughness = stbi_load(roughness_files(i), &nxr, &nyr, &nnr, 4);
+      nnr = 4;
       roughness_textures.push_back(tex_data_roughness);
       nx_ny_nn_roughness.push_back(new int[3]);
       nx_ny_nn_roughness[i][0] = nxr;
@@ -255,7 +258,8 @@ void render_animation_rcpp(List camera_info, List scene_info, List camera_moveme
   vec3f world_center  = bounding_box_world.Centroid();
   for(int i = 0; i < cam_x.length(); i++) {
     vec3f lf(cam_x(i),cam_y(i),cam_z(i));
-    world_radius = world_radius > (lf - world_center).length() ? world_radius : (lf - world_center ).length();
+    world_radius = world_radius > (lf - world_center).length() ? world_radius : 
+      1.1*(lf - world_center).length();
   }
 
   //Initialize background
@@ -278,12 +282,30 @@ void render_animation_rcpp(List camera_info, List scene_info, List camera_moveme
   std::shared_ptr<Transform> BackgroundTransformInv = transformCache.Lookup(BackgroundAngle.GetInverseMatrix());
 
   if(hasbackground) {
-    background_texture_data = stbi_loadf(background[0], &nx1, &ny1, &nn1, 0);
-    background_texture = std::make_shared<image_texture_float>(background_texture_data, nx1, ny1, nn1, 1, 1, intensity_env);
-    background_material = std::make_shared<diffuse_light>(background_texture, 1.0, false);
-    background_sphere = std::make_shared<InfiniteAreaLight>(nx1, ny1, world_radius*2, world_center,
-                                                            background_texture, background_material, BackgroundTransform,
-                                                            BackgroundTransformInv, false);
+    background_texture_data = stbi_loadf(background[0], &nx1, &ny1, &nn1, 4);
+    nn1 = 4;
+    if(background_texture_data) {
+      background_texture = std::make_shared<image_texture_float>(background_texture_data, nx1, ny1, nn1, 1, 1, intensity_env);
+      background_material = std::make_shared<diffuse_light>(background_texture, 1.0, false);
+      background_sphere = std::make_shared<InfiniteAreaLight>(nx1, ny1, world_radius*2, world_center,
+                                                              background_texture, background_material,
+                                                              BackgroundTransform,
+                                                              BackgroundTransformInv, false);
+    } else {
+      Rcpp::Rcout << "Failed to load background image at " << background(0) << "\n";
+      if(stbi_failure_reason()) {
+        Rcpp::Rcout << stbi_failure_reason() << "\n";
+      }
+      hasbackground = false;
+      ambient_light = true;
+      backgroundhigh = vec3f(FLT_MIN,FLT_MIN,FLT_MIN);
+      backgroundlow = vec3f(FLT_MIN,FLT_MIN,FLT_MIN);
+      background_texture = std::make_shared<gradient_texture>(backgroundlow, backgroundhigh, false, false);
+      background_material = std::make_shared<diffuse_light>(background_texture, 1.0, false);
+      background_sphere = std::make_shared<InfiniteAreaLight>(100, 100, world_radius*2, world_center,
+                                                              background_texture, background_material,
+                                                              BackgroundTransform,BackgroundTransformInv,false);
+    }
   } else if(ambient_light) {
     //Check if both high and low are black, and set to FLT_MIN
     if(backgroundhigh.length() == 0 && backgroundlow.length() == 0) {
@@ -315,16 +337,16 @@ void render_animation_rcpp(List camera_info, List scene_info, List camera_moveme
     }
   }
   hitable_list world;
-
   world.add(worldbvh);
 
   bool impl_only_bg = false;
+  world.add(background_sphere);
+  
   if((numbertosample == 0 || hasbackground || ambient_light)  && debug_channel != 18) {
-    world.add(background_sphere);
     impl_only_bg = true;
   }
   
-  PreviewDisplay d(nx,ny, preview, false, 20.0f, cam.get(), 
+  PreviewDisplay d(nx, ny, preview, false, 20.0f, cam.get(), 
                    background_sphere->ObjectToWorld.get(),
                    background_sphere->WorldToObject.get());
   
@@ -494,9 +516,11 @@ void render_animation_rcpp(List camera_info, List scene_info, List camera_moveme
       RayMatrix routput(nx,ny);
       RayMatrix goutput(nx,ny);
       RayMatrix boutput(nx,ny);
+      RayMatrix alpha_output(nx,ny);
+      
       pathtracer(numbercores, nx, ny, ns, debug_channel,
                  min_variance, min_adaptive_size,
-                 routput, goutput,boutput,
+                 routput, goutput, boutput, alpha_output,
                  progress_bar, sample_method, stratified_dim,
                  verbose, cam.get(),  fov,
                  world, imp_sample_objects,
@@ -506,10 +530,10 @@ void render_animation_rcpp(List camera_info, List scene_info, List camera_moveme
       }
       List temp = List::create(_["r"] = routput.ConvertRcpp(), 
                                _["g"] = goutput.ConvertRcpp(), 
-                               _["b"] = boutput.ConvertRcpp());
-      if(write_image) {
-        post_process_frame(temp, debug_channel, as<std::string>(filenames(i)), toneval, bloom);
-      }
+                               _["b"] = boutput.ConvertRcpp(),
+                               _["a"] = alpha_output.ConvertRcpp());
+      post_process_frame(temp, debug_channel, as<std::string>(filenames(i)), toneval, bloom,
+                       transparent_background, write_image);
     }
   }
 

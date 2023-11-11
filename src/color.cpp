@@ -6,7 +6,8 @@
 // #define DEBUG
 
 point3f color(const ray& r, hitable *world, hitable_list *hlist,
-           size_t max_depth, size_t roulette_activate, random_gen& rng, Sampler* sampler) {
+           size_t max_depth, size_t roulette_activate, random_gen& rng, Sampler* sampler,
+           bool& alpha) {
 #ifdef DEBUG
   std::ofstream myfile;
   myfile.open("rays.txt", std::ios::app | std::ios::out);
@@ -19,6 +20,8 @@ point3f color(const ray& r, hitable *world, hitable_list *hlist,
   ray r1 = r;
   ray r2 = r;
   bool diffuse_bounce = false;
+  //To-do: Add logic to detect when rays only go through transmissive surfaces and make those transparent
+  //when transparent_background = TRUE
   for(size_t i = 0; i < max_depth; i++) {
     bool is_invisible = false;
     hit_record hrec;
@@ -27,6 +30,9 @@ point3f color(const ray& r, hitable *world, hitable_list *hlist,
       if(hrec.alpha_miss) {
         r2.A = OffsetRayOrigin(hrec.p, hrec.pError, hrec.normal, r2.direction());
         continue;
+      }
+      if(hrec.infinite_area_hit && i == 0) {
+        alpha = true;
       }
       emit_color = throughput * hrec.mat_ptr->emitted(r2, hrec, hrec.u, hrec.v, hrec.p, is_invisible);
       //Some lights can be invisible until after diffuse bounce

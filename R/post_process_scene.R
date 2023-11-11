@@ -3,9 +3,9 @@
 #'@keywords internal
 #'@examples
 #'#internal
-post_process_scene = function(rgb_mat, iso, tonemap, debug_channel, filename, return_raw_array, bloom, new_page = TRUE) {
+post_process_scene = function(rgb_mat, iso, tonemap, debug_channel, filename, return_raw_array, bloom, new_page = TRUE,
+                              transparent_background = FALSE) {
   toneval = switch(tonemap, "gamma" = 1,"reinhold" = 2,"uncharted" = 3,"hbd" = 4, "raw" = 5)
-  
   if(!is.numeric(debug_channel)) {
     debug_channel = unlist(lapply(tolower(debug_channel),switch,
                                   "none" = 0,"depth" = 1,"normals" = 2, "uv" = 3, "bvh" = 4,
@@ -18,11 +18,17 @@ post_process_scene = function(rgb_mat, iso, tonemap, debug_channel, filename, re
     light_direction = debug_channel
     debug_channel = 9
   }
-  
-  full_array = array(0,c(ncol(rgb_mat$r),nrow(rgb_mat$r),3))
+  if(!transparent_background) {
+    full_array = array(0,c(ncol(rgb_mat$r),nrow(rgb_mat$r),3))
+  } else {
+    full_array = array(0,c(ncol(rgb_mat$r),nrow(rgb_mat$r),4))
+  }
   full_array[,,1] = flipud(t(rgb_mat$r))
   full_array[,,2] = flipud(t(rgb_mat$g))
   full_array[,,3] = flipud(t(rgb_mat$b))
+  if(transparent_background) {
+    full_array[,,4] = flipud(t(rgb_mat$a))
+  } 
   if(debug_channel == 1) {
     returnmat = fliplr(t(full_array[,,1]))
     returnmat[is.infinite(returnmat)] = NA
@@ -112,15 +118,27 @@ post_process_scene = function(rgb_mat, iso, tonemap, debug_channel, filename, re
     full_array = rayimage::render_convolution(image = full_array, kernel = kernel,  min_value = 1, preview=FALSE)
   }
   tonemapped_channels = tonemap_image(full_array[,,1],full_array[,,2],full_array[,,3],toneval)
-  full_array = array(0,c(nrow(tonemapped_channels$r),ncol(tonemapped_channels$r),3))
+  if(!transparent_background) {
+    full_array = array(0,c(nrow(tonemapped_channels$r),ncol(tonemapped_channels$r),3))
+  } else {
+    alpha_layer = full_array[,,4]
+    full_array = array(0,c(nrow(tonemapped_channels$r),ncol(tonemapped_channels$r),4))
+  }
   full_array[,,1] = tonemapped_channels$r
   full_array[,,2] = tonemapped_channels$g
   full_array[,,3] = tonemapped_channels$b
+  if(transparent_background) {
+    full_array[,,4] = alpha_layer
+  }
   if(toneval == 5) {
     return(full_array)
   }
   
-  array_from_mat = array(full_array,dim=c(nrow(full_array),ncol(full_array),3))
+  if(!transparent_background) {
+    array_from_mat = array(full_array,dim=c(nrow(full_array),ncol(full_array),3))
+  } else {
+    array_from_mat = array(full_array,dim=c(nrow(full_array),ncol(full_array),4))
+  }
   if(any(is.na(array_from_mat ))) {
     array_from_mat[is.na(array_from_mat)] = 0
   }

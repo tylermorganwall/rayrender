@@ -12,7 +12,8 @@ post_process_scene(
   filename,
   return_raw_array,
   bloom,
-  new_page = TRUE
+  new_page = TRUE,
+  transparent_background = FALSE
 )
 }
 \description{

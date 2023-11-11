@@ -57,7 +57,7 @@ bool InfiniteAreaLight::hit(const ray& r, Float t_min, Float t_max, hit_record& 
     
     rec.mat_ptr = mat_ptr.get();
     rec.alpha_miss = false;
-    
+    rec.infinite_area_hit = true;
     return(true);
   }
   if(temp2 < t_max && temp2 > t_min) {
@@ -85,6 +85,7 @@ bool InfiniteAreaLight::hit(const ray& r, Float t_min, Float t_max, hit_record& 
 
     rec.mat_ptr = mat_ptr.get();
     rec.alpha_miss = false;
+    rec.infinite_area_hit = true;
     
     return(true);
   }
@@ -128,6 +129,7 @@ bool InfiniteAreaLight::hit(const ray& r, Float t_min, Float t_max, hit_record& 
     rec.pError = vec3f(0,0,0);
     rec.mat_ptr = mat_ptr.get();
     rec.alpha_miss = false;
+    rec.infinite_area_hit = true;
     
     return(true);
   }
@@ -156,6 +158,7 @@ bool InfiniteAreaLight::hit(const ray& r, Float t_min, Float t_max, hit_record& 
     
     rec.mat_ptr = mat_ptr.get();
     rec.alpha_miss = false;
+    rec.infinite_area_hit = true;
     
     return(true);
   }

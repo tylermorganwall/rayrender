@@ -487,10 +487,13 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
     RayMatrix routput2(nx,ny);
     RayMatrix goutput2(nx,ny);
     RayMatrix boutput2(nx,ny);
+    RayMatrix alpha(nx,ny);
+    
     adaptive_sampler adaptive_pixel_sampler(numbercores, nx, ny, ns, debug_channel,
                                             min_variance, min_adaptive_size,
                                             routput, goutput, boutput,
-                                            routput2, goutput2, boutput2);
+                                            routput2, goutput2, boutput2,
+                                            alpha);
     std::vector<random_gen > rngs;
     std::vector<std::unique_ptr<Sampler> > samplers;
 

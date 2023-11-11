@@ -3,6 +3,7 @@
 
 raymesh::raymesh(Rcpp::List raymesh_list, 
                  std::shared_ptr<material> default_material, 
+                 std::shared_ptr<alpha_texture> alpha_mask, std::shared_ptr<bump_texture> bump_tex,
                  bool importance_sample_lights, 
                  bool calculate_consistent_normals,
                  bool override_material,
@@ -15,6 +16,8 @@ raymesh::raymesh(Rcpp::List raymesh_list,
   mesh = std::unique_ptr<TriangleMesh>(new TriangleMesh(raymesh_list, verbose, 
                                                         calculate_consistent_normals, override_material,
                                                         flip_transmittance,
+                                                        alpha_mask,
+                                                        bump_tex,
                                                         default_material, 
                                                         ObjectToWorld, WorldToObject, reverseOrientation));
 #ifdef FULL_DEBUG
@@ -27,6 +30,9 @@ raymesh::raymesh(Rcpp::List raymesh_list,
                                              &mesh->normalIndices[i],
                                              &mesh->texIndices[i], i / 3,
                                              ObjectToWorld, WorldToObject, reverseOrientation));
+    if(mesh->face_material_id[i / 3] < 0 || mesh->face_material_id[i / 3] >= mesh->mesh_materials.size()) {
+      throw std::runtime_error("Material ID out of range");
+    }
     if(mesh->material_is_light[mesh->face_material_id[i / 3]] && importance_sample_lights) {
       imp_sample_objects.add(triangles.back());
     }

@@ -14,7 +14,7 @@
 
 void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::size_t ns, int debug_channel,
                 Float min_variance, std::size_t min_adaptive_size, 
-                RayMatrix& routput, RayMatrix& goutput, RayMatrix& boutput,
+                RayMatrix& routput, RayMatrix& goutput, RayMatrix& boutput, RayMatrix& alpha_output,
                 bool progress_bar, int sample_method, Rcpp::NumericVector& stratified_dim,
                 bool verbose, RayCamera* cam, 
                 Float fov,
@@ -43,7 +43,8 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
   adaptive_sampler adaptive_pixel_sampler(numbercores, nx, ny, ns, debug_channel,
                                           min_variance, min_adaptive_size,
                                           routput, goutput, boutput,
-                                          routput2, goutput2, boutput2);
+                                          routput2, goutput2, boutput2,
+                                          alpha_output);
   
   size_t nx_small = nx*0.25;
   size_t ny_small = ny*0.25;
@@ -53,10 +54,13 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
   RayMatrix routput_small2(nx_small,ny_small);
   RayMatrix goutput_small2(nx_small,ny_small);
   RayMatrix boutput_small2(nx_small,ny_small);
+  RayMatrix alpha_output_small(nx_small,ny_small);
+  
   adaptive_sampler adaptive_pixel_sampler_small(numbercores, nx_small, ny_small, 1, debug_channel,
                                                 0, 1,
                                                 routput_small, goutput_small, boutput_small,
-                                                routput_small2, goutput_small2, boutput_small2);
+                                                routput_small2, goutput_small2, boutput_small2,
+                                                alpha_output_small);
   std::vector<random_gen > rngs;
   std::vector<random_gen > rngs_small;
   
@@ -151,9 +155,13 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
                              weight = cam->GenerateRay(samp, &r);
                            }
                            r.pri_stack = mat_stack;
+                           bool alpha = false;
                            point3f col = weight != 0 ? clamp_point(de_nan(color(r, &world, &hlist, max_depth, 
-                                                         roulette_active, rngs[index], samplers[index].get())),
+                                                         roulette_active, rngs[index], samplers[index].get(), alpha)),
                                                0, clampval) * weight * cam->get_iso() : 0;
+                           if(alpha) {
+                             adaptive_pixel_sampler.add_alpha_count(i,j);
+                           }
                            // col = col * fil.Evaluate(u2);
                            mat_stack->clear();
                            adaptive_pixel_sampler.add_color_main(i, j, col);
@@ -180,7 +188,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
       auto worker = [&adaptive_pixel_sampler_small,
                      nx_small, ny_small, s, sample_method,
                      &rngs_small, fov, &samplers_small,
-                     cam, &world, &hlist,
+                     cam, &world, &hlist, 
                      clampval, max_depth, roulette_active] (int k) {
                        // MitchellFilter fil(vec2f(1.0),1./3.,1./3.);
                        int nx_begin = adaptive_pixel_sampler_small.pixel_chunks[k].startx;
@@ -206,9 +214,17 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
                              weight = cam->GenerateRay(samp, &r);
                            }
                            r.pri_stack = mat_stack;
+                           bool alpha = false;
                            point3f col = weight != 0 ? clamp_point(de_nan(color(r, &world, &hlist, max_depth, 
-                                                                                roulette_active, rngs_small[index], samplers_small[index].get())),
-                                                                                0, clampval) * weight * cam->get_iso() : 0;
+                                                                                roulette_active, 
+                                                                                rngs_small[index], 
+                                                                                samplers_small[index].get(),
+                                                                                alpha)
+                                                                          ),
+                                                                   0, clampval) * weight * cam->get_iso() : 0;
+                           if(alpha) {
+                             adaptive_pixel_sampler_small.add_alpha_count(i,j);
+                           }
                            // col = col * fil.Evaluate(u2);
                            mat_stack->clear();
                            adaptive_pixel_sampler_small.add_color_main(i, j, col);
@@ -239,9 +255,12 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
       
       for(size_t ii = 0; ii < nx; ii++) {
         for(size_t jj = 0; jj < ny; jj++) {
-          adaptive_pixel_sampler.r(ii,jj) = adaptive_pixel_sampler_small.r((Float)ii * ratio_x,(Float)jj * ratio_y);
-          adaptive_pixel_sampler.g(ii,jj) = adaptive_pixel_sampler_small.g((Float)ii * ratio_x,(Float)jj * ratio_y);
-          adaptive_pixel_sampler.b(ii,jj) = adaptive_pixel_sampler_small.b((Float)ii * ratio_x,(Float)jj * ratio_y);
+          int iii = (Float)ii * ratio_x;
+          int jjj = (Float)jj * ratio_y;
+          adaptive_pixel_sampler.r(ii,jj) = adaptive_pixel_sampler_small.r(iii,jjj);
+          adaptive_pixel_sampler.g(ii,jj) = adaptive_pixel_sampler_small.g(iii,jjj);
+          adaptive_pixel_sampler.b(ii,jj) = adaptive_pixel_sampler_small.b(iii,jjj);
+          adaptive_pixel_sampler.a(ii,jj) = adaptive_pixel_sampler_small.a(iii,jjj);
         }
       }
     }

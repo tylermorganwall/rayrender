@@ -56,6 +56,8 @@ struct TriangleMesh {
                bool reverseOrientation);
   TriangleMesh(Rcpp::List raymesh, bool verbose, bool calculate_consistent_normals,
                bool override_material, bool flip_transmittance,
+               std::shared_ptr<alpha_texture> alpha,
+               std::shared_ptr<bump_texture> bump,
                std::shared_ptr<material> default_material, 
                std::shared_ptr<Transform> ObjectToWorld, 
                std::shared_ptr<Transform> WorldToObject, 

@@ -705,12 +705,13 @@ std::shared_ptr<hitable> build_scene(IntegerVector& type,
       ////calculate consistent normals--need to change
       entry = std::make_shared<raymesh>(raymesh_object,
                                         tex,
+                                        alpha[i], bump[i], 
                                         tempvector(prop_len+1), 
                                         tempvector(prop_len+2), 
                                         tempvector(prop_len+3),
                                         tempvector(prop_len+4),
                                         imp_sample_objects, 
-                                        verbose,
+                                        verbose, 
                                         shutteropen, shutterclose, bvh_type, rng, 
                                         ObjToWorld, WorldToObj, isflipped(i));
       if(has_animation(i)) {

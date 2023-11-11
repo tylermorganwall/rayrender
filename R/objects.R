@@ -1270,20 +1270,15 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
     y = xylist$y
     if(is.null(holes) || holes == 0) {
       holes = 0
-    } else if (
-      !is.numeric(holes) || anyNA(holes <- as.integer(holes))
-    ) {
+    } else if (!is.numeric(holes) || anyNA(as.integer(holes))) {
       stop("holes must be integer")
-    } else if (
-      any(holes < 0L) || any(holes) > length(x) ||
-      (any(holes == 0L) && length(holes) != 1L)
-    ) {
-      stop(
-        "holes must be zero, or contain indices to polygon vertices"
-      )
+    } else if (any(holes < 0L) || any(holes) > length(x) ||
+               (any(holes == 0L) && length(holes) != 1L)) {
+      stop("holes must be zero, or contain indices to polygon vertices")
     } else if (any(holes < 4)) {
       stop("holes cannot begin before vertex 4. Hole index here starts at: ", min(holes))
     }
+    holes = as.integer(holes)
     # label each vertex with a hole id
 
     if(isTRUE(holes == 0)) {
@@ -1336,7 +1331,6 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
       poly_list[[i]][,2] = poly_list[[i]][,2] - middle_y
     }
   }
-  scenelist= list()
   counter = 1
   
   vert_list = list()
@@ -1430,11 +1424,6 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
         }
       }
     }
-  }
-  if(length(find.package("dplyr",quiet=TRUE)) > 0) {
-    scenefull = dplyr::bind_rows(scenelist)
-  } else {
-    scenefull = do.call(rbind, scenelist)
   }
   
   v_mat = do.call(rbind,vert_list)
@@ -2700,19 +2689,20 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
 #' generate_ground(depth=-0.4,material=diffuse(color="grey50",
 #'                                             checkercolor = "grey20",checkerperiod = 1.5)) |>
 #'   add_object(extruded_path(points = points, width=0.7, linear_step = TRUE, 
-#'                            polygon = circ_polygon, twists = 2, closed = TRUE,
-#'                            polygon_end = star_polygon,
+#'                            polygon = star_polygon, twists = 2, closed = TRUE,
+#'                            polygon_end = star_polygon, breaks=500,
 #'                            material=dielectric(priority = 1, refraction = 1.2, 
-#'                                                attenuation=c(1,0.3,1)*10))) |> 
+#'                                                attenuation=c(1,0.3,1),
+#'                                                attenuation_intensity=20))) |> 
 #'   add_object(extruded_path(points = points, width=0.4, linear_step = TRUE,
-#'                            polygon = circ_polygon,twists = 2, closed = TRUE,
-#'                            polygon_end = star_polygon,
+#'                            polygon = star_polygon,twists = 2, closed = TRUE,
+#'                            polygon_end = star_polygon, breaks=500,
 #'                            material=dielectric(priority = 0,refraction = 1))) |>  
 #'   add_object(extruded_path(points = points, width=0.05, closed = TRUE,
 #'                            material=light(color="purple", intensity = 5,
 #'                                           importance_sample = FALSE))) |>
 #'   add_object(sphere(y=10,z=-5,x=0,radius=5,material=light(color = "white",intensity = 5))) |>
-#'   render_scene(lookat=c(0,0.5,1),fov=12, 
+#'   render_scene(lookat=c(0,0.5,1),fov=10, 
 #'                width=800,height=800, clamp_value = 10,
 #'                aperture=0.025, samples=128, sample_method="sobol_blue")
 #' }
@@ -3096,12 +3086,14 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
   poly_tex = seq(0,1,length.out=nrow(polygon))
   counter = 1
   if(closed && !closed_smooth) {
-    twist_amount = -calculate_final_twist(full_control_points,
+    twist_amount = calculate_final_twist(full_control_points,
                                          breaks, t_vals,
                                          t_vec, s_vec, r_vec)
     end_angle_r = twists*2*pi + twist_amount[1]
-    end_angle_s = twist_amount[2]
-    end_angle_t = twist_amount[3]
+    # end_angle_s = twist_amount[2]
+    # end_angle_t = twist_amount[3]
+    end_angle_s = 0
+    end_angle_t = 0
   } else {
     end_angle_r = twists*2*pi
     end_angle_s = 0
@@ -3211,7 +3203,7 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
   
   twist_mat = matrix(c(cb*cc, sa*sb*cc-ca*sc, ca*sb*cc + sa*sc,
                        cb*sc, sa*sb*sc+ca*cc, ca*sb*sc - sa*cc,
-                       -sb,              sa*cb,         ca*cb), nrow=3,ncol=3,byrow=TRUE)
+                       -sb,            sa*cb,            ca*cb), nrow=3,ncol=3,byrow=TRUE)
   vertices[[counter]] = matrix(x1,ncol=3,nrow=nrow(polygon), byrow=TRUE) +
     t((rot_mat %*% twist_mat %*% t(polygon_end*width_vals[seg_end+1])))
   texcoords[[counter]] = matrix(c(poly_tex,rep(1 * texture_repeats,nrow(polygon))),

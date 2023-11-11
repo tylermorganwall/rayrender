@@ -47,7 +47,8 @@
 #' @param sample_method Default `sobol`. The type of sampling method used to generate
 #' random numbers. The other options are `random` (worst quality but fastest), 
 #' `stratified` (only implemented for completion), `sobol_blue` (best option for sample counts below 256), 
-#' and `sobol` (slowest but best quality, better than `sobol_blue` for sample counts greater than 256).
+#' and `sobol` (slowest but best quality, better than `sobol_blue` for sample counts greater than 256). If 
+#' `samples > 256` and `sobol_blue` is selected, the method will automatically switch to `sample_method = "sobol"`.
 #' @param max_depth Default `NA`, automatically sets to 50. Maximum number of bounces a ray can make in a scene. Alternatively,
 #' if a debugging option is chosen, this sets the bounce to query the debugging parameter (only for some options).
 #' @param roulette_active_depth Default `100`. Number of ray bounces until a ray can stop bouncing via
@@ -91,6 +92,9 @@
 #' @param rotate_env Default `0`. The number of degrees to rotate the environment map around the scene.
 #' @param intensity_env Default `1`. The amount to increase the intensity of the environment lighting. Useful
 #' if using a LDR (JPEG or PNG) image as an environment map.
+#' @param transparent_background Default `FALSE`. If `TRUE`, any initial camera rays that escape the scene
+#' will be marked as transparent in the final image. If for a pixel some rays escape and others hit a surface,
+#' those pixels will be partially transparent. 
 #' @param debug_channel Default `none`. If `depth`, function will return a depth map of rays into the scene 
 #' instead of an image. If `normals`, function will return an image of scene normals, mapped from 0 to 1.
 #' If `uv`, function will return an image of the uv coords. If `variance`, function will return an image 
@@ -135,9 +139,11 @@
 #' }
 #' if (run_documentation()) {
 #'   # Add a metallic gold sphere, using stratified sampling for a higher quality render
+#'   # We also add a light, which turns off the default ambient lighting
 #'   scene = scene %>%
 #'     add_object(sphere(x = -1.1, y = 0, z = 0, radius = 0.5, 
-#'                       material = metal(color = "gold", fuzz = 0.1)))
+#'                       material = metal(color = "gold", fuzz = 0.1))) %>%
+#'     add_object(sphere(y=10,z=13,radius=2,material=light(intensity=40)))
 #'   render_scene(scene, fov = 20, parallel = TRUE, samples = 128)
 #' }
 #' if (run_documentation()) {
@@ -152,7 +158,7 @@
 #'   dev.off()
 #'   image_array = aperm(png::readPNG(tempfileplot), c(2, 1, 3))
 #'   scene = scene %>%
-#'     add_object(xy_rect(x = 0, y = 1.1, z = 0, xwidth = 2, angle = c(0, 180, 0),
+#'     add_object(xy_rect(x = 0, y = 1.1, z = 0, xwidth = 2, angle = c(0, 0, 0), 
 #'                        material = diffuse(image_texture = image_array)))
 #'   render_scene(scene, fov = 20, parallel = TRUE, samples = 128)
 #' }
@@ -161,15 +167,16 @@
 #'   render_scene(scene, lookfrom = c(7, 1.5, 10), lookat = c(0, 0.5, 0), fov = 15, parallel = TRUE)
 #' }
 #' if (run_documentation()) {
-#'   # Change the background gradient to a night time ambiance
+#'   # Change the background gradient to a firey sky
 #'   render_scene(scene, lookfrom = c(7, 1.5, 10), lookat = c(0, 0.5, 0), fov = 15,
-#'                backgroundhigh = "#282375", backgroundlow = "#7e77ea", parallel = TRUE,
+#'                backgroundhigh = "orange", backgroundlow = "red", parallel = TRUE,
+#'                ambient = TRUE,
 #'                samples = 128)
 #' }
 #' if (run_documentation()) {    
 #'   # Increase the aperture to blur objects that are further from the focal plane.
 #'   render_scene(scene, lookfrom = c(7, 1.5, 10), lookat = c(0, 0.5, 0), fov = 15,
-#'                aperture = 0.5, parallel = TRUE, samples = 128)
+#'                aperture = 1, parallel = TRUE, samples = 128)
 #' }
 #' if (run_documentation()) {
 #'   # We can also capture a 360 environment image by setting `fov = 360` (can be used for VR)
@@ -209,7 +216,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
                         preview = interactive(), interactive = TRUE,
                         camera_scale = 1, iso = 100, film_size = 22,
                         min_variance = 0.00005, min_adaptive_size = 8,
-                        sample_method = "sobol", 
+                        sample_method = "sobol_blue", 
                         max_depth = NA, roulette_active_depth = 100,
                         ambient_light = NULL, 
                         lookfrom = c(0,1,10), lookat = c(0,0,0), camera_up = c(0,1,0), 
@@ -218,9 +225,14 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
                         shutteropen = 0.0, shutterclose = 1.0, focal_distance=NULL, ortho_dimensions = c(1,1),
                         tonemap ="gamma", bloom = TRUE, parallel = TRUE, bvh_type = "sah",
                         environment_light = NULL, rotate_env = 0, intensity_env = 1,
-                        debug_channel = "none", return_raw_array = FALSE,
+                        transparent_background = FALSE,
+                        debug_channel = "none", return_raw_array = FALSE, 
                         progress = interactive(), verbose = FALSE, new_page = TRUE) { 
   init_time()
+  if(samples > 256 && sample_method == "sobol_blue") {
+    warning('"sobol_blue" sample method only valid for `samples` than or equal to 256--switching to `sample_method = "sobol"`')
+    sample_method = "sobol"
+  }
   
   #Check if Cornell Box scene and set camera if user did not:
   if(!is.null(attr(scene,"cornell"))) {
@@ -300,7 +312,7 @@ Left Mouse Click: Change Look At (new focal distance) | Right Mouse Click: Chang
     assign("keyframes",keyframes, envir = ray_environment)
   }
   return_array = post_process_scene(rgb_mat, iso, tonemap, debug_string, filename, return_raw_array, bloom,
-                                    new_page)
+                                    new_page, transparent_background = transparent_background)
   print_time(verbose, "Post-processed image" );
   
   return(invisible(return_array))

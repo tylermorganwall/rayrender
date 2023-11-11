@@ -2,10 +2,10 @@
 #include "texture.h"
 
 mesh3d::mesh3d(Rcpp::List mesh_info, std::shared_ptr<material> mat, 
-       Float shutteropen, Float shutterclose, int bvh_type, random_gen rng,
-       std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation,
-       int prop_len, Rcpp::NumericVector tempvector, Rcpp::NumericVector temp_glossy, double sigma,
-       double lightintensity) :
+               Float shutteropen, Float shutterclose, int bvh_type, random_gen rng,
+               std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation,
+               int prop_len, Rcpp::NumericVector tempvector, Rcpp::NumericVector temp_glossy, double sigma,
+               double lightintensity) :
   hitable(ObjectToWorld, WorldToObject, reverseOrientation) {
   Rcpp::NumericMatrix vertices = Rcpp::as<Rcpp::NumericMatrix>(mesh_info["vertices"]);
   Rcpp::IntegerMatrix indices = Rcpp::as<Rcpp::IntegerMatrix>(mesh_info["indices"]);
@@ -28,7 +28,8 @@ mesh3d::mesh3d(Rcpp::List mesh_info, std::shared_ptr<material> mat,
   unsigned char* mesh_material_data;
   unsigned char* bump_texture_data;
   if(strlen(texture_location.c_str()) > 0) {
-    mesh_material_data = stbi_load(texture_location.c_str(), &nx, &ny, &nn, 0);
+    mesh_material_data = stbi_load(texture_location.c_str(), &nx, &ny, &nn, 4);
+    nn = 4;
     // has_texture = nx != 0 && ny != 0 && nn != 0;
   } else {
     mesh_material_data = nullptr;

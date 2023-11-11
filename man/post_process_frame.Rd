@@ -4,7 +4,15 @@
 \alias{post_process_frame}
 \title{Post-process Frame}
 \usage{
-post_process_frame(rgb_mat, debug_channel, filename, toneval, bloom = TRUE)
+post_process_frame(
+  rgb_mat,
+  debug_channel,
+  filename,
+  toneval,
+  bloom = TRUE,
+  transparent_background = FALSE,
+  write_file = TRUE
+)
 }
 \value{
 Nothing

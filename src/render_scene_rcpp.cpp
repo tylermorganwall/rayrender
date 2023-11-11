@@ -190,7 +190,7 @@ List render_scene_rcpp(List camera_info, List scene_info) {
   bool preview     = as<bool>(camera_info["preview"]);
   bool interactive = as<bool>(camera_info["interactive"]);
   Float iso = as<Float>(camera_info["iso"]);
-  
+
   int bvh_type = as<int>(camera_info["bvh"]);
 
   
@@ -203,7 +203,8 @@ List render_scene_rcpp(List camera_info, List scene_info) {
   RayMatrix routput(nx,ny);
   RayMatrix goutput(nx,ny);
   RayMatrix boutput(nx,ny);
-
+  RayMatrix alpha_output(nx,ny);
+  
   vec3f lookfrom(lookfromvec[0],lookfromvec[1],lookfromvec[2]);
   vec3f lookat(lookatvec[0],lookatvec[1],lookatvec[2]);
   vec3f backgroundhigh(bghigh[0],bghigh[1],bghigh[2]);
@@ -284,7 +285,8 @@ List render_scene_rcpp(List camera_info, List scene_info) {
   for(int i = 0; i < n; i++) {
     if(isimage(i)) {
       int nx, ny, nn;
-      Float* tex_data = stbi_loadf(filelocation(i), &nx, &ny, &nn, 0);
+      Float* tex_data = stbi_loadf(filelocation(i), &nx, &ny, &nn, 4);
+      nn = 4;
       // texture_bytes += nx * ny * nn;
       textures.push_back(tex_data);
       nx_ny_nn.push_back(new int[3]);
@@ -403,7 +405,8 @@ List render_scene_rcpp(List camera_info, List scene_info) {
   worldbvh->bounding_box(0,0,bounding_box_world);
   Float world_radius = bounding_box_world.Diag().length()/2 ;
   vec3f world_center  = bounding_box_world.Centroid();
-  world_radius = world_radius > (lookfrom - world_center).length() ? world_radius : (lookfrom - world_center ).length();
+  world_radius = world_radius > (lookfrom - world_center).length() ? world_radius : 
+     1.1*(lookfrom - world_center).length();
   world_radius *= interactive ? 100 : 1;
   
   if(fov == 0) {
@@ -427,13 +430,14 @@ List render_scene_rcpp(List camera_info, List scene_info) {
   std::shared_ptr<Transform> BackgroundTransform = transformCacheBg.Lookup(BackgroundAngle);
   std::shared_ptr<Transform> BackgroundTransformInv = transformCacheBg.Lookup(BackgroundAngle.GetInverseMatrix());
   if(hasbackground) {
-    background_texture_data = stbi_loadf(background[0], &nx1, &ny1, &nn1, 0);
+    background_texture_data = stbi_loadf(background[0], &nx1, &ny1, &nn1, 4);
+    nn1 = 4;
     // texture_bytes += nx1 * ny1 * nn1;
     
     if(background_texture_data) {
       background_texture = std::make_shared<image_texture_float>(background_texture_data, nx1, ny1, nn1, 1, 1, intensity_env);
       background_material = std::make_shared<diffuse_light>(background_texture, 1.0, false);
-      background_sphere = std::make_shared<InfiniteAreaLight>(nx1, ny1, world_radius*2, vec3f(0.f),
+      background_sphere = std::make_shared<InfiniteAreaLight>(nx1, ny1, world_radius*2, world_center,
                                                 background_texture, background_material,
                                                 BackgroundTransform,
                                                 BackgroundTransformInv, false);
@@ -449,7 +453,7 @@ List render_scene_rcpp(List camera_info, List scene_info) {
       backgroundlow = vec3f(FLT_MIN,FLT_MIN,FLT_MIN);
       background_texture = std::make_shared<gradient_texture>(backgroundlow, backgroundhigh, false, false);
       background_material = std::make_shared<diffuse_light>(background_texture, 1.0, false);
-      background_sphere = std::make_shared<InfiniteAreaLight>(100, 100, world_radius*2, vec3f(0.f),
+      background_sphere = std::make_shared<InfiniteAreaLight>(100, 100, world_radius*2, world_center,
                                                               background_texture, background_material,
                                                               BackgroundTransform,BackgroundTransformInv,false);
     }
@@ -461,7 +465,7 @@ List render_scene_rcpp(List camera_info, List scene_info) {
     }
     background_texture = std::make_shared<gradient_texture>(backgroundlow, backgroundhigh, false, false);
     background_material = std::make_shared<diffuse_light>(background_texture, 1.0, false);
-    background_sphere = std::make_shared<InfiniteAreaLight>(100, 100, world_radius*2, vec3f(0.f),
+    background_sphere = std::make_shared<InfiniteAreaLight>(100, 100, world_radius*2, world_center,
                                               background_texture, background_material,
                                               BackgroundTransform,BackgroundTransformInv,false);
 
@@ -469,7 +473,7 @@ List render_scene_rcpp(List camera_info, List scene_info) {
     //Minimum intensity FLT_MIN so the CDF isn't NAN
     background_texture = std::make_shared<constant_texture>(vec3f(FLT_MIN,FLT_MIN,FLT_MIN));
     background_material = std::make_shared<diffuse_light>(background_texture, 1.0, false);
-    background_sphere = std::make_shared<InfiniteAreaLight>(100, 100, world_radius*2, vec3f(0.f),
+    background_sphere = std::make_shared<InfiniteAreaLight>(100, 100, world_radius*2, world_center,
                                               background_texture, background_material,
                                               BackgroundTransform,
                                               BackgroundTransformInv,false);
@@ -479,8 +483,8 @@ List render_scene_rcpp(List camera_info, List scene_info) {
   world.add(worldbvh);
 
   bool impl_only_bg = false;
+  world.add(background_sphere);
   if((imp_sample_objects.size() == 0 || hasbackground || ambient_light || interactive) && debug_channel != 18) {
-    world.add(background_sphere);
     impl_only_bg = true;
   }
   preview = preview && debug_channel == 0;
@@ -511,7 +515,7 @@ List render_scene_rcpp(List camera_info, List scene_info) {
   } else {
     pathtracer(numbercores, nx, ny, ns, debug_channel,
                min_variance, min_adaptive_size,
-               routput, goutput,boutput,
+               routput, goutput,boutput, alpha_output,
                progress_bar, sample_method, stratified_dim,
                verbose, cam.get(),  fov,
                world, imp_sample_objects,
@@ -544,7 +548,8 @@ List render_scene_rcpp(List camera_info, List scene_info) {
   print_time(verbose, "Finished rendering" );
   List final_image = List::create(_["r"] = routput.ConvertRcpp(), 
                                   _["g"] = goutput.ConvertRcpp(), 
-                                  _["b"] = boutput.ConvertRcpp());
+                                  _["b"] = boutput.ConvertRcpp(),
+                                  _["a"] = alpha_output.ConvertRcpp());
   if(Display.Keyframes.size() > 0) {
     List keyframes(Display.Keyframes.size());
     for(unsigned int i = 0; i < Display.Keyframes.size(); i++ ) {

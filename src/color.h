@@ -8,6 +8,7 @@
 #include "material.h"
 
 point3f color(const ray& r, hitable *world, hitable_list *hlist,
-              size_t max_depth, size_t roulette_activate, random_gen& rng, Sampler* sampler);
+              size_t max_depth, size_t roulette_activate, random_gen& rng, Sampler* sampler,
+              bool& alpha);
 
 #endif

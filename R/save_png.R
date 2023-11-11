@@ -33,9 +33,10 @@ save_png = function(hillshade,filename ,rotate=0) {
   } else {
     if(number_of_rots != 0) {
       newarray = hillshade
-      newarrayt = array(0,dim=c(ncol(hillshade),nrow(hillshade),3))
+      n_layers = dim(hillshade)[3]
+      newarrayt = array(1,dim=c(ncol(hillshade),nrow(hillshade),n_layers))
       for(i in 1:number_of_rots) {
-        for(j in 1:3) {
+        for(j in 1:n_layers) {
           if(i == 2) {
             newarray[,,j] = rotatef(newarrayt[,,j])
           } else {
