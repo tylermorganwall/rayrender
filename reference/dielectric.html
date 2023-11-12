@@ -17,7 +17,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">rayrender</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.30.2</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.31.0</span>
       </span>
     </div>
 
@@ -190,6 +190,7 @@ be used to specify a bump map for the surface.</p></dd>
 <span class="r-in"><span>                     angle<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>,<span class="op">-</span><span class="fl">90</span>,<span class="fl">45</span><span class="op">)</span>, order_rotation <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">3</span>,<span class="fl">2</span>,<span class="fl">1</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>parallel<span class="op">=</span><span class="cn">TRUE</span>,aperture<span class="op">=</span><span class="fl">0</span>, ambient_light<span class="op">=</span><span class="cn">FALSE</span>,samples<span class="op">=</span><span class="fl">1000</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span></span></span>
+<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>"sobol_blue" sample method only valid for `samples` than or equal to 256--switching to `sample_method = "sobol"`</span>
 <span class="r-plt img"><img src="dielectric-4.png" alt="" width="768" height="768"></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co">#Color glass using Beer-Lambert attenuation, which attenuates light on a per-channel</span></span></span>
@@ -203,6 +204,7 @@ be used to specify a bump map for the surface.</p></dd>
 <span class="r-in"><span>                  material<span class="op">=</span><span class="fu">dielectric</span><span class="op">(</span>attenuation<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1.2</span>,<span class="fl">0.2</span>,<span class="fl">1.2</span><span class="op">)</span><span class="op">)</span>,angle<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">45</span>,<span class="fl">110</span>,<span class="fl">0</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>parallel<span class="op">=</span><span class="cn">TRUE</span>, samples <span class="op">=</span> <span class="fl">1000</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span></span></span>
+<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>"sobol_blue" sample method only valid for `samples` than or equal to 256--switching to `sample_method = "sobol"`</span>
 <span class="r-plt img"><img src="dielectric-5.png" alt="" width="768" height="768"></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co">#If you have overlapping dielectrics, the `priority` value can help disambiguate what </span></span></span>

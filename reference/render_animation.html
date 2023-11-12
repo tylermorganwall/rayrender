@@ -17,7 +17,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">rayrender</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.30.2</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.31.0</span>
       </span>
     </div>
 
@@ -130,6 +130,7 @@
 <span>  return_raw_array <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  progress <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/interactive.html" class="external-link">interactive</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  verbose <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  transparent_background <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  preview_light_direction <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="op">-</span><span class="fl">1</span>, <span class="fl">0</span><span class="op">)</span>,</span>
 <span>  preview_exponent <span class="op">=</span> <span class="fl">6</span></span>
 <span><span class="op">)</span></span></code></pre></div>
@@ -342,6 +343,12 @@ information.</p></dd>
 construction and raytracing progress.</p></dd>
 
 
+<dt>transparent_background</dt>
+<dd><p>Default `FALSE`. If `TRUE`, any initial camera rays that escape the scene
+will be marked as transparent in the final image. If for a pixel some rays escape and others hit a surface,
+those pixels will be partially transparent.</p></dd>
+
+
 <dt>preview_light_direction</dt>
 <dd><p>Default `c(0,-1,0)`. Vector specifying the orientation for the global light using for phong shading.</p></dd>
 
@@ -426,10 +433,22 @@ construction and raytracing progress.</p></dd>
 <span class="r-in"><span>                 emotion<span class="op">=</span><span class="st">"angry"</span>, spider<span class="op">=</span><span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span> </span></span>
 <span class="r-in"><span>  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="path.html">path</a></span><span class="op">(</span><span class="va">camera_pos</span>, y<span class="op">=</span><span class="op">-</span><span class="fl">0.2</span>,material<span class="op">=</span><span class="fu"><a href="diffuse.html">diffuse</a></span><span class="op">(</span>color<span class="op">=</span><span class="st">"red"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span> </span></span>
 <span class="r-in"><span>  <span class="fu">render_animation</span><span class="op">(</span>filename <span class="op">=</span> <span class="cn">NA</span>, camera_motion <span class="op">=</span> <span class="va">camera_motion</span>, samples<span class="op">=</span><span class="fl">100</span>,</span></span>
-<span class="r-in"><span>                   sample_method<span class="op">=</span><span class="st">"sobol_blue"</span>,  </span></span>
+<span class="r-in"><span>                   sample_method<span class="op">=</span><span class="st">"sobol_blue"</span>,  transparent_background<span class="op">=</span><span class="cn">TRUE</span>,</span></span>
 <span class="r-in"><span>                   clamp_value<span class="op">=</span><span class="fl">10</span>, width<span class="op">=</span><span class="fl">400</span>, height<span class="op">=</span><span class="fl">400</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="op">}</span></span></span>
+<span class="r-plt img"><img src="render_animation-4.png" alt="" width="768" height="768"></span>
+<span class="r-plt img"><img src="render_animation-5.png" alt="" width="768" height="768"></span>
+<span class="r-plt img"><img src="render_animation-6.png" alt="" width="768" height="768"></span>
+<span class="r-plt img"><img src="render_animation-7.png" alt="" width="768" height="768"></span>
+<span class="r-plt img"><img src="render_animation-8.png" alt="" width="768" height="768"></span>
+<span class="r-plt img"><img src="render_animation-9.png" alt="" width="768" height="768"></span>
+<span class="r-plt img"><img src="render_animation-10.png" alt="" width="768" height="768"></span>
+<span class="r-plt img"><img src="render_animation-11.png" alt="" width="768" height="768"></span>
+<span class="r-plt img"><img src="render_animation-12.png" alt="" width="768" height="768"></span>
+<span class="r-plt img"><img src="render_animation-13.png" alt="" width="768" height="768"></span>
+<span class="r-plt img"><img src="render_animation-14.png" alt="" width="768" height="768"></span>
+<span class="r-plt img"><img src="render_animation-15.png" alt="" width="768" height="768"></span>
 </code></pre></div>
     </div>
   </div>

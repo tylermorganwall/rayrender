@@ -17,7 +17,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">rayrender</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.30.2</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.31.0</span>
       </span>
     </div>
 
@@ -89,7 +89,15 @@
     </div>
 
     <div id="ref-usage">
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">post_process_frame</span><span class="op">(</span><span class="va">rgb_mat</span>, <span class="va">debug_channel</span>, <span class="va">filename</span>, <span class="va">toneval</span>, bloom <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">post_process_frame</span><span class="op">(</span></span>
+<span>  <span class="va">rgb_mat</span>,</span>
+<span>  <span class="va">debug_channel</span>,</span>
+<span>  <span class="va">filename</span>,</span>
+<span>  <span class="va">toneval</span>,</span>
+<span>  bloom <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  transparent_background <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  write_file <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div id="value">
