@@ -7,11 +7,11 @@
 process_point_series_1d(values, closed = FALSE, straight = FALSE)
 }
 \arguments{
+\item{values}{Points}
+
 \item{closed}{Whether to be closed}
 
 \item{straight}{Whether to be straight}
-
-\item{points}{Points}
 }
 \value{
 Matrix of control points

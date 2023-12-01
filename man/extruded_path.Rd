@@ -259,19 +259,20 @@ if(run_documentation()) {
 generate_ground(depth=-0.4,material=diffuse(color="grey50",
                                             checkercolor = "grey20",checkerperiod = 1.5)) |>
   add_object(extruded_path(points = points, width=0.7, linear_step = TRUE, 
-                           polygon = circ_polygon, twists = 2, closed = TRUE,
-                           polygon_end = star_polygon,
+                           polygon = star_polygon, twists = 2, closed = TRUE,
+                           polygon_end = star_polygon, breaks=500,
                            material=dielectric(priority = 1, refraction = 1.2, 
-                                               attenuation=c(1,0.3,1)*10))) |> 
+                                               attenuation=c(1,0.3,1),
+                                               attenuation_intensity=20))) |> 
   add_object(extruded_path(points = points, width=0.4, linear_step = TRUE,
-                           polygon = circ_polygon,twists = 2, closed = TRUE,
-                           polygon_end = star_polygon,
+                           polygon = star_polygon,twists = 2, closed = TRUE,
+                           polygon_end = star_polygon, breaks=500,
                            material=dielectric(priority = 0,refraction = 1))) |>  
   add_object(extruded_path(points = points, width=0.05, closed = TRUE,
                            material=light(color="purple", intensity = 5,
                                           importance_sample = FALSE))) |>
   add_object(sphere(y=10,z=-5,x=0,radius=5,material=light(color = "white",intensity = 5))) |>
-  render_scene(lookat=c(0,0.5,1),fov=12, 
+  render_scene(lookat=c(0,0.5,1),fov=10, 
                width=800,height=800, clamp_value = 10,
                aperture=0.025, samples=128, sample_method="sobol_blue")
 }

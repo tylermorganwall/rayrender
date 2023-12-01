@@ -11,7 +11,7 @@ tween(vals, n, ease = "cubic")
 
 \item{n}{Frames}
 
-\item{type}{typenae}
+\item{ease}{type}
 }
 \value{
 number

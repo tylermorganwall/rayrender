@@ -107,7 +107,7 @@ void LoadRayMaterials(std::vector<std::shared_ptr<material> > &mesh_materials,
           throw std::runtime_error("Could not find " + diffuse_texname);
         }
         if(verbose) {
-          Rprintf("(%i/%i) Loading Material Texture %s (%i/%i/%i) \n", i+1, materials.size(),diffuse_texname.c_str(),nx,ny,nn);
+          Rprintf("(%i/%i) Loading Material Texture %s (%i/%i/%i) \n", (int)i+1, (int)materials.size(),diffuse_texname.c_str(),nx,ny,nn);
         }
         
         texture_size += sizeof(unsigned char) * nx * ny * nn;
@@ -324,7 +324,7 @@ void LoadMtlMaterials(std::vector<std::shared_ptr<material> > &mesh_materials,
           }
         }
         if(verbose) {
-          Rprintf("(%i/%i) Loading Material Texture %s (%i/%i/%i) \n", i+1, materials.size(),materials[i].name.c_str(),nx,ny,nn);
+          Rprintf("(%i/%i) Loading Material Texture %s (%i/%i/%i) \n", (int)i+1, (int)materials.size(),materials[i].name.c_str(),nx,ny,nn);
         }
         
         texture_size += sizeof(unsigned char) * nx * ny * nn;
@@ -462,8 +462,8 @@ void LoadMtlMaterials(std::vector<std::shared_ptr<material> > &mesh_materials,
         }
       }
       if(verbose) {
-        Rprintf("(%i/%i) Loading Material %s (Imp Sample: %s) \n", material_num+1, 
-                materials.size(),materials[material_num].name.c_str(), imp_sample_obj ? "true" : "false");
+        Rprintf("(%i/%i) Loading Material %s (Imp Sample: %s) \n", (int)material_num+1, 
+                (int)materials.size(),materials[material_num].name.c_str(), imp_sample_obj ? "true" : "false");
       }
       mesh_materials.push_back(tex);
       material_is_light.push_back(imp_sample_obj);

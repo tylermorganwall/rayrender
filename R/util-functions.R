@@ -141,7 +141,7 @@ slerp = function(vec1, vec2, n) {
 #' 
 #' @param vals Numeric values
 #' @param n Frames
-#' @param type typenae
+#' @param ease type
 #' @return number
 #'
 #' @keywords internal
@@ -409,10 +409,6 @@ run_documentation = function() {
 
 #' Print time
 #'
-#' @param verbose 
-#' @param message 
-#' 
-#'
 #' @return Nothing
 #' @keywords internal
 init_time = function() {
@@ -433,10 +429,6 @@ get_time = function(init = TRUE) {
 }
 
 #' Print time
-#'
-#' @param verbose 
-#' @param message 
-#' 
 #'
 #' @return Nothing
 #' @keywords internal

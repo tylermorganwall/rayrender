@@ -470,7 +470,7 @@ process_point_series = function(points, closed=FALSE, straight=FALSE) {
 
 #' Process Points to Control Points
 #'
-#' @param points Points
+#' @param values Points
 #' @param closed Whether to be closed
 #' @param straight Whether to be straight
 #' @return Matrix of control points
@@ -489,7 +489,7 @@ process_point_series_1d = function(values, closed=FALSE, straight=FALSE) {
 
 #' Process Points to Control Points
 #'
-#' @param points Points
+#' @param values Points
 #' @param closed Whether to be closed
 #' @param straight Whether to be straight
 #' @return Matrix of control points

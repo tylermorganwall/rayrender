@@ -6,11 +6,6 @@
 \usage{
 init_time()
 }
-\arguments{
-\item{verbose}{}
-
-\item{message}{}
-}
 \value{
 Nothing
 }

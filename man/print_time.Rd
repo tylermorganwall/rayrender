@@ -6,11 +6,6 @@
 \usage{
 print_time(verbose = FALSE, message_text = "")
 }
-\arguments{
-\item{verbose}{}
-
-\item{message}{}
-}
 \value{
 Nothing
 }
