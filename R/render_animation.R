@@ -162,7 +162,7 @@
 #'                  emotion="angry", spider=TRUE)) %>% 
 #'   add_object(path(camera_pos, y=-0.2,material=diffuse(color="red"))) %>% 
 #'   render_animation(filename = NA, camera_motion = camera_motion, samples=100,
-#'                    sample_method="sobol_blue",  transparent_background=TRUE,
+#'                    sample_method="sobol_blue", 
 #'                    clamp_value=10, width=400, height=400)
 #' 
 #' }
@@ -211,6 +211,7 @@ render_animation = function(scene, camera_motion, start_frame = 1, end_frame = N
   
   camera_info = scene_list$camera_info
   scene_info = scene_list$scene_info
+  processed_scene = scene_list$scene
   
   camera_info$preview = preview
   camera_info$interactive = FALSE
@@ -248,7 +249,7 @@ render_animation = function(scene, camera_motion, start_frame = 1, end_frame = N
   }
   stopifnot(end_frame <= nrow(camera_motion))
   #Pathrace Scene
-  rgb_mat = render_animation_rcpp(camera_info = camera_info, scene_info = scene_info, camera_movement = camera_motion,
+  rgb_mat = render_animation_rcpp(scene = processed_scene, camera_info = camera_info, scene_info = scene_info, camera_movement = camera_motion,
                               start_frame = start_frame - 1, end_frame = end_frame, filenames = filename_str, post_process_frame  = post_process_frame,
                               toneval=toneval, bloom = bloom, write_image = write_file,
                               transparent_background = transparent_background) 

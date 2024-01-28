@@ -13,6 +13,6 @@ new_tibble_row = function(x) {
   x = unclass(x)
   attr(x, "row.names") = 1L
   attr(x, "names") = names(x)
-  class(x) = c("tbl_df", "tbl", "data.frame")
+  class(x) = c("ray_scene", "tbl_df", "tbl", "data.frame")
   return(x)
 }

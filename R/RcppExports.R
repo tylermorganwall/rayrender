@@ -5,12 +5,12 @@ has_gui_capability <- function() {
     .Call(`_rayrender_has_gui_capability`)
 }
 
-render_animation_rcpp <- function(camera_info, scene_info, camera_movement, start_frame, end_frame, filenames, post_process_frame, toneval, bloom, write_image, transparent_background) {
-    invisible(.Call(`_rayrender_render_animation_rcpp`, camera_info, scene_info, camera_movement, start_frame, end_frame, filenames, post_process_frame, toneval, bloom, write_image, transparent_background))
+render_animation_rcpp <- function(scene, camera_info, scene_info, camera_movement, start_frame, end_frame, filenames, post_process_frame, toneval, bloom, write_image, transparent_background) {
+    invisible(.Call(`_rayrender_render_animation_rcpp`, scene, camera_info, scene_info, camera_movement, start_frame, end_frame, filenames, post_process_frame, toneval, bloom, write_image, transparent_background))
 }
 
-render_scene_rcpp <- function(camera_info, scene_info) {
-    .Call(`_rayrender_render_scene_rcpp`, camera_info, scene_info)
+render_scene_rcpp <- function(scene, camera_info, scene_info) {
+    .Call(`_rayrender_render_scene_rcpp`, scene, camera_info, scene_info)
 }
 
 PrintClassSizes <- function() {

@@ -299,13 +299,16 @@ Left Mouse Click: Change Look At (new focal distance) | Right Mouse Click: Chang
   
   camera_info = scene_list$camera_info
   scene_info = scene_list$scene_info
+  processed_scene = scene_list$scene
   
   camera_info$preview = preview
   camera_info$interactive = interactive
   debug_channel = scene_info$debug_channel  # converted to numeric
   
   #Pathrace Scene
-  rgb_mat = render_scene_rcpp(camera_info = camera_info, scene_info = scene_info) 
+  rgb_mat = render_scene_rcpp(scene = processed_scene, 
+                              camera_info = camera_info, 
+                              scene_info = scene_info) 
   if(!is.null(attr(rgb_mat,"keyframes"))) {
     message("Saving camera keyframes: Call `get_saved_keyframes()` function to return them.")
     keyframes = do.call(rbind,lapply(attr(rgb_mat,"keyframes"),as.data.frame))

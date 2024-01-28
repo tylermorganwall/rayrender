@@ -5,7 +5,11 @@
 #include "material.h"
 #include "mathinline.h"
 
-enum class CurveType { Flat, Cylinder, Ribbon };
+enum class CurveType { 
+  Flat = 1, 
+  Cylinder = 2, 
+  Ribbon = 3 
+};
 
 struct CurveCommon {
   CurveCommon(const vec3f c[4], Float w0, Float w1, CurveType type,

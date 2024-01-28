@@ -20,7 +20,7 @@ metal(
   gradient_point_start = NA,
   gradient_point_end = NA,
   gradient_type = "hsv",
-  image_texture = NA,
+  image_texture = NA_character_,
   image_repeat = 1,
   alpha_texture = NA,
   bump_texture = NA,

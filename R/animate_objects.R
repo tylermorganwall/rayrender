@@ -133,12 +133,13 @@ animate_objects = function(scene, start_time = 0, end_time = 1,
     Rotation = RotateAxis(start_angle,start_axis_rotation)
   }
   for(i in seq_len(nrow(scene))) {
-    scene$start_transform_animation[i] = list(Translation %*% 
-                                      PivotTranslateEnd %*% 
-                                      Rotation %*% 
-                                      Scale %*% 
-                                      PivotTranslateStart)
-    scene$start_time[i] = start_time
+    scene$animation_info[[i]]$start_transform_animation[[1]] = 
+      (Translation %*% 
+       PivotTranslateEnd %*% 
+       Rotation %*% 
+       Scale %*% 
+       PivotTranslateStart)
+    scene$animation_info[[i]]$start_time = start_time
   }
   stopifnot(length(end_pivot_point) == 3)
   stopifnot(length(end_position) == 3)
@@ -158,12 +159,13 @@ animate_objects = function(scene, start_time = 0, end_time = 1,
     Rotation = RotateAxis(end_angle,end_axis_rotation)
   }
   for(i in seq_len(nrow(scene))) {
-    scene$end_transform_animation[i] = list(Translation %*% 
-                                                PivotTranslateEnd %*% 
-                                                Rotation %*% 
-                                                Scale %*% 
-                                                PivotTranslateStart)
-    scene$end_time[i] = end_time
+    scene$animation_info[[i]]$end_transform_animation[[1]] = 
+      (Translation %*% 
+       PivotTranslateEnd %*% 
+       Rotation %*% 
+       Scale %*% 
+       PivotTranslateStart)
+    scene$animation_info[[i]]$end_time = end_time
   }
   return(scene)
 }

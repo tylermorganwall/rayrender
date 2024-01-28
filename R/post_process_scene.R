@@ -30,7 +30,8 @@ post_process_scene = function(rgb_mat, iso, tonemap, debug_channel, filename, re
     full_array[,,4] = flipud(t(rgb_mat$a))
   } 
   if(debug_channel == 1) {
-    returnmat = fliplr(t(full_array[,,1]))
+    # returnmat = fliplr(t(full_array[,,1]))
+    returnmat = full_array[,,1]
     returnmat[is.infinite(returnmat)] = NA
     if(is.null(filename)) {
       rayimage::plot_image((returnmat-min(returnmat,na.rm=TRUE))/(max(returnmat,na.rm=TRUE) - min(returnmat,na.rm=TRUE)), new_page = new_page)

@@ -166,8 +166,8 @@ public:
 
 class spot_light : public material {
   public:
-    spot_light(std::shared_ptr<texture>  a, vec3f dir, Float cosTotalWidth, Float cosFalloffStart, bool invisible) : 
-      emit(a), spot_direction(unit_vector(dir)), cosTotalWidth(cosTotalWidth), 
+    spot_light(std::shared_ptr<texture>  a, vec3f dir, Float cosTotalWidth, Float cosFalloffStart, Float intensity, bool invisible) : 
+      emit(a), spot_direction(unit_vector(dir)), intensity(intensity), cosTotalWidth(cosTotalWidth), 
       cosFalloffStart(cosFalloffStart), invisible(invisible) {}
     ~spot_light() {}
     bool scatter(const ray& r_in, const hit_record& rec, scatter_record& srec, random_gen& rng) {
@@ -185,6 +185,7 @@ class spot_light : public material {
     };
     std::shared_ptr<texture>  emit;
     vec3f spot_direction;
+    Float intensity;
     const Float cosTotalWidth, cosFalloffStart;
     bool invisible;
 };

@@ -352,7 +352,7 @@ size_t diffuse_light::GetSize()  {
 point3f spot_light::emitted(const ray& r_in, const hit_record& rec, Float u, Float v, const point3f& p, bool& is_invisible) {
   is_invisible = invisible;
   if(dot(rec.normal, r_in.direction()) < 0.0) {
-    return(falloff(r_in.origin() - rec.p) * emit->value(u,v,p) );
+    return(falloff(r_in.origin() - rec.p) * emit->value(u,v,p) * intensity );
   } else {
     return(vec3f(0,0,0));
   }
@@ -371,7 +371,7 @@ Float spot_light::falloff(const vec3f &w) const {
 }
 
 point3f spot_light::get_albedo(const ray& r_in, const hit_record& rec) const {
-  return(emit->value(rec.u, rec.v, rec.p));
+  return(emit->value(rec.u, rec.v, rec.p) * intensity);
 }
 
 size_t spot_light::GetSize()  {

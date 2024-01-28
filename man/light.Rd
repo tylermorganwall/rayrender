@@ -12,7 +12,7 @@ light(
   spotlight_width = 30,
   spotlight_start_falloff = 15,
   invisible = FALSE,
-  image_texture = NA,
+  image_texture = NA_character_,
   image_repeat = 1,
   gradient_color = NA,
   gradient_transpose = FALSE,

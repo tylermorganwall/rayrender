@@ -77,26 +77,24 @@ csg_object = function(object, x = 0, y = 0, z = 0, material = diffuse(),
   if(!inherits(object,"ray_csg")) {
     stop("`object` must be constructed with rayrender csg_* functions")
   }
-  new_tibble_row(list(x = x, y = y, z = z, radius = 1, type = material$type, shape = "csg_object",
-                      properties = material$properties, 
-                      checkercolor = material$checkercolor, 
-                      gradient_color = material$gradient_color, gradient_transpose = material$gradient_transpose, 
-                      world_gradient = material$world_gradient, gradient_point_info = material$gradient_point_info,
-                      gradient_type = material$gradient_type,
-                      noise = material$noise, noisephase = material$noisephase, 
-                      noiseintensity = material$noiseintensity, noisecolor = material$noisecolor,
-                      angle = list(angle), image = material$image,  image_repeat = material$image_repeat,
-                      alphaimage = list(material$alphaimage), bump_texture = list(material$bump_texture),
-                      roughness_texture = list(material$rough_texture),
-                      bump_intensity = material$bump_intensity, lightintensity = material$lightintensity,
-                      flipped = flipped, fog = material$fog, fogdensity = material$fogdensity,
-                      implicit_sample = material$implicit_sample, sigma = material$sigma, glossyinfo = material$glossyinfo,
-                      order_rotation = list(order_rotation),
-                      group_transform = list(NA),
-                      tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), 
-                      material_id = NA, csg_object = list(object), mesh_info = list(NA),
-                      start_transform_animation = list(NA), end_transform_animation = list(NA),
-                      start_time = 0, end_time = 1))
+  new_tibble_row(list(x = x, y = y, z = z, shape = "csg_object",
+                      material = material,
+                      shape_info = ray_shape_info(shape_properties = list(NA),
+                                                  tricolorinfo = list(NA), 
+                                                  fileinfo = NA,
+                                                  material_id = NA_integer_,  
+                                                  csg_object = list(object), 
+                                                  mesh_info = list(NA),
+                                                  flipped = flipped),
+                      transforms = ray_transform(angle = list(angle),
+                                                 order_rotation = list(order_rotation),
+                                                 scale = list(scale),
+                                                 group_transform = list(matrix(NA_real_))),
+                      animation_info = ray_animated_transform(
+                        start_transform_animation = list(matrix(NA_real_)), 
+                        end_transform_animation = list(matrix(NA_real_)),
+                        start_time = 0, end_time = 1)
+  ))
 }
 
 #' CSG Sphere

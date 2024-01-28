@@ -15,9 +15,7 @@ class mesh3d : public hitable {
     ~mesh3d() {}
     mesh3d(Rcpp::List mesh_info, std::shared_ptr<material>  mat, 
            Float shutteropen, Float shutterclose, int bvh_type, random_gen rng,
-           std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation,
-           int prop_len, Rcpp::NumericVector tempvector, Rcpp::NumericVector temp_glossy, double sigma,
-           double lightintensity);
+           std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation);
     virtual bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng);
     virtual bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler);
     

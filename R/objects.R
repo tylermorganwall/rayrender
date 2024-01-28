@@ -40,26 +40,24 @@ sphere = function(x = 0, y = 0, z = 0, radius = 1, material = diffuse(),
   if(length(scale) == 1) {
     scale = c(scale, scale, scale)
   }
-  new_tibble_row(list(x = x, y = y, z = z, radius = radius, type = material$type, shape = "sphere",
-                 properties = material$properties, 
-                 checkercolor = material$checkercolor, 
-                 gradient_color = material$gradient_color, gradient_transpose = material$gradient_transpose, 
-                 world_gradient = material$world_gradient, gradient_point_info = material$gradient_point_info,
-                 gradient_type = material$gradient_type,
-                 noise = material$noise, noisephase = material$noisephase, 
-                 noiseintensity = material$noiseintensity, noisecolor = material$noisecolor,
-                 angle = list(angle), image = material$image,  image_repeat = material$image_repeat,
-                 alphaimage = list(material$alphaimage), bump_texture = list(material$bump_texture),
-                 roughness_texture = list(material$rough_texture),
-                 bump_intensity = material$bump_intensity, lightintensity = material$lightintensity,
-                 flipped = flipped, fog = material$fog, fogdensity = material$fogdensity,
-                 implicit_sample = material$implicit_sample, sigma = material$sigma, glossyinfo = material$glossyinfo,
-                 order_rotation = list(order_rotation),
-                 group_transform = list(NA),
-                 tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), 
-                 material_id = NA, csg_object = list(NA), mesh_info = list(NA),
-                 start_transform_animation = list(NA), end_transform_animation = list(NA),
-                 start_time = 0, end_time = 1))
+  new_tibble_row(list(x = x, y = y, z = z, shape = "sphere",
+                 material = material,
+                 shape_info = ray_shape_info(shape_properties = list(radius = radius),
+                                             tricolorinfo = list(NA), 
+                                             fileinfo = NA,
+                                             material_id = NA_integer_,  
+                                             csg_object = list(NA), 
+                                             mesh_info = list(NA),
+                                             flipped = flipped),
+                 transforms = ray_transform(angle = list(angle),
+                                            order_rotation = list(order_rotation),
+                                            scale = list(scale),
+                                            group_transform = list(matrix(NA_real_))),
+                 animation_info = ray_animated_transform(
+                   start_transform_animation = list(matrix(NA_real_)), 
+                   end_transform_animation = list(matrix(NA_real_)),
+                   start_time = 0, end_time = 1))
+                 )
 }
 
 #' Cube Object
@@ -121,27 +119,26 @@ cube = function(x = 0, y = 0, z = 0, width = 1, xwidth = 1, ywidth = 1, zwidth =
   xwidth = ifelse(missing(xwidth), width, xwidth)
   ywidth = ifelse(missing(ywidth), width, ywidth)
   zwidth = ifelse(missing(zwidth), width, zwidth)
-  boxinfo = c(unlist(material$properties), xwidth, ywidth, zwidth)
-  new_tibble_row(list(x = x, y = y, z = z, radius = NA, type = material$type, shape = "box",
-                 properties = list(boxinfo), 
-                 checkercolor = material$checkercolor, 
-                 gradient_color = material$gradient_color, gradient_transpose = material$gradient_transpose, 
-                 world_gradient = material$world_gradient, gradient_point_info = material$gradient_point_info,
-                 gradient_type = material$gradient_type,
-                 noise = material$noise, noisephase = material$noisephase, 
-                 noiseintensity = material$noiseintensity, noisecolor = material$noisecolor,
-                 angle = list(angle), image = material$image,  image_repeat = material$image_repeat,
-                 alphaimage = list(material$alphaimage), bump_texture = list(material$bump_texture),
-                 roughness_texture = list(material$rough_texture),
-                 bump_intensity = material$bump_intensity, lightintensity = material$lightintensity,
-                 flipped = flipped, fog = material$fog, fogdensity = material$fogdensity,
-                 implicit_sample = material$implicit_sample,  sigma = material$sigma, glossyinfo = material$glossyinfo,
-                 order_rotation = list(order_rotation), 
-                 group_transform = list(NA),
-                 tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), 
-                 material_id = NA, csg_object = list(NA), mesh_info = list(NA),
-                 start_transform_animation = list(NA), end_transform_animation = list(NA),
-                 start_time = 0, end_time = 1))
+  boxinfo = c(xwidth, ywidth, zwidth)
+
+  new_tibble_row(list(x = x, y = y, z = z, shape = "box",
+                 material = material,
+                 shape_info = ray_shape_info(shape_properties = list(boxinfo = boxinfo),
+                                             tricolorinfo = list(NA), 
+                                             fileinfo = NA,
+                                             material_id = NA_integer_,  
+                                             csg_object = list(NA), 
+                                             mesh_info = list(NA),
+                                             flipped = flipped),
+                 transforms = ray_transform(angle = list(angle),
+                                            order_rotation = list(order_rotation),
+                                            scale = list(scale),
+                                            group_transform = list(matrix(NA_real_))),
+                 animation_info = ray_animated_transform(
+                   start_transform_animation = list(matrix(NA_real_)), 
+                   end_transform_animation = list(matrix(NA_real_)),
+                   start_time = 0, end_time = 1)
+                 ))
 }
 
 #' Rectangular XY Plane Object 
@@ -188,27 +185,26 @@ xy_rect = function(x = 0, y = 0, z = 0, xwidth = 1, ywidth = 1,
   if(length(scale) == 1) {
     scale = c(scale, scale, scale)
   }
-  rectinfo = c(unlist(material$properties), x, xwidth, y, ywidth, z)
-  new_tibble_row(list(x = x, y = y, z = z, radius = NA, type = material$type, shape = "xy_rect",
-                 properties = list(rectinfo), 
-                 checkercolor = material$checkercolor, 
-                 gradient_color = material$gradient_color, gradient_transpose = material$gradient_transpose, 
-                 world_gradient = material$world_gradient, gradient_point_info = material$gradient_point_info,
-                 gradient_type = material$gradient_type,
-                 noise = material$noise, noisephase = material$noisephase, 
-                 noiseintensity = material$noiseintensity, noisecolor = material$noisecolor,
-                 angle = list(angle), image = material$image, image_repeat = material$image_repeat,
-                 alphaimage = list(material$alphaimage), bump_texture = list(material$bump_texture),
-                 roughness_texture = list(material$rough_texture),
-                 bump_intensity = material$bump_intensity, lightintensity = material$lightintensity,
-                 flipped = flipped, fog = material$fog, fogdensity = material$fogdensity,
-                 implicit_sample = material$implicit_sample,  sigma = material$sigma, glossyinfo = material$glossyinfo,
-                 order_rotation = list(order_rotation),
-                 group_transform = list(NA),
-                 tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), 
-                 material_id = NA, csg_object = list(NA), mesh_info = list(NA),
-                 start_transform_animation = list(NA), end_transform_animation = list(NA),
-                 start_time = 0, end_time = 1))
+  rectinfo = c(xwidth, ywidth)
+
+  new_tibble_row(list(x = x, y = y, z = z, shape = "xy_rect",
+                 material = material,
+                 shape_info = ray_shape_info(shape_properties = list(rectinfo = rectinfo),
+                                             tricolorinfo = list(NA), 
+                                             fileinfo = NA,
+                                             material_id = NA_integer_,  
+                                             csg_object = list(NA), 
+                                             mesh_info = list(NA),
+                                             flipped = flipped),
+                 transforms = ray_transform(angle = list(angle),
+                                            order_rotation = list(order_rotation),
+                                            scale = list(scale),
+                                            group_transform = list(matrix(NA_real_))),
+                 animation_info = ray_animated_transform(
+                   start_transform_animation = list(matrix(NA_real_)), 
+                   end_transform_animation = list(matrix(NA_real_)),
+                   start_time = 0, end_time = 1)
+                 ))
 }
 
 #' Rectangular YZ Plane Object
@@ -254,27 +250,26 @@ yz_rect = function(x = 0, y = 0, z = 0, ywidth = 1, zwidth = 1, material = diffu
   if(length(scale) == 1) {
     scale = c(scale, scale, scale)
   }
-  rectinfo = c(unlist(material$properties), y, ywidth, z, zwidth, x)
-  new_tibble_row(list(x = x, y = y, z = z, radius = NA, type = material$type, shape = "yz_rect",
-                 properties = list(rectinfo), 
-                 checkercolor = material$checkercolor, 
-                 gradient_color = material$gradient_color, gradient_transpose = material$gradient_transpose, 
-                 world_gradient = material$world_gradient, gradient_point_info = material$gradient_point_info,
-                 gradient_type = material$gradient_type,
-                 noise = material$noise, noisephase = material$noisephase, 
-                 noiseintensity = material$noiseintensity, noisecolor = material$noisecolor,
-                 angle = list(angle), image = material$image, image_repeat = material$image_repeat,
-                 alphaimage = list(material$alphaimage), bump_texture = list(material$bump_texture),
-                 roughness_texture = list(material$rough_texture),
-                 bump_intensity = material$bump_intensity, lightintensity = material$lightintensity,
-                 flipped = flipped, fog = material$fog, fogdensity = material$fogdensity,
-                 implicit_sample = material$implicit_sample,  sigma = material$sigma, glossyinfo = material$glossyinfo,
-                 order_rotation = list(order_rotation),
-                 group_transform = list(NA),
-                 tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), 
-                 material_id = NA, csg_object = list(NA), mesh_info = list(NA),
-                 start_transform_animation = list(NA), end_transform_animation = list(NA),
-                 start_time = 0, end_time = 1))
+  rectinfo = c(ywidth, zwidth)
+  
+  new_tibble_row(list(x = x, y = y, z = z, shape = "yz_rect",
+                 material = material,
+                 shape_info = ray_shape_info(shape_properties = list(rectinfo = rectinfo),
+                                             tricolorinfo = list(NA), 
+                                             fileinfo = NA,
+                                             material_id = NA_integer_,  
+                                             csg_object = list(NA), 
+                                             mesh_info = list(NA),
+                                             flipped = flipped),
+                 transforms = ray_transform(angle = list(angle),
+                                            order_rotation = list(order_rotation),
+                                            scale = list(scale),
+                                            group_transform = list(matrix(NA_real_))),
+                 animation_info = ray_animated_transform(
+                   start_transform_animation = list(matrix(NA_real_)), 
+                   end_transform_animation = list(matrix(NA_real_)),
+                   start_time = 0, end_time = 1)
+                 ))
 }
 
 #' Rectangular XZ Plane Object
@@ -321,28 +316,26 @@ xz_rect = function(x = 0, xwidth = 1, z = 0, zwidth = 1, y = 0, material = diffu
   if(length(scale) == 1) {
     scale = c(scale, scale, scale)
   }
-  rectinfo = c(unlist(material$properties), x, xwidth, z, zwidth, y)
-  new_tibble_row(list(x = x, y = y, z = z, radius = NA, 
-                 type = material$type, shape = "xz_rect",
-                 properties = list(rectinfo), 
-                 checkercolor = material$checkercolor, 
-                 gradient_color = material$gradient_color, gradient_transpose = material$gradient_transpose, 
-                 world_gradient = material$world_gradient, gradient_point_info = material$gradient_point_info,
-                 gradient_type = material$gradient_type,
-                 noise = material$noise, noisephase = material$noisephase, 
-                 noiseintensity = material$noiseintensity, noisecolor = material$noisecolor,
-                 angle = list(angle), image = material$image, image_repeat = material$image_repeat,
-                 alphaimage = list(material$alphaimage), bump_texture = list(material$bump_texture),
-                 roughness_texture = list(material$rough_texture),
-                 bump_intensity = material$bump_intensity, lightintensity = material$lightintensity,
-                 flipped = flipped, fog = material$fog, fogdensity = material$fogdensity,
-                 implicit_sample = material$implicit_sample,  sigma = material$sigma, glossyinfo = material$glossyinfo,
-                 order_rotation = list(order_rotation),
-                 group_transform = list(NA),
-                 tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), 
-                 material_id = NA, csg_object = list(NA), mesh_info = list(NA),
-                 start_transform_animation = list(NA), end_transform_animation = list(NA),
-                 start_time = 0, end_time = 1))
+  rectinfo = c(xwidth, zwidth)
+  new_tibble_row(list(x = x, y = y, z = z, 
+                 shape = "xz_rect",
+                 material = material,
+                 shape_info = ray_shape_info(shape_properties = list(rectinfo = rectinfo),
+                                             tricolorinfo = list(NA), 
+                                             fileinfo = NA,
+                                             material_id = NA_integer_,  
+                                             csg_object = list(NA), 
+                                             mesh_info = list(NA),
+                                             flipped = flipped),
+                 transforms = ray_transform(angle = list(angle),
+                                            order_rotation = list(order_rotation),
+                                            scale = list(scale),
+                                            group_transform = list(matrix(NA_real_))),
+                 animation_info = ray_animated_transform(
+                   start_transform_animation = list(matrix(NA_real_)), 
+                   end_transform_animation = list(matrix(NA_real_)),
+                   start_time = 0, end_time = 1)
+                 ))
 }
 
 #' Triangle Object
@@ -428,13 +421,13 @@ triangle = function(v1 = c(1, 0, 0), v2 = c(0, 1, 0), v3 = c(-1, 0, 0),
     color3 = convert_color(color3)
   }
   if(any(is.na(color1)) && any(!is.na(c(color2, color3)))) {
-    color1 = unlist(material$properties)[1:3]
+    color1 = unlist(material[[1]]$properties)[1:3]
   }
   if(any(is.na(color2)) && any(!is.na(c(color1, color3)))) {
-    color2 = unlist(material$properties)[1:3]
+    color2 = unlist(material[[1]]$properties)[1:3]
   }
   if(any(is.na(color3)) && any(!is.na(c(color1, color2)))) {
-    color3 = unlist(material$properties)[1:3]
+    color3 = unlist(material[[1]]$properties)[1:3]
   }
   color_matrix = matrix(c(color1, color2, color3),nrow=3,ncol=3,byrow=TRUE)
   mesh_obj = list(vb=vb,it=it,normals=normals)
@@ -446,8 +439,9 @@ triangle = function(v1 = c(1, 0, 0), v2 = c(0, 1, 0), v3 = c(-1, 0, 0),
   class(mesh_obj) = "mesh3d"
   mesh_obj$meshColor = ifelse(vertex_colors, "default", "vertex")
   mesh3d_model(mesh_obj,material = material, 
-               angle = angle, order_rotation = order_rotation, 
-               flipped = flipped, scale = scale)
+               angle = angle, order_rotation = order_rotation,
+               scale = scale, 
+               flipped = flipped)
 }
 
 #' Disk Object
@@ -503,27 +497,27 @@ disk = function(x = 0, y = 0, z = 0, radius = 1, inner_radius = 0, material = di
   if(length(scale) == 1) {
     scale = c(scale, scale, scale)
   }
-  info = c(unlist(material$properties), inner_radius)
-  new_tibble_row(list(x = x, y = y, z = z, radius = radius, type = material$type, shape = "disk",
-                 properties = list(info), 
-                 checkercolor = material$checkercolor, 
-                 gradient_color = material$gradient_color, gradient_transpose = material$gradient_transpose, 
-                 world_gradient = material$world_gradient, gradient_point_info = material$gradient_point_info,
-                 gradient_type = material$gradient_type,
-                 noise = material$noise, noisephase = material$noisephase, 
-                 noiseintensity = material$noiseintensity, noisecolor = material$noisecolor,
-                 angle = list(angle), image = material$image, image_repeat = material$image_repeat,
-                 alphaimage = list(material$alphaimage), bump_texture = list(material$bump_texture),
-                 roughness_texture = list(material$rough_texture),
-                 bump_intensity = material$bump_intensity, lightintensity = material$lightintensity,
-                 flipped = flipped, fog = material$fog, fogdensity = material$fogdensity,
-                 implicit_sample = material$implicit_sample,  sigma = material$sigma, glossyinfo = material$glossyinfo,
-                 order_rotation = list(order_rotation),
-                 group_transform = list(NA),
-                 tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), 
-                 material_id = NA, csg_object = list(NA), mesh_info = list(NA),
-                 start_transform_animation = list(NA), end_transform_animation = list(NA),
-                 start_time = 0, end_time = 1))
+  info = c(inner_radius)
+
+  new_tibble_row(list(x = x, y = y, z = z, shape = "disk",
+                 material = material,
+                 shape_info = ray_shape_info(shape_properties = list(radius = radius,
+                                                                     inner_radius = inner_radius),
+                                             tricolorinfo = list(NA), 
+                                             fileinfo = NA,
+                                             material_id = NA_integer_,  
+                                             csg_object = list(NA), 
+                                             mesh_info = list(NA),
+                                             flipped = flipped),
+                 transforms = ray_transform(angle = list(angle),
+                                            order_rotation = list(order_rotation),
+                                            scale = list(scale),
+                                            group_transform = list(matrix(NA_real_))),
+                 animation_info = ray_animated_transform(
+                   start_transform_animation = list(matrix(NA_real_)), 
+                   end_transform_animation = list(matrix(NA_real_)),
+                   start_time = 0, end_time = 1)
+                 ))
 }
 
 #' `obj` File Object
@@ -606,29 +600,40 @@ obj_model = function(filename, x = 0, y = 0, z = 0, scale_obj = 1,
   if(!load_material) {
     load_textures = FALSE
   }
-  info = c(unlist(material$properties), scale_obj, load_textures, load_material, vertex_colors, 
-           importance_sample_lights, load_normals, calculate_consistent_normals)
-  new_tibble_row(list(x = x, y = y, z = z, radius = NA, 
-                 type = material$type, shape = "objcolor",
-                 properties = list(info), 
-                 checkercolor = material$checkercolor, 
-                 gradient_color = material$gradient_color, gradient_transpose = material$gradient_transpose, 
-                 world_gradient = material$world_gradient, gradient_point_info = material$gradient_point_info,
-                 gradient_type = material$gradient_type,
-                 noise = material$noise, noisephase = material$noisephase, 
-                 noiseintensity = material$noiseintensity, noisecolor = material$noisecolor,
-                 angle = list(angle), image = material$image, image_repeat = material$image_repeat,
-                 alphaimage = list(material$alphaimage), bump_texture = list(material$bump_texture),
-                 roughness_texture = list(material$rough_texture),
-                 bump_intensity = material$bump_intensity, lightintensity = material$lightintensity,
-                 flipped = flipped, fog = material$fog, fogdensity = material$fogdensity,
-                 implicit_sample = material$implicit_sample,  sigma = material$sigma, glossyinfo = material$glossyinfo,
-                 order_rotation = list(order_rotation),
-                 group_transform = list(NA),
-                 tricolorinfo = list(NA), fileinfo = filename, scale_factor = list(scale),
-                 material_id = NA, csg_object = list(NA), mesh_info = list(NA),
-                 start_transform_animation = list(NA), end_transform_animation = list(NA),
-                 start_time = 0, end_time = 1))
+  base_dir = function(x) {
+    dirname_processed = dirname(x)
+    if(dirname_processed == ".") {
+      return("")
+    } else {
+      return(dirname_processed)
+    }
+  }
+  new_tibble_row(list(x = x, y = y, z = z, 
+                 shape = "obj",
+                 material = material,
+                 shape_info = ray_shape_info(shape_properties = list(scale_obj = scale_obj,
+                                                                     load_textures = load_textures,
+                                                                     load_material = load_material,
+                                                                     vertex_colors = vertex_colors,
+                                                                     importance_sample_lights = importance_sample_lights,
+                                                                     load_normals = load_normals,
+                                                                     calculate_consistent_normals = calculate_consistent_normals,
+                                                                     basename = base_dir(filename)),
+                                             tricolorinfo = list(NA), 
+                                             fileinfo = filename,
+                                             material_id = NA_integer_, 
+                                             csg_object = list(NA), 
+                                             mesh_info = list(NA),
+                                             flipped = flipped),
+                 transforms = ray_transform(angle = list(angle),
+                                            order_rotation = list(order_rotation),
+                                            scale = list(scale),
+                                            group_transform = list(matrix(NA_real_))),
+                 animation_info = ray_animated_transform(
+                   start_transform_animation = list(matrix(NA_real_)), 
+                   end_transform_animation = list(matrix(NA_real_)),
+                   start_time = 0, end_time = 1)
+                 ))
 }
 
 #' Cylinder Object
@@ -675,12 +680,12 @@ obj_model = function(filename, x = 0, y = 0, z = 0, scale_obj = 1,
 #'                ambient_light = FALSE, samples = 128, parallel = TRUE, clamp_value = 5)
 #' }
 #' 
-#' # Only render a subtended arc of the cylinder,
+#' # Only render a subtended arc of the cylinder, flipping the normals.
 #' if(run_documentation()) {
 #' generate_cornell(lightintensity=3) %>%
 #'   add_object(cylinder(x = 555/2, y = 250, z = 555/2, capped = FALSE,
 #'                       length = 300, radius = 100, angle = c(45, 0, 0), phi_min = 0, phi_max = 180,
-#'                       material = diffuse())) %>%
+#'                       material = diffuse(), flipped = TRUE)) %>%
 #'   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
 #'                ambient_light = FALSE, samples = 128, parallel = TRUE, clamp_value = 5)
 #' }
@@ -692,28 +697,28 @@ cylinder = function(x = 0, y = 0, z = 0, radius = 1, length = 1,
     scale = c(scale, scale, scale)
   }
   stopifnot(phi_max > phi_min)
-  cap_int = ifelse(capped, 1, 0)
-  info = c(unlist(material$properties), length, phi_min * pi / 180, phi_max * pi / 180, cap_int)
-  new_tibble_row(list(x = x, y = y, z = z, radius = radius, type = material$type, shape = "cylinder",
-                 properties = list(info), 
-                 checkercolor = material$checkercolor, 
-                 gradient_color = material$gradient_color, gradient_transpose = material$gradient_transpose, 
-                 world_gradient = material$world_gradient, gradient_point_info = material$gradient_point_info,
-                 gradient_type = material$gradient_type,
-                 noise = material$noise, noisephase = material$noisephase, 
-                 noiseintensity = material$noiseintensity, noisecolor = material$noisecolor,
-                 angle = list(angle), image = material$image, image_repeat = material$image_repeat,
-                 alphaimage = list(material$alphaimage), bump_texture = list(material$bump_texture),
-                 roughness_texture = list(material$rough_texture),
-                 bump_intensity = material$bump_intensity, lightintensity = material$lightintensity,
-                 flipped = flipped, fog = material$fog, fogdensity = material$fogdensity,
-                 implicit_sample = material$implicit_sample,  sigma = material$sigma, glossyinfo = material$glossyinfo,
-                 order_rotation = list(order_rotation),
-                 group_transform = list(NA),
-                 tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), 
-                 material_id = NA, csg_object = list(NA), mesh_info = list(NA),
-                 start_transform_animation = list(NA), end_transform_animation = list(NA),
-                 start_time = 0, end_time = 1))
+  new_tibble_row(list(x = x, y = y, z = z,shape = "cylinder",
+                 material = material,
+                 shape_info = ray_shape_info(shape_properties = list(radius = radius,
+                                                                     length = length,
+                                                                     phi_min = phi_min * pi / 180,
+                                                                     phi_max = phi_max * pi / 180,
+                                                                     has_cap = capped),
+                                             tricolorinfo = list(NA), 
+                                             fileinfo = NA,
+                                             material_id = NA_integer_,  
+                                             csg_object = list(NA), 
+                                             mesh_info = list(NA),
+                                             flipped = flipped),
+                 transforms = ray_transform(angle = list(angle),
+                                            order_rotation = list(order_rotation),
+                                            scale = list(scale),
+                                            group_transform = list(matrix(NA_real_))),
+                 animation_info = ray_animated_transform(
+                   start_transform_animation = list(matrix(NA_real_)), 
+                   end_transform_animation = list(matrix(NA_real_)),
+                   start_time = 0, end_time = 1)
+                 ))
 }
 
 #' Segment Object
@@ -826,7 +831,7 @@ segment = function(start = c(0, -1, 0), end = c(0, 1, 0), radius = 0.1,
   order_rotation = c(3, 2, 1)
   phi =  atan2( as.numeric(end[1]-start[1]), as.numeric(end[3]-start[3]))/pi*180 + 90
   
-  cap_int = ifelse(capped, 1, 0)
+  # cap_int = ifelse(capped, 1, 0)
   length_xy = sqrt((end[1]-start[1])^2 + (end[3]-start[3])^2)
   if(end[1] == start[1] && end[3] == start[3]) {
     theta = 0
@@ -835,27 +840,28 @@ segment = function(start = c(0, -1, 0), end = c(0, 1, 0), radius = 0.1,
   }
   fulllength = sqrt(sum((end-start)^2))
   angle = c(0, phi, theta)
-  info = c(unlist(material$properties), fulllength, phi_min * pi / 180, phi_max * pi / 180, cap_int)
-  new_tibble_row(list(x = x, y = y, z = z, radius = radius, type = material$type, shape = "cylinder",
-                 properties = list(info), 
-                 checkercolor = material$checkercolor, 
-                 gradient_color = material$gradient_color, gradient_transpose = material$gradient_transpose, 
-                 world_gradient = material$world_gradient, gradient_point_info = material$gradient_point_info,
-                 gradient_type = material$gradient_type,
-                 noise = material$noise, noisephase = material$noisephase, 
-                 noiseintensity = material$noiseintensity, noisecolor = material$noisecolor,
-                 angle = list(angle), image = material$image, image_repeat = material$image_repeat,
-                 alphaimage = list(material$alphaimage), bump_texture = list(material$bump_texture),
-                 roughness_texture = list(material$rough_texture),
-                 bump_intensity = material$bump_intensity, lightintensity = material$lightintensity,
-                 flipped = flipped, fog = material$fog, fogdensity = material$fogdensity,
-                 implicit_sample = material$implicit_sample,  sigma = material$sigma, glossyinfo = material$glossyinfo,
-                 order_rotation = list(order_rotation),
-                 group_transform = list(NA),
-                 tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale),
-                 material_id = NA, csg_object = list(NA), mesh_info = list(NA),
-                 start_transform_animation = list(NA), end_transform_animation = list(NA),
-                 start_time = 0, end_time = 1))
+  new_tibble_row(list(x = x, y = y, z = z, shape = "cylinder",
+                 material = material,
+                 shape_info = ray_shape_info(shape_properties = list(radius = radius,
+                                                                     length = fulllength,
+                                                                     phi_min = phi_min * pi / 180,
+                                                                     phi_max = phi_max * pi / 180,
+                                                                     has_cap = capped),
+                                             tricolorinfo = list(NA), 
+                                             fileinfo = NA,
+                                             material_id = NA_integer_,  
+                                             csg_object = list(NA), 
+                                             mesh_info = list(NA),
+                                             flipped = flipped),
+                 transforms = ray_transform(angle = list(angle),
+                                            order_rotation = list(order_rotation),
+                                            scale = list(scale),
+                                            group_transform = list(matrix(NA_real_))),
+                 animation_info = ray_animated_transform(
+                   start_transform_animation = list(matrix(NA_real_)), 
+                   end_transform_animation = list(matrix(NA_real_)),
+                   start_time = 0, end_time = 1)
+                 ))
 }
 
 #' Ellipsoid Object
@@ -916,28 +922,26 @@ ellipsoid = function(x = 0, y = 0, z = 0, a = 1, b = 1, c = 1,
   if(length(scale) == 1) {
     scale = c(scale, scale, scale)
   }
-  radius = 1
-  info = c(unlist(material$properties), a, b, c)
-  new_tibble_row(list(x = x, y = y, z = z, radius = radius, type = material$type, shape = "ellipsoid",
-                 properties = list(info), 
-                 checkercolor = material$checkercolor, 
-                 gradient_color = material$gradient_color, gradient_transpose = material$gradient_transpose, 
-                 world_gradient = material$world_gradient, gradient_point_info = material$gradient_point_info,
-                 gradient_type = material$gradient_type,
-                 noise = material$noise, noisephase = material$noisephase, 
-                 noiseintensity = material$noiseintensity, noisecolor = material$noisecolor,
-                 angle = list(angle), image = material$image, image_repeat = material$image_repeat,
-                 alphaimage = list(material$alphaimage), bump_texture = list(material$bump_texture),
-                 roughness_texture = list(material$rough_texture),
-                 bump_intensity = material$bump_intensity, lightintensity = material$lightintensity,
-                 flipped = flipped, fog = material$fog, fogdensity = material$fogdensity,
-                 implicit_sample = material$implicit_sample,  sigma = material$sigma, glossyinfo = material$glossyinfo,
-                 order_rotation = list(order_rotation),
-                 group_transform = list(NA),
-                 tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), 
-                 material_id = NA, csg_object = list(NA), mesh_info = list(NA),
-                 start_transform_animation = list(NA), end_transform_animation = list(NA),
-                 start_time = 0, end_time = 1))
+  new_tibble_row(list(x = x, y = y, z = z, shape = "ellipsoid",
+                 material = material,
+                 shape_info = ray_shape_info(shape_properties = list(a = a, 
+                                                                     b = b,
+                                                                     c = c),
+                                             tricolorinfo = list(NA), 
+                                             fileinfo = NA,
+                                             material_id = NA_integer_,  
+                                             csg_object = list(NA), 
+                                             mesh_info = list(NA),
+                                             flipped = flipped),
+                 transforms = ray_transform(angle = list(angle),
+                                            order_rotation = list(order_rotation),
+                                            scale = list(scale),
+                                            group_transform = list(matrix(NA_real_))),
+                 animation_info = ray_animated_transform(
+                   start_transform_animation = list(matrix(NA_real_)), 
+                   end_transform_animation = list(matrix(NA_real_)),
+                   start_time = 0, end_time = 1)
+                 ))
 }
 
 #' Extruded Polygon Object
@@ -1130,14 +1134,6 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
   } else {
     stop("Plane ", plane, " not recognized.")
   }
-  material_id = get("max_material_id", envir = ray_environment)
-  material_id = material_id + 1
-  assign("max_material_id", material_id, envir = ray_environment)
-  rot_coords = function(x1,x2,theta) {
-    cos_theta = cospi(theta/180)
-    sin_theta = sinpi(theta/180)
-    return(c(cos_theta*x1 + sin_theta*x2,-sin_theta*x1 + cos_theta*x2))
-  }
   permute_axes = function(x,plane_val) {
     if(plane_val == 1) {
       return(x)
@@ -1158,8 +1154,7 @@ extruded_polygon = function(polygon = NULL, x = 0, y = 0, z = 0, plane = "xz",
       return(x[c(2,1,3)])
     }
   }
-  proplen = length(material$properties[[1]])
-  
+
   if(top == bottom) {
     extruded = FALSE
   } else {
@@ -1520,67 +1515,10 @@ cone = function(start = c(0, 0, 0), end = c(0, 1, 0), radius = 0.5,
                 direction = NA, from_center = TRUE,
                 material = diffuse(), angle = c(0,0,0),
                 flipped = FALSE, scale = c(1,1,1)) {
-  if(length(scale) == 1) {
-    scale = c(scale, scale, scale)
-  }
-  if(!is.na(material$lightintensity) && material$implicit_sample) {
-    message("Importance sampling not supported with cone lights: turning off")
-    material$implicit_sample = FALSE
-  }
-  if(!is.na(material$alphaimage)) {
-    message("Alpha transparency currently not supported with cones: turning off")
-    material$alphaimage = NA
-  }
-  if(all(!is.na(direction)) && length(direction) == 3) {
-    if(from_center) {
-      new_start = start - direction/2
-      new_end = start + direction/2
-    } else {
-      new_start = start
-      new_end = start + direction
-    }
-    start = new_start
-    end = new_end
-  }
-  x = start[1] 
-  y = start[2] 
-  z = start[3] 
-  order_rotation = c(3, 2, 1)
-  phi =  atan2( as.numeric(end[1]-start[1]), as.numeric(end[3]-start[3]))/pi*180 + 90
-  
-  length_xy = sqrt((end[1]-start[1])^2 + (end[3]-start[3])^2)
-  if(end[1] == start[1] && end[3] == start[3]) {
-    if((end[2]-start[2]) < 0) {
-      theta = 180
-    } else {
-      theta = 0
-    }
-  } else {
-    theta = atan2(length_xy, (end[2]-start[2]))/pi*180
-  }
-  fulllength = sqrt(sum((end-start)^2))
-  angle = c(0, phi, theta) + angle
-  info = c(unlist(material$properties), fulllength)
-  new_tibble_row(list(x = x, y = y, z = z, radius = radius, type = material$type, shape = "cone",
-                      properties = list(info), 
-                      checkercolor = material$checkercolor, 
-                      gradient_color = material$gradient_color, gradient_transpose = material$gradient_transpose, 
-                      world_gradient = material$world_gradient, gradient_point_info = material$gradient_point_info,
-                      gradient_type = material$gradient_type,
-                      noise = material$noise, noisephase = material$noisephase, 
-                      noiseintensity = material$noiseintensity, noisecolor = material$noisecolor,
-                      angle = list(angle), image = material$image, image_repeat = material$image_repeat,
-                      alphaimage = list(material$alphaimage), bump_texture = list(material$bump_texture),
-                      roughness_texture = list(material$rough_texture),
-                      bump_intensity = material$bump_intensity, lightintensity = material$lightintensity,
-                      flipped = flipped, fog = material$fog, fogdensity = material$fogdensity,
-                      implicit_sample = material$implicit_sample,  sigma = material$sigma, glossyinfo = material$glossyinfo,
-                      order_rotation = list(order_rotation),
-                      group_transform = list(NA),
-                      tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), 
-                      material_id = NA, csg_object = list(NA), mesh_info = list(NA),
-                      start_transform_animation = list(NA), end_transform_animation = list(NA),
-                      start_time = 0, end_time = 1))
+  return(raymesh_model(rayvertex::cone_mesh(start = start,
+                                            end = end, radius = radius, direction = direction,
+                                            from_center = from_center),
+                       material = material, angle = angle, flipped = flipped, scale = scale))
 }
 
 #' Arrow Object
@@ -1847,7 +1785,7 @@ bezier_curve = function(p1 = c(0,0,0), p2 = c(-1,0.33,0), p3 = c(1,0.66,0), p4=c
     stopifnot(length(normal) == 3 && is.numeric(normal))
     stopifnot(length(normal_end) == 3 && is.numeric(normal_end))
   }
-  if(material$type == "hair") {
+  if(material[[1]]$type == "hair") {
     type = "flat"
   }
   if(all(is.na(normal)) || type == "cylinder" || type == "flat") {
@@ -1856,28 +1794,34 @@ bezier_curve = function(p1 = c(0,0,0), p2 = c(-1,0.33,0), p3 = c(1,0.66,0), p4=c
   }
   curvetype = unlist(lapply(tolower(type),switch,
                            "flat" = 1,"cylinder" = 2, "ribbon" = 3))
-  curve_info = c(unlist(material$properties), p1, p2, p3, p4, width, width_end, 
-                 u_min, u_max, curvetype, normal, normal_end)
-  new_tibble_row(list(x = x, y = y, z = z, radius = NA, type = material$type, shape = "curve",
-                      properties = list(curve_info), 
-                      checkercolor = material$checkercolor, 
-                      gradient_color = material$gradient_color, gradient_transpose = material$gradient_transpose, 
-                      world_gradient = material$world_gradient, gradient_point_info = material$gradient_point_info,
-                      gradient_type = material$gradient_type,
-                      noise = material$noise, noisephase = material$noisephase, 
-                      noiseintensity = material$noiseintensity, noisecolor = material$noisecolor,
-                      angle = list(angle), image = material$image,  image_repeat = material$image_repeat,
-                      alphaimage = list(material$alphaimage), bump_texture = list(material$bump_texture),
-                      roughness_texture = list(material$rough_texture),
-                      bump_intensity = material$bump_intensity, lightintensity = material$lightintensity,
-                      flipped = flipped, fog = material$fog, fogdensity = material$fogdensity,
-                      implicit_sample = material$implicit_sample,  sigma = material$sigma, glossyinfo = material$glossyinfo,
-                      order_rotation = list(order_rotation), 
-                      group_transform = list(NA),
-                      tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale), 
-                      material_id = NA, csg_object = list(NA), mesh_info = list(NA),
-                      start_transform_animation = list(NA), end_transform_animation = list(NA),
-                      start_time = 0, end_time = 1))
+  new_tibble_row(list(x = x, y = y, z = z, shape = "curve",
+                      material = material,
+                      shape_info = ray_shape_info(shape_properties = list(p1 = p1,
+                                                                          p2 = p2,
+                                                                          p3 = p3,
+                                                                          p4 = p4,
+                                                                          width = width,
+                                                                          width_end = width_end,
+                                                                          u_min = u_min,
+                                                                          u_max = u_max,
+                                                                          curvetype = curvetype,
+                                                                          normal = normal,
+                                                                          normal_end = normal_end),
+                                                  tricolorinfo = list(NA), 
+                                                  fileinfo = NA,
+                                                  material_id = NA_integer_,  
+                                                  csg_object = list(NA), 
+                                                  mesh_info = list(NA),
+                                                  flipped = flipped),
+                      transforms = ray_transform(angle = list(angle),
+                                                 order_rotation = list(order_rotation),
+                                                 scale = list(scale),
+                                                 group_transform = list(matrix(NA_real_))),
+                      animation_info = ray_animated_transform(
+                        start_transform_animation = list(matrix(NA_real_)), 
+                        end_transform_animation = list(matrix(NA_real_)),
+                        start_time = 0, end_time = 1)
+                      ))
 }
 
 #' Path Object
@@ -2206,7 +2150,7 @@ text3d = function(label, x = 0, y = 0, z = 0, text_height = 1, orientation = "xy
                       title_size  = 60,
                       title_offset = c(0,0),title_text = label, title_color = "white",
                       title_position = "center", filename = labelfile)
-  material$alphaimage = list(labelfile)
+  material[[1]]$alphaimage = list(labelfile)
   if(orientation == "xy" || orientation == "yx") {
     rayrender::xy_rect(x=x,y=y,z=z, angle = angle,
                        xwidth = nchar(label)*text_height, ywidth = text_height,
@@ -2279,28 +2223,34 @@ ply_model = function(filename, x = 0, y = 0, z = 0, scale_ply = 1,
     }
     tokenval = scan(tempcon,what=character(),n=1, quiet=TRUE)
   }
-  info = c(unlist(material$properties), scale_ply)
-  new_tibble_row(list(x = x, y = y, z = z, radius = NA, 
-                      type = material$type, shape = "ply",
-                      properties = list(info), 
-                      checkercolor = material$checkercolor, 
-                      gradient_color = material$gradient_color, gradient_transpose = material$gradient_transpose, 
-                      world_gradient = material$world_gradient, gradient_point_info = material$gradient_point_info,
-                      gradient_type = material$gradient_type,
-                      noise = material$noise, noisephase = material$noisephase, 
-                      noiseintensity = material$noiseintensity, noisecolor = material$noisecolor,
-                      angle = list(angle), image = material$image, image_repeat = material$image_repeat,
-                      alphaimage = list(material$alphaimage), bump_texture = list(material$bump_texture),
-                      roughness_texture = list(material$rough_texture),
-                      bump_intensity = material$bump_intensity, lightintensity = material$lightintensity,
-                      flipped = flipped, fog = material$fog, fogdensity = material$fogdensity,
-                      implicit_sample = material$implicit_sample,  sigma = material$sigma, glossyinfo = material$glossyinfo,
-                      order_rotation = list(order_rotation),
-                      group_transform = list(NA),
-                      tricolorinfo = list(NA), fileinfo = filename, scale_factor = list(scale), 
-                      material_id = NA, csg_object = list(NA), mesh_info = list(NA),
-                      start_transform_animation = list(NA), end_transform_animation = list(NA),
-                      start_time = 0, end_time = 1))
+  base_dir = function(x) {
+    dirname_processed = dirname(x)
+    if(dirname_processed == ".") {
+      return("")
+    } else {
+      return(dirname_processed)
+    }
+  }
+  new_tibble_row(list(x = x, y = y, z = z, 
+                      shape = "ply",
+                      material = material,
+                      shape_info = ray_shape_info(shape_properties = list(scale_ply = scale_ply,
+                                                                          basename = base_dir(filename)),
+                                                  tricolorinfo = list(NA), 
+                                                  fileinfo = filename,
+                                                  material_id = NA_integer_,  
+                                                  csg_object = list(NA), 
+                                                  mesh_info = list(NA),
+                                                  flipped = flipped),
+                      transforms = ray_transform(angle = list(angle),
+                                                 order_rotation = list(order_rotation),
+                                                 scale = list(scale),
+                                                 group_transform = list(matrix(NA_real_))),
+                      animation_info = ray_animated_transform(
+                        start_transform_animation = list(matrix(NA_real_)), 
+                        end_transform_animation = list(matrix(NA_real_)),
+                        start_time = 0, end_time = 1)
+                      ))
 }
 
 #' `mesh3d` model
@@ -2450,10 +2400,10 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
   if(reverse) {
     indices = indices[,c(3,2,1)]
   }
-  material_type = switch(material$type,
+  material_type = switch(material[[1]]$type,
                          "diffuse" = 1,"metal" = 2,"dielectric" = 3, 
-                         "oren-nayar" = 4, "light" = 5, "microfacet" = 6, 
-                         "glossy" = 7, "spotlight" = 8, "hair" = 9, "microfacet_transmission" = 10)
+                         "oren-nayar" = 4, "light" = 5, "mf" = 6, 
+                         "glossy" = 7, "spotlight" = 8, "hair" = 9, "mf-t" = 10)
 
   mesh_info = list(vertices=vertices,indices=indices,
                    normals=normals,texcoords=texcoords,
@@ -2462,33 +2412,30 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
                    color_vals=color_vals,
                    color_type=color_type,scale_mesh=scale_mesh,
                    material_type = material_type)
-  info = c(unlist(material$properties))
   if(verbose) {
     bbox = apply(vertices,2,range)
     message(sprintf("mesh3d Bounding Box: %0.1f-%0.1f x %0.1f-%0.1f x %0.1f-%0.1f", 
                     bbox[1,1],bbox[2,1],bbox[1,2],bbox[2,2],bbox[1,3],bbox[2,3]))
   }
-  new_tibble_row(list(x = x, y = y, z = z, radius = NA, 
-                      type = material$type, shape = "mesh3d",
-                      properties = list(info), 
-                      checkercolor = material$checkercolor, 
-                      gradient_color = material$gradient_color, gradient_transpose = material$gradient_transpose, 
-                      world_gradient = material$world_gradient, gradient_point_info = material$gradient_point_info,
-                      gradient_type = material$gradient_type,
-                      noise = material$noise, noisephase = material$noisephase, 
-                      noiseintensity = material$noiseintensity, noisecolor = material$noisecolor,
-                      angle = list(angle), image = material$image, image_repeat = material$image_repeat,
-                      alphaimage = list(material$alphaimage), bump_texture = list(material$bump_texture),
-                      roughness_texture = list(material$rough_texture),
-                      bump_intensity = material$bump_intensity, lightintensity = material$lightintensity,
-                      flipped = flipped, fog = material$fog, fogdensity = material$fogdensity,
-                      implicit_sample = material$implicit_sample,  sigma = material$sigma, glossyinfo = material$glossyinfo,
-                      order_rotation = list(order_rotation),
-                      group_transform = list(NA),
-                      tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale),
-                      material_id = NA, csg_object = list(NA), mesh_info = list(mesh_info),
-                      start_transform_animation = list(NA), end_transform_animation = list(NA),
-                      start_time = 0, end_time = 1))
+  new_tibble_row(list(x = x, y = y, z = z, 
+                      shape = "mesh3d",
+                      material = material,
+                      shape_info = ray_shape_info(shape_properties = list(NA),
+                                                  tricolorinfo = list(NA), 
+                                                  fileinfo = NA,
+                                                  material_id = NA_integer_,  
+                                                  csg_object = list(NA), 
+                                                  mesh_info = list(mesh_info),
+                                                  flipped = flipped),
+                      transforms = ray_transform(angle = list(angle),
+                                                 order_rotation = list(order_rotation),
+                                                 scale = list(scale),
+                                                 group_transform = list(matrix(NA_real_))),
+                      animation_info = ray_animated_transform(
+                        start_transform_animation = list(matrix(NA_real_)), 
+                        end_transform_animation = list(matrix(NA_real_)),
+                        start_time = 0, end_time = 1)
+                      ))
 }
 
 #' Extruded Path Object
@@ -2557,41 +2504,41 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
 #' }
 #' if(run_documentation()) {
 #' #Default path shape is a circle
-#' generate_studio(depth=-0.4,material=ground_mat) |>
+#' generate_studio(depth=-0.4,material=ground_mat) %>%
 #'   add_object(extruded_path(points = points, width=0.25, 
-#'                            material=diffuse(color="red"))) |> 
-#'   add_object(sphere(y=3,z=5,x=2,material=light(intensity=15))) |> 
+#'                            material=diffuse(color="red"))) %>% 
+#'   add_object(sphere(y=3,z=5,x=2,material=light(intensity=15))) %>% 
 #'   render_scene(lookat=c(0.3,0.5,0.5),fov=12, width=800,height=800, clamp_value = 10,
 #'                aperture=0.025, samples=128, sample_method="sobol_blue")
 #' }
 #' if(run_documentation()) {
 #' #Change the width evenly along the tube
-#' generate_studio(depth=-0.4,material=ground_mat) |>
+#' generate_studio(depth=-0.4,material=ground_mat) %>%
 #'   add_object(extruded_path(points = points, width=0.25, 
 #'                            width_end = 0.5,
-#'                            material=diffuse(color="red"))) |> 
-#'   add_object(sphere(y=3,z=5,x=2,material=light(intensity=15))) |> 
+#'                            material=diffuse(color="red"))) %>% 
+#'   add_object(sphere(y=3,z=5,x=2,material=light(intensity=15))) %>% 
 #'   render_scene(lookat=c(0.3,0.5,0.5),fov=12, width=800,height=800, clamp_value = 10,
 #'                aperture=0.025, samples=128, sample_method="sobol_blue")
 #' }
 #' if(run_documentation()) {
 #' #Change the width along the full length of the tube
-#' generate_studio(depth=-0.4,material=ground_mat) |>
+#' generate_studio(depth=-0.4,material=ground_mat) %>%
 #'   add_object(extruded_path(points = points, 
 #'                            width=0.25*sinpi(0:72*20/180),
-#'                            material=diffuse(color="red"))) |> 
-#'   add_object(sphere(y=3,z=5,x=2,material=light(intensity=15))) |> 
+#'                            material=diffuse(color="red"))) %>% 
+#'   add_object(sphere(y=3,z=5,x=2,material=light(intensity=15))) %>% 
 #'   render_scene(lookat=c(0.3,0.5,0.5),fov=12, width=800,height=800, clamp_value = 10,
 #'                aperture=0.025, samples=128, sample_method="sobol_blue")
 #' }
 #' if(run_documentation()) {
 #' #Specify the exact parametric x positions for the width values:
 #' custom_width = data.frame(x=c(0,0.2,0.5,0.8,1), y=c(0.25,0.5,0,0.5,0.25))
-#' generate_studio(depth=-0.4,material=ground_mat) |>
+#' generate_studio(depth=-0.4,material=ground_mat) %>%
 #'   add_object(extruded_path(points = points, 
 #'                            width=custom_width,
-#'                            material=diffuse(color="red"))) |> 
-#'   add_object(sphere(y=3,z=5,x=2,material=light(intensity=15))) |> 
+#'                            material=diffuse(color="red"))) %>% 
+#'   add_object(sphere(y=3,z=5,x=2,material=light(intensity=15))) %>% 
 #'   render_scene(lookat=c(0.3,0.5,0.5),fov=12, width=800,height=800, clamp_value = 10,
 #'                aperture=0.025, samples=128, sample_method="sobol_blue")
 #' }
@@ -2603,11 +2550,11 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
 #' star_polygon = data.frame(x=xx,y=yy)
 #' 
 #' #Extrude a path using a star polygon
-#' generate_studio(depth=-0.4,material=ground_mat) |>
+#' generate_studio(depth=-0.4,material=ground_mat) %>%
 #'   add_object(extruded_path(points = points, width=0.5, 
 #'                            polygon = star_polygon,
-#'                            material=diffuse(color="red"))) |> 
-#'   add_object(sphere(y=3,z=5,x=2,material=light(intensity=15))) |> 
+#'                            material=diffuse(color="red"))) %>% 
+#'   add_object(sphere(y=3,z=5,x=2,material=light(intensity=15))) %>% 
 #'   render_scene(lookat=c(0.3,0.5,1),fov=12, width=800,height=800, clamp_value = 10,
 #'                aperture=0.025, samples=128, sample_method="sobol_blue")
 #' }
@@ -2619,48 +2566,48 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
 #' circ_polygon = data.frame(x=xx,y=yy)
 #' 
 #' #Transform from the circle polygon to the star polygon and change the end cap material
-#' generate_studio(depth=-0.4,material=ground_mat) |>
+#' generate_studio(depth=-0.4,material=ground_mat) %>%
 #'   add_object(extruded_path(points = points, width=0.5, 
 #'                            polygon=circ_polygon, polygon_end = star_polygon,
 #'                            material_cap  = diffuse(color="white"),
-#'                            material=diffuse(color="red"))) |> 
-#'   add_object(sphere(y=3,z=5,x=2,material=light(intensity=15))) |> 
+#'                            material=diffuse(color="red"))) %>% 
+#'   add_object(sphere(y=3,z=5,x=2,material=light(intensity=15))) %>% 
 #'   render_scene(lookat=c(0.3,0.5,0.5),fov=12, width=800,height=800, clamp_value = 10,
 #'                aperture=0.025, samples=128, sample_method="sobol_blue")
 #' }
 #' if(run_documentation()) {
 #' #Add three and a half twists along the path, and make sure the breaks are evenly spaced
-#' generate_studio(depth=-0.4,material=ground_mat) |>
+#' generate_studio(depth=-0.4,material=ground_mat) %>%
 #'   add_object(extruded_path(points = points, width=0.5, twists = 3.5,
 #'                            polygon=star_polygon, linear_step = TRUE, breaks=360,
 #'                            material_cap  = diffuse(color="white"),
-#'                            material=diffuse(color="red"))) |> 
-#'   add_object(sphere(y=3,z=5,x=2,material=light(intensity=15))) |> 
+#'                            material=diffuse(color="red"))) %>% 
+#'   add_object(sphere(y=3,z=5,x=2,material=light(intensity=15))) %>% 
 #'   render_scene(lookat=c(0.3,0.5,0),fov=12, width=800,height=800, clamp_value = 10,
 #'                aperture=0.025, samples=128, sample_method="sobol_blue")
 #' }
 #' if(run_documentation()) {
 #' #Smooth the normals for a less sharp appearance:
-#' generate_studio(depth=-0.4,material=ground_mat) |>
+#' generate_studio(depth=-0.4,material=ground_mat) %>%
 #'   add_object(extruded_path(points = points, width=0.5, twists = 3.5,
 #'                            polygon=star_polygon, 
 #'                            linear_step = TRUE, breaks=360,
 #'                            smooth_normals = TRUE,
 #'                            material_cap  = diffuse(color="white"),
-#'                            material=diffuse(color="red"))) |> 
-#'   add_object(sphere(y=3,z=5,x=2,material=light(intensity=15))) |> 
+#'                            material=diffuse(color="red"))) %>% 
+#'   add_object(sphere(y=3,z=5,x=2,material=light(intensity=15))) %>% 
 #'   render_scene(lookat=c(0.3,0.5,0),fov=12, width=800,height=800, clamp_value = 10,
 #'                aperture=0.025, samples=128, sample_method="sobol_blue")
 #' }
 #' if(run_documentation()) {
 #' #Only generate part of the curve, specified by the u_min and u_max arguments
-#' generate_studio(depth=-0.4,material=ground_mat) |>
+#' generate_studio(depth=-0.4,material=ground_mat) %>%
 #'   add_object(extruded_path(points = points, width=0.5, twists = 3.5,
 #'                            u_min = 0.2, u_max = 0.8,
 #'                            polygon=star_polygon, linear_step = TRUE, breaks=360,
 #'                            material_cap  = diffuse(color="white"),
-#'                            material=diffuse(color="red"))) |> 
-#'   add_object(sphere(y=3,z=5,x=2,material=light(intensity=15))) |> 
+#'                            material=diffuse(color="red"))) %>% 
+#'   add_object(sphere(y=3,z=5,x=2,material=light(intensity=15))) %>% 
 #'   render_scene(lookat=c(0.3,0.5,0),fov=12, width=800,height=800, clamp_value = 10,
 #'                aperture=0.025, samples=128, sample_method="sobol_blue")
 #' }
@@ -2674,12 +2621,12 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
 #'
 #' generate_studio(depth=-0.2,
 #'                material=diffuse(color = "dodgerblue4", checkercolor = "#002a61",
-#'                                 checkerperiod = 1)) |>
+#'                                 checkerperiod = 1)) %>%
 #'  add_object(extruded_path(points = points,  polygon=square_polygon, closed = TRUE,
 #'                           linear_step = TRUE, twists = 1.5, breaks = 720, 
 #'                           material = diffuse(noisecolor = "black", noise = 10, 
-#'                                              noiseintensity = 10))) |>
-#'  add_object(sphere(y=20,x=0,z=21,material=light(intensity = 1000))) |> 
+#'                                              noiseintensity = 10))) %>%
+#'  add_object(sphere(y=20,x=0,z=21,material=light(intensity = 1000))) %>% 
 #'  render_scene(lookat=c(0,0.5,0), fov=10, samples=128, sample_method = "sobol_blue",
 #'               width = 800, height=800)
 #' }
@@ -2687,21 +2634,21 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
 #' #Create a green glass tube with the dielectric priority interface
 #' #and fill it with a purple neon tube light
 #' generate_ground(depth=-0.4,material=diffuse(color="grey50",
-#'                                             checkercolor = "grey20",checkerperiod = 1.5)) |>
+#'                                             checkercolor = "grey20",checkerperiod = 1.5)) %>%
 #'   add_object(extruded_path(points = points, width=0.7, linear_step = TRUE, 
 #'                            polygon = star_polygon, twists = 2, closed = TRUE,
 #'                            polygon_end = star_polygon, breaks=500,
 #'                            material=dielectric(priority = 1, refraction = 1.2, 
 #'                                                attenuation=c(1,0.3,1),
-#'                                                attenuation_intensity=20))) |> 
+#'                                                attenuation_intensity=20))) %>% 
 #'   add_object(extruded_path(points = points, width=0.4, linear_step = TRUE,
 #'                            polygon = star_polygon,twists = 2, closed = TRUE,
 #'                            polygon_end = star_polygon, breaks=500,
-#'                            material=dielectric(priority = 0,refraction = 1))) |>  
+#'                            material=dielectric(priority = 0,refraction = 1))) %>%  
 #'   add_object(extruded_path(points = points, width=0.05, closed = TRUE,
 #'                            material=light(color="purple", intensity = 5,
-#'                                           importance_sample = FALSE))) |>
-#'   add_object(sphere(y=10,z=-5,x=0,radius=5,material=light(color = "white",intensity = 5))) |>
+#'                                           importance_sample = FALSE))) %>%
+#'   add_object(sphere(y=10,z=-5,x=0,radius=5,material=light(color = "white",intensity = 5))) %>%
 #'   render_scene(lookat=c(0,0.5,1),fov=10, 
 #'                width=800,height=800, clamp_value = 10,
 #'                aperture=0.025, samples=128, sample_method="sobol_blue")
@@ -2762,10 +2709,12 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
                                                  order_rotation = order_rotation,
                                                  flipped = flipped, scale = scale)
                                    )
-      material_id = get("max_material_id", envir = ray_environment)
-      material_id = material_id + 1
-      assign("max_material_id", material_id, envir = ray_environment)
-      combined_return$material_id = rep(material_id,nrow(combined_return))
+      material_id_old = get("max_material_id", envir = ray_environment)
+      material_id_new = material_id_old + 1L
+      assign("max_material_id", material_id_new, envir = ray_environment)
+      combined_return$shape_info[[1]]$material_id = material_id_new
+      combined_return$shape_info[[2]]$material_id = material_id_new
+      
       return(combined_return)
     }
   }
@@ -3278,13 +3227,13 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
     mesh$normals = t(normal_mat)
   }
   mesh$texcoords = t(tex)
-  if(!is.na(material$image[[1]])) {
-    mesh$material$texture = material$image[[1]]
+  if(!is.na(material[[1]]$image[[1]])) {
+    mesh$material$texture = material[[1]]$image[[1]]
     mesh$meshColor = "vertices"
   }
-  if(!is.na(material$bump_texture[[1]])) {
-    mesh$material$bump_texture = material$bump_texture[[1]]
-    mesh$material$bump_intensity =  material$bump_intensity
+  if(!is.na(material[[1]]$bump_texture[[1]])) {
+    mesh$material$bump_texture = material[[1]]$bump_texture[[1]]
+    mesh$material$bump_intensity =  material[[1]]$bump_intensity
     mesh$meshColor = "vertices"
   } else {
     mesh$material$bump_texture = ""
@@ -3297,9 +3246,9 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
     material_caps = material
     same_material = TRUE
   }
-  material_id = get("max_material_id", envir = ray_environment)
-  material_id = material_id + 1
-  assign("max_material_id", material_id, envir = ray_environment)
+  material_id_old = get("max_material_id", envir = ray_environment)
+  material_id_new = material_id_old + 1L
+  assign("max_material_id", material_id_new, envir = ray_environment)
   if(any(end_caps)) {
     return_scene = add_object(mesh3d_model(mesh,x=x,y=y,z=z, override_material = TRUE,
                                 angle=angle, order_rotation = order_rotation, flipped=flipped,
@@ -3309,14 +3258,18 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
                                            angle=angle, order_rotation = order_rotation, flipped=flipped,
                                            scale=scale))
     if(same_material) {
-      return_scene$material_id = c(material_id, material_id)
+      for(i in seq_len(nrow(return_scene))) {
+        return_scene$shape_info[[i]]$material_id = material_id_new
+      }
     }
   } else {
     return_scene = mesh3d_model(mesh,x=x,y=y,z=z, override_material = TRUE,
                                            angle=angle, order_rotation = order_rotation, flipped=flipped,
                                            scale=scale, material = material)
     if(same_material) {
-      return_scene$material_id = material_id
+      for(i in seq_len(nrow(return_scene))) {
+        return_scene$shape_info[[i]]$material_id = material_id_new
+      }
     }
   }
   return(return_scene)
@@ -3369,7 +3322,7 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
 #' # We create a complex rayvertex mesh, using the `rayvertex::add_shape` function which
 #' # creates a new `raymesh` object out of individual `raymesh` objects
 #' rm_scene = sphere_mesh(position = c(-1, 0, 0),
-#'             material = material_list(transmittance = "red")) |> 
+#'             material = material_list(transmittance = "red")) %>% 
 #'     add_shape(sphere_mesh(position = c(1, 0, 0),
 #'             material = material_list(transmittance = "green", ior = 1.5)))
 #'
@@ -3384,7 +3337,7 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
 #' # Set `flip_transmittance = FALSE` argument to specify attenuation coefficients directly
 #' # (as specified in the `dielectric()` material). We change the material's numerical attenuation
 #' # constants using `rayvertex::change_material`
-#' rm_scene_new= change_material(rm_scene, transmittance = c(1,2,0.3), id = 1) |> 
+#' rm_scene_new= change_material(rm_scene, transmittance = c(1,2,0.3), id = 1) %>% 
 #'   change_material(transmittance = c(3,1,2), id = 2)
 #' if(run_documentation()) {
 #' raymesh_model(rm_scene_new, flip_transmittance = FALSE) %>%
@@ -3424,29 +3377,26 @@ raymesh_model = function(mesh, x = 0, y = 0, z = 0,
   if(validate_mesh) {
     raymesh = rayvertex::validate_mesh(mesh)
   }
-  
-  mesh_info = list(raymesh)
-  info = c(unlist(material$properties), importance_sample_lights, calculate_consistent_normals, 
-           override_material, flip_transmittance)
-  new_tibble_row(list(x = x, y = y, z = z, radius = NA, 
-                      type = material$type, shape = "raymesh",
-                      properties = list(info), 
-                      checkercolor = material$checkercolor, 
-                      gradient_color = material$gradient_color, gradient_transpose = material$gradient_transpose, 
-                      world_gradient = material$world_gradient, gradient_point_info = material$gradient_point_info,
-                      gradient_type = material$gradient_type,
-                      noise = material$noise, noisephase = material$noisephase, 
-                      noiseintensity = material$noiseintensity, noisecolor = material$noisecolor,
-                      angle = list(angle), image = material$image, image_repeat = material$image_repeat,
-                      alphaimage = list(material$alphaimage), bump_texture = list(material$bump_texture),
-                      roughness_texture = list(material$rough_texture),
-                      bump_intensity = material$bump_intensity, lightintensity = material$lightintensity,
-                      flipped = flipped, fog = material$fog, fogdensity = material$fogdensity,
-                      implicit_sample = material$implicit_sample,  sigma = material$sigma, glossyinfo = material$glossyinfo,
-                      order_rotation = list(order_rotation),
-                      group_transform = list(NA),
-                      tricolorinfo = list(NA), fileinfo = NA, scale_factor = list(scale),
-                      material_id = NA, csg_object = list(NA), mesh_info = mesh_info,
-                      start_transform_animation = list(NA), end_transform_animation = list(NA),
-                      start_time = 0, end_time = 1))
+  new_tibble_row(list(x = x, y = y, z = z, 
+                      shape = "raymesh", 
+                      material = material,
+                      shape_info = ray_shape_info(shape_properties = list(importance_sample_lights = importance_sample_lights,
+                                                                          calculate_consistent_normals = calculate_consistent_normals,
+                                                                          override_material = override_material,
+                                                                          flip_transmittance = flip_transmittance),
+                                                  tricolorinfo = list(NA), 
+                                                  fileinfo = NA,
+                                                  material_id = NA_integer_,  
+                                                  csg_object = list(NA), 
+                                                  mesh_info = list(raymesh),
+                                                  flipped = flipped),
+                      transforms = ray_transform(angle = list(angle),
+                                                 order_rotation = list(order_rotation),
+                                                 scale = list(scale),
+                                                 group_transform = list(matrix(NA_real_))),
+                      animation_info = ray_animated_transform(
+                        start_transform_animation = list(matrix(NA_real_)), 
+                        end_transform_animation = list(matrix(NA_real_)),
+                        start_time = 0, end_time = 1)
+                      ))
 }

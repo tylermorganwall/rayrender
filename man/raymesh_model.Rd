@@ -83,7 +83,7 @@ raymesh_model(sphere_mesh(position = c(-1, 0, 0),
 # We create a complex rayvertex mesh, using the `rayvertex::add_shape` function which
 # creates a new `raymesh` object out of individual `raymesh` objects
 rm_scene = sphere_mesh(position = c(-1, 0, 0),
-            material = material_list(transmittance = "red")) |> 
+            material = material_list(transmittance = "red")) \%>\% 
     add_shape(sphere_mesh(position = c(1, 0, 0),
             material = material_list(transmittance = "green", ior = 1.5)))
 
@@ -98,7 +98,7 @@ raymesh_model(rm_scene) \%>\%
 # Set `flip_transmittance = FALSE` argument to specify attenuation coefficients directly
 # (as specified in the `dielectric()` material). We change the material's numerical attenuation
 # constants using `rayvertex::change_material`
-rm_scene_new= change_material(rm_scene, transmittance = c(1,2,0.3), id = 1) |> 
+rm_scene_new= change_material(rm_scene, transmittance = c(1,2,0.3), id = 1) \%>\% 
   change_material(transmittance = c(3,1,2), id = 2)
 if(run_documentation()) {
 raymesh_model(rm_scene_new, flip_transmittance = FALSE) \%>\%

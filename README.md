@@ -53,7 +53,7 @@ library(rayrender)
 
 scene = generate_ground(material=diffuse(checkercolor="grey20")) %>%
   add_object(sphere(y=0.2,material=glossy(color="#2b6eff",reflectance=0.05))) 
-render_scene(scene, parallel = TRUE, width = 800, height = 800, samples = 1000)
+render_scene(scene, parallel = TRUE, width = 800, height = 800, samples = 256)
 ```
 
 ![](man/figures/README_ground-1.png)<!-- -->
@@ -68,7 +68,7 @@ scene = generate_ground(material=diffuse(checkercolor="grey20")) %>%
   add_object(sphere(y=0.2,material=glossy(color="#2b6eff",reflectance=0.05))) %>%
   add_object(sphere(y=6,z=1,radius=4,material=light(intensity=8))) %>%
   add_object(sphere(z=15,material=light(intensity=70)))
-render_scene(scene, parallel = TRUE, width = 800, height = 800, samples = 1000, clamp_value=10)
+render_scene(scene, parallel = TRUE, width = 800, height = 800, samples = 256, clamp_value=10)
 ```
 
 ![](man/figures/README_ground_sphere-1.png)<!-- -->
@@ -83,7 +83,7 @@ scene = generate_ground(material=diffuse(checkercolor="grey20")) %>%
   add_object(obj_model(r_obj(),z=1,y=-0.05,scale_obj=0.45,material=diffuse())) %>%
   add_object(sphere(y=10,z=1,radius=4,material=light(intensity=8))) %>%
   add_object(sphere(z=15,material=light(intensity=70)))
-render_scene(scene, parallel = TRUE, width = 800, height = 800, samples = 1000, clamp_value=10)
+render_scene(scene, parallel = TRUE, width = 800, height = 800, samples = 256, clamp_value=10)
 ```
 
 ![](man/figures/README_ground_r_path-1.png)<!-- -->
@@ -93,16 +93,31 @@ Here we’ll render a grid of different viewpoints.
 ``` r
 par(mfrow=c(2,2))
 render_scene(scene, parallel = TRUE, width = 400, height = 400, 
-             lookfrom = c(7,1,7), samples = 1000, clamp_value=10)
-render_scene(scene, parallel = TRUE, width = 400, height = 400, 
-             lookfrom = c(0,7,7), samples = 1000, clamp_value=10)
-render_scene(scene, parallel = TRUE, width = 400, height = 400, 
-             lookfrom = c(-7,0,-7), samples = 1000, clamp_value=10)
-render_scene(scene, parallel = TRUE, width = 400, height = 400, 
-             lookfrom = c(-7,7,7), samples = 1000, clamp_value=10)
+             lookfrom = c(7,1,7), samples = 256, clamp_value=10)
 ```
 
 ![](man/figures/README_ground_grid-1.png)<!-- -->
+
+``` r
+render_scene(scene, parallel = TRUE, width = 400, height = 400, 
+             lookfrom = c(0,7,7), samples = 256, clamp_value=10)
+```
+
+![](man/figures/README_ground_grid-2.png)<!-- -->
+
+``` r
+render_scene(scene, parallel = TRUE, width = 400, height = 400, 
+             lookfrom = c(-7,0,-7), samples = 256, clamp_value=10)
+```
+
+![](man/figures/README_ground_grid-3.png)<!-- -->
+
+``` r
+render_scene(scene, parallel = TRUE, width = 400, height = 400, 
+             lookfrom = c(-7,7,7), samples = 256, clamp_value=10)
+```
+
+![](man/figures/README_ground_grid-4.png)<!-- -->
 
 ``` r
 par(mfrow=c(1,1))
@@ -117,7 +132,7 @@ counts result in a less noisy image.
 
 ``` r
 scene = generate_cornell()
-render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), aperture=0, fov=40, samples = 1000,
+render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), aperture=0, fov=40, samples = 256,
              ambient_light=FALSE, parallel=TRUE, width=800, height=800, clamp_value = 5)
 ```
 
@@ -156,7 +171,7 @@ generate_cornell() %>%
                      material = diffuse(image_texture = image_array),angle=c(0,90,0))) %>%
   add_object(yz_rect(x=555-0.01,y=300,z=555/2,zwidth=400,ywidth=400,
                      material = diffuse(image_texture = image_array),angle=c(0,180,0))) %>%
-  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), aperture=0, fov=40,  samples = 1000,
+  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), aperture=0, fov=40,  samples = 256,
              ambient_light=FALSE, parallel=TRUE, width=800, height=800, clamp_value = 5)
 ```
 
@@ -186,7 +201,7 @@ generate_ground(material=diffuse(checkercolor="grey20")) %>%
      csg_sphere(x=-1.4,z=0.4, radius = 0.4), operation="blend", radius=0.5),
      material=glossy(color="dodgerblue4"))) %>%
   add_object(sphere(y=5,x=3,radius=1,material=light(intensity=30))) %>%
-  render_scene(clamp_value=10, fov=20,lookfrom=c(5,5,10),samples=1000,width=800,height=800)
+  render_scene(clamp_value=10, fov=20,lookfrom=c(5,5,10),samples=256,width=800,height=800)
 ```
 
 ![](man/figures/unnamed-chunk-1-1.png)<!-- -->
@@ -288,14 +303,15 @@ download.file("https://www.tylermw.com/data/venice_sunset_2k.hdr",tempfilehdr, m
 hollow_star = rbind(star_polygon, 0.8 * star_polygon)
 
 generate_ground(material = diffuse(color="grey20", checkercolor = "grey50",sigma=90)) %>%
-  add_object(sphere(material=metal())) %>%
+  add_object(sphere(material=microfacet(roughness = 0.2,
+                                        eta=c(0.216,0.42833,1.3184), kappa=c(3.239,2.4599,1.8661)))) %>%
   add_object(obj_model(y=-1,x=-1.8,r_obj(), angle=c(0,135,0),material = diffuse(sigma=90))) %>%
   add_object(pig(x=1.8,y=-1.2,scale=0.5,angle=c(0,90,0),diffuse_sigma = 90)) %>%
   add_object(extruded_polygon(hollow_star,top=-0.5,bottom=-1, z=-2,
                               holes = nrow(star_polygon),
                               material=diffuse(color="red",sigma=90))) %>%
   render_scene(parallel = TRUE, environment_light = tempfilehdr, width=800,height=800,
-               fov=70,clamp_value=10,samples=1000, aperture=0.1, sample_method = "sobol",
+               fov=70,clamp_value=10,samples=256, aperture=0.1, sample_method = "sobol_blue",
                lookfrom=c(-0.9,1.2,-4.5),lookat=c(0,-1,0))
 ```
 
