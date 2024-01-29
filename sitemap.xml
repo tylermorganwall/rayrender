@@ -214,6 +214,9 @@
     <loc>/reference/init_time.html</loc>
   </url>
   <url>
+    <loc>/reference/is_rendering_in_knitr.html</loc>
+  </url>
+  <url>
     <loc>/reference/lambertian.html</loc>
   </url>
   <url>
@@ -275,6 +278,21 @@
   </url>
   <url>
     <loc>/reference/r_obj.html</loc>
+  </url>
+  <url>
+    <loc>/reference/ray_animated_transform.html</loc>
+  </url>
+  <url>
+    <loc>/reference/ray_material.html</loc>
+  </url>
+  <url>
+    <loc>/reference/ray_scene.html</loc>
+  </url>
+  <url>
+    <loc>/reference/ray_shape_info.html</loc>
+  </url>
+  <url>
+    <loc>/reference/ray_transform.html</loc>
   </url>
   <url>
     <loc>/reference/raymesh_model.html</loc>
