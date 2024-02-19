@@ -1,8 +1,8 @@
 Package: rayrender
 Type: Package
 Title: Build and Raytrace 3D Scenes
-Version: 0.32.0
-Date: 2024-01-28
+Version: 0.32.1
+Date: 2024-02-19
 Authors@R: c(person("Tyler", "Morgan-Wall", email = "tylermw@gmail.com", 
     role = c("aut", "cph", "cre"), comment = c(ORCID = "0000-0002-3131-3814")),
     person("Syoyo", "Fujita", role=c("ctb", "cph")),
@@ -23,7 +23,7 @@ Imports:
     rayimage (>= 0.10.0),
     stats,
     progress,
-    rayvertex (>= 0.10.2),
+    rayvertex (>= 0.10.4),
     withr,
     vctrs,
     cli,
