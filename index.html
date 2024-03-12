@@ -38,7 +38,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="index.html">rayrender</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.32.1</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.32.2</span>
       </span>
     </div>
 
@@ -190,8 +190,8 @@
 <span><span class="fu"><a href="https://rdrr.io/r/grDevices/png.html" class="external-link">png</a></span><span class="op">(</span>filename<span class="op">=</span><span class="va">tempfileplot</span>,height<span class="op">=</span><span class="fl">1600</span>,width<span class="op">=</span><span class="fl">1600</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">iris</span><span class="op">$</span><span class="va">Petal.Length</span>,<span class="va">iris</span><span class="op">$</span><span class="va">Sepal.Width</span>,col<span class="op">=</span><span class="va">iris</span><span class="op">$</span><span class="va">Species</span>,pch<span class="op">=</span><span class="fl">18</span>,cex<span class="op">=</span><span class="fl">12</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/grDevices/dev.html" class="external-link">dev.off</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
-<div class="sourceCode" id="cb12"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="do">## quartz_off_screen </span></span>
-<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="do">##                 2</span></span></code></pre></div>
+<div class="sourceCode" id="cb12"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" tabindex="-1"></a><span class="do">## quartz_off_screen </span></span>
+<span id="cb12-2"><a href="#cb12-2" tabindex="-1"></a><span class="do">##                 2</span></span></code></pre></div>
 <div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">image_array</span> <span class="op">=</span> <span class="fu">png</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/png/man/readPNG.html" class="external-link">readPNG</a></span><span class="op">(</span><span class="va">tempfileplot</span><span class="op">)</span></span>
 <span></span>
