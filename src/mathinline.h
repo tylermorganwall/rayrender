@@ -14,6 +14,7 @@
 #include "normal.h"
 #include <limits>
 #include <array>
+#include <limits>
 
 static const Float mpi_over_180 = M_PI/180;
 static const Float SqrtPiOver8 = 0.626657069f;
