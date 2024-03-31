@@ -34,7 +34,8 @@ Suggests:
     dplyr,
     Rvcg,
     testthat (>= 3.0.0),
-    tibble
+    tibble,
+    rayshader
 LinkingTo: Rcpp, RcppThread, progress, spacefillr (>= 0.3.0)
 URL: https://www.rayrender.net, https://github.com/tylermorganwall/rayrender
 RoxygenNote: 7.3.0
