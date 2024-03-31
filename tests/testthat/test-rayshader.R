@@ -6,7 +6,6 @@ compare_image = function(path1, path2) {
 
 
 test_that("rayshader tests", {
-  testthat::skip_if_not_installed("rayshader")
   set.seed(1)
   
   volcano %>%
