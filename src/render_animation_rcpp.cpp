@@ -27,33 +27,38 @@ using namespace Rcpp;
 using namespace std;
 
 // [[Rcpp::export]]
-void render_animation_rcpp(List scene, List camera_info, List scene_info, List camera_movement, 
+void render_animation_rcpp(List scene, List camera_info, List scene_info, List render_info,
+                           List camera_movement, 
                            int start_frame, int end_frame,
                            CharacterVector filenames, Function post_process_frame, int toneval,
                            bool bloom, bool write_image, bool transparent_background) {
-  
-  size_t n = scene.length();
   //Unpack scene info
-  bool ambient_light = as<bool>(scene_info["ambient_light"]);
   IntegerVector shape = as<IntegerVector>(scene_info["shape"]);
   List position_list = as<List>(scene_info["position_list"]);
-  NumericVector bghigh  = as<NumericVector>(scene_info["bghigh"]);
-  NumericVector bglow = as<NumericVector>(scene_info["bglow"]);
-  LogicalVector isimage = as<LogicalVector>(scene_info["isimage"]);
-  CharacterVector filelocation = as<CharacterVector>(scene_info["filelocation"]);
-  List alphalist = as<List>(scene_info["alphalist"]);
-  Float clampval = as<Float>(scene_info["clampval"]);
-  bool progress_bar = as<bool>(scene_info["progress_bar"]);
-  int numbercores = as<int>(scene_info["numbercores"]);
-  bool hasbackground = as<bool>(scene_info["hasbackground"]);
-  CharacterVector background = as<CharacterVector>(scene_info["background"]);
-  Float rotate_env = as<Float>(scene_info["rotate_env"]);
-  Float intensity_env = as<Float>(scene_info["intensity_env"]);
-  bool verbose = as<bool>(scene_info["verbose"]);
-  int debug_channel = as<int>(scene_info["debug_channel"]);
-  Float min_variance = as<Float>(scene_info["min_variance"]);
-  int min_adaptive_size = as<int>(scene_info["min_adaptive_size"]);
+  List image_list = as<List>(scene_info["image_list"]);
+  List alpha_list = as<List>(scene_info["alpha_list"]);
+  List bump_list = as<List>(scene_info["bump_list"]);
   List roughness_list = as<List>(scene_info["roughness_list"]);
+  
+  //Unpack render info
+  bool ambient_light = as<bool>(render_info["ambient_light"]);
+  NumericVector bghigh  = as<NumericVector>(render_info["bghigh"]);
+  NumericVector bglow = as<NumericVector>(render_info["bglow"]);
+  Float clampval = as<Float>(render_info["clampval"]);
+  bool progress_bar = as<bool>(render_info["progress_bar"]);
+  int numbercores = as<int>(render_info["numbercores"]);
+  bool hasbackground = as<bool>(render_info["hasbackground"]);
+  CharacterVector background = as<CharacterVector>(render_info["background"]);
+  Float rotate_env = as<Float>(render_info["rotate_env"]);
+  Float intensity_env = as<Float>(render_info["intensity_env"]);
+  bool verbose = as<bool>(render_info["verbose"]);
+  int debug_channel = as<int>(render_info["debug_channel"]);
+  Float min_variance = as<Float>(render_info["min_variance"]);
+  int min_adaptive_size = as<int>(render_info["min_adaptive_size"]);
+  
+  Environment pkg = Environment::namespace_env("rayrender");
+  Function print_time = pkg["print_time"];
+  size_t n = shape.length();
 
 
   auto startfirst = std::chrono::high_resolution_clock::now();
@@ -77,7 +82,6 @@ void render_animation_rcpp(List scene, List camera_info, List scene_info, List c
   bool preview = as<bool>(camera_info["preview"]);
   Float iso = as<Float>(camera_info["iso"]);
   
-  
   std::unique_ptr<RayCamera> cam;
 
   //unpack motion info
@@ -99,11 +103,15 @@ void render_animation_rcpp(List scene, List camera_info, List scene_info, List c
 
   vec3f backgroundhigh(bghigh[0],bghigh[1],bghigh[2]);
   vec3f backgroundlow(bglow[0],bglow[1],bglow[2]);
-  CharacterVector alpha_files = as<CharacterVector>(alphalist["alpha_temp_file_names"]);
-  LogicalVector has_alpha = as<LogicalVector>(alphalist["alpha_tex_bool"]);
+  
+  CharacterVector image_files = as<CharacterVector>(image_list["image_temp_file_names"]);
+  LogicalVector has_image = as<LogicalVector>(image_list["image_tex_bool"]);
+  
+  CharacterVector alpha_files = as<CharacterVector>(alpha_list["alpha_temp_file_names"]);
+  LogicalVector has_alpha = as<LogicalVector>(alpha_list["alpha_tex_bool"]);
 
-  CharacterVector bump_files = as<CharacterVector>(alphalist["bump_temp_file_names"]);
-  LogicalVector has_bump = as<LogicalVector>(alphalist["bump_tex_bool"]);
+  CharacterVector bump_files = as<CharacterVector>(bump_list["bump_temp_file_names"]);
+  LogicalVector has_bump = as<LogicalVector>(bump_list["bump_tex_bool"]);
 
   CharacterVector roughness_files = as<CharacterVector>(roughness_list["rough_temp_file_names"]);
   LogicalVector has_roughness = as<LogicalVector>(roughness_list["rough_tex_bool"]);
@@ -132,9 +140,9 @@ void render_animation_rcpp(List scene, List camera_info, List scene_info, List c
   std::vector<std::shared_ptr<material> >* shared_materials = new std::vector<std::shared_ptr<material> >;
 
   for(size_t i = 0; i < n; i++) {
-    if(isimage(i)) {
+    if(has_image(i)) {
       int nx, ny, nn;
-      Float* tex_data = stbi_loadf(filelocation(i), &nx, &ny, &nn, 4);
+      Float* tex_data = stbi_loadf(image_files(i), &nx, &ny, &nn, 4);
       nn = 4;
       // texture_bytes += nx * ny * nn;
       textures.push_back(tex_data);
@@ -228,6 +236,7 @@ void render_animation_rcpp(List scene, List camera_info, List scene_info, List c
   //Initialize transformation cache
   TransformCache transformCache;
   hitable_list imp_sample_objects;
+  std::vector<std::shared_ptr<hitable> > instanced_objects;
   
   std::shared_ptr<hitable> worldbvh = build_scene(scene, shape, position_list,
                                                   shutteropen,shutterclose,
@@ -237,6 +246,7 @@ void render_animation_rcpp(List scene, List camera_info, List scene_info, List c
                                                   roughness_textures, nx_ny_nn_roughness,
                                                   shared_materials, bvh_type,
                                                   transformCache, imp_sample_objects,
+                                                  instanced_objects,
                                                   verbose, rng);
   
   auto finish = std::chrono::high_resolution_clock::now();
@@ -531,7 +541,7 @@ void render_animation_rcpp(List scene, List camera_info, List scene_info, List c
     stbi_image_free(background_texture_data);
   }
   for(int i = 0; i < n; i++) {
-    if(isimage(i)) {
+    if(has_image(i)) {
       stbi_image_free(textures[i]);
       delete[] nx_ny_nn[i];
     }

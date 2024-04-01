@@ -48,6 +48,7 @@ std::shared_ptr<hitable> build_scene(List& scene,
                                      int bvh_type,
                                      TransformCache& transformCache, 
                                      hitable_list& imp_sample_objects,
+                                     std::vector<std::shared_ptr<hitable> >& instanced_objects,
                                      bool verbose,
                                      random_gen& rng); 
 

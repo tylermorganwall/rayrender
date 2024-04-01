@@ -36,7 +36,8 @@ enum ShapeEnum {
   CSG_OBJECT = 11, 
   PLY = 12,
   MESH3D = 13,
-  RAYMESH = 14
+  RAYMESH = 14,
+  INSTANCE = 15
 };
 
 enum MaterialEnum {   
@@ -240,6 +241,7 @@ std::shared_ptr<hitable> build_scene(List& scene,
                                      int bvh_type,
                                      TransformCache& transformCache, 
                                      hitable_list& imp_sample_objects,
+                                     std::vector<std::shared_ptr<hitable> >& instanced_objects,
                                      bool verbose,
                                      random_gen& rng) {
   hitable_list list;
@@ -625,6 +627,53 @@ std::shared_ptr<hitable> build_scene(List& scene,
         list.add(entry);
         break;
       }
+      //   case RAYMESH: {
+      //   List raymesh_object = as<List>(SingleShape["mesh_info"])(0);
+      //   bool importance_sample_lights = as<bool>(shape_properties["importance_sample_lights"]);
+      //   bool calculate_consistent_normals = as<bool>(shape_properties["calculate_consistent_normals"]);
+      //   bool override_material = as<bool>(shape_properties["override_material"]);
+      //   bool flip_transmittance = as<bool>(shape_properties["flip_transmittance"]);
+      //   //importance sample lights--need to change
+      //   ////calculate consistent normals--need to change
+      //   entry = std::make_shared<raymesh>(raymesh_object,
+      //                                     shape_material,
+      //                                     alpha[i], bump[i], 
+      //                                     importance_sample_lights, 
+      //                                     calculate_consistent_normals, 
+      //                                     override_material,
+      //                                     flip_transmittance,
+      //                                     imp_sample_objects, 
+      //                                     verbose, 
+      //                                     shutteropen, shutterclose, bvh_type, rng, 
+      //                                     ObjToWorld, WorldToObj, is_flipped);
+      //   if(is_animated) {
+      //     entry = std::make_shared<AnimatedHitable>(entry, Animate);
+      //   }
+      //   list.add(entry);
+      //   break;
+      // }
+      // case INSTANCE: {
+      //   List ray_scene = as<List>(SingleShape["ray_scene"])(0);
+      //   bool x_values = as<bool>(shape_properties["x_values"]);
+      //   bool y_values = as<bool>(shape_properties["y_values"]);
+      //   bool z_values = as<bool>(shape_properties["z_values"]);
+      //   entry = std::make_shared<raymesh>(raymesh_object,
+      //                                     shape_material,
+      //                                     alpha[i], bump[i], 
+      //                                                   importance_sample_lights, 
+      //                                                   calculate_consistent_normals, 
+      //                                                   override_material,
+      //                                                   flip_transmittance,
+      //                                                   imp_sample_objects, 
+      //                                                   verbose, 
+      //                                                   shutteropen, shutterclose, bvh_type, rng, 
+      //                                                   ObjToWorld, WorldToObj, is_flipped);
+      //   if(is_animated) {
+      //     entry = std::make_shared<AnimatedHitable>(entry, Animate);
+      //   }
+      //   list.add(entry);
+      //   break;
+      // }
     }
     if(importance_sample) {
       imp_sample_objects.add(entry);
