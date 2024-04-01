@@ -33,7 +33,6 @@ std::shared_ptr<hitable> rotation_order(std::shared_ptr<hitable> entry, NumericV
 
 std::shared_ptr<hitable> build_scene(List& scene,
                                      IntegerVector& shape,
-                                     List& position_list,
                                      Float shutteropen, 
                                      Float shutterclose,
                                      std::vector<Float* >& textures, 

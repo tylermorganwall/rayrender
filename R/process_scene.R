@@ -3,11 +3,6 @@
 #'@keywords internal
 #'#internal
 process_scene = function(scene, process_material_ids = TRUE) {
-  position_list = list()
-  position_list$xvec = scene$x 
-  position_list$yvec = scene$y
-  position_list$zvec = scene$z
-  
   shapevec = unlist(lapply(tolower(scene$shape),switch,
                            "sphere" = 1,"xy_rect" = 2, "xz_rect" = 3,"yz_rect" = 4,"box" = 5, 
                            "obj" = 6, "disk" = 7, "cylinder" = 8, "ellipsoid" = 9,
@@ -206,9 +201,9 @@ process_scene = function(scene, process_material_ids = TRUE) {
     for(i in seq_len(nrow(scene))) {
       if(typevec[i] == 8) {
         scene$material[[i]]$properties[[1]][4:6] = scene$material[[i]]$properties[[1]][4:6] - 
-          c(position_list$xvec[i],
-            position_list$yvec[i],
-            position_list$zvec[i]) 
+          c(scene$x[i],
+            scene$y[i],
+            scene$z[i]) 
       }
     }
   }
@@ -262,7 +257,6 @@ process_scene = function(scene, process_material_ids = TRUE) {
   scene_info$scene = scene
   scene_info$shape = shapevec
   scene_info$typevec = typevec
-  scene_info$position_list = position_list
   scene_info$image_list = image_list
   scene_info$bump_list = bump_list
   scene_info$alpha_list = alpha_list

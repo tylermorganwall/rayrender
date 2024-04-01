@@ -3441,10 +3441,11 @@ create_instances = function(ray_scene,
   if(length(scale) == 1) {
     scale = c(scale, scale, scale)
   }
+  ray_scene_processed = process_scene(ray_scene, process_material_ids = FALSE)
   new_tibble_row(list(x = 0, y = 0, z = 0, 
                       shape = "instance",
                       material = material,
-                      shape_info = ray_shape_info(scene = ray_scene, 
+                      shape_info = ray_shape_info(original_scene = ray_scene_processed, 
                                                   x_values = x,
                                                   y_values = y,
                                                   z_values = z),

@@ -226,7 +226,6 @@ std::shared_ptr<material> LoadSingleMaterial(List SingleMaterial,
 
 std::shared_ptr<hitable> build_scene(List& scene,
                                      IntegerVector& shape,
-                                     List& position_list,
                                      Float shutteropen, 
                                      Float shutterclose,
                                      std::vector<Float* >& textures, 
@@ -254,9 +253,9 @@ std::shared_ptr<hitable> build_scene(List& scene,
   List AnimationInfo = as<List>(scene["animation_info"]);
   size_t n = ShapeInfo.length();
 
-  NumericVector x = position_list["xvec"];
-  NumericVector y = position_list["yvec"];
-  NumericVector z = position_list["zvec"];
+  NumericVector x = scene["x"];
+  NumericVector y = scene["y"];
+  NumericVector z = scene["z"];
   
   std::vector<std::shared_ptr<alpha_texture> > alpha(n);
   std::vector<std::shared_ptr<bump_texture> > bump(n);
@@ -627,46 +626,41 @@ std::shared_ptr<hitable> build_scene(List& scene,
         list.add(entry);
         break;
       }
-      //   case RAYMESH: {
-      //   List raymesh_object = as<List>(SingleShape["mesh_info"])(0);
-      //   bool importance_sample_lights = as<bool>(shape_properties["importance_sample_lights"]);
-      //   bool calculate_consistent_normals = as<bool>(shape_properties["calculate_consistent_normals"]);
-      //   bool override_material = as<bool>(shape_properties["override_material"]);
-      //   bool flip_transmittance = as<bool>(shape_properties["flip_transmittance"]);
-      //   //importance sample lights--need to change
-      //   ////calculate consistent normals--need to change
-      //   entry = std::make_shared<raymesh>(raymesh_object,
-      //                                     shape_material,
-      //                                     alpha[i], bump[i], 
-      //                                     importance_sample_lights, 
-      //                                     calculate_consistent_normals, 
-      //                                     override_material,
-      //                                     flip_transmittance,
-      //                                     imp_sample_objects, 
-      //                                     verbose, 
-      //                                     shutteropen, shutterclose, bvh_type, rng, 
-      //                                     ObjToWorld, WorldToObj, is_flipped);
-      //   if(is_animated) {
-      //     entry = std::make_shared<AnimatedHitable>(entry, Animate);
-      //   }
-      //   list.add(entry);
-      //   break;
-      // }
       // case INSTANCE: {
-      //   List ray_scene = as<List>(SingleShape["ray_scene"])(0);
+      //   List original_scene = as<List>(SingleShape["original_scene"])(0);
+      //   IntegerVector shape_vec = as<IntegerVector>(original_scene["shape"]);
+      //   std::shared_ptr<hitable> instance_scene = build_scene(original_scene,
+      //                                                         shape_vec,
+      //                                                         shutteropen, 
+      //                                                         shutterclose,
+      //                                                         textures, 
+      //                                                         nvec,
+      //                                                         alpha_textures, 
+      //                                                         nveca,
+      //                                                         bump_textures, 
+      //                                                         nvecb,
+      //                                                         roughness_textures,  
+      //                                                         nvecr,
+      //                                                         shared_materials, 
+      //                                                         bvh_type,
+      //                                                         transformCache, 
+      //                                                         imp_sample_objects,
+      //                                                         instanced_objects,
+      //                                                         false,
+      //                                                         rng);
       //   bool x_values = as<bool>(shape_properties["x_values"]);
       //   bool y_values = as<bool>(shape_properties["y_values"]);
       //   bool z_values = as<bool>(shape_properties["z_values"]);
       //   entry = std::make_shared<raymesh>(raymesh_object,
       //                                     shape_material,
-      //                                     alpha[i], bump[i], 
-      //                                                   importance_sample_lights, 
-      //                                                   calculate_consistent_normals, 
+      //                                     alpha[i], bump[i],
+      //                                                   importance_sample_lights,
+      //                                                   calculate_consistent_normals,
       //                                                   override_material,
       //                                                   flip_transmittance,
-      //                                                   imp_sample_objects, 
-      //                                                   verbose, 
-      //                                                   shutteropen, shutterclose, bvh_type, rng, 
+      //                                                   imp_sample_objects,
+      //                                                   verbose,
+      //                                                   shutteropen, shutterclose, bvh_type, rng,
       //                                                   ObjToWorld, WorldToObj, is_flipped);
       //   if(is_animated) {
       //     entry = std::make_shared<AnimatedHitable>(entry, Animate);

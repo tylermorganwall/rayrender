@@ -34,7 +34,6 @@ void render_animation_rcpp(List scene, List camera_info, List scene_info, List r
                            bool bloom, bool write_image, bool transparent_background) {
   //Unpack scene info
   IntegerVector shape = as<IntegerVector>(scene_info["shape"]);
-  List position_list = as<List>(scene_info["position_list"]);
   List image_list = as<List>(scene_info["image_list"]);
   List alpha_list = as<List>(scene_info["alpha_list"]);
   List bump_list = as<List>(scene_info["bump_list"]);
@@ -238,7 +237,7 @@ void render_animation_rcpp(List scene, List camera_info, List scene_info, List r
   hitable_list imp_sample_objects;
   std::vector<std::shared_ptr<hitable> > instanced_objects;
   
-  std::shared_ptr<hitable> worldbvh = build_scene(scene, shape, position_list,
+  std::shared_ptr<hitable> worldbvh = build_scene(scene, shape, 
                                                   shutteropen,shutterclose,
                                                   textures, nx_ny_nn,
                                                   alpha_textures, nx_ny_nn_alpha,

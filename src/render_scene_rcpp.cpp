@@ -107,7 +107,6 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
 
   //Unpack scene info
   IntegerVector shape = as<IntegerVector>(scene_info["shape"]);
-  List position_list = as<List>(scene_info["position_list"]);
   List image_list = as<List>(scene_info["image_list"]);
   List alpha_list = as<List>(scene_info["alpha_list"]);
   List bump_list = as<List>(scene_info["bump_list"]);
@@ -351,7 +350,7 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
   
   hitable_list imp_sample_objects;
   std::vector<std::shared_ptr<hitable> > instanced_objects;
-  std::shared_ptr<hitable> worldbvh = build_scene(scene, shape, position_list,
+  std::shared_ptr<hitable> worldbvh = build_scene(scene, shape, 
                                                   shutteropen,shutterclose,
                                                   textures, nx_ny_nn,
                                                   alpha_textures, nx_ny_nn_alpha,
