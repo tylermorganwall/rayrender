@@ -365,7 +365,7 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
   //Calculate world bounds and ensure camera is inside infinite area light
   aabb bounding_box_world;
   worldbvh->bounding_box(0,0,bounding_box_world);
-  Float world_radius = bounding_box_world.Diag().length()/2 ;
+  Float world_radius = bounding_box_world.Diag().length() ;
   vec3f world_center  = bounding_box_world.Centroid();
   world_radius = world_radius > (lookfrom - world_center).length() ? world_radius : 
      1.1*(lookfrom - world_center).length();

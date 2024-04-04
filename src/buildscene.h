@@ -21,6 +21,7 @@
 #include "plymesh.h"
 #include "mesh3d.h"
 #include "raymesh.h"
+#include "instance.h"
 #include "transform.h"
 #include "transformcache.h"
 #include <Rcpp.h>

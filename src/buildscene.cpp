@@ -626,49 +626,60 @@ std::shared_ptr<hitable> build_scene(List& scene,
         list.add(entry);
         break;
       }
-      // case INSTANCE: {
-      //   List original_scene = as<List>(SingleShape["original_scene"])(0);
-      //   IntegerVector shape_vec = as<IntegerVector>(original_scene["shape"]);
-      //   std::shared_ptr<hitable> instance_scene = build_scene(original_scene,
-      //                                                         shape_vec,
-      //                                                         shutteropen, 
-      //                                                         shutterclose,
-      //                                                         textures, 
-      //                                                         nvec,
-      //                                                         alpha_textures, 
-      //                                                         nveca,
-      //                                                         bump_textures, 
-      //                                                         nvecb,
-      //                                                         roughness_textures,  
-      //                                                         nvecr,
-      //                                                         shared_materials, 
-      //                                                         bvh_type,
-      //                                                         transformCache, 
-      //                                                         imp_sample_objects,
-      //                                                         instanced_objects,
-      //                                                         false,
-      //                                                         rng);
-      //   bool x_values = as<bool>(shape_properties["x_values"]);
-      //   bool y_values = as<bool>(shape_properties["y_values"]);
-      //   bool z_values = as<bool>(shape_properties["z_values"]);
-      //   entry = std::make_shared<raymesh>(raymesh_object,
-      //                                     shape_material,
-      //                                     alpha[i], bump[i],
-      //                                                   importance_sample_lights,
-      //                                                   calculate_consistent_normals,
-      //                                                   override_material,
-      //                                                   flip_transmittance,
-      //                                                   imp_sample_objects,
-      //                                                   verbose,
-      //                                                   shutteropen, shutterclose, bvh_type, rng,
-      //                                                   ObjToWorld, WorldToObj, is_flipped);
-      //   if(is_animated) {
-      //     entry = std::make_shared<AnimatedHitable>(entry, Animate);
-      //   }
-      //   list.add(entry);
-      //   break;
-      // }
+      case INSTANCE: {
+        List original_scene = as<List>(shape_properties["original_scene"])(0);
+        NumericVector x_values = as<NumericVector>(shape_properties["x_values"]);
+        NumericVector y_values = as<NumericVector>(shape_properties["y_values"]);
+        NumericVector z_values = as<NumericVector>(shape_properties["z_values"]);
+        NumericVector angle_x = as<NumericVector>(shape_properties["angle_x"]);
+        NumericVector angle_y = as<NumericVector>(shape_properties["angle_y"]);
+        NumericVector angle_z = as<NumericVector>(shape_properties["angle_z"]);
+        NumericVector scale_x = as<NumericVector>(shape_properties["scale_x"]);
+        NumericVector scale_y = as<NumericVector>(shape_properties["scale_y"]);
+        NumericVector scale_z = as<NumericVector>(shape_properties["scale_z"]);
+        IntegerVector shape_vec = as<IntegerVector>(original_scene["shape"]);
+        
+        std::shared_ptr<hitable> instance_scene = build_scene(original_scene,
+                                                              shape_vec,
+                                                              shutteropen,
+                                                              shutterclose,
+                                                              //Need to deal with below
+                                                              textures,
+                                                              nvec,
+                                                              alpha_textures,
+                                                              nveca,
+                                                              bump_textures,
+                                                              nvecb,
+                                                              roughness_textures,
+                                                              nvecr,
+                                                              shared_materials,
+                                                              // Need to deal with above
+                                                              bvh_type,
+                                                              transformCache,
+                                                              imp_sample_objects,
+                                                              instanced_objects,
+                                                              false,
+                                                              rng);
+        instanced_objects.push_back(instance_scene);
+        
+        for(size_t ii = 0; ii < x_values.size(); ii++) {
+          vec3f center_instance = vec3f(x_values(ii), y_values(ii), z_values(ii));
+          NumericVector angle_instance = {angle_x(ii), angle_y(ii), angle_z(ii)};
+
+          Transform InstanceTransform = Translate(center_instance) * 
+            rotation_order_matrix(angle_instance, order_rotation) * 
+            Scale(scale_x(ii), scale_y(ii), scale_z(ii));
+          std::shared_ptr<Transform> ObjToWorldInst = transformCache.Lookup(InstanceTransform);
+          std::shared_ptr<Transform> WorldToObjInst = transformCache.Lookup(InstanceTransform.GetInverseMatrix());
+          list.add(std::make_shared<instance>(instance_scene.get(),
+                                              ObjToWorldInst, 
+                                              WorldToObjInst));
+        }
+        break;
+      }
     }
+    //NOTE:
+    //Have to figure out how to importance sample objects in an instance
     if(importance_sample) {
       imp_sample_objects.add(entry);
     }

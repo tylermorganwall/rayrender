@@ -183,7 +183,7 @@ process_scene = function(scene, process_material_ids = TRUE) {
   roughness_list$rough_temp_file_names = rough_temp_file_names
   roughness_list$rough_tex_bool = rough_tex_bool
   
-  for(i in seq(nrow(scene))) {
+  for(i in seq_len(nrow(scene))) {
     fileinfovec = scene$shape_info[[i]]$fileinfo
     if(!is.na(fileinfovec)) {
       if(any(!file.exists(scene$shape_info[[i]]$fileinfo) & nchar(scene$shape_info[[i]]$fileinfo) > 0)) {

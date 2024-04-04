@@ -257,7 +257,7 @@ void render_animation_rcpp(List scene, List camera_info, List scene_info, List r
   //Calculate world bounds
   aabb bounding_box_world;
   worldbvh->bounding_box(0,0,bounding_box_world);
-  Float world_radius = bounding_box_world.Diag().length()/2 ;
+  Float world_radius = bounding_box_world.Diag().length() ;
   vec3f world_center  = bounding_box_world.Centroid();
   for(int i = 0; i < cam_x.length(); i++) {
     vec3f lf(cam_x(i),cam_y(i),cam_z(i));
