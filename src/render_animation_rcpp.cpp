@@ -34,10 +34,6 @@ void render_animation_rcpp(List scene, List camera_info, List scene_info, List r
                            bool bloom, bool write_image, bool transparent_background) {
   //Unpack scene info
   IntegerVector shape = as<IntegerVector>(scene_info["shape"]);
-  List image_list = as<List>(scene_info["image_list"]);
-  List alpha_list = as<List>(scene_info["alpha_list"]);
-  List bump_list = as<List>(scene_info["bump_list"]);
-  List roughness_list = as<List>(scene_info["roughness_list"]);
   
   //Unpack render info
   bool ambient_light = as<bool>(render_info["ambient_light"]);
@@ -102,18 +98,6 @@ void render_animation_rcpp(List scene, List camera_info, List scene_info, List r
 
   vec3f backgroundhigh(bghigh[0],bghigh[1],bghigh[2]);
   vec3f backgroundlow(bglow[0],bglow[1],bglow[2]);
-  
-  CharacterVector image_files = as<CharacterVector>(image_list["image_temp_file_names"]);
-  LogicalVector has_image = as<LogicalVector>(image_list["image_tex_bool"]);
-  
-  CharacterVector alpha_files = as<CharacterVector>(alpha_list["alpha_temp_file_names"]);
-  LogicalVector has_alpha = as<LogicalVector>(alpha_list["alpha_tex_bool"]);
-
-  CharacterVector bump_files = as<CharacterVector>(bump_list["bump_temp_file_names"]);
-  LogicalVector has_bump = as<LogicalVector>(bump_list["bump_tex_bool"]);
-
-  CharacterVector roughness_files = as<CharacterVector>(roughness_list["rough_temp_file_names"]);
-  LogicalVector has_roughness = as<LogicalVector>(roughness_list["rough_tex_bool"]);
 
   RcppThread::ThreadPool pool(numbercores);
   GetRNGstate();
@@ -125,127 +109,30 @@ void render_animation_rcpp(List scene, List camera_info, List scene_info, List r
   }
 
   std::vector<Float* > textures;
-  std::vector<int* > nx_ny_nn;
-
   std::vector<unsigned char * > alpha_textures;
-  std::vector<int* > nx_ny_nn_alpha;
-
   std::vector<unsigned char * > bump_textures;
-  std::vector<int* > nx_ny_nn_bump;
-
   std::vector<unsigned char * > roughness_textures;
-  std::vector<int* > nx_ny_nn_roughness;
   //Shared material vector
   std::vector<std::shared_ptr<material> >* shared_materials = new std::vector<std::shared_ptr<material> >;
 
-  for(size_t i = 0; i < n; i++) {
-    if(has_image(i)) {
-      int nx, ny, nn;
-      Float* tex_data = stbi_loadf(image_files(i), &nx, &ny, &nn, 4);
-      nn = 4;
-      // texture_bytes += nx * ny * nn;
-      textures.push_back(tex_data);
-      nx_ny_nn.push_back(new int[3]);
-      nx_ny_nn[i][0] = nx;
-      nx_ny_nn[i][1] = ny;
-      nx_ny_nn[i][2] = nn;
-    } else {
-      textures.push_back(nullptr);
-      nx_ny_nn.push_back(nullptr);
-    }
-    if(has_alpha(i)) {
-      int nxa, nya, nna;
-      unsigned char * tex_data_alpha = stbi_load(alpha_files(i), &nxa, &nya, &nna, 0);
-      // texture_bytes += nxa * nya * nna;
-      
-      alpha_textures.push_back(tex_data_alpha);
-      nx_ny_nn_alpha.push_back(new int[3]);
-      nx_ny_nn_alpha[i][0] = nxa;
-      nx_ny_nn_alpha[i][1] = nya;
-      nx_ny_nn_alpha[i][2] = nna;
-    } else {
-      alpha_textures.push_back(nullptr);
-      nx_ny_nn_alpha.push_back(nullptr);
-    }
-    if(has_bump(i)) {
-      int nxb, nyb, nnb;
-      unsigned char * tex_data_bump = stbi_load(bump_files(i), &nxb, &nyb, &nnb, 0);
-      bump_textures.push_back(tex_data_bump);
-      nx_ny_nn_bump.push_back(new int[3]);
-      nx_ny_nn_bump[i][0] = nxb;
-      nx_ny_nn_bump[i][1] = nyb;
-      nx_ny_nn_bump[i][2] = nnb;
-    } else {
-      bump_textures.push_back(nullptr);
-      nx_ny_nn_bump.push_back(nullptr);
-    }
-    if(has_roughness(i)) {
-      List material = as<List>(scene(i))["material"];
-      NumericVector temp_glossy = as<NumericVector>(material["glossyinfo"]);
-      int nxr, nyr, nnr;
-      unsigned char * tex_data_roughness = stbi_load(roughness_files(i), &nxr, &nyr, &nnr, 0);
-      // texture_bytes += nxr * nyr * nnr;
-      
-      Float min = temp_glossy(9), max = temp_glossy(10);
-      Float rough_range = max-min;
-      Float maxr = 0, minr = 1;
-      for(int ii = 0; ii < nxr; ii++) {
-        for(int jj = 0; jj < nyr; jj++) {
-          Float temp_rough = tex_data_roughness[nnr*ii + nnr*nxr*jj];
-          maxr = maxr < temp_rough ? temp_rough : maxr;
-          minr = minr > temp_rough ? temp_rough : minr;
-          if(nnr > 1) {
-            temp_rough = tex_data_roughness[nnr*ii + nnr*nxr*jj+1];
-            maxr = maxr < temp_rough ? temp_rough : maxr;
-            minr = minr > temp_rough ? temp_rough : minr;
-          }
-        }
-      }
-      Float data_range = maxr-minr;
-      for(int ii = 0; ii < nxr; ii++) {
-        for(int jj = 0; jj < nyr; jj++) {
-          if(!temp_glossy(11)) {
-            tex_data_roughness[nnr*ii + nnr*nxr*jj] =
-              (tex_data_roughness[nnr*ii + nnr*nxr*jj]-minr)/data_range * rough_range + min;
-            if(nnr > 1) {
-              tex_data_roughness[nnr*ii + nnr*nxr*jj+1] =
-                (tex_data_roughness[nnr*ii + nnr*nxr*jj+1]-minr)/data_range * rough_range + min;
-            }
-          } else {
-            tex_data_roughness[nnr*ii + nnr*nxr*jj] =
-              (1.0-(tex_data_roughness[nnr*ii + nnr*nxr*jj]-minr)/data_range) * rough_range + min;
-            if(nnr > 1) {
-              tex_data_roughness[nnr*ii + nnr*nxr*jj+1] =
-                (1.0-(tex_data_roughness[nnr*ii + nnr*nxr*jj+1]-minr)/data_range) * rough_range + min;
-            }
-          }
-        }
-      }
-      roughness_textures.push_back(tex_data_roughness);
-      nx_ny_nn_roughness.push_back(new int[3]);
-      nx_ny_nn_roughness[i][0] = nxr;
-      nx_ny_nn_roughness[i][1] = nyr;
-      nx_ny_nn_roughness[i][2] = nnr;
-    } else {
-      roughness_textures.push_back(nullptr);
-      nx_ny_nn_roughness.push_back(nullptr);
-    }
-  }
 
   //Initialize transformation cache
   TransformCache transformCache;
   hitable_list imp_sample_objects;
   std::vector<std::shared_ptr<hitable> > instanced_objects;
+  std::vector<std::shared_ptr<hitable_list> > instance_importance_sampled;
   
-  std::shared_ptr<hitable> worldbvh = build_scene(scene, shape, 
+  std::shared_ptr<bvh_node> worldbvh = build_scene(scene, shape, 
                                                   shutteropen,shutterclose,
-                                                  textures, nx_ny_nn,
-                                                  alpha_textures, nx_ny_nn_alpha,
-                                                  bump_textures, nx_ny_nn_bump,
-                                                  roughness_textures, nx_ny_nn_roughness,
+                                                  textures, 
+                                                  alpha_textures,
+                                                  bump_textures,
+                                                  roughness_textures, 
                                                   shared_materials, bvh_type,
-                                                  transformCache, imp_sample_objects,
+                                                  transformCache, 
+                                                  imp_sample_objects,
                                                   instanced_objects,
+                                                  instance_importance_sampled,
                                                   verbose, rng);
   
   auto finish = std::chrono::high_resolution_clock::now();
@@ -539,22 +426,18 @@ void render_animation_rcpp(List scene, List camera_info, List scene_info, List r
   if(hasbackground) {
     stbi_image_free(background_texture_data);
   }
-  for(int i = 0; i < n; i++) {
-    if(has_image(i)) {
+  for(int i = 0; i < textures.size(); i++) {
+    if(textures[i]) {
       stbi_image_free(textures[i]);
-      delete[] nx_ny_nn[i];
     }
-    if(has_alpha(i)) {
+    if(alpha_textures[i]) {
       stbi_image_free(alpha_textures[i]);
-      delete[] nx_ny_nn_alpha[i];
     }
-    if(has_bump(i)) {
+    if(bump_textures[i]) {
       stbi_image_free(bump_textures[i]);
-      delete[] nx_ny_nn_bump[i];
     }
-    if(has_roughness(i)) {
+    if(roughness_textures[i]) {
       stbi_image_free(roughness_textures[i]);
-      delete[] nx_ny_nn_roughness[i];
     }
   }
   delete shared_materials;

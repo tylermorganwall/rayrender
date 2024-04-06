@@ -36,10 +36,8 @@ create_instances = function(ray_scene,
                             material = diffuse(), 
                             order_rotation = c(1, 2, 3), 
                             flipped = FALSE) {
-  if(length(scale) == 1) {
-    scale = c(scale, scale, scale)
-  }
   ray_scene_processed = process_scene(ray_scene, process_material_ids = FALSE)
+
   # Use data.frame for recycling
   x_is_df = inherits(x, "data.frame") || inherits(x, "matrix")
   
@@ -72,7 +70,6 @@ create_instances = function(ray_scene,
   scale_x = scales$x
   scale_y = scales$y
   scale_z = scales$z
-  
   # Add detecting importance sampling and error
   # 
   # 
@@ -88,7 +85,8 @@ create_instances = function(ray_scene,
                                                                           angle_z = angle_z,
                                                                           scale_x = scale_x,
                                                                           scale_y = scale_y,
-                                                                          scale_z = scale_z),
+                                                                          scale_z = scale_z,
+                                                                          any_light = ray_scene_processed$any_light),
                                                   tricolorinfo = list(NA), 
                                                   fileinfo = NA,
                                                   material_id = NA_integer_,  

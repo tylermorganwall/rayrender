@@ -9,9 +9,10 @@
 class instance : public hitable {
 public:
   instance() {}
-  instance(hitable* scene, 
+  instance(bvh_node* scene, 
            std::shared_ptr<Transform> ObjectToWorld, 
-           std::shared_ptr<Transform> WorldToObject);
+           std::shared_ptr<Transform> WorldToObject,
+           hitable_list* imp_list);
   
   virtual bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng);
   virtual bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler);
@@ -27,7 +28,8 @@ public:
   size_t GetSize();
   
   //Embedded scene
-  hitable* original_scene;
+  bvh_node* original_scene;
+  hitable_list* importance_sampled_objects;
 };
 
 #endif

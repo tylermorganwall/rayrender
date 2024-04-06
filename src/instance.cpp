@@ -1,9 +1,10 @@
 #include "instance.h"
 
-instance::instance(hitable* scene, 
+instance::instance(bvh_node* scene, 
                    std::shared_ptr<Transform> ObjectToWorld, 
-                   std::shared_ptr<Transform> WorldToObject) : 
-  hitable(ObjectToWorld, WorldToObject, false), original_scene(scene) {
+                   std::shared_ptr<Transform> WorldToObject,
+                   hitable_list* imp_list) : 
+  hitable(ObjectToWorld, WorldToObject, false), original_scene(scene), importance_sampled_objects(imp_list) {
 }
 
 bool instance::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
@@ -32,20 +33,23 @@ bool instance::bounding_box(Float t0, Float t1, aabb& box) const {
 
 
 Float instance::pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Float time) {
-  return(original_scene->pdf_value(o,v, rng, time));
+  hit_record rec;
+  ray r2 = (*WorldToObject)(ray(o,v));
+  return(importance_sampled_objects->pdf_value(r2.origin(),r2.direction(), rng, time));
 }
 
 Float instance::pdf_value(const point3f& o, const vec3f& v, Sampler* sampler, Float time) {
-  return(original_scene->pdf_value(o,v, sampler, time));
-  
+  hit_record rec;
+  ray r2 = (*WorldToObject)(ray(o,v));
+  return(importance_sampled_objects->pdf_value(r2.origin(),r2.direction(), sampler, time));
 }
 
 vec3f instance::random(const point3f& o, random_gen& rng, Float time) {
-  return(original_scene->random(o, rng, time));
+  return((*ObjectToWorld)(importance_sampled_objects->random((*WorldToObject)(o), rng, time)));
 }
 
 vec3f instance::random(const point3f& o, Sampler* sampler, Float time) {
-  return(original_scene->random(o, sampler, time));
+  return((*ObjectToWorld)(importance_sampled_objects->random((*WorldToObject)(o), sampler, time)));
 }
 
 size_t instance::GetSize() {

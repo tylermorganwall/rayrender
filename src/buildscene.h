@@ -32,23 +32,20 @@ using namespace Rcpp;
 std::shared_ptr<hitable> rotation_order(std::shared_ptr<hitable> entry, NumericVector temprotvec, NumericVector order_rotation);
 
 
-std::shared_ptr<hitable> build_scene(List& scene,
+std::shared_ptr<bvh_node> build_scene(List& scene,
                                      IntegerVector& shape,
                                      Float shutteropen, 
                                      Float shutterclose,
                                      std::vector<Float* >& textures, 
-                                     std::vector<int* >& nvec,
                                      std::vector<unsigned char * >& alpha_textures, 
-                                     std::vector<int* >& nveca,
                                      std::vector<unsigned char * >& bump_textures, 
-                                     std::vector<int* >& nvecb,
                                      std::vector<unsigned char * >& roughness_textures,  
-                                     std::vector<int* >& nvecr,
                                      std::vector<std::shared_ptr<material> >* shared_materials, 
                                      int bvh_type,
                                      TransformCache& transformCache, 
                                      hitable_list& imp_sample_objects,
                                      std::vector<std::shared_ptr<hitable> >& instanced_objects,
+                                     std::vector<std::shared_ptr<hitable_list> >& instance_importance_sampled,
                                      bool verbose,
                                      random_gen& rng); 
 

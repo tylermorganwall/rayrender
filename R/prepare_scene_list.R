@@ -59,8 +59,9 @@ prepare_scene_list = function(scene, width = 400, height = 400, fov = 20,
   }
   
   
-  typevec = scene_info$typevec
-  if(!any(typevec == 5) && !any(typevec == 8) && is.null(ambient_light) && is.null(environment_light)) {
+  if(scene_info$any_light && 
+     is.null(ambient_light) && 
+     is.null(environment_light)) {
     ambient_light = TRUE
   } else {
     if(is.null(ambient_light)) {
