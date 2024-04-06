@@ -67,9 +67,17 @@
 group_objects = function(scene, pivot_point=c(0,0,0), translate = c(0,0,0),
                          angle = c(0,0,0), order_rotation = c(1,2,3),
                          scale = c(1,1,1), axis_rotation = NA) {
-  if(missing(pivot_point)) {
-    pivot_point = c(0,0,0)
+  stopifnot(is.numeric(scale))
+  stopifnot(is.numeric(pivot_point))
+  stopifnot(is.numeric(translate))
+  stopifnot(is.numeric(angle))
+  stopifnot(is.numeric(order_rotation) && 
+            length(order_rotation) == 3 && 
+            all(sort(order_rotation) == 1:3))
+  if(length(scale) == 1) {
+    scale = rep(scale, 3)
   }
+  
   stopifnot(length(pivot_point) == 3)
   stopifnot(length(translate) == 3)
   stopifnot(length(order_rotation) == 3)

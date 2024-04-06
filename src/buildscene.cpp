@@ -813,7 +813,8 @@ std::shared_ptr<bvh_node> build_scene(List& scene,
           vec3f center_instance = vec3f(x_values(ii), y_values(ii), z_values(ii));
           NumericVector angle_instance = {angle_x(ii), angle_y(ii), angle_z(ii)};
 
-          Transform InstanceTransform = Translate(center_instance) * 
+          Transform InstanceTransform = GroupTransform * 
+            Translate(center_instance) * 
             rotation_order_matrix(angle_instance, order_rotation) * 
             Scale(scale_x(ii), scale_y(ii), scale_z(ii));
           std::shared_ptr<Transform> ObjToWorldInst = transformCache.Lookup(InstanceTransform);
