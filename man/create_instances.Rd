@@ -16,8 +16,7 @@ create_instances(
   scale_y = 1,
   scale_z = 1,
   material = diffuse(),
-  order_rotation = c(1, 2, 3),
-  flipped = FALSE
+  order_rotation = c(1, 2, 3)
 )
 }
 \arguments{
@@ -46,11 +45,9 @@ create_instances(
 functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}.}
 
 \item{order_rotation}{Default `c(1, 2, 3)`. The order to apply the rotations, referring to "x", "y", and "z" axes.}
-
-\item{flipped}{Default `FALSE`. Whether to flip the normals.}
 }
 \value{
-Single row of a tibble describing the obj model in the scene.
+Single row of a tibble describing the instance in the scene.
 }
 \description{
 This creates multiple instances of the `ray_scene` passed, each with it's own transformation applied (measured
@@ -139,9 +136,11 @@ image_array = png::readPNG(tempfileplot)
 # Note that if a instanced scene has importance sampled lights and there are many instances, 
 # it will be slow to render. 
 generate_cornell(importance_sample=FALSE) \%>\%
-  add_object(ellipsoid(x = 555 / 2, y = 100, z = 555 / 2, a = 50, b = 100, c = 50, material = metal(color = "lightblue"))) \%>\%
-  add_object(cube(x = 100, y = 130 / 2, z = 200, xwidth = 130, ywidth = 130, zwidth = 130,
-                  material = diffuse(checkercolor = "purple", checkerperiod = 30), angle = c(0, 10, 0))) \%>\%
+  add_object(ellipsoid(x = 555 / 2, y = 100, z = 555 / 2, a = 50, b = 100, c = 50, 
+             material = metal(color = "lightblue"))) \%>\%
+  add_object(cube(x = 100, y = 130 / 2, z = 200, xwidth = 130, 
+                  ywidth = 130, zwidth = 130, angle = c(0, 10, 0),
+                  material = diffuse(checkercolor = "purple", checkerperiod = 30))) \%>\%
   add_object(pig(x = 100, y = 190, z = 200, scale = 40, angle = c(0, 30, 0))) \%>\%
   add_object(sphere(x = 420, y = 555 / 8, z = 100, radius = 555 / 8,
                     material = dielectric(color = "orange"))) \%>\%

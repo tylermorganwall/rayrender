@@ -18,9 +18,8 @@
 #' @param material Default  \code{\link{diffuse}}.The material, called from one of the material 
 #' functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}. 
 #' @param order_rotation Default `c(1, 2, 3)`. The order to apply the rotations, referring to "x", "y", and "z" axes. 
-#' @param flipped Default `FALSE`. Whether to flip the normals.
 #' 
-#' @return Single row of a tibble describing the obj model in the scene.
+#' @return Single row of a tibble describing the instance in the scene.
 #' @export
 #'
 #' @examples
@@ -105,9 +104,11 @@
 #' # Note that if a instanced scene has importance sampled lights and there are many instances, 
 #' # it will be slow to render. 
 #' generate_cornell(importance_sample=FALSE) %>%
-#'   add_object(ellipsoid(x = 555 / 2, y = 100, z = 555 / 2, a = 50, b = 100, c = 50, material = metal(color = "lightblue"))) %>%
-#'   add_object(cube(x = 100, y = 130 / 2, z = 200, xwidth = 130, ywidth = 130, zwidth = 130,
-#'                   material = diffuse(checkercolor = "purple", checkerperiod = 30), angle = c(0, 10, 0))) %>%
+#'   add_object(ellipsoid(x = 555 / 2, y = 100, z = 555 / 2, a = 50, b = 100, c = 50, 
+#'              material = metal(color = "lightblue"))) %>%
+#'   add_object(cube(x = 100, y = 130 / 2, z = 200, xwidth = 130, 
+#'                   ywidth = 130, zwidth = 130, angle = c(0, 10, 0),
+#'                   material = diffuse(checkercolor = "purple", checkerperiod = 30))) %>%
 #'   add_object(pig(x = 100, y = 190, z = 200, scale = 40, angle = c(0, 30, 0))) %>%
 #'   add_object(sphere(x = 420, y = 555 / 8, z = 100, radius = 555 / 8,
 #'                     material = dielectric(color = "orange"))) %>%
@@ -129,15 +130,14 @@ create_instances = function(ray_scene,
                             angle_x = 0, angle_y = 0, angle_z = 0,
                             scale_x = 1, scale_y = 1, scale_z = 1,
                             material = diffuse(), 
-                            order_rotation = c(1, 2, 3), 
-                            flipped = FALSE) {
+                            order_rotation = c(1, 2, 3)) {
   ray_scene_processed = process_scene(ray_scene, process_material_ids = FALSE)
 
   # Use data.frame for recycling
   x_is_df = inherits(x, "data.frame") || inherits(x, "matrix")
   
   if(x_is_df && ncol(x) == 3) {
-    xyz = xyz.coords(x=x)
+    xyz = grDevices::xyz.coords(x=x)
   } else {
     xyz = data.frame(x=x,y=y,z=z)
   }
@@ -146,7 +146,7 @@ create_instances = function(ray_scene,
   z = xyz$z
   angle_is_df = inherits(angle_x, "data.frame") || inherits(angle_x, "matrix")
   if(angle_is_df && ncol(angle_x) == 3) {
-    angles = xyz.coords(angle_x)
+    angles = grDevices::xyz.coords(angle_x)
     stopifnot(length(angles$x) == length(x))
   } else {
     angles = data.frame(x_val=x,x=angle_x,y=angle_y,z=angle_z)
@@ -157,7 +157,7 @@ create_instances = function(ray_scene,
   
   scale_is_df = inherits(scale_x, "data.frame") || inherits(scale_x, "matrix")
   if(scale_is_df && ncol(scale_x) == 3) {
-    scales = xyz.coords(scale_x)
+    scales = grDevices::xyz.coords(scale_x)
     stopifnot(length(scales$x) == length(x))
   } else {
     scales = data.frame(x_val=x,x=scale_x,y=scale_y,z=scale_z)
@@ -165,9 +165,7 @@ create_instances = function(ray_scene,
   scale_x = scales$x
   scale_y = scales$y
   scale_z = scales$z
-  # Add detecting importance sampling and error
-  # 
-  # 
+
   new_tibble_row(list(x = 0, y = 0, z = 0, 
                       shape = "instance",
                       material = material,
@@ -187,7 +185,7 @@ create_instances = function(ray_scene,
                                                   material_id = NA_integer_,  
                                                   csg_object = list(NA), 
                                                   mesh_info = list(NA),
-                                                  flipped = flipped),
+                                                  flipped = FALSE),
                       transforms = ray_transform(angle = list(c(0,0,0)),
                                                  order_rotation = list(order_rotation),
                                                  scale = list(c(1,1,1)),
