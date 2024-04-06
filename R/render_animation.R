@@ -209,9 +209,11 @@ render_animation = function(scene, camera_motion, start_frame = 1, end_frame = N
                                   progress = progress, verbose = verbose, sample_dist = sample_dist,
                                   keep_colors = keep_colors)
   
+  
   camera_info = scene_list$camera_info
   scene_info = scene_list$scene_info
-  processed_scene = scene_list$scene
+  render_info = scene_list$render_info
+  processed_scene = scene_info$scene
   
   camera_info$preview = preview
   camera_info$interactive = FALSE
@@ -248,9 +250,11 @@ render_animation = function(scene, camera_motion, start_frame = 1, end_frame = N
     end_frame = nrow(camera_motion)
   }
   stopifnot(end_frame <= nrow(camera_motion))
-  #Pathrace Scene
-  rgb_mat = render_animation_rcpp(scene = processed_scene, camera_info = camera_info, scene_info = scene_info, camera_movement = camera_motion,
-                              start_frame = start_frame - 1, end_frame = end_frame, filenames = filename_str, post_process_frame  = post_process_frame,
-                              toneval=toneval, bloom = bloom, write_image = write_file,
-                              transparent_background = transparent_background) 
+  #Animate Scene
+  rgb_mat = render_animation_rcpp(scene = processed_scene, camera_info = camera_info, scene_info = scene_info, 
+                                  render_info = render_info,
+                                  camera_movement = camera_motion,
+                                  start_frame = start_frame - 1, end_frame = end_frame, filenames = filename_str, post_process_frame  = post_process_frame,
+                                  toneval=toneval, bloom = bloom, write_image = write_file,
+                                  transparent_background = transparent_background) 
 }

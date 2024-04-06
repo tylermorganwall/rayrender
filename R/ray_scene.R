@@ -51,7 +51,9 @@ print.ray_scene = function(x, ...) {
   
   # Count each type of object
   shape_counts <- table(x$shape)
-  shape_summary <- sprintf("Objects - %s", paste(cli::col_blue(names(shape_counts)), cli::col_red(shape_counts), sep = ": ", collapse = " | "))
+  shape_summary <- sprintf("Objects - %s", 
+                           paste(cli::col_blue(names(shape_counts)), 
+                                 cli::col_red(shape_counts), sep = ": ", collapse = " | "))
   
   # Calculate bounding box
   bbxmin <- c(min(x$x), min(x$y), min(x$z))

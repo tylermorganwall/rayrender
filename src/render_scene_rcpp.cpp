@@ -97,7 +97,7 @@ using namespace std;
 
 
 // [[Rcpp::export]]
-List render_scene_rcpp(List scene, List camera_info, List scene_info) {
+List render_scene_rcpp(List scene, List camera_info, List scene_info, List render_info) {
 #ifdef DEBUG_MEMORY
   alloc = 0;
   // dealloc = 0;
@@ -106,26 +106,23 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info) {
 #endif
 
   //Unpack scene info
-  bool ambient_light = as<bool>(scene_info["ambient_light"]);
   IntegerVector shape = as<IntegerVector>(scene_info["shape"]);
-  List position_list = as<List>(scene_info["position_list"]);
-  NumericVector bghigh  = as<NumericVector>(scene_info["bghigh"]);
-  NumericVector bglow = as<NumericVector>(scene_info["bglow"]);
-  LogicalVector isimage = as<LogicalVector>(scene_info["isimage"]);
-  CharacterVector filelocation = as<CharacterVector>(scene_info["filelocation"]);
-  List alphalist = as<List>(scene_info["alphalist"]);
-  Float clampval = as<Float>(scene_info["clampval"]);
-  bool progress_bar = as<bool>(scene_info["progress_bar"]);
-  int numbercores = as<int>(scene_info["numbercores"]);
-  bool hasbackground = as<bool>(scene_info["hasbackground"]);
-  CharacterVector background = as<CharacterVector>(scene_info["background"]);
-  Float rotate_env = as<Float>(scene_info["rotate_env"]);
-  Float intensity_env = as<Float>(scene_info["intensity_env"]);
-  bool verbose = as<bool>(scene_info["verbose"]);
-  int debug_channel = as<int>(scene_info["debug_channel"]);
-  Float min_variance = as<Float>(scene_info["min_variance"]);
-  int min_adaptive_size = as<int>(scene_info["min_adaptive_size"]);
-  List roughness_list = as<List>(scene_info["roughness_list"]);
+  
+  //Unpack render info
+  bool ambient_light = as<bool>(render_info["ambient_light"]);
+  NumericVector bghigh  = as<NumericVector>(render_info["bghigh"]);
+  NumericVector bglow = as<NumericVector>(render_info["bglow"]);
+  Float clampval = as<Float>(render_info["clampval"]);
+  bool progress_bar = as<bool>(render_info["progress_bar"]);
+  int numbercores = as<int>(render_info["numbercores"]);
+  bool hasbackground = as<bool>(render_info["hasbackground"]);
+  CharacterVector background = as<CharacterVector>(render_info["background"]);
+  Float rotate_env = as<Float>(render_info["rotate_env"]);
+  Float intensity_env = as<Float>(render_info["intensity_env"]);
+  bool verbose = as<bool>(render_info["verbose"]);
+  int debug_channel = as<int>(render_info["debug_channel"]);
+  Float min_variance = as<Float>(render_info["min_variance"]);
+  int min_adaptive_size = as<int>(render_info["min_adaptive_size"]);
 
   Environment pkg = Environment::namespace_env("rayrender");
   Function print_time = pkg["print_time"];
@@ -158,7 +155,6 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info) {
   bool preview     = as<bool>(camera_info["preview"]);
   bool interactive = as<bool>(camera_info["interactive"]);
   Float iso = as<Float>(camera_info["iso"]);
-
   int bvh_type = as<int>(camera_info["bvh"]);
 
   
@@ -178,14 +174,11 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info) {
   vec3f backgroundhigh(bghigh[0],bghigh[1],bghigh[2]);
   vec3f backgroundlow(bglow[0],bglow[1],bglow[2]);
   Float dist_to_focus = focus_distance;
-  CharacterVector alpha_files = as<CharacterVector>(alphalist["alpha_temp_file_names"]);
-  LogicalVector has_alpha = as<LogicalVector>(alphalist["alpha_tex_bool"]);
-
-  CharacterVector bump_files = as<CharacterVector>(alphalist["bump_temp_file_names"]);
-  LogicalVector has_bump = as<LogicalVector>(alphalist["bump_tex_bool"]);
-
-  CharacterVector roughness_files = as<CharacterVector>(roughness_list["rough_temp_file_names"]);
-  LogicalVector has_roughness = as<LogicalVector>(roughness_list["rough_tex_bool"]);
+  
+  std::vector<bool> has_image;
+  std::vector<bool> has_alpha;
+  std::vector<bool> has_bump;
+  std::vector<bool> has_roughness;
   
   std::unique_ptr<RayCamera> cam;
 
@@ -234,132 +227,40 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info) {
   int nx1, ny1, nn1;
 
   std::vector<Float* > textures;
-  std::vector<int* > nx_ny_nn;
-
   std::vector<unsigned char * > alpha_textures;
-  std::vector<int* > nx_ny_nn_alpha;
-
   std::vector<unsigned char * > bump_textures;
-  std::vector<int* > nx_ny_nn_bump;
-
   std::vector<unsigned char * > roughness_textures;
-  std::vector<int* > nx_ny_nn_roughness;
+  
   //Shared material vector
   std::vector<std::shared_ptr<material> >* shared_materials = new std::vector<std::shared_ptr<material> >;
 
   
-  // size_t texture_bytes = 0;
-  for(size_t i = 0; i < n; i++) {
-    if(isimage(i)) {
-      int nx, ny, nn;
-      Float* tex_data = stbi_loadf(filelocation(i), &nx, &ny, &nn, 4);
-      nn = 4;
-      // texture_bytes += nx * ny * nn;
-      textures.push_back(tex_data);
-      nx_ny_nn.push_back(new int[3]);
-      nx_ny_nn[i][0] = nx;
-      nx_ny_nn[i][1] = ny;
-      nx_ny_nn[i][2] = nn;
-    } else {
-      textures.push_back(nullptr);
-      nx_ny_nn.push_back(nullptr);
-    }
-    if(has_alpha(i)) {
-      int nxa, nya, nna;
-      unsigned char * tex_data_alpha = stbi_load(alpha_files(i), &nxa, &nya, &nna, 0);
-      // texture_bytes += nxa * nya * nna;
-      
-      alpha_textures.push_back(tex_data_alpha);
-      nx_ny_nn_alpha.push_back(new int[3]);
-      nx_ny_nn_alpha[i][0] = nxa;
-      nx_ny_nn_alpha[i][1] = nya;
-      nx_ny_nn_alpha[i][2] = nna;
-    } else {
-      alpha_textures.push_back(nullptr);
-      nx_ny_nn_alpha.push_back(nullptr);
-    }
-    if(has_bump(i)) {
-      int nxb, nyb, nnb;
-      unsigned char * tex_data_bump = stbi_load(bump_files(i), &nxb, &nyb, &nnb, 0);
-      bump_textures.push_back(tex_data_bump);
-      nx_ny_nn_bump.push_back(new int[3]);
-      nx_ny_nn_bump[i][0] = nxb;
-      nx_ny_nn_bump[i][1] = nyb;
-      nx_ny_nn_bump[i][2] = nnb;
-    } else {
-      bump_textures.push_back(nullptr);
-      nx_ny_nn_bump.push_back(nullptr);
-    }
-    if(has_roughness(i)) {
-      List SingleMaterial = as<List>(scene(i))["material"];
-      NumericVector temp_glossy = as<NumericVector>(SingleMaterial["glossyinfo"]);
-      int nxr, nyr, nnr;
-      unsigned char * tex_data_roughness = stbi_load(roughness_files(i), &nxr, &nyr, &nnr, 0);
-      // texture_bytes += nxr * nyr * nnr;
-      
-      Float min = temp_glossy(9), max = temp_glossy(10);
-      Float rough_range = max-min;
-      Float maxr = 0, minr = 1;
-      for(int ii = 0; ii < nxr; ii++) {
-        for(int jj = 0; jj < nyr; jj++) {
-          Float temp_rough = tex_data_roughness[nnr*ii + nnr*nxr*jj];
-          maxr = maxr < temp_rough ? temp_rough : maxr;
-          minr = minr > temp_rough ? temp_rough : minr;
-          if(nnr > 1) {
-            temp_rough = tex_data_roughness[nnr*ii + nnr*nxr*jj+1];
-            maxr = maxr < temp_rough ? temp_rough : maxr;
-            minr = minr > temp_rough ? temp_rough : minr;
-          }
-        }
-      }
-      Float data_range = maxr-minr;
-      for(int ii = 0; ii < nxr; ii++) {
-        for(int jj = 0; jj < nyr; jj++) {
-          if(!temp_glossy(11)) {
-            tex_data_roughness[nnr*ii + nnr*nxr*jj] =
-              (tex_data_roughness[nnr*ii + nnr*nxr*jj]-minr)/data_range * rough_range + min;
-            if(nnr > 1) {
-              tex_data_roughness[nnr*ii + nnr*nxr*jj+1] =
-                (tex_data_roughness[nnr*ii + nnr*nxr*jj+1]-minr)/data_range * rough_range + min;
-            }
-          } else {
-            tex_data_roughness[nnr*ii + nnr*nxr*jj] =
-              (1.0-(tex_data_roughness[nnr*ii + nnr*nxr*jj]-minr)/data_range) * rough_range + min;
-            if(nnr > 1) {
-              tex_data_roughness[nnr*ii + nnr*nxr*jj+1] =
-                (1.0-(tex_data_roughness[nnr*ii + nnr*nxr*jj+1]-minr)/data_range) * rough_range + min;
-            }
-          }
-        }
-      }
-      roughness_textures.push_back(tex_data_roughness);
-      nx_ny_nn_roughness.push_back(new int[3]);
-      nx_ny_nn_roughness[i][0] = nxr;
-      nx_ny_nn_roughness[i][1] = nyr;
-      nx_ny_nn_roughness[i][2] = nnr;
-    } else {
-      roughness_textures.push_back(nullptr);
-      nx_ny_nn_roughness.push_back(nullptr);
-    }
-  }
-  print_time(verbose, "Loaded Textures" );
-  
   hitable_list imp_sample_objects;
-  std::shared_ptr<hitable> worldbvh = build_scene(scene, shape, position_list,
-                                                  shutteropen,shutterclose,
-                                                  textures, nx_ny_nn,
-                                                  alpha_textures, nx_ny_nn_alpha,
-                                                  bump_textures, nx_ny_nn_bump,
-                                                  roughness_textures, nx_ny_nn_roughness,
-                                                  shared_materials, bvh_type,
-                                                  transformCache, imp_sample_objects,
-                                                  verbose, rng);
+  std::vector<std::shared_ptr<hitable> > instanced_objects;
+  std::vector<std::shared_ptr<hitable_list> > instance_importance_sampled;
+  
+  std::shared_ptr<bvh_node> worldbvh = build_scene(scene, 
+                                                   shape, 
+                                                   shutteropen,
+                                                   shutterclose,
+                                                   textures, 
+                                                   alpha_textures,
+                                                   bump_textures,
+                                                   roughness_textures, 
+                                                   shared_materials, 
+                                                   bvh_type,
+                                                   transformCache, 
+                                                   imp_sample_objects,
+                                                   instanced_objects,
+                                                   instance_importance_sampled,
+                                                   verbose, 
+                                                   rng);
   print_time(verbose, "Built Scene BVH" );
 
   //Calculate world bounds and ensure camera is inside infinite area light
   aabb bounding_box_world;
   worldbvh->bounding_box(0,0,bounding_box_world);
-  Float world_radius = bounding_box_world.Diag().length()/2 ;
+  Float world_radius = bounding_box_world.Diag().length() ;
   vec3f world_center  = bounding_box_world.Centroid();
   world_radius = world_radius > (lookfrom - world_center).length() ? world_radius : 
      1.1*(lookfrom - world_center).length();
@@ -423,7 +324,7 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info) {
     background_material = std::make_shared<diffuse_light>(background_texture, 1.0, false);
     background_sphere = std::make_shared<InfiniteAreaLight>(100, 100, world_radius*2, world_center,
                                               background_texture, background_material,
-                                              BackgroundTransform,BackgroundTransformInv,false);
+                                              BackgroundTransform, BackgroundTransformInv, false);
 
   } else {
     //Minimum intensity FLT_MIN so the CDF isn't NAN
@@ -432,7 +333,7 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info) {
     background_sphere = std::make_shared<InfiniteAreaLight>(100, 100, world_radius*2, world_center,
                                               background_texture, background_material,
                                               BackgroundTransform,
-                                              BackgroundTransformInv,false);
+                                              BackgroundTransformInv, false);
   }
   print_time(verbose, "Loaded background" );
   hitable_list world;
@@ -481,22 +382,19 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info) {
   if(hasbackground) {
     stbi_image_free(background_texture_data);
   }
-  for(int i = 0; i < n; i++) {
-    if(isimage(i)) {
+  
+  for(int i = 0; i < textures.size(); i++) {
+    if(textures[i]) {
       stbi_image_free(textures[i]);
-      delete[] nx_ny_nn[i];
     }
-    if(has_alpha(i)) {
+    if(alpha_textures[i]) {
       stbi_image_free(alpha_textures[i]);
-      delete[] nx_ny_nn_alpha[i];
     }
-    if(has_bump(i)) {
+    if(bump_textures[i]) {
       stbi_image_free(bump_textures[i]);
-      delete[] nx_ny_nn_bump[i];
     }
-    if(has_roughness(i)) {
+    if(roughness_textures[i]) {
       stbi_image_free(roughness_textures[i]);
-      delete[] nx_ny_nn_roughness[i];
     }
   }
   delete shared_materials;

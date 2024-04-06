@@ -118,7 +118,8 @@
 #' }
 generate_camera_motion = function(positions, 
                                   lookats = NULL, 
-                                  apertures = 0, fovs = 40,
+                                  apertures = 0, 
+                                  fovs = 40,
                                   focal_distances = NULL, 
                                   ortho_dims = NULL, 
                                   camera_ups = NULL,
