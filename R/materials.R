@@ -122,18 +122,11 @@ diffuse = function(color = "#ffffff",
   
   info = convert_color(color)
   noisecolor = convert_color(noisecolor)
-  if(!is.array(image_texture) && !is.na(image_texture) && !is.character(image_texture)) {
-    image_texture = NA_character_
-    warning("Texture not in recognized format (array, matrix, or filename), ignoring.")
-  }
-  if(!is.array(alpha_texture) && !is.na(alpha_texture) && !is.character(alpha_texture)) {
-    alpha_texture = NA
-    warning("Alpha texture not in recognized format (array, matrix, or filename), ignoring.")
-  }
-  if(!is.array(bump_texture) && !is.na(bump_texture) && !is.character(bump_texture)) {
-    bump_texture = NA
-    warning("Bump texture not in recognized format (array, matrix, or filename), ignoring.")
-  }
+  image_texture = check_image_texture(image_texture)
+  alpha_texture = check_image_texture(alpha_texture)
+  bump_texture  = check_image_texture(bump_texture)
+  
+
   type = "diffuse"
   if(!is.null(sigma) && is.numeric(sigma)) {
     if(sigma < 0) {
@@ -285,18 +278,10 @@ metal = function(color = "#ffffff",
     gradient_point_info = NA
   }
   noisecolor = convert_color(noisecolor)
-  if(!is.array(image_texture) && !is.na(image_texture) && !is.character(image_texture)) {
-    image_texture = NA_character_
-    warning("Texture not in recognized format (array, matrix, or filename), ignoring.")
-  }
-  if(!is.array(alpha_texture) && !is.na(alpha_texture) && !is.character(alpha_texture)) {
-    alpha_texture = NA
-    warning("Alpha texture not in recognized format (array, matrix, or filename), ignoring.")
-  }
-  if(!is.array(bump_texture) && !is.na(bump_texture) && !is.character(bump_texture)) {
-    bump_texture = NA
-    warning("Bump texture not in recognized format (array, matrix, or filename), ignoring.")
-  }
+  image_texture = check_image_texture(image_texture)
+  alpha_texture = check_image_texture(alpha_texture)
+  bump_texture  = check_image_texture(bump_texture)
+  
   if(length(eta) == 1) {
     eta = c(eta,eta,eta)
   }
@@ -443,10 +428,7 @@ dielectric = function(color="white", refraction = 1.5,
   } 
   attenuation = attenuation * attenuation_intensity
   
-  if(!is.array(bump_texture) && !is.na(bump_texture) && !is.character(bump_texture)) {
-    bump_texture = NA
-    warning("Bump texture not in recognized format (array, matrix, or filename), ignoring.")
-  }
+  bump_texture  = check_image_texture(bump_texture)
   ray_material(list(type = "dielectric", 
                       properties = list(c(color, refraction, attenuation, priority)), 
                       checkercolor=list(NA), 
@@ -647,22 +629,11 @@ microfacet = function(color="white", roughness = 0.0001, transmission = FALSE,
     gradient_point_info = NA
   }
   noisecolor = convert_color(noisecolor)
-  if(!is.array(image_texture) && !is.na(image_texture) && !is.character(image_texture)) {
-    image_texture = NA_character_
-    warning("Texture not in recognized format (array, matrix, or filename), ignoring.")
-  }
-  if(!is.array(alpha_texture) && !is.na(alpha_texture) && !is.character(alpha_texture)) {
-    alpha_texture = NA
-    warning("Alpha texture not in recognized format (array, matrix, or filename), ignoring.")
-  }
-  if(!is.array(bump_texture) && !is.na(bump_texture) && !is.character(bump_texture)) {
-    bump_texture = NA
-    warning("Bump texture not in recognized format (array, matrix, or filename), ignoring.")
-  }
-  if(!is.array(roughness_texture) && !is.na(roughness_texture) && !is.character(roughness_texture)) {
-    roughness_texture = NA
-    warning("Roughness texture not in recognized format (array, matrix, or filename), ignoring.")
-  }
+  image_texture = check_image_texture(image_texture)
+  alpha_texture = check_image_texture(alpha_texture)
+  bump_texture  = check_image_texture(bump_texture)
+  roughness_texture = check_image_texture(roughness_texture)
+
   if(length(image_repeat) == 1) {
     image_repeat = c(image_repeat,image_repeat)
   }
@@ -784,10 +755,7 @@ light = function(color = "#ffffff", intensity = 10, importance_sample = TRUE,
                  gradient_color = NA, gradient_transpose = FALSE,
                  gradient_point_start = NA, gradient_point_end = NA, gradient_type = "hsv") {
   info = convert_color(color)
-  if(!is.array(image_texture) && !is.na(image_texture) && !is.character(image_texture)) {
-    image_texture = NA_character_
-    warning("Texture not in recognized format (array, matrix, or filename), ignoring.")
-  }
+  image_texture = check_image_texture(image_texture)
   if(length(image_repeat) == 1) {
     image_repeat = c(image_repeat,image_repeat)
   }
@@ -993,22 +961,11 @@ glossy = function(color="white", gloss = 1, reflectance = 0.05, microfacet = "tb
     gradient_point_info = NA_real_
   }
   noisecolor = convert_color(noisecolor)
-  if(!is.array(image_texture) && !is.na(image_texture) && !is.character(image_texture)) {
-    image_texture = NA_character_
-    warning("Texture not in recognized format (array, matrix, or filename), ignoring.")
-  }
-  if(!is.array(alpha_texture) && !is.na(alpha_texture) && !is.character(alpha_texture)) {
-    alpha_texture = NA_character_
-    warning("Alpha texture not in recognized format (array, matrix, or filename), ignoring.")
-  }
-  if(!is.array(bump_texture) && !is.na(bump_texture) && !is.character(bump_texture)) {
-    bump_texture = NA_character_
-    warning("Bump texture not in recognized format (array, matrix, or filename), ignoring.")
-  }
-  if(!is.array(roughness_texture) && !is.na(roughness_texture) && !is.character(roughness_texture)) {
-    roughness_texture = NA_character_
-    warning("Roughness texture not in recognized format (array, matrix, or filename), ignoring.")
-  }
+  image_texture = check_image_texture(image_texture)
+  alpha_texture = check_image_texture(alpha_texture)
+  bump_texture  = check_image_texture(bump_texture)
+  roughness_texture = check_image_texture(roughness_texture)
+  
   if(length(image_repeat) == 1) {
     image_repeat = c(image_repeat,image_repeat)
   }
@@ -1160,5 +1117,20 @@ hair = function(pigment = 1.3, red_pigment = 0, color = NA, sigma_a = NA,
 lambertian = function(...) {
   warning("lambertian() deprecated--use diffuse() instead.")
   diffuse(...)
+}
+
+#' Check Image Texture
+#' @keywords internal
+check_image_texture = function(image_texture) {
+  if(!is.array(image_texture) && !is.na(image_texture) && !is.character(image_texture)) {
+    image_texture = NA_character_
+    warning("Texture not in recognized format (array, matrix, or filename), ignoring.")
+  }
+  if(!is.array(image_texture) && !is.na(image_texture) && 
+     !tools::file_ext(tolower(image_texture)) %in% c("jpg", "jpeg", "png", "hdr")) {
+    image_texture = NA_character_
+    warning("Texture not in recognized format (JPEG, PNG, or HDR), ignoring.")
+  }
+  return(image_texture)
 }
 

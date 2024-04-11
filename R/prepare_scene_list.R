@@ -59,7 +59,7 @@ prepare_scene_list = function(scene, width = 400, height = 400, fov = 20,
   }
   
   
-  if(scene_info$any_light && 
+  if(!scene_info$any_light && 
      is.null(ambient_light) && 
      is.null(environment_light)) {
     ambient_light = TRUE
