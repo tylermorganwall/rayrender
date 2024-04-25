@@ -1,5 +1,6 @@
 #include "mesh3d.h"
 #include "texture.h"
+#include "loopsubdiv.h"
 
 mesh3d::mesh3d(Rcpp::List mesh_info, std::shared_ptr<material> mat, 
                Float shutteropen, Float shutterclose, int bvh_type, random_gen rng,
@@ -9,6 +10,8 @@ mesh3d::mesh3d(Rcpp::List mesh_info, std::shared_ptr<material> mat,
   Rcpp::IntegerMatrix indices = Rcpp::as<Rcpp::IntegerMatrix>(mesh_info["indices"]);
   Rcpp::NumericMatrix norms = Rcpp::as<Rcpp::NumericMatrix>(mesh_info["normals"]);
   Rcpp::NumericMatrix txcoord = Rcpp::as<Rcpp::NumericMatrix>(mesh_info["texcoords"]);
+  int subdivision_levels = Rcpp::as<int>(mesh_info["subdivision_levels"]);
+  
   // float scale_mesh = Rcpp::as<float>(mesh_info["scale_mesh"]);
   
   
@@ -76,9 +79,16 @@ mesh3d::mesh3d(Rcpp::List mesh_info, std::shared_ptr<material> mat,
                                                         mat, true, true, 
                                                         ObjectToWorld, WorldToObject, reverseOrientation));
   
+  if(subdivision_levels > 1) {
+    LoopSubdivide(mesh.get(),
+                  subdivision_levels,
+                  false);
+  }
+  size_t n = mesh->nTriangles * 3;
+  // mesh->ValidateMesh();
+  
   mesh->texture_size += sizeof(unsigned char) * (nx * ny * nn + nxb * nyb * nnb) ;
   
-  size_t n = mesh->nTriangles * 3;
   for(size_t i = 0; i < n; i += 3) {
     triangles.add(std::make_shared<triangle>(mesh.get(), 
                                              &mesh->vertexIndices[i], 

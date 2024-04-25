@@ -2,6 +2,7 @@
 
 #include "miniply.h"
 #include "plymesh.h"
+#include "loopsubdiv.h"
 
 inline char separator_ply() {
 #if defined _WIN32 || defined __CYGWIN__
@@ -113,7 +114,8 @@ static TriMesh* parse_file_with_miniply(const char* filename, bool assumeTriangl
 
 plymesh::plymesh(std::string inputfile, std::string basedir, std::shared_ptr<material> mat, 
                  std::shared_ptr<alpha_texture> alpha, std::shared_ptr<bump_texture> bump,
-                 Float scale, Float shutteropen, Float shutterclose, int bvh_type, random_gen rng,
+                 Float scale, int subdivision_levels, 
+                 Float shutteropen, Float shutterclose, int bvh_type, random_gen rng,
                  std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation) :
   hitable(ObjectToWorld, WorldToObject, reverseOrientation) {
   TriMesh* tri = parse_file_with_miniply(inputfile.c_str(), false);
@@ -128,8 +130,15 @@ plymesh::plymesh(std::string inputfile, std::string basedir, std::shared_ptr<mat
                                                         alpha, bump, 
                                                         mat,
                                                         ObjectToWorld, WorldToObject, reverseOrientation));
-  // mesh->ValidateMesh();
+
+  if(subdivision_levels > 1) {
+    LoopSubdivide(mesh.get(),
+                  subdivision_levels,
+                  false);
+  }
   size_t n = mesh->nTriangles * 3;
+  
+  // mesh->ValidateMesh();
   
   for(size_t i = 0; i < n; i += 3) {
     triangles.add(std::make_shared<triangle>(mesh.get(), 

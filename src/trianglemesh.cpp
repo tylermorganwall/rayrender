@@ -42,15 +42,12 @@ void LoadRayMaterials(std::vector<std::shared_ptr<material> > &mesh_materials,
   //For default texture
   if(override_material) {
     mesh_materials.push_back(default_material);
+    //TODO: Do I need to check if the default material is a light and is importance sampled?
     material_is_light.push_back(false);
     alpha_textures.push_back(alpha_default);
     bump_textures.push_back(bump_default);
     return;
   } 
-  // else {
-    // alpha_textures.push_back(nullptr);
-    // bump_textures.push_back(nullptr);
-  // }
   
   std::vector<vec3f > diffuse_materials(total_materials+1);
   std::vector<vec3f > specular_materials(total_materials+1);
@@ -130,7 +127,12 @@ void LoadRayMaterials(std::vector<std::shared_ptr<material> > &mesh_materials,
               break;
             }
           }
-        } 
+        }
+        if(has_alpha[mat_num]) {
+          if(verbose) {
+            Rprintf("(%i/%i) Material has alpha channel \n", (int)i+1, (int)materials.size());
+          }
+        }
       } else if (diffuse.size() == 3 && dissolve == 1) {
         obj_texture_data.push_back(nullptr);
         diffuse_materials[mat_num] = vec3f(diffuse[0],diffuse[1],diffuse[2]);
@@ -187,7 +189,7 @@ void LoadRayMaterials(std::vector<std::shared_ptr<material> > &mesh_materials,
       Rcpp::NumericVector emission = Rcpp::as<Rcpp::NumericVector>(single_material["emission"]);
       Rcpp::NumericVector specular = Rcpp::as<Rcpp::NumericVector>(single_material["specular"]);
       Rcpp::NumericVector transmittance = Rcpp::as<Rcpp::NumericVector>(single_material["transmittance"]);
-      bool any_trans = transmittance(0) != 1 || transmittance(1) != 1 || transmittance(2) != 1;
+      bool any_trans = transmittance(0) != 0 || transmittance(1) != 0 || transmittance(2) != 0;
       Float shininess = Rcpp::as<Float>(single_material["shininess"]);
       
       int illum = Rcpp::as<int>(single_material["illum"]);
@@ -519,7 +521,7 @@ TriangleMesh::TriangleMesh(std::string inputfile, std::string basedir,
   if(ret) {
     nVertices = attrib.vertices.size();
     for (size_t s = 0; s < shapes.size(); s++) {
-      nTriangles += shapes[s].mesh.indices.size();
+      nTriangles += shapes[s].mesh.indices.size() / 3;
       for(size_t m = 0; m < shapes[s].mesh.indices.size(); m++) {
         vertexIndices.push_back(shapes[s].mesh.indices[m].vertex_index);
         normalIndices.push_back(shapes[s].mesh.indices[m].normal_index);
@@ -1100,7 +1102,7 @@ void TriangleMesh::ValidateMesh() {
       throw std::runtime_error("Vertex data contains NaN or Inf values");
     }
   }
-  
+
   // 5. Check for NaN or Inf in normal data
   if (has_normals) {
     for (size_t i = 0; i < nNormals; ++i) {
@@ -1110,7 +1112,7 @@ void TriangleMesh::ValidateMesh() {
       }
     }
   }
-  
+
   // 6. Check for NaN or Inf in texture coordinate data
   if (has_tex) {
     for (size_t i = 0; i < nTex; ++i) {

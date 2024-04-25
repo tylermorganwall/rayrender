@@ -603,11 +603,14 @@ std::shared_ptr<bvh_node> build_scene(List& scene,
         bool importance_sample_lights = as<bool>(shape_properties["importance_sample_lights"]);
         bool load_normals = as<bool>(shape_properties["load_normals"]);
         bool calculate_consistent_normals = as<bool>(shape_properties["calculate_consistent_normals"]);
+        int subdivision_levels = as<int>(shape_properties["subdivision_levels"]);
+        
         Float sigma_obj = as<Float>(SingleMaterial["sigma"]);
         entry = std::make_shared<trimesh>(objfilename, objbasename, 
                                           scale_obj, sigma_obj, shape_material, 
                                           load_material, load_textures, load_vertex_colors,
                                           importance_sample_lights, load_normals, calculate_consistent_normals,
+                                          subdivision_levels,
                                           imp_sample_objects,
                                           shutteropen, shutterclose, bvh_type, rng, verbose,
                                           ObjToWorld,WorldToObj, is_flipped);
@@ -718,9 +721,11 @@ std::shared_ptr<bvh_node> build_scene(List& scene,
         std::string plyfilename = Rcpp::as<std::string>(SingleShape["fileinfo"]);
         std::string plybasename =  Rcpp::as<std::string>(shape_properties["basename"]);
         Float scale_ply = as<Float>(shape_properties["scale_ply"]);
+        int subdivision_levels = as<int>(shape_properties["subdivision_levels"]);
+        
         entry = std::make_shared<plymesh>(plyfilename, plybasename, 
                                           shape_material, alpha[mat_idx], bump[mat_idx], 
-                                          scale_ply,
+                                          scale_ply, subdivision_levels,
                                           shutteropen, shutterclose, bvh_type, rng,
                                           ObjToWorld,WorldToObj, is_flipped);
         if(entry == nullptr) {
@@ -755,6 +760,8 @@ std::shared_ptr<bvh_node> build_scene(List& scene,
         bool calculate_consistent_normals = as<bool>(shape_properties["calculate_consistent_normals"]);
         bool override_material = as<bool>(shape_properties["override_material"]);
         bool flip_transmittance = as<bool>(shape_properties["flip_transmittance"]);
+        int subdivision_levels = as<int>(shape_properties["subdivision_levels"]);
+        
         //importance sample lights--need to change
         ////calculate consistent normals--need to change
         entry = std::make_shared<raymesh>(raymesh_object,
@@ -764,6 +771,7 @@ std::shared_ptr<bvh_node> build_scene(List& scene,
                                           calculate_consistent_normals, 
                                           override_material,
                                           flip_transmittance,
+                                          subdivision_levels,
                                           imp_sample_objects, 
                                           verbose, 
                                           shutteropen, shutterclose, bvh_type, rng, 

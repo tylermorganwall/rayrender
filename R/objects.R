@@ -590,7 +590,8 @@ disk = function(x = 0, y = 0, z = 0, radius = 1, inner_radius = 0, material = di
 obj_model = function(filename, x = 0, y = 0, z = 0, scale_obj = 1, 
                      load_material = TRUE, load_textures = TRUE, load_normals = TRUE,
                      vertex_colors = FALSE, calculate_consistent_normals = TRUE,
-                     importance_sample_lights = TRUE,
+                     subdivision_levels = 1,
+                     importance_sample_lights = TRUE, 
                      material = diffuse(), 
                      angle = c(0, 0, 0), order_rotation = c(1, 2, 3), 
                      flipped = FALSE, scale = c(1,1,1)) {
@@ -608,6 +609,11 @@ obj_model = function(filename, x = 0, y = 0, z = 0, scale_obj = 1,
       return(dirname_processed)
     }
   }
+  if(subdivision_levels > getOption("rayrender_subdivision_max", 5) ) {
+    stop("Default maximum subdivision level set to 5. Did you really mean to set a subdivision level ",
+         "of ", subdivision_levels, "? If so, set `options(rayrender_subdivision_max = ", subdivision_levels,
+         ")`.")
+  }
   new_tibble_row(list(x = x, y = y, z = z, 
                  shape = "obj",
                  material = material,
@@ -618,6 +624,7 @@ obj_model = function(filename, x = 0, y = 0, z = 0, scale_obj = 1,
                                                                      importance_sample_lights = importance_sample_lights,
                                                                      load_normals = load_normals,
                                                                      calculate_consistent_normals = calculate_consistent_normals,
+                                                                     subdivision_levels = subdivision_levels,
                                                                      basename = base_dir(filename)),
                                              tricolorinfo = list(NA), 
                                              fileinfo = filename,
@@ -2194,7 +2201,7 @@ text3d = function(label, x = 0, y = 0, z = 0, text_height = 1, orientation = "xy
 #' @examples
 #' #See the documentation for `obj_model()`--no example PLY models are included with this package,
 #' #but the process of loading a model is the same (without support for vertex colors).
-ply_model = function(filename, x = 0, y = 0, z = 0, scale_ply = 1, 
+ply_model = function(filename, x = 0, y = 0, z = 0, scale_ply = 1, subdivision_levels = 1,
                      material = diffuse(), 
                      angle = c(0, 0, 0), order_rotation = c(1, 2, 3), 
                      flipped = FALSE, scale = c(1,1,1)) {
@@ -2235,7 +2242,8 @@ ply_model = function(filename, x = 0, y = 0, z = 0, scale_ply = 1,
                       shape = "ply",
                       material = material,
                       shape_info = ray_shape_info(shape_properties = list(scale_ply = scale_ply,
-                                                                          basename = base_dir(filename)),
+                                                                          basename = base_dir(filename),
+                                                                          subdivision_levels = subdivision_levels),
                                                   tricolorinfo = list(NA), 
                                                   fileinfo = filename,
                                                   material_id = NA_integer_,  
@@ -2266,7 +2274,6 @@ ply_model = function(filename, x = 0, y = 0, z = 0, scale_ply = 1,
 #' @param z Default `0`. z-coordinate to offset the model.
 #' @param swap_yz Default `FALSE`. Swap the Y and Z coordinates.
 #' @param reverse Default `FALSE`. Reverse the orientation of the indices, flipping their normals.
-#' @param scale_mesh Default `1`. Amount to scale the size of the mesh in all directions.
 #' @param verbose Default `FALSE`. If `TRUE`, prints information about the mesh to the console.
 #' @param override_material Default `FALSE`. If `TRUE`, overrides the material specified in the 
 #' `mesh3d` object with the one specified in `material`.
@@ -2290,13 +2297,13 @@ ply_model = function(filename, x = 0, y = 0, z = 0, scale_ply = 1,
 #'   
 #'   generate_studio() %>% 
 #'     add_object(mesh3d_model(humface,y=-0.3,x=0,z=0,
-#'                           material=glossy(color="dodgerblue4"), scale_mesh = 1/70)) %>%
+#'                           material=glossy(color="dodgerblue4"), scale = 1/70)) %>%
 #'     add_object(sphere(y=5,x=5,z=5,material=light(intensity=50))) %>% 
 #'     render_scene(samples=128,width=800,height=800,
 #'                  lookat = c(0,0.5,1), aperture=0.0)
 #' }
 mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FALSE,
-                        scale_mesh = 1, verbose = FALSE, 
+                        subdivision_levels = 1, verbose = FALSE, 
                         override_material = FALSE, material = diffuse(), 
                         angle = c(0, 0, 0), order_rotation = c(1, 2, 3), 
                         flipped = FALSE, scale = c(1,1,1)) {
@@ -2307,8 +2314,9 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
     shapes = list()
     for(shape in seq_len(length(mesh))) {
       shapes[[shape]] = mesh3d_model(mesh[[shape]], x=x,y=y,z=z,
-                                     swap_yz=swap_yz,reverse=reverse,scale_mesh = scale_mesh,
+                                     swap_yz=swap_yz,reverse=reverse,
                                      override_material=override_material,material=material,
+                                     subdivision_levels = subdivision_levels,
                                      angle=angle,order_rotation=order_rotation,flipped=flipped,
                                      scale=scale,verbose=verbose)
     }
@@ -2410,8 +2418,9 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
                    texture=texture,bump_texture=bump_texture,
                    bump_intensity=bump_intensity,
                    color_vals=color_vals,
-                   color_type=color_type,scale_mesh=scale_mesh,
-                   material_type = material_type)
+                   color_type=color_type,
+                   material_type = material_type,
+                   subdivision_levels = subdivision_levels)
   if(verbose) {
     bbox = apply(vertices,2,range)
     message(sprintf("mesh3d Bounding Box: %0.1f-%0.1f x %0.1f-%0.1f x %0.1f-%0.1f", 
@@ -3365,6 +3374,7 @@ raymesh_model = function(mesh, x = 0, y = 0, z = 0,
                          flip_transmittance = TRUE, verbose = FALSE, 
                          importance_sample_lights = FALSE,
                          calculate_consistent_normals = TRUE,
+                         subdivision_levels = 1,
                          override_material = TRUE, material = diffuse(), 
                          angle = c(0, 0, 0), order_rotation = c(1, 2, 3), 
                          flipped = FALSE, scale = c(1,1,1), validate_mesh = TRUE) {
@@ -3377,13 +3387,19 @@ raymesh_model = function(mesh, x = 0, y = 0, z = 0,
   if(validate_mesh) {
     raymesh = rayvertex::validate_mesh(mesh)
   }
+  if(subdivision_levels > getOption("rayrender_subdivision_max", 5) ) {
+    stop("Default maximum subdivision level set to 5. Did you really mean to set a subdivision level ",
+         "of ", subdivision_levels, "? If so, set `options(rayrender_subdivision_max = ", subdivision_levels,
+         ")`.")
+  }
   new_tibble_row(list(x = x, y = y, z = z, 
                       shape = "raymesh", 
                       material = material,
                       shape_info = ray_shape_info(shape_properties = list(importance_sample_lights = importance_sample_lights,
                                                                           calculate_consistent_normals = calculate_consistent_normals,
                                                                           override_material = override_material,
-                                                                          flip_transmittance = flip_transmittance),
+                                                                          flip_transmittance = flip_transmittance,
+                                                                          subdivision_levels = subdivision_levels),
                                                   tricolorinfo = list(NA), 
                                                   fileinfo = NA,
                                                   material_id = NA_integer_,  

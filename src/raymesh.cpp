@@ -1,13 +1,16 @@
 #include "raymesh.h"
 #include "RProgress.h"
+#include "loopsubdiv.h"
 
 raymesh::raymesh(Rcpp::List raymesh_list, 
                  std::shared_ptr<material> default_material, 
-                 std::shared_ptr<alpha_texture> alpha_mask, std::shared_ptr<bump_texture> bump_tex,
+                 std::shared_ptr<alpha_texture> alpha_mask, 
+                 std::shared_ptr<bump_texture> bump_tex,
                  bool importance_sample_lights, 
                  bool calculate_consistent_normals,
                  bool override_material,
                  bool flip_transmittance,
+                 int subdivision_levels,
                  hitable_list& imp_sample_objects, 
                  bool verbose, 
                  Float shutteropen, Float shutterclose, int bvh_type, random_gen rng, 
@@ -20,11 +23,17 @@ raymesh::raymesh(Rcpp::List raymesh_list,
                                                         bump_tex,
                                                         default_material, 
                                                         ObjectToWorld, WorldToObject, reverseOrientation));
+  if(subdivision_levels > 1) {
+    LoopSubdivide(mesh.get(),
+                  subdivision_levels,
+                  verbose);
+  }
+  size_t n = mesh->nTriangles * 3;
+  
 #ifdef FULL_DEBUG
   mesh->ValidateMesh();
 #endif
-  size_t n = mesh->nTriangles;
-  for(size_t i = 0; i < 3*n; i += 3) {
+  for(size_t i = 0; i < n; i += 3) {
     triangles.add(std::make_shared<triangle>(mesh.get(), 
                                              &mesh->vertexIndices[i], 
                                              &mesh->normalIndices[i],

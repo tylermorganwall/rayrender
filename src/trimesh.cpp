@@ -1,10 +1,12 @@
 #include "trimesh.h"
 #include "RProgress.h"
+#include "loopsubdiv.h"
 
 trimesh::trimesh(std::string inputfile, std::string basedir, Float scale, Float sigma,
                  std::shared_ptr<material> default_material, bool load_materials, 
                  bool load_textures, bool load_vertex_colors,
                  bool importance_sample_lights, bool load_normals, bool calculate_consistent_normals,
+                 int subdivision_levels,
                  hitable_list& imp_sample_objects,
                  Float shutteropen, Float shutterclose, int bvh_type, random_gen rng, bool verbose,
                  std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation) : 
@@ -13,7 +15,13 @@ trimesh::trimesh(std::string inputfile, std::string basedir, Float scale, Float 
                                                         load_materials, load_textures, load_vertex_colors, load_normals, verbose,
                                                         scale, calculate_consistent_normals,
                                                         ObjectToWorld, WorldToObject, reverseOrientation));
-  size_t n = mesh->nTriangles;
+  if(subdivision_levels > 1) {
+    LoopSubdivide(mesh.get(),
+                  subdivision_levels,
+                  verbose);
+  }
+  // mesh->ValidateMesh();
+  size_t n = mesh->nTriangles * 3;
   for(size_t i = 0; i < n; i += 3) {
     triangles.add(std::make_shared<triangle>(mesh.get(), 
                                              &mesh->vertexIndices[i], 
