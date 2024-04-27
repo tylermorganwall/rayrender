@@ -457,7 +457,7 @@ inline Float calculate_bounces(const ray& r, hitable *world, hitable_list *hlist
       }
       final_color += emit_color;
       if(throughput.x() == 0 && throughput.y() == 0 && throughput.z() == 0) {
-        return(i);
+        return((Float)i);
       }
       float pdf_val;
       //generates scatter record and sends out new ray, otherwise exits out with accumulated color
@@ -487,13 +487,13 @@ inline Float calculate_bounces(const ray& r, hitable *world, hitable_list *hlist
         pdf_val = p.value(dir, rng, r2.time()); //generates a pdf value based the intersection point and the mixture pdf
         throughput *= hrec.mat_ptr->f(r1, hrec, r2) / pdf_val;
       } else {
-        return(i);
+        return((Float)i);
       }
     } else {
-      return(i);
+      return((Float)i);
     }
   }
-  return(max_depth);
+  return((Float)max_depth);
 }
 
 inline point3f calculate_ao(const ray& r, hitable *world, hitable_list *hlist,

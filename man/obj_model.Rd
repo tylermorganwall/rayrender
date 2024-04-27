@@ -15,6 +15,7 @@ obj_model(
   load_normals = TRUE,
   vertex_colors = FALSE,
   calculate_consistent_normals = TRUE,
+  subdivision_levels = 1,
   importance_sample_lights = TRUE,
   material = diffuse(),
   angle = c(0, 0, 0),
@@ -49,6 +50,8 @@ to the model.}
 \item{calculate_consistent_normals}{Default `TRUE`. Whether to calculate consistent vertex normals to prevent energy 
 loss at edges.}
 
+\item{subdivision_levels}{Default `1`. Number of Loop subdivisions to be applied to the mesh.}
+
 \item{importance_sample_lights}{Default `TRUE`. Whether to importance sample lights specified in the OBJ material
 (objects with a non-zero Ke MTL material).}
 
@@ -79,30 +82,47 @@ Note: light importance sampling currently not supported for this shape.
 #affect the function.
 
 if(run_documentation()) {
+#Load the basic 3D R logo with the included materials
 generate_ground(material = diffuse(checkercolor = "grey50")) \%>\%
-  add_object(obj_model(y = -0.8, filename = r_obj(),
-                       material = microfacet(color = "gold", roughness = 0.05))) \%>\%
-  add_object(obj_model(x = 1.8, y = -0.8, filename = r_obj(), 
-                       material = diffuse(color = "dodgerblue"))) \%>\%
-  add_object(obj_model(x = -1.8, y = -0.8, filename = r_obj() , 
-                       material = dielectric(attenuation = c(1,0.3,1)*2))) \%>\%
-  add_object(sphere(z = 20, x = 20, y = 20, radius = 10,
-                    material = light(intensity = 10))) \%>\%
-  render_scene(parallel = TRUE, samples = 128, aperture = 0.05, 
-               fov = 32, lookfrom = c(0, 2, 10))
-
+  add_object(obj_model(y = 0.2, filename = rayrender::r_obj(),
+                       scale_obj=3)) \%>\%
+   add_object(sphere(z = 20, x = 20, y = 20, radius = 10,
+                     material = light(intensity = 10))) \%>\%
+  render_scene(parallel = TRUE, samples = 256, aperture = 0.05, 
+               sample_method="sobol_blue",
+               fov = 20, lookfrom = c(0, 2, 10))
 }
 
-#Use scale_obj to make objects bigger--this is more robust than the generic scale argument.
 if(run_documentation()) {
+# Smooth a mesh by setting the number of subdivision levels 
 generate_ground(material = diffuse(checkercolor = "grey50")) \%>\%
-  add_object(obj_model(y = -0.8, filename = r_obj(), scale_obj = 2,
-                       material = diffuse(noise = TRUE, noiseintensity = 10,noisephase=45))) \%>\%
+  add_object(obj_model(y = 0.2, filename = rayrender::r_obj(),
+                       scale_obj=3, subdivision_levels = 3)) \%>\%
+   add_object(sphere(z = 20, x = 20, y = 20, radius = 10,
+                     material = light(intensity = 10))) \%>\%
+  render_scene(parallel = TRUE, samples = 256, aperture = 0.05,
+               sample_method="sobol_blue", 
+               fov = 20, lookfrom = c(0, 2, 10))
+}
+
+if(run_documentation()) {
+#Override the materials for each object
+generate_ground(material = diffuse(checkercolor = "grey50")) \%>\%
+  add_object(obj_model(y = 1.4, filename = rayrender::r_obj(), load_material = FALSE,
+                       scale_obj = 1.8, angle=c(10,0,0),
+                       material = microfacet(color = "gold", roughness = 0.05))) \%>\%
+  add_object(obj_model(x = 0.9, y = 0, filename = rayrender::r_obj(), load_material = FALSE,
+                       scale_obj = 1.8, angle=c(0,-20,0),
+                       material = diffuse(color = "dodgerblue"))) \%>\%
+  add_object(obj_model(x = -0.9, y = 0, filename = rayrender::r_obj() , load_material = FALSE,
+                       scale_obj = 1.8, angle=c(0,20,0),
+                       material = dielectric(attenuation = c(1,0.3,1), priority = 1,
+                                             attenuation_intensity = 20))) \%>\%
   add_object(sphere(z = 20, x = 20, y = 20, radius = 10,
                     material = light(intensity = 10))) \%>\%
-  render_scene(parallel = TRUE, samples = 128, ambient = TRUE, 
-               backgroundhigh="blue", backgroundlow="red",
-               aperture = 0.05, fov = 32, lookfrom = c(0, 2, 10),
-               lookat = c(0,1,0)) 
+  render_scene(parallel = TRUE, samples = 256, aperture = 0.05, 
+               sample_method="sobol_blue", lookat=c(0,0.5,0),
+               fov = 22, lookfrom = c(0, 2, 10))
+
 }
 }

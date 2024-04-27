@@ -11,7 +11,7 @@ mesh3d_model(
   z = 0,
   swap_yz = FALSE,
   reverse = FALSE,
-  scale_mesh = 1,
+  subdivision_levels = 1,
   verbose = FALSE,
   override_material = FALSE,
   material = diffuse(),
@@ -37,7 +37,7 @@ only supports one image texture per mesh. All quads will be triangulated.}
 
 \item{reverse}{Default `FALSE`. Reverse the orientation of the indices, flipping their normals.}
 
-\item{scale_mesh}{Default `1`. Amount to scale the size of the mesh in all directions.}
+\item{subdivision_levels}{Default `1`. Number of Loop subdivisions to be applied to the mesh.}
 
 \item{verbose}{Default `FALSE`. If `TRUE`, prints information about the mesh to the console.}
 
@@ -71,7 +71,7 @@ if(length(find.package("Rcvg", quiet=TRUE)) > 0) {
   
   generate_studio() \%>\% 
     add_object(mesh3d_model(humface,y=-0.3,x=0,z=0,
-                          material=glossy(color="dodgerblue4"), scale_mesh = 1/70)) \%>\%
+                          material=glossy(color="dodgerblue4"), scale = 1/70)) \%>\%
     add_object(sphere(y=5,x=5,z=5,material=light(intensity=50))) \%>\% 
     render_scene(samples=128,width=800,height=800,
                  lookat = c(0,0.5,1), aperture=0.0)

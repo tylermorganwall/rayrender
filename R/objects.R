@@ -542,6 +542,7 @@ disk = function(x = 0, y = 0, z = 0, radius = 1, inner_radius = 0, material = di
 #' to the model.
 #' @param importance_sample_lights Default `TRUE`. Whether to importance sample lights specified in the OBJ material
 #' (objects with a non-zero Ke MTL material).
+#' @param subdivision_levels Default `1`. Number of Loop subdivisions to be applied to the mesh.
 #' @param material Default  \code{\link{diffuse}}.The material, called from one of the material 
 #' functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}. 
 #' @param angle Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.
@@ -561,31 +562,48 @@ disk = function(x = 0, y = 0, z = 0, radius = 1, inner_radius = 0, material = di
 #' #affect the function.
 #' 
 #' if(run_documentation()) {
+#' #Load the basic 3D R logo with the included materials
 #' generate_ground(material = diffuse(checkercolor = "grey50")) %>%
-#'   add_object(obj_model(y = -0.8, filename = r_obj(),
-#'                        material = microfacet(color = "gold", roughness = 0.05))) %>%
-#'   add_object(obj_model(x = 1.8, y = -0.8, filename = r_obj(), 
-#'                        material = diffuse(color = "dodgerblue"))) %>%
-#'   add_object(obj_model(x = -1.8, y = -0.8, filename = r_obj() , 
-#'                        material = dielectric(attenuation = c(1,0.3,1)*2))) %>%
-#'   add_object(sphere(z = 20, x = 20, y = 20, radius = 10,
-#'                     material = light(intensity = 10))) %>%
-#'   render_scene(parallel = TRUE, samples = 128, aperture = 0.05, 
-#'                fov = 32, lookfrom = c(0, 2, 10))
-#' 
+#'   add_object(obj_model(y = 0.2, filename = rayrender::r_obj(),
+#'                        scale_obj=3)) %>%
+#'    add_object(sphere(z = 20, x = 20, y = 20, radius = 10,
+#'                      material = light(intensity = 10))) %>%
+#'   render_scene(parallel = TRUE, samples = 256, aperture = 0.05, 
+#'                sample_method="sobol_blue",
+#'                fov = 20, lookfrom = c(0, 2, 10))
 #' }
 #' 
-#' #Use scale_obj to make objects bigger--this is more robust than the generic scale argument.
 #' if(run_documentation()) {
+#' # Smooth a mesh by setting the number of subdivision levels 
 #' generate_ground(material = diffuse(checkercolor = "grey50")) %>%
-#'   add_object(obj_model(y = -0.8, filename = r_obj(), scale_obj = 2,
-#'                        material = diffuse(noise = TRUE, noiseintensity = 10,noisephase=45))) %>%
+#'   add_object(obj_model(y = 0.2, filename = rayrender::r_obj(),
+#'                        scale_obj=3, subdivision_levels = 3)) %>%
+#'    add_object(sphere(z = 20, x = 20, y = 20, radius = 10,
+#'                      material = light(intensity = 10))) %>%
+#'   render_scene(parallel = TRUE, samples = 256, aperture = 0.05,
+#'                sample_method="sobol_blue", 
+#'                fov = 20, lookfrom = c(0, 2, 10))
+#' }
+#' 
+#' if(run_documentation()) {
+#' #Override the materials for each object
+#' generate_ground(material = diffuse(checkercolor = "grey50")) %>%
+#'   add_object(obj_model(y = 1.4, filename = rayrender::r_obj(), load_material = FALSE,
+#'                        scale_obj = 1.8, angle=c(10,0,0),
+#'                        material = microfacet(color = "gold", roughness = 0.05))) %>%
+#'   add_object(obj_model(x = 0.9, y = 0, filename = rayrender::r_obj(), load_material = FALSE,
+#'                        scale_obj = 1.8, angle=c(0,-20,0),
+#'                        material = diffuse(color = "dodgerblue"))) %>%
+#'   add_object(obj_model(x = -0.9, y = 0, filename = rayrender::r_obj() , load_material = FALSE,
+#'                        scale_obj = 1.8, angle=c(0,20,0),
+#'                        material = dielectric(attenuation = c(1,0.3,1), priority = 1,
+#'                                              attenuation_intensity = 20))) %>%
 #'   add_object(sphere(z = 20, x = 20, y = 20, radius = 10,
 #'                     material = light(intensity = 10))) %>%
-#'   render_scene(parallel = TRUE, samples = 128, ambient = TRUE, 
-#'                backgroundhigh="blue", backgroundlow="red",
-#'                aperture = 0.05, fov = 32, lookfrom = c(0, 2, 10),
-#'                lookat = c(0,1,0)) 
+#'   render_scene(parallel = TRUE, samples = 256, aperture = 0.05, 
+#'                sample_method="sobol_blue", lookat=c(0,0.5,0),
+#'                fov = 22, lookfrom = c(0, 2, 10))
+#' 
 #' }
 obj_model = function(filename, x = 0, y = 0, z = 0, scale_obj = 1, 
                      load_material = TRUE, load_textures = TRUE, load_normals = TRUE,
@@ -601,6 +619,7 @@ obj_model = function(filename, x = 0, y = 0, z = 0, scale_obj = 1,
   if(!load_material) {
     load_textures = FALSE
   }
+  filename = path.expand(filename)
   base_dir = function(x) {
     dirname_processed = dirname(x)
     if(dirname_processed == ".") {
@@ -2186,6 +2205,7 @@ text3d = function(label, x = 0, y = 0, z = 0, text_height = 1, orientation = "xy
 #' @param z Default `0`. z-coordinate to offset the model.
 #' @param scale_ply Default `1`. Amount to scale the model. Use this to scale the object up or down on all axes, as it is
 #' more robust to numerical precision errors than the generic scale option.
+#' @param subdivision_levels Default `1`. Number of Loop subdivisions to be applied to the mesh. 
 #' @param material Default  \code{\link{diffuse}}.The material, called from one of the material 
 #' functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}. 
 #' @param angle Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.
@@ -2208,6 +2228,8 @@ ply_model = function(filename, x = 0, y = 0, z = 0, scale_ply = 1, subdivision_l
   if(length(scale) == 1) {
     scale = c(scale, scale, scale)
   }
+  
+  filename = path.expand(filename)
   tempcon = file(filename, open="rt")
   on.exit(close(tempcon))
   is_ply = scan(tempcon,what=character(),n=1, quiet=TRUE) == "ply"
@@ -2277,6 +2299,7 @@ ply_model = function(filename, x = 0, y = 0, z = 0, scale_ply = 1, subdivision_l
 #' @param verbose Default `FALSE`. If `TRUE`, prints information about the mesh to the console.
 #' @param override_material Default `FALSE`. If `TRUE`, overrides the material specified in the 
 #' `mesh3d` object with the one specified in `material`.
+#' @param subdivision_levels Default `1`. Number of Loop subdivisions to be applied to the mesh.
 #' @param material Default  \code{\link{diffuse}}.The material, called from one of the material 
 #' functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}. 
 #' @param angle Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.
@@ -3303,6 +3326,7 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
 #' loss at edges.
 #' @param importance_sample_lights Default `TRUE`. Whether to importance sample lights specified in the OBJ material
 #' (objects with a non-zero Ke MTL material).
+#' @param subdivision_levels Default `1`. Number of Loop subdivisions to be applied to the mesh.
 #' @param validate_mesh Default `TRUE`. Validates the `raymesh` object using `rayvertex::validate_mesh()` 
 #' before parsing to ensure correct parsing. Set to `FALSE` to speed up scene construction if `raymesh_model()` 
 #' is taking a long time (Note: this does not affect rendering time).

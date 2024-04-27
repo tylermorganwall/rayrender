@@ -275,7 +275,7 @@ void LoadMtlMaterials(std::vector<std::shared_ptr<material> > &mesh_materials,
   std::vector<vec3f > diffuse_materials(materials.size()+1);
   std::vector<vec3f > specular_materials(materials.size()+1);
   std::vector<Float > ior_materials(materials.size()+1);
-  std::vector<bool > has_diffuse(materials.size()+1, false);
+  std::vector<bool > has_diffuse_texture(materials.size()+1, false);
   std::vector<bool > has_transparency(materials.size()+1, false);
   std::vector<bool > ior(materials.size()+1, 1.0);
   
@@ -331,7 +331,7 @@ void LoadMtlMaterials(std::vector<std::shared_ptr<material> > &mesh_materials,
         }
         
         texture_size += sizeof(unsigned char) * nx * ny * nn;
-        has_diffuse[i] = true;
+        has_diffuse_texture[i] = true;
         has_single_diffuse[i] = false;
         nx_mat[i] = nx;
         ny_mat[i] = ny;
@@ -353,7 +353,7 @@ void LoadMtlMaterials(std::vector<std::shared_ptr<material> > &mesh_materials,
       } else if (sizeof(materials[i].diffuse) == 12 && materials[i].dissolve == 1) {
         obj_texture_data.push_back(nullptr);
         diffuse_materials[i] = vec3f(materials[i].diffuse[0],materials[i].diffuse[1],materials[i].diffuse[2]);
-        has_diffuse[i] = true;
+        has_diffuse_texture[i] = false;
         has_alpha[i] = false;
         has_single_diffuse[i] = true;
       } else if(materials[i].dissolve < 1) {
@@ -364,7 +364,7 @@ void LoadMtlMaterials(std::vector<std::shared_ptr<material> > &mesh_materials,
         has_transparency[i] = true; 
       } else {
         obj_texture_data.push_back(nullptr);
-        has_diffuse[i] = false;
+        has_diffuse_texture[i] = false;
         has_alpha[i] = false;
         has_single_diffuse[i] = false;
       }
@@ -424,49 +424,87 @@ void LoadMtlMaterials(std::vector<std::shared_ptr<material> > &mesh_materials,
     for(size_t material_num = 0; material_num < materials.size(); material_num++) {
       bool imp_sample_obj = false;
       std::shared_ptr<material> tex = nullptr;
+      int illum = materials[material_num].illum;
+      float shininess = materials[material_num].shininess;
+      point3f spec = point3f(materials[material_num].specular[0],
+                             materials[material_num].specular[1],
+                             materials[material_num].specular[2]);
+      float dissolve = materials[material_num].dissolve;
       
-      if(materials[material_num].illum <= 4) {
-        point3f ke(materials[material_num].emission[0],
-                   materials[material_num].emission[1],
-                   materials[material_num].emission[2]);
-        if(ke.x() != 0 || ke.y() != 0 || ke.z() != 0) {
-          tex = std::make_shared<diffuse_light>(std::make_shared<constant_texture>(ke), 1.0, false);
-          imp_sample_obj = true;
+      point3f ke(materials[material_num].emission[0],
+                 materials[material_num].emission[1],
+                 materials[material_num].emission[2]);
+      point3f atten = point3f(materials[material_num].transmittance[0],
+                              materials[material_num].transmittance[1],
+                              materials[material_num].transmittance[2]);
+      bool any_transparent = dissolve < 1 && !has_diffuse_texture[material_num];
+      bool is_metallic = materials[material_num].shininess == 1000;
+      bool is_glossy = materials[material_num].shininess > 128;
+      
+      if(ke.x() != 0 || ke.y() != 0 || ke.z() != 0) { 
+        //Any emitting material will be a light
+        tex = std::make_shared<diffuse_light>(std::make_shared<constant_texture>(ke), 1.0, false);
+        imp_sample_obj = true;
+      } else if (any_transparent) {
+        tex = std::make_shared<dielectric>(spec, 
+                                           materials[material_num].ior, atten, 
+                                           0);
+      } else if (is_metallic) {
+        tex = std::make_shared<metal>(std::make_shared<constant_texture>(spec),
+                                      0., 
+                                      point3f(0), 
+                                      point3f(0));
+      } else if (is_glossy) {
+        if(has_diffuse_texture[material_num]) {
+          float inv_shininess = 0.001;
+          
+          MicrofacetDistribution *dist = new TrowbridgeReitzDistribution(inv_shininess, 
+                                                                         inv_shininess,
+                                                                         nullptr, 
+                                                                         false,  
+                                                                         true);
+          point3f Rd(0.f,0.f,0.f);
+          point3f Rs(1.f,1.f,1.f);
+          
+          tex = std::make_shared<glossy>(std::make_shared<image_texture_char>(obj_texture_data[material_num],
+                                                                              nx_mat[material_num], 
+                                                                              ny_mat[material_num],
+                                                                              nn_mat[material_num]),
+                                                                              dist, Rd, Rs);
+        } else if (has_single_diffuse[material_num]) {
+          float inv_shininess = 0.001;
+          MicrofacetDistribution *dist = new TrowbridgeReitzDistribution(inv_shininess, 
+                                                                         inv_shininess,
+                                                                         nullptr, 
+                                                                         false,  
+                                                                         true);
+          point3f Rd = diffuse_materials[material_num];
+          point3f Rs(1.f,1.f,1.f);
+          
+          tex = std::make_shared<glossy>(std::make_shared<constant_texture>(point3f(0,0,0)), 
+                                         dist, Rd, Rs);
         } else {
-          if(has_diffuse[material_num]) {
-            if(has_single_diffuse[material_num]) {
-              tex = std::make_shared<lambertian>(std::make_shared<constant_texture>(diffuse_materials[material_num]));
-            } else {
-              tex = std::make_shared<lambertian>(std::make_shared<image_texture_char>(obj_texture_data[material_num],
-                                                                                      nx_mat[material_num], 
-                                                                                      ny_mat[material_num],
-                                                                                      nn_mat[material_num]));
-            }
-          } else {
-            tex = default_material;
-          }
+          tex = default_material;
         }
       } else {
-        point3f spec = point3f(materials[material_num].specular[0],
-                               materials[material_num].specular[1],
-                               materials[material_num].specular[2]);
-        if(materials[material_num].shininess == 1000) {
-          tex = std::make_shared<metal>(std::make_shared<constant_texture>(spec),
-                                        0., 
-                                        point3f(0), 
-                                        point3f(0));
+        if(has_diffuse_texture[material_num]) {
+          tex = std::make_shared<lambertian>(std::make_shared<image_texture_char>(obj_texture_data[material_num],
+                                                                                  nx_mat[material_num], 
+                                                                                  ny_mat[material_num],
+                                                                                  nn_mat[material_num]));
+        } else if (has_single_diffuse[material_num]) {
+          tex = std::make_shared<lambertian>(std::make_shared<constant_texture>(diffuse_materials[material_num]));
         } else {
-          point3f atten = point3f(materials[material_num].transmittance[0],
-                                  materials[material_num].transmittance[1],
-                                  materials[material_num].transmittance[2]);
-          tex = std::make_shared<dielectric>(spec, 
-                                             materials[material_num].ior, atten, 
-                                             0);
+          tex = default_material;
         }
       }
       if(verbose) {
-        Rprintf("(%i/%i) Loading Material %s (Imp Sample: %s) \n", (int)material_num+1, 
-                (int)materials.size(),materials[material_num].name.c_str(), imp_sample_obj ? "true" : "false");
+        Rprintf("(%i/%i) Loading Material %s as %s (Imp Sample: %s) \n", 
+                (int)material_num+1, 
+                (int)materials.size(),
+                materials[material_num].name.c_str(), 
+                tex->GetName().c_str(),
+                imp_sample_obj ? "true" : "false");
       }
       mesh_materials.push_back(tex);
       material_is_light.push_back(imp_sample_obj);

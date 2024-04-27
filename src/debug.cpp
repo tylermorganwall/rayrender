@@ -429,9 +429,9 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                                                     max_depth, rng);
                          mat_stack->clear();
                          
-                         routput(i,j) += qr/ns;
-                         goutput(i,j) += qr/ns;
-                         boutput(i,j) += qr/ns;
+                         routput(i,j) += qr/(Float)ns;
+                         goutput(i,j) += qr/(Float)ns;
+                         boutput(i,j) += qr/(Float)ns;
                        }
                      }
                      delete mat_stack;

@@ -10,6 +10,7 @@ ply_model(
   y = 0,
   z = 0,
   scale_ply = 1,
+  subdivision_levels = 1,
   material = diffuse(),
   angle = c(0, 0, 0),
   order_rotation = c(1, 2, 3),
@@ -28,6 +29,8 @@ ply_model(
 
 \item{scale_ply}{Default `1`. Amount to scale the model. Use this to scale the object up or down on all axes, as it is
 more robust to numerical precision errors than the generic scale option.}
+
+\item{subdivision_levels}{Default `1`. Number of Loop subdivisions to be applied to the mesh.}
 
 \item{material}{Default  \code{\link{diffuse}}.The material, called from one of the material 
 functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}.}

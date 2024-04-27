@@ -40,6 +40,9 @@ prepare_scene_list = function(scene, width = 400, height = 400, fov = 20,
   if(debug_channel == 0 && is.na(max_depth)) {
     max_depth = 50
   }
+  if(debug_channel == 16 && is.na(max_depth)) {
+    max_depth = 10000
+  }
   if(debug_channel != 0 && is.na(max_depth)) {
     max_depth = 1
   }

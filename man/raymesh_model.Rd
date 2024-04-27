@@ -13,6 +13,7 @@ raymesh_model(
   verbose = FALSE,
   importance_sample_lights = FALSE,
   calculate_consistent_normals = TRUE,
+  subdivision_levels = 1,
   override_material = TRUE,
   material = diffuse(),
   angle = c(0, 0, 0),
@@ -43,6 +44,8 @@ the attenuation values directly.}
 
 \item{calculate_consistent_normals}{Default `TRUE`. Whether to calculate consistent vertex normals to prevent energy 
 loss at edges.}
+
+\item{subdivision_levels}{Default `1`. Number of Loop subdivisions to be applied to the mesh.}
 
 \item{override_material}{Default `TRUE`. If `TRUE`, overrides the material specified in the 
 `raymesh` object with the one specified in `material`.}

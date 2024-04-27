@@ -28,7 +28,7 @@ trimesh::trimesh(std::string inputfile, std::string basedir, Float scale, Float 
                                              &mesh->normalIndices[i],
                                              &mesh->texIndices[i], i / 3,
                                              ObjectToWorld, WorldToObject, reverseOrientation));
-   if(mesh->material_is_light[mesh->face_material_id[i / 3]] && importance_sample_lights) {
+   if(mesh->material_is_light[mesh->face_material_id[i / 3]] == 1 && importance_sample_lights) {
       imp_sample_objects.add(triangles.back());
     }
   }

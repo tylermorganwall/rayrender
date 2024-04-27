@@ -43,7 +43,6 @@ struct SDFace {
     MatID = 0;
     vertices_initialized = false;
     faces_initialized = false;
-    
     for (int i = 0; i < 4; ++i) children[i] = nullptr;
   }
   
@@ -82,7 +81,6 @@ struct SDFace {
   int MatID;
   bool vertices_initialized; //This marks when the vertices are all initialized
   bool faces_initialized; //This marks when the vertices are all initialized
-  
 };
 
 struct SDEdge {
@@ -118,7 +116,6 @@ inline int SDVertex::valence() {
     // Compute valence of interior vertex
     int nf = 1;
     while ((f = f->nextFace(this)) != startFace) {
-      // Rcpp::Rcout << f << " " << f->vertices_initialized << " " << f->v[0] << " " << f->MatID << " " << "\n";
       ++nf;
     }
     return nf;
@@ -245,11 +242,13 @@ void LoopSubdivide(TriangleMesh* base_mesh,
   for (int i = 0; i < nVertices; ++i) {
     SDVertex *v = vertices[i];
     SDFace *f = v->startFace;
-    if(!f) {
+    // SDFace *prevf = nullptr;
+    if(!f || !f->faces_initialized) {
       continue;
     }
     do {
       f = f->nextFace(v);
+      Rcpp::checkUserInterrupt(); //Add logic here to auto detect loops due to flipped edges
     } while (f && f != v->startFace);
     v->boundary = (f == nullptr);
     if (!v->boundary && v->valence() == 6) {
