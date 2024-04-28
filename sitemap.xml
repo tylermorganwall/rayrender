@@ -58,6 +58,9 @@
     <loc>/reference/calculate_final_twist.html</loc>
   </url>
   <url>
+    <loc>/reference/check_image_texture.html</loc>
+  </url>
+  <url>
     <loc>/reference/clamp.html</loc>
   </url>
   <url>
@@ -65,6 +68,9 @@
   </url>
   <url>
     <loc>/reference/convert_color.html</loc>
+  </url>
+  <url>
+    <loc>/reference/create_instances.html</loc>
   </url>
   <url>
     <loc>/reference/cross_prod.html</loc>
@@ -272,6 +278,9 @@
   </url>
   <url>
     <loc>/reference/process_point_series_2d.html</loc>
+  </url>
+  <url>
+    <loc>/reference/process_scene.html</loc>
   </url>
   <url>
     <loc>/reference/quadInOut.html</loc>
