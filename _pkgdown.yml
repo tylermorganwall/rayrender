@@ -71,6 +71,7 @@ reference:
     contents:
       - starts_with("add")
       - starts_with("group")
+      - starts_with("create")
   - title: "Animating Scenes"
     desc: "Function for animating objects or the camera through a scene."
     contents:
