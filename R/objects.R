@@ -608,7 +608,11 @@ disk = function(x = 0, y = 0, z = 0, radius = 1, inner_radius = 0, material = di
 obj_model = function(filename, x = 0, y = 0, z = 0, scale_obj = 1, 
                      load_material = TRUE, load_textures = TRUE, load_normals = TRUE,
                      vertex_colors = FALSE, calculate_consistent_normals = TRUE,
-                     subdivision_levels = 1,
+                     subdivision_levels = 1,  
+                     displacement_texture = NA, 
+                     displacement_intensity = 1, 
+                     displacement_vector = FALSE,
+                     recalculate_normals = FALSE,
                      importance_sample_lights = TRUE, 
                      material = diffuse(), 
                      angle = c(0, 0, 0), order_rotation = c(1, 2, 3), 
@@ -628,6 +632,8 @@ obj_model = function(filename, x = 0, y = 0, z = 0, scale_obj = 1,
       return(dirname_processed)
     }
   }
+  displacement_texture  = check_image_texture(displacement_texture)
+  
   if(subdivision_levels > getOption("rayrender_subdivision_max", 5) ) {
     stop("Default maximum subdivision level set to 5. Did you really mean to set a subdivision level ",
          "of ", subdivision_levels, "? If so, set `options(rayrender_subdivision_max = ", subdivision_levels,
@@ -644,7 +650,11 @@ obj_model = function(filename, x = 0, y = 0, z = 0, scale_obj = 1,
                                                                      load_normals = load_normals,
                                                                      calculate_consistent_normals = calculate_consistent_normals,
                                                                      subdivision_levels = subdivision_levels,
-                                                                     basename = base_dir(filename)),
+                                                                     basename = base_dir(filename),
+                                                                     displacement_texture = list(displacement_texture), 
+                                                                     displacement_intensity = displacement_intensity, 
+                                                                     displacement_vector = displacement_vector,
+                                                                     recalculate_normals = recalculate_normals),
                                              tricolorinfo = list(NA), 
                                              fileinfo = filename,
                                              material_id = NA_integer_, 
@@ -2327,6 +2337,10 @@ ply_model = function(filename, x = 0, y = 0, z = 0, scale_ply = 1, subdivision_l
 #' }
 mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FALSE,
                         subdivision_levels = 1, verbose = FALSE, 
+                        displacement_texture = NA, 
+                        displacement_intensity = 1, 
+                        displacement_vector = FALSE,
+                        recalculate_normals = FALSE,
                         override_material = FALSE, material = diffuse(), 
                         angle = c(0, 0, 0), order_rotation = c(1, 2, 3), 
                         flipped = FALSE, scale = c(1,1,1)) {
@@ -2345,6 +2359,8 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
     }
     return(do.call(rbind,shapes))
   }
+  displacement_texture  = check_image_texture(displacement_texture)
+  
   if(!inherits(mesh,"mesh3d")) {
     stop("mesh must be of class 'mesh3d': actual class is ", class(mesh))
   }
@@ -2443,7 +2459,11 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
                    color_vals=color_vals,
                    color_type=color_type,
                    material_type = material_type,
-                   subdivision_levels = subdivision_levels)
+                   subdivision_levels = subdivision_levels,
+                   displacement_texture = list(displacement_texture), 
+                   displacement_intensity = displacement_intensity, 
+                   displacement_vector = displacement_vector,
+                   recalculate_normals = recalculate_normals)
   if(verbose) {
     bbox = apply(vertices,2,range)
     message(sprintf("mesh3d Bounding Box: %0.1f-%0.1f x %0.1f-%0.1f x %0.1f-%0.1f", 
@@ -3399,6 +3419,10 @@ raymesh_model = function(mesh, x = 0, y = 0, z = 0,
                          importance_sample_lights = FALSE,
                          calculate_consistent_normals = TRUE,
                          subdivision_levels = 1,
+                         displacement_texture = NA, 
+                         displacement_intensity = 1, 
+                         displacement_vector = FALSE,
+                         recalculate_normals = FALSE,
                          override_material = TRUE, material = diffuse(), 
                          angle = c(0, 0, 0), order_rotation = c(1, 2, 3), 
                          flipped = FALSE, scale = c(1,1,1), validate_mesh = TRUE) {
@@ -3416,6 +3440,8 @@ raymesh_model = function(mesh, x = 0, y = 0, z = 0,
          "of ", subdivision_levels, "? If so, set `options(rayrender_subdivision_max = ", subdivision_levels,
          ")`.")
   }
+  displacement_texture  = check_image_texture(displacement_texture)
+  
   new_tibble_row(list(x = x, y = y, z = z, 
                       shape = "raymesh", 
                       material = material,
@@ -3423,7 +3449,11 @@ raymesh_model = function(mesh, x = 0, y = 0, z = 0,
                                                                           calculate_consistent_normals = calculate_consistent_normals,
                                                                           override_material = override_material,
                                                                           flip_transmittance = flip_transmittance,
-                                                                          subdivision_levels = subdivision_levels),
+                                                                          subdivision_levels = subdivision_levels,
+                                                                          displacement_texture = list(displacement_texture), 
+                                                                          displacement_intensity = displacement_intensity, 
+                                                                          displacement_vector = displacement_vector,
+                                                                          recalculate_normals = recalculate_normals),
                                                   tricolorinfo = list(NA), 
                                                   fileinfo = NA,
                                                   material_id = NA_integer_,  

@@ -5,10 +5,6 @@
 #include "triangle.h"
 #include "bvh_node.h"
 #include "rng.h"
-#ifndef STBIMAGEH
-#define STBIMAGEH
-#include "stb_image.h"
-#endif
 #include <Rcpp.h>
 
 
@@ -20,6 +16,7 @@ public:
           std::shared_ptr<alpha_texture> alpha_mask, std::shared_ptr<bump_texture> bump_tex,
           bool importance_sample_lights, bool calculate_consistent_normals, bool override_material,
           bool flip_transmittance, int subdivision_levels,
+          std::string displacement_texture, Float displacement, bool displacement_vector,
           hitable_list& imp_sample_objects, bool verbose,
           Float shutteropen, Float shutterclose, int bvh_type, random_gen rng, 
           std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation);

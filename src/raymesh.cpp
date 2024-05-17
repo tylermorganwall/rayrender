@@ -1,6 +1,13 @@
 #include "raymesh.h"
 #include "RProgress.h"
 #include "loopsubdiv.h"
+#include "displacement.h"
+#include "calcnormals.h"
+#include "calctangents.h"
+#ifndef STBIMAGEH
+#define STBIMAGEH
+#include "stb/stb_image.h"
+#endif
 
 raymesh::raymesh(Rcpp::List raymesh_list, 
                  std::shared_ptr<material> default_material, 
@@ -11,6 +18,7 @@ raymesh::raymesh(Rcpp::List raymesh_list,
                  bool override_material,
                  bool flip_transmittance,
                  int subdivision_levels,
+                 std::string displacement_texture, Float displacement, bool displacement_vector,
                  hitable_list& imp_sample_objects, 
                  bool verbose, 
                  Float shutteropen, Float shutterclose, int bvh_type, random_gen rng, 
@@ -27,6 +35,24 @@ raymesh::raymesh(Rcpp::List raymesh_list,
     LoopSubdivide(mesh.get(),
                   subdivision_levels,
                   verbose);
+  }
+  if(displacement_texture.length() > 0) {
+    if(mesh->nVertices != mesh->nNormals) {
+      if(verbose) {
+        Rcpp::message(Rcpp::CharacterVector("* Calculating mesh normals for displacement"));
+      }
+      CalculateNormals(mesh.get());
+    }
+    if(displacement_vector) {
+      if(verbose) {
+        Rcpp::message(Rcpp::CharacterVector("* Calculating mesh tangents for vector displacement"));
+      }
+      CalculateTangents(mesh.get());
+    }
+    DisplaceMesh(mesh.get(),
+                 displacement_texture,
+                 displacement,
+                 displacement_vector);
   }
   size_t n = mesh->nTriangles * 3;
   

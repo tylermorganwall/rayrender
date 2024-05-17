@@ -121,7 +121,7 @@ inline int SDVertex::valence() {
     return nf;
   } else {
     // Compute valence of boundary vertex
-    int nf = 1;
+    int nf = 1; 
 
     while ((f = f->nextFace(this)) != nullptr) {
       ++nf;
@@ -145,6 +145,25 @@ inline Float beta(int valence) {
 inline Float loopGamma(int valence) {
   return 1.f / (valence + 3.f / (8.f * beta(valence)));
 }
+
+
+// SDVertex *calculateSharpVertexPosition(SDVertex *v) {
+//   point3f sum(0.f, 0.f, 0.f);
+//   float sharpWeight = 0.5; // Define how much sharpness influences
+//   int count = 0;
+//   
+//   SDFace* f = v->startFace;
+//   while(f)
+//   
+//   for (auto edge : v->connectedEdges()) {
+//     if (edge->sharpness > 0) {
+//       sum += edge->otherVertex(v)->p * sharpWeight;
+//       count++;
+//     }
+//   }
+//   
+//   return (v->p * (1 - sharpWeight * count)) + sum;
+// }
 
 // LoopSubdiv Function Definitions
 void LoopSubdivide(TriangleMesh* base_mesh,
@@ -266,7 +285,8 @@ void LoopSubdivide(TriangleMesh* base_mesh,
   std::vector<SDVertex *> v = vertices;
   for (int i = 0; i < nLevels; ++i) {
     if(verbose) {
-      Rprintf("Subdividing mesh level %i/%i \n", (int)i+1, nLevels);
+      Rcpp::message(Rcpp::CharacterVector(std::string("* Subdividing mesh level " + 
+        std::to_string(i+1) + "/" + std::to_string(nLevels))));
     }
     Rcpp::checkUserInterrupt();
     // Update _f_ and _v_ for next level of subdivision
@@ -320,6 +340,7 @@ void LoopSubdivide(TriangleMesh* base_mesh,
           }
         }
       } else {
+        
         // Apply boundary rule for even vertex
         vertex->child->p = weightBoundary<point3f>(vertex, vertex->p, 1.f / 8.f);
         if(has_uv) {
@@ -572,10 +593,10 @@ void LoopSubdivide(TriangleMesh* base_mesh,
       uv = nullptr;
     }
     base_mesh->nVertices = v.size(); 
-    base_mesh->nNormals = base_mesh->nVertices;
+    base_mesh->nNormals = v.size();
     
-    base_mesh->has_normals = false;
-    base_mesh->nTex = base_mesh->has_tex ? v.size() * 2 : 0;
+    base_mesh->has_normals = true;
+    base_mesh->nTex = base_mesh->has_tex ? v.size()  : 0;
     
     size_t numIndices = 3 * ntris; 
 
@@ -583,7 +604,7 @@ void LoopSubdivide(TriangleMesh* base_mesh,
     base_mesh->normalIndices.clear();
     base_mesh->texIndices.clear();
     
-    base_mesh->nTriangles = 0;
+    base_mesh->nTriangles = ntris;
     base_mesh->face_material_id = face_material_id;
     for (size_t s = 0; s < numIndices; s += 3) {
       // Rcpp::Rcout << s << " " << indices[s] << " " << indices[s+1] << " " << indices[s+2] << " " << v.size() << "\n";
@@ -591,9 +612,9 @@ void LoopSubdivide(TriangleMesh* base_mesh,
       base_mesh->vertexIndices.push_back(indices[s+1]);
       base_mesh->vertexIndices.push_back(indices[s+2]);
       // if(base_mesh->has_normals) {
-        // base_mesh->normalIndices.push_back(indices[s]);
-        // base_mesh->normalIndices.push_back(indices[s+1]);
-        // base_mesh->normalIndices.push_back(indices[s+2]);
+      base_mesh->normalIndices.push_back(indices[s]);
+      base_mesh->normalIndices.push_back(indices[s+1]);
+      base_mesh->normalIndices.push_back(indices[s+2]);
       // } else {
       //   base_mesh->normalIndices.push_back(-1);
       //   base_mesh->normalIndices.push_back(-1);
@@ -608,17 +629,16 @@ void LoopSubdivide(TriangleMesh* base_mesh,
         base_mesh->texIndices.push_back(-1);
         base_mesh->texIndices.push_back(-1);
       }
-      base_mesh->nTriangles++;
     }
     if(base_mesh->has_consistent_normals) {
       base_mesh->alpha_v.clear();
       base_mesh->face_n.reset(new normal3f[base_mesh->normalIndices.size() / 3]);
       std::map<int, std::priority_queue<Float> > alpha_values;
-      for (size_t i = 0; i < base_mesh->normalIndices.size() * 3; i += 3) {
+      for (size_t i = 0; i < base_mesh->normalIndices.size(); i += 3) {
         int idx_n1 = base_mesh->normalIndices[i];
         int idx_n2 = base_mesh->normalIndices[i+1];
         int idx_n3 = base_mesh->normalIndices[i+2];
-        
+
         normal3f n1 = unit_vector(base_mesh->n[idx_n1]);
         normal3f n2 = unit_vector(base_mesh->n[idx_n2]);
         normal3f n3 = unit_vector(base_mesh->n[idx_n3]);

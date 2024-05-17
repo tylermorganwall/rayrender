@@ -1,8 +1,16 @@
 #include "mesh3d.h"
 #include "texture.h"
 #include "loopsubdiv.h"
+#include "displacement.h"
+#include "calcnormals.h"
+#include "calctangents.h"
+#ifndef STBIMAGEH
+#define STBIMAGEH
+#include "stb/stb_image.h"
+#endif
 
 mesh3d::mesh3d(Rcpp::List mesh_info, std::shared_ptr<material> mat, 
+               std::string displacement_texture, Float displacement, bool displacement_vector, bool verbose,
                Float shutteropen, Float shutterclose, int bvh_type, random_gen rng,
                std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation) :
   hitable(ObjectToWorld, WorldToObject, reverseOrientation) {
@@ -83,6 +91,24 @@ mesh3d::mesh3d(Rcpp::List mesh_info, std::shared_ptr<material> mat,
     LoopSubdivide(mesh.get(),
                   subdivision_levels,
                   false);
+  }
+  if(displacement_texture.length() > 0) {
+    if(mesh->nVertices != mesh->nNormals) {
+      if(verbose) {
+        Rcpp::message(Rcpp::CharacterVector("* Calculating mesh normals for displacement"));
+      }
+      CalculateNormals(mesh.get());
+    }
+    if(displacement_vector) {
+      if(verbose) {
+        Rcpp::message(Rcpp::CharacterVector("* Calculating mesh tangents for vector displacement"));
+      }
+      CalculateTangents(mesh.get());
+    }
+    DisplaceMesh(mesh.get(),
+                 displacement_texture,
+                 displacement,
+                 displacement_vector);
   }
   size_t n = mesh->nTriangles * 3;
   // mesh->ValidateMesh();

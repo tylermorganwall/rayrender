@@ -1,12 +1,17 @@
 #include "trimesh.h"
 #include "RProgress.h"
 #include "loopsubdiv.h"
+#include "displacement.h"
+#include "calctangents.h"
+#include "assert.h"
+#include "calcnormals.h"
 
 trimesh::trimesh(std::string inputfile, std::string basedir, Float scale, Float sigma,
                  std::shared_ptr<material> default_material, bool load_materials, 
                  bool load_textures, bool load_vertex_colors,
                  bool importance_sample_lights, bool load_normals, bool calculate_consistent_normals,
-                 int subdivision_levels,
+                 int subdivision_levels, std::string displacement_texture, Float displacement,
+                 bool displacement_vector,
                  hitable_list& imp_sample_objects,
                  Float shutteropen, Float shutterclose, int bvh_type, random_gen rng, bool verbose,
                  std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation) : 
@@ -20,6 +25,30 @@ trimesh::trimesh(std::string inputfile, std::string basedir, Float scale, Float 
                   subdivision_levels,
                   verbose);
   }
+  if(displacement_texture.length() > 0) {
+    if(mesh->nVertices != mesh->nNormals) {
+      if(verbose) {
+        Rcpp::message(Rcpp::CharacterVector("* Calculating mesh normals for displacement"));
+      }
+      CalculateNormals(mesh.get());
+    }
+    if(displacement_vector) {
+      if(verbose) {
+        Rcpp::message(Rcpp::CharacterVector("* Calculating mesh tangents for vector displacement"));
+      }
+      CalculateTangents(mesh.get());
+    }
+    if(verbose) {
+      Rcpp::message(Rcpp::CharacterVector("* Displacing mesh"));
+    }
+    DisplaceMesh(mesh.get(),
+                 displacement_texture,
+                 displacement,
+                 displacement_vector);
+    // Calculate new normals
+    CalculateNormals(mesh.get());
+  }
+
   // mesh->ValidateMesh();
   size_t n = mesh->nTriangles * 3;
   for(size_t i = 0; i < n; i += 3) {

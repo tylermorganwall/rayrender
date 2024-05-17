@@ -80,6 +80,8 @@ void getInfo(){
 #include "color.h"
 #include "integrator.h"
 #include "debug.h"
+
+#include "texturecache.h"
 using namespace Rcpp;
 // [[Rcpp::plugins(cpp11)]]
 // [[Rcpp::depends(RcppThread)]]
@@ -116,7 +118,7 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
   bool progress_bar = as<bool>(render_info["progress_bar"]);
   int numbercores = as<int>(render_info["numbercores"]);
   bool hasbackground = as<bool>(render_info["hasbackground"]);
-  CharacterVector background = as<CharacterVector>(render_info["background"]);
+  std::string background = as<std::string>(render_info["background"]);
   Float rotate_env = as<Float>(render_info["rotate_env"]);
   Float intensity_env = as<Float>(render_info["intensity_env"]);
   bool verbose = as<bool>(render_info["verbose"]);
@@ -162,6 +164,8 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
   TransformCache transformCache;
   TransformCache transformCacheBg;
   
+  //Initialize texture cache
+  TextureCache texCache;
 
   //Initialize output matrices
   RayMatrix routput(nx,ny);
@@ -287,33 +291,33 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
   std::shared_ptr<Transform> BackgroundTransform = transformCacheBg.Lookup(BackgroundAngle);
   std::shared_ptr<Transform> BackgroundTransformInv = transformCacheBg.Lookup(BackgroundAngle.GetInverseMatrix());
   if(hasbackground) {
-    background_texture_data = stbi_loadf(background[0], &nx1, &ny1, &nn1, 4);
-    nn1 = 4;
+    // background_texture_data = stbi_loadf(background[0], &nx1, &ny1, &nn1, 4);
+    // nn1 = 4;
     // texture_bytes += nx1 * ny1 * nn1;
     
-    if(background_texture_data) {
-      background_texture = std::make_shared<image_texture_float>(background_texture_data, nx1, ny1, nn1, 1, 1, intensity_env);
-      background_material = std::make_shared<diffuse_light>(background_texture, 1.0, false);
-      background_sphere = std::make_shared<InfiniteAreaLight>(nx1, ny1, world_radius*2, world_center,
-                                                background_texture, background_material,
-                                                BackgroundTransform,
-                                                BackgroundTransformInv, false);
-    } else {
-      
-      Rcpp::Rcout << "Failed to load background image at " << background(0) << "\n";
-      if(stbi_failure_reason()) {
-        Rcpp::Rcout << stbi_failure_reason() << "\n";
-      }
-      hasbackground = false;
-      ambient_light = true;
-      backgroundhigh = vec3f(FLT_MIN,FLT_MIN,FLT_MIN);
-      backgroundlow = vec3f(FLT_MIN,FLT_MIN,FLT_MIN);
-      background_texture = std::make_shared<gradient_texture>(backgroundlow, backgroundhigh, false, false);
-      background_material = std::make_shared<diffuse_light>(background_texture, 1.0, false);
-      background_sphere = std::make_shared<InfiniteAreaLight>(100, 100, world_radius*2, world_center,
-                                                              background_texture, background_material,
-                                                              BackgroundTransform,BackgroundTransformInv,false);
-    }
+    // if(background_texture_data) {
+    background_texture = texCache.Lookup(background, nx1, ny1, 1, 1, intensity_env);
+    background_material = std::make_shared<diffuse_light>(background_texture, 1.0, false);
+    background_sphere = std::make_shared<InfiniteAreaLight>(nx1, ny1, world_radius*2, world_center,
+                                              background_texture, background_material,
+                                              BackgroundTransform,
+                                              BackgroundTransformInv, false);
+    // } else {
+    //   
+    //   Rcpp::Rcout << "Failed to load background image at " << background(0) << "\n";
+    //   if(stbi_failure_reason()) {
+    //     Rcpp::Rcout << stbi_failure_reason() << "\n";
+    //   }
+    //   hasbackground = false;
+    //   ambient_light = true;
+    //   backgroundhigh = vec3f(FLT_MIN,FLT_MIN,FLT_MIN);
+    //   backgroundlow = vec3f(FLT_MIN,FLT_MIN,FLT_MIN);
+    //   background_texture = std::make_shared<gradient_texture>(backgroundlow, backgroundhigh, false, false);
+    //   background_material = std::make_shared<diffuse_light>(background_texture, 1.0, false);
+    //   background_sphere = std::make_shared<InfiniteAreaLight>(100, 100, world_radius*2, world_center,
+    //                                                           background_texture, background_material,
+    //                                                           BackgroundTransform,BackgroundTransformInv,false);
+    // }
   } else if(ambient_light) {
     //Check if both high and low are black, and set to FLT_MIN
     if(backgroundhigh.length() == 0 && backgroundlow.length() == 0) {

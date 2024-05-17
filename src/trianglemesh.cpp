@@ -8,6 +8,14 @@
 
 #include <queue>
 
+TriangleMesh::~TriangleMesh() {
+  for(auto tex : obj_texture_data) {
+    if(tex) stbi_image_free(tex);
+  }
+  for(auto bump : bump_texture_data) {
+    if(bump) stbi_image_free(bump);
+  }
+}
 
 
 inline Float luminance(point3f& color) {
@@ -550,14 +558,15 @@ TriangleMesh::TriangleMesh(std::string inputfile, std::string basedir,
   auto& shapes = reader.GetShapes();
   auto& materials = reader.GetMaterials();
   has_normals = false;
-  has_tex = false;
-  
+
   has_vertex_colors = attrib.colors.size() > 0 ? true : false;
+  has_tex = attrib.texcoords.size() > 0 ? true : false;
+  
   if(strlen(basedir.c_str()) == 0) {
     has_sep = false;
   }
   if(ret) {
-    nVertices = attrib.vertices.size();
+    nVertices = attrib.vertices.size() / 3;
     for (size_t s = 0; s < shapes.size(); s++) {
       nTriangles += shapes[s].mesh.indices.size() / 3;
       for(size_t m = 0; m < shapes[s].mesh.indices.size(); m++) {
@@ -577,11 +586,10 @@ TriangleMesh::TriangleMesh(std::string inputfile, std::string basedir,
         }
       } 
     }
-    
-    nNormals = load_normals ? attrib.normals.size() : 0;
-    nTex = !has_vertex_colors ? attrib.texcoords.size() : 0;
-    p.reset(new point3f[nVertices / 3]);
-    for (size_t i = 0; i < nVertices; i += 3) {
+    nNormals = load_normals ? attrib.normals.size() / 3 : 0;
+    nTex = !has_vertex_colors ? attrib.texcoords.size() / 2 : 0;
+    p.reset(new point3f[nVertices]);
+    for (size_t i = 0; i < nVertices * 3; i += 3) {
       p[i / 3] = (*ObjectToWorld)(point3f(attrib.vertices[i+0],
                                           attrib.vertices[i+1],
                                           attrib.vertices[i+2]) * scale);
@@ -590,14 +598,14 @@ TriangleMesh::TriangleMesh(std::string inputfile, std::string basedir,
     
     if(nNormals > 0) {
       has_normals = true;
-      n.reset(new normal3f[nNormals / 3]);
-      for (size_t i = 0; i < nNormals; i += 3) {
+      n.reset(new normal3f[nNormals]);
+      for (size_t i = 0; i < nNormals * 3; i += 3) {
         n[i / 3] = (*ObjectToWorld)(normal3f(attrib.normals[i+0],
                                              attrib.normals[i+1],
                                              attrib.normals[i+2]));
       }
       if(has_consistent_normals) {
-        face_n.reset(new normal3f[normalIndices.size() / 3]);
+        face_n.reset(new normal3f[normalIndices.size()]);
         std::map<int, std::priority_queue<Float> > alpha_values;
         for (size_t i = 0; i < normalIndices.size(); i += 3) {
           int idx_n1 = normalIndices[i];
@@ -632,18 +640,17 @@ TriangleMesh::TriangleMesh(std::string inputfile, std::string basedir,
     
     if(nTex > 0) {
       has_tex = true;
-      uv.reset(new point2f[nTex / 2]);
-      for (size_t i = 0; i < nTex; i += 2) {
+      uv.reset(new point2f[nTex]);
+      for (size_t i = 0; i < nTex * 2; i += 2) {
         uv[i / 2] = point2f(attrib.texcoords[i+0],
-                            attrib.texcoords[i+1]);
-      }
+                            attrib.texcoords[i+1]);      }
     } else {
       uv = nullptr;
     }
     
     if(has_vertex_colors) {
-      vc.reset(new point3f[nVertices / 3]);
-      for (size_t i = 0; i < nVertices; i += 3) {
+      vc.reset(new point3f[nVertices]);
+      for (size_t i = 0; i < nVertices * 3; i += 3) {
         vc[i / 3] = point3f(attrib.colors[i+0],
                             attrib.colors[i+1],
                             attrib.colors[i+2]);

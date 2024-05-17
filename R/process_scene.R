@@ -91,6 +91,34 @@ process_scene = function(scene, process_material_ids = TRUE) {
       scene$material[[i]]$image = ""
     }
   }
+  
+  #displacement texture handler
+  disp_temp_file_names = tempfile(sprintf("disp_image_temp%i",seq_len(nrow(scene))), fileext = ".png")
+  for(i in seq_len(nrow(scene))) {
+    if(!scene$shape[[i]] %in% c(6,13,14)) { #obj, mesh3d, raymesh
+      next
+    }
+    image_input = scene$shape_info[[i]]$shape_properties$displacement_texture[[1]]
+    image_tex_bool = is.array(image_input)
+    image_is_filename = is.character(image_input) && !is.na(image_input)
+    if(image_tex_bool) {
+      if(dim(image_input)[3] == 4) {
+        png::writePNG(fliplr(aperm(image_input[,,1:3],c(2,1,3))),disp_temp_file_names[i])
+      } else if(dim(image_input)[3] == 3){
+        png::writePNG(fliplr(aperm(image_input,c(2,1,3))),disp_temp_file_names[i])
+      }
+      scene$shape_info[[i]]$shape_properties$displacement_texture = disp_temp_file_names[i]
+    } else if(image_is_filename) {
+      if(any(!file.exists(path.expand(image_input)) & nchar(image_input) > 0)) {
+        stop(paste0("Cannot find the following displacement texture file:\n",
+                    paste(image_input, collapse="\n")))
+      }
+      disp_temp_file_names[i] = path.expand(image_input)
+      scene$shape_info[[i]]$shape_properties$displacement_texture = disp_temp_file_names[i]
+    } else {
+      scene$shape_info[[i]]$shape_properties$displacement_texture = ""
+    }
+  }
 
   #bump texture handler
   bump_temp_file_names = tempfile(sprintf("bumptemp%i",seq_len(nrow(scene))),fileext = ".png")

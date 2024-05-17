@@ -15,6 +15,7 @@
 #include <limits>
 #include <array>
 
+
 static const Float mpi_over_180 = M_PI/180;
 static const Float SqrtPiOver8 = 0.626657069f;
 static const Float ONE_OVER_2_PI = 1 / (2 * M_PI);
@@ -52,7 +53,17 @@ inline Float Degrees(Float rad) {
   return (180 / M_PI) * rad; 
 }
 
+inline bool any_is_nan(const point3f& c) {
+  return(std::isnan(c[0]) || std::isnan(c[1]) || std::isnan(c[2]));
+}
 
+inline bool any_is_nan(const vec3f& c) {
+  return(std::isnan(c[0]) || std::isnan(c[1]) || std::isnan(c[2]));
+}
+
+inline bool any_is_nan(const normal3f& c) {
+  return(std::isnan(c[0]) || std::isnan(c[1]) || std::isnan(c[2]));
+}
 
 inline point3f de_nan(const point3f& c) {
   point3f temp = c;

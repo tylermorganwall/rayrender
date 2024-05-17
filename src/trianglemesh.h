@@ -3,7 +3,7 @@
 
 #ifndef STBIMAGEH
 #define STBIMAGEH
-#include "stb_image.h"
+#include "stb/stb_image.h"
 #endif
 
 #include "texture.h"
@@ -63,20 +63,13 @@ struct TriangleMesh {
                std::shared_ptr<Transform> WorldToObject, 
                bool reverseOrientation);
   
-  ~TriangleMesh() {
-    for(auto tex : obj_texture_data) {
-      if(tex) stbi_image_free(tex);
-    }
-    for(auto bump : bump_texture_data) {
-      if(bump) stbi_image_free(bump);
-    }
-  }
+  ~TriangleMesh();
   size_t GetSize();
   void ValidateMesh();
     
   // TriangleMesh Data
-  size_t nTriangles, nVertices, nNormals, nTex;
-  bool has_normals, has_tex, has_vertex_colors, has_consistent_normals;
+  size_t nTriangles, nVertices, nNormals, nTex, nTangents;
+  bool has_normals, has_tex, has_vertex_colors, has_consistent_normals, has_tangents;
   std::vector<int> vertexIndices;
   std::vector<int> normalIndices;
   std::vector<int> texIndices;
@@ -86,7 +79,7 @@ struct TriangleMesh {
   std::unique_ptr<normal3f[]> face_n; //For consistent normals
   std::vector<Float> alpha_v; //For consistent normals
   
-  // std::unique_ptr<vec3f[]>    s;
+  std::unique_ptr<vec3f[]>    t; //tangent vector
   std::unique_ptr<point2f[]>  uv;
   std::unique_ptr<point3f[]>  vc;
   
@@ -102,6 +95,7 @@ struct TriangleMesh {
   std::vector<std::shared_ptr<alpha_texture> > alpha_textures;
   size_t texture_size;
   std::vector<bool> material_is_light;
+  std::vector<bool> tangent_right_handed;
 };
 
 #endif

@@ -604,13 +604,21 @@ std::shared_ptr<bvh_node> build_scene(List& scene,
         bool load_normals = as<bool>(shape_properties["load_normals"]);
         bool calculate_consistent_normals = as<bool>(shape_properties["calculate_consistent_normals"]);
         int subdivision_levels = as<int>(shape_properties["subdivision_levels"]);
+        std::string displacement_texture = as<std::string>(shape_properties["displacement_texture"]);
+        Float displacement_intensity = as<Float>(shape_properties["displacement_intensity"]);
+        bool is_vector_displacement = as<bool>(shape_properties["displacement_vector"]);
         
         Float sigma_obj = as<Float>(SingleMaterial["sigma"]);
+
+        
         entry = std::make_shared<trimesh>(objfilename, objbasename, 
                                           scale_obj, sigma_obj, shape_material, 
                                           load_material, load_textures, load_vertex_colors,
                                           importance_sample_lights, load_normals, calculate_consistent_normals,
-                                          subdivision_levels,
+                                          subdivision_levels, 
+                                          displacement_texture,
+                                          displacement_intensity,
+                                          is_vector_displacement,
                                           imp_sample_objects,
                                           shutteropen, shutterclose, bvh_type, rng, verbose,
                                           ObjToWorld,WorldToObj, is_flipped);
@@ -745,7 +753,14 @@ std::shared_ptr<bvh_node> build_scene(List& scene,
       }
       case MESH3D: {
         List mesh_entry = as<List>(SingleShape["mesh_info"])(0);
+        std::string displacement_texture = as<std::string>(mesh_entry["displacement_texture"]);
+        Float displacement_intensity = as<Float>(mesh_entry["displacement_intensity"]);
+        bool is_vector_displacement = as<bool>(mesh_entry["displacement_vector"]);
         entry = std::make_shared<mesh3d>(mesh_entry, shape_material,
+                                         displacement_texture,
+                                         displacement_intensity,
+                                         is_vector_displacement,
+                                         verbose,
                                          shutteropen, shutterclose, bvh_type, rng,
                                          ObjToWorld,WorldToObj, is_flipped);
         if(is_animated) {
@@ -761,7 +776,9 @@ std::shared_ptr<bvh_node> build_scene(List& scene,
         bool override_material = as<bool>(shape_properties["override_material"]);
         bool flip_transmittance = as<bool>(shape_properties["flip_transmittance"]);
         int subdivision_levels = as<int>(shape_properties["subdivision_levels"]);
-        
+        std::string displacement_texture = as<std::string>(shape_properties["displacement_texture"]);
+        Float displacement_intensity = as<Float>(shape_properties["displacement_intensity"]);
+        bool is_vector_displacement = as<bool>(shape_properties["displacement_vector"]);
         //importance sample lights--need to change
         ////calculate consistent normals--need to change
         entry = std::make_shared<raymesh>(raymesh_object,
@@ -772,6 +789,9 @@ std::shared_ptr<bvh_node> build_scene(List& scene,
                                           override_material,
                                           flip_transmittance,
                                           subdivision_levels,
+                                          displacement_texture,
+                                          displacement_intensity,
+                                          is_vector_displacement,
                                           imp_sample_objects, 
                                           verbose, 
                                           shutteropen, shutterclose, bvh_type, rng, 
@@ -838,9 +858,6 @@ std::shared_ptr<bvh_node> build_scene(List& scene,
         break;
       }
     }
-    //NOTE:
-    //Objects are added to the list, but I have to figure out how to incorporate the instancing info--maybe 
-    //by making an instanced list in each instance? That might take up too much memory.
     if(importance_sample && shape_type != INSTANCE) {
       imp_sample_objects.add(entry);
     }

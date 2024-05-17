@@ -125,7 +125,7 @@ diffuse = function(color = "#ffffff",
   image_texture = check_image_texture(image_texture)
   alpha_texture = check_image_texture(alpha_texture)
   bump_texture  = check_image_texture(bump_texture)
-  
+
 
   type = "diffuse"
   if(!is.null(sigma) && is.numeric(sigma)) {
@@ -281,7 +281,7 @@ metal = function(color = "#ffffff",
   image_texture = check_image_texture(image_texture)
   alpha_texture = check_image_texture(alpha_texture)
   bump_texture  = check_image_texture(bump_texture)
-  
+
   if(length(eta) == 1) {
     eta = c(eta,eta,eta)
   }
@@ -430,17 +430,17 @@ dielectric = function(color="white", refraction = 1.5,
   
   bump_texture  = check_image_texture(bump_texture)
   ray_material(list(type = "dielectric", 
-                      properties = list(c(color, refraction, attenuation, priority)), 
-                      checkercolor=list(NA), 
-                      gradient_color = list(NA), gradient_transpose = FALSE,
-                      world_gradient = FALSE,gradient_point_info = list(NA),
-                      gradient_type = NA,
-                      noise=0, noisephase = 0, noiseintensity = 0, noisecolor = list(c(0,0,0)),
-                      image = list(NA_character_), image_repeat = list(c(1,1)), 
-                      alphaimage = list(NA_character_), lightintensity = NA_real_, 
-                      fog=FALSE, fogdensity=NA_real_, implicit_sample = importance_sample, 
-                      sigma = 0, glossyinfo = list(NA), bump_texture = list(bump_texture),
-                      bump_intensity = bump_intensity, roughness_texture = list(NA_character_)))
+                    properties = list(c(color, refraction, attenuation, priority)), 
+                    checkercolor=list(NA), 
+                    gradient_color = list(NA), gradient_transpose = FALSE,
+                    world_gradient = FALSE,gradient_point_info = list(NA),
+                    gradient_type = NA,
+                    noise=0, noisephase = 0, noiseintensity = 0, noisecolor = list(c(0,0,0)),
+                    image = list(NA_character_), image_repeat = list(c(1,1)), 
+                    alphaimage = list(NA_character_), lightintensity = NA_real_, 
+                    fog=FALSE, fogdensity=NA_real_, implicit_sample = importance_sample, 
+                    sigma = 0, glossyinfo = list(NA), bump_texture = list(bump_texture),
+                    bump_intensity = bump_intensity, roughness_texture = list(NA_character_)))
 }
 
 #' Microfacet Material
@@ -571,8 +571,8 @@ microfacet = function(color="white", roughness = 0.0001, transmission = FALSE,
                       gradient_color = NA, gradient_transpose = FALSE,
                       gradient_point_start = NA_real_, gradient_point_end = NA_real_, gradient_type = "hsv",
                       image_texture = NA_character_, image_repeat = 1, alpha_texture = NA_character_,
-                      bump_texture = NA_character_, bump_intensity = 1, roughness_texture = NA_character_,
-                      roughness_range = c(0.0001, 0.2), roughness_flip = FALSE,
+                      bump_texture = NA_character_, bump_intensity = 1, 
+                      roughness_texture = NA_character_, roughness_range = c(0.0001, 0.2), roughness_flip = FALSE,
                       importance_sample = FALSE) {
   microtype = switch(microfacet, "tbr" = 1,"beckmann" = 2, 1)
   roughness[roughness <= 0] = 0
@@ -642,31 +642,31 @@ microfacet = function(color="white", roughness = 0.0001, transmission = FALSE,
   if(alphax == 0 && alphay == 0 ) {
     if(!transmission) {
       ray_material(list(type = "metal", 
-                          properties = list(c(color, 0)), 
-                          gradient_color = list(gradient_color), gradient_transpose = FALSE,
-                          world_gradient = is_world_gradient, gradient_point_info = list(gradient_point_info),
-                          gradient_type = gradient_type,
-                          checkercolor=list(c(checkercolor,checkerperiod)), 
-                          noise=noise, noisephase = noisephase * pi / 180, 
+                        properties = list(c(color, 0)), 
+                        gradient_color = list(gradient_color), gradient_transpose = FALSE,
+                        world_gradient = is_world_gradient, gradient_point_info = list(gradient_point_info),
+                        gradient_type = gradient_type,
+                        checkercolor=list(c(checkercolor,checkerperiod)), 
+                        noise=noise, noisephase = noisephase * pi / 180, 
                         noiseintensity = noiseintensity, noisecolor = list(noisecolor),
-                          image = list(image_texture), image_repeat = list(image_repeat), 
-                          alphaimage = list(alpha_texture), lightintensity = NA_real_, 
-                          fog=FALSE, fogdensity=NA_real_, implicit_sample = importance_sample, 
-                          sigma = 0, glossyinfo = glossyinfo, bump_texture = list(bump_texture),
-                          bump_intensity = bump_intensity, roughness_texture = list(NA_character_)))
+                        image = list(image_texture), image_repeat = list(image_repeat), 
+                        alphaimage = list(alpha_texture), lightintensity = NA_real_, 
+                        fog=FALSE, fogdensity=NA_real_, implicit_sample = importance_sample, 
+                        sigma = 0, glossyinfo = glossyinfo, bump_texture = list(bump_texture),
+                        bump_intensity = bump_intensity, roughness_texture = list(NA_character_)))
     } else {
       ray_material(list(type = "dielectric", 
-                          properties = list(c(color, eta[1], c(0,0,0), 0)), 
-                          gradient_color = list(gradient_color), gradient_transpose = FALSE,
-                          world_gradient = is_world_gradient, gradient_point_info = list(gradient_point_info),
-                          gradient_type = gradient_type,
-                          checkercolor=list(c(checkercolor,checkerperiod)), 
-                          noise=noise, noisephase = noisephase * pi / 180, noiseintensity = noiseintensity, noisecolor = list(noisecolor),
-                          image = list(image_texture), image_repeat = list(image_repeat), 
-                          alphaimage = list(alpha_texture), lightintensity = NA_real_, 
-                          fog=FALSE, fogdensity=NA_real_, implicit_sample = importance_sample, 
-                          sigma = 0, glossyinfo = glossyinfo, bump_texture = list(bump_texture),
-                          bump_intensity = bump_intensity, roughness_texture = list(NA_character_)))
+                        properties = list(c(color, eta[1], c(0,0,0), 0)), 
+                        gradient_color = list(gradient_color), gradient_transpose = FALSE,
+                        world_gradient = is_world_gradient, gradient_point_info = list(gradient_point_info),
+                        gradient_type = gradient_type,
+                        checkercolor=list(c(checkercolor,checkerperiod)), 
+                        noise=noise, noisephase = noisephase * pi / 180, noiseintensity = noiseintensity, noisecolor = list(noisecolor),
+                        image = list(image_texture), image_repeat = list(image_repeat), 
+                        alphaimage = list(alpha_texture), lightintensity = NA_real_, 
+                        fog=FALSE, fogdensity=NA_real_, implicit_sample = importance_sample, 
+                        sigma = 0, glossyinfo = glossyinfo, bump_texture = list(bump_texture),
+                        bump_intensity = bump_intensity, roughness_texture = list(NA_character_)))
     }
   } else {
     if(transmission) {
@@ -786,29 +786,29 @@ light = function(color = "#ffffff", intensity = 10, importance_sample = TRUE,
     spotlight_start_falloff = min(c(spotlight_start_falloff,90))
     info = c(info, spotlight_focus, cospi(spotlight_width/180), cospi(spotlight_start_falloff/180), invisible)
     ray_material(list(type = "spotlight", 
-                        properties = list(info), checkercolor=list(NA_real_), 
-                        gradient_color = list(NA_real_), gradient_transpose = FALSE,
-                        world_gradient = FALSE, gradient_point_info = list(NA_real_),
-                        gradient_type = NA,
-                        noise=0, noisephase = 0, noiseintensity = 0, noisecolor = list(c(0,0,0)),
-                        image = list(image_texture), image_repeat = list(image_repeat),
-                        alphaimage = list(NA_character_), lightintensity = intensity,
-                        fog=FALSE, fogdensity = 0.01, implicit_sample = importance_sample, 
-                        sigma = 0, glossyinfo = list(NA_real_), bump_texture = list(NA_character_),
-                        bump_intensity = 1, roughness_texture = list(NA_character_)))
+                      properties = list(info), checkercolor=list(NA_real_), 
+                      gradient_color = list(NA_real_), gradient_transpose = FALSE,
+                      world_gradient = FALSE, gradient_point_info = list(NA_real_),
+                      gradient_type = NA,
+                      noise=0, noisephase = 0, noiseintensity = 0, noisecolor = list(c(0,0,0)),
+                      image = list(image_texture), image_repeat = list(image_repeat),
+                      alphaimage = list(NA_character_), lightintensity = intensity,
+                      fog=FALSE, fogdensity = 0.01, implicit_sample = importance_sample, 
+                      sigma = 0, glossyinfo = list(NA_real_), bump_texture = list(NA_character_),
+                      bump_intensity = 1, roughness_texture = list(NA_character_)))
   } else {
     info = c(info, invisible)
     ray_material(list(type = "light", 
-                        properties = list(info), checkercolor=list(NA_real_), 
-                        gradient_color = list(gradient_color), gradient_transpose = gradient_transpose,
-                        world_gradient = is_world_gradient, gradient_point_info = list(gradient_point_info),
-                        gradient_type = gradient_type,
-                        noise=0, noisephase = 0, noiseintensity = 0, noisecolor = list(c(0,0,0)),
-                        image = list(image_texture), image_repeat = list(image_repeat),
-                        alphaimage = list(NA_character_), lightintensity = intensity,
-                        fog=FALSE, fogdensity = 0.01, implicit_sample = importance_sample, 
-                        sigma = 0, glossyinfo = list(NA_real_), bump_texture = list(NA_character_),
-                        bump_intensity = 1, roughness_texture = list(NA_character_)))
+                      properties = list(info), checkercolor=list(NA_real_), 
+                      gradient_color = list(gradient_color), gradient_transpose = gradient_transpose,
+                      world_gradient = is_world_gradient, gradient_point_info = list(gradient_point_info),
+                      gradient_type = gradient_type,
+                      noise=0, noisephase = 0, noiseintensity = 0, noisecolor = list(c(0,0,0)),
+                      image = list(image_texture), image_repeat = list(image_repeat),
+                      alphaimage = list(NA_character_), lightintensity = intensity,
+                      fog=FALSE, fogdensity = 0.01, implicit_sample = importance_sample, 
+                      sigma = 0, glossyinfo = list(NA_real_), bump_texture = list(NA_character_),
+                      bump_intensity = 1, roughness_texture = list(NA_character_)))
   }
 }
 
@@ -912,8 +912,9 @@ glossy = function(color="white", gloss = 1, reflectance = 0.05, microfacet = "tb
                   gradient_color = NA, gradient_transpose = FALSE,
                   gradient_point_start = NA_real_, gradient_point_end = NA_real_, gradient_type = "hsv",
                   image_texture = NA_character_, image_repeat = 1, alpha_texture = NA_character_, 
-                  bump_texture = NA_character_, roughness_texture = NA_character_, bump_intensity = 1,
-                  roughness_range = c(0.0001, 0.2), roughness_flip = FALSE,
+                  bump_texture = NA_character_, bump_intensity = 1,
+                  roughness_texture = NA_character_, roughness_range = c(0.0001, 0.2), 
+                  roughness_flip = FALSE,
                   importance_sample = FALSE) {
   microtype = switch(microfacet, "tbr" = 1,"beckmann" = 2, 1)
   gloss[gloss <= 0] = 0
@@ -973,17 +974,17 @@ glossy = function(color="white", gloss = 1, reflectance = 0.05, microfacet = "tb
   
   glossyinfo = list(c(microtype, alphax, alphay, reflectance, c(1,1,1), roughness_range, roughness_flip));
   ray_material(list(type = "glossy", 
-                      properties = list(c(color)), 
-                      gradient_color = list(gradient_color), gradient_transpose = FALSE,
-                      world_gradient = is_world_gradient, gradient_point_info = list(gradient_point_info),
-                      gradient_type = gradient_type,
-                      checkercolor=list(c(checkercolor,checkerperiod)), 
-                      noise=noise, noisephase = noisephase * pi / 180, noiseintensity = noiseintensity, noisecolor = list(noisecolor),
-                      image = list(image_texture), image_repeat = list(image_repeat), 
-                      alphaimage = list(alpha_texture), lightintensity = NA_real_, 
-                      fog=FALSE, fogdensity = NA_real_, implicit_sample = importance_sample, 
-                      sigma = 0, glossyinfo = glossyinfo, bump_texture = list(bump_texture),
-                      bump_intensity = bump_intensity, roughness_texture = list(roughness_texture)))
+                    properties = list(c(color)), 
+                    gradient_color = list(gradient_color), gradient_transpose = FALSE,
+                    world_gradient = is_world_gradient, gradient_point_info = list(gradient_point_info),
+                    gradient_type = gradient_type,
+                    checkercolor=list(c(checkercolor,checkerperiod)), 
+                    noise=noise, noisephase = noisephase * pi / 180, noiseintensity = noiseintensity, noisecolor = list(noisecolor),
+                    image = list(image_texture), image_repeat = list(image_repeat), 
+                    alphaimage = list(alpha_texture), lightintensity = NA_real_, 
+                    fog=FALSE, fogdensity = NA_real_, implicit_sample = importance_sample, 
+                    sigma = 0, glossyinfo = glossyinfo, bump_texture = list(bump_texture),
+                    bump_intensity = bump_intensity, roughness_texture = list(roughness_texture)))
 }
 
 
@@ -1086,16 +1087,16 @@ hair = function(pigment = 1.3, red_pigment = 0, color = NA, sigma_a = NA,
   
   info = c(sigma_a, eta, beta_m, beta_n, alpha)
   ray_material(list(type = "hair", 
-                      properties = list(info), checkercolor=list(NA_real_), 
-                      gradient_color = list(NA_real_), gradient_transpose = NA,
-                      world_gradient = FALSE, gradient_point_info = list(NA_real_),
-                      gradient_type = NA,
-                      noise=0, noisephase = 0, noiseintensity = 0, noisecolor = list(c(0,0,0)),
-                      image = list(NA_character_), image_repeat = list(NA_real_),
-                      alphaimage = list(NA_character_), lightintensity = NA_real_,
-                      fog=FALSE, fogdensity = NA_real_, implicit_sample = FALSE, 
-                      sigma = NA_real_, glossyinfo = list(NA_real_), bump_texture = list(NA_character_),
-                      bump_intensity = NA_real_, roughness_texture = list(NA_character_)))
+                    properties = list(info), checkercolor=list(NA_real_), 
+                    gradient_color = list(NA_real_), gradient_transpose = NA,
+                    world_gradient = FALSE, gradient_point_info = list(NA_real_),
+                    gradient_type = NA,
+                    noise=0, noisephase = 0, noiseintensity = 0, noisecolor = list(c(0,0,0)),
+                    image = list(NA_character_), image_repeat = list(NA_real_),
+                    alphaimage = list(NA_character_), lightintensity = NA_real_,
+                    fog=FALSE, fogdensity = NA_real_, implicit_sample = FALSE, 
+                    sigma = NA_real_, glossyinfo = list(NA_real_), bump_texture = list(NA_character_),
+                    bump_intensity = NA_real_, roughness_texture = list(NA_character_)))
 }
 
 #' Lambertian Material (deprecated)
@@ -1127,9 +1128,9 @@ check_image_texture = function(image_texture) {
     warning("Texture not in recognized format (array, matrix, or filename), ignoring.")
   }
   if(!is.array(image_texture) && !is.na(image_texture) && 
-     !tools::file_ext(tolower(image_texture)) %in% c("jpg", "jpeg", "png", "hdr")) {
+     !tools::file_ext(tolower(image_texture)) %in% c("jpg", "jpeg", "png", "exr", "hdr")) {
     image_texture = NA_character_
-    warning("Texture not in recognized format (JPEG, PNG, or HDR), ignoring.")
+    warning("Texture not in recognized format (JPEG, PNG, EXR,or HDR), ignoring.")
   }
   return(image_texture)
 }
