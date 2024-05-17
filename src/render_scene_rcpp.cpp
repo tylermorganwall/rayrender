@@ -384,20 +384,20 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
                clampval, max_depth, roulette_active, Display);
   }
   
-  for(int i = 0; i < textures.size(); i++) {
-    if(textures[i]) {
-      stbi_image_free(textures[i]);
-    }
-    if(alpha_textures[i]) {
-      stbi_image_free(alpha_textures[i]);
-    }
-    if(bump_textures[i]) {
-      stbi_image_free(bump_textures[i]);
-    }
-    if(roughness_textures[i]) {
-      stbi_image_free(roughness_textures[i]);
-    }
-  }
+  // for(int i = 0; i < textures.size(); i++) {
+  //   if(textures[i]) {
+  //     stbi_image_free(textures[i]);
+  //   }
+  //   if(alpha_textures[i]) {
+  //     stbi_image_free(alpha_textures[i]);
+  //   }
+  //   if(bump_textures[i]) {
+  //     stbi_image_free(bump_textures[i]);
+  //   }
+  //   if(roughness_textures[i]) {
+  //     stbi_image_free(roughness_textures[i]);
+  //   }
+  // }
   delete shared_materials;
   PutRNGstate();
   print_time(verbose, "Finished rendering" );

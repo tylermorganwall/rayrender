@@ -22,6 +22,7 @@
 #include "instance.h"
 #include "transform.h"
 #include "transformcache.h"
+#include "texturecache.h"
 
 Transform rotation_order_matrix(NumericVector temprotvec, NumericVector order_rotation) {
   Transform M;
@@ -80,10 +81,10 @@ void LoadTexture(std::string image_file,
                  std::string alpha_file,
                  std::string bump_file,
                  std::string roughness_file,
-                 std::vector<Float* >& textures, 
-                 std::vector<unsigned char * >& alpha_textures, 
-                 std::vector<unsigned char * >& bump_textures, 
-                 std::vector<unsigned char * >& roughness_textures,  
+                 std::vector<Float* >& textures,
+                 std::vector<unsigned char * >& alpha_textures,
+                 std::vector<unsigned char * >& bump_textures,
+                 std::vector<unsigned char * >& roughness_textures,
                  int* nvec,
                  int* nveca,
                  int* nvecb,
@@ -94,10 +95,11 @@ void LoadTexture(std::string image_file,
   
   if(has_image) {
     int nx, ny, nn;
-    Float* tex_data = stbi_loadf(image_file.c_str(), &nx, &ny, &nn, 4);
-    nn = 4;
+    Float* texture_data = texCache.LookupFloat(image_file, nx, ny, nn);
+    // Float* tex_data = stbi_loadf(image_file.c_str(), &nx, &ny, &nn, 4);
+    // nn = 4;
     // texture_bytes += nx * ny * nn;
-    textures.push_back(tex_data);
+    textures.push_back(texture_data);
     nvec[0] = nx;
     nvec[1] = ny;
     nvec[2] = nn;
@@ -106,10 +108,10 @@ void LoadTexture(std::string image_file,
   }
   if(has_alpha) {
     int nxa, nya, nna;
-    unsigned char * tex_data_alpha = stbi_load(alpha_file.c_str(), &nxa, &nya, &nna, 0);
+    unsigned char* alpha_data = texCache.LookupChar(alpha_file, nxa, nya, nna);
     // texture_bytes += nxa * nya * nna;
     
-    alpha_textures.push_back(tex_data_alpha);
+    alpha_textures.push_back(alpha_data);
     nveca[0] = nxa;
     nveca[1] = nya;
     nveca[2] = nna;
@@ -118,8 +120,8 @@ void LoadTexture(std::string image_file,
   }
   if(has_bump) {
     int nxb, nyb, nnb;
-    unsigned char * tex_data_bump = stbi_load(bump_file.c_str(), &nxb, &nyb, &nnb, 0);
-    bump_textures.push_back(tex_data_bump);
+    unsigned char* bump_data = texCache.LookupChar(bump_file, nxb, nyb, nnb);
+    bump_textures.push_back(bump_data);
     nvecb[0] = nxb;
     nvecb[1] = nyb;
     nvecb[2] = nnb;
@@ -128,7 +130,8 @@ void LoadTexture(std::string image_file,
   }
   if(has_roughness) {
     int nxr, nyr, nnr;
-    unsigned char * tex_data_roughness = stbi_load(roughness_file.c_str(), &nxr, &nyr, &nnr, 0);
+    unsigned char* roughness_data = texCache.LookupChar(roughness_file, nxr, nyr, nnr);
+    
     // texture_bytes += nxr * nyr * nnr;
     
     Float min = glossy_info(9), max = glossy_info(10);
@@ -136,11 +139,11 @@ void LoadTexture(std::string image_file,
     Float maxr = 0, minr = 1;
     for(int ii = 0; ii < nxr; ii++) {
       for(int jj = 0; jj < nyr; jj++) {
-        Float temp_rough = tex_data_roughness[nnr*ii + nnr*nxr*jj];
+        Float temp_rough = roughness_data[nnr*ii + nnr*nxr*jj];
         maxr = maxr < temp_rough ? temp_rough : maxr;
         minr = minr > temp_rough ? temp_rough : minr;
         if(nnr > 1) {
-          temp_rough = tex_data_roughness[nnr*ii + nnr*nxr*jj+1];
+          temp_rough = roughness_data[nnr*ii + nnr*nxr*jj+1];
           maxr = maxr < temp_rough ? temp_rough : maxr;
           minr = minr > temp_rough ? temp_rough : minr;
         }
@@ -150,23 +153,23 @@ void LoadTexture(std::string image_file,
     for(int ii = 0; ii < nxr; ii++) {
       for(int jj = 0; jj < nyr; jj++) {
         if(!glossy_info(11)) {
-          tex_data_roughness[nnr*ii + nnr*nxr*jj] =
-            (tex_data_roughness[nnr*ii + nnr*nxr*jj]-minr)/data_range * rough_range + min;
+          roughness_data[nnr*ii + nnr*nxr*jj] =
+            (roughness_data[nnr*ii + nnr*nxr*jj]-minr)/data_range * rough_range + min;
           if(nnr > 1) {
-            tex_data_roughness[nnr*ii + nnr*nxr*jj+1] =
-              (tex_data_roughness[nnr*ii + nnr*nxr*jj+1]-minr)/data_range * rough_range + min;
+            roughness_data[nnr*ii + nnr*nxr*jj+1] =
+              (roughness_data[nnr*ii + nnr*nxr*jj+1]-minr)/data_range * rough_range + min;
           }
         } else {
-          tex_data_roughness[nnr*ii + nnr*nxr*jj] =
-            (1.0-(tex_data_roughness[nnr*ii + nnr*nxr*jj]-minr)/data_range) * rough_range + min;
+          roughness_data[nnr*ii + nnr*nxr*jj] =
+            (1.0-(roughness_data[nnr*ii + nnr*nxr*jj]-minr)/data_range) * rough_range + min;
           if(nnr > 1) {
-            tex_data_roughness[nnr*ii + nnr*nxr*jj+1] =
-              (1.0-(tex_data_roughness[nnr*ii + nnr*nxr*jj+1]-minr)/data_range) * rough_range + min;
+            roughness_data[nnr*ii + nnr*nxr*jj+1] =
+              (1.0-(roughness_data[nnr*ii + nnr*nxr*jj+1]-minr)/data_range) * rough_range + min;
           }
         }
       }
     }
-    roughness_textures.push_back(tex_data_roughness);
+    roughness_textures.push_back(roughness_data);
     nvecr[0] = nxr;
     nvecr[1] = nyr;
     nvecr[2] = nnr;
@@ -178,10 +181,10 @@ void LoadTexture(std::string image_file,
 
 std::shared_ptr<material> LoadSingleMaterial(List SingleMaterial,
                                              TextureCache& texCache,
-                                             std::vector<Float* >& textures, 
-                                             std::vector<unsigned char * >& alpha_textures, 
-                                             std::vector<unsigned char * >& bump_textures, 
-                                             std::vector<unsigned char * >& roughness_textures,  
+                                             std::vector<Float* >& textures,
+                                             std::vector<unsigned char * >& alpha_textures,
+                                             std::vector<unsigned char * >& bump_textures,
+                                             std::vector<unsigned char * >& roughness_textures,
                                              int* nvec,
                                              int* nveca,
                                              int* nvecb,
@@ -231,10 +234,10 @@ std::shared_ptr<material> LoadSingleMaterial(List SingleMaterial,
               alpha_file, 
               bump_file, 
               roughness_file,
-              textures, 
-              alpha_textures, 
-              bump_textures, 
-              roughness_textures,  
+              textures,
+              alpha_textures,
+              bump_textures,
+              roughness_textures,
               nvec,
               nveca,
               nvecb,
@@ -451,7 +454,7 @@ std::shared_ptr<bvh_node> build_scene(List& scene,
                                           textures,
                                           alpha_textures,
                                           bump_textures,
-                                          roughness_textures,  
+                                          roughness_textures,
                                           nvec.get(),
                                           nveca.get(),
                                           nvecb.get(),
@@ -847,10 +850,10 @@ std::shared_ptr<bvh_node> build_scene(List& scene,
                                                               shape_vec,
                                                               shutteropen,
                                                               shutterclose,
-                                                              textures,
-                                                              alpha_textures,
-                                                              bump_textures,
-                                                              roughness_textures,
+                                                              textures, 
+                                                              alpha_textures, 
+                                                              bump_textures, 
+                                                              roughness_textures,  
                                                               shared_materials,
                                                               bvh_type,
                                                               transformCache,
