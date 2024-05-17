@@ -1,4 +1,27 @@
 #include "buildscene.h"
+#include "hitable.h"
+#include "sphere.h"
+#include "hitablelist.h"
+#include "bvh_node.h"
+#include "perlin.h"
+#include "texture.h"
+#include "rectangle.h"
+#include "box.h"
+#include "constant.h"
+#include "triangle.h"
+#include "pdf.h"
+#include "trimesh.h"
+#include "disk.h"
+#include "cylinder.h"
+#include "ellipsoid.h"
+#include "curve.h"
+#include "csg.h"
+#include "plymesh.h"
+#include "mesh3d.h"
+#include "raymesh.h"
+#include "instance.h"
+#include "transform.h"
+#include "transformcache.h"
 
 Transform rotation_order_matrix(NumericVector temprotvec, NumericVector order_rotation) {
   Transform M;
@@ -66,7 +89,8 @@ void LoadTexture(std::string image_file,
                  int* nvecb,
                  int* nvecr,
                  NumericVector glossy_info,
-                 bool has_image, bool has_alpha, bool has_bump, bool has_roughness) {
+                 bool has_image, bool has_alpha, bool has_bump, bool has_roughness,
+                 TextureCache& texCache) {
   
   if(has_image) {
     int nx, ny, nn;
@@ -153,19 +177,20 @@ void LoadTexture(std::string image_file,
 
 
 std::shared_ptr<material> LoadSingleMaterial(List SingleMaterial,
-                                            std::vector<Float* >& textures, 
-                                            std::vector<unsigned char * >& alpha_textures, 
-                                            std::vector<unsigned char * >& bump_textures, 
-                                            std::vector<unsigned char * >& roughness_textures,  
-                                            int* nvec,
-                                            int* nveca,
-                                            int* nvecb,
-                                            int* nvecr,
-                                            bool& has_image,
-                                            bool& has_alpha,
-                                            bool& has_bump,
-                                            bool& has_roughness,
-                                            NumericVector tricolorinfo) {
+                                             TextureCache& texCache,
+                                             std::vector<Float* >& textures, 
+                                             std::vector<unsigned char * >& alpha_textures, 
+                                             std::vector<unsigned char * >& bump_textures, 
+                                             std::vector<unsigned char * >& roughness_textures,  
+                                             int* nvec,
+                                             int* nveca,
+                                             int* nvecb,
+                                             int* nvecr,
+                                             bool& has_image,
+                                             bool& has_alpha,
+                                             bool& has_bump,
+                                             bool& has_roughness,
+                                             NumericVector tricolorinfo) {
   MaterialEnum type = static_cast<MaterialEnum>(as<int>(SingleMaterial["type"]));
   NumericVector properties = as<NumericVector>(as<List>(SingleMaterial["properties"])(0));
   NumericVector checkercolor = as<NumericVector>(as<List>(SingleMaterial["checkercolor"])(0));
@@ -218,7 +243,8 @@ std::shared_ptr<material> LoadSingleMaterial(List SingleMaterial,
               has_image,
               has_alpha,
               has_bump,
-              has_roughness);
+              has_roughness,
+              texCache);
   
   std::shared_ptr<material> mat = nullptr;
   std::shared_ptr<texture> material_texture;
@@ -364,6 +390,7 @@ std::shared_ptr<bvh_node> build_scene(List& scene,
                                      std::vector<std::shared_ptr<material> >* shared_materials, 
                                      int bvh_type,
                                      TransformCache& transformCache, 
+                                     TextureCache& texCache,
                                      hitable_list& imp_sample_objects,
                                      std::vector<std::shared_ptr<hitable> >& instanced_objects,
                                      std::vector<std::shared_ptr<hitable_list> >& instance_importance_sampled,
@@ -420,6 +447,7 @@ std::shared_ptr<bvh_node> build_scene(List& scene,
       texture_idx.push_back(material_id-1);
     } else {
       shape_material = LoadSingleMaterial(SingleMaterial,
+                                          texCache,
                                           textures,
                                           alpha_textures,
                                           bump_textures,
@@ -826,6 +854,7 @@ std::shared_ptr<bvh_node> build_scene(List& scene,
                                                               shared_materials,
                                                               bvh_type,
                                                               transformCache,
+                                                              texCache,
                                                               (*instance_importance_sample_list),
                                                               instanced_objects,
                                                               instance_importance_sampled,

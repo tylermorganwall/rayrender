@@ -1,36 +1,20 @@
 #ifndef BUILDSCENEH
 #define BUILDSCENEH
 
-#include "hitable.h"
-#include "sphere.h"
-#include "hitablelist.h"
-#include "bvh_node.h"
-#include "perlin.h"
-#include "texture.h"
-#include "rectangle.h"
-#include "box.h"
-#include "constant.h"
-#include "triangle.h"
-#include "pdf.h"
-#include "trimesh.h"
-#include "disk.h"
-#include "cylinder.h"
-#include "ellipsoid.h"
-#include "curve.h"
-#include "csg.h"
-#include "plymesh.h"
-#include "mesh3d.h"
-#include "raymesh.h"
-#include "instance.h"
-#include "transform.h"
-#include "transformcache.h"
 #include <Rcpp.h>
 #include <memory>
+#include "float.h"
 using namespace Rcpp;
 
+class TransformCache;
+class TextureCache;
+class material;
+class hitable;
+class bvh_node;
+class random_gen;
+class hitable_list;
 
 std::shared_ptr<hitable> rotation_order(std::shared_ptr<hitable> entry, NumericVector temprotvec, NumericVector order_rotation);
-
 
 std::shared_ptr<bvh_node> build_scene(List& scene,
                                      IntegerVector& shape,
@@ -43,6 +27,7 @@ std::shared_ptr<bvh_node> build_scene(List& scene,
                                      std::vector<std::shared_ptr<material> >* shared_materials, 
                                      int bvh_type,
                                      TransformCache& transformCache, 
+                                     TextureCache& texCache,
                                      hitable_list& imp_sample_objects,
                                      std::vector<std::shared_ptr<hitable> >& instanced_objects,
                                      std::vector<std::shared_ptr<hitable_list> >& instance_importance_sampled,

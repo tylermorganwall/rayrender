@@ -15,45 +15,61 @@
 namespace fs = std::filesystem;
 
 TextureCache::~TextureCache() {
-  for (size_t i = 0; i < rawData.size(); ++i) {
+  for (size_t i = 0; i < rawDataFloat.size(); ++i) {
     if (loadedBySTB[i]) {
-      stbi_image_free(rawData[i]);
+      stbi_image_free(rawDataFloat[i]);
     } else {
-      free(rawData[i]);
+      free(rawDataFloat[i]);
     }
+  }
+  for (size_t i = 0; i < rawDataChar.size(); ++i) {
+    stbi_image_free(rawDataChar[i]);
   }
 }
 
-std::shared_ptr<image_texture_float> TextureCache::Lookup(const std::string& filename,
-                                                          int& nx, int& ny,
-                                                          Float repeatu = 1.0f, 
-                                                          Float repeatv = 1.0f, 
-                                                          Float intensity = 1.0f) {
-  std::string standardizedFilename = StandardizeFilename(filename);
-  std::string standardizedFilenameInfo = standardizedFilename + 
-    std::to_string(repeatu) + 
-    std::to_string(repeatv) + 
-    std::to_string(intensity);
-  auto it = hashTable.find(standardizedFilenameInfo);
-  if (it != hashTable.end()) {
-    auto itDim = hashTableDims.find(standardizedFilenameInfo);
-    nx = itDim->second.first;
-    ny = itDim->second.second;
+Float* TextureCache::LookupFloat(const std::string& filename,
+                                 int& nx, int& ny, int& nn) {
+  std::string standardizedFilename = StandardizeFilename(filename);;
+  auto it = hashTableFloat.find(standardizedFilename);
+  if (it != hashTableFloat.end()) {
+    auto itDim = hashTableDims.find(standardizedFilename);
+    nx = std::get<0>(itDim->second);
+    ny = std::get<1>(itDim->second);
+    nn = std::get<2>(itDim->second);
     return it->second;
   }
   
-  int channels;
-  Float* data = LoadImage(standardizedFilename, nx, ny, channels);
+  Float* data = LoadImageFloat(standardizedFilename, nx, ny, nn);
   if (!data) {
     throw std::runtime_error("Failed to load image: " + filename);
   }
   
-  auto tex = std::make_shared<image_texture_float>(data, nx, ny, channels,
-                                                   repeatu, repeatv, intensity);
-  hashTable[standardizedFilenameInfo] = tex;
-  hashTableDims[standardizedFilenameInfo] = std::pair<int, int>(nx,ny);
-  rawData.push_back(data);
-  return tex;
+  hashTableFloat[standardizedFilename] = data;
+  hashTableDims[standardizedFilename] = std::make_tuple(nx,ny,nn);
+  rawDataFloat.push_back(data);
+  return data;
+}
+
+unsigned char * TextureCache::LookupChar(const std::string& filename,
+                                         int& nx, int& ny, int& nn) {
+  std::string standardizedFilename = StandardizeFilename(filename);;
+  auto it = hashTableChar.find(standardizedFilename);
+  if (it != hashTableChar.end()) {
+    auto itDim = hashTableDims.find(standardizedFilename);
+    nx = std::get<0>(itDim->second);
+    ny = std::get<1>(itDim->second);
+    nn = std::get<2>(itDim->second);
+    return it->second;
+  }
+  
+  unsigned char * data = LoadImageChar(standardizedFilename, nx, ny, nn);
+  if (!data) {
+    throw std::runtime_error("Failed to load image: " + filename);
+  }
+  
+  hashTableChar[standardizedFilename] = data;
+  hashTableDims[standardizedFilename] = std::make_tuple(nx,ny,nn);
+  return data;
 }
 
 std::string TextureCache::StandardizeFilename(const std::string& filename) {
@@ -64,7 +80,7 @@ std::string TextureCache::StandardizeFilename(const std::string& filename) {
   return result;
 }
 
-float* TextureCache::LoadImage(const std::string& filename, int& width, int& height, int& channels) {
+float* TextureCache::LoadImageFloat(const std::string& filename, int& width, int& height, int& channels) {
   std::string standardizedFilename = StandardizeFilename(filename);
   const char* input = standardizedFilename.c_str();
   fs::path filepath(input);
@@ -113,6 +129,26 @@ float* TextureCache::LoadImage(const std::string& filename, int& width, int& hei
       throw std::runtime_error("Loading failed: " + standardizedFilename);
     }
     loadedBySTB.push_back(true);
+  }
+  
+  if (width == 0 || height == 0 || channels == 0) {
+    throw std::runtime_error("Could not find " + filename);
+  }
+  
+  return data;
+}
+
+unsigned char * TextureCache::LoadImageChar(const std::string& filename, int& width, int& height, int& channels) {
+  std::string standardizedFilename = StandardizeFilename(filename);
+  const char* input = standardizedFilename.c_str();
+  fs::path filepath(input);
+
+  unsigned char * data = nullptr;
+  const char* err = nullptr;
+  data = stbi_load(standardizedFilename.c_str(), &width, &height, &channels, 3);
+  if (!data) {
+    std::cerr << "Load failed: " << stbi_failure_reason() << std::endl;
+    throw std::runtime_error("Loading failed: " + standardizedFilename);
   }
   
   if (width == 0 || height == 0 || channels == 0) {

@@ -26,23 +26,31 @@
 #include <filesystem>
 namespace fs = std::filesystem;
 
+
 class TextureCache {
 public:
   TextureCache() = default;
   ~TextureCache();
   
-  std::shared_ptr<image_texture_float> Lookup(const std::string& filename,
-                                              int& nx, int& ny,
-                                              Float repeatu, Float repeatv, Float intensity);
-  
+  Float* LookupFloat(const std::string& filename,
+                     int& nx, int& ny, int& nn);
+  unsigned char * LookupChar(const std::string& filename,
+                     int& nx, int& ny, int& nn);
+
 private:
-  std::vector<float*> rawData;
-  std::vector<bool> loadedBySTB; // true for stb_image, false for tinyexr
-  std::unordered_map<std::string, std::shared_ptr<image_texture_float>> hashTable;
-  std::unordered_map<std::string, std::pair<int, int>> hashTableDims;
+  std::vector<float*> rawDataFloat;
+  std::vector<unsigned char *> rawDataChar;
+  
+  std::vector<bool> loadedBySTB; // For floats: true for stb_image, false for tinyexr
+  std::unordered_map<std::string, Float*> hashTableFloat;
+  std::unordered_map<std::string, unsigned char *> hashTableChar;
+  
+  std::unordered_map<std::string, std::tuple<int, int, int> > hashTableDims;
   
   static std::string StandardizeFilename(const std::string& filename);
-  float* LoadImage(const std::string& filename, int& width, int& height, int& channels);
+  float* LoadImageFloat(const std::string& filename, int& width, int& height, int& channels);
+  unsigned char * LoadImageChar(const std::string& filename, int& width, int& height, int& channels);
+  
 };
 
 #endif // TEXTURECACHE

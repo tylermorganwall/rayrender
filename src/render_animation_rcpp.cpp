@@ -19,7 +19,9 @@
 #include "matrix.h"
 #include "transform.h"
 #include "transformcache.h"
+#include "texturecache.h"
 #include "debug.h"
+#include "bvh_node.h"
 using namespace Rcpp;
 #include "RcppThread.h"
 #include "PreviewDisplay.h"
@@ -118,6 +120,10 @@ void render_animation_rcpp(List scene, List camera_info, List scene_info, List r
 
   //Initialize transformation cache
   TransformCache transformCache;
+  
+  //Initialize texture cache
+  TextureCache texCache;
+  
   hitable_list imp_sample_objects;
   std::vector<std::shared_ptr<hitable> > instanced_objects;
   std::vector<std::shared_ptr<hitable_list> > instance_importance_sampled;
@@ -130,6 +136,7 @@ void render_animation_rcpp(List scene, List camera_info, List scene_info, List r
                                                   roughness_textures, 
                                                   shared_materials, bvh_type,
                                                   transformCache, 
+                                                  texCache,
                                                   imp_sample_objects,
                                                   instanced_objects,
                                                   instance_importance_sampled,
