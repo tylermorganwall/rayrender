@@ -11,6 +11,7 @@ ply_model(
   z = 0,
   scale_ply = 1,
   subdivision_levels = 1,
+  recalculate_normals = FALSE,
   material = diffuse(),
   angle = c(0, 0, 0),
   order_rotation = c(1, 2, 3),
@@ -31,6 +32,10 @@ ply_model(
 more robust to numerical precision errors than the generic scale option.}
 
 \item{subdivision_levels}{Default `1`. Number of Loop subdivisions to be applied to the mesh.}
+
+\item{recalculate_normals}{Default `FALSE`. Whether to recalculate vertex normals based on the 
+connecting face orientations. This can be used to compute normals for meshes lacking them or
+to calculate new normals after a displacement map has been applied to the mesh.}
 
 \item{material}{Default  \code{\link{diffuse}}.The material, called from one of the material 
 functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}.}

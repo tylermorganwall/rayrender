@@ -16,6 +16,10 @@ obj_model(
   vertex_colors = FALSE,
   calculate_consistent_normals = TRUE,
   subdivision_levels = 1,
+  displacement_texture = NA,
+  displacement_intensity = 1,
+  displacement_vector = FALSE,
+  recalculate_normals = FALSE,
   importance_sample_lights = TRUE,
   material = diffuse(),
   angle = c(0, 0, 0),
@@ -51,6 +55,20 @@ to the model.}
 loss at edges.}
 
 \item{subdivision_levels}{Default `1`. Number of Loop subdivisions to be applied to the mesh.}
+
+\item{displacement_texture}{Default `NA`. File path to the displacement texture. 
+This texture is used to displace the vertices of the mesh based on the texture's pixel values.}
+
+\item{displacement_intensity}{Default `1`. Intensity of the displacement effect. 
+Higher values result in greater displacement.}
+
+\item{displacement_vector}{Default `FALSE`. Whether to use vector displacement. 
+If `TRUE`, the displacement texture is interpreted as providing a 3D displacement vector. 
+Otherwise, the texture is interpreted as providing a scalar displacement.}
+
+\item{recalculate_normals}{Default `FALSE`. Whether to recalculate vertex normals based on the 
+connecting face orientations. This can be used to compute normals for meshes lacking them or
+to calculate new normals after a displacement map has been applied to the mesh.}
 
 \item{importance_sample_lights}{Default `TRUE`. Whether to importance sample lights specified in the OBJ material
 (objects with a non-zero Ke MTL material).}

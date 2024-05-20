@@ -10,7 +10,9 @@ class mesh3d : public hitable {
     mesh3d() {}
     ~mesh3d() {}
     mesh3d(Rcpp::List mesh_info, std::shared_ptr<material>  mat, 
-           std::string displacement_texture, Float displacement, bool displacement_vector, bool verbose,
+           std::string displacement_texture, Float displacement, bool displacement_vector, 
+           TextureCache &texCache, bool recalculate_normals,
+           bool verbose,
            Float shutteropen, Float shutterclose, int bvh_type, random_gen rng,
            std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation);
     virtual bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng);

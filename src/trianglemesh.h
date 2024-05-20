@@ -19,13 +19,17 @@ inline char separator() {
 #endif
 }
 
+class TextureCache;
+
 struct TriangleMesh {
   // TriangleMesh Public Methods
   TriangleMesh(std::string inputfile, std::string basedir,
                std::shared_ptr<material> default_material, 
+               std::shared_ptr<alpha_texture> alpha_default,
+               std::shared_ptr<bump_texture> bump_default,
                bool load_materials, bool load_textures, bool load_vertex_colors,  bool load_normals,
                bool verbose, Float scale, 
-               bool calculate_consistent_normals,
+               bool calculate_consistent_normals, TextureCache& texCache,
                std::shared_ptr<Transform> ObjectToWorld, 
                std::shared_ptr<Transform> WorldToObject, 
                bool reverseOrientation);
@@ -39,7 +43,7 @@ struct TriangleMesh {
                std::shared_ptr<alpha_texture> alpha,
                std::shared_ptr<bump_texture> bump,
                std::shared_ptr<material> default_material, 
-               bool load_materials, bool load_textures,
+               bool load_materials, bool load_textures, TextureCache& texCache,
                std::shared_ptr<Transform> ObjectToWorld, 
                std::shared_ptr<Transform> WorldToObject, 
                bool reverseOrientation);
@@ -58,6 +62,7 @@ struct TriangleMesh {
                bool override_material, bool flip_transmittance,
                std::shared_ptr<alpha_texture> alpha,
                std::shared_ptr<bump_texture> bump,
+               TextureCache& texCache,
                std::shared_ptr<material> default_material, 
                std::shared_ptr<Transform> ObjectToWorld, 
                std::shared_ptr<Transform> WorldToObject, 

@@ -682,20 +682,20 @@ extern "C" unsigned char *stbi_zlib_compress(unsigned char *data, int data_len, 
 #endif
 
 
-#if TINYEXR_USE_ZFP
-
-#ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Weverything"
-#endif
-
-#include "zfp.h"
-
-#ifdef __clang__
-#pragma clang diagnostic pop
-#endif
-
-#endif
+// #if TINYEXR_USE_ZFP
+// 
+// #ifdef __clang__
+// #pragma clang diagnostic push
+// #pragma clang diagnostic ignored "-Weverything"
+// #endif
+// 
+// #include "zfp.h"
+// 
+// #ifdef __clang__
+// #pragma clang diagnostic pop
+// #endif
+// 
+// #endif
 
 // cond: conditional expression
 // msg: std::string
@@ -727,15 +727,15 @@ typedef int64_t tinyexr_int64;
 #else
 // Although `long long` is not a standard type pre C++11, assume it is defined
 // as a compiler's extension.
-#ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wc++11-long-long"
-#endif
+// #ifdef __clang__
+// #pragma clang diagnostic push
+// #pragma clang diagnostic ignored "-Wc++11-long-long"
+// #endif
 typedef unsigned long long tinyexr_uint64;
 typedef long long tinyexr_int64;
-#ifdef __clang__
-#pragma clang diagnostic pop
-#endif
+// #ifdef __clang__
+// #pragma clang diagnostic pop
+// #endif
 #endif
 
 // static bool IsBigEndian(void) {
@@ -792,15 +792,15 @@ static void swap2(unsigned short *val) {
 #endif
 }
 
-#ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wunused-function"
-#endif
-
-#ifdef __GNUC__
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-function"
-#endif
+// #ifdef __clang__
+// #pragma clang diagnostic push
+// #pragma clang diagnostic ignored "-Wunused-function"
+// #endif
+// 
+// #ifdef __GNUC__
+// #pragma GCC diagnostic push
+// #pragma GCC diagnostic ignored "-Wunused-function"
+// #endif
 static void cpy4(int *dst_val, const int *src_val) {
   unsigned char *dst = reinterpret_cast<unsigned char *>(dst_val);
   const unsigned char *src = reinterpret_cast<const unsigned char *>(src_val);
@@ -830,13 +830,13 @@ static void cpy4(float *dst_val, const float *src_val) {
   dst[2] = src[2];
   dst[3] = src[3];
 }
-#ifdef __clang__
-#pragma clang diagnostic pop
-#endif
-
-#ifdef __GNUC__
-#pragma GCC diagnostic pop
-#endif
+// #ifdef __clang__
+// #pragma clang diagnostic pop
+// #endif
+// 
+// #ifdef __GNUC__
+// #pragma GCC diagnostic pop
+// #endif
 
 static void swap4(unsigned int *val) {
 #if TINYEXR_LITTLE_ENDIAN
@@ -935,10 +935,10 @@ union FP32 {
   } s;
 };
 
-#ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wpadded"
-#endif
+// #ifdef __clang__
+// #pragma clang diagnostic push
+// #pragma clang diagnostic ignored "-Wpadded"
+// #endif
 
 union FP16 {
   unsigned short u;
@@ -955,9 +955,9 @@ union FP16 {
   } s;
 };
 
-#ifdef __clang__
-#pragma clang diagnostic pop
-#endif
+// #ifdef __clang__
+// #pragma clang diagnostic pop
+// #endif
 
 static FP32 half_to_float(FP16 h) {
   static const FP32 magic = {113 << 23};
@@ -1033,14 +1033,14 @@ static FP16 float_to_half_full(FP32 f) {
 // #define IMF_B44_COMPRESSION 6
 // #define IMF_B44A_COMPRESSION  7
 
-#ifdef __clang__
-#pragma clang diagnostic push
-
-#if __has_warning("-Wzero-as-null-pointer-constant")
-#pragma clang diagnostic ignored "-Wzero-as-null-pointer-constant"
-#endif
-
-#endif
+// #ifdef __clang__
+// #pragma clang diagnostic push
+// 
+// #if __has_warning("-Wzero-as-null-pointer-constant")
+// #pragma clang diagnostic ignored "-Wzero-as-null-pointer-constant"
+// #endif
+// 
+// #endif
 
 static const char *ReadString(std::string *s, const char *ptr, size_t len) {
   // Read untile NULL(\0).
@@ -1497,27 +1497,27 @@ static bool DecompressZip(unsigned char *dst,
 
 // RLE code from OpenEXR --------------------------------------
 
-#ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wsign-conversion"
-#if __has_warning("-Wextra-semi-stmt")
-#pragma clang diagnostic ignored "-Wextra-semi-stmt"
-#endif
-#endif
+// #ifdef __clang__
+// #pragma clang diagnostic push
+// #pragma clang diagnostic ignored "-Wsign-conversion"
+// #if __has_warning("-Wextra-semi-stmt")
+// #pragma clang diagnostic ignored "-Wextra-semi-stmt"
+// #endif
+// #endif
 
-#ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable : 4204)  // nonstandard extension used : non-constant
-                                 // aggregate initializer (also supported by GNU
-                                 // C and C99, so no big deal)
-#pragma warning(disable : 4244)  // 'initializing': conversion from '__int64' to
-                                 // 'int', possible loss of data
-#pragma warning(disable : 4267)  // 'argument': conversion from '__int64' to
-                                 // 'int', possible loss of data
-#pragma warning(disable : 4996)  // 'strdup': The POSIX name for this item is
-                                 // deprecated. Instead, use the ISO C and C++
-                                 // conformant name: _strdup.
-#endif
+// #ifdef _MSC_VER
+// #pragma warning(push)
+// #pragma warning(disable : 4204)  // nonstandard extension used : non-constant
+//                                  // aggregate initializer (also supported by GNU
+//                                  // C and C99, so no big deal)
+// #pragma warning(disable : 4244)  // 'initializing': conversion from '__int64' to
+//                                  // 'int', possible loss of data
+// #pragma warning(disable : 4267)  // 'argument': conversion from '__int64' to
+//                                  // 'int', possible loss of data
+// #pragma warning(disable : 4996)  // 'strdup': The POSIX name for this item is
+//                                  // deprecated. Instead, use the ISO C and C++
+//                                  // conformant name: _strdup.
+// #endif
 
 const int MIN_RUN_LENGTH = 3;
 const int MAX_RUN_LENGTH = 127;
@@ -1609,9 +1609,9 @@ static int rleUncompress(int inLength, int maxLength, const signed char in[],
   return static_cast<int>(out - outStart);
 }
 
-#ifdef __clang__
-#pragma clang diagnostic pop
-#endif
+// #ifdef __clang__
+// #pragma clang diagnostic pop
+// #endif
 
 // End of RLE code from OpenEXR -----------------------------------
 
@@ -1751,26 +1751,26 @@ static bool DecompressRle(unsigned char *dst,
 }
 
 #if TINYEXR_USE_PIZ
-
-#ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wc++11-long-long"
-#pragma clang diagnostic ignored "-Wold-style-cast"
-#pragma clang diagnostic ignored "-Wpadded"
-#pragma clang diagnostic ignored "-Wsign-conversion"
-#pragma clang diagnostic ignored "-Wc++11-extensions"
-#pragma clang diagnostic ignored "-Wconversion"
-#pragma clang diagnostic ignored "-Wc++98-compat-pedantic"
-
-#if __has_warning("-Wcast-qual")
-#pragma clang diagnostic ignored "-Wcast-qual"
-#endif
-
-#if __has_warning("-Wextra-semi-stmt")
-#pragma clang diagnostic ignored "-Wextra-semi-stmt"
-#endif
-
-#endif
+// 
+// #ifdef __clang__
+// #pragma clang diagnostic push
+// #pragma clang diagnostic ignored "-Wc++11-long-long"
+// #pragma clang diagnostic ignored "-Wold-style-cast"
+// #pragma clang diagnostic ignored "-Wpadded"
+// #pragma clang diagnostic ignored "-Wsign-conversion"
+// #pragma clang diagnostic ignored "-Wc++11-extensions"
+// #pragma clang diagnostic ignored "-Wconversion"
+// #pragma clang diagnostic ignored "-Wc++98-compat-pedantic"
+// 
+// #if __has_warning("-Wcast-qual")
+// #pragma clang diagnostic ignored "-Wcast-qual"
+// #endif
+// 
+// #if __has_warning("-Wextra-semi-stmt")
+// #pragma clang diagnostic ignored "-Wextra-semi-stmt"
+// #endif
+// 
+// #endif
 
 //
 // PIZ compress/uncompress, based on OpenEXR's ImfPizCompressor.cpp
@@ -3077,13 +3077,13 @@ static void applyLut(const unsigned short lut[USHORT_RANGE],
   for (int i = 0; i < nData; ++i) data[i] = lut[data[i]];
 }
 
-#ifdef __clang__
-#pragma clang diagnostic pop
-#endif  // __clang__
-
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif
+// #ifdef __clang__
+// #pragma clang diagnostic pop
+// #endif  // __clang__
+// 
+// #ifdef _MSC_VER
+// #pragma warning(pop)
+// #endif
 
 static bool CompressPiz(unsigned char *outPtr, unsigned int *outSize,
                         const unsigned char *inPtr, size_t inSize,
@@ -6802,17 +6802,17 @@ struct MemoryMappedFile {
     // on a 32-bit system. On current 64-bit systems, this check can never
     // fail, so we turn off clang's Wtautological-type-limit-compare warning
     // around this code.
-#ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wtautological-type-limit-compare"
-#endif
+// #ifdef __clang__
+// #pragma clang diagnostic push
+// #pragma clang diagnostic ignored "-Wtautological-type-limit-compare"
+// #endif
     if (info.st_size < 0 ||
         info.st_size > std::numeric_limits<ssize_t>::max()) {
       return;
     }
-#ifdef __clang__
-#pragma clang diagnostic pop
-#endif
+// #ifdef __clang__
+// #pragma clang diagnostic pop
+// #endif
     size = static_cast<size_t>(info.st_size);
 
     data = reinterpret_cast<unsigned char *>(
@@ -6900,19 +6900,19 @@ struct MemoryMappedFile {
   // A MemoryMappedFile cannot be copied or moved.
   // Only check for this when compiling with C++11 or higher, since deleted
   // function definitions were added then.
-#if TINYEXR_HAS_CXX11
-#ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wc++98-compat"
-#endif
+// #if TINYEXR_HAS_CXX11
+// #ifdef __clang__
+// #pragma clang diagnostic push
+// #pragma clang diagnostic ignored "-Wc++98-compat"
+// #endif
   MemoryMappedFile(const MemoryMappedFile &) = delete;
   MemoryMappedFile &operator=(const MemoryMappedFile &) = delete;
   MemoryMappedFile(MemoryMappedFile &&other) noexcept = delete;
   MemoryMappedFile &operator=(MemoryMappedFile &&other) noexcept = delete;
-#ifdef __clang__
-#pragma clang diagnostic pop
-#endif
-#endif
+// #ifdef __clang__
+// #pragma clang diagnostic pop
+// #endif
+// #endif
 
   // Returns whether this was successfully opened.
   bool valid() const { return data; }
@@ -6967,10 +6967,10 @@ int LoadEXRImageFromMemory(EXRImage *exr_image, const EXRHeader *exr_header,
 namespace tinyexr
 {
 
-#ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wsign-conversion"
-#endif
+// #ifdef __clang__
+// #pragma clang diagnostic push
+// #pragma clang diagnostic ignored "-Wsign-conversion"
+// #endif
 
 // out_data must be allocated initially with the block-header size
 // of the current image(-part) type
@@ -7980,9 +7980,9 @@ static size_t SaveEXRNPartImageToMemory(const EXRImage* exr_images,
   return size_t(total_size);  // OK
 }
 
-#ifdef __clang__
-#pragma clang diagnostic pop
-#endif
+// #ifdef __clang__
+// #pragma clang diagnostic pop
+// #endif
 
 } // tinyexr
 
@@ -9295,10 +9295,10 @@ int SaveEXR(const float *data, int width, int height, int components,
   return ret;
 }
 
-#ifdef __clang__
-// zero-as-null-pointer-constant
-#pragma clang diagnostic pop
-#endif
+// #ifdef __clang__
+// // zero-as-null-pointer-constant
+// #pragma clang diagnostic pop
+// #endif
 
 #endif  // TINYEXR_IMPLEMENTATION_DEFINED
 #endif  // TINYEXR_IMPLEMENTATION

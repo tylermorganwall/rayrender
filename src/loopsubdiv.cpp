@@ -607,7 +607,6 @@ void LoopSubdivide(TriangleMesh* base_mesh,
     base_mesh->nTriangles = ntris;
     base_mesh->face_material_id = face_material_id;
     for (size_t s = 0; s < numIndices; s += 3) {
-      // Rcpp::Rcout << s << " " << indices[s] << " " << indices[s+1] << " " << indices[s+2] << " " << v.size() << "\n";
       base_mesh->vertexIndices.push_back(indices[s]);
       base_mesh->vertexIndices.push_back(indices[s+1]);
       base_mesh->vertexIndices.push_back(indices[s+2]);

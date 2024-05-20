@@ -95,9 +95,8 @@ void LoadTexture(std::string image_file,
   
   if(has_image) {
     int nx, ny, nn;
-    Float* texture_data = texCache.LookupFloat(image_file, nx, ny, nn);
-    // Float* tex_data = stbi_loadf(image_file.c_str(), &nx, &ny, &nn, 4);
-    // nn = 4;
+    Float* texture_data = texCache.LookupFloat(image_file, nx, ny, nn, 4);
+    nn = 4;
     // texture_bytes += nx * ny * nn;
     textures.push_back(texture_data);
     nvec[0] = nx;
@@ -108,9 +107,9 @@ void LoadTexture(std::string image_file,
   }
   if(has_alpha) {
     int nxa, nya, nna;
-    unsigned char* alpha_data = texCache.LookupChar(alpha_file, nxa, nya, nna);
+    unsigned char* alpha_data = texCache.LookupChar(alpha_file, nxa, nya, nna, 4);
     // texture_bytes += nxa * nya * nna;
-    
+    nna = 4;
     alpha_textures.push_back(alpha_data);
     nveca[0] = nxa;
     nveca[1] = nya;
@@ -120,7 +119,9 @@ void LoadTexture(std::string image_file,
   }
   if(has_bump) {
     int nxb, nyb, nnb;
-    unsigned char* bump_data = texCache.LookupChar(bump_file, nxb, nyb, nnb);
+    unsigned char* bump_data = texCache.LookupChar(bump_file, nxb, nyb, nnb, 1);
+
+    nnb = 1;
     bump_textures.push_back(bump_data);
     nvecb[0] = nxb;
     nvecb[1] = nyb;
@@ -130,8 +131,8 @@ void LoadTexture(std::string image_file,
   }
   if(has_roughness) {
     int nxr, nyr, nnr;
-    unsigned char* roughness_data = texCache.LookupChar(roughness_file, nxr, nyr, nnr);
-    
+    unsigned char* roughness_data = texCache.LookupChar(roughness_file, nxr, nyr, nnr, 3);
+    nnr = 3;
     // texture_bytes += nxr * nyr * nnr;
     
     Float min = glossy_info(9), max = glossy_info(10);
@@ -638,18 +639,23 @@ std::shared_ptr<bvh_node> build_scene(List& scene,
         std::string displacement_texture = as<std::string>(shape_properties["displacement_texture"]);
         Float displacement_intensity = as<Float>(shape_properties["displacement_intensity"]);
         bool is_vector_displacement = as<bool>(shape_properties["displacement_vector"]);
+        bool recalculate_normals = as<bool>(shape_properties["recalculate_normals"]);
+        
         
         Float sigma_obj = as<Float>(SingleMaterial["sigma"]);
 
         
         entry = std::make_shared<trimesh>(objfilename, objbasename, 
                                           scale_obj, sigma_obj, shape_material, 
+                                          alpha[mat_idx], bump[mat_idx], 
                                           load_material, load_textures, load_vertex_colors,
                                           importance_sample_lights, load_normals, calculate_consistent_normals,
                                           subdivision_levels, 
                                           displacement_texture,
                                           displacement_intensity,
                                           is_vector_displacement,
+                                          texCache,
+                                          recalculate_normals,
                                           imp_sample_objects,
                                           shutteropen, shutterclose, bvh_type, rng, verbose,
                                           ObjToWorld,WorldToObj, is_flipped);
@@ -761,10 +767,12 @@ std::shared_ptr<bvh_node> build_scene(List& scene,
         std::string plybasename =  Rcpp::as<std::string>(shape_properties["basename"]);
         Float scale_ply = as<Float>(shape_properties["scale_ply"]);
         int subdivision_levels = as<int>(shape_properties["subdivision_levels"]);
+        bool recalculate_normals = as<bool>(shape_properties["recalculate_normals"]);
         
         entry = std::make_shared<plymesh>(plyfilename, plybasename, 
                                           shape_material, alpha[mat_idx], bump[mat_idx], 
-                                          scale_ply, subdivision_levels,
+                                          scale_ply, subdivision_levels, recalculate_normals,
+                                          verbose,
                                           shutteropen, shutterclose, bvh_type, rng,
                                           ObjToWorld,WorldToObj, is_flipped);
         if(entry == nullptr) {
@@ -787,10 +795,13 @@ std::shared_ptr<bvh_node> build_scene(List& scene,
         std::string displacement_texture = as<std::string>(mesh_entry["displacement_texture"]);
         Float displacement_intensity = as<Float>(mesh_entry["displacement_intensity"]);
         bool is_vector_displacement = as<bool>(mesh_entry["displacement_vector"]);
+        bool recalculate_normals = as<bool>(mesh_entry["recalculate_normals"]);
+        
         entry = std::make_shared<mesh3d>(mesh_entry, shape_material,
                                          displacement_texture,
                                          displacement_intensity,
                                          is_vector_displacement,
+                                         texCache, recalculate_normals,
                                          verbose,
                                          shutteropen, shutterclose, bvh_type, rng,
                                          ObjToWorld,WorldToObj, is_flipped);
@@ -810,6 +821,8 @@ std::shared_ptr<bvh_node> build_scene(List& scene,
         std::string displacement_texture = as<std::string>(shape_properties["displacement_texture"]);
         Float displacement_intensity = as<Float>(shape_properties["displacement_intensity"]);
         bool is_vector_displacement = as<bool>(shape_properties["displacement_vector"]);
+        bool recalculate_normals = as<bool>(shape_properties["recalculate_normals"]);
+        
         //importance sample lights--need to change
         ////calculate consistent normals--need to change
         entry = std::make_shared<raymesh>(raymesh_object,
@@ -823,6 +836,7 @@ std::shared_ptr<bvh_node> build_scene(List& scene,
                                           displacement_texture,
                                           displacement_intensity,
                                           is_vector_displacement,
+                                          texCache, recalculate_normals,
                                           imp_sample_objects, 
                                           verbose, 
                                           shutteropen, shutterclose, bvh_type, rng, 

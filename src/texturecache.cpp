@@ -28,7 +28,7 @@ TextureCache::~TextureCache() {
 }
 
 Float* TextureCache::LookupFloat(const std::string& filename,
-                                 int& nx, int& ny, int& nn) {
+                                 int& nx, int& ny, int& nn, int desired_channels) {
   std::string standardizedFilename = StandardizeFilename(filename);;
   auto it = hashTableFloat.find(standardizedFilename);
   if (it != hashTableFloat.end()) {
@@ -39,19 +39,19 @@ Float* TextureCache::LookupFloat(const std::string& filename,
     return it->second;
   }
   
-  Float* data = LoadImageFloat(standardizedFilename, nx, ny, nn);
+  Float* data = LoadImageFloat(standardizedFilename, nx, ny, nn, desired_channels);
   if (!data) {
     throw std::runtime_error("Failed to load image: " + filename);
   }
   
   hashTableFloat[standardizedFilename] = data;
-  hashTableDims[standardizedFilename] = std::make_tuple(nx,ny,nn);
+  hashTableDims[standardizedFilename] = std::make_tuple(nx,ny,desired_channels);
   rawDataFloat.push_back(data);
   return data;
 }
 
 unsigned char * TextureCache::LookupChar(const std::string& filename,
-                                         int& nx, int& ny, int& nn) {
+                                         int& nx, int& ny, int& nn, int desired_channels) {
   std::string standardizedFilename = StandardizeFilename(filename);;
   auto it = hashTableChar.find(standardizedFilename);
   if (it != hashTableChar.end()) {
@@ -62,13 +62,13 @@ unsigned char * TextureCache::LookupChar(const std::string& filename,
     return it->second;
   }
   
-  unsigned char * data = LoadImageChar(standardizedFilename, nx, ny, nn);
+  unsigned char * data = LoadImageChar(standardizedFilename, nx, ny, nn, desired_channels);
   if (!data) {
     throw std::runtime_error("Failed to load image: " + filename);
   }
   
   hashTableChar[standardizedFilename] = data;
-  hashTableDims[standardizedFilename] = std::make_tuple(nx,ny,nn);
+  hashTableDims[standardizedFilename] = std::make_tuple(nx,ny,desired_channels);
   return data;
 }
 
@@ -80,7 +80,8 @@ std::string TextureCache::StandardizeFilename(const std::string& filename) {
   return result;
 }
 
-float* TextureCache::LoadImageFloat(const std::string& filename, int& width, int& height, int& channels) {
+float* TextureCache::LoadImageFloat(const std::string& filename, int& width, int& height, 
+                                    int& channels, int desired_channels) {
   std::string standardizedFilename = StandardizeFilename(filename);
   const char* input = standardizedFilename.c_str();
   fs::path filepath(input);
@@ -101,7 +102,8 @@ float* TextureCache::LoadImageFloat(const std::string& filename, int& width, int
     int header_ret = ParseEXRHeaderFromFile(&header, &exr_version, input, &err);
     if (header_ret != TINYEXR_SUCCESS) {
       if (err) {
-        std::cerr << "Error loading EXR header: " << err << std::endl;
+      //   Rcpp::Rcout<< "Loading of '" + standardizedFilename << 
+      //     "' failed due to: " << err << std::endl;
         FreeEXRErrorMessage(err);
         FreeEXRHeader(&header);
         throw std::runtime_error("Error loading EXR header");
@@ -113,7 +115,9 @@ float* TextureCache::LoadImageFloat(const std::string& filename, int& width, int
     
     FreeEXRHeader(&header);
     if (err) {
-      std::cerr << err << std::endl;
+      Rcpp::Rcout<< "Loading of '" + standardizedFilename << "' failed due to: " << err << 
+        " -- nx/ny/channels :"  + std::to_string(width)  +  "/"  +  std::to_string(height)  +  "/"  +  std::to_string(channels) << 
+        std::endl;
       FreeEXRErrorMessage(err);
     }
     
@@ -123,10 +127,11 @@ float* TextureCache::LoadImageFloat(const std::string& filename, int& width, int
     
     loadedBySTB.push_back(false);
   } else {
-    data = stbi_loadf(standardizedFilename.c_str(), &width, &height, &channels, 3);
+    data = stbi_loadf(standardizedFilename.c_str(), &width, &height, &channels, desired_channels);
     if (!data) {
-      std::cerr << "Load failed: " << stbi_failure_reason() << std::endl;
-      throw std::runtime_error("Loading failed: " + standardizedFilename);
+      throw std::runtime_error("Loading of '" + standardizedFilename  +
+                               "' failed due to error: " + stbi_failure_reason() +
+                               "-- nx/ny/channels :"  + std::to_string(width)  +  "/"  +  std::to_string(height)  +  "/"  +  std::to_string(channels));
     }
     loadedBySTB.push_back(true);
   }
@@ -138,17 +143,19 @@ float* TextureCache::LoadImageFloat(const std::string& filename, int& width, int
   return data;
 }
 
-unsigned char * TextureCache::LoadImageChar(const std::string& filename, int& width, int& height, int& channels) {
+unsigned char * TextureCache::LoadImageChar(const std::string& filename, int& width, int& height, 
+                                            int& channels, int desired_channels) {
   std::string standardizedFilename = StandardizeFilename(filename);
   const char* input = standardizedFilename.c_str();
   fs::path filepath(input);
 
   unsigned char * data = nullptr;
   const char* err = nullptr;
-  data = stbi_load(standardizedFilename.c_str(), &width, &height, &channels, 3);
+  data = stbi_load(standardizedFilename.c_str(), &width, &height, &channels, desired_channels);
   if (!data) {
-    std::cerr << "Load failed: " << stbi_failure_reason() << std::endl;
-    throw std::runtime_error("Loading failed: " + standardizedFilename);
+    throw std::runtime_error("Loading of '" + standardizedFilename  +
+                             "' failed due to error: " + stbi_failure_reason() +
+                             "-- nx/ny/channels :"  + std::to_string(width)  +  "/"  +  std::to_string(height)  +  "/"  +  std::to_string(channels));
   }
   
   if (width == 0 || height == 0 || channels == 0) {

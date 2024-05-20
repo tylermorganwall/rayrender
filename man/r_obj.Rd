@@ -4,7 +4,10 @@
 \alias{r_obj}
 \title{R 3D Model}
 \usage{
-r_obj()
+r_obj(simple_r = FALSE)
+}
+\arguments{
+\item{simple_r}{Default `FALSE`. If `TRUE`, this will return a 3D R (instead of the R logo).}
 }
 \value{
 File location of the 3d_r_logo.obj file (saved with a .txt extension)

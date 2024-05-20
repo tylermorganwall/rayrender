@@ -13,6 +13,7 @@
 #include "trianglemesh.h"
 #include <filesystem> // C++17
 namespace fs = std::filesystem;
+#include "texturecache.h"
 
 
 void DisplaceMesh(TriangleMesh* base_mesh,
@@ -30,60 +31,11 @@ void DisplaceMesh(TriangleMesh* base_mesh,
                              ") in mesh must be exactly equal to number of vertices (" +  std::to_string(base_mesh->nVertices) + 
                              ")for displacement mapping.");
   }
-  std::transform(displacement_texture.begin(), displacement_texture.end(), displacement_texture.begin(),
-                 [](unsigned char c){ return std::tolower(c); });
-  const char* input = displacement_texture.c_str();
-  fs::path filepath(input);
-  bool is_exr = filepath.extension() == ".exr";
-  
-  float* displacement_data = nullptr;
-  const char* err = nullptr; // or nullptr in C++11
-  int ret;
-  if(is_exr) {
-    if(IsEXR(input) != TINYEXR_SUCCESS) {
-      throw std::runtime_error("Not an EXR file.");
-    }
-    EXRVersion exr_version;
-    ParseEXRVersionFromFile(&exr_version, input);
-  
-    EXRHeader header;
-    InitEXRHeader(&header);
-  
-    // Load the EXR header
-    int header_ret = ParseEXRHeaderFromFile(&header, &exr_version, input, &err);
-    if (header_ret != TINYEXR_SUCCESS) {
-      if (err) {
-        Rcpp::Rcout << "Error loading EXR header: " << err << std::endl;
-        FreeEXRErrorMessage(err); // Free error message memory
-        FreeEXRHeader(&header);
-        throw std::runtime_error("");
-      }
-    }
-    ret = LoadEXR(&displacement_data, &nx, &ny, input, &err);
-    nn = header.num_channels;
-  
-    // Free allocated memory for header
-    FreeEXRHeader(&header);
-    if(err) {
-      Rcpp::Rcout << err << "\n";
-      FreeEXRErrorMessage(err); // release memory of error message.
-    }
-  } else {
-    displacement_data = stbi_loadf(displacement_texture.c_str(), &nx, &ny, &nn, 3 );
-    if(!displacement_data) {
-      REprintf("Load failed: %s\n", stbi_failure_reason());
-      throw std::runtime_error("Loading failed of: " + displacement_texture + 
-                               "-- nx/ny/channels :" + std::to_string(nx)  +  "/"  +  
-                               std::to_string(ny)  +  "/"  +  std::to_string(nn));
-    }
-  }
-  
-  if(nx == 0 || ny == 0 || nn == 0) {
-    throw std::runtime_error("Could not find " + displacement_texture);
-  }
-  int channels = is_exr ? 4 : 3;
+
+  TextureCache temp_texcache;
+  Float* displacement_data = temp_texcache.LookupFloat(displacement_texture, nx, ny, nn);
   auto tex = std::make_unique<image_texture_float>(displacement_data,
-                                                   nx, ny, channels);
+                                                   nx, ny, nn);
   
   if(!displacement_vector) {
     for(size_t i = 0; i < base_mesh->nVertices; i++) {
@@ -117,10 +69,4 @@ void DisplaceMesh(TriangleMesh* base_mesh,
     }
   }
   base_mesh->has_normals = false;
-  
-  if(is_exr) {
-    free(displacement_data);
-  } else {
-    stbi_image_free(displacement_data);
-  }
 }

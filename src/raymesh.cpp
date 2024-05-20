@@ -8,6 +8,11 @@
 #define STBIMAGEH
 #include "stb/stb_image.h"
 #endif
+#include "texturecache.h"
+#include "trianglemesh.h"
+#include "bvh_node.h"
+#include "rng.h"
+#include "triangle.h"
 
 raymesh::raymesh(Rcpp::List raymesh_list, 
                  std::shared_ptr<material> default_material, 
@@ -19,6 +24,7 @@ raymesh::raymesh(Rcpp::List raymesh_list,
                  bool flip_transmittance,
                  int subdivision_levels,
                  std::string displacement_texture, Float displacement, bool displacement_vector,
+                 TextureCache &texCache, bool recalculate_normals,
                  hitable_list& imp_sample_objects, 
                  bool verbose, 
                  Float shutteropen, Float shutterclose, int bvh_type, random_gen rng, 
@@ -29,13 +35,18 @@ raymesh::raymesh(Rcpp::List raymesh_list,
                                                         flip_transmittance,
                                                         alpha_mask,
                                                         bump_tex,
+                                                        texCache,
                                                         default_material, 
                                                         ObjectToWorld, WorldToObject, reverseOrientation));
+  //Loop subdivision automatically calculates new normals
   if(subdivision_levels > 1) {
     LoopSubdivide(mesh.get(),
                   subdivision_levels,
                   verbose);
+  } else if (recalculate_normals) {
+    CalculateNormals(mesh.get());
   }
+  
   if(displacement_texture.length() > 0) {
     if(mesh->nVertices != mesh->nNormals) {
       if(verbose) {

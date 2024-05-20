@@ -45,7 +45,7 @@ void render_animation_rcpp(List scene, List camera_info, List scene_info, List r
   bool progress_bar = as<bool>(render_info["progress_bar"]);
   int numbercores = as<int>(render_info["numbercores"]);
   bool hasbackground = as<bool>(render_info["hasbackground"]);
-  CharacterVector background = as<CharacterVector>(render_info["background"]);
+  std::string background = as<std::string>(render_info["background"]);
   Float rotate_env = as<Float>(render_info["rotate_env"]);
   Float intensity_env = as<Float>(render_info["intensity_env"]);
   bool verbose = as<bool>(render_info["verbose"]);
@@ -55,10 +55,8 @@ void render_animation_rcpp(List scene, List camera_info, List scene_info, List r
   
   Environment pkg = Environment::namespace_env("rayrender");
   Function print_time = pkg["print_time"];
-  size_t n = shape.length();
 
 
-  auto startfirst = std::chrono::high_resolution_clock::now();
   //Unpack Camera Info
   int nx = as<int>(camera_info["nx"]);
   int ny = as<int>(camera_info["ny"]);
@@ -105,10 +103,7 @@ void render_animation_rcpp(List scene, List camera_info, List scene_info, List r
   GetRNGstate();
   random_gen rng(unif_rand() * std::pow(2,32));
   int nx1, ny1, nn1;
-  auto start = std::chrono::high_resolution_clock::now();
-  if(verbose) {
-    Rcpp::Rcout << "Building BVH: ";
-  }
+  print_time(verbose, "Loaded Data");
 
   std::vector<Float* > textures;
   std::vector<unsigned char * > alpha_textures;
@@ -141,12 +136,8 @@ void render_animation_rcpp(List scene, List camera_info, List scene_info, List r
                                                   instanced_objects,
                                                   instance_importance_sampled,
                                                   verbose, rng);
+  print_time(verbose, "Built Scene BVH" );
   
-  auto finish = std::chrono::high_resolution_clock::now();
-  if(verbose) {
-    std::chrono::duration<double> elapsed = finish - start;
-    Rcpp::Rcout << elapsed.count() << " seconds" << "\n";
-  }
 
   //Calculate world bounds
   aabb bounding_box_world;
@@ -159,11 +150,7 @@ void render_animation_rcpp(List scene, List camera_info, List scene_info, List r
       1.1*(lf - world_center).length();
   }
 
-  //Initialize background
-  if(verbose && hasbackground) {
-    Rcpp::Rcout << "Loading Environment Image: ";
-  }
-  start = std::chrono::high_resolution_clock::now();
+  
   std::shared_ptr<texture> background_texture = nullptr;
   std::shared_ptr<material> background_material = nullptr;
   std::shared_ptr<hitable> background_sphere = nullptr;
@@ -179,20 +166,20 @@ void render_animation_rcpp(List scene, List camera_info, List scene_info, List r
   std::shared_ptr<Transform> BackgroundTransformInv = transformCache.Lookup(BackgroundAngle.GetInverseMatrix());
 
   if(hasbackground) {
-    background_texture_data = stbi_loadf(background[0], &nx1, &ny1, &nn1, 4);
-    nn1 = 4;
+    background_texture_data = texCache.LookupFloat(background, nx1, ny1, nn1, 3);
+    // nn1 = 3;
+    // texture_bytes += nx1 * ny1 * nn1;
+    
     if(background_texture_data) {
-      background_texture = std::make_shared<image_texture_float>(background_texture_data, nx1, ny1, nn1, 1, 1, intensity_env);
+      background_texture = std::make_shared<image_texture_float>(background_texture_data, nx1, ny1, nn1,
+                                                                 1, 1, intensity_env);
       background_material = std::make_shared<diffuse_light>(background_texture, 1.0, false);
       background_sphere = std::make_shared<InfiniteAreaLight>(nx1, ny1, world_radius*2, world_center,
                                                               background_texture, background_material,
                                                               BackgroundTransform,
                                                               BackgroundTransformInv, false);
     } else {
-      Rcpp::Rcout << "Failed to load background image at " << background(0) << "\n";
-      if(stbi_failure_reason()) {
-        Rcpp::Rcout << stbi_failure_reason() << "\n";
-      }
+      Rcpp::Rcout << "Failed to load background image at " << background << "\n";
       hasbackground = false;
       ambient_light = true;
       backgroundhigh = vec3f(FLT_MIN,FLT_MIN,FLT_MIN);
@@ -213,20 +200,19 @@ void render_animation_rcpp(List scene, List camera_info, List scene_info, List r
     background_material = std::make_shared<diffuse_light>(background_texture, 1.0, false);
     background_sphere = std::make_shared<InfiniteAreaLight>(100, 100, world_radius*2, world_center,
                                                             background_texture, background_material,
-                                                            BackgroundTransform,BackgroundTransformInv,false);
+                                                            BackgroundTransform, BackgroundTransformInv, false);
+    
   } else {
     //Minimum intensity FLT_MIN so the CDF isn't NAN
     background_texture = std::make_shared<constant_texture>(vec3f(FLT_MIN,FLT_MIN,FLT_MIN));
     background_material = std::make_shared<diffuse_light>(background_texture, 1.0, false);
     background_sphere = std::make_shared<InfiniteAreaLight>(100, 100, world_radius*2, world_center,
                                                             background_texture, background_material,
-                                                            BackgroundTransform,BackgroundTransformInv,false);
+                                                            BackgroundTransform,
+                                                            BackgroundTransformInv, false);
   }
-  finish = std::chrono::high_resolution_clock::now();
-  if(verbose && hasbackground) {
-    std::chrono::duration<double> elapsed = finish - start;
-    Rcpp::Rcout << elapsed.count() << " seconds" << "\n";
-  }
+  //Initialize background
+  print_time(verbose, "Loaded Background" );
   hitable_list world;
   world.add(worldbvh);
 
@@ -240,16 +226,12 @@ void render_animation_rcpp(List scene, List camera_info, List scene_info, List r
                    background_sphere->ObjectToWorld.get(),
                    background_sphere->WorldToObject.get());
   
-  if(verbose) {
-    std::chrono::duration<double> elapsed = finish - start;
-    Rcpp::Rcout << elapsed.count() << " seconds" << "\n";
-  }
   if(impl_only_bg || hasbackground) {
     imp_sample_objects.add(background_sphere);
   }
 
   if(verbose && !progress_bar) {
-    Rcpp::Rcout << "Starting Raytracing:\n ";
+    Rcpp::message(CharacterVector("Starting Raytracing"));
   }
   RProgress::RProgress pb_sampler("Generating Samples [:bar] :percent%");
   pb_sampler.set_width(70);
@@ -427,31 +409,8 @@ void render_animation_rcpp(List scene, List camera_info, List scene_info, List r
     }
   }
 
-  if(verbose) {
-    Rcpp::Rcout << "Cleaning up memory..." << "\n";
-  }
-  if(hasbackground) {
-    stbi_image_free(background_texture_data);
-  }
-  for(int i = 0; i < textures.size(); i++) {
-    if(textures[i]) {
-      stbi_image_free(textures[i]);
-    }
-    if(alpha_textures[i]) {
-      stbi_image_free(alpha_textures[i]);
-    }
-    if(bump_textures[i]) {
-      stbi_image_free(bump_textures[i]);
-    }
-    if(roughness_textures[i]) {
-      stbi_image_free(roughness_textures[i]);
-    }
-  }
   delete shared_materials;
   PutRNGstate();
-  finish = std::chrono::high_resolution_clock::now();
-  if(verbose) {
-    std::chrono::duration<double> elapsed = finish - startfirst;
-    Rcpp::Rcout << "Total time elapsed: " << elapsed.count() << " seconds" << "\n";
-  }
+  print_time(verbose, "Finished rendering" );
+  
 }

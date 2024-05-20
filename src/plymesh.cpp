@@ -3,6 +3,7 @@
 #include "miniply.h"
 #include "plymesh.h"
 #include "loopsubdiv.h"
+#include "calcnormals.h"
 
 inline char separator_ply() {
 #if defined _WIN32 || defined __CYGWIN__
@@ -114,7 +115,8 @@ static TriMesh* parse_file_with_miniply(const char* filename, bool assumeTriangl
 
 plymesh::plymesh(std::string inputfile, std::string basedir, std::shared_ptr<material> mat, 
                  std::shared_ptr<alpha_texture> alpha, std::shared_ptr<bump_texture> bump,
-                 Float scale, int subdivision_levels, 
+                 Float scale, int subdivision_levels, bool recalculate_normals,
+                 bool verbose,
                  Float shutteropen, Float shutterclose, int bvh_type, random_gen rng,
                  std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation) :
   hitable(ObjectToWorld, WorldToObject, reverseOrientation) {
@@ -131,11 +133,15 @@ plymesh::plymesh(std::string inputfile, std::string basedir, std::shared_ptr<mat
                                                         mat,
                                                         ObjectToWorld, WorldToObject, reverseOrientation));
 
+  //Loop subdivision automatically calculates new normals
   if(subdivision_levels > 1) {
     LoopSubdivide(mesh.get(),
                   subdivision_levels,
-                  false);
+                  verbose);
+  } else if (recalculate_normals) {
+    CalculateNormals(mesh.get());
   }
+  
   size_t n = mesh->nTriangles * 3;
   
   // mesh->ValidateMesh();

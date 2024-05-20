@@ -7,15 +7,9 @@
 #endif
 
 #include <queue>
+#include "texturecache.h"
 
-TriangleMesh::~TriangleMesh() {
-  for(auto tex : obj_texture_data) {
-    if(tex) stbi_image_free(tex);
-  }
-  for(auto bump : bump_texture_data) {
-    if(bump) stbi_image_free(bump);
-  }
-}
+TriangleMesh::~TriangleMesh() {}
 
 
 inline Float luminance(point3f& color) {
@@ -33,6 +27,7 @@ void LoadRayMaterials(std::vector<std::shared_ptr<material> > &mesh_materials,
                       size_t &texture_size,
                       std::shared_ptr<material> default_material,
                       bool override_material, bool flip_transmittance,
+                      TextureCache &texCache,
                       bool verbose, std::vector<bool>& material_is_light) {
   int total_materials = 0;
   for(int i = 0; i < shape_materials.size(); i++) { 
@@ -76,13 +71,12 @@ void LoadRayMaterials(std::vector<std::shared_ptr<material> > &mesh_materials,
   std::vector<int > nx_mat_bump(total_materials+1);
   std::vector<int > ny_mat_bump(total_materials+1);
   std::vector<int > nn_mat_bump(total_materials+1);
-  int nx, ny, nn;
+  // int nx, ny, nn;
   
   int mat_num = 0;
   for(size_t ii = 0; ii < shape_materials.size(); ii++) {
     Rcpp::List materials = Rcpp::as<Rcpp::List>(shape_materials[ii]);
     for (size_t i = 0; i < materials.size(); i++) {
-      nx = 0; ny = 0; nn = 0;
       Rcpp::List single_material = Rcpp::as<Rcpp::List>(materials(i));
       std::string diffuse_texname = Rcpp::as<std::string>(single_material["diffuse_texname"]);
       std::string bump_texname = Rcpp::as<std::string>(single_material["bump_texname"]);
@@ -97,30 +91,23 @@ void LoadRayMaterials(std::vector<std::shared_ptr<material> > &mesh_materials,
       Float ior = Rcpp::as<Float>(single_material["ior"]);
 
       if(strlen(diffuse_texname.c_str()) > 0) {
-        int ok;
+        int nx = 0; 
+        int ny = 0; 
+        int nn = 0;
         std::replace(diffuse_texname.begin(),diffuse_texname.end(), '\\', separator());
-        ok = stbi_info(diffuse_texname.c_str(), &nx, &ny, &nn);
-        obj_texture_data.push_back(stbi_load(diffuse_texname.c_str(), &nx, &ny, &nn, 4));
-        nn = 4;
-        
-        if(!obj_texture_data[mat_num] || !ok) {
-          REprintf("Load failed: %s\n", stbi_failure_reason());
-          throw std::runtime_error("Loading failed of: " + diffuse_texname + 
-                                   "-- nx/ny/channels :" + std::to_string(nx)  +  "/"  +  std::to_string(ny)  +  "/"  +  std::to_string(nn));
-        }
+        obj_texture_data.push_back(texCache.LookupChar(diffuse_texname, nx, ny, nn, 4));
         if(nx == 0 || ny == 0 || nn == 0) {
           throw std::runtime_error("Could not find " + diffuse_texname);
         }
+
         if(verbose) {
-          Rprintf("(%i/%i) Loading Material Texture %s (%i/%i/%i) \n", (int)i+1, (int)materials.size(),diffuse_texname.c_str(),nx,ny,nn);
+          Rprintf("(%i/%i) Loading Material Texture %s (%i/%i/%i) \n", 
+                  (int)i+1, (int)materials.size(),diffuse_texname.c_str(),nx,ny,nn);
         }
         
         texture_size += sizeof(unsigned char) * nx * ny * nn;
         has_diffuse[mat_num] = true;
         has_single_diffuse[mat_num] = false;
-        nx_mat[mat_num] = nx;
-        ny_mat[mat_num] = ny;
-        nn_mat[mat_num] = nn;
         
         has_alpha[mat_num] = false;
         if(nn == 4) {
@@ -136,6 +123,11 @@ void LoadRayMaterials(std::vector<std::shared_ptr<material> > &mesh_materials,
             }
           }
         }
+        //Always use 4 channels for RGB
+        nn = 4;
+        nx_mat[mat_num] = nx;
+        ny_mat[mat_num] = ny;
+        nn_mat[mat_num] = nn;
         if(has_alpha[mat_num]) {
           if(verbose) {
             Rprintf("(%i/%i) Material has alpha channel \n", (int)i+1, (int)materials.size());
@@ -160,17 +152,20 @@ void LoadRayMaterials(std::vector<std::shared_ptr<material> > &mesh_materials,
         has_single_diffuse[mat_num] = false;
       }
       if(strlen(bump_texname.c_str()) > 0) {
+        int nxb = 0; 
+        int nyb = 0; 
+        int nnb = 0;
         std::replace(bump_texname.begin(),bump_texname.end(), '\\', separator());
   
-        bump_texture_data[mat_num] = stbi_load(bump_texname.c_str(), &nx, &ny, &nn, 4);
-        nn = 4;
-        texture_size += sizeof(unsigned char) * nx * ny * nn;
-        if(nx == 0 || ny == 0 || nn == 0) {
+        bump_texture_data[mat_num] = texCache.LookupChar(bump_texname, nxb, nyb, nnb, 1);
+        // nn = 4;
+        texture_size += sizeof(unsigned char) * nxb * nyb * nnb;
+        if(nxb == 0 || nyb == 0 || nnb == 0) {
           throw std::runtime_error("Could not find " + bump_texname);
         }
-        nx_mat_bump[mat_num] = nx;
-        ny_mat_bump[mat_num] = ny;
-        nn_mat_bump[mat_num] = nn;
+        nx_mat_bump[mat_num] = nxb;
+        ny_mat_bump[mat_num] = nyb;
+        nn_mat_bump[mat_num] = 1;
         bump_intensity[mat_num] = bump_intensity_single;
         has_bump[mat_num] = true;
       } else {
@@ -200,7 +195,7 @@ void LoadRayMaterials(std::vector<std::shared_ptr<material> > &mesh_materials,
       bool any_trans = transmittance(0) != 0 || transmittance(1) != 0 || transmittance(2) != 0;
       Float shininess = Rcpp::as<Float>(single_material["shininess"]);
       
-      int illum = Rcpp::as<int>(single_material["illum"]);
+      // int illum = Rcpp::as<int>(single_material["illum"]);
       
       if(dissolve == 1 && shininess != 1000 && !any_trans) {
         point3f ke(emission(0),
@@ -263,12 +258,15 @@ void LoadMtlMaterials(std::vector<std::shared_ptr<material> > &mesh_materials,
                       std::vector<tinyobj::material_t > &materials,
                       std::vector<unsigned char * > &obj_texture_data,
                       std::vector<unsigned char * > &bump_texture_data,
-                      std::vector<std::shared_ptr<bump_texture> > &bump_textures,
                       std::vector<std::shared_ptr<alpha_texture> > &alpha_textures,
+                      std::vector<std::shared_ptr<bump_texture> > &bump_textures,
+                      std::shared_ptr<alpha_texture> alpha_default,
+                      std::shared_ptr<bump_texture> bump_default,
                       size_t &texture_size,
                       const std::string inputfile, const std::string basedir, bool has_sep,
                       std::shared_ptr<material> default_material, bool load_materials,
-                      bool load_textures, bool verbose, std::vector<bool>& material_is_light) {
+                      bool load_textures, 
+                      TextureCache &texCache, bool verbose, std::vector<bool>& material_is_light) {
   mesh_materials.reserve(materials.size()+1);
   obj_texture_data.reserve(materials.size()+1);
   bump_texture_data.reserve(materials.size()+1);
@@ -277,8 +275,8 @@ void LoadMtlMaterials(std::vector<std::shared_ptr<material> > &mesh_materials,
   material_is_light.reserve(materials.size()+1);
   
   //For default texture
-  alpha_textures.push_back(nullptr);
-  bump_textures.push_back(nullptr);
+  // alpha_textures.push_back(nullptr);
+  // bump_textures.push_back(nullptr);
   
   std::vector<vec3f > diffuse_materials(materials.size()+1);
   std::vector<vec3f > specular_materials(materials.size()+1);
@@ -299,35 +297,26 @@ void LoadMtlMaterials(std::vector<std::shared_ptr<material> > &mesh_materials,
   std::vector<int > nx_mat_bump(materials.size()+1);
   std::vector<int > ny_mat_bump(materials.size()+1);
   std::vector<int > nn_mat_bump(materials.size()+1);
-  int nx, ny, nn;
-  
+
   if(load_materials) {
     for (size_t i = 0; i < materials.size(); i++) {
-      nx = 0; ny = 0; nn = 0;
+      int nx = 0; 
+      int ny = 0; 
+      int nn = 0;
       if(strlen(materials[i].diffuse_texname.c_str()) > 0 && load_textures) {
-        int ok;
         std::replace(materials[i].diffuse_texname.begin(), materials[i].diffuse_texname.end(), '\\', separator());
         if(has_sep) {
-          ok = stbi_info((basedir + separator() + materials[i].diffuse_texname).c_str(), &nx, &ny, &nn);
-          obj_texture_data.push_back(stbi_load((basedir + separator() + materials[i].diffuse_texname).c_str(), &nx, &ny, &nn, 4));
+          obj_texture_data.push_back(texCache.LookupChar((basedir + 
+            separator() + 
+            materials[i].diffuse_texname), nx, ny, nn, 4));
           nn = 4;
         } else {
-          ok = stbi_info((materials[i].diffuse_texname).c_str(), &nx, &ny, &nn);
-          obj_texture_data.push_back(stbi_load((materials[i].diffuse_texname).c_str(), &nx, &ny, &nn, 4));
+          obj_texture_data.push_back(texCache.LookupChar(materials[i].diffuse_texname, 
+                                                         nx, ny, nn, 4));
           nn = 4;
         }
         
-        if(!obj_texture_data[i] || !ok) {
-          REprintf("Load failed: %s\n", stbi_failure_reason());
-          if(has_sep) {
-            throw std::runtime_error("Loading failed of: " + (basedir + separator() + materials[i].diffuse_texname) + 
-                                     "-- nx/ny/channels :"  + std::to_string(nx)  +  "/"  +  std::to_string(ny)  +  "/"  +  std::to_string(nn));
-          } else {
-            throw std::runtime_error("Loading failed of: " + materials[i].diffuse_texname + 
-                                     "-- nx/ny/channels :" + std::to_string(nx)  +  "/"  +  std::to_string(ny)  +  "/"  +  std::to_string(nn));
-          }
-        }
-        if(nx == 0 || ny == 0 || nn == 0) {
+        if(nx == 0 || ny == 0) {
           if(has_sep) {
             throw std::runtime_error("Could not find " + (basedir + separator() + materials[i].diffuse_texname));
           } else {
@@ -335,7 +324,8 @@ void LoadMtlMaterials(std::vector<std::shared_ptr<material> > &mesh_materials,
           }
         }
         if(verbose) {
-          Rprintf("(%i/%i) Loading Material Texture %s (%i/%i/%i) \n", (int)i+1, (int)materials.size(),materials[i].name.c_str(),nx,ny,nn);
+          Rprintf("(%i/%i) Loading Material Texture %s (%i/%i/%i) \n", 
+                  (int)i+1, (int)materials.size(),materials[i].name.c_str(),nx,ny,nn);
         }
         
         texture_size += sizeof(unsigned char) * nx * ny * nn;
@@ -380,10 +370,11 @@ void LoadMtlMaterials(std::vector<std::shared_ptr<material> > &mesh_materials,
         std::replace(materials[i].bump_texname.begin(), materials[i].bump_texname.end(), '\\', separator());
         
         if(has_sep) {
-          bump_texture_data[i] = stbi_load((basedir + separator() + materials[i].bump_texname).c_str(), &nx, &ny, &nn, 4);
+          bump_texture_data[i] = texCache.LookupChar(basedir + separator() + materials[i].bump_texname, 
+                                                     nx, ny, nn, 4);
           nn = 4;
         } else {
-          bump_texture_data[i] = stbi_load(materials[i].bump_texname.c_str(), &nx, &ny, &nn, 4);
+          bump_texture_data[i] = texCache.LookupChar(materials[i].bump_texname, nx, ny, nn, 4);
           nn = 4;
         }
         texture_size += sizeof(unsigned char) * nx * ny * nn;
@@ -420,8 +411,8 @@ void LoadMtlMaterials(std::vector<std::shared_ptr<material> > &mesh_materials,
       bump_textures.push_back(bump);
     }
   } else {
-    alpha_textures.push_back(nullptr);
-    bump_textures.push_back(nullptr);
+    alpha_textures.push_back(alpha_default);
+    bump_textures.push_back(bump_default);
   }
   
   //First texture is default (when shapes[s].mesh.material_ids[f] == -1)
@@ -432,7 +423,7 @@ void LoadMtlMaterials(std::vector<std::shared_ptr<material> > &mesh_materials,
     for(size_t material_num = 0; material_num < materials.size(); material_num++) {
       bool imp_sample_obj = false;
       std::shared_ptr<material> tex = nullptr;
-      int illum = materials[material_num].illum;
+      // int illum = materials[material_num].illum;
       float shininess = materials[material_num].shininess;
       point3f spec = point3f(materials[material_num].specular[0],
                              materials[material_num].specular[1],
@@ -446,8 +437,8 @@ void LoadMtlMaterials(std::vector<std::shared_ptr<material> > &mesh_materials,
                               materials[material_num].transmittance[1],
                               materials[material_num].transmittance[2]);
       bool any_transparent = dissolve < 1 && !has_diffuse_texture[material_num];
-      bool is_metallic = materials[material_num].shininess == 1000;
-      bool is_glossy = materials[material_num].shininess > 128;
+      bool is_metallic = shininess == 1000;
+      bool is_glossy = shininess > 128;
       
       if(ke.x() != 0 || ke.y() != 0 || ke.z() != 0) { 
         //Any emitting material will be a light
@@ -522,9 +513,12 @@ void LoadMtlMaterials(std::vector<std::shared_ptr<material> > &mesh_materials,
 
 TriangleMesh::TriangleMesh(std::string inputfile, std::string basedir,
                            std::shared_ptr<material> default_material, 
+                           std::shared_ptr<alpha_texture> alpha_default,
+                           std::shared_ptr<bump_texture> bump_default,
                            bool load_materials, bool load_textures, bool load_vertex_colors, 
                            bool load_normals, bool verbose, Float scale, 
                            bool calculate_consistent_normals,
+                           TextureCache& texCache,
                            std::shared_ptr<Transform> ObjectToWorld, 
                            std::shared_ptr<Transform> WorldToObject, 
                            bool reverseOrientation) : nTriangles(0) {
@@ -661,9 +655,12 @@ TriangleMesh::TriangleMesh(std::string inputfile, std::string basedir,
     
     if(!has_vertex_colors) {
       LoadMtlMaterials(mesh_materials, materials, obj_texture_data,
-                       bump_texture_data, bump_textures, alpha_textures,
+                       bump_texture_data, alpha_textures, bump_textures, 
+                       alpha_default, bump_default,
                        texture_size, inputfile, basedir, has_sep, default_material,
-                       load_materials, load_textures, verbose, material_is_light);
+                       load_materials, load_textures, 
+                       texCache, 
+                       verbose, material_is_light);
     } else {
       mesh_materials.push_back(default_material);
       material_is_light.push_back(false);
@@ -698,6 +695,7 @@ TriangleMesh::TriangleMesh(Rcpp::NumericMatrix vertices,
                            std::shared_ptr<bump_texture> bump,
                            std::shared_ptr<material> default_material, 
                            bool load_materials, bool load_textures,
+                           TextureCache& texCache,
                            std::shared_ptr<Transform> ObjectToWorld, 
                            std::shared_ptr<Transform> WorldToObject, 
                            bool reverseOrientation) : nTriangles(0) {
@@ -840,6 +838,7 @@ TriangleMesh::TriangleMesh(Rcpp::List raymesh, bool verbose, bool calculate_cons
                            bool override_material, bool flip_transmittance,
                            std::shared_ptr<alpha_texture> alpha,
                            std::shared_ptr<bump_texture> bump,
+                           TextureCache& texCache,
                            std::shared_ptr<material> default_material, 
                            std::shared_ptr<Transform> ObjectToWorld, 
                            std::shared_ptr<Transform> WorldToObject, 
@@ -1023,6 +1022,7 @@ TriangleMesh::TriangleMesh(Rcpp::List raymesh, bool verbose, bool calculate_cons
                    alpha, bump,
                    texture_size, default_material,
                    override_material, flip_transmittance,
+                   texCache,
                    verbose, material_is_light);
   
 }

@@ -1,12 +1,16 @@
 #ifndef RAYMESHH
 #define RAYMESHH
 
-#include "trianglemesh.h"
-#include "triangle.h"
-#include "bvh_node.h"
-#include "rng.h"
 #include <Rcpp.h>
+#include "float.h"
+#include "hitable.h"
+#include "hitablelist.h"
 
+class TextureCache;
+struct TriangleMesh;
+class bvh_node;
+class random_gen;
+class Transform;
 
 class raymesh : public hitable {
 public:
@@ -17,6 +21,7 @@ public:
           bool importance_sample_lights, bool calculate_consistent_normals, bool override_material,
           bool flip_transmittance, int subdivision_levels,
           std::string displacement_texture, Float displacement, bool displacement_vector,
+          TextureCache &texCache, bool recalculate_normals,
           hitable_list& imp_sample_objects, bool verbose,
           Float shutteropen, Float shutterclose, int bvh_type, random_gen rng, 
           std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation);

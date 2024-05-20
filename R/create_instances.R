@@ -30,7 +30,8 @@
 #' 
 #' # Start with a single sphere with an R in it
 #' sphere_scene = sphere(y = 0, material = glossy(color = "#2b6eff", reflectance = 0.05)) %>%
-#'   add_object(obj_model(r_obj(), z = 1, y = -0.05, scale_obj = 0.45, material = diffuse())) %>%
+#'   add_object(obj_model(r_obj(simple_r = TRUE), z = 0.9, y = -0.2, 
+#'   scale_obj = 0.45, material = diffuse())) %>%
 #'   group_objects(scale = 0.1)
 #' 
 #' # Render the scene

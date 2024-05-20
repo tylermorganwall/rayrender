@@ -248,7 +248,7 @@ camera_motion
 generate_ground(material=diffuse(checkercolor="grey20"),depth=-10) \%>\% 
   add_object(ellip_scene) \%>\% 
   add_object(sphere(y=50,radius=10,material=light(intensity=30))) \%>\% 
-  add_object(obj_model(r_obj(),x=10,y=-10,scale_obj=3, angle=c(0,-45,0),
+  add_object(obj_model(r_obj(),x=10,y=-5,z=10,scale=7, angle=c(-45,-45,0), 
                        material=dielectric(attenuation=c(1,1,0.3)))) \%>\% 
   add_object(pig(x=-7,y=10,z=-5,scale=1,angle=c(0,-45,80),emotion="angry")) \%>\% 
   add_object(pig(x=0,y=-0.25,z=-15,scale=1,angle=c(30,225,30),

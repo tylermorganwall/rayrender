@@ -33,9 +33,9 @@ public:
   ~TextureCache();
   
   Float* LookupFloat(const std::string& filename,
-                     int& nx, int& ny, int& nn);
+                     int& nx, int& ny, int& nn, int desired_channels = 3);
   unsigned char * LookupChar(const std::string& filename,
-                     int& nx, int& ny, int& nn);
+                             int& nx, int& ny, int& nn, int desired_channels = 3);
 
 private:
   std::vector<float*> rawDataFloat;
@@ -48,8 +48,8 @@ private:
   std::unordered_map<std::string, std::tuple<int, int, int> > hashTableDims;
   
   static std::string StandardizeFilename(const std::string& filename);
-  float* LoadImageFloat(const std::string& filename, int& width, int& height, int& channels);
-  unsigned char * LoadImageChar(const std::string& filename, int& width, int& height, int& channels);
+  float* LoadImageFloat(const std::string& filename, int& width, int& height, int& channels, int desired_channels);
+  unsigned char * LoadImageChar(const std::string& filename, int& width, int& height, int& channels, int desired_channels);
   
 };
 

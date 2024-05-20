@@ -543,6 +543,16 @@ disk = function(x = 0, y = 0, z = 0, radius = 1, inner_radius = 0, material = di
 #' @param importance_sample_lights Default `TRUE`. Whether to importance sample lights specified in the OBJ material
 #' (objects with a non-zero Ke MTL material).
 #' @param subdivision_levels Default `1`. Number of Loop subdivisions to be applied to the mesh.
+#' @param displacement_texture Default `NA`. File path to the displacement texture. 
+#' This texture is used to displace the vertices of the mesh based on the texture's pixel values.
+#' @param displacement_intensity Default `1`. Intensity of the displacement effect. 
+#' Higher values result in greater displacement.
+#' @param displacement_vector Default `FALSE`. Whether to use vector displacement. 
+#' If `TRUE`, the displacement texture is interpreted as providing a 3D displacement vector. 
+#' Otherwise, the texture is interpreted as providing a scalar displacement.
+#' @param recalculate_normals Default `FALSE`. Whether to recalculate vertex normals based on the 
+#' connecting face orientations. This can be used to compute normals for meshes lacking them or
+#' to calculate new normals after a displacement map has been applied to the mesh.
 #' @param material Default  \code{\link{diffuse}}.The material, called from one of the material 
 #' functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}. 
 #' @param angle Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.
@@ -2216,6 +2226,9 @@ text3d = function(label, x = 0, y = 0, z = 0, text_height = 1, orientation = "xy
 #' @param scale_ply Default `1`. Amount to scale the model. Use this to scale the object up or down on all axes, as it is
 #' more robust to numerical precision errors than the generic scale option.
 #' @param subdivision_levels Default `1`. Number of Loop subdivisions to be applied to the mesh. 
+#' @param recalculate_normals Default `FALSE`. Whether to recalculate vertex normals based on the 
+#' connecting face orientations. This can be used to compute normals for meshes lacking them or
+#' to calculate new normals after a displacement map has been applied to the mesh.
 #' @param material Default  \code{\link{diffuse}}.The material, called from one of the material 
 #' functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}. 
 #' @param angle Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.
@@ -2232,6 +2245,7 @@ text3d = function(label, x = 0, y = 0, z = 0, text_height = 1, orientation = "xy
 #' #See the documentation for `obj_model()`--no example PLY models are included with this package,
 #' #but the process of loading a model is the same (without support for vertex colors).
 ply_model = function(filename, x = 0, y = 0, z = 0, scale_ply = 1, subdivision_levels = 1,
+                     recalculate_normals = FALSE,
                      material = diffuse(), 
                      angle = c(0, 0, 0), order_rotation = c(1, 2, 3), 
                      flipped = FALSE, scale = c(1,1,1)) {
@@ -2275,7 +2289,8 @@ ply_model = function(filename, x = 0, y = 0, z = 0, scale_ply = 1, subdivision_l
                       material = material,
                       shape_info = ray_shape_info(shape_properties = list(scale_ply = scale_ply,
                                                                           basename = base_dir(filename),
-                                                                          subdivision_levels = subdivision_levels),
+                                                                          subdivision_levels = subdivision_levels,
+                                                                          recalculate_normals = recalculate_normals),
                                                   tricolorinfo = list(NA), 
                                                   fileinfo = filename,
                                                   material_id = NA_integer_,  
@@ -2310,6 +2325,16 @@ ply_model = function(filename, x = 0, y = 0, z = 0, scale_ply = 1, subdivision_l
 #' @param override_material Default `FALSE`. If `TRUE`, overrides the material specified in the 
 #' `mesh3d` object with the one specified in `material`.
 #' @param subdivision_levels Default `1`. Number of Loop subdivisions to be applied to the mesh.
+#' @param displacement_texture Default `NA`. File path to the displacement texture. 
+#' This texture is used to displace the vertices of the mesh based on the texture's pixel values.
+#' @param displacement_intensity Default `1`. Intensity of the displacement effect. 
+#' Higher values result in greater displacement.
+#' @param displacement_vector Default `FALSE`. Whether to use vector displacement. 
+#' If `TRUE`, the displacement texture is interpreted as providing a 3D displacement vector. 
+#' Otherwise, the texture is interpreted as providing a scalar displacement.
+#' @param recalculate_normals Default `FALSE`. Whether to recalculate vertex normals based on the 
+#' connecting face orientations. This can be used to compute normals for meshes lacking them or
+#' to calculate new normals after a displacement map has been applied to the mesh.
 #' @param material Default  \code{\link{diffuse}}.The material, called from one of the material 
 #' functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}. 
 #' @param angle Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.
@@ -3347,6 +3372,16 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
 #' @param importance_sample_lights Default `TRUE`. Whether to importance sample lights specified in the OBJ material
 #' (objects with a non-zero Ke MTL material).
 #' @param subdivision_levels Default `1`. Number of Loop subdivisions to be applied to the mesh.
+#' @param displacement_texture Default `NA`. File path to the displacement texture. 
+#' This texture is used to displace the vertices of the mesh based on the texture's pixel values.
+#' @param displacement_intensity Default `1`. Intensity of the displacement effect. 
+#' Higher values result in greater displacement.
+#' @param displacement_vector Default `FALSE`. Whether to use vector displacement. 
+#' If `TRUE`, the displacement texture is interpreted as providing a 3D displacement vector. 
+#' Otherwise, the texture is interpreted as providing a scalar displacement.
+#' @param recalculate_normals Default `FALSE`. Whether to recalculate vertex normals based on the 
+#' connecting face orientations. This can be used to compute normals for meshes lacking them or
+#' to calculate new normals after a displacement map has been applied to the mesh.
 #' @param validate_mesh Default `TRUE`. Validates the `raymesh` object using `rayvertex::validate_mesh()` 
 #' before parsing to ensure correct parsing. Set to `FALSE` to speed up scene construction if `raymesh_model()` 
 #' is taking a long time (Note: this does not affect rendering time).

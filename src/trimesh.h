@@ -11,15 +11,18 @@
 #endif
 #include <Rcpp.h>
 
+class TextureCache;
 
 class trimesh : public hitable {
 public:
   trimesh() {}
   trimesh(std::string inputfile, std::string basedir, Float scale, Float sigma,
-          std::shared_ptr<material> default_material, bool load_materials, bool load_textures, bool load_vertex_colors,
+          std::shared_ptr<material> default_material, 
+          std::shared_ptr<alpha_texture> alpha_default, std::shared_ptr<bump_texture> bump_default,
+          bool load_materials, bool load_textures, bool load_vertex_colors,
           bool importance_sample_lights, bool load_normals, bool calculate_consistent_normals,
           int subdivision_levels, std::string displacement_texture, Float displacement,
-          bool displacement_vector,
+          bool displacement_vector, TextureCache& texCache, bool recalculate_normals,
           hitable_list& imp_sample_objects,
           Float shutteropen, Float shutterclose, int bvh_type, random_gen rng, bool verbose,
           std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation);

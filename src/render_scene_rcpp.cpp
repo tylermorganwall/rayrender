@@ -130,8 +130,7 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
 
   Environment pkg = Environment::namespace_env("rayrender");
   Function print_time = pkg["print_time"];
-  size_t n = shape.length();
-  
+
 
   //Unpack Camera Info
   int nx = as<int>(camera_info["nx"]);
@@ -295,7 +294,7 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
   std::shared_ptr<Transform> BackgroundTransform = transformCacheBg.Lookup(BackgroundAngle);
   std::shared_ptr<Transform> BackgroundTransformInv = transformCacheBg.Lookup(BackgroundAngle.GetInverseMatrix());
   if(hasbackground) {
-    background_texture_data = texCache.LookupFloat(background, nx1, ny1, nn1);
+    background_texture_data = texCache.LookupFloat(background, nx1, ny1, nn1, 3);
     // nn1 = 3;
     // texture_bytes += nx1 * ny1 * nn1;
     
@@ -384,20 +383,6 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
                clampval, max_depth, roulette_active, Display);
   }
   
-  // for(int i = 0; i < textures.size(); i++) {
-  //   if(textures[i]) {
-  //     stbi_image_free(textures[i]);
-  //   }
-  //   if(alpha_textures[i]) {
-  //     stbi_image_free(alpha_textures[i]);
-  //   }
-  //   if(bump_textures[i]) {
-  //     stbi_image_free(bump_textures[i]);
-  //   }
-  //   if(roughness_textures[i]) {
-  //     stbi_image_free(roughness_textures[i]);
-  //   }
-  // }
   delete shared_materials;
   PutRNGstate();
   print_time(verbose, "Finished rendering" );

@@ -24,8 +24,8 @@ glossy(
   image_repeat = 1,
   alpha_texture = NA_character_,
   bump_texture = NA_character_,
-  roughness_texture = NA_character_,
   bump_intensity = 1,
+  roughness_texture = NA_character_,
   roughness_range = c(1e-04, 0.2),
   roughness_flip = FALSE,
   importance_sample = FALSE
@@ -84,10 +84,10 @@ begins with value `gradient_color`.}
 \item{bump_texture}{Default `NA`. A matrix, array, or filename (specifying a greyscale image) to 
 be used to specify a bump map for the surface.}
 
+\item{bump_intensity}{Default `1`. Intensity of the bump map. High values may lead to unphysical results.}
+
 \item{roughness_texture}{Default `NA`. A matrix, array, or filename (specifying a greyscale image) to 
 be used to specify a roughness map for the surface.}
-
-\item{bump_intensity}{Default `1`. Intensity of the bump map. High values may lead to unphysical results.}
 
 \item{roughness_range}{Default ` c(0.0001, 0.2)`. This is a length-2 vector that specifies the range of roughness values 
 that the `roughness_texture` can take.}
