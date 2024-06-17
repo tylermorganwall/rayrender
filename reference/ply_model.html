@@ -98,6 +98,7 @@ Note: light importance sampling currently not supported for this shape.</p>
 <span>  z <span class="op">=</span> <span class="fl">0</span>,</span>
 <span>  scale_ply <span class="op">=</span> <span class="fl">1</span>,</span>
 <span>  subdivision_levels <span class="op">=</span> <span class="fl">1</span>,</span>
+<span>  recalculate_normals <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  material <span class="op">=</span> <span class="fu"><a href="diffuse.html">diffuse</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  angle <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">0</span>, <span class="fl">0</span><span class="op">)</span>,</span>
 <span>  order_rotation <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">2</span>, <span class="fl">3</span><span class="op">)</span>,</span>
@@ -131,6 +132,12 @@ more robust to numerical precision errors than the generic scale option.</p></dd
 
 <dt>subdivision_levels</dt>
 <dd><p>Default `1`. Number of Loop subdivisions to be applied to the mesh.</p></dd>
+
+
+<dt>recalculate_normals</dt>
+<dd><p>Default `FALSE`. Whether to recalculate vertex normals based on the 
+connecting face orientations. This can be used to compute normals for meshes lacking them or
+to calculate new normals after a displacement map has been applied to the mesh.</p></dd>
 
 
 <dt>material</dt>

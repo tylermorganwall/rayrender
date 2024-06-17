@@ -109,8 +109,8 @@
 <span>  image_repeat <span class="op">=</span> <span class="fl">1</span>,</span>
 <span>  alpha_texture <span class="op">=</span> <span class="cn">NA_character_</span>,</span>
 <span>  bump_texture <span class="op">=</span> <span class="cn">NA_character_</span>,</span>
-<span>  roughness_texture <span class="op">=</span> <span class="cn">NA_character_</span>,</span>
 <span>  bump_intensity <span class="op">=</span> <span class="fl">1</span>,</span>
+<span>  roughness_texture <span class="op">=</span> <span class="cn">NA_character_</span>,</span>
 <span>  roughness_range <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1e-04</span>, <span class="fl">0.2</span><span class="op">)</span>,</span>
 <span>  roughness_flip <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  importance_sample <span class="op">=</span> <span class="cn">FALSE</span></span>
@@ -209,13 +209,13 @@ begins with value `gradient_color`.</p></dd>
 be used to specify a bump map for the surface.</p></dd>
 
 
+<dt>bump_intensity</dt>
+<dd><p>Default `1`. Intensity of the bump map. High values may lead to unphysical results.</p></dd>
+
+
 <dt>roughness_texture</dt>
 <dd><p>Default `NA`. A matrix, array, or filename (specifying a greyscale image) to 
 be used to specify a roughness map for the surface.</p></dd>
-
-
-<dt>bump_intensity</dt>
-<dd><p>Default `1`. Intensity of the bump map. High values may lead to unphysical results.</p></dd>
 
 
 <dt>roughness_range</dt>
