@@ -150,7 +150,6 @@ unsigned char * TextureCache::LoadImageChar(const std::string& filename, int& wi
   fs::path filepath(input);
 
   unsigned char * data = nullptr;
-  const char* err = nullptr;
   data = stbi_load(standardizedFilename.c_str(), &width, &height, &channels, desired_channels);
   if (!data) {
     throw std::runtime_error("Loading of '" + standardizedFilename  +

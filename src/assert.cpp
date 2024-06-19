@@ -1,5 +1,6 @@
 #include "assert.h"
 #include <string>
+#include <stdexcept>
 
 // Function to throw error if condition is false
 void assertCondition(bool condition, const char* conditionStr) {
