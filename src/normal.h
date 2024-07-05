@@ -12,7 +12,7 @@ public:
   normal3() {}
   normal3(T e0, T e1, T e2) {e[0] = e0; e[1] = e1; e[2] = e2;}
   normal3(T e0) {e[0] = e0; e[1] = e0; e[2] = e0;}
-  template <typename U> normal3<T>(const vec3<U> &p) { 
+  template <typename U> normal3(const vec3<U> &p) { 
     e[0] = (T)p.x();
     e[1] = (T)p.y();
     e[2] = (T)p.z();

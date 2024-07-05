@@ -13,8 +13,8 @@ template <typename T> class point2 {
 public:
   point2() {}
   point2(T e0, T e1) {e[0] = e0; e[1] = e1;}
-  explicit point2<T>(const vec3<T> &p) { e[0] = p.x(); e[1] = p.y(); }
-  explicit point2<T>(const point3<T> &p) { e[0] = p.x(); e[1] = p.y(); }
+  explicit point2(const vec3<T> &p) { e[0] = p.x(); e[1] = p.y(); }
+  explicit point2(const point3<T> &p) { e[0] = p.x(); e[1] = p.y(); }
   
   inline T x() const { return e[0]; }
   inline T y() const { return e[1]; }
