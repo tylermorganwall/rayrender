@@ -3,7 +3,7 @@
 <script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
 <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
 <![endif]--></head><body data-spy="scroll" data-target="#toc">
-    
+
 
     <div class="container template-reference-topic">
       <header><div class="navbar navbar-inverse navbar-fixed-top" role="navigation">
@@ -25,13 +25,13 @@
       <ul class="nav navbar-nav"><li>
   <a href="../index.html">
     <span class="fa fa-home"></span>
-     
+
   </a>
 </li>
 <li class="dropdown">
   <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
     Tutorials/Demos
-     
+
     <span class="caret"></span>
   </a>
   <ul class="dropdown-menu" role="menu"><li>
@@ -59,14 +59,14 @@
       </ul><ul class="nav navbar-nav navbar-right"><li>
   <a href="../reference/index.html">
     <span class="fa fa-file-code-o"></span>
-     
+
     functions
   </a>
 </li>
 <li>
   <a href="https://github.com/tylermorganwall/rayrender" class="external-link">
     <span class="fa fa-github fa-lg"></span>
-     
+
     GitHub
   </a>
 </li>
@@ -74,13 +74,13 @@
   </div><!--/.container -->
 </div><!--/.navbar -->
 
-      
+
 
       </header><div class="row">
   <div class="col-md-9 contents">
     <div class="page-header">
     <h1>Diffuse Material</h1>
-    <small class="dont-index">Source: <a href="https://github.com/tylermorganwall/rayrender/blob/HEAD/R/materials.R" class="external-link"><code>R/materials.R</code></a></small>
+    <small class="dont-index">Source: <a href="https://github.com/tylermorganwall/rayrender/blob/master/R/materials.R" class="external-link"><code>R/materials.R</code></a></small>
     <div class="hidden name"><code>diffuse.Rd</code></div>
     </div>
 
@@ -116,104 +116,106 @@
 
     <div id="arguments">
     <h2>Arguments</h2>
-    <dl><dt>color</dt>
+
+
+<dl><dt id="arg-color">color<a class="anchor" aria-label="anchor" href="#arg-color"></a></dt>
 <dd><p>Default `white`. The color of the surface. Can be either
 a hexadecimal code, R color string, or a numeric rgb vector listing three intensities between `0` and `1`.</p></dd>
 
 
-<dt>checkercolor</dt>
-<dd><p>Default `NA`. If not `NA`, determines the secondary color of the checkered surface. 
+<dt id="arg-checkercolor">checkercolor<a class="anchor" aria-label="anchor" href="#arg-checkercolor"></a></dt>
+<dd><p>Default `NA`. If not `NA`, determines the secondary color of the checkered surface.
 Can be either a hexadecimal code, or a numeric rgb vector listing three intensities between `0` and `1`.</p></dd>
 
 
-<dt>checkerperiod</dt>
-<dd><p>Default `3`. The period of the checker pattern. Increasing this value makes the checker 
+<dt id="arg-checkerperiod">checkerperiod<a class="anchor" aria-label="anchor" href="#arg-checkerperiod"></a></dt>
+<dd><p>Default `3`. The period of the checker pattern. Increasing this value makes the checker
 pattern bigger, and decreasing it makes it smaller</p></dd>
 
 
-<dt>noise</dt>
+<dt id="arg-noise">noise<a class="anchor" aria-label="anchor" href="#arg-noise"></a></dt>
 <dd><p>Default `0`. If not `0`, covers the surface in a turbulent marble pattern. This value will determine
 the amount of turbulence in the texture.</p></dd>
 
 
-<dt>noisephase</dt>
+<dt id="arg-noisephase">noisephase<a class="anchor" aria-label="anchor" href="#arg-noisephase"></a></dt>
 <dd><p>Default `0`. The phase of the noise. The noise will repeat at `360`.</p></dd>
 
 
-<dt>noiseintensity</dt>
+<dt id="arg-noiseintensity">noiseintensity<a class="anchor" aria-label="anchor" href="#arg-noiseintensity"></a></dt>
 <dd><p>Default `10`. Intensity of the noise.</p></dd>
 
 
-<dt>noisecolor</dt>
+<dt id="arg-noisecolor">noisecolor<a class="anchor" aria-label="anchor" href="#arg-noisecolor"></a></dt>
 <dd><p>Default `#000000`. The secondary color of the noise pattern.
 Can be either a hexadecimal code, or a numeric rgb vector listing three intensities between `0` and `1`.</p></dd>
 
 
-<dt>gradient_color</dt>
-<dd><p>Default `NA`. If not `NA`, creates a secondary color for a linear gradient 
+<dt id="arg-gradient-color">gradient_color<a class="anchor" aria-label="anchor" href="#arg-gradient-color"></a></dt>
+<dd><p>Default `NA`. If not `NA`, creates a secondary color for a linear gradient
 between the this color and color specified in `color`. Direction is determined by `gradient_transpose`.</p></dd>
 
 
-<dt>gradient_transpose</dt>
+<dt id="arg-gradient-transpose">gradient_transpose<a class="anchor" aria-label="anchor" href="#arg-gradient-transpose"></a></dt>
 <dd><p>Default `FALSE`. If `TRUE`, this will use the `v` coordinate texture instead
 of the `u` coordinate texture to map the gradient.</p></dd>
 
 
-<dt>gradient_point_start</dt>
-<dd><p>Default `NA`. If not `NA`, this changes the behavior from mapping texture coordinates to 
+<dt id="arg-gradient-point-start">gradient_point_start<a class="anchor" aria-label="anchor" href="#arg-gradient-point-start"></a></dt>
+<dd><p>Default `NA`. If not `NA`, this changes the behavior from mapping texture coordinates to
 mapping to world space coordinates. This should be a length-3 vector specifying the x,y, and z points where the gradient
 begins with value `color`.</p></dd>
 
 
-<dt>gradient_point_end</dt>
-<dd><p>Default `NA`. If not `NA`, this changes the behavior from mapping texture coordinates to 
+<dt id="arg-gradient-point-end">gradient_point_end<a class="anchor" aria-label="anchor" href="#arg-gradient-point-end"></a></dt>
+<dd><p>Default `NA`. If not `NA`, this changes the behavior from mapping texture coordinates to
 mapping to world space coordinates. This should be a length-3 vector specifying the x,y, and z points where the gradient
 begins with value `gradient_color`.</p></dd>
 
 
-<dt>gradient_type</dt>
+<dt id="arg-gradient-type">gradient_type<a class="anchor" aria-label="anchor" href="#arg-gradient-type"></a></dt>
 <dd><p>Default `hsv`. Colorspace to calculate the gradient. Alternative `rgb`.</p></dd>
 
 
-<dt>image_texture</dt>
+<dt id="arg-image-texture">image_texture<a class="anchor" aria-label="anchor" href="#arg-image-texture"></a></dt>
 <dd><p>Default `NA`. A 3-layer RGB array or filename to be used as the texture on the surface of the object.</p></dd>
 
 
-<dt>image_repeat</dt>
+<dt id="arg-image-repeat">image_repeat<a class="anchor" aria-label="anchor" href="#arg-image-repeat"></a></dt>
 <dd><p>Default `1`. Number of times to repeat the image across the surface.
 `u` and `v` repeat amount can be set independently if user passes in a length-2 vector.</p></dd>
 
 
-<dt>alpha_texture</dt>
-<dd><p>Default `NA`. A matrix or filename (specifying a greyscale image) to 
+<dt id="arg-alpha-texture">alpha_texture<a class="anchor" aria-label="anchor" href="#arg-alpha-texture"></a></dt>
+<dd><p>Default `NA`. A matrix or filename (specifying a greyscale image) to
 be used to specify the transparency.</p></dd>
 
 
-<dt>bump_texture</dt>
-<dd><p>Default `NA`. A matrix, array, or filename (specifying a greyscale image) to 
+<dt id="arg-bump-texture">bump_texture<a class="anchor" aria-label="anchor" href="#arg-bump-texture"></a></dt>
+<dd><p>Default `NA`. A matrix, array, or filename (specifying a greyscale image) to
 be used to specify a bump map for the surface.</p></dd>
 
 
-<dt>bump_intensity</dt>
+<dt id="arg-bump-intensity">bump_intensity<a class="anchor" aria-label="anchor" href="#arg-bump-intensity"></a></dt>
 <dd><p>Default `1`. Intensity of the bump map. High values may lead to unphysical results.</p></dd>
 
 
-<dt>fog</dt>
+<dt id="arg-fog">fog<a class="anchor" aria-label="anchor" href="#arg-fog"></a></dt>
 <dd><p>Default `FALSE`. If `TRUE`, the object will be a volumetric scatterer.</p></dd>
 
 
-<dt>fogdensity</dt>
+<dt id="arg-fogdensity">fogdensity<a class="anchor" aria-label="anchor" href="#arg-fogdensity"></a></dt>
 <dd><p>Default `0.01`. The density of the fog. Higher values will produce more opaque objects.</p></dd>
 
 
-<dt>sigma</dt>
+<dt id="arg-sigma">sigma<a class="anchor" aria-label="anchor" href="#arg-sigma"></a></dt>
 <dd><p>Default `NULL`. A number between 0 and Infinity specifying the roughness of the surface using the Oren-Nayar microfacet model.
 Higher numbers indicate a roughed surface, where sigma is the standard deviation of the microfacet orientation angle. When 0, this reverts
 to the default lambertian behavior.</p></dd>
 
 
-<dt>importance_sample</dt>
-<dd><p>Default `FALSE`. If `TRUE`, the object will be sampled explicitly during 
+<dt id="arg-importance-sample">importance_sample<a class="anchor" aria-label="anchor" href="#arg-importance-sample"></a></dt>
+<dd><p>Default `FALSE`. If `TRUE`, the object will be sampled explicitly during
 the rendering process. If the object is particularly important in contributing to the light paths
 in the image (e.g. light sources, refracting glass ball with caustics, metal objects concentrating light),
 this will help with the convergence of the image.</p></dd>
@@ -221,9 +223,7 @@ this will help with the convergence of the image.</p></dd>
 </dl></div>
     <div id="value">
     <h2>Value</h2>
-    
-
-<p>Single row of a tibble describing the diffuse material.</p>
+    <p>Single row of a tibble describing the diffuse material.</p>
     </div>
 
     <div id="ref-examples">
@@ -290,15 +290,15 @@ this will help with the convergence of the image.</p></dd>
 </div>
 
 <div class="pkgdown">
-  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.9.</p>
+  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.0.</p>
 </div>
 
       </footer></div>
 
-  
 
 
-  
+
+
 
   </body></html>
 

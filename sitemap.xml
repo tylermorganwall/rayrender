@@ -1,354 +1,120 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url>
-    <loc>/404.html</loc>
-  </url>
-  <url>
-    <loc>/CODE_OF_CONDUCT.html</loc>
-  </url>
-  <url>
-    <loc>/CONTRIBUTING.html</loc>
-  </url>
-  <url>
-    <loc>/authors.html</loc>
-  </url>
-  <url>
-    <loc>/index.html</loc>
-  </url>
-  <url>
-    <loc>/reference/RotateAxis.html</loc>
-  </url>
-  <url>
-    <loc>/reference/RotateX.html</loc>
-  </url>
-  <url>
-    <loc>/reference/RotateY.html</loc>
-  </url>
-  <url>
-    <loc>/reference/RotateZ.html</loc>
-  </url>
-  <url>
-    <loc>/reference/add_object.html</loc>
-  </url>
-  <url>
-    <loc>/reference/add_points_polygon.html</loc>
-  </url>
-  <url>
-    <loc>/reference/animate_objects.html</loc>
-  </url>
-  <url>
-    <loc>/reference/arrow.html</loc>
-  </url>
-  <url>
-    <loc>/reference/bezier_curve.html</loc>
-  </url>
-  <url>
-    <loc>/reference/calculate_control_points.html</loc>
-  </url>
-  <url>
-    <loc>/reference/calculate_control_points_straight.html</loc>
-  </url>
-  <url>
-    <loc>/reference/calculate_distance_along_bezier_curve.html</loc>
-  </url>
-  <url>
-    <loc>/reference/calculate_final_path.html</loc>
-  </url>
-  <url>
-    <loc>/reference/calculate_final_twist.html</loc>
-  </url>
-  <url>
-    <loc>/reference/check_image_texture.html</loc>
-  </url>
-  <url>
-    <loc>/reference/clamp.html</loc>
-  </url>
-  <url>
-    <loc>/reference/cone.html</loc>
-  </url>
-  <url>
-    <loc>/reference/convert_color.html</loc>
-  </url>
-  <url>
-    <loc>/reference/create_instances.html</loc>
-  </url>
-  <url>
-    <loc>/reference/cross_prod.html</loc>
-  </url>
-  <url>
-    <loc>/reference/csg_box.html</loc>
-  </url>
-  <url>
-    <loc>/reference/csg_capsule.html</loc>
-  </url>
-  <url>
-    <loc>/reference/csg_combine.html</loc>
-  </url>
-  <url>
-    <loc>/reference/csg_cone.html</loc>
-  </url>
-  <url>
-    <loc>/reference/csg_cylinder.html</loc>
-  </url>
-  <url>
-    <loc>/reference/csg_ellipsoid.html</loc>
-  </url>
-  <url>
-    <loc>/reference/csg_elongate.html</loc>
-  </url>
-  <url>
-    <loc>/reference/csg_group.html</loc>
-  </url>
-  <url>
-    <loc>/reference/csg_object.html</loc>
-  </url>
-  <url>
-    <loc>/reference/csg_onion.html</loc>
-  </url>
-  <url>
-    <loc>/reference/csg_plane.html</loc>
-  </url>
-  <url>
-    <loc>/reference/csg_pyramid.html</loc>
-  </url>
-  <url>
-    <loc>/reference/csg_rotate.html</loc>
-  </url>
-  <url>
-    <loc>/reference/csg_round.html</loc>
-  </url>
-  <url>
-    <loc>/reference/csg_rounded_cone.html</loc>
-  </url>
-  <url>
-    <loc>/reference/csg_scale.html</loc>
-  </url>
-  <url>
-    <loc>/reference/csg_sphere.html</loc>
-  </url>
-  <url>
-    <loc>/reference/csg_torus.html</loc>
-  </url>
-  <url>
-    <loc>/reference/csg_translate.html</loc>
-  </url>
-  <url>
-    <loc>/reference/csg_triangle.html</loc>
-  </url>
-  <url>
-    <loc>/reference/cube.html</loc>
-  </url>
-  <url>
-    <loc>/reference/cubicInOut.html</loc>
-  </url>
-  <url>
-    <loc>/reference/cylinder.html</loc>
-  </url>
-  <url>
-    <loc>/reference/dielectric.html</loc>
-  </url>
-  <url>
-    <loc>/reference/diffuse.html</loc>
-  </url>
-  <url>
-    <loc>/reference/disk.html</loc>
-  </url>
-  <url>
-    <loc>/reference/ellipsoid.html</loc>
-  </url>
-  <url>
-    <loc>/reference/eval_bezier.html</loc>
-  </url>
-  <url>
-    <loc>/reference/eval_bezier_2nd_deriv.html</loc>
-  </url>
-  <url>
-    <loc>/reference/eval_bezier_deriv.html</loc>
-  </url>
-  <url>
-    <loc>/reference/expInOut.html</loc>
-  </url>
-  <url>
-    <loc>/reference/extruded_path.html</loc>
-  </url>
-  <url>
-    <loc>/reference/extruded_polygon.html</loc>
-  </url>
-  <url>
-    <loc>/reference/fliplr.html</loc>
-  </url>
-  <url>
-    <loc>/reference/flipud.html</loc>
-  </url>
-  <url>
-    <loc>/reference/generate_camera_motion.html</loc>
-  </url>
-  <url>
-    <loc>/reference/generate_cornell.html</loc>
-  </url>
-  <url>
-    <loc>/reference/generate_ground.html</loc>
-  </url>
-  <url>
-    <loc>/reference/generate_rotation_matrix.html</loc>
-  </url>
-  <url>
-    <loc>/reference/generate_studio.html</loc>
-  </url>
-  <url>
-    <loc>/reference/generate_translation_matrix.html</loc>
-  </url>
-  <url>
-    <loc>/reference/get_saved_keyframes.html</loc>
-  </url>
-  <url>
-    <loc>/reference/get_time.html</loc>
-  </url>
-  <url>
-    <loc>/reference/glossy.html</loc>
-  </url>
-  <url>
-    <loc>/reference/group_objects.html</loc>
-  </url>
-  <url>
-    <loc>/reference/hair.html</loc>
-  </url>
-  <url>
-    <loc>/reference/index.html</loc>
-  </url>
-  <url>
-    <loc>/reference/init_time.html</loc>
-  </url>
-  <url>
-    <loc>/reference/is_rendering_in_knitr.html</loc>
-  </url>
-  <url>
-    <loc>/reference/lambertian.html</loc>
-  </url>
-  <url>
-    <loc>/reference/lerp.html</loc>
-  </url>
-  <url>
-    <loc>/reference/light.html</loc>
-  </url>
-  <url>
-    <loc>/reference/mesh3d_model.html</loc>
-  </url>
-  <url>
-    <loc>/reference/metal.html</loc>
-  </url>
-  <url>
-    <loc>/reference/microfacet.html</loc>
-  </url>
-  <url>
-    <loc>/reference/new_tibble_row.html</loc>
-  </url>
-  <url>
-    <loc>/reference/obj_model.html</loc>
-  </url>
-  <url>
-    <loc>/reference/path.html</loc>
-  </url>
-  <url>
-    <loc>/reference/pig.html</loc>
-  </url>
-  <url>
-    <loc>/reference/pipe.html</loc>
-  </url>
-  <url>
-    <loc>/reference/ply_model.html</loc>
-  </url>
-  <url>
-    <loc>/reference/post_process_frame.html</loc>
-  </url>
-  <url>
-    <loc>/reference/post_process_scene.html</loc>
-  </url>
-  <url>
-    <loc>/reference/prepare_scene_list.html</loc>
-  </url>
-  <url>
-    <loc>/reference/print_time.html</loc>
-  </url>
-  <url>
-    <loc>/reference/process_point_series.html</loc>
-  </url>
-  <url>
-    <loc>/reference/process_point_series_1d.html</loc>
-  </url>
-  <url>
-    <loc>/reference/process_point_series_2d.html</loc>
-  </url>
-  <url>
-    <loc>/reference/process_scene.html</loc>
-  </url>
-  <url>
-    <loc>/reference/quadInOut.html</loc>
-  </url>
-  <url>
-    <loc>/reference/r_obj.html</loc>
-  </url>
-  <url>
-    <loc>/reference/ray_animated_transform.html</loc>
-  </url>
-  <url>
-    <loc>/reference/ray_material.html</loc>
-  </url>
-  <url>
-    <loc>/reference/ray_scene.html</loc>
-  </url>
-  <url>
-    <loc>/reference/ray_shape_info.html</loc>
-  </url>
-  <url>
-    <loc>/reference/ray_transform.html</loc>
-  </url>
-  <url>
-    <loc>/reference/raymesh_model.html</loc>
-  </url>
-  <url>
-    <loc>/reference/render_animation.html</loc>
-  </url>
-  <url>
-    <loc>/reference/render_ao.html</loc>
-  </url>
-  <url>
-    <loc>/reference/render_preview.html</loc>
-  </url>
-  <url>
-    <loc>/reference/render_scene.html</loc>
-  </url>
-  <url>
-    <loc>/reference/run_documentation.html</loc>
-  </url>
-  <url>
-    <loc>/reference/save_png.html</loc>
-  </url>
-  <url>
-    <loc>/reference/segment.html</loc>
-  </url>
-  <url>
-    <loc>/reference/slerp.html</loc>
-  </url>
-  <url>
-    <loc>/reference/sphere.html</loc>
-  </url>
-  <url>
-    <loc>/reference/text3d.html</loc>
-  </url>
-  <url>
-    <loc>/reference/triangle.html</loc>
-  </url>
-  <url>
-    <loc>/reference/tween.html</loc>
-  </url>
-  <url>
-    <loc>/reference/xy_rect.html</loc>
-  </url>
-  <url>
-    <loc>/reference/xz_rect.html</loc>
-  </url>
-  <url>
-    <loc>/reference/yz_rect.html</loc>
-  </url>
+<urlset xmlns = 'http://www.sitemaps.org/schemas/sitemap/0.9'>
+<url><loc>/404.html</loc></url>
+<url><loc>/CODE_OF_CONDUCT.html</loc></url>
+<url><loc>/CONTRIBUTING.html</loc></url>
+<url><loc>/authors.html</loc></url>
+<url><loc>/index.html</loc></url>
+<url><loc>/reference/RotateAxis.html</loc></url>
+<url><loc>/reference/RotateX.html</loc></url>
+<url><loc>/reference/RotateY.html</loc></url>
+<url><loc>/reference/RotateZ.html</loc></url>
+<url><loc>/reference/add_object.html</loc></url>
+<url><loc>/reference/add_points_polygon.html</loc></url>
+<url><loc>/reference/animate_objects.html</loc></url>
+<url><loc>/reference/arrow.html</loc></url>
+<url><loc>/reference/bezier_curve.html</loc></url>
+<url><loc>/reference/calculate_control_points.html</loc></url>
+<url><loc>/reference/calculate_control_points_straight.html</loc></url>
+<url><loc>/reference/calculate_distance_along_bezier_curve.html</loc></url>
+<url><loc>/reference/calculate_final_path.html</loc></url>
+<url><loc>/reference/calculate_final_twist.html</loc></url>
+<url><loc>/reference/check_image_texture.html</loc></url>
+<url><loc>/reference/clamp.html</loc></url>
+<url><loc>/reference/cone.html</loc></url>
+<url><loc>/reference/convert_color.html</loc></url>
+<url><loc>/reference/create_instances.html</loc></url>
+<url><loc>/reference/cross_prod.html</loc></url>
+<url><loc>/reference/csg_box.html</loc></url>
+<url><loc>/reference/csg_capsule.html</loc></url>
+<url><loc>/reference/csg_combine.html</loc></url>
+<url><loc>/reference/csg_cone.html</loc></url>
+<url><loc>/reference/csg_cylinder.html</loc></url>
+<url><loc>/reference/csg_ellipsoid.html</loc></url>
+<url><loc>/reference/csg_elongate.html</loc></url>
+<url><loc>/reference/csg_group.html</loc></url>
+<url><loc>/reference/csg_object.html</loc></url>
+<url><loc>/reference/csg_onion.html</loc></url>
+<url><loc>/reference/csg_plane.html</loc></url>
+<url><loc>/reference/csg_pyramid.html</loc></url>
+<url><loc>/reference/csg_rotate.html</loc></url>
+<url><loc>/reference/csg_round.html</loc></url>
+<url><loc>/reference/csg_rounded_cone.html</loc></url>
+<url><loc>/reference/csg_scale.html</loc></url>
+<url><loc>/reference/csg_sphere.html</loc></url>
+<url><loc>/reference/csg_torus.html</loc></url>
+<url><loc>/reference/csg_translate.html</loc></url>
+<url><loc>/reference/csg_triangle.html</loc></url>
+<url><loc>/reference/cube.html</loc></url>
+<url><loc>/reference/cubicInOut.html</loc></url>
+<url><loc>/reference/cylinder.html</loc></url>
+<url><loc>/reference/dielectric.html</loc></url>
+<url><loc>/reference/diffuse.html</loc></url>
+<url><loc>/reference/disk.html</loc></url>
+<url><loc>/reference/ellipsoid.html</loc></url>
+<url><loc>/reference/eval_bezier.html</loc></url>
+<url><loc>/reference/eval_bezier_2nd_deriv.html</loc></url>
+<url><loc>/reference/eval_bezier_deriv.html</loc></url>
+<url><loc>/reference/expInOut.html</loc></url>
+<url><loc>/reference/extruded_path.html</loc></url>
+<url><loc>/reference/extruded_polygon.html</loc></url>
+<url><loc>/reference/fliplr.html</loc></url>
+<url><loc>/reference/flipud.html</loc></url>
+<url><loc>/reference/generate_camera_motion.html</loc></url>
+<url><loc>/reference/generate_cornell.html</loc></url>
+<url><loc>/reference/generate_ground.html</loc></url>
+<url><loc>/reference/generate_rotation_matrix.html</loc></url>
+<url><loc>/reference/generate_studio.html</loc></url>
+<url><loc>/reference/generate_translation_matrix.html</loc></url>
+<url><loc>/reference/get_saved_keyframes.html</loc></url>
+<url><loc>/reference/get_time.html</loc></url>
+<url><loc>/reference/glossy.html</loc></url>
+<url><loc>/reference/group_objects.html</loc></url>
+<url><loc>/reference/hair.html</loc></url>
+<url><loc>/reference/index.html</loc></url>
+<url><loc>/reference/init_time.html</loc></url>
+<url><loc>/reference/is_rendering_in_knitr.html</loc></url>
+<url><loc>/reference/lambertian.html</loc></url>
+<url><loc>/reference/lerp.html</loc></url>
+<url><loc>/reference/light.html</loc></url>
+<url><loc>/reference/mesh3d_model.html</loc></url>
+<url><loc>/reference/metal.html</loc></url>
+<url><loc>/reference/microfacet.html</loc></url>
+<url><loc>/reference/new_tibble_row.html</loc></url>
+<url><loc>/reference/obj_model.html</loc></url>
+<url><loc>/reference/path.html</loc></url>
+<url><loc>/reference/pig.html</loc></url>
+<url><loc>/reference/pipe.html</loc></url>
+<url><loc>/reference/ply_model.html</loc></url>
+<url><loc>/reference/post_process_frame.html</loc></url>
+<url><loc>/reference/post_process_scene.html</loc></url>
+<url><loc>/reference/prepare_scene_list.html</loc></url>
+<url><loc>/reference/print_time.html</loc></url>
+<url><loc>/reference/process_point_series.html</loc></url>
+<url><loc>/reference/process_point_series_1d.html</loc></url>
+<url><loc>/reference/process_point_series_2d.html</loc></url>
+<url><loc>/reference/process_scene.html</loc></url>
+<url><loc>/reference/quadInOut.html</loc></url>
+<url><loc>/reference/r_obj.html</loc></url>
+<url><loc>/reference/ray_animated_transform.html</loc></url>
+<url><loc>/reference/ray_material.html</loc></url>
+<url><loc>/reference/ray_scene.html</loc></url>
+<url><loc>/reference/ray_shape_info.html</loc></url>
+<url><loc>/reference/ray_transform.html</loc></url>
+<url><loc>/reference/raymesh_model.html</loc></url>
+<url><loc>/reference/render_animation.html</loc></url>
+<url><loc>/reference/render_ao.html</loc></url>
+<url><loc>/reference/render_preview.html</loc></url>
+<url><loc>/reference/render_scene.html</loc></url>
+<url><loc>/reference/run_documentation.html</loc></url>
+<url><loc>/reference/save_png.html</loc></url>
+<url><loc>/reference/segment.html</loc></url>
+<url><loc>/reference/slerp.html</loc></url>
+<url><loc>/reference/sphere.html</loc></url>
+<url><loc>/reference/text3d.html</loc></url>
+<url><loc>/reference/triangle.html</loc></url>
+<url><loc>/reference/tween.html</loc></url>
+<url><loc>/reference/xy_rect.html</loc></url>
+<url><loc>/reference/xz_rect.html</loc></url>
+<url><loc>/reference/yz_rect.html</loc></url>
 </urlset>
+

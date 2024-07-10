@@ -3,7 +3,7 @@
 <script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
 <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
 <![endif]--></head><body data-spy="scroll" data-target="#toc">
-    
+
 
     <div class="container template-reference-topic">
       <header><div class="navbar navbar-inverse navbar-fixed-top" role="navigation">
@@ -25,13 +25,13 @@
       <ul class="nav navbar-nav"><li>
   <a href="../index.html">
     <span class="fa fa-home"></span>
-     
+
   </a>
 </li>
 <li class="dropdown">
   <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
     Tutorials/Demos
-     
+
     <span class="caret"></span>
   </a>
   <ul class="dropdown-menu" role="menu"><li>
@@ -59,14 +59,14 @@
       </ul><ul class="nav navbar-nav navbar-right"><li>
   <a href="../reference/index.html">
     <span class="fa fa-file-code-o"></span>
-     
+
     functions
   </a>
 </li>
 <li>
   <a href="https://github.com/tylermorganwall/rayrender" class="external-link">
     <span class="fa fa-github fa-lg"></span>
-     
+
     GitHub
   </a>
 </li>
@@ -74,13 +74,13 @@
   </div><!--/.container -->
 </div><!--/.navbar -->
 
-      
+
 
       </header><div class="row">
   <div class="col-md-9 contents">
     <div class="page-header">
     <h1>Light Material</h1>
-    <small class="dont-index">Source: <a href="https://github.com/tylermorganwall/rayrender/blob/HEAD/R/materials.R" class="external-link"><code>R/materials.R</code></a></small>
+    <small class="dont-index">Source: <a href="https://github.com/tylermorganwall/rayrender/blob/master/R/materials.R" class="external-link"><code>R/materials.R</code></a></small>
     <div class="hidden name"><code>light.Rd</code></div>
     </div>
 
@@ -109,80 +109,80 @@
 
     <div id="arguments">
     <h2>Arguments</h2>
-    <dl><dt>color</dt>
+
+
+<dl><dt id="arg-color">color<a class="anchor" aria-label="anchor" href="#arg-color"></a></dt>
 <dd><p>Default `white`. The color of the light Can be either
 a hexadecimal code, R color string, or a numeric rgb vector listing three intensities between `0` and `1`.</p></dd>
 
 
-<dt>intensity</dt>
+<dt id="arg-intensity">intensity<a class="anchor" aria-label="anchor" href="#arg-intensity"></a></dt>
 <dd><p>Default `10`. If a positive value, this will turn this object into a light emitting the value specified
 in `color` (ignoring other properties). Higher values will produce a brighter light.</p></dd>
 
 
-<dt>importance_sample</dt>
-<dd><p>Default `TRUE`. Keeping this on for lights improves the convergence of the rendering 
+<dt id="arg-importance-sample">importance_sample<a class="anchor" aria-label="anchor" href="#arg-importance-sample"></a></dt>
+<dd><p>Default `TRUE`. Keeping this on for lights improves the convergence of the rendering
 algorithm, in most cases. If the object is particularly important in contributing to the light paths
 in the image (e.g. light sources, refracting glass ball with caustics, metal objects concentrating light),
 this will help with the convergence of the image.</p></dd>
 
 
-<dt>spotlight_focus</dt>
+<dt id="arg-spotlight-focus">spotlight_focus<a class="anchor" aria-label="anchor" href="#arg-spotlight-focus"></a></dt>
 <dd><p>Default `NA`, no spotlight. Otherwise, a length-3 numeric vector specifying
 the x/y/z coordinates that the spotlight should be focused on. Only works for spheres and rectangles.</p></dd>
 
 
-<dt>spotlight_width</dt>
+<dt id="arg-spotlight-width">spotlight_width<a class="anchor" aria-label="anchor" href="#arg-spotlight-width"></a></dt>
 <dd><p>Default `30`. Angular width of the spotlight.</p></dd>
 
 
-<dt>spotlight_start_falloff</dt>
+<dt id="arg-spotlight-start-falloff">spotlight_start_falloff<a class="anchor" aria-label="anchor" href="#arg-spotlight-start-falloff"></a></dt>
 <dd><p>Default `15`. Angle at which the light starts fading in intensity.</p></dd>
 
 
-<dt>invisible</dt>
+<dt id="arg-invisible">invisible<a class="anchor" aria-label="anchor" href="#arg-invisible"></a></dt>
 <dd><p>Default `FALSE`. If `TRUE`, the light itself will be invisible.</p></dd>
 
 
-<dt>image_texture</dt>
+<dt id="arg-image-texture">image_texture<a class="anchor" aria-label="anchor" href="#arg-image-texture"></a></dt>
 <dd><p>Default `NA`. A 3-layer RGB array or filename to be used as the texture on the surface of the object.</p></dd>
 
 
-<dt>image_repeat</dt>
+<dt id="arg-image-repeat">image_repeat<a class="anchor" aria-label="anchor" href="#arg-image-repeat"></a></dt>
 <dd><p>Default `1`. Number of times to repeat the image across the surface.
 `u` and `v` repeat amount can be set independently if user passes in a length-2 vector.</p></dd>
 
 
-<dt>gradient_color</dt>
-<dd><p>Default `NA`. If not `NA`, creates a secondary color for a linear gradient 
+<dt id="arg-gradient-color">gradient_color<a class="anchor" aria-label="anchor" href="#arg-gradient-color"></a></dt>
+<dd><p>Default `NA`. If not `NA`, creates a secondary color for a linear gradient
 between the this color and color specified in `color`. Direction is determined by `gradient_transpose`.</p></dd>
 
 
-<dt>gradient_transpose</dt>
+<dt id="arg-gradient-transpose">gradient_transpose<a class="anchor" aria-label="anchor" href="#arg-gradient-transpose"></a></dt>
 <dd><p>Default `FALSE`. If `TRUE`, this will use the `v` coordinate texture instead
 of the `u` coordinate texture to map the gradient.</p></dd>
 
 
-<dt>gradient_point_start</dt>
-<dd><p>Default `NA`. If not `NA`, this changes the behavior from mapping texture coordinates to 
+<dt id="arg-gradient-point-start">gradient_point_start<a class="anchor" aria-label="anchor" href="#arg-gradient-point-start"></a></dt>
+<dd><p>Default `NA`. If not `NA`, this changes the behavior from mapping texture coordinates to
 mapping to world space coordinates. This should be a length-3 vector specifying the x,y, and z points where the gradient
 begins with value `color`.</p></dd>
 
 
-<dt>gradient_point_end</dt>
-<dd><p>Default `NA`. If not `NA`, this changes the behavior from mapping texture coordinates to 
+<dt id="arg-gradient-point-end">gradient_point_end<a class="anchor" aria-label="anchor" href="#arg-gradient-point-end"></a></dt>
+<dd><p>Default `NA`. If not `NA`, this changes the behavior from mapping texture coordinates to
 mapping to world space coordinates. This should be a length-3 vector specifying the x,y, and z points where the gradient
 begins with value `gradient_color`.</p></dd>
 
 
-<dt>gradient_type</dt>
+<dt id="arg-gradient-type">gradient_type<a class="anchor" aria-label="anchor" href="#arg-gradient-type"></a></dt>
 <dd><p>Default `hsv`. Colorspace to calculate the gradient. Alternative `rgb`.</p></dd>
 
 </dl></div>
     <div id="value">
     <h2>Value</h2>
-    
-
-<p>Single row of a tibble describing the light material.</p>
+    <p>Single row of a tibble describing the light material.</p>
     </div>
 
     <div id="ref-examples">
@@ -229,15 +229,15 @@ begins with value `gradient_color`.</p></dd>
 </div>
 
 <div class="pkgdown">
-  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.9.</p>
+  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.0.</p>
 </div>
 
       </footer></div>
 
-  
 
 
-  
+
+
 
   </body></html>
 

@@ -3,7 +3,7 @@
 <script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
 <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
 <![endif]--></head><body data-spy="scroll" data-target="#toc">
-    
+
 
     <div class="container template-reference-topic">
       <header><div class="navbar navbar-inverse navbar-fixed-top" role="navigation">
@@ -25,13 +25,13 @@
       <ul class="nav navbar-nav"><li>
   <a href="../index.html">
     <span class="fa fa-home"></span>
-     
+
   </a>
 </li>
 <li class="dropdown">
   <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
     Tutorials/Demos
-     
+
     <span class="caret"></span>
   </a>
   <ul class="dropdown-menu" role="menu"><li>
@@ -59,14 +59,14 @@
       </ul><ul class="nav navbar-nav navbar-right"><li>
   <a href="../reference/index.html">
     <span class="fa fa-file-code-o"></span>
-     
+
     functions
   </a>
 </li>
 <li>
   <a href="https://github.com/tylermorganwall/rayrender" class="external-link">
     <span class="fa fa-github fa-lg"></span>
-     
+
     GitHub
   </a>
 </li>
@@ -74,13 +74,13 @@
   </div><!--/.container -->
 </div><!--/.navbar -->
 
-      
+
 
       </header><div class="row">
   <div class="col-md-9 contents">
     <div class="page-header">
     <h1>Dielectric (glass) Material</h1>
-    <small class="dont-index">Source: <a href="https://github.com/tylermorganwall/rayrender/blob/HEAD/R/materials.R" class="external-link"><code>R/materials.R</code></a></small>
+    <small class="dont-index">Source: <a href="https://github.com/tylermorganwall/rayrender/blob/master/R/materials.R" class="external-link"><code>R/materials.R</code></a></small>
     <div class="hidden name"><code>dielectric.Rd</code></div>
     </div>
 
@@ -103,55 +103,55 @@
 
     <div id="arguments">
     <h2>Arguments</h2>
-    <dl><dt>color</dt>
+
+
+<dl><dt id="arg-color">color<a class="anchor" aria-label="anchor" href="#arg-color"></a></dt>
 <dd><p>Default `white`. The color of the surface. Can be either
 a hexadecimal code, R color string, or a numeric rgb vector listing three intensities between `0` and `1`.</p></dd>
 
 
-<dt>refraction</dt>
+<dt id="arg-refraction">refraction<a class="anchor" aria-label="anchor" href="#arg-refraction"></a></dt>
 <dd><p>Default `1.5`. The index of refraction.</p></dd>
 
 
-<dt>attenuation</dt>
-<dd><p>Default `c(0,0,0)`. The Beer-Lambert color-channel specific exponential attenuation 
+<dt id="arg-attenuation">attenuation<a class="anchor" aria-label="anchor" href="#arg-attenuation"></a></dt>
+<dd><p>Default `c(0,0,0)`. The Beer-Lambert color-channel specific exponential attenuation
 through the material. Higher numbers will result in less of that color making it through the material. If a character string
 is provided (either as a named R color or a hex string), this will be converted to a length-3 vector equal to one minus the RGB
 color vector, which should approximate the color being passed.
 Note: This assumes the object has a closed surface.</p></dd>
 
 
-<dt>attenuation_intensity</dt>
-<dd><p>Default `1`. Changes the attenuation by a multiplicative factor. Values lower than one will make the 
+<dt id="arg-attenuation-intensity">attenuation_intensity<a class="anchor" aria-label="anchor" href="#arg-attenuation-intensity"></a></dt>
+<dd><p>Default `1`. Changes the attenuation by a multiplicative factor. Values lower than one will make the
 dielectric more transparent, while values greater than one will make the glass more opaque.</p></dd>
 
 
-<dt>priority</dt>
+<dt id="arg-priority">priority<a class="anchor" aria-label="anchor" href="#arg-priority"></a></dt>
 <dd><p>Default `0`. When two dielectric materials overlap, the one with the lower priority value
 is used for intersection. NOTE: If the camera is placed inside a dielectric object, its priority value
 will not be taken into account when determining hits to other objects also inside the object.</p></dd>
 
 
-<dt>importance_sample</dt>
-<dd><p>Default `FALSE`. If `TRUE`, the object will be sampled explicitly during 
+<dt id="arg-importance-sample">importance_sample<a class="anchor" aria-label="anchor" href="#arg-importance-sample"></a></dt>
+<dd><p>Default `FALSE`. If `TRUE`, the object will be sampled explicitly during
 the rendering process. If the object is particularly important in contributing to the light paths
 in the image (e.g. light sources, refracting glass ball with caustics, metal objects concentrating light),
 this will help with the convergence of the image.</p></dd>
 
 
-<dt>bump_texture</dt>
-<dd><p>Default `NA`. A matrix, array, or filename (specifying a greyscale image) to 
+<dt id="arg-bump-texture">bump_texture<a class="anchor" aria-label="anchor" href="#arg-bump-texture"></a></dt>
+<dd><p>Default `NA`. A matrix, array, or filename (specifying a greyscale image) to
 be used to specify a bump map for the surface.</p></dd>
 
 
-<dt>bump_intensity</dt>
+<dt id="arg-bump-intensity">bump_intensity<a class="anchor" aria-label="anchor" href="#arg-bump-intensity"></a></dt>
 <dd><p>Default `1`. Intensity of the bump map. High values may lead to unphysical results.</p></dd>
 
 </dl></div>
     <div id="value">
     <h2>Value</h2>
-    
-
-<p>Single row of a tibble describing the dielectric material.</p>
+    <p>Single row of a tibble describing the dielectric material.</p>
     </div>
 
     <div id="ref-examples">
@@ -250,15 +250,15 @@ be used to specify a bump map for the surface.</p></dd>
 </div>
 
 <div class="pkgdown">
-  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.9.</p>
+  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.0.</p>
 </div>
 
       </footer></div>
 
-  
 
 
-  
+
+
 
   </body></html>
 

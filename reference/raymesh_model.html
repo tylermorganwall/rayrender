@@ -3,7 +3,7 @@
 <script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
 <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
 <![endif]--></head><body data-spy="scroll" data-target="#toc">
-    
+
 
     <div class="container template-reference-topic">
       <header><div class="navbar navbar-inverse navbar-fixed-top" role="navigation">
@@ -25,13 +25,13 @@
       <ul class="nav navbar-nav"><li>
   <a href="../index.html">
     <span class="fa fa-home"></span>
-     
+
   </a>
 </li>
 <li class="dropdown">
   <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
     Tutorials/Demos
-     
+
     <span class="caret"></span>
   </a>
   <ul class="dropdown-menu" role="menu"><li>
@@ -59,14 +59,14 @@
       </ul><ul class="nav navbar-nav navbar-right"><li>
   <a href="../reference/index.html">
     <span class="fa fa-file-code-o"></span>
-     
+
     functions
   </a>
 </li>
 <li>
   <a href="https://github.com/tylermorganwall/rayrender" class="external-link">
     <span class="fa fa-github fa-lg"></span>
-     
+
     GitHub
   </a>
 </li>
@@ -74,13 +74,13 @@
   </div><!--/.container -->
 </div><!--/.navbar -->
 
-      
+
 
       </header><div class="row">
   <div class="col-md-9 contents">
     <div class="page-header">
     <h1>`raymesh` model</h1>
-    <small class="dont-index">Source: <a href="https://github.com/tylermorganwall/rayrender/blob/HEAD/R/objects.R" class="external-link"><code>R/objects.R</code></a></small>
+    <small class="dont-index">Source: <a href="https://github.com/tylermorganwall/rayrender/blob/master/R/objects.R" class="external-link"><code>R/objects.R</code></a></small>
     <div class="hidden name"><code>raymesh_model.Rd</code></div>
     </div>
 
@@ -115,108 +115,108 @@
 
     <div id="arguments">
     <h2>Arguments</h2>
-    <dl><dt>mesh</dt>
-<dd><p>A `raymesh` object. Pulls the vertex, index, texture coordinates, 
+
+
+<dl><dt id="arg-mesh">mesh<a class="anchor" aria-label="anchor" href="#arg-mesh"></a></dt>
+<dd><p>A `raymesh` object. Pulls the vertex, index, texture coordinates,
 normals, and material information.</p></dd>
 
 
-<dt>x</dt>
+<dt id="arg-x">x<a class="anchor" aria-label="anchor" href="#arg-x"></a></dt>
 <dd><p>Default `0`. x-coordinate to offset the model.</p></dd>
 
 
-<dt>y</dt>
+<dt id="arg-y">y<a class="anchor" aria-label="anchor" href="#arg-y"></a></dt>
 <dd><p>Default `0`. y-coordinate to offset the model.</p></dd>
 
 
-<dt>z</dt>
+<dt id="arg-z">z<a class="anchor" aria-label="anchor" href="#arg-z"></a></dt>
 <dd><p>Default `0`. z-coordinate to offset the model.</p></dd>
 
 
-<dt>flip_transmittance</dt>
+<dt id="arg-flip-transmittance">flip_transmittance<a class="anchor" aria-label="anchor" href="#arg-flip-transmittance"></a></dt>
 <dd><p>Default `TRUE`. Flips `(1-t)` the transmittance values to match the way the colors
 would be interpreted in a rasterizer (where it specifies the transmitted color). Turn off to specify
 the attenuation values directly.</p></dd>
 
 
-<dt>verbose</dt>
+<dt id="arg-verbose">verbose<a class="anchor" aria-label="anchor" href="#arg-verbose"></a></dt>
 <dd><p>Default `FALSE`. If `TRUE`, prints information about the mesh to the console.</p></dd>
 
 
-<dt>importance_sample_lights</dt>
+<dt id="arg-importance-sample-lights">importance_sample_lights<a class="anchor" aria-label="anchor" href="#arg-importance-sample-lights"></a></dt>
 <dd><p>Default `TRUE`. Whether to importance sample lights specified in the OBJ material
 (objects with a non-zero Ke MTL material).</p></dd>
 
 
-<dt>calculate_consistent_normals</dt>
-<dd><p>Default `TRUE`. Whether to calculate consistent vertex normals to prevent energy 
+<dt id="arg-calculate-consistent-normals">calculate_consistent_normals<a class="anchor" aria-label="anchor" href="#arg-calculate-consistent-normals"></a></dt>
+<dd><p>Default `TRUE`. Whether to calculate consistent vertex normals to prevent energy
 loss at edges.</p></dd>
 
 
-<dt>subdivision_levels</dt>
+<dt id="arg-subdivision-levels">subdivision_levels<a class="anchor" aria-label="anchor" href="#arg-subdivision-levels"></a></dt>
 <dd><p>Default `1`. Number of Loop subdivisions to be applied to the mesh.</p></dd>
 
 
-<dt>displacement_texture</dt>
-<dd><p>Default `NA`. File path to the displacement texture. 
+<dt id="arg-displacement-texture">displacement_texture<a class="anchor" aria-label="anchor" href="#arg-displacement-texture"></a></dt>
+<dd><p>Default `NA`. File path to the displacement texture.
 This texture is used to displace the vertices of the mesh based on the texture's pixel values.</p></dd>
 
 
-<dt>displacement_intensity</dt>
-<dd><p>Default `1`. Intensity of the displacement effect. 
+<dt id="arg-displacement-intensity">displacement_intensity<a class="anchor" aria-label="anchor" href="#arg-displacement-intensity"></a></dt>
+<dd><p>Default `1`. Intensity of the displacement effect.
 Higher values result in greater displacement.</p></dd>
 
 
-<dt>displacement_vector</dt>
-<dd><p>Default `FALSE`. Whether to use vector displacement. 
-If `TRUE`, the displacement texture is interpreted as providing a 3D displacement vector. 
+<dt id="arg-displacement-vector">displacement_vector<a class="anchor" aria-label="anchor" href="#arg-displacement-vector"></a></dt>
+<dd><p>Default `FALSE`. Whether to use vector displacement.
+If `TRUE`, the displacement texture is interpreted as providing a 3D displacement vector.
 Otherwise, the texture is interpreted as providing a scalar displacement.</p></dd>
 
 
-<dt>recalculate_normals</dt>
-<dd><p>Default `FALSE`. Whether to recalculate vertex normals based on the 
+<dt id="arg-recalculate-normals">recalculate_normals<a class="anchor" aria-label="anchor" href="#arg-recalculate-normals"></a></dt>
+<dd><p>Default `FALSE`. Whether to recalculate vertex normals based on the
 connecting face orientations. This can be used to compute normals for meshes lacking them or
 to calculate new normals after a displacement map has been applied to the mesh.</p></dd>
 
 
-<dt>override_material</dt>
-<dd><p>Default `TRUE`. If `TRUE`, overrides the material specified in the 
+<dt id="arg-override-material">override_material<a class="anchor" aria-label="anchor" href="#arg-override-material"></a></dt>
+<dd><p>Default `TRUE`. If `TRUE`, overrides the material specified in the
 `raymesh` object with the one specified in `material`.</p></dd>
 
 
-<dt>material</dt>
-<dd><p>Default  <code><a href="diffuse.html">diffuse</a></code>, but ignored unless `override_material = TRUE`. The material, called from one of the material 
+<dt id="arg-material">material<a class="anchor" aria-label="anchor" href="#arg-material"></a></dt>
+<dd><p>Default  <code><a href="diffuse.html">diffuse</a></code>, but ignored unless `override_material = TRUE`. The material, called from one of the material
 functions <code><a href="diffuse.html">diffuse</a></code>, <code><a href="metal.html">metal</a></code>, or <code><a href="dielectric.html">dielectric</a></code>.</p></dd>
 
 
-<dt>angle</dt>
+<dt id="arg-angle">angle<a class="anchor" aria-label="anchor" href="#arg-angle"></a></dt>
 <dd><p>Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.</p></dd>
 
 
-<dt>order_rotation</dt>
+<dt id="arg-order-rotation">order_rotation<a class="anchor" aria-label="anchor" href="#arg-order-rotation"></a></dt>
 <dd><p>Default `c(1, 2, 3)`. The order to apply the rotations, referring to "x", "y", and "z".</p></dd>
 
 
-<dt>flipped</dt>
+<dt id="arg-flipped">flipped<a class="anchor" aria-label="anchor" href="#arg-flipped"></a></dt>
 <dd><p>Default `FALSE`. Whether to flip the normals.</p></dd>
 
 
-<dt>scale</dt>
+<dt id="arg-scale">scale<a class="anchor" aria-label="anchor" href="#arg-scale"></a></dt>
 <dd><p>Default `c(1, 1, 1)`. Scale transformation in the x, y, and z directions. If this is a single value,
 number, the object will be scaled uniformly.
 Note: emissive objects may not currently function correctly when scaled.</p></dd>
 
 
-<dt>validate_mesh</dt>
-<dd><p>Default `TRUE`. Validates the `raymesh` object using `rayvertex::validate_mesh()` 
-before parsing to ensure correct parsing. Set to `FALSE` to speed up scene construction if `raymesh_model()` 
+<dt id="arg-validate-mesh">validate_mesh<a class="anchor" aria-label="anchor" href="#arg-validate-mesh"></a></dt>
+<dd><p>Default `TRUE`. Validates the `raymesh` object using `rayvertex::validate_mesh()`
+before parsing to ensure correct parsing. Set to `FALSE` to speed up scene construction if `raymesh_model()`
 is taking a long time (Note: this does not affect rendering time).</p></dd>
 
 </dl></div>
     <div id="value">
     <h2>Value</h2>
-    
-
-<p>Single row of a tibble describing the raymesh model in the scene.</p>
+    <p>Single row of a tibble describing the raymesh model in the scene.</p>
     </div>
 
     <div id="ref-examples">
@@ -296,15 +296,15 @@ is taking a long time (Note: this does not affect rendering time).</p></dd>
 </div>
 
 <div class="pkgdown">
-  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.9.</p>
+  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.0.</p>
 </div>
 
       </footer></div>
 
-  
 
 
-  
+
+
 
   </body></html>
 

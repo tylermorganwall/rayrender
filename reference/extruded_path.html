@@ -4,7 +4,7 @@ using a bump map."><meta property="og:image" content="/reference/figures/website
 <script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
 <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
 <![endif]--></head><body data-spy="scroll" data-target="#toc">
-    
+
 
     <div class="container template-reference-topic">
       <header><div class="navbar navbar-inverse navbar-fixed-top" role="navigation">
@@ -26,13 +26,13 @@ using a bump map."><meta property="og:image" content="/reference/figures/website
       <ul class="nav navbar-nav"><li>
   <a href="../index.html">
     <span class="fa fa-home"></span>
-     
+
   </a>
 </li>
 <li class="dropdown">
   <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
     Tutorials/Demos
-     
+
     <span class="caret"></span>
   </a>
   <ul class="dropdown-menu" role="menu"><li>
@@ -60,14 +60,14 @@ using a bump map."><meta property="og:image" content="/reference/figures/website
       </ul><ul class="nav navbar-nav navbar-right"><li>
   <a href="../reference/index.html">
     <span class="fa fa-file-code-o"></span>
-     
+
     functions
   </a>
 </li>
 <li>
   <a href="https://github.com/tylermorganwall/rayrender" class="external-link">
     <span class="fa fa-github fa-lg"></span>
-     
+
     GitHub
   </a>
 </li>
@@ -75,13 +75,13 @@ using a bump map."><meta property="og:image" content="/reference/figures/website
   </div><!--/.container -->
 </div><!--/.navbar -->
 
-      
+
 
       </header><div class="row">
   <div class="col-md-9 contents">
     <div class="page-header">
     <h1>Extruded Path Object</h1>
-    <small class="dont-index">Source: <a href="https://github.com/tylermorganwall/rayrender/blob/HEAD/R/objects.R" class="external-link"><code>R/objects.R</code></a></small>
+    <small class="dont-index">Source: <a href="https://github.com/tylermorganwall/rayrender/blob/master/R/objects.R" class="external-link"><code>R/objects.R</code></a></small>
     <div class="hidden name"><code>extruded_path.Rd</code></div>
     </div>
 
@@ -125,142 +125,142 @@ using a bump map.</p>
 
     <div id="arguments">
     <h2>Arguments</h2>
-    <dl><dt>points</dt>
+
+
+<dl><dt id="arg-points">points<a class="anchor" aria-label="anchor" href="#arg-points"></a></dt>
 <dd><p>Either a list of length-3 numeric vectors or 3-column matrix/data.frame specifying
 the x/y/z points that the path should go through.</p></dd>
 
 
-<dt>x</dt>
+<dt id="arg-x">x<a class="anchor" aria-label="anchor" href="#arg-x"></a></dt>
 <dd><p>Default `0`. x-coordinate offset for the path.</p></dd>
 
 
-<dt>y</dt>
+<dt id="arg-y">y<a class="anchor" aria-label="anchor" href="#arg-y"></a></dt>
 <dd><p>Default `0`. y-coordinate offset for the path.</p></dd>
 
 
-<dt>z</dt>
+<dt id="arg-z">z<a class="anchor" aria-label="anchor" href="#arg-z"></a></dt>
 <dd><p>Default `0`. z-coordinate offset for the path.</p></dd>
 
 
-<dt>polygon</dt>
+<dt id="arg-polygon">polygon<a class="anchor" aria-label="anchor" href="#arg-polygon"></a></dt>
 <dd><p>Defaults to a circle. A polygon with no holes, specified by a data.frame() parsable by `xy.coords()`. Vertices
 are taken as sequential rows. If the polygon isn't closed (the last vertex equal to the first), it will be closed automatically.</p></dd>
 
 
-<dt>polygon_end</dt>
-<dd><p>Defaults to `polygon`. If specified, the number of vertices should equal the to the number of vertices 
+<dt id="arg-polygon-end">polygon_end<a class="anchor" aria-label="anchor" href="#arg-polygon-end"></a></dt>
+<dd><p>Defaults to `polygon`. If specified, the number of vertices should equal the to the number of vertices
 of the polygon set in `polygon`. Vertices are taken as sequential rows. If the polygon isn't closed (the last vertex equal to the first), it will be closed automatically.</p></dd>
 
 
-<dt>breaks</dt>
+<dt id="arg-breaks">breaks<a class="anchor" aria-label="anchor" href="#arg-breaks"></a></dt>
 <dd><p>Defaults to `20` times the number of control points in the bezier curve.</p></dd>
 
 
-<dt>closed</dt>
+<dt id="arg-closed">closed<a class="anchor" aria-label="anchor" href="#arg-closed"></a></dt>
 <dd><p>Default `FALSE`. If `TRUE`, the path will be closed by smoothly connecting the first
 and last points, also ensuring the final polygon is aligned to the first.</p></dd>
 
 
-<dt>closed_smooth</dt>
-<dd><p>Default `TRUE`. If `closed = TRUE`, this will ensure C2 (second derivative) 
+<dt id="arg-closed-smooth">closed_smooth<a class="anchor" aria-label="anchor" href="#arg-closed-smooth"></a></dt>
+<dd><p>Default `TRUE`. If `closed = TRUE`, this will ensure C2 (second derivative)
 continuity between the ends. If `closed = FALSE`, the curve will only have C1 (first derivative)
 continuity between the ends.</p></dd>
 
 
-<dt>polygon_add_points</dt>
+<dt id="arg-polygon-add-points">polygon_add_points<a class="anchor" aria-label="anchor" href="#arg-polygon-add-points"></a></dt>
 <dd><p>Default `0`. Positive integer specifying the number of points to fill in between polygon
 vertices. Higher numbers can give smoother results (especially when combined with `smooth_normals = TRUE`.</p></dd>
 
 
-<dt>twists</dt>
+<dt id="arg-twists">twists<a class="anchor" aria-label="anchor" href="#arg-twists"></a></dt>
 <dd><p>Default `0`. Number of twists in the polygon from one end to another.</p></dd>
 
 
-<dt>texture_repeats</dt>
+<dt id="arg-texture-repeats">texture_repeats<a class="anchor" aria-label="anchor" href="#arg-texture-repeats"></a></dt>
 <dd><p>Default `1`. Number of times to repeat the texture along the length of the path.</p></dd>
 
 
-<dt>straight</dt>
+<dt id="arg-straight">straight<a class="anchor" aria-label="anchor" href="#arg-straight"></a></dt>
 <dd><p>Default `FALSE`. If `TRUE`, straight lines will be used to connect the points instead
 of bezier curves.</p></dd>
 
 
-<dt>precomputed_control_points</dt>
+<dt id="arg-precomputed-control-points">precomputed_control_points<a class="anchor" aria-label="anchor" href="#arg-precomputed-control-points"></a></dt>
 <dd><p>Default `FALSE`. If `TRUE`, `points` argument will expect
 a list of control points calculated with the internal rayrender function `rayrender:::calculate_control_points()`.</p></dd>
 
 
-<dt>width</dt>
-<dd><p>Default `0.1`. Curve width. If `width_ease == "spline"`, `width` is specified in a format that can be read by 
-`xy.coords()` (with `y` as the width), and the `x` coordinate is between `0` and `1`, this can also specify the exact 
+<dt id="arg-width">width<a class="anchor" aria-label="anchor" href="#arg-width"></a></dt>
+<dd><p>Default `0.1`. Curve width. If `width_ease == "spline"`, `width` is specified in a format that can be read by
+`xy.coords()` (with `y` as the width), and the `x` coordinate is between `0` and `1`, this can also specify the exact
 positions along the curve for the corresponding width values. If a numeric vector, specifies the different values of the width evenly along the curve.
 If not a single value, `width_end` will be ignored.</p></dd>
 
 
-<dt>width_end</dt>
-<dd><p>Default `NA`. Width at end of path. Same as `width`, unless specified. Ignored if multiple width values 
+<dt id="arg-width-end">width_end<a class="anchor" aria-label="anchor" href="#arg-width-end"></a></dt>
+<dd><p>Default `NA`. Width at end of path. Same as `width`, unless specified. Ignored if multiple width values
 specified in `width`.</p></dd>
 
 
-<dt>width_ease</dt>
+<dt id="arg-width-ease">width_ease<a class="anchor" aria-label="anchor" href="#arg-width-ease"></a></dt>
 <dd><p>Default `spline`. Ease function between width values. Other options: `linear`, `quad`, `cubic`, `exp`.</p></dd>
 
 
-<dt>smooth_normals</dt>
+<dt id="arg-smooth-normals">smooth_normals<a class="anchor" aria-label="anchor" href="#arg-smooth-normals"></a></dt>
 <dd><p>Default `FALSE`. Whether to smooth the normals of the polygon to remove sharp angles.</p></dd>
 
 
-<dt>u_min</dt>
-<dd><p>Default `0`. Minimum parametric coordinate for the path. If `closed = TRUE`, values greater than one will refer to the beginning 
+<dt id="arg-u-min">u_min<a class="anchor" aria-label="anchor" href="#arg-u-min"></a></dt>
+<dd><p>Default `0`. Minimum parametric coordinate for the path. If `closed = TRUE`, values greater than one will refer to the beginning
 of the loop (but the path will be generated as two objects).</p></dd>
 
 
-<dt>u_max</dt>
-<dd><p>Default `1`. Maximum parametric coordinate for the path. If `closed = TRUE`, values greater than one will refer to the beginning 
+<dt id="arg-u-max">u_max<a class="anchor" aria-label="anchor" href="#arg-u-max"></a></dt>
+<dd><p>Default `1`. Maximum parametric coordinate for the path. If `closed = TRUE`, values greater than one will refer to the beginning
 of the loop (but the path will be generated as two objects).</p></dd>
 
 
-<dt>linear_step</dt>
+<dt id="arg-linear-step">linear_step<a class="anchor" aria-label="anchor" href="#arg-linear-step"></a></dt>
 <dd><p>Default `FALSE`. Whether the polygon intervals should be set at linear intervals,
 rather than intervals based on the underlying bezier curve parameterization.</p></dd>
 
 
-<dt>end_caps</dt>
+<dt id="arg-end-caps">end_caps<a class="anchor" aria-label="anchor" href="#arg-end-caps"></a></dt>
 <dd><p>Default `c(TRUE, TRUE)`. Specifies whether to add an end cap to the beginning and end of a path.</p></dd>
 
 
-<dt>material</dt>
-<dd><p>Default  <code><a href="diffuse.html">diffuse</a></code>. The material, called from one of the material 
+<dt id="arg-material">material<a class="anchor" aria-label="anchor" href="#arg-material"></a></dt>
+<dd><p>Default  <code><a href="diffuse.html">diffuse</a></code>. The material, called from one of the material
 functions.</p></dd>
 
 
-<dt>material_caps</dt>
+<dt id="arg-material-caps">material_caps<a class="anchor" aria-label="anchor" href="#arg-material-caps"></a></dt>
 <dd><p>Defaults to the same material set in `material`.
 Note: emissive objects may not currently function correctly when scaled.</p></dd>
 
 
-<dt>angle</dt>
+<dt id="arg-angle">angle<a class="anchor" aria-label="anchor" href="#arg-angle"></a></dt>
 <dd><p>Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.</p></dd>
 
 
-<dt>order_rotation</dt>
+<dt id="arg-order-rotation">order_rotation<a class="anchor" aria-label="anchor" href="#arg-order-rotation"></a></dt>
 <dd><p>Default `c(1, 2, 3)`. The order to apply the rotations, referring to "x", "y", and "z".</p></dd>
 
 
-<dt>flipped</dt>
+<dt id="arg-flipped">flipped<a class="anchor" aria-label="anchor" href="#arg-flipped"></a></dt>
 <dd><p>Default `FALSE`. Whether to flip the normals.</p></dd>
 
 
-<dt>scale</dt>
+<dt id="arg-scale">scale<a class="anchor" aria-label="anchor" href="#arg-scale"></a></dt>
 <dd><p>Default `c(1, 1, 1)`. Scale transformation in the x, y, and z directions. If this is a single value,
 number, the object will be scaled uniformly.</p></dd>
 
 </dl></div>
     <div id="value">
     <h2>Value</h2>
-    
-
-<p>Single row of a tibble describing the cube in the scene.</p>
+    <p>Single row of a tibble describing the cube in the scene.</p>
     </div>
 
     <div id="ref-examples">
@@ -447,15 +447,15 @@ number, the object will be scaled uniformly.</p></dd>
 </div>
 
 <div class="pkgdown">
-  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.9.</p>
+  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.0.</p>
 </div>
 
       </footer></div>
 
-  
 
 
-  
+
+
 
   </body></html>
 

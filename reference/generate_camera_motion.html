@@ -4,7 +4,7 @@ a data.frame that can be passed to `render_animation()`."><meta property="og:ima
 <script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
 <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
 <![endif]--></head><body data-spy="scroll" data-target="#toc">
-    
+
 
     <div class="container template-reference-topic">
       <header><div class="navbar navbar-inverse navbar-fixed-top" role="navigation">
@@ -26,13 +26,13 @@ a data.frame that can be passed to `render_animation()`."><meta property="og:ima
       <ul class="nav navbar-nav"><li>
   <a href="../index.html">
     <span class="fa fa-home"></span>
-     
+
   </a>
 </li>
 <li class="dropdown">
   <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
     Tutorials/Demos
-     
+
     <span class="caret"></span>
   </a>
   <ul class="dropdown-menu" role="menu"><li>
@@ -60,14 +60,14 @@ a data.frame that can be passed to `render_animation()`."><meta property="og:ima
       </ul><ul class="nav navbar-nav navbar-right"><li>
   <a href="../reference/index.html">
     <span class="fa fa-file-code-o"></span>
-     
+
     functions
   </a>
 </li>
 <li>
   <a href="https://github.com/tylermorganwall/rayrender" class="external-link">
     <span class="fa fa-github fa-lg"></span>
-     
+
     GitHub
   </a>
 </li>
@@ -75,13 +75,13 @@ a data.frame that can be passed to `render_animation()`."><meta property="og:ima
   </div><!--/.container -->
 </div><!--/.navbar -->
 
-      
+
 
       </header><div class="row">
   <div class="col-md-9 contents">
     <div class="page-header">
     <h1>Generate Camera Movement</h1>
-    <small class="dont-index">Source: <a href="https://github.com/tylermorganwall/rayrender/blob/HEAD/R/generate_camera_motion.R" class="external-link"><code>R/generate_camera_motion.R</code></a></small>
+    <small class="dont-index">Source: <a href="https://github.com/tylermorganwall/rayrender/blob/master/R/generate_camera_motion.R" class="external-link"><code>R/generate_camera_motion.R</code></a></small>
     <div class="hidden name"><code>generate_camera_motion.Rd</code></div>
     </div>
 
@@ -118,114 +118,114 @@ a data.frame that can be passed to `render_animation()`.</p>
 
     <div id="arguments">
     <h2>Arguments</h2>
-    <dl><dt>positions</dt>
-<dd><p>A list or 3-column XYZ matrix of camera positions. 
-These will serve as key frames for the camera position. Alternatively, this can also be the a 
+
+
+<dl><dt id="arg-positions">positions<a class="anchor" aria-label="anchor" href="#arg-positions"></a></dt>
+<dd><p>A list or 3-column XYZ matrix of camera positions.
+These will serve as key frames for the camera position. Alternatively, this can also be the a
 dataframe of the keyframe output from an interactive rayrender session (`ray_keyframes`).</p></dd>
 
 
-<dt>lookats</dt>
-<dd><p>Default `NULL`, which sets the camera lookat to the origin `c(0,0,0)` 
+<dt id="arg-lookats">lookats<a class="anchor" aria-label="anchor" href="#arg-lookats"></a></dt>
+<dd><p>Default `NULL`, which sets the camera lookat to the origin `c(0,0,0)`
 for the animation. A list or 3-column XYZ matrix
 of `lookat` points. Must be the same number of points as `positions`.</p></dd>
 
 
-<dt>apertures</dt>
+<dt id="arg-apertures">apertures<a class="anchor" aria-label="anchor" href="#arg-apertures"></a></dt>
 <dd><p>Default `0`. A numeric vector of aperture values.</p></dd>
 
 
-<dt>fovs</dt>
+<dt id="arg-fovs">fovs<a class="anchor" aria-label="anchor" href="#arg-fovs"></a></dt>
 <dd><p>Default `40`. A numeric vector of field of view values.</p></dd>
 
 
-<dt>focal_distances</dt>
-<dd><p>Default `NULL`, automatically the distance between positions and lookats. 
+<dt id="arg-focal-distances">focal_distances<a class="anchor" aria-label="anchor" href="#arg-focal-distances"></a></dt>
+<dd><p>Default `NULL`, automatically the distance between positions and lookats.
 Numeric vector of focal distances.</p></dd>
 
 
-<dt>ortho_dims</dt>
+<dt id="arg-ortho-dims">ortho_dims<a class="anchor" aria-label="anchor" href="#arg-ortho-dims"></a></dt>
 <dd><p>Default `NULL`, which results in `c(1,1)` orthographic dimensions.  A list or 2-column matrix
 of orthographic dimensions.</p></dd>
 
 
-<dt>camera_ups</dt>
+<dt id="arg-camera-ups">camera_ups<a class="anchor" aria-label="anchor" href="#arg-camera-ups"></a></dt>
 <dd><p>Default `NULL`, which gives at up vector of `c(0,1,0)`. Camera up orientation.</p></dd>
 
 
-<dt>type</dt>
-<dd><p>Default `cubic`. Type of transition between keyframes. 
-Other options are `linear`, `quad`, `bezier`, `exp`, and `manual`. `manual` just returns the values 
+<dt id="arg-type">type<a class="anchor" aria-label="anchor" href="#arg-type"></a></dt>
+<dd><p>Default `cubic`. Type of transition between keyframes.
+Other options are `linear`, `quad`, `bezier`, `exp`, and `manual`. `manual` just returns the values
 passed in, properly formatted to be passed to `render_animation()`.</p></dd>
 
 
-<dt>frames</dt>
+<dt id="arg-frames">frames<a class="anchor" aria-label="anchor" href="#arg-frames"></a></dt>
 <dd><p>Default `30`. Total number of frames.</p></dd>
 
 
-<dt>closed</dt>
+<dt id="arg-closed">closed<a class="anchor" aria-label="anchor" href="#arg-closed"></a></dt>
 <dd><p>Default `FALSE`. Whether to close the camera curve so the first position matches the last. Set this to `TRUE` for perfect loops.</p></dd>
 
 
-<dt>aperture_linear</dt>
+<dt id="arg-aperture-linear">aperture_linear<a class="anchor" aria-label="anchor" href="#arg-aperture-linear"></a></dt>
 <dd><p>Default `TRUE`. This linearly interpolates focal distances, rather than using a smooth Bezier curve  or easing function.</p></dd>
 
 
-<dt>fov_linear</dt>
+<dt id="arg-fov-linear">fov_linear<a class="anchor" aria-label="anchor" href="#arg-fov-linear"></a></dt>
 <dd><p>Default `TRUE`. This linearly interpolates focal distances, rather than using a smooth Bezier curve  or easing function.</p></dd>
 
 
-<dt>focal_linear</dt>
+<dt id="arg-focal-linear">focal_linear<a class="anchor" aria-label="anchor" href="#arg-focal-linear"></a></dt>
 <dd><p>Default `TRUE`. This linearly interpolates focal distances, rather than using a smooth Bezier curve or easing function.</p></dd>
 
 
-<dt>ortho_linear</dt>
+<dt id="arg-ortho-linear">ortho_linear<a class="anchor" aria-label="anchor" href="#arg-ortho-linear"></a></dt>
 <dd><p>Default `TRUE`. This linearly interpolates orthographic dimensions, rather than using a smooth Bezier curve or easing function.</p></dd>
 
 
-<dt>constant_step</dt>
+<dt id="arg-constant-step">constant_step<a class="anchor" aria-label="anchor" href="#arg-constant-step"></a></dt>
 <dd><p>Default `TRUE`. This will make the camera travel at a constant speed.</p></dd>
 
 
-<dt>curvature_adjust</dt>
+<dt id="arg-curvature-adjust">curvature_adjust<a class="anchor" aria-label="anchor" href="#arg-curvature-adjust"></a></dt>
 <dd><p>Default `none`. Other options are `position`, `lookat`, and `both`. Whether to slow down the camera at areas of high curvature
 to prevent fast swings. Only used for curve `type = bezier`. This does not preserve key frame positions.
-Note: This feature will likely result in the `lookat` and `position` diverging if they do not 
-have similar curvatures at each point. This feature is best used when passing the same set of points to `positions` and `lookats` 
+Note: This feature will likely result in the `lookat` and `position` diverging if they do not
+have similar curvatures at each point. This feature is best used when passing the same set of points to `positions` and `lookats`
 and providing an `offset_lookat` value, which ensures the curvature will be the same.</p></dd>
 
 
-<dt>curvature_scale</dt>
+<dt id="arg-curvature-scale">curvature_scale<a class="anchor" aria-label="anchor" href="#arg-curvature-scale"></a></dt>
 <dd><p>Default `30`. Constant dividing factor for curvature. Higher values will subdivide the
 path more, potentially finding a smoother path, but increasing the calculation time. Only used for curve `type = bezier`.
 Increasing this value after a certain point will not increase the quality of the path, but it is scene-dependent.</p></dd>
 
 
-<dt>offset_lookat</dt>
+<dt id="arg-offset-lookat">offset_lookat<a class="anchor" aria-label="anchor" href="#arg-offset-lookat"></a></dt>
 <dd><p>Default `0`. Amount to offset the lookat position, either along the path (if `constant_step = TRUE`)
 or towards the derivative of the Bezier curve.</p></dd>
 
 
-<dt>damp_motion</dt>
+<dt id="arg-damp-motion">damp_motion<a class="anchor" aria-label="anchor" href="#arg-damp-motion"></a></dt>
 <dd><p>Default `FALSE`. Whether to damp the motion of the camera, so that quick movements are damped
 and don't result in shakey motion. This function tracks the current position, and linearly interpolates between
-that point and the next point using value `damp_magnitude`. 
+that point and the next point using value `damp_magnitude`.
 The equation for the position is `cam_current = cam_current * damp_magnitude + cam_next_point * (1 - damp_magnitude)`.</p></dd>
 
 
-<dt>damp_magnitude</dt>
+<dt id="arg-damp-magnitude">damp_magnitude<a class="anchor" aria-label="anchor" href="#arg-damp-magnitude"></a></dt>
 <dd><p>Default `0.1`. Amount to damp the motion, a numeric value greater than `0` (no damping) and
 less than `1`.</p></dd>
 
 
-<dt>progress</dt>
+<dt id="arg-progress">progress<a class="anchor" aria-label="anchor" href="#arg-progress"></a></dt>
 <dd><p>Default `TRUE`. Whether to display a progress bar.</p></dd>
 
 </dl></div>
     <div id="value">
     <h2>Value</h2>
-    
-
-<p>Data frame of camera positions, orientations, apertures, focal distances, and field of views</p>
+    <p>Data frame of camera positions, orientations, apertures, focal distances, and field of views</p>
     </div>
 
     <div id="ref-examples">
@@ -327,15 +327,15 @@ less than `1`.</p></dd>
 </div>
 
 <div class="pkgdown">
-  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.9.</p>
+  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.0.</p>
 </div>
 
       </footer></div>
 
-  
 
 
-  
+
+
 
   </body></html>
 

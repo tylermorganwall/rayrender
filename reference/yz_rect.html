@@ -3,7 +3,7 @@
 <script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
 <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
 <![endif]--></head><body data-spy="scroll" data-target="#toc">
-    
+
 
     <div class="container template-reference-topic">
       <header><div class="navbar navbar-inverse navbar-fixed-top" role="navigation">
@@ -25,13 +25,13 @@
       <ul class="nav navbar-nav"><li>
   <a href="../index.html">
     <span class="fa fa-home"></span>
-     
+
   </a>
 </li>
 <li class="dropdown">
   <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
     Tutorials/Demos
-     
+
     <span class="caret"></span>
   </a>
   <ul class="dropdown-menu" role="menu"><li>
@@ -59,14 +59,14 @@
       </ul><ul class="nav navbar-nav navbar-right"><li>
   <a href="../reference/index.html">
     <span class="fa fa-file-code-o"></span>
-     
+
     functions
   </a>
 </li>
 <li>
   <a href="https://github.com/tylermorganwall/rayrender" class="external-link">
     <span class="fa fa-github fa-lg"></span>
-     
+
     GitHub
   </a>
 </li>
@@ -74,13 +74,13 @@
   </div><!--/.container -->
 </div><!--/.navbar -->
 
-      
+
 
       </header><div class="row">
   <div class="col-md-9 contents">
     <div class="page-header">
     <h1>Rectangular YZ Plane Object</h1>
-    <small class="dont-index">Source: <a href="https://github.com/tylermorganwall/rayrender/blob/HEAD/R/objects.R" class="external-link"><code>R/objects.R</code></a></small>
+    <small class="dont-index">Source: <a href="https://github.com/tylermorganwall/rayrender/blob/master/R/objects.R" class="external-link"><code>R/objects.R</code></a></small>
     <div class="hidden name"><code>yz_rect.Rd</code></div>
     </div>
 
@@ -105,44 +105,46 @@
 
     <div id="arguments">
     <h2>Arguments</h2>
-    <dl><dt>x</dt>
+
+
+<dl><dt id="arg-x">x<a class="anchor" aria-label="anchor" href="#arg-x"></a></dt>
 <dd><p>Default `0`. x-coordinate of the center of the rectangle.</p></dd>
 
 
-<dt>y</dt>
+<dt id="arg-y">y<a class="anchor" aria-label="anchor" href="#arg-y"></a></dt>
 <dd><p>Default `0`. y-coordinate of the center of the rectangle.</p></dd>
 
 
-<dt>z</dt>
+<dt id="arg-z">z<a class="anchor" aria-label="anchor" href="#arg-z"></a></dt>
 <dd><p>Default `0`. z-coordinate of the center of the rectangle.</p></dd>
 
 
-<dt>ywidth</dt>
+<dt id="arg-ywidth">ywidth<a class="anchor" aria-label="anchor" href="#arg-ywidth"></a></dt>
 <dd><p>Default `1`. y-width of the rectangle.</p></dd>
 
 
-<dt>zwidth</dt>
+<dt id="arg-zwidth">zwidth<a class="anchor" aria-label="anchor" href="#arg-zwidth"></a></dt>
 <dd><p>Default `1`. z-width of the rectangle.</p></dd>
 
 
-<dt>material</dt>
-<dd><p>Default  <code><a href="diffuse.html">diffuse</a></code>.The material, called from one of the material 
+<dt id="arg-material">material<a class="anchor" aria-label="anchor" href="#arg-material"></a></dt>
+<dd><p>Default  <code><a href="diffuse.html">diffuse</a></code>.The material, called from one of the material
 functions <code><a href="diffuse.html">diffuse</a></code>, <code><a href="metal.html">metal</a></code>, or <code><a href="dielectric.html">dielectric</a></code>.</p></dd>
 
 
-<dt>angle</dt>
+<dt id="arg-angle">angle<a class="anchor" aria-label="anchor" href="#arg-angle"></a></dt>
 <dd><p>Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.</p></dd>
 
 
-<dt>order_rotation</dt>
+<dt id="arg-order-rotation">order_rotation<a class="anchor" aria-label="anchor" href="#arg-order-rotation"></a></dt>
 <dd><p>Default `c(1, 2, 3)`. The order to apply the rotations, referring to "x", "y", and "z".</p></dd>
 
 
-<dt>flipped</dt>
+<dt id="arg-flipped">flipped<a class="anchor" aria-label="anchor" href="#arg-flipped"></a></dt>
 <dd><p>Default `FALSE`. Whether to flip the normals.</p></dd>
 
 
-<dt>scale</dt>
+<dt id="arg-scale">scale<a class="anchor" aria-label="anchor" href="#arg-scale"></a></dt>
 <dd><p>Default `c(1, 1, 1)`. Scale transformation in the x, y, and z directions. If this is a single value,
 number, the object will be scaled uniformly.
 Note: emissive objects may not currently function correctly when scaled.</p></dd>
@@ -150,9 +152,7 @@ Note: emissive objects may not currently function correctly when scaled.</p></dd
 </dl></div>
     <div id="value">
     <h2>Value</h2>
-    
-
-<p>Single row of a tibble describing the YZ plane in the scene.</p>
+    <p>Single row of a tibble describing the YZ plane in the scene.</p>
     </div>
 
     <div id="ref-examples">
@@ -190,15 +190,15 @@ Note: emissive objects may not currently function correctly when scaled.</p></dd
 </div>
 
 <div class="pkgdown">
-  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.9.</p>
+  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.0.</p>
 </div>
 
       </footer></div>
 
-  
 
 
-  
+
+
 
   </body></html>
 
