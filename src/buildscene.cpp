@@ -883,7 +883,7 @@ std::shared_ptr<bvh_node> build_scene(List& scene,
           instance_importance_sampled.push_back(instance_importance_sample_list);
         }
         
-        for(size_t ii = 0; ii < x_values.size(); ii++) {
+        for(size_t ii = 0; ii < (size_t)x_values.size(); ii++) {
           vec3f center_instance = vec3f(x_values(ii), y_values(ii), z_values(ii));
           NumericVector angle_instance = {angle_x(ii), angle_y(ii), angle_z(ii)};
 

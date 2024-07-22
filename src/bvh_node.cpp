@@ -218,7 +218,7 @@ bvh_node::bvh_node(std::vector<std::shared_ptr<hitable> >& l,
 
       int minCostSplitBucket = -1;
       Float minCost = INFINITY;
-      Float costs[nBuckets];
+      // Float costs[nBuckets];
       
       for (unsigned int i = 0; i < nSplits; ++i) {
         if (countBelow[i] == 0 || countAbove[i] == 0) {
@@ -226,7 +226,7 @@ bvh_node::bvh_node(std::vector<std::shared_ptr<hitable> >& l,
         }
         Float cost = (countBelow[i] * boundsBelow[i].surface_area() +
           countAbove[i] * boundsAbove[i].surface_area());
-        costs[i] = cost;
+        // costs[i] = cost;
         
         if (cost < minCost) {
           minCost = cost;

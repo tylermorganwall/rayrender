@@ -37,9 +37,9 @@ void CalculateTangents(TriangleMesh *trianglemesh) {
     int i0 = triangleArray[k+0];
     int i1 = triangleArray[k+1];
     int i2 = triangleArray[k+2];
-    ASSERT(i0 < trianglemesh->vertexIndices.size());
-    ASSERT(i1 < trianglemesh->vertexIndices.size());
-    ASSERT(i2 < trianglemesh->vertexIndices.size());
+    ASSERT(i0 < (int)trianglemesh->vertexIndices.size());
+    ASSERT(i1 < (int)trianglemesh->vertexIndices.size());
+    ASSERT(i2 < (int)trianglemesh->vertexIndices.size());
     ASSERT(i0 < vertexCount);
     ASSERT(i1 < vertexCount);
     ASSERT(i2 < vertexCount);

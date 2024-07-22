@@ -193,7 +193,7 @@ void LoopSubdivide(TriangleMesh* base_mesh,
   std::vector<point2f> TexcoordsExpanded(nVertices);
   std::vector<int> vertexToTex(nVertices);
   if(has_uv) {
-    for(int i = 0; i < base_mesh->vertexIndices.size(); ++i) {
+    for(size_t i = 0; i < base_mesh->vertexIndices.size(); ++i) {
       if(texIndices[i] != -1) {
         TexcoordsExpanded[vertexIndices[i]] = uv[texIndices[i]];
       }

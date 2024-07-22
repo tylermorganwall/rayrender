@@ -76,7 +76,7 @@ raymesh::raymesh(Rcpp::List raymesh_list,
                                              &mesh->normalIndices[i],
                                              &mesh->texIndices[i], i / 3,
                                              ObjectToWorld, WorldToObject, reverseOrientation));
-    if(mesh->face_material_id[i / 3] < 0 || mesh->face_material_id[i / 3] >= mesh->mesh_materials.size()) {
+    if(mesh->face_material_id[i / 3] < 0 || mesh->face_material_id[i / 3] >= (int)mesh->mesh_materials.size()) {
       throw std::runtime_error("Material ID out of range");
     }
     if(mesh->material_is_light[mesh->face_material_id[i / 3]] && importance_sample_lights) {

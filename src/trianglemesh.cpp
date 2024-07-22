@@ -30,7 +30,7 @@ void LoadRayMaterials(std::vector<std::shared_ptr<material> > &mesh_materials,
                       TextureCache &texCache,
                       bool verbose, std::vector<bool>& material_is_light) {
   int total_materials = 0;
-  for(int i = 0; i < shape_materials.size(); i++) { 
+  for(size_t i = 0; i < shape_materials.size(); i++) { 
     Rcpp::List single_material_batch = Rcpp::as<Rcpp::List>(shape_materials[0]);
     total_materials += single_material_batch.size();
   }
@@ -76,7 +76,7 @@ void LoadRayMaterials(std::vector<std::shared_ptr<material> > &mesh_materials,
   int mat_num = 0;
   for(size_t ii = 0; ii < shape_materials.size(); ii++) {
     Rcpp::List materials = Rcpp::as<Rcpp::List>(shape_materials[ii]);
-    for (size_t i = 0; i < materials.size(); i++) {
+    for (size_t i = 0; i < (size_t)materials.size(); i++) {
       Rcpp::List single_material = Rcpp::as<Rcpp::List>(materials(i));
       std::string diffuse_texname = Rcpp::as<std::string>(single_material["diffuse_texname"]);
       std::string bump_texname = Rcpp::as<std::string>(single_material["bump_texname"]);
@@ -853,7 +853,7 @@ TriangleMesh::TriangleMesh(Rcpp::List raymesh, bool verbose, bool calculate_cons
   Rcpp::List materials_raw = Rcpp::as<Rcpp::List>(raymesh["materials"]);
   std::vector<Rcpp::List> materials;
   
-  for(size_t i = 0; i < materials_raw.size(); i++) {
+  for(size_t i = 0; i < (size_t)materials_raw.size(); i++) {
     materials.push_back(Rcpp::as<Rcpp::List>(materials_raw(i)));
   }
   
