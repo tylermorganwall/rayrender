@@ -102,8 +102,6 @@ float* TextureCache::LoadImageFloat(const std::string& filename, int& width, int
     int header_ret = ParseEXRHeaderFromFile(&header, &exr_version, input, &err);
     if (header_ret != TINYEXR_SUCCESS) {
       if (err) {
-      //   Rcpp::Rcout<< "Loading of '" + standardizedFilename << 
-      //     "' failed due to: " << err << std::endl;
         FreeEXRErrorMessage(err);
         FreeEXRHeader(&header);
         throw std::runtime_error("Error loading EXR header");
@@ -115,7 +113,7 @@ float* TextureCache::LoadImageFloat(const std::string& filename, int& width, int
     
     FreeEXRHeader(&header);
     if (err) {
-      Rcpp::Rcout<< "Loading of '" + standardizedFilename << "' failed due to: " << err << 
+      Rcpp::Rcout<< "Loading of '" + filename << "' failed due to: " << err << 
         " -- nx/ny/channels :"  + std::to_string(width)  +  "/"  +  std::to_string(height)  +  "/"  +  std::to_string(channels) << 
         std::endl;
       FreeEXRErrorMessage(err);
@@ -127,9 +125,9 @@ float* TextureCache::LoadImageFloat(const std::string& filename, int& width, int
     
     loadedBySTB.push_back(false);
   } else {
-    data = stbi_loadf(standardizedFilename.c_str(), &width, &height, &channels, desired_channels);
+    data = stbi_loadf(filename.c_str(), &width, &height, &channels, desired_channels);
     if (!data) {
-      throw std::runtime_error("Loading of '" + standardizedFilename  +
+      throw std::runtime_error("Loading of '" + filename  +
                                "' (float) failed due to error: " + stbi_failure_reason() +
                                "-- nx/ny/channels :"  + std::to_string(width)  +  "/"  +  std::to_string(height)  +  "/"  +  std::to_string(channels));
     }
@@ -145,14 +143,10 @@ float* TextureCache::LoadImageFloat(const std::string& filename, int& width, int
 
 unsigned char * TextureCache::LoadImageChar(const std::string& filename, int& width, int& height, 
                                             int& channels, int desired_channels) {
-  std::string standardizedFilename = StandardizeFilename(filename);
-  const char* input = standardizedFilename.c_str();
-  fs::path filepath(input);
-
   unsigned char * data = nullptr;
-  data = stbi_load(standardizedFilename.c_str(), &width, &height, &channels, desired_channels);
+  data = stbi_load(filename.c_str(), &width, &height, &channels, desired_channels);
   if (!data) {
-    throw std::runtime_error("Loading of '" + standardizedFilename  +
+    throw std::runtime_error("Loading of '" + filename  +
                              "' (char) failed due to error: " + stbi_failure_reason() +
                              "-- nx/ny/channels :"  + std::to_string(width)  +  "/"  +  std::to_string(height)  +  "/"  +  std::to_string(channels));
   }
