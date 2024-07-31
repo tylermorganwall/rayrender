@@ -297,8 +297,8 @@ void LoadMtlMaterials(std::vector<std::shared_ptr<material> > &mesh_materials,
 
   if(load_materials) {
     //For default texture
-    alpha_textures.push_back(nullptr);
-    bump_textures.push_back(nullptr);
+    alpha_textures.push_back(alpha_default);
+    bump_textures.push_back(bump_default);
     for (size_t i = 0; i < materials.size(); i++) {
       int nx = 0; 
       int ny = 0; 

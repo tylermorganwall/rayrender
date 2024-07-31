@@ -24,6 +24,7 @@ trimesh::trimesh(std::string inputfile, std::string basedir, Float scale, Float 
                                                         scale, calculate_consistent_normals, texCache,
                                                         ObjectToWorld, WorldToObject, reverseOrientation));
   //Loop subdivision automatically calculates new normals
+  Rcpp::Rcout << "updated" << "\n";
   if(subdivision_levels > 1) {
     LoopSubdivide(mesh.get(),
                   subdivision_levels,
