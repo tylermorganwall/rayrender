@@ -39,7 +39,7 @@ Float* TextureCache::LookupFloat(const std::string& filename,
     return it->second;
   }
   
-  Float* data = LoadImageFloat(standardizedFilename, nx, ny, nn, desired_channels);
+  Float* data = LoadImageFloat(filename, nx, ny, nn, desired_channels);
   if (!data) {
     throw std::runtime_error("Failed to load image: " + filename);
   }
@@ -62,7 +62,7 @@ unsigned char * TextureCache::LookupChar(const std::string& filename,
     return it->second;
   }
   
-  unsigned char * data = LoadImageChar(standardizedFilename, nx, ny, nn, desired_channels);
+  unsigned char * data = LoadImageChar(filename, nx, ny, nn, desired_channels);
   if (!data) {
     throw std::runtime_error("Failed to load image: " + filename);
   }
