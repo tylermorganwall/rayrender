@@ -130,7 +130,7 @@ float* TextureCache::LoadImageFloat(const std::string& filename, int& width, int
     data = stbi_loadf(standardizedFilename.c_str(), &width, &height, &channels, desired_channels);
     if (!data) {
       throw std::runtime_error("Loading of '" + standardizedFilename  +
-                               "' failed due to error: " + stbi_failure_reason() +
+                               "' (float) failed due to error: " + stbi_failure_reason() +
                                "-- nx/ny/channels :"  + std::to_string(width)  +  "/"  +  std::to_string(height)  +  "/"  +  std::to_string(channels));
     }
     loadedBySTB.push_back(true);
@@ -153,7 +153,7 @@ unsigned char * TextureCache::LoadImageChar(const std::string& filename, int& wi
   data = stbi_load(standardizedFilename.c_str(), &width, &height, &channels, desired_channels);
   if (!data) {
     throw std::runtime_error("Loading of '" + standardizedFilename  +
-                             "' failed due to error: " + stbi_failure_reason() +
+                             "' (char) failed due to error: " + stbi_failure_reason() +
                              "-- nx/ny/channels :"  + std::to_string(width)  +  "/"  +  std::to_string(height)  +  "/"  +  std::to_string(channels));
   }
   

@@ -273,10 +273,7 @@ void LoadMtlMaterials(std::vector<std::shared_ptr<material> > &mesh_materials,
   bump_textures.reserve(materials.size()+1);
   alpha_textures.reserve(materials.size()+1);
   material_is_light.reserve(materials.size()+1);
-  
-  //For default texture
-  // alpha_textures.push_back(nullptr);
-  // bump_textures.push_back(nullptr);
+
   
   std::vector<vec3f > diffuse_materials(materials.size()+1);
   std::vector<vec3f > specular_materials(materials.size()+1);
@@ -299,6 +296,9 @@ void LoadMtlMaterials(std::vector<std::shared_ptr<material> > &mesh_materials,
   std::vector<int > nn_mat_bump(materials.size()+1);
 
   if(load_materials) {
+    //For default texture
+    alpha_textures.push_back(nullptr);
+    bump_textures.push_back(nullptr);
     for (size_t i = 0; i < materials.size(); i++) {
       int nx = 0; 
       int ny = 0; 
