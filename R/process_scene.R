@@ -98,7 +98,11 @@ process_scene = function(scene, process_material_ids = TRUE) {
     if(!scene$shape[[i]] %in% c(6,13,14)) { #obj, mesh3d, raymesh
       next
     }
-    image_input = scene$shape_info[[i]]$shape_properties$displacement_texture[[1]]
+    if(scene$shape[[i]] == 13) {
+      image_input = scene$shape_info[[i]]$mesh_info[[1]]$displacement_texture[[1]]
+    } else {
+      image_input = scene$shape_info[[i]]$shape_properties$displacement_texture[[1]]
+    }
     image_tex_bool = is.array(image_input)
     image_is_filename = is.character(image_input) && !is.na(image_input)
     if(image_tex_bool) {
@@ -116,7 +120,11 @@ process_scene = function(scene, process_material_ids = TRUE) {
       disp_temp_file_names[i] = path.expand(image_input)
       scene$shape_info[[i]]$shape_properties$displacement_texture = disp_temp_file_names[i]
     } else {
-      scene$shape_info[[i]]$shape_properties$displacement_texture = ""
+      if(scene$shape[[i]] == 13) {
+        scene$shape_info[[i]]$mesh_info[[1]]$displacement_texture = ""
+      } else {
+        scene$shape_info[[i]]$shape_properties$displacement_texture = ""
+      }
     }
   }
 
