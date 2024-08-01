@@ -43,3 +43,5 @@ SystemRequirements: C++17
 Biarch: true
 Encoding: UTF-8
 Config/testthat/edition: 3
+Remotes: tylermorganwall/rayimage, tylermorganwall/rayvertex
+
