@@ -152,6 +152,7 @@ public:
   Float start_cam_width, start_cam_height;
   point3f start_lookat;
   Float focus_dist;
+  Float initial_ratio;
 };
 
 

@@ -187,6 +187,7 @@ ortho_camera::ortho_camera(point3f lookfrom, point3f _lookat, vec3f _vup,
   lower_left_corner = origin - cam_width/2 *  u - cam_height/2 * v;
   horizontal = cam_width * u;
   vertical = cam_height * v;
+  initial_ratio = cam_width / cam_height;
 }
 
 ray ortho_camera::get_ray(Float s, Float t, point3f u3, Float u) {
@@ -214,7 +215,7 @@ void ortho_camera::update_position(vec3f delta, bool update_uvw, bool update_foc
 }
 
 void ortho_camera::update_fov(Float delta_fov) {
-  cam_width += delta_fov;
+  cam_width += delta_fov * initial_ratio;
   cam_height += delta_fov;
   cam_width = std::fmax(cam_width,0.001);
   cam_height = std::fmax(cam_height,0.001);
