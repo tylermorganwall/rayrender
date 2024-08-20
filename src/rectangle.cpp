@@ -1,6 +1,10 @@
 #include "rectangle.h"
+#include "raylog.h"
 
 bool xy_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
+  SCOPED_CONTEXT("Hit");
+  SCOPED_TIMER_COUNTER("Rect");
+  
   ray r2 = (*WorldToObject)(r);
   
   Float t = (k-r2.origin().z()) * r2.inv_dir_pad.z();
@@ -53,12 +57,12 @@ bool xy_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
   rec = (*ObjectToWorld)(rec);
   rec.shape = this;
   rec.alpha_miss = alpha_miss;
-  
-  
   return(true);
 }
 
 bool xy_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) {
+  SCOPED_CONTEXT("Hit");
+  SCOPED_TIMER_COUNTER("Rect");
   ray r2 = (*WorldToObject)(r);
   
   Float t = (k-r2.origin().z()) * r2.inv_dir_pad.z();
@@ -111,7 +115,6 @@ bool xy_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampl
   rec = (*ObjectToWorld)(rec);
   rec.shape = this;
   rec.alpha_miss = alpha_miss;
-  
   return(true);
 }
 
@@ -156,6 +159,9 @@ vec3f xy_rect::random(const point3f& o, Sampler* sampler, Float time) {
 }
 
 bool xz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
+  SCOPED_CONTEXT("Hit");
+  SCOPED_TIMER_COUNTER("Rect");
+  
   ray r2 = (*WorldToObject)(r);
   
   Float t = (k-r2.origin().y()) * r2.inv_dir_pad.y();
@@ -217,6 +223,9 @@ bool xz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
 
 
 bool xz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) {
+  SCOPED_CONTEXT("Hit");
+  SCOPED_TIMER_COUNTER("Rect");
+  
   ray r2 = (*WorldToObject)(r);
   
   Float t = (k-r2.origin().y()) * r2.inv_dir_pad.y();
@@ -314,6 +323,8 @@ vec3f xz_rect::random(const point3f& o, Sampler* sampler, Float time) {
 }
 
 bool yz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
+  SCOPED_CONTEXT("Hit");
+  SCOPED_TIMER_COUNTER("Rect");
   ray r2 = (*WorldToObject)(r);
   
   Float t = (k-r2.origin().x()) * r2.inv_dir_pad.x();
@@ -373,6 +384,9 @@ bool yz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
 
 
 bool yz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) {
+  SCOPED_CONTEXT("Hit");
+  SCOPED_TIMER_COUNTER("Rect");
+  
   ray r2 = (*WorldToObject)(r);
   
   Float t = (k-r2.origin().x()) * r2.inv_dir_pad.x();

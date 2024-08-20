@@ -1,6 +1,6 @@
 #include "pdf.h"
 #include "mathinline.h"
-
+#include "raylog.h"
 
 inline bool Refract(const vec3f &wi, const normal3f &n, Float eta, vec3f *wt) {
   // Compute $\cos \theta_\roman{t}$ using Snell's law
@@ -16,6 +16,9 @@ inline bool Refract(const vec3f &wi, const normal3f &n, Float eta, vec3f *wt) {
 }
 
 Float cosine_pdf::value(const vec3f& direction, random_gen& rng, Float time) {
+  SCOPED_CONTEXT("PDF");
+  SCOPED_TIMER_COUNTER("CosinePDF Value");
+  
   Float cosine = dot(unit_vector(direction), uvw.w());
   if(cosine > 0) {
     return(cosine/M_PI);
@@ -25,6 +28,9 @@ Float cosine_pdf::value(const vec3f& direction, random_gen& rng, Float time) {
 }
 
 Float cosine_pdf::value(const vec3f& direction, Sampler* sampler, Float time) {
+  SCOPED_CONTEXT("PDF");
+  SCOPED_TIMER_COUNTER("CosinePDF Value");
+  
   Float cosine = dot(unit_vector(direction), uvw.w());
   if(cosine > 0) {
     return(cosine/M_PI);
@@ -33,34 +39,52 @@ Float cosine_pdf::value(const vec3f& direction, Sampler* sampler, Float time) {
   }
 } 
 vec3f cosine_pdf::generate(random_gen& rng, bool& diffuse_bounce, Float time) {
+  SCOPED_CONTEXT("PDF");
+  SCOPED_TIMER_COUNTER("CosinePDF Generate");
+  
   diffuse_bounce = true;
   return(uvw.local_to_world(rng.random_cosine_direction()));
 }
 
 vec3f cosine_pdf::generate(Sampler* sampler, bool& diffuse_bounce, Float time) {
+  SCOPED_CONTEXT("PDF");
+  SCOPED_TIMER_COUNTER("CosinePDF Generate");
+  
   diffuse_bounce = true;
   return(uvw.local_to_world(rand_cosine_direction(sampler->Get2D())));
 }
 
 
 Float micro_pdf::value(const vec3f& direction, random_gen& rng, Float time) {
+  SCOPED_CONTEXT("PDF");
+  SCOPED_TIMER_COUNTER("MicroPDF Value");
+  
   vec3f wo = unit_vector(uvw.world_to_local(direction));
   vec3f wh = unit_vector(wi + wo);
   return(distribution->Pdf(wo, wi, wh, u, v) / ( 4 * dot(wo, wh) ));
 }
 
 Float micro_pdf::value(const vec3f& direction, Sampler* sampler, Float time) {
+  SCOPED_CONTEXT("PDF");
+  SCOPED_TIMER_COUNTER("MicroPDF Value");
+  
   vec3f wo = unit_vector(uvw.world_to_local(direction));
   vec3f wh = unit_vector(wi + wo);
   return(distribution->Pdf(wo, wi, wh, u, v) / ( 4 * dot(wo, wh) ));
 }
 
 vec3f micro_pdf::generate(random_gen& rng, bool& diffuse_bounce, Float time) {
+  SCOPED_CONTEXT("PDF");
+  SCOPED_TIMER_COUNTER("MicroPDF Generate");
+  
   vec3f wh = distribution->Sample_wh(wi, rng.unif_rand(), rng.unif_rand(), u, v);
   return(uvw.local_to_world(Reflect(wi, wh)));
 }
 
 vec3f micro_pdf::generate(Sampler* sampler, bool& diffuse_bounce, Float time) {
+  SCOPED_CONTEXT("PDF");
+  SCOPED_TIMER_COUNTER("MicroPDF Generate");
+  
   vec2f u_r = sampler->Get2D();
   vec3f wh = distribution->Sample_wh(wi, u_r.x(), u_r.y(), u, v);
   return(uvw.local_to_world(Reflect(wi, wh)));
@@ -74,6 +98,9 @@ micro_transmission_pdf::micro_transmission_pdf(const normal3f& w, const vec3f& w
 }
 
 Float micro_transmission_pdf::value(const vec3f& direction, random_gen& rng, Float time) {
+  SCOPED_CONTEXT("PDF");
+  SCOPED_TIMER_COUNTER("MicroTrPDF Value");
+  
   vec3f wo = unit_vector(uvw.world_to_local(direction));
   Float cosTheta_o = CosTheta(wo), cosTheta_i = CosTheta(wi);
   bool reflect = cosTheta_i * cosTheta_o > 0;
@@ -100,6 +127,9 @@ Float micro_transmission_pdf::value(const vec3f& direction, random_gen& rng, Flo
 }
 
 Float micro_transmission_pdf::value(const vec3f& direction, Sampler* sampler, Float time) {
+  SCOPED_CONTEXT("PDF");
+  SCOPED_TIMER_COUNTER("MicroTrPDF Value");
+  
   vec3f wo = unit_vector(uvw.world_to_local(direction));
   Float cosTheta_o = CosTheta(wo), cosTheta_i = CosTheta(wi);
   bool reflect = cosTheta_i * cosTheta_o > 0;
@@ -130,6 +160,9 @@ inline Float schlick(Float cosine, Float ref_idx, Float ref_idx2) {
 }
 
 vec3f micro_transmission_pdf::generate(random_gen& rng, bool& diffuse_bounce, Float time) {
+  SCOPED_CONTEXT("PDF");
+  SCOPED_TIMER_COUNTER("MicroTrPDF Generate");
+  
   vec3f wh = distribution->Sample_wh(wi, rng.unif_rand(),rng.unif_rand(), u, v);
 
   bool entering = CosTheta(wi) > 0;
@@ -143,6 +176,9 @@ vec3f micro_transmission_pdf::generate(random_gen& rng, bool& diffuse_bounce, Fl
 }
 
 vec3f micro_transmission_pdf::generate(Sampler* sampler, bool& diffuse_bounce, Float time) {
+  SCOPED_CONTEXT("PDF");
+  SCOPED_TIMER_COUNTER("MicroTrPDF Generate");
+  
   vec2f u_r = sampler->Get2D();
   normal3f wh = distribution->Sample_wh(wi, u_r.x(), u_r.y(), u, v);
 
@@ -158,6 +194,9 @@ vec3f micro_transmission_pdf::generate(Sampler* sampler, bool& diffuse_bounce, F
 
 
 Float glossy_pdf::value(const vec3f& direction, random_gen& rng, Float time) {
+  SCOPED_CONTEXT("PDF");
+  SCOPED_TIMER_COUNTER("GlossyPDF Value");
+  
   vec3f wo = unit_vector(uvw.world_to_local(direction));
   if(!SameHemisphere(wo,wi)) {
     return(0);
@@ -167,6 +206,9 @@ Float glossy_pdf::value(const vec3f& direction, random_gen& rng, Float time) {
 }
 
 Float glossy_pdf::value(const vec3f& direction, Sampler* sampler, Float time) {
+  SCOPED_CONTEXT("PDF");
+  SCOPED_TIMER_COUNTER("GlossyPDF Value");
+  
   vec3f wo = unit_vector(uvw.world_to_local(direction));
   if(!SameHemisphere(wo,wi)) {
     return(0);
@@ -176,6 +218,9 @@ Float glossy_pdf::value(const vec3f& direction, Sampler* sampler, Float time) {
 }
 
 vec3f glossy_pdf::generate(random_gen& rng, bool& diffuse_bounce, Float time) {
+  SCOPED_CONTEXT("PDF");
+  SCOPED_TIMER_COUNTER("GlossyPDF Generate");
+  
   if(rng.unif_rand() < 0.5) {
     vec3f wh = distribution->Sample_wh(wi, rng.unif_rand(), rng.unif_rand(), u, v);
     return(uvw.local_to_world(Reflect(wi, wh)));
@@ -187,6 +232,9 @@ vec3f glossy_pdf::generate(random_gen& rng, bool& diffuse_bounce, Float time) {
   }
 }
 vec3f glossy_pdf::generate(Sampler* sampler, bool& diffuse_bounce, Float time) {
+  SCOPED_CONTEXT("PDF");
+  SCOPED_TIMER_COUNTER("GlossyPDF Generate");
+  
   if(sampler->Get1D() < 0.5) {
     vec2f u_r = sampler->Get2D();
     vec3f wh = distribution->Sample_wh(wi, u_r.x(), u_r.y(), u, v);
@@ -240,6 +288,9 @@ vec3f mixture_pdf::generate(Sampler* sampler, bool& diffuse_bounce, Float time) 
 }
 
 Float hair_pdf::value(const vec3f& direction, random_gen& rng, Float time) {
+  SCOPED_CONTEXT("PDF");
+  SCOPED_TIMER_COUNTER("HairPDF Value");
+  
   Float sinThetaO = wo.x();
   Float cosThetaO = SafeSqrt(1 - Sqr(sinThetaO));
   Float phiO = std::atan2(wo.z(), wo.y());
@@ -292,6 +343,9 @@ Float hair_pdf::value(const vec3f& direction, random_gen& rng, Float time) {
 
 
 Float hair_pdf::value(const vec3f& direction, Sampler* sampler, Float time) {
+  SCOPED_CONTEXT("PDF");
+  SCOPED_TIMER_COUNTER("HairPDF Value");
+  
   Float sinThetaO = wo.x();
   Float cosThetaO = SafeSqrt(1 - Sqr(sinThetaO));
   Float phiO = std::atan2(wo.z(), wo.y());
@@ -344,6 +398,9 @@ Float hair_pdf::value(const vec3f& direction, Sampler* sampler, Float time) {
 
 
 vec3f hair_pdf::generate(random_gen& rng, bool& diffuse_bounce, Float time) {
+  SCOPED_CONTEXT("PDF");
+  SCOPED_TIMER_COUNTER("HairPDF Generate");
+  
   diffuse_bounce = true;
   Float sinThetaO = wo.x();
   Float cosThetaO = SafeSqrt(1 - Sqr(sinThetaO));
@@ -403,6 +460,9 @@ vec3f hair_pdf::generate(random_gen& rng, bool& diffuse_bounce, Float time) {
 }
 
 vec3f hair_pdf::generate(Sampler* sampler, bool& diffuse_bounce, Float time) {
+  SCOPED_CONTEXT("PDF");
+  SCOPED_TIMER_COUNTER("HairPDF Generate");
+  
   diffuse_bounce = true;
   Float sinThetaO = wo.x();
   Float cosThetaO = SafeSqrt(1 - Sqr(sinThetaO));

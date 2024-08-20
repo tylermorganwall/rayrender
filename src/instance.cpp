@@ -1,4 +1,5 @@
 #include "instance.h"
+#include "raylog.h"
 
 instance::instance(bvh_node* scene, 
                    std::shared_ptr<Transform> ObjectToWorld, 
@@ -8,6 +9,9 @@ instance::instance(bvh_node* scene,
 }
 
 bool instance::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
+  SCOPED_CONTEXT("MultiHit");
+  SCOPED_TIMER_COUNTER("Instance");
+  
   ray r2 = (*WorldToObject)(r);
   if(original_scene->hit(r2, t_min, t_max, rec, rng)) {
     rec = (*ObjectToWorld)(rec);
@@ -17,6 +21,9 @@ bool instance::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
 }
 
 bool instance::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) {
+  SCOPED_CONTEXT("MultiHit");
+  SCOPED_TIMER_COUNTER("Instance");
+  
   ray r2 = (*WorldToObject)(r);
   if(original_scene->hit(r2, t_min, t_max, rec, sampler)) {
     rec = (*ObjectToWorld)(rec);

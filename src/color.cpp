@@ -1,6 +1,7 @@
 #include "color.h"
 #include "RcppThread.h"
 #include "mathinline.h"
+#include "raylog.h"
 
 // #include "fstream"
 // #define DEBUG
@@ -8,6 +9,9 @@
 point3f color(const ray& r, hitable *world, hitable_list *hlist,
            size_t max_depth, size_t roulette_activate, random_gen& rng, Sampler* sampler,
            bool& alpha) {
+  SCOPED_CONTEXT("Overall");
+  SCOPED_TIMER_COUNTER("Color");
+  
 #ifdef DEBUG
   std::ofstream myfile;
   myfile.open("rays.txt", std::ios::app | std::ios::out);
@@ -25,7 +29,9 @@ point3f color(const ray& r, hitable *world, hitable_list *hlist,
   for(size_t i = 0; i < max_depth; i++) {
     bool is_invisible = false;
     hit_record hrec;
+    START_TIMER("Total Hits");
     if(world->hit(r2, 0.001, MaxT, hrec, rng)) { //generated hit record, world space
+      STOP_TIMER("Total Hits");
       scatter_record srec;
       if(hrec.alpha_miss) {
         r2.A = OffsetRayOrigin(hrec.p, hrec.pError, hrec.normal, r2.direction());
@@ -99,6 +105,7 @@ point3f color(const ray& r, hitable *world, hitable_list *hlist,
         return(final_color);
       }
     } else {
+      STOP_TIMER("hit");
       return(final_color);
     }
   }

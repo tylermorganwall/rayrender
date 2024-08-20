@@ -13,6 +13,7 @@
 #include "bvh_node.h"
 #include "rng.h"
 #include "triangle.h"
+#include "raylog.h"
 
 raymesh::raymesh(Rcpp::List raymesh_list, 
                  std::shared_ptr<material> default_material, 
@@ -95,10 +96,16 @@ raymesh::raymesh(Rcpp::List raymesh_list,
 }
 
 bool raymesh::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
+  SCOPED_CONTEXT("MultiHit");
+  SCOPED_TIMER_COUNTER("RayMesh");
+  
   return(tri_mesh_bvh->hit(r, t_min, t_max, rec, rng));
 }
 
 bool raymesh::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) {
+  SCOPED_CONTEXT("MultiHit");
+  SCOPED_TIMER_COUNTER("RayMesh");
+  
   return(tri_mesh_bvh->hit(r, t_min, t_max, rec, sampler));
 }
 

@@ -1,8 +1,11 @@
 #include "sphere.h"
+#include "raylog.h"
 
 // #include "RcppThread.h"
 
 bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
+  SCOPED_CONTEXT("Hit");
+  SCOPED_TIMER_COUNTER("Sphere");
   vec3f oErr, dErr;
   ray r2 = (*WorldToObject)(r, &oErr, &dErr);
   // Compute quadratic sphere coefficients
@@ -125,6 +128,9 @@ bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random
 
 
 bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) {
+  SCOPED_CONTEXT("Hit");
+  SCOPED_TIMER_COUNTER("Sphere");
+  
   vec3f oErr, dErr;
   ray r2 = (*WorldToObject)(r, &oErr, &dErr);
   // Compute quadratic sphere coefficients

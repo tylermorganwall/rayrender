@@ -4,6 +4,7 @@
 #include "plymesh.h"
 #include "loopsubdiv.h"
 #include "calcnormals.h"
+#include "raylog.h"
 
 inline char separator_ply() {
 #if defined _WIN32 || defined __CYGWIN__
@@ -161,10 +162,15 @@ plymesh::plymesh(std::string inputfile, std::string basedir, std::shared_ptr<mat
 
 
 bool plymesh::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
+  SCOPED_CONTEXT("MultiHit");
+  SCOPED_TIMER_COUNTER("PlyMesh");
   return(ply_mesh_bvh->hit(r, t_min, t_max, rec, rng));
 };
 
 bool plymesh::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) {
+  SCOPED_CONTEXT("MultiHit");
+  SCOPED_TIMER_COUNTER("PlyMesh");
+  
   return(ply_mesh_bvh->hit(r, t_min, t_max, rec, sampler));
 };
 

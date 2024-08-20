@@ -1,4 +1,5 @@
 #include "box.h"
+#include "raylog.h"
 
 box::box(const vec3f& p0, const vec3f& p1, std::shared_ptr<material> ptr, 
          std::shared_ptr<alpha_texture> alpha_mask, std::shared_ptr<bump_texture> bump_tex,
@@ -41,9 +42,13 @@ std::string box::GetName() const {
 }
 
 bool box::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
+  SCOPED_CONTEXT("Hit");
+  SCOPED_TIMER_COUNTER("Cube");
   return(list.hit(r,t_min,t_max,rec, rng));
 }
 
 bool box::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) {
+  SCOPED_CONTEXT("Hit");
+  SCOPED_TIMER_COUNTER("Cube");
   return(list.hit(r,t_min,t_max,rec, sampler));
 }

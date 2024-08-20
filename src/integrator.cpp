@@ -10,6 +10,7 @@
 #include "filter.h"
 #include "sampler.h"
 #include "PreviewDisplay.h"
+#include "raylog.h"
 
 
 void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::size_t ns, int debug_channel,
@@ -273,5 +274,6 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
       break;
     }
   }
+  PRINT_LOG_REPORT(numbercores);
   adaptive_pixel_sampler.write_final_pixels();
 }

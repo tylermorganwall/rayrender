@@ -4,60 +4,6 @@
 
 #include <Rcpp.h>
 
-// #define DEBUG_MEMORY
-#ifdef DEBUG_MEMORY
-
-#include <cstdlib>
-#include <iostream>
-#include <new>
-
-
-static std::size_t alloc{0};
-static std::size_t dealloc{0};
-static std::size_t memory_used{0};
-static std::size_t mem_counter(0);
-
-void* operator new(std::size_t sz){
-  alloc += 1;
-  memory_used += sz;
-  Rcpp::Rcout << alloc << " : " << sz << " : " << memory_used << "\n";
-  return std::malloc(sz);
-}
-
-void operator delete(void* ptr) noexcept{
-  dealloc += 1;
-  std::free(ptr);
-}
-
-void* operator new[](std::size_t sz){
-  alloc += 1;
-  memory_used += sz;
-  // Rcpp::Rcout << alloc << " : " << sz << " : " << memory_used << "\n";
-  
-  return std::malloc(sz);
-}
-
-void operator delete[](void* ptr) noexcept {
-  dealloc += 1;
-  std::free(ptr);
-}
-
-void getInfo(){
-  Rcpp::Rcout << "Number of allocations  : " << alloc << std::endl;
-  // Rcpp::Rcout << "Number of deallocations: " << dealloc << std::endl;
-  Rcpp::Rcout << "Total memory used      : " << memory_used <<      " bytes (";
-
-  if(memory_used < 1024) {
-  } else if (memory_used <= 1024*1024) {
-    Rcpp::Rcout << (float)memory_used/(float)1024 << " KB)" << std::endl;
-  } else if (memory_used <= 1024*1024*1024) {
-    Rcpp::Rcout << (float)memory_used/(float)(1024*1024) <<      " MB)" << std::endl;
-  } else {
-    Rcpp::Rcout << (float)memory_used/float(1024*1024*1024) <<      " GB)" << std::endl;
-  }
-}
-#endif
-
 #include "float.h"
 #include "vec3.h"
 #include "vec2.h"
@@ -89,6 +35,7 @@ using namespace Rcpp;
 // [[Rcpp::depends(RcppThread)]]
 #include "RcppThread.h"
 #include "PreviewDisplay.h"
+#include "raylog.h"
 
 // #define DEBUG
 
@@ -99,16 +46,9 @@ using namespace Rcpp;
 using namespace std;
 
 
-
 // [[Rcpp::export]]
 List render_scene_rcpp(List scene, List camera_info, List scene_info, List render_info) {
-#ifdef DEBUG_MEMORY
-  alloc = 0;
-  // dealloc = 0;
-  memory_used = 0;
-  mem_counter = 0;
-#endif
-
+  RESET_RAYLOG();
   //Unpack scene info
   IntegerVector shape = as<IntegerVector>(scene_info["shape"]);
   
@@ -362,6 +302,9 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
     min_adaptive_size = 1;
     min_variance = 10E-8;
   }
+  QUERY_MEMORY_USAGE();
+  PRINT_CURRENT_MEMORY("Before raytracing");
+  
   // Rcpp::Rcout << "Total world size: " << world.GetSize() + texture_bytes << " (Textures: " << texture_bytes << ") \n";
   if(debug_channel != 0) {
     debug_scene(numbercores, nx, ny, ns, debug_channel,
@@ -382,6 +325,7 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
                world, imp_sample_objects,
                clampval, max_depth, roulette_active, Display);
   }
+  PRINT_CURRENT_MEMORY("After raytracing");
   
   delete shared_materials;
   PutRNGstate();
@@ -397,11 +341,8 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
     }
     final_image.attr("keyframes") = keyframes;
   }
-#ifdef DEBUG_MEMORY
-  Rcpp::Rcout << "Test alloc #" << mem_counter << "\n";
-  mem_counter++;
-  getInfo();
-#endif
+  PRINT_CURRENT_MEMORY("After cleanup");
+  
   return(final_image);
 }
 

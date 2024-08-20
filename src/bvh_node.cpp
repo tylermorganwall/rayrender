@@ -1,5 +1,5 @@
 #include "bvh_node.h"
-
+#include "raylog.h"
 
 #ifdef DEBUGBBOX
 #include <iostream>
@@ -100,6 +100,9 @@ bvh_node::bvh_node(std::vector<std::shared_ptr<hitable> >& l,
                      size_t start, size_t end,
                      Float time0, Float time1, int bvh_type, random_gen &rng) {
 #endif
+  PUSH_CONTEXT("Initialization");
+  START_TIMER("Build BVH");
+    
   aabb centroid_bounds;
   if(bvh_type == 1) {
     sah = true;
@@ -235,6 +238,9 @@ bvh_node::bvh_node(std::vector<std::shared_ptr<hitable> >& l,
       }
       int halfCount = countBelow[minCostSplitBucket];
       //End SAH
+      POP_CONTEXT();
+      STOP_TIMER("Build BVH");
+      
 #ifdef DEBUGBBOX
       depth++;
       left = std::make_shared<bvh_node>(l, start, start + halfCount, time0, time1, bvh_type, depth, rng);
@@ -245,6 +251,8 @@ bvh_node::bvh_node(std::vector<std::shared_ptr<hitable> >& l,
       right = std::make_shared<bvh_node>(l, start + halfCount, end, time0, time1, bvh_type, rng);
 #endif
     } else {
+      POP_CONTEXT();
+      STOP_TIMER("Build BVH");
 #ifdef DEBUGBBOX
       depth++;
       auto mid = start + n/2;

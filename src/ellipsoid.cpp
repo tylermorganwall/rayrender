@@ -1,7 +1,10 @@
 #include "ellipsoid.h"
-
+#include "raylog.h"
 
 bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
+  SCOPED_CONTEXT("Hit");
+  SCOPED_TIMER_COUNTER("Ellipsoid");
+  
   ray r2 = (*WorldToObject)(r);
   ray scaled_ray(r2.origin() * point3f(inv_axes) + -center, r2.direction() * inv_axes);
   Float a = dot(scaled_ray.direction(), scaled_ray.direction());
@@ -127,6 +130,9 @@ bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, ran
 
 
 bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) {
+  SCOPED_CONTEXT("Hit");
+  SCOPED_TIMER_COUNTER("Ellipsoid");
+  
   ray r2 = (*WorldToObject)(r);
   
   ray scaled_ray(r2.origin() * point3f(inv_axes) + -center, r2.direction() * inv_axes);

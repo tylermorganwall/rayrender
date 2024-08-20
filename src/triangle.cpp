@@ -1,7 +1,11 @@
 #include "triangle.h"
 #include "RcppThread.h"
+#include "raylog.h"
 
 bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
+  SCOPED_CONTEXT("Hit");
+  SCOPED_TIMER_COUNTER("Triangle");
+  
   const point3f &p0 = mesh->p[v[0]];
   const point3f &p1 = mesh->p[v[1]];
   const point3f &p2 = mesh->p[v[2]];
@@ -208,6 +212,9 @@ bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
 
 
 bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) {
+  SCOPED_CONTEXT("Hit");
+  SCOPED_TIMER_COUNTER("Triangle");
+  
   const point3f &p0 = mesh->p[v[0]];
   const point3f &p1 = mesh->p[v[1]];
   const point3f &p2 = mesh->p[v[2]];

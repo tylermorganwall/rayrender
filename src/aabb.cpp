@@ -1,5 +1,5 @@
 #include "aabb.h"
-
+#include "raylog.h"
 const Float aabb::surface_area() const {
   point3f diag = Diag();
   return(min().x() <= max().x() ? 
@@ -15,6 +15,9 @@ const Float aabb::Volume() const {
 }
 
 bool aabb::hit(const ray &r, Float tmin, Float tmax, random_gen& rng) {
+  SCOPED_CONTEXT("Hit");
+  SCOPED_TIMER_COUNTER("AABB");
+
   Float txmin, txmax, tymin, tymax, tzmin, tzmax;
   txmin = (bounds[  r.sign[0]].x()-r.origin().x()) * r.inv_dir.x();
   txmax = (bounds[1-r.sign[0]].x()-r.origin().x()) * r.inv_dir_pad.x();
@@ -28,6 +31,8 @@ bool aabb::hit(const ray &r, Float tmin, Float tmax, random_gen& rng) {
 }
 
 bool aabb::hit(const ray &r, Float tmin, Float tmax, Sampler* sampler) {
+  SCOPED_CONTEXT("Hit");
+  SCOPED_TIMER_COUNTER("AABB");
   Float txmin, txmax, tymin, tymax, tzmin, tzmax;
   txmin = (bounds[  r.sign[0]].x()-r.origin().x()) * r.inv_dir.x();
   txmax = (bounds[1-r.sign[0]].x()-r.origin().x()) * r.inv_dir_pad.x();

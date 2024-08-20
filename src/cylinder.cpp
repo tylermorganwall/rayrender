@@ -1,4 +1,5 @@
 #include "cylinder.h"
+#include "raylog.h"
 
 void cylinder::get_cylinder_uv(const point3f& p, Float& u, Float& v) {
   Float phi = atan2(p.z(),p.x());
@@ -8,6 +9,9 @@ void cylinder::get_cylinder_uv(const point3f& p, Float& u, Float& v) {
 };
 
 bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
+  SCOPED_CONTEXT("Hit");
+  SCOPED_TIMER_COUNTER("Cylinder");
+  
   ray r2 = (*WorldToObject)(r);
   
   vec3f oc = r2.origin();
@@ -232,6 +236,9 @@ bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
 
 
 bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) {
+  SCOPED_CONTEXT("Hit");
+  SCOPED_TIMER_COUNTER("Cylinder");
+  
   ray r2 = (*WorldToObject)(r);
   
   vec3f oc = r2.origin()-point3f(0.);

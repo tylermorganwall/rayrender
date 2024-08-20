@@ -1,4 +1,5 @@
 #include "hitable.h"
+#include "raylog.h"
 
 //Translate implementation
 
@@ -54,6 +55,9 @@ bool AnimatedHitable::bounding_box(Float t0, Float t1, aabb& box) const {
 }
 
 bool AnimatedHitable::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
+  SCOPED_CONTEXT("Hit");
+  SCOPED_TIMER_COUNTER("Animation");
+  
   Transform InterpolatedPrimToWorld;
   PrimitiveToWorld.Interpolate(r.time(), &InterpolatedPrimToWorld);
   ray ray_interp = Inverse(InterpolatedPrimToWorld)(r);
@@ -69,6 +73,9 @@ bool AnimatedHitable::hit(const ray& r, Float t_min, Float t_max, hit_record& re
 }
 
 bool AnimatedHitable::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) {
+  SCOPED_CONTEXT("Hit");
+  SCOPED_TIMER_COUNTER("Animation");
+  
   Transform InterpolatedPrimToWorld;
   PrimitiveToWorld.Interpolate(r.time(), &InterpolatedPrimToWorld);
   ray ray_interp = Inverse(InterpolatedPrimToWorld)(r);

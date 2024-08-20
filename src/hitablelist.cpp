@@ -1,5 +1,5 @@
 #include "hitablelist.h"
-
+#include "raylog.h"
 
 bool hitable_list::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
   hit_record temp_rec;

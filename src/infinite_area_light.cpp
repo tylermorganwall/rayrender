@@ -1,4 +1,5 @@
 #include "infinite_area_light.h"
+#include "raylog.h"
 
 InfiniteAreaLight::InfiniteAreaLight(int width, int height, Float r, vec3f center, 
                                      std::shared_ptr<texture> image, std::shared_ptr<material> mat,
@@ -21,6 +22,9 @@ InfiniteAreaLight::InfiniteAreaLight(int width, int height, Float r, vec3f cente
 }
 
 bool InfiniteAreaLight::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
+  SCOPED_CONTEXT("Hit");
+  SCOPED_TIMER_COUNTER("InfLight");
+  
   ray r2 = (*WorldToObject)(r);
   
   vec3f oc = r2.origin() - center;
@@ -94,6 +98,9 @@ bool InfiniteAreaLight::hit(const ray& r, Float t_min, Float t_max, hit_record& 
 
 
 bool InfiniteAreaLight::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) {
+  SCOPED_CONTEXT("Hit");
+  SCOPED_TIMER_COUNTER("InfLight");
+  
   ray r2 = (*WorldToObject)(r);
   vec3f oc = r2.origin() - center;
   Float a = dot(r2.direction(), r2.direction());

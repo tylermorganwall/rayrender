@@ -1,5 +1,5 @@
 #include "adaptivesampler.h"
-
+#include "raylog.h"
 
 adaptive_sampler::adaptive_sampler(size_t _numbercores, size_t nx, size_t ny, size_t ns, int debug_channel,
                  float min_variance, size_t min_adaptive_size, 
@@ -59,6 +59,9 @@ void adaptive_sampler::reset() {
 void adaptive_sampler::test_for_convergence(size_t k, size_t s,
                           size_t nx_end, size_t nx_begin,
                           size_t ny_end, size_t ny_begin) {
+  SCOPED_CONTEXT("Overall");
+  SCOPED_TIMER_COUNTER("Convergence Test");
+  
   Float error_block = 0.0;
   size_t nx_block = (nx_end-nx_begin);
   size_t ny_block = (ny_end-ny_begin);
@@ -111,6 +114,8 @@ void adaptive_sampler::test_for_convergence(size_t k, size_t s,
 }
   
 void adaptive_sampler::split_remove_chunks(size_t s) {
+  SCOPED_CONTEXT("Overall");
+  SCOPED_TIMER_COUNTER("Split/Remove Chunks");
   auto it = pixel_chunks.begin();
   std::vector<pixel_block> temppixels;
   while(it != pixel_chunks.end()) {

@@ -1,7 +1,10 @@
 #include "disk.h"
-
+#include "raylog.h"
 
 bool disk::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
+  SCOPED_CONTEXT("Hit");
+  SCOPED_TIMER_COUNTER("Disk");
+  
   ray r2 = (*WorldToObject)(r);
   // First we intersect with the plane containing the disk
   Float t = -r2.origin().y() / r2.direction().y();
@@ -64,6 +67,9 @@ bool disk::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_g
 
 
 bool disk::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) {
+  SCOPED_CONTEXT("Hit");
+  SCOPED_TIMER_COUNTER("Disk");
+  
   ray r2 = (*WorldToObject)(r);
   // First we intersect with the plane containing the disk
   Float t = -r2.origin().y() / r2.direction().y();

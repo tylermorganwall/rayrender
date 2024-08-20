@@ -1,4 +1,5 @@
 #include "curve.h"
+#include "raylog.h"
 
 static point3f BlossomBezier(const point3f p[4], Float u0, Float u1, Float u2) {
   point3f a[3] = { lerp(u0, p[0], p[1]),
@@ -72,6 +73,9 @@ bool curve::bounding_box(Float t0, Float t1, aabb& box) const {
 }
 
 bool curve::hit(const ray& r, Float tmin, Float tmax, hit_record& rec, random_gen& rng) {
+  SCOPED_CONTEXT("Hit");
+  SCOPED_TIMER_COUNTER("Curve");
+  
   ray r2 = (*WorldToObject)(r); 
   
   // Compute object-space control points for curve segment, cpObj
@@ -160,6 +164,9 @@ bool curve::hit(const ray& r, Float tmin, Float tmax, hit_record& rec, random_ge
 #include "RcppThread.h"
 
 bool curve::hit(const ray& r, Float tmin, Float tmax, hit_record& rec, Sampler* sampler) {
+  SCOPED_CONTEXT("Hit");
+  SCOPED_TIMER_COUNTER("Curve");
+  
   ray r2 = (*WorldToObject)(r); 
   
   // Compute object-space control points for curve segment, cpObj

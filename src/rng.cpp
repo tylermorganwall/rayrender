@@ -1,10 +1,16 @@
 #include "rng.h"
+#include "raylog.h"
 
 Float random_gen::unif_rand() {
+  SCOPED_CONTEXT("RNG");
+  SCOPED_TIMER_COUNTER("Uniform");
   return(std::ldexp(rng(),-32)); 
 }
 
 vec3f random_gen::random_in_unit_disk() {
+  SCOPED_CONTEXT("RNG");
+  SCOPED_TIMER_COUNTER("InUnitDisk");
+  
   vec3f p;
   do {
     p = 2.0 * vec3f(unif_rand(), unif_rand(), 0) - vec3f(1, 1, 0);
@@ -13,6 +19,9 @@ vec3f random_gen::random_in_unit_disk() {
 }
 
 vec3f random_gen::random_in_unit_sphere() {
+  SCOPED_CONTEXT("RNG");
+  SCOPED_TIMER_COUNTER("InUnitSphere");
+  
   vec3f p;
   do {
     p = 2.0 * vec3f(unif_rand(),unif_rand(),unif_rand()) - vec3f(1,1,1);
@@ -21,6 +30,9 @@ vec3f random_gen::random_in_unit_sphere() {
 }
 
 vec3f random_gen::random_cosine_direction() {
+  SCOPED_CONTEXT("RNG");
+  SCOPED_TIMER_COUNTER("CosineDir");
+  
   Float r1 = unif_rand();
   Float r2 = unif_rand();
   Float z = std::sqrt(1.0-r2);
@@ -31,6 +43,9 @@ vec3f random_gen::random_cosine_direction() {
 }
 
 vec3f random_gen::random_to_sphere(Float radius, Float distance_squared) {
+  SCOPED_CONTEXT("RNG");
+  SCOPED_TIMER_COUNTER("ToSphere");
+  
   Float r1 = unif_rand();
   Float r2 = unif_rand();
   Float z = 1.0 + r2 * (std::sqrt(1.0-radius * radius / distance_squared) - 1);
@@ -41,6 +56,9 @@ vec3f random_gen::random_to_sphere(Float radius, Float distance_squared) {
 }
 
 uint32_t random_gen::UniformUInt32(uint32_t b) {
+  SCOPED_CONTEXT("RNG");
+  SCOPED_TIMER_COUNTER("UnifUInt32");
+  
   uint32_t threshold = (~b + 1u) % b;
   while (true) {
     uint32_t r = rng();

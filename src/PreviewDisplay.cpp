@@ -1,6 +1,7 @@
 #include "PreviewDisplay.h"
 #include "mathinline.h"
 #include "Rcpp.h"
+#include "raylog.h"
 
 
 #ifdef RAY_HAS_X11
@@ -64,6 +65,8 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
                                size_t &ns, RProgress::RProgress &pb, bool progress,
                                Float percent_done,
                                hitable *world, random_gen& rng) {
+  SCOPED_CONTEXT("Overall");
+  SCOPED_TIMER_COUNTER("Draw Image");
 #ifdef RAY_HAS_X11
   if (d) {
     RayMatrix &r  = adaptive_pixel_sampler.r;
