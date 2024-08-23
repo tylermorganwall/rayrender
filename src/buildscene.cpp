@@ -24,6 +24,7 @@
 #include "transformcache.h"
 #include "texturecache.h"
 #include "raylog.h"
+#include "flat_bvh.h"
 
 Transform rotation_order_matrix(NumericVector temprotvec, NumericVector order_rotation) {
   Transform M;
@@ -384,7 +385,7 @@ std::shared_ptr<material> LoadSingleMaterial(List SingleMaterial,
 }
 
 
-std::shared_ptr<bvh_node> build_scene(List& scene,
+std::shared_ptr<hitable> build_scene(List& scene,
                                      IntegerVector& shape,
                                      Float shutteropen, 
                                      Float shutterclose,
@@ -861,7 +862,7 @@ std::shared_ptr<bvh_node> build_scene(List& scene,
         NumericVector scale_z = as<NumericVector>(shape_properties["scale_z"]);
         IntegerVector shape_vec = as<IntegerVector>(original_scene["shape"]);
         auto instance_importance_sample_list = std::make_shared<hitable_list>();
-        std::shared_ptr<bvh_node> instance_scene = build_scene(original_scene,
+        std::shared_ptr<hitable> instance_scene = build_scene(original_scene,
                                                               shape_vec,
                                                               shutteropen,
                                                               shutterclose,
@@ -910,7 +911,9 @@ std::shared_ptr<bvh_node> build_scene(List& scene,
     }
   }
   std::shared_ptr<bvh_node> world_bvh = std::make_shared<bvh_node>(list, shutteropen, shutterclose, bvh_type, rng);
-#ifdef FULL_DEBUG
+  // std::shared_ptr<FlatBVH> world_bvh = std::make_shared<FlatBVH>(world_bvh_2child);
+  
+  #ifdef FULL_DEBUG
   world_bvh->validate_bvh();
 #endif
   // auto nodeleaf = world_bvh->CountNodeLeaf();

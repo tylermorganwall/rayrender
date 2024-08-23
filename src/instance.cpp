@@ -1,7 +1,7 @@
 #include "instance.h"
 #include "raylog.h"
 
-instance::instance(bvh_node* scene, 
+instance::instance(hitable* scene, 
                    std::shared_ptr<Transform> ObjectToWorld, 
                    std::shared_ptr<Transform> WorldToObject,
                    hitable_list* imp_list) : 

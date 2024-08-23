@@ -1,6 +1,25 @@
 #include "flat_bvh.h"
 
+bool FlatBVH::bounding_box(Float t0, Float t1, aabb& b) const {
+  root_node->bounding_box(t0,t1,b);
+  return(true);
+}
+
 void FlatBVH::build(const std::shared_ptr<bvh_node>& root) {
+  root_node = root;  // Store the root node
+  // Count the total number of nodes
+  std::pair<size_t, size_t> node_counts = root->CountNodeLeaf();
+  size_t total_nodes = node_counts.first + node_counts.second;
+  
+  // Resize the nodes vector
+  nodes.resize(total_nodes);
+  
+  // Flatten the tree
+  int offset = 0;
+  flattenBVHNode(root.get(), offset);
+}
+
+FlatBVH::FlatBVH(const std::shared_ptr<bvh_node>& root) {
   root_node = root;  // Store the root node
   
   // Count the total number of nodes
@@ -102,7 +121,51 @@ const bool FlatBVH::hit(const ray& r, Float tmin, Float tmax, hit_record& rec, r
   return hit_anything;
 }
 
-// size_t FlatBVH::GetSize()  {
-//   return(left != right ? sizeof(*this) + left->GetSize() + right->GetSize() :
-//            sizeof(*this) + left->GetSize());
-// }
+const bool FlatBVH::hit(const ray& r, Float tmin, Float tmax, hit_record& rec, Sampler* sampler) const {
+  int stack[64];
+  int stack_ptr = 0;
+  int node_index = 0;
+  bool hit_anything = false;
+  
+  while (true) {
+    const FlatBVHNode& node = nodes[node_index];
+    if (node.bounds.hit(r, tmin, tmax, sampler)) {
+      if (node.primitive_count > 0) {
+        // Leaf node, test primitive
+        const bvh_node* original_node = root_node.get();
+        for (int i = 0; i < node_index; ++i) {
+          if (nodes[i].primitive_count == 0) {
+            original_node = (r.direction()[nodes[i].axis] < 0) 
+            ? dynamic_cast<const bvh_node*>(original_node->right.get())
+              : dynamic_cast<const bvh_node*>(original_node->left.get());
+          }
+        }
+        if (original_node->hit(r, tmin, tmax, rec, sampler)) {
+          hit_anything = true;
+          tmax = rec.t;
+        }
+      } else {
+        // Interior node, push far child and continue with near child
+        int far_child = node_index + 1;
+        int near_child = node.second_child_offset;
+        
+        if (r.direction()[node.axis] < 0.0f) {
+          std::swap(near_child, far_child);
+        }
+        
+        stack[stack_ptr++] = far_child;
+        node_index = near_child;
+        continue;
+      }
+    }
+    
+    if (stack_ptr == 0) break;
+    node_index = stack[--stack_ptr];
+  }
+  
+  return hit_anything;
+}
+
+size_t FlatBVH::GetSize()  {
+  return(root_node->GetSize());
+}

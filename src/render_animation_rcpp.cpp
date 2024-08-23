@@ -123,7 +123,7 @@ void render_animation_rcpp(List scene, List camera_info, List scene_info, List r
   std::vector<std::shared_ptr<hitable> > instanced_objects;
   std::vector<std::shared_ptr<hitable_list> > instance_importance_sampled;
   
-  std::shared_ptr<bvh_node> worldbvh = build_scene(scene, shape, 
+  std::shared_ptr<hitable> worldbvh = build_scene(scene, shape, 
                                                   shutteropen,shutterclose,
                                                   textures, 
                                                   alpha_textures,

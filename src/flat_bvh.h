@@ -22,17 +22,22 @@ struct FlatBVHNode {
 class FlatBVH : public hitable {
 public:
   FlatBVH() = default;
+  FlatBVH(const std::shared_ptr<bvh_node>& root);
   void build(const std::shared_ptr<bvh_node>& root);
   virtual const bool hit(const ray& r, Float tmin, Float tmax, hit_record& rec, random_gen& rng) const;
+  virtual const bool hit(const ray& r, Float tmin, Float tmax, hit_record& rec, Sampler* sampler) const;
+  bool bounding_box(Float t0, Float t1, aabb& b) const;
+  
   std::string GetName() const {
     return(std::string("FlatBVH"));
   }
   void convertToSIMD();
-  // size_t GetSize();
+  size_t GetSize();
 private:
   std::vector<FlatBVHNode> nodes;
   std::shared_ptr<bvh_node> root_node;
   std::vector<SimdAABB> simd_nodes;
+  aabb box;
   
   void flattenBVHNode(const bvh_node* node, int& offset);
 };

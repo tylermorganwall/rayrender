@@ -9,7 +9,7 @@
 class instance : public hitable {
 public:
   instance() {}
-  instance(bvh_node* scene, 
+  instance(hitable* scene, 
            std::shared_ptr<Transform> ObjectToWorld, 
            std::shared_ptr<Transform> WorldToObject,
            hitable_list* imp_list);
@@ -28,7 +28,7 @@ public:
   size_t GetSize();
   
   //Embedded scene
-  bvh_node* original_scene;
+  hitable* original_scene;
   hitable_list* importance_sampled_objects;
 };
 

@@ -184,7 +184,7 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
   std::vector<std::shared_ptr<hitable> > instanced_objects;
   std::vector<std::shared_ptr<hitable_list> > instance_importance_sampled;
   
-  std::shared_ptr<bvh_node> worldbvh = build_scene(scene, 
+  std::shared_ptr<hitable> worldbvh = build_scene(scene, 
                                                    shape, 
                                                    shutteropen,
                                                    shutterclose,

@@ -13,10 +13,11 @@ class hitable;
 class bvh_node;
 class random_gen;
 class hitable_list;
+class FlatBVH;
 
 std::shared_ptr<hitable> rotation_order(std::shared_ptr<hitable> entry, NumericVector temprotvec, NumericVector order_rotation);
 
-std::shared_ptr<bvh_node> build_scene(List& scene,
+std::shared_ptr<hitable> build_scene(List& scene,
                                      IntegerVector& shape,
                                      Float shutteropen, 
                                      Float shutterclose,

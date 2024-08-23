@@ -9,7 +9,6 @@
 #include "stb/stb_image.h"
 #endif
 #include "texturecache.h"
-#include "raylog.h"
 
 mesh3d::mesh3d(Rcpp::List mesh_info, std::shared_ptr<material> mat, 
                std::string displacement_texture, Float displacement, bool displacement_vector, 
@@ -137,17 +136,11 @@ mesh3d::mesh3d(Rcpp::List mesh_info, std::shared_ptr<material> mat,
 }
 
 const bool mesh3d::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
-  SCOPED_CONTEXT("MultiHit");
-  SCOPED_TIMER_COUNTER("Mesh3D");
-  
   return(mesh_bvh->hit(r, t_min, t_max, rec, rng));
 };
 
 
 const bool mesh3d::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const {
-  SCOPED_CONTEXT("MultiHit");
-  SCOPED_TIMER_COUNTER("Mesh3D");
-  
   return(mesh_bvh->hit(r, t_min, t_max, rec, sampler));
 };
 
