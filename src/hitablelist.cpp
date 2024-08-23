@@ -1,7 +1,7 @@
 #include "hitablelist.h"
 #include "raylog.h"
 
-bool hitable_list::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
+const bool hitable_list::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
   hit_record temp_rec;
 #ifdef DEBUGBVH
   temp_rec.bvh_nodes = rec.bvh_nodes;
@@ -18,7 +18,7 @@ bool hitable_list::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, 
   return(hit_anything);
 }
 
-bool hitable_list::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) {
+const bool hitable_list::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const {
   hit_record temp_rec;
 #ifdef DEBUGBVH
   temp_rec.bvh_nodes = rec.bvh_nodes;

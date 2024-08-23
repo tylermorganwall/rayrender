@@ -18,8 +18,8 @@ public:
   InfiniteAreaLight(int width, int height, Float r, vec3f center, 
                     std::shared_ptr<texture> image,  std::shared_ptr<material> mat,
                     std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation);
-  virtual bool hit(const ray& r, Float tmin, Float tmax, hit_record& rec, random_gen& rng);
-  virtual bool hit(const ray& r, Float tmin, Float tmax, hit_record& rec, Sampler* sampler);
+  virtual const bool hit(const ray& r, Float tmin, Float tmax, hit_record& rec, random_gen& rng) const;
+  virtual const bool hit(const ray& r, Float tmin, Float tmax, hit_record& rec, Sampler* sampler) const;
   
   virtual bool bounding_box(Float t0, Float t1, aabb& box) const;
   virtual Float pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Float time = 0);

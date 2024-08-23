@@ -23,6 +23,7 @@
 #include "transform.h"
 #include "transformcache.h"
 #include "texturecache.h"
+#include "raylog.h"
 
 Transform rotation_order_matrix(NumericVector temprotvec, NumericVector order_rotation) {
   Transform M;
@@ -908,7 +909,7 @@ std::shared_ptr<bvh_node> build_scene(List& scene,
       imp_sample_objects.add(entry);
     }
   }
-  auto world_bvh = std::make_shared<bvh_node>(list, shutteropen, shutterclose, bvh_type, rng);
+  std::shared_ptr<bvh_node> world_bvh = std::make_shared<bvh_node>(list, shutteropen, shutterclose, bvh_type, rng);
 #ifdef FULL_DEBUG
   world_bvh->validate_bvh();
 #endif

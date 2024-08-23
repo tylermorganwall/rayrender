@@ -41,13 +41,13 @@ std::string box::GetName() const {
   return(std::string("Box"));
 }
 
-bool box::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
+const bool box::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("Cube");
   return(list.hit(r,t_min,t_max,rec, rng));
 }
 
-bool box::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) {
+const bool box::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("Cube");
   return(list.hit(r,t_min,t_max,rec, sampler));

@@ -679,8 +679,8 @@ class csg: public hitable {
         throw std::runtime_error("error");
       }
     };
-    virtual bool hit(const ray& r, Float tmin, Float tmax, hit_record& rec, random_gen& rng);
-    virtual bool hit(const ray& r, Float tmin, Float tmax, hit_record& rec, Sampler* sampler);
+    virtual const bool hit(const ray& r, Float tmin, Float tmax, hit_record& rec, random_gen& rng) const;
+    virtual const bool hit(const ray& r, Float tmin, Float tmax, hit_record& rec, Sampler* sampler) const;
     
     virtual bool bounding_box(Float t0, Float t1, aabb& box) const;
     virtual Float pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Float time) {

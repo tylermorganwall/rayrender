@@ -54,7 +54,7 @@ bool AnimatedHitable::bounding_box(Float t0, Float t1, aabb& box) const {
   return(true);
 }
 
-bool AnimatedHitable::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
+const bool AnimatedHitable::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("Animation");
   
@@ -72,7 +72,7 @@ bool AnimatedHitable::hit(const ray& r, Float t_min, Float t_max, hit_record& re
   return true;
 }
 
-bool AnimatedHitable::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) {
+const bool AnimatedHitable::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("Animation");
   

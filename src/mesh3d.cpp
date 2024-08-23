@@ -136,7 +136,7 @@ mesh3d::mesh3d(Rcpp::List mesh_info, std::shared_ptr<material> mat,
   triangles.objects.clear();
 }
 
-bool mesh3d::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
+const bool mesh3d::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
   SCOPED_CONTEXT("MultiHit");
   SCOPED_TIMER_COUNTER("Mesh3D");
   
@@ -144,7 +144,7 @@ bool mesh3d::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random
 };
 
 
-bool mesh3d::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) {
+const bool mesh3d::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const {
   SCOPED_CONTEXT("MultiHit");
   SCOPED_TIMER_COUNTER("Mesh3D");
   

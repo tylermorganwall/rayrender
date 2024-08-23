@@ -1,7 +1,7 @@
 #include "csg.h"
 #include "raylog.h"
 
-bool csg::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
+const bool csg::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("CSG");
   
@@ -79,7 +79,7 @@ bool csg::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_ge
 }
 
 
-bool csg::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) {
+const bool csg::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("CSG");
   

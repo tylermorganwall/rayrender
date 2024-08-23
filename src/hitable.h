@@ -25,8 +25,8 @@ class hitable {
     hitable(std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation) : 
       ObjectToWorld(ObjectToWorld), WorldToObject(WorldToObject), reverseOrientation(reverseOrientation),
       transformSwapsHandedness(ObjectToWorld->SwapsHandedness()) {}
-    virtual bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) = 0;
-    virtual bool hit(const ray& r, Float tmin, Float tmax, hit_record& rec, Sampler* sampler) = 0;
+    virtual const bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const = 0;
+    virtual const bool hit(const ray& r, Float tmin, Float tmax, hit_record& rec, Sampler* sampler) const = 0;
     virtual bool bounding_box(Float t0, Float t1, aabb& box) const = 0;
     virtual Float pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Float time = 0) {
       return(0.0);
@@ -90,8 +90,8 @@ public:
                   const AnimatedTransform &PrimitiveToWorld)
     : primitive(primitive), PrimitiveToWorld(PrimitiveToWorld) {} 
   ~AnimatedHitable() {}
-  bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng);
-  bool hit(const ray& r, Float tmin, Float tmax, hit_record& rec, Sampler* sampler);
+  const bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const;
+  const bool hit(const ray& r, Float tmin, Float tmax, hit_record& rec, Sampler* sampler) const;
   Float pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Float time = 0);
   Float pdf_value(const point3f& o, const vec3f& v, Sampler* sampler, Float time = 0);
   vec3f random(const point3f& o, random_gen& rng, Float time = 0);

@@ -14,7 +14,7 @@ const Float aabb::Volume() const {
          10E20);
 }
 
-bool aabb::hit(const ray &r, Float tmin, Float tmax, random_gen& rng) {
+const bool aabb::hit(const ray &r, Float tmin, Float tmax, random_gen& rng) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("AABB");
 
@@ -30,7 +30,7 @@ bool aabb::hit(const ray &r, Float tmin, Float tmax, random_gen& rng) {
   return(tmin <= tmax);
 }
 
-bool aabb::hit(const ray &r, Float tmin, Float tmax, Sampler* sampler) {
+const bool aabb::hit(const ray &r, Float tmin, Float tmax, Sampler* sampler) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("AABB");
   Float txmin, txmax, tymin, tymax, tzmin, tzmax;
@@ -96,6 +96,12 @@ const point3f aabb::Centroid() const {
 
 const point3f aabb::Diag() const {
   return((bounds[1] + bounds[0]));
+}
+
+template<typename... Args>
+SimdAABB make_simd_aabb(Args&&... args) {
+  static_assert(sizeof...(Args) == SIMD_WIDTH, "Number of AABBs must match SIMD width");
+  return SimdAABB(std::array<aabb, SIMD_WIDTH>{std::forward<Args>(args)...});
 }
 
 

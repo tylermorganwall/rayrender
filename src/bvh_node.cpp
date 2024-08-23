@@ -13,7 +13,7 @@ bool bvh_node::bounding_box(Float t0, Float t1, aabb& b) const {
   return(true);
 }
 
-bool bvh_node::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
+const bool bvh_node::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
 #ifndef DEBUGBVH
   if(box.hit(r, t_min, t_max, rng)) {
     if(left->hit(r,t_min,t_max,rec, rng)) {
@@ -39,7 +39,7 @@ bool bvh_node::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
 #endif
 }
 
-bool bvh_node::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) {
+const bool bvh_node::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const {
 #ifndef DEBUGBVH
   if(box.hit(r, t_min, t_max, sampler)) {
     if(left->hit(r,t_min,t_max,rec, sampler)) {

@@ -14,8 +14,8 @@ public:
            std::shared_ptr<Transform> WorldToObject,
            hitable_list* imp_list);
   
-  virtual bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng);
-  virtual bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler);
+  virtual const bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const;
+  virtual const bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const;
   Float pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Float time = 0);
   Float pdf_value(const point3f& o, const vec3f& v, Sampler* sampler, Float time = 0);
   vec3f random(const point3f& o, random_gen& rng, Float time = 0);

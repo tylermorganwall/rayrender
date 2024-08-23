@@ -78,14 +78,14 @@ trimesh::trimesh(std::string inputfile, std::string basedir, Float scale, Float 
   }
 }
 
-bool trimesh::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
+const bool trimesh::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
   SCOPED_CONTEXT("MultiHit");
   SCOPED_TIMER_COUNTER("ObjMesh");
   
   return(tri_mesh_bvh->hit(r, t_min, t_max, rec, rng));
 }
 
-bool trimesh::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) {
+const bool trimesh::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const {
   SCOPED_CONTEXT("MultiHit");
   SCOPED_TIMER_COUNTER("ObjMesh");
   

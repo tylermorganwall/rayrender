@@ -95,14 +95,14 @@ raymesh::raymesh(Rcpp::List raymesh_list,
   }
 }
 
-bool raymesh::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
+const bool raymesh::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
   SCOPED_CONTEXT("MultiHit");
   SCOPED_TIMER_COUNTER("RayMesh");
   
   return(tri_mesh_bvh->hit(r, t_min, t_max, rec, rng));
 }
 
-bool raymesh::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) {
+const bool raymesh::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const {
   SCOPED_CONTEXT("MultiHit");
   SCOPED_TIMER_COUNTER("RayMesh");
   

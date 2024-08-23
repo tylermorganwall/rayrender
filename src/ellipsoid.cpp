@@ -1,7 +1,7 @@
 #include "ellipsoid.h"
 #include "raylog.h"
 
-bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
+const bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("Ellipsoid");
   
@@ -129,7 +129,7 @@ bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, ran
 }
 
 
-bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) {
+const bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("Ellipsoid");
   

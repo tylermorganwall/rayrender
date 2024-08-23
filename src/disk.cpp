@@ -1,7 +1,7 @@
 #include "disk.h"
 #include "raylog.h"
 
-bool disk::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
+const bool disk::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("Disk");
   
@@ -66,7 +66,7 @@ bool disk::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_g
 }
 
 
-bool disk::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) {
+const bool disk::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("Disk");
   

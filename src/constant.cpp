@@ -22,7 +22,7 @@ vec3f constant_medium::random(const point3f& o, Sampler* sampler, Float time) {
 }
 
 
-bool constant_medium::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
+const bool constant_medium::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("Medium");
   hit_record rec1, rec2;
@@ -55,7 +55,7 @@ bool constant_medium::hit(const ray& r, Float t_min, Float t_max, hit_record& re
 }
 
 
-bool constant_medium::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) {
+const bool constant_medium::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("Medium");
   hit_record rec1, rec2;

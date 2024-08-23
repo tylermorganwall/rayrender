@@ -21,7 +21,7 @@ InfiniteAreaLight::InfiniteAreaLight(int width, int height, Float r, vec3f cente
   distribution = new Distribution2D(img.get(), width, height);
 }
 
-bool InfiniteAreaLight::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
+const bool InfiniteAreaLight::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("InfLight");
   
@@ -97,7 +97,7 @@ bool InfiniteAreaLight::hit(const ray& r, Float t_min, Float t_max, hit_record& 
 }
 
 
-bool InfiniteAreaLight::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) {
+const bool InfiniteAreaLight::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("InfLight");
   

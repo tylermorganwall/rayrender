@@ -8,7 +8,7 @@ instance::instance(bvh_node* scene,
   hitable(ObjectToWorld, WorldToObject, false), original_scene(scene), importance_sampled_objects(imp_list) {
 }
 
-bool instance::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
+const bool instance::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
   SCOPED_CONTEXT("MultiHit");
   SCOPED_TIMER_COUNTER("Instance");
   
@@ -20,7 +20,7 @@ bool instance::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
   return(original_scene->hit(r2, t_min, t_max, rec, rng));
 }
 
-bool instance::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) {
+const bool instance::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const {
   SCOPED_CONTEXT("MultiHit");
   SCOPED_TIMER_COUNTER("Instance");
   

@@ -1,7 +1,7 @@
 #include "rectangle.h"
 #include "raylog.h"
 
-bool xy_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
+const bool xy_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("Rect");
   
@@ -60,7 +60,7 @@ bool xy_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
   return(true);
 }
 
-bool xy_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) {
+const bool xy_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("Rect");
   ray r2 = (*WorldToObject)(r);
@@ -158,7 +158,7 @@ vec3f xy_rect::random(const point3f& o, Sampler* sampler, Float time) {
   return(random_point - o);
 }
 
-bool xz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
+const bool xz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("Rect");
   
@@ -222,7 +222,7 @@ bool xz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
 }
 
 
-bool xz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) {
+const bool xz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("Rect");
   
@@ -322,7 +322,7 @@ vec3f xz_rect::random(const point3f& o, Sampler* sampler, Float time) {
   return(random_point - o);
 }
 
-bool yz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
+const bool yz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("Rect");
   ray r2 = (*WorldToObject)(r);
@@ -383,7 +383,7 @@ bool yz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rando
 }
 
 
-bool yz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) {
+const bool yz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("Rect");
   

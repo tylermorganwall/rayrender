@@ -1,14 +1,14 @@
 #include "cylinder.h"
 #include "raylog.h"
 
-void cylinder::get_cylinder_uv(const point3f& p, Float& u, Float& v) {
+void cylinder::get_cylinder_uv(const point3f& p, Float& u, Float& v) const {
   Float phi = atan2(p.z(),p.x());
   // if (phi < 0) phi += 2 * M_PI;
   u = 1 - (phi + M_PI) / (2*M_PI);
   v = (p.y() + length/2)/length;
 };
 
-bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
+const bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("Cylinder");
   
@@ -235,7 +235,7 @@ bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, rand
 }
 
 
-bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) {
+const bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("Cylinder");
   

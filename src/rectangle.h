@@ -16,8 +16,8 @@ public:
     x0(_x0), x1(_x1), y0(_y0), y1(_y1), k(_k), mp(mat), alpha_mask(alpha_mask),
     bump_tex(bump_tex) {};
   ~xy_rect() {}
-  virtual bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng);
-  virtual bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler);
+  virtual const bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const;
+  virtual const bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const;
   
   virtual bool bounding_box(Float t0, Float t1, aabb& box) const;
   virtual Float pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Float time = 0);
@@ -50,8 +50,8 @@ public:
   x0(_x0), x1(_x1), z0(_z0), z1(_z1), k(_k), mp(mat), alpha_mask(alpha_mask), 
   bump_tex(bump_tex) {};
   ~xz_rect() {}
-  virtual bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng);
-  virtual bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler);
+  virtual const bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const;
+  virtual const bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const;
   
   virtual bool bounding_box(Float t0, Float t1, aabb& box) const;
   virtual Float pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Float time = 0);
@@ -81,8 +81,8 @@ public:
   y0(_y0), y1(_y1), z0(_z0), z1(_z1), k(_k), mp(mat), alpha_mask(alpha_mask), 
   bump_tex(bump_tex) {};
   ~yz_rect() {}
-  virtual bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng);
-  virtual bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler);
+  virtual const bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const;
+  virtual const bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const;
   
   virtual bool bounding_box(Float t0, Float t1, aabb& box) const;
   virtual Float pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Float time = 0);

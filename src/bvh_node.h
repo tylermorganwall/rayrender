@@ -32,8 +32,8 @@ class bvh_node : public hitable {
              Float time0, Float time1, int bvh_type, int depth, random_gen &rng);
 #endif
 
-    virtual bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng);
-    virtual bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler);
+    virtual const bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const;
+    virtual const bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const;
 
     virtual bool bounding_box(Float t0, Float t1, aabb& box) const;
     

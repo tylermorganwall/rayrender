@@ -15,8 +15,8 @@ public:
     radius(r), length(len), phi_min(phi_min), phi_max(phi_max), has_caps(has_caps), mat_ptr(mat), 
     alpha_mask(alpha_mask), bump_tex(bump_tex) {};
   ~cylinder() {}
-  virtual bool hit(const ray& r, Float tmin, Float tmax, hit_record& rec, random_gen& rng);
-  virtual bool hit(const ray& r, Float tmin, Float tmax, hit_record& rec, Sampler* sampler);
+  virtual const bool hit(const ray& r, Float tmin, Float tmax, hit_record& rec, random_gen& rng) const;
+  virtual const bool hit(const ray& r, Float tmin, Float tmax, hit_record& rec, Sampler* sampler) const;
   
   virtual bool bounding_box(Float t0, Float t1, aabb& box) const;
   virtual Float pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Float time = 0);
@@ -30,7 +30,7 @@ public:
   size_t GetSize()  {
     return(sizeof(*this));
   }
-  void get_cylinder_uv(const point3f& p, Float& u, Float& v);
+  void get_cylinder_uv(const point3f& p, Float& u, Float& v) const;
   Float radius;
   Float length;
   Float phi_min;

@@ -7,6 +7,10 @@
 #include "mathinline.h"
 #include "sampler.h"
 
+#include <algorithm>
+#include "simd.h" // Make sure this includes our SIMD abstraction layer
+
+
 class aabb {
   public: 
     aabb() {
@@ -45,8 +49,8 @@ class aabb {
     const point3f Centroid() const;
     const point3f Diag() const;
     
-    bool hit(const ray& r, Float tmin, Float tmax, random_gen& rng);
-    bool hit(const ray& r, Float tmin, Float tmax, Sampler* sampler);
+    const bool hit(const ray& r, Float tmin, Float tmax, random_gen& rng) const;
+    const bool hit(const ray& r, Float tmin, Float tmax, Sampler* sampler) const;
     
     const point3f offset(const point3f o);
     const point3f offset(const vec3f o);
@@ -116,5 +120,80 @@ inline std::ostream& operator<<(std::ostream &os, const aabb &t) {
   return os;
 }
 
+
+struct SimdAABB {
+  SimdFloat min_x, min_y, min_z;
+  SimdFloat max_x, max_y, max_z;
+  
+  bool intersect(const ray& r, Float tmin, Float tmax) const {
+    // Load ray origin and direction
+    SimdFloat origin_x = simd_set1(r.origin().x());
+    SimdFloat origin_y = simd_set1(r.origin().y());
+    SimdFloat origin_z = simd_set1(r.origin().z());
+    
+    SimdFloat inv_dir_x = simd_set1(r.inverse_dir().x());
+    SimdFloat inv_dir_y = simd_set1(r.inverse_dir().y());
+    SimdFloat inv_dir_z = simd_set1(r.inverse_dir().z());
+    
+    // Compute t0 and t1 for each axis
+    SimdFloat tx1 = simd_mul(simd_sub(min_x, origin_x), inv_dir_x);
+    SimdFloat tx2 = simd_mul(simd_sub(max_x, origin_x), inv_dir_x);
+    
+    SimdFloat ty1 = simd_mul(simd_sub(min_y, origin_y), inv_dir_y);
+    SimdFloat ty2 = simd_mul(simd_sub(max_y, origin_y), inv_dir_y);
+    
+    SimdFloat tz1 = simd_mul(simd_sub(min_z, origin_z), inv_dir_z);
+    SimdFloat tz2 = simd_mul(simd_sub(max_z, origin_z), inv_dir_z);
+    
+    // Compute tmin and tmax for each AABB
+    SimdFloat tmin_x = simd_min(tx1, tx2);
+    SimdFloat tmax_x = simd_max(tx1, tx2);
+    SimdFloat tmin_y = simd_min(ty1, ty2);
+    SimdFloat tmax_y = simd_max(ty1, ty2);
+    SimdFloat tmin_z = simd_min(tz1, tz2);
+    SimdFloat tmax_z = simd_max(tz1, tz2);
+    
+    SimdFloat tmin_aabb = simd_max(simd_max(tmin_x, tmin_y), simd_max(tmin_z, simd_set1(tmin)));
+    SimdFloat tmax_aabb = simd_min(simd_min(tmax_x, tmax_y), simd_min(tmax_z, simd_set1(tmax)));
+    
+    // Check if there's an intersection
+    SimdMask hit_mask = simd_less_equal(tmin_aabb, tmax_aabb);
+    
+    // Convert SIMD mask to boolean result
+    return simd_any_true(hit_mask);
+  }
+  
+  // Constructor taking an array of AABBs
+  template<size_t N>
+  SimdAABB(const std::array<aabb, N>& aabbs) {
+    static_assert(N == SIMD_WIDTH, "Number of AABBs must match SIMD width");
+    
+    // Temporary arrays to hold the values before loading into SIMD registers
+    float min_x_values[N], min_y_values[N], min_z_values[N];
+    float max_x_values[N], max_y_values[N], max_z_values[N];
+    
+    // Fill the temporary arrays
+    for (size_t i = 0; i < N; ++i) {
+      const auto& aabb = aabbs[i];
+      min_x_values[i] = aabb.min().x();
+      min_y_values[i] = aabb.min().y();
+      min_z_values[i] = aabb.min().z();
+      max_x_values[i] = aabb.max().x();
+      max_y_values[i] = aabb.max().y();
+      max_z_values[i] = aabb.max().z();
+    }
+    
+    // Load the values into SIMD registers
+    min_x = simd_load(min_x_values);
+    min_y = simd_load(min_y_values);
+    min_z = simd_load(min_z_values);
+    max_x = simd_load(max_x_values);
+    max_y = simd_load(max_y_values);
+    max_z = simd_load(max_z_values);
+  }
+};
+
+template<typename... Args>
+SimdAABB make_simd_aabb(Args&&... args);
 
 #endif

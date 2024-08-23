@@ -72,7 +72,7 @@ bool curve::bounding_box(Float t0, Float t1, aabb& box) const {
   return(true);
 }
 
-bool curve::hit(const ray& r, Float tmin, Float tmax, hit_record& rec, random_gen& rng) {
+const bool curve::hit(const ray& r, Float tmin, Float tmax, hit_record& rec, random_gen& rng) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("Curve");
   
@@ -163,7 +163,7 @@ bool curve::hit(const ray& r, Float tmin, Float tmax, hit_record& rec, random_ge
 
 #include "RcppThread.h"
 
-bool curve::hit(const ray& r, Float tmin, Float tmax, hit_record& rec, Sampler* sampler) {
+const bool curve::hit(const ray& r, Float tmin, Float tmax, hit_record& rec, Sampler* sampler) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("Curve");
   

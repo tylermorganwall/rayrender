@@ -3,7 +3,7 @@
 
 // #include "RcppThread.h"
 
-bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) {
+const bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("Sphere");
   vec3f oErr, dErr;
@@ -127,7 +127,7 @@ bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random
 }
 
 
-bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) {
+const bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("Sphere");
   
