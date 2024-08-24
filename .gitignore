@@ -10,3 +10,7 @@ src/*.dll
 autom4te.cache
 config.log
 config.status
+docs/*
+README_cache/
+launch.json
+tasks.json

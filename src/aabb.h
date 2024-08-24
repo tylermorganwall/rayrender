@@ -42,7 +42,7 @@ class aabb {
     
     point3f min() const {return(bounds[0]);}
     point3f max() const {return(bounds[1]);}
-    
+    int MaxDimension() const;
     
     const Float surface_area() const;
     const Float Volume() const;
@@ -52,8 +52,8 @@ class aabb {
     const bool hit(const ray& r, Float tmin, Float tmax, random_gen& rng) const;
     const bool hit(const ray& r, Float tmin, Float tmax, Sampler* sampler) const;
     
-    const point3f offset(const point3f o);
-    const point3f offset(const vec3f o);
+    const point3f offset(const point3f o) const;
+    const point3f offset(const vec3f o) const;
     
     const point3f Corner(int corner) const;
     const point3f Lerp(const point3f &t) const;

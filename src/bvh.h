@@ -1,8 +1,11 @@
 #ifndef BVHH
 #define BVHH
 #include <memory>
+#include <span>
+#include "assert.h"
 
 struct BVHPrimitive {
+    BVHPrimitive() : primitiveIndex(0), bounds(aabb()) {};
     BVHPrimitive(size_t primitiveIndex, const aabb &bounds)
         : primitiveIndex(primitiveIndex), bounds(bounds) {}
     size_t primitiveIndex;
@@ -13,7 +16,7 @@ struct BVHPrimitive {
 
 struct BVHSplitBucket {
     int count = 0;
-    Bounds3f bounds;
+    aabb bounds;
 };
 
 
@@ -24,9 +27,9 @@ struct BVHBuildNode {
         nPrimitives = n;
         bounds = b;
         children[0] = children[1] = nullptr;
-        ++leafNodes;
-        ++totalLeafNodes;
-        totalPrimitives += n;
+        // ++leafNodes;
+        // ++totalLeafNodes;
+        // totalPrimitives += n;
     }
 
     void InitInterior(int axis, BVHBuildNode *c0, BVHBuildNode *c1) {
@@ -35,7 +38,7 @@ struct BVHBuildNode {
         bounds = surrounding_box(c0->bounds, c1->bounds);
         splitAxis = axis;
         nPrimitives = 0;
-        ++interiorNodes;
+        // ++interiorNodes;
     }
 
     aabb bounds;
@@ -55,8 +58,9 @@ struct alignas(32) LinearBVHNode {
 
 class BVHAggregate : hitable {
   public:
-        BVHAggregate(std::vector<std::shared_ptr<hitable> >& p, 
-                    int maxPrimsInNode = 1);
+        BVHAggregate(std::vector<std::shared_ptr<hitable> > prims,
+                    float t_min, float t_max, 
+                    int maxPrimsInNode, bool sah);
         
         // static BVHAggregate *Create(std::vector<Primitive> prims,
         //                         const ParameterDictionary &parameters);
@@ -79,13 +83,13 @@ class BVHAggregate : hitable {
         std::string GetName() const {
             return(std::string("BVH"));
         }
-        size_t GetSize();
+        size_t GetSize() {
+            return(0);
+        };
+        aabb scene_bounds;
         // std::pair<size_t,size_t> CountNodeLeaf();
-
   private:
-       BVHBuildNode *buildRecursive(//ThreadLocal<Allocator> &threadAllocators,
-                                    //pstd::span<BVHPrimitive> bvhPrimitives,
-                                    std::span<bvh_node> bvhPrimitives,
+       BVHBuildNode *buildRecursive(std::span<BVHPrimitive> bvhPrimitives,
                                     std::atomic<int> *totalNodes,
                                     std::atomic<int> *orderedPrimsOffset,
                                     std::vector<std::shared_ptr<hitable> > &orderedPrims);
@@ -107,18 +111,23 @@ class BVHAggregate : hitable {
        std::vector<std::shared_ptr<hitable> > primitives;
     //    SplitMethod splitMethod;
        LinearBVHNode *nodes = nullptr;
-       int totalNodes;
+    //    int totalNodes;
 
 };
 
 BVHAggregate::BVHAggregate(std::vector<std::shared_ptr<hitable> > prims,
+        float t_min, float t_max, 
         int maxPrimsInNode, bool sah) : 
         maxPrimsInNode(std::min(255, maxPrimsInNode)),
         primitives(std::move(prims))//, splitMethod(splitMethod) 
         { 
     std::vector<BVHPrimitive> bvhPrimitives(primitives.size());
-    for (size_t i = 0; i < primitives.size(); ++i)
-        bvhPrimitives[i] = BVHPrimitive(i, primitives[i].Bounds());
+    for (size_t i = 0; i < primitives.size(); ++i) {
+        aabb temp_box;
+        primitives[i]->bounding_box(t_min, t_max, temp_box);
+        bvhPrimitives[i] = BVHPrimitive(i, temp_box);
+        scene_bounds = surrounding_box(scene_bounds, temp_box);
+    }
 
     std::vector<std::shared_ptr<hitable> > orderedPrims(primitives.size());
     BVHBuildNode* root;
@@ -136,6 +145,11 @@ BVHAggregate::BVHAggregate(std::vector<std::shared_ptr<hitable> > prims,
     flattenBVH(root, &offset);
 }
 
+bool BVHAggregate::bounding_box(Float t0, Float t1, aabb& box) const {
+    box = scene_bounds;
+    return(true);
+}
+
 BVHBuildNode *BVHAggregate::buildRecursive(std::span<BVHPrimitive> bvhPrimitives,
                                            std::atomic<int> *totalNodes,
                                            std::atomic<int> *orderedPrimsOffset,
@@ -147,14 +161,14 @@ BVHBuildNode *BVHAggregate::buildRecursive(std::span<BVHPrimitive> bvhPrimitives
     BVHBuildNode *node = new BVHBuildNode();
 
     // Initialize _BVHBuildNode_ for primitive range
-    ++*totalNodes;
+    // ++*totalNodes;
     // Compute bounds of all primitives in BVH node
     aabb bounds;
     for (const auto &prim : bvhPrimitives) {
         bounds = surrounding_box(bounds, prim.bounds);
     }
 
-    if (bounds.SurfaceArea() == 0 || bvhPrimitives.size() == 1) {
+    if (bounds.surface_area() == 0 || bvhPrimitives.size() == 1) {
         // Create leaf _BVHBuildNode_
         int firstPrimOffset = orderedPrimsOffset->fetch_add(bvhPrimitives.size());
         for (size_t i = 0; i < bvhPrimitives.size(); ++i) {
@@ -171,7 +185,7 @@ BVHBuildNode *BVHAggregate::buildRecursive(std::span<BVHPrimitive> bvhPrimitives
         int dim = centroidBounds.MaxDimension();
 
         // Partition primitives into two sets and build children
-        if (centroidBounds.pMax[dim] == centroidBounds.pMin[dim]) {
+        if (centroidBounds.max()[dim] == centroidBounds.min()[dim]) {
             // Create leaf _BVHBuildNode_
             int firstPrimOffset = orderedPrimsOffset->fetch_add(bvhPrimitives.size());
             for (size_t i = 0; i < bvhPrimitives.size(); ++i) {
@@ -229,7 +243,7 @@ BVHBuildNode *BVHAggregate::buildRecursive(std::span<BVHPrimitive> bvhPrimitives
 
                 // Initialize _BVHSplitBucket_ for SAH partition buckets
                 for (const auto &prim : bvhPrimitives) {
-                    int b = nBuckets * centroidBounds.Offset(prim.Centroid())[dim];
+                    int b = nBuckets * centroidBounds.offset(prim.Centroid())[dim];
                     if (b == nBuckets) {
                         b = nBuckets - 1;
                     }
@@ -248,7 +262,7 @@ BVHBuildNode *BVHAggregate::buildRecursive(std::span<BVHPrimitive> bvhPrimitives
                 for (int i = 0; i < nSplits; ++i) {
                     boundBelow = surrounding_box(boundBelow, buckets[i].bounds);
                     countBelow += buckets[i].count;
-                    costs[i] += countBelow * boundBelow.SurfaceArea();
+                    costs[i] += countBelow * boundBelow.surface_area();
                 }
 
                 // Finish initializing _costs_ using a backward scan over splits
@@ -257,7 +271,7 @@ BVHBuildNode *BVHAggregate::buildRecursive(std::span<BVHPrimitive> bvhPrimitives
                 for (int i = nSplits; i >= 1; --i) {
                     boundAbove = surrounding_box(boundAbove, buckets[i].bounds);
                     countAbove += buckets[i].count;
-                    costs[i - 1] += countAbove * boundAbove.SurfaceArea();
+                    costs[i - 1] += countAbove * boundAbove.surface_area();
                 }
 
                 // Find bucket to split at that minimizes SAH metric
@@ -273,17 +287,17 @@ BVHBuildNode *BVHAggregate::buildRecursive(std::span<BVHPrimitive> bvhPrimitives
                 }
                 // Compute leaf cost and SAH split cost for chosen split
                 Float leafCost = bvhPrimitives.size();
-                minCost = 1.f / 2.f + minCost / bounds.SurfaceArea();
+                minCost = 1.f / 2.f + minCost / bounds.surface_area();
 
                 // Either create leaf or split primitives at selected SAH bucket
                 if (bvhPrimitives.size() > maxPrimsInNode || minCost < leafCost) {
                     auto midIter = std::partition(
                         bvhPrimitives.begin(), bvhPrimitives.end(),
                         [=](const BVHPrimitive &bp) {
-                            int b =
-                                nBuckets * centroidBounds.Offset(bp.Centroid())[dim];
-                            if (b == nBuckets)
+                            int b = nBuckets * centroidBounds.offset(bp.Centroid())[dim];
+                            if (b == nBuckets) {
                                 b = nBuckets - 1;
+                            }
                             return b <= minCostSplitBucket;
                         });
                     mid = midIter - bvhPrimitives.begin();
@@ -302,7 +316,7 @@ BVHBuildNode *BVHAggregate::buildRecursive(std::span<BVHPrimitive> bvhPrimitives
 
                 // break;
             // }
-            }
+            // }
 
             BVHBuildNode *children[2];
             // Recursively build BVHs for _children_
@@ -354,28 +368,30 @@ int BVHAggregate::flattenBVH(BVHBuildNode *node, int *offset) {
     return nodeOffset;
 }
 
-const bool bvh_node::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
+const bool BVHAggregate::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
     if (!nodes) {
         return false;
     }
     // Follow ray through BVH nodes to find primitive intersections
     int toVisitOffset = 0, currentNodeIndex = 0;
     int nodesToVisit[64];
-    int nodesVisited = 0;
+    // int nodesVisited = 0;
+    bool any_hit = false;
     while (true) {
-        ++nodesVisited;
+        // ++nodesVisited;
         const LinearBVHNode *node = &nodes[currentNodeIndex];
         // Check ray against BVH node
-        if (node->bounds.hit(r, t_min, t_max, rec, rng)) {
+        if (node->bounds.hit(r, t_min, t_max, rng)) {
             if (node->nPrimitives > 0) {
                 // Intersect ray with primitives in leaf BVH node
                 for (int i = 0; i < node->nPrimitives; ++i) {
                     // Check for intersection with primitive in BVH node
                     hit_record hrec_temp;
-                    bool primSi = primitives[node->primitivesOffset + i]->hit(r, t_min, t_max, hrec_temp, rng);
-                    if (primSi) {
+                    bool prim_hrec = primitives[node->primitivesOffset + i]->hit(r, t_min, t_max, hrec_temp, rng);
+                    if (prim_hrec) {
+                        any_hit = true;
                         rec = hrec_temp;
-                        t_max = rec->t;
+                        t_max = rec.t;
                     }
                 }
                 if (toVisitOffset == 0) {
@@ -400,32 +416,34 @@ const bool bvh_node::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
         }
     }
 
-    bvhNodesVisited += nodesVisited;
-    return si;
+    // bvhNodesVisited += nodesVisited;
+    return any_hit;
 }
 
-const bool bvh_node::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const {
+const bool BVHAggregate::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const {
     if (!nodes) {
         return false;
     }
     // Follow ray through BVH nodes to find primitive intersections
     int toVisitOffset = 0, currentNodeIndex = 0;
     int nodesToVisit[64];
-    int nodesVisited = 0;
+    // int nodesVisited = 0;
+    bool any_hit = false;
     while (true) {
-        ++nodesVisited;
+        // ++nodesVisited;
         const LinearBVHNode *node = &nodes[currentNodeIndex];
         // Check ray against BVH node
-        if (node->bounds.hit(r, t_min, t_max, rec, sampler)) {
+        if (node->bounds.hit(r, t_min, t_max, sampler)) {
             if (node->nPrimitives > 0) {
                 // Intersect ray with primitives in leaf BVH node
                 for (int i = 0; i < node->nPrimitives; ++i) {
                     // Check for intersection with primitive in BVH node
                     hit_record hrec_temp;
-                    bool primSi = primitives[node->primitivesOffset + i]->hit(r, t_min, t_max, hrec_temp, sampler);
-                    if (primSi) {
+                    bool prim_hrec = primitives[node->primitivesOffset + i]->hit(r, t_min, t_max, hrec_temp, sampler);
+                    if (prim_hrec) {
+                        any_hit = true;
                         rec = hrec_temp;
-                        t_max = rec->t;
+                        t_max = rec.t;
                     }
                 }
                 if (toVisitOffset == 0) {
@@ -450,26 +468,36 @@ const bool bvh_node::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
         }
     }
 
-    bvhNodesVisited += nodesVisited;
-    return si;
+    // bvhNodesVisited += nodesVisited;
+    return any_hit;
 }
 
 Float BVHAggregate::pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Float time) {
-  return(0.5*left->pdf_value(o,v, rng, time) + 0.5*right->pdf_value(o,v, rng, time));
+  Float weight = 1.0 / primitives.size();
+  Float sum = 0;
+  for (const auto& object : primitives) {
+    sum += weight*object->pdf_value(o,v, rng, time);
+  }
+  return(sum);
 }
 
 Float BVHAggregate::pdf_value(const point3f& o, const vec3f& v, Sampler* sampler, Float time) {
-  return(0.5*left->pdf_value(o,v, sampler, time) + 0.5*right->pdf_value(o,v, sampler, time));
-  
+  Float weight = 1.0 / primitives.size();
+  Float sum = 0;
+  for (const auto& object : primitives) {
+    sum += weight*object->pdf_value(o,v, sampler, time);
+  }
+  return(sum);
 }
 
 vec3f BVHAggregate::random(const point3f& o, random_gen& rng, Float time) {
-  return(rng.unif_rand() > 0.5 ? left->random(o, rng, time) : right->random(o, rng, time));
+  int index = int(rng.unif_rand() * primitives.size() * 0.99999999);
+  return(primitives[index]->random(o, rng, time));
 }
 
 vec3f BVHAggregate::random(const point3f& o, Sampler* sampler, Float time) {
-  return(sampler->Get1D() > 0.5 ? left->random(o, sampler, time) : right->random(o, sampler, time));
-  
+  int index = int(sampler->Get1D() * primitives.size() * 0.99999999);
+  return(primitives[index]->random(o, sampler, time));
 }
 
 #endif

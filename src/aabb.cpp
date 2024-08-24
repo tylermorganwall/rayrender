@@ -45,7 +45,7 @@ const bool aabb::hit(const ray &r, Float tmin, Float tmax, Sampler* sampler) con
   return(tmin <= tmax);
 }
 
-const point3f aabb::offset(const point3f p) {
+const point3f aabb::offset(const point3f p) const {
   point3f o = p + -min();
   if (max().x() > min().x()) {
     o.e[0] /= (max().x() - min().x());
@@ -59,7 +59,7 @@ const point3f aabb::offset(const point3f p) {
   return(o);
 }
 
-const point3f aabb::offset(const vec3f p) {
+const point3f aabb::offset(const vec3f p) const {
   point3f o = point3f(p.x(),p.y(),p.z()) + -min();
   if (max().x() > min().x()) {
     o.e[0] /= (max().x() - min().x());
@@ -96,6 +96,16 @@ const point3f aabb::Centroid() const {
 
 const point3f aabb::Diag() const {
   return((bounds[1] + bounds[0]));
+}
+
+int aabb::MaxDimension() const {
+    point3f d = Diag();
+    if (d.x() > d.y() && d.x() > d.z())
+      return 0;
+    else if (d.y() > d.z())
+      return 1;
+    else
+      return 2;
 }
 
 template<typename... Args>
