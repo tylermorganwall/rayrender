@@ -24,7 +24,7 @@
 #include "transformcache.h"
 #include "texturecache.h"
 #include "raylog.h"
-#include "flat_bvh.h"
+#include "bvh.h"
 
 Transform rotation_order_matrix(NumericVector temprotvec, NumericVector order_rotation) {
   Transform M;
@@ -911,7 +911,7 @@ std::shared_ptr<hitable> build_scene(List& scene,
     }
   }
   std::shared_ptr<bvh_node> world_bvh = std::make_shared<bvh_node>(list, shutteropen, shutterclose, bvh_type, rng);
-  // std::shared_ptr<FlatBVH> world_bvh = std::make_shared<FlatBVH>(world_bvh_2child);
+  std::shared_ptr<FlatBVH> world_bvh2 = std::make_shared<FlatBVH>(world_bvh);
   
   #ifdef FULL_DEBUG
   world_bvh->validate_bvh();
