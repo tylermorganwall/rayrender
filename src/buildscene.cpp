@@ -400,7 +400,7 @@ std::shared_ptr<hitable> build_scene(List& scene,
                                      hitable_list& imp_sample_objects,
                                      std::vector<std::shared_ptr<hitable> >& instanced_objects,
                                      std::vector<std::shared_ptr<hitable_list> >& instance_importance_sampled,
-                                     bool verbose,
+                                     bool verbose, 
                                      random_gen& rng) {
   auto nvec  = std::make_unique<int[]>(3);
   auto nveca = std::make_unique<int[]>(3);
@@ -411,6 +411,8 @@ std::shared_ptr<hitable> build_scene(List& scene,
   hitable_list list;
   NumericMatrix IdentityMat(4,4);
   IdentityMat.fill_diag(1);
+  Transform IdentityTransform(IdentityMat);
+  std::shared_ptr<Transform> Iden = transformCache.Lookup(IdentityTransform);
   
   List RayMaterials = as<List>(scene["material"]);
   List ShapeInfo = as<List>(scene["shape_info"]);
@@ -910,8 +912,8 @@ std::shared_ptr<hitable> build_scene(List& scene,
       imp_sample_objects.add(entry);
     }
   }
-  std::shared_ptr<bvh_node> world_bvh = std::make_shared<bvh_node>(list, shutteropen, shutterclose, bvh_type, rng);
-  // std::shared_ptr<FlatBVH> world_bvh2 = std::make_shared<FlatBVH>(world_bvh);
+  std::shared_ptr<BVHAggregate> world_bvh = std::make_shared<BVHAggregate>(list.objects, shutteropen, shutterclose, 1, true,
+                                                   Iden,Iden,false );
   
   #ifdef FULL_DEBUG
   world_bvh->validate_bvh();

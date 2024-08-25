@@ -13,7 +13,6 @@ class hitable;
 class bvh_node;
 class random_gen;
 class hitable_list;
-class FlatBVH;
 
 std::shared_ptr<hitable> rotation_order(std::shared_ptr<hitable> entry, NumericVector temprotvec, NumericVector order_rotation);
 
