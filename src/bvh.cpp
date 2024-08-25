@@ -30,7 +30,7 @@ BVHAggregate::BVHAggregate(std::vector<std::shared_ptr<hitable> > prims,
     primitives.swap(orderedPrims);
     bvhPrimitives.resize(0);
     bvhPrimitives.shrink_to_fit();
-    nodes = new LinearBVHNode[totalNodes];
+    nodes.reset(new LinearBVHNode[totalNodes]);
     int offset = 0;
     flattenBVH(root, &offset);
 }

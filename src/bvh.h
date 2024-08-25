@@ -114,7 +114,7 @@ class BVHAggregate : public hitable {
        int maxPrimsInNode;
        std::vector<std::shared_ptr<hitable> > primitives;
     //    SplitMethod splitMethod;
-       LinearBVHNode *nodes = nullptr;
+       std::unique_ptr<LinearBVHNode[]> nodes;
     //    int totalNodes;
 
 };
