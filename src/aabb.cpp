@@ -1,5 +1,6 @@
 #include "aabb.h"
 #include "raylog.h"
+
 const Float aabb::surface_area() const {
   point3f diag = Diag();
   return(min().x() <= max().x() ? 
@@ -106,12 +107,6 @@ int aabb::MaxDimension() const {
       return 1;
     else
       return 2;
-}
-
-template<typename... Args>
-SimdAABB make_simd_aabb(Args&&... args) {
-  static_assert(sizeof...(Args) == SIMD_WIDTH, "Number of AABBs must match SIMD width");
-  return SimdAABB(std::array<aabb, SIMD_WIDTH>{std::forward<Args>(args)...});
 }
 
 

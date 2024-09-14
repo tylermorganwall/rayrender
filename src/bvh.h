@@ -4,6 +4,7 @@
 #include <span>
 #include "assert.h"
 #include "hitable.h"
+#include "simd.h"
 
 struct BVHPrimitive {
     BVHPrimitive() : primitiveIndex(0), bounds(aabb()) {};
@@ -18,6 +19,17 @@ struct BVHPrimitive {
 struct BVHSplitBucket {
     int count = 0;
     aabb bounds;
+};
+
+struct BVH4Node {
+    BBox4 bounds;
+    union {
+        int primitiveOffset;    // Leaf
+        int secondChildOffset;  // Interior
+    };
+    uint8_t nPrimitives;  // 0 -> interior node
+    uint8_t nChildren;    // Number of valid children (1-4)
+    uint8_t children[4];  // Indices of child nodes
 };
 
 
@@ -47,7 +59,16 @@ struct BVHBuildNode {
     int splitAxis, firstPrimOffset, nPrimitives;
 };
 
-struct alignas(32) LinearBVHNode {
+struct BVHBuildNode4 {
+    aabb bounds;
+    BVHBuildNode4* children[4]; // Up to 4 children
+    int nChildren;              // Number of valid children (1 to 4)
+    int splitAxis;              // Axis along which the node was split
+    int firstPrimOffset;        // Offset in primitives array (for leaf nodes)
+    int nPrimitives;            // Number of primitives in leaf node
+};
+
+struct LinearBVHNode {
     aabb bounds;
     union {
         int primitivesOffset;    // leaf
@@ -56,6 +77,18 @@ struct alignas(32) LinearBVHNode {
     uint16_t nPrimitives;  // 0 -> interior node
     uint8_t axis;          // interior node: xyz
 };
+
+struct LinearBVHNode4 {
+    aabb bounds;
+    union{
+        int childOffsets[4];      // Offsets to child nodes (valid if interior node)
+        int primitivesOffset;     // Offset in primitives array (valid if leaf node)
+    };
+    uint8_t nPrimitives;     // Number of primitives (0 for interior nodes)
+    uint8_t axis;             // Split axis (valid if interior node)
+    uint8_t nChildren;        // Number of children (0 for leaf nodes)
+};
+
 
 class BVHAggregate : public hitable {
   public:
@@ -90,7 +123,10 @@ class BVHAggregate : public hitable {
         size_t GetSize() {
             return(0);
         };
+        void transformToSimdFormat();
         aabb scene_bounds;
+        std::vector<BVH4Node> simdNodes;
+        int n_nodes;
         // std::pair<size_t,size_t> CountNodeLeaf();
   private:
        BVHBuildNode *buildRecursive(std::span<BVHPrimitive> bvhPrimitives,
@@ -118,5 +154,7 @@ class BVHAggregate : public hitable {
     //    int totalNodes;
 
 };
+
+
 
 #endif
