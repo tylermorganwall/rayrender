@@ -40,10 +40,6 @@ struct BVHBuildNode {
         nPrimitives = n;
         bounds = b;
         children[0] = children[1] = nullptr;
-
-        // Debug print
-        Rcpp::Rcout << "InitLeaf called: firstPrimOffset = " << firstPrimOffset
-                    << ", nPrimitives = " << nPrimitives << "\n";
     }
 
     void InitInterior(int axis, BVHBuildNode* c0, BVHBuildNode* c1) {
@@ -53,11 +49,6 @@ struct BVHBuildNode {
         splitAxis = axis;
         firstPrimOffset = -1; // Invalid for interior nodes
         nPrimitives = 0;      // Interior nodes contain no primitives directly
-
-        // Debug print
-        Rcpp::Rcout << "InitInterior called: splitAxis = " << splitAxis
-                    << ", firstPrimOffset = " << firstPrimOffset
-                    << ", nPrimitives = " << nPrimitives << "\n";
     }
 
     aabb bounds;

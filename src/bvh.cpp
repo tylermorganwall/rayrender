@@ -1033,12 +1033,7 @@ void BVHAggregate::validateBVH4() const {
         totalNodesVisited++;
 
         bool isLeaf = node->nPrimitives > 0;
-
-        // Node information for debugging
-        Rcpp::Rcout << "Visiting node index: " << current.nodeIndex
-                    << ", depth: " << current.depth
-                    << ", isLeaf: " << isLeaf << "\n";
-
+        
         if (isLeaf) {
             // Leaf node validation
             if (node->nChildren != 0) {
