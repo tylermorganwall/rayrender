@@ -85,15 +85,15 @@ struct LinearBVHNode {
 };
 
 struct LinearBVHNode4 {
-    aabb bounds;
-    // union{
-        int childOffsets[4];      // Offsets to child nodes (valid if interior node)
-        int primitivesOffset;     // Offset in primitives array (valid if leaf node)
-    // };
-    uint8_t nPrimitives;     // Number of primitives (0 for interior nodes)
-    uint8_t axis;             // Split axis (valid if interior node)
-    uint8_t nChildren;        // Number of children (0 for leaf nodes)
+    aabb bounds;          // Bounding box of this node
+    uint8_t nPrimitives;  // 0 for interior nodes
+    uint8_t axis;         // Split axis
+    uint8_t nChildren;    // Number of children (up to 4)
+    int primitivesOffset; // For leaf nodes
+    int childOffsets[4];  // For interior nodes
+    BBox4 bbox4;          // Packed bounding boxes of child nodes
 };
+
 
 
 class BVHAggregate : public hitable {

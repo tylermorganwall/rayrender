@@ -27,9 +27,9 @@ typedef struct FVec4 {
 public:
     union {
 #if defined(__x86_64__)
-        __m128 m128;
+        __m128 v;
 #elif defined(__aarch64__)
-        float32x4_t f32x4;
+        float32x4_t v;
 #endif
         float xyzw[4];
         // struct {
@@ -40,9 +40,9 @@ public:
         // };
     };
 #if defined(__x86_64__)
-    FVec4(__m128 f4) : m128(f4) {}
+    FVec4(__m128 f4) : v(f4) {}
 #elif defined(__aarch64__)
-    FVec4(float32x4_t f4) : f32x4(f4) {}
+    FVec4(float32x4_t f4) : v(f4) {}
 #endif
     FVec4()  {
       xyzw[0] = 0.f;
@@ -114,22 +114,22 @@ typedef struct IVec4 {
 
 
 // SIMD vector type
-struct SimdFloat {
-#ifdef __AVX__
-  __m256 v;
-#elif defined(__SSE__)
-  __m128 v;
-#elif defined(__ARM_NEON)
-  float32x4_t v;
-#else
-  float v[SIMD_WIDTH];
-#endif
-};
+// struct SimdFloat {
+// #ifdef __AVX__
+//   __m256 v;
+// #elif defined(__SSE__)
+//   __m128 v;
+// #elif defined(__ARM_NEON)
+//   float32x4_t v;
+// #else
+//   float v[SIMD_WIDTH];
+// #endif
+// };
 
 
 // SIMD operations
-inline SimdFloat simd_load(const float* ptr) {
-  SimdFloat result;
+inline FVec4 simd_load(const float* ptr) {
+  FVec4 result;
 #ifdef __AVX__
   result.v = _mm256_load_ps(ptr);
 #elif defined(__SSE__)
@@ -144,10 +144,10 @@ inline SimdFloat simd_load(const float* ptr) {
   return result;
 }
 
-typedef SimdFloat SimdMask;
+typedef FVec4 SimdMask;
 
-inline SimdFloat simd_set1(float value) {
-  SimdFloat result;
+inline FVec4 simd_set1(float value) {
+  FVec4 result;
 #ifdef __AVX__
   result.v = _mm256_set1_ps(value);
 #elif defined(__SSE__)
@@ -162,8 +162,8 @@ inline SimdFloat simd_set1(float value) {
   return result;
 }
 
-inline SimdFloat simd_sub(SimdFloat a, SimdFloat b) {
-  SimdFloat result;
+inline FVec4 simd_sub(FVec4 a, FVec4 b) {
+  FVec4 result;
 #ifdef __AVX__
   result.v = _mm256_sub_ps(a.v, b.v);
 #elif defined(__SSE__)
@@ -179,8 +179,8 @@ inline SimdFloat simd_sub(SimdFloat a, SimdFloat b) {
 }
 
 
-inline SimdFloat simd_mul(SimdFloat a, SimdFloat b) {
-  SimdFloat result;
+inline FVec4 simd_mul(FVec4 a, FVec4 b) {
+  FVec4 result;
 #ifdef __AVX__
   result.v = _mm256_mul_ps(a.v, b.v);
 #elif defined(__SSE__)
@@ -196,8 +196,8 @@ inline SimdFloat simd_mul(SimdFloat a, SimdFloat b) {
 }
 
 
-inline SimdFloat simd_min(SimdFloat a, SimdFloat b) {
-  SimdFloat result;
+inline FVec4 simd_min(FVec4 a, FVec4 b) {
+  FVec4 result;
 #ifdef __AVX__
   result.v = _mm256_min_ps(a.v, b.v);
 #elif defined(__SSE__)
@@ -213,8 +213,8 @@ inline SimdFloat simd_min(SimdFloat a, SimdFloat b) {
 }
 
 
-inline SimdFloat simd_max(SimdFloat a, SimdFloat b) {
-  SimdFloat result;
+inline FVec4 simd_max(FVec4 a, FVec4 b) {
+  FVec4 result;
 #ifdef __AVX__
   result.v = _mm256_max_ps(a.v, b.v);
 #elif defined(__SSE__)
@@ -230,7 +230,7 @@ inline SimdFloat simd_max(SimdFloat a, SimdFloat b) {
 }
 
 
-inline SimdMask simd_less_equal(SimdFloat a, SimdFloat b) {
+inline SimdMask simd_less_equal(FVec4 a, FVec4 b) {
   SimdMask result;
 #ifdef __AVX__
   result.v = _mm256_cmp_ps(a.v, b.v, _CMP_LE_OQ);
@@ -265,7 +265,7 @@ inline bool simd_any_true(SimdMask mask) {
 inline IVec4 simd_cast_to_int(FVec4 mask) {
 #ifdef __ARM_NEON
     // NEON: reinterpret the result of comparison from float to int
-    return vreinterpretq_s32_u32(vreinterpretq_u32_f32(mask.f32x4));
+    return vreinterpretq_s32_u32(vreinterpretq_u32_f32(mask.v));
 #elif defined(__SSE__)
     // SSE: cast floating-point mask to integer mask
     return _mm_castps_si128(mask.v);

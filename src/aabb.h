@@ -69,11 +69,11 @@ struct BBox4 {
     };
 
 #if defined(__x86_64__)
-    inline const __m128* minCornerSSE() const { return &corners[0].m128; }
-    inline const __m128* maxCornerSSE() const { return &corners[3].m128; }
+    inline const __m128* minCornerSSE() const { return &corners[0].v; }
+    inline const __m128* maxCornerSSE() const { return &corners[3].v; }
 #elif defined(__aarch64__)
-    inline const float32x4_t* minCornerNeon() const { return &corners[0].f32x4; }
-    inline const float32x4_t* maxCornerNeon() const { return &corners[3].f32x4; }
+    inline const float32x4_t* minCornerNeon() const { return &corners[0].v; }
+    inline const float32x4_t* maxCornerNeon() const { return &corners[3].v; }
 #endif
 
     inline void setBBox(int boxNum, const FVec4& minCorner, const FVec4& maxCorner) {
@@ -84,7 +84,8 @@ struct BBox4 {
         cornersFloat[1][1][boxNum] = fmax(minCorner[1], maxCorner[1]);
         cornersFloat[1][2][boxNum] = fmax(minCorner[2], maxCorner[2]);
     }
-
+    BBox4() {}
+    
     BBox4(const aabb& a, const aabb& b, const aabb& c, const aabb& d) {
         setBBox(0, a.min(), a.max());
         setBBox(1, b.min(), b.max());
@@ -150,6 +151,12 @@ inline std::ostream& operator<<(std::ostream &os, const aabb &t) {
   return os;
 }
 
-
+void rayBBoxIntersect4(const ray& ray,
+                       const BBox4& bbox4,
+                       Float tMin,
+                       Float tMax,
+                       IVec4& hits,
+                       FVec4& tMins,
+                       FVec4& tMaxs);
 
 #endif

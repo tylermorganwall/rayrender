@@ -1,5 +1,6 @@
 #include "aabb.h"
 #include "raylog.h"
+#include "simd.h"
 
 const Float aabb::surface_area() const {
   point3f diag = Diag();
@@ -110,3 +111,49 @@ int aabb::MaxDimension() const {
 }
 
 
+
+void rayBBoxIntersect4(const ray& ray,
+                       const BBox4& bbox4,
+                       Float tMin,
+                       Float tMax,
+                       IVec4& hits,
+                       FVec4& tMins,
+                       FVec4& tMaxs) {
+    // Prepare ray data
+    FVec4 rayOriginX = simd_set1(ray.origin().x());
+    FVec4 rayOriginY = simd_set1(ray.origin().y());
+    FVec4 rayOriginZ = simd_set1(ray.origin().z());
+    FVec4 rayInvDirX = simd_set1(ray.inv_dir.x());
+    FVec4 rayInvDirY = simd_set1(ray.inv_dir.y());
+    FVec4 rayInvDirZ = simd_set1(ray.inv_dir.z());
+
+    // Determine near and far indices based on ray direction signs
+    int ixNear = ray.sign[0] ? 3 : 0;
+    int iyNear = ray.sign[1] ? 4 : 1;
+    int izNear = ray.sign[2] ? 5 : 2;
+    int ixFar = ray.sign[0] ? 0 : 3;
+    int iyFar = ray.sign[1] ? 1 : 4;
+    int izFar = ray.sign[2] ? 2 : 5;
+
+    // Compute t values for slabs
+    FVec4 t0x = simd_mul(simd_sub(bbox4.corners[ixNear], rayOriginX), rayInvDirX);
+    FVec4 t1x = simd_mul(simd_sub(bbox4.corners[ixFar], rayOriginX), rayInvDirX);
+
+    FVec4 t0y = simd_mul(simd_sub(bbox4.corners[iyNear], rayOriginY), rayInvDirY);
+    FVec4 t1y = simd_mul(simd_sub(bbox4.corners[iyFar], rayOriginY), rayInvDirY);
+
+    FVec4 t0z = simd_mul(simd_sub(bbox4.corners[izNear], rayOriginZ), rayInvDirZ);
+    FVec4 t1z = simd_mul(simd_sub(bbox4.corners[izFar], rayOriginZ), rayInvDirZ);
+
+    // Compute tEnter and tExit
+    FVec4 tEnter = simd_max(simd_max(t0x, t0y), t0z);
+    FVec4 tExit = simd_min(simd_min(t1x, t1y), t1z);
+
+    // Clamp tEnter and tExit with tMin and tMax
+    tMins = simd_max(tEnter, simd_set1(tMin));
+    tMaxs = simd_min(tExit, simd_set1(tMax));
+
+    // Compute hit mask
+    SimdMask hitMask = simd_less_equal(tMins, tMaxs);
+    hits = simd_cast_to_int(hitMask);
+}
