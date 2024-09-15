@@ -35,23 +35,29 @@ struct BVH4Node {
 
 struct BVHBuildNode {
     // BVHBuildNode Public Methods
-    void InitLeaf(int first, int n, const aabb &b) {
+    void InitLeaf(int first, int n, const aabb& b) {
         firstPrimOffset = first;
         nPrimitives = n;
         bounds = b;
         children[0] = children[1] = nullptr;
-        // ++leafNodes;
-        // ++totalLeafNodes;
-        // totalPrimitives += n;
+
+        // Debug print
+        Rcpp::Rcout << "InitLeaf called: firstPrimOffset = " << firstPrimOffset
+                    << ", nPrimitives = " << nPrimitives << "\n";
     }
 
-    void InitInterior(int axis, BVHBuildNode *c0, BVHBuildNode *c1) {
+    void InitInterior(int axis, BVHBuildNode* c0, BVHBuildNode* c1) {
         children[0] = c0;
         children[1] = c1;
         bounds = surrounding_box(c0->bounds, c1->bounds);
         splitAxis = axis;
-        nPrimitives = 0;
-        // ++interiorNodes;
+        firstPrimOffset = -1; // Invalid for interior nodes
+        nPrimitives = 0;      // Interior nodes contain no primitives directly
+
+        // Debug print
+        Rcpp::Rcout << "InitInterior called: splitAxis = " << splitAxis
+                    << ", firstPrimOffset = " << firstPrimOffset
+                    << ", nPrimitives = " << nPrimitives << "\n";
     }
 
     aabb bounds;
@@ -80,10 +86,10 @@ struct LinearBVHNode {
 
 struct LinearBVHNode4 {
     aabb bounds;
-    union{
+    // union{
         int childOffsets[4];      // Offsets to child nodes (valid if interior node)
         int primitivesOffset;     // Offset in primitives array (valid if leaf node)
-    };
+    // };
     uint8_t nPrimitives;     // Number of primitives (0 for interior nodes)
     uint8_t axis;             // Split axis (valid if interior node)
     uint8_t nChildren;        // Number of children (0 for leaf nodes)
@@ -133,6 +139,7 @@ class BVHAggregate : public hitable {
                                     std::atomic<int> *totalNodes,
                                     std::atomic<int> *orderedPrimsOffset,
                                     std::vector<std::shared_ptr<hitable> > &orderedPrims);
+       BVHBuildNode4* ConvertBVH2ToBVH4(BVHBuildNode* node, int* totalNodes4);
     //    BVHBuildNode *buildHLBVH(Allocator alloc,
     //                             const std::vector<BVHPrimitive> &primitiveInfo,
     //                             std::atomic<int> *totalNodes,
@@ -146,11 +153,15 @@ class BVHAggregate : public hitable {
     //                                std::vector<BVHBuildNode *> &treeletRoots, int start,
     //                                int end, std::atomic<int> *totalNodes) const;
        int flattenBVH(BVHBuildNode *node, int *offset);
+       int flattenBVH4(BVHBuildNode4* node, int* offset);
+       void validateBVH4() const;
 
        int maxPrimsInNode;
+       int totalNodes4;
        std::vector<std::shared_ptr<hitable> > primitives;
     //    SplitMethod splitMethod;
        std::unique_ptr<LinearBVHNode[]> nodes;
+       std::unique_ptr<LinearBVHNode4[]> nodes4;
     //    int totalNodes;
 
 };

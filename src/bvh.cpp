@@ -1,4 +1,5 @@
 #include "bvh.h"
+#include "assert.h"
 
 BVHAggregate::BVHAggregate(std::vector<std::shared_ptr<hitable> > prims,
         float t_min, float t_max, 
@@ -8,7 +9,7 @@ BVHAggregate::BVHAggregate(std::vector<std::shared_ptr<hitable> > prims,
         bool reverseOrientation) : 
         hitable(ObjectToWorld, WorldToObject, reverseOrientation), 
         maxPrimsInNode(std::min(255, maxPrimsInNode)),
-        primitives(prims)//, splitMethod(splitMethod) 
+        primitives(prims)
         { 
     std::vector<BVHPrimitive> bvhPrimitives(primitives.size());
     for (size_t i = 0; i < primitives.size(); ++i) {
@@ -26,6 +27,9 @@ BVHAggregate::BVHAggregate(std::vector<std::shared_ptr<hitable> > prims,
                           &totalNodes, 
                           &orderedPrimsOffset, 
                           orderedPrims);
+    totalNodes4 = 0;
+    BVHBuildNode4* rootBVH4 = ConvertBVH2ToBVH4(root, &totalNodes4);
+    nodes4.reset(new LinearBVHNode4[totalNodes4]);
     primitives.swap(orderedPrims);
     bvhPrimitives.resize(0);
     bvhPrimitives.shrink_to_fit();
@@ -33,6 +37,10 @@ BVHAggregate::BVHAggregate(std::vector<std::shared_ptr<hitable> > prims,
     n_nodes = totalNodes;
     int offset = 0;
     flattenBVH(root, &offset);
+    int offset4 = 0;
+    flattenBVH4(rootBVH4, &offset4);
+    validateBVH4();
+
     // transformToSimdFormat();
 }
 
@@ -52,7 +60,7 @@ BVHBuildNode *BVHAggregate::buildRecursive(std::span<BVHPrimitive> bvhPrimitives
     BVHBuildNode *node = new BVHBuildNode();
 
     // Initialize _BVHBuildNode_ for primitive range
-    ++*totalNodes;
+    int nodeIndex = (*totalNodes)++;
     // Compute bounds of all primitives in BVH node
     aabb bounds;
     for (const auto &prim : bvhPrimitives) {
@@ -84,39 +92,13 @@ BVHBuildNode *BVHAggregate::buildRecursive(std::span<BVHPrimitive> bvhPrimitives
                 orderedPrims[firstPrimOffset + i] = primitives[index];
             }
             node->InitLeaf(firstPrimOffset, bvhPrimitives.size(), bounds);
+            Rcpp::Rcout << "1) Created leaf node " << nodeIndex 
+                    << ": firstPrimOffset = " << firstPrimOffset
+                    << ", nPrimitives = " << bvhPrimitives.size() << "\n";
             return node;
 
         } else {
             int mid = bvhPrimitives.size() / 2;
-            // Partition primitives based on _splitMethod_
-            // switch (splitMethod) {
-            // case SplitMethod::Middle: {
-            //     // Partition primitives through node's midpoint
-            //     Float pmid = (centroidBounds.pMin[dim] + centroidBounds.pMax[dim]) / 2;
-            //     auto midIter = std::partition(bvhPrimitives.begin(), bvhPrimitives.end(),
-            //                                   [dim, pmid](const BVHPrimitive &pi) {
-            //                                       return pi.Centroid()[dim] < pmid;
-            //                                   });
-            //     mid = midIter - bvhPrimitives.begin();
-            //     // For lots of prims with large overlapping bounding boxes, this
-            //     // may fail to partition; in that case do not break and fall through
-            //     // to EqualCounts.
-            //     if (midIter != bvhPrimitives.begin() && midIter != bvhPrimitives.end())
-            //         break;
-            // }
-            // case SplitMethod::EqualCounts: {
-            //     // Partition primitives into equally sized subsets
-            //     mid = bvhPrimitives.size() / 2;
-            //     std::nth_element(bvhPrimitives.begin(), bvhPrimitives.begin() + mid,
-            //                      bvhPrimitives.end(),
-            //                      [dim](const BVHPrimitive &a, const BVHPrimitive &b) {
-            //                          return a.Centroid()[dim] < b.Centroid()[dim];
-            //                      });
-
-            //     break;
-            // }
-            // case SplitMethod::SAH:
-            // default: {
             // Partition primitives using approximate SAH
             if (bvhPrimitives.size() <= 2) {
                 // Partition primitives into equally sized subsets
@@ -201,30 +183,16 @@ BVHBuildNode *BVHAggregate::buildRecursive(std::span<BVHPrimitive> bvhPrimitives
                         orderedPrims[firstPrimOffset + i] = primitives[index];
                     }
                     node->InitLeaf(firstPrimOffset, bvhPrimitives.size(), bounds);
+
+                    // Debug print for leaf node
+                    Rcpp::Rcout << "2) Created leaf node " << nodeIndex 
+                                << ": firstPrimOffset = " << firstPrimOffset
+                                << ", nPrimitives = " << bvhPrimitives.size() << "\n";
                     return node;
                 }
             }
-
-                // break;
-            // }
-            // }
-
             BVHBuildNode *children[2];
-            // Recursively build BVHs for _children_
-            // if (bvhPrimitives.size() > 128 * 1024) {
-            //     // Recursively build child BVHs in parallel
-            //     // ParallelFor(0, 2, [&](int i) {
-            //         if (i == 0)
-            //             children[0] = buildRecursive(
-            //                 bvhPrimitives.subspan(0, mid), totalNodes,
-            //                 orderedPrimsOffset, orderedPrims);
-            //         else
-            //             children[1] =
-            //                 buildRecursive(threadAllocators, bvhPrimitives.subspan(mid),
-            //                                totalNodes, orderedPrimsOffset, orderedPrims);
-            //     // });
 
-            // } else {
             // Recursively build child BVHs sequentially
             children[0] =
                 buildRecursive(bvhPrimitives.subspan(0, mid),
@@ -232,8 +200,12 @@ BVHBuildNode *BVHAggregate::buildRecursive(std::span<BVHPrimitive> bvhPrimitives
             children[1] =
                 buildRecursive(bvhPrimitives.subspan(mid),
                                 totalNodes, orderedPrimsOffset, orderedPrims);
-            // }
+
             node->InitInterior(dim, children[0], children[1]);
+
+            // Debug print for interior node
+            Rcpp::Rcout << "Created interior node " << nodeIndex << " with prim: " << node->firstPrimOffset << " "
+                        << ": splitAxis = " << dim << "\n";
         }
     }
 
@@ -249,6 +221,9 @@ int BVHAggregate::flattenBVH(BVHBuildNode *node, int *offset) {
         // CHECK_LT(node->nPrimitives, 65536);
         linearNode->primitivesOffset = node->firstPrimOffset;
         linearNode->nPrimitives = node->nPrimitives;
+        // Debug print
+        Rcpp::Rcout << "BVH2 leaf node: nPrimitives = " << node->nPrimitives
+                << ", firstPrimOffset = " << node->firstPrimOffset << "\n";
     } else {
         // Create interior flattened BVH node
         linearNode->axis = node->splitAxis;
@@ -260,111 +235,111 @@ int BVHAggregate::flattenBVH(BVHBuildNode *node, int *offset) {
 }
 
 
-#ifndef RAYSSE
-const bool BVHAggregate::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
-    if (!nodes) {
-        return false;
-    }
-    // Follow ray through BVH nodes to find primitive intersections
-    int toVisitOffset = 0, currentNodeIndex = 0;
-    int nodesToVisit[64];
-    // int nodesVisited = 0;
-    bool any_hit = false;
-    while (true) {
-        // ++nodesVisited;
-        const LinearBVHNode *node = &nodes[currentNodeIndex];
-        // Check ray against BVH node
-        if (node->bounds.hit(r, t_min, t_max, rng)) {
-            if (node->nPrimitives > 0) {
-                // Intersect ray with primitives in leaf BVH node
-                for (int i = 0; i < node->nPrimitives; ++i) {
-                    // Check for intersection with primitive in BVH node
-                    hit_record hrec_temp;
-                    bool prim_hrec = primitives[node->primitivesOffset + i]->hit(r, t_min, t_max, hrec_temp, rng);
-                    if (prim_hrec) {
-                        any_hit = true;
-                        rec = hrec_temp;
-                        t_max = rec.t;
-                    }
-                }
-                if (toVisitOffset == 0) {
-                    break;
-                }
-                currentNodeIndex = nodesToVisit[--toVisitOffset];
-            } else {
-                // Put far BVH node on _nodesToVisit_ stack, advance to near node
-                if (r.sign[node->axis]) {
-                    nodesToVisit[toVisitOffset++] = currentNodeIndex + 1;
-                    currentNodeIndex = node->secondChildOffset;
-                } else {
-                    nodesToVisit[toVisitOffset++] = node->secondChildOffset;
-                    currentNodeIndex = currentNodeIndex + 1;
-                }
-            }
-        } else {
-            if (toVisitOffset == 0) {
-                break;
-            }
-            currentNodeIndex = nodesToVisit[--toVisitOffset];
-        }
-    }
+// #ifndef RAYSSE
+// const bool BVHAggregate::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
+//     if (!nodes) {
+//         return false;
+//     }
+//     // Follow ray through BVH nodes to find primitive intersections
+//     int toVisitOffset = 0, currentNodeIndex = 0;
+//     int nodesToVisit[64];
+//     // int nodesVisited = 0;
+//     bool any_hit = false;
+//     while (true) {
+//         // ++nodesVisited;
+//         const LinearBVHNode *node = &nodes[currentNodeIndex];
+//         // Check ray against BVH node
+//         if (node->bounds.hit(r, t_min, t_max, rng)) {
+//             if (node->nPrimitives > 0) {
+//                 // Intersect ray with primitives in leaf BVH node
+//                 for (int i = 0; i < node->nPrimitives; ++i) {
+//                     // Check for intersection with primitive in BVH node
+//                     hit_record hrec_temp;
+//                     bool prim_hrec = primitives[node->primitivesOffset + i]->hit(r, t_min, t_max, hrec_temp, rng);
+//                     if (prim_hrec) {
+//                         any_hit = true;
+//                         rec = hrec_temp;
+//                         t_max = rec.t;
+//                     }
+//                 }
+//                 if (toVisitOffset == 0) {
+//                     break;
+//                 }
+//                 currentNodeIndex = nodesToVisit[--toVisitOffset];
+//             } else {
+//                 // Put far BVH node on _nodesToVisit_ stack, advance to near node
+//                 if (r.sign[node->axis]) {
+//                     nodesToVisit[toVisitOffset++] = currentNodeIndex + 1;
+//                     currentNodeIndex = node->secondChildOffset;
+//                 } else {
+//                     nodesToVisit[toVisitOffset++] = node->secondChildOffset;
+//                     currentNodeIndex = currentNodeIndex + 1;
+//                 }
+//             }
+//         } else {
+//             if (toVisitOffset == 0) {
+//                 break;
+//             }
+//             currentNodeIndex = nodesToVisit[--toVisitOffset];
+//         }
+//     }
 
-    // bvhNodesVisited += nodesVisited;
-    return any_hit;
-}
+//     // bvhNodesVisited += nodesVisited;
+//     return any_hit;
+// }
 
-const bool BVHAggregate::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const {
-    if (!nodes) {
-        return false;
-    }
-    // Follow ray through BVH nodes to find primitive intersections
-    int toVisitOffset = 0, currentNodeIndex = 0;
-    int nodesToVisit[64];
-    // int nodesVisited = 0;
-    bool any_hit = false;
-    while (true) {
-        // ++nodesVisited;
-        const LinearBVHNode *node = &nodes[currentNodeIndex];
-        // Check ray against BVH node
-        if (node->bounds.hit(r, t_min, t_max, sampler)) {
-            if (node->nPrimitives > 0) {
-                // Intersect ray with primitives in leaf BVH node
-                for (int i = 0; i < node->nPrimitives; ++i) {
-                    // Check for intersection with primitive in BVH node
-                    hit_record hrec_temp;
-                    bool prim_hrec = primitives[node->primitivesOffset + i]->hit(r, t_min, t_max, hrec_temp, sampler);
-                    if (prim_hrec) {
-                        any_hit = true;
-                        rec = hrec_temp;
-                        t_max = rec.t;
-                    }
-                }
-                if (toVisitOffset == 0) {
-                    break;
-                }
-                currentNodeIndex = nodesToVisit[--toVisitOffset];
-            } else {
-                // Put far BVH node on _nodesToVisit_ stack, advance to near node
-                if (r.sign[node->axis]) {
-                    nodesToVisit[toVisitOffset++] = currentNodeIndex + 1;
-                    currentNodeIndex = node->secondChildOffset;
-                } else {
-                    nodesToVisit[toVisitOffset++] = node->secondChildOffset;
-                    currentNodeIndex = currentNodeIndex + 1;
-                }
-            }
-        } else {
-            if (toVisitOffset == 0) {
-                break;
-            }
-            currentNodeIndex = nodesToVisit[--toVisitOffset];
-        }
-    }
+// const bool BVHAggregate::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const {
+//     if (!nodes) {
+//         return false;
+//     }
+//     // Follow ray through BVH nodes to find primitive intersections
+//     int toVisitOffset = 0, currentNodeIndex = 0;
+//     int nodesToVisit[64];
+//     // int nodesVisited = 0;
+//     bool any_hit = false;
+//     while (true) {
+//         // ++nodesVisited;
+//         const LinearBVHNode *node = &nodes[currentNodeIndex];
+//         // Check ray against BVH node
+//         if (node->bounds.hit(r, t_min, t_max, sampler)) {
+//             if (node->nPrimitives > 0) {
+//                 // Intersect ray with primitives in leaf BVH node
+//                 for (int i = 0; i < node->nPrimitives; ++i) {
+//                     // Check for intersection with primitive in BVH node
+//                     hit_record hrec_temp;
+//                     bool prim_hrec = primitives[node->primitivesOffset + i]->hit(r, t_min, t_max, hrec_temp, sampler);
+//                     if (prim_hrec) {
+//                         any_hit = true;
+//                         rec = hrec_temp;
+//                         t_max = rec.t;
+//                     }
+//                 }
+//                 if (toVisitOffset == 0) {
+//                     break;
+//                 }
+//                 currentNodeIndex = nodesToVisit[--toVisitOffset];
+//             } else {
+//                 // Put far BVH node on _nodesToVisit_ stack, advance to near node
+//                 if (r.sign[node->axis]) {
+//                     nodesToVisit[toVisitOffset++] = currentNodeIndex + 1;
+//                     currentNodeIndex = node->secondChildOffset;
+//                 } else {
+//                     nodesToVisit[toVisitOffset++] = node->secondChildOffset;
+//                     currentNodeIndex = currentNodeIndex + 1;
+//                 }
+//             }
+//         } else {
+//             if (toVisitOffset == 0) {
+//                 break;
+//             }
+//             currentNodeIndex = nodesToVisit[--toVisitOffset];
+//         }
+//     }
 
-    // bvhNodesVisited += nodesVisited;
-    return any_hit;
-}
-#endif
+//     // bvhNodesVisited += nodesVisited;
+//     return any_hit;
+// }
+// #endif
 
 #if defined(__aarch64__)
 inline uint32_t neonCompareAndMask(const float32x4_t& a, const float32x4_t& b) {
@@ -774,136 +749,318 @@ void BVHAggregate::transformToSimdFormat() {
 //     return node;
 // }
 
-BVHBuildNode4* ConvertBVH2ToBVH4(BVHBuildNode* node) {
+BVHBuildNode4* BVHAggregate::ConvertBVH2ToBVH4(BVHBuildNode* node, int* totalNodes4) {
+    Rcpp::Rcout << "Converting node: " << *totalNodes4 << "with firstPrimOffset: " 
+                << node->firstPrimOffset << " nPrimitives: " << node->nPrimitives << std::endl;
     if (node == nullptr) {
         return nullptr;
     }
 
+    // Skip nodes with no primitives and no children
+    if (node->nPrimitives == 0 && node->children[0] == nullptr && node->children[1] == nullptr) {
+        return nullptr;
+    }
+
+    // Increment the total node count for BVH4
+    (*totalNodes4)++;
+
     BVHBuildNode4* newNode = new BVHBuildNode4();
     newNode->bounds = node->bounds;
+    newNode->splitAxis = node->splitAxis;
 
     if (node->nPrimitives > 0) {
         // Leaf node
         newNode->nPrimitives = node->nPrimitives;
         newNode->firstPrimOffset = node->firstPrimOffset;
         newNode->nChildren = 0;
-        newNode->splitAxis = node->splitAxis;
         for (int i = 0; i < 4; ++i) {
             newNode->children[i] = nullptr;
         }
     } else {
         // Interior node
         BVHBuildNode* potentialChildren[4];
+        newNode->firstPrimOffset = -1;
+        newNode->nPrimitives = 0;
+        newNode->nChildren = 0;
         int nChildren = 0;
 
         // Process the two children of the BVH2 node
         for (int i = 0; i < 2; ++i) {
             BVHBuildNode* child = node->children[i];
+            if (child == nullptr) {
+                continue;
+            }
+            // Skip nodes with no primitives and no children
+            if (child->nPrimitives == 0 && child->children[0] == nullptr && child->children[1] == nullptr) {
+                continue;
+            }
             if (child->nPrimitives > 0 || (child->children[0] == nullptr && child->children[1] == nullptr)) {
                 // If the child is a leaf node or has no further children
                 potentialChildren[nChildren++] = child;
             } else {
                 // The child is an interior node, add its two children
-                potentialChildren[nChildren++] = child->children[0];
-                potentialChildren[nChildren++] = child->children[1];
+                if (child->children[0] != nullptr) {
+                    potentialChildren[nChildren++] = child->children[0];
+                }
+                if (child->children[1] != nullptr) {
+                    potentialChildren[nChildren++] = child->children[1];
+                }
             }
         }
 
+        if (nChildren == 0) {
+            // No valid children, delete the node and return nullptr
+            delete newNode;
+            return nullptr;
+        }
+
         // Initialize the BVH4 node
-        newNode->nChildren = nChildren;
-        newNode->nPrimitives = 0;
-        newNode->firstPrimOffset = -1;
-        newNode->splitAxis = node->splitAxis;
         for (int i = 0; i < nChildren; ++i) {
             // Recursively convert the child nodes
-            newNode->children[i] = ConvertBVH2ToBVH4(potentialChildren[i]);
-            // Update the bounds
-            newNode->bounds = surrounding_box(newNode->bounds, newNode->children[i]->bounds);
+            BVHBuildNode4* childNode = ConvertBVH2ToBVH4(potentialChildren[i], totalNodes4);
+            if (childNode != nullptr) {
+                newNode->children[newNode->nChildren++] = childNode;
+                // Update the bounds
+                newNode->bounds = surrounding_box(newNode->bounds, childNode->bounds);
+            }
         }
         // Set any remaining child pointers to nullptr
-        for (int i = nChildren; i < 4; ++i) {
+        for (int i = newNode->nChildren; i < 4; ++i) {
             newNode->children[i] = nullptr;
+        }
+
+        if (newNode->nChildren == 0) {
+            // No valid children, delete the node and return nullptr
+            delete newNode;
+            return nullptr;
         }
     }
 
     return newNode;
 }
 
-// int BVHAggregate::flattenBVH4(BVHBuildNode4* node, int* offset) {
-//     LinearBVHNode4* linearNode = &nodes4[*offset];
-//     int nodeOffset = (*offset)++;
 
-//     linearNode->bounds = node->bounds;
-//     linearNode->nPrimitives = node->nPrimitives;
-//     linearNode->primitivesOffset = node->firstPrimOffset;
-//     linearNode->axis = node->splitAxis;
-//     linearNode->nChildren = node->nChildren;
+int BVHAggregate::flattenBVH4(BVHBuildNode4* node, int* offset) {
+    if (node == nullptr) {
+        throw std::runtime_error("flattenBVH4 called with nullptr node");
+    }
 
-//     if (node->nChildren == 0) {
-//         // Leaf node, nothing more to do
-//         for (int i = 0; i < 4; ++i) {
-//             linearNode->childOffsets[i] = -1; // Invalid offset
-//         }
-//     } else {
-//         // Interior node
-//         for (int i = 0; i < node->nChildren; ++i) {
-//             linearNode->childOffsets[i] = flattenBVH4(node->children[i], offset);
-//         }
-//         // Set any unused childOffsets to -1
-//         for (int i = node->nChildren; i < 4; ++i) {
-//             linearNode->childOffsets[i] = -1;
-//         }
-//     }
+    LinearBVHNode4* linearNode = &nodes4[*offset];
+    int nodeOffset = (*offset)++;
 
-//     return nodeOffset;
-// }
+    linearNode->bounds = node->bounds;
+    linearNode->axis = node->splitAxis;
+    linearNode->nChildren = node->nChildren;
+
+    if (node->nChildren == 0) {
+        // Leaf node
+        Rcpp::Rcout << "Creating leaf node with primitivesOffset = " << node->firstPrimOffset << "\n";
+
+        linearNode->nPrimitives = node->nPrimitives;
+        linearNode->primitivesOffset = node->firstPrimOffset; // Valid for leaf nodes
+        for (int i = 0; i < 4; ++i) {
+            linearNode->childOffsets[i] = -1;
+        }
+    } else {
+        Rcpp::Rcout << "Creating interior node with primitivesOffset = -1\n";
+        // Interior node
+        linearNode->nPrimitives = 0;
+        linearNode->primitivesOffset = -1; // Invalid for interior nodes
+        for (int i = 0; i < node->nChildren; ++i) {
+            linearNode->childOffsets[i] = flattenBVH4(node->children[i], offset);
+        }
+        for (int i = node->nChildren; i < 4; ++i) {
+            linearNode->childOffsets[i] = -1;
+        }
+    }
+
+    // Debug print with proper casting
+    Rcpp::Rcout << "Node at index " << nodeOffset
+                << ": nPrimitives = " << static_cast<int>(linearNode->nPrimitives)
+                << ", primitivesOffset = " << linearNode->primitivesOffset
+                << ", nChildren = " << static_cast<int>(linearNode->nChildren) << "\n";
+
+    return nodeOffset;
+}
 
 
-// bool BVHAggregate::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const {
-//     if (!nodes4) {
-//         return false;
-//     }
+const bool BVHAggregate::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const {
+    if (!nodes4) {
+        return false;
+    }
 
-//     // Initialize traversal stack
-//     int nodesToVisit[64];
-//     int toVisitOffset = 0;
-//     int currentNodeIndex = 0;
+    // Initialize traversal stack
+    int nodesToVisit[64];
+    int toVisitOffset = 0;
+    int currentNodeIndex = 0;
 
-//     bool any_hit = false;
+    bool any_hit = false;
+    Float ray_t_max = t_max;
 
-//     while (true) {
-//         const LinearBVHNode4* node = &nodes4[currentNodeIndex];
+    while (true) {
+        const LinearBVHNode4* node = &nodes4[currentNodeIndex];
 
-//         // Check ray against BVH node
-//         if (node->bounds.hit(r, t_min, t_max, sampler)) {
-//             if (node->nChildren == 0) {
-//                 // Leaf node
-//                 for (int i = 0; i < node->nPrimitives; ++i) {
-//                     hit_record tempRec;
-//                     bool hitPrimitive = primitives[node->primitivesOffset + i]->hit(r, t_min, t_max, tempRec, sampler);
-//                     if (hitPrimitive) {
-//                         any_hit = true;
-//                         rec = tempRec;
-//                         t_max = rec.t;
-//                     }
-//                 }
-//             } else {
-//                 // Interior node
-//                 // Push child nodes onto stack
-//                 for (int i = 0; i < node->nChildren; ++i) {
-//                     int childOffset = node->childOffsets[i];
-//                     if (childOffset != -1) {
-//                         nodesToVisit[toVisitOffset++] = childOffset;
-//                     }
-//                 }
-//             }
-//         }
+        // Check ray against BVH node's bounding box
+        if (node->bounds.hit(r, t_min, ray_t_max, sampler)) {
+            if (node->nPrimitives > 0) {
+                // Leaf node: test ray against primitives
+                for (int i = 0; i < node->nPrimitives; ++i) {
+                    hit_record tempRec;
+                    bool hitPrimitive = primitives[node->primitivesOffset + i]->hit(r, t_min, ray_t_max, tempRec, sampler);
+                    if (hitPrimitive) {
+                        any_hit = true;
+                        rec = tempRec;
+                        ray_t_max = rec.t; // Update ray_t_max to the closest hit
+                    }
+                }
+            } else {
+                // Interior node: push child nodes onto the stack without sorting
+                for (int i = 0; i < node->nChildren; ++i) {
+                    int childOffset = node->childOffsets[i];
+                    if (childOffset == -1) continue;
 
-//         if (toVisitOffset == 0) {
-//             break;
-//         }
-//         currentNodeIndex = nodesToVisit[--toVisitOffset];
-//     }
+                    nodesToVisit[toVisitOffset++] = childOffset;
+                }
+            }
+        }
 
-//     return any_hit;
-// }
+        // Move to the next node to visit
+        if (toVisitOffset == 0) {
+            break; // Stack is empty, traversal is complete
+        }
+        currentNodeIndex = nodesToVisit[--toVisitOffset];
+    }
+
+    return any_hit;
+}
+
+
+const bool BVHAggregate::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
+    if (!nodes4) {
+        return false;
+    }
+
+    // Initialize traversal stack
+    int nodesToVisit[64];
+    int toVisitOffset = 0;
+    int currentNodeIndex = 0;
+
+    bool any_hit = false;
+    Float ray_t_max = t_max;
+
+    while (true) {
+        const LinearBVHNode4* node = &nodes4[currentNodeIndex];
+
+        // Check ray against BVH node's bounding box
+        if (node->bounds.hit(r, t_min, ray_t_max, rng)) {
+            if (node->nPrimitives > 0) {
+                // Leaf node: test ray against primitives
+                for (int i = 0; i < node->nPrimitives; ++i) {
+                    hit_record tempRec;
+                    bool hitPrimitive = primitives[node->primitivesOffset + i]->hit(r, t_min, ray_t_max, tempRec, rng);
+                    if (hitPrimitive) {
+                        any_hit = true;
+                        rec = tempRec;
+                        ray_t_max = rec.t; // Update ray_t_max to the closest hit
+                    }
+                }
+            } else {
+                // Interior node: push child nodes onto the stack without sorting
+                for (int i = 0; i < node->nChildren; ++i) {
+                    int childOffset = node->childOffsets[i];
+                    if (childOffset == -1) continue;
+
+                    nodesToVisit[toVisitOffset++] = childOffset;
+                }
+            }
+        }
+
+        // Move to the next node to visit
+        if (toVisitOffset == 0) {
+            break; // Stack is empty, traversal is complete
+        }
+        currentNodeIndex = nodesToVisit[--toVisitOffset];
+    }
+
+    return any_hit;
+}
+
+void BVHAggregate::validateBVH4() const {
+    if (!nodes4) {
+        throw std::runtime_error("BVH4 tree is empty.");
+    }
+
+    // Use a stack for traversal
+    struct NodeInfo {
+        int nodeIndex;
+        int depth;
+    };
+
+    std::vector<NodeInfo> nodesToVisit;
+    nodesToVisit.push_back({0, 0}); // Start with root node at index 0
+
+    int totalNodesVisited = 0;
+
+    while (!nodesToVisit.empty()) {
+        NodeInfo current = nodesToVisit.back();
+        nodesToVisit.pop_back();
+
+        if (current.nodeIndex < 0 || current.nodeIndex >= totalNodes4) {
+            throw std::runtime_error("Invalid node index during traversal: " + std::to_string(current.nodeIndex));
+        }
+
+        const LinearBVHNode4* node = &nodes4[current.nodeIndex];
+        totalNodesVisited++;
+
+        bool isLeaf = node->nPrimitives > 0;
+
+        // Node information for debugging
+        Rcpp::Rcout << "Visiting node index: " << current.nodeIndex
+                    << ", depth: " << current.depth
+                    << ", isLeaf: " << isLeaf << "\n";
+
+        if (isLeaf) {
+            // Leaf node validation
+            if (node->nChildren != 0) {
+                throw std::runtime_error("Invalid leaf node at index " + std::to_string(current.nodeIndex) + ": nChildren != 0");
+            }
+            if (node->primitivesOffset < 0) {
+                throw std::runtime_error("Invalid leaf node at index " + std::to_string(current.nodeIndex) + ": primitivesOffset < 0");
+            }
+            if (node->nPrimitives <= 0) {
+                throw std::runtime_error("Invalid leaf node at index " + std::to_string(current.nodeIndex) + ": nPrimitives <= 0");
+            }
+            if (node->primitivesOffset + node->nPrimitives > primitives.size()) {
+                throw std::runtime_error("Invalid leaf node at index " + std::to_string(current.nodeIndex) + ": primitivesOffset + nPrimitives exceeds primitives.size()");
+            }
+        } else {
+            // Interior node validation
+            if (node->nChildren <= 0 || node->nChildren > 4) {
+                throw std::runtime_error("Invalid interior node at index " + std::to_string(current.nodeIndex) + ": nChildren = " + std::to_string(static_cast<int>(node->nChildren)));
+            }
+            if (node->primitivesOffset != -1) {
+                throw std::runtime_error("Invalid interior node at index " + std::to_string(current.nodeIndex) + ": primitivesOffset != -1");
+            }
+            if (node->nPrimitives != 0) {
+                throw std::runtime_error("Invalid interior node at index " + std::to_string(current.nodeIndex) + ": nPrimitives != 0");
+            }
+            // Validate child offsets and push them onto the stack
+            for (int i = 0; i < node->nChildren; ++i) {
+                int childOffset = node->childOffsets[i];
+                if (childOffset < 0 || childOffset >= totalNodes4) {
+                    throw std::runtime_error("Invalid child offset at node " + std::to_string(current.nodeIndex) + ", child " + std::to_string(i) + ": " + std::to_string(childOffset));
+                } else {
+                    nodesToVisit.push_back({childOffset, current.depth + 1});
+                }
+            }
+            // Ensure unused childOffsets are set to -1
+            for (int i = node->nChildren; i < 4; ++i) {
+                if (node->childOffsets[i] != -1) {
+                    throw std::runtime_error("Invalid interior node at index " + std::to_string(current.nodeIndex) + ": unused childOffset[" + std::to_string(i) + "] != -1");
+                }
+            }
+        }
+    }
+
+    Rcpp::Rcout << "BVH4 validation complete. Total nodes visited: " << totalNodesVisited << "\n";
+}
