@@ -119,6 +119,8 @@ void rayBBoxIntersect4(const ray& ray,
                        IVec4& hits,
                        FVec4& tMins,
                        FVec4& tMaxs) {
+    SCOPED_CONTEXT("Hit");
+    SCOPED_TIMER_COUNTER("BBox4");
     // Prepare ray data
     FVec4 rayOriginX = simd_set1(ray.origin().x());
     FVec4 rayOriginY = simd_set1(ray.origin().y());
