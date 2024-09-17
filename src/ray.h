@@ -38,6 +38,7 @@ class ray {
       A = a;
       B = b;
       _time = ti;
+      tMax = tmax;
       inv_dir = vec3f(1/b.x(), 1/b.y(), 1/b.z());
       inv_dir_pad.e[0] = add_ulp_magnitude(inv_dir.x(), 2);
       inv_dir_pad.e[1] = add_ulp_magnitude(inv_dir.y(), 2);
@@ -51,6 +52,7 @@ class ray {
       A = a; 
       B = b; 
       _time = ti;
+      tMax = tmax;
       inv_dir = vec3f(1/b.x(), 1/b.y(), 1/b.z());
       inv_dir_pad.e[0] = add_ulp_magnitude(inv_dir.x(), 2);
       inv_dir_pad.e[1] = add_ulp_magnitude(inv_dir.y(), 2);
