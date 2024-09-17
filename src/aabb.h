@@ -159,4 +159,12 @@ void rayBBoxIntersect4(const ray& ray,
                        FVec4& tMins,
                        FVec4& tMaxs);
 
+
+void rayBBoxIntersect4Serial(const ray& ray,
+                       const BBox4& bbox4,
+                       Float tMin,
+                       Float tMax,
+                       IVec4& hits,
+                       FVec4& tMins,
+                       FVec4& tMaxs);
 #endif
