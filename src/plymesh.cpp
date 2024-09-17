@@ -154,7 +154,7 @@ plymesh::plymesh(std::string inputfile, std::string basedir, std::shared_ptr<mat
                                              &mesh->texIndices[i], i / 3,
                                              ObjectToWorld, WorldToObject, reverseOrientation));
   }
-  ply_mesh_bvh = std::make_shared<bvh_node>(triangles, shutteropen, shutterclose, bvh_type, rng);
+  ply_mesh_bvh = std::make_shared<BVHAggregate>(triangles.objects, shutteropen, shutterclose, bvh_type, true);
   // ply_mesh_bvh->validate_bvh();
   triangles.objects.clear();
   delete tri;

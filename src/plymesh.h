@@ -3,6 +3,7 @@
 
 #include "triangle.h"
 #include "bvh_node.h"
+#include "bvh.h"
 #include <Rcpp.h>
 
 
@@ -32,7 +33,7 @@ class plymesh : public hitable {
   std::pair<size_t,size_t> CountNodeLeaf();
   
   std::unique_ptr<TriangleMesh> mesh;
-  std::shared_ptr<bvh_node> ply_mesh_bvh;
+  std::shared_ptr<BVHAggregate> ply_mesh_bvh;
   hitable_list triangles;
 };
 

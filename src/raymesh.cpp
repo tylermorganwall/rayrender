@@ -11,6 +11,8 @@
 #include "texturecache.h"
 #include "trianglemesh.h"
 #include "bvh_node.h"
+#include "bvh.h"
+
 #include "rng.h"
 #include "triangle.h"
 #include "raylog.h"
@@ -85,7 +87,7 @@ raymesh::raymesh(Rcpp::List raymesh_list,
     }
   }
   if(n > 0) {
-    tri_mesh_bvh = std::make_shared<bvh_node>(triangles, shutteropen, shutterclose, bvh_type, rng);
+    tri_mesh_bvh = std::make_shared<BVHAggregate>(triangles.objects, shutteropen, shutterclose, bvh_type, true);
 #ifdef FULL_DEBUG
     tri_mesh_bvh->validate_bvh();
 #endif

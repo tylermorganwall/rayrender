@@ -1,5 +1,6 @@
 #include "trimesh.h"
 #include "RProgress.h"
+#include "bvh.h"
 #include "loopsubdiv.h"
 #include "displacement.h"
 #include "calctangents.h"
@@ -71,7 +72,9 @@ trimesh::trimesh(std::string inputfile, std::string basedir, Float scale, Float 
     }
   }
   if(n > 0) {
-    tri_mesh_bvh = std::make_shared<bvh_node>(triangles, shutteropen, shutterclose, bvh_type, rng);
+    tri_mesh_bvh = std::make_shared<BVHAggregate>(triangles.objects, shutteropen, shutterclose, bvh_type, true);
+    // tri_mesh_bvh = std::make_shared<bvh_node>(triangles, shutteropen, shutterclose, bvh_type, rng);
+
     triangles.objects.clear();
   } else {
     throw std::runtime_error(inputfile + ": No triangles loaded.");

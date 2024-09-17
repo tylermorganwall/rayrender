@@ -5,6 +5,7 @@
 #include "triangle.h"
 #include "bvh_node.h"
 #include "rng.h"
+#include "bvh.h"
 #ifndef STBIMAGEH
 #define STBIMAGEH
 #include "stb/stb_image.h"
@@ -48,7 +49,7 @@ public:
 
   //Hitable extras
   std::shared_ptr<material> mat_ptr;
-  std::shared_ptr<bvh_node> tri_mesh_bvh;
+  std::shared_ptr<BVHAggregate> tri_mesh_bvh;
 };
 
 

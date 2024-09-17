@@ -5,6 +5,7 @@
 #include "float.h"
 #include "hitable.h"
 #include "hitablelist.h"
+#include "bvh.h"
 
 class TextureCache;
 struct TriangleMesh;
@@ -47,7 +48,7 @@ public:
   
   //Hitable extras
   std::shared_ptr<material> mat_ptr;
-  std::shared_ptr<bvh_node> tri_mesh_bvh;
+  std::shared_ptr<BVHAggregate> tri_mesh_bvh;
 };
 
 #endif
