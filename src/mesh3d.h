@@ -2,6 +2,8 @@
 #define MESH3DH
 
 #include "triangle.h"
+#include "bvh.h"
+
 #include "bvh_node.h"
 #include <Rcpp.h>
 
@@ -33,7 +35,7 @@ class mesh3d : public hitable {
     hitable_list triangles;
     
     //Hitable extra
-    std::shared_ptr<bvh_node> mesh_bvh;
+    std::shared_ptr<BVHAggregate> mesh_bvh;
 };
 
 

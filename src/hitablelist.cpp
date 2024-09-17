@@ -7,7 +7,7 @@ const bool hitable_list::hit(const ray& r, Float t_min, Float t_max, hit_record&
   temp_rec.bvh_nodes = rec.bvh_nodes;
 #endif
   bool hit_anything = false;
-  double closest_so_far = t_max;
+  Float closest_so_far = t_max;
   for (const auto& object : objects) {
     if (object->hit(r, t_min, closest_so_far, temp_rec, rng)) {
       hit_anything = true;
@@ -24,7 +24,7 @@ const bool hitable_list::hit(const ray& r, Float t_min, Float t_max, hit_record&
   temp_rec.bvh_nodes = rec.bvh_nodes;
 #endif
   bool hit_anything = false;
-  double closest_so_far = t_max;
+  Float closest_so_far = t_max;
   for (const auto& object : objects) {
     if (object->hit(r, t_min, closest_so_far, temp_rec, sampler)) {
       hit_anything = true;

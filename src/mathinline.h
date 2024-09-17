@@ -16,10 +16,10 @@
 #include <array>
 
 
-static const Float mpi_over_180 = M_PI/180;
-static const Float SqrtPiOver8 = 0.626657069f;
-static const Float ONE_OVER_2_PI = 1 / (2 * M_PI);
-static const Float Infinity =  Infinity;
+static constexpr Float mpi_over_180 = M_PI/180;
+static constexpr Float SqrtPiOver8 = 0.626657069f;
+static constexpr Float ONE_OVER_2_PI = 1 / (2 * M_PI);
+static constexpr Float Infinity =  std::numeric_limits<Float>::infinity();
 
 static constexpr Float MachineEpsilon = std::numeric_limits<Float>::epsilon() * 0.5;
 

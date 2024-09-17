@@ -22,6 +22,7 @@
 #include "texturecache.h"
 #include "debug.h"
 #include "bvh_node.h"
+#include "bvh.h"
 using namespace Rcpp;
 #include "RcppThread.h"
 #include "PreviewDisplay.h"
