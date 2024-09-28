@@ -5,6 +5,7 @@
 #include "assert.h"
 #include "hitable.h"
 #include "simd.h"
+#include "aabb.h"
 
 struct BVHPrimitive {
     BVHPrimitive() : primitiveIndex(0), bounds(aabb()) {};
@@ -21,16 +22,16 @@ struct BVHSplitBucket {
     aabb bounds;
 };
 
-struct BVH4Node {
-    BBox4 bounds;
-    union {
-        int primitiveOffset;    // Leaf
-        int secondChildOffset;  // Interior
-    };
-    uint8_t nPrimitives;  // 0 -> interior node
-    uint8_t nChildren;    // Number of valid children (1-4)
-    uint8_t children[4];  // Indices of child nodes
-};
+// struct BVH4Node {
+//     BBox4 bounds;
+//     union {
+//         int primitiveOffset;    // Leaf
+//         int secondChildOffset;  // Interior
+//     };
+//     uint8_t nPrimitives;  // 0 -> interior node
+//     uint8_t nChildren;    // Number of valid children (1-4)
+//     uint8_t children[4];  // Indices of child nodes
+// };
 
 
 struct BVHBuildNode {
@@ -75,13 +76,13 @@ struct LinearBVHNode {
     uint8_t axis;          // interior node: xyz
 };
 
-struct LinearBVHNode4 {
-    aabb bounds;          // Bounding box of this node
+struct alignas(64) LinearBVHNode4 {
+    // aabb bounds;          // Bounding box of this node
+    // uint8_t axis;         // Split axis
     uint8_t nPrimitives;  // 0 for interior nodes
-    uint8_t axis;         // Split axis
     uint8_t nChildren;    // Number of children (up to 4)
     int primitivesOffset; // For leaf nodes
-    int childOffsets[4];  // For interior nodes
+    alignas(16) int childOffsets[4];  // For interior nodes
     BBox4 bbox4;          // Packed bounding boxes of child nodes
 };
 
@@ -126,7 +127,7 @@ class BVHAggregate : public hitable {
         };
         void transformToSimdFormat();
         aabb scene_bounds;
-        std::vector<BVH4Node> simdNodes;
+        // std::vector<BVH4Node> simdNodes;
         int n_nodes;
         // std::pair<size_t,size_t> CountNodeLeaf();
   private:

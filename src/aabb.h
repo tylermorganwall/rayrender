@@ -26,12 +26,12 @@ class aabb {
       bounds[1] = a;
     }
     aabb(const vec3f& a, const vec3f& b) { 
-      bounds[0] = point3f(fmin(a.x(), b.x()), fmin(a.y(), b.y()),fmin(a.z(), b.z()));
-      bounds[1] = point3f(fmax(a.x(), b.x()), fmax(a.y(), b.y()),fmax(a.z(), b.z()));
+      bounds[0] = point3f(ffmin(a.x(), b.x()), ffmin(a.y(), b.y()),ffmin(a.z(), b.z()));
+      bounds[1] = point3f(ffmax(a.x(), b.x()), ffmax(a.y(), b.y()),ffmax(a.z(), b.z()));
     }
     aabb(const point3f& a, const point3f& b) { 
-      bounds[0] = point3f(fmin(a.x(), b.x()), fmin(a.y(), b.y()),fmin(a.z(), b.z()));
-      bounds[1] = point3f(fmax(a.x(), b.x()), fmax(a.y(), b.y()),fmax(a.z(), b.z()));
+      bounds[0] = point3f(ffmin(a.x(), b.x()), ffmin(a.y(), b.y()),ffmin(a.z(), b.z()));
+      bounds[1] = point3f(ffmax(a.x(), b.x()), ffmax(a.y(), b.y()),ffmax(a.z(), b.z()));
     }
     aabb(const aabb &box) {
       bounds[0] = box.bounds[0]; 
@@ -61,7 +61,7 @@ class aabb {
     point3f bounds[2];
 };
 
-struct BBox4 {
+struct alignas(16) BBox4 {
     union {
         FVec4 corners[6];             // order: minX, minY, minZ, maxX, maxY, maxZ
         float cornersFloat[2][3][4];  // indexed as corner[minOrMax][XYZ][bboxNumber]
@@ -77,12 +77,12 @@ struct BBox4 {
 #endif
 
     inline void setBBox(int boxNum, const FVec4& minCorner, const FVec4& maxCorner) {
-        cornersFloat[0][0][boxNum] = fmin(minCorner[0], maxCorner[0]);
-        cornersFloat[0][1][boxNum] = fmin(minCorner[1], maxCorner[1]);
-        cornersFloat[0][2][boxNum] = fmin(minCorner[2], maxCorner[2]);
-        cornersFloat[1][0][boxNum] = fmax(minCorner[0], maxCorner[0]);
-        cornersFloat[1][1][boxNum] = fmax(minCorner[1], maxCorner[1]);
-        cornersFloat[1][2][boxNum] = fmax(minCorner[2], maxCorner[2]);
+        cornersFloat[0][0][boxNum] = ffmin(minCorner[0], maxCorner[0]);
+        cornersFloat[0][1][boxNum] = ffmin(minCorner[1], maxCorner[1]);
+        cornersFloat[0][2][boxNum] = ffmin(minCorner[2], maxCorner[2]);
+        cornersFloat[1][0][boxNum] = ffmax(minCorner[0], maxCorner[0]);
+        cornersFloat[1][1][boxNum] = ffmax(minCorner[1], maxCorner[1]);
+        cornersFloat[1][2][boxNum] = ffmax(minCorner[2], maxCorner[2]);
     }
     BBox4() {}
     
@@ -95,32 +95,32 @@ struct BBox4 {
 };
 
 inline aabb surrounding_box(aabb box0, aabb box1) {
-  point3f small(fmin(box0.min().x(), box1.min().x()),
-             fmin(box0.min().y(), box1.min().y()),
-             fmin(box0.min().z(), box1.min().z()));
-  point3f big(fmax(box0.max().x(), box1.max().x()),
-           fmax(box0.max().y(), box1.max().y()),
-           fmax(box0.max().z(), box1.max().z()));
+  point3f small(ffmin(box0.min().x(), box1.min().x()),
+             ffmin(box0.min().y(), box1.min().y()),
+             ffmin(box0.min().z(), box1.min().z()));
+  point3f big(ffmax(box0.max().x(), box1.max().x()),
+           ffmax(box0.max().y(), box1.max().y()),
+           ffmax(box0.max().z(), box1.max().z()));
   return(aabb(small,big));
 }
 
 inline aabb surrounding_box(aabb box0, point3f point1) {
-  point3f small(fmin(box0.min().x(), point1.x()),
-                fmin(box0.min().y(), point1.y()),
-                fmin(box0.min().z(), point1.z()));
-  point3f big(fmax(box0.max().x(), point1.x()),
-              fmax(box0.max().y(), point1.y()),
-              fmax(box0.max().z(), point1.z()));
+  point3f small(ffmin(box0.min().x(), point1.x()),
+                ffmin(box0.min().y(), point1.y()),
+                ffmin(box0.min().z(), point1.z()));
+  point3f big(ffmax(box0.max().x(), point1.x()),
+              ffmax(box0.max().y(), point1.y()),
+              ffmax(box0.max().z(), point1.z()));
   return(aabb(small,big));
 }
 
 inline aabb surrounding_box(aabb box0, vec3f point1) {
-  point3f small(fmin(box0.min().x(), point1.x()),
-                fmin(box0.min().y(), point1.y()),
-                fmin(box0.min().z(), point1.z()));
-  point3f big(fmax(box0.max().x(), point1.x()),
-              fmax(box0.max().y(), point1.y()),
-              fmax(box0.max().z(), point1.z()));
+  point3f small(ffmin(box0.min().x(), point1.x()),
+                ffmin(box0.min().y(), point1.y()),
+                ffmin(box0.min().z(), point1.z()));
+  point3f big(ffmax(box0.max().x(), point1.x()),
+              ffmax(box0.max().y(), point1.y()),
+              ffmax(box0.max().z(), point1.z()));
   return(aabb(small,big));
 }
 

@@ -274,6 +274,5 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
       break;
     }
   }
-  PRINT_LOG_REPORT(numbercores);
   adaptive_pixel_sampler.write_final_pixels();
 }

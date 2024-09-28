@@ -131,7 +131,8 @@ inline point3<T> operator*(const point3<T> &v, Float t) {
 
 template<typename T> 
 inline point3<T> operator/(const point3<T> &v, Float t) {
-  return point3<T>(v.e[0]/t, v.e[1]/t, v.e[2]/t);
+    Float inv_t = 1.f / t;
+  return point3<T>(v.e[0] * inv_t, v.e[1] * inv_t, v.e[2] * inv_t);
 }
 
 template<typename T> 
@@ -147,8 +148,8 @@ inline Float dot(const point3<T> &v1, const point3<T> &v2) {
 template<typename T> 
 inline point3<T> cross(const point3<T> &v1, const point3<T> &v2) {
   return(point3<T>(DifferenceOfProducts(v1.y(), v2.z(), v1.z(), v2.y()),
-                 DifferenceOfProducts(v1.z(), v2.x(), v1.x(), v2.z()),
-                 DifferenceOfProducts(v1.x(), v2.y(), v1.y(), v2.x())));
+                   DifferenceOfProducts(v1.z(), v2.x(), v1.x(), v2.z()),
+                   DifferenceOfProducts(v1.x(), v2.y(), v1.y(), v2.x())));
 }
 
 template<typename T> 
@@ -224,12 +225,12 @@ inline point3<T> unit_vector(point3<T> v) {
 
 template<typename T> 
 inline Float MinComponent(const point3<T> &v) {
-  return(std::min(v.x(), std::min(v.y(), v.z())));
+  return(ffmin(v.x(), ffmin(v.y(), v.z())));
 }
 
 template<typename T> 
 inline Float MaxComponent(const point3<T> &v) {
-  return(std::fmax(v.x(), std::fmax(v.y(), v.z())));
+  return(ffmax(v.x(), ffmax(v.y(), v.z())));
 }
 
 template<typename T> 
@@ -240,12 +241,12 @@ inline int MaxDimension(const point3<T> &v) {
 
 template<typename T> 
 inline point3<T> Min(const point3<T> &p1, const point3<T> &p2) {
-  return(point3<T>(fmin(p1.x(), p2.x()), fmin(p1.y(), p2.y()),fmin(p1.z(), p2.z())));
+  return(point3<T>(ffmin(p1.x(), p2.x()), ffmin(p1.y(), p2.y()),ffmin(p1.z(), p2.z())));
 }
 
 template<typename T> 
 inline point3<T> Max(const point3<T> &p1, const point3<T> &p2) {
-  return(point3<T>(fmax(p1.x(), p2.x()), fmax(p1.y(), p2.y()),fmax(p1.z(), p2.z())));
+  return(point3<T>(ffmax(p1.x(), p2.x()), ffmax(p1.y(), p2.y()),ffmax(p1.z(), p2.z())));
 }
 
 template<typename T> 
@@ -255,7 +256,7 @@ inline point3<T> Permute(const point3<T> &v, int x, int y, int z) {
 
 template<typename T> 
 inline point3<T> Abs(const point3<T> &v) {
-  return(point3<T>(fabs(v.x()), fabs(v.y()), fabs(v.z())));
+  return(point3<T>(std::fabsf(v.x()), std::fabsf(v.y()), std::fabsf(v.z())));
 }
 
 template <typename T> inline Float

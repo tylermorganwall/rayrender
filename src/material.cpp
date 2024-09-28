@@ -38,7 +38,7 @@ point3f lambertian::f(const ray& r_in, const hit_record& rec, const ray& scatter
     
     Float NsNlight = dot(rec.bump_normal, wi);
     Float NsNg = dot(rec.bump_normal, n);
-    G = NsNlight > 0.0 && NsNg > 0.0 ? std::fmin(1.0, dot(wi, n) / (NsNlight * NsNg)) : 0;
+    G = NsNlight > 0.0 && NsNg > 0.0 ? ffmin(1.f, dot(wi, n) / (NsNlight * NsNg)) : 0;
     G = G > 0.0f ? -G * G * G + G * G + G : 0.0f;
     cosine = dot(rec.bump_normal, wi);
   }

@@ -69,7 +69,6 @@ public:
   void popContext();
   
   std::string getCurrentContext() const;
-  std::string getFullContext() const;
   
 private:
   RayLog() = default;
@@ -112,7 +111,7 @@ private:
   }
 };
 
-// New RAII class for automatic timer management
+// RAII class for automatic timer management
 class ScopedTimer {
 public:
   ScopedTimer(const std::string& name) : name_(name) {
@@ -127,7 +126,7 @@ private:
   std::string name_;
 };
 
-// New RAII class for automatic timer management
+// RAII class for automatic timer management
 class ScopedTimerCounter {
 public:
   ScopedTimerCounter(const std::string& name) : name_(name) {

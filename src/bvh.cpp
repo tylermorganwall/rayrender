@@ -2,6 +2,8 @@
 #include "assert.h"
 #include "mathinline.h"
 #include <limits>
+#include "raylog.h"
+#include "aabb.h"
 
 BVHAggregate::BVHAggregate(std::vector<std::shared_ptr<hitable> > prims,
         float t_min, float t_max, 
@@ -13,6 +15,8 @@ BVHAggregate::BVHAggregate(std::vector<std::shared_ptr<hitable> > prims,
         maxPrimsInNode(std::min(255, maxPrimsInNode)),
         primitives(prims)
         { 
+    SCOPED_CONTEXT("Initialization");
+    SCOPED_TIMER_COUNTER("BVH Build");
     std::vector<BVHPrimitive> bvhPrimitives(primitives.size());
     for (size_t i = 0; i < primitives.size(); ++i) {
         aabb temp_box;
@@ -20,7 +24,6 @@ BVHAggregate::BVHAggregate(std::vector<std::shared_ptr<hitable> > prims,
         bvhPrimitives[i] = BVHPrimitive(i, temp_box);
         scene_bounds = surrounding_box(scene_bounds, temp_box);
     }
-
     std::vector<std::shared_ptr<hitable> > orderedPrims(primitives.size());
     BVHBuildNode* root;
     std::atomic<int> totalNodes{0};
@@ -29,19 +32,23 @@ BVHAggregate::BVHAggregate(std::vector<std::shared_ptr<hitable> > prims,
                           &totalNodes, 
                           &orderedPrimsOffset, 
                           orderedPrims);
-    totalNodes4 = 0;
-    BVHBuildNode4* rootBVH4 = ConvertBVH2ToBVH4(root, &totalNodes4);
-    nodes4.reset(new LinearBVHNode4[totalNodes4]);
     primitives.swap(orderedPrims);
     bvhPrimitives.resize(0);
     bvhPrimitives.shrink_to_fit();
-    // nodes.reset(new LinearBVHNode[totalNodes]);
-    // n_nodes = totalNodes;
-    //int offset = 0;
-    //flattenBVH(root, &offset);
+
+#ifndef RAYSIMD
+    nodes.reset(new LinearBVHNode[totalNodes]);
+    n_nodes = totalNodes;
+    int offset = 0;
+    flattenBVH(root, &offset);
+#else
+    totalNodes4 = 0;
+    BVHBuildNode4* rootBVH4 = ConvertBVH2ToBVH4(root, &totalNodes4);
+    nodes4.reset(new LinearBVHNode4[totalNodes4]);
     int offset4 = 0;
     flattenBVH4(rootBVH4, &offset4);
-    validateBVH4();
+    // validateBVH4();
+#endif
 }
 
 
@@ -50,6 +57,8 @@ BVHAggregate::BVHAggregate(std::vector<std::shared_ptr<hitable> > prims,
                            int maxPrimsInNode, bool sah) :
                                 maxPrimsInNode(std::min(255, maxPrimsInNode)),
                                 primitives(prims) { 
+    SCOPED_CONTEXT("Initialization");
+    SCOPED_TIMER_COUNTER("BVH Build");
     std::vector<BVHPrimitive> bvhPrimitives(primitives.size());
     for (size_t i = 0; i < primitives.size(); ++i) {
         aabb temp_box;
@@ -66,24 +75,22 @@ BVHAggregate::BVHAggregate(std::vector<std::shared_ptr<hitable> > prims,
                           &totalNodes, 
                           &orderedPrimsOffset, 
                           orderedPrims);
+    primitives.swap(orderedPrims);
+    bvhPrimitives.resize(0);
+    bvhPrimitives.shrink_to_fit();
+#ifndef RAYSIMD
+    nodes.reset(new LinearBVHNode[totalNodes]);
+    n_nodes = totalNodes;
+    int offset = 0;
+    flattenBVH(root, &offset);
+#else
     totalNodes4 = 0;
     BVHBuildNode4* rootBVH4 = ConvertBVH2ToBVH4(root, &totalNodes4);
     nodes4.reset(new LinearBVHNode4[totalNodes4]);
-    primitives.swap(orderedPrims);
-#ifdef RAYSSE
-
-#else
-
-#endif
-    bvhPrimitives.resize(0);
-    bvhPrimitives.shrink_to_fit();
-    // nodes.reset(new LinearBVHNode[totalNodes]);
-    // n_nodes = totalNodes;
-    //int offset = 0;
-    //flattenBVH(root, &offset);
     int offset4 = 0;
     flattenBVH4(rootBVH4, &offset4);
-    validateBVH4();
+    // validateBVH4();
+#endif
 }
 
 bool BVHAggregate::bounding_box(Float t0, Float t1, aabb& box) const {
@@ -102,7 +109,7 @@ BVHBuildNode *BVHAggregate::buildRecursive(std::span<BVHPrimitive> bvhPrimitives
     BVHBuildNode *node = new BVHBuildNode();
 
     // Initialize _BVHBuildNode_ for primitive range
-    int nodeIndex = (*totalNodes)++;
+    // int nodeIndex = (*totalNodes)++;
     // Compute bounds of all primitives in BVH node
     aabb bounds;
     for (const auto &prim : bvhPrimitives) {
@@ -261,111 +268,269 @@ int BVHAggregate::flattenBVH(BVHBuildNode *node, int *offset) {
 }
 
 
-// #ifndef RAYSSE
-// const bool BVHAggregate::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
-//     if (!nodes) {
-//         return false;
-//     }
-//     // Follow ray through BVH nodes to find primitive intersections
-//     int toVisitOffset = 0, currentNodeIndex = 0;
-//     int nodesToVisit[64];
-//     // int nodesVisited = 0;
-//     bool any_hit = false;
-//     while (true) {
-//         // ++nodesVisited;
-//         const LinearBVHNode *node = &nodes[currentNodeIndex];
-//         // Check ray against BVH node
-//         if (node->bounds.hit(r, t_min, t_max, rng)) {
-//             if (node->nPrimitives > 0) {
-//                 // Intersect ray with primitives in leaf BVH node
-//                 for (int i = 0; i < node->nPrimitives; ++i) {
-//                     // Check for intersection with primitive in BVH node
-//                     hit_record hrec_temp;
-//                     bool prim_hrec = primitives[node->primitivesOffset + i]->hit(r, t_min, t_max, hrec_temp, rng);
-//                     if (prim_hrec) {
-//                         any_hit = true;
-//                         rec = hrec_temp;
-//                         t_max = rec.t;
-//                     }
-//                 }
-//                 if (toVisitOffset == 0) {
-//                     break;
-//                 }
-//                 currentNodeIndex = nodesToVisit[--toVisitOffset];
-//             } else {
-//                 // Put far BVH node on _nodesToVisit_ stack, advance to near node
-//                 if (r.sign[node->axis]) {
-//                     nodesToVisit[toVisitOffset++] = currentNodeIndex + 1;
-//                     currentNodeIndex = node->secondChildOffset;
-//                 } else {
-//                     nodesToVisit[toVisitOffset++] = node->secondChildOffset;
-//                     currentNodeIndex = currentNodeIndex + 1;
-//                 }
-//             }
-//         } else {
-//             if (toVisitOffset == 0) {
-//                 break;
-//             }
-//             currentNodeIndex = nodesToVisit[--toVisitOffset];
-//         }
-//     }
+#ifndef RAYSIMD
+const bool BVHAggregate::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
+    // SCOPED_CONTEXT("Hit");
+    // SCOPED_TIMER_COUNTER("BVH Serial");
+    if (!nodes) {
+        return false;
+    }
+    // Follow ray through BVH nodes to find primitive intersections
+    int toVisitOffset = 0, currentNodeIndex = 0;
+    int nodesToVisit[64];
+    // int nodesVisited = 0;
+    bool any_hit = false;
+    while (true) {
+        // ++nodesVisited;
+        const LinearBVHNode *node = &nodes[currentNodeIndex];
+        // Check ray against BVH node
+        if (node->bounds.hit(r, t_min, t_max, rng)) {
+            if (node->nPrimitives > 0) {
+                // Intersect ray with primitives in leaf BVH node
+                for (int i = 0; i < node->nPrimitives; ++i) {
+                    // Check for intersection with primitive in BVH node
+                    hit_record hrec_temp;
+                    bool prim_hrec = primitives[node->primitivesOffset + i]->hit(r, t_min, t_max, hrec_temp, rng);
+                    if (prim_hrec) {
+                        any_hit = true;
+                        rec = hrec_temp;
+                        t_max = rec.t;
+                    }
+                }
+                if (toVisitOffset == 0) {
+                    break;
+                }
+                currentNodeIndex = nodesToVisit[--toVisitOffset];
+            } else {
+                // Put far BVH node on _nodesToVisit_ stack, advance to near node
+                if (r.sign[node->axis]) {
+                    nodesToVisit[toVisitOffset++] = currentNodeIndex + 1;
+                    currentNodeIndex = node->secondChildOffset;
+                } else {
+                    nodesToVisit[toVisitOffset++] = node->secondChildOffset;
+                    currentNodeIndex = currentNodeIndex + 1;
+                }
+            }
+        } else {
+            if (toVisitOffset == 0) {
+                break;
+            }
+            currentNodeIndex = nodesToVisit[--toVisitOffset];
+        }
+    }
 
-//     // bvhNodesVisited += nodesVisited;
-//     return any_hit;
-// }
+    // bvhNodesVisited += nodesVisited;
+    return any_hit;
+}
 
-// const bool BVHAggregate::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const {
-//     if (!nodes) {
-//         return false;
-//     }
-//     // Follow ray through BVH nodes to find primitive intersections
-//     int toVisitOffset = 0, currentNodeIndex = 0;
-//     int nodesToVisit[64];
-//     // int nodesVisited = 0;
-//     bool any_hit = false;
-//     while (true) {
-//         // ++nodesVisited;
-//         const LinearBVHNode *node = &nodes[currentNodeIndex];
-//         // Check ray against BVH node
-//         if (node->bounds.hit(r, t_min, t_max, sampler)) {
-//             if (node->nPrimitives > 0) {
-//                 // Intersect ray with primitives in leaf BVH node
-//                 for (int i = 0; i < node->nPrimitives; ++i) {
-//                     // Check for intersection with primitive in BVH node
-//                     hit_record hrec_temp;
-//                     bool prim_hrec = primitives[node->primitivesOffset + i]->hit(r, t_min, t_max, hrec_temp, sampler);
-//                     if (prim_hrec) {
-//                         any_hit = true;
-//                         rec = hrec_temp;
-//                         t_max = rec.t;
-//                     }
-//                 }
-//                 if (toVisitOffset == 0) {
-//                     break;
-//                 }
-//                 currentNodeIndex = nodesToVisit[--toVisitOffset];
-//             } else {
-//                 // Put far BVH node on _nodesToVisit_ stack, advance to near node
-//                 if (r.sign[node->axis]) {
-//                     nodesToVisit[toVisitOffset++] = currentNodeIndex + 1;
-//                     currentNodeIndex = node->secondChildOffset;
-//                 } else {
-//                     nodesToVisit[toVisitOffset++] = node->secondChildOffset;
-//                     currentNodeIndex = currentNodeIndex + 1;
-//                 }
-//             }
-//         } else {
-//             if (toVisitOffset == 0) {
-//                 break;
-//             }
-//             currentNodeIndex = nodesToVisit[--toVisitOffset];
-//         }
-//     }
+const bool BVHAggregate::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const {
+    // SCOPED_CONTEXT("Hit");
+    // SCOPED_TIMER_COUNTER("BVH Serial");
+    if (!nodes) {
+        return false;
+    }
+    // Follow ray through BVH nodes to find primitive intersections
+    int toVisitOffset = 0, currentNodeIndex = 0;
+    int nodesToVisit[64];
+    // int nodesVisited = 0;
+    bool any_hit = false;
+    while (true) {
+        // ++nodesVisited;
+        const LinearBVHNode *node = &nodes[currentNodeIndex];
+        // Check ray against BVH node
+        if (node->bounds.hit(r, t_min, t_max, sampler)) {
+            if (node->nPrimitives > 0) {
+                // Intersect ray with primitives in leaf BVH node
+                for (int i = 0; i < node->nPrimitives; ++i) {
+                    // Check for intersection with primitive in BVH node
+                    hit_record hrec_temp;
+                    bool prim_hrec = primitives[node->primitivesOffset + i]->hit(r, t_min, t_max, hrec_temp, sampler);
+                    if (prim_hrec) {
+                        any_hit = true;
+                        rec = hrec_temp;
+                        t_max = rec.t;
+                    }
+                }
+                if (toVisitOffset == 0) {
+                    break;
+                }
+                currentNodeIndex = nodesToVisit[--toVisitOffset];
+            } else {
+                // Put far BVH node on _nodesToVisit_ stack, advance to near node
+                if (r.sign[node->axis]) {
+                    nodesToVisit[toVisitOffset++] = currentNodeIndex + 1;
+                    currentNodeIndex = node->secondChildOffset;
+                } else {
+                    nodesToVisit[toVisitOffset++] = node->secondChildOffset;
+                    currentNodeIndex = currentNodeIndex + 1;
+                }
+            }
+        } else {
+            if (toVisitOffset == 0) {
+                break;
+            }
+            currentNodeIndex = nodesToVisit[--toVisitOffset];
+        }
+    }
 
-//     // bvhNodesVisited += nodesVisited;
-//     return any_hit;
-// }
-// #endif
+    // bvhNodesVisited += nodesVisited;
+    return any_hit;
+}
+#else
+const bool BVHAggregate::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
+    // SCOPED_CONTEXT("Hit");
+    // SCOPED_TIMER_COUNTER("BVH SIMD");
+    // Check if the BVH tree is initialized
+    if (!nodes4) {
+        return false;
+    }
+
+    // Initialize the traversal stack
+    int nodesToVisit[64];
+    int toVisitOffset = 0;
+    int currentNodeIndex = 0;
+
+    bool any_hit = false;
+
+    // Initialize the ray's tMax
+    // r.tMax = t_max;
+
+    while (true) {
+        const LinearBVHNode4* node = &nodes4[currentNodeIndex];
+
+        if (node->nPrimitives > 0) {
+            // Leaf node: test ray against primitives
+            for (int i = 0; i < node->nPrimitives; ++i) {
+                hit_record tempRec;
+                if(i + 1 < node->nPrimitives) {
+                    __builtin_prefetch(&primitives[node->primitivesOffset + i + 1], 0, 1);
+                }
+
+                // Test ray against primitive
+                bool hitPrimitive = primitives[node->primitivesOffset + i]->hit(r, t_min, t_max, tempRec, rng);
+                if (hitPrimitive) {
+                    any_hit = true;
+                    rec = tempRec;
+                    t_max = tempRec.t; // Update ray's tMax to the closest hit
+                }
+            }
+        } else {
+            // Interior node: test ray against child bounding boxes using SIMD
+            int nChildren = node->nChildren;
+
+            // Use the pre-packed bounding boxes stored in the node
+            const BBox4& bbox4 = node->bbox4;
+
+            // Perform SIMD ray-box intersection
+            IVec4 hits;
+            FVec4 tMins, tMaxs;
+
+            // Call the SIMD intersection function
+            rayBBoxIntersect4(r, bbox4, t_min, t_max, hits, tMins, tMaxs);
+
+            // Process hit results
+            // if (nChildren == 4) {
+            __builtin_prefetch(&node->childOffsets[0], 0, 1);
+            __builtin_prefetch(&node->childOffsets[1], 0, 1);
+            __builtin_prefetch(&node->childOffsets[2], 0, 1);
+            __builtin_prefetch(&node->childOffsets[3], 0, 1);
+
+            if (hits[0] && node->childOffsets[0] != -1)
+                nodesToVisit[toVisitOffset++] = node->childOffsets[0];
+            if (hits[1] && node->childOffsets[1] != -1)
+                nodesToVisit[toVisitOffset++] = node->childOffsets[1];
+            if (hits[2] && node->childOffsets[2] != -1)
+                nodesToVisit[toVisitOffset++] = node->childOffsets[2];
+            if (hits[3] && node->childOffsets[3] != -1)
+                nodesToVisit[toVisitOffset++] = node->childOffsets[3];
+            // }
+            // for (int i = 0; i < nChildren; ++i) {
+            //     if (hits[i]) {
+            //         int childOffset = node->childOffsets[i];
+            //         if (childOffset != -1) {
+            //             nodesToVisit[toVisitOffset++] = childOffset;
+            //         }
+            //     }
+            // }
+        }
+
+        // Move to the next node to visit
+        if (toVisitOffset == 0) {
+            break; // Stack is empty, traversal is complete
+        }
+        currentNodeIndex = nodesToVisit[--toVisitOffset];
+    }
+
+    return any_hit;
+}
+
+const bool BVHAggregate::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const {
+    // SCOPED_CONTEXT("Hit");
+    // SCOPED_TIMER_COUNTER("BVH SIMD");
+    // Check if the BVH tree is initialized
+    if (!nodes4) {
+        return false;
+    }
+
+    // Initialize the traversal stack
+    int nodesToVisit[64];
+    int toVisitOffset = 0;
+    int currentNodeIndex = 0;
+
+    bool any_hit = false;
+
+    // Initialize the ray's tMax
+    // r.tMax = t_max;
+
+    while (true) {
+        const LinearBVHNode4* node = &nodes4[currentNodeIndex];
+
+        if (node->nPrimitives > 0) {
+            // Leaf node: test ray against primitives
+            for (int i = 0; i < node->nPrimitives; ++i) {
+                hit_record tempRec;
+                // Test ray against primitive
+                bool hitPrimitive = primitives[node->primitivesOffset + i]->hit(r, t_min, t_max, tempRec, sampler);
+                if (hitPrimitive) {
+                    any_hit = true;
+                    rec = tempRec;
+                    t_max = tempRec.t; // Update ray's tMax to the closest hit
+                }
+            }
+        } else {
+            // Interior node: test ray against child bounding boxes using SIMD
+            int nChildren = node->nChildren;
+
+            // Use the pre-packed bounding boxes stored in the node
+            const BBox4& bbox4 = node->bbox4;
+
+            // Perform SIMD ray-box intersection
+            IVec4 hits;
+            FVec4 tMins, tMaxs;
+
+            // Call the SIMD intersection function
+            rayBBoxIntersect4(r, bbox4, t_min, t_max, hits, tMins, tMaxs);
+
+            // Process hit results
+            for (int i = 0; i < nChildren; ++i) {
+                if (hits[i]) {
+                    int childOffset = node->childOffsets[i];
+                    if (childOffset != -1) {
+                        nodesToVisit[toVisitOffset++] = childOffset;
+                    }
+                }
+            }
+        }
+
+        // Move to the next node to visit
+        if (toVisitOffset == 0) {
+            break; // Stack is empty, traversal is complete
+        }
+        currentNodeIndex = nodesToVisit[--toVisitOffset];
+    }
+    return any_hit;
+}
+#endif
 
 Float BVHAggregate::pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Float time) {
   Float weight = 1.0 / primitives.size();
@@ -394,29 +559,6 @@ vec3f BVHAggregate::random(const point3f& o, Sampler* sampler, Float time) {
   int index = int(sampler->Get1D() * primitives.size() * 0.99999999);
   return(primitives[index]->random(o, sampler, time));
 }
-
-#ifdef RAYSSE
-
-// Add this function to your BVHAggregate class
-void BVHAggregate::transformToSimdFormat() {
-    size_t numNodes = n_nodes;
-    size_t numSimdNodes = (numNodes + 3) / 4; // Round up to nearest multiple of 4
-    std::vector<BBox4> simdNodes(numSimdNodes);
-
-    for (size_t i = 0; i < numSimdNodes; ++i) {
-        aabb a = (i * 4 < numNodes) ? nodes[i * 4].bounds : aabb();
-        aabb b = (i * 4 + 1 < numNodes) ? nodes[i * 4 + 1].bounds : aabb();
-        aabb c = (i * 4 + 2 < numNodes) ? nodes[i * 4 + 2].bounds : aabb();
-        aabb d = (i * 4 + 3 < numNodes) ? nodes[i * 4 + 3].bounds : aabb();
-
-        simdNodes[i] = BBox4(a, b, c, d);
-    }
-
-    // Store the SIMD nodes
-    this->simdNodes = std::move(simdNodes);
-}
-#endif
-
 
 BVHBuildNode4* BVHAggregate::ConvertBVH2ToBVH4(BVHBuildNode* node, int* totalNodes4) {
     if (node == nullptr) {
@@ -515,8 +657,8 @@ int BVHAggregate::flattenBVH4(BVHBuildNode4* node, int* offset) {
     LinearBVHNode4* linearNode = &nodes4[*offset];
     int nodeOffset = (*offset)++;
 
-    linearNode->bounds = node->bounds;
-    linearNode->axis = node->splitAxis;
+    // linearNode->bounds = node->bounds;
+    // linearNode->axis = node->splitAxis;
     linearNode->nChildren = node->nChildren;
 
     if (node->nChildren == 0) {
@@ -546,144 +688,7 @@ int BVHAggregate::flattenBVH4(BVHBuildNode4* node, int* offset) {
         // Pack the child bounding boxes into bbox4
         linearNode->bbox4 = BBox4(childBoxes[0], childBoxes[1], childBoxes[2], childBoxes[3]);
     }
-
     return nodeOffset;
-}
-
-const bool BVHAggregate::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
-    // Check if the BVH tree is initialized
-    if (!nodes4) {
-        return false;
-    }
-
-    // Initialize the traversal stack
-    int nodesToVisit[64];
-    int toVisitOffset = 0;
-    int currentNodeIndex = 0;
-
-    bool any_hit = false;
-
-    // Initialize the ray's tMax
-    r.tMax = t_max;
-
-    while (true) {
-        const LinearBVHNode4* node = &nodes4[currentNodeIndex];
-
-        if (node->nPrimitives > 0) {
-            // Leaf node: test ray against primitives
-            for (int i = 0; i < node->nPrimitives; ++i) {
-                hit_record tempRec;
-                
-                // Test ray against primitive
-                bool hitPrimitive = primitives[node->primitivesOffset + i]->hit(r, t_min, r.tMax, tempRec, rng);
-                if (hitPrimitive) {
-                    any_hit = true;
-                    rec = tempRec;
-                    r.tMax = tempRec.t; // Update ray's tMax to the closest hit
-                }
-            }
-        } else {
-            // Interior node: test ray against child bounding boxes using SIMD
-            int nChildren = node->nChildren;
-
-            // Use the pre-packed bounding boxes stored in the node
-            const BBox4& bbox4 = node->bbox4;
-
-            // Perform SIMD ray-box intersection
-            IVec4 hits;
-            FVec4 tMins, tMaxs;
-
-            // Call the SIMD intersection function
-            rayBBoxIntersect4(r, bbox4, t_min, r.tMax, hits, tMins, tMaxs);
-
-            // Process hit results
-            for (int i = 0; i < nChildren; ++i) {
-                if (hits[i]) {
-                    int childOffset = node->childOffsets[i];
-                    if (childOffset != -1) {
-                        nodesToVisit[toVisitOffset++] = childOffset;
-                    }
-                }
-            }
-        }
-
-        // Move to the next node to visit
-        if (toVisitOffset == 0) {
-            break; // Stack is empty, traversal is complete
-        }
-        currentNodeIndex = nodesToVisit[--toVisitOffset];
-    }
-
-    return any_hit;
-}
-
-
-
-
-const bool BVHAggregate::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const {
-    // Check if the BVH tree is initialized
-    if (!nodes4) {
-        return false;
-    }
-
-    // Initialize the traversal stack
-    int nodesToVisit[64];
-    int toVisitOffset = 0;
-    int currentNodeIndex = 0;
-
-    bool any_hit = false;
-
-    // Initialize the ray's tMax
-    r.tMax = t_max;
-
-    while (true) {
-        const LinearBVHNode4* node = &nodes4[currentNodeIndex];
-
-        if (node->nPrimitives > 0) {
-            // Leaf node: test ray against primitives
-            for (int i = 0; i < node->nPrimitives; ++i) {
-                hit_record tempRec;
-                // Test ray against primitive
-                bool hitPrimitive = primitives[node->primitivesOffset + i]->hit(r, t_min, r.tMax, tempRec, sampler);
-                if (hitPrimitive) {
-                    any_hit = true;
-                    rec = tempRec;
-                    r.tMax = tempRec.t; // Update ray's tMax to the closest hit
-                }
-            }
-        } else {
-            // Interior node: test ray against child bounding boxes using SIMD
-            int nChildren = node->nChildren;
-
-            // Use the pre-packed bounding boxes stored in the node
-            const BBox4& bbox4 = node->bbox4;
-
-            // Perform SIMD ray-box intersection
-            IVec4 hits;
-            FVec4 tMins, tMaxs;
-
-            // Call the SIMD intersection function
-            rayBBoxIntersect4(r, bbox4, t_min, r.tMax, hits, tMins, tMaxs);
-
-            // Process hit results
-            for (int i = 0; i < nChildren; ++i) {
-                if (hits[i]) {
-                    int childOffset = node->childOffsets[i];
-                    if (childOffset != -1) {
-                        nodesToVisit[toVisitOffset++] = childOffset;
-                    }
-                }
-            }
-        }
-
-        // Move to the next node to visit
-        if (toVisitOffset == 0) {
-            break; // Stack is empty, traversal is complete
-        }
-        currentNodeIndex = nodesToVisit[--toVisitOffset];
-    }
-
-    return any_hit;
 }
 
 void BVHAggregate::validateBVH4() const {
@@ -700,7 +705,7 @@ void BVHAggregate::validateBVH4() const {
     std::vector<NodeInfo> nodesToVisit;
     nodesToVisit.push_back({0, 0}); // Start with root node at index 0
 
-    int totalNodesVisited = 0;
+    // int totalNodesVisited = 0;
 
     while (!nodesToVisit.empty()) {
         NodeInfo current = nodesToVisit.back();
@@ -711,7 +716,7 @@ void BVHAggregate::validateBVH4() const {
         }
 
         const LinearBVHNode4* node = &nodes4[current.nodeIndex];
-        totalNodesVisited++;
+        // totalNodesVisited++;
 
         bool isLeaf = node->nPrimitives > 0;
         

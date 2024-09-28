@@ -5,13 +5,29 @@
 #include <cmath>
 #include "float.h"
 
+template<class T>
+inline T ffmin(T a, T b);
+
+template<class T>
+inline T ffmax(T a, T b);
+
 
 inline Float DifferenceOfProducts(Float a, Float b, Float c, Float d) {
   Float cd = c * d;
+#ifndef RAY_FLOAT_AS_DOUBLE
+  Float err = std::fmaf(-c, d, cd);
+  Float dop = std::fmaf(a, b, -cd);
+#else
   Float err = std::fma(-c, d, cd);
   Float dop = std::fma(a, b, -cd);
+#endif
   return(dop + err);
 }
+
+// inline Float DifferenceOfProducts(Float a, Float b, Float c, Float d) {
+//   return(a * b - c * d);
+// }
+
 template <typename T> class vec3 {
 public:
   vec3() {}
@@ -113,7 +129,8 @@ inline vec3<T> operator*(const vec3<T> &v, Float t) {
 
 template<typename T> 
 inline vec3<T> operator/(const vec3<T> &v, Float t) {
-  return vec3<T>(v.e[0]/t, v.e[1]/t, v.e[2]/t);
+  Float inv_t = 1./t;
+  return vec3<T>(v.e[0]*inv_t, v.e[1]*inv_t, v.e[2]*inv_t);
 }
 
 template<typename T> 
@@ -206,12 +223,12 @@ inline vec3<T> unit_vector(vec3<T> v) {
 
 template<typename T> 
 inline Float MinComponent(const vec3<T> &v) {
-  return(std::min(v.x(), std::min(v.y(), v.z())));
+  return(ffmin(v.x(), ffmin(v.y(), v.z())));
 }
 
 template<typename T> 
 inline Float MaxComponent(const vec3<T> &v) {
-  return(std::fmax(v.x(), std::fmax(v.y(), v.z())));
+  return(ffmax(v.x(), ffmax(v.y(), v.z())));
 }
 
 template<typename T> 
@@ -221,12 +238,12 @@ inline int MaxDimension(const vec3<T> &v) {
 
 template<typename T> 
 inline vec3<T> Min(const vec3<T> &p1, const vec3<T> &p2) {
-  return(vec3<T>(fmin(p1.x(), p2.x()), fmin(p1.y(), p2.y()),fmin(p1.z(), p2.z())));
+  return(vec3<T>(ffmin(p1.x(), p2.x()), ffmin(p1.y(), p2.y()),ffmin(p1.z(), p2.z())));
 }
 
 template<typename T> 
 inline vec3<T> Max(const vec3<T> &p1, const vec3<T> &p2) {
-  return(vec3<T>(fmax(p1.x(), p2.x()), fmax(p1.y(), p2.y()),fmax(p1.z(), p2.z())));
+  return(vec3<T>(ffmax(p1.x(), p2.x()), ffmax(p1.y(), p2.y()),ffmax(p1.z(), p2.z())));
 }
 
 template<typename T> 

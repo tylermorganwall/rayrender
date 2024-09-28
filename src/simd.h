@@ -6,17 +6,15 @@
 #include <stdio.h>
 
 // SIMD vector size (4 for SSE, 8 for AVX)
-#ifdef __AVX__
+#ifdef HAS_AVX
 #define SIMD_WIDTH 8
 #else
 #define SIMD_WIDTH 4
 #endif
 
-
-
-#ifdef __ARM_NEON
+#ifdef HAS_NEON
     #include <arm_neon.h>
-#elif defined(__SSE__)
+#elif defined(HAS_SSE)
     #include <xmmintrin.h>
 #else
     #error "No SIMD support available"
@@ -26,22 +24,16 @@
 typedef struct FVec4 {
 public:
     union {
-#if defined(__x86_64__)
+#ifdef HAS_SSE
         __m128 v;
-#elif defined(__aarch64__)
+#elif defined(HAS_NEON)
         float32x4_t v;
 #endif
         float xyzw[4];
-        // struct {
-        //   float x;
-        //   float y;
-        //   float z;
-        //   float w;
-        // };
     };
-#if defined(__x86_64__)
+#ifdef HAS_SSE
     FVec4(__m128 f4) : v(f4) {}
-#elif defined(__aarch64__)
+#elif defined(HAS_NEON)
     FVec4(float32x4_t f4) : v(f4) {}
 #endif
     FVec4()  {
@@ -76,10 +68,11 @@ public:
 
 typedef struct IVec4 {
     union {
-#if defined(__x86_64__)
-        __m128i m128i;
-#elif defined(__aarch64__)
-        int32x4_t i32x4;
+#ifdef HAS_SSE
+        __m128i v;
+#elif defined(HAS_NEON)
+        int32x4_t v;
+        uint32x4_t uv;
 #endif
         int xyzw[4];
     };
@@ -102,10 +95,10 @@ typedef struct IVec4 {
       xyzw[2] = z_;
       xyzw[3] = 0;
     }
-#if defined(__x86_64__)
-    IVec4(__m128i m128i_) : m128i(m128i_) {};
-#elif defined(__aarch64__)
-    IVec4(int32x4_t i32x4_) : i32x4(i32x4_) {};
+#ifdef HAS_SSE
+    IVec4(__m128i m128i_) : v(m128i_) {};
+#elif defined(HAS_NEON)
+    IVec4(int32x4_t i32x4_) : v(i32x4_) {};
 #endif
 
     int operator[](int i) const { return xyzw[i]; }
@@ -113,28 +106,14 @@ typedef struct IVec4 {
 } IVec4;
 
 
-// SIMD vector type
-// struct SimdFloat {
-// #ifdef __AVX__
-//   __m256 v;
-// #elif defined(__SSE__)
-//   __m128 v;
-// #elif defined(__ARM_NEON)
-//   float32x4_t v;
-// #else
-//   float v[SIMD_WIDTH];
-// #endif
-// };
-
-
 // SIMD operations
 inline FVec4 simd_load(const float* ptr) {
   FVec4 result;
-#ifdef __AVX__
+#ifdef HAS_AVX
   result.v = _mm256_load_ps(ptr);
-#elif defined(__SSE__)
+#elif defined(HAS_SSE)
   result.v = _mm_load_ps(ptr);
-#elif defined(__ARM_NEON)
+#elif defined(HAS_NEON)
   result.v = vld1q_f32(ptr);
 #else
   for (int i = 0; i < SIMD_WIDTH; ++i) {
@@ -148,11 +127,11 @@ typedef FVec4 SimdMask;
 
 inline FVec4 simd_set1(float value) {
   FVec4 result;
-#ifdef __AVX__
+#ifdef HAS_AVX
   result.v = _mm256_set1_ps(value);
-#elif defined(__SSE__)
+#elif defined(HAS_SSE)
   result.v = _mm_set1_ps(value);
-#elif defined(__ARM_NEON)
+#elif defined(HAS_NEON)
   result.v = vdupq_n_f32(value);
 #else
   for (int i = 0; i < SIMD_WIDTH; ++i) {
@@ -164,11 +143,11 @@ inline FVec4 simd_set1(float value) {
 
 inline FVec4 simd_sub(FVec4 a, FVec4 b) {
   FVec4 result;
-#ifdef __AVX__
+#ifdef HAS_AVX
   result.v = _mm256_sub_ps(a.v, b.v);
-#elif defined(__SSE__)
+#elif defined(HAS_SSE)
   result.v = _mm_sub_ps(a.v, b.v);
-#elif defined(__ARM_NEON)
+#elif defined(HAS_NEON)
   result.v = vsubq_f32(a.v, b.v);
 #else
   for (int i = 0; i < SIMD_WIDTH; ++i) {
@@ -181,11 +160,11 @@ inline FVec4 simd_sub(FVec4 a, FVec4 b) {
 
 inline FVec4 simd_mul(FVec4 a, FVec4 b) {
   FVec4 result;
-#ifdef __AVX__
+#ifdef HAS_AVX
   result.v = _mm256_mul_ps(a.v, b.v);
-#elif defined(__SSE__)
+#elif defined(HAS_SSE)
   result.v = _mm_mul_ps(a.v, b.v);
-#elif defined(__ARM_NEON)
+#elif defined(HAS_NEON)
   result.v = vmulq_f32(a.v, b.v);
 #else
   for (int i = 0; i < SIMD_WIDTH; ++i) {
@@ -198,11 +177,11 @@ inline FVec4 simd_mul(FVec4 a, FVec4 b) {
 
 inline FVec4 simd_min(FVec4 a, FVec4 b) {
   FVec4 result;
-#ifdef __AVX__
+#ifdef HAS_AVX
   result.v = _mm256_min_ps(a.v, b.v);
-#elif defined(__SSE__)
+#elif defined(HAS_SSE)
   result.v = _mm_min_ps(a.v, b.v);
-#elif defined(__ARM_NEON)
+#elif defined(HAS_NEON)
   result.v = vminq_f32(a.v, b.v);
 #else
   for (int i = 0; i < SIMD_WIDTH; ++i) {
@@ -215,11 +194,11 @@ inline FVec4 simd_min(FVec4 a, FVec4 b) {
 
 inline FVec4 simd_max(FVec4 a, FVec4 b) {
   FVec4 result;
-#ifdef __AVX__
+#ifdef HAS_AVX
   result.v = _mm256_max_ps(a.v, b.v);
-#elif defined(__SSE__)
+#elif defined(HAS_SSE)
   result.v = _mm_max_ps(a.v, b.v);
-#elif defined(__ARM_NEON)
+#elif defined(HAS_NEON)
   result.v = vmaxq_f32(a.v, b.v);
 #else
   for (int i = 0; i < SIMD_WIDTH; ++i) {
@@ -232,11 +211,11 @@ inline FVec4 simd_max(FVec4 a, FVec4 b) {
 
 inline SimdMask simd_less_equal(FVec4 a, FVec4 b) {
   SimdMask result;
-#ifdef __AVX__
+#ifdef HAS_AVX
   result.v = _mm256_cmp_ps(a.v, b.v, _CMP_LE_OQ);
-#elif defined(__SSE__)
+#elif defined(HAS_SSE)
   result.v = _mm_cmple_ps(a.v, b.v);
-#elif defined(__ARM_NEON)
+#elif defined(HAS_NEON)
   result.v = vcleq_f32(a.v, b.v);
 #else
   for (int i = 0; i < SIMD_WIDTH; ++i) {
@@ -248,11 +227,11 @@ inline SimdMask simd_less_equal(FVec4 a, FVec4 b) {
 
 
 inline bool simd_any_true(SimdMask mask) {
-#ifdef __AVX__
+#ifdef HAS_AVX
   return _mm256_movemask_ps(mask.v) != 0;
-#elif defined(__SSE__)
+#elif defined(HAS_SSE)
   return _mm_movemask_ps(mask.v) != 0;
-#elif defined(__ARM_NEON)
+#elif defined(HAS_NEON)
   return vmaxvq_u32(vreinterpretq_u32_f32(mask.v)) != 0;
 #else
   for (int i = 0; i < SIMD_WIDTH; ++i) {
@@ -262,18 +241,61 @@ inline bool simd_any_true(SimdMask mask) {
 #endif
 }
 
-inline IVec4 simd_cast_to_int(FVec4 mask) {
-#ifdef __ARM_NEON
-    // NEON: reinterpret the result of comparison from float to int
-    return vreinterpretq_s32_u32(vreinterpretq_u32_f32(mask.v));
-#elif defined(__SSE__)
-    // SSE: cast floating-point mask to integer mask
-    return _mm_castps_si128(mask.v);
+inline IVec4 simd_cast_to_int(SimdMask mask) {
+#ifdef HAS_SSE
+    IVec4 result;
+    result.v = _mm_castps_si128(mask.v);
+    return result;
+#elif defined(HAS_NEON)
+    IVec4 result;
+    result.v = vreinterpretq_s32_f32(mask.v);
+    return result;
 #else
     // Fallback for non-SIMD
     IVec4 result;
-    for (int i = 0; i < SIMD_WIDTH; ++i) {
-        result.v[i] = (mask.v[i] != 0.0f) ? 0xFFFFFFFF : 0;
+    for (int i = 0; i < 4; ++i) {
+        result.xyzw[i] = (mask.xyzw[i] != 0.0f) ? -1 : 0;
+    }
+    return result;
+#endif
+}
+
+
+inline FVec4 simd_blend(SimdMask mask, FVec4 a, FVec4 b) {
+#ifdef HAS_SSE
+    // For SSE, use bitwise operations
+    FVec4 result;
+    result.v = _mm_or_ps(_mm_and_ps(mask.v, a.v), _mm_andnot_ps(mask.v, b.v));
+    return result;
+#elif defined(HAS_NEON)
+    // For NEON, use vbslq_f32
+    FVec4 result;
+    result.v = vbslq_f32(vreinterpretq_u32_f32(mask.v), a.v, b.v);
+    return result;
+#else
+    // Fallback for non-SIMD
+    FVec4 result;
+    for (int i = 0; i < 4; ++i) {
+        result.xyzw[i] = mask.xyzw[i] ? a.xyzw[i] : b.xyzw[i];
+    }
+    return result;
+#endif
+}
+
+inline SimdMask simd_cmpge(FVec4 a, FVec4 b) {
+#ifdef HAS_SSE
+    SimdMask result;
+    result.v = _mm_cmpge_ps(a.v, b.v);
+    return result;
+#elif defined(HAS_NEON)
+    SimdMask result;
+    result.v = vcgeq_f32(a.v, b.v);
+    return result;
+#else
+    // Fallback for non-SIMD
+    SimdMask result;
+    for (int i = 0; i < 4; ++i) {
+        result.xyzw[i] = (a.xyzw[i] >= b.xyzw[i]) ? -1.0f : 0.0f;
     }
     return result;
 #endif

@@ -155,8 +155,8 @@ inline Float AbsDot(const normal3<T> &v1, const vec3<T> &v2) {
 template<typename T> 
 inline normal3<T> cross(const normal3<T> &v1, const normal3<T> &v2) {
   return(normal3<T>(DifferenceOfProducts(v1.y(), v2.z(), v1.z(), v2.y()),
-                 DifferenceOfProducts(v1.z(), v2.x(), v1.x(), v2.z()),
-                 DifferenceOfProducts(v1.x(), v2.y(), v1.y(), v2.x())));
+                    DifferenceOfProducts(v1.z(), v2.x(), v1.x(), v2.z()),
+                    DifferenceOfProducts(v1.x(), v2.y(), v1.y(), v2.x())));
 }
 
 template<typename T> 
@@ -240,12 +240,12 @@ inline normal3<T> unit_vector(normal3<T> v) {
 
 template<typename T> 
 inline Float MinComponent(const normal3<T> &v) {
-  return(std::min(v.x(), std::min(v.y(), v.z())));
+  return(ffmin(v.x(), ffmin(v.y(), v.z())));
 }
 
 template<typename T> 
 inline Float MaxComponent(const normal3<T> &v) {
-  return(std::fmax(v.x(), std::fmax(v.y(), v.z())));
+  return(ffmax(v.x(), ffmax(v.y(), v.z())));
 }
 
 template<typename T> 
@@ -255,7 +255,7 @@ inline int MaxDimension(const normal3<T> &v) {
 
 template<typename T> 
 inline normal3<T> Min(const normal3<T> &p1, const normal3<T> &p2) {
-  return(normal3<T>(fmin(p1.x(), p2.x()), fmin(p1.y(), p2.y()),fmin(p1.z(), p2.z())));
+  return(normal3<T>(ffmin(p1.x(), p2.x()), ffmin(p1.y(), p2.y()),ffmin(p1.z(), p2.z())));
 }
 
 template<typename T> 

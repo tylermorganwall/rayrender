@@ -36,6 +36,7 @@ using namespace Rcpp;
 #include "RcppThread.h"
 #include "PreviewDisplay.h"
 #include "raylog.h"
+#include <cfenv>
 
 // #define DEBUG
 
@@ -49,6 +50,9 @@ using namespace std;
 // [[Rcpp::export]]
 List render_scene_rcpp(List scene, List camera_info, List scene_info, List render_info) {
   RESET_RAYLOG();
+  START_TIMER("Overall Time");
+  feclearexcept(FE_ALL_EXCEPT);
+
   //Unpack scene info
   IntegerVector shape = as<IntegerVector>(scene_info["shape"]);
   
@@ -341,6 +345,10 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
     }
     final_image.attr("keyframes") = keyframes;
   }
+  STOP_TIMER("Overall Time");
+
+  PRINT_LOG_REPORT(numbercores);
+
   PRINT_CURRENT_MEMORY("After cleanup");
   
   return(final_image);

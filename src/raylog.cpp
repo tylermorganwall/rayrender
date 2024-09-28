@@ -40,7 +40,7 @@ void RayLog::startTimer(const std::string& name) {
 #ifdef ENABLE_RAYLOG
   auto now = std::chrono::high_resolution_clock::now();
   threadLocalStartTimes[name] = now;
-  getOrCreateTimer(name); // This will set the correct context from the stack
+  getOrCreateTimer(name); 
 #endif
 }
 
@@ -186,19 +186,6 @@ std::string RayLog::getCurrentContext() const {
     return "Global";
   }
   return contextStack.top();
-}
-
-std::string RayLog::getFullContext() const {
-  if (contextStack.empty()) {
-    return "Global";
-  }
-  std::string fullContext;
-  std::stack<std::string> tempStack = contextStack;
-  while (!tempStack.empty()) {
-    fullContext = tempStack.top() + "/" + fullContext;
-    tempStack.pop();
-  }
-  return fullContext.substr(0, fullContext.length() - 1);
 }
 
 void RayLog::pushContext(const std::string& context) {

@@ -5,7 +5,7 @@
 const bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("Triangle");
-  
+
   const point3f &p0 = mesh->p[v[0]];
   const point3f &p1 = mesh->p[v[1]];
   const point3f &p2 = mesh->p[v[2]];
@@ -53,8 +53,12 @@ const bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
     e2 = (float)(p1typ0tx - p1txp0ty);
   }
 
-  if ((e0 < 0 || e1 < 0 || e2 < 0) && (e0 > 0 || e1 > 0 || e2 > 0))
+  bool negative = (e0 < 0) || (e1 < 0) || (e2 < 0);
+  bool positive = (e0 > 0) || (e1 > 0) || (e2 > 0);
+
+  if (negative && positive) {
     return false;
+  }
   Float det = e0 + e1 + e2;
   if (det == 0) return false;
 
@@ -423,12 +427,12 @@ bool triangle::bounding_box(Float t0, Float t1, aabb& box) const {
   const point3f &a = mesh->p[v[0]];
   const point3f &b = mesh->p[v[1]];
   const point3f &c = mesh->p[v[2]];
-  point3f min_v(fmin(fmin(a.x(), b.x()), c.x()),
-                fmin(fmin(a.y(), b.y()), c.y()),
-                fmin(fmin(a.z(), b.z()), c.z()));
-  point3f max_v(fmax(fmax(a.x(), b.x()), c.x()),
-                fmax(fmax(a.y(), b.y()), c.y()),
-                fmax(fmax(a.z(), b.z()), c.z()));
+  point3f min_v(ffmin(ffmin(a.x(), b.x()), c.x()),
+                ffmin(ffmin(a.y(), b.y()), c.y()),
+                ffmin(ffmin(a.z(), b.z()), c.z()));
+  point3f max_v(ffmax(ffmax(a.x(), b.x()), c.x()),
+                ffmax(ffmax(a.y(), b.y()), c.y()),
+                ffmax(ffmax(a.z(), b.z()), c.z()));
 
   point3f difference = max_v + -min_v;
 

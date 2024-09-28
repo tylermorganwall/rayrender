@@ -51,6 +51,32 @@ else
   fi
 fi
 
+# Check for AVX, SSE, and NEON support
+AC_MSG_CHECKING([for AVX support])
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([#include <immintrin.h>], [__m256 test = _mm256_setzero_ps();])],
+  [AC_MSG_RESULT([yes])
+   DEFINES="${DEFINES} -DHAS_AVX -DRAYSIMD"
+   CXXFLAGS="${CXXFLAGS} -mavx"],
+  [AC_MSG_RESULT([no])])
+
+AC_MSG_CHECKING([for SSE support])
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([#include <xmmintrin.h>], [__m128 test = _mm_setzero_ps();])],
+  [AC_MSG_RESULT([yes])
+   DEFINES="${DEFINES} -DHAS_SSE -DRAYSIMD"
+   CXXFLAGS="${CXXFLAGS} -msse"],
+  [AC_MSG_RESULT([no])])
+
+AC_MSG_CHECKING([for NEON support])
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
+#if defined(__ARM_NEON) || defined(__ARM_NEON__)
+#include <arm_neon.h>
+#endif
+]], [[float32x4_t test = vdupq_n_f32(0.0);]])],
+  [AC_MSG_RESULT([yes])
+   DEFINES="${DEFINES} -DHAS_NEON -DRAYSIMD"
+   CXXFLAGS="${CXXFLAGS} -mfpu=neon"],
+  [AC_MSG_RESULT([no])])
+
 
 
 # Write the flags into the src/Makevars file.

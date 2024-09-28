@@ -38,7 +38,7 @@ Suggests:
     rayshader
 LinkingTo: Rcpp, RcppThread, progress, spacefillr (>= 0.3.0)
 URL: https://www.rayrender.net, https://github.com/tylermorganwall/rayrender
-RoxygenNote: 7.3.1
+RoxygenNote: 7.3.2
 SystemRequirements: C++20
 Biarch: true
 Encoding: UTF-8

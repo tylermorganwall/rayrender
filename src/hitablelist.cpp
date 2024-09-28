@@ -2,6 +2,8 @@
 #include "raylog.h"
 
 const bool hitable_list::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
+  SCOPED_CONTEXT("MultiHit");
+  SCOPED_TIMER_COUNTER("Hitable List");
   hit_record temp_rec;
 #ifdef DEBUGBVH
   temp_rec.bvh_nodes = rec.bvh_nodes;
@@ -19,6 +21,8 @@ const bool hitable_list::hit(const ray& r, Float t_min, Float t_max, hit_record&
 }
 
 const bool hitable_list::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const {
+  SCOPED_CONTEXT("MultiHit");
+  SCOPED_TIMER_COUNTER("Hitable List");
   hit_record temp_rec;
 #ifdef DEBUGBVH
   temp_rec.bvh_nodes = rec.bvh_nodes;
@@ -36,6 +40,8 @@ const bool hitable_list::hit(const ray& r, Float t_min, Float t_max, hit_record&
 }
 
 bool hitable_list::bounding_box(Float t0, Float t1, aabb& box) const {
+  SCOPED_CONTEXT("Bounding Box");
+  SCOPED_TIMER_COUNTER("Hitable List");
   if(objects.empty()) {
     return(false);
   }

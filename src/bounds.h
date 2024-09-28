@@ -18,8 +18,8 @@ public:
   }
   explicit Bounds2(const point2<T> &p) : pMin(p), pMax(p) {}
   Bounds2(const point2<T> &p1, const point2<T> &p2) {
-    pMin = point2<T>(std::fmin(p1.x(), p2.x()), std::fmin(p1.y(), p2.y()));
-    pMax = point2<T>(std::fmax(p1.x(), p2.x()), std::fmax(p1.y(), p2.y()));
+    pMin = point2<T>(ffmin(p1.x(), p2.x()), ffmin(p1.y(), p2.y()));
+    pMax = point2<T>(ffmax(p1.x(), p2.x()), ffmax(p1.y(), p2.y()));
   }
   template <typename U>
   explicit operator Bounds2<U>() const {
@@ -87,10 +87,8 @@ public:
   }
   explicit Bounds3(const point3<T> &p) : pMin(p), pMax(p) {}
   Bounds3(const point3<T> &p1, const point3<T> &p2)
-    : pMin(std::fmin(p1.x(), p2.x()), std::fmin(p1.y(), p2.y()),
-      std::fmin(p1.z(), p2.z)),
-      pMax(std::fmax(p1.x(), p2.x()), std::fmax(p1.y(), p2.y()),
-           std::fmax(p1.z(), p2.z())) {}
+    : pMin(ffmin(p1.x(), p2.x()), ffmin(p1.y(), p2.y()), ffmin(p1.z(), p2.z)),
+      pMax(ffmax(p1.x(), p2.x()), ffmax(p1.y(), p2.y()), ffmax(p1.z(), p2.z())) {}
   const point3<T> &operator[](int i) const;
   point3<T> &operator[](int i);
   bool operator==(const Bounds3<T> &b) const {
@@ -163,12 +161,12 @@ typedef Bounds3<int> Bounds3i;
 
 template <typename T>
 point2<T> Min(const point2<T> &pa, const point2<T> &pb) {
-  return point2<T>(std::fmin(pa.x(), pb.x()), std::fmin(pa.y(), pb.y()));
+  return point2<T>(ffmin(pa.x(), pb.x()), ffmin(pa.y(), pb.y()));
 }
 
 template <typename T>
 point2<T> Max(const point2<T> &pa, const point2<T> &pb) {
-  return point2<T>(std::fmax(pa.x(), pb.x()), std::fmax(pa.y(), pb.y()));
+  return point2<T>(ffmax(pa.x(), pb.x()), ffmax(pa.y(), pb.y()));
 }
 
 
