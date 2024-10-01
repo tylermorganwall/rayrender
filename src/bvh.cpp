@@ -109,7 +109,7 @@ BVHBuildNode *BVHAggregate::buildRecursive(std::span<BVHPrimitive> bvhPrimitives
     BVHBuildNode *node = new BVHBuildNode();
 
     // Initialize _BVHBuildNode_ for primitive range
-    // int nodeIndex = (*totalNodes)++;
+    int nodeIndex = (*totalNodes)++;
     // Compute bounds of all primitives in BVH node
     aabb bounds;
     for (const auto &prim : bvhPrimitives) {

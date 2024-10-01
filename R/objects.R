@@ -3469,6 +3469,8 @@ raymesh_model = function(mesh, x = 0, y = 0, z = 0,
   }
   if(validate_mesh) {
     raymesh = rayvertex::validate_mesh(mesh)
+  } else {
+    raymesh = mesh
   }
   if(subdivision_levels > getOption("rayrender_subdivision_max", 5) ) {
     stop("Default maximum subdivision level set to 5. Did you really mean to set a subdivision level ",
