@@ -160,64 +160,43 @@ int aabb::MaxDimension() const {
 //     hits = simd_cast_to_int(hitMask);
 // }
 
-void rayBBoxIntersect4(const ray& ray,
-                                      const BBox4& bbox4,
-                                      Float tMin,
-                                      Float tMax,
-                                      IVec4& hits,
-                                      FVec4& tMins,
-                                      FVec4& tMaxs) {
-    // Prepare ray data
-    FVec4 rayOriginX = simd_set1(ray.origin().x());
-    FVec4 rayOriginY = simd_set1(ray.origin().y());
-    FVec4 rayOriginZ = simd_set1(ray.origin().z());
-    FVec4 rayInvDirX = simd_set1(ray.inv_dir_pad.x());
-    FVec4 rayInvDirY = simd_set1(ray.inv_dir_pad.y());
-    FVec4 rayInvDirZ = simd_set1(ray.inv_dir_pad.z());
+void rayBBoxIntersect4(const ray& r,
+                       const BBox4& bbox4,
+                       Float tMin,
+                       Float tMax,
+                       IVec4& hits,
+                       FVec4& tEnters) {
+    FVec4 bboxMinX = bbox4.getMinX();
+    FVec4 bboxMaxX = bbox4.getMaxX();
+    FVec4 bboxMinY = bbox4.getMinY();
+    FVec4 bboxMaxY = bbox4.getMaxY();
+    FVec4 bboxMinZ = bbox4.getMinZ();
+    FVec4 bboxMaxZ = bbox4.getMaxZ();
+    FVec4 origin0 = r.origin4[0];
+    FVec4 origin1 = r.origin4[1];
+    FVec4 origin2 = r.origin4[2];
+    FVec4 inv_pad0 = r.inv_dir_pad4[0];
+    FVec4 inv_pad1 = r.inv_dir_pad4[1];
+    FVec4 inv_pad2 = r.inv_dir_pad4[2];
 
-    // Create masks based on ray direction signs
-    SimdMask maskPosX = simd_cmpge(rayInvDirX, simd_set1(0.0f));
-    SimdMask maskPosY = simd_cmpge(rayInvDirY, simd_set1(0.0f));
-    SimdMask maskPosZ = simd_cmpge(rayInvDirZ, simd_set1(0.0f));
+    // For X axis
+    FVec4 t0x = simd_mul(simd_sub(bboxMinX, origin0), inv_pad0);
+    FVec4 t1x = simd_mul(simd_sub(bboxMaxX, origin0), inv_pad0);
 
-    // Load bounding box min and max corners for each axis
-    FVec4 bboxMinX = simd_load(&bbox4.corners[0].xyzw[0]);
-    FVec4 bboxMaxX = simd_load(&bbox4.corners[3].xyzw[0]);
-    FVec4 bboxMinY = simd_load(&bbox4.corners[1].xyzw[0]);
-    FVec4 bboxMaxY = simd_load(&bbox4.corners[4].xyzw[0]);
-    FVec4 bboxMinZ = simd_load(&bbox4.corners[2].xyzw[0]);
-    FVec4 bboxMaxZ = simd_load(&bbox4.corners[5].xyzw[0]);
+    // For Y axis
+    FVec4 t0y = simd_mul(simd_sub(bboxMinY, origin1), inv_pad1);
+    FVec4 t1y = simd_mul(simd_sub(bboxMaxY, origin1), inv_pad1);
 
-    // Select near and far corners based on ray direction signs
-    FVec4 bboxNearX = simd_blend(maskPosX, bboxMinX, bboxMaxX);
-    FVec4 bboxFarX  = simd_blend(maskPosX, bboxMaxX, bboxMinX);
-
-    FVec4 bboxNearY = simd_blend(maskPosY, bboxMinY, bboxMaxY);
-    FVec4 bboxFarY  = simd_blend(maskPosY, bboxMaxY, bboxMinY);
-
-    FVec4 bboxNearZ = simd_blend(maskPosZ, bboxMinZ, bboxMaxZ);
-    FVec4 bboxFarZ  = simd_blend(maskPosZ, bboxMaxZ, bboxMinZ);
-
-    // Compute t values for slabs
-    FVec4 t0x = simd_mul(simd_sub(bboxNearX, rayOriginX), rayInvDirX);
-    FVec4 t1x = simd_mul(simd_sub(bboxFarX,  rayOriginX), rayInvDirX);
-
-    FVec4 t0y = simd_mul(simd_sub(bboxNearY, rayOriginY), rayInvDirY);
-    FVec4 t1y = simd_mul(simd_sub(bboxFarY,  rayOriginY), rayInvDirY);
-
-    FVec4 t0z = simd_mul(simd_sub(bboxNearZ, rayOriginZ), rayInvDirZ);
-    FVec4 t1z = simd_mul(simd_sub(bboxFarZ,  rayOriginZ), rayInvDirZ);
+    // For Z axis
+    FVec4 t0z = simd_mul(simd_sub(bboxMinZ, origin2), inv_pad2);
+    FVec4 t1z = simd_mul(simd_sub(bboxMaxZ, origin2), inv_pad2);
 
     // Compute tEnter and tExit
-    FVec4 tEnter = simd_max(simd_max(simd_min(t0x, t1x), simd_min(t0y, t1y)), simd_min(t0z, t1z));
-    FVec4 tExit  = simd_min(simd_min(simd_max(t0x, t1x), simd_max(t0y, t1y)), simd_max(t0z, t1z));
-
-    // Clamp tEnter and tExit with tMin and tMax
-    tMins = simd_max(tEnter, simd_set1(tMin));
-    tMaxs = simd_min(tExit,  simd_set1(tMax));
+    tEnters = simd_max(simd_max(simd_min(t0x, t1x), simd_min(t0y, t1y)), simd_min(t0z, t1z));
+    FVec4 tExits  = simd_min(simd_min(simd_max(t0x, t1x), simd_max(t0y, t1y)), simd_max(t0z, t1z));
 
     // Compute hit mask
-    SimdMask hitMask = simd_less_equal(tMins, tMaxs);
+    SimdMask hitMask = simd_less_equal(simd_max(tEnters, simd_set1(tMin)), simd_min(tExits,  simd_set1(tMax)));
     hits = simd_cast_to_int(hitMask);
 }
 

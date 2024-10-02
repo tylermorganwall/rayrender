@@ -63,26 +63,38 @@ class aabb {
 
 struct alignas(16) BBox4 {
     union {
-        FVec4 corners[6];             // order: minX, minY, minZ, maxX, maxY, maxZ
+        // FVec4 corners[6];             // order: minX, minY, minZ, maxX, maxY, maxZ
+        FVec4 corners[6];             // order: minX, maxX, minY, maxY, minZ, maxZ
         float cornersFloat[2][3][4];  // indexed as corner[minOrMax][XYZ][bboxNumber]
-        float cornersFloatAlt[6][4];
     };
 
-#if defined(__x86_64__)
-    inline const __m128* minCornerSSE() const { return &corners[0].v; }
-    inline const __m128* maxCornerSSE() const { return &corners[3].v; }
-#elif defined(__aarch64__)
-    inline const float32x4_t* minCornerNeon() const { return &corners[0].v; }
-    inline const float32x4_t* maxCornerNeon() const { return &corners[3].v; }
-#endif
+    inline FVec4 getMinX() const { return corners[0]; }
+    inline FVec4 getMinY() const { return corners[2]; }
+    inline FVec4 getMinZ() const { return corners[4]; }
+    inline FVec4 getMaxX() const { return corners[1]; }
+    inline FVec4 getMaxY() const { return corners[3]; }
+    inline FVec4 getMaxZ() const { return corners[5]; }
 
-    inline void setBBox(int boxNum, const FVec4& minCorner, const FVec4& maxCorner) {
-        cornersFloat[0][0][boxNum] = ffmin(minCorner[0], maxCorner[0]);
-        cornersFloat[0][1][boxNum] = ffmin(minCorner[1], maxCorner[1]);
-        cornersFloat[0][2][boxNum] = ffmin(minCorner[2], maxCorner[2]);
-        cornersFloat[1][0][boxNum] = ffmax(minCorner[0], maxCorner[0]);
-        cornersFloat[1][1][boxNum] = ffmax(minCorner[1], maxCorner[1]);
-        cornersFloat[1][2][boxNum] = ffmax(minCorner[2], maxCorner[2]);
+    // inline void setBBox(int boxNum, const FVec4& minCorner, const FVec4& maxCorner) {
+    //     cornersFloat[0][0][boxNum] = ffmin(minCorner[0], maxCorner[0]);
+    //     cornersFloat[0][1][boxNum] = ffmin(minCorner[1], maxCorner[1]);
+    //     cornersFloat[0][2][boxNum] = ffmin(minCorner[2], maxCorner[2]);
+    //     cornersFloat[1][0][boxNum] = ffmax(minCorner[0], maxCorner[0]);
+    //     cornersFloat[1][1][boxNum] = ffmax(minCorner[1], maxCorner[1]);
+    //     cornersFloat[1][2][boxNum] = ffmax(minCorner[2], maxCorner[2]);
+    // }
+    inline void setBBox(int boxNum, const point3f& minCorner, const point3f& maxCorner) {
+      // Set minX and maxX
+      corners[0].xyzw[boxNum] = ffmin(minCorner.x(), maxCorner.x()); // minX
+      corners[1].xyzw[boxNum] = ffmax(minCorner.x(), maxCorner.x()); // maxX
+
+      // Set minY and maxY
+      corners[2].xyzw[boxNum] = ffmin(minCorner.y(), maxCorner.y()); // minY
+      corners[3].xyzw[boxNum] = ffmax(minCorner.y(), maxCorner.y()); // maxY
+
+      // Set minZ and maxZ
+      corners[4].xyzw[boxNum] = ffmin(minCorner.z(), maxCorner.z()); // minZ
+      corners[5].xyzw[boxNum] = ffmax(minCorner.z(), maxCorner.z()); // maxZ
     }
     BBox4() {}
     
@@ -156,8 +168,10 @@ void rayBBoxIntersect4(const ray& ray,
                        Float tMin,
                        Float tMax,
                        IVec4& hits,
-                       FVec4& tMins,
-                       FVec4& tMaxs);
+                       FVec4& tEnters
+                      //  FVec4& tMins,
+                      //  FVec4& tMaxs
+                       );
 
 
 void rayBBoxIntersect4Serial(const ray& ray,
