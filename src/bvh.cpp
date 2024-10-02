@@ -423,35 +423,23 @@ const bool BVHAggregate::hit(const ray& r, Float t_min, Float t_max, hit_record&
 
             // Perform SIMD ray-box intersection
             IVec4 hits;
-            FVec4 tMins, tMaxs;
+            FVec4 tEnters;
 
             // Call the SIMD intersection function
-            rayBBoxIntersect4(r, bbox4, t_min, t_max, hits, tMins, tMaxs);
+            rayBBoxIntersect4(r, bbox4, t_min, t_max, hits, tEnters);
 
-            // Process hit results
-            // if (nChildren == 4) {
-            __builtin_prefetch(&node->childOffsets[0], 0, 1);
-            __builtin_prefetch(&node->childOffsets[1], 0, 1);
-            __builtin_prefetch(&node->childOffsets[2], 0, 1);
-            __builtin_prefetch(&node->childOffsets[3], 0, 1);
+            int mask = 0;
+            for (int i = 0; i < 4; ++i) {
+                int valid = hits[i] & (node->childOffsets[i] != -1);
+                mask |= (valid << i);
+            }
 
-            if (hits[0] && node->childOffsets[0] != -1)
-                nodesToVisit[toVisitOffset++] = node->childOffsets[0];
-            if (hits[1] && node->childOffsets[1] != -1)
-                nodesToVisit[toVisitOffset++] = node->childOffsets[1];
-            if (hits[2] && node->childOffsets[2] != -1)
-                nodesToVisit[toVisitOffset++] = node->childOffsets[2];
-            if (hits[3] && node->childOffsets[3] != -1)
-                nodesToVisit[toVisitOffset++] = node->childOffsets[3];
-            // }
-            // for (int i = 0; i < nChildren; ++i) {
-            //     if (hits[i]) {
-            //         int childOffset = node->childOffsets[i];
-            //         if (childOffset != -1) {
-            //             nodesToVisit[toVisitOffset++] = childOffset;
-            //         }
-            //     }
-            // }
+            // Use the mask to process valid children without branches
+            while (mask) {
+                int bitIndex = __builtin_ctz(mask); // Get index of least significant set bit
+                nodesToVisit[toVisitOffset++] = node->childOffsets[bitIndex];
+                mask &= mask - 1; // Clear the least significant set bit
+            }
         }
 
         // Move to the next node to visit
@@ -506,10 +494,11 @@ const bool BVHAggregate::hit(const ray& r, Float t_min, Float t_max, hit_record&
 
             // Perform SIMD ray-box intersection
             IVec4 hits;
-            FVec4 tMins, tMaxs;
+            FVec4 tEnters;
+            // FVec4 tMins, tMaxs;
 
             // Call the SIMD intersection function
-            rayBBoxIntersect4(r, bbox4, t_min, t_max, hits, tMins, tMaxs);
+            rayBBoxIntersect4(r, bbox4, t_min, t_max, hits, tEnters);
 
             // Process hit results
             for (int i = 0; i < nChildren; ++i) {
