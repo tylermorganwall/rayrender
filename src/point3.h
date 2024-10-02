@@ -254,6 +254,13 @@ inline point3<T> Permute(const point3<T> &v, int x, int y, int z) {
   return(point3<T>(v.e[x], v.e[y], v.e[z]));
 }
 
+// In-place Permute function
+template<typename T>
+inline void PermuteInPlace(point3<T>& v, int x, int y, int z) {
+  T temp[3] = { v.e[x], v.e[y], v.e[z] };
+  v.e[0] = temp[0]; v.e[1] = temp[1]; v.e[2] = temp[2];
+}
+
 template<typename T> 
 inline point3<T> Abs(const point3<T> &v) {
   return(point3<T>(std::fabsf(v.x()), std::fabsf(v.y()), std::fabsf(v.z())));
