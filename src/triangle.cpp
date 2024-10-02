@@ -9,25 +9,25 @@ const bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
   const point3f &p0 = mesh->p[v[0]];
   const point3f &p1 = mesh->p[v[1]];
   const point3f &p2 = mesh->p[v[2]];
+
+  vec3f origin_vec(r.origin());
   
-  point3f p0t = p0 - vec3f(r.origin());
-  point3f p1t = p1 - vec3f(r.origin());
-  point3f p2t = p2 - vec3f(r.origin());
-  
-  int kz = MaxDimension(Abs(r.direction()));
-  int kx = kz + 1;
-  if (kx == 3) kx = 0;
-  int ky = kx + 1;
-  if (ky == 3) ky = 0;
-  vec3f d = Permute(r.direction(), kx, ky, kz);
+  point3f p0t = p0 - origin_vec;
+  point3f p1t = p1 - origin_vec;
+  point3f p2t = p2 - origin_vec;
+    Float Sx = r.Sx;
+  Float Sy = r.Sy;
+  Float Sz = r.Sz;
+  int kx = r.kx;
+  int ky = r.ky;
+  int kz = r.kz;
+
   p0t = Permute(p0t, kx, ky, kz);
   p1t = Permute(p1t, kx, ky, kz);
   p2t = Permute(p2t, kx, ky, kz);
 
-  // Apply shear transformation to translated vertex positions
-  Float Sx = -d.x() / d.z();
-  Float Sy = -d.y() / d.z();
-  Float Sz = 1.f / d.z();
+  vec3f d = r.dPermuted;
+
   p0t[0] += Sx * p0t.z();
   p0t[1] += Sy * p0t.z();
   p1t[0] += Sx * p1t.z();
@@ -40,8 +40,9 @@ const bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
   Float e2 = DifferenceOfProducts(p0t.x(), p1t.y(), p0t.y(), p1t.x());
 
   // Fall back to double precision test at triangle edges
-  if (sizeof(Float) == sizeof(float) &&
-      (e0 == 0.0f || e1 == 0.0f || e2 == 0.0f)) {
+  #ifndef RAY_FLOAT_AS_DOUBLE
+  if (e0 == 0.f || e1 == 0.f || e2 == 0.f)	{
+    [[unlikely]];
     double p2txp1ty = (double)p2t.x() * (double)p1t.y();
     double p2typ1tx = (double)p2t.y() * (double)p1t.x();
     e0 = (float)(p2typ1tx - p2txp1ty);
@@ -52,23 +53,36 @@ const bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
     double p1typ0tx = (double)p1t.y() * (double)p0t.x();
     e2 = (float)(p1typ0tx - p1txp0ty);
   }
+  #endif
 
-  bool negative = (e0 < 0) || (e1 < 0) || (e2 < 0);
-  bool positive = (e0 > 0) || (e1 > 0) || (e2 > 0);
+  // bool negative = (e0 < 0) || (e1 < 0) || (e2 < 0);
+  // bool positive = (e0 > 0) || (e1 > 0) || (e2 > 0);
 
-  if (negative && positive) {
-    return false;
-  }
+    // if (negative && positive) {
+    //   [[unlikely]];
+    //   return false;
+    // }
   Float det = e0 + e1 + e2;
-  if (det == 0) return false;
+//   if (det == 0) {
+//     [[unlikely]];
+//     return false;
+// }
+
+  // Check if all e0, e1, e2 have the same sign as det
+  if ((e0 * det < 0) || (e1 * det < 0) || (e2 * det < 0)) {
+      [[unlikely]];
+      return false;
+  }
 
   p0t[2] *= Sz;
   p1t[2] *= Sz;
   p2t[2] *= Sz;
   Float tScaled = e0 * p0t.z() + e1 * p1t.z() + e2 * p2t.z();
   if (det < 0 && (tScaled >= 0 || tScaled < t_max * det)) {
+    [[unlikely]];
     return false;
   } else if (det > 0 && (tScaled <= 0 || tScaled > t_max * det)) {
+    [[unlikely]];
     return false;
   }
 
@@ -94,8 +108,11 @@ const bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
   Float maxE = MaxComponent(Abs(vec3f(e0, e1, e2)));
   Float deltaT = 3 *
     (gamma(3) * maxE * maxZt + deltaE * maxZt + deltaZ * maxE) *
-    std::abs(invDet);
-  if (t <= deltaT) return false;
+    ffabs(invDet);
+  if (t <= deltaT) {
+    [[unlikely]];
+    return false;
+  }
 
   vec3f dpdu, dpdv;
   point2f uv[3];
@@ -105,16 +122,21 @@ const bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
   vec2f duv02 = uv[0] - uv[2], duv12 = uv[1] - uv[2];
   vec3f dp02 = p0 - p2, dp12 = p1 - p2;
   Float determinant = DifferenceOfProducts(duv02[0],duv12[1],duv02[1],duv12[0]);
-  bool degenerateUV = std::fabs(determinant) < 1e-8;
+  bool degenerateUV = ffabs(determinant) < 1e-8;
   if (!degenerateUV) {
+    [[likely]];
     Float invdet = 1 / determinant;
     rec.dpdu = (duv12[1] * dp02 - duv02[1] * dp12) * invdet;
     rec.dpdv = (-duv12[0] * dp02 + duv02[0] * dp12) * invdet;
   }
-  if (degenerateUV || cross(rec.dpdu, rec.dpdv).squared_length() == 0) {
+  // if (degenerateUV || cross(rec.dpdu, rec.dpdv).squared_length() == 0) {
+  if (degenerateUV || parallelVectors(rec.dpdu, rec.dpdv)) {
+
+    [[unlikely]];
     // Handle zero determinant for triangle partial derivative matrix
     vec3f ng = cross(p2 - p0, p1 - p0);
     if (ng.squared_length() == 0) {
+      [[unlikely]];
       // The triangle is actually degenerate; the intersection is
       // bogus.
       return false;
@@ -122,12 +144,12 @@ const bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
     CoordinateSystem(unit_vector(ng), &rec.dpdu, &rec.dpdv);
   }
   //Add error calc
-  Float xAbsSum = (std::abs(b0 * p0.x()) + std::abs(b1 * p1.x()) +
-    std::abs(b2 * p2.x()));
-  Float yAbsSum = (std::abs(b0 * p0.y()) + std::abs(b1 * p1.y()) +
-    std::abs(b2 * p2.y()));
-  Float zAbsSum = (std::abs(b0 * p0.z()) + std::abs(b1 * p1.z()) +
-    std::abs(b2 * p2.z()));
+  Float xAbsSum = (ffabs(b0 * p0.x()) + ffabs(b1 * p1.x()) +
+    ffabs(b2 * p2.x()));
+  Float yAbsSum = (ffabs(b0 * p0.y()) + ffabs(b1 * p1.y()) +
+    ffabs(b2 * p2.y()));
+  Float zAbsSum = (ffabs(b0 * p0.z()) + ffabs(b1 * p1.z()) +
+    ffabs(b2 * p2.z()));
   rec.pError = gamma(7) * vec3f(xAbsSum, yAbsSum, zAbsSum);
 
   point3f pHit = b0 * p0 + b1 * p1 + b2 * p2;
@@ -164,6 +186,7 @@ const bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
     
     normal3f np = (b0 * n1 + b1 * n2 + b2 * n3);
     if(np.squared_length() == 0) {
+      [[unlikely]];
       rec.normal = normal;
     } else {
       np.make_unit_vector();
@@ -210,7 +233,6 @@ const bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
   rec.mat_ptr = mesh->mesh_materials[mat_id].get();
   rec.alpha_miss = alpha_miss;
   rec.shape = this;
-  
   return(true);
 }
 
@@ -265,7 +287,10 @@ const bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
     double p1typ0tx = (double)p1t.y() * (double)p0t.x();
     e2 = (float)(p1typ0tx - p1txp0ty);
   }
-  
+  __builtin_prefetch(&p0t[2], 0, 1);
+  __builtin_prefetch(&p1t[2], 0, 1);
+  __builtin_prefetch(&p2t[2], 0, 1);
+
   if ((e0 < 0 || e1 < 0 || e2 < 0) && (e0 > 0 || e1 > 0 || e2 > 0))
     return false;
   Float det = e0 + e1 + e2;
@@ -303,7 +328,7 @@ const bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
   Float maxE = MaxComponent(Abs(vec3f(e0, e1, e2)));
   Float deltaT = 3 *
     (gamma(3) * maxE * maxZt + deltaE * maxZt + deltaZ * maxE) *
-    std::abs(invDet);
+    ffabs(invDet);
   if (t <= deltaT) return false;
   
   vec3f dpdu, dpdv;
@@ -331,12 +356,12 @@ const bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
     CoordinateSystem(unit_vector(ng), &rec.dpdu, &rec.dpdv);
   }
   //Add error calc
-  Float xAbsSum = (std::abs(b0 * p0.x()) + std::abs(b1 * p1.x()) +
-    std::abs(b2 * p2.x()));
-  Float yAbsSum = (std::abs(b0 * p0.y()) + std::abs(b1 * p1.y()) +
-    std::abs(b2 * p2.y()));
-  Float zAbsSum = (std::abs(b0 * p0.z()) + std::abs(b1 * p1.z()) +
-    std::abs(b2 * p2.z()));
+  Float xAbsSum = (ffabs(b0 * p0.x()) + ffabs(b1 * p1.x()) +
+    ffabs(b2 * p2.x()));
+  Float yAbsSum = (ffabs(b0 * p0.y()) + ffabs(b1 * p1.y()) +
+    ffabs(b2 * p2.y()));
+  Float zAbsSum = (ffabs(b0 * p0.z()) + ffabs(b1 * p1.z()) +
+    ffabs(b2 * p2.z()));
   rec.pError = gamma(7) * vec3f(xAbsSum, yAbsSum, zAbsSum);
   
   point3f pHit = b0 * p0 + b1 * p1 + b2 * p2;
