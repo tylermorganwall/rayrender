@@ -20,22 +20,22 @@
     #error "No SIMD support available"
 #endif
 
+#ifdef HAS_SSE
+typedef __m128 fvec4;
+typedef __m128i ivec4;
+#elif defined(HAS_NEON)
+typedef uint32x4_t uivec4;
+typedef int32x4_t ivec4;
+typedef float32x4_t fvec4;
+#endif
 
 typedef struct FVec4 {
 public:
     union {
-#ifdef HAS_SSE
-        __m128 v;
-#elif defined(HAS_NEON)
-        float32x4_t v;
-#endif
+        fvec4 v;
         float xyzw[4];
     };
-#ifdef HAS_SSE
-    FVec4(__m128 f4) : v(f4) {}
-#elif defined(HAS_NEON)
-    FVec4(float32x4_t f4) : v(f4) {}
-#endif
+    FVec4(fvec4 f4) : v(f4) {}
     FVec4()  {
       xyzw[0] = 0.f;
       xyzw[1] = 0.f;
@@ -209,8 +209,8 @@ inline FVec4 simd_max(FVec4 a, FVec4 b) {
 }
 
 
-inline SimdMask simd_less_equal(FVec4 a, FVec4 b) {
-  SimdMask result;
+inline FVec4 simd_less_equal(FVec4 a, FVec4 b) {
+  FVec4 result;
 #ifdef HAS_AVX
   result.v = _mm256_cmp_ps(a.v, b.v, _CMP_LE_OQ);
 #elif defined(HAS_SSE)
