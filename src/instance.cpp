@@ -17,7 +17,7 @@ const bool instance::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
     rec = (*ObjectToWorld)(rec);
     return(true);
   }
-  return(original_scene->hit(r2, t_min, t_max, rec, rng));
+  return(false);
 }
 
 const bool instance::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const {
