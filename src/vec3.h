@@ -146,8 +146,20 @@ inline Float dot(const vec3<T> &v1, const vec3<T> &v2) {
 template<typename T> 
 inline vec3<T> cross(const vec3<T> &v1, const vec3<T> &v2) {
   return(vec3<T>(DifferenceOfProducts(v1.y(), v2.z(), v1.z(), v2.y()),
-              DifferenceOfProducts(v1.z(), v2.x(), v1.x(), v2.z()),
-              DifferenceOfProducts(v1.x(), v2.y(), v1.y(), v2.x())));
+                 DifferenceOfProducts(v1.z(), v2.x(), v1.x(), v2.z()),
+                 DifferenceOfProducts(v1.x(), v2.y(), v1.y(), v2.x())));
+}
+
+template<typename T> 
+inline bool parallelVectors(const vec3<T> &v1, const vec3<T> &v2) {
+  Float x = DifferenceOfProducts(v1.y(), v2.z(), v1.z(), v2.y());
+  Float y = DifferenceOfProducts(v1.z(), v2.x(), v1.x(), v2.z());
+  Float z = DifferenceOfProducts(v1.x(), v2.y(), v1.y(), v2.x());
+  if(x == 0 && y == 0 && z == 0) {
+    [[unlikely]];
+    return(true);
+  }
+  return(false);
 }
 
 template<typename T> 
@@ -249,6 +261,13 @@ inline vec3<T> Max(const vec3<T> &p1, const vec3<T> &p2) {
 template<typename T> 
 inline vec3<T> Permute(const vec3<T> &v, int x, int y, int z) {
   return(vec3<T>(v.e[x], v.e[y], v.e[z]));
+}
+
+// In-place Permute function
+template<typename T>
+inline void PermuteInPlace(vec3<T>& v, int x, int y, int z) {
+  T temp[3] = { v.e[x], v.e[y], v.e[z] };
+  v.e[0] = temp[0]; v.e[1] = temp[1]; v.e[2] = temp[2];
 }
 
 template<typename T> 
