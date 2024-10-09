@@ -196,7 +196,13 @@ void rayBBoxIntersect4(const ray& r,
     FVec4 tExits  = simd_min(simd_min(simd_max(t0x, t1x), simd_max(t0y, t1y)), simd_max(t0z, t1z));
 
     // Compute hit mask
-    SimdMask hitMask = simd_less_equal(simd_max(tEnters, simd_set1(tMin)), simd_min(tExits,  simd_set1(tMax)));
+    FVec4 tmp_max = simd_max(tEnters, simd_set1(tMin));
+    FVec4 tmp_min = simd_min(tExits,  simd_set1(tMax));
+
+    SimdMask hitMask = simd_less_equal(tmp_max,tmp_min);
+    // t = simd_(hitMask, tEnters, tExits);
+    // SimdMask hitMask = simd_less_equal(simd_max(tEnters, simd_set1(tMin)), simd_min(tExits,  simd_set1(tMax)));
+
     hits = simd_cast_to_int(hitMask);
 }
 
@@ -205,8 +211,7 @@ void rayBBoxIntersect4Serial(const ray& ray,
                        Float tMin,
                        Float tMax,
                        IVec4& hits,
-                       FVec4& tMins,
-                       FVec4& tMaxs) {
+                       FVec4& tEnters) {
     // Loop over each bounding box (up to 4)
     for (int i = 0; i < 4; ++i) {
         // Extract min and max coordinates for the i-th bounding box
@@ -252,8 +257,7 @@ void rayBBoxIntersect4Serial(const ray& ray,
         Float tMax_i = ffmin(tExit, tMax);
 
         // Store tMins and tMaxs
-        tMins[i] = tMin_i;
-        tMaxs[i] = tMax_i;
+        tEnters[i] = tMin_i;
 
         // Compute hit mask
         hits[i] = (tMin_i <= tMax_i) ? -1 : 0; // -1 indicates a hit (all bits set in integer)

@@ -389,7 +389,6 @@ const bool BVHAggregate::hit(const ray& r, Float t_min, Float t_max, hit_record&
     int nodesToVisit[64];
     int toVisitOffset = 0;
     int currentNodeIndex = 0;
-
     bool any_hit = false;
 
     // Initialize the ray's tMax
@@ -428,16 +427,21 @@ const bool BVHAggregate::hit(const ray& r, Float t_min, Float t_max, hit_record&
             // Call the SIMD intersection function
             rayBBoxIntersect4(r, bbox4, t_min, t_max, hits, tEnters);
 
+            IVec4 order = sort_simd_4_floats(tEnters);
+
             int mask = 0;
             for (int i = 0; i < 4; ++i) {
-                int valid = hits[i] & (node->childOffsets[i] != -1);
+                int idx = order[i];
+                int valid = hits[idx] & (node->childOffsets[idx] != -1);
                 mask |= (valid << i);
             }
 
             // Use the mask to process valid children without branches
             while (mask) {
                 int bitIndex = __builtin_ctz(mask); // Get index of least significant set bit
-                nodesToVisit[toVisitOffset++] = node->childOffsets[bitIndex];
+                int idx = order[bitIndex];
+
+                nodesToVisit[toVisitOffset++] = node->childOffsets[idx];
                 mask &= mask - 1; // Clear the least significant set bit
             }
         }
