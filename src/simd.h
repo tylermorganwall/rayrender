@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <stdio.h>
 #include "point3.h"
+#include <cstddef> // For alignas
 
 // SIMD vector size (4 for SSE, 8 for AVX)
 #ifdef HAS_AVX
@@ -30,7 +31,7 @@ typedef int32x4_t ivec4;
 typedef float32x4_t fvec4;
 #endif
 
-typedef struct FVec4 {
+typedef struct alignas(16) FVec4 {
 public:
     union {
         fvec4 v;
@@ -67,7 +68,7 @@ public:
 } FVec4;
 
 
-typedef struct IVec4 {
+typedef struct alignas(16) IVec4 {
     union {
 #ifdef HAS_SSE
         __m128i v;
@@ -704,6 +705,34 @@ inline SimdMask simd_set1(unsigned int value) {
     }
 #endif
     return result;
+}
+
+#include <cstring>
+
+// Helper functions to convert between float and uint32_t
+inline uint32_t float_to_uint32(float f) {
+    uint32_t i;
+    memcpy(&i, &f, sizeof(float));
+    return i;
+}
+
+inline float uint32_to_float(uint32_t i) {
+    float f;
+    memcpy(&f, &i, sizeof(float));
+    return f;
+}
+
+// Pack index into the lowest 2 bits of the float
+inline float pack_index(float value, uint32_t index) {
+    uint32_t int_value = float_to_uint32(value);
+    int_value = (int_value & ~0x3) | (index & 0x3); // Set the lowest 2 bits
+    return uint32_to_float(int_value);
+}
+
+// Extract index from the lowest 2 bits of the float
+inline uint32_t extract_index(float value) {
+    uint32_t int_value = float_to_uint32(value);
+    return int_value & 0x3;
 }
 
 // inline void PackIndexFloat(float* float, int index) {
