@@ -4,6 +4,15 @@
 #include <limits>
 #include "raylog.h"
 #include "aabb.h"
+#include "simd.h"
+
+#define RAYSIMD
+
+inline int floatToIntBits(float f) {
+    int i;
+    memcpy(&i, &f, sizeof(float));
+    return i;
+}
 
 BVHAggregate::BVHAggregate(std::vector<std::shared_ptr<hitable> > prims,
         float t_min, float t_max, 
@@ -387,24 +396,22 @@ const bool BVHAggregate::hit(const ray& r, Float t_min, Float t_max, hit_record&
 
     // Initialize the traversal stack
     int nodesToVisit[64];
+    float timeToVisitDebug[64];
     int toVisitOffset = 0;
     int currentNodeIndex = 0;
+    float currentTime = INFINITY;
     bool any_hit = false;
-
-    // Initialize the ray's tMax
-    // r.tMax = t_max;
 
     while (true) {
         const LinearBVHNode4* node = &nodes4[currentNodeIndex];
-
+        float next_time = 0;
+        if(toVisitOffset > 0) {
+            next_time = timeToVisitDebug[toVisitOffset - 1];
+        }
         if (node->nPrimitives > 0) {
             // Leaf node: test ray against primitives
             for (int i = 0; i < node->nPrimitives; ++i) {
                 hit_record tempRec;
-                if(i + 1 < node->nPrimitives) {
-                    __builtin_prefetch(&primitives[node->primitivesOffset + i + 1], 0, 1);
-                }
-
                 // Test ray against primitive
                 bool hitPrimitive = primitives[node->primitivesOffset + i]->hit(r, t_min, t_max, tempRec, rng);
                 if (hitPrimitive) {
@@ -413,10 +420,10 @@ const bool BVHAggregate::hit(const ray& r, Float t_min, Float t_max, hit_record&
                     t_max = tempRec.t; // Update ray's tMax to the closest hit
                 }
             }
+            if(any_hit && next_time > currentTime) { //this second part protects again wrong reorderings from packing the index and overlapping AABBs
+                return(true);
+            }
         } else {
-            // Interior node: test ray against child bounding boxes using SIMD
-            int nChildren = node->nChildren;
-
             // Use the pre-packed bounding boxes stored in the node
             const BBox4& bbox4 = node->bbox4;
 
@@ -428,22 +435,34 @@ const bool BVHAggregate::hit(const ray& r, Float t_min, Float t_max, hit_record&
             rayBBoxIntersect4(r, bbox4, t_min, t_max, hits, tEnters);
 
             IVec4 order = sort_simd_4_floats(tEnters);
+            IVec4 valid_hit = simd_and(hits, simd_not_equals_minus_one(node->childOffsets));
 
-            int mask = 0;
+            // Extract valid flags for each index
+
+            int valid0 = valid_hit[order[3]] & 1;
+            int valid1 = valid_hit[order[2]] & 1;
+            int valid2 = valid_hit[order[1]] & 1;
+            int valid3 = valid_hit[order[0]] & 1;
+
+            IVec4 cumsum(0,0,0,0);
+            cumsum[1] = valid0;
+            cumsum[2] = cumsum[1] + valid1;
+            cumsum[3] = cumsum[2] + valid2;
+
+            // Use masks to write valid entries without branches
             for (int i = 0; i < 4; ++i) {
-                int idx = order[i];
-                int valid = hits[idx] & (node->childOffsets[idx] != -1);
-                mask |= (valid << i);
-            }
+                int idx = order[3 - i]; // Reverse order
+                int valid = valid_hit[idx] & 1;
+                int mask = -valid;
+                int dest = toVisitOffset + cumsum[i];
 
-            // Use the mask to process valid children without branches
-            while (mask) {
-                int bitIndex = __builtin_ctz(mask); // Get index of least significant set bit
-                int idx = order[bitIndex];
+                nodesToVisit[dest] = (nodesToVisit[dest] & ~mask) | (node->childOffsets[idx] & mask);
 
-                nodesToVisit[toVisitOffset++] = node->childOffsets[idx];
-                mask &= mask - 1; // Clear the least significant set bit
+                int tEnterInt = floatToIntBits(tEnters[idx]);
+                int* timeAsInt = reinterpret_cast<int*>(&timeToVisitDebug[dest]);
+                *timeAsInt = (*timeAsInt & ~mask) | (tEnterInt & mask);
             }
+            toVisitOffset += cumsum[3] + valid3;
         }
 
         // Move to the next node to visit
@@ -451,6 +470,7 @@ const bool BVHAggregate::hit(const ray& r, Float t_min, Float t_max, hit_record&
             break; // Stack is empty, traversal is complete
         }
         currentNodeIndex = nodesToVisit[--toVisitOffset];
+        currentTime = timeToVisitDebug[toVisitOffset];
     }
 
     return any_hit;
@@ -489,6 +509,9 @@ const bool BVHAggregate::hit(const ray& r, Float t_min, Float t_max, hit_record&
                     t_max = tempRec.t; // Update ray's tMax to the closest hit
                 }
             }
+        //    if(any_hit) {
+        //         return(true);
+        //     }
         } else {
             // Interior node: test ray against child bounding boxes using SIMD
             int nChildren = node->nChildren;
