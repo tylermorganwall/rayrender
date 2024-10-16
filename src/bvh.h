@@ -76,17 +76,13 @@ struct LinearBVHNode {
     uint8_t axis;          // interior node: xyz
 };
 
-struct alignas(64) LinearBVHNode4 {
-    // aabb bounds;          // Bounding box of this node
-    // uint8_t axis;         // Split axis
-    uint8_t nPrimitives;  // 0 for interior nodes
-    uint8_t nChildren;    // Number of children (up to 4)
-    int primitivesOffset; // For leaf nodes
-    alignas(16) int childOffsets[4];  // For interior nodes
+struct alignas(64) LinearBVHNode4 { // 13 bytes to spare if needed using uint8, 4 if using int
+    IVec4 childOffsets;  // For interior nodes
     BBox4 bbox4;          // Packed bounding boxes of child nodes
+    int nPrimitives;  // 0 for interior nodes
+    int nChildren;    // Number of children (up to 4)
+    int primitivesOffset; // For leaf nodes
 };
-
-
 
 class BVHAggregate : public hitable {
   public:
