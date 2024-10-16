@@ -7,12 +7,15 @@
 #include "point3.h"
 #include <cstddef> // For alignas
 
+// #define HAS_NEON
+
 // SIMD vector size (4 for SSE, 8 for AVX)
 #ifdef HAS_AVX
 #define SIMD_WIDTH 8
 #else
 #define SIMD_WIDTH 4
 #endif
+
 
 #ifdef HAS_NEON
     #include <arm_neon.h>
@@ -591,7 +594,7 @@ inline IVec4 simd_cmpneq(IVec4 a, IVec4 b) {
 // #endif
 // }
 
-inline SimdMask simd_and(IVec4 a, IVec4 b) {
+inline IVec4 simd_and(IVec4 a, IVec4 b) {
 #ifdef HAS_AVX
     SimdMask result;
     result.v = _mm256_and_ps(a.v, b.v);
@@ -601,13 +604,48 @@ inline SimdMask simd_and(IVec4 a, IVec4 b) {
     result.v = _mm_and_ps(a.v, b.v);
     return result;
 #elif defined(HAS_NEON)
-    SimdMask result;
+    IVec4 result;
     result.v = (vandq_u32((a.v), (b.v)));
     return result;
 #else
     SimdMask result;
     for (int i = 0; i < SIMD_WIDTH; ++i) {
         result.v[i] = a.v[i] & b.v[i];
+    }
+    return result;
+#endif
+}
+
+inline IVec4 simd_not_equals_minus_one(IVec4 a) {
+#ifdef HAS_AVX2
+    // AVX2 supports integer operations on 256-bit registers
+    IVec4 result;
+    __m256i minus_one = _mm256_set1_epi32(-1);
+    __m256i cmp_eq = _mm256_cmpeq_epi32(a.v, minus_one);
+    __m256i cmp_neq = _mm256_xor_si256(cmp_eq, _mm256_set1_epi32(-1));
+    result.v = _mm256_srli_epi32(cmp_neq, 31);
+    return result;
+#elif defined(HAS_SSE2)
+    // SSE2 supports integer operations on 128-bit registers
+    IVec4 result;
+    __m128i minus_one = _mm_set1_epi32(-1);
+    __m128i cmp_eq = _mm_cmpeq_epi32(a.v, minus_one);
+    __m128i cmp_neq = _mm_xor_si128(cmp_eq, _mm_set1_epi32(-1));
+    result.v = _mm_srli_epi32(cmp_neq, 31);
+    return result;
+#elif defined(HAS_NEON)
+    // NEON supports integer comparisons
+    IVec4 result;
+    int32x4_t minus_one = vdupq_n_s32(-1);
+    uint32x4_t cmp_eq = vceqq_s32(a.v, minus_one);
+    uint32x4_t cmp_neq = vmvnq_u32(cmp_eq);
+    result.v = vshrq_n_u32(cmp_neq, 31);
+    return result;
+#else
+    // Scalar fallback
+    IVec4 result;
+    for (int i = 0; i < SIMD_WIDTH; ++i) {
+        result.v[i] = (a.v[i] != -1) ? 1 : 0;
     }
     return result;
 #endif
