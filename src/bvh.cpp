@@ -437,24 +437,14 @@ const bool BVHAggregate::hit(const ray& r, Float t_min, Float t_max, hit_record&
             IVec4 order = sort_simd_4_floats(tEnters);
             IVec4 valid_hit = simd_and(hits, simd_not_equals_minus_one(node->childOffsets));
 
-            // Extract valid flags for each index
-
-            int valid0 = valid_hit[order[3]] & 1;
-            int valid1 = valid_hit[order[2]] & 1;
-            int valid2 = valid_hit[order[1]] & 1;
-            int valid3 = valid_hit[order[0]] & 1;
-
-            IVec4 cumsum(0,0,0,0);
-            cumsum[1] = valid0;
-            cumsum[2] = cumsum[1] + valid1;
-            cumsum[3] = cumsum[2] + valid2;
-
+            int cumsum = 0;
             // Use masks to write valid entries without branches
             for (int i = 0; i < 4; ++i) {
-                int idx = order[3 - i]; // Reverse order
-                int valid = valid_hit[idx] & 1;
+                int idx = order[3-i]; // Reverse order
+                int valid = valid_hit[idx];// & 1;
                 int mask = -valid;
-                int dest = toVisitOffset + cumsum[i];
+                int dest = toVisitOffset + cumsum;
+                cumsum += valid;
 
                 nodesToVisit[dest] = (nodesToVisit[dest] & ~mask) | (node->childOffsets[idx] & mask);
 
@@ -462,7 +452,7 @@ const bool BVHAggregate::hit(const ray& r, Float t_min, Float t_max, hit_record&
                 int* timeAsInt = reinterpret_cast<int*>(&timeToVisitDebug[dest]);
                 *timeAsInt = (*timeAsInt & ~mask) | (tEnterInt & mask);
             }
-            toVisitOffset += cumsum[3] + valid3;
+            toVisitOffset += cumsum;
         }
 
         // Move to the next node to visit

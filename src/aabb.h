@@ -63,7 +63,6 @@ class aabb {
 
 struct alignas(16) BBox4 {
     union {
-        // FVec4 corners[6];             // order: minX, minY, minZ, maxX, maxY, maxZ
         FVec4 corners[6];             // order: minX, maxX, minY, maxY, minZ, maxZ
         float cornersFloat[2][3][4];  // indexed as corner[minOrMax][XYZ][bboxNumber]
     };
@@ -75,14 +74,6 @@ struct alignas(16) BBox4 {
     inline FVec4 getMaxY() const { return corners[3]; }
     inline FVec4 getMaxZ() const { return corners[5]; }
 
-    // inline void setBBox(int boxNum, const FVec4& minCorner, const FVec4& maxCorner) {
-    //     cornersFloat[0][0][boxNum] = ffmin(minCorner[0], maxCorner[0]);
-    //     cornersFloat[0][1][boxNum] = ffmin(minCorner[1], maxCorner[1]);
-    //     cornersFloat[0][2][boxNum] = ffmin(minCorner[2], maxCorner[2]);
-    //     cornersFloat[1][0][boxNum] = ffmax(minCorner[0], maxCorner[0]);
-    //     cornersFloat[1][1][boxNum] = ffmax(minCorner[1], maxCorner[1]);
-    //     cornersFloat[1][2][boxNum] = ffmax(minCorner[2], maxCorner[2]);
-    // }
     inline void setBBox(int boxNum, const point3f& minCorner, const point3f& maxCorner) {
       // Set minX and maxX
       corners[0].xyzw[boxNum] = ffmin(minCorner.x(), maxCorner.x()); // minX
