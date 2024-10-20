@@ -1,12 +1,28 @@
 #include "bvh.h"
 #include "assert.h"
 #include "mathinline.h"
+#include <cmath>
 #include <limits>
 #include "raylog.h"
 #include "aabb.h"
 #include "simd.h"
 
-#define RAYSIMD
+#include <queue>
+#include <vector>
+#include <functional>
+
+// Define a structure to hold node index and tEnter time
+struct BVHNodeEntry {
+    int nodeIndex;
+    float tEnter;
+
+    // Comparator for the priority queue (min-heap)
+    bool operator<(const BVHNodeEntry& other) const {
+        return tEnter > other.tEnter; // Inverted comparison for min-heap
+    }
+};
+
+// #define RAYSIMD
 
 inline int floatToIntBits(float f) {
     int i;
@@ -118,6 +134,7 @@ BVHBuildNode *BVHAggregate::buildRecursive(std::span<BVHPrimitive> bvhPrimitives
     BVHBuildNode *node = new BVHBuildNode();
 
     // Initialize _BVHBuildNode_ for primitive range
+    bool isRoot = (*totalNodes == 0);
     int nodeIndex = (*totalNodes)++;
     // Compute bounds of all primitives in BVH node
     aabb bounds;
@@ -125,7 +142,7 @@ BVHBuildNode *BVHAggregate::buildRecursive(std::span<BVHPrimitive> bvhPrimitives
         bounds = surrounding_box(bounds, prim.bounds);
     }
 
-    if (bounds.surface_area() == 0 || bvhPrimitives.size() == 1) {
+    if ((bounds.surface_area() == 0 || bvhPrimitives.size() <= maxPrimsInNode) && !isRoot) {
         // Create leaf _BVHBuildNode_
         int firstPrimOffset = orderedPrimsOffset->fetch_add(bvhPrimitives.size());
         for (size_t i = 0; i < bvhPrimitives.size(); ++i) {
@@ -386,81 +403,175 @@ const bool BVHAggregate::hit(const ray& r, Float t_min, Float t_max, hit_record&
     return any_hit;
 }
 #else
+// const bool BVHAggregate::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
+//     // SCOPED_CONTEXT("Hit");
+//     // SCOPED_TIMER_COUNTER("BVH SIMD");
+//     // Check if the BVH tree is initialized
+//     if (!nodes4) {
+//         return false;
+//     }
+
+//     // Initialize the traversal stack
+//     int nodesToVisit[64];
+//     float timeToVisitDebug[64];
+//     int toVisitOffset = 0;
+//     int currentNodeIndex = 0;
+//     float currentTime = INFINITY;
+//     bool any_hit = false;
+
+//     while (true) {
+//         const LinearBVHNode4* node = &nodes4[currentNodeIndex];
+//         float next_time = 0;
+//         if(toVisitOffset > 0) {
+//             next_time = timeToVisitDebug[toVisitOffset - 1];
+//         }
+//         if (node->nPrimitives > 0) {
+//             // Leaf node: test ray against primitives
+//             for (int i = 0; i < node->nPrimitives; ++i) {
+//                 hit_record tempRec;
+//                 // Test ray against primitive
+//                 bool hitPrimitive = primitives[node->primitivesOffset + i]->hit(r, t_min, t_max, tempRec, rng);
+//                 if (hitPrimitive) {
+//                     any_hit = true;
+//                     rec = tempRec;
+//                     t_max = tempRec.t; // Update ray's tMax to the closest hit
+//                 }
+//             }
+//             if(any_hit && next_time > currentTime) { //this second part protects again wrong reorderings from packing the index and overlapping AABBs
+//                 // if(next_time < currentTime) {
+//                 //     Rcpp::Rcout << toVisitOffset << " " << next_time << " " << currentTime << "\n";
+//                 // }
+//                 return(true);
+//             }
+//         } else {
+//             // Use the pre-packed bounding boxes stored in the node
+//             const BBox4& bbox4 = node->bbox4;
+
+//             // Perform SIMD ray-box intersection
+//             IVec4 hits;
+//             FVec4 tEnters, tExits;
+
+//             // Call the SIMD intersection function
+//             rayBBoxIntersect4(r, bbox4, t_min, t_max, hits, tEnters, tExits);
+
+//             IVec4 order = sort_simd_4_floats(tEnters);
+//             IVec4 valid_hit = simd_and(hits, simd_not_equals_minus_one(node->childOffsets));
+
+//             int cumsum = 0;
+//             // Use masks to write valid entries without branches
+//             for (int i = 0; i < 4; ++i) {
+//                 int idx = order[3-i]; // Reverse order
+//                 int valid = valid_hit[idx];// & 1;
+//                 int mask = -valid;
+//                 int dest = toVisitOffset + cumsum;
+//                 cumsum += valid;
+
+//                 nodesToVisit[dest] = (nodesToVisit[dest] & ~mask) | (node->childOffsets[idx] & mask);
+
+//                 int tEnterInt = floatToIntBits(tEnters[idx]);
+//                 int* timeAsInt = reinterpret_cast<int*>(&timeToVisitDebug[dest]);
+//                 *timeAsInt = (*timeAsInt & ~mask) | (tEnterInt & mask);
+//             }
+//             toVisitOffset += cumsum;
+//         }
+
+//         // Move to the next node to visit
+//         if (toVisitOffset == 0) {
+//             break; // Stack is empty, traversal is complete
+//         }
+//         currentNodeIndex = nodesToVisit[--toVisitOffset];
+//         currentTime = timeToVisitDebug[toVisitOffset];
+//     }
+
+//     return any_hit;
+// }
 const bool BVHAggregate::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
-    // SCOPED_CONTEXT("Hit");
-    // SCOPED_TIMER_COUNTER("BVH SIMD");
-    // Check if the BVH tree is initialized
     if (!nodes4) {
         return false;
     }
+    std::priority_queue<BVHNodeEntry> nodesToVisit;
 
-    // Initialize the traversal stack
-    int nodesToVisit[64];
-    float timeToVisitDebug[64];
-    int toVisitOffset = 0;
-    int currentNodeIndex = 0;
-    float currentTime = INFINITY;
+    nodesToVisit.push({0, -INFINITY});
+    // const BBox4& first_bbox4 = first_node->bbox4;
+
+    // // When less than four elements, 
+    // // Perform SIMD ray-box intersection
+    // IVec4 first_hits; 
+    // FVec4 first_tEnters, first_tExits;
+    // //If Nprimitives is 1, this should just be a single hit function
+    // rayBBoxIntersect4(r, first_bbox4, t_min, t_max, 
+    //                   first_hits, first_tEnters, first_tExits);
+
+
+    // // Initialize the priority queue with the root node
+    // for (int i = 0; i < 4; ++i) {
+    //     int valid = first_hits[i];
+    //     if (valid) {
+    //         int childNodeIndex = first_node->childOffsets[i];
+    //         float tEnter = first_tEnters[i];
+    //         // float tExits = first_tEnters[i];
+
+    //         // nodesToVisit.push({childNodeIndex, tEnter});
+    //         // Check if the child node is valid and within t_min and t_max
+    //         if (childNodeIndex != -1 && tEnter <= t_max) {
+    //             nodesToVisit.push({childNodeIndex, tEnter});
+    //         }
+    //     }
+    // }
+
     bool any_hit = false;
+    int iters = 0;
+    while (!nodesToVisit.empty()) {
+        // Pop the node with the smallest tEnter
+        BVHNodeEntry entry = nodesToVisit.top();
+        nodesToVisit.pop();
 
-    while (true) {
+        int currentNodeIndex = entry.nodeIndex;
         const LinearBVHNode4* node = &nodes4[currentNodeIndex];
-        float next_time = 0;
-        if(toVisitOffset > 0) {
-            next_time = timeToVisitDebug[toVisitOffset - 1];
+
+        // Early exit if the tEnter is greater than tMax
+        if (entry.tEnter > t_max) {
+            continue;
         }
+
         if (node->nPrimitives > 0) {
             // Leaf node: test ray against primitives
             for (int i = 0; i < node->nPrimitives; ++i) {
                 hit_record tempRec;
-                // Test ray against primitive
                 bool hitPrimitive = primitives[node->primitivesOffset + i]->hit(r, t_min, t_max, tempRec, rng);
                 if (hitPrimitive) {
                     any_hit = true;
                     rec = tempRec;
-                    t_max = tempRec.t; // Update ray's tMax to the closest hit
+                    t_max = tempRec.t; // Update tMax to the closest hit
                 }
             }
-            if(any_hit && next_time > currentTime) { //this second part protects again wrong reorderings from packing the index and overlapping AABBs
-                return(true);
+            if (any_hit) {
+                return true;
             }
         } else {
-            // Use the pre-packed bounding boxes stored in the node
+            // Internal node
             const BBox4& bbox4 = node->bbox4;
-
+            iters++;
             // Perform SIMD ray-box intersection
             IVec4 hits;
-            FVec4 tEnters;
+            FVec4 tEnters, tExits;
 
-            // Call the SIMD intersection function
-            rayBBoxIntersect4(r, bbox4, t_min, t_max, hits, tEnters);
+            rayBBoxIntersect4(r, bbox4, t_min, t_max, hits, tEnters, tExits);
 
-            IVec4 order = sort_simd_4_floats(tEnters);
-            IVec4 valid_hit = simd_and(hits, simd_not_equals_minus_one(node->childOffsets));
-
-            int cumsum = 0;
-            // Use masks to write valid entries without branches
+            // Insert valid child nodes into the priority queue
             for (int i = 0; i < 4; ++i) {
-                int idx = order[3-i]; // Reverse order
-                int valid = valid_hit[idx];// & 1;
-                int mask = -valid;
-                int dest = toVisitOffset + cumsum;
-                cumsum += valid;
-
-                nodesToVisit[dest] = (nodesToVisit[dest] & ~mask) | (node->childOffsets[idx] & mask);
-
-                int tEnterInt = floatToIntBits(tEnters[idx]);
-                int* timeAsInt = reinterpret_cast<int*>(&timeToVisitDebug[dest]);
-                *timeAsInt = (*timeAsInt & ~mask) | (tEnterInt & mask);
+                int valid = hits[i];
+                if (valid) {
+                    int childNodeIndex = node->childOffsets[i];
+                    float tEnter = tEnters[i];
+                    // nodesToVisit.push({childNodeIndex, tEnter});
+                    // Check if the child node is valid and within t_min and t_max
+                    if (childNodeIndex != -1 && tEnter <= t_max) {
+                        nodesToVisit.push({childNodeIndex, tEnter});
+                    }
+                }
             }
-            toVisitOffset += cumsum;
         }
-
-        // Move to the next node to visit
-        if (toVisitOffset == 0) {
-            break; // Stack is empty, traversal is complete
-        }
-        currentNodeIndex = nodesToVisit[--toVisitOffset];
-        currentTime = timeToVisitDebug[toVisitOffset];
     }
 
     return any_hit;
@@ -511,11 +622,11 @@ const bool BVHAggregate::hit(const ray& r, Float t_min, Float t_max, hit_record&
 
             // Perform SIMD ray-box intersection
             IVec4 hits;
-            FVec4 tEnters;
+            FVec4 tEnters, tExits;
             // FVec4 tMins, tMaxs;
 
             // Call the SIMD intersection function
-            rayBBoxIntersect4(r, bbox4, t_min, t_max, hits, tEnters);
+            rayBBoxIntersect4(r, bbox4, t_min, t_max, hits, tEnters, tExits);
 
             // Process hit results
             for (int i = 0; i < nChildren; ++i) {

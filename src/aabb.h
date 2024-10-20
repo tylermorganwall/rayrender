@@ -159,8 +159,8 @@ void rayBBoxIntersect4(const ray& ray,
                        Float tMin,
                        Float tMax,
                        IVec4& hits,
-                       FVec4& tEnters
-                       );
+                       FVec4& tEnters,
+                       FVec4& tExits);
 
 
 void rayBBoxIntersect4Serial(const ray& ray,

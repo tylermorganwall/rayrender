@@ -165,7 +165,8 @@ void rayBBoxIntersect4(const ray& r,
                        Float tMin,
                        Float tMax,
                        IVec4& hits,
-                       FVec4& tEnters) {
+                       FVec4& tEnters,
+                       FVec4& tExits) {
     FVec4 bboxMinX = bbox4.getMinX();
     FVec4 bboxMaxX = bbox4.getMaxX();
     FVec4 bboxMinY = bbox4.getMinY();
@@ -193,15 +194,13 @@ void rayBBoxIntersect4(const ray& r,
 
     // Compute tEnter and tExit
     tEnters = simd_max(simd_max(simd_min(t0x, t1x), simd_min(t0y, t1y)), simd_min(t0z, t1z));
-    FVec4 tExits  = simd_min(simd_min(simd_max(t0x, t1x), simd_max(t0y, t1y)), simd_max(t0z, t1z));
+    tExits  = simd_min(simd_min(simd_max(t0x, t1x), simd_max(t0y, t1y)), simd_max(t0z, t1z));
 
     // Compute hit mask
     FVec4 tmp_max = simd_max(tEnters, simd_set1(tMin));
     FVec4 tmp_min = simd_min(tExits,  simd_set1(tMax));
 
     SimdMask hitMask = simd_less_equal(tmp_max,tmp_min);
-    // t = simd_(hitMask, tEnters, tExits);
-    // SimdMask hitMask = simd_less_equal(simd_max(tEnters, simd_set1(tMin)), simd_min(tExits,  simd_set1(tMax)));
 
     hits = simd_cast_to_int(hitMask);
 }
