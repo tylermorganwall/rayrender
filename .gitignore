@@ -16,3 +16,4 @@ launch.json
 tasks.json
 compile_commands.json
 .cache
+*.asm
