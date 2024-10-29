@@ -79,7 +79,7 @@ typedef struct alignas(16) IVec4 {
         int32x4_t v;
         uint32x4_t uv;
 #endif
-        int xyzw[4];
+        alignas(16) int xyzw[4];
     };
 
     IVec4()  {
@@ -773,9 +773,55 @@ inline uint32_t extract_index(float value) {
     return int_value & 0x3;
 }
 
-// inline void PackIndexFloat(float* float, int index) {
+inline int simd_extract_hitmask(IVec4 hits) {
+#ifdef HAS_SSE
+    // SSE implementation
+    __m128i zero = _mm_setzero_si128();
+    __m128i cmp = _mm_cmpeq_epi32(hits.v, zero); // 0xFFFFFFFF where hits[i] == 0
+    __m128i inv = _mm_andnot_si128(cmp, _mm_set1_epi32(-1)); // 0xFFFFFFFF where hits[i] != 0
 
-// } 
+    // Cast to __m128 to use _mm_movemask_ps
+    __m128 mask_ps = _mm_castsi128_ps(inv);
+
+    // Use movemask_ps to get bits: each bit corresponds to the sign bit of each float
+    int mask = _mm_movemask_ps(mask_ps);
+
+    // The relevant bits are the lowest 4 bits
+    return mask & 0xF;
+
+#elif defined(HAS_NEON)
+    // NEON implementation
+    // hits.v is int32x4_t
+    uint32x4_t hits_vec = vreinterpretq_u32_s32(hits.v);
+
+    // Compare hits_vec != 0, resulting in 0xFFFFFFFF where true
+    uint32x4_t cmp_neq_zero = vmvnq_u32(vceqq_u32(hits_vec, vdupq_n_u32(0)));
+
+    // Shift right by 31 bits to get 1 or 0 in each lane
+    uint32x4_t shifted = vshrq_n_u32(cmp_neq_zero, 31);
+
+    // Narrow to 16 bits to extract the lower bits
+    uint16x4_t narrow = vmovn_u32(shifted);
+
+    // Extract bits and assemble the mask
+    uint16_t mask = (vget_lane_u16(narrow, 0) & 1) |
+                    ((vget_lane_u16(narrow, 1) & 1) << 1) |
+                    ((vget_lane_u16(narrow, 2) & 1) << 2) |
+                    ((vget_lane_u16(narrow, 3) & 1) << 3);
+
+    return mask;
+
+#else
+    // Generic implementation for other architectures
+    int mask = 0;
+    for (int i = 0; i < 4; ++i) {
+        if (hits.xyzw[i] != 0) {
+            mask |= (1 << i);
+        }
+    }
+    return mask;
+#endif
+}
 
 
 IVec4 sort_simd_4_floats(FVec4 values);

@@ -490,42 +490,17 @@ const bool BVHAggregate::hit(const ray& r, Float t_min, Float t_max, hit_record&
         return false;
     }
     std::priority_queue<BVHNodeEntry> nodesToVisit;
-
     nodesToVisit.push({0, -INFINITY});
-    // const BBox4& first_bbox4 = first_node->bbox4;
-
-    // // When less than four elements, 
-    // // Perform SIMD ray-box intersection
-    // IVec4 first_hits; 
-    // FVec4 first_tEnters, first_tExits;
-    // //If Nprimitives is 1, this should just be a single hit function
-    // rayBBoxIntersect4(r, first_bbox4, t_min, t_max, 
-    //                   first_hits, first_tEnters, first_tExits);
-
-
-    // // Initialize the priority queue with the root node
-    // for (int i = 0; i < 4; ++i) {
-    //     int valid = first_hits[i];
-    //     if (valid) {
-    //         int childNodeIndex = first_node->childOffsets[i];
-    //         float tEnter = first_tEnters[i];
-    //         // float tExits = first_tEnters[i];
-
-    //         // nodesToVisit.push({childNodeIndex, tEnter});
-    //         // Check if the child node is valid and within t_min and t_max
-    //         if (childNodeIndex != -1 && tEnter <= t_max) {
-    //             nodesToVisit.push({childNodeIndex, tEnter});
-    //         }
-    //     }
-    // }
 
     bool any_hit = false;
-    int iters = 0;
+    
+    IVec4 hits;
+    FVec4 tEnters;
+    
     while (!nodesToVisit.empty()) {
         // Pop the node with the smallest tEnter
         BVHNodeEntry entry = nodesToVisit.top();
         nodesToVisit.pop();
-
         int currentNodeIndex = entry.nodeIndex;
         const LinearBVHNode4* node = &nodes4[currentNodeIndex];
 
@@ -545,30 +520,23 @@ const bool BVHAggregate::hit(const ray& r, Float t_min, Float t_max, hit_record&
                     t_max = tempRec.t; // Update tMax to the closest hit
                 }
             }
-            if (any_hit) {
+            if (any_hit && nodesToVisit.top().tEnter < entry.tEnter) {
                 return true;
             }
         } else {
             // Internal node
             const BBox4& bbox4 = node->bbox4;
-            iters++;
             // Perform SIMD ray-box intersection
-            IVec4 hits;
-            FVec4 tEnters, tExits;
 
-            rayBBoxIntersect4(r, bbox4, t_min, t_max, hits, tEnters, tExits);
+            rayBBoxIntersect4(r, bbox4, t_min, t_max, hits, tEnters);//, tExits);
 
             // Insert valid child nodes into the priority queue
             for (int i = 0; i < 4; ++i) {
                 int valid = hits[i];
-                if (valid) {
-                    int childNodeIndex = node->childOffsets[i];
+                 int childNodeIndex = node->childOffsets[i];
+                if (valid && childNodeIndex != -1) {
                     float tEnter = tEnters[i];
-                    // nodesToVisit.push({childNodeIndex, tEnter});
-                    // Check if the child node is valid and within t_min and t_max
-                    if (childNodeIndex != -1 && tEnter <= t_max) {
-                        nodesToVisit.push({childNodeIndex, tEnter});
-                    }
+                    nodesToVisit.push({childNodeIndex, tEnter});
                 }
             }
         }
@@ -622,11 +590,11 @@ const bool BVHAggregate::hit(const ray& r, Float t_min, Float t_max, hit_record&
 
             // Perform SIMD ray-box intersection
             IVec4 hits;
-            FVec4 tEnters, tExits;
+            FVec4 tEnters;//, tExits;
             // FVec4 tMins, tMaxs;
 
             // Call the SIMD intersection function
-            rayBBoxIntersect4(r, bbox4, t_min, t_max, hits, tEnters, tExits);
+            rayBBoxIntersect4(r, bbox4, t_min, t_max, hits, tEnters);//, tExits);
 
             // Process hit results
             for (int i = 0; i < nChildren; ++i) {

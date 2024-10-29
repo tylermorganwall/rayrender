@@ -165,8 +165,8 @@ void rayBBoxIntersect4(const ray& r,
                        Float tMin,
                        Float tMax,
                        IVec4& hits,
-                       FVec4& tEnters,
-                       FVec4& tExits) {
+                       FVec4& tEnters) {
+                       //FVec4& tExits) {
     FVec4 bboxMinX = bbox4.getMinX();
     FVec4 bboxMaxX = bbox4.getMaxX();
     FVec4 bboxMinY = bbox4.getMinY();
@@ -194,7 +194,7 @@ void rayBBoxIntersect4(const ray& r,
 
     // Compute tEnter and tExit
     tEnters = simd_max(simd_max(simd_min(t0x, t1x), simd_min(t0y, t1y)), simd_min(t0z, t1z));
-    tExits  = simd_min(simd_min(simd_max(t0x, t1x), simd_max(t0y, t1y)), simd_max(t0z, t1z));
+    FVec4 tExits  = simd_min(simd_min(simd_max(t0x, t1x), simd_max(t0y, t1y)), simd_max(t0z, t1z));
 
     // Compute hit mask
     FVec4 tmp_max = simd_max(tEnters, simd_set1(tMin));
@@ -203,39 +203,47 @@ void rayBBoxIntersect4(const ray& r,
     SimdMask hitMask = simd_less_equal(tmp_max,tmp_min);
 
     hits = simd_cast_to_int(hitMask);
+    // int hits = simd_extract_hitmask(simd_cast_to_int(hitMask));
+    // return(hits);
 }
 
-void rayBBoxIntersect4Serial(const ray& ray,
+void rayBBoxIntersect4Serial(const ray& r,
                        const BBox4& bbox4,
                        Float tMin,
                        Float tMax,
                        IVec4& hits,
                        FVec4& tEnters) {
+    FVec4 bboxMinX = bbox4.getMinX();
+    FVec4 bboxMaxX = bbox4.getMaxX();
+    FVec4 bboxMinY = bbox4.getMinY();
+    FVec4 bboxMaxY = bbox4.getMaxY();
+    FVec4 bboxMinZ = bbox4.getMinZ();
+    FVec4 bboxMaxZ = bbox4.getMaxZ();
+    
+    // Prepare ray data
+    Float rayOriginX = r.origin().x();
+    Float rayOriginY = r.origin().y();
+    Float rayOriginZ = r.origin().z();
+    Float rayInvDirX = r.inv_dir_pad.x();
+    Float rayInvDirY = r.inv_dir_pad.y();
+    Float rayInvDirZ = r.inv_dir_pad.z();
     // Loop over each bounding box (up to 4)
     for (int i = 0; i < 4; ++i) {
         // Extract min and max coordinates for the i-th bounding box
-        Float minX = bbox4.corners[0][i]; // bbox4.corners[0]: minX
-        Float minY = bbox4.corners[1][i]; // bbox4.corners[1]: minY
-        Float minZ = bbox4.corners[2][i]; // bbox4.corners[2]: minZ
-        Float maxX = bbox4.corners[3][i]; // bbox4.corners[3]: maxX
-        Float maxY = bbox4.corners[4][i]; // bbox4.corners[4]: maxY
-        Float maxZ = bbox4.corners[5][i]; // bbox4.corners[5]: maxZ
-
-        // Prepare ray data
-        Float rayOriginX = ray.origin().x();
-        Float rayOriginY = ray.origin().y();
-        Float rayOriginZ = ray.origin().z();
-        Float rayInvDirX = ray.inv_dir_pad.x();
-        Float rayInvDirY = ray.inv_dir_pad.y();
-        Float rayInvDirZ = ray.inv_dir_pad.z();
+        Float minX = bboxMinX[i]; // bbox4.corners[0]: minX
+        Float minY = bboxMinY[i]; // bbox4.corners[1]: minY
+        Float minZ = bboxMinZ[i]; // bbox4.corners[2]: minZ
+        Float maxX = bboxMaxX[i]; // bbox4.corners[3]: maxX
+        Float maxY = bboxMaxY[i]; // bbox4.corners[4]: maxY
+        Float maxZ = bboxMaxZ[i]; // bbox4.corners[5]: maxZ
 
         // Determine near and far coordinates based on ray direction signs
-        Float bboxNearX = ray.sign[0] ? maxX : minX;
-        Float bboxFarX  = ray.sign[0] ? minX : maxX;
-        Float bboxNearY = ray.sign[1] ? maxY : minY;
-        Float bboxFarY  = ray.sign[1] ? minY : maxY;
-        Float bboxNearZ = ray.sign[2] ? maxZ : minZ;
-        Float bboxFarZ  = ray.sign[2] ? minZ : maxZ;
+        Float bboxNearX = r.sign[0] ? maxX : minX;
+        Float bboxFarX  = r.sign[0] ? minX : maxX;
+        Float bboxNearY = r.sign[1] ? maxY : minY;
+        Float bboxFarY  = r.sign[1] ? minY : maxY;
+        Float bboxNearZ = r.sign[2] ? maxZ : minZ;
+        Float bboxFarZ  = r.sign[2] ? minZ : maxZ;
 
         // Compute t values for slabs
         Float t0x = (bboxNearX - rayOriginX) * rayInvDirX;
