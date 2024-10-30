@@ -5,7 +5,7 @@
 const static SimdMask first_mask = simd_setmask(false, true, false, true);
 const static SimdMask second_mask = simd_setmask(false, false, true, true);
 
-IVec4 sort_simd_4_floats(FVec4 values) {
+inline IVec4 sort_simd_4_floats(FVec4 values) {
     values.v[0] = pack_index(values.v[0], 0);
     values.v[1] = pack_index(values.v[1], 1);
     values.v[2] = pack_index(values.v[2], 2);

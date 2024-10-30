@@ -824,6 +824,6 @@ inline int simd_extract_hitmask(IVec4 hits) {
 }
 
 
-IVec4 sort_simd_4_floats(FVec4 values);
+inline IVec4 sort_simd_4_floats(FVec4 values);
 
 #endif
