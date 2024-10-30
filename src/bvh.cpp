@@ -30,6 +30,91 @@ inline int floatToIntBits(float f) {
     return i;
 }
 
+template <size_t MaxSize>
+class StaticPriorityQueue {
+public:
+    StaticPriorityQueue() : size_(0) {}
+
+    // Insert a new entry into the priority queue
+    void push(const BVHNodeEntry& entry) {
+        if (size_ < MaxSize) {
+            // Place the new entry at the end
+            data_[size_] = entry;
+            size_++;
+
+            // Up-heapify to maintain the min-heap property
+            int i = size_ - 1;
+            while (i > 0) {
+                int parent = (i - 1) / 2;
+                if (data_[i].tEnter >= data_[parent].tEnter) {
+                    break;
+                }
+                std::swap(data_[i], data_[parent]);
+                i = parent;
+            }
+        } else {
+            // Handle overflow if necessary
+            // For example, you could assert or throw an exception
+            // Or resize the data_ array if allowed
+            // Here, we'll assert to catch overflows during development
+            assert(false && "Priority queue overflow");
+        }
+    }
+
+    // Remove and return the element with the smallest tEnter
+    BVHNodeEntry pop() {
+        assert(size_ > 0 && "Priority queue underflow");
+        BVHNodeEntry top = data_[0];
+        size_--;
+        data_[0] = data_[size_];
+        heapify(0);
+        return top;
+    }
+
+    // Return a const reference to the element with the smallest tEnter
+    const BVHNodeEntry& top() const {
+        assert(size_ > 0 && "Priority queue is empty");
+        return data_[0];
+    }
+
+    bool empty() const {
+        return size_ == 0;
+    }
+
+    size_t size() const {
+        return size_;
+    }
+
+    void clear() {
+        size_ = 0;
+    }
+
+private:
+    void heapify(int i) {
+        int smallest = i;
+        while (true) {
+            int left = 2 * i + 1;
+            int right = 2 * i + 2;
+
+            if (left < static_cast<int>(size_) && data_[left].tEnter < data_[smallest].tEnter) {
+                smallest = left;
+            }
+            if (right < static_cast<int>(size_) && data_[right].tEnter < data_[smallest].tEnter) {
+                smallest = right;
+            }
+            if (smallest != i) {
+                std::swap(data_[i], data_[smallest]);
+                i = smallest;
+            } else {
+                break;
+            }
+        }
+    }
+
+    BVHNodeEntry data_[MaxSize];
+    size_t size_;
+};
+
 BVHAggregate::BVHAggregate(std::vector<std::shared_ptr<hitable> > prims,
         float t_min, float t_max, 
         int maxPrimsInNode, bool sah, 
@@ -413,18 +498,30 @@ const bool BVHAggregate::hit(const ray& r, Float t_min, Float t_max, hit_record&
 
 //     // Initialize the traversal stack
 //     int nodesToVisit[64];
-//     float timeToVisitDebug[64];
+//     // float timeToVisitDebug[64];
 //     int toVisitOffset = 0;
 //     int currentNodeIndex = 0;
-//     float currentTime = INFINITY;
+//     // float currentTime = t_max;
 //     bool any_hit = false;
+
+//     // Perform SIMD ray-box intersection
+//     IVec4 hits;
+//     FVec4 tEnters;//, tExits;
 
 //     while (true) {
 //         const LinearBVHNode4* node = &nodes4[currentNodeIndex];
-//         float next_time = 0;
-//         if(toVisitOffset > 0) {
-//             next_time = timeToVisitDebug[toVisitOffset - 1];
-//         }
+//         // float next_time = 0;
+//         // if(toVisitOffset > 0) {
+//         //     next_time = timeToVisitDebug[toVisitOffset - 1];
+//         // }
+//         // if(any_hit && currentTime > t_max) {
+//         //     if (toVisitOffset == 0) {
+//         //         break; // Stack is empty, traversal is complete
+//         //     }
+//         //     currentNodeIndex = nodesToVisit[--toVisitOffset];
+//         //     currentTime = timeToVisitDebug[toVisitOffset];
+//         //     continue;
+//         // }
 //         if (node->nPrimitives > 0) {
 //             // Leaf node: test ray against primitives
 //             for (int i = 0; i < node->nPrimitives; ++i) {
@@ -437,40 +534,50 @@ const bool BVHAggregate::hit(const ray& r, Float t_min, Float t_max, hit_record&
 //                     t_max = tempRec.t; // Update ray's tMax to the closest hit
 //                 }
 //             }
-//             if(any_hit && next_time > currentTime) { //this second part protects again wrong reorderings from packing the index and overlapping AABBs
-//                 // if(next_time < currentTime) {
-//                 //     Rcpp::Rcout << toVisitOffset << " " << next_time << " " << currentTime << "\n";
-//                 // }
-//                 return(true);
-//             }
+
+//             // if(any_hit && next_time > currentTime) { //this second part protects again wrong reorderings from packing the index and overlapping AABBs
+//             //     // if(next_time < currentTime) {
+//             //     //     Rcpp::Rcout << toVisitOffset << " " << next_time << " " << currentTime << "\n";
+//             //     // }
+//             //     return(true);
+//             // }
 //         } else {
 //             // Use the pre-packed bounding boxes stored in the node
 //             const BBox4& bbox4 = node->bbox4;
 
-//             // Perform SIMD ray-box intersection
-//             IVec4 hits;
-//             FVec4 tEnters, tExits;
-
 //             // Call the SIMD intersection function
-//             rayBBoxIntersect4(r, bbox4, t_min, t_max, hits, tEnters, tExits);
+//             rayBBoxIntersect4(r, bbox4, t_min, t_max, hits, tEnters);//, tExits);
 
-//             IVec4 order = sort_simd_4_floats(tEnters);
+//             // IVec4 order = sort_simd_4_floats(tEnters);
 //             IVec4 valid_hit = simd_and(hits, simd_not_equals_minus_one(node->childOffsets));
-
+//             // int cumsum = 0;
+//             // for (int i = 0; i < 4; ++i) {
+//             //     // int idx = order[i];
+//             //     if(hits[i]) {
+//             //         nodesToVisit[toVisitOffset] = node->childOffsets[i];
+//             //         // timeToVisitDebug[toVisitOffset] = tEnters[i];
+//             //         toVisitOffset++;
+//             //     }
+//             // }
 //             int cumsum = 0;
 //             // Use masks to write valid entries without branches
 //             for (int i = 0; i < 4; ++i) {
-//                 int idx = order[3-i]; // Reverse order
-//                 int valid = valid_hit[idx];// & 1;
+//                 // int idx = order[i]; // Reverse order
+//                 int valid = valid_hit[i];// & 1;
+//                 // int valid = hits[i];// & 1;
+
 //                 int mask = -valid;
 //                 int dest = toVisitOffset + cumsum;
 //                 cumsum += valid;
 
-//                 nodesToVisit[dest] = (nodesToVisit[dest] & ~mask) | (node->childOffsets[idx] & mask);
+//                 nodesToVisit[dest] = (nodesToVisit[dest] & ~mask) | (node->childOffsets[i] & mask);
+//                 // nodesToVisit[dest] = (nodesToVisit[dest] & ~mask) | (node->childOffsets[i] & mask);
 
-//                 int tEnterInt = floatToIntBits(tEnters[idx]);
-//                 int* timeAsInt = reinterpret_cast<int*>(&timeToVisitDebug[dest]);
-//                 *timeAsInt = (*timeAsInt & ~mask) | (tEnterInt & mask);
+//                 // int tEnterInt = floatToIntBits(tEnters[idx]);
+//                 // int tEnterInt = floatToIntBits(tEnters[i]);
+
+//                 // int* timeAsInt = reinterpret_cast<int*>(&timeToVisitDebug[dest]);
+//                 // *timeAsInt = (*timeAsInt & ~mask) | (tEnterInt & mask);
 //             }
 //             toVisitOffset += cumsum;
 //         }
@@ -480,7 +587,7 @@ const bool BVHAggregate::hit(const ray& r, Float t_min, Float t_max, hit_record&
 //             break; // Stack is empty, traversal is complete
 //         }
 //         currentNodeIndex = nodesToVisit[--toVisitOffset];
-//         currentTime = timeToVisitDebug[toVisitOffset];
+//         // currentTime = timeToVisitDebug[toVisitOffset];
 //     }
 
 //     return any_hit;
@@ -489,7 +596,8 @@ const bool BVHAggregate::hit(const ray& r, Float t_min, Float t_max, hit_record&
     if (!nodes4) {
         return false;
     }
-    std::priority_queue<BVHNodeEntry> nodesToVisit;
+    // std::priority_queue<BVHNodeEntry> nodesToVisit;
+    StaticPriorityQueue<64> nodesToVisit;
     nodesToVisit.push({0, -INFINITY});
 
     bool any_hit = false;
@@ -520,7 +628,7 @@ const bool BVHAggregate::hit(const ray& r, Float t_min, Float t_max, hit_record&
                     t_max = tempRec.t; // Update tMax to the closest hit
                 }
             }
-            if (any_hit && nodesToVisit.top().tEnter < entry.tEnter) {
+            if (any_hit && nodesToVisit.top().tEnter > t_max) {
                 return true;
             }
         } else {
@@ -530,11 +638,18 @@ const bool BVHAggregate::hit(const ray& r, Float t_min, Float t_max, hit_record&
 
             rayBBoxIntersect4(r, bbox4, t_min, t_max, hits, tEnters);//, tExits);
 
+            IVec4 valid_hit = simd_and(hits, simd_not_equals_minus_one(node->childOffsets));
+            // int hitmask = simd_extract_hitmask(valid_hit);
+
             // Insert valid child nodes into the priority queue
             for (int i = 0; i < 4; ++i) {
-                int valid = hits[i];
-                 int childNodeIndex = node->childOffsets[i];
+                int valid = valid_hit[i];
+                // int valid = hitmask & (0x1 << i);
+                int childNodeIndex = node->childOffsets[i];
+
                 if (valid && childNodeIndex != -1) {
+                // if (hitmask & (0x1 << i)) {
+                    int childNodeIndex = node->childOffsets[i];
                     float tEnter = tEnters[i];
                     nodesToVisit.push({childNodeIndex, tEnter});
                 }
