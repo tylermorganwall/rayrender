@@ -154,14 +154,59 @@ inline std::ostream& operator<<(std::ostream &os, const aabb &t) {
   return os;
 }
 
-void rayBBoxIntersect4(const ray& ray,
+// inline void rayBBoxIntersect4(const ray& ray,
+//                        const BBox4& bbox4,
+//                        Float tMin,
+//                        Float tMax,
+//                        IVec4& hits,
+//                        FVec4& tEnters);
+//                        //FVec4& tExits);
+inline void rayBBoxIntersect4(const ray& r,
                        const BBox4& bbox4,
                        Float tMin,
                        Float tMax,
                        IVec4& hits,
-                       FVec4& tEnters);
-                       //FVec4& tExits);
+                       FVec4& tEnters) {
+                       //FVec4& tExits) {
+    FVec4 bboxMinX = bbox4.getMinX();
+    FVec4 bboxMaxX = bbox4.getMaxX();
+    FVec4 bboxMinY = bbox4.getMinY();
+    FVec4 bboxMaxY = bbox4.getMaxY();
+    FVec4 bboxMinZ = bbox4.getMinZ();
+    FVec4 bboxMaxZ = bbox4.getMaxZ();
+    FVec4 origin0 = r.origin4[0];
+    FVec4 origin1 = r.origin4[1];
+    FVec4 origin2 = r.origin4[2];
+    FVec4 inv_pad0 = r.inv_dir_pad4[0];
+    FVec4 inv_pad1 = r.inv_dir_pad4[1];
+    FVec4 inv_pad2 = r.inv_dir_pad4[2];
 
+    // For X axis
+    FVec4 t0x = simd_mul(simd_sub(bboxMinX, origin0), inv_pad0);
+    FVec4 t1x = simd_mul(simd_sub(bboxMaxX, origin0), inv_pad0);
+
+    // For Y axis
+    FVec4 t0y = simd_mul(simd_sub(bboxMinY, origin1), inv_pad1);
+    FVec4 t1y = simd_mul(simd_sub(bboxMaxY, origin1), inv_pad1);
+
+    // For Z axis
+    FVec4 t0z = simd_mul(simd_sub(bboxMinZ, origin2), inv_pad2);
+    FVec4 t1z = simd_mul(simd_sub(bboxMaxZ, origin2), inv_pad2);
+
+    // Compute tEnter and tExit
+    tEnters = simd_max(simd_max(simd_min(t0x, t1x), simd_min(t0y, t1y)), simd_min(t0z, t1z));
+    FVec4 tExits  = simd_min(simd_min(simd_max(t0x, t1x), simd_max(t0y, t1y)), simd_max(t0z, t1z));
+
+    // Compute hit mask
+    FVec4 tmp_max = simd_max(tEnters, simd_set1(tMin));
+    FVec4 tmp_min = simd_min(tExits,  simd_set1(tMax));
+
+    SimdMask hitMask = simd_less_equal(tmp_max,tmp_min);
+
+    hits = simd_cast_to_int(hitMask);
+    // int hits = simd_extract_hitmask(simd_cast_to_int(hitMask));
+    // return(hits);
+}
 
 void rayBBoxIntersect4Serial(const ray& ray,
                        const BBox4& bbox4,
