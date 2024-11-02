@@ -15,25 +15,28 @@ const bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
   point3f p0t = p0 - origin_vec;
   point3f p1t = p1 - origin_vec;
   point3f p2t = p2 - origin_vec;
-  Float Sx = r.Sx;
-  Float Sy = r.Sy;
-  Float Sz = r.Sz;
-  int kx = r.kx;
-  int ky = r.ky;
-  int kz = r.kz;
 
-  p0t = Permute(p0t, kx, ky, kz);
-  p1t = Permute(p1t, kx, ky, kz);
-  p2t = Permute(p2t, kx, ky, kz);
+  {
+    int kx = r.kx;
+    int ky = r.ky;
+    int kz = r.kz;
 
-  vec3f d = r.dPermuted;
-
-  p0t[0] += Sx * p0t.z();
-  p0t[1] += Sy * p0t.z();
-  p1t[0] += Sx * p1t.z();
-  p1t[1] += Sy * p1t.z();
-  p2t[0] += Sx * p2t.z();
-  p2t[1] += Sy * p2t.z();
+    p0t = Permute(p0t, kx, ky, kz);
+    p1t = Permute(p1t, kx, ky, kz);
+    p2t = Permute(p2t, kx, ky, kz);
+  }
+  Float Sz;
+  {
+    Float Sx = r.Sx;
+    Float Sy = r.Sy;
+    Sz = r.Sz;
+    p0t[0] += Sx * p0t.z();
+    p0t[1] += Sy * p0t.z();
+    p1t[0] += Sx * p1t.z();
+    p1t[1] += Sy * p1t.z();
+    p2t[0] += Sx * p2t.z();
+    p2t[1] += Sy * p2t.z();
+  }
   // Compute edge function coefficients _e0_, _e1_, and _e2_
   Float e0 = DifferenceOfProducts(p1t.x(), p2t.y(), p1t.y(), p2t.x());
   Float e1 = DifferenceOfProducts(p2t.x(), p0t.y(), p2t.y(), p0t.x());
@@ -42,7 +45,6 @@ const bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
   // Fall back to double precision test at triangle edges
   #ifndef RAY_FLOAT_AS_DOUBLE
   if (e0 == 0.f || e1 == 0.f || e2 == 0.f)	{
-    [[unlikely]];
     double p2txp1ty = (double)p2t.x() * (double)p1t.y();
     double p2typ1tx = (double)p2t.y() * (double)p1t.x();
     e0 = (float)(p2typ1tx - p2txp1ty);
@@ -55,22 +57,10 @@ const bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
   }
   #endif
 
-  // bool negative = (e0 < 0) || (e1 < 0) || (e2 < 0);
-  // bool positive = (e0 > 0) || (e1 > 0) || (e2 > 0);
-
-    // if (negative && positive) {
-    //   [[unlikely]];
-    //   return false;
-    // }
   Float det = e0 + e1 + e2;
-//   if (det == 0) {
-//     [[unlikely]];
-//     return false;
-// }
 
   // Check if all e0, e1, e2 have the same sign as det
   if ((e0 * det < 0) || (e1 * det < 0) || (e2 * det < 0)) {
-      [[unlikely]];
       return false;
   }
 
@@ -79,10 +69,8 @@ const bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
   p2t[2] *= Sz;
   Float tScaled = e0 * p0t.z() + e1 * p1t.z() + e2 * p2t.z();
   if (det < 0 && (tScaled >= 0 || tScaled < t_max * det)) {
-    [[unlikely]];
     return false;
   } else if (det > 0 && (tScaled <= 0 || tScaled > t_max * det)) {
-    [[unlikely]];
     return false;
   }
 
@@ -92,26 +80,27 @@ const bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
   Float b1 = e1 * invDet;
   Float b2 = e2 * invDet;
   Float t = tScaled * invDet;
-  Float maxZt = MaxComponent(Abs(vec3f(p0t.z(), p1t.z(), p2t.z())));
-  Float deltaZ = gamma(3) * maxZt;
+  {
+    Float maxZt = MaxComponent(Abs(vec3f(p0t.z(), p1t.z(), p2t.z())));
+    Float deltaZ = gamma(3) * maxZt;
 
-  // Compute $\delta_x$ and $\delta_y$ terms for triangle $t$ error bounds
-  Float maxXt = MaxComponent(Abs(vec3f(p0t.x(), p1t.x(), p2t.x())));
-  Float maxYt = MaxComponent(Abs(vec3f(p0t.y(), p1t.y(), p2t.y())));
-  Float deltaX = gamma(5) * (maxXt + maxZt);
-  Float deltaY = gamma(5) * (maxYt + maxZt);
+    // Compute $\delta_x$ and $\delta_y$ terms for triangle $t$ error bounds
+    Float maxXt = MaxComponent(Abs(vec3f(p0t.x(), p1t.x(), p2t.x())));
+    Float maxYt = MaxComponent(Abs(vec3f(p0t.y(), p1t.y(), p2t.y())));
+    Float deltaX = gamma(5) * (maxXt + maxZt);
+    Float deltaY = gamma(5) * (maxYt + maxZt);
 
-  // Compute $\delta_e$ term for triangle $t$ error bounds
-  Float deltaE = 2 * (gamma(2) * maxXt * maxYt + deltaY * maxXt + deltaX * maxYt);
+    // Compute $\delta_e$ term for triangle $t$ error bounds
+    Float deltaE = 2 * (gamma(2) * maxXt * maxYt + deltaY * maxXt + deltaX * maxYt);
 
-  // Compute $\delta_t$ term for triangle $t$ error bounds and check _t_
-  Float maxE = MaxComponent(Abs(vec3f(e0, e1, e2)));
-  Float deltaT = 3 *
-    (gamma(3) * maxE * maxZt + deltaE * maxZt + deltaZ * maxE) *
-    ffabs(invDet);
-  if (t <= deltaT) {
-    [[unlikely]];
-    return false;
+    // Compute $\delta_t$ term for triangle $t$ error bounds and check _t_
+    Float maxE = MaxComponent(Abs(vec3f(e0, e1, e2)));
+    Float deltaT = 3 *
+      (gamma(3) * maxE * maxZt + deltaE * maxZt + deltaZ * maxE) *
+      ffabs(invDet);
+    if (t <= deltaT) {
+      return false;
+    }
   }
 
   vec3f dpdu, dpdv;
@@ -124,19 +113,15 @@ const bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
   Float determinant = DifferenceOfProducts(duv02[0],duv12[1],duv02[1],duv12[0]);
   bool degenerateUV = ffabs(determinant) < 1e-8;
   if (!degenerateUV) {
-    [[likely]];
     Float invdet = 1 / determinant;
     rec.dpdu = (duv12[1] * dp02 - duv02[1] * dp12) * invdet;
     rec.dpdv = (-duv12[0] * dp02 + duv02[0] * dp12) * invdet;
   }
   // if (degenerateUV || cross(rec.dpdu, rec.dpdv).squared_length() == 0) {
   if (degenerateUV || parallelVectors(rec.dpdu, rec.dpdv)) {
-
-    [[unlikely]];
     // Handle zero determinant for triangle partial derivative matrix
     vec3f ng = cross(p2 - p0, p1 - p0);
     if (ng.squared_length() == 0) {
-      [[unlikely]];
       // The triangle is actually degenerate; the intersection is
       // bogus.
       return false;
@@ -185,7 +170,6 @@ const bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
     
     normal3f np = (b0 * n1 + b1 * n2 + b2 * n3);
     if(np.squared_length() == 0) {
-      [[unlikely]];
       rec.normal = normal;
     } else {
       np.make_unit_vector();
