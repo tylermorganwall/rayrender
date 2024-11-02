@@ -174,7 +174,6 @@ const bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
   }
   rec.t = t;
   rec.p = pHit;
-  rec.pError = gamma(7) * vec3f(xAbsSum, yAbsSum, zAbsSum);
 
   rec.has_bump = false;
 

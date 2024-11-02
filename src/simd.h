@@ -826,40 +826,42 @@ inline uint32_t extract_index(float value) {
     return int_value & 0x3;
 }
 
-// inline int simd_extract_hitmask(const IVec4& vec) {
-// #ifdef HAS_NEON
-//     uint32_t elements[4];
-//     vst1q_u32(elements, vec.v); // Store SIMD vector to array
-
-//     int mask = ((elements[0] & 1) << 0) |
-//                ((elements[1] & 1) << 1) |
-//                ((elements[2] & 1) << 2) |
-//                ((elements[3] & 1) << 3);
-
-//     return mask;
-// #else
-//     // Scalar fallback
-//     int mask = ((vec[0] & 1) << 0) |
-//                ((vec[1] & 1) << 1) |
-//                ((vec[2] & 1) << 2) |
-//                ((vec[3] & 1) << 3);
-//     return mask;
-// #endif
-// }
-
 inline int simd_extract_hitmask(const IVec4& vec) {
-#ifdef HAS_NEON
-    // Mask the least significant bits
-    uint32x4_t masked = vandq_u32(vec.v, vdupq_n_u32(1)); // Elements are 0 or 1
+#ifdef HAS_SSE
+    // SSE implementation
+
+    // Mask the least significant bits (elements are 0 or 1)
+    __m128i masked = _mm_and_si128(vec.v, _mm_set1_epi32(1));
 
     // Multiply each element by its corresponding power of 2
-    uint32x4_t powers = {1, 2, 4, 8}; // 2^0, 2^1, 2^2, 2^3
+    // Powers of 2: [3]=8, [2]=4, [1]=2, [0]=1
+    __m128i powers = _mm_set_epi32(8, 4, 2, 1);
+    __m128i weighted = _mm_mullo_epi32(masked, powers);
+
+    // Sum the weighted bits
+    // Since SSE2 lacks horizontal add for integers, we sum manually
+    __m128i temp1 = _mm_add_epi32(weighted, _mm_srli_si128(weighted, 8)); // Sum pairs: [0]+[2], [1]+[3]
+    __m128i temp2 = _mm_add_epi32(temp1, _mm_srli_si128(temp1, 4));       // Sum all elements
+
+    int mask = _mm_cvtsi128_si32(temp2); // Extract the lowest 32 bits
+
+    return mask & 0xF; // Ensure only the lower 4 bits are used
+
+#elif defined(HAS_NEON)
+    // NEON implementation
+
+    // Mask the least significant bits (elements are 0 or 1)
+    uint32x4_t masked = vandq_u32(vec.v, vdupq_n_u32(1));
+
+    // Multiply each element by its corresponding power of 2
+    uint32x4_t powers = {1, 2, 4, 8}; // Powers of 2: 2^0, 2^1, 2^2, 2^3
     uint32x4_t weighted = vmulq_u32(masked, powers);
 
     // Sum the weighted bits
     uint32_t mask = vaddvq_u32(weighted); // Requires ARMv8.1-A
 
     return static_cast<int>(mask & 0xF);
+
 #else
     // Scalar fallback
     int mask = ((vec[0] & 1) << 0) |
@@ -869,101 +871,6 @@ inline int simd_extract_hitmask(const IVec4& vec) {
     return mask;
 #endif
 }
-
-// inline int simd_extract_hitmask(IVec4 hits) {
-// #ifdef HAS_SSE
-//     // SSE implementation
-//     __m128i zero = _mm_setzero_si128();
-//     __m128i cmp = _mm_cmpeq_epi32(hits.v, zero); // 0xFFFFFFFF where hits[i] == 0
-//     __m128i inv = _mm_andnot_si128(cmp, _mm_set1_epi32(-1)); // 0xFFFFFFFF where hits[i] != 0
-
-//     // Cast to __m128 to use _mm_movemask_ps
-//     __m128 mask_ps = _mm_castsi128_ps(inv);
-
-//     // Use movemask_ps to get bits: each bit corresponds to the sign bit of each float
-//     int mask = _mm_movemask_ps(mask_ps);
-
-//     // The relevant bits are the lowest 4 bits
-//     return mask & 0xF;
-
-// #elif defined(HAS_NEON)
-//     // NEON implementation
-//     // hits.v is int32x4_t
-//     uint32x4_t hits_vec = vreinterpretq_u32_s32(hits.v);
-
-//     // Compare hits_vec != 0, resulting in 0xFFFFFFFF where true
-//     uint32x4_t cmp_neq_zero = vmvnq_u32(vceqq_u32(hits_vec, vdupq_n_u32(0)));
-
-//     // Shift right by 31 bits to get 1 or 0 in each lane
-//     uint32x4_t shifted = vshrq_n_u32(cmp_neq_zero, 31);
-
-//     // Narrow to 16 bits to extract the lower bits
-//     uint16x4_t narrow = vmovn_u32(shifted);
-
-//     // Extract bits and assemble the mask
-//     uint16_t mask = (vget_lane_u16(narrow, 0) & 1) |
-//                     ((vget_lane_u16(narrow, 1) & 1) << 1) |
-//                     ((vget_lane_u16(narrow, 2) & 1) << 2) |
-//                     ((vget_lane_u16(narrow, 3) & 1) << 3);
-
-//     return mask;
-
-// #else
-//     // Generic implementation for other architectures
-//     int mask = 0;
-//     for (int i = 0; i < 4; ++i) {
-//         if (hits.xyzw[i] != 0) {
-//             mask |= (1 << i);
-//         }
-//     }
-//     return mask;
-// #endif
-// }
-
-// inline int simd_extract_hitmask(const IVec4& vec) {
-// #ifdef HAS_NEON
-//     int mask = ((vgetq_lane_u32(vec.v, 0) & 1) << 0) |
-//                ((vgetq_lane_u32(vec.v, 1) & 1) << 1) |
-//                ((vgetq_lane_u32(vec.v, 2) & 1) << 2) |
-//                ((vgetq_lane_u32(vec.v, 3) & 1) << 3);
-//     return mask;
-// #else
-//     // Scalar fallback
-//     int mask = ((vec[0] & 1) << 0) |
-//                ((vec[1] & 1) << 1) |
-//                ((vec[2] & 1) << 2) |
-//                ((vec[3] & 1) << 3);
-//     return mask;
-// #endif
-// }
-
-// inline int simd_extract_hitmask(const IVec4& vec) {
-// #ifdef HAS_NEON
-//     // Assuming vec.v is a uint32x4_t
-//     uint32x4_t tmp = vec.v;
-
-//     // Shift right to get the sign bits (or MSB)
-//     uint32x4_t shifted = vshrq_n_u32(tmp, 31); // Shift each 32-bit element right by 31 bits
-
-//     // Narrow to 16-bit integers
-//     uint16x4_t narrowed = vmovn_u32(shifted); // Narrow each 32-bit element to 16 bits
-
-//     // Reinterpret as a 64-bit integer
-//     uint64x1_t combined = vreinterpret_u64_u16(narrowed);
-
-//     // Extract the lower 4 bits as the hitmask
-//     uint64_t mask = vget_lane_u64(combined, 0) & 0xF;
-
-//     return static_cast<int>(mask);
-// #else
-//     // Scalar fallback
-//     int mask = 0;
-//     for (int i = 0; i < 4; ++i) {
-//         mask |= ((vec[i] >> 31) & 1) << i;
-//     }
-//     return mask;
-// #endif
-// }
 
 
 inline IVec4 sort_simd_4_floats(FVec4 values);
