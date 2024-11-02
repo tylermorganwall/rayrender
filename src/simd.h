@@ -7,8 +7,6 @@
 #include "point3.h"
 #include <cstddef> // For alignas
 
-// #define HAS_NEON
-
 // SIMD vector size (4 for SSE, 8 for AVX)
 #ifdef HAS_AVX
 #define SIMD_WIDTH 8
@@ -21,8 +19,6 @@
     #include <arm_neon.h>
 #elif defined(HAS_SSE)
     #include <xmmintrin.h>
-#else
-    #error "No SIMD support available"
 #endif
 
 #ifdef HAS_SSE
