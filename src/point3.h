@@ -263,7 +263,7 @@ inline void PermuteInPlace(point3<T>& v, int x, int y, int z) {
 
 template<typename T> 
 inline point3<T> Abs(const point3<T> &v) {
-  return(point3<T>(std::fabsf(v.x()), std::fabsf(v.y()), std::fabsf(v.z())));
+  return(point3<T>(::fabsf(v.x()), ::fabsf(v.y()), ::fabsf(v.z())));
 }
 
 template <typename T> inline Float

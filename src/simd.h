@@ -105,45 +105,6 @@ typedef struct alignas(16) IVec4 {
   int operator[](int i) const { return xyzw[i]; }
   int& operator[](int i) { return xyzw[i]; }
 
-  int i0() const {
-  #ifdef HAS_NEON
-      return vgetq_lane_s32(v, 0);
-  #elif defined(HAS_SSE)
-      return _mm_extract_epi32(v, 0);
-  #else
-      return xyzw[0];
-  #endif
-  }
-
-  int i1() const {
-  #ifdef HAS_NEON
-      return vgetq_lane_s32(v, 1);
-  #elif defined(HAS_SSE)
-      return _mm_extract_epi32(v, 1);
-  #else
-      return xyzw[1];
-  #endif
-  }
-
-  int i2() const {
-  #ifdef HAS_NEON
-      return vgetq_lane_s32(v, 2);
-  #elif defined(HAS_SSE)
-      return _mm_extract_epi32(v, 2);
-  #else
-      return xyzw[2];
-  #endif
-  }
-
-  int i3() const {
-  #ifdef HAS_NEON
-      return vgetq_lane_s32(v, 3);
-  #elif defined(HAS_SSE)
-      return _mm_extract_epi32(v, 3);
-  #else
-      return xyzw[3];
-  #endif
-  }
 } IVec4;
 
 
@@ -156,28 +117,6 @@ inline FVec4 simd_load(const float* ptr) {
   result.v = _mm_load_ps(ptr);
 #elif defined(HAS_NEON)
   result.v = vld1q_f32(ptr);
-#else
-  for (int i = 0; i < SIMD_WIDTH; ++i) {
-    result.v[i] = ptr[i];
-  }
-#endif
-  return result;
-}
-
-
-// SIMD operations
-inline IVec4 simd_load_int(const int* ptr) {
-  IVec4 result;
-#ifdef HAS_AVX
-  result.v = _mm256_load_ps(ptr);
-#elif defined(HAS_SSE)
-  result.v = _mm_load_ps(ptr);
-#elif defined(HAS_NEON)
-  result.v[0] = ptr[0];
-  result.v[1] = ptr[1];
-  result.v[2] = ptr[2];
-  result.v[3] = ptr[3];
-  // result.v = vld1q_f32(ptr);
 #else
   for (int i = 0; i < SIMD_WIDTH; ++i) {
     result.v[i] = ptr[i];
@@ -335,10 +274,9 @@ inline IVec4 simd_cast_to_int(SimdMask mask) {
     result.v = vreinterpretq_s32_f32(mask.v);
     return result;
 #else
-    // Fallback for non-SIMD
     IVec4 result;
     for (int i = 0; i < 4; ++i) {
-        result.xyzw[i] = (mask.xyzw[i] != 0.0f) ? -1 : 0;
+        result.xyzw[i] = reinterpret_cast<int&>(mask.xyzw[i]);
     }
     return result;
 #endif
@@ -563,45 +501,25 @@ inline IVec4 simd_shuffle(IVec4 a, int idx0, int idx1, int idx2, int idx3) {
     return result;
 }
 
-// inline SimdMask simd_cmpneq(IVec4 a, IVec4 b) {
-// #ifdef HAS_AVX
-//     SimdMask result;
-//     result.v = _mm256_castsi256_ps(_mm256_cmp_epi32(a.v, b.v, _MM_CMPINT_NE));
-//     return result;
-// #elif defined(HAS_SSE)
-//     SimdMask result;
-//     result.v = _mm_castsi128_ps(_mm_cmpneq_epi32(a.v, b.v));
-//     return result;
-// #elif defined(HAS_NEON)
-//     SimdMask result;
-//     result.v = vreinterpretq_f32_u32(vmvnq_u32(vceqq_s32(a.v, b.v)));
-//     return result;
-// #else
-//     SimdMask result;
-//     for (int i = 0; i < SIMD_WIDTH; ++i) {
-//         result.v[i] = (a.v[i] != b.v[i]) ? 0xFFFFFFFF : 0;
-//     }
-//     return result;
-// #endif
-// }
-
 inline IVec4 simd_cmpneq(IVec4 a, IVec4 b) {
 #ifdef HAS_AVX
-    SimdMask result;
-    result.v = _mm256_castsi256_ps(_mm256_cmp_epi32(a.v, b.v, _MM_CMPINT_NE));
+    IVec4 result;
+    __m256i cmp = _mm256_cmpeq_epi32(a.v, b.v);
+    result.v = _mm256_xor_si256(cmp, _mm256_set1_epi32(-1)); // Invert bits
     return result;
 #elif defined(HAS_SSE)
-    SimdMask result;
-    result.v = _mm_castsi128_ps(_mm_cmpneq_epi32(a.v, b.v));
+    IVec4 result;
+    __m128i cmp = _mm_cmpeq_epi32(a.v, b.v);
+    result.v = _mm_xor_si128(cmp, _mm_set1_epi32(-1)); // Invert bits
     return result;
 #elif defined(HAS_NEON)
     IVec4 result;
-    result.v = vmvnq_u32(vceqq_s32(a.v, b.v));
+    result.v = vmvnq_s32(vceqq_s32(a.v, b.v));
     return result;
 #else
-    SimdMask result;
-    for (int i = 0; i < SIMD_WIDTH; ++i) {
-        result.v[i] = (a.v[i] != b.v[i]) ? 0xFFFFFFFF : 0;
+    IVec4 result;
+    for (int i = 0; i < 4; ++i) {
+        result.xyzw[i] = (a.xyzw[i] != b.xyzw[i]) ? -1 : 0;
     }
     return result;
 #endif
@@ -631,22 +549,22 @@ inline IVec4 simd_cmpneq(IVec4 a, IVec4 b) {
 // }
 
 inline IVec4 simd_and(IVec4 a, IVec4 b) {
-#ifdef HAS_AVX
-    SimdMask result;
-    result.v = _mm256_and_ps(a.v, b.v);
+#ifdef HAS_AVX2
+    IVec4 result;
+    result.v = _mm256_and_si256(a.v, b.v);
     return result;
 #elif defined(HAS_SSE)
-    SimdMask result;
-    result.v = _mm_and_ps(a.v, b.v);
+    IVec4 result;
+    result.v = _mm_and_si128(a.v, b.v);
     return result;
 #elif defined(HAS_NEON)
     IVec4 result;
-    result.v = (vandq_u32((a.v), (b.v)));
+    result.v = vandq_s32(a.v, b.v);
     return result;
 #else
-    SimdMask result;
-    for (int i = 0; i < SIMD_WIDTH; ++i) {
-        result.v[i] = a.v[i] & b.v[i];
+    IVec4 result;
+    for (int i = 0; i < 4; ++i) {
+        result.xyzw[i] = a.xyzw[i] & b.xyzw[i];
     }
     return result;
 #endif
@@ -741,25 +659,48 @@ inline SimdMask simd_cmplt(FVec4 a, FVec4 b) {
     #endif
 }
 
-inline IVec4 simd_blend_int(SimdMask mask, IVec4 a, IVec4 b) {
-    IVec4 mask_int = simd_cast_to_int(mask);
+// inline IVec4 simd_blend_int(SimdMask mask, IVec4 a, IVec4 b) {
+//     IVec4 mask_int = simd_cast_to_int(mask);
 
-    #ifdef HAS_SSE
-        IVec4 result;
-        result.v = _mm_or_si128(_mm_and_si128(mask_int.v, a.v), _mm_andnot_si128(mask_int.v, b.v));
-        return result;
-    #elif defined(HAS_NEON)
-        IVec4 result;
-        result.v = vbslq_s32(vreinterpretq_u32_s32(mask_int.v), a.v, b.v);
-        return result;
-    #else
-        // Fallback for non-SIMD
-        IVec4 result;
-        for (int i = 0; i < 4; ++i) {
-            result.xyzw[i] = mask_int.xyzw[i] ? a.xyzw[i] : b.xyzw[i];
-        }
-        return result;
-    #endif
+//     #ifdef HAS_SSE
+//         IVec4 result;
+//         result.v = _mm_or_si128(_mm_and_si128(mask_int.v, a.v), _mm_andnot_si128(mask_int.v, b.v));
+//         return result;
+//     #elif defined(HAS_NEON)
+//         IVec4 result;
+//         result.v = vbslq_s32(vreinterpretq_u32_s32(mask_int.v), a.v, b.v);
+//         return result;
+//     #else
+//         // Fallback for non-SIMD
+//         IVec4 result;
+//         for (int i = 0; i < 4; ++i) {
+//             result.xyzw[i] = mask_int.xyzw[i] ? a.xyzw[i] : b.xyzw[i];
+//         }
+//         return result;
+//     #endif
+// }
+
+inline IVec4 simd_blend_int(SimdMask mask, IVec4 a, IVec4 b) {
+#ifdef HAS_AVX
+    IVec4 result;
+    result.v = _mm256_blendv_epi8(b.v, a.v, _mm256_castps_si256(mask.v));
+    return result;
+#elif defined(HAS_SSE)
+    IVec4 result;
+    result.v = _mm_or_si128(_mm_and_si128(_mm_castps_si128(mask.v), a.v),
+                            _mm_andnot_si128(_mm_castps_si128(mask.v), b.v));
+    return result;
+#elif defined(HAS_NEON)
+    IVec4 result;
+    result.v = vbslq_s32(vreinterpretq_u32_f32(mask.v), a.v, b.v);
+    return result;
+#else
+    IVec4 result;
+    for (int i = 0; i < 4; ++i) {
+        result.xyzw[i] = (reinterpret_cast<uint32_t&>(mask.xyzw[i])) ? a.xyzw[i] : b.xyzw[i];
+    }
+    return result;
+#endif
 }
 
 inline SimdMask simd_not(SimdMask mask) {
@@ -774,7 +715,8 @@ inline SimdMask simd_not(SimdMask mask) {
 #else
     SimdMask result;
     for (int i = 0; i < 4; ++i) {
-        result.xyzw[i] = ~reinterpret_cast<unsigned int&>(mask.xyzw[i]);
+        uint32_t bits = ~reinterpret_cast<uint32_t&>(mask.xyzw[i]);
+        result.xyzw[i] = reinterpret_cast<float&>(bits);
     }
     return result;
 #endif
