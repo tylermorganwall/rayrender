@@ -52,11 +52,12 @@ else
 fi
 
 # Check for AVX, SSE, and NEON support
+# Change AVX define to -DHAS_AVX when supported and CXXFLAGS to -mavx
 AC_MSG_CHECKING([for AVX support])
 AC_COMPILE_IFELSE([AC_LANG_PROGRAM([#include <immintrin.h>], [__m256 test = _mm256_setzero_ps();])],
   [AC_MSG_RESULT([yes])
-   DEFINES="${DEFINES} -DHAS_AVX -DRAYSIMD"
-   CXXFLAGS="${CXXFLAGS} -mavx"],
+   DEFINES="${DEFINES} -DHAS_SSE -DRAYSIMD"
+   CXXFLAGS="${CXXFLAGS} -msse"],
   [AC_MSG_RESULT([no])])
 
 AC_MSG_CHECKING([for SSE support])

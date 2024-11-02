@@ -4411,6 +4411,7 @@ else
 fi
 
 # Check for AVX, SSE, and NEON support
+# Change AVX define to -DHAS_AVX when supported and CXXFLAGS to -mavx
 { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for AVX support" >&5
 printf %s "checking for AVX support... " >&6; }
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -4428,8 +4429,8 @@ if ac_fn_cxx_try_compile "$LINENO"
 then :
   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 printf "%s\n" "yes" >&6; }
-   DEFINES="${DEFINES} -DHAS_AVX -DRAYSIMD"
-   CXXFLAGS="${CXXFLAGS} -mavx"
+   DEFINES="${DEFINES} -DHAS_SSE -DRAYSIMD"
+   CXXFLAGS="${CXXFLAGS} -msse"
 else $as_nop
   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
 printf "%s\n" "no" >&6; }
