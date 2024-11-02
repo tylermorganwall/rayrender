@@ -15,7 +15,7 @@ const bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
   point3f p0t = p0 - origin_vec;
   point3f p1t = p1 - origin_vec;
   point3f p2t = p2 - origin_vec;
-    Float Sx = r.Sx;
+  Float Sx = r.Sx;
   Float Sy = r.Sy;
   Float Sz = r.Sz;
   int kx = r.kx;

@@ -1,6 +1,7 @@
 #include "bvh.h"
 #include "assert.h"
 #include "mathinline.h"
+#include <arm_neon.h>
 #include <cmath>
 #include <limits>
 #include "raylog.h"
@@ -12,7 +13,7 @@
 #include <functional>
 
 // Define a structure to hold node index and tEnter time
-struct BVHNodeEntry {
+struct alignas(16) BVHNodeEntry {
     int nodeIndex;
     float tEnter;
 
@@ -30,51 +31,40 @@ inline int floatToIntBits(float f) {
     return i;
 }
 
+//Insertion sort is faster than a heap here
 template <size_t MaxSize>
 class StaticPriorityQueue {
 public:
     StaticPriorityQueue() : size_(0) {}
 
-    // Insert a new entry into the priority queue
+    // Insert a new entry into the priority queue using insertion sort
     void push(const BVHNodeEntry& entry) {
-        if (size_ < MaxSize) {
-            // Place the new entry at the end
-            data_[size_] = entry;
-            size_++;
+        ASSERT(size_ < MaxSize && "Priority queue overflow");
 
-            // Up-heapify to maintain the min-heap property
-            int i = size_ - 1;
-            while (i > 0) {
-                int parent = (i - 1) / 2;
-                if (data_[i].tEnter >= data_[parent].tEnter) {
-                    break;
-                }
-                std::swap(data_[i], data_[parent]);
-                i = parent;
-            }
-        } else {
-            // Handle overflow if necessary
-            // For example, you could assert or throw an exception
-            // Or resize the data_ array if allowed
-            // Here, we'll assert to catch overflows during development
-            assert(false && "Priority queue overflow");
+        // Find the correct position to insert the new entry
+        int i = size_ - 1;
+        while (i >= 0 && data_[i].tEnter < entry.tEnter) {
+            // Shift elements to make room for the new entry
+            data_[i + 1] = data_[i];
+            i--;
         }
+        // Insert the new entry at the found position
+        data_[i + 1] = entry;
+        size_++;
     }
 
     // Remove and return the element with the smallest tEnter
     BVHNodeEntry pop() {
-        assert(size_ > 0 && "Priority queue underflow");
-        BVHNodeEntry top = data_[0];
-        size_--;
-        data_[0] = data_[size_];
-        heapify(0);
-        return top;
+        ASSERT(size_ > 0 && "Priority queue underflow");
+        // The smallest element is at the end of the array
+        return data_[--size_];
     }
 
     // Return a const reference to the element with the smallest tEnter
     const BVHNodeEntry& top() const {
-        assert(size_ > 0 && "Priority queue is empty");
-        return data_[0];
+        ASSERT(size_ > 0 && "Priority queue is empty");
+        // The smallest element is at the end
+        return data_[size_ - 1];
     }
 
     bool empty() const {
@@ -90,29 +80,150 @@ public:
     }
 
 private:
-    void heapify(int i) {
-        int smallest = i;
-        while (true) {
-            int left = 2 * i + 1;
-            int right = 2 * i + 2;
-
-            if (left < static_cast<int>(size_) && data_[left].tEnter < data_[smallest].tEnter) {
-                smallest = left;
-            }
-            if (right < static_cast<int>(size_) && data_[right].tEnter < data_[smallest].tEnter) {
-                smallest = right;
-            }
-            if (smallest != i) {
-                std::swap(data_[i], data_[smallest]);
-                i = smallest;
-            } else {
-                break;
-            }
-        }
-    }
-
     BVHNodeEntry data_[MaxSize];
     size_t size_;
+};
+
+
+// template <size_t MaxSize>
+// class StaticPriorityQueue {
+// public:
+//     StaticPriorityQueue() : size_(0) {}
+
+//     // Insert a new entry into the priority queue
+//     // void push(const BVHNodeEntry& entry) {
+//     //     if (size_ < MaxSize) {
+//     //         // Place the new entry at the end
+//     //         data_[size_] = entry;
+//     //         size_++;
+
+//     //         // Up-heapify to maintain the min-heap property
+//     //         int i = size_ - 1;
+//     //         while (i > 0) {
+//     //             int parent = (i - 1) / 2;
+//     //             if (data_[i].tEnter >= data_[parent].tEnter) {
+//     //                 break;
+//     //             }
+//     //             std::swap(data_[i], data_[parent]);
+//     //             i = parent;
+//     //         }
+//     //     } else {
+//     //         // Handle overflow if necessary
+//     //         // For example, you could assert or throw an exception
+//     //         // Or resize the data_ array if allowed
+//     //         // Here, we'll assert to catch overflows during development
+//     //         ASSERT(false && "Priority queue overflow");
+//     //     }
+//     // }
+//     inline void push(const BVHNodeEntry& entry) {
+//         ASSERT(size_ < MaxSize && "Priority queue overflow");
+//         int i = size_;
+//         data_[i] = entry;
+//         size_++;
+
+//         while (i > 0) {
+//             int parent = (i - 1) >> 1; // Use bitwise shift instead of division
+//             if (data_[i].tEnter >= data_[parent].tEnter) {
+//                 break;
+//             }
+//             std::swap(data_[i], data_[parent]);
+//             i = parent;
+//         }
+//     }
+
+//     // Remove and return the element with the smallest tEnter
+//     BVHNodeEntry pop() {
+//         ASSERT(size_ > 0 && "Priority queue underflow");
+//         BVHNodeEntry top = data_[0];
+//         size_--;
+//         data_[0] = data_[size_];
+//         heapify(0);
+//         return top;
+//     }
+
+//     // Return a const reference to the element with the smallest tEnter
+//     const BVHNodeEntry& top() const {
+//         ASSERT(size_ > 0 && "Priority queue is empty");
+//         return data_[0];
+//     }
+
+//     bool empty() const {
+//         return size_ == 0;
+//     }
+
+//     size_t size() const {
+//         return size_;
+//     }
+
+//     void clear() {
+//         size_ = 0;
+//     }
+
+// private:
+//     // void heapify(int i) {
+//     //     int smallest = i;
+//     //     while (true) {
+//     //         int left = 2 * i + 1;
+//     //         int right = 2 * i + 2;
+
+//     //         if (left < static_cast<int>(size_) && data_[left].tEnter < data_[smallest].tEnter) {
+//     //             smallest = left;
+//     //         }
+//     //         if (right < static_cast<int>(size_) && data_[right].tEnter < data_[smallest].tEnter) {
+//     //             smallest = right;
+//     //         }
+//     //         if (smallest != i) {
+//     //             std::swap(data_[i], data_[smallest]);
+//     //             i = smallest;
+//     //         } else {
+//     //             break;
+//     //         }
+//     //     }
+//     // }
+//     inline void heapify(int i) {
+//         while (true) {
+//             int left = (i << 1) + 1;
+//             int right = left + 1;
+//             int smallest = i;
+
+//             if (left < static_cast<int>(size_) && data_[left].tEnter < data_[smallest].tEnter) {
+//                 smallest = left;
+//             }
+//             if (right < static_cast<int>(size_) && data_[right].tEnter < data_[smallest].tEnter) {
+//                 smallest = right;
+//             }
+//             if (smallest != i) {
+//                 std::swap(data_[i], data_[smallest]);
+//                 i = smallest;
+//             } else {
+//                 break;
+//             }
+//         }
+//     }
+
+//     BVHNodeEntry data_[MaxSize];
+//     size_t size_;
+// };
+
+// Precomputed table mapping hitmask to valid indices
+// This ended up being slightly slower than just a branch
+static const int validIndices[16][5] = {
+    {0, -1, -1, -1, -1 }, // 0b0000
+    {1, 0, -1, -1, -1 },  // 0b0001
+    {1, 1, -1, -1, -1 },  // 0b0010
+    {2, 0, 1, -1, -1 },   // 0b0011
+    {1, 2, -1, -1, -1 },  // 0b0100
+    {2, 0, 2, -1, -1 },   // 0b0101
+    {2, 1, 2, -1, -1 },   // 0b0110
+    {3, 0, 1, 2, -1 },    // 0b0111
+    {1, 3, -1, -1, -1 },  // 0b1000
+    {2, 0, 3, -1, -1 },   // 0b1001
+    {2, 1, 3, -1, -1 },   // 0b1010
+    {3, 0, 1, 3, -1 },    // 0b1011
+    {2, 2, 3, -1, -1 },   // 0b1100
+    {3, 0, 2, 3, -1 },    // 0b1101
+    {3, 1, 2, 3, -1 },    // 0b1110
+    {4, 0, 1, 2, 3 }      // 0b1111
 };
 
 BVHAggregate::BVHAggregate(std::vector<std::shared_ptr<hitable> > prims,
@@ -602,9 +713,6 @@ const bool BVHAggregate::hit(const ray& r, Float t_min, Float t_max, hit_record&
 
     bool any_hit = false;
     
-    IVec4 hits;
-    FVec4 tEnters;
-    
     while (!nodesToVisit.empty()) {
         // Pop the node with the smallest tEnter
         BVHNodeEntry entry = nodesToVisit.top();
@@ -613,9 +721,9 @@ const bool BVHAggregate::hit(const ray& r, Float t_min, Float t_max, hit_record&
         const LinearBVHNode4* node = &nodes4[currentNodeIndex];
 
         // Early exit if the tEnter is greater than tMax
-        if (entry.tEnter > t_max) {
-            continue;
-        }
+        // if (entry.tEnter > t_max) {
+        //     continue;
+        // }
 
         if (node->nPrimitives > 0) {
             // Leaf node: test ray against primitives
@@ -636,24 +744,316 @@ const bool BVHAggregate::hit(const ray& r, Float t_min, Float t_max, hit_record&
             const BBox4& bbox4 = node->bbox4;
             // Perform SIMD ray-box intersection
 
+            IVec4 hits;
+            FVec4 tEnters;
+            
             rayBBoxIntersect4(r, bbox4, t_min, t_max, hits, tEnters);//, tExits);
 
-            IVec4 valid_hit = simd_and(hits, simd_not_equals_minus_one(node->childOffsets));
+            const IVec4 valid_hit = simd_and(hits, simd_not_equals_minus_one(node->childOffsets));
+            int hitmask = simd_extract_hitmask(valid_hit);
+
+            float tEntersArray[4];
+            simd_extract_fvec4(tEnters, tEntersArray);
+
             // int hitmask = simd_extract_hitmask(valid_hit);
 
-            // Insert valid child nodes into the priority queue
-            for (int i = 0; i < 4; ++i) {
-                int valid = valid_hit[i];
-                // int valid = hitmask & (0x1 << i);
-                int childNodeIndex = node->childOffsets[i];
+            // Get the array of valid indices for the current hitmask
+            // const int* indices = validIndices[hitmask];
 
-                if (valid && childNodeIndex != -1) {
-                // if (hitmask & (0x1 << i)) {
-                    int childNodeIndex = node->childOffsets[i];
-                    float tEnter = tEnters[i];
-                    nodesToVisit.push({childNodeIndex, tEnter});
+            // Process the valid child nodes
+            // for (int i = 1; i < indices[0]+1; ++i) {
+            //     int idx = indices[i];
+            //     int childNodeIndex = node->childOffsets[idx];
+            //     float tEnter = tEnters[idx];
+            //     nodesToVisit.push({childNodeIndex, tEnter});
+            // }
+            // Insert valid child nodes into the priority queue
+            // while (hitmask) {
+            //     int i = __builtin_ctz(hitmask); // Count Trailing Zeros to find the index of the least significant set bit
+            //     hitmask &= hitmask - 1;         // Clear the least significant set bit
+
+            //     int childNodeIndex = node->childOffsets[i];
+            //     float tEnter = tEnters[i];
+            //     nodesToVisit.push({childNodeIndex, tEnter});
+            // }
+        
+
+            // switch (hitmask) { 
+            //     case 0: // 0000
+            //         // No valid hits; do nothing
+            //         break;
+
+            //     case 1: // 0001
+            //         // Process index 0
+            //         nodesToVisit.push({node->childOffsets[0], tEntersArray[0]});
+            //         break;
+
+            //     case 2: // 0010
+            //         // Process index 1
+            //         nodesToVisit.push({node->childOffsets[1], tEntersArray[1]});
+            //         break;
+
+            //     case 3: // 0011
+            //         // Process indices 0 and 1
+            //         nodesToVisit.push({node->childOffsets[0], tEntersArray[0]});
+            //         nodesToVisit.push({node->childOffsets[1], tEntersArray[1]});
+            //         break;
+
+            //     case 4: // 0100
+            //         // Process index 2
+            //         nodesToVisit.push({node->childOffsets[2], tEntersArray[2]});
+            //         break;
+
+            //     case 5: // 0101
+            //         // Process indices 0 and 2
+            //         nodesToVisit.push({node->childOffsets[0], tEntersArray[0]});
+            //         nodesToVisit.push({node->childOffsets[2], tEntersArray[2]});
+            //         break;
+
+            //     case 6: // 0110
+            //         // Process indices 1 and 2
+            //         nodesToVisit.push({node->childOffsets[1], tEntersArray[1]});
+            //         nodesToVisit.push({node->childOffsets[2], tEntersArray[2]});
+            //         break;
+
+            //     case 7: // 0111
+            //         // Process indices 0, 1, and 2
+            //         nodesToVisit.push({node->childOffsets[0], tEntersArray[0]});
+            //         nodesToVisit.push({node->childOffsets[1], tEntersArray[1]});
+            //         nodesToVisit.push({node->childOffsets[2], tEntersArray[2]});
+            //         break;
+
+            //     case 8: // 1000
+            //         // Process index 3
+            //         nodesToVisit.push({node->childOffsets[3], tEntersArray[3]});
+            //         break;
+
+            //     case 9: // 1001
+            //         // Process indices 0 and 3
+            //         nodesToVisit.push({node->childOffsets[0], tEntersArray[0]});
+            //         nodesToVisit.push({node->childOffsets[3], tEntersArray[3]});
+            //         break;
+
+            //     case 10: // 1010
+            //         // Process indices 1 and 3
+            //         nodesToVisit.push({node->childOffsets[1], tEntersArray[1]});
+            //         nodesToVisit.push({node->childOffsets[3], tEntersArray[3]});
+            //         break;
+
+            //     case 11: // 1011
+            //         // Process indices 0, 1, and 3
+            //         nodesToVisit.push({node->childOffsets[0], tEntersArray[0]});
+            //         nodesToVisit.push({node->childOffsets[1], tEntersArray[1]});
+            //         nodesToVisit.push({node->childOffsets[3], tEntersArray[3]});
+            //         break;
+
+            //     case 12: // 1100
+            //         // Process indices 2 and 3
+            //         nodesToVisit.push({node->childOffsets[2], tEntersArray[2]});
+            //         nodesToVisit.push({node->childOffsets[3], tEntersArray[3]});
+            //         break;
+
+            //     case 13: // 1101
+            //         // Process indices 0, 2, and 3
+            //         nodesToVisit.push({node->childOffsets[0], tEntersArray[0]});
+            //         nodesToVisit.push({node->childOffsets[2], tEntersArray[2]});
+            //         nodesToVisit.push({node->childOffsets[3], tEntersArray[3]});
+            //         break;
+
+            //     case 14: // 1110
+            //         // Process indices 1, 2, and 3
+            //         nodesToVisit.push({node->childOffsets[1], tEntersArray[1]});
+            //         nodesToVisit.push({node->childOffsets[2], tEntersArray[2]});
+            //         nodesToVisit.push({node->childOffsets[3], tEntersArray[3]});
+            //         break;
+
+            //     case 15: // 1111
+            //         // Process all indices 0 to 3
+            //         nodesToVisit.push({node->childOffsets[0], tEntersArray[0]});
+            //         nodesToVisit.push({node->childOffsets[1], tEntersArray[1]});
+            //         nodesToVisit.push({node->childOffsets[2], tEntersArray[2]});
+            //         nodesToVisit.push({node->childOffsets[3], tEntersArray[3]});
+            //         break;
+
+            //     default:
+            //         // Should not happen; handle error if necessary
+            //         break;
+            // }
+            // if (hitmask & 1) {
+            //     int childNodeIndex = node->childOffsets[0];
+            //     float tEnter = tEntersArray[0];
+            //     nodesToVisit.push({childNodeIndex, tEnter});
+            // }
+            // if (hitmask & 2) {
+            //     int childNodeIndex = node->childOffsets[1];
+            //     float tEnter = tEntersArray[1];
+            //     nodesToVisit.push({childNodeIndex, tEnter});
+            // }
+            // if (hitmask & 4) {
+            //     int childNodeIndex = node->childOffsets[2];
+            //     float tEnter = tEntersArray[2];
+            //     nodesToVisit.push({childNodeIndex, tEnter});
+            // }
+            // if (hitmask & 8) {
+            //     int childNodeIndex = node->childOffsets[3];
+            //     float tEnter = tEntersArray[3];
+            //     nodesToVisit.push({childNodeIndex, tEnter});
+            // }
+            // while (hitmask) {
+            //     int i = __builtin_ctz(hitmask); // Index of least significant set bit
+            //     hitmask &= hitmask - 1;         // Clear least significant set bit
+
+            //     int childNodeIndex = node->childOffsets[i];
+            //     float tEnter = tEntersArray[i];
+
+            //     nodesToVisit.push({childNodeIndex, tEnter});
+            // }
+            for (int i = 0; i < 4; ++i) {
+                const bool valid = (hitmask >> i) & 1;
+                if (valid) {
+                    nodesToVisit.push({node->childOffsets[i], tEntersArray[i]});
                 }
             }
+            // const bool valid1 = (hitmask >> 0) & 1;
+            // const bool valid2 = (hitmask >> 1) & 1;
+            // const bool valid3 = (hitmask >> 2) & 1;
+            // const bool valid4 = (hitmask >> 3) & 1;
+
+            // {
+            //     // const int valid = (hitmask >> 0) & 1;
+            //     if (valid1) {
+            //         int childNodeIndex = node->childOffsets[0];
+            //         // Access tEnter value
+            //         float tEnter;
+            //         #ifdef HAS_NEON
+            //             tEnter = vgetq_lane_f32(tEnters.v, 0); // Extract tEnter value
+            //         #else
+            //             tEnter = tEnters[i]; // Access directly if tEnters is an array
+            //         #endif
+            //         // float tEnter = tEnters[i];
+            //         nodesToVisit.push({childNodeIndex, tEnter});
+            //     }
+            // }
+            // {
+            //     // const int valid = (hitmask >> 1) & 1;
+            //     if (valid2) {
+            //         int childNodeIndex = node->childOffsets[1];
+            //         // Access tEnter value
+            //         float tEnter;
+            //         #ifdef HAS_NEON
+            //             tEnter = vgetq_lane_f32(tEnters.v, 1); // Extract tEnter value
+            //         #else
+            //             tEnter = tEnters[i]; // Access directly if tEnters is an array
+            //         #endif
+            //         // float tEnter = tEnters[i];
+            //         nodesToVisit.push({childNodeIndex, tEnter});
+            //     }
+            // }
+            // {
+            //     // const int valid = (hitmask >> 2) & 1;
+            //     if (valid3) {
+            //         int childNodeIndex = node->childOffsets[2];
+            //         // Access tEnter value
+            //         float tEnter;
+            //         #ifdef HAS_NEON
+            //             tEnter = vgetq_lane_f32(tEnters.v, 2); // Extract tEnter value
+            //         #else
+            //             tEnter = tEnters[i]; // Access directly if tEnters is an array
+            //         #endif
+            //         // float tEnter = tEnters[i];
+            //         nodesToVisit.push({childNodeIndex, tEnter});
+            //     }
+            // }
+            // {
+            //     // const int valid = (hitmask >> 3) & 1;
+            //     if (valid4) {
+            //         int childNodeIndex = node->childOffsets[3];
+            //         // Access tEnter value
+            //         float tEnter;
+            //         #ifdef HAS_NEON
+            //             tEnter = vgetq_lane_f32(tEnters.v, 3); // Extract tEnter value
+            //         #else
+            //             tEnter = tEnters[i]; // Access directly if tEnters is an array
+            //         #endif
+            //         // float tEnter = tEnters[i];
+            //         nodesToVisit.push({childNodeIndex, tEnter});
+            //     }
+            // }
+
+            // If necessary, store tEnters into an array
+            // float tEntersArray[4];
+            // #ifdef HAS_NEON
+            // vst1q_f32(tEntersArray, tEnters.v); // NEON intrinsic to store SIMD vector to array
+            // #else
+            // // If not using SIMD or tEnters is already an array, this step is unnecessary
+            // #endif
+
+            // // Process valid child nodes using the hitmask
+            // while (hitmask) {
+            //     // Get the index of the least significant set bit
+            //     int i = __builtin_ctz(hitmask);
+
+            //     // Clear the least significant set bit
+            //     hitmask &= hitmask - 1;
+
+            //     // Access child node index
+            //     int childNodeIndex = node->childOffsets[i];
+
+            //     // Access tEnter value
+            //     float tEnter;
+            // #ifdef HAS_NEON
+            //     tEnter = tEntersArray[i]; // Efficient access from array
+            // #else
+            //     tEnter = tEnters[i]; // Direct access if tEnters is an array
+            // #endif
+
+            //     // Push the child node onto the priority queue
+            //     nodesToVisit.push({childNodeIndex, tEnter});
+            // }
+            // for (int i = 0; i < 4; ++i) {
+            //     const int valid = valid_hit[i];
+            //     if (valid) {
+            //         int childNodeIndex = node->childOffsets[i];
+            //         float tEnter = tEnters[i];
+            //         nodesToVisit.push({childNodeIndex, tEnter});
+            //     }
+            // }
+            // {
+            //     const int valid = hitmask & (1 << 0);
+            //     // const int valid = valid_hit.i0();
+            //     if (valid) {
+            //         int childNodeIndex = node->childOffsets[0];
+            //         float tEnter = tEnters[0];
+            //         nodesToVisit.push({childNodeIndex, tEnter});
+            //     }
+            // }
+            // {
+            //     const int valid = hitmask & (1 << 1);
+            //     // const int valid = valid_hit.i1();
+            //     if (valid) {
+            //         int childNodeIndex = node->childOffsets[1];
+            //         float tEnter = tEnters[1];
+            //         nodesToVisit.push({childNodeIndex, tEnter});
+            //     }
+            // }
+            // {
+            //     const int valid = hitmask & (1 << 2);
+            //     // const int valid = valid_hit.i2();
+            //     if (valid) {
+            //         int childNodeIndex = node->childOffsets[2];
+            //         float tEnter = tEnters[2];
+            //         nodesToVisit.push({childNodeIndex, tEnter});
+            //     }
+            // }
+            // {
+            //     const int valid = hitmask & (1 << 3);
+            //     // const int valid = valid_hit.i3();
+            //     if (valid) {
+            //         int childNodeIndex = node->childOffsets[3];
+            //         float tEnter = tEnters[3];
+            //         nodesToVisit.push({childNodeIndex, tEnter});
+            //     }
+            // }
         }
     }
 

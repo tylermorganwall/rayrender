@@ -106,8 +106,48 @@ typedef struct alignas(16) IVec4 {
     IVec4(int32x4_t i32x4_) : v(i32x4_) {};
 #endif
 
-    int operator[](int i) const { return xyzw[i]; }
-    int& operator[](int i) { return xyzw[i]; }
+  int operator[](int i) const { return xyzw[i]; }
+  int& operator[](int i) { return xyzw[i]; }
+
+  int i0() const {
+  #ifdef HAS_NEON
+      return vgetq_lane_s32(v, 0);
+  #elif defined(HAS_SSE)
+      return _mm_extract_epi32(v, 0);
+  #else
+      return xyzw[0];
+  #endif
+  }
+
+  int i1() const {
+  #ifdef HAS_NEON
+      return vgetq_lane_s32(v, 1);
+  #elif defined(HAS_SSE)
+      return _mm_extract_epi32(v, 1);
+  #else
+      return xyzw[1];
+  #endif
+  }
+
+  int i2() const {
+  #ifdef HAS_NEON
+      return vgetq_lane_s32(v, 2);
+  #elif defined(HAS_SSE)
+      return _mm_extract_epi32(v, 2);
+  #else
+      return xyzw[2];
+  #endif
+  }
+
+  int i3() const {
+  #ifdef HAS_NEON
+      return vgetq_lane_s32(v, 3);
+  #elif defined(HAS_SSE)
+      return _mm_extract_epi32(v, 3);
+  #else
+      return xyzw[3];
+  #endif
+  }
 } IVec4;
 
 
@@ -616,6 +656,19 @@ inline IVec4 simd_and(IVec4 a, IVec4 b) {
 #endif
 }
 
+inline void simd_extract_fvec4(FVec4 src, float* dest) {
+#ifdef HAS_NEON
+    vst1q_f32(dest, src.v); // Store NEON float32x4 to array
+#elif defined(HAS_SSE)
+    _mm_store_ps(dest, src.v); // Store SSE __m128 to array
+#else
+    // Fallback for non-SIMD
+    for (int i = 0; i < 4; ++i) {
+        dest[i] = src.xyzw[i];
+    }
+#endif
+}
+
 inline IVec4 simd_not_equals_minus_one(IVec4 a) {
 #ifdef HAS_AVX2
     // AVX2 supports integer operations on 256-bit registers
@@ -773,55 +826,144 @@ inline uint32_t extract_index(float value) {
     return int_value & 0x3;
 }
 
-inline int simd_extract_hitmask(IVec4 hits) {
-#ifdef HAS_SSE
-    // SSE implementation
-    __m128i zero = _mm_setzero_si128();
-    __m128i cmp = _mm_cmpeq_epi32(hits.v, zero); // 0xFFFFFFFF where hits[i] == 0
-    __m128i inv = _mm_andnot_si128(cmp, _mm_set1_epi32(-1)); // 0xFFFFFFFF where hits[i] != 0
+// inline int simd_extract_hitmask(const IVec4& vec) {
+// #ifdef HAS_NEON
+//     uint32_t elements[4];
+//     vst1q_u32(elements, vec.v); // Store SIMD vector to array
 
-    // Cast to __m128 to use _mm_movemask_ps
-    __m128 mask_ps = _mm_castsi128_ps(inv);
+//     int mask = ((elements[0] & 1) << 0) |
+//                ((elements[1] & 1) << 1) |
+//                ((elements[2] & 1) << 2) |
+//                ((elements[3] & 1) << 3);
 
-    // Use movemask_ps to get bits: each bit corresponds to the sign bit of each float
-    int mask = _mm_movemask_ps(mask_ps);
+//     return mask;
+// #else
+//     // Scalar fallback
+//     int mask = ((vec[0] & 1) << 0) |
+//                ((vec[1] & 1) << 1) |
+//                ((vec[2] & 1) << 2) |
+//                ((vec[3] & 1) << 3);
+//     return mask;
+// #endif
+// }
 
-    // The relevant bits are the lowest 4 bits
-    return mask & 0xF;
+inline int simd_extract_hitmask(const IVec4& vec) {
+#ifdef HAS_NEON
+    // Mask the least significant bits
+    uint32x4_t masked = vandq_u32(vec.v, vdupq_n_u32(1)); // Elements are 0 or 1
 
-#elif defined(HAS_NEON)
-    // NEON implementation
-    // hits.v is int32x4_t
-    uint32x4_t hits_vec = vreinterpretq_u32_s32(hits.v);
+    // Multiply each element by its corresponding power of 2
+    uint32x4_t powers = {1, 2, 4, 8}; // 2^0, 2^1, 2^2, 2^3
+    uint32x4_t weighted = vmulq_u32(masked, powers);
 
-    // Compare hits_vec != 0, resulting in 0xFFFFFFFF where true
-    uint32x4_t cmp_neq_zero = vmvnq_u32(vceqq_u32(hits_vec, vdupq_n_u32(0)));
+    // Sum the weighted bits
+    uint32_t mask = vaddvq_u32(weighted); // Requires ARMv8.1-A
 
-    // Shift right by 31 bits to get 1 or 0 in each lane
-    uint32x4_t shifted = vshrq_n_u32(cmp_neq_zero, 31);
-
-    // Narrow to 16 bits to extract the lower bits
-    uint16x4_t narrow = vmovn_u32(shifted);
-
-    // Extract bits and assemble the mask
-    uint16_t mask = (vget_lane_u16(narrow, 0) & 1) |
-                    ((vget_lane_u16(narrow, 1) & 1) << 1) |
-                    ((vget_lane_u16(narrow, 2) & 1) << 2) |
-                    ((vget_lane_u16(narrow, 3) & 1) << 3);
-
-    return mask;
-
+    return static_cast<int>(mask & 0xF);
 #else
-    // Generic implementation for other architectures
-    int mask = 0;
-    for (int i = 0; i < 4; ++i) {
-        if (hits.xyzw[i] != 0) {
-            mask |= (1 << i);
-        }
-    }
+    // Scalar fallback
+    int mask = ((vec[0] & 1) << 0) |
+               ((vec[1] & 1) << 1) |
+               ((vec[2] & 1) << 2) |
+               ((vec[3] & 1) << 3);
     return mask;
 #endif
 }
+
+// inline int simd_extract_hitmask(IVec4 hits) {
+// #ifdef HAS_SSE
+//     // SSE implementation
+//     __m128i zero = _mm_setzero_si128();
+//     __m128i cmp = _mm_cmpeq_epi32(hits.v, zero); // 0xFFFFFFFF where hits[i] == 0
+//     __m128i inv = _mm_andnot_si128(cmp, _mm_set1_epi32(-1)); // 0xFFFFFFFF where hits[i] != 0
+
+//     // Cast to __m128 to use _mm_movemask_ps
+//     __m128 mask_ps = _mm_castsi128_ps(inv);
+
+//     // Use movemask_ps to get bits: each bit corresponds to the sign bit of each float
+//     int mask = _mm_movemask_ps(mask_ps);
+
+//     // The relevant bits are the lowest 4 bits
+//     return mask & 0xF;
+
+// #elif defined(HAS_NEON)
+//     // NEON implementation
+//     // hits.v is int32x4_t
+//     uint32x4_t hits_vec = vreinterpretq_u32_s32(hits.v);
+
+//     // Compare hits_vec != 0, resulting in 0xFFFFFFFF where true
+//     uint32x4_t cmp_neq_zero = vmvnq_u32(vceqq_u32(hits_vec, vdupq_n_u32(0)));
+
+//     // Shift right by 31 bits to get 1 or 0 in each lane
+//     uint32x4_t shifted = vshrq_n_u32(cmp_neq_zero, 31);
+
+//     // Narrow to 16 bits to extract the lower bits
+//     uint16x4_t narrow = vmovn_u32(shifted);
+
+//     // Extract bits and assemble the mask
+//     uint16_t mask = (vget_lane_u16(narrow, 0) & 1) |
+//                     ((vget_lane_u16(narrow, 1) & 1) << 1) |
+//                     ((vget_lane_u16(narrow, 2) & 1) << 2) |
+//                     ((vget_lane_u16(narrow, 3) & 1) << 3);
+
+//     return mask;
+
+// #else
+//     // Generic implementation for other architectures
+//     int mask = 0;
+//     for (int i = 0; i < 4; ++i) {
+//         if (hits.xyzw[i] != 0) {
+//             mask |= (1 << i);
+//         }
+//     }
+//     return mask;
+// #endif
+// }
+
+// inline int simd_extract_hitmask(const IVec4& vec) {
+// #ifdef HAS_NEON
+//     int mask = ((vgetq_lane_u32(vec.v, 0) & 1) << 0) |
+//                ((vgetq_lane_u32(vec.v, 1) & 1) << 1) |
+//                ((vgetq_lane_u32(vec.v, 2) & 1) << 2) |
+//                ((vgetq_lane_u32(vec.v, 3) & 1) << 3);
+//     return mask;
+// #else
+//     // Scalar fallback
+//     int mask = ((vec[0] & 1) << 0) |
+//                ((vec[1] & 1) << 1) |
+//                ((vec[2] & 1) << 2) |
+//                ((vec[3] & 1) << 3);
+//     return mask;
+// #endif
+// }
+
+// inline int simd_extract_hitmask(const IVec4& vec) {
+// #ifdef HAS_NEON
+//     // Assuming vec.v is a uint32x4_t
+//     uint32x4_t tmp = vec.v;
+
+//     // Shift right to get the sign bits (or MSB)
+//     uint32x4_t shifted = vshrq_n_u32(tmp, 31); // Shift each 32-bit element right by 31 bits
+
+//     // Narrow to 16-bit integers
+//     uint16x4_t narrowed = vmovn_u32(shifted); // Narrow each 32-bit element to 16 bits
+
+//     // Reinterpret as a 64-bit integer
+//     uint64x1_t combined = vreinterpret_u64_u16(narrowed);
+
+//     // Extract the lower 4 bits as the hitmask
+//     uint64_t mask = vget_lane_u64(combined, 0) & 0xF;
+
+//     return static_cast<int>(mask);
+// #else
+//     // Scalar fallback
+//     int mask = 0;
+//     for (int i = 0; i < 4; ++i) {
+//         mask |= ((vec[i] >> 31) & 1) << i;
+//     }
+//     return mask;
+// #endif
+// }
 
 
 inline IVec4 sort_simd_4_floats(FVec4 values);
