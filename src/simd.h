@@ -494,10 +494,30 @@ inline FVec4 simd_shuffle(FVec4 a, int idx0, int idx1, int idx2, int idx3) {
 
 inline IVec4 simd_shuffle(IVec4 a, int idx0, int idx1, int idx2, int idx3) {
     IVec4 result;
-    result.v[0] = a.v[idx0];
-    result.v[1] = a.v[idx1];
-    result.v[2] = a.v[idx2];
-    result.v[3] = a.v[idx3];
+#ifdef HAS_SSE2
+    // For SSE2, use _mm_set_epi32 to set elements
+    result.v = _mm_set_epi32(
+        a.xyzw[idx3], // Note: _mm_set_epi32 sets elements in order [3,2,1,0]
+        a.xyzw[idx2],
+        a.xyzw[idx1],
+        a.xyzw[idx0]
+    );
+#elif defined(HAS_NEON)
+    // For NEON, create an array and load it into the vector
+    int32_t values[4] = {
+        a.xyzw[idx0],
+        a.xyzw[idx1],
+        a.xyzw[idx2],
+        a.xyzw[idx3]
+    };
+    result.v = vld1q_s32(values);
+#else
+    // Scalar fallback
+    result.xyzw[0] = a.xyzw[idx0];
+    result.xyzw[1] = a.xyzw[idx1];
+    result.xyzw[2] = a.xyzw[idx2];
+    result.xyzw[3] = a.xyzw[idx3];
+#endif
     return result;
 }
 
@@ -592,7 +612,7 @@ inline IVec4 simd_not_equals_minus_one(IVec4 a) {
     __m256i cmp_neq = _mm256_xor_si256(cmp_eq, _mm256_set1_epi32(-1));
     result.v = _mm256_srli_epi32(cmp_neq, 31);
     return result;
-#elif defined(HAS_SSE2)
+#elif defined(HAS_SSE)
     // SSE2 supports integer operations on 128-bit registers
     IVec4 result;
     __m128i minus_one = _mm_set1_epi32(-1);
@@ -766,22 +786,19 @@ inline uint32_t extract_index(float value) {
 
 inline int simd_extract_hitmask(const IVec4& vec) {
 #ifdef HAS_SSE
-    // SSE implementation
+    __m128i masked = _mm_and_si128(vec.v, _mm_set1_epi32(1)); // Now masked contains 0 or 1 in each 32-bit element
 
-    // Mask the least significant bits (elements are 0 or 1)
-    __m128i masked = _mm_and_si128(vec.v, _mm_set1_epi32(1));
+    // Shift left by 31 bits to place the bit in the sign position
+    __m128i shifted = _mm_slli_epi32(masked, 31);
 
-    // Multiply each element by its corresponding power of 2
-    // Powers of 2: [3]=8, [2]=4, [1]=2, [0]=1
-    __m128i powers = _mm_set_epi32(8, 4, 2, 1);
-    __m128i weighted = _mm_mullo_epi32(masked, powers);
+    // Cast to float to use _mm_movemask_ps
+    __m128 float_vals = _mm_castsi128_ps(shifted);
 
-    // Sum the weighted bits
-    // Since SSE2 lacks horizontal add for integers, we sum manually
-    __m128i temp1 = _mm_add_epi32(weighted, _mm_srli_si128(weighted, 8)); // Sum pairs: [0]+[2], [1]+[3]
-    __m128i temp2 = _mm_add_epi32(temp1, _mm_srli_si128(temp1, 4));       // Sum all elements
+    // Use _mm_movemask_ps to extract the sign bits
+    int mask = _mm_movemask_ps(float_vals); // Extracts the sign bits of each float
 
-    int mask = _mm_cvtsi128_si32(temp2); // Extract the lowest 32 bits
+    // The sign bits are in the higher bits; adjust them to lower bits
+    mask = mask >> 4; // Since _mm_movemask_ps puts the bits in the higher 4 bits
 
     return mask & 0xF; // Ensure only the lower 4 bits are used
 
