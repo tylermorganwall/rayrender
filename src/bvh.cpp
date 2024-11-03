@@ -1,7 +1,6 @@
 #include "bvh.h"
 #include "assert.h"
 #include "mathinline.h"
-#include <arm_neon.h>
 #include <cmath>
 #include <limits>
 #include "raylog.h"
@@ -22,8 +21,6 @@ struct alignas(16) BVHNodeEntry {
         return tEnter > other.tEnter; // Inverted comparison for min-heap
     }
 };
-
-// #define RAYSIMD
 
 inline int floatToIntBits(float f) {
     int i;
