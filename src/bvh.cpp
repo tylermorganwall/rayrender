@@ -458,7 +458,7 @@ const bool BVHAggregate::hit(const ray& r, Float t_min, Float t_max, hit_record&
     if (!nodes4) {
         return false;
     }
-    StaticPriorityQueue<64> nodesToVisit;
+    StaticPriorityQueue<256> nodesToVisit;
     nodesToVisit.push({0, -INFINITY});
 
     bool any_hit = false;

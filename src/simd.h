@@ -22,12 +22,16 @@
 #endif
 
 #ifdef HAS_SSE
-typedef __m128 fvec4;
-typedef __m128i ivec4;
+    typedef __m128 fvec4;
+    typedef __m128i ivec4;
 #elif defined(HAS_NEON)
-typedef uint32x4_t uivec4;
-typedef int32x4_t ivec4;
-typedef float32x4_t fvec4;
+    typedef float32x4_t fvec4;
+    typedef int32x4_t ivec4;
+    typedef uint32x4_t uivec4;
+#else
+    typedef float fvec4[4];  // Fallback to a plain float array of size 4
+    typedef int ivec4[4];
+    typedef unsigned int uivec4[4];
 #endif
 
 typedef struct alignas(16) FVec4 {
@@ -485,16 +489,16 @@ inline IVec4 simd_reverse(IVec4 a) {
 
 inline FVec4 simd_shuffle(FVec4 a, int idx0, int idx1, int idx2, int idx3) {
     FVec4 result;
-    result.v[0] = a.v[idx0];
-    result.v[1] = a.v[idx1];
-    result.v[2] = a.v[idx2];
-    result.v[3] = a.v[idx3];
+    result.xyzw[0] = a.xyzw[idx0];
+    result.xyzw[1] = a.xyzw[idx1];
+    result.xyzw[2] = a.xyzw[idx2];
+    result.xyzw[3] = a.xyzw[idx3];
     return result;
 }
 
 inline IVec4 simd_shuffle(IVec4 a, int idx0, int idx1, int idx2, int idx3) {
     IVec4 result;
-#ifdef HAS_SSE2
+#ifdef HAS_SSE
     // For SSE2, use _mm_set_epi32 to set elements
     result.v = _mm_set_epi32(
         a.xyzw[idx3], // Note: _mm_set_epi32 sets elements in order [3,2,1,0]
