@@ -533,7 +533,8 @@ dielectric = function(color="white", refraction = 1.5,
 #' if(run_documentation()) {
 #' #Render a rough silver R with a smaller golden egg in front
 #' generate_cornell() %>%
-#'   add_object(obj_model(r_obj(),x=555/2,z=350,y=0, scale_obj = 200, angle=c(0,200,0),
+#'   add_object(obj_model(r_obj(simple_r = TRUE),
+#'                        x=555/2,z=350,y=0, scale_obj = 200, angle=c(0,200,0),
 #'              material=microfacet(roughness=0.2,
 #'                                  eta=c(1.1583,0.9302,0.5996), kappa=c(6.9650,6.396,5.332)))) %>% 
 #'  add_object(ellipsoid(x=200,z=200,y=80, a=50,b=80,c=50,
@@ -545,7 +546,8 @@ dielectric = function(color="white", refraction = 1.5,
 #' if(run_documentation()) {
 #' #Increase the roughness
 #' generate_cornell() %>%
-#'   add_object(obj_model(r_obj(),x=555/2,z=350,y=0, scale_obj = 200, angle=c(0,200,0),
+#'   add_object(obj_model(r_obj(simple_r = TRUE),
+#'                        x=555/2,z=350,y=0, scale_obj = 200, angle=c(0,200,0),
 #'              material=microfacet(roughness=0.5,
 #'                                  eta=c(1.1583,0.9302,0.5996), kappa=c(6.9650,6.396,5.332)))) %>% 
 #'  add_object(ellipsoid(x=200,z=200,y=80, a=50,b=80,c=50,
@@ -557,7 +559,8 @@ dielectric = function(color="white", refraction = 1.5,
 #' if(run_documentation()) {
 #'  #Use transmission for a rough dielectric
 #' generate_cornell() %>%
-#'   add_object(obj_model(r_obj(),x=555/2,z=350,y=0, scale_obj = 200, angle=c(0,200,0),
+#'   add_object(obj_model(r_obj(simple_r = TRUE),
+#'                        x=555/2,z=350,y=0, scale_obj = 200, angle=c(0,200,0),
 #'              material=microfacet(roughness=0.3, transmission=T, eta=1.6))) %>% 
 #'  add_object(ellipsoid(x=200,z=200,y=80, a=50,b=80,c=50,
 #'              material=microfacet(roughness=0.3, transmission=T, eta=1.6))) %>% 
@@ -744,7 +747,7 @@ microfacet = function(color="white", roughness = 0.0001, transmission = FALSE,
 #' #All gather around the orb
 #' scene = generate_ground(material = diffuse(checkercolor="grey50")) %>%
 #'   add_object(sphere(radius=0.5,material=light(intensity=5,color="red"))) %>%
-#'   add_object(obj_model(r_obj(), z=-3,x=-1.5,y=-1, angle=c(0,45,0))) %>%
+#'   add_object(obj_model(r_obj(simple_r = TRUE), z=-3,x=-1.5,y=-1, angle=c(0,45,0))) %>%
 #'   add_object(pig(scale=0.3, x=1.5,z=-2,y=-1.5,angle=c(0,-135,0)))
 #' if(run_documentation()) {
 #' render_scene(scene, samples=128, parallel=TRUE, clamp_value=10)
@@ -901,7 +904,8 @@ light = function(color = "#ffffff", intensity = 10, importance_sample = TRUE,
 #' #Add an R and a fill light (this may look familiar)
 #' generate_ground(material=diffuse()) %>%
 #'   add_object(sphere(y=0.2,material=glossy(color="#2b6eff",reflectance=0.05))) %>% 
-#'   add_object(obj_model(r_obj(),z=1,y=-0.05,scale=0.45,material=diffuse())) %>%
+#'   add_object(obj_model(r_obj(simple_r = TRUE),
+#'                        z=1,y=-0.05,scale=0.45,material=diffuse())) %>%
 #'   add_object(sphere(y=6,z=1,radius=4,material=light(intensity=3))) %>%
 #'   add_object(sphere(z=15,material=light(intensity=50))) %>%
 #'   render_scene(parallel=TRUE,clamp_value=10,samples=128,sample_method="sobol_blue")
@@ -1047,7 +1051,7 @@ SigmaAFromReflectance = function(c, beta_n) {
 #'   add_object(hairball) %>%
 #'   add_object(sphere(y=20,z=20,radius=5,material=light(color="white",intensity = 100))) %>%
 #'   render_scene(samples=64, lookfrom=c(0,3,10),clamp_value = 10,
-#'                fov=20)
+#'                fov=20, width=800, height=800)
 #' }
 #' if(run_documentation()) {         
 #'                
@@ -1071,7 +1075,7 @@ SigmaAFromReflectance = function(c, beta_n) {
 #'   add_object(hairball) %>%
 #'   add_object(sphere(y=20,z=20,radius=5,material=light(color="white",intensity = 100))) %>%
 #'   render_scene(samples=64, lookfrom=c(0,3,10),clamp_value = 10,
-#'                fov=20)
+#'                fov=20, width=800, height=800)
 #' }
 hair = function(pigment = 1.3, red_pigment = 0, color = NA, sigma_a = NA, 
                 eta = 1.55, beta_m = 0.3, beta_n = 0.3, alpha = 2) {

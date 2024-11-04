@@ -233,7 +233,7 @@ process_scene = function(scene, process_material_ids = TRUE) {
   #Detect any importance sampling
   any_light = FALSE
   for(i in seq_len(nrow(scene))) {
-    any_light = any_light || (scene$material[[i]]$type %in% c(5, 7)) #light and spotlight
+    any_light = any_light || (scene$material[[i]]$type %in% c(5, 8)) #light and spotlight
     if(scene$shape[[i]] == 15) { #instance
       any_light = any_light || scene$shape_info[[i]]$shape_properties$any_light 
     }

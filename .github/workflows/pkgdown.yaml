@@ -30,6 +30,8 @@ jobs:
         run: |
           brew install imagemagick@6
           brew install gdal
+          brew install gs
+
       - name: Query dependencies
         run: |
           install.packages('remotes')
@@ -43,6 +45,7 @@ jobs:
           path: ${{ env.R_LIBS_USER }}
           key: ${{ runner.os }}-${{ hashFiles('.github/R-version') }}-2-${{ hashFiles('.github/depends.Rds') }}
           restore-keys: ${{ runner.os }}-${{ hashFiles('.github/R-version') }}-2-
+
       - name: Install system dependencies
         if: runner.os == 'Linux'
         env:
@@ -58,7 +61,9 @@ jobs:
             libudunits2-dev \
             libgdal-dev \
             libgeos-dev \
-            libproj-dev
+            libproj-dev \
+            gsfonts  
+
       - name: Install dependencies
         run: |
           remotes::install_deps(dependencies = TRUE)

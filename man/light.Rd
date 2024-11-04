@@ -90,7 +90,7 @@ render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=128,
 #All gather around the orb
 scene = generate_ground(material = diffuse(checkercolor="grey50")) \%>\%
   add_object(sphere(radius=0.5,material=light(intensity=5,color="red"))) \%>\%
-  add_object(obj_model(r_obj(), z=-3,x=-1.5,y=-1, angle=c(0,45,0))) \%>\%
+  add_object(obj_model(r_obj(simple_r = TRUE), z=-3,x=-1.5,y=-1, angle=c(0,45,0))) \%>\%
   add_object(pig(scale=0.3, x=1.5,z=-2,y=-1.5,angle=c(0,-135,0)))
 if(run_documentation()) {
 render_scene(scene, samples=128, parallel=TRUE, clamp_value=10)

@@ -150,7 +150,8 @@ generate_cornell() \%>\%
 if(run_documentation()) {
 #Render a rough silver R with a smaller golden egg in front
 generate_cornell() \%>\%
-  add_object(obj_model(r_obj(),x=555/2,z=350,y=0, scale_obj = 200, angle=c(0,200,0),
+  add_object(obj_model(r_obj(simple_r = TRUE),
+                       x=555/2,z=350,y=0, scale_obj = 200, angle=c(0,200,0),
              material=microfacet(roughness=0.2,
                                  eta=c(1.1583,0.9302,0.5996), kappa=c(6.9650,6.396,5.332)))) \%>\% 
  add_object(ellipsoid(x=200,z=200,y=80, a=50,b=80,c=50,
@@ -162,7 +163,8 @@ generate_cornell() \%>\%
 if(run_documentation()) {
 #Increase the roughness
 generate_cornell() \%>\%
-  add_object(obj_model(r_obj(),x=555/2,z=350,y=0, scale_obj = 200, angle=c(0,200,0),
+  add_object(obj_model(r_obj(simple_r = TRUE),
+                       x=555/2,z=350,y=0, scale_obj = 200, angle=c(0,200,0),
              material=microfacet(roughness=0.5,
                                  eta=c(1.1583,0.9302,0.5996), kappa=c(6.9650,6.396,5.332)))) \%>\% 
  add_object(ellipsoid(x=200,z=200,y=80, a=50,b=80,c=50,
@@ -174,7 +176,8 @@ generate_cornell() \%>\%
 if(run_documentation()) {
  #Use transmission for a rough dielectric
 generate_cornell() \%>\%
-  add_object(obj_model(r_obj(),x=555/2,z=350,y=0, scale_obj = 200, angle=c(0,200,0),
+  add_object(obj_model(r_obj(simple_r = TRUE),
+                       x=555/2,z=350,y=0, scale_obj = 200, angle=c(0,200,0),
              material=microfacet(roughness=0.3, transmission=T, eta=1.6))) \%>\% 
  add_object(ellipsoid(x=200,z=200,y=80, a=50,b=80,c=50,
              material=microfacet(roughness=0.3, transmission=T, eta=1.6))) \%>\% 
