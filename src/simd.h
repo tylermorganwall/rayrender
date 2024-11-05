@@ -14,6 +14,12 @@
 #define SIMD_WIDTH 4
 #endif
 
+#ifndef HAS_SSE
+#ifndef HAS_NEON
+#define NO_SSE
+#endif
+#endif
+
 
 #ifdef HAS_NEON
     #include <arm_neon.h>
@@ -29,9 +35,9 @@
     typedef int32x4_t ivec4;
     typedef uint32x4_t uivec4;
 #else
-    typedef float fvec4[4];  // Fallback to a plain float array of size 4
-    typedef int ivec4[4];
-    typedef unsigned int uivec4[4];
+    typedef float fvec4[SIMD_WIDTH]; 
+    typedef int ivec4[SIMD_WIDTH];
+    typedef unsigned int uivec4[SIMD_WIDTH];
 #endif
 
 typedef struct alignas(16) FVec4 {
@@ -40,7 +46,15 @@ public:
         fvec4 v;
         float xyzw[4];
     };
+#ifndef NO_SSE
     FVec4(fvec4 f4) : v(f4) {}
+#else
+    FVec4(fvec4 f4) {
+      for (int i = 0; i < SIMD_WIDTH; ++i) {
+          v[i] = f4[i];
+      }
+    }
+#endif
     FVec4()  {
       xyzw[0] = 0.f;
       xyzw[1] = 0.f;
@@ -73,15 +87,21 @@ public:
 
 typedef struct alignas(16) IVec4 {
     union {
-#ifdef HAS_SSE
-        __m128i v;
-#elif defined(HAS_NEON)
-        int32x4_t v;
+        ivec4 v;
+#ifdef HAS_NEON
         uint32x4_t uv;
 #endif
         alignas(16) int xyzw[4];
     };
-
+#ifndef NO_SSE
+    IVec4(ivec4 i4) : v(i4) {}
+#else
+    IVec4(ivec4 i4) {
+      for (int i = 0; i < SIMD_WIDTH; ++i) {
+          v[i] = i4[i];
+      }
+    }
+#endif
     IVec4()  {
       xyzw[0] = 0;
       xyzw[1] = 0;
@@ -100,12 +120,7 @@ typedef struct alignas(16) IVec4 {
       xyzw[2] = z_;
       xyzw[3] = 0;
     }
-#ifdef HAS_SSE
-    IVec4(__m128i m128i_) : v(m128i_) {};
-#elif defined(HAS_NEON)
-    IVec4(int32x4_t i32x4_) : v(i32x4_) {};
-#endif
-
+    
   int operator[](int i) const { return xyzw[i]; }
   int& operator[](int i) { return xyzw[i]; }
 
@@ -226,7 +241,7 @@ inline FVec4 simd_less_equal(FVec4 a, FVec4 b) {
   result.v = vcleq_f32(a.v, b.v);
 #else
   for (int i = 0; i < SIMD_WIDTH; ++i) {
-    result.v[i] = (a.v[i] <= b.v[i]) ? 0xFFFFFFFF : 0;
+    result.v[i] = (a.v[i] <= b.v[i]) ? -1.0f : 0.0f;
   }
 #endif
   return result;
