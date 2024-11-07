@@ -810,9 +810,6 @@ inline int simd_extract_hitmask(const IVec4& vec) {
     // Use _mm_movemask_ps to extract the sign bits
     int mask = _mm_movemask_ps(float_vals); // Extracts the sign bits of each float
 
-    // The sign bits are in the higher bits; adjust them to lower bits
-    mask = mask >> 4; // Since _mm_movemask_ps puts the bits in the higher 4 bits
-
     return mask & 0xF; // Ensure only the lower 4 bits are used
 
 #elif defined(HAS_NEON)
