@@ -179,7 +179,6 @@ inline FVec4 simd_sub(FVec4 a, FVec4 b) {
   return result;
 }
 
-
 inline FVec4 simd_mul(FVec4 a, FVec4 b) {
   FVec4 result;
 #ifdef HAS_AVX
@@ -195,7 +194,6 @@ inline FVec4 simd_mul(FVec4 a, FVec4 b) {
 #endif
   return result;
 }
-
 
 inline FVec4 simd_min(FVec4 a, FVec4 b) {
   FVec4 result;
@@ -247,7 +245,6 @@ inline FVec4 simd_less_equal(FVec4 a, FVec4 b) {
   return result;
 }
 
-
 inline bool simd_any_true(SimdMask mask) {
 #ifdef HAS_AVX
   return _mm256_movemask_ps(mask.v) != 0;
@@ -281,7 +278,6 @@ inline IVec4 simd_cast_float_to_int(FVec4 mask) {
     return result;
 #endif
 }
-
 
 inline IVec4 simd_cast_to_int(SimdMask mask) {
 #ifdef HAS_SSE
@@ -501,7 +497,6 @@ inline IVec4 simd_reverse(IVec4 a) {
 #endif // HAS_NEON
 #endif // HAS_SSE
 
-
 inline FVec4 simd_shuffle(FVec4 a, int idx0, int idx1, int idx2, int idx3) {
     FVec4 result;
     result.xyzw[0] = a.xyzw[idx0];
@@ -563,7 +558,6 @@ inline IVec4 simd_cmpneq(IVec4 a, IVec4 b) {
     return result;
 #endif
 }
-
 
 // inline SimdMask simd_and(SimdMask a, SimdMask b) {
 // #ifdef HAS_AVX
@@ -845,6 +839,7 @@ inline int simd_extract_hitmask(const IVec4& vec) {
     return mask;
 #endif
 }
+
 
 
 inline IVec4 sort_simd_4_floats(FVec4 values);

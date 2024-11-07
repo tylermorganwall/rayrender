@@ -81,12 +81,15 @@ BEGIN_RCPP
 END_RCPP
 }
 
+RcppExport SEXP run_testthat_tests(SEXP);
+
 static const R_CallMethodDef CallEntries[] = {
     {"_rayrender_PrintClassSizes", (DL_FUNC) &_rayrender_PrintClassSizes, 0},
     {"_rayrender_has_gui_capability", (DL_FUNC) &_rayrender_has_gui_capability, 0},
     {"_rayrender_render_animation_rcpp", (DL_FUNC) &_rayrender_render_animation_rcpp, 13},
     {"_rayrender_render_scene_rcpp", (DL_FUNC) &_rayrender_render_scene_rcpp, 4},
     {"_rayrender_tonemap_image", (DL_FUNC) &_rayrender_tonemap_image, 4},
+    {"run_testthat_tests", (DL_FUNC) &run_testthat_tests, 1},
     {NULL, NULL, 0}
 };
 
