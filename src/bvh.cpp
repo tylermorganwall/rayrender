@@ -454,9 +454,11 @@ const bool BVHAggregate::hit(const ray& r, Float t_min, Float t_max, hit_record&
     return any_hit;
 }
 #else
+
 #define TOTAL_NODES_STATIC 4096
 constexpr const int triggerLargeBVH = TOTAL_NODES_STATIC - SIMD_WIDTH;
 #define RAY_SUPPORT_LARGE_BVH
+
 const bool BVHAggregate::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
     if (!nodes4) {
         return false;
@@ -490,8 +492,13 @@ const bool BVHAggregate::hit(const ray& r, Float t_min, Float t_max, hit_record&
                     t_max = tempRec.t; // Update tMax to the closest hit
                 }
             }
-            if (any_hit && nodesToVisit.top().tEnter > t_max) {
+            if (any_hit) {
+              if(nodesToVisit.empty()) {
                 return true;
+              }
+              if(nodesToVisit.top().tEnter > t_max) {
+                return true;
+              }
             }
         } else {
             // Internal node
