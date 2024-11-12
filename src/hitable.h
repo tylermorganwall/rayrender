@@ -59,9 +59,6 @@ struct hit_record {
   hit_record() : has_bump(false), alpha_miss(false), infinite_area_hit(false) {};
   
   point3f p; //PBRT: In Interaction
-  Float t; //PBRT: In Interaction
-  Float u; //PBRT: In SurfaceInteraction
-  Float v; //PBRT: In SurfaceInteraction
 #ifdef DEBUGBVH
   Float bvh_nodes;
 #endif
@@ -70,13 +67,16 @@ struct hit_record {
   vec3f pError; //PBRT: In Interaction
   vec3f wo; //PBRT: In Interaction, negative ray direction
   normal3f bump_normal; 
-  bool has_bump; 
   const hitable* shape = nullptr; //PBRT: In SurfaceInteraction, const Shape *shape
   material* mat_ptr; //PBRT: In SurfaceInteraction as bsdf or bssrdf
-  bool alpha_miss;
-  mutable Float dudx, dvdx, dudy, dvdy;
   mutable vec3f dpdx, dpdy;
   mutable normal3f dndu, dndv;
+  mutable Float dudx, dvdx, dudy, dvdy;
+  Float t; //PBRT: In Interaction
+  Float u; //PBRT: In SurfaceInteraction
+  Float v; //PBRT: In SurfaceInteraction
+  bool has_bump; 
+  bool alpha_miss;
   bool infinite_area_hit;
   //const Shape *shape (recording the shape)
   //const Primitive *primitive (recording the primitive)
