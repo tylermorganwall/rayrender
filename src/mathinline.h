@@ -35,6 +35,12 @@ inline T ffmax(T a, T b) { return(a > b ? a : b);}
 template<class T>
 inline T ffabs(T a) { return(a > 0 ? a : -a);}
 
+template<>
+inline float ffabs(float a) { return(std::fabsf(a));}
+
+template<>
+inline double ffabs(double a) { return(std::fabs(a));}
+
 template<class T>
 inline T lerp(Float t, T v1, T v2) {
   return((1-t) * v1 + t * v2);
