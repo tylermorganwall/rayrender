@@ -67,34 +67,34 @@ class csg_plane : public ImplicitShape {
 
 class csg_box : public ImplicitShape { 
   public: 
-    csg_box(const point3f& c, point3f width_) :  center(c), width(width_) {} 
+    csg_box(const point3f& c, vec3f width_) :  center(c), width(width_) {} 
     Float getDistance(const point3f& from_old) const {
-      point3f from = from_old + -center;
-      point3f q = Abs(from) + -width/2;
-      const static point3f zeros(0,0,0);
+      vec3f from = from_old - center;
+      vec3f q = Abs(from) - width / static_cast<Float>(2);
+      const vec3f zeros(0,0,0);
       return(Max(q, zeros).length() + 
              fmin(MaxComponent(q),0.0)); 
     } 
     virtual bool bbox(Float t0, Float t1, aabb& box) const {
-      box = aabb(center + -Abs(width)/2, center + Abs(width)/2);
+      box = aabb(center + -Abs(width) / static_cast<Float>(2), center + Abs(width) / static_cast<Float>(2));
       return(true);
     }
     size_t GetSize()  {
       return(sizeof(*this));
     }
     point3f center;
-    point3f width; 
+    vec3f width; 
 }; 
 
 class csg_rounded_box : public ImplicitShape { 
   public: 
-    csg_rounded_box(const vec3f& c, vec3f width_, Float radius) :  center(c), width(width_), radius(radius){} 
+    csg_rounded_box(const point3f& c, vec3f width_, Float radius) :  center(c), width(width_), radius(radius){} 
     Float getDistance(const point3f& from_old) const {
-      vec3f from = from_old  - center;
-      vec3f q = Abs(from)  - width/2;
-      const static vec3f zeros(0,0,0);
+      vec3f from = from_old - center;
+      vec3f q = Abs(from) - width/2;
+      const vec3f zeros(0,0,0);
       return(Max(q, zeros).length() + 
-             fmin(MaxComponent(q),0.0)-radius); 
+             fmin(MaxComponent(q),0.0) - radius); 
     } 
     virtual bool bbox(Float t0, Float t1, aabb& box) const {
       box = aabb(center-Abs(width)/2, center+Abs(width)/2);
@@ -215,11 +215,11 @@ class csg_cylinder : public ImplicitShape {
 
 class csg_ellipsoid : public ImplicitShape { 
   public: 
-    csg_ellipsoid(const point3f& c, point3f axes) : center(c), axes(axes)  {
-      inv_axes = point3f(1.0/axes.x(),1.0/axes.y(),1.0/axes.z());
+    csg_ellipsoid(const point3f& c, vec3f axes) : center(c), axes(axes)  {
+      inv_axes = vec3f(1.0) / axes;
     } 
     Float getDistance(const point3f& from_old) const {
-      point3f from = point3f(from_old - center); 
+      vec3f from = from_old - center; 
       float k0 = (from * inv_axes).length();
       float k1 = (from * (inv_axes*inv_axes)).length();
       return(k0 < 1.0 ? (k0 - 1.0) * MinComponent(axes) : k0*(k0-1.0)/k1);
@@ -231,7 +231,8 @@ class csg_ellipsoid : public ImplicitShape {
     size_t GetSize()  {
       return(sizeof(*this));
     }
-    point3f center, axes, inv_axes; 
+    point3f center;
+    vec3f axes, inv_axes; 
 }; 
 
 class csg_rounded_cone : public ImplicitShape { 
@@ -394,7 +395,7 @@ class csg_elongate : public ImplicitShape {
       shape(shape),center(center), elongate(elongate) {} 
     Float getDistance(const point3f& from_old) const {
       vec3f from = from_old - center;
-      point3f q = from - clamp(from, -elongate, elongate);
+      vec3f q = from - clamp(from, -elongate, elongate);
       return(shape->getDistance(q + center));
     } 
     virtual bool bbox(Float t0, Float t1, aabb& box) const {
@@ -419,7 +420,9 @@ class csg_elongate_robust : public ImplicitShape {
       const static vec3f zeros(0,0,0);
       const static vec3f inf(INFINITY,INFINITY,INFINITY);
       vec3f q = Abs(from)-elongate;
-      return(shape->getDistance(sgn(from) * clamp(q,zeros,inf) + vec3f(center)) + 
+      return(shape->getDistance(sgn(from) * 
+                                clamp(q,zeros,inf) + 
+                                center ) + 
              std::fmin(MaxComponent(q),0.0));
     } 
     virtual bool bbox(Float t0, Float t1, aabb& box) const {
@@ -494,61 +497,61 @@ class csg_scale : public ImplicitShape {
 
 class csg_rotate : public ImplicitShape { 
   public: 
-    csg_rotate(std::shared_ptr<ImplicitShape> shape, vec3f pivot_point, vec3f up) : 
-      shape(shape),pivot_point(pivot_point), up(up) {
+    csg_rotate(std::shared_ptr<ImplicitShape> shape, point3f pivot_point_, vec3f up) : 
+      shape(shape),pivot_point(pivot_point_), up(up) {
       axis.build_from_w(up);
       axis.swap_yz();
       
       aabb box2;
       shape->bbox(0,0,box2); //Pre-compute rotated bbox
-      vec3f corners[8];
-      corners[0] = axis.local_to_world(vec3f(box2.min()) - pivot_point) + pivot_point;
-      corners[1] = axis.local_to_world(vec3f(box2.min().x(), box2.min().y(), box2.max().z())- pivot_point) + pivot_point;
-      corners[2] = axis.local_to_world(vec3f(box2.min().x(), box2.max().y(), box2.min().z())- pivot_point) + pivot_point;
-      corners[3] = axis.local_to_world(vec3f(box2.max().x(), box2.min().y(), box2.min().z())- pivot_point) + pivot_point;
-      corners[4] = axis.local_to_world(vec3f(box2.min().x(), box2.max().y(), box2.max().z())- pivot_point) + pivot_point;
-      corners[5] = axis.local_to_world(vec3f(box2.max().x(), box2.min().y(), box2.max().z())- pivot_point) + pivot_point;
-      corners[6] = axis.local_to_world(vec3f(box2.max().x(), box2.max().y(), box2.min().z())- pivot_point) + pivot_point;
-      corners[7] = axis.local_to_world(vec3f(box2.max()) - pivot_point) + pivot_point;
-      vec3f temp_min = corners[0];
-      vec3f temp_max = corners[7];
+      point3f corners[8];
+      corners[0] = axis.local_to_world(box2.min() - pivot_point) + pivot_point;
+      corners[1] = axis.local_to_world(point3f(box2.min().x(), box2.min().y(), box2.max().z())- pivot_point) + pivot_point;
+      corners[2] = axis.local_to_world(point3f(box2.min().x(), box2.max().y(), box2.min().z())- pivot_point) + pivot_point;
+      corners[3] = axis.local_to_world(point3f(box2.max().x(), box2.min().y(), box2.min().z())- pivot_point) + pivot_point;
+      corners[4] = axis.local_to_world(point3f(box2.min().x(), box2.max().y(), box2.max().z())- pivot_point) + pivot_point;
+      corners[5] = axis.local_to_world(point3f(box2.max().x(), box2.min().y(), box2.max().z())- pivot_point) + pivot_point;
+      corners[6] = axis.local_to_world(point3f(box2.max().x(), box2.max().y(), box2.min().z())- pivot_point) + pivot_point;
+      corners[7] = axis.local_to_world(box2.max() - pivot_point) + pivot_point;
+      point3f temp_min = corners[0];
+      point3f temp_max = corners[7];
       
       for(int i = 1; i < 7; i++) {
-        temp_min = vec3f(ffmin(temp_min.x(), corners[i].x()),
+        temp_min = point3f(ffmin(temp_min.x(), corners[i].x()),
                         ffmin(temp_min.y(), corners[i].y()),
                         ffmin(temp_min.z(), corners[i].z()));
-        temp_max = vec3f(ffmax(temp_max.x(), corners[i].x()),
+        temp_max = point3f(ffmax(temp_max.x(), corners[i].x()),
                         ffmax(temp_max.y(), corners[i].y()),
                         ffmax(temp_max.z(), corners[i].z()));
       }
       aabb new_box(temp_min,temp_max);
       box_cache = new_box;
     } 
-    csg_rotate(std::shared_ptr<ImplicitShape> shape, vec3f pivot_point, vec3f up, vec3f axis_x, vec3f axis_z) : 
-      shape(shape),pivot_point(pivot_point), up(up) {
+    csg_rotate(std::shared_ptr<ImplicitShape> shape, point3f pivot_point_, vec3f up, vec3f axis_x, vec3f axis_z) : 
+      shape(shape),pivot_point(pivot_point_), up(up) {
       axis.axis[0] = axis_x;
       axis.axis[1] = up;
       axis.axis[2] = axis_z;
       
       aabb box2;
       shape->bbox(0,0,box2); //Pre-compute rotated bbox
-      vec3f corners[8];
-      corners[0] = axis.local_to_world(vec3f(box2.min()) - pivot_point) + pivot_point;
-      corners[1] = axis.local_to_world(vec3f(box2.min().x(), box2.min().y(), box2.max().z())- pivot_point) + pivot_point;
-      corners[2] = axis.local_to_world(vec3f(box2.min().x(), box2.max().y(), box2.min().z())- pivot_point) + pivot_point;
-      corners[3] = axis.local_to_world(vec3f(box2.max().x(), box2.min().y(), box2.min().z())- pivot_point) + pivot_point;
-      corners[4] = axis.local_to_world(vec3f(box2.min().x(), box2.max().y(), box2.max().z())- pivot_point) + pivot_point;
-      corners[5] = axis.local_to_world(vec3f(box2.max().x(), box2.min().y(), box2.max().z())- pivot_point) + pivot_point;
-      corners[6] = axis.local_to_world(vec3f(box2.max().x(), box2.max().y(), box2.min().z())- pivot_point) + pivot_point;
-      corners[7] = axis.local_to_world(vec3f(box2.max()) - pivot_point) + pivot_point;
-      vec3f temp_min = corners[0];
-      vec3f temp_max = corners[7];
+      point3f corners[8];
+      corners[0] = axis.local_to_world(box2.min() - pivot_point) + pivot_point;
+      corners[1] = axis.local_to_world(point3f(box2.min().x(), box2.min().y(), box2.max().z()) - pivot_point) + pivot_point;
+      corners[2] = axis.local_to_world(point3f(box2.min().x(), box2.max().y(), box2.min().z()) - pivot_point) + pivot_point;
+      corners[3] = axis.local_to_world(point3f(box2.max().x(), box2.min().y(), box2.min().z()) - pivot_point) + pivot_point;
+      corners[4] = axis.local_to_world(point3f(box2.min().x(), box2.max().y(), box2.max().z()) - pivot_point) + pivot_point;
+      corners[5] = axis.local_to_world(point3f(box2.max().x(), box2.min().y(), box2.max().z()) - pivot_point) + pivot_point;
+      corners[6] = axis.local_to_world(point3f(box2.max().x(), box2.max().y(), box2.min().z()) - pivot_point) + pivot_point;
+      corners[7] = axis.local_to_world(box2.max() - pivot_point) + pivot_point;
+      point3f temp_min = corners[0];
+      point3f temp_max = corners[7];
       
       for(int i = 1; i < 7; i++) {
-        temp_min = vec3f(ffmin(temp_min.x(), corners[i].x()),
+        temp_min = point3f(ffmin(temp_min.x(), corners[i].x()),
                         ffmin(temp_min.y(), corners[i].y()),
                         ffmin(temp_min.z(), corners[i].z()));
-        temp_max = vec3f(ffmax(temp_max.x(), corners[i].x()),
+        temp_max = point3f(ffmax(temp_max.x(), corners[i].x()),
                         ffmax(temp_max.y(), corners[i].y()),
                         ffmax(temp_max.z(), corners[i].z()));
       }
@@ -556,7 +559,7 @@ class csg_rotate : public ImplicitShape {
       box_cache = new_box;
     } 
     Float getDistance(const point3f& from) const {
-      return(shape->getDistance(axis.world_to_local(from - pivot_point) + vec3f(pivot_point)));
+      return(shape->getDistance(axis.world_to_local(from - pivot_point) + pivot_point));
     } 
     virtual bool bbox(Float t0, Float t1, aabb& box) const {
       box = box_cache;
@@ -743,20 +746,20 @@ inline std::shared_ptr<ImplicitShape> parse_csg(Rcpp::List csg_info) {
     
     Rcpp::NumericVector n = Rcpp::as<Rcpp::NumericVector>(csg_info["normal"]);
     return(std::make_shared<csg_plane>(vec3f(n(0),n(1),n(2)),
-                                       vec3f(x,y,z), width_x, width_z));
+                                       point3f(x,y,z), width_x, width_z));
   } else if (Rcpp::as<int>(csg_info["csg_type"]) == 4) { //Box
     Float x = Rcpp::as<Float>(csg_info["x"]);
     Float y = Rcpp::as<Float>(csg_info["y"]);
     Float z = Rcpp::as<Float>(csg_info["z"]);
     Rcpp::NumericVector w = Rcpp::as<Rcpp::NumericVector>(csg_info["width"]);
-    return(std::make_shared<csg_box>(vec3f(x,y,z), vec3f(w(0),w(1),w(2))));
+    return(std::make_shared<csg_box>(point3f(x,y,z), vec3f(w(0),w(1),w(2))));
   } else if (Rcpp::as<int>(csg_info["csg_type"]) == 5) { //Curved Box
     double x = Rcpp::as<double>(csg_info["x"]);
     double y = Rcpp::as<double>(csg_info["y"]);
     double z = Rcpp::as<double>(csg_info["z"]);
     Rcpp::NumericVector w = Rcpp::as<Rcpp::NumericVector>(csg_info["width"]);
     double r = Rcpp::as<double>(csg_info["radius"]);
-    return(std::make_shared<csg_rounded_box>(vec3f(x,y,z), vec3f(w(0),w(1),w(2)), r));
+    return(std::make_shared<csg_rounded_box>(point3f(x,y,z), vec3f(w(0),w(1),w(2)), r));
   } else if (Rcpp::as<int>(csg_info["csg_type"]) == 6) { //List of shapes
     std::vector<std::shared_ptr<ImplicitShape> > shapes;
     Rcpp::List entries = Rcpp::as<Rcpp::List>(csg_info["shapes"]);
@@ -770,53 +773,53 @@ inline std::shared_ptr<ImplicitShape> parse_csg(Rcpp::List csg_info) {
     double z = Rcpp::as<double>(csg_info["z"]);
     double ring_radius = Rcpp::as<double>(csg_info["ring_radius"]);
     double cross_radius = Rcpp::as<double>(csg_info["cross_radius"]);
-    return(std::make_shared<csg_torus>(vec3f(x,y,z), ring_radius, cross_radius));
+    return(std::make_shared<csg_torus>(point3f(x,y,z), ring_radius, cross_radius));
   } else if (Rcpp::as<int>(csg_info["csg_type"]) == 8) { //Capsule
     Rcpp::NumericVector start = Rcpp::as<Rcpp::NumericVector>(csg_info["start"]);
     Rcpp::NumericVector end = Rcpp::as<Rcpp::NumericVector>(csg_info["end"]);
     double r = Rcpp::as<double>(csg_info["radius"]);
-    return(std::make_shared<csg_capsule>(vec3f(start(0),start(1),start(2)), 
-                                       vec3f(end(0),end(1),end(2)), r));
+    return(std::make_shared<csg_capsule>(point3f(start(0),start(1),start(2)), 
+                                       point3f(end(0),end(1),end(2)), r));
   } else if (Rcpp::as<int>(csg_info["csg_type"]) == 9) { //Cylinder
     Rcpp::NumericVector start = Rcpp::as<Rcpp::NumericVector>(csg_info["start"]);
     Rcpp::NumericVector end = Rcpp::as<Rcpp::NumericVector>(csg_info["end"]);
     double r = Rcpp::as<double>(csg_info["radius"]);
     double cr = Rcpp::as<double>(csg_info["corner_radius"]);
-    return(std::make_shared<csg_cylinder>(vec3f(start(0),start(1),start(2)), 
-                                         vec3f(end(0),end(1),end(2)), r, cr));
+    return(std::make_shared<csg_cylinder>(point3f(start(0),start(1),start(2)), 
+                                         point3f(end(0),end(1),end(2)), r, cr));
   } else if (Rcpp::as<int>(csg_info["csg_type"]) == 10) { //Ellipsoid
     double x = Rcpp::as<double>(csg_info["x"]);
     double y = Rcpp::as<double>(csg_info["y"]);
     double z = Rcpp::as<double>(csg_info["z"]);
     Rcpp::NumericVector a = Rcpp::as<Rcpp::NumericVector>(csg_info["axes"]);
-    return(std::make_shared<csg_ellipsoid>(vec3f(x,y,z), vec3f(a(0),a(1),a(2))));
+    return(std::make_shared<csg_ellipsoid>(point3f(x,y,z), vec3f(a(0),a(1),a(2))));
   } else if (Rcpp::as<int>(csg_info["csg_type"]) == 11) { //Rounded Cone
     Rcpp::NumericVector start = Rcpp::as<Rcpp::NumericVector>(csg_info["start"]);
     Rcpp::NumericVector end = Rcpp::as<Rcpp::NumericVector>(csg_info["end"]);
     double r = Rcpp::as<double>(csg_info["radius"]);
     double cr = Rcpp::as<double>(csg_info["upper_radius"]);
-    return(std::make_shared<csg_rounded_cone>(vec3f(start(0),start(1),start(2)), 
-                                      vec3f(end(0),end(1),end(2)), r, cr));
+    return(std::make_shared<csg_rounded_cone>(point3f(start(0),start(1),start(2)), 
+                                      point3f(end(0),end(1),end(2)), r, cr));
   } else if (Rcpp::as<int>(csg_info["csg_type"]) == 12) { //Cone
     Rcpp::NumericVector start = Rcpp::as<Rcpp::NumericVector>(csg_info["start"]);
     Rcpp::NumericVector end = Rcpp::as<Rcpp::NumericVector>(csg_info["end"]);
     double r = Rcpp::as<double>(csg_info["radius"]);
-    return(std::make_shared<csg_cone>(vec3f(start(0),start(1),start(2)), 
-                                      vec3f(end(0),end(1),end(2)), r));
+    return(std::make_shared<csg_cone>(point3f(start(0),start(1),start(2)), 
+                                      point3f(end(0),end(1),end(2)), r));
   } else if (Rcpp::as<int>(csg_info["csg_type"]) == 13) { //Pyramid
     double x = Rcpp::as<double>(csg_info["x"]);
     double y = Rcpp::as<double>(csg_info["y"]);
     double z = Rcpp::as<double>(csg_info["z"]);
     double h = Rcpp::as<double>(csg_info["height"]);
     double base = Rcpp::as<double>(csg_info["base"]);
-    return(std::make_shared<csg_pyramid>(vec3f(x,y,z), h, base));
+    return(std::make_shared<csg_pyramid>(point3f(x,y,z), h, base));
   } else if (Rcpp::as<int>(csg_info["csg_type"]) == 14) { //Triangle
     Rcpp::NumericVector v1 = Rcpp::as<Rcpp::NumericVector>(csg_info["v1"]);
     Rcpp::NumericVector v2 = Rcpp::as<Rcpp::NumericVector>(csg_info["v2"]);
     Rcpp::NumericVector v3 = Rcpp::as<Rcpp::NumericVector>(csg_info["v3"]);
-    return(std::make_shared<csg_triangle>(vec3f(v1(0),v1(1),v1(2)),
-                                          vec3f(v2(0),v2(1),v2(2)),
-                                          vec3f(v3(0),v3(1),v3(2))));
+    return(std::make_shared<csg_triangle>(point3f(v1(0),v1(1),v1(2)),
+                                          point3f(v2(0),v2(1),v2(2)),
+                                          point3f(v3(0),v3(1),v3(2))));
   } else if (Rcpp::as<int>(csg_info["csg_type"]) == 15) { //Elongate
     double x = Rcpp::as<double>(csg_info["x"]);
     double y = Rcpp::as<double>(csg_info["y"]);
@@ -824,7 +827,7 @@ inline std::shared_ptr<ImplicitShape> parse_csg(Rcpp::List csg_info) {
     Rcpp::NumericVector e = Rcpp::as<Rcpp::NumericVector>(csg_info["elongate"]);
     
     std::shared_ptr<ImplicitShape> obj = parse_csg(Rcpp::as<Rcpp::List>(csg_info["object"]));
-    return(std::make_shared<csg_elongate>(obj, vec3f(x,y,z),vec3f(e(0),e(1),e(2))));
+    return(std::make_shared<csg_elongate>(obj, point3f(x,y,z),vec3f(e(0),e(1),e(2))));
   } else if (Rcpp::as<int>(csg_info["csg_type"]) == 16) { //Elongate (2)
     double x = Rcpp::as<double>(csg_info["x"]);
     double y = Rcpp::as<double>(csg_info["y"]);
@@ -832,7 +835,7 @@ inline std::shared_ptr<ImplicitShape> parse_csg(Rcpp::List csg_info) {
     Rcpp::NumericVector e = Rcpp::as<Rcpp::NumericVector>(csg_info["elongate"]);
     
     std::shared_ptr<ImplicitShape> obj = parse_csg(Rcpp::as<Rcpp::List>(csg_info["object"]));
-    return(std::make_shared<csg_elongate_robust>(obj, vec3f(x,y,z),vec3f(e(0),e(1),e(2))));
+    return(std::make_shared<csg_elongate_robust>(obj, point3f(x,y,z),vec3f(e(0),e(1),e(2))));
   } else if (Rcpp::as<int>(csg_info["csg_type"]) == 17) { //Round 
     double r = Rcpp::as<double>(csg_info["radius"]);
     std::shared_ptr<ImplicitShape> obj = parse_csg(Rcpp::as<Rcpp::List>(csg_info["object"]));
@@ -853,11 +856,11 @@ inline std::shared_ptr<ImplicitShape> parse_csg(Rcpp::List csg_info) {
     if(axis_x(0) == 0 && axis_x(1) == 0 && axis_x(2) == 0 && 
        axis_z(0) == 0 && axis_z(1) == 0 && axis_z(2) == 0) {
       std::shared_ptr<ImplicitShape> obj = parse_csg(Rcpp::as<Rcpp::List>(csg_info["object"]));
-      return(std::make_shared<csg_rotate>(obj,vec3f(pp(0),pp(1),pp(2)),
+      return(std::make_shared<csg_rotate>(obj,point3f(pp(0),pp(1),pp(2)),
                                           vec3f(up(0),up(1),up(2))));
     } else {
       std::shared_ptr<ImplicitShape> obj = parse_csg(Rcpp::as<Rcpp::List>(csg_info["object"]));
-      return(std::make_shared<csg_rotate>(obj,vec3f(pp(0),pp(1),pp(2)),
+      return(std::make_shared<csg_rotate>(obj,point3f(pp(0),pp(1),pp(2)),
                                           vec3f(up(0),up(1),up(2)),
                                           vec3f(axis_x(0),axis_x(1),axis_x(2)),
                                           vec3f(axis_z(0),axis_z(1),axis_z(2))));

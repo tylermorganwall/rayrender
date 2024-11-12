@@ -4,7 +4,6 @@
 #include "aabb.h"
 #include "hitable.h"
 
-
 Transform::Transform(const Float mat[4][4]) {
   m = Matrix4x4(mat[0][0], mat[0][1], mat[0][2], mat[0][3],
                 mat[1][0], mat[1][1], mat[1][2], mat[1][3],
@@ -464,4 +463,287 @@ vec3f Transform::v() {
   return(vec3f(m.m[0][1],
                m.m[1][1],
                m.m[2][1]));
+}
+
+// Unit Tests
+#include <testthat.h>
+
+context("Translate function works correctly") {
+  test_that("Translate applies correct translation") {
+      vec3f delta(1.0f, 2.0f, 3.0f);
+      Transform translate = Translate(delta);
+
+      // Expected translation matrix
+      Matrix4x4 expected(
+          1, 0, 0, 1.0f,
+          0, 1, 0, 2.0f,
+          0, 0, 1, 3.0f,
+          0, 0, 0, 1);
+
+      expect_true(translate.GetMatrix() == expected);
+
+      // Test inverse
+      Matrix4x4 expectedInv(
+          1, 0, 0, -1.0f,
+          0, 1, 0, -2.0f,
+          0, 0, 1, -3.0f,
+          0, 0, 0, 1);
+
+      expect_true(translate.GetInverseMatrix() == expectedInv);
+
+      // Test transforming a point
+      point3f p(0.0f, 0.0f, 0.0f);
+      point3f pTransformed = translate(p);
+      point3f expectedPoint(1.0f, 2.0f, 3.0f);
+
+      // Compare individual components
+      expect_true(pTransformed.x() == Approx(expectedPoint.x()));
+      expect_true(pTransformed.y() == Approx(expectedPoint.y()));
+      expect_true(pTransformed.z() == Approx(expectedPoint.z()));
+  }
+};
+
+// Test Scale function
+context("Scale function works correctly") {
+  test_that("Scale applies correct scaling") {
+      Float sx = 2.0f, sy = 3.0f, sz = 4.0f;
+      Transform scale = Scale(sx, sy, sz);
+
+      // Expected scaling matrix
+      Matrix4x4 expected(
+          2.0f, 0,    0,    0,
+          0,    3.0f, 0,    0,
+          0,    0,    4.0f, 0,
+          0,    0,    0,    1);
+
+      expect_true(scale.GetMatrix() == expected);
+
+      // Test inverse
+      Matrix4x4 expectedInv(
+          1.0f / 2.0f, 0,            0,            0,
+          0,           1.0f / 3.0f,  0,            0,
+          0,           0,            1.0f / 4.0f,  0,
+          0,           0,            0,            1);
+
+      expect_true(scale.GetInverseMatrix() == expectedInv);
+
+      // Test transforming a point
+      point3f p(1.0f, 1.0f, 1.0f);
+      point3f pTransformed = scale(p);
+      point3f expectedPoint(2.0f, 3.0f, 4.0f);
+
+      expect_true(pTransformed.x() == Approx(expectedPoint.x()));
+      expect_true(pTransformed.y() == Approx(expectedPoint.y()));
+      expect_true(pTransformed.z() == Approx(expectedPoint.z()));
+  }
+}
+
+// Test RotateX function
+context("RotateX function works correctly") {
+  test_that("RotateX rotates point around X-axis") {
+      Float theta = 90.0f; // degrees
+      Transform rotateX = RotateX(theta);
+
+      // Expected rotation matrix (90 degrees around X-axis)
+      Float rad = Radians(theta);
+      Float cosTheta = std::cos(rad);
+      Float sinTheta = std::sin(rad);
+
+      Matrix4x4 expected(
+          1, 0,         0,        0,
+          0, cosTheta, -sinTheta, 0,
+          0, sinTheta,  cosTheta, 0,
+          0, 0,         0,        1);
+
+      expect_true(rotateX.GetMatrix() == expected);
+
+      // Test transforming a point
+      point3f p(0.0f, 1.0f, 0.0f);
+      point3f pTransformed = rotateX(p);
+      point3f expectedPoint(0.0f, 0.0f, 1.0f);
+
+      expect_true(pTransformed.x() == Approx(expectedPoint.x()));
+      expect_true(pTransformed.y() == Approx(expectedPoint.y()));
+      expect_true(pTransformed.z() == Approx(expectedPoint.z()));
+  }
+}
+
+// Test RotateY function
+context("RotateY function works correctly") {
+  test_that("RotateY rotates point around Y-axis") {
+      Float theta = 90.0f; // degrees
+      Transform rotateY = RotateY(theta);
+
+      // Expected rotation matrix (90 degrees around Y-axis)
+      Float rad = Radians(theta);
+      Float cosTheta = std::cos(rad);
+      Float sinTheta = std::sin(rad);
+
+      Matrix4x4 expected(
+          cosTheta,  0, sinTheta, 0,
+          0,         1, 0,        0,
+          -sinTheta, 0, cosTheta, 0,
+          0,         0, 0,        1);
+
+      expect_true(rotateY.GetMatrix() == expected);
+
+      // Test transforming a point
+      point3f p(1.0f, 0.0f, 0.0f);
+      point3f pTransformed = rotateY(p);
+      point3f expectedPoint(0.0f, 0.0f, -1.0f);
+
+      expect_true(pTransformed.x() == Approx(expectedPoint.x()));
+      expect_true(pTransformed.y() == Approx(expectedPoint.y()));
+      expect_true(pTransformed.z() == Approx(expectedPoint.z()));
+  }
+}
+
+// Test RotateZ function
+context("RotateZ function works correctly") {
+  test_that("RotateZ rotates point around Z-axis") {
+      Float theta = 90.0f; // degrees
+      Transform rotateZ = RotateZ(theta);
+
+      // Expected rotation matrix (90 degrees around Z-axis)
+      Float rad = Radians(theta);
+      Float cosTheta = std::cos(rad);
+      Float sinTheta = std::sin(rad);
+
+      Matrix4x4 expected(
+          cosTheta, -sinTheta, 0, 0,
+          sinTheta,  cosTheta, 0, 0,
+          0,         0,        1, 0,
+          0,         0,        0, 1);
+
+      expect_true(rotateZ.GetMatrix() == expected);
+
+      // Test transforming a point
+      point3f p(1.0f, 0.0f, 0.0f);
+      point3f pTransformed = rotateZ(p);
+      point3f expectedPoint(0.0f, 1.0f, 0.0f);
+
+      expect_true(pTransformed.x() == Approx(expectedPoint.x()));
+      expect_true(pTransformed.y() == Approx(expectedPoint.y()));
+      expect_true(pTransformed.z() == Approx(expectedPoint.z()));
+  }
+}
+
+// Test Rotate function with arbitrary axis
+context("Rotate function works correctly with arbitrary axis") {
+  test_that("Rotate rotates point around arbitrary axis") {
+      Float theta = 90.0f; // degrees
+      vec3f axis(0.0f, 0.0f, 1.0f); // Z-axis
+      Transform rotate = Rotate(theta, axis);
+
+      // Should be equivalent to RotateZ(90)
+      Transform rotateZ = RotateZ(theta);
+
+      // Compare matrices
+      expect_true(rotate.GetMatrix() == rotateZ.GetMatrix());
+
+      // Test transforming a point
+      point3f p(1.0f, 0.0f, 0.0f);
+      point3f pTransformed = rotate(p);
+      point3f expectedPoint(0.0f, 1.0f, 0.0f);
+
+      expect_true(pTransformed.x() == Approx(expectedPoint.x()));
+      expect_true(pTransformed.y() == Approx(expectedPoint.y()));
+      expect_true(pTransformed.z() == Approx(expectedPoint.z()));
+  }
+}
+
+// Test LookAt function
+context("LookAt function works correctly") {
+  test_that("LookAt creates correct camera transform") {
+      point3f pos(0.0f, 0.0f, 0.0f);
+      point3f look(0.0f, 0.0f, -1.0f);
+      vec3f up(0.0f, 1.0f, 0.0f);
+
+      Transform lookAt = LookAt(pos, look, up);
+
+      // Test transforming a point in front of the camera
+      point3f p(0.0f, 0.0f, -5.0f);
+      point3f pTransformed = lookAt(p);
+      point3f expectedPoint(0.0f, 0.0f, -5.0f);
+
+      expect_true(pTransformed.x() == Approx(expectedPoint.x()));
+      expect_true(pTransformed.y() == Approx(expectedPoint.y()));
+      expect_true(pTransformed.z() == Approx(expectedPoint.z()));
+  }
+}
+
+// Test Orthographic function
+context("Orthographic function works correctly") {
+  test_that("Orthographic projection transforms point correctly") {
+      Float zNear = 0.0f;
+      Float zFar = 1.0f;
+
+      Transform ortho = Orthographic(zNear, zFar);
+
+      // Test transforming a point
+      point3f p(1.0f, 2.0f, 3.0f);
+      point3f pTransformed = ortho(p);
+
+      // Since ortho scales Z by 1 / (zFar - zNear)
+      Float scaleZ = 1 / (zFar - zNear);
+      point3f expectedPoint(1.0f, 2.0f, 3.0f * scaleZ - zNear * scaleZ);
+
+      expect_true(pTransformed.x() == Approx(expectedPoint.x()));
+      expect_true(pTransformed.y() == Approx(expectedPoint.y()));
+      expect_true(pTransformed.z() == Approx(expectedPoint.z()));
+  }
+}
+
+// Test SwapsHandedness function
+context("SwapsHandedness function works correctly") {
+  test_that("SwapsHandedness detects handedness swap correctly") {
+      Transform scale = Scale(-1.0f, 1.0f, 1.0f);
+      expect_true(scale.SwapsHandedness() == true);
+
+      Transform identity;
+      expect_true(identity.SwapsHandedness() == false);
+  }
+}
+
+// Test IsIdentity function
+context("IsIdentity function works correctly") {
+  test_that("IsIdentity detects identity transform correctly") {
+      Transform identity;
+      expect_true(identity.IsIdentity() == true);
+
+      Transform translate = Translate(vec3f(1.0f, 2.0f, 3.0f));
+      expect_true(translate.IsIdentity() == false);
+  }
+}
+
+// Test HasScale function
+context("HasScale function works correctly") {
+  test_that("HasScale detects scaling correctly") {
+      Transform scale = Scale(2.0f, 2.0f, 2.0f);
+      expect_true(scale.HasScale() == true);
+
+      Transform translate = Translate(vec3f(1.0f, 2.0f, 3.0f));
+      expect_true(translate.HasScale() == false);
+  }
+}
+
+// Test operator* (composition of transforms)
+context("Transform composition works correctly") {
+  test_that("Composition of transforms applies correctly") {
+      Transform translate = Translate(vec3f(1.0f, 0.0f, 0.0f));
+      Transform scale = Scale(2.0f, 2.0f, 2.0f);
+
+      Transform composed = translate * scale;
+
+      // Test transforming a point
+      point3f p(1.0f, 1.0f, 1.0f);
+      point3f pTransformed = composed(p);
+
+      // Expected result: first scales to (2,2,2), then translates to (3,2,2)
+      point3f expectedPoint(3.0f, 2.0f, 2.0f);
+
+      expect_true(pTransformed.x() == Approx(expectedPoint.x()));
+      expect_true(pTransformed.y() == Approx(expectedPoint.y()));
+      expect_true(pTransformed.z() == Approx(expectedPoint.z()));
+  }
 }

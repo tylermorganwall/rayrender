@@ -4,7 +4,6 @@
 #include <cstdint>
 #include <algorithm>
 #include <stdio.h>
-#include "point3.h"
 #include <cstddef> // For alignas
 
 // SIMD vector size (4 for SSE, 8 for AVX)
@@ -73,12 +72,6 @@ public:
       xyzw[2] = z_;
       xyzw[3] = 0.f;
     }
-    FVec4(point3f v) {
-      xyzw[0] = v.x();
-      xyzw[1] = v.y();
-      xyzw[2] = v.z();
-      xyzw[3] = 0;
-    }
 
     float operator[](int i) const { return xyzw[i]; }
     float& operator[](int i) { return xyzw[i]; }
@@ -142,6 +135,60 @@ inline FVec4 simd_load(const float* ptr) {
   }
 #endif
   return result;
+}
+
+
+inline FVec4 simd_add(FVec4 a, FVec4 b) {
+    FVec4 result;
+#ifdef HAS_AVX
+    result.v = _mm256_add_ps(a.v, b.v);
+#elif defined(HAS_SSE)
+    result.v = _mm_add_ps(a.v, b.v);
+#elif defined(HAS_NEON)
+    result.v = vaddq_f32(a.v, b.v);
+#else
+    for (int i = 0; i < SIMD_WIDTH; ++i) {
+        result.v[i] = a.v[i] + b.v[i];
+    }
+#endif
+    return result;
+}
+
+inline FVec4 simd_div(FVec4 a, FVec4 b) {
+    FVec4 result;
+#ifdef HAS_AVX
+    result.v = _mm256_div_ps(a.v, b.v);
+#elif defined(HAS_SSE)
+    result.v = _mm_div_ps(a.v, b.v);
+#elif defined(HAS_NEON)
+    // NEON doesn't have a divide instruction, so we approximate
+    float32x4_t reciprocal = vrecpeq_f32(b.v);
+    reciprocal = vmulq_f32(vrecpsq_f32(b.v, reciprocal), reciprocal);
+    reciprocal = vmulq_f32(vrecpsq_f32(b.v, reciprocal), reciprocal);
+    result.v = vmulq_f32(a.v, reciprocal);
+#else
+    for (int i = 0; i < SIMD_WIDTH; ++i) {
+        result.v[i] = a.v[i] / b.v[i];
+    }
+#endif
+    return result;
+}
+
+
+inline FVec4 simd_set(float e0, float e1, float e2, float e3) {
+    FVec4 result;
+#ifdef HAS_SSE
+    result.v = _mm_set_ps(e3, e2, e1, e0);  // Note the reverse order
+#elif defined(HAS_NEON)
+    float32_t data[4] = { e0, e1, e2, e3 };
+    result.v = vld1q_f32(data);
+#else
+    result.xyzw[0] = e0;
+    result.xyzw[1] = e1;
+    result.xyzw[2] = e2;
+    result.xyzw[3] = e3;
+#endif
+    return result;
 }
 
 typedef FVec4 SimdMask;
@@ -581,6 +628,91 @@ inline IVec4 simd_cmpneq(IVec4 a, IVec4 b) {
 // #endif
 // }
 
+static inline float sgn_local(float val) {
+  return (float(0) < val) - (val < float(0));
+}
+
+inline int sgn_local(int val) {
+  return (0 < val) - (val < 0);
+}
+
+inline FVec4 simd_sgn(const FVec4& a) {
+  FVec4 result;
+#ifdef HAS_SSE2
+    __m128i zero = _mm_setzero_si128();
+    __m128i one = _mm_set1_epi32(1);
+    __m128i neg_one = _mm_set1_epi32(-1);
+
+    __m128i gt_mask = _mm_cmpgt_epi32(a.v, zero);      // x > 0
+    __m128i lt_mask = _mm_cmpgt_epi32(zero, a.v);      // x < 0
+
+    __m128i pos_result = _mm_and_si128(gt_mask, one);     // 1 where x > 0
+    __m128i neg_result = _mm_and_si128(lt_mask, neg_one); // -1 where x < 0
+
+    result.v = _mm_add_epi32(pos_result, neg_result);
+
+#elif defined(HAS_NEON)
+    int32x4_t zero = vdupq_n_s32(0);
+    int32x4_t one = vdupq_n_s32(1);
+    int32x4_t neg_one = vdupq_n_s32(-1);
+
+    uint32x4_t gt_mask = vcgtq_s32(a.v, zero); // x > 0
+    uint32x4_t lt_mask = vcltq_s32(a.v, zero); // x < 0
+
+    int32x4_t pos_result = vandq_s32(vreinterpretq_s32_u32(gt_mask), one);
+    int32x4_t neg_result = vandq_s32(vreinterpretq_s32_u32(lt_mask), neg_one);
+
+    result.v = vaddq_s32(pos_result, neg_result);
+
+#else
+    // Fallback to scalar implementation
+    result.e[0] = sgn_local(p.e[0]);
+    result.e[1] = sgn_local(p.e[1]);
+    result.e[2] = sgn_local(p.e[2]);
+    result.e[3] = 0;
+#endif
+    return result;
+}
+
+
+inline IVec4 simd_sgn(const IVec4& a) {
+  IVec4 result;
+#ifdef HAS_SSE2
+    __m128i zero = _mm_setzero_si128();
+    __m128i one = _mm_set1_epi32(1);
+    __m128i neg_one = _mm_set1_epi32(-1);
+
+    __m128i gt_mask = _mm_cmpgt_epi32(p.e.v, zero);      // x > 0
+    __m128i lt_mask = _mm_cmpgt_epi32(zero, p.e.v);      // x < 0
+
+    __m128i pos_result = _mm_and_si128(gt_mask, one);     // 1 where x > 0
+    __m128i neg_result = _mm_and_si128(lt_mask, neg_one); // -1 where x < 0
+
+    result.v = _mm_add_epi32(pos_result, neg_result);
+
+#elif defined(HAS_NEON)
+    int32x4_t zero = vdupq_n_s32(0);
+    int32x4_t one = vdupq_n_s32(1);
+    int32x4_t neg_one = vdupq_n_s32(-1);
+
+    uint32x4_t gt_mask = vcgtq_s32(a.v, zero); // x > 0
+    uint32x4_t lt_mask = vcltq_s32(a.v, zero); // x < 0
+
+    int32x4_t pos_result = vandq_s32(vreinterpretq_s32_u32(gt_mask), one);
+    int32x4_t neg_result = vandq_s32(vreinterpretq_s32_u32(lt_mask), neg_one);
+
+    result.v = vaddq_s32(pos_result, neg_result);
+
+#else
+    // Fallback to scalar implementation
+    result.e[0] = sgn_local(p.e[0]);
+    result.e[1] = sgn_local(p.e[1]);
+    result.e[2] = sgn_local(p.e[2]);
+    result.e[3] = 0;
+#endif
+    return result;
+}
+
 inline IVec4 simd_and(IVec4 a, IVec4 b) {
 #ifdef HAS_AVX2
     IVec4 result;
@@ -651,6 +783,137 @@ inline IVec4 simd_not_equals_minus_one(IVec4 a) {
 #endif
 }
 
+inline FVec4 simd_abs(const FVec4& b) {
+    FVec4 result;
+#ifdef HAS_SSE
+    result.v = _mm_andnot_ps(_mm_set1_ps(-0.0f), b.v);
+#elif defined(HAS_NEON)
+    result.v = vabsq_f32(b.v);
+#else
+#ifdef RAY_FLOAT_AS_DOUBLE
+    result.e[0] = std::fabs(b.e[0]);
+    result.e[1] = std::fabs(b.e[1]);
+    result.e[2] = std::fabs(b.e[2]);
+    result.e[3] = 0.0f;
+#else
+    result.e[0] = std::fabsf(b.e[0]);
+    result.e[1] = std::fabsf(b.e[1]);
+    result.e[2] = std::fabsf(b.e[2]);
+    result.e[3] = 0.0f;
+#endif
+#endif
+    return result;
+}
+
+inline float simd_dot(FVec4 a, FVec4 b) {
+#ifdef HAS_AVX
+    // For AVX, use _mm256_dp_ps or manually compute
+    __m256 mul = _mm256_mul_ps(a.v, b.v);
+    // Sum the elements manually
+    __m128 hi = _mm256_extractf128_ps(mul, 1); // Upper 128 bits
+    __m128 lo = _mm256_castps256_ps128(mul);   // Lower 128 bits
+    __m128 sum = _mm_add_ps(lo, hi);           // Sum lower and upper parts
+    sum = _mm_hadd_ps(sum, sum);
+    sum = _mm_hadd_ps(sum, sum);
+    return _mm_cvtss_f32(sum);
+#elif defined(HAS_SSE)
+    // For SSE, use dot product intrinsics or manual horizontal addition
+    __m128 mul = _mm_mul_ps(a.v, b.v);
+#if defined(__SSE4_1__)
+    // If SSE4.1 is available, use _mm_dp_ps
+    __m128 sum = _mm_dp_ps(a.v, b.v, 0x71); // 0x71 masks elements and specifies which elements to sum
+    return _mm_cvtss_f32(sum);
+#else
+    // Without SSE4.1, perform horizontal adds
+    __m128 shuf = _mm_movehdup_ps(mul);    // Shuffle for adding high and low parts
+    __m128 sums = _mm_add_ps(mul, shuf);
+    shuf = _mm_movehl_ps(shuf, sums);      // Move high parts
+    sums = _mm_add_ss(sums, shuf);
+    return _mm_cvtss_f32(sums);
+#endif
+#elif defined(HAS_NEON)
+    // For NEON, use vmlaq_f32 and vaddvq_f32 (vaddvq_f32 requires ARMv8)
+#if defined(__aarch64__)
+    // ARMv8 and above
+    float32x4_t mul = vmulq_f32(a.v, b.v);
+    float result = vaddvq_f32(mul); // Sum across vector
+    return result;
+#else
+    // For ARMv7, sum manually
+    float32x4_t mul = vmulq_f32(a.v, b.v);
+    float32x2_t sum_pair = vadd_f32(vget_low_f32(mul), vget_high_f32(mul));
+    float32x2_t sum = vpadd_f32(sum_pair, sum_pair);
+    return vget_lane_f32(sum, 0);
+#endif
+#else
+    // Scalar fallback
+    float result = 0.0f;
+    for (int i = 0; i < 3; ++i) { // Only sum the first 3 elements
+        result += a.xyzw[i] * b.xyzw[i];
+    }
+    return result;
+#endif
+}
+
+
+inline FVec4 simd_cross(FVec4 a, FVec4 b) {
+    FVec4 result;
+#ifdef HAS_SSE
+    // For SSE, use shuffle and multiply operations
+    __m128 a_yzx = _mm_shuffle_ps(a.v, a.v, _MM_SHUFFLE(3, 0, 2, 1)); // (a.z, a.x, a.y)
+    __m128 b_yzx = _mm_shuffle_ps(b.v, b.v, _MM_SHUFFLE(3, 0, 2, 1)); // (b.z, b.x, b.y)
+
+    __m128 c = _mm_sub_ps(
+        _mm_mul_ps(a.v, b_yzx),
+        _mm_mul_ps(a_yzx, b.v)
+    );
+
+    result.v = _mm_shuffle_ps(c, c, _MM_SHUFFLE(3, 0, 2, 1)); // Shuffle back to (c.x, c.y, c.z)
+#elif defined(HAS_NEON)
+    // Allocate aligned memory for arrays
+    alignas(16) float a_values[4];
+    alignas(16) float b_values[4];
+
+    // Store vectors into arrays
+    vst1q_f32(a_values, a.v);
+    vst1q_f32(b_values, b.v);
+
+     // ARM code adaptation
+    // Load elements into NEON registers
+    float32x2_t vec_a_1 = vld1_f32(a_values + 1); // [a_y, a_z]
+    float32x2_t vec_a_2 = vld1_f32(a_values);     // [a_x, a_y]
+
+    float32x2_t vec_b_1 = vld1_f32(b_values + 1); // [b_y, b_z]
+    float32x2_t vec_b_2 = vld1_f32(b_values);     // [b_x, b_y]
+
+    // Combine to create 128-bit vectors
+    float32x4_t vec_a = vcombine_f32(vec_a_2, vec_a_1); // [a_x, a_y, a_y, a_z]
+    float32x4_t vec_b = vcombine_f32(vec_b_2, vec_b_1); // [b_x, b_y, b_y, b_z]
+
+    // Rotate vectors
+    float32x4_t vec_a_rot = vextq_f32(vec_a, vec_a, 1); // [a_y, a_y, a_z, a_x]
+    float32x4_t vec_b_rot = vextq_f32(vec_b, vec_b, 1); // [b_y, b_y, b_z, b_x]
+
+    // Compute cross product
+    float32x4_t prod = vmulq_f32(vec_a, vec_b_rot); // [a_x * b_y, a_y * b_y, a_y * b_z, a_z * b_x]
+    // [a_x * b_y - a_y * b_x, a_y * b_y - a_y * b_y, a_y * b_z - a_z * b_y, a_z * b_x - a_x * b_z]
+    prod = vmlsq_f32(prod, vec_a_rot, vec_b); 
+    // So this is [c_z, 0, c_x, c_y]
+    prod = vextq_f32(prod, prod, 2);
+    
+    result.v = prod;
+#else
+    // Scalar fallback
+    result.xyzw[0] = DifferenceOfProducts(a.xyzw[1], b.xyzw[2], a.xyzw[2], b.xyzw[1]);
+    result.xyzw[1] = DifferenceOfProducts(a.xyzw[2], b.xyzw[0], a.xyzw[0], b.xyzw[2]);
+    result.xyzw[2] = DifferenceOfProducts(a.xyzw[0], b.xyzw[1], a.xyzw[1], b.xyzw[0]);
+    result.xyzw[3] = 0.0f;
+#endif
+    // Ensure the fourth element is zero
+    result.xyzw[3] = 0.0f;
+    return result;
+}
+
 inline SimdMask simd_cmpgt(FVec4 a, FVec4 b) {
 #ifdef HAS_AVX
     SimdMask result;
@@ -690,6 +953,80 @@ inline SimdMask simd_cmplt(FVec4 a, FVec4 b) {
         }
         return result;
     #endif
+}
+
+
+inline IVec4 simd_set1(int value) {
+    IVec4 result;
+#ifdef HAS_AVX2
+    result.v = _mm256_set1_epi32(value);
+#elif defined(HAS_SSE)
+    result.v = _mm_set1_epi32(value);
+#elif defined(HAS_NEON)
+    result.v = vdupq_n_s32(value);
+#else
+    for (int i = 0; i < SIMD_WIDTH; ++i) {
+        result.xyzw[i] = value;
+    }
+#endif
+    return result;
+}
+
+inline IVec4 simd_add(IVec4 a, IVec4 b) {
+    IVec4 result;
+#ifdef HAS_AVX2
+    result.v = _mm256_add_epi32(a.v, b.v);
+#elif defined(HAS_SSE)
+    result.v = _mm_add_epi32(a.v, b.v);
+#elif defined(HAS_NEON)
+    result.v = vaddq_s32(a.v, b.v);
+#else
+    for (int i = 0; i < SIMD_WIDTH; ++i) {
+        result.xyzw[i] = a.xyzw[i] + b.xyzw[i];
+    }
+#endif
+    return result;
+}
+
+inline IVec4 simd_sub(IVec4 a, IVec4 b) {
+    IVec4 result;
+#ifdef HAS_AVX2
+    result.v = _mm256_sub_epi32(a.v, b.v);
+#elif defined(HAS_SSE)
+    result.v = _mm_sub_epi32(a.v, b.v);
+#elif defined(HAS_NEON)
+    result.v = vsubq_s32(a.v, b.v);
+#else
+    for (int i = 0; i < SIMD_WIDTH; ++i) {
+        result.xyzw[i] = a.xyzw[i] - b.xyzw[i];
+    }
+#endif
+    return result;
+}
+
+inline IVec4 simd_mul(IVec4 a, IVec4 b) {
+    IVec4 result;
+#ifdef HAS_AVX2
+    result.v = _mm256_mullo_epi32(a.v, b.v);
+#elif defined(HAS_SSE4_1)
+    result.v = _mm_mullo_epi32(a.v, b.v);
+#elif defined(HAS_NEON)
+    result.v = vmulq_s32(a.v, b.v);
+#else
+    for (int i = 0; i < SIMD_WIDTH; ++i) {
+        result.xyzw[i] = a.xyzw[i] * b.xyzw[i];
+    }
+#endif
+    return result;
+}
+
+// Integer division is not directly supported in SIMD; we can approximate or use scalar code
+inline IVec4 simd_div(IVec4 a, IVec4 b) {
+    IVec4 result;
+    for (int i = 0; i < SIMD_WIDTH; ++i) {
+        result.xyzw[i] = a.xyzw[i] / b.xyzw[i];
+    }
+    return result;
 }
 
 // inline IVec4 simd_blend_int(SimdMask mask, IVec4 a, IVec4 b) {

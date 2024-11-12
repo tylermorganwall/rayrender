@@ -11,8 +11,13 @@ const bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, 
   // Compute quadratic sphere coefficients
   
   // Initialize _EFloat_ ray coordinate values
-  EFloat ox(r2.origin().x(), oErr.x()), oy(r2.origin().y(), oErr.y()), oz(r2.origin().z(), oErr.z());
-  EFloat dx(r2.direction().x(), dErr.x()), dy(r2.direction().y(), dErr.y()), dz(r2.direction().z(), dErr.z());
+  EFloat ox(r2.origin().x(), oErr.x()), 
+         oy(r2.origin().y(), oErr.y()), 
+         oz(r2.origin().z(), oErr.z());
+  EFloat dx(r2.direction().x(), dErr.x()), 
+         dy(r2.direction().y(), dErr.y()), 
+         dz(r2.direction().z(), dErr.z());
+         
   EFloat a = dx * dx + dy * dy + dz * dz;
   EFloat b = 2 * (dx * ox + dy * oy + dz * oz);
   EFloat c = ox * ox + oy * oy + oz * oz - EFloat(radius) * EFloat(radius);
@@ -32,7 +37,7 @@ const bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, 
     if(temp1 < t_max && temp1 > t_min) {
       point3f p1 = r2.point_at_parameter((Float)temp1);
       p1 *= radius / p1.length(); 
-      vec3f normal = p1 / radius;
+      vec3f normal = convert_to_vec3f(p1 / radius);
       get_sphere_uv(normal, u, v);
       if(alpha_mask->value(u, v, rec.p) < rng.unif_rand()) {
         is_hit = false;
@@ -41,7 +46,7 @@ const bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, 
     if(temp2 < t_max && temp2 > t_min) {
       point3f p2 = r2.point_at_parameter((Float)temp2);
       p2 *= radius / p2.length(); 
-      vec3f normal = p2 / radius;
+      vec3f normal = convert_to_vec3f(p2 / radius);
       get_sphere_uv(normal, u, v);
       if(alpha_mask->value(u, v, rec.p) < rng.unif_rand()) {
         if(!is_hit) {
@@ -55,7 +60,7 @@ const bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, 
     rec.t = (Float)temp1;
     rec.p = r2.point_at_parameter(rec.t);
     rec.p *= radius / rec.p.length(); 
-    rec.normal = vec3f(rec.p) / radius;
+    rec.normal = convert_to_normal3f(rec.p) / radius;
     
     //Interaction information
     Float zRadius = std::sqrt(rec.p.x() * rec.p.x()  + rec.p.z()  * rec.p.z() );
@@ -73,7 +78,7 @@ const bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, 
       rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
       rec.bump_normal.make_unit_vector();
     }
-    rec.pError = gamma(5) * Abs(rec.p);
+    rec.pError = convert_to_vec3f(gamma(5) * Abs(rec.p));
     rec = (*ObjectToWorld)(rec);
     rec.normal *= reverseOrientation  ? -1 : 1;
     rec.bump_normal *= reverseOrientation  ? -1 : 1;
@@ -88,7 +93,7 @@ const bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, 
     rec.t = (Float)temp2;
     rec.p = r2.point_at_parameter(rec.t);
     rec.p *= radius / rec.p.length();
-    rec.normal = vec3f(rec.p) / radius;
+    rec.normal = convert_to_normal3f(rec.p) / radius;
     
     //Interaction information
     Float zRadius = std::sqrt(rec.p.x() * rec.p.x()  + rec.p.z()  * rec.p.z() );
@@ -111,7 +116,7 @@ const bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, 
       rec.normal = -rec.normal;
       rec.bump_normal = -rec.bump_normal;
     }
-    rec.pError = gamma(5) * Abs(rec.p);
+    rec.pError = convert_to_vec3f(gamma(5) * Abs(rec.p));
     rec = (*ObjectToWorld)(rec);
     rec.normal *= reverseOrientation  ? -1 : 1;
     rec.bump_normal *= reverseOrientation  ? -1 : 1;
@@ -156,7 +161,7 @@ const bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, 
     if(temp1 < t_max && temp1 > t_min) {
       point3f p1 = r2.point_at_parameter((Float)temp1);
       p1 *= radius / p1.length(); 
-      vec3f normal = p1 / radius;
+      vec3f normal = convert_to_vec3f(p1) / radius;
       get_sphere_uv(normal, u, v);
       if(alpha_mask->value(u, v, rec.p) < sampler->Get1D()) {
         is_hit = false;
@@ -165,7 +170,7 @@ const bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, 
     if(temp2 < t_max && temp2 > t_min) {
       point3f p2 = r2.point_at_parameter((Float)temp2);
       p2 *= radius / p2.length(); 
-      vec3f normal = p2 / radius;
+      vec3f normal = convert_to_vec3f(p2) / radius;
       get_sphere_uv(normal, u, v);
       if(alpha_mask->value(u, v, rec.p) < sampler->Get1D()) {
         if(!is_hit) {
@@ -179,7 +184,7 @@ const bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, 
     rec.t = (Float)temp1;
     rec.p = r2.point_at_parameter(rec.t);
     rec.p *= radius / rec.p.length(); 
-    rec.normal = vec3f(rec.p) / radius;
+    rec.normal = convert_to_normal3f(rec.p) / radius;
     
     //Interaction information
     Float zRadius = std::sqrt(rec.p.x() * rec.p.x()  + rec.p.z()  * rec.p.z() );
@@ -197,7 +202,7 @@ const bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, 
       rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
       rec.bump_normal.make_unit_vector();
     }
-    rec.pError = gamma(5) * Abs(rec.p);
+    rec.pError = convert_to_vec3f(gamma(5) * Abs(rec.p));
     rec = (*ObjectToWorld)(rec);
     rec.normal *= reverseOrientation  ? -1 : 1;
     rec.bump_normal *= reverseOrientation  ? -1 : 1;
@@ -213,7 +218,7 @@ const bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, 
     rec.t = (Float)temp2;
     rec.p = r2.point_at_parameter(rec.t);
     rec.p *= radius / rec.p.length();
-    rec.normal = vec3f(rec.p) / radius;
+    rec.normal = convert_to_normal3f(rec.p) / radius;
     
     //Interaction information
     Float zRadius = std::sqrt(rec.p.x() * rec.p.x()  + rec.p.z()  * rec.p.z() );
@@ -236,7 +241,7 @@ const bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, 
       rec.normal = -rec.normal;
       rec.bump_normal = -rec.bump_normal;
     }
-    rec.pError = gamma(5) * Abs(rec.p);
+    rec.pError = convert_to_vec3f(gamma(5) * Abs(rec.p));
     rec = (*ObjectToWorld)(rec);
     rec.normal *= reverseOrientation  ? -1 : 1;
     rec.bump_normal *= reverseOrientation  ? -1 : 1;

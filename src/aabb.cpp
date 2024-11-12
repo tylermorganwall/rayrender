@@ -93,11 +93,11 @@ const point2f aabb::Lerp(const point2f &t) const {
 }
 
 const point3f aabb::Centroid() const {
-  return((bounds[0] + bounds[1])/2);
+  return((bounds[0] + bounds[1]) / static_cast<Float>(2));
 }
 
 const point3f aabb::Diag() const {
-  return((bounds[1] - bounds[0]));
+  return((bounds[1] + (-bounds[0])));
 }
 
 int aabb::MaxDimension() const {

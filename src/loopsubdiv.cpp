@@ -3,6 +3,7 @@
 #include <map>
 #include "point3.h"
 #include "Rcpp.h"
+#include "vectypes.h"
 #include <queue>
 
 struct SDFace;
@@ -525,7 +526,7 @@ void LoopSubdivide(TriangleMesh* base_mesh,
   int cntr = 0;
   for (SDVertex *vertex : v) {
     if(vertex->initialized) {
-      vec3f S(0, 0, 0), T(0, 0, 0);
+      point3f S(0, 0, 0), T(0, 0, 0);
       int valence = vertex->valence();
       if (valence > (int)pRing.size()) {
         pRing.resize(valence);
@@ -534,30 +535,30 @@ void LoopSubdivide(TriangleMesh* base_mesh,
       if (!vertex->boundary) {
         // Compute tangents of interior face
         for (int j = 0; j < valence; ++j) {
-          S += std::cos(2 * M_PI * j / valence) * vec3f(pRing[j]);
-          T += std::sin(2 * M_PI * j / valence) * vec3f(pRing[j]);
+          S += std::cos(2 * M_PI * j / valence) * (pRing[j]);
+          T += std::sin(2 * M_PI * j / valence) * (pRing[j]);
         }
       } else {
         // Compute tangents of boundary face
-        S = pRing[valence - 1] - pRing[0];
+        S = pRing[valence - 1] + -pRing[0];
         if (valence == 2) {
-          T = vec3f(pRing[0] + pRing[1] - 2 * vertex->p);
+          T = (pRing[0] + pRing[1] + -static_cast<Float>(2) * vertex->p);
         } else if (valence == 3) {
-          T = pRing[1] - vertex->p;
+          T = pRing[1] + -vertex->p;
         } else if (valence == 4) {   // regular
-          T = vec3f(-1 * pRing[0] + 2 * pRing[1] + 2 * pRing[2] +
-            -1 * pRing[3] + -2 * vertex->p);
+          T = (-static_cast<Float>(1) * pRing[0] + static_cast<Float>(2) * pRing[1] + static_cast<Float>(2) * pRing[2] +
+            -static_cast<Float>(1) * pRing[3] + -static_cast<Float>(2) * vertex->p);
         } else {
           Float theta = M_PI / float(valence - 1);
-          T = vec3f(std::sin(theta) * (pRing[0] + pRing[valence - 1]));
+          T = (std::sin(theta) * (pRing[0] + pRing[valence - 1]));
           for (int k = 1; k < valence - 1; ++k) {
             Float wt = (2 * std::cos(theta) - 2) * std::sin((k)*theta);
-            T += vec3f(wt * pRing[k]);
+            T += (wt * pRing[k]);
           }
           T = -T;
         }
       }
-      final_normals[cntr] = (normal3f(-cross(S, T)));
+      final_normals[cntr] = (convert_to_normal3f(-cross(S, T)));
     }
     cntr++;
   }

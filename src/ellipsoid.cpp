@@ -1,12 +1,13 @@
 #include "ellipsoid.h"
 #include "raylog.h"
+#include "vectypes.h"
 
 const bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("Ellipsoid");
   
   ray r2 = (*WorldToObject)(r);
-  ray scaled_ray(r2.origin() * point3f(inv_axes) + -center, r2.direction() * inv_axes);
+  ray scaled_ray(r2.origin() * inv_axes + -center, r2.direction() * inv_axes);
   Float a = dot(scaled_ray.direction(), scaled_ray.direction());
   Float b = 2 * dot(scaled_ray.origin(), scaled_ray.direction()); 
   Float c = dot(scaled_ray.origin(),scaled_ray.origin()) - 1;
@@ -74,7 +75,7 @@ const bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& re
     rec.normal.make_unit_vector();
     rec.p *= 1/rec.p.length() * axes;
     
-    rec.pError = gamma(5) * Abs(rec.p);
+    rec.pError = convert_to_vec3f(gamma(5) * Abs(rec.p));
     rec = (*ObjectToWorld)(rec);
     rec.normal *= reverseOrientation  ? -1 : 1;
     rec.bump_normal *= reverseOrientation  ? -1 : 1;
@@ -116,7 +117,7 @@ const bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& re
       rec.normal = -rec.normal;
       rec.bump_normal = -rec.bump_normal;
     }
-    rec.pError = gamma(5) * Abs(rec.p);
+    rec.pError = convert_to_vec3f(gamma(5) * Abs(rec.p));
     rec = (*ObjectToWorld)(rec);
     rec.normal *= reverseOrientation  ? -1 : 1;
     rec.bump_normal *= reverseOrientation  ? -1 : 1;
@@ -135,7 +136,7 @@ const bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& re
   
   ray r2 = (*WorldToObject)(r);
   
-  ray scaled_ray(r2.origin() * point3f(inv_axes) + -center, r2.direction() * inv_axes);
+  ray scaled_ray(r2.origin() * inv_axes + -center, r2.direction() * inv_axes);
   Float a = dot(scaled_ray.direction(), scaled_ray.direction());
   Float b = 2 * dot(scaled_ray.origin(), scaled_ray.direction()); 
   Float c = dot(scaled_ray.origin(),scaled_ray.origin()) - 1;
@@ -205,7 +206,7 @@ const bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& re
     rec.normal.make_unit_vector();
     rec.p *= 1/rec.p.length() * axes;
     
-    rec.pError = gamma(5) * Abs(rec.p);
+    rec.pError = convert_to_vec3f(gamma(5) * Abs(rec.p));
     rec = (*ObjectToWorld)(rec);
     rec.normal *= reverseOrientation  ? -1 : 1;
     rec.bump_normal *= reverseOrientation  ? -1 : 1;
@@ -247,7 +248,7 @@ const bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& re
       rec.normal = -rec.normal;
       rec.bump_normal = -rec.bump_normal;
     }
-    rec.pError = gamma(5) * Abs(rec.p);
+    rec.pError = convert_to_vec3f(gamma(5) * Abs(rec.p));
     rec = (*ObjectToWorld)(rec);
     rec.normal *= reverseOrientation  ? -1 : 1;
     rec.bump_normal *= reverseOrientation  ? -1 : 1;

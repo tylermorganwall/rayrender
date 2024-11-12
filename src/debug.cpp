@@ -12,7 +12,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                 hitable_list& world, hitable_list& hlist,
                 Float clampval, size_t max_depth, size_t roulette_active,
                 Rcpp::NumericVector& light_direction, random_gen& rng, Float sample_dist,
-                bool keep_colors, vec3f backgroundhigh) {
+                bool keep_colors, point3f backgroundhigh) {
   Environment pkg = Environment::namespace_env("rayrender");
   Function print_time = pkg["print_time"];
   if(debug_channel == 1) {
@@ -24,7 +24,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
         if(fov >= 0) {
           Float u = (Float(i)) / Float(nx);
           Float v = (Float(j)) / Float(ny);
-          r = cam->get_ray(u,v, vec3f(0,0,0), rng.unif_rand());
+          r = cam->get_ray(u,v, point3f(0,0,0), rng.unif_rand());
         } else {
           point2f u(rng.unif_rand(),rng.unif_rand());
           point2f u2(rng.unif_rand(),rng.unif_rand());
@@ -49,7 +49,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
         if(fov >= 0) {
           Float u = (Float(i)) / Float(nx);
           Float v = (Float(j)) / Float(ny);
-          r = cam->get_ray(u,v, vec3f(0,0,0), rng.unif_rand());
+          r = cam->get_ray(u,v, point3f(0,0,0), rng.unif_rand());
         } else {
           point2f u(rng.unif_rand(),rng.unif_rand());
           point2f u2(rng.unif_rand(),rng.unif_rand());
@@ -65,15 +65,15 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
       }
     }
   } else if(debug_channel == 3) {
-    vec3f uv_map(0,0,0);
+    point3f uv_map(0,0,0);
     for(unsigned int j = 0; j < ny; j++) {
       for(unsigned int i = 0; i < nx; i++) {
-        uv_map = vec3f(0,0,0);
+        uv_map = point3f(0,0,0);
         ray r;
         if(fov >= 0) {
           Float u = (Float(i)) / Float(nx);
           Float v = (Float(j)) / Float(ny);
-          r = cam->get_ray(u,v, vec3f(0,0,0), rng.unif_rand());
+          r = cam->get_ray(u,v, point3f(0,0,0), rng.unif_rand());
         } else {
           point2f u(rng.unif_rand(),rng.unif_rand());
           point2f u2(rng.unif_rand(),rng.unif_rand());
@@ -96,7 +96,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
         if(fov >= 0) {
           Float u = (Float(i)) / Float(nx);
           Float v = (Float(j)) / Float(ny);
-          r = cam->get_ray(u,v, vec3f(0,0,0), rng.unif_rand());
+          r = cam->get_ray(u,v, point3f(0,0,0), rng.unif_rand());
         } else {
           point2f u(rng.unif_rand(),rng.unif_rand());
           point2f u2(rng.unif_rand(),rng.unif_rand());
@@ -117,7 +117,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
         if(fov >= 0) {
           Float u = (Float(i)) / Float(nx);
           Float v = (Float(j)) / Float(ny);
-          r = cam->get_ray(u,v, vec3f(0,0,0), rng.unif_rand());
+          r = cam->get_ray(u,v, point3f(0,0,0), rng.unif_rand());
         } else {
           point2f u(rng.unif_rand(),rng.unif_rand());
           point2f u2(rng.unif_rand(),rng.unif_rand());
@@ -139,7 +139,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
         if(fov >= 0) {
           Float u = (Float(i)) / Float(nx);
           Float v = (Float(j)) / Float(ny);
-          r = cam->get_ray(u,v, vec3f(0,0,0), rng.unif_rand());
+          r = cam->get_ray(u,v, point3f(0,0,0), rng.unif_rand());
         } else {
           point2f u(rng.unif_rand(),rng.unif_rand());
           point2f u2(rng.unif_rand(),rng.unif_rand());
@@ -170,7 +170,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                        if(fov >= 0) {
                          Float u = (Float(i)) / Float(nx);
                          Float v = (Float(j)) / Float(ny);
-                         r = cam->get_ray(u,v, vec3f(0,0,0), rng.unif_rand());
+                         r = cam->get_ray(u,v, point3f(0,0,0), rng.unif_rand());
                        } else {
                          point2f u(rng.unif_rand(),rng.unif_rand());
                          point2f u2(rng.unif_rand(),rng.unif_rand());
@@ -203,7 +203,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                        if(fov >= 0) {
                          Float u = (Float(i)) / Float(nx);
                          Float v = (Float(j)) / Float(ny);
-                         r = cam->get_ray(u,v, vec3f(0,0,0), rng.unif_rand());
+                         r = cam->get_ray(u,v, point3f(0,0,0), rng.unif_rand());
                        } else {
                          point2f u(rng.unif_rand(),rng.unif_rand());
                          point2f u2(rng.unif_rand(),rng.unif_rand());
@@ -238,7 +238,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                          if(fov >= 0) {
                            Float u = (Float(i)) / Float(nx);
                            Float v = (Float(j)) / Float(ny);
-                           r = cam->get_ray(u,v, vec3f(0,0,0), rng.unif_rand());
+                           r = cam->get_ray(u,v, point3f(0,0,0), rng.unif_rand());
                          } else {
                            point2f u(rng.unif_rand(),rng.unif_rand());
                            point2f u2(rng.unif_rand(),rng.unif_rand());
@@ -274,7 +274,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                        if(fov >= 0) {
                          Float u = (Float(i)) / Float(nx);
                          Float v = (Float(j)) / Float(ny);
-                         r = cam->get_ray(u,v, vec3f(0,0,0), rng.unif_rand());
+                         r = cam->get_ray(u,v, point3f(0,0,0), rng.unif_rand());
                        } else {
                          point2f u(rng.unif_rand(),rng.unif_rand());
                          point2f u2(rng.unif_rand(),rng.unif_rand());
@@ -309,7 +309,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                        if(fov >= 0) {
                          Float u = (Float(i)) / Float(nx);
                          Float v = (Float(j)) / Float(ny);
-                         r = cam->get_ray(u,v, vec3f(0,0,0), rng.unif_rand());
+                         r = cam->get_ray(u,v, point3f(0,0,0), rng.unif_rand());
                        } else {
                          point2f u(rng.unif_rand(),rng.unif_rand());
                          point2f u2(rng.unif_rand(),rng.unif_rand());
@@ -345,7 +345,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                          if(fov >= 0) {
                            Float u = (Float(i)) / Float(nx);
                            Float v = (Float(j)) / Float(ny);
-                           r = cam->get_ray(u,v, vec3f(0,0,0), rng.unif_rand());
+                           r = cam->get_ray(u,v, point3f(0,0,0), rng.unif_rand());
                          } else {
                            point2f u(rng.unif_rand(),rng.unif_rand());
                            point2f u2(rng.unif_rand(),rng.unif_rand());
@@ -381,7 +381,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                        if(fov >= 0) {
                          Float u = (Float(i)) / Float(nx);
                          Float v = (Float(j)) / Float(ny);
-                         r = cam->get_ray(u,v, vec3f(0,0,0), rng.unif_rand());
+                         r = cam->get_ray(u,v, point3f(0,0,0), rng.unif_rand());
                        } else {
                          point2f u(rng.unif_rand(),rng.unif_rand());
                          point2f u2(rng.unif_rand(),rng.unif_rand());
@@ -417,7 +417,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                          if(fov >= 0) {
                            Float u = (Float(i)) / Float(nx);
                            Float v = (Float(j)) / Float(ny);
-                           r = cam->get_ray(u,v, vec3f(0,0,0), rng.unif_rand());
+                           r = cam->get_ray(u,v, point3f(0,0,0), rng.unif_rand());
                          } else {
                            point2f u(rng.unif_rand(),rng.unif_rand());
                            point2f u2(rng.unif_rand(),rng.unif_rand());
@@ -454,7 +454,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                          if(fov >= 0) {
                            Float u = (Float(i)) / Float(nx);
                            Float v = (Float(j)) / Float(ny);
-                           r = cam->get_ray(u,v, vec3f(0,0,0), rng.unif_rand());
+                           r = cam->get_ray(u,v, point3f(0,0,0), rng.unif_rand());
                          } else {
                            point2f u(rng.unif_rand(),rng.unif_rand());
                            point2f u2(rng.unif_rand(),rng.unif_rand());
@@ -549,7 +549,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                            if(fov >= 0) {
                              Float u = (Float(i)) / Float(nx);
                              Float v = (Float(j)) / Float(ny);
-                             r = cam->get_ray(u,v, rand_to_unit(samplers[index]->Get2D()),
+                             r = cam->get_ray(u,v, convert_to_point3f(rand_to_unit(samplers[index]->Get2D())),
                                               samplers[index]->Get1D());
                            } else {
                              CameraSample samp({1-u,1-v},samplers[index]->Get2D(), samplers[index]->Get1D());
@@ -593,7 +593,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                        if(fov >= 0) {
                          Float u = (Float(i)) / Float(nx);
                          Float v = (Float(j)) / Float(ny);
-                         r = cam->get_ray(u,v, vec3f(0,0,0), rng.unif_rand());
+                         r = cam->get_ray(u,v, point3f(0,0,0), rng.unif_rand());
                        } else {
                          point2f u(rng.unif_rand(),rng.unif_rand());
                          point2f u2(rng.unif_rand(),rng.unif_rand());

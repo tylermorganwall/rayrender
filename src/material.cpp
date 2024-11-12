@@ -45,7 +45,7 @@ point3f lambertian::f(const ray& r_in, const hit_record& rec, const ray& scatter
   if(cosine < 0) {
     cosine = 0;
   }
-  return(G * albedo->value(rec.u, rec.v, rec.p) * cosine * M_1_PI);
+  return(G * albedo->value(rec.u, rec.v, rec.p) * cosine * static_cast<Float>(M_1_PI));
 }
 
 bool lambertian::scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng) {
@@ -384,7 +384,7 @@ point3f spot_light::emitted(const ray& r_in, const hit_record& rec, Float u, Flo
   if(dot(rec.normal, r_in.direction()) < 0.0) {
     return(falloff(r_in.origin() - rec.p) * emit->value(u,v,p) * intensity );
   } else {
-    return(vec3f(0,0,0));
+    return(point3f(0,0,0));
   }
 }
 
@@ -435,7 +435,7 @@ point3f isotropic::f(const ray& r_in, const hit_record& rec, const ray& scattere
   SCOPED_CONTEXT("Material");
   SCOPED_TIMER_COUNTER("Isotropic F");
   
-  return(albedo->value(rec.u,rec.v,rec.p) * 0.25 * M_1_PI);
+  return(albedo->value(rec.u,rec.v,rec.p) * static_cast<Float>(0.25) * static_cast<Float>(M_1_PI));
 }
 point3f isotropic::get_albedo(const ray& r_in, const hit_record& rec) const {
   return(albedo->value(rec.u, rec.v, rec.p));
@@ -504,7 +504,7 @@ point3f orennayar::f(const ray& r_in, const hit_record& rec, const ray& scattere
     sinAlpha = sinThetaI;
     tanBeta = sinThetaO / AbsCosTheta(wo);
   }
-  return(albedo->value(rec.u, rec.v, rec.p) * (A + B * maxCos * sinAlpha * tanBeta ) * cosine * M_1_PI );
+  return(albedo->value(rec.u, rec.v, rec.p) * (A + B * maxCos * sinAlpha * tanBeta ) * cosine * static_cast<Float>(M_1_PI ));
 }
 
 point3f orennayar::get_albedo(const ray& r_in, const hit_record& rec) const {
@@ -565,10 +565,10 @@ point3f MicrofacetReflection::f(const ray& r_in, const hit_record& rec, const ra
   Float cosThetaI = AbsCosTheta(wi);
   vec3f normal = unit_vector(wi + wo);
   if (cosThetaI == 0 || cosThetaO == 0) {
-    return(vec3f(0,0,0));
+    return(point3f(0,0,0));
   }
   if (normal.x() == 0 && normal.y() == 0 && normal.z() == 0) {
-    return(vec3f(0,0,0));
+    return(point3f(0,0,0));
   }
   point3f F = FrCond(cosThetaO, eta, k);
   Float G = distribution->G(wo,wi,normal);
@@ -664,7 +664,7 @@ point3f MicrofacetTransmission::f(const ray& r_in, const hit_record& rec, const 
   }
 
   Float sqrtDenom = dot(wi, wh)  + dot(wo, wh)* eta2 ;
-  return ((1.0 - F) *
+  return (static_cast<Float>(1.0 - F) *
           albedo->value(rec.u, rec.v, rec.p) * atten *
           D * G * AbsCosTheta(wo) *
         std::fabs(eta2 * eta2 *
@@ -724,13 +724,13 @@ point3f glossy::f(const ray& r_in, const hit_record& rec, const ray& scattered) 
   vec3f wo = unit_vector(uvw.world_to_local(scattered.direction()));
   
   auto pow5 = [](Float v) { return (v * v) * (v * v) * v; };
-  point3f diffuse = (28.0f / (23.0f * M_PI)) * Rd * albedo->value(rec.u, rec.v,rec.p) *
-    (point3f(1.0f) + -Rs) *
-    (1.0 - pow5(1 - 0.5f * AbsCosTheta(wi))) *
-    (1.0 - pow5(1 - 0.5f * AbsCosTheta(wo)));
+  point3f diffuse = static_cast<Float>(28.0 / (23.0 * M_PI)) * Rd * albedo->value(rec.u, rec.v,rec.p) *
+    (point3f(1.0) + -Rs) *
+    static_cast<Float>(1.0 - pow5(1 - 0.5f * AbsCosTheta(wi))) *
+    static_cast<Float>(1.0 - pow5(1 - 0.5f * AbsCosTheta(wo)));
   vec3f wh = unit_vector(wi + wo);
   if (wh.x() == 0 && wh.y() == 0 && wh.z() == 0) {
-    return(vec3f(0.0f));
+    return(point3f(0.0f));
   }
   Float cosine  = dot(wh,wi);
   if(cosine < 0 || !SameHemisphere(wi,wo)) {
@@ -855,7 +855,7 @@ bool hair::scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec
   vec3f wi(sinThetaI, cosThetaI * std::cos(phiI),
           cosThetaI * std::sin(phiI));
   srec.is_specular = false;
-  srec.attenuation = vec3f(1,1,1);
+  srec.attenuation = point3f(1,1,1);
   
   srec.pdf_ptr = new hair_pdf(uvw, wi, wo, 
                               eta, h, gammaO,  s, sigma_a,
@@ -931,7 +931,7 @@ bool hair::scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec
   vec3f wi(sinThetaI, cosThetaI * std::cos(phiI),
           cosThetaI * std::sin(phiI));
   srec.is_specular = false;
-  srec.attenuation = vec3f(1,1,1);
+  srec.attenuation = point3f(1,1,1);
   
   srec.pdf_ptr = new hair_pdf(uvw, wi, wo, 
                               eta, h, gammaO,  s, sigma_a,

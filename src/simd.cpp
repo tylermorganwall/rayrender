@@ -1,4 +1,5 @@
 #include "simd.h"
+#include "Rcpp.h"
 
 // const static SimdMask first_mask = simd_setmask(true, false, true, false);
 // const static SimdMask second_mask = simd_setmask(true, true, false, false);
@@ -54,9 +55,7 @@ inline IVec4 sort_simd_4_floats(FVec4 values) {
                   extract_index(values[3])));
 }
 
-
-#define TESTTHAT_TEST_RUNNER
-#include "testthat.h"
+#include <testthat.h>
 
 context("simd_load loads values correctly") {
   test_that("[simd_load]") {
@@ -84,6 +83,23 @@ context("simd_sub subtracts vectors correctly") {
         expect_true(result.xyzw[i] == Approx(a_values[i] - b_values[i]));
     }
   }
+}
+
+context("simd_div performs element-wise division correctly") {
+    test_that("[simd_div]") {
+        float a_values[SIMD_WIDTH] = {10.0f, 20.0f, 30.0f, 40.0f};
+        float b_values[SIMD_WIDTH] = {2.0f, 4.0f, 5.0f, 8.0f};
+
+        FVec4 a = simd_load(a_values);
+        FVec4 b = simd_load(b_values);
+
+        FVec4 result = simd_div(a, b);
+
+        for (int i = 0; i < SIMD_WIDTH; ++i) {
+            float expected = a_values[i] / b_values[i];
+            expect_true(fabs(result.xyzw[i] - expected) < 1e-6f);
+        }
+    }
 }
 
 
@@ -297,4 +313,62 @@ context("simd_extract_hitmask extracts mask correctly") {
 
     expect_true(mask == expected_mask);
   }
+}
+
+context("simd_dot computes dot product correctly") {
+    test_that("[simd_dot]") {
+        float a_values[SIMD_WIDTH] = {1.0f, 3.0f, -5.0f, 0.0f};
+        float b_values[SIMD_WIDTH] = {4.0f, -2.0f, -1.0f, 0.0f};
+
+        FVec4 a = simd_load(a_values);
+        FVec4 b = simd_load(b_values);
+
+        float result = simd_dot(a, b);
+
+        float expected = a_values[0] * b_values[0] + a_values[1] * b_values[1] + a_values[2] * b_values[2];
+
+        expect_true(fabs(result - expected) < 1e-6f);
+    }
+}
+
+context("simd_cross computes cross product correctly") {
+  test_that("[simd_cross]") {
+      float a_values[SIMD_WIDTH] = {1.0f, 2.0f, 3.0f, 0.0f};
+      float b_values[SIMD_WIDTH] = {4.0f, 5.0f, 6.0f, 0.0f};
+
+      FVec4 a = simd_load(a_values);
+      FVec4 b = simd_load(b_values);
+
+      FVec4 result = simd_cross(a, b);
+
+      float expected_values[3];
+      expected_values[0] = a_values[1] * b_values[2] - a_values[2] * b_values[1];
+      expected_values[1] = a_values[2] * b_values[0] - a_values[0] * b_values[2];
+      expected_values[2] = a_values[0] * b_values[1] - a_values[1] * b_values[0];
+
+      for (int i = 0; i < 3; ++i) {
+          std::cout << i << " " << result.xyzw[i] << " " << expected_values[i] << "\n";
+          expect_true(fabs(result.xyzw[i] - expected_values[i]) < 1e-6f);
+      }
+
+      // Ensure the fourth element is zero
+      expect_true(result.xyzw[3] == 0.0f);
+  }
+}
+
+context("simd_add performs vector addition correctly") {
+    test_that("[simd_add]") {
+        float a_values[SIMD_WIDTH] = {1.0f, 2.0f, 3.0f, 4.0f};
+        float b_values[SIMD_WIDTH] = {5.0f, 6.0f, 7.0f, 8.0f};
+
+        FVec4 a = simd_load(a_values);
+        FVec4 b = simd_load(b_values);
+
+        FVec4 result = simd_add(a, b);
+
+        for (int i = 0; i < SIMD_WIDTH; ++i) {
+            float expected = a_values[i] + b_values[i];
+            expect_true(fabs(result.xyzw[i] - expected) < 1e-6f);
+        }
+    }
 }

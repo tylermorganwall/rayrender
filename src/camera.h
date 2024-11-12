@@ -50,7 +50,7 @@ class RayCamera {
     virtual point3f get_origin() = 0;
     virtual Float get_iso() {return(1.f);}
     virtual vec3f get_up() {return(vec3f(0,1,0));}
-    virtual point3f get_lookat() {return(vec3f(0,0,0));}
+    virtual point3f get_lookat() {return(point3f(0,0,0));}
     virtual point2f get_ortho() {return(point2f(1.f,1.f));}
     
     

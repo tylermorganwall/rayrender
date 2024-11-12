@@ -1,7 +1,7 @@
 #include "infinite_area_light.h"
 #include "raylog.h"
 
-InfiniteAreaLight::InfiniteAreaLight(int width, int height, Float r, vec3f center, 
+InfiniteAreaLight::InfiniteAreaLight(int width, int height, Float r, point3f center, 
                                      std::shared_ptr<texture> image, std::shared_ptr<material> mat,
                                      std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation)
                                      : hitable(ObjectToWorld, WorldToObject, reverseOrientation), 

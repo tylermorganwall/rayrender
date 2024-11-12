@@ -149,7 +149,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
                            Float v = (Float(j) + u2.y()) / Float(ny);
                            
                            if(fov >= 0) {
-                             r = cam->get_ray(u,v, rand_to_unit(samplers[index]->Get2D()),
+                             r = cam->get_ray(u,v, convert_to_point3f(rand_to_unit(samplers[index]->Get2D())),
                                               samplers[index]->Get1D());
                            } else {
                              CameraSample samp({1-u,1-v},samplers[index]->Get2D(), samplers[index]->Get1D());
@@ -208,7 +208,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
                            Float v = (Float(j) + u2.y()) / Float(ny_small);
                            
                            if(fov >= 0) {
-                             r = cam->get_ray(u,v, rand_to_unit(samplers_small[index]->Get2D()),
+                             r = cam->get_ray(u,v, convert_to_point3f(rand_to_unit(samplers_small[index]->Get2D())),
                                               samplers_small[index]->Get1D());
                            } else {
                              CameraSample samp({1-u,1-v},samplers_small[index]->Get2D(), samplers_small[index]->Get1D());

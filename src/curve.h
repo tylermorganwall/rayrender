@@ -12,7 +12,7 @@ enum class CurveType {
 };
 
 struct CurveCommon {
-  CurveCommon(const vec3f c[4], Float w0, Float w1, CurveType type,
+  CurveCommon(const point3f c[4], Float w0, Float w1, CurveType type,
               const vec3f *norm);
   const CurveType type;
   point3f cpObj[4];

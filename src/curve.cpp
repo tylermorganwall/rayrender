@@ -33,16 +33,16 @@ static point3f EvalBezier(const point3f cp[4], Float u, vec3f *deriv = nullptr) 
 
 inline void SubdivideBezier(const point3f cp[4], point3f cpSplit[7]) {
   cpSplit[0] = cp[0];
-  cpSplit[1] = (cp[0] + cp[1]) / 2;
-  cpSplit[2] = (cp[0] + 2 * cp[1] + cp[2]) / 4;
-  cpSplit[3] = (cp[0] + 3 * cp[1] + 3 * cp[2] + cp[3]) / 8;
-  cpSplit[4] = (cp[1] + 2 * cp[2] + cp[3]) / 4;
-  cpSplit[5] = (cp[2] + cp[3]) / 2;
+  cpSplit[1] = (cp[0] + cp[1]) / static_cast<Float>(2);
+  cpSplit[2] = (cp[0] + static_cast<Float>(2) * cp[1] + cp[2]) / static_cast<Float>(4);
+  cpSplit[3] = (cp[0] + static_cast<Float>(3) * cp[1] + static_cast<Float>(3) * cp[2] + cp[3]) / static_cast<Float>(8);
+  cpSplit[4] = (cp[1] + static_cast<Float>(2) * cp[2] + cp[3]) / static_cast<Float>(4);
+  cpSplit[5] = (cp[2] + cp[3]) / static_cast<Float>(2);
   cpSplit[6] = cp[3];
 }
 
 
-CurveCommon::CurveCommon(const vec3f c[4], Float width0, Float width1,
+CurveCommon::CurveCommon(const point3f c[4], Float width0, Float width1,
                          CurveType type, const vec3f *norm)
   : type(type), cpObj{c[0], c[1], c[2], c[3]}, width{width0, width1} {
   width[0] = width0;
@@ -60,7 +60,7 @@ CurveCommon::CurveCommon(const vec3f c[4], Float width0, Float width1,
 
 bool curve::bounding_box(Float t0, Float t1, aabb& box) const {
   // Compute object-space control points for curve segment, cpObj
-  vec3f cpObj[4];
+  point3f cpObj[4];
   cpObj[0] = BlossomBezier(common->cpObj, uMin, uMin, uMin);
   cpObj[1] = BlossomBezier(common->cpObj, uMin, uMin, uMax);
   cpObj[2] = BlossomBezier(common->cpObj, uMin, uMax, uMax);

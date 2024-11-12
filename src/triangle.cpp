@@ -1,6 +1,7 @@
 #include "triangle.h"
 #include "RcppThread.h"
 #include "raylog.h"
+#include "vectypes.h"
 
 const bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
   SCOPED_CONTEXT("Hit");
@@ -10,11 +11,11 @@ const bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
   const point3f &p1 = mesh->p[v[1]];
   const point3f &p2 = mesh->p[v[2]];
 
-  vec3f origin_vec(r.origin());
+  point3f origin_vec(r.origin());
   
-  point3f p0t = p0 - origin_vec;
-  point3f p1t = p1 - origin_vec;
-  point3f p2t = p2 - origin_vec;
+  vec3f p0t = p0 - origin_vec;
+  vec3f p1t = p1 - origin_vec;
+  vec3f p2t = p2 - origin_vec;
 
   {
     int kx = r.kx;
@@ -79,6 +80,7 @@ const bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
   Float b0 = e0 * invDet;
   Float b1 = e1 * invDet;
   Float b2 = e2 * invDet;
+  vec3f bVec(b0, b1, b2);
   Float t = tScaled * invDet;
   {
     Float maxZt = MaxComponent(Abs(vec3f(p0t.z(), p1t.z(), p2t.z())));
@@ -129,13 +131,24 @@ const bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
     CoordinateSystem(unit_vector(ng), &rec.dpdu, &rec.dpdv);
   }
   //Add error calc
-  Float xAbsSum = (ffabs(b0 * p0.x()) + ffabs(b1 * p1.x()) +
-    ffabs(b2 * p2.x()));
-  Float yAbsSum = (ffabs(b0 * p0.y()) + ffabs(b1 * p1.y()) +
-    ffabs(b2 * p2.y()));
-  Float zAbsSum = (ffabs(b0 * p0.z()) + ffabs(b1 * p1.z()) +
-    ffabs(b2 * p2.z()));
-  rec.pError = gamma(7) * vec3f(xAbsSum, yAbsSum, zAbsSum);
+
+  point3f bSum0[3];
+  bSum0[0] = Abs(b0 * p0);
+  bSum0[1] = Abs(b1 * p1);
+  bSum0[2] = Abs(b2 * p2);
+
+  vec3f absSum = vec3f(bSum0[0].x() + bSum0[1].x() + bSum0[2].x(),
+                       bSum0[0].y() + bSum0[1].y() + bSum0[2].y(),
+                       bSum0[0].z() + bSum0[1].z() + bSum0[2].z()
+  );
+  // Float xAbsSum = (ffabs(b0 * p0.x()) + ffabs(b1 * p1.x()) +
+  //   ffabs(b2 * p2.x()));
+  // Float yAbsSum = (ffabs(b0 * p0.y()) + ffabs(b1 * p1.y()) +
+  //   ffabs(b2 * p2.y()));
+  // Float zAbsSum = (ffabs(b0 * p0.z()) + ffabs(b1 * p1.z()) +
+  //   ffabs(b2 * p2.z()));
+  // rec.pError = gamma(7) * vec3f(xAbsSum, yAbsSum, zAbsSum);
+  rec.pError = gamma(7) * absSum;
 
   point3f pHit = b0 * p0 + b1 * p1 + b2 * p2;
   point2f uvHit = b0 * uv[0] + b1 * uv[1] + b2 * uv[2];
@@ -228,9 +241,9 @@ const bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
   const point3f &p1 = mesh->p[v[1]];
   const point3f &p2 = mesh->p[v[2]];
   
-  point3f p0t = p0 - vec3f(r.origin());
-  point3f p1t = p1 - vec3f(r.origin());
-  point3f p2t = p2 - vec3f(r.origin());
+  vec3f p0t = p0 - r.origin();
+  vec3f p1t = p1 - r.origin();
+  vec3f p2t = p2 - r.origin();
   
   int kz = MaxDimension(Abs(r.direction()));
   int kx = kz + 1;

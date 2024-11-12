@@ -285,7 +285,7 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
           if (e.xkey.keycode == P_key || e.xkey.keycode == K_key ) {
             point3f origin = cam->get_origin();
             Float fov =  cam->get_fov();
-            point3f cam_direction = -cam->get_w();
+            vec3f cam_direction = -cam->get_w();
             Float cam_aperture = cam->get_aperture();
             Float fd = cam->get_focal_distance();
             vec3f cam_up = cam->get_up();
@@ -465,7 +465,7 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
             if (e.xkey.keycode == P_key ) {
               point3f origin = cam->get_origin();
               Float fov =  cam->get_fov();
-              point3f cam_direction = -cam->get_w();
+              vec3f cam_direction = -cam->get_w();
               Float fd = cam->get_focal_distance();
               point3f cam_lookat = cam->get_lookat();
               Float cam_aperture = cam->get_aperture();
@@ -519,11 +519,11 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
             cam->GenerateRay(samp,&r2);
             if(world->hit(r2, 0.001, FLT_MAX, hrec, rng)) {
               if( hrec.shape->GetName() != "EnvironmentLight") {
-                dir = -hrec.p;
+                dir = point3f(0)-hrec.p;
               }  else {
                 left = false;
                 right = true;
-                dir = -hrec.p;
+                dir = point3f(0)-hrec.p;
               }
             }
           } else if (fov > 0) {

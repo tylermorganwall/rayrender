@@ -14,7 +14,7 @@ const bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
   
   ray r2 = (*WorldToObject)(r);
   
-  vec3f oc = r2.origin();
+  point3f oc = r2.origin();
   vec3f dir = r2.direction();
   dir.e[1] = 0;
   oc.e[1] = 0;
@@ -73,7 +73,8 @@ const bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
     rec.p = temppoint;
     
     temppoint.e[1] = 0;
-    rec.normal = vec3f(temppoint) / radius;
+    point3f new_pt = temppoint / radius;
+    rec.normal.e = new_pt.e;
     
     get_cylinder_uv(rec.p, rec.u, rec.v);
     
@@ -204,7 +205,9 @@ const bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
     rec.p = temppoint;
     
     temppoint.e[1] = 0;
-    rec.normal = vec3f(temppoint) / radius;
+    point3f new_pt = temppoint / radius;
+
+    rec.normal.e = new_pt.e;
     
     get_cylinder_uv(rec.p, rec.u, rec.v);
     
@@ -299,7 +302,9 @@ const bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
     rec.p = temppoint;
     
     temppoint.e[1] = 0;
-    rec.normal = vec3f(temppoint) / radius;
+    point3f new_pt = temppoint / radius;
+
+    rec.normal.e = new_pt.e;
     get_cylinder_uv(rec.p, rec.u, rec.v);
     
     //Interaction information
@@ -427,7 +432,9 @@ const bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
     rec.p = temppoint;
     
     temppoint.e[1] = 0;
-    rec.normal = vec3f(temppoint) / radius;
+    point3f new_pt = temppoint / radius;
+
+    rec.normal.e = new_pt.e;
     get_cylinder_uv(rec.p, rec.u, rec.v);
     
     //Interaction information

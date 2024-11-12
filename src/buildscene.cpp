@@ -708,7 +708,7 @@ std::shared_ptr<hitable> build_scene(List& scene,
         Float a =  Rcpp::as<Float>(shape_properties["a"]);
         Float b =  Rcpp::as<Float>(shape_properties["b"]);
         Float c =  Rcpp::as<Float>(shape_properties["c"]);
-        entry = std::make_shared<ellipsoid>(vec3f(0,0,0), 1, 
+        entry = std::make_shared<ellipsoid>(point3f(0), 1, 
                                             vec3f(a,b,c),
                                             shape_material, alpha[mat_idx], bump[mat_idx],
                                             ObjToWorld,WorldToObj, is_flipped);
@@ -735,12 +735,12 @@ std::shared_ptr<hitable> build_scene(List& scene,
         NumericVector normal     = as<NumericVector>(shape_properties["normal"]);
         NumericVector normal_end = as<NumericVector>(shape_properties["normal_end"]);
         
-        vec3f p[4];
+        point3f p[4];
         vec3f n[2];
-        p[0] = vec3f(p1(0),p1(1),p1(2));
-        p[1] = vec3f(p2(0),p2(1),p2(2));
-        p[2] = vec3f(p3(0),p3(1),p3(2));
-        p[3] = vec3f(p4(0),p4(1),p4(2));
+        p[0] = point3f(p1(0),p1(1),p1(2));
+        p[1] = point3f(p2(0),p2(1),p2(2));
+        p[2] = point3f(p3(0),p3(1),p3(2));
+        p[3] = point3f(p4(0),p4(1),p4(2));
         
         n[0] = vec3f(normal(0),normal(1),normal(2));
         n[1] = vec3f(normal_end(0),normal_end(1),normal_end(2));

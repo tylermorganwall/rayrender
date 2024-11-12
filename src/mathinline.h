@@ -6,14 +6,13 @@
 #include <cstdint>
 #include <cstring>
 #include "float.h"
-#include "vec3.h"
+#include "vectypes.h"
 #include "vec2.h"
-#include "point3.h"
 #include "point2.h"
 
-#include "normal.h"
 #include <limits>
 #include <array>
+#include "dop.h"
 
 
 static constexpr Float mpi_over_180 = M_PI/180;
@@ -41,12 +40,16 @@ inline T lerp(Float t, T v1, T v2) {
   return((1-t) * v1 + t * v2);
 }
 
-template <typename T> int sgn(T val) {
-  return (T(0) < val) - (val < T(0));
+// template <typename T> int sgn(T val) {
+//   return (T(0) < val) - (val < T(0));
+// }
+
+inline Float sgn(Float val) {
+  return (static_cast<Float>(0) < val) - (val < static_cast<Float>(0));
 }
 
-inline vec3f sgn(vec3f v) {
-  return(vec3f(sgn(v.x()),sgn(v.y()),sgn(v.z())));
+inline int sgn(int val) {
+  return (0 < val) - (val < 0);
 }
 
 inline Float Radians(Float deg) { 
@@ -531,9 +534,9 @@ inline Float Erf(Float x) {
 }
 
 template <typename T>
-inline vec3<T> Reflect(const vec3<T> &wo, const normal3<T> &n) {
-  normal3<T> n2 = 2 * dot(wo, n) * n;
-  return(-wo + vec3<T>(n2.x(),n2.y(),n2.z()));
+inline vec3<T> Reflect(const vec3<T> &wo, const normal3f &n) {
+  normal3f n2 = 2 * dot(wo, n) * n;
+  return(-wo + n2.convert_to_vec3());
 }
 
 template <typename T>
@@ -921,10 +924,9 @@ inline Float SphericalTriangleArea(vec3f a, vec3f b, vec3f c) {
   return(std::abs(2 * std::atan2(dot(a, cross(b, c)), 1 + dot(a, b) + dot(a, c) + dot(b, c))));
 }
 
-template <typename T>
-inline normal3<T> Faceforward(const normal3<T> &n, const normal3<T> &n2) {
-  return (dot(n, n2) < 0.f) ? -n : n;
-}
+// inline normal3f Faceforward(const normal3f &n, const normal3f &n2) {
+//   return (dot(n, n2) < 0.f) ? -n : n;
+// }
 
 template <typename T>
 inline vec3<T> Faceforward(const vec3<T> &v, const vec3<T> &v2) {
@@ -932,7 +934,7 @@ inline vec3<T> Faceforward(const vec3<T> &v, const vec3<T> &v2) {
 }
 
 template <typename T>
-inline vec3<T> Faceforward(const vec3<T> &v, const normal3<T> &n2) {
+inline vec3<T> Faceforward(const vec3<T> &v, const normal3f &n2) {
   return (dot(v, n2) < 0.f) ? -v : v;
 }
 
