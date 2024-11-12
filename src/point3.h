@@ -7,7 +7,7 @@
 #include "float.h"
 #include "vec3.h"
 
-template <typename T> class point3 {
+template <typename T> class alignas(16) point3 {
 public:
   point3() {}
   point3(T e0, T e1, T e2) {e[0] = e0; e[1] = e1; e[2] = e2;}
@@ -309,7 +309,7 @@ inline T dot(const point3<T> &v1, const vec3<T> &v2) {
 
 // Specialize for Float
 template<>
-class point3<Float> {
+class alignas(16) point3<Float> {
 public:
     FVec4 e;
 
@@ -646,7 +646,7 @@ inline Float dot(const point3<Float>& p1, const vec3<Float>& v2) {
 
 // Specialize for int type
 template<>
-class point3<int> {
+class alignas(16) point3<int> {
 public:
     IVec4 e;
 

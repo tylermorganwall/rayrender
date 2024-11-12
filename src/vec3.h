@@ -13,7 +13,7 @@ inline T ffmin(T a, T b);
 template<class T>
 inline T ffmax(T a, T b);
 
-template <typename T> class vec3 {
+template <typename T> class alignas(16) vec3 {
 public:
   vec3() {}
   vec3(T e0, T e1, T e2) {e[0] = e0; e[1] = e1; e[2] = e2;}
@@ -254,7 +254,7 @@ inline vec3<T> unit_vector(const vec3<T>& v) {
 
 // Specialize for Float
 template<>
-class vec3<Float> {
+class alignas(16) vec3<Float> {
 public:
     FVec4 e;
 
@@ -546,7 +546,7 @@ inline Float dot(const vec3<Float>& v1, const vec3<Float>& v2) {
 
 // Specialize for int type
 template<>
-class vec3<int> {
+class alignas(16) vec3<int> {
 public:
     IVec4 e;
 

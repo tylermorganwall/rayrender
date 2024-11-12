@@ -8,7 +8,7 @@
 #include "float.h"
 #include "simd.h" 
 
-class normal3f {
+class alignas(16) normal3f {
 public:
     FVec4 e;  // SIMD vector for storage
 
