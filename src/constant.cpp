@@ -45,7 +45,7 @@ const bool constant_medium::hit(const ray& r, Float t_min, Float t_max, hit_reco
       if(hit_distance < distance_inside_boundary) {
         rec.t = rec1.t + hit_distance / r.direction().length();
         rec.p = r.point_at_parameter(rec.t);
-        rec.normal = vec3f(1,0,0);
+        rec.normal = normal3f(1,0,0);
         rec.mat_ptr = phase_function.get();
         return(true);
       }
@@ -78,7 +78,7 @@ const bool constant_medium::hit(const ray& r, Float t_min, Float t_max, hit_reco
       if(hit_distance < distance_inside_boundary) {
         rec.t = rec1.t + hit_distance / r.direction().length();
         rec.p = r.point_at_parameter(rec.t);
-        rec.normal = vec3f(1,0,0);
+        rec.normal = normal3f(1,0,0);
         rec.mat_ptr = phase_function.get();
         return(true);
       }
