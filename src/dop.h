@@ -24,4 +24,9 @@ inline double DifferenceOfProducts(double a, double b, double c, double d) {
   return(dop + err);
 }
 
+template<typename T>
+inline T DifferenceOfProductsRaw(T a, T b, T c, T d) {
+    return a * b - c * d;
+}
+
 #endif
