@@ -27,21 +27,6 @@ inline constexpr Float gamma(int n) {
 }
 
 template<class T>
-inline T ffmin(T a, T b) { return(a < b ? a : b);}
-
-template<class T>
-inline T ffmax(T a, T b) { return(a > b ? a : b);}
-
-template<class T>
-inline T ffabs(T a) { return(a > 0 ? a : -a);}
-
-template<>
-inline float ffabs(float a) { return(std::fabsf(a));}
-
-template<>
-inline double ffabs(double a) { return(std::fabs(a));}
-
-template<class T>
 inline T lerp(Float t, T v1, T v2) {
   return((1-t) * v1 + t * v2);
 }
@@ -102,6 +87,12 @@ inline vec3f rand_to_unit(vec2f u) {
     phi = (M_PI_2) - (M_PI_4)*(a/b);
   }
   return(vec3f(r*cos(phi),r*sin(phi),0));
+}
+
+template<typename T>
+inline vec3<T> sgn(vec3<T> v) {
+  vec3<T> result(sgn(v.e[0]),sgn(v.e[1]),sgn(v.e[2]));
+  return result;
 }
 
 inline vec3f rand_cosine_direction(vec2f u) {
@@ -447,15 +438,15 @@ inline bool refract(const vec3f& v, const normal3f& n2, Float ni_over_nt, vec3f&
 inline vec3f refract(const vec3f& uv, const vec3f& n, Float ni_over_nt) {
   Float cos_theta = dot(-uv, n);
   vec3f r_out_parallel =  ni_over_nt * (uv + cos_theta*n);
-  vec3f r_out_perp = -sqrt(1.0 - r_out_parallel.squared_length()) * n;
+  vec3f r_out_perp = -sqrtf(1.0 - r_out_parallel.squared_length()) * n;
   return(r_out_parallel + r_out_perp);
 }
 
 inline vec3f refract(const vec3f& uv, const normal3f& n, Float ni_over_nt) {
-  vec3f n2 = vec3f(n.x(),n.y(),n.z());
+  vec3f n2 = convert_to_vec3(n);
   Float cos_theta = dot(-uv, n);
   vec3f r_out_parallel =  ni_over_nt * (uv + cos_theta*n2);
-  vec3f r_out_perp = -sqrt(1.0 - r_out_parallel.squared_length()) * n2;
+  vec3f r_out_perp = -sqrtf(1.0 - r_out_parallel.squared_length()) * n2;
   return(r_out_parallel + r_out_perp);
 }
 
@@ -542,7 +533,7 @@ inline Float Erf(Float x) {
 template <typename T>
 inline vec3<T> Reflect(const vec3<T> &wo, const normal3f &n) {
   normal3f n2 = 2 * dot(wo, n) * n;
-  return(-wo + n2.convert_to_vec3());
+  return(-wo + convert_to_vec3(n2));
 }
 
 template <typename T>
@@ -863,7 +854,7 @@ CoordinateSystem(const vec3<T> &v1, vec3<T> *v2, vec3<T> *v3) {
 inline point3f OffsetRayOrigin(const point3f &p, const vec3f &pError,
                                const normal3f &n, const vec3f &w) {
   Float d = dot(Abs(n), pError);
-  vec3f offset = d * vec3f(n.x(),n.y(),n.z());
+  vec3f offset = d * convert_to_vec3(n);
   if (dot(w, n) < 0) {
     offset = -offset;
   }
