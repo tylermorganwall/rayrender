@@ -74,7 +74,7 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
 #endif
 ]], [[float32x4_t test = vdupq_n_f32(0.0);]])],
   [AC_MSG_RESULT([yes])
-   DEFINES="${DEFINES} -DHAS_NEON -DRAYSIMD"
+   DEFINES="${DEFINES} -DHAS_NEON -DRAYSIMD -DRAYSIMDVEC"
    CXXFLAGS="${CXXFLAGS} -mfpu=neon"],
   [AC_MSG_RESULT([no])])
 
