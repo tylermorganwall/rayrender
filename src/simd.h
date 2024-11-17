@@ -972,6 +972,38 @@ inline IVec4 simd_set1(int value) {
     return result;
 }
 
+inline float simd_squared_length(FVec4 a) {
+    float result;
+#if defined(HAS_SSE)
+    // SSE implementation using _mm intrinsics
+    __m128 v = a.v;
+    __m128 v_squared = _mm_mul_ps(v, v);
+    // Sum all elements of v_squared
+    __m128 sum = _mm_hadd_ps(v_squared, v_squared);           // [x² + y², z² + w², x² + y², z² + w²]
+    sum = _mm_hadd_ps(sum, sum);                              // [length², length², length², length²]
+    result = _mm_cvtss_f32(sum);                              // Extract the result
+#elif defined(HAS_NEON)
+    // NEON implementation using ARM intrinsics
+    float32x4_t v = a.v;
+    float32x4_t v_squared = vmulq_f32(v, v);
+    // Sum all elements of v_squared
+    #if defined(__aarch64__)
+        // AArch64 provides vaddvq_f32 to sum across vector
+        result = vaddvq_f32(v_squared);
+    #else
+        // For ARMv7, sum manually
+        float32x2_t sum_pair = vadd_f32(vget_low_f32(v_squared), vget_high_f32(v_squared));
+        result = vget_lane_f32(vpadd_f32(sum_pair, sum_pair), 0);
+    #endif
+#else
+    // Scalar fallback
+    result = a.xyzw[0] * a.xyzw[0] +
+             a.xyzw[1] * a.xyzw[1] +
+             a.xyzw[2] * a.xyzw[2];
+#endif
+    return result;
+}
+
 inline IVec4 simd_add(IVec4 a, IVec4 b) {
     IVec4 result;
 #ifdef HAS_AVX2

@@ -549,7 +549,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                            if(fov >= 0) {
                              Float u = (Float(i)) / Float(nx);
                              Float v = (Float(j)) / Float(ny);
-                             r = cam->get_ray(u,v, convert_to_point3f(rand_to_unit(samplers[index]->Get2D())),
+                             r = cam->get_ray(u,v, convert_to_point3(rand_to_unit(samplers[index]->Get2D())),
                                               samplers[index]->Get1D());
                            } else {
                              CameraSample samp({1-u,1-v},samplers[index]->Get2D(), samplers[index]->Get1D());

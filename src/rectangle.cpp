@@ -44,8 +44,8 @@ const bool xy_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec,
   }
   if(bump_tex) {
     point3f bvbu = bump_tex->value(u,v, rec.p);
-    rec.bump_normal = cross(rec.dpdu + bvbu.x() * rec.normal.convert_to_vec3() , 
-                            rec.dpdv - bvbu.y() * rec.normal.convert_to_vec3() );
+    rec.bump_normal = convert_to_normal3(cross(rec.dpdu + bvbu.x() * convert_to_vec3(rec.normal) , 
+                            rec.dpdv - bvbu.y() * convert_to_vec3(rec.normal) ));
     rec.bump_normal.make_unit_vector();
   }
   
@@ -86,7 +86,7 @@ const bool xy_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec,
     if(alpha_mask->value(u, v, rec.p) < sampler->Get1D()) {
       alpha_miss = true;
     }
-    rec.normal = dot(r2.direction(),vec3f(0,0,1)) < 0 ? vec3f(0,0,1) : vec3f(0,0,-1);
+    rec.normal = convert_to_normal3(dot(r2.direction(),vec3f(0,0,1)) < 0 ? vec3f(0,0,1) : vec3f(0,0,-1));
   } else {
     rec.normal = normal3f(0,0,1);
   }
@@ -102,8 +102,8 @@ const bool xy_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec,
   }
   if(bump_tex) {
     point3f bvbu = bump_tex->value(u,v, rec.p);
-    rec.bump_normal = cross(rec.dpdu + bvbu.x() * rec.normal.convert_to_vec3() , 
-                            rec.dpdv - bvbu.y() * rec.normal.convert_to_vec3() );
+    rec.bump_normal = convert_to_normal3(cross(rec.dpdu + bvbu.x() * convert_to_vec3(rec.normal) , 
+                            rec.dpdv - bvbu.y() * convert_to_vec3(rec.normal) ));
     rec.bump_normal.make_unit_vector();
   }
   
@@ -204,8 +204,8 @@ const bool xz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec,
   }
   if(bump_tex) {
     point3f bvbu = bump_tex->value(u,v, rec.p);
-    rec.bump_normal = cross(rec.dpdu + bvbu.x() * rec.normal.convert_to_vec3() , 
-                            rec.dpdv - bvbu.y() * rec.normal.convert_to_vec3() );
+    rec.bump_normal = convert_to_normal3(cross(rec.dpdu + bvbu.x() * convert_to_vec3(rec.normal) , 
+                            rec.dpdv - bvbu.y() * convert_to_vec3(rec.normal) ));
     rec.bump_normal.make_unit_vector();
   }
   
@@ -266,8 +266,8 @@ const bool xz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec,
   }
   if(bump_tex) {
     point3f bvbu = bump_tex->value(u,v, rec.p);
-    rec.bump_normal = cross(rec.dpdu + bvbu.x() * rec.normal.convert_to_vec3() , 
-                            rec.dpdv - bvbu.y() * rec.normal.convert_to_vec3() );
+    rec.bump_normal = convert_to_normal3(cross(rec.dpdu + bvbu.x() * convert_to_vec3(rec.normal) , 
+                            rec.dpdv - bvbu.y() * convert_to_vec3(rec.normal) ));
     rec.bump_normal.make_unit_vector();
   }
   
@@ -372,8 +372,8 @@ const bool yz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec,
   }
   if(bump_tex) {
     point3f bvbu = bump_tex->value(u,v, rec.p);
-    rec.bump_normal = cross(rec.dpdu + bvbu.x() * rec.normal.convert_to_vec3() , 
-                            rec.dpdv - bvbu.y() * rec.normal.convert_to_vec3() );
+    rec.bump_normal = convert_to_normal3(cross(rec.dpdu + bvbu.x() * convert_to_vec3(rec.normal) , 
+                            rec.dpdv - bvbu.y() * convert_to_vec3(rec.normal) ));
     rec.bump_normal.make_unit_vector();
   }
   rec.shape = this;
@@ -427,8 +427,8 @@ const bool yz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec,
   }
   if(bump_tex) {
     point3f bvbu = bump_tex->value(u,v, rec.p);
-    rec.bump_normal = cross(rec.dpdu + bvbu.x() * rec.normal.convert_to_vec3() , 
-                            rec.dpdv - bvbu.y() * rec.normal.convert_to_vec3() );
+    rec.bump_normal = convert_to_normal3(cross(rec.dpdu + bvbu.x() * convert_to_vec3(rec.normal) , 
+                            rec.dpdv - bvbu.y() * convert_to_vec3(rec.normal) ));
     rec.bump_normal.make_unit_vector();
   }
   

@@ -7,12 +7,6 @@
 #include "simd.h"
 #include "dop.h"
 
-template<class T>
-inline T ffmin(T a, T b);
-
-template<class T>
-inline T ffmax(T a, T b);
-
 template <typename T> class alignas(16) vec3 {
 public:
   vec3() {}
@@ -58,9 +52,12 @@ public:
   T e[3];
 };
 
-
 template<typename T>
 inline void vec3<T>::make_unit_vector() {
+    // T len = length();
+    // if(len - 1 < 1e-8) {
+    //   volatile int f = 1;
+    // }
     T k = 1.0 / std::sqrt(e[0]*e[0] + e[1]*e[1] + e[2]*e[2]);
     e[0] *= k; e[1] *= k; e[2] *= k;
 }
@@ -137,6 +134,10 @@ inline vec3<T>& vec3<T>::operator/=(const T& t) {
 
 template<typename T> 
 inline vec3<T> unit_vector(vec3<T> v) {
+  // T len = v.length();
+  // if(len - 1 < 1e-8) {
+  //   volatile int f = 1;
+  // }
   return(v/v.length());
 }
 
@@ -225,8 +226,26 @@ inline vec3<T> operator*(T t, const vec3<T>& v) {
 }
 
 template<typename T>
+inline vec3<T> operator*(int t, const vec3<T>& v) {
+    T t_f = static_cast<T>(t);
+    return vec3<T>(t_f*v.e[0], t_f*v.e[1], t_f*v.e[2]);
+}
+
+template<typename T>
+inline vec3<T> operator*(const vec3<T>& v, int t) {
+    T t_f = static_cast<T>(t);
+    return vec3<T>(t_f*v.e[0], t_f*v.e[1], t_f*v.e[2]);
+}
+
+template<typename T>
 inline vec3<T> operator/(const vec3<T>& v, T t) {
     T k = 1.0 / t;
+    return vec3<T>(v.e[0]*k, v.e[1]*k, v.e[2]*k);
+}
+
+template<typename T>
+inline vec3<T> operator/(const vec3<T>& v, int t) {
+    T k = 1.0 / static_cast<Float>(t);
     return vec3<T>(v.e[0]*k, v.e[1]*k, v.e[2]*k);
 }
 
@@ -246,11 +265,17 @@ inline vec3<T> cross(const vec3<T>& v1, const vec3<T>& v2) {
     );
 }
 
-// Additional functions for generic vec3<T>
+// Cross product for generic vec3<T>
 template<typename T>
-inline vec3<T> unit_vector(const vec3<T>& v) {
-    return v / v.length();
+inline vec3<T> serial_cross(const vec3<T>& v1, const vec3<T>& v2) {
+    return vec3<T>(
+        DifferenceOfProductsRaw(v1.e[1],v2.e[2],v1.e[2],v2.e[1]),
+        DifferenceOfProductsRaw(v1.e[2],v2.e[0],v1.e[0],v2.e[2]),
+        DifferenceOfProductsRaw(v1.e[0],v2.e[1],v1.e[1],v2.e[0])
+    );
 }
+
+#ifdef RAYSIMDVEC
 
 // Specialize for Float
 template<>
@@ -264,7 +289,7 @@ public:
     }
 
     vec3(Float e0, Float e1, Float e2) {
-        float values[4] = { e0, e1, e2, 0.0f };
+        alignas(16) float values[4] = { e0, e1, e2, 0.0f };
         e = simd_load(values);
     }
 
@@ -339,8 +364,9 @@ public:
     }
 
     inline Float squared_length() const {
-        FVec4 mul = simd_mul(e, e);
-        return mul[0] + mul[1] + mul[2];
+      return(simd_squared_length(e));
+        // FVec4 mul = simd_mul(e, e);
+        // return mul[0] + mul[1] + mul[2];
     }
 
     inline vec3<Float> pow(Float exponent) const {
@@ -359,6 +385,10 @@ public:
     }
 
     inline void make_unit_vector() {
+      // Float len = length();
+      // if(len - 1 < 1e-8) {
+      //   volatile int f = 1;
+      // }
         Float len = length();
         e = simd_div(e, simd_set1(len));
     }
@@ -447,7 +477,21 @@ inline vec3<Float> cross(const vec3<Float>& v1, const vec3<Float>& v2) {
 //     return result;
 // }
 
+// Cross product for generic vec3<T>
+inline vec3<Float> serial_cross(const vec3<Float>& v1, const vec3<Float>& v2) {
+    return vec3<Float>(
+        DifferenceOfProducts(v1.e[1],v2.e[2],v1.e[2],v2.e[1]),
+        DifferenceOfProducts(v1.e[2],v2.e[0],v1.e[0],v2.e[2]),
+        DifferenceOfProducts(v1.e[0],v2.e[1],v1.e[1],v2.e[0])
+    );
+}
+
 inline vec3<Float> unit_vector(const vec3<Float>& v) {
+    // Float len = v.length();
+    // if(len - 1 < 1e-8) {
+    //   volatile int f = 1;
+    // }
+    
     return v / v.length();
 }
 
@@ -821,6 +865,8 @@ inline std::ostream& operator<<(std::ostream& os, const vec3<int>& t) {
     return os;
 }
 
+
+#endif
 
 #ifdef RAY_FLOAT_AS_DOUBLE
 inline vec3f convert_to_vec3(const point3f& p) {

@@ -51,8 +51,8 @@ CurveCommon::CurveCommon(const point3f c[4], Float width0, Float width1,
     cpObj[i] = c[i];
   }
   if (norm) {
-    n[0] = unit_vector(norm[0]);
-    n[1] = unit_vector(norm[1]);
+    n[0] = convert_to_normal3(unit_vector(norm[0]));
+    n[1] = convert_to_normal3(unit_vector(norm[1]));
     normalAngle = std::acos(clamp(dot(n[0], n[1]), 0, 1));
     invSinNormalAngle = 1.0 / std::sin(normalAngle);
   }
@@ -389,7 +389,7 @@ bool curve::recursiveIntersect(const ray& r, Float tmin, Float tmax, hit_record&
       Transform rot = Rotate(theta, dpduPlane);
       dpdvPlane = rot(dpdvPlane);
       rec.dpdv = rayToObject(dpdvPlane);
-      rec.normal = unit_vector(-cross(rec.dpdu ,rec.dpdv));
+      rec.normal = convert_to_normal3(unit_vector(-cross(rec.dpdu ,rec.dpdv)));
     } else if (common->type == CurveType::Ribbon) {
       rec.dpdv = unit_vector(cross(vec3f(nHit.x(),nHit.y(),nHit.z()), rec.dpdu)) * hitWidth;
       rec.normal = !flipped_n ? nHit : -nHit;
@@ -397,7 +397,7 @@ bool curve::recursiveIntersect(const ray& r, Float tmin, Float tmax, hit_record&
       //Compute curve dpdv for flat and cylinder curves
       //Assumes z-axis faces directly at viewer
       rec.dpdv = unit_vector(cross(rec.dpdu,-r.direction()));
-      rec.normal = unit_vector(-r.direction());
+      rec.normal = convert_to_normal3(unit_vector(-r.direction()));
     } 
     rec.dpdu.make_unit_vector();
     

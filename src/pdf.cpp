@@ -1,6 +1,7 @@
 #include "pdf.h"
 #include "mathinline.h"
 #include "raylog.h"
+#include "vec3.h"
 
 inline bool Refract(const vec3f &wi, const normal3f &n, Float eta, vec3f *wt) {
   // Compute $\cos \theta_\roman{t}$ using Snell's law
@@ -15,11 +16,24 @@ inline bool Refract(const vec3f &wi, const normal3f &n, Float eta, vec3f *wt) {
   return(true);
 }
 
+inline bool Refract(const vec3f &wi, const vec3f &n, Float eta, vec3f *wt) {
+  // Compute $\cos \theta_\roman{t}$ using Snell's law
+  Float cosThetaI = dot(n, wi);
+  Float sin2ThetaI = std::fmax(Float(0), Float(1 - cosThetaI * cosThetaI));
+  Float sin2ThetaT = eta * eta * sin2ThetaI;
+  
+  // Handle total internal reflection for transmission
+  if (sin2ThetaT >= 1) return(false);
+  Float cosThetaT = std::sqrt(1 - sin2ThetaT);
+  *wt = eta * -wi + (eta * cosThetaI - cosThetaT) * n;
+  return(true);
+}
+
 Float cosine_pdf::value(const vec3f& direction, random_gen& rng, Float time) {
   SCOPED_CONTEXT("PDF");
   SCOPED_TIMER_COUNTER("CosinePDF Value");
   
-  Float cosine = dot(unit_vector(direction), uvw.w());
+  Float cosine = dot(unit_vector(direction), uvw.w()); 
   if(cosine > 0) {
     return(cosine/M_PI);
   } else {
@@ -31,7 +45,7 @@ Float cosine_pdf::value(const vec3f& direction, Sampler* sampler, Float time) {
   SCOPED_CONTEXT("PDF");
   SCOPED_TIMER_COUNTER("CosinePDF Value");
   
-  Float cosine = dot(unit_vector(direction), uvw.w());
+  Float cosine = dot(unit_vector(direction), uvw.w()); 
   if(cosine > 0) {
     return(cosine/M_PI);
   } else {
@@ -59,7 +73,7 @@ Float micro_pdf::value(const vec3f& direction, random_gen& rng, Float time) {
   SCOPED_CONTEXT("PDF");
   SCOPED_TIMER_COUNTER("MicroPDF Value");
   
-  vec3f wo = unit_vector(uvw.world_to_local(direction));
+  vec3f wo = unit_vector(uvw.world_to_local(direction)); 
   vec3f wh = unit_vector(wi + wo);
   return(distribution->Pdf(wo, wi, wh, u, v) / ( 4 * dot(wo, wh) ));
 }
@@ -180,7 +194,7 @@ vec3f micro_transmission_pdf::generate(Sampler* sampler, bool& diffuse_bounce, F
   SCOPED_TIMER_COUNTER("MicroTrPDF Generate");
   
   vec2f u_r = sampler->Get2D();
-  normal3f wh = distribution->Sample_wh(wi, u_r.x(), u_r.y(), u, v);
+  vec3f wh = distribution->Sample_wh(wi, u_r.x(), u_r.y(), u, v);
 
   bool entering = CosTheta(wi) > 0;
   Float eta2 = entering ? (1.0/eta) : (eta);  

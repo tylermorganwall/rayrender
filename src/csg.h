@@ -6,7 +6,7 @@
 #include "mathinline.h"
 #include <algorithm>
 #include <cmath>
-#include "point3.h"
+#include "vectypes.h"
 
 class ImplicitShape { 
   public: 
@@ -91,13 +91,13 @@ class csg_rounded_box : public ImplicitShape {
     csg_rounded_box(const point3f& c, vec3f width_, Float radius) :  center(c), width(width_), radius(radius){} 
     Float getDistance(const point3f& from_old) const {
       vec3f from = from_old - center;
-      vec3f q = Abs(from) - width/2;
+      vec3f q = Abs(from) - width / static_cast<Float>(2);
       const vec3f zeros(0,0,0);
       return(Max(q, zeros).length() + 
              fmin(MaxComponent(q),0.0) - radius); 
     } 
     virtual bool bbox(Float t0, Float t1, aabb& box) const {
-      box = aabb(center-Abs(width)/2, center+Abs(width)/2);
+      box = aabb(center-Abs(width)/static_cast<Float>(2), center+Abs(width)/static_cast<Float>(2));
       return(true);
     }
     size_t GetSize()  {

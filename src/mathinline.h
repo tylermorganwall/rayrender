@@ -98,7 +98,7 @@ inline vec3<T> sgn(vec3<T> v) {
 inline vec3f rand_cosine_direction(vec2f u) {
   Float r1 = u.x();
   Float r2 = u.y();
-  Float z = std::sqrt(1.0-r2);
+  Float z = std::sqrt(static_cast<Float>(1)-r2);
   Float phi = 2.0 * M_PI * r1;
   Float x = cos(phi) * std::sqrt(r2);
   Float y = sin(phi) * std::sqrt(r2);
@@ -108,10 +108,10 @@ inline vec3f rand_cosine_direction(vec2f u) {
 inline vec3f rand_to_sphere(Float radius, Float distance_squared, vec2f u) {
   Float r1 = u.x();
   Float r2 = u.y();
-  Float z = 1.0 + r2 * (std::sqrt(1.0-radius * radius / distance_squared) - 1);
+  Float z = 1.0 + r2 * (std::sqrt(static_cast<Float>(1)-radius * radius / distance_squared) - 1);
   Float phi = 2.0 * M_PI * r1;
-  Float x = std::cos(phi) * std::sqrt(1-z*z);
-  Float y = std::sin(phi) * std::sqrt(1-z*z);
+  Float x = std::cos(phi) * std::sqrt(static_cast<Float>(1)-z*z);
+  Float y = std::sin(phi) * std::sqrt(static_cast<Float>(1)-z*z);
   return(vec3f(x,y,z));
 }
 
@@ -438,7 +438,7 @@ inline bool refract(const vec3f& v, const normal3f& n2, Float ni_over_nt, vec3f&
 inline vec3f refract(const vec3f& uv, const vec3f& n, Float ni_over_nt) {
   Float cos_theta = dot(-uv, n);
   vec3f r_out_parallel =  ni_over_nt * (uv + cos_theta*n);
-  vec3f r_out_perp = -sqrtf(1.0 - r_out_parallel.squared_length()) * n;
+  vec3f r_out_perp = -std::sqrt(static_cast<Float>(1) - r_out_parallel.squared_length()) * n;
   return(r_out_parallel + r_out_perp);
 }
 
@@ -446,7 +446,7 @@ inline vec3f refract(const vec3f& uv, const normal3f& n, Float ni_over_nt) {
   vec3f n2 = convert_to_vec3(n);
   Float cos_theta = dot(-uv, n);
   vec3f r_out_parallel =  ni_over_nt * (uv + cos_theta*n2);
-  vec3f r_out_perp = -sqrtf(1.0 - r_out_parallel.squared_length()) * n2;
+  vec3f r_out_perp = -std::sqrt(static_cast<Float>(1) - r_out_parallel.squared_length()) * n2;
   return(r_out_parallel + r_out_perp);
 }
 
@@ -877,7 +877,7 @@ inline Float UniformConePdf(Float cosThetaMax) {
 
 inline vec3f UniformSampleCone(const point2f &u, Float cosThetaMax) {
   Float cosTheta = ((Float)1 - u[0]) + u[0] * cosThetaMax;
-  Float sinTheta = std::sqrt((Float)1 - cosTheta * cosTheta);
+  Float sinTheta = std::sqrt(static_cast<Float>(1) - cosTheta * cosTheta);
   Float phi = u[1] * 2 * M_PI;
   return vec3f(std::cos(phi) * sinTheta, std::sin(phi) * sinTheta,
                cosTheta);
@@ -887,7 +887,7 @@ inline vec3f UniformSampleCone(const point2f &u, Float cosThetaMax,
                         const vec3f &x, const vec3f &y,
                         const vec3f &z) {
   Float cosTheta = lerp(u[0], cosThetaMax, (Float)1.);
-  Float sinTheta = std::sqrt((Float)1. - cosTheta * cosTheta);
+  Float sinTheta = std::sqrt(static_cast<Float>(1) - cosTheta * cosTheta);
   Float phi = u[1] * 2 * M_PI;
   return std::cos(phi) * sinTheta * x + std::sin(phi) * sinTheta * y +
     cosTheta * z;

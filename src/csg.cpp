@@ -1,5 +1,6 @@
 #include "csg.h"
 #include "raylog.h"
+#include "vectypes.h"
 
 const bool csg::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
   SCOPED_CONTEXT("Hit");
@@ -43,14 +44,14 @@ const bool csg::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, ran
     if (minDistance <= threshold) { 
       Float tval = t / r2.direction().length();
       if(tval > t_min && tval < t_max) {
-    rec.normal = vec3f( 
+        rec.normal = normal3f( 
           shapes->getDistance(from + vec3f(delta, 0, 0)) - shapes->getDistance(from + vec3f(-delta, 0, 0)), 
           shapes->getDistance(from + vec3f(0, delta, 0)) - shapes->getDistance(from + vec3f(0, -delta, 0)), 
           shapes->getDistance(from + vec3f(0, 0, delta)) - shapes->getDistance(from + vec3f(0, 0, -delta))
         );
         //Deal with degenerate case by setting directly at camera--not ideal, need better fix
         if(rec.normal.x() == 0 && rec.normal.y() == 0 && rec.normal.z() == 0) {
-      rec.normal = -r2.direction();
+          rec.normal = convert_to_normal3(-r2.direction());
         }
         rec.p = from;
         rec.normal.make_unit_vector(); 
@@ -114,14 +115,14 @@ const bool csg::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sam
     if (minDistance <= threshold) { 
       Float tval = t / r2.direction().length();
       if(tval > t_min && tval < t_max) {
-    rec.normal = vec3f( 
+        rec.normal = normal3f( 
           shapes->getDistance(from + vec3f(delta, 0, 0)) - shapes->getDistance(from + vec3f(-delta, 0, 0)), 
           shapes->getDistance(from + vec3f(0, delta, 0)) - shapes->getDistance(from + vec3f(0, -delta, 0)), 
           shapes->getDistance(from + vec3f(0, 0, delta)) - shapes->getDistance(from + vec3f(0, 0, -delta))
         );
         //Deal with degenerate case by setting directly at camera--not ideal, need better fix
         if(rec.normal.x() == 0 && rec.normal.y() == 0 && rec.normal.z() == 0) {
-      rec.normal = -r2.direction();
+          rec.normal = convert_to_normal3(-r2.direction());
         }
         rec.p = from;
         rec.normal.make_unit_vector(); 

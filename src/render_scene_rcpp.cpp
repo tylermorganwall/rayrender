@@ -209,7 +209,7 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
   aabb bounding_box_world;
   worldbvh->bounding_box(0,0,bounding_box_world);
   Float world_radius = bounding_box_world.Diag().length() ;
-  vec3f world_center  = convert_to_vec3f(bounding_box_world.Centroid());
+  vec3f world_center  = convert_to_vec3(bounding_box_world.Centroid());
   world_radius = world_radius > (lookfrom - world_center).length() ? world_radius : 
      1.1*(lookfrom - world_center).length();
   world_radius *= interactive ? 100 : 1;
@@ -244,7 +244,7 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
       background_texture = std::make_shared<image_texture_float>(background_texture_data, nx1, ny1, nn1,
                                                                  1, 1, intensity_env);
       background_material = std::make_shared<diffuse_light>(background_texture, 1.0, false);
-      background_sphere = std::make_shared<InfiniteAreaLight>(nx1, ny1, world_radius*2, convert_to_point3f(world_center),
+      background_sphere = std::make_shared<InfiniteAreaLight>(nx1, ny1, world_radius*2, convert_to_point3(world_center),
                                                               background_texture, background_material,
                                                               BackgroundTransform,
                                                               BackgroundTransformInv, false);
@@ -256,7 +256,7 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
       backgroundlow = point3f(FLT_MIN,FLT_MIN,FLT_MIN);
       background_texture = std::make_shared<gradient_texture>(backgroundlow, backgroundhigh, false, false);
       background_material = std::make_shared<diffuse_light>(background_texture, 1.0, false);
-      background_sphere = std::make_shared<InfiniteAreaLight>(100, 100, world_radius*2, convert_to_point3f(world_center),
+      background_sphere = std::make_shared<InfiniteAreaLight>(100, 100, world_radius*2, convert_to_point3(world_center),
                                                               background_texture, background_material,
                                                               BackgroundTransform,BackgroundTransformInv,false);
     }
@@ -268,7 +268,7 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
     }
     background_texture = std::make_shared<gradient_texture>(backgroundlow, backgroundhigh, false, false);
     background_material = std::make_shared<diffuse_light>(background_texture, 1.0, false);
-    background_sphere = std::make_shared<InfiniteAreaLight>(100, 100, world_radius*2, convert_to_point3f(world_center),
+    background_sphere = std::make_shared<InfiniteAreaLight>(100, 100, world_radius*2, convert_to_point3(world_center),
                                               background_texture, background_material,
                                               BackgroundTransform, BackgroundTransformInv, false);
 
@@ -276,7 +276,7 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
     //Minimum intensity FLT_MIN so the CDF isn't NAN
     background_texture = std::make_shared<constant_texture>(point3f(FLT_MIN,FLT_MIN,FLT_MIN));
     background_material = std::make_shared<diffuse_light>(background_texture, 1.0, false);
-    background_sphere = std::make_shared<InfiniteAreaLight>(100, 100, world_radius*2, convert_to_point3f(world_center),
+    background_sphere = std::make_shared<InfiniteAreaLight>(100, 100, world_radius*2, convert_to_point3(world_center),
                                               background_texture, background_material,
                                               BackgroundTransform,
                                               BackgroundTransformInv, false);

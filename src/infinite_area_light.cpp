@@ -1,5 +1,7 @@
 #include "infinite_area_light.h"
 #include "raylog.h"
+#include "vec3.h"
+#include "vectypes.h"
 
 InfiniteAreaLight::InfiniteAreaLight(int width, int height, Float r, point3f center, 
                                      std::shared_ptr<texture> image, std::shared_ptr<material> mat,
@@ -40,7 +42,7 @@ const bool InfiniteAreaLight::hit(const ray& r, Float t_min, Float t_max, hit_re
     rec.t = temp1;
     rec.p = r2.point_at_parameter(rec.t);
     rec.p *= radius / rec.p.length(); 
-    rec.normal = -unit_vector(r2.direction());
+    rec.normal = convert_to_normal3(-unit_vector(r2.direction())); 
     
     vec3f v2(-r2.direction().z(),r2.direction().y(),r2.direction().x());
     get_sphere_uv(unit_vector(v2), rec.u, rec.v);
@@ -68,7 +70,7 @@ const bool InfiniteAreaLight::hit(const ray& r, Float t_min, Float t_max, hit_re
     rec.t = temp2;
     rec.p = r.point_at_parameter(rec.t);
     rec.p *= radius / rec.p.length(); 
-    rec.normal = -unit_vector(r2.direction());
+    rec.normal = convert_to_normal3(-unit_vector(r2.direction())); 
     
     vec3f v2(-r2.direction().z(),r2.direction().y(),r2.direction().x());
     get_sphere_uv(unit_vector(v2), rec.u, rec.v);
@@ -115,7 +117,7 @@ const bool InfiniteAreaLight::hit(const ray& r, Float t_min, Float t_max, hit_re
     rec.t = temp1;
     rec.p = r2.point_at_parameter(rec.t);
     rec.p *= radius / rec.p.length(); 
-    rec.normal = -unit_vector(r2.direction());
+    rec.normal = convert_to_normal3(-unit_vector(r2.direction()));
     
     vec3f v2(-r2.direction().z(),r2.direction().y(),r2.direction().x());
     get_sphere_uv(unit_vector(v2), rec.u, rec.v);
@@ -144,7 +146,7 @@ const bool InfiniteAreaLight::hit(const ray& r, Float t_min, Float t_max, hit_re
     rec.t = temp2;
     rec.p = r2.point_at_parameter(rec.t);
     rec.p *= radius / rec.p.length(); 
-    rec.normal = -unit_vector(r2.direction());
+    rec.normal = convert_to_normal3(-unit_vector(r2.direction()));
     
     vec3f v2(-r2.direction().z(),r2.direction().y(),r2.direction().x());
     get_sphere_uv(unit_vector(v2), rec.u, rec.v);

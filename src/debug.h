@@ -55,7 +55,7 @@ inline vec3f calculate_normals(const ray& r, hitable *world, size_t max_depth, r
         if(srec.is_specular) { //returns specular ray
           if(i == max_depth-1) {
             hrec.normal.make_unit_vector();
-            return((vec3f(1,1,1) + vec3f(hrec.normal.x(),hrec.normal.y(),hrec.normal.z()))/2);
+            return((vec3f(1,1,1) + convert_to_vec3(hrec.normal))/ static_cast<Float>(2));
           }
           r2 = srec.specular_ray;
           continue;
@@ -70,17 +70,17 @@ inline vec3f calculate_normals(const ray& r, hitable *world, size_t max_depth, r
         dir = srec.pdf_ptr->generate(rng, diffuse_bounce, r2.time());
         if((dir.x() == 0 && dir.y() == 0 && dir.z() == 0)) {
           hrec.normal.make_unit_vector();
-          return((vec3f(1,1,1) + vec3f(hrec.normal.x(),hrec.normal.y(),hrec.normal.z()))/2);
+          return((vec3f(1,1,1) + convert_to_vec3(hrec.normal))/static_cast<Float>(2));
         }
         r2 = ray(OffsetRayOrigin(offset_p, hrec.pError, hrec.normal, dir), dir, r2.pri_stack, r2.time());
         
         if(i == max_depth-1) {
           hrec.normal.make_unit_vector();
-          return((vec3f(1,1,1) + vec3f(hrec.normal.x(),hrec.normal.y(),hrec.normal.z()))/2);
+          return((vec3f(1,1,1) + convert_to_vec3(hrec.normal))/static_cast<Float>(2));
         }
       } else {
         hrec.normal.make_unit_vector();
-        return((vec3f(1,1,1) + vec3f(hrec.normal.x(),hrec.normal.y(),hrec.normal.z()))/2);
+        return((vec3f(1,1,1) + convert_to_vec3(hrec.normal))/static_cast<Float>(2));
       }
     } else {
       return(vec3f(0,0,0));
@@ -102,9 +102,9 @@ inline vec3f calculate_dpduv(const ray& r, hitable *world, random_gen &rng, bool
   hit_record hrec;
   if(world->hit(r, 0.001, FLT_MAX, hrec, rng)) {
     if(u) {
-      return((unit_vector(hrec.dpdu) + 1)/2);
+      return((unit_vector(hrec.dpdu) + static_cast<Float>(1))/static_cast<Float>(2));
     } else {
-      return((unit_vector(hrec.dpdv) + 1)/2);
+      return((unit_vector(hrec.dpdv) + static_cast<Float>(1))/static_cast<Float>(2));
     }
   } else {
     return(vec3f(0,0,0));
@@ -256,7 +256,7 @@ inline point3f calculate_bounce_dir(const ray& r, hitable *world, hitable_list *
       if(hrec.mat_ptr->scatter(r2, hrec, srec, rng)) { //generates scatter record, world space
         if(srec.is_specular) { //returns specular ray
           if(i == max_depth-1) {
-            return(convert_to_point3f(unit_vector(srec.specular_ray.direction())));
+            return(convert_to_point3(unit_vector(srec.specular_ray.direction())));
           }
           r2 = srec.specular_ray;
           continue;
@@ -270,12 +270,12 @@ inline point3f calculate_bounce_dir(const ray& r, hitable *world, hitable_list *
         vec3f dir;
         dir = p.generate(rng, diffuse_bounce, r2.time());
         if((dir.x() == 0 && dir.y() == 0 && dir.z() == 0)) {
-          return(convert_to_point3f(dir));
+          return(convert_to_point3(dir));
         }
         r2 = ray(OffsetRayOrigin(offset_p, hrec.pError, hrec.normal, dir), dir, r2.pri_stack, r2.time());
         
         if(i == max_depth-1) {
-          return(convert_to_point3f(unit_vector(dir)));
+          return(convert_to_point3(unit_vector(dir)));
         }
       } else {
         return(point3f(0,0,0));

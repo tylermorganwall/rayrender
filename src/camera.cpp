@@ -22,7 +22,7 @@ camera::camera(point3f lookfrom, point3f _lookat, vec3f _vup, Float vfov,
   focus_dist = _focus_dist;
   start_focus_dist = focus_dist;
   w = unit_vector(lookfrom - lookat);
-  u = unit_vector(cross(vup, w));
+  u = unit_vector(cross(vup, w)); //unit_same
   v = cross(w, u);
   lower_left_corner = origin - half_width * focus_dist *  u - half_height * focus_dist * v - focus_dist * w;
   horizontal = 2.0f * half_width * focus_dist * u;
@@ -610,7 +610,7 @@ bool RealisticCamera::IntersectSphericalElement(Float radius,Float zCenter,
   if (*t < 0) {
     return false;
   }
-  *n = Faceforward(unit_vector(convert_to_normal3f(o + *t * rd)), -rd);
+  *n = Faceforward(unit_vector(convert_to_normal3(o + *t * rd)), -rd);
   return true;
 }
 
@@ -926,7 +926,7 @@ void RealisticCamera::update_focal_distance(Float delta_focus) {
 //This actually takes the position of the intersection
 void RealisticCamera::update_look_direction(vec3f dir) {
   
-  CamTransform = Transform(LookAt(get_origin(), convert_to_point3f(dir), camera_up).GetInverseMatrix());
+  CamTransform = Transform(LookAt(get_origin(), convert_to_point3(dir), camera_up).GetInverseMatrix());
 }
 
 void RealisticCamera::update_lookat(point3f point) {

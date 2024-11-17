@@ -2,7 +2,7 @@
 #define HITABLEH
 
 #include "aabb.h"
-#include "vec3.h"
+#include "vectypes.h"
 #include "texture.h"
 #include "rng.h"
 #include "sampler.h"

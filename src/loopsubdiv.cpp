@@ -1,9 +1,8 @@
 #include "loopsubdiv.h"
 #include <set>
 #include <map>
-#include "point3.h"
-#include "Rcpp.h"
 #include "vectypes.h"
+#include "Rcpp.h"
 #include <queue>
 
 struct SDFace;
@@ -558,7 +557,7 @@ void LoopSubdivide(TriangleMesh* base_mesh,
           T = -T;
         }
       }
-      final_normals[cntr] = (convert_to_normal3f(-cross(S, T)));
+      final_normals[cntr] = (convert_to_normal3(-cross(S, T)));
     }
     cntr++;
   }

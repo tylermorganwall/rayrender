@@ -49,7 +49,7 @@ const bool disk::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, ra
   
   if(bump_tex) {
     point3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
-    rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
+    rec.bump_normal = rec.normal + convert_to_normal3(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
     rec.bump_normal.make_unit_vector();
 
   }
@@ -114,7 +114,7 @@ const bool disk::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sa
   
   if(bump_tex) {
     point3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
-    rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
+    rec.bump_normal = rec.normal + convert_to_normal3(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
     rec.bump_normal.make_unit_vector();
   }
   rec.pError = vec3f(0,0,0);

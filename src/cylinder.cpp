@@ -73,8 +73,7 @@ const bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
     rec.p = temppoint;
     
     temppoint.e[1] = 0;
-    point3f new_pt = temppoint / radius;
-    rec.normal.e = new_pt.e;
+    rec.normal = convert_to_normal3(temppoint / radius);
     
     get_cylinder_uv(rec.p, rec.u, rec.v);
     
@@ -86,8 +85,8 @@ const bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
     
     if(bump_tex) {
       point3f bvbu = bump_tex->value(rec.u, rec.v, rec.p);
-      rec.bump_normal = cross(rec.dpdu - bvbu.x() * rec.normal.convert_to_vec3() , 
-                              rec.dpdv + bvbu.y() * rec.normal.convert_to_vec3() );
+      rec.bump_normal = convert_to_normal3(cross(rec.dpdu - bvbu.x() * convert_to_vec3(rec.normal) , 
+                              rec.dpdv + bvbu.y() * convert_to_vec3(rec.normal) ));
       rec.bump_normal.make_unit_vector();
       rec.has_bump = true;
     }
@@ -124,7 +123,7 @@ const bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
       }
     }
     rec.p = p;
-    rec.normal = vec3f(0,1,0);
+    rec.normal = normal3f(0,1,0);
     rec.t = t_cyl;
     rec.mat_ptr = mat_ptr.get();
     rec.u = u;
@@ -135,7 +134,7 @@ const bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
     
     if(bump_tex) {
       point3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
-      rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv);
+      rec.bump_normal = rec.normal + convert_to_normal3(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv);
       rec.bump_normal.make_unit_vector(); 
     }
     rec.pError = gamma(3) * Abs(vec3f(rec.p.x(), 0, rec.p.z()));
@@ -168,7 +167,7 @@ const bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
       }
     }
     rec.p = p;
-    rec.normal = vec3f(0,-1,0);
+    rec.normal = normal3f(0,-1,0);
     rec.t = t_cyl2;
     rec.mat_ptr = mat_ptr.get();
     rec.u = u;
@@ -179,7 +178,7 @@ const bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
     
     if(bump_tex) {
       point3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
-      rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv);
+      rec.bump_normal = rec.normal + convert_to_normal3(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv);
       rec.bump_normal.make_unit_vector();
     }
     rec.pError = gamma(3) * Abs(vec3f(rec.p.x(), 0, rec.p.z()));
@@ -205,9 +204,7 @@ const bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
     rec.p = temppoint;
     
     temppoint.e[1] = 0;
-    point3f new_pt = temppoint / radius;
-
-    rec.normal.e = new_pt.e;
+    rec.normal = convert_to_normal3(temppoint / radius);
     
     get_cylinder_uv(rec.p, rec.u, rec.v);
     
@@ -219,8 +216,8 @@ const bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
     
     if(bump_tex) {
       point3f bvbu = bump_tex->value(rec.u, rec.v, rec.p);
-      rec.bump_normal = cross(rec.dpdu + bvbu.x() * rec.normal.convert_to_vec3() , 
-                              rec.dpdv - bvbu.y() * rec.normal.convert_to_vec3() );
+      rec.bump_normal = convert_to_normal3(cross(rec.dpdu + bvbu.x() * convert_to_vec3(rec.normal) , 
+                              rec.dpdv - bvbu.y() * convert_to_vec3(rec.normal) ));
       rec.bump_normal.make_unit_vector();
       rec.has_bump = true;
     }
@@ -302,9 +299,8 @@ const bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
     rec.p = temppoint;
     
     temppoint.e[1] = 0;
-    point3f new_pt = temppoint / radius;
+    rec.normal = convert_to_normal3(temppoint / radius);
 
-    rec.normal.e = new_pt.e;
     get_cylinder_uv(rec.p, rec.u, rec.v);
     
     //Interaction information
@@ -314,7 +310,7 @@ const bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
     
     if(bump_tex) {
       point3f bvbu = bump_tex->value(rec.u, rec.v, rec.p);
-      rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
+      rec.bump_normal = rec.normal + convert_to_normal3(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
       rec.bump_normal.make_unit_vector();
       rec.bump_normal *= dot(temppoint, dir) > 0 ? -1 : 1;
     }
@@ -351,7 +347,7 @@ const bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
       }
     }
     rec.p = p;
-    rec.normal = vec3f(0,1,0);
+    rec.normal = normal3f(0,1,0);
     rec.t = t_cyl;
     rec.mat_ptr = mat_ptr.get();
     rec.u = u;
@@ -362,7 +358,7 @@ const bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
     
     if(bump_tex) {
       point3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
-      rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv);
+      rec.bump_normal = rec.normal + convert_to_normal3(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv);
       rec.bump_normal.make_unit_vector();
     }
     rec.pError = gamma(3) * Abs(vec3f(rec.p.x(), 0, rec.p.z()));
@@ -395,7 +391,7 @@ const bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
       }
     }
     rec.p = p;
-    rec.normal = vec3f(0,-1,0);
+    rec.normal = normal3f(0,-1,0);
     rec.t = t_cyl2;
     rec.mat_ptr = mat_ptr.get();
     rec.u = u;
@@ -406,7 +402,7 @@ const bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
     
     if(bump_tex) {
       point3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
-      rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv);
+      rec.bump_normal = rec.normal + convert_to_normal3(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv);
       rec.bump_normal.make_unit_vector();
     }
     rec.pError = gamma(3) * Abs(vec3f(rec.p.x(), 0, rec.p.z()));
@@ -432,9 +428,8 @@ const bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
     rec.p = temppoint;
     
     temppoint.e[1] = 0;
-    point3f new_pt = temppoint / radius;
+    rec.normal = convert_to_normal3(temppoint / radius);
 
-    rec.normal.e = new_pt.e;
     get_cylinder_uv(rec.p, rec.u, rec.v);
     
     //Interaction information
@@ -444,7 +439,7 @@ const bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
     
     if(bump_tex) {
       point3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
-      rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
+      rec.bump_normal = rec.normal + convert_to_normal3(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
       rec.bump_normal.make_unit_vector();
       rec.bump_normal = (*ObjectToWorld)(rec.bump_normal);
     }

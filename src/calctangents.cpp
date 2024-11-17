@@ -7,7 +7,7 @@
 #include "assert.h"
 
 vec3f Reject(vec3f t, normal3f n) {
-  return(unit_vector(t - dot(t,n) * n.convert_to_vec3()));
+  return(unit_vector(t - dot(t,n) * convert_to_vec3(n)));
 }
 
 void CalculateTangents(TriangleMesh *trianglemesh) {

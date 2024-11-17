@@ -28,7 +28,7 @@ Quaternion::Quaternion(const Transform &t) {
   if (trace > 0.f) {
     // Compute w from matrix trace, then xyz
     // 4w^2 = m[0][0] + m[1][1] + m[2][2] + m[3][3] (but m[3][3] == 1)
-    Float s = std::sqrt(trace + 1.0f);
+    Float s = std::sqrt(trace + static_cast<Float>(1));
     w = s / 2.0f;
     s = 0.5f / s;
     v[0] = (m.m[2][1] - m.m[1][2]) * s;
@@ -43,7 +43,7 @@ Quaternion::Quaternion(const Transform &t) {
     if (m.m[2][2] > m.m[i][i]) i = 2;
     int j = nxt[i];
     int k = nxt[j];
-    Float s = std::sqrt((m.m[i][i] - (m.m[j][j] + m.m[k][k])) + 1.0f);
+    Float s = std::sqrt((m.m[i][i] - (m.m[j][j] + m.m[k][k])) + static_cast<Float>(1));
     q[i] = s * 0.5f;
     if (s != 0.f) s = 0.5f / s;
     w = (m.m[k][j] - m.m[j][k]) * s;
@@ -61,7 +61,7 @@ Quaternion::Quaternion(const Matrix4x4 &m) {
   if (trace > 0.f) {
     // Compute w from matrix trace, then xyz
     // 4w^2 = m[0][0] + m[1][1] + m[2][2] + m[3][3] (but m[3][3] == 1)
-    Float s = std::sqrt(trace + 1.0f);
+    Float s = std::sqrt(trace + static_cast<Float>(1));
     w = s / 2.0f;
     s = 0.5f / s;
     v[0] = (m.m[2][1] - m.m[1][2]) * s;
@@ -76,7 +76,7 @@ Quaternion::Quaternion(const Matrix4x4 &m) {
     if (m.m[2][2] > m.m[i][i]) i = 2;
     int j = nxt[i];
     int k = nxt[j];
-    Float s = std::sqrt((m.m[i][i] - (m.m[j][j] + m.m[k][k])) + 1.0f);
+    Float s = std::sqrt((m.m[i][i] - (m.m[j][j] + m.m[k][k])) + static_cast<Float>(1));
     q[i] = s * 0.5f;
     if (s != 0.f) s = 0.5f / s;
     w = (m.m[k][j] - m.m[j][k]) * s;

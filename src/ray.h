@@ -44,15 +44,15 @@ class ray {
       inv_dir_pad.e[0] = add_ulp_magnitude(inv_dir.x(), 2);
       inv_dir_pad.e[1] = add_ulp_magnitude(inv_dir.y(), 2);
       inv_dir_pad.e[2] = add_ulp_magnitude(inv_dir.z(), 2);
-      sign[0] = (inv_dir.x() < 0);
-      sign[1] = (inv_dir.y() < 0);
-      sign[2] = (inv_dir.z() < 0);
+      // sign[0] = (inv_dir.x() < 0);
+      // sign[1] = (inv_dir.y() < 0);
+      // sign[2] = (inv_dir.z() < 0);
       kz = MaxDimension(Abs(B));
       kx = kz + 1;
       if (kx == 3) kx = 0;
       ky = kx + 1;
       if (ky == 3) ky = 0;
-      dPermuted = Permute(B, kx, ky, kz);
+      vec3f dPermuted = Permute(B, kx, ky, kz);
       Sx = -dPermuted.x() / dPermuted.z();
       Sy = -dPermuted.y() / dPermuted.z();
       Sz = 1.f / dPermuted.z();
@@ -78,16 +78,16 @@ class ray {
       inv_dir_pad.e[0] = add_ulp_magnitude(inv_dir.x(), 2);
       inv_dir_pad.e[1] = add_ulp_magnitude(inv_dir.y(), 2);
       inv_dir_pad.e[2] = add_ulp_magnitude(inv_dir.z(), 2);
-      sign[0] = (inv_dir.x() < 0);
-      sign[1] = (inv_dir.y() < 0);
-      sign[2] = (inv_dir.z() < 0);
+      // sign[0] = (inv_dir.x() < 0);
+      // sign[1] = (inv_dir.y() < 0);
+      // sign[2] = (inv_dir.z() < 0);
       pri_stack = priority2;
       kz = MaxDimension(Abs(B));
       kx = kz + 1;
       if (kx == 3) kx = 0;
       ky = kx + 1;
       if (ky == 3) ky = 0;
-      dPermuted = Permute(B, kx, ky, kz);
+      vec3f dPermuted = Permute(B, kx, ky, kz);
       Sx = -dPermuted.x() / dPermuted.z();
       Sy = -dPermuted.y() / dPermuted.z();
       Sz = 1.f / dPermuted.z();
@@ -123,11 +123,10 @@ class ray {
     SimdMask maskPos4[3];
   #endif
 
-    int sign[3];
+    // int sign[3];
     Float _time;
     Float Sx, Sy, Sz;
     int kx, ky, kz;
-    vec3f dPermuted;
     mutable Float tMax;
     std::vector<dielectric*> *pri_stack;
 };

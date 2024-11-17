@@ -20,30 +20,30 @@ const bool aabb::hit(const ray &r, Float tmin, Float tmax, random_gen& rng) cons
   // SCOPED_CONTEXT("Hit");
   // SCOPED_TIMER_COUNTER("AABB");
 
-  Float txmin, txmax, tymin, tymax, tzmin, tzmax;
-  txmin = (bounds[  r.sign[0]].x()-r.origin().x()) * r.inv_dir.x();
-  txmax = (bounds[1-r.sign[0]].x()-r.origin().x()) * r.inv_dir_pad.x();
-  tymin = (bounds[  r.sign[1]].y()-r.origin().y()) * r.inv_dir.y();
-  tymax = (bounds[1-r.sign[1]].y()-r.origin().y()) * r.inv_dir_pad.y();
-  tzmin = (bounds[  r.sign[2]].z()-r.origin().z()) * r.inv_dir.z();
-  tzmax = (bounds[1-r.sign[2]].z()-r.origin().z()) * r.inv_dir_pad.z();
-  tmin = ffmax(tzmin, ffmax(tymin, ffmax(txmin, tmin)));
-  tmax = ffmin(tzmax, ffmin(tymax, ffmin(txmax, tmax)));
+  // Float txmin, txmax, tymin, tymax, tzmin, tzmax;
+  // txmin = (bounds[  r.sign[0]].x()-r.origin().x()) * r.inv_dir.x();
+  // txmax = (bounds[1-r.sign[0]].x()-r.origin().x()) * r.inv_dir_pad.x();
+  // tymin = (bounds[  r.sign[1]].y()-r.origin().y()) * r.inv_dir.y();
+  // tymax = (bounds[1-r.sign[1]].y()-r.origin().y()) * r.inv_dir_pad.y();
+  // tzmin = (bounds[  r.sign[2]].z()-r.origin().z()) * r.inv_dir.z();
+  // tzmax = (bounds[1-r.sign[2]].z()-r.origin().z()) * r.inv_dir_pad.z();
+  // tmin = ffmax(tzmin, ffmax(tymin, ffmax(txmin, tmin)));
+  // tmax = ffmin(tzmax, ffmin(tymax, ffmin(txmax, tmax)));
   return(tmin <= tmax);
 }
 
 const bool aabb::hit(const ray &r, Float tmin, Float tmax, Sampler* sampler) const {
   // SCOPED_CONTEXT("Hit");
   // SCOPED_TIMER_COUNTER("AABB");
-  Float txmin, txmax, tymin, tymax, tzmin, tzmax;
-  txmin = (bounds[  r.sign[0]].x()-r.origin().x()) * r.inv_dir.x();
-  txmax = (bounds[1-r.sign[0]].x()-r.origin().x()) * r.inv_dir_pad.x();
-  tymin = (bounds[  r.sign[1]].y()-r.origin().y()) * r.inv_dir.y();
-  tymax = (bounds[1-r.sign[1]].y()-r.origin().y()) * r.inv_dir_pad.y();
-  tzmin = (bounds[  r.sign[2]].z()-r.origin().z()) * r.inv_dir.z();
-  tzmax = (bounds[1-r.sign[2]].z()-r.origin().z()) * r.inv_dir_pad.z();
-  tmin = ffmax(tzmin, ffmax(tymin, ffmax(txmin, tmin)));
-  tmax = ffmin(tzmax, ffmin(tymax, ffmin(txmax, tmax)));
+  // Float txmin, txmax, tymin, tymax, tzmin, tzmax;
+  // txmin = (bounds[  r.sign[0]].x()-r.origin().x()) * r.inv_dir.x();
+  // txmax = (bounds[1-r.sign[0]].x()-r.origin().x()) * r.inv_dir_pad.x();
+  // tymin = (bounds[  r.sign[1]].y()-r.origin().y()) * r.inv_dir.y();
+  // tymax = (bounds[1-r.sign[1]].y()-r.origin().y()) * r.inv_dir_pad.y();
+  // tzmin = (bounds[  r.sign[2]].z()-r.origin().z()) * r.inv_dir.z();
+  // tzmax = (bounds[1-r.sign[2]].z()-r.origin().z()) * r.inv_dir_pad.z();
+  // tmin = ffmax(tzmin, ffmax(tymin, ffmax(txmin, tmin)));
+  // tmax = ffmin(tzmax, ffmin(tymax, ffmin(txmax, tmax)));
   return(tmin <= tmax);
 }
 
@@ -213,60 +213,60 @@ void rayBBoxIntersect4Serial(const ray& r,
                        Float tMax,
                        IVec4& hits,
                        FVec4& tEnters) {
-    FVec4 bboxMinX = bbox4.getMinX();
-    FVec4 bboxMaxX = bbox4.getMaxX();
-    FVec4 bboxMinY = bbox4.getMinY();
-    FVec4 bboxMaxY = bbox4.getMaxY();
-    FVec4 bboxMinZ = bbox4.getMinZ();
-    FVec4 bboxMaxZ = bbox4.getMaxZ();
+    // FVec4 bboxMinX = bbox4.getMinX();
+    // FVec4 bboxMaxX = bbox4.getMaxX();
+    // FVec4 bboxMinY = bbox4.getMinY();
+    // FVec4 bboxMaxY = bbox4.getMaxY();
+    // FVec4 bboxMinZ = bbox4.getMinZ();
+    // FVec4 bboxMaxZ = bbox4.getMaxZ();
     
-    // Prepare ray data
-    Float rayOriginX = r.origin().x();
-    Float rayOriginY = r.origin().y();
-    Float rayOriginZ = r.origin().z();
-    Float rayInvDirX = r.inv_dir_pad.x();
-    Float rayInvDirY = r.inv_dir_pad.y();
-    Float rayInvDirZ = r.inv_dir_pad.z();
-    // Loop over each bounding box (up to 4)
-    for (int i = 0; i < 4; ++i) {
-        // Extract min and max coordinates for the i-th bounding box
-        Float minX = bboxMinX[i]; // bbox4.corners[0]: minX
-        Float minY = bboxMinY[i]; // bbox4.corners[1]: minY
-        Float minZ = bboxMinZ[i]; // bbox4.corners[2]: minZ
-        Float maxX = bboxMaxX[i]; // bbox4.corners[3]: maxX
-        Float maxY = bboxMaxY[i]; // bbox4.corners[4]: maxY
-        Float maxZ = bboxMaxZ[i]; // bbox4.corners[5]: maxZ
+    // // Prepare ray data
+    // Float rayOriginX = r.origin().x();
+    // Float rayOriginY = r.origin().y();
+    // Float rayOriginZ = r.origin().z();
+    // Float rayInvDirX = r.inv_dir_pad.x();
+    // Float rayInvDirY = r.inv_dir_pad.y();
+    // Float rayInvDirZ = r.inv_dir_pad.z();
+    // // Loop over each bounding box (up to 4)
+    // for (int i = 0; i < 4; ++i) {
+    //     // Extract min and max coordinates for the i-th bounding box
+    //     Float minX = bboxMinX[i]; // bbox4.corners[0]: minX
+    //     Float minY = bboxMinY[i]; // bbox4.corners[1]: minY
+    //     Float minZ = bboxMinZ[i]; // bbox4.corners[2]: minZ
+    //     Float maxX = bboxMaxX[i]; // bbox4.corners[3]: maxX
+    //     Float maxY = bboxMaxY[i]; // bbox4.corners[4]: maxY
+    //     Float maxZ = bboxMaxZ[i]; // bbox4.corners[5]: maxZ
 
-        // Determine near and far coordinates based on ray direction signs
-        Float bboxNearX = r.sign[0] ? maxX : minX;
-        Float bboxFarX  = r.sign[0] ? minX : maxX;
-        Float bboxNearY = r.sign[1] ? maxY : minY;
-        Float bboxFarY  = r.sign[1] ? minY : maxY;
-        Float bboxNearZ = r.sign[2] ? maxZ : minZ;
-        Float bboxFarZ  = r.sign[2] ? minZ : maxZ;
+    //     // Determine near and far coordinates based on ray direction signs
+    //     Float bboxNearX = r.sign[0] ? maxX : minX;
+    //     Float bboxFarX  = r.sign[0] ? minX : maxX;
+    //     Float bboxNearY = r.sign[1] ? maxY : minY;
+    //     Float bboxFarY  = r.sign[1] ? minY : maxY;
+    //     Float bboxNearZ = r.sign[2] ? maxZ : minZ;
+    //     Float bboxFarZ  = r.sign[2] ? minZ : maxZ;
 
-        // Compute t values for slabs
-        Float t0x = (bboxNearX - rayOriginX) * rayInvDirX;
-        Float t1x = (bboxFarX  - rayOriginX) * rayInvDirX;
+    //     // Compute t values for slabs
+    //     Float t0x = (bboxNearX - rayOriginX) * rayInvDirX;
+    //     Float t1x = (bboxFarX  - rayOriginX) * rayInvDirX;
 
-        Float t0y = (bboxNearY - rayOriginY) * rayInvDirY;
-        Float t1y = (bboxFarY  - rayOriginY) * rayInvDirY;
+    //     Float t0y = (bboxNearY - rayOriginY) * rayInvDirY;
+    //     Float t1y = (bboxFarY  - rayOriginY) * rayInvDirY;
 
-        Float t0z = (bboxNearZ - rayOriginZ) * rayInvDirZ;
-        Float t1z = (bboxFarZ  - rayOriginZ) * rayInvDirZ;
+    //     Float t0z = (bboxNearZ - rayOriginZ) * rayInvDirZ;
+    //     Float t1z = (bboxFarZ  - rayOriginZ) * rayInvDirZ;
 
-        // Compute tEnter and tExit
-        Float tEnter = ffmax(ffmax(t0x, t0y), t0z);
-        Float tExit  = ffmin(ffmin(t1x, t1y), t1z);
+    //     // Compute tEnter and tExit
+    //     Float tEnter = ffmax(ffmax(t0x, t0y), t0z);
+    //     Float tExit  = ffmin(ffmin(t1x, t1y), t1z);
 
-        // Clamp tEnter and tExit with tMin and tMax
-        Float tMin_i = ffmax(tEnter, tMin);
-        Float tMax_i = ffmin(tExit, tMax);
+    //     // Clamp tEnter and tExit with tMin and tMax
+    //     Float tMin_i = ffmax(tEnter, tMin);
+    //     Float tMax_i = ffmin(tExit, tMax);
 
-        // Store tMins and tMaxs
-        tEnters[i] = tMin_i;
+    //     // Store tMins and tMaxs
+    //     tEnters[i] = tMin_i;
 
-        // Compute hit mask
-        hits[i] = (tMin_i <= tMax_i) ? -1 : 0; // -1 indicates a hit (all bits set in integer)
-    }
+    //     // Compute hit mask
+    //     hits[i] = (tMin_i <= tMax_i) ? -1 : 0; // -1 indicates a hit (all bits set in integer)
+    // }
 }

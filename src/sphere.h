@@ -7,6 +7,7 @@
 #include "transform.h"
 #include "matrix.h"
 #include "efloat.h"
+#include "vectypes.h"
 
 class sphere: public hitable {
   public:

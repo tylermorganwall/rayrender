@@ -79,6 +79,10 @@ public:
 
 template<typename T> 
 inline void point3<T>::make_unit_vector() {
+  // Float len = length();
+  //   if(len - 1 < 1e-8) {
+  //     volatile int f = 1;
+  //   }
   T k = 1.0 / std::sqrt(e[0]*e[0] + e[1]*e[1] + e[2]*e[2]);
   e[0] *= k; e[1] *= k; e[2] *= k; 
 }
@@ -133,6 +137,18 @@ inline point3<T> operator*(T t, const point3<T> &v) {
 template<typename T> 
 inline point3<T> operator*(const point3<T> &v, T t) {
   return point3<T>(t*v.e[0], t*v.e[1], t*v.e[2]);
+}
+
+template<typename T>
+inline point3<T> operator*(int t, const point3<T>& v) {
+    T t_f = static_cast<T>(t);
+    return point3<T>(t_f*v.e[0], t_f*v.e[1], t_f*v.e[2]);
+}
+
+template<typename T>
+inline point3<T> operator*(const point3<T>& v, int t) {
+    T t_f = static_cast<T>(t);
+    return point3<T>(t_f*v.e[0], t_f*v.e[1], t_f*v.e[2]);
 }
 
 template<typename T> 
@@ -226,6 +242,10 @@ inline point3<T>& point3<T>::operator/=(const T& t) {
 
 template<typename T> 
 inline point3<T> unit_vector(point3<T> v) {
+    // T len = v.length();
+    // if(len - 1 < 1e-8) {
+    //   volatile int f = 1;
+    // }
   return(v/v.length());
 }
 
@@ -272,6 +292,12 @@ inline point3<T> Abs(const point3<T> &v) {
   return(point3<T>(std::abs(v.x()), std::abs(v.y()), std::abs(v.z())));
 }
 
+template<typename T>
+inline point3<T> operator/(const point3<T>& v, int t) {
+    T k = 1.0 / static_cast<Float>(t);
+    return point3<T>(v.e[0]*k, v.e[1]*k, v.e[2]*k);
+}
+
 template <typename T> inline T
 Distance(const point3<T> &p1, const point3<T> &p2) {
   return (p1 - p2).length();
@@ -306,6 +332,7 @@ inline T dot(const point3<T> &v1, const vec3<T> &v2) {
   return (v1.e[0] * v2.e[0] + v1.e[1] * v2.e[1] + v1.e[2] * v2.e[2]);
 }
 
+#ifdef RAYSIMDVEC
 
 // Specialize for Float
 template<>
@@ -319,7 +346,7 @@ public:
     }
 
     point3(Float e0, Float e1, Float e2) {
-        float values[4] = { e0, e1, e2, 0.0f };
+        alignas(16) float values[4] = { e0, e1, e2, 0.0f };
         e = simd_load(values);
     }
 
@@ -403,8 +430,9 @@ public:
     }
 
     inline Float squared_length() const {
-        FVec4 mul = simd_mul(e, e);
-        return mul[0] + mul[1] + mul[2];
+      return(simd_squared_length(e));
+        // FVec4 mul = simd_mul(e, e);
+        // return mul[0] + mul[1] + mul[2];
     }
 
     inline point3<Float> pow(Float exponent) const {
@@ -423,6 +451,10 @@ public:
     }
 
     inline void make_unit_vector() {
+          // Float len = length();
+          // if(len - 1 < 1e-8) {
+          //   volatile int f = 1;
+          // }
         Float len = length();
         e = simd_div(e, simd_set1(len));
     }
@@ -558,6 +590,10 @@ inline point3<Float> Lerp(Float t, const point3<Float>& p0, const point3<Float>&
 // }
 
 inline point3<Float> unit_vector(const point3<Float>& v) {
+    // Float len = v.length();
+    // if(len - 1 < 1e-8) {
+    //   volatile int f = 1;
+    // }
     return v / v.length();
 }
 
@@ -656,7 +692,7 @@ public:
     }
 
     point3(int e0, int e1, int e2) {
-        int values[4] = { e0, e1, e2, 0 };
+        alignas(16) int values[4] = { e0, e1, e2, 0 };
     #ifdef HAS_SSE
         e.v = _mm_loadu_si128(reinterpret_cast<const __m128i*>(values));
     #elif defined(HAS_NEON)
@@ -920,6 +956,8 @@ inline std::ostream& operator<<(std::ostream& os, const point3<int>& t) {
     os << t.e[0] << ", " << t.e[1] << ", " << t.e[2];
     return os;
 }
+
+#endif
 
 
 #ifdef RAY_FLOAT_AS_DOUBLE

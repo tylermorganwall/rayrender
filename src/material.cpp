@@ -17,8 +17,8 @@ inline bool Refract(const vec3f &wi, const normal3f &n, Float eta, vec3f *wt) {
   
   // Handle total internal reflection for transmission
   if (sin2ThetaT >= 1) return(false);
-  Float cosThetaT = std::sqrt(1 - sin2ThetaT);
-  *wt = eta * -wi + (eta * cosThetaI - cosThetaT) * vec3f(n.x(),n.y(),n.z());
+  Float cosThetaT = std::sqrt(static_cast<Float>(1) - sin2ThetaT);
+  *wt = eta * -wi + (eta * cosThetaI - cosThetaT) * convert_to_vec3(n);
   return(true);
 }
 

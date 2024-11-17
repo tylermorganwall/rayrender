@@ -1,5 +1,4 @@
-#include "vec3.h"
-#include "normal.h"
+#include "vectypes.h"
 #include "trianglemesh.h"
 #include "assert.h"
 
@@ -7,8 +6,8 @@
 normal3f CalculateFaceNormal(const point3f& p0, const point3f& p1, const point3f& p2) {
   vec3f v0 = p1 - p0;
   vec3f v1 = p2 - p0;
-  vec3f cross_product = cross(v0, v1);
-  return unit_vector(cross_product);
+  vec3f cross_product = unit_vector(cross(v0, v1));
+  return convert_to_normal3(cross_product);
 }
 
 void CalculateNormals(TriangleMesh *trianglemesh) {

@@ -48,9 +48,9 @@ const bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& re
   if(temp1 < t_max && temp1 > t_min && is_hit) {
     rec.t = temp1;
     rec.p = scaled_ray.point_at_parameter(rec.t) ;
-    rec.normal = (rec.p - center);
+    rec.normal = convert_to_normal3(rec.p - center);
     rec.mat_ptr = mat_ptr.get();
-    normal3f trans_normal = rec.normal *  normal3f(inv_axes);
+    normal3f trans_normal = rec.normal * inv_axes;
     trans_normal.make_unit_vector();
     
     get_sphere_uv(trans_normal, rec.u, rec.v);
@@ -67,7 +67,7 @@ const bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& re
     
     if(bump_tex) {
       point3f bvbu = bump_tex->value(rec.u, rec.v, rec.p);
-      rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
+      rec.bump_normal = rec.normal + convert_to_normal3(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
       rec.bump_normal *= inv_axes;
       rec.bump_normal.make_unit_vector();
     }
@@ -75,7 +75,7 @@ const bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& re
     rec.normal.make_unit_vector();
     rec.p *= 1/rec.p.length() * axes;
     
-    rec.pError = convert_to_vec3f(gamma(5) * Abs(rec.p));
+    rec.pError = convert_to_vec3(gamma(5) * Abs(rec.p));
     rec = (*ObjectToWorld)(rec);
     rec.normal *= reverseOrientation  ? -1 : 1;
     rec.bump_normal *= reverseOrientation  ? -1 : 1;
@@ -87,9 +87,9 @@ const bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& re
   if(temp2 < t_max && temp2 > t_min && second_is_hit) {
     rec.t = temp2;
     rec.p = scaled_ray.point_at_parameter(rec.t) ;
-    rec.normal = (rec.p - center);
+    rec.normal = convert_to_normal3(rec.p - center);
     rec.mat_ptr = mat_ptr.get();
-    normal3f trans_normal = rec.normal *  normal3f(inv_axes);
+    normal3f trans_normal = rec.normal * inv_axes;
     trans_normal.make_unit_vector();
     
     get_sphere_uv(trans_normal, rec.u, rec.v);
@@ -105,7 +105,7 @@ const bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& re
     
     if(bump_tex) {
       point3f bvbu = bump_tex->value(rec.u, rec.v, rec.p);
-      rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
+      rec.bump_normal = rec.normal + convert_to_normal3(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
       rec.bump_normal *= inv_axes;
       rec.bump_normal.make_unit_vector();
     }
@@ -117,7 +117,7 @@ const bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& re
       rec.normal = -rec.normal;
       rec.bump_normal = -rec.bump_normal;
     }
-    rec.pError = convert_to_vec3f(gamma(5) * Abs(rec.p));
+    rec.pError = convert_to_vec3(gamma(5) * Abs(rec.p));
     rec = (*ObjectToWorld)(rec);
     rec.normal *= reverseOrientation  ? -1 : 1;
     rec.bump_normal *= reverseOrientation  ? -1 : 1;
@@ -179,9 +179,9 @@ const bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& re
   if(temp1 < t_max && temp1 > t_min && is_hit) {
     rec.t = temp1;
     rec.p = scaled_ray.point_at_parameter(rec.t) ;
-    rec.normal = (rec.p - center);
+    rec.normal = convert_to_normal3(rec.p - center);
     rec.mat_ptr = mat_ptr.get();
-    normal3f trans_normal = rec.normal *  normal3f(inv_axes);
+    normal3f trans_normal = rec.normal * inv_axes;
     trans_normal.make_unit_vector();
     
     get_sphere_uv(trans_normal, rec.u, rec.v);
@@ -198,7 +198,7 @@ const bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& re
     
     if(bump_tex) {
       point3f bvbu = bump_tex->value(rec.u, rec.v, rec.p);
-      rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
+      rec.bump_normal = rec.normal + convert_to_normal3(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
       rec.bump_normal *= inv_axes;
       rec.bump_normal.make_unit_vector();
     }
@@ -206,7 +206,7 @@ const bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& re
     rec.normal.make_unit_vector();
     rec.p *= 1/rec.p.length() * axes;
     
-    rec.pError = convert_to_vec3f(gamma(5) * Abs(rec.p));
+    rec.pError = convert_to_vec3(gamma(5) * Abs(rec.p));
     rec = (*ObjectToWorld)(rec);
     rec.normal *= reverseOrientation  ? -1 : 1;
     rec.bump_normal *= reverseOrientation  ? -1 : 1;
@@ -218,9 +218,9 @@ const bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& re
   if(temp2 < t_max && temp2 > t_min && second_is_hit) {
     rec.t = temp2;
     rec.p = scaled_ray.point_at_parameter(rec.t) ;
-    rec.normal = (rec.p - center);
+    rec.normal = convert_to_normal3(rec.p - center);
     rec.mat_ptr = mat_ptr.get();
-    normal3f trans_normal = rec.normal *  normal3f(inv_axes);
+    normal3f trans_normal = rec.normal * inv_axes;
     trans_normal.make_unit_vector();
     
     get_sphere_uv(trans_normal, rec.u, rec.v);
@@ -236,7 +236,7 @@ const bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& re
     
     if(bump_tex) {
       point3f bvbu = bump_tex->value(rec.u, rec.v, rec.p);
-      rec.bump_normal = rec.normal + normal3f(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
+      rec.bump_normal = rec.normal + convert_to_normal3(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
       rec.bump_normal *= inv_axes;
       rec.bump_normal.make_unit_vector();
     }
@@ -248,7 +248,7 @@ const bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& re
       rec.normal = -rec.normal;
       rec.bump_normal = -rec.bump_normal;
     }
-    rec.pError = convert_to_vec3f(gamma(5) * Abs(rec.p));
+    rec.pError = convert_to_vec3(gamma(5) * Abs(rec.p));
     rec = (*ObjectToWorld)(rec);
     rec.normal *= reverseOrientation  ? -1 : 1;
     rec.bump_normal *= reverseOrientation  ? -1 : 1;
