@@ -1,7 +1,7 @@
 #include "pdf.h"
 #include "mathinline.h"
 #include "raylog.h"
-#include "vec3.h"
+#include "vectypes.h"
 
 inline bool Refract(const vec3f &wi, const normal3f &n, Float eta, vec3f *wt) {
   // Compute $\cos \theta_\roman{t}$ using Snell's law
@@ -107,7 +107,7 @@ vec3f micro_pdf::generate(Sampler* sampler, bool& diffuse_bounce, Float time) {
 micro_transmission_pdf::micro_transmission_pdf(const normal3f& w, const vec3f& wi_, MicrofacetDistribution* distribution,
                        Float eta, Float uu, Float vv) : eta(eta), distribution(distribution), 
                        u(uu), v(vv) {
-  uvw.build_from_w(w);
+  uvw.build_from_w_normalized(w);
   wi = -unit_vector(uvw.world_to_local(wi_));
 }
 

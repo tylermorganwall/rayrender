@@ -1,21 +1,20 @@
 #ifndef ONBH
 #define ONBH
 
-#include "vec3.h"
-#include "normal.h"
+#include "vectypes.h"
 
 class onb {
 public:
   onb() {}
-  onb(vec3f u,vec3f v,vec3f w) {
+  onb(vec3f u, vec3f v, vec3f w) {
     axis[0] = u;
     axis[1] = v;
     axis[2] = w;
   }
-  onb(vec3f u,vec3f v,normal3f w) {
+  onb(vec3f u, vec3f v, normal3f w) {
     axis[0] = u;
     axis[1] = v;
-    axis[2] = vec3f(w.x(),w.y(),w.z());
+    axis[2] = convert_to_vec3(w);
   }
   inline vec3f operator[](int i) const {return(axis[i]);}
   vec3f u() const {return(axis[0]);}
@@ -35,16 +34,29 @@ public:
   }
   void build_from_w(const vec3f& n) {
     axis[2] = unit_vector(n);
-    vec3f a = fabs(w().x()) > 0.9999999 ? vec3f(0,1,0)  : vec3f(1,0,0);
-    axis[1] = unit_vector(cross(w(),a));
+    vec3f a = std::fabsf(w().x()) > 0.9999999 ? vec3f(0,1,0)  : vec3f(1,0,0);
+    axis[1] = cross(w(),a);
     axis[0] = cross(w(), v());
   }
   void build_from_w(const normal3f& n) {
-    axis[2] = unit_vector(vec3f(n.x(),n.y(),n.z()));
-    vec3f a = fabs(w().x()) > 0.9999999 ? vec3f(0,1,0)  : vec3f(1,0,0);
-    axis[1] = unit_vector(cross(w(),a));
+    axis[2] = unit_vector(convert_to_vec3(n));
+    vec3f a = std::fabsf(w().x()) > 0.9999999 ? vec3f(0,1,0)  : vec3f(1,0,0);
+    axis[1] = cross(w(),a);
     axis[0] = cross(w(), v());
   }
+  void build_from_w_normalized(const vec3f& n) {
+    axis[2] = n;
+    vec3f a = std::fabsf(w().x()) > 0.9999999 ? vec3f(0,1,0)  : vec3f(1,0,0);
+    axis[1] = cross(w(),a);
+    axis[0] = cross(w(), v());
+  }
+  void build_from_w_normalized(const normal3f& n) {
+    axis[2] = convert_to_vec3(n);
+    vec3f a = std::fabsf(w().x()) > 0.9999999 ? vec3f(0,1,0)  : vec3f(1,0,0);
+    axis[1] = cross(w(),a);
+    axis[0] = cross(w(), v());
+  }
+
   void swap_yz() {
     vec3f tempaxis = axis[1];
     axis[1] = axis[2];

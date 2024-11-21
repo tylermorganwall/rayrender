@@ -24,7 +24,7 @@ public:
 class cosine_pdf : public pdf {
 public:
   cosine_pdf(const normal3f& w) {
-    uvw.build_from_w(w);
+    uvw.build_from_w_normalized(w);
   }
   virtual Float value(const vec3f& direction, random_gen& rng, Float time = 0);
   virtual Float value(const vec3f& direction, Sampler* sampler, Float time = 0);
@@ -37,7 +37,7 @@ class micro_pdf : public pdf {
 public:
   micro_pdf(const normal3f& w, const vec3f& wi_, MicrofacetDistribution* distribution, 
             Float uu, Float vv) : distribution(distribution),  u(uu), v(vv) {
-    uvw.build_from_w(w);
+    uvw.build_from_w_normalized(w);
     wi = -unit_vector(uvw.world_to_local(wi_));;
   }
   virtual Float value(const vec3f& direction, random_gen& rng, Float time = 0);
@@ -70,7 +70,7 @@ class glossy_pdf : public pdf {
 public:
   glossy_pdf(const normal3f& w, const vec3f& wi_, MicrofacetDistribution* distribution, 
              Float uu, Float vv) : distribution(distribution), u(uu), v(vv) {
-    uvw.build_from_w(w);
+    uvw.build_from_w_normalized(w);
     wi = -unit_vector(uvw.world_to_local(wi_));;
   }
   virtual Float value(const vec3f& direction, random_gen& rng, Float time = 0);

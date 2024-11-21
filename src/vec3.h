@@ -91,8 +91,7 @@ inline bool parallelVectors(const vec3<T> &v1, const vec3<T> &v2) {
   T x = DifferenceOfProducts(v1.y(), v2.z(), v1.z(), v2.y());
   T y = DifferenceOfProducts(v1.z(), v2.x(), v1.x(), v2.z());
   T z = DifferenceOfProducts(v1.x(), v2.y(), v1.y(), v2.x());
-  if(x == 0 && y == 0 && z == 0) {
-    [[unlikely]];
+  if(x == 0 && y == 0 && z == 0) [[unlikely]] {
     return(true);
   }
   return(false);
@@ -268,12 +267,16 @@ inline vec3<T> cross(const vec3<T>& v1, const vec3<T>& v2) {
 // Cross product for generic vec3<T>
 template<typename T>
 inline vec3<T> serial_cross(const vec3<T>& v1, const vec3<T>& v2) {
-    return vec3<T>(
-        DifferenceOfProductsRaw(v1.e[1],v2.e[2],v1.e[2],v2.e[1]),
-        DifferenceOfProductsRaw(v1.e[2],v2.e[0],v1.e[0],v2.e[2]),
-        DifferenceOfProductsRaw(v1.e[0],v2.e[1],v1.e[1],v2.e[0])
-    );
+  const T e1[3] = {v1.e[0], v1.e[1], v1.e[2]};
+  const T e2[3] = {v2.e[0], v2.e[1], v2.e[2]};
+
+  return vec3<T>(
+      DifferenceOfProductsRaw(e1[1],e2[2],e1[2],e2[1]),
+      DifferenceOfProductsRaw(e1[2],e2[0],e1[0],e2[2]),
+      DifferenceOfProductsRaw(e1[0],e2[1],e1[1],e2[0])
+  );
 }
+
 
 #ifdef RAYSIMDVEC
 

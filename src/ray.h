@@ -24,13 +24,6 @@ inline Float add_ulp_magnitude(Float f, int ulps) {
 }
 #endif
 
-// static constexpr Float MachineEpsilon =
-//   std::numeric_limits<Float>::epsilon() * 0.5;
-// 
-// inline constexpr Float gamma(int n) {
-//   return (n * MachineEpsilon) / (1 - n * MachineEpsilon);
-// }
-
 class ray {
   public: 
     ray() {}
@@ -40,22 +33,20 @@ class ray {
       B = b;
       _time = ti;
       tMax = tmax;
-      inv_dir = vec3f(1/b.x(), 1/b.y(), 1/b.z());
+      vec3 inv_dir = vec3f(1/b.x(), 1/b.y(), 1/b.z());
       inv_dir_pad.e[0] = add_ulp_magnitude(inv_dir.x(), 2);
       inv_dir_pad.e[1] = add_ulp_magnitude(inv_dir.y(), 2);
       inv_dir_pad.e[2] = add_ulp_magnitude(inv_dir.z(), 2);
-      // sign[0] = (inv_dir.x() < 0);
-      // sign[1] = (inv_dir.y() < 0);
-      // sign[2] = (inv_dir.z() < 0);
       kz = MaxDimension(Abs(B));
       kx = kz + 1;
       if (kx == 3) kx = 0;
       ky = kx + 1;
       if (ky == 3) ky = 0;
       vec3f dPermuted = Permute(B, kx, ky, kz);
-      Sx = -dPermuted.x() / dPermuted.z();
-      Sy = -dPermuted.y() / dPermuted.z();
-      Sz = 1.f / dPermuted.z();
+      Float Sx = -dPermuted.x() / dPermuted.z();
+      Float Sy = -dPermuted.y() / dPermuted.z();
+      Float Sz = 1.f / dPermuted.z();
+      Svec = vec3f(Sx, Sy, Sz);
 #ifdef RAYSIMD
       origin4[0] = simd_set1(a.x());
       origin4[1] = simd_set1(a.y());
@@ -74,13 +65,10 @@ class ray {
       B = b; 
       _time = ti;
       tMax = tmax;
-      inv_dir = vec3f(1/b.x(), 1/b.y(), 1/b.z());
+      vec3 inv_dir = vec3f(1/b.x(), 1/b.y(), 1/b.z());
       inv_dir_pad.e[0] = add_ulp_magnitude(inv_dir.x(), 2);
       inv_dir_pad.e[1] = add_ulp_magnitude(inv_dir.y(), 2);
       inv_dir_pad.e[2] = add_ulp_magnitude(inv_dir.z(), 2);
-      // sign[0] = (inv_dir.x() < 0);
-      // sign[1] = (inv_dir.y() < 0);
-      // sign[2] = (inv_dir.z() < 0);
       pri_stack = priority2;
       kz = MaxDimension(Abs(B));
       kx = kz + 1;
@@ -88,9 +76,10 @@ class ray {
       ky = kx + 1;
       if (ky == 3) ky = 0;
       vec3f dPermuted = Permute(B, kx, ky, kz);
-      Sx = -dPermuted.x() / dPermuted.z();
-      Sy = -dPermuted.y() / dPermuted.z();
-      Sz = 1.f / dPermuted.z();
+      Float Sx = -dPermuted.x() / dPermuted.z();
+      Float Sy = -dPermuted.y() / dPermuted.z();
+      Float Sz = 1.f / dPermuted.z();
+      Svec = vec3f(Sx, Sy, Sz);
 #ifdef RAYSIMD
       origin4[0] = simd_set1(a.x());
       origin4[1] = simd_set1(a.y());
@@ -107,7 +96,7 @@ class ray {
     
     point3f origin() const {return(A);}
     vec3f direction() const {return(B);}
-    vec3f inverse_dir() const {return(inv_dir);}
+    // vec3f inverse_dir() const {return(inv_dir);}
     Float time() const {return _time;}
     point3f point_at_parameter(Float t) const {return(A + t*B);}
     bool has_priority() const {return(pri_stack ? true : false);}
@@ -115,7 +104,7 @@ class ray {
     
     point3f A;
     vec3f B;
-    vec3f inv_dir;
+    // vec3f inv_dir;
     vec3f inv_dir_pad;
   #ifdef RAYSIMD
     FVec4 origin4[3];
@@ -124,8 +113,9 @@ class ray {
   #endif
 
     // int sign[3];
+    vec3f Svec;
     Float _time;
-    Float Sx, Sy, Sz;
+    // Float Sx, Sy, Sz;
     int kx, ky, kz;
     mutable Float tMax;
     std::vector<dielectric*> *pri_stack;
@@ -137,6 +127,45 @@ inline std::istream& operator>>(std::istream &is, ray &r) {
 }
 
 inline std::ostream& operator<<(std::ostream &os, const ray &r) {
+  os << "Origin: " << r.A.e[0] << ", " << r.A.e[1] << ", " << r.A.e[2] << " Dir: " << r.B.e[0] << ", " << r.B.e[1] << ", " << r.B.e[2] ;
+  return os;
+}
+
+class CompactRay {
+  public: 
+    CompactRay() {}
+    CompactRay(const ray& r) {
+      A = r.A;
+      B = r.B;
+      _time = r._time;
+      tMax = r.tMax;
+      inv_dir_pad = r.inv_dir_pad;
+      pri_stack = r.pri_stack;
+    }
+    point3f operator()(Float t) const { return A + B * t; }
+    
+    point3f origin() const {return(A);}
+    vec3f direction() const {return(B);}
+    // vec3f inverse_dir() const {return(inv_dir);}
+    Float time() const {return _time;}
+    point3f point_at_parameter(Float t) const {return(A + t*B);}
+    bool has_priority() const {return(pri_stack ? true : false);}
+    size_t get_priority_size() const {return(pri_stack->size());}
+    
+    point3f A;
+    vec3f B;
+    vec3f inv_dir_pad;
+    Float _time;
+    mutable Float tMax;
+    std::vector<dielectric*> *pri_stack;
+};
+
+inline std::istream& operator>>(std::istream &is, CompactRay &r) {
+  is >> r.A.e[0] >> r.A.e[1] >> r.A.e[2];
+  return is;
+}
+
+inline std::ostream& operator<<(std::ostream &os, const CompactRay &r) {
   os << "Origin: " << r.A.e[0] << ", " << r.A.e[1] << ", " << r.A.e[2] << " Dir: " << r.B.e[0] << ", " << r.B.e[1] << ", " << r.B.e[2] ;
   return os;
 }

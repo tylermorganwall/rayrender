@@ -30,7 +30,7 @@ point3f lambertian::f(const ray& r_in, const hit_record& rec, const ray& scatter
   //unit_vector(scattered.direction()) == wo
   //r_in.direction() == wi
   vec3f wi = unit_vector(scattered.direction());
-  normal3f n = unit_vector(rec.normal);
+  normal3f n = (rec.normal);
   Float cosine = dot(n, wi);
   //Shadow terminator if bump map
   Float G = 1.0f;
@@ -86,8 +86,8 @@ bool metal::scatter(const ray& r_in, const hit_record& hrec, scatter_record& sre
   
   normal3f normal = !hrec.has_bump ? hrec.normal : hrec.bump_normal;
   vec3f wi = -unit_vector(r_in.direction());
-  vec3f reflected = Reflect(wi,unit_vector(normal));
-  Float cosine = AbsDot(unit_vector(reflected), unit_vector(normal));
+  vec3f reflected = Reflect(wi,normal);
+  Float cosine = AbsDot(unit_vector(reflected), normal);
   if(cosine < 0) {
     cosine = 0;
   }
@@ -107,8 +107,8 @@ bool metal::scatter(const ray& r_in, const hit_record& hrec, scatter_record& sre
   
   normal3f normal = !hrec.has_bump ? hrec.normal : hrec.bump_normal;
   vec3f wi = -unit_vector(r_in.direction());
-  vec3f reflected = Reflect(wi,unit_vector(normal));
-  Float cosine = AbsDot(unit_vector(reflected), unit_vector(normal));
+  vec3f reflected = Reflect(wi,normal);
+  Float cosine = AbsDot(unit_vector(reflected), normal);
   if(cosine < 0) {
     cosine = 0;
   }
@@ -141,7 +141,6 @@ bool dielectric::scatter(const ray& r_in, const hit_record& hrec, scatter_record
   srec.is_specular = true;
   normal3f outward_normal;
   normal3f wh = !hrec.has_bump ? hrec.normal : hrec.bump_normal;
-  wh.make_unit_vector();
   
   vec3f wi = -unit_vector(r_in.direction());
   
@@ -247,7 +246,6 @@ bool dielectric::scatter(const ray& r_in, const hit_record& hrec, scatter_record
   srec.is_specular = true;
   normal3f outward_normal;
   normal3f wh = !hrec.has_bump ? hrec.normal : hrec.bump_normal;
-  wh.make_unit_vector();
   
   vec3f wi = -unit_vector(r_in.direction());
   
@@ -472,9 +470,9 @@ point3f orennayar::f(const ray& r_in, const hit_record& rec, const ray& scattere
   SCOPED_TIMER_COUNTER("Oren-Nayar F");
   onb uvw;
   if(!rec.has_bump) {
-    uvw.build_from_w(rec.normal);
+    uvw.build_from_w_normalized(rec.normal);
   } else {
-    uvw.build_from_w(rec.bump_normal);
+    uvw.build_from_w_normalized(rec.bump_normal);
   }
   vec3f wi = -unit_vector(uvw.world_to_local(r_in.direction()));
   vec3f wo = unit_vector(uvw.world_to_local(scattered.direction()));
@@ -554,9 +552,9 @@ point3f MicrofacetReflection::f(const ray& r_in, const hit_record& rec, const ra
   
   onb uvw;
   if(!rec.has_bump) {
-    uvw.build_from_w(rec.normal);
+    uvw.build_from_w_normalized(rec.normal);
   } else {
-    uvw.build_from_w(rec.bump_normal);
+    uvw.build_from_w_normalized(rec.bump_normal);
   }
   vec3f wi = -unit_vector(uvw.world_to_local(r_in.direction()));
   vec3f wo = unit_vector(uvw.world_to_local(scattered.direction()));
@@ -625,9 +623,9 @@ point3f MicrofacetTransmission::f(const ray& r_in, const hit_record& rec, const 
   
   onb uvw;
   if(!rec.has_bump) {
-    uvw.build_from_w(rec.normal);
+    uvw.build_from_w_normalized(rec.normal);
   } else {
-    uvw.build_from_w(rec.bump_normal);
+    uvw.build_from_w_normalized(rec.bump_normal);
   }
   
   vec3f wi = -unit_vector(uvw.world_to_local(r_in.direction()));
@@ -716,9 +714,9 @@ point3f glossy::f(const ray& r_in, const hit_record& rec, const ray& scattered) 
   
   onb uvw;
   if(!rec.has_bump) {
-    uvw.build_from_w(rec.normal);
+    uvw.build_from_w_normalized(rec.normal);
   } else {
-    uvw.build_from_w(rec.bump_normal);
+    uvw.build_from_w_normalized(rec.bump_normal);
   }
   vec3f wi = -unit_vector(uvw.world_to_local(r_in.direction()));
   vec3f wo = unit_vector(uvw.world_to_local(scattered.direction()));

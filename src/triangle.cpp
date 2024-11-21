@@ -25,17 +25,15 @@ const bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
     p1t = Permute(p1t, kx, ky, kz);
     p2t = Permute(p2t, kx, ky, kz);
   }
-  const Float Sz = r.Sz;;
-  {
-    const Float Sx = r.Sx;
-    const Float Sy = r.Sy;
-    p0t[0] += Sx * p0t.z();
-    p0t[1] += Sy * p0t.z();
-    p1t[0] += Sx * p1t.z();
-    p1t[1] += Sy * p1t.z();
-    p2t[0] += Sx * p2t.z();
-    p2t[1] += Sy * p2t.z();
-  }
+  vec3f Svec = r.Svec;
+  const Float Sz = Svec.z();
+  const vec3f zero_z(1,1,0);
+
+  Svec *= zero_z;
+  p0t += Svec * p0t.z();
+  p1t += Svec * p1t.z();
+  p2t += Svec * p2t.z();
+
   // Compute edge function coefficients _e0_, _e1_, and _e2_
   Float e0 = DifferenceOfProducts(p1t.x(), p2t.y(), p1t.y(), p2t.x());
   Float e1 = DifferenceOfProducts(p2t.x(), p0t.y(), p2t.y(), p0t.x());
@@ -75,10 +73,6 @@ const bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
 
   // Compute barycentric coordinates and $t$ value for triangle intersection
   Float invDet = 1 / det;
-  Float b0 = e0 * invDet;
-  Float b1 = e1 * invDet;
-  Float b2 = e2 * invDet;
-  vec3f bVec(b0, b1, b2);
   Float t = tScaled * invDet;
   {
     Float maxZt = MaxComponent(Abs(vec3f(p0t.z(), p1t.z(), p2t.z())));
@@ -103,6 +97,11 @@ const bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
     }
   }
 
+  Float b0 = e0 * invDet;
+  Float b1 = e1 * invDet;
+  Float b2 = e2 * invDet;
+  vec3f bVec(b0, b1, b2);
+
   vec3f dpdu, dpdv;
   point2f uv[3];
   GetUVs(uv);
@@ -110,15 +109,16 @@ const bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
   // Compute deltas for triangle partial derivatives
   vec2f duv02 = uv[0] - uv[2], duv12 = uv[1] - uv[2];
   vec3f dp02 = p0 - p2, dp12 = p1 - p2;
-  Float determinant = DifferenceOfProducts(duv02[0],duv12[1],duv02[1],duv12[0]);
-  bool degenerateUV = ffabs(determinant) < 1e-8;
+  normal3f normal = convert_to_normal3(cross(dp02, dp12));
+
+  Float determinantUV = DifferenceOfProducts(duv02[0],duv12[1],duv02[1],duv12[0]);
+  bool degenerateUV = ffabs(determinantUV) < 1e-8;
   if (!degenerateUV) {
-    Float invdet = 1 / determinant;
-    rec.dpdu = (duv12[1] * dp02 - duv02[1] * dp12) * invdet;
-    rec.dpdv = (-duv12[0] * dp02 + duv02[0] * dp12) * invdet;
+    Float invdet = 1 / determinantUV;
+    dpdu = (duv12[1] * dp02 - duv02[1] * dp12) * invdet;
+    dpdv = (-duv12[0] * dp02 + duv02[0] * dp12) * invdet;
   }
-  // if (degenerateUV || cross(rec.dpdu, rec.dpdv).squared_length() == 0) {
-  if (degenerateUV || parallelVectors(rec.dpdu, rec.dpdv)) {
+  if (degenerateUV || parallelVectors(dpdu, dpdv)) {
     // Handle zero determinant for triangle partial derivative matrix
     vec3f ng = cross(p2 - p0, p1 - p0);
     if (ng.squared_length() == 0) {
@@ -126,9 +126,12 @@ const bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
       // bogus.
       return false;
     }
-    CoordinateSystem(unit_vector(ng), &rec.dpdu, &rec.dpdv);
+    CoordinateSystem(unit_vector(ng), &dpdu, &dpdv);
   }
-  //Add error calc
+  //Everything after this could be delayed until later
+  
+  point3f pHit = b0 * p0 + b1 * p1 + b2 * p2;
+  point2f uvHit = b0 * uv[0] + b1 * uv[1] + b2 * uv[2];
 
   point3f bSum0[3];
   bSum0[0] = Abs(b0 * p0);
@@ -136,10 +139,6 @@ const bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
   bSum0[2] = Abs(b2 * p2);
   vec3f absSum = convert_to_vec3(bSum0[0] + bSum0[1] + bSum0[2]);
 
-  rec.pError = vec3f(gamma(7)) * absSum;
-
-  point3f pHit = b0 * p0 + b1 * p1 + b2 * p2;
-  point2f uvHit = b0 * uv[0] + b1 * uv[1] + b2 * uv[2];
   
   Float uHit = uvHit[0];
   Float vHit = uvHit[1];
@@ -149,7 +148,6 @@ const bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
   } 
   
   bool alpha_miss = false;
-  normal3f normal = convert_to_normal3(cross(dp02, dp12));
   int mat_id = mesh->face_material_id[face_number];
 
   alpha_texture* alpha_mask = mesh->alpha_textures[mat_id].get();
@@ -158,11 +156,11 @@ const bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
       alpha_miss = true;
     }
   }
-  rec.t = t;
   rec.p = pHit;
-
-  rec.has_bump = false;
-
+  rec.t = t;
+  
+  __builtin_prefetch(mesh->bump_textures[mat_id].get()); //WILL_READ_ONLY
+  __builtin_prefetch(mesh->mesh_materials[mat_id].get()); //WILL_READ_ONLY
   // Use that to calculate normals
   if(mesh->has_normals && n[0] != -1 && n[1] != -1 && n[2] != -1) {
     normal3f n1 = mesh->n[n[0]];
@@ -171,7 +169,7 @@ const bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
     
     vec3f np = convert_to_vec3(b0 * n1 + b1 * n2 + b2 * n3);
     if(np.squared_length() == 0) {
-      rec.normal = unit_vector(normal);
+      rec.normal = normal;
     } else {
       np.make_unit_vector();
       if(mesh->has_consistent_normals) {
@@ -187,7 +185,7 @@ const bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
         Float g = 1 + q * (b - 1);
         Float rho = sqrt(q * (1 + g) / (1 +b));
         vec3f r1 = (g + rho * b) * np - rho * i;
-        rec.normal = unit_vector(convert_to_normal3(i + r1));
+        rec.normal = convert_to_normal3(i + r1);
       } else {
         rec.normal = convert_to_normal3(np);
       }
@@ -195,14 +193,24 @@ const bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
   } else {
     if(alpha_mask) {
       rec.normal = dot(r.direction(), normal) < 0 ? normal : -normal;
-      rec.normal.make_unit_vector();
     } else {
       rec.normal = normal;
-      rec.normal.make_unit_vector();
     }
   }
+
+  rec.normal.make_unit_vector();
+
+  rec.dpdu = dpdu;
+  rec.dpdv = dpdv;
+  rec.pError = vec3f(gamma(7)) * absSum;
+
+  rec.u = uHit;
+  rec.v = vHit;
+  rec.has_bump = false;
+  rec.alpha_miss = alpha_miss;
+
   bump_texture* bump_tex = mesh->bump_textures[mat_id].get();
-  
+
   if(bump_tex) {
     vec3f norm_bump = dot(r.direction(), rec.normal) < 0 ? convert_to_vec3(rec.normal) : -convert_to_vec3(rec.normal);
 
@@ -213,12 +221,9 @@ const bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
     rec.bump_normal = Faceforward(rec.bump_normal,rec.normal);
     rec.has_bump = true;
   }
-  rec.u = uHit;
-  rec.v = vHit;
-  
-  rec.mat_ptr = mesh->mesh_materials[mat_id].get();
-  rec.alpha_miss = alpha_miss;
+
   rec.shape = this;
+  rec.mat_ptr = mesh->mesh_materials[mat_id].get();
   return(true);
 }
 
@@ -265,7 +270,7 @@ const bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
       (e0 == 0.0f || e1 == 0.0f || e2 == 0.0f)) {
     double p2txp1ty = (double)p2t.x() * (double)p1t.y();
     double p2typ1tx = (double)p2t.y() * (double)p1t.x();
-    e0 = (float)(p2typ1tx - p2txp1ty);
+    e0 = (float)(p2typ1tx - p2txp1ty); 
     double p0txp2ty = (double)p0t.x() * (double)p2t.y();
     double p0typ2tx = (double)p0t.y() * (double)p2t.x();
     e1 = (float)(p0typ2tx - p0txp2ty);
@@ -325,7 +330,7 @@ const bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
   vec2f duv02 = uv[0] - uv[2], duv12 = uv[1] - uv[2];
   vec3f dp02 = p0 - p2, dp12 = p1 - p2;
   Float determinant = DifferenceOfProducts(duv02[0],duv12[1],duv02[1],duv12[0]);
-  bool degenerateUV = std::fabs(determinant) < 1e-8;
+  bool degenerateUV = std::fabsf(determinant) < 1e-8;
   if (!degenerateUV) {
     Float invdet = 1 / determinant;
     rec.dpdu = (duv12[1] * dp02 - duv02[1] * dp12) * invdet;
@@ -341,6 +346,7 @@ const bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
     }
     CoordinateSystem(unit_vector(ng), &rec.dpdu, &rec.dpdv);
   }
+
   //Add error calc
   Float xAbsSum = (ffabs(b0 * p0.x()) + ffabs(b1 * p1.x()) +
     ffabs(b2 * p2.x()));
@@ -348,17 +354,13 @@ const bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
     ffabs(b2 * p2.y()));
   Float zAbsSum = (ffabs(b0 * p0.z()) + ffabs(b1 * p1.z()) +
     ffabs(b2 * p2.z()));
-  rec.pError = gamma(7) * vec3f(xAbsSum, yAbsSum, zAbsSum);
+  // rec.pError = gamma(7) * vec3f(xAbsSum, yAbsSum, zAbsSum);
   
   point3f pHit = b0 * p0 + b1 * p1 + b2 * p2;
   point2f uvHit = b0 * uv[0] + b1 * uv[1] + b2 * uv[2];
   
-  // Float uHit = uvHit[0];
-  // Float vHit = uvHit[1];
   if(mesh->has_vertex_colors) {
     uvHit = point2f(b0,b1);
-    // uHit = b0;
-    // vHit = b1;
   } 
   
   bool alpha_miss = false;
@@ -374,7 +376,6 @@ const bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
   rec.t = t;
   rec.p = pHit;
   rec.pError = gamma(7) * vec3f(xAbsSum, yAbsSum, zAbsSum);
-  
   rec.has_bump = false;
   
   // Use that to calculate normals
@@ -413,7 +414,7 @@ const bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
     }
   }
   bump_texture* bump_tex = mesh->bump_textures[mat_id].get();
-  
+
   if(bump_tex) {
     vec3f norm_bump = dot(r.direction(), rec.normal) < 0 ? convert_to_vec3(rec.normal) : -convert_to_vec3(rec.normal);
     

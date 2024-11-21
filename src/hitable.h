@@ -2,6 +2,7 @@
 #define HITABLEH
 
 #include "aabb.h"
+#include "ray.h"
 #include "vectypes.h"
 #include "texture.h"
 #include "rng.h"
@@ -27,6 +28,10 @@ class hitable {
       transformSwapsHandedness(ObjectToWorld->SwapsHandedness()) {}
     virtual const bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const = 0;
     virtual const bool hit(const ray& r, Float tmin, Float tmax, hit_record& rec, Sampler* sampler) const = 0;
+
+    // virtual const bool hit(const CompactRay& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const = 0;
+    // virtual const bool hit(const CompactRay& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const = 0;
+
     virtual bool bounding_box(Float t0, Float t1, aabb& box) const = 0;
     virtual Float pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Float time = 0) {
       return(0.0);
@@ -55,29 +60,31 @@ class hitable {
 };
 
 
-struct hit_record {
+struct alignas(16) hit_record {
   hit_record() : has_bump(false), alpha_miss(false), infinite_area_hit(false) {};
-  
   point3f p; //PBRT: In Interaction
+  Float t; //PBRT: In Interaction
+  normal3f normal; //PBRT: In interaction
+
 #ifdef DEBUGBVH
   Float bvh_nodes;
 #endif
-  normal3f normal; //PBRT: In interaction
   vec3f dpdu, dpdv; //PBRT: In SurfaceInteraction
   vec3f pError; //PBRT: In Interaction
-  vec3f wo; //PBRT: In Interaction, negative ray direction
-  normal3f bump_normal; 
-  const hitable* shape = nullptr; //PBRT: In SurfaceInteraction, const Shape *shape
-  material* mat_ptr; //PBRT: In SurfaceInteraction as bsdf or bssrdf
-  mutable vec3f dpdx, dpdy;
-  mutable normal3f dndu, dndv;
-  mutable Float dudx, dvdx, dudy, dvdy;
-  Float t; //PBRT: In Interaction
   Float u; //PBRT: In SurfaceInteraction
   Float v; //PBRT: In SurfaceInteraction
   bool has_bump; 
   bool alpha_miss;
   bool infinite_area_hit;
+  normal3f bump_normal; 
+
+  // vec3f wo; //PBRT: In Interaction, negative ray direction
+  const hitable* shape = nullptr; //PBRT: In SurfaceInteraction, const Shape *shape
+  material* mat_ptr; //PBRT: In SurfaceInteraction as bsdf or bssrdf
+
+  // mutable vec3f dpdx, dpdy;
+  // mutable normal3f dndu, dndv;
+  // mutable Float dudx, dvdx, dudy, dvdy;
   //const Shape *shape (recording the shape)
   //const Primitive *primitive (recording the primitive)
   //int faceIndex (for ptex lookups)

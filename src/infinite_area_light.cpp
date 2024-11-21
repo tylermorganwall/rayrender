@@ -42,7 +42,7 @@ const bool InfiniteAreaLight::hit(const ray& r, Float t_min, Float t_max, hit_re
     rec.t = temp1;
     rec.p = r2.point_at_parameter(rec.t);
     rec.p *= radius / rec.p.length(); 
-    rec.normal = convert_to_normal3(-unit_vector(r2.direction())); 
+    rec.normal = convert_to_normal3(-(r2.direction())); 
     
     vec3f v2(-r2.direction().z(),r2.direction().y(),r2.direction().x());
     get_sphere_uv(unit_vector(v2), rec.u, rec.v);
@@ -70,7 +70,7 @@ const bool InfiniteAreaLight::hit(const ray& r, Float t_min, Float t_max, hit_re
     rec.t = temp2;
     rec.p = r.point_at_parameter(rec.t);
     rec.p *= radius / rec.p.length(); 
-    rec.normal = convert_to_normal3(-unit_vector(r2.direction())); 
+    rec.normal = convert_to_normal3(-(r2.direction())); 
     
     vec3f v2(-r2.direction().z(),r2.direction().y(),r2.direction().x());
     get_sphere_uv(unit_vector(v2), rec.u, rec.v);
@@ -117,7 +117,7 @@ const bool InfiniteAreaLight::hit(const ray& r, Float t_min, Float t_max, hit_re
     rec.t = temp1;
     rec.p = r2.point_at_parameter(rec.t);
     rec.p *= radius / rec.p.length(); 
-    rec.normal = convert_to_normal3(-unit_vector(r2.direction()));
+    rec.normal = convert_to_normal3(-(r2.direction()));
     
     vec3f v2(-r2.direction().z(),r2.direction().y(),r2.direction().x());
     get_sphere_uv(unit_vector(v2), rec.u, rec.v);
@@ -146,7 +146,7 @@ const bool InfiniteAreaLight::hit(const ray& r, Float t_min, Float t_max, hit_re
     rec.t = temp2;
     rec.p = r2.point_at_parameter(rec.t);
     rec.p *= radius / rec.p.length(); 
-    rec.normal = convert_to_normal3(-unit_vector(r2.direction()));
+    rec.normal = convert_to_normal3(-(r2.direction()));
     
     vec3f v2(-r2.direction().z(),r2.direction().y(),r2.direction().x());
     get_sphere_uv(unit_vector(v2), rec.u, rec.v);

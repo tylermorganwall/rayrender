@@ -94,7 +94,7 @@ const bool curve::hit(const ray& r, Float tmin, Float tmax, hit_record& rec, ran
     // orientation for the ray coordinate system so that intersection
     // tests can proceed in this unusual case.
     onb uvw;
-    uvw.build_from_w(unit_dir);
+    uvw.build_from_w_normalized(unit_dir);
     dx = uvw.v();
   } else {
     dx.make_unit_vector();
@@ -185,7 +185,7 @@ const bool curve::hit(const ray& r, Float tmin, Float tmax, hit_record& rec, Sam
     // orientation for the ray coordinate system so that intersection
     // tests can proceed in this unusual case.
     onb uvw;
-    uvw.build_from_w(unit_dir);
+    uvw.build_from_w_normalized(unit_dir);
     dx = uvw.v();
   } else {
     dx.make_unit_vector();
