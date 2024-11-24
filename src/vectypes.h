@@ -60,6 +60,12 @@ inline point3<Float> operator*(const point3<Float>& v1, const vec3<Float>& v2) {
     return result;
 }
 
+inline point3<Float> operator*(const point3<Float>& v1, const normal3f& v2) {
+    point3<Float> result;
+    result.e = simd_mul(v1.e, v2.e);
+    return result;
+}
+
 inline normal3f operator*(const normal3f& v1, const vec3<Float>& v2) {
     normal3f result;
     result.e = simd_mul(v1.e, v2.e);
@@ -135,6 +141,13 @@ inline normal3f convert_to_normal3(const point3<T>& p) {
 
 template<typename T> 
 inline point3<T> operator*(const point3<T>& v1, const vec3<T>& v2) {
+    point3<T> result;
+    result.e[0] = v1.x() * v2.x(); result.e[1] = v1.y() * v2.y(); result.e[2] = v1.z() * v2.z(); 
+    return result;
+}
+
+template<typename T> 
+inline point3<T> operator*(const point3<T>& v1, const normal3f& v2) {
     point3<T> result;
     result.e[0] = v1.x() * v2.x(); result.e[1] = v1.y() * v2.y(); result.e[2] = v1.z() * v2.z(); 
     return result;

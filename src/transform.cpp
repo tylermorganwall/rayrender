@@ -123,11 +123,11 @@ Transform LookAt(const point3f &pos, const point3f &look, const vec3f &up) {
   
   // Initialize first three columns of viewing matrix
   vec3f dir = unit_vector(look - pos);
-  if (cross(unit_vector(up), dir).length() == 0) {
+  vec3f right = cross(unit_vector(up), dir);
+  if (right.length() == 0) {
     throw std::runtime_error("\"up\" vector and viewing direction passed to LookAt are pointing in the same direction.  Using the identity transformation.");
     return Transform();
   }
-  vec3f right = unit_vector(cross(unit_vector(up), dir));
   vec3f newUp = cross(dir, right);
   cameraToWorld.m[0][0] = right.x();
   cameraToWorld.m[1][0] = right.y();

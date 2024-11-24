@@ -30,7 +30,7 @@ point3f lambertian::f(const ray& r_in, const hit_record& rec, const ray& scatter
   //unit_vector(scattered.direction()) == wo
   //r_in.direction() == wi
   vec3f wi = unit_vector(scattered.direction());
-  normal3f n = (rec.normal);
+  normal3f n = rec.normal;
   Float cosine = dot(n, wi);
   //Shadow terminator if bump map
   Float G = 1.0f;
@@ -943,7 +943,6 @@ point3f hair::f(const ray& r_in, const hit_record& rec, const ray& scattered) co
   SCOPED_TIMER_COUNTER("Hair F");
   
   onb uvw(rec.dpdu, rec.dpdv, rec.normal);
-  // vec3f wo = -unit_vector(uvw.world_to_local(r_in.direction()));
   vec3f wo = -unit_vector(uvw.world_to_local(r_in.direction()));
   
   vec3f wi = unit_vector(uvw.world_to_local(scattered.direction()));

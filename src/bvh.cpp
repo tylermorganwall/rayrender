@@ -482,6 +482,8 @@ const bool BVHAggregate::hit(const ray& r, Float t_min, Float t_max, hit_record&
         const LinearBVHNode4* node = &nodes4[currentNodeIndex];
 
         if (node->nPrimitives > 0) {
+            // __builtin_prefetch(&primitives[node->primitivesOffset]);
+
             // Leaf node: test ray against primitives
             for (int i = 0; i < node->nPrimitives; ++i) {
                 hit_record tempRec;
@@ -510,15 +512,18 @@ const bool BVHAggregate::hit(const ray& r, Float t_min, Float t_max, hit_record&
             
             rayBBoxIntersect4(r, bbox4, t_min, t_max, hits, tEnters);//, tExits);
 
-            const IVec4 valid_hit = simd_and(hits, simd_not_equals_minus_one(node->childOffsets));
-            int hitmask = simd_extract_hitmask(valid_hit);
-
             float tEntersArray[4];
             simd_extract_fvec4(tEnters, tEntersArray);
             
+            const IVec4 valid_hit = simd_and(hits, simd_not_equals_minus_one(node->childOffsets));
+            // int hitmask = simd_extract_hitmask(valid_hit);
             for (int i = 0; i < 4; ++i) {
-                const bool valid = (hitmask >> i) & 1;
-                if (valid) {
+                // __builtin_prefetch(&tEntersArray[i+1]);
+
+                // const bool valid = (hitmask >> i) & 1;
+                // const bool valid = valid_hit[i];
+
+                if (valid_hit[i]) {
                     nodesToVisit.push({node->childOffsets[i], tEntersArray[i]});
                 }
             }

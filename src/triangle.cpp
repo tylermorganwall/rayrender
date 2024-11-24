@@ -27,6 +27,7 @@ const bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
   }
   vec3f Svec = r.Svec;
   const Float Sz = Svec.z();
+  vec3f Svec_z = vec3f(1,1,Sz);
   const vec3f zero_z(1,1,0);
 
   Svec *= zero_z;
@@ -38,10 +39,14 @@ const bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
   Float e0 = DifferenceOfProducts(p1t.x(), p2t.y(), p1t.y(), p2t.x());
   Float e1 = DifferenceOfProducts(p2t.x(), p0t.y(), p2t.y(), p0t.x());
   Float e2 = DifferenceOfProducts(p0t.x(), p1t.y(), p0t.y(), p1t.x());
+  // __builtin_prefetch(&p0t[2],1);
+  // __builtin_prefetch(&p1t[2],1);
+  // __builtin_prefetch(&p2t[2],1);
+  // __builtin_prefetch(&Sz,0);
 
   // Fall back to double precision test at triangle edges
   #ifndef RAY_FLOAT_AS_DOUBLE
-  if (e0 == 0.f || e1 == 0.f || e2 == 0.f)	{
+  if (e0 == 0.f || e1 == 0.f || e2 == 0.f) [[unlikely]]	{
     double p2txp1ty = (double)p2t.x() * (double)p1t.y();
     double p2typ1tx = (double)p2t.y() * (double)p1t.x();
     e0 = (float)(p2typ1tx - p2txp1ty);
@@ -53,6 +58,9 @@ const bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
     e2 = (float)(p1typ0tx - p1txp0ty);
   }
   #endif
+  // __builtin_prefetch(&p0t[2],1);
+  // __builtin_prefetch(&p1t[2]);
+  // __builtin_prefetch(&p2t[2]);
 
   Float det = e0 + e1 + e2;
 
@@ -61,9 +69,12 @@ const bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
       return false;
   }
 
-  p0t[2] *= Sz;
-  p1t[2] *= Sz;
-  p2t[2] *= Sz;
+  p0t *= Svec_z;
+  p1t *= Svec_z;
+  p2t *= Svec_z;
+  // p0t[2] *= Sz;
+  // p1t[2] *= Sz;
+  // p2t[2] *= Sz;
   Float tScaled = e0 * p0t.z() + e1 * p1t.z() + e2 * p2t.z();
   if (det < 0 && (tScaled >= 0 || tScaled < t_max * det)) {
     return false;
@@ -100,6 +111,10 @@ const bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
   Float b0 = e0 * invDet;
   Float b1 = e1 * invDet;
   Float b2 = e2 * invDet;
+  point3f b0v(b0);
+  point3f b1v(b1);
+  point3f b2v(b2);
+
   vec3f bVec(b0, b1, b2);
 
   vec3f dpdu, dpdv;
@@ -130,13 +145,13 @@ const bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
   }
   //Everything after this could be delayed until later
   
-  point3f pHit = b0 * p0 + b1 * p1 + b2 * p2;
+  point3f pHit = b0v * p0 + b1v * p1 + b2v * p2;
   point2f uvHit = b0 * uv[0] + b1 * uv[1] + b2 * uv[2];
 
   point3f bSum0[3];
-  bSum0[0] = Abs(b0 * p0);
-  bSum0[1] = Abs(b1 * p1);
-  bSum0[2] = Abs(b2 * p2);
+  bSum0[0] = Abs(b0v * p0);
+  bSum0[1] = Abs(b1v * p1);
+  bSum0[2] = Abs(b2v * p2);
   vec3f absSum = convert_to_vec3(bSum0[0] + bSum0[1] + bSum0[2]);
 
   
@@ -159,15 +174,15 @@ const bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
   rec.p = pHit;
   rec.t = t;
   
-  __builtin_prefetch(mesh->bump_textures[mat_id].get()); //WILL_READ_ONLY
-  __builtin_prefetch(mesh->mesh_materials[mat_id].get()); //WILL_READ_ONLY
+  // __builtin_prefetch(mesh->bump_textures[mat_id].get()); //WILL_READ_ONLY
+  // __builtin_prefetch(mesh->mesh_materials[mat_id].get()); //WILL_READ_ONLY
   // Use that to calculate normals
   if(mesh->has_normals && n[0] != -1 && n[1] != -1 && n[2] != -1) {
     normal3f n1 = mesh->n[n[0]];
     normal3f n2 = mesh->n[n[1]];
     normal3f n3 = mesh->n[n[2]];
     
-    vec3f np = convert_to_vec3(b0 * n1 + b1 * n2 + b2 * n3);
+    vec3f np = convert_to_vec3(b0v * n1 + b1v * n2 + b2v * n3);
     if(np.squared_length() == 0) {
       rec.normal = normal;
     } else {
@@ -197,7 +212,6 @@ const bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
       rec.normal = normal;
     }
   }
-
   rec.normal.make_unit_vector();
 
   rec.dpdu = dpdu;
