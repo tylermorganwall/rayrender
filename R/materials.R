@@ -23,12 +23,12 @@
 #' mapping to world space coordinates. This should be a length-3 vector specifying the x,y, and z points where the gradient
 #' begins with value `gradient_color`.
 #' @param gradient_type Default `hsv`. Colorspace to calculate the gradient. Alternative `rgb`.
-#' @param image_texture Default `NA`. A 3-layer RGB array or filename to be used as the texture on the surface of the object.
+#' @param image_texture Default `""`. A 3-layer RGB array or filename to be used as the texture on the surface of the object.
 #' @param image_repeat Default `1`. Number of times to repeat the image across the surface.
 #' `u` and `v` repeat amount can be set independently if user passes in a length-2 vector.
-#' @param alpha_texture Default `NA`. A matrix or filename (specifying a greyscale image) to 
+#' @param alpha_texture Default `""`. A matrix or filename (specifying a greyscale image) to 
 #' be used to specify the transparency.
-#' @param bump_texture Default `NA`. A matrix, array, or filename (specifying a greyscale image) to 
+#' @param bump_texture Default `""`. A matrix, array, or filename (specifying a greyscale image) to 
 #' be used to specify a bump map for the surface.
 #' @param bump_intensity Default `1`. Intensity of the bump map. High values may lead to unphysical results.
 #' @param fog Default `FALSE`. If `TRUE`, the object will be a volumetric scatterer.
@@ -94,8 +94,8 @@ diffuse = function(color = "#ffffff",
                    noise = 0, noisephase = 0, noiseintensity = 10, noisecolor = "#000000",
                    gradient_color = NA, gradient_transpose = FALSE, 
                    gradient_point_start = NA, gradient_point_end = NA, gradient_type = "hsv",
-                   image_texture = NA_character_, image_repeat = 1, alpha_texture = NA,
-                   bump_texture = NA, bump_intensity = 1,
+                   image_texture = "", image_repeat = 1, alpha_texture = "",
+                   bump_texture = "", bump_intensity = 1,
                    fog = FALSE, fogdensity = 0.01, 
                    sigma = NULL, importance_sample = FALSE) {
   if(all(!is.na(checkercolor))) {
@@ -146,17 +146,17 @@ diffuse = function(color = "#ffffff",
     image_repeat = c(image_repeat,image_repeat)
   }
   stopifnot(checkerperiod != 0)
-  ray_material(list(type = type, 
+  ray_material(list(type = get_material_enum(type), 
                properties = list(info), checkercolor=list(c(checkercolor,checkerperiod)), 
                gradient_color = list(gradient_color), gradient_transpose = gradient_transpose,
                world_gradient = is_world_gradient,gradient_point_info = list(gradient_point_info),
                gradient_type = gradient_type,
                noise=noise, noisephase = noisephase * pi / 180, noiseintensity = noiseintensity, noisecolor = list(noisecolor),
-               image = list(image_texture), image_repeat = list(image_repeat), 
-               alphaimage = list(alpha_texture), lightintensity = NA_real_,
+               image = image_texture, image_repeat = list(image_repeat), 
+               alphaimage = alpha_texture, lightintensity = NA_real_,
                fog=fog, fogdensity=fogdensity,implicit_sample = importance_sample, 
-               sigma = sigma, glossyinfo = list(NA), bump_texture = list(bump_texture),
-               bump_intensity = bump_intensity, roughness_texture = list(NA_character_)))
+               sigma = sigma, glossyinfo = list(NA), bump_texture = bump_texture,
+               bump_intensity = bump_intensity, roughness_texture = ""))
 }
 
 #' Metallic Material
@@ -190,11 +190,11 @@ diffuse = function(color = "#ffffff",
 #' mapping to world space coordinates. This should be a length-3 vector specifying the x,y, and z points where the gradient
 #' begins with value `gradient_color`.
 #' @param gradient_type Default `hsv`. Colorspace to calculate the gradient. Alternative `rgb`.
-#' @param image_texture Default `NA`. A 3-layer RGB array or filename to be used as the texture on the surface of the object.
+#' @param image_texture Default `""`. A 3-layer RGB array or filename to be used as the texture on the surface of the object.
 #' @param image_repeat Default `1`. Number of times to repeat the image across the surface.
 #' `u` and `v` repeat amount can be set independently if user passes in a length-2 vector.
-#' @param alpha_texture Default `NA`. A matrix or filename (specifying a greyscale image) to be used to specify the transparency.
-#' @param bump_texture Default `NA`. A matrix, array, or filename (specifying a greyscale image) to 
+#' @param alpha_texture Default `""`. A matrix or filename (specifying a greyscale image) to be used to specify the transparency.
+#' @param bump_texture Default `""`. A matrix, array, or filename (specifying a greyscale image) to 
 #' be used to specify a bump map for the surface.
 #' @param bump_intensity Default `1`. Intensity of the bump map. High values may lead to unphysical results.
 #' @param importance_sample Default `FALSE`. If `TRUE`, the object will be sampled explicitly during 
@@ -252,8 +252,8 @@ metal = function(color = "#ffffff",
                  noise = 0, noisephase = 0, noiseintensity = 10, noisecolor = "#000000",
                  gradient_color = NA, gradient_transpose = FALSE,
                  gradient_point_start = NA, gradient_point_end = NA, gradient_type = "hsv",
-                 image_texture = NA_character_, image_repeat = 1, alpha_texture = NA,
-                 bump_texture = NA, bump_intensity = 1,
+                 image_texture = "", image_repeat = 1, alpha_texture = "",
+                 bump_texture = "", bump_intensity = 1,
                  importance_sample = FALSE) {
   color = convert_color(color)
   if(all(!is.na(checkercolor))) {
@@ -298,7 +298,7 @@ metal = function(color = "#ffffff",
     image_repeat = c(image_repeat,image_repeat)
   }
   glossyinfo = list(c(1, 0, 0, eta, kappa));
-  ray_material(list(type = "metal", 
+  ray_material(list(type = get_material_enum("metal"), 
                  properties = list(c(color,fuzz)), 
                  checkercolor=list(c(checkercolor,checkerperiod)), 
                  gradient_color = list(gradient_color), gradient_transpose = gradient_transpose,
@@ -307,12 +307,12 @@ metal = function(color = "#ffffff",
                  noise=noise, noisephase = noisephase * pi / 180, 
                  noiseintensity = noiseintensity, noisecolor = list(noisecolor),
                  lightinfo = list(NA), 
-                 image = list(image_texture), image_repeat = list(image_repeat),
-                 alphaimage = list(alpha_texture), 
+                 image = image_texture, image_repeat = list(image_repeat),
+                 alphaimage = alpha_texture, 
                  lightintensity = NA_real_,fog=FALSE,fogdensity=0.01,
                  implicit_sample = importance_sample, 
-                 sigma = 0, glossyinfo = glossyinfo, bump_texture = list(bump_texture),
-                 bump_intensity = bump_intensity, roughness_texture = list(NA_character_)))
+                 sigma = 0, glossyinfo = glossyinfo, bump_texture = bump_texture,
+                 bump_intensity = bump_intensity, roughness_texture = ""))
 }
 
 #' Dielectric (glass) Material
@@ -335,7 +335,7 @@ metal = function(color = "#ffffff",
 #' the rendering process. If the object is particularly important in contributing to the light paths
 #' in the image (e.g. light sources, refracting glass ball with caustics, metal objects concentrating light),
 #' this will help with the convergence of the image.
-#' @param bump_texture Default `NA`. A matrix, array, or filename (specifying a greyscale image) to 
+#' @param bump_texture Default `""`. A matrix, array, or filename (specifying a greyscale image) to 
 #' be used to specify a bump map for the surface.
 #' @param bump_intensity Default `1`. Intensity of the bump map. High values may lead to unphysical results.
 #'
@@ -417,7 +417,7 @@ metal = function(color = "#ffffff",
 dielectric = function(color="white", refraction = 1.5,  
                       attenuation = c(0,0,0), attenuation_intensity = 1,
                       priority = 0, importance_sample = FALSE,
-                      bump_texture = NA, bump_intensity = 1) {
+                      bump_texture = "", bump_intensity = 1) {
   color = convert_color(color)
   stopifnot(attenuation_intensity >= 0 && 
             is.numeric(attenuation_intensity) && 
@@ -429,18 +429,18 @@ dielectric = function(color="white", refraction = 1.5,
   attenuation = attenuation * attenuation_intensity
   
   bump_texture  = check_image_texture(bump_texture)
-  ray_material(list(type = "dielectric", 
+  ray_material(list(type = get_material_enum("dielectric"), 
                     properties = list(c(color, refraction, attenuation, priority)), 
                     checkercolor=list(NA), 
                     gradient_color = list(NA), gradient_transpose = FALSE,
                     world_gradient = FALSE,gradient_point_info = list(NA),
                     gradient_type = NA,
                     noise=0, noisephase = 0, noiseintensity = 0, noisecolor = list(c(0,0,0)),
-                    image = list(NA_character_), image_repeat = list(c(1,1)), 
-                    alphaimage = list(NA_character_), lightintensity = NA_real_, 
+                    image = "", image_repeat = list(c(1,1)), 
+                    alphaimage = "", lightintensity = NA_real_, 
                     fog=FALSE, fogdensity=NA_real_, implicit_sample = importance_sample, 
-                    sigma = 0, glossyinfo = list(NA), bump_texture = list(bump_texture),
-                    bump_intensity = bump_intensity, roughness_texture = list(NA_character_)))
+                    sigma = 0, glossyinfo = list(NA), bump_texture = bump_texture,
+                    bump_intensity = bump_intensity, roughness_texture = ""))
 }
 
 #' Microfacet Material
@@ -483,14 +483,14 @@ dielectric = function(color="white", refraction = 1.5,
 #' mapping to world space coordinates. This should be a length-3 vector specifying the x,y, and z points where the gradient
 #' begins with value `gradient_color`.
 #' @param gradient_type Default `hsv`. Colorspace to calculate the gradient. Alternative `rgb`.
-#' @param image_texture Default `NA`. A 3-layer RGB array or filename to be used as the texture on the surface of the object.
+#' @param image_texture Default `""`. A 3-layer RGB array or filename to be used as the texture on the surface of the object.
 #' @param image_repeat Default `1`. Number of times to repeat the image across the surface.
 #' `u` and `v` repeat amount can be set independently if user passes in a length-2 vector.
-#' @param alpha_texture Default `NA`. A matrix or filename (specifying a greyscale image) to be used to specify the transparency.
-#' @param bump_texture Default `NA`. A matrix, array, or filename (specifying a greyscale image) to 
+#' @param alpha_texture Default `""`. A matrix or filename (specifying a greyscale image) to be used to specify the transparency.
+#' @param bump_texture Default `""`. A matrix, array, or filename (specifying a greyscale image) to 
 #' be used to specify a bump map for the surface.
 #' @param bump_intensity Default `1`. Intensity of the bump map. High values may lead to unphysical results.
-#' @param roughness_texture Default `NA`. A matrix, array, or filename (specifying a greyscale image) to 
+#' @param roughness_texture Default `""`. A matrix, array, or filename (specifying a greyscale image) to 
 #' be used to specify a roughness map for the surface.
 #' @param roughness_range Default ` c(0.0001, 0.2)`. This is a length-2 vector that specifies the range of roughness values 
 #' that the `roughness_texture` can take. 
@@ -573,9 +573,9 @@ microfacet = function(color="white", roughness = 0.0001, transmission = FALSE,
                       noise = 0, noisephase = 0, noiseintensity = 10, noisecolor = "#000000",
                       gradient_color = NA, gradient_transpose = FALSE,
                       gradient_point_start = NA_real_, gradient_point_end = NA_real_, gradient_type = "hsv",
-                      image_texture = NA_character_, image_repeat = 1, alpha_texture = NA_character_,
-                      bump_texture = NA_character_, bump_intensity = 1, 
-                      roughness_texture = NA_character_, roughness_range = c(0.0001, 0.2), roughness_flip = FALSE,
+                      image_texture = "", image_repeat = 1, alpha_texture = "",
+                      bump_texture = "", bump_intensity = 1, 
+                      roughness_texture = "", roughness_range = c(0.0001, 0.2), roughness_flip = FALSE,
                       importance_sample = FALSE) {
   microtype = switch(microfacet, "tbr" = 1,"beckmann" = 2, 1)
   roughness[roughness <= 0] = 0
@@ -593,8 +593,8 @@ microfacet = function(color="white", roughness = 0.0001, transmission = FALSE,
   if(roughness_range[1] > roughness_range[2]) {
     roughness_range = rev(roughness_range)
   }
-  if(roughness_range[1] == roughness_range[2] && !is.na(roughness_texture)) {
-    roughness_texture = NA
+  if(roughness_range[1] == roughness_range[2] && nchar(roughness_texture) > 0) {
+    roughness_texture = ""
     roughness = roughness_range[1]
   }
   if(length(eta) == 1) {
@@ -644,7 +644,7 @@ microfacet = function(color="white", roughness = 0.0001, transmission = FALSE,
   glossyinfo = list(c(microtype, alphax, alphay, eta, kappa, roughness_range,roughness_flip))
   if(alphax == 0 && alphay == 0 ) {
     if(!transmission) {
-      ray_material(list(type = "metal", 
+      ray_material(list(type = get_material_enum("metal"), 
                         properties = list(c(color, 0)), 
                         gradient_color = list(gradient_color), gradient_transpose = FALSE,
                         world_gradient = is_world_gradient, gradient_point_info = list(gradient_point_info),
@@ -652,24 +652,24 @@ microfacet = function(color="white", roughness = 0.0001, transmission = FALSE,
                         checkercolor=list(c(checkercolor,checkerperiod)), 
                         noise=noise, noisephase = noisephase * pi / 180, 
                         noiseintensity = noiseintensity, noisecolor = list(noisecolor),
-                        image = list(image_texture), image_repeat = list(image_repeat), 
-                        alphaimage = list(alpha_texture), lightintensity = NA_real_, 
+                        image = image_texture, image_repeat = list(image_repeat), 
+                        alphaimage = alpha_texture, lightintensity = NA_real_, 
                         fog=FALSE, fogdensity=NA_real_, implicit_sample = importance_sample, 
-                        sigma = 0, glossyinfo = glossyinfo, bump_texture = list(bump_texture),
-                        bump_intensity = bump_intensity, roughness_texture = list(NA_character_)))
+                        sigma = 0, glossyinfo = glossyinfo, bump_texture = bump_texture,
+                        bump_intensity = bump_intensity, roughness_texture = ""))
     } else {
-      ray_material(list(type = "dielectric", 
+      ray_material(list(type = get_material_enum("dielectric"), 
                         properties = list(c(color, eta[1], c(0,0,0), 0)), 
                         gradient_color = list(gradient_color), gradient_transpose = FALSE,
                         world_gradient = is_world_gradient, gradient_point_info = list(gradient_point_info),
                         gradient_type = gradient_type,
                         checkercolor=list(c(checkercolor,checkerperiod)), 
                         noise=noise, noisephase = noisephase * pi / 180, noiseintensity = noiseintensity, noisecolor = list(noisecolor),
-                        image = list(image_texture), image_repeat = list(image_repeat), 
-                        alphaimage = list(alpha_texture), lightintensity = NA_real_, 
+                        image = image_texture, image_repeat = list(image_repeat), 
+                        alphaimage = alpha_texture, lightintensity = NA_real_, 
                         fog=FALSE, fogdensity=NA_real_, implicit_sample = importance_sample, 
-                        sigma = 0, glossyinfo = glossyinfo, bump_texture = list(bump_texture),
-                        bump_intensity = bump_intensity, roughness_texture = list(NA_character_)))
+                        sigma = 0, glossyinfo = glossyinfo, bump_texture = bump_texture,
+                        bump_intensity = bump_intensity, roughness_texture = ""))
     }
   } else {
     if(transmission) {
@@ -677,18 +677,18 @@ microfacet = function(color="white", roughness = 0.0001, transmission = FALSE,
     } else {
       typeval = "mf"
     }
-    ray_material(list(type = typeval, 
+    ray_material(list(type = get_material_enum(typeval), 
                  properties = list(c(color)), 
                  gradient_color = list(gradient_color), gradient_transpose = FALSE,
                  world_gradient = is_world_gradient,gradient_point_info = list(gradient_point_info),
                  gradient_type = gradient_type,
                  checkercolor=list(c(checkercolor,checkerperiod)), 
                  noise=noise, noisephase = noisephase * pi / 180, noiseintensity = noiseintensity, noisecolor = list(noisecolor),
-                 image = list(image_texture), image_repeat = list(image_repeat), 
-                 alphaimage = list(alpha_texture), lightintensity = NA_real_, 
+                 image = image_texture, image_repeat = list(image_repeat), 
+                 alphaimage = alpha_texture, lightintensity = NA_real_, 
                  fog=FALSE, fogdensity=NA_real_, implicit_sample = importance_sample, 
-                 sigma = 0, glossyinfo = glossyinfo, bump_texture = list(bump_texture),
-                 bump_intensity = bump_intensity, roughness_texture = list(roughness_texture)))
+                 sigma = 0, glossyinfo = glossyinfo, bump_texture = bump_texture,
+                 bump_intensity = bump_intensity, roughness_texture = roughness_texture))
   }
 }
 
@@ -707,7 +707,7 @@ microfacet = function(color="white", roughness = 0.0001, transmission = FALSE,
 #' @param spotlight_width Default `30`. Angular width of the spotlight.
 #' @param spotlight_start_falloff Default `15`. Angle at which the light starts fading in intensity.
 #' @param invisible Default `FALSE`. If `TRUE`, the light itself will be invisible.
-#' @param image_texture Default `NA`. A 3-layer RGB array or filename to be used as the texture on the surface of the object.
+#' @param image_texture Default `""`. A 3-layer RGB array or filename to be used as the texture on the surface of the object.
 #' @param image_repeat Default `1`. Number of times to repeat the image across the surface.
 #' `u` and `v` repeat amount can be set independently if user passes in a length-2 vector.
 #' @param gradient_color Default `NA`. If not `NA`, creates a secondary color for a linear gradient 
@@ -754,7 +754,7 @@ microfacet = function(color="white", roughness = 0.0001, transmission = FALSE,
 #' }
 light = function(color = "#ffffff", intensity = 10, importance_sample = TRUE, 
                  spotlight_focus = NA, spotlight_width = 30, spotlight_start_falloff = 15,
-                 invisible = FALSE, image_texture = NA_character_, image_repeat = 1, 
+                 invisible = FALSE, image_texture = "", image_repeat = 1, 
                  gradient_color = NA, gradient_transpose = FALSE,
                  gradient_point_start = NA, gradient_point_end = NA, gradient_type = "hsv") {
   info = convert_color(color)
@@ -788,30 +788,30 @@ light = function(color = "#ffffff", intensity = 10, importance_sample = TRUE,
     spotlight_width = min(c(spotlight_width,180))
     spotlight_start_falloff = min(c(spotlight_start_falloff,90))
     info = c(info, spotlight_focus, cospi(spotlight_width/180), cospi(spotlight_start_falloff/180), invisible)
-    ray_material(list(type = "spotlight", 
+    ray_material(list(type = get_material_enum("spotlight"), 
                       properties = list(info), checkercolor=list(NA_real_), 
                       gradient_color = list(NA_real_), gradient_transpose = FALSE,
                       world_gradient = FALSE, gradient_point_info = list(NA_real_),
                       gradient_type = NA,
                       noise=0, noisephase = 0, noiseintensity = 0, noisecolor = list(c(0,0,0)),
-                      image = list(image_texture), image_repeat = list(image_repeat),
-                      alphaimage = list(NA_character_), lightintensity = intensity,
+                      image = image_texture, image_repeat = list(image_repeat),
+                      alphaimage = "", lightintensity = intensity,
                       fog=FALSE, fogdensity = 0.01, implicit_sample = importance_sample, 
-                      sigma = 0, glossyinfo = list(NA_real_), bump_texture = list(NA_character_),
-                      bump_intensity = 1, roughness_texture = list(NA_character_)))
+                      sigma = 0, glossyinfo = list(NA_real_), bump_texture = "",
+                      bump_intensity = 1, roughness_texture = ""))
   } else {
     info = c(info, invisible)
-    ray_material(list(type = "light", 
+    ray_material(list(type = get_material_enum("light"), 
                       properties = list(info), checkercolor=list(NA_real_), 
                       gradient_color = list(gradient_color), gradient_transpose = gradient_transpose,
                       world_gradient = is_world_gradient, gradient_point_info = list(gradient_point_info),
                       gradient_type = gradient_type,
                       noise=0, noisephase = 0, noiseintensity = 0, noisecolor = list(c(0,0,0)),
-                      image = list(image_texture), image_repeat = list(image_repeat),
-                      alphaimage = list(NA_character_), lightintensity = intensity,
+                      image = image_texture, image_repeat = list(image_repeat),
+                      alphaimage = "", lightintensity = intensity,
                       fog=FALSE, fogdensity = 0.01, implicit_sample = importance_sample, 
-                      sigma = 0, glossyinfo = list(NA_real_), bump_texture = list(NA_character_),
-                      bump_intensity = 1, roughness_texture = list(NA_character_)))
+                      sigma = 0, glossyinfo = list(NA_real_), bump_texture = "",
+                      bump_intensity = 1, roughness_texture = ""))
   }
 }
 
@@ -844,14 +844,14 @@ light = function(color = "#ffffff", intensity = 10, importance_sample = TRUE,
 #' mapping to world space coordinates. This should be a length-3 vector specifying the x,y, and z points where the gradient
 #' begins with value `gradient_color`.
 #' @param gradient_type Default `hsv`. Colorspace to calculate the gradient. Alternative `rgb`.
-#' @param image_texture Default `NA`. A 3-layer RGB array or filename to be used as the texture on the surface of the object.
+#' @param image_texture Default `""`. A 3-layer RGB array or filename to be used as the texture on the surface of the object.
 #' @param image_repeat Default `1`. Number of times to repeat the image across the surface.
 #' `u` and `v` repeat amount can be set independently if user passes in a length-2 vector.
-#' @param alpha_texture Default `NA`. A matrix or filename (specifying a greyscale image) to be used to specify the transparency.
-#' @param bump_texture Default `NA`. A matrix, array, or filename (specifying a greyscale image) to 
+#' @param alpha_texture Default `""`. A matrix or filename (specifying a greyscale image) to be used to specify the transparency.
+#' @param bump_texture Default `""`. A matrix, array, or filename (specifying a greyscale image) to 
 #' be used to specify a bump map for the surface.
 #' @param bump_intensity Default `1`. Intensity of the bump map. High values may lead to unphysical results.
-#' @param roughness_texture Default `NA`. A matrix, array, or filename (specifying a greyscale image) to 
+#' @param roughness_texture Default `""`. A matrix, array, or filename (specifying a greyscale image) to 
 #' be used to specify a roughness map for the surface.
 #' @param roughness_range Default ` c(0.0001, 0.2)`. This is a length-2 vector that specifies the range of roughness values 
 #' that the `roughness_texture` can take. 
@@ -915,9 +915,9 @@ glossy = function(color="white", gloss = 1, reflectance = 0.05, microfacet = "tb
                   noise = 0, noisephase = 0, noiseintensity = 10, noisecolor = "#000000",
                   gradient_color = NA, gradient_transpose = FALSE,
                   gradient_point_start = NA_real_, gradient_point_end = NA_real_, gradient_type = "hsv",
-                  image_texture = NA_character_, image_repeat = 1, alpha_texture = NA_character_, 
-                  bump_texture = NA_character_, bump_intensity = 1,
-                  roughness_texture = NA_character_, roughness_range = c(0.0001, 0.2), 
+                  image_texture = "", image_repeat = 1, alpha_texture = "", 
+                  bump_texture = "", bump_intensity = 1,
+                  roughness_texture = "", roughness_range = c(0.0001, 0.2), 
                   roughness_flip = FALSE,
                   importance_sample = FALSE) {
   microtype = switch(microfacet, "tbr" = 1,"beckmann" = 2, 1)
@@ -938,8 +938,8 @@ glossy = function(color="white", gloss = 1, reflectance = 0.05, microfacet = "tb
   if(roughness_range[1] > roughness_range[2]) {
     roughness_range = rev(roughness_range)
   }
-  if(roughness_range[1] == roughness_range[2] && !is.na(roughness_texture)) {
-    roughness_texture = NA_character_
+  if(roughness_range[1] == roughness_range[2] && nchar(roughness_texture) > 0) {
+    roughness_texture = ""
     gloss = 1-roughness_range[1]
   }
   color = convert_color(color)
@@ -977,18 +977,18 @@ glossy = function(color="white", gloss = 1, reflectance = 0.05, microfacet = "tb
   roughness_flip = ifelse(roughness_flip,1,0)
   
   glossyinfo = list(c(microtype, alphax, alphay, reflectance, c(1,1,1), roughness_range, roughness_flip));
-  ray_material(list(type = "glossy", 
+  ray_material(list(type = get_material_enum("glossy"), 
                     properties = list(c(color)), 
                     gradient_color = list(gradient_color), gradient_transpose = FALSE,
                     world_gradient = is_world_gradient, gradient_point_info = list(gradient_point_info),
                     gradient_type = gradient_type,
                     checkercolor=list(c(checkercolor,checkerperiod)), 
                     noise=noise, noisephase = noisephase * pi / 180, noiseintensity = noiseintensity, noisecolor = list(noisecolor),
-                    image = list(image_texture), image_repeat = list(image_repeat), 
-                    alphaimage = list(alpha_texture), lightintensity = NA_real_, 
+                    image = image_texture, image_repeat = list(image_repeat), 
+                    alphaimage = alpha_texture, lightintensity = NA_real_, 
                     fog=FALSE, fogdensity = NA_real_, implicit_sample = importance_sample, 
-                    sigma = 0, glossyinfo = glossyinfo, bump_texture = list(bump_texture),
-                    bump_intensity = bump_intensity, roughness_texture = list(roughness_texture)))
+                    sigma = 0, glossyinfo = glossyinfo, bump_texture = bump_texture,
+                    bump_intensity = bump_intensity, roughness_texture = roughness_texture))
 }
 
 
@@ -1090,17 +1090,17 @@ hair = function(pigment = 1.3, red_pigment = 0, color = NA, sigma_a = NA,
   }
   
   info = c(sigma_a, eta, beta_m, beta_n, alpha)
-  ray_material(list(type = "hair", 
+  ray_material(list(type = get_material_enum("hair"), 
                     properties = list(info), checkercolor=list(NA_real_), 
                     gradient_color = list(NA_real_), gradient_transpose = NA,
                     world_gradient = FALSE, gradient_point_info = list(NA_real_),
                     gradient_type = NA,
                     noise=0, noisephase = 0, noiseintensity = 0, noisecolor = list(c(0,0,0)),
-                    image = list(NA_character_), image_repeat = list(NA_real_),
-                    alphaimage = list(NA_character_), lightintensity = NA_real_,
+                    image = "", image_repeat = list(NA_real_),
+                    alphaimage = "", lightintensity = NA_real_,
                     fog=FALSE, fogdensity = NA_real_, implicit_sample = FALSE, 
-                    sigma = NA_real_, glossyinfo = list(NA_real_), bump_texture = list(NA_character_),
-                    bump_intensity = NA_real_, roughness_texture = list(NA_character_)))
+                    sigma = NA_real_, glossyinfo = list(NA_real_), bump_texture = "",
+                    bump_intensity = NA_real_, roughness_texture = ""))
 }
 
 #' Lambertian Material (deprecated)
@@ -1127,15 +1127,39 @@ lambertian = function(...) {
 #' Check Image Texture
 #' @keywords internal
 check_image_texture = function(image_texture) {
-  if(!is.array(image_texture) && !is.na(image_texture) && !is.character(image_texture)) {
-    image_texture = NA_character_
+  if(!is.array(image_texture) && !is.character(image_texture)) {
+    image_texture = ""
     warning("Texture not in recognized format (array, matrix, or filename), ignoring.")
   }
-  if(!is.array(image_texture) && !is.na(image_texture) && 
+  if(!is.array(image_texture) && nchar(image_texture) > 0 &&
      !tools::file_ext(tolower(image_texture)) %in% c("jpg", "jpeg", "png", "exr", "hdr")) {
-    image_texture = NA_character_
+    image_texture = ""
     warning("Texture not in recognized format (JPEG, PNG, EXR,or HDR), ignoring.")
   }
   return(image_texture)
 }
 
+#' get_material_enum
+#' @keywords internal
+get_material_enum = function(material) {
+  switch(material,
+    "diffuse" = 1L,"metal" = 2L,"dielectric" = 3L,
+    "oren-nayar" = 4L, "light" = 5L, "mf" = 6L,
+    "glossy" = 7L, "spotlight" = 8L, "hair" = 9L, "mf-t" = 10L,
+    stop(sprintf("Material type `%s` not found",material)))
+}
+
+#' get_material_name
+#' @keywords internal
+get_material_name = function(material) {
+    c("diffuse",
+    "metal", 
+    "dielectric",
+    "oren-nayar", 
+    "light", 
+    "mf",
+    "glossy", 
+    "spotlight",
+    "hair", 
+    "mf-t")[material]
+}

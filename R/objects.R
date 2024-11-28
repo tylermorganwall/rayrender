@@ -543,7 +543,7 @@ disk = function(x = 0, y = 0, z = 0, radius = 1, inner_radius = 0, material = di
 #' @param importance_sample_lights Default `TRUE`. Whether to importance sample lights specified in the OBJ material
 #' (objects with a non-zero Ke MTL material).
 #' @param subdivision_levels Default `1`. Number of Loop subdivisions to be applied to the mesh.
-#' @param displacement_texture Default `NA`. File path to the displacement texture. 
+#' @param displacement_texture Default `""`. File path to the displacement texture. 
 #' This texture is used to displace the vertices of the mesh based on the texture's pixel values.
 #' @param displacement_intensity Default `1`. Intensity of the displacement effect. 
 #' Higher values result in greater displacement.
@@ -619,7 +619,7 @@ obj_model = function(filename, x = 0, y = 0, z = 0, scale_obj = 1,
                      load_material = TRUE, load_textures = TRUE, load_normals = TRUE,
                      vertex_colors = FALSE, calculate_consistent_normals = TRUE,
                      subdivision_levels = 1,  
-                     displacement_texture = NA, 
+                     displacement_texture = "", 
                      displacement_intensity = 1, 
                      displacement_vector = FALSE,
                      recalculate_normals = FALSE,
@@ -661,7 +661,7 @@ obj_model = function(filename, x = 0, y = 0, z = 0, scale_obj = 1,
                                                                      calculate_consistent_normals = calculate_consistent_normals,
                                                                      subdivision_levels = subdivision_levels,
                                                                      basename = base_dir(filename),
-                                                                     displacement_texture = list(displacement_texture), 
+                                                                     displacement_texture = displacement_texture, 
                                                                      displacement_intensity = displacement_intensity, 
                                                                      displacement_vector = displacement_vector,
                                                                      recalculate_normals = recalculate_normals),
@@ -2325,7 +2325,7 @@ ply_model = function(filename, x = 0, y = 0, z = 0, scale_ply = 1, subdivision_l
 #' @param override_material Default `FALSE`. If `TRUE`, overrides the material specified in the 
 #' `mesh3d` object with the one specified in `material`.
 #' @param subdivision_levels Default `1`. Number of Loop subdivisions to be applied to the mesh.
-#' @param displacement_texture Default `NA`. File path to the displacement texture. 
+#' @param displacement_texture Default `""`. File path to the displacement texture. 
 #' This texture is used to displace the vertices of the mesh based on the texture's pixel values.
 #' @param displacement_intensity Default `1`. Intensity of the displacement effect. 
 #' Higher values result in greater displacement.
@@ -2362,7 +2362,7 @@ ply_model = function(filename, x = 0, y = 0, z = 0, scale_ply = 1, subdivision_l
 #' }
 mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FALSE,
                         subdivision_levels = 1, verbose = FALSE, 
-                        displacement_texture = NA, 
+                        displacement_texture = "", 
                         displacement_intensity = 1, 
                         displacement_vector = FALSE,
                         recalculate_normals = FALSE,
@@ -2485,7 +2485,7 @@ mesh3d_model = function(mesh, x = 0, y = 0, z = 0, swap_yz = FALSE, reverse = FA
                    color_type=color_type,
                    material_type = material_type,
                    subdivision_levels = subdivision_levels,
-                   displacement_texture = list(displacement_texture), 
+                   displacement_texture = displacement_texture, 
                    displacement_intensity = displacement_intensity, 
                    displacement_vector = displacement_vector,
                    recalculate_normals = recalculate_normals)
@@ -3372,7 +3372,7 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
 #' @param importance_sample_lights Default `TRUE`. Whether to importance sample lights specified in the OBJ material
 #' (objects with a non-zero Ke MTL material).
 #' @param subdivision_levels Default `1`. Number of Loop subdivisions to be applied to the mesh.
-#' @param displacement_texture Default `NA`. File path to the displacement texture. 
+#' @param displacement_texture Default `""`. File path to the displacement texture. 
 #' This texture is used to displace the vertices of the mesh based on the texture's pixel values.
 #' @param displacement_intensity Default `1`. Intensity of the displacement effect. 
 #' Higher values result in greater displacement.
@@ -3454,7 +3454,7 @@ raymesh_model = function(mesh, x = 0, y = 0, z = 0,
                          importance_sample_lights = FALSE,
                          calculate_consistent_normals = TRUE,
                          subdivision_levels = 1,
-                         displacement_texture = NA, 
+                         displacement_texture = "", 
                          displacement_intensity = 1, 
                          displacement_vector = FALSE,
                          recalculate_normals = FALSE,
@@ -3487,7 +3487,7 @@ raymesh_model = function(mesh, x = 0, y = 0, z = 0,
                                                                           override_material = override_material,
                                                                           flip_transmittance = flip_transmittance,
                                                                           subdivision_levels = subdivision_levels,
-                                                                          displacement_texture = list(displacement_texture), 
+                                                                          displacement_texture = displacement_texture, 
                                                                           displacement_intensity = displacement_intensity, 
                                                                           displacement_vector = displacement_vector,
                                                                           recalculate_normals = recalculate_normals),

@@ -61,6 +61,7 @@ print.ray_material = function(x, ...) {
 #' @keywords internal
 format_pillar = function(x) {
   format_material <- function(x) {
+    x_char = get_material_name(x$type)
     mat_col = switch(x$type,
                      "diffuse" = cli::col_none,
                      "metal" = cli::col_grey,
@@ -72,7 +73,7 @@ format_pillar = function(x) {
                      "spotlight" = cli::col_yellow, 
                      "hair" = cli::col_black, 
                      "mf-t" = cli::col_br_blue)
-    mat_col(sprintf("<%s>",x$type))
+    mat_col(sprintf("<%s>",x_char))
   }
   vapply(x, format_material, character(1))
 }
