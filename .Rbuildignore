@@ -26,3 +26,4 @@
 ^tests/*$
 ^compile_commands\.json$
 ^\.cache$
+^\.vscode/*$
