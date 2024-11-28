@@ -518,11 +518,6 @@ const bool BVHAggregate::hit(const ray& r, Float t_min, Float t_max, hit_record&
             const IVec4 valid_hit = simd_and(hits, simd_not_equals_minus_one(node->childOffsets));
             // int hitmask = simd_extract_hitmask(valid_hit);
             for (int i = 0; i < 4; ++i) {
-                // __builtin_prefetch(&tEntersArray[i+1]);
-
-                // const bool valid = (hitmask >> i) & 1;
-                // const bool valid = valid_hit[i];
-
                 if (valid_hit[i]) {
                     nodesToVisit.push({node->childOffsets[i], tEntersArray[i]});
                 }
