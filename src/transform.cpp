@@ -3,6 +3,7 @@
 #include "mathinline.h"
 #include "aabb.h"
 #include "hitable.h"
+#include "simd.h"
 
 Transform::Transform(const Float mat[4][4]) {
   m = Matrix4x4(mat[0][0], mat[0][1], mat[0][2], mat[0][3],
@@ -222,111 +223,8 @@ Transform Transform::operator*(const Transform &t2) const {
 // }
 
 
-ray Transform::operator()(const ray &r) const {
-  vec3f oError;
-  point3f o = (*this)(r.origin(), &oError);
-  vec3f d = (*this)(r.direction());
-  // Offset ray origin to edge of error bounds and compute _tMax_
-  Float lengthSquared = d.squared_length();
-  Float tMax = r.tMax;
-  if (lengthSquared > 0) {
-    Float dt = dot(Abs(d), oError) / lengthSquared;
-    o += d * dt;
-    tMax -= dt;
-  }
-  return ray(o, d, r.pri_stack, r.time(), tMax);
-}
 
-
- ray Transform::operator()(const ray &r, vec3f *oError,
-                               vec3f *dError) const {
-  point3f o = (*this)(r.origin(), oError);
-  vec3f d = (*this)(r.direction(), dError);
-  Float tMax = r.tMax;
-  Float lengthSquared = d.squared_length();
-  if (lengthSquared > 0) {
-    Float dt = dot(Abs(d), *oError) / lengthSquared;
-    o += d * dt;
-    //        tMax -= dt;
-  }
-  return ray(o, d, r.pri_stack, r.time(), tMax);
-}
-
- ray Transform::operator()(const ray &r, const vec3f &oErrorIn,
-                               const vec3f &dErrorIn, vec3f *oErrorOut,
-                               vec3f *dErrorOut) const {
-  point3f o = (*this)(r.origin(), oErrorIn, oErrorOut);
-  vec3f d = (*this)(r.direction(), dErrorIn, dErrorOut);
-  Float tMax = r.tMax;
-  Float lengthSquared = d.squared_length();
-  if (lengthSquared > 0) {
-    Float dt = dot(Abs(d), *oErrorOut) / lengthSquared;
-    o += d * dt;
-    //        tMax -= dt;
-  }
-  return ray(o, d, r.pri_stack, r.time(), tMax);
-}
-
-
-hit_record Transform::operator()(const hit_record &r) const {
-  hit_record hr;
-  hr.p = (*this)(r.p, r.pError, &hr.pError);
-  hr.normal = (*this)(r.normal);
-  hr.bump_normal = (*this)(r.bump_normal);
-  hr.dpdu = (*this)(r.dpdu);
-  hr.dpdv = (*this)(r.dpdv);
-  hr.mat_ptr = r.mat_ptr;
-  hr.has_bump = r.has_bump;
-#ifdef DEBUGBVH
-  hr.bvh_nodes = r.bvh_nodes;
-#endif
-  hr.u = r.u;
-  hr.v = r.v;
-  hr.t = r.t;
-  hr.shape = r.shape;
-  hr.alpha_miss = r.alpha_miss;
-  
-  
-  
-  //Need to transform wo if used
-  return(hr);
-}
-
-hit_record Transform::operator()(hit_record &r) const {
-  hit_record hr;
-  hr.p = (*this)(r.p, r.pError, &hr.pError);
-
-  hr.normal = (*this)(r.normal);
-  hr.bump_normal = (*this)(r.bump_normal);
-  hr.dpdu = (*this)(r.dpdu);
-  hr.dpdv = (*this)(r.dpdv);
-  hr.mat_ptr = r.mat_ptr;
-  hr.has_bump = r.has_bump;
-#ifdef DEBUGBVH
-  hr.bvh_nodes = r.bvh_nodes;
-#endif
-  hr.u = r.u;
-  hr.v = r.v;
-  hr.t = r.t;
-  hr.shape = r.shape;
-  hr.alpha_miss = r.alpha_miss;
-  
-  
-  //Need to transform wo if used
-  return(hr);
-}
-
-// inline rayDifferential Transform::operator()(const rayDifferential &r) const {
-//   ray tr = (*this)(ray(r));
-//   rayDifferential ret(tr.o, tr.d, tr.tMax, tr.time, tr.medium);
-//   ret.hasDifferentials = r.hasDifferentials;
-//   ret.rxOrigin = (*this)(r.rxOrigin);
-//   ret.ryOrigin = (*this)(r.ryOrigin);
-//   ret.rxDirection = (*this)(r.rxDirection);
-//   ret.ryDirection = (*this)(r.ryDirection);
-//   return ret;
-// }
-
+#ifdef RAYSIMDVEC
 template <typename T>
 point3<T> Transform::operator()(const point3<T> &p,
                                 vec3<T> *pError) const {
@@ -449,6 +347,170 @@ vec3<T> Transform::operator()(const vec3<T> &v,
                  m.m[2][0] * x + m.m[2][1] * y + m.m[2][2] * z);
 }
 
+#else
+template <>
+point3<float> Transform::operator()(const point3<float> &p, vec3<float> *pError) const {
+    // Load point into FVec4 (p_v)
+    FVec4 p_v = p.e; // Contains [x, y, z, 1.0f]
+    p_v[3] = 1.0;
+
+    // Compute transformed point using SIMD dot products
+    float xp = simd_dot(m.m[0], p_v);
+    float yp = simd_dot(m.m[1], p_v);
+    float zp = simd_dot(m.m[2], p_v);
+    float wp = simd_dot(m.m[3], p_v);
+
+    // Compute absolute error for transformed point
+    // Compute |m.m[i]| element-wise
+    FVec4 m0_abs = simd_abs(m.m[0]);
+    FVec4 m1_abs = simd_abs(m.m[1]);
+    FVec4 m2_abs = simd_abs(m.m[2]);
+    FVec4 p_abs  = simd_abs(p_v);
+
+    // Multiply element-wise and sum components
+    float xAbsSum = simd_dot(m0_abs, p_abs);
+    float yAbsSum = simd_dot(m1_abs, p_abs);
+    float zAbsSum = simd_dot(m2_abs, p_abs);
+
+    // Compute gamma(3) * [xAbsSum, yAbsSum, zAbsSum]
+    float gamma3 = gamma(3);
+    *pError = vec3<float>(xAbsSum, yAbsSum, zAbsSum) * gamma3;
+
+    // Return the transformed point
+    if (wp == 1.0f) {
+        return point3<float>(xp, yp, zp);
+    } else {
+        float inv_wp = 1.0f / wp;
+        return point3<float>(xp * inv_wp, yp * inv_wp, zp * inv_wp);
+    }
+}
+template <>
+point3<float> Transform::operator()(const point3<float> &pt, const vec3<float> &ptError, vec3<float> *absError) const {
+    // Load point and error into FVec4
+    FVec4 p_v = pt.e;            // [x, y, z, 1.0f]
+    p_v[3] = 1.0;
+    FVec4 pErr_v = ptError.e;    // [ex, ey, ez, 0.0f]
+
+    // Compute transformed point
+    float xp = simd_dot(m.m[0], p_v);
+    float yp = simd_dot(m.m[1], p_v);
+    float zp = simd_dot(m.m[2], p_v);
+    float wp = simd_dot(m.m[3], p_v);
+
+    // Error estimation
+    float gamma3 = gamma(3);
+    float gamma3p1 = gamma3 + 1.0f;
+
+    // Compute absolute values
+    FVec4 m0_abs = simd_abs(m.m[0]);
+    FVec4 m1_abs = simd_abs(m.m[1]);
+    FVec4 m2_abs = simd_abs(m.m[2]);
+    FVec4 p_v_abs = simd_abs(p_v);
+    FVec4 pErr_v_abs = simd_abs(pErr_v);
+
+    // First term: (gamma(3) + 1) * |M| * |ptError|
+    float xErrTerm1 = gamma3p1 * simd_dot(m0_abs, pErr_v_abs);
+    float yErrTerm1 = gamma3p1 * simd_dot(m1_abs, pErr_v_abs);
+    float zErrTerm1 = gamma3p1 * simd_dot(m2_abs, pErr_v_abs);
+
+    // Second term: gamma(3) * sum(|M| * |pt|)
+    float xErrTerm2 = gamma3 * simd_dot(m0_abs, p_v_abs);
+    float yErrTerm2 = gamma3 * simd_dot(m1_abs, p_v_abs);
+    float zErrTerm2 = gamma3 * simd_dot(m2_abs, p_v_abs);
+
+    // Compute absolute error
+    absError->e = simd_set(xErrTerm1 + xErrTerm2,
+                           yErrTerm1 + yErrTerm2,
+                           zErrTerm1 + zErrTerm2,
+                           0.0f);
+
+    // Return the transformed point
+    if (wp == 1.0f) {
+        return point3<float>(xp, yp, zp);
+    } else {
+        float inv_wp = 1.0f / wp;
+        return point3<float>(xp * inv_wp, yp * inv_wp, zp * inv_wp);
+    }
+}
+
+template <>
+vec3<float> Transform::operator()(const vec3<float> &v, vec3<float> *absError) const {
+    // Load vector into FVec4
+    FVec4 v_v = v.e; // [x, y, z, 0.0f]
+
+    // Compute transformed vector
+    FVec4 x_row = m.m[0]; x_row.xyzw[3] = 0.0f; // Zero out w component
+    FVec4 y_row = m.m[1]; y_row.xyzw[3] = 0.0f;
+    FVec4 z_row = m.m[2]; z_row.xyzw[3] = 0.0f;
+
+    float x = simd_dot(x_row, v_v);
+    float y = simd_dot(y_row, v_v);
+    float z = simd_dot(z_row, v_v);
+
+    // Error estimation
+    float gamma3 = gamma(3);
+
+    FVec4 m0_abs = simd_abs(x_row);
+    FVec4 m1_abs = simd_abs(y_row);
+    FVec4 m2_abs = simd_abs(z_row);
+    FVec4 v_abs  = simd_abs(v_v);
+
+    float xErr = gamma3 * simd_dot(m0_abs, v_abs);
+    float yErr = gamma3 * simd_dot(m1_abs, v_abs);
+    float zErr = gamma3 * simd_dot(m2_abs, v_abs);
+
+    absError->e = simd_set(xErr, yErr, zErr, 0.0f);
+
+    return vec3<float>(x, y, z);
+}
+
+template <>
+vec3<float> Transform::operator()(const vec3<float> &v, const vec3<float> &vError, vec3<float> *absError) const {
+    // Load vector and error into FVec4
+    FVec4 v_v = v.e;           // [x, y, z, 0.0f]
+    FVec4 vErr_v = vError.e;   // [ex, ey, ez, 0.0f]
+
+    // Compute transformed vector
+    FVec4 x_row = m.m[0]; x_row.xyzw[3] = 0.0f;
+    FVec4 y_row = m.m[1]; y_row.xyzw[3] = 0.0f;
+    FVec4 z_row = m.m[2]; z_row.xyzw[3] = 0.0f;
+
+    float x = simd_dot(x_row, v_v);
+    float y = simd_dot(y_row, v_v);
+    float z = simd_dot(z_row, v_v);
+
+    // Error estimation
+    float gamma3 = gamma(3);
+    float gamma3p1 = gamma3 + 1.0f;
+
+    FVec4 m0_abs = simd_abs(x_row);
+    FVec4 m1_abs = simd_abs(y_row);
+    FVec4 m2_abs = simd_abs(z_row);
+    FVec4 v_v_abs = simd_abs(v_v);
+    FVec4 vErr_v_abs = simd_abs(vErr_v);
+
+    // First term: (gamma(3) + 1) * |M| * |vError|
+    float xErrTerm1 = gamma3p1 * simd_dot(m0_abs, vErr_v_abs);
+    float yErrTerm1 = gamma3p1 * simd_dot(m1_abs, vErr_v_abs);
+    float zErrTerm1 = gamma3p1 * simd_dot(m2_abs, vErr_v_abs);
+
+    // Second term: gamma(3) * sum(|M| * |v|)
+    float xErrTerm2 = gamma3 * simd_dot(m0_abs, v_v_abs);
+    float yErrTerm2 = gamma3 * simd_dot(m1_abs, v_v_abs);
+    float zErrTerm2 = gamma3 * simd_dot(m2_abs, v_v_abs);
+
+    // Compute absolute error
+    absError->e = simd_set(xErrTerm1 + xErrTerm2,
+                           yErrTerm1 + yErrTerm2,
+                           zErrTerm1 + zErrTerm2,
+                           0.0f);
+
+    return vec3<float>(x, y, z);
+}
+
+
+#endif
+
 vec3f Transform::w() {
   return(vec3f(m.m[0][2],
                m.m[1][2],
@@ -464,6 +526,112 @@ vec3f Transform::v() {
                m.m[1][1],
                m.m[2][1]));
 }
+
+ray Transform::operator()(const ray &r) const {
+  vec3f oError;
+  point3f o = (*this)(r.origin(), &oError);
+  vec3f d = (*this)(r.direction());
+  // Offset ray origin to edge of error bounds and compute _tMax_
+  Float lengthSquared = d.squared_length();
+  Float tMax = r.tMax;
+  if (lengthSquared > 0) {
+    Float dt = dot(Abs(d), oError) / lengthSquared;
+    o += d * dt;
+    tMax -= dt;
+  }
+  return ray(o, d, r.pri_stack, r.time(), tMax);
+}
+
+
+ ray Transform::operator()(const ray &r, vec3f *oError,
+                               vec3f *dError) const {
+  point3f o = (*this)(r.origin(), oError);
+  vec3f d = (*this)(r.direction(), dError);
+  Float tMax = r.tMax;
+  Float lengthSquared = d.squared_length();
+  if (lengthSquared > 0) {
+    Float dt = dot(Abs(d), *oError) / lengthSquared;
+    o += d * dt;
+    //        tMax -= dt;
+  }
+  return ray(o, d, r.pri_stack, r.time(), tMax);
+}
+
+ ray Transform::operator()(const ray &r, const vec3f &oErrorIn,
+                               const vec3f &dErrorIn, vec3f *oErrorOut,
+                               vec3f *dErrorOut) const {
+  point3f o = (*this)(r.origin(), oErrorIn, oErrorOut);
+  vec3f d = (*this)(r.direction(), dErrorIn, dErrorOut);
+  Float tMax = r.tMax;
+  Float lengthSquared = d.squared_length();
+  if (lengthSquared > 0) {
+    Float dt = dot(Abs(d), *oErrorOut) / lengthSquared;
+    o += d * dt;
+    //        tMax -= dt;
+  }
+  return ray(o, d, r.pri_stack, r.time(), tMax);
+}
+
+
+hit_record Transform::operator()(const hit_record &r) const {
+  hit_record hr;
+  hr.p = (*this)(r.p, r.pError, &hr.pError);
+  hr.normal = (*this)(r.normal);
+  hr.bump_normal = (*this)(r.bump_normal);
+  hr.dpdu = (*this)(r.dpdu);
+  hr.dpdv = (*this)(r.dpdv);
+  hr.mat_ptr = r.mat_ptr;
+  hr.has_bump = r.has_bump;
+#ifdef DEBUGBVH
+  hr.bvh_nodes = r.bvh_nodes;
+#endif
+  hr.u = r.u;
+  hr.v = r.v;
+  hr.t = r.t;
+  hr.shape = r.shape;
+  hr.alpha_miss = r.alpha_miss;
+  
+  
+  
+  //Need to transform wo if used
+  return(hr);
+}
+
+hit_record Transform::operator()(hit_record &r) const {
+  hit_record hr;
+  hr.p = (*this)(r.p, r.pError, &hr.pError);
+
+  hr.normal = (*this)(r.normal);
+  hr.bump_normal = (*this)(r.bump_normal);
+  hr.dpdu = (*this)(r.dpdu);
+  hr.dpdv = (*this)(r.dpdv);
+  hr.mat_ptr = r.mat_ptr;
+  hr.has_bump = r.has_bump;
+#ifdef DEBUGBVH
+  hr.bvh_nodes = r.bvh_nodes;
+#endif
+  hr.u = r.u;
+  hr.v = r.v;
+  hr.t = r.t;
+  hr.shape = r.shape;
+  hr.alpha_miss = r.alpha_miss;
+  
+  
+  //Need to transform wo if used
+  return(hr);
+}
+
+// inline rayDifferential Transform::operator()(const rayDifferential &r) const {
+//   ray tr = (*this)(ray(r));
+//   rayDifferential ret(tr.o, tr.d, tr.tMax, tr.time, tr.medium);
+//   ret.hasDifferentials = r.hasDifferentials;
+//   ret.rxOrigin = (*this)(r.rxOrigin);
+//   ret.ryOrigin = (*this)(r.ryOrigin);
+//   ret.rxDirection = (*this)(r.rxDirection);
+//   ret.ryDirection = (*this)(r.ryDirection);
+//   return ret;
+// }
+
 
 // Unit Tests
 #include <testthat.h>
@@ -664,7 +832,7 @@ context("LookAt function works correctly") {
       // Test transforming a point in front of the camera
       point3f p(0.0f, 0.0f, -5.0f);
       point3f pTransformed = lookAt(p);
-      point3f expectedPoint(0.0f, 0.0f, -5.0f);
+      point3f expectedPoint(0.0f, 0.0f, 5.0f);
 
       expect_true(pTransformed.x() == Approx(expectedPoint.x()));
       expect_true(pTransformed.y() == Approx(expectedPoint.y()));

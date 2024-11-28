@@ -63,12 +63,75 @@ Transform() { }
                    m.m[2][0] * x + m.m[2][1] * y + m.m[2][2] * z);
   }
   
+  #ifndef RAYSIMDVEC
   normal3f operator()(const normal3f &n) const {
     Float x = n.x(), y = n.y(), z = n.z();
     return normal3f(mInv.m[0][0] * x + mInv.m[1][0] * y + mInv.m[2][0] * z,
                     mInv.m[0][1] * x + mInv.m[1][1] * y + mInv.m[2][1] * z,
                     mInv.m[0][2] * x + mInv.m[1][2] * y + mInv.m[2][2] * z);
   }
+  #endif
+
+  #ifdef RAYSIMDVEC
+
+  template <>
+  point3<float> operator()(const point3<float> &p) const {
+    // Load point into FVec4 (including w = 1.0f)
+    FVec4 p_v = p.e; // [x, y, z, 1.0f]
+    p_v[3] = 1.0;
+
+    // Compute transformed point using SIMD dot products
+    float xp = simd_dot(m.m[0], p_v);
+    float yp = simd_dot(m.m[1], p_v);
+    float zp = simd_dot(m.m[2], p_v);
+    float wp = simd_dot(m.m[3], p_v);
+
+    // Return the transformed point
+    if (wp == 1.0f) {
+        return point3<float>(xp, yp, zp);
+    } else {
+        float inv_wp = 1.0f / wp;
+        return point3<float>(xp * inv_wp, yp * inv_wp, zp * inv_wp);
+    }
+  }
+
+  template<>
+  vec3<float> operator()(const vec3<float> &v) const {
+    // Load vector into FVec4 (w component is 0.0f)
+    FVec4 v_v = v.e; // [x, y, z, 0.0f]
+
+    // Zero out the w components of the matrix rows
+    FVec4 x_row = m.m[0]; x_row.xyzw[3] = 0.0f;
+    FVec4 y_row = m.m[1]; y_row.xyzw[3] = 0.0f;
+    FVec4 z_row = m.m[2]; z_row.xyzw[3] = 0.0f;
+
+    // Compute transformed vector components
+    float x = simd_dot(x_row, v_v);
+    float y = simd_dot(y_row, v_v);
+    float z = simd_dot(z_row, v_v);
+
+    return vec3<float>(x, y, z);
+  }
+
+  
+  normal3f operator()(const normal3f &n) const {
+    // Load normal into FVec4 (w component is 0.0f)
+    FVec4 n_v = n.e; // [x, y, z, 0.0f]
+
+    // Transpose the inverse matrix (only the upper-left 3x3 part)
+    FVec4 col0 = simd_set(mInv.m[0][0], mInv.m[1][0], mInv.m[2][0], 0.0f);
+    FVec4 col1 = simd_set(mInv.m[0][1], mInv.m[1][1], mInv.m[2][1], 0.0f);
+    FVec4 col2 = simd_set(mInv.m[0][2], mInv.m[1][2], mInv.m[2][2], 0.0f);
+
+    // Compute transformed normal components
+    float x = simd_dot(col0, n_v);
+    float y = simd_dot(col1, n_v);
+    float z = simd_dot(col2, n_v);
+
+    return normal3f(x, y, z);
+  }
+
+  #endif
   
   // template <typename T> void operator()(const normal3<T> &, normal3<T> *nt) const;
   ray operator()(const ray &r) const;

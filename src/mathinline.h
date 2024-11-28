@@ -31,6 +31,39 @@ inline T lerp(Float t, T v1, T v2) {
   return((1-t) * v1 + t * v2);
 }
 
+#ifdef RAYSIMDVEC
+// Overload for point3<float>
+inline point3f lerp(Float t, const point3f& v1, const point3f& v2) {
+    FVec4 tval = simd_set1(t);
+    FVec4 diff = simd_sub(v2.e, v1.e);
+    FVec4 scaled_diff = simd_mul(diff, tval);
+    point3f result;
+    result.e = simd_add(v1.e, scaled_diff);
+    return (result);
+}
+
+// Overload for vec3<float>
+inline vec3f lerp(Float t, const vec3f& v1, const vec3f& v2) {
+    FVec4 tval = simd_set1(t);
+    FVec4 diff = simd_sub(v2.e, v1.e);
+    FVec4 scaled_diff = simd_mul(diff, tval);
+    vec3f result;
+    result.e = simd_add(v1.e, scaled_diff);
+    return (result);
+}
+
+// Overload for normal3f
+inline normal3f lerp(Float t, const normal3f& v1, const normal3f& v2) {
+    FVec4 tval = simd_set1(t);
+    FVec4 diff = simd_sub(v2.e, v1.e);
+    FVec4 scaled_diff = simd_mul(diff, tval);
+    normal3f result;
+    result.e = simd_add(v1.e, scaled_diff);
+    return (result);
+}
+
+#endif
+
 // template <typename T> int sgn(T val) {
 //   return (T(0) < val) - (val < T(0));
 // }

@@ -72,6 +72,17 @@ public:
       xyzw[2] = z_;
       xyzw[3] = 0.f;
     }
+    FVec4(float t_) {
+#if defined(HAS_SSE)
+        v = _mm_set1_ps(t_);
+#elif defined(HAS_NEON)
+        v = vdupq_n_f32(t_);
+#else
+        for (int i = 0; i < SIMD_WIDTH; ++i) {
+            xyzw[i] = t_;
+        }
+#endif
+    }
 
     float operator[](int i) const { return xyzw[i]; }
     float& operator[](int i) { return xyzw[i]; }

@@ -1,10 +1,11 @@
 #ifndef MATRIXH
 #define MATRIXH
 
-#include "vec3.h"
+#include "vectypes.h"
+#include "simd.h"
 #include <cstring>
 
-struct Matrix4x4 {
+struct alignas(16) Matrix4x4 {
   Matrix4x4() {
     m[0][0] = m[1][1] = m[2][2] = m[3][3] = 1.f;
     m[0][1] = m[0][2] = m[0][3] = m[1][0] =
@@ -12,6 +13,14 @@ struct Matrix4x4 {
     m[3][0] = m[3][1] = m[3][2] = 0.f;
   }
   Matrix4x4(Float mat[4][4]);
+#ifdef RAYSIMDVEC
+  Matrix4x4(FVec4 mat[4]) {
+    m[0] = mat[0];
+    m[1] = mat[1];
+    m[2] = mat[2];
+    m[3] = mat[3];
+  }
+#endif
   Matrix4x4(Float t00, Float t01, Float t02, Float t03,
             Float t10, Float t11, Float t12, Float t13,
             Float t20, Float t21, Float t22, Float t23,
@@ -64,10 +73,15 @@ struct Matrix4x4 {
     Matrix4x4 r;
     for (int i = 0; i < 4; ++i) {
       for (int j = 0; j < 4; ++j) {
+#ifdef RAYSIMDVEC
+        FVec4 col{m2.m[0][j], m2.m[1][j], m2.m[2][j], m2.m[3][j]};
+        r.m[i][j] = simd_dot(m1.m[i], col);
+#else
         r.m[i][j] = m1.m[i][0] * m2.m[0][j] + 
                     m1.m[i][1] * m2.m[1][j] + 
                     m1.m[i][2] * m2.m[2][j] + 
                     m1.m[i][3] * m2.m[3][j];
+#endif
       }
     }
     return r;
@@ -75,7 +89,12 @@ struct Matrix4x4 {
   
   friend Matrix4x4 Inverse(const Matrix4x4 &);
   
+  // Float m[4][4];
+#ifdef RAYSIMDVEC
+  FVec4 m[4];
+#else
   Float m[4][4];
+#endif
 };
 
 #endif
