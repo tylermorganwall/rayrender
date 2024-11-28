@@ -10,7 +10,6 @@ class TransformCache;
 class TextureCache;
 class material;
 class hitable;
-class bvh_node;
 class random_gen;
 class hitable_list;
 

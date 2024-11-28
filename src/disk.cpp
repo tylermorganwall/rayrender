@@ -130,6 +130,49 @@ const bool disk::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sa
 }
 
 
+bool disk::HitP(const ray& r, Float t_min, Float t_max, random_gen& rng) const {
+  SCOPED_CONTEXT("Hit");
+  SCOPED_TIMER_COUNTER("Disk");
+  
+  ray r2 = (*WorldToObject)(r);
+  // First we intersect with the plane containing the disk
+  Float t = -r2.origin().y() / r2.direction().y();
+  
+  if(t < t_min || t > t_max) {
+    return(false);
+  }
+  Float x = r2.origin().x() + t*r2.direction().x();
+  Float z = r2.origin().z() + t*r2.direction().z();
+  Float radHit2 = x*x + z*z;
+  if(radHit2 >= radius * radius || radHit2 <= inner_radius * inner_radius) {
+    return(false);
+  }
+  return(true);
+}
+
+
+bool disk::HitP(const ray& r, Float t_min, Float t_max, Sampler* sampler) const {
+  SCOPED_CONTEXT("Hit");
+  SCOPED_TIMER_COUNTER("Disk");
+  
+  ray r2 = (*WorldToObject)(r);
+  // First we intersect with the plane containing the disk
+  Float t = -r2.origin().y() / r2.direction().y();
+  
+  if(t < t_min || t > t_max) {
+    return(false);
+  }
+  Float x = r2.origin().x() + t*r2.direction().x();
+  Float z = r2.origin().z() + t*r2.direction().z();
+  Float radHit2 = x*x + z*z;
+  if(radHit2 >= radius * radius || radHit2 <= inner_radius * inner_radius) {
+    return(false);
+  }
+  return(true);
+}
+
+
+
 Float disk::pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Float time) {
   hit_record rec;
   if(this->hit(ray(o,v), 0.001, FLT_MAX, rec, rng)) {

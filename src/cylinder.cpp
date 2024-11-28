@@ -455,6 +455,122 @@ const bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
   return(false);
 }
 
+
+bool cylinder::HitP(const ray& r, Float t_min, Float t_max, random_gen& rng) const {
+  SCOPED_CONTEXT("Hit");
+  SCOPED_TIMER_COUNTER("Cylinder");
+  
+  ray r2 = (*WorldToObject)(r);
+  
+  point3f oc = r2.origin();
+  vec3f dir = r2.direction();
+  dir.e[1] = 0;
+  oc.e[1] = 0;
+  Float a = dot(dir, dir);
+  Float b = 2 * dot(oc, dir); 
+  Float c = dot(oc, oc) - radius * radius;
+  Float temp1, temp2;
+  if (!quadratic(a, b, c, &temp1, &temp2)) {
+    return(false);
+  }
+  bool is_hit = true;
+  bool second_is_hit = true;
+  point3f temppoint = r2.point_at_parameter(temp1);
+  Float phi = atan2(temppoint.z(),temppoint.x());
+  phi = phi < 0 ? phi + 2 * M_PI : phi;
+  if(is_hit && temp1 < t_max && temp1 > t_min && 
+     temppoint.y() > -length/2 && temppoint.y() < length/2 && phi <= phi_max && phi >= phi_min) {
+    return(true);
+  }
+  Float t_cyl = -(r2.origin().y()-length/2) / r2.direction().y();
+  Float t_cyl2 = -(r2.origin().y()+length/2) / r2.direction().y();
+  Float x = r2.origin().x() + t_cyl*r2.direction().x();
+  Float z = r2.origin().z() + t_cyl*r2.direction().z();
+  
+  Float phi2 = atan2(z,x);
+  phi2 = phi2 < 0 ? phi2 + 2 * M_PI : phi2;
+  Float radHit2 = x*x + z*z;
+  if(has_caps && t_cyl < temp2 && t_cyl > t_min && t_cyl < t_max && t_cyl < t_cyl2 && 
+     radHit2 <= radius * radius && phi2 <= phi_max && phi2 >= phi_min) {
+    return(true);
+  }
+  Float x2 = r2.origin().x() + t_cyl2*r2.direction().x();
+  Float z2 = r2.origin().z() + t_cyl2*r2.direction().z();
+  
+  Float phi3 = atan2(z2,x2);
+  phi3 = phi3 < 0 ? phi3 + 2 * M_PI : phi3;
+  Float radHit3 = x2*x2 + z2*z2;
+  if(has_caps && t_cyl2 < temp2 && t_cyl2 > t_min && t_cyl2 < t_max && radHit3 <= radius * radius && phi3 <= phi_max && phi3 >= phi_min) {
+    return(true);
+  }
+  temppoint = r2.point_at_parameter(temp2);
+  phi = atan2(temppoint.z(),temppoint.x());
+  phi = phi < 0 ? phi + 2 * M_PI : phi;
+  if(second_is_hit && temp2 < t_max && temp2 > t_min && 
+     temppoint.y() > -length/2 && temppoint.y() < length/2 && phi <= phi_max && phi >= phi_min) {
+    return(true);
+  }
+  return(false);
+}
+
+
+bool cylinder::HitP(const ray& r, Float t_min, Float t_max, Sampler* sampler) const {
+  SCOPED_CONTEXT("Hit");
+  SCOPED_TIMER_COUNTER("Cylinder");
+  
+  ray r2 = (*WorldToObject)(r);
+  
+  point3f oc = r2.origin();
+  vec3f dir = r2.direction();
+  dir.e[1] = 0;
+  oc.e[1] = 0;
+  Float a = dot(dir, dir);
+  Float b = 2 * dot(oc, dir); 
+  Float c = dot(oc, oc) - radius * radius;
+  Float temp1, temp2;
+  if (!quadratic(a, b, c, &temp1, &temp2)) {
+    return(false);
+  }
+  bool is_hit = true;
+  bool second_is_hit = true;
+  point3f temppoint = r2.point_at_parameter(temp1);
+  Float phi = atan2(temppoint.z(),temppoint.x());
+  phi = phi < 0 ? phi + 2 * M_PI : phi;
+  if(is_hit && temp1 < t_max && temp1 > t_min && 
+     temppoint.y() > -length/2 && temppoint.y() < length/2 && phi <= phi_max && phi >= phi_min) {
+    return(true);
+  }
+  Float t_cyl = -(r2.origin().y()-length/2) / r2.direction().y();
+  Float t_cyl2 = -(r2.origin().y()+length/2) / r2.direction().y();
+  Float x = r2.origin().x() + t_cyl*r2.direction().x();
+  Float z = r2.origin().z() + t_cyl*r2.direction().z();
+  
+  Float phi2 = atan2(z,x);
+  phi2 = phi2 < 0 ? phi2 + 2 * M_PI : phi2;
+  Float radHit2 = x*x + z*z;
+  if(has_caps && t_cyl < temp2 && t_cyl > t_min && t_cyl < t_max && t_cyl < t_cyl2 && 
+     radHit2 <= radius * radius && phi2 <= phi_max && phi2 >= phi_min) {
+    return(true);
+  }
+  Float x2 = r2.origin().x() + t_cyl2*r2.direction().x();
+  Float z2 = r2.origin().z() + t_cyl2*r2.direction().z();
+  
+  Float phi3 = atan2(z2,x2);
+  phi3 = phi3 < 0 ? phi3 + 2 * M_PI : phi3;
+  Float radHit3 = x2*x2 + z2*z2;
+  if(has_caps && t_cyl2 < temp2 && t_cyl2 > t_min && t_cyl2 < t_max && radHit3 <= radius * radius && phi3 <= phi_max && phi3 >= phi_min) {
+    return(true);
+  }
+  temppoint = r2.point_at_parameter(temp2);
+  phi = atan2(temppoint.z(),temppoint.x());
+  phi = phi < 0 ? phi + 2 * M_PI : phi;
+  if(second_is_hit && temp2 < t_max && temp2 > t_min && 
+     temppoint.y() > -length/2 && temppoint.y() < length/2 && phi <= phi_max && phi >= phi_min) {
+    return(true);
+  }
+  return(false);
+}
+
 Float cylinder::pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Float time) {
   hit_record rec;
   if(this->hit(ray(o,v), 0.001, FLT_MAX, rec, rng)) {

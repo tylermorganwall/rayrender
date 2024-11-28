@@ -257,10 +257,75 @@ const bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, 
   return(false);
 }
 
+bool sphere::HitP(const ray& r, Float t_min, Float t_max, random_gen& rng) const {
+  SCOPED_CONTEXT("Hit");
+  SCOPED_TIMER_COUNTER("Sphere");
+  vec3f oErr, dErr;
+  ray r2 = (*WorldToObject)(r, &oErr, &dErr);
+  // Compute quadratic sphere coefficients
+  
+  // Initialize _EFloat_ ray coordinate values
+  EFloat ox(r2.origin().x(), oErr.x()), 
+         oy(r2.origin().y(), oErr.y()), 
+         oz(r2.origin().z(), oErr.z());
+  EFloat dx(r2.direction().x(), dErr.x()), 
+         dy(r2.direction().y(), dErr.y()), 
+         dz(r2.direction().z(), dErr.z());
+         
+  EFloat a = dx * dx + dy * dy + dz * dz;
+  EFloat b = 2 * (dx * ox + dy * oy + dz * oz);
+  EFloat c = ox * ox + oy * oy + oz * oz - EFloat(radius) * EFloat(radius);
+  
+  // Solve quadratic equation for _t_ values
+  EFloat temp1, temp2;
+  if (!Quadratic(a, b, c, &temp1, &temp2)) {
+    return(false);
+  }
+  if(temp1 < t_max && temp1 > t_min) {
+    return(true);
+  }
+  if(temp2 < t_max && temp2 > t_min) {
+    return(true);
+  }
+  return(false);
+}
+
+bool sphere::HitP(const ray& r, Float t_min, Float t_max, Sampler* sampler) const {
+  SCOPED_CONTEXT("Hit");
+  SCOPED_TIMER_COUNTER("Sphere");
+  vec3f oErr, dErr;
+  ray r2 = (*WorldToObject)(r, &oErr, &dErr);
+  // Compute quadratic sphere coefficients
+  
+  // Initialize _EFloat_ ray coordinate values
+  EFloat ox(r2.origin().x(), oErr.x()), 
+         oy(r2.origin().y(), oErr.y()), 
+         oz(r2.origin().z(), oErr.z());
+  EFloat dx(r2.direction().x(), dErr.x()), 
+         dy(r2.direction().y(), dErr.y()), 
+         dz(r2.direction().z(), dErr.z());
+         
+  EFloat a = dx * dx + dy * dy + dz * dz;
+  EFloat b = 2 * (dx * ox + dy * oy + dz * oz);
+  EFloat c = ox * ox + oy * oy + oz * oz - EFloat(radius) * EFloat(radius);
+  
+  // Solve quadratic equation for _t_ values
+  EFloat temp1, temp2;
+  if (!Quadratic(a, b, c, &temp1, &temp2)) {
+    return(false);
+  }
+  if(temp1 < t_max && temp1 > t_min) {
+    return(true);
+  }
+  if(temp2 < t_max && temp2 > t_min) {
+    return(true);
+  }
+  return(false);
+}
+
 
 Float sphere::pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Float time) {
-  hit_record rec;
-  if(!this->hit(ray(o,v), 0.001, FLT_MAX, rec, rng)) {
+  if(!this->HitP(ray(o,v), 0.001, FLT_MAX, rng)) {
     return(0);
   }
   point3f pCenter = (*ObjectToWorld)(point3f(0.f, 0.f, 0.f));
@@ -278,8 +343,7 @@ Float sphere::pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Float
 
 
 Float sphere::pdf_value(const point3f& o, const vec3f& v, Sampler* sampler, Float time) {
-  hit_record rec;
-  if(!this->hit(ray(o,v), 0.001, FLT_MAX, rec, sampler)) {
+  if(!this->HitP(ray(o,v), 0.001, FLT_MAX, sampler)) {
     return(0);
   }
   point3f pCenter = (*ObjectToWorld)(point3f(0.f, 0.f, 0.f));

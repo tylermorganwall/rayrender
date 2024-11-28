@@ -14,50 +14,11 @@
 #include <cfloat>
 
 class material;
+class hitable;
 
 void get_sphere_uv(const vec3f& p, Float& u, Float& v);
 void get_sphere_uv(const normal3f& p, Float& u, Float& v);
 
-struct hit_record;
-
-class hitable {
-  public:
-    hitable() : reverseOrientation(false), transformSwapsHandedness(false) {}
-    hitable(std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation) : 
-      ObjectToWorld(ObjectToWorld), WorldToObject(WorldToObject), reverseOrientation(reverseOrientation),
-      transformSwapsHandedness(ObjectToWorld->SwapsHandedness()) {}
-    virtual const bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const = 0;
-    virtual const bool hit(const ray& r, Float tmin, Float tmax, hit_record& rec, Sampler* sampler) const = 0;
-
-    // virtual const bool hit(const CompactRay& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const = 0;
-    // virtual const bool hit(const CompactRay& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const = 0;
-
-    virtual bool bounding_box(Float t0, Float t1, aabb& box) const = 0;
-    virtual Float pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Float time = 0) {
-      return(0.0);
-    }
-    virtual Float pdf_value(const point3f& o, const vec3f& v, Sampler* sampler, Float time = 0) {
-      return(0.0);
-    }
-    virtual vec3f random(const point3f& o, random_gen& rng, Float time = 0) {
-      return(vec3f(0,1,0));
-    }
-    virtual vec3f random(const point3f& o, Sampler* sampler, Float time = 0) {
-      return(vec3f(0,1,0));
-    }
-    virtual std::string GetName() const {
-      return(std::string("Hitable"));
-    }
-    virtual size_t GetSize() = 0;
-    virtual std::pair<size_t,size_t> CountNodeLeaf() {
-      return(std::pair<size_t,size_t>(0,1));
-    }
-    
-    virtual ~hitable() {}
-    const std::shared_ptr<Transform> ObjectToWorld, WorldToObject;
-    const bool reverseOrientation;
-    const bool transformSwapsHandedness;
-};
 
 
 struct alignas(16) hit_record {
@@ -90,6 +51,54 @@ struct alignas(16) hit_record {
   //int faceIndex (for ptex lookups)
 };
 
+class hitable {
+  public:
+    hitable() : reverseOrientation(false), transformSwapsHandedness(false) {}
+    hitable(std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation) : 
+      ObjectToWorld(ObjectToWorld), WorldToObject(WorldToObject), reverseOrientation(reverseOrientation),
+      transformSwapsHandedness(ObjectToWorld->SwapsHandedness()) {}
+    virtual const bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const = 0;
+    virtual const bool hit(const ray& r, Float tmin, Float tmax, hit_record& rec, Sampler* sampler) const = 0;
+    virtual bool HitP(const ray &r, Float t_min, Float t_max, random_gen& rng) const {
+      hit_record tmp;
+      return hit(r, t_min, t_max, tmp, rng);
+    }
+    virtual bool HitP(const ray &r, Float t_min, Float t_max, Sampler* sampler) const {
+      hit_record tmp;
+      return hit(r, t_min, t_max, tmp, sampler);
+    }
+
+
+    // virtual const bool hit(const CompactRay& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const = 0;
+    // virtual const bool hit(const CompactRay& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const = 0;
+
+    virtual bool bounding_box(Float t0, Float t1, aabb& box) const = 0;
+    virtual Float pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Float time = 0) {
+      return(0.0);
+    }
+    virtual Float pdf_value(const point3f& o, const vec3f& v, Sampler* sampler, Float time = 0) {
+      return(0.0);
+    }
+    virtual vec3f random(const point3f& o, random_gen& rng, Float time = 0) {
+      return(vec3f(0,1,0));
+    }
+    virtual vec3f random(const point3f& o, Sampler* sampler, Float time = 0) {
+      return(vec3f(0,1,0));
+    }
+    virtual std::string GetName() const {
+      return(std::string("Hitable"));
+    }
+    virtual size_t GetSize() = 0;
+    virtual std::pair<size_t,size_t> CountNodeLeaf() {
+      return(std::pair<size_t,size_t>(0,1));
+    }
+    
+    virtual ~hitable() {}
+    const std::shared_ptr<Transform> ObjectToWorld, WorldToObject;
+    const bool reverseOrientation;
+    const bool transformSwapsHandedness;
+};
+
 
 class AnimatedHitable: public hitable {
 public:
@@ -99,6 +108,15 @@ public:
   ~AnimatedHitable() {}
   const bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const;
   const bool hit(const ray& r, Float tmin, Float tmax, hit_record& rec, Sampler* sampler) const;
+  virtual bool HitP(const ray &r, Float t_min, Float t_max, random_gen& rng) const {
+    hit_record tmp;
+    return hit(r, t_min, t_max, tmp, rng);
+  }
+  virtual bool HitP(const ray &r, Float t_min, Float t_max, Sampler* sampler) const {
+    hit_record tmp;
+    return hit(r, t_min, t_max, tmp, sampler);
+  }
+
   Float pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Float time = 0);
   Float pdf_value(const point3f& o, const vec3f& v, Sampler* sampler, Float time = 0);
   vec3f random(const point3f& o, random_gen& rng, Float time = 0);

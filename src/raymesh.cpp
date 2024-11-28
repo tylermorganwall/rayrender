@@ -10,7 +10,7 @@
 #endif
 #include "texturecache.h"
 #include "trianglemesh.h"
-#include "bvh_node.h"
+
 #include "bvh.h"
 
 #include "rng.h"
@@ -109,6 +109,20 @@ const bool raymesh::hit(const ray& r, Float t_min, Float t_max, hit_record& rec,
   SCOPED_TIMER_COUNTER("RayMesh");
   
   return(tri_mesh_bvh->hit(r, t_min, t_max, rec, sampler));
+}
+
+bool raymesh::HitP(const ray& r, Float t_min, Float t_max, random_gen& rng) const {
+  SCOPED_CONTEXT("MultiHit");
+  SCOPED_TIMER_COUNTER("RayMesh");
+  
+  return(tri_mesh_bvh->HitP(r, t_min, t_max, rng));
+}
+
+bool raymesh::HitP(const ray& r, Float t_min, Float t_max, Sampler* sampler) const {
+  SCOPED_CONTEXT("MultiHit");
+  SCOPED_TIMER_COUNTER("RayMesh");
+  
+  return(tri_mesh_bvh->HitP(r, t_min, t_max, sampler));
 }
 
 bool raymesh::bounding_box(Float t0, Float t1, aabb& box) const {

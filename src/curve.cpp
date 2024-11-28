@@ -199,8 +199,6 @@ const bool curve::hit(const ray& r, Float tmin, Float tmax, hit_record& rec, ran
                             uMax, maxDepth, Inverse(objectToRay)));
 }
 
-#include "RcppThread.h"
-
 const bool curve::hit(const ray& r, Float tmin, Float tmax, hit_record& rec, Sampler* sampler) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("Curve");

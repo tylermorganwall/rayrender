@@ -32,6 +32,22 @@ const bool instance::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
   return(false);
 }
 
+bool instance::HitP(const ray& r, Float t_min, Float t_max, random_gen& rng) const {
+  SCOPED_CONTEXT("MultiHit");
+  SCOPED_TIMER_COUNTER("Instance");
+  
+  ray r2 = (*WorldToObject)(r);
+  return(original_scene->HitP(r2, t_min, t_max, rng));
+}
+
+bool instance::HitP(const ray& r, Float t_min, Float t_max, Sampler* sampler) const {
+  SCOPED_CONTEXT("MultiHit");
+  SCOPED_TIMER_COUNTER("Instance");
+  
+  ray r2 = (*WorldToObject)(r);
+  return(original_scene->HitP(r2, t_min, t_max, sampler));
+}
+
 bool instance::bounding_box(Float t0, Float t1, aabb& box) const {
   bool bbox_bool = original_scene->bounding_box(t0,t1,box);
   box = (*ObjectToWorld)(box);
@@ -40,13 +56,11 @@ bool instance::bounding_box(Float t0, Float t1, aabb& box) const {
 
 
 Float instance::pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Float time) {
-  hit_record rec;
   ray r2 = (*WorldToObject)(ray(o,v));
   return(importance_sampled_objects->pdf_value(r2.origin(),r2.direction(), rng, time));
 }
 
 Float instance::pdf_value(const point3f& o, const vec3f& v, Sampler* sampler, Float time) {
-  hit_record rec;
   ray r2 = (*WorldToObject)(ray(o,v));
   return(importance_sampled_objects->pdf_value(r2.origin(),r2.direction(), sampler, time));
 }

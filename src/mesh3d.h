@@ -4,7 +4,7 @@
 #include "triangle.h"
 #include "bvh.h"
 
-#include "bvh_node.h"
+
 #include <Rcpp.h>
 
 class mesh3d : public hitable {
@@ -19,7 +19,9 @@ class mesh3d : public hitable {
            std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation);
     virtual const bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const;
     virtual const bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const;
-    
+    virtual bool HitP(const ray &r, Float t_min, Float t_max, random_gen& rng) const;
+    virtual bool HitP(const ray &r, Float t_min, Float t_max, Sampler* sampler) const;
+
     virtual bool bounding_box(Float t0, Float t1, aabb& box) const;
     virtual std::string GetName() const {
       return(std::string("Mesh3d"));

@@ -39,6 +39,28 @@ const bool hitable_list::hit(const ray& r, Float t_min, Float t_max, hit_record&
   return(hit_anything);
 }
 
+bool hitable_list::HitP(const ray& r, Float t_min, Float t_max, random_gen& rng) const {
+  SCOPED_CONTEXT("MultiHit");
+  SCOPED_TIMER_COUNTER("Hitable List");
+  for (const auto& object : objects) {
+    if (object->HitP(r, t_min, t_max, rng)) {
+      return(true);
+    }
+  }
+  return(false);
+}
+
+bool hitable_list::HitP(const ray& r, Float t_min, Float t_max, Sampler* sampler) const {
+  SCOPED_CONTEXT("MultiHit");
+  SCOPED_TIMER_COUNTER("Hitable List");
+  for (const auto& object : objects) {
+    if (object->HitP(r, t_min, t_max, sampler)) {
+      return(true);
+    }
+  }
+  return(false);
+}
+
 bool hitable_list::bounding_box(Float t0, Float t1, aabb& box) const {
   SCOPED_CONTEXT("Bounding Box");
   SCOPED_TIMER_COUNTER("Hitable List");

@@ -144,6 +144,14 @@ const bool mesh3d::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, 
   return(mesh_bvh->hit(r, t_min, t_max, rec, sampler));
 };
 
+bool mesh3d::HitP(const ray& r, Float t_min, Float t_max, random_gen& rng) const {
+  return(mesh_bvh->HitP(r, t_min, t_max, rng));
+};
+
+bool mesh3d::HitP(const ray& r, Float t_min, Float t_max, Sampler* sampler) const {
+  return(mesh_bvh->HitP(r, t_min, t_max, sampler));
+};
+
 bool mesh3d::bounding_box(Float t0, Float t1, aabb& box) const {
   return(mesh_bvh->bounding_box(t0,t1,box));
 };

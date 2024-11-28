@@ -73,8 +73,6 @@ trimesh::trimesh(std::string inputfile, std::string basedir, Float scale, Float 
   }
   if(n > 0) {
     tri_mesh_bvh = std::make_shared<BVHAggregate>(triangles.objects, shutteropen, shutterclose, bvh_type, true);
-    // tri_mesh_bvh = std::make_shared<bvh_node>(triangles, shutteropen, shutterclose, bvh_type, rng);
-
     triangles.objects.clear();
   } else {
     throw std::runtime_error(inputfile + ": No triangles loaded.");
@@ -93,6 +91,20 @@ const bool trimesh::hit(const ray& r, Float t_min, Float t_max, hit_record& rec,
   SCOPED_TIMER_COUNTER("ObjMesh");
   
   return(tri_mesh_bvh->hit(r, t_min, t_max, rec, sampler));
+}
+
+bool trimesh::HitP(const ray& r, Float t_min, Float t_max, random_gen& rng) const {
+  SCOPED_CONTEXT("MultiHit");
+  SCOPED_TIMER_COUNTER("ObjMesh");
+  
+  return(tri_mesh_bvh->HitP(r, t_min, t_max, rng));
+}
+
+bool trimesh::HitP(const ray& r, Float t_min, Float t_max, Sampler* sampler) const {
+  SCOPED_CONTEXT("MultiHit");
+  SCOPED_TIMER_COUNTER("ObjMesh");
+  
+  return(tri_mesh_bvh->HitP(r, t_min, t_max, sampler));
 }
 
 bool trimesh::bounding_box(Float t0, Float t1, aabb& box) const {

@@ -118,6 +118,44 @@ const bool xy_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec,
   return(true);
 }
 
+bool xy_rect::HitP(const ray& r, Float t_min, Float t_max, random_gen& rng) const {
+  SCOPED_CONTEXT("Hit");
+  SCOPED_TIMER_COUNTER("Rect");
+  
+  ray r2 = (*WorldToObject)(r);
+  
+  Float t = (k-r2.origin().z()) * r2.inv_dir_pad.z();
+
+  if(t < t_min || t > t_max) {
+    return(false);
+  }
+  Float x = r2.origin().x() + t*r2.direction().x();
+  Float y = r2.origin().y() + t*r2.direction().y();
+  if(x < x0 || x > x1 || y < y0 || y > y1) {
+    return(false);
+  }
+  return(true);
+}
+
+bool xy_rect::HitP(const ray& r, Float t_min, Float t_max, Sampler* sampler) const {
+  SCOPED_CONTEXT("Hit");
+  SCOPED_TIMER_COUNTER("Rect");
+  
+  ray r2 = (*WorldToObject)(r);
+  
+  Float t = (k-r2.origin().z()) * r2.inv_dir_pad.z();
+
+  if(t < t_min || t > t_max) {
+    return(false);
+  }
+  Float x = r2.origin().x() + t*r2.direction().x();
+  Float y = r2.origin().y() + t*r2.direction().y();
+  if(x < x0 || x > x1 || y < y0 || y > y1) {
+    return(false);
+  }
+  return(true);
+}
+
 bool xy_rect::bounding_box(Float t0, Float t1, aabb& box) const {
   box = (*ObjectToWorld)(aabb(vec3f(x0,y0,k-0.001), vec3f(x1,y1,k+0.001)));
   return(true);
@@ -283,6 +321,49 @@ const bool xz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec,
   return(true);
 }
 
+bool xz_rect::HitP(const ray& r, Float t_min, Float t_max, random_gen& rng) const {
+  SCOPED_CONTEXT("Hit");
+  SCOPED_TIMER_COUNTER("Rect");
+  
+  ray r2 = (*WorldToObject)(r);
+  
+  Float t = (k-r2.origin().y()) * r2.inv_dir_pad.y();
+
+  if(t < t_min || t > t_max) {
+    return(false);
+  }
+  
+  Float x = r2.origin().x() + t*r2.direction().x();
+  Float z = r2.origin().z() + t*r2.direction().z();
+  if(x < x0 || x > x1 || z < z0 || z > z1) {
+    return(false);
+  }
+  
+  return(true);
+}
+
+
+bool xz_rect::HitP(const ray& r, Float t_min, Float t_max, Sampler* sampler) const {
+  SCOPED_CONTEXT("Hit");
+  SCOPED_TIMER_COUNTER("Rect");
+  
+  ray r2 = (*WorldToObject)(r);
+  
+  Float t = (k-r2.origin().y()) * r2.inv_dir_pad.y();
+
+  if(t < t_min || t > t_max) {
+    return(false);
+  }
+  
+  Float x = r2.origin().x() + t*r2.direction().x();
+  Float z = r2.origin().z() + t*r2.direction().z();
+  if(x < x0 || x > x1 || z < z0 || z > z1) {
+    return(false);
+  }
+  
+  return(true);
+}
+
 bool xz_rect::bounding_box(Float t0, Float t1, aabb& box) const {
   box = (*ObjectToWorld)(aabb(vec3f(x0,k-0.001,z0), vec3f(x1,k+0.001,z1)));
   return(true);
@@ -382,7 +463,6 @@ const bool yz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec,
   return(true);
 }
 
-
 const bool yz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("Rect");
@@ -444,6 +524,46 @@ const bool yz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec,
   
   return(true);
 }
+
+
+bool yz_rect::HitP(const ray& r, Float t_min, Float t_max, random_gen& rng) const {
+  SCOPED_CONTEXT("Hit");
+  SCOPED_TIMER_COUNTER("Rect");
+  ray r2 = (*WorldToObject)(r);
+  
+  Float t = (k-r2.origin().x()) * r2.inv_dir_pad.x();
+
+  if(t < t_min || t > t_max) {
+    return(false);
+  }
+  Float z = r2.origin().z() + t*r2.direction().z();
+  Float y = r2.origin().y() + t*r2.direction().y();
+  if(z < z0 || z > z1 || y < y0 || y > y1) {
+    return(false);
+  }
+  
+  return(true);
+}
+
+bool yz_rect::HitP(const ray& r, Float t_min, Float t_max, Sampler* sampler) const {
+  SCOPED_CONTEXT("Hit");
+  SCOPED_TIMER_COUNTER("Rect");
+  ray r2 = (*WorldToObject)(r);
+  
+  Float t = (k-r2.origin().x()) * r2.inv_dir_pad.x();
+
+  if(t < t_min || t > t_max) {
+    return(false);
+  }
+  Float z = r2.origin().z() + t*r2.direction().z();
+  Float y = r2.origin().y() + t*r2.direction().y();
+  if(z < z0 || z > z1 || y < y0 || y > y1) {
+    return(false);
+  }
+  
+  return(true);
+}
+
 
 bool yz_rect::bounding_box(Float t0, Float t1, aabb& box) const {
   box = (*ObjectToWorld)(aabb(vec3f(k-0.001,y0,z0), vec3f(k+0.001,y1,z1)));

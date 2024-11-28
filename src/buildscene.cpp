@@ -2,7 +2,6 @@
 #include "hitable.h"
 #include "sphere.h"
 #include "hitablelist.h"
-#include "bvh_node.h"
 #include "perlin.h"
 #include "texture.h"
 #include "rectangle.h"

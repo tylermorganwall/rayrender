@@ -11,7 +11,9 @@ class hitable_list: public hitable {
     hitable_list(std::shared_ptr<hitable> object) {add(object);}
     const bool hit(const ray& r, Float tmin, Float tmax, hit_record& rec, random_gen& rng) const;
     const bool hit(const ray& r, Float tmin, Float tmax, hit_record& rec, Sampler* sampler) const;
-    
+    virtual bool HitP(const ray &r, Float t_min, Float t_max, random_gen& rng) const;
+    virtual bool HitP(const ray &r, Float t_min, Float t_max, Sampler* sampler) const;
+
     bool bounding_box(Float t0, Float t1, aabb& box) const;
     Float pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Float time = 0);
     Float pdf_value(const point3f& o, const vec3f& v, Sampler* sampler, Float time = 0);

@@ -2,7 +2,7 @@
 #include "hitable.h"
 #include "sphere.h"
 #include "hitablelist.h"
-#include "bvh_node.h"
+
 #include "perlin.h"
 #include "texture.h"
 #include "rectangle.h"
@@ -59,7 +59,6 @@ void PrintClassSizes() {
   Rcpp::Rcout << "vec2i                    : " << sizeof(vec2i) << "\n";
   Rcpp::Rcout << "random_gen               : " << sizeof(random_gen) << "\n";
   Rcpp::Rcout << "aabb                     : " << sizeof(aabb) << "\n\n";
-  Rcpp::Rcout << "bvh_node                 : " << sizeof(bvh_node) << "\n\n";
   Rcpp::Rcout << "hitable_list             : " << sizeof(hitable_list) << "\n\n";
   
   Rcpp::Rcout << "RayCamera                : " << sizeof(RayCamera) << "\n";

@@ -24,7 +24,7 @@
 #include "color.h"
 #include "integrator.h"
 #include "debug.h"
-#include "bvh_node.h"
+
 #include "texturecache.h"
 #include "box.h"
 #include "sphere.h"

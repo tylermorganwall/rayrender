@@ -449,6 +449,268 @@ const bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
   return(true);
 }
 
+bool triangle::HitP(const ray& r, Float t_min, Float t_max, random_gen& rng) const {
+  SCOPED_CONTEXT("Hit");
+  SCOPED_TIMER_COUNTER("Triangle");
+
+  const point3f &p0 = mesh->p[v[0]];
+  const point3f &p1 = mesh->p[v[1]];
+  const point3f &p2 = mesh->p[v[2]];
+  
+  vec3f p0t = p0 - r.origin();
+  vec3f p1t = p1 - r.origin();
+  vec3f p2t = p2 - r.origin();
+
+  {
+    int kx = r.kx;
+    int ky = r.ky;
+    int kz = r.kz;
+
+    p0t = Permute(p0t, kx, ky, kz);
+    p1t = Permute(p1t, kx, ky, kz);
+    p2t = Permute(p2t, kx, ky, kz);
+  }
+  vec3f Svec = r.Svec;
+  const Float Sz = Svec.z();
+  vec3f Svec_z = vec3f(1,1,Sz);
+  const vec3f zero_z(1,1,0);
+
+  Svec *= zero_z;
+  p0t += Svec * p0t.z();
+  p1t += Svec * p1t.z();
+  p2t += Svec * p2t.z();
+
+  // Compute edge function coefficients _e0_, _e1_, and _e2_
+  Float e0 = DifferenceOfProducts(p1t.x(), p2t.y(), p1t.y(), p2t.x());
+  Float e1 = DifferenceOfProducts(p2t.x(), p0t.y(), p2t.y(), p0t.x());
+  Float e2 = DifferenceOfProducts(p0t.x(), p1t.y(), p0t.y(), p1t.x());
+
+  // Fall back to double precision test at triangle edges
+  #ifndef RAY_FLOAT_AS_DOUBLE
+  if (e0 == 0.f || e1 == 0.f || e2 == 0.f) [[unlikely]]	{
+    double p2txp1ty = (double)p2t.x() * (double)p1t.y();
+    double p2typ1tx = (double)p2t.y() * (double)p1t.x();
+    e0 = (float)(p2typ1tx - p2txp1ty);
+    double p0txp2ty = (double)p0t.x() * (double)p2t.y();
+    double p0typ2tx = (double)p0t.y() * (double)p2t.x();
+    e1 = (float)(p0typ2tx - p0txp2ty);
+    double p1txp0ty = (double)p1t.x() * (double)p0t.y();
+    double p1typ0tx = (double)p1t.y() * (double)p0t.x();
+    e2 = (float)(p1typ0tx - p1txp0ty);
+  }
+  #endif
+
+  Float det = e0 + e1 + e2;
+
+  // Check if all e0, e1, e2 have the same sign as det
+  if ((e0 * det < 0) || (e1 * det < 0) || (e2 * det < 0)) {
+      return false;
+  }
+
+  p0t *= Svec_z;
+  p1t *= Svec_z;
+  p2t *= Svec_z;
+
+  Float tScaled = e0 * p0t.z() + e1 * p1t.z() + e2 * p2t.z();
+  if (det < 0 && (tScaled >= 0 || tScaled < t_max * det)) {
+    return false;
+  } else if (det > 0 && (tScaled <= 0 || tScaled > t_max * det)) {
+    return false;
+  }
+
+  // Compute barycentric coordinates and $t$ value for triangle intersection
+  Float invDet = 1 / det;
+  Float t = tScaled * invDet;
+  {
+    Float maxZt = MaxComponent(Abs(vec3f(p0t.z(), p1t.z(), p2t.z())));
+    Float deltaZ = gamma(3) * maxZt;
+
+    // Compute $\delta_x$ and $\delta_y$ terms for triangle $t$ error bounds
+    Float maxXt = MaxComponent(Abs(vec3f(p0t.x(), p1t.x(), p2t.x())));
+    Float maxYt = MaxComponent(Abs(vec3f(p0t.y(), p1t.y(), p2t.y())));
+    Float deltaX = gamma(5) * (maxXt + maxZt);
+    Float deltaY = gamma(5) * (maxYt + maxZt);
+
+    // Compute $\delta_e$ term for triangle $t$ error bounds
+    Float deltaE = 2 * (gamma(2) * maxXt * maxYt + deltaY * maxXt + deltaX * maxYt);
+
+    // Compute $\delta_t$ term for triangle $t$ error bounds and check _t_
+    Float maxE = MaxComponent(Abs(vec3f(e0, e1, e2)));
+    Float deltaT = 3 *
+      (gamma(3) * maxE * maxZt + deltaE * maxZt + deltaZ * maxE) *
+      ffabs(invDet);
+    if (t <= deltaT) {
+      return false;
+    }
+  }
+
+  Float b0 = e0 * invDet;
+  Float b1 = e1 * invDet;
+  Float b2 = e2 * invDet;
+  point3f b0v(b0);
+  point3f b1v(b1);
+  point3f b2v(b2);
+
+  vec3f bVec(b0, b1, b2);
+
+  vec3f dpdu, dpdv;
+  point2f uv[3];
+  GetUVs(uv);
+
+  // Compute deltas for triangle partial derivatives
+  vec2f duv02 = uv[0] - uv[2], duv12 = uv[1] - uv[2];
+  vec3f dp02 = p0 - p2, dp12 = p1 - p2;
+
+  Float determinantUV = DifferenceOfProducts(duv02[0],duv12[1],duv02[1],duv12[0]);
+  bool degenerateUV = ffabs(determinantUV) < 1e-8;
+  if (!degenerateUV) {
+    Float invdet = 1 / determinantUV;
+    dpdu = (duv12[1] * dp02 - duv02[1] * dp12) * invdet;
+    dpdv = (-duv12[0] * dp02 + duv02[0] * dp12) * invdet;
+  }
+  if (degenerateUV || parallelVectors(dpdu, dpdv)) {
+    // Handle zero determinant for triangle partial derivative matrix
+    vec3f ng = cross(p2 - p0, p1 - p0);
+    if (ng.squared_length() == 0) {
+      // The triangle is actually degenerate; the intersection is
+      // bogus.
+      return false;
+    }
+  }
+  return(true);
+}
+
+bool triangle::HitP(const ray& r, Float t_min, Float t_max, Sampler* sampler) const {
+  SCOPED_CONTEXT("Hit");
+  SCOPED_TIMER_COUNTER("Triangle");
+
+  const point3f &p0 = mesh->p[v[0]];
+  const point3f &p1 = mesh->p[v[1]];
+  const point3f &p2 = mesh->p[v[2]];
+  
+  vec3f p0t = p0 - r.origin();
+  vec3f p1t = p1 - r.origin();
+  vec3f p2t = p2 - r.origin();
+
+  {
+    int kx = r.kx;
+    int ky = r.ky;
+    int kz = r.kz;
+
+    p0t = Permute(p0t, kx, ky, kz);
+    p1t = Permute(p1t, kx, ky, kz);
+    p2t = Permute(p2t, kx, ky, kz);
+  }
+  vec3f Svec = r.Svec;
+  const Float Sz = Svec.z();
+  vec3f Svec_z = vec3f(1,1,Sz);
+  const vec3f zero_z(1,1,0);
+
+  Svec *= zero_z;
+  p0t += Svec * p0t.z();
+  p1t += Svec * p1t.z();
+  p2t += Svec * p2t.z();
+
+  // Compute edge function coefficients _e0_, _e1_, and _e2_
+  Float e0 = DifferenceOfProducts(p1t.x(), p2t.y(), p1t.y(), p2t.x());
+  Float e1 = DifferenceOfProducts(p2t.x(), p0t.y(), p2t.y(), p0t.x());
+  Float e2 = DifferenceOfProducts(p0t.x(), p1t.y(), p0t.y(), p1t.x());
+
+  // Fall back to double precision test at triangle edges
+  #ifndef RAY_FLOAT_AS_DOUBLE
+  if (e0 == 0.f || e1 == 0.f || e2 == 0.f) [[unlikely]]	{
+    double p2txp1ty = (double)p2t.x() * (double)p1t.y();
+    double p2typ1tx = (double)p2t.y() * (double)p1t.x();
+    e0 = (float)(p2typ1tx - p2txp1ty);
+    double p0txp2ty = (double)p0t.x() * (double)p2t.y();
+    double p0typ2tx = (double)p0t.y() * (double)p2t.x();
+    e1 = (float)(p0typ2tx - p0txp2ty);
+    double p1txp0ty = (double)p1t.x() * (double)p0t.y();
+    double p1typ0tx = (double)p1t.y() * (double)p0t.x();
+    e2 = (float)(p1typ0tx - p1txp0ty);
+  }
+  #endif
+
+  Float det = e0 + e1 + e2;
+
+  // Check if all e0, e1, e2 have the same sign as det
+  if ((e0 * det < 0) || (e1 * det < 0) || (e2 * det < 0)) {
+      return false;
+  }
+
+  p0t *= Svec_z;
+  p1t *= Svec_z;
+  p2t *= Svec_z;
+
+  Float tScaled = e0 * p0t.z() + e1 * p1t.z() + e2 * p2t.z();
+  if (det < 0 && (tScaled >= 0 || tScaled < t_max * det)) {
+    return false;
+  } else if (det > 0 && (tScaled <= 0 || tScaled > t_max * det)) {
+    return false;
+  }
+
+  // Compute barycentric coordinates and $t$ value for triangle intersection
+  Float invDet = 1 / det;
+  Float t = tScaled * invDet;
+  {
+    Float maxZt = MaxComponent(Abs(vec3f(p0t.z(), p1t.z(), p2t.z())));
+    Float deltaZ = gamma(3) * maxZt;
+
+    // Compute $\delta_x$ and $\delta_y$ terms for triangle $t$ error bounds
+    Float maxXt = MaxComponent(Abs(vec3f(p0t.x(), p1t.x(), p2t.x())));
+    Float maxYt = MaxComponent(Abs(vec3f(p0t.y(), p1t.y(), p2t.y())));
+    Float deltaX = gamma(5) * (maxXt + maxZt);
+    Float deltaY = gamma(5) * (maxYt + maxZt);
+
+    // Compute $\delta_e$ term for triangle $t$ error bounds
+    Float deltaE = 2 * (gamma(2) * maxXt * maxYt + deltaY * maxXt + deltaX * maxYt);
+
+    // Compute $\delta_t$ term for triangle $t$ error bounds and check _t_
+    Float maxE = MaxComponent(Abs(vec3f(e0, e1, e2)));
+    Float deltaT = 3 *
+      (gamma(3) * maxE * maxZt + deltaE * maxZt + deltaZ * maxE) *
+      ffabs(invDet);
+    if (t <= deltaT) {
+      return false;
+    }
+  }
+
+  Float b0 = e0 * invDet;
+  Float b1 = e1 * invDet;
+  Float b2 = e2 * invDet;
+  point3f b0v(b0);
+  point3f b1v(b1);
+  point3f b2v(b2);
+
+  vec3f bVec(b0, b1, b2);
+
+  vec3f dpdu, dpdv;
+  point2f uv[3];
+  GetUVs(uv);
+
+  // Compute deltas for triangle partial derivatives
+  vec2f duv02 = uv[0] - uv[2], duv12 = uv[1] - uv[2];
+  vec3f dp02 = p0 - p2, dp12 = p1 - p2;
+
+  Float determinantUV = DifferenceOfProducts(duv02[0],duv12[1],duv02[1],duv12[0]);
+  bool degenerateUV = ffabs(determinantUV) < 1e-8;
+  if (!degenerateUV) {
+    Float invdet = 1 / determinantUV;
+    dpdu = (duv12[1] * dp02 - duv02[1] * dp12) * invdet;
+    dpdv = (-duv12[0] * dp02 + duv02[0] * dp12) * invdet;
+  }
+  if (degenerateUV || parallelVectors(dpdu, dpdv)) {
+    // Handle zero determinant for triangle partial derivative matrix
+    vec3f ng = cross(p2 - p0, p1 - p0);
+    if (ng.squared_length() == 0) {
+      // The triangle is actually degenerate; the intersection is
+      // bogus.
+      return false;
+    }
+  }
+  return(true);
+}
+
 
 bool triangle::bounding_box(Float t0, Float t1, aabb& box) const {
   const point3f &a = mesh->p[v[0]];
@@ -472,16 +734,14 @@ bool triangle::bounding_box(Float t0, Float t1, aabb& box) const {
 }
 
 Float triangle::pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Float time) { 
-  hit_record rec;
-  if (this->hit(ray(o, v), 0.001, FLT_MAX, rec, rng)) {
+  if (this->HitP(ray(o, v), 0.001, FLT_MAX, rng)) {
     return(1 / SolidAngle(o));
   }
   return 0; 
 }
 
 Float triangle::pdf_value(const point3f& o, const vec3f& v, Sampler* sampler, Float time) { 
-  hit_record rec;
-  if (this->hit(ray(o, v), 0.001, FLT_MAX, rec, sampler)) {
+  if (this->HitP(ray(o, v), 0.001, FLT_MAX, sampler)) {
     return(1 / SolidAngle(o));
   }
   return 0; 

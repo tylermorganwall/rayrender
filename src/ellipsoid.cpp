@@ -261,10 +261,56 @@ const bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& re
   return(false);
 }
 
+bool ellipsoid::HitP(const ray& r, Float t_min, Float t_max, random_gen& rng) const {
+  SCOPED_CONTEXT("Hit");
+  SCOPED_TIMER_COUNTER("Ellipsoid");
+  
+  ray r2 = (*WorldToObject)(r);
+  ray scaled_ray(r2.origin() * inv_axes + -center, r2.direction() * inv_axes);
+  Float a = dot(scaled_ray.direction(), scaled_ray.direction());
+  Float b = 2 * dot(scaled_ray.origin(), scaled_ray.direction()); 
+  Float c = dot(scaled_ray.origin(),scaled_ray.origin()) - 1;
+  Float temp1, temp2;
+  if (!quadratic(a, b, c, &temp1, &temp2)) {
+    return(false);
+  }
+  if(temp1 < t_max && temp1 > t_min) {
+    return(true);
+  }
+  if(temp2 < t_max && temp2 > t_min) {
+    return(true);
+  }
+  return(false);
+}
+
+
+bool ellipsoid::HitP(const ray& r, Float t_min, Float t_max, Sampler* sampler) const {
+  SCOPED_CONTEXT("Hit");
+  SCOPED_TIMER_COUNTER("Ellipsoid");
+  
+  ray r2 = (*WorldToObject)(r);
+  
+  ray scaled_ray(r2.origin() * inv_axes + -center, r2.direction() * inv_axes);
+  Float a = dot(scaled_ray.direction(), scaled_ray.direction());
+  Float b = 2 * dot(scaled_ray.origin(), scaled_ray.direction()); 
+  Float c = dot(scaled_ray.origin(),scaled_ray.origin()) - 1;
+  Float temp1, temp2;
+  if (!quadratic(a, b, c, &temp1, &temp2)) {
+    return(false);
+  }
+
+  if(temp1 < t_max && temp1 > t_min) {
+    return(true);
+  }
+  if(temp2 < t_max && temp2 > t_min) {
+    return(true);
+  }
+  return(false);
+}
+
 //Not great
 Float ellipsoid::pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Float time) {
-  hit_record rec;
-  if(this->hit(ray(o,v), 0.001, FLT_MAX, rec, rng)) {
+  if(this->HitP(ray(o,v), 0.001, FLT_MAX, rng)) {
     point3f o2 = (*WorldToObject)(o);
     Float cos_theta_max = sqrt(1 - 1/(center - o2).squared_length());
     Float solid_angle = 2 * M_PI * (1-cos_theta_max) * largest_proj_axis ;
@@ -277,8 +323,7 @@ Float ellipsoid::pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Fl
 
 //Not great
 Float ellipsoid::pdf_value(const point3f& o, const vec3f& v, Sampler* sampler, Float time) {
-  hit_record rec;
-  if(this->hit(ray(o,v), 0.001, FLT_MAX, rec, sampler)) {
+  if(this->HitP(ray(o,v), 0.001, FLT_MAX, sampler)) {
     point3f o2 = (*WorldToObject)(o);
     Float cos_theta_max = sqrt(1 - 1/(center - o2).squared_length());
     Float solid_angle = 2 * M_PI * (1-cos_theta_max) * largest_proj_axis ;
