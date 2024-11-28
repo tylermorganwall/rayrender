@@ -12,24 +12,11 @@ inline point3f BlossomBezier(const point3f p[4], Float u0, Float u1, Float u2) {
 
 // Adjusted function to accept precomputed a[3]
 inline point3f BlossomBezierPrecomputed(const point3f a[3], Float u1, Float u2) {
-  point3f b0, b1;
-    if (u1 == 1.0f) {
-        b0 = a[1];
-        b1 = a[2];
-    } else {
-        b0 = lerp(u1, a[0], a[1]);
-        b1 = lerp(u1, a[1], a[2]);
-    }
-    if (u2 == 1.0f) {
-        return b1;
-    } else {
-        return lerp(u2, b0, b1);
-    }
-    // point3f b[2] = {
-    //     lerp(u1, a[0], a[1]),
-    //     lerp(u1, a[1], a[2])
-    // };
-    // return lerp(u2, b[0], b[1]);
+    point3f b[2] = {
+        lerp(u1, a[0], a[1]),
+        lerp(u1, a[1], a[2])
+    };
+    return lerp(u2, b[0], b[1]);
 }
 
 
