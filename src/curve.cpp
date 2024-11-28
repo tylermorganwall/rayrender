@@ -1,13 +1,37 @@
 #include "curve.h"
 #include "raylog.h"
 
-static point3f BlossomBezier(const point3f p[4], Float u0, Float u1, Float u2) {
-  point3f a[3] = { lerp(u0, p[0], p[1]),
-                lerp(u0, p[1], p[2]),
-                lerp(u0, p[2], p[3]) };
-  point3f b[2] = { lerp(u1, a[0], a[1]), lerp(u1, a[1], a[2]) };
+inline point3f BlossomBezier(const point3f p[4], Float u0, Float u1, Float u2) {
+  point3f a[3] = {lerp(u0, p[0], p[1]),
+                  lerp(u0, p[1], p[2]),
+                  lerp(u0, p[2], p[3]) };
+  point3f b[2] = {lerp(u1, a[0], a[1]), 
+                  lerp(u1, a[1], a[2]) };
   return(lerp(u2, b[0], b[1]));
 }
+
+// Adjusted function to accept precomputed a[3]
+inline point3f BlossomBezierPrecomputed(const point3f a[3], Float u1, Float u2) {
+  point3f b0, b1;
+    if (u1 == 1.0f) {
+        b0 = a[1];
+        b1 = a[2];
+    } else {
+        b0 = lerp(u1, a[0], a[1]);
+        b1 = lerp(u1, a[1], a[2]);
+    }
+    if (u2 == 1.0f) {
+        return b1;
+    } else {
+        return lerp(u2, b0, b1);
+    }
+    // point3f b[2] = {
+    //     lerp(u1, a[0], a[1]),
+    //     lerp(u1, a[1], a[2])
+    // };
+    // return lerp(u2, b[0], b[1]);
+}
+
 
 
 static point3f EvalBezier(const point3f cp[4], Float u, vec3f *deriv = nullptr) {
@@ -61,10 +85,24 @@ CurveCommon::CurveCommon(const point3f c[4], Float width0, Float width1,
 bool curve::bounding_box(Float t0, Float t1, aabb& box) const {
   // Compute object-space control points for curve segment, cpObj
   point3f cpObj[4];
-  cpObj[0] = BlossomBezier(common->cpObj, uMin, uMin, uMin);
-  cpObj[1] = BlossomBezier(common->cpObj, uMin, uMin, uMax);
-  cpObj[2] = BlossomBezier(common->cpObj, uMin, uMax, uMax);
-  cpObj[3] = BlossomBezier(common->cpObj, uMax, uMax, uMax);
+  // Precompute aMin[3] for u0 = uMin
+  point3f aMin[3] = {
+      lerp(uMin, common->cpObj[0], common->cpObj[1]),
+      lerp(uMin, common->cpObj[1], common->cpObj[2]),
+      lerp(uMin, common->cpObj[2], common->cpObj[3])
+  };
+
+  // Precompute aMax[3] for u0 = uMax
+  point3f aMax[3] = {
+      lerp(uMax, common->cpObj[0], common->cpObj[1]),
+      lerp(uMax, common->cpObj[1], common->cpObj[2]),
+      lerp(uMax, common->cpObj[2], common->cpObj[3])
+  };
+  
+  cpObj[0] = BlossomBezierPrecomputed(aMin, uMin, uMin);
+  cpObj[1] = BlossomBezierPrecomputed(aMin, uMin, uMax);
+  cpObj[2] = BlossomBezierPrecomputed(aMin, uMax, uMax);
+  cpObj[3] = BlossomBezierPrecomputed(aMax, uMax, uMax);
   box = surrounding_box(aabb(cpObj[0], cpObj[1]), aabb(cpObj[2], cpObj[3]));
   Float width[2] = {lerp(uMin, common->width[0], common->width[1]),
                     lerp(uMax, common->width[0], common->width[1])};
@@ -79,11 +117,24 @@ const bool curve::hit(const ray& r, Float tmin, Float tmax, hit_record& rec, ran
   ray r2 = (*WorldToObject)(r); 
   
   // Compute object-space control points for curve segment, cpObj
-  point3f cpObj[4];
-  cpObj[0] = BlossomBezier(common->cpObj, uMin, uMin, uMin);
-  cpObj[1] = BlossomBezier(common->cpObj, uMin, uMin, uMax);
-  cpObj[2] = BlossomBezier(common->cpObj, uMin, uMax, uMax);
-  cpObj[3] = BlossomBezier(common->cpObj, uMax, uMax, uMax);
+  alignas(16) point3f cpObj[4];
+  alignas(16) point3f aMin[3] = {
+      lerp(uMin, common->cpObj[0], common->cpObj[1]),
+      lerp(uMin, common->cpObj[1], common->cpObj[2]),
+      lerp(uMin, common->cpObj[2], common->cpObj[3])
+  };
+
+  // Precompute aMax[3] for u0 = uMax
+  alignas(16) point3f aMax[3] = {
+      lerp(uMax, common->cpObj[0], common->cpObj[1]),
+      lerp(uMax, common->cpObj[1], common->cpObj[2]),
+      lerp(uMax, common->cpObj[2], common->cpObj[3])
+  };
+
+  cpObj[0] = BlossomBezierPrecomputed(aMin, uMin, uMin);
+  cpObj[1] = BlossomBezierPrecomputed(aMin, uMin, uMax);
+  cpObj[2] = BlossomBezierPrecomputed(aMin, uMax, uMax);
+  cpObj[3] = BlossomBezierPrecomputed(aMax, uMax, uMax);
   
   // Project curve control points to plane perpendicular to ray
   vec3f unit_dir = unit_vector(r2.direction()); 
