@@ -14,6 +14,7 @@
 #include "normal.h"
 #include <limits>
 #include <array>
+#include <limits>
 
 
 static constexpr Float mpi_over_180 = M_PI/180;
