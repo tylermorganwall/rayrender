@@ -23,13 +23,13 @@ inline bool Refract(const vec3f &wi, const normal3f &n, Float eta, vec3f *wt) {
 }
 
 
-point3f lambertian::f(const ray& r_in, const hit_record& rec, const ray& scattered) const {
+point3f lambertian::f(const ray& r_in, const hit_record& rec, const vec3f& scattered) const {
   SCOPED_CONTEXT("Material");
   SCOPED_TIMER_COUNTER("Lambertian F");
   
-  //unit_vector(scattered.direction()) == wo
+  //unit_vector(scattered) == wo
   //r_in.direction() == wi
-  vec3f wi = unit_vector(scattered.direction());
+  vec3f wi = unit_vector(scattered);
   normal3f n = rec.normal;
   Float cosine = dot(n, wi);
   //Shadow terminator if bump map
@@ -429,7 +429,7 @@ bool isotropic::scatter(const ray& r_in, const hit_record& rec, scatter_record& 
   return(true);
 }
 
-point3f isotropic::f(const ray& r_in, const hit_record& rec, const ray& scattered) const {
+point3f isotropic::f(const ray& r_in, const hit_record& rec, const vec3f& scattered) const {
   SCOPED_CONTEXT("Material");
   SCOPED_TIMER_COUNTER("Isotropic F");
   
@@ -465,7 +465,7 @@ bool orennayar::scatter(const ray& r_in, const hit_record& hrec, scatter_record&
   return(true);
 }
 
-point3f orennayar::f(const ray& r_in, const hit_record& rec, const ray& scattered) const {
+point3f orennayar::f(const ray& r_in, const hit_record& rec, const vec3f& scattered) const {
   SCOPED_CONTEXT("Material");
   SCOPED_TIMER_COUNTER("Oren-Nayar F");
   onb uvw;
@@ -475,7 +475,7 @@ point3f orennayar::f(const ray& r_in, const hit_record& rec, const ray& scattere
     uvw.build_from_w_normalized(rec.bump_normal);
   }
   vec3f wi = -unit_vector(uvw.world_to_local(r_in.direction()));
-  vec3f wo = unit_vector(uvw.world_to_local(scattered.direction()));
+  vec3f wo = unit_vector(uvw.world_to_local(scattered));
   
   Float cosine = wo.z();
   
@@ -546,7 +546,7 @@ bool MicrofacetReflection::scatter(const ray& r_in, const hit_record& hrec, scat
   return(true);
 }
 
-point3f MicrofacetReflection::f(const ray& r_in, const hit_record& rec, const ray& scattered) const {
+point3f MicrofacetReflection::f(const ray& r_in, const hit_record& rec, const vec3f& scattered) const {
   SCOPED_CONTEXT("Material");
   SCOPED_TIMER_COUNTER("MicrofacetReflection F");
   
@@ -557,7 +557,7 @@ point3f MicrofacetReflection::f(const ray& r_in, const hit_record& rec, const ra
     uvw.build_from_w_normalized(rec.bump_normal);
   }
   vec3f wi = -unit_vector(uvw.world_to_local(r_in.direction()));
-  vec3f wo = unit_vector(uvw.world_to_local(scattered.direction()));
+  vec3f wo = unit_vector(uvw.world_to_local(scattered));
   
   Float cosThetaO = AbsCosTheta(wo);
   Float cosThetaI = AbsCosTheta(wi);
@@ -617,7 +617,7 @@ bool MicrofacetTransmission::scatter(const ray& r_in, const hit_record& hrec, sc
   return(true);
 }
 
-point3f MicrofacetTransmission::f(const ray& r_in, const hit_record& rec, const ray& scattered) const {
+point3f MicrofacetTransmission::f(const ray& r_in, const hit_record& rec, const vec3f& scattered) const {
   SCOPED_CONTEXT("Material");
   SCOPED_TIMER_COUNTER("MicrofacetTransmission F");
   
@@ -629,7 +629,7 @@ point3f MicrofacetTransmission::f(const ray& r_in, const hit_record& rec, const 
   }
   
   vec3f wi = -unit_vector(uvw.world_to_local(r_in.direction()));
-  vec3f wo = unit_vector(uvw.world_to_local(scattered.direction()));
+  vec3f wo = unit_vector(uvw.world_to_local(scattered));
   bool entering = CosTheta(wi) > 0;
   Float cosThetaO = CosTheta(wo);
   Float cosThetaI = CosTheta(wi);
@@ -708,7 +708,7 @@ bool glossy::scatter(const ray& r_in, const hit_record& hrec, scatter_record& sr
   return(true);
 }
 
-point3f glossy::f(const ray& r_in, const hit_record& rec, const ray& scattered) const {
+point3f glossy::f(const ray& r_in, const hit_record& rec, const vec3f& scattered) const {
   SCOPED_CONTEXT("Material");
   SCOPED_TIMER_COUNTER("Glossy F");
   
@@ -719,7 +719,7 @@ point3f glossy::f(const ray& r_in, const hit_record& rec, const ray& scattered) 
     uvw.build_from_w_normalized(rec.bump_normal);
   }
   vec3f wi = -unit_vector(uvw.world_to_local(r_in.direction()));
-  vec3f wo = unit_vector(uvw.world_to_local(scattered.direction()));
+  vec3f wo = unit_vector(uvw.world_to_local(scattered));
   
   auto pow5 = [](Float v) { return (v * v) * (v * v) * v; };
   point3f diffuse = static_cast<Float>(28.0 / (23.0 * M_PI)) * Rd * albedo->value(rec.u, rec.v,rec.p) *
@@ -938,14 +938,14 @@ bool hair::scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec
 }
 
 
-point3f hair::f(const ray& r_in, const hit_record& rec, const ray& scattered) const {
+point3f hair::f(const ray& r_in, const hit_record& rec, const vec3f& scattered) const {
   SCOPED_CONTEXT("Material");
   SCOPED_TIMER_COUNTER("Hair F");
   
   onb uvw(rec.dpdu, rec.dpdv, rec.normal);
   vec3f wo = -unit_vector(uvw.world_to_local(r_in.direction()));
   
-  vec3f wi = unit_vector(uvw.world_to_local(scattered.direction()));
+  vec3f wi = unit_vector(uvw.world_to_local(scattered));
   
   Float h = -1 + 2 * rec.v;
   Float gammaO = SafeASin(h);

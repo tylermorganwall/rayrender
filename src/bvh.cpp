@@ -87,7 +87,7 @@ BVHAggregate::BVHAggregate(std::vector<std::shared_ptr<hitable> > prims,
         std::shared_ptr<Transform> ObjectToWorld, 
         std::shared_ptr<Transform> WorldToObject, 
         bool reverseOrientation) : 
-        hitable(ObjectToWorld, WorldToObject, reverseOrientation), 
+        hitable(ObjectToWorld, WorldToObject, nullptr, reverseOrientation), 
         maxPrimsInNode(std::min(255, maxPrimsInNode)),
         primitives(prims)
         { 
@@ -744,10 +744,16 @@ bool BVHAggregate::HitP(const ray& r, Float t_min, Float t_max, Sampler* sampler
     if (!nodes4) {
         return false;
     }
-    StaticPriorityQueue<64> nodesToVisit;
+    StaticPriorityQueue<TOTAL_NODES_STATIC> nodesToVisit;
+    bool large_bvh = false;
+    std::priority_queue<BVHNodeEntry> nodesToVisitLarge;
+
     nodesToVisit.push({0, -INFINITY});
     
     while (!nodesToVisit.empty()) {
+        if(nodesToVisit.size() > triggerLargeBVH) {
+            large_bvh = true;
+        }
         // Pop the node with the smallest tEnter
         BVHNodeEntry entry = nodesToVisit.top();
         nodesToVisit.pop();
@@ -755,6 +761,8 @@ bool BVHAggregate::HitP(const ray& r, Float t_min, Float t_max, Sampler* sampler
         const LinearBVHNode4* node = &nodes4[currentNodeIndex];
 
         if (node->nPrimitives > 0) {
+            // __builtin_prefetch(&primitives[node->primitivesOffset]);
+
             // Leaf node: test ray against primitives
             for (int i = 0; i < node->nPrimitives; ++i) {
                 bool hitPrimitive = primitives[node->primitivesOffset + i]->HitP(r, t_min, t_max, sampler);
@@ -772,20 +780,65 @@ bool BVHAggregate::HitP(const ray& r, Float t_min, Float t_max, Sampler* sampler
             
             rayBBoxIntersect4(r, bbox4, t_min, t_max, hits, tEnters);//, tExits);
 
-            const IVec4 valid_hit = simd_and(hits, simd_not_equals_minus_one(node->childOffsets));
-            int hitmask = simd_extract_hitmask(valid_hit);
-
             float tEntersArray[4];
             simd_extract_fvec4(tEnters, tEntersArray);
-
+            
+            const IVec4 valid_hit = simd_and(hits, simd_not_equals_minus_one(node->childOffsets));
+            // int hitmask = simd_extract_hitmask(valid_hit);
             for (int i = 0; i < 4; ++i) {
-                const bool valid = (hitmask >> i) & 1;
-                if (valid) {
+                if (valid_hit[i]) {
                     nodesToVisit.push({node->childOffsets[i], tEntersArray[i]});
                 }
             }
         }
     }
+    //If we exceed the static priority size, copy all elements to a normal priority queue and continue
+    if(large_bvh) {
+         while (!nodesToVisit.empty()) {
+            nodesToVisitLarge.push(nodesToVisit.top());
+            nodesToVisit.pop();
+         }
+        while (!nodesToVisitLarge.empty()) {
+            // Pop the node with the smallest tEnter
+            BVHNodeEntry entry = nodesToVisitLarge.top();
+            nodesToVisitLarge.pop();
+            int currentNodeIndex = entry.nodeIndex;
+            const LinearBVHNode4* node = &nodes4[currentNodeIndex];
+
+            if (node->nPrimitives > 0) {
+                // Leaf node: test ray against primitives
+                for (int i = 0; i < node->nPrimitives; ++i) {
+                    bool hitPrimitive = primitives[node->primitivesOffset + i]->HitP(r, t_min, t_max, sampler);
+                    if (hitPrimitive) {
+                        return(true);
+                    }
+                }
+            } else {
+                // Internal node
+                const BBox4& bbox4 = node->bbox4;
+                // Perform SIMD ray-box intersection
+
+                IVec4 hits;
+                FVec4 tEnters;
+                
+                rayBBoxIntersect4(r, bbox4, t_min, t_max, hits, tEnters);//, tExits);
+
+                const IVec4 valid_hit = simd_and(hits, simd_not_equals_minus_one(node->childOffsets));
+                int hitmask = simd_extract_hitmask(valid_hit);
+
+                float tEntersArray[4];
+                simd_extract_fvec4(tEnters, tEntersArray);
+                
+                for (int i = 0; i < 4; ++i) {
+                    const bool valid = (hitmask >> i) & 1;
+                    if (valid) {
+                        nodesToVisitLarge.push({node->childOffsets[i], tEntersArray[i]});
+                    }
+                }
+            }
+        }
+    }
+
     return false;
 }
 #endif

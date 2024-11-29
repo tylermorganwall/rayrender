@@ -669,8 +669,8 @@ class csg: public hitable {
     csg() {}
     csg(std::shared_ptr<material> mat, std::shared_ptr<ImplicitShape> shapes,
         std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation) : 
-          hitable(ObjectToWorld, WorldToObject, reverseOrientation), 
-          mat_ptr(mat), shapes(shapes) {
+          hitable(ObjectToWorld, WorldToObject, mat, reverseOrientation), 
+          shapes(shapes) {
       aabb box;
       bool temp = shapes->bbox(0,1,box);
       if(temp) {
@@ -706,7 +706,6 @@ class csg: public hitable {
     size_t GetSize()  {
       return(sizeof(*this) + shapes->GetSize());
     }
-    std::shared_ptr<material> mat_ptr;
     std::shared_ptr<ImplicitShape> shapes;
     Float max_dist;
     vec3f last_intersection;

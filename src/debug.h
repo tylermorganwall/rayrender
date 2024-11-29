@@ -485,7 +485,7 @@ inline Float calculate_bounces(const ray& r, hitable *world, hitable_list *hlist
         r2 = ray(OffsetRayOrigin(hrec.p, hrec.pError, hrec.normal, dir), dir, r2.pri_stack, r2.time());
         
         pdf_val = p.value(dir, rng, r2.time()); //generates a pdf value based the intersection point and the mixture pdf
-        throughput *= hrec.mat_ptr->f(r1, hrec, r2) / pdf_val;
+        throughput *= hrec.mat_ptr->f(r1, hrec, r2.direction()) / pdf_val;
       } else {
         return((Float)i);
       }
@@ -527,7 +527,7 @@ inline point3f calculate_ao(const ray& r, hitable *world, hitable_list *hlist,
       if(keep_colors && hrec.mat_ptr->scatter(r2, hrec, srec, rng)) { 
         if(!srec.is_specular) {
           Float pdf_val = p.value(dir, rng, r2.time());
-          final_color = hrec.mat_ptr->f(r1, hrec, r2) / pdf_val;
+          final_color = hrec.mat_ptr->f(r1, hrec, r2.direction()) / pdf_val;
         }
       }
     } else {

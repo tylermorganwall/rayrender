@@ -11,9 +11,9 @@ public:
   disk(vec3f cen, Float r, Float i_r, std::shared_ptr<material> mat, std::shared_ptr<alpha_texture> alpha_mask, 
        std::shared_ptr<bump_texture> bump_tex,
        std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation) : 
-      hitable(ObjectToWorld, WorldToObject, reverseOrientation), 
+      hitable(ObjectToWorld, WorldToObject, mat, reverseOrientation), 
       center(cen), radius(r), 
-       inner_radius(i_r), mat_ptr(mat), alpha_mask(alpha_mask), bump_tex(bump_tex) {};
+       inner_radius(i_r), alpha_mask(alpha_mask), bump_tex(bump_tex) {};
   ~disk() {}
   virtual const bool hit(const ray& r, Float tmin, Float tmax, hit_record& rec, random_gen& rng) const;
   virtual const bool hit(const ray& r, Float tmin, Float tmax, hit_record& rec, Sampler* sampler) const;
@@ -35,7 +35,6 @@ public:
   vec3f center;
   Float radius;
   Float inner_radius;
-  std::shared_ptr<material> mat_ptr;
   std::shared_ptr<alpha_texture> alpha_mask;
   std::shared_ptr<bump_texture> bump_tex;
 };

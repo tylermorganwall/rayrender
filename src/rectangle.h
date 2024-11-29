@@ -12,8 +12,8 @@ public:
           std::shared_ptr<alpha_texture> alpha_mask, 
           std::shared_ptr<bump_texture> bump_tex, 
             std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation) : 
-    hitable(ObjectToWorld, WorldToObject, reverseOrientation), 
-    x0(_x0), x1(_x1), y0(_y0), y1(_y1), k(_k), mp(mat), alpha_mask(alpha_mask),
+    hitable(ObjectToWorld, WorldToObject, mat, reverseOrientation), 
+    x0(_x0), x1(_x1), y0(_y0), y1(_y1), k(_k), alpha_mask(alpha_mask),
     bump_tex(bump_tex) {};
   ~xy_rect() {}
   virtual const bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const;
@@ -35,7 +35,6 @@ public:
     return(sizeof(*this));
   }
   Float x0, x1, y0, y1, k;
-  std::shared_ptr<material> mp;
   std::shared_ptr<alpha_texture> alpha_mask;
   std::shared_ptr<bump_texture> bump_tex;
 };
@@ -48,8 +47,8 @@ public:
           std::shared_ptr<alpha_texture> alpha_mask, 
           std::shared_ptr<bump_texture> bump_tex, 
           std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation) : 
-    hitable(ObjectToWorld, WorldToObject, reverseOrientation), 
-  x0(_x0), x1(_x1), z0(_z0), z1(_z1), k(_k), mp(mat), alpha_mask(alpha_mask), 
+    hitable(ObjectToWorld, WorldToObject, mat, reverseOrientation), 
+  x0(_x0), x1(_x1), z0(_z0), z1(_z1), k(_k), alpha_mask(alpha_mask), 
   bump_tex(bump_tex) {};
   ~xz_rect() {}
   virtual const bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const;
@@ -69,7 +68,6 @@ public:
     return(sizeof(*this));
   }
   Float x0, x1, z0, z1, k;
-  std::shared_ptr<material> mp;
   std::shared_ptr<alpha_texture> alpha_mask;
   std::shared_ptr<bump_texture> bump_tex;
 };
@@ -81,8 +79,8 @@ public:
           std::shared_ptr<material> mat, 
           std::shared_ptr<alpha_texture> alpha_mask, std::shared_ptr<bump_texture> bump_tex, 
           std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation) : 
-    hitable(ObjectToWorld, WorldToObject, reverseOrientation), 
-  y0(_y0), y1(_y1), z0(_z0), z1(_z1), k(_k), mp(mat), alpha_mask(alpha_mask), 
+    hitable(ObjectToWorld, WorldToObject, mat, reverseOrientation), 
+  y0(_y0), y1(_y1), z0(_z0), z1(_z1), k(_k), alpha_mask(alpha_mask), 
   bump_tex(bump_tex) {};
   ~yz_rect() {}
   virtual const bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const;
@@ -102,7 +100,6 @@ public:
     return(sizeof(*this));
   }
   Float y0, y1, z0, z1, k;
-  std::shared_ptr<material> mp;
   std::shared_ptr<alpha_texture> alpha_mask;
   std::shared_ptr<bump_texture> bump_tex;
 };

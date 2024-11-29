@@ -16,9 +16,8 @@ class sphere: public hitable {
     sphere(Float r, std::shared_ptr<material> mat, 
            std::shared_ptr<alpha_texture> alpha_mask, std::shared_ptr<bump_texture> bump_tex,
            std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation) : 
-            hitable(ObjectToWorld, WorldToObject, reverseOrientation), 
-            radius(r), 
-            mat_ptr(mat), alpha_mask(alpha_mask), bump_tex(bump_tex) {};
+            hitable(ObjectToWorld, WorldToObject, mat, reverseOrientation), 
+            radius(r), alpha_mask(alpha_mask), bump_tex(bump_tex) {};
     virtual const bool hit(const ray& r, Float tmin, Float tmax, hit_record& rec, random_gen& rng) const;
     virtual const bool hit(const ray& r, Float tmin, Float tmax, hit_record& rec, Sampler* sampler) const;
     virtual bool HitP(const ray &r, Float t_min, Float t_max, random_gen& rng) const;
@@ -35,7 +34,6 @@ class sphere: public hitable {
     }
     size_t GetSize();
     Float radius;
-    std::shared_ptr<material> mat_ptr;
     std::shared_ptr<alpha_texture> alpha_mask;
     std::shared_ptr<bump_texture> bump_tex;
 };

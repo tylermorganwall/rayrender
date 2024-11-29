@@ -1,20 +1,21 @@
 #include "hitable.h"
 #include "raylog.h"
+#include <cmath>
 
 //Translate implementation
 
 void get_sphere_uv(const vec3f& p, Float& u, Float& v) {
   Float phi = atan2(p.z(),p.x());
   Float theta = asin(p.y());
-  u = 1 - (phi + M_PI) / (2*M_PI);
-  v = (theta + M_PI/2) / M_PI;
+  u = 1 - (phi * M_1_PI + 1) * 0.5;
+  v = (theta * M_1_PI + 0.5);
 }
 
 void get_sphere_uv(const normal3f& p, Float& u, Float& v) {
   Float phi = atan2(p.z(),p.x());
   Float theta = asin(p.y());
-  u = 1 - (phi + M_PI) / (2*M_PI);
-  v = (theta + M_PI/2) / M_PI;
+  u = 1 - (phi * M_1_PI + 1) * 0.5;
+  v = (theta * M_1_PI + 0.5);
 }
 
 Float AnimatedHitable::pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Float time) {

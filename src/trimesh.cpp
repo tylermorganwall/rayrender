@@ -19,7 +19,7 @@ trimesh::trimesh(std::string inputfile, std::string basedir, Float scale, Float 
                  hitable_list& imp_sample_objects, 
                  Float shutteropen, Float shutterclose, int bvh_type, random_gen rng, bool verbose,
                  std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation) : 
-  hitable(ObjectToWorld, WorldToObject, reverseOrientation) {
+  hitable(ObjectToWorld, WorldToObject, default_material, reverseOrientation) {
   mesh = std::unique_ptr<TriangleMesh>(new TriangleMesh(inputfile, basedir, default_material, 
                                                         alpha_default, bump_default,
                                                         load_materials, load_textures, load_vertex_colors, load_normals, verbose,

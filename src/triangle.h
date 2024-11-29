@@ -11,7 +11,7 @@ public:
   triangle() : face_number(0) {}
   triangle(TriangleMesh* mesh, const int *v, const int *n, const int *t, const int face_number,
            std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation) : 
-    hitable(ObjectToWorld, WorldToObject, reverseOrientation), mesh(mesh), v(v), n(n), t(t), face_number(face_number) {
+    hitable(ObjectToWorld, WorldToObject, nullptr, reverseOrientation), mesh(mesh), v(v), n(n), t(t), face_number(face_number) {
     
   }
   virtual const bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const;

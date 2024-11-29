@@ -120,7 +120,7 @@ plymesh::plymesh(std::string inputfile, std::string basedir, std::shared_ptr<mat
                  bool verbose,
                  Float shutteropen, Float shutterclose, int bvh_type, random_gen rng,
                  std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation) :
-  hitable(ObjectToWorld, WorldToObject, reverseOrientation) {
+  hitable(ObjectToWorld, WorldToObject, mat, reverseOrientation) {
   TriMesh* tri = parse_file_with_miniply(inputfile.c_str(), false);
 
   if(tri == nullptr) {

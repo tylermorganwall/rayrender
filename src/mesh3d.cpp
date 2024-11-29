@@ -16,7 +16,7 @@ mesh3d::mesh3d(Rcpp::List mesh_info, std::shared_ptr<material> mat,
                bool verbose, 
                Float shutteropen, Float shutterclose, int bvh_type, random_gen rng,
                std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation) :
-  hitable(ObjectToWorld, WorldToObject, reverseOrientation) {
+  hitable(ObjectToWorld, WorldToObject, mat, reverseOrientation) {
   Rcpp::NumericMatrix vertices = Rcpp::as<Rcpp::NumericMatrix>(mesh_info["vertices"]);
   Rcpp::IntegerMatrix indices = Rcpp::as<Rcpp::IntegerMatrix>(mesh_info["indices"]);
   Rcpp::NumericMatrix norms = Rcpp::as<Rcpp::NumericMatrix>(mesh_info["normals"]);

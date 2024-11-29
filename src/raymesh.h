@@ -48,7 +48,6 @@ public:
   hitable_list triangles;
   
   //Hitable extras
-  std::shared_ptr<material> mat_ptr;
   std::shared_ptr<BVHAggregate> tri_mesh_bvh;
 };
 

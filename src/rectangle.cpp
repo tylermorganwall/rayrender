@@ -49,7 +49,7 @@ const bool xy_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec,
     rec.bump_normal.make_unit_vector();
   }
   
-  rec.mat_ptr = mp.get();
+  rec.mat_ptr = mat_ptr.get();
   rec.p = r2.point_at_parameter(t);
   rec.p.e[2] = k;
   rec.pError = vec3f(0,0,0);
@@ -107,7 +107,7 @@ const bool xy_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec,
     rec.bump_normal.make_unit_vector();
   }
   
-  rec.mat_ptr = mp.get();
+  rec.mat_ptr = mat_ptr.get();
   rec.p = r2.point_at_parameter(t);
   rec.p.e[2] = k;
   rec.pError = vec3f(0,0,0);
@@ -247,7 +247,7 @@ const bool xz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec,
     rec.bump_normal.make_unit_vector();
   }
   
-  rec.mat_ptr = mp.get();
+  rec.mat_ptr = mat_ptr.get();
   rec.p = r2.point_at_parameter(t);
   rec.p.e[1] = k;
   rec.pError = vec3f(0,0,0);
@@ -309,7 +309,7 @@ const bool xz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec,
     rec.bump_normal.make_unit_vector();
   }
   
-  rec.mat_ptr = mp.get();
+  rec.mat_ptr = mat_ptr.get();
   rec.p = r2.point_at_parameter(t);
   rec.p.e[1] = k;
   rec.pError = vec3f(0,0,0);
@@ -442,7 +442,7 @@ const bool yz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec,
   rec.dpdv = vec3f(0, 1, 0);
   rec.has_bump = bump_tex ? true : false;
   
-  rec.mat_ptr = mp.get();
+  rec.mat_ptr = mat_ptr.get();
   rec.p = r2.point_at_parameter(t);
   rec.p.e[0] = k;
   rec.pError = vec3f(0,0,0);
@@ -512,7 +512,7 @@ const bool yz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec,
     rec.bump_normal.make_unit_vector();
   }
   
-  rec.mat_ptr = mp.get();
+  rec.mat_ptr = mat_ptr.get();
   rec.p = r2.point_at_parameter(t);
   rec.p.e[0] = k;
   rec.pError = vec3f(0,0,0);

@@ -36,7 +36,6 @@ public:
   int width, height;
   Float radius;
   point3f center;
-  std::shared_ptr<material> mat_ptr;
   Distribution2D *distribution;
 };
 
