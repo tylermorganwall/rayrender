@@ -23,7 +23,7 @@ public:
                    float min_variance, size_t min_adaptive_size, 
                    RayMatrix& r, RayMatrix& g, RayMatrix& b,
                    RayMatrix& r2, RayMatrix& g2, RayMatrix& b2,
-                   RayMatrix& alpha);
+                   RayMatrix& alpha, bool adaptive_on);
   void reset();
   ~adaptive_sampler() {}
   void test_for_convergence(size_t k, size_t s,
@@ -51,6 +51,7 @@ public:
   std::vector<pixel_block> pixel_chunks;
   std::vector<bool> finalized;
   std::vector<bool> just_finalized;
+  bool adaptive_on;
   
 };
 

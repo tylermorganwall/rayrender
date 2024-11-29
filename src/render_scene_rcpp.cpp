@@ -69,6 +69,7 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
   int debug_channel = as<int>(render_info["debug_channel"]);
   Float min_variance = as<Float>(render_info["min_variance"]);
   int min_adaptive_size = as<int>(render_info["min_adaptive_size"]);
+  IntegratorType integrator_type = static_cast<IntegratorType>(as<int>(render_info["integrator_type"]));
 
   Environment pkg = Environment::namespace_env("rayrender");
   Function print_time = pkg["print_time"];
@@ -300,10 +301,6 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
     imp_sample_objects.add(background_sphere);
   }
 
-  if(min_variance == 0) {
-    min_adaptive_size = 1;
-    min_variance = 10E-8;
-  }
   QUERY_MEMORY_USAGE();
   PRINT_CURRENT_MEMORY("Before raytracing");
   
@@ -325,7 +322,7 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
                progress_bar, sample_method, stratified_dim,
                verbose, cam.get(),  fov,
                world, imp_sample_objects,
-               clampval, max_depth, roulette_active, Display);
+               clampval, max_depth, roulette_active, Display, integrator_type);
   }
   PRINT_CURRENT_MEMORY("After raytracing");
   

@@ -21,7 +21,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
                 Float fov,
                 hitable_list& world, hitable_list& hlist,
                 Float clampval, std::size_t max_depth, std::size_t roulette_active,
-                PreviewDisplay& display) {
+                PreviewDisplay& display, IntegratorType integrator_type) {
   RProgress::RProgress pb_sampler("Generating Samples [:bar] :percent%");
   pb_sampler.set_width(70);
   RProgress::RProgress pb("Adaptive Raytracing [:bar] :percent%");
@@ -34,18 +34,16 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
     pb_sampler.set_total(ny);
     pb.set_total(ns);
   }
-#ifdef DEBUG
-  std::remove("rays.txt");
-#endif
   RayMatrix routput2(nx,ny);
   RayMatrix goutput2(nx,ny);
   RayMatrix boutput2(nx,ny);
   display.write_fast_output = false;
+  bool adaptive_on = min_variance > 0;
   adaptive_sampler adaptive_pixel_sampler(numbercores, nx, ny, ns, debug_channel,
                                           min_variance, min_adaptive_size,
                                           routput, goutput, boutput,
                                           routput2, goutput2, boutput2,
-                                          alpha_output);
+                                          alpha_output, adaptive_on);
   
   size_t nx_small = nx*0.25;
   size_t ny_small = ny*0.25;
@@ -61,7 +59,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
                                                 0, 1,
                                                 routput_small, goutput_small, boutput_small,
                                                 routput_small2, goutput_small2, boutput_small2,
-                                                alpha_output_small);
+                                                alpha_output_small, adaptive_on);
   std::vector<random_gen > rngs;
   std::vector<random_gen > rngs_small;
   
@@ -131,7 +129,8 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
                      nx, ny, s, sample_method,
                      &rngs, fov, &samplers,
                      cam, &world, &hlist,
-                     clampval, max_depth, roulette_active] (int k) {
+                     clampval, max_depth, roulette_active, 
+                     integrator_type] (int k) {
                        // MitchellFilter fil(vec2f(1.0),1./3.,1./3.);
                        int nx_begin = adaptive_pixel_sampler.pixel_chunks[k].startx;
                        int ny_begin = adaptive_pixel_sampler.pixel_chunks[k].starty;
@@ -158,7 +157,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
                            r.pri_stack = mat_stack;
                            bool alpha = false;
                            point3f col = weight != 0 ? clamp_point(de_nan(color(r, &world, &hlist, max_depth, 
-                                                         roulette_active, rngs[index], samplers[index].get(), alpha)),
+                                                         roulette_active, rngs[index], samplers[index].get(), alpha,integrator_type)),
                                                0, clampval) * weight * cam->get_iso() : 0;
                            if(alpha) {
                              adaptive_pixel_sampler.add_alpha_count(i,j);
@@ -172,8 +171,10 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
                            samplers[index]->StartNextSample();
                          }
                        }
-                       if((s % 2 == 1 && s > 3 && sample_method != 2) || (s % 2 == 1 && sample_method == 2 && s > 64)) {
-                         adaptive_pixel_sampler.test_for_convergence(k, s, nx_end, nx_begin, ny_end, ny_begin);
+                       if (adaptive_pixel_sampler.adaptive_on) {
+                        if((s % 2 == 1 && s > 3 && sample_method != 2) || (s % 2 == 1 && sample_method == 2 && s > 64)) {
+                          adaptive_pixel_sampler.test_for_convergence(k, s, nx_end, nx_begin, ny_end, ny_begin);
+                        }
                        }
                        delete mat_stack;
                      };
@@ -181,8 +182,10 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
         pool.push(worker, j);
       }
       pool.join();
-      if(s % 2 == 1 && s > 1) {
-        adaptive_pixel_sampler.split_remove_chunks(s);
+      if (adaptive_pixel_sampler.adaptive_on) {
+        if(s % 2 == 1 && s > 1) {
+          adaptive_pixel_sampler.split_remove_chunks(s);
+        }
       }
       adaptive_pixel_sampler.max_s++;
     } else {
@@ -190,7 +193,8 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
                      nx_small, ny_small, s, sample_method,
                      &rngs_small, fov, &samplers_small,
                      cam, &world, &hlist, 
-                     clampval, max_depth, roulette_active] (int k) {
+                     clampval, max_depth, roulette_active,
+                     integrator_type] (int k) {
                        // MitchellFilter fil(vec2f(1.0),1./3.,1./3.);
                        int nx_begin = adaptive_pixel_sampler_small.pixel_chunks[k].startx;
                        int ny_begin = adaptive_pixel_sampler_small.pixel_chunks[k].starty;
@@ -220,7 +224,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
                                                                                 roulette_active, 
                                                                                 rngs_small[index], 
                                                                                 samplers_small[index].get(),
-                                                                                alpha)
+                                                                                alpha, integrator_type)
                                                                           ),
                                                                    0, clampval) * weight * cam->get_iso() : 0;
                            if(alpha) {
@@ -235,8 +239,10 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
                            samplers_small[index]->StartNextSample();
                          }
                        }
-                       if((s % 2 == 1 && s > 3 && sample_method != 2) || (s % 2 == 1 && sample_method == 2 && s > 64)) {
-                         adaptive_pixel_sampler_small.test_for_convergence(k, s, nx_end, nx_begin, ny_end, ny_begin);
+                       if (adaptive_pixel_sampler_small.adaptive_on) {
+                          if((s % 2 == 1 && s > 3 && sample_method != 2) || (s % 2 == 1 && sample_method == 2 && s > 64)) {
+                            adaptive_pixel_sampler_small.test_for_convergence(k, s, nx_end, nx_begin, ny_end, ny_begin);
+                          }
                        }
                        delete mat_stack;
                      };
@@ -245,9 +251,10 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
         pool.push(worker, j);
       }
       pool.join();
-      
-      if(s % 2 == 1 && s > 1) {
-        adaptive_pixel_sampler_small.split_remove_chunks(s);
+      if (adaptive_pixel_sampler_small.adaptive_on) {
+        if(s % 2 == 1 && s > 1) {
+          adaptive_pixel_sampler_small.split_remove_chunks(s);
+        }
       }
       adaptive_pixel_sampler_small.max_s++;
       

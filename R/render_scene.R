@@ -95,6 +95,7 @@
 #' @param transparent_background Default `FALSE`. If `TRUE`, any initial camera rays that escape the scene
 #' will be marked as transparent in the final image. If for a pixel some rays escape and others hit a surface,
 #' those pixels will be partially transparent. 
+#' @param integrator_type Default `"nee"`. Other options include `"rtiow"` and `"basic"`.
 #' @param debug_channel Default `none`. If `depth`, function will return a depth map of rays into the scene 
 #' instead of an image. If `normals`, function will return an image of scene normals, mapped from 0 to 1.
 #' If `uv`, function will return an image of the uv coords. If `variance`, function will return an image 
@@ -227,7 +228,8 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
                         environment_light = NULL, rotate_env = 0, intensity_env = 1,
                         transparent_background = FALSE,
                         debug_channel = "none", return_raw_array = FALSE, 
-                        progress = interactive(), verbose = FALSE, new_page = TRUE) { 
+                        progress = interactive(), verbose = FALSE, new_page = TRUE,
+                        integrator_type = "nee") { 
   init_time()
   if(samples > 256 && sample_method == "sobol_blue") {
     warning('"sobol_blue" sample method only valid for `samples` than or equal to 256--switching to `sample_method = "sobol"`')
@@ -294,7 +296,8 @@ Left Mouse Click: Change Look At (new focal distance) | Right Mouse Click: Chang
                                   environment_light = environment_light, rotate_env = rotate_env, 
                                   intensity_env = intensity_env,
                                   debug_channel = debug_channel, return_raw_array = return_raw_array,
-                                  progress = progress, verbose = verbose, sample_dist = Inf)
+                                  progress = progress, verbose = verbose, sample_dist = Inf, 
+                                  integrator_type = integrator_type)
   print_time(verbose, "Pre-processed scene")
   
   camera_info = scene_list$camera_info

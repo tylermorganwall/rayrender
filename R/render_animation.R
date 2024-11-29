@@ -182,7 +182,8 @@ render_animation = function(scene, camera_motion, start_frame = 1, end_frame = N
                             environment_light = NULL, rotate_env = 0, intensity_env = 1,
                             debug_channel = "none", return_raw_array = FALSE,
                             progress = interactive(), verbose = FALSE, transparent_background = FALSE,
-                            preview_light_direction = c(0,-1,0), preview_exponent = 6) { 
+                            preview_light_direction = c(0,-1,0), preview_exponent = 6,
+                            integrator_type = "nee") { 
   if(ambient_occlusion) {
     debug_channel = "ao"
   }
@@ -207,7 +208,7 @@ render_animation = function(scene, camera_motion, start_frame = 1, end_frame = N
                                   intensity_env = intensity_env,
                                   debug_channel = debug_channel, return_raw_array = return_raw_array,
                                   progress = progress, verbose = verbose, sample_dist = sample_dist,
-                                  keep_colors = keep_colors)
+                                  keep_colors = keep_colors,integrator_type = integrator_type)
   
   
   camera_info = scene_list$camera_info

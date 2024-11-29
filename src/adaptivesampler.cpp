@@ -5,10 +5,10 @@ adaptive_sampler::adaptive_sampler(size_t _numbercores, size_t nx, size_t ny, si
                  float min_variance, size_t min_adaptive_size, 
                  RayMatrix& r, RayMatrix& g, RayMatrix& b,
                  RayMatrix& r2, RayMatrix& g2, RayMatrix& b2,
-                 RayMatrix& alpha) : 
+                 RayMatrix& alpha, bool adaptive_on) : 
     numbercores(_numbercores), nx(nx), ny(ny), ns(ns), max_s(0), debug_channel(debug_channel), 
     min_variance(min_variance), min_adaptive_size(min_adaptive_size),
-    r(r), g(g), b(b), r2(r2), g2(g2), b2(b2), a(alpha) {
+    r(r), g(g), b(b), r2(r2), g2(g2), b2(b2), a(alpha), adaptive_on(adaptive_on) {
   size_t nx_chunk = nx / numbercores;
   size_t ny_chunk = ny / numbercores;
   size_t bonus_x = nx - nx_chunk * numbercores;
@@ -61,7 +61,9 @@ void adaptive_sampler::test_for_convergence(size_t k, size_t s,
                           size_t ny_end, size_t ny_begin) {
   SCOPED_CONTEXT("Overall");
   SCOPED_TIMER_COUNTER("Convergence Test");
-  
+  if (!adaptive_on) {
+    return; // Skip convergence test if adaptive sampling is off
+  }
   Float error_block = 0.0;
   size_t nx_block = (nx_end-nx_begin);
   size_t ny_block = (ny_end-ny_begin);
@@ -116,6 +118,9 @@ void adaptive_sampler::test_for_convergence(size_t k, size_t s,
 void adaptive_sampler::split_remove_chunks(size_t s) {
   SCOPED_CONTEXT("Overall");
   SCOPED_TIMER_COUNTER("Split/Remove Chunks");
+  if (!adaptive_on) {
+    return; // Skip convergence test if adaptive sampling is off
+  }
   auto it = pixel_chunks.begin();
   std::vector<pixel_block> temppixels;
   while(it != pixel_chunks.end()) {

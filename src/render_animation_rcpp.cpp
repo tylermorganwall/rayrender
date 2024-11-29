@@ -53,7 +53,8 @@ void render_animation_rcpp(List scene, List camera_info, List scene_info, List r
   int debug_channel = as<int>(render_info["debug_channel"]);
   Float min_variance = as<Float>(render_info["min_variance"]);
   int min_adaptive_size = as<int>(render_info["min_adaptive_size"]);
-  
+  IntegratorType integrator_type = static_cast<IntegratorType>(as<int>(render_info["integrator_type"]));
+
   Environment pkg = Environment::namespace_env("rayrender");
   Function print_time = pkg["print_time"];
 
@@ -247,10 +248,6 @@ void render_animation_rcpp(List scene, List camera_info, List scene_info, List r
     pb.set_total(ns);
     pb_frames.set_total(n_frames - start_frame);
   }
-  if(min_variance == 0) {
-    min_adaptive_size = 1;
-    min_variance = 10E-8;
-  }
 
   if(debug_channel != 0) {
     for(int i = start_frame; i < n_frames; i++ ) {
@@ -397,7 +394,7 @@ void render_animation_rcpp(List scene, List camera_info, List scene_info, List r
                  progress_bar, sample_method, stratified_dim,
                  verbose, cam.get(),  fov,
                  world, imp_sample_objects,
-                 clampval, max_depth, roulette_active, d);
+                 clampval, max_depth, roulette_active, d, integrator_type);
       if(d.terminate) {
         break;
       }

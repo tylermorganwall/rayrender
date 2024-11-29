@@ -6,6 +6,7 @@
 #include "hitablelist.h"
 #include "PreviewDisplay.h"
 #include "RayMatrix.h"
+#include "color.h"
 
 
 void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::size_t ns, int debug_channel,
@@ -16,6 +17,6 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
                 Float fov,
                 hitable_list& world, hitable_list& hlist,
                 Float clampval, std::size_t max_depth, std::size_t roulette_active,
-                PreviewDisplay& display);
+                PreviewDisplay& display, IntegratorType integrator_type);
 
 #endif

@@ -18,10 +18,9 @@ prepare_scene_list = function(scene, width = 400, height = 400, fov = 20,
                               environment_light = NULL, rotate_env = 0, intensity_env = 1,
                               debug_channel = "none", return_raw_array = FALSE,
                               progress = interactive(), verbose = FALSE, sample_dist = Inf,
-                              keep_colors = FALSE) {
+                              keep_colors = FALSE, integrator_type = "nee") {
   #Process images, convert shapes and materials to enums, extract positions, and 
   scene_info = process_scene(scene)
-  
   if(!is.numeric(debug_channel)) {
     debug_channel = unlist(lapply(tolower(debug_channel),switch,
                                   "none" = 0,"depth" = 1,"normals" = 2, "uv" = 3, "bvh" = 4,
@@ -34,6 +33,8 @@ prepare_scene_list = function(scene, width = 400, height = 400, fov = 20,
     light_direction = debug_channel
     debug_channel = 9
   }
+  integrator_type = switch(integrator_type, "nee" = 1L, "rtiow" = 2L, "basic" = 3L, 
+                    stop(integrator_type, " not recognized as valid `integrator_type`"))
   if(debug_channel == 4) {
     message("rayrender must be compiled with option DEBUGBVH for this debug option to work")
   }
@@ -183,6 +184,8 @@ prepare_scene_list = function(scene, width = 400, height = 400, fov = 20,
   
   if(min_variance < 0) {
     stop("min_variance cannot be less than zero")
+  } else if (min_variance == 0) {
+    min_variance = 0L
   }
   
   render_info = list()
@@ -200,6 +203,7 @@ prepare_scene_list = function(scene, width = 400, height = 400, fov = 20,
   render_info$debug_channel = debug_channel
   render_info$min_variance = min_variance
   render_info$min_adaptive_size = min_adaptive_size
+  render_info$integrator_type = integrator_type
 
   all_info = list()
   all_info$scene_info = scene_info
