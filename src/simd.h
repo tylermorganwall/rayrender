@@ -677,10 +677,10 @@ inline FVec4 simd_sgn(const FVec4& a) {
 
 #else
     // Fallback to scalar implementation
-    result.e[0] = sgn_local(p.e[0]);
-    result.e[1] = sgn_local(p.e[1]);
-    result.e[2] = sgn_local(p.e[2]);
-    result.e[3] = 0;
+    result.xyzw[0] = sgn_local(a.xyzw[0]);
+    result.xyzw[1] = sgn_local(a.xyzw[1]);
+    result.xyzw[2] = sgn_local(a.xyzw[2]);
+    result.xyzw[3] = sgn_local(a.xyzw[3]);
 #endif
     return result;
 }
@@ -716,10 +716,10 @@ inline IVec4 simd_sgn(const IVec4& a) {
 
 #else
     // Fallback to scalar implementation
-    result.e[0] = sgn_local(p.e[0]);
-    result.e[1] = sgn_local(p.e[1]);
-    result.e[2] = sgn_local(p.e[2]);
-    result.e[3] = 0;
+    result.xyzw[0] = sgn_local(a.xyzw[0]);
+    result.xyzw[1] = sgn_local(a.xyzw[1]);
+    result.xyzw[2] = sgn_local(a.xyzw[2]);
+    result.xyzw[3] = sgn_local(a.xyzw[3]);
 #endif
     return result;
 }
@@ -836,10 +836,10 @@ inline float simd_dot(FVec4 a, FVec4 b) {
     return _mm_cvtss_f32(sum);
 #else
     // Without SSE4.1, perform horizontal adds
-    __m128 shuf = _mm_movehdup_ps(mul);    // Shuffle for adding high and low parts
-    __m128 sums = _mm_add_ps(mul, shuf);
-    shuf = _mm_movehl_ps(shuf, sums);      // Move high parts
-    sums = _mm_add_ss(sums, shuf);
+    __m128 shuf = _mm_shuffle_ps(mul, mul, _MM_SHUFFLE(2, 3, 0, 1)); // Shuffle
+    __m128 sums = _mm_add_ps(mul, shuf); // Add pairs
+    shuf = _mm_movehl_ps(shuf, sums);    // Move high part
+    sums = _mm_add_ss(sums, shuf);       // Final sum
     return _mm_cvtss_f32(sums);
 #endif
 #elif defined(HAS_NEON)
@@ -859,7 +859,7 @@ inline float simd_dot(FVec4 a, FVec4 b) {
 #else
     // Scalar fallback
     float result = 0.0f;
-    for (int i = 0; i < 3; ++i) { // Only sum the first 3 elements
+    for (int i = 0; i < 4; ++i) { // Only sum the first 3 elements
         result += a.xyzw[i] * b.xyzw[i];
     }
     return result;
@@ -988,11 +988,20 @@ inline float simd_squared_length(FVec4 a) {
 #if defined(HAS_SSE)
     // SSE implementation using _mm intrinsics
     __m128 v = a.v;
-    __m128 v_squared = _mm_mul_ps(v, v);
-    // Sum all elements of v_squared
-    __m128 sum = _mm_hadd_ps(v_squared, v_squared);           // [x² + y², z² + w², x² + y², z² + w²]
-    sum = _mm_hadd_ps(sum, sum);                              // [length², length², length², length²]
-    result = _mm_cvtss_f32(sum);                              // Extract the result
+    __m128 v_squared = _mm_mul_ps(v, v);          // Element-wise square
+#if defined(__SSE3__)
+    // Use _mm_hadd_ps for horizontal addition (requires SSE3)
+    __m128 sum = _mm_hadd_ps(v_squared, v_squared);
+    sum = _mm_hadd_ps(sum, sum);
+    result = _mm_cvtss_f32(sum);                 // Extract the result
+#else
+    // Manual horizontal addition for SSE2
+    __m128 shuf = _mm_shuffle_ps(v_squared, v_squared, _MM_SHUFFLE(2, 3, 0, 1)); // Shuffle
+    __m128 sums = _mm_add_ps(v_squared, shuf);  // Add pairs
+    shuf = _mm_movehl_ps(shuf, sums);           // Move high part
+    sums = _mm_add_ss(sums, shuf);              // Add final pair
+    result = _mm_cvtss_f32(sums);               // Extract the result
+#endif                          // Extract the result
 #elif defined(HAS_NEON)
     // NEON implementation using ARM intrinsics
     float32x4_t v = a.v;
@@ -1010,7 +1019,8 @@ inline float simd_squared_length(FVec4 a) {
     // Scalar fallback
     result = a.xyzw[0] * a.xyzw[0] +
              a.xyzw[1] * a.xyzw[1] +
-             a.xyzw[2] * a.xyzw[2];
+             a.xyzw[2] * a.xyzw[2] +
+             a.xyzw[3] * a.xyzw[3];
 #endif
     return result;
 }

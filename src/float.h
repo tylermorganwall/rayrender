@@ -20,20 +20,20 @@ inline T ffmax(T a, T b) { return(a > b ? a : b);}
 
 
 template<>
-inline float ffmin(float a, float b) { return(std::fminf(a,b));}
+inline float ffmin(float a, float b) { return(fmin(a,b));}
 
 template<class T>
-inline double ffmax(double a, double b) { return(std::fmin(a,b));}
+inline double ffmax(double a, double b) { return(fminf(a,b));}
 
 
 template<class T>
 inline T ffabs(T a) { return(a > 0 ? a : -a);}
 
 template<>
-inline float ffabs(float a) { return(std::fabsf(a));}
+inline float ffabs(float a) { return(fabsf(a));}
 
 template<>
-inline double ffabs(double a) { return(std::fabs(a));}
+inline double ffabs(double a) { return(fabs(a));}
 
 
 #endif
