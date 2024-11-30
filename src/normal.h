@@ -542,11 +542,11 @@ inline Float dot(const normal3f& v1, const vec3f& v2) {
 }
 
 inline Float AbsDot(const vec3f& v1, const normal3f& v2) {
-    return std::fabsf(simd_dot(v1.e, v2.e));
+    return ffabs(simd_dot(v1.e, v2.e));
 }
 
 inline Float AbsDot(const normal3f& v1, const vec3f& v2) {
-    return std::fabsf(simd_dot(v1.e, v2.e));
+    return ffabs(simd_dot(v1.e, v2.e));
 }
 
 inline normal3f cross(const normal3f& v1, const normal3f& v2) {

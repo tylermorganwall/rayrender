@@ -802,14 +802,14 @@ inline FVec4 simd_abs(const FVec4& b) {
     result.v = vabsq_f32(b.v);
 #else
 #ifdef RAY_FLOAT_AS_DOUBLE
-    result.e[0] = std::fabs(b.e[0]);
-    result.e[1] = std::fabs(b.e[1]);
-    result.e[2] = std::fabs(b.e[2]);
+    result.e[0] = ffabs(b.e[0]);
+    result.e[1] = ffabs(b.e[1]);
+    result.e[2] = ffabs(b.e[2]);
     result.e[3] = 0.0f;
 #else
-    result.e[0] = std::fabsf(b.e[0]);
-    result.e[1] = std::fabsf(b.e[1]);
-    result.e[2] = std::fabsf(b.e[2]);
+    result.e[0] = ffabs(b.e[0]);
+    result.e[1] = ffabs(b.e[1]);
+    result.e[2] = ffabs(b.e[2]);
     result.e[3] = 0.0f;
 #endif
 #endif

@@ -653,14 +653,14 @@ inline point3<Float> Abs(const point3<Float>& v) {
 #else
     // Fallback to scalar implementation if SIMD is not available
 #ifdef RAY_FLOAT_AS_DOUBLE
-    result.e[0] = std::fabs(v.e[0]);
-    result.e[1] = std::fabs(v.e[1]);
-    result.e[2] = std::fabs(v.e[2]);
+    result.e[0] = ffabs(v.e[0]);
+    result.e[1] = ffabs(v.e[1]);
+    result.e[2] = ffabs(v.e[2]);
     result.e[3] = 0.0;
 #else 
-    result.e[0] = std::fabsf(v.e[0]);
-    result.e[1] = std::fabsf(v.e[1]);
-    result.e[2] = std::fabsf(v.e[2]);
+    result.e[0] = ffabs(v.e[0]);
+    result.e[1] = ffabs(v.e[1]);
+    result.e[2] = ffabs(v.e[2]);
     result.e[3] = 0.0;
 #endif
 #endif

@@ -28,7 +28,7 @@ const bool csg::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, ran
     point3f from = r2.origin() + t * dir; 
     
     //Need distance from interior edge to support dielectrics
-    float d =  std::fabs(shapes->getDistance(from)); 
+    float d =  ffabs(shapes->getDistance(from)); 
     
     //Need to deal with refraction, often initial distance is too close to surface, so we offset
     if(first && d < threshold) {
@@ -99,7 +99,7 @@ const bool csg::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sam
     point3f from = r2.origin() + t * dir; 
     
     //Need distance from interior edge to support dielectrics
-    float d =  std::fabs(shapes->getDistance(from)); 
+    float d =  ffabs(shapes->getDistance(from)); 
     
     //Need to deal with refraction, often initial distance is too close to surface, so we offset
     if(first && d < threshold) {
@@ -178,7 +178,7 @@ bool csg::HitP(const ray& r, Float t_min, Float t_max, random_gen& rng) const {
     point3f from = r2.origin() + t * dir; 
     
     //Need distance from interior edge to support dielectrics
-    float d =  std::fabs(shapes->getDistance(from)); 
+    float d =  ffabs(shapes->getDistance(from)); 
     
     //Need to deal with refraction, often initial distance is too close to surface, so we offset
     if(first && d < threshold) {
@@ -223,7 +223,7 @@ bool csg::HitP(const ray& r, Float t_min, Float t_max, Sampler* sampler) const {
     point3f from = r2.origin() + t * dir; 
     
     //Need distance from interior edge to support dielectrics
-    float d =  std::fabs(shapes->getDistance(from)); 
+    float d =  ffabs(shapes->getDistance(from)); 
     
     //Need to deal with refraction, often initial distance is too close to surface, so we offset
     if(first && d < threshold) {

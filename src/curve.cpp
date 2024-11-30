@@ -176,9 +176,9 @@ const bool curve::hit(const ray& r, Float tmin, Float tmax, hit_record& rec, ran
   for (int i = 0; i < 2; ++i) {
     L0 = std::fmax(
       L0, std::fmax(
-          std::fmax(std::fabs(cp[i].x() - 2 * cp[i + 1].x() + cp[i + 2].x()),
-                   std::fabs(cp[i].y() - 2 * cp[i + 1].y() + cp[i + 2].y())),
-                   std::fabs(cp[i].z() - 2 * cp[i + 1].z() + cp[i + 2].z())));
+          std::fmax(ffabs(cp[i].x() - 2 * cp[i + 1].x() + cp[i + 2].x()),
+                   ffabs(cp[i].y() - 2 * cp[i + 1].y() + cp[i + 2].y())),
+                   ffabs(cp[i].z() - 2 * cp[i + 1].z() + cp[i + 2].z())));
   }
   
   Float eps = std::fmax(common->width[0], common->width[1]) * .05f;  // width / 20
@@ -267,9 +267,9 @@ const bool curve::hit(const ray& r, Float tmin, Float tmax, hit_record& rec, Sam
   for (int i = 0; i < 2; ++i) {
     L0 = std::fmax(
       L0, std::fmax(
-          std::fmax(std::fabs(cp[i].x() - 2 * cp[i + 1].x() + cp[i + 2].x()),
-                    std::fabs(cp[i].y() - 2 * cp[i + 1].y() + cp[i + 2].y())),
-                    std::fabs(cp[i].z() - 2 * cp[i + 1].z() + cp[i + 2].z())));
+          std::fmax(ffabs(cp[i].x() - 2 * cp[i + 1].x() + cp[i + 2].x()),
+                    ffabs(cp[i].y() - 2 * cp[i + 1].y() + cp[i + 2].y())),
+                    ffabs(cp[i].z() - 2 * cp[i + 1].z() + cp[i + 2].z())));
   }
   
   Float eps = std::fmax(common->width[0], common->width[1]) * .05f;  // width / 20
