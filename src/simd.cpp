@@ -347,7 +347,6 @@ context("simd_cross computes cross product correctly") {
       expected_values[2] = a_values[0] * b_values[1] - a_values[1] * b_values[0];
 
       for (int i = 0; i < 3; ++i) {
-          std::cout << i << " " << result.xyzw[i] << " " << expected_values[i] << "\n";
           expect_true(fabs(result.xyzw[i] - expected_values[i]) < 1e-6f);
       }
 

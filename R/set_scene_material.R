@@ -12,10 +12,10 @@
 #'   add_object(sphere(x=555/2, y=555/2, z=555/2, radius=100))
 #'   
 #' # Set all objects to be metallic
-#' scene = set_material(scene, metal(color="gold"))
+#' scene = set_scene_material(scene, metal(color="gold"))
 #'
 #' # Set all objects to be glass
-#' scene = set_material(scene, dielectric())
+#' scene = set_scene_material(scene, dielectric())
 set_scene_material = function(scene, material) {
   if (!inherits(scene, "ray_scene")) {
     stop("Input must be a ray_scene object")
