@@ -238,42 +238,44 @@ point3f color_shadow_rays(const ray& r, hitable *world, hitable_list *hlist,
         point3f direct_light(0, 0, 0);
         int num_lights = hlist->size();
         if (num_lights > 0) {
-            // Optionally, sample a subset of lights or implement multiple importance sampling
-            for (int li = 0; li < num_lights; li++) {
-                hitable* light = hlist->objects[li].get();
+          int li = rng.UniformUInt32(num_lights);
+          // Optionally, sample a subset of lights or implement multiple importance sampling
+          // for (int li = 0; li < num_lights; li++) {
+          hitable* light = hlist->objects[li].get();
 
-                // Sample a point on the light using the random function
-                vec3f wi = light->random(hrec.p, sampler, r2.time());
-                float pdf_light = light->pdf_value(hrec.p, wi, sampler, r2.time());
+          // Sample a point on the light using the random function
+          vec3f wi = light->random(hrec.p, sampler, r2.time());
+          float pdf_light = light->pdf_value(hrec.p, wi, sampler, r2.time());
+          Float p_light_selection = 1.0f / num_lights;
 
-                // Avoid division by zero
-                if (pdf_light <= 0.0f) {
-                    continue;
-                }
+          // Avoid division by zero
+          if (pdf_light <= 0.0f) {
+              continue;
+          }
 
-                // Create a shadow ray towards the light
-                ray shadow_ray(OffsetRayOrigin(hrec.p, hrec.pError, 
-                              hrec.normal, wi), wi, r2.pri_stack, r2.time());
+          // Create a shadow ray towards the light
+          ray shadow_ray(OffsetRayOrigin(hrec.p, hrec.pError, 
+                        hrec.normal, wi), wi, r2.pri_stack, r2.time());
 
-                // Check for occlusion using HitP
-                if (!world->HitP(shadow_ray, 0.001f, MaxT, rng)) {
-                    // Unoccluded, compute contribution
-                    float cos_theta = dot(hrec.normal, wi);
-                    if (cos_theta > 0) {
-                        // Evaluate BRDF
-                        point3f f = hrec.mat_ptr->f(r2, hrec, wi);
+          // Check for occlusion using HitP
+          if (!world->HitP(shadow_ray, 0.001f, MaxT, rng)) {
+              // Unoccluded, compute contribution
+              float cos_theta = dot(hrec.normal, wi);
+              if (cos_theta > 0) {
+                  // Evaluate BRDF
+                  point3f f = hrec.mat_ptr->f(r2, hrec, wi);
 
-                        // Get emitted radiance from the light material
-                        bool is_invisible = false;
-                        point3f emitted_radiance = light->mat_ptr->emitted(shadow_ray, hrec, hrec.u, hrec.v, hrec.p, is_invisible);
+                  // Get emitted radiance from the light material
+                  bool is_invisible = false;
+                  point3f emitted_radiance = light->mat_ptr->emitted(shadow_ray, hrec, hrec.u, hrec.v, hrec.p, is_invisible);
 
-                        // Accumulate direct lighting
-                        direct_light += f * emitted_radiance * cos_theta / pdf_light;
-                    }
-                }
-            }
-            // Average over all lights
-            direct_light /= float(num_lights);
+                  // Accumulate direct lighting
+                  direct_light += f * emitted_radiance * cos_theta / (pdf_light * p_light_selection);
+              }
+          }
+          // }
+          // Average over all lights
+          direct_light /= float(num_lights);
         }
         final_color += throughput * direct_light;
 
