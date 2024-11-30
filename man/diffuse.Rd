@@ -17,10 +17,10 @@ diffuse(
   gradient_point_start = NA,
   gradient_point_end = NA,
   gradient_type = "hsv",
-  image_texture = NA_character_,
+  image_texture = "",
   image_repeat = 1,
-  alpha_texture = NA,
-  bump_texture = NA,
+  alpha_texture = "",
+  bump_texture = "",
   bump_intensity = 1,
   fog = FALSE,
   fogdensity = 0.01,
@@ -64,15 +64,15 @@ begins with value `gradient_color`.}
 
 \item{gradient_type}{Default `hsv`. Colorspace to calculate the gradient. Alternative `rgb`.}
 
-\item{image_texture}{Default `NA`. A 3-layer RGB array or filename to be used as the texture on the surface of the object.}
+\item{image_texture}{Default `""`. A 3-layer RGB array or filename to be used as the texture on the surface of the object.}
 
 \item{image_repeat}{Default `1`. Number of times to repeat the image across the surface.
 `u` and `v` repeat amount can be set independently if user passes in a length-2 vector.}
 
-\item{alpha_texture}{Default `NA`. A matrix or filename (specifying a greyscale image) to 
+\item{alpha_texture}{Default `""`. A matrix or filename (specifying a greyscale image) to 
 be used to specify the transparency.}
 
-\item{bump_texture}{Default `NA`. A matrix, array, or filename (specifying a greyscale image) to 
+\item{bump_texture}{Default `""`. A matrix, array, or filename (specifying a greyscale image) to 
 be used to specify a bump map for the surface.}
 
 \item{bump_intensity}{Default `1`. Intensity of the bump map. High values may lead to unphysical results.}

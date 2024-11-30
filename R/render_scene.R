@@ -95,7 +95,9 @@
 #' @param transparent_background Default `FALSE`. If `TRUE`, any initial camera rays that escape the scene
 #' will be marked as transparent in the final image. If for a pixel some rays escape and others hit a surface,
 #' those pixels will be partially transparent. 
-#' @param integrator_type Default `"nee"`. Other options include `"rtiow"` and `"basic"`.
+#' @param integrator_type Default `"rtiow"` (the algorithm specified in the book "Raytracing in One Weekend", a basic
+#' form of path guiding). Other options include `"nee"` (Next Event Estimation, with direct light sampling) 
+#' and `"basic"` (basic pathtracing, for high sample reference renders and debugging only).
 #' @param debug_channel Default `none`. If `depth`, function will return a depth map of rays into the scene 
 #' instead of an image. If `normals`, function will return an image of scene normals, mapped from 0 to 1.
 #' If `uv`, function will return an image of the uv coords. If `variance`, function will return an image 
@@ -229,7 +231,7 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
                         transparent_background = FALSE,
                         debug_channel = "none", return_raw_array = FALSE, 
                         progress = interactive(), verbose = FALSE, new_page = TRUE,
-                        integrator_type = "nee") { 
+                        integrator_type = "rtiow") { 
   init_time()
   if(samples > 256 && sample_method == "sobol_blue") {
     warning('"sobol_blue" sample method only valid for `samples` than or equal to 256--switching to `sample_method = "sobol"`')

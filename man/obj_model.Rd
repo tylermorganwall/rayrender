@@ -16,7 +16,7 @@ obj_model(
   vertex_colors = FALSE,
   calculate_consistent_normals = TRUE,
   subdivision_levels = 1,
-  displacement_texture = NA,
+  displacement_texture = "",
   displacement_intensity = 1,
   displacement_vector = FALSE,
   recalculate_normals = FALSE,
@@ -56,7 +56,7 @@ loss at edges.}
 
 \item{subdivision_levels}{Default `1`. Number of Loop subdivisions to be applied to the mesh.}
 
-\item{displacement_texture}{Default `NA`. File path to the displacement texture. 
+\item{displacement_texture}{Default `""`. File path to the displacement texture. 
 This texture is used to displace the vertices of the mesh based on the texture's pixel values.}
 
 \item{displacement_intensity}{Default `1`. Intensity of the displacement effect. 

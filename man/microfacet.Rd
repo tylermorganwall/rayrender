@@ -22,12 +22,12 @@ microfacet(
   gradient_point_start = NA_real_,
   gradient_point_end = NA_real_,
   gradient_type = "hsv",
-  image_texture = NA_character_,
+  image_texture = "",
   image_repeat = 1,
-  alpha_texture = NA_character_,
-  bump_texture = NA_character_,
+  alpha_texture = "",
+  bump_texture = "",
   bump_intensity = 1,
-  roughness_texture = NA_character_,
+  roughness_texture = "",
   roughness_range = c(1e-04, 0.2),
   roughness_flip = FALSE,
   importance_sample = FALSE
@@ -89,19 +89,19 @@ begins with value `gradient_color`.}
 
 \item{gradient_type}{Default `hsv`. Colorspace to calculate the gradient. Alternative `rgb`.}
 
-\item{image_texture}{Default `NA`. A 3-layer RGB array or filename to be used as the texture on the surface of the object.}
+\item{image_texture}{Default `""`. A 3-layer RGB array or filename to be used as the texture on the surface of the object.}
 
 \item{image_repeat}{Default `1`. Number of times to repeat the image across the surface.
 `u` and `v` repeat amount can be set independently if user passes in a length-2 vector.}
 
-\item{alpha_texture}{Default `NA`. A matrix or filename (specifying a greyscale image) to be used to specify the transparency.}
+\item{alpha_texture}{Default `""`. A matrix or filename (specifying a greyscale image) to be used to specify the transparency.}
 
-\item{bump_texture}{Default `NA`. A matrix, array, or filename (specifying a greyscale image) to 
+\item{bump_texture}{Default `""`. A matrix, array, or filename (specifying a greyscale image) to 
 be used to specify a bump map for the surface.}
 
 \item{bump_intensity}{Default `1`. Intensity of the bump map. High values may lead to unphysical results.}
 
-\item{roughness_texture}{Default `NA`. A matrix, array, or filename (specifying a greyscale image) to 
+\item{roughness_texture}{Default `""`. A matrix, array, or filename (specifying a greyscale image) to 
 be used to specify a roughness map for the surface.}
 
 \item{roughness_range}{Default ` c(0.0001, 0.2)`. This is a length-2 vector that specifies the range of roughness values 

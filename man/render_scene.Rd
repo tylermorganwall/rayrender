@@ -46,7 +46,8 @@ render_scene(
   return_raw_array = FALSE,
   progress = interactive(),
   verbose = FALSE,
-  new_page = TRUE
+  new_page = TRUE,
+  integrator_type = "rtiow"
 )
 }
 \arguments{
@@ -200,6 +201,10 @@ construction and raytracing progress.}
 
 \item{new_page}{Default `TRUE`. Whether to call `grid::grid.newpage()` when plotting the image (if
 no filename specified). Set to `FALSE` for faster plotting (does not affect render time).}
+
+\item{integrator_type}{Default `"rtiow"` (the algorithm specified in the book "Raytracing in One Weekend", a basic
+form of path guiding). Other options include `"nee"` (Next Event Estimation, with direct light sampling) 
+and `"basic"` (basic pathtracing, for high sample reference renders and debugging only).}
 }
 \value{
 A pathtraced image to the current device, or an image saved to a file. Invisibly returns the

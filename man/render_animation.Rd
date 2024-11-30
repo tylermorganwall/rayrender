@@ -47,7 +47,8 @@ render_animation(
   verbose = FALSE,
   transparent_background = FALSE,
   preview_light_direction = c(0, -1, 0),
-  preview_exponent = 6
+  preview_exponent = 6,
+  integrator_type = "rtiow"
 )
 }
 \arguments{
@@ -183,6 +184,10 @@ those pixels will be partially transparent.}
 \item{preview_light_direction}{Default `c(0,-1,0)`. Vector specifying the orientation for the global light using for phong shading.}
 
 \item{preview_exponent}{Default `6`. Phong exponent.}
+
+\item{integrator_type}{Default `"rtiow"` (the algorithm specified in the book "Raytracing in One Weekend", a basic
+form of path guiding). Other options include `"nee"` (Next Event Estimation, with direct light sampling) 
+and `"basic"` (basic pathtracing, for high sample reference renders and debugging only).}
 }
 \value{
 Raytraced plot to current device, or an image saved to a file.

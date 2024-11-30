@@ -13,7 +13,7 @@ mesh3d_model(
   reverse = FALSE,
   subdivision_levels = 1,
   verbose = FALSE,
-  displacement_texture = NA,
+  displacement_texture = "",
   displacement_intensity = 1,
   displacement_vector = FALSE,
   recalculate_normals = FALSE,
@@ -45,7 +45,7 @@ only supports one image texture per mesh. All quads will be triangulated.}
 
 \item{verbose}{Default `FALSE`. If `TRUE`, prints information about the mesh to the console.}
 
-\item{displacement_texture}{Default `NA`. File path to the displacement texture. 
+\item{displacement_texture}{Default `""`. File path to the displacement texture. 
 This texture is used to displace the vertices of the mesh based on the texture's pixel values.}
 
 \item{displacement_intensity}{Default `1`. Intensity of the displacement effect. 

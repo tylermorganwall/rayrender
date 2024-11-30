@@ -93,6 +93,9 @@
 #' @param transparent_background Default `FALSE`. If `TRUE`, any initial camera rays that escape the scene
 #' will be marked as transparent in the final image. If for a pixel some rays escape and others hit a surface,
 #' those pixels will be partially transparent. 
+#' @param integrator_type Default `"rtiow"` (the algorithm specified in the book "Raytracing in One Weekend", a basic
+#' form of path guiding). Other options include `"nee"` (Next Event Estimation, with direct light sampling) 
+#' and `"basic"` (basic pathtracing, for high sample reference renders and debugging only).
 #' @export
 #' @importFrom  grDevices col2rgb
 #' @return Raytraced plot to current device, or an image saved to a file. 
@@ -183,7 +186,7 @@ render_animation = function(scene, camera_motion, start_frame = 1, end_frame = N
                             debug_channel = "none", return_raw_array = FALSE,
                             progress = interactive(), verbose = FALSE, transparent_background = FALSE,
                             preview_light_direction = c(0,-1,0), preview_exponent = 6,
-                            integrator_type = "nee") { 
+                            integrator_type = "rtiow") { 
   if(ambient_occlusion) {
     debug_channel = "ao"
   }

@@ -12,7 +12,7 @@ light(
   spotlight_width = 30,
   spotlight_start_falloff = 15,
   invisible = FALSE,
-  image_texture = NA_character_,
+  image_texture = "",
   image_repeat = 1,
   gradient_color = NA,
   gradient_transpose = FALSE,
@@ -42,7 +42,7 @@ the x/y/z coordinates that the spotlight should be focused on. Only works for sp
 
 \item{invisible}{Default `FALSE`. If `TRUE`, the light itself will be invisible.}
 
-\item{image_texture}{Default `NA`. A 3-layer RGB array or filename to be used as the texture on the surface of the object.}
+\item{image_texture}{Default `""`. A 3-layer RGB array or filename to be used as the texture on the surface of the object.}
 
 \item{image_repeat}{Default `1`. Number of times to repeat the image across the surface.
 `u` and `v` repeat amount can be set independently if user passes in a length-2 vector.}
