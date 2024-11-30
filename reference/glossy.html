@@ -17,7 +17,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">rayrender</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.35.1</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.36.0</span>
       </span>
     </div>
 
@@ -105,12 +105,12 @@
 <span>  gradient_point_start <span class="op">=</span> <span class="cn">NA_real_</span>,</span>
 <span>  gradient_point_end <span class="op">=</span> <span class="cn">NA_real_</span>,</span>
 <span>  gradient_type <span class="op">=</span> <span class="st">"hsv"</span>,</span>
-<span>  image_texture <span class="op">=</span> <span class="cn">NA_character_</span>,</span>
+<span>  image_texture <span class="op">=</span> <span class="st">""</span>,</span>
 <span>  image_repeat <span class="op">=</span> <span class="fl">1</span>,</span>
-<span>  alpha_texture <span class="op">=</span> <span class="cn">NA_character_</span>,</span>
-<span>  bump_texture <span class="op">=</span> <span class="cn">NA_character_</span>,</span>
+<span>  alpha_texture <span class="op">=</span> <span class="st">""</span>,</span>
+<span>  bump_texture <span class="op">=</span> <span class="st">""</span>,</span>
 <span>  bump_intensity <span class="op">=</span> <span class="fl">1</span>,</span>
-<span>  roughness_texture <span class="op">=</span> <span class="cn">NA_character_</span>,</span>
+<span>  roughness_texture <span class="op">=</span> <span class="st">""</span>,</span>
 <span>  roughness_range <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1e-04</span>, <span class="fl">0.2</span><span class="op">)</span>,</span>
 <span>  roughness_flip <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  importance_sample <span class="op">=</span> <span class="cn">FALSE</span></span>
@@ -194,7 +194,7 @@ begins with value `gradient_color`.</p></dd>
 
 
 <dt id="arg-image-texture">image_texture<a class="anchor" aria-label="anchor" href="#arg-image-texture"></a></dt>
-<dd><p>Default `NA`. A 3-layer RGB array or filename to be used as the texture on the surface of the object.</p></dd>
+<dd><p>Default `""`. A 3-layer RGB array or filename to be used as the texture on the surface of the object.</p></dd>
 
 
 <dt id="arg-image-repeat">image_repeat<a class="anchor" aria-label="anchor" href="#arg-image-repeat"></a></dt>
@@ -203,11 +203,11 @@ begins with value `gradient_color`.</p></dd>
 
 
 <dt id="arg-alpha-texture">alpha_texture<a class="anchor" aria-label="anchor" href="#arg-alpha-texture"></a></dt>
-<dd><p>Default `NA`. A matrix or filename (specifying a greyscale image) to be used to specify the transparency.</p></dd>
+<dd><p>Default `""`. A matrix or filename (specifying a greyscale image) to be used to specify the transparency.</p></dd>
 
 
 <dt id="arg-bump-texture">bump_texture<a class="anchor" aria-label="anchor" href="#arg-bump-texture"></a></dt>
-<dd><p>Default `NA`. A matrix, array, or filename (specifying a greyscale image) to
+<dd><p>Default `""`. A matrix, array, or filename (specifying a greyscale image) to
 be used to specify a bump map for the surface.</p></dd>
 
 
@@ -216,7 +216,7 @@ be used to specify a bump map for the surface.</p></dd>
 
 
 <dt id="arg-roughness-texture">roughness_texture<a class="anchor" aria-label="anchor" href="#arg-roughness-texture"></a></dt>
-<dd><p>Default `NA`. A matrix, array, or filename (specifying a greyscale image) to
+<dd><p>Default `""`. A matrix, array, or filename (specifying a greyscale image) to
 be used to specify a roughness map for the surface.</p></dd>
 
 

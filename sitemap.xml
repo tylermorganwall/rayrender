@@ -65,6 +65,8 @@
 <url><loc>/reference/generate_rotation_matrix.html</loc></url>
 <url><loc>/reference/generate_studio.html</loc></url>
 <url><loc>/reference/generate_translation_matrix.html</loc></url>
+<url><loc>/reference/get_material_enum.html</loc></url>
+<url><loc>/reference/get_material_name.html</loc></url>
 <url><loc>/reference/get_saved_keyframes.html</loc></url>
 <url><loc>/reference/get_time.html</loc></url>
 <url><loc>/reference/glossy.html</loc></url>
@@ -108,6 +110,7 @@
 <url><loc>/reference/run_documentation.html</loc></url>
 <url><loc>/reference/save_png.html</loc></url>
 <url><loc>/reference/segment.html</loc></url>
+<url><loc>/reference/set_scene_material.html</loc></url>
 <url><loc>/reference/slerp.html</loc></url>
 <url><loc>/reference/sphere.html</loc></url>
 <url><loc>/reference/text3d.html</loc></url>

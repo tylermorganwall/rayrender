@@ -17,7 +17,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">rayrender</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.35.1</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.36.0</span>
       </span>
     </div>
 
@@ -132,7 +132,8 @@
 <span>  verbose <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  transparent_background <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  preview_light_direction <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="op">-</span><span class="fl">1</span>, <span class="fl">0</span><span class="op">)</span>,</span>
-<span>  preview_exponent <span class="op">=</span> <span class="fl">6</span></span>
+<span>  preview_exponent <span class="op">=</span> <span class="fl">6</span>,</span>
+<span>  integrator_type <span class="op">=</span> <span class="st">"rtiow"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -357,6 +358,12 @@ those pixels will be partially transparent.</p></dd>
 
 <dt id="arg-preview-exponent">preview_exponent<a class="anchor" aria-label="anchor" href="#arg-preview-exponent"></a></dt>
 <dd><p>Default `6`. Phong exponent.</p></dd>
+
+
+<dt id="arg-integrator-type">integrator_type<a class="anchor" aria-label="anchor" href="#arg-integrator-type"></a></dt>
+<dd><p>Default `"rtiow"` (the algorithm specified in the book "Raytracing in One Weekend", a basic
+form of path guiding). Other options include `"nee"` (Next Event Estimation, with direct light sampling)
+and `"basic"` (basic pathtracing, for high sample reference renders and debugging only).</p></dd>
 
 </dl></div>
     <div id="value">

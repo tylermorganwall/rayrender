@@ -19,7 +19,7 @@ or are on Windows."><meta property="og:image" content="/reference/figures/websit
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">rayrender</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.35.1</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.36.0</span>
       </span>
     </div>
 
@@ -135,7 +135,8 @@ or are on Windows.</p>
 <span>  return_raw_array <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  progress <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/interactive.html" class="external-link">interactive</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  verbose <span class="op">=</span> <span class="cn">FALSE</span>,</span>
-<span>  new_page <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span>  new_page <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  integrator_type <span class="op">=</span> <span class="st">"rtiow"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -374,6 +375,12 @@ construction and raytracing progress.</p></dd>
 <dt id="arg-new-page">new_page<a class="anchor" aria-label="anchor" href="#arg-new-page"></a></dt>
 <dd><p>Default `TRUE`. Whether to call `grid::grid.newpage()` when plotting the image (if
 no filename specified). Set to `FALSE` for faster plotting (does not affect render time).</p></dd>
+
+
+<dt id="arg-integrator-type">integrator_type<a class="anchor" aria-label="anchor" href="#arg-integrator-type"></a></dt>
+<dd><p>Default `"rtiow"` (the algorithm specified in the book "Raytracing in One Weekend", a basic
+form of path guiding). Other options include `"nee"` (Next Event Estimation, with direct light sampling)
+and `"basic"` (basic pathtracing, for high sample reference renders and debugging only).</p></dd>
 
 </dl></div>
     <div id="value">
