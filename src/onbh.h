@@ -35,25 +35,25 @@ public:
   void build_from_w(const vec3f& n) {
     axis[2] = unit_vector(n);
     vec3f a = std::fabsf(w().x()) > 0.9999999 ? vec3f(0,1,0)  : vec3f(1,0,0);
-    axis[1] = cross(w(),a);
+    axis[1] = unit_vector(cross(w(),a));
     axis[0] = cross(w(), v());
   }
   void build_from_w(const normal3f& n) {
     axis[2] = unit_vector(convert_to_vec3(n));
     vec3f a = std::fabsf(w().x()) > 0.9999999 ? vec3f(0,1,0)  : vec3f(1,0,0);
-    axis[1] = cross(w(),a);
+    axis[1] = unit_vector(cross(w(),a));
     axis[0] = cross(w(), v());
   }
   void build_from_w_normalized(const vec3f& n) {
-    axis[2] = n;
+    axis[2] = (n);
     vec3f a = std::fabsf(w().x()) > 0.9999999 ? vec3f(0,1,0)  : vec3f(1,0,0);
-    axis[1] = cross(w(),a);
+    axis[1] = unit_vector(cross(w(),a));
     axis[0] = cross(w(), v());
   }
   void build_from_w_normalized(const normal3f& n) {
-    axis[2] = convert_to_vec3(n);
+    axis[2] = (convert_to_vec3(n));
     vec3f a = std::fabsf(w().x()) > 0.9999999 ? vec3f(0,1,0)  : vec3f(1,0,0);
-    axis[1] = cross(w(),a);
+    axis[1] = unit_vector(cross(w(),a));
     axis[0] = cross(w(), v());
   }
 
