@@ -35,7 +35,7 @@ Float cosine_pdf::value(const vec3f& direction, random_gen& rng, Float time) {
   
   Float cosine = dot(unit_vector(direction), uvw.w()); 
   if(cosine > 0) {
-    return(cosine/M_PI);
+    return(cosine * M_1_PI);
   } else {
     return(0);
   }
@@ -47,7 +47,7 @@ Float cosine_pdf::value(const vec3f& direction, Sampler* sampler, Float time) {
   
   Float cosine = dot(unit_vector(direction), uvw.w()); 
   if(cosine > 0) {
-    return(cosine/M_PI);
+    return(cosine * M_1_PI);
   } else {
     return(0);
   }

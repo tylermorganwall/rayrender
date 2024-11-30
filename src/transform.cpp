@@ -224,7 +224,7 @@ Transform Transform::operator*(const Transform &t2) const {
 
 
 
-#ifdef RAYSIMDVEC
+#ifndef RAYSIMDVEC
 template <typename T>
 point3<T> Transform::operator()(const point3<T> &p,
                                 vec3<T> *pError) const {
