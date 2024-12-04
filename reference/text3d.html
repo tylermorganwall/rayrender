@@ -17,7 +17,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">rayrender</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.36.0</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.36.2</span>
       </span>
     </div>
 
@@ -97,6 +97,8 @@
 <span>  text_height <span class="op">=</span> <span class="fl">1</span>,</span>
 <span>  orientation <span class="op">=</span> <span class="st">"xy"</span>,</span>
 <span>  material <span class="op">=</span> <span class="fu"><a href="diffuse.html">diffuse</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  font <span class="op">=</span> <span class="st">"Arial"</span>,</span>
+<span>  font_style <span class="op">=</span> <span class="st">"plain"</span>,</span>
 <span>  angle <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">0</span>, <span class="fl">0</span><span class="op">)</span>,</span>
 <span>  order_rotation <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">2</span>, <span class="fl">3</span><span class="op">)</span>,</span>
 <span>  flipped <span class="op">=</span> <span class="cn">FALSE</span>,</span>
@@ -137,6 +139,14 @@
 functions <code><a href="diffuse.html">diffuse</a></code>, <code><a href="metal.html">metal</a></code>, or <code><a href="dielectric.html">dielectric</a></code>.</p></dd>
 
 
+<dt id="arg-font">font<a class="anchor" aria-label="anchor" href="#arg-font"></a></dt>
+<dd><p>A character string specifying the font family (e.g., `"Arial"`, `"Times"`, `"Helvetica"`).</p></dd>
+
+
+<dt id="arg-font-style">font_style<a class="anchor" aria-label="anchor" href="#arg-font-style"></a></dt>
+<dd><p>A character string specifying the font style, such as `"plain"`, `"italic"`, or `"bold"`. Default is `"plain"`.</p></dd>
+
+
 <dt id="arg-angle">angle<a class="anchor" aria-label="anchor" href="#arg-angle"></a></dt>
 <dd><p>Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.</p></dd>
 
@@ -169,7 +179,8 @@ Note: emissive objects may not currently function correctly when scaled.</p></dd
 <span class="r-in"><span>                    material<span class="op">=</span><span class="fu"><a href="diffuse.html">diffuse</a></span><span class="op">(</span>color<span class="op">=</span><span class="st">"grey10"</span><span class="op">)</span>, angle<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">180</span>,<span class="fl">0</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span> </span></span>
 <span class="r-in"><span>  <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>samples<span class="op">=</span><span class="fl">128</span>, clamp_value<span class="op">=</span><span class="fl">10</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> R: NonconformingDrawingPrimitiveDefinition `text' @ error/draw.c/RenderMVGContent/4456</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Setting default values for Cornell box: lookfrom `c(278,278,-800)` lookat `c(278,278,555/2)` fov `40` .</span>
+<span class="r-plt img"><img src="text3d-1.png" alt="" width="768" height="768"></span>
 <span class="r-in"><span><span class="kw">if</span><span class="op">(</span><span class="fu"><a href="run_documentation.html">run_documentation</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span></span>
 <span class="r-in"><span><span class="co">#Change the orientation</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="generate_cornell.html">generate_cornell</a></span><span class="op">(</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span> </span></span>
@@ -184,7 +195,8 @@ Note: emissive objects may not currently function correctly when scaled.</p></dd
 <span class="r-in"><span>                    material<span class="op">=</span><span class="fu"><a href="diffuse.html">diffuse</a></span><span class="op">(</span>color<span class="op">=</span><span class="st">"grey10"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span> </span></span>
 <span class="r-in"><span>  <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>samples<span class="op">=</span><span class="fl">128</span>, clamp_value<span class="op">=</span><span class="fl">10</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> R: NonconformingDrawingPrimitiveDefinition `text' @ error/draw.c/RenderMVGContent/4456</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Setting default values for Cornell box: lookfrom `c(278,278,-800)` lookat `c(278,278,555/2)` fov `40` .</span>
+<span class="r-plt img"><img src="text3d-2.png" alt="" width="768" height="768"></span>
 <span class="r-in"><span><span class="kw">if</span><span class="op">(</span><span class="fu"><a href="run_documentation.html">run_documentation</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span></span>
 <span class="r-in"><span><span class="co">#Add an label in front of a sphere</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="generate_cornell.html">generate_cornell</a></span><span class="op">(</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span> </span></span>
@@ -199,7 +211,8 @@ Note: emissive objects may not currently function correctly when scaled.</p></dd
 <span class="r-in"><span>                                   spotlight_focus<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">555</span><span class="op">/</span><span class="fl">2</span>,<span class="fl">100</span>,<span class="fl">100</span><span class="op">)</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span>                   </span></span>
 <span class="r-in"><span>  <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>samples<span class="op">=</span><span class="fl">128</span>, clamp_value<span class="op">=</span><span class="fl">10</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> R: NonconformingDrawingPrimitiveDefinition `text' @ error/draw.c/RenderMVGContent/4456</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Setting default values for Cornell box: lookfrom `c(278,278,-800)` lookat `c(278,278,555/2)` fov `40` .</span>
+<span class="r-plt img"><img src="text3d-3.png" alt="" width="768" height="768"></span>
 <span class="r-in"><span>  </span></span>
 <span class="r-in"><span><span class="kw">if</span><span class="op">(</span><span class="fu"><a href="run_documentation.html">run_documentation</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span></span>
 <span class="r-in"><span><span class="co">#A room full of bees</span></span></span>
@@ -213,7 +226,8 @@ Note: emissive objects may not currently function correctly when scaled.</p></dd
 <span class="r-in"><span>  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="va">bees</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span>                   </span></span>
 <span class="r-in"><span>  <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>samples<span class="op">=</span><span class="fl">128</span>, clamp_value<span class="op">=</span><span class="fl">10</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> R: NonconformingDrawingPrimitiveDefinition `text' @ error/draw.c/RenderMVGContent/4456</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Setting default values for Cornell box: lookfrom `c(278,278,-800)` lookat `c(278,278,555/2)` fov `40` .</span>
+<span class="r-plt img"><img src="text3d-4.png" alt="" width="768" height="768"></span>
 </code></pre></div>
     </div>
   </div>
