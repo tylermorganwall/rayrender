@@ -2124,6 +2124,8 @@ path = function(points,
 #' @param y Default `0`. y-coordinate of the center of the label.
 #' @param z Default `0`. z-coordinate of the center of the label.
 #' @param text_height Default `1`. Height of the text.
+#' @param font A character string specifying the font family (e.g., `"Arial"`, `"Times"`, `"Helvetica"`).
+#' @param font_style A character string specifying the font style, such as `"plain"`, `"italic"`, or `"bold"`. Default is `"plain"`.
 #' @param orientation Default `xy`. Orientation of the plane. Other options are `yz` and `xz`.
 #' @param material Default  \code{\link{diffuse}}. The material, called from one of the material 
 #' functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}.
@@ -2188,15 +2190,17 @@ path = function(points,
 #'   render_scene(samples=128, clamp_value=10)
 #' }
 text3d = function(label, x = 0, y = 0, z = 0, text_height = 1, orientation = "xy",
-                  material = diffuse(), 
+                  material = diffuse(), font = "Arial", font_style = "plain",
                   angle = c(0, 0, 0), order_rotation = c(1, 2, 3), 
                   flipped = FALSE, scale = c(1,1,1)) {
   labelfile = tempfile(fileext = ".png")
-  rayimage::add_title(matrix(0,ncol = nchar(label)*60, nrow=60*1.2), 
-                      title_size  = 60,
-                      title_offset = c(0,0),title_text = label, title_color = "white",
-                      title_position = "center", filename = labelfile)
-  material[[1]]$alphaimage = list(labelfile)
+  font_metrics  = rayimage::get_font_metrics(font, 60, font_style)
+  vheight = 60 - font_metrics$total_height
+  rayimage::add_title(matrix(0,ncol = nchar(label)*60, nrow=60), 
+                      title_size  = 60, title_just = "center",  title_font = font, title_style = font_style,
+                      title_offset = c(0,vheight/2),title_text = label, title_color = "white",
+                      filename = labelfile)
+  material[[1]]$alphaimage = labelfile
   if(orientation == "xy" || orientation == "yx") {
     rayrender::xy_rect(x=x,y=y,z=z, angle = angle,
                        xwidth = nchar(label)*text_height, ywidth = text_height,

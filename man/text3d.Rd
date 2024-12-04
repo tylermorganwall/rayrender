@@ -12,6 +12,8 @@ text3d(
   text_height = 1,
   orientation = "xy",
   material = diffuse(),
+  font = "Arial",
+  font_style = "plain",
   angle = c(0, 0, 0),
   order_rotation = c(1, 2, 3),
   flipped = FALSE,
@@ -33,6 +35,10 @@ text3d(
 
 \item{material}{Default  \code{\link{diffuse}}. The material, called from one of the material 
 functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}.}
+
+\item{font}{A character string specifying the font family (e.g., `"Arial"`, `"Times"`, `"Helvetica"`).}
+
+\item{font_style}{A character string specifying the font style, such as `"plain"`, `"italic"`, or `"bold"`. Default is `"plain"`.}
 
 \item{angle}{Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.}
 

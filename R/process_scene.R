@@ -47,6 +47,10 @@ process_scene = function(scene, process_material_ids = TRUE) {
         temp_array[,,2] = temp_array[,,4]
         temp_array[,,3] = temp_array[,,4]
       }
+      if(dim(temp_array)[3] == 4 && all(temp_array[,,4] == 1) && 
+         any(temp_array[,,1:3] != 1)) {
+        temp_array[,,4] = temp_array[,,1]
+      }
       scene$material[[i]]$alphaimage = alpha_temp_file_names[i]
       png::writePNG(temp_array,alpha_temp_file_names[i])
     } 
@@ -67,6 +71,7 @@ process_scene = function(scene, process_material_ids = TRUE) {
           image_input[,,2] = image_input[,,4]
           image_input[,,3] = image_input[,,4]
           png::writePNG(fliplr(aperm(image_input[,,1:3],c(2,1,3))), alpha_temp_file_names[i])
+          browser()
           scene$material[[i]]$alphaimage = alpha_temp_file_names[i]
         }
       } else if(dim(image_input)[3] == 3){

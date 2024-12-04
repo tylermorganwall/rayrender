@@ -1,6 +1,6 @@
 #include "texture.h"
 
-static constexpr Float rescale = 1.f/255.f;
+static constexpr Float rescale = static_cast<Float>(1)/static_cast<Float>(255);
 
 point3f triangle_texture::value(Float u, Float v, const point3f& p) const {
     return(u * a + v * b + (1 - u - v) * c);
@@ -55,7 +55,7 @@ Float alpha_texture::value(Float u, Float v, const point3f& p) const {
   if (j < 0) j = 0;
   if (i > nx-1) i = nx-1;
   if (j > ny-1) j = ny-1;
-  return((Float)data[channels*i + channels*nx*j+channels-1] * rescale);
+  return(static_cast<Float>(data[channels*i + channels*nx*j + channels-1]) * rescale);
 }
 
 
