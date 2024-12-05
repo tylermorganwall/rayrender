@@ -6,13 +6,12 @@ compare_image = function(path1, path2) {
 
 
 test_that("rayshader tests", {
-  set.seed(1)
-  
   testthat::expect_no_error({
     volcano %>%
       rayshader::sphere_shade() %>%
       rayshader::plot_3d(volcano,zscale = 2)
     temp_hq = tempfile(fileext = ".png")
+    set.seed(1)
     rayshader::render_highquality(filename=temp_hq, samples = 100)
     rgl::close3d()
   })

@@ -648,33 +648,31 @@ inline int sgn_local(int val) {
 }
 
 inline FVec4 simd_sgn(const FVec4& a) {
-  FVec4 result;
-#ifdef HAS_SSE2
-    __m128i zero = _mm_setzero_si128();
-    __m128i one = _mm_set1_epi32(1);
-    __m128i neg_one = _mm_set1_epi32(-1);
+    FVec4 result;
+#ifdef HAS_SSE
+    __m128 zero = _mm_setzero_ps();
+    __m128 one = _mm_set1_ps(1.0f);
+    __m128 neg_one = _mm_set1_ps(-1.0f);
 
-    __m128i gt_mask = _mm_cmpgt_epi32(a.v, zero);      // x > 0
-    __m128i lt_mask = _mm_cmpgt_epi32(zero, a.v);      // x < 0
+    __m128 gt_mask = _mm_cmpgt_ps(a.v, zero); // x > 0
+    __m128 lt_mask = _mm_cmplt_ps(a.v, zero); // x < 0
 
-    __m128i pos_result = _mm_and_si128(gt_mask, one);     // 1 where x > 0
-    __m128i neg_result = _mm_and_si128(lt_mask, neg_one); // -1 where x < 0
+    __m128 pos_result = _mm_and_ps(gt_mask, one);     // 1.0f where x > 0
+    __m128 neg_result = _mm_and_ps(lt_mask, neg_one); // -1.0f where x < 0
 
-    result.v = _mm_add_epi32(pos_result, neg_result);
-
+    result.v = _mm_or_ps(pos_result, neg_result);
 #elif defined(HAS_NEON)
-    int32x4_t zero = vdupq_n_s32(0);
-    int32x4_t one = vdupq_n_s32(1);
-    int32x4_t neg_one = vdupq_n_s32(-1);
+    float32x4_t zero = vdupq_n_f32(0.0f);
+    float32x4_t one = vdupq_n_f32(1.0f);
+    float32x4_t neg_one = vdupq_n_f32(-1.0f);
 
-    uint32x4_t gt_mask = vcgtq_s32(a.v, zero); // x > 0
-    uint32x4_t lt_mask = vcltq_s32(a.v, zero); // x < 0
+    uint32x4_t gt_mask = vcgtq_f32(a.v, zero); // x > 0
+    uint32x4_t lt_mask = vcltq_f32(a.v, zero); // x < 0
 
-    int32x4_t pos_result = vandq_s32(vreinterpretq_s32_u32(gt_mask), one);
-    int32x4_t neg_result = vandq_s32(vreinterpretq_s32_u32(lt_mask), neg_one);
+    float32x4_t pos_result = vbslq_f32(gt_mask, one, zero);
+    float32x4_t neg_result = vbslq_f32(lt_mask, neg_one, zero);
 
-    result.v = vaddq_s32(pos_result, neg_result);
-
+    result.v = vaddq_f32(pos_result, neg_result);
 #else
     // Fallback to scalar implementation
     result.xyzw[0] = sgn_local(a.xyzw[0]);

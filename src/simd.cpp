@@ -371,3 +371,325 @@ context("simd_add performs vector addition correctly") {
         }
     }
 }
+
+
+context("simd_set initializes vector correctly") {
+  test_that("[simd_set]") {
+    float e0 = 1.0f;
+    float e1 = 2.0f;
+    float e2 = 3.0f;
+    float e3 = 4.0f;
+
+    FVec4 vec = simd_set(e0, e1, e2, e3);
+
+    expect_true(vec.xyzw[0] == Approx(e0));
+    expect_true(vec.xyzw[1] == Approx(e1));
+    expect_true(vec.xyzw[2] == Approx(e2));
+    expect_true(vec.xyzw[3] == Approx(e3));
+  }
+}
+
+context("simd_set1 initializes vector correctly with single value") {
+  test_that("[simd_set1]") {
+    float value = 3.14f;
+
+    FVec4 vec = simd_set1(value);
+
+    for (int i = 0; i < SIMD_WIDTH; ++i) {
+      expect_true(vec.xyzw[i] == Approx(value));
+    }
+  }
+}
+
+context("simd_cast_to_int casts SimdMask to IVec4") {
+  test_that("[simd_cast_to_int]") {
+    bool mask_bools[SIMD_WIDTH] = {true, false, true, false};
+    SimdMask mask = simd_setmask(mask_bools[0], mask_bools[1], mask_bools[2], mask_bools[3]);
+
+    IVec4 int_vec = simd_cast_to_int(mask);
+
+    for (int i = 0; i < SIMD_WIDTH; ++i) {
+      int expected = mask_bools[i] ? -1 : 0;
+      expect_true(int_vec.xyzw[i] == expected);
+    }
+  }
+}
+
+context("simd_setmask creates mask correctly") {
+  test_that("[simd_setmask]") {
+    bool mask_bools[SIMD_WIDTH] = {true, false, true, false};
+
+    SimdMask mask = simd_setmask(mask_bools[0], mask_bools[1], mask_bools[2], mask_bools[3]);
+
+    for (int i = 0; i < SIMD_WIDTH; ++i) {
+      uint32_t expected_bits = mask_bools[i] ? 0xFFFFFFFF : 0x00000000;
+      uint32_t mask_bits = reinterpret_cast<uint32_t&>(mask.xyzw[i]);
+      expect_true(mask_bits == expected_bits);
+    }
+  }
+}
+
+context("simd_cmpgt compares vectors correctly") {
+  test_that("[simd_cmpgt]") {
+    float a_values[SIMD_WIDTH] = {5.0f, 2.0f, 7.0f, 1.0f};
+    float b_values[SIMD_WIDTH] = {3.0f, 4.0f, 7.0f, 2.0f};
+
+    FVec4 a = simd_load(a_values);
+    FVec4 b = simd_load(b_values);
+
+    SimdMask mask = simd_cmpgt(a, b);
+
+    for (int i = 0; i < SIMD_WIDTH; ++i) {
+      bool expected = a_values[i] > b_values[i];
+      expect_true((mask.xyzw[i] != 0.0f) == expected);
+    }
+  }
+}
+
+context("simd_cmplt compares vectors correctly") {
+  test_that("[simd_cmplt]") {
+    float a_values[SIMD_WIDTH] = {5.0f, 2.0f, 7.0f, 1.0f};
+    float b_values[SIMD_WIDTH] = {3.0f, 4.0f, 7.0f, 2.0f};
+
+    FVec4 a = simd_load(a_values);
+    FVec4 b = simd_load(b_values);
+
+    SimdMask mask = simd_cmplt(a, b);
+
+    for (int i = 0; i < SIMD_WIDTH; ++i) {
+      bool expected = a_values[i] < b_values[i];
+      expect_true((mask.xyzw[i] != 0.0f) == expected);
+    }
+  }
+}
+
+context("simd_shuffle rearranges vector elements correctly") {
+  test_that("[simd_shuffle]") {
+    float values[SIMD_WIDTH] = {10.0f, 20.0f, 30.0f, 40.0f};
+    FVec4 vec = simd_load(values);
+
+    // Shuffle to [vec[3], vec[2], vec[1], vec[0]]
+    FVec4 result = simd_shuffle(vec, 3, 2, 1, 0);
+
+    expect_true(result.xyzw[0] == Approx(values[3]));
+    expect_true(result.xyzw[1] == Approx(values[2]));
+    expect_true(result.xyzw[2] == Approx(values[1]));
+    expect_true(result.xyzw[3] == Approx(values[0]));
+  }
+}
+
+context("simd_sgn computes sign correctly for floats") {
+  test_that("[simd_sgn]") {
+    float values[SIMD_WIDTH] = {3.5f, -2.0f, 0.0f, -0.0f};
+
+    FVec4 vec = simd_load(values);
+
+    FVec4 result = simd_sgn(vec);
+
+    for (int i = 0; i < SIMD_WIDTH; ++i) {
+      float expected = (values[i] > 0.0f) ? 1.0f : ((values[i] < 0.0f) ? -1.0f : 0.0f);
+      expect_true(result.xyzw[i] == Approx(expected));
+    }
+  }
+}
+
+context("simd_sgn computes sign correctly for integers") {
+  test_that("[simd_sgn_int]") {
+    int values[SIMD_WIDTH] = {10, -20, 0, -0};
+
+    IVec4 vec = IVec4(values[0], values[1], values[2], values[3]);
+
+    IVec4 result = simd_sgn(vec);
+
+    for (int i = 0; i < SIMD_WIDTH; ++i) {
+      int expected = (values[i] > 0) ? 1 : ((values[i] < 0) ? -1 : 0);
+      expect_true(result.xyzw[i] == expected);
+    }
+  }
+}
+
+context("simd_extract_fvec4 extracts vector elements correctly") {
+  test_that("[simd_extract_fvec4]") {
+    float values[SIMD_WIDTH] = {3.14f, 2.71f, 1.41f, 0.0f};
+    FVec4 vec = simd_load(values);
+
+    float dest[SIMD_WIDTH];
+    simd_extract_fvec4(vec, dest);
+
+    for (int i = 0; i < SIMD_WIDTH; ++i) {
+      expect_true(dest[i] == Approx(values[i]));
+    }
+  }
+}
+
+context("simd_not_equals_minus_one computes correctly") {
+  test_that("[simd_not_equals_minus_one]") {
+    int values[SIMD_WIDTH] = {-1, 0, -1, 2};
+    IVec4 vec = IVec4(values[0], values[1], values[2], values[3]);
+
+    IVec4 result = simd_not_equals_minus_one(vec);
+
+    for (int i = 0; i < SIMD_WIDTH; ++i) {
+      int expected = (values[i] != -1) ? 1 : 0;
+      expect_true(result.xyzw[i] == expected);
+    }
+  }
+}
+
+context("simd_abs computes absolute value correctly") {
+  test_that("[simd_abs]") {
+    float values[SIMD_WIDTH] = {-3.5f, 2.0f, -0.0f, 0.0f};
+
+    FVec4 vec = simd_load(values);
+
+    FVec4 result = simd_abs(vec);
+
+    for (int i = 0; i < SIMD_WIDTH; ++i) {
+      float expected = fabs(values[i]);
+      expect_true(result.xyzw[i] == Approx(expected));
+    }
+  }
+}
+
+context("simd_squared_length computes squared length correctly") {
+  test_that("[simd_squared_length]") {
+    float values[SIMD_WIDTH] = {1.0f, 2.0f, 3.0f, 4.0f};
+
+    FVec4 vec = simd_load(values);
+
+    float result = simd_squared_length(vec);
+
+    float expected = 0.0f;
+    for (int i = 0; i < SIMD_WIDTH; ++i) {
+      expected += values[i] * values[i];
+    }
+
+    expect_true(fabs(result - expected) < 1e-6f);
+  }
+}
+
+context("simd_set1 initializes integer vector correctly with single value") {
+  test_that("[simd_set1_int]") {
+    int value = 42;
+
+    IVec4 vec = simd_set1(value);
+
+    for (int i = 0; i < SIMD_WIDTH; ++i) {
+      expect_true(vec.xyzw[i] == value);
+    }
+  }
+}
+
+context("simd_add performs integer vector addition correctly") {
+  test_that("[simd_add_int]") {
+    int a_values[SIMD_WIDTH] = {1, 2, 3, 4};
+    int b_values[SIMD_WIDTH] = {5, 6, 7, 8};
+
+    IVec4 a = IVec4(a_values[0], a_values[1], a_values[2], a_values[3]);
+    IVec4 b = IVec4(b_values[0], b_values[1], b_values[2], b_values[3]);
+
+    IVec4 result = simd_add(a, b);
+
+    for (int i = 0; i < SIMD_WIDTH; ++i) {
+      int expected = a_values[i] + b_values[i];
+      expect_true(result.xyzw[i] == expected);
+    }
+  }
+}
+
+context("simd_sub performs integer vector subtraction correctly") {
+  test_that("[simd_sub_int]") {
+    int a_values[SIMD_WIDTH] = {5, 6, 7, 8};
+    int b_values[SIMD_WIDTH] = {1, 2, 3, 4};
+
+    IVec4 a = IVec4(a_values[0], a_values[1], a_values[2], a_values[3]);
+    IVec4 b = IVec4(b_values[0], b_values[1], b_values[2], b_values[3]);
+
+    IVec4 result = simd_sub(a, b);
+
+    for (int i = 0; i < SIMD_WIDTH; ++i) {
+      int expected = a_values[i] - b_values[i];
+      expect_true(result.xyzw[i] == expected);
+    }
+  }
+}
+
+context("simd_mul performs integer vector multiplication correctly") {
+  test_that("[simd_mul_int]") {
+    int a_values[SIMD_WIDTH] = {2, 3, 4, 5};
+    int b_values[SIMD_WIDTH] = {6, 7, 8, 9};
+
+    IVec4 a = IVec4(a_values[0], a_values[1], a_values[2], a_values[3]);
+    IVec4 b = IVec4(b_values[0], b_values[1], b_values[2], b_values[3]);
+
+    IVec4 result = simd_mul(a, b);
+
+    for (int i = 0; i < SIMD_WIDTH; ++i) {
+      int expected = a_values[i] * b_values[i];
+      expect_true(result.xyzw[i] == expected);
+    }
+  }
+}
+
+context("simd_div performs integer vector division correctly") {
+  test_that("[simd_div_int]") {
+    int a_values[SIMD_WIDTH] = {10, 20, 30, 40};
+    int b_values[SIMD_WIDTH] = {2, 4, 5, 8};
+
+    IVec4 a = IVec4(a_values[0], a_values[1], a_values[2], a_values[3]);
+    IVec4 b = IVec4(b_values[0], b_values[1], b_values[2], b_values[3]);
+
+    IVec4 result = simd_div(a, b);
+
+    for (int i = 0; i < SIMD_WIDTH; ++i) {
+      int expected = a_values[i] / b_values[i];
+      expect_true(result.xyzw[i] == expected);
+    }
+  }
+}
+
+context("simd_blend_int blends integer vectors correctly") {
+  test_that("[simd_blend_int]") {
+    int a_values[SIMD_WIDTH] = {1, 2, 3, 4};
+    int b_values[SIMD_WIDTH] = {5, 6, 7, 8};
+    bool mask_bools[SIMD_WIDTH] = {true, false, true, false};
+
+    IVec4 a = IVec4(a_values[0], a_values[1], a_values[2], a_values[3]);
+    IVec4 b = IVec4(b_values[0], b_values[1], b_values[2], b_values[3]);
+    SimdMask mask = simd_setmask(mask_bools[0], mask_bools[1], mask_bools[2], mask_bools[3]);
+
+    IVec4 result = simd_blend_int(mask, a, b);
+
+    for (int i = 0; i < SIMD_WIDTH; ++i) {
+      int expected = mask_bools[i] ? a_values[i] : b_values[i];
+      expect_true(result.xyzw[i] == expected);
+    }
+  }
+}
+
+context("simd_not computes logical NOT correctly") {
+  test_that("[simd_not]") {
+    bool mask_bools[SIMD_WIDTH] = {true, false, true, false};
+    SimdMask mask = simd_setmask(mask_bools[0], mask_bools[1], mask_bools[2], mask_bools[3]);
+
+    SimdMask result = simd_not(mask);
+
+    for (int i = 0; i < SIMD_WIDTH; ++i) {
+      bool expected = !mask_bools[i];
+      expect_true((result.xyzw[i] != 0.0f) == expected);
+    }
+  }
+}
+
+context("simd_set1 initializes SimdMask with unsigned int value correctly") {
+  test_that("[simd_set1_unsigned_int]") {
+    unsigned int value = 0xFFFFFFFF; // All bits set
+
+    SimdMask mask = simd_set1(value);
+
+    for (int i = 0; i < SIMD_WIDTH; ++i) {
+      uint32_t mask_bits = reinterpret_cast<uint32_t&>(mask.xyzw[i]);
+      expect_true(mask_bits == value);
+    }
+  }
+}
