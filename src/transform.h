@@ -62,7 +62,6 @@ Transform() { }
                    m.m[1][0] * x + m.m[1][1] * y + m.m[1][2] * z,
                    m.m[2][0] * x + m.m[2][1] * y + m.m[2][2] * z);
   }
-  normal3f operator()(const normal3f &n) const;
   
   #ifndef RAYSIMDVEC
   normal3f operator()(const normal3f &n) const {
@@ -71,6 +70,8 @@ Transform() { }
                     mInv.m[0][1] * x + mInv.m[1][1] * y + mInv.m[2][1] * z,
                     mInv.m[0][2] * x + mInv.m[1][2] * y + mInv.m[2][2] * z);
   }
+  #else 
+  normal3f operator()(const normal3f &n) const;
   #endif
   
   // template <typename T> void operator()(const normal3<T> &, normal3<T> *nt) const;

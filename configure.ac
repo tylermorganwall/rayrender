@@ -7,14 +7,12 @@ if test -z "${R_HOME}"; then
   exit 1
 fi
 
-##Fix CRAN note about looking for gcc 
 CC=`"${R_HOME}/bin/R" CMD config CC`
 CFLAGS=`"${R_HOME}/bin/R" CMD config CFLAGS`
 CPPFLAGS=`"${R_HOME}/bin/R" CMD config CPPFLAGS`
 
 if test `uname` = "Darwin" ; then
   darwin="yes"
-  ## we want the *build* cputype and not the host one.
   cmd=`echo $CC $CFLAGS | grep -E 'x86_64|ppc64|-m64'`
   if test -n "$cmd"; then
     have_64bit="yes"
@@ -51,21 +49,20 @@ else
   fi
 fi
 
-# Check for AVX, SSE, and NEON support
-# Change AVX define to -DHAS_AVX when supported and CXXFLAGS to -mavx
-AC_MSG_CHECKING([for AVX support])
-AC_COMPILE_IFELSE([AC_LANG_PROGRAM([#include <immintrin.h>], [__m256 test = _mm256_setzero_ps();])],
+# Check for SSE2 support first
+AC_MSG_CHECKING([for SSE2 support])
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([#include <emmintrin.h>], [__m128d test = _mm_setzero_pd();])],
   [AC_MSG_RESULT([yes])
-   DEFINES="${DEFINES} -DHAS_SSE -DRAYSIMD"
-   CXXFLAGS="${CXXFLAGS} -msse"],
-  [AC_MSG_RESULT([no])])
-
-AC_MSG_CHECKING([for SSE support])
-AC_COMPILE_IFELSE([AC_LANG_PROGRAM([#include <xmmintrin.h>], [__m128 test = _mm_setzero_ps();])],
-  [AC_MSG_RESULT([yes])
-   DEFINES="${DEFINES} -DHAS_SSE -DRAYSIMD"
-   CXXFLAGS="${CXXFLAGS} -msse"],
-  [AC_MSG_RESULT([no])])
+   DEFINES="${DEFINES} -DHAS_SSE2 -DRAYSIMD -DRAYSIMDVEC"
+   CXXFLAGS="${CXXFLAGS} -msse2"],
+  [AC_MSG_RESULT([no])
+   # If SSE2 not found, try SSE
+   AC_MSG_CHECKING([for SSE support])
+   AC_COMPILE_IFELSE([AC_LANG_PROGRAM([#include <xmmintrin.h>], [__m128 test = _mm_setzero_ps();])],
+     [AC_MSG_RESULT([yes])
+      DEFINES="${DEFINES} -DHAS_SSE -DRAYSIMD -DRAYSIMDVEC"
+      CXXFLAGS="${CXXFLAGS} -msse"],
+     [AC_MSG_RESULT([no])])])
 
 AC_MSG_CHECKING([for NEON support])
 AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
@@ -78,9 +75,6 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
    CXXFLAGS="${CXXFLAGS} -mfpu=neon"],
   [AC_MSG_RESULT([no])])
 
-
-
-# Write the flags into the src/Makevars file.
 AC_SUBST([PKG_CPPFLAGS], ["${PKG_CPPFLAGS}"])
 AC_SUBST([PKG_LIBS], ["${LIBS} ${PKG_LIBS}"])
 AC_SUBST([DEFINES], ["${DEFINES}"])

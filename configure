@@ -2501,14 +2501,12 @@ if test -z "${R_HOME}"; then
   exit 1
 fi
 
-##Fix CRAN note about looking for gcc
 CC=`"${R_HOME}/bin/R" CMD config CC`
 CFLAGS=`"${R_HOME}/bin/R" CMD config CFLAGS`
 CPPFLAGS=`"${R_HOME}/bin/R" CMD config CPPFLAGS`
 
 if test `uname` = "Darwin" ; then
   darwin="yes"
-  ## we want the *build* cputype and not the host one.
   cmd=`echo $CC $CFLAGS | grep -E 'x86_64|ppc64|-m64'`
   if test -n "$cmd"; then
     have_64bit="yes"
@@ -4410,17 +4408,16 @@ else
   fi
 fi
 
-# Check for AVX, SSE, and NEON support
-# Change AVX define to -DHAS_AVX when supported and CXXFLAGS to -mavx
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for AVX support" >&5
-printf %s "checking for AVX support... " >&6; }
+# Check for SSE2 support first
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for SSE2 support" >&5
+printf %s "checking for SSE2 support... " >&6; }
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-#include <immintrin.h>
+#include <emmintrin.h>
 int
 main (void)
 {
-__m256 test = _mm256_setzero_ps();
+__m128d test = _mm_setzero_pd();
   ;
   return 0;
 }
@@ -4429,17 +4426,15 @@ if ac_fn_cxx_try_compile "$LINENO"
 then :
   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 printf "%s\n" "yes" >&6; }
-   DEFINES="${DEFINES} -DHAS_SSE -DRAYSIMD"
-   CXXFLAGS="${CXXFLAGS} -msse"
+   DEFINES="${DEFINES} -DHAS_SSE2 -DRAYSIMD -DRAYSIMDVEC"
+   CXXFLAGS="${CXXFLAGS} -msse2"
 else $as_nop
   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
 printf "%s\n" "no" >&6; }
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
-
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for SSE support" >&5
+   # If SSE2 not found, try SSE
+   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for SSE support" >&5
 printf %s "checking for SSE support... " >&6; }
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 #include <xmmintrin.h>
 int
@@ -4454,11 +4449,13 @@ if ac_fn_cxx_try_compile "$LINENO"
 then :
   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 printf "%s\n" "yes" >&6; }
-   DEFINES="${DEFINES} -DHAS_SSE -DRAYSIMD"
-   CXXFLAGS="${CXXFLAGS} -msse"
+      DEFINES="${DEFINES} -DHAS_SSE -DRAYSIMD -DRAYSIMDVEC"
+      CXXFLAGS="${CXXFLAGS} -msse"
 else $as_nop
   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
 printf "%s\n" "no" >&6; }
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
 
@@ -4491,9 +4488,6 @@ printf "%s\n" "no" >&6; }
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
 
-
-
-# Write the flags into the src/Makevars file.
 PKG_CPPFLAGS="${PKG_CPPFLAGS}"
 
 PKG_LIBS="${LIBS} ${PKG_LIBS}"
@@ -5664,3 +5658,4 @@ echo "
 
   --------------------------------------------------
 "
+
