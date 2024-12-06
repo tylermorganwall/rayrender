@@ -36,7 +36,8 @@ Suggests:
     testthat (>= 3.0.0),
     tibble,
     rayshader,
-    xml2
+    xml2,
+    rgl
 LinkingTo: Rcpp, RcppThread, progress, spacefillr (>= 0.3.0), testthat
 URL: https://www.rayrender.net, https://github.com/tylermorganwall/rayrender
 RoxygenNote: 7.3.2
