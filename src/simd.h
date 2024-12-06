@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <stdio.h>
 #include <cstddef> // For alignas
+#include "dop.h"
 
 // SIMD vector size (4 for SSE, 8 for AVX)
 #ifdef HAS_AVX
@@ -350,7 +351,9 @@ inline IVec4 simd_cast_to_int(SimdMask mask) {
 #else
     IVec4 result;
     for (int i = 0; i < 4; ++i) {
-        result.xyzw[i] = reinterpret_cast<int&>(mask.xyzw[i]);
+        uint32_t bits;
+        std::memcpy(&bits, &mask.xyzw[i], sizeof(bits)); 
+        result.xyzw[i] = static_cast<int>(bits);
     }
     return result;
 #endif
@@ -377,7 +380,8 @@ inline SimdMask simd_setmask(bool m0, bool m1, bool m2, bool m3) {
 #else
     for (int i = 0; i < 4; ++i) {
         uint32_t bits = ((i == 0 && m0) || (i == 1 && m1) || (i == 2 && m2) || (i == 3 && m3)) ? 0xFFFFFFFF : 0x00000000;
-        result.xyzw[i] = reinterpret_cast<float&>(bits);
+        std::memcpy(&bits, &mask.xyzw[i], sizeof(bits)); 
+        result.xyzw[i] = static_cast<float>(bits);
     }
 #endif
     return result;
@@ -596,12 +600,7 @@ inline IVec4 simd_shuffle(IVec4 a, int idx0, int idx1, int idx2, int idx3) {
 }
 
 inline IVec4 simd_cmpneq(IVec4 a, IVec4 b) {
-#ifdef HAS_AVX
-    IVec4 result;
-    __m256i cmp = _mm256_cmpeq_epi32(a.v, b.v);
-    result.v = _mm256_xor_si256(cmp, _mm256_set1_epi32(-1)); // Invert bits
-    return result;
-#elif defined(HAS_SSE)
+#if defined(HAS_SSE)
     IVec4 result;
     __m128i cmp = _mm_cmpeq_epi32(a.v, b.v);
     result.v = _mm_xor_si128(cmp, _mm_set1_epi32(-1)); // Invert bits
@@ -688,14 +687,16 @@ inline FVec4 simd_sgn(const FVec4& a) {
 
 
 inline IVec4 simd_sgn(const IVec4& a) {
-  IVec4 result;
-#ifdef HAS_SSE2
+    IVec4 result;
+
+#if defined(__SSE2__)
+    // SSE2 provides _mm_set1_epi32, _mm_cmpgt_epi32, and other integer intrinsics.
     __m128i zero = _mm_setzero_si128();
     __m128i one = _mm_set1_epi32(1);
     __m128i neg_one = _mm_set1_epi32(-1);
 
-    __m128i gt_mask = _mm_cmpgt_epi32(p.e.v, zero);      // x > 0
-    __m128i lt_mask = _mm_cmpgt_epi32(zero, p.e.v);      // x < 0
+    __m128i gt_mask = _mm_cmpgt_epi32(a.v, zero);  // x > 0
+    __m128i lt_mask = _mm_cmpgt_epi32(zero, a.v);  // x < 0
 
     __m128i pos_result = _mm_and_si128(gt_mask, one);     // 1 where x > 0
     __m128i neg_result = _mm_and_si128(lt_mask, neg_one); // -1 where x < 0
@@ -716,12 +717,13 @@ inline IVec4 simd_sgn(const IVec4& a) {
     result.v = vaddq_s32(pos_result, neg_result);
 
 #else
-    // Fallback to scalar implementation
+    // Fallback scalar implementation if SSE2 (or NEON) isn't available.
     result.xyzw[0] = sgn_local(a.xyzw[0]);
     result.xyzw[1] = sgn_local(a.xyzw[1]);
     result.xyzw[2] = sgn_local(a.xyzw[2]);
     result.xyzw[3] = sgn_local(a.xyzw[3]);
 #endif
+
     return result;
 }
 
@@ -802,17 +804,10 @@ inline FVec4 simd_abs(const FVec4& b) {
 #elif defined(HAS_NEON)
     result.v = vabsq_f32(b.v);
 #else
-#ifdef RAY_FLOAT_AS_DOUBLE
-    result.e[0] = ffabs(b.e[0]);
-    result.e[1] = ffabs(b.e[1]);
-    result.e[2] = ffabs(b.e[2]);
-    result.e[3] = 0.0f;
-#else
-    result.e[0] = ffabs(b.e[0]);
-    result.e[1] = ffabs(b.e[1]);
-    result.e[2] = ffabs(b.e[2]);
-    result.e[3] = 0.0f;
-#endif
+    result.xyzw[0] = ffabs(b.xyzw[0]);
+    result.xyzw[1] = ffabs(b.xyzw[1]);
+    result.xyzw[2] = ffabs(b.xyzw[2]);
+    result.xyzw[3] = ffabs(b.xyzw[3]);
 #endif
     return result;
 }
@@ -1123,7 +1118,9 @@ inline IVec4 simd_blend_int(SimdMask mask, IVec4 a, IVec4 b) {
 #else
     IVec4 result;
     for (int i = 0; i < 4; ++i) {
-        result.xyzw[i] = (reinterpret_cast<uint32_t&>(mask.xyzw[i])) ? a.xyzw[i] : b.xyzw[i];
+        uint32_t bits;
+        std::memcpy(&bits, &mask.xyzw[i], sizeof(bits));
+        result.xyzw[i] = (static_cast<int>(bits) ? a.xyzw[i] : b.xyzw[i];
     }
     return result;
 #endif
@@ -1141,7 +1138,8 @@ inline SimdMask simd_not(SimdMask mask) {
 #else
     SimdMask result;
     for (int i = 0; i < 4; ++i) {
-        uint32_t bits = ~reinterpret_cast<uint32_t&>(mask.xyzw[i]);
+        uint32_t bits;
+        std::memcpy(&bits, &mask.xyzw[i], sizeof(bits));
         result.xyzw[i] = reinterpret_cast<float&>(bits);
     }
     return result;
@@ -1156,7 +1154,9 @@ inline SimdMask simd_set1(unsigned int value) {
     result.v = vreinterpretq_f32_u32(vdupq_n_u32(value));
 #else
     for (int i = 0; i < 4; ++i) {
-        result.xyzw[i] = *reinterpret_cast<float*>(&value);
+        uint32_t bits;
+        std::memcpy(&bits, &mask.xyzw[i], sizeof(bits));
+        result.xyzw[i] = reinterpret_cast<float>(bits);
     }
 #endif
     return result;

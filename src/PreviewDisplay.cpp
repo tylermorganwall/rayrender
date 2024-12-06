@@ -975,7 +975,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         case VK_KEY_P: {
           point3f origin = cam_w->get_origin();
           Float fov =  cam_w->get_fov();
-          point3f cam_direction = -cam_w->get_w();
+          vec3f cam_direction = -cam_w->get_w();
           Float cam_aperture = cam_w->get_aperture();
           Float fd = cam_w->get_focal_distance();
           point2f ortho = cam_w->get_ortho();
@@ -1027,7 +1027,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
           case VK_KEY_K: {
             point3f origin = cam_w->get_origin();
             Float fov =  cam_w->get_fov();
-            point3f cam_direction = -cam_w->get_w();
+            vec3f cam_direction = -cam_w->get_w();
             Float cam_aperture = cam_w->get_aperture();
             Float fd = cam_w->get_focal_distance();
             vec3f cam_up = cam_w->get_up();
@@ -1133,10 +1133,8 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
           ray r2;
           cam_w->GenerateRay(samp,&r2);
           if(world_w->hit(r2, 0.001, FLT_MAX, hrec, *rng_w)) {
-            if( hrec.shape->GetName() != "EnvironmentLight") {
-              dir = -hrec.p;
-            }  else {
-              dir = -hrec.p;
+            dir = convert_to_vec3(-hrec.p)
+            if( hrec.shape->GetName() == "EnvironmentLight") {
               just_direction = true;
             }
           }

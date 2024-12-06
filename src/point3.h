@@ -868,9 +868,7 @@ inline point3<int> cross(const point3<int>& v1, const point3<int>& v2) {
 
 inline point3<int> Min(const point3<int>& p1, const point3<int>& p2) {
     point3<int> result;
-#ifdef HAS_AVX2
-    result.e.v = _mm256_min_epi32(p1.e.v, p2.e.v);
-#elif defined(HAS_SSE4_1)
+#if defined(__SSE4_1__)
     result.e.v = _mm_min_epi32(p1.e.v, p2.e.v);
 #elif defined(HAS_NEON)
     result.e.v = vminq_s32(p1.e.v, p2.e.v);
@@ -884,9 +882,7 @@ inline point3<int> Min(const point3<int>& p1, const point3<int>& p2) {
 
 inline point3<int> Max(const point3<int>& p1, const point3<int>& p2) {
     point3<int> result;
-#ifdef HAS_AVX2
-    result.e.v = _mm256_max_epi32(p1.e.v, p2.e.v);
-#elif defined(HAS_SSE4_1)
+#if defined(__SSE4_1__)
     result.e.v = _mm_max_epi32(p1.e.v, p2.e.v);
 #elif defined(HAS_NEON)
     result.e.v = vmaxq_s32(p1.e.v, p2.e.v);
@@ -918,7 +914,7 @@ inline int MaxDimension(const point3<int>& v) {
 
 inline point3<int> Abs(const point3<int>& v) {
     point3<int> result;
-#ifdef HAS_SSE2
+#ifdef __SSE2__
     result.e.v = _mm_abs_epi32(v.e.v);
 #elif defined(HAS_NEON)
     result.e.v = vabsq_s32(v.e.v);

@@ -767,21 +767,9 @@ inline vec3<int> sgn(const vec3<int>& v1) {
   return result;
 }
 
-// inline vec3<int>& vec3<int>::operator*=(const int& t) {
-//     e = simd_mul(e, simd_set1(t));
-//     return *this;
-// }
-
-// inline vec3<int>& vec3<int>::operator/=(const int& t) {
-//     e = simd_div(e, simd_set1(t));
-//     return *this;
-// }
-
 inline vec3<int> Min(const vec3<int>& p1, const vec3<int>& p2) {
     vec3<int> result;
-#ifdef HAS_AVX2
-    result.e.v = _mm256_min_epi32(p1.e.v, p2.e.v);
-#elif defined(HAS_SSE4_1)
+#if defined(__SSE4_1__)
     result.e.v = _mm_min_epi32(p1.e.v, p2.e.v);
 #elif defined(HAS_NEON)
     result.e.v = vminq_s32(p1.e.v, p2.e.v);
@@ -795,9 +783,7 @@ inline vec3<int> Min(const vec3<int>& p1, const vec3<int>& p2) {
 
 inline vec3<int> Max(const vec3<int>& p1, const vec3<int>& p2) {
     vec3<int> result;
-#ifdef HAS_AVX2
-    result.e.v = _mm256_max_epi32(p1.e.v, p2.e.v);
-#elif defined(HAS_SSE4_1)
+#if defined(__SSE4_1__)
     result.e.v = _mm_max_epi32(p1.e.v, p2.e.v);
 #elif defined(HAS_NEON)
     result.e.v = vmaxq_s32(p1.e.v, p2.e.v);
@@ -829,7 +815,7 @@ inline int MaxDimension(const vec3<int>& v) {
 
 inline vec3<int> Abs(const vec3<int>& v) {
     vec3<int> result;
-#ifdef HAS_SSE2
+#ifdef __SSE3__
     result.e.v = _mm_abs_epi32(v.e.v);
 #elif defined(HAS_NEON)
     result.e.v = vabsq_s32(v.e.v);

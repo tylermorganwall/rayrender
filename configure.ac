@@ -53,7 +53,7 @@ fi
 AC_MSG_CHECKING([for SSE2 support])
 AC_COMPILE_IFELSE([AC_LANG_PROGRAM([#include <emmintrin.h>], [__m128d test = _mm_setzero_pd();])],
   [AC_MSG_RESULT([yes])
-   DEFINES="${DEFINES} -DHAS_SSE2 -DRAYSIMD -DRAYSIMDVEC"
+   DEFINES="${DEFINES} -DHAS_SSE -DRAYSIMD -DRAYSIMDVEC"
    CXXFLAGS="${CXXFLAGS} -msse2"],
   [AC_MSG_RESULT([no])
    # If SSE2 not found, try SSE
