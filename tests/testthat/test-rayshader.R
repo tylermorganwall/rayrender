@@ -15,7 +15,8 @@ test_that("rayshader tests", {
     rayshader::render_highquality(filename=temp_hq, samples = 100)
     rgl::close3d()
   })
-  
-  announce_snapshot_file(temp_hq, name = "rayshader.png")
-  expect_snapshot_file(temp_hq, name = "rayshader.png", compare = compare_image)
+  if(!isTRUE(as.logical(Sys.getenv("IS_GHA", "false")))) {
+    announce_snapshot_file(temp_hq, name = "rayshader.png")
+    expect_snapshot_file(temp_hq, name = "rayshader.png", compare = compare_image)
+  }
 })

@@ -294,7 +294,8 @@ inline FVec4 simd_less_equal(FVec4 a, FVec4 b) {
 #elif defined(HAS_SSE)
   result.v = _mm_cmple_ps(a.v, b.v);
 #elif defined(HAS_NEON)
-  result.v = vcleq_f32(a.v, b.v);
+    uint32x4_t mask = vcleq_f32(a.v, b.v);
+    result.v = vreinterpretq_f32_u32(mask);
 #else
   for (int i = 0; i < SIMD_WIDTH; ++i) {
     result.v[i] = (a.v[i] <= b.v[i]) ? -1.0f : 0.0f;
@@ -411,7 +412,8 @@ inline SimdMask simd_cmpge(FVec4 a, FVec4 b) {
     return result;
 #elif defined(HAS_NEON)
     SimdMask result;
-    result.v = vcgeq_f32(a.v, b.v);
+    uint32x4_t mask = vcgeq_f32(a.v, b.v);
+    result.v = vreinterpretq_f32_u32(mask);
     return result;
 #else
     // Fallback for non-SIMD
@@ -606,7 +608,8 @@ inline IVec4 simd_cmpneq(IVec4 a, IVec4 b) {
     return result;
 #elif defined(HAS_NEON)
     IVec4 result;
-    result.v = vmvnq_s32(vceqq_s32(a.v, b.v));
+    result.v = vreinterpretq_s32_u32(vmvnq_u32(vceqq_s32(a.v, b.v)));
+    // result.v = vreinterpretq_s32_u32(mask);
     return result;
 #else
     IVec4 result;
@@ -780,7 +783,7 @@ inline IVec4 simd_not_equals_minus_one(IVec4 a) {
     int32x4_t minus_one = vdupq_n_s32(-1);
     uint32x4_t cmp_eq = vceqq_s32(a.v, minus_one);
     uint32x4_t cmp_neq = vmvnq_u32(cmp_eq);
-    result.v = vshrq_n_u32(cmp_neq, 31);
+    result.v = vreinterpretq_s32_u32(vshrq_n_u32(cmp_neq, 31));
     return result;
 #else
     // Scalar fallback
@@ -934,7 +937,8 @@ inline SimdMask simd_cmpgt(FVec4 a, FVec4 b) {
     return result;
 #elif defined(HAS_NEON)
     SimdMask result;
-    result.v = vcgtq_f32(a.v, b.v);
+    uint32x4_t mask = vcgtq_f32(a.v, b.v);
+    result.v = vreinterpretq_f32_u32(mask);
     return result;
 #else
     SimdMask result;
@@ -952,7 +956,8 @@ inline SimdMask simd_cmplt(FVec4 a, FVec4 b) {
         return result;
     #elif defined(HAS_NEON)
         SimdMask result;
-        result.v = vcltq_f32(a.v, b.v);
+        uint32x4_t mask = vcltq_f32(a.v, b.v);
+        result.v = vreinterpretq_f32_u32(mask);
         return result;
     #else
         // Fallback for non-SIMD
@@ -1204,7 +1209,8 @@ inline int simd_extract_hitmask(const IVec4& vec) {
     // NEON implementation
 
     // Mask the least significant bits (elements are 0 or 1)
-    uint32x4_t masked = vandq_u32(vec.v, vdupq_n_u32(1));
+
+    uint32x4_t masked = vandq_u32(vreinterpretq_u32_s32(vec.v), vdupq_n_u32(1));
 
     // Multiply each element by its corresponding power of 2
     uint32x4_t powers = {1, 2, 4, 8}; // Powers of 2: 2^0, 2^1, 2^2, 2^3

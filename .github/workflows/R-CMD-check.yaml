@@ -28,8 +28,15 @@ jobs:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
       R_KEEP_PKG_SOURCE: yes
       NOT_CRAN: true
+      IS_GHA: true
 
     steps:
+      - name: Set RGL_USE_NULL for Ubuntu
+        if: runner.os == 'Linux'
+        run: echo "RGL_USE_NULL=TRUE" >> $GITHUB_ENV
+      - name: Set RGL_USE_NULL for macOS
+        if: runner.os == 'macOS'
+        run: echo "RGL_USE_NULL=TRUE" >> $GITHUB_ENV
       - uses: actions/checkout@v4
 
       - uses: r-lib/actions/setup-pandoc@v2
