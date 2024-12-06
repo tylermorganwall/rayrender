@@ -1133,7 +1133,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
           ray r2;
           cam_w->GenerateRay(samp,&r2);
           if(world_w->hit(r2, 0.001, FLT_MAX, hrec, *rng_w)) {
-            dir = convert_to_vec3(-hrec.p)
+            dir = convert_to_vec3(-hrec.p);
             if( hrec.shape->GetName() == "EnvironmentLight") {
               just_direction = true;
             }
@@ -1193,11 +1193,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         ray r2;
         cam_w->GenerateRay(samp,&r2);
         if(world_w->hit(r2, 0.001, FLT_MAX, hrec, *rng_w)) {
-          if( hrec.shape->GetName() != "EnvironmentLight") {
-            dir = -hrec.p;
-          }  else {
-            dir = -hrec.p;
-          }
+          dir = convert_to_vec3(-hrec.p)
         }
       } else if (fov > 0) {
         ray r2 = cam_w->get_ray(u,1-v, point3f(0),
