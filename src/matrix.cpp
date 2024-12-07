@@ -109,7 +109,7 @@ Matrix4x4 Inverse(const Matrix4x4 &m) {
   int indxc[4], indxr[4];
   int ipiv[4] = {0, 0, 0, 0};
   Float minv[4][4];
-  memcpy(minv, m.m, 4 * 4 * sizeof(Float));
+  memcpy(&minv, (Float*)&m.m, 4 * 4 * sizeof(Float));
   for (int i = 0; i < 4; i++) {
     int irow = 0, icol = 0;
     Float big = 0.f;
