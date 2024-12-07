@@ -73,6 +73,9 @@ jobs:
           install.packages("pkgdown", type = "binary")
         shell: Rscript {0}
 
+      - name: Fix git pkgdown build
+        run: git config --global http.postBuffer 524288000
+
       - name: Install package
         run: R CMD INSTALL .
 
