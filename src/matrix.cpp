@@ -2,6 +2,9 @@
 #include "simd.h"
 #include <testthat.h>
 
+static_assert(std::is_trivially_copyable<FVec4>::value,
+              "FVec4 must be trivially copyable to use memcpy safely.");
+
 Matrix4x4::Matrix4x4(Float mat[4][4]) { memcpy(m, mat, 16 * sizeof(Float)); }
 
 Matrix4x4::Matrix4x4(Float t00, Float t01, Float t02, Float t03, 
