@@ -89,7 +89,6 @@ struct alignas(16) Matrix4x4 {
   
   friend Matrix4x4 Inverse(const Matrix4x4 &);
   
-  // Float m[4][4];
 #ifdef RAYSIMDVEC
   FVec4 m[4];
 #else
