@@ -1,5 +1,6 @@
 #include "integrator.h"
 
+#include "RayMatrix.h"
 #include "float.h"
 // #define DEBUG
 #include "RcppThread.h"
@@ -15,7 +16,9 @@
 
 void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::size_t ns, int debug_channel,
                 Float min_variance, std::size_t min_adaptive_size, 
-                RayMatrix& routput, RayMatrix& goutput, RayMatrix& boutput, RayMatrix& alpha_output,
+                RayMatrix& rgb_output, RayMatrix& normalOutput, RayMatrix& albedoOutput, 
+                RayMatrix& alpha_output,
+                RayMatrix& draw_rgb_output,
                 bool progress_bar, int sample_method, Rcpp::NumericVector& stratified_dim,
                 bool verbose, RayCamera* cam, 
                 Float fov,
@@ -34,32 +37,38 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
     pb_sampler.set_total(ny);
     pb.set_total(ns);
   }
-  RayMatrix routput2(nx,ny);
-  RayMatrix goutput2(nx,ny);
-  RayMatrix boutput2(nx,ny);
+  RayMatrix rgb_output2(nx,ny,3);
   display.write_fast_output = false;
   bool adaptive_on = min_variance > 0;
   adaptive_sampler adaptive_pixel_sampler(numbercores, nx, ny, ns, debug_channel,
                                           min_variance, min_adaptive_size,
-                                          routput, goutput, boutput,
-                                          routput2, goutput2, boutput2,
-                                          alpha_output, adaptive_on);
+                                          rgb_output, 
+                                          rgb_output2, 
+                                          normalOutput, albedoOutput,
+                                          alpha_output, draw_rgb_output,
+                                          adaptive_on);
   
   size_t nx_small = nx*0.25;
   size_t ny_small = ny*0.25;
-  RayMatrix routput_small(nx_small,ny_small);
-  RayMatrix goutput_small(nx_small,ny_small);
-  RayMatrix boutput_small(nx_small,ny_small);
-  RayMatrix routput_small2(nx_small,ny_small);
-  RayMatrix goutput_small2(nx_small,ny_small);
-  RayMatrix boutput_small2(nx_small,ny_small);
-  RayMatrix alpha_output_small(nx_small,ny_small);
+  RayMatrix rgb_output_small(nx_small,ny_small,3);
+  RayMatrix rgb_output_small2(nx_small,ny_small,3);
+  RayMatrix draw_rgb_output_small(nx_small,ny_small,3);
+
+  RayMatrix normal_output_small(nx_small,ny_small,3);
+  RayMatrix albedo_output_small(nx_small,ny_small,3);
+
+  RayMatrix alpha_output_small(nx_small,ny_small,1);
   
-  adaptive_sampler adaptive_pixel_sampler_small(numbercores, nx_small, ny_small, 1, debug_channel,
+  adaptive_sampler adaptive_pixel_sampler_small(numbercores, nx_small, ny_small, 
+                                                1, debug_channel,
                                                 0, 1,
-                                                routput_small, goutput_small, boutput_small,
-                                                routput_small2, goutput_small2, boutput_small2,
-                                                alpha_output_small, adaptive_on);
+                                                rgb_output_small, 
+                                                rgb_output_small2, 
+                                                normal_output_small,
+                                                albedo_output_small,
+                                                alpha_output_small, 
+                                                draw_rgb_output_small, 
+                                                adaptive_on);
   std::vector<random_gen > rngs;
   std::vector<random_gen > rngs_small;
   
@@ -156,9 +165,14 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
                            }
                            r.pri_stack = mat_stack;
                            bool alpha = false;
-                           point3f col = weight != 0 ? clamp_point(de_nan(color(r, &world, &hlist, max_depth, 
-                                                         roulette_active, rngs[index], samplers[index].get(), alpha,integrator_type)),
-                                               0, clampval) * weight * cam->get_iso() : 0;
+                           point3f color_sample;
+                           normal3f normal_sample;
+                           point3f albedo_sample;
+                           color(r, &world, &hlist, max_depth, roulette_active, rngs[index], 
+                                 samplers[index].get(), alpha,integrator_type,
+                                 color_sample, normal_sample, albedo_sample);
+                           point3f col = weight != 0 ? clamp_point(de_nan(color_sample), 
+                                                                   0, clampval) * weight * cam->get_iso() : 0;
                            if(alpha) {
                              adaptive_pixel_sampler.add_alpha_count(i,j);
                            }
@@ -168,6 +182,9 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
                            if(s % 2 == 0) {
                              adaptive_pixel_sampler.add_color_sec(i, j, col);
                            }
+                           adaptive_pixel_sampler.add_albedo(i, j, albedo_sample);
+                           adaptive_pixel_sampler.add_normal(i, j, normal_sample);
+
                            samplers[index]->StartNextSample();
                          }
                        }
@@ -220,16 +237,21 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
                            }
                            r.pri_stack = mat_stack;
                            bool alpha = false;
-                           point3f col = weight != 0 ? clamp_point(de_nan(color(r, &world, &hlist, max_depth, 
-                                                                                roulette_active, 
-                                                                                rngs_small[index], 
-                                                                                samplers_small[index].get(),
-                                                                                alpha, integrator_type)
-                                                                          ),
+                           point3f color_sample;
+                           normal3f normal_sample;
+                           point3f albedo_sample;
+                           color(r, &world, &hlist, max_depth, roulette_active, 
+                                 rngs_small[index], 
+                                 samplers_small[index].get(),
+                                 alpha, integrator_type,
+                                 color_sample, normal_sample, albedo_sample);
+                           point3f col = weight != 0 ? clamp_point(de_nan(color_sample),
                                                                    0, clampval) * weight * cam->get_iso() : 0;
                            if(alpha) {
                              adaptive_pixel_sampler_small.add_alpha_count(i,j);
                            }
+                           adaptive_pixel_sampler_small.add_albedo(i, j, albedo_sample);
+                           adaptive_pixel_sampler_small.add_normal(i, j, normal_sample);
                            // col = col * fil.Evaluate(u2);
                            mat_stack->clear();
                            adaptive_pixel_sampler_small.add_color_main(i, j, col);
@@ -265,10 +287,19 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
         for(size_t jj = 0; jj < ny; jj++) {
           int iii = (Float)ii * ratio_x;
           int jjj = (Float)jj * ratio_y;
-          adaptive_pixel_sampler.r(ii,jj) = adaptive_pixel_sampler_small.r(iii,jjj);
-          adaptive_pixel_sampler.g(ii,jj) = adaptive_pixel_sampler_small.g(iii,jjj);
-          adaptive_pixel_sampler.b(ii,jj) = adaptive_pixel_sampler_small.b(iii,jjj);
-          adaptive_pixel_sampler.a(ii,jj) = adaptive_pixel_sampler_small.a(iii,jjj);
+          adaptive_pixel_sampler.rgb(ii,jj,0) = adaptive_pixel_sampler_small.rgb(iii,jjj,0);
+          adaptive_pixel_sampler.rgb(ii,jj,1) = adaptive_pixel_sampler_small.rgb(iii,jjj,1);
+          adaptive_pixel_sampler.rgb(ii,jj,2) = adaptive_pixel_sampler_small.rgb(iii,jjj,2);
+
+          adaptive_pixel_sampler.normalOutput(ii,jj,0) = adaptive_pixel_sampler_small.normalOutput(iii,jjj,0);
+          adaptive_pixel_sampler.normalOutput(ii,jj,1) = adaptive_pixel_sampler_small.normalOutput(iii,jjj,1);
+          adaptive_pixel_sampler.normalOutput(ii,jj,2) = adaptive_pixel_sampler_small.normalOutput(iii,jjj,2);
+
+          adaptive_pixel_sampler.albedoOutput(ii,jj,0) = adaptive_pixel_sampler_small.albedoOutput(iii,jjj,0);
+          adaptive_pixel_sampler.albedoOutput(ii,jj,1) = adaptive_pixel_sampler_small.albedoOutput(iii,jjj,1);
+          adaptive_pixel_sampler.albedoOutput(ii,jj,2) = adaptive_pixel_sampler_small.albedoOutput(iii,jjj,2);
+
+          adaptive_pixel_sampler.a(ii,jj,0) = adaptive_pixel_sampler_small.a(iii,jjj,0);
         }
       }
     }

@@ -32,6 +32,11 @@
 #' the aperture and field of view cannot be changed from their initial settings. Additionally,
 #' clicking to direct the camera at the background environment image while using a realistic camera will
 #' not always point to the exact position selected. 
+#' @param denoise Default `TRUE`. Whether to de-noise the final image and preview images. Note, this requires 
+#' the free Intel Open Image Denoise (OIDN) library be installed on your system. Pre-compiled binaries can be installed from
+#' ppenimagedenoise.org, as well as . Linking during rayrender installation is done by defining the environment variable
+#' OIDN_PATH (set it in the .Renviron file by calling `usethis::edit_r_environ()`) to the top-level directory for OIDN (the directory containing the "lib", "bin", and "include"
+#' directories) and re-installing this package from source.
 #' @param camera_description_file Default `NA`. Filename of a camera description file for rendering with
 #' a realistic camera. Several camera files are built-in: `"50mm"`,`"wide"`,`"fisheye"`, and `"telephoto"`.
 #' @param camera_scale Default `1`. Amount to scale the camera up or down in size. Use this rather than scaling a 
@@ -39,7 +44,7 @@
 #' @param iso Default `100`. Camera exposure.
 #' @param film_size Default `22`, in `mm` (scene units in `m`. Size of the film if using a realistic camera, otherwise
 #' ignored.
-#' @param min_variance Default `0.00005`. Minimum acceptable variance for a block of pixels for the 
+#' @param min_variance Default `0`. Minimum acceptable variance for a block of pixels for the 
 #' adaptive sampler. Smaller numbers give higher quality images, at the expense of longer rendering times.
 #' If this is set to zero, the adaptive sampler will be turned off and the renderer
 #' will use the maximum number of samples everywhere.
@@ -217,8 +222,9 @@
 render_scene = function(scene, width = 400, height = 400, fov = 20, 
                         samples = 100,  camera_description_file = NA, 
                         preview = interactive(), interactive = TRUE,
+                        denoise = TRUE,
                         camera_scale = 1, iso = 100, film_size = 22,
-                        min_variance = 0.00005, min_adaptive_size = 8,
+                        min_variance = 0, min_adaptive_size = 8,
                         sample_method = "sobol_blue", 
                         max_depth = NA, roulette_active_depth = 100,
                         ambient_light = NULL, 
@@ -299,7 +305,7 @@ Left Mouse Click: Change Look At (new focal distance) | Right Mouse Click: Chang
                                   intensity_env = intensity_env,
                                   debug_channel = debug_channel, return_raw_array = return_raw_array,
                                   progress = progress, verbose = verbose, sample_dist = Inf, 
-                                  integrator_type = integrator_type)
+                                  integrator_type = integrator_type, denoise = denoise)
   print_time(verbose, "Pre-processed scene")
   
   camera_info = scene_list$camera_info

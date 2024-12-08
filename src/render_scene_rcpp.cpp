@@ -42,6 +42,11 @@ using namespace Rcpp;
 #include <iostream>
 #endif
 
+#ifdef HAS_OIDN
+#undef None
+#include <OpenImageDenoise/oidn.hpp>
+#endif
+
 using namespace std;
 
 
@@ -70,6 +75,7 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
   Float min_variance = as<Float>(render_info["min_variance"]);
   int min_adaptive_size = as<int>(render_info["min_adaptive_size"]);
   IntegratorType integrator_type = static_cast<IntegratorType>(as<int>(render_info["integrator_type"]));
+  bool denoise = as<bool>(render_info["denoise"]);
 
   Environment pkg = Environment::namespace_env("rayrender");
   Function print_time = pkg["print_time"];
@@ -112,10 +118,33 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
   TextureCache texCache;
 
   //Initialize output matrices
-  RayMatrix routput(nx,ny);
-  RayMatrix goutput(nx,ny);
-  RayMatrix boutput(nx,ny);
-  RayMatrix alpha_output(nx,ny);
+  RayMatrix rgb_output(nx,ny, 3);
+  RayMatrix draw_rgb_output(nx,ny, 3);
+  RayMatrix alpha_output(nx,ny, 1);
+  RayMatrix normalOutput(nx,ny, 3);
+  RayMatrix albedoOutput(nx,ny, 3);
+
+#ifdef HAS_OIDN
+  // Create an Open Image Denoise device
+  oidn::DeviceRef device = oidn::newDevice(); // CPU or GPU if available
+  // oidn::DeviceRef device = oidn::newDevice(oidn::DeviceType::CPU);
+  device.commit();
+  // Create buffers for input/output images accessible by both host (CPU) and device (CPU/GPU)
+  oidn::BufferRef colorBuf  = device.newBuffer(rgb_output.begin(), nx * ny * 3 * sizeof(Float));
+  oidn::BufferRef albedoBuf = device.newBuffer(albedoOutput.begin(), nx * ny * 3 * sizeof(Float));
+  oidn::BufferRef normalBuf = device.newBuffer(normalOutput.begin(), nx * ny * 3 * sizeof(Float));
+  oidn::BufferRef colorBuf2 = device.newBuffer(draw_rgb_output.begin(), nx * ny * 3 * sizeof(Float));
+
+  // Create a filter for denoising a beauty (color) image using optional auxiliary images too
+  // This can be an expensive operation, so try no to create a new filter for every image!
+  oidn::FilterRef filter = device.newFilter("RT"); // generic ray tracing filter
+  filter.setImage("color",  colorBuf,  oidn::Format::Float3, nx, ny); // beauty
+  filter.setImage("albedo", albedoBuf, oidn::Format::Float3, nx, ny); // auxiliary
+  filter.setImage("normal", normalBuf, oidn::Format::Float3, nx, ny); // auxiliary
+  filter.setImage("output", colorBuf2,  oidn::Format::Float3, nx, ny); // denoised beauty
+  filter.set("hdr", true); // beauty image is HDR
+  filter.commit();
+#endif
   
   point3f lookfrom(lookfromvec[0],lookfromvec[1],lookfromvec[2]);
   point3f lookat(lookatvec[0],lookatvec[1],lookatvec[2]);
@@ -292,10 +321,18 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
     impl_only_bg = true;
   }
   preview = preview && debug_channel == 0;
-  
-  PreviewDisplay Display(nx,ny, preview, interactive, (lookat-lookfrom).length(), cam.get(),
+#ifdef HAS_OIDN
+  PreviewDisplay Display(nx,ny, preview, interactive, 
+                         (lookat-lookfrom).length(), cam.get(),
+                         background_sphere->ObjectToWorld.get(),
+                         background_sphere->WorldToObject.get(),
+                         filter, denoise);
+#else
+  PreviewDisplay Display(nx,ny, preview, interactive, 
+                         (lookat-lookfrom).length(), cam.get(),
                          background_sphere->ObjectToWorld.get(),
                          background_sphere->WorldToObject.get());
+#endif
   
   if(impl_only_bg || hasbackground) {
     imp_sample_objects.add(background_sphere);
@@ -308,7 +345,7 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
   if(debug_channel != 0) {
     debug_scene(numbercores, nx, ny, ns, debug_channel,
                 min_variance, min_adaptive_size,
-                routput, goutput,boutput,
+                rgb_output, normalOutput, albedoOutput,
                 progress_bar, sample_method, stratified_dim,
                 verbose, cam.get(), fov,
                 world, imp_sample_objects, 
@@ -318,20 +355,41 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
   } else {
     pathtracer(numbercores, nx, ny, ns, debug_channel,
                min_variance, min_adaptive_size,
-               routput, goutput,boutput, alpha_output,
+               rgb_output, normalOutput, albedoOutput,
+               alpha_output,
+               draw_rgb_output,
                progress_bar, sample_method, stratified_dim,
                verbose, cam.get(),  fov,
                world, imp_sample_objects,
                clampval, max_depth, roulette_active, Display, integrator_type);
   }
   PRINT_CURRENT_MEMORY("After raytracing");
-  
+#ifdef HAS_OIDN
+  filter.execute();
+  const char* errorMessage;
+  if (device.getError(errorMessage) != oidn::Error::None) {
+    Rcpp::Rcout << "Error: " << errorMessage << std::endl;
+  }
+#endif
   delete shared_materials;
   PutRNGstate();
   print_time(verbose, "Finished rendering" );
-  List final_image = List::create(_["r"] = routput.ConvertRcpp(), 
-                                  _["g"] = goutput.ConvertRcpp(), 
-                                  _["b"] = boutput.ConvertRcpp(),
+  RayMatrix &final_output = rgb_output;
+  if(denoise) {
+    final_output = draw_rgb_output;
+  }
+  List final_image = List::create(_["r"] = final_output.ConvertRcpp(0), 
+                                  _["g"] = final_output.ConvertRcpp(1), 
+                                  _["b"] = final_output.ConvertRcpp(2),
+
+                                  _["nx"] = normalOutput.ConvertRcpp(0), 
+                                  _["ny"] = normalOutput.ConvertRcpp(1), 
+                                  _["nz"] = normalOutput.ConvertRcpp(2),
+
+                                  _["cx"] = albedoOutput.ConvertRcpp(0), 
+                                  _["cy"] = albedoOutput.ConvertRcpp(1), 
+                                  _["cz"] = albedoOutput.ConvertRcpp(2),
+
                                   _["a"] = alpha_output.ConvertRcpp());
   if(Display.Keyframes.size() > 0) {
     List keyframes(Display.Keyframes.size());

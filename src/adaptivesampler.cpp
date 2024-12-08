@@ -1,14 +1,20 @@
 #include "adaptivesampler.h"
+#include "RayMatrix.h"
 #include "raylog.h"
 
 adaptive_sampler::adaptive_sampler(size_t _numbercores, size_t nx, size_t ny, size_t ns, int debug_channel,
                  float min_variance, size_t min_adaptive_size, 
-                 RayMatrix& r, RayMatrix& g, RayMatrix& b,
-                 RayMatrix& r2, RayMatrix& g2, RayMatrix& b2,
-                 RayMatrix& alpha, bool adaptive_on) : 
+                 RayMatrix& rgb, 
+                 RayMatrix& rgb2, 
+                 RayMatrix& normalOutput, 
+                 RayMatrix& albedoOutput,
+                 RayMatrix& alpha, 
+                 RayMatrix& draw_rgb_output, bool adaptive_on) : 
     numbercores(_numbercores), nx(nx), ny(ny), ns(ns), max_s(0), debug_channel(debug_channel), 
     min_variance(min_variance), min_adaptive_size(min_adaptive_size),
-    r(r), g(g), b(b), r2(r2), g2(g2), b2(b2), a(alpha), adaptive_on(adaptive_on) {
+    rgb(rgb), rgb2(rgb2), normalOutput(normalOutput), albedoOutput(albedoOutput),
+    draw_rgb_output(draw_rgb_output),
+    a(alpha), adaptive_on(adaptive_on) {
   size_t nx_chunk = nx / numbercores;
   size_t ny_chunk = ny / numbercores;
   size_t bonus_x = nx - nx_chunk * numbercores;
@@ -47,13 +53,12 @@ void adaptive_sampler::reset() {
   }
   std::fill(finalized.begin(), finalized.end(), false);
   std::fill(just_finalized.begin(), just_finalized.end(), true);
-  std::fill(r.begin(), r.end(), 0);
-  std::fill(g.begin(), g.end(), 0);
-  std::fill(b.begin(), b.end(), 0);
-  std::fill(r2.begin(), r2.end(), 0);
-  std::fill(g2.begin(), g2.end(), 0);
-  std::fill(b2.begin(), b2.end(), 0);
-  std::fill(a.begin(), a.end(), 0);
+  rgb.reset();
+  rgb2.reset();
+  normalOutput.reset();
+  albedoOutput.reset();
+  draw_rgb_output.reset();
+  a.reset();
 }
 
 void adaptive_sampler::test_for_convergence(size_t k, size_t s,
@@ -72,11 +77,12 @@ void adaptive_sampler::test_for_convergence(size_t k, size_t s,
   std::vector<Float> error_sum(nx_block * ny_block, 0);
   for(size_t i = nx_begin; i < nx_end; i++) {
     for(size_t j = ny_begin; j < ny_end; j++) {
-      error_sum[(i-nx_begin) + (j-ny_begin) * nx_block] = fabs(r(i,j) - 2 * r2(i,j)) +
-        fabs(g(i,j) - 2 * g2(i,j)) +
-        fabs(b(i,j) - 2 * b2(i,j));
+      error_sum[(i-nx_begin) + (j-ny_begin) * nx_block] = 
+        fabs(rgb(i,j,0) - 2 * rgb2(i,j,0)) +
+        fabs(rgb(i,j,1) - 2 * rgb2(i,j,1)) +
+        fabs(rgb(i,j,2) - 2 * rgb2(i,j,2));
       error_sum[(i-nx_begin) + (j-ny_begin) * nx_block] *= r_b / (s*N);
-      Float normalize = sqrt(r(i,j) + g(i,j)  + b(i,j));
+      Float normalize = sqrt(rgb(i,j,0) + rgb(i,j,1)  + rgb(i,j,2));
       if(normalize != 0) {
         error_sum[(i-nx_begin) + (j-ny_begin) * nx_block] /= normalize;
       }
@@ -127,14 +133,14 @@ void adaptive_sampler::split_remove_chunks(size_t s) {
     if(it->erase) {
       for(size_t i = it->startx; i < it->endx; i++) {
         for(size_t j = it->starty; j < it->endy; j++) {
-          r(i,j) /= (float)(s+1);
-          g(i,j) /= (float)(s+1);
-          b(i,j) /= (float)(s+1);
-          a(i,j) = 1.f - a(i,j)/(float)(s+1);
+          rgb(i,j,0) /= (float)(s+1);
+          rgb(i,j,1) /= (float)(s+1);
+          rgb(i,j,2) /= (float)(s+1);
+          a(i,j,0) = 1.f - a(i,j,0)/(float)(s+1);
           if(debug_channel == 5) {
-            r(i,j) = (float)(s+1)/(float)ns;
-            g(i,j) = (float)(s+1)/(float)ns;
-            b(i,j) = (float)(s+1)/(float)ns;
+            rgb(i,j,0) = (float)(s+1)/(float)ns;
+            rgb(i,j,1) = (float)(s+1)/(float)ns;
+            rgb(i,j,2) = (float)(s+1)/(float)ns;
           }
           finalized[i + nx*j] = true;
         }
@@ -173,14 +179,20 @@ void adaptive_sampler::write_final_pixels() {
   while(it != pixel_chunks.end()) {
     for(size_t i = it->startx; i < it->endx; i++) {
       for(size_t j = it->starty; j < it->endy; j++) {
-        r(i,j) /= (float)ns;
-        g(i,j) /= (float)ns;
-        b(i,j) /= (float)ns;
-        a(i,j)  = 1 - a(i,j)/(float)ns;
+        rgb(i,j,0) /= (float)ns;
+        rgb(i,j,1) /= (float)ns;
+        rgb(i,j,2) /= (float)ns;
+        normalOutput(i,j,0) /= (float)ns;
+        normalOutput(i,j,1) /= (float)ns;
+        normalOutput(i,j,2) /= (float)ns;
+        albedoOutput(i,j,0) /= (float)ns;
+        albedoOutput(i,j,1) /= (float)ns;
+        albedoOutput(i,j,2) /= (float)ns;
+        a(i,j,0)  = 1 - a(i,j,0)/(float)ns;
         if(debug_channel == 5) {
-          r(i,j) = (float)max_s/(float)ns;
-          g(i,j) = (float)max_s/(float)ns;
-          b(i,j) = (float)max_s/(float)ns;
+          rgb(i,j,0) = (float)max_s/(float)ns;
+          rgb(i,j,1) = (float)max_s/(float)ns;
+          rgb(i,j,2) = (float)max_s/(float)ns;
         }
       }
     }
@@ -188,23 +200,35 @@ void adaptive_sampler::write_final_pixels() {
   }
 }
 void adaptive_sampler::add_color_main(size_t i, size_t j, point3f color) {
-  r(i,j) += color.r();
-  g(i,j) += color.g();
-  b(i,j) += color.b();
+  rgb(i,j,0) += color.r();
+  rgb(i,j,1) += color.g();
+  rgb(i,j,2) += color.b();
 }
   
 void adaptive_sampler::add_color_sec(size_t i, size_t j, point3f color) {
-  r2(i,j) += color.r();
-  g2(i,j) += color.g();
-  b2(i,j) += color.b();
+  rgb2(i,j,0) += color.r();
+  rgb2(i,j,1) += color.g();
+  rgb2(i,j,2) += color.b();
 }
 //For use when s = 1 in small image preview
 void adaptive_sampler::set_color_main(size_t i, size_t j, point3f color) {
-  r(i,j) = color.r();
-  g(i,j) = color.g();
-  b(i,j) = color.b();
+  rgb(i,j,0) = color.r();
+  rgb(i,j,1) = color.g();
+  rgb(i,j,2) = color.b();
+}
+
+void adaptive_sampler::add_albedo(size_t i, size_t j, point3f albedo) {
+  albedoOutput(i,j,0) += albedo.r();
+  albedoOutput(i,j,1) += albedo.g();
+  albedoOutput(i,j,2) += albedo.b();
+}
+
+void adaptive_sampler::add_normal(size_t i, size_t j, normal3f normal) {
+  normalOutput(i,j,0) += normal.r();
+  normalOutput(i,j,1) += normal.g();
+  normalOutput(i,j,2) += normal.b();
 }
 
 void adaptive_sampler::add_alpha_count(size_t i, size_t j) {
-  a.add_one(i,j); 
+  a.add_one(i,j,0); 
 }

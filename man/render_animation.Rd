@@ -12,6 +12,7 @@ render_animation(
   width = 400,
   height = 400,
   preview = interactive(),
+  denoise = TRUE,
   camera_description_file = NA,
   camera_scale = 1,
   iso = 100,
@@ -65,6 +66,12 @@ render_animation(
 \item{height}{Default `400`. Height of the render, in pixels.}
 
 \item{preview}{Default `interactive()`. Whether to display a realtime progressive preview of the render. Press ESC to cancel the render.}
+
+\item{denoise}{Default `TRUE`. Whether to de-noise the final image and preview images. Note, this requires 
+the free Intel Open Image Denoise (OIDN) library be installed on your system. Pre-compiled binaries can be installed from
+ppenimagedenoise.org, as well as . Linking during rayrender installation is done by defining the environment variable
+OIDN_PATH (set it in the .Renviron file by calling `usethis::edit_r_environ()`) to the top-level directory for OIDN (the directory containing the "lib", "bin", and "include"
+directories) and re-installing this package from source.}
 
 \item{camera_description_file}{Default `NA`. Filename of a camera description file for rendering with
 a realistic camera. Several camera files are built-in: `"50mm"`,`"wide"`,`"fisheye"`, and `"telephoto"`.}

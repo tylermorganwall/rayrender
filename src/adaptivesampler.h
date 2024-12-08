@@ -1,8 +1,7 @@
 #ifndef ADAPTIVESAMPLERH
 #define ADAPTIVESAMPLERH
 
-#include "vec3.h"
-#include "point3.h"
+#include "vectypes.h"
 #include "RayMatrix.h"
 
 using namespace Rcpp;
@@ -21,9 +20,13 @@ class adaptive_sampler {
 public:
   adaptive_sampler(size_t _numbercores, size_t nx, size_t ny, size_t ns, int debug_channel,
                    float min_variance, size_t min_adaptive_size, 
-                   RayMatrix& r, RayMatrix& g, RayMatrix& b,
-                   RayMatrix& r2, RayMatrix& g2, RayMatrix& b2,
-                   RayMatrix& alpha, bool adaptive_on);
+                   RayMatrix& rgb,  
+                   RayMatrix& rgb2, 
+                   RayMatrix& normalOutput, 
+                   RayMatrix& albedoOutput,
+                   RayMatrix& alpha, 
+                   RayMatrix& draw_rgb_output,
+                   bool adaptive_on);
   void reset();
   ~adaptive_sampler() {}
   void test_for_convergence(size_t k, size_t s,
@@ -38,6 +41,9 @@ public:
   //For use when s = 1 in small image preview
   void set_color_main(size_t i, size_t j, point3f color);
   void add_alpha_count(size_t i, size_t j);
+  void add_albedo(size_t i, size_t j, point3f albedo);
+  void add_normal(size_t i, size_t j, normal3f normal);
+
   size_t size() {return(pixel_chunks.size());}
 
   size_t numbercores;
@@ -46,7 +52,7 @@ public:
   int debug_channel;
   float min_variance;
   size_t min_adaptive_size;
-  RayMatrix &r, &g, &b, &r2, &g2, &b2;
+  RayMatrix &rgb, &rgb2, &normalOutput, &albedoOutput, &draw_rgb_output;
   RayMatrix &a;
   std::vector<pixel_block> pixel_chunks;
   std::vector<bool> finalized;

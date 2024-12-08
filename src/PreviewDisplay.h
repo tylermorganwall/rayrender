@@ -14,6 +14,11 @@
 
 #endif
 
+#ifdef HAS_OIDN
+#undef None
+#include <OpenImageDenoise/oidn.hpp>
+#endif
+
 #ifdef RAY_WINDOWS
 #ifndef UNICODE
 #define UNICODE
@@ -29,9 +34,16 @@
 
 class PreviewDisplay {
 public: 
+#ifdef HAS_OIDN
+  PreviewDisplay(unsigned int _width, unsigned int _height, bool preview, bool _interactive,
+                 Float initial_lookat_distance, RayCamera* _cam,
+                 Transform* _EnvObjectToWorld, Transform* _EnvWorldToObject, oidn::FilterRef& _filter,
+                 bool denoise);
+#else
   PreviewDisplay(unsigned int _width, unsigned int _height, bool preview, bool _interactive,
                  Float initial_lookat_distance, RayCamera* _cam,
                  Transform* _EnvObjectToWorld, Transform* _EnvWorldToObject);
+#endif
   ~PreviewDisplay();
   void DrawImage(adaptive_sampler& adaptive_pixel_sampler, 
                  adaptive_sampler& adaptive_pixel_sampler_small,
@@ -68,8 +80,11 @@ public:
   Transform* EnvWorldToObject;
   Transform Start_EnvObjectToWorld;
   Transform Start_EnvWorldToObject;
+  #ifdef HAS_OIDN
+  oidn::FilterRef& filter;
+  bool denoise;
+  #endif
   std::vector<Rcpp::List> Keyframes;
-  
 };
 
 #endif

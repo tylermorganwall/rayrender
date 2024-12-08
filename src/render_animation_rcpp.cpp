@@ -27,6 +27,11 @@ using namespace Rcpp;
 #include "RcppThread.h"
 #include "PreviewDisplay.h"
 
+#ifdef HAS_OIDN
+#undef None
+#include <OpenImageDenoise/oidn.hpp>
+#endif
+
 using namespace std;
 
 // [[Rcpp::export]]
@@ -54,6 +59,7 @@ void render_animation_rcpp(List scene, List camera_info, List scene_info, List r
   Float min_variance = as<Float>(render_info["min_variance"]);
   int min_adaptive_size = as<int>(render_info["min_adaptive_size"]);
   IntegratorType integrator_type = static_cast<IntegratorType>(as<int>(render_info["integrator_type"]));
+  bool denoise = as<bool>(render_info["denoise"]);
 
   Environment pkg = Environment::namespace_env("rayrender");
   Function print_time = pkg["print_time"];
@@ -224,10 +230,6 @@ void render_animation_rcpp(List scene, List camera_info, List scene_info, List r
     impl_only_bg = true;
   }
   
-  PreviewDisplay d(nx, ny, preview, false, 20.0f, cam.get(), 
-                   background_sphere->ObjectToWorld.get(),
-                   background_sphere->WorldToObject.get());
-  
   if(impl_only_bg || hasbackground) {
     imp_sample_objects.add(background_sphere);
   }
@@ -307,20 +309,21 @@ void render_animation_rcpp(List scene, List camera_info, List scene_info, List r
       }
 
       //Initialize output matrices
-      RayMatrix routput(nx,ny);
-      RayMatrix goutput(nx,ny);
-      RayMatrix boutput(nx,ny);
+      RayMatrix rgb_output(nx,ny, 3);
+      RayMatrix normalOutput(nx,ny, 3);
+      RayMatrix albedoOutput(nx,ny, 3);
+
       debug_scene(numbercores, nx, ny, ns, debug_channel,
                   min_variance, min_adaptive_size,
-                  routput, goutput,boutput,
+                  rgb_output, normalOutput, albedoOutput,
                   progress_bar, sample_method, stratified_dim,
                   verbose, cam.get(), fov,
                   world, imp_sample_objects,
                   clampval, max_depth, roulette_active,
                   light_direction, rng, sample_dist, keep_colors, backgroundhigh);
-      List temp = List::create(_["r"] = routput.ConvertRcpp(), 
-                               _["g"] = goutput.ConvertRcpp(), 
-                               _["b"] = boutput.ConvertRcpp());
+      List temp = List::create(_["r"] = rgb_output.ConvertRcpp(0), 
+                               _["g"] = rgb_output.ConvertRcpp(1), 
+                               _["b"] = rgb_output.ConvertRcpp(2));
       post_process_frame(temp, debug_channel, as<std::string>(filenames(i)), toneval);
     }
   } else {
@@ -383,14 +386,50 @@ void render_animation_rcpp(List scene, List camera_info, List scene_info, List r
       }
 
       //Initialize output matrices
-      RayMatrix routput(nx,ny);
-      RayMatrix goutput(nx,ny);
-      RayMatrix boutput(nx,ny);
-      RayMatrix alpha_output(nx,ny);
-      
+      RayMatrix rgb_output(nx,ny, 3);
+      RayMatrix normalOutput(nx,ny, 3);
+      RayMatrix albedoOutput(nx,ny, 3);
+      RayMatrix alpha_output(nx,ny, 1);
+      RayMatrix draw_rgb_output(nx,ny, 3);
+
+#ifdef HAS_OIDN
+      // Create an Open Image Denoise device
+      oidn::DeviceRef device = oidn::newDevice(); // CPU or GPU if available
+      // oidn::DeviceRef device = oidn::newDevice(oidn::DeviceType::CPU);
+      device.commit();
+      // Create buffers for input/output images accessible by both host (CPU) and device (CPU/GPU)
+      oidn::BufferRef colorBuf  = device.newBuffer(rgb_output.begin(), nx * ny * 3 * sizeof(Float));
+      oidn::BufferRef albedoBuf = device.newBuffer(albedoOutput.begin(), nx * ny * 3 * sizeof(Float));
+      oidn::BufferRef normalBuf = device.newBuffer(normalOutput.begin(), nx * ny * 3 * sizeof(Float));
+      oidn::BufferRef colorBuf2 = device.newBuffer(draw_rgb_output.begin(), nx * ny * 3 * sizeof(Float));
+
+      // Create a filter for denoising a beauty (color) image using optional auxiliary images too
+      // This can be an expensive operation, so try no to create a new filter for every image!
+      oidn::FilterRef filter = device.newFilter("RT"); // generic ray tracing filter
+      filter.setImage("color",  colorBuf,  oidn::Format::Float3, nx, ny); // beauty
+      filter.setImage("albedo", albedoBuf, oidn::Format::Float3, nx, ny); // auxiliary
+      filter.setImage("normal", normalBuf, oidn::Format::Float3, nx, ny); // auxiliary
+      filter.setImage("output", colorBuf2,  oidn::Format::Float3, nx, ny); // denoised beauty
+      filter.set("hdr", true); // beauty image is HDR
+      filter.commit();
+#endif
+
+#ifdef HAS_OIDN
+      PreviewDisplay d(nx, ny, preview, false, 
+                   20.0f, cam.get(), 
+                   background_sphere->ObjectToWorld.get(),
+                   background_sphere->WorldToObject.get(),
+                   filter, denoise);
+#else
+  PreviewDisplay Display(nx,ny, preview, interactive, 
+                         (lookat-lookfrom).length(), cam.get(),
+                         background_sphere->ObjectToWorld.get(),
+                         background_sphere->WorldToObject.get());
+#endif
       pathtracer(numbercores, nx, ny, ns, debug_channel,
                  min_variance, min_adaptive_size,
-                 routput, goutput, boutput, alpha_output,
+                 rgb_output, normalOutput, albedoOutput,
+                 alpha_output, draw_rgb_output,
                  progress_bar, sample_method, stratified_dim,
                  verbose, cam.get(),  fov,
                  world, imp_sample_objects,
@@ -398,9 +437,16 @@ void render_animation_rcpp(List scene, List camera_info, List scene_info, List r
       if(d.terminate) {
         break;
       }
-      List temp = List::create(_["r"] = routput.ConvertRcpp(), 
-                               _["g"] = goutput.ConvertRcpp(), 
-                               _["b"] = boutput.ConvertRcpp(),
+#ifdef HAS_OIDN
+      filter.execute();
+      const char* errorMessage;
+      if (device.getError(errorMessage) != oidn::Error::None) {
+        Rcpp::Rcout << "Error: " << errorMessage << std::endl;
+      }
+#endif
+      List temp = List::create(_["r"] = rgb_output.ConvertRcpp(0), 
+                               _["g"] = rgb_output.ConvertRcpp(1), 
+                               _["b"] = rgb_output.ConvertRcpp(2),
                                _["a"] = alpha_output.ConvertRcpp());
       post_process_frame(temp, debug_channel, as<std::string>(filenames(i)), toneval, bloom,
                        transparent_background, write_image);

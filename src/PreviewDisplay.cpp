@@ -69,9 +69,15 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
   SCOPED_TIMER_COUNTER("Draw Image");
 #ifdef RAY_HAS_X11
   if (d) {
-    RayMatrix &r  = adaptive_pixel_sampler.r;
-    RayMatrix &g  = adaptive_pixel_sampler.g;
-    RayMatrix &b  = adaptive_pixel_sampler.b;
+#ifdef HAS_OIDN
+  filter.execute();
+  RayMatrix &rgb  = adaptive_pixel_sampler.draw_rgb_output;
+  if(!denoise) {
+    rgb = adaptive_pixel_sampler.rgb;
+  }
+#else
+  RayMatrix &rgb  = adaptive_pixel_sampler.rgb;
+#endif
     std::vector<bool>& finalized = adaptive_pixel_sampler.finalized;
     std::vector<bool>& just_finalized = adaptive_pixel_sampler.just_finalized;
     
@@ -86,15 +92,15 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
             g_col = 1;
             b_col = 0;
           } else {
-            r_col = interactive ? std::sqrt((r(i/4,height-1-j))) : std::sqrt((r(i/4,height-1-j))/4);
-            g_col = interactive ? std::sqrt((g(i/4,height-1-j))) : std::sqrt((g(i/4,height-1-j))/4);
-            b_col = interactive ? std::sqrt((b(i/4,height-1-j))) : std::sqrt((b(i/4,height-1-j))/4);
+            r_col = interactive ? std::sqrt((rgb(i/4,height-1-j,0))) : std::sqrt((rgb(i/4,height-1-j,0))/4);
+            g_col = interactive ? std::sqrt((rgb(i/4,height-1-j,1))) : std::sqrt((rgb(i/4,height-1-j,1))/4);
+            b_col = interactive ? std::sqrt((rgb(i/4,height-1-j,2))) : std::sqrt((rgb(i/4,height-1-j,2))/4);
           }
         } else {
           samples = ns+1;
-          r_col = std::sqrt((r(i/4,height-1-j))/samples);
-          g_col = std::sqrt((g(i/4,height-1-j))/samples);
-          b_col = std::sqrt((b(i/4,height-1-j))/samples);
+          r_col = std::sqrt((rgb(i/4,height-1-j,0))/samples);
+          g_col = std::sqrt((rgb(i/4,height-1-j,1))/samples);
+          b_col = std::sqrt((rgb(i/4,height-1-j,2))/samples);
         }
 
         data[i + 4*width*j]   = (unsigned char)(255*clamp(b_col,0,1));
@@ -581,9 +587,12 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
     pb_w = &pb;
     progress_w = progress;
     interactive_w = interactive;
-    RayMatrix &r  = adaptive_pixel_sampler.r;
-    RayMatrix &g  = adaptive_pixel_sampler.g;
-    RayMatrix &b  = adaptive_pixel_sampler.b;
+#ifdef HAS_OIDN
+    filter.execute();
+    RayMatrix &rgb_s  = adaptive_pixel_sampler.draw_rgb_output;
+#else
+    RayMatrix &rgb_s  = adaptive_pixel_sampler.rgb;
+#endif
     EnvWorldToObject_w = EnvWorldToObject;
     EnvObjectToWorld_w = EnvObjectToWorld;
     Start_EnvWorldToObject_w = Start_EnvWorldToObject;
@@ -593,8 +602,8 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
     write_fast_output_w = &write_fast_output;
     world_w = world;
     rng_w = &rng;
-    height = (unsigned int)r.cols();
-    width = (unsigned int)r.rows();
+    height = (unsigned int)rgb_s.cols();
+    width = (unsigned int)rgb_s.rows();
     rgb.resize(width*height*3);
     for(unsigned int i = 0; i < width*3; i += 3) {
       for(unsigned int j = 0; j < height; j++) {
@@ -606,15 +615,18 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
             g_col = 1.f;
             b_col = 0.f;
           } else {
-            r_col = interactive ? std::sqrt((r(i/3,height-1-j))) : std::sqrt((r(i/3,height-1-j))/4.f);
-            g_col = interactive ? std::sqrt((g(i/3,height-1-j))) : std::sqrt((g(i/3,height-1-j))/4.f);
-            b_col = interactive ? std::sqrt((b(i/3,height-1-j))) : std::sqrt((b(i/3,height-1-j))/4.f);
+            r_col = interactive ? std::sqrt((rgb_s(i/3,height-1-j,0))) : 
+              std::sqrt((rgb_s(i/3,height-1-j,0))/4.f);
+            g_col = interactive ? std::sqrt((rgb_s(i/3,height-1-j,1))) : 
+              std::sqrt((rgb_s(i/3,height-1-j,1))/4.f);
+            b_col = interactive ? std::sqrt((rgb_s(i/3,height-1-j,2))) : 
+              std::sqrt((rgb_s(i/3,height-1-j,2))/4.f);
           }
         } else {
           samples = (Float)ns+1.f;
-          r_col = std::sqrt((r(i/3,height-1-j))/samples);
-          g_col = std::sqrt((g(i/3,height-1-j))/samples);
-          b_col = std::sqrt((b(i/3,height-1-j))/samples);
+          r_col = std::sqrt((rgb_s(i/3,height-1-j,0))/samples);
+          g_col = std::sqrt((rgb_s(i/3,height-1-j,1))/samples);
+          b_col = std::sqrt((rgb_s(i/3,height-1-j,2))/samples);
         }
         rgb[i+3*width*j]   = clamp(r_col,0.f,1.f);
         rgb[i+3*width*j+1] = clamp(g_col,0.f,1.f);
@@ -646,13 +658,24 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
   }
 #endif
 }
-
+#ifdef HAS_OIDN
+PreviewDisplay::PreviewDisplay(unsigned int _width, unsigned int _height, 
+                               bool preview, bool _interactive,
+                               Float initial_lookat_distance, RayCamera* _cam,
+                               Transform* _EnvObjectToWorld, Transform* _EnvWorldToObject, 
+                               oidn::FilterRef& _filter,
+                               bool denoise) :
+  preview(preview), EnvObjectToWorld(_EnvObjectToWorld), EnvWorldToObject(_EnvWorldToObject),
+  Start_EnvObjectToWorld(*_EnvObjectToWorld), Start_EnvWorldToObject(*_EnvWorldToObject), filter(_filter),
+  denoise(denoise) {
+#else
 PreviewDisplay::PreviewDisplay(unsigned int _width, unsigned int _height, 
                                bool preview, bool _interactive,
                                Float initial_lookat_distance, RayCamera* _cam,
                                Transform* _EnvObjectToWorld, Transform* _EnvWorldToObject) :
   preview(preview), EnvObjectToWorld(_EnvObjectToWorld), EnvWorldToObject(_EnvWorldToObject),
   Start_EnvObjectToWorld(*_EnvObjectToWorld), Start_EnvWorldToObject(*_EnvWorldToObject) {
+#endif
   Keyframes.clear();
   write_fast_output = false;
 #ifdef RAY_HAS_X11

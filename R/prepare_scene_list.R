@@ -18,7 +18,7 @@ prepare_scene_list = function(scene, width = 400, height = 400, fov = 20,
                               environment_light = NULL, rotate_env = 0, intensity_env = 1,
                               debug_channel = "none", return_raw_array = FALSE,
                               progress = interactive(), verbose = FALSE, sample_dist = Inf,
-                              keep_colors = FALSE, integrator_type = "nee") {
+                              keep_colors = FALSE, integrator_type = "nee", denoise = TRUE) {
   #Process images, convert shapes and materials to enums, extract positions, and 
   scene_info = process_scene(scene)
   if(!is.numeric(debug_channel)) {
@@ -204,6 +204,7 @@ prepare_scene_list = function(scene, width = 400, height = 400, fov = 20,
   render_info$min_variance = min_variance
   render_info$min_adaptive_size = min_adaptive_size
   render_info$integrator_type = integrator_type
+  render_info$denoise = denoise
 
   all_info = list()
   all_info$scene_info = scene_info

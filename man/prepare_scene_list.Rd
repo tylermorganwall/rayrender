@@ -45,7 +45,8 @@ prepare_scene_list(
   verbose = FALSE,
   sample_dist = Inf,
   keep_colors = FALSE,
-  integrator_type = "nee"
+  integrator_type = "nee",
+  denoise = TRUE
 )
 }
 \description{

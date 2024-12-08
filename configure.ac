@@ -49,6 +49,33 @@ else
   fi
 fi
 
+AC_MSG_CHECKING([for Open Image Denoise (OIDN)])
+
+OIDN_CPPFLAGS=""
+OIDN_LDFLAGS=""
+OIDN_LIBS=""
+
+if test -d "$OIDN_PATH"; then
+  AC_MSG_RESULT([found at $OIDN_PATH])
+  OIDN_CPPFLAGS="-I$OIDN_PATH/include"
+  OIDN_LDFLAGS="-L$OIDN_PATH/lib"
+  OIDN_LIBS="-lOpenImageDenoise -ltbb"
+  DEFINES="${DEFINES} -DHAS_OIDN"
+  # If we are on Darwin (macOS), add the rpath entry
+  if test $darwin = yes; then
+    OIDN_LDFLAGS="${OIDN_LDFLAGS} -Wl,-rpath,$OIDN_PATH/lib"
+  fi
+else
+  AC_MSG_WARN([OIDN not found. Skipping OIDN support.])
+  OIDN_CPPFLAGS=""
+  OIDN_LDFLAGS=""
+  OIDN_LIBS=""
+fi
+
+AC_SUBST([OIDN_CPPFLAGS])
+AC_SUBST([OIDN_LDFLAGS])
+AC_SUBST([OIDN_LIBS])
+
 # Check for SSE2 support first
 AC_MSG_CHECKING([for SSE2 support])
 AC_COMPILE_IFELSE([AC_LANG_PROGRAM([#include <emmintrin.h>], [__m128d test = _mm_setzero_pd();])],
@@ -75,8 +102,8 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
    CXXFLAGS="${CXXFLAGS} -mfpu=neon"],
   [AC_MSG_RESULT([no])])
 
-AC_SUBST([PKG_CPPFLAGS], ["${PKG_CPPFLAGS}"])
-AC_SUBST([PKG_LIBS], ["${LIBS} ${PKG_LIBS}"])
+AC_SUBST([PKG_CPPFLAGS], ["${PKG_CPPFLAGS} ${OIDN_CPPFLAGS}"])
+AC_SUBST([PKG_LIBS], ["${LIBS} ${PKG_LIBS} ${OIDN_LDFLAGS} ${OIDN_LIBS}"])
 AC_SUBST([DEFINES], ["${DEFINES}"])
 
 AC_CONFIG_FILES([src/Makevars])

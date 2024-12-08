@@ -9,6 +9,11 @@
 #' @param width Default `400`. Width of the render, in pixels.
 #' @param height Default `400`. Height of the render, in pixels.
 #' @param preview Default `interactive()`. Whether to display a realtime progressive preview of the render. Press ESC to cancel the render.
+#' @param denoise Default `TRUE`. Whether to de-noise the final image and preview images. Note, this requires 
+#' the free Intel Open Image Denoise (OIDN) library be installed on your system. Pre-compiled binaries can be installed from
+#' ppenimagedenoise.org, as well as . Linking during rayrender installation is done by defining the environment variable
+#' OIDN_PATH (set it in the .Renviron file by calling `usethis::edit_r_environ()`) to the top-level directory for OIDN (the directory containing the "lib", "bin", and "include"
+#' directories) and re-installing this package from source.
 #' @param samples Default `100`. The maximum number of samples for each pixel. If this is a length-2
 #' vector and the `sample_method` is `stratified`, this will control the number of strata in each dimension.
 #' The total number of samples in this case will be the product of the two numbers.
@@ -171,7 +176,8 @@
 #' }
 render_animation = function(scene, camera_motion, start_frame = 1, end_frame = NA,
                             width = 400, height = 400, 
-                            preview = interactive(), camera_description_file = NA, 
+                            preview = interactive(), denoise = TRUE,
+                            camera_description_file = NA, 
                             camera_scale = 1, iso = 100, film_size = 22, 
                             samples = 100, min_variance = 0.00005, min_adaptive_size = 8,
                             sample_method = "sobol", 
@@ -211,7 +217,8 @@ render_animation = function(scene, camera_motion, start_frame = 1, end_frame = N
                                   intensity_env = intensity_env,
                                   debug_channel = debug_channel, return_raw_array = return_raw_array,
                                   progress = progress, verbose = verbose, sample_dist = sample_dist,
-                                  keep_colors = keep_colors,integrator_type = integrator_type)
+                                  keep_colors = keep_colors,integrator_type = integrator_type,
+                                  denoise = denoise)
   
   
   camera_info = scene_list$camera_info

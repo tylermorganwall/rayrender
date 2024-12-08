@@ -13,6 +13,7 @@ render_scene(
   camera_description_file = NA,
   preview = interactive(),
   interactive = TRUE,
+  denoise = TRUE,
   camera_scale = 1,
   iso = 100,
   film_size = 22,
@@ -88,6 +89,12 @@ Some options aren't available all cameras. When using a realistic camera,
 the aperture and field of view cannot be changed from their initial settings. Additionally,
 clicking to direct the camera at the background environment image while using a realistic camera will
 not always point to the exact position selected.}
+
+\item{denoise}{Default `TRUE`. Whether to de-noise the final image and preview images. Note, this requires 
+the free Intel Open Image Denoise (OIDN) library be installed on your system. Pre-compiled binaries can be installed from
+ppenimagedenoise.org, as well as . Linking during rayrender installation is done by defining the environment variable
+OIDN_PATH (set it in the .Renviron file by calling `usethis::edit_r_environ()`) to the top-level directory for OIDN (the directory containing the "lib", "bin", and "include"
+directories) and re-installing this package from source.}
 
 \item{camera_scale}{Default `1`. Amount to scale the camera up or down in size. Use this rather than scaling a 
 scene.}

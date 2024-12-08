@@ -4,7 +4,9 @@
 
 void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_channel,
                 Float min_variance, size_t min_adaptive_size, 
-                RayMatrix& routput, RayMatrix& goutput, RayMatrix& boutput,
+                RayMatrix& rgb_output, 
+                RayMatrix& normalOutput, 
+                RayMatrix& albedoOutput, 
                 bool progress_bar, int sample_method, Rcpp::NumericVector& stratified_dim,
                 bool verbose, 
                 RayCamera* cam, 
@@ -32,9 +34,9 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
           cam->GenerateRay(samp, &r);
         }
         depth_into_scene = calculate_depth(r, &world, rng);
-        routput(i,j) = depth_into_scene;
-        goutput(i,j) = depth_into_scene;
-        boutput(i,j) = depth_into_scene;
+        rgb_output(i,j,0) = depth_into_scene;
+        rgb_output(i,j,1) = depth_into_scene;
+        rgb_output(i,j,2) = depth_into_scene;
       }
     }
   } else if(debug_channel == 2) {
@@ -58,9 +60,9 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
         }
         r.pri_stack = mat_stack;
         normal_map = calculate_normals(r, &world, max_depth, rng);
-        routput(i,j) = normal_map.x();
-        goutput(i,j) = normal_map.y();
-        boutput(i,j) = normal_map.z();
+        rgb_output(i,j,0) = normal_map.x();
+        rgb_output(i,j,1) = normal_map.y();
+        rgb_output(i,j,2) = normal_map.z();
         delete mat_stack;
       }
     }
@@ -81,9 +83,9 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
           cam->GenerateRay(samp, &r);
         }
         uv_map = calculate_uv(r, &world, rng);
-        routput(i,j) = uv_map.x();
-        goutput(i,j) = uv_map.y();
-        boutput(i,j) = uv_map.z();
+        rgb_output(i,j,0) = uv_map.x();
+        rgb_output(i,j,1) = uv_map.y();
+        rgb_output(i,j,2) = uv_map.z();
       }
     }
   } else if(debug_channel == 4) {
@@ -104,9 +106,9 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
           cam->GenerateRay(samp, &r);
         }
         Float bvh_intersections = debug_bvh(r, &world, rng);
-        routput(i,j) = bvh_intersections;
-        goutput(i,j) = bvh_intersections;
-        boutput(i,j) = bvh_intersections;
+        rgb_output(i,j,0) = bvh_intersections;
+        rgb_output(i,j,1) = bvh_intersections;
+        rgb_output(i,j,2) = bvh_intersections;
       }
     }
   #endif
@@ -125,9 +127,9 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
           cam->GenerateRay(samp, &r);
         }
         vec3f dpd_val = calculate_dpduv(r, &world, rng, debug_channel == 6);
-        routput(i,j) = dpd_val.x();
-        goutput(i,j) = dpd_val.y();
-        boutput(i,j) = dpd_val.z();
+        rgb_output(i,j,0) = dpd_val.x();
+        rgb_output(i,j,1) = dpd_val.y();
+        rgb_output(i,j,2) = dpd_val.z();
       }
     }
   } else if (debug_channel == 8) {
@@ -150,9 +152,9 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
         point3f dpd_val = calculate_color(r, &world, rng);
         mat_stack->clear();
         
-        routput(i,j) = dpd_val.x();
-        goutput(i,j) = dpd_val.y();
-        boutput(i,j) = dpd_val.z();
+        rgb_output(i,j,0) = dpd_val.x();
+        rgb_output(i,j,1) = dpd_val.y();
+        rgb_output(i,j,2) = dpd_val.z();
       }
     }
     delete mat_stack;
@@ -160,7 +162,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
     vec3f light_dir(light_direction(0),light_direction(1),light_direction(2));
     Float n_exp = light_direction(3);
     RcppThread::ThreadPool pool(numbercores);
-    auto worker = [&routput, &goutput, &boutput,
+    auto worker = [&rgb_output, 
                    nx, ny,  fov, light_dir, n_exp,
                    cam, &world] (int j) {
                      std::vector<dielectric*> *mat_stack = new std::vector<dielectric*>;
@@ -181,9 +183,9 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                        point3f qr = quick_render(r, &world, rng, light_dir, n_exp);
                        mat_stack->clear();
                        
-                       routput(i,j) = qr.x();
-                       goutput(i,j) = qr.y();
-                       boutput(i,j) = qr.z();
+                       rgb_output(i,j,0) = qr.x();
+                       rgb_output(i,j,1) = qr.y();
+                       rgb_output(i,j,2) = qr.z();
                      }
                      delete mat_stack;
                    };
@@ -193,7 +195,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
     pool.join();
   } else if (debug_channel == 10) {
     RcppThread::ThreadPool pool(numbercores);
-    auto worker = [&routput, &goutput, &boutput,
+    auto worker = [&rgb_output,
                    nx, ny,  fov, max_depth, &hlist,
                    cam, &world] (int j) {
                      std::vector<dielectric*> *mat_stack = new std::vector<dielectric*>;
@@ -214,9 +216,9 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                        point3f qr = calculate_position(r, &world, &hlist, max_depth, rng);
                        mat_stack->clear();
                        
-                       routput(i,j) = qr.x();
-                       goutput(i,j) = qr.y();
-                       boutput(i,j) = qr.z();
+                       rgb_output(i,j,0) = qr.x();
+                       rgb_output(i,j,1) = qr.y();
+                       rgb_output(i,j,2) = qr.z();
                      }
                      delete mat_stack;
                    };
@@ -227,7 +229,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
   } else if (debug_channel == 11) {
     RcppThread::ThreadPool pool(numbercores);
     
-    auto worker = [&routput, &goutput, &boutput, 
+    auto worker = [&rgb_output,
                    nx, ny,  fov, &hlist, max_depth,ns,
                    cam, &world] (int j) {
                      std::vector<dielectric*> *mat_stack = new std::vector<dielectric*>;
@@ -250,9 +252,9 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                                                            max_depth, rng);
                          mat_stack->clear();
                          
-                         routput(i,j) += qr.x()/ns;
-                         goutput(i,j) += qr.y()/ns;
-                         boutput(i,j) += qr.z()/ns;
+                         rgb_output(i,j,0) += qr.x()/ns;
+                         rgb_output(i,j,1) += qr.y()/ns;
+                         rgb_output(i,j,2) += qr.z()/ns;
                        }
                      }
                      delete mat_stack;
@@ -264,7 +266,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
   } else if (debug_channel == 12) {
     RcppThread::ThreadPool pool(numbercores);
     
-    auto worker = [&routput, &goutput, &boutput, 
+    auto worker = [&rgb_output, 
                    nx, ny,  fov, &hlist, max_depth,
                    cam, &world] (int j) {
                      std::vector<dielectric*> *mat_stack = new std::vector<dielectric*>;
@@ -286,9 +288,9 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                                                          max_depth, rng);
                        mat_stack->clear();
                        
-                       routput(i,j) = qr;
-                       goutput(i,j) = qr;
-                       boutput(i,j) = qr;
+                       rgb_output(i,j,0) = qr;
+                       rgb_output(i,j,1) = qr;
+                       rgb_output(i,j,2) = qr;
                      }
                      delete mat_stack;
                    };
@@ -299,7 +301,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
   } else if (debug_channel == 13) {
     RcppThread::ThreadPool pool(numbercores);
     
-    auto worker = [&routput, &goutput, &boutput, 
+    auto worker = [&rgb_output, 
                    nx, ny,  fov, &hlist, max_depth,
                    cam, &world] (int j) {
                      std::vector<dielectric*> *mat_stack = new std::vector<dielectric*>;
@@ -321,9 +323,9 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                                                     max_depth, rng);
                        mat_stack->clear();
                        
-                       routput(i,j) = qr.x();
-                       goutput(i,j) = qr.y();
-                       boutput(i,j) = qr.z();
+                       rgb_output(i,j,0) = qr.x();
+                       rgb_output(i,j,1) = qr.y();
+                       rgb_output(i,j,2) = qr.z();
                      }
                      delete mat_stack;
                    };
@@ -334,7 +336,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
   } else if (debug_channel == 14) {
     RcppThread::ThreadPool pool(numbercores);
     
-    auto worker = [&routput, &goutput, &boutput,
+    auto worker = [&rgb_output, 
                    nx, ny,  fov, &hlist, max_depth,ns,
                    cam,&world] (int j) {
                      std::vector<dielectric*> *mat_stack = new std::vector<dielectric*>;
@@ -357,9 +359,9 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                                                       max_depth, rng);
                          mat_stack->clear();
                          
-                         routput(i,j) += qr/(Float)ns;
-                         goutput(i,j) += qr/(Float)ns;
-                         boutput(i,j) += qr/(Float)ns;
+                         rgb_output(i,j,0) += qr/(Float)ns;
+                         rgb_output(i,j,1) += qr/(Float)ns;
+                         rgb_output(i,j,2) += qr/(Float)ns;
                        }
                      }
                      delete mat_stack;
@@ -371,7 +373,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
   } else if (debug_channel == 15) {
     RcppThread::ThreadPool pool(numbercores);
     
-    auto worker = [&routput, &goutput, &boutput,
+    auto worker = [&rgb_output,
                    nx, ny,  fov, &hlist, max_depth, 
                    cam, &world] (int j) {
                      std::vector<dielectric*> *mat_stack = new std::vector<dielectric*>;
@@ -393,9 +395,9 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                                                 max_depth, rng);
                        mat_stack->clear();
                        
-                       routput(i,j) = qr;
-                       goutput(i,j) = qr;
-                       boutput(i,j) = qr;
+                       rgb_output(i,j,0) = qr;
+                       rgb_output(i,j,1) = qr;
+                       rgb_output(i,j,2) = qr;
                      }
                      delete mat_stack;
                    };
@@ -406,7 +408,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
   } else if (debug_channel == 16) {
     RcppThread::ThreadPool pool(numbercores);
     
-    auto worker = [&routput, &goutput, &boutput, 
+    auto worker = [&rgb_output,
                    nx, ny,  fov, &hlist, max_depth, ns,
                    cam,&world] (int j) {
                      std::vector<dielectric*> *mat_stack = new std::vector<dielectric*>;
@@ -429,9 +431,9 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                                                     max_depth, rng);
                          mat_stack->clear();
                          
-                         routput(i,j) += qr/(Float)ns;
-                         goutput(i,j) += qr/(Float)ns;
-                         boutput(i,j) += qr/(Float)ns;
+                         rgb_output(i,j,0) += qr/(Float)ns;
+                         rgb_output(i,j,1) += qr/(Float)ns;
+                         rgb_output(i,j,2) += qr/(Float)ns;
                        }
                      }
                      delete mat_stack;
@@ -443,7 +445,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
   } else if (debug_channel == 17) {
     RcppThread::ThreadPool pool(numbercores);
     
-    auto worker = [&routput, &goutput, &boutput, 
+    auto worker = [&rgb_output,
                    nx, ny,  fov, ns,
                    cam] (int j) {
                      random_gen rng(j);
@@ -464,9 +466,9 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                          vec3f v2 = unit_vector(r.direction());
                          
                          
-                         routput(i,j) = weight != 0 ? (v2.x()+1.f)/(2.f) : 0;
-                         goutput(i,j) = weight != 0 ? (v2.y()+1.f)/(2.f) : 0;
-                         boutput(i,j) = weight != 0 ? (v2.z()+1.f)/(2.f) : 0;
+                         rgb_output(i,j,0) = weight != 0 ? (v2.x()+1.f)/(2.f) : 0;
+                         rgb_output(i,j,1) = weight != 0 ? (v2.y()+1.f)/(2.f) : 0;
+                         rgb_output(i,j,2) = weight != 0 ? (v2.z()+1.f)/(2.f) : 0;
                        }
                      }
                    };
@@ -484,16 +486,18 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
       pb_sampler.set_total(ny);
       pb.set_total(ns);
     }
-    RayMatrix routput2(nx,ny);
-    RayMatrix goutput2(nx,ny);
-    RayMatrix boutput2(nx,ny);
-    RayMatrix alpha(nx,ny);
+    RayMatrix rgb_output2(nx,ny, 3);
+    RayMatrix draw_rgb_output2(nx,ny, 3);
+
+    RayMatrix alpha(nx,ny,1);
     bool adaptive_on = min_variance > 0;
     adaptive_sampler adaptive_pixel_sampler(numbercores, nx, ny, ns, debug_channel,
                                             min_variance, min_adaptive_size,
-                                            routput, goutput, boutput,
-                                            routput2, goutput2, boutput2,
-                                            alpha, adaptive_on);
+                                            rgb_output, 
+                                            rgb_output2, 
+                                            normalOutput,
+                                            albedoOutput,
+                                            alpha, draw_rgb_output2, adaptive_on);
     std::vector<random_gen > rngs;
     std::vector<std::unique_ptr<Sampler> > samplers;
 
@@ -583,7 +587,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
   } else if (debug_channel == 19) {
     RcppThread::ThreadPool pool(numbercores);
     
-    auto worker = [&routput, &goutput, &boutput, 
+    auto worker = [&rgb_output, 
                    nx, ny,  fov, &hlist, max_depth,
                    cam, &world] (int j) {
                      std::vector<dielectric*> *mat_stack = new std::vector<dielectric*>;
@@ -605,9 +609,9 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                                                     max_depth, rng);
                        mat_stack->clear();
                        
-                       routput(i,j) = qr.x();
-                       goutput(i,j) = qr.y();
-                       boutput(i,j) = qr.z();
+                       rgb_output(i,j,0) = qr.x();
+                       rgb_output(i,j,1) = qr.y();
+                       rgb_output(i,j,2) = qr.z();
                      }
                      delete mat_stack;
                    };
