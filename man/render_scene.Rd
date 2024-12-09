@@ -17,7 +17,7 @@ render_scene(
   camera_scale = 1,
   iso = 100,
   film_size = 22,
-  min_variance = 5e-05,
+  min_variance = 0,
   min_adaptive_size = 8,
   sample_method = "sobol_blue",
   max_depth = NA,
@@ -104,7 +104,7 @@ scene.}
 \item{film_size}{Default `22`, in `mm` (scene units in `m`. Size of the film if using a realistic camera, otherwise
 ignored.}
 
-\item{min_variance}{Default `0.00005`. Minimum acceptable variance for a block of pixels for the 
+\item{min_variance}{Default `0`. Minimum acceptable variance for a block of pixels for the 
 adaptive sampler. Smaller numbers give higher quality images, at the expense of longer rendering times.
 If this is set to zero, the adaptive sampler will be turned off and the renderer
 will use the maximum number of samples everywhere.}
