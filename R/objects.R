@@ -912,8 +912,7 @@ segment = function(start = c(0, -1, 0), end = c(0, 1, 0), radius = 0.1,
 
 #' Ellipsoid Object
 #'
-#' Note: light importance sampling for this shape is currently approximated by a sphere. This will fail
-#' for ellipsoids with large differences between axes.
+#' Note: this is just a scaled sphere.
 #'
 #' @param x Default `0`. x-coordinate of the center of the ellipsoid.
 #' @param y Default `0`. y-coordinate of the center of the ellipsoid.
@@ -965,29 +964,7 @@ ellipsoid = function(x = 0, y = 0, z = 0, a = 1, b = 1, c = 1,
                   material = diffuse(), 
                   angle = c(0, 0, 0), order_rotation = c(1, 2, 3), 
                   flipped = FALSE, scale = c(1,1,1)) {
-  if(length(scale) == 1) {
-    scale = c(scale, scale, scale)
-  }
-  new_tibble_row(list(x = x, y = y, z = z, shape = "ellipsoid",
-                 material = material,
-                 shape_info = ray_shape_info(shape_properties = list(a = a, 
-                                                                     b = b,
-                                                                     c = c),
-                                             tricolorinfo = list(NA), 
-                                             fileinfo = NA,
-                                             material_id = NA_integer_,  
-                                             csg_object = list(NA), 
-                                             mesh_info = list(NA),
-                                             flipped = flipped),
-                 transforms = ray_transform(angle = list(angle),
-                                            order_rotation = list(order_rotation),
-                                            scale = list(scale),
-                                            group_transform = list(matrix(NA_real_))),
-                 animation_info = ray_animated_transform(
-                   start_transform_animation = list(matrix(NA_real_)), 
-                   end_transform_animation = list(matrix(NA_real_)),
-                   start_time = 0, end_time = 1)
-                 ))
+  return(sphere(x=x,y=y,z=z,scale=c(a,b,c)*scale, material=material, angle = angle,flipped = flipped, order_rotation = order_rotation))
 }
 
 #' Extruded Polygon Object

@@ -125,7 +125,7 @@ inline point3f calculate_color(const ray& r, hitable *world, random_gen &rng) {
       if(srec.is_specular) { 
         return(point3f(1,1,1));
       }
-      return(hrec.mat_ptr->get_albedo(r2, hrec));
+      return(hrec.mat_ptr->get_albedo(hrec));
     } else {
       return(point3f(0,0,0));
     }
@@ -150,7 +150,7 @@ inline point3f quick_render(const ray& r, hitable *world, random_gen &rng, vec3f
       }
       normal3f normal = hrec.has_bump ? hrec.bump_normal : hrec.normal;
       vec3f R = Reflect(lightdir, hrec.normal); 
-      return(hrec.mat_ptr->get_albedo(r2, hrec) * (dot(normal, lightdir)+1) / static_cast<Float>(2) + 
+      return(hrec.mat_ptr->get_albedo(hrec) * (dot(normal, lightdir)+1) / static_cast<Float>(2) + 
              std::pow(std::fmax(0.f, dot(R, -unit_vector(r.direction()))), n));
     } else {
       return(point3f(0,0,0));

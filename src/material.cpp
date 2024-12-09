@@ -67,7 +67,7 @@ bool lambertian::scatter(const ray& r_in, const hit_record& hrec, scatter_record
   srec.pdf_ptr = new cosine_pdf(hrec.normal);
   return(true);
 }
-point3f lambertian::get_albedo(const ray& r_in, const hit_record& rec) const {
+point3f lambertian::get_albedo(const hit_record& rec) const {
   return(albedo->value(rec.u, rec.v, rec.p));
 }
 
@@ -122,7 +122,7 @@ bool metal::scatter(const ray& r_in, const hit_record& hrec, scatter_record& sre
   return(true);
 }
 
-point3f metal::get_albedo(const ray& r_in, const hit_record& rec) const {
+point3f metal::get_albedo(const hit_record& rec) const {
   return(albedo->value(rec.u, rec.v, rec.p));
 }
 
@@ -362,7 +362,7 @@ point3f diffuse_light::emitted(const ray& r_in, const hit_record& rec, Float u, 
   }
 }
 
-point3f diffuse_light::get_albedo(const ray& r_in, const hit_record& rec) const {
+point3f diffuse_light::get_albedo(const hit_record& rec) const {
   return(emit->value(rec.u, rec.v, rec.p));
 }
 
@@ -398,7 +398,7 @@ Float spot_light::falloff(const vec3f &w) const {
   return((delta * delta) * (delta * delta));
 }
 
-point3f spot_light::get_albedo(const ray& r_in, const hit_record& rec) const {
+point3f spot_light::get_albedo(const hit_record& rec) const {
   return(emit->value(rec.u, rec.v, rec.p) * intensity);
 }
 
@@ -435,7 +435,7 @@ point3f isotropic::f(const ray& r_in, const hit_record& rec, const vec3f& scatte
   
   return(albedo->value(rec.u,rec.v,rec.p) * static_cast<Float>(0.25) * static_cast<Float>(M_1_PI));
 }
-point3f isotropic::get_albedo(const ray& r_in, const hit_record& rec) const {
+point3f isotropic::get_albedo(const hit_record& rec) const {
   return(albedo->value(rec.u, rec.v, rec.p));
 }
 
@@ -505,7 +505,7 @@ point3f orennayar::f(const ray& r_in, const hit_record& rec, const vec3f& scatte
   return(albedo->value(rec.u, rec.v, rec.p) * (A + B * maxCos * sinAlpha * tanBeta ) * cosine * static_cast<Float>(M_1_PI ));
 }
 
-point3f orennayar::get_albedo(const ray& r_in, const hit_record& rec) const {
+point3f orennayar::get_albedo(const hit_record& rec) const {
   return(albedo->value(rec.u, rec.v, rec.p));
 }
 
@@ -574,7 +574,7 @@ point3f MicrofacetReflection::f(const ray& r_in, const hit_record& rec, const ve
   return(albedo->value(rec.u, rec.v, rec.p) * F * G * D  * cosThetaI / (4 * CosTheta(wo) * CosTheta(wi) ));
 }
 
-point3f MicrofacetReflection::get_albedo(const ray& r_in, const hit_record& rec) const {
+point3f MicrofacetReflection::get_albedo(const hit_record& rec) const {
   return(albedo->value(rec.u, rec.v, rec.p));
 }
 
@@ -670,7 +670,7 @@ point3f MicrofacetTransmission::f(const ray& r_in, const hit_record& rec, const 
       (cosThetaI * cosThetaO * sqrtDenom * sqrtDenom));
 }
 
-point3f MicrofacetTransmission::get_albedo(const ray& r_in, const hit_record& rec) const {
+point3f MicrofacetTransmission::get_albedo(const hit_record& rec) const {
   return(albedo->value(rec.u, rec.v, rec.p));
 }
 
@@ -746,7 +746,7 @@ point3f glossy::SchlickFresnel(Float cosTheta) const {
   return Rs + pow5(1 - cosTheta) * (point3f(1.0f) + -Rs);
 }
 
-point3f glossy::get_albedo(const ray& r_in, const hit_record& rec) const {
+point3f glossy::get_albedo(const hit_record& rec) const {
   return(albedo->value(rec.u, rec.v, rec.p));
 }
 

@@ -176,7 +176,7 @@ void color_basic_path_guiding(const ray &r, hitable *world, hitable_list *hlist,
           wrote_normal = true;
         }        
         if(!wrote_albedo) {
-          albedo = throughput;
+          albedo = hrec.mat_ptr->get_albedo(hrec);
           wrote_albedo = true;
         }
         if (srec.is_specular) { // returns specular ray

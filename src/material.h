@@ -81,7 +81,7 @@ class material {
     virtual point3f emitted(const ray& r_in, const hit_record& rec, Float u, Float v, const point3f& p, bool& is_invisible) {
       return(point3f(0,0,0));
     }
-    virtual point3f get_albedo(const ray& r_in, const hit_record& rec) const {
+    virtual point3f get_albedo(const hit_record& rec) const {
       return(point3f(0,0,0));
     }
     virtual ~material() {};
@@ -96,7 +96,7 @@ class lambertian : public material {
     point3f f(const ray& r_in, const hit_record& rec, const vec3f& scattered) const;
     bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng);
     bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler);
-    point3f get_albedo(const ray& r_in, const hit_record& rec) const;
+    point3f get_albedo(const hit_record& rec) const;
     size_t GetSize();
     const std::string GetName() {
       return(std::string("diffuse"));
@@ -111,7 +111,7 @@ class metal : public material {
     }
     virtual bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng);
     virtual bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler);
-    point3f get_albedo(const ray& r_in, const hit_record& rec) const;
+    point3f get_albedo(const hit_record& rec) const;
     size_t GetSize();
     const std::string GetName() {
       return(std::string("metal"));
@@ -129,7 +129,7 @@ class dielectric : public material {
     bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng);
     bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler);
     
-    point3f get_albedo(const ray& r_in, const hit_record& rec) const {
+    point3f get_albedo(const hit_record& rec) const {
       return(point3f(1,1,1));
     }
     size_t GetSize();
@@ -154,7 +154,7 @@ public:
     return(false);
   }
   point3f emitted(const ray& r_in, const hit_record& rec, Float u, Float v, const point3f& p, bool& is_invisible);
-  point3f get_albedo(const ray& r_in, const hit_record& rec) const;
+  point3f get_albedo(const hit_record& rec) const;
   size_t GetSize();
   const std::string GetName() {
     return(std::string("diffuse_light"));
@@ -178,7 +178,7 @@ class spot_light : public material {
     }
     point3f emitted(const ray& r_in, const hit_record& rec, Float u, Float v, const point3f& p, bool& is_invisible);
     Float falloff(const vec3f &w) const;
-    point3f get_albedo(const ray& r_in, const hit_record& rec) const;
+    point3f get_albedo(const hit_record& rec) const;
     size_t GetSize();
     const std::string GetName() {
       return(std::string("spot_light"));
@@ -197,7 +197,7 @@ public:
   virtual bool scatter(const ray& r_in, const hit_record& rec, scatter_record& srec, random_gen& rng);
   virtual bool scatter(const ray& r_in, const hit_record& rec, scatter_record& srec, Sampler* sampler);
   point3f f(const ray& r_in, const hit_record& rec, const vec3f& scattered) const;
-  point3f get_albedo(const ray& r_in, const hit_record& rec) const;
+  point3f get_albedo(const hit_record& rec) const;
   size_t GetSize();
   const std::string GetName() {
     return(std::string("isotropic"));
@@ -216,7 +216,7 @@ public:
   bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng);
   bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler);
   point3f f(const ray& r_in, const hit_record& rec, const vec3f& scattered) const;
-  point3f get_albedo(const ray& r_in, const hit_record& rec) const;
+  point3f get_albedo(const hit_record& rec) const;
   size_t GetSize();
   const std::string GetName() {
     return(std::string("orennayer"));
@@ -237,7 +237,7 @@ public:
   bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng);
   bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler);
   point3f f(const ray& r_in, const hit_record& rec, const vec3f& scattered) const;
-  point3f get_albedo(const ray& r_in, const hit_record& rec) const;
+  point3f get_albedo(const hit_record& rec) const;
   size_t GetSize();
   const std::string GetName() {
     return(std::string("MicrofacetReflection"));
@@ -261,7 +261,7 @@ public:
   bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng);
   bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler);
   point3f f(const ray& r_in, const hit_record& rec, const vec3f& scattered) const;
-  point3f get_albedo(const ray& r_in, const hit_record& rec) const;
+  point3f get_albedo(const hit_record& rec) const;
   point3f SchlickFresnel(Float cosTheta) const;
   size_t GetSize();
   const std::string GetName() {
@@ -287,7 +287,7 @@ public:
   bool scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler);
   point3f f(const ray& r_in, const hit_record& rec, const vec3f& scattered) const;
   point3f SchlickFresnel(Float cosTheta) const;
-  point3f get_albedo(const ray& r_in, const hit_record& rec) const;
+  point3f get_albedo(const hit_record& rec) const;
   size_t GetSize();
   const std::string GetName() {
     return(std::string("glossy"));

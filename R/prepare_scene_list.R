@@ -28,8 +28,12 @@ prepare_scene_list = function(scene, width = 400, height = 400, fov = 20,
                                   "position" = 10, "direction" = 11, "time" = 12, "shape" = 13,
                                   "pdf" = 14, "error" = 15, "bounces" = 16, "camera" = 17,
                                   "ao" = 18, "material" = 19, 0))
+    if(debug_channel != 0) {
+      denoise = FALSE
+    }
     light_direction = c(0,1,0)
   } else {
+    denoise = FALSE
     light_direction = debug_channel
     debug_channel = 9
   }
