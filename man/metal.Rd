@@ -112,7 +112,7 @@ scene = scene \%>\%
   add_object(cube(x=380,y=150/2,z=200,xwidth=150,ywidth=150,zwidth=150,
   material = metal(eta = c(1.07,0.8946,0.523), k = c(6.7144,6.188,4.95)),angle=c(0,45,0)))
 if(run_documentation()) {
-render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=128,
+render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=16,
              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 }
 #Add a copper metal cube      
@@ -122,7 +122,7 @@ scene = scene \%>\%
                                    k = c(2.898,2.476,2.298)),
                   angle=c(0,-30,0)))
 if(run_documentation()) {
-render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=128,
+render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=16,
              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 }
 
@@ -133,7 +133,7 @@ scene2 = scene \%>\%
                                    k = c(3.18,3.36,3.43)),
                   angle=c(0,-30,0)))
 if(run_documentation()) {
-render_scene(scene2, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=128,
+render_scene(scene2, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=16,
              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 }
 }

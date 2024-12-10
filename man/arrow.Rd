@@ -56,7 +56,7 @@ if(run_documentation()) {
 generate_studio() \%>\% 
   add_object(arrow(start = c(-1,0,0), end = c(1,0,0), material=glossy(color="red"))) \%>\% 
   add_object(sphere(y=5,material=light(intensity=20))) \%>\% 
-  render_scene(clamp_value=10,  samples=128)
+  render_scene(clamp_value=10,  samples=16)
 }
 if(run_documentation()) {
 #Change the proportion of tail to top
@@ -68,7 +68,7 @@ generate_studio(depth=-2) \%>\%
   add_object(arrow(start = c(-1,1,0), end = c(1,1,0), tail_proportion = 0.9,
                    material=glossy(color="red"))) \%>\% 
   add_object(sphere(y=5,z=5,x=2,material=light(intensity=30))) \%>\% 
-  render_scene(clamp_value=10, fov=25,  samples=128)
+  render_scene(clamp_value=10, fov=25,  samples=16)
 }
 if(run_documentation()) {
 #Change the radius of the tail/top segments
@@ -83,7 +83,7 @@ generate_studio(depth=-1.5) \%>\%
                    radius_top = 0.3, radius_tail=0.2,
                    material=glossy(color="red"))) \%>\% 
   add_object(sphere(y=5,z=5,x=2,material=light(intensity=30))) \%>\% 
-  render_scene(clamp_value=10, samples=128)
+  render_scene(clamp_value=10, samples=16)
 }
 if(run_documentation()) {
 #We can also specify arrows via a midpoint and direction:
@@ -97,7 +97,7 @@ generate_studio(depth=-1) \%>\%
   add_object(arrow(start = c(0,-0.5,-1), direction = c(-1,0,0),
                    material=glossy(color="purple"))) \%>\% 
   add_object(sphere(y=5,z=5,x=2,material=light(intensity=30))) \%>\% 
-  render_scene(clamp_value=10, samples=128, 
+  render_scene(clamp_value=10, samples=16, 
                lookfrom=c(0,5,10), lookat=c(0,-0.5,0), fov=16)
 }
 if(run_documentation()) {
@@ -121,7 +121,7 @@ vector_field = do.call(rbind,arrow_list)
 sphere(material=diffuse(noise=1,color="blue",noisecolor="darkgreen")) \%>\% 
   add_object(vector_field) \%>\% 
   add_object(sphere(y=0,x=10,z=5,material=light(intensity=200))) \%>\% 
-  render_scene(fov=20, ambient=TRUE, samples=128,
+  render_scene(fov=20, ambient=TRUE, samples=16,
                backgroundlow="black",backgroundhigh="white") 
 }
 }

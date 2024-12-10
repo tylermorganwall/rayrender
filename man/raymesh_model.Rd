@@ -98,7 +98,7 @@ if(run_documentation()) {
 raymesh_model(sphere_mesh(position = c(-1, 0, 0),
               material = material_list(transmittance = "red"))) \%>\%
   add_object(generate_ground(material = diffuse(checkercolor="grey20"))) \%>\%
-  render_scene(fov = 30, samples=128, sample_method="sobol_blue")
+  render_scene(fov = 30, samples=16, sample_method="sobol_blue")
 }
 
 # We create a complex rayvertex mesh, using the `rayvertex::add_shape` function which
@@ -113,7 +113,7 @@ rm_scene = sphere_mesh(position = c(-1, 0, 0),
 if(run_documentation()) {
 raymesh_model(rm_scene) \%>\%
   add_object(generate_ground(material = diffuse(checkercolor="grey20"))) \%>\%
-  render_scene(fov = 30, samples=128, sample_method="sobol_blue")
+  render_scene(fov = 30, samples=16, sample_method="sobol_blue")
 }
 
 # Set `flip_transmittance = FALSE` argument to specify attenuation coefficients directly
@@ -124,7 +124,7 @@ rm_scene_new= change_material(rm_scene, transmittance = c(1,2,0.3), id = 1) \%>\
 if(run_documentation()) {
 raymesh_model(rm_scene_new, flip_transmittance = FALSE) \%>\%
   add_object(generate_ground(material = diffuse(checkercolor="grey20"))) \%>\%
-  render_scene(fov = 30, samples=128, sample_method="sobol_blue")
+  render_scene(fov = 30, samples=16, sample_method="sobol_blue")
 }
 
 # Override the material specified in the `raymesh` object and render the scene
@@ -133,7 +133,7 @@ raymesh_model(rm_scene,
               material = dielectric(attenuation = "dodgerblue2", attenuation_intensity = 4), 
   override_material = TRUE) \%>\%
   add_object(generate_ground(material = diffuse(checkercolor="grey20"))) \%>\%
-  render_scene(fov = 30, samples=128, sample_method="sobol_blue")
+  render_scene(fov = 30, samples=16, sample_method="sobol_blue")
 }
 
 # Adjusting the scale, position, and rotation parameters of the `raymesh` model
@@ -141,6 +141,6 @@ if(run_documentation()) {
 raymesh_model(rm_scene,
               x = 0, y = 0.5, z = -1, angle = c(0, 0, 20)) \%>\%
   add_object(generate_ground(material = diffuse(checkercolor="grey20"))) \%>\%
-  render_scene(fov = 30,lookat=c(0,0.5,0), samples=128, sample_method="sobol_blue")
+  render_scene(fov = 30,lookat=c(0,0.5,0), samples=16, sample_method="sobol_blue")
 }
 }

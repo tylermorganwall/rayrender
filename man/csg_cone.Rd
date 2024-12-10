@@ -24,14 +24,14 @@ if(run_documentation()) {
 #Generate a basic cone:
 generate_ground(material=diffuse(checkercolor="grey20")) \%>\% 
   add_object(csg_object(csg_cone(),material=glossy(color="red"))) \%>\% 
-  render_scene(clamp_value=10,fov=20)
+  render_scene(clamp_value=10, samples=16,fov=20)
   }
 if(run_documentation()) {
 #Change the orientation by specifying a start and end
 generate_ground(material=diffuse(color="dodgerblue4",checkercolor="grey10")) \%>\% 
   add_object(csg_object(csg_cone(start = c(-1,0.5,-2), end = c(1,0.5,-2),
   radius=0.5),material=glossy(checkercolor="red"))) \%>\% 
-  render_scene(clamp_value=10,fov=20,
+  render_scene(clamp_value=10, samples=16,fov=20,
                lookat=c(0,0.5,-2),lookfrom=c(3,3,10))
  }
 if(run_documentation()) {
@@ -42,7 +42,7 @@ generate_ground(material=diffuse(color="dodgerblue4",checkercolor="grey10")) \%>
     csg_cone(start = c(-1,0.5,-2), end = c(1,0.5,-2), radius=0.5),
     csg_cone(start = c(-0.5,1.5,-2), end = c(0.5,1.5,-2), radius=0.2)),
     material=glossy(checkercolor="red"))) \%>\% 
-  render_scene(clamp_value=10,fov=20,
+  render_scene(clamp_value=10, samples=16,fov=20,
                lookat=c(0,0.5,-2),lookfrom=c(-3,3,10))
     }
 if(run_documentation()) {           
@@ -51,6 +51,6 @@ generate_cornell() \%>\%
   add_object(csg_object(
     csg_cone(start = c(555/2,0,555/2), end = c(555/2,555/2+100,555/2), radius=100),
     material=dielectric(attenuation=c(1,1,0.3)/100))) \%>\% 
-  render_scene(clamp_value=10)
+  render_scene(clamp_value=10, samples=16)
 }
 }

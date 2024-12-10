@@ -59,7 +59,7 @@ if(run_documentation()) {
 generate_cornell() \%>\%
   add_object(segment(start = c(100, 100, 100), end = c(455, 455, 455), radius = 50)) \%>\%
   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
-               ambient_light = FALSE, samples = 128, parallel = TRUE, clamp_value = 5)
+               ambient_light = FALSE, samples = 16, parallel = TRUE, clamp_value = 5)
 }
 
 # Draw a line graph representing a normal distribution, but with metal:
@@ -78,7 +78,7 @@ if(run_documentation()) {
 generate_cornell() \%>\% 
   add_object(scene_segments) \%>\%
   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
-               ambient_light = FALSE, samples = 128, parallel = TRUE, clamp_value = 5)
+               ambient_light = FALSE, samples = 16, parallel = TRUE, clamp_value = 5)
 }
 
 #Draw the outline of a cube:
@@ -100,7 +100,7 @@ if(run_documentation()) {
 generate_cornell() \%>\%
   add_object(cube_outline) \%>\%
   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
-               ambient_light = FALSE, samples = 128, parallel = TRUE, clamp_value = 5)
+               ambient_light = FALSE, samples = 16, parallel = TRUE, clamp_value = 5)
 }
 
 #Shrink and rotate the cube
@@ -109,6 +109,6 @@ generate_cornell() \%>\%
   add_object(group_objects(cube_outline, pivot_point = c(555/2, 555/2, 555/2),
                            angle = c(45,45,45), scale = c(0.5,0.5,0.5))) \%>\%
   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
-               ambient_light = FALSE, samples = 128, parallel = TRUE, clamp_value = 5)
+               ambient_light = FALSE, samples = 16, parallel = TRUE, clamp_value = 5)
 }
 }

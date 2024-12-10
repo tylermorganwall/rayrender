@@ -126,19 +126,19 @@
 #' if (run_documentation()) {
 #'   scene = generate_ground(depth = -0.5, 
 #'                           material = diffuse(color = "white", checkercolor = "darkgreen"))
-#'   render_scene(scene, parallel = TRUE, samples = 128, sample_method = "sobol")
+#'   render_scene(scene, parallel = TRUE, samples = 16, sample_method = "sobol")
 #' }
 #' if (run_documentation()) {
 #'   # Add a sphere to the center
 #'   scene = scene %>%
 #'     add_object(sphere(x = 0, y = 0, z = 0, radius = 0.5, material = diffuse(color = c(1, 0, 1))))
-#'   render_scene(scene, fov = 20, parallel = TRUE, samples = 128)
+#'   render_scene(scene, fov = 20, parallel = TRUE, samples = 16)
 #' }
 #' if (run_documentation()) {
 #'   # Add a marbled cube
 #'   scene = scene %>%
 #'     add_object(cube(x = 1.1, y = 0, z = 0, material = diffuse(noise = 3)))
-#'   render_scene(scene, fov = 20, parallel = TRUE, samples = 128)
+#'   render_scene(scene, fov = 20, parallel = TRUE, samples = 16)
 #' }
 #' if (run_documentation()) {
 #'   # Add a metallic gold sphere, using stratified sampling for a higher quality render
@@ -147,7 +147,7 @@
 #'     add_object(sphere(x = -1.1, y = 0, z = 0, radius = 0.5, 
 #'                       material = metal(color = "gold", fuzz = 0.1))) %>%
 #'     add_object(sphere(y=10,z=13,radius=2,material=light(intensity=40)))
-#'   render_scene(scene, fov = 20, parallel = TRUE, samples = 128)
+#'   render_scene(scene, fov = 20, parallel = TRUE, samples = 16)
 #' }
 #' if (run_documentation()) {
 #'   # Lower the number of samples to render more quickly (here, we also use only one core).
@@ -163,7 +163,7 @@
 #'   scene = scene %>%
 #'     add_object(xy_rect(x = 0, y = 1.1, z = 0, xwidth = 2, angle = c(0, 0, 0), 
 #'                        material = diffuse(image_texture = image_array)))
-#'   render_scene(scene, fov = 20, parallel = TRUE, samples = 128)
+#'   render_scene(scene, fov = 20, parallel = TRUE, samples = 16)
 #' }
 #' if (run_documentation()) {
 #'   # Move the camera
@@ -174,12 +174,12 @@
 #'   render_scene(scene, lookfrom = c(7, 1.5, 10), lookat = c(0, 0.5, 0), fov = 15,
 #'                backgroundhigh = "orange", backgroundlow = "red", parallel = TRUE,
 #'                ambient = TRUE,
-#'                samples = 128)
+#'                samples = 16)
 #' }
 #' if (run_documentation()) {    
 #'   # Increase the aperture to blur objects that are further from the focal plane.
 #'   render_scene(scene, lookfrom = c(7, 1.5, 10), lookat = c(0, 0.5, 0), fov = 15,
-#'                aperture = 1, parallel = TRUE, samples = 128)
+#'                aperture = 1, parallel = TRUE, samples = 16)
 #' }
 #' if (run_documentation()) {
 #'   # We can also capture a 360 environment image by setting `fov = 360` (can be used for VR)
@@ -196,7 +196,7 @@
 #'                        material = glossy(checkercolor = "white",
 #'                                          checkerperiod = 10, color = "dodgerblue"))) %>%
 #'     render_scene(lookfrom = c(278, 278, 30), lookat = c(278, 278, 500), clamp_value = 10,
-#'                  fov = 360,  samples = 128, width = 800, height = 800)
+#'                  fov = 360,  samples = 16, width = 800, height = 800)
 #' }
 #' if (run_documentation()) {            
 #'   # Spin the camera around the scene, decreasing the number of samples to render faster. To make 

@@ -23,12 +23,12 @@
 #'    add_object(sphere(y=3,x=-2,z=20,material=light(intensity=600)))
 #' if(run_documentation()) {
 #' render_scene(scene, parallel = TRUE, lookfrom = c(0,2,10), lookat=c(0,-0.25,0),
-#'              fov = 14, clamp_value = 10, samples = 128)
+#'              fov = 14, clamp_value = 10, samples = 16)
 #' }
 #' 
 #' #Zooming out to show the full default scene
 #' if(run_documentation()) {
-#' render_scene(scene, parallel=TRUE,lookfrom=c(0,200,400),clamp_value=10,samples=128)
+#' render_scene(scene, parallel=TRUE,lookfrom=c(0,200,400),clamp_value=10,samples=16)
 #' }
 generate_studio = function(depth = -1, distance = -10, width = 100, height = 100,
                            curvature = 8, material = diffuse()) {
