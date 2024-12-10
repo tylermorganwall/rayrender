@@ -24,7 +24,7 @@
 #' @param iso Default `100`. Camera exposure.
 #' @param film_size Default `22`, in `mm` (scene units in `m`. Size of the film if using a realistic camera, otherwise
 #' ignored.
-#' @param min_variance Default `0.00005`. Minimum acceptable variance for a block of pixels for the 
+#' @param min_variance Default `0`. Minimum acceptable variance for a block of pixels for the 
 #' adaptive sampler. Smaller numbers give higher quality images, at the expense of longer rendering times.
 #' If this is set to zero, the adaptive sampler will be turned off and the renderer
 #' will use the maximum number of samples everywhere.
@@ -179,7 +179,7 @@ render_animation = function(scene, camera_motion, start_frame = 1, end_frame = N
                             preview = interactive(), denoise = TRUE,
                             camera_description_file = NA, 
                             camera_scale = 1, iso = 100, film_size = 22, 
-                            samples = 100, min_variance = 0.00005, min_adaptive_size = 8,
+                            samples = 100, min_variance = 0, min_adaptive_size = 8,
                             sample_method = "sobol", 
                             ambient_occlusion = FALSE, keep_colors = FALSE,  sample_dist = 10,
                             max_depth = 50, roulette_active_depth = 10,

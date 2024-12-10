@@ -18,7 +18,7 @@ render_animation(
   iso = 100,
   film_size = 22,
   samples = 100,
-  min_variance = 5e-05,
+  min_variance = 0,
   min_adaptive_size = 8,
   sample_method = "sobol",
   ambient_occlusion = FALSE,
@@ -88,7 +88,7 @@ ignored.}
 vector and the `sample_method` is `stratified`, this will control the number of strata in each dimension.
 The total number of samples in this case will be the product of the two numbers.}
 
-\item{min_variance}{Default `0.00005`. Minimum acceptable variance for a block of pixels for the 
+\item{min_variance}{Default `0`. Minimum acceptable variance for a block of pixels for the 
 adaptive sampler. Smaller numbers give higher quality images, at the expense of longer rendering times.
 If this is set to zero, the adaptive sampler will be turned off and the renderer
 will use the maximum number of samples everywhere.}
