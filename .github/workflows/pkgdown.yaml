@@ -63,6 +63,28 @@ jobs:
             libgeos-dev \
             libproj-dev \
             gsfonts  
+            
+      # --- Download and Install OIDN ---
+      - name: Install OIDN (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          curl -LO https://github.com/OpenImageDenoise/oidn/releases/download/v2.3.1/oidn-2.3.1.x86_64.macos.tar.gz
+          tar xzf oidn-2.3.1.x86_64.macos.tar.gz
+          echo "OIDN_PATH=$(pwd)/oidn-2.3.1.x86_64.macos" >> $GITHUB_ENV
+
+      - name: Install OIDN (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          curl -LO https://github.com/OpenImageDenoise/oidn/releases/download/v2.3.1/oidn-2.3.1.x86_64.linux.tar.gz
+          tar xzf oidn-2.3.1.x86_64.linux.tar.gz
+          echo "OIDN_PATH=$(pwd)/oidn-2.3.1.x86_64.linux" >> $GITHUB_ENV
+
+      - name: Install OIDN (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          curl -LO https://github.com/OpenImageDenoise/oidn/releases/download/v2.3.1/oidn-2.3.1.x64.windows.zip
+          7z x oidn-2.3.1.x64.windows.zip
+          echo "OIDN_PATH=$(pwd)/oidn-2.3.1.x64.windows" >> $GITHUB_ENV
 
       - name: Install dependencies
         run: |

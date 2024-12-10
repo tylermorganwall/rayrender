@@ -47,8 +47,7 @@ number, the object will be scaled uniformly. Note: emissive objects may not curr
 Single row of a tibble describing the ellipsoid in the scene.
 }
 \description{
-Note: light importance sampling for this shape is currently approximated by a sphere. This will fail
-for ellipsoids with large differences between axes.
+Note: this is just a scaled sphere.
 }
 \examples{
 #Generate an ellipsoid in a Cornell box
