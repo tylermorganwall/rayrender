@@ -29,7 +29,7 @@ generate_ground(material=diffuse(checkercolor="grey20")) \%>\%
   add_object(csg_object(csg_translate(csg_torus(),x=-2,y=1,z=-2), 
                         material=glossy(color="red"))) \%>\%
   add_object(sphere(y=5,x=5,radius=3,material=light(intensity=10))) \%>\%  
-  render_scene(clamp_value=10,lookfrom=c(0,5,10),fov=30,
+  render_scene(clamp_value=10, samples=16,lookfrom=c(0,5,10),fov=30,
                lookat=c(-1,0.5,-1))
 }
 if(run_documentation()) {
@@ -45,7 +45,7 @@ generate_ground(material=diffuse(checkercolor="grey20")) \%>\%
     x=-3,y=1,z=-3),
     material=glossy(color="red"))) \%>\%
   add_object(sphere(y=5,x=5,radius=3,material=light(intensity=10))) \%>\%  
-  render_scene(clamp_value=10,lookfrom=c(0,5,10),fov=30,
+  render_scene(clamp_value=10, samples=16,lookfrom=c(0,5,10),fov=30,
                lookat=c(-1.5,0.5,-1.5))
 }
 }

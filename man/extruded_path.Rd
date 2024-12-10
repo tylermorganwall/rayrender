@@ -132,7 +132,7 @@ generate_studio(depth=-0.4,material=ground_mat) \%>\%
                            material=diffuse(color="red"))) \%>\% 
   add_object(sphere(y=3,z=5,x=2,material=light(intensity=15))) \%>\% 
   render_scene(lookat=c(0.3,0.5,0.5),fov=12, width=800,height=800, clamp_value = 10,
-               aperture=0.025, samples=128, sample_method="sobol_blue")
+               aperture=0.025, samples=16, sample_method="sobol_blue")
 }
 if(run_documentation()) {
 #Change the width evenly along the tube
@@ -142,7 +142,7 @@ generate_studio(depth=-0.4,material=ground_mat) \%>\%
                            material=diffuse(color="red"))) \%>\% 
   add_object(sphere(y=3,z=5,x=2,material=light(intensity=15))) \%>\% 
   render_scene(lookat=c(0.3,0.5,0.5),fov=12, width=800,height=800, clamp_value = 10,
-               aperture=0.025, samples=128, sample_method="sobol_blue")
+               aperture=0.025, samples=16, sample_method="sobol_blue")
 }
 if(run_documentation()) {
 #Change the width along the full length of the tube
@@ -152,7 +152,7 @@ generate_studio(depth=-0.4,material=ground_mat) \%>\%
                            material=diffuse(color="red"))) \%>\% 
   add_object(sphere(y=3,z=5,x=2,material=light(intensity=15))) \%>\% 
   render_scene(lookat=c(0.3,0.5,0.5),fov=12, width=800,height=800, clamp_value = 10,
-               aperture=0.025, samples=128, sample_method="sobol_blue")
+               aperture=0.025, samples=16, sample_method="sobol_blue")
 }
 if(run_documentation()) {
 #Specify the exact parametric x positions for the width values:
@@ -163,7 +163,7 @@ generate_studio(depth=-0.4,material=ground_mat) \%>\%
                            material=diffuse(color="red"))) \%>\% 
   add_object(sphere(y=3,z=5,x=2,material=light(intensity=15))) \%>\% 
   render_scene(lookat=c(0.3,0.5,0.5),fov=12, width=800,height=800, clamp_value = 10,
-               aperture=0.025, samples=128, sample_method="sobol_blue")
+               aperture=0.025, samples=16, sample_method="sobol_blue")
 }
 if(run_documentation()) {
 #Generate a star polygon
@@ -179,7 +179,7 @@ generate_studio(depth=-0.4,material=ground_mat) \%>\%
                            material=diffuse(color="red"))) \%>\% 
   add_object(sphere(y=3,z=5,x=2,material=light(intensity=15))) \%>\% 
   render_scene(lookat=c(0.3,0.5,1),fov=12, width=800,height=800, clamp_value = 10,
-               aperture=0.025, samples=128, sample_method="sobol_blue")
+               aperture=0.025, samples=16, sample_method="sobol_blue")
 }
 if(run_documentation()) {
 #Specify a circle polygon
@@ -196,7 +196,7 @@ generate_studio(depth=-0.4,material=ground_mat) \%>\%
                            material=diffuse(color="red"))) \%>\% 
   add_object(sphere(y=3,z=5,x=2,material=light(intensity=15))) \%>\% 
   render_scene(lookat=c(0.3,0.5,0.5),fov=12, width=800,height=800, clamp_value = 10,
-               aperture=0.025, samples=128, sample_method="sobol_blue")
+               aperture=0.025, samples=16, sample_method="sobol_blue")
 }
 if(run_documentation()) {
 #Add three and a half twists along the path, and make sure the breaks are evenly spaced
@@ -207,7 +207,7 @@ generate_studio(depth=-0.4,material=ground_mat) \%>\%
                            material=diffuse(color="red"))) \%>\% 
   add_object(sphere(y=3,z=5,x=2,material=light(intensity=15))) \%>\% 
   render_scene(lookat=c(0.3,0.5,0),fov=12, width=800,height=800, clamp_value = 10,
-               aperture=0.025, samples=128, sample_method="sobol_blue")
+               aperture=0.025, samples=16, sample_method="sobol_blue")
 }
 if(run_documentation()) {
 #Smooth the normals for a less sharp appearance:
@@ -220,7 +220,7 @@ generate_studio(depth=-0.4,material=ground_mat) \%>\%
                            material=diffuse(color="red"))) \%>\% 
   add_object(sphere(y=3,z=5,x=2,material=light(intensity=15))) \%>\% 
   render_scene(lookat=c(0.3,0.5,0),fov=12, width=800,height=800, clamp_value = 10,
-               aperture=0.025, samples=128, sample_method="sobol_blue")
+               aperture=0.025, samples=16, sample_method="sobol_blue")
 }
 if(run_documentation()) {
 #Only generate part of the curve, specified by the u_min and u_max arguments
@@ -232,7 +232,7 @@ generate_studio(depth=-0.4,material=ground_mat) \%>\%
                            material=diffuse(color="red"))) \%>\% 
   add_object(sphere(y=3,z=5,x=2,material=light(intensity=15))) \%>\% 
   render_scene(lookat=c(0.3,0.5,0),fov=12, width=800,height=800, clamp_value = 10,
-               aperture=0.025, samples=128, sample_method="sobol_blue")
+               aperture=0.025, samples=16, sample_method="sobol_blue")
 }
 if(run_documentation()) {
 #Render a Mobius strip with 1.5 turns 
@@ -250,7 +250,7 @@ generate_studio(depth=-0.2,
                           material = diffuse(noisecolor = "black", noise = 10, 
                                              noiseintensity = 10))) \%>\%
  add_object(sphere(y=20,x=0,z=21,material=light(intensity = 1000))) \%>\% 
- render_scene(lookat=c(0,0.5,0), fov=10, samples=128, sample_method = "sobol_blue",
+ render_scene(lookat=c(0,0.5,0), fov=10, samples=16, sample_method = "sobol_blue",
               width = 800, height=800)
 }
 if(run_documentation()) {
@@ -274,6 +274,6 @@ generate_ground(depth=-0.4,material=diffuse(color="grey50",
   add_object(sphere(y=10,z=-5,x=0,radius=5,material=light(color = "white",intensity = 5))) \%>\%
   render_scene(lookat=c(0,0.5,1),fov=10, 
                width=800,height=800, clamp_value = 10,
-               aperture=0.025, samples=128, sample_method="sobol_blue")
+               aperture=0.025, samples=16, sample_method="sobol_blue")
 }
 }

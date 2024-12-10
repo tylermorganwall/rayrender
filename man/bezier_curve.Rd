@@ -84,7 +84,7 @@ generate_studio(depth=-0.2) \%>\%
   add_object(sphere(y=3,z=5,x=2,radius=0.3,
                     material=light(intensity=200, spotlight_focus = c(0,0.5,0)))) \%>\%
   render_scene(clamp_value = 10, lookat = c(0,0.5,0), fov=13,
-               samples=128)
+               samples=16)
 }
 
 if(run_documentation()) {
@@ -99,7 +99,7 @@ generate_studio(depth=-0.2) \%>\%
   add_object(sphere(y=3,z=5,x=2,radius=0.3,
                     material=light(intensity=200, spotlight_focus = c(0,0.5,0)))) \%>\%
   render_scene(clamp_value = 10, lookat = c(0,0.5,0), fov=15,
-               samples=128)
+               samples=16)
 }
 if(run_documentation()) {
 #We can make the curve flat (always facing the camera) by setting the type to `flat`
@@ -108,7 +108,7 @@ generate_studio(depth=-0.2) \%>\%
   add_object(sphere(y=3,z=5,x=2,radius=0.3,
                     material=light(intensity=200, spotlight_focus = c(0,0.5,0)))) \%>\%
   render_scene(clamp_value = 10, lookat = c(0,0.5,0), fov=13,
-               samples=128)
+               samples=16)
 }
 if(run_documentation()) {
 #We can also plot a ribbon, which is further specified by a start and end orientation with
@@ -121,7 +121,7 @@ generate_studio(depth=-0.2) \%>\%
   add_object(sphere(y=3,z=5,x=2,radius=0.3,
                     material=light(intensity=200, spotlight_focus = c(0,0.5,0)))) \%>\%
   render_scene(clamp_value = 10, lookat = c(0,0.5,0), fov=13,
-               samples=128)
+               samples=16)
 }
 if(run_documentation()) {
 #Create a single curve and copy and rotate it around the y-axis to create a wavy fountain effect:

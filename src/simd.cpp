@@ -194,7 +194,8 @@ context("simd_cast_float_to_int casts floats to ints") {
     IVec4 int_vec = simd_cast_float_to_int(float_vec);
 
     for (int i = 0; i < SIMD_WIDTH; ++i) {
-        int expected = *reinterpret_cast<int*>(&values[i]);
+        int expected;
+        std::memcpy(&expected, &values[i], sizeof(expected)); 
         expect_true(int_vec.xyzw[i] == expected);
     }
   }
@@ -423,7 +424,8 @@ context("simd_setmask creates mask correctly") {
 
     for (int i = 0; i < SIMD_WIDTH; ++i) {
       uint32_t expected_bits = mask_bools[i] ? 0xFFFFFFFF : 0x00000000;
-      uint32_t mask_bits = reinterpret_cast<uint32_t&>(mask.xyzw[i]);
+      uint32_t mask_bits;
+      std::memcpy(&mask_bits, &mask.xyzw[i], sizeof(mask_bits)); 
       expect_true(mask_bits == expected_bits);
     }
   }
@@ -688,7 +690,8 @@ context("simd_set1 initializes SimdMask with unsigned int value correctly") {
     SimdMask mask = simd_set1(value);
 
     for (int i = 0; i < SIMD_WIDTH; ++i) {
-      uint32_t mask_bits = reinterpret_cast<uint32_t&>(mask.xyzw[i]);
+      uint32_t mask_bits;
+      std::memcpy(&mask_bits, &mask.xyzw[i], sizeof(mask_bits)); 
       expect_true(mask_bits == value);
     }
   }

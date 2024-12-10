@@ -50,7 +50,7 @@
 #' scene = generate_cornell() %>%
 #'   add_object(sphere(x=555/2,y=555/2,z=555/2,radius=555/8,material=diffuse()))
 #' if(run_documentation()) {
-#' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=128,
+#' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=16,
 #'              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 #' }
 #' 
@@ -59,7 +59,7 @@
 #'   add_object(cube(x=555/2,y=555/8,z=555/2,xwidth=555/2,ywidth=555/4,zwidth=555/2,
 #'   material = diffuse(checkercolor="purple",checkerperiod=20)))
 #' if(run_documentation()) {
-#' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=128,
+#' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=16,
 #'              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 #' }
 #'   
@@ -68,7 +68,7 @@
 #'   add_object(sphere(x=555/2+555/4,y=555/2,z=555/2,radius=555/8,
 #'   material = diffuse(noise=1/20)))
 #' if(run_documentation()) {
-#' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=128,
+#' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=16,
 #'              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 #' }
 #' 
@@ -77,7 +77,7 @@
 #'   add_object(cube(x=555/2-555/4,y=555/2,z=555/2,xwidth=555/4,ywidth=555/4,zwidth=555/4,
 #'   material = diffuse(fog=TRUE, fogdensity=0.05,color="orange")))
 #' if(run_documentation()) {
-#' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=128,
+#' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=16,
 #'              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 #' }
 #' 
@@ -86,7 +86,7 @@
 #'   add_object(segment(start = c(555,450,450),end=c(0,450,450),radius = 50, 
 #'                      material = diffuse(color="#1f7326", gradient_color = "#a60d0d")))
 #' if(run_documentation()) {
-#' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=128,
+#' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=16,
 #'              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 #' }
 diffuse = function(color = "#ffffff", 
@@ -222,7 +222,7 @@ diffuse = function(color = "#ffffff",
 #'   add_object(cube(x=380,y=150/2,z=200,xwidth=150,ywidth=150,zwidth=150,
 #'   material = metal(eta = c(1.07,0.8946,0.523), k = c(6.7144,6.188,4.95)),angle=c(0,45,0)))
 #' if(run_documentation()) {
-#' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=128,
+#' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=16,
 #'              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 #' }
 #' #Add a copper metal cube      
@@ -232,7 +232,7 @@ diffuse = function(color = "#ffffff",
 #'                                    k = c(2.898,2.476,2.298)),
 #'                   angle=c(0,-30,0)))
 #' if(run_documentation()) {
-#' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=128,
+#' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=16,
 #'              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 #' }
 #' 
@@ -243,7 +243,7 @@ diffuse = function(color = "#ffffff",
 #'                                    k = c(3.18,3.36,3.43)),
 #'                   angle=c(0,-30,0)))
 #' if(run_documentation()) {
-#' render_scene(scene2, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=128,
+#' render_scene(scene2, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=16,
 #'              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 #' }
 metal = function(color = "#ffffff", 
@@ -353,7 +353,7 @@ metal = function(color = "#ffffff",
 #' if(run_documentation()) {
 #' scene %>%
 #'   add_object(sphere(x=-0.5,radius=0.5,material=dielectric())) %>%
-#'   render_scene(parallel=TRUE,samples=128)
+#'   render_scene(parallel=TRUE,samples=16)
 #' }
 #' 
 #' #Add a rotated colored glass cube
@@ -361,7 +361,7 @@ metal = function(color = "#ffffff",
 #' scene %>%
 #'   add_object(sphere(x=-0.5,radius=0.5,material=dielectric())) %>%
 #'   add_object(cube(x=0.5,xwidth=0.5,material=dielectric(color="darkgreen"),angle=c(0,-45,0))) %>%
-#'   render_scene(parallel=TRUE,samples=128)
+#'   render_scene(parallel=TRUE,samples=16)
 #' }
 #' 
 #' #Add an area light behind and at an angle and turn off the ambient lighting
@@ -398,7 +398,7 @@ metal = function(color = "#ffffff",
 #'                     material = dielectric(priority=0,attenuation = c(10,3,10) ))) %>%
 #'   add_object(sphere(radius=0.25,x=-0.5,z=0.5,y=0.5,
 #'                     material = dielectric(priority=0,attenuation = c(10,3,10)))) %>%
-#'   render_scene(parallel=TRUE, samples = 128,lookfrom=c(5,1,5)) 
+#'   render_scene(parallel=TRUE, samples = 16,lookfrom=c(5,1,5)) 
 #' }
 #' 
 #' # We can also use this as a basic Constructive Solid Geometry interface by setting 
@@ -412,7 +412,7 @@ metal = function(color = "#ffffff",
 #'   add_object(sphere(radius=1,x=-1.01, 
 #'                     material = dielectric(priority=0,refraction=1))) %>%
 #'   add_object(sphere(y=10,x=3,material=light(intensit=150))) %>%
-#'   render_scene(parallel=TRUE, samples = 128,lookfrom=c(5,3,5))
+#'   render_scene(parallel=TRUE, samples = 16,lookfrom=c(5,3,5))
 #' }
 dielectric = function(color="white", refraction = 1.5,  
                       attenuation = c(0,0,0), attenuation_intensity = 1,
@@ -513,7 +513,7 @@ dielectric = function(color="white", refraction = 1.5,
 #'   add_object(ellipsoid(x=555/2,555/2,y=150, a=100,b=150,c=100,
 #'              material=microfacet(roughness=0.1,
 #'                                  eta=c(0.216,0.42833,1.3184), kappa=c(3.239,2.4599,1.8661)))) %>% 
-#'  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=128,
+#'  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=16,
 #'              aperture=0, fov=40, parallel=TRUE,clamp_value=10)
 #'  }
 #' if(run_documentation()) {
@@ -527,7 +527,7 @@ dielectric = function(color="white", refraction = 1.5,
 #'  add_object(ellipsoid(x=150,555/2,y=150, a=100,b=150,c=100,
 #'              material=microfacet(roughness=c(0.1,0.3),
 #'                                  eta=c(0.216,0.42833,1.3184), kappa=c(3.239,2.4599,1.8661)))) %>%  
-#'  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=128,
+#'  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=16,
 #'              aperture=0, fov=40,  parallel=TRUE,clamp_value=10)
 #'}
 #' if(run_documentation()) {
@@ -540,7 +540,7 @@ dielectric = function(color="white", refraction = 1.5,
 #'  add_object(ellipsoid(x=200,z=200,y=80, a=50,b=80,c=50,
 #'              material=microfacet(roughness=0.1,
 #'                                  eta=c(0.216,0.42833,1.3184), kappa=c(3.239,2.4599,1.8661)))) %>% 
-#'  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=128,
+#'  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=16,
 #'              aperture=0, fov=40, parallel=TRUE,clamp_value=10)
 #'  }
 #' if(run_documentation()) {
@@ -553,7 +553,7 @@ dielectric = function(color="white", refraction = 1.5,
 #'  add_object(ellipsoid(x=200,z=200,y=80, a=50,b=80,c=50,
 #'              material=microfacet(roughness=0.3,
 #'                                  eta=c(0.216,0.42833,1.3184), kappa=c(3.239,2.4599,1.8661)))) %>% 
-#'  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=128,
+#'  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=16,
 #'              aperture=0, fov=40, parallel=TRUE,clamp_value=10)
 #'  }
 #' if(run_documentation()) {
@@ -564,7 +564,7 @@ dielectric = function(color="white", refraction = 1.5,
 #'              material=microfacet(roughness=0.3, transmission=T, eta=1.6))) %>% 
 #'  add_object(ellipsoid(x=200,z=200,y=80, a=50,b=80,c=50,
 #'              material=microfacet(roughness=0.3, transmission=T, eta=1.6))) %>% 
-#'  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=128,
+#'  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=16,
 #'              aperture=0, fov=40, parallel=TRUE,clamp_value=10, min_variance=1e-6)
 #' }
 microfacet = function(color="white", roughness = 0.0001, transmission = FALSE,
@@ -731,7 +731,7 @@ microfacet = function(color="white", roughness = 0.0001, transmission = FALSE,
 #' scene = generate_cornell(light=FALSE) %>%
 #'   add_object(sphere(x=555/2,y=555/2,z=555/2,radius=555/8,material=light()))
 #' if(run_documentation()) {
-#' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=128,
+#' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=16,
 #'              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 #' }
 #' 
@@ -740,7 +740,7 @@ microfacet = function(color="white", roughness = 0.0001, transmission = FALSE,
 #'   add_object(sphere(x=555/2,y=555/2,z=555/2,radius=555/8,
 #'              material=light(intensity=15,invisible=TRUE)))
 #' if(run_documentation()) {
-#' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=128,
+#' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=16,
 #'              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 #' }
 #' 
@@ -750,7 +750,7 @@ microfacet = function(color="white", roughness = 0.0001, transmission = FALSE,
 #'   add_object(obj_model(r_obj(simple_r = TRUE), z=-3,x=-1.5,y=-1, angle=c(0,45,0))) %>%
 #'   add_object(pig(scale=0.3, x=1.5,z=-2,y=-1.5,angle=c(0,-135,0)))
 #' if(run_documentation()) {
-#' render_scene(scene, samples=128, parallel=TRUE, clamp_value=10)
+#' render_scene(scene, samples=16, parallel=TRUE, clamp_value=10)
 #' }
 light = function(color = "#ffffff", intensity = 10, importance_sample = TRUE, 
                  spotlight_focus = NA, spotlight_width = 30, spotlight_start_falloff = 15,
@@ -871,7 +871,7 @@ light = function(color = "#ffffff", intensity = 10, importance_sample = TRUE,
 #' generate_ground(material=diffuse(sigma=90)) %>%
 #'   add_object(sphere(y=0.2,material=glossy(color="#2b6eff"))) %>% 
 #'   add_object(sphere(y=2.8,material=light())) %>%
-#'   render_scene(parallel=TRUE,clamp_value=10,samples=128,sample_method="sobol_blue")
+#'   render_scene(parallel=TRUE,clamp_value=10,samples=16,sample_method="sobol_blue")
 #'  }
 #' if(run_documentation()) {
 #' #Change the color of the underlying diffuse layer
@@ -880,7 +880,7 @@ light = function(color = "#ffffff", intensity = 10, importance_sample = TRUE,
 #'   add_object(sphere(y=0.2,material=glossy(color="#2b6eff"))) %>% 
 #'   add_object(sphere(y=0.2,x=2.1,material=glossy(color="#2fed4f"))) %>% 
 #'   add_object(sphere(y=8,z=-5,radius=3,material=light(intensity=20))) %>%
-#'   render_scene(parallel=TRUE,clamp_value=10,samples=128,fov=40,sample_method="sobol_blue")
+#'   render_scene(parallel=TRUE,clamp_value=10,samples=16,fov=40,sample_method="sobol_blue")
 #'  }
 #' if(run_documentation()) {
 #' #Change the amount of gloss 
@@ -889,7 +889,7 @@ light = function(color = "#ffffff", intensity = 10, importance_sample = TRUE,
 #'   add_object(sphere(y=0.2,material=glossy(gloss=0.5,color="#2b6eff"))) %>% 
 #'   add_object(sphere(y=0.2,x=2.1,material=glossy(gloss=0,color="#2fed4f"))) %>% 
 #'   add_object(sphere(y=8,z=-5,radius=3,material=light(intensity=20))) %>%
-#'   render_scene(parallel=TRUE,clamp_value=10,samples=128,fov=40,sample_method="sobol_blue")
+#'   render_scene(parallel=TRUE,clamp_value=10,samples=16,fov=40,sample_method="sobol_blue")
 #'  }
 #' if(run_documentation()) {
 #' #Add gloss to a pattern 
@@ -898,7 +898,7 @@ light = function(color = "#ffffff", intensity = 10, importance_sample = TRUE,
 #'   add_object(sphere(y=0.2,material=glossy(color="#ff365a",checkercolor="#2b6eff"))) %>% 
 #'   add_object(sphere(y=0.2,x=2.1,material=glossy(color="blue",gradient_color="#2fed4f"))) %>% 
 #'   add_object(sphere(y=8,z=-5,radius=3,material=light(intensity=20))) %>%
-#'   render_scene(parallel=TRUE,clamp_value=10,samples=128,fov=40,sample_method="sobol_blue")
+#'   render_scene(parallel=TRUE,clamp_value=10,samples=16,fov=40,sample_method="sobol_blue")
 #'  }
 #' if(run_documentation()) {
 #' #Add an R and a fill light (this may look familiar)
@@ -908,7 +908,7 @@ light = function(color = "#ffffff", intensity = 10, importance_sample = TRUE,
 #'                        z=1,y=-0.05,scale=0.45,material=diffuse())) %>%
 #'   add_object(sphere(y=6,z=1,radius=4,material=light(intensity=3))) %>%
 #'   add_object(sphere(z=15,material=light(intensity=50))) %>%
-#'   render_scene(parallel=TRUE,clamp_value=10,samples=128,sample_method="sobol_blue")
+#'   render_scene(parallel=TRUE,clamp_value=10,samples=16,sample_method="sobol_blue")
 #' }
 glossy = function(color="white", gloss = 1, reflectance = 0.05, microfacet = "tbr", 
                   checkercolor = NA, checkerperiod = 3,
@@ -1050,7 +1050,7 @@ SigmaAFromReflectance = function(c, beta_n) {
 #'   add_object(sphere()) %>%
 #'   add_object(hairball) %>%
 #'   add_object(sphere(y=20,z=20,radius=5,material=light(color="white",intensity = 100))) %>%
-#'   render_scene(samples=64, lookfrom=c(0,3,10),clamp_value = 10,
+#'   render_scene(samples=16, lookfrom=c(0,3,10),clamp_value = 10,
 #'                fov=20, width=800, height=800)
 #' }
 #' if(run_documentation()) {         
@@ -1074,7 +1074,7 @@ SigmaAFromReflectance = function(c, beta_n) {
 #'   add_object(sphere()) %>%
 #'   add_object(hairball) %>%
 #'   add_object(sphere(y=20,z=20,radius=5,material=light(color="white",intensity = 100))) %>%
-#'   render_scene(samples=64, lookfrom=c(0,3,10),clamp_value = 10,
+#'   render_scene(samples=16, lookfrom=c(0,3,10),clamp_value = 10,
 #'                fov=20, width=800, height=800)
 #' }
 hair = function(pigment = 1.3, red_pigment = 0, color = NA, sigma_a = NA, 

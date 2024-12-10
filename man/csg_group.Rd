@@ -25,6 +25,6 @@ generate_ground(material=diffuse(checkercolor="grey20")) \%>\%
                  csg_sphere(x=1,z=-1, radius=0.5),csg_sphere(x=-1,z=-1, radius=0.5))),
   csg_box(y=0.5, width=c(2,0.2,2)), operation="blend"), material=glossy(color="red"))) \%>\%
   add_object(sphere(y=10,x=-5,radius=3,material=light(intensity=10))) \%>\% 
-  render_scene(clamp_value=10,lookfrom=c(5,5,10)) 
+  render_scene(clamp_value=10, samples=16,lookfrom=c(5,5,10)) 
 }
 }

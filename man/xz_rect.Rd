@@ -54,7 +54,7 @@ generate_cornell() \%>\%
   add_object(xz_rect(x = 555/2, y = 100, z = 555/2, xwidth = 200, zwidth = 200,
              material = diffuse(color = "purple"))) \%>\%
   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
-               ambient_light = FALSE, samples = 128, parallel = TRUE, clamp_value = 5)
+               ambient_light = FALSE, samples = 16, parallel = TRUE, clamp_value = 5)
 }
 
 #Generate a gold plane in the cornell box
@@ -64,6 +64,6 @@ generate_cornell() \%>\%
              xwidth = 200, zwidth = 200, angle = c(0, 30, 0),
              material = metal(color = "gold"))) \%>\%
   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
-               ambient_light = FALSE, samples = 128, parallel = TRUE, clamp_value = 5)
+               ambient_light = FALSE, samples = 16, parallel = TRUE, clamp_value = 5)
 }
 }

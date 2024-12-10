@@ -38,7 +38,7 @@
 #' sphere_scene %>%
 #'   add_object(base_scene) %>%
 #'   render_scene(lookat = c(0, 1, 0), width = 800, sample_method = "sobol_blue", aperture = 0.2,
-#'                height = 800, samples = 128, clamp_value = 20)
+#'                height = 800, samples = 16, clamp_value = 20)
 #' }
 #' 
 #' if (run_documentation()) {
@@ -50,7 +50,7 @@
 #'                  angle_z = 90 * (runif(10) - 0.5)) %>%
 #'   add_object(base_scene) %>%
 #'   render_scene(lookat = c(0, 1, 0), width = 800, sample_method = "sobol_blue",
-#'                height = 800, samples = 128, clamp_value = 20)
+#'                height = 800, samples = 16, clamp_value = 20)
 #' }
 #' 
 #' if (run_documentation()) {
@@ -63,7 +63,7 @@
 #'                  scale_z = 0.5 + runif(10)) %>%
 #'   add_object(base_scene) %>%
 #'   render_scene(lookat = c(0, 1, 0), width = 800, sample_method = "sobol_blue",
-#'                height = 800, samples = 128, clamp_value = 20)
+#'                height = 800, samples = 16, clamp_value = 20)
 #' }
 #' 
 #' if (run_documentation()) {
@@ -74,7 +74,7 @@
 #'   create_instances(y = seq(0, 2, length.out = 10)) %>%
 #'   add_object(base_scene) %>%
 #'   render_scene(lookat = c(0, 1, 0), width = 800, sample_method = "sobol_blue",
-#'                height = 800, samples = 128, clamp_value = 20)
+#'                height = 800, samples = 16, clamp_value = 20)
 #' }
 #' 
 #' if (run_documentation()) {
@@ -90,7 +90,7 @@
 #'   add_object(base_scene) %>%
 #'   render_scene(lookat = c(0, 10, 0), lookfrom = c(0, 10, 50),
 #'                width = 800, sample_method = "sobol_blue", fov = 30,
-#'                height = 800, samples = 128, clamp_value = 20)
+#'                height = 800, samples = 16, clamp_value = 20)
 #' }
 #' 
 #' if (run_documentation()) {
@@ -123,7 +123,7 @@
 #'                                    y = seq(-1, 1, by = 1) * 556 - 555 / 2,
 #'                                    z = 0)) %>%
 #'   render_scene(lookfrom = c(0, 0, -800) * 3, fov = 40,  
-#'                samples = 128, sample_method = "sobol_blue",
+#'                samples = 16, sample_method = "sobol_blue",
 #'                parallel = TRUE, width = 800, height = 800)
 #' }
 create_instances = function(ray_scene, 

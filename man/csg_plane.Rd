@@ -31,7 +31,7 @@ if(run_documentation()) {
 #Generate a plane
 csg_object(csg_plane(width_x=4, width_z=4), material=diffuse(checkercolor="purple")) \%>\% 
   add_object(sphere(y=5,x=5,material=light(intensity=40))) \%>\% 
-  render_scene(clamp_value=10)
+  render_scene(clamp_value=10, samples=16)
  }
 if(run_documentation()) {
 #Combine the plane with a sphere
@@ -40,7 +40,7 @@ csg_object(csg_combine(
     csg_plane(width_x=4, width_z=4,y=-0.5), 
     operation="blend"),material=diffuse(checkercolor="purple")) \%>\% 
   add_object(sphere(y=5,x=5,material=light(intensity=40))) \%>\% 
-  render_scene(clamp_value=10)
+  render_scene(clamp_value=10, samples=16)
   }
 if(run_documentation()) {
 #Re-orient the plane using the normal and 
@@ -49,6 +49,6 @@ csg_object(csg_combine(
     csg_plane(normal = c(1,1,0),width_x=4, width_z=4,y=-0.5), 
     operation="blend"),material=diffuse(checkercolor="purple")) \%>\% 
   add_object(sphere(y=5,x=5,material=light(intensity=40))) \%>\% 
-  render_scene(clamp_value=10)
+  render_scene(clamp_value=10, samples=16)
 }
 }

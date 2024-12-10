@@ -61,7 +61,7 @@ render_scene(scene,parallel=TRUE)
 if(run_documentation()) {
 scene \%>\%
   add_object(sphere(x=-0.5,radius=0.5,material=dielectric())) \%>\%
-  render_scene(parallel=TRUE,samples=128)
+  render_scene(parallel=TRUE,samples=16)
 }
 
 #Add a rotated colored glass cube
@@ -69,7 +69,7 @@ if(run_documentation()) {
 scene \%>\%
   add_object(sphere(x=-0.5,radius=0.5,material=dielectric())) \%>\%
   add_object(cube(x=0.5,xwidth=0.5,material=dielectric(color="darkgreen"),angle=c(0,-45,0))) \%>\%
-  render_scene(parallel=TRUE,samples=128)
+  render_scene(parallel=TRUE,samples=16)
 }
 
 #Add an area light behind and at an angle and turn off the ambient lighting
@@ -106,7 +106,7 @@ generate_ground(depth=-0.51,material=diffuse(checkercolor="grey30",checkerperiod
                     material = dielectric(priority=0,attenuation = c(10,3,10) ))) \%>\%
   add_object(sphere(radius=0.25,x=-0.5,z=0.5,y=0.5,
                     material = dielectric(priority=0,attenuation = c(10,3,10)))) \%>\%
-  render_scene(parallel=TRUE, samples = 128,lookfrom=c(5,1,5)) 
+  render_scene(parallel=TRUE, samples = 16,lookfrom=c(5,1,5)) 
 }
 
 # We can also use this as a basic Constructive Solid Geometry interface by setting 
@@ -120,6 +120,6 @@ generate_ground(depth=-0.51,material=diffuse(checkercolor="grey30",checkerperiod
   add_object(sphere(radius=1,x=-1.01, 
                     material = dielectric(priority=0,refraction=1))) \%>\%
   add_object(sphere(y=10,x=3,material=light(intensit=150))) \%>\%
-  render_scene(parallel=TRUE, samples = 128,lookfrom=c(5,3,5))
+  render_scene(parallel=TRUE, samples = 16,lookfrom=c(5,3,5))
 }
 }

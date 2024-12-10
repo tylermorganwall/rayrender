@@ -5,7 +5,7 @@
 static_assert(std::is_trivially_copyable<FVec4>::value,
               "FVec4 must be trivially copyable to use memcpy safely.");
 
-Matrix4x4::Matrix4x4(Float mat[4][4]) { memcpy(m, mat, 16 * sizeof(Float)); }
+Matrix4x4::Matrix4x4(Float mat[4][4]) { memcpy((Float*)m, mat, 16 * sizeof(Float)); }
 
 Matrix4x4::Matrix4x4(Float t00, Float t01, Float t02, Float t03, 
                      Float t10, Float t11, Float t12, Float t13, 
@@ -109,7 +109,7 @@ Matrix4x4 Inverse(const Matrix4x4 &m) {
   int indxc[4], indxr[4];
   int ipiv[4] = {0, 0, 0, 0};
   Float minv[4][4];
-  memcpy(&minv, (Float*)&m.m, 4 * 4 * sizeof(Float));
+  std::memcpy(&minv, (Float*)&m.m, 4 * 4 * sizeof(Float));
   for (int i = 0; i < 4; i++) {
     int irow = 0, icol = 0;
     Float big = 0.f;

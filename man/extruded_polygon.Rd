@@ -98,7 +98,7 @@ generate_ground(depth=0,
   add_object(extruded_polygon(star_polygon,top=0.5,bottom=0,
                               material=diffuse(color="red",sigma=90))) \%>\%
   add_object(sphere(y=4,x=-3,z=-3,material=light(intensity=30))) \%>\%
-  render_scene(parallel=TRUE,lookfrom = c(0,2,3),samples=128,lookat=c(0,0.5,0),fov=60)
+  render_scene(parallel=TRUE,lookfrom = c(0,2,3),samples=16,lookat=c(0,0.5,0),fov=60)
 }
 
 #Now, let's add a hole to the center of the polygon. We'll make the polygon
@@ -116,7 +116,7 @@ generate_ground(depth=-0.01,
   add_object(extruded_polygon(hollow_star,top=0.25,bottom=0, holes = nrow(star_polygon) + 1,
                               material=diffuse(color="red",sigma=90))) \%>\%
   add_object(sphere(y=4,x=-3,z=-3,material=light(intensity=30))) \%>\%
-  render_scene(parallel=TRUE,lookfrom = c(0,2,4),samples=128,lookat=c(0,0,0),fov=30)
+  render_scene(parallel=TRUE,lookfrom = c(0,2,4),samples=16,lookat=c(0,0,0),fov=30)
 }
 
 # Render one in the y-x plane as well by changing the `plane` argument,
@@ -130,7 +130,7 @@ generate_ground(depth=-0.01,
                               holes = nrow(star_polygon) + 1, plane = "yx", 
                               material=diffuse(color="green",sigma=90))) \%>\%
   add_object(sphere(y=4,x=-3,material=light(intensity=30))) \%>\%
-  render_scene(parallel=TRUE,lookfrom = c(0,2,4),samples=128,lookat=c(0,0.9,0),fov=40)
+  render_scene(parallel=TRUE,lookfrom = c(0,2,4),samples=16,lookat=c(0,0.9,0),fov=40)
 }
 
 # Now add the zy plane:
@@ -146,7 +146,7 @@ generate_ground(depth=-0.01,
                               holes = nrow(star_polygon) + 1, plane = "zy", 
                               material=diffuse(color="blue",sigma=90))) \%>\%
   add_object(sphere(y=4,x=-3,material=light(intensity=30))) \%>\%
-  render_scene(parallel=TRUE,lookfrom = c(-4,2,4),samples=128,lookat=c(0,0.9,0),fov=40)
+  render_scene(parallel=TRUE,lookfrom = c(-4,2,4),samples=16,lookat=c(0,0.9,0),fov=40)
 }
 
 #We can also directly pass in sf polygons:
@@ -168,7 +168,7 @@ generate_ground(depth=-0.01,
                               material=diffuse(color="#ff2222",sigma=90))) \%>\%
   add_object(sphere(y=30,x=-30,radius=10,
                     material=light(color="lightblue",intensity=40))) \%>\%
-  render_scene(parallel=TRUE,lookfrom = c(0,10,-10),samples=128,fov=60)
+  render_scene(parallel=TRUE,lookfrom = c(0,10,-10),samples=16,fov=60)
 }
 
 #Here we use the raw coordinates, but offset the polygon manually.
@@ -181,7 +181,7 @@ generate_ground(depth=-0.01,
                     material=light(color="lightblue",intensity=200))) \%>\%
   add_object(sphere(y=30,x=100,radius=10,
                     material=light(color="orange",intensity=200))) \%>\%
-  render_scene(parallel=TRUE,lookfrom = c(0,120,-120),samples=128,fov=20)
+  render_scene(parallel=TRUE,lookfrom = c(0,120,-120),samples=16,fov=20)
 }
 
 #We can also set the map the height of each polygon to a column in the sf object,
@@ -197,7 +197,7 @@ generate_ground(depth=0,
                     material=light(color="lightblue",intensity=250))) \%>\%
   add_object(sphere(y=30,x=100,z=-60,radius=10,
                     material=light(color="orange",intensity=250))) \%>\%
-  render_scene(parallel=TRUE,lookfrom = c(-60,50,-40),lookat=c(0,-5,0),samples=128,fov=30)
+  render_scene(parallel=TRUE,lookfrom = c(-60,50,-40),lookat=c(0,-5,0),samples=16,fov=30)
 }
 
 }
