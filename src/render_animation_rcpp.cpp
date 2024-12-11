@@ -423,8 +423,8 @@ void render_animation_rcpp(List scene, List camera_info, List scene_info, List r
                    background_sphere->WorldToObject.get(),
                    filter, denoise);
 #else
-  PreviewDisplay Display(nx,ny, preview, false, 
-                         (lookat-lookfrom).length(), cam.get(),
+  PreviewDisplay d(nx,ny, preview, false, 
+                         20.0f, cam.get(),
                          background_sphere->ObjectToWorld.get(),
                          background_sphere->WorldToObject.get());
 #endif
