@@ -205,6 +205,11 @@ inline vec3<T> operator/(const vec3<T>& v1, const vec3<T>& v2) {
 }
 
 template<typename T>
+inline vec3<T> operator/(T t, const vec3<T>& v2) {
+    return vec3<T>(t/v2.e[0], t/v2.e[1], t/v2.e[2]);
+}
+
+template<typename T>
 inline vec3<T> operator+(const vec3<T>& v, T t) {
     return vec3<T>(v.e[0]+t, v.e[1]+t, v.e[2]+t);
 }

@@ -93,25 +93,6 @@ context("Arithmetic operators with point3, vec3, normal3") {
         expect_true(result.z() == Approx(-3.0f));
     }
 
-    test_that("[vec3f *= point3f]") {
-        vec3f v; v.e[0] = 2.0f; v.e[1] = 3.0f; v.e[2] = 4.0f;
-        point3f p; p.e[0] = 1.0f; p.e[1] = -1.0f; p.e[2] = 2.0f;
-
-        vec3f result = v *= p;
-        expect_true(result.x() == Approx(2.0f));   // 2*1
-        expect_true(result.y() == Approx(-3.0f));  // 3*(-1)
-        expect_true(result.z() == Approx(8.0f));   // 4*2
-    }
-
-    test_that("[vec3f *= normal3f]") {
-        vec3f v; v.e[0] = 2.0f; v.e[1] = 3.0f; v.e[2] = 4.0f;
-        normal3f n; n.e[0] = -1.0f; n.e[1] = 0.5f; n.e[2] = 2.0f;
-
-        vec3f result = v *= n;
-        expect_true(result.x() == Approx(-2.0f));  // 2*(-1)
-        expect_true(result.y() == Approx(1.5f));   // 3*0.5
-        expect_true(result.z() == Approx(8.0f));   // 4*2
-    }
 
     test_that("[point3f *= point3f]") {
         point3f p1; p1.e[0] = 2.0f; p1.e[1] = 2.0f; p1.e[2] = 2.0f;

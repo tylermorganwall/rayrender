@@ -72,17 +72,6 @@ inline normal3f operator*(const normal3f& v1, const vec3<Float>& v2) {
     return result;
 }
 
-inline vec3f operator*=(const vec3f& v1, const point3f& v2) {
-    vec3f result;
-    result.e = simd_mul(v1.e, v2.e);
-    return result;
-}
-
-inline vec3f operator*=(const vec3f& v1, const normal3f& v2) {
-    vec3f result;
-    result.e = simd_mul(v1.e, v2.e);
-    return result;
-}
 
 inline point3f operator*=(const point3f& v1, const point3f& v2) {
     point3f result;

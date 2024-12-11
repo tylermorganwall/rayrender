@@ -80,14 +80,14 @@ AC_SUBST([OIDN_LIBS])
 AC_MSG_CHECKING([for SSE2 support])
 AC_COMPILE_IFELSE([AC_LANG_PROGRAM([#include <emmintrin.h>], [__m128d test = _mm_setzero_pd();])],
   [AC_MSG_RESULT([yes])
-   DEFINES="${DEFINES} -DHAS_SSE -DRAYSIMD -DRAYSIMDVEC"
+   DEFINES="${DEFINES} -DHAS_SSE -DRAYSIMD -DRAYSIMDVECOFF"
    CXXFLAGS="${CXXFLAGS} -msse2"],
   [AC_MSG_RESULT([no])
    # If SSE2 not found, try SSE
    AC_MSG_CHECKING([for SSE support])
    AC_COMPILE_IFELSE([AC_LANG_PROGRAM([#include <xmmintrin.h>], [__m128 test = _mm_setzero_ps();])],
      [AC_MSG_RESULT([yes])
-      DEFINES="${DEFINES} -DHAS_SSE -DRAYSIMD -DRAYSIMDVEC"
+      DEFINES="${DEFINES} -DHAS_SSE -DRAYSIMD -DRAYSIMDVECOFF"
       CXXFLAGS="${CXXFLAGS} -msse"],
      [AC_MSG_RESULT([no])])])
 
@@ -98,7 +98,7 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
 #endif
 ]], [[float32x4_t test = vdupq_n_f32(0.0);]])],
   [AC_MSG_RESULT([yes])
-   DEFINES="${DEFINES} -DHAS_NEON -DRAYSIMD -DRAYSIMDVEC"
+   DEFINES="${DEFINES} -DHAS_NEON -DRAYSIMD -DRAYSIMDVECOFF"
    CXXFLAGS="${CXXFLAGS} -mfpu=neon"],
   [AC_MSG_RESULT([no])])
 
