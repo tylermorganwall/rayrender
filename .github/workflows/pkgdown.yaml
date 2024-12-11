@@ -68,9 +68,18 @@ jobs:
       - name: Install OIDN (macOS)
         if: runner.os == 'macOS'
         run: |
-          curl -LO https://github.com/OpenImageDenoise/oidn/releases/download/v2.3.1/oidn-2.3.1.x86_64.macos.tar.gz
-          tar xzf oidn-2.3.1.x86_64.macos.tar.gz
-          echo "OIDN_PATH=$(pwd)/oidn-2.3.1.x86_64.macos" >> $GITHUB_ENV
+          ARCH=$(uname -m)
+          if [ "${ARCH}" = "arm64" ]; then
+            # Download ARM64 (Apple Silicon) OIDN build
+            curl -LO https://github.com/OpenImageDenoise/oidn/releases/download/v2.3.1/oidn-2.3.1.arm64.macos.tar.gz
+            tar xzf oidn-2.3.1.arm64.macos.tar.gz
+            echo "OIDN_PATH=$(pwd)/oidn-2.3.1.arm64.macos" >> $GITHUB_ENV
+          else
+            # Download x86_64 OIDN build
+            curl -LO https://github.com/OpenImageDenoise/oidn/releases/download/v2.3.1/oidn-2.3.1.x86_64.macos.tar.gz
+            tar xzf oidn-2.3.1.x86_64.macos.tar.gz
+            echo "OIDN_PATH=$(pwd)/oidn-2.3.1.x86_64.macos" >> $GITHUB_ENV
+          fi
 
       - name: Install OIDN (Linux)
         if: runner.os == 'Linux'
