@@ -75,7 +75,9 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
   Float min_variance = as<Float>(render_info["min_variance"]);
   int min_adaptive_size = as<int>(render_info["min_adaptive_size"]);
   IntegratorType integrator_type = static_cast<IntegratorType>(as<int>(render_info["integrator_type"]));
+#ifdef HAS_OIDN
   bool denoise = as<bool>(render_info["denoise"]);
+#endif
 
   Environment pkg = Environment::namespace_env("rayrender");
   Function print_time = pkg["print_time"];
@@ -375,9 +377,11 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
   PutRNGstate();
   print_time(verbose, "Finished rendering" );
   RayMatrix &final_output = rgb_output;
+#ifdef HAS_OIDN
   if(denoise) {
     final_output = draw_rgb_output;
   }
+#endif
   List final_image = List::create(_["r"] = final_output.ConvertRcpp(0), 
                                   _["g"] = final_output.ConvertRcpp(1), 
                                   _["b"] = final_output.ConvertRcpp(2),

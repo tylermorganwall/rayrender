@@ -59,7 +59,9 @@ void render_animation_rcpp(List scene, List camera_info, List scene_info, List r
   Float min_variance = as<Float>(render_info["min_variance"]);
   int min_adaptive_size = as<int>(render_info["min_adaptive_size"]);
   IntegratorType integrator_type = static_cast<IntegratorType>(as<int>(render_info["integrator_type"]));
+#ifdef HAS_OIDN
   bool denoise = as<bool>(render_info["denoise"]);
+#endif
 
   Environment pkg = Environment::namespace_env("rayrender");
   Function print_time = pkg["print_time"];
@@ -421,7 +423,7 @@ void render_animation_rcpp(List scene, List camera_info, List scene_info, List r
                    background_sphere->WorldToObject.get(),
                    filter, denoise);
 #else
-  PreviewDisplay Display(nx,ny, preview, interactive, 
+  PreviewDisplay Display(nx,ny, preview, false, 
                          (lookat-lookfrom).length(), cam.get(),
                          background_sphere->ObjectToWorld.get(),
                          background_sphere->WorldToObject.get());
