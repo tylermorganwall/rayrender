@@ -4421,7 +4421,7 @@ OIDN_LIBS=""
 if test -d "$OIDN_PATH"; then
   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: found at $OIDN_PATH" >&5
 printf "%s\n" "found at $OIDN_PATH" >&6; }
-  OIDN_CPPFLAGS="-I$OIDN_PATH/include"
+  OIDN_CPPFLAGS="-I'$OIDN_PATH/include'"
   OIDN_LDFLAGS="-L$OIDN_PATH/lib"
   OIDN_LIBS="-lOpenImageDenoise -ltbb"
   DEFINES="${DEFINES} -DHAS_OIDN"
