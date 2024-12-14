@@ -83,8 +83,8 @@ jobs:
           remotes::install_deps(dependencies = TRUE)
           remotes::install_github("tylermorganwall/rayimage")
           install.packages("magick")
-          install.packages("Rcvg")
-          install.packages("pkgdown", type = "binary")
+          install.packages("Rvcg")
+          install.packages("pkgdown")
         shell: Rscript {0}
 
       - name: Fix git pkgdown build
