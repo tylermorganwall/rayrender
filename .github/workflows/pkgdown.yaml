@@ -46,6 +46,11 @@ jobs:
             libgeos-dev \
             libproj-dev \
             gsfonts  
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          extra-packages: any::pkgdown, local::.
+          needs: website
             
       # --- Download and Install OIDN ---
       - name: Install OIDN (macOS)
@@ -89,6 +94,9 @@ jobs:
 
       - name: Fix git pkgdown build
         run: git config --global http.postBuffer 524288000
+
+      - name: Build site
+        run: pkgdown::build_site_github_pages(new_process = FALSE, install = FALSE)
 
       - name: Deploy to GitHub pages 🚀
         if: github.event_name != 'pull_request'
