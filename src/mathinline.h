@@ -77,10 +77,10 @@ inline int sgn(int val) {
 }
 
 inline Float Radians(Float deg) { 
-  return (M_PI / 180) * deg; 
+  return (static_cast<Float>(M_PI) / 180) * deg; 
 }
 inline Float Degrees(Float rad) { 
-  return (180 / M_PI) * rad; 
+  return (180 / static_cast<Float>(M_PI)) * rad; 
 }
 
 inline bool any_is_nan(const point3f& c) {
@@ -114,10 +114,10 @@ inline vec3f rand_to_unit(vec2f u) {
   Float r, phi;
   if (a*a > b*b) {
     r = a;
-    phi = (M_PI/4)*(b/a);
+    phi = (static_cast<Float>(M_PI)/4)*(b/a);
   } else {
     r = b;
-    phi = (M_PI_2) - (M_PI_4)*(a/b);
+    phi = static_cast<Float>(M_PI_2) - static_cast<Float>(M_PI_4)*(a/b);
   }
   return(vec3f(r*cos(phi),r*sin(phi),0));
 }
@@ -132,7 +132,7 @@ inline vec3f rand_cosine_direction(vec2f u) {
   Float r1 = u.x();
   Float r2 = u.y();
   Float z = std::sqrt(static_cast<Float>(1)-r2);
-  Float phi = 2.0 * M_PI * r1;
+  Float phi = 2.0 * static_cast<Float>(M_PI) * r1;
   Float x = cos(phi) * std::sqrt(r2);
   Float y = sin(phi) * std::sqrt(r2);
   return(vec3f(x, y, z));
@@ -142,7 +142,7 @@ inline vec3f rand_to_sphere(Float radius, Float distance_squared, vec2f u) {
   Float r1 = u.x();
   Float r2 = u.y();
   Float z = 1.0 + r2 * (std::sqrt(static_cast<Float>(1)-radius * radius / distance_squared) - 1);
-  Float phi = 2.0 * M_PI * r1;
+  Float phi = 2.0 * static_cast<Float>(M_PI) * r1;
   Float x = std::cos(phi) * std::sqrt(static_cast<Float>(1)-z*z);
   Float y = std::sin(phi) * std::sqrt(static_cast<Float>(1)-z*z);
   return(vec3f(x,y,z));
@@ -424,7 +424,7 @@ template <typename Predicate> int FindInterval(int size, const Predicate &pred) 
 
 inline Float SphericalPhi(const vec3f &v) {
   float p = atan2f(v.x(), v.y());
-  return((p < 0.0f) ? p + 2.0f*M_PI : p);
+  return((p < 0.0f) ? p + 2.0f*static_cast<Float>(M_PI) : p);
 }
 
 inline Float SphericalTheta(const vec3f &v) {
@@ -784,7 +784,7 @@ inline Float I0(Float x) {
 
 inline Float LogI0(Float x) {
   if (x > 12) {
-    return(x + 0.5 * (-std::log(2 * M_PI) + std::log(1 / x) + 1 / (8 * x)));
+    return(x + 0.5 * (-std::log(2 * static_cast<Float>(M_PI)) + std::log(1 / x) + 1 / (8 * x)));
   } else {
     return(std::log(I0(x)));
   }
@@ -824,15 +824,15 @@ inline Float Mp(Float cosThetaI, Float cosThetaO, Float sinThetaI,
 }
 
 inline Float Phi(int p, Float gammaO, Float gammaT) {
-  return(2 * p * gammaT - 2 * gammaO + p * M_PI);
+  return(2 * p * gammaT - 2 * gammaO + p * static_cast<Float>(M_PI));
 }
 
 inline Float Np(Float phi, int p, Float s, Float gammaO, Float gammaT) {
   Float dphi = phi - Phi(p, gammaO, gammaT);
   // Remap _dphi_ to $[-\pi,\pi]$
-  while (dphi > M_PI) dphi -= 2 * M_PI;
-  while (dphi < -M_PI) dphi += 2 * M_PI;
-  return(TrimmedLogistic(dphi, s, -M_PI, M_PI));
+  while (dphi > static_cast<Float>(M_PI)) dphi -= 2 * static_cast<Float>(M_PI);
+  while (dphi < -static_cast<Float>(M_PI)) dphi += 2 * static_cast<Float>(M_PI);
+  return(TrimmedLogistic(dphi, s, -static_cast<Float>(M_PI), static_cast<Float>(M_PI)));
 }
 
 inline Float SampleTrimmedLogistic(Float u, Float s, Float a, Float b) {
@@ -905,13 +905,13 @@ inline point3f OffsetRayOrigin(const point3f &p, const vec3f &pError,
 
 
 inline Float UniformConePdf(Float cosThetaMax) {
-  return 1 / (2 * M_PI * (1 - cosThetaMax));
+  return 1 / (2 * static_cast<Float>(M_PI) * (1 - cosThetaMax));
 }
 
 inline vec3f UniformSampleCone(const point2f &u, Float cosThetaMax) {
   Float cosTheta = ((Float)1 - u[0]) + u[0] * cosThetaMax;
   Float sinTheta = std::sqrt(static_cast<Float>(1) - cosTheta * cosTheta);
-  Float phi = u[1] * 2 * M_PI;
+  Float phi = u[1] * 2 * static_cast<Float>(M_PI);
   return vec3f(std::cos(phi) * sinTheta, std::sin(phi) * sinTheta,
                cosTheta);
 }
@@ -921,7 +921,7 @@ inline vec3f UniformSampleCone(const point2f &u, Float cosThetaMax,
                         const vec3f &z) {
   Float cosTheta = lerp(u[0], cosThetaMax, (Float)1.);
   Float sinTheta = std::sqrt(static_cast<Float>(1) - cosTheta * cosTheta);
-  Float phi = u[1] * 2 * M_PI;
+  Float phi = u[1] * 2 * static_cast<Float>(M_PI);
   return std::cos(phi) * sinTheta * x + std::sin(phi) * sinTheta * y +
     cosTheta * z;
 }
@@ -929,7 +929,7 @@ inline vec3f UniformSampleCone(const point2f &u, Float cosThetaMax,
 inline vec3f UniformSampleHemisphere(const vec2f &u) {
   Float z = u[0];
   Float r = std::sqrt(std::fmax((Float)0, (Float)1. - z * z));
-  Float phi = 2 * M_PI * u[1];
+  Float phi = 2 * static_cast<Float>(M_PI) * u[1];
   return vec3f(r * std::cos(phi), r * std::sin(phi), z);
 }
 
@@ -938,7 +938,7 @@ inline Float UniformHemispherePdf() { return 0.5*M_1_PI; }
 inline vec3f UniformSampleSphere(const vec2f &u) {
   Float z = 1 - 2 * u[0];
   Float r = std::sqrt(std::fmax((Float)0, (Float)1 - z * z));
-  Float phi = 2 * M_PI * u[1];
+  Float phi = 2 * static_cast<Float>(M_PI) * u[1];
   return vec3f(r * std::cos(phi), r * std::sin(phi), z);
 }
 
@@ -946,7 +946,7 @@ inline Float UniformSpherePdf() { return 0.25*M_1_PI; }
 
 inline point2f UniformSampleDisk(const vec2f &u) {
   Float r = std::sqrt(u[0]);
-  Float theta = 2 * M_PI * u[1];
+  Float theta = 2 * static_cast<Float>(M_PI) * u[1];
   return point2f(r * std::cos(theta), r * std::sin(theta));
 }
 

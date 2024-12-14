@@ -722,7 +722,7 @@ point3f glossy::f(const ray& r_in, const hit_record& rec, const vec3f& scattered
   vec3f wo = unit_vector(uvw.world_to_local(scattered));
   
   auto pow5 = [](Float v) { return (v * v) * (v * v) * v; };
-  point3f diffuse = static_cast<Float>(28.0 / (23.0 * M_PI)) * Rd * albedo->value(rec.u, rec.v,rec.p) *
+  point3f diffuse = static_cast<Float>(28.0 / (23.0 * static_cast<Float>(M_PI))) * Rd * albedo->value(rec.u, rec.v,rec.p) *
     (point3f(1.0) + -Rs) *
     static_cast<Float>(1.0 - pow5(1 - 0.5f * AbsCosTheta(wi))) *
     static_cast<Float>(1.0 - pow5(1 - 0.5f * AbsCosTheta(wo)));
@@ -831,7 +831,7 @@ bool hair::scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec
   u[1].e[0] = std::fmax(u[1].e[0], Float(1e-5));
   Float cosTheta = 1 + v[p] * std::log(u[1].e[0] + (1 - u[1].e[0]) * std::exp(-2 / v[p]));
   Float sinTheta = SafeSqrt(1 - Sqr(cosTheta));
-  Float cosPhi = std::cos(2 * M_PI * u[1].e[1]);
+  Float cosPhi = std::cos(2 * static_cast<Float>(M_PI) * u[1].e[1]);
   Float sinThetaI = -cosTheta * sinThetaOp + sinTheta * cosPhi * cosThetaOp;
   Float cosThetaI = SafeSqrt(1 - Sqr(sinThetaI));
   
@@ -843,9 +843,9 @@ bool hair::scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec
   Float gammaT = SafeASin(sinGammaT);
   Float dphi;
   if (p < pMax) {
-    dphi = Phi(p, gammaO, gammaT) + SampleTrimmedLogistic(u[0].e[1], s, -M_PI, M_PI);
+    dphi = Phi(p, gammaO, gammaT) + SampleTrimmedLogistic(u[0].e[1], s, -static_cast<Float>(M_PI), static_cast<Float>(M_PI));
   } else {
-    dphi = 2 * M_PI * u[0].e[1];
+    dphi = 2 * static_cast<Float>(M_PI) * u[0].e[1];
   }
   
   // Compute _wi_ from sampled hair scattering angles
@@ -907,7 +907,7 @@ bool hair::scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec
   u[1].e[0] = std::fmax(u[1].e[0], Float(1e-5));
   Float cosTheta = 1 + v[p] * std::log(u[1].e[0] + (1 - u[1].e[0]) * std::exp(-2 / v[p]));
   Float sinTheta = SafeSqrt(1 - Sqr(cosTheta));
-  Float cosPhi = std::cos(2 * M_PI * u[1].e[1]);
+  Float cosPhi = std::cos(2 * static_cast<Float>(M_PI) * u[1].e[1]);
   Float sinThetaI = -cosTheta * sinThetaOp + sinTheta * cosPhi * cosThetaOp;
   Float cosThetaI = SafeSqrt(1 - Sqr(sinThetaI));
   
@@ -919,9 +919,9 @@ bool hair::scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec
   Float gammaT = SafeASin(sinGammaT);
   Float dphi;
   if (p < pMax) {
-    dphi = Phi(p, gammaO, gammaT) + SampleTrimmedLogistic(u[0].e[1], s, -M_PI, M_PI);
+    dphi = Phi(p, gammaO, gammaT) + SampleTrimmedLogistic(u[0].e[1], s, -static_cast<Float>(M_PI), static_cast<Float>(M_PI));
   } else {
-    dphi = 2 * M_PI * u[0].e[1];
+    dphi = 2 * static_cast<Float>(M_PI) * u[0].e[1];
   }
   
   // Compute _wi_ from sampled hair scattering angles

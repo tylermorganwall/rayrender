@@ -6,8 +6,8 @@ static void BeckmannSample11(Float cosThetaI, Float U1, Float U2,
   /* Special case (normal incidence) */
   if (cosThetaI > .9999) {
     Float r = std::sqrt(-std::log(static_cast<Float>(1) - U1));
-    Float sinPhi = std::sin(2 * M_PI * U2);
-    Float cosPhi = std::cos(2 * M_PI * U2);
+    Float sinPhi = std::sin(2 * static_cast<Float>(M_PI) * U2);
+    Float cosPhi = std::cos(2 * static_cast<Float>(M_PI) * U2);
     *slope_x = r * cosPhi;
     *slope_y = r * sinPhi;
     return;
@@ -103,7 +103,7 @@ static void TrowbridgeReitzSample11(Float cosTheta, Float U1, Float U2,
   // special case (normal incidence)
   if (cosTheta > 0.9999f) {
     Float r = sqrt(U1 / (1 - U1));
-    Float phi = 2 * M_PI * U2;
+    Float phi = 2 * static_cast<Float>(M_PI) * U2;
     *slope_x = r * cos(phi);
     *slope_y = r * sin(phi);
     return;
@@ -170,7 +170,7 @@ Float TrowbridgeReitzDistribution::D(const vec3f &normal) const {
   const Float cos4Theta = Cos2Theta(normal) * Cos2Theta(normal);
   Float e = tan2Theta * (Cos2Phi(normal) / (alphax_constant * alphax_constant) + 
     Sin2Phi(normal) / (alphay_constant * alphay_constant));
-  return(1.0/(M_PI * alphax_constant * alphay_constant * cos4Theta * (1.0+e) * (1.0+e)));
+  return(1.0/(static_cast<Float>(M_PI) * alphax_constant * alphay_constant * cos4Theta * (1.0+e) * (1.0+e)));
 }
 
 Float TrowbridgeReitzDistribution::Lambda(const vec3f &w) const {
@@ -202,7 +202,7 @@ Float BeckmannDistribution::D(const vec3f &wh) const {
   }
   Float cos4Theta = Cos2Theta(wh) * Cos2Theta(wh);
   return(std::exp(-tan2Theta * (Cos2Phi(wh) / (alphax_constant * alphax_constant) + 
-         Sin2Phi(wh) / (alphay_constant * alphay_constant))) / (M_PI * alphax_constant * alphay_constant * cos4Theta));
+         Sin2Phi(wh) / (alphay_constant * alphay_constant))) / (static_cast<Float>(M_PI) * alphax_constant * alphay_constant * cos4Theta));
 }
 
 Float BeckmannDistribution::Lambda(const vec3f &w) const {
@@ -256,7 +256,7 @@ Float TrowbridgeReitzDistribution::D(const vec3f &normal, Float u, Float v) cons
   point2f alphas = GetAlphas(u,v);
   Float e = tan2Theta * (Cos2Phi(normal) / (alphas.x() * alphas.x()) + 
     Sin2Phi(normal) / (alphas.y() * alphas.y()));
-  return(1.0/(M_PI * alphas.x() * alphas.y() * cos4Theta * (1.0+e) * (1.0+e)));
+  return(1.0/(static_cast<Float>(M_PI) * alphas.x() * alphas.y() * cos4Theta * (1.0+e) * (1.0+e)));
 }
 
 Float TrowbridgeReitzDistribution::Lambda(const vec3f &w, Float u, Float v) const {
@@ -293,7 +293,7 @@ Float BeckmannDistribution::D(const vec3f &wh, Float u, Float v) const {
   }
   Float cos4Theta = Cos2Theta(wh) * Cos2Theta(wh);
   return(std::exp(-tan2Theta * (Cos2Phi(wh) / (alphas.x() * alphas.x()) + 
-         Sin2Phi(wh) / (alphas.y() * alphas.y()))) / (M_PI * alphas.x() * alphas.y() * cos4Theta));
+         Sin2Phi(wh) / (alphas.y() * alphas.y()))) / (static_cast<Float>(M_PI) * alphas.x() * alphas.y() * cos4Theta));
 }
 
 Float BeckmannDistribution::Lambda(const vec3f &w, Float u, Float v) const {

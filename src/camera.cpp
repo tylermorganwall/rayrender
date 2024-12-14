@@ -11,7 +11,7 @@ camera::camera(point3f lookfrom, point3f _lookat, vec3f _vup, Float vfov,
   start_fov = fov;
   lens_radius = aperture / 2;
   start_lens_radius = lens_radius;
-  Float theta = vfov * M_PI/180;
+  Float theta = vfov * static_cast<Float>(M_PI)/180;
   half_height = tan(theta/2);
   half_width = aspect * half_height;
   origin = lookfrom;
@@ -59,7 +59,7 @@ void camera::update_position(vec3f delta, bool update_uvw, bool update_focal) {
 void camera::update_fov(Float delta_fov) {
   fov += delta_fov;
   fov = std::fmax(std::fmin(fov,179.9f),0.1f);
-  Float theta = fov * M_PI/180;
+  Float theta = fov * static_cast<Float>(M_PI)/180;
   half_height = tan(theta/2);
   half_width = aspect * half_height;
   lower_left_corner = origin - half_width * focus_dist *  u - half_height * focus_dist * v - focus_dist * w;
@@ -138,7 +138,7 @@ void camera::update_focal_absolute(Float focal_length) {
 void camera::update_fov_absolute(Float fov_new) {
   fov = fov_new;
   fov = std::fmax(std::fmin(fov,179.9f),0.1f);
-  Float theta = fov * M_PI/180;
+  Float theta = fov * static_cast<Float>(M_PI)/180;
   half_height = tan(theta/2);
   half_width = aspect * half_height;
   lower_left_corner = origin - half_width * focus_dist *  u - half_height * focus_dist * v - focus_dist * w;
@@ -153,7 +153,7 @@ void camera::reset() {
   lookat = start_lookat;
   focus_dist = start_focus_dist;
   fov = start_fov;
-  Float theta = start_fov * M_PI/180;
+  Float theta = start_fov * static_cast<Float>(M_PI)/180;
   half_height = tan(theta/2);
   half_width = aspect * half_height;
   lens_radius = start_lens_radius;
@@ -315,8 +315,8 @@ environment_camera::environment_camera(point3f lookfrom, point3f lookat, vec3f _
 
 ray environment_camera::get_ray(Float s, Float t, point3f u3, Float u1) {
   Float time = time0 + u1 * (time1 - time0);
-  Float theta = M_PI * t;
-  Float phi = 2 * M_PI * s;
+  Float theta = static_cast<Float>(M_PI) * t;
+  Float phi = 2 * static_cast<Float>(M_PI) * s;
   vec3f dir(std::sin(theta) * std::cos(phi), 
             std::sin(theta) * std::sin(phi),
             std::cos(theta));

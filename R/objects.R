@@ -578,7 +578,7 @@ disk = function(x = 0, y = 0, z = 0, radius = 1, inner_radius = 0, material = di
 #'                        scale_obj=3)) %>%
 #'    add_object(sphere(z = 20, x = 20, y = 20, radius = 10,
 #'                      material = light(intensity = 10))) %>%
-#'   render_scene(parallel = TRUE, samples = 256, aperture = 0.05, 
+#'   render_scene(parallel = TRUE, samples = 16, aperture = 0.05, 
 #'                sample_method="sobol_blue",
 #'                fov = 20, lookfrom = c(0, 2, 10))
 #' }
@@ -590,7 +590,7 @@ disk = function(x = 0, y = 0, z = 0, radius = 1, inner_radius = 0, material = di
 #'                        scale_obj=3, subdivision_levels = 3)) %>%
 #'    add_object(sphere(z = 20, x = 20, y = 20, radius = 10,
 #'                      material = light(intensity = 10))) %>%
-#'   render_scene(parallel = TRUE, samples = 256, aperture = 0.05,
+#'   render_scene(parallel = TRUE, samples = 16, aperture = 0.05,
 #'                sample_method="sobol_blue", 
 #'                fov = 20, lookfrom = c(0, 2, 10))
 #' }
@@ -610,7 +610,7 @@ disk = function(x = 0, y = 0, z = 0, radius = 1, inner_radius = 0, material = di
 #'                                              attenuation_intensity = 20))) %>%
 #'   add_object(sphere(z = 20, x = 20, y = 20, radius = 10,
 #'                     material = light(intensity = 10))) %>%
-#'   render_scene(parallel = TRUE, samples = 256, aperture = 0.05, 
+#'   render_scene(parallel = TRUE, samples = 16, aperture = 0.05, 
 #'                sample_method="sobol_blue", lookat=c(0,0.5,0),
 #'                fov = 22, lookfrom = c(0, 2, 10))
 #' 
@@ -3024,6 +3024,9 @@ extruded_path = function(points, x = 0, y = 0, z = 0,
     full_control_points[[length(full_control_points)]][3,] = 2*first_point[1,] - first_point[2,]
     full_control_points[[length(full_control_points)]][2,] = 2*last_point[4,]  - last_point[3,]
     full_control_points[[length(full_control_points)]][1,] = last_point[4,]
+  }
+  if(any(unlist(lapply(full_control_points, is.na)))) {
+    stop("`points` should not contain NA/NaN values.")
   }
   if(is.na(breaks)) {
     breaks = length(full_control_points) * 20

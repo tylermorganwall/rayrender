@@ -43,7 +43,7 @@ Float LanczosSincFilter::Evaluate(const vec2f &p) const {
 Float LanczosSincFilter::Sinc(Float x) const {
   x = std::fabs(x);
   if (x < 1e-5)  return 1;
-  return std::sin(M_PI) / (M_PI * x);
+  return std::sin(static_cast<Float>(M_PI)) / (static_cast<Float>(M_PI) * x);
 }
 Float LanczosSincFilter::WindowedSinc(Float x, Float radius) const {
   x = std::abs(x);

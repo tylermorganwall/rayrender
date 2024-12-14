@@ -30,28 +30,7 @@ jobs:
       - uses: r-lib/actions/setup-r@v2
         with:
           use-public-rspm: true
-
-      - name: Install system dependencies
-        if: runner.os == 'Linux'
-        env:
-          RHUB_PLATFORM: linux-x86_64-ubuntu-gcc
-        run: |
-          Rscript -e "install.packages('remotes')"
-          # install spatial dependencies
-          sudo add-apt-repository ppa:ubuntugis/ubuntugis-unstable
-          sudo apt update
-          sudo apt install \
-            libudunits2-dev \
-            libgdal-dev \
-            libgeos-dev \
-            libproj-dev \
-            gsfonts  
-
-      - uses: r-lib/actions/setup-r-dependencies@v2
-        with:
-          extra-packages: any::pkgdown, local::.
-          needs: website
-            
+          
       # --- Download and Install OIDN ---
       - name: Install OIDN (macOS)
         if: runner.os == 'macOS'
@@ -82,6 +61,11 @@ jobs:
           curl -LO https://github.com/OpenImageDenoise/oidn/releases/download/v2.3.1/oidn-2.3.1.x64.windows.zip
           7z x oidn-2.3.1.x64.windows.zip
           echo "OIDN_PATH=$(pwd)/oidn-2.3.1.x64.windows" >> $GITHUB_ENV
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          extra-packages: any::pkgdown, local::.
+          needs: website
 
       - name: Install dependencies
         run: |

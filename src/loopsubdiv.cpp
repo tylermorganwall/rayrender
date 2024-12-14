@@ -1,4 +1,5 @@
 #include "loopsubdiv.h"
+#include <cmath>
 #include <set>
 #include <map>
 #include "vectypes.h"
@@ -532,11 +533,12 @@ void LoopSubdivide(TriangleMesh* base_mesh,
       }
       vertex->oneRing(&pRing[0]);
       if (!vertex->boundary) {
+        Float inv_valence = static_cast<Float>(1)/static_cast<Float>(valence);
         // Compute tangents of interior face
         for (int j = 0; j < valence; ++j) {
-          S += std::cos(2 * M_PI * j / valence) * (pRing[j]);
-          T += std::sin(2 * M_PI * j / valence) * (pRing[j]);
-        }
+          S += std::cosf(static_cast<Float>(2) * static_cast<Float>(M_PI) * static_cast<Float>(j) * inv_valence) * (pRing[j]);
+          T += std::sinf(static_cast<Float>(2) * static_cast<Float>(M_PI) * static_cast<Float>(j) * inv_valence) * (pRing[j]);
+      }
       } else {
         // Compute tangents of boundary face
         S = pRing[valence - 1] + -pRing[0];
@@ -548,7 +550,7 @@ void LoopSubdivide(TriangleMesh* base_mesh,
           T = (-static_cast<Float>(1) * pRing[0] + static_cast<Float>(2) * pRing[1] + static_cast<Float>(2) * pRing[2] +
             -static_cast<Float>(1) * pRing[3] + -static_cast<Float>(2) * vertex->p);
         } else {
-          Float theta = M_PI / float(valence - 1);
+          Float theta = static_cast<Float>(M_PI) / float(valence - 1);
           T = (std::sin(theta) * (pRing[0] + pRing[valence - 1]));
           for (int k = 1; k < valence - 1; ++k) {
             Float wt = (2 * std::cos(theta) - 2) * std::sin((k)*theta);
@@ -558,6 +560,8 @@ void LoopSubdivide(TriangleMesh* base_mesh,
         }
       }
       final_normals[cntr] = (convert_to_normal3(-cross(S, T)));
+      // Rcpp::Rcout << final_normals[cntr] << " " << S << " " << T << "\n";
+
     }
     cntr++;
   }

@@ -451,7 +451,7 @@ vec3f hair_pdf::generate(random_gen& rng, bool& diffuse_bounce, Float time) {
   u[1].e[0] = std::fmax(u[1].e[0], Float(1e-5));
   Float cosTheta = 1 + v[p] * std::log(u[1].e[0] + (1 - u[1].e[0]) * std::exp(-2 / v[p]));
   Float sinTheta = SafeSqrt(1 - Sqr(cosTheta));
-  Float cosPhi = std::cos(2 * M_PI * u[1].e[1]);
+  Float cosPhi = std::cos(2 * static_cast<Float>(M_PI) * u[1].e[1]);
   Float sinThetaI = -cosTheta * sinThetaOp + sinTheta * cosPhi * cosThetaOp;
   Float cosThetaI = SafeSqrt(1 - Sqr(sinThetaI));
   
@@ -463,9 +463,9 @@ vec3f hair_pdf::generate(random_gen& rng, bool& diffuse_bounce, Float time) {
   Float gammaT = SafeASin(sinGammaT);
   Float dphi;
   if (p < pMax) {
-    dphi = Phi(p, gammaO, gammaT) + SampleTrimmedLogistic(u[0].e[1], s, -M_PI, M_PI);
+    dphi = Phi(p, gammaO, gammaT) + SampleTrimmedLogistic(u[0].e[1], s, -static_cast<Float>(M_PI), static_cast<Float>(M_PI));
   } else {
-    dphi = 2 * M_PI * u[0].e[1];
+    dphi = 2 * static_cast<Float>(M_PI) * u[0].e[1];
   }
   // Compute _wi_ from sampled hair scattering angles
   Float phiI = phiO + dphi;
@@ -513,7 +513,7 @@ vec3f hair_pdf::generate(Sampler* sampler, bool& diffuse_bounce, Float time) {
   u[1].e[0] = std::fmax(u[1].e[0], Float(1e-5));
   Float cosTheta = 1 + v[p] * std::log(u[1].e[0] + (1 - u[1].e[0]) * std::exp(-2 / v[p]));
   Float sinTheta = SafeSqrt(1 - Sqr(cosTheta));
-  Float cosPhi = std::cos(2 * M_PI * u[1].e[1]);
+  Float cosPhi = std::cos(2 * static_cast<Float>(M_PI) * u[1].e[1]);
   Float sinThetaI = -cosTheta * sinThetaOp + sinTheta * cosPhi * cosThetaOp;
   Float cosThetaI = SafeSqrt(1 - Sqr(sinThetaI));
   
@@ -525,9 +525,9 @@ vec3f hair_pdf::generate(Sampler* sampler, bool& diffuse_bounce, Float time) {
   Float gammaT = SafeASin(sinGammaT);
   Float dphi;
   if (p < pMax) {
-    dphi = Phi(p, gammaO, gammaT) + SampleTrimmedLogistic(u[0].e[1], s, -M_PI, M_PI);
+    dphi = Phi(p, gammaO, gammaT) + SampleTrimmedLogistic(u[0].e[1], s, -static_cast<Float>(M_PI), static_cast<Float>(M_PI));
   } else {
-    dphi = 2 * M_PI * u[0].e[1];
+    dphi = 2 * static_cast<Float>(M_PI) * u[0].e[1];
   }
   // Compute _wi_ from sampled hair scattering angles
   Float phiI = phiO + dphi;

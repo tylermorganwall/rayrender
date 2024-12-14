@@ -61,8 +61,8 @@ const bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& re
     Float cosPhi = rec.p.x() * invZRadius;
     Float sinPhi = rec.p.z() * invZRadius;
     Float theta = std::acos(clamp(rec.p.z(), -1, 1));
-    rec.dpdu = 2 * M_PI * vec3f(-rec.p.z(), 0, rec.p.x());
-    rec.dpdv = 2 * M_PI * vec3f(rec.p.z() * cosPhi, rec.p.z() * sinPhi, -std::sin(theta));
+    rec.dpdu = 2 * static_cast<Float>(M_PI) * vec3f(-rec.p.z(), 0, rec.p.x());
+    rec.dpdv = 2 * static_cast<Float>(M_PI) * vec3f(rec.p.z() * cosPhi, rec.p.z() * sinPhi, -std::sin(theta));
     rec.has_bump = bump_tex ? true : false;
     
     if(bump_tex) {
@@ -99,8 +99,8 @@ const bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& re
     Float cosPhi = rec.p.x() * invZRadius;
     Float sinPhi = rec.p.z() * invZRadius;
     Float theta = std::acos(clamp(rec.p.z(), -1, 1));
-    rec.dpdu = 2 * M_PI * vec3f(-rec.p.z(), 0, rec.p.x());
-    rec.dpdv = 2 * M_PI * vec3f(rec.p.z() * cosPhi, rec.p.z() * sinPhi, -std::sin(theta));
+    rec.dpdu = 2 * static_cast<Float>(M_PI) * vec3f(-rec.p.z(), 0, rec.p.x());
+    rec.dpdv = 2 * static_cast<Float>(M_PI) * vec3f(rec.p.z() * cosPhi, rec.p.z() * sinPhi, -std::sin(theta));
     rec.has_bump = bump_tex ? true : false;
     
     if(bump_tex) {
@@ -192,8 +192,8 @@ const bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& re
     Float cosPhi = rec.p.x() * invZRadius;
     Float sinPhi = rec.p.z() * invZRadius;
     Float theta = std::acos(clamp(rec.p.z(), -1, 1));
-    rec.dpdu = 2 * M_PI * vec3f(-rec.p.z(), 0, rec.p.x());
-    rec.dpdv = 2 * M_PI * vec3f(rec.p.z() * cosPhi, rec.p.z() * sinPhi, -std::sin(theta));
+    rec.dpdu = 2 * static_cast<Float>(M_PI) * vec3f(-rec.p.z(), 0, rec.p.x());
+    rec.dpdv = 2 * static_cast<Float>(M_PI) * vec3f(rec.p.z() * cosPhi, rec.p.z() * sinPhi, -std::sin(theta));
     rec.has_bump = bump_tex ? true : false;
     
     if(bump_tex) {
@@ -230,8 +230,8 @@ const bool ellipsoid::hit(const ray& r, Float t_min, Float t_max, hit_record& re
     Float cosPhi = rec.p.x() * invZRadius;
     Float sinPhi = rec.p.z() * invZRadius;
     Float theta = std::acos(clamp(rec.p.z(), -1, 1));
-    rec.dpdu = 2 * M_PI * vec3f(-rec.p.z(), 0, rec.p.x());
-    rec.dpdv = 2 * M_PI * vec3f(rec.p.z() * cosPhi, rec.p.z() * sinPhi, -std::sin(theta));
+    rec.dpdu = 2 * static_cast<Float>(M_PI) * vec3f(-rec.p.z(), 0, rec.p.x());
+    rec.dpdv = 2 * static_cast<Float>(M_PI) * vec3f(rec.p.z() * cosPhi, rec.p.z() * sinPhi, -std::sin(theta));
     rec.has_bump = bump_tex ? true : false;
     
     if(bump_tex) {
@@ -313,7 +313,7 @@ Float ellipsoid::pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Fl
   if(this->HitP(ray(o,v), 0.001, FLT_MAX, rng)) {
     point3f o2 = (*WorldToObject)(o);
     Float cos_theta_max = sqrt(1 - 1/(center - o2).squared_length());
-    Float solid_angle = 2 * M_PI * (1-cos_theta_max) * largest_proj_axis ;
+    Float solid_angle = 2 * static_cast<Float>(M_PI) * (1-cos_theta_max) * largest_proj_axis ;
     return(1/solid_angle);
   } else {
     return(0);
@@ -326,7 +326,7 @@ Float ellipsoid::pdf_value(const point3f& o, const vec3f& v, Sampler* sampler, F
   if(this->HitP(ray(o,v), 0.001, FLT_MAX, sampler)) {
     point3f o2 = (*WorldToObject)(o);
     Float cos_theta_max = sqrt(1 - 1/(center - o2).squared_length());
-    Float solid_angle = 2 * M_PI * (1-cos_theta_max) * largest_proj_axis ;
+    Float solid_angle = 2 * static_cast<Float>(M_PI) * (1-cos_theta_max) * largest_proj_axis ;
     return(1/solid_angle);
   } else {
     return(0);
@@ -364,7 +364,7 @@ vec3f ellipsoid::random(const point3f& o, random_gen& rng, Float time) {
   Float cosAlpha = sinTheta2 * invSinThetaMax +
     cosTheta * std::sqrt(std::fmax((Float)0.f, 1.f - sinTheta2 * invSinThetaMax * invSinThetaMax));
   Float sinAlpha = std::sqrt(std::fmax((Float)0.f, 1.f - cosAlpha*cosAlpha));
-  Float phi = u.e[1] * 2 * M_PI;
+  Float phi = u.e[1] * 2 * static_cast<Float>(M_PI);
   
   // Compute surface normal and sampled point on sphere
   vec3f nWorld = SphericalDirection(sinAlpha, cosAlpha, phi, -uvw.u(), -uvw.v(), -uvw.w()) * inv_axes;
@@ -402,7 +402,7 @@ vec3f ellipsoid::random(const point3f& o, Sampler* sampler, Float time) {
   Float cosAlpha = sinTheta2 * invSinThetaMax +
     cosTheta * std::sqrt(std::fmax((Float)0.f, 1.f - sinTheta2 * invSinThetaMax * invSinThetaMax));
   Float sinAlpha = std::sqrt(std::fmax((Float)0.f, 1.f - cosAlpha*cosAlpha));
-  Float phi = u.e[1] * 2 * M_PI;
+  Float phi = u.e[1] * 2 * static_cast<Float>(M_PI);
   
   // Compute surface normal and sampled point on sphere
   vec3f nWorld = SphericalDirection(sinAlpha, cosAlpha, phi, -uvw.u(), -uvw.v(), -uvw.w()) * inv_axes;

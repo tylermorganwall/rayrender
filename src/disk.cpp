@@ -176,7 +176,7 @@ bool disk::HitP(const ray& r, Float t_min, Float t_max, Sampler* sampler) const 
 Float disk::pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Float time) {
   hit_record rec;
   if(this->hit(ray(o,v), 0.001, FLT_MAX, rec, rng)) {
-    Float area =  M_PI * (radius * radius - inner_radius * inner_radius);
+    Float area =  static_cast<Float>(M_PI) * (radius * radius - inner_radius * inner_radius);
     Float distance_squared = rec.t * rec.t * v.squared_length();
     Float cosine = fabs(dot(v,rec.normal)/v.length());
     return(distance_squared / (cosine * area));
@@ -188,7 +188,7 @@ Float disk::pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Float t
 Float disk::pdf_value(const point3f& o, const vec3f& v, Sampler* sampler, Float time) {
   hit_record rec;
   if(this->hit(ray(o,v), 0.001, FLT_MAX, rec, sampler)) {
-    Float area =  M_PI * (radius * radius - inner_radius * inner_radius);
+    Float area =  static_cast<Float>(M_PI) * (radius * radius - inner_radius * inner_radius);
     Float distance_squared = rec.t * rec.t * v.squared_length();
     Float cosine = fabs(dot(v,rec.normal)/v.length());
     return(distance_squared / (cosine * area));
@@ -200,7 +200,7 @@ Float disk::pdf_value(const point3f& o, const vec3f& v, Sampler* sampler, Float 
 vec3f disk::random(const point3f& o, random_gen& rng, Float time) {
   Float r1 = rng.unif_rand();
   Float r2 = sqrt(rng.unif_rand());
-  Float phi = 2 * M_PI * r1;
+  Float phi = 2 * static_cast<Float>(M_PI) * r1;
   Float x = ((radius - inner_radius) * r2 + inner_radius) * cos(phi);
   Float z = ((radius - inner_radius) * r2 + inner_radius) * sin(phi);
   return((*ObjectToWorld)(point3f(x,0,z))+center-o);
@@ -210,7 +210,7 @@ vec3f disk::random(const point3f& o, Sampler* sampler, Float time) {
   vec2f u = sampler->Get2D();
   Float r1 = u.x();
   Float r2 = sqrt(u.y());
-  Float phi = 2 * M_PI * r1;
+  Float phi = 2 * static_cast<Float>(M_PI) * r1;
   Float x = ((radius - inner_radius) * r2 + inner_radius) * cos(phi);
   Float z = ((radius - inner_radius) * r2 + inner_radius) * sin(phi);
   return((*ObjectToWorld)(point3f(x,0,z))+center-o);

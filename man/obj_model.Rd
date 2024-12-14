@@ -106,7 +106,7 @@ generate_ground(material = diffuse(checkercolor = "grey50")) \%>\%
                        scale_obj=3)) \%>\%
    add_object(sphere(z = 20, x = 20, y = 20, radius = 10,
                      material = light(intensity = 10))) \%>\%
-  render_scene(parallel = TRUE, samples = 256, aperture = 0.05, 
+  render_scene(parallel = TRUE, samples = 16, aperture = 0.05, 
                sample_method="sobol_blue",
                fov = 20, lookfrom = c(0, 2, 10))
 }
@@ -118,7 +118,7 @@ generate_ground(material = diffuse(checkercolor = "grey50")) \%>\%
                        scale_obj=3, subdivision_levels = 3)) \%>\%
    add_object(sphere(z = 20, x = 20, y = 20, radius = 10,
                      material = light(intensity = 10))) \%>\%
-  render_scene(parallel = TRUE, samples = 256, aperture = 0.05,
+  render_scene(parallel = TRUE, samples = 16, aperture = 0.05,
                sample_method="sobol_blue", 
                fov = 20, lookfrom = c(0, 2, 10))
 }
@@ -138,7 +138,7 @@ generate_ground(material = diffuse(checkercolor = "grey50")) \%>\%
                                              attenuation_intensity = 20))) \%>\%
   add_object(sphere(z = 20, x = 20, y = 20, radius = 10,
                     material = light(intensity = 10))) \%>\%
-  render_scene(parallel = TRUE, samples = 256, aperture = 0.05, 
+  render_scene(parallel = TRUE, samples = 16, aperture = 0.05, 
                sample_method="sobol_blue", lookat=c(0,0.5,0),
                fov = 22, lookfrom = c(0, 2, 10))
 
