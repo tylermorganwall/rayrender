@@ -9,7 +9,7 @@ name: R-CMD-check
 jobs:
   R-CMD-check:
     runs-on: ${{ matrix.config.os }}
-    name: ${{ matrix.config.os }} (${{ matrix.config.r }}, OIDN: ${{ matrix.config.oidn }})
+    name: "${{ matrix.config.os }} R: (${{ matrix.config.r }}, OIDN: ${{ matrix.config.oidn }})"
 
     strategy:
       fail-fast: false
