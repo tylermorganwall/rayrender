@@ -57,7 +57,7 @@ OIDN_LIBS=""
 
 if test -d "$OIDN_PATH"; then
   AC_MSG_RESULT([found at $OIDN_PATH])
-  OIDN_CPPFLAGS="-I$OIDN_PATH/include"
+  OIDN_CPPFLAGS="-I'$OIDN_PATH/include'"
   OIDN_LDFLAGS="-L$OIDN_PATH/lib"
   OIDN_LIBS="-lOpenImageDenoise -ltbb"
   DEFINES="${DEFINES} -DHAS_OIDN"
