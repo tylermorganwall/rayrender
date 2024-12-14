@@ -536,8 +536,8 @@ void LoopSubdivide(TriangleMesh* base_mesh,
         Float inv_valence = static_cast<Float>(1)/static_cast<Float>(valence);
         // Compute tangents of interior face
         for (int j = 0; j < valence; ++j) {
-          S += std::cosf(static_cast<Float>(2) * static_cast<Float>(M_PI) * static_cast<Float>(j) * inv_valence) * (pRing[j]);
-          T += std::sinf(static_cast<Float>(2) * static_cast<Float>(M_PI) * static_cast<Float>(j) * inv_valence) * (pRing[j]);
+          S += std::cos(static_cast<Float>(2) * static_cast<Float>(M_PI) * static_cast<Float>(j) * inv_valence) * (pRing[j]);
+          T += std::sin(static_cast<Float>(2) * static_cast<Float>(M_PI) * static_cast<Float>(j) * inv_valence) * (pRing[j]);
       }
       } else {
         // Compute tangents of boundary face
