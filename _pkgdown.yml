@@ -1,17 +1,16 @@
+url: http://www.rayrender.net/
 pandoc: 2.3.1
 pkgdown: 1.3.0.9000
 pkgdown_sha: 2f40b4769ea9ad2312aa4cc93f27ab116461543b
 articles: []
-
 template:
   opengraph:
     image:
       src: man/figures/website_rayrender.jpg
-      alt: "Picture of a golden 3D ggplot with a description of rayrender"
+      alt: Picture of a golden 3D ggplot with a description of rayrender
     twitter:
-      creator: "@tylermorganwall"
+      creator: '@tylermorganwall'
       card: summary_large_image
-
 figures:
   dpi: 96
   dev.args: []
@@ -22,103 +21,97 @@ figures:
   fig.asp: 1
   bg: NA
   other.parameters: []
-
 reference:
-  - title: "Objects"
-    desc: "Functions for generating objects to add to scenes"
-    contents: 
-      - starts_with("sphere")
-      - starts_with("cube")
-      - ends_with("rect")
-      - ends_with("cornell")
-      - ends_with("ground")
-      - ends_with("studio")
-      - starts_with("segment")
-      - starts_with("cylinder")
-      - starts_with("triangle")
-      - starts_with("ellipsoid")
-      - starts_with("disk")
-      - starts_with("obj")
-      - starts_with("ply")
-      - starts_with("mesh3d")
-      - starts_with("cone")
-      - starts_with("arrow")
-      - starts_with("extruded")
-      - starts_with("bezier")
-      - starts_with("path")
-      - starts_with("pig")
-      - starts_with("text")
-      - starts_with("csg_object")
-      - starts_with("r_obj")
-      - starts_with("raymesh")
-  - title: "Constructive Solid Geometry (CSG) Interface"
-    desc: "Functions to model and build objects using CSG"
-    contents: 
-      - starts_with("csg")
-  - title: "Materials"
-    desc: "Functions to specify the visual properties of objects"
-    contents:
-      - starts_with("diffuse")
-      - starts_with("metal")
-      - starts_with("dielectric")
-      - starts_with("microfacet")
-      - starts_with("glossy")
-      - starts_with("light")
-      - starts_with("hair")
-      - starts_with("lambertian")
-      - starts_with("set_scene_material")
-  - title: "Composing Scenes"
-    desc: "Function for adding objects together to form a scene."
-    contents:
-      - starts_with("add")
-      - starts_with("group")
-      - starts_with("create")
-  - title: "Animating Scenes"
-    desc: "Function for animating objects or the camera through a scene."
-    contents:
-      - starts_with("get")
-      - starts_with("generate_camera_motion")
-      - starts_with("animate")
-  - title: "Render Raytraced Scene"
-    desc: "Function to render the current scene."
-    contents:
-      - starts_with("render")
-  - title: "pkgdown utils"
-    desc: "Internal but must be exported to meet CRAN guidelines"
-    contents:
-      - starts_with("run")
-
-     
-navbar: 
-  title: "rayrender"
+- title: Objects
+  desc: Functions for generating objects to add to scenes
+  contents:
+  - starts_with("sphere")
+  - starts_with("cube")
+  - ends_with("rect")
+  - ends_with("cornell")
+  - ends_with("ground")
+  - ends_with("studio")
+  - starts_with("segment")
+  - starts_with("cylinder")
+  - starts_with("triangle")
+  - starts_with("ellipsoid")
+  - starts_with("disk")
+  - starts_with("obj")
+  - starts_with("ply")
+  - starts_with("mesh3d")
+  - starts_with("cone")
+  - starts_with("arrow")
+  - starts_with("extruded")
+  - starts_with("bezier")
+  - starts_with("path")
+  - starts_with("pig")
+  - starts_with("text")
+  - starts_with("csg_object")
+  - starts_with("r_obj")
+  - starts_with("raymesh")
+- title: Constructive Solid Geometry (CSG) Interface
+  desc: Functions to model and build objects using CSG
+  contents: starts_with("csg")
+- title: Materials
+  desc: Functions to specify the visual properties of objects
+  contents:
+  - starts_with("diffuse")
+  - starts_with("metal")
+  - starts_with("dielectric")
+  - starts_with("microfacet")
+  - starts_with("glossy")
+  - starts_with("light")
+  - starts_with("hair")
+  - starts_with("lambertian")
+  - starts_with("set_scene_material")
+- title: Composing Scenes
+  desc: Function for adding objects together to form a scene.
+  contents:
+  - starts_with("add")
+  - starts_with("group")
+  - starts_with("create")
+- title: Animating Scenes
+  desc: Function for animating objects or the camera through a scene.
+  contents:
+  - starts_with("get")
+  - starts_with("generate_camera_motion")
+  - starts_with("animate")
+- title: Render Raytraced Scene
+  desc: Function to render the current scene.
+  contents: starts_with("render")
+- title: pkgdown utils
+  desc: Internal but must be exported to meet CRAN guidelines
+  contents: starts_with("run")
+navbar:
+  title: rayrender
   type: inverse
   left:
-    - icon: fa-home
-      href: index.html
-    - text: "Tutorials/Demos"
-      menu: 
-      -  text: How to Download and Animate Polar Ice Data in R with Rayrender
-         href: https://www.tylermw.com/polar-ice-data-in-r-with-rayrender/
-      -  text: Plinko Statistics-Insights from the Bean Machine
-         href: https://www.tylermw.com/plinko-statistics-insights-from-the-bean-machine/
-      -  text: Loading and Visualizing OpenSky Network Flight Data in R
-         href: https://www.tylermw.com/loading-and-visualizing-opensky-network-data-in-r/
-      -  text: Generating Procedural 3D Trees with Raybonsai and Rayrender
-         href: https://www.tylermw.com/raybonsai-generate-procedural-3d-trees-in-r/
-      -  text: Pathtracing Neon Landscapes in R
-         href: https://www.tylermw.com/pathtracing-neon-landscapes-in-r/          
-      -  text: Raytracing Lenticular Gifs with rayrender
-         href: https://www.tylermw.com/raytracing-lenticular-gifs/
-      -  text: Getting Stated with Rayrender--Forging the R Sword
-         href: https://www.tylermw.com/getting-started-with-rayrender/
+  - icon: fa-home
+    href: index.html
+  - text: Tutorials/Demos
+    menu:
+    - text: How to Download and Animate Polar Ice Data in R with Rayrender
+      href: https://www.tylermw.com/polar-ice-data-in-r-with-rayrender/
+    - text: Plinko Statistics-Insights from the Bean Machine
+      href: https://www.tylermw.com/plinko-statistics-insights-from-the-bean-machine/
+    - text: Loading and Visualizing OpenSky Network Flight Data in R
+      href: https://www.tylermw.com/loading-and-visualizing-opensky-network-data-in-r/
+    - text: Generating Procedural 3D Trees with Raybonsai and Rayrender
+      href: https://www.tylermw.com/raybonsai-generate-procedural-3d-trees-in-r/
+    - text: Pathtracing Neon Landscapes in R
+      href: https://www.tylermw.com/pathtracing-neon-landscapes-in-r/
+    - text: Raytracing Lenticular Gifs with rayrender
+      href: https://www.tylermw.com/raytracing-lenticular-gifs/
+    - text: Getting Stated with Rayrender--Forging the R Sword
+      href: https://www.tylermw.com/getting-started-with-rayrender/
   right:
-    - icon: fa-file-code-o 
-      text: "functions"
-      href: reference/index.html
-    - icon: fa-github fa-lg
-      text: "GitHub"
-      href: https://github.com/tylermorganwall/rayrender
-      
+  - icon: fa-file-code-o
+    text: functions
+    href: reference/index.html
+  - icon: fa-github fa-lg
+    text: GitHub
+    href: https://github.com/tylermorganwall/rayrender
 authors:
-  Tyler Morgan-Wall: 
+  Tyler Morgan-Wall:
     href: https://www.tylermw.com
+

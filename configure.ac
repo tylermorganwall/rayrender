@@ -61,10 +61,7 @@ if test -d "$OIDN_PATH"; then
   OIDN_LDFLAGS="-L$OIDN_PATH/lib"
   OIDN_LIBS="-lOpenImageDenoise -ltbb"
   DEFINES="${DEFINES} -DHAS_OIDN"
-  # If we are on Darwin (macOS), add the rpath entry
-  if test $darwin = yes; then
-    OIDN_LDFLAGS="${OIDN_LDFLAGS} -Wl,-rpath,$OIDN_PATH/lib"
-  fi
+  OIDN_LDFLAGS="${OIDN_LDFLAGS} -Wl,-rpath,$OIDN_PATH/lib"
 else
   AC_MSG_WARN([OIDN not found. Skipping OIDN support.])
   OIDN_CPPFLAGS=""
