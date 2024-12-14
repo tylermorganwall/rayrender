@@ -214,7 +214,7 @@ diffuse = function(color = "#ffffff",
 #'   add_object(sphere(x=555/2,y=555/2,z=555/2,radius=555/8,
 #'   material=metal(eta=c(3.2176,3.1029,2.1839), k = c(3.3018,3.33,3.0339))))
 #' if(run_documentation()) {
-#' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=50,
+#' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=16,
 #'              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 #' }
 #' #Add an aluminum rotated shiny metal block     
@@ -346,7 +346,7 @@ metal = function(color = "#ffffff",
 #' #Generate a checkered ground
 #' scene = generate_ground(depth=-0.5, material = diffuse(checkercolor="grey30",checkerperiod=2))
 #' if(run_documentation()) {
-#' render_scene(scene,parallel=TRUE)
+#' render_scene(scene,parallel=TRUE, samples=16)
 #' }
 #' 
 #' #Add a glass sphere
@@ -372,7 +372,7 @@ metal = function(color = "#ffffff",
 #'   add_object(yz_rect(z=-3,y=1,x=0,zwidth=3,ywidth=1.5,
 #'                      material=light(intensity=15),
 #'                      angle=c(0,-90,45), order_rotation = c(3,2,1))) %>%
-#'   render_scene(parallel=TRUE,aperture=0, ambient_light=FALSE,samples=1000)
+#'   render_scene(parallel=TRUE,aperture=0, ambient_light=FALSE,samples=16)
 #' }
 #' 
 #' #Color glass using Beer-Lambert attenuation, which attenuates light on a per-channel
@@ -384,7 +384,7 @@ metal = function(color = "#ffffff",
 #'   add_object(sphere(z=-5,x=-0.5,y=1,material=light(intensity=10))) %>%
 #'   add_object(cube(y=0.3,ywidth=0.1,xwidth=2,zwidth=2,
 #'                   material=dielectric(attenuation=c(1.2,0.2,1.2)),angle=c(45,110,0))) %>%
-#'   render_scene(parallel=TRUE, samples = 1000)
+#'   render_scene(parallel=TRUE, samples = 16)
 #' }
 #' 
 #' #If you have overlapping dielectrics, the `priority` value can help disambiguate what 
@@ -1116,7 +1116,7 @@ hair = function(pigment = 1.3, red_pigment = 0, color = NA, sigma_a = NA,
 #' if(run_documentation()) {
 #' scene = generate_cornell() %>%
 #'   add_object(sphere(x=555/2,y=555/2,z=555/2,radius=555/8,material=lambertian()))
-#'   render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=10,
+#'   render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=16,
 #'              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 #' }
 lambertian = function(...) {

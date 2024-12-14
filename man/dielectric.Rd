@@ -54,7 +54,7 @@ Dielectric (glass) Material
 #Generate a checkered ground
 scene = generate_ground(depth=-0.5, material = diffuse(checkercolor="grey30",checkerperiod=2))
 if(run_documentation()) {
-render_scene(scene,parallel=TRUE)
+render_scene(scene,parallel=TRUE, samples=16)
 }
 
 #Add a glass sphere
@@ -80,7 +80,7 @@ scene \%>\%
   add_object(yz_rect(z=-3,y=1,x=0,zwidth=3,ywidth=1.5,
                      material=light(intensity=15),
                      angle=c(0,-90,45), order_rotation = c(3,2,1))) \%>\%
-  render_scene(parallel=TRUE,aperture=0, ambient_light=FALSE,samples=1000)
+  render_scene(parallel=TRUE,aperture=0, ambient_light=FALSE,samples=16)
 }
 
 #Color glass using Beer-Lambert attenuation, which attenuates light on a per-channel
@@ -92,7 +92,7 @@ generate_ground(depth=-0.5,material=diffuse(checkercolor="grey30",checkerperiod=
   add_object(sphere(z=-5,x=-0.5,y=1,material=light(intensity=10))) \%>\%
   add_object(cube(y=0.3,ywidth=0.1,xwidth=2,zwidth=2,
                   material=dielectric(attenuation=c(1.2,0.2,1.2)),angle=c(45,110,0))) \%>\%
-  render_scene(parallel=TRUE, samples = 1000)
+  render_scene(parallel=TRUE, samples = 16)
 }
 
 #If you have overlapping dielectrics, the `priority` value can help disambiguate what 

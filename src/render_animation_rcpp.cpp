@@ -445,13 +445,20 @@ void render_animation_rcpp(List scene, List camera_info, List scene_info, List r
       if (device.getError(errorMessage) != oidn::Error::None) {
         Rcpp::Rcout << "Error: " << errorMessage << std::endl;
       }
-#endif
+      List temp = List::create(_["r"] = draw_rgb_output.ConvertRcpp(0), 
+                               _["g"] = draw_rgb_output.ConvertRcpp(1), 
+                               _["b"] = draw_rgb_output.ConvertRcpp(2),
+                               _["a"] = alpha_output.ConvertRcpp());
+      post_process_frame(temp, debug_channel, as<std::string>(filenames(i)), toneval, bloom,
+                       transparent_background, write_image);
+#else
       List temp = List::create(_["r"] = rgb_output.ConvertRcpp(0), 
                                _["g"] = rgb_output.ConvertRcpp(1), 
                                _["b"] = rgb_output.ConvertRcpp(2),
                                _["a"] = alpha_output.ConvertRcpp());
       post_process_frame(temp, debug_channel, as<std::string>(filenames(i)), toneval, bloom,
                        transparent_background, write_image);
+#endif
     }
   }
 

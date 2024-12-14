@@ -67,15 +67,6 @@ jobs:
           extra-packages: any::pkgdown, local::.
           needs: website
 
-      - name: Install dependencies
-        run: |
-          remotes::install_deps(dependencies = TRUE)
-          remotes::install_github("tylermorganwall/rayimage")
-          install.packages("magick")
-          install.packages("Rvcg")
-          install.packages("pkgdown")
-        shell: Rscript {0}
-
       - name: Fix git pkgdown build
         run: git config --global http.postBuffer 524288000
 

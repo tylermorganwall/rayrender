@@ -20,7 +20,7 @@ Lambertian Material (deprecated)
 if(run_documentation()) {
 scene = generate_cornell() \%>\%
   add_object(sphere(x=555/2,y=555/2,z=555/2,radius=555/8,material=lambertian()))
-  render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=10,
+  render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=16,
              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 }
 }

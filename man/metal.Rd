@@ -104,7 +104,7 @@ scene = generate_cornell() \%>\%
   add_object(sphere(x=555/2,y=555/2,z=555/2,radius=555/8,
   material=metal(eta=c(3.2176,3.1029,2.1839), k = c(3.3018,3.33,3.0339))))
 if(run_documentation()) {
-render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=50,
+render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=16,
              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 }
 #Add an aluminum rotated shiny metal block     
