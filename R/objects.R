@@ -2101,7 +2101,7 @@ path = function(points,
 #' @param y Default `0`. y-coordinate of the center of the label.
 #' @param z Default `0`. z-coordinate of the center of the label.
 #' @param text_height Default `1`. Height of the text.
-#' @param font A character string specifying the font family (e.g., `"Arial"`, `"Times"`, `"Helvetica"`).
+#' @param font Default `"sans"`. A character string specifying the font family (e.g., `"Arial"`, `"Times"`, `"Helvetica"`).
 #' @param font_style A character string specifying the font style, such as `"plain"`, `"italic"`, or `"bold"`. Default is `"plain"`.
 #' @param orientation Default `xy`. Orientation of the plane. Other options are `yz` and `xz`.
 #' @param material Default  \code{\link{diffuse}}. The material, called from one of the material 
@@ -2167,7 +2167,7 @@ path = function(points,
 #'   render_scene(samples=16, clamp_value=10)
 #' }
 text3d = function(label, x = 0, y = 0, z = 0, text_height = 1, orientation = "xy",
-                  material = diffuse(), font = "Arial", font_style = "plain",
+                  material = diffuse(), font = "sans", font_style = "plain",
                   angle = c(0, 0, 0), order_rotation = c(1, 2, 3), 
                   flipped = FALSE, scale = c(1,1,1)) {
   labelfile = tempfile(fileext = ".png")
