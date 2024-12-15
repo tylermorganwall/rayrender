@@ -2330,7 +2330,7 @@ ply_model = function(filename, x = 0, y = 0, z = 0, scale_ply = 1, subdivision_l
 #'
 #' @examples
 #' #Load a mesh3d object (from the Rvcg) and render it:
-#' if(length(find.package("Rvcg", quiet=TRUE)) > 0) {
+#' if(run_documentation()) {
 #'   library(Rvcg)
 #'   data(humface)
 #'   
