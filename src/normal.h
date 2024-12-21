@@ -59,7 +59,7 @@ inline void normal3f::make_unit_vector() {
   // if(len - 1 < 1e-8) {
   //   volatile int f = 1;
   // }
-  Float k = 1.0 / std::sqrt(e[0]*e[0] + e[1]*e[1] + e[2]*e[2]);
+  Float k = 1.0f / std::sqrt(e[0]*e[0] + e[1]*e[1] + e[2]*e[2]);
   e[0] *= k; e[1] *= k; e[2] *= k; 
 }
 
