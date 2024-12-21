@@ -64,28 +64,40 @@ process_scene = function(scene, process_material_ids = TRUE) {
     image_is_filename = is.character(image_input) && nchar(image_input) > 0
     if(image_tex_bool) {
       if(dim(image_input)[3] == 4) {
-        png::writePNG(fliplr(aperm(image_input[,,1:3],c(2,1,3))),temp_file_names[i])
+        png::writePNG(fliplr(aperm(image_input[,,1:4],c(2,1,3))),temp_file_names[i])
         #Handle PNG with alpha
         if(!alpha_tex_bool && any(image_input[,,4] != 1)) {
-          image_input[,,1] = image_input[,,4]
-          image_input[,,2] = image_input[,,4]
-          image_input[,,3] = image_input[,,4]
-          png::writePNG(fliplr(aperm(image_input[,,1:3],c(2,1,3))), alpha_temp_file_names[i])
-          browser()
-          scene$material[[i]]$alphaimage = alpha_temp_file_names[i]
+          # image_input[,,1] = image_input[,,1]
+          # image_input[,,2] = image_input[,,4]
+          # image_input[,,3] = image_input[,,4]
+          # image_input[,,4] = image_input[,,4]
+          # image_input = 
+          # png::writePNG(fliplr(aperm(image_input[,,1:4],c(2,1,3))), alpha_temp_file_names[i])
+          scene$material[[i]]$alphaimage = temp_file_names[i]
         }
       } else if(dim(image_input)[3] == 3){
         png::writePNG(fliplr(aperm(image_input,c(2,1,3))),temp_file_names[i])
       }
       scene$material[[i]]$image = temp_file_names[i]
     } else if(image_is_filename) {
+      tmp_image = png::readPNG(image_input)
+      if(length(dim(tmp_image)) == 3 && dim(tmp_image)[3] == 4) {
+        if(any(tmp_image[,,4] != 1)) {
+          tmp_image[,,1] = tmp_image[,,4]
+          tmp_image[,,2] = tmp_image[,,4]
+          tmp_image[,,3] = tmp_image[,,4]
+          tmp_image[,,4] = tmp_image[,,4]
+          png::writePNG(tmp_image[,,1:4], alpha_temp_file_names[i])
+          scene$material[[i]]$alphaimage = alpha_temp_file_names[i]
+        }
+      }
       if(any(!file.exists(path.expand(image_input)))) {
         stop(paste0("Cannot find the following texture file:\n",
                     paste(image_input, collapse="\n")))
       }
       temp_file_names[i] = path.expand(image_input)
       scene$material[[i]]$image = temp_file_names[i]
-    }
+      }
   }
   
   #displacement texture handler
