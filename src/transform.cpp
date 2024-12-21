@@ -77,8 +77,9 @@ Transform::Transform(const Rcpp::NumericMatrix& mat) {
     float x = simd_dot(col0, n_v);
     float y = simd_dot(col1, n_v);
     float z = simd_dot(col2, n_v);
-
-    return normal3f(x, y, z);
+    normal3f new_norm(x, y, z);
+    new_norm.make_unit_vector();
+    return new_norm;
   }
 
   #endif
