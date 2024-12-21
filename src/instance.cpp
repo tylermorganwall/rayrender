@@ -15,6 +15,9 @@ const bool instance::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
   ray r2 = (*WorldToObject)(r);
   if(original_scene->hit(r2, t_min, t_max, rec, rng)) {
     rec = (*ObjectToWorld)(rec);
+    if(rec.alpha_miss) {
+      return(false);
+    }
     return(true);
   }
   return(false);
