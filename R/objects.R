@@ -2123,35 +2123,35 @@ path = function(points,
 #' generate_cornell() %>% 
 #'   add_object(text3d(label="Cornell Box", x=555/2,y=555/2,z=555/2,text_height=60,
 #'                     material=diffuse(color="grey10"), angle=c(0,180,0))) %>% 
-#'   render_scene(samples=16, clamp_value=10)
+#'   render_scene(samples=16
 #' }
 #' if(run_documentation()) {
 #' #Change the orientation
 #' generate_cornell() %>% 
-#'   add_object(text3d(label="YZ Plane", x=550,y=555/2,z=555/2,text_height=100,
+#'   add_object(text3d(label="YZ Plane", x=550,y=555/2,z=555/2,text_height=150,
 #'                     orientation = "yz",
 #'                     material=diffuse(color="grey10"), angle=c(0,180,0))) %>% 
-#'  add_object(text3d(label="XY Plane", z=550,y=555/2,x=555/2,text_height=100,
+#'  add_object(text3d(label="XY Plane", z=550,y=555/2,x=555/2,text_height=150,
 #'                     orientation = "xy",
 #'                     material=diffuse(color="grey10"), angle=c(0,180,0))) %>% 
-#'  add_object(text3d(label="XZ Plane", z=555/2,y=5,x=555/2,text_height=100,
+#'  add_object(text3d(label="XZ Plane", z=555/2,y=5,x=555/2,text_height=150,
 #'                     orientation = "xz",
 #'                     material=diffuse(color="grey10"))) %>% 
-#'   render_scene(samples=16, clamp_value=10)
+#'   render_scene(samples=16)
 #' }
 #' if(run_documentation()) {
 #' #Add an label in front of a sphere
 #' generate_cornell() %>% 
-#'   add_object(text3d(label="Cornell Box", x=555/2,y=555/2,z=555/2,text_height=60,
+#'   add_object(text3d(label="Cornell Box", x=555/2,y=555/2,z=555/2,text_height=90,
 #'                     material=diffuse(color="grey10"), angle=c(0,180,0))) %>% 
-#'   add_object(text3d(label="Sphere", x=555/2,y=100,z=100,text_height=30,
+#'   add_object(text3d(label="Sphere", x=555/2,y=100,z=100,text_height=60,
 #'                     material=diffuse(color="white"), angle=c(0,180,0))) %>% 
 #'   add_object(sphere(y=100,radius=100,z=555/2,x=555/2,
 #'                     material=glossy(color="purple"))) %>% 
 #'   add_object(sphere(y=555,radius=100,z=-1000,x=555/2,
 #'                     material=light(intensity=100,
 #'                                    spotlight_focus=c(555/2,100,100)))) %>%                   
-#'   render_scene(samples=16, clamp_value=10)
+#'   render_scene(samples=16)
 #' }
 #'   
 #' if(run_documentation()) {
@@ -2164,31 +2164,60 @@ path = function(points,
 #' bees = do.call(rbind,bee_list)
 #' generate_cornell() %>% 
 #'   add_object(bees) %>%                   
-#'   render_scene(samples=16, clamp_value=10)
+#'   render_scene(samples=16)
+#' }
+#' if(run_documentation()) {
+#' # If you have ragg installed, you can also use color emojis.
+#' generate_cornell() |>
+#'    add_object(text3d(label="🌊",font_size = 500,
+#'                      x=555/2,y=555/2,z=460,text_height=1000)) |> 
+#'    add_object(text3d(label="🚣", x=380,y=140,z=460-50,
+#'      text_height=400, font_size = 500,
+#'      material=diffuse(color="black"), 
+#'      angle=c(0,180,-30))) |>
+#'    add_object(text3d(label="🗻", x=430,y=320,z=460+50,text_height=700, 
+#'      font_size = 500,material=diffuse(color="black"), 
+#'      angle=c(0,180,0)))|>
+#'    render_scene(samples=32)
 #' }
 text3d = function(label, x = 0, y = 0, z = 0, text_height = 1, orientation = "xy",
-                  material = diffuse(), font = "sans", font_style = "plain",
+                  material = diffuse(), 
+                  font = "sans", font_style = "plain", font_color = "black",
+                  font_lineheight = 1, font_size = 100,
+                  background_color = "white", background_alpha = 0,
                   angle = c(0, 0, 0), order_rotation = c(1, 2, 3), 
                   flipped = FALSE, scale = c(1,1,1)) {
   labelfile = tempfile(fileext = ".png")
-  font_metrics  = rayimage::get_font_metrics(font, 100, font_style)
-  vheight = font_metrics$total_height
-  rayimage::add_title(matrix(0,ncol = nchar(label)*vheight, nrow=vheight+2), 
-                      title_size  = vheight, title_just = "center",  title_font = font, title_style = font_style,
-                      title_offset = c(0,1),title_text = label, title_color = "white",
-                      filename = labelfile)
-  material[[1]]$alphaimage = labelfile
+  text_image = rayimage::generate_text_image(label, 
+    font = font, 
+    size = font_size,
+    color = font_color, 
+    just = "left",
+    lineheight = font_lineheight,
+    background_color = background_color,
+    background_alpha = background_alpha,
+    filename = labelfile
+  )
+  height_val_raw = nrow(text_image)
+  width_val_raw = ncol(text_image)
+  ratio = text_height/height_val_raw
+
+  height_val = text_height
+  width_val = width_val_raw * ratio
+
+  material[[1]]$image = labelfile
+  
   if(orientation == "xy" || orientation == "yx") {
     rayrender::xy_rect(x=x,y=y,z=z, angle = angle,
-                       xwidth = nchar(label)*text_height, ywidth = text_height,
+                       xwidth = width_val, ywidth = height_val,
                        material = material)
   } else if (orientation == "yz" || orientation == "zy") {
     rayrender::yz_rect(x=x,y=y,z=z, angle = angle,
-                       zwidth = nchar(label)*text_height, ywidth = text_height,
+                       zwidth = width_val, ywidth = height_val,
                        material = material)
   } else if (orientation == "xz" || orientation == "zx") {
     rayrender::xz_rect(x=x,y=y,z=z, angle = angle,
-                       xwidth = nchar(label)*text_height, zwidth = text_height,
+                       xwidth = width_val, zwidth = height_val,
                        material = material)
   } else {
     stop("Orientation ", orientation, " not recognized")

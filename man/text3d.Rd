@@ -14,6 +14,11 @@ text3d(
   material = diffuse(),
   font = "sans",
   font_style = "plain",
+  font_color = "black",
+  font_lineheight = 1,
+  font_size = 100,
+  background_color = "white",
+  background_alpha = 0,
   angle = c(0, 0, 0),
   order_rotation = c(1, 2, 3),
   flipped = FALSE,
@@ -62,35 +67,35 @@ if(run_documentation()) {
 generate_cornell() \%>\% 
   add_object(text3d(label="Cornell Box", x=555/2,y=555/2,z=555/2,text_height=60,
                     material=diffuse(color="grey10"), angle=c(0,180,0))) \%>\% 
-  render_scene(samples=16, clamp_value=10)
+  render_scene(samples=16
 }
 if(run_documentation()) {
 #Change the orientation
 generate_cornell() \%>\% 
-  add_object(text3d(label="YZ Plane", x=550,y=555/2,z=555/2,text_height=100,
+  add_object(text3d(label="YZ Plane", x=550,y=555/2,z=555/2,text_height=150,
                     orientation = "yz",
                     material=diffuse(color="grey10"), angle=c(0,180,0))) \%>\% 
- add_object(text3d(label="XY Plane", z=550,y=555/2,x=555/2,text_height=100,
+ add_object(text3d(label="XY Plane", z=550,y=555/2,x=555/2,text_height=150,
                     orientation = "xy",
                     material=diffuse(color="grey10"), angle=c(0,180,0))) \%>\% 
- add_object(text3d(label="XZ Plane", z=555/2,y=5,x=555/2,text_height=100,
+ add_object(text3d(label="XZ Plane", z=555/2,y=5,x=555/2,text_height=150,
                     orientation = "xz",
                     material=diffuse(color="grey10"))) \%>\% 
-  render_scene(samples=16, clamp_value=10)
+  render_scene(samples=16)
 }
 if(run_documentation()) {
 #Add an label in front of a sphere
 generate_cornell() \%>\% 
-  add_object(text3d(label="Cornell Box", x=555/2,y=555/2,z=555/2,text_height=60,
+  add_object(text3d(label="Cornell Box", x=555/2,y=555/2,z=555/2,text_height=90,
                     material=diffuse(color="grey10"), angle=c(0,180,0))) \%>\% 
-  add_object(text3d(label="Sphere", x=555/2,y=100,z=100,text_height=30,
+  add_object(text3d(label="Sphere", x=555/2,y=100,z=100,text_height=60,
                     material=diffuse(color="white"), angle=c(0,180,0))) \%>\% 
   add_object(sphere(y=100,radius=100,z=555/2,x=555/2,
                     material=glossy(color="purple"))) \%>\% 
   add_object(sphere(y=555,radius=100,z=-1000,x=555/2,
                     material=light(intensity=100,
                                    spotlight_focus=c(555/2,100,100)))) \%>\%                   
-  render_scene(samples=16, clamp_value=10)
+  render_scene(samples=16)
 }
   
 if(run_documentation()) {
@@ -103,6 +108,20 @@ bee_list[[i]] = text3d("B", x=20+runif(1)*525, y=20+runif(1)*525, z=20+runif(1)*
 bees = do.call(rbind,bee_list)
 generate_cornell() \%>\% 
   add_object(bees) \%>\%                   
-  render_scene(samples=16, clamp_value=10)
+  render_scene(samples=16)
+}
+if(run_documentation()) {
+# If you have ragg installed, you can also use color emojis.
+generate_cornell() |>
+   add_object(text3d(label="🌊",font_size = 500,
+                     x=555/2,y=555/2,z=460,text_height=1000)) |> 
+   add_object(text3d(label="🚣", x=380,y=140,z=460-50,
+     text_height=400, font_size = 500,
+     material=diffuse(color="black"), 
+     angle=c(0,180,-30))) |>
+   add_object(text3d(label="🗻", x=430,y=320,z=460+50,text_height=700, 
+     font_size = 500,material=diffuse(color="black"), 
+     angle=c(0,180,0)))|>
+   render_scene(samples=32)
 }
 }
