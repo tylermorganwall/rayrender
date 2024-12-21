@@ -5,6 +5,7 @@
 #' @param lightcolor Default `white`. The color the of the light.
 #' @param lightwidth Default `332`. Width (z) of the light.
 #' @param lightdepth Default `343`. Depth (x) of the light.
+#' @param light_position Default `c(555/2,554,555/2)`. Position of the light.
 #' @param sigma Default `0`. Oren-Nayar microfacet angle.
 #' @param leftcolor Default `#1f7326` (green).
 #' @param rightcolor Default `#a60d0d` (red).
@@ -43,22 +44,25 @@
 #'                parallel=TRUE,clamp_value=3)
 #' }
 generate_cornell = function(light = TRUE, lightintensity = 5, 
-                            lightcolor = "white",lightwidth = 332, lightdepth=343, sigma=0,
+                            lightcolor = "white",lightwidth = 332, lightdepth=343, 
+                            light_position = c(555/2,554,555/2),
+                            sigma=0,
                             leftcolor = "#1f7326", rightcolor = "#a60d0d", roomcolor = "#bababa",
                             importance_sample = TRUE) {
-  scene = yz_rect(x=555,y=555/2,z=555/2,555,555,
-      material = diffuse(color = leftcolor, sigma = sigma),flipped=TRUE) %>%
-    add_object(yz_rect(x=0,y=555/2,z=555/2,555,555,
+  scene = cube(x=555+5,y=555/2,z=555/2,scale = c(10,555,555),
+      material = diffuse(color = leftcolor, sigma = sigma)) %>%
+    add_object(cube(x=0-5,y=555/2,z=555/2,scale = c(10,555,555),
       material = diffuse(color = rightcolor, sigma = sigma))) %>%
-    add_object(xz_rect(x=555/2,y=555,z=555/2,555,555,
+    add_object(cube(x=555/2,y=555+5,z=555/2,scale = c(575,10,555),
       material = diffuse(color=roomcolor, sigma = sigma),flipped=TRUE)) %>%
-    add_object(xz_rect(x=555/2,y=0,z=555/2,555,555,
+    add_object(cube(x=555/2,y=0-5,z=555/2,scale = c(575,10,555),
       material = diffuse(color=roomcolor, sigma = sigma))) %>%
-    add_object(xy_rect(x=555/2,y=555/2,z=555,555,555,
+    add_object(cube(x=555/2,y=555/2,z=555+5,scale = c(555,555,10),
       material = diffuse(color = roomcolor, sigma = sigma),flipped=TRUE))
   if(light) {
     scene = scene %>%
-      add_object(xz_rect(x=555/2,y=554,z=555/2,lightdepth,lightwidth, flipped = TRUE,
+      add_object(xz_rect(x=light_position[1],y=light_position[2],z=light_position[3],
+        lightdepth,lightwidth, flipped = TRUE,
                        material = light(color=lightcolor,intensity=lightintensity,
                                         importance_sample = importance_sample))) 
   }
