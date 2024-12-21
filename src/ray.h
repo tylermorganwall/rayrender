@@ -131,43 +131,4 @@ inline std::ostream& operator<<(std::ostream &os, const ray &r) {
   return os;
 }
 
-class CompactRay {
-  public: 
-    CompactRay() {}
-    CompactRay(const ray& r) {
-      A = r.A;
-      B = r.B;
-      _time = r._time;
-      tMax = r.tMax;
-      inv_dir_pad = r.inv_dir_pad;
-      pri_stack = r.pri_stack;
-    }
-    point3f operator()(Float t) const { return A + B * t; }
-    
-    point3f origin() const {return(A);}
-    vec3f direction() const {return(B);}
-    // vec3f inverse_dir() const {return(inv_dir);}
-    Float time() const {return _time;}
-    point3f point_at_parameter(Float t) const {return(A + t*B);}
-    bool has_priority() const {return(pri_stack ? true : false);}
-    size_t get_priority_size() const {return(pri_stack->size());}
-    
-    point3f A;
-    vec3f B;
-    vec3f inv_dir_pad;
-    Float _time;
-    mutable Float tMax;
-    std::vector<dielectric*> *pri_stack;
-};
-
-inline std::istream& operator>>(std::istream &is, CompactRay &r) {
-  is >> r.A.e[0] >> r.A.e[1] >> r.A.e[2];
-  return is;
-}
-
-inline std::ostream& operator<<(std::ostream &os, const CompactRay &r) {
-  os << "Origin: " << r.A.e[0] << ", " << r.A.e[1] << ", " << r.A.e[2] << " Dir: " << r.B.e[0] << ", " << r.B.e[1] << ", " << r.B.e[2] ;
-  return os;
-}
-
 #endif
