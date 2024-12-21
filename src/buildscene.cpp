@@ -393,19 +393,23 @@ std::shared_ptr<hitable> build_scene(List& scene,
                                      std::vector<unsigned char * >& bump_textures, 
                                      std::vector<unsigned char * >& roughness_textures,  
                                      std::vector<std::shared_ptr<material> >* shared_materials, 
+                                     std::vector<std::shared_ptr<alpha_texture> >& alpha,
+                                     std::vector<std::shared_ptr<bump_texture> >& bump,
+                                     std::vector<std::shared_ptr<roughness_texture> >& roughness,
                                      int bvh_type,
                                      TransformCache& transformCache, 
                                      TextureCache& texCache,
                                      hitable_list& imp_sample_objects,
                                      std::vector<std::shared_ptr<hitable> >& instanced_objects,
                                      std::vector<std::shared_ptr<hitable_list> >& instance_importance_sampled,
+                                     std::vector<int>& texture_idx,
                                      bool verbose, 
                                      random_gen& rng) {
   auto nvec  = std::make_unique<int[]>(3);
   auto nveca = std::make_unique<int[]>(3);
   auto nvecb = std::make_unique<int[]>(3);
   auto nvecr = std::make_unique<int[]>(3);
-  std::vector<int> texture_idx;
+  int init_texture_size = texture_idx.size();
   
   hitable_list list;
   NumericMatrix IdentityMat(4,4);
@@ -422,10 +426,6 @@ std::shared_ptr<hitable> build_scene(List& scene,
   NumericVector x = scene["x"];
   NumericVector y = scene["y"];
   NumericVector z = scene["z"];
-  
-  std::vector<std::shared_ptr<alpha_texture> > alpha;
-  std::vector<std::shared_ptr<bump_texture> > bump;
-  std::vector<std::shared_ptr<roughness_texture> > roughness;
   
   for(size_t i = 0; i < n; i++) {
     List SingleShape = ShapeInfo(i);
@@ -468,7 +468,7 @@ std::shared_ptr<hitable> build_scene(List& scene,
                                           has_bump,
                                           has_roughness,
                                           tricolorinfo);
-      texture_idx.push_back(i);
+      texture_idx.push_back(init_texture_size + i);
     }
     if(is_shared_mat && shared_materials->size() < static_cast<size_t>(material_id)) {
       shared_materials->push_back(shape_material);
@@ -507,7 +507,7 @@ std::shared_ptr<hitable> build_scene(List& scene,
     
     
     //`mat_idx` selects the index of the texture, in case there's a shared material.
-    int mat_idx = texture_idx[i];
+    int mat_idx = texture_idx.back();
     if(has_alpha) {
       alpha.push_back(std::make_shared<alpha_texture>(alpha_textures[mat_idx], nveca[0], nveca[1], nveca[2]));
     } else {
@@ -872,12 +872,14 @@ std::shared_ptr<hitable> build_scene(List& scene,
                                                               bump_textures, 
                                                               roughness_textures,  
                                                               shared_materials,
+                                                              alpha, bump, roughness,
                                                               bvh_type,
                                                               transformCache,
                                                               texCache,
                                                               (*instance_importance_sample_list),
                                                               instanced_objects,
                                                               instance_importance_sampled,
+                                                              texture_idx,
                                                               false,
                                                               rng);
         instanced_objects.push_back(instance_scene);

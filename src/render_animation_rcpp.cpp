@@ -132,19 +132,26 @@ void render_animation_rcpp(List scene, List camera_info, List scene_info, List r
   hitable_list imp_sample_objects;
   std::vector<std::shared_ptr<hitable> > instanced_objects;
   std::vector<std::shared_ptr<hitable_list> > instance_importance_sampled;
-  
+  std::vector<std::shared_ptr<alpha_texture> > alpha;
+  std::vector<std::shared_ptr<bump_texture> > bump;
+  std::vector<std::shared_ptr<roughness_texture> > roughness;
+  std::vector<int> texture_idx;
+
   std::shared_ptr<hitable> worldbvh = build_scene(scene, shape, 
                                                   shutteropen,shutterclose,
                                                   textures, 
                                                   alpha_textures,
                                                   bump_textures,
                                                   roughness_textures, 
-                                                  shared_materials, bvh_type,
+                                                  shared_materials, 
+                                                  alpha, bump, roughness,
+                                                  bvh_type,
                                                   transformCache, 
                                                   texCache,
                                                   imp_sample_objects,
                                                   instanced_objects,
                                                   instance_importance_sampled,
+                                                  texture_idx,
                                                   verbose, rng);
   print_time(verbose, "Built Scene BVH" );
   
