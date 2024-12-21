@@ -116,22 +116,32 @@ inline point3f calculate_color(const ray& r, hitable *world, random_gen &rng) {
   scatter_record srec;
   ray r2 = r;
   bool invisible = false;
-  if(world->hit(r2, 0.001, FLT_MAX, hrec, rng)) {
-    point3f emit = hrec.mat_ptr->emitted(r2, hrec, hrec.u, hrec.v, hrec.p, invisible);
-    if(emit.x() != 0 || emit.y() != 0 || emit.z() != 0) {
-      return(emit);
-    }
-    if(hrec.mat_ptr->scatter(r2, hrec, srec, rng)) { //generates scatter record, world space
-      if(srec.is_specular) { 
-        return(point3f(1,1,1));
+  bool hit_alpha = false;
+  do {
+    if(world->hit(r2, 0.001, FLT_MAX, hrec, rng)) {
+      if(!hrec.alpha_miss) {
+        hit_alpha = false;
+      } else {
+        hit_alpha = true;
+        r2.A = OffsetRayOrigin(hrec.p, hrec.pError, hrec.normal, r2.direction());
+        continue;
       }
-      return(hrec.mat_ptr->get_albedo(hrec));
+      point3f emit = hrec.mat_ptr->emitted(r2, hrec, hrec.u, hrec.v, hrec.p, invisible);
+      if(emit.x() != 0 || emit.y() != 0 || emit.z() != 0) {
+        return(emit);
+      }
+      if(hrec.mat_ptr->scatter(r2, hrec, srec, rng)) { //generates scatter record, world space
+        if(srec.is_specular) { 
+          return(point3f(1,1,1));
+        }
+        return(hrec.mat_ptr->get_albedo(hrec));
+      } else {
+        return(point3f(0,0,0));
+      }
     } else {
       return(point3f(0,0,0));
     }
-  } else {
-    return(point3f(0,0,0));
-  }
+  } while (hit_alpha);
 }
 
 inline point3f quick_render(const ray& r, hitable *world, random_gen &rng, vec3f lightdir, Float n) {
