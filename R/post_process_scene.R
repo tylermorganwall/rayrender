@@ -94,29 +94,31 @@ post_process_scene = function(rgb_mat, iso, tonemap, debug_channel, filename, re
     }
     return(invisible(full_array_ret))
   }
-  if(!is.matrix(bloom)) {
-    if(is.numeric(bloom) && length(bloom) == 1) {
-      kernel = rayimage::generate_2d_exponential(0.1,11,3*1/bloom)
-      full_array = rayimage::render_convolution(image = full_array, kernel = kernel, min_value = 1, preview=FALSE)
-    } else {
-      if(bloom) {
-        kernel = rayimage::generate_2d_exponential(0.1,11,3)
+  if(debug_channel == 0) {
+    if(!is.matrix(bloom)) {
+      if(is.numeric(bloom) && length(bloom) == 1) {
+        kernel = rayimage::generate_2d_exponential(0.1,11,3*1/bloom)
         full_array = rayimage::render_convolution(image = full_array, kernel = kernel, min_value = 1, preview=FALSE)
+      } else {
+        if(bloom) {
+          kernel = rayimage::generate_2d_exponential(0.1,11,3)
+          full_array = rayimage::render_convolution(image = full_array, kernel = kernel, min_value = 1, preview=FALSE)
+        }
       }
+    } else {
+      kernel = bloom
+      if(ncol(kernel) %% 2 == 0) {
+        newkernel = matrix(0, ncol = ncol(kernel) + 1, nrow = nrow(kernel))
+        newkernel[,1:ncol(kernel)] = kernel
+        kernel = newkernel
+      }
+      if(nrow(kernel) %% 2 == 0) {
+        newkernel = matrix(0, ncol = ncol(kernel), nrow = nrow(kernel) + 1)
+        newkernel[1:nrow(kernel),] = kernel
+        kernel = newkernel
+      }
+      full_array = rayimage::render_convolution(image = full_array, kernel = kernel,  min_value = 1, preview=FALSE)
     }
-  } else {
-    kernel = bloom
-    if(ncol(kernel) %% 2 == 0) {
-      newkernel = matrix(0, ncol = ncol(kernel) + 1, nrow = nrow(kernel))
-      newkernel[,1:ncol(kernel)] = kernel
-      kernel = newkernel
-    }
-    if(nrow(kernel) %% 2 == 0) {
-      newkernel = matrix(0, ncol = ncol(kernel), nrow = nrow(kernel) + 1)
-      newkernel[1:nrow(kernel),] = kernel
-      kernel = newkernel
-    }
-    full_array = rayimage::render_convolution(image = full_array, kernel = kernel,  min_value = 1, preview=FALSE)
   }
   tonemapped_channels = tonemap_image(full_array[,,1],full_array[,,2],full_array[,,3],toneval)
   if(!transparent_background) {
