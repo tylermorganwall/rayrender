@@ -2168,17 +2168,21 @@ path = function(points,
 #' }
 #' if(run_documentation()) {
 #' # If you have ragg installed, you can also use color emojis.
-#' generate_cornell() |>
-#'    add_object(text3d(label="🌊",font_size = 500,
-#'                      x=555/2,y=555/2,z=460,text_height=1000)) |> 
-#'    add_object(text3d(label="🚣", x=380,y=140,z=460-50,
-#'      text_height=400, font_size = 500,
-#'      material=diffuse(color="black"), 
-#'      angle=c(0,180,-30))) |>
-#'    add_object(text3d(label="🗻", x=430,y=320,z=460+50,text_height=700, 
-#'      font_size = 500,material=diffuse(color="black"), 
-#'      angle=c(0,180,0)))|>
-#'    render_scene(samples=32)
+#' library(rayrender)
+#' generate_cornell(light_position = c(555/2,554,10), 
+#'                  lightwidth = 10, lightdepth = 100,
+#'                  lightintensity = 800) |>
+#'   add_object(text3d(label="🌊",font_size = 500,
+#'                     x=555/2,y=555/2,z=260,text_height=1000)) |> 
+#'   add_object(text3d(label="🚣", x=380,y=140,z=260-50,
+#'                     text_height=400, font_size = 500,
+#'                     material=diffuse(color="black"), 
+#'                     angle=c(0,180,-30))) |>
+#'   add_object(text3d(label="🗻", x=430,y=320,z=260+50,text_height=700, 
+#'                     font_size = 500,material=diffuse(color="black"), 
+#'                     angle=c(0,180,0)))|>
+#'   render_scene(samples=32)
+#' 
 #' }
 text3d = function(label, x = 0, y = 0, z = 0, text_height = 1, orientation = "xy",
                   material = diffuse(), 
@@ -2188,7 +2192,7 @@ text3d = function(label, x = 0, y = 0, z = 0, text_height = 1, orientation = "xy
                   angle = c(0, 0, 0), order_rotation = c(1, 2, 3), 
                   flipped = FALSE, scale = c(1,1,1)) {
   labelfile = tempfile(fileext = ".png")
-  text_image = rayimage::generate_text_image(label, 
+  text_image = rayimage::render_text_image(label, 
     font = font, 
     size = font_size,
     color = font_color, 
