@@ -142,6 +142,7 @@ inline point3f calculate_color(const ray& r, hitable *world, random_gen &rng) {
       return(point3f(0,0,0));
     }
   } while (hit_alpha);
+  return(point3f(0,0,0));
 }
 
 inline point3f quick_render(const ray& r, hitable *world, random_gen &rng, vec3f lightdir, Float n) {
