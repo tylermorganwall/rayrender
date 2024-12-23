@@ -2103,6 +2103,12 @@ path = function(points,
 #' @param text_height Default `1`. Height of the text.
 #' @param font Default `"sans"`. A character string specifying the font family (e.g., `"Arial"`, `"Times"`, `"Helvetica"`).
 #' @param font_style A character string specifying the font style, such as `"plain"`, `"italic"`, or `"bold"`. Default is `"plain"`.
+#' @param font_color Default `"black"`. The font color.
+#' @param font_lineheight Default `12`. The lineheight for strings with newlines.
+#' @param font_size Default `100`. The size of the font. Note that this does not control the size of the text, just the resolution
+#' as rendered in the texture.
+#' @param background_color Default `"white"`. The background color.
+#' @param background_alpha Default `0`. The background opacity. `1` is fully opaque.
 #' @param orientation Default `xy`. Orientation of the plane. Other options are `yz` and `xz`.
 #' @param material Default  \code{\link{diffuse}}. The material, called from one of the material 
 #' functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}.
@@ -2123,7 +2129,7 @@ path = function(points,
 #' generate_cornell() %>% 
 #'   add_object(text3d(label="Cornell Box", x=555/2,y=555/2,z=555/2,text_height=60,
 #'                     material=diffuse(color="grey10"), angle=c(0,180,0))) %>% 
-#'   render_scene(samples=16
+#'   render_scene(samples=16)
 #' }
 #' if(run_documentation()) {
 #' #Change the orientation
@@ -2172,15 +2178,15 @@ path = function(points,
 #' generate_cornell(light_position = c(555/2,554,10), 
 #'                  lightwidth = 10, lightdepth = 100,
 #'                  lightintensity = 800) |>
-#'   add_object(text3d(label="🌊",font_size = 500,
+#'   add_object(text3d(label="🌊",font_size = 500,angle=c(0,180,0)
 #'                     x=555/2,y=555/2,z=260,text_height=1000)) |> 
 #'   add_object(text3d(label="🚣", x=380,y=140,z=260-50,
 #'                     text_height=400, font_size = 500,
 #'                     material=diffuse(color="black"), 
-#'                     angle=c(0,180,-30))) |>
+#'                     angle=c(0,0,-30))) |>
 #'   add_object(text3d(label="🗻", x=430,y=320,z=260+50,text_height=700, 
 #'                     font_size = 500,material=diffuse(color="black"), 
-#'                     angle=c(0,180,0)))|>
+#'                     angle=c(0,0,0)))|>
 #'   render_scene(samples=32)
 #' 
 #' }

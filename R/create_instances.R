@@ -119,8 +119,8 @@
 #'                      material = diffuse(image_texture = image_array), angle = c(0, 90, 0))) %>%
 #'   add_object(yz_rect(x = 555 - 5, y = 300, z = 555 / 2, zwidth = 400, ywidth = 400,
 #'                      material = diffuse(image_texture = image_array), angle = c(0, 180, 0))) %>%
-#'   create_instances(x = expand.grid(x = seq(-1, 1, by = 1) * 556 - 555 / 2,
-#'                                    y = seq(-1, 1, by = 1) * 556 - 555 / 2,
+#'   create_instances(x = expand.grid(x = seq(-1, 1, by = 1) * 570 - 555 / 2,
+#'                                    y = seq(-1, 1, by = 1) * 570 - 555 / 2,
 #'                                    z = 0)) %>%
 #'   render_scene(lookfrom = c(0, 0, -800) * 3, fov = 40,  
 #'                samples = 16, sample_method = "sobol_blue",
