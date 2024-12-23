@@ -127,16 +127,17 @@ library(rayrender)
 generate_cornell(light_position = c(555/2,554,10), 
                  lightwidth = 10, lightdepth = 100,
                  lightintensity = 800) |>
-  add_object(text3d(label="🌊",font_size = 500,angle=c(0,180,0)
-                    x=555/2,y=555/2,z=260,text_height=1000)) |> 
-  add_object(text3d(label="🚣", x=380,y=140,z=260-50,
-                    text_height=400, font_size = 500,
-                    material=diffuse(color="black"), 
-                    angle=c(0,0,-30))) |>
-  add_object(text3d(label="🗻", x=430,y=320,z=260+50,text_height=700, 
-                    font_size = 500,material=diffuse(color="black"), 
-                    angle=c(0,0,0)))|>
-  render_scene(samples=32)
+ add_object(text3d(label="🌊",font_size = 500,angle=c(0,180,0),
+   x=555/2,y=555/2,z=260,text_height=1000)) |> 
+ add_object(text3d(label="🚣", x=180,y=140,z=260-50,
+   text_height=400, font_size = 500,
+   material=diffuse(color="black"), 
+   angle=c(0,0,30))) |>
+ add_object(text3d(label="🗻", x=180,y=230,z=260+50,text_height=300, 
+   font_size = 500,material=diffuse(color="black"), 
+   angle=c(0,0,0))) |>
+ render_scene(samples=32)
+
 
 }
 }
