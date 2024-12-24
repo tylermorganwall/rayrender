@@ -5,7 +5,12 @@
 
 [![R build
 status](https://github.com/tylermorganwall/rayrender/workflows/R-CMD-check/badge.svg)](https://github.com/tylermorganwall/rayrender/actions)
-[![R-CMD-check](https://github.com/tylermorganwall/rayrender/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/tylermorganwall/rayrender/actions/workflows/R-CMD-check.yaml)
+[![:name status
+badge](https://tylermorganwall.r-universe.dev/badges/:name)](https://tylermorganwall.r-universe.dev/)
+[![rayrender status
+badge](https://tylermorganwall.r-universe.dev/badges/rayrender)](https://tylermorganwall.r-universe.dev/rayrender)
+![cran-badge rayrender
+package](http://www.r-pkg.org/badges/version/rayrender)
 <!-- badges: end -->
 
 <img src="man/figures/swordsmall.gif" ></img>
@@ -13,16 +18,15 @@ status](https://github.com/tylermorganwall/rayrender/workflows/R-CMD-check/badge
 ## Overview
 
 **rayrender** is an open source R package for raytracing scenes in
-created in R. Based off of Peter Shirley’s three books “Ray Tracing in
-One Weekend”, “Ray Tracing: The Next Week”, and “Ray Tracing: The Rest
-of Your Life”, this package provides a tidy R API to a raytracer built
-in C++ to render scenes built out of an array of primitives.
-**rayrender** builds scenes using a pipeable iterative interface, and
-supports diffuse, metallic, dielectric (glass), light emitting
-materials, as well as procedural and user-specified image textures and
-HDR environment lighting. **rayrender** includes multicore support (with
-progress bars) via RcppThread, random number generation via the PCG RNG,
-and `.obj` file support via TinyObjLoader.
+created in R. This package provides a tidy R interface to a fast
+pathtracer written in C++ to render scenes built out of an array of
+primitives and meshes. **rayrender** builds scenes using a pipeable
+iterative interface, and supports diffuse, metallic, dielectric (glass),
+glossy, microfacet, light emitting materials, as well as procedural and
+user-specified image/roughness/bump/normal textures and HDR environment
+lighting. **rayrender** includes multicore support (with progress bars)
+via RcppThread, random number generation via the PCG RNG, OBJ/PLY
+support, and denoising support with Intel Open Image Denoise (OIDN).
 
 Browse the documentation and see more examples at the website (if you
 aren’t already there):
@@ -39,6 +43,56 @@ aren’t already there):
 devtools::install_github("tylermorganwall/rayrender")
 ```
 
+To get denoising support, you need to install OIDN. You can download the
+official binaries from Intel and set the `OIDN_PATH` argument in your
+.Renviron file with the following command line instructions:
+
+## macOS
+
+``` bash
+# Download the appropriate binary for your architecture
+curl -LO https://github.com/OpenImageDenoise/oidn/releases/download/v2.3.1/oidn-2.3.1.x86_64.macos.tar.gz
+# or for Apple Silicon
+curl -LO https://github.com/OpenImageDenoise/oidn/releases/download/v2.3.1/oidn-2.3.1.arm64.macos.tar.gz
+
+# Extract the archive
+tar -xvzf oidn-2.3.1.x86_64.macos.tar.gz
+# or for Apple Silicon
+tar -xvzf oidn-2.3.1.arm64.macos.tar.gz
+
+# Set OIDN_PATH in your .Renviron file to the extracted directory
+echo "OIDN_PATH=/path/to/extracted/oidn" >> ~/.Renviron
+```
+
+## linux
+
+``` bash
+# Download the binary
+curl -LO https://github.com/OpenImageDenoise/oidn/releases/download/v2.3.1/oidn-2.3.1.x86_64.linux.tar.gz
+
+# Extract the archive
+tar -xvzf oidn-2.3.1.x86_64.linux.tar.gz
+
+# Set OIDN_PATH in your .Renviron file to the extracted directory
+echo "OIDN_PATH=/path/to/extracted/oidn" >> ~/.Renviron
+```
+
+## windows
+
+``` bash
+# Download the binary
+Invoke-WebRequest -Uri https://github.com/OpenImageDenoise/oidn/releases/download/v2.3.1/oidn-2.3.1.x64.windows.zip -OutFile oidn-2.3.1.x64.windows.zip
+
+# Extract the archive
+Expand-Archive -Path oidn-2.3.1.x64.windows.zip -DestinationPath "C:\path\to\extract\oidn"
+
+# Set OIDN_PATH in your .Renviron file to the extracted directory
+echo "OIDN_PATH=C:/path/to/extracted/oidn" >> .Renviron
+```
+
+Ensure you restart your R session after setting the `OIDN_PATH`
+environment variable for the changes to take effect.
+
 ## Usage
 
 We’ll first start by rendering a simple scene consisting of the ground,
@@ -53,7 +107,7 @@ library(rayrender)
 
 scene = generate_ground(material=diffuse(checkercolor="grey20")) %>%
   add_object(sphere(y=0.2,material=glossy(color="#2b6eff",reflectance=0.05))) 
-render_scene(scene, parallel = TRUE, width = 800, height = 800, samples = 256)
+render_scene(scene, parallel = TRUE, width = 800, height = 800, samples = 64)
 ```
 
 ![](man/figures/README_ground-1.png)<!-- -->
@@ -66,9 +120,9 @@ camera.
 ``` r
 scene = generate_ground(material=diffuse(checkercolor="grey20")) %>%
   add_object(sphere(y=0.2,material=glossy(color="#2b6eff",reflectance=0.05))) %>%
-  add_object(sphere(y=6,z=1,radius=4,material=light(intensity=8))) %>%
+  add_object(sphere(y=10,z=1,radius=4,material=light(intensity=4))) %>%
   add_object(sphere(z=15,material=light(intensity=70)))
-render_scene(scene, parallel = TRUE, width = 800, height = 800, samples = 256, clamp_value=10)
+render_scene(scene, parallel = TRUE, width = 800, height = 800, samples = 64)
 ```
 
 ![](man/figures/README_ground_sphere-1.png)<!-- -->
@@ -80,10 +134,11 @@ Now we’ll add the (included) R .obj file into the scene, using the
 ``` r
 scene = generate_ground(material=diffuse(checkercolor="grey20")) %>%
   add_object(sphere(y=0.2,material=glossy(color="#2b6eff",reflectance=0.05))) %>%
-  add_object(obj_model(r_obj(),z=1,y=-0.05,scale_obj=0.45,material=diffuse())) %>%
-  add_object(sphere(y=10,z=1,radius=4,material=light(intensity=8))) %>%
+  add_object(obj_model(r_obj(simple_r = TRUE),
+                       z=1,y=-0.05,scale_obj=0.45,material=diffuse())) %>%
+  add_object(sphere(y=10,z=1,radius=4,material=light(intensity=4))) %>%
   add_object(sphere(z=15,material=light(intensity=70)))
-render_scene(scene, parallel = TRUE, width = 800, height = 800, samples = 256, clamp_value=10)
+render_scene(scene, parallel = TRUE, width = 800, height = 800, samples = 64)
 ```
 
 ![](man/figures/README_ground_r_path-1.png)<!-- -->
@@ -91,37 +146,19 @@ render_scene(scene, parallel = TRUE, width = 800, height = 800, samples = 256, c
 Here we’ll render a grid of different viewpoints.
 
 ``` r
-par(mfrow=c(2,2))
-render_scene(scene, parallel = TRUE, width = 400, height = 400, 
-             lookfrom = c(7,1,7), samples = 256, clamp_value=10)
+filename = tempfile()
+image1 = render_scene(scene, parallel = TRUE, width = 400, height = 400, 
+             lookfrom = c(7,1,7), samples = 64, return_raw_array = TRUE)
+image2 = render_scene(scene, parallel = TRUE, width = 400, height = 400, 
+             lookfrom = c(0,7,7), samples = 64, return_raw_array = TRUE)
+image3 = render_scene(scene, parallel = TRUE, width = 400, height = 400, 
+             lookfrom = c(-7,0,-7), samples = 64, return_raw_array = TRUE)
+image4 = render_scene(scene, parallel = TRUE, width = 400, height = 400, 
+             lookfrom = c(-7,7,7), samples = 64, return_raw_array = TRUE)
+rayimage::plot_image_grid(list(image1,image2,image3,image4), dim = c(2,2))
 ```
 
 ![](man/figures/README_ground_grid-1.png)<!-- -->
-
-``` r
-render_scene(scene, parallel = TRUE, width = 400, height = 400, 
-             lookfrom = c(0,7,7), samples = 256, clamp_value=10)
-```
-
-![](man/figures/README_ground_grid-2.png)<!-- -->
-
-``` r
-render_scene(scene, parallel = TRUE, width = 400, height = 400, 
-             lookfrom = c(-7,0,-7), samples = 256, clamp_value=10)
-```
-
-![](man/figures/README_ground_grid-3.png)<!-- -->
-
-``` r
-render_scene(scene, parallel = TRUE, width = 400, height = 400, 
-             lookfrom = c(-7,7,7), samples = 256, clamp_value=10)
-```
-
-![](man/figures/README_ground_grid-4.png)<!-- -->
-
-``` r
-par(mfrow=c(1,1))
-```
 
 Here’s another example: We start by generating an empty Cornell box and
 rendering it with `render_scene()`. Setting `parallel = TRUE` will
@@ -132,8 +169,8 @@ counts result in a less noisy image.
 
 ``` r
 scene = generate_cornell()
-render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), aperture=0, fov=40, samples = 256,
-             ambient_light=FALSE, parallel=TRUE, width=800, height=800, clamp_value = 5)
+render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), aperture=0, fov=40, samples = 64,
+             ambient_light=FALSE, parallel=TRUE, width=800, height=800)
 ```
 
 ![](man/figures/README_basic-1.png)<!-- -->
@@ -171,8 +208,8 @@ generate_cornell() %>%
                      material = diffuse(image_texture = image_array),angle=c(0,90,0))) %>%
   add_object(yz_rect(x=555-0.01,y=300,z=555/2,zwidth=400,ywidth=400,
                      material = diffuse(image_texture = image_array),angle=c(0,180,0))) %>%
-  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), aperture=0, fov=40,  samples = 256,
-             ambient_light=FALSE, parallel=TRUE, width=800, height=800, clamp_value = 5)
+  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), aperture=0, fov=40,  samples = 64,
+             ambient_light=FALSE, parallel=TRUE, width=800, height=800)
 ```
 
 ![](man/figures/README_basic_sphere-1.png)<!-- -->
@@ -201,7 +238,7 @@ generate_ground(material=diffuse(checkercolor="grey20")) %>%
      csg_sphere(x=-1.4,z=0.4, radius = 0.4), operation="blend", radius=0.5),
      material=glossy(color="dodgerblue4"))) %>%
   add_object(sphere(y=5,x=3,radius=1,material=light(intensity=30))) %>%
-  render_scene(clamp_value=10, fov=20,lookfrom=c(5,5,10),samples=256,width=800,height=800)
+  render_scene(clamp_value=10, fov=20,lookfrom=c(5,5,10),samples=64,width=800,height=800)
 ```
 
 ![](man/figures/unnamed-chunk-1-1.png)<!-- -->
@@ -232,8 +269,7 @@ vals = vals[,c(1,3,2)]/20
 generate_studio() %>% 
   add_object(path(points=vals,y=-0.6,width=0.01,material=diffuse(color="red"))) %>% 
   add_object(sphere(y=5,z=5,radius=0.5,material=light(intensity=200))) %>% 
-  render_scene(samples=256,lookat=c(0,0.5,0),lookfrom=c(0,1,10),width = 800, height = 800, 
-               clamp_value=10,parallel=TRUE)
+  render_scene(samples=64,lookat=c(0,0.5,0),lookfrom=c(0,1,10),width = 800, height = 800, parallel=TRUE)
 ```
 
 ![](man/figures/README_ground_r_lorenz-1.png)<!-- -->
@@ -260,9 +296,13 @@ generate_studio(depth=-0.4) |>
                            material=diffuse(color="purple"))) |>
   add_object(sphere(y=3,z=5,x=2,radius=1,material=light(intensity=15))) |>
   render_scene(lookat=c(0.3,0.5,1), 
-               fov=12, width=800,height=800, clamp_value = 10,
-               aperture=0.025, samples=256)
+               fov=12, width=800,height=800, 
+               aperture=0.025, samples=64)
 ```
+
+    ## Warning in mesh3d_model(mesh, x = x, y = y, z = z, override_material = TRUE, :
+    ## material set as vertex color but no texture or bump map passed--ignoring mesh3d
+    ## material.
 
 ![](man/figures/README_r_extruded_path-1.png)<!-- -->
 
@@ -282,9 +322,13 @@ generate_studio(depth=-0.2,
                           material = diffuse(noisecolor = "black", noise = 10, 
                                              noiseintensity = 10))) |>
  add_object(sphere(y=20,x=0,z=21,material=light(intensity = 1000))) |> 
- render_scene(lookat=c(0,0.5,0), fov=10, samples=256, clamp_value=10,
+ render_scene(lookat=c(0,0.5,0), fov=10, samples=64,
               width = 800, height=800)
 ```
+
+    ## Warning in mesh3d_model(mesh, x = x, y = y, z = z, override_material = TRUE, :
+    ## material set as vertex color but no texture or bump map passed--ignoring mesh3d
+    ## material.
 
 ![](man/figures/README_r_extruded_path-2.png)<!-- -->
 
@@ -305,13 +349,14 @@ hollow_star = rbind(star_polygon, 0.8 * star_polygon)
 generate_ground(material = diffuse(color="grey20", checkercolor = "grey50",sigma=90)) %>%
   add_object(sphere(material=microfacet(roughness = 0.2,
                                         eta=c(0.216,0.42833,1.3184), kappa=c(3.239,2.4599,1.8661)))) %>%
-  add_object(obj_model(y=-1,x=-1.8,r_obj(), angle=c(0,135,0),material = diffuse(sigma=90))) %>%
+  add_object(obj_model(y=-1,x=-1.8,r_obj(simple_r = TRUE), 
+                       angle=c(0,135,0),material = diffuse(sigma=90))) %>%
   add_object(pig(x=1.8,y=-1.2,scale=0.5,angle=c(0,90,0),diffuse_sigma = 90)) %>%
   add_object(extruded_polygon(hollow_star,top=-0.5,bottom=-1, z=-2,
                               holes = nrow(star_polygon),
                               material=diffuse(color="red",sigma=90))) %>%
   render_scene(parallel = TRUE, environment_light = tempfilehdr, width=800,height=800,
-               fov=70,clamp_value=10,samples=256, aperture=0.1, sample_method = "sobol_blue",
+               fov=70,samples=64, aperture=0.1, sample_method = "sobol_blue",
                lookfrom=c(-0.9,1.2,-4.5),lookat=c(0,-1,0))
 ```
 
