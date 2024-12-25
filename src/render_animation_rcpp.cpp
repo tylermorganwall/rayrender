@@ -3,12 +3,10 @@
 #include "float.h"
 #include "vectypes.h"
 #include "vec2.h"
-#include "RayMatrix.h"
 #include "mathinline.h"
 #include "camera.h"
 #include "float.h"
 #include "buildscene.h"
-#include "RProgress.h"
 #include "rng.h"
 #include "tonemap.h"
 #include "infinite_area_light.h"
@@ -23,14 +21,19 @@
 #include "debug.h"
 
 #include "bvh.h"
-using namespace Rcpp;
-#include "RcppThread.h"
 #include "PreviewDisplay.h"
 
 #ifdef HAS_OIDN
 #undef None
 #include <OpenImageDenoise/oidn.hpp>
 #endif
+
+#include "Rcpp.h"
+#include "RayMatrix.h"
+using namespace Rcpp;
+#include "RcppThread.h"
+#include "RProgress.h"
+
 
 using namespace std;
 

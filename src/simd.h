@@ -20,6 +20,14 @@
 #endif
 #endif
 
+#if defined(__SSE4_1__)
+#include <smmintrin.h> 
+#endif
+
+#if defined(__SSE3__)
+#include <pmmintrin.h> 
+#endif
+
 
 #ifdef HAS_NEON
     #include <arm_neon.h>

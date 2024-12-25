@@ -2,20 +2,16 @@
 #define STB_IMAGE_IMPLEMENTATION 
 #endif
 
-#include <Rcpp.h>
-
 #include "float.h"
 #include "vectypes.h"
 #include "vec2.h"
 #include "point2.h"
-#include "RayMatrix.h"
 #include "mathinline.h"
 #include "transform.h"
 #include "transformcache.h"
 #include "camera.h"
 #include "float.h"
 #include "buildscene.h"
-#include "RProgress.h"
 #include "rng.h"
 #include "tonemap.h"
 #include "infinite_area_light.h"
@@ -28,10 +24,6 @@
 #include "texturecache.h"
 #include "box.h"
 #include "sphere.h"
-using namespace Rcpp;
-// [[Rcpp::plugins(cpp11)]]
-// [[Rcpp::depends(RcppThread)]]
-#include "RcppThread.h"
 #include "PreviewDisplay.h"
 #include "raylog.h"
 #include <cfenv>
@@ -46,6 +38,15 @@ using namespace Rcpp;
 #undef None
 #include <OpenImageDenoise/oidn.hpp>
 #endif
+
+
+#include "RProgress.h"
+#include <Rcpp.h>
+using namespace Rcpp;
+// [[Rcpp::plugins(cpp11)]]
+// [[Rcpp::depends(RcppThread)]]
+#include "RayMatrix.h"
+#include "RcppThread.h"
 
 using namespace std;
 

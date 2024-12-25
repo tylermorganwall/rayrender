@@ -73,20 +73,65 @@ AC_SUBST([OIDN_CPPFLAGS])
 AC_SUBST([OIDN_LDFLAGS])
 AC_SUBST([OIDN_LIBS])
 
-# Check for SSE2 support first
-AC_MSG_CHECKING([for SSE2 support])
-AC_COMPILE_IFELSE([AC_LANG_PROGRAM([#include <emmintrin.h>], [__m128d test = _mm_setzero_pd();])],
+# Check for SSE4.1 support
+AC_MSG_CHECKING([for SSE4.1 support])
+AC_COMPILE_IFELSE(
+  [AC_LANG_PROGRAM([
+    #include <smmintrin.h>
+  ], [
+    __m128 test = _mm_dp_ps(_mm_set1_ps(1.0f), _mm_set1_ps(2.0f), 0xFF);
+  ])],
   [AC_MSG_RESULT([yes])
-   DEFINES="${DEFINES} -DHAS_SSE -DRAYSIMD -DRAYSIMDVECOFF"
-   CXXFLAGS="${CXXFLAGS} -msse2"],
+   DEFINES="${DEFINES} -DHAS_SSE -DHAS_SSE41 -DRAYSIMD -DRAYSIMDVECOFF"
+   CXXFLAGS="${CXXFLAGS} -msse4.1"
+  ],
   [AC_MSG_RESULT([no])
-   # If SSE2 not found, try SSE
-   AC_MSG_CHECKING([for SSE support])
-   AC_COMPILE_IFELSE([AC_LANG_PROGRAM([#include <xmmintrin.h>], [__m128 test = _mm_setzero_ps();])],
+   
+   # If SSE4.1 not found, check SSE3
+   AC_MSG_CHECKING([for SSE3 support])
+   AC_COMPILE_IFELSE(
+     [AC_LANG_PROGRAM([
+       #include <pmmintrin.h>
+     ], [
+       __m128 test = _mm_hadd_ps(_mm_set1_ps(1.0f), _mm_set1_ps(1.0f));
+     ])],
      [AC_MSG_RESULT([yes])
-      DEFINES="${DEFINES} -DHAS_SSE -DRAYSIMD -DRAYSIMDVECOFF"
-      CXXFLAGS="${CXXFLAGS} -msse"],
-     [AC_MSG_RESULT([no])])])
+      DEFINES="${DEFINES} -DHAS_SSE -DHAS_SSE3 -DRAYSIMD -DRAYSIMDVECOFF"
+      CXXFLAGS="${CXXFLAGS} -msse3"
+     ],
+     [AC_MSG_RESULT([no])
+      
+      # If SSE3 not found, fall back to SSE2
+      AC_MSG_CHECKING([for SSE2 support])
+      AC_COMPILE_IFELSE(
+        [AC_LANG_PROGRAM([
+          #include <emmintrin.h>
+        ], [
+          __m128d test = _mm_setzero_pd();
+        ])],
+        [AC_MSG_RESULT([yes])
+         DEFINES="${DEFINES} -DHAS_SSE -DRAYSIMD -DRAYSIMDVECOFF"
+         CXXFLAGS="${CXXFLAGS} -msse2"
+        ],
+        [AC_MSG_RESULT([no])
+         # If SSE2 not found, try SSE or nothing
+         AC_MSG_CHECKING([for SSE support])
+         AC_COMPILE_IFELSE(
+           [AC_LANG_PROGRAM([
+             #include <xmmintrin.h>
+           ], [
+             __m128 test = _mm_setzero_ps();
+           ])],
+           [AC_MSG_RESULT([yes])
+            DEFINES="${DEFINES} -DHAS_SSE -DRAYSIMD -DRAYSIMDVECOFF"
+            CXXFLAGS="${CXXFLAGS} -msse"
+           ],
+           [AC_MSG_RESULT([no])
+            # SSE not found at all; no vector intrinsics
+           ])
+        ])
+     ])
+  ])
 
 AC_MSG_CHECKING([for NEON support])
 AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
@@ -99,7 +144,7 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
    CXXFLAGS="${CXXFLAGS} -mfpu=neon"],
   [AC_MSG_RESULT([no])])
 
-AC_SUBST([PKG_CPPFLAGS], ["${PKG_CPPFLAGS} ${OIDN_CPPFLAGS}"])
+AC_SUBST([PKG_CPPFLAGS], ["${PKG_CPPFLAGS} ${OIDN_CPPFLAGS} -DR_NO_REMAP"])
 AC_SUBST([PKG_LIBS], ["${LIBS} ${PKG_LIBS} ${OIDN_LDFLAGS} ${OIDN_LIBS}"])
 AC_SUBST([DEFINES], ["${DEFINES}"])
 
