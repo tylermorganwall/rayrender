@@ -131,3 +131,12 @@ test_that("render_scene basic options", {
   expect_error(render_scene(scene1,lookat=c(0,0.5,0), width  = 3, bloom=TRUE))
   expect_error(render_scene(scene1,lookat=c(0,0.5,0), height = 3, bloom=TRUE))
 })
+
+
+test_that("Test basic rendering", {
+  set.seed(1)
+  generate_cornell() |> 
+    render_scene(samples=16, denoise=F) ->
+  rgb_output
+  expect_true(abs(sum(rgb_output) - 232160.35) < 0.01)
+})

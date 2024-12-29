@@ -136,7 +136,7 @@ generate_cornell(light_position = c(555/2,554,10),
  add_object(text3d(label="🗻", x=180,y=230,z=260+50,text_height=300, 
    font_size = 500,material=diffuse(color="black"), 
    angle=c(0,0,0))) |>
- render_scene(samples=32)
+ render_scene(samples=16)
 
 
 }
