@@ -110,7 +110,7 @@ AC_COMPILE_IFELSE(
           __m128d test = _mm_setzero_pd();
         ])],
         [AC_MSG_RESULT([yes])
-         DEFINES="${DEFINES} -DHAS_SSE -DRAYSIMD -DRAYSIMDVECOFF"
+         DEFINES="${DEFINES} -DHAS_SSE -DHAS_SSE2 -DRAYSIMD -DRAYSIMDVECOFF"
          CXXFLAGS="${CXXFLAGS} -msse2"
         ],
         [AC_MSG_RESULT([no])

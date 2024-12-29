@@ -9,6 +9,30 @@ has_gui_capability <- function() {
     .Call(`_rayrender_has_gui_capability`)
 }
 
+cppdef_HAS_OIDN <- function() {
+    .Call(`_rayrender_cppdef_HAS_OIDN`)
+}
+
+cppdef_HAS_NEON <- function() {
+    .Call(`_rayrender_cppdef_HAS_NEON`)
+}
+
+cppdef_HAS_SSE <- function() {
+    .Call(`_rayrender_cppdef_HAS_SSE`)
+}
+
+cppdef_HAS_SSE2 <- function() {
+    .Call(`_rayrender_cppdef_HAS_SSE2`)
+}
+
+cppdef_HAS_SSE3 <- function() {
+    .Call(`_rayrender_cppdef_HAS_SSE3`)
+}
+
+cppdef_HAS_SSE41 <- function() {
+    .Call(`_rayrender_cppdef_HAS_SSE41`)
+}
+
 render_animation_rcpp <- function(scene, camera_info, scene_info, render_info, camera_movement, start_frame, end_frame, filenames, post_process_frame, toneval, bloom, write_image, transparent_background) {
     invisible(.Call(`_rayrender_render_animation_rcpp`, scene, camera_info, scene_info, render_info, camera_movement, start_frame, end_frame, filenames, post_process_frame, toneval, bloom, write_image, transparent_background))
 }

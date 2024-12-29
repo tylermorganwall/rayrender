@@ -47,6 +47,7 @@ render_scene(
   return_raw_array = FALSE,
   progress = interactive(),
   verbose = FALSE,
+  print_debug_info = FALSE,
   new_page = TRUE,
   integrator_type = "rtiow"
 )
@@ -205,6 +206,9 @@ information.}
 
 \item{verbose}{Default `FALSE`. Prints information and timing information about scene
 construction and raytracing progress.}
+
+\item{print_debug_info}{Default `FALSE`. This will print out additional information on the compilation environment with
+each render.}
 
 \item{new_page}{Default `TRUE`. Whether to call `grid::grid.newpage()` when plotting the image (if
 no filename specified). Set to `FALSE` for faster plotting (does not affect render time).}

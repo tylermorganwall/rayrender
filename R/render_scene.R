@@ -13,7 +13,7 @@
 #' @param samples Default `100`. The maximum number of samples for each pixel. If this is a length-2
 #' vector and the `sample_method` is `stratified`, this will control the number of strata in each dimension.
 #' The total number of samples in this case will be the product of the two numbers.
-#' @param preview Default `TRUE`. Whether to display a real-time progressive preview of the render. Press ESC to cancel the render.
+#' @param preview Default `interactive()`. Whether to display a real-time progressive preview of the render. Press ESC to cancel the render.
 #' @param interactive Default `interactive()`. Whether the scene preview should be interactive. Camera movement orbits around the 
 #' lookat point (unless the mode is switched to free flying), with the following control mapping:
 #' W = Forward, S = Backward, A = Left, D = Right, Q = Up, Z = Down, 
@@ -116,9 +116,11 @@
 #' @param bvh_type Default `"sah"`, "surface area heuristic". Method of building the bounding volume
 #' hierarchy structure used when rendering. Other option is "equal", which splits tree into groups
 #' of equal size.
-#' @param progress Default `TRUE` if interactive session, `FALSE` otherwise. 
+#' @param progress Default `interactive()` if interactive session, `FALSE` otherwise. 
 #' @param verbose Default `FALSE`. Prints information and timing information about scene
 #' construction and raytracing progress.
+#' @param print_debug_info Default `FALSE`. This will print out additional information on the compilation environment with
+#' each render.
 #' @param new_page Default `TRUE`. Whether to call `grid::grid.newpage()` when plotting the image (if
 #' no filename specified). Set to `FALSE` for faster plotting (does not affect render time).
 #' @export
@@ -236,9 +238,31 @@ render_scene = function(scene, width = 400, height = 400, fov = 20,
                         environment_light = NULL, rotate_env = 0, intensity_env = 1,
                         transparent_background = FALSE,
                         debug_channel = "none", return_raw_array = FALSE, 
-                        progress = interactive(), verbose = FALSE, new_page = TRUE,
+                        progress = interactive(), verbose = FALSE, print_debug_info = FALSE,
+                        new_page = TRUE,
                         integrator_type = "rtiow") { 
   init_time()
+  if(print_debug_info) {
+    message(sprintf(
+"------Debug Info------
+RAY_HAS_X11: %s 
+HAS_SSE: %s 
+HAS_SSE2: %s 
+HAS_SSE3: %s 
+HAS_SSE41:  %s
+HAS_NEON: %s
+HAS_OIDN: %s
+----------------------", 
+      ifelse(has_gui_capability(),"TRUE","FALSE"),
+      ifelse(cppdef_HAS_SSE(),"TRUE","FALSE"),
+      ifelse(cppdef_HAS_SSE2(),"TRUE","FALSE"),
+      ifelse(cppdef_HAS_SSE3(),"TRUE","FALSE"),
+      ifelse(cppdef_HAS_SSE41(),"TRUE","FALSE"),
+      ifelse(cppdef_HAS_NEON(),"TRUE","FALSE"),
+      ifelse(cppdef_HAS_OIDN(),"TRUE","FALSE")
+      )
+    )
+  }
   if(samples > 256 && sample_method == "sobol_blue") {
     warning('"sobol_blue" sample method only valid for `samples` than or equal to 256--switching to `sample_method = "sobol"`')
     sample_method = "sobol"

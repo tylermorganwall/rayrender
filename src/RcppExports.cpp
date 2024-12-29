@@ -30,6 +30,66 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// cppdef_HAS_OIDN
+bool cppdef_HAS_OIDN();
+RcppExport SEXP _rayrender_cppdef_HAS_OIDN() {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    rcpp_result_gen = Rcpp::wrap(cppdef_HAS_OIDN());
+    return rcpp_result_gen;
+END_RCPP
+}
+// cppdef_HAS_NEON
+bool cppdef_HAS_NEON();
+RcppExport SEXP _rayrender_cppdef_HAS_NEON() {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    rcpp_result_gen = Rcpp::wrap(cppdef_HAS_NEON());
+    return rcpp_result_gen;
+END_RCPP
+}
+// cppdef_HAS_SSE
+bool cppdef_HAS_SSE();
+RcppExport SEXP _rayrender_cppdef_HAS_SSE() {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    rcpp_result_gen = Rcpp::wrap(cppdef_HAS_SSE());
+    return rcpp_result_gen;
+END_RCPP
+}
+// cppdef_HAS_SSE2
+bool cppdef_HAS_SSE2();
+RcppExport SEXP _rayrender_cppdef_HAS_SSE2() {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    rcpp_result_gen = Rcpp::wrap(cppdef_HAS_SSE2());
+    return rcpp_result_gen;
+END_RCPP
+}
+// cppdef_HAS_SSE3
+bool cppdef_HAS_SSE3();
+RcppExport SEXP _rayrender_cppdef_HAS_SSE3() {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    rcpp_result_gen = Rcpp::wrap(cppdef_HAS_SSE3());
+    return rcpp_result_gen;
+END_RCPP
+}
+// cppdef_HAS_SSE41
+bool cppdef_HAS_SSE41();
+RcppExport SEXP _rayrender_cppdef_HAS_SSE41() {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    rcpp_result_gen = Rcpp::wrap(cppdef_HAS_SSE41());
+    return rcpp_result_gen;
+END_RCPP
+}
 // render_animation_rcpp
 void render_animation_rcpp(List scene, List camera_info, List scene_info, List render_info, List camera_movement, int start_frame, int end_frame, CharacterVector filenames, Function post_process_frame, int toneval, bool bloom, bool write_image, bool transparent_background);
 RcppExport SEXP _rayrender_render_animation_rcpp(SEXP sceneSEXP, SEXP camera_infoSEXP, SEXP scene_infoSEXP, SEXP render_infoSEXP, SEXP camera_movementSEXP, SEXP start_frameSEXP, SEXP end_frameSEXP, SEXP filenamesSEXP, SEXP post_process_frameSEXP, SEXP tonevalSEXP, SEXP bloomSEXP, SEXP write_imageSEXP, SEXP transparent_backgroundSEXP) {
@@ -86,6 +146,12 @@ RcppExport SEXP run_testthat_tests(SEXP);
 static const R_CallMethodDef CallEntries[] = {
     {"_rayrender_PrintClassSizes", (DL_FUNC) &_rayrender_PrintClassSizes, 0},
     {"_rayrender_has_gui_capability", (DL_FUNC) &_rayrender_has_gui_capability, 0},
+    {"_rayrender_cppdef_HAS_OIDN", (DL_FUNC) &_rayrender_cppdef_HAS_OIDN, 0},
+    {"_rayrender_cppdef_HAS_NEON", (DL_FUNC) &_rayrender_cppdef_HAS_NEON, 0},
+    {"_rayrender_cppdef_HAS_SSE", (DL_FUNC) &_rayrender_cppdef_HAS_SSE, 0},
+    {"_rayrender_cppdef_HAS_SSE2", (DL_FUNC) &_rayrender_cppdef_HAS_SSE2, 0},
+    {"_rayrender_cppdef_HAS_SSE3", (DL_FUNC) &_rayrender_cppdef_HAS_SSE3, 0},
+    {"_rayrender_cppdef_HAS_SSE41", (DL_FUNC) &_rayrender_cppdef_HAS_SSE41, 0},
     {"_rayrender_render_animation_rcpp", (DL_FUNC) &_rayrender_render_animation_rcpp, 13},
     {"_rayrender_render_scene_rcpp", (DL_FUNC) &_rayrender_render_scene_rcpp, 4},
     {"_rayrender_tonemap_image", (DL_FUNC) &_rayrender_tonemap_image, 4},
