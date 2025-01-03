@@ -2,21 +2,20 @@
 
 test_that("Test rendering with and without OIDN", {
   set.seed(1)
-  generate_cornell() |> 
-    render_scene(samples=16, denoise=F, print_debug_info = TRUE, return_raw_array = TRUE) ->
-  rgb_output
+  rgb_output = generate_cornell() |> 
+    render_scene(samples=16, denoise = FALSE, preview = FALSE,
+      print_debug_info = TRUE, return_raw_array = TRUE)
   if(abs(sum(rgb_output) - 232160.35) > 0.01) {
-    message(sprintf("Sum of rgb_output is %f", sum(rgb_output)))
+    warning(sprintf("Sum of rgb_output is %f", sum(rgb_output)))
   }
-  expect_true(abs(sum(rgb_output) - 232160.35) < 0.01)
+  expect_true(abs(sum(rgb_output) - 232160.35) < 0.5)
   if(rayrender:::cppdef_HAS_OIDN()()) {
     set.seed(1)
-    generate_cornell() |> 
-      render_scene(samples=16, preview = FALSE, return_raw_array = TRUE) ->
-    rgb_output_oidn
+    rgb_output_oidn = generate_cornell() |> 
+      render_scene(samples=16, preview = FALSE, return_raw_array = TRUE)
     if(abs(sum(rgb_output_oidn) - 235740.581) > 0.01) {
-      message(sprintf("Sum of rgb_output_oidn is %f", sum(rgb_output_oidn)))
+      warning(sprintf("Sum of rgb_output_oidn is %f", sum(rgb_output_oidn)))
     }
-    expect_true(abs(sum(rgb_output_oidn) - 235740.581) < 0.01)
+    expect_true(abs(sum(rgb_output_oidn) - 235740.581) < 0.5)
   }
 })

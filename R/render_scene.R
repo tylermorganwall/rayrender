@@ -329,7 +329,8 @@ Left Mouse Click: Change Look At (new focal distance) | Right Mouse Click: Chang
                                   intensity_env = intensity_env,
                                   debug_channel = debug_channel, return_raw_array = return_raw_array,
                                   progress = progress, verbose = verbose, sample_dist = Inf, 
-                                  integrator_type = integrator_type, denoise = denoise)
+                                  integrator_type = integrator_type, denoise = denoise,
+                                  print_debug_info = print_debug_info)
   print_time(verbose, "Pre-processed scene")
   
   camera_info = scene_list$camera_info

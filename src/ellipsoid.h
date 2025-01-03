@@ -33,6 +33,11 @@ class ellipsoid: public hitable {
     size_t GetSize()  {
       return(sizeof(*this));
     }
+    virtual void hitable_info_bounds(Float t0, Float t1) const {
+      aabb box;
+      bounding_box(t0, t1, box);
+      Rcpp::Rcout << GetName() << ": " <<  box.min() << "-" << box.max() << "\n";
+    }
     point3f center;
     Float radius;
     vec3f axes;

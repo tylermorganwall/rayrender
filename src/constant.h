@@ -23,9 +23,16 @@ public:
   Float pdf_value(const point3f& o, const vec3f& v, Sampler* sampler, Float time = 0);
   vec3f random(const point3f& o, random_gen& rng, Float time = 0);
   vec3f random(const point3f& o, Sampler* sampler, Float time = 0);
-  
+  std::string GetName() const {
+    return(std::string("Constant"));
+  }
   size_t GetSize()  {
     return(sizeof(*this) + boundary->GetSize());
+  }
+  virtual void hitable_info_bounds(Float t0, Float t1) const {
+    aabb box;
+    bounding_box(t0, t1, box);
+    Rcpp::Rcout << GetName() << ": " <<  box.min() << "-" << box.max() << "\n";
   }
   
   std::shared_ptr<hitable> boundary;

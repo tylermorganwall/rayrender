@@ -28,6 +28,11 @@ public:
   virtual std::string GetName() const {
     return(std::string("Instance"));
   }
+  virtual void hitable_info_bounds(Float t0, Float t1) const {
+    aabb box;
+    bounding_box(t0, t1, box);
+    Rcpp::Rcout << GetName() << ": " <<  box.min() << "-" << box.max() << "\n";
+  }
   size_t GetSize();
   
   //Embedded scene

@@ -32,6 +32,11 @@ class plymesh : public hitable {
   size_t GetSize()  {
     return(ply_mesh_bvh->GetSize() + sizeof(triangles));
   }
+  virtual void hitable_info_bounds(Float t0, Float t1) const {
+    aabb box;
+    bounding_box(t0, t1, box);
+    Rcpp::Rcout << GetName() << ": " <<  box.min() << "-" << box.max() << "\n";
+  }
   std::pair<size_t,size_t> CountNodeLeaf();
   
   std::unique_ptr<TriangleMesh> mesh;

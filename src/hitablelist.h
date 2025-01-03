@@ -22,8 +22,18 @@ class hitable_list: public hitable {
     void add(std::shared_ptr<hitable> object) { objects.push_back(object); }
     std::shared_ptr<hitable> back() {return(objects.back());}
     void validate() const;
+    virtual void hitable_info_bounds(Float t0, Float t1) const {
+      aabb box_top;
+      bounding_box(t0, t1, box_top);
+      Rcpp::Rcout << GetName() << ": " <<  box_top.min() << "-" << box_top.max() << "\n";
+      for(size_t i = 0; i < objects.size(); i++) {
+        aabb box;
+        objects[i]->bounding_box(t0, t1, box);
+        Rcpp::Rcout << "   " << objects[i]->GetName() << ": " <<  box.min() << "-" << box.max() << "\n";
+      }
+    }
     
-    int size() {return(objects.size());}
+    size_t size() {return(objects.size());}
     std::vector<std::shared_ptr<hitable>> objects;
     std::string GetName() const;
     size_t GetSize();

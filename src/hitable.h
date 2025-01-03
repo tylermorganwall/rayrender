@@ -12,6 +12,7 @@
 #include "animatedtransform.h"
 #include <memory>
 #include <cfloat>
+#include <tuple>
 
 class material;
 class hitable;
@@ -89,13 +90,14 @@ class hitable {
     virtual vec3f random(const point3f& o, Sampler* sampler, Float time = 0) {
       return(vec3f(0,1,0));
     }
-    virtual std::string GetName() const {
-      return(std::string("Hitable"));
-    }
+    virtual std::string GetName() const = 0;
+
     virtual size_t GetSize() = 0;
     virtual std::pair<size_t,size_t> CountNodeLeaf() {
       return(std::pair<size_t,size_t>(0,1));
     }
+
+    virtual void hitable_info_bounds(Float t0, Float t1) const = 0;
     
     virtual ~hitable() {}
     const std::shared_ptr<Transform> ObjectToWorld, WorldToObject;
@@ -129,6 +131,11 @@ public:
   std::string GetName() const;
   size_t GetSize() {
     return(sizeof(*this));
+  }
+  virtual void hitable_info_bounds(Float t0, Float t1) const {
+    aabb box;
+    bounding_box(t0, t1, box);
+    Rcpp::Rcout << GetName() << ": " <<  box.min() << "-" << box.max() << "\n";
   }
   bool bounding_box(Float t0, Float t1, aabb& box) const;
   std::shared_ptr<hitable> primitive;

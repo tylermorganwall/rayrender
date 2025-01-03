@@ -49,6 +49,11 @@ class curve: public hitable {
     size_t GetSize()  {
       return(sizeof(*this) + sizeof(*common));
     }
+    virtual void hitable_info_bounds(Float t0, Float t1) const {
+      aabb box;
+      bounding_box(t0, t1, box);
+      Rcpp::Rcout << GetName() << ": " <<  box.min() << "-" << box.max() << "\n";
+    }
   private:
     bool recursiveIntersect(const ray& r, Float tmin, Float tmax, hit_record& rec,
                             const point3f cp[4], Float u0, Float u1, int depth,

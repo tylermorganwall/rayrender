@@ -32,6 +32,11 @@ class sphere: public hitable {
     virtual std::string GetName() const {
       return(std::string("Sphere"));
     }
+    virtual void hitable_info_bounds(Float t0, Float t1) const {
+      aabb box;
+      bounding_box(t0, t1, box);
+      Rcpp::Rcout << GetName() << ": " <<  box.min() << "-" << box.max() << "\n";
+    }
     size_t GetSize();
     Float radius;
     std::shared_ptr<alpha_texture> alpha_mask;

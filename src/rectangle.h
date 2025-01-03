@@ -34,6 +34,11 @@ public:
   size_t GetSize() {
     return(sizeof(*this));
   }
+  virtual void hitable_info_bounds(Float t0, Float t1) const {
+    aabb box;
+    bounding_box(t0, t1, box);
+    Rcpp::Rcout << GetName() << ": " <<  box.min() << "-" << box.max() << "\n";
+  }
   Float x0, x1, y0, y1, k;
   std::shared_ptr<alpha_texture> alpha_mask;
   std::shared_ptr<bump_texture> bump_tex;
@@ -67,6 +72,11 @@ public:
   size_t GetSize() {
     return(sizeof(*this));
   }
+  virtual void hitable_info_bounds(Float t0, Float t1) const {
+    aabb box;
+    bounding_box(t0, t1, box);
+    Rcpp::Rcout << GetName() << ": " <<  box.min() << "-" << box.max() << "\n";
+  }
   Float x0, x1, z0, z1, k;
   std::shared_ptr<alpha_texture> alpha_mask;
   std::shared_ptr<bump_texture> bump_tex;
@@ -98,6 +108,11 @@ public:
   }
   size_t GetSize() {
     return(sizeof(*this));
+  }
+  virtual void hitable_info_bounds(Float t0, Float t1) const {
+    aabb box;
+    bounding_box(t0, t1, box);
+    Rcpp::Rcout << GetName() << ": " <<  box.min() << "-" << box.max() << "\n";
   }
   Float y0, y1, z0, z1, k;
   std::shared_ptr<alpha_texture> alpha_mask;

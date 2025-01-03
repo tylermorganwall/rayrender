@@ -85,74 +85,84 @@ struct alignas(64) LinearBVHNode4 { // 13 bytes to spare if needed using uint8, 
 };
 
 class BVHAggregate : public hitable {
-  public:
-        BVHAggregate(std::vector<std::shared_ptr<hitable> > prims,
-                    float t_min, float t_max, 
-                    int maxPrimsInNode, bool sah, 
-                    std::shared_ptr<Transform> ObjectToWorld, 
-                    std::shared_ptr<Transform> WorldToObject, 
-                    bool reverseOrientation);
-                    
-        BVHAggregate(std::vector<std::shared_ptr<hitable> > prims,
-                    float t_min, float t_max, 
-                    int maxPrimsInNode, bool sah);
-        
-        // static BVHAggregate *Create(std::vector<Primitive> prims,
-        //                         const ParameterDictionary &parameters);
-        
-        // Bounds3f Bounds() const;
-        // pstd::optional<ShapeIntersection> Intersect(const Ray &ray, Float tMax) const;
-        // bool IntersectP(const Ray &ray, Float tMax) const;
+public:
+    BVHAggregate(std::vector<std::shared_ptr<hitable> > prims,
+                float t_min, float t_max, 
+                int maxPrimsInNode, bool sah, 
+                std::shared_ptr<Transform> ObjectToWorld, 
+                std::shared_ptr<Transform> WorldToObject, 
+                bool reverseOrientation);
+                
+    BVHAggregate(std::vector<std::shared_ptr<hitable> > prims,
+                float t_min, float t_max, 
+                int maxPrimsInNode, bool sah);
+    
+    // static BVHAggregate *Create(std::vector<Primitive> prims,
+    //                         const ParameterDictionary &parameters);
+    
+    // Bounds3f Bounds() const;
+    // pstd::optional<ShapeIntersection> Intersect(const Ray &ray, Float tMax) const;
+    // bool IntersectP(const Ray &ray, Float tMax) const;
 
-        virtual const bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const;
-        virtual const bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const;
-        virtual bool HitP(const ray &r, Float t_min, Float t_max, random_gen& rng) const;
-        virtual bool HitP(const ray &r, Float t_min, Float t_max, Sampler* sampler) const;
+    virtual const bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const;
+    virtual const bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const;
+    virtual bool HitP(const ray &r, Float t_min, Float t_max, random_gen& rng) const;
+    virtual bool HitP(const ray &r, Float t_min, Float t_max, Sampler* sampler) const;
 
-        virtual bool bounding_box(Float t0, Float t1, aabb& box) const;
-        
-        Float pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Float time = 0);
-        Float pdf_value(const point3f& o, const vec3f& v, Sampler* sampler, Float time = 0);
-        vec3f random(const point3f& o, random_gen& rng, Float time = 0);
-        vec3f random(const point3f& o, Sampler* sampler, Float time = 0);
-        // void validate_bvh();
-        
-        std::string GetName() const {
-            return(std::string("BVH"));
-        }
-        size_t GetSize() {
-            return(0);
-        };
-        void transformToSimdFormat();
-        aabb scene_bounds;
-        // std::vector<BVH4Node> simdNodes;
-        int n_nodes;
-        // std::pair<size_t,size_t> CountNodeLeaf();
-  private:
-       BVHBuildNode *buildRecursive(std::span<BVHPrimitive> bvhPrimitives,
-                                    std::atomic<int> *totalNodes,
-                                    std::atomic<int> *orderedPrimsOffset,
-                                    std::vector<std::shared_ptr<hitable> > &orderedPrims);
-       BVHBuildNode4* ConvertBVH2ToBVH4(BVHBuildNode* node, int* totalNodes4);
-    //    BVHBuildNode *buildHLBVH(Allocator alloc,
-    //                             const std::vector<BVHPrimitive> &primitiveInfo,
-    //                             std::atomic<int> *totalNodes,
-    //                             std::vector<Primitive> &orderedPrims);
-    //    BVHBuildNode *emitLBVH(BVHBuildNode *&buildNodes,
-    //                           const std::vector<BVHPrimitive> &primitiveInfo,
-    //                           MortonPrimitive *mortonPrims, int nPrimitives, int *totalNodes,
-    //                           std::vector<Primitive> &orderedPrims,
-    //                           std::atomic<int> *orderedPrimsOffset, int bitIndex);
-    //    BVHBuildNode *buildUpperSAH(Allocator alloc,
-    //                                std::vector<BVHBuildNode *> &treeletRoots, int start,
-    //                                int end, std::atomic<int> *totalNodes) const;
-       int flattenBVH(BVHBuildNode *node, int *offset);
-       int flattenBVH4(BVHBuildNode4* node, int* offset);
-       void validateBVH4() const;
+    virtual bool bounding_box(Float t0, Float t1, aabb& box) const;
+    
+    Float pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Float time = 0);
+    Float pdf_value(const point3f& o, const vec3f& v, Sampler* sampler, Float time = 0);
+    vec3f random(const point3f& o, random_gen& rng, Float time = 0);
+    vec3f random(const point3f& o, Sampler* sampler, Float time = 0);
+    virtual void hitable_info_bounds(Float t0, Float t1) const {
+      aabb box_top;
+      bounding_box(t0, t1, box_top);
+      Rcpp::Rcout << GetName() << ": " <<  box_top.min() << "-" << box_top.max() << "\n";
+      for(size_t i = 0; i < primitives.size(); i++) {
+        aabb box;
+        primitives[i]->bounding_box(t0, t1, box);
+        Rcpp::Rcout << "   " << primitives[i]->GetName() << ": " <<  box.min() << "-" << box.max() << "\n";
+      }
+    }
+    // void validate_bvh();
+    
+    std::string GetName() const {
+        return(std::string("BVH"));
+    }
+    size_t GetSize() {
+        return(0);
+    };
+    void transformToSimdFormat();
+    aabb scene_bounds;
+    // std::vector<BVH4Node> simdNodes;
+    int n_nodes;
+    // std::pair<size_t,size_t> CountNodeLeaf();
+private:
+    BVHBuildNode *buildRecursive(std::span<BVHPrimitive> bvhPrimitives,
+                                std::atomic<int> *totalNodes,
+                                std::atomic<int> *orderedPrimsOffset,
+                                std::vector<std::shared_ptr<hitable> > &orderedPrims);
+    BVHBuildNode4* ConvertBVH2ToBVH4(BVHBuildNode* node, int* totalNodes4);
+//    BVHBuildNode *buildHLBVH(Allocator alloc,
+//                             const std::vector<BVHPrimitive> &primitiveInfo,
+//                             std::atomic<int> *totalNodes,
+//                             std::vector<Primitive> &orderedPrims);
+//    BVHBuildNode *emitLBVH(BVHBuildNode *&buildNodes,
+//                           const std::vector<BVHPrimitive> &primitiveInfo,
+//                           MortonPrimitive *mortonPrims, int nPrimitives, int *totalNodes,
+//                           std::vector<Primitive> &orderedPrims,
+//                           std::atomic<int> *orderedPrimsOffset, int bitIndex);
+//    BVHBuildNode *buildUpperSAH(Allocator alloc,
+//                                std::vector<BVHBuildNode *> &treeletRoots, int start,
+//                                int end, std::atomic<int> *totalNodes) const;
+    int flattenBVH(BVHBuildNode *node, int *offset);
+    int flattenBVH4(BVHBuildNode4* node, int* offset);
+    void validateBVH4() const;
 
-       int maxPrimsInNode;
-       int totalNodes4;
-       std::vector<std::shared_ptr<hitable> > primitives;
+    int maxPrimsInNode;
+    int totalNodes4;
+    std::vector<std::shared_ptr<hitable> > primitives;
     //    SplitMethod splitMethod;
        std::unique_ptr<LinearBVHNode[]> nodes;
        std::unique_ptr<LinearBVHNode4[]> nodes4;

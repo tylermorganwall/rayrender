@@ -41,6 +41,11 @@ public:
     return(std::string("RayMesh"));
   }
   size_t GetSize();
+  virtual void hitable_info_bounds(Float t0, Float t1) const {
+    aabb box;
+    bounding_box(t0, t1, box);
+    Rcpp::Rcout << GetName() << ": " <<  box.min() << "-" << box.max() << "\n";
+  }
   std::pair<size_t,size_t> CountNodeLeaf();
   
   //Data Members

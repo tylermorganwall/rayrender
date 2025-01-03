@@ -26,6 +26,11 @@ public:
   size_t GetSize()  {
     return(sizeof(*this));
   }
+  virtual void hitable_info_bounds(Float t0, Float t1) const {
+    aabb box;
+    bounding_box(t0, t1, box);
+    Rcpp::Rcout << GetName() << ": " <<  box.min() << "-" << box.max() << "\n";
+  }
   vec3f pmin, pmax;
   hitable_list list;
 };

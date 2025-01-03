@@ -25,7 +25,6 @@ run_tests = function(func, argument_grid, plot_prefix="", ...) {
                              verbose = FALSE, 
                              preview = FALSE, 
                              progress = FALSE))
-    
     # args = append(args, list(filename = path))
     do.call(func, args = args) |> 
       expect_no_error()
@@ -56,10 +55,11 @@ test_that("render_scene basic options", {
   render_args_basic = expand.grid(width         = list(50,100),
                                   height        = list(50,100),
                                   clamp_value   = list(Inf, 10),
+                                  denoise       = list(TRUE, FALSE),
                                   parallel      = list(TRUE, FALSE))
   
   run_tests("render_scene", render_args_basic, plot_prefix = "basic", 
-            list(scene = scene1,
+            list(scene = scene1,  lookat=c(0, 1, 0), return_raw_array = TRUE,
                  samples = 16,
                  ortho_dimensions = c(3,3)))
   
@@ -70,7 +70,7 @@ test_that("render_scene basic options", {
                                         fov           = list(0,40,360))
   
   run_tests("render_scene", render_args_camera_info, plot_prefix = "cam_info", 
-            list(scene = scene1,
+            list(scene = scene1,lookat=c(0, 1, 0), return_raw_array = TRUE,
                  samples = 16,
                  ortho_dimensions = c(3,3)))
   
@@ -80,7 +80,7 @@ test_that("render_scene basic options", {
                                                                     "uncharted","hbd"))
   
   run_tests("render_scene", render_args_post_processing_info, plot_prefix = "post", 
-            list(scene = scene1,
+            list(scene = scene1,lookat=c(0, 1, 0), return_raw_array = TRUE,
                  samples = 16,
                  ortho_dimensions = c(3,3)))
   
@@ -89,7 +89,7 @@ test_that("render_scene basic options", {
                                                  return_raw_array = list(TRUE, FALSE))
   
   run_tests("render_scene", render_args_debug, plot_prefix = "debug", 
-            list(scene = scene1,
+            list(scene = scene1,lookat=c(0, 1, 0), return_raw_array = TRUE,
                  samples = 16,
                  ortho_dimensions = c(3,3)))
   
@@ -100,7 +100,7 @@ test_that("render_scene basic options", {
                                      ambient = list(TRUE, FALSE))
   
   run_tests("render_scene", render_sampling_args, plot_prefix = "sampling", 
-            list(scene = scene1,
+            list(scene = scene1,lookat=c(0, 1, 0), return_raw_array = TRUE,
                  width = 200,
                  height = 200))
   
@@ -108,7 +108,7 @@ test_that("render_scene basic options", {
                                         roulette_active_depth = list(100,10,3))
   
   run_tests("render_scene", render_termination_args, plot_prefix = "termination", 
-            list(scene = scene1,
+            list(scene = scene1,lookat=c(0, 1, 0), return_raw_array = TRUE,
                  samples = 16,
                  width = 200,
                  height = 200))
@@ -121,7 +121,7 @@ test_that("render_scene basic options", {
   render_realistic_camera_args = render_realistic_camera_args[c(1,4:8,16,25,30),]
   
   run_tests("render_scene", render_realistic_camera_args, plot_prefix = "real_cam", 
-            list(scene = scene1,
+            list(scene = scene1,lookat=c(0, 1, 0), return_raw_array = TRUE,
                  samples = 16,
                  iso = 10000,
                  width = 200,
