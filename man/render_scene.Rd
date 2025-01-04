@@ -70,7 +70,7 @@ The total number of samples in this case will be the product of the two numbers.
 \item{camera_description_file}{Default `NA`. Filename of a camera description file for rendering with
 a realistic camera. Several camera files are built-in: `"50mm"`,`"wide"`,`"fisheye"`, and `"telephoto"`.}
 
-\item{preview}{Default `TRUE`. Whether to display a real-time progressive preview of the render. Press ESC to cancel the render.}
+\item{preview}{Default `interactive()`. Whether to display a real-time progressive preview of the render. Press ESC to cancel the render.}
 
 \item{interactive}{Default `interactive()`. Whether the scene preview should be interactive. Camera movement orbits around the 
 lookat point (unless the mode is switched to free flying), with the following control mapping:
@@ -202,7 +202,7 @@ values (with white for `metal` and `dielectric` materials).}
 \item{return_raw_array}{Default `FALSE`. If `TRUE`, function will return raw array with RGB intensity
 information.}
 
-\item{progress}{Default `TRUE` if interactive session, `FALSE` otherwise.}
+\item{progress}{Default `interactive()` if interactive session, `FALSE` otherwise.}
 
 \item{verbose}{Default `FALSE`. Prints information and timing information about scene
 construction and raytracing progress.}

@@ -70,7 +70,7 @@ test_that("render_scene basic options", {
                                         fov           = list(0,40,360))
   
   run_tests("render_scene", render_args_camera_info, plot_prefix = "cam_info", 
-            list(scene = scene1,lookat=c(0, 1, 0), return_raw_array = TRUE,
+            list(scene = scene1,return_raw_array = TRUE,
                  samples = 16,
                  ortho_dimensions = c(3,3)))
   
@@ -89,7 +89,7 @@ test_that("render_scene basic options", {
                                                  return_raw_array = list(TRUE, FALSE))
   
   run_tests("render_scene", render_args_debug, plot_prefix = "debug", 
-            list(scene = scene1,lookat=c(0, 1, 0), return_raw_array = TRUE,
+            list(scene = scene1,lookat=c(0, 1, 0), 
                  samples = 16,
                  ortho_dimensions = c(3,3)))
   
