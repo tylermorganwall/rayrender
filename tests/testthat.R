@@ -10,7 +10,7 @@ library(testthat)
 library(rayrender)
 
 if(!isTRUE(as.logical(Sys.getenv("RAY_COLOR_DEBUG", "false")))) {
-  test_check("rayrender")
+  test_check("rayrender", filter = "integrator", invert = TRUE)
 } else {
   # Just test
   test_check("rayrender", filter = "integrator")
