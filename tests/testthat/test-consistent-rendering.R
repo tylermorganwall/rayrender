@@ -34,5 +34,5 @@ test_that("Test rendering with and without OIDN, snapshot", {
     generate_cornell() |> 
       render_scene(samples=16, preview = FALSE, filename=path_oidn)
     expect_snapshot_file(path_oidn, variant = Sys.info()[["sysname"]])
-
+  }
 })
