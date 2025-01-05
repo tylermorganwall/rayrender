@@ -19,3 +19,20 @@ test_that("Test rendering with and without OIDN", {
     expect_true(abs(sum(rgb_output_oidn) - 235740.581) < 100)
   }
 })
+
+test_that("Test rendering with and without OIDN, snapshot", {
+  set.seed(1)
+  path = tempfile(fileext = ".png")
+  generate_cornell() |> 
+    render_scene(samples=16, denoise = FALSE, 
+      preview = FALSE, filename=path)
+  expect_snapshot_file(path, variant = Sys.info()[["sysname"]])
+  if(rayrender:::cppdef_HAS_OIDN()) {
+    set.seed(1)
+    path_oidn = tempfile(pattern="oidn", fileext = ".png")
+
+    generate_cornell() |> 
+      render_scene(samples=16, preview = FALSE, filename=path_oidn)
+    expect_snapshot_file(path_oidn, variant = Sys.info()[["sysname"]])
+
+})
