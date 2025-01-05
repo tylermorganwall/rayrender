@@ -259,6 +259,12 @@ inline T dot(const vec3<T>& v1, const vec3<T>& v2) {
     return v1.e[0]*v2.e[0] + v1.e[1]*v2.e[1] + v1.e[2]*v2.e[2];
 }
 
+template<typename T> 
+inline std::ostream& operator<<(std::ostream &os, const vec3<T> &t) {
+  os << t.e[0] << ", " << t.e[1] << ", " << t.e[2];
+  return os;
+}
+
 // Cross product for generic vec3<T>
 template<typename T>
 inline vec3<T> cross(const vec3<T>& v1, const vec3<T>& v2) {
