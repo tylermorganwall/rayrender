@@ -2,12 +2,12 @@
 #   code
 #   path
 # }
-# 
-# compare_image = function(path1, path2) {
-#   image1 = png::readPNG(path1)
-#   image2 = png::readPNG(path2)
-#   return(identical(image1, image2))
-# }
+
+compare_image = function(path1, path2) {
+  image1 = png::readPNG(path1)
+  image2 = png::readPNG(path2)
+  return(identical(image1, image2))
+}
 
 run_tests = function(func, argument_grid, plot_prefix="", ...) {
   stopifnot(inherits(argument_grid,"data.frame"))
@@ -59,7 +59,8 @@ test_that("render_scene basic options", {
                                   parallel      = list(TRUE, FALSE))
   
   run_tests("render_scene", render_args_basic, plot_prefix = "basic", 
-            list(scene = scene1,  lookat=c(0, 1, 0), return_raw_array = TRUE,
+            list(scene = scene1,  
+                 lookat=c(0, 1, 0), return_raw_array = TRUE,
                  samples = 16,
                  ortho_dimensions = c(3,3)))
   
@@ -130,4 +131,23 @@ test_that("render_scene basic options", {
   
   expect_error(render_scene(scene1,lookat=c(0,0.5,0), width  = 3, bloom=TRUE))
   expect_error(render_scene(scene1,lookat=c(0,0.5,0), height = 3, bloom=TRUE))
+})
+
+
+
+test_that("Test debug channels", {
+  set.seed(1)
+  debug_channels = c("depth", "normals", "uv", "dpdu", "dpdv", 
+            "color", "position", "direction", "time", 
+            "shape", "bounces", "camera", "material")
+  inputs = expand.grid(depth = 1:6,debug_channels=debug_channels)
+  path_debug = tempfile(pattern = apply(inputs,1,paste0,collapse="_"), 
+                        fileext = ".png")
+  for(i in seq_len(nrow(inputs))) {
+    generate_cornell() |> 
+      render_scene(samples=1, preview = FALSE,max_depth = inputs$depth[i],
+        debug_channel = inputs$debug_channels[i],
+      filename = path_debug[i])
+    expect_snapshot_file(path_debug[i], variant = Sys.info()[["sysname"]])
+  }
 })
