@@ -306,7 +306,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
     display.DrawImage(adaptive_pixel_sampler, adaptive_pixel_sampler_small,
                       s, pb, progress_bar,
                       (Float)s/(Float)ns, &world, rng_interactive);
-    if(display.terminate) {
+    if(display.terminate && display.preview) {
       adaptive_pixel_sampler.ns = s;
       adaptive_pixel_sampler.max_s = s;
       break;

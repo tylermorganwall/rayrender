@@ -70,13 +70,15 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
 #ifdef RAY_HAS_X11
   if (d) {
 #ifdef HAS_OIDN
-  filter.execute();
-  RayMatrix &rgb  = adaptive_pixel_sampler.draw_rgb_output;
-  if(!denoise) {
-    rgb = adaptive_pixel_sampler.rgb;
-  }
+    if(denoise) {
+      filter.execute();
+    }
+    RayMatrix &rgb  = adaptive_pixel_sampler.draw_rgb_output;
+    if(!denoise) {
+      rgb = adaptive_pixel_sampler.rgb;
+    }
 #else
-  RayMatrix &rgb  = adaptive_pixel_sampler.rgb;
+    RayMatrix &rgb  = adaptive_pixel_sampler.rgb;
 #endif
     std::vector<bool>& finalized = adaptive_pixel_sampler.finalized;
     std::vector<bool>& just_finalized = adaptive_pixel_sampler.just_finalized;
@@ -678,11 +680,11 @@ PreviewDisplay::PreviewDisplay(unsigned int _width, unsigned int _height,
 #endif
   Keyframes.clear();
   write_fast_output = false;
+  terminate = false;
+  orbit = true;
 #ifdef RAY_HAS_X11
   speed = 1.f;
   interactive = _interactive;
-  orbit = true;
-  terminate = false;
   env_y_angle = 0;
   base_step = initial_lookat_distance/20;
   cam = _cam;
@@ -730,8 +732,6 @@ PreviewDisplay::PreviewDisplay(unsigned int _width, unsigned int _height,
 #ifdef RAY_WINDOWS
   speed = 1.f;
   interactive = _interactive;
-  orbit = true;
-  terminate = false;
   term = false;
   env_y_angle = 0;
   Keyframes_w = &Keyframes;
