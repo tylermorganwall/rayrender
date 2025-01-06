@@ -144,8 +144,14 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
    CXXFLAGS="${CXXFLAGS} -mfpu=neon"],
   [AC_MSG_RESULT([no])])
 
-if test -n "$RAY_COLOR_DEBUG"; then
+AC_MSG_CHECKING([If test debugging should be turned on:])
+AC_MSG_NOTICE([RAY_COLOR_DEBUG is "$RAY_COLOR_DEBUG"])
+
+if test "$RAY_COLOR_DEBUG" = "true"; then
+  AC_MSG_RESULT([Yes, enabling debug])
   DEFINES="${DEFINES} -DRAY_COLOR_DEBUG"
+else
+  AC_MSG_RESULT([No, not enabling debug])
 fi
 
 AC_SUBST([PKG_CPPFLAGS], ["${PKG_CPPFLAGS} ${OIDN_CPPFLAGS}"])
