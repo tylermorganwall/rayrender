@@ -386,7 +386,7 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
   delete shared_materials;
   PutRNGstate();
   print_time(verbose, "Finished rendering" );
-  RayMatrix &final_output = rgb_output;
+  RayMatrix final_output = rgb_output;
 #ifdef HAS_OIDN
   if(denoise) {
     final_output = draw_rgb_output;
