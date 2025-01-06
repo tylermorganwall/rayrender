@@ -82,36 +82,20 @@ jobs:
           7z x oidn-2.3.1.x64.windows.zip
           echo "OIDN_PATH=$(pwd)/oidn-2.3.1.x64.windows" >> $GITHUB_ENV
 
-      - name: Set color debugging env
+      - name: Set color debugging env + single core
         if: matrix.config.ray_color_debug == 'true'
         run: |
+          echo 'options(cores=1)' >> ~/.Rprofile
           echo "RAY_COLOR_DEBUG=true" >> $GITHUB_ENV
-          echo "RAY_COLOR_DEBUG=true" >> .Renviron
 
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
           extra-packages: any::rcmdcheck
-
-      - name: Install rayshader
-        run: |
-          Rscript -e "if(!requireNamespace('remotes', quietly = TRUE)) install.packages('remotes')"
-          Rscript -e "remotes::install_github('tylermorganwall/rayshader')"
-          Rscript -e "remotes::install_github('tylermorganwall/rayrender')"
-
-      - name: Set single-core for tests
-        if: matrix.config.ray_color_debug == 'true'
-        run: echo 'options(cores=1)' >> ~/.Rprofile
   
       - uses: r-lib/actions/check-r-package@v2
-        env:
-          RAY_COLOR_DEBUG: ${{ matrix.config.ray_color_debug || 'false' }}
         with:
           upload-snapshots: true
-          build_args: >
-            c(
-              "--no-manual",
-              "--compact-vignettes=gs+qpdf"
-            )
+          build_args: c("--no-manual","--compact-vignettes=gs+qpdf")
 
       - name: Upload check logs
         if: always()
