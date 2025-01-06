@@ -50,6 +50,15 @@ jobs:
           r-version: ${{ matrix.config.r }}
           http-user-agent: ${{ matrix.config.http-user-agent }}
           use-public-rspm: true
+          
+      - name: Determine cache setting
+        id: set_cache
+        run: |
+          if [ "${{ matrix.config.ray_color_debug }}" = "true" ]; then
+            echo "::set-output name=cache_setting::false"
+          else
+            echo "::set-output name=cache_setting::true"
+          fi
 
       - name: Install OIDN (macOS)
         if: runner.os == 'macOS' && matrix.config.oidn == 'true'
@@ -83,17 +92,10 @@ jobs:
           echo "OIDN_PATH=$(pwd)/oidn-2.3.1.x64.windows" >> $GITHUB_ENV
           
       - uses: r-lib/actions/setup-r-dependencies@v2
-        if: matrix.config.ray_color_debug == 'false'
         with:
           extra-packages: any::rcmdcheck
           needs: check
-
-      - uses: r-lib/actions/setup-r-dependencies@v2
-        if: matrix.config.ray_color_debug == 'true'
-        with:
-          cache: false
-          extra-packages: any::rcmdcheck
-          needs: check
+          cache: ${{ steps.set_cache.outputs.cache_setting }}
 
       - name: Set single-core for tests
         if: matrix.config.ray_color_debug == 'true'
@@ -104,13 +106,19 @@ jobs:
           RAY_COLOR_DEBUG: ${{ matrix.config.ray_color_debug || 'false' }}
         with:
           upload-snapshots: true
-          build_args: 'c("--no-manual","--compact-vignettes=gs+qpdf")'
+          build_args: >
+            c(
+              "--no-manual",
+              "--compact-vignettes=gs+qpdf",
+              "--configure-vars=RAY_COLOR_DEBUG=${{ matrix.config.ray_color_debug || '' }}"
+            )
 
       - name: Upload check logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: check-logs
+          # Make the artifact name unique per OS + R + debug status
+          name: "check-logs-${{ matrix.config.os }}-${{ matrix.config.r }}-${{ matrix.config.ray_color_debug }}"
           path: |
             **/*.Rcheck/00install.out
             **/*.Rcheck/00check.log
