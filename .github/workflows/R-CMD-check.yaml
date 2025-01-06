@@ -53,6 +53,7 @@ jobs:
           
       - name: Determine cache setting
         id: set_cache
+        shell: bash  
         run: |
           if [ "${{ matrix.config.ray_color_debug }}" = "true" ]; then
             echo "::set-output name=cache_setting::false"
@@ -94,7 +95,6 @@ jobs:
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
           extra-packages: any::rcmdcheck
-          needs: check
           cache: ${{ steps.set_cache.outputs.cache_setting }}
 
       - name: Set single-core for tests
