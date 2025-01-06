@@ -41,10 +41,6 @@ jobs:
         if: runner.os == 'macOS'
         run: echo "RGL_USE_NULL=TRUE" >> $GITHUB_ENV
 
-      - name: Set RAY_COLOR_DEBUG if enabled
-        if: matrix.config.ray_color_debug == 'true'
-        run: echo "RAY_COLOR_DEBUG=true" >> $GITHUB_ENV
-
       - uses: actions/checkout@v4
 
       - uses: r-lib/actions/setup-pandoc@v2
@@ -96,10 +92,12 @@ jobs:
         run: echo 'options(cores=1)' >> ~/.Rprofile
 
       - uses: r-lib/actions/check-r-package@v2
+        env:
+          RAY_COLOR_DEBUG: ${{ matrix.config.ray_color_debug || 'false' }}
         with:
           upload-snapshots: true
           build_args: 'c("--no-manual","--compact-vignettes=gs+qpdf")'
-          
+
       - name: Upload check logs
         if: always()
         uses: actions/upload-artifact@v4
