@@ -50,16 +50,6 @@ jobs:
           r-version: ${{ matrix.config.r }}
           http-user-agent: ${{ matrix.config.http-user-agent }}
           use-public-rspm: true
-          
-      - name: Determine cache setting
-        id: set_cache
-        shell: bash  
-        run: |
-          if [ "${{ matrix.config.ray_color_debug }}" = "true" ]; then
-            echo "::set-output name=cache_setting::false"
-          else
-            echo "::set-output name=cache_setting::true"
-          fi
 
       - name: Install OIDN (macOS)
         if: runner.os == 'macOS' && matrix.config.oidn == 'true'
@@ -95,12 +85,20 @@ jobs:
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
           extra-packages: any::rcmdcheck
-          cache: ${{ steps.set_cache.outputs.cache_setting }}
+
+      - name: Install rayshader
+        env:
+          RAY_COLOR_DEBUG: ${{ matrix.config.ray_color_debug || 'false' }}
+        run: |
+          Rscript -e "if(!requireNamespace('remotes', quietly = TRUE)) install.packages('remotes')"
+          Rscript -e "remotes::install_github('tylermorganwall/rayshader')"
+          Rscript -e "remotes::install_github('tylermorganwall/rayrender')"
+
 
       - name: Set single-core for tests
         if: matrix.config.ray_color_debug == 'true'
         run: echo 'options(cores=1)' >> ~/.Rprofile
-
+  
       - uses: r-lib/actions/check-r-package@v2
         env:
           RAY_COLOR_DEBUG: ${{ matrix.config.ray_color_debug || 'false' }}
@@ -109,8 +107,7 @@ jobs:
           build_args: >
             c(
               "--no-manual",
-              "--compact-vignettes=gs+qpdf",
-              "--configure-vars=RAY_COLOR_DEBUG=${{ matrix.config.ray_color_debug || '' }}"
+              "--compact-vignettes=gs+qpdf"
             )
 
       - name: Upload check logs
