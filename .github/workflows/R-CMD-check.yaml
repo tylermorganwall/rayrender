@@ -94,7 +94,7 @@ jobs:
         run: |
           Rscript -e "if(!requireNamespace('remotes', quietly = TRUE)) install.packages('remotes')"
           Rscript -e "remotes::install_github('tylermorganwall/rayshader')"
-          Rscript -e "remotes::install_github('tylermorganwall/rayrender')"
+          Rscript -e "remotes::install_github('tylermorganwall/rayrender',configure.vars = c('RAY_COLOR_DEBUG=true'))
 
       - name: Set single-core for tests
         if: matrix.config.ray_color_debug == 'true'
