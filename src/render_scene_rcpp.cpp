@@ -377,10 +377,12 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
   }
   PRINT_CURRENT_MEMORY("After raytracing");
 #ifdef HAS_OIDN
-  filter.execute();
-  const char* errorMessage;
-  if (device.getError(errorMessage) != oidn::Error::None) {
-    Rcpp::Rcout << "Error: " << errorMessage << std::endl;
+  if(denoise) {
+    filter.execute();
+    const char* errorMessage;
+    if (device.getError(errorMessage) != oidn::Error::None) {
+      Rcpp::Rcout << "Error: " << errorMessage << std::endl;
+    }
   }
 #endif
   delete shared_materials;
