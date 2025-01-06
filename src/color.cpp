@@ -22,18 +22,13 @@ void color_basic(const ray &r, hitable *world, size_t max_depth,
   // and make those transparent when transparent_background = TRUE
   for (size_t i = 0; i < max_depth; i++) {
     #ifdef RAY_COLOR_DEBUG
-    Rcpp::Rcout << i << "th ray: O[" <<  r2.origin() << "] D[" << r2.direction() << "] T[" << r2.time() << "]\n";
+    Rcpp::Rcout << i << "th ray: O[" <<  r2.origin() << "] Color: [" << throughput << "]\n\n";
     #endif
     bool is_invisible = false;
     hit_record hrec;
     START_TIMER("Total Hits");
     if (world->hit(r2, 0.001, MaxT, hrec,
                    rng)) { // generated hit record, world space
-      #ifdef RAY_COLOR_DEBUG
-      Rcpp::Rcout << "P [" << hrec.p << "] Shp[" << hrec.shape->GetName() << "] t[" << hrec.t << "] Mat[" << hrec.mat_ptr->GetName() << "]\n";
-      Rcpp::Rcout << "Alpha [" << hrec.alpha_miss << "] pErr[" << hrec.pError << "] N[" << hrec.normal << "] Inf[" << hrec.infinite_area_hit << "]\n";
-      Rcpp::Rcout << "dpdu [" << hrec.dpdu << "] dpdv[" << hrec.dpdv << "] u[" << hrec.u << "] v[" << hrec.v << "\n";
-      #endif
       STOP_TIMER("Total Hits");
       scatter_record srec;
       if (hrec.alpha_miss) {
@@ -143,18 +138,13 @@ void color_basic_path_guiding(const ray &r, hitable *world, hitable_list *hlist,
   // and make those transparent when transparent_background = TRUE
   for (size_t i = 0; i < max_depth; i++) {
     #ifdef RAY_COLOR_DEBUG
-    Rcpp::Rcout << i << "th ray: O[" <<  r2.origin() << "] D[" << r2.direction() << "] T[" << r2.time() << "]\n\n";
+    Rcpp::Rcout << i << "th ray: O[" <<  r2.origin() << "] Color: [" << throughput << "]\n\n";
     #endif
     bool is_invisible = false;
     hit_record hrec;
     START_TIMER("Total Hits");
     if (world->hit(r2, 0.001, MaxT, hrec,
                    rng)) { // generated hit record, world space
-      #ifdef RAY_COLOR_DEBUG
-      Rcpp::Rcout << "P [" << hrec.p << "] Shp[" << hrec.shape->GetName() << "] t[" << hrec.t << "] Mat[" << hrec.mat_ptr->GetName() << "]\n";
-      Rcpp::Rcout << "Alpha [" << hrec.alpha_miss << "] pErr[" << hrec.pError << "] N[" << hrec.normal << "] Inf[" << hrec.infinite_area_hit << "]\n";
-      Rcpp::Rcout << "dpdu [" << hrec.dpdu << "] dpdv[" << hrec.dpdv << "] u[" << hrec.u << "] v[" << hrec.v << "\n";
-      #endif
       STOP_TIMER("Total Hits");
       scatter_record srec;
       if (hrec.alpha_miss) {
@@ -270,18 +260,13 @@ void color_shadow_rays(const ray &r, hitable *world, hitable_list *hlist,
   // and make those transparent when transparent_background = TRUE
   for (size_t i = 0; i < max_depth; i++) {
     #ifdef RAY_COLOR_DEBUG
-    Rcpp::Rcout << i << "th ray: O[" <<  r2.origin() << "] D[" << r2.direction() << " T[" << r2.time() << "]\n";
+    Rcpp::Rcout << i << "th ray: O[" <<  r2.origin() << "] Color: [" << throughput << "]\n\n";
     #endif
     bool is_invisible = false;
     hit_record hrec;
     START_TIMER("Total Hits");
     if (world->hit(r2, 0.001, MaxT, hrec,
                    rng)) { // generated hit record, world space
-      #ifdef RAY_COLOR_DEBUG
-      Rcpp::Rcout << "P [" << hrec.p << "] Shp[" << hrec.shape->GetName() << "] t[" << hrec.t << "] Mat[" << hrec.mat_ptr->GetName() << "]\n";
-      Rcpp::Rcout << "Alpha [" << hrec.alpha_miss << "] pErr[" << hrec.pError << "] N[" << hrec.normal << "] Inf[" << hrec.infinite_area_hit << "]\n";
-      Rcpp::Rcout << "dpdu [" << hrec.dpdu << "] dpdv[" << hrec.dpdv << "] u[" << hrec.u << "] v[" << hrec.v << "\n";
-      #endif
       STOP_TIMER("Total Hits");
       scatter_record srec;
       if (hrec.alpha_miss) {
