@@ -83,7 +83,15 @@ jobs:
           echo "OIDN_PATH=$(pwd)/oidn-2.3.1.x64.windows" >> $GITHUB_ENV
           
       - uses: r-lib/actions/setup-r-dependencies@v2
+        if: matrix.config.ray_color_debug == 'false'
         with:
+          extra-packages: any::rcmdcheck
+          needs: check
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        if: matrix.config.ray_color_debug == 'true'
+        with:
+          cache: false
           extra-packages: any::rcmdcheck
           needs: check
 
