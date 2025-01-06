@@ -84,7 +84,9 @@ jobs:
 
       - name: Set color debugging env
         if: matrix.config.ray_color_debug == 'true'
-        run: echo "RAY_COLOR_DEBUG=true" >> $GITHUB_ENV
+        run: |
+          echo "RAY_COLOR_DEBUG=true" >> $GITHUB_ENV
+          echo "RAY_COLOR_DEBUG=true" >> .Renviron
 
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
@@ -94,7 +96,7 @@ jobs:
         run: |
           Rscript -e "if(!requireNamespace('remotes', quietly = TRUE)) install.packages('remotes')"
           Rscript -e "remotes::install_github('tylermorganwall/rayshader')"
-          Rscript -e "remotes::install_github('tylermorganwall/rayrender',configure.vars = c('RAY_COLOR_DEBUG=true'))
+          Rscript -e "remotes::install_github('tylermorganwall/rayrender')"
 
       - name: Set single-core for tests
         if: matrix.config.ray_color_debug == 'true'
