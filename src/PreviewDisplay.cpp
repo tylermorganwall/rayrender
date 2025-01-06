@@ -681,11 +681,11 @@ PreviewDisplay::PreviewDisplay(unsigned int _width, unsigned int _height,
   Keyframes.clear();
   write_fast_output = false;
   terminate = false;
-  orbit = true;
 #ifdef RAY_HAS_X11
   speed = 1.f;
   interactive = _interactive;
   env_y_angle = 0;
+  orbit = true;
   base_step = initial_lookat_distance/20;
   cam = _cam;
   if(preview) {
