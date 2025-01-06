@@ -312,5 +312,10 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
       break;
     }
   }
+
+  #ifdef RAY_COLOR_DEBUG
+  Rcpp::Rcout << "ns: " << adaptive_pixel_sampler.ns << " adaptive_pixel_sampler.rgb pre divide:\n";
+  adaptive_pixel_sampler.rgb.print();
+  #endif 
   adaptive_pixel_sampler.write_final_pixels();
 }
