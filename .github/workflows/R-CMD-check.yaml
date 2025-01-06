@@ -99,3 +99,13 @@ jobs:
         with:
           upload-snapshots: true
           build_args: 'c("--no-manual","--compact-vignettes=gs+qpdf")'
+          
+      - name: Upload check logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: check-logs
+          path: |
+            **/*.Rcheck/00install.out
+            **/*.Rcheck/00check.log
+          if-no-files-found: ignore
