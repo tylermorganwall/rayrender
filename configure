@@ -4438,16 +4438,20 @@ fi
 
 
 
-# Check for SSE2 support first
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for SSE2 support" >&5
-printf %s "checking for SSE2 support... " >&6; }
+# Check for SSE4.1 support
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for SSE4.1 support" >&5
+printf %s "checking for SSE4.1 support... " >&6; }
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-#include <emmintrin.h>
+
+    #include <smmintrin.h>
+
 int
 main (void)
 {
-__m128d test = _mm_setzero_pd();
+
+    __m128 test = _mm_dp_ps(_mm_set1_ps(1.0f), _mm_set1_ps(2.0f), 0xFF);
+
   ;
   return 0;
 }
@@ -4456,21 +4460,27 @@ if ac_fn_cxx_try_compile "$LINENO"
 then :
   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 printf "%s\n" "yes" >&6; }
-   DEFINES="${DEFINES} -DHAS_SSE -DRAYSIMD -DRAYSIMDVECOFF"
-   CXXFLAGS="${CXXFLAGS} -msse2"
+   DEFINES="${DEFINES} -DHAS_SSE -DHAS_SSE41 -DRAYSIMD -DRAYSIMDVECOFF"
+   CXXFLAGS="${CXXFLAGS} -msse4.1"
+
 else $as_nop
   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
 printf "%s\n" "no" >&6; }
-   # If SSE2 not found, try SSE
-   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for SSE support" >&5
-printf %s "checking for SSE support... " >&6; }
+
+   # If SSE4.1 not found, check SSE3
+   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for SSE3 support" >&5
+printf %s "checking for SSE3 support... " >&6; }
    cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-#include <xmmintrin.h>
+
+       #include <pmmintrin.h>
+
 int
 main (void)
 {
-__m128 test = _mm_setzero_ps();
+
+       __m128 test = _mm_hadd_ps(_mm_set1_ps(1.0f), _mm_set1_ps(1.0f));
+
   ;
   return 0;
 }
@@ -4479,13 +4489,80 @@ if ac_fn_cxx_try_compile "$LINENO"
 then :
   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 printf "%s\n" "yes" >&6; }
-      DEFINES="${DEFINES} -DHAS_SSE -DRAYSIMD -DRAYSIMDVECOFF"
-      CXXFLAGS="${CXXFLAGS} -msse"
+      DEFINES="${DEFINES} -DHAS_SSE -DHAS_SSE3 -DRAYSIMD -DRAYSIMDVECOFF"
+      CXXFLAGS="${CXXFLAGS} -msse3"
+
 else $as_nop
   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
 printf "%s\n" "no" >&6; }
+
+      # If SSE3 not found, fall back to SSE2
+      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for SSE2 support" >&5
+printf %s "checking for SSE2 support... " >&6; }
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+          #include <emmintrin.h>
+
+int
+main (void)
+{
+
+          __m128d test = _mm_setzero_pd();
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_compile "$LINENO"
+then :
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+printf "%s\n" "yes" >&6; }
+         DEFINES="${DEFINES} -DHAS_SSE -DHAS_SSE2 -DRAYSIMD -DRAYSIMDVECOFF"
+         CXXFLAGS="${CXXFLAGS} -msse2"
+
+else $as_nop
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf "%s\n" "no" >&6; }
+         # If SSE2 not found, try SSE or nothing
+         { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for SSE support" >&5
+printf %s "checking for SSE support... " >&6; }
+         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+             #include <xmmintrin.h>
+
+int
+main (void)
+{
+
+             __m128 test = _mm_setzero_ps();
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_compile "$LINENO"
+then :
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+printf "%s\n" "yes" >&6; }
+            DEFINES="${DEFINES} -DHAS_SSE -DRAYSIMD -DRAYSIMDVECOFF"
+            CXXFLAGS="${CXXFLAGS} -msse"
+
+else $as_nop
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf "%s\n" "no" >&6; }
+            # SSE not found at all; no vector intrinsics
+
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
+
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
 
@@ -4517,6 +4594,20 @@ else $as_nop
 printf "%s\n" "no" >&6; }
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
+
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking If test debugging should be turned on:" >&5
+printf %s "checking If test debugging should be turned on:... " >&6; }
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: RAY_COLOR_DEBUG is \"$RAY_COLOR_DEBUG\"" >&5
+printf "%s\n" "$as_me: RAY_COLOR_DEBUG is \"$RAY_COLOR_DEBUG\"" >&6;}
+
+if test "$RAY_COLOR_DEBUG" = "true"; then
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: Yes, enabling debug" >&5
+printf "%s\n" "Yes, enabling debug" >&6; }
+  DEFINES="${DEFINES} -DRAY_COLOR_DEBUG"
+else
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: No, not enabling debug" >&5
+printf "%s\n" "No, not enabling debug" >&6; }
+fi
 
 PKG_CPPFLAGS="${PKG_CPPFLAGS} ${OIDN_CPPFLAGS}"
 
