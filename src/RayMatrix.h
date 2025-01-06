@@ -14,6 +14,17 @@ public:
   inline void add_one(unsigned int x, unsigned int y, unsigned int channel) { 
     data[channel + channels * x + channels * nrow * y] += 1;
   }
+  inline void print() {
+    for(unsigned int k = 0; k < channels; k++) {
+      Rcpp::Rcout << "Channel: " << k << "\n\n";
+      for(unsigned int i = 0; i < nrow; i++) {
+        for(unsigned int j = 0; j < ncol; j++) {
+          Rcpp::Rcout << (*this)(i,j,k) << " ";
+        }
+        Rcpp::Rcout << "\n";
+      }
+    }
+  }
   unsigned int rows() {return(nrow);}
   unsigned int cols() {return(ncol);}
   unsigned int nrows() {return(nrow);}

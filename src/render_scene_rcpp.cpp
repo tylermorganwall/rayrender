@@ -392,6 +392,9 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
     final_output = draw_rgb_output;
   }
 #endif
+  #ifdef RAY_COLOR_DEBUG
+  final_output.print();
+  #endif
   List final_image = List::create(_["r"] = final_output.ConvertRcpp(0), 
                                   _["g"] = final_output.ConvertRcpp(1), 
                                   _["b"] = final_output.ConvertRcpp(2),
