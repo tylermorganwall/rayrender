@@ -81,19 +81,20 @@ jobs:
           curl -LO https://github.com/OpenImageDenoise/oidn/releases/download/v2.3.1/oidn-2.3.1.x64.windows.zip
           7z x oidn-2.3.1.x64.windows.zip
           echo "OIDN_PATH=$(pwd)/oidn-2.3.1.x64.windows" >> $GITHUB_ENV
-          
+
+      - name: Set color debugging env
+        if: matrix.config.ray_color_debug == 'true'
+        run: echo "RAY_COLOR_DEBUG=true" >> $GITHUB_ENV
+
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
           extra-packages: any::rcmdcheck
 
       - name: Install rayshader
-        env:
-          RAY_COLOR_DEBUG: ${{ matrix.config.ray_color_debug || 'false' }}
         run: |
           Rscript -e "if(!requireNamespace('remotes', quietly = TRUE)) install.packages('remotes')"
           Rscript -e "remotes::install_github('tylermorganwall/rayshader')"
           Rscript -e "remotes::install_github('tylermorganwall/rayrender')"
-
 
       - name: Set single-core for tests
         if: matrix.config.ray_color_debug == 'true'
