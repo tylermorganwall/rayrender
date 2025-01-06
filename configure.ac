@@ -73,7 +73,7 @@ AC_SUBST([OIDN_CPPFLAGS])
 AC_SUBST([OIDN_LDFLAGS])
 AC_SUBST([OIDN_LIBS])
 
-# Check for SSE4.1 support
+# Check for SSE/NEON support
 AC_MSG_CHECKING([for SSE4.1 support])
 AC_COMPILE_IFELSE(
   [AC_LANG_PROGRAM([
@@ -141,7 +141,11 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
 ]], [[float32x4_t test = vdupq_n_f32(0.0);]])],
   [AC_MSG_RESULT([yes])
    DEFINES="${DEFINES} -DHAS_NEON -DRAYSIMD -DRAYSIMDVECOFF"
-   CXXFLAGS="${CXXFLAGS} -mfpu=neon"],
+   if test "$darwin" = "yes"; then
+     CXXFLAGS="${CXXFLAGS} -march=armv8-a+simd"
+   else
+     CXXFLAGS="${CXXFLAGS} -mfpu=neon"
+   fi],
   [AC_MSG_RESULT([no])])
 
 AC_MSG_CHECKING([If test debugging should be turned on:])
@@ -168,6 +172,7 @@ echo "
     cppflags: ${CPPFLAGS} ${DEFINES}
     libs:     ${PKG_LIBS}
     includes: ${PKG_CPPFLAGS}
+    cxxflags: ${CXXFLAGS}
 
   --------------------------------------------------
 "
