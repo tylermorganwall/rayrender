@@ -35,6 +35,14 @@ struct BVHSplitBucket {
 
 
 struct BVHBuildNode {
+    ~BVHBuildNode() {
+        if(children[0]) {
+            delete children[0];
+        }
+        if(children[1]) {
+            delete children[1];
+        }
+    }
     // BVHBuildNode Public Methods
     void InitLeaf(int first, int n, const aabb& b) {
         firstPrimOffset = first;
@@ -58,6 +66,13 @@ struct BVHBuildNode {
 };
 
 struct BVHBuildNode4 {
+    ~BVHBuildNode4() {
+        for(int i = 0; i < 4; i++) {
+            if(children[i]) {
+                delete children[i];
+            }
+        }
+    }
     aabb bounds;
     BVHBuildNode4* children[4]; // Up to 4 children
     int nChildren;              // Number of valid children (1 to 4)

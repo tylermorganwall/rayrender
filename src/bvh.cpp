@@ -121,8 +121,10 @@ BVHAggregate::BVHAggregate(std::vector<std::shared_ptr<hitable> > prims,
     totalNodes4 = 0;
     BVHBuildNode4* rootBVH4 = ConvertBVH2ToBVH4(root, &totalNodes4);
     nodes4.reset(new LinearBVHNode4[totalNodes4]);
+    delete root;
     int offset4 = 0;
     flattenBVH4(rootBVH4, &offset4);
+    delete rootBVH4;
     // validateBVH4();
 #endif
 }
@@ -162,9 +164,11 @@ BVHAggregate::BVHAggregate(std::vector<std::shared_ptr<hitable> > prims,
 #else
     totalNodes4 = 0;
     BVHBuildNode4* rootBVH4 = ConvertBVH2ToBVH4(root, &totalNodes4);
+    delete root;
     nodes4.reset(new LinearBVHNode4[totalNodes4]);
     int offset4 = 0;
     flattenBVH4(rootBVH4, &offset4);
+    delete rootBVH4; //NEED TO WRITE THIS
     // validateBVH4();
 #endif
 }

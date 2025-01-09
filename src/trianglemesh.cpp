@@ -844,7 +844,7 @@ TriangleMesh::TriangleMesh(Rcpp::List raymesh, bool verbose, bool calculate_cons
                            std::shared_ptr<Transform> WorldToObject, 
                            bool reverseOrientation) : nTriangles(0) {
   Rcpp::List shape_container = Rcpp::as<Rcpp::List>(raymesh["shapes"]);
-
+  has_vertex_colors = false;
   Rcpp::List vertex_raw = raymesh["vertices"];
   Rcpp::List normals_raw = raymesh["normals"];
   Rcpp::List tex_raw = raymesh["texcoords"];
@@ -1038,6 +1038,7 @@ TriangleMesh::TriangleMesh(float* vertices,
                            std::shared_ptr<Transform> ObjectToWorld, 
                            std::shared_ptr<Transform> WorldToObject, 
                            bool reverseOrientation) : nTriangles(0) {
+  has_vertex_colors = false;
   texture_size = 0;
   vertexIndices.clear();
   normalIndices.clear();

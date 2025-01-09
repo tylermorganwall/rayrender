@@ -449,7 +449,7 @@ std::shared_ptr<hitable> build_scene(List& scene,
     bool has_bump = false;
     bool has_roughness = false;
     
-    if(is_shared_mat && shared_materials->size() > static_cast<size_t>(material_id - 1)) {
+    if(is_shared_mat && static_cast<int>(shared_materials->size()) > (material_id - 1)) {
       shape_material = shared_materials->at(material_id-1);
       texture_idx.push_back(material_id-1);
     } else {
@@ -470,7 +470,7 @@ std::shared_ptr<hitable> build_scene(List& scene,
                                           tricolorinfo);
       texture_idx.push_back(init_texture_size + i);
     }
-    if(is_shared_mat && shared_materials->size() < static_cast<size_t>(material_id)) {
+    if(is_shared_mat && static_cast<int>(shared_materials->size()) < material_id) {
       shared_materials->push_back(shape_material);
     }
     
