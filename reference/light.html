@@ -194,7 +194,7 @@ begins with value `gradient_color`.</p></dd>
 <span class="r-in"><span><span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span><span class="va">scene</span>, lookfrom<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">278</span>,<span class="fl">278</span>,<span class="op">-</span><span class="fl">800</span><span class="op">)</span>,lookat <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">278</span>,<span class="fl">278</span>,<span class="fl">0</span><span class="op">)</span>, samples<span class="op">=</span><span class="fl">16</span>,</span></span>
 <span class="r-in"><span>             aperture<span class="op">=</span><span class="fl">0</span>, fov<span class="op">=</span><span class="fl">40</span>, ambient_light<span class="op">=</span><span class="cn">FALSE</span>, parallel<span class="op">=</span><span class="cn">TRUE</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span></span></span>
-<span class="r-plt img"><img src="light-1.png" alt="" width="768" height="768"></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> vector::_M_range_check: __n (which is 2147483647) &gt;= this-&gt;size() (which is 0)</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co">#Remove the light for direct camera rays, but keep the lighting</span></span></span>
 <span class="r-in"><span><span class="va">scene</span> <span class="op">=</span> <span class="fu"><a href="generate_cornell.html">generate_cornell</a></span><span class="op">(</span>light<span class="op">=</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span></span></span>
@@ -204,7 +204,7 @@ begins with value `gradient_color`.</p></dd>
 <span class="r-in"><span><span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span><span class="va">scene</span>, lookfrom<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">278</span>,<span class="fl">278</span>,<span class="op">-</span><span class="fl">800</span><span class="op">)</span>,lookat <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">278</span>,<span class="fl">278</span>,<span class="fl">0</span><span class="op">)</span>, samples<span class="op">=</span><span class="fl">16</span>,</span></span>
 <span class="r-in"><span>             aperture<span class="op">=</span><span class="fl">0</span>, fov<span class="op">=</span><span class="fl">40</span>, ambient_light<span class="op">=</span><span class="cn">FALSE</span>, parallel<span class="op">=</span><span class="cn">TRUE</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span></span></span>
-<span class="r-plt img"><img src="light-2.png" alt="" width="768" height="768"></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> vector::_M_range_check: __n (which is 2147483647) &gt;= this-&gt;size() (which is 0)</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co">#All gather around the orb</span></span></span>
 <span class="r-in"><span><span class="va">scene</span> <span class="op">=</span> <span class="fu"><a href="generate_ground.html">generate_ground</a></span><span class="op">(</span>material <span class="op">=</span> <span class="fu"><a href="diffuse.html">diffuse</a></span><span class="op">(</span>checkercolor<span class="op">=</span><span class="st">"grey50"</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="pipe.html">%&gt;%</a></span></span></span>
@@ -214,7 +214,7 @@ begins with value `gradient_color`.</p></dd>
 <span class="r-in"><span><span class="kw">if</span><span class="op">(</span><span class="fu"><a href="run_documentation.html">run_documentation</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span><span class="va">scene</span>, samples<span class="op">=</span><span class="fl">16</span>, parallel<span class="op">=</span><span class="cn">TRUE</span>, clamp_value<span class="op">=</span><span class="fl">10</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span></span></span>
-<span class="r-plt img"><img src="light-3.png" alt="" width="768" height="768"></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> vector::_M_range_check: __n (which is 2147483647) &gt;= this-&gt;size() (which is 0)</span>
 </code></pre></div>
     </div>
   </div>
