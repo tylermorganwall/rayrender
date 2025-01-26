@@ -3,7 +3,7 @@
 
 box::box(const vec3f& p0, const vec3f& p1, std::shared_ptr<material> ptr, 
          std::shared_ptr<alpha_texture> alpha_mask, std::shared_ptr<bump_texture> bump_tex,
-         std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation) :
+         Transform* ObjectToWorld, Transform* WorldToObject, bool reverseOrientation) :
   hitable(ObjectToWorld, WorldToObject, ptr, reverseOrientation) {
   pmin = (p0);
   pmax = (p1);

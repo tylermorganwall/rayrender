@@ -668,7 +668,7 @@ class csg: public hitable {
   public:
     csg() {}
     csg(std::shared_ptr<material> mat, std::shared_ptr<ImplicitShape> shapes,
-        std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation) : 
+        Transform* ObjectToWorld, Transform* WorldToObject, bool reverseOrientation) : 
           hitable(ObjectToWorld, WorldToObject, mat, reverseOrientation), 
           shapes(shapes) {
       aabb box;

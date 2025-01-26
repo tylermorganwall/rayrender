@@ -104,8 +104,8 @@ public:
     BVHAggregate(std::vector<std::shared_ptr<hitable> > prims,
                 float t_min, float t_max, 
                 int maxPrimsInNode, bool sah, 
-                std::shared_ptr<Transform> ObjectToWorld, 
-                std::shared_ptr<Transform> WorldToObject, 
+                Transform* ObjectToWorld, 
+                Transform* WorldToObject, 
                 bool reverseOrientation);
                 
     BVHAggregate(std::vector<std::shared_ptr<hitable> > prims,

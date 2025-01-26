@@ -182,8 +182,8 @@ void render_animation_rcpp(List scene, List camera_info, List scene_info, List r
   } else {
     BackgroundAngle = Translate(world_center);
   }
-  std::shared_ptr<Transform> BackgroundTransform = transformCache.Lookup(BackgroundAngle);
-  std::shared_ptr<Transform> BackgroundTransformInv = transformCache.Lookup(BackgroundAngle.GetInverseMatrix());
+  Transform* BackgroundTransform = transformCache.Lookup(BackgroundAngle);
+  Transform* BackgroundTransformInv = transformCache.Lookup(BackgroundAngle.GetInverseMatrix());
 
   if(hasbackground) {
     background_texture_data = texCache.LookupFloat(background, nx1, ny1, nn1, 3);
@@ -282,7 +282,7 @@ void render_animation_rcpp(List scene, List camera_info, List scene_info, List r
         Transform CamTransform = LookAt(lookfrom,
                                         lookat,
                                         camera_up).GetInverseMatrix();
-        std::shared_ptr<Transform> CameraTransform = transformCache.Lookup(CamTransform);
+        Transform* CameraTransform = transformCache.Lookup(CamTransform);
         AnimatedTransform CamTr(CameraTransform,0,CameraTransform,0);
         
         std::vector<Float> lensData;
@@ -358,7 +358,7 @@ void render_animation_rcpp(List scene, List camera_info, List scene_info, List r
         Transform CamTransform = LookAt(lookfrom,
                                         lookat,
                                         camera_up).GetInverseMatrix();
-        std::shared_ptr<Transform> CameraTransform = transformCache.Lookup(CamTransform);
+        Transform* CameraTransform = transformCache.Lookup(CamTransform);
         
         AnimatedTransform CamTr(CameraTransform,0,CameraTransform,0);
         
@@ -429,14 +429,14 @@ void render_animation_rcpp(List scene, List camera_info, List scene_info, List r
 #ifdef HAS_OIDN
       PreviewDisplay d(nx, ny, preview, false, 
                    20.0f, cam.get(), 
-                   background_sphere->ObjectToWorld.get(),
-                   background_sphere->WorldToObject.get(),
+                   background_sphere->ObjectToWorld,
+                   background_sphere->WorldToObject,
                    filter, denoise);
 #else
   PreviewDisplay d(nx,ny, preview, false, 
                          20.0f, cam.get(),
-                         background_sphere->ObjectToWorld.get(),
-                         background_sphere->WorldToObject.get());
+                         background_sphere->ObjectToWorld,
+                         background_sphere->WorldToObject);
 #endif
       pathtracer(numbercores, nx, ny, ns, debug_channel,
                  min_variance, min_adaptive_size,

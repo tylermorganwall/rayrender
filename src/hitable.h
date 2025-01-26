@@ -55,11 +55,13 @@ struct alignas(16) hit_record {
 class hitable {
   public:
     hitable() : reverseOrientation(false), transformSwapsHandedness(false) {}
-    hitable(std::shared_ptr<Transform> ObjectToWorld, 
-            std::shared_ptr<Transform> WorldToObject, 
+    hitable(Transform* ObjectToWorld, 
+            Transform* WorldToObject, 
             std::shared_ptr<material> mat_ptr,
             bool reverseOrientation) : 
-      ObjectToWorld(ObjectToWorld), WorldToObject(WorldToObject), mat_ptr(mat_ptr), 
+      ObjectToWorld(ObjectToWorld), 
+      WorldToObject(WorldToObject), 
+      mat_ptr(mat_ptr), 
       reverseOrientation(reverseOrientation),
       transformSwapsHandedness(ObjectToWorld->SwapsHandedness()) {}
     virtual const bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const = 0;
@@ -100,7 +102,8 @@ class hitable {
     virtual void hitable_info_bounds(Float t0, Float t1) const = 0;
     
     virtual ~hitable() {}
-    const std::shared_ptr<Transform> ObjectToWorld, WorldToObject;
+    Transform* ObjectToWorld;
+    Transform* WorldToObject;
     const std::shared_ptr<material> mat_ptr;
     const bool reverseOrientation;
     const bool transformSwapsHandedness;

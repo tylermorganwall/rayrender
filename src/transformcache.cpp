@@ -40,7 +40,7 @@ void TransformCache::Grow() {
   std::swap(hashTable, newTable);
 }
 
-std::shared_ptr<Transform> TransformCache::Lookup(const Transform &t) {
+Transform* TransformCache::Lookup(const Transform &t) {
   int offset = Hash(t) & (hashTable.size() - 1);
   int step = 1;
   while (true) {
@@ -52,12 +52,14 @@ std::shared_ptr<Transform> TransformCache::Lookup(const Transform &t) {
     offset = (offset + step * step) & (hashTable.size() - 1);
     ++step;
   }
-  std::shared_ptr<Transform> tCached = hashTable[offset];
+  Transform* tCached = hashTable[offset].get();
+  std::shared_ptr<Transform> tCached_new;
   if (tCached) {
+    //Do nothing
   } else {
-    tCached = std::make_shared<Transform>();
-    *tCached = t;
-    Insert(tCached);
+    std::shared_ptr<Transform> tCached_new = std::make_shared<Transform>(t);
+    Insert(tCached_new);
+    tCached = tCached_new.get();
   }
   return tCached;
 }

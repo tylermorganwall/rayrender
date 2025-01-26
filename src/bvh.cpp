@@ -84,8 +84,8 @@ private:
 BVHAggregate::BVHAggregate(std::vector<std::shared_ptr<hitable> > prims,
         float t_min, float t_max, 
         int maxPrimsInNode, bool sah, 
-        std::shared_ptr<Transform> ObjectToWorld, 
-        std::shared_ptr<Transform> WorldToObject, 
+        Transform* ObjectToWorld, 
+        Transform* WorldToObject, 
         bool reverseOrientation) : 
         hitable(ObjectToWorld, WorldToObject, nullptr, reverseOrientation), 
         maxPrimsInNode(std::min(255, maxPrimsInNode)),
@@ -190,7 +190,7 @@ BVHBuildNode *BVHAggregate::buildRecursive(std::span<BVHPrimitive> bvhPrimitives
 
     // Initialize _BVHBuildNode_ for primitive range
     bool isRoot = (*totalNodes == 0);
-    int nodeIndex = (*totalNodes)++;
+    (*totalNodes)++;
     // Compute bounds of all primitives in BVH node
     aabb bounds;
     for (const auto &prim : bvhPrimitives) {

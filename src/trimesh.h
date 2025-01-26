@@ -26,7 +26,7 @@ public:
           bool displacement_vector, TextureCache& texCache, bool recalculate_normals,
           hitable_list& imp_sample_objects,
           Float shutteropen, Float shutterclose, int bvh_type, random_gen rng, bool verbose,
-          std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation);
+          Transform* ObjectToWorld, Transform* WorldToObject, bool reverseOrientation);
   
   virtual const bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const;
   virtual const bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const;

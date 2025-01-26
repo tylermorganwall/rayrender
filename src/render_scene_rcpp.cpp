@@ -171,7 +171,7 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
     Transform CamTransform = LookAt(lookfrom,
                                     lookat,
                                     vec3f(camera_up(0),camera_up(1),camera_up(2))).GetInverseMatrix();
-    std::shared_ptr<Transform> CameraTransform = transformCache.Lookup(CamTransform);
+    Transform* CameraTransform = transformCache.Lookup(CamTransform);
     
     AnimatedTransform CamTr(CameraTransform,0,CameraTransform,0);
     
@@ -275,8 +275,8 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
     BackgroundAngle = Translate(world_center);
   }
 
-  std::shared_ptr<Transform> BackgroundTransform = transformCacheBg.Lookup(BackgroundAngle);
-  std::shared_ptr<Transform> BackgroundTransformInv = transformCacheBg.Lookup(BackgroundAngle.GetInverseMatrix());
+  Transform* BackgroundTransform = transformCacheBg.Lookup(BackgroundAngle);
+  Transform* BackgroundTransformInv = transformCacheBg.Lookup(BackgroundAngle.GetInverseMatrix());
   if(hasbackground) {
     background_texture_data = texCache.LookupFloat(background, nx1, ny1, nn1, 3);
     // nn1 = 3;
@@ -336,14 +336,14 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
 #ifdef HAS_OIDN
   PreviewDisplay Display(nx,ny, preview, interactive, 
                          (lookat-lookfrom).length(), cam.get(),
-                         background_sphere->ObjectToWorld.get(),
-                         background_sphere->WorldToObject.get(),
+                         background_sphere->ObjectToWorld,
+                         background_sphere->WorldToObject,
                          filter, denoise);
 #else
   PreviewDisplay Display(nx,ny, preview, interactive, 
                          (lookat-lookfrom).length(), cam.get(),
-                         background_sphere->ObjectToWorld.get(),
-                         background_sphere->WorldToObject.get());
+                         background_sphere->ObjectToWorld,
+                         background_sphere->WorldToObject);
 #endif
   
   if(impl_only_bg || hasbackground) {

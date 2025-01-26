@@ -519,8 +519,8 @@ TriangleMesh::TriangleMesh(std::string inputfile, std::string basedir,
                            bool load_normals, bool verbose, Float scale, 
                            bool calculate_consistent_normals,
                            TextureCache& texCache,
-                           std::shared_ptr<Transform> ObjectToWorld, 
-                           std::shared_ptr<Transform> WorldToObject, 
+                           Transform* ObjectToWorld, 
+                           Transform* WorldToObject, 
                            bool reverseOrientation) : nTriangles(0) {
   std::string warn, err;
   texture_size = 0;
@@ -696,8 +696,8 @@ TriangleMesh::TriangleMesh(Rcpp::NumericMatrix vertices,
                            std::shared_ptr<material> default_material, 
                            bool load_materials, bool load_textures,
                            TextureCache& texCache,
-                           std::shared_ptr<Transform> ObjectToWorld, 
-                           std::shared_ptr<Transform> WorldToObject, 
+                           Transform* ObjectToWorld, 
+                           Transform* WorldToObject, 
                            bool reverseOrientation) : nTriangles(0) {
   texture_size = 0;
   vertexIndices.clear();
@@ -840,8 +840,8 @@ TriangleMesh::TriangleMesh(Rcpp::List raymesh, bool verbose, bool calculate_cons
                            std::shared_ptr<bump_texture> bump,
                            TextureCache& texCache,
                            std::shared_ptr<material> default_material, 
-                           std::shared_ptr<Transform> ObjectToWorld, 
-                           std::shared_ptr<Transform> WorldToObject, 
+                           Transform* ObjectToWorld, 
+                           Transform* WorldToObject, 
                            bool reverseOrientation) : nTriangles(0) {
   Rcpp::List shape_container = Rcpp::as<Rcpp::List>(raymesh["shapes"]);
   has_vertex_colors = false;
@@ -1035,8 +1035,8 @@ TriangleMesh::TriangleMesh(float* vertices,
                            std::shared_ptr<alpha_texture> alpha,
                            std::shared_ptr<bump_texture> bump,
                            std::shared_ptr<material> default_material, 
-                           std::shared_ptr<Transform> ObjectToWorld, 
-                           std::shared_ptr<Transform> WorldToObject, 
+                           Transform* ObjectToWorld, 
+                           Transform* WorldToObject, 
                            bool reverseOrientation) : nTriangles(0) {
   has_vertex_colors = false;
   texture_size = 0;

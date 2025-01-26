@@ -10,7 +10,7 @@ public:
   cylinder(Float r, Float len, Float phi_min, Float phi_max, bool has_caps,
            std::shared_ptr<material> mat, 
            std::shared_ptr<alpha_texture> alpha_mask, std::shared_ptr<bump_texture> bump_tex,
-           std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation) : 
+           Transform* ObjectToWorld, Transform* WorldToObject, bool reverseOrientation) : 
     hitable(ObjectToWorld, WorldToObject, mat, reverseOrientation), 
     radius(r), length(len), phi_min(phi_min), phi_max(phi_max), has_caps(has_caps), 
     alpha_mask(alpha_mask), bump_tex(bump_tex) {};

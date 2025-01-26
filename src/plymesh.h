@@ -19,7 +19,7 @@ class plymesh : public hitable {
           Float scale, int subdivision_levels, bool recalculate_normals,
           bool verbose,
           Float shutteropen, Float shutterclose, int bvh_type, random_gen rng,
-          std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation);
+          Transform* ObjectToWorld, Transform* WorldToObject, bool reverseOrientation);
   virtual const bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const;
   virtual const bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const;
   virtual bool HitP(const ray &r, Float t_min, Float t_max, random_gen& rng) const;

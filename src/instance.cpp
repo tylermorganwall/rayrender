@@ -2,10 +2,11 @@
 #include "raylog.h"
 
 instance::instance(hitable* scene, 
-                   std::shared_ptr<Transform> ObjectToWorld, 
-                   std::shared_ptr<Transform> WorldToObject,
+                   Transform* ObjectToWorld, 
+                   Transform* WorldToObject,
                    hitable_list* imp_list) : 
-  hitable(ObjectToWorld, WorldToObject, nullptr, false), original_scene(scene), importance_sampled_objects(imp_list) {
+  hitable(ObjectToWorld, WorldToObject, nullptr, false), 
+  original_scene(scene), importance_sampled_objects(imp_list) {
 }
 
 const bool instance::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {

@@ -10,8 +10,8 @@
 class AnimatedTransform {
 public:
   // AnimatedTransform Public Methods
-  AnimatedTransform(const std::shared_ptr<Transform> startTransform, Float startTime,
-                    const std::shared_ptr<Transform>  endTransform, Float endTime);
+  AnimatedTransform(Transform* startTransform, Float startTime,
+                    Transform*  endTransform, Float endTime);
   static void Decompose(const Matrix4x4 &m, vec3f *T, Quaternion *R,
                         Matrix4x4 *S);
   void Interpolate(Float time, Transform *t) const;
@@ -24,8 +24,8 @@ public:
   }
   aabb MotionBounds(const aabb &b) const;
   aabb BoundPointMotion(const point3f &p) const;
-  std::shared_ptr<Transform> GetStartTransform() {return(startTransform);};
-  std::shared_ptr<Transform> GetEndTransform() {return(endTransform);};
+  Transform* GetStartTransform() {return(startTransform);};
+  Transform* GetEndTransform() {return(endTransform);};
   
   vec3f w();
   vec3f u();
@@ -34,7 +34,7 @@ public:
   
 private:
   // AnimatedTransform Private Data
-  const std::shared_ptr<Transform> startTransform, endTransform;
+  Transform *startTransform, *endTransform;
   const Float startTime, endTime;
   const bool actuallyAnimated;
   vec3f T[2];

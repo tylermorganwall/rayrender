@@ -18,7 +18,7 @@ trimesh::trimesh(std::string inputfile, std::string basedir, Float scale, Float 
                  bool displacement_vector, TextureCache& texCache, bool recalculate_normals,
                  hitable_list& imp_sample_objects, 
                  Float shutteropen, Float shutterclose, int bvh_type, random_gen rng, bool verbose,
-                 std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation) : 
+                 Transform* ObjectToWorld, Transform* WorldToObject, bool reverseOrientation) : 
   hitable(ObjectToWorld, WorldToObject, default_material, reverseOrientation) {
   mesh = std::unique_ptr<TriangleMesh>(new TriangleMesh(inputfile, basedir, default_material, 
                                                         alpha_default, bump_default,

@@ -30,8 +30,8 @@ struct TriangleMesh {
                bool load_materials, bool load_textures, bool load_vertex_colors,  bool load_normals,
                bool verbose, Float scale, 
                bool calculate_consistent_normals, TextureCache& texCache,
-               std::shared_ptr<Transform> ObjectToWorld, 
-               std::shared_ptr<Transform> WorldToObject, 
+               Transform* ObjectToWorld, 
+               Transform* WorldToObject, 
                bool reverseOrientation);
   TriangleMesh(Rcpp::NumericMatrix vertices, 
                Rcpp::IntegerMatrix indices, 
@@ -44,8 +44,8 @@ struct TriangleMesh {
                std::shared_ptr<bump_texture> bump,
                std::shared_ptr<material> default_material, 
                bool load_materials, bool load_textures, TextureCache& texCache,
-               std::shared_ptr<Transform> ObjectToWorld, 
-               std::shared_ptr<Transform> WorldToObject, 
+               Transform* ObjectToWorld, 
+               Transform* WorldToObject, 
                bool reverseOrientation);
   TriangleMesh(float* vertices, 
                int* indices, 
@@ -55,8 +55,8 @@ struct TriangleMesh {
                std::shared_ptr<alpha_texture> alpha,
                std::shared_ptr<bump_texture> bump,
                std::shared_ptr<material> default_material, 
-               std::shared_ptr<Transform> ObjectToWorld, 
-               std::shared_ptr<Transform> WorldToObject, 
+               Transform* ObjectToWorld, 
+               Transform* WorldToObject, 
                bool reverseOrientation);
   TriangleMesh(Rcpp::List raymesh, bool verbose, bool calculate_consistent_normals,
                bool override_material, bool flip_transmittance,
@@ -64,8 +64,8 @@ struct TriangleMesh {
                std::shared_ptr<bump_texture> bump,
                TextureCache& texCache,
                std::shared_ptr<material> default_material, 
-               std::shared_ptr<Transform> ObjectToWorld, 
-               std::shared_ptr<Transform> WorldToObject, 
+               Transform* ObjectToWorld, 
+               Transform* WorldToObject, 
                bool reverseOrientation);
   
   ~TriangleMesh();

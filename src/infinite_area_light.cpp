@@ -6,7 +6,7 @@
 
 InfiniteAreaLight::InfiniteAreaLight(int width, int height, Float r, point3f center, 
                                      std::shared_ptr<texture> image, std::shared_ptr<material> mat,
-                                     std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation)
+                                     Transform* ObjectToWorld, Transform* WorldToObject, bool reverseOrientation)
                                      : hitable(ObjectToWorld, WorldToObject, mat, reverseOrientation), 
                                        width(width), height(height), radius(r), center(center) {
   //Set up distribution

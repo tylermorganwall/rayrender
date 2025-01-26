@@ -31,7 +31,7 @@ raymesh::raymesh(Rcpp::List raymesh_list,
                  hitable_list& imp_sample_objects, 
                  bool verbose, 
                  Float shutteropen, Float shutterclose, int bvh_type, random_gen rng, 
-                 std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation) : 
+                 Transform* ObjectToWorld, Transform* WorldToObject, bool reverseOrientation) : 
   hitable(ObjectToWorld, WorldToObject, default_material, reverseOrientation) {
   mesh = std::unique_ptr<TriangleMesh>(new TriangleMesh(raymesh_list, verbose, 
                                                         calculate_consistent_normals, override_material,

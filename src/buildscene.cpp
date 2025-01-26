@@ -415,7 +415,7 @@ std::shared_ptr<hitable> build_scene(List& scene,
   NumericMatrix IdentityMat(4,4);
   IdentityMat.fill_diag(1);
   Transform IdentityTransform(IdentityMat);
-  std::shared_ptr<Transform> Iden = transformCache.Lookup(IdentityTransform);
+  Transform* Iden = transformCache.Lookup(IdentityTransform);
   
   List RayMaterials = as<List>(scene["material"]);
   List ShapeInfo = as<List>(scene["shape_info"]);
@@ -527,14 +527,14 @@ std::shared_ptr<hitable> build_scene(List& scene,
     Transform TempM = GroupTransform * Translate(center) *
       rotation_order_matrix(angle, order_rotation) * 
       Scale(scales[0], scales[1], scales[2]);
-    std::shared_ptr<Transform> ObjToWorld = transformCache.Lookup(TempM);
-    std::shared_ptr<Transform> WorldToObj = transformCache.Lookup(TempM.GetInverseMatrix());
+    Transform* ObjToWorld = transformCache.Lookup(TempM);
+    Transform* WorldToObj = transformCache.Lookup(TempM.GetInverseMatrix());
     
     
     Transform AnimationStartTransform(StartTransformAnimationMat);
     Transform AnimationEndTransform(EndTransformAnimationMat);
-    std::shared_ptr<Transform> StartAnim = transformCache.Lookup(AnimationStartTransform);
-    std::shared_ptr<Transform> EndAnim = transformCache.Lookup(AnimationEndTransform);
+    Transform* StartAnim = transformCache.Lookup(AnimationStartTransform);
+    Transform* EndAnim = transformCache.Lookup(AnimationEndTransform);
     
     AnimatedTransform Animate(StartAnim, start_time, EndAnim, end_time);
     
@@ -896,8 +896,8 @@ std::shared_ptr<hitable> build_scene(List& scene,
             Translate(center_instance) * 
             rotation_order_matrix(angle_instance, order_rotation) * 
             Scale(scale_x(ii), scale_y(ii), scale_z(ii));
-          std::shared_ptr<Transform> ObjToWorldInst = transformCache.Lookup(InstanceTransform);
-          std::shared_ptr<Transform> WorldToObjInst = transformCache.Lookup(InstanceTransform.GetInverseMatrix());
+          Transform* ObjToWorldInst = transformCache.Lookup(InstanceTransform);
+          Transform* WorldToObjInst = transformCache.Lookup(InstanceTransform.GetInverseMatrix());
           list.add(std::make_shared<instance>(instance_scene.get(),
                                               ObjToWorldInst, 
                                               WorldToObjInst,

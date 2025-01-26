@@ -8,7 +8,7 @@ public:
   TransformCache() : hashTable(512), hashTableOccupancy(0) {}
   
   // TransformCache Public Methods
-  std::shared_ptr<Transform> Lookup(const Transform &t);
+  Transform* Lookup(const Transform &t);
   void Clear();
 private:
   void Insert(std::shared_ptr<Transform> tNew);

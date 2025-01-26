@@ -17,7 +17,7 @@ public:
   }
   InfiniteAreaLight(int width, int height, Float r, point3f center, 
                     std::shared_ptr<texture> image,  std::shared_ptr<material> mat,
-                    std::shared_ptr<Transform> ObjectToWorld, std::shared_ptr<Transform> WorldToObject, bool reverseOrientation);
+                    Transform* ObjectToWorld, Transform* WorldToObject, bool reverseOrientation);
   virtual const bool hit(const ray& r, Float tmin, Float tmax, hit_record& rec, random_gen& rng) const;
   virtual const bool hit(const ray& r, Float tmin, Float tmax, hit_record& rec, Sampler* sampler) const;
   virtual bool HitP(const ray &r, Float t_min, Float t_max, random_gen& rng) const;

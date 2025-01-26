@@ -10,8 +10,8 @@ class instance : public hitable {
 public:
   instance() {}
   instance(hitable* scene, 
-           std::shared_ptr<Transform> ObjectToWorld, 
-           std::shared_ptr<Transform> WorldToObject,
+           Transform* ObjectToWorld, 
+           Transform* WorldToObject,
            hitable_list* imp_list);
   
   virtual const bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const;
