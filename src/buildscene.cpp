@@ -441,7 +441,7 @@ std::shared_ptr<hitable> build_scene(List& scene,
     Float importance_sample = as<bool>(SingleMaterial["implicit_sample"]);
     
     IntegerVector material_id_vec = as<IntegerVector>(SingleShape["material_id"]);
-    bool is_shared_mat = Rcpp::IntegerVector::is_na(material_id_vec(0));
+    bool is_shared_mat = !Rcpp::IntegerVector::is_na(material_id_vec(0));
     int material_id = material_id_vec(0);
     std::shared_ptr<material> shape_material;
     bool has_image = false;
