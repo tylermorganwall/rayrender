@@ -69,6 +69,7 @@ unsigned char * TextureCache::LookupChar(const std::string& filename,
   
   hashTableChar[standardizedFilename] = data;
   hashTableDims[standardizedFilename] = std::make_tuple(nx,ny,desired_channels);
+  rawDataChar.push_back(data);
   return data;
 }
 
