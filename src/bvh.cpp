@@ -104,7 +104,7 @@ BVHAggregate::BVHAggregate(std::vector<std::shared_ptr<hitable> > prims,
     BVHBuildNode* root;
     std::atomic<int> totalNodes{0};
     std::atomic<int> orderedPrimsOffset{0};
-    root = buildRecursive(std::span<BVHPrimitive>(bvhPrimitives),
+    root = buildRecursive(std::span<BVHPrimitive>(bvhPrimitives.data(), bvhPrimitives.size()),
                           &totalNodes, 
                           &orderedPrimsOffset, 
                           orderedPrims);
@@ -149,7 +149,7 @@ BVHAggregate::BVHAggregate(std::vector<std::shared_ptr<hitable> > prims,
     BVHBuildNode* root;
     std::atomic<int> totalNodes{0};
     std::atomic<int> orderedPrimsOffset{0};
-    root = buildRecursive(std::span<BVHPrimitive>(bvhPrimitives),
+    root = buildRecursive(std::span<BVHPrimitive>(bvhPrimitives.data(), bvhPrimitives.size()),
                           &totalNodes, 
                           &orderedPrimsOffset, 
                           orderedPrims);
