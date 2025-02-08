@@ -251,7 +251,7 @@ render_animation = function(scene, camera_motion, start_frame = 1, end_frame = N
   }
   #Camera Movement Info
   if(filename != "") {
-    filename_str = paste0(filename,1:nrow(camera_motion),".png")
+    filename_str = paste0(filename,str_pad(1:nrow(camera_motion),width=ceiling(log10(nrow(camera_motion))),pad="0"),".png")
   } else {
     filename_str = rep("", length(1:nrow(camera_motion)))
   }
