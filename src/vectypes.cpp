@@ -1,10 +1,12 @@
 #include "Rcpp.h"
-#include <testthat.h>
 #include "vec3.h"
 #include "point3.h"
 #include "normal.h"
 #include "simd.h"
 #include "vectypes.h"  // Your provided header with inline functions
+
+#ifdef NOT_CRAN
+#include <testthat.h>
 
 context("Conversion functions") {
     test_that("[convert_to_point3(vec3f)]") {
@@ -462,3 +464,5 @@ context("point3<Float> arithmetic operators") {
         expect_true(v.z() == Approx(1.0f));
     }
 }
+
+#endif

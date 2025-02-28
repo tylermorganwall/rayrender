@@ -695,7 +695,7 @@ hit_record Transform::operator()(hit_record &r) const {
 //   return ret;
 // }
 
-
+#ifdef NOT_CRAN
 // Unit Tests
 #include <testthat.h>
 
@@ -978,3 +978,5 @@ context("Transform composition works correctly") {
       expect_true(pTransformed.z() == Approx(expectedPoint.z()));
   }
 }
+
+#endif

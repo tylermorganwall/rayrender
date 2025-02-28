@@ -1,6 +1,5 @@
 #include "matrix.h"
 #include "simd.h"
-#include <testthat.h>
 
 static_assert(std::is_trivially_copyable<FVec4>::value,
               "FVec4 must be trivially copyable to use memcpy safely.");
@@ -175,6 +174,7 @@ Matrix4x4 Transpose(const Matrix4x4 &m) {
                    m.m[0][3], m.m[1][3], m.m[2][3], m.m[3][3]);
 }
 
+#ifdef NOT_CRAN
 #include <testthat.h>
 #include <Rcpp.h>
 
@@ -303,3 +303,5 @@ context("Inverse computes matrix inverse correctly") {
         }
     }
 }
+
+#endif

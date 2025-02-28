@@ -55,6 +55,7 @@ inline IVec4 sort_simd_4_floats(FVec4 values) {
                   extract_index(values[3])));
 }
 
+#ifdef NOT_CRAN
 #include <testthat.h>
 
 context("simd_load loads values correctly") {
@@ -67,7 +68,6 @@ context("simd_load loads values correctly") {
     }
   }
 }
-
 
 context("simd_sub subtracts vectors correctly") {
   test_that("[simd_sub]") {
@@ -696,3 +696,4 @@ context("simd_set1 initializes SimdMask with unsigned int value correctly") {
     }
   }
 }
+#endif

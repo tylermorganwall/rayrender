@@ -3,5 +3,14 @@
  * 'run_testthat_tests()' C routine that can be used to run the Catch unit tests
  * available in your package.
  */
+#ifdef NOT_CRAN
 #define TESTTHAT_TEST_RUNNER
 #include <testthat.h>
+#else 
+
+#include <R.h>
+#include <Rinternals.h>
+extern "C" SEXP run_testthat_tests(SEXP use_xml_sxp) {
+  return Rf_ScalarLogical(true);
+}
+#endif
