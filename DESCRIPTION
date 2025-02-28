@@ -46,4 +46,4 @@ Biarch: true
 Encoding: UTF-8
 Config/testthat/edition: 3
 Config/build/compilation-database: true
-Remotes: tylermorganwall/testthat, tylermorganwall/rayshader
+Remotes: tylermorganwall/rayshader
