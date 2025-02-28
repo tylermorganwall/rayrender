@@ -11,7 +11,7 @@ library(rayrender)
 
 if (!isTRUE(as.logical(Sys.getenv("RAY_COLOR_DEBUG", "false")))) {
   if (isTRUE(as.logical(Sys.getenv("NOT_CRAN", "false")))) {
-    test_check("rayrender", filter = c("integrator"), invert = TRUE)
+    test_check("rayrender", filter = c("integrator|cpp"), invert = TRUE)
   } else {
     test_check("rayrender", filter = c("integrator|cpp"), invert = TRUE)
   }
