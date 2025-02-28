@@ -9,9 +9,12 @@
 library(testthat)
 library(rayrender)
 
-if(!isTRUE(as.logical(Sys.getenv("RAY_COLOR_DEBUG", "false")))) {
-  test_check("rayrender", filter = "integrator", invert = TRUE)
+if (!isTRUE(as.logical(Sys.getenv("RAY_COLOR_DEBUG", "false")))) {
+  if (isTRUE(as.logical(Sys.getenv("NOT_CRAN", "false")))) {
+    test_check("rayrender", filter = c("integrator"), invert = TRUE)
+  } else {
+    test_check("rayrender", filter = c("integrator|cpp"), invert = TRUE)
+  }
 } else {
-  # Just test
   test_check("rayrender", filter = "integrator")
 }
