@@ -1,5 +1,5 @@
 #' New Tibble Row
-#' 
+#'
 #' Creates a row of a tibble, without the parsing and checks in tibble::new_tibble(). Internal use only.
 #'
 #' @param x Named list.

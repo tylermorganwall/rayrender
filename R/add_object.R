@@ -17,12 +17,12 @@
 #' render_scene(scene,parallel=TRUE)
 #' }
 add_object = function(scene, objects = NULL) {
-  if(is.null(objects)) {
+  if (is.null(objects)) {
     return(scene)
   }
-  newscene = rbind(scene,objects)
-  if(!is.null(attr(objects,"cornell")) || !is.null(attr(scene,"cornell"))) {
-    attr(newscene,"cornell") = TRUE
+  newscene = rbind(scene, objects)
+  if (!is.null(attr(objects, "cornell")) || !is.null(attr(scene, "cornell"))) {
+    attr(newscene, "cornell") = TRUE
   }
   return(newscene)
 }

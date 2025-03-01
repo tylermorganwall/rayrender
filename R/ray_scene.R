@@ -16,12 +16,12 @@ ray_scene = function(...) {
 
 #' @keywords internal
 style_subtle = function(x) {
-  sprintf("\033[38;5;246m%s\033[39m",x)
+  sprintf("\033[38;5;246m%s\033[39m", x)
 }
 
 #'@export
 print.ray_scene = function(x, ...) {
-  if(getOption("ray.ANSI", TRUE) && !is_rendering_in_knitr()) {
+  if (getOption("ray.ANSI", TRUE) && !is_rendering_in_knitr()) {
     boldstart = "\u001b[1m"
     formatend = "\u001b[0m"
     color = "\u001b[0;31m"
@@ -37,38 +37,52 @@ print.ray_scene = function(x, ...) {
     bullet = "*"
   }
   generate_text = function(label, output) {
-    sprintf("%s%s %s - %s%s \n",boldstart, bullet, label, formatend, output)
+    sprintf("%s%s %s - %s%s \n", boldstart, bullet, label, formatend, output)
   }
   red = function(text) {
-    sprintf("%s%s%s%s",color, boldstart, text,colorend)
+    sprintf("%s%s%s%s", color, boldstart, text, colorend)
   }
   blue = function(text) {
-    sprintf("%s%s%s%s",boldstart, blue_color,text,colorend)
+    sprintf("%s%s%s%s", boldstart, blue_color, text, colorend)
   }
   # Count total objects and lights
   total_objects <- nrow(x)
   total_lights = sum(unlist(lapply(x$material, \(x) x$type == "light")))
-  
+
   # Count each type of object
   shape_counts <- table(x$shape)
-  shape_summary <- sprintf("Objects - %s", 
-                           paste(cli::col_blue(names(shape_counts)), 
-                                 cli::col_red(shape_counts), sep = ": ", collapse = " | "))
-  
+  shape_summary <- sprintf(
+    "Objects - %s",
+    paste(
+      cli::col_blue(names(shape_counts)),
+      cli::col_red(shape_counts),
+      sep = ": ",
+      collapse = " | "
+    )
+  )
+
   # Calculate bounding box
   bbxmin <- c(min(x$x), min(x$y), min(x$z))
   bbxmax <- c(max(x$x), max(x$y), max(x$z))
-  
+
   # Construct the print output
-  line1 = sprintf("Summary - %s: %s | %s: %s", 
-                  cli::col_blue("Objects"), 
-                  cli::col_red(as.character(total_objects)),
-                  cli::col_blue("Lights"), 
-                  cli::col_red(as.character(total_lights)))
-  min_bbox = sprintf("c(%0.2f, %0.2f, %0.2f)",bbxmin[1],bbxmin[2],bbxmin[3])
-  max_bbox = sprintf("c(%0.2f, %0.2f, %0.2f)",bbxmax[1],bbxmax[2],bbxmax[3])
-  bbox_text = sprintf("XYZ Bounds - %s: %s | %s: %s", cli::col_blue("Min"), cli::col_red(min_bbox), cli::col_blue("Max"), cli::col_red(max_bbox))
-  
+  line1 = sprintf(
+    "Summary - %s: %s | %s: %s",
+    cli::col_blue("Objects"),
+    cli::col_red(as.character(total_objects)),
+    cli::col_blue("Lights"),
+    cli::col_red(as.character(total_lights))
+  )
+  min_bbox = sprintf("c(%0.2f, %0.2f, %0.2f)", bbxmin[1], bbxmin[2], bbxmin[3])
+  max_bbox = sprintf("c(%0.2f, %0.2f, %0.2f)", bbxmax[1], bbxmax[2], bbxmax[3])
+  bbox_text = sprintf(
+    "XYZ Bounds - %s: %s | %s: %s",
+    cli::col_blue("Min"),
+    cli::col_red(min_bbox),
+    cli::col_blue("Max"),
+    cli::col_red(max_bbox)
+  )
+
   cli_output = function() {
     cli::cli_rule(left = "Scene Description")
     cli::cli_bullets(c(
@@ -88,14 +102,15 @@ print.ray_scene = function(x, ...) {
     # cli_li("An environment variable: {.envvar R_LIBS}")
     # cli_li("Some {.field field}")
   }
-  
+
   # bbox_text = sprintf("%s: %s | %s: %s", cli::col_blue("Min"), cli::col_red(min_bbox), cli::col_blue("Max"), cli::col_red(max_bbox))
   # cat(generate_text("Rayscene Info", line1))
   cli_output()
   # cat(generate_text("Scene Details", shape_summary))
   # cat(generate_text("Center Bounds", bbox_text ))
-  if(length(find.package("tibble",quiet=TRUE)) > 0) {
-    withr::local_options(list(pillar.advice = FALSE, pillar.print_max = 3, pillar.width = 50),
+  if (length(find.package("tibble", quiet = TRUE)) > 0) {
+    withr::local_options(
+      list(pillar.advice = FALSE, pillar.print_max = 3, pillar.width = 50),
       code = {
         print(tibble::as_tibble(x), ...)
       }
