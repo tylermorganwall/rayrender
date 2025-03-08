@@ -1,7 +1,8 @@
 #include "material.h"
 #include "mathinline.h"
 #include "raylog.h"
-//
+#include "assert.h"
+
 //Lambertian
 //
 
@@ -193,9 +194,9 @@ bool dielectric::scatter(const ray& r_in, const hit_record& hrec, scatter_record
     srec.specular_ray = ray(offset_p, r_in.direction(), r_in.pri_stack, r_in.time());
     Float distance = (offset_p-r_in.point_at_parameter(0)).length();
     point3f prev_atten = r_in.pri_stack->at(prev_active)->attenuation;
-    srec.attenuation = point3f(std::exp(-distance * prev_atten.x()),
-                               std::exp(-distance * prev_atten.y()),
-                               std::exp(-distance * prev_atten.z()));
+    srec.attenuation = point3f(std::exp(-distance * prev_atten.x),
+                               std::exp(-distance * prev_atten.y),
+                               std::exp(-distance * prev_atten.z));
     if(!entering && current_layer != -1) {
       r_in.pri_stack->erase(r_in.pri_stack->begin() + static_cast<size_t>(current_layer));
     }
@@ -206,17 +207,17 @@ bool dielectric::scatter(const ray& r_in, const hit_record& hrec, scatter_record
   //Calculate attenuation color
   if(!entering) {
     Float distance = (offset_p-r_in.point_at_parameter(0)).length();
-    srec.attenuation = point3f(std::exp(-distance * attenuation.x()),
-                               std::exp(-distance * attenuation.y()),
-                               std::exp(-distance * attenuation.z()));
+    srec.attenuation = point3f(std::exp(-distance * attenuation.x),
+                               std::exp(-distance * attenuation.y),
+                               std::exp(-distance * attenuation.z));
   } else {
     if(prev_active != -1) {
       Float distance = (offset_p-r_in.point_at_parameter(0)).length();
       point3f prev_atten = r_in.pri_stack->at(prev_active)->attenuation;
       
-      srec.attenuation = albedo * point3f(std::exp(-distance * prev_atten.x()),
-                                          std::exp(-distance * prev_atten.y()),
-                                          std::exp(-distance * prev_atten.z()));
+      srec.attenuation = albedo * point3f(std::exp(-distance * prev_atten.x),
+                                          std::exp(-distance * prev_atten.y),
+                                          std::exp(-distance * prev_atten.z));
     } else {
       srec.attenuation = albedo;
     }
@@ -291,9 +292,9 @@ bool dielectric::scatter(const ray& r_in, const hit_record& hrec, scatter_record
     srec.specular_ray = ray(offset_p, r_in.direction(), r_in.pri_stack, r_in.time());
     Float distance = (offset_p-r_in.point_at_parameter(0)).length();
     point3f prev_atten = r_in.pri_stack->at(prev_active)->attenuation;
-    srec.attenuation = point3f(std::exp(-distance * prev_atten.x()),
-                               std::exp(-distance * prev_atten.y()),
-                               std::exp(-distance * prev_atten.z()));
+    srec.attenuation = point3f(std::exp(-distance * prev_atten.x),
+                               std::exp(-distance * prev_atten.y),
+                               std::exp(-distance * prev_atten.z));
     if(!entering && current_layer != -1) {
       r_in.pri_stack->erase(r_in.pri_stack->begin() + static_cast<size_t>(current_layer));
     }
@@ -310,17 +311,17 @@ bool dielectric::scatter(const ray& r_in, const hit_record& hrec, scatter_record
   //Calculate attenuation color
   if(!entering) {
     Float distance = (offset_p-r_in.point_at_parameter(0)).length();
-    srec.attenuation = point3f(std::exp(-distance * attenuation.x()),
-                               std::exp(-distance * attenuation.y()),
-                               std::exp(-distance * attenuation.z()));
+    srec.attenuation = point3f(std::exp(-distance * attenuation.x),
+                               std::exp(-distance * attenuation.y),
+                               std::exp(-distance * attenuation.z));
   } else {
     if(prev_active != -1) {
       Float distance = (offset_p-r_in.point_at_parameter(0)).length();
       point3f prev_atten = r_in.pri_stack->at(prev_active)->attenuation;
       
-      srec.attenuation = albedo * point3f(std::exp(-distance * prev_atten.x()),
-                                          std::exp(-distance * prev_atten.y()),
-                                          std::exp(-distance * prev_atten.z()));
+      srec.attenuation = albedo * point3f(std::exp(-distance * prev_atten.x),
+                                          std::exp(-distance * prev_atten.y),
+                                          std::exp(-distance * prev_atten.z));
     } else {
       srec.attenuation = albedo;
     }
@@ -477,7 +478,7 @@ point3f orennayar::f(const ray& r_in, const hit_record& rec, const vec3f& scatte
   vec3f wi = -unit_vector(uvw.world_to_local(r_in.direction()));
   vec3f wo = unit_vector(uvw.world_to_local(scattered));
   
-  Float cosine = wo.z();
+  Float cosine = wo.z;
   
   if(cosine < 0) {
     cosine = 0;
@@ -565,7 +566,7 @@ point3f MicrofacetReflection::f(const ray& r_in, const hit_record& rec, const ve
   if (cosThetaI == 0 || cosThetaO == 0) {
     return(point3f(0,0,0));
   }
-  if (normal.x() == 0 && normal.y() == 0 && normal.z() == 0) {
+  if (normal.x == 0 && normal.y == 0 && normal.z == 0) {
     return(point3f(0,0,0));
   }
   point3f F = FrCond(cosThetaO, eta, k);
@@ -651,9 +652,9 @@ point3f MicrofacetTransmission::f(const ray& r_in, const hit_record& rec, const 
   
   Float distance = (rec.p-r_in.point_at_parameter(0)).length();
   
-  point3f atten = !entering ? point3f(std::exp(-distance * k.x()),
-                                      std::exp(-distance * k.y()),
-                                      std::exp(-distance * k.z())) :
+  point3f atten = !entering ? point3f(std::exp(-distance * k.x),
+                                      std::exp(-distance * k.y),
+                                      std::exp(-distance * k.z)) :
     point3f(1.0);
   
   // Same side?
@@ -727,7 +728,7 @@ point3f glossy::f(const ray& r_in, const hit_record& rec, const vec3f& scattered
     static_cast<Float>(1.0 - pow5(1 - 0.5f * AbsCosTheta(wi))) *
     static_cast<Float>(1.0 - pow5(1 - 0.5f * AbsCosTheta(wo)));
   vec3f wh = unit_vector(wi + wo);
-  if (wh.x() == 0 && wh.y() == 0 && wh.z() == 0) {
+  if (wh.x == 0 && wh.y == 0 && wh.z == 0) {
     return(point3f(0.0f));
   }
   Float cosine  = dot(wh,wi);
@@ -779,9 +780,9 @@ std::array<Float, pMax + 1> hair::ComputeApPdf(Float cosThetaO, Float h) const {
   // Compute $A_p$ PDF from individual $A_p$ terms
   std::array<Float, pMax + 1> apPdf;
   Float sumY = std::accumulate(ap.begin(), ap.end(), Float(0),
-                               [](Float s, const point3f &ap) { return s + ap.y(); });
+                               [](Float s, const point3f &ap) { return s + ap.y; });
   for (int i = 0; i <= pMax; ++i) {
-    apPdf[i] = ap[i].y() / sumY;
+    apPdf[i] = ap[i].y / sumY;
   }
   return(apPdf);
 }
@@ -793,9 +794,9 @@ bool hair::scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec
   onb uvw(hrec.dpdu, hrec.dpdv, hrec.normal);
   vec3f wo = unit_vector(uvw.world_to_local(r_in.direction()));
 
-  Float sinThetaO = wo.x();
+  Float sinThetaO = wo.x;
   Float cosThetaO = SafeSqrt(1 - Sqr(sinThetaO));
-  Float phiO = std::atan2(wo.z(), wo.y());
+  Float phiO = std::atan2(wo.z, wo.y);
   Float h = -1 + 2 * hrec.v;
   Float gammaO = SafeASin(h);
   
@@ -869,9 +870,9 @@ bool hair::scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec
   onb uvw(hrec.dpdu, hrec.dpdv, hrec.normal);
   vec3f wo = unit_vector(uvw.world_to_local(r_in.direction()));
   
-  Float sinThetaO = wo.x();
+  Float sinThetaO = wo.x;
   Float cosThetaO = SafeSqrt(1 - Sqr(sinThetaO));
-  Float phiO = std::atan2(wo.z(), wo.y());
+  Float phiO = std::atan2(wo.z, wo.y);
   Float h = -1 + 2 * hrec.v;
   Float gammaO = SafeASin(h);
   
@@ -950,14 +951,14 @@ point3f hair::f(const ray& r_in, const hit_record& rec, const vec3f& scattered) 
   Float h = -1 + 2 * rec.v;
   Float gammaO = SafeASin(h);
   
-  Float sinThetaO = wo.x();
+  Float sinThetaO = wo.x;
   Float cosThetaO = SafeSqrt(1 - Sqr(sinThetaO));
-  Float phiO = std::atan2(wo.z(), wo.y());
+  Float phiO = std::atan2(wo.z, wo.y);
   
   // Compute hair coordinate system terms related to _wi_
-  Float sinThetaI = wi.x();
+  Float sinThetaI = wi.x;
   Float cosThetaI = SafeSqrt(1 - Sqr(sinThetaI));
-  Float phiI = std::atan2(wi.z(), wi.y());
+  Float phiI = std::atan2(wi.z, wi.y);
   
   // Compute $\cos \thetat$ for refracted ray
   Float sinThetaT = sinThetaO / eta;

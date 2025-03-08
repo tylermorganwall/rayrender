@@ -6,12 +6,12 @@ Float BoxFilter::Evaluate(const vec2f &p) const {
 }
 
 Float TriangleFilter::Evaluate(const vec2f &p) const {
-  return std::max((Float)0, radius.x() - std::fabs(p.x())) * 
-    std::max((Float)0, radius.y() - std::fabs(p.y()));
+  return std::max((Float)0, radius.x - std::fabs(p.x)) * 
+    std::max((Float)0, radius.y - std::fabs(p.y));
 }
 
 Float GaussianFilter::Evaluate(const vec2f &p) const {
-  return Gaussian(p.x(), expX) * Gaussian(p.y(), expY);
+  return Gaussian(p.x, expX) * Gaussian(p.y, expY);
 }
 
 Float GaussianFilter::Gaussian(Float d, Float expv) const {
@@ -20,7 +20,7 @@ Float GaussianFilter::Gaussian(Float d, Float expv) const {
 
 
 Float MitchellFilter::Evaluate(const vec2f &p) const {
-  return Mitchell1D(p.x() * invRadius.x()) * Mitchell1D(p.y() * invRadius.y());
+  return Mitchell1D(p.x * invRadius.x) * Mitchell1D(p.y * invRadius.y);
 }
 
 Float MitchellFilter::Mitchell1D(Float x) const {
@@ -37,7 +37,7 @@ Float MitchellFilter::Mitchell1D(Float x) const {
 
 
 Float LanczosSincFilter::Evaluate(const vec2f &p) const {
-  return WindowedSinc(p.x(), radius.x()) * WindowedSinc(p.y(), radius.y());
+  return WindowedSinc(p.x, radius.x) * WindowedSinc(p.y, radius.y);
 }
 
 Float LanczosSincFilter::Sinc(Float x) const {

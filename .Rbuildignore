@@ -27,3 +27,5 @@
 ^\.cache$
 ^\.vscode/*$
 ^_pkgdown\.yml$
+^tests/*$
+^todo.text$

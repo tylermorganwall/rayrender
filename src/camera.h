@@ -15,7 +15,7 @@ struct CameraSample {
   CameraSample(point2f pFilm_, point2f pLens_, Float time_) : 
     pFilm(pFilm_), pLens(pLens_), time(time_) {};
   CameraSample(vec2f pFilm_, vec2f pLens_, Float time_) : 
-    pFilm(point2f(pFilm_.x(),pFilm_.y())), pLens(point2f(pLens_.x(),pLens_.y())), time(time_) {};
+    pFilm(point2f(pFilm_.x,pFilm_.y)), pLens(point2f(pLens_.x,pLens_.y)), time(time_) {};
 };
 
 class RayCamera {

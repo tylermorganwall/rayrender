@@ -13,13 +13,8 @@ template <typename T> class point2 {
 public:
   point2() {}
   point2(T e0, T e1) {e[0] = e0; e[1] = e1;}
-  explicit point2(const vec3<T> &p) { e[0] = p.x(); e[1] = p.y(); }
-  explicit point2(const point3<T> &p) { e[0] = p.x(); e[1] = p.y(); }
-  
-  inline T x() const { return e[0]; }
-  inline T y() const { return e[1]; }
-  inline T u() const { return e[0]; }
-  inline T v() const { return e[1]; }
+  explicit point2(const vec3<T> &p) { e[0] = p.x; e[1] = p.y; }
+  explicit point2(const point3<T> &p) { e[0] = p.x; e[1] = p.y; }
   
   inline const point2<T>& operator+() const { return *this; }
   inline point2<T> operator-() const { return point2<T>(-e[0], -e[1]); }
@@ -32,6 +27,8 @@ public:
   inline point2<T>& operator/=(const point2<T> &v2);
   inline point2<T>& operator*=(const Float t);
   inline point2<T>& operator/=(const Float t);
+  inline bool operator==(const point2<T> &v2) const;
+
   bool HasNaNs() const {
     return(std::isnan(e[0]) || std::isnan(e[1]));
   }
@@ -39,7 +36,11 @@ public:
   inline Float squared_length() const { return e[0]*e[0] + e[1]*e[1]; }
   inline void make_unit_vector();
   
-  Float e[2];
+  union {
+    T e[2];
+    T x, y;
+    T u, v;
+  };
 };
 
 
@@ -53,6 +54,11 @@ template<typename T>
 inline std::ostream& operator<<(std::ostream &os, const point2<T> &t) {
   os << t.e[0] << ", " << t.e[1];
   return os;
+}
+
+template<typename T> 
+inline bool point2<T>::operator==(const point2<T> &t) const {
+  return x == t.x && y == t.y;
 }
 
 template<typename T> 

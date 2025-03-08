@@ -24,12 +24,12 @@ class perlin {
 public:
   perlin() {};
   Float noise(const point3f& p) const {
-    Float u = p.x() - floor(p.x());
-    Float v = p.y() - floor(p.y());
-    Float w = p.z() - floor(p.z());
-    int i = floor(p.x());
-    int j = floor(p.y());
-    int k = floor(p.z());
+    Float u = p.x - floor(p.x);
+    Float v = p.y - floor(p.y);
+    Float w = p.z - floor(p.z);
+    int i = floor(p.x);
+    int j = floor(p.y);
+    int k = floor(p.z);
     point3f c[2][2][2];
     for(int di = 0; di < 2; di++) {
       for(int dj = 0; dj < 2; dj++) {

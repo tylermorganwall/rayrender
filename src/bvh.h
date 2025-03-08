@@ -116,7 +116,7 @@ public:
     //                         const ParameterDictionary &parameters);
     
     // Bounds3f Bounds() const;
-    // pstd::optional<ShapeIntersection> Intersect(const Ray &ray, Float tMax) const;
+    // std::optional<ShapeIntersection> Intersect(const Ray &ray, Float tMax) const;
     // bool IntersectP(const Ray &ray, Float tMax) const;
 
     virtual const bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const;

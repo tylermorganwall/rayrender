@@ -50,7 +50,7 @@ const bool csg::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, ran
           shapes->getDistance(from + vec3f(0, 0, delta)) - shapes->getDistance(from + vec3f(0, 0, -delta))
         );
         //Deal with degenerate case by setting directly at camera--not ideal, need better fix
-        if(rec.normal.x() == 0 && rec.normal.y() == 0 && rec.normal.z() == 0) {
+        if(rec.normal.x == 0 && rec.normal.y == 0 && rec.normal.z == 0) {
           rec.normal = convert_to_normal3(-r2.direction());
         }
         rec.p = from;
@@ -121,7 +121,7 @@ const bool csg::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sam
           shapes->getDistance(from + vec3f(0, 0, delta)) - shapes->getDistance(from + vec3f(0, 0, -delta))
         );
         //Deal with degenerate case by setting directly at camera--not ideal, need better fix
-        if(rec.normal.x() == 0 && rec.normal.y() == 0 && rec.normal.z() == 0) {
+        if(rec.normal.x == 0 && rec.normal.y == 0 && rec.normal.z == 0) {
           rec.normal = convert_to_normal3(-r2.direction());
         }
         rec.p = from;

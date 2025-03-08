@@ -47,7 +47,7 @@ private:
       : kc(c), kx(x), ky(y), kz(z) {}
     Float kc, kx, ky, kz;
     Float Eval(const point3f &p) const {
-      return kc + kx * p.x() + ky * p.y() + kz * p.z();
+      return kc + kx * p.x + ky * p.y + kz * p.z;
     }
   };
   DerivativeTerm c1[3], c2[3], c3[3], c4[3], c5[3];

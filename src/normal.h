@@ -17,13 +17,6 @@ public:
   normal3f(Float e0, Float e1, Float e2) {e[0] = e0; e[1] = e1; e[2] = e2;}
   normal3f(Float e0) {e[0] = e0; e[1] = e0; e[2] = e0;}
   
-  inline Float x() const { return e[0]; }
-  inline Float y() const { return e[1]; }
-  inline Float z() const { return e[2]; }
-  inline Float r() const { return e[0]; }
-  inline Float g() const { return e[1]; }
-  inline Float b() const { return e[2]; }
-  
   inline const normal3f& operator+() const { return *this; }
   
   inline normal3f operator-() const { return normal3f(-e[0], -e[1], -e[2]); }
@@ -50,7 +43,11 @@ public:
   }
   inline void make_unit_vector();
   
-  Float e[3];
+  union {
+    Float e[3];
+    Float x, y ,z;
+    Float r, g, b;
+  };
 };
 
 
@@ -152,23 +149,23 @@ inline Float AbsDot(const normal3f &v1, const vec3f &v2) {
 
 
 inline normal3f cross(const normal3f &v1, const normal3f &v2) {
-  return(normal3f(DifferenceOfProducts(v1.y(), v2.z(), v1.z(), v2.y()),
-                    DifferenceOfProducts(v1.z(), v2.x(), v1.x(), v2.z()),
-                    DifferenceOfProducts(v1.x(), v2.y(), v1.y(), v2.x())));
+  return(normal3f(DifferenceOfProducts(v1.y, v2.z, v1.z, v2.y),
+                    DifferenceOfProducts(v1.z, v2.x, v1.x, v2.z),
+                    DifferenceOfProducts(v1.x, v2.y, v1.y, v2.x)));
 }
 
 
 inline normal3f cross(const vec3f &v1, const normal3f &v2) {
-  return(normal3f(DifferenceOfProducts(v1.y(), v2.z(), v1.z(), v2.y()),
-                    DifferenceOfProducts(v1.z(), v2.x(), v1.x(), v2.z()),
-                    DifferenceOfProducts(v1.x(), v2.y(), v1.y(), v2.x())));
+  return(normal3f(DifferenceOfProducts(v1.y, v2.z, v1.z, v2.y),
+                    DifferenceOfProducts(v1.z, v2.x, v1.x, v2.z),
+                    DifferenceOfProducts(v1.x, v2.y, v1.y, v2.x)));
 }
 
 
 inline normal3f cross(const normal3f &v1, const vec3f &v2) {
-  return(normal3f(DifferenceOfProducts(v1.y(), v2.z(), v1.z(), v2.y()),
-                    DifferenceOfProducts(v1.z(), v2.x(), v1.x(), v2.z()),
-                    DifferenceOfProducts(v1.x(), v2.y(), v1.y(), v2.x())));
+  return(normal3f(DifferenceOfProducts(v1.y, v2.z, v1.z, v2.y),
+                    DifferenceOfProducts(v1.z, v2.x, v1.x, v2.z),
+                    DifferenceOfProducts(v1.x, v2.y, v1.y, v2.x)));
 }
 
 
@@ -241,27 +238,27 @@ inline normal3f unit_vector(normal3f v) {
 
 
 inline Float MinComponent(const normal3f &v) {
-  return(ffmin(v.x(), ffmin(v.y(), v.z())));
+  return(ffmin(v.x, ffmin(v.y, v.z)));
 }
 
 
 inline Float MaxComponent(const normal3f &v) {
-  return(ffmax(v.x(), ffmax(v.y(), v.z())));
+  return(ffmax(v.x, ffmax(v.y, v.z)));
 }
 
 
 inline int MaxDimension(const normal3f &v) {
-  return((v.x() > v.y()) ? ((v.x() > v.z()) ? 0 : 2) : ((v.y() > v.z()) ? 1 : 2));
+  return((v.x > v.y) ? ((v.x > v.z) ? 0 : 2) : ((v.y > v.z) ? 1 : 2));
 }
 
 
 inline normal3f Min(const normal3f &p1, const normal3f &p2) {
-  return(normal3f(ffmin(p1.x(), p2.x()), ffmin(p1.y(), p2.y()),ffmin(p1.z(), p2.z())));
+  return(normal3f(ffmin(p1.x, p2.x), ffmin(p1.y, p2.y),ffmin(p1.z, p2.z)));
 }
 
 
 inline normal3f Max(const normal3f &p1, const normal3f &p2) {
-  return(normal3f(fmax(p1.x(), p2.x()), fmax(p1.y(), p2.y()),fmax(p1.z(), p2.z())));
+  return(normal3f(fmax(p1.x, p2.x), fmax(p1.y, p2.y),fmax(p1.z, p2.z)));
 }
 
 
@@ -271,7 +268,7 @@ inline normal3f Permute(const normal3f &v, int x, int y, int z) {
 
 
 inline normal3f Abs(const normal3f &v) {
-  return(normal3f(fabs(v.x()), fabs(v.y()), fabs(v.z())));
+  return(normal3f(fabs(v.x), fabs(v.y), fabs(v.z)));
 }
 
 inline normal3f Faceforward(const normal3f &n, const vec3f &v) {
@@ -286,7 +283,10 @@ inline normal3f Faceforward(const normal3f &n, const normal3f &v) {
 
 class alignas(16) normal3f {
 public:
-    FVec4 e;  // SIMD vector for storage
+    union {
+      FVec4 e;  // SIMD vector for storage
+      Float x, y ,z, w;
+    };
 
     // Constructors
     normal3f() {
@@ -304,9 +304,9 @@ public:
 
     template <typename U>
     normal3f(const vec3<U>& p) {
-        e = simd_set(static_cast<Float>(p.x()), 
-                     static_cast<Float>(p.y()), 
-                     static_cast<Float>(p.z()), 
+        e = simd_set(static_cast<Float>(p.x), 
+                     static_cast<Float>(p.y), 
+                     static_cast<Float>(p.z), 
                      0.0f);
     }
 
@@ -576,18 +576,18 @@ inline normal3f unit_vector(const normal3f& v) {
 }
 
 inline Float MinComponent(const normal3f& v) {
-    return std::fmin(v.x(), std::fmin(v.y(), v.z()));
+    return std::fmin(v.x, std::fmin(v.y, v.z));
 }
 
 inline Float MaxComponent(const normal3f& v) {
-    return std::fmax(v.x(), std::fmax(v.y(), v.z()));
+    return std::fmax(v.x, std::fmax(v.y, v.z));
 }
 
 inline int MaxDimension(const normal3f& v) {
-    if (v.x() > v.y()) {
-        return (v.x() > v.z()) ? 0 : 2;
+    if (v.x > v.y) {
+        return (v.x > v.z) ? 0 : 2;
     } else {
-        return (v.y() > v.z()) ? 1 : 2;
+        return (v.y > v.z) ? 1 : 2;
     }
 }
 

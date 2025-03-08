@@ -153,8 +153,8 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
                            ray r; 
                            vec2f u2 = samplers[index]->Get2D();
                            Float weight(1.0);
-                           Float u = (Float(i) + u2.x()) / Float(nx);
-                           Float v = (Float(j) + u2.y()) / Float(ny);
+                           Float u = (Float(i) + u2.x) / Float(nx);
+                           Float v = (Float(j) + u2.y) / Float(ny);
                            
                            if(fov >= 0) {
                              r = cam->get_ray(u,v, convert_to_point3(rand_to_unit(samplers[index]->Get2D())),
@@ -225,8 +225,8 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
                            ray r; 
                            vec2f u2 = samplers_small[index]->Get2D();
                            Float weight(1.0);
-                           Float u = (Float(i) + u2.x()) / Float(nx_small);
-                           Float v = (Float(j) + u2.y()) / Float(ny_small);
+                           Float u = (Float(i) + u2.x) / Float(nx_small);
+                           Float v = (Float(j) + u2.y) / Float(ny_small);
                            
                            if(fov >= 0) {
                              r = cam->get_ray(u,v, convert_to_point3(rand_to_unit(samplers_small[index]->Get2D())),

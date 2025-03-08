@@ -142,7 +142,7 @@ class csg_torus : public ImplicitShape {
       ring_radius(ring_radius), cross_radius(cross_radius) {} 
     Float getDistance(const point3f& from_old) const {
       vec3f from = from_old - center;
-      vec2f q = vec2f(std::sqrt(from.x()*from.x() + from.z()*from.z()) - ring_radius, from.y());
+      vec2f q = vec2f(std::sqrt(from.x*from.x + from.z*from.z) - ring_radius, from.y);
       return(q.length()-cross_radius);
     } 
     virtual bool bbox(Float t0, Float t1, aabb& box) const {
@@ -169,8 +169,8 @@ class csg_capsule : public ImplicitShape {
       return((pa - ba*h).length() - radius);
     } 
     virtual bool bbox(Float t0, Float t1, aabb& box) const {
-      vec3f min = vec3f(ffmin(start.x(),end.x()),ffmin(start.y(),end.y()),ffmin(start.z(),end.z()));
-      vec3f max = vec3f(ffmax(start.x(),end.x()),ffmax(start.y(),end.y()),ffmax(start.z(),end.z()));
+      vec3f min = vec3f(ffmin(start.x,end.x),ffmin(start.y,end.y),ffmin(start.z,end.z));
+      vec3f max = vec3f(ffmax(start.x,end.x),ffmax(start.y,end.y),ffmax(start.z,end.z));
       box = aabb(min-radius, max+radius);
       return(true);
     }
@@ -200,8 +200,8 @@ class csg_cylinder : public ImplicitShape {
       return(d > 0 ? std::sqrt(std::fabs(d)) * inv_baba - corner_radius : -std::sqrt(std::fabs(d)) * inv_baba - corner_radius);
     } 
     virtual bool bbox(Float t0, Float t1, aabb& box) const {
-      vec3f min = vec3f(ffmin(start.x(),end.x()),ffmin(start.y(),end.y()),ffmin(start.z(),end.z()));
-      vec3f max = vec3f(ffmax(start.x(),end.x()),ffmax(start.y(),end.y()),ffmax(start.z(),end.z()));
+      vec3f min = vec3f(ffmin(start.x,end.x),ffmin(start.y,end.y),ffmin(start.z,end.z));
+      vec3f max = vec3f(ffmax(start.x,end.x),ffmax(start.y,end.y),ffmax(start.z,end.z));
       box = aabb(min-radius, max+radius);
       return(true);
     }
@@ -263,8 +263,8 @@ class csg_rounded_cone : public ImplicitShape {
       return((std::sqrt(x2*a2*il2)+y*rr)*il2 - r1);
     } 
     virtual bool bbox(Float t0, Float t1, aabb& box) const {
-      point3f min = point3f(ffmin(start.x(),end.x()),ffmin(start.y(),end.y()),ffmin(start.z(),end.z()));
-      point3f max = point3f(ffmax(start.x(),end.x()),ffmax(start.y(),end.y()),ffmax(start.z(),end.z()));
+      point3f min = point3f(ffmin(start.x,end.x),ffmin(start.y,end.y),ffmin(start.z,end.z));
+      point3f max = point3f(ffmax(start.x,end.x),ffmax(start.y,end.y),ffmax(start.z,end.z));
       box = aabb(min-r1-r2, max+r1+r2);
       return(true);
     }
@@ -288,17 +288,17 @@ class csg_cone : public ImplicitShape {
       vec3f from = from_trans - vec3f(0,height,0);
       vec2f q = vec2f(radius,-height);
       
-      vec2f w = vec2f( std::sqrt(from.x() * from.x() +  from.z() *  from.z()), from.y() );
+      vec2f w = vec2f( std::sqrt(from.x * from.x +  from.z *  from.z), from.y );
       vec2f a = w - q*clamp( dot(w,q)/dot(q,q), 0.0, 1.0 );
-      vec2f b = w - q*vec2f( clamp( w.x()/q.x(), 0.0, 1.0 ), 1.0 );
-      float k = sgn( q.y() );
+      vec2f b = w - q*vec2f( clamp( w.x/q.x, 0.0, 1.0 ), 1.0 );
+      float k = sgn( q.y );
       float d = std::min(dot( a, a ),dot(b, b));
-      float s = std::fmax( k*(w.x()*q.y()-w.y()*q.x()),k*(w.y()-q.y()));
+      float s = std::fmax( k*(w.x*q.y-w.y*q.x),k*(w.y-q.y));
       return(std::sqrt(d)*sgn(s));
     } 
     virtual bool bbox(Float t0, Float t1, aabb& box) const {
-      point3f min = point3f(ffmin(start.x(),end.x()),ffmin(start.y(),end.y()),ffmin(start.z(),end.z()));
-      point3f max = point3f(ffmax(start.x(),end.x()),ffmax(start.y(),end.y()),ffmax(start.z(),end.z()));
+      point3f min = point3f(ffmin(start.x,end.x),ffmin(start.y,end.y),ffmin(start.z,end.z));
+      point3f max = point3f(ffmax(start.x,end.x),ffmax(start.y,end.y),ffmax(start.z,end.z));
       box = aabb(min-radius, max+radius);
       return(true);
     }
@@ -323,20 +323,20 @@ class csg_pyramid : public ImplicitShape {
       from = from * base_inv;
       from.e[0] = std::fabs(from.e[0]); 
       from.e[2] = std::fabs(from.e[2]);
-      from = (from.z() > from.x()) ? vec3f(from.z(),from.y(),from.x()) : from;
+      from = (from.z > from.x) ? vec3f(from.z,from.y,from.x) : from;
       from -= vec3f(0.5,0,0.5);
       
-      vec3f q = vec3f(from.z(), h*from.y() - 0.5*from.x(), h*from.x() + 0.5*from.y());
+      vec3f q = vec3f(from.z, h*from.y - 0.5*from.x, h*from.x + 0.5*from.y);
       
-      float s = std::fmax(-q.x(),0.0);
-      float t = clamp((q.y()-0.5*from.z())*m2_inv_buff, 0.0, 1.0 );
+      float s = std::fmax(-q.x,0.0);
+      float t = clamp((q.y-0.5*from.z)*m2_inv_buff, 0.0, 1.0 );
       
-      float a = m2*(q.x()+s)*(q.x()+s) + q.y()*q.y();
-      float b = m2*(q.x()+0.5*t)*(q.x()+0.5*t) + (q.y()-m2*t)*(q.y()-m2*t);
+      float a = m2*(q.x+s)*(q.x+s) + q.y*q.y;
+      float b = m2*(q.x+0.5*t)*(q.x+0.5*t) + (q.y-m2*t)*(q.y-m2*t);
       
-      float d2 = std::fmin(q.y(),-q.x()*m2-q.y()*0.5) > 0.0 ? 0.0 : std::fmin(a,b);
+      float d2 = std::fmin(q.y,-q.x*m2-q.y*0.5) > 0.0 ? 0.0 : std::fmin(a,b);
       
-      return(std::sqrt((d2+q.z()*q.z()) * m2_inv ) * sgn(std::fmax(q.z(),-from.y())));
+      return(std::sqrt((d2+q.z*q.z) * m2_inv ) * sgn(std::fmax(q.z,-from.y)));
     } 
     virtual bool bbox(Float t0, Float t1, aabb& box) const {
       box = aabb(center_bottom-vec3f(base,0,base), center_bottom+vec3f(base,h,base));
@@ -372,13 +372,13 @@ class csg_triangle : public ImplicitShape {
               dot(nor,pa)*dot(nor,pa)/nor.squared_length() ));
     } 
     virtual bool bbox(Float t0, Float t1, aabb& box) const {
-      point3f min = point3f(ffmin(ffmin(a.x(),b.x()),c.x()),
-                      ffmin(ffmin(a.y(),b.y()),c.y()),
-                      ffmin(ffmin(a.z(),b.z()),c.z()));
+      point3f min = point3f(ffmin(ffmin(a.x,b.x),c.x),
+                      ffmin(ffmin(a.y,b.y),c.y),
+                      ffmin(ffmin(a.z,b.z),c.z));
       
-      point3f max = point3f(ffmax(ffmax(a.x(),b.x()),c.x()),
-                      ffmax(ffmax(a.y(),b.y()),c.y()),
-                      ffmax(ffmax(a.z(),b.z()),c.z()));
+      point3f max = point3f(ffmax(ffmax(a.x,b.x),c.x),
+                      ffmax(ffmax(a.y,b.y),c.y),
+                      ffmax(ffmax(a.z,b.z),c.z));
       box = Expand(aabb(min, max),0.01);
       return(true);
     }
@@ -506,23 +506,23 @@ class csg_rotate : public ImplicitShape {
       shape->bbox(0,0,box2); //Pre-compute rotated bbox
       point3f corners[8];
       corners[0] = axis.local_to_world(box2.min() - pivot_point) + pivot_point;
-      corners[1] = axis.local_to_world(point3f(box2.min().x(), box2.min().y(), box2.max().z())- pivot_point) + pivot_point;
-      corners[2] = axis.local_to_world(point3f(box2.min().x(), box2.max().y(), box2.min().z())- pivot_point) + pivot_point;
-      corners[3] = axis.local_to_world(point3f(box2.max().x(), box2.min().y(), box2.min().z())- pivot_point) + pivot_point;
-      corners[4] = axis.local_to_world(point3f(box2.min().x(), box2.max().y(), box2.max().z())- pivot_point) + pivot_point;
-      corners[5] = axis.local_to_world(point3f(box2.max().x(), box2.min().y(), box2.max().z())- pivot_point) + pivot_point;
-      corners[6] = axis.local_to_world(point3f(box2.max().x(), box2.max().y(), box2.min().z())- pivot_point) + pivot_point;
+      corners[1] = axis.local_to_world(point3f(box2.min().x, box2.min().y, box2.max().z)- pivot_point) + pivot_point;
+      corners[2] = axis.local_to_world(point3f(box2.min().x, box2.max().y, box2.min().z)- pivot_point) + pivot_point;
+      corners[3] = axis.local_to_world(point3f(box2.max().x, box2.min().y, box2.min().z)- pivot_point) + pivot_point;
+      corners[4] = axis.local_to_world(point3f(box2.min().x, box2.max().y, box2.max().z)- pivot_point) + pivot_point;
+      corners[5] = axis.local_to_world(point3f(box2.max().x, box2.min().y, box2.max().z)- pivot_point) + pivot_point;
+      corners[6] = axis.local_to_world(point3f(box2.max().x, box2.max().y, box2.min().z)- pivot_point) + pivot_point;
       corners[7] = axis.local_to_world(box2.max() - pivot_point) + pivot_point;
       point3f temp_min = corners[0];
       point3f temp_max = corners[7];
       
       for(int i = 1; i < 7; i++) {
-        temp_min = point3f(ffmin(temp_min.x(), corners[i].x()),
-                        ffmin(temp_min.y(), corners[i].y()),
-                        ffmin(temp_min.z(), corners[i].z()));
-        temp_max = point3f(ffmax(temp_max.x(), corners[i].x()),
-                        ffmax(temp_max.y(), corners[i].y()),
-                        ffmax(temp_max.z(), corners[i].z()));
+        temp_min = point3f(ffmin(temp_min.x, corners[i].x),
+                        ffmin(temp_min.y, corners[i].y),
+                        ffmin(temp_min.z, corners[i].z));
+        temp_max = point3f(ffmax(temp_max.x, corners[i].x),
+                        ffmax(temp_max.y, corners[i].y),
+                        ffmax(temp_max.z, corners[i].z));
       }
       aabb new_box(temp_min,temp_max);
       box_cache = new_box;
@@ -537,23 +537,23 @@ class csg_rotate : public ImplicitShape {
       shape->bbox(0,0,box2); //Pre-compute rotated bbox
       point3f corners[8];
       corners[0] = axis.local_to_world(box2.min() - pivot_point) + pivot_point;
-      corners[1] = axis.local_to_world(point3f(box2.min().x(), box2.min().y(), box2.max().z()) - pivot_point) + pivot_point;
-      corners[2] = axis.local_to_world(point3f(box2.min().x(), box2.max().y(), box2.min().z()) - pivot_point) + pivot_point;
-      corners[3] = axis.local_to_world(point3f(box2.max().x(), box2.min().y(), box2.min().z()) - pivot_point) + pivot_point;
-      corners[4] = axis.local_to_world(point3f(box2.min().x(), box2.max().y(), box2.max().z()) - pivot_point) + pivot_point;
-      corners[5] = axis.local_to_world(point3f(box2.max().x(), box2.min().y(), box2.max().z()) - pivot_point) + pivot_point;
-      corners[6] = axis.local_to_world(point3f(box2.max().x(), box2.max().y(), box2.min().z()) - pivot_point) + pivot_point;
+      corners[1] = axis.local_to_world(point3f(box2.min().x, box2.min().y, box2.max().z) - pivot_point) + pivot_point;
+      corners[2] = axis.local_to_world(point3f(box2.min().x, box2.max().y, box2.min().z) - pivot_point) + pivot_point;
+      corners[3] = axis.local_to_world(point3f(box2.max().x, box2.min().y, box2.min().z) - pivot_point) + pivot_point;
+      corners[4] = axis.local_to_world(point3f(box2.min().x, box2.max().y, box2.max().z) - pivot_point) + pivot_point;
+      corners[5] = axis.local_to_world(point3f(box2.max().x, box2.min().y, box2.max().z) - pivot_point) + pivot_point;
+      corners[6] = axis.local_to_world(point3f(box2.max().x, box2.max().y, box2.min().z) - pivot_point) + pivot_point;
       corners[7] = axis.local_to_world(box2.max() - pivot_point) + pivot_point;
       point3f temp_min = corners[0];
       point3f temp_max = corners[7];
       
       for(int i = 1; i < 7; i++) {
-        temp_min = point3f(ffmin(temp_min.x(), corners[i].x()),
-                        ffmin(temp_min.y(), corners[i].y()),
-                        ffmin(temp_min.z(), corners[i].z()));
-        temp_max = point3f(ffmax(temp_max.x(), corners[i].x()),
-                        ffmax(temp_max.y(), corners[i].y()),
-                        ffmax(temp_max.z(), corners[i].z()));
+        temp_min = point3f(ffmin(temp_min.x, corners[i].x),
+                        ffmin(temp_min.y, corners[i].y),
+                        ffmin(temp_min.z, corners[i].z));
+        temp_max = point3f(ffmax(temp_max.x, corners[i].x),
+                        ffmax(temp_max.y, corners[i].y),
+                        ffmax(temp_max.z, corners[i].z));
       }
       aabb new_box(temp_min,temp_max);
       box_cache = new_box;

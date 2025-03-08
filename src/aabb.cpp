@@ -4,15 +4,15 @@
 
 const Float aabb::surface_area() const {
   point3f diag = Diag();
-  return(min().x() <= max().x() ? 
-         2*(diag.x() * diag.y() + diag.x() * diag.z() + diag.y() * diag.z()):
+  return(min().x <= max().x ? 
+         2*(diag.x * diag.y + diag.x * diag.z + diag.y * diag.z):
          10E20);
 }
 
 const Float aabb::Volume() const {
   point3f diag = Diag();
-  return(min().x() <= max().x() ? 
-         diag.x() * diag.y() * diag.z():
+  return(min().x <= max().x ? 
+         diag.x * diag.y * diag.z:
          10E20);
 }
 
@@ -21,12 +21,12 @@ const bool aabb::hit(const ray &r, Float tmin, Float tmax, random_gen& rng) cons
   // SCOPED_TIMER_COUNTER("AABB");
 
   // Float txmin, txmax, tymin, tymax, tzmin, tzmax;
-  // txmin = (bounds[  r.sign[0]].x()-r.origin().x()) * r.inv_dir.x();
-  // txmax = (bounds[1-r.sign[0]].x()-r.origin().x()) * r.inv_dir_pad.x();
-  // tymin = (bounds[  r.sign[1]].y()-r.origin().y()) * r.inv_dir.y();
-  // tymax = (bounds[1-r.sign[1]].y()-r.origin().y()) * r.inv_dir_pad.y();
-  // tzmin = (bounds[  r.sign[2]].z()-r.origin().z()) * r.inv_dir.z();
-  // tzmax = (bounds[1-r.sign[2]].z()-r.origin().z()) * r.inv_dir_pad.z();
+  // txmin = (bounds[  r.sign[0]].x-r.origin().x) * r.inv_dir.x;
+  // txmax = (bounds[1-r.sign[0]].x-r.origin().x) * r.inv_dir_pad.x;
+  // tymin = (bounds[  r.sign[1]].y-r.origin().y) * r.inv_dir.y;
+  // tymax = (bounds[1-r.sign[1]].y-r.origin().y) * r.inv_dir_pad.y;
+  // tzmin = (bounds[  r.sign[2]].z-r.origin().z) * r.inv_dir.z;
+  // tzmax = (bounds[1-r.sign[2]].z-r.origin().z) * r.inv_dir_pad.z;
   // tmin = ffmax(tzmin, ffmax(tymin, ffmax(txmin, tmin)));
   // tmax = ffmin(tzmax, ffmin(tymax, ffmin(txmax, tmax)));
   return(tmin <= tmax);
@@ -36,12 +36,12 @@ const bool aabb::hit(const ray &r, Float tmin, Float tmax, Sampler* sampler) con
   // SCOPED_CONTEXT("Hit");
   // SCOPED_TIMER_COUNTER("AABB");
   // Float txmin, txmax, tymin, tymax, tzmin, tzmax;
-  // txmin = (bounds[  r.sign[0]].x()-r.origin().x()) * r.inv_dir.x();
-  // txmax = (bounds[1-r.sign[0]].x()-r.origin().x()) * r.inv_dir_pad.x();
-  // tymin = (bounds[  r.sign[1]].y()-r.origin().y()) * r.inv_dir.y();
-  // tymax = (bounds[1-r.sign[1]].y()-r.origin().y()) * r.inv_dir_pad.y();
-  // tzmin = (bounds[  r.sign[2]].z()-r.origin().z()) * r.inv_dir.z();
-  // tzmax = (bounds[1-r.sign[2]].z()-r.origin().z()) * r.inv_dir_pad.z();
+  // txmin = (bounds[  r.sign[0]].x-r.origin().x) * r.inv_dir.x;
+  // txmax = (bounds[1-r.sign[0]].x-r.origin().x) * r.inv_dir_pad.x;
+  // tymin = (bounds[  r.sign[1]].y-r.origin().y) * r.inv_dir.y;
+  // tymax = (bounds[1-r.sign[1]].y-r.origin().y) * r.inv_dir_pad.y;
+  // tzmin = (bounds[  r.sign[2]].z-r.origin().z) * r.inv_dir.z;
+  // tzmax = (bounds[1-r.sign[2]].z-r.origin().z) * r.inv_dir_pad.z;
   // tmin = ffmax(tzmin, ffmax(tymin, ffmax(txmin, tmin)));
   // tmax = ffmin(tzmax, ffmin(tymax, ffmin(txmax, tmax)));
   return(tmin <= tmax);
@@ -49,47 +49,47 @@ const bool aabb::hit(const ray &r, Float tmin, Float tmax, Sampler* sampler) con
 
 const point3f aabb::offset(const point3f p) const {
   point3f o = p + -min();
-  if (max().x() > min().x()) {
-    o.e[0] /= (max().x() - min().x());
+  if (max().x > min().x) {
+    o.e[0] /= (max().x - min().x);
   }
-  if (max().y() > min().y()) {
-    o.e[1] /= (max().y() - min().y());
+  if (max().y > min().y) {
+    o.e[1] /= (max().y - min().y);
   }
-  if (max().z() > min().z()) {
-    o.e[2] /= (max().z() - min().z());
+  if (max().z > min().z) {
+    o.e[2] /= (max().z - min().z);
   }
   return(o);
 }
 
 const point3f aabb::offset(const vec3f p) const {
-  point3f o = point3f(p.x(),p.y(),p.z()) + -min();
-  if (max().x() > min().x()) {
-    o.e[0] /= (max().x() - min().x());
+  point3f o = point3f(p.x,p.y,p.z) + -min();
+  if (max().x > min().x) {
+    o.e[0] /= (max().x - min().x);
   }
-  if (max().y() > min().y()) {
-    o.e[1] /= (max().y() - min().y());
+  if (max().y > min().y) {
+    o.e[1] /= (max().y - min().y);
   }
-  if (max().z() > min().z()) {
-    o.e[2] /= (max().z() - min().z());
+  if (max().z > min().z) {
+    o.e[2] /= (max().z - min().z);
   }
   return(o);
 }
 
 const point3f aabb::Corner(int corner) const {
-  return point3f((*this).bounds[(corner & 1)].x(),
-                 (*this).bounds[(corner & 2) ? 1 : 0].y(),
-                 (*this).bounds[(corner & 4) ? 1 : 0].z());
+  return point3f((*this).bounds[(corner & 1)].x,
+                 (*this).bounds[(corner & 2) ? 1 : 0].y,
+                 (*this).bounds[(corner & 4) ? 1 : 0].z);
 }
 
 const point3f aabb::Lerp(const point3f &t) const {
-  return point3f(lerp(t.x(), min().x(), max().x()),
-                 lerp(t.y(), min().y(), max().y()),
-                 lerp(t.z(), min().z(), max().z()));
+  return point3f(lerp(t.x, min().x, max().x),
+                 lerp(t.y, min().y, max().y),
+                 lerp(t.z, min().z, max().z));
 }
 
 const point2f aabb::Lerp(const point2f &t) const {
-  return point2f(lerp(t.x(), min().x(), max().x()),
-                 lerp(t.y(), min().y(), max().y()));
+  return point2f(lerp(t.x, min().x, max().x),
+                 lerp(t.y, min().y, max().y));
 }
 
 const point3f aabb::Centroid() const {
@@ -102,9 +102,9 @@ const point3f aabb::Diag() const {
 
 int aabb::MaxDimension() const {
     point3f d = Diag();
-    if (d.x() > d.y() && d.x() > d.z())
+    if (d.x > d.y && d.x > d.z)
       return 0;
-    else if (d.y() > d.z())
+    else if (d.y > d.z)
       return 1;
     else
       return 2;
@@ -122,12 +122,12 @@ int aabb::MaxDimension() const {
 //     // SCOPED_CONTEXT("Hit");
 //     // SCOPED_TIMER_COUNTER("BBox4");
 //     // Prepare ray data
-//     FVec4 rayOriginX = simd_set1(ray.origin().x());
-//     FVec4 rayOriginY = simd_set1(ray.origin().y());
-//     FVec4 rayOriginZ = simd_set1(ray.origin().z());
-//     FVec4 rayInvDirX = simd_set1(ray.inv_dir_pad.x());
-//     FVec4 rayInvDirY = simd_set1(ray.inv_dir_pad.y());
-//     FVec4 rayInvDirZ = simd_set1(ray.inv_dir_pad.z());
+//     FVec4 rayOriginX = simd_set1(ray.origin().x);
+//     FVec4 rayOriginY = simd_set1(ray.origin().y);
+//     FVec4 rayOriginZ = simd_set1(ray.origin().z);
+//     FVec4 rayInvDirX = simd_set1(ray.inv_dir_pad.x);
+//     FVec4 rayInvDirY = simd_set1(ray.inv_dir_pad.y);
+//     FVec4 rayInvDirZ = simd_set1(ray.inv_dir_pad.z);
 
 //     // Determine near and far indices based on ray direction signs
 //     int ixNear = ray.sign[0] ? 3 : 0;
@@ -221,12 +221,12 @@ void rayBBoxIntersect4Serial(const ray& r,
     // FVec4 bboxMaxZ = bbox4.getMaxZ();
     
     // // Prepare ray data
-    // Float rayOriginX = r.origin().x();
-    // Float rayOriginY = r.origin().y();
-    // Float rayOriginZ = r.origin().z();
-    // Float rayInvDirX = r.inv_dir_pad.x();
-    // Float rayInvDirY = r.inv_dir_pad.y();
-    // Float rayInvDirZ = r.inv_dir_pad.z();
+    // Float rayOriginX = r.origin().x;
+    // Float rayOriginY = r.origin().y;
+    // Float rayOriginZ = r.origin().z;
+    // Float rayInvDirX = r.inv_dir_pad.x;
+    // Float rayInvDirY = r.inv_dir_pad.y;
+    // Float rayInvDirZ = r.inv_dir_pad.z;
     // // Loop over each bounding box (up to 4)
     // for (int i = 0; i < 4; ++i) {
     //     // Extract min and max coordinates for the i-th bounding box

@@ -9,13 +9,6 @@
 #include "vec3.h"
 #include "point3.h"
 
-#ifdef RAY_FLOAT_AS_DOUBLE
-static const Float OneMinusEpsilon = 0x1.fffffffffffffp-1;
-#else
-static const Float OneMinusEpsilon = 0x1.fffffep-1;
-#endif
-
-
 class random_gen {
 public:
   random_gen(unsigned int seed) : rng(seed) {}

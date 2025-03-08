@@ -7,14 +7,14 @@ const bool disk::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, ra
   
   ray r2 = (*WorldToObject)(r);
   // First we intersect with the plane containing the disk
-  Float t = -r2.origin().y() / r2.direction().y();
+  Float t = -r2.origin().y / r2.direction().y;
   bool alpha_miss = false;
   
   if(t < t_min || t > t_max) {
     return(false);
   }
-  Float x = r2.origin().x() + t*r2.direction().x();
-  Float z = r2.origin().z() + t*r2.direction().z();
+  Float x = r2.origin().x + t*r2.direction().x;
+  Float z = r2.origin().z + t*r2.direction().z;
   Float radHit2 = x*x + z*z;
   if(radHit2 >= radius * radius || radHit2 <= inner_radius * inner_radius) {
     return(false);
@@ -24,8 +24,8 @@ const bool disk::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, ra
   point3f p = r2.point_at_parameter(t);
   p.e[1] = 0;
 
-  Float u = p.x() / (2.0 * radius) + 0.5;
-  Float v = p.z() / (2.0 * radius) + 0.5;
+  Float u = p.x / (2.0 * radius) + 0.5;
+  Float v = p.z / (2.0 * radius) + 0.5;
   u = 1 - u;
   if(alpha_mask) {
     if(alpha_mask->value(u, v, rec.p) < rng.unif_rand()) {
@@ -49,7 +49,7 @@ const bool disk::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, ra
   
   if(bump_tex) {
     point3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
-    rec.bump_normal = rec.normal + convert_to_normal3(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
+    rec.bump_normal = rec.normal + convert_to_normal3(bvbu.x * rec.dpdu + bvbu.y * rec.dpdv); 
     rec.bump_normal.make_unit_vector();
 
   }
@@ -72,14 +72,14 @@ const bool disk::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sa
   
   ray r2 = (*WorldToObject)(r);
   // First we intersect with the plane containing the disk
-  Float t = -r2.origin().y() / r2.direction().y();
+  Float t = -r2.origin().y / r2.direction().y;
   bool alpha_miss = false;
   
   if(t < t_min || t > t_max) {
     return(false);
   }
-  Float x = r2.origin().x() + t*r2.direction().x();
-  Float z = r2.origin().z() + t*r2.direction().z();
+  Float x = r2.origin().x + t*r2.direction().x;
+  Float z = r2.origin().z + t*r2.direction().z;
   Float radHit2 = x*x + z*z;
   if(radHit2 >= radius * radius || radHit2 <= inner_radius * inner_radius) {
     return(false);
@@ -89,8 +89,8 @@ const bool disk::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sa
   point3f p = r2.point_at_parameter(t);
   p.e[1] = 0;
 
-  Float u = p.x() / (2.0 * radius) + 0.5;
-  Float v = p.z() / (2.0 * radius) + 0.5;
+  Float u = p.x / (2.0 * radius) + 0.5;
+  Float v = p.z / (2.0 * radius) + 0.5;
   u = 1 - u;
   if(alpha_mask) {
     if(alpha_mask->value(u, v, rec.p) < sampler->Get1D()) {
@@ -114,7 +114,7 @@ const bool disk::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sa
   
   if(bump_tex) {
     point3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
-    rec.bump_normal = rec.normal + convert_to_normal3(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
+    rec.bump_normal = rec.normal + convert_to_normal3(bvbu.x * rec.dpdu + bvbu.y * rec.dpdv); 
     rec.bump_normal.make_unit_vector();
   }
   rec.pError = vec3f(0,0,0);
@@ -136,13 +136,13 @@ bool disk::HitP(const ray& r, Float t_min, Float t_max, random_gen& rng) const {
   
   ray r2 = (*WorldToObject)(r);
   // First we intersect with the plane containing the disk
-  Float t = -r2.origin().y() / r2.direction().y();
+  Float t = -r2.origin().y / r2.direction().y;
   
   if(t < t_min || t > t_max) {
     return(false);
   }
-  Float x = r2.origin().x() + t*r2.direction().x();
-  Float z = r2.origin().z() + t*r2.direction().z();
+  Float x = r2.origin().x + t*r2.direction().x;
+  Float z = r2.origin().z + t*r2.direction().z;
   Float radHit2 = x*x + z*z;
   if(radHit2 >= radius * radius || radHit2 <= inner_radius * inner_radius) {
     return(false);
@@ -157,13 +157,13 @@ bool disk::HitP(const ray& r, Float t_min, Float t_max, Sampler* sampler) const 
   
   ray r2 = (*WorldToObject)(r);
   // First we intersect with the plane containing the disk
-  Float t = -r2.origin().y() / r2.direction().y();
+  Float t = -r2.origin().y / r2.direction().y;
   
   if(t < t_min || t > t_max) {
     return(false);
   }
-  Float x = r2.origin().x() + t*r2.direction().x();
-  Float z = r2.origin().z() + t*r2.direction().z();
+  Float x = r2.origin().x + t*r2.direction().x;
+  Float z = r2.origin().z + t*r2.direction().z;
   Float radHit2 = x*x + z*z;
   if(radHit2 >= radius * radius || radHit2 <= inner_radius * inner_radius) {
     return(false);
@@ -208,8 +208,8 @@ vec3f disk::random(const point3f& o, random_gen& rng, Float time) {
 
 vec3f disk::random(const point3f& o, Sampler* sampler, Float time) {
   vec2f u = sampler->Get2D();
-  Float r1 = u.x();
-  Float r2 = sqrt(u.y());
+  Float r1 = u.x;
+  Float r2 = sqrt(u.y);
   Float phi = 2 * static_cast<Float>(M_PI) * r1;
   Float x = ((radius - inner_radius) * r2 + inner_radius) * cos(phi);
   Float z = ((radius - inner_radius) * r2 + inner_radius) * sin(phi);

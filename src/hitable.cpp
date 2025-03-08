@@ -5,15 +5,15 @@
 //Translate implementation
 
 void get_sphere_uv(const vec3f& p, Float& u, Float& v) {
-  Float phi = atan2(p.z(),p.x());
-  Float theta = asin(p.y());
+  Float phi = atan2(p.z,p.x);
+  Float theta = asin(p.y);
   u = 1 - (phi * M_1_PI + 1) * 0.5;
   v = (theta * M_1_PI + 0.5);
 }
 
 void get_sphere_uv(const normal3f& p, Float& u, Float& v) {
-  Float phi = atan2(p.z(),p.x());
-  Float theta = asin(p.y());
+  Float phi = atan2(p.z,p.x);
+  Float theta = asin(p.y);
   u = 1 - (phi * M_1_PI + 1) * 0.5;
   v = (theta * M_1_PI + 0.5);
 }

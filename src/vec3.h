@@ -12,12 +12,6 @@ public:
   vec3() {}
   vec3(T e0, T e1, T e2) {e[0] = e0; e[1] = e1; e[2] = e2;}
   vec3(T e0) {e[0] = e0; e[1] = e0; e[2] = e0;}
-  inline T x() const { return e[0]; }
-  inline T y() const { return e[1]; }
-  inline T z() const { return e[2]; }
-  inline T r() const { return e[0]; }
-  inline T g() const { return e[1]; }
-  inline T b() const { return e[2]; }
   
   inline const vec3<T>& operator+() const { return *this; }
   inline vec3<T> operator-() const { return vec3<T>(-e[0], -e[1], -e[2]); }
@@ -49,7 +43,11 @@ public:
   }
   inline void make_unit_vector();
   
-  T e[3];
+  union {
+    T e[3];
+    T x, y, z;
+    T r, g, b;
+  };
 };
 
 template<typename T>
@@ -88,9 +86,9 @@ inline vec3<T>& vec3<T>::operator/=(const vec3<T>& v) {
 
 template<typename T> 
 inline bool parallelVectors(const vec3<T> &v1, const vec3<T> &v2) {
-  T x = DifferenceOfProducts(v1.y(), v2.z(), v1.z(), v2.y());
-  T y = DifferenceOfProducts(v1.z(), v2.x(), v1.x(), v2.z());
-  T z = DifferenceOfProducts(v1.x(), v2.y(), v1.y(), v2.x());
+  T x = DifferenceOfProducts(v1.y, v2.z, v1.z, v2.y);
+  T y = DifferenceOfProducts(v1.z, v2.x, v1.x, v2.z);
+  T z = DifferenceOfProducts(v1.x, v2.y, v1.y, v2.x);
   if(x == 0 && y == 0 && z == 0) [[unlikely]] {
     return(true);
   }
@@ -142,27 +140,27 @@ inline vec3<T> unit_vector(vec3<T> v) {
 
 template<typename T> 
 inline T MinComponent(const vec3<T> &v) {
-  return(ffmin(v.x(), ffmin(v.y(), v.z())));
+  return(ffmin(v.x, ffmin(v.y, v.z)));
 }
 
 template<typename T> 
 inline T MaxComponent(const vec3<T> &v) {
-  return(ffmax(v.x(), ffmax(v.y(), v.z())));
+  return(ffmax(v.x, ffmax(v.y, v.z)));
 }
 
 template<typename T> 
 inline int MaxDimension(const vec3<T> &v) {
-  return((v.x() > v.y()) ? ((v.x() > v.z()) ? 0 : 2) : ((v.y() > v.z()) ? 1 : 2));
+  return((v.x > v.y) ? ((v.x > v.z) ? 0 : 2) : ((v.y > v.z) ? 1 : 2));
 }
 
 template<typename T> 
 inline vec3<T> Min(const vec3<T> &p1, const vec3<T> &p2) {
-  return(vec3<T>(ffmin(p1.x(), p2.x()), ffmin(p1.y(), p2.y()),ffmin(p1.z(), p2.z())));
+  return(vec3<T>(ffmin(p1.x, p2.x), ffmin(p1.y, p2.y),ffmin(p1.z, p2.z)));
 }
 
 template<typename T> 
 inline vec3<T> Max(const vec3<T> &p1, const vec3<T> &p2) {
-  return(vec3<T>(ffmax(p1.x(), p2.x()), ffmax(p1.y(), p2.y()),ffmax(p1.z(), p2.z())));
+  return(vec3<T>(ffmax(p1.x, p2.x), ffmax(p1.y, p2.y),ffmax(p1.z, p2.z)));
 }
 
 template<typename T> 
@@ -179,7 +177,7 @@ inline void PermuteInPlace(vec3<T>& v, int x, int y, int z) {
 
 template<typename T> 
 inline vec3<T> Abs(const vec3<T> &v) {
-  return(vec3<T>(std::abs(v.x()), std::abs(v.y()), std::abs(v.z())));
+  return(vec3<T>(std::abs(v.x), std::abs(v.y), std::abs(v.z)));
 }
 
 // Non-member operators for generic vec3<T>
@@ -295,7 +293,10 @@ inline vec3<T> serial_cross(const vec3<T>& v1, const vec3<T>& v2) {
 template<>
 class alignas(16) vec3<Float> {
 public:
-    FVec4 e;
+    union {
+        FVec4 e;
+        Float x,y,z,w;
+    };
 
     // Constructors
     vec3() {
@@ -310,14 +311,6 @@ public:
     vec3(Float e0) {
         e = simd_set1(e0);
     }
-
-    // Accessors
-    inline Float x() const { return e[0]; }
-    inline Float y() const { return e[1]; }
-    inline Float z() const { return e[2]; }
-    inline Float r() const { return e[0]; }
-    inline Float g() const { return e[1]; }
-    inline Float b() const { return e[2]; }
 
     // Operators
     inline const vec3<Float>& operator+() const { return *this; }
@@ -483,9 +476,9 @@ inline vec3<Float> cross(const vec3<Float>& v1, const vec3<Float>& v2) {
 //         _mm_mul_ps(_mm_shuffle_ps(v1.e.v, v1.e.v, _MM_SHUFFLE(3, 1, 0, 2)), _mm_shuffle_ps(v2.e.v, v2.e.v, _MM_SHUFFLE(3, 0, 2, 1)))
 //     );
 // #else
-//     result.e[0] = DifferenceOfProducts(v1.y(), v2.z(), v1.z(), v2.y());
-//     result.e[1] = DifferenceOfProducts(v1.z(), v2.x(), v1.x(), v2.z());
-//     result.e[2] = DifferenceOfProducts(v1.x(), v2.y(), v1.y(), v2.x());
+//     result.e[0] = DifferenceOfProducts(v1.y, v2.z, v1.z, v2.y);
+//     result.e[1] = DifferenceOfProducts(v1.z, v2.x, v1.x, v2.z);
+//     result.e[2] = DifferenceOfProducts(v1.x, v2.y, v1.y, v2.x);
 //     result.e[3] = 0.0f;
 // #endif
 //     return result;
@@ -510,18 +503,18 @@ inline vec3<Float> unit_vector(const vec3<Float>& v) {
 }
 
 inline Float MinComponent(const vec3<Float>& v) {
-    return std::fmin(v.x(), std::fmin(v.y(), v.z()));
+    return std::fmin(v.x, std::fmin(v.y, v.z));
 }
 
 inline Float MaxComponent(const vec3<Float>& v) {
-    return std::fmax(v.x(), std::fmax(v.y(), v.z()));
+    return std::fmax(v.x, std::fmax(v.y, v.z));
 }
 
 inline int MaxDimension(const vec3<Float>& v) {
-    if (v.x() > v.y()) {
-        return (v.x() > v.z()) ? 0 : 2;
+    if (v.x > v.y) {
+        return (v.x > v.z) ? 0 : 2;
     } else {
-        return (v.y() > v.z()) ? 1 : 2;
+        return (v.y > v.z) ? 1 : 2;
     }
 }
 
@@ -765,9 +758,9 @@ inline int dot(const vec3<int>& v1, const vec3<int>& v2) {
 
 inline vec3<int> cross(const vec3<int>& v1, const vec3<int>& v2) {
     vec3<int> result;
-    int x = v1.y() * v2.z() - v1.z() * v2.y();
-    int y = v1.z() * v2.x() - v1.x() * v2.z();
-    int z = v1.x() * v2.y() - v1.y() * v2.x();
+    int x = v1.y * v2.z - v1.z * v2.y;
+    int y = v1.z * v2.x - v1.x * v2.z;
+    int z = v1.x * v2.y - v1.y * v2.x;
     result = vec3<int>(x, y, z);
     return result;
 }
@@ -807,20 +800,20 @@ inline vec3<int> Max(const vec3<int>& p1, const vec3<int>& p2) {
 }
 
 inline int MinComponent(const vec3<int>& v) {
-    int minVal = std::min(v.x(), std::min(v.y(), v.z()));
+    int minVal = std::min(v.x, std::min(v.y, v.z));
     return minVal;
 }
 
 inline int MaxComponent(const vec3<int>& v) {
-    int maxVal = std::max(v.x(), std::max(v.y(), v.z()));
+    int maxVal = std::max(v.x, std::max(v.y, v.z));
     return maxVal;
 }
 
 inline int MaxDimension(const vec3<int>& v) {
-    if (v.x() > v.y()) {
-        return (v.x() > v.z()) ? 0 : 2;
+    if (v.x > v.y) {
+        return (v.x > v.z) ? 0 : 2;
     } else {
-        return (v.y() > v.z()) ? 1 : 2;
+        return (v.y > v.z) ? 1 : 2;
     }
 }
 

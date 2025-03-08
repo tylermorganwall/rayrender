@@ -12,12 +12,12 @@ const bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, 
   // Compute quadratic sphere coefficients
   
   // Initialize _EFloat_ ray coordinate values
-  EFloat ox(r2.origin().x(), oErr.x()), 
-         oy(r2.origin().y(), oErr.y()), 
-         oz(r2.origin().z(), oErr.z());
-  EFloat dx(r2.direction().x(), dErr.x()), 
-         dy(r2.direction().y(), dErr.y()), 
-         dz(r2.direction().z(), dErr.z());
+  EFloat ox(r2.origin().x, oErr.x), 
+         oy(r2.origin().y, oErr.y), 
+         oz(r2.origin().z, oErr.z);
+  EFloat dx(r2.direction().x, dErr.x), 
+         dy(r2.direction().y, dErr.y), 
+         dz(r2.direction().z, dErr.z);
          
   EFloat a = dx * dx + dy * dy + dz * dz;
   EFloat b = 2 * (dx * ox + dy * oy + dz * oz);
@@ -64,19 +64,19 @@ const bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, 
     rec.normal = convert_to_normal3(rec.p) / radius;
     
     //Interaction information
-    Float zRadius = std::sqrt(rec.p.x() * rec.p.x()  + rec.p.z()  * rec.p.z() );
+    Float zRadius = std::sqrt(rec.p.x * rec.p.x  + rec.p.z  * rec.p.z );
     Float invZRadius = 1 / zRadius;
-    Float cosPhi = rec.p.x() * invZRadius;
-    Float sinPhi = rec.p.z() * invZRadius;
-    Float theta = std::acos(clamp(rec.p.z() / radius, -1, 1));
-    rec.dpdu = 2 * static_cast<Float>(M_PI) * vec3f(-rec.p.z(), 0, rec.p.x());
-    rec.dpdv = 2 * static_cast<Float>(M_PI) * vec3f(rec.p.z() * cosPhi, rec.p.z() * sinPhi, -radius * std::sin(theta));
+    Float cosPhi = rec.p.x * invZRadius;
+    Float sinPhi = rec.p.z * invZRadius;
+    Float theta = std::acos(clamp(rec.p.z / radius, -1, 1));
+    rec.dpdu = 2 * static_cast<Float>(M_PI) * vec3f(-rec.p.z, 0, rec.p.x);
+    rec.dpdv = 2 * static_cast<Float>(M_PI) * vec3f(rec.p.z * cosPhi, rec.p.z * sinPhi, -radius * std::sin(theta));
     get_sphere_uv(rec.normal, rec.u, rec.v);
     rec.has_bump = bump_tex ? true : false;
     
     if(bump_tex) {
       point3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
-      rec.bump_normal = rec.normal + convert_to_normal3(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
+      rec.bump_normal = rec.normal + convert_to_normal3(bvbu.x * rec.dpdu + bvbu.y * rec.dpdv); 
       rec.bump_normal.make_unit_vector();
     }
     rec.pError = convert_to_vec3(gamma(5) * Abs(rec.p));
@@ -97,19 +97,19 @@ const bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, 
     rec.normal = convert_to_normal3(rec.p) / radius;
     
     //Interaction information
-    Float zRadius = std::sqrt(rec.p.x() * rec.p.x()  + rec.p.z()  * rec.p.z() );
+    Float zRadius = std::sqrt(rec.p.x * rec.p.x  + rec.p.z  * rec.p.z );
     Float invZRadius = 1 / zRadius;
-    Float cosPhi = rec.p.x() * invZRadius;
-    Float sinPhi = rec.p.z() * invZRadius;
-    Float theta = std::acos(clamp(rec.p.z() / radius, -1, 1));
-    rec.dpdu = 2 * static_cast<Float>(M_PI) * vec3f(-rec.p.z(), 0, rec.p.x());
-    rec.dpdv = 2 * static_cast<Float>(M_PI) * vec3f(rec.p.z() * cosPhi, rec.p.z() * sinPhi, -radius * std::sin(theta));
+    Float cosPhi = rec.p.x * invZRadius;
+    Float sinPhi = rec.p.z * invZRadius;
+    Float theta = std::acos(clamp(rec.p.z / radius, -1, 1));
+    rec.dpdu = 2 * static_cast<Float>(M_PI) * vec3f(-rec.p.z, 0, rec.p.x);
+    rec.dpdv = 2 * static_cast<Float>(M_PI) * vec3f(rec.p.z * cosPhi, rec.p.z * sinPhi, -radius * std::sin(theta));
     get_sphere_uv(rec.normal, rec.u, rec.v);
     rec.has_bump = bump_tex ? true : false;
     
     if(bump_tex) {
       point3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
-      rec.bump_normal = rec.normal +  convert_to_normal3(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
+      rec.bump_normal = rec.normal +  convert_to_normal3(bvbu.x * rec.dpdu + bvbu.y * rec.dpdv); 
       rec.bump_normal.make_unit_vector();
     }
     
@@ -142,8 +142,8 @@ const bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, 
   // Compute quadratic sphere coefficients
   
   // Initialize _EFloat_ ray coordinate values
-  EFloat ox(r2.origin().x(), oErr.x()), oy(r2.origin().y(), oErr.y()), oz(r2.origin().z(), oErr.z());
-  EFloat dx(r2.direction().x(), dErr.x()), dy(r2.direction().y(), dErr.y()), dz(r2.direction().z(), dErr.z());
+  EFloat ox(r2.origin().x, oErr.x), oy(r2.origin().y, oErr.y), oz(r2.origin().z, oErr.z);
+  EFloat dx(r2.direction().x, dErr.x), dy(r2.direction().y, dErr.y), dz(r2.direction().z, dErr.z);
   EFloat a = dx * dx + dy * dy + dz * dz;
   EFloat b = 2 * (dx * ox + dy * oy + dz * oz);
   EFloat c = ox * ox + oy * oy + oz * oz - EFloat(radius) * EFloat(radius);
@@ -188,19 +188,19 @@ const bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, 
     rec.normal = convert_to_normal3(rec.p) / radius;
     
     //Interaction information
-    Float zRadius = std::sqrt(rec.p.x() * rec.p.x()  + rec.p.z()  * rec.p.z() );
+    Float zRadius = std::sqrt(rec.p.x * rec.p.x  + rec.p.z  * rec.p.z );
     Float invZRadius = 1 / zRadius;
-    Float cosPhi = rec.p.x() * invZRadius;
-    Float sinPhi = rec.p.z() * invZRadius;
-    Float theta = std::acos(clamp(rec.p.z() / radius, -1, 1));
-    rec.dpdu = 2 * static_cast<Float>(M_PI) * vec3f(-rec.p.z(), 0, rec.p.x());
-    rec.dpdv = 2 * static_cast<Float>(M_PI) * vec3f(rec.p.z() * cosPhi, rec.p.z() * sinPhi, -radius * std::sin(theta));
+    Float cosPhi = rec.p.x * invZRadius;
+    Float sinPhi = rec.p.z * invZRadius;
+    Float theta = std::acos(clamp(rec.p.z / radius, -1, 1));
+    rec.dpdu = 2 * static_cast<Float>(M_PI) * vec3f(-rec.p.z, 0, rec.p.x);
+    rec.dpdv = 2 * static_cast<Float>(M_PI) * vec3f(rec.p.z * cosPhi, rec.p.z * sinPhi, -radius * std::sin(theta));
     get_sphere_uv(rec.normal, rec.u, rec.v);
     rec.has_bump = bump_tex ? true : false;
     
     if(bump_tex) {
       point3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
-      rec.bump_normal = rec.normal + convert_to_normal3(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
+      rec.bump_normal = rec.normal + convert_to_normal3(bvbu.x * rec.dpdu + bvbu.y * rec.dpdv); 
       rec.bump_normal.make_unit_vector();
     }
     rec.pError = convert_to_vec3(gamma(5) * Abs(rec.p));
@@ -222,19 +222,19 @@ const bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, 
     rec.normal = convert_to_normal3(rec.p) / radius;
     
     //Interaction information
-    Float zRadius = std::sqrt(rec.p.x() * rec.p.x()  + rec.p.z()  * rec.p.z() );
+    Float zRadius = std::sqrt(rec.p.x * rec.p.x  + rec.p.z  * rec.p.z );
     Float invZRadius = 1 / zRadius;
-    Float cosPhi = rec.p.x() * invZRadius;
-    Float sinPhi = rec.p.z() * invZRadius;
-    Float theta = std::acos(clamp(rec.p.z() / radius, -1, 1));
-    rec.dpdu = 2 * static_cast<Float>(M_PI) * vec3f(-rec.p.z(), 0, rec.p.x());
-    rec.dpdv = 2 * static_cast<Float>(M_PI) * vec3f(rec.p.z() * cosPhi, rec.p.z() * sinPhi, -radius * std::sin(theta));
+    Float cosPhi = rec.p.x * invZRadius;
+    Float sinPhi = rec.p.z * invZRadius;
+    Float theta = std::acos(clamp(rec.p.z / radius, -1, 1));
+    rec.dpdu = 2 * static_cast<Float>(M_PI) * vec3f(-rec.p.z, 0, rec.p.x);
+    rec.dpdv = 2 * static_cast<Float>(M_PI) * vec3f(rec.p.z * cosPhi, rec.p.z * sinPhi, -radius * std::sin(theta));
     get_sphere_uv(rec.normal, rec.u, rec.v);
     rec.has_bump = bump_tex ? true : false;
     
     if(bump_tex) {
       point3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
-      rec.bump_normal = rec.normal +  convert_to_normal3(bvbu.x() * rec.dpdu + bvbu.y() * rec.dpdv); 
+      rec.bump_normal = rec.normal +  convert_to_normal3(bvbu.x * rec.dpdu + bvbu.y * rec.dpdv); 
       rec.bump_normal.make_unit_vector();
     }
     
@@ -265,12 +265,12 @@ bool sphere::HitP(const ray& r, Float t_min, Float t_max, random_gen& rng) const
   // Compute quadratic sphere coefficients
   
   // Initialize _EFloat_ ray coordinate values
-  EFloat ox(r2.origin().x(), oErr.x()), 
-         oy(r2.origin().y(), oErr.y()), 
-         oz(r2.origin().z(), oErr.z());
-  EFloat dx(r2.direction().x(), dErr.x()), 
-         dy(r2.direction().y(), dErr.y()), 
-         dz(r2.direction().z(), dErr.z());
+  EFloat ox(r2.origin().x, oErr.x), 
+         oy(r2.origin().y, oErr.y), 
+         oz(r2.origin().z, oErr.z);
+  EFloat dx(r2.direction().x, dErr.x), 
+         dy(r2.direction().y, dErr.y), 
+         dz(r2.direction().z, dErr.z);
          
   EFloat a = dx * dx + dy * dy + dz * dz;
   EFloat b = 2 * (dx * ox + dy * oy + dz * oz);
@@ -298,12 +298,12 @@ bool sphere::HitP(const ray& r, Float t_min, Float t_max, Sampler* sampler) cons
   // Compute quadratic sphere coefficients
   
   // Initialize _EFloat_ ray coordinate values
-  EFloat ox(r2.origin().x(), oErr.x()), 
-         oy(r2.origin().y(), oErr.y()), 
-         oz(r2.origin().z(), oErr.z());
-  EFloat dx(r2.direction().x(), dErr.x()), 
-         dy(r2.direction().y(), dErr.y()), 
-         dz(r2.direction().z(), dErr.z());
+  EFloat ox(r2.origin().x, oErr.x), 
+         oy(r2.origin().y, oErr.y), 
+         oz(r2.origin().z, oErr.z);
+  EFloat dx(r2.direction().x, dErr.x), 
+         dy(r2.direction().y, dErr.y), 
+         dz(r2.direction().z, dErr.z);
          
   EFloat a = dx * dx + dy * dy + dz * dz;
   EFloat b = 2 * (dx * ox + dy * oy + dz * oz);
@@ -394,7 +394,7 @@ vec3f sphere::random(const point3f& o, random_gen& rng, Float time) {
   
   // Compute surface normal and sampled point on sphere
   vec3f nWorld = SphericalDirection(sinAlpha, cosAlpha, phi, -uvw.u(), -uvw.v(), -uvw.w());
-  point3f pWorld = pCenter + radius * point3f(nWorld.x(), nWorld.y(), nWorld.z());
+  point3f pWorld = pCenter + radius * point3f(nWorld.x, nWorld.y, nWorld.z);
   return (pWorld-o);
 }
 
@@ -433,7 +433,7 @@ vec3f sphere::random(const point3f& o, Sampler* sampler, Float time) {
   
   // Compute surface normal and sampled point on sphere
   vec3f nWorld = SphericalDirection(sinAlpha, cosAlpha, phi, -uvw.u(), -uvw.v(), -uvw.w());
-  point3f pWorld = pCenter + radius * point3f(nWorld.x(), nWorld.y(), nWorld.z());
+  point3f pWorld = pCenter + radius * point3f(nWorld.x, nWorld.y, nWorld.z);
   return unit_vector(pWorld-o); 
 }
 
