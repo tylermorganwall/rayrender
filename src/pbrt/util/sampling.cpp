@@ -2,10 +2,6 @@
 // The pbrt source code is licensed under the Apache License, Version 2.0.
 // SPDX: Apache-2.0
 
-// Include this first, since it has a method named Infinity(), and we
-// #define that for __CUDA_ARCH__ builds.
-#include <gtest/gtest.h>
-
 #include "util/sampling.h"
 
 #include "util/check.h"
