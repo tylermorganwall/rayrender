@@ -4,8 +4,8 @@
 
 #include <gtest/gtest.h>
 
-#include <pbrt/pbrt.h>
-#include <pbrt/util/string.h>
+#include "pbrt.h"
+#include "util/string.h"
 
 #include <string>
 

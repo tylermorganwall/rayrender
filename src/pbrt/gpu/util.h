@@ -5,12 +5,12 @@
 #ifndef PBRT_GPU_UTIL_H
 #define PBRT_GPU_UTIL_H
 
-#include <pbrt/pbrt.h>
+#include "pbrt.h"
 
-#include <pbrt/util/check.h>
-#include <pbrt/util/log.h>
-#include <pbrt/util/parallel.h>
-#include <pbrt/util/progressreporter.h>
+#include "util/check.h"
+#include "util/log.h"
+#include "util/parallel.h"
+#include "util/progressreporter.h"
 
 #include <map>
 #include <typeindex>
@@ -18,8 +18,8 @@
 #include <utility>
 #include <vector>
 
-#include <cuda.h>
-#include <cuda_runtime_api.h>
+#include "cuda.h"
+#include "cuda_runtime_api.h"
 
 #ifdef NVTX
 #ifdef UNICODE

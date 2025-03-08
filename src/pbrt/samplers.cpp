@@ -2,14 +2,14 @@
 // The pbrt source code is licensed under the Apache License, Version 2.0.
 // SPDX: Apache-2.0
 
-#include <pbrt/samplers.h>
+#include "samplers.h"
 
-#include <pbrt/cameras.h>
-#include <pbrt/filters.h>
-#include <pbrt/options.h>
-#include <pbrt/paramdict.h>
-#include <pbrt/util/error.h>
-#include <pbrt/util/string.h>
+#include "cameras.h"
+#include "filters.h"
+#include "options.h"
+#include "paramdict.h"
+#include "util/error.h"
+#include "util/string.h"
 
 #include <string>
 

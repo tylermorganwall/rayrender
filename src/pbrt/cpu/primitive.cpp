@@ -2,17 +2,17 @@
 // The pbrt source code is licensed under the Apache License, Version 2.0.
 // SPDX: Apache-2.0
 
-#include <pbrt/cpu/primitive.h>
+#include "cpu/primitive.h"
 
-#include <pbrt/cpu/aggregates.h>
-#include <pbrt/interaction.h>
-#include <pbrt/materials.h>
-#include <pbrt/shapes.h>
-#include <pbrt/textures.h>
-#include <pbrt/util/check.h>
-#include <pbrt/util/log.h>
-#include <pbrt/util/taggedptr.h>
-#include <pbrt/util/vecmath.h>
+#include "cpu/aggregates.h"
+#include "interaction.h"
+#include "materials.h"
+#include "shapes.h"
+#include "textures.h"
+#include "util/check.h"
+#include "util/log.h"
+#include "util/taggedptr.h"
+#include "util/vecmath.h"
 
 namespace pbrt {
 

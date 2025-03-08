@@ -4,10 +4,10 @@
 
 #include <gtest/gtest.h>
 
-#include <pbrt/util/pstd.h>
-#include <pbrt/util/rng.h>
-#include <pbrt/util/splines.h>
-#include <pbrt/util/vecmath.h>
+#include "util/pstd.h"
+#include "util/rng.h"
+#include "util/splines.h"
+#include "util/vecmath.h"
 
 #include <array>
 

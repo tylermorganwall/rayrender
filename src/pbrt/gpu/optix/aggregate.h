@@ -5,24 +5,24 @@
 #ifndef PBRT_GPU_OPTIX_AGGREGATE_H
 #define PBRT_GPU_OPTIX_AGGREGATE_H
 
-#include <pbrt/pbrt.h>
+#include "pbrt.h"
 
-#include <pbrt/gpu/memory.h>
-#include <pbrt/gpu/optix/optix.h>
-#include <pbrt/scene.h>
-#include <pbrt/util/containers.h>
-#include <pbrt/util/pstd.h>
-#include <pbrt/util/soa.h>
-#include <pbrt/util/vecmath.h>
-#include <pbrt/wavefront/integrator.h>
-#include <pbrt/wavefront/workitems.h>
+#include "gpu/memory.h"
+#include "gpu/optix/optix.h"
+#include "scene.h"
+#include "util/containers.h"
+#include "util/pstd.h"
+#include "util/soa.h"
+#include "util/vecmath.h"
+#include "wavefront/integrator.h"
+#include "wavefront/workitems.h"
 
 #include <map>
 #include <string>
 #include <vector>
 
-#include <cuda.h>
-#include <cuda_runtime.h>
+#include "cuda.h"
+#include "cuda_runtime.h"
 #include <optix.h>
 
 namespace pbrt {

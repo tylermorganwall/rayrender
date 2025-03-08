@@ -2,12 +2,12 @@
 // The pbrt source code is licensed under the Apache License, Version 2.0.
 // SPDX: Apache-2.0
 
-#include <pbrt/util/file.h>
+#include "util/file.h"
 
-#include <pbrt/util/check.h>
-#include <pbrt/util/error.h>
-#include <pbrt/util/parallel.h>
-#include <pbrt/util/string.h>
+#include "util/check.h"
+#include "util/error.h"
+#include "util/parallel.h"
+#include "util/string.h"
 
 #include <libdeflate.h>
 
@@ -20,8 +20,8 @@
 #include <cstring>
 #include <fstream>
 #ifndef PBRT_IS_WINDOWS
-#include <dirent.h>
-#include <fcntl.h>
+#include "dirent.h"
+#include "fcntl.h"
 #include <sys/dir.h>
 #include <sys/stat.h>
 #include <sys/types.h>

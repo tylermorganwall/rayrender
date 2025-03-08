@@ -5,17 +5,17 @@
 #ifndef PBRT_UTIL_SAMPLING_H
 #define PBRT_UTIL_SAMPLING_H
 
-#include <pbrt/pbrt.h>
+#include "pbrt.h"
 
-#include <pbrt/util/check.h>
-#include <pbrt/util/containers.h>
-#include <pbrt/util/lowdiscrepancy.h>  // yuck: for Hammersley generator...
-#include <pbrt/util/math.h>
-#include <pbrt/util/memory.h>
-#include <pbrt/util/print.h>
-#include <pbrt/util/pstd.h>
-#include <pbrt/util/rng.h>
-#include <pbrt/util/vecmath.h>
+#include "util/check.h"
+#include "util/containers.h"
+#include "util/lowdiscrepancy.h"  // yuck: for Hammersley generator...
+#include "util/math.h"
+#include "util/memory.h"
+#include "util/print.h"
+#include "util/pstd.h"
+#include "util/rng.h"
+#include "util/vecmath.h"
 
 #include <algorithm>
 #include <cmath>

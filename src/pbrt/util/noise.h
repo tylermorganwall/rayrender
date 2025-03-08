@@ -5,7 +5,7 @@
 #ifndef PBRT_UTIL_NOISE_H
 #define PBRT_UTIL_NOISE_H
 
-#include <pbrt/pbrt.h>
+#include "pbrt.h"
 
 namespace pbrt {
 

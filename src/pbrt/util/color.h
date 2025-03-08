@@ -5,13 +5,13 @@
 #ifndef PBRT_UTIL_COLOR_H
 #define PBRT_UTIL_COLOR_H
 
-#include <pbrt/pbrt.h>
+#include "pbrt.h"
 
-#include <pbrt/util/check.h>
-#include <pbrt/util/math.h>
-#include <pbrt/util/pstd.h>
-#include <pbrt/util/taggedptr.h>
-#include <pbrt/util/vecmath.h>
+#include "util/check.h"
+#include "util/math.h"
+#include "util/pstd.h"
+#include "util/taggedptr.h"
+#include "util/vecmath.h"
 
 #include <cmath>
 #include <map>

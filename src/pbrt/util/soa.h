@@ -5,19 +5,19 @@
 #ifndef PBRT_UTIL_SOA_H
 #define PBRT_UTIL_SOA_H
 
-#include <pbrt/pbrt.h>
+#include "pbrt.h"
 
-#include <pbrt/base/bssrdf.h>
-#include <pbrt/base/material.h>
-#include <pbrt/base/medium.h>
-#include <pbrt/bsdf.h>
-#include <pbrt/bssrdf.h>
-#include <pbrt/interaction.h>
-#include <pbrt/ray.h>
-#include <pbrt/util/math.h>
-#include <pbrt/util/pstd.h>
-#include <pbrt/util/spectrum.h>
-#include <pbrt/util/vecmath.h>
+#include "base/bssrdf.h"
+#include "base/material.h"
+#include "base/medium.h"
+#include "bsdf.h"
+#include "bssrdf.h"
+#include "interaction.h"
+#include "ray.h"
+#include "util/math.h"
+#include "util/pstd.h"
+#include "util/spectrum.h"
+#include "util/vecmath.h"
 
 namespace pbrt {
 

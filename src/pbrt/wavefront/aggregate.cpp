@@ -2,21 +2,21 @@
 // The pbrt source code is licensed under the Apache License, Version 2.0.
 // SPDX: Apache-2.0
 
-#include <pbrt/wavefront/aggregate.h>
+#include "wavefront/aggregate.h"
 
-#include <pbrt/cpu/aggregates.h>
-#include <pbrt/lights.h>
-#include <pbrt/materials.h>
-#include <pbrt/scene.h>
-#include <pbrt/textures.h>
-#include <pbrt/util/error.h>
-#include <pbrt/util/file.h>
-#include <pbrt/util/log.h>
-#include <pbrt/util/mesh.h>
-#include <pbrt/util/parallel.h>
-#include <pbrt/util/pstd.h>
-#include <pbrt/util/stats.h>
-#include <pbrt/wavefront/intersect.h>
+#include "cpu/aggregates.h"
+#include "lights.h"
+#include "materials.h"
+#include "scene.h"
+#include "textures.h"
+#include "util/error.h"
+#include "util/file.h"
+#include "util/log.h"
+#include "util/mesh.h"
+#include "util/parallel.h"
+#include "util/pstd.h"
+#include "util/stats.h"
+#include "wavefront/intersect.h"
 
 namespace pbrt {
 

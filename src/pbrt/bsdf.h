@@ -5,13 +5,13 @@
 #ifndef PBRT_BSDF_H
 #define PBRT_BSDF_H
 
-#include <pbrt/pbrt.h>
+#include "pbrt.h"
 
-#include <pbrt/bxdfs.h>
-#include <pbrt/interaction.h>
-#include <pbrt/util/memory.h>
-#include <pbrt/util/pstd.h>
-#include <pbrt/util/vecmath.h>
+#include "bxdfs.h"
+#include "interaction.h"
+#include "util/memory.h"
+#include "util/pstd.h"
+#include "util/vecmath.h"
 
 namespace pbrt {
 

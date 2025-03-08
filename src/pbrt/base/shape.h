@@ -5,11 +5,11 @@
 #ifndef PBRT_BASE_SHAPE_H
 #define PBRT_BASE_SHAPE_H
 
-#include <pbrt/pbrt.h>
+#include "pbrt.h"
 
-#include <pbrt/base/texture.h>
-#include <pbrt/util/taggedptr.h>
-#include <pbrt/util/vecmath.h>
+#include "base/texture.h"
+#include "util/taggedptr.h"
+#include "util/vecmath.h"
 
 #include <map>
 #include <string>

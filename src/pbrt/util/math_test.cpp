@@ -7,11 +7,11 @@
 #include <cmath>
 #include <cstdint>
 
-#include <pbrt/pbrt.h>
-#include <pbrt/util/float.h>
-#include <pbrt/util/math.h>
-#include <pbrt/util/rng.h>
-#include <pbrt/util/vecmath.h>
+#include "pbrt.h"
+#include "util/float.h"
+#include "util/math.h"
+#include "util/rng.h"
+#include "util/vecmath.h"
 
 #include <vector>
 

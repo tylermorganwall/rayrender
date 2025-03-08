@@ -3,8 +3,8 @@
 // SPDX: Apache-2.0
 
 #include <gtest/gtest.h>
-#include <pbrt/pbrt.h>
-#include <pbrt/util/parallel.h>
+#include "pbrt.h"
+#include "util/parallel.h"
 
 #include <atomic>
 #include <cmath>

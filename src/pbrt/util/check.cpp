@@ -2,25 +2,25 @@
 // The pbrt source code is licensed under the Apache License, Version 2.0.
 // SPDX: Apache-2.0
 
-#include <pbrt/util/check.h>
+#include "util/check.h"
 
 #include <string.h>
 #include <cstdlib>
 #include <iostream>
 
 #ifdef PBRT_IS_OSX
-#include <cxxabi.h>
-#include <execinfo.h>
+#include "cxxabi.h"
+#include "execinfo.h"
 #endif
 #ifdef PBRT_IS_LINUX
-#include <cxxabi.h>
-#include <execinfo.h>
+#include "cxxabi.h"
+#include "execinfo.h"
 #endif
 #ifdef PBRT_IS_WINDOWS
 // clang-format off
 #include <windows.h>
 #include <tchar.h>
-#include <process.h>
+#include "process.h"
 #include <dbghelp.h>
 // clang-format on
 #endif

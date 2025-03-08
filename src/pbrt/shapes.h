@@ -5,17 +5,17 @@
 #ifndef PBRT_SHAPES_H
 #define PBRT_SHAPES_H
 
-#include <pbrt/pbrt.h>
+#include "pbrt.h"
 
-#include <pbrt/base/shape.h>
-#include <pbrt/interaction.h>
-#include <pbrt/ray.h>
-#include <pbrt/util/buffercache.h>
-#include <pbrt/util/mesh.h>
-#include <pbrt/util/pstd.h>
-#include <pbrt/util/sampling.h>
-#include <pbrt/util/transform.h>
-#include <pbrt/util/vecmath.h>
+#include "base/shape.h"
+#include "interaction.h"
+#include "ray.h"
+#include "util/buffercache.h"
+#include "util/mesh.h"
+#include "util/pstd.h"
+#include "util/sampling.h"
+#include "util/transform.h"
+#include "util/vecmath.h"
 
 #include <algorithm>
 #include <map>

@@ -2,19 +2,19 @@
 // The pbrt source code is licensed under the Apache License, Version 2.0.
 // SPDX: Apache-2.0
 
-#include <pbrt/interaction.h>
+#include "interaction.h"
 
-#include <pbrt/base/camera.h>
-#include <pbrt/cameras.h>
-#include <pbrt/lights.h>
-#include <pbrt/materials.h>
-#include <pbrt/options.h>
-#include <pbrt/paramdict.h>
-#include <pbrt/samplers.h>
-#include <pbrt/util/check.h>
-#include <pbrt/util/math.h>
-#include <pbrt/util/print.h>
-#include <pbrt/util/rng.h>
+#include "base/camera.h"
+#include "cameras.h"
+#include "lights.h"
+#include "materials.h"
+#include "options.h"
+#include "paramdict.h"
+#include "samplers.h"
+#include "util/check.h"
+#include "util/math.h"
+#include "util/print.h"
+#include "util/rng.h"
 
 #include <cmath>
 

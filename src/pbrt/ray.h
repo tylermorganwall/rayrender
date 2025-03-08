@@ -5,10 +5,10 @@
 #ifndef PBRT_RAY_H
 #define PBRT_RAY_H
 
-#include <pbrt/pbrt.h>
+#include "pbrt.h"
 
-#include <pbrt/base/medium.h>
-#include <pbrt/util/vecmath.h>
+#include "base/medium.h"
+#include "util/vecmath.h"
 
 #include <string>
 

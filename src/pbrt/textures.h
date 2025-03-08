@@ -5,19 +5,19 @@
 #ifndef PBRT_TEXTURES_H
 #define PBRT_TEXTURES_H
 
-#include <pbrt/pbrt.h>
+#include "pbrt.h"
 
-#include <pbrt/base/texture.h>
-#include <pbrt/interaction.h>
-#include <pbrt/paramdict.h>
-#include <pbrt/util/colorspace.h>
-#include <pbrt/util/math.h>
-#include <pbrt/util/mipmap.h>
-#include <pbrt/util/noise.h>
-#include <pbrt/util/spectrum.h>
-#include <pbrt/util/taggedptr.h>
-#include <pbrt/util/transform.h>
-#include <pbrt/util/vecmath.h>
+#include "base/texture.h"
+#include "interaction.h"
+#include "paramdict.h"
+#include "util/colorspace.h"
+#include "util/math.h"
+#include "util/mipmap.h"
+#include "util/noise.h"
+#include "util/spectrum.h"
+#include "util/taggedptr.h"
+#include "util/transform.h"
+#include "util/vecmath.h"
 
 #include <initializer_list>
 #include <map>

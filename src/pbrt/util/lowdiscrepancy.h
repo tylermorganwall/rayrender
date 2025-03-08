@@ -5,16 +5,16 @@
 #ifndef PBRT_UTIL_LOWDISCREPANCY_H
 #define PBRT_UTIL_LOWDISCREPANCY_H
 
-#include <pbrt/pbrt.h>
+#include "pbrt.h"
 
-#include <pbrt/util/check.h>
-#include <pbrt/util/float.h>
-#include <pbrt/util/hash.h>
-#include <pbrt/util/math.h>
-#include <pbrt/util/primes.h>
-#include <pbrt/util/pstd.h>
-#include <pbrt/util/sobolmatrices.h>
-#include <pbrt/util/vecmath.h>
+#include "util/check.h"
+#include "util/float.h"
+#include "util/hash.h"
+#include "util/math.h"
+#include "util/primes.h"
+#include "util/pstd.h"
+#include "util/sobolmatrices.h"
+#include "util/vecmath.h"
 
 #include <algorithm>
 #include <memory>

@@ -2,13 +2,13 @@
 // The pbrt source code is licensed under the Apache License, Version 2.0.
 // SPDX: Apache-2.0
 
-#include <pbrt/gpu/util.h>
+#include "gpu/util.h"
 
-#include <pbrt/options.h>
-#include <pbrt/util/check.h>
-#include <pbrt/util/error.h>
-#include <pbrt/util/log.h>
-#include <pbrt/util/print.h>
+#include "options.h"
+#include "util/check.h"
+#include "util/error.h"
+#include "util/log.h"
+#include "util/print.h"
 
 #include <algorithm>
 #include <vector>

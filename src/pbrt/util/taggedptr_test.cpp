@@ -4,9 +4,9 @@
 
 #include <gtest/gtest.h>
 
-#include <pbrt/pbrt.h>
+#include "pbrt.h"
 
-#include <pbrt/util/taggedptr.h>
+#include "util/taggedptr.h"
 
 using namespace pbrt;
 

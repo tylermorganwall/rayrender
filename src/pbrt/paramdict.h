@@ -5,15 +5,15 @@
 #ifndef PBRT_PARAMDICT_H
 #define PBRT_PARAMDICT_H
 
-#include <pbrt/pbrt.h>
+#include "pbrt.h"
 
-#include <pbrt/base/texture.h>
-#include <pbrt/util/containers.h>
-#include <pbrt/util/error.h>
-#include <pbrt/util/memory.h>
-#include <pbrt/util/pstd.h>
-#include <pbrt/util/spectrum.h>
-#include <pbrt/util/vecmath.h>
+#include "base/texture.h"
+#include "util/containers.h"
+#include "util/error.h"
+#include "util/memory.h"
+#include "util/pstd.h"
+#include "util/spectrum.h"
+#include "util/vecmath.h"
 
 #include <limits>
 #include <map>

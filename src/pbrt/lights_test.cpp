@@ -4,16 +4,16 @@
 
 #include <gtest/gtest.h>
 
-#include <pbrt/pbrt.h>
+#include "pbrt.h"
 
-#include <pbrt/lights.h>
-#include <pbrt/util/color.h>
-#include <pbrt/util/colorspace.h>
-#include <pbrt/util/image.h>
-#include <pbrt/util/lowdiscrepancy.h>
-#include <pbrt/util/sampling.h>
-#include <pbrt/util/spectrum.h>
-#include <pbrt/util/transform.h>
+#include "lights.h"
+#include "util/color.h"
+#include "util/colorspace.h"
+#include "util/image.h"
+#include "util/lowdiscrepancy.h"
+#include "util/sampling.h"
+#include "util/spectrum.h"
+#include "util/transform.h"
 
 #include <cmath>
 #include <memory>

@@ -5,14 +5,14 @@
 #ifndef PBRT_WAVEFRONT_WORKQUEUE_H
 #define PBRT_WAVEFRONT_WORKQUEUE_H
 
-#include <pbrt/pbrt.h>
+#include "pbrt.h"
 
-#include <pbrt/options.h>
+#include "options.h"
 #ifdef PBRT_BUILD_GPU_RENDERER
-#include <pbrt/gpu/util.h>
+#include "gpu/util.h"
 #endif  // PBRT_BUILD_GPU_RENDERER
-#include <pbrt/util/parallel.h>
-#include <pbrt/util/pstd.h>
+#include "util/parallel.h"
+#include "util/pstd.h"
 
 #include <atomic>
 #include <utility>

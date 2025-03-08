@@ -2,25 +2,25 @@
 // The pbrt source code is licensed under the Apache License, Version 2.0.
 // SPDX: Apache-2.0
 
-#include <pbrt/bxdfs.h>
+#include "bxdfs.h"
 
-#include <pbrt/bssrdf.h>
-#include <pbrt/interaction.h>
-#include <pbrt/media.h>
-#include <pbrt/options.h>
-#include <pbrt/util/check.h>
-#include <pbrt/util/color.h>
-#include <pbrt/util/colorspace.h>
-#include <pbrt/util/error.h>
-#include <pbrt/util/file.h>
-#include <pbrt/util/float.h>
-#include <pbrt/util/hash.h>
-#include <pbrt/util/log.h>
-#include <pbrt/util/math.h>
-#include <pbrt/util/memory.h>
-#include <pbrt/util/print.h>
-#include <pbrt/util/sampling.h>
-#include <pbrt/util/stats.h>
+#include "bssrdf.h"
+#include "interaction.h"
+#include "media.h"
+#include "options.h"
+#include "util/check.h"
+#include "util/color.h"
+#include "util/colorspace.h"
+#include "util/error.h"
+#include "util/file.h"
+#include "util/float.h"
+#include "util/hash.h"
+#include "util/log.h"
+#include "util/math.h"
+#include "util/memory.h"
+#include "util/print.h"
+#include "util/sampling.h"
+#include "util/stats.h"
 
 #include <unordered_map>
 

@@ -5,7 +5,7 @@
 #ifndef PBRT_UTIL_LOG_H
 #define PBRT_UTIL_LOG_H
 
-#include <pbrt/pbrt.h>
+#include "pbrt.h"
 
 #include <string>
 #include <vector>
@@ -91,7 +91,7 @@ extern __constant__ LogLevel LOGGING_LogLevelGPU;
 
 }  // namespace pbrt
 
-#include <pbrt/util/print.h>
+#include "util/print.h"
 
 namespace pbrt {
 

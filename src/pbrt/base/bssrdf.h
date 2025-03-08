@@ -5,10 +5,10 @@
 #ifndef PBRT_BASE_BSSRDF_H
 #define PBRT_BASE_BSSRDF_H
 
-#include <pbrt/pbrt.h>
+#include "pbrt.h"
 
-#include <pbrt/util/pstd.h>
-#include <pbrt/util/taggedptr.h>
+#include "util/pstd.h"
+#include "util/taggedptr.h"
 
 #include <string>
 

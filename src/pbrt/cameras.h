@@ -5,16 +5,16 @@
 #ifndef PBRT_CAMERAS_H
 #define PBRT_CAMERAS_H
 
-#include <pbrt/pbrt.h>
+#include "pbrt.h"
 
-#include <pbrt/base/camera.h>
-#include <pbrt/base/film.h>
-#include <pbrt/film.h>
-#include <pbrt/interaction.h>
-#include <pbrt/ray.h>
-#include <pbrt/samplers.h>
-#include <pbrt/util/image.h>
-#include <pbrt/util/scattering.h>
+#include "base/camera.h"
+#include "base/film.h"
+#include "film.h"
+#include "interaction.h"
+#include "ray.h"
+#include "samplers.h"
+#include "util/image.h"
+#include "util/scattering.h"
 
 #include <algorithm>
 #include <memory>

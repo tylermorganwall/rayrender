@@ -5,19 +5,19 @@
 #ifndef PBRT_SCENE_H
 #define PBRT_SCENE_H
 
-#include <pbrt/pbrt.h>
+#include "pbrt.h"
 
-#include <pbrt/cameras.h>
-#include <pbrt/cpu/primitive.h>
-#include <pbrt/paramdict.h>
-#include <pbrt/parser.h>
-#include <pbrt/util/containers.h>
-#include <pbrt/util/error.h>
-#include <pbrt/util/memory.h>
-#include <pbrt/util/parallel.h>
-#include <pbrt/util/print.h>
-#include <pbrt/util/string.h>
-#include <pbrt/util/transform.h>
+#include "cameras.h"
+#include "cpu/primitive.h"
+#include "paramdict.h"
+#include "parser.h"
+#include "util/containers.h"
+#include "util/error.h"
+#include "util/memory.h"
+#include "util/parallel.h"
+#include "util/print.h"
+#include "util/string.h"
+#include "util/transform.h"
 
 #include <functional>
 #include <map>

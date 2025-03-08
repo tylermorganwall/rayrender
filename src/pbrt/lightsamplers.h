@@ -5,16 +5,16 @@
 #ifndef PBRT_LIGHTSAMPLERS_H
 #define PBRT_LIGHTSAMPLERS_H
 
-#include <pbrt/pbrt.h>
+#include "pbrt.h"
 
-#include <pbrt/base/light.h>
-#include <pbrt/base/lightsampler.h>
-#include <pbrt/lights.h>  // LightBounds. Should that live elsewhere?
-#include <pbrt/util/containers.h>
-#include <pbrt/util/hash.h>
-#include <pbrt/util/pstd.h>
-#include <pbrt/util/sampling.h>
-#include <pbrt/util/vecmath.h>
+#include "base/light.h"
+#include "base/lightsampler.h"
+#include "lights.h"  // LightBounds. Should that live elsewhere?
+#include "util/containers.h"
+#include "util/hash.h"
+#include "util/pstd.h"
+#include "util/sampling.h"
+#include "util/vecmath.h"
 
 #include <algorithm>
 #include <cstdint>

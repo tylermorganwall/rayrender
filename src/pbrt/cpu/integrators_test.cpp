@@ -4,22 +4,22 @@
 
 #include <gtest/gtest.h>
 
-#include <pbrt/cameras.h>
-#include <pbrt/cpu/aggregates.h>
-#include <pbrt/cpu/integrators.h>
-#include <pbrt/filters.h>
-#include <pbrt/lights.h>
-#include <pbrt/materials.h>
-#include <pbrt/options.h>
-#include <pbrt/pbrt.h>
-#include <pbrt/samplers.h>
-#include <pbrt/shapes.h>
-#include <pbrt/textures.h>
-#include <pbrt/util/color.h>
-#include <pbrt/util/colorspace.h>
-#include <pbrt/util/image.h>
-#include <pbrt/util/spectrum.h>
-#include <pbrt/util/vecmath.h>
+#include "cameras.h"
+#include "cpu/aggregates.h"
+#include "cpu/integrators.h"
+#include "filters.h"
+#include "lights.h"
+#include "materials.h"
+#include "options.h"
+#include "pbrt.h"
+#include "samplers.h"
+#include "shapes.h"
+#include "textures.h"
+#include "util/color.h"
+#include "util/colorspace.h"
+#include "util/image.h"
+#include "util/spectrum.h"
+#include "util/vecmath.h"
 
 #include <memory>
 

@@ -4,9 +4,9 @@
 
 #include <gtest/gtest.h>
 
-#include <pbrt/pbrt.h>
-#include <pbrt/util/image.h>
-#include <pbrt/util/rng.h>
+#include "pbrt.h"
+#include "util/image.h"
+#include "util/rng.h"
 
 #include <array>
 #include <vector>

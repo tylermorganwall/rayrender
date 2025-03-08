@@ -5,10 +5,10 @@
 #ifndef PBRT_UTIL_PSTD_H
 #define PBRT_UTIL_PSTD_H
 
-#include <pbrt/util/check.h>
+#include "util/check.h"
 
 #include <float.h>
-#include <limits.h>
+#include "limits.h"
 #include <cassert>
 #include <cmath>
 #include <cstddef>

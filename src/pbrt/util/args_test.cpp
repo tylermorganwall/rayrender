@@ -4,9 +4,9 @@
 
 #include <gtest/gtest.h>
 
-#include <pbrt/pbrt.h>
-#include <pbrt/util/args.h>
-#include <pbrt/util/string.h>
+#include "pbrt.h"
+#include "util/args.h"
+#include "util/string.h"
 
 #include <algorithm>
 #include <memory>

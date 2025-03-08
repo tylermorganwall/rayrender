@@ -2,20 +2,20 @@
 // The pbrt source code is licensed under the Apache License, Version 2.0.
 // SPDX: Apache-2.0
 
-#include <pbrt/pbrt.h>
+#include "pbrt.h"
 
-#include <pbrt/base/bxdf.h>
-#include <pbrt/bxdfs.h>
-#include <pbrt/cameras.h>
-#include <pbrt/interaction.h>
-#include <pbrt/materials.h>
-#include <pbrt/options.h>
-#include <pbrt/textures.h>
-#include <pbrt/util/check.h>
-#include <pbrt/util/containers.h>
-#include <pbrt/util/spectrum.h>
-#include <pbrt/util/vecmath.h>
-#include <pbrt/wavefront/integrator.h>
+#include "base/bxdf.h"
+#include "bxdfs.h"
+#include "cameras.h"
+#include "interaction.h"
+#include "materials.h"
+#include "options.h"
+#include "textures.h"
+#include "util/check.h"
+#include "util/containers.h"
+#include "util/spectrum.h"
+#include "util/vecmath.h"
+#include "wavefront/integrator.h"
 
 #include <type_traits>
 

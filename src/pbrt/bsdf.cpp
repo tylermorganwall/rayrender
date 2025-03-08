@@ -2,9 +2,9 @@
 // The pbrt source code is licensed under the Apache License, Version 2.0.
 // SPDX: Apache-2.0
 
-#include <pbrt/bsdf.h>
+#include "bsdf.h"
 
-#include <pbrt/util/spectrum.h>
+#include "util/spectrum.h"
 
 namespace pbrt {
 

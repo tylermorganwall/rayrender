@@ -2,26 +2,26 @@
 // The pbrt source code is licensed under the Apache License, Version 2.0.
 // SPDX: Apache-2.0
 
-#include <pbrt/textures.h>
+#include "textures.h"
 
 #ifdef PBRT_BUILD_GPU_RENDERER
-#include <pbrt/gpu/util.h>
+#include "gpu/util.h"
 #endif  // PBRT_BUILD_GPU_RENDERER
-#include <pbrt/interaction.h>
-#include <pbrt/paramdict.h>
-#include <pbrt/util/color.h>
-#include <pbrt/util/colorspace.h>
-#include <pbrt/util/error.h>
-#include <pbrt/util/file.h>
-#include <pbrt/util/float.h>
-#include <pbrt/util/print.h>
-#include <pbrt/util/splines.h>
-#include <pbrt/util/stats.h>
+#include "interaction.h"
+#include "paramdict.h"
+#include "util/color.h"
+#include "util/colorspace.h"
+#include "util/error.h"
+#include "util/file.h"
+#include "util/float.h"
+#include "util/print.h"
+#include "util/splines.h"
+#include "util/stats.h"
 
 #include <algorithm>
 #include <mutex>
 
-#include <Ptexture.h>
+#include "Ptexture.h"
 
 // Windows strikes again.
 #ifdef RGB

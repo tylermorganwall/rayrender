@@ -5,7 +5,7 @@
 #ifndef PBRT_UTIL_PRINT_H
 #define PBRT_UTIL_PRINT_H
 
-#include <pbrt/pbrt.h>
+#include "pbrt.h"
 
 #include <string>
 
@@ -15,7 +15,7 @@ template <typename... Args>
 inline std::string StringPrintf(const char *fmt, Args &&...args);
 }
 
-#include <pbrt/util/log.h>
+#include "util/log.h"
 
 #include <ctype.h>
 #include <inttypes.h>

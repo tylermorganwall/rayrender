@@ -2,13 +2,13 @@
 // The pbrt source code is licensed under the Apache License, Version 2.0.
 // SPDX: Apache-2.0
 
-#include <pbrt/util/transform.h>
+#include "util/transform.h"
 
-#include <pbrt/interaction.h>
-#include <pbrt/util/check.h>
-#include <pbrt/util/error.h>
-#include <pbrt/util/math.h>
-#include <pbrt/util/print.h>
+#include "interaction.h"
+#include "util/check.h"
+#include "util/error.h"
+#include "util/math.h"
+#include "util/print.h"
 
 #include <algorithm>
 #include <cmath>

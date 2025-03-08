@@ -5,7 +5,7 @@
 #ifndef PBRT_UTIL_SOBOLMATRICES_H
 #define PBRT_UTIL_SOBOLMATRICES_H
 
-#include <pbrt/pbrt.h>
+#include "pbrt.h"
 
 #include <cstdint>
 

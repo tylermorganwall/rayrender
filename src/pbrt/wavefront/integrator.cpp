@@ -2,33 +2,33 @@
 // The pbrt source code is licensed under the Apache License, Version 2.0.
 // SPDX: Apache-2.0
 
-#include <pbrt/wavefront/integrator.h>
+#include "wavefront/integrator.h"
 
-#include <pbrt/base/medium.h>
-#include <pbrt/cameras.h>
-#include <pbrt/film.h>
-#include <pbrt/filters.h>
+#include "base/medium.h"
+#include "cameras.h"
+#include "film.h"
+#include "filters.h"
 #ifdef PBRT_BUILD_GPU_RENDERER
-#include <pbrt/gpu/optix/aggregate.h>
-#include <pbrt/gpu/memory.h>
+#include "gpu/optix/aggregate.h"
+#include "gpu/memory.h"
 #endif  // PBRT_BUILD_GPU_RENDERER
-#include <pbrt/lights.h>
-#include <pbrt/lightsamplers.h>
-#include <pbrt/util/color.h>
-#include <pbrt/util/colorspace.h>
-#include <pbrt/util/display.h>
-#include <pbrt/util/file.h>
-#include <pbrt/util/gui.h>
-#include <pbrt/util/image.h>
-#include <pbrt/util/log.h>
-#include <pbrt/util/print.h>
-#include <pbrt/util/progressreporter.h>
-#include <pbrt/util/pstd.h>
-#include <pbrt/util/spectrum.h>
-#include <pbrt/util/stats.h>
-#include <pbrt/util/string.h>
-#include <pbrt/util/taggedptr.h>
-#include <pbrt/wavefront/aggregate.h>
+#include "lights.h"
+#include "lightsamplers.h"
+#include "util/color.h"
+#include "util/colorspace.h"
+#include "util/display.h"
+#include "util/file.h"
+#include "util/gui.h"
+#include "util/image.h"
+#include "util/log.h"
+#include "util/print.h"
+#include "util/progressreporter.h"
+#include "util/pstd.h"
+#include "util/spectrum.h"
+#include "util/stats.h"
+#include "util/string.h"
+#include "util/taggedptr.h"
+#include "wavefront/aggregate.h"
 
 #include <atomic>
 #include <cstring>
@@ -36,8 +36,8 @@
 #include <map>
 
 #ifdef PBRT_BUILD_GPU_RENDERER
-#include <cuda.h>
-#include <cuda_runtime.h>
+#include "cuda.h"
+#include "cuda_runtime.h"
 #endif  // PBRT_BUILD_GPU_RENDERER
 
 namespace pbrt {

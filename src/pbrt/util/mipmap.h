@@ -5,11 +5,11 @@
 #ifndef PBRT_UTIL_MIPMAP_H
 #define PBRT_UTIL_MIPMAP_H
 
-#include <pbrt/pbrt.h>
+#include "pbrt.h"
 
-#include <pbrt/util/image.h>
-#include <pbrt/util/pstd.h>
-#include <pbrt/util/vecmath.h>
+#include "util/image.h"
+#include "util/pstd.h"
+#include "util/vecmath.h"
 
 #include <memory>
 #include <string>

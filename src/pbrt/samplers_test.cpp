@@ -4,9 +4,9 @@
 
 #include <gtest/gtest.h>
 
-#include <pbrt/pbrt.h>
+#include "pbrt.h"
 
-#include <pbrt/samplers.h>
+#include "samplers.h"
 
 #include <set>
 

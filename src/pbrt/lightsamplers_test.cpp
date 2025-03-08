@@ -4,15 +4,15 @@
 
 #include <gtest/gtest.h>
 
-#include <pbrt/interaction.h>
-#include <pbrt/lights.h>
-#include <pbrt/lightsamplers.h>
-#include <pbrt/shapes.h>
-#include <pbrt/util/math.h>
-#include <pbrt/util/rng.h>
-#include <pbrt/util/spectrum.h>
-#include <pbrt/util/transform.h>
-#include <pbrt/util/vecmath.h>
+#include "interaction.h"
+#include "lights.h"
+#include "lightsamplers.h"
+#include "shapes.h"
+#include "util/math.h"
+#include "util/rng.h"
+#include "util/spectrum.h"
+#include "util/transform.h"
+#include "util/vecmath.h"
 
 #include <memory>
 #include <tuple>

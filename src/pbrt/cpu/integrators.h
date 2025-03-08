@@ -5,22 +5,22 @@
 #ifndef PBRT_CPU_INTEGRATORS_H
 #define PBRT_CPU_INTEGRATORS_H
 
-#include <pbrt/pbrt.h>
+#include "pbrt.h"
 
-#include <pbrt/base/camera.h>
-#include <pbrt/base/sampler.h>
-#include <pbrt/bsdf.h>
-#include <pbrt/cameras.h>
-#include <pbrt/cpu/primitive.h>
-#include <pbrt/film.h>
-#include <pbrt/interaction.h>
-#include <pbrt/lights.h>
-#include <pbrt/lightsamplers.h>
-#include <pbrt/util/lowdiscrepancy.h>
-#include <pbrt/util/print.h>
-#include <pbrt/util/pstd.h>
-#include <pbrt/util/rng.h>
-#include <pbrt/util/sampling.h>
+#include "base/camera.h"
+#include "base/sampler.h"
+#include "bsdf.h"
+#include "cameras.h"
+#include "cpu/primitive.h"
+#include "film.h"
+#include "interaction.h"
+#include "lights.h"
+#include "lightsamplers.h"
+#include "util/lowdiscrepancy.h"
+#include "util/print.h"
+#include "util/pstd.h"
+#include "util/rng.h"
+#include "util/sampling.h"
 
 #include <functional>
 #include <memory>

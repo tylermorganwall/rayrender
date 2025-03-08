@@ -4,10 +4,10 @@
 
 #include <gtest/gtest.h>
 
-#include <pbrt/pbrt.h>
-#include <pbrt/util/rng.h>
-#include <pbrt/util/sampling.h>
-#include <pbrt/util/transform.h>
+#include "pbrt.h"
+#include "util/rng.h"
+#include "util/sampling.h"
+#include "util/transform.h"
 
 using namespace pbrt;
 

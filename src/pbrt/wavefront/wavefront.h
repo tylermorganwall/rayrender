@@ -5,9 +5,9 @@
 #ifndef PBRT_WAVEFRONT_WAVEFRONT_H
 #define PBRT_WAVEFRONT_WAVEFRONT_H
 
-#include <pbrt/pbrt.h>
+#include "pbrt.h"
 
-#include <pbrt/scene.h>
+#include "scene.h"
 
 namespace pbrt {
 

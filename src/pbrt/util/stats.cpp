@@ -2,15 +2,15 @@
 // The pbrt source code is licensed under the Apache License, Version 2.0.
 // SPDX: Apache-2.0
 
-#include <pbrt/util/stats.h>
+#include "util/stats.h"
 
-#include <pbrt/util/check.h>
-#include <pbrt/util/image.h>
-#include <pbrt/util/memory.h>
-#include <pbrt/util/parallel.h>
-#include <pbrt/util/print.h>
-#include <pbrt/util/string.h>
-#include <pbrt/util/vecmath.h>
+#include "util/check.h"
+#include "util/image.h"
+#include "util/memory.h"
+#include "util/parallel.h"
+#include "util/print.h"
+#include "util/string.h"
+#include "util/vecmath.h"
 
 #include <algorithm>
 #include <chrono>

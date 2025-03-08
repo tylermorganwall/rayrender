@@ -5,11 +5,11 @@
 #ifndef PBRT_UTIL_MEMORY_H
 #define PBRT_UTIL_MEMORY_H
 
-#include <pbrt/pbrt.h>
+#include "pbrt.h"
 
-#include <pbrt/util/check.h>
-#include <pbrt/util/math.h>
-#include <pbrt/util/pstd.h>
+#include "util/check.h"
+#include "util/math.h"
+#include "util/pstd.h"
 
 #include <atomic>
 #include <cstddef>

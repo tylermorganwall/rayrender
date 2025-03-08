@@ -2,11 +2,11 @@
 // The pbrt source code is licensed under the Apache License, Version 2.0.
 // SPDX: Apache-2.0
 
-#include <pbrt/filters.h>
+#include "filters.h"
 
-#include <pbrt/paramdict.h>
-#include <pbrt/util/print.h>
-#include <pbrt/util/rng.h>
+#include "paramdict.h"
+#include "util/print.h"
+#include "util/rng.h"
 
 namespace pbrt {
 

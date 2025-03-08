@@ -2,22 +2,22 @@
 // The pbrt source code is licensed under the Apache License, Version 2.0.
 // SPDX: Apache-2.0
 
-#include <pbrt/cameras.h>
+#include "cameras.h"
 
-#include <pbrt/base/medium.h>
-#include <pbrt/bsdf.h>
-#include <pbrt/film.h>
-#include <pbrt/filters.h>
-#include <pbrt/options.h>
-#include <pbrt/paramdict.h>
-#include <pbrt/util/error.h>
-#include <pbrt/util/file.h>
-#include <pbrt/util/image.h>
-#include <pbrt/util/lowdiscrepancy.h>
-#include <pbrt/util/math.h>
-#include <pbrt/util/parallel.h>
-#include <pbrt/util/print.h>
-#include <pbrt/util/stats.h>
+#include "base/medium.h"
+#include "bsdf.h"
+#include "film.h"
+#include "filters.h"
+#include "options.h"
+#include "paramdict.h"
+#include "util/error.h"
+#include "util/file.h"
+#include "util/image.h"
+#include "util/lowdiscrepancy.h"
+#include "util/math.h"
+#include "util/parallel.h"
+#include "util/print.h"
+#include "util/stats.h"
 
 #include <algorithm>
 

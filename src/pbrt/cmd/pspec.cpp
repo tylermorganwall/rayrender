@@ -6,24 +6,24 @@
 
 // Computes power spectra of a variety point sets used by pbrt's samplers.
 
-#include <pbrt/pbrt.h>
+#include "pbrt.h"
 
-#include <pbrt/base/sampler.h>
-#include <pbrt/paramdict.h>
-#include <pbrt/parser.h>
-#include <pbrt/samplers.h>
-#include <pbrt/util/args.h>
-#include <pbrt/util/colorspace.h>
-#include <pbrt/util/file.h>
-#include <pbrt/util/image.h>
-#include <pbrt/util/parallel.h>
-#include <pbrt/util/print.h>
-#include <pbrt/util/progressreporter.h>
-#include <pbrt/util/pstd.h>
+#include "base/sampler.h"
+#include "paramdict.h"
+#include "parser.h"
+#include "samplers.h"
+#include "util/args.h"
+#include "util/colorspace.h"
+#include "util/file.h"
+#include "util/image.h"
+#include "util/parallel.h"
+#include "util/print.h"
+#include "util/progressreporter.h"
+#include "util/pstd.h"
 
 #ifdef PBRT_BUILD_GPU_RENDERER
-#include <pbrt/gpu/memory.h>
-#include <pbrt/gpu/util.h>
+#include "gpu/memory.h"
+#include "gpu/util.h"
 #endif
 
 #include <string>

@@ -3,16 +3,16 @@
 // The pbrt source code is licensed under the Apache License, Version 2.0.
 // SPDX: Apache-2.0
 
-#include <pbrt/pbrt.h>
+#include "pbrt.h"
 
-#include <pbrt/media.h>
-#include <pbrt/util/args.h>
+#include "media.h"
+#include "util/args.h"
 
-#include <nanovdb/NanoVDB.h>
+#include "nanovdb/NanoVDB.h"
 #define NANOVDB_USE_ZIP 1
-#include <nanovdb/util/IO.h>
-#include <nanovdb/util/GridHandle.h>
-#include <nanovdb/util/SampleFromVoxels.h>
+#include "nanovdb/util/IO.h"
+#include "nanovdb/util/GridHandle.h"
+#include "nanovdb/util/SampleFromVoxels.h"
 
 #include <stdio.h>
 #include <vector>

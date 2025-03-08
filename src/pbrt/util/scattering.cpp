@@ -2,7 +2,7 @@
 // The pbrt source code is licensed under the Apache License, Version 2.0.
 // SPDX: Apache-2.0
 
-#include <pbrt/util/scattering.h>
+#include "util/scattering.h"
 
 namespace pbrt {
 

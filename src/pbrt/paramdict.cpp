@@ -2,18 +2,18 @@
 // The pbrt source code is licensed under the Apache License, Version 2.0.
 // SPDX: Apache-2.0
 
-#include <pbrt/paramdict.h>
+#include "paramdict.h"
 
-#include <pbrt/options.h>
-#include <pbrt/textures.h>
-#include <pbrt/util/check.h>
-#include <pbrt/util/color.h>
-#include <pbrt/util/colorspace.h>
-#include <pbrt/util/error.h>
-#include <pbrt/util/file.h>
-#include <pbrt/util/memory.h>
-#include <pbrt/util/print.h>
-#include <pbrt/util/spectrum.h>
+#include "options.h"
+#include "textures.h"
+#include "util/check.h"
+#include "util/color.h"
+#include "util/colorspace.h"
+#include "util/error.h"
+#include "util/file.h"
+#include "util/memory.h"
+#include "util/print.h"
+#include "util/spectrum.h"
 
 #include <algorithm>
 #include <utility>

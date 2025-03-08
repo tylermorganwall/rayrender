@@ -6,20 +6,20 @@
 // Copyright (c) 2020, Weta Digital, Ltd.
 // SPDX-License-Identifier: Apache-2.0
 
-#include <pbrt/util/spectrum.h>
+#include "util/spectrum.h"
 
 #ifdef PBRT_BUILD_GPU_RENDERER
-#include <pbrt/gpu/util.h>
+#include "gpu/util.h"
 #endif
-#include <pbrt/options.h>
-#include <pbrt/util/color.h>
-#include <pbrt/util/colorspace.h>
-#include <pbrt/util/error.h>
-#include <pbrt/util/file.h>
-#include <pbrt/util/print.h>
-#include <pbrt/util/rng.h>
-#include <pbrt/util/sampling.h>
-#include <pbrt/util/stats.h>
+#include "options.h"
+#include "util/color.h"
+#include "util/colorspace.h"
+#include "util/error.h"
+#include "util/file.h"
+#include "util/print.h"
+#include "util/rng.h"
+#include "util/sampling.h"
+#include "util/stats.h"
 
 #include <algorithm>
 #include <cmath>

@@ -2,21 +2,21 @@
 // The pbrt source code is licensed under the Apache License, Version 2.0.
 // SPDX: Apache-2.0
 
-#include <pbrt/parser.h>
+#include "parser.h"
 
-#include <pbrt/options.h>
-#include <pbrt/scene.h>
-#include <pbrt/shapes.h>
-#include <pbrt/util/args.h>
-#include <pbrt/util/check.h>
-#include <pbrt/util/error.h>
-#include <pbrt/util/file.h>
-#include <pbrt/util/memory.h>
-#include <pbrt/util/mesh.h>
-#include <pbrt/util/print.h>
-#include <pbrt/util/progressreporter.h>
-#include <pbrt/util/stats.h>
-#include <pbrt/util/string.h>
+#include "options.h"
+#include "scene.h"
+#include "shapes.h"
+#include "util/args.h"
+#include "util/check.h"
+#include "util/error.h"
+#include "util/file.h"
+#include "util/memory.h"
+#include "util/mesh.h"
+#include "util/print.h"
+#include "util/progressreporter.h"
+#include "util/stats.h"
+#include "util/string.h"
 
 #include <double-conversion/double-conversion.h>
 
@@ -24,7 +24,7 @@
 #include <cstdio>
 #include <cstring>
 #ifdef PBRT_HAVE_MMAP
-#include <fcntl.h>
+#include "fcntl.h"
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <sys/types.h>

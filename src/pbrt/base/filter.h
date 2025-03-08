@@ -5,9 +5,9 @@
 #ifndef PBRT_BASE_FILTER_H
 #define PBRT_BASE_FILTER_H
 
-#include <pbrt/pbrt.h>
+#include "pbrt.h"
 
-#include <pbrt/util/taggedptr.h>
+#include "util/taggedptr.h"
 
 #include <string>
 

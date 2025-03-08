@@ -5,13 +5,13 @@
 #ifndef PBRT_BASE_CAMERA_H
 #define PBRT_BASE_CAMERA_H
 
-#include <pbrt/pbrt.h>
+#include "pbrt.h"
 
-#include <pbrt/base/film.h>
-#include <pbrt/base/filter.h>
-#include <pbrt/util/taggedptr.h>
-#include <pbrt/util/transform.h>
-#include <pbrt/util/vecmath.h>
+#include "base/film.h"
+#include "base/filter.h"
+#include "util/taggedptr.h"
+#include "util/transform.h"
+#include "util/vecmath.h"
 
 #include <string>
 

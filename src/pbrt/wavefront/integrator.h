@@ -5,23 +5,23 @@
 #ifndef PBRT_WAVEFRONT_INTEGRATOR_H
 #define PBRT_WAVEFRONT_INTEGRATOR_H
 
-#include <pbrt/pbrt.h>
+#include "pbrt.h"
 
-#include <pbrt/base/bxdf.h>
-#include <pbrt/base/camera.h>
-#include <pbrt/base/film.h>
-#include <pbrt/base/filter.h>
-#include <pbrt/base/light.h>
-#include <pbrt/base/lightsampler.h>
-#include <pbrt/base/sampler.h>
+#include "base/bxdf.h"
+#include "base/camera.h"
+#include "base/film.h"
+#include "base/filter.h"
+#include "base/light.h"
+#include "base/lightsampler.h"
+#include "base/sampler.h"
 #ifdef PBRT_BUILD_GPU_RENDERER
-#include <pbrt/gpu/util.h>
+#include "gpu/util.h"
 #endif  // PBRT_BUILD_GPU_RENDERER
-#include <pbrt/options.h>
-#include <pbrt/util/parallel.h>
-#include <pbrt/util/pstd.h>
-#include <pbrt/wavefront/workitems.h>
-#include <pbrt/wavefront/workqueue.h>
+#include "options.h"
+#include "util/parallel.h"
+#include "util/pstd.h"
+#include "wavefront/workitems.h"
+#include "wavefront/workqueue.h"
 
 namespace pbrt {
 

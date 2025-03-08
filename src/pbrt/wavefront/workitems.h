@@ -5,17 +5,17 @@
 #ifndef PBRT_WAVEFRONT_WORKITEMS_H
 #define PBRT_WAVEFRONT_WORKITEMS_H
 
-#include <pbrt/pbrt.h>
+#include "pbrt.h"
 
-#include <pbrt/base/sampler.h>
-#include <pbrt/film.h>
-#include <pbrt/lightsamplers.h>
-#include <pbrt/materials.h>
-#include <pbrt/ray.h>
-#include <pbrt/util/containers.h>
-#include <pbrt/util/pstd.h>
-#include <pbrt/util/soa.h>
-#include <pbrt/wavefront/workqueue.h>
+#include "base/sampler.h"
+#include "film.h"
+#include "lightsamplers.h"
+#include "materials.h"
+#include "ray.h"
+#include "util/containers.h"
+#include "util/pstd.h"
+#include "util/soa.h"
+#include "wavefront/workqueue.h"
 
 namespace pbrt {
 

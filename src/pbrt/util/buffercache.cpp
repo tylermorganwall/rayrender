@@ -2,9 +2,9 @@
 // The pbrt source code is licensed under the Apache License, Version 2.0.
 // SPDX: Apache-2.0
 
-#include <pbrt/util/buffercache.h>
+#include "util/buffercache.h"
 
-#include <pbrt/util/stats.h>
+#include "util/stats.h"
 
 namespace pbrt {
 

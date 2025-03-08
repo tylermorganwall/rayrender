@@ -2,33 +2,33 @@
 // The pbrt source code is licensed under the Apache License, Version 2.0.
 // SPDX: Apache-2.0
 
-#include <pbrt/pbrt.h>
+#include "pbrt.h"
 
-#include <pbrt/filters.h>
-#include <pbrt/options.h>
+#include "filters.h"
+#include "options.h"
 #ifdef PBRT_BUILD_GPU_RENDERER
 #ifndef __HIP_PLATFORM_AMD__
-#include <pbrt/gpu/optix/denoiser.h>
+#include "gpu/optix/denoiser.h"
 #endif // __HIP_PLATFORM_AMD__
-#include <pbrt/gpu/util.h>
+#include "gpu/util.h"
 #endif  // PBRT_BUILD_GPU_RENDERER
-#include <pbrt/util/args.h>
-#include <pbrt/util/check.h>
-#include <pbrt/util/color.h>
-#include <pbrt/util/colorspace.h>
-#include <pbrt/util/error.h>
-#include <pbrt/util/file.h>
-#include <pbrt/util/image.h>
-#include <pbrt/util/log.h>
-#include <pbrt/util/math.h>
-#include <pbrt/util/parallel.h>
-#include <pbrt/util/print.h>
-#include <pbrt/util/progressreporter.h>
-#include <pbrt/util/rng.h>
-#include <pbrt/util/sampling.h>
-#include <pbrt/util/spectrum.h>
-#include <pbrt/util/string.h>
-#include <pbrt/util/vecmath.h>
+#include "util/args.h"
+#include "util/check.h"
+#include "util/color.h"
+#include "util/colorspace.h"
+#include "util/error.h"
+#include "util/file.h"
+#include "util/image.h"
+#include "util/log.h"
+#include "util/math.h"
+#include "util/parallel.h"
+#include "util/print.h"
+#include "util/progressreporter.h"
+#include "util/rng.h"
+#include "util/sampling.h"
+#include "util/spectrum.h"
+#include "util/string.h"
+#include "util/vecmath.h"
 
 extern "C" {
 #include <skymodel/ArHosekSkyModel.h>

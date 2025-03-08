@@ -4,16 +4,16 @@
 
 #include <gtest/gtest.h>
 
-#include <pbrt/pbrt.h>
+#include "pbrt.h"
 
-#include <pbrt/util/float.h>
-#include <pbrt/util/image.h>
-#include <pbrt/util/lowdiscrepancy.h>
-#include <pbrt/util/math.h>
-#include <pbrt/util/parallel.h>
-#include <pbrt/util/print.h>
-#include <pbrt/util/rng.h>
-#include <pbrt/util/sampling.h>
+#include "util/float.h"
+#include "util/image.h"
+#include "util/lowdiscrepancy.h"
+#include "util/math.h"
+#include "util/parallel.h"
+#include "util/print.h"
+#include "util/rng.h"
+#include "util/sampling.h"
 
 #include <algorithm>
 #include <array>

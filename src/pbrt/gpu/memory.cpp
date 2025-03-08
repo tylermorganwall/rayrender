@@ -2,14 +2,14 @@
 // The pbrt source code is licensed under the Apache License, Version 2.0.
 // SPDX: Apache-2.0
 
-#include <pbrt/gpu/memory.h>
+#include "gpu/memory.h"
 
-#include <pbrt/gpu/util.h>
-#include <pbrt/util/check.h>
-#include <pbrt/util/log.h>
+#include "gpu/util.h"
+#include "util/check.h"
+#include "util/log.h"
 
-#include <cuda.h>
-#include <cuda_runtime.h>
+#include "cuda.h"
+#include "cuda_runtime.h"
 
 namespace pbrt {
 

@@ -4,8 +4,8 @@
 
 #include <gtest/gtest.h>
 
-#include <pbrt/pbrt.h>
-#include <pbrt/util/buffercache.h>
+#include "pbrt.h"
+#include "util/buffercache.h"
 
 #include <vector>
 

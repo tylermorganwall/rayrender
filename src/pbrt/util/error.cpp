@@ -2,12 +2,12 @@
 // The pbrt source code is licensed under the Apache License, Version 2.0.
 // SPDX: Apache-2.0
 
-#include <pbrt/util/error.h>
+#include "util/error.h"
 
-#include <pbrt/util/check.h>
-#include <pbrt/util/display.h>
-#include <pbrt/util/parallel.h>
-#include <pbrt/util/print.h>
+#include "util/check.h"
+#include "util/display.h"
+#include "util/parallel.h"
+#include "util/print.h"
 
 #include <cstdio>
 #include <cstdlib>

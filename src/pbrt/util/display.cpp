@@ -2,13 +2,13 @@
 // The pbrt source code is licensed under the Apache License, Version 2.0.
 // SPDX: Apache-2.0
 
-#include <pbrt/util/display.h>
+#include "util/display.h"
 
-#include <pbrt/util/error.h>
-#include <pbrt/util/hash.h>
-#include <pbrt/util/image.h>
-#include <pbrt/util/print.h>
-#include <pbrt/util/string.h>
+#include "util/error.h"
+#include "util/hash.h"
+#include "util/image.h"
+#include "util/print.h"
+#include "util/string.h"
 
 #include <algorithm>
 #include <atomic>
@@ -30,7 +30,7 @@ using socket_t = int;
 #include <errno.h>
 #include <netdb.h>
 #include <netinet/in.h>
-#include <signal.h>
+#include "signal.h"
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <unistd.h>

@@ -2,22 +2,22 @@
 // The pbrt source code is licensed under the Apache License, Version 2.0.
 // SPDX: Apache-2.0
 
-#include <pbrt/util/image.h>
+#include "util/image.h"
 
-#include <pbrt/util/bluenoise.h>
-#include <pbrt/util/color.h>
-#include <pbrt/util/colorspace.h>
-#include <pbrt/util/error.h>
-#include <pbrt/util/file.h>
-#include <pbrt/util/math.h>
-#include <pbrt/util/parallel.h>
-#include <pbrt/util/print.h>
-#include <pbrt/util/pstd.h>
-#include <pbrt/util/string.h>
+#include "util/bluenoise.h"
+#include "util/color.h"
+#include "util/colorspace.h"
+#include "util/error.h"
+#include "util/file.h"
+#include "util/math.h"
+#include "util/parallel.h"
+#include "util/print.h"
+#include "util/pstd.h"
+#include "util/string.h"
 
 // No need, since we need to do our own file i/o to support UTF-8 filenames.
 #define LODEPNG_NO_COMPILE_DISK
-#include <lodepng/lodepng.h>
+#include "lodepng/lodepng.h"
 
 #ifndef PBRT_IS_GPU_CODE
 // Work around conflict with "half".

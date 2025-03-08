@@ -5,27 +5,27 @@
 #ifndef PBRT_MEDIA_H
 #define PBRT_MEDIA_H
 
-#include <pbrt/pbrt.h>
+#include "pbrt.h"
 
-#include <pbrt/base/medium.h>
-#include <pbrt/interaction.h>
-#include <pbrt/paramdict.h>
-#include <pbrt/textures.h>
-#include <pbrt/util/colorspace.h>
-#include <pbrt/util/error.h>
-#include <pbrt/util/memory.h>
-#include <pbrt/util/parallel.h>
-#include <pbrt/util/print.h>
-#include <pbrt/util/pstd.h>
-#include <pbrt/util/scattering.h>
-#include <pbrt/util/spectrum.h>
-#include <pbrt/util/transform.h>
+#include "base/medium.h"
+#include "interaction.h"
+#include "paramdict.h"
+#include "textures.h"
+#include "util/colorspace.h"
+#include "util/error.h"
+#include "util/memory.h"
+#include "util/parallel.h"
+#include "util/print.h"
+#include "util/pstd.h"
+#include "util/scattering.h"
+#include "util/spectrum.h"
+#include "util/transform.h"
 
-#include <nanovdb/NanoVDB.h>
-#include <nanovdb/util/GridHandle.h>
-#include <nanovdb/util/SampleFromVoxels.h>
+#include "nanovdb/NanoVDB.h"
+#include "nanovdb/util/GridHandle.h"
+#include "nanovdb/util/SampleFromVoxels.h"
 #if defined(PBRT_BUILD_GPU_RENDERER) && defined(__NVCC__)
-#include <nanovdb/util/CudaDeviceBuffer.h>
+#include "nanovdb/util/CudaDeviceBuffer.h"
 #endif  // PBRT_BUILD_GPU_RENDERER
 
 #include <algorithm>

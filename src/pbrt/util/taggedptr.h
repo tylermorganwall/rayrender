@@ -5,10 +5,10 @@
 #ifndef PBRT_UTIL_TAGGEDPTR_H
 #define PBRT_UTIL_TAGGEDPTR_H
 
-#include <pbrt/pbrt.h>
-#include <pbrt/util/check.h>
-#include <pbrt/util/containers.h>
-#include <pbrt/util/print.h>
+#include "pbrt.h"
+#include "util/check.h"
+#include "util/containers.h"
+#include "util/print.h"
 
 #include <algorithm>
 #include <string>

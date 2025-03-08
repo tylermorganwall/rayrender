@@ -4,8 +4,8 @@
 
 #include <gtest/gtest.h>
 
-#include <pbrt/util/pstd.h>
-#include <pbrt/util/rng.h>
+#include "util/pstd.h"
+#include "util/rng.h"
 
 #include <map>
 #include <set>

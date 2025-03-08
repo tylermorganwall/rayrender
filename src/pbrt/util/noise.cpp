@@ -2,9 +2,9 @@
 // The pbrt source code is licensed under the Apache License, Version 2.0.
 // SPDX: Apache-2.0
 
-#include <pbrt/util/noise.h>
+#include "util/noise.h"
 
-#include <pbrt/util/vecmath.h>
+#include "util/vecmath.h"
 
 #include <algorithm>
 #include <cmath>

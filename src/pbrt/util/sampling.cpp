@@ -6,15 +6,15 @@
 // #define that for __CUDA_ARCH__ builds.
 #include <gtest/gtest.h>
 
-#include <pbrt/util/sampling.h>
+#include "util/sampling.h"
 
-#include <pbrt/util/check.h>
-#include <pbrt/util/float.h>
-#include <pbrt/util/lowdiscrepancy.h>
-#include <pbrt/util/math.h>
-#include <pbrt/util/print.h>
-#include <pbrt/util/pstd.h>
-#include <pbrt/util/scattering.h>
+#include "util/check.h"
+#include "util/float.h"
+#include "util/lowdiscrepancy.h"
+#include "util/math.h"
+#include "util/print.h"
+#include "util/pstd.h"
+#include "util/scattering.h"
 
 #include <algorithm>
 #include <cmath>

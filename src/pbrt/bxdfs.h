@@ -5,19 +5,19 @@
 #ifndef PBRT_BXDFS_H
 #define PBRT_BXDFS_H
 
-#include <pbrt/pbrt.h>
+#include "pbrt.h"
 
-#include <pbrt/base/bxdf.h>
-#include <pbrt/interaction.h>
-#include <pbrt/media.h>
-#include <pbrt/options.h>
-#include <pbrt/util/math.h>
-#include <pbrt/util/memory.h>
-#include <pbrt/util/pstd.h>
-#include <pbrt/util/scattering.h>
-#include <pbrt/util/spectrum.h>
-#include <pbrt/util/taggedptr.h>
-#include <pbrt/util/vecmath.h>
+#include "base/bxdf.h"
+#include "interaction.h"
+#include "media.h"
+#include "options.h"
+#include "util/math.h"
+#include "util/memory.h"
+#include "util/pstd.h"
+#include "util/scattering.h"
+#include "util/spectrum.h"
+#include "util/taggedptr.h"
+#include "util/vecmath.h"
 
 #include <algorithm>
 #include <cmath>

@@ -5,16 +5,16 @@
 #ifndef PBRT_CPU_PRIMITIVE_H
 #define PBRT_CPU_PRIMITIVE_H
 
-#include <pbrt/pbrt.h>
+#include "pbrt.h"
 
-#include <pbrt/base/light.h>
-#include <pbrt/base/material.h>
-#include <pbrt/base/medium.h>
-#include <pbrt/base/shape.h>
-#include <pbrt/base/texture.h>
-#include <pbrt/util/stats.h>
-#include <pbrt/util/taggedptr.h>
-#include <pbrt/util/transform.h>
+#include "base/light.h"
+#include "base/material.h"
+#include "base/medium.h"
+#include "base/shape.h"
+#include "base/texture.h"
+#include "util/stats.h"
+#include "util/taggedptr.h"
+#include "util/transform.h"
 
 #include <memory>
 

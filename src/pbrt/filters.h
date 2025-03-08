@@ -5,11 +5,11 @@
 #ifndef PBRT_FILTERS_H
 #define PBRT_FILTERS_H
 
-#include <pbrt/pbrt.h>
+#include "pbrt.h"
 
-#include <pbrt/base/filter.h>
-#include <pbrt/util/math.h>
-#include <pbrt/util/sampling.h>
+#include "base/filter.h"
+#include "util/math.h"
+#include "util/sampling.h"
 
 #include <cmath>
 #include <memory>

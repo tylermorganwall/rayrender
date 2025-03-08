@@ -5,11 +5,11 @@
 #include <gtest/gtest.h>
 #include <cmath>
 
-#include <pbrt/pbrt.h>
-#include <pbrt/util/float.h>
-#include <pbrt/util/math.h>
-#include <pbrt/util/parallel.h>
-#include <pbrt/util/rng.h>
+#include "pbrt.h"
+#include "util/float.h"
+#include "util/math.h"
+#include "util/parallel.h"
+#include "util/rng.h"
 
 using namespace pbrt;
 

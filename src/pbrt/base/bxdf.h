@@ -5,12 +5,12 @@
 #ifndef PBRT_BASE_BXDF_H
 #define PBRT_BASE_BXDF_H
 
-#include <pbrt/pbrt.h>
+#include "pbrt.h"
 
-#include <pbrt/util/pstd.h>
-#include <pbrt/util/spectrum.h>
-#include <pbrt/util/taggedptr.h>
-#include <pbrt/util/vecmath.h>
+#include "util/pstd.h"
+#include "util/spectrum.h"
+#include "util/taggedptr.h"
+#include "util/vecmath.h"
 
 #include <string>
 

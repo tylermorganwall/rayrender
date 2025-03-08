@@ -4,10 +4,10 @@
 
 #include <gtest/gtest.h>
 
-#include <pbrt/filters.h>
-#include <pbrt/pbrt.h>
-#include <pbrt/util/math.h>
-#include <pbrt/util/sampling.h>
+#include "filters.h"
+#include "pbrt.h"
+#include "util/math.h"
+#include "util/sampling.h"
 
 #include <algorithm>
 #include <vector>

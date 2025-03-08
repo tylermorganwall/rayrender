@@ -2,19 +2,19 @@
 // The pbrt source code is licensed under the Apache License, Version 2.0.
 // SPDX: Apache-2.0
 
-#include <pbrt/lightsamplers.h>
+#include "lightsamplers.h"
 
-#include <pbrt/interaction.h>
-#include <pbrt/lights.h>
-#include <pbrt/util/check.h>
-#include <pbrt/util/error.h>
-#include <pbrt/util/hash.h>
-#include <pbrt/util/lowdiscrepancy.h>
-#include <pbrt/util/math.h>
-#include <pbrt/util/memory.h>
-#include <pbrt/util/print.h>
-#include <pbrt/util/sampling.h>
-#include <pbrt/util/spectrum.h>
+#include "interaction.h"
+#include "lights.h"
+#include "util/check.h"
+#include "util/error.h"
+#include "util/hash.h"
+#include "util/lowdiscrepancy.h"
+#include "util/math.h"
+#include "util/memory.h"
+#include "util/print.h"
+#include "util/sampling.h"
+#include "util/spectrum.h"
 
 #include <atomic>
 #include <cstdint>

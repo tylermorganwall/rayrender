@@ -4,12 +4,12 @@
 
 #include <gtest/gtest.h>
 
-#include <pbrt/pbrt.h>
-#include <pbrt/util/math.h>
-#include <pbrt/util/print.h>
-#include <pbrt/util/pstd.h>
-#include <pbrt/util/transform.h>
-#include <pbrt/util/vecmath.h>
+#include "pbrt.h"
+#include "util/math.h"
+#include "util/print.h"
+#include "util/pstd.h"
+#include "util/transform.h"
+#include "util/vecmath.h"
 
 #include <double-conversion/double-conversion.h>
 #include <array>

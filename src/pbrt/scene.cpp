@@ -2,29 +2,29 @@
 // The pbrt source code is licensed under the Apache License, Version 2.0.
 // SPDX: Apache-2.0
 
-#include <pbrt/scene.h>
+#include "scene.h"
 
-#include <pbrt/cpu/aggregates.h>
-#include <pbrt/cpu/integrators.h>
+#include "cpu/aggregates.h"
+#include "cpu/integrators.h"
 #ifdef PBRT_BUILD_GPU_RENDERER
-#include <pbrt/gpu/memory.h>
+#include "gpu/memory.h"
 #endif  // PBRT_BUILD_GPU_RENDERER
-#include <pbrt/materials.h>
-#include <pbrt/options.h>
-#include <pbrt/paramdict.h>
-#include <pbrt/shapes.h>
-#include <pbrt/util/args.h>
-#include <pbrt/util/check.h>
-#include <pbrt/util/color.h>
-#include <pbrt/util/colorspace.h>
-#include <pbrt/util/file.h>
-#include <pbrt/util/memory.h>
-#include <pbrt/util/mesh.h>
-#include <pbrt/util/parallel.h>
-#include <pbrt/util/print.h>
-#include <pbrt/util/spectrum.h>
-#include <pbrt/util/string.h>
-#include <pbrt/util/transform.h>
+#include "materials.h"
+#include "options.h"
+#include "paramdict.h"
+#include "shapes.h"
+#include "util/args.h"
+#include "util/check.h"
+#include "util/color.h"
+#include "util/colorspace.h"
+#include "util/file.h"
+#include "util/memory.h"
+#include "util/mesh.h"
+#include "util/parallel.h"
+#include "util/print.h"
+#include "util/spectrum.h"
+#include "util/string.h"
+#include "util/transform.h"
 
 #include <iostream>
 #include <mutex>

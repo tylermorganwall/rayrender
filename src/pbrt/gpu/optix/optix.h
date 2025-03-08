@@ -5,16 +5,16 @@
 #ifndef PBRT_GPU_OPTIX_OPTIX_H
 #define PBRT_GPU_OPTIX_OPTIX_H
 
-#include <pbrt/pbrt.h>
+#include "pbrt.h"
 
-#include <pbrt/base/light.h>
-#include <pbrt/base/material.h>
-#include <pbrt/base/medium.h>
-#include <pbrt/base/shape.h>
-#include <pbrt/base/texture.h>
-#include <pbrt/util/pstd.h>
-#include <pbrt/wavefront/workitems.h>
-#include <pbrt/wavefront/workqueue.h>
+#include "base/light.h"
+#include "base/material.h"
+#include "base/medium.h"
+#include "base/shape.h"
+#include "base/texture.h"
+#include "util/pstd.h"
+#include "wavefront/workitems.h"
+#include "wavefront/workqueue.h"
 
 #include <optix.h>
 

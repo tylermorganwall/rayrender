@@ -29,14 +29,14 @@
 #ifndef PBRT_GPU_CUDAGL_H
 #define PBRT_GPU_CUDAGL_H
 
-#include <pbrt/gpu/util.h>
-#include <pbrt/util/error.h>
+#include "gpu/util.h"
+#include "util/error.h"
 
 #include <glad/glad.h>
 
-#include <cuda.h>
-#include <cuda_gl_interop.h>
-#include <cuda_runtime.h>
+#include "cuda.h"
+#include "cuda_gl_interop.h"
+#include "cuda_runtime.h"
 
 #define GL_CHECK(call)                                                   \
     do {                                                                 \

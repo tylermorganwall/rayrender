@@ -4,8 +4,8 @@
 
 #include <gtest/gtest.h>
 
-#include <pbrt/pbrt.h>
-#include <pbrt/util/file.h>
+#include "pbrt.h"
+#include "util/file.h"
 
 using namespace pbrt;
 

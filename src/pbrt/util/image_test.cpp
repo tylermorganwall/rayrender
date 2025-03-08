@@ -4,16 +4,16 @@
 
 #include <gtest/gtest.h>
 
-#include <pbrt/pbrt.h>
+#include "pbrt.h"
 
-#include <pbrt/util/color.h>
-#include <pbrt/util/colorspace.h>
-#include <pbrt/util/file.h>
-#include <pbrt/util/float.h>
-#include <pbrt/util/image.h>
-#include <pbrt/util/mipmap.h>
-#include <pbrt/util/rng.h>
-#include <pbrt/util/sampling.h>
+#include "util/color.h"
+#include "util/colorspace.h"
+#include "util/file.h"
+#include "util/float.h"
+#include "util/image.h"
+#include "util/mipmap.h"
+#include "util/rng.h"
+#include "util/sampling.h"
 
 #include <algorithm>
 #include <array>

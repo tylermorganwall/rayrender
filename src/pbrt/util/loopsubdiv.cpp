@@ -2,15 +2,15 @@
 // The pbrt source code is licensed under the Apache License, Version 2.0.
 // SPDX: Apache-2.0
 
-#include <pbrt/util/loopsubdiv.h>
+#include "util/loopsubdiv.h"
 
-#include <pbrt/util/containers.h>
-#include <pbrt/util/error.h>
-#include <pbrt/util/memory.h>
-#include <pbrt/util/mesh.h>
-#include <pbrt/util/pstd.h>
-#include <pbrt/util/transform.h>
-#include <pbrt/util/vecmath.h>
+#include "util/containers.h"
+#include "util/error.h"
+#include "util/memory.h"
+#include "util/mesh.h"
+#include "util/pstd.h"
+#include "util/transform.h"
+#include "util/vecmath.h"
 
 #include <algorithm>
 #include <map>

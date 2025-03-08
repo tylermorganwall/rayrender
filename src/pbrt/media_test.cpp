@@ -4,11 +4,11 @@
 
 #include <gtest/gtest.h>
 
-#include <pbrt/pbrt.h>
+#include "pbrt.h"
 
-#include <pbrt/media.h>
-#include <pbrt/util/rng.h>
-#include <pbrt/util/sampling.h>
+#include "media.h"
+#include "util/rng.h"
+#include "util/sampling.h"
 
 using namespace pbrt;
 

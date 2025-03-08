@@ -2,28 +2,28 @@
 // The pbrt source code is licensed under the Apache License, Version 2.0.
 // SPDX: Apache-2.0
 
-#include <pbrt/shapes.h>
+#include "shapes.h"
 
-#include <pbrt/textures.h>
+#include "textures.h"
 #ifdef PBRT_BUILD_GPU_RENDERER
-#include <pbrt/gpu/util.h>
+#include "gpu/util.h"
 #endif  // PBRT_BUILD_GPU_RENDERER
-#include <pbrt/interaction.h>
-#include <pbrt/options.h>
-#include <pbrt/paramdict.h>
-#include <pbrt/util/check.h>
-#include <pbrt/util/error.h>
-#include <pbrt/util/file.h>
-#include <pbrt/util/float.h>
-#include <pbrt/util/image.h>
-#include <pbrt/util/loopsubdiv.h>
-#include <pbrt/util/lowdiscrepancy.h>
-#include <pbrt/util/math.h>
-#include <pbrt/util/memory.h>
-#include <pbrt/util/print.h>
-#include <pbrt/util/sampling.h>
-#include <pbrt/util/splines.h>
-#include <pbrt/util/stats.h>
+#include "interaction.h"
+#include "options.h"
+#include "paramdict.h"
+#include "util/check.h"
+#include "util/error.h"
+#include "util/file.h"
+#include "util/float.h"
+#include "util/image.h"
+#include "util/loopsubdiv.h"
+#include "util/lowdiscrepancy.h"
+#include "util/math.h"
+#include "util/memory.h"
+#include "util/print.h"
+#include "util/sampling.h"
+#include "util/splines.h"
+#include "util/stats.h"
 
 #include <algorithm>
 

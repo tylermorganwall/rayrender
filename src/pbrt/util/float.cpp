@@ -2,9 +2,9 @@
 // The pbrt source code is licensed under the Apache License, Version 2.0.
 // SPDX: Apache-2.0
 
-#include <pbrt/util/float.h>
+#include "util/float.h"
 
-#include <pbrt/util/print.h>
+#include "util/print.h"
 
 namespace pbrt {
 

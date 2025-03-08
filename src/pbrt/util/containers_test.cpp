@@ -4,10 +4,10 @@
 
 #include <gtest/gtest.h>
 
-#include <pbrt/util/containers.h>
-#include <pbrt/util/math.h>
-#include <pbrt/util/pstd.h>
-#include <pbrt/util/rng.h>
+#include "util/containers.h"
+#include "util/math.h"
+#include "util/pstd.h"
+#include "util/rng.h"
 
 #include <set>
 #include <string>

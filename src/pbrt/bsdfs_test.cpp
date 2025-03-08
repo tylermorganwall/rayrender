@@ -4,21 +4,21 @@
 
 #include <gtest/gtest.h>
 
-#include <pbrt/pbrt.h>
+#include "pbrt.h"
 
-#include <pbrt/bsdf.h>
-#include <pbrt/interaction.h>
-#include <pbrt/options.h>
-#include <pbrt/paramdict.h>
-#include <pbrt/shapes.h>
-#include <pbrt/util/image.h>
-#include <pbrt/util/log.h>
-#include <pbrt/util/memory.h>
-#include <pbrt/util/parallel.h>
-#include <pbrt/util/print.h>
-#include <pbrt/util/rng.h>
-#include <pbrt/util/sampling.h>
-#include <pbrt/util/spectrum.h>
+#include "bsdf.h"
+#include "interaction.h"
+#include "options.h"
+#include "paramdict.h"
+#include "shapes.h"
+#include "util/image.h"
+#include "util/log.h"
+#include "util/memory.h"
+#include "util/parallel.h"
+#include "util/print.h"
+#include "util/rng.h"
+#include "util/sampling.h"
+#include "util/spectrum.h"
 
 #include <cstdio>
 #include <cstdlib>

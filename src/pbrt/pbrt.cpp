@@ -2,32 +2,32 @@
 // The pbrt source code is licensed under the Apache License, Version 2.0.
 // SPDX: Apache-2.0
 
-#include <pbrt/pbrt.h>
+#include "pbrt.h"
 
 #ifdef PBRT_BUILD_GPU_RENDERER
-#include <pbrt/gpu/memory.h>
-#include <pbrt/gpu/util.h>
+#include "gpu/memory.h"
+#include "gpu/util.h"
 #endif  // PBRT_BUILD_GPU_RENDERER
-#include <pbrt/options.h>
-#include <pbrt/shapes.h>
-#include <pbrt/util/check.h>
-#include <pbrt/util/color.h>
-#include <pbrt/util/colorspace.h>
-#include <pbrt/util/display.h>
-#include <pbrt/util/error.h>
-#include <pbrt/util/gui.h>
-#include <pbrt/util/memory.h>
-#include <pbrt/util/parallel.h>
-#include <pbrt/util/print.h>
-#include <pbrt/util/spectrum.h>
-#include <pbrt/util/stats.h>
+#include "options.h"
+#include "shapes.h"
+#include "util/check.h"
+#include "util/color.h"
+#include "util/colorspace.h"
+#include "util/display.h"
+#include "util/error.h"
+#include "util/gui.h"
+#include "util/memory.h"
+#include "util/parallel.h"
+#include "util/print.h"
+#include "util/spectrum.h"
+#include "util/stats.h"
 
 #include <ImfThreading.h>
 
 #include <stdlib.h>
 
 #ifdef PBRT_IS_WINDOWS
-#include <Windows.h>
+#include "Windows.h"
 #endif  // PBRT_IS_WINDOWS
 
 namespace pbrt {

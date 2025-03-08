@@ -5,14 +5,14 @@
 #ifndef PBRT_UTIL_DISPLAY_H
 #define PBRT_UTIL_DISPLAY_H
 
-#include <pbrt/pbrt.h>
+#include "pbrt.h"
 
-#include <pbrt/util/check.h>
-#include <pbrt/util/color.h>
-#include <pbrt/util/containers.h>
-#include <pbrt/util/image.h>
-#include <pbrt/util/pstd.h>
-#include <pbrt/util/vecmath.h>
+#include "util/check.h"
+#include "util/color.h"
+#include "util/containers.h"
+#include "util/image.h"
+#include "util/pstd.h"
+#include "util/vecmath.h"
 
 #include <functional>
 #include <string>

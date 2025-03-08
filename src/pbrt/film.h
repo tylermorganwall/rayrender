@@ -9,20 +9,20 @@
 // Copyright (c) 2020, Weta Digital, Ltd.
 // SPDX-License-Identifier: Apache-2.0
 
-#include <pbrt/pbrt.h>
+#include "pbrt.h"
 
-#include <pbrt/base/bxdf.h>
-#include <pbrt/base/camera.h>
-#include <pbrt/base/film.h>
-#include <pbrt/bsdf.h>
-#include <pbrt/util/color.h>
-#include <pbrt/util/colorspace.h>
-#include <pbrt/util/parallel.h>
-#include <pbrt/util/pstd.h>
-#include <pbrt/util/sampling.h>
-#include <pbrt/util/spectrum.h>
-#include <pbrt/util/transform.h>
-#include <pbrt/util/vecmath.h>
+#include "base/bxdf.h"
+#include "base/camera.h"
+#include "base/film.h"
+#include "bsdf.h"
+#include "util/color.h"
+#include "util/colorspace.h"
+#include "util/parallel.h"
+#include "util/pstd.h"
+#include "util/sampling.h"
+#include "util/spectrum.h"
+#include "util/transform.h"
+#include "util/vecmath.h"
 
 #include <atomic>
 #include <map>

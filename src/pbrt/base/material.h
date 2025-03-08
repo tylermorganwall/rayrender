@@ -5,11 +5,11 @@
 #ifndef PBRT_BASE_MATERIAL_H
 #define PBRT_BASE_MATERIAL_H
 
-#include <pbrt/pbrt.h>
+#include "pbrt.h"
 
-#include <pbrt/base/bssrdf.h>
-#include <pbrt/base/texture.h>
-#include <pbrt/util/taggedptr.h>
+#include "base/bssrdf.h"
+#include "base/texture.h"
+#include "util/taggedptr.h"
 
 #include <map>
 #include <string>

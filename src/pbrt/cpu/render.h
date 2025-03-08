@@ -5,7 +5,7 @@
 #ifndef PBRT_CPU_RENDER_H
 #define PBRT_CPU_RENDER_H
 
-#include <pbrt/pbrt.h>
+#include "pbrt.h"
 
 namespace pbrt {
 

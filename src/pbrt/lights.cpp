@@ -6,28 +6,28 @@
 // Copyright (c) 2020, Weta Digital, Ltd.
 // SPDX-License-Identifier: Apache-2.0
 
-#include <pbrt/lights.h>
+#include "lights.h"
 
-#include <pbrt/cameras.h>
+#include "cameras.h"
 #ifdef PBRT_BUILD_GPU_RENDERER
-#include <pbrt/gpu/memory.h>
+#include "gpu/memory.h"
 #endif  // PBRT_BUILD_GPU_RENDERER
-#include <pbrt/paramdict.h>
-#include <pbrt/samplers.h>
-#include <pbrt/shapes.h>
-#include <pbrt/util/color.h>
-#include <pbrt/util/colorspace.h>
-#include <pbrt/util/containers.h>
-#include <pbrt/util/error.h>
-#include <pbrt/util/file.h>
-#include <pbrt/util/float.h>
-#include <pbrt/util/math.h>
-#include <pbrt/util/memory.h>
-#include <pbrt/util/parallel.h>
-#include <pbrt/util/print.h>
-#include <pbrt/util/sampling.h>
-#include <pbrt/util/spectrum.h>
-#include <pbrt/util/stats.h>
+#include "paramdict.h"
+#include "samplers.h"
+#include "shapes.h"
+#include "util/color.h"
+#include "util/colorspace.h"
+#include "util/containers.h"
+#include "util/error.h"
+#include "util/file.h"
+#include "util/float.h"
+#include "util/math.h"
+#include "util/memory.h"
+#include "util/parallel.h"
+#include "util/print.h"
+#include "util/sampling.h"
+#include "util/spectrum.h"
+#include "util/stats.h"
 
 #include <algorithm>
 #include <mutex>

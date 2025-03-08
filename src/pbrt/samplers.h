@@ -5,22 +5,22 @@
 #ifndef PBRT_SAMPLERS_H
 #define PBRT_SAMPLERS_H
 
-#include <pbrt/pbrt.h>
+#include "pbrt.h"
 
-#include <pbrt/base/sampler.h>
-#include <pbrt/filters.h>
-#include <pbrt/options.h>
-#include <pbrt/util/bluenoise.h>
-#include <pbrt/util/check.h>
-#include <pbrt/util/error.h>
-#include <pbrt/util/hash.h>
-#include <pbrt/util/lowdiscrepancy.h>
-#include <pbrt/util/math.h>
-#include <pbrt/util/pmj02tables.h>
-#include <pbrt/util/primes.h>
-#include <pbrt/util/pstd.h>
-#include <pbrt/util/rng.h>
-#include <pbrt/util/vecmath.h>
+#include "base/sampler.h"
+#include "filters.h"
+#include "options.h"
+#include "util/bluenoise.h"
+#include "util/check.h"
+#include "util/error.h"
+#include "util/hash.h"
+#include "util/lowdiscrepancy.h"
+#include "util/math.h"
+#include "util/pmj02tables.h"
+#include "util/primes.h"
+#include "util/pstd.h"
+#include "util/rng.h"
+#include "util/vecmath.h"
 
 #include <algorithm>
 #include <limits>

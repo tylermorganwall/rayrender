@@ -2,15 +2,15 @@
 // The pbrt source code is licensed under the Apache License, Version 2.0.
 // SPDX: Apache-2.0
 
-#include <pbrt/util/gui.h>
+#include "util/gui.h"
 
-#include <pbrt/options.h>
+#include "options.h"
 #ifdef PBRT_BUILD_GPU_RENDERER
-#include <pbrt/gpu/util.h>
+#include "gpu/util.h"
 #endif  // PBRT_BUILD_GPU_RENDERER
-#include <pbrt/util/error.h>
-#include <pbrt/util/image.h>
-#include <pbrt/util/parallel.h>
+#include "util/error.h"
+#include "util/image.h"
+#include "util/parallel.h"
 
 #define GL_CHECK(call)                                                   \
     do {                                                                 \

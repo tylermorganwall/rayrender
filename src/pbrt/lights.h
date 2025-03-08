@@ -9,21 +9,21 @@
 // Copyright (c) 2020, Weta Digital, Ltd.
 // SPDX-License-Identifier: Apache-2.0
 
-#include <pbrt/pbrt.h>
+#include "pbrt.h"
 
-#include <pbrt/base/light.h>
-#include <pbrt/base/medium.h>
-#include <pbrt/base/texture.h>
-#include <pbrt/interaction.h>
-#include <pbrt/shapes.h>
-#include <pbrt/textures.h>
-#include <pbrt/util/image.h>
-#include <pbrt/util/log.h>
-#include <pbrt/util/pstd.h>
-#include <pbrt/util/sampling.h>
-#include <pbrt/util/spectrum.h>
-#include <pbrt/util/transform.h>
-#include <pbrt/util/vecmath.h>
+#include "base/light.h"
+#include "base/medium.h"
+#include "base/texture.h"
+#include "interaction.h"
+#include "shapes.h"
+#include "textures.h"
+#include "util/image.h"
+#include "util/log.h"
+#include "util/pstd.h"
+#include "util/sampling.h"
+#include "util/spectrum.h"
+#include "util/transform.h"
+#include "util/vecmath.h"
 
 #include <functional>
 #include <memory>

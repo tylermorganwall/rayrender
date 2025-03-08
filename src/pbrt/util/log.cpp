@@ -2,18 +2,18 @@
 // The pbrt source code is licensed under the Apache License, Version 2.0.
 // SPDX: Apache-2.0
 
-#include <pbrt/util/log.h>
+#include "util/log.h"
 
-#include <pbrt/options.h>
+#include "options.h"
 #ifdef PBRT_BUILD_GPU_RENDERER
-#include <pbrt/gpu/util.h>
+#include "gpu/util.h"
 #endif
-#include <pbrt/util/check.h>
-#include <pbrt/util/error.h>
-#include <pbrt/util/file.h>
-#include <pbrt/util/memory.h>
-#include <pbrt/util/parallel.h>
-#include <pbrt/util/string.h>
+#include "util/check.h"
+#include "util/error.h"
+#include "util/file.h"
+#include "util/memory.h"
+#include "util/parallel.h"
+#include "util/string.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -29,20 +29,20 @@
 
 #ifdef PBRT_IS_OSX
 #include <sys/syscall.h>
-#include <time.h>
+#include "time.h"
 #include <unistd.h>
 #endif
 #ifdef PBRT_IS_LINUX
 #include <sys/syscall.h>
 #include <sys/types.h>
-#include <time.h>
+#include "time.h"
 #include <unistd.h>
 #endif
 #ifdef PBRT_IS_WINDOWS
 #include <windows.h>
 #endif
 #if defined(PBRT_USE_NVML)
-#include <nvml.h>
+#include "nvml.h"
 #endif
 
 namespace pbrt {

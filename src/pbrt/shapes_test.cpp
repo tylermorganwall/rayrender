@@ -4,15 +4,15 @@
 
 #include <gtest/gtest.h>
 
-#include <pbrt/pbrt.h>
+#include "pbrt.h"
 
-#include <pbrt/interaction.h>
-#include <pbrt/shapes.h>
-#include <pbrt/util/lowdiscrepancy.h>
-#include <pbrt/util/memory.h>
-#include <pbrt/util/parallel.h>
-#include <pbrt/util/rng.h>
-#include <pbrt/util/sampling.h>
+#include "interaction.h"
+#include "shapes.h"
+#include "util/lowdiscrepancy.h"
+#include "util/memory.h"
+#include "util/parallel.h"
+#include "util/rng.h"
+#include "util/sampling.h"
 
 #include <cmath>
 #include <functional>

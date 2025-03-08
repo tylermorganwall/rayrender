@@ -5,18 +5,18 @@
 #ifndef PBRT_MATERIALS_H
 #define PBRT_MATERIALS_H
 
-#include <pbrt/pbrt.h>
+#include "pbrt.h"
 
-#include <pbrt/base/bssrdf.h>
-#include <pbrt/base/material.h>
-#include <pbrt/bsdf.h>
-#include <pbrt/bssrdf.h>
-#include <pbrt/interaction.h>
-#include <pbrt/textures.h>
-#include <pbrt/util/check.h>
-#include <pbrt/util/spectrum.h>
-#include <pbrt/util/taggedptr.h>
-#include <pbrt/util/transform.h>
+#include "base/bssrdf.h"
+#include "base/material.h"
+#include "bsdf.h"
+#include "bssrdf.h"
+#include "interaction.h"
+#include "textures.h"
+#include "util/check.h"
+#include "util/spectrum.h"
+#include "util/taggedptr.h"
+#include "util/transform.h"
 
 #include <memory>
 #include <string>

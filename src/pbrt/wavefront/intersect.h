@@ -5,10 +5,10 @@
 #ifndef PBRT_WAVEFRONT_INTERSECT_H
 #define PBRT_WAVEFRONT_INTERSECT_H
 
-#include <pbrt/pbrt.h>
+#include "pbrt.h"
 
-#include <pbrt/util/spectrum.h>
-#include <pbrt/wavefront/workitems.h>
+#include "util/spectrum.h"
+#include "wavefront/workitems.h"
 
 namespace pbrt {
 

@@ -5,10 +5,10 @@
 #ifndef PBRT_GPU_DENOISER_H
 #define PBRT_GPU_DENOISER_H
 
-#include <pbrt/pbrt.h>
+#include "pbrt.h"
 
-#include <pbrt/util/color.h>
-#include <pbrt/util/vecmath.h>
+#include "util/color.h"
+#include "util/vecmath.h"
 
 #include <optix.h>
 

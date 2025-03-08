@@ -46,7 +46,7 @@ THE SOFTWARE.
 
 #include <iostream>
 
-//#include <pbrt/core/cyhair_loader.h>
+//#include <core/cyhair_loader.h>
 
 namespace cyhair {
 

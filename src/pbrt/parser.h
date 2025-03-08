@@ -5,13 +5,13 @@
 #ifndef PBRT_PARSER_H
 #define PBRT_PARSER_H
 
-#include <pbrt/pbrt.h>
+#include "pbrt.h"
 
-#include <pbrt/paramdict.h>
-#include <pbrt/util/check.h>
-#include <pbrt/util/containers.h>
-#include <pbrt/util/error.h>
-#include <pbrt/util/pstd.h>
+#include "paramdict.h"
+#include "util/check.h"
+#include "util/containers.h"
+#include "util/error.h"
+#include "util/pstd.h"
 
 #include <functional>
 #include <map>

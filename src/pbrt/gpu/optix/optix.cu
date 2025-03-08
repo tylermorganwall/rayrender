@@ -2,29 +2,29 @@
 // The pbrt source code is licensed under the Apache License, Version 2.0.
 // SPDX: Apache-2.0
 
-#include <pbrt/pbrt.h>
+#include "pbrt.h"
 
-#include <pbrt/gpu/optix/aggregate.h>
-#include <pbrt/gpu/optix/optix.h>
-#include <pbrt/interaction.h>
-#include <pbrt/materials.h>
-#include <pbrt/media.h>
-#include <pbrt/shapes.h>
-#include <pbrt/textures.h>
-#include <pbrt/util/float.h>
-#include <pbrt/util/rng.h>
-#include <pbrt/util/transform.h>
-#include <pbrt/util/vecmath.h>
-#include <pbrt/wavefront/intersect.h>
+#include "gpu/optix/aggregate.h"
+#include "gpu/optix/optix.h"
+#include "interaction.h"
+#include "materials.h"
+#include "media.h"
+#include "shapes.h"
+#include "textures.h"
+#include "util/float.h"
+#include "util/rng.h"
+#include "util/transform.h"
+#include "util/vecmath.h"
+#include "wavefront/intersect.h"
 
 // Make various functions visible to OptiX, which doesn't get to link
 // shader code with the CUDA code in the main executable...
-#include <pbrt/util/color.cpp>
-#include <pbrt/util/colorspace.cpp>
-#include <pbrt/util/log.cpp>
-#include <pbrt/util/noise.cpp>
-#include <pbrt/util/spectrum.cpp>
-#include <pbrt/util/transform.cpp>
+#include <util/color.cpp>
+#include <util/colorspace.cpp>
+#include <util/log.cpp>
+#include <util/noise.cpp>
+#include <util/spectrum.cpp>
+#include <util/transform.cpp>
 
 #include <optix_device.h>
 

@@ -5,10 +5,10 @@
 #ifndef PBRT_UTIL_PARALLEL_H
 #define PBRT_UTIL_PARALLEL_H
 
-#include <pbrt/pbrt.h>
+#include "pbrt.h"
 
-#include <pbrt/util/float.h>
-#include <pbrt/util/vecmath.h>
+#include "util/float.h"
+#include "util/vecmath.h"
 
 #include <atomic>
 #include <chrono>

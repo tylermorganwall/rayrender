@@ -4,7 +4,7 @@
 
 #include <gtest/gtest.h>
 
-#include <pbrt/util/hash.h>
+#include "util/hash.h"
 
 #include <set>
 

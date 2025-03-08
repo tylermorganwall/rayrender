@@ -4,13 +4,13 @@
 
 #include <gtest/gtest.h>
 
-#include <pbrt/pbrt.h>
+#include "pbrt.h"
 
-#include <pbrt/util/color.h>
-#include <pbrt/util/colorspace.h>
-#include <pbrt/util/rng.h>
-#include <pbrt/util/sampling.h>
-#include <pbrt/util/spectrum.h>
+#include "util/color.h"
+#include "util/colorspace.h"
+#include "util/rng.h"
+#include "util/sampling.h"
+#include "util/spectrum.h"
 
 #include <array>
 

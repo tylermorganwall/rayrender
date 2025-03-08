@@ -5,9 +5,9 @@
 #ifndef PBRT_UTIL_PRIMES_H
 #define PBRT_UTIL_PRIMES_H
 
-#include <pbrt/pbrt.h>
+#include "pbrt.h"
 
-#include <pbrt/util/pstd.h>
+#include "util/pstd.h"
 
 namespace pbrt {
 

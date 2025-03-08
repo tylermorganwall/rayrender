@@ -5,10 +5,10 @@
 #ifndef PBRT_OPTIONS_H
 #define PBRT_OPTIONS_H
 
-#include <pbrt/pbrt.h>
-#include <pbrt/util/log.h>
-#include <pbrt/util/pstd.h>
-#include <pbrt/util/vecmath.h>
+#include "pbrt.h"
+#include "util/log.h"
+#include "util/pstd.h"
+#include "util/vecmath.h"
 
 #include <string>
 

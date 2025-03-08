@@ -2,24 +2,24 @@
 // The pbrt source code is licensed under the Apache License, Version 2.0.
 // SPDX: Apache-2.0
 
-#include <pbrt/media.h>
+#include "media.h"
 
-#include <pbrt/interaction.h>
-#include <pbrt/paramdict.h>
-#include <pbrt/samplers.h>
-#include <pbrt/textures.h>
-#include <pbrt/util/color.h>
-#include <pbrt/util/colorspace.h>
-#include <pbrt/util/error.h>
-#include <pbrt/util/file.h>
-#include <pbrt/util/memory.h>
-#include <pbrt/util/sampling.h>
-#include <pbrt/util/scattering.h>
-#include <pbrt/util/stats.h>
+#include "interaction.h"
+#include "paramdict.h"
+#include "samplers.h"
+#include "textures.h"
+#include "util/color.h"
+#include "util/colorspace.h"
+#include "util/error.h"
+#include "util/file.h"
+#include "util/memory.h"
+#include "util/sampling.h"
+#include "util/scattering.h"
+#include "util/stats.h"
 
-#include <nanovdb/NanoVDB.h>
+#include "nanovdb/NanoVDB.h"
 #define NANOVDB_USE_ZIP 1
-#include <nanovdb/util/IO.h>
+#include "nanovdb/util/IO.h"
 
 #include <algorithm>
 #include <cmath>

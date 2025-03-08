@@ -2,13 +2,13 @@
 // The pbrt source code is licensed under the Apache License, Version 2.0.
 // SPDX: Apache-2.0
 
-#include <pbrt/gpu/optix/denoiser.h>
+#include "gpu/optix/denoiser.h"
 
-#include <pbrt/gpu/memory.h>
-#include <pbrt/gpu/util.h>
+#include "gpu/memory.h"
+#include "gpu/util.h"
 
-#include <cuda.h>
-#include <cuda_runtime.h>
+#include "cuda.h"
+#include "cuda_runtime.h"
 #include <array>
 
 #include <optix.h>

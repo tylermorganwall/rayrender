@@ -2,12 +2,12 @@
 // The pbrt source code is licensed under the Apache License, Version 2.0.
 // SPDX: Apache-2.0
 
-#include <pbrt/util/colorspace.h>
+#include "util/colorspace.h"
 
 #ifdef PBRT_BUILD_GPU_RENDERER
-#include <pbrt/gpu/util.h>
+#include "gpu/util.h"
 #endif
-#include <pbrt/options.h>
+#include "options.h"
 
 namespace pbrt {
 

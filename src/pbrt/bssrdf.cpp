@@ -2,15 +2,15 @@
 // The pbrt source code is licensed under the Apache License, Version 2.0.
 // SPDX: Apache-2.0
 
-#include <pbrt/bssrdf.h>
+#include "bssrdf.h"
 
-#include <pbrt/media.h>
-#include <pbrt/shapes.h>
-#include <pbrt/util/math.h>
-#include <pbrt/util/memory.h>
-#include <pbrt/util/parallel.h>
-#include <pbrt/util/print.h>
-#include <pbrt/util/sampling.h>
+#include "media.h"
+#include "shapes.h"
+#include "util/math.h"
+#include "util/memory.h"
+#include "util/parallel.h"
+#include "util/print.h"
+#include "util/sampling.h"
 
 #include <cmath>
 

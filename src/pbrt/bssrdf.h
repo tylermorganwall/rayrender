@@ -5,17 +5,17 @@
 #ifndef PBRT_BSSRDF_H
 #define PBRT_BSSRDF_H
 
-#include <pbrt/pbrt.h>
+#include "pbrt.h"
 
-#include <pbrt/base/bssrdf.h>
-#include <pbrt/bsdf.h>
-#include <pbrt/interaction.h>
-#include <pbrt/util/check.h>
-#include <pbrt/util/pstd.h>
-#include <pbrt/util/scattering.h>
-#include <pbrt/util/spectrum.h>
-#include <pbrt/util/taggedptr.h>
-#include <pbrt/util/vecmath.h>
+#include "base/bssrdf.h"
+#include "bsdf.h"
+#include "interaction.h"
+#include "util/check.h"
+#include "util/pstd.h"
+#include "util/scattering.h"
+#include "util/spectrum.h"
+#include "util/taggedptr.h"
+#include "util/vecmath.h"
 
 #include <string>
 

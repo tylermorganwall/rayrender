@@ -4,9 +4,9 @@
 
 #include <gtest/gtest.h>
 
-#include <pbrt/parser.h>
-#include <pbrt/pbrt.h>
-#include <pbrt/util/pstd.h>
+#include "parser.h"
+#include "pbrt.h"
+#include "util/pstd.h"
 
 #include <fstream>
 #include <initializer_list>

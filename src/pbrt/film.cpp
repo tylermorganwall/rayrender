@@ -6,28 +6,28 @@
 // Copyright (c) 2020, Weta Digital, Ltd.
 // SPDX-License-Identifier: Apache-2.0
 
-#include <pbrt/film.h>
+#include "film.h"
 
-#include <pbrt/bsdf.h>
-#include <pbrt/cameras.h>
-#include <pbrt/filters.h>
-#include <pbrt/options.h>
-#include <pbrt/paramdict.h>
-#include <pbrt/util/bluenoise.h>
-#include <pbrt/util/check.h>
-#include <pbrt/util/color.h>
-#include <pbrt/util/colorspace.h>
-#include <pbrt/util/error.h>
-#include <pbrt/util/file.h>
-#include <pbrt/util/gui.h>
-#include <pbrt/util/image.h>
-#include <pbrt/util/lowdiscrepancy.h>
-#include <pbrt/util/memory.h>
-#include <pbrt/util/parallel.h>
-#include <pbrt/util/print.h>
-#include <pbrt/util/spectrum.h>
-#include <pbrt/util/stats.h>
-#include <pbrt/util/transform.h>
+#include "bsdf.h"
+#include "cameras.h"
+#include "filters.h"
+#include "options.h"
+#include "paramdict.h"
+#include "util/bluenoise.h"
+#include "util/check.h"
+#include "util/color.h"
+#include "util/colorspace.h"
+#include "util/error.h"
+#include "util/file.h"
+#include "util/gui.h"
+#include "util/image.h"
+#include "util/lowdiscrepancy.h"
+#include "util/memory.h"
+#include "util/parallel.h"
+#include "util/print.h"
+#include "util/spectrum.h"
+#include "util/stats.h"
+#include "util/transform.h"
 
 #include <algorithm>
 #include <cstring>

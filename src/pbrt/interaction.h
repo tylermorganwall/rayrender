@@ -5,18 +5,18 @@
 #ifndef PBRT_INTERACTION_H
 #define PBRT_INTERACTION_H
 
-#include <pbrt/pbrt.h>
+#include "pbrt.h"
 
-#include <pbrt/base/bssrdf.h>
-#include <pbrt/base/camera.h>
-#include <pbrt/base/light.h>
-#include <pbrt/base/material.h>
-#include <pbrt/base/medium.h>
-#include <pbrt/base/sampler.h>
-#include <pbrt/ray.h>
-#include <pbrt/util/spectrum.h>
-#include <pbrt/util/taggedptr.h>
-#include <pbrt/util/vecmath.h>
+#include "base/bssrdf.h"
+#include "base/camera.h"
+#include "base/light.h"
+#include "base/material.h"
+#include "base/medium.h"
+#include "base/sampler.h"
+#include "ray.h"
+#include "util/spectrum.h"
+#include "util/taggedptr.h"
+#include "util/vecmath.h"
 
 #include <limits>
 
