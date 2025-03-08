@@ -5,17 +5,17 @@
 #ifndef PBRT_WAVEFRONT_WORKITEMS_H
 #define PBRT_WAVEFRONT_WORKITEMS_H
 
-#include "pbrt.h"
+#include "../pbrt.h"
 
-#include "base/sampler.h"
-#include "film.h"
-#include "lightsamplers.h"
-#include "materials.h"
-#include "ray.h"
-#include "util/containers.h"
-#include "util/pstd.h"
-#include "util/soa.h"
-#include "wavefront/workqueue.h"
+#include "../base/sampler.h"
+#include "../film.h"
+#include "../lightsamplers.h"
+#include "../materials.h"
+#include "../ray.h"
+#include "../util/containers.h"
+#include "../util/pstd.h"
+#include "../util/soa.h"
+#include "../wavefront/workqueue.h"
 
 namespace pbrt {
 
@@ -324,7 +324,7 @@ struct MaterialEvalWorkItem {
     MediumInterface mediumInterface;
 };
 
-#include "wavefront_workitems_soa.h"
+#include "../wavefront_workitems_soa.h"
 
 // RayQueue Definition
 class RayQueue : public WorkQueue<RayWorkItem> {

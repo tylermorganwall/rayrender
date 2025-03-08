@@ -2,33 +2,33 @@
 // The pbrt source code is licensed under the Apache License, Version 2.0.
 // SPDX: Apache-2.0
 
-#include "wavefront/integrator.h"
+#include "../wavefront/integrator.h"
 
-#include "base/medium.h"
-#include "cameras.h"
-#include "film.h"
-#include "filters.h"
+#include "../base/medium.h"
+#include "../cameras.h"
+#include "../film.h"
+#include "../filters.h"
 #ifdef PBRT_BUILD_GPU_RENDERER
-#include "gpu/optix/aggregate.h"
-#include "gpu/memory.h"
+#include "../gpu/optix/aggregate.h"
+#include "../gpu/memory.h"
 #endif  // PBRT_BUILD_GPU_RENDERER
-#include "lights.h"
-#include "lightsamplers.h"
-#include "util/color.h"
-#include "util/colorspace.h"
-#include "util/display.h"
-#include "util/file.h"
-#include "util/gui.h"
-#include "util/image.h"
-#include "util/log.h"
-#include "util/print.h"
-#include "util/progressreporter.h"
-#include "util/pstd.h"
-#include "util/spectrum.h"
-#include "util/stats.h"
-#include "util/string.h"
-#include "util/taggedptr.h"
-#include "wavefront/aggregate.h"
+#include "../lights.h"
+#include "../lightsamplers.h"
+#include "../util/color.h"
+#include "../util/colorspace.h"
+#include "../util/display.h"
+#include "../util/file.h"
+#include "../util/gui.h"
+#include "../util/image.h"
+#include "../util/log.h"
+#include "../util/print.h"
+#include "../util/progressreporter.h"
+#include "../util/pstd.h"
+#include "../util/spectrum.h"
+#include "../util/stats.h"
+#include "../util/string.h"
+#include "../util/taggedptr.h"
+#include "../wavefront/aggregate.h"
 
 #include <atomic>
 #include <cstring>
@@ -36,8 +36,8 @@
 #include <map>
 
 #ifdef PBRT_BUILD_GPU_RENDERER
-#include "cuda.h"
-#include "cuda_runtime.h"
+#include "../cuda.h"
+#include "../cuda_runtime.h"
 #endif  // PBRT_BUILD_GPU_RENDERER
 
 namespace pbrt {

@@ -5,8 +5,8 @@
 #ifndef PBRT_UTIL_GUI_H
 #define PBRT_UTIL_GUI_H
 
-#include <glad/glad.h>
-#include <GLFW/glfw3.h>
+// #include <glad/glad.h>
+// #include <GLFW/glfw3.h>
 
 #include "../pbrt.h"
 
@@ -44,7 +44,7 @@ class GUI {
 #endif  // PBRT_BUILD_GPU_RENDERER
     }
 
-    DisplayState RefreshDisplay();
+    // DisplayState RefreshDisplay();
 
     // It's a little messy that the state of values controlled via the UI
     // are just public variables here but it's probably not worth putting
@@ -53,9 +53,9 @@ class GUI {
     Float exposure = 1.f;
     bool printCameraTransform = false;
 
-    void keyboardCallback(GLFWwindow *window, int key, int scan, int action, int mods);
-    void cursorPosCallback(GLFWwindow *window, double xpos, double ypos);
-    void mouseButtonCallback(GLFWwindow *window, int button, int action, int mods);
+    // void keyboardCallback(GLFWwindow *window, int key, int scan, int action, int mods);
+    // void cursorPosCallback(GLFWwindow *window, double xpos, double ypos);
+    // void mouseButtonCallback(GLFWwindow *window, int button, int action, int mods);
 
     static void Initialize();
     static Point2i GetResolution();
@@ -81,7 +81,7 @@ class GUI {
     CUDAOutputBuffer<RGB> *cudaFramebuffer = nullptr;
 #endif
     RGB *cpuFramebuffer = nullptr;
-    GLFWwindow *window = nullptr;
+    // GLFWwindow *window = nullptr;
 };
 
 }  // namespace pbrt

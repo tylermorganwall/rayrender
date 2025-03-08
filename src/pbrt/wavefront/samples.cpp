@@ -2,10 +2,10 @@
 // The pbrt source code is licensed under the Apache License, Version 2.0.
 // SPDX: Apache-2.0
 
-#include "pbrt.h"
+#include "../pbrt.h"
 
-#include "samplers.h"
-#include "wavefront/integrator.h"
+#include "../samplers.h"
+#include "../wavefront/integrator.h"
 
 #include <type_traits>
 

@@ -22,7 +22,7 @@
 #include "util/spectrum.h"
 #include "util/stats.h"
 
-#include <ImfThreading.h>
+// #include <ImfThreading.h>
 
 #include <stdlib.h>
 

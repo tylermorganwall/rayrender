@@ -2,9 +2,9 @@
 // The pbrt source code is licensed under the Apache License, Version 2.0.
 // SPDX: Apache-2.0
 
-#include "wavefront/integrator.h"
+#include "../wavefront/integrator.h"
 
-#include "media.h"
+#include "../media.h"
 
 namespace pbrt {
 

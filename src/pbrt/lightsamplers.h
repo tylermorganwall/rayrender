@@ -231,6 +231,14 @@ class CompactLightBounds {
 struct alignas(32) LightBVHNode {
     // LightBVHNode Public Methods
     LightBVHNode() = default;
+    // LightBVHNode(CompactLightBounds cb, std::array<unsigned int, 2> ar) :
+    //     lightBounds(cb), leafInfo(ar) 
+
+    LightBVHNode(const CompactLightBounds &cb, std::array<unsigned int, 2> ar)
+        : lightBounds(cb) {
+        childOrLightIndex = ar[0];
+        isLeaf = ar[1];
+    }
 
     PBRT_CPU_GPU
     static LightBVHNode MakeLeaf(unsigned int lightIndex, const CompactLightBounds &cb) {

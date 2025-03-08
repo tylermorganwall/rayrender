@@ -5,17 +5,17 @@
 #ifndef PBRT_WAVEFRONT_AGGREGATE_H
 #define PBRT_WAVEFRONT_AGGREGATE_H
 
-#include "pbrt.h"
+#include "../pbrt.h"
 
-#include "cpu/primitive.h"
-#include "lights.h"
-#include "materials.h"
-#include "scene.h"
-#include "util/containers.h"
-#include "util/pstd.h"
-#include "util/soa.h"
-#include "wavefront/integrator.h"
-#include "wavefront/workitems.h"
+#include "../cpu/primitive.h"
+#include "../lights.h"
+#include "../materials.h"
+#include "../scene.h"
+#include "../util/containers.h"
+#include "../util/pstd.h"
+#include "../util/soa.h"
+#include "../wavefront/integrator.h"
+#include "../wavefront/workitems.h"
 
 #include <map>
 #include <string>

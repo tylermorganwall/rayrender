@@ -2,12 +2,12 @@
 // The pbrt source code is licensed under the Apache License, Version 2.0.
 // SPDX: Apache-2.0
 
-#include "wavefront/wavefront.h"
+#include "../wavefront/wavefront.h"
 
 #ifdef PBRT_BUILD_GPU_RENDERER
-#include "gpu/memory.h"
+#include "../gpu/memory.h"
 #endif  // PBRT_BUILD_GPU_RENDERER
-#include "wavefront/integrator.h"
+#include "../wavefront/integrator.h"
 
 namespace pbrt {
 

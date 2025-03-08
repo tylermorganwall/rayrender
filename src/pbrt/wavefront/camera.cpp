@@ -2,15 +2,15 @@
 // The pbrt source code is licensed under the Apache License, Version 2.0.
 // SPDX: Apache-2.0
 
-#include "pbrt.h"
+#include "../pbrt.h"
 
-#include "cameras.h"
-#include "options.h"
-#include "samplers.h"
-#include "util/bluenoise.h"
-#include "util/spectrum.h"
-#include "util/vecmath.h"
-#include "wavefront/integrator.h"
+#include "../cameras.h"
+#include "../options.h"
+#include "../samplers.h"
+#include "../util/bluenoise.h"
+#include "../util/spectrum.h"
+#include "../util/vecmath.h"
+#include "../wavefront/integrator.h"
 
 namespace pbrt {
 
