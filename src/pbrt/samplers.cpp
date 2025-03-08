@@ -170,63 +170,63 @@ ZSobolSampler *ZSobolSampler::Create(const ParameterDictionary &parameters,
 }
 
 // PMJ02BNSampler Method Definitions
-PMJ02BNSampler::PMJ02BNSampler(int samplesPerPixel, int seed, Allocator alloc)
-    : samplesPerPixel(samplesPerPixel), seed(seed) {
-    if (!IsPowerOf4(samplesPerPixel))
-        Warning("PMJ02BNSampler results are best with power-of-4 samples per "
-                "pixel (1, 4, 16, 64, ...)");
-    // Get sorted pmj02bn samples for pixel samples
-    if (samplesPerPixel > nPMJ02bnSamples)
-        Error("PMJ02BNSampler only supports up to %d samples per pixel", nPMJ02bnSamples);
-    // Compute _pixelTileSize_ for pmj02bn pixel samples and allocate _pixelSamples_
-    pixelTileSize =
-        1 << (Log4Int(nPMJ02bnSamples) - Log4Int(RoundUpPow4(samplesPerPixel)));
-    int nPixelSamples = pixelTileSize * pixelTileSize * samplesPerPixel;
-    pixelSamples = alloc.new_object<pstd::vector<Point2f>>(nPixelSamples, alloc);
+// PMJ02BNSampler::PMJ02BNSampler(int samplesPerPixel, int seed, Allocator alloc)
+//     : samplesPerPixel(samplesPerPixel), seed(seed) {
+//     if (!IsPowerOf4(samplesPerPixel))
+//         Warning("PMJ02BNSampler results are best with power-of-4 samples per "
+//                 "pixel (1, 4, 16, 64, ...)");
+//     // Get sorted pmj02bn samples for pixel samples
+//     if (samplesPerPixel > nPMJ02bnSamples)
+//         Error("PMJ02BNSampler only supports up to %d samples per pixel", nPMJ02bnSamples);
+//     // Compute _pixelTileSize_ for pmj02bn pixel samples and allocate _pixelSamples_
+//     pixelTileSize =
+//         1 << (Log4Int(nPMJ02bnSamples) - Log4Int(RoundUpPow4(samplesPerPixel)));
+//     int nPixelSamples = pixelTileSize * pixelTileSize * samplesPerPixel;
+//     pixelSamples = alloc.new_object<pstd::vector<Point2f>>(nPixelSamples, alloc);
 
-    // Loop over pmj02bn samples and associate them with their pixels
-    std::vector<int> nStored(pixelTileSize * pixelTileSize, 0);
-    for (int i = 0; i < nPMJ02bnSamples; ++i) {
-        Point2f p = GetPMJ02BNSample(0, i);
-        p *= pixelTileSize;
-        int pixelOffset = int(p.x) + int(p.y) * pixelTileSize;
-        if (nStored[pixelOffset] == samplesPerPixel) {
-            CHECK(!IsPowerOf4(samplesPerPixel));
-            continue;
-        }
-        int sampleOffset = pixelOffset * samplesPerPixel + nStored[pixelOffset];
-        CHECK((*pixelSamples)[sampleOffset] == Point2f(0, 0));
-        (*pixelSamples)[sampleOffset] = Point2f(p - Floor(p));
-        ++nStored[pixelOffset];
-    }
+//     // Loop over pmj02bn samples and associate them with their pixels
+//     std::vector<int> nStored(pixelTileSize * pixelTileSize, 0);
+//     for (int i = 0; i < nPMJ02bnSamples; ++i) {
+//         Point2f p = GetPMJ02BNSample(0, i);
+//         p *= pixelTileSize;
+//         int pixelOffset = int(p.x) + int(p.y) * pixelTileSize;
+//         if (nStored[pixelOffset] == samplesPerPixel) {
+//             CHECK(!IsPowerOf4(samplesPerPixel));
+//             continue;
+//         }
+//         int sampleOffset = pixelOffset * samplesPerPixel + nStored[pixelOffset];
+//         CHECK((*pixelSamples)[sampleOffset] == Point2f(0, 0));
+//         (*pixelSamples)[sampleOffset] = Point2f(p - Floor(p));
+//         ++nStored[pixelOffset];
+//     }
 
-    for (int i = 0; i < nStored.size(); ++i)
-        CHECK_EQ(nStored[i], samplesPerPixel);
-    for (int c : nStored)
-        DCHECK_EQ(c, samplesPerPixel);
-}
+//     for (int i = 0; i < nStored.size(); ++i)
+//         CHECK_EQ(nStored[i], samplesPerPixel);
+//     for (int c : nStored)
+//         DCHECK_EQ(c, samplesPerPixel);
+// }
 
-PMJ02BNSampler *PMJ02BNSampler::Create(const ParameterDictionary &parameters,
-                                       const FileLoc *loc, Allocator alloc) {
-    int nsamp = parameters.GetOneInt("pixelsamples", 16);
-    if (Options->pixelSamples)
-        nsamp = *Options->pixelSamples;
-    if (Options->quickRender)
-        nsamp = 1;
-    int seed = parameters.GetOneInt("seed", Options->seed);
-    return alloc.new_object<PMJ02BNSampler>(nsamp, seed, alloc);
-}
+// PMJ02BNSampler *PMJ02BNSampler::Create(const ParameterDictionary &parameters,
+//                                        const FileLoc *loc, Allocator alloc) {
+//     int nsamp = parameters.GetOneInt("pixelsamples", 16);
+//     if (Options->pixelSamples)
+//         nsamp = *Options->pixelSamples;
+//     if (Options->quickRender)
+//         nsamp = 1;
+//     int seed = parameters.GetOneInt("seed", Options->seed);
+//     return alloc.new_object<PMJ02BNSampler>(nsamp, seed, alloc);
+// }
 
-Sampler PMJ02BNSampler::Clone(Allocator alloc) {
-    return alloc.new_object<PMJ02BNSampler>(*this);
-}
+// Sampler PMJ02BNSampler::Clone(Allocator alloc) {
+//     return alloc.new_object<PMJ02BNSampler>(*this);
+// }
 
-std::string PMJ02BNSampler::ToString() const {
-    return StringPrintf("[ PMJ02BNSampler pixel: %s sampleIndex: %d dimension: %d "
-                        "samplesPerPixel: %d pixelTileSize: %d pixelSamples: %p ]",
-                        pixel, sampleIndex, dimension, samplesPerPixel, pixelTileSize,
-                        pixelSamples);
-}
+// std::string PMJ02BNSampler::ToString() const {
+//     return StringPrintf("[ PMJ02BNSampler pixel: %s sampleIndex: %d dimension: %d "
+//                         "samplesPerPixel: %d pixelTileSize: %d pixelSamples: %p ]",
+//                         pixel, sampleIndex, dimension, samplesPerPixel, pixelTileSize,
+//                         pixelSamples);
+// }
 
 std::string IndependentSampler::ToString() const {
     return StringPrintf("[ IndependentSampler samplesPerPixel: %d seed: %d rng: %s ]",
@@ -425,8 +425,8 @@ Sampler Sampler::Create(const std::string &name, const ParameterDictionary &para
         sampler = HaltonSampler::Create(parameters, fullRes, loc, alloc);
     else if (name == "sobol")
         sampler = SobolSampler::Create(parameters, fullRes, loc, alloc);
-    else if (name == "pmj02bn")
-        sampler = PMJ02BNSampler::Create(parameters, loc, alloc);
+    // else if (name == "pmj02bn")
+    //     sampler = PMJ02BNSampler::Create(parameters, loc, alloc);
     else if (name == "independent")
         sampler = IndependentSampler::Create(parameters, loc, alloc);
     else if (name == "stratified")

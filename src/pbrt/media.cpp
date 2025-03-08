@@ -17,9 +17,9 @@
 #include "util/scattering.h"
 #include "util/stats.h"
 
-#include "nanovdb/NanoVDB.h"
+#include "../nanovdb/NanoVDB.h"
 #define NANOVDB_USE_ZIP 1
-#include "nanovdb/util/IO.h"
+#include "../nanovdb/io/IO.h"
 
 #include <algorithm>
 #include <cmath>
@@ -491,7 +491,7 @@ static nanovdb::GridHandle<Buffer> readGrid(const std::string &filename,
     NanoVDBBuffer buf(alloc);
     nanovdb::GridHandle<Buffer> grid;
     try {
-        grid =
+        grid = 
             nanovdb::io::readGrid<Buffer>(filename, gridName, 0 /* not verbose */, buf);
     } catch (const std::exception &e) {
         ErrorExit("nanovdb: %s: %s", filename, e.what());
@@ -529,7 +529,7 @@ NanoVDBMedium::NanoVDBMedium(const Transform &renderFromMedium, Spectrum sigma_a
     sigma_a_spec.Scale(sigmaScale);
     sigma_s_spec.Scale(sigmaScale);
 
-    nanovdb::BBox<nanovdb::Vec3R> bbox = densityFloatGrid->worldBBox();
+    nanovdb::math::BBox<nanovdb::Vec3d> bbox = densityFloatGrid->worldBBox();
     bounds = Bounds3f(Point3f(bbox.min()[0], bbox.min()[1], bbox.min()[2]),
                       Point3f(bbox.max()[0], bbox.max()[1], bbox.max()[2]));
 
@@ -539,10 +539,10 @@ NanoVDBMedium::NanoVDBMedium(const Transform &renderFromMedium, Spectrum sigma_a
         temperatureFloatGrid->tree().extrema(minTemperature, maxTemperature);
         LOG_VERBOSE("Max temperature: %f", maxTemperature);
 
-        nanovdb::BBox<nanovdb::Vec3R> bbox = temperatureFloatGrid->worldBBox();
+        nanovdb::math::BBox<nanovdb::Vec3d> bbox = temperatureFloatGrid->worldBBox();
         bounds =
             Union(bounds, Bounds3f(Point3f(bbox.min()[0], bbox.min()[1], bbox.min()[2]),
-                                   Point3f(bbox.max()[0], bbox.max()[1], bbox.max()[2])));
+                                          Point3f(bbox.max()[0], bbox.max()[1], bbox.max()[2])));
     }
 
     majorantGrid.bounds = bounds;
@@ -574,10 +574,10 @@ NanoVDBMedium::NanoVDBMedium(const Transform &renderFromMedium, Spectrum sigma_a
                                         Float(z + 1) / majorantGrid.res.z)));
 
         // Compute corresponding NanoVDB index-space bounds in floating-point.
-        nanovdb::Vec3R i0 = densityFloatGrid->worldToIndexF(
-            nanovdb::Vec3R(wb.pMin.x, wb.pMin.y, wb.pMin.z));
-        nanovdb::Vec3R i1 = densityFloatGrid->worldToIndexF(
-            nanovdb::Vec3R(wb.pMax.x, wb.pMax.y, wb.pMax.z));
+        nanovdb::Vec3d i0 = densityFloatGrid->worldToIndexF(
+            nanovdb::Vec3d(wb.pMin.x, wb.pMin.y, wb.pMin.z));
+        nanovdb::Vec3d i1 = densityFloatGrid->worldToIndexF(
+            nanovdb::Vec3d(wb.pMax.x, wb.pMax.y, wb.pMax.z));
 
         // Now find integer index-space bounds, accounting for both
         // filtering and the overall index bounding box.

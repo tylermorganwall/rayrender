@@ -2,15 +2,15 @@
 // The pbrt source code is licensed under the Apache License, Version 2.0.
 // SPDX: Apache-2.0
 
-#include "options.h"
-#include "pbrt.h"
-#include "util/args.h"
-#include "util/file.h"
-#include "util/image.h"
-#include "util/mesh.h"
-#include "util/string.h"
-#include "util/transform.h"
-#include "util/vecmath.h"
+#include "../options.h"
+#include "../pbrt.h"
+#include "../util/args.h"
+#include "../util/file.h"
+#include "../util/image.h"
+#include "../util/mesh.h"
+#include "../util/string.h"
+#include "../util/transform.h"
+#include "../util/vecmath.h"
 #include <stdlib.h>
 
 #include <array>

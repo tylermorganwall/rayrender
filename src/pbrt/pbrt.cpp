@@ -60,7 +60,8 @@ void InitPBRT(const PBRTOptions &opt) {
     Options = new PBRTOptions(opt);
     // API Initialization
 
-    Imf::setGlobalThreadCount(opt.nThreads ? opt.nThreads : AvailableCores());
+    // We'll do our own threading
+    // Imf::setGlobalThreadCount(opt.nThreads ? opt.nThreads : AvailableCores());
 
 #if defined(PBRT_IS_WINDOWS)
     SetUnhandledExceptionFilter(handleExceptions);

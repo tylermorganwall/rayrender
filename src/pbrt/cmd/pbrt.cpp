@@ -2,25 +2,25 @@
 // The pbrt source code is licensed under the Apache License, Version 2.0.
 // SPDX: Apache-2.0
 
-#include "pbrt.h"
+#include "../pbrt.h"
 
-#include "cpu/render.h"
+#include "../cpu/render.h"
 #ifdef PBRT_BUILD_GPU_RENDERER
-#include "gpu/memory.h"
+#include "../gpu/memory.h"
 #endif  // PBRT_BUILD_GPU_RENDERER
-#include "options.h"
-#include "parser.h"
-#include "scene.h"
-#include "util/args.h"
-#include "util/check.h"
-#include "util/error.h"
-#include "util/log.h"
-#include "util/memory.h"
-#include "util/parallel.h"
-#include "util/print.h"
-#include "util/spectrum.h"
-#include "util/string.h"
-#include "wavefront/wavefront.h"
+#include "../options.h"
+#include "../parser.h"
+#include "../scene.h"
+#include "../util/args.h"
+#include "../util/check.h"
+#include "../util/error.h"
+#include "../util/log.h"
+#include "../util/memory.h"
+#include "../util/parallel.h"
+#include "../util/print.h"
+#include "../util/spectrum.h"
+#include "../util/string.h"
+#include "../wavefront/wavefront.h"
 
 #include <string>
 #include <vector>

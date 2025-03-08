@@ -10,14 +10,14 @@
 
 #ifdef PBRT_BUILD_GPU_RENDERER
 
-#include "pbrt.h"
+#include "../pbrt.h"
 
-#include "gpu/util.h"
-#include "util/image.h"
-#include "util/vecmath.h"
+#include "../gpu/util.h"
+#include "../util/image.h"
+#include "../util/vecmath.h"
 
-#include "cuda.h"
-#include "cuda_runtime_api.h"
+#include "../cuda.h"
+#include "../cuda_runtime_api.h"
 
 #include <vector>
 

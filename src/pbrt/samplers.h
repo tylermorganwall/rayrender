@@ -10,13 +10,13 @@
 #include "base/sampler.h"
 #include "filters.h"
 #include "options.h"
-#include "util/bluenoise.h"
+// #include "util/bluenoise.h"
 #include "util/check.h"
 #include "util/error.h"
 #include "util/hash.h"
 #include "util/lowdiscrepancy.h"
 #include "util/math.h"
-#include "util/pmj02tables.h"
+// #include "util/pmj02tables.h"
 #include "util/primes.h"
 #include "util/pstd.h"
 #include "util/rng.h"
@@ -364,79 +364,79 @@ class ZSobolSampler {
 };
 
 // PMJ02BNSampler Definition
-class PMJ02BNSampler {
-  public:
-    // PMJ02BNSampler Public Methods
-    PMJ02BNSampler(int samplesPerPixel, int seed = 0, Allocator alloc = {});
+// class PMJ02BNSampler {
+//   public:
+//     // PMJ02BNSampler Public Methods
+//     PMJ02BNSampler(int samplesPerPixel, int seed = 0, Allocator alloc = {});
 
-    PBRT_CPU_GPU
-    static constexpr const char *Name() { return "PMJ02BNSampler"; }
-    static PMJ02BNSampler *Create(const ParameterDictionary &parameters,
-                                  const FileLoc *loc, Allocator alloc);
+//     PBRT_CPU_GPU
+//     static constexpr const char *Name() { return "PMJ02BNSampler"; }
+//     static PMJ02BNSampler *Create(const ParameterDictionary &parameters,
+//                                   const FileLoc *loc, Allocator alloc);
 
-    PBRT_CPU_GPU
-    int SamplesPerPixel() const { return samplesPerPixel; }
+//     PBRT_CPU_GPU
+//     int SamplesPerPixel() const { return samplesPerPixel; }
 
-    PBRT_CPU_GPU
-    void StartPixelSample(Point2i p, int index, int dim) {
-        pixel = p;
-        sampleIndex = index;
-        dimension = std::max(2, dim);
-    }
+//     PBRT_CPU_GPU
+//     void StartPixelSample(Point2i p, int index, int dim) {
+//         pixel = p;
+//         sampleIndex = index;
+//         dimension = std::max(2, dim);
+//     }
 
-    PBRT_CPU_GPU
-    Float Get1D() {
-        // Find permuted sample index for 1D PMJ02BNSampler sample
-        uint64_t hash = Hash(pixel, dimension, seed);
-        int index = PermutationElement(sampleIndex, samplesPerPixel, hash);
+//     PBRT_CPU_GPU
+//     Float Get1D() {
+//         // Find permuted sample index for 1D PMJ02BNSampler sample
+//         uint64_t hash = Hash(pixel, dimension, seed);
+//         int index = PermutationElement(sampleIndex, samplesPerPixel, hash);
 
-        Float delta = BlueNoise(dimension, pixel);
-        ++dimension;
-        return std::min((index + delta) / samplesPerPixel, OneMinusEpsilon);
-    }
+//         Float delta = BlueNoise(dimension, pixel);
+//         ++dimension;
+//         return std::min((index + delta) / samplesPerPixel, OneMinusEpsilon);
+//     }
 
-    PBRT_CPU_GPU
-    Point2f GetPixel2D() {
-        int px = pixel.x % pixelTileSize, py = pixel.y % pixelTileSize;
-        int offset = (px + py * pixelTileSize) * samplesPerPixel;
-        return (*pixelSamples)[offset + sampleIndex];
-    }
+//     PBRT_CPU_GPU
+//     Point2f GetPixel2D() {
+//         int px = pixel.x % pixelTileSize, py = pixel.y % pixelTileSize;
+//         int offset = (px + py * pixelTileSize) * samplesPerPixel;
+//         return (*pixelSamples)[offset + sampleIndex];
+//     }
 
-    PBRT_CPU_GPU
-    Point2f Get2D() {
-        // Compute index for 2D pmj02bn sample
-        int index = sampleIndex;
-        int pmjInstance = dimension / 2;
-        if (pmjInstance >= nPMJ02bnSets) {
-            // Permute index to be used for pmj02bn sample array
-            uint64_t hash = Hash(pixel, dimension, seed);
-            index = PermutationElement(sampleIndex, samplesPerPixel, hash);
-        }
+//     PBRT_CPU_GPU
+//     Point2f Get2D() {
+//         // Compute index for 2D pmj02bn sample
+//         int index = sampleIndex;
+//         int pmjInstance = dimension / 2;
+//         if (pmjInstance >= nPMJ02bnSets) {
+//             // Permute index to be used for pmj02bn sample array
+//             uint64_t hash = Hash(pixel, dimension, seed);
+//             index = PermutationElement(sampleIndex, samplesPerPixel, hash);
+//         }
 
-        // Return randomized pmj02bn sample for current dimension
-        Point2f u = GetPMJ02BNSample(pmjInstance, index);
-        // Apply Cranley-Patterson rotation to pmj02bn sample _u_
-        u += Vector2f(BlueNoise(dimension, pixel), BlueNoise(dimension + 1, pixel));
-        if (u.x >= 1)
-            u.x -= 1;
-        if (u.y >= 1)
-            u.y -= 1;
+//         // Return randomized pmj02bn sample for current dimension
+//         Point2f u = GetPMJ02BNSample(pmjInstance, index);
+//         // Apply Cranley-Patterson rotation to pmj02bn sample _u_
+//         u += Vector2f(BlueNoise(dimension, pixel), BlueNoise(dimension + 1, pixel));
+//         if (u.x >= 1)
+//             u.x -= 1;
+//         if (u.y >= 1)
+//             u.y -= 1;
 
-        dimension += 2;
-        return {std::min(u.x, OneMinusEpsilon), std::min(u.y, OneMinusEpsilon)};
-    }
+//         dimension += 2;
+//         return {std::min(u.x, OneMinusEpsilon), std::min(u.y, OneMinusEpsilon)};
+//     }
 
-    Sampler Clone(Allocator alloc);
-    std::string ToString() const;
+//     Sampler Clone(Allocator alloc);
+//     std::string ToString() const;
 
-  private:
-    // PMJ02BNSampler Private Members
-    int samplesPerPixel, seed;
-    int pixelTileSize;
-    pstd::vector<Point2f> *pixelSamples;
-    Point2i pixel;
-    int sampleIndex, dimension;
-};
+//   private:
+//     // PMJ02BNSampler Private Members
+//     int samplesPerPixel, seed;
+//     int pixelTileSize;
+//     pstd::vector<Point2f> *pixelSamples;
+//     Point2i pixel;
+//     int sampleIndex, dimension;
+// };
 
 // IndependentSampler Definition
 class IndependentSampler {

@@ -38,7 +38,8 @@ class DebugMLTSampler;
 // Sampler Definition
 class Sampler
     : public TaggedPointer<  // Sampler Types
-          PMJ02BNSampler, IndependentSampler, StratifiedSampler, HaltonSampler,
+        //   PMJ02BNSampler, 
+          IndependentSampler, StratifiedSampler, HaltonSampler,
           PaddedSobolSampler, SobolSampler, ZSobolSampler, MLTSampler, DebugMLTSampler
 
           > {

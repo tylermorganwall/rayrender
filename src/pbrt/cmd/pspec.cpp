@@ -6,24 +6,24 @@
 
 // Computes power spectra of a variety point sets used by pbrt's samplers.
 
-#include "pbrt.h"
+#include "../pbrt.h"
 
-#include "base/sampler.h"
-#include "paramdict.h"
-#include "parser.h"
-#include "samplers.h"
-#include "util/args.h"
-#include "util/colorspace.h"
-#include "util/file.h"
-#include "util/image.h"
-#include "util/parallel.h"
-#include "util/print.h"
-#include "util/progressreporter.h"
-#include "util/pstd.h"
+#include "../base/sampler.h"
+#include "../paramdict.h"
+#include "../parser.h"
+#include "../samplers.h"
+#include "../util/args.h"
+#include "../util/colorspace.h"
+#include "../util/file.h"
+#include "../util/image.h"
+#include "../util/parallel.h"
+#include "../util/print.h"
+#include "../util/progressreporter.h"
+#include "../util/pstd.h"
 
 #ifdef PBRT_BUILD_GPU_RENDERER
-#include "gpu/memory.h"
-#include "gpu/util.h"
+#include "../gpu/memory.h"
+#include "../gpu/util.h"
 #endif
 
 #include <string>
@@ -224,8 +224,8 @@ static pstd::optional<std::vector<Point2f>> GenerateSamples(std::string samplerN
                 nPoints = Sqr(sqrtSamples);
                 return new StratifiedSampler(sqrtSamples, sqrtSamples, true,
                                              Options->seed);
-            } else if (samplerName == "pmj02bn") {
-                return new PMJ02BNSampler(nPoints, Options->seed);
+            // } else if (samplerName == "pmj02bn") {
+            //     return new PMJ02BNSampler(nPoints, Options->seed);
             } else if (samplerName == "sobol") {
                 return new PaddedSobolSampler(nPoints, RandomizeStrategy::None,
                                               Options->seed);
