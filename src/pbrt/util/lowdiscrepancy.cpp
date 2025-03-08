@@ -2,12 +2,12 @@
 // The pbrt source code is licensed under the Apache License, Version 2.0.
 // SPDX: Apache-2.0
 
-#include "util/lowdiscrepancy.h"
+#include "../util/lowdiscrepancy.h"
 
-#include "util/math.h"
-#include "util/primes.h"
-#include "util/print.h"
-#include "util/stats.h"
+#include "../util/math.h"
+#include "../util/primes.h"
+#include "../util/print.h"
+#include "../util/stats.h"
 
 namespace pbrt {
 

@@ -5,14 +5,14 @@
 #ifndef PBRT_UTIL_BUFFERCACHE_H
 #define PBRT_UTIL_BUFFERCACHE_H
 
-#include "pbrt.h"
+#include "../pbrt.h"
 
-#include "util/check.h"
-#include "util/hash.h"
-#include "util/print.h"
-#include "util/pstd.h"
-#include "util/stats.h"
-#include "util/vecmath.h"
+#include "../util/check.h"
+#include "../util/hash.h"
+#include "../util/print.h"
+#include "../util/pstd.h"
+#include "../util/stats.h"
+#include "../util/vecmath.h"
 
 #include <atomic>
 #include <cstring>

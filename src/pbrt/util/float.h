@@ -5,9 +5,9 @@
 #ifndef PBRT_UTIL_FLOAT_H
 #define PBRT_UTIL_FLOAT_H
 
-#include "pbrt.h"
+#include "../pbrt.h"
 
-#include "util/pstd.h"
+#include "../util/pstd.h"
 
 #include <cmath>
 #include <cstdint>
@@ -16,7 +16,7 @@
 #include <string>
 
 #if defined(PBRT_BUILD_GPU_RENDERER) && defined(PBRT_IS_GPU_CODE)
-#include "cuda_fp16.h"
+#include "../cuda_fp16.h"
 #endif
 
 namespace pbrt {

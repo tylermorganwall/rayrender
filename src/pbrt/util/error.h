@@ -5,10 +5,10 @@
 #ifndef PBRT_UTIL_ERROR_H
 #define PBRT_UTIL_ERROR_H
 
-#include "pbrt.h"
+#include "../pbrt.h"
 
-#include "util/print.h"
-#include "util/pstd.h"
+#include "../util/print.h"
+#include "../util/pstd.h"
 
 #include <string>
 #include <string_view>

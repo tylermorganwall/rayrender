@@ -5,9 +5,9 @@
 #ifndef PBRT_UTIL_PROGRESSREPORTER_H
 #define PBRT_UTIL_PROGRESSREPORTER_H
 
-#include "pbrt.h"
+#include "../pbrt.h"
 
-#include "util/pstd.h"
+#include "../util/pstd.h"
 
 #include <atomic>
 #include <chrono>
@@ -16,7 +16,7 @@
 #include <thread>
 
 #ifdef PBRT_BUILD_GPU_RENDERER
-#include "cuda_runtime.h"
+#include "../cuda_runtime.h"
 #include <vector>
 #endif
 

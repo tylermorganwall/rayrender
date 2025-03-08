@@ -5,10 +5,10 @@
 #ifndef PBRT_UTIL_ARGS_H
 #define PBRT_UTIL_ARGS_H
 
-#include "pbrt.h"
-#include "util/print.h"
-#include "util/pstd.h"
-#include "util/string.h"
+#include "../pbrt.h"
+#include "../util/print.h"
+#include "../util/pstd.h"
+#include "../util/string.h"
 
 #include <cctype>
 #include <cstring>

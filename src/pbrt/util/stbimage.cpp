@@ -2,7 +2,7 @@
 // The pbrt source code is licensed under the Apache License, Version 2.0.
 // SPDX: Apache-2.0
 
-#include "util/check.h"
+#include "../util/check.h"
 
 #define STBI_NO_PNG
 // too old school

@@ -2,19 +2,19 @@
 // The pbrt source code is licensed under the Apache License, Version 2.0.
 // SPDX: Apache-2.0
 
-#include "util/memory.h"
+#include "../util/memory.h"
 
-#include "util/check.h"
-#include "util/print.h"
+#include "../util/check.h"
+#include "../util/print.h"
 
 #include <cstdlib>
 #ifdef PBRT_HAVE_MALLOC_H
-#include "malloc.h"  // for both memalign and _aligned_malloc
+#include "../malloc.h"  // for both memalign and _aligned_malloc
 #endif
 #ifdef PBRT_IS_WINDOWS
 // clang-format off
 #include <windows.h>
-#include "psapi.h"
+#include "../psapi.h"
 #pragma comment(lib, "psapi.lib")
 // clang-format on
 #endif  // PBRT_IS_WINDOWS
@@ -23,7 +23,7 @@
 #include <cstdio>
 #endif  // PBRT_IS_LINUX
 #ifdef PBRT_IS_OSX
-#include "mach/mach.h"
+#include "../mach/mach.h"
 #endif  // PBRT_IS_OSX
 
 namespace pbrt {

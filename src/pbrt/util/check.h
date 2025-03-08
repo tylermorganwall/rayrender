@@ -5,10 +5,10 @@
 #ifndef PBRT_UTIL_CHECK_H
 #define PBRT_UTIL_CHECK_H
 
-#include "pbrt.h"
+#include "../pbrt.h"
 
-#include "util/log.h"
-#include "util/stats.h"
+#include "../util/log.h"
+#include "../util/stats.h"
 
 #include <functional>
 #include <string>

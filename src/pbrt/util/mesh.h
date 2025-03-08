@@ -5,14 +5,14 @@
 #ifndef PBRT_UTIL_MESH_H
 #define PBRT_UTIL_MESH_H
 
-#include "pbrt.h"
+#include "../pbrt.h"
 
-#include "util/containers.h"
-#include "util/error.h"
-#include "util/hash.h"
-#include "util/parallel.h"
-#include "util/pstd.h"
-#include "util/vecmath.h"
+#include "../util/containers.h"
+#include "../util/error.h"
+#include "../util/hash.h"
+#include "../util/parallel.h"
+#include "../util/pstd.h"
+#include "../util/vecmath.h"
 
 #include <array>
 #include <string>

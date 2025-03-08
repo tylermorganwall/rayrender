@@ -5,14 +5,14 @@
 #ifndef PBRT_UTIL_TRANSFORM_H
 #define PBRT_UTIL_TRANSFORM_H
 
-#include "pbrt.h"
+#include "../pbrt.h"
 
-#include "ray.h"
-#include "util/float.h"
-#include "util/hash.h"
-#include "util/math.h"
-#include "util/pstd.h"
-#include "util/vecmath.h"
+#include "../ray.h"
+#include "../util/float.h"
+#include "../util/hash.h"
+#include "../util/math.h"
+#include "../util/pstd.h"
+#include "../util/vecmath.h"
 
 #include <stdio.h>
 #include <cmath>

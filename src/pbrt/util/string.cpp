@@ -6,10 +6,10 @@
 #define _SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING
 #endif  // PBRT_IS_WINDOWS
 
-#include "util/string.h"
+#include "../util/string.h"
 
-#include "util/check.h"
-#include "util/error.h"
+#include "../util/check.h"
+#include "../util/error.h"
 
 #define UTF8PROC_STATIC
 #include <utf8proc/utf8proc.h>

@@ -5,11 +5,11 @@
 #ifndef PBRT_UTIL_SPLINES_H
 #define PBRT_UTIL_SPLINES_H
 
-#include "pbrt.h"
+#include "../pbrt.h"
 
-#include "util/math.h"
-#include "util/pstd.h"
-#include "util/vecmath.h"
+#include "../util/math.h"
+#include "../util/pstd.h"
+#include "../util/vecmath.h"
 
 namespace pbrt {
 

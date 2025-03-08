@@ -2,18 +2,18 @@
 // The pbrt source code is licensed under the Apache License, Version 2.0.
 // SPDX: Apache-2.0
 
-#include "util/mipmap.h"
+#include "../util/mipmap.h"
 
-#include "options.h"
-#include "util/check.h"
-#include "util/color.h"
-#include "util/colorspace.h"
-#include "util/error.h"
-#include "util/file.h"
-#include "util/log.h"
-#include "util/math.h"
-#include "util/print.h"
-#include "util/stats.h"
+#include "../options.h"
+#include "../util/check.h"
+#include "../util/color.h"
+#include "../util/colorspace.h"
+#include "../util/error.h"
+#include "../util/file.h"
+#include "../util/log.h"
+#include "../util/math.h"
+#include "../util/print.h"
+#include "../util/stats.h"
 
 #include <algorithm>
 #include <cmath>

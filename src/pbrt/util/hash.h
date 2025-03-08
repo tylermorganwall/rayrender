@@ -5,9 +5,9 @@
 #ifndef PBRT_UTIL_HASH_H
 #define PBRT_UTIL_HASH_H
 
-#include "pbrt.h"
+#include "../pbrt.h"
 
-#include "util/check.h"
+#include "../util/check.h"
 
 #include <string.h>
 #include <cstdint>

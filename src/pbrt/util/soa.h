@@ -5,19 +5,19 @@
 #ifndef PBRT_UTIL_SOA_H
 #define PBRT_UTIL_SOA_H
 
-#include "pbrt.h"
+#include "../pbrt.h"
 
-#include "base/bssrdf.h"
-#include "base/material.h"
-#include "base/medium.h"
-#include "bsdf.h"
-#include "bssrdf.h"
-#include "interaction.h"
-#include "ray.h"
-#include "util/math.h"
-#include "util/pstd.h"
-#include "util/spectrum.h"
-#include "util/vecmath.h"
+#include "../base/bssrdf.h"
+#include "../base/material.h"
+#include "../base/medium.h"
+#include "../bsdf.h"
+#include "../bssrdf.h"
+#include "../interaction.h"
+#include "../ray.h"
+#include "../util/math.h"
+#include "../util/pstd.h"
+#include "../util/spectrum.h"
+#include "../util/vecmath.h"
 
 namespace pbrt {
 
@@ -220,7 +220,7 @@ struct SOA<SampledWavelengths> {
     Float *PBRT_RESTRICT pdf1 = nullptr;
 };
 
-#include "pbrt_soa.h"
+#include "../pbrt_soa.h"
 
 }  // namespace pbrt
 

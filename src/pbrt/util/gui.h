@@ -8,14 +8,14 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
-#include "pbrt.h"
+#include "../pbrt.h"
 
 #ifdef PBRT_BUILD_GPU_RENDERER
-#include "gpu/cudagl.h"
+#include "../gpu/cudagl.h"
 #endif  //  PBRT_BUILD_GPU_RENDERER
-#include "util/color.h"
-#include "util/transform.h"
-#include "util/vecmath.h"
+#include "../util/color.h"
+#include "../util/transform.h"
+#include "../util/vecmath.h"
 
 #include <set>
 #include <string>

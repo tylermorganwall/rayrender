@@ -2,15 +2,15 @@
 // The pbrt source code is licensed under the Apache License, Version 2.0.
 // SPDX: Apache-2.0
 
-#include "util/mesh.h"
+#include "../util/mesh.h"
 
-#include "util/buffercache.h"
-#include "util/check.h"
-#include "util/error.h"
-#include "util/log.h"
-#include "util/print.h"
-#include "util/stats.h"
-#include "util/transform.h"
+#include "../util/buffercache.h"
+#include "../util/check.h"
+#include "../util/error.h"
+#include "../util/log.h"
+#include "../util/print.h"
+#include "../util/stats.h"
+#include "../util/transform.h"
 
 #include <rply/rply.h>
 

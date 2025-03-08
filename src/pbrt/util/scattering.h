@@ -5,12 +5,12 @@
 #ifndef PBRT_UTIL_SCATTERING_H
 #define PBRT_UTIL_SCATTERING_H
 
-#include "pbrt.h"
+#include "../pbrt.h"
 
-#include "util/math.h"
-#include "util/spectrum.h"
-#include "util/taggedptr.h"
-#include "util/vecmath.h"
+#include "../util/math.h"
+#include "../util/spectrum.h"
+#include "../util/taggedptr.h"
+#include "../util/vecmath.h"
 
 namespace pbrt {
 

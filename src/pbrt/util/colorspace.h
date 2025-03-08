@@ -5,12 +5,12 @@
 #ifndef PBRT_UTIL_COLORSPACE_H
 #define PBRT_UTIL_COLORSPACE_H
 
-#include "pbrt.h"
+#include "../pbrt.h"
 
-#include "util/color.h"
-#include "util/math.h"
-#include "util/spectrum.h"
-#include "util/vecmath.h"
+#include "../util/color.h"
+#include "../util/math.h"
+#include "../util/spectrum.h"
+#include "../util/vecmath.h"
 
 #include <string>
 

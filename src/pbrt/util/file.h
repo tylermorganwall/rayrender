@@ -5,9 +5,9 @@
 #ifndef PBRT_UTIL_FILE_H
 #define PBRT_UTIL_FILE_H
 
-#include "pbrt.h"
+#include "../pbrt.h"
 
-#include "util/pstd.h"
+#include "../util/pstd.h"
 
 #include <string>
 #include <vector>

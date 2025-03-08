@@ -5,16 +5,16 @@
 #ifndef PBRT_UTIL_IMAGE_H
 #define PBRT_UTIL_IMAGE_H
 
-#include "pbrt.h"
+#include "../pbrt.h"
 
-#include "util/check.h"
-#include "util/color.h"
-#include "util/containers.h"
-#include "util/float.h"
-#include "util/math.h"
-#include "util/parallel.h"
-#include "util/pstd.h"
-#include "util/vecmath.h"
+#include "../util/check.h"
+#include "../util/color.h"
+#include "../util/containers.h"
+#include "../util/float.h"
+#include "../util/math.h"
+#include "../util/parallel.h"
+#include "../util/pstd.h"
+#include "../util/vecmath.h"
 
 #include <cstdint>
 #include <cstring>

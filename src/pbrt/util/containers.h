@@ -5,12 +5,12 @@
 #ifndef PBRT_UTIL_CONTAINERS_H
 #define PBRT_UTIL_CONTAINERS_H
 
-#include "pbrt.h"
+#include "../pbrt.h"
 
-#include "util/check.h"
-#include "util/print.h"
-#include "util/pstd.h"
-#include "util/vecmath.h"
+#include "../util/check.h"
+#include "../util/print.h"
+#include "../util/pstd.h"
+#include "../util/vecmath.h"
 
 #include <algorithm>
 #include <cstring>

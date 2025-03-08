@@ -2,15 +2,15 @@
 // The pbrt source code is licensed under the Apache License, Version 2.0.
 // SPDX: Apache-2.0
 
-#include "util/sampling.h"
+#include "../util/sampling.h"
 
-#include "util/check.h"
-#include "util/float.h"
-#include "util/lowdiscrepancy.h"
-#include "util/math.h"
-#include "util/print.h"
-#include "util/pstd.h"
-#include "util/scattering.h"
+#include "../util/check.h"
+#include "../util/float.h"
+#include "../util/lowdiscrepancy.h"
+#include "../util/math.h"
+#include "../util/print.h"
+#include "../util/pstd.h"
+#include "../util/scattering.h"
 
 #include <algorithm>
 #include <cmath>

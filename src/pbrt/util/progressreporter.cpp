@@ -2,14 +2,14 @@
 // The pbrt source code is licensed under the Apache License, Version 2.0.
 // SPDX: Apache-2.0
 
-#include "util/progressreporter.h"
+#include "../util/progressreporter.h"
 
 #ifdef PBRT_BUILD_GPU_RENDERER
-#include "gpu/util.h"
+#include "../gpu/util.h"
 #endif
-#include "util/check.h"
-#include "util/parallel.h"
-#include "util/print.h"
+#include "../util/check.h"
+#include "../util/parallel.h"
+#include "../util/print.h"
 
 #include <cerrno>
 #include <cstdio>

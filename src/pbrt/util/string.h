@@ -5,7 +5,7 @@
 #ifndef PBRT_UTIL_STRING_H
 #define PBRT_UTIL_STRING_H
 
-#include "pbrt.h"
+#include "../pbrt.h"
 
 #include <ctype.h>
 #include <string>
