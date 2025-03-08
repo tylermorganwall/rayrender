@@ -1,0 +1,174 @@
+// -*- mode: c++ -*-
+// pbrt is Copyright(c) 1998-2020 Matt Pharr, Wenzel Jakob, and Greg Humphreys.
+// The pbrt source code is licensed under the Apache License, Version 2.0.
+// SPDX: Apache-2.0
+
+flat Float;
+flat PhaseFunction;
+flat Light;
+flat Material;
+flat Medium;
+flat int;
+
+soa BSDF;
+soa LightSampleContext;
+soa MediumInterface;
+soa Normal3f;
+soa Point2f;
+soa Point2i;
+soa Point3f;
+soa Point3fi;
+soa Ray;
+soa RaySamples;
+soa SampledSpectrum;
+soa SampledWavelengths;
+soa SubsurfaceInteraction;
+soa TabulatedBSSRDF;
+soa Vector3f;
+soa VisibleSurface;
+
+soa PixelSampleState {
+    Float filterWeight;
+    Point2i pPixel;
+    SampledWavelengths lambda;
+    SampledSpectrum L;
+    SampledSpectrum cameraRayWeight;
+    VisibleSurface visibleSurface;
+    RaySamples samples;
+};
+
+soa RayWorkItem {
+    Ray ray;
+    int depth;
+    int pixelIndex;
+    SampledWavelengths lambda;
+    SampledSpectrum beta, r_u, r_l;
+    LightSampleContext prevIntrCtx;
+    Float etaScale;
+    int specularBounce;
+    int anyNonSpecularBounces;
+};
+
+soa EscapedRayWorkItem {
+    Point3f rayo;
+    Vector3f rayd;
+    int depth;
+    SampledSpectrum beta, r_u, r_l;
+    SampledWavelengths lambda;
+    LightSampleContext prevIntrCtx;
+    int specularBounce;
+    int pixelIndex;
+};
+
+soa HitAreaLightWorkItem {
+    Light areaLight;
+    SampledWavelengths lambda;
+    SampledSpectrum beta, r_u, r_l;
+    Point3f p;
+    Normal3f n;
+    Point2f uv;
+    Vector3f wo;
+    int depth;
+    LightSampleContext prevIntrCtx;
+    int specularBounce;
+    int pixelIndex;
+};
+
+soa ShadowRayWorkItem {
+    Ray ray;
+    Float tMax;
+    SampledWavelengths lambda;
+    SampledSpectrum Ld, r_u, r_l;
+    int pixelIndex;
+};
+
+soa GetBSSRDFAndProbeRayWorkItem {
+    Material material;
+    SampledWavelengths lambda;
+    SampledSpectrum beta, r_u;
+    Point3f p;
+    Vector3f wo;
+    Normal3f n, ns;
+    Vector3f dpdus;
+    Point2f uv;
+    int depth;
+    MediumInterface mediumInterface;
+    Float etaScale;
+    int pixelIndex;
+};
+
+soa SubsurfaceScatterWorkItem {
+    // Via eval/sample SSS kernel
+    Point3f p0, p1;
+    int depth;
+    Material material;
+    TabulatedBSSRDF bssrdf;
+    SampledWavelengths lambda;
+    SampledSpectrum beta, r_u;
+    MediumInterface mediumInterface;
+    Float etaScale;
+    int pixelIndex;
+
+    // OptiX code initializes these.
+    Float reservoirPDF;
+    Float uLight;
+    SubsurfaceInteraction ssi;
+};
+
+soa MediumSampleWorkItem {
+    Ray ray;
+    int depth;
+    Float tMax;
+    SampledWavelengths lambda;
+    SampledSpectrum beta, r_u, r_l;
+    int pixelIndex;
+    Light areaLight;
+    Point3fi pi;
+    Normal3f n;
+    Vector3f dpdu, dpdv;
+    Vector3f wo;
+    Point2f uv;
+    LightSampleContext prevIntrCtx;
+    int specularBounce;
+    Material material;
+    Normal3f ns;
+    Vector3f dpdus, dpdvs;
+    Normal3f dndus, dndvs;
+    int faceIndex;
+    int anyNonSpecularBounces;
+    Float etaScale;
+    MediumInterface mediumInterface;
+};
+
+soa MediumScatterWorkItem<ConcretePhaseFunction> {
+    Point3f p;
+    int depth;
+    SampledWavelengths lambda;
+    SampledSpectrum beta, r_u;
+    const ConcretePhaseFunction *phase;
+    Vector3f wo;
+    Float time;
+    Float etaScale;
+    Medium medium;
+    int pixelIndex;
+};
+
+soa MaterialEvalWorkItem<ConcreteMaterial> {
+    const ConcreteMaterial *material;
+    SampledWavelengths lambda;
+    SampledSpectrum beta, r_u;
+    Point3fi pi;
+    Normal3f n, ns;
+    Vector3f dpdu, dpdv;
+    Vector3f dpdus, dpdvs;
+    Normal3f dndus, dndvs;
+    Vector3f wo;
+    Point2f uv;
+    int depth;
+    int faceIndex;
+    Float time;
+    int anyNonSpecularBounces;
+    Float etaScale;
+    MediumInterface mediumInterface;
+    int pixelIndex;
+};
