@@ -8,7 +8,7 @@
 #include "../util/check.h"
 
 #include <float.h>
-#include "../limits.h"
+#include <limits.h>
 #include <cassert>
 #include <cmath>
 #include <cstddef>

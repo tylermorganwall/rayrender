@@ -5,10 +5,10 @@
 #ifndef PBRT_CPU_AGGREGATES_H
 #define PBRT_CPU_AGGREGATES_H
 
-#include "pbrt.h"
+#include "../pbrt.h"
 
-#include "cpu/primitive.h"
-#include "util/parallel.h"
+#include "../cpu/primitive.h"
+#include "../util/parallel.h"
 
 #include <atomic>
 #include <memory>

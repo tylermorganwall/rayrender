@@ -5,13 +5,13 @@
 #ifndef PBRT_BASE_LIGHT_H
 #define PBRT_BASE_LIGHT_H
 
-#include "pbrt.h"
+#include "../pbrt.h"
 
-#include "base/medium.h"
-#include "base/shape.h"
-#include "base/texture.h"
-#include "util/pstd.h"
-#include "util/taggedptr.h"
+#include "../base/medium.h"
+#include "../base/shape.h"
+#include "../base/texture.h"
+#include "../util/pstd.h"
+#include "../util/taggedptr.h"
 
 #include <string>
 

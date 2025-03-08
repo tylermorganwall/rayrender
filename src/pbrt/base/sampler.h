@@ -5,10 +5,10 @@
 #ifndef PBRT_BASE_SAMPLER_H
 #define PBRT_BASE_SAMPLER_H
 
-#include "pbrt.h"
+#include "../pbrt.h"
 
-#include "util/taggedptr.h"
-#include "util/vecmath.h"
+#include "../util/taggedptr.h"
+#include "../util/vecmath.h"
 
 #include <string>
 #include <vector>

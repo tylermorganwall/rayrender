@@ -5,9 +5,9 @@
 #ifndef PBRT_BASE_TEXTURE_H
 #define PBRT_BASE_TEXTURE_H
 
-#include "pbrt.h"
+#include "../pbrt.h"
 
-#include "util/taggedptr.h"
+#include "../util/taggedptr.h"
 
 #include <string>
 

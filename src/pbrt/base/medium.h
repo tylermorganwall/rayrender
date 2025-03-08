@@ -5,12 +5,12 @@
 #ifndef PBRT_BASE_MEDIUM_H
 #define PBRT_BASE_MEDIUM_H
 
-#include "pbrt.h"
+#include "../pbrt.h"
 
-#include "util/pstd.h"
-#include "util/rng.h"
-#include "util/spectrum.h"
-#include "util/taggedptr.h"
+#include "../util/pstd.h"
+#include "../util/rng.h"
+#include "../util/spectrum.h"
+#include "../util/taggedptr.h"
 
 #include <string>
 #include <vector>

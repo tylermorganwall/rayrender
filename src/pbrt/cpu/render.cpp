@@ -2,22 +2,22 @@
 // The pbrt source code is licensed under the Apache License, Version 2.0.
 // SPDX: Apache-2.0
 
-#include "cpu/render.h"
+#include "../cpu/render.h"
 
-#include "cameras.h"
-#include "cpu/aggregates.h"
-#include "cpu/integrators.h"
-#include "film.h"
-#include "filters.h"
-#include "lights.h"
-#include "materials.h"
-#include "media.h"
-#include "samplers.h"
-#include "scene.h"
-#include "shapes.h"
-#include "textures.h"
-#include "util/colorspace.h"
-#include "util/parallel.h"
+#include "../cameras.h"
+#include "../cpu/aggregates.h"
+#include "../cpu/integrators.h"
+#include "../film.h"
+#include "../filters.h"
+#include "../lights.h"
+#include "../materials.h"
+#include "../media.h"
+#include "../samplers.h"
+#include "../scene.h"
+#include "../shapes.h"
+#include "../textures.h"
+#include "../util/colorspace.h"
+#include "../util/parallel.h"
 
 namespace pbrt {
 

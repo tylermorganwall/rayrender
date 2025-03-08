@@ -21,9 +21,10 @@
 #include "util/spectrum.h"
 #include "util/transform.h"
 
-#include "nanovdb/NanoVDB.h"
-#include "nanovdb/util/GridHandle.h"
-#include "nanovdb/util/SampleFromVoxels.h"
+#include "../nanovdb/NanoVDB.h"
+#include "../nanovdb/util/GridHandle.h"
+#include "../nanovdb/math/SampleFromVoxels.h"
+
 #if defined(PBRT_BUILD_GPU_RENDERER) && defined(__NVCC__)
 #include "nanovdb/util/CudaDeviceBuffer.h"
 #endif  // PBRT_BUILD_GPU_RENDERER
@@ -623,9 +624,9 @@ class NanoVDBMedium {
         // Scale scattering coefficients by medium density at _p_
         p = renderFromMedium.ApplyInverse(p);
 
-        nanovdb::Vec3<float> pIndex =
-            densityFloatGrid->worldToIndexF(nanovdb::Vec3<float>(p.x, p.y, p.z));
-        using Sampler = nanovdb::SampleFromVoxels<nanovdb::FloatGrid::TreeType, 1, false>;
+        nanovdb::math::Vec3<float> pIndex =
+            densityFloatGrid->worldToIndexF(nanovdb::math::Vec3<float>(p.x, p.y, p.z));
+        using Sampler = nanovdb::math::SampleFromVoxels<nanovdb::FloatGrid::TreeType, 1, false>;
         Float d = Sampler(densityFloatGrid->tree())(pIndex);
 
         return MediumProperties{sigma_a * d, sigma_s * d, &phase, Le(p, lambda)};
@@ -655,9 +656,9 @@ class NanoVDBMedium {
     SampledSpectrum Le(Point3f p, const SampledWavelengths &lambda) const {
         if (!temperatureFloatGrid)
             return SampledSpectrum(0.f);
-        nanovdb::Vec3<float> pIndex =
-            temperatureFloatGrid->worldToIndexF(nanovdb::Vec3<float>(p.x, p.y, p.z));
-        using Sampler = nanovdb::SampleFromVoxels<nanovdb::FloatGrid::TreeType, 1, false>;
+        nanovdb::math::Vec3<float> pIndex =
+            temperatureFloatGrid->worldToIndexF(nanovdb::math::Vec3<float>(p.x, p.y, p.z));
+        using Sampler = nanovdb::math::SampleFromVoxels<nanovdb::FloatGrid::TreeType, 1, false>;
         Float temp = Sampler(temperatureFloatGrid->tree())(pIndex);
         temp = (temp - temperatureOffset) * temperatureScale;
         if (temp <= 100.f)

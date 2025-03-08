@@ -2,18 +2,18 @@
 // The pbrt source code is licensed under the Apache License, Version 2.0.
 // SPDX: Apache-2.0
 
-#include "cpu/aggregates.h"
+#include "../cpu/aggregates.h"
 
-#include "interaction.h"
-#include "paramdict.h"
-#include "shapes.h"
-#include "util/error.h"
-#include "util/log.h"
-#include "util/math.h"
-#include "util/memory.h"
-#include "util/parallel.h"
-#include "util/print.h"
-#include "util/stats.h"
+#include "../interaction.h"
+#include "../paramdict.h"
+#include "../shapes.h"
+#include "../util/error.h"
+#include "../util/log.h"
+#include "../util/math.h"
+#include "../util/memory.h"
+#include "../util/parallel.h"
+#include "../util/print.h"
+#include "../util/stats.h"
 
 #include <algorithm>
 #include <tuple>
