@@ -194,7 +194,7 @@ class TrowbridgeReitzDistribution {
     // therefore, we will leave it as is so that the rendered results with
     // existing pbrt-v4 scenes doesn't change unexpectedly.
     PBRT_CPU_GPU
-    static Float RoughnessToAlpha(Float roughness) { return std::sqrt(roughness); }
+    static Float RoughnessToAlpha(Float roughness) { return Sqr(roughness); }
 
     PBRT_CPU_GPU
     void Regularize() {
