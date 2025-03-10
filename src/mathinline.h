@@ -1361,5 +1361,11 @@ inline void CoordinateSystem(const vec3f &v1, vec3f *v2, vec3f *v3) {
   *v3 = vec3f(b, sign + (v1.y * v1.y) * a, -v1.y);
 }
 
+template <typename T>
+inline typename std::enable_if_t<std::is_floating_point_v<T>, bool> IsNaN(
+    T v) {
+  return std::isnan(v);
+}
+
 
 #endif
