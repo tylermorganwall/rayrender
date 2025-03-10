@@ -442,7 +442,7 @@ bool curve::recursiveIntersect(const Ray& r, Float tmin, Float tmax, hit_record&
     rec.mat_ptr = mat_ptr.get();
     rec.has_bump = false;
     rec.pError = vec3f(hitWidth, hitWidth, hitWidth);
-    rec.p = r.point_at_parameter(rec.t);
+    rec.p = r(rec.t);
     rec.shape = this;
     rec.alpha_miss = false;
     rec = (*ObjectToWorld)(rec);

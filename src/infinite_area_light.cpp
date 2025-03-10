@@ -41,7 +41,7 @@ const bool InfiniteAreaLight::hit(const Ray& r, Float t_min, Float t_max, hit_re
 
   if(temp1 < t_max && temp1 > t_min) {
     rec.t = temp1;
-    rec.p = r2.point_at_parameter(rec.t);
+    rec.p = r2(rec.t);
     rec.p *= radius / rec.p.length(); 
     rec.normal = convert_to_normal3(-(r2.direction())); 
     
@@ -69,7 +69,7 @@ const bool InfiniteAreaLight::hit(const Ray& r, Float t_min, Float t_max, hit_re
   }
   if(temp2 < t_max && temp2 > t_min) {
     rec.t = temp2;
-    rec.p = r.point_at_parameter(rec.t);
+    rec.p = r(rec.t);
     rec.p *= radius / rec.p.length(); 
     rec.normal = convert_to_normal3(-(r2.direction())); 
     
@@ -116,7 +116,7 @@ const bool InfiniteAreaLight::hit(const Ray& r, Float t_min, Float t_max, hit_re
 
   if(temp1 < t_max && temp1 > t_min) {
     rec.t = temp1;
-    rec.p = r2.point_at_parameter(rec.t);
+    rec.p = r2(rec.t);
   //   rec.p *= radius / rec.p.length(); 
   //   rec.normal = convert_to_normal3(-(r2.direction()));
     
@@ -145,7 +145,7 @@ const bool InfiniteAreaLight::hit(const Ray& r, Float t_min, Float t_max, hit_re
   }
   if(temp2 < t_max && temp2 > t_min) {
     rec.t = temp2;
-    rec.p = r2.point_at_parameter(rec.t);
+    rec.p = r2(rec.t);
   //   rec.p *= radius / rec.p.length(); 
   //   rec.normal = convert_to_normal3(-(r2.direction()));
     

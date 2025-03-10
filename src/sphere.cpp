@@ -36,7 +36,7 @@ const bool sphere::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, 
     Float u;
     Float v;
     if(temp1 < t_max && temp1 > t_min) {
-      point3f p1 = r2.point_at_parameter((Float)temp1);
+      point3f p1 = r2((Float)temp1);
       p1 *= radius / p1.length(); 
       vec3f normal = convert_to_vec3(p1 / radius);
       get_sphere_uv(normal, u, v);
@@ -45,7 +45,7 @@ const bool sphere::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, 
       }
     }
     if(temp2 < t_max && temp2 > t_min) {
-      point3f p2 = r2.point_at_parameter((Float)temp2);
+      point3f p2 = r2((Float)temp2);
       p2 *= radius / p2.length(); 
       vec3f normal = convert_to_vec3(p2 / radius);
       get_sphere_uv(normal, u, v);
@@ -59,7 +59,7 @@ const bool sphere::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, 
   }
   if(temp1 < t_max && temp1 > t_min && is_hit) {
     rec.t = (Float)temp1;
-    rec.p = r2.point_at_parameter(rec.t);
+    rec.p = r2(rec.t);
     rec.p *= radius / rec.p.length(); 
     rec.normal = convert_to_normal3(rec.p) / radius;
     
@@ -92,7 +92,7 @@ const bool sphere::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, 
   }
   if(temp2 < t_max && temp2 > t_min && second_is_hit) {
     rec.t = (Float)temp2;
-    rec.p = r2.point_at_parameter(rec.t);
+    rec.p = r2(rec.t);
     rec.p *= radius / rec.p.length();
     rec.normal = convert_to_normal3(rec.p) / radius;
     
@@ -160,7 +160,7 @@ const bool sphere::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, 
     Float u;
     Float v;
     if(temp1 < t_max && temp1 > t_min) {
-      point3f p1 = r2.point_at_parameter((Float)temp1);
+      point3f p1 = r2((Float)temp1);
       p1 *= radius / p1.length(); 
       vec3f normal = convert_to_vec3(p1) / radius;
       get_sphere_uv(normal, u, v);
@@ -169,7 +169,7 @@ const bool sphere::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, 
       }
     }
     if(temp2 < t_max && temp2 > t_min) {
-      point3f p2 = r2.point_at_parameter((Float)temp2);
+      point3f p2 = r2((Float)temp2);
       p2 *= radius / p2.length(); 
       vec3f normal = convert_to_vec3(p2) / radius;
       get_sphere_uv(normal, u, v);
@@ -183,7 +183,7 @@ const bool sphere::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, 
   }
   if(temp1 < t_max && temp1 > t_min && is_hit) {
     rec.t = (Float)temp1;
-    rec.p = r2.point_at_parameter(rec.t);
+    rec.p = r2(rec.t);
     rec.p *= radius / rec.p.length(); 
     rec.normal = convert_to_normal3(rec.p) / radius;
     
@@ -217,7 +217,7 @@ const bool sphere::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, 
   }
   if(temp2 < t_max && temp2 > t_min && second_is_hit) {
     rec.t = (Float)temp2;
-    rec.p = r2.point_at_parameter(rec.t);
+    rec.p = r2(rec.t);
     rec.p *= radius / rec.p.length();
     rec.normal = convert_to_normal3(rec.p) / radius;
     

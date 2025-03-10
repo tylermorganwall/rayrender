@@ -29,7 +29,7 @@ const bool cylinder::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
   bool second_is_hit = true;
   bool alpha_miss = false;
   if(alpha_mask) {
-    point3f temppoint = r2.point_at_parameter(temp1);
+    point3f temppoint = r2(temp1);
     Float phi = atan2(temppoint.z,temppoint.x);
     phi = phi < 0 ? phi + 2 * static_cast<Float>(M_PI) : phi;
     Float u;
@@ -44,7 +44,7 @@ const bool cylinder::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
         is_hit = false;
       }
     }
-    temppoint = r2.point_at_parameter(temp2);
+    temppoint = r2(temp2);
     phi = atan2(temppoint.z,temppoint.x);
     phi = phi < 0 ? phi + 2 * static_cast<Float>(M_PI) : phi;
     if(temp2 < t_max && temp2 > t_min && 
@@ -61,7 +61,7 @@ const bool cylinder::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
       } 
     }
   }
-  point3f temppoint = r2.point_at_parameter(temp1);
+  point3f temppoint = r2(temp1);
   Float phi = atan2(temppoint.z,temppoint.x);
   phi = phi < 0 ? phi + 2 * static_cast<Float>(M_PI) : phi;
   if(is_hit && temp1 < t_max && temp1 > t_min && 
@@ -111,7 +111,7 @@ const bool cylinder::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
   Float radHit2 = x*x + z*z;
   if(has_caps && t_cyl < temp2 && t_cyl > t_min && t_cyl < t_max && t_cyl < t_cyl2 && 
      radHit2 <= radius * radius && phi2 <= phi_max && phi2 >= phi_min) {
-    point3f p = r2.point_at_parameter(t_cyl);
+    point3f p = r2(t_cyl);
     p.e[1] = length/2;
     
     Float u = p.x / (2.0 * radius) + 0.5;
@@ -155,7 +155,7 @@ const bool cylinder::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
   phi3 = phi3 < 0 ? phi3 + 2 * static_cast<Float>(M_PI) : phi3;
   Float radHit3 = x2*x2 + z2*z2;
   if(has_caps && t_cyl2 < temp2 && t_cyl2 > t_min && t_cyl2 < t_max && radHit3 <= radius * radius && phi3 <= phi_max && phi3 >= phi_min) {
-    point3f p = r2.point_at_parameter(t_cyl2);
+    point3f p = r2(t_cyl2);
     p.e[1] = -length/2;
     
     Float u = p.x / (2.0 * radius) + 0.5;
@@ -192,7 +192,7 @@ const bool cylinder::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
 
     return(true);
   }
-  temppoint = r2.point_at_parameter(temp2);
+  temppoint = r2(temp2);
   phi = atan2(temppoint.z,temppoint.x);
   phi = phi < 0 ? phi + 2 * static_cast<Float>(M_PI) : phi;
   if(second_is_hit && temp2 < t_max && temp2 > t_min && 
@@ -255,7 +255,7 @@ const bool cylinder::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
   bool is_hit = true;
   bool second_is_hit = true;
   if(alpha_mask) {
-    point3f temppoint = r2.point_at_parameter(temp1);
+    point3f temppoint = r2(temp1);
     Float phi = atan2(temppoint.z,temppoint.x);
     phi = phi < 0 ? phi + 2 * static_cast<Float>(M_PI) : phi;
     Float u;
@@ -270,7 +270,7 @@ const bool cylinder::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
         is_hit = false;
       }
     }
-    temppoint = r2.point_at_parameter(temp2);
+    temppoint = r2(temp2);
     phi = atan2(temppoint.z,temppoint.x);
     phi = phi < 0 ? phi + 2 * static_cast<Float>(M_PI) : phi;
     if(temp2 < t_max && temp2 > t_min && 
@@ -287,7 +287,7 @@ const bool cylinder::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
       } 
     }
   }
-  point3f temppoint = r2.point_at_parameter(temp1);
+  point3f temppoint = r2(temp1);
   Float phi = atan2(temppoint.z,temppoint.x);
   phi = phi < 0 ? phi + 2 * static_cast<Float>(M_PI) : phi;
   if(is_hit && temp1 < t_max && temp1 > t_min && 
@@ -335,7 +335,7 @@ const bool cylinder::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
   Float radHit2 = x*x + z*z;
   if(has_caps && t_cyl < temp2 && t_cyl > t_min && t_cyl < t_max && t_cyl < t_cyl2 && 
      radHit2 <= radius * radius && phi2 <= phi_max && phi2 >= phi_min) {
-    point3f p = r2.point_at_parameter(t_cyl);
+    point3f p = r2(t_cyl);
     p.e[1] = length/2;
     
     Float u = p.x / (2.0 * radius) + 0.5;
@@ -379,7 +379,7 @@ const bool cylinder::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
   phi3 = phi3 < 0 ? phi3 + 2 * static_cast<Float>(M_PI) : phi3;
   Float radHit3 = x2*x2 + z2*z2;
   if(has_caps && t_cyl2 < temp2 && t_cyl2 > t_min && t_cyl2 < t_max && radHit3 <= radius * radius && phi3 <= phi_max && phi3 >= phi_min) {
-    point3f p = r2.point_at_parameter(t_cyl2);
+    point3f p = r2(t_cyl2);
     p.e[1] = -length/2;
     
     Float u = p.x / (2.0 * radius) + 0.5;
@@ -416,7 +416,7 @@ const bool cylinder::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
     rec.normal = !reverseOrientation ? (*ObjectToWorld)(rec.normal) : -(*ObjectToWorld)(rec.normal);
     return(true);
   }
-  temppoint = r2.point_at_parameter(temp2);
+  temppoint = r2(temp2);
   phi = atan2(temppoint.z,temppoint.x);
   phi = phi < 0 ? phi + 2 * static_cast<Float>(M_PI) : phi;
   if(second_is_hit && temp2 < t_max && temp2 > t_min && 
@@ -475,7 +475,7 @@ bool cylinder::HitP(const Ray& r, Float t_min, Float t_max, random_gen& rng) con
   }
   bool is_hit = true;
   bool second_is_hit = true;
-  point3f temppoint = r2.point_at_parameter(temp1);
+  point3f temppoint = r2(temp1);
   Float phi = atan2(temppoint.z,temppoint.x);
   phi = phi < 0 ? phi + 2 * static_cast<Float>(M_PI) : phi;
   if(is_hit && temp1 < t_max && temp1 > t_min && 
@@ -503,7 +503,7 @@ bool cylinder::HitP(const Ray& r, Float t_min, Float t_max, random_gen& rng) con
   if(has_caps && t_cyl2 < temp2 && t_cyl2 > t_min && t_cyl2 < t_max && radHit3 <= radius * radius && phi3 <= phi_max && phi3 >= phi_min) {
     return(true);
   }
-  temppoint = r2.point_at_parameter(temp2);
+  temppoint = r2(temp2);
   phi = atan2(temppoint.z,temppoint.x);
   phi = phi < 0 ? phi + 2 * static_cast<Float>(M_PI) : phi;
   if(second_is_hit && temp2 < t_max && temp2 > t_min && 
@@ -533,7 +533,7 @@ bool cylinder::HitP(const Ray& r, Float t_min, Float t_max, Sampler* sampler) co
   }
   bool is_hit = true;
   bool second_is_hit = true;
-  point3f temppoint = r2.point_at_parameter(temp1);
+  point3f temppoint = r2(temp1);
   Float phi = atan2(temppoint.z,temppoint.x);
   phi = phi < 0 ? phi + 2 * static_cast<Float>(M_PI) : phi;
   if(is_hit && temp1 < t_max && temp1 > t_min && 
@@ -561,7 +561,7 @@ bool cylinder::HitP(const Ray& r, Float t_min, Float t_max, Sampler* sampler) co
   if(has_caps && t_cyl2 < temp2 && t_cyl2 > t_min && t_cyl2 < t_max && radHit3 <= radius * radius && phi3 <= phi_max && phi3 >= phi_min) {
     return(true);
   }
-  temppoint = r2.point_at_parameter(temp2);
+  temppoint = r2(temp2);
   phi = atan2(temppoint.z,temppoint.x);
   phi = phi < 0 ? phi + 2 * static_cast<Float>(M_PI) : phi;
   if(second_is_hit && temp2 < t_max && temp2 > t_min && 

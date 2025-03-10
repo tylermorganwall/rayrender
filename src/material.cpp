@@ -192,7 +192,7 @@ bool dielectric::scatter(const Ray& r_in, const hit_record& hrec, scatter_record
   
   if(skip) {
     srec.specular_ray = Ray(offset_p, r_in.direction(), r_in.pri_stack, r_in.time());
-    Float distance = (offset_p-r_in.point_at_parameter(0)).length();
+    Float distance = (offset_p-r_in(0)).length();
     point3f prev_atten = r_in.pri_stack->at(prev_active)->attenuation;
     srec.attenuation = point3f(std::exp(-distance * prev_atten.x),
                                std::exp(-distance * prev_atten.y),
@@ -206,13 +206,13 @@ bool dielectric::scatter(const Ray& r_in, const hit_record& hrec, scatter_record
   
   //Calculate attenuation color
   if(!entering) {
-    Float distance = (offset_p-r_in.point_at_parameter(0)).length();
+    Float distance = (offset_p-r_in(0)).length();
     srec.attenuation = point3f(std::exp(-distance * attenuation.x),
                                std::exp(-distance * attenuation.y),
                                std::exp(-distance * attenuation.z));
   } else {
     if(prev_active != -1) {
-      Float distance = (offset_p-r_in.point_at_parameter(0)).length();
+      Float distance = (offset_p-r_in(0)).length();
       point3f prev_atten = r_in.pri_stack->at(prev_active)->attenuation;
       
       srec.attenuation = albedo * point3f(std::exp(-distance * prev_atten.x),
@@ -290,7 +290,7 @@ bool dielectric::scatter(const Ray& r_in, const hit_record& hrec, scatter_record
 
   if(skip) {
     srec.specular_ray = Ray(offset_p, r_in.direction(), r_in.pri_stack, r_in.time());
-    Float distance = (offset_p-r_in.point_at_parameter(0)).length();
+    Float distance = (offset_p-r_in(0)).length();
     point3f prev_atten = r_in.pri_stack->at(prev_active)->attenuation;
     srec.attenuation = point3f(std::exp(-distance * prev_atten.x),
                                std::exp(-distance * prev_atten.y),
@@ -310,13 +310,13 @@ bool dielectric::scatter(const Ray& r_in, const hit_record& hrec, scatter_record
   
   //Calculate attenuation color
   if(!entering) {
-    Float distance = (offset_p-r_in.point_at_parameter(0)).length();
+    Float distance = (offset_p-r_in(0)).length();
     srec.attenuation = point3f(std::exp(-distance * attenuation.x),
                                std::exp(-distance * attenuation.y),
                                std::exp(-distance * attenuation.z));
   } else {
     if(prev_active != -1) {
-      Float distance = (offset_p-r_in.point_at_parameter(0)).length();
+      Float distance = (offset_p-r_in(0)).length();
       point3f prev_atten = r_in.pri_stack->at(prev_active)->attenuation;
       
       srec.attenuation = albedo * point3f(std::exp(-distance * prev_atten.x),
@@ -650,7 +650,7 @@ point3f MicrofacetTransmission::f(const Ray& r_in, const hit_record& rec, const 
   Float G = distribution->G(wo,wi,wh);
   Float D = distribution->D(wh, rec.u, rec.v);
   
-  Float distance = (rec.p-r_in.point_at_parameter(0)).length();
+  Float distance = (rec.p-r_in(0)).length();
   
   point3f atten = !entering ? point3f(std::exp(-distance * k.x),
                                       std::exp(-distance * k.y),

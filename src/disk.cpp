@@ -21,7 +21,7 @@ const bool disk::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, ra
   }
   
   
-  point3f p = r2.point_at_parameter(t);
+  point3f p = r2(t);
   p.e[1] = 0;
 
   Float u = p.x / (2.0 * radius) + 0.5;
@@ -86,7 +86,7 @@ const bool disk::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, Sa
   }
   
   
-  point3f p = r2.point_at_parameter(t);
+  point3f p = r2(t);
   p.e[1] = 0;
 
   Float u = p.x / (2.0 * radius) + 0.5;

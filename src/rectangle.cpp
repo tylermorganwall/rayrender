@@ -50,7 +50,7 @@ const bool xy_rect::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec,
   }
   
   rec.mat_ptr = mat_ptr.get();
-  rec.p = r2.point_at_parameter(t);
+  rec.p = r2(t);
   rec.p.e[2] = k;
   rec.pError = vec3f(0,0,0);
   
@@ -108,7 +108,7 @@ const bool xy_rect::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec,
   }
   
   rec.mat_ptr = mat_ptr.get();
-  rec.p = r2.point_at_parameter(t);
+  rec.p = r2(t);
   rec.p.e[2] = k;
   rec.pError = vec3f(0,0,0);
   
@@ -248,7 +248,7 @@ const bool xz_rect::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec,
   }
   
   rec.mat_ptr = mat_ptr.get();
-  rec.p = r2.point_at_parameter(t);
+  rec.p = r2(t);
   rec.p.e[1] = k;
   rec.pError = vec3f(0,0,0);
   rec = (*ObjectToWorld)(rec);
@@ -310,7 +310,7 @@ const bool xz_rect::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec,
   }
   
   rec.mat_ptr = mat_ptr.get();
-  rec.p = r2.point_at_parameter(t);
+  rec.p = r2(t);
   rec.p.e[1] = k;
   rec.pError = vec3f(0,0,0);
   
@@ -443,7 +443,7 @@ const bool yz_rect::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec,
   rec.has_bump = bump_tex ? true : false;
   
   rec.mat_ptr = mat_ptr.get();
-  rec.p = r2.point_at_parameter(t);
+  rec.p = r2(t);
   rec.p.e[0] = k;
   rec.pError = vec3f(0,0,0);
   
@@ -513,7 +513,7 @@ const bool yz_rect::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec,
   }
   
   rec.mat_ptr = mat_ptr.get();
-  rec.p = r2.point_at_parameter(t);
+  rec.p = r2(t);
   rec.p.e[0] = k;
   rec.pError = vec3f(0,0,0);
   

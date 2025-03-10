@@ -22,7 +22,7 @@ const bool ellipsoid::hit(const Ray& r, Float t_min, Float t_max, hit_record& re
     Float u;
     Float v;
     if(temp1 < t_max && temp1 > t_min) {
-      point3f p1 = scaled_ray.point_at_parameter(temp1) ;
+      point3f p1 = scaled_ray(temp1) ;
       p1 *= 1/p1.length() * axes;
       vec3f normal = (p1 - center) * inv_axes;
       normal.make_unit_vector();
@@ -32,7 +32,7 @@ const bool ellipsoid::hit(const Ray& r, Float t_min, Float t_max, hit_record& re
       }
     }
     if(temp2 < t_max && temp2 > t_min) {
-      point3f p2 = scaled_ray.point_at_parameter(temp2) ;
+      point3f p2 = scaled_ray(temp2) ;
       p2 *= 1/p2.length() * axes;
       vec3f normal = (p2 - center) * inv_axes;
       normal.make_unit_vector();
@@ -47,7 +47,7 @@ const bool ellipsoid::hit(const Ray& r, Float t_min, Float t_max, hit_record& re
   }
   if(temp1 < t_max && temp1 > t_min && is_hit) {
     rec.t = temp1;
-    rec.p = scaled_ray.point_at_parameter(rec.t) ;
+    rec.p = scaled_ray(rec.t) ;
     rec.normal = convert_to_normal3(rec.p - center);
     rec.mat_ptr = mat_ptr.get();
     normal3f trans_normal = rec.normal * inv_axes;
@@ -86,7 +86,7 @@ const bool ellipsoid::hit(const Ray& r, Float t_min, Float t_max, hit_record& re
   }
   if(temp2 < t_max && temp2 > t_min && second_is_hit) {
     rec.t = temp2;
-    rec.p = scaled_ray.point_at_parameter(rec.t) ;
+    rec.p = scaled_ray(rec.t) ;
     rec.normal = convert_to_normal3(rec.p - center);
     rec.mat_ptr = mat_ptr.get();
     normal3f trans_normal = rec.normal * inv_axes;
@@ -152,7 +152,7 @@ const bool ellipsoid::hit(const Ray& r, Float t_min, Float t_max, hit_record& re
     Float u;
     Float v;
     if(temp1 < t_max && temp1 > t_min) {
-      point3f p1 = scaled_ray.point_at_parameter(temp1) ;
+      point3f p1 = scaled_ray(temp1) ;
       p1 *= 1/p1.length() * axes;
       vec3f normal = (p1 - center) * inv_axes;
       normal.make_unit_vector();
@@ -162,7 +162,7 @@ const bool ellipsoid::hit(const Ray& r, Float t_min, Float t_max, hit_record& re
       }
     }
     if(temp2 < t_max && temp2 > t_min) {
-      point3f p2 = scaled_ray.point_at_parameter(temp2) ;
+      point3f p2 = scaled_ray(temp2) ;
       p2 *= 1/p2.length() * axes;
       vec3f normal = (p2 - center) * inv_axes;
       normal.make_unit_vector();
@@ -178,7 +178,7 @@ const bool ellipsoid::hit(const Ray& r, Float t_min, Float t_max, hit_record& re
   }
   if(temp1 < t_max && temp1 > t_min && is_hit) {
     rec.t = temp1;
-    rec.p = scaled_ray.point_at_parameter(rec.t) ;
+    rec.p = scaled_ray(rec.t) ;
     rec.normal = convert_to_normal3(rec.p - center);
     rec.mat_ptr = mat_ptr.get();
     normal3f trans_normal = rec.normal * inv_axes;
@@ -217,7 +217,7 @@ const bool ellipsoid::hit(const Ray& r, Float t_min, Float t_max, hit_record& re
   }
   if(temp2 < t_max && temp2 > t_min && second_is_hit) {
     rec.t = temp2;
-    rec.p = scaled_ray.point_at_parameter(rec.t) ;
+    rec.p = scaled_ray(rec.t) ;
     rec.normal = convert_to_normal3(rec.p - center);
     rec.mat_ptr = mat_ptr.get();
     normal3f trans_normal = rec.normal * inv_axes;
