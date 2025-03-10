@@ -97,28 +97,28 @@ raymesh::raymesh(Rcpp::List raymesh_list,
   }
 }
 
-const bool raymesh::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
+const bool raymesh::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
   SCOPED_CONTEXT("MultiHit");
   SCOPED_TIMER_COUNTER("RayMesh");
   
   return(tri_mesh_bvh->hit(r, t_min, t_max, rec, rng));
 }
 
-const bool raymesh::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const {
+const bool raymesh::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const {
   SCOPED_CONTEXT("MultiHit");
   SCOPED_TIMER_COUNTER("RayMesh");
   
   return(tri_mesh_bvh->hit(r, t_min, t_max, rec, sampler));
 }
 
-bool raymesh::HitP(const ray& r, Float t_min, Float t_max, random_gen& rng) const {
+bool raymesh::HitP(const Ray& r, Float t_min, Float t_max, random_gen& rng) const {
   SCOPED_CONTEXT("MultiHit");
   SCOPED_TIMER_COUNTER("RayMesh");
   
   return(tri_mesh_bvh->HitP(r, t_min, t_max, rng));
 }
 
-bool raymesh::HitP(const ray& r, Float t_min, Float t_max, Sampler* sampler) const {
+bool raymesh::HitP(const Ray& r, Float t_min, Float t_max, Sampler* sampler) const {
   SCOPED_CONTEXT("MultiHit");
   SCOPED_TIMER_COUNTER("RayMesh");
   

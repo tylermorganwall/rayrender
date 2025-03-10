@@ -41,25 +41,25 @@ std::string box::GetName() const {
   return(std::string("Box"));
 }
 
-const bool box::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
+const bool box::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("Cube");
   return(list.hit(r,t_min,t_max,rec, rng));
 }
 
-const bool box::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const {
+const bool box::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("Cube");
   return(list.hit(r,t_min,t_max,rec, sampler));
 }
 
-bool box::HitP(const ray& r, Float t_min, Float t_max, Sampler* sampler) const {
+bool box::HitP(const Ray& r, Float t_min, Float t_max, Sampler* sampler) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("Cube");
   return(list.HitP(r,t_min,t_max, sampler));
 }
 
-bool box::HitP(const ray& r, Float t_min, Float t_max, random_gen& rng) const {
+bool box::HitP(const Ray& r, Float t_min, Float t_max, random_gen& rng) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("Cube");
   return(list.HitP(r,t_min,t_max, rng));

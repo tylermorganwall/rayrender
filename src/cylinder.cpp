@@ -8,11 +8,11 @@ void cylinder::get_cylinder_uv(const point3f& p, Float& u, Float& v) const {
   v = (p.y + length * 0.5)/length;
 };
 
-const bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
+const bool cylinder::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("Cylinder");
   
-  ray r2 = (*WorldToObject)(r);
+  Ray r2 = (*WorldToObject)(r);
   
   point3f oc = r2.origin();
   vec3f dir = r2.direction();
@@ -235,11 +235,11 @@ const bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
 }
 
 
-const bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const {
+const bool cylinder::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("Cylinder");
   
-  ray r2 = (*WorldToObject)(r);
+  Ray r2 = (*WorldToObject)(r);
   
   vec3f oc = r2.origin()-point3f(0.);
   vec3f dir = r2.direction();
@@ -456,11 +456,11 @@ const bool cylinder::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
 }
 
 
-bool cylinder::HitP(const ray& r, Float t_min, Float t_max, random_gen& rng) const {
+bool cylinder::HitP(const Ray& r, Float t_min, Float t_max, random_gen& rng) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("Cylinder");
   
-  ray r2 = (*WorldToObject)(r);
+  Ray r2 = (*WorldToObject)(r);
   
   point3f oc = r2.origin();
   vec3f dir = r2.direction();
@@ -514,11 +514,11 @@ bool cylinder::HitP(const ray& r, Float t_min, Float t_max, random_gen& rng) con
 }
 
 
-bool cylinder::HitP(const ray& r, Float t_min, Float t_max, Sampler* sampler) const {
+bool cylinder::HitP(const Ray& r, Float t_min, Float t_max, Sampler* sampler) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("Cylinder");
   
-  ray r2 = (*WorldToObject)(r);
+  Ray r2 = (*WorldToObject)(r);
   
   point3f oc = r2.origin();
   vec3f dir = r2.direction();
@@ -573,7 +573,7 @@ bool cylinder::HitP(const ray& r, Float t_min, Float t_max, Sampler* sampler) co
 
 Float cylinder::pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Float time) {
   hit_record rec;
-  if(this->hit(ray(o,v), 0.001, FLT_MAX, rec, rng)) {
+  if(this->hit(Ray(o,v), 0.001, FLT_MAX, rec, rng)) {
     Float area = length * radius * (phi_max - phi_min);
     Float distance_squared = rec.t * rec.t * v.squared_length();
     Float cosine = fabs(dot(v,rec.normal)/v.length());
@@ -585,7 +585,7 @@ Float cylinder::pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Flo
 
 Float cylinder::pdf_value(const point3f& o, const vec3f& v, Sampler* sampler, Float time) {
   hit_record rec;
-  if(this->hit(ray(o,v), 0.001, FLT_MAX, rec, sampler)) {
+  if(this->hit(Ray(o,v), 0.001, FLT_MAX, rec, sampler)) {
     Float area = length * radius * (phi_max - phi_min);
     Float distance_squared = rec.t * rec.t * v.squared_length();
     Float cosine = fabs(dot(v,rec.normal)/v.length());

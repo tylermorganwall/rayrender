@@ -161,26 +161,26 @@ plymesh::plymesh(std::string inputfile, std::string basedir, std::shared_ptr<mat
 };
 
 
-const bool plymesh::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
+const bool plymesh::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
   SCOPED_CONTEXT("MultiHit");
   SCOPED_TIMER_COUNTER("PlyMesh");
   return(ply_mesh_bvh->hit(r, t_min, t_max, rec, rng));
 };
 
-const bool plymesh::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const {
+const bool plymesh::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const {
   SCOPED_CONTEXT("MultiHit");
   SCOPED_TIMER_COUNTER("PlyMesh");
   
   return(ply_mesh_bvh->hit(r, t_min, t_max, rec, sampler));
 };
 
-bool plymesh::HitP(const ray& r, Float t_min, Float t_max,random_gen& rng) const {
+bool plymesh::HitP(const Ray& r, Float t_min, Float t_max,random_gen& rng) const {
   SCOPED_CONTEXT("MultiHit");
   SCOPED_TIMER_COUNTER("PlyMesh");
   return(ply_mesh_bvh->HitP(r, t_min, t_max, rng));
 };
 
-bool plymesh::HitP(const ray& r, Float t_min, Float t_max, Sampler* sampler) const {
+bool plymesh::HitP(const Ray& r, Float t_min, Float t_max, Sampler* sampler) const {
   SCOPED_CONTEXT("MultiHit");
   SCOPED_TIMER_COUNTER("PlyMesh");
   return(ply_mesh_bvh->HitP(r, t_min, t_max, sampler));

@@ -7,7 +7,7 @@
 // #define DEBUG
 
 // Basic path tracing without importance sampling
-void color_basic(const ray &r, hitable *world, size_t max_depth,
+void color_basic(const Ray &r, hitable *world, size_t max_depth,
                  random_gen &rng, Sampler *sampler, bool &alpha, point3f &color,
                  normal3f &normal, point3f &albedo) {
   point3f final_color(0, 0, 0);
@@ -15,8 +15,8 @@ void color_basic(const ray &r, hitable *world, size_t max_depth,
   bool wrote_normal = false;
   bool wrote_albedo = false;
   point3f throughput(1, 1, 1);
-  ray r1 = r;
-  ray r2 = r;
+  Ray r1 = r;
+  Ray r2 = r;
   bool diffuse_bounce = false;
   // To-do: Add logic to detect when rays only go through transmissive surfaces
   // and make those transparent when transparent_background = TRUE
@@ -88,7 +88,7 @@ void color_basic(const ray &r, hitable *world, size_t max_depth,
               r2.time()); // scatters a ray from hit point to random direction
         }
 
-        r2 = ray(OffsetRayOrigin(hrec.p, hrec.pError, hrec.normal, dir), dir,
+        r2 = Ray(OffsetRayOrigin(hrec.p, hrec.pError, hrec.normal, dir), dir,
                  r2.pri_stack, r2.time());
         pdf_val = srec.pdf_ptr->value(
             dir, rng, r2.time()); // generates a pdf value based the
@@ -118,7 +118,7 @@ void color_basic(const ray &r, hitable *world, size_t max_depth,
   return;
 }
 
-void color_basic_path_guiding(const ray &r, hitable *world, hitable_list *hlist,
+void color_basic_path_guiding(const Ray &r, hitable *world, hitable_list *hlist,
                               size_t max_depth, size_t roulette_activate,
                               random_gen &rng, Sampler *sampler, bool &alpha,
                               point3f &color, normal3f &normal,
@@ -131,8 +131,8 @@ void color_basic_path_guiding(const ray &r, hitable *world, hitable_list *hlist,
   bool wrote_albedo = false;
 
   point3f throughput(1, 1, 1);
-  ray r1 = r;
-  ray r2 = r;
+  Ray r1 = r;
+  Ray r2 = r;
   bool diffuse_bounce = false;
   // To-do: Add logic to detect when rays only go through transmissive surfaces
   // and make those transparent when transparent_background = TRUE
@@ -212,7 +212,7 @@ void color_basic_path_guiding(const ray &r, hitable *world, hitable_list *hlist,
               r2.time()); // scatters a ray from hit point to random direction
         }
 
-        r2 = ray(OffsetRayOrigin(hrec.p, hrec.pError, hrec.normal, dir), dir,
+        r2 = Ray(OffsetRayOrigin(hrec.p, hrec.pError, hrec.normal, dir), dir,
                  r2.pri_stack, r2.time());
         pdf_val = p.value(dir, rng,
                           r2.time()); // generates a pdf value based the
@@ -241,7 +241,7 @@ void color_basic_path_guiding(const ray &r, hitable *world, hitable_list *hlist,
   return;
 }
 
-void color_shadow_rays(const ray &r, hitable *world, hitable_list *hlist,
+void color_shadow_rays(const Ray &r, hitable *world, hitable_list *hlist,
                        size_t max_depth, size_t roulette_activate,
                        random_gen &rng, Sampler *sampler, bool &alpha,
                        point3f &color, normal3f &normal, point3f &albedo) {
@@ -254,7 +254,7 @@ void color_shadow_rays(const ray &r, hitable *world, hitable_list *hlist,
   bool wrote_albedo = false;
   point3f throughput(1, 1, 1);
   float prev_t = 1;
-  ray r2 = r;
+  Ray r2 = r;
   bool diffuse_bounce = false;
   // To-do: Add logic to detect when rays only go through transmissive surfaces
   // and make those transparent when transparent_background = TRUE
@@ -342,7 +342,7 @@ void color_shadow_rays(const ray &r, hitable *world, hitable_list *hlist,
           }
 
           // Create a shadow ray towards the light
-          ray shadow_ray(OffsetRayOrigin(hrec.p, hrec.pError, hrec.normal, wi),
+          Ray shadow_ray(OffsetRayOrigin(hrec.p, hrec.pError, hrec.normal, wi),
                          wi, r2.pri_stack, r2.time());
 
           // Check for occlusion using HitP
@@ -399,7 +399,7 @@ void color_shadow_rays(const ray &r, hitable *world, hitable_list *hlist,
         throughput *= f / pdf_scatter;
 
         // Update the ray
-        r2 = ray(OffsetRayOrigin(hrec.p, hrec.pError, hrec.normal,
+        r2 = Ray(OffsetRayOrigin(hrec.p, hrec.pError, hrec.normal,
                                  scatter_direction),
                  scatter_direction, r2.pri_stack, r2.time());
 
@@ -419,7 +419,7 @@ void color_shadow_rays(const ray &r, hitable *world, hitable_list *hlist,
   return;
 }
 
-void color(const ray &r, hitable *world, hitable_list *hlist, size_t max_depth,
+void color(const Ray &r, hitable *world, hitable_list *hlist, size_t max_depth,
            size_t roulette_activate, random_gen &rng, Sampler *sampler,
            bool &alpha, IntegratorType type, point3f &color, normal3f &normal,
            point3f &albedo) {

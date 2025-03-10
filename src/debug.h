@@ -25,7 +25,7 @@ inline Float debug_bvh(const ray& r, hitable *world, random_gen &rng) {
 #endif
 
 
-inline Float calculate_depth(const ray& r, hitable *world, random_gen &rng) {
+inline Float calculate_depth(const Ray& r, hitable *world, random_gen &rng) {
   hit_record hrec;
   if(world->hit(r, 0.001, FLT_MAX, hrec, rng)) {
     return((r.origin()-hrec.p).length());
@@ -34,10 +34,10 @@ inline Float calculate_depth(const ray& r, hitable *world, random_gen &rng) {
   }
 }
 
-inline vec3f calculate_normals(const ray& r, hitable *world, size_t max_depth, random_gen &rng) {
+inline vec3f calculate_normals(const Ray& r, hitable *world, size_t max_depth, random_gen &rng) {
   point3f final_color(0,0,0);
-  ray r1 = r;
-  ray r2 = r;
+  Ray r1 = r;
+  Ray r2 = r;
   bool diffuse_bounce = false;
   
   for(size_t i = 0; i < max_depth; i++) {
@@ -72,7 +72,7 @@ inline vec3f calculate_normals(const ray& r, hitable *world, size_t max_depth, r
           hrec.normal.make_unit_vector();
           return((vec3f(1,1,1) + convert_to_vec3(hrec.normal))/static_cast<Float>(2));
         }
-        r2 = ray(OffsetRayOrigin(offset_p, hrec.pError, hrec.normal, dir), dir, r2.pri_stack, r2.time());
+        r2 = Ray(OffsetRayOrigin(offset_p, hrec.pError, hrec.normal, dir), dir, r2.pri_stack, r2.time());
         
         if(i == max_depth-1) {
           hrec.normal.make_unit_vector();
@@ -89,7 +89,7 @@ inline vec3f calculate_normals(const ray& r, hitable *world, size_t max_depth, r
   return(vec3f(0,0,0));
 }
 
-inline point3f calculate_uv(const ray& r, hitable *world, random_gen &rng) {
+inline point3f calculate_uv(const Ray& r, hitable *world, random_gen &rng) {
   hit_record hrec;
   if(world->hit(r, 0.001, FLT_MAX, hrec, rng)) {
     return(point3f(hrec.u,hrec.v,1-hrec.u-hrec.v));
@@ -98,7 +98,7 @@ inline point3f calculate_uv(const ray& r, hitable *world, random_gen &rng) {
   }
 }
 
-inline vec3f calculate_dpduv(const ray& r, hitable *world, random_gen &rng, bool u) {
+inline vec3f calculate_dpduv(const Ray& r, hitable *world, random_gen &rng, bool u) {
   hit_record hrec;
   if(world->hit(r, 0.001, FLT_MAX, hrec, rng)) {
     if(u) {
@@ -111,10 +111,10 @@ inline vec3f calculate_dpduv(const ray& r, hitable *world, random_gen &rng, bool
   }
 }
 
-inline point3f calculate_color(const ray& r, hitable *world, random_gen &rng) {
+inline point3f calculate_color(const Ray& r, hitable *world, random_gen &rng) {
   hit_record hrec;
   scatter_record srec;
-  ray r2 = r;
+  Ray r2 = r;
   bool invisible = false;
   bool hit_alpha = false;
   do {
@@ -145,10 +145,10 @@ inline point3f calculate_color(const ray& r, hitable *world, random_gen &rng) {
   return(point3f(0,0,0));
 }
 
-inline point3f quick_render(const ray& r, hitable *world, random_gen &rng, vec3f lightdir, Float n) {
+inline point3f quick_render(const Ray& r, hitable *world, random_gen &rng, vec3f lightdir, Float n) {
   hit_record hrec;
   scatter_record srec;
-  ray r2 = r;
+  Ray r2 = r;
   bool invisible = false;
   if(world->hit(r2, 0.001, FLT_MAX, hrec, rng)) {
     point3f emit = hrec.mat_ptr->emitted(r2, hrec, hrec.u, hrec.v, hrec.p, invisible);
@@ -196,11 +196,11 @@ inline point3f quick_render(const ray& r, hitable *world, random_gen &rng, vec3f
 //   } 
 // }
 
-inline point3f calculate_position(const ray& r, hitable *world, hitable_list *hlist,
+inline point3f calculate_position(const Ray& r, hitable *world, hitable_list *hlist,
                                   size_t max_depth, random_gen &rng) {
   point3f final_color(0,0,0);
-  ray r1 = r;
-  ray r2 = r;
+  Ray r1 = r;
+  Ray r2 = r;
   bool diffuse_bounce = false;
   for(size_t i = 0; i < max_depth; i++) {
     bool is_invisible = false;
@@ -232,7 +232,7 @@ inline point3f calculate_position(const ray& r, hitable *world, hitable_list *hl
         if((dir.x == 0 && dir.y == 0 && dir.z == 0)) {
           return(hrec.p);
         }
-        r2 = ray(OffsetRayOrigin(offset_p, hrec.pError, hrec.normal, dir), dir, r2.pri_stack, r2.time());
+        r2 = Ray(OffsetRayOrigin(offset_p, hrec.pError, hrec.normal, dir), dir, r2.pri_stack, r2.time());
         
         if(i == max_depth-1) {
           return(hrec.p);
@@ -247,11 +247,11 @@ inline point3f calculate_position(const ray& r, hitable *world, hitable_list *hl
   return(point3f(0,0,0));
 }
 
-inline point3f calculate_bounce_dir(const ray& r, hitable *world, hitable_list *hlist,
+inline point3f calculate_bounce_dir(const Ray& r, hitable *world, hitable_list *hlist,
               size_t max_depth, random_gen& rng) {
   point3f final_color(0,0,0);
-  ray r1 = r;
-  ray r2 = r;
+  Ray r1 = r;
+  Ray r2 = r;
   bool diffuse_bounce = false;
   for(size_t i = 0; i < max_depth; i++) {
     bool is_invisible = false;
@@ -283,7 +283,7 @@ inline point3f calculate_bounce_dir(const ray& r, hitable *world, hitable_list *
         if((dir.x == 0 && dir.y == 0 && dir.z == 0)) {
           return(convert_to_point3(dir));
         }
-        r2 = ray(OffsetRayOrigin(offset_p, hrec.pError, hrec.normal, dir), dir, r2.pri_stack, r2.time());
+        r2 = Ray(OffsetRayOrigin(offset_p, hrec.pError, hrec.normal, dir), dir, r2.pri_stack, r2.time());
         
         if(i == max_depth-1) {
           return(convert_to_point3(unit_vector(dir)));
@@ -298,7 +298,7 @@ inline point3f calculate_bounce_dir(const ray& r, hitable *world, hitable_list *
   return(point3f(0,0,0));
 }
 
-inline Float calculate_time(const ray& r, hitable *world, hitable_list *hlist,
+inline Float calculate_time(const Ray& r, hitable *world, hitable_list *hlist,
                                     size_t max_depth, random_gen& rng) {
   hit_record hrec;
   if(world->hit(r, 0.001, FLT_MAX, hrec, rng)) {
@@ -317,7 +317,7 @@ inline uint32_t hash32(uint32_t x) {
     return x;
 }
 
-inline point3f calculate_shape(const ray& r, hitable *world, hitable_list *hlist,
+inline point3f calculate_shape(const Ray& r, hitable *world, hitable_list *hlist,
                             size_t max_depth, random_gen& rng) {
   hit_record hrec;
   if(world->hit(r, 0.001, FLT_MAX, hrec, rng)) {
@@ -336,7 +336,7 @@ inline point3f calculate_shape(const ray& r, hitable *world, hitable_list *hlist
   }
 }
 
-inline point3f calculate_material(const ray& r, hitable *world, hitable_list *hlist,
+inline point3f calculate_material(const Ray& r, hitable *world, hitable_list *hlist,
                                   size_t max_depth, random_gen& rng) {
   hit_record hrec;
   if(world->hit(r, 0.001, FLT_MAX, hrec, rng)) {
@@ -355,11 +355,11 @@ inline point3f calculate_material(const ray& r, hitable *world, hitable_list *hl
   }
 }
 
-inline Float calculate_pdf(const ray& r, hitable *world, hitable_list *hlist,
+inline Float calculate_pdf(const Ray& r, hitable *world, hitable_list *hlist,
                                     size_t max_depth, random_gen& rng) {
   point3f final_color(0,0,0);
-  ray r1 = r;
-  ray r2 = r;
+  Ray r1 = r;
+  Ray r2 = r;
   bool diffuse_bounce = false;
   for(size_t i = 0; i < max_depth; i++) {
     bool is_invisible = false;
@@ -394,7 +394,7 @@ inline Float calculate_pdf(const ray& r, hitable *world, hitable_list *hlist,
         if((dir.x == 0 && dir.y == 0 && dir.z == 0)) {
           return(0);
         }
-        r2 = ray(OffsetRayOrigin(offset_p, hrec.pError, hrec.normal, dir), dir, r2.pri_stack, r2.time());
+        r2 = Ray(OffsetRayOrigin(offset_p, hrec.pError, hrec.normal, dir), dir, r2.pri_stack, r2.time());
       } else {
         return(0);
       }
@@ -405,11 +405,11 @@ inline Float calculate_pdf(const ray& r, hitable *world, hitable_list *hlist,
   return(0);
 }
 
-inline Float calculate_error(const ray& r, hitable *world, hitable_list *hlist,
+inline Float calculate_error(const Ray& r, hitable *world, hitable_list *hlist,
                            size_t max_depth, random_gen& rng) {
   point3f final_color(0,0,0);
-  ray r1 = r;
-  ray r2 = r;
+  Ray r1 = r;
+  Ray r2 = r;
   bool diffuse_bounce = false;
   for(size_t i = 0; i < 2; i++) {
     bool is_invisible = false;
@@ -444,14 +444,14 @@ inline Float calculate_error(const ray& r, hitable *world, hitable_list *hlist,
   return(0);
 }
 
-inline Float calculate_bounces(const ray& r, hitable *world, hitable_list *hlist,
+inline Float calculate_bounces(const Ray& r, hitable *world, hitable_list *hlist,
                              size_t max_depth, random_gen& rng) {
   point3f final_color(0,0,0);
   point3f emit_color(0,0,0);
   
   point3f throughput(1,1,1);
-  ray r1 = r;
-  ray r2 = r;
+  Ray r1 = r;
+  Ray r2 = r;
   bool diffuse_bounce = false;
   for(size_t i = 0; i < max_depth; i++) {
     // RcppThread::Rcout << "Ray origin: " << r2.A << "\n";
@@ -493,7 +493,7 @@ inline Float calculate_bounces(const ray& r, hitable *world, hitable_list *hlist
         r1 = r2;
         vec3f dir;
         dir = p.generate(rng, diffuse_bounce, r2.time()); //scatters a ray from hit point to random direction
-        r2 = ray(OffsetRayOrigin(hrec.p, hrec.pError, hrec.normal, dir), dir, r2.pri_stack, r2.time());
+        r2 = Ray(OffsetRayOrigin(hrec.p, hrec.pError, hrec.normal, dir), dir, r2.pri_stack, r2.time());
         
         pdf_val = p.value(dir, rng, r2.time()); //generates a pdf value based the intersection point and the mixture pdf
         throughput *= hrec.mat_ptr->f(r1, hrec, r2.direction()) / pdf_val;
@@ -507,11 +507,11 @@ inline Float calculate_bounces(const ray& r, hitable *world, hitable_list *hlist
   return((Float)max_depth);
 }
 
-inline point3f calculate_ao(const ray& r, hitable *world, hitable_list *hlist,
+inline point3f calculate_ao(const Ray& r, hitable *world, hitable_list *hlist,
                             Float sample_distance, random_gen& rng, Sampler* sampler,
                             bool keep_colors, point3f bg) {
-  ray r1 = r;
-  ray r2 = r;
+  Ray r1 = r;
+  Ray r2 = r;
   point3f final_color(1.0f);
   Float t_max = FLT_MAX;
   bool diffuse_bounce = false;
@@ -534,7 +534,7 @@ inline point3f calculate_ao(const ray& r, hitable *world, hitable_list *hlist,
       r1 = r2;
       
       t_max = sample_distance;
-      r2 = ray(OffsetRayOrigin(hrec.p, hrec.pError, hrec.normal, dir), dir, r2.pri_stack, r2.time());
+      r2 = Ray(OffsetRayOrigin(hrec.p, hrec.pError, hrec.normal, dir), dir, r2.pri_stack, r2.time());
       if(keep_colors && hrec.mat_ptr->scatter(r2, hrec, srec, rng)) { 
         if(!srec.is_specular) {
           Float pdf_val = p.value(dir, rng, r2.time());

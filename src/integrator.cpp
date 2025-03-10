@@ -150,7 +150,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
                        for(int i = nx_begin; i < nx_end; i++) {
                          for(int j = ny_begin; j < ny_end; j++) {
                            int index = j + ny * i;
-                           ray r; 
+                           Ray r; 
                            vec2f u2 = samplers[index]->Get2D();
                            Float weight(1.0);
                            Float u = (Float(i) + u2.x) / Float(nx);
@@ -222,7 +222,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
                        for(int i = nx_begin; i < nx_end; i++) {
                          for(int j = ny_begin; j < ny_end; j++) {
                            int index = j + ny_small * i;
-                           ray r; 
+                           Ray r; 
                            vec2f u2 = samplers_small[index]->Get2D();
                            Float weight(1.0);
                            Float u = (Float(i) + u2.x) / Float(nx_small);

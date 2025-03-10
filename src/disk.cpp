@@ -1,11 +1,11 @@
 #include "disk.h"
 #include "raylog.h"
 
-const bool disk::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
+const bool disk::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("Disk");
   
-  ray r2 = (*WorldToObject)(r);
+  Ray r2 = (*WorldToObject)(r);
   // First we intersect with the plane containing the disk
   Float t = -r2.origin().y / r2.direction().y;
   bool alpha_miss = false;
@@ -66,11 +66,11 @@ const bool disk::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, ra
 }
 
 
-const bool disk::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const {
+const bool disk::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("Disk");
   
-  ray r2 = (*WorldToObject)(r);
+  Ray r2 = (*WorldToObject)(r);
   // First we intersect with the plane containing the disk
   Float t = -r2.origin().y / r2.direction().y;
   bool alpha_miss = false;
@@ -130,11 +130,11 @@ const bool disk::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sa
 }
 
 
-bool disk::HitP(const ray& r, Float t_min, Float t_max, random_gen& rng) const {
+bool disk::HitP(const Ray& r, Float t_min, Float t_max, random_gen& rng) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("Disk");
   
-  ray r2 = (*WorldToObject)(r);
+  Ray r2 = (*WorldToObject)(r);
   // First we intersect with the plane containing the disk
   Float t = -r2.origin().y / r2.direction().y;
   
@@ -151,11 +151,11 @@ bool disk::HitP(const ray& r, Float t_min, Float t_max, random_gen& rng) const {
 }
 
 
-bool disk::HitP(const ray& r, Float t_min, Float t_max, Sampler* sampler) const {
+bool disk::HitP(const Ray& r, Float t_min, Float t_max, Sampler* sampler) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("Disk");
   
-  ray r2 = (*WorldToObject)(r);
+  Ray r2 = (*WorldToObject)(r);
   // First we intersect with the plane containing the disk
   Float t = -r2.origin().y / r2.direction().y;
   
@@ -175,7 +175,7 @@ bool disk::HitP(const ray& r, Float t_min, Float t_max, Sampler* sampler) const 
 
 Float disk::pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Float time) {
   hit_record rec;
-  if(this->hit(ray(o,v), 0.001, FLT_MAX, rec, rng)) {
+  if(this->hit(Ray(o,v), 0.001, FLT_MAX, rec, rng)) {
     Float area =  static_cast<Float>(M_PI) * (radius * radius - inner_radius * inner_radius);
     Float distance_squared = rec.t * rec.t * v.squared_length();
     Float cosine = fabs(dot(v,rec.normal)/v.length());
@@ -187,7 +187,7 @@ Float disk::pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Float t
 
 Float disk::pdf_value(const point3f& o, const vec3f& v, Sampler* sampler, Float time) {
   hit_record rec;
-  if(this->hit(ray(o,v), 0.001, FLT_MAX, rec, sampler)) {
+  if(this->hit(Ray(o,v), 0.001, FLT_MAX, rec, sampler)) {
     Float area =  static_cast<Float>(M_PI) * (radius * radius - inner_radius * inner_radius);
     Float distance_squared = rec.t * rec.t * v.squared_length();
     Float cosine = fabs(dot(v,rec.normal)/v.length());

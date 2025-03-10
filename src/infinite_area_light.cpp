@@ -24,11 +24,11 @@ InfiniteAreaLight::InfiniteAreaLight(int width, int height, Float r, point3f cen
   distribution = new Distribution2D(img.get(), width, height);
 }
 
-const bool InfiniteAreaLight::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
+const bool InfiniteAreaLight::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("InfLight");
   
-  ray r2 = (*WorldToObject)(r);
+  Ray r2 = (*WorldToObject)(r);
   
   vec3f oc = r2.origin() - center;
   Float a = dot(r2.direction(), r2.direction());
@@ -100,11 +100,11 @@ const bool InfiniteAreaLight::hit(const ray& r, Float t_min, Float t_max, hit_re
 }
 
 
-const bool InfiniteAreaLight::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const {
+const bool InfiniteAreaLight::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("InfLight");
   
-  ray r2 = (*WorldToObject)(r);
+  Ray r2 = (*WorldToObject)(r);
   vec3f oc = r2.origin() - center;
   Float a = dot(r2.direction(), r2.direction());
   Float b = 2 * dot(oc, r2.direction()); 
@@ -175,11 +175,11 @@ const bool InfiniteAreaLight::hit(const ray& r, Float t_min, Float t_max, hit_re
   return(false);
 }
 
-bool InfiniteAreaLight::HitP(const ray& r, Float t_min, Float t_max, random_gen& rng) const {
+bool InfiniteAreaLight::HitP(const Ray& r, Float t_min, Float t_max, random_gen& rng) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("InfLight");
   
-  ray r2 = (*WorldToObject)(r);
+  Ray r2 = (*WorldToObject)(r);
   
   vec3f oc = r2.origin() - center;
   Float a = dot(r2.direction(), r2.direction());
@@ -200,11 +200,11 @@ bool InfiniteAreaLight::HitP(const ray& r, Float t_min, Float t_max, random_gen&
 }
 
 
-bool InfiniteAreaLight::HitP(const ray& r, Float t_min, Float t_max, Sampler* sampler) const {
+bool InfiniteAreaLight::HitP(const Ray& r, Float t_min, Float t_max, Sampler* sampler) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("InfLight");
   
-  ray r2 = (*WorldToObject)(r);
+  Ray r2 = (*WorldToObject)(r);
   vec3f oc = r2.origin() - center;
   Float a = dot(r2.direction(), r2.direction());
   Float b = 2 * dot(oc, r2.direction()); 

@@ -2,11 +2,11 @@
 #include "raylog.h"
 #include "vectypes.h"
 
-const bool csg::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
+const bool csg::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("CSG");
   
-  ray r2 = (*WorldToObject)(r);
+  Ray r2 = (*WorldToObject)(r);
   Float threshold = 0.001;
   
   Float delta = 10e-5 * max_dist/100; 
@@ -80,11 +80,11 @@ const bool csg::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, ran
 }
 
 
-const bool csg::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const {
+const bool csg::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("CSG");
   
-  ray r2 = (*WorldToObject)(r);
+  Ray r2 = (*WorldToObject)(r);
   Float threshold = 0.001;
   
   Float delta = 10e-5 * max_dist/100; 
@@ -153,11 +153,11 @@ const bool csg::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sam
 }
 
 
-bool csg::HitP(const ray& r, Float t_min, Float t_max, random_gen& rng) const {
+bool csg::HitP(const Ray& r, Float t_min, Float t_max, random_gen& rng) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("CSG");
   
-  ray r2 = (*WorldToObject)(r);
+  Ray r2 = (*WorldToObject)(r);
   Float threshold = 0.001;
   
   Float t = 0; 
@@ -205,11 +205,11 @@ bool csg::HitP(const ray& r, Float t_min, Float t_max, random_gen& rng) const {
 }
 
 
-bool csg::HitP(const ray& r, Float t_min, Float t_max, Sampler* sampler) const {
+bool csg::HitP(const Ray& r, Float t_min, Float t_max, Sampler* sampler) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("CSG");
   
-  ray r2 = (*WorldToObject)(r);
+  Ray r2 = (*WorldToObject)(r);
   Float threshold = 0.001;
   
   Float t = 0; 

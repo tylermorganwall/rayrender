@@ -4,7 +4,7 @@
 #include "ray.h"
 
 template <typename T>
-bool Bounds3<T>::HitP(const ray &r, Float tMax, Float *hitt0, Float *hitt1) const {
+bool Bounds3<T>::HitP(const Ray &r, Float tMax, Float *hitt0, Float *hitt1) const {
     Float t0 = 0, t1 = tMax;
     for (int i = 0; i < 3; ++i) {
         // Update interval for _i_th bounding box slab

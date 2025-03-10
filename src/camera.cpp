@@ -29,11 +29,11 @@ camera::camera(point3f lookfrom, point3f _lookat, vec3f _vup, Float vfov,
   vertical = 2.0f * half_height * focus_dist * v;
 }
 
-ray camera::get_ray(Float s, Float t, point3f u3, Float u1) {
+Ray camera::get_ray(Float s, Float t, point3f u3, Float u1) {
   point3f rd = lens_radius * u3;
   vec3f offset = u * rd.x + v * rd.y;
   Float time = time0 + u1 * (time1 - time0);
-  return(ray(origin + offset, lower_left_corner + s * horizontal + t * vertical - origin - offset, time)); 
+  return(Ray(origin + offset, lower_left_corner + s * horizontal + t * vertical - origin - offset, time)); 
 }
 
 void camera::update_position(vec3f delta, bool update_uvw, bool update_focal) {
@@ -190,9 +190,9 @@ ortho_camera::ortho_camera(point3f lookfrom, point3f _lookat, vec3f _vup,
   initial_ratio = cam_width / cam_height;
 }
 
-ray ortho_camera::get_ray(Float s, Float t, point3f u3, Float u) {
+Ray ortho_camera::get_ray(Float s, Float t, point3f u3, Float u) {
   Float time = time0 + u * (time1 - time0);
-  return(ray(lower_left_corner + s * horizontal + t * vertical, -w, time)); 
+  return(Ray(lower_left_corner + s * horizontal + t * vertical, -w, time)); 
 }
 
 void ortho_camera::update_position(vec3f delta, bool update_uvw, bool update_focal) {
@@ -313,7 +313,7 @@ environment_camera::environment_camera(point3f lookfrom, point3f lookat, vec3f _
 }
 
 
-ray environment_camera::get_ray(Float s, Float t, point3f u3, Float u1) {
+Ray environment_camera::get_ray(Float s, Float t, point3f u3, Float u1) {
   Float time = time0 + u1 * (time1 - time0);
   Float theta = static_cast<Float>(M_PI) * t;
   Float phi = 2 * static_cast<Float>(M_PI) * s;
@@ -321,7 +321,7 @@ ray environment_camera::get_ray(Float s, Float t, point3f u3, Float u1) {
             std::sin(theta) * std::sin(phi),
             std::cos(theta));
   dir = uvw.local_to_world(dir);
-  return(ray(origin, dir, time)); 
+  return(Ray(origin, dir, time)); 
 }
 
 void environment_camera::update_position(vec3f delta, bool update_uvw, bool update_focal) {
@@ -491,7 +491,7 @@ Float RealisticCamera::FocusDistance(Float filmDistance) {
   const std::array<Float, 3> scaleFactors = {0.1f, 0.01f, 0.001f};
   Float lu = 0.0f;
   
-  ray ray2;
+  Ray ray2;
   
   // Try some different and decreasing scaling factor to find focus ray
   // more quickly when `aperturediameter` is too small.
@@ -499,7 +499,7 @@ Float RealisticCamera::FocusDistance(Float filmDistance) {
   bool foundFocusRay = false;
   for (Float scale : scaleFactors) {
     lu = scale * bounds.pMax[0];
-    if (TraceLensesFromFilm(ray(point3f(0, 0, LensRearZ() - filmDistance),
+    if (TraceLensesFromFilm(Ray(point3f(0, 0, LensRearZ() - filmDistance),
                                 vec3f(lu, 0, filmDistance)),
                                 &ray2)) {
       foundFocusRay = true;
@@ -593,7 +593,7 @@ inline bool Quadratic(Float A, Float B, Float C, Float *t0, Float *t1) {
 
 
 bool RealisticCamera::IntersectSphericalElement(Float radius,Float zCenter, 
-                                                const ray &ray2, Float *t, normal3f *n) {
+                                                const Ray &ray2, Float *t, normal3f *n) {
   const vec3f& rd = ray2.direction();
   const point3f& ro = ray2.origin();
   
@@ -614,13 +614,13 @@ bool RealisticCamera::IntersectSphericalElement(Float radius,Float zCenter,
   return true;
 }
 
-bool RealisticCamera::TraceLensesFromScene(const ray &rCamera,
-                                           ray* rOut) const {
+bool RealisticCamera::TraceLensesFromScene(const Ray &rCamera,
+                                           Ray* rOut) const {
   Float elementZ = -LensFrontZ();
   // Transform _rCamera_ from camera to lens system space
   
   static const Transform CameraToLens = Scale(1, 1, -1);
-  ray rLens = CameraToLens(rCamera);
+  Ray rLens = CameraToLens(rCamera);
   for (size_t i = 0; i < elementInterfaces.size(); ++i) {
     const LensElementInterface &element = elementInterfaces[i];
     // Compute intersection of ray with lens element
@@ -671,11 +671,11 @@ bool RealisticCamera::TraceLensesFromScene(const ray &rCamera,
   return true;
 }
 
-bool RealisticCamera::TraceLensesFromFilm(const ray &rCamera, ray *rOut) const {
+bool RealisticCamera::TraceLensesFromFilm(const Ray &rCamera, Ray *rOut) const {
   Float elementZ = 0;
   // Transform _rCamera_ from camera to lens system space
   static const Transform CameraToLens = Scale(1, 1, -1);
-  ray rLens = CameraToLens(rCamera);
+  Ray rLens = CameraToLens(rCamera);
   
   for (int i = elementInterfaces.size() - 1; i >= 0; --i) {
     const LensElementInterface &element = elementInterfaces[i];
@@ -724,7 +724,7 @@ bool RealisticCamera::TraceLensesFromFilm(const ray &rCamera, ray *rOut) const {
       rLens.B = w;
     }
   }
-  rLens = ray(rLens.origin(), rLens.direction());
+  rLens = Ray(rLens.origin(), rLens.direction());
   // Transform _rLens_ from lens system space back to camera space
   if (rOut) {
     static const Transform LensToCamera = Scale(1, 1, -1);
@@ -734,8 +734,8 @@ bool RealisticCamera::TraceLensesFromFilm(const ray &rCamera, ray *rOut) const {
 }
 
 
-void RealisticCamera::ComputeCardinalPoints(const ray &rIn,
-                                            const ray &rOut, Float *pz, Float *fz) {
+void RealisticCamera::ComputeCardinalPoints(const Ray &rIn,
+                                            const Ray &rOut, Float *pz, Float *fz) {
   Float tf = -rOut.origin().x / rOut.direction().x;
   *fz = -rOut(tf).z;
   Float tp = (rIn.origin().x - rOut.origin().x) / rOut.direction().x;
@@ -746,13 +746,13 @@ void RealisticCamera::ComputeCardinalPoints(const ray &rIn,
 void RealisticCamera::ComputeThickLensApproximation(Float pz[2],
                                                     Float fz[2]) const {
   Float x =  min_aperture/10;// * film->diagonal;
-  ray rScene(point3f(x, 0, LensFrontZ() + 1), vec3f(0, 0, -1));
-  ray rFilm;
+  Ray rScene(point3f(x, 0, LensFrontZ() + 1), vec3f(0, 0, -1));
+  Ray rFilm;
   if(!TraceLensesFromScene(rScene, &rFilm)) {
     throw std::runtime_error("Unable to trace ray from scene to film for thick lens approximation. Is aperture stop extremely small?");
   }
   ComputeCardinalPoints(rScene, rFilm, &pz[0], &fz[0]);
-  rFilm = ray(point3f(x, 0, LensRearZ() - 1), vec3f(0, 0, 1));
+  rFilm = Ray(point3f(x, 0, LensRearZ() - 1), vec3f(0, 0, 1));
   if(!TraceLensesFromFilm(rFilm, &rScene)) {
     throw std::runtime_error("Unable to trace ray from film to scene for thick lens approximation. Is aperture stop extremely small?");
   }
@@ -806,7 +806,7 @@ Bounds2f RealisticCamera::BoundExitPupil(Float pFilmX0, Float pFilmX1) const {
     
     // Expand pupil bounds if ray makes it through the lens system
     if (Inside(point2f(pRear.x, pRear.y), pupilBounds) || 
-        TraceLensesFromFilm(ray(pFilm, pRear - pFilm), nullptr)) {
+        TraceLensesFromFilm(Ray(pFilm, pRear - pFilm), nullptr)) {
       pupilBounds = UnionB(pupilBounds, point2f(pRear.x, pRear.y));
       ++nExitingRays;
     }
@@ -856,7 +856,7 @@ Bounds2f  RealisticCamera::GetPhysicalExtent() const {
 }
 
 
-Float RealisticCamera::GenerateRay(const CameraSample &sample, ray *ray2) const {
+Float RealisticCamera::GenerateRay(const CameraSample &sample, Ray *ray2) const {
   // Find point on film, _pFilm_, corresponding to _sample.pFilm_
   point2f pFilm2 = GetPhysicalExtent().Lerp(sample.pFilm);
   point3f pFilm(-pFilm2.x, pFilm2.y, 0);
@@ -866,7 +866,7 @@ Float RealisticCamera::GenerateRay(const CameraSample &sample, ray *ray2) const 
   point3f pRear = SampleExitPupil(point2f(pFilm.x, pFilm.y), sample.pLens,
                                   &exitPupilBoundsArea);
 
-  ray rFilm(pFilm, unit_vector(pRear - pFilm), 
+  Ray rFilm(pFilm, unit_vector(pRear - pFilm), 
             lerp(sample.time, shutterOpen, shutterClose));
   if (!TraceLensesFromFilm(rFilm, ray2)) {
     return 0;

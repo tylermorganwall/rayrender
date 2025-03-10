@@ -463,7 +463,7 @@ const bool BVHAggregate::hit(const ray& r, Float t_min, Float t_max, hit_record&
 constexpr const int triggerLargeBVH = TOTAL_NODES_STATIC - SIMD_WIDTH;
 #define RAY_SUPPORT_LARGE_BVH
 
-const bool BVHAggregate::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
+const bool BVHAggregate::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
     if (!nodes4) {
         return false;
     }
@@ -584,7 +584,7 @@ const bool BVHAggregate::hit(const ray& r, Float t_min, Float t_max, hit_record&
     return any_hit;
 }
 
-const bool BVHAggregate::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const {
+const bool BVHAggregate::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const {
     if (!nodes4) {
         return false;
     }
@@ -642,7 +642,7 @@ const bool BVHAggregate::hit(const ray& r, Float t_min, Float t_max, hit_record&
     return any_hit;
 }
 
-bool BVHAggregate::HitP(const ray& r, Float t_min, Float t_max, random_gen& rng) const {
+bool BVHAggregate::HitP(const Ray& r, Float t_min, Float t_max, random_gen& rng) const {
     if (!nodes4) {
         return false;
     }
@@ -744,7 +744,7 @@ bool BVHAggregate::HitP(const ray& r, Float t_min, Float t_max, random_gen& rng)
     return false;
 }
 
-bool BVHAggregate::HitP(const ray& r, Float t_min, Float t_max, Sampler* sampler) const {
+bool BVHAggregate::HitP(const Ray& r, Float t_min, Float t_max, Sampler* sampler) const {
     if (!nodes4) {
         return false;
     }

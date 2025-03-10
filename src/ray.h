@@ -24,10 +24,10 @@ inline Float add_ulp_magnitude(Float f, int ulps) {
 }
 #endif
 
-class ray {
+class Ray {
   public: 
-    ray() {}
-    ray(const point3f& a, const vec3f& b, 
+    Ray() {}
+    Ray(const point3f& a, const vec3f& b, 
         Float ti = 0.0, Float tmax = Infinity) {
       A = a;
       B = b;
@@ -59,7 +59,7 @@ class ray {
       maskPos4[2] = simd_cmpge(inv_dir_pad4[2], simd_set1(0.0f));
 #endif
     }
-    ray(const point3f& a, const vec3f& b,  std::vector<dielectric* > *priority2, 
+    Ray(const point3f& a, const vec3f& b,  std::vector<dielectric* > *priority2, 
         Float ti = 0.0, Float tmax = Infinity) {
       A = a; 
       B = b; 
@@ -127,12 +127,12 @@ class ray {
     std::vector<dielectric*> *pri_stack;
 };
 
-inline std::istream& operator>>(std::istream &is, ray &r) {
+inline std::istream& operator>>(std::istream &is, Ray &r) {
   is >> r.A.e[0] >> r.A.e[1] >> r.A.e[2];
   return is;
 }
 
-inline std::ostream& operator<<(std::ostream &os, const ray &r) {
+inline std::ostream& operator<<(std::ostream &os, const Ray &r) {
   os << "Origin: " << r.A.e[0] << ", " << r.A.e[1] << ", " << r.A.e[2] << " Dir: " << r.B.e[0] << ", " << r.B.e[1] << ", " << r.B.e[2] ;
   return os;
 }

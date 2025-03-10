@@ -14,10 +14,10 @@ public:
     hitable(ObjectToWorld, WorldToObject, nullptr, reverseOrientation), mesh(mesh), v(v), n(n), t(t), face_number(face_number) {
     
   }
-  virtual const bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const;
-  virtual const bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const;
-  virtual bool HitP(const ray &r, Float t_min, Float t_max, random_gen& rng) const;
-  virtual bool HitP(const ray &r, Float t_min, Float t_max, Sampler* sampler) const;
+  virtual const bool hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const;
+  virtual const bool hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const;
+  virtual bool HitP(const Ray &r, Float t_min, Float t_max, random_gen& rng) const;
+  virtual bool HitP(const Ray &r, Float t_min, Float t_max, Sampler* sampler) const;
 
   virtual bool bounding_box(Float t0, Float t1, aabb& box) const;
   virtual Float pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Float time = 0);

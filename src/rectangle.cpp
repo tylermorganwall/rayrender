@@ -1,11 +1,11 @@
 #include "rectangle.h"
 #include "raylog.h"
 
-const bool xy_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
+const bool xy_rect::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("Rect");
   
-  ray r2 = (*WorldToObject)(r);
+  Ray r2 = (*WorldToObject)(r);
   
   Float t = (k-r2.origin().z) * r2.inv_dir_pad.z;
 
@@ -60,10 +60,10 @@ const bool xy_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec,
   return(true);
 }
 
-const bool xy_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const {
+const bool xy_rect::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("Rect");
-  ray r2 = (*WorldToObject)(r);
+  Ray r2 = (*WorldToObject)(r);
   
   Float t = (k-r2.origin().z) * r2.inv_dir_pad.z;
 
@@ -118,11 +118,11 @@ const bool xy_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec,
   return(true);
 }
 
-bool xy_rect::HitP(const ray& r, Float t_min, Float t_max, random_gen& rng) const {
+bool xy_rect::HitP(const Ray& r, Float t_min, Float t_max, random_gen& rng) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("Rect");
   
-  ray r2 = (*WorldToObject)(r);
+  Ray r2 = (*WorldToObject)(r);
   
   Float t = (k-r2.origin().z) * r2.inv_dir_pad.z;
 
@@ -137,11 +137,11 @@ bool xy_rect::HitP(const ray& r, Float t_min, Float t_max, random_gen& rng) cons
   return(true);
 }
 
-bool xy_rect::HitP(const ray& r, Float t_min, Float t_max, Sampler* sampler) const {
+bool xy_rect::HitP(const Ray& r, Float t_min, Float t_max, Sampler* sampler) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("Rect");
   
-  ray r2 = (*WorldToObject)(r);
+  Ray r2 = (*WorldToObject)(r);
   
   Float t = (k-r2.origin().z) * r2.inv_dir_pad.z;
 
@@ -163,7 +163,7 @@ bool xy_rect::bounding_box(Float t0, Float t1, aabb& box) const {
 
 Float xy_rect::pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Float time) {
   hit_record rec;
-  if(this->hit(ray(o,v), 0.001, FLT_MAX, rec, rng)) {
+  if(this->hit(Ray(o,v), 0.001, FLT_MAX, rec, rng)) {
     Float area = (x1-x0)*(y1-y0);
     Float distance_squared = rec.t * rec.t * v.squared_length();
     Float cosine = fabs(dot(v,rec.normal)/v.length());
@@ -175,7 +175,7 @@ Float xy_rect::pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Floa
 
 Float xy_rect::pdf_value(const point3f& o, const vec3f& v, Sampler* sampler, Float time) {
   hit_record rec;
-  if(this->hit(ray(o,v), 0.001, FLT_MAX, rec, sampler)) {
+  if(this->hit(Ray(o,v), 0.001, FLT_MAX, rec, sampler)) {
     Float area = (x1-x0)*(y1-y0);
     Float distance_squared = rec.t * rec.t * v.squared_length();
     Float cosine = fabs(dot(v,rec.normal)/v.length());
@@ -196,11 +196,11 @@ vec3f xy_rect::random(const point3f& o, Sampler* sampler, Float time) {
   return(random_point - o);
 }
 
-const bool xz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
+const bool xz_rect::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("Rect");
   
-  ray r2 = (*WorldToObject)(r);
+  Ray r2 = (*WorldToObject)(r);
   
   Float t = (k-r2.origin().y) * r2.inv_dir_pad.y;
 
@@ -260,11 +260,11 @@ const bool xz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec,
 }
 
 
-const bool xz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const {
+const bool xz_rect::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("Rect");
   
-  ray r2 = (*WorldToObject)(r);
+  Ray r2 = (*WorldToObject)(r);
   
   Float t = (k-r2.origin().y) * r2.inv_dir_pad.y;
 
@@ -321,11 +321,11 @@ const bool xz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec,
   return(true);
 }
 
-bool xz_rect::HitP(const ray& r, Float t_min, Float t_max, random_gen& rng) const {
+bool xz_rect::HitP(const Ray& r, Float t_min, Float t_max, random_gen& rng) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("Rect");
   
-  ray r2 = (*WorldToObject)(r);
+  Ray r2 = (*WorldToObject)(r);
   
   Float t = (k-r2.origin().y) * r2.inv_dir_pad.y;
 
@@ -343,11 +343,11 @@ bool xz_rect::HitP(const ray& r, Float t_min, Float t_max, random_gen& rng) cons
 }
 
 
-bool xz_rect::HitP(const ray& r, Float t_min, Float t_max, Sampler* sampler) const {
+bool xz_rect::HitP(const Ray& r, Float t_min, Float t_max, Sampler* sampler) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("Rect");
   
-  ray r2 = (*WorldToObject)(r);
+  Ray r2 = (*WorldToObject)(r);
   
   Float t = (k-r2.origin().y) * r2.inv_dir_pad.y;
 
@@ -370,7 +370,7 @@ bool xz_rect::bounding_box(Float t0, Float t1, aabb& box) const {
 }
 Float xz_rect::pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Float time) {
   hit_record rec;
-  if(this->hit(ray(o,v), 0.001, FLT_MAX, rec, rng)) {
+  if(this->hit(Ray(o,v), 0.001, FLT_MAX, rec, rng)) {
     vec3f v2 = (*WorldToObject)(v);
     Float area = (x1-x0)*(z1-z0);
     Float distance_squared = rec.t * rec.t * v2.squared_length();
@@ -382,7 +382,7 @@ Float xz_rect::pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Floa
 }
 Float xz_rect::pdf_value(const point3f& o, const vec3f& v, Sampler* sampler, Float time) {
   hit_record rec;
-  if(this->hit(ray(o,v), 0.001, FLT_MAX, rec, sampler)) {
+  if(this->hit(Ray(o,v), 0.001, FLT_MAX, rec, sampler)) {
     vec3f v2 = (*WorldToObject)(v);
     
     Float area = (x1-x0)*(z1-z0);
@@ -403,10 +403,10 @@ vec3f xz_rect::random(const point3f& o, Sampler* sampler, Float time) {
   return(random_point - o);
 }
 
-const bool yz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
+const bool yz_rect::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("Rect");
-  ray r2 = (*WorldToObject)(r);
+  Ray r2 = (*WorldToObject)(r);
   
   Float t = (k-r2.origin().x) * r2.inv_dir_pad.x;
 
@@ -463,11 +463,11 @@ const bool yz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec,
   return(true);
 }
 
-const bool yz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const {
+const bool yz_rect::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("Rect");
   
-  ray r2 = (*WorldToObject)(r);
+  Ray r2 = (*WorldToObject)(r);
   
   Float t = (k-r2.origin().x) * r2.inv_dir_pad.x;
 
@@ -526,10 +526,10 @@ const bool yz_rect::hit(const ray& r, Float t_min, Float t_max, hit_record& rec,
 }
 
 
-bool yz_rect::HitP(const ray& r, Float t_min, Float t_max, random_gen& rng) const {
+bool yz_rect::HitP(const Ray& r, Float t_min, Float t_max, random_gen& rng) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("Rect");
-  ray r2 = (*WorldToObject)(r);
+  Ray r2 = (*WorldToObject)(r);
   
   Float t = (k-r2.origin().x) * r2.inv_dir_pad.x;
 
@@ -545,10 +545,10 @@ bool yz_rect::HitP(const ray& r, Float t_min, Float t_max, random_gen& rng) cons
   return(true);
 }
 
-bool yz_rect::HitP(const ray& r, Float t_min, Float t_max, Sampler* sampler) const {
+bool yz_rect::HitP(const Ray& r, Float t_min, Float t_max, Sampler* sampler) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("Rect");
-  ray r2 = (*WorldToObject)(r);
+  Ray r2 = (*WorldToObject)(r);
   
   Float t = (k-r2.origin().x) * r2.inv_dir_pad.x;
 
@@ -572,7 +572,7 @@ bool yz_rect::bounding_box(Float t0, Float t1, aabb& box) const {
 
 Float yz_rect::pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Float time) {
   hit_record rec;
-  if(this->hit(ray(o,v), 0.001, FLT_MAX, rec, rng)) {
+  if(this->hit(Ray(o,v), 0.001, FLT_MAX, rec, rng)) {
     Float area = (y1-y0)*(z1-z0);
     Float distance_squared = rec.t * rec.t * v.squared_length();
     Float cosine = fabs(dot(v,rec.normal)/v.length());
@@ -584,7 +584,7 @@ Float yz_rect::pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Floa
 
 Float yz_rect::pdf_value(const point3f& o, const vec3f& v, Sampler* sampler, Float time) {
   hit_record rec;
-  if(this->hit(ray(o,v), 0.001, FLT_MAX, rec, sampler)) {
+  if(this->hit(Ray(o,v), 0.001, FLT_MAX, rec, sampler)) {
     Float area = (y1-y0)*(z1-z0);
     Float distance_squared = rec.t * rec.t * v.squared_length();
     Float cosine = fabs(dot(v,rec.normal)/v.length());

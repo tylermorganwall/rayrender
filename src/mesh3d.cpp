@@ -135,20 +135,20 @@ mesh3d::mesh3d(Rcpp::List mesh_info, std::shared_ptr<material> mat,
   triangles.objects.clear();
 }
 
-const bool mesh3d::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
+const bool mesh3d::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
   return(mesh_bvh->hit(r, t_min, t_max, rec, rng));
 };
 
 
-const bool mesh3d::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const {
+const bool mesh3d::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const {
   return(mesh_bvh->hit(r, t_min, t_max, rec, sampler));
 };
 
-bool mesh3d::HitP(const ray& r, Float t_min, Float t_max, random_gen& rng) const {
+bool mesh3d::HitP(const Ray& r, Float t_min, Float t_max, random_gen& rng) const {
   return(mesh_bvh->HitP(r, t_min, t_max, rng));
 };
 
-bool mesh3d::HitP(const ray& r, Float t_min, Float t_max, Sampler* sampler) const {
+bool mesh3d::HitP(const Ray& r, Float t_min, Float t_max, Sampler* sampler) const {
   return(mesh_bvh->HitP(r, t_min, t_max, sampler));
 };
 

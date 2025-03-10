@@ -4,7 +4,7 @@
 #include "vec3.h"
 #include "vectypes.h"
 
-const bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
+const bool triangle::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("Triangle");
 
@@ -242,7 +242,7 @@ const bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
 }
 
 
-const bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const {
+const bool triangle::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("Triangle");
   
@@ -449,7 +449,7 @@ const bool triangle::hit(const ray& r, Float t_min, Float t_max, hit_record& rec
   return(true);
 }
 
-bool triangle::HitP(const ray& r, Float t_min, Float t_max, random_gen& rng) const {
+bool triangle::HitP(const Ray& r, Float t_min, Float t_max, random_gen& rng) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("Triangle");
 
@@ -580,7 +580,7 @@ bool triangle::HitP(const ray& r, Float t_min, Float t_max, random_gen& rng) con
   return(true);
 }
 
-bool triangle::HitP(const ray& r, Float t_min, Float t_max, Sampler* sampler) const {
+bool triangle::HitP(const Ray& r, Float t_min, Float t_max, Sampler* sampler) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("Triangle");
 
@@ -734,14 +734,14 @@ bool triangle::bounding_box(Float t0, Float t1, aabb& box) const {
 }
 
 Float triangle::pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Float time) { 
-  if (this->HitP(ray(o, v), 0.001, FLT_MAX, rng)) {
+  if (this->HitP(Ray(o, v), 0.001, FLT_MAX, rng)) {
     return(1 / SolidAngle(o));
   }
   return 0; 
 }
 
 Float triangle::pdf_value(const point3f& o, const vec3f& v, Sampler* sampler, Float time) { 
-  if (this->HitP(ray(o, v), 0.001, FLT_MAX, sampler)) {
+  if (this->HitP(Ray(o, v), 0.001, FLT_MAX, sampler)) {
     return(1 / SolidAngle(o));
   }
   return 0; 

@@ -779,7 +779,7 @@ void AnimatedTransform::Interpolate(Float time, Transform *t) const {
   *t = Translate(trans) * rotate.ToTransform() * Transform(scale);
 }
 
-ray AnimatedTransform::operator()(const ray &r) const {
+Ray AnimatedTransform::operator()(const Ray &r) const {
   if (!actuallyAnimated || r.time() <= startTime)
     return (*startTransform)(r);
   else if (r.time() >= endTime)

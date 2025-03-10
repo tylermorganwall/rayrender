@@ -1,7 +1,7 @@
 #include "hitablelist.h"
 #include "raylog.h"
 
-const bool hitable_list::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
+const bool hitable_list::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
   SCOPED_CONTEXT("MultiHit");
   SCOPED_TIMER_COUNTER("Hitable List");
   hit_record temp_rec;
@@ -20,7 +20,7 @@ const bool hitable_list::hit(const ray& r, Float t_min, Float t_max, hit_record&
   return(hit_anything);
 }
 
-const bool hitable_list::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const {
+const bool hitable_list::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const {
   SCOPED_CONTEXT("MultiHit");
   SCOPED_TIMER_COUNTER("Hitable List");
   hit_record temp_rec;
@@ -39,7 +39,7 @@ const bool hitable_list::hit(const ray& r, Float t_min, Float t_max, hit_record&
   return(hit_anything);
 }
 
-bool hitable_list::HitP(const ray& r, Float t_min, Float t_max, random_gen& rng) const {
+bool hitable_list::HitP(const Ray& r, Float t_min, Float t_max, random_gen& rng) const {
   SCOPED_CONTEXT("MultiHit");
   SCOPED_TIMER_COUNTER("Hitable List");
   for (const auto& object : objects) {
@@ -50,7 +50,7 @@ bool hitable_list::HitP(const ray& r, Float t_min, Float t_max, random_gen& rng)
   return(false);
 }
 
-bool hitable_list::HitP(const ray& r, Float t_min, Float t_max, Sampler* sampler) const {
+bool hitable_list::HitP(const Ray& r, Float t_min, Float t_max, Sampler* sampler) const {
   SCOPED_CONTEXT("MultiHit");
   SCOPED_TIMER_COUNTER("Hitable List");
   for (const auto& object : objects) {

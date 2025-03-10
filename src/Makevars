@@ -1,4 +1,4 @@
 CXX_STD = CXX20
-PKG_CPPFLAGS =  -I/usr/X11/include -I/opt/X11/include -I/Applications/oidn-2.3.1.arm64.macos/include 
+PKG_CPPFLAGS =  -I/usr/X11/include -I/opt/X11/include -I'/Applications/oidn-2.3.1.arm64.macos/include' 
 PKG_LIBS =  -L/usr/X11/lib -lX11  -L/Applications/oidn-2.3.1.arm64.macos/lib -Wl,-rpath,/Applications/oidn-2.3.1.arm64.macos/lib -lOpenImageDenoise -ltbb
 PKG_CXXFLAGS = -D RAY_REPRODUCE_PERLIN -DSTRICT_R_HEADERS -DRAY_HAS_X11 -DHAS_OIDN -DHAS_NEON -DRAYSIMD -DRAYSIMDVECOFF

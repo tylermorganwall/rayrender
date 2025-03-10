@@ -15,7 +15,7 @@ public:
   static void Decompose(const Matrix4x4 &m, vec3f *T, Quaternion *R,
                         Matrix4x4 *S);
   void Interpolate(Float time, Transform *t) const;
-  ray operator()(const ray &r) const;
+  Ray operator()(const Ray &r) const;
   // rayDifferential operator()(const rayDifferential &r) const;
   point3f operator()(Float time, const point3f &p) const;
   vec3f operator()(Float time, const vec3f &v) const;

@@ -4,11 +4,11 @@
 
 // #include "RcppThread.h"
 
-const bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
+const bool sphere::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("Sphere");
   vec3f oErr, dErr;
-  ray r2 = (*WorldToObject)(r, &oErr, &dErr);
+  Ray r2 = (*WorldToObject)(r, &oErr, &dErr);
   // Compute quadratic sphere coefficients
   
   // Initialize _EFloat_ ray coordinate values
@@ -133,12 +133,12 @@ const bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, 
 }
 
 
-const bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const {
+const bool sphere::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("Sphere");
   
   vec3f oErr, dErr;
-  ray r2 = (*WorldToObject)(r, &oErr, &dErr);
+  Ray r2 = (*WorldToObject)(r, &oErr, &dErr);
   // Compute quadratic sphere coefficients
   
   // Initialize _EFloat_ ray coordinate values
@@ -257,11 +257,11 @@ const bool sphere::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, 
   return(false);
 }
 
-bool sphere::HitP(const ray& r, Float t_min, Float t_max, random_gen& rng) const {
+bool sphere::HitP(const Ray& r, Float t_min, Float t_max, random_gen& rng) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("Sphere");
   vec3f oErr, dErr;
-  ray r2 = (*WorldToObject)(r, &oErr, &dErr);
+  Ray r2 = (*WorldToObject)(r, &oErr, &dErr);
   // Compute quadratic sphere coefficients
   
   // Initialize _EFloat_ ray coordinate values
@@ -290,11 +290,11 @@ bool sphere::HitP(const ray& r, Float t_min, Float t_max, random_gen& rng) const
   return(false);
 }
 
-bool sphere::HitP(const ray& r, Float t_min, Float t_max, Sampler* sampler) const {
+bool sphere::HitP(const Ray& r, Float t_min, Float t_max, Sampler* sampler) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("Sphere");
   vec3f oErr, dErr;
-  ray r2 = (*WorldToObject)(r, &oErr, &dErr);
+  Ray r2 = (*WorldToObject)(r, &oErr, &dErr);
   // Compute quadratic sphere coefficients
   
   // Initialize _EFloat_ ray coordinate values
@@ -325,7 +325,7 @@ bool sphere::HitP(const ray& r, Float t_min, Float t_max, Sampler* sampler) cons
 
 
 Float sphere::pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Float time) {
-  if(!this->HitP(ray(o,v), 0.001, FLT_MAX, rng)) {
+  if(!this->HitP(Ray(o,v), 0.001, FLT_MAX, rng)) {
     return(0);
   }
   point3f pCenter = (*ObjectToWorld)(point3f(0.f, 0.f, 0.f));
@@ -343,7 +343,7 @@ Float sphere::pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Float
 
 
 Float sphere::pdf_value(const point3f& o, const vec3f& v, Sampler* sampler, Float time) {
-  if(!this->HitP(ray(o,v), 0.001, FLT_MAX, sampler)) {
+  if(!this->HitP(Ray(o,v), 0.001, FLT_MAX, sampler)) {
     return(0);
   }
   point3f pCenter = (*ObjectToWorld)(point3f(0.f, 0.f, 0.f));

@@ -16,7 +16,7 @@ const Float aabb::Volume() const {
          10E20);
 }
 
-const bool aabb::hit(const ray &r, Float tmin, Float tmax, random_gen& rng) const {
+const bool aabb::hit(const Ray &r, Float tmin, Float tmax, random_gen& rng) const {
   // SCOPED_CONTEXT("Hit");
   // SCOPED_TIMER_COUNTER("AABB");
 
@@ -32,7 +32,7 @@ const bool aabb::hit(const ray &r, Float tmin, Float tmax, random_gen& rng) cons
   return(tmin <= tmax);
 }
 
-const bool aabb::hit(const ray &r, Float tmin, Float tmax, Sampler* sampler) const {
+const bool aabb::hit(const Ray &r, Float tmin, Float tmax, Sampler* sampler) const {
   // SCOPED_CONTEXT("Hit");
   // SCOPED_TIMER_COUNTER("AABB");
   // Float txmin, txmax, tymin, tymax, tzmin, tzmax;
@@ -207,7 +207,7 @@ int aabb::MaxDimension() const {
 //     // return(hits);
 // }
 
-void rayBBoxIntersect4Serial(const ray& r,
+void rayBBoxIntersect4Serial(const Ray& r,
                        const BBox4& bbox4,
                        Float tMin,
                        Float tMax,

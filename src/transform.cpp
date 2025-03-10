@@ -619,7 +619,7 @@ vec3f Transform::v() {
                m.m[2][1]));
 }
 
-ray Transform::operator()(const ray &r) const {
+Ray Transform::operator()(const Ray &r) const {
   vec3f oError;
   point3f o = (*this)(r.origin(), &oError);
   vec3f d = (*this)(r.direction());
@@ -631,11 +631,11 @@ ray Transform::operator()(const ray &r) const {
     o += d * dt;
     tMax -= dt;
   }
-  return ray(o, d, r.pri_stack, r.time(), tMax);
+  return Ray(o, d, r.pri_stack, r.time(), tMax);
 }
 
 
- ray Transform::operator()(const ray &r, vec3f *oError,
+ Ray Transform::operator()(const Ray &r, vec3f *oError,
                                vec3f *dError) const {
   point3f o = (*this)(r.origin(), oError);
   vec3f d = (*this)(r.direction(), dError);
@@ -646,10 +646,10 @@ ray Transform::operator()(const ray &r) const {
     o += d * dt;
     //        tMax -= dt;
   }
-  return ray(o, d, r.pri_stack, r.time(), tMax);
+  return Ray(o, d, r.pri_stack, r.time(), tMax);
 }
 
- ray Transform::operator()(const ray &r, const vec3f &oErrorIn,
+ Ray Transform::operator()(const Ray &r, const vec3f &oErrorIn,
                                const vec3f &dErrorIn, vec3f *oErrorOut,
                                vec3f *dErrorOut) const {
   point3f o = (*this)(r.origin(), oErrorIn, oErrorOut);
@@ -661,7 +661,7 @@ ray Transform::operator()(const ray &r) const {
     o += d * dt;
     //        tMax -= dt;
   }
-  return ray(o, d, r.pri_stack, r.time(), tMax);
+  return Ray(o, d, r.pri_stack, r.time(), tMax);
 }
 
 

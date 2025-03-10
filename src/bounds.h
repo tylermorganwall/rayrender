@@ -5,7 +5,7 @@
 #include "point3.h"
 #include "mathinline.h"
 
-class ray;
+class Ray;
 class random_gen;
 class Sampler;
 
@@ -154,7 +154,7 @@ public:
     return os;
   }
                     
-  bool HitP(const ray &r, Float tMax = Infinity, Float *hitt0 = nullptr,
+  bool HitP(const Ray &r, Float tMax = Infinity, Float *hitt0 = nullptr,
             Float *hitt1 = nullptr) const;
                   
   // Bounds3 Public Data

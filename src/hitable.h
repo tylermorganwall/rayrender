@@ -64,13 +64,13 @@ class hitable {
       mat_ptr(mat_ptr), 
       reverseOrientation(reverseOrientation),
       transformSwapsHandedness(ObjectToWorld->SwapsHandedness()) {}
-    virtual const bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const = 0;
-    virtual const bool hit(const ray& r, Float tmin, Float tmax, hit_record& rec, Sampler* sampler) const = 0;
-    virtual bool HitP(const ray &r, Float t_min, Float t_max, random_gen& rng) const {
+    virtual const bool hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const = 0;
+    virtual const bool hit(const Ray& r, Float tmin, Float tmax, hit_record& rec, Sampler* sampler) const = 0;
+    virtual bool HitP(const Ray &r, Float t_min, Float t_max, random_gen& rng) const {
       hit_record tmp;
       return hit(r, t_min, t_max, tmp, rng);
     }
-    virtual bool HitP(const ray &r, Float t_min, Float t_max, Sampler* sampler) const {
+    virtual bool HitP(const Ray &r, Float t_min, Float t_max, Sampler* sampler) const {
       hit_record tmp;
       return hit(r, t_min, t_max, tmp, sampler);
     }
@@ -116,13 +116,13 @@ public:
                   const AnimatedTransform &PrimitiveToWorld)
     : primitive(primitive), PrimitiveToWorld(PrimitiveToWorld) {} 
   ~AnimatedHitable() {}
-  const bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const;
-  const bool hit(const ray& r, Float tmin, Float tmax, hit_record& rec, Sampler* sampler) const;
-  virtual bool HitP(const ray &r, Float t_min, Float t_max, random_gen& rng) const {
+  const bool hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const;
+  const bool hit(const Ray& r, Float tmin, Float tmax, hit_record& rec, Sampler* sampler) const;
+  virtual bool HitP(const Ray &r, Float t_min, Float t_max, random_gen& rng) const {
     hit_record tmp;
     return hit(r, t_min, t_max, tmp, rng);
   }
-  virtual bool HitP(const ray &r, Float t_min, Float t_max, Sampler* sampler) const {
+  virtual bool HitP(const Ray &r, Float t_min, Float t_max, Sampler* sampler) const {
     hit_record tmp;
     return hit(r, t_min, t_max, tmp, sampler);
   }

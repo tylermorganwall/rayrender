@@ -26,7 +26,7 @@ Transform() { }
   friend Transform Transpose(const Transform &t) {
     return Transform(Transpose(t.m), Transpose(t.mInv));
   }
-  inline ray ApplyInverse(const ray &r, Float *tMax = nullptr) const;
+  inline Ray ApplyInverse(const Ray &r, Float *tMax = nullptr) const;
   
   template <typename T>
   inline vec3<T> ApplyInverse(vec3<T> v) const;
@@ -88,7 +88,7 @@ Transform() { }
   #endif
   
   // template <typename T> void operator()(const normal3<T> &, normal3<T> *nt) const;
-  ray operator()(const ray &r) const;
+  Ray operator()(const Ray &r) const;
   
   hit_record operator()(const hit_record &r) const;
   hit_record operator()(hit_record &r) const;
@@ -102,8 +102,8 @@ Transform() { }
   template <typename T> vec3<T> operator()(const vec3<T> &v, const vec3<T> &vError,
            vec3<T> *vTransError) const;
 
-  ray operator()(const ray &r, vec3f *oError,vec3f *dError) const;
-  ray operator()(const ray &r, const vec3f &oErrorIn,
+  Ray operator()(const Ray &r, vec3f *oError,vec3f *dError) const;
+  Ray operator()(const Ray &r, const vec3f &oErrorIn,
                  const vec3f &dErrorIn, vec3f *oErrorOut,
                  vec3f *dErrorOut) const;
   

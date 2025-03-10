@@ -32,8 +32,8 @@ class curve: public hitable {
           Transform* ObjectToWorld, Transform* WorldToObject, bool reverseOrientation) : 
       hitable(ObjectToWorld, WorldToObject, mat, reverseOrientation), 
       common(common), uMin(uMin), uMax(uMax) {};
-    virtual const bool hit(const ray& r, Float tmin, Float tmax, hit_record& rec, random_gen& rng) const;
-    virtual const bool hit(const ray& r, Float tmin, Float tmax, hit_record& rec, Sampler* sampler) const;
+    virtual const bool hit(const Ray& r, Float tmin, Float tmax, hit_record& rec, random_gen& rng) const;
+    virtual const bool hit(const Ray& r, Float tmin, Float tmax, hit_record& rec, Sampler* sampler) const;
     // virtual bool HitP(const ray &r, Float t_min, Float t_max, random_gen& rng) const;
     // virtual bool HitP(const ray &r, Float t_min, Float t_max, Sampler* sampler) const;
 
@@ -55,7 +55,7 @@ class curve: public hitable {
       Rcpp::Rcout << GetName() << ": " <<  box.min() << "-" << box.max() << "\n";
     }
   private:
-    bool recursiveIntersect(const ray& r, Float tmin, Float tmax, hit_record& rec,
+    bool recursiveIntersect(const Ray& r, Float tmin, Float tmax, hit_record& rec,
                             const point3f cp[4], Float u0, Float u1, int depth,
                             const Transform &rayToObject) const;
 

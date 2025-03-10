@@ -13,8 +13,8 @@ public:
   constant_medium(std::shared_ptr<hitable> b, Float d, std::shared_ptr<texture> a ) : boundary(b), density(d) {
     phase_function = std::make_shared<isotropic>(a);
   }
-  virtual const bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const;
-  virtual const bool hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const;
+  virtual const bool hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const;
+  virtual const bool hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const;
   // virtual bool HitP(const ray &r, Float t_min, Float t_max, random_gen& rng) const;
   // virtual bool HitP(const ray &r, Float t_min, Float t_max, Sampler* sampler) const;
 

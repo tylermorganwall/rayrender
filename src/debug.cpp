@@ -22,7 +22,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
     for(unsigned int j = 0; j < ny; j++) {
       for(unsigned int i = 0; i < nx; i++) {
         depth_into_scene = 0;
-        ray r;
+        Ray r;
         if(fov >= 0) {
           Float u = (Float(i)) / Float(nx);
           Float v = (Float(j)) / Float(ny);
@@ -47,7 +47,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
         std::vector<dielectric*> *mat_stack = new std::vector<dielectric*>;
         
         normal_map = vec3f(0,0,0);
-        ray r;
+        Ray r;
         if(fov >= 0) {
           Float u = (Float(i)) / Float(nx);
           Float v = (Float(j)) / Float(ny);
@@ -71,7 +71,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
     for(unsigned int j = 0; j < ny; j++) {
       for(unsigned int i = 0; i < nx; i++) {
         uv_map = point3f(0,0,0);
-        ray r;
+        Ray r;
         if(fov >= 0) {
           Float u = (Float(i)) / Float(nx);
           Float v = (Float(j)) / Float(ny);
@@ -115,7 +115,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
   } else if (debug_channel == 6 || debug_channel == 7) {
     for(unsigned int j = 0; j < ny; j++) {
       for(unsigned int i = 0; i < nx; i++) {
-        ray r;
+        Ray r;
         if(fov >= 0) {
           Float u = (Float(i)) / Float(nx);
           Float v = (Float(j)) / Float(ny);
@@ -137,7 +137,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
     
     for(unsigned int j = 0; j < ny; j++) {
       for(unsigned int i = 0; i < nx; i++) {
-        ray r;
+        Ray r;
         if(fov >= 0) {
           Float u = (Float(i)) / Float(nx);
           Float v = (Float(j)) / Float(ny);
@@ -168,7 +168,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                      std::vector<dielectric*> *mat_stack = new std::vector<dielectric*>;
                      random_gen rng(j);
                      for(unsigned int i = 0; i < nx; i++) {
-                       ray r;
+                       Ray r;
                        if(fov >= 0) {
                          Float u = (Float(i)) / Float(nx);
                          Float v = (Float(j)) / Float(ny);
@@ -201,7 +201,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                      std::vector<dielectric*> *mat_stack = new std::vector<dielectric*>;
                      random_gen rng(j);
                      for(unsigned int i = 0; i < nx; i++) {
-                       ray r;
+                       Ray r;
                        if(fov >= 0) {
                          Float u = (Float(i)) / Float(nx);
                          Float v = (Float(j)) / Float(ny);
@@ -236,7 +236,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                      random_gen rng(j);
                      for(unsigned int i = 0; i < nx; i++) {
                        for(size_t s = 0; s < static_cast<size_t>(ns); s++) {
-                         ray r;
+                         Ray r;
                          if(fov >= 0) {
                            Float u = (Float(i)) / Float(nx);
                            Float v = (Float(j)) / Float(ny);
@@ -272,7 +272,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                      std::vector<dielectric*> *mat_stack = new std::vector<dielectric*>;
                      random_gen rng(j);
                      for(unsigned int i = 0; i < nx; i++) {
-                       ray r;
+                       Ray r;
                        if(fov >= 0) {
                          Float u = (Float(i)) / Float(nx);
                          Float v = (Float(j)) / Float(ny);
@@ -307,7 +307,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                      std::vector<dielectric*> *mat_stack = new std::vector<dielectric*>;
                      random_gen rng(j);
                      for(unsigned int i = 0; i < nx; i++) {
-                       ray r;
+                       Ray r;
                        if(fov >= 0) {
                          Float u = (Float(i)) / Float(nx);
                          Float v = (Float(j)) / Float(ny);
@@ -343,7 +343,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                      random_gen rng(j);
                      for(unsigned int i = 0; i < nx; i++) {
                        for(size_t s = 0; s < static_cast<size_t>(ns); s++) {
-                         ray r;
+                         Ray r;
                          if(fov >= 0) {
                            Float u = (Float(i)) / Float(nx);
                            Float v = (Float(j)) / Float(ny);
@@ -379,7 +379,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                      std::vector<dielectric*> *mat_stack = new std::vector<dielectric*>;
                      random_gen rng(j);
                      for(unsigned int i = 0; i < nx; i++) {
-                       ray r;
+                       Ray r;
                        if(fov >= 0) {
                          Float u = (Float(i)) / Float(nx);
                          Float v = (Float(j)) / Float(ny);
@@ -415,7 +415,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                      random_gen rng(j);
                      for(unsigned int i = 0; i < nx; i++) {
                        for(size_t s = 0; s < static_cast<size_t>(ns); s++) {
-                         ray r;
+                         Ray r;
                          if(fov >= 0) {
                            Float u = (Float(i)) / Float(nx);
                            Float v = (Float(j)) / Float(ny);
@@ -451,7 +451,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                      random_gen rng(j);
                      for(unsigned int i = 0; i < nx; i++) {
                        for(size_t s = 0; s < static_cast<size_t>(ns); s++) {
-                         ray r;
+                         Ray r;
                          Float weight = 1;
                          if(fov >= 0) {
                            Float u = (Float(i)) / Float(nx);
@@ -546,7 +546,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                        for(int i = nx_begin; i < nx_end; i++) {
                          for(int j = ny_begin; j < ny_end; j++) {
                            int index = j + ny * i;
-                           ray r; 
+                           Ray r; 
                            vec2f u2 = samplers[index]->Get2D();
                            Float u = (Float(i) + u2.x) / Float(nx);
                            Float v = (Float(j) + u2.y) / Float(ny);
@@ -593,7 +593,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                      std::vector<dielectric*> *mat_stack = new std::vector<dielectric*>;
                      random_gen rng(j);
                      for(unsigned int i = 0; i < nx; i++) {
-                       ray r;
+                       Ray r;
                        if(fov >= 0) {
                          Float u = (Float(i)) / Float(nx);
                          Float v = (Float(j)) / Float(ny);

@@ -523,7 +523,7 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
           hit_record hrec;
           if(fov < 0) {
             CameraSample samp({1-u,v},point2f(0.5,0.5), 0.5);
-            ray r2;
+            Ray r2;
             cam->GenerateRay(samp,&r2);
             if(world->hit(r2, 0.001, FLT_MAX, hrec, rng)) {
               if( hrec.shape->GetName() != "EnvironmentLight") {
@@ -535,7 +535,7 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
               }
             }
           } else if (fov > 0) {
-            ray r2 = cam->get_ray(u,1-v, point3f(0),
+            Ray r2 = cam->get_ray(u,1-v, point3f(0),
                                  0.5f);
             if(left) {
               world->hit(r2, 0.001, FLT_MAX, hrec, rng);
@@ -545,7 +545,7 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
             }
             dir = r2.direction();
           } else {
-            ray r2 = cam->get_ray(u,1-v, point3f(0.5),
+            Ray r2 = cam->get_ray(u,1-v, point3f(0.5),
                                  0.5f);
             if(world->hit(r2, 0.001, FLT_MAX, hrec, rng)) {
               if( hrec.shape->GetName() != "EnvironmentLight") {

@@ -24,7 +24,7 @@ inline bool Refract(const vec3f &wi, const normal3f &n, Float eta, vec3f *wt) {
 }
 
 
-point3f lambertian::f(const ray& r_in, const hit_record& rec, const vec3f& scattered) const {
+point3f lambertian::f(const Ray& r_in, const hit_record& rec, const vec3f& scattered) const {
   SCOPED_CONTEXT("Material");
   SCOPED_TIMER_COUNTER("Lambertian F");
   
@@ -49,7 +49,7 @@ point3f lambertian::f(const ray& r_in, const hit_record& rec, const vec3f& scatt
   return(G * albedo->value(rec.u, rec.v, rec.p) * cosine * static_cast<Float>(M_1_PI));
 }
 
-bool lambertian::scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng) {
+bool lambertian::scatter(const Ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng) {
   SCOPED_CONTEXT("Material");
   SCOPED_TIMER_COUNTER("Lambertian Scatter");
   
@@ -59,7 +59,7 @@ bool lambertian::scatter(const ray& r_in, const hit_record& hrec, scatter_record
   return(true);
 }
 
-bool lambertian::scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler) {
+bool lambertian::scatter(const Ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler) {
   SCOPED_CONTEXT("Material");
   SCOPED_TIMER_COUNTER("Lambertian Scatter");
   
@@ -80,7 +80,7 @@ size_t lambertian::GetSize()  {
 //Metal
 //
 
-bool metal::scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng) {
+bool metal::scatter(const Ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng) {
   SCOPED_CONTEXT("Material");
   SCOPED_TIMER_COUNTER("Metal Scatter");
   
@@ -94,7 +94,7 @@ bool metal::scatter(const ray& r_in, const hit_record& hrec, scatter_record& sre
   }
   point3f offset_p = offset_ray(hrec.p-r_in.A, hrec.normal) + r_in.A;
   
-  srec.specular_ray = ray(offset_p, reflected + fuzz * rng.random_in_unit_sphere(), r_in.pri_stack, r_in.time());
+  srec.specular_ray = Ray(offset_p, reflected + fuzz * rng.random_in_unit_sphere(), r_in.pri_stack, r_in.time());
   srec.attenuation = albedo->value(hrec.u, hrec.v, hrec.p) * FrCond(cosine, eta, k);
   srec.is_specular = true;
   srec.pdf_ptr = 0;
@@ -102,7 +102,7 @@ bool metal::scatter(const ray& r_in, const hit_record& hrec, scatter_record& sre
   return(true);
 }
 
-bool metal::scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler) {
+bool metal::scatter(const Ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler) {
   SCOPED_CONTEXT("Material");
   SCOPED_TIMER_COUNTER("Metal Scatter");
   
@@ -115,7 +115,7 @@ bool metal::scatter(const ray& r_in, const hit_record& hrec, scatter_record& sre
   }
   point3f offset_p = offset_ray(hrec.p-r_in.A, hrec.normal) + r_in.A;
   
-  srec.specular_ray = ray(offset_p, reflected + fuzz * rand_to_unit(sampler->Get2D()), r_in.pri_stack, r_in.time());
+  srec.specular_ray = Ray(offset_p, reflected + fuzz * rand_to_unit(sampler->Get2D()), r_in.pri_stack, r_in.time());
   srec.attenuation = albedo->value(hrec.u, hrec.v, hrec.p) * FrCond(cosine, eta, k);
   srec.is_specular = true;
   srec.pdf_ptr = 0;
@@ -135,7 +135,7 @@ size_t metal::GetSize()  {
 //Dielectric
 //
 
-bool dielectric::scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng) {
+bool dielectric::scatter(const Ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng) {
   SCOPED_CONTEXT("Material");
   SCOPED_TIMER_COUNTER("Dielectric Scatter");
   
@@ -191,7 +191,7 @@ bool dielectric::scatter(const ray& r_in, const hit_record& hrec, scatter_record
   point3f offset_p = hrec.p;
   
   if(skip) {
-    srec.specular_ray = ray(offset_p, r_in.direction(), r_in.pri_stack, r_in.time());
+    srec.specular_ray = Ray(offset_p, r_in.direction(), r_in.pri_stack, r_in.time());
     Float distance = (offset_p-r_in.point_at_parameter(0)).length();
     point3f prev_atten = r_in.pri_stack->at(prev_active)->attenuation;
     srec.attenuation = point3f(std::exp(-distance * prev_atten.x),
@@ -227,20 +227,20 @@ bool dielectric::scatter(const ray& r_in, const hit_record& hrec, scatter_record
       r_in.pri_stack->pop_back();
     }
     vec3f reflected = Reflect(wi, outward_normal);
-    srec.specular_ray = ray(offset_p, reflected, r_in.pri_stack, r_in.time());
+    srec.specular_ray = Ray(offset_p, reflected, r_in.pri_stack, r_in.time());
   } else {
     if(!entering && current_layer != -1) {
       r_in.pri_stack->erase(r_in.pri_stack->begin() + current_layer);
     }
     vec3f refracted(0,0,0);
     Refract(wi, outward_normal, ni_over_nt, &refracted);
-    srec.specular_ray = ray(offset_p, refracted, r_in.pri_stack, r_in.time());
+    srec.specular_ray = Ray(offset_p, refracted, r_in.pri_stack, r_in.time());
   }
   return(true);
 }
 
 
-bool dielectric::scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler) {
+bool dielectric::scatter(const Ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler) {
   SCOPED_CONTEXT("Material");
   SCOPED_TIMER_COUNTER("Dielectric Scatter");
   
@@ -289,7 +289,7 @@ bool dielectric::scatter(const ray& r_in, const hit_record& hrec, scatter_record
   }
 
   if(skip) {
-    srec.specular_ray = ray(offset_p, r_in.direction(), r_in.pri_stack, r_in.time());
+    srec.specular_ray = Ray(offset_p, r_in.direction(), r_in.pri_stack, r_in.time());
     Float distance = (offset_p-r_in.point_at_parameter(0)).length();
     point3f prev_atten = r_in.pri_stack->at(prev_active)->attenuation;
     srec.attenuation = point3f(std::exp(-distance * prev_atten.x),
@@ -331,14 +331,14 @@ bool dielectric::scatter(const ray& r_in, const hit_record& hrec, scatter_record
       r_in.pri_stack->pop_back();
     }
     vec3f reflected = Reflect(wi, outward_normal);
-    srec.specular_ray = ray(offset_p, reflected, r_in.pri_stack, r_in.time());
+    srec.specular_ray = Ray(offset_p, reflected, r_in.pri_stack, r_in.time());
   } else {
     if(!entering && current_layer != -1) {
       r_in.pri_stack->erase(r_in.pri_stack->begin() + current_layer);
     }
     vec3f refracted(-wi);    
     Refract(wi, outward_normal, ni_over_nt, &refracted);
-    srec.specular_ray = ray(offset_p, refracted, r_in.pri_stack, r_in.time());
+    srec.specular_ray = Ray(offset_p, refracted, r_in.pri_stack, r_in.time());
   }
   return(true);
 }
@@ -351,7 +351,7 @@ size_t dielectric::GetSize()  {
 //Diffuse Light
 //
 
-point3f diffuse_light::emitted(const ray& r_in, const hit_record& rec, Float u, Float v, const point3f& p, bool& is_invisible) {
+point3f diffuse_light::emitted(const Ray& r_in, const hit_record& rec, Float u, Float v, const point3f& p, bool& is_invisible) {
   SCOPED_CONTEXT("Material");
   SCOPED_TIMER_COUNTER("Light Emit");
   
@@ -375,7 +375,7 @@ size_t diffuse_light::GetSize()  {
 //Spot Light
 //
 
-point3f spot_light::emitted(const ray& r_in, const hit_record& rec, Float u, Float v, const point3f& p, bool& is_invisible) {
+point3f spot_light::emitted(const Ray& r_in, const hit_record& rec, Float u, Float v, const point3f& p, bool& is_invisible) {
   SCOPED_CONTEXT("Material");
   SCOPED_TIMER_COUNTER("Spotlight Emit");
   
@@ -411,26 +411,26 @@ size_t spot_light::GetSize()  {
 //Isotropic
 //
 
-bool isotropic::scatter(const ray& r_in, const hit_record& rec, scatter_record& srec, random_gen& rng) {
+bool isotropic::scatter(const Ray& r_in, const hit_record& rec, scatter_record& srec, random_gen& rng) {
   SCOPED_CONTEXT("Material");
   SCOPED_TIMER_COUNTER("Isotropic Scatter");
   
   srec.is_specular = true;
-  srec.specular_ray = ray(rec.p, rng.random_in_unit_sphere(), r_in.pri_stack);
+  srec.specular_ray = Ray(rec.p, rng.random_in_unit_sphere(), r_in.pri_stack);
   srec.attenuation = albedo->value(rec.u,rec.v,rec.p);
   return(true);
 }
-bool isotropic::scatter(const ray& r_in, const hit_record& rec, scatter_record& srec, Sampler* sampler) {
+bool isotropic::scatter(const Ray& r_in, const hit_record& rec, scatter_record& srec, Sampler* sampler) {
   SCOPED_CONTEXT("Material");
   SCOPED_TIMER_COUNTER("Isotropic Scatter");
   
   srec.is_specular = true;
-  srec.specular_ray = ray(rec.p, rand_to_sphere(1, 1, sampler->Get2D()), r_in.pri_stack);
+  srec.specular_ray = Ray(rec.p, rand_to_sphere(1, 1, sampler->Get2D()), r_in.pri_stack);
   srec.attenuation = albedo->value(rec.u,rec.v,rec.p);
   return(true);
 }
 
-point3f isotropic::f(const ray& r_in, const hit_record& rec, const vec3f& scattered) const {
+point3f isotropic::f(const Ray& r_in, const hit_record& rec, const vec3f& scattered) const {
   SCOPED_CONTEXT("Material");
   SCOPED_TIMER_COUNTER("Isotropic F");
   
@@ -448,7 +448,7 @@ size_t isotropic::GetSize()  {
 //Oren Nayar
 //
 
-bool orennayar::scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng) {
+bool orennayar::scatter(const Ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng) {
   SCOPED_CONTEXT("Material");
   SCOPED_TIMER_COUNTER("Oren-Nayar Scatter");
   srec.is_specular = false;
@@ -457,7 +457,7 @@ bool orennayar::scatter(const ray& r_in, const hit_record& hrec, scatter_record&
   return(true);
 }
 
-bool orennayar::scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler) {
+bool orennayar::scatter(const Ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler) {
   SCOPED_CONTEXT("Material");
   SCOPED_TIMER_COUNTER("Oren-Nayar Scatter");
   srec.is_specular = false;
@@ -466,7 +466,7 @@ bool orennayar::scatter(const ray& r_in, const hit_record& hrec, scatter_record&
   return(true);
 }
 
-point3f orennayar::f(const ray& r_in, const hit_record& rec, const vec3f& scattered) const {
+point3f orennayar::f(const Ray& r_in, const hit_record& rec, const vec3f& scattered) const {
   SCOPED_CONTEXT("Material");
   SCOPED_TIMER_COUNTER("Oren-Nayar F");
   onb uvw;
@@ -519,7 +519,7 @@ size_t orennayar::GetSize()  {
 //
 
 
-bool MicrofacetReflection::scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng) {
+bool MicrofacetReflection::scatter(const Ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng) {
   SCOPED_CONTEXT("Material");
   SCOPED_TIMER_COUNTER("MicrofacetReflection Scatter");
   
@@ -533,7 +533,7 @@ bool MicrofacetReflection::scatter(const ray& r_in, const hit_record& hrec, scat
   return(true);
 }
 
-bool MicrofacetReflection::scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler) {
+bool MicrofacetReflection::scatter(const Ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler) {
   SCOPED_CONTEXT("Material");
   SCOPED_TIMER_COUNTER("MicrofacetReflection Scatter");
   
@@ -547,7 +547,7 @@ bool MicrofacetReflection::scatter(const ray& r_in, const hit_record& hrec, scat
   return(true);
 }
 
-point3f MicrofacetReflection::f(const ray& r_in, const hit_record& rec, const vec3f& scattered) const {
+point3f MicrofacetReflection::f(const Ray& r_in, const hit_record& rec, const vec3f& scattered) const {
   SCOPED_CONTEXT("Material");
   SCOPED_TIMER_COUNTER("MicrofacetReflection F");
   
@@ -589,7 +589,7 @@ size_t MicrofacetReflection::GetSize()  {
 //MicrofacetTransmission
 //
 
-bool MicrofacetTransmission::scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng) {
+bool MicrofacetTransmission::scatter(const Ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng) {
   SCOPED_CONTEXT("Material");
   SCOPED_TIMER_COUNTER("MicrofacetTransmission Scatter");
   
@@ -603,7 +603,7 @@ bool MicrofacetTransmission::scatter(const ray& r_in, const hit_record& hrec, sc
   return(true);
 }
 
-bool MicrofacetTransmission::scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler) {
+bool MicrofacetTransmission::scatter(const Ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler) {
   SCOPED_CONTEXT("Material");
   SCOPED_TIMER_COUNTER("MicrofacetTransmission Scatter");
 
@@ -618,7 +618,7 @@ bool MicrofacetTransmission::scatter(const ray& r_in, const hit_record& hrec, sc
   return(true);
 }
 
-point3f MicrofacetTransmission::f(const ray& r_in, const hit_record& rec, const vec3f& scattered) const {
+point3f MicrofacetTransmission::f(const Ray& r_in, const hit_record& rec, const vec3f& scattered) const {
   SCOPED_CONTEXT("Material");
   SCOPED_TIMER_COUNTER("MicrofacetTransmission F");
   
@@ -689,7 +689,7 @@ size_t MicrofacetTransmission::GetSize()  {
 //
 
 
-bool glossy::scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng) {
+bool glossy::scatter(const Ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng) {
   SCOPED_CONTEXT("Material");
   SCOPED_TIMER_COUNTER("Glossy Scatter");
   
@@ -699,7 +699,7 @@ bool glossy::scatter(const ray& r_in, const hit_record& hrec, scatter_record& sr
   return(true);
 }
 
-bool glossy::scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler) {
+bool glossy::scatter(const Ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler) {
   SCOPED_CONTEXT("Material");
   SCOPED_TIMER_COUNTER("Glossy Scatter");
   
@@ -709,7 +709,7 @@ bool glossy::scatter(const ray& r_in, const hit_record& hrec, scatter_record& sr
   return(true);
 }
 
-point3f glossy::f(const ray& r_in, const hit_record& rec, const vec3f& scattered) const {
+point3f glossy::f(const Ray& r_in, const hit_record& rec, const vec3f& scattered) const {
   SCOPED_CONTEXT("Material");
   SCOPED_TIMER_COUNTER("Glossy F");
   
@@ -787,7 +787,7 @@ std::array<Float, pMax + 1> hair::ComputeApPdf(Float cosThetaO, Float h) const {
   return(apPdf);
 }
 
-bool hair::scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng) {
+bool hair::scatter(const Ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng) {
   SCOPED_CONTEXT("Material");
   SCOPED_TIMER_COUNTER("Hair Scatter");
   
@@ -863,7 +863,7 @@ bool hair::scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec
 }
 
 
-bool hair::scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler) {
+bool hair::scatter(const Ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler) {
   SCOPED_CONTEXT("Material");
   SCOPED_TIMER_COUNTER("Hair Scatter");
   
@@ -939,7 +939,7 @@ bool hair::scatter(const ray& r_in, const hit_record& hrec, scatter_record& srec
 }
 
 
-point3f hair::f(const ray& r_in, const hit_record& rec, const vec3f& scattered) const {
+point3f hair::f(const Ray& r_in, const hit_record& rec, const vec3f& scattered) const {
   SCOPED_CONTEXT("Material");
   SCOPED_TIMER_COUNTER("Hair F");
   

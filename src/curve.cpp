@@ -97,11 +97,11 @@ bool curve::bounding_box(Float t0, Float t1, aabb& box) const {
   return(true);
 }
 
-const bool curve::hit(const ray& r, Float tmin, Float tmax, hit_record& rec, random_gen& rng) const {
+const bool curve::hit(const Ray& r, Float tmin, Float tmax, hit_record& rec, random_gen& rng) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("Curve");
   
-  ray r2 = (*WorldToObject)(r); 
+  Ray r2 = (*WorldToObject)(r); 
   
   // Compute object-space control points for curve segment, cpObj
   alignas(16) point3f cpObj[4];
@@ -199,11 +199,11 @@ const bool curve::hit(const ray& r, Float tmin, Float tmax, hit_record& rec, ran
                             uMax, maxDepth, Inverse(objectToRay)));
 }
 
-const bool curve::hit(const ray& r, Float tmin, Float tmax, hit_record& rec, Sampler* sampler) const {
+const bool curve::hit(const Ray& r, Float tmin, Float tmax, hit_record& rec, Sampler* sampler) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("Curve");
   
-  ray r2 = (*WorldToObject)(r); 
+  Ray r2 = (*WorldToObject)(r); 
   
   // Compute object-space control points for curve segment, cpObj
   point3f cpObj[4];
@@ -290,7 +290,7 @@ const bool curve::hit(const ray& r, Float tmin, Float tmax, hit_record& rec, Sam
                             uMax, maxDepth, Inverse(objectToRay)));
 }
 
-bool curve::recursiveIntersect(const ray& r, Float tmin, Float tmax, hit_record& rec, 
+bool curve::recursiveIntersect(const Ray& r, Float tmin, Float tmax, hit_record& rec, 
                                const point3f cp[4], Float u0, Float u1, int depth,
                                const Transform &rayToObject) const {
   Float rayLength = r.direction().length();

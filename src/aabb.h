@@ -47,8 +47,8 @@ class aabb {
     const point3f Centroid() const;
     const point3f Diag() const;
     
-    const bool hit(const ray& r, Float tmin, Float tmax, random_gen& rng) const;
-    const bool hit(const ray& r, Float tmin, Float tmax, Sampler* sampler) const;
+    const bool hit(const Ray& r, Float tmin, Float tmax, random_gen& rng) const;
+    const bool hit(const Ray& r, Float tmin, Float tmax, Sampler* sampler) const;
     
     const point3f offset(const point3f o) const;
     const point3f offset(const vec3f o) const;
@@ -161,7 +161,7 @@ inline std::ostream& operator<<(std::ostream &os, const aabb &t) {
 //                        IVec4& hits,
 //                        FVec4& tEnters);
 //                        //FVec4& tExits);
-inline void rayBBoxIntersect4(const ray& r,
+inline void rayBBoxIntersect4(const Ray& r,
                        const BBox4& bbox4,
                        Float tMin,
                        Float tMax,
@@ -208,7 +208,7 @@ inline void rayBBoxIntersect4(const ray& r,
     // return(hits);
 }
 
-void rayBBoxIntersect4Serial(const ray& ray,
+void rayBBoxIntersect4Serial(const Ray& ray,
                        const BBox4& bbox4,
                        Float tMin,
                        Float tMax,

@@ -55,13 +55,13 @@ bool AnimatedHitable::bounding_box(Float t0, Float t1, aabb& box) const {
   return(true);
 }
 
-const bool AnimatedHitable::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
+const bool AnimatedHitable::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("Animation");
   
   Transform InterpolatedPrimToWorld;
   PrimitiveToWorld.Interpolate(r.time(), &InterpolatedPrimToWorld);
-  ray ray_interp = Inverse(InterpolatedPrimToWorld)(r);
+  Ray ray_interp = Inverse(InterpolatedPrimToWorld)(r);
   
   if (!primitive->hit(ray_interp, t_min, t_max, rec, rng)) {
     return false;
@@ -73,13 +73,13 @@ const bool AnimatedHitable::hit(const ray& r, Float t_min, Float t_max, hit_reco
   return true;
 }
 
-const bool AnimatedHitable::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const {
+const bool AnimatedHitable::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("Animation");
   
   Transform InterpolatedPrimToWorld;
   PrimitiveToWorld.Interpolate(r.time(), &InterpolatedPrimToWorld);
-  ray ray_interp = Inverse(InterpolatedPrimToWorld)(r);
+  Ray ray_interp = Inverse(InterpolatedPrimToWorld)(r);
   
   if (!primitive->hit(ray_interp, t_min, t_max, rec, sampler)) {
     return false;
