@@ -96,9 +96,7 @@ class Ray {
     
     point3f origin() const {return(A);}
     vec3f direction() const {return(B);}
-    // vec3f inverse_dir() const {return(inv_dir);}
     Float time() const {return _time;}
-    point3f point_at_parameter(Float t) const {return(A + t*B);}
     bool has_priority() const {return(pri_stack ? true : false);}
     size_t get_priority_size() const {return(pri_stack->size());}
     
