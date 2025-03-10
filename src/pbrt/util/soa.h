@@ -19,6 +19,8 @@
 #include "../util/spectrum.h"
 #include "../util/vecmath.h"
 
+#define PBRT_RESTRICT 
+
 namespace pbrt {
 
 struct alignas(16) Float4 {
@@ -220,7 +222,7 @@ struct SOA<SampledWavelengths> {
     Float *PBRT_RESTRICT pdf1 = nullptr;
 };
 
-#include "../pbrt_soa.h"
+// #include "../pbrt_soa.h"
 
 }  // namespace pbrt
 
