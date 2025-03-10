@@ -48,7 +48,7 @@ inline vec3f calculate_normals(const Ray& r, hitable *world, size_t max_depth, r
       //Some lights can be invisible until after diffuse bounce
       //If so, generate new ray with intersection point and continue ray
       if(is_invisible && !diffuse_bounce) {
-        r2.A = hrec.p;
+        r2.o = hrec.p;
         continue;
       }
       if(hrec.mat_ptr->scatter(r2, hrec, srec, rng)) { //generates scatter record, world space
@@ -63,7 +63,7 @@ inline vec3f calculate_normals(const Ray& r, hitable *world, size_t max_depth, r
         // hitable_pdf p_imp(hlist, hrec.p); //creates pdf of all objects to be sampled
         // mixture_pdf p(&p_imp, srec.pdf_ptr); //creates mixture pdf of surface intersected at hrec.p and all sampled objects/lights
         
-        point3f offset_p = offset_ray(hrec.p-r2.A, hrec.normal) + r2.A;
+        point3f offset_p = offset_ray(hrec.p-r2.o, hrec.normal) + r2.o;
         
         r1 = r2;
         vec3f dir;
@@ -123,7 +123,7 @@ inline point3f calculate_color(const Ray& r, hitable *world, random_gen &rng) {
         hit_alpha = false;
       } else {
         hit_alpha = true;
-        r2.A = OffsetRayOrigin(hrec.p, hrec.pError, hrec.normal, r2.direction());
+        r2.o = OffsetRayOrigin(hrec.p, hrec.pError, hrec.normal, r2.direction());
         continue;
       }
       point3f emit = hrec.mat_ptr->emitted(r2, hrec, hrec.u, hrec.v, hrec.p, invisible);
@@ -210,7 +210,7 @@ inline point3f calculate_position(const Ray& r, hitable *world, hitable_list *hl
       //Some lights can be invisible until after diffuse bounce
       //If so, generate new ray with intersection point and continue ray
       if(is_invisible && !diffuse_bounce) {
-        r2.A = hrec.p;
+        r2.o = hrec.p;
         continue;
       }
       if(hrec.mat_ptr->scatter(r2, hrec, srec, rng)) { //generates scatter record, world space
@@ -224,7 +224,7 @@ inline point3f calculate_position(const Ray& r, hitable *world, hitable_list *hl
         hitable_pdf p_imp(hlist, hrec.p); //creates pdf of all objects to be sampled
         mixture_pdf p(&p_imp, srec.pdf_ptr); //creates mixture pdf of surface intersected at hrec.p and all sampled objects/lights
         
-        point3f offset_p = offset_ray(hrec.p-r2.A, hrec.normal) + r2.A;
+        point3f offset_p = offset_ray(hrec.p-r2.o, hrec.normal) + r2.o;
         
         r1 = r2;
         vec3f dir;
@@ -261,7 +261,7 @@ inline point3f calculate_bounce_dir(const Ray& r, hitable *world, hitable_list *
       //Some lights can be invisible until after diffuse bounce
       //If so, generate new ray with intersection point and continue ray
       if(is_invisible && !diffuse_bounce) {
-        r2.A = hrec.p;
+        r2.o = hrec.p;
         continue;
       }
       if(hrec.mat_ptr->scatter(r2, hrec, srec, rng)) { //generates scatter record, world space
@@ -275,7 +275,7 @@ inline point3f calculate_bounce_dir(const Ray& r, hitable *world, hitable_list *
         hitable_pdf p_imp(hlist, hrec.p); //creates pdf of all objects to be sampled
         mixture_pdf p(&p_imp, srec.pdf_ptr); //creates mixture pdf of surface intersected at hrec.p and all sampled objects/lights
         
-        point3f offset_p = offset_ray(hrec.p-r2.A, hrec.normal) + r2.A;
+        point3f offset_p = offset_ray(hrec.p-r2.o, hrec.normal) + r2.o;
         
         r1 = r2;
         vec3f dir;
@@ -369,7 +369,7 @@ inline Float calculate_pdf(const Ray& r, hitable *world, hitable_list *hlist,
       //Some lights can be invisible until after diffuse bounce
       //If so, generate new ray with intersection point and continue ray
       if(is_invisible && !diffuse_bounce) {
-        r2.A = OffsetRayOrigin(hrec.p, hrec.pError, hrec.normal, r2.direction());
+        r2.o = OffsetRayOrigin(hrec.p, hrec.pError, hrec.normal, r2.direction());
         continue;
       }
       if(hrec.mat_ptr->scatter(r2, hrec, srec, rng)) { //generates scatter record, world space
@@ -382,7 +382,7 @@ inline Float calculate_pdf(const Ray& r, hitable *world, hitable_list *hlist,
         }
         hitable_pdf p_imp(hlist, hrec.p); //creates pdf of all objects to be sampled
         mixture_pdf p(&p_imp, srec.pdf_ptr); //creates mixture pdf of surface intersected at hrec.p and all sampled objects/lights
-        point3f offset_p = offset_ray(hrec.p-r2.A, hrec.normal) + r2.A;
+        point3f offset_p = offset_ray(hrec.p-r2.o, hrec.normal) + r2.o;
         
         r1 = r2;
         vec3f dir;
@@ -419,7 +419,7 @@ inline Float calculate_error(const Ray& r, hitable *world, hitable_list *hlist,
       //Some lights can be invisible until after diffuse bounce
       //If so, generate new ray with intersection point and continue ray
       if(is_invisible && !diffuse_bounce) {
-        r2.A = hrec.p;
+        r2.o = hrec.p;
         continue;
       }
       if(hrec.mat_ptr->scatter(r2, hrec, srec, rng)) { //generates scatter record, world space
@@ -463,7 +463,7 @@ inline Float calculate_bounces(const Ray& r, hitable *world, hitable_list *hlist
       //Some lights can be invisible until after diffuse bounce
       //If so, generate new ray with intersection point and continue ray
       if(is_invisible && !diffuse_bounce) {
-        r2.A = OffsetRayOrigin(hrec.p, hrec.pError, hrec.normal, r2.direction());
+        r2.o = OffsetRayOrigin(hrec.p, hrec.pError, hrec.normal, r2.direction());
         continue;
       }
       final_color += emit_color;

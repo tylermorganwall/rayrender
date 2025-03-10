@@ -32,7 +32,7 @@ void color_basic(const Ray &r, hitable *world, size_t max_depth,
       STOP_TIMER("Total Hits");
       scatter_record srec;
       if (hrec.alpha_miss) {
-        r2.A =
+        r2.o =
             OffsetRayOrigin(hrec.p, hrec.pError, hrec.normal, r2.direction());
         continue;
       }
@@ -44,7 +44,7 @@ void color_basic(const Ray &r, hitable *world, size_t max_depth,
       // Some lights can be invisible until after diffuse bounce
       // If so, generate new ray with intersection point and continue ray
       if (is_invisible && !diffuse_bounce) {
-        r2.A =
+        r2.o =
             OffsetRayOrigin(hrec.p, hrec.pError, hrec.normal, r2.direction());
         continue;
       }
@@ -148,7 +148,7 @@ void color_basic_path_guiding(const Ray &r, hitable *world, hitable_list *hlist,
       STOP_TIMER("Total Hits");
       scatter_record srec;
       if (hrec.alpha_miss) {
-        r2.A =
+        r2.o =
             OffsetRayOrigin(hrec.p, hrec.pError, hrec.normal, r2.direction());
         continue;
       }
@@ -160,7 +160,7 @@ void color_basic_path_guiding(const Ray &r, hitable *world, hitable_list *hlist,
       // Some lights can be invisible until after diffuse bounce
       // If so, generate new ray with intersection point and continue ray
       if (is_invisible && !diffuse_bounce) {
-        r2.A =
+        r2.o =
             OffsetRayOrigin(hrec.p, hrec.pError, hrec.normal, r2.direction());
         continue;
       }
@@ -270,7 +270,7 @@ void color_shadow_rays(const Ray &r, hitable *world, hitable_list *hlist,
       STOP_TIMER("Total Hits");
       scatter_record srec;
       if (hrec.alpha_miss) {
-        r2.A =
+        r2.o =
             OffsetRayOrigin(hrec.p, hrec.pError, hrec.normal, r2.direction());
         continue;
       }
@@ -282,7 +282,7 @@ void color_shadow_rays(const Ray &r, hitable *world, hitable_list *hlist,
       // Some lights can be invisible until after diffuse bounce
       // If so, generate new ray with intersection point and continue ray
       if (is_invisible && !diffuse_bounce) {
-        r2.A =
+        r2.o =
             OffsetRayOrigin(hrec.p, hrec.pError, hrec.normal, r2.direction());
         continue;
       }

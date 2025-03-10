@@ -92,7 +92,7 @@ bool metal::scatter(const Ray& r_in, const hit_record& hrec, scatter_record& sre
   if(cosine < 0) {
     cosine = 0;
   }
-  point3f offset_p = offset_ray(hrec.p-r_in.A, hrec.normal) + r_in.A;
+  point3f offset_p = offset_ray(hrec.p-r_in.o, hrec.normal) + r_in.o;
   
   srec.specular_ray = Ray(offset_p, reflected + fuzz * rng.random_in_unit_sphere(), r_in.pri_stack, r_in.time());
   srec.attenuation = albedo->value(hrec.u, hrec.v, hrec.p) * FrCond(cosine, eta, k);
@@ -113,7 +113,7 @@ bool metal::scatter(const Ray& r_in, const hit_record& hrec, scatter_record& sre
   if(cosine < 0) {
     cosine = 0;
   }
-  point3f offset_p = offset_ray(hrec.p-r_in.A, hrec.normal) + r_in.A;
+  point3f offset_p = offset_ray(hrec.p-r_in.o, hrec.normal) + r_in.o;
   
   srec.specular_ray = Ray(offset_p, reflected + fuzz * rand_to_unit(sampler->Get2D()), r_in.pri_stack, r_in.time());
   srec.attenuation = albedo->value(hrec.u, hrec.v, hrec.p) * FrCond(cosine, eta, k);

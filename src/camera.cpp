@@ -645,7 +645,7 @@ bool RealisticCamera::TraceLensesFromScene(const Ray &rCamera,
     if (r2 > element.apertureRadius * element.apertureRadius) {
       return false;
     }
-    rLens.A = pHit;
+    rLens.o = pHit;
     
     // Update ray path for from-scene element interface interaction
     if (!isStop) {
@@ -658,7 +658,7 @@ bool RealisticCamera::TraceLensesFromScene(const Ray &rCamera,
       if (!Refract(unit_vector(-rLens.direction()), n, etaT / etaI, &wt)) {
         return false;
       }
-      rLens.B = wt;
+      rLens.d = wt;
     }
     elementZ += element.thickness;
   }
@@ -709,7 +709,7 @@ bool RealisticCamera::TraceLensesFromFilm(const Ray &rCamera, Ray *rOut) const {
     if (r2 > element.apertureRadius * element.apertureRadius) {
       return false;
     }
-    rLens.A = pHit;
+    rLens.o = pHit;
     
     // Update ray path for element interface interaction
     if (!isStop) {
@@ -721,7 +721,7 @@ bool RealisticCamera::TraceLensesFromFilm(const Ray &rCamera, Ray *rOut) const {
       if (!Refract(unit_vector(-rLens.direction()), n, etaT / etaI, &w)) {
         return false;
       }
-      rLens.B = w;
+      rLens.d = w;
     }
   }
   rLens = Ray(rLens.origin(), rLens.direction());
@@ -873,7 +873,7 @@ Float RealisticCamera::GenerateRay(const CameraSample &sample, Ray *ray2) const 
   }
   // Finish initialization of _RealisticCamera_ ray
   *ray2 = (CamTransform(*ray2));
-  ray2->B = unit_vector(ray2->direction());
+  ray2->d = unit_vector(ray2->direction());
   
   // Return weighting for _RealisticCamera_ ray
   Float cosTheta = unit_vector(rFilm.direction()).z;
