@@ -2,30 +2,28 @@
 #define STB_IMAGE_IMPLEMENTATION 
 #endif
 
-#include "float.h"
-#include "vectypes.h"
-#include "vec2.h"
-#include "point2.h"
-#include "mathinline.h"
-#include "transform.h"
-#include "transformcache.h"
-#include "camera.h"
-#include "float.h"
-#include "buildscene.h"
+#include "math/float.h"
+#include "math/vectypes.h"
+#include "math/mathinline.h"
+#include "math/transform.h"
+#include "math/transformcache.h"
+#include "core/camera.h"
+#include "math/float.h"
+#include "core/buildscene.h"
 #include "rng.h"
-#include "tonemap.h"
-#include "infinite_area_light.h"
-#include "adaptivesampler.h"
-#include "sampler.h"
-#include "color.h"
-#include "integrator.h"
-#include "debug.h"
+#include "math/tonemap.h"
+#include "hitables/infinite_area_light.h"
+#include "core/adaptivesampler.h"
+#include "math/sampler.h"
+#include "core/color.h"
+#include "core/integrator.h"
+#include "utils/debug.h"
 
-#include "texturecache.h"
-#include "box.h"
-#include "sphere.h"
-#include "PreviewDisplay.h"
-#include "raylog.h"
+#include "materials/texturecache.h"
+#include "hitables/box.h"
+#include "hitables/sphere.h"
+#include "core/PreviewDisplay.h"
+#include "utils/raylog.h"
 #include <cfenv>
 
 // #define DEBUG
@@ -45,7 +43,7 @@
 using namespace Rcpp;
 // [[Rcpp::plugins(cpp11)]]
 // [[Rcpp::depends(RcppThread)]]
-#include "RayMatrix.h"
+#include "math/RayMatrix.h"
 #include "RcppThread.h"
 
 using namespace std;

@@ -827,7 +827,7 @@ using Normal3f = Normal3<Float>;
 class Quaternion {
   public:
     // Quaternion Public Methods
-    Quaternion() = default;
+    // Quaternion() = default;
 
     PBRT_CPU_GPU
     Quaternion &operator+=(Quaternion q) {

@@ -1,27 +1,25 @@
 #define RCPP_USE_UNWIND_PROTECT
 
-#include "float.h"
-#include "vectypes.h"
-#include "vec2.h"
-#include "mathinline.h"
-#include "camera.h"
-#include "float.h"
-#include "buildscene.h"
-#include "rng.h"
-#include "tonemap.h"
-#include "infinite_area_light.h"
-#include "adaptivesampler.h"
-#include "sampler.h"
-#include "color.h"
-#include "integrator.h"
-#include "matrix.h"
-#include "transform.h"
-#include "transformcache.h"
-#include "texturecache.h"
-#include "debug.h"
-
-#include "bvh.h"
-#include "PreviewDisplay.h"
+#include "math/float.h"
+#include "math/vectypes.h"
+#include "math/mathinline.h"
+#include "core/camera.h"
+#include "math/float.h"
+#include "core/buildscene.h"
+#include "math/rng.h"
+#include "math/tonemap.h"
+#include "hitables/infinite_area_light.h"
+#include "core/adaptivesampler.h"
+#include "math/sampler.h"
+#include "core/color.h"
+#include "core/integrator.h"
+#include "math/matrix.h"
+#include "math/transform.h"
+#include "math/transformcache.h"
+#include "materials/texturecache.h"
+#include "utils/debug.h"
+#include "core/bvh.h"
+#include "core/PreviewDisplay.h"
 
 #ifdef HAS_OIDN
 #undef None
@@ -29,7 +27,7 @@
 #endif
 
 #include "Rcpp.h"
-#include "RayMatrix.h"
+#include "math/RayMatrix.h"
 using namespace Rcpp;
 #include "RcppThread.h"
 #include "RProgress.h"

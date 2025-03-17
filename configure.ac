@@ -158,6 +158,14 @@ else
   AC_MSG_RESULT([No, not enabling debug])
 fi
 
+SUBDIR_SOURCES="$(cd src/ && ls {core,hitables,materials,math,miniply,utils}/*.cpp | tr '\n' ' ')"
+DIR_SOURCES="$(cd src/ && ls *.cpp | tr '\n' ' ')"
+
+# Supply it as a variable
+AC_SUBST(SUBDIR_SOURCES)
+AC_SUBST(DIR_SOURCES)
+
+
 AC_SUBST([PKG_CPPFLAGS], ["${PKG_CPPFLAGS} ${OIDN_CPPFLAGS}"])
 AC_SUBST([PKG_LIBS], ["${LIBS} ${PKG_LIBS} ${OIDN_LDFLAGS} ${OIDN_LIBS}"])
 AC_SUBST([DEFINES], ["${DEFINES}"])

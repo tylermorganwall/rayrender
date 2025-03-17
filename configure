@@ -618,6 +618,8 @@ LIBOBJS
 DEFINES
 PKG_LIBS
 PKG_CPPFLAGS
+DIR_SOURCES
+SUBDIR_SOURCES
 OIDN_LIBS
 OIDN_LDFLAGS
 OIDN_CPPFLAGS
@@ -4612,6 +4614,14 @@ else
   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: No, not enabling debug" >&5
 printf "%s\n" "No, not enabling debug" >&6; }
 fi
+
+SUBDIR_SOURCES="$(cd src/ && ls {core,hitables,materials,math,miniply,utils}/*.cpp | tr '\n' ' ')"
+DIR_SOURCES="$(cd src/ && ls *.cpp | tr '\n' ' ')"
+
+# Supply it as a variable
+
+
+
 
 PKG_CPPFLAGS="${PKG_CPPFLAGS} ${OIDN_CPPFLAGS}"
 
