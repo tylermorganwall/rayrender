@@ -23,14 +23,14 @@ cone(
 
 \item{radius}{Default `1`. Radius of the bottom of the cone.}
 
-\item{direction}{Default `NA`. Alternative to `start` and `end`, specify the direction (via 
+\item{direction}{Default `NA`. Alternative to `start` and `end`, specify the direction (via
 a length-3 vector) of the cone. Cone will be centered at `start`, and the length will be
 determined by the magnitude of the direction vector.}
 
 \item{from_center}{Default `TRUE`. If orientation specified via `direction`, setting this argument
 to `FALSE` will make `start` specify the bottom of the cone, instead of the middle.}
 
-\item{material}{Default  \code{\link{diffuse}}.The material, called from one of the material 
+\item{material}{Default  \code{\link{diffuse}}.The material, called from one of the material
 functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}.}
 
 \item{angle}{Default `c(0, 0, 0)`. Rotation angle. Note: This will change the `start` and `end` coordinates.}
@@ -38,7 +38,7 @@ functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}
 \item{flipped}{Default `FALSE`. Whether to flip the normals.}
 
 \item{scale}{Default `c(1, 1, 1)`. Scale transformation in the x, y, and z directions. If this is a single value,
-number, the object will be scaled uniformly. Notes: this will change the stated start/end position of the cone. 
+number, the object will be scaled uniformly. Notes: this will change the stated start/end position of the cone.
 Emissive objects may not currently function correctly when scaled.}
 }
 \value{
@@ -50,56 +50,56 @@ Cone Object
 \examples{
 #Generate a cone in a studio, pointing upwards:
 if(run_documentation()) {
-generate_studio() \%>\% 
- add_object(cone(start=c(0,-1,0), end=c(0,1,0), radius=1,material=diffuse(color="red"))) \%>\% 
- add_object(sphere(y=5,x=5,material=light(intensity=40))) \%>\% 
+generate_studio() \%>\%
+ add_object(cone(start=c(0,-1,0), end=c(0,1,0), radius=1,material=diffuse(color="red"))) \%>\%
+ add_object(sphere(y=5,x=5,material=light(intensity=40))) \%>\%
  render_scene(samples=16,clamp_value=10)
 }
 if(run_documentation()) {
  #Change the radius, length, and direction
-generate_studio() \%>\% 
- add_object(cone(start=c(0,0,0), end=c(0,-1,0), radius=0.5,material=diffuse(color="red"))) \%>\% 
- add_object(sphere(y=5,x=5,material=light(intensity=40))) \%>\% 
+generate_studio() \%>\%
+ add_object(cone(start=c(0,0,0), end=c(0,-1,0), radius=0.5,material=diffuse(color="red"))) \%>\%
+ add_object(sphere(y=5,x=5,material=light(intensity=40))) \%>\%
  render_scene(samples=16,clamp_value=10)
 }
 if(run_documentation()) {
 #Give custom start and end points (and customize the color/texture)
-generate_studio() \%>\% 
+generate_studio() \%>\%
  add_object(cone(start=c(-1,0.5,-1), end=c(0,0,0), radius=0.5,material=diffuse(color="red"))) \%>\%
  add_object(cone(start=c(1,0.5,-1), end=c(0,0,0), radius=0.5,material=diffuse(color="green"))) \%>\%
- add_object(cone(start=c(0,1,-1), end=c(0,0,0), radius=0.5,material=diffuse(color="orange"))) \%>\% 
+ add_object(cone(start=c(0,1,-1), end=c(0,0,0), radius=0.5,material=diffuse(color="orange"))) \%>\%
  add_object(cone(start=c(-1,-0.5,0), end=c(1,-0.5,0), radius=0.25,
-   material = diffuse(color="red",gradient_color="green"))) \%>\% 
- add_object(sphere(y=5,x=5,material=light(intensity=40))) \%>\% 
+   material = diffuse(color="red",gradient_color="green"))) \%>\%
+ add_object(sphere(y=5,x=5,material=light(intensity=40))) \%>\%
  render_scene(samples=16,clamp_value=10)
 }
-if(run_documentation()) {  
+if(run_documentation()) {
 #Specify cone via direction and location, instead of start and end positions
 #Length is derived from the magnitude of the direction.
 gold_mat = microfacet(roughness=0.1,eta=c(0.216,0.42833,1.3184), kappa=c(3.239,2.4599,1.8661))
-generate_studio() \%>\% 
-  add_object(cone(start = c(-1,0,0), direction = c(-0.5,0.5,0), material = gold_mat)) \%>\% 
-  add_object(cone(start = c(1,0,0), direction = c(0.5,0.5,0), material = gold_mat)) \%>\% 
-  add_object(cone(start = c(0,0,-1), direction = c(0,0.5,-0.5), material = gold_mat)) \%>\% 
-  add_object(cone(start = c(0,0,1), direction = c(0,0.5,0.5), material = gold_mat)) \%>\% 
-  add_object(sphere(y=5,material=light())) \%>\% 
-  add_object(sphere(y=3,x=-3,z=-3,material=light(color="red"))) \%>\% 
-  add_object(sphere(y=3,x=3,z=-3,material=light(color="green"))) \%>\% 
+generate_studio() \%>\%
+  add_object(cone(start = c(-1,0,0), direction = c(-0.5,0.5,0), material = gold_mat)) \%>\%
+  add_object(cone(start = c(1,0,0), direction = c(0.5,0.5,0), material = gold_mat)) \%>\%
+  add_object(cone(start = c(0,0,-1), direction = c(0,0.5,-0.5), material = gold_mat)) \%>\%
+  add_object(cone(start = c(0,0,1), direction = c(0,0.5,0.5), material = gold_mat)) \%>\%
+  add_object(sphere(y=5,material=light())) \%>\%
+  add_object(sphere(y=3,x=-3,z=-3,material=light(color="red"))) \%>\%
+  add_object(sphere(y=3,x=3,z=-3,material=light(color="green"))) \%>\%
   render_scene(lookfrom=c(0,4,10), clamp_value=10, samples=16)
 }
 if(run_documentation()) {
  #Render the position from the base, instead of the center of the cone:
  noise_mat = material = glossy(color="purple",noisecolor="blue", noise=5)
- generate_studio() \%>\% 
-  add_object(cone(start = c(0,-1,0), from_center = FALSE, radius=1, direction = c(0,2,0), 
-    material = noise_mat)) \%>\% 
-  add_object(cone(start = c(-1.5,-1,0), from_center = FALSE, radius=0.5, direction = c(0,1,0), 
-    material = noise_mat)) \%>\% 
-  add_object(cone(start = c(1.5,-1,0), from_center = FALSE, radius=0.5, direction = c(0,1,0), 
-    material = noise_mat)) \%>\% 
-  add_object(cone(start = c(0,-1,1.5), from_center = FALSE, radius=0.5, direction = c(0,1,0), 
-    material = noise_mat)) \%>\% 
-  add_object(sphere(y=5,x=5,material=light(intensity=40))) \%>\% 
+ generate_studio() \%>\%
+  add_object(cone(start = c(0,-1,0), from_center = FALSE, radius=1, direction = c(0,2,0),
+    material = noise_mat)) \%>\%
+  add_object(cone(start = c(-1.5,-1,0), from_center = FALSE, radius=0.5, direction = c(0,1,0),
+    material = noise_mat)) \%>\%
+  add_object(cone(start = c(1.5,-1,0), from_center = FALSE, radius=0.5, direction = c(0,1,0),
+    material = noise_mat)) \%>\%
+  add_object(cone(start = c(0,-1,1.5), from_center = FALSE, radius=0.5, direction = c(0,1,0),
+    material = noise_mat)) \%>\%
+  add_object(sphere(y=5,x=5,material=light(intensity=40))) \%>\%
   render_scene(lookfrom=c(0,4,10), clamp_value=10,fov=25, samples=16)
 }
 }

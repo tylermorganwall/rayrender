@@ -1,5 +1,5 @@
 #include "../core/camera.h"
-#include "../math/low_discrepancy.h"
+#include "low_discrepancy.h"
 
 camera::camera(point3f lookfrom, point3f _lookat, vec3f _vup, Float vfov, 
                Float _aspect, Float aperture, Float _focus_dist,

@@ -1,5 +1,5 @@
-#include "../math/sampler.h"
-#include "../math/samplerBlueNoise.h"
+#include "sampler.h"
+#include "samplerBlueNoise.h"
 #include "../math/mathinline.h"
 
 template <typename T>
@@ -220,7 +220,7 @@ void SobolSampler::StartPixel( unsigned int i,  unsigned int j) {
   current1DDimension = 0;
 }
 
-#include "../math/RcppThread.h"
+#include "RcppThread.h"
 
 Float SobolSampler::Get1D() {
   double temp = sobol_calc_single(current1Dsample,

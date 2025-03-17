@@ -1,6 +1,6 @@
 #include "debug.h"
 #include "RProgress.h"
-#include "core/adaptivesampler.h"
+#include "../core/adaptivesampler.h"
 
 void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_channel,
                 Float min_variance, size_t min_adaptive_size, 

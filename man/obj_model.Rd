@@ -51,29 +51,29 @@ just using the colors specified for each material).}
 \item{vertex_colors}{Default `FALSE`. Set to `TRUE` if the OBJ file has vertex colors to apply them
 to the model.}
 
-\item{calculate_consistent_normals}{Default `TRUE`. Whether to calculate consistent vertex normals to prevent energy 
+\item{calculate_consistent_normals}{Default `TRUE`. Whether to calculate consistent vertex normals to prevent energy
 loss at edges.}
 
 \item{subdivision_levels}{Default `1`. Number of Loop subdivisions to be applied to the mesh.}
 
-\item{displacement_texture}{Default `""`. File path to the displacement texture. 
+\item{displacement_texture}{Default `""`. File path to the displacement texture.
 This texture is used to displace the vertices of the mesh based on the texture's pixel values.}
 
-\item{displacement_intensity}{Default `1`. Intensity of the displacement effect. 
+\item{displacement_intensity}{Default `1`. Intensity of the displacement effect.
 Higher values result in greater displacement.}
 
-\item{displacement_vector}{Default `FALSE`. Whether to use vector displacement. 
-If `TRUE`, the displacement texture is interpreted as providing a 3D displacement vector. 
+\item{displacement_vector}{Default `FALSE`. Whether to use vector displacement.
+If `TRUE`, the displacement texture is interpreted as providing a 3D displacement vector.
 Otherwise, the texture is interpreted as providing a scalar displacement.}
 
-\item{recalculate_normals}{Default `FALSE`. Whether to recalculate vertex normals based on the 
+\item{recalculate_normals}{Default `FALSE`. Whether to recalculate vertex normals based on the
 connecting face orientations. This can be used to compute normals for meshes lacking them or
 to calculate new normals after a displacement map has been applied to the mesh.}
 
 \item{importance_sample_lights}{Default `TRUE`. Whether to importance sample lights specified in the OBJ material
 (objects with a non-zero Ke MTL material).}
 
-\item{material}{Default  \code{\link{diffuse}}.The material, called from one of the material 
+\item{material}{Default  \code{\link{diffuse}}.The material, called from one of the material
 functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}.}
 
 \item{angle}{Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.}
@@ -90,13 +90,13 @@ Note: emissive objects may not currently function correctly when scaled.}
 Single row of a tibble describing the obj model in the scene.
 }
 \description{
-Load an obj file via a filepath. Currently only supports the diffuse texture with the `texture` argument. 
+Load an obj file via a filepath. Currently only supports the diffuse texture with the `texture` argument.
 Note: light importance sampling currently not supported for this shape.
 }
 \examples{
 #Load the included example R object file, by calling the r_obj() function. This
-#returns the local file path to the `r.txt` obj file. The file extension is "txt" 
-#due to package constraints, but the file contents are identical and it does not 
+#returns the local file path to the `r.txt` obj file. The file extension is "txt"
+#due to package constraints, but the file contents are identical and it does not
 #affect the function.
 
 if(run_documentation()) {
@@ -106,20 +106,20 @@ generate_ground(material = diffuse(checkercolor = "grey50")) \%>\%
                        scale_obj=3)) \%>\%
    add_object(sphere(z = 20, x = 20, y = 20, radius = 10,
                      material = light(intensity = 10))) \%>\%
-  render_scene(parallel = TRUE, samples = 16, aperture = 0.05, 
+  render_scene(parallel = TRUE, samples = 16, aperture = 0.05,
                sample_method="sobol_blue",
                fov = 20, lookfrom = c(0, 2, 10))
 }
 
 if(run_documentation()) {
-# Smooth a mesh by setting the number of subdivision levels 
+# Smooth a mesh by setting the number of subdivision levels
 generate_ground(material = diffuse(checkercolor = "grey50")) \%>\%
   add_object(obj_model(y = 0.2, filename = rayrender::r_obj(),
                        scale_obj=3, subdivision_levels = 3)) \%>\%
    add_object(sphere(z = 20, x = 20, y = 20, radius = 10,
                      material = light(intensity = 10))) \%>\%
   render_scene(parallel = TRUE, samples = 16, aperture = 0.05,
-               sample_method="sobol_blue", 
+               sample_method="sobol_blue",
                fov = 20, lookfrom = c(0, 2, 10))
 }
 
@@ -138,7 +138,7 @@ generate_ground(material = diffuse(checkercolor = "grey50")) \%>\%
                                              attenuation_intensity = 20))) \%>\%
   add_object(sphere(z = 20, x = 20, y = 20, radius = 10,
                     material = light(intensity = 10))) \%>\%
-  render_scene(parallel = TRUE, samples = 16, aperture = 0.05, 
+  render_scene(parallel = TRUE, samples = 16, aperture = 0.05,
                sample_method="sobol_blue", lookat=c(0,0.5,0),
                fov = 22, lookfrom = c(0, 2, 10))
 

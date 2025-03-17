@@ -5,7 +5,7 @@
 #include "../math/float.h"
 #include "../hitables/hitable.h"
 #include "../hitables/hitablelist.h"
-#include "../hitables/bvh.h"
+#include "../core/bvh.h"
 
 class TextureCache;
 struct TriangleMesh;

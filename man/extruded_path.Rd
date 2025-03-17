@@ -48,7 +48,7 @@ the x/y/z points that the path should go through.}
 \item{polygon}{Defaults to a circle. A polygon with no holes, specified by a data.frame() parsable by `xy.coords()`. Vertices
 are taken as sequential rows. If the polygon isn't closed (the last vertex equal to the first), it will be closed automatically.}
 
-\item{polygon_end}{Defaults to `polygon`. If specified, the number of vertices should equal the to the number of vertices 
+\item{polygon_end}{Defaults to `polygon`. If specified, the number of vertices should equal the to the number of vertices
 of the polygon set in `polygon`. Vertices are taken as sequential rows. If the polygon isn't closed (the last vertex equal to the first), it will be closed automatically.}
 
 \item{breaks}{Defaults to `20` times the number of control points in the bezier curve.}
@@ -56,7 +56,7 @@ of the polygon set in `polygon`. Vertices are taken as sequential rows. If the p
 \item{closed}{Default `FALSE`. If `TRUE`, the path will be closed by smoothly connecting the first
 and last points, also ensuring the final polygon is aligned to the first.}
 
-\item{closed_smooth}{Default `TRUE`. If `closed = TRUE`, this will ensure C2 (second derivative) 
+\item{closed_smooth}{Default `TRUE`. If `closed = TRUE`, this will ensure C2 (second derivative)
 continuity between the ends. If `closed = FALSE`, the curve will only have C1 (first derivative)
 continuity between the ends.}
 
@@ -73,22 +73,22 @@ of bezier curves.}
 \item{precomputed_control_points}{Default `FALSE`. If `TRUE`, `points` argument will expect
 a list of control points calculated with the internal rayrender function `rayrender:::calculate_control_points()`.}
 
-\item{width}{Default `0.1`. Curve width. If `width_ease == "spline"`, `width` is specified in a format that can be read by 
-`xy.coords()` (with `y` as the width), and the `x` coordinate is between `0` and `1`, this can also specify the exact 
+\item{width}{Default `0.1`. Curve width. If `width_ease == "spline"`, `width` is specified in a format that can be read by
+`xy.coords()` (with `y` as the width), and the `x` coordinate is between `0` and `1`, this can also specify the exact
 positions along the curve for the corresponding width values. If a numeric vector, specifies the different values of the width evenly along the curve.
 If not a single value, `width_end` will be ignored.}
 
-\item{width_end}{Default `NA`. Width at end of path. Same as `width`, unless specified. Ignored if multiple width values 
+\item{width_end}{Default `NA`. Width at end of path. Same as `width`, unless specified. Ignored if multiple width values
 specified in `width`.}
 
 \item{width_ease}{Default `spline`. Ease function between width values. Other options: `linear`, `quad`, `cubic`, `exp`.}
 
 \item{smooth_normals}{Default `FALSE`. Whether to smooth the normals of the polygon to remove sharp angles.}
 
-\item{u_min}{Default `0`. Minimum parametric coordinate for the path. If `closed = TRUE`, values greater than one will refer to the beginning 
+\item{u_min}{Default `0`. Minimum parametric coordinate for the path. If `closed = TRUE`, values greater than one will refer to the beginning
 of the loop (but the path will be generated as two objects).}
 
-\item{u_max}{Default `1`. Maximum parametric coordinate for the path. If `closed = TRUE`, values greater than one will refer to the beginning 
+\item{u_max}{Default `1`. Maximum parametric coordinate for the path. If `closed = TRUE`, values greater than one will refer to the beginning
 of the loop (but the path will be generated as two objects).}
 
 \item{linear_step}{Default `FALSE`. Whether the polygon intervals should be set at linear intervals,
@@ -96,7 +96,7 @@ rather than intervals based on the underlying bezier curve parameterization.}
 
 \item{end_caps}{Default `c(TRUE, TRUE)`. Specifies whether to add an end cap to the beginning and end of a path.}
 
-\item{material}{Default  \code{\link{diffuse}}. The material, called from one of the material 
+\item{material}{Default  \code{\link{diffuse}}. The material, called from one of the material
 functions.}
 
 \item{material_caps}{Defaults to the same material set in `material`.
@@ -128,29 +128,29 @@ ground_mat = material=diffuse(color="grey50",
 if(run_documentation()) {
 #Default path shape is a circle
 generate_studio(depth=-0.4,material=ground_mat) \%>\%
-  add_object(extruded_path(points = points, width=0.25, 
-                           material=diffuse(color="red"))) \%>\% 
-  add_object(sphere(y=3,z=5,x=2,material=light(intensity=15))) \%>\% 
+  add_object(extruded_path(points = points, width=0.25,
+                           material=diffuse(color="red"))) \%>\%
+  add_object(sphere(y=3,z=5,x=2,material=light(intensity=15))) \%>\%
   render_scene(lookat=c(0.3,0.5,0.5),fov=12, width=800,height=800, clamp_value = 10,
                aperture=0.025, samples=16, sample_method="sobol_blue")
 }
 if(run_documentation()) {
 #Change the width evenly along the tube
 generate_studio(depth=-0.4,material=ground_mat) \%>\%
-  add_object(extruded_path(points = points, width=0.25, 
+  add_object(extruded_path(points = points, width=0.25,
                            width_end = 0.5,
-                           material=diffuse(color="red"))) \%>\% 
-  add_object(sphere(y=3,z=5,x=2,material=light(intensity=15))) \%>\% 
+                           material=diffuse(color="red"))) \%>\%
+  add_object(sphere(y=3,z=5,x=2,material=light(intensity=15))) \%>\%
   render_scene(lookat=c(0.3,0.5,0.5),fov=12, width=800,height=800, clamp_value = 10,
                aperture=0.025, samples=16, sample_method="sobol_blue")
 }
 if(run_documentation()) {
 #Change the width along the full length of the tube
 generate_studio(depth=-0.4,material=ground_mat) \%>\%
-  add_object(extruded_path(points = points, 
+  add_object(extruded_path(points = points,
                            width=0.25*sinpi(0:72*20/180),
-                           material=diffuse(color="red"))) \%>\% 
-  add_object(sphere(y=3,z=5,x=2,material=light(intensity=15))) \%>\% 
+                           material=diffuse(color="red"))) \%>\%
+  add_object(sphere(y=3,z=5,x=2,material=light(intensity=15))) \%>\%
   render_scene(lookat=c(0.3,0.5,0.5),fov=12, width=800,height=800, clamp_value = 10,
                aperture=0.025, samples=16, sample_method="sobol_blue")
 }
@@ -158,10 +158,10 @@ if(run_documentation()) {
 #Specify the exact parametric x positions for the width values:
 custom_width = data.frame(x=c(0,0.2,0.5,0.8,1), y=c(0.25,0.5,0,0.5,0.25))
 generate_studio(depth=-0.4,material=ground_mat) \%>\%
-  add_object(extruded_path(points = points, 
+  add_object(extruded_path(points = points,
                            width=custom_width,
-                           material=diffuse(color="red"))) \%>\% 
-  add_object(sphere(y=3,z=5,x=2,material=light(intensity=15))) \%>\% 
+                           material=diffuse(color="red"))) \%>\%
+  add_object(sphere(y=3,z=5,x=2,material=light(intensity=15))) \%>\%
   render_scene(lookat=c(0.3,0.5,0.5),fov=12, width=800,height=800, clamp_value = 10,
                aperture=0.025, samples=16, sample_method="sobol_blue")
 }
@@ -174,10 +174,10 @@ star_polygon = data.frame(x=xx,y=yy)
 
 #Extrude a path using a star polygon
 generate_studio(depth=-0.4,material=ground_mat) \%>\%
-  add_object(extruded_path(points = points, width=0.5, 
+  add_object(extruded_path(points = points, width=0.5,
                            polygon = star_polygon,
-                           material=diffuse(color="red"))) \%>\% 
-  add_object(sphere(y=3,z=5,x=2,material=light(intensity=15))) \%>\% 
+                           material=diffuse(color="red"))) \%>\%
+  add_object(sphere(y=3,z=5,x=2,material=light(intensity=15))) \%>\%
   render_scene(lookat=c(0.3,0.5,1),fov=12, width=800,height=800, clamp_value = 10,
                aperture=0.025, samples=16, sample_method="sobol_blue")
 }
@@ -190,11 +190,11 @@ circ_polygon = data.frame(x=xx,y=yy)
 
 #Transform from the circle polygon to the star polygon and change the end cap material
 generate_studio(depth=-0.4,material=ground_mat) \%>\%
-  add_object(extruded_path(points = points, width=0.5, 
+  add_object(extruded_path(points = points, width=0.5,
                            polygon=circ_polygon, polygon_end = star_polygon,
                            material_cap  = diffuse(color="white"),
-                           material=diffuse(color="red"))) \%>\% 
-  add_object(sphere(y=3,z=5,x=2,material=light(intensity=15))) \%>\% 
+                           material=diffuse(color="red"))) \%>\%
+  add_object(sphere(y=3,z=5,x=2,material=light(intensity=15))) \%>\%
   render_scene(lookat=c(0.3,0.5,0.5),fov=12, width=800,height=800, clamp_value = 10,
                aperture=0.025, samples=16, sample_method="sobol_blue")
 }
@@ -204,8 +204,8 @@ generate_studio(depth=-0.4,material=ground_mat) \%>\%
   add_object(extruded_path(points = points, width=0.5, twists = 3.5,
                            polygon=star_polygon, linear_step = TRUE, breaks=360,
                            material_cap  = diffuse(color="white"),
-                           material=diffuse(color="red"))) \%>\% 
-  add_object(sphere(y=3,z=5,x=2,material=light(intensity=15))) \%>\% 
+                           material=diffuse(color="red"))) \%>\%
+  add_object(sphere(y=3,z=5,x=2,material=light(intensity=15))) \%>\%
   render_scene(lookat=c(0.3,0.5,0),fov=12, width=800,height=800, clamp_value = 10,
                aperture=0.025, samples=16, sample_method="sobol_blue")
 }
@@ -213,12 +213,12 @@ if(run_documentation()) {
 #Smooth the normals for a less sharp appearance:
 generate_studio(depth=-0.4,material=ground_mat) \%>\%
   add_object(extruded_path(points = points, width=0.5, twists = 3.5,
-                           polygon=star_polygon, 
+                           polygon=star_polygon,
                            linear_step = TRUE, breaks=360,
                            smooth_normals = TRUE,
                            material_cap  = diffuse(color="white"),
-                           material=diffuse(color="red"))) \%>\% 
-  add_object(sphere(y=3,z=5,x=2,material=light(intensity=15))) \%>\% 
+                           material=diffuse(color="red"))) \%>\%
+  add_object(sphere(y=3,z=5,x=2,material=light(intensity=15))) \%>\%
   render_scene(lookat=c(0.3,0.5,0),fov=12, width=800,height=800, clamp_value = 10,
                aperture=0.025, samples=16, sample_method="sobol_blue")
 }
@@ -229,13 +229,13 @@ generate_studio(depth=-0.4,material=ground_mat) \%>\%
                            u_min = 0.2, u_max = 0.8,
                            polygon=star_polygon, linear_step = TRUE, breaks=360,
                            material_cap  = diffuse(color="white"),
-                           material=diffuse(color="red"))) \%>\% 
-  add_object(sphere(y=3,z=5,x=2,material=light(intensity=15))) \%>\% 
+                           material=diffuse(color="red"))) \%>\%
+  add_object(sphere(y=3,z=5,x=2,material=light(intensity=15))) \%>\%
   render_scene(lookat=c(0.3,0.5,0),fov=12, width=800,height=800, clamp_value = 10,
                aperture=0.025, samples=16, sample_method="sobol_blue")
 }
 if(run_documentation()) {
-#Render a Mobius strip with 1.5 turns 
+#Render a Mobius strip with 1.5 turns
 points = list(c(0,0,0),c(0.5,0.5,0),c(0,1,0),c(-0.5,0.5,0))
 square_polygon = matrix(c(-1, -0.1, 0,
                            1, -0.1, 0,
@@ -246,10 +246,10 @@ generate_studio(depth=-0.2,
                material=diffuse(color = "dodgerblue4", checkercolor = "#002a61",
                                 checkerperiod = 1)) \%>\%
  add_object(extruded_path(points = points,  polygon=square_polygon, closed = TRUE,
-                          linear_step = TRUE, twists = 1.5, breaks = 720, 
-                          material = diffuse(noisecolor = "black", noise = 10, 
+                          linear_step = TRUE, twists = 1.5, breaks = 720,
+                          material = diffuse(noisecolor = "black", noise = 10,
                                              noiseintensity = 10))) \%>\%
- add_object(sphere(y=20,x=0,z=21,material=light(intensity = 1000))) \%>\% 
+ add_object(sphere(y=20,x=0,z=21,material=light(intensity = 1000))) \%>\%
  render_scene(lookat=c(0,0.5,0), fov=10, samples=16, sample_method = "sobol_blue",
               width = 800, height=800)
 }
@@ -258,21 +258,21 @@ if(run_documentation()) {
 #and fill it with a purple neon tube light
 generate_ground(depth=-0.4,material=diffuse(color="grey50",
                                             checkercolor = "grey20",checkerperiod = 1.5)) \%>\%
-  add_object(extruded_path(points = points, width=0.7, linear_step = TRUE, 
+  add_object(extruded_path(points = points, width=0.7, linear_step = TRUE,
                            polygon = star_polygon, twists = 2, closed = TRUE,
                            polygon_end = star_polygon, breaks=500,
-                           material=dielectric(priority = 1, refraction = 1.2, 
+                           material=dielectric(priority = 1, refraction = 1.2,
                                                attenuation=c(1,0.3,1),
-                                               attenuation_intensity=20))) \%>\% 
+                                               attenuation_intensity=20))) \%>\%
   add_object(extruded_path(points = points, width=0.4, linear_step = TRUE,
                            polygon = star_polygon,twists = 2, closed = TRUE,
                            polygon_end = star_polygon, breaks=500,
-                           material=dielectric(priority = 0,refraction = 1))) \%>\%  
+                           material=dielectric(priority = 0,refraction = 1))) \%>\%
   add_object(extruded_path(points = points, width=0.05, closed = TRUE,
                            material=light(color="purple", intensity = 5,
                                           importance_sample = FALSE))) \%>\%
   add_object(sphere(y=10,z=-5,x=0,radius=5,material=light(color = "white",intensity = 5))) \%>\%
-  render_scene(lookat=c(0,0.5,1),fov=10, 
+  render_scene(lookat=c(0,0.5,1),fov=10,
                width=800,height=800, clamp_value = 10,
                aperture=0.025, samples=16, sample_method="sobol_blue")
 }

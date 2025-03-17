@@ -3,7 +3,7 @@
 
 #include <random>
 #define extended extended_rng
-#include "../pcg/pcg_random.hpp"
+#include "pcg/pcg_random.hpp"
 #undef extended
 #include "../math/float.h"
 #include "../math/vec3.h"

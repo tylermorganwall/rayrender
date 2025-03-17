@@ -1,19 +1,19 @@
 #include "../hitables/raymesh.h"
-#include "../hitables/RProgress.h"
-#include "../hitables/loopsubdiv.h"
-#include "../hitables/displacement.h"
-#include "../hitables/calcnormals.h"
-#include "../hitables/calctangents.h"
+#include "RProgress.h"
+#include "../math/loopsubdiv.h"
+#include "../math/displacement.h"
+#include "../math/calcnormals.h"
+#include "../math/calctangents.h"
 #ifndef STBIMAGEH
 #define STBIMAGEH
 #include "../stb/stb_image.h"
 #endif
-#include "../hitables/texturecache.h"
+#include "../materials/texturecache.h"
 #include "../hitables/trianglemesh.h"
 
-#include "../hitables/bvh.h"
+#include "../core/bvh.h"
 
-#include "../hitables/rng.h"
+#include "../math/rng.h"
 #include "../hitables/triangle.h"
 #include "../utils/raylog.h"
 

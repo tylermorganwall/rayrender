@@ -15,7 +15,7 @@ generate_ground(
 
 \item{spheresize}{Default `1000`. Radius of the sphere representing the surface.}
 
-\item{material}{Default  \code{\link{diffuse}} with `color= "#ccff00"`.The material, called from one of the material 
+\item{material}{Default  \code{\link{diffuse}} with `color= "#ccff00"`.The material, called from one of the material
 functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}.}
 
 \item{color}{Default `#ccff00`. The color of the sphere. Can be either

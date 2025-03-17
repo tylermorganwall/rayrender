@@ -2,7 +2,7 @@
 #define MESH3DH
 
 #include "../hitables/triangle.h"
-#include "../hitables/bvh.h"
+#include "../core/bvh.h"
 
 
 #include <Rcpp.h>

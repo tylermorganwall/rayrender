@@ -38,13 +38,13 @@ If single number, will be repeated across all three channels.}
 \item{kappa}{Default `0`. Wavelength dependent absorption of the material (red, green, and blue channels).
 If single number, will be repeated across all three channels.}
 
-\item{fuzz}{Default `0`. Deprecated--Use the microfacet material instead, as it is designed for rough metals. 
+\item{fuzz}{Default `0`. Deprecated--Use the microfacet material instead, as it is designed for rough metals.
 The roughness of the metallic surface. Maximum `1`.}
 
-\item{checkercolor}{Default `NA`. If not `NA`, determines the secondary color of the checkered surface. 
+\item{checkercolor}{Default `NA`. If not `NA`, determines the secondary color of the checkered surface.
 Can be either a hexadecimal code, or a numeric rgb vector listing three intensities between `0` and `1`.}
 
-\item{checkerperiod}{Default `3`. The period of the checker pattern. Increasing this value makes the checker 
+\item{checkerperiod}{Default `3`. The period of the checker pattern. Increasing this value makes the checker
 pattern bigger, and decreasing it makes it smaller}
 
 \item{noise}{Default `0`. If not `0`, covers the surface in a turbulent marble pattern. This value will determine
@@ -57,17 +57,17 @@ the amount of turbulence in the texture.}
 \item{noisecolor}{Default `#000000`. The secondary color of the noise pattern.
 Can be either a hexadecimal code, or a numeric rgb vector listing three intensities between `0` and `1`.}
 
-\item{gradient_color}{Default `NA`. If not `NA`, creates a secondary color for a linear gradient 
+\item{gradient_color}{Default `NA`. If not `NA`, creates a secondary color for a linear gradient
 between the this color and color specified in `color`. Direction is determined by `gradient_transpose`.}
 
 \item{gradient_transpose}{Default `FALSE`. If `TRUE`, this will use the `v` coordinate texture instead
 of the `u` coordinate texture to map the gradient.}
 
-\item{gradient_point_start}{Default `NA`. If not `NA`, this changes the behavior from mapping texture coordinates to 
+\item{gradient_point_start}{Default `NA`. If not `NA`, this changes the behavior from mapping texture coordinates to
 mapping to world space coordinates. This should be a length-3 vector specifying the x,y, and z points where the gradient
 begins with value `color`.}
 
-\item{gradient_point_end}{Default `NA`. If not `NA`, this changes the behavior from mapping texture coordinates to 
+\item{gradient_point_end}{Default `NA`. If not `NA`, this changes the behavior from mapping texture coordinates to
 mapping to world space coordinates. This should be a length-3 vector specifying the x,y, and z points where the gradient
 begins with value `gradient_color`.}
 
@@ -80,12 +80,12 @@ begins with value `gradient_color`.}
 
 \item{alpha_texture}{Default `""`. A matrix or filename (specifying a greyscale image) to be used to specify the transparency.}
 
-\item{bump_texture}{Default `""`. A matrix, array, or filename (specifying a greyscale image) to 
+\item{bump_texture}{Default `""`. A matrix, array, or filename (specifying a greyscale image) to
 be used to specify a bump map for the surface.}
 
 \item{bump_intensity}{Default `1`. Intensity of the bump map. High values may lead to unphysical results.}
 
-\item{importance_sample}{Default `FALSE`. If `TRUE`, the object will be sampled explicitly during 
+\item{importance_sample}{Default `FALSE`. If `TRUE`, the object will be sampled explicitly during
 the rendering process. If the object is particularly important in contributing to the light paths
 in the image (e.g. light sources, refracting glass ball with caustics, metal objects concentrating light),
 this will help with the convergence of the image.}
@@ -107,7 +107,7 @@ if(run_documentation()) {
 render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=16,
              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 }
-#Add an aluminum rotated shiny metal block     
+#Add an aluminum rotated shiny metal block
 scene = scene \%>\%
   add_object(cube(x=380,y=150/2,z=200,xwidth=150,ywidth=150,zwidth=150,
   material = metal(eta = c(1.07,0.8946,0.523), k = c(6.7144,6.188,4.95)),angle=c(0,45,0)))
@@ -115,10 +115,10 @@ if(run_documentation()) {
 render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=16,
              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 }
-#Add a copper metal cube      
+#Add a copper metal cube
 scene = scene \%>\%
   add_object(cube(x=150,y=150/2,z=300,xwidth=150,ywidth=150,zwidth=150,
-                  material = metal(eta = c(0.497,0.8231,1.338), 
+                  material = metal(eta = c(0.497,0.8231,1.338),
                                    k = c(2.898,2.476,2.298)),
                   angle=c(0,-30,0)))
 if(run_documentation()) {
@@ -129,7 +129,7 @@ render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=16,
 #Finally, let's add a lead pipe
 scene2 = scene \%>\%
   add_object(cylinder(x=450,y=200,z=400,length=400,radius=30,
-                  material = metal(eta = c(1.44,1.78,1.9), 
+                  material = metal(eta = c(1.44,1.78,1.9),
                                    k = c(3.18,3.36,3.43)),
                   angle=c(0,-30,0)))
 if(run_documentation()) {

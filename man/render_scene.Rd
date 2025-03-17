@@ -72,13 +72,13 @@ a realistic camera. Several camera files are built-in: `"50mm"`,`"wide"`,`"fishe
 
 \item{preview}{Default `interactive()`. Whether to display a real-time progressive preview of the render. Press ESC to cancel the render.}
 
-\item{interactive}{Default `interactive()`. Whether the scene preview should be interactive. Camera movement orbits around the 
+\item{interactive}{Default `interactive()`. Whether the scene preview should be interactive. Camera movement orbits around the
 lookat point (unless the mode is switched to free flying), with the following control mapping:
-W = Forward, S = Backward, A = Left, D = Right, Q = Up, Z = Down, 
+W = Forward, S = Backward, A = Left, D = Right, Q = Up, Z = Down,
 E = 2x Step Distance (max 128), C = 0.5x Step Distance, Up Key = Zoom In (decrease FOV), Down Key = Zoom Out (increase FOV),
 Left Key = Decrease Aperture, Right Key = Increase Aperture, 1 = Decrease Focal Distance, 2 = Increase Focal Distance,
-3/4 = Rotate Environment Light, 
-R = Reset Camera, TAB: Toggle Orbit Mode, Left Mouse Click: Change Look Direction, Right Mouse Click: Change Look At 
+3/4 = Rotate Environment Light,
+R = Reset Camera, TAB: Toggle Orbit Mode, Left Mouse Click: Change Look Direction, Right Mouse Click: Change Look At
 K: Save Keyframe (at the conclusion of the render, this will create the `ray_keyframes`
 data.frame in the global environment, which can be passed to `generate_camera_motion()` to tween between those saved positions.
 L: Reset Camera to Last Keyframe (if set) F: Toggle Fast Travel Mode
@@ -91,13 +91,13 @@ the aperture and field of view cannot be changed from their initial settings. Ad
 clicking to direct the camera at the background environment image while using a realistic camera will
 not always point to the exact position selected.}
 
-\item{denoise}{Default `TRUE`. Whether to de-noise the final image and preview images. Note, this requires 
+\item{denoise}{Default `TRUE`. Whether to de-noise the final image and preview images. Note, this requires
 the free Intel Open Image Denoise (OIDN) library be installed on your system. Pre-compiled binaries can be installed from
 ppenimagedenoise.org, as well as . Linking during rayrender installation is done by defining the environment variable
 OIDN_PATH (set it in the .Renviron file by calling `usethis::edit_r_environ()`) to the top-level directory for OIDN (the directory containing the "lib", "bin", and "include"
 directories) and re-installing this package from source.}
 
-\item{camera_scale}{Default `1`. Amount to scale the camera up or down in size. Use this rather than scaling a 
+\item{camera_scale}{Default `1`. Amount to scale the camera up or down in size. Use this rather than scaling a
 scene.}
 
 \item{iso}{Default `100`. Camera exposure.}
@@ -105,7 +105,7 @@ scene.}
 \item{film_size}{Default `22`, in `mm` (scene units in `m`. Size of the film if using a realistic camera, otherwise
 ignored.}
 
-\item{min_variance}{Default `0`. Minimum acceptable variance for a block of pixels for the 
+\item{min_variance}{Default `0`. Minimum acceptable variance for a block of pixels for the
 adaptive sampler. Smaller numbers give higher quality images, at the expense of longer rendering times.
 If this is set to zero, the adaptive sampler will be turned off and the renderer
 will use the maximum number of samples everywhere.}
@@ -113,9 +113,9 @@ will use the maximum number of samples everywhere.}
 \item{min_adaptive_size}{Default `8`. Width of the minimum block size in the adaptive sampler.}
 
 \item{sample_method}{Default `sobol`. The type of sampling method used to generate
-random numbers. The other options are `random` (worst quality but fastest), 
-`stratified` (only implemented for completion), `sobol_blue` (best option for sample counts below 256), 
-and `sobol` (slowest but best quality, better than `sobol_blue` for sample counts greater than 256). If 
+random numbers. The other options are `random` (worst quality but fastest),
+`stratified` (only implemented for completion), `sobol_blue` (best option for sample counts below 256),
+and `sobol` (slowest but best quality, better than `sobol_blue` for sample counts greater than 256). If
 `samples > 256` and `sobol_blue` is selected, the method will automatically switch to `sample_method = "sobol"`.}
 
 \item{max_depth}{Default `NA`, automatically sets to 50. Maximum number of bounces a ray can make in a scene. Alternatively,
@@ -124,8 +124,8 @@ if a debugging option is chosen, this sets the bounce to query the debugging par
 \item{roulette_active_depth}{Default `100`. Number of ray bounces until a ray can stop bouncing via
 Russian roulette.}
 
-\item{ambient_light}{Default `FALSE`, unless there are no emitting objects in the scene. 
-If `TRUE`, the background will be a gradient varying from `backgroundhigh` directly up (+y) to 
+\item{ambient_light}{Default `FALSE`, unless there are no emitting objects in the scene.
+If `TRUE`, the background will be a gradient varying from `backgroundhigh` directly up (+y) to
 `backgroundlow` directly down (-y).}
 
 \item{lookfrom}{Default `c(0,1,10)`. Location of the camera.}
@@ -138,7 +138,7 @@ If `TRUE`, the background will be a gradient varying from `backgroundhigh` direc
 less blurring in areas not in focus.}
 
 \item{clamp_value}{Default `Inf`. If a bright light or a reflective material is in the scene, occasionally
-there will be bright spots that will not go away even with a large number of samples. These 
+there will be bright spots that will not go away even with a large number of samples. These
 can be removed (at the cost of slightly darkening the image) by setting this to a small number greater than 1.}
 
 \item{filename}{Default `NULL`. If present, the renderer will write to the filename instead
@@ -160,8 +160,8 @@ otherwise specified.}
 \item{ortho_dimensions}{Default `c(1,1)`. Width and height of the orthographic camera. Will only be used if `fov = 0`.}
 
 \item{tonemap}{Default `gamma`. Choose the tone mapping function,
-Default `gamma` solely adjusts for gamma and clamps values greater than 1 to 1. 
-`reinhold` scales values by their individual color channels `color/(1+color)` and then performs the 
+Default `gamma` solely adjusts for gamma and clamps values greater than 1 to 1.
+`reinhold` scales values by their individual color channels `color/(1+color)` and then performs the
 gamma adjustment. `uncharted` uses the mapping developed for Uncharted 2 by John Hable. `hbd` uses an
 optimized formula by Jim Hejl and Richard Burgess-Dawson. If `raw`, the raw array of HDR values will be
 returned, rather than an image or a plot.}
@@ -192,9 +192,9 @@ if using a LDR (JPEG or PNG) image as an environment map.}
 will be marked as transparent in the final image. If for a pixel some rays escape and others hit a surface,
 those pixels will be partially transparent.}
 
-\item{debug_channel}{Default `none`. If `depth`, function will return a depth map of rays into the scene 
+\item{debug_channel}{Default `none`. If `depth`, function will return a depth map of rays into the scene
 instead of an image. If `normals`, function will return an image of scene normals, mapped from 0 to 1.
-If `uv`, function will return an image of the uv coords. If `variance`, function will return an image 
+If `uv`, function will return an image of the uv coords. If `variance`, function will return an image
 showing the number of samples needed to take for each block to converge. If `dpdu` or `dpdv`, function will return
 an image showing the differential `u` and `u` coordinates. If `color`, function will return the raw albedo
 values (with white for `metal` and `dielectric` materials).}
@@ -214,7 +214,7 @@ each render.}
 no filename specified). Set to `FALSE` for faster plotting (does not affect render time).}
 
 \item{integrator_type}{Default `"rtiow"` (the algorithm specified in the book "Raytracing in One Weekend", a basic
-form of path guiding). Other options include `"nee"` (Next Event Estimation, with direct light sampling) 
+form of path guiding). Other options include `"nee"` (Next Event Estimation, with direct light sampling)
 and `"basic"` (basic pathtracing, for high sample reference renders and debugging only).}
 }
 \value{
@@ -229,7 +229,7 @@ or are on Windows.
 \examples{
 # Generate a large checkered sphere as the ground
 if (run_documentation()) {
-  scene = generate_ground(depth = -0.5, 
+  scene = generate_ground(depth = -0.5,
                           material = diffuse(color = "white", checkercolor = "darkgreen"))
   render_scene(scene, parallel = TRUE, samples = 16, sample_method = "sobol")
 }
@@ -249,7 +249,7 @@ if (run_documentation()) {
   # Add a metallic gold sphere, using stratified sampling for a higher quality render
   # We also add a light, which turns off the default ambient lighting
   scene = scene \%>\%
-    add_object(sphere(x = -1.1, y = 0, z = 0, radius = 0.5, 
+    add_object(sphere(x = -1.1, y = 0, z = 0, radius = 0.5,
                       material = metal(color = "gold", fuzz = 0.1))) \%>\%
     add_object(sphere(y=10,z=13,radius=2,material=light(intensity=40)))
   render_scene(scene, fov = 20, parallel = TRUE, samples = 16)
@@ -266,7 +266,7 @@ if (run_documentation()) {
   dev.off()
   image_array = aperm(png::readPNG(tempfileplot), c(2, 1, 3))
   scene = scene \%>\%
-    add_object(xy_rect(x = 0, y = 1.1, z = 0, xwidth = 2, angle = c(0, 0, 0), 
+    add_object(xy_rect(x = 0, y = 1.1, z = 0, xwidth = 2, angle = c(0, 0, 0),
                        material = diffuse(image_texture = image_array)))
   render_scene(scene, fov = 20, parallel = TRUE, samples = 16)
 }
@@ -281,7 +281,7 @@ if (run_documentation()) {
                ambient = TRUE,
                samples = 16)
 }
-if (run_documentation()) {    
+if (run_documentation()) {
   # Increase the aperture to blur objects that are further from the focal plane.
   render_scene(scene, lookfrom = c(7, 1.5, 10), lookat = c(0, 0.5, 0), fov = 15,
                aperture = 1, parallel = TRUE, samples = 16)
@@ -289,10 +289,10 @@ if (run_documentation()) {
 if (run_documentation()) {
   # We can also capture a 360 environment image by setting `fov = 360` (can be used for VR)
   generate_cornell() \%>\%
-    add_object(ellipsoid(x = 555 / 2, y = 100, z = 555 / 2, a = 50, b = 100, c = 50, 
+    add_object(ellipsoid(x = 555 / 2, y = 100, z = 555 / 2, a = 50, b = 100, c = 50,
                           material = metal(color = "lightblue"))) \%>\%
     add_object(cube(x = 100, y = 130 / 2, z = 200, xwidth = 130, ywidth = 130, zwidth = 130,
-                     material = diffuse(checkercolor = "purple", 
+                     material = diffuse(checkercolor = "purple",
                                         checkerperiod = 30), angle = c(0, 10, 0))) \%>\%
     add_object(pig(x = 100, y = 190, z = 200, scale = 40, angle = c(0, 30, 0))) \%>\%
     add_object(sphere(x = 420, y = 555 / 8, z = 100, radius = 555 / 8,
@@ -303,11 +303,11 @@ if (run_documentation()) {
     render_scene(lookfrom = c(278, 278, 30), lookat = c(278, 278, 500), clamp_value = 10,
                  fov = 360,  samples = 16, width = 800, height = 800)
 }
-if (run_documentation()) {            
-  # Spin the camera around the scene, decreasing the number of samples to render faster. To make 
+if (run_documentation()) {
+  # Spin the camera around the scene, decreasing the number of samples to render faster. To make
   # an animation, specify the a filename in `render_scene` for each frame and use the `av` package
   # or ffmpeg to combine them all into a movie.
-  t = 1:30 
+  t = 1:30
   xpos = 10 * sin(t * 12 * pi / 180 + pi / 2)
   zpos = 10 * cos(t * 12 * pi / 180 + pi / 2)
   # Save old par() settings
@@ -315,7 +315,7 @@ if (run_documentation()) {
   on.exit(par(old.par))
   par(mfrow = c(5, 6))
   for (i in 1:30) {
-    render_scene(scene, samples = 16, 
+    render_scene(scene, samples = 16,
                  lookfrom = c(xpos[i], 1.5, zpos[i]), lookat = c(0, 0.5, 0), parallel = TRUE)
   }
 }

@@ -7,8 +7,6 @@
 #include <cstring>
 #include "../math/float.h"
 #include "../math/vectypes.h"
-#include "../math/vec2.h"
-#include "../math/point2.h"
 
 #include <limits>
 #include <array>

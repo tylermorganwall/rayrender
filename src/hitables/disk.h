@@ -2,8 +2,8 @@
 #define DISKH
 
 #include "../hitables/hitable.h"
-#include "../hitables/onbh.h"
-#include "../hitables/material.h"
+#include "../math/onbh.h"
+#include "../materials/material.h"
 
 class disk : public hitable {
 public:

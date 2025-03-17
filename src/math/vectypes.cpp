@@ -1,4 +1,4 @@
-#include "../math/Rcpp.h"
+#include "Rcpp.h"
 #include "../math/vec3.h"
 #include "../math/point3.h"
 #include "../math/normal.h"

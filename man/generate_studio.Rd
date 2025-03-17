@@ -25,7 +25,7 @@ generate_studio(
 \item{curvature}{Default `2`. Radius of the curvature connecting the bottom plane to the vertical
 backdrop.}
 
-\item{material}{Default  \code{\link{diffuse}} with `color= "#ccff00"`.The material, called from one of the material 
+\item{material}{Default  \code{\link{diffuse}} with `color= "#ccff00"`.The material, called from one of the material
 functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}.}
 }
 \value{
@@ -39,7 +39,7 @@ Generates a curved studio backdrop.
 scene = generate_studio(depth=-1, material = diffuse(color="white")) \%>\%
    add_object(obj_model(r_obj(),y=-0.5,x=0.5, scale=1.2,
                         material=glossy(color="darkred"),angle=c(0,-20,0))) \%>\%
-   add_object(sphere(x=-0.5,radius=0.5,material=dielectric())) \%>\% 
+   add_object(sphere(x=-0.5,radius=0.5,material=dielectric())) \%>\%
    add_object(sphere(y=3,x=-2,z=20,material=light(intensity=600)))
 if(run_documentation()) {
 render_scene(scene, parallel = TRUE, lookfrom = c(0,2,10), lookat=c(0,-0.25,0),

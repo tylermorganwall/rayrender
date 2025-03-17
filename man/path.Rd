@@ -40,7 +40,7 @@ the x/y/z points that the path should go through.}
 \item{closed}{Default `FALSE`. If `TRUE`, the path will be closed by smoothly connecting the first
 and last points.}
 
-\item{closed_smooth}{Default `TRUE`. If `closed = TRUE`, this will ensure C2 (second derivative) 
+\item{closed_smooth}{Default `TRUE`. If `closed = TRUE`, this will ensure C2 (second derivative)
 continuity between the ends. If `closed = FALSE`, the curve will only have C1 (first derivative)
 continuity between the ends.}
 
@@ -65,7 +65,7 @@ a list of control points calculated with the internal rayrender function `rayren
 \item{normal_end}{Default `NA`. Orientation surface normal for the start of ribbon curves. If not
 specified, same as `normal`.}
 
-\item{material}{Default  \code{\link{diffuse}}.The material, called from one of the material 
+\item{material}{Default  \code{\link{diffuse}}.The material, called from one of the material
 functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}.}
 
 \item{angle}{Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.}
@@ -82,7 +82,7 @@ Note: emissive objects may not currently function correctly when scaled.}
 Single row of a tibble describing the cube in the scene.
 }
 \description{
-Either a closed or open path made up of bezier curves that go through the specified points 
+Either a closed or open path made up of bezier curves that go through the specified points
 (with continuous first and second derivatives), or straight line segments.
 }
 \examples{
@@ -90,21 +90,21 @@ if(run_documentation()) {
 #Generate a wavy line, showing the line goes through the specified points:
 wave = list(c(-2,1,0),c(-1,-1,0),c(0,1,0),c(1,-1,0),c(2,1,0))
 point_mat = glossy(color="green")
-generate_studio(depth=-1.5) \%>\% 
-  add_object(path(points = wave,material=glossy(color="red"))) \%>\% 
-  add_object(sphere(x=-2,y=1,radius=0.1,material=point_mat)) \%>\% 
-  add_object(sphere(x=-1,y=-1,radius=0.1,material=point_mat)) \%>\% 
-  add_object(sphere(x=0,y=1,radius=0.1,material=point_mat)) \%>\% 
-  add_object(sphere(x=1,y=-1,radius=0.1,material=point_mat)) \%>\% 
-  add_object(sphere(x=2,y=1,radius=0.1,material=point_mat)) \%>\% 
-  add_object(sphere(z=5,x=5,y=5,radius=2,material=light(intensity=15))) \%>\% 
+generate_studio(depth=-1.5) \%>\%
+  add_object(path(points = wave,material=glossy(color="red"))) \%>\%
+  add_object(sphere(x=-2,y=1,radius=0.1,material=point_mat)) \%>\%
+  add_object(sphere(x=-1,y=-1,radius=0.1,material=point_mat)) \%>\%
+  add_object(sphere(x=0,y=1,radius=0.1,material=point_mat)) \%>\%
+  add_object(sphere(x=1,y=-1,radius=0.1,material=point_mat)) \%>\%
+  add_object(sphere(x=2,y=1,radius=0.1,material=point_mat)) \%>\%
+  add_object(sphere(z=5,x=5,y=5,radius=2,material=light(intensity=15))) \%>\%
   render_scene(samples=16, clamp_value=10,fov=30)
 }
 if(run_documentation()) {
 #Here we use straight lines by setting `straight = TRUE`:
-generate_studio(depth=-1.5) \%>\% 
-  add_object(path(points = wave,straight = TRUE, material=glossy(color="red"))) \%>\% 
-  add_object(sphere(z=5,x=5,y=5,radius=2,material=light(intensity=15))) \%>\% 
+generate_studio(depth=-1.5) \%>\%
+  add_object(path(points = wave,straight = TRUE, material=glossy(color="red"))) \%>\%
+  add_object(sphere(z=5,x=5,y=5,radius=2,material=light(intensity=15))) \%>\%
   render_scene(samples=16, clamp_value=10,fov=30)
 }
 if(run_documentation()) {
@@ -112,16 +112,16 @@ if(run_documentation()) {
 #we'll create a random curve:
 set.seed(21)
 random_mat = matrix(runif(3*9)*2-1, ncol=3)
-generate_studio(depth=-1.5) \%>\% 
-  add_object(path(points=random_mat, material=glossy(color="red"))) \%>\% 
-  add_object(sphere(y=5,radius=1,material=light(intensity=30))) \%>\% 
+generate_studio(depth=-1.5) \%>\%
+  add_object(path(points=random_mat, material=glossy(color="red"))) \%>\%
+  add_object(sphere(y=5,radius=1,material=light(intensity=30))) \%>\%
   render_scene(samples=16, clamp_value=10)
 }
 if(run_documentation()) {
 #We can ensure the curve is closed by setting `closed = TRUE`
-generate_studio(depth=-1.5) \%>\% 
-  add_object(path(points=random_mat, closed = TRUE, material=glossy(color="red"))) \%>\% 
-  add_object(sphere(y=5,radius=1,material=light(intensity=30))) \%>\% 
+generate_studio(depth=-1.5) \%>\%
+  add_object(path(points=random_mat, closed = TRUE, material=glossy(color="red"))) \%>\%
+  add_object(sphere(y=5,radius=1,material=light(intensity=30))) \%>\%
   render_scene(samples=16, clamp_value=10)
 }
 if(run_documentation()) {
@@ -129,37 +129,37 @@ if(run_documentation()) {
 pretzel = list(c(-0.8,-0.5,0.1),c(0,-0.2,-0.1),c(0,0.3,0.1),c(-0.5,0.5,0.1), c(-0.6,-0.5,-0.1),
                c(0,-0.8,-0.1),
                c(0.6,-0.5,-0.1),c(0.5,0.5,-0.1), c(0,0.3,-0.1),c(-0,-0.2,0.1), c(0.8,-0.5,0.1))
-               
+
 #Render the full pretzel:
-generate_studio(depth = -1.1) \%>\% 
-  add_object(path(pretzel, width=0.17,  material = glossy(color="#db5b00"))) \%>\% 
-  add_object(sphere(y=5,x=2,z=4,material=light(intensity=20,spotlight_focus = c(0,0,0)))) \%>\% 
+generate_studio(depth = -1.1) \%>\%
+  add_object(path(pretzel, width=0.17,  material = glossy(color="#db5b00"))) \%>\%
+  add_object(sphere(y=5,x=2,z=4,material=light(intensity=20,spotlight_focus = c(0,0,0)))) \%>\%
   render_scene(samples=16, clamp_value=10)
 }
 if(run_documentation()) {
 #Here, we'll render only the first third of the pretzel by setting `u_max = 0.33`
-generate_studio(depth = -1.1) \%>\% 
-  add_object(path(pretzel, width=0.17, u_max=0.33, material = glossy(color="#db5b00"))) \%>\% 
-  add_object(sphere(y=5,x=2,z=4,material=light(intensity=20,spotlight_focus = c(0,0,0)))) \%>\% 
+generate_studio(depth = -1.1) \%>\%
+  add_object(path(pretzel, width=0.17, u_max=0.33, material = glossy(color="#db5b00"))) \%>\%
+  add_object(sphere(y=5,x=2,z=4,material=light(intensity=20,spotlight_focus = c(0,0,0)))) \%>\%
   render_scene(samples=16, clamp_value=10)
 }
 if(run_documentation()) {
 #Here's the last third, by setting `u_min = 0.66`
-generate_studio(depth = -1.1) \%>\% 
-  add_object(path(pretzel, width=0.17, u_min=0.66, material = glossy(color="#db5b00"))) \%>\% 
-  add_object(sphere(y=5,x=2,z=4,material=light(intensity=20,spotlight_focus = c(0,0,0)))) \%>\% 
+generate_studio(depth = -1.1) \%>\%
+  add_object(path(pretzel, width=0.17, u_min=0.66, material = glossy(color="#db5b00"))) \%>\%
+  add_object(sphere(y=5,x=2,z=4,material=light(intensity=20,spotlight_focus = c(0,0,0)))) \%>\%
   render_scene(samples=16, clamp_value=10)
 }
 if(run_documentation()) {
 #Here's the full pretzel, decomposed into thirds using the u_min and u_max coordinates
-generate_studio(depth = -1.1) \%>\% 
+generate_studio(depth = -1.1) \%>\%
   add_object(path(pretzel, width=0.17, u_max=0.33, x = -0.8, y =0.6,
-                  material = glossy(color="#db5b00"))) \%>\% 
+                  material = glossy(color="#db5b00"))) \%>\%
   add_object(path(pretzel, width=0.17, u_min=0.66, x = 0.8, y =0.6,
-                  material = glossy(color="#db5b00"))) \%>\% 
+                  material = glossy(color="#db5b00"))) \%>\%
   add_object(path(pretzel, width=0.17, u_min=0.33, u_max=0.66, x=0,
-                  material = glossy(color="#db5b00"))) \%>\% 
-  add_object(sphere(y=5,x=2,z=4,material=light(intensity=20,spotlight_focus = c(0,0,0)))) \%>\% 
+                  material = glossy(color="#db5b00"))) \%>\%
+  add_object(sphere(y=5,x=2,z=4,material=light(intensity=20,spotlight_focus = c(0,0,0)))) \%>\%
   render_scene(samples=16, clamp_value=10, lookfrom=c(0,3,10))
 }
 }

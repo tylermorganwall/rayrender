@@ -29,11 +29,11 @@ generate_camera_motion(
 )
 }
 \arguments{
-\item{positions}{A list or 3-column XYZ matrix of camera positions. 
-These will serve as key frames for the camera position. Alternatively, this can also be the a 
+\item{positions}{A list or 3-column XYZ matrix of camera positions.
+These will serve as key frames for the camera position. Alternatively, this can also be the a
 dataframe of the keyframe output from an interactive rayrender session (`ray_keyframes`).}
 
-\item{lookats}{Default `NULL`, which sets the camera lookat to the origin `c(0,0,0)` 
+\item{lookats}{Default `NULL`, which sets the camera lookat to the origin `c(0,0,0)`
 for the animation. A list or 3-column XYZ matrix
 of `lookat` points. Must be the same number of points as `positions`.}
 
@@ -41,7 +41,7 @@ of `lookat` points. Must be the same number of points as `positions`.}
 
 \item{fovs}{Default `40`. A numeric vector of field of view values.}
 
-\item{focal_distances}{Default `NULL`, automatically the distance between positions and lookats. 
+\item{focal_distances}{Default `NULL`, automatically the distance between positions and lookats.
 Numeric vector of focal distances.}
 
 \item{ortho_dims}{Default `NULL`, which results in `c(1,1)` orthographic dimensions.  A list or 2-column matrix
@@ -49,8 +49,8 @@ of orthographic dimensions.}
 
 \item{camera_ups}{Default `NULL`, which gives at up vector of `c(0,1,0)`. Camera up orientation.}
 
-\item{type}{Default `cubic`. Type of transition between keyframes. 
-Other options are `linear`, `quad`, `bezier`, `exp`, and `manual`. `manual` just returns the values 
+\item{type}{Default `cubic`. Type of transition between keyframes.
+Other options are `linear`, `quad`, `bezier`, `exp`, and `manual`. `manual` just returns the values
 passed in, properly formatted to be passed to `render_animation()`.}
 
 \item{frames}{Default `30`. Total number of frames.}
@@ -69,8 +69,8 @@ passed in, properly formatted to be passed to `render_animation()`.}
 
 \item{curvature_adjust}{Default `none`. Other options are `position`, `lookat`, and `both`. Whether to slow down the camera at areas of high curvature
 to prevent fast swings. Only used for curve `type = bezier`. This does not preserve key frame positions.
-Note: This feature will likely result in the `lookat` and `position` diverging if they do not 
-have similar curvatures at each point. This feature is best used when passing the same set of points to `positions` and `lookats` 
+Note: This feature will likely result in the `lookat` and `position` diverging if they do not
+have similar curvatures at each point. This feature is best used when passing the same set of points to `positions` and `lookats`
 and providing an `offset_lookat` value, which ensures the curvature will be the same.}
 
 \item{curvature_scale}{Default `30`. Constant dividing factor for curvature. Higher values will subdivide the
@@ -82,7 +82,7 @@ or towards the derivative of the Bezier curve.}
 
 \item{damp_motion}{Default `FALSE`. Whether to damp the motion of the camera, so that quick movements are damped
 and don't result in shakey motion. This function tracks the current position, and linearly interpolates between
-that point and the next point using value `damp_magnitude`. 
+that point and the next point using value `damp_magnitude`.
 The equation for the position is `cam_current = cam_current * damp_magnitude + cam_next_point * (1 - damp_magnitude)`.}
 
 \item{damp_magnitude}{Default `0.1`. Amount to damp the motion, a numeric value greater than `0` (no damping) and
@@ -113,56 +113,56 @@ ellip_scene = do.call(rbind, elliplist)
 camera_pos = list(c(0,1,15),c(5,-5,5),c(-5,5,-5),c(0,1,-15))
 
 #Plot the camera path and render from above using the path object:
-generate_ground(material=diffuse(checkercolor="grey20"),depth=-10) \%>\% 
-  add_object(ellip_scene) \%>\% 
-  add_object(sphere(y=50,radius=10,material=light(intensity=30))) \%>\% 
-  add_object(path(camera_pos, material=diffuse(color="red"))) \%>\% 
+generate_ground(material=diffuse(checkercolor="grey20"),depth=-10) \%>\%
+  add_object(ellip_scene) \%>\%
+  add_object(sphere(y=50,radius=10,material=light(intensity=30))) \%>\%
+  add_object(path(camera_pos, material=diffuse(color="red"))) \%>\%
   render_scene(lookfrom=c(0,20,0), width=800,height=800,samples=16,
                camera_up = c(0,0,1),
                fov=80)
 }
-if(run_documentation()) { 
-#Side view     
-generate_ground(material=diffuse(checkercolor="grey20"),depth=-10) \%>\% 
-  add_object(ellip_scene) \%>\% 
-  add_object(sphere(y=50,radius=10,material=light(intensity=30))) \%>\% 
-  add_object(path(camera_pos, material=diffuse(color="red"))) \%>\% 
+if(run_documentation()) {
+#Side view
+generate_ground(material=diffuse(checkercolor="grey20"),depth=-10) \%>\%
+  add_object(ellip_scene) \%>\%
+  add_object(sphere(y=50,radius=10,material=light(intensity=30))) \%>\%
+  add_object(path(camera_pos, material=diffuse(color="red"))) \%>\%
   render_scene(lookfrom=c(20,0,0),width=800,height=800,samples=16,
                  fov=80)
  }
 if(run_documentation()) {
-#View from the start        
-generate_ground(material=diffuse(checkercolor="grey20"),depth=-10) \%>\% 
-  add_object(ellip_scene) \%>\% 
-  add_object(sphere(y=50,radius=10,material=light(intensity=30))) \%>\% 
-  add_object(path(camera_pos, material=diffuse(color="red"))) \%>\% 
+#View from the start
+generate_ground(material=diffuse(checkercolor="grey20"),depth=-10) \%>\%
+  add_object(ellip_scene) \%>\%
+  add_object(sphere(y=50,radius=10,material=light(intensity=30))) \%>\%
+  add_object(path(camera_pos, material=diffuse(color="red"))) \%>\%
   render_scene(lookfrom=c(0,1.5,16),width=800,height=800,samples=16,
                  fov=80)
  }
-if(run_documentation()) {  
+if(run_documentation()) {
 #Generate Camera movement, setting the lookat position to be same as camera position, but offset
 #slightly in front. We'll render 12 frames, but you'd likely want more in a real animation.
 
-camera_motion =  generate_camera_motion(positions = camera_pos, lookats = camera_pos, 
+camera_motion =  generate_camera_motion(positions = camera_pos, lookats = camera_pos,
                                         offset_lookat = 1, fovs=80, frames=12,
-                                        type="bezier") 
-                                        
+                                        type="bezier")
+
 #This returns a data frame of individual camera positions, interpolated by cubic bezier curves.
 camera_motion
 
 #Pass NA filename to plot to the device. We'll keep the path and offset it slightly to see
 #where we're going. This results in a "roller coaster" effect.
-generate_ground(material=diffuse(checkercolor="grey20"),depth=-10) \%>\% 
-  add_object(ellip_scene) \%>\% 
-  add_object(sphere(y=50,radius=10,material=light(intensity=30))) \%>\% 
+generate_ground(material=diffuse(checkercolor="grey20"),depth=-10) \%>\%
+  add_object(ellip_scene) \%>\%
+  add_object(sphere(y=50,radius=10,material=light(intensity=30))) \%>\%
   add_object(obj_model(r_obj(simple_r = TRUE),x=10,y=-10,scale_obj=3, angle=c(0,-45,0),
-                       material=dielectric(attenuation=c(1,1,0.3)))) \%>\% 
-  add_object(pig(x=-7,y=10,z=-5,scale=1,angle=c(0,-45,80),emotion="angry")) \%>\% 
+                       material=dielectric(attenuation=c(1,1,0.3)))) \%>\%
+  add_object(pig(x=-7,y=10,z=-5,scale=1,angle=c(0,-45,80),emotion="angry")) \%>\%
   add_object(pig(x=0,y=-0.25,z=-15,scale=1,angle=c(0,225,-22), order_rotation = c(3,2,1),
-                 emotion="angry", spider=TRUE)) \%>\% 
-  add_object(path(camera_pos, y=-0.2,material=diffuse(color="red"))) \%>\% 
+                 emotion="angry", spider=TRUE)) \%>\%
+  add_object(path(camera_pos, y=-0.2,material=diffuse(color="red"))) \%>\%
   render_animation(filename = NA, camera_motion = camera_motion, samples=16,
-                   sample_method="sobol_blue",  
+                   sample_method="sobol_blue",
                    clamp_value=10, width=400, height=400)
 
 }

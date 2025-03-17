@@ -1,7 +1,6 @@
 #include "../hitables/infinite_area_light.h"
-#include "../hitables/mathinline.h"
+#include "../math/mathinline.h"
 #include "../utils/raylog.h"
-#include "../hitables/vec3.h"
 #include "../math/vectypes.h"
 
 InfiniteAreaLight::InfiniteAreaLight(int width, int height, Float r, point3f center, 

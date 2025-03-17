@@ -4,8 +4,7 @@
 #include "../math/rng.h"
 #include "../math/vec2.h"
 #include <memory>
-// Include commented out - file does not exist in the repo
-// #include "../math/single_sample.h"
+#include "single_sample.h"
 
 class Sampler {
 public:

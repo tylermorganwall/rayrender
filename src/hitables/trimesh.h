@@ -4,8 +4,8 @@
 #include "../hitables/trianglemesh.h"
 #include "../hitables/triangle.h"
 
-#include "../hitables/rng.h"
-#include "../hitables/bvh.h"
+#include "../math/rng.h"
+#include "../core/bvh.h"
 #ifndef STBIMAGEH
 #define STBIMAGEH
 #include "../stb/stb_image.h"

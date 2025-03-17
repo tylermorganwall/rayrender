@@ -50,12 +50,12 @@ Generate Cornell Box
 \examples{
 #Generate and render the default Cornell box.
 if(run_documentation()) {
-render_scene(generate_cornell(), 
+render_scene(generate_cornell(),
              samples=16,aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 }
 if(run_documentation()) {
 #Make a much smaller light in the center of the room.
-render_scene(generate_cornell(lightwidth=200,lightdepth=200), 
+render_scene(generate_cornell(lightwidth=200,lightdepth=200),
              samples=16,aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 }
 if(run_documentation()) {
@@ -66,13 +66,13 @@ render_scene(scene, samples=16,aperture=0, fov=40, ambient_light=FALSE, parallel
 }
 if(run_documentation()) {
 #Reduce "fireflies" by setting a clamp_value in render_scene()
-render_scene(scene, samples=16,aperture=0, fov=40, ambient_light=FALSE, 
+render_scene(scene, samples=16,aperture=0, fov=40, ambient_light=FALSE,
              parallel=TRUE,clamp_value=3)
 }
 if(run_documentation()) {
 # Change the color scheme of the cornell box
-generate_cornell(leftcolor="purple", rightcolor="yellow") |> 
-  render_scene(samples=16,aperture=0, fov=40, ambient_light=FALSE, 
+generate_cornell(leftcolor="purple", rightcolor="yellow") |>
+  render_scene(samples=16,aperture=0, fov=40, ambient_light=FALSE,
                parallel=TRUE,clamp_value=3)
 }
 }

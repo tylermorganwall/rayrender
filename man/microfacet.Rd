@@ -37,12 +37,12 @@ microfacet(
 \item{color}{Default `white`. The color of the surface. Can be either
 a hexadecimal code, R color string, or a numeric rgb vector listing three intensities between `0` and `1`.}
 
-\item{roughness}{Default `0.0001`. Roughness of the surface, between `0` (smooth) and `1` (diffuse). 
+\item{roughness}{Default `0.0001`. Roughness of the surface, between `0` (smooth) and `1` (diffuse).
 Can be either a single number, or two numbers indicating an anisotropic distribution of normals. `0` is a smooth surface, while
-`1` is extremely rough. This can be used to create a wide-variety of materials (e.g. `0-0.01` is specular 
-metal, `0.02`-`0.1` is brushed metal, `0.1`-`0.3` is a rough metallic surface , `0.3`-`0.5` is diffuse, and 
-above that is a rough satin-like material). 
-Two numbers will specify the x and y roughness separately (e.g. `roughness = c(0.01, 0.001)` gives an 
+`1` is extremely rough. This can be used to create a wide-variety of materials (e.g. `0-0.01` is specular
+metal, `0.02`-`0.1` is brushed metal, `0.1`-`0.3` is a rough metallic surface , `0.3`-`0.5` is diffuse, and
+above that is a rough satin-like material).
+Two numbers will specify the x and y roughness separately (e.g. `roughness = c(0.01, 0.001)` gives an
 etched metal effect). If `0`, this defaults to the `metal()` material for faster evaluation.}
 
 \item{transmission}{Default `FALSE`. If `TRUE`, this material will be a rough dielectric instead of a rough metallic surface.}
@@ -52,15 +52,15 @@ If single number, will be repeated across all three channels. If `transmission =
 index of refraction of the material.}
 
 \item{kappa}{Default `0`. Wavelength dependent absorption of the material (red, green, and blue channels).
-If single number, will be repeated across all three channels. If `transmission = TRUE`, this length-3 vector specifies 
+If single number, will be repeated across all three channels. If `transmission = TRUE`, this length-3 vector specifies
 the attenuation of the dielectric (analogous to the dielectric `attenuation` argument).}
 
 \item{microfacet}{Default `tbr`.  Type of microfacet distribution. Alternative option `beckmann`.}
 
-\item{checkercolor}{Default `NA`. If not `NA`, determines the secondary color of the checkered surface. 
+\item{checkercolor}{Default `NA`. If not `NA`, determines the secondary color of the checkered surface.
 Can be either a hexadecimal code, or a numeric rgb vector listing three intensities between `0` and `1`.}
 
-\item{checkerperiod}{Default `3`. The period of the checker pattern. Increasing this value makes the checker 
+\item{checkerperiod}{Default `3`. The period of the checker pattern. Increasing this value makes the checker
 pattern bigger, and decreasing it makes it smaller}
 
 \item{noise}{Default `0`. If not `0`, covers the surface in a turbulent marble pattern. This value will determine
@@ -73,17 +73,17 @@ the amount of turbulence in the texture.}
 \item{noisecolor}{Default `#000000`. The secondary color of the noise pattern.
 Can be either a hexadecimal code, or a numeric rgb vector listing three intensities between `0` and `1`.}
 
-\item{gradient_color}{Default `NA`. If not `NA`, creates a secondary color for a linear gradient 
+\item{gradient_color}{Default `NA`. If not `NA`, creates a secondary color for a linear gradient
 between the this color and color specified in `color`. Direction is determined by `gradient_transpose`.}
 
 \item{gradient_transpose}{Default `FALSE`. If `TRUE`, this will use the `v` coordinate texture instead
 of the `u` coordinate texture to map the gradient.}
 
-\item{gradient_point_start}{Default `NA`. If not `NA`, this changes the behavior from mapping texture coordinates to 
+\item{gradient_point_start}{Default `NA`. If not `NA`, this changes the behavior from mapping texture coordinates to
 mapping to world space coordinates. This should be a length-3 vector specifying the x,y, and z points where the gradient
 begins with value `color`.}
 
-\item{gradient_point_end}{Default `NA`. If not `NA`, this changes the behavior from mapping texture coordinates to 
+\item{gradient_point_end}{Default `NA`. If not `NA`, this changes the behavior from mapping texture coordinates to
 mapping to world space coordinates. This should be a length-3 vector specifying the x,y, and z points where the gradient
 begins with value `gradient_color`.}
 
@@ -96,21 +96,21 @@ begins with value `gradient_color`.}
 
 \item{alpha_texture}{Default `""`. A matrix or filename (specifying a greyscale image) to be used to specify the transparency.}
 
-\item{bump_texture}{Default `""`. A matrix, array, or filename (specifying a greyscale image) to 
+\item{bump_texture}{Default `""`. A matrix, array, or filename (specifying a greyscale image) to
 be used to specify a bump map for the surface.}
 
 \item{bump_intensity}{Default `1`. Intensity of the bump map. High values may lead to unphysical results.}
 
-\item{roughness_texture}{Default `""`. A matrix, array, or filename (specifying a greyscale image) to 
+\item{roughness_texture}{Default `""`. A matrix, array, or filename (specifying a greyscale image) to
 be used to specify a roughness map for the surface.}
 
-\item{roughness_range}{Default ` c(0.0001, 0.2)`. This is a length-2 vector that specifies the range of roughness values 
+\item{roughness_range}{Default ` c(0.0001, 0.2)`. This is a length-2 vector that specifies the range of roughness values
 that the `roughness_texture` can take.}
 
 \item{roughness_flip}{Default `FALSE`. Setting this to `TRUE` flips the roughness values specified in the `roughness_texture`
 so high values are now low values and vice versa.}
 
-\item{importance_sample}{Default `FALSE`. If `TRUE`, the object will be sampled explicitly during 
+\item{importance_sample}{Default `FALSE`. If `TRUE`, the object will be sampled explicitly during
 the rendering process. If the object is particularly important in contributing to the light paths
 in the image (e.g. light sources, refracting glass ball with caustics, metal objects concentrating light),
 this will help with the convergence of the image.}
@@ -123,13 +123,13 @@ Microfacet Material
 }
 \examples{
 # Generate a golden egg, using eta and kappa taken from physical measurements
-# See the website refractiveindex.info for eta and k data, use 
+# See the website refractiveindex.info for eta and k data, use
 # wavelengths 580nm (R), 530nm (G), and 430nm (B).
 if(run_documentation()) {
 generate_cornell() \%>\%
   add_object(ellipsoid(x=555/2,555/2,y=150, a=100,b=150,c=100,
              material=microfacet(roughness=0.1,
-                                 eta=c(0.216,0.42833,1.3184), kappa=c(3.239,2.4599,1.8661)))) \%>\% 
+                                 eta=c(0.216,0.42833,1.3184), kappa=c(3.239,2.4599,1.8661)))) \%>\%
  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=16,
              aperture=0, fov=40, parallel=TRUE,clamp_value=10)
  }
@@ -137,13 +137,13 @@ if(run_documentation()) {
 #Make the roughness anisotropic (either horizontal or vertical), adding an extra light in front
 #to show off the different microfacet orientations
 generate_cornell() \%>\%
-  add_object(sphere(x=555/2,z=50,y=75,radius=20,material=light())) \%>\% 
+  add_object(sphere(x=555/2,z=50,y=75,radius=20,material=light())) \%>\%
   add_object(ellipsoid(x=555-150,555/2,y=150, a=100,b=150,c=100,
              material=microfacet(roughness=c(0.3,0.1),
-                                 eta=c(0.216,0.42833,1.3184), kappa=c(3.239,2.4599,1.8661)))) \%>\% 
+                                 eta=c(0.216,0.42833,1.3184), kappa=c(3.239,2.4599,1.8661)))) \%>\%
  add_object(ellipsoid(x=150,555/2,y=150, a=100,b=150,c=100,
              material=microfacet(roughness=c(0.1,0.3),
-                                 eta=c(0.216,0.42833,1.3184), kappa=c(3.239,2.4599,1.8661)))) \%>\%  
+                                 eta=c(0.216,0.42833,1.3184), kappa=c(3.239,2.4599,1.8661)))) \%>\%
  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=16,
              aperture=0, fov=40,  parallel=TRUE,clamp_value=10)
 }
@@ -153,10 +153,10 @@ generate_cornell() \%>\%
   add_object(obj_model(r_obj(simple_r = TRUE),
                        x=555/2,z=350,y=0, scale_obj = 200, angle=c(0,200,0),
              material=microfacet(roughness=0.2,
-                                 eta=c(1.1583,0.9302,0.5996), kappa=c(6.9650,6.396,5.332)))) \%>\% 
+                                 eta=c(1.1583,0.9302,0.5996), kappa=c(6.9650,6.396,5.332)))) \%>\%
  add_object(ellipsoid(x=200,z=200,y=80, a=50,b=80,c=50,
              material=microfacet(roughness=0.1,
-                                 eta=c(0.216,0.42833,1.3184), kappa=c(3.239,2.4599,1.8661)))) \%>\% 
+                                 eta=c(0.216,0.42833,1.3184), kappa=c(3.239,2.4599,1.8661)))) \%>\%
  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=16,
              aperture=0, fov=40, parallel=TRUE,clamp_value=10)
  }
@@ -166,10 +166,10 @@ generate_cornell() \%>\%
   add_object(obj_model(r_obj(simple_r = TRUE),
                        x=555/2,z=350,y=0, scale_obj = 200, angle=c(0,200,0),
              material=microfacet(roughness=0.5,
-                                 eta=c(1.1583,0.9302,0.5996), kappa=c(6.9650,6.396,5.332)))) \%>\% 
+                                 eta=c(1.1583,0.9302,0.5996), kappa=c(6.9650,6.396,5.332)))) \%>\%
  add_object(ellipsoid(x=200,z=200,y=80, a=50,b=80,c=50,
              material=microfacet(roughness=0.3,
-                                 eta=c(0.216,0.42833,1.3184), kappa=c(3.239,2.4599,1.8661)))) \%>\% 
+                                 eta=c(0.216,0.42833,1.3184), kappa=c(3.239,2.4599,1.8661)))) \%>\%
  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=16,
              aperture=0, fov=40, parallel=TRUE,clamp_value=10)
  }
@@ -178,9 +178,9 @@ if(run_documentation()) {
 generate_cornell() \%>\%
   add_object(obj_model(r_obj(simple_r = TRUE),
                        x=555/2,z=350,y=0, scale_obj = 200, angle=c(0,200,0),
-             material=microfacet(roughness=0.3, transmission=T, eta=1.6))) \%>\% 
+             material=microfacet(roughness=0.3, transmission=T, eta=1.6))) \%>\%
  add_object(ellipsoid(x=200,z=200,y=80, a=50,b=80,c=50,
-             material=microfacet(roughness=0.3, transmission=T, eta=1.6))) \%>\% 
+             material=microfacet(roughness=0.3, transmission=T, eta=1.6))) \%>\%
  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=16,
              aperture=0, fov=40, parallel=TRUE,clamp_value=10, min_variance=1e-6)
 }

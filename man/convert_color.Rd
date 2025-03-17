@@ -7,7 +7,7 @@
 convert_color(color, as_hex = FALSE)
 }
 \arguments{
-\item{color}{The color to convert. Can be either a hexadecimal code, or a numeric rgb 
+\item{color}{The color to convert. Can be either a hexadecimal code, or a numeric rgb
 vector listing three intensities between `0` and `1`.}
 }
 \value{

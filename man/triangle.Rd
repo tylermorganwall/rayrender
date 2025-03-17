@@ -35,7 +35,7 @@ triangle(
 
 \item{n3}{Default `NA`. Length-3 vector indicating the normal vector associated with the third triangle vertex.}
 
-\item{color1}{Default `NA`. Length-3 vector or string indicating the color associated with the first triangle vertex. 
+\item{color1}{Default `NA`. Length-3 vector or string indicating the color associated with the first triangle vertex.
 If NA but other vertices specified, color inherits from material.}
 
 \item{color2}{Default `NA`. Length-3 vector or string indicating the color associated with the second triangle vertex.
@@ -44,7 +44,7 @@ If NA but other vertices specified, color inherits from material.}
 \item{color3}{Default `NA`. Length-3 vector or string indicating the color associated with the third triangle vertex.
 If NA but other vertices specified, color inherits from material.}
 
-\item{material}{Default  \code{\link{diffuse}}.The material, called from one of the material 
+\item{material}{Default  \code{\link{diffuse}}.The material, called from one of the material
 functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}.}
 
 \item{angle}{Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.}
@@ -53,7 +53,7 @@ functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}
 
 \item{flipped}{Default `FALSE`. Whether to flip the normals.}
 
-\item{reversed}{Default `FALSE`. Similar to the `flipped` argument, but this reverses the handedness of the 
+\item{reversed}{Default `FALSE`. Similar to the `flipped` argument, but this reverses the handedness of the
 triangle so it will be oriented in the opposite direction.}
 
 \item{scale}{Default `c(1, 1, 1)`. Scale transformation in the x, y, and z directions. If this is a single value,
@@ -72,15 +72,15 @@ if(run_documentation()) {
 generate_cornell() \%>\%
   add_object(triangle(v1 = c(100, 100, 100), v2 = c(555/2, 455, 455), v3 = c(455, 100, 100),
                       material = diffuse(color = "purple"))) \%>\%
-  render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
+  render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40,
                ambient_light = FALSE, samples = 16, parallel = TRUE, clamp_value = 5)
 }
-#Pass individual colors to each vertex: 
+#Pass individual colors to each vertex:
 if(run_documentation()) {
 generate_cornell() \%>\%
   add_object(triangle(v1 = c(100, 100, 100), v2 = c(555/2, 455, 455), v3 = c(455, 100, 100),
                       color1 = "green", color2 = "yellow", color3 = "red")) \%>\%
-  render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
+  render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40,
                ambient_light = FALSE, samples = 16, parallel = TRUE, clamp_value = 5)
 }
 }

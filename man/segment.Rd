@@ -32,11 +32,11 @@ segment(
 \item{from_center}{Default `TRUE`. If orientation specified via `direction`, setting this argument
 to `FALSE` will make `start` specify the bottom of the segment, instead of the middle.}
 
-\item{direction}{Default `NA`. Alternative to `start` and `end`, specify the direction (via 
+\item{direction}{Default `NA`. Alternative to `start` and `end`, specify the direction (via
 a length-3 vector) of the segment. Segment will be centered at `start`, and the length will be
 determined by the magnitude of the direction vector.}
 
-\item{material}{Default  \code{\link{diffuse}}.The material, called from one of the material 
+\item{material}{Default  \code{\link{diffuse}}.The material, called from one of the material
 functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}.}
 
 \item{capped}{Default `TRUE`. Whether to add caps to the segment. Turned off when using the `light()` material.}
@@ -44,7 +44,7 @@ functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}
 \item{flipped}{Default `FALSE`. Whether to flip the normals.}
 
 \item{scale}{Default `c(1, 1, 1)`. Scale transformation in the x, y, and z directions. If this is a single value,
-number, the object will be scaled uniformly. Notes: this will change the stated start/end position of the segment. 
+number, the object will be scaled uniformly. Notes: this will change the stated start/end position of the segment.
 Emissive objects may not currently function correctly when scaled.}
 }
 \value{
@@ -54,11 +54,11 @@ Single row of a tibble describing the segment in the scene.
 Similar to the cylinder object, but specified by start and end points.
 }
 \examples{
-#Generate a segment in the cornell box. 
+#Generate a segment in the cornell box.
 if(run_documentation()) {
 generate_cornell() \%>\%
   add_object(segment(start = c(100, 100, 100), end = c(455, 455, 455), radius = 50)) \%>\%
-  render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
+  render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40,
                ambient_light = FALSE, samples = 16, parallel = TRUE, clamp_value = 5)
 }
 
@@ -75,9 +75,9 @@ for(i in 1:(length(xvals) - 1)) {
 }
 scene_segments = do.call(rbind,scene_list)
 if(run_documentation()) {
-generate_cornell() \%>\% 
+generate_cornell() \%>\%
   add_object(scene_segments) \%>\%
-  render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
+  render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40,
                ambient_light = FALSE, samples = 16, parallel = TRUE, clamp_value = 5)
 }
 
@@ -99,7 +99,7 @@ cube_outline = segment(start = c(100, 100, 100), end = c(100, 100, 455), radius 
 if(run_documentation()) {
 generate_cornell() \%>\%
   add_object(cube_outline) \%>\%
-  render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
+  render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40,
                ambient_light = FALSE, samples = 16, parallel = TRUE, clamp_value = 5)
 }
 
@@ -108,7 +108,7 @@ if(run_documentation()) {
 generate_cornell() \%>\%
   add_object(group_objects(cube_outline, pivot_point = c(555/2, 555/2, 555/2),
                            angle = c(45,45,45), scale = c(0.5,0.5,0.5))) \%>\%
-  render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
+  render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40,
                ambient_light = FALSE, samples = 16, parallel = TRUE, clamp_value = 5)
 }
 }

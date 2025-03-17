@@ -25,7 +25,7 @@ csg_object(
 
 \item{z}{Default `0`. z-offset of the center of the object.}
 
-\item{material}{Default  \code{\link{diffuse}}. The material, called from one of the material 
+\item{material}{Default  \code{\link{diffuse}}. The material, called from one of the material
 functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}.}
 
 \item{angle}{Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.}
@@ -53,14 +53,14 @@ nested inside will be ignored.
 if(run_documentation()) {
 #We will combine these three objects:
 generate_ground(material=diffuse(checkercolor="grey20")) \%>\%
-  add_object(csg_object(csg_box(), material=glossy(color="red"))) \%>\% 
-  add_object(csg_object(csg_sphere(radius=0.707), material=glossy(color="green"))) \%>\% 
+  add_object(csg_object(csg_box(), material=glossy(color="red"))) \%>\%
+  add_object(csg_object(csg_sphere(radius=0.707), material=glossy(color="green"))) \%>\%
   add_object(csg_object(csg_group(list(csg_cylinder(start=c(-1,0,0), end=c(1,0,0), radius=0.4),
                    csg_cylinder(start=c(0,-1,0), end=c(0,1,0), radius=0.4),
                    csg_cylinder(start=c(0,0,-1), end=c(0,0,1), radius=0.4))),
-                   material=glossy(color="blue"))) \%>\% 
+                   material=glossy(color="blue"))) \%>\%
   add_object(sphere(y=5,x=3,radius=1,material=light(intensity=30))) \%>\%
-  render_scene(clamp_value=10, fov=15,lookfrom=c(5,5,10), 
+  render_scene(clamp_value=10, fov=15,lookfrom=c(5,5,10),
                samples=16, sample_method="sobol_blue")
 }
 if(run_documentation()) {
@@ -94,7 +94,7 @@ generate_ground(material=diffuse(checkercolor="grey20")) \%>\%
     operation="blend"),
     material=glossy(color="purple"))) \%>\%
   add_object(sphere(y=5,x=3,radius=1,material=light(intensity=30))) \%>\%
-  render_scene(clamp_value=10, fov=15,lookfrom=c(5,5,10), 
+  render_scene(clamp_value=10, fov=15,lookfrom=c(5,5,10),
                samples=16, sample_method="sobol_blue")
 }
 }

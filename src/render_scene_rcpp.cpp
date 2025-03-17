@@ -11,7 +11,7 @@
 #include "math/float.h"
 #include "core/buildscene.h"
 #include "rng.h"
-#include "math/tonemap.h"
+#include "tonemap.h"
 #include "hitables/infinite_area_light.h"
 #include "core/adaptivesampler.h"
 #include "math/sampler.h"

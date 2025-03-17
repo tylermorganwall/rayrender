@@ -1,7 +1,7 @@
 #include "../math/bounds.h"
 #include "../math/rng.h"
 #include "../math/sampler.h"
-#include "../math/ray.h"
+#include "../core/ray.h"
 
 template <typename T>
 bool Bounds3<T>::HitP(const Ray &r, Float tMax, Float *hitt0, Float *hitt1) const {

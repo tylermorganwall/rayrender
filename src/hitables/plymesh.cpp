@@ -1,9 +1,9 @@
 #define TINYPLY_IMPLEMENTATION
 
-#include "../hitables/miniply.h"
+#include "../miniply/miniply.h"
 #include "../hitables/plymesh.h"
-#include "../hitables/loopsubdiv.h"
-#include "../hitables/calcnormals.h"
+#include "../math/loopsubdiv.h"
+#include "../math/calcnormals.h"
 #include "../utils/raylog.h"
 
 inline char separator_ply() {

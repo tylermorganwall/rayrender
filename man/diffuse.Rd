@@ -32,10 +32,10 @@ diffuse(
 \item{color}{Default `white`. The color of the surface. Can be either
 a hexadecimal code, R color string, or a numeric rgb vector listing three intensities between `0` and `1`.}
 
-\item{checkercolor}{Default `NA`. If not `NA`, determines the secondary color of the checkered surface. 
+\item{checkercolor}{Default `NA`. If not `NA`, determines the secondary color of the checkered surface.
 Can be either a hexadecimal code, or a numeric rgb vector listing three intensities between `0` and `1`.}
 
-\item{checkerperiod}{Default `3`. The period of the checker pattern. Increasing this value makes the checker 
+\item{checkerperiod}{Default `3`. The period of the checker pattern. Increasing this value makes the checker
 pattern bigger, and decreasing it makes it smaller}
 
 \item{noise}{Default `0`. If not `0`, covers the surface in a turbulent marble pattern. This value will determine
@@ -48,17 +48,17 @@ the amount of turbulence in the texture.}
 \item{noisecolor}{Default `#000000`. The secondary color of the noise pattern.
 Can be either a hexadecimal code, or a numeric rgb vector listing three intensities between `0` and `1`.}
 
-\item{gradient_color}{Default `NA`. If not `NA`, creates a secondary color for a linear gradient 
+\item{gradient_color}{Default `NA`. If not `NA`, creates a secondary color for a linear gradient
 between the this color and color specified in `color`. Direction is determined by `gradient_transpose`.}
 
 \item{gradient_transpose}{Default `FALSE`. If `TRUE`, this will use the `v` coordinate texture instead
 of the `u` coordinate texture to map the gradient.}
 
-\item{gradient_point_start}{Default `NA`. If not `NA`, this changes the behavior from mapping texture coordinates to 
+\item{gradient_point_start}{Default `NA`. If not `NA`, this changes the behavior from mapping texture coordinates to
 mapping to world space coordinates. This should be a length-3 vector specifying the x,y, and z points where the gradient
 begins with value `color`.}
 
-\item{gradient_point_end}{Default `NA`. If not `NA`, this changes the behavior from mapping texture coordinates to 
+\item{gradient_point_end}{Default `NA`. If not `NA`, this changes the behavior from mapping texture coordinates to
 mapping to world space coordinates. This should be a length-3 vector specifying the x,y, and z points where the gradient
 begins with value `gradient_color`.}
 
@@ -69,10 +69,10 @@ begins with value `gradient_color`.}
 \item{image_repeat}{Default `1`. Number of times to repeat the image across the surface.
 `u` and `v` repeat amount can be set independently if user passes in a length-2 vector.}
 
-\item{alpha_texture}{Default `""`. A matrix or filename (specifying a greyscale image) to 
+\item{alpha_texture}{Default `""`. A matrix or filename (specifying a greyscale image) to
 be used to specify the transparency.}
 
-\item{bump_texture}{Default `""`. A matrix, array, or filename (specifying a greyscale image) to 
+\item{bump_texture}{Default `""`. A matrix, array, or filename (specifying a greyscale image) to
 be used to specify a bump map for the surface.}
 
 \item{bump_intensity}{Default `1`. Intensity of the bump map. High values may lead to unphysical results.}
@@ -85,7 +85,7 @@ be used to specify a bump map for the surface.}
 Higher numbers indicate a roughed surface, where sigma is the standard deviation of the microfacet orientation angle. When 0, this reverts
 to the default lambertian behavior.}
 
-\item{importance_sample}{Default `FALSE`. If `TRUE`, the object will be sampled explicitly during 
+\item{importance_sample}{Default `FALSE`. If `TRUE`, the object will be sampled explicitly during
 the rendering process. If the object is particularly important in contributing to the light paths
 in the image (e.g. light sources, refracting glass ball with caustics, metal objects concentrating light),
 this will help with the convergence of the image.}
@@ -105,7 +105,7 @@ render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=16,
              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 }
 
-#Add a checkered rectangular cube below             
+#Add a checkered rectangular cube below
 scene = scene \%>\%
   add_object(cube(x=555/2,y=555/8,z=555/2,xwidth=555/2,ywidth=555/4,zwidth=555/2,
   material = diffuse(checkercolor="purple",checkerperiod=20)))
@@ -113,8 +113,8 @@ if(run_documentation()) {
 render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=16,
              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 }
-  
-#Add a marbled sphere           
+
+#Add a marbled sphere
 scene = scene \%>\%
   add_object(sphere(x=555/2+555/4,y=555/2,z=555/2,radius=555/8,
   material = diffuse(noise=1/20)))
@@ -123,7 +123,7 @@ render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=16,
              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 }
 
-#Add an orange volumetric (fog) cube           
+#Add an orange volumetric (fog) cube
 scene = scene \%>\%
   add_object(cube(x=555/2-555/4,y=555/2,z=555/2,xwidth=555/4,ywidth=555/4,zwidth=555/4,
   material = diffuse(fog=TRUE, fogdensity=0.05,color="orange")))
@@ -132,9 +132,9 @@ render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=16,
              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 }
 
-#' #Add an line segment with a color gradient        
+#' #Add an line segment with a color gradient
 scene = scene \%>\%
-  add_object(segment(start = c(555,450,450),end=c(0,450,450),radius = 50, 
+  add_object(segment(start = c(555,450,450),end=c(0,450,450),radius = 50,
                      material = diffuse(color="#1f7326", gradient_color = "#a60d0d")))
 if(run_documentation()) {
 render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=16,

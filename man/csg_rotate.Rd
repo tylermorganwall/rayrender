@@ -38,26 +38,26 @@ CSG Rotate
 \examples{
 if(run_documentation()) {
 #Rotate a pyramid (translating it upwards because the object is scaled from the center):
-generate_ground(material=diffuse(checkercolor="grey20")) \%>\% 
+generate_ground(material=diffuse(checkercolor="grey20")) \%>\%
   add_object(csg_object(csg_pyramid(z=1,y=-0.99),
-                        material=glossy(color="red"))) \%>\% 
+                        material=glossy(color="red"))) \%>\%
   add_object(csg_object(csg_rotate(csg_pyramid(z=-1.5,y=-0.99),
                         pivot_point = c(0,-0.99,-1.5),angle=c(0,45,0)),
-                        material=glossy(color="green"))) \%>\% 
-  add_object(sphere(y=5,x=5,z=5,material=light(intensity=40))) \%>\% 
-  render_scene(lookfrom=c(-3,4,10), fov=15, 
+                        material=glossy(color="green"))) \%>\%
+  add_object(sphere(y=5,x=5,z=5,material=light(intensity=40))) \%>\%
+  render_scene(lookfrom=c(-3,4,10), fov=15,
                lookat=c(0,-0.5,0),clamp_value=10)
   }
 if(run_documentation()) {
 #Rotate by specifying a new up vector:
-generate_ground(material=diffuse(checkercolor="grey20")) \%>\% 
+generate_ground(material=diffuse(checkercolor="grey20")) \%>\%
   add_object(csg_object(csg_pyramid(z=1,y=-0.99),
-                        material=glossy(color="red"))) \%>\% 
+                        material=glossy(color="red"))) \%>\%
   add_object(csg_object(csg_rotate(csg_pyramid(z=-1.5,y=-0.49),
                         pivot_point = c(0,-0.49,-1.5), up =c(1,1,0)),
-                        material=glossy(color="green"))) \%>\% 
-  add_object(sphere(y=5,x=5,z=5,material=light(intensity=40))) \%>\% 
-  render_scene(lookfrom=c(-3,4,10), fov=15, 
+                        material=glossy(color="green"))) \%>\%
+  add_object(sphere(y=5,x=5,z=5,material=light(intensity=40))) \%>\%
+  render_scene(lookfrom=c(-3,4,10), fov=15,
                lookat=c(0,-0.5,0),clamp_value=10)
 }
 }

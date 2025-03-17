@@ -2,7 +2,7 @@
 
 #include "../math/mathinline.h"
 #include "../math/aabb.h"
-#include "../math/hitable.h"
+#include "../hitables/hitable.h"
 #include "../math/simd.h"
 
 Transform::Transform(const Float mat[4][4]) {

@@ -1,7 +1,7 @@
 #include "../materials/material.h"
-#include "../materials/mathinline.h"
+#include "../math/mathinline.h"
 #include "../utils/raylog.h"
-#include "../materials/assert.h"
+#include "../utils/assert.h"
 
 //Lambertian
 //

@@ -20,30 +20,30 @@ CSG Round
 \examples{
 if(run_documentation()) {
 #Generate a rounded pyramid:
-generate_ground(material=diffuse(checkercolor="grey20")) \%>\% 
+generate_ground(material=diffuse(checkercolor="grey20")) \%>\%
   add_object(csg_object(csg_pyramid(x=-1,y=-0.99,z=1),
-                        material=glossy(color="red"))) \%>\% 
+                        material=glossy(color="red"))) \%>\%
   add_object(csg_object(csg_round(csg_pyramid(x=1,y=-0.89)),
-                        material=glossy(color="blue"))) \%>\% 
+                        material=glossy(color="blue"))) \%>\%
   add_object(csg_object(csg_round(csg_pyramid(x=0,z=-2,y=-0.5), radius=0.5),
-                        material=glossy(color="green"))) \%>\% 
-  add_object(sphere(y=5,x=5,z=5,radius=1,material=light(intensity=50))) \%>\% 
-  render_scene(lookfrom=c(-3,4,10), fov=22, 
+                        material=glossy(color="green"))) \%>\%
+  add_object(sphere(y=5,x=5,z=5,radius=1,material=light(intensity=50))) \%>\%
+  render_scene(lookfrom=c(-3,4,10), fov=22,
                lookat=c(0,-0.5,0),clamp_value=10)
 }
 if(run_documentation()) {
 #Round a blend of two objects
-generate_ground(material=diffuse(checkercolor="grey20")) \%>\% 
+generate_ground(material=diffuse(checkercolor="grey20")) \%>\%
   add_object(csg_object(csg_round(csg_combine(
     csg_pyramid(x=-0.5,y=-0.99,z=1.5),
     csg_pyramid(x=0.5,y=-0.99,z=2), operation="blend"), radius=0),
-                        material=glossy(color="red"))) \%>\% 
+                        material=glossy(color="red"))) \%>\%
   add_object(csg_object(csg_round(csg_combine(
     csg_pyramid(x=-0.5,y=-0.79,z=-1.5),
     csg_pyramid(x=0.5,y=-0.79,z=-1), operation="blend"), radius=0.2),
-                        material=glossy(color="green"))) \%>\% 
-  add_object(sphere(y=5,x=5,z=5,radius=1,material=light(intensity=50))) \%>\% 
-  render_scene(lookfrom=c(-3,5,10), fov=22, 
+                        material=glossy(color="green"))) \%>\%
+  add_object(sphere(y=5,x=5,z=5,radius=1,material=light(intensity=50))) \%>\%
+  render_scene(lookfrom=c(-3,5,10), fov=22,
                lookat=c(0,-0.5,0),clamp_value=10)
 }
 }

@@ -2,8 +2,8 @@
 #define ELLIPSOIDH
 
 #include "../hitables/sphere.h"
-#include "../hitables/material.h"
-#include "../hitables/mathinline.h"
+#include "../materials/material.h"
+#include "../math/mathinline.h"
 
 class ellipsoid: public hitable {
   public:

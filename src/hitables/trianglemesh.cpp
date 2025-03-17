@@ -7,7 +7,7 @@
 #endif
 
 #include <queue>
-#include "../hitables/texturecache.h"
+#include "../materials/texturecache.h"
 
 TriangleMesh::~TriangleMesh() {}
 

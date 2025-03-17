@@ -3,7 +3,7 @@
 
 
 #include <Rcpp.h>
-#include "../hitables/rng.h"
+#include "../math/rng.h"
 #include "../hitables/hitablelist.h"
 
 class instance : public hitable {

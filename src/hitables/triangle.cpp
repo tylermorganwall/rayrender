@@ -1,7 +1,6 @@
 #include "../hitables/triangle.h"
-#include "../hitables/RcppThread.h"
+#include "RcppThread.h"
 #include "../utils/raylog.h"
-#include "../hitables/vec3.h"
 #include "../math/vectypes.h"
 
 const bool triangle::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {

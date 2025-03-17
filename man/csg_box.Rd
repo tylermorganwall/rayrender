@@ -26,26 +26,26 @@ CSG Box
 \examples{
 if(run_documentation()) {
 #Generate a box
-generate_ground(material=diffuse(checkercolor="grey20")) \%>\% 
+generate_ground(material=diffuse(checkercolor="grey20")) \%>\%
   add_object(csg_object(csg_box(), material=glossy(color="#FF69B4"))) \%>\%
-  add_object(sphere(y=5,x=5,radius=3,material=light(intensity=5))) \%>\%  
+  add_object(sphere(y=5,x=5,radius=3,material=light(intensity=5))) \%>\%
   render_scene(clamp_value=10, samples=16,lookfrom=c(7,3,7))
   }
 if(run_documentation()) {
 #Change the width
-generate_ground(material=diffuse(checkercolor="grey20")) \%>\% 
+generate_ground(material=diffuse(checkercolor="grey20")) \%>\%
   add_object(csg_object(csg_box(width = c(2,1,0.5)), material=glossy(color="#FF69B4"))) \%>\%
-  add_object(sphere(y=5,x=5,radius=3,material=light(intensity=5))) \%>\%  
+  add_object(sphere(y=5,x=5,radius=3,material=light(intensity=5))) \%>\%
   render_scene(clamp_value=10, samples=16,lookfrom=c(7,3,7))
 }
 if(run_documentation()) {
 #Subtract two boxes to make stairs
-generate_ground(material=diffuse(checkercolor="grey20")) \%>\% 
+generate_ground(material=diffuse(checkercolor="grey20")) \%>\%
   add_object(csg_object(csg_combine(
     csg_box(),
     csg_box(x=0.5,y=0.5,width=c(1,1,1.1)),operation="subtract"),
    material=glossy(color="#FF69B4"))) \%>\%
-  add_object(sphere(y=5,x=5,radius=3,material=light(intensity=5))) \%>\%  
+  add_object(sphere(y=5,x=5,radius=3,material=light(intensity=5))) \%>\%
   render_scene(clamp_value=10, samples=16,lookfrom=c(7,3,7),fov=13)
   }
 }

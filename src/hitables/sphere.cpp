@@ -2,7 +2,7 @@
 #include "../utils/raylog.h"
 #include "../math/vectypes.h"
 
-// #include "../hitables/RcppThread.h"
+// #include "RcppThread.h"
 
 const bool sphere::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
   SCOPED_CONTEXT("Hit");

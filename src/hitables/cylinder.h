@@ -2,7 +2,7 @@
 #define CYLINDERH
 
 #include "../hitables/hitable.h"
-#include "../hitables/material.h"
+#include "../materials/material.h"
 
 class cylinder: public hitable {
 public:

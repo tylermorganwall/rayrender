@@ -28,20 +28,20 @@ arrow(
 
 \item{tail_proportion}{Default `0.5`. Proportion of the arrow that is the tail.}
 
-\item{direction}{Default `NA`. Alternative to `start` and `end`, specify the direction (via 
+\item{direction}{Default `NA`. Alternative to `start` and `end`, specify the direction (via
 a length-3 vector) of the arrow. Arrow will be centered at `start`, and the length will be
 determined by the magnitude of the direction vector.}
 
 \item{from_center}{Default `TRUE`. If orientation specified via `direction`, setting this argument
 to `FALSE` will make `start` specify the bottom of the cone, instead of the middle.}
 
-\item{material}{Default  \code{\link{diffuse}}.The material, called from one of the material 
+\item{material}{Default  \code{\link{diffuse}}.The material, called from one of the material
 functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}.}
 
 \item{flipped}{Default `FALSE`. Whether to flip the normals.}
 
 \item{scale}{Default `c(1, 1, 1)`. Scale transformation in the x, y, and z directions. If this is a single value,
-number, the object will be scaled uniformly. Notes: this will change the stated start/end position of the cone. 
+number, the object will be scaled uniformly. Notes: this will change the stated start/end position of the cone.
 Emissive objects may not currently function correctly when scaled.}
 }
 \value{
@@ -53,51 +53,51 @@ Composite object (cone + segment)
 \examples{
 #Draw a simple arrow from x = -1 to x = 1
 if(run_documentation()) {
-generate_studio() \%>\% 
-  add_object(arrow(start = c(-1,0,0), end = c(1,0,0), material=glossy(color="red"))) \%>\% 
-  add_object(sphere(y=5,material=light(intensity=20))) \%>\% 
+generate_studio() \%>\%
+  add_object(arrow(start = c(-1,0,0), end = c(1,0,0), material=glossy(color="red"))) \%>\%
+  add_object(sphere(y=5,material=light(intensity=20))) \%>\%
   render_scene(clamp_value=10,  samples=16)
 }
 if(run_documentation()) {
 #Change the proportion of tail to top
-generate_studio(depth=-2) \%>\% 
+generate_studio(depth=-2) \%>\%
   add_object(arrow(start = c(-1,-1,0), end = c(1,-1,0), tail_proportion = 0.5,
-                   material=glossy(color="red"))) \%>\% 
+                   material=glossy(color="red"))) \%>\%
   add_object(arrow(start = c(-1,0,0), end = c(1,0,0), tail_proportion = 0.75,
-                   material=glossy(color="red"))) \%>\% 
+                   material=glossy(color="red"))) \%>\%
   add_object(arrow(start = c(-1,1,0), end = c(1,1,0), tail_proportion = 0.9,
-                   material=glossy(color="red"))) \%>\% 
-  add_object(sphere(y=5,z=5,x=2,material=light(intensity=30))) \%>\% 
+                   material=glossy(color="red"))) \%>\%
+  add_object(sphere(y=5,z=5,x=2,material=light(intensity=30))) \%>\%
   render_scene(clamp_value=10, fov=25,  samples=16)
 }
 if(run_documentation()) {
 #Change the radius of the tail/top segments
-generate_studio(depth=-1.5) \%>\% 
+generate_studio(depth=-1.5) \%>\%
   add_object(arrow(start = c(-1,-1,0), end = c(1,-1,0), tail_proportion = 0.75,
                    radius_top = 0.1, radius_tail=0.03,
-                   material=glossy(color="red"))) \%>\% 
+                   material=glossy(color="red"))) \%>\%
   add_object(arrow(start = c(-1,0,0), end = c(1,0,0), tail_proportion = 0.75,
                    radius_top = 0.2, radius_tail=0.1,
-                   material=glossy(color="red"))) \%>\% 
+                   material=glossy(color="red"))) \%>\%
   add_object(arrow(start = c(-1,1,0), end = c(1,1,0), tail_proportion = 0.75,
                    radius_top = 0.3, radius_tail=0.2,
-                   material=glossy(color="red"))) \%>\% 
-  add_object(sphere(y=5,z=5,x=2,material=light(intensity=30))) \%>\% 
+                   material=glossy(color="red"))) \%>\%
+  add_object(sphere(y=5,z=5,x=2,material=light(intensity=30))) \%>\%
   render_scene(clamp_value=10, samples=16)
 }
 if(run_documentation()) {
 #We can also specify arrows via a midpoint and direction:
-generate_studio(depth=-1) \%>\% 
+generate_studio(depth=-1) \%>\%
   add_object(arrow(start = c(-1,-0.5,0), direction = c(0,0,1),
-                   material=glossy(color="green"))) \%>\% 
+                   material=glossy(color="green"))) \%>\%
   add_object(arrow(start = c(1,-0.5,0), direction = c(0,0,-1),
-                   material=glossy(color="red"))) \%>\% 
+                   material=glossy(color="red"))) \%>\%
   add_object(arrow(start = c(0,-0.5,1), direction = c(1,0,0),
-                   material=glossy(color="yellow"))) \%>\% 
+                   material=glossy(color="yellow"))) \%>\%
   add_object(arrow(start = c(0,-0.5,-1), direction = c(-1,0,0),
-                   material=glossy(color="purple"))) \%>\% 
-  add_object(sphere(y=5,z=5,x=2,material=light(intensity=30))) \%>\% 
-  render_scene(clamp_value=10, samples=16, 
+                   material=glossy(color="purple"))) \%>\%
+  add_object(sphere(y=5,z=5,x=2,material=light(intensity=30))) \%>\%
+  render_scene(clamp_value=10, samples=16,
                lookfrom=c(0,5,10), lookat=c(0,-0.5,0), fov=16)
 }
 if(run_documentation()) {
@@ -110,7 +110,7 @@ arrow_list = list()
 counter = 1
 for(theta in theta_vals) {
   for(phi in phi_vals) {
-    rval = c(r*sin(phi)*cos(theta),r*cos(phi),r*sin(phi)*sin(theta)) 
+    rval = c(r*sin(phi)*cos(theta),r*cos(phi),r*sin(phi)*sin(theta))
     arrow_list[[counter]] = arrow(rval, direction = -1/2*rval/sqrt(sum(rval*rval))^3,
                                   tail_proportion = 0.66, radius_top=0.03, radius_tail=0.01,
                                   material = diffuse(color="red"))
@@ -118,10 +118,10 @@ for(theta in theta_vals) {
   }
 }
 vector_field = do.call(rbind,arrow_list)
-sphere(material=diffuse(noise=1,color="blue",noisecolor="darkgreen")) \%>\% 
-  add_object(vector_field) \%>\% 
-  add_object(sphere(y=0,x=10,z=5,material=light(intensity=200))) \%>\% 
+sphere(material=diffuse(noise=1,color="blue",noisecolor="darkgreen")) \%>\%
+  add_object(vector_field) \%>\%
+  add_object(sphere(y=0,x=10,z=5,material=light(intensity=200))) \%>\%
   render_scene(fov=20, ambient=TRUE, samples=16,
-               backgroundlow="black",backgroundhigh="white") 
+               backgroundlow="black",backgroundhigh="white")
 }
 }

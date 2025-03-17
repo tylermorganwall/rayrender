@@ -1,5 +1,5 @@
 #include "../math/RayMatrix.h"
-#include "../math/assert.h"
+#include "../utils/assert.h"
 
 RayMatrix::RayMatrix() : nrow(0), ncol(0), channels(0) {
   data.resize(0);

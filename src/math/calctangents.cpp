@@ -2,9 +2,9 @@
 #include "../math/vec3.h"
 #include "../math/point3.h"
 #include "../math/point2.h"
-#include "../math/trianglemesh.h"
+#include "../hitables/trianglemesh.h"
 #include "../math/mathinline.h"
-#include "../math/assert.h"
+#include "../utils/assert.h"
 
 vec3f Reject(vec3f t, normal3f n) {
   return(unit_vector(t - dot(t,n) * convert_to_vec3(n)));

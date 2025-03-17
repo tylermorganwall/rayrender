@@ -26,8 +26,8 @@ mesh3d_model(
 )
 }
 \arguments{
-\item{mesh}{A `mesh3d` or `shapelist3d` object. Pulls the vertex, index, texture coordinates, 
-normals, and material information. If the material references an image texture, the 
+\item{mesh}{A `mesh3d` or `shapelist3d` object. Pulls the vertex, index, texture coordinates,
+normals, and material information. If the material references an image texture, the
 `mesh$material$texture` argument should be set to the image filename. The `mesh3d` format
 only supports one image texture per mesh. All quads will be triangulated.}
 
@@ -45,24 +45,24 @@ only supports one image texture per mesh. All quads will be triangulated.}
 
 \item{verbose}{Default `FALSE`. If `TRUE`, prints information about the mesh to the console.}
 
-\item{displacement_texture}{Default `""`. File path to the displacement texture. 
+\item{displacement_texture}{Default `""`. File path to the displacement texture.
 This texture is used to displace the vertices of the mesh based on the texture's pixel values.}
 
-\item{displacement_intensity}{Default `1`. Intensity of the displacement effect. 
+\item{displacement_intensity}{Default `1`. Intensity of the displacement effect.
 Higher values result in greater displacement.}
 
-\item{displacement_vector}{Default `FALSE`. Whether to use vector displacement. 
-If `TRUE`, the displacement texture is interpreted as providing a 3D displacement vector. 
+\item{displacement_vector}{Default `FALSE`. Whether to use vector displacement.
+If `TRUE`, the displacement texture is interpreted as providing a 3D displacement vector.
 Otherwise, the texture is interpreted as providing a scalar displacement.}
 
-\item{recalculate_normals}{Default `FALSE`. Whether to recalculate vertex normals based on the 
+\item{recalculate_normals}{Default `FALSE`. Whether to recalculate vertex normals based on the
 connecting face orientations. This can be used to compute normals for meshes lacking them or
 to calculate new normals after a displacement map has been applied to the mesh.}
 
-\item{override_material}{Default `FALSE`. If `TRUE`, overrides the material specified in the 
+\item{override_material}{Default `FALSE`. If `TRUE`, overrides the material specified in the
 `mesh3d` object with the one specified in `material`.}
 
-\item{material}{Default  \code{\link{diffuse}}.The material, called from one of the material 
+\item{material}{Default  \code{\link{diffuse}}.The material, called from one of the material
 functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}.}
 
 \item{angle}{Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.}
@@ -86,11 +86,11 @@ Load an `mesh3d` (or `shapelist3d`) object, as specified in the `rgl` package.
 if(run_documentation()) {
   library(Rvcg)
   data(humface)
-  
-  generate_studio() \%>\% 
+
+  generate_studio() \%>\%
     add_object(mesh3d_model(humface,y=-0.3,x=0,z=0,
                           material=glossy(color="dodgerblue4"), scale = 1/70)) \%>\%
-    add_object(sphere(y=5,x=5,z=5,material=light(intensity=50))) \%>\% 
+    add_object(sphere(y=5,x=5,z=5,material=light(intensity=50))) \%>\%
     render_scene(samples=16,width=800,height=800,
                  lookat = c(0,0.5,1), aperture=0.0)
 }

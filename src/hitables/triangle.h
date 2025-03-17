@@ -2,8 +2,8 @@
 #define TRIANGLEH
 
 #include "../hitables/hitable.h"
-#include "../hitables/material.h"
-#include "../hitables/onbh.h"
+#include "../materials/material.h"
+#include "../math/onbh.h"
 #include "../hitables/trianglemesh.h"
 
 class triangle : public hitable {

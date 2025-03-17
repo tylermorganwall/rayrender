@@ -33,11 +33,11 @@ more robust to numerical precision errors than the generic scale option.}
 
 \item{subdivision_levels}{Default `1`. Number of Loop subdivisions to be applied to the mesh.}
 
-\item{recalculate_normals}{Default `FALSE`. Whether to recalculate vertex normals based on the 
+\item{recalculate_normals}{Default `FALSE`. Whether to recalculate vertex normals based on the
 connecting face orientations. This can be used to compute normals for meshes lacking them or
 to calculate new normals after a displacement map has been applied to the mesh.}
 
-\item{material}{Default  \code{\link{diffuse}}.The material, called from one of the material 
+\item{material}{Default  \code{\link{diffuse}}.The material, called from one of the material
 functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}.}
 
 \item{angle}{Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.}
@@ -54,7 +54,7 @@ Note: emissive objects may not currently function correctly when scaled.}
 Single row of a tibble describing the obj model in the scene.
 }
 \description{
-Load an PLY file via a filepath. 
+Load an PLY file via a filepath.
 Note: light importance sampling currently not supported for this shape.
 }
 \examples{

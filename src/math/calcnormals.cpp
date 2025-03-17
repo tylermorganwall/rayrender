@@ -1,6 +1,6 @@
 #include "../math/vectypes.h"
-#include "../math/trianglemesh.h"
-#include "../math/assert.h"
+#include "../hitables/trianglemesh.h"
+#include "../utils/assert.h"
 
 // Calculate normal for a given face using three vertices
 normal3f CalculateFaceNormal(const point3f& p0, const point3f& p1, const point3f& p2) {

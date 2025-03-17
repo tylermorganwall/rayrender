@@ -3,7 +3,7 @@
 #include <set>
 #include <map>
 #include "../math/vectypes.h"
-#include "../math/Rcpp.h"
+#include "Rcpp.h"
 #include <queue>
 
 struct SDFace;

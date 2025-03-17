@@ -28,7 +28,7 @@ a hexadecimal code, R color string, or a numeric rgb vector listing three intens
 \item{intensity}{Default `10`. If a positive value, this will turn this object into a light emitting the value specified
 in `color` (ignoring other properties). Higher values will produce a brighter light.}
 
-\item{importance_sample}{Default `TRUE`. Keeping this on for lights improves the convergence of the rendering 
+\item{importance_sample}{Default `TRUE`. Keeping this on for lights improves the convergence of the rendering
 algorithm, in most cases. If the object is particularly important in contributing to the light paths
 in the image (e.g. light sources, refracting glass ball with caustics, metal objects concentrating light),
 this will help with the convergence of the image.}
@@ -47,17 +47,17 @@ the x/y/z coordinates that the spotlight should be focused on. Only works for sp
 \item{image_repeat}{Default `1`. Number of times to repeat the image across the surface.
 `u` and `v` repeat amount can be set independently if user passes in a length-2 vector.}
 
-\item{gradient_color}{Default `NA`. If not `NA`, creates a secondary color for a linear gradient 
+\item{gradient_color}{Default `NA`. If not `NA`, creates a secondary color for a linear gradient
 between the this color and color specified in `color`. Direction is determined by `gradient_transpose`.}
 
 \item{gradient_transpose}{Default `FALSE`. If `TRUE`, this will use the `v` coordinate texture instead
 of the `u` coordinate texture to map the gradient.}
 
-\item{gradient_point_start}{Default `NA`. If not `NA`, this changes the behavior from mapping texture coordinates to 
+\item{gradient_point_start}{Default `NA`. If not `NA`, this changes the behavior from mapping texture coordinates to
 mapping to world space coordinates. This should be a length-3 vector specifying the x,y, and z points where the gradient
 begins with value `color`.}
 
-\item{gradient_point_end}{Default `NA`. If not `NA`, this changes the behavior from mapping texture coordinates to 
+\item{gradient_point_end}{Default `NA`. If not `NA`, this changes the behavior from mapping texture coordinates to
 mapping to world space coordinates. This should be a length-3 vector specifying the x,y, and z points where the gradient
 begins with value `gradient_color`.}
 

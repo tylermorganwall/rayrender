@@ -24,48 +24,48 @@ CSG Sphere
 \examples{
 if(run_documentation()) {
 #Generate a simple sphere:
-generate_ground() \%>\% 
+generate_ground() \%>\%
   add_object(csg_object(csg_sphere(),
-                        material=glossy(color="purple"))) \%>\% 
+                        material=glossy(color="purple"))) \%>\%
   render_scene(clamp_value=10, samples=16)
 }
 if(run_documentation()) {
 #Generate a bigger sphere in the cornell box.
-generate_cornell() \%>\% 
+generate_cornell() \%>\%
   add_object(csg_object(csg_sphere(x=555/2,y=555/2,z=555/2,radius=100),
-                        material=glossy(checkercolor="purple", checkerperiod=100))) \%>\% 
+                        material=glossy(checkercolor="purple", checkerperiod=100))) \%>\%
   render_scene(clamp_value=10, samples=16)
 }
 if(run_documentation()) {
 #Combine two spheres of different sizes
-generate_cornell() \%>\% 
+generate_cornell() \%>\%
   add_object(csg_object(
     csg_combine(
       csg_sphere(x=555/2,y=555/2-50,z=555/2,radius=100),
       csg_sphere(x=555/2,y=555/2+50,z=555/2,radius=80)),
-    material=glossy(color="purple"))) \%>\% 
+    material=glossy(color="purple"))) \%>\%
   render_scene(clamp_value=10, samples=16)
 }
 if(run_documentation()) {
 #Subtract two spheres to create an indented region
-generate_cornell() \%>\% 
+generate_cornell() \%>\%
   add_object(csg_object(
     csg_combine(
       csg_sphere(x=555/2,y=555/2-50,z=555/2,radius=100),
       csg_sphere(x=555/2+30,y=555/2+20,z=555/2-90,radius=40),
       operation="subtract"),
-    material=glossy(color="grey20"))) \%>\% 
+    material=glossy(color="grey20"))) \%>\%
   render_scene(clamp_value=10, samples=16)
 }
 if(run_documentation()) {
 #Use csg_combine(operation="blend") to melt the two together
-generate_cornell() \%>\% 
+generate_cornell() \%>\%
   add_object(csg_object(
     csg_combine(
       csg_sphere(x=555/2,y=555/2-50,z=555/2,radius=100),
       csg_sphere(x=555/2,y=555/2+50,z=555/2,radius=80),
       operation="blend", radius=20),
-    material=glossy(color="purple"))) \%>\% 
+    material=glossy(color="purple"))) \%>\%
   render_scene(clamp_value=10, samples=16)
 }
 }

@@ -1,6 +1,6 @@
+#include "Rcpp.h"
 #include "../core/PreviewDisplay.h"
 #include "../math/mathinline.h"
-#include "../core/Rcpp.h"
 #include "../utils/raylog.h"
 
 
@@ -21,10 +21,10 @@ static Float env_y_angle;;
 
 #include <windows.h>
 #include <winuser.h>
-#include "../math/float.h"
+#include "float.h"
 #include <wingdi.h>
 #include <windowsx.h>
-#include "../core/RProgress.h"
+#include "RProgress.h"
 
 static unsigned int width;
 static unsigned int height;

@@ -31,7 +31,7 @@ ellipsoid(
 
 \item{c}{Default `1`. Principal z-axis of the ellipsoid.}
 
-\item{material}{Default  \code{\link{diffuse}}.The material, called from one of the material 
+\item{material}{Default  \code{\link{diffuse}}.The material, called from one of the material
 functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}.}
 
 \item{angle}{Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.}
@@ -53,28 +53,28 @@ Note: this is just a scaled sphere.
 #Generate an ellipsoid in a Cornell box
 if(run_documentation()) {
 generate_cornell() \%>\%
-  add_object(ellipsoid(x = 555/2, y = 555/2, z = 555/2, 
+  add_object(ellipsoid(x = 555/2, y = 555/2, z = 555/2,
                        a = 100, b = 50, c = 50)) \%>\%
-  render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
+  render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40,
                ambient_light = FALSE, samples = 16, parallel = TRUE, clamp_value = 5)
 }
 
 #Change the axes to make it taller rather than wide:
 if(run_documentation()) {
 generate_cornell() \%>\%
-  add_object(ellipsoid(x = 555/2, y = 555/2, z = 555/2, 
+  add_object(ellipsoid(x = 555/2, y = 555/2, z = 555/2,
                        a = 100, b = 200, c = 100, material = metal())) \%>\%
-  render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
+  render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40,
                ambient_light = FALSE, samples = 16, parallel = TRUE, clamp_value = 5)
 }
 
 #Rotate it and make it dielectric:
 if(run_documentation()) {
 generate_cornell() \%>\%
-  add_object(ellipsoid(x = 555/2, y = 555/2, z = 555/2, 
+  add_object(ellipsoid(x = 555/2, y = 555/2, z = 555/2,
                        a = 100, b = 200, c = 100, angle = c(0, 0, 45),
                        material = dielectric())) \%>\%
-  render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40, 
+  render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40,
                ambient_light = FALSE, samples = 16, parallel = TRUE, clamp_value = 5)
 }
 }

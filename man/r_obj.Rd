@@ -13,7 +13,7 @@ r_obj(simple_r = FALSE)
 File location of the 3d_r_logo.obj file (saved with a .txt extension)
 }
 \description{
-3D obj model of R logo (created from the R SVG logo with the `raybevel` package), 
+3D obj model of R logo (created from the R SVG logo with the `raybevel` package),
 to be used with `obj_model()`
 }
 \examples{

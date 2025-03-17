@@ -1,14 +1,14 @@
 #include "../hitables/mesh3d.h"
-#include "../hitables/texture.h"
-#include "../hitables/loopsubdiv.h"
-#include "../hitables/displacement.h"
-#include "../hitables/calcnormals.h"
-#include "../hitables/calctangents.h"
+#include "../materials/texture.h"
+#include "../math/loopsubdiv.h"
+#include "../math/displacement.h"
+#include "../math/calcnormals.h"
+#include "../math/calctangents.h"
 #ifndef STBIMAGEH
 #define STBIMAGEH
 #include "../stb/stb_image.h"
 #endif
-#include "../hitables/texturecache.h"
+#include "../materials/texturecache.h"
 
 mesh3d::mesh3d(Rcpp::List mesh_info, std::shared_ptr<material> mat, 
                std::string displacement_texture, Float displacement, bool displacement_vector, 

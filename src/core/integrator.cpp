@@ -3,8 +3,8 @@
 #include "../math/RayMatrix.h"
 #include "../math/float.h"
 // #define DEBUG
-#include "../core/RcppThread.h"
-#include "../core/RProgress.h"
+#include "RcppThread.h"
+#include "RProgress.h"
 #include "../core/adaptivesampler.h"
 #include "../core/color.h"
 #include "../math/mathinline.h"

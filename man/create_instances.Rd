@@ -41,7 +41,7 @@ create_instances(
 
 \item{scale_z}{Default `0`. A vector of values around the scale the instances on the z-axis.}
 
-\item{material}{Default  \code{\link{diffuse}}.The material, called from one of the material 
+\item{material}{Default  \code{\link{diffuse}}.The material, called from one of the material
 functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}.}
 
 \item{order_rotation}{Default `c(1, 2, 3)`. The order to apply the rotations, referring to "x", "y", and "z" axes.}
@@ -51,7 +51,7 @@ Single row of a tibble describing the instance in the scene.
 }
 \description{
 This creates multiple instances of the `ray_scene` passed, each with it's own transformation applied (measured
-from the origin of the ray_scene). This means the scene only uses the memory of the object once and each 
+from the origin of the ray_scene). This means the scene only uses the memory of the object once and each
 copy only requires a 4x4 matrix in memory.
 }
 \examples{
@@ -62,7 +62,7 @@ base_scene = generate_ground(material = diffuse(checkercolor = "grey20")) \%>\%
 
 # Start with a single sphere with an R in it
 sphere_scene = sphere(y = 0, material = glossy(color = "#2b6eff", reflectance = 0.05)) \%>\%
-  add_object(obj_model(r_obj(simple_r = TRUE), z = 0.9, y = -0.2, 
+  add_object(obj_model(r_obj(simple_r = TRUE), z = 0.9, y = -0.2,
   scale_obj = 0.45, material = diffuse())) \%>\%
   group_objects(scale = 0.1)
 
@@ -75,10 +75,10 @@ sphere_scene \%>\%
 
 if (run_documentation()) {
 # Create instances at different x positions, with random rotations applied
-create_instances(sphere_scene, 
-                 x = seq(-1.5, 1.5, length.out = 10), 
-                 angle_x = 90 * (runif(10) - 0.5), 
-                 angle_y = 90 * (runif(10) - 0.5), 
+create_instances(sphere_scene,
+                 x = seq(-1.5, 1.5, length.out = 10),
+                 angle_x = 90 * (runif(10) - 0.5),
+                 angle_y = 90 * (runif(10) - 0.5),
                  angle_z = 90 * (runif(10) - 0.5)) \%>\%
   add_object(base_scene) \%>\%
   render_scene(lookat = c(0, 1, 0), width = 800, sample_method = "sobol_blue",
@@ -87,11 +87,11 @@ create_instances(sphere_scene,
 
 if (run_documentation()) {
 # Create instances at different x/z positions, with random scaling factors
-create_instances(sphere_scene, 
-                 x = seq(-1.5, 1.5, length.out = 10), 
-                 y = seq(0, 1.5, length.out = 10), 
-                 scale_x = 0.5 + runif(10), 
-                 scale_y = 0.5 + runif(10), 
+create_instances(sphere_scene,
+                 x = seq(-1.5, 1.5, length.out = 10),
+                 y = seq(0, 1.5, length.out = 10),
+                 scale_x = 0.5 + runif(10),
+                 scale_y = 0.5 + runif(10),
                  scale_z = 0.5 + runif(10)) \%>\%
   add_object(base_scene) \%>\%
   render_scene(lookat = c(0, 1, 0), width = 800, sample_method = "sobol_blue",
@@ -100,7 +100,7 @@ create_instances(sphere_scene,
 
 if (run_documentation()) {
 # Create instances of instances
-create_instances(sphere_scene, 
+create_instances(sphere_scene,
                  x = seq(-1.5, 1.5, length.out = 10),
                  angle_y = 90 * (runif(10) - 0.5)) \%>\%
   create_instances(y = seq(0, 2, length.out = 10)) \%>\%
@@ -111,7 +111,7 @@ create_instances(sphere_scene,
 
 if (run_documentation()) {
 # Create instances of instances of instances of instances
-create_instances(sphere_scene, 
+create_instances(sphere_scene,
                  x = seq(-1.5, 1.5, length.out = 10),
                  angle_y = 90 * (runif(10) - 0.5)) \%>\%
   create_instances(y = seq(0, 1, length.out = 5)) \%>\%
@@ -134,12 +134,12 @@ plot(iris$Petal.Length, iris$Sepal.Width, col = iris$Species, pch = 18, cex = 12
 dev.off()
 image_array = png::readPNG(tempfileplot)
 
-# Note that if a instanced scene has importance sampled lights and there are many instances, 
-# it will be slow to render. 
+# Note that if a instanced scene has importance sampled lights and there are many instances,
+# it will be slow to render.
 generate_cornell(importance_sample=FALSE) \%>\%
-  add_object(ellipsoid(x = 555 / 2, y = 100, z = 555 / 2, a = 50, b = 100, c = 50, 
+  add_object(ellipsoid(x = 555 / 2, y = 100, z = 555 / 2, a = 50, b = 100, c = 50,
              material = metal(color = "lightblue"))) \%>\%
-  add_object(cube(x = 100, y = 130 / 2, z = 200, xwidth = 130, 
+  add_object(cube(x = 100, y = 130 / 2, z = 200, xwidth = 130,
                   ywidth = 130, zwidth = 130, angle = c(0, 10, 0),
                   material = diffuse(checkercolor = "purple", checkerperiod = 30))) \%>\%
   add_object(pig(x = 100, y = 190, z = 200, scale = 40, angle = c(0, 30, 0))) \%>\%
@@ -154,7 +154,7 @@ generate_cornell(importance_sample=FALSE) \%>\%
   create_instances(x = expand.grid(x = seq(-1, 1, by = 1) * 570 - 555 / 2,
                                    y = seq(-1, 1, by = 1) * 570 - 555 / 2,
                                    z = 0)) \%>\%
-  render_scene(lookfrom = c(0, 0, -800) * 3, fov = 40,  
+  render_scene(lookfrom = c(0, 0, -800) * 3, fov = 40,
                samples = 16, sample_method = "sobol_blue",
                parallel = TRUE, width = 800, height = 800)
 }

@@ -1,11 +1,11 @@
 #include "../hitables/trimesh.h"
-#include "../hitables/RProgress.h"
-#include "../hitables/bvh.h"
-#include "../hitables/loopsubdiv.h"
-#include "../hitables/displacement.h"
-#include "../hitables/calctangents.h"
-#include "../hitables/assert.h"
-#include "../hitables/calcnormals.h"
+#include "RProgress.h"
+#include "../core/bvh.h"
+#include "../math/loopsubdiv.h"
+#include "../math/displacement.h"
+#include "../math/calctangents.h"
+#include "../utils/assert.h"
+#include "../math/calcnormals.h"
 #include "../utils/raylog.h"
 
 trimesh::trimesh(std::string inputfile, std::string basedir, Float scale, Float sigma,

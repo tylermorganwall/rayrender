@@ -35,7 +35,7 @@ generate_ground(material=diffuse(checkercolor="grey20")) \%>\%
       csg_onion(csg_sphere(z=-2.5,x=-2.5,radius=1), thickness = 0.6),
       csg_box(y=1,width=c(10,2,10)), operation = "subtract"),
       material=glossy(color="green"))) \%>\%
- add_object(sphere(y=5,x=5,radius=2,material=light())) \%>\% 
+ add_object(sphere(y=5,x=5,radius=2,material=light())) \%>\%
  render_scene(clamp_value=10, samples=16,lookat=c(0,-0.5,0),
               lookfrom=c(3,5,10),fov=35)
 }
@@ -46,7 +46,7 @@ generate_ground(material=diffuse(checkercolor="grey20")) \%>\%
     csg_onion(csg_onion(csg_onion(csg_sphere(radius=1), 0.4), 0.2),0.1),
     csg_box(y=1,width=c(10,2,10)), operation = "subtract"),
     material=glossy(color="purple"))) \%>\%
-  add_object(sphere(y=5,x=5,radius=2,material=light())) \%>\% 
+  add_object(sphere(y=5,x=5,radius=2,material=light())) \%>\%
   render_scene(clamp_value=10, samples=16,lookat=c(0,-0.5,0),
                lookfrom=c(3,5,10),fov=20)
   }

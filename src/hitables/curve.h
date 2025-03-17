@@ -2,8 +2,8 @@
 #define CURVEH
 
 #include "../hitables/hitable.h"
-#include "../hitables/material.h"
-#include "../hitables/mathinline.h"
+#include "../materials/material.h"
+#include "../math/mathinline.h"
 
 enum class CurveType { 
   Flat = 1, 

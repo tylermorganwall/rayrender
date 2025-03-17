@@ -1,5 +1,5 @@
 #include "../core/color.h"
-#include "../core/RcppThread.h"
+#include "RcppThread.h"
 #include "../math/mathinline.h"
 #include "../utils/raylog.h"
 

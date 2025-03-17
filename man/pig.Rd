@@ -52,7 +52,7 @@ generate_cornell() \%>\%
   render_scene(parallel=TRUE, samples=16,clamp_value=10)
 }
 if(run_documentation()) {
-# Show the pig staring into a mirror, worried 
+# Show the pig staring into a mirror, worried
 generate_cornell() \%>\%
   add_object(pig(x=555/2-70,z=555/2+50,y=120,scale=c(80,80,80),
                  angle = c(0,-40,0), emotion = "worried")) \%>\%
@@ -63,9 +63,9 @@ generate_cornell() \%>\%
 if(run_documentation()) {
 # Render many small pigs facing random directions, with an evil pig overlord
 set.seed(1)
-lots_of_pigs = list() 
+lots_of_pigs = list()
 for(i in 1:10) {
-  lots_of_pigs[[i]] = pig(x=50 + 450 * runif(1), z = 50 + 450 * runif(1), y=50, 
+  lots_of_pigs[[i]] = pig(x=50 + 450 * runif(1), z = 50 + 450 * runif(1), y=50,
                              scale = c(30,30,30), angle = c(0,360*runif(1),0), emotion = "worried")
 }
 
@@ -73,14 +73,14 @@ many_pigs_scene = do.call(rbind, lots_of_pigs) \%>\%
  add_object(generate_cornell(lightintensity=30, lightwidth=100)) \%>\%
  add_object(pig(z=500,x=555/2,y=350, emotion = "angry",
             scale=c(100,100,100),angle=c(-30,90,0), order_rotation=c(3,2,1)))
-            
+
 render_scene(many_pigs_scene,parallel=TRUE,clamp_value=10, samples=16)
 }
 if(run_documentation()) {
 #Render spiderpig
-generate_studio() \%>\%  
-  add_object(pig(y=-1,angle=c(0,-100,0), scale=1/2,spider=TRUE)) \%>\% 
-  add_object(sphere(y=5,z=5,x=5,material=light(intensity=100))) \%>\% 
+generate_studio() \%>\%
+  add_object(pig(y=-1,angle=c(0,-100,0), scale=1/2,spider=TRUE)) \%>\%
+  add_object(sphere(y=5,z=5,x=5,material=light(intensity=100))) \%>\%
   render_scene(samples=16,lookfrom=c(0,2,10),clamp_value=10)
 }
 }

@@ -1,5 +1,5 @@
 #include "../math/simd.h"
-#include "../math/Rcpp.h"
+#include "Rcpp.h"
 
 // const static SimdMask first_mask = simd_setmask(true, false, true, false);
 // const static SimdMask second_mask = simd_setmask(true, true, false, false);

@@ -26,32 +26,32 @@ CSG Torus
 \examples{
 if(run_documentation()) {
 #Generate a torus:
-generate_ground(material=diffuse(checkercolor="grey20")) \%>\% 
+generate_ground(material=diffuse(checkercolor="grey20")) \%>\%
   add_object(csg_object(csg_torus(), material=glossy(color="dodgerblue4"))) \%>\%
-  add_object(sphere(y=5,x=5,radius=3,material=light(intensity=10))) \%>\%  
+  add_object(sphere(y=5,x=5,radius=3,material=light(intensity=10))) \%>\%
   render_scene(clamp_value=10, samples=16,lookfrom=c(0,5,10),fov=30)
 }
 if(run_documentation()) {
 #Change the radius of the torus:
-generate_ground(material=diffuse(checkercolor="grey20")) \%>\% 
+generate_ground(material=diffuse(checkercolor="grey20")) \%>\%
   add_object(csg_object(csg_torus(radius=2), material=glossy(color="dodgerblue4"))) \%>\%
-  add_object(sphere(y=5,x=5,radius=3,material=light(intensity=10))) \%>\%  
+  add_object(sphere(y=5,x=5,radius=3,material=light(intensity=10))) \%>\%
   render_scene(clamp_value=10, samples=16,lookfrom=c(0,5,10),fov=30)
 }
 if(run_documentation()) {
 #Change the minor radius of the torus:
-generate_ground(material=diffuse(checkercolor="grey20")) \%>\% 
-  add_object(csg_object(csg_torus(radius=2, minor_radius=0.25), 
+generate_ground(material=diffuse(checkercolor="grey20")) \%>\%
+  add_object(csg_object(csg_torus(radius=2, minor_radius=0.25),
                         material=glossy(color="dodgerblue4"))) \%>\%
-  add_object(sphere(y=5,x=5,radius=3,material=light(intensity=10))) \%>\%  
+  add_object(sphere(y=5,x=5,radius=3,material=light(intensity=10))) \%>\%
   render_scene(clamp_value=10, samples=16,lookfrom=c(0,5,10),fov=30)
   }
 if(run_documentation()) {
 #Generate a rotated torus in the Cornell Box
-generate_cornell() \%>\% 
+generate_cornell() \%>\%
   add_object(csg_object(csg_rotate(
-    csg_torus(x=555/2,y=555/2,z=555/2,radius=100, minor_radius=50), 
-    pivot_point = c(555/2,555/2,555/2), up =c(0,1,-1)), 
+    csg_torus(x=555/2,y=555/2,z=555/2,radius=100, minor_radius=50),
+    pivot_point = c(555/2,555/2,555/2), up =c(0,1,-1)),
                         material=glossy(color="dodgerblue4"))) \%>\%
   render_scene(clamp_value=10, samples=16)
 }

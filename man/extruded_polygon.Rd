@@ -54,7 +54,7 @@ the holes in the polygon. See the `earcut` function in the `decido` package for 
 
 \item{order_rotation}{Default `c(1, 2, 3)`. The order to apply the rotations, referring to "x", "y", and "z".}
 
-\item{material}{Default  \code{\link{diffuse}}.The material, called from one of the material 
+\item{material}{Default  \code{\link{diffuse}}.The material, called from one of the material
 functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}.}
 
 \item{center}{Default `FALSE`. Whether to center the polygon at the origin.}
@@ -63,10 +63,10 @@ functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}
 
 \item{flip_vertical}{Default `FALSE`. Flip polygon vertically in the plane defined by `plane`.}
 
-\item{data_column_top}{Default `NULL`. A string indicating the column in the `sf` object to use 
+\item{data_column_top}{Default `NULL`. A string indicating the column in the `sf` object to use
 to specify the top of the extruded polygon.}
 
-\item{data_column_bottom}{Default `NULL`. A string indicating the column in the `sf` object to use 
+\item{data_column_bottom}{Default `NULL`. A string indicating the column in the `sf` object to use
 to specify the bottom of the extruded polygon.}
 
 \item{scale_data}{Default `1`. If specifying `data_column_top` or `data_column_bottom`, how
@@ -126,8 +126,8 @@ generate_ground(depth=-0.01,
                 material = diffuse(color="grey50",checkercolor="grey20")) \%>\%
   add_object(extruded_polygon(hollow_star,top=0.25,bottom=0, holes = nrow(star_polygon),
                               material=diffuse(color="red",sigma=90))) \%>\%
-  add_object(extruded_polygon(hollow_star,top=0.25,bottom=0, y=1.2, z=-1.2, 
-                              holes = nrow(star_polygon) + 1, plane = "yx", 
+  add_object(extruded_polygon(hollow_star,top=0.25,bottom=0, y=1.2, z=-1.2,
+                              holes = nrow(star_polygon) + 1, plane = "yx",
                               material=diffuse(color="green",sigma=90))) \%>\%
   add_object(sphere(y=4,x=-3,material=light(intensity=30))) \%>\%
   render_scene(parallel=TRUE,lookfrom = c(0,2,4),samples=16,lookat=c(0,0.9,0),fov=40)
@@ -139,11 +139,11 @@ generate_ground(depth=-0.01,
                 material = diffuse(color="grey50",checkercolor="grey20")) \%>\%
   add_object(extruded_polygon(hollow_star,top=0.25,bottom=0, holes = nrow(star_polygon) + 1,
                               material=diffuse(color="red",sigma=90))) \%>\%
-  add_object(extruded_polygon(hollow_star,top=0.25,bottom=0, y=1.2, z=-1.2, 
-                              holes = nrow(star_polygon) + 1, plane = "yx", 
+  add_object(extruded_polygon(hollow_star,top=0.25,bottom=0, y=1.2, z=-1.2,
+                              holes = nrow(star_polygon) + 1, plane = "yx",
                               material=diffuse(color="green",sigma=90))) \%>\%
-  add_object(extruded_polygon(hollow_star,top=0.25,bottom=0, y=1.2, x=1.2, 
-                              holes = nrow(star_polygon) + 1, plane = "zy", 
+  add_object(extruded_polygon(hollow_star,top=0.25,bottom=0, y=1.2, x=1.2,
+                              holes = nrow(star_polygon) + 1, plane = "zy",
                               material=diffuse(color="blue",sigma=90))) \%>\%
   add_object(sphere(y=4,x=-3,material=light(intensity=30))) \%>\%
   render_scene(parallel=TRUE,lookfrom = c(-4,2,4),samples=16,lookat=c(0,0.9,0),fov=40)

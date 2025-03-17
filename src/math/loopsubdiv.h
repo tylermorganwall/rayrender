@@ -1,8 +1,8 @@
 #ifndef LOOPSUBDIVH
 #define LOOPSUBDIVH
 
-#include "../math/hitable.h"
-#include "../math/trianglemesh.h"
+#include "../hitables/hitable.h"
+#include "../hitables/trianglemesh.h"
 
 void LoopSubdivide(TriangleMesh* base_mesh,
                    const int nLevels,

@@ -35,17 +35,17 @@ glossy(
 \item{color}{Default `white`. The color of the surface. Can be either
 a hexadecimal code, R color string, or a numeric rgb vector listing three intensities between `0` and `1`.}
 
-\item{gloss}{Default `0.8`. Gloss of the surface, between `1` (completely glossy) and `0` (rough glossy). 
+\item{gloss}{Default `0.8`. Gloss of the surface, between `1` (completely glossy) and `0` (rough glossy).
 Can be either a single number, or two numbers indicating an anisotropic distribution of normals (as in `microfacet()`).}
 
 \item{reflectance}{Default `0.03`. The reflectivity of the surface. `1` is a full mirror, `0` is diffuse with a glossy highlight.}
 
 \item{microfacet}{Default `tbr`.  Type of microfacet distribution. Alternative option `beckmann`.}
 
-\item{checkercolor}{Default `NA`. If not `NA`, determines the secondary color of the checkered surface. 
+\item{checkercolor}{Default `NA`. If not `NA`, determines the secondary color of the checkered surface.
 Can be either a hexadecimal code, or a numeric rgb vector listing three intensities between `0` and `1`.}
 
-\item{checkerperiod}{Default `3`. The period of the checker pattern. Increasing this value makes the checker 
+\item{checkerperiod}{Default `3`. The period of the checker pattern. Increasing this value makes the checker
 pattern bigger, and decreasing it makes it smaller}
 
 \item{noise}{Default `0`. If not `0`, covers the surface in a turbulent marble pattern. This value will determine
@@ -58,17 +58,17 @@ the amount of turbulence in the texture.}
 \item{noisecolor}{Default `#000000`. The secondary color of the noise pattern.
 Can be either a hexadecimal code, or a numeric rgb vector listing three intensities between `0` and `1`.}
 
-\item{gradient_color}{Default `NA`. If not `NA`, creates a secondary color for a linear gradient 
+\item{gradient_color}{Default `NA`. If not `NA`, creates a secondary color for a linear gradient
 between the this color and color specified in `color`. Direction is determined by `gradient_transpose`.}
 
 \item{gradient_transpose}{Default `FALSE`. If `TRUE`, this will use the `v` coordinate texture instead
 of the `u` coordinate texture to map the gradient.}
 
-\item{gradient_point_start}{Default `NA`. If not `NA`, this changes the behavior from mapping texture coordinates to 
+\item{gradient_point_start}{Default `NA`. If not `NA`, this changes the behavior from mapping texture coordinates to
 mapping to world space coordinates. This should be a length-3 vector specifying the x,y, and z points where the gradient
 begins with value `color`.}
 
-\item{gradient_point_end}{Default `NA`. If not `NA`, this changes the behavior from mapping texture coordinates to 
+\item{gradient_point_end}{Default `NA`. If not `NA`, this changes the behavior from mapping texture coordinates to
 mapping to world space coordinates. This should be a length-3 vector specifying the x,y, and z points where the gradient
 begins with value `gradient_color`.}
 
@@ -81,21 +81,21 @@ begins with value `gradient_color`.}
 
 \item{alpha_texture}{Default `""`. A matrix or filename (specifying a greyscale image) to be used to specify the transparency.}
 
-\item{bump_texture}{Default `""`. A matrix, array, or filename (specifying a greyscale image) to 
+\item{bump_texture}{Default `""`. A matrix, array, or filename (specifying a greyscale image) to
 be used to specify a bump map for the surface.}
 
 \item{bump_intensity}{Default `1`. Intensity of the bump map. High values may lead to unphysical results.}
 
-\item{roughness_texture}{Default `""`. A matrix, array, or filename (specifying a greyscale image) to 
+\item{roughness_texture}{Default `""`. A matrix, array, or filename (specifying a greyscale image) to
 be used to specify a roughness map for the surface.}
 
-\item{roughness_range}{Default ` c(0.0001, 0.2)`. This is a length-2 vector that specifies the range of roughness values 
+\item{roughness_range}{Default ` c(0.0001, 0.2)`. This is a length-2 vector that specifies the range of roughness values
 that the `roughness_texture` can take.}
 
 \item{roughness_flip}{Default `FALSE`. Setting this to `TRUE` flips the roughness values specified in the `roughness_texture`
 so high values are now low values and vice versa.}
 
-\item{importance_sample}{Default `FALSE`. If `TRUE`, the object will be sampled explicitly during 
+\item{importance_sample}{Default `FALSE`. If `TRUE`, the object will be sampled explicitly during
 the rendering process. If the object is particularly important in contributing to the light paths
 in the image (e.g. light sources, refracting glass ball with caustics, metal objects concentrating light),
 this will help with the convergence of the image.}
@@ -110,41 +110,41 @@ Glossy Material
 if(run_documentation()) {
 #Generate a glossy sphere
 generate_ground(material=diffuse(sigma=90)) \%>\%
-  add_object(sphere(y=0.2,material=glossy(color="#2b6eff"))) \%>\% 
+  add_object(sphere(y=0.2,material=glossy(color="#2b6eff"))) \%>\%
   add_object(sphere(y=2.8,material=light())) \%>\%
   render_scene(parallel=TRUE,clamp_value=10,samples=16,sample_method="sobol_blue")
  }
 if(run_documentation()) {
 #Change the color of the underlying diffuse layer
 generate_ground(material=diffuse(sigma=90)) \%>\%
-  add_object(sphere(y=0.2,x=-2.1,material=glossy(color="#fc3d03"))) \%>\% 
-  add_object(sphere(y=0.2,material=glossy(color="#2b6eff"))) \%>\% 
-  add_object(sphere(y=0.2,x=2.1,material=glossy(color="#2fed4f"))) \%>\% 
+  add_object(sphere(y=0.2,x=-2.1,material=glossy(color="#fc3d03"))) \%>\%
+  add_object(sphere(y=0.2,material=glossy(color="#2b6eff"))) \%>\%
+  add_object(sphere(y=0.2,x=2.1,material=glossy(color="#2fed4f"))) \%>\%
   add_object(sphere(y=8,z=-5,radius=3,material=light(intensity=20))) \%>\%
   render_scene(parallel=TRUE,clamp_value=10,samples=16,fov=40,sample_method="sobol_blue")
  }
 if(run_documentation()) {
-#Change the amount of gloss 
+#Change the amount of gloss
 generate_ground(material=diffuse(sigma=90)) \%>\%
-  add_object(sphere(y=0.2,x=-2.1,material=glossy(gloss=1,color="#fc3d03"))) \%>\% 
-  add_object(sphere(y=0.2,material=glossy(gloss=0.5,color="#2b6eff"))) \%>\% 
-  add_object(sphere(y=0.2,x=2.1,material=glossy(gloss=0,color="#2fed4f"))) \%>\% 
+  add_object(sphere(y=0.2,x=-2.1,material=glossy(gloss=1,color="#fc3d03"))) \%>\%
+  add_object(sphere(y=0.2,material=glossy(gloss=0.5,color="#2b6eff"))) \%>\%
+  add_object(sphere(y=0.2,x=2.1,material=glossy(gloss=0,color="#2fed4f"))) \%>\%
   add_object(sphere(y=8,z=-5,radius=3,material=light(intensity=20))) \%>\%
   render_scene(parallel=TRUE,clamp_value=10,samples=16,fov=40,sample_method="sobol_blue")
  }
 if(run_documentation()) {
-#Add gloss to a pattern 
+#Add gloss to a pattern
 generate_ground(material=diffuse(sigma=90)) \%>\%
-  add_object(sphere(y=0.2,x=-2.1,material=glossy(noise=2,noisecolor="black"))) \%>\% 
-  add_object(sphere(y=0.2,material=glossy(color="#ff365a",checkercolor="#2b6eff"))) \%>\% 
-  add_object(sphere(y=0.2,x=2.1,material=glossy(color="blue",gradient_color="#2fed4f"))) \%>\% 
+  add_object(sphere(y=0.2,x=-2.1,material=glossy(noise=2,noisecolor="black"))) \%>\%
+  add_object(sphere(y=0.2,material=glossy(color="#ff365a",checkercolor="#2b6eff"))) \%>\%
+  add_object(sphere(y=0.2,x=2.1,material=glossy(color="blue",gradient_color="#2fed4f"))) \%>\%
   add_object(sphere(y=8,z=-5,radius=3,material=light(intensity=20))) \%>\%
   render_scene(parallel=TRUE,clamp_value=10,samples=16,fov=40,sample_method="sobol_blue")
  }
 if(run_documentation()) {
 #Add an R and a fill light (this may look familiar)
 generate_ground(material=diffuse()) \%>\%
-  add_object(sphere(y=0.2,material=glossy(color="#2b6eff",reflectance=0.05))) \%>\% 
+  add_object(sphere(y=0.2,material=glossy(color="#2b6eff",reflectance=0.05))) \%>\%
   add_object(obj_model(r_obj(simple_r = TRUE),
                        z=1,y=-0.05,scale=0.45,material=diffuse())) \%>\%
   add_object(sphere(y=6,z=1,radius=4,material=light(intensity=3))) \%>\%

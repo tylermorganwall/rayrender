@@ -21,20 +21,20 @@ Takes the scene description and renders an image, either to the device or to a f
 }
 \examples{
 if(run_documentation()) {
-generate_ground(material=diffuse(color="darkgreen")) \%>\% 
-  add_object(sphere(material=diffuse(checkercolor="red"))) \%>\% 
+generate_ground(material=diffuse(color="darkgreen")) \%>\%
+  add_object(sphere(material=diffuse(checkercolor="red"))) \%>\%
   render_preview()
   }
 if(run_documentation()) {
 #Change the light direction
-generate_ground(material=diffuse(color="darkgreen")) \%>\% 
-  add_object(sphere(material=diffuse(checkercolor="red"))) \%>\% 
+generate_ground(material=diffuse(color="darkgreen")) \%>\%
+  add_object(sphere(material=diffuse(checkercolor="red"))) \%>\%
   render_preview(light_direction = c(-1,-1,0))
 }
 if(run_documentation()) {
 #Change the Phong exponent
-generate_ground(material=diffuse(color="darkgreen")) \%>\% 
-  add_object(sphere(material=diffuse(checkercolor="red"))) \%>\% 
+generate_ground(material=diffuse(color="darkgreen")) \%>\%
+  add_object(sphere(material=diffuse(checkercolor="red"))) \%>\%
   render_preview(light_direction = c(-1,-1,0), exponent=100)
 }
 }
