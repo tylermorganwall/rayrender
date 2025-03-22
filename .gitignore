@@ -5,6 +5,9 @@
 src/*.o
 src/*.so
 src/*.dll
+src/**/*.o
+src/**/*.so
+src/**/*.dll
 .Rapp.history
 .DS_Store
 autom4te.cache

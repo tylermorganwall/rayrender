@@ -45,8 +45,16 @@ public:
   
   union {
     Float e[3];
-    Float x, y ,z;
-    Float r, g, b;
+    struct {
+        Float x; 
+        Float y;
+        Float z;
+    };
+    struct {
+        Float r; 
+        Float g;
+        Float b;
+    };
   };
 };
 

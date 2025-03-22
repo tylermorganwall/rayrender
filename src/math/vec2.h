@@ -10,13 +10,13 @@
 template <typename T> class vec2 {
 public:
   vec2() {}
-  vec2(T e0, T e1) {e[0] = e0; e[1] = e1;}
-  explicit vec2(const vec3<T> &p) { e[0] = p.x; e[1] = p.y; }
-  explicit vec2(const point3<T> &p) { e[0] = p.x; e[1] = p.y; }
+  vec2(T e0, T e1) {x = e0; y = e1;}
+  explicit vec2(const vec3<T> &p) { x = p.x; y = p.y; }
+  explicit vec2(const point3<T> &p) { x = p.x; y = p.y; }
 
 
   inline const vec2<T>& operator+() const { return *this; }
-  inline vec2<T> operator-() const { return vec2<T>(-e[0], -e[1]); }
+  inline vec2<T> operator-() const { return vec2<T>(-x, -y); }
   inline T operator[](int i) const { return e[i]; }
   
   inline vec2<T>& operator+=(const vec2<T> &v2);
@@ -26,110 +26,116 @@ public:
   inline vec2<T>& operator*=(const Float t);
   inline vec2<T>& operator/=(const Float t);
   bool HasNaNs() const {
-    return(std::isnan(e[0]) || std::isnan(e[1]));
+    return(std::isnan(x) || std::isnan(y));
   }
-  inline Float length() const { return sqrt(e[0]*e[0] + e[1]*e[1]); }
-  inline Float squared_length() const { return e[0]*e[0] + e[1]*e[1]; }
+  inline Float length() const { return sqrt(x*x + y*y); }
+  inline Float squared_length() const { return x*x + y*y; }
   inline void make_unit_vector();
   
   union {
     Float e[2];
-    Float x, y;
-    Float u, v;
+    struct {
+        Float x;
+        Float y;
+    };
+    struct {
+        Float u;
+        Float v;
+    };
   };
 };
 
 
 template<typename T> 
 inline std::istream& operator>>(std::istream &is, vec2<T> &t) {
-  is >> t.e[0] >> t.e[1];
+  is >> t.x >> t.y;
   return is;
 }
 
 template<typename T> 
 inline std::ostream& operator<<(std::ostream &os, const vec2<T> &t) {
-  os << t.e[0] << ", " << t.e[1];
+  os << t.x << ", " << t.y;
   return os;
 }
 
 template<typename T> 
 inline void vec2<T>::make_unit_vector() {
-  Float k = 1.0 / sqrt(e[0]*e[0] + e[1]*e[1]);
-  e[0] *= k; e[1] *= k; 
+  Float k = 1.0 / sqrt(x*x + y*y);
+  x *= k; y *= k; 
 }
 
 template<typename T> 
 inline vec2<T> operator+(const vec2<T> &v1, const vec2<T> &v2) {
-  return vec2<T>(v1.e[0] + v2.e[0],v1.e[1] + v2.e[1]);
+  return vec2<T>(v1.x + v2.x,v1.y + v2.y);
 }
 
 template<typename T> 
 inline vec2<T> operator-(const vec2<T> &v1, const vec2<T> &v2) {
-  return vec2<T>(v1.e[0] - v2.e[0],v1.e[1] - v2.e[1]);
+  return vec2<T>(v1.x - v2.x,v1.y - v2.y);
 }
 
 template<typename T> 
 inline vec2<T> operator*(const vec2<T> &v1, const vec2<T> &v2) {
-  return vec2<T>(v1.e[0] * v2.e[0],v1.e[1] * v2.e[1]);
+  return vec2<T>(v1.x * v2.x,v1.y * v2.y);
 }
 
 template<typename T> 
 inline vec2<T> operator/(const vec2<T> &v1, const vec2<T> &v2) {
-  return vec2<T>(v1.e[0] / v2.e[0],v1.e[1] / v2.e[1]);
+  return vec2<T>(v1.x / v2.x,v1.y / v2.y);
 }
 
 template<typename T> 
 inline vec2<T> operator*(Float t, const vec2<T> &v) {
-  return vec2<T>(t*v.e[0], t*v.e[1]);
+  return vec2<T>(t*v.x, t*v.y);
 }
 
 template<typename T> 
 inline vec2<T> operator*(const vec2<T> &v, Float t) {
-  return vec2<T>(t*v.e[0], t*v.e[1]);
+  return vec2<T>(t*v.x, t*v.y);
 }
 
 template<typename T> 
 inline vec2<T> operator/(const vec2<T> &v, Float t) {
-  return vec2<T>(v.e[0]/t, v.e[1]/t);
+  return vec2<T>(v.x/t, v.y/t);
 }
 
 template<typename T> 
 inline Float dot(const vec2<T> &v1, const vec2<T> &v2) {
-  return (v1.e[0] * v2.e[0] + v1.e[1] * v2.e[1]);
+  return (v1.x * v2.x + v1.y * v2.y);
 }
 
 template<typename T> 
 inline vec2<T>& vec2<T>::operator+=(const vec2<T> &v) {
-  e[0] += v.e[0];
-  e[1] += v.e[1];
+  x += v.x;
+  y += v.y;
   return(*this);
 }
 
 template<typename T> 
 inline vec2<T>& vec2<T>::operator*=(const vec2<T> &v) {
-  e[0] *= v.e[0];
-  e[1] *= v.e[1];
+  x *= v.x;
+  y *= v.y;
   return(*this);
 }
 
 template<typename T> 
 inline vec2<T>& vec2<T>::operator/=(const vec2<T> &v) {
-  e[0] /= v.e[0];
-  e[1] /= v.e[1];
+  x /= v.x;
+  y /= v.y;
   return(*this);
 }
 
 template<typename T> 
 inline vec2<T>& vec2<T>::operator-=(const vec2<T> &v) {
-  e[0] -= v.e[0];
-  e[1] -= v.e[1];
+  x -= v.x;
+  y -= v.y;
   return(*this);
 }
 
 template<typename T> 
 inline vec2<T>& vec2<T>::operator*=(const Float t) {
-  e[0] *= t;
-  e[1] *= t;
+  x *= t;
+  y *= t;
   return(*this);
 }
 
@@ -137,8 +143,8 @@ template<typename T>
 inline vec2<T>& vec2<T>::operator/=(const Float t) {
   Float k = 1.0/t;
   
-  e[0] *= k;
-  e[1] *= k;
+  x *= k;
+  y *= k;
   return(*this);
 }
 

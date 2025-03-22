@@ -37,9 +37,15 @@ public:
   inline void make_unit_vector();
   
   union {
-    T e[2];
-    T x, y;
-    T u, v;
+    Float e[2];
+    struct {
+        Float x;
+        Float y;
+    };
+    struct {
+        Float u;
+        Float v;
+    };
   };
 };
 

@@ -29,3 +29,7 @@
 ^_pkgdown\.yml$
 ^tests/*$
 ^todo.text$
+^CLAUDE.md$
+^todo.txt$
+^src/pbrt$
+^nanovdb$

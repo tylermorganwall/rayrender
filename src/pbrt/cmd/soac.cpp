@@ -29,10 +29,10 @@ TODO:
 
 int line = 1;
 
-#ifdef __GNUG__
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wformat-security"
-#endif  // __GNUG__
+//#ifdef __GNUG__
+//#pragma GCC diagnostic push
+//#pragma GCC diagnostic ignored "-Wformat-security"
+//#endif  // __GNUG__
 
 const char *filename;
 
@@ -43,9 +43,9 @@ static void error(const char *fmt, Args... args) {
     exit(1);
 }
 
-#ifdef __GNUG__
-#pragma GCC diagnostic pop
-#endif  // __GNUG__
+//#ifdef __GNUG__
+//#pragma GCC diagnostic pop
+//#endif  // __GNUG__
 
 struct OptionalString {
     OptionalString() = default;

@@ -390,7 +390,7 @@ vec3f sphere::random(const point3f& o, random_gen& rng, Float time) {
   Float cosAlpha = sinTheta2 * invSinThetaMax +
     cosTheta * std::sqrt(std::fmax((Float)0.f, 1.f - sinTheta2 * invSinThetaMax * invSinThetaMax));
   Float sinAlpha = std::sqrt(std::fmax((Float)0.f, 1.f - cosAlpha*cosAlpha));
-  Float phi = u.e[1] * 2 * static_cast<Float>(M_PI);
+  Float phi = u.y * 2 * static_cast<Float>(M_PI);
   
   // Compute surface normal and sampled point on sphere
   vec3f nWorld = SphericalDirection(sinAlpha, cosAlpha, phi, -uvw.u(), -uvw.v(), -uvw.w());
@@ -429,7 +429,7 @@ vec3f sphere::random(const point3f& o, Sampler* sampler, Float time) {
   Float cosAlpha = sinTheta2 * invSinThetaMax +
     cosTheta * std::sqrt(std::fmax((Float)0.f, 1.f - sinTheta2 * invSinThetaMax * invSinThetaMax));
   Float sinAlpha = std::sqrt(std::fmax((Float)0.f, 1.f - cosAlpha*cosAlpha));
-  Float phi = u.e[1] * 2 * static_cast<Float>(M_PI);
+  Float phi = u.y * 2 * static_cast<Float>(M_PI);
   
   // Compute surface normal and sampled point on sphere
   vec3f nWorld = SphericalDirection(sinAlpha, cosAlpha, phi, -uvw.u(), -uvw.v(), -uvw.w());

@@ -26,10 +26,10 @@ inline std::string StringPrintf(const char *fmt, Args &&...args);
 #include <type_traits>
 #include <typeinfo>
 
-#ifdef __GNUG__
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wformat-security"
-#endif  // __GNUG__
+//#ifdef __GNUG__
+//#pragma GCC diagnostic push
+//#pragma GCC diagnostic ignored "-Wformat-security"
+//#endif  // __GNUG__
 
 namespace pbrt {
 
@@ -202,10 +202,10 @@ stringPrintfRecursiveWithPrecision(std::string *s, const char *fmt,
     stringPrintfRecursive(s, fmt, std::forward<Args>(args)...);
 }
 
-#ifdef PBRT_IS_MSVC
-#pragma warning(push)
-#pragma warning(disable : 4102)  // bogus "unreferenced label" warning for done: below
-#endif
+//#ifdef PBRT_IS_MSVC
+//#pragma warning(push)
+//#pragma warning(disable : 4102)  // bogus "unreferenced label" warning for done: below
+//#endif
 
 // General-purpose version of stringPrintfRecursive; add the formatted
 // output for a single StringPrintf() argument to the final result string
@@ -269,9 +269,9 @@ done:
     stringPrintfRecursive(s, fmt, std::forward<Args>(args)...);
 }
 
-#ifdef PBRT_IS_MSVC
-#pragma warning(pop)
-#endif
+//#ifdef PBRT_IS_MSVC
+//#pragma warning(pop)
+//#endif
 
 }  // namespace detail
 
@@ -294,9 +294,9 @@ void Printf(const char *fmt, Args &&...args) {
     fputs(s.c_str(), stdout);
 }
 
-#ifdef __GNUG__
-#pragma GCC diagnostic pop
-#endif  // __GNUG__
+//#ifdef __GNUG__
+//#pragma GCC diagnostic pop
+//#endif  // __GNUG__
 
 // https://en.wikipedia.org/wiki/ANSI_escape_code#Colors
 inline std::string Red(const std::string &s) {

@@ -70,8 +70,16 @@ public:
   
   union {
     T e[3];
-    T x, y, z;
-    T r, g, b;
+    struct {
+        T x; 
+        T y;
+        T z;
+    };
+    struct {
+        T r; 
+        T g;
+        T b;
+    };
   };
 };
 
