@@ -1,0 +1,16 @@
+CXX_STD = CXX20
+
+## Compiler flags/defines:
+PKG_LIBS = -lgdi32
+PKG_CXXFLAGS = -DRAY_REPRODUCE_PERLIN -DSTRICT_R_HEADERS -DRAY_WINDOWS -DHAS_SSE -DRAYSIMD -DRAYSIMDVECOFF
+
+## Files to compile:
+SOURCES = @DIR_SOURCES@ @SUBDIR_SOURCES@
+OBJECTS = $(SOURCES:.cpp=.o)
+
+## Build the DLL:
+all: $(SHLIB)
+
+## Clean up object files:
+clean:
+	@rm -f $(OBJECTS)

@@ -1,16 +1,17 @@
 CXX_STD = CXX20
+
+## Compiler flags/defines:
 PKG_CPPFLAGS = @PKG_CPPFLAGS@ 
 PKG_LIBS = @PKG_LIBS@
 PKG_CXXFLAGS = @DEFINES@
 
+## Files to compile:
 SOURCES=@DIR_SOURCES@ @SUBDIR_SOURCES@
-
-# Obtain the object files
 OBJECTS=$(SOURCES:.cpp=.o) 
 
 # Make the shared object
 all: $(SHLIB)
 
-# Provide recipe to remove all objects
+## Clean up object files:
 clean:
 	@rm -f $(OBJECTS)

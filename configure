@@ -4630,7 +4630,7 @@ PKG_LIBS="${LIBS} ${PKG_LIBS} ${OIDN_LDFLAGS} ${OIDN_LIBS}"
 DEFINES="${DEFINES}"
 
 
-ac_config_files="$ac_config_files src/Makevars"
+ac_config_files="$ac_config_files src/Makevars src/Makevars.win"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -5333,6 +5333,7 @@ for ac_config_target in $ac_config_targets
 do
   case $ac_config_target in
     "src/Makevars") CONFIG_FILES="$CONFIG_FILES src/Makevars" ;;
+    "src/Makevars.win") CONFIG_FILES="$CONFIG_FILES src/Makevars.win" ;;
 
   *) as_fn_error $? "invalid argument: \`$ac_config_target'" "$LINENO" 5;;
   esac

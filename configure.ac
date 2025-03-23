@@ -170,7 +170,10 @@ AC_SUBST([PKG_CPPFLAGS], ["${PKG_CPPFLAGS} ${OIDN_CPPFLAGS}"])
 AC_SUBST([PKG_LIBS], ["${LIBS} ${PKG_LIBS} ${OIDN_LDFLAGS} ${OIDN_LIBS}"])
 AC_SUBST([DEFINES], ["${DEFINES}"])
 
-AC_CONFIG_FILES([src/Makevars])
+AC_CONFIG_FILES([
+  src/Makevars
+  src/Makevars.win
+])
 AC_OUTPUT
 
 echo "
