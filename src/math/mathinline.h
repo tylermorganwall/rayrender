@@ -705,18 +705,18 @@ inline Float Log2(Float x) {
 }
 
 inline point3f RGBtoHSV(point3f& rgb) {
-  Float max_val = ffmax(ffmax(rgb.r, rgb.g), rgb.b);
-  Float min_val = ffmin(ffmin(rgb.r, rgb.g), rgb.b);
+  Float max_val = ffmax(ffmax(rgb.x, rgb.y), rgb.y);
+  Float min_val = ffmin(ffmin(rgb.x, rgb.y), rgb.z);
   Float delta_val = max_val - min_val;
   point3f hsv;
   
   if(delta_val > 0) {
-    if(max_val == rgb.r) {
-      hsv.e[0] = 60 * (fmod(((rgb.g - rgb.b) / delta_val), 6));
-    } else if(max_val == rgb.g) {
-      hsv.e[0] = 60 * (((rgb.b - rgb.r) / delta_val) + 2);
-    } else if(max_val == rgb.b) {
-      hsv.e[0] = 60 * (((rgb.r - rgb.g) / delta_val) + 4);
+    if(max_val == rgb.x) {
+      hsv.e[0] = 60 * (fmod(((rgb.y - rgb.z) / delta_val), 6));
+    } else if(max_val == rgb.y) {
+      hsv.e[0] = 60 * (((rgb.z - rgb.x) / delta_val) + 2);
+    } else if(max_val == rgb.z) {
+      hsv.e[0] = 60 * (((rgb.x - rgb.y) / delta_val) + 4);
     }
     if(max_val > 0) {
       hsv.e[1] = delta_val / max_val;

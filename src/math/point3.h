@@ -75,11 +75,6 @@ public:
         T y;
         T z;
     };
-    struct {
-        T r; 
-        T g;
-        T b;
-    };
   };
 };
 

@@ -38,10 +38,6 @@ public:
         Float x;
         Float y;
     };
-    struct {
-        Float u;
-        Float v;
-    };
   };
 };
 

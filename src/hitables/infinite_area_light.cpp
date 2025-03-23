@@ -16,7 +16,7 @@ InfiniteAreaLight::InfiniteAreaLight(int width, int height, Float r, point3f cen
     for (int u = 0; u < width; ++u) {
       Float up = (Float)u / (Float)width;
       point3f rgb = image->value(up, vp, center);
-      img[u + v * width] =  0.212671f*rgb.r + 0.715160f*rgb.g + 0.072169f*rgb.b;
+      img[u + v * width] =  0.212671f*rgb.x + 0.715160f*rgb.y + 0.072169f*rgb.z;
       img[u + v * width] *= sinTheta;
     }
   }
