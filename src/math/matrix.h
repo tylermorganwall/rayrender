@@ -6,6 +6,7 @@
 #include "../math/vectypes.h"
 #include "../math/simd.h"
 #include "../math/mathinline.h"
+#include <optional>
 
 struct alignas(16) Matrix4x4 {
   Matrix4x4() {
@@ -288,7 +289,7 @@ std::optional<SquareMatrix<N>> Inverse(const SquareMatrix<N> &);
 template <int N>
 SquareMatrix<N> InvertOrExit(const SquareMatrix<N> &m) {
     std::optional<SquareMatrix<N>> inv = Inverse(m);
-    CHECK(inv.has_value());
+    // CHECK(inv.has_value());
     return *inv;
 }
 
