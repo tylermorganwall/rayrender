@@ -41,9 +41,9 @@ void DisplaceMesh(TriangleMesh* base_mesh,
     for(size_t i = 0; i < base_mesh->nVertices; i++) {
       const point2f& uv = base_mesh->uv[i];
       const point3f& pp = base_mesh->p[i];
-      point3f disp = tex->value(uv.x,uv.y, pp);
+      point3f disp = tex->value(uv.xy.x,uv.xy.y, pp);
       
-      normal3f displace_n = displacement_scale * unit_vector(base_mesh->n[i]) * disp.x; 
+      normal3f displace_n = displacement_scale * unit_vector(base_mesh->n[i]) * disp.xyz.x; 
       base_mesh->p[i] += convert_to_vec3(displace_n);
     }
   } else {
@@ -53,7 +53,7 @@ void DisplaceMesh(TriangleMesh* base_mesh,
     for(size_t i = 0; i < base_mesh->nVertices; i++) {
       const point2f& uv = base_mesh->uv[i];
       const point3f& pp = base_mesh->p[i];
-      point3f disp = unit_vector(tex->value(uv.x,uv.y, pp));
+      point3f disp = unit_vector(tex->value(uv.xy.x,uv.xy.y, pp));
       vec3f tangent = unit_vector(base_mesh->t[i]);
       if(any_is_nan(tangent)) {
         continue;
@@ -61,7 +61,7 @@ void DisplaceMesh(TriangleMesh* base_mesh,
       vec3f n = unit_vector(convert_to_vec3(base_mesh->n[i]));
       vec3f bitangent =  base_mesh->tangent_right_handed[i] ? -cross(n, tangent) : cross(n, tangent);
       
-      vec3f displace_n = displacement_scale * (tangent * disp.x + bitangent * disp.y + n * disp.z);
+      vec3f displace_n = displacement_scale * (tangent * disp.xyz.x + bitangent * disp.xyz.y + n * disp.xyz.z);
       if(any_is_nan(displace_n)) {
         continue;
       }

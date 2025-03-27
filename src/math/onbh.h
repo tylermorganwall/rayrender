@@ -36,11 +36,11 @@ public:
   }
 
   vec3f local(const vec3f &a) const {
-    return a.x*u() + a.y*v() + a.z*w();
+    return a.xyz.x*u() + a.xyz.y*v() + a.xyz.z*w();
   }
 
   vec3f local_to_world(const vec3f &a) const {
-    return a.x*u() + a.y*v() + a.z*w();
+    return a.xyz.x*u() + a.xyz.y*v() + a.xyz.z*w();
   }
   
   vec3f world_to_local(const vec3f &a) const {
@@ -53,28 +53,28 @@ public:
   // Builds the basis from a given vector (w) and ensures right-handedness.
   void build_from_w(const vec3f &n) {
     axis[2] = unit_vector(n);
-    vec3f a = (std::fabs(axis[2].x) > 0.9999999f) ? vec3f(0, 1, 0) : vec3f(1, 0, 0);
+    vec3f a = (std::fabs(axis[2].xyz.x) > 0.9999999f) ? vec3f(0, 1, 0) : vec3f(1, 0, 0);
     axis[1] = unit_vector(cross(axis[2], a));
     axis[0] = cross(axis[1], axis[2]);
   }
 
   void build_from_w(const normal3f &n) {
     axis[2] = unit_vector(convert_to_vec3(n));
-    vec3f a = (std::fabs(axis[2].x) > 0.9999999f) ? vec3f(0, 1, 0) : vec3f(1, 0, 0);
+    vec3f a = (std::fabs(axis[2].xyz.x) > 0.9999999f) ? vec3f(0, 1, 0) : vec3f(1, 0, 0);
     axis[1] = unit_vector(cross(axis[2], a));
     axis[0] = cross(axis[1], axis[2]);
   }
 
   void build_from_w_normalized(const vec3f &n) {
     axis[2] = n;
-    vec3f a = (std::fabs(axis[2].x) > 0.9999999f) ? vec3f(0, 1, 0) : vec3f(1, 0, 0);
+    vec3f a = (std::fabs(axis[2].xyz.x) > 0.9999999f) ? vec3f(0, 1, 0) : vec3f(1, 0, 0);
     axis[1] = unit_vector(cross(axis[2], a));
     axis[0] = cross(axis[1], axis[2]);
   }
 
   void build_from_w_normalized(const normal3f &n) {
     axis[2] = unit_vector(convert_to_vec3(n));
-    vec3f a = (std::fabs(axis[2].x) > 0.9999999f) ? vec3f(0, 1, 0) : vec3f(1, 0, 0);
+    vec3f a = (std::fabs(axis[2].xyz.x) > 0.9999999f) ? vec3f(0, 1, 0) : vec3f(1, 0, 0);
     axis[1] = unit_vector(cross(axis[2], a));
     axis[0] = cross(axis[1], axis[2]);
   }
@@ -94,11 +94,11 @@ public:
   }
 
   static void coordinateSystem(const vec3f &v1, vec3f *v2, vec3f *v3) {
-    Float sign = (v1.z >= 0) ? 1.0f : -1.0f;
-    Float a = -1.0f / (sign + v1.z);
-    Float b = v1.x * v1.y * a;
-    *v2 = vec3f(1 + sign * (v1.x * v1.x) * a, sign * b, -sign * v1.x);
-    *v3 = vec3f(b, sign + (v1.y * v1.y) * a, -v1.y);
+    Float sign = (v1.xyz.z >= 0) ? 1.0f : -1.0f;
+    Float a = -1.0f / (sign + v1.xyz.z);
+    Float b = v1.xyz.x * v1.xyz.y * a;
+    *v2 = vec3f(1 + sign * (v1.xyz.x * v1.xyz.x) * a, sign * b, -sign * v1.xyz.x);
+    *v3 = vec3f(b, sign + (v1.xyz.y * v1.xyz.y) * a, -v1.xyz.y);
   }
 
   static onb FromZ(const vec3f &z_) {

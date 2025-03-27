@@ -83,7 +83,7 @@ Float Noise(Float x, Float y, Float z) {
 }
 
 Float Noise(point3f p) {
-    return Noise(p.x, p.y, p.z);
+    return Noise(p.xyz.x, p.xyz.y, p.xyz.z);
 }
 
 inline Float Grad(int x, int y, int z, Float dx, Float dy, Float dz) {

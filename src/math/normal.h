@@ -49,12 +49,7 @@ public:
         Float x; 
         Float y;
         Float z;
-    };
-    struct {
-        Float r; 
-        Float g;
-        Float b;
-    };
+    } xyz;
   };
 };
 
@@ -157,23 +152,23 @@ inline Float AbsDot(const normal3f &v1, const vec3f &v2) {
 
 
 inline normal3f cross(const normal3f &v1, const normal3f &v2) {
-  return(normal3f(DifferenceOfProducts(v1.y, v2.z, v1.z, v2.y),
-                    DifferenceOfProducts(v1.z, v2.x, v1.x, v2.z),
-                    DifferenceOfProducts(v1.x, v2.y, v1.y, v2.x)));
+  return(normal3f(DifferenceOfProducts(v1.xyz.y, v2.xyz.z, v1.xyz.z, v2.xyz.y),
+                    DifferenceOfProducts(v1.xyz.z, v2.xyz.x, v1.xyz.x, v2.xyz.z),
+                    DifferenceOfProducts(v1.xyz.x, v2.xyz.y, v1.xyz.y, v2.xyz.x)));
 }
 
 
 inline normal3f cross(const vec3f &v1, const normal3f &v2) {
-  return(normal3f(DifferenceOfProducts(v1.y, v2.z, v1.z, v2.y),
-                    DifferenceOfProducts(v1.z, v2.x, v1.x, v2.z),
-                    DifferenceOfProducts(v1.x, v2.y, v1.y, v2.x)));
+  return(normal3f(DifferenceOfProducts(v1.xyz.y, v2.xyz.z, v1.xyz.z, v2.xyz.y),
+                    DifferenceOfProducts(v1.xyz.z, v2.xyz.x, v1.xyz.x, v2.xyz.z),
+                    DifferenceOfProducts(v1.xyz.x, v2.xyz.y, v1.xyz.y, v2.xyz.x)));
 }
 
 
 inline normal3f cross(const normal3f &v1, const vec3f &v2) {
-  return(normal3f(DifferenceOfProducts(v1.y, v2.z, v1.z, v2.y),
-                    DifferenceOfProducts(v1.z, v2.x, v1.x, v2.z),
-                    DifferenceOfProducts(v1.x, v2.y, v1.y, v2.x)));
+  return(normal3f(DifferenceOfProducts(v1.xyz.y, v2.xyz.z, v1.xyz.z, v2.xyz.y),
+                    DifferenceOfProducts(v1.xyz.z, v2.xyz.x, v1.xyz.x, v2.xyz.z),
+                    DifferenceOfProducts(v1.xyz.x, v2.xyz.y, v1.xyz.y, v2.xyz.x)));
 }
 
 
@@ -246,27 +241,27 @@ inline normal3f unit_vector(normal3f v) {
 
 
 inline Float MinComponent(const normal3f &v) {
-  return(ffmin(v.x, ffmin(v.y, v.z)));
+  return(ffmin(v.xyz.x, ffmin(v.xyz.y, v.xyz.z)));
 }
 
 
 inline Float MaxComponent(const normal3f &v) {
-  return(ffmax(v.x, ffmax(v.y, v.z)));
+  return(ffmax(v.xyz.x, ffmax(v.xyz.y, v.xyz.z)));
 }
 
 
 inline int MaxDimension(const normal3f &v) {
-  return((v.x > v.y) ? ((v.x > v.z) ? 0 : 2) : ((v.y > v.z) ? 1 : 2));
+  return((v.xyz.x > v.xyz.y) ? ((v.xyz.x > v.xyz.z) ? 0 : 2) : ((v.xyz.y > v.xyz.z) ? 1 : 2));
 }
 
 
 inline normal3f Min(const normal3f &p1, const normal3f &p2) {
-  return(normal3f(ffmin(p1.x, p2.x), ffmin(p1.y, p2.y),ffmin(p1.z, p2.z)));
+  return(normal3f(ffmin(p1.xyz.x, p2.xyz.x), ffmin(p1.xyz.y, p2.xyz.y),ffmin(p1.xyz.z, p2.xyz.z)));
 }
 
 
 inline normal3f Max(const normal3f &p1, const normal3f &p2) {
-  return(normal3f(fmax(p1.x, p2.x), fmax(p1.y, p2.y),fmax(p1.z, p2.z)));
+  return(normal3f(fmax(p1.xyz.x, p2.xyz.x), fmax(p1.xyz.y, p2.xyz.y),fmax(p1.xyz.z, p2.xyz.z)));
 }
 
 
@@ -276,7 +271,7 @@ inline normal3f Permute(const normal3f &v, int x, int y, int z) {
 
 
 inline normal3f Abs(const normal3f &v) {
-  return(normal3f(fabs(v.x), fabs(v.y), fabs(v.z)));
+  return(normal3f(fabs(v.xyz.x), fabs(v.xyz.y), fabs(v.xyz.z)));
 }
 
 inline normal3f Faceforward(const normal3f &n, const vec3f &v) {
@@ -312,9 +307,9 @@ public:
 
     template <typename U>
     normal3f(const vec3<U>& p) {
-        e = simd_set(static_cast<Float>(p.x), 
-                     static_cast<Float>(p.y), 
-                     static_cast<Float>(p.z), 
+        e = simd_set(static_cast<Float>(p.xyz.x), 
+                     static_cast<Float>(p.xyz.y), 
+                     static_cast<Float>(p.xyz.z), 
                      0.0f);
     }
 
@@ -584,18 +579,18 @@ inline normal3f unit_vector(const normal3f& v) {
 }
 
 inline Float MinComponent(const normal3f& v) {
-    return std::fmin(v.x, std::fmin(v.y, v.z));
+    return std::fmin(v.xyz.x, std::fmin(v.xyz.y, v.xyz.z));
 }
 
 inline Float MaxComponent(const normal3f& v) {
-    return std::fmax(v.x, std::fmax(v.y, v.z));
+    return std::fmax(v.xyz.x, std::fmax(v.xyz.y, v.xyz.z));
 }
 
 inline int MaxDimension(const normal3f& v) {
-    if (v.x > v.y) {
-        return (v.x > v.z) ? 0 : 2;
+    if (v.xyz.x > v.xyz.y) {
+        return (v.xyz.x > v.xyz.z) ? 0 : 2;
     } else {
-        return (v.y > v.z) ? 1 : 2;
+        return (v.xyz.y > v.xyz.z) ? 1 : 2;
     }
 }
 

@@ -22,8 +22,8 @@ public:
   }
   explicit Bounds2(const point2<T> &p) : pMin(p), pMax(p) {}
   Bounds2(const point2<T> &p1, const point2<T> &p2) {
-    pMin = point2<T>(ffmin(p1.x, p2.x), ffmin(p1.y, p2.y));
-    pMax = point2<T>(ffmax(p1.x, p2.x), ffmax(p1.y, p2.y));
+    pMin = point2<T>(ffmin(p1.xy.x, p2.xy.x), ffmin(p1.xy.y, p2.xy.y));
+    pMax = point2<T>(ffmax(p1.xy.x, p2.xy.x), ffmax(p1.xy.y, p2.xy.y));
   }
   template <typename U>
   explicit operator Bounds2<U>() const {
@@ -33,11 +33,11 @@ public:
   vec2<T> Diagonal() const { return pMax - pMin; }
   T Area() const {
     vec2<T> d = pMax - pMin;
-    return (d.x * d.y);
+    return (d.xy.x * d.xy.y);
   }
   int MaximumExtent() const {
     vec2<T> diag = Diagonal();
-    if (diag.x > diag.y)
+    if (diag.xy.x > diag.xy.y)
       return 0;
     else
       return 1;
@@ -57,13 +57,13 @@ public:
     return b.pMin != pMin || b.pMax != pMax;
   }
   point2<T> Lerp(const point2f &t) const {
-    return point2<T>(lerp(t.x, pMin.x, pMax.x),
-                     lerp(t.y, pMin.y, pMax.y));
+    return point2<T>(lerp(t.xy.x, pMin.xy.x, pMax.xy.x),
+                     lerp(t.xy.y, pMin.xy.y, pMax.xy.y));
   }
   vec2<T> Offset(const point2<T> &p) const {
     vec2<T> o = p - pMin;
-    if (pMax.x > pMin.x) o.x /= pMax.x - pMin.x;
-    if (pMax.y > pMin.y) o.y /= pMax.y - pMin.y;
+    if (pMax.xy.x > pMin.xy.x) o.xy.x /= pMax.xy.x - pMin.xy.x;
+    if (pMax.xy.y > pMin.xy.y) o.xy.y /= pMax.xy.y - pMin.xy.y;
     return o;
   }
   void BoundingSphere(point2<T> *c, Float *rad) const {
@@ -91,8 +91,8 @@ public:
   }
   explicit Bounds3(const point3<T> &p) : pMin(p), pMax(p) {}
   Bounds3(const point3<T> &p1, const point3<T> &p2)
-    : pMin(ffmin(p1.x, p2.x), ffmin(p1.y, p2.y), ffmin(p1.z, p2.z)),
-      pMax(ffmax(p1.x, p2.x), ffmax(p1.y, p2.y), ffmax(p1.z, p2.z)) {}
+    : pMin(ffmin(p1.xyz.x, p2.xyz.x), ffmin(p1.xyz.y, p2.xyz.y), ffmin(p1.xyz.z, p2.xyz.z)),
+      pMax(ffmax(p1.xyz.x, p2.xyz.x), ffmax(p1.xyz.y, p2.xyz.y), ffmax(p1.xyz.z, p2.xyz.z)) {}
   const point3<T> &operator[](int i) const;
   point3<T> &operator[](int i);
   bool operator==(const Bounds3<T> &b) const {
@@ -103,38 +103,38 @@ public:
   }
   point3<T> Corner(int corner) const {
     // DCHECK(corner >= 0 && corner < 8);
-    return point3<T>((*this)[(corner & 1)].x,
-                     (*this)[(corner & 2) ? 1 : 0].y,
-                     (*this)[(corner & 4) ? 1 : 0].z);
+    return point3<T>((*this)[(corner & 1)].xyz.x,
+                     (*this)[(corner & 2) ? 1 : 0].xyz.y,
+                     (*this)[(corner & 4) ? 1 : 0].xyz.z);
   }
   vec3<T> Diagonal() const { return pMax - pMin; }
   T SurfaceArea() const {
     vec3<T> d = Diagonal();
-    return 2 * (d.x * d.y + d.x * d.z + d.y * d.z);
+    return 2 * (d.xyz.x * d.xyz.y + d.xyz.x * d.xyz.z + d.xyz.y * d.xyz.z);
   }
   T Volume() const {
     vec3<T> d = Diagonal();
-    return d.x * d.y * d.z;
+    return d.xyz.x * d.xyz.y * d.xyz.z;
   }
   int MaximumExtent() const {
     vec3<T> d = Diagonal();
-    if (d.x > d.y && d.x > d.z)
+    if (d.xyz.x > d.xyz.y && d.xyz.x > d.xyz.z)
       return 0;
-    else if (d.y > d.z)
+    else if (d.xyz.y > d.xyz.z)
       return 1;
     else
       return 2;
   }
   point3<T> Lerp(const point3f &t) const {
-    return point3<T>(lerp(t.x, pMin.x, pMax.x),
-                     lerp(t.y, pMin.y, pMax.y),
-                     lerp(t.z, pMin.z, pMax.z));
+    return point3<T>(lerp(t.xyz.x, pMin.xyz.x, pMax.xyz.x),
+                     lerp(t.xyz.y, pMin.xyz.y, pMax.xyz.y),
+                     lerp(t.xyz.z, pMin.xyz.z, pMax.xyz.z));
   }
   vec3<T> Offset(const point3<T> &p) const {
     vec3<T> o = p - pMin;
-    if (pMax.x > pMin.x) o.x /= pMax.x - pMin.x;
-    if (pMax.y > pMin.y) o.y /= pMax.y - pMin.y;
-    if (pMax.z > pMin.z) o.z /= pMax.z - pMin.z;
+    if (pMax.xyz.x > pMin.xyz.x) o.xyz.x /= pMax.xyz.x - pMin.xyz.x;
+    if (pMax.xyz.y > pMin.xyz.y) o.xyz.y /= pMax.xyz.y - pMin.xyz.y;
+    if (pMax.xyz.z > pMin.xyz.z) o.xyz.z /= pMax.xyz.z - pMin.xyz.z;
     return o;
   }
   void BoundingSphere(point3<T> *center, Float *radius) const {
@@ -168,12 +168,12 @@ typedef Bounds3<int> Bounds3i;
 
 template <typename T>
 point2<T> Min(const point2<T> &pa, const point2<T> &pb) {
-  return point2<T>(ffmin(pa.x, pb.x), ffmin(pa.y, pb.y));
+  return point2<T>(ffmin(pa.xy.x, pb.xy.x), ffmin(pa.xy.y, pb.xy.y));
 }
 
 template <typename T>
 point2<T> Max(const point2<T> &pa, const point2<T> &pb) {
-  return point2<T>(ffmax(pa.x, pb.x), ffmax(pa.y, pb.y));
+  return point2<T>(ffmax(pa.xy.x, pb.xy.x), ffmax(pa.xy.y, pb.xy.y));
 }
 
 
@@ -207,28 +207,28 @@ Bounds2<T> IntersectB(const Bounds2<T> &b1, const Bounds2<T> &b2) {
 
 template <typename T>
 bool Overlaps(const Bounds2<T> &ba, const Bounds2<T> &bb) {
-  bool x = (ba.pMax.x >= bb.pMin.x) && (ba.pMin.x <= bb.pMax.x);
-  bool y = (ba.pMax.y >= bb.pMin.y) && (ba.pMin.y <= bb.pMax.y);
+  bool x = (ba.pMax.xyz.x >= bb.pMin.xyz.x) && (ba.pMin.xyz.x <= bb.pMax.xyz.x);
+  bool y = (ba.pMax.xyz.y >= bb.pMin.xyz.y) && (ba.pMin.xyz.y <= bb.pMax.xyz.y);
   return (x && y);
 }
 
 template <typename T>
 bool Inside(const point2<T> &pt, const Bounds2<T> &b) {
-  return (pt.x >= b.pMin.x && pt.x <= b.pMax.x && pt.y >= b.pMin.y &&
-          pt.y <= b.pMax.y);
+  return (pt.xy.x >= b.pMin.xy.x && pt.xy.x <= b.pMax.xy.x && pt.xy.y >= b.pMin.xy.y &&
+          pt.xy.y <= b.pMax.xy.y);
 }
 
 template <typename T>
 bool InsideExclusive(const point2<T> &pt, const Bounds2<T> &b) {
-  return (pt.x >= b.pMin.x && pt.x < b.pMax.x && pt.y >= b.pMin.y &&
-          pt.y < b.pMax.y);
+  return (pt.xy.x >= b.pMin.xy.x && pt.xy.x < b.pMax.xy.x && pt.xy.y >= b.pMin.xy.y &&
+          pt.xy.y < b.pMax.xy.y);
 }
 
 template <typename T>
 bool InsideExclusive(const point3<T> &pt, const Bounds3<T> &b) {
-  return (pt.x >= b.pMin.x && pt.x < b.pMax.x && 
-          pt.y >= b.pMin.y && pt.y < b.pMax.y &&
-          pt.z >= b.pMin.z && pt.z < b.pMax.z);
+  return (pt.xyz.x >= b.pMin.xyz.x && pt.xyz.x < b.pMax.xyz.x && 
+          pt.xyz.y >= b.pMin.xyz.y && pt.xyz.y < b.pMax.xyz.y &&
+          pt.xyz.z >= b.pMin.xyz.z && pt.xyz.z < b.pMax.xyz.z);
 }
 
 template <typename T, typename U>

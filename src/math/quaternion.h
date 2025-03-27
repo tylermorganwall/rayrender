@@ -60,7 +60,7 @@ struct Quaternion {
   Quaternion(const Matrix4x4 &m);
   
   friend std::ostream &operator<<(std::ostream &os, const Quaternion &q) {
-    os << "[ " <<  q.v.x << " " << q.v.y << " " << q.v.z << " " << q.w << "\n";
+    os << "[ " <<  q.v.xyz.x << " " << q.v.xyz.y << " " << q.v.xyz.z << " " << q.w << "\n";
     return os;
   }
   

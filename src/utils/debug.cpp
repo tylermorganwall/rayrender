@@ -60,9 +60,9 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
         }
         r.pri_stack = mat_stack;
         normal_map = calculate_normals(r, &world, max_depth, rng);
-        rgb_output(i,j,0) = normal_map.x;
-        rgb_output(i,j,1) = normal_map.y;
-        rgb_output(i,j,2) = normal_map.z;
+        rgb_output(i,j,0) = normal_map.xyz.x;
+        rgb_output(i,j,1) = normal_map.xyz.y;
+        rgb_output(i,j,2) = normal_map.xyz.z;
         delete mat_stack;
       }
     }
@@ -83,9 +83,9 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
           cam->GenerateRay(samp, &r);
         }
         uv_map = calculate_uv(r, &world, rng);
-        rgb_output(i,j,0) = uv_map.x;
-        rgb_output(i,j,1) = uv_map.y;
-        rgb_output(i,j,2) = uv_map.z;
+        rgb_output(i,j,0) = uv_map.xyz.x;
+        rgb_output(i,j,1) = uv_map.xyz.y;
+        rgb_output(i,j,2) = uv_map.xyz.z;
       }
     }
   } else if(debug_channel == 4) {
@@ -127,9 +127,9 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
           cam->GenerateRay(samp, &r);
         }
         vec3f dpd_val = calculate_dpduv(r, &world, rng, debug_channel == 6);
-        rgb_output(i,j,0) = dpd_val.x;
-        rgb_output(i,j,1) = dpd_val.y;
-        rgb_output(i,j,2) = dpd_val.z;
+        rgb_output(i,j,0) = dpd_val.xyz.x;
+        rgb_output(i,j,1) = dpd_val.xyz.y;
+        rgb_output(i,j,2) = dpd_val.xyz.z;
       }
     }
   } else if (debug_channel == 8) {
@@ -152,9 +152,9 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
         point3f dpd_val = calculate_color(r, &world, rng);
         mat_stack->clear();
         
-        rgb_output(i,j,0) = dpd_val.x;
-        rgb_output(i,j,1) = dpd_val.y;
-        rgb_output(i,j,2) = dpd_val.z;
+        rgb_output(i,j,0) = dpd_val.xyz.x;
+        rgb_output(i,j,1) = dpd_val.xyz.y;
+        rgb_output(i,j,2) = dpd_val.xyz.z;
       }
     }
     delete mat_stack;
@@ -183,9 +183,9 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                        point3f qr = quick_render(r, &world, rng, light_dir, n_exp);
                        mat_stack->clear();
                        
-                       rgb_output(i,j,0) = qr.x;
-                       rgb_output(i,j,1) = qr.y;
-                       rgb_output(i,j,2) = qr.z;
+                       rgb_output(i,j,0) = qr.xyz.x;
+                       rgb_output(i,j,1) = qr.xyz.y;
+                       rgb_output(i,j,2) = qr.xyz.z;
                      }
                      delete mat_stack;
                    };
@@ -216,9 +216,9 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                        point3f qr = calculate_position(r, &world, &hlist, max_depth, rng);
                        mat_stack->clear();
                        
-                       rgb_output(i,j,0) = qr.x;
-                       rgb_output(i,j,1) = qr.y;
-                       rgb_output(i,j,2) = qr.z;
+                       rgb_output(i,j,0) = qr.xyz.x;
+                       rgb_output(i,j,1) = qr.xyz.y;
+                       rgb_output(i,j,2) = qr.xyz.z;
                      }
                      delete mat_stack;
                    };
@@ -252,9 +252,9 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                                                            max_depth, rng);
                          mat_stack->clear();
                          
-                         rgb_output(i,j,0) += qr.x/ns;
-                         rgb_output(i,j,1) += qr.y/ns;
-                         rgb_output(i,j,2) += qr.z/ns;
+                         rgb_output(i,j,0) += qr.xyz.x/ns;
+                         rgb_output(i,j,1) += qr.xyz.y/ns;
+                         rgb_output(i,j,2) += qr.xyz.z/ns;
                        }
                      }
                      delete mat_stack;
@@ -323,9 +323,9 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                                                     max_depth, rng);
                        mat_stack->clear();
                        
-                       rgb_output(i,j,0) = qr.x;
-                       rgb_output(i,j,1) = qr.y;
-                       rgb_output(i,j,2) = qr.z;
+                       rgb_output(i,j,0) = qr.xyz.x;
+                       rgb_output(i,j,1) = qr.xyz.y;
+                       rgb_output(i,j,2) = qr.xyz.z;
                      }
                      delete mat_stack;
                    };
@@ -466,9 +466,9 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                          vec3f v2 = unit_vector(r.direction());
                          
                          
-                         rgb_output(i,j,0) = weight != 0 ? (v2.x+1.f)/(2.f) : 0;
-                         rgb_output(i,j,1) = weight != 0 ? (v2.y+1.f)/(2.f) : 0;
-                         rgb_output(i,j,2) = weight != 0 ? (v2.z+1.f)/(2.f) : 0;
+                         rgb_output(i,j,0) = weight != 0 ? (v2.xyz.x+1.f)/(2.f) : 0;
+                         rgb_output(i,j,1) = weight != 0 ? (v2.xyz.y+1.f)/(2.f) : 0;
+                         rgb_output(i,j,2) = weight != 0 ? (v2.xyz.z+1.f)/(2.f) : 0;
                        }
                      }
                    };
@@ -548,8 +548,8 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                            int index = j + ny * i;
                            Ray r; 
                            vec2f u2 = samplers[index]->Get2D();
-                           Float u = (Float(i) + u2.x) / Float(nx);
-                           Float v = (Float(j) + u2.y) / Float(ny);
+                           Float u = (Float(i) + u2.xy.x) / Float(nx);
+                           Float v = (Float(j) + u2.xy.y) / Float(ny);
                            if(fov >= 0) {
                              Float u = (Float(i)) / Float(nx);
                              Float v = (Float(j)) / Float(ny);
@@ -609,9 +609,9 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                                                     max_depth, rng);
                        mat_stack->clear();
                        
-                       rgb_output(i,j,0) = qr.x;
-                       rgb_output(i,j,1) = qr.y;
-                       rgb_output(i,j,2) = qr.z;
+                       rgb_output(i,j,0) = qr.xyz.x;
+                       rgb_output(i,j,1) = qr.xyz.y;
+                       rgb_output(i,j,2) = qr.xyz.z;
                      }
                      delete mat_stack;
                    };

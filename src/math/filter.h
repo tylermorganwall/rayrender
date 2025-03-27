@@ -5,7 +5,7 @@
 
 class Filter {
 public:
-  Filter(const vec2f &radius) : radius(radius), invRadius(vec2f(1 / radius.x, 1 / radius.y)) { }
+  Filter(const vec2f &radius) : radius(radius), invRadius(vec2f(1 / radius.xy.x, 1 / radius.xy.y)) { }
   virtual Float Evaluate(const vec2f &p) const = 0;
   const vec2f radius, invRadius;
     
@@ -27,8 +27,8 @@ class GaussianFilter : public Filter {
 public:
 GaussianFilter(const vec2f &radius, Float alpha)
   : Filter(radius), alpha(alpha),
-    expX(std::exp(-alpha * radius.x * radius.x)),
-    expY(std::exp(-alpha * radius.y * radius.y)) { }
+    expX(std::exp(-alpha * radius.xy.x * radius.xy.x)),
+    expY(std::exp(-alpha * radius.xy.y * radius.xy.y)) { }
   Float Evaluate(const vec2f &p) const;
   
 private:

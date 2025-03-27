@@ -78,7 +78,7 @@ static void BeckmannSample11(Float cosThetaI, Float U1, Float U2,
 static vec3f BeckmannSample(const vec3f &wi, Float alpha_x, Float alpha_y,
                            Float U1, Float U2) {
   // 1. stretch wi
-  vec3f wiStretched = unit_vector(vec3f(alpha_x * wi.x, alpha_y * wi.y, wi.z));
+  vec3f wiStretched = unit_vector(vec3f(alpha_x * wi.xyz.x, alpha_y * wi.xyz.y, wi.xyz.z));
   
   // 2. simulate P22_{wi}(x_slope, y_slope, 1, 1)
   Float slope_x, slope_y;
@@ -143,7 +143,7 @@ static void TrowbridgeReitzSample11(Float cosTheta, Float U1, Float U2,
 static vec3f TrowbridgeReitzSample(const vec3f &wi, Float alpha_x,
                                   Float alpha_y, Float U1, Float U2) {
   // 1. stretch wi
-  vec3f wiStretched = unit_vector(vec3f(alpha_x * wi.x, alpha_y * wi.y, wi.z));
+  vec3f wiStretched = unit_vector(vec3f(alpha_x * wi.xyz.x, alpha_y * wi.xyz.y, wi.xyz.z));
   
   // 2. simulate P22_{wi}(x_slope, y_slope, 1, 1)
   Float slope_x, slope_y;
@@ -186,7 +186,7 @@ Float TrowbridgeReitzDistribution::Lambda(const vec3f &w) const {
 
 vec3f TrowbridgeReitzDistribution::Sample_wh(const vec3f &wi,
                                             const Float u1, const Float u2) const {
-  bool flip = wi.z < 0;
+  bool flip = wi.xyz.z < 0;
   vec3f wh = TrowbridgeReitzSample(flip ? -wi : wi, alphax_constant, alphay_constant, u1, u2);
   if (flip) {
     wh = -wh;
@@ -221,7 +221,7 @@ Float BeckmannDistribution::Lambda(const vec3f &w) const {
 
 vec3f BeckmannDistribution::Sample_wh(const vec3f &wi, const Float u1, const Float u2) const {
   // Sample visible area of normals for Beckmann distribution
-  bool flip = wi.z < 0;
+  bool flip = wi.xyz.z < 0;
   vec3f wh = BeckmannSample(flip ? -wi : wi, alphax_constant, alphay_constant, u1, u2);
   if (flip) {
     wh = -wh;
@@ -231,7 +231,7 @@ vec3f BeckmannDistribution::Sample_wh(const vec3f &wi, const Float u1, const Flo
 
 Float BeckmannDistribution::GetAlpha(Float u, Float v) const {
   point2f alphas = GetAlphas(u,v);
-  return(std::sqrt(alphas.x * alphas.x + alphas.y * alphas.y));
+  return(std::sqrt(alphas.xy.x * alphas.xy.x + alphas.xy.y * alphas.xy.y));
 }
 point2f BeckmannDistribution::GetAlphas(Float u, Float v) const {
   return(!has_roughness ? point2f(alphax_constant,alphay_constant) : roughness->value(u,v));
@@ -239,7 +239,7 @@ point2f BeckmannDistribution::GetAlphas(Float u, Float v) const {
 
 Float TrowbridgeReitzDistribution::GetAlpha(Float u, Float v) const {
   point2f alphas = GetAlphas(u,v);
-  return(std::sqrt(alphas.x * alphas.x + alphas.y * alphas.y));
+  return(std::sqrt(alphas.xy.x * alphas.xy.x + alphas.xy.y * alphas.xy.y));
 }
 point2f TrowbridgeReitzDistribution::GetAlphas(Float u, Float v) const {
   return(!has_roughness ? point2f(alphax_constant,alphay_constant) : roughness->value(u,v));
@@ -254,9 +254,9 @@ Float TrowbridgeReitzDistribution::D(const vec3f &normal, Float u, Float v) cons
   }
   const Float cos4Theta = Cos2Theta(normal) * Cos2Theta(normal);
   point2f alphas = GetAlphas(u,v);
-  Float e = tan2Theta * (Cos2Phi(normal) / (alphas.x * alphas.x) + 
-    Sin2Phi(normal) / (alphas.y * alphas.y));
-  return(1.0/(static_cast<Float>(M_PI) * alphas.x * alphas.y * cos4Theta * (1.0+e) * (1.0+e)));
+  Float e = tan2Theta * (Cos2Phi(normal) / (alphas.xy.x * alphas.xy.x) + 
+    Sin2Phi(normal) / (alphas.xy.y * alphas.xy.y));
+  return(1.0/(static_cast<Float>(M_PI) * alphas.xy.x * alphas.xy.y * cos4Theta * (1.0+e) * (1.0+e)));
 }
 
 Float TrowbridgeReitzDistribution::Lambda(const vec3f &w, Float u, Float v) const {
@@ -266,7 +266,7 @@ Float TrowbridgeReitzDistribution::Lambda(const vec3f &w, Float u, Float v) cons
   }
   point2f alphas = GetAlphas(u,v);
   
-  Float alpha = std::sqrt(Cos2Phi(w) * alphas.x * alphas.x + Sin2Phi(w) * alphas.y * alphas.y);
+  Float alpha = std::sqrt(Cos2Phi(w) * alphas.xy.x * alphas.xy.x + Sin2Phi(w) * alphas.xy.y * alphas.xy.y);
   Float alpha2Tan2Theta = (alpha * absTanTheta) * (alpha * absTanTheta);
   return((-1 + std::sqrt(static_cast<Float>(1) + alpha2Tan2Theta)) / 2);
 }
@@ -275,8 +275,8 @@ Float TrowbridgeReitzDistribution::Lambda(const vec3f &w, Float u, Float v) cons
 vec3f TrowbridgeReitzDistribution::Sample_wh(const vec3f &wi,
                                              const Float u1, const Float u2, Float u, Float v) const {
   point2f alphas = GetAlphas(u,v);
-  bool flip = wi.z < 0;
-  vec3f wh = TrowbridgeReitzSample(flip ? -wi : wi, alphas.x, alphas.y, u1, u2);
+  bool flip = wi.xyz.z < 0;
+  vec3f wh = TrowbridgeReitzSample(flip ? -wi : wi, alphas.xy.x, alphas.xy.y, u1, u2);
   if (flip) {
     wh = -wh;
   }
@@ -292,8 +292,8 @@ Float BeckmannDistribution::D(const vec3f &wh, Float u, Float v) const {
     return(0.0);
   }
   Float cos4Theta = Cos2Theta(wh) * Cos2Theta(wh);
-  return(std::exp(-tan2Theta * (Cos2Phi(wh) / (alphas.x * alphas.x) + 
-         Sin2Phi(wh) / (alphas.y * alphas.y))) / (static_cast<Float>(M_PI) * alphas.x * alphas.y * cos4Theta));
+  return(std::exp(-tan2Theta * (Cos2Phi(wh) / (alphas.xy.x * alphas.xy.x) + 
+         Sin2Phi(wh) / (alphas.xy.y * alphas.xy.y))) / (static_cast<Float>(M_PI) * alphas.xy.x * alphas.xy.y * cos4Theta));
 }
 
 Float BeckmannDistribution::Lambda(const vec3f &w, Float u, Float v) const {
@@ -303,7 +303,7 @@ Float BeckmannDistribution::Lambda(const vec3f &w, Float u, Float v) const {
   if (std::isinf(absTanTheta)) {
     return(0.0);
   }
-  Float alpha = std::sqrt(Cos2Phi(w) * alphas.x * alphas.x + Sin2Phi(w) * alphas.y * alphas.y);
+  Float alpha = std::sqrt(Cos2Phi(w) * alphas.xy.x * alphas.xy.x + Sin2Phi(w) * alphas.xy.y * alphas.xy.y);
   Float a = 1 / (alpha * absTanTheta);
   if (a >= 1.6f) {
     return(0.0);
@@ -316,8 +316,8 @@ vec3f BeckmannDistribution::Sample_wh(const vec3f &wi, const Float u1, const Flo
   point2f alphas = GetAlphas(u,v);
   
   // Sample visible area of normals for Beckmann distribution
-  bool flip = wi.z < 0;
-  vec3f wh = BeckmannSample(flip ? -wi : wi, alphas.x, alphas.y, u1, u2);
+  bool flip = wi.xyz.z < 0;
+  vec3f wh = BeckmannSample(flip ? -wi : wi, alphas.xy.x, alphas.xy.y, u1, u2);
   if (flip) {
     wh = -wh;
   }

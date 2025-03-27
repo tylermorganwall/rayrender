@@ -12,7 +12,7 @@ inline bool Refract(const vec3f &wi, const normal3f &n, Float eta, vec3f *wt) {
   // Handle total internal reflection for transmission
   if (sin2ThetaT >= 1) return(false);
   Float cosThetaT = std::sqrt(1 - sin2ThetaT);
-  *wt = eta * -wi + (eta * cosThetaI - cosThetaT) * vec3f(n.x,n.y,n.z);
+  *wt = eta * -wi + (eta * cosThetaI - cosThetaT) * vec3f(n.xyz.x,n.xyz.y,n.xyz.z);
   return(true);
 }
 
@@ -100,7 +100,7 @@ vec3f micro_pdf::generate(Sampler* sampler, bool& diffuse_bounce, Float time) {
   SCOPED_TIMER_COUNTER("MicroPDF Generate");
   
   vec2f u_r = sampler->Get2D();
-  vec3f wh = distribution->Sample_wh(wi, u_r.x, u_r.y, u, v);
+  vec3f wh = distribution->Sample_wh(wi, u_r.xy.x, u_r.xy.y, u, v);
   return(uvw.local_to_world(Reflect(wi, wh)));
 }
 
@@ -194,7 +194,7 @@ vec3f micro_transmission_pdf::generate(Sampler* sampler, bool& diffuse_bounce, F
   SCOPED_TIMER_COUNTER("MicroTrPDF Generate");
   
   vec2f u_r = sampler->Get2D();
-  vec3f wh = distribution->Sample_wh(wi, u_r.x, u_r.y, u, v);
+  vec3f wh = distribution->Sample_wh(wi, u_r.xy.x, u_r.xy.y, u, v);
 
   bool entering = CosTheta(wi) > 0;
   Float eta2 = entering ? (1.0/eta) : (eta);  
@@ -241,7 +241,7 @@ vec3f glossy_pdf::generate(random_gen& rng, bool& diffuse_bounce, Float time) {
   } else {
     diffuse_bounce = true;
     vec3f wo = uvw.local_to_world(rng.random_cosine_direction());
-    if (wi.z < 0) wo.e[2] *= -1;
+    if (wi.xyz.z < 0) wo.e[2] *= -1;
     return(wo);
   }
 }
@@ -251,12 +251,12 @@ vec3f glossy_pdf::generate(Sampler* sampler, bool& diffuse_bounce, Float time) {
   
   if(sampler->Get1D() < 0.5) {
     vec2f u_r = sampler->Get2D();
-    vec3f wh = distribution->Sample_wh(wi, u_r.x, u_r.y, u, v);
+    vec3f wh = distribution->Sample_wh(wi, u_r.xy.x, u_r.xy.y, u, v);
     return(uvw.local_to_world(Reflect(wi, wh)));
   } else {
     diffuse_bounce = true;
     vec3f wo = uvw.local_to_world(rand_cosine_direction(sampler->Get2D()));
-    if (wi.z < 0) wo.e[2] *= -1;
+    if (wi.xyz.z < 0) wo.e[2] *= -1;
     return(wo);
   }
 }
@@ -305,14 +305,14 @@ Float hair_pdf::value(const vec3f& direction, random_gen& rng, Float time) {
   SCOPED_CONTEXT("PDF");
   SCOPED_TIMER_COUNTER("HairPDF Value");
   
-  Float sinThetaO = wo.x;
+  Float sinThetaO = wo.xyz.x;
   Float cosThetaO = SafeSqrt(1 - Sqr(sinThetaO));
-  Float phiO = std::atan2(wo.z, wo.y);
+  Float phiO = std::atan2(wo.xyz.z, wo.xyz.y);
   
   // Compute hair coordinate system terms related to _wi_
-  Float sinThetaI = wi.x;
+  Float sinThetaI = wi.xyz.x;
   Float cosThetaI = SafeSqrt(1 - Sqr(sinThetaI));
-  Float phiI = std::atan2(wi.z, wi.y);
+  Float phiI = std::atan2(wi.xyz.z, wi.xyz.y);
   
   // Compute $\gammat$ for refracted ray
   Float etap = std::sqrt(eta * eta - Sqr(sinThetaO)) / cosThetaO;
@@ -360,14 +360,14 @@ Float hair_pdf::value(const vec3f& direction, Sampler* sampler, Float time) {
   SCOPED_CONTEXT("PDF");
   SCOPED_TIMER_COUNTER("HairPDF Value");
   
-  Float sinThetaO = wo.x;
+  Float sinThetaO = wo.xyz.x;
   Float cosThetaO = SafeSqrt(1 - Sqr(sinThetaO));
-  Float phiO = std::atan2(wo.z, wo.y);
+  Float phiO = std::atan2(wo.xyz.z, wo.xyz.y);
   
   // Compute hair coordinate system terms related to _wi_
-  Float sinThetaI = wi.x;
+  Float sinThetaI = wi.xyz.x;
   Float cosThetaI = SafeSqrt(1 - Sqr(sinThetaI));
-  Float phiI = std::atan2(wi.z, wi.y);
+  Float phiI = std::atan2(wi.xyz.z, wi.xyz.y);
   
   // Compute $\gammat$ for refracted ray
   Float etap = std::sqrt(eta * eta - Sqr(sinThetaO)) / cosThetaO;
@@ -416,9 +416,9 @@ vec3f hair_pdf::generate(random_gen& rng, bool& diffuse_bounce, Float time) {
   SCOPED_TIMER_COUNTER("HairPDF Generate");
   
   diffuse_bounce = true;
-  Float sinThetaO = wo.x;
+  Float sinThetaO = wo.xyz.x;
   Float cosThetaO = SafeSqrt(1 - Sqr(sinThetaO));
-  Float phiO = std::atan2(wo.z, wo.y);
+  Float phiO = std::atan2(wo.xyz.z, wo.xyz.y);
   
   // Derive four random samples from _u2_
   vec2f u2 = vec2f(rng.unif_rand(),rng.unif_rand());
@@ -478,9 +478,9 @@ vec3f hair_pdf::generate(Sampler* sampler, bool& diffuse_bounce, Float time) {
   SCOPED_TIMER_COUNTER("HairPDF Generate");
   
   diffuse_bounce = true;
-  Float sinThetaO = wo.x;
+  Float sinThetaO = wo.xyz.x;
   Float cosThetaO = SafeSqrt(1 - Sqr(sinThetaO));
-  Float phiO = std::atan2(wo.z, wo.y);
+  Float phiO = std::atan2(wo.xyz.z, wo.xyz.y);
   
   // Derive four random samples from _u2_
   vec2f u2 = sampler->Get2D();
@@ -555,9 +555,9 @@ std::array<Float, pMax + 1> hair_pdf::ComputeApPdf(Float cosThetaO) const {
   // Compute $A_p$ PDF from individual $A_p$ terms
   std::array<Float, pMax + 1> apPdf;
   Float sumY = std::accumulate(ap.begin(), ap.end(), Float(0),
-                               [](Float s, const point3f &ap) { return s + ap.y; });
+                               [](Float s, const point3f &ap) { return s + ap.xyz.y; });
   for (int i = 0; i <= pMax; ++i) {
-    apPdf[i] = ap[i].y / sumY;
+    apPdf[i] = ap[i].xyz.y / sumY;
   }
   return apPdf;
 }

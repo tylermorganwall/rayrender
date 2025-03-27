@@ -2,10 +2,10 @@
 #include "../utils/raylog.h"
 
 void cylinder::get_cylinder_uv(const point3f& p, Float& u, Float& v) const {
-  Float phi = atan2(p.z,p.x);
+  Float phi = atan2(p.xyz.z,p.xyz.x);
   // if (phi < 0) phi += 2 * M_PI;
   u = 1 - (phi + static_cast<Float>(M_PI)) * 0.5 * static_cast<Float>(M_1_PI);
-  v = (p.y + length * 0.5)/length;
+  v = (p.xyz.y + length * 0.5)/length;
 };
 
 const bool cylinder::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
@@ -30,13 +30,13 @@ const bool cylinder::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
   bool alpha_miss = false;
   if(alpha_mask) {
     point3f temppoint = r2(temp1);
-    Float phi = atan2(temppoint.z,temppoint.x);
+    Float phi = atan2(temppoint.xyz.z,temppoint.xyz.x);
     phi = phi < 0 ? phi + 2 * static_cast<Float>(M_PI) : phi;
     Float u;
     Float v;
     if(temp1 < t_max && temp1 > t_min && 
-       temppoint.y > -length/2 && temppoint.y < length/2 && phi <= phi_max && phi >= phi_min) {
-      Float hitRad = std::sqrt(temppoint.x * temppoint.x + temppoint.z * temppoint.z);
+       temppoint.xyz.y > -length/2 && temppoint.xyz.y < length/2 && phi <= phi_max && phi >= phi_min) {
+      Float hitRad = std::sqrt(temppoint.xyz.x * temppoint.xyz.x + temppoint.xyz.z * temppoint.xyz.z);
       temppoint.e[0] *= radius / hitRad;
       temppoint.e[2] *= radius / hitRad;
       get_cylinder_uv(temppoint, u, v);
@@ -45,11 +45,11 @@ const bool cylinder::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
       }
     }
     temppoint = r2(temp2);
-    phi = atan2(temppoint.z,temppoint.x);
+    phi = atan2(temppoint.xyz.z,temppoint.xyz.x);
     phi = phi < 0 ? phi + 2 * static_cast<Float>(M_PI) : phi;
     if(temp2 < t_max && temp2 > t_min && 
-       temppoint.y > -length/2 && temppoint.y < length/2 && phi <= phi_max && phi >= phi_min) {
-      Float hitRad = std::sqrt(temppoint.x * temppoint.x + temppoint.z * temppoint.z);
+       temppoint.xyz.y > -length/2 && temppoint.xyz.y < length/2 && phi <= phi_max && phi >= phi_min) {
+      Float hitRad = std::sqrt(temppoint.xyz.x * temppoint.xyz.x + temppoint.xyz.z * temppoint.xyz.z);
       temppoint.e[0] *= radius / hitRad;
       temppoint.e[2] *= radius / hitRad;
       get_cylinder_uv(temppoint, u, v);
@@ -62,11 +62,11 @@ const bool cylinder::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
     }
   }
   point3f temppoint = r2(temp1);
-  Float phi = atan2(temppoint.z,temppoint.x);
+  Float phi = atan2(temppoint.xyz.z,temppoint.xyz.x);
   phi = phi < 0 ? phi + 2 * static_cast<Float>(M_PI) : phi;
   if(is_hit && temp1 < t_max && temp1 > t_min && 
-     temppoint.y > -length/2 && temppoint.y < length/2 && phi <= phi_max && phi >= phi_min) {
-    Float hitRad = std::sqrt(temppoint.x * temppoint.x + temppoint.z * temppoint.z);
+     temppoint.xyz.y > -length/2 && temppoint.xyz.y < length/2 && phi <= phi_max && phi >= phi_min) {
+    Float hitRad = std::sqrt(temppoint.xyz.x * temppoint.xyz.x + temppoint.xyz.z * temppoint.xyz.z);
     temppoint.e[0] *= radius / hitRad;
     temppoint.e[2] *= radius / hitRad;
     rec.t = temp1;
@@ -78,19 +78,19 @@ const bool cylinder::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
     get_cylinder_uv(rec.p, rec.u, rec.v);
     
     //Interaction information
-    rec.dpdu = vec3f(-temppoint.z,0,  temppoint.x);
+    rec.dpdu = vec3f(-temppoint.xyz.z,0,  temppoint.xyz.x);
     rec.dpdv = vec3f(0, -length, 0);
     rec.has_bump = bump_tex ? true : false;
     rec.normal *= reverseOrientation  ? -1 : 1;
     
     if(bump_tex) {
       point3f bvbu = bump_tex->value(rec.u, rec.v, rec.p);
-      rec.bump_normal = convert_to_normal3(cross(rec.dpdu - bvbu.x * convert_to_vec3(rec.normal) , 
-                              rec.dpdv + bvbu.y * convert_to_vec3(rec.normal) ));
+      rec.bump_normal = convert_to_normal3(cross(rec.dpdu - bvbu.xyz.x * convert_to_vec3(rec.normal) , 
+                              rec.dpdv + bvbu.xyz.y * convert_to_vec3(rec.normal) ));
       rec.bump_normal.make_unit_vector();
       rec.has_bump = true;
     }
-    rec.pError = gamma(3) * Abs(vec3f(rec.p.x, 0, rec.p.z));
+    rec.pError = gamma(3) * Abs(vec3f(rec.p.xyz.x, 0, rec.p.xyz.z));
     
     rec = (*ObjectToWorld)(rec);
     rec.normal.make_unit_vector();
@@ -101,10 +101,10 @@ const bool cylinder::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
     rec.mat_ptr = mat_ptr.get();
     return(true);
   }
-  Float t_cyl = -(r2.origin().y-length/2) / r2.direction().y;
-  Float t_cyl2 = -(r2.origin().y+length/2) / r2.direction().y;
-  Float x = r2.origin().x + t_cyl*r2.direction().x;
-  Float z = r2.origin().z + t_cyl*r2.direction().z;
+  Float t_cyl = -(r2.origin().xyz.y-length/2) / r2.direction().xyz.y;
+  Float t_cyl2 = -(r2.origin().xyz.y+length/2) / r2.direction().xyz.y;
+  Float x = r2.origin().xyz.x + t_cyl*r2.direction().xyz.x;
+  Float z = r2.origin().xyz.z + t_cyl*r2.direction().xyz.z;
   
   Float phi2 = atan2(z,x);
   phi2 = phi2 < 0 ? phi2 + 2 * static_cast<Float>(M_PI) : phi2;
@@ -114,8 +114,8 @@ const bool cylinder::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
     point3f p = r2(t_cyl);
     p.e[1] = length/2;
     
-    Float u = p.x / (2.0 * radius) + 0.5;
-    Float v = p.z / (2.0 * radius) + 0.5;
+    Float u = p.xyz.x / (2.0 * radius) + 0.5;
+    Float v = p.xyz.z / (2.0 * radius) + 0.5;
     u = 1 - u;
     if(alpha_mask) {
       if(alpha_mask->value(u, v, rec.p) < 1) {
@@ -134,10 +134,10 @@ const bool cylinder::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
     
     if(bump_tex) {
       point3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
-      rec.bump_normal = rec.normal + convert_to_normal3(bvbu.x * rec.dpdu + bvbu.y * rec.dpdv);
+      rec.bump_normal = rec.normal + convert_to_normal3(bvbu.xyz.x * rec.dpdu + bvbu.xyz.y * rec.dpdv);
       rec.bump_normal.make_unit_vector(); 
     }
-    rec.pError = gamma(3) * Abs(vec3f(rec.p.x, 0, rec.p.z));
+    rec.pError = gamma(3) * Abs(vec3f(rec.p.xyz.x, 0, rec.p.xyz.z));
     
     rec = (*ObjectToWorld)(rec);
     rec.normal *= reverseOrientation  ? -1 : 1;
@@ -148,8 +148,8 @@ const bool cylinder::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
     rec.shape = this;
     return(true);
   }
-  Float x2 = r2.origin().x + t_cyl2*r2.direction().x;
-  Float z2 = r2.origin().z + t_cyl2*r2.direction().z;
+  Float x2 = r2.origin().xyz.x + t_cyl2*r2.direction().xyz.x;
+  Float z2 = r2.origin().xyz.z + t_cyl2*r2.direction().xyz.z;
   
   Float phi3 = atan2(z2,x2);
   phi3 = phi3 < 0 ? phi3 + 2 * static_cast<Float>(M_PI) : phi3;
@@ -158,8 +158,8 @@ const bool cylinder::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
     point3f p = r2(t_cyl2);
     p.e[1] = -length/2;
     
-    Float u = p.x / (2.0 * radius) + 0.5;
-    Float v = p.z / (2.0 * radius) + 0.5;
+    Float u = p.xyz.x / (2.0 * radius) + 0.5;
+    Float v = p.xyz.z / (2.0 * radius) + 0.5;
     u = 1 - u;
     if(alpha_mask) {
       if(alpha_mask->value(u, v, rec.p) < 1) {
@@ -178,10 +178,10 @@ const bool cylinder::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
     
     if(bump_tex) {
       point3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
-      rec.bump_normal = rec.normal + convert_to_normal3(bvbu.x * rec.dpdu + bvbu.y * rec.dpdv);
+      rec.bump_normal = rec.normal + convert_to_normal3(bvbu.xyz.x * rec.dpdu + bvbu.xyz.y * rec.dpdv);
       rec.bump_normal.make_unit_vector();
     }
-    rec.pError = gamma(3) * Abs(vec3f(rec.p.x, 0, rec.p.z));
+    rec.pError = gamma(3) * Abs(vec3f(rec.p.xyz.x, 0, rec.p.xyz.z));
     rec = (*ObjectToWorld)(rec);
     rec.normal *= reverseOrientation  ? -1 : 1;
     rec.bump_normal *= reverseOrientation  ? -1 : 1;
@@ -193,11 +193,11 @@ const bool cylinder::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
     return(true);
   }
   temppoint = r2(temp2);
-  phi = atan2(temppoint.z,temppoint.x);
+  phi = atan2(temppoint.xyz.z,temppoint.xyz.x);
   phi = phi < 0 ? phi + 2 * static_cast<Float>(M_PI) : phi;
   if(second_is_hit && temp2 < t_max && temp2 > t_min && 
-     temppoint.y > -length/2 && temppoint.y < length/2 && phi <= phi_max && phi >= phi_min) {
-    Float hitRad = std::sqrt(temppoint.x * temppoint.x + temppoint.z * temppoint.z);
+     temppoint.xyz.y > -length/2 && temppoint.xyz.y < length/2 && phi <= phi_max && phi >= phi_min) {
+    Float hitRad = std::sqrt(temppoint.xyz.x * temppoint.xyz.x + temppoint.xyz.z * temppoint.xyz.z);
     temppoint.e[0] *= radius / hitRad;
     temppoint.e[2] *= radius / hitRad;
     rec.t = temp2;
@@ -209,19 +209,19 @@ const bool cylinder::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
     get_cylinder_uv(rec.p, rec.u, rec.v);
     
     //Interaction information
-    rec.dpdu = vec3f(-phi_max * temppoint.z, 0,  phi_max * temppoint.x);
+    rec.dpdu = vec3f(-phi_max * temppoint.xyz.z, 0,  phi_max * temppoint.xyz.x);
     rec.dpdv = vec3f(0, length, 0);
     rec.has_bump = bump_tex ? true : false;
     rec.normal *= reverseOrientation  ? -1 : 1;
     
     if(bump_tex) {
       point3f bvbu = bump_tex->value(rec.u, rec.v, rec.p);
-      rec.bump_normal = convert_to_normal3(cross(rec.dpdu + bvbu.x * convert_to_vec3(rec.normal) , 
-                              rec.dpdv - bvbu.y * convert_to_vec3(rec.normal) ));
+      rec.bump_normal = convert_to_normal3(cross(rec.dpdu + bvbu.xyz.x * convert_to_vec3(rec.normal) , 
+                              rec.dpdv - bvbu.xyz.y * convert_to_vec3(rec.normal) ));
       rec.bump_normal.make_unit_vector();
       rec.has_bump = true;
     }
-    rec.pError = gamma(3) * Abs(vec3f(rec.p.x, 0, rec.p.z));
+    rec.pError = gamma(3) * Abs(vec3f(rec.p.xyz.x, 0, rec.p.xyz.z));
     
     rec = (*ObjectToWorld)(rec);
     rec.normal.make_unit_vector();
@@ -256,13 +256,13 @@ const bool cylinder::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
   bool second_is_hit = true;
   if(alpha_mask) {
     point3f temppoint = r2(temp1);
-    Float phi = atan2(temppoint.z,temppoint.x);
+    Float phi = atan2(temppoint.xyz.z,temppoint.xyz.x);
     phi = phi < 0 ? phi + 2 * static_cast<Float>(M_PI) : phi;
     Float u;
     Float v;
     if(temp1 < t_max && temp1 > t_min && 
-       temppoint.y > -length/2 && temppoint.y < length/2 && phi <= phi_max && phi >= phi_min) {
-      Float hitRad = std::sqrt(temppoint.x * temppoint.x + temppoint.z * temppoint.z);
+       temppoint.xyz.y > -length/2 && temppoint.xyz.y < length/2 && phi <= phi_max && phi >= phi_min) {
+      Float hitRad = std::sqrt(temppoint.xyz.x * temppoint.xyz.x + temppoint.xyz.z * temppoint.xyz.z);
       temppoint.e[0] *= radius / hitRad;
       temppoint.e[2] *= radius / hitRad;
       get_cylinder_uv(temppoint, u, v);
@@ -271,11 +271,11 @@ const bool cylinder::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
       }
     }
     temppoint = r2(temp2);
-    phi = atan2(temppoint.z,temppoint.x);
+    phi = atan2(temppoint.xyz.z,temppoint.xyz.x);
     phi = phi < 0 ? phi + 2 * static_cast<Float>(M_PI) : phi;
     if(temp2 < t_max && temp2 > t_min && 
-       temppoint.y > -length/2 && temppoint.y < length/2 && phi <= phi_max && phi >= phi_min) {
-      Float hitRad = std::sqrt(temppoint.x * temppoint.x + temppoint.z * temppoint.z);
+       temppoint.xyz.y > -length/2 && temppoint.xyz.y < length/2 && phi <= phi_max && phi >= phi_min) {
+      Float hitRad = std::sqrt(temppoint.xyz.x * temppoint.xyz.x + temppoint.xyz.z * temppoint.xyz.z);
       temppoint.e[0] *= radius / hitRad;
       temppoint.e[2] *= radius / hitRad;
       get_cylinder_uv(temppoint, u, v);
@@ -288,11 +288,11 @@ const bool cylinder::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
     }
   }
   point3f temppoint = r2(temp1);
-  Float phi = atan2(temppoint.z,temppoint.x);
+  Float phi = atan2(temppoint.xyz.z,temppoint.xyz.x);
   phi = phi < 0 ? phi + 2 * static_cast<Float>(M_PI) : phi;
   if(is_hit && temp1 < t_max && temp1 > t_min && 
-     temppoint.y > -length/2 && temppoint.y < length/2 && phi <= phi_max && phi >= phi_min) {
-    Float hitRad = std::sqrt(temppoint.x * temppoint.x + temppoint.z * temppoint.z);
+     temppoint.xyz.y > -length/2 && temppoint.xyz.y < length/2 && phi <= phi_max && phi >= phi_min) {
+    Float hitRad = std::sqrt(temppoint.xyz.x * temppoint.xyz.x + temppoint.xyz.z * temppoint.xyz.z);
     temppoint.e[0] *= radius / hitRad;
     temppoint.e[2] *= radius / hitRad;
     rec.t = temp1;
@@ -304,17 +304,17 @@ const bool cylinder::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
     get_cylinder_uv(rec.p, rec.u, rec.v);
     
     //Interaction information
-    rec.dpdu = vec3f(-temppoint.z,0,  temppoint.x);
+    rec.dpdu = vec3f(-temppoint.xyz.z,0,  temppoint.xyz.x);
     rec.dpdv = vec3f(0, length, 0);
     rec.has_bump = bump_tex ? true : false;
     
     if(bump_tex) {
       point3f bvbu = bump_tex->value(rec.u, rec.v, rec.p);
-      rec.bump_normal = rec.normal + convert_to_normal3(bvbu.x * rec.dpdu + bvbu.y * rec.dpdv); 
+      rec.bump_normal = rec.normal + convert_to_normal3(bvbu.xyz.x * rec.dpdu + bvbu.xyz.y * rec.dpdv); 
       rec.bump_normal.make_unit_vector();
       rec.bump_normal *= dot(temppoint, dir) > 0 ? -1 : 1;
     }
-    rec.pError = gamma(3) * Abs(vec3f(rec.p.x, 0, rec.p.z));
+    rec.pError = gamma(3) * Abs(vec3f(rec.p.xyz.x, 0, rec.p.xyz.z));
     
     rec = (*ObjectToWorld)(rec);
     rec.normal *= reverseOrientation  ? -1 : 1;
@@ -325,10 +325,10 @@ const bool cylinder::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
     rec.mat_ptr = mat_ptr.get();
     return(true);
   }
-  Float t_cyl = -(r2.origin().y-length/2) / r2.direction().y;
-  Float t_cyl2 = -(r2.origin().y+length/2) / r2.direction().y;
-  Float x = r2.origin().x + t_cyl*r2.direction().x;
-  Float z = r2.origin().z + t_cyl*r2.direction().z;
+  Float t_cyl = -(r2.origin().xyz.y-length/2) / r2.direction().xyz.y;
+  Float t_cyl2 = -(r2.origin().xyz.y+length/2) / r2.direction().xyz.y;
+  Float x = r2.origin().xyz.x + t_cyl*r2.direction().xyz.x;
+  Float z = r2.origin().xyz.z + t_cyl*r2.direction().xyz.z;
   
   Float phi2 = atan2(z,x);
   phi2 = phi2 < 0 ? phi2 + 2 * static_cast<Float>(M_PI) : phi2;
@@ -338,8 +338,8 @@ const bool cylinder::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
     point3f p = r2(t_cyl);
     p.e[1] = length/2;
     
-    Float u = p.x / (2.0 * radius) + 0.5;
-    Float v = p.z / (2.0 * radius) + 0.5;
+    Float u = p.xyz.x / (2.0 * radius) + 0.5;
+    Float v = p.xyz.z / (2.0 * radius) + 0.5;
     u = 1 - u;
     if(alpha_mask) {
       if(alpha_mask->value(u, v, rec.p) < 1) {
@@ -358,10 +358,10 @@ const bool cylinder::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
     
     if(bump_tex) {
       point3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
-      rec.bump_normal = rec.normal + convert_to_normal3(bvbu.x * rec.dpdu + bvbu.y * rec.dpdv);
+      rec.bump_normal = rec.normal + convert_to_normal3(bvbu.xyz.x * rec.dpdu + bvbu.xyz.y * rec.dpdv);
       rec.bump_normal.make_unit_vector();
     }
-    rec.pError = gamma(3) * Abs(vec3f(rec.p.x, 0, rec.p.z));
+    rec.pError = gamma(3) * Abs(vec3f(rec.p.xyz.x, 0, rec.p.xyz.z));
     
     rec = (*ObjectToWorld)(rec);
     rec.normal *= reverseOrientation  ? -1 : 1;
@@ -372,8 +372,8 @@ const bool cylinder::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
     
     return(true);
   }
-  Float x2 = r2.origin().x + t_cyl2*r2.direction().x;
-  Float z2 = r2.origin().z + t_cyl2*r2.direction().z;
+  Float x2 = r2.origin().xyz.x + t_cyl2*r2.direction().xyz.x;
+  Float z2 = r2.origin().xyz.z + t_cyl2*r2.direction().xyz.z;
   
   Float phi3 = atan2(z2,x2);
   phi3 = phi3 < 0 ? phi3 + 2 * static_cast<Float>(M_PI) : phi3;
@@ -382,8 +382,8 @@ const bool cylinder::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
     point3f p = r2(t_cyl2);
     p.e[1] = -length/2;
     
-    Float u = p.x / (2.0 * radius) + 0.5;
-    Float v = p.z / (2.0 * radius) + 0.5;
+    Float u = p.xyz.x / (2.0 * radius) + 0.5;
+    Float v = p.xyz.z / (2.0 * radius) + 0.5;
     u = 1 - u;
     if(alpha_mask) {
       if(alpha_mask->value(u, v, rec.p) < 1) {
@@ -402,10 +402,10 @@ const bool cylinder::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
     
     if(bump_tex) {
       point3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
-      rec.bump_normal = rec.normal + convert_to_normal3(bvbu.x * rec.dpdu + bvbu.y * rec.dpdv);
+      rec.bump_normal = rec.normal + convert_to_normal3(bvbu.xyz.x * rec.dpdu + bvbu.xyz.y * rec.dpdv);
       rec.bump_normal.make_unit_vector();
     }
-    rec.pError = gamma(3) * Abs(vec3f(rec.p.x, 0, rec.p.z));
+    rec.pError = gamma(3) * Abs(vec3f(rec.p.xyz.x, 0, rec.p.xyz.z));
     
     rec = (*ObjectToWorld)(rec);
     rec.normal *= reverseOrientation  ? -1 : 1;
@@ -417,11 +417,11 @@ const bool cylinder::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
     return(true);
   }
   temppoint = r2(temp2);
-  phi = atan2(temppoint.z,temppoint.x);
+  phi = atan2(temppoint.xyz.z,temppoint.xyz.x);
   phi = phi < 0 ? phi + 2 * static_cast<Float>(M_PI) : phi;
   if(second_is_hit && temp2 < t_max && temp2 > t_min && 
-     temppoint.y > -length/2 && temppoint.y < length/2 && phi <= phi_max && phi >= phi_min) {
-    Float hitRad = std::sqrt(temppoint.x * temppoint.x + temppoint.z * temppoint.z);
+     temppoint.xyz.y > -length/2 && temppoint.xyz.y < length/2 && phi <= phi_max && phi >= phi_min) {
+    Float hitRad = std::sqrt(temppoint.xyz.x * temppoint.xyz.x + temppoint.xyz.z * temppoint.xyz.z);
     temppoint.e[0] *= radius / hitRad;
     temppoint.e[2] *= radius / hitRad;
     rec.t = temp2;
@@ -433,17 +433,17 @@ const bool cylinder::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
     get_cylinder_uv(rec.p, rec.u, rec.v);
     
     //Interaction information
-    rec.dpdu = vec3f(-phi_max * temppoint.z, 0,  phi_max * temppoint.x);
+    rec.dpdu = vec3f(-phi_max * temppoint.xyz.z, 0,  phi_max * temppoint.xyz.x);
     rec.dpdv = vec3f(0, length, 0);
     rec.has_bump = bump_tex ? true : false;
     
     if(bump_tex) {
       point3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
-      rec.bump_normal = rec.normal + convert_to_normal3(bvbu.x * rec.dpdu + bvbu.y * rec.dpdv); 
+      rec.bump_normal = rec.normal + convert_to_normal3(bvbu.xyz.x * rec.dpdu + bvbu.xyz.y * rec.dpdv); 
       rec.bump_normal.make_unit_vector();
       rec.bump_normal = (*ObjectToWorld)(rec.bump_normal);
     }
-    rec.pError = gamma(3) * Abs(vec3f(rec.p.x, 0, rec.p.z));
+    rec.pError = gamma(3) * Abs(vec3f(rec.p.xyz.x, 0, rec.p.xyz.z));
     
     rec = (*ObjectToWorld)(rec);
     rec.normal *= reverseOrientation  ? -1 : 1;
@@ -476,16 +476,16 @@ bool cylinder::HitP(const Ray& r, Float t_min, Float t_max, random_gen& rng) con
   bool is_hit = true;
   bool second_is_hit = true;
   point3f temppoint = r2(temp1);
-  Float phi = atan2(temppoint.z,temppoint.x);
+  Float phi = atan2(temppoint.xyz.z,temppoint.xyz.x);
   phi = phi < 0 ? phi + 2 * static_cast<Float>(M_PI) : phi;
   if(is_hit && temp1 < t_max && temp1 > t_min && 
-     temppoint.y > -length/2 && temppoint.y < length/2 && phi <= phi_max && phi >= phi_min) {
+     temppoint.xyz.y > -length/2 && temppoint.xyz.y < length/2 && phi <= phi_max && phi >= phi_min) {
     return(true);
   }
-  Float t_cyl = -(r2.origin().y-length/2) / r2.direction().y;
-  Float t_cyl2 = -(r2.origin().y+length/2) / r2.direction().y;
-  Float x = r2.origin().x + t_cyl*r2.direction().x;
-  Float z = r2.origin().z + t_cyl*r2.direction().z;
+  Float t_cyl = -(r2.origin().xyz.y-length/2) / r2.direction().xyz.y;
+  Float t_cyl2 = -(r2.origin().xyz.y+length/2) / r2.direction().xyz.y;
+  Float x = r2.origin().xyz.x + t_cyl*r2.direction().xyz.x;
+  Float z = r2.origin().xyz.z + t_cyl*r2.direction().xyz.z;
   
   Float phi2 = atan2(z,x);
   phi2 = phi2 < 0 ? phi2 + 2 * static_cast<Float>(M_PI) : phi2;
@@ -494,8 +494,8 @@ bool cylinder::HitP(const Ray& r, Float t_min, Float t_max, random_gen& rng) con
      radHit2 <= radius * radius && phi2 <= phi_max && phi2 >= phi_min) {
     return(true);
   }
-  Float x2 = r2.origin().x + t_cyl2*r2.direction().x;
-  Float z2 = r2.origin().z + t_cyl2*r2.direction().z;
+  Float x2 = r2.origin().xyz.x + t_cyl2*r2.direction().xyz.x;
+  Float z2 = r2.origin().xyz.z + t_cyl2*r2.direction().xyz.z;
   
   Float phi3 = atan2(z2,x2);
   phi3 = phi3 < 0 ? phi3 + 2 * static_cast<Float>(M_PI) : phi3;
@@ -504,10 +504,10 @@ bool cylinder::HitP(const Ray& r, Float t_min, Float t_max, random_gen& rng) con
     return(true);
   }
   temppoint = r2(temp2);
-  phi = atan2(temppoint.z,temppoint.x);
+  phi = atan2(temppoint.xyz.z,temppoint.xyz.x);
   phi = phi < 0 ? phi + 2 * static_cast<Float>(M_PI) : phi;
   if(second_is_hit && temp2 < t_max && temp2 > t_min && 
-     temppoint.y > -length/2 && temppoint.y < length/2 && phi <= phi_max && phi >= phi_min) {
+     temppoint.xyz.y > -length/2 && temppoint.xyz.y < length/2 && phi <= phi_max && phi >= phi_min) {
     return(true);
   }
   return(false);
@@ -534,16 +534,16 @@ bool cylinder::HitP(const Ray& r, Float t_min, Float t_max, Sampler* sampler) co
   bool is_hit = true;
   bool second_is_hit = true;
   point3f temppoint = r2(temp1);
-  Float phi = atan2(temppoint.z,temppoint.x);
+  Float phi = atan2(temppoint.xyz.z,temppoint.xyz.x);
   phi = phi < 0 ? phi + 2 * static_cast<Float>(M_PI) : phi;
   if(is_hit && temp1 < t_max && temp1 > t_min && 
-     temppoint.y > -length/2 && temppoint.y < length/2 && phi <= phi_max && phi >= phi_min) {
+     temppoint.xyz.y > -length/2 && temppoint.xyz.y < length/2 && phi <= phi_max && phi >= phi_min) {
     return(true);
   }
-  Float t_cyl = -(r2.origin().y-length/2) / r2.direction().y;
-  Float t_cyl2 = -(r2.origin().y+length/2) / r2.direction().y;
-  Float x = r2.origin().x + t_cyl*r2.direction().x;
-  Float z = r2.origin().z + t_cyl*r2.direction().z;
+  Float t_cyl = -(r2.origin().xyz.y-length/2) / r2.direction().xyz.y;
+  Float t_cyl2 = -(r2.origin().xyz.y+length/2) / r2.direction().xyz.y;
+  Float x = r2.origin().xyz.x + t_cyl*r2.direction().xyz.x;
+  Float z = r2.origin().xyz.z + t_cyl*r2.direction().xyz.z;
   
   Float phi2 = atan2(z,x);
   phi2 = phi2 < 0 ? phi2 + 2 * static_cast<Float>(M_PI) : phi2;
@@ -552,8 +552,8 @@ bool cylinder::HitP(const Ray& r, Float t_min, Float t_max, Sampler* sampler) co
      radHit2 <= radius * radius && phi2 <= phi_max && phi2 >= phi_min) {
     return(true);
   }
-  Float x2 = r2.origin().x + t_cyl2*r2.direction().x;
-  Float z2 = r2.origin().z + t_cyl2*r2.direction().z;
+  Float x2 = r2.origin().xyz.x + t_cyl2*r2.direction().xyz.x;
+  Float z2 = r2.origin().xyz.z + t_cyl2*r2.direction().xyz.z;
   
   Float phi3 = atan2(z2,x2);
   phi3 = phi3 < 0 ? phi3 + 2 * static_cast<Float>(M_PI) : phi3;
@@ -562,10 +562,10 @@ bool cylinder::HitP(const Ray& r, Float t_min, Float t_max, Sampler* sampler) co
     return(true);
   }
   temppoint = r2(temp2);
-  phi = atan2(temppoint.z,temppoint.x);
+  phi = atan2(temppoint.xyz.z,temppoint.xyz.x);
   phi = phi < 0 ? phi + 2 * static_cast<Float>(M_PI) : phi;
   if(second_is_hit && temp2 < t_max && temp2 > t_min && 
-     temppoint.y > -length/2 && temppoint.y < length/2 && phi <= phi_max && phi >= phi_min) {
+     temppoint.xyz.y > -length/2 && temppoint.xyz.y < length/2 && phi <= phi_max && phi >= phi_min) {
     return(true);
   }
   return(false);
@@ -607,8 +607,8 @@ vec3f cylinder::random(const point3f& o, random_gen& rng, Float time) {
 
 vec3f cylinder::random(const point3f& o, Sampler* sampler, Float time) {
   vec2f u = sampler->Get2D();
-  Float r1 = u.x;
-  Float y1 = length*(u.y-0.5);
+  Float r1 = u.xy.x;
+  Float y1 = length*(u.xy.y-0.5);
   Float phi = (phi_max - phi_min) * r1 + phi_min;
   Float x = radius * cos(phi);
   Float z = radius * sin(phi);

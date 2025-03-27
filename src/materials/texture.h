@@ -33,11 +33,11 @@ public:
   checker_texture(std::shared_ptr<texture> t0, std::shared_ptr<texture> t1, Float p) : even(t0), odd(t1), period(p) {}
   virtual point3f value(Float u, Float v, const point3f& p) const {
     Float invperiod = 1.0/period;
-    Float sinx  = sin(invperiod*p.x*M_PI);
+    Float sinx  = sin(invperiod*p.xyz.x*M_PI);
     sinx = sinx == 0 ? 1 : sinx;
-    Float siny  = sin(invperiod*p.y*M_PI);
+    Float siny  = sin(invperiod*p.xyz.y*M_PI);
     siny = siny == 0 ? 1 : siny;
-    Float sinz  = sin(invperiod*p.z*M_PI);
+    Float sinz  = sin(invperiod*p.xyz.z*M_PI);
     sinz = sinz == 0 ? 1 : sinz;
     if(sinx * siny * sinz < 0) {
       return(odd->value(u,v,p));
@@ -61,7 +61,7 @@ public:
     if(noise) delete noise;
   }
   virtual point3f value(Float u, Float v, const point3f& p) const {
-    Float weight = 0.5*(1+sin(scale*p.y  + intensity*noise->turb(scale * p) + phase));
+    Float weight = 0.5*(1+sin(scale*p.xyz.y  + intensity*noise->turb(scale * p) + phase));
     return(color * (1-weight) + color2 * weight);
   }
   perlin *noise;

@@ -68,7 +68,7 @@ inline vec3f calculate_normals(const Ray& r, hitable *world, size_t max_depth, r
         r1 = r2;
         vec3f dir;
         dir = srec.pdf_ptr->generate(rng, diffuse_bounce, r2.time());
-        if((dir.x == 0 && dir.y == 0 && dir.z == 0)) {
+        if((dir.xyz.x == 0 && dir.xyz.y == 0 && dir.xyz.z == 0)) {
           hrec.normal.make_unit_vector();
           return((vec3f(1,1,1) + convert_to_vec3(hrec.normal))/static_cast<Float>(2));
         }
@@ -127,7 +127,7 @@ inline point3f calculate_color(const Ray& r, hitable *world, random_gen &rng) {
         continue;
       }
       point3f emit = hrec.mat_ptr->emitted(r2, hrec, hrec.u, hrec.v, hrec.p, invisible);
-      if(emit.x != 0 || emit.y != 0 || emit.z != 0) {
+      if(emit.xyz.x != 0 || emit.xyz.y != 0 || emit.xyz.z != 0) {
         return(emit);
       }
       if(hrec.mat_ptr->scatter(r2, hrec, srec, rng)) { //generates scatter record, world space
@@ -152,7 +152,7 @@ inline point3f quick_render(const Ray& r, hitable *world, random_gen &rng, vec3f
   bool invisible = false;
   if(world->hit(r2, 0.001, FLT_MAX, hrec, rng)) {
     point3f emit = hrec.mat_ptr->emitted(r2, hrec, hrec.u, hrec.v, hrec.p, invisible);
-    if(emit.x != 0 || emit.y != 0 || emit.z != 0) {
+    if(emit.xyz.x != 0 || emit.xyz.y != 0 || emit.xyz.z != 0) {
       return(emit);
     }
     if(hrec.mat_ptr->scatter(r2, hrec, srec, rng)) { //generates scatter record, world space
@@ -229,7 +229,7 @@ inline point3f calculate_position(const Ray& r, hitable *world, hitable_list *hl
         r1 = r2;
         vec3f dir;
         dir = p.generate(rng, diffuse_bounce, r2.time());
-        if((dir.x == 0 && dir.y == 0 && dir.z == 0)) {
+        if((dir.xyz.x == 0 && dir.xyz.y == 0 && dir.xyz.z == 0)) {
           return(hrec.p);
         }
         r2 = Ray(OffsetRayOrigin(offset_p, hrec.pError, hrec.normal, dir), dir, r2.pri_stack, r2.time());
@@ -280,7 +280,7 @@ inline point3f calculate_bounce_dir(const Ray& r, hitable *world, hitable_list *
         r1 = r2;
         vec3f dir;
         dir = p.generate(rng, diffuse_bounce, r2.time());
-        if((dir.x == 0 && dir.y == 0 && dir.z == 0)) {
+        if((dir.xyz.x == 0 && dir.xyz.y == 0 && dir.xyz.z == 0)) {
           return(convert_to_point3(dir));
         }
         r2 = Ray(OffsetRayOrigin(offset_p, hrec.pError, hrec.normal, dir), dir, r2.pri_stack, r2.time());
@@ -391,7 +391,7 @@ inline Float calculate_pdf(const Ray& r, hitable *world, hitable_list *hlist,
         if(i == max_depth-1) {
           return(pdf_val);
         }
-        if((dir.x == 0 && dir.y == 0 && dir.z == 0)) {
+        if((dir.xyz.x == 0 && dir.xyz.y == 0 && dir.xyz.z == 0)) {
           return(0);
         }
         r2 = Ray(OffsetRayOrigin(offset_p, hrec.pError, hrec.normal, dir), dir, r2.pri_stack, r2.time());
@@ -467,7 +467,7 @@ inline Float calculate_bounces(const Ray& r, hitable *world, hitable_list *hlist
         continue;
       }
       final_color += emit_color;
-      if(throughput.x == 0 && throughput.y == 0 && throughput.z == 0) {
+      if(throughput.xyz.x == 0 && throughput.xyz.y == 0 && throughput.xyz.z == 0) {
         return((Float)i);
       }
       float pdf_val;

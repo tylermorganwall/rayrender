@@ -13,8 +13,8 @@ class ellipsoid: public hitable {
                 Transform* ObjectToWorld, Transform* WorldToObject, bool reverseOrientation) : 
       hitable(ObjectToWorld, WorldToObject, mat, reverseOrientation), 
       center(cen), radius(r), axes(axes),  alpha_mask(alpha_mask), bump_tex(bump_tex) {
-      inv_axes = vec3f(1.0f/axes.x, 1.0f/axes.y, 1.0f/axes.z);
-      largest_proj_axis = axes.x * axes.y * axes.z / ffmin(axes.x, ffmin(axes.y, axes.z));
+      inv_axes = vec3f(1.0f/axes.xyz.x, 1.0f/axes.xyz.y, 1.0f/axes.xyz.z);
+      largest_proj_axis = axes.xyz.x * axes.xyz.y * axes.xyz.z / ffmin(axes.xyz.x, ffmin(axes.xyz.y, axes.xyz.z));
     };
     virtual const bool hit(const Ray& r, Float tmin, Float tmax, hit_record& rec, random_gen& rng) const;
     virtual const bool hit(const Ray& r, Float tmin, Float tmax, hit_record& rec, Sampler* sampler) const;

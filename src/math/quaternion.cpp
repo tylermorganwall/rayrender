@@ -3,9 +3,9 @@
 
 // Quaternion Method Definitions
 Transform Quaternion::ToTransform() const {
-  Float xx = v.x * v.x, yy = v.y * v.y, zz = v.z * v.z;
-  Float xy = v.x * v.y, xz = v.x * v.z, yz = v.y * v.z;
-  Float wx = v.x * w, wy = v.y * w, wz = v.z * w;
+  Float xx = v.xyz.x * v.xyz.x, yy = v.xyz.y * v.xyz.y, zz = v.xyz.z * v.xyz.z;
+  Float xy = v.xyz.x * v.xyz.y, xz = v.xyz.x * v.xyz.z, yz = v.xyz.y * v.xyz.z;
+  Float wx = v.xyz.x * w, wy = v.xyz.y * w, wz = v.xyz.z * w;
   
   Matrix4x4 m;
   m.m[0][0] = 1 - 2 * (yy + zz);

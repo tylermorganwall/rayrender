@@ -31,7 +31,7 @@ camera::camera(point3f lookfrom, point3f _lookat, vec3f _vup, Float vfov,
 
 Ray camera::get_ray(Float s, Float t, point3f u3, Float u1) {
   point3f rd = lens_radius * u3;
-  vec3f offset = u * rd.x + v * rd.y;
+  vec3f offset = u * rd.xyz.x + v * rd.xyz.y;
   Float time = time0 + u1 * (time1 - time0);
   return(Ray(origin + offset, lower_left_corner + s * horizontal + t * vertical - origin - offset, time)); 
 }
@@ -264,8 +264,8 @@ void ortho_camera::update_position_absolute(point3f point) {
 }
 
 void ortho_camera::update_ortho_absolute(vec2f o_size) {
-  cam_width = std::fmax(o_size.x,0.001);
-  cam_height = std::fmax(o_size.y,0.001);
+  cam_width = std::fmax(o_size.xy.x,0.001);
+  cam_height = std::fmax(o_size.xy.y,0.001);
   
   lower_left_corner = origin - cam_width/2 *  u - cam_height/2 * v;
   horizontal = cam_width * u;
@@ -513,8 +513,8 @@ Float RealisticCamera::FocusDistance(Float filmDistance) {
   }
   
   // Compute distance _zFocus_ where ray intersects the principal axis
-  Float tFocus = -ray2.origin().x / ray2.direction().x;
-  Float zFocus = ray2(tFocus).z;
+  Float tFocus = -ray2.origin().xyz.x / ray2.direction().xyz.x;
+  Float zFocus = ray2(tFocus).xyz.z;
   if (zFocus < 0) zFocus = Infinity;
   return zFocus;
 }
@@ -558,7 +558,7 @@ inline bool Refract(const vec3f &wi, normal3f &n, Float eta, vec3f *wt) {
   
   Float cosTheta_t = SafeSqrt(1 - sin2Theta_t);
   
-  *wt = -wi / eta + (cosTheta_i / eta - cosTheta_t) * vec3f(n.x,n.y,n.z);
+  *wt = -wi / eta + (cosTheta_i / eta - cosTheta_t) * vec3f(n.xyz.x,n.xyz.y,n.xyz.z);
   return(true);
 }
 
@@ -598,14 +598,14 @@ bool RealisticCamera::IntersectSphericalElement(Float radius,Float zCenter,
   const point3f& ro = ray2.origin();
   
   point3f o = ro - vec3f(0, 0, zCenter);
-  Float A = rd.x*rd.x + rd.y*rd.y + rd.z*rd.z;
-  Float B = 2 * (rd.x*o.x + rd.y*o.y + rd.z*o.z);
-  Float C = o.x*o.x + o.y*o.y + o.z*o.z - radius*radius;
+  Float A = rd.xyz.x*rd.xyz.x + rd.xyz.y*rd.xyz.y + rd.xyz.z*rd.xyz.z;
+  Float B = 2 * (rd.xyz.x*o.xyz.x + rd.xyz.y*o.xyz.y + rd.xyz.z*o.xyz.z);
+  Float C = o.xyz.x*o.xyz.x + o.xyz.y*o.xyz.y + o.xyz.z*o.xyz.z - radius*radius;
   Float t0, t1;
   if (!Quadratic(A, B, C, &t0, &t1)) {
     return false;
   }
-  bool useCloserT = (rd.z > 0) ^ (radius < 0);
+  bool useCloserT = (rd.xyz.z > 0) ^ (radius < 0);
   *t = useCloserT ? std::fmin(t0, t1) : std::fmax(t0, t1);
   if (*t < 0) {
     return false;
@@ -628,7 +628,7 @@ bool RealisticCamera::TraceLensesFromScene(const Ray &rCamera,
     normal3f n;
     bool isStop = (element.curvatureRadius == 0);
     if (isStop) {
-      t = (elementZ - rLens.origin().z) / rLens.direction().z;
+      t = (elementZ - rLens.origin().xyz.z) / rLens.direction().xyz.z;
       
       //Debug
     } else {
@@ -641,7 +641,7 @@ bool RealisticCamera::TraceLensesFromScene(const Ray &rCamera,
     }
     // Test intersection point against element aperture
     point3f pHit = rLens(t);
-    Float r2 = pHit.x * pHit.x + pHit.y * pHit.y;
+    Float r2 = pHit.xyz.x * pHit.xyz.x + pHit.xyz.y * pHit.xyz.y;
     if (r2 > element.apertureRadius * element.apertureRadius) {
       return false;
     }
@@ -690,10 +690,10 @@ bool RealisticCamera::TraceLensesFromFilm(const Ray &rCamera, Ray *rOut) const {
       // The refracted ray computed in the previous lens element
       // interface may be pointed towards film plane(+z) in some
       // extreme situations; in such cases, 't' becomes negative.
-      if (rLens.direction().z >= 0.0) {
+      if (rLens.direction().xyz.z >= 0.0) {
         return false;
       }
-      t = (elementZ - rLens.origin().z) / rLens.direction().z;
+      t = (elementZ - rLens.origin().xyz.z) / rLens.direction().xyz.z;
     } else {
       Float radius = element.curvatureRadius;
       Float zCenter = elementZ + element.curvatureRadius;
@@ -705,7 +705,7 @@ bool RealisticCamera::TraceLensesFromFilm(const Ray &rCamera, Ray *rOut) const {
     // Test intersection point against element aperture
     point3f pHit = rLens(t);
     
-    Float r2 = pHit.x * pHit.x + pHit.y * pHit.y;
+    Float r2 = pHit.xyz.x * pHit.xyz.x + pHit.xyz.y * pHit.xyz.y;
     if (r2 > element.apertureRadius * element.apertureRadius) {
       return false;
     }
@@ -736,10 +736,10 @@ bool RealisticCamera::TraceLensesFromFilm(const Ray &rCamera, Ray *rOut) const {
 
 void RealisticCamera::ComputeCardinalPoints(const Ray &rIn,
                                             const Ray &rOut, Float *pz, Float *fz) {
-  Float tf = -rOut.origin().x / rOut.direction().x;
-  *fz = -rOut(tf).z;
-  Float tp = (rIn.origin().x - rOut.origin().x) / rOut.direction().x;
-  *pz = -rOut(tp).z;
+  Float tf = -rOut.origin().xyz.x / rOut.direction().xyz.x;
+  *fz = -rOut(tf).xyz.z;
+  Float tp = (rIn.origin().xyz.x - rOut.origin().xyz.x) / rOut.direction().xyz.x;
+  *pz = -rOut(tp).xyz.z;
 }
 
 //This is all working correctly (checked with PBRT)
@@ -800,14 +800,14 @@ Bounds2f RealisticCamera::BoundExitPupil(Float pFilmX0, Float pFilmX1) const {
     // Find location of sample points on $x$ segment and rear lens element
     point3f pFilm(lerp(Float(i + 0.5f) / (Float)nSamples, pFilmX0, pFilmX1), 0, 0); 
     Float u[2] = {spacefillr::RadicalInverse(0, i), spacefillr::RadicalInverse(1, i)};
-    point3f pRear(lerp(u[0], projRearBounds.pMin.x, projRearBounds.pMax.x),
-                  lerp(u[1], projRearBounds.pMin.y, projRearBounds.pMax.y),
+    point3f pRear(lerp(u[0], projRearBounds.pMin.xy.x, projRearBounds.pMax.xy.x),
+                  lerp(u[1], projRearBounds.pMin.xy.y, projRearBounds.pMax.xy.y),
                   LensRearZ());
     
     // Expand pupil bounds if ray makes it through the lens system
-    if (Inside(point2f(pRear.x, pRear.y), pupilBounds) || 
+    if (Inside(point2f(pRear.xyz.x, pRear.xyz.y), pupilBounds) || 
         TraceLensesFromFilm(Ray(pFilm, pRear - pFilm), nullptr)) {
-      pupilBounds = UnionB(pupilBounds, point2f(pRear.x, pRear.y));
+      pupilBounds = UnionB(pupilBounds, point2f(pRear.xyz.x, pRear.xyz.y));
       ++nExitingRays;
     }
   }
@@ -827,7 +827,7 @@ point3f RealisticCamera::SampleExitPupil(const point2f &pFilm,
                                          const point2f &lensSample,
                                          Float *sampleBoundsArea) const {
   // Find exit pupil bound for sample distance from film center
-  Float rFilm = std::sqrt(pFilm.x * pFilm.x + pFilm.y * pFilm.y);
+  Float rFilm = std::sqrt(pFilm.xy.x * pFilm.xy.x + pFilm.xy.y * pFilm.xy.y);
   int rIndex = rFilm / (diag / 2) * exitPupilBounds.size();
 
   rIndex = std::min((int)exitPupilBounds.size() - 1, rIndex);
@@ -841,10 +841,10 @@ point3f RealisticCamera::SampleExitPupil(const point2f &pFilm,
   point2f pLens = pupilBounds.Lerp(lensSample);
   
   // Return sample point rotated by angle of _pFilm_ with $+x$ axis
-  Float sinTheta = (rFilm != 0) ? pFilm.y / rFilm : 0;
-  Float cosTheta = (rFilm != 0) ? pFilm.x / rFilm : 1;
-  return point3f(cosTheta * pLens.x - sinTheta * pLens.y,
-                 sinTheta * pLens.x + cosTheta * pLens.y, LensRearZ());
+  Float sinTheta = (rFilm != 0) ? pFilm.xy.y / rFilm : 0;
+  Float cosTheta = (rFilm != 0) ? pFilm.xy.x / rFilm : 1;
+  return point3f(cosTheta * pLens.xy.x - sinTheta * pLens.xy.y,
+                 sinTheta * pLens.xy.x + cosTheta * pLens.xy.y, LensRearZ());
 }
 
 
@@ -859,11 +859,11 @@ Bounds2f  RealisticCamera::GetPhysicalExtent() const {
 Float RealisticCamera::GenerateRay(const CameraSample &sample, Ray *ray2) const {
   // Find point on film, _pFilm_, corresponding to _sample.pFilm_
   point2f pFilm2 = GetPhysicalExtent().Lerp(sample.pFilm);
-  point3f pFilm(-pFilm2.x, pFilm2.y, 0);
+  point3f pFilm(-pFilm2.xy.x, pFilm2.xy.y, 0);
 
   // Trace ray from _pFilm_ through lens system
   Float exitPupilBoundsArea;
-  point3f pRear = SampleExitPupil(point2f(pFilm.x, pFilm.y), sample.pLens,
+  point3f pRear = SampleExitPupil(point2f(pFilm.xyz.x, pFilm.xyz.y), sample.pLens,
                                   &exitPupilBoundsArea);
 
   Ray rFilm(pFilm, unit_vector(pRear - pFilm), 
@@ -876,7 +876,7 @@ Float RealisticCamera::GenerateRay(const CameraSample &sample, Ray *ray2) const 
   ray2->d = unit_vector(ray2->direction());
   
   // Return weighting for _RealisticCamera_ ray
-  Float cosTheta = unit_vector(rFilm.direction()).z;
+  Float cosTheta = unit_vector(rFilm.direction()).xyz.z;
   Float cos4Theta = (cosTheta * cosTheta) * (cosTheta * cosTheta);
   if (simpleWeighting) {
     return cos4Theta * exitPupilBoundsArea / exitPupilBounds[0].Area();

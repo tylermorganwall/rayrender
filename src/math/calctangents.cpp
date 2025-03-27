@@ -52,10 +52,10 @@ void CalculateTangents(TriangleMesh *trianglemesh) {
     const point2f& w2 = texcoordArray[i2];
     vec3f e1 = p1 - p0;
     vec3f e2 = p2 - p0;
-    Float x1 = w1.x - w0.x;
-    Float x2 = w2.x - w0.x;
-    Float y1 = w1.y - w0.y; 
-    Float y2 = w2.y - w0.y;
+    Float x1 = w1.xy.x - w0.xy.x;
+    Float x2 = w2.xy.x - w0.xy.x;
+    Float y1 = w1.xy.y - w0.xy.y; 
+    Float y2 = w2.xy.y - w0.xy.y;
     Float inv_dop = DifferenceOfProducts(x1, y2, x2, y1);
     if(inv_dop == 0) {
       continue;

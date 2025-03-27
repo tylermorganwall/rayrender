@@ -46,8 +46,8 @@ public:
            0.0171201f * x * x * x + 0.000640711f * x * x * x * x );
   }
   static point2f RoughnessToAlpha(point2f roughness) {
-    Float x = std::log(std::fmax(roughness.x, (Float)0.0001550155));
-    Float y = std::log(std::fmax(roughness.y, (Float)0.0001550155));
+    Float x = std::log(std::fmax(roughness.xy.x, (Float)0.0001550155));
+    Float y = std::log(std::fmax(roughness.xy.y, (Float)0.0001550155));
     
     return(point2f(1.62142f + 0.819955f * x + 0.1734f * x * x +
            0.0171201f * x * x * x + 0.000640711f * x * x * x * x,

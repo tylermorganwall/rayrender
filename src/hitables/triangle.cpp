@@ -25,19 +25,19 @@ const bool triangle::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
     p2t = Permute(p2t, kx, ky, kz);
   }
   vec3f Svec = r.Svec;
-  const Float Sz = Svec.z;
+  const Float Sz = Svec.xyz.z;
   vec3f Svec_z = vec3f(1,1,Sz);
   const vec3f zero_z(1,1,0);
 
   Svec *= zero_z;
-  p0t += Svec * p0t.z;
-  p1t += Svec * p1t.z;
-  p2t += Svec * p2t.z;
+  p0t += Svec * p0t.xyz.z;
+  p1t += Svec * p1t.xyz.z;
+  p2t += Svec * p2t.xyz.z;
 
   // Compute edge function coefficients _e0_, _e1_, and _e2_
-  Float e0 = DifferenceOfProducts(p1t.x, p2t.y, p1t.y, p2t.x);
-  Float e1 = DifferenceOfProducts(p2t.x, p0t.y, p2t.y, p0t.x);
-  Float e2 = DifferenceOfProducts(p0t.x, p1t.y, p0t.y, p1t.x);
+  Float e0 = DifferenceOfProducts(p1t.xyz.x, p2t.xyz.y, p1t.xyz.y, p2t.xyz.x);
+  Float e1 = DifferenceOfProducts(p2t.xyz.x, p0t.xyz.y, p2t.xyz.y, p0t.xyz.x);
+  Float e2 = DifferenceOfProducts(p0t.xyz.x, p1t.xyz.y, p0t.xyz.y, p1t.xyz.x);
   // __builtin_prefetch(&p0t[2],1);
   // __builtin_prefetch(&p1t[2],1);
   // __builtin_prefetch(&p2t[2],1);
@@ -46,14 +46,14 @@ const bool triangle::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
   // Fall back to double precision test at triangle edges
   #ifndef RAY_FLOAT_AS_DOUBLE
   if (e0 == 0.f || e1 == 0.f || e2 == 0.f) [[unlikely]]	{
-    double p2txp1ty = (double)p2t.x * (double)p1t.y;
-    double p2typ1tx = (double)p2t.y * (double)p1t.x;
+    double p2txp1ty = (double)p2t.xyz.x * (double)p1t.xyz.y;
+    double p2typ1tx = (double)p2t.xyz.y * (double)p1t.xyz.x;
     e0 = (float)(p2typ1tx - p2txp1ty);
-    double p0txp2ty = (double)p0t.x * (double)p2t.y;
-    double p0typ2tx = (double)p0t.y * (double)p2t.x;
+    double p0txp2ty = (double)p0t.xyz.x * (double)p2t.xyz.y;
+    double p0typ2tx = (double)p0t.xyz.y * (double)p2t.xyz.x;
     e1 = (float)(p0typ2tx - p0txp2ty);
-    double p1txp0ty = (double)p1t.x * (double)p0t.y;
-    double p1typ0tx = (double)p1t.y * (double)p0t.x;
+    double p1txp0ty = (double)p1t.xyz.x * (double)p0t.xyz.y;
+    double p1typ0tx = (double)p1t.xyz.y * (double)p0t.xyz.x;
     e2 = (float)(p1typ0tx - p1txp0ty);
   }
   #endif
@@ -74,7 +74,7 @@ const bool triangle::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
   // p0t[2] *= Sz;
   // p1t[2] *= Sz;
   // p2t[2] *= Sz;
-  Float tScaled = e0 * p0t.z + e1 * p1t.z + e2 * p2t.z;
+  Float tScaled = e0 * p0t.xyz.z + e1 * p1t.xyz.z + e2 * p2t.xyz.z;
   if (det < 0 && (tScaled >= 0 || tScaled < t_max * det)) {
     return false;
   } else if (det > 0 && (tScaled <= 0 || tScaled > t_max * det)) {
@@ -85,12 +85,12 @@ const bool triangle::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
   Float invDet = 1 / det;
   Float t = tScaled * invDet;
   {
-    Float maxZt = MaxComponent(Abs(vec3f(p0t.z, p1t.z, p2t.z)));
+    Float maxZt = MaxComponent(Abs(vec3f(p0t.xyz.z, p1t.xyz.z, p2t.xyz.z)));
     Float deltaZ = gamma(3) * maxZt;
 
     // Compute $\delta_x$ and $\delta_y$ terms for triangle $t$ error bounds
-    Float maxXt = MaxComponent(Abs(vec3f(p0t.x, p1t.x, p2t.x)));
-    Float maxYt = MaxComponent(Abs(vec3f(p0t.y, p1t.y, p2t.y)));
+    Float maxXt = MaxComponent(Abs(vec3f(p0t.xyz.x, p1t.xyz.x, p2t.xyz.x)));
+    Float maxYt = MaxComponent(Abs(vec3f(p0t.xyz.y, p1t.xyz.y, p2t.xyz.y)));
     Float deltaX = gamma(5) * (maxXt + maxZt);
     Float deltaY = gamma(5) * (maxYt + maxZt);
 
@@ -228,8 +228,8 @@ const bool triangle::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
     vec3f norm_bump = dot(r.direction(), rec.normal) < 0 ? convert_to_vec3(rec.normal) : -convert_to_vec3(rec.normal);
 
     point3f bvbu = bump_tex->value(uHit, vHit, rec.p);
-    rec.bump_normal = convert_to_normal3(cross(rec.dpdu + bvbu.x * norm_bump ,
-                            rec.dpdv - bvbu.y * norm_bump));
+    rec.bump_normal = convert_to_normal3(cross(rec.dpdu + bvbu.xyz.x * norm_bump ,
+                            rec.dpdv - bvbu.xyz.y * norm_bump));
     rec.bump_normal.make_unit_vector();
     rec.bump_normal = Faceforward(rec.bump_normal,rec.normal);
     rec.has_bump = true;
@@ -264,31 +264,31 @@ const bool triangle::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
   p2t = Permute(p2t, kx, ky, kz);
   
   // Apply shear transformation to translated vertex positions
-  Float Sx = -d.x / d.z;
-  Float Sy = -d.y / d.z;
-  Float Sz = 1.f / d.z;
-  p0t[0] += Sx * p0t.z;
-  p0t[1] += Sy * p0t.z;
-  p1t[0] += Sx * p1t.z;
-  p1t[1] += Sy * p1t.z;
-  p2t[0] += Sx * p2t.z;
-  p2t[1] += Sy * p2t.z;
+  Float Sx = -d.xyz.x / d.xyz.z;
+  Float Sy = -d.xyz.y / d.xyz.z;
+  Float Sz = 1.f / d.xyz.z;
+  p0t[0] += Sx * p0t.xyz.z;
+  p0t[1] += Sy * p0t.xyz.z;
+  p1t[0] += Sx * p1t.xyz.z;
+  p1t[1] += Sy * p1t.xyz.z;
+  p2t[0] += Sx * p2t.xyz.z;
+  p2t[1] += Sy * p2t.xyz.z;
   // Compute edge function coefficients _e0_, _e1_, and _e2_
-  Float e0 = DifferenceOfProducts(p1t.x, p2t.y, p1t.y, p2t.x);
-  Float e1 = DifferenceOfProducts(p2t.x, p0t.y, p2t.y, p0t.x);
-  Float e2 = DifferenceOfProducts(p0t.x, p1t.y, p0t.y, p1t.x);
+  Float e0 = DifferenceOfProducts(p1t.xyz.x, p2t.xyz.y, p1t.xyz.y, p2t.xyz.x);
+  Float e1 = DifferenceOfProducts(p2t.xyz.x, p0t.xyz.y, p2t.xyz.y, p0t.xyz.x);
+  Float e2 = DifferenceOfProducts(p0t.xyz.x, p1t.xyz.y, p0t.xyz.y, p1t.xyz.x);
   
   // Fall back to double precision test at triangle edges
   if (sizeof(Float) == sizeof(float) &&
       (e0 == 0.0f || e1 == 0.0f || e2 == 0.0f)) {
-    double p2txp1ty = (double)p2t.x * (double)p1t.y;
-    double p2typ1tx = (double)p2t.y * (double)p1t.x;
+    double p2txp1ty = (double)p2t.xyz.x * (double)p1t.xyz.y;
+    double p2typ1tx = (double)p2t.xyz.y * (double)p1t.xyz.x;
     e0 = (float)(p2typ1tx - p2txp1ty); 
-    double p0txp2ty = (double)p0t.x * (double)p2t.y;
-    double p0typ2tx = (double)p0t.y * (double)p2t.x;
+    double p0txp2ty = (double)p0t.xyz.x * (double)p2t.xyz.y;
+    double p0typ2tx = (double)p0t.xyz.y * (double)p2t.xyz.x;
     e1 = (float)(p0typ2tx - p0txp2ty);
-    double p1txp0ty = (double)p1t.x * (double)p0t.y;
-    double p1typ0tx = (double)p1t.y * (double)p0t.x;
+    double p1txp0ty = (double)p1t.xyz.x * (double)p0t.xyz.y;
+    double p1typ0tx = (double)p1t.xyz.y * (double)p0t.xyz.x;
     e2 = (float)(p1typ0tx - p1txp0ty);
   }
   __builtin_prefetch(&p0t[2], 0, 1);
@@ -303,7 +303,7 @@ const bool triangle::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
   p0t[2] *= Sz;
   p1t[2] *= Sz;
   p2t[2] *= Sz;
-  Float tScaled = e0 * p0t.z + e1 * p1t.z + e2 * p2t.z;
+  Float tScaled = e0 * p0t.xyz.z + e1 * p1t.xyz.z + e2 * p2t.xyz.z;
   if (det < 0 && (tScaled >= 0 || tScaled < t_max * det)) {
     return false;
   } else if (det > 0 && (tScaled <= 0 || tScaled > t_max * det)) {
@@ -316,12 +316,12 @@ const bool triangle::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
   Float b1 = e1 * invDet;
   Float b2 = e2 * invDet;
   Float t = tScaled * invDet;
-  Float maxZt = MaxComponent(Abs(vec3f(p0t.z, p1t.z, p2t.z)));
+  Float maxZt = MaxComponent(Abs(vec3f(p0t.xyz.z, p1t.xyz.z, p2t.xyz.z)));
   Float deltaZ = gamma(3) * maxZt;
   
   // Compute $\delta_x$ and $\delta_y$ terms for triangle $t$ error bounds
-  Float maxXt = MaxComponent(Abs(vec3f(p0t.x, p1t.x, p2t.x)));
-  Float maxYt = MaxComponent(Abs(vec3f(p0t.y, p1t.y, p2t.y)));
+  Float maxXt = MaxComponent(Abs(vec3f(p0t.xyz.x, p1t.xyz.x, p2t.xyz.x)));
+  Float maxYt = MaxComponent(Abs(vec3f(p0t.xyz.y, p1t.xyz.y, p2t.xyz.y)));
   Float deltaX = gamma(5) * (maxXt + maxZt);
   Float deltaY = gamma(5) * (maxYt + maxZt);
   
@@ -361,12 +361,12 @@ const bool triangle::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
   }
 
   //Add error calc
-  Float xAbsSum = (ffabs(b0 * p0.x) + ffabs(b1 * p1.x) +
-    ffabs(b2 * p2.x));
-  Float yAbsSum = (ffabs(b0 * p0.y) + ffabs(b1 * p1.y) +
-    ffabs(b2 * p2.y));
-  Float zAbsSum = (ffabs(b0 * p0.z) + ffabs(b1 * p1.z) +
-    ffabs(b2 * p2.z));
+  Float xAbsSum = (ffabs(b0 * p0.xyz.x) + ffabs(b1 * p1.xyz.x) +
+    ffabs(b2 * p2.xyz.x));
+  Float yAbsSum = (ffabs(b0 * p0.xyz.y) + ffabs(b1 * p1.xyz.y) +
+    ffabs(b2 * p2.xyz.y));
+  Float zAbsSum = (ffabs(b0 * p0.xyz.z) + ffabs(b1 * p1.xyz.z) +
+    ffabs(b2 * p2.xyz.z));
   // rec.pError = gamma(7) * vec3f(xAbsSum, yAbsSum, zAbsSum);
   
   point3f pHit = b0 * p0 + b1 * p1 + b2 * p2;
@@ -413,8 +413,8 @@ const bool triangle::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
         Float q = (1 - 2 * M_1_PI * af) * (1 - (2 * M_1_PI) * af)/(1 + 2 * (1 - 2 * M_1_PI) * af);
         Float g = 1 + q * (b - 1);
         Float rho = sqrt(q * (1 + g) / (1 +b));
-        normal3f r1 = (g + rho * b) * np - rho * normal3f(i.x,i.y,i.z);
-        rec.normal = unit_vector(normal3f(i.x,i.y,i.z) + r1);
+        normal3f r1 = (g + rho * b) * np - rho * normal3f(i.xyz.x,i.xyz.y,i.xyz.z);
+        rec.normal = unit_vector(normal3f(i.xyz.x,i.xyz.y,i.xyz.z) + r1);
       } else {
         rec.normal = np;
       }
@@ -432,8 +432,8 @@ const bool triangle::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
     vec3f norm_bump = dot(r.direction(), rec.normal) < 0 ? convert_to_vec3(rec.normal) : -convert_to_vec3(rec.normal);
     
     point3f bvbu = bump_tex->value(uvHit[0], uvHit[1], rec.p);
-    rec.bump_normal = convert_to_normal3(cross(rec.dpdu + bvbu.x * norm_bump ,
-                            rec.dpdv - bvbu.y * norm_bump));
+    rec.bump_normal = convert_to_normal3(cross(rec.dpdu + bvbu.xyz.x * norm_bump ,
+                            rec.dpdv - bvbu.xyz.y * norm_bump));
     rec.bump_normal.make_unit_vector();
     rec.bump_normal = Faceforward(rec.bump_normal,rec.normal);
     rec.has_bump = true;
@@ -470,31 +470,31 @@ bool triangle::HitP(const Ray& r, Float t_min, Float t_max, random_gen& rng) con
     p2t = Permute(p2t, kx, ky, kz);
   }
   vec3f Svec = r.Svec;
-  const Float Sz = Svec.z;
+  const Float Sz = Svec.xyz.z;
   vec3f Svec_z = vec3f(1,1,Sz);
   const vec3f zero_z(1,1,0);
 
   Svec *= zero_z;
-  p0t += Svec * p0t.z;
-  p1t += Svec * p1t.z;
-  p2t += Svec * p2t.z;
+  p0t += Svec * p0t.xyz.z;
+  p1t += Svec * p1t.xyz.z;
+  p2t += Svec * p2t.xyz.z;
 
   // Compute edge function coefficients _e0_, _e1_, and _e2_
-  Float e0 = DifferenceOfProducts(p1t.x, p2t.y, p1t.y, p2t.x);
-  Float e1 = DifferenceOfProducts(p2t.x, p0t.y, p2t.y, p0t.x);
-  Float e2 = DifferenceOfProducts(p0t.x, p1t.y, p0t.y, p1t.x);
+  Float e0 = DifferenceOfProducts(p1t.xyz.x, p2t.xyz.y, p1t.xyz.y, p2t.xyz.x);
+  Float e1 = DifferenceOfProducts(p2t.xyz.x, p0t.xyz.y, p2t.xyz.y, p0t.xyz.x);
+  Float e2 = DifferenceOfProducts(p0t.xyz.x, p1t.xyz.y, p0t.xyz.y, p1t.xyz.x);
 
   // Fall back to double precision test at triangle edges
   #ifndef RAY_FLOAT_AS_DOUBLE
   if (e0 == 0.f || e1 == 0.f || e2 == 0.f) [[unlikely]]	{
-    double p2txp1ty = (double)p2t.x * (double)p1t.y;
-    double p2typ1tx = (double)p2t.y * (double)p1t.x;
+    double p2txp1ty = (double)p2t.xyz.x * (double)p1t.xyz.y;
+    double p2typ1tx = (double)p2t.xyz.y * (double)p1t.xyz.x;
     e0 = (float)(p2typ1tx - p2txp1ty);
-    double p0txp2ty = (double)p0t.x * (double)p2t.y;
-    double p0typ2tx = (double)p0t.y * (double)p2t.x;
+    double p0txp2ty = (double)p0t.xyz.x * (double)p2t.xyz.y;
+    double p0typ2tx = (double)p0t.xyz.y * (double)p2t.xyz.x;
     e1 = (float)(p0typ2tx - p0txp2ty);
-    double p1txp0ty = (double)p1t.x * (double)p0t.y;
-    double p1typ0tx = (double)p1t.y * (double)p0t.x;
+    double p1txp0ty = (double)p1t.xyz.x * (double)p0t.xyz.y;
+    double p1typ0tx = (double)p1t.xyz.y * (double)p0t.xyz.x;
     e2 = (float)(p1typ0tx - p1txp0ty);
   }
   #endif
@@ -510,7 +510,7 @@ bool triangle::HitP(const Ray& r, Float t_min, Float t_max, random_gen& rng) con
   p1t *= Svec_z;
   p2t *= Svec_z;
 
-  Float tScaled = e0 * p0t.z + e1 * p1t.z + e2 * p2t.z;
+  Float tScaled = e0 * p0t.xyz.z + e1 * p1t.xyz.z + e2 * p2t.xyz.z;
   if (det < 0 && (tScaled >= 0 || tScaled < t_max * det)) {
     return false;
   } else if (det > 0 && (tScaled <= 0 || tScaled > t_max * det)) {
@@ -521,12 +521,12 @@ bool triangle::HitP(const Ray& r, Float t_min, Float t_max, random_gen& rng) con
   Float invDet = 1 / det;
   Float t = tScaled * invDet;
   {
-    Float maxZt = MaxComponent(Abs(vec3f(p0t.z, p1t.z, p2t.z)));
+    Float maxZt = MaxComponent(Abs(vec3f(p0t.xyz.z, p1t.xyz.z, p2t.xyz.z)));
     Float deltaZ = gamma(3) * maxZt;
 
     // Compute $\delta_x$ and $\delta_y$ terms for triangle $t$ error bounds
-    Float maxXt = MaxComponent(Abs(vec3f(p0t.x, p1t.x, p2t.x)));
-    Float maxYt = MaxComponent(Abs(vec3f(p0t.y, p1t.y, p2t.y)));
+    Float maxXt = MaxComponent(Abs(vec3f(p0t.xyz.x, p1t.xyz.x, p2t.xyz.x)));
+    Float maxYt = MaxComponent(Abs(vec3f(p0t.xyz.y, p1t.xyz.y, p2t.xyz.y)));
     Float deltaX = gamma(5) * (maxXt + maxZt);
     Float deltaY = gamma(5) * (maxYt + maxZt);
 
@@ -601,31 +601,31 @@ bool triangle::HitP(const Ray& r, Float t_min, Float t_max, Sampler* sampler) co
     p2t = Permute(p2t, kx, ky, kz);
   }
   vec3f Svec = r.Svec;
-  const Float Sz = Svec.z;
+  const Float Sz = Svec.xyz.z;
   vec3f Svec_z = vec3f(1,1,Sz);
   const vec3f zero_z(1,1,0);
 
   Svec *= zero_z;
-  p0t += Svec * p0t.z;
-  p1t += Svec * p1t.z;
-  p2t += Svec * p2t.z;
+  p0t += Svec * p0t.xyz.z;
+  p1t += Svec * p1t.xyz.z;
+  p2t += Svec * p2t.xyz.z;
 
   // Compute edge function coefficients _e0_, _e1_, and _e2_
-  Float e0 = DifferenceOfProducts(p1t.x, p2t.y, p1t.y, p2t.x);
-  Float e1 = DifferenceOfProducts(p2t.x, p0t.y, p2t.y, p0t.x);
-  Float e2 = DifferenceOfProducts(p0t.x, p1t.y, p0t.y, p1t.x);
+  Float e0 = DifferenceOfProducts(p1t.xyz.x, p2t.xyz.y, p1t.xyz.y, p2t.xyz.x);
+  Float e1 = DifferenceOfProducts(p2t.xyz.x, p0t.xyz.y, p2t.xyz.y, p0t.xyz.x);
+  Float e2 = DifferenceOfProducts(p0t.xyz.x, p1t.xyz.y, p0t.xyz.y, p1t.xyz.x);
 
   // Fall back to double precision test at triangle edges
   #ifndef RAY_FLOAT_AS_DOUBLE
   if (e0 == 0.f || e1 == 0.f || e2 == 0.f) [[unlikely]]	{
-    double p2txp1ty = (double)p2t.x * (double)p1t.y;
-    double p2typ1tx = (double)p2t.y * (double)p1t.x;
+    double p2txp1ty = (double)p2t.xyz.x * (double)p1t.xyz.y;
+    double p2typ1tx = (double)p2t.xyz.y * (double)p1t.xyz.x;
     e0 = (float)(p2typ1tx - p2txp1ty);
-    double p0txp2ty = (double)p0t.x * (double)p2t.y;
-    double p0typ2tx = (double)p0t.y * (double)p2t.x;
+    double p0txp2ty = (double)p0t.xyz.x * (double)p2t.xyz.y;
+    double p0typ2tx = (double)p0t.xyz.y * (double)p2t.xyz.x;
     e1 = (float)(p0typ2tx - p0txp2ty);
-    double p1txp0ty = (double)p1t.x * (double)p0t.y;
-    double p1typ0tx = (double)p1t.y * (double)p0t.x;
+    double p1txp0ty = (double)p1t.xyz.x * (double)p0t.xyz.y;
+    double p1typ0tx = (double)p1t.xyz.y * (double)p0t.xyz.x;
     e2 = (float)(p1typ0tx - p1txp0ty);
   }
   #endif
@@ -641,7 +641,7 @@ bool triangle::HitP(const Ray& r, Float t_min, Float t_max, Sampler* sampler) co
   p1t *= Svec_z;
   p2t *= Svec_z;
 
-  Float tScaled = e0 * p0t.z + e1 * p1t.z + e2 * p2t.z;
+  Float tScaled = e0 * p0t.xyz.z + e1 * p1t.xyz.z + e2 * p2t.xyz.z;
   if (det < 0 && (tScaled >= 0 || tScaled < t_max * det)) {
     return false;
   } else if (det > 0 && (tScaled <= 0 || tScaled > t_max * det)) {
@@ -652,12 +652,12 @@ bool triangle::HitP(const Ray& r, Float t_min, Float t_max, Sampler* sampler) co
   Float invDet = 1 / det;
   Float t = tScaled * invDet;
   {
-    Float maxZt = MaxComponent(Abs(vec3f(p0t.z, p1t.z, p2t.z)));
+    Float maxZt = MaxComponent(Abs(vec3f(p0t.xyz.z, p1t.xyz.z, p2t.xyz.z)));
     Float deltaZ = gamma(3) * maxZt;
 
     // Compute $\delta_x$ and $\delta_y$ terms for triangle $t$ error bounds
-    Float maxXt = MaxComponent(Abs(vec3f(p0t.x, p1t.x, p2t.x)));
-    Float maxYt = MaxComponent(Abs(vec3f(p0t.y, p1t.y, p2t.y)));
+    Float maxXt = MaxComponent(Abs(vec3f(p0t.xyz.x, p1t.xyz.x, p2t.xyz.x)));
+    Float maxYt = MaxComponent(Abs(vec3f(p0t.xyz.y, p1t.xyz.y, p2t.xyz.y)));
     Float deltaX = gamma(5) * (maxXt + maxZt);
     Float deltaY = gamma(5) * (maxYt + maxZt);
 
@@ -715,18 +715,18 @@ bool triangle::bounding_box(Float t0, Float t1, aabb& box) const {
   const point3f &a = mesh->p[v[0]];
   const point3f &b = mesh->p[v[1]];
   const point3f &c = mesh->p[v[2]];
-  point3f min_v(ffmin(ffmin(a.x, b.x), c.x),
-                ffmin(ffmin(a.y, b.y), c.y),
-                ffmin(ffmin(a.z, b.z), c.z));
-  point3f max_v(ffmax(ffmax(a.x, b.x), c.x),
-                ffmax(ffmax(a.y, b.y), c.y),
-                ffmax(ffmax(a.z, b.z), c.z));
+  point3f min_v(ffmin(ffmin(a.xyz.x, b.xyz.x), c.xyz.x),
+                ffmin(ffmin(a.xyz.y, b.xyz.y), c.xyz.y),
+                ffmin(ffmin(a.xyz.z, b.xyz.z), c.xyz.z));
+  point3f max_v(ffmax(ffmax(a.xyz.x, b.xyz.x), c.xyz.x),
+                ffmax(ffmax(a.xyz.y, b.xyz.y), c.xyz.y),
+                ffmax(ffmax(a.xyz.z, b.xyz.z), c.xyz.z));
 
   point3f difference = max_v + -min_v;
 
-  if (difference.x < 1E-5) max_v.e[0] += 1E-5;
-  if (difference.y < 1E-5) max_v.e[1] += 1E-5;
-  if (difference.z < 1E-5) max_v.e[2] += 1E-5;
+  if (difference.xyz.x < 1E-5) max_v.e[0] += 1E-5;
+  if (difference.xyz.y < 1E-5) max_v.e[1] += 1E-5;
+  if (difference.xyz.z < 1E-5) max_v.e[2] += 1E-5;
 
   box = aabb(min_v, max_v);
   return(true);
@@ -771,8 +771,8 @@ vec3f triangle::random(const point3f& origin, Sampler* sampler, Float time) {
   const point3f &b = mesh->p[v[1]];
   const point3f &c = mesh->p[v[2]];
   vec2f u = sampler->Get2D();
-  Float r1 = sqrt(u.x);
-  Float r2 = u.y;
+  Float r1 = sqrt(u.xy.x);
+  Float r2 = u.xy.y;
   Float u1 = 1.0f-r1;
   Float u2 = r2*r1;
   point3f random_point = (u1 * a + u2 * b + (1 - u1 - u2) * c);

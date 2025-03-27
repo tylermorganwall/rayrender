@@ -49,7 +49,7 @@ public:
         T x; 
         T y;
         T z;
-    };
+    } xyz;
   };
 };
 
@@ -89,9 +89,9 @@ inline vec3<T>& vec3<T>::operator/=(const vec3<T>& v) {
 
 template<typename T> 
 inline bool parallelVectors(const vec3<T> &v1, const vec3<T> &v2) {
-  T x = DifferenceOfProducts(v1.y, v2.z, v1.z, v2.y);
-  T y = DifferenceOfProducts(v1.z, v2.x, v1.x, v2.z);
-  T z = DifferenceOfProducts(v1.x, v2.y, v1.y, v2.x);
+  T x = DifferenceOfProducts(v1.xyz.y, v2.xyz.z, v1.xyz.z, v2.xyz.y);
+  T y = DifferenceOfProducts(v1.xyz.z, v2.xyz.x, v1.xyz.x, v2.xyz.z);
+  T z = DifferenceOfProducts(v1.xyz.x, v2.xyz.y, v1.xyz.y, v2.xyz.x);
   if(x == 0 && y == 0 && z == 0) [[unlikely]] {
     return(true);
   }
@@ -143,27 +143,27 @@ inline vec3<T> unit_vector(vec3<T> v) {
 
 template<typename T> 
 inline T MinComponent(const vec3<T> &v) {
-  return(ffmin(v.x, ffmin(v.y, v.z)));
+  return(ffmin(v.xyz.x, ffmin(v.xyz.y, v.xyz.z)));
 }
 
 template<typename T> 
 inline T MaxComponent(const vec3<T> &v) {
-  return(ffmax(v.x, ffmax(v.y, v.z)));
+  return(ffmax(v.xyz.x, ffmax(v.xyz.y, v.xyz.z)));
 }
 
 template<typename T> 
 inline int MaxDimension(const vec3<T> &v) {
-  return((v.x > v.y) ? ((v.x > v.z) ? 0 : 2) : ((v.y > v.z) ? 1 : 2));
+  return((v.xyz.x > v.xyz.y) ? ((v.xyz.x > v.xyz.z) ? 0 : 2) : ((v.xyz.y > v.xyz.z) ? 1 : 2));
 }
 
 template<typename T> 
 inline vec3<T> Min(const vec3<T> &p1, const vec3<T> &p2) {
-  return(vec3<T>(ffmin(p1.x, p2.x), ffmin(p1.y, p2.y),ffmin(p1.z, p2.z)));
+  return(vec3<T>(ffmin(p1.xyz.x, p2.xyz.x), ffmin(p1.xyz.y, p2.xyz.y),ffmin(p1.xyz.z, p2.xyz.z)));
 }
 
 template<typename T> 
 inline vec3<T> Max(const vec3<T> &p1, const vec3<T> &p2) {
-  return(vec3<T>(ffmax(p1.x, p2.x), ffmax(p1.y, p2.y),ffmax(p1.z, p2.z)));
+  return(vec3<T>(ffmax(p1.xyz.x, p2.xyz.x), ffmax(p1.xyz.y, p2.xyz.y),ffmax(p1.xyz.z, p2.xyz.z)));
 }
 
 template<typename T> 
@@ -180,7 +180,7 @@ inline void PermuteInPlace(vec3<T>& v, int x, int y, int z) {
 
 template<typename T> 
 inline vec3<T> Abs(const vec3<T> &v) {
-  return(vec3<T>(std::abs(v.x), std::abs(v.y), std::abs(v.z)));
+  return(vec3<T>(std::abs(v.xyz.x), std::abs(v.xyz.y), std::abs(v.xyz.z)));
 }
 
 // Non-member operators for generic vec3<T>
@@ -298,7 +298,7 @@ class alignas(16) vec3<Float> {
 public:
     union {
         FVec4 e;
-        Float x,y,z,w;
+        Float xyz.x,xyz.y,xyz.z,w;
     };
 
     // Constructors
@@ -479,9 +479,9 @@ inline vec3<Float> cross(const vec3<Float>& v1, const vec3<Float>& v2) {
 //         _mm_mul_ps(_mm_shuffle_ps(v1.e.v, v1.e.v, _MM_SHUFFLE(3, 1, 0, 2)), _mm_shuffle_ps(v2.e.v, v2.e.v, _MM_SHUFFLE(3, 0, 2, 1)))
 //     );
 // #else
-//     result.e[0] = DifferenceOfProducts(v1.y, v2.z, v1.z, v2.y);
-//     result.e[1] = DifferenceOfProducts(v1.z, v2.x, v1.x, v2.z);
-//     result.e[2] = DifferenceOfProducts(v1.x, v2.y, v1.y, v2.x);
+//     result.e[0] = DifferenceOfProducts(v1.xyz.y, v2.xyz.z, v1.xyz.z, v2.xyz.y);
+//     result.e[1] = DifferenceOfProducts(v1.xyz.z, v2.xyz.x, v1.xyz.x, v2.xyz.z);
+//     result.e[2] = DifferenceOfProducts(v1.xyz.x, v2.xyz.y, v1.xyz.y, v2.xyz.x);
 //     result.e[3] = 0.0f;
 // #endif
 //     return result;
@@ -506,18 +506,18 @@ inline vec3<Float> unit_vector(const vec3<Float>& v) {
 }
 
 inline Float MinComponent(const vec3<Float>& v) {
-    return std::fmin(v.x, std::fmin(v.y, v.z));
+    return std::fmin(v.xyz.x, std::fmin(v.xyz.y, v.xyz.z));
 }
 
 inline Float MaxComponent(const vec3<Float>& v) {
-    return std::fmax(v.x, std::fmax(v.y, v.z));
+    return std::fmax(v.xyz.x, std::fmax(v.xyz.y, v.xyz.z));
 }
 
 inline int MaxDimension(const vec3<Float>& v) {
-    if (v.x > v.y) {
-        return (v.x > v.z) ? 0 : 2;
+    if (v.xyz.x > v.xyz.y) {
+        return (v.xyz.x > v.xyz.z) ? 0 : 2;
     } else {
-        return (v.y > v.z) ? 1 : 2;
+        return (v.xyz.y > v.xyz.z) ? 1 : 2;
     }
 }
 
@@ -533,17 +533,17 @@ inline vec3<Float> Max(const vec3<Float>& p1, const vec3<Float>& p2) {
     return result;
 }
 
-inline vec3<Float> Permute(const vec3<Float>& v, int x, int y, int z) {
+inline vec3<Float> Permute(const vec3<Float>& v, int xyz.x, int xyz.y, int xyz.z) {
     vec3<Float> result;
-    result.e[0] = v.e[x];
-    result.e[1] = v.e[y];
-    result.e[2] = v.e[z];
+    result.e[0] = v.e[xyz.x];
+    result.e[1] = v.e[xyz.y];
+    result.e[2] = v.e[xyz.z];
     result.e[3] = 0.0f;
     return result;
 }
 
-inline void PermuteInPlace(vec3<Float>& v, int x, int y, int z) {
-    Float temp[3] = { v.e[x], v.e[y], v.e[z] };
+inline void PermuteInPlace(vec3<Float>& v, int xyz.x, int xyz.y, int xyz.z) {
+    Float temp[3] = { v.e[xyz.x], v.e[xyz.y], v.e[xyz.z] };
     v.e[0] = temp[0];
     v.e[1] = temp[1];
     v.e[2] = temp[2];
@@ -627,13 +627,13 @@ public:
     }
 
     // Accessors
-    inline int x() const { return e[0]; }
-    inline int y() const { return e[1]; }
-    inline int z() const { return e[2]; }
+    inline int xyz.x() const { return e[0]; }
+    inline int xyz.y() const { return e[1]; }
+    inline int xyz.z() const { return e[2]; }
 
-    inline int& x() { return e[0]; }
-    inline int& y() { return e[1]; }
-    inline int& z() { return e[2]; }
+    inline int& xyz.x() { return e[0]; }
+    inline int& xyz.y() { return e[1]; }
+    inline int& xyz.z() { return e[2]; }
 
     // Operators
     inline const vec3<int>& operator+() const { return *this; }
@@ -761,10 +761,10 @@ inline int dot(const vec3<int>& v1, const vec3<int>& v2) {
 
 inline vec3<int> cross(const vec3<int>& v1, const vec3<int>& v2) {
     vec3<int> result;
-    int x = v1.y * v2.z - v1.z * v2.y;
-    int y = v1.z * v2.x - v1.x * v2.z;
-    int z = v1.x * v2.y - v1.y * v2.x;
-    result = vec3<int>(x, y, z);
+    int xyz.x = v1.xyz.y * v2.xyz.z - v1.xyz.z * v2.xyz.y;
+    int xyz.y = v1.xyz.z * v2.xyz.x - v1.xyz.x * v2.xyz.z;
+    int xyz.z = v1.xyz.x * v2.xyz.y - v1.xyz.y * v2.xyz.x;
+    result = vec3<int>(xyz.x, xyz.y, xyz.z);
     return result;
 }
 
@@ -803,20 +803,20 @@ inline vec3<int> Max(const vec3<int>& p1, const vec3<int>& p2) {
 }
 
 inline int MinComponent(const vec3<int>& v) {
-    int minVal = std::min(v.x, std::min(v.y, v.z));
+    int minVal = std::min(v.xyz.x, std::min(v.xyz.y, v.xyz.z));
     return minVal;
 }
 
 inline int MaxComponent(const vec3<int>& v) {
-    int maxVal = std::max(v.x, std::max(v.y, v.z));
+    int maxVal = std::max(v.xyz.x, std::max(v.xyz.y, v.xyz.z));
     return maxVal;
 }
 
 inline int MaxDimension(const vec3<int>& v) {
-    if (v.x > v.y) {
-        return (v.x > v.z) ? 0 : 2;
+    if (v.xyz.x > v.xyz.y) {
+        return (v.xyz.x > v.xyz.z) ? 0 : 2;
     } else {
-        return (v.y > v.z) ? 1 : 2;
+        return (v.xyz.y > v.xyz.z) ? 1 : 2;
     }
 }
 
@@ -834,17 +834,17 @@ inline vec3<int> Abs(const vec3<int>& v) {
     return result;
 }
 
-inline vec3<int> Permute(const vec3<int>& v, int x, int y, int z) {
+inline vec3<int> Permute(const vec3<int>& v, int xyz.x, int xyz.y, int xyz.z) {
     vec3<int> result;
-    result.e[0] = v.e[x];
-    result.e[1] = v.e[y];
-    result.e[2] = v.e[z];
+    result.e[0] = v.e[xyz.x];
+    result.e[1] = v.e[xyz.y];
+    result.e[2] = v.e[xyz.z];
     result.e[3] = 0;
     return result;
 }
 
-inline void PermuteInPlace(vec3<int>& v, int x, int y, int z) {
-    int temp[3] = { v.e[x], v.e[y], v.e[z] };
+inline void PermuteInPlace(vec3<int>& v, int xyz.x, int xyz.y, int xyz.z) {
+    int temp[3] = { v.e[xyz.x], v.e[xyz.y], v.e[xyz.z] };
     v.e[0] = temp[0];
     v.e[1] = temp[1];
     v.e[2] = temp[2];

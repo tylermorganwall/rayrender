@@ -13,8 +13,8 @@ template <typename T> class point2 {
 public:
   point2() {}
   point2(T e0, T e1) {e[0] = e0; e[1] = e1;}
-  explicit point2(const vec3<T> &p) { e[0] = p.x; e[1] = p.y; }
-  explicit point2(const point3<T> &p) { e[0] = p.x; e[1] = p.y; }
+  explicit point2(const vec3<T> &p) { e[0] = p.xy.x; e[1] = p.xy.y; }
+  explicit point2(const point3<T> &p) { e[0] = p.xy.x; e[1] = p.xy.y; }
   
   inline const point2<T>& operator+() const { return *this; }
   inline point2<T> operator-() const { return point2<T>(-e[0], -e[1]); }
@@ -41,11 +41,11 @@ public:
     struct {
         Float x;
         Float y;
-    };
+    } xy;
     struct {
         Float u;
         Float v;
-    };
+    } uv;
   };
 };
 
@@ -64,7 +64,7 @@ inline std::ostream& operator<<(std::ostream &os, const point2<T> &t) {
 
 template<typename T> 
 inline bool point2<T>::operator==(const point2<T> &t) const {
-  return x == t.x && y == t.y;
+  return xy.x == t.xy.x && xy.y == t.xy.y;
 }
 
 template<typename T> 

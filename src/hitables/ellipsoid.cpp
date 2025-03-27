@@ -56,18 +56,18 @@ const bool ellipsoid::hit(const Ray& r, Float t_min, Float t_max, hit_record& re
     get_sphere_uv(trans_normal, rec.u, rec.v);
     
     //Interaction information
-    Float zRadius = std::sqrt(rec.p.x * rec.p.x  + rec.p.z  * rec.p.z );
+    Float zRadius = std::sqrt(rec.p.xyz.x * rec.p.xyz.x  + rec.p.xyz.z  * rec.p.xyz.z );
     Float invZRadius = 1 / zRadius;
-    Float cosPhi = rec.p.x * invZRadius;
-    Float sinPhi = rec.p.z * invZRadius;
-    Float theta = std::acos(clamp(rec.p.z, -1, 1));
-    rec.dpdu = 2 * static_cast<Float>(M_PI) * vec3f(-rec.p.z, 0, rec.p.x);
-    rec.dpdv = 2 * static_cast<Float>(M_PI) * vec3f(rec.p.z * cosPhi, rec.p.z * sinPhi, -std::sin(theta));
+    Float cosPhi = rec.p.xyz.x * invZRadius;
+    Float sinPhi = rec.p.xyz.z * invZRadius;
+    Float theta = std::acos(clamp(rec.p.xyz.z, -1, 1));
+    rec.dpdu = 2 * static_cast<Float>(M_PI) * vec3f(-rec.p.xyz.z, 0, rec.p.xyz.x);
+    rec.dpdv = 2 * static_cast<Float>(M_PI) * vec3f(rec.p.xyz.z * cosPhi, rec.p.xyz.z * sinPhi, -std::sin(theta));
     rec.has_bump = bump_tex ? true : false;
     
     if(bump_tex) {
       point3f bvbu = bump_tex->value(rec.u, rec.v, rec.p);
-      rec.bump_normal = rec.normal + convert_to_normal3(bvbu.x * rec.dpdu + bvbu.y * rec.dpdv); 
+      rec.bump_normal = rec.normal + convert_to_normal3(bvbu.xyz.x * rec.dpdu + bvbu.xyz.y * rec.dpdv); 
       rec.bump_normal *= inv_axes;
       rec.bump_normal.make_unit_vector();
     }
@@ -94,18 +94,18 @@ const bool ellipsoid::hit(const Ray& r, Float t_min, Float t_max, hit_record& re
     
     get_sphere_uv(trans_normal, rec.u, rec.v);
     //Interaction information
-    Float zRadius = std::sqrt(rec.p.x * rec.p.x  + rec.p.z  * rec.p.z );
+    Float zRadius = std::sqrt(rec.p.xyz.x * rec.p.xyz.x  + rec.p.xyz.z  * rec.p.xyz.z );
     Float invZRadius = 1 / zRadius;
-    Float cosPhi = rec.p.x * invZRadius;
-    Float sinPhi = rec.p.z * invZRadius;
-    Float theta = std::acos(clamp(rec.p.z, -1, 1));
-    rec.dpdu = 2 * static_cast<Float>(M_PI) * vec3f(-rec.p.z, 0, rec.p.x);
-    rec.dpdv = 2 * static_cast<Float>(M_PI) * vec3f(rec.p.z * cosPhi, rec.p.z * sinPhi, -std::sin(theta));
+    Float cosPhi = rec.p.xyz.x * invZRadius;
+    Float sinPhi = rec.p.xyz.z * invZRadius;
+    Float theta = std::acos(clamp(rec.p.xyz.z, -1, 1));
+    rec.dpdu = 2 * static_cast<Float>(M_PI) * vec3f(-rec.p.xyz.z, 0, rec.p.xyz.x);
+    rec.dpdv = 2 * static_cast<Float>(M_PI) * vec3f(rec.p.xyz.z * cosPhi, rec.p.xyz.z * sinPhi, -std::sin(theta));
     rec.has_bump = bump_tex ? true : false;
     
     if(bump_tex) {
       point3f bvbu = bump_tex->value(rec.u, rec.v, rec.p);
-      rec.bump_normal = rec.normal + convert_to_normal3(bvbu.x * rec.dpdu + bvbu.y * rec.dpdv); 
+      rec.bump_normal = rec.normal + convert_to_normal3(bvbu.xyz.x * rec.dpdu + bvbu.xyz.y * rec.dpdv); 
       rec.bump_normal *= inv_axes;
       rec.bump_normal.make_unit_vector();
     }
@@ -187,18 +187,18 @@ const bool ellipsoid::hit(const Ray& r, Float t_min, Float t_max, hit_record& re
     get_sphere_uv(trans_normal, rec.u, rec.v);
     
     //Interaction information
-    Float zRadius = std::sqrt(rec.p.x * rec.p.x  + rec.p.z  * rec.p.z );
+    Float zRadius = std::sqrt(rec.p.xyz.x * rec.p.xyz.x  + rec.p.xyz.z  * rec.p.xyz.z );
     Float invZRadius = 1 / zRadius;
-    Float cosPhi = rec.p.x * invZRadius;
-    Float sinPhi = rec.p.z * invZRadius;
-    Float theta = std::acos(clamp(rec.p.z, -1, 1));
-    rec.dpdu = 2 * static_cast<Float>(M_PI) * vec3f(-rec.p.z, 0, rec.p.x);
-    rec.dpdv = 2 * static_cast<Float>(M_PI) * vec3f(rec.p.z * cosPhi, rec.p.z * sinPhi, -std::sin(theta));
+    Float cosPhi = rec.p.xyz.x * invZRadius;
+    Float sinPhi = rec.p.xyz.z * invZRadius;
+    Float theta = std::acos(clamp(rec.p.xyz.z, -1, 1));
+    rec.dpdu = 2 * static_cast<Float>(M_PI) * vec3f(-rec.p.xyz.z, 0, rec.p.xyz.x);
+    rec.dpdv = 2 * static_cast<Float>(M_PI) * vec3f(rec.p.xyz.z * cosPhi, rec.p.xyz.z * sinPhi, -std::sin(theta));
     rec.has_bump = bump_tex ? true : false;
     
     if(bump_tex) {
       point3f bvbu = bump_tex->value(rec.u, rec.v, rec.p);
-      rec.bump_normal = rec.normal + convert_to_normal3(bvbu.x * rec.dpdu + bvbu.y * rec.dpdv); 
+      rec.bump_normal = rec.normal + convert_to_normal3(bvbu.xyz.x * rec.dpdu + bvbu.xyz.y * rec.dpdv); 
       rec.bump_normal *= inv_axes;
       rec.bump_normal.make_unit_vector();
     }
@@ -225,18 +225,18 @@ const bool ellipsoid::hit(const Ray& r, Float t_min, Float t_max, hit_record& re
     
     get_sphere_uv(trans_normal, rec.u, rec.v);
     //Interaction information
-    Float zRadius = std::sqrt(rec.p.x * rec.p.x  + rec.p.z  * rec.p.z );
+    Float zRadius = std::sqrt(rec.p.xyz.x * rec.p.xyz.x  + rec.p.xyz.z  * rec.p.xyz.z );
     Float invZRadius = 1 / zRadius;
-    Float cosPhi = rec.p.x * invZRadius;
-    Float sinPhi = rec.p.z * invZRadius;
-    Float theta = std::acos(clamp(rec.p.z, -1, 1));
-    rec.dpdu = 2 * static_cast<Float>(M_PI) * vec3f(-rec.p.z, 0, rec.p.x);
-    rec.dpdv = 2 * static_cast<Float>(M_PI) * vec3f(rec.p.z * cosPhi, rec.p.z * sinPhi, -std::sin(theta));
+    Float cosPhi = rec.p.xyz.x * invZRadius;
+    Float sinPhi = rec.p.xyz.z * invZRadius;
+    Float theta = std::acos(clamp(rec.p.xyz.z, -1, 1));
+    rec.dpdu = 2 * static_cast<Float>(M_PI) * vec3f(-rec.p.xyz.z, 0, rec.p.xyz.x);
+    rec.dpdv = 2 * static_cast<Float>(M_PI) * vec3f(rec.p.xyz.z * cosPhi, rec.p.xyz.z * sinPhi, -std::sin(theta));
     rec.has_bump = bump_tex ? true : false;
     
     if(bump_tex) {
       point3f bvbu = bump_tex->value(rec.u, rec.v, rec.p);
-      rec.bump_normal = rec.normal + convert_to_normal3(bvbu.x * rec.dpdu + bvbu.y * rec.dpdv); 
+      rec.bump_normal = rec.normal + convert_to_normal3(bvbu.xyz.x * rec.dpdu + bvbu.xyz.y * rec.dpdv); 
       rec.bump_normal *= inv_axes;
       rec.bump_normal.make_unit_vector();
     }
@@ -368,7 +368,7 @@ vec3f ellipsoid::random(const point3f& o, random_gen& rng, Float time) {
   
   // Compute surface normal and sampled point on sphere
   vec3f nWorld = SphericalDirection(sinAlpha, cosAlpha, phi, -uvw.u(), -uvw.v(), -uvw.w()) * inv_axes;
-  point3f pWorld = pCenter + radius * point3f(nWorld.x, nWorld.y, nWorld.z);
+  point3f pWorld = pCenter + radius * point3f(nWorld.xyz.x, nWorld.xyz.y, nWorld.xyz.z);
   return (pWorld-o);
 }
 
@@ -406,7 +406,7 @@ vec3f ellipsoid::random(const point3f& o, Sampler* sampler, Float time) {
   
   // Compute surface normal and sampled point on sphere
   vec3f nWorld = SphericalDirection(sinAlpha, cosAlpha, phi, -uvw.u(), -uvw.v(), -uvw.w()) * inv_axes;
-  point3f pWorld = pCenter + radius * point3f(nWorld.x, nWorld.y, nWorld.z);
+  point3f pWorld = pCenter + radius * point3f(nWorld.xyz.x, nWorld.xyz.y, nWorld.xyz.z);
   return (pWorld-o);
 }
 

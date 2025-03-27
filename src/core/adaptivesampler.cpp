@@ -200,33 +200,33 @@ void adaptive_sampler::write_final_pixels() {
   }
 }
 void adaptive_sampler::add_color_main(size_t i, size_t j, point3f color) {
-  rgb(i,j,0) += color.x;
-  rgb(i,j,1) += color.y;
-  rgb(i,j,2) += color.z;
+  rgb(i,j,0) += color.xyz.x;
+  rgb(i,j,1) += color.xyz.y;
+  rgb(i,j,2) += color.xyz.z;
 }
   
 void adaptive_sampler::add_color_sec(size_t i, size_t j, point3f color) {
-  rgb2(i,j,0) += color.x;
-  rgb2(i,j,1) += color.y;
-  rgb2(i,j,2) += color.z;
+  rgb2(i,j,0) += color.xyz.x;
+  rgb2(i,j,1) += color.xyz.y;
+  rgb2(i,j,2) += color.xyz.z;
 }
 //For use when s = 1 in small image preview
 void adaptive_sampler::set_color_main(size_t i, size_t j, point3f color) {
-  rgb(i,j,0) = color.x;
-  rgb(i,j,1) = color.y;
-  rgb(i,j,2) = color.z;
+  rgb(i,j,0) = color.xyz.x;
+  rgb(i,j,1) = color.xyz.y;
+  rgb(i,j,2) = color.xyz.z;
 }
 
 void adaptive_sampler::add_albedo(size_t i, size_t j, point3f albedo) {
-  albedoOutput(i,j,0) += albedo.x;
-  albedoOutput(i,j,1) += albedo.y;
-  albedoOutput(i,j,2) += albedo.z;
+  albedoOutput(i,j,0) += albedo.xyz.x;
+  albedoOutput(i,j,1) += albedo.xyz.y;
+  albedoOutput(i,j,2) += albedo.xyz.z;
 }
 
 void adaptive_sampler::add_normal(size_t i, size_t j, normal3f normal) {
-  normalOutput(i,j,0) += normal.x;
-  normalOutput(i,j,1) += normal.y;
-  normalOutput(i,j,2) += normal.z;
+  normalOutput(i,j,0) += normal.xyz.x;
+  normalOutput(i,j,1) += normal.xyz.y;
+  normalOutput(i,j,2) += normal.xyz.z;
 }
 
 void adaptive_sampler::add_alpha_count(size_t i, size_t j) {

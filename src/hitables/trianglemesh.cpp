@@ -201,7 +201,7 @@ void LoadRayMaterials(std::vector<std::shared_ptr<material> > &mesh_materials,
         point3f ke(emission(0),
                    emission(1),
                    emission(2));
-        if(ke.x != 0 || ke.y != 0 || ke.z != 0) {
+        if(ke.xyz.x != 0 || ke.xyz.y != 0 || ke.xyz.z != 0) {
           tex = std::make_shared<diffuse_light>(std::make_shared<constant_texture>(ke), 1.0, false);
           imp_sample_obj = true;
         } else {
@@ -440,7 +440,7 @@ void LoadMtlMaterials(std::vector<std::shared_ptr<material> > &mesh_materials,
       bool is_metallic = shininess == 1000;
       bool is_glossy = shininess > 128;
       
-      if(ke.x != 0 || ke.y != 0 || ke.z != 0) { 
+      if(ke.xyz.x != 0 || ke.xyz.y != 0 || ke.xyz.z != 0) { 
         //Any emitting material will be a light
         tex = std::make_shared<diffuse_light>(std::make_shared<constant_texture>(ke), 1.0, false);
         imp_sample_obj = true;
@@ -1143,8 +1143,8 @@ void TriangleMesh::ValidateMesh() {
   
   // 4. Check for NaN or Inf in vertex data
   for (size_t i = 0; i < nVertices; ++i) {
-    if (std::isnan(p[i].x) || std::isnan(p[i].y) || std::isnan(p[i].z) ||
-        std::isinf(p[i].x) || std::isinf(p[i].y) || std::isinf(p[i].z)) {
+    if (std::isnan(p[i].xyz.x) || std::isnan(p[i].xyz.y) || std::isnan(p[i].xyz.z) ||
+        std::isinf(p[i].xyz.x) || std::isinf(p[i].xyz.y) || std::isinf(p[i].xyz.z)) {
       throw std::runtime_error("Vertex data contains NaN or Inf values");
     }
   }
@@ -1152,8 +1152,8 @@ void TriangleMesh::ValidateMesh() {
   // 5. Check for NaN or Inf in normal data
   if (has_normals) {
     for (size_t i = 0; i < nNormals; ++i) {
-      if (std::isnan(n[i].x) || std::isnan(n[i].y) || std::isnan(n[i].z) ||
-          std::isinf(n[i].x) || std::isinf(n[i].y) || std::isinf(n[i].z)) {
+      if (std::isnan(n[i].xyz.x) || std::isnan(n[i].xyz.y) || std::isnan(n[i].xyz.z) ||
+          std::isinf(n[i].xyz.x) || std::isinf(n[i].xyz.y) || std::isinf(n[i].xyz.z)) {
         throw std::runtime_error("Normal data contains NaN or Inf values");
       }
     }
@@ -1162,8 +1162,8 @@ void TriangleMesh::ValidateMesh() {
   // 6. Check for NaN or Inf in texture coordinate data
   if (has_tex) {
     for (size_t i = 0; i < nTex; ++i) {
-      if (std::isnan(uv[i].x) || std::isnan(uv[i].y) ||
-          std::isinf(uv[i].x) || std::isinf(uv[i].y)) {
+      if (std::isnan(uv[i].xy.x) || std::isnan(uv[i].xy.y) ||
+          std::isinf(uv[i].xy.x) || std::isinf(uv[i].xy.y)) {
         throw std::runtime_error("Texture coordinate data contains NaN or Inf values");
       }
     }

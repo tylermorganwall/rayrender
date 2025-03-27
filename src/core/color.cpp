@@ -49,7 +49,7 @@ void color_basic(const Ray &r, hitable *world, size_t max_depth,
         continue;
       }
       final_color += emit_color;
-      if (throughput.x == 0 && throughput.y == 0 && throughput.z == 0) {
+      if (throughput.xyz.x == 0 && throughput.xyz.y == 0 && throughput.xyz.z == 0) {
         color = (point3f(0, 0, 0));
         return;
       }
@@ -98,7 +98,7 @@ void color_basic(const Ray &r, hitable *world, size_t max_depth,
           break;
         }
 
-        if ((dir.x == 0 && dir.y == 0 && dir.z == 0)) {
+        if ((dir.xyz.x == 0 && dir.xyz.y == 0 && dir.xyz.z == 0)) {
           break;
         }
 
@@ -165,7 +165,7 @@ void color_basic_path_guiding(const Ray &r, hitable *world, hitable_list *hlist,
         continue;
       }
       final_color += emit_color;
-      if (throughput.x == 0 && throughput.y == 0 && throughput.z == 0) {
+      if (throughput.xyz.x == 0 && throughput.xyz.y == 0 && throughput.xyz.z == 0) {
         if(!wrote_normal) [[unlikely]] {
           normal = hrec.normal;
           wrote_normal = true;
@@ -222,7 +222,7 @@ void color_basic_path_guiding(const Ray &r, hitable *world, hitable_list *hlist,
           break;
         }
 
-        if ((dir.x == 0 && dir.y == 0 && dir.z == 0)) [[unlikely]] {
+        if ((dir.xyz.x == 0 && dir.xyz.y == 0 && dir.xyz.z == 0)) [[unlikely]] {
           break;
         }
 
@@ -287,13 +287,13 @@ void color_shadow_rays(const Ray &r, hitable *world, hitable_list *hlist,
         continue;
       }
       final_color += emit_color;
-      if (throughput.x == 0 && throughput.y == 0 && throughput.z == 0) {
+      if (throughput.xyz.x == 0 && throughput.xyz.y == 0 && throughput.xyz.z == 0) {
         color = point3f(0, 0, 0);
         return;
       }
       if (i > roulette_activate) {
-        float t = std::fmax(throughput.x,
-                            std::fmax(throughput.y, throughput.z));
+        float t = std::fmax(throughput.xyz.x,
+                            std::fmax(throughput.xyz.y, throughput.xyz.z));
         // From Szecsi, Szirmay-Kalos, and Kelemen
         float prob_continue = std::fmin(1.0f, std::sqrt(t / prev_t));
         prev_t = t;

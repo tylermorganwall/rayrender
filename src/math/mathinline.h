@@ -106,8 +106,8 @@ inline point3f de_nan(const point3f& c) {
 
 
 inline vec3f rand_to_unit(vec2f u) {
-  Float a = 2.0*u.x - 1.0; 
-  Float b = 2.0*u.y - 1.0;
+  Float a = 2.0*u.xy.x - 1.0; 
+  Float b = 2.0*u.xy.y - 1.0;
   if (b == 0) {
     b = 1.0;
   }
@@ -129,8 +129,8 @@ inline vec3<T> sgn(vec3<T> v) {
 }
 
 inline vec3f rand_cosine_direction(vec2f u) {
-  Float r1 = u.x;
-  Float r2 = u.y;
+  Float r1 = u.xy.x;
+  Float r2 = u.xy.y;
   Float z = std::sqrt(static_cast<Float>(1)-r2);
   Float phi = 2.0 * static_cast<Float>(M_PI) * r1;
   Float x = cos(phi) * std::sqrt(r2);
@@ -139,8 +139,8 @@ inline vec3f rand_cosine_direction(vec2f u) {
 }
 
 inline vec3f rand_to_sphere(Float radius, Float distance_squared, vec2f u) {
-  Float r1 = u.x;
-  Float r2 = u.y;
+  Float r1 = u.xy.x;
+  Float r2 = u.xy.y;
   Float z = 1.0 + r2 * (std::sqrt(static_cast<Float>(1)-radius * radius / distance_squared) - 1);
   Float phi = 2.0 * static_cast<Float>(M_PI) * r1;
   Float x = std::cos(phi) * std::sqrt(static_cast<Float>(1)-z*z);
@@ -165,17 +165,17 @@ inline vec3f SphericalDirection(Float sinTheta, Float cosTheta,
 // point2f ConcentricSampleDisk(const point2f &u) {
 //   point2f uOffset = 2.f * u - vec2f(1, 1);
 //   
-//   if (uOffset.x == 0 && uOffset.y == 0) {
+//   if (uOffset.xy.x == 0 && uOffset.xy.y == 0) {
 //     return(point2f(0, 0));
 //   }
 //   
 //   Float theta, r;
-//   if (std::fabs(uOffset.x) > std::fabs(uOffset.y)) {
-//     r = uOffset.x;
-//     theta = M_PI_4 * (uOffset.y / uOffset.x);
+//   if (std::fabs(uOffset.xy.x) > std::fabs(uOffset.xy.y)) {
+//     r = uOffset.xy.x;
+//     theta = M_PI_4 * (uOffset.xy.y / uOffset.xy.x);
 //   } else {
-//     r = uOffset.y;
-//     theta = M_PI_2 - M_PI_4 * (uOffset.x / uOffset.y);
+//     r = uOffset.xy.y;
+//     theta = M_PI_2 - M_PI_4 * (uOffset.xy.x / uOffset.xy.y);
 //   }
 //   return(r * point2f(std::cos(theta), std::sin(theta)));
 //   
@@ -252,16 +252,16 @@ inline Float clamp(const Float& c, Float clamplow, Float clamphigh) {
 }
 
 inline vec3f clamp(vec3f input, vec3f low, vec3f high) {
-  vec3f final(clamp(input.x, low.x, high.x),
-              clamp(input.y, low.y, high.y),
-              clamp(input.z, low.z, high.z));
+  vec3f final(clamp(input.xyz.x, low.xyz.x, high.xyz.x),
+              clamp(input.xyz.y, low.xyz.y, high.xyz.y),
+              clamp(input.xyz.z, low.xyz.z, high.xyz.z));
   return(final);
 }
 
 inline point3f clamp(point3f input, point3f low, point3f high) {
-  point3f final(clamp(input.x, low.x, high.x),
-                clamp(input.y, low.y, high.y),
-                clamp(input.z, low.z, high.z));
+  point3f final(clamp(input.xyz.x, low.xyz.x, high.xyz.x),
+                clamp(input.xyz.y, low.xyz.y, high.xyz.y),
+                clamp(input.xyz.z, low.xyz.z, high.xyz.z));
   return(final);
 }
 
@@ -300,11 +300,11 @@ inline Float SafeSqrt(Float x) {
 }
 
 inline vec3f Exp(vec3f a) {
-  return(vec3f(std::exp(a.x),std::exp(a.y),std::exp(a.z)));
+  return(vec3f(std::exp(a.xyz.x),std::exp(a.xyz.y),std::exp(a.xyz.z)));
 }
 
 inline point3f Exp(point3f a) {
-  return(point3f(std::exp(a.x),std::exp(a.y),std::exp(a.z)));
+  return(point3f(std::exp(a.xyz.x),std::exp(a.xyz.y),std::exp(a.xyz.z)));
 }
 
 inline Float Logistic(Float x, Float s) {
@@ -321,9 +321,9 @@ inline Float TrimmedLogistic(Float x, Float s, Float a, Float b) {
 }
 
 
-inline Float CosTheta(const vec3f &w) { return w.z; }
-inline Float Cos2Theta(const vec3f &w) { return w.z * w.z; }
-inline Float AbsCosTheta(const vec3f &w) { return std::fabs(w.z); }
+inline Float CosTheta(const vec3f &w) { return w.xyz.z; }
+inline Float Cos2Theta(const vec3f &w) { return w.xyz.z * w.xyz.z; }
+inline Float AbsCosTheta(const vec3f &w) { return std::fabs(w.xyz.z); }
 
 inline Float Sin2Theta(const vec3f &w) {
   return(std::fmax((Float)0, (Float)1 - Cos2Theta(w)));
@@ -335,12 +335,12 @@ inline Float SinTheta(const vec3f &w) {
 
 inline Float CosPhi(const vec3f &w) {
   Float sinTheta = SinTheta(w);
-  return((sinTheta == 0) ? 1 : clamp(w.x / sinTheta, -1, 1));
+  return((sinTheta == 0) ? 1 : clamp(w.xyz.x / sinTheta, -1, 1));
 }
 
 inline Float SinPhi(const vec3f &w) {
   Float sinTheta = SinTheta(w);
-  return((sinTheta == 0) ? 0 : clamp(w.y / sinTheta, -1, 1));
+  return((sinTheta == 0) ? 0 : clamp(w.xyz.y / sinTheta, -1, 1));
 }
 
 inline Float Cos2Phi(const vec3f &w) {
@@ -428,24 +428,24 @@ template <typename Predicate> int FindInterval(int size, const Predicate &pred) 
 }
 
 inline Float SphericalPhi(const vec3f &v) {
-  float p = atan2f(v.x, v.y);
+  float p = atan2f(v.xyz.x, v.xyz.y);
   return((p < 0.0f) ? p + 2.0f*static_cast<Float>(M_PI) : p);
 }
 
 inline Float SphericalTheta(const vec3f &v) {
-  return(acosf(clamp(v.z, -1.0f, 1.0f)));
+  return(acosf(clamp(v.xyz.z, -1.0f, 1.0f)));
 }
 
 inline bool SameHemisphere(const vec3f &w, const vec3f &wp) {
-  return(w.z * wp.z > 0);
+  return(w.xyz.z * wp.xyz.z > 0);
 }
 
 inline bool SameHemisphere(const normal3f &w, const vec3f &wp) {
-  return(w.z * wp.z > 0);
+  return(w.xyz.z * wp.xyz.z > 0);
 }
 
 inline bool SameHemisphere(const vec3f &w, const normal3f &wp) {
-  return(w.z * wp.z > 0);
+  return(w.xyz.z * wp.xyz.z > 0);
 }
 
 inline bool refract(const vec3f& v, const vec3f& n, Float ni_over_nt, vec3f& refracted) {
@@ -462,7 +462,7 @@ inline bool refract(const vec3f& v, const vec3f& n, Float ni_over_nt, vec3f& ref
 
 inline bool refract(const vec3f& v, const normal3f& n2, Float ni_over_nt, vec3f& refracted) {
   vec3f uv = unit_vector(v);
-  vec3f n = vec3f(n2.x,n2.y,n2.z);
+  vec3f n = vec3f(n2.xyz.x,n2.xyz.y,n2.xyz.z);
   Float dt = dot(uv, n);
   Float discriminant = 1.0 - ni_over_nt * ni_over_nt * (1 - dt * dt);
   if(discriminant > 0) {
@@ -690,13 +690,13 @@ constexpr Float float_scale() { return 1.0f / 65536.0f; }
 constexpr Float int_scale() { return 256.0f; }
 
 inline point3f offset_ray(const vec3f p, const normal3f n) {
-  int of_i[3] = {(int)(int_scale() * n.x), (int)(int_scale() * n.y), (int)(int_scale() * n.z)};
-  point3f p_i(int_to_float(float_to_int(p.x)+((p.x < 0) ? -of_i[0] : of_i[0])),
-              int_to_float(float_to_int(p.y)+((p.y < 0) ? -of_i[1] : of_i[1])),
-              int_to_float(float_to_int(p.z)+((p.z < 0) ? -of_i[2] : of_i[2])));
-  return(point3f(std::fabs(p.x) < origin() ? p.x + float_scale()*n.x : p_i.x,
-                 std::fabs(p.y) < origin() ? p.y + float_scale()*n.y : p_i.y,
-                 std::fabs(p.z) < origin() ? p.z + float_scale()*n.z : p_i.z));
+  int of_i[3] = {(int)(int_scale() * n.xyz.x), (int)(int_scale() * n.xyz.y), (int)(int_scale() * n.xyz.z)};
+  point3f p_i(int_to_float(float_to_int(p.xyz.x)+((p.xyz.x < 0) ? -of_i[0] : of_i[0])),
+              int_to_float(float_to_int(p.xyz.y)+((p.xyz.y < 0) ? -of_i[1] : of_i[1])),
+              int_to_float(float_to_int(p.xyz.z)+((p.xyz.z < 0) ? -of_i[2] : of_i[2])));
+  return(point3f(std::fabs(p.xyz.x) < origin() ? p.xyz.x + float_scale()*n.xyz.x : p_i.xyz.x,
+                 std::fabs(p.xyz.y) < origin() ? p.xyz.y + float_scale()*n.xyz.y : p_i.xyz.y,
+                 std::fabs(p.xyz.z) < origin() ? p.xyz.z + float_scale()*n.xyz.z : p_i.xyz.z));
 }
 
 inline Float Log2(Float x) {
@@ -705,18 +705,18 @@ inline Float Log2(Float x) {
 }
 
 inline point3f RGBtoHSV(point3f& rgb) {
-  Float max_val = ffmax(ffmax(rgb.x, rgb.y), rgb.y);
-  Float min_val = ffmin(ffmin(rgb.x, rgb.y), rgb.z);
+  Float max_val = ffmax(ffmax(rgb.xyz.x, rgb.xyz.y), rgb.xyz.y);
+  Float min_val = ffmin(ffmin(rgb.xyz.x, rgb.xyz.y), rgb.xyz.z);
   Float delta_val = max_val - min_val;
   point3f hsv;
   
   if(delta_val > 0) {
-    if(max_val == rgb.x) {
-      hsv.e[0] = 60 * (fmod(((rgb.y - rgb.z) / delta_val), 6));
-    } else if(max_val == rgb.y) {
-      hsv.e[0] = 60 * (((rgb.z - rgb.x) / delta_val) + 2);
-    } else if(max_val == rgb.z) {
-      hsv.e[0] = 60 * (((rgb.x - rgb.y) / delta_val) + 4);
+    if(max_val == rgb.xyz.x) {
+      hsv.e[0] = 60 * (fmod(((rgb.xyz.y - rgb.xyz.z) / delta_val), 6));
+    } else if(max_val == rgb.xyz.y) {
+      hsv.e[0] = 60 * (((rgb.xyz.z - rgb.xyz.x) / delta_val) + 2);
+    } else if(max_val == rgb.xyz.z) {
+      hsv.e[0] = 60 * (((rgb.xyz.x - rgb.xyz.y) / delta_val) + 4);
     }
     if(max_val > 0) {
       hsv.e[1] = delta_val / max_val;
@@ -737,10 +737,10 @@ inline point3f RGBtoHSV(point3f& rgb) {
 
 
 inline point3f HSVtoRGB(point3f hsv) {
-  Float chroma = hsv.z * hsv.y; 
-  Float fHPrime = fmod(hsv.x / 60.0, 6);
+  Float chroma = hsv.xyz.z * hsv.xyz.y; 
+  Float fHPrime = fmod(hsv.xyz.x / 60.0, 6);
   Float x_val = chroma * (1 - std::fabs(fmod(fHPrime, 2) - 1));
-  Float m_val = hsv.z - chroma;
+  Float m_val = hsv.xyz.z - chroma;
 
   if(0 <= fHPrime && fHPrime < 1) {
     point3f rgb(chroma,x_val,0);
@@ -909,12 +909,12 @@ inline uint64_t ReverseBits64(uint64_t n) {
 
 template <typename T> inline void
 CoordinateSystem(const vec3<T> &v1, vec3<T> *v2, vec3<T> *v3) {
-  if (std::fabs(v1.x) > std::fabs(v1.y)) {
-    *v2 = vec3<T>(-v1.z, 0, v1.x) /
-      std::sqrt(v1.x * v1.x + v1.z * v1.z);
+  if (std::fabs(v1.xy.x) > std::fabs(v1.xy.y)) {
+    *v2 = vec3<T>(-v1.xyz.z, 0, v1.xy.x) /
+      std::sqrt(v1.xy.x * v1.xy.x + v1.xyz.z * v1.xyz.z);
   } else {
-    *v2 = vec3<T>(0, v1.z, -v1.y) /
-      std::sqrt(v1.y * v1.y + v1.z * v1.z);
+    *v2 = vec3<T>(0, v1.xyz.z, -v1.xy.y) /
+      std::sqrt(v1.xy.y * v1.xy.y + v1.xyz.z * v1.xyz.z);
   }
   *v3 = cross(v1, *v2);
 }
@@ -1352,11 +1352,11 @@ inline vec3<T> GramSchmidt(vec3<T> v, vec3<T> w) {
 }
 
 inline void CoordinateSystem(const vec3f &v1, vec3f *v2, vec3f *v3) {
-  Float sign = (v1.z >= 0) ? 1.0f : -1.0f;
-  Float a = -1.0f / (sign + v1.z);
-  Float b = v1.x * v1.y * a;
-  *v2 = vec3f(1 + sign * (v1.x * v1.x) * a, sign * b, -sign * v1.x);
-  *v3 = vec3f(b, sign + (v1.y * v1.y) * a, -v1.y);
+  Float sign = (v1.xyz.z >= 0) ? 1.0f : -1.0f;
+  Float a = -1.0f / (sign + v1.xyz.z);
+  Float b = v1.xyz.x * v1.xyz.y * a;
+  *v2 = vec3f(1 + sign * (v1.xyz.x * v1.xyz.x) * a, sign * b, -sign * v1.xyz.x);
+  *v3 = vec3f(b, sign + (v1.xyz.y * v1.xyz.y) * a, -v1.xyz.y);
 }
 
 template <typename T>

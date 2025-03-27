@@ -45,8 +45,8 @@ void StratifiedSample2D(vec2f *samp, int nx, int ny, random_gen &rng,
     for (int x = 0; x < nx; ++x) {
       Float jx = jitter ? rng.unif_rand() : 0.5f;
       Float jy = jitter ? rng.unif_rand() : 0.5f;
-      samp->x = std::min((x + jx) * dx, OneMinusEpsilon);
-      samp->y = std::min((y + jy) * dy, OneMinusEpsilon);
+      samp->xy.x = std::min((x + jx) * dx, OneMinusEpsilon);
+      samp->xy.y = std::min((y + jy) * dy, OneMinusEpsilon);
       ++samp;
     }
   }
@@ -161,7 +161,7 @@ void StratifiedSampler::StartPixel(unsigned int i, unsigned int j) {
   for (size_t i = 0; i < samples2DArraySizes.size(); ++i) {
     for (size_t j = 0; j < samplesPerPixel; ++j) {
       int count = samples2DArraySizes[i];
-      LatinHypercube(&sampleArray2D[i][j * count].x, count, 2, rng);
+      LatinHypercube(&sampleArray2D[i][j * count].xy.x, count, 2, rng);
     }
   }
   PixelSampler::StartPixel(i,j);

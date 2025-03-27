@@ -100,13 +100,13 @@ bool Transform::operator<(const Transform &t2) const {
 }
 
 Transform Translate(const vec3f &delta) {
-  Matrix4x4 m(1, 0, 0, delta.x, 
-              0, 1, 0, delta.y, 
-              0, 0, 1, delta.z, 
+  Matrix4x4 m(1, 0, 0, delta.xyz.x, 
+              0, 1, 0, delta.xyz.y, 
+              0, 0, 1, delta.xyz.z, 
               0, 0, 0, 1);
-  Matrix4x4 minv(1, 0, 0, -delta.x, 
-                 0, 1, 0, -delta.y, 
-                 0, 0, 1, -delta.z, 
+  Matrix4x4 minv(1, 0, 0, -delta.xyz.x, 
+                 0, 1, 0, -delta.xyz.y, 
+                 0, 0, 1, -delta.xyz.z, 
                  0, 0, 0, 1);
   return Transform(m, minv);
 }
@@ -159,20 +159,20 @@ Transform Rotate(Float theta, const vec3f &axis) {
   Float cosTheta = std::cos(Radians(theta));
   Matrix4x4 m;
   // Compute rotation of first basis vector
-  m.m[0][0] = a.x * a.x + (1 - a.x * a.x) * cosTheta;
-  m.m[0][1] = a.x * a.y * (1 - cosTheta) - a.z * sinTheta;
-  m.m[0][2] = a.x * a.z * (1 - cosTheta) + a.y * sinTheta;
+  m.m[0][0] = a.xyz.x * a.xyz.x + (1 - a.xyz.x * a.xyz.x) * cosTheta;
+  m.m[0][1] = a.xyz.x * a.xyz.y * (1 - cosTheta) - a.xyz.z * sinTheta;
+  m.m[0][2] = a.xyz.x * a.xyz.z * (1 - cosTheta) + a.xyz.y * sinTheta;
   m.m[0][3] = 0;
   
   // Compute rotations of second and third basis vectors
-  m.m[1][0] = a.x * a.y * (1 - cosTheta) + a.z * sinTheta;
-  m.m[1][1] = a.y * a.y + (1 - a.y * a.y) * cosTheta;
-  m.m[1][2] = a.y * a.z * (1 - cosTheta) - a.x * sinTheta;
+  m.m[1][0] = a.xyz.x * a.xyz.y * (1 - cosTheta) + a.xyz.z * sinTheta;
+  m.m[1][1] = a.xyz.y * a.xyz.y + (1 - a.xyz.y * a.xyz.y) * cosTheta;
+  m.m[1][2] = a.xyz.y * a.xyz.z * (1 - cosTheta) - a.xyz.x * sinTheta;
   m.m[1][3] = 0;
   
-  m.m[2][0] = a.x * a.z * (1 - cosTheta) - a.y * sinTheta;
-  m.m[2][1] = a.y * a.z * (1 - cosTheta) + a.x * sinTheta;
-  m.m[2][2] = a.z * a.z + (1 - a.z * a.z) * cosTheta;
+  m.m[2][0] = a.xyz.x * a.xyz.z * (1 - cosTheta) - a.xyz.y * sinTheta;
+  m.m[2][1] = a.xyz.y * a.xyz.z * (1 - cosTheta) + a.xyz.x * sinTheta;
+  m.m[2][2] = a.xyz.z * a.xyz.z + (1 - a.xyz.z * a.xyz.z) * cosTheta;
   m.m[2][3] = 0;
   return Transform(m, Transpose(m));
 }
@@ -180,9 +180,9 @@ Transform Rotate(Float theta, const vec3f &axis) {
 Transform LookAt(const point3f &pos, const point3f &look, const vec3f &up) {
   Matrix4x4 cameraToWorld;
   // Initialize fourth column of viewing matrix
-  cameraToWorld.m[0][3] = pos.x;
-  cameraToWorld.m[1][3] = pos.y;
-  cameraToWorld.m[2][3] = pos.z;
+  cameraToWorld.m[0][3] = pos.xyz.x;
+  cameraToWorld.m[1][3] = pos.xyz.y;
+  cameraToWorld.m[2][3] = pos.xyz.z;
   cameraToWorld.m[3][3] = 1;
   
   // Initialize first three columns of viewing matrix
@@ -193,17 +193,17 @@ Transform LookAt(const point3f &pos, const point3f &look, const vec3f &up) {
     return Transform();
   }
   vec3f newUp = cross(dir, right);
-  cameraToWorld.m[0][0] = right.x;
-  cameraToWorld.m[1][0] = right.y;
-  cameraToWorld.m[2][0] = right.z;
+  cameraToWorld.m[0][0] = right.xyz.x;
+  cameraToWorld.m[1][0] = right.xyz.y;
+  cameraToWorld.m[2][0] = right.xyz.z;
   cameraToWorld.m[3][0] = 0.;
-  cameraToWorld.m[0][1] = newUp.x;
-  cameraToWorld.m[1][1] = newUp.y;
-  cameraToWorld.m[2][1] = newUp.z;
+  cameraToWorld.m[0][1] = newUp.xyz.x;
+  cameraToWorld.m[1][1] = newUp.xyz.y;
+  cameraToWorld.m[2][1] = newUp.xyz.z;
   cameraToWorld.m[3][1] = 0.;
-  cameraToWorld.m[0][2] = dir.x;
-  cameraToWorld.m[1][2] = dir.y;
-  cameraToWorld.m[2][2] = dir.z;
+  cameraToWorld.m[0][2] = dir.xyz.x;
+  cameraToWorld.m[1][2] = dir.xyz.y;
+  cameraToWorld.m[2][2] = dir.xyz.z;
   cameraToWorld.m[3][2] = 0.;
   return Transform(Inverse(cameraToWorld), cameraToWorld);
 }
@@ -263,13 +263,13 @@ aabb Transform::operator()(const aabb &b) const {
   point3f pMax = b.max();
   
   aabb ret(M(pMin));
-  ret = surrounding_box(ret, M(point3f(pMax.x, pMin.y, pMin.z)));
-  ret = surrounding_box(ret, M(point3f(pMin.x, pMax.y, pMin.z)));
-  ret = surrounding_box(ret, M(point3f(pMin.x, pMin.y, pMax.z)));
-  ret = surrounding_box(ret, M(point3f(pMin.x, pMax.y, pMax.z)));
-  ret = surrounding_box(ret, M(point3f(pMax.x, pMax.y, pMin.z)));
-  ret = surrounding_box(ret, M(point3f(pMax.x, pMin.y, pMax.z)));
-  ret = surrounding_box(ret, M(point3f(pMax.x, pMax.y, pMax.z)));
+  ret = surrounding_box(ret, M(point3f(pMax.xyz.x, pMin.xyz.y, pMin.xyz.z)));
+  ret = surrounding_box(ret, M(point3f(pMin.xyz.x, pMax.xyz.y, pMin.xyz.z)));
+  ret = surrounding_box(ret, M(point3f(pMin.xyz.x, pMin.xyz.y, pMax.xyz.z)));
+  ret = surrounding_box(ret, M(point3f(pMin.xyz.x, pMax.xyz.y, pMax.xyz.z)));
+  ret = surrounding_box(ret, M(point3f(pMax.xyz.x, pMax.xyz.y, pMin.xyz.z)));
+  ret = surrounding_box(ret, M(point3f(pMax.xyz.x, pMin.xyz.y, pMax.xyz.z)));
+  ret = surrounding_box(ret, M(point3f(pMax.xyz.x, pMax.xyz.y, pMax.xyz.z)));
   return ret;
 }
 
@@ -291,7 +291,7 @@ Transform Transform::operator*(const Transform &t2) const {
 template <typename T>
 point3<T> Transform::operator()(const point3<T> &p,
                                 vec3<T> *pError) const {
-  T x = p.x, y = p.y, z = p.z;
+  T x = p.xyz.x, y = p.xyz.y, z = p.xyz.z;
   // Compute transformed coordinates from point _pt_
   T xp = (m.m[0][0] * x + m.m[0][1] * y) + (m.m[0][2] * z + m.m[0][3]);
   T yp = (m.m[1][0] * x + m.m[1][1] * y) + (m.m[1][2] * z + m.m[1][3]);
@@ -318,32 +318,32 @@ template <typename T>
 point3<T> Transform::operator()(const point3<T> &pt,
                                 const vec3<T> &ptError,
                                 vec3<T> *absError) const {
-  T x = pt.x, y = pt.y, z = pt.z;
+  T x = pt.xyz.x, y = pt.xyz.y, z = pt.xyz.z;
   T xp = (m.m[0][0] * x + m.m[0][1] * y) + (m.m[0][2] * z + m.m[0][3]);
   T yp = (m.m[1][0] * x + m.m[1][1] * y) + (m.m[1][2] * z + m.m[1][3]);
   T zp = (m.m[2][0] * x + m.m[2][1] * y) + (m.m[2][2] * z + m.m[2][3]);
   T wp = (m.m[3][0] * x + m.m[3][1] * y) + (m.m[3][2] * z + m.m[3][3]);
   absError->e[0] =
     (gamma(3) + (T)1) *
-    (std::fabs(m.m[0][0]) * ptError.x  + 
-     std::fabs(m.m[0][1]) * ptError.y  +
-     std::fabs(m.m[0][2]) * ptError.z) +
+    (std::fabs(m.m[0][0]) * ptError.xyz.x  + 
+     std::fabs(m.m[0][1]) * ptError.xyz.y  +
+     std::fabs(m.m[0][2]) * ptError.xyz.z) +
     gamma(3) * (std::fabs(m.m[0][0] * x) + 
                 std::fabs(m.m[0][1] * y) +
                 std::fabs(m.m[0][2] * z) + std::fabs(m.m[0][3]));
   absError->e[1] =
     (gamma(3) + (T)1) *
-    (std::fabs(m.m[1][0]) * ptError.x  + 
-     std::fabs(m.m[1][1]) * ptError.y  +
-     std::fabs(m.m[1][2]) * ptError.z) +
+    (std::fabs(m.m[1][0]) * ptError.xyz.x  + 
+     std::fabs(m.m[1][1]) * ptError.xyz.y  +
+     std::fabs(m.m[1][2]) * ptError.xyz.z) +
     gamma(3) * (std::fabs(m.m[1][0] * x) + 
                 std::fabs(m.m[1][1] * y) +
                 std::fabs(m.m[1][2] * z) + std::fabs(m.m[1][3]));
   absError->e[2] =
     (gamma(3) + (T)1) *
-    (std::fabs(m.m[2][0]) * ptError.x  + 
-     std::fabs(m.m[2][1]) * ptError.y  +
-     std::fabs(m.m[2][2]) * ptError.z) +
+    (std::fabs(m.m[2][0]) * ptError.xyz.x  + 
+     std::fabs(m.m[2][1]) * ptError.xyz.y  +
+     std::fabs(m.m[2][2]) * ptError.xyz.z) +
     gamma(3) * (std::fabs(m.m[2][0] * x) + 
                 std::fabs(m.m[2][1] * y) +
                 std::fabs(m.m[2][2] * z) + std::fabs(m.m[2][3]));
@@ -358,19 +358,19 @@ point3<T> Transform::operator()(const point3<T> &pt,
 template <typename T>
 vec3<T> Transform::operator()(const vec3<T> &v,
                               vec3<T> *absError) const {
-  T x = v.x, y = v.y, z = v.z;
+  T x = v.xyz.x, y = v.xyz.y, z = v.xyz.z;
   absError->e[0] =
-    gamma(3) * (std::fabs(m.m[0][0] * v.x) + 
-                std::fabs(m.m[0][1] * v.y) +
-                std::fabs(m.m[0][2] * v.z));
+    gamma(3) * (std::fabs(m.m[0][0] * v.xyz.x) + 
+                std::fabs(m.m[0][1] * v.xyz.y) +
+                std::fabs(m.m[0][2] * v.xyz.z));
   absError->e[1] =
-    gamma(3) * (std::fabs(m.m[1][0] * v.x) + 
-                std::fabs(m.m[1][1] * v.y) +
-                std::fabs(m.m[1][2] * v.z));
+    gamma(3) * (std::fabs(m.m[1][0] * v.xyz.x) + 
+                std::fabs(m.m[1][1] * v.xyz.y) +
+                std::fabs(m.m[1][2] * v.xyz.z));
   absError->e[2] =
-    gamma(3) * (std::fabs(m.m[2][0] * v.x) + 
-                std::fabs(m.m[2][1] * v.y) +
-                std::fabs(m.m[2][2] * v.z));
+    gamma(3) * (std::fabs(m.m[2][0] * v.xyz.x) + 
+                std::fabs(m.m[2][1] * v.xyz.y) +
+                std::fabs(m.m[2][2] * v.xyz.z));
   return vec3<T>(m.m[0][0] * x + m.m[0][1] * y + m.m[0][2] * z,
                  m.m[1][0] * x + m.m[1][1] * y + m.m[1][2] * z,
                  m.m[2][0] * x + m.m[2][1] * y + m.m[2][2] * z);
@@ -380,31 +380,31 @@ template <typename T>
 vec3<T> Transform::operator()(const vec3<T> &v,
                               const vec3<T> &vError,
                               vec3<T> *absError) const {
-  T x = v.x, y = v.y, z = v.z;
+  T x = v.xyz.x, y = v.xyz.y, z = v.xyz.z;
   absError->e[0] =
     (gamma(3) + (T)1) *
-    (std::fabs(m.m[0][0]) * vError.x + 
-     std::fabs(m.m[0][1]) * vError.y +
-     std::fabs(m.m[0][2]) * vError.z) +
-    gamma(3) * (std::fabs(m.m[0][0] * v.x) + 
-                std::fabs(m.m[0][1] * v.y) +
-                std::fabs(m.m[0][2] * v.z));
+    (std::fabs(m.m[0][0]) * vError.xyz.x + 
+     std::fabs(m.m[0][1]) * vError.xyz.y +
+     std::fabs(m.m[0][2]) * vError.xyz.z) +
+    gamma(3) * (std::fabs(m.m[0][0] * v.xyz.x) + 
+                std::fabs(m.m[0][1] * v.xyz.y) +
+                std::fabs(m.m[0][2] * v.xyz.z));
   absError->e[1] =
     (gamma(3) + (T)1) *
-    (std::fabs(m.m[1][0]) * vError.x + 
-     std::fabs(m.m[1][1]) * vError.y +
-     std::fabs(m.m[1][2]) * vError.z) +
-    gamma(3) * (std::fabs(m.m[1][0] * v.x) + 
-                std::fabs(m.m[1][1] * v.y) +
-                std::fabs(m.m[1][2] * v.z));
+    (std::fabs(m.m[1][0]) * vError.xyz.x + 
+     std::fabs(m.m[1][1]) * vError.xyz.y +
+     std::fabs(m.m[1][2]) * vError.xyz.z) +
+    gamma(3) * (std::fabs(m.m[1][0] * v.xyz.x) + 
+                std::fabs(m.m[1][1] * v.xyz.y) +
+                std::fabs(m.m[1][2] * v.xyz.z));
   absError->e[2] =
     (gamma(3) + (T)1) *
-    (std::fabs(m.m[2][0]) * vError.x + 
-     std::fabs(m.m[2][1]) * vError.y +
-     std::fabs(m.m[2][2]) * vError.z) +
-    gamma(3) * (std::fabs(m.m[2][0] * v.x) + 
-                std::fabs(m.m[2][1] * v.y) +
-                std::fabs(m.m[2][2] * v.z));
+    (std::fabs(m.m[2][0]) * vError.xyz.x + 
+     std::fabs(m.m[2][1]) * vError.xyz.y +
+     std::fabs(m.m[2][2]) * vError.xyz.z) +
+    gamma(3) * (std::fabs(m.m[2][0] * v.xyz.x) + 
+                std::fabs(m.m[2][1] * v.xyz.y) +
+                std::fabs(m.m[2][2] * v.xyz.z));
   return vec3<T>(m.m[0][0] * x + m.m[0][1] * y + m.m[0][2] * z,
                  m.m[1][0] * x + m.m[1][1] * y + m.m[1][2] * z,
                  m.m[2][0] * x + m.m[2][1] * y + m.m[2][2] * z);
@@ -412,7 +412,7 @@ vec3<T> Transform::operator()(const vec3<T> &v,
 
 template <typename T>
 inline point3<T> Transform::ApplyInverse(point3<T> p) const {
-    T x = p.x, y = p.y, z = p.z;
+    T x = p.xyz.x, y = p.xyz.y, z = p.xyz.z;
     T xp = (mInv.m[0][0] * x + mInv.m[0][1] * y) + (mInv.m[0][2] * z + mInv.m[0][3]);
     T yp = (mInv.m[1][0] * x + mInv.m[1][1] * y) + (mInv.m[1][2] * z + mInv.m[1][3]);
     T zp = (mInv.m[2][0] * x + mInv.m[2][1] * y) + (mInv.m[2][2] * z + mInv.m[2][3]);
@@ -425,7 +425,7 @@ inline point3<T> Transform::ApplyInverse(point3<T> p) const {
 
 template <typename T>
 inline vec3<T> Transform::ApplyInverse(vec3<T> v) const {
-    T x = v.x, y = v.y, z = v.z;
+    T x = v.xyz.x, y = v.xyz.y, z = v.xyz.z;
     return vec3<T>(mInv.m[0][0] * x + mInv.m[0][1] * y + mInv.m[0][2] * z,
                       mInv.m[1][0] * x + mInv.m[1][1] * y + mInv.m[1][2] * z,
                       mInv.m[2][0] * x + mInv.m[2][1] * y + mInv.m[2][2] * z);
@@ -433,7 +433,7 @@ inline vec3<T> Transform::ApplyInverse(vec3<T> v) const {
 
 template <typename T>
 inline normal3f Transform::ApplyInverse(normal3f n) const {
-    T x = n.x, y = n.y, z = n.z;
+    T x = n.xyz.x, y = n.xyz.y, z = n.xyz.z;
     return normal3f(m.m[0][0] * x + m.m[1][0] * y + m.m[2][0] * z,
                     m.m[0][1] * x + m.m[1][1] * y + m.m[2][1] * z,
                     m.m[0][2] * x + m.m[1][2] * y + m.m[2][2] * z);
@@ -757,9 +757,9 @@ context("Translate function works correctly") {
       point3f expectedPoint(1.0f, 2.0f, 3.0f);
 
       // Compare individual components
-      expect_true(pTransformed.x == Approx(expectedPoint.x));
-      expect_true(pTransformed.y == Approx(expectedPoint.y));
-      expect_true(pTransformed.z == Approx(expectedPoint.z));
+      expect_true(pTransformed.xyz.x == Approx(expectedPoint.xyz.x));
+      expect_true(pTransformed.xyz.y == Approx(expectedPoint.xyz.y));
+      expect_true(pTransformed.xyz.z == Approx(expectedPoint.xyz.z));
   }
 };
 
@@ -792,9 +792,9 @@ context("Scale function works correctly") {
       point3f pTransformed = scale(p);
       point3f expectedPoint(2.0f, 3.0f, 4.0f);
 
-      expect_true(pTransformed.x == Approx(expectedPoint.x));
-      expect_true(pTransformed.y == Approx(expectedPoint.y));
-      expect_true(pTransformed.z == Approx(expectedPoint.z));
+      expect_true(pTransformed.xyz.x == Approx(expectedPoint.xyz.x));
+      expect_true(pTransformed.xyz.y == Approx(expectedPoint.xyz.y));
+      expect_true(pTransformed.xyz.z == Approx(expectedPoint.xyz.z));
   }
 }
 
@@ -822,9 +822,9 @@ context("RotateX function works correctly") {
       point3f pTransformed = rotateX(p);
       point3f expectedPoint(0.0f, 0.0f, 1.0f);
 
-      expect_true(pTransformed.x == Approx(expectedPoint.x));
-      expect_true(pTransformed.y == Approx(expectedPoint.y));
-      expect_true(pTransformed.z == Approx(expectedPoint.z));
+      expect_true(pTransformed.xyz.x == Approx(expectedPoint.xyz.x));
+      expect_true(pTransformed.xyz.y == Approx(expectedPoint.xyz.y));
+      expect_true(pTransformed.xyz.z == Approx(expectedPoint.xyz.z));
   }
 }
 
@@ -852,9 +852,9 @@ context("RotateY function works correctly") {
       point3f pTransformed = rotateY(p);
       point3f expectedPoint(0.0f, 0.0f, -1.0f);
 
-      expect_true(pTransformed.x == Approx(expectedPoint.x));
-      expect_true(pTransformed.y == Approx(expectedPoint.y));
-      expect_true(pTransformed.z == Approx(expectedPoint.z));
+      expect_true(pTransformed.xyz.x == Approx(expectedPoint.xyz.x));
+      expect_true(pTransformed.xyz.y == Approx(expectedPoint.xyz.y));
+      expect_true(pTransformed.xyz.z == Approx(expectedPoint.xyz.z));
   }
 }
 
@@ -882,9 +882,9 @@ context("RotateZ function works correctly") {
       point3f pTransformed = rotateZ(p);
       point3f expectedPoint(0.0f, 1.0f, 0.0f);
 
-      expect_true(pTransformed.x == Approx(expectedPoint.x));
-      expect_true(pTransformed.y == Approx(expectedPoint.y));
-      expect_true(pTransformed.z == Approx(expectedPoint.z));
+      expect_true(pTransformed.xyz.x == Approx(expectedPoint.xyz.x));
+      expect_true(pTransformed.xyz.y == Approx(expectedPoint.xyz.y));
+      expect_true(pTransformed.xyz.z == Approx(expectedPoint.xyz.z));
   }
 }
 
@@ -906,9 +906,9 @@ context("Rotate function works correctly with arbitrary axis") {
       point3f pTransformed = rotate(p);
       point3f expectedPoint(0.0f, 1.0f, 0.0f);
 
-      expect_true(pTransformed.x == Approx(expectedPoint.x));
-      expect_true(pTransformed.y == Approx(expectedPoint.y));
-      expect_true(pTransformed.z == Approx(expectedPoint.z));
+      expect_true(pTransformed.xyz.x == Approx(expectedPoint.xyz.x));
+      expect_true(pTransformed.xyz.y == Approx(expectedPoint.xyz.y));
+      expect_true(pTransformed.xyz.z == Approx(expectedPoint.xyz.z));
   }
 }
 
@@ -926,9 +926,9 @@ context("LookAt function works correctly") {
       point3f pTransformed = lookAt(p);
       point3f expectedPoint(0.0f, 0.0f, 5.0f);
 
-      expect_true(pTransformed.x == Approx(expectedPoint.x));
-      expect_true(pTransformed.y == Approx(expectedPoint.y));
-      expect_true(pTransformed.z == Approx(expectedPoint.z));
+      expect_true(pTransformed.xyz.x == Approx(expectedPoint.xyz.x));
+      expect_true(pTransformed.xyz.y == Approx(expectedPoint.xyz.y));
+      expect_true(pTransformed.xyz.z == Approx(expectedPoint.xyz.z));
   }
 }
 
@@ -948,9 +948,9 @@ context("Orthographic function works correctly") {
       Float scaleZ = 1 / (zFar - zNear);
       point3f expectedPoint(1.0f, 2.0f, 3.0f * scaleZ - zNear * scaleZ);
 
-      expect_true(pTransformed.x == Approx(expectedPoint.x));
-      expect_true(pTransformed.y == Approx(expectedPoint.y));
-      expect_true(pTransformed.z == Approx(expectedPoint.z));
+      expect_true(pTransformed.xyz.x == Approx(expectedPoint.xyz.x));
+      expect_true(pTransformed.xyz.y == Approx(expectedPoint.xyz.y));
+      expect_true(pTransformed.xyz.z == Approx(expectedPoint.xyz.z));
   }
 }
 
@@ -1002,9 +1002,9 @@ context("Transform composition works correctly") {
       // Expected result: first scales to (2,2,2), then translates to (3,2,2)
       point3f expectedPoint(3.0f, 2.0f, 2.0f);
 
-      expect_true(pTransformed.x == Approx(expectedPoint.x));
-      expect_true(pTransformed.y == Approx(expectedPoint.y));
-      expect_true(pTransformed.z == Approx(expectedPoint.z));
+      expect_true(pTransformed.xyz.x == Approx(expectedPoint.xyz.x));
+      expect_true(pTransformed.xyz.y == Approx(expectedPoint.xyz.y));
+      expect_true(pTransformed.xyz.z == Approx(expectedPoint.xyz.z));
   }
 }
 
