@@ -38,14 +38,7 @@ public:
   
   union {
     Float e[2];
-    struct {
-        Float x;
-        Float y;
-    } xy;
-    struct {
-        Float u;
-        Float v;
-    } uv;
+    XYstruct<T> xy;
   };
 };
 

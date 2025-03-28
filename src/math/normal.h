@@ -45,11 +45,7 @@ public:
   
   union {
     Float e[3];
-    struct {
-        Float x; 
-        Float y;
-        Float z;
-    } xyz;
+    XYZstruct<Float> xyz;
   };
 };
 

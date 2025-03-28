@@ -70,11 +70,7 @@ public:
   
   union {
     T e[3];
-    struct {
-        T x; 
-        T y;
-        T z;
-    } xyz;
+    XYZstruct<T> xyz;
   };
 };
 

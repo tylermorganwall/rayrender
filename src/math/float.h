@@ -9,6 +9,20 @@ typedef double Float;
 typedef float Float;
 #endif 
 
+template <typename T>
+struct XYZstruct {
+    T x;
+    T y;
+    T z;
+};
+
+template <typename T>
+struct XYstruct {
+    T x;
+    T y;
+    T z;
+};
+
 
 #include <cmath>
 
