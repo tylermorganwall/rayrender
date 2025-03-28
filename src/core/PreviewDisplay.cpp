@@ -1069,8 +1069,8 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
                                                      Named("aperture") = cam_aperture,
                                                      Named("fov") = fov,
                                                      Named("focal") = fd,
-                                                     Named("orthox") = ortho.xyz.x,
-                                                     Named("orthoy") = ortho.xyz.y,
+                                                     Named("orthox") = ortho.xy.x,
+                                                     Named("orthoy") = ortho.xy.y,
                                                      Named("upx")  = cam_up.xyz.x,
                                                      Named("upy")  = cam_up.xyz.y,
                                                      Named("upz")  = cam_up.xyz.z));
@@ -1084,8 +1084,8 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
                                                      Named("aperture") = 0,
                                                      Named("fov") = 0,
                                                      Named("focal") = fd,
-                                                     Named("orthox") = ortho.xyz.x,
-                                                     Named("orthoy") = ortho.xyz.y,
+                                                     Named("orthox") = ortho.xy.x,
+                                                     Named("orthoy") = ortho.xy.y,
                                                      Named("upx")  = cam_up.xyz.x,
                                                      Named("upy")  = cam_up.xyz.y,
                                                      Named("upz")  = cam_up.xyz.z));
@@ -1099,8 +1099,8 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
                                                      Named("aperture") = 0,
                                                      Named("fov") = 0,
                                                      Named("focal") = fd,
-                                                     Named("orthox") = ortho.xyz.x,
-                                                     Named("orthoy") = ortho.xyz.y,
+                                                     Named("orthox") = ortho.xy.x,
+                                                     Named("orthoy") = ortho.xy.y,
                                                      Named("upx")  = cam_up.xyz.x,
                                                      Named("upy")  = cam_up.xyz.y,
                                                      Named("upz")  = cam_up.xyz.z));
@@ -1155,7 +1155,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         hit_record hrec;
         if(fov < 0) {
           CameraSample samp({1-u,v},point2f(0.5,0.5), 0.5);
-          ray r2;
+          Ray r2;
           cam_w->GenerateRay(samp,&r2);
           if(world_w->hit(r2, 0.001, FLT_MAX, hrec, *rng_w)) {
             dir = convert_to_vec3(-hrec.p);
@@ -1164,7 +1164,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             }
           }
         } else if (fov > 0) {
-          ray r2 = cam_w->get_ray(u,1-v, point3f(0),
+          Ray r2 = cam_w->get_ray(u,1-v, point3f(0),
                                 0.5f);
           world_w->hit(r2, 0.001, FLT_MAX, hrec, *rng_w);
           dir = r2.direction();
@@ -1172,7 +1172,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             just_direction = true;
           } 
         } else {
-          ray r2 = cam_w->get_ray(u,1-v, point3f(0),
+          Ray r2 = cam_w->get_ray(u,1-v, point3f(0),
                                 0.5f);
           if(world_w->hit(r2, 0.001, FLT_MAX, hrec, *rng_w)) {
             if( hrec.shape->GetName() != "EnvironmentLight") {
@@ -1215,17 +1215,17 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
       hit_record hrec;
       if(fov < 0) {
         CameraSample samp({1-u,v},point2f(0.5,0.5), 0.5);
-        ray r2;
+        Ray r2;
         cam_w->GenerateRay(samp,&r2);
         if(world_w->hit(r2, 0.001, FLT_MAX, hrec, *rng_w)) {
           dir = convert_to_vec3(-hrec.p);
         }
       } else if (fov > 0) {
-        ray r2 = cam_w->get_ray(u,1-v, point3f(0),
+        Ray r2 = cam_w->get_ray(u,1-v, point3f(0),
                                 0.5f);
         dir = r2.direction();
       } else {
-        ray r2 = cam_w->get_ray(u,1-v, point3f(0),
+        Ray r2 = cam_w->get_ray(u,1-v, point3f(0),
                               0.5f);
         if(world_w->hit(r2, 0.001, FLT_MAX, hrec, *rng_w)) {
           if( hrec.shape->GetName() != "EnvironmentLight") {
