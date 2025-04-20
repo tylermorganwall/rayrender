@@ -423,4 +423,3 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
   
   return(final_image);
 }
-

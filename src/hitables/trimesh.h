@@ -8,7 +8,7 @@
 #include "../core/bvh.h"
 #ifndef STBIMAGEH
 #define STBIMAGEH
-#include "../stb/stb_image.h"
+#include "../../../ext/stb/stb_image.h"
 #endif
 #include <Rcpp.h>
 

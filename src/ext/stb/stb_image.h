@@ -126,7 +126,7 @@ RECENT REVISION HISTORY:
 #ifndef STBI_INCLUDE_STB_IMAGE_H
 #define STBI_INCLUDE_STB_IMAGE_H
 
-#include "../math/float.h"
+#include "../../math/float.h"
 
 // DOCUMENTATION
 //

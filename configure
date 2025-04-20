@@ -618,7 +618,11 @@ LIBOBJS
 DEFINES
 PKG_LIBS
 PKG_CPPFLAGS
+PKG_CXXFLAGS
 DIR_SOURCES
+PBRT_SOURCES
+EXT_CPP_SOURCES
+EXT_C_SOURCES
 SUBDIR_SOURCES
 OIDN_LIBS
 OIDN_LDFLAGS
@@ -3661,6 +3665,30 @@ ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ex
 ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
 
 
+PKG_CXXFLAGS=""
+
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for hidden‑visibility support" >&5
+printf %s "checking for hidden‑visibility support... " >&6; }
+PKG_CXXFLAGS="${PKG_CXXFLAGS} -fvisibility=hidden -fvisibility-inlines-hidden"
+CFLAGS="${CFLAGS}  -fvisibility=hidden"
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: enabled" >&5
+printf "%s\n" "enabled" >&6; }
+
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking target architecture" >&5
+printf %s "checking target architecture... " >&6; }
+TARGET_ARCH=`${R_HOME}/bin/Rscript -e 'cat(Sys.info()["machine"])'`
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: ${TARGET_ARCH}" >&5
+printf "%s\n" "${TARGET_ARCH}" >&6; }
+
+
+if test "$OS" = "Windows_NT"; then
+  DEFINES="${DEFINES} -DPBRT_IS_WINDOWS -DNOMINMAX -DPBRT_HAVE__ALIGNED_MALLOC"
+elif test "$(uname)" = "Darwin"; then
+  DEFINES="${DEFINES} -DPBRT_IS_OSX -DPBRT_HAVE_POSIX_MEMALIGN"
+elif test "$(uname)" = "Linux"; then
+  DEFINES="${DEFINES} -DPBRT_IS_LINUX -DPBRT_HAVE_POSIX_MEMALIGN"
+fi
+
 
 
 
@@ -4440,6 +4468,119 @@ fi
 
 
 
+########################################################
+# Locate + link to OpenEXR (static)
+########################################################
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking OpenEXR package" >&5
+printf %s "checking OpenEXR package... " >&6; }
+
+# Directories from the R package 'libopenexr'
+OPENEXR_LIB_DIR=`${R_HOME}/bin/Rscript -e 'cat(system.file("lib", package="libopenexr", mustWork=TRUE))'`
+OPENEXR_INC_DIR=`${R_HOME}/bin/Rscript -e 'cat(system.file("include", "OpenEXR", package="libopenexr", mustWork=TRUE))'`
+
+# Detect architecture subfolder (e.g. "x86_64", "arm64", etc.)
+OPENEXR_LIB_ARCH="${OPENEXR_LIB_DIR}/${TARGET_ARCH}"
+
+if test -d "${OPENEXR_LIB_ARCH}"; then
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: found at ${OPENEXR_LIB_ARCH}" >&5
+printf "%s\n" "found at ${OPENEXR_LIB_ARCH}" >&6; }
+  # Add -I for headers
+  PKG_CPPFLAGS="${PKG_CPPFLAGS} -I${OPENEXR_INC_DIR}"
+  # Add -L (the library folder) plus -l (the library name)
+  PKG_LIBS="${PKG_LIBS} -L${OPENEXR_LIB_ARCH}  -lIlmThread-3_4 -lOpenEXR-3_4 -lIex-3_4 -lOpenEXRCore-3_4 -lOpenEXRUtil-3_4"
+else
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: not found" >&5
+printf "%s\n" "not found" >&6; }
+  echo ${OPENEXR_LIB_ARCH}
+  as_fn_error $? "OpenEXR not found; please install libopenexr or make sure it is on the library path" "$LINENO" 5
+fi
+
+
+########################################################
+# Locate + link to Imath (static)
+########################################################
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking Imath package" >&5
+printf %s "checking Imath package... " >&6; }
+
+IMATH_LIB_DIR=`${R_HOME}/bin/Rscript -e 'cat(system.file("lib", package="libimath", mustWork=TRUE))'`
+IMATH_INC_DIR=`${R_HOME}/bin/Rscript -e 'cat(system.file("include", "Imath", package="libimath", mustWork=TRUE))'`
+IMATH_LIB_ARCH="${IMATH_LIB_DIR}/${TARGET_ARCH}"
+
+if test -d "${IMATH_LIB_ARCH}"; then
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: found at ${IMATH_LIB_ARCH}" >&5
+printf "%s\n" "found at ${IMATH_LIB_ARCH}" >&6; }
+  PKG_CPPFLAGS="${PKG_CPPFLAGS} -I${IMATH_INC_DIR}"
+  PKG_LIBS="${PKG_LIBS} -L${IMATH_LIB_ARCH} -lImath-3_2"
+else
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: not found" >&5
+printf "%s\n" "not found" >&6; }
+  as_fn_error $? "Imath not found; please install libimath" "$LINENO" 5
+fi
+
+########################################################
+# Locate + link to Ptex (static)
+########################################################
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking Ptex package" >&5
+printf %s "checking Ptex package... " >&6; }
+
+PTEX_LIB_DIR=`${R_HOME}/bin/Rscript -e 'cat(system.file("lib", package="libptex", mustWork=TRUE))'`
+PTEX_INC_DIR=`${R_HOME}/bin/Rscript -e 'cat(system.file("include", package="libptex", mustWork=TRUE))'`
+PTEX_LIB_ARCH="${PTEX_LIB_DIR}/${TARGET_ARCH}/ptex"
+
+if test -d "${PTEX_LIB_ARCH}"; then
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: found at ${PTEX_LIB_ARCH}" >&5
+printf "%s\n" "found at ${PTEX_LIB_ARCH}" >&6; }
+  PKG_CPPFLAGS="${PKG_CPPFLAGS} -I${PTEX_INC_DIR}"
+  PKG_LIBS="${PKG_LIBS} -L${PTEX_LIB_ARCH} -lPtex"
+else
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: not found" >&5
+printf "%s\n" "not found" >&6; }
+  as_fn_error $? "Ptex not found; please install libptex" "$LINENO" 5
+fi
+
+########################################################
+# Locate + link to libdeflate (static)
+########################################################
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking libdeflate package" >&5
+printf %s "checking libdeflate package... " >&6; }
+
+LIBDEFLATE_LIB_DIR=`${R_HOME}/bin/Rscript -e 'cat(system.file("lib", package="libdeflate", mustWork=TRUE))'`
+LIBDEFLATE_INC_DIR=`${R_HOME}/bin/Rscript -e 'cat(system.file("include", package="libdeflate", mustWork=TRUE))'`
+LIBDEFLATE_LIB_ARCH="${LIBDEFLATE_LIB_DIR}/${TARGET_ARCH}"
+
+if test -d "${LIBDEFLATE_LIB_ARCH}"; then
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: found at ${LIBDEFLATE_LIB_ARCH}" >&5
+printf "%s\n" "found at ${LIBDEFLATE_LIB_ARCH}" >&6; }
+  PKG_CPPFLAGS="${PKG_CPPFLAGS} -I${LIBDEFLATE_INC_DIR}"
+  PKG_LIBS="${PKG_LIBS} -L${LIBDEFLATE_LIB_ARCH} -ldeflate"
+else
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: not found" >&5
+printf "%s\n" "not found" >&6; }
+  as_fn_error $? "libdeflate not found; please install libdeflate" "$LINENO" 5
+fi
+
+########################################################
+# Locate + link (header-only) NanoVDB
+########################################################
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking NanoVDB headers" >&5
+printf %s "checking NanoVDB headers... " >&6; }
+
+NANOVDB_INC_DIR=`${R_HOME}/bin/Rscript -e 'cat(system.file("include", package="libnanovdb", mustWork=TRUE))'`
+NANOVDB_LIB_DIR=`${R_HOME}/bin/Rscript -e 'cat(system.file("include", package="libnanovdb", mustWork=TRUE))'`
+
+if test -d "${NANOVDB_INC_DIR}"; then
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: found at ${NANOVDB_INC_DIR}" >&5
+printf "%s\n" "found at ${NANOVDB_INC_DIR}" >&6; }
+  # Headers only => just need -I
+  PKG_CPPFLAGS="${PKG_CPPFLAGS} -I${NANOVDB_INC_DIR}"
+  PKG_LIBS="${PKG_LIBS} -L${NANOVDB_LIB_DIR}"
+else
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: not found" >&5
+printf "%s\n" "not found" >&6; }
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: NanoVDB headers not found; please install libnanovdb or remove LinkingTo: libnanovdb if not needed." >&5
+printf "%s\n" "$as_me: WARNING: NanoVDB headers not found; please install libnanovdb or remove LinkingTo: libnanovdb if not needed." >&2;}
+fi
+
 # Check for SSE/NEON support
 { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for SSE4.1 support" >&5
 printf %s "checking for SSE4.1 support... " >&6; }
@@ -4463,7 +4604,7 @@ then :
   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 printf "%s\n" "yes" >&6; }
    DEFINES="${DEFINES} -DHAS_SSE -DHAS_SSE41 -DRAYSIMD -DRAYSIMDVECOFF"
-   CXXFLAGS="${CXXFLAGS} -msse4.1"
+   PKG_CXXFLAGS="${PKG_CXXFLAGS} -msse4.1"
 
 else $as_nop
   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
@@ -4492,7 +4633,7 @@ then :
   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 printf "%s\n" "yes" >&6; }
       DEFINES="${DEFINES} -DHAS_SSE -DHAS_SSE3 -DRAYSIMD -DRAYSIMDVECOFF"
-      CXXFLAGS="${CXXFLAGS} -msse3"
+      PKG_CXXFLAGS="${PKG_CXXFLAGS} -msse3"
 
 else $as_nop
   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
@@ -4521,7 +4662,7 @@ then :
   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 printf "%s\n" "yes" >&6; }
          DEFINES="${DEFINES} -DHAS_SSE -DHAS_SSE2 -DRAYSIMD -DRAYSIMDVECOFF"
-         CXXFLAGS="${CXXFLAGS} -msse2"
+         PKG_CXXFLAGS="${PKG_CXXFLAGS} -msse2"
 
 else $as_nop
   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
@@ -4549,7 +4690,7 @@ then :
   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 printf "%s\n" "yes" >&6; }
             DEFINES="${DEFINES} -DHAS_SSE -DRAYSIMD -DRAYSIMDVECOFF"
-            CXXFLAGS="${CXXFLAGS} -msse"
+            PKG_CXXFLAGS="${PKG_CXXFLAGS} -msse"
 
 else $as_nop
   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
@@ -4591,9 +4732,9 @@ then :
 printf "%s\n" "yes" >&6; }
    DEFINES="${DEFINES} -DHAS_NEON -DRAYSIMD -DRAYSIMDVECOFF"
    if test "$darwin" = "yes"; then
-     CXXFLAGS="${CXXFLAGS} -march=armv8-a+simd"
+     PKG_CXXFLAGS="${PKG_CXXFLAGS} -march=armv8-a+simd"
    else
-     CXXFLAGS="${CXXFLAGS} -mfpu=neon"
+     PKG_CXXFLAGS="${PKG_CXXFLAGS} -mfpu=neon"
    fi
 else $as_nop
   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
@@ -4615,7 +4756,13 @@ else
 printf "%s\n" "No, not enabling debug" >&6; }
 fi
 
-SUBDIR_SOURCES="$(cd src/ && ls {core,hitables,materials,math,miniply,utils}/*.cpp | tr '\n' ' ')"
+SUBDIR_SOURCES="$(cd src/ && ls {core,hitables,materials,math,utils}/*.cpp | tr '\n' ' ')"
+EXT_CPP_SOURCES="$(cd src/ && ls {ext/rply,ext/lodepng,ext/sky,ext/miniply}/*.cpp | tr '\n' ' ')"
+
+# EXT_CPP_SOURCES="$(cd src/ && ls {ext/rply,ext/lodepng,ext/OpenEXR,ext/ptex,ext/sky}/*.cpp | tr '\n' ' ')"
+# PBRT_SOURCES="pbrt/util/colorspace.cpp pbrt/util/spectrum.cpp pbrt/util/file.cpp pbrt/util/error.cpp pbrt/util/parallel.cpp pbrt/util/color.cpp pbrt/util/stats.cpp pbrt/util/log.cpp pbrt/util/string.cpp pbrt/util/pstd.cpp pbrt/util/mesh.cpp pbrt/pbrt.cpp pbrt/shapes.cpp pbrt/scene.cpp pbrt/cmd/pbrt.cpp"
+PBRT_SOURCES="$(cd src/ && ls {ext/pbrt,ext/pbrt/base,ext/pbrt/cpu,ext/pbrt/util,ext/pbrt/spectrums}/*.cpp | tr '\n' ' ')"
+
 DIR_SOURCES="$(cd src/ && ls *.cpp | tr '\n' ' ')"
 
 # Supply it as a variable
@@ -4623,9 +4770,13 @@ DIR_SOURCES="$(cd src/ && ls *.cpp | tr '\n' ' ')"
 
 
 
+
+
+
+
 PKG_CPPFLAGS="${PKG_CPPFLAGS} ${OIDN_CPPFLAGS}"
 
-PKG_LIBS="${LIBS} ${PKG_LIBS} ${OIDN_LDFLAGS} ${OIDN_LIBS}"
+PKG_LIBS="${LIBS} ${PKG_LIBS} ${OIDN_LDFLAGS} ${OIDN_LIBS} "
 
 DEFINES="${DEFINES}"
 
@@ -5791,7 +5942,7 @@ echo "
     cppflags: ${CPPFLAGS} ${DEFINES}
     libs:     ${PKG_LIBS}
     includes: ${PKG_CPPFLAGS}
-    cxxflags: ${CXXFLAGS}
+    cxxflags: ${PKG_CXXFLAGS}
 
   --------------------------------------------------
 "

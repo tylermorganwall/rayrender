@@ -41,6 +41,10 @@ render_scene_rcpp <- function(scene, camera_info, scene_info, render_info) {
     .Call(`_rayrender_render_scene_rcpp`, scene, camera_info, scene_info, render_info)
 }
 
+makesky <- function(outfile, albedo = 0.5, turbidity = 3., elevation = 10, resolution = 2048L, numbercores = 1L, square_projection = FALSE) {
+    .Call(`_rayrender_makesky`, outfile, albedo, turbidity, elevation, resolution, numbercores, square_projection)
+}
+
 tonemap_image <- function(routput, goutput, boutput, toneval) {
     .Call(`_rayrender_tonemap_image`, routput, goutput, boutput, toneval)
 }

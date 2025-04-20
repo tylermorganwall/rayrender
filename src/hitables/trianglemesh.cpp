@@ -3,7 +3,7 @@
 #ifndef TINYOBJLOADER_IMPLEMENTATION
 #define TINYOBJLOADER_IMPLEMENTATION
 #define TINYOBJLOADER_USE_MAPBOX_EARCUT
-#include "../tinyobj/tiny_obj_loader.h"
+#include "../ext/tinyobj/tiny_obj_loader.h"
 #endif
 
 #include <queue>

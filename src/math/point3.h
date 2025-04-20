@@ -305,8 +305,8 @@ DistanceSquared(const point3<T> &p1, const point3<T> &p2) {
   return (p1 - p2).squared_length();
 }
 
-template <typename T> point3<T>
-Lerp(T t, const point3<T> &p0, const point3<T> &p1) {
+template <typename T> int
+Lerp(int t, const point3<T> &p0, const point3<T> &p1) {
   return (1 - t) * p0 + t * p1;
 }
 

@@ -126,6 +126,23 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// makesky
+int makesky(std::string outfile, double albedo, double turbidity, double elevation, unsigned int resolution, unsigned int numbercores, bool square_projection);
+RcppExport SEXP _rayrender_makesky(SEXP outfileSEXP, SEXP albedoSEXP, SEXP turbiditySEXP, SEXP elevationSEXP, SEXP resolutionSEXP, SEXP numbercoresSEXP, SEXP square_projectionSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::string >::type outfile(outfileSEXP);
+    Rcpp::traits::input_parameter< double >::type albedo(albedoSEXP);
+    Rcpp::traits::input_parameter< double >::type turbidity(turbiditySEXP);
+    Rcpp::traits::input_parameter< double >::type elevation(elevationSEXP);
+    Rcpp::traits::input_parameter< unsigned int >::type resolution(resolutionSEXP);
+    Rcpp::traits::input_parameter< unsigned int >::type numbercores(numbercoresSEXP);
+    Rcpp::traits::input_parameter< bool >::type square_projection(square_projectionSEXP);
+    rcpp_result_gen = Rcpp::wrap(makesky(outfile, albedo, turbidity, elevation, resolution, numbercores, square_projection));
+    return rcpp_result_gen;
+END_RCPP
+}
 // tonemap_image
 Rcpp::List tonemap_image(Rcpp::NumericMatrix routput, Rcpp::NumericMatrix goutput, Rcpp::NumericMatrix boutput, int toneval);
 RcppExport SEXP _rayrender_tonemap_image(SEXP routputSEXP, SEXP goutputSEXP, SEXP boutputSEXP, SEXP tonevalSEXP) {
@@ -154,6 +171,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_rayrender_cppdef_HAS_SSE41", (DL_FUNC) &_rayrender_cppdef_HAS_SSE41, 0},
     {"_rayrender_render_animation_rcpp", (DL_FUNC) &_rayrender_render_animation_rcpp, 13},
     {"_rayrender_render_scene_rcpp", (DL_FUNC) &_rayrender_render_scene_rcpp, 4},
+    {"_rayrender_makesky", (DL_FUNC) &_rayrender_makesky, 7},
     {"_rayrender_tonemap_image", (DL_FUNC) &_rayrender_tonemap_image, 4},
     {"run_testthat_tests", (DL_FUNC) &run_testthat_tests, 1},
     {NULL, NULL, 0}

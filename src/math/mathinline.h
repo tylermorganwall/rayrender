@@ -5,11 +5,11 @@
 #include <cmath>
 #include <cstdint>
 #include <cstring>
-#include "../math/float.h"
-#include "../math/vectypes.h"
-
 #include <limits>
 #include <array>
+
+#include "../math/float.h"
+#include "../math/vectypes.h"
 #include "../math/dop.h"
 
 
@@ -120,6 +120,11 @@ inline vec3f rand_to_unit(vec2f u) {
     phi = static_cast<Float>(M_PI_2) - static_cast<Float>(M_PI_4)*(a/b);
   }
   return(vec3f(r*cos(phi),r*sin(phi),0));
+}
+
+template <typename T> T
+Lerp(Float t, const T &p0, const T &p1) {
+  return (1 - t) * p0 + t * p1;
 }
 
 template<typename T>
@@ -1363,6 +1368,31 @@ template <typename T>
 inline typename std::enable_if_t<std::is_floating_point_v<T>, bool> IsNaN(
     T v) {
   return std::isnan(v);
+}
+
+inline vec3f EqualAreaSquareToSphere(point2f p) {
+    // CHECK(p.x >= 0 && p.x <= 1 && p.y >= 0 && p.y <= 1);
+    // Transform _p_ to $[-1,1]^2$ and compute absolute values
+    Float u = 2 * p.xy.x - 1, v = 2 * p.xy.y - 1;
+    Float up = std::abs(u), vp = std::abs(v);
+
+    // Compute radius _r_ as signed distance from diagonal
+    Float signedDistance = 1 - (up + vp);
+    Float d = std::abs(signedDistance);
+    Float r = 1 - d;
+
+    // Compute angle $\phi$ for square to sphere mapping
+    Float phi = (r == 0 ? 1 : (vp - up) / r + 1) * static_cast<Float>(M_PI) / 4;
+
+    // Find $z$ coordinate for spherical direction
+    Float z = std::copysign(1 - Sqr(r), signedDistance);
+
+    // Compute $\cos\phi$ and $\sin\phi$ for original quadrant and return vector
+    Float cosPhi = std::copysign(std::cos(phi), u);
+    Float sinPhi = std::copysign(std::sin(phi), v);
+    return vec3f(cosPhi * r * SafeSqrt(2 - Sqr(r)), 
+                 sinPhi * r * SafeSqrt(2 - Sqr(r)),
+                 z);
 }
 
 

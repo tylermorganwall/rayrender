@@ -8,9 +8,9 @@
 #include <cctype>
 #ifndef STBIMAGEH
 #define STBIMAGEH
-#include "../stb/stb_image.h"
+#include "../ext/stb/stb_image.h"
 #endif
-#include "../tinyobj/tinyexr.h"
+#include "../ext/tinyobj/tinyexr.h"
 #include <filesystem>
 namespace fs = std::filesystem;
 

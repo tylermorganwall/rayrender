@@ -1,6 +1,6 @@
 #define TINYPLY_IMPLEMENTATION
 
-#include "../miniply/miniply.h"
+#include "../ext/miniply/miniply.h"
 #include "../hitables/plymesh.h"
 #include "../math/loopsubdiv.h"
 #include "../math/calcnormals.h"

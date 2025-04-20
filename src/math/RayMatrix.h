@@ -3,12 +3,17 @@
 
 #include "Rcpp.h"
 
+//TODO: why is this float and not templated? I think I remember an issue.
+
 //Row major
 class RayMatrix {
 public: 
   RayMatrix();
   RayMatrix(unsigned int _rows, unsigned int _cols, unsigned int channels, float start_value = 0);
   inline float& operator()(unsigned int x, unsigned int y, unsigned int channel) { 
+    return data[channel + channels * x + channels * nrow * y]; 
+  }
+  inline float value(unsigned int x, unsigned int y, unsigned int channel) const { 
     return data[channel + channels * x + channels * nrow * y]; 
   }
   inline void add_one(unsigned int x, unsigned int y, unsigned int channel) { 
