@@ -8,8 +8,14 @@ PKG_CXXFLAGS = -DRAY_REPRODUCE_PERLIN -DSTRICT_R_HEADERS -DRAY_WINDOWS -DHAS_SSE
 SOURCES = @DIR_SOURCES@ @SUBDIR_SOURCES@ pbrt/util/colorspace.cpp
 OBJECTS = $(SOURCES:.cpp=.o)
 
+# Silence warnings about symbols with different visibilities
+SHLIB_LDFLAGS += -Wl,-exported_symbol,_R_init_rayrender \
+                 -Wl,-exported_symbol,_R_unload_rayrender
+
 ## Build the DLL:
 all: $(SHLIB)
+
+$(SHLIB) : $(OBJECTS)
 
 ## Clean up object files:
 clean:

@@ -9,8 +9,14 @@ PKG_CXXFLAGS = @DEFINES@ @PKG_CXXFLAGS@
 SOURCES=@DIR_SOURCES@ @SUBDIR_SOURCES@ @EXT_C_SOURCES@ @EXT_CPP_SOURCES@ @PBRT_SOURCES@
 OBJECTS=$(SOURCES:.cpp=.o) 
 
+# Silence warnings about symbols with different visibilities
+SHLIB_LDFLAGS += -Wl,-exported_symbol,_R_init_rayrender \
+                 -Wl,-exported_symbol,_R_unload_rayrender
+
 # Make the shared object
 all: $(SHLIB)
+
+$(SHLIB): $(OBJECTS)
 
 ## Clean up object files:
 clean:

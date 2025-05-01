@@ -278,10 +278,7 @@ fi
 
 SUBDIR_SOURCES="$(cd src/ && ls {core,hitables,materials,math,utils}/*.cpp | tr '\n' ' ')"
 EXT_CPP_SOURCES="$(cd src/ && ls {ext/rply,ext/lodepng,ext/sky,ext/miniply}/*.cpp | tr '\n' ' ')"
-
-# EXT_CPP_SOURCES="$(cd src/ && ls {ext/rply,ext/lodepng,ext/OpenEXR,ext/ptex,ext/sky}/*.cpp | tr '\n' ' ')"
-# PBRT_SOURCES="pbrt/util/colorspace.cpp pbrt/util/spectrum.cpp pbrt/util/file.cpp pbrt/util/error.cpp pbrt/util/parallel.cpp pbrt/util/color.cpp pbrt/util/stats.cpp pbrt/util/log.cpp pbrt/util/string.cpp pbrt/util/pstd.cpp pbrt/util/mesh.cpp pbrt/pbrt.cpp pbrt/shapes.cpp pbrt/scene.cpp pbrt/cmd/pbrt.cpp"
-PBRT_SOURCES="$(cd src/ && ls {ext/pbrt,ext/pbrt/base,ext/pbrt/cpu,ext/pbrt/util,ext/pbrt/spectrums}/*.cpp | tr '\n' ' ')"
+PBRT_SOURCES="$(cd src/ && ls {ext/pbrt,ext/pbrt/cpu,ext/pbrt/util,ext/pbrt/spectrums}/*.cpp | tr '\n' ' ')"
 
 DIR_SOURCES="$(cd src/ && ls *.cpp | tr '\n' ' ')"
 
