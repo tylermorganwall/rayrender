@@ -217,11 +217,11 @@ class Image {
   public:
     // Image Public Methods
     Image(Allocator alloc = {})
-        : p8(alloc),
+        : format(PixelFormat::U256),
+          resolution(0, 0),
+          p8(alloc),
           p16(alloc),
-          p32(alloc),
-          format(PixelFormat::U256),
-          resolution(0, 0) {}
+          p32(alloc) {}
     Image(pstd::vector<uint8_t> p8, Point2i resolution,
           pstd::span<const std::string> channels, ColorEncoding encoding);
     Image(pstd::vector<Half> p16, Point2i resolution,
