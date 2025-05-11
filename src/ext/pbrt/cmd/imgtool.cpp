@@ -30,9 +30,9 @@
 #include "../util/string.h"
 #include "../util/vecmath.h"
 
-// extern "C" {
-// #include <skymodel/ArHosekSkyModel.h>
-// }
+extern "C" {
+#include "../../sky/ArHosekSkyModel.h"
+}
 
 #include <algorithm>
 #include <array>
@@ -323,102 +323,102 @@ static bool checkImageCompatibility(std::string fn1, const Image &im1,
     return true;
 }
 
-// int makesky(std::vector<std::string> args) {
-//     std::string outfile;
-//     Float albedo = 0.5;
-//     Float turbidity = 3.;
-//     Float elevation = 10;
-//     int resolution = 2048;
+int makesky(std::vector<std::string> args) {
+    std::string outfile;
+    Float albedo = 0.5;
+    Float turbidity = 3.;
+    Float elevation = 10;
+    int resolution = 2048;
 
-//     for (auto iter = args.begin(); iter != args.end(); ++iter) {
-//         auto onError = [](const std::string &err) {
-//             usage("makesky", "%s", err.c_str());
-//             exit(1);
-//         };
-//         if (ParseArg(&iter, args.end(), "outfile", &outfile, onError) ||
-//             ParseArg(&iter, args.end(), "albedo", &albedo, onError) ||
-//             ParseArg(&iter, args.end(), "turbidity", &turbidity, onError) ||
-//             ParseArg(&iter, args.end(), "elevation", &elevation, onError) ||
-//             ParseArg(&iter, args.end(), "resolution", &resolution, onError)) {
-//             // success
-//         } else
-//             onError(StringPrintf("argument %s invalid", *iter));
-//     }
+    for (auto iter = args.begin(); iter != args.end(); ++iter) {
+        auto onError = [](const std::string &err) {
+            usage("makesky", "%s", err.c_str());
+            exit(1);
+        };
+        if (ParseArg(&iter, args.end(), "outfile", &outfile, onError) ||
+            ParseArg(&iter, args.end(), "albedo", &albedo, onError) ||
+            ParseArg(&iter, args.end(), "turbidity", &turbidity, onError) ||
+            ParseArg(&iter, args.end(), "elevation", &elevation, onError) ||
+            ParseArg(&iter, args.end(), "resolution", &resolution, onError)) {
+            // success
+        } else
+            onError(StringPrintf("argument %s invalid", *iter));
+    }
 
-//     if (outfile.empty())
-//         usage("makesky", "--outfile must be specified");
-//     if (albedo < 0. || albedo > 1.)
-//         usage("makesky", "--albedo must be between 0 and 1");
-//     if (turbidity < 1.7 || turbidity > 10.)
-//         usage("makesky", "--turbidity must be between 1.7 and 10.");
-//     if (elevation < 0. || elevation > 90.)
-//         usage("makesky", "--elevation must be between 0. and 90.");
-//     elevation = Radians(elevation);
-//     if (resolution < 1)
-//         usage("makesky", "--resolution must be >= 1");
+    if (outfile.empty())
+        usage("makesky", "--outfile must be specified");
+    if (albedo < 0. || albedo > 1.)
+        usage("makesky", "--albedo must be between 0 and 1");
+    if (turbidity < 1.7 || turbidity > 10.)
+        usage("makesky", "--turbidity must be between 1.7 and 10.");
+    if (elevation < 0. || elevation > 90.)
+        usage("makesky", "--elevation must be between 0. and 90.");
+    elevation = Radians(elevation);
+    if (resolution < 1)
+        usage("makesky", "--resolution must be >= 1");
 
-//     // Vector pointing at the sun. Note that elevation is measured from the
-//     // horizon--not the zenith, as it is elsewhere in pbrt.
-//     Vector3f sunDir(0., std::cos(elevation), std::sin(elevation));
+    // Vector pointing at the sun. Note that elevation is measured from the
+    // horizon--not the zenith, as it is elsewhere in pbrt.
+    Vector3f sunDir(0., std::cos(elevation), std::sin(elevation));
 
-//     Image img(PixelFormat::Float, {resolution, resolution}, {"R", "G", "B"});
+    Image img(PixelFormat::Float, {resolution, resolution}, {"R", "G", "B"});
 
-//     // They assert wavelengths are in this range...
-//     int nLambda = 1 + (720 - 320) / 32;
-//     std::vector<Float> lambda(nLambda, Float(0));
-//     for (int i = 0; i < nLambda; ++i)
-//         lambda[i] = Lerp(i / Float(nLambda - 1), 320, 720);
+    // They assert wavelengths are in this range...
+    int nLambda = 1 + (720 - 320) / 32;
+    std::vector<Float> lambda(nLambda, Float(0));
+    for (int i = 0; i < nLambda; ++i)
+        lambda[i] = Lerp(i / Float(nLambda - 1), 320, 720);
 
-//     // Assume a uniform spectral albedo
-//     // ArHosekSkyModelState *skymodel_state =
-//     //     arhosekskymodelstate_alloc_init(elevation, turbidity, albedo);
+    // Assume a uniform spectral albedo
+    ArHosekSkyModelState *skymodel_state =
+        arhosekskymodelstate_alloc_init(elevation, turbidity, albedo);
 
-//     const RGBColorSpace *colorSpace = RGBColorSpace::ACES2065_1;
+    const RGBColorSpace *colorSpace = RGBColorSpace::ACES2065_1;
 
-//     ParallelFor(0, resolution, [&](int64_t start, int64_t end) {
-//         std::vector<Float> skyv(lambda.size());
-//         for (int64_t iy = start; iy < end; ++iy) {
-//             Float y = (iy + 0.5f) / resolution;
-//             for (int ix = 0; ix < resolution; ++ix) {
-//                 Float x = (ix + 0.5f) / resolution;
-//                 Vector3f v = EqualAreaSquareToSphere({x, y});
-//                 if (v.z <= 0)
-//                     // downward hemisphere
-//                     continue;
+    ParallelFor(0, resolution, [&](int64_t start, int64_t end) {
+        std::vector<Float> skyv(lambda.size());
+        for (int64_t iy = start; iy < end; ++iy) {
+            Float y = (iy + 0.5f) / resolution;
+            for (int ix = 0; ix < resolution; ++ix) {
+                Float x = (ix + 0.5f) / resolution;
+                Vector3f v = EqualAreaSquareToSphere({x, y});
+                if (v.z <= 0)
+                    // downward hemisphere
+                    continue;
 
-//                 Float theta = SphericalTheta(v);
+                Float theta = SphericalTheta(v);
 
-//                 // Compute the angle between the pixel's direction and the sun
-//                 // direction.
-//                 Float gamma = SafeACos(Dot(v, sunDir));
-//                 DCHECK(gamma >= 0 && gamma <= Pi);
+                // Compute the angle between the pixel's direction and the sun
+                // direction.
+                Float gamma = SafeACos(Dot(v, sunDir));
+                DCHECK(gamma >= 0 && gamma <= Pi);
 
-//                 for (int i = 0; i < lambda.size(); ++i)
-//                     skyv[i] = arhosekskymodel_solar_radiance(skymodel_state, theta, gamma,
-//                                                              lambda[i]);
+                for (int i = 0; i < lambda.size(); ++i)
+                    skyv[i] = arhosekskymodel_solar_radiance(skymodel_state, theta, gamma,
+                                                             lambda[i]);
 
-//                 PiecewiseLinearSpectrum spec(pstd::MakeConstSpan(lambda),
-//                                              pstd::MakeConstSpan(skyv));
-//                 XYZ xyz = SpectrumToXYZ(&spec);
-//                 RGB rgb = colorSpace->ToRGB(xyz);
+                PiecewiseLinearSpectrum spec(pstd::MakeConstSpan(lambda),
+                                             pstd::MakeConstSpan(skyv));
+                XYZ xyz = SpectrumToXYZ(&spec);
+                RGB rgb = colorSpace->ToRGB(xyz);
 
-//                 for (int c = 0; c < 3; ++c)
-//                     img.SetChannel({ix, int(iy)}, c, rgb[c]);
-//             }
-//         }
-//     });
+                for (int c = 0; c < 3; ++c)
+                    img.SetChannel({ix, int(iy)}, c, rgb[c]);
+            }
+        }
+    });
 
-//     ImageMetadata metadata;
-//     metadata.colorSpace = colorSpace;
-//     std::map<std::string, std::vector<std::string>> stringVectors;
-//     stringVectors["makesky.albedo"] = {std::to_string(albedo)};
-//     stringVectors["makesky.elevation"] = {std::to_string(elevation)};
-//     stringVectors["makesky.turbidity"] = {std::to_string(turbidity)};
-//     metadata.stringVectors = stringVectors;
-//     CHECK(img.Write(outfile, metadata));
+    ImageMetadata metadata;
+    metadata.colorSpace = colorSpace;
+    std::map<std::string, std::vector<std::string>> stringVectors;
+    stringVectors["makesky.albedo"] = {std::to_string(albedo)};
+    stringVectors["makesky.elevation"] = {std::to_string(elevation)};
+    stringVectors["makesky.turbidity"] = {std::to_string(turbidity)};
+    metadata.stringVectors = stringVectors;
+    CHECK(img.Write(outfile, metadata));
 
-//     return 0;
-// }
+    return 0;
+}
 
 int assemble(std::vector<std::string> args) {
     if (args.empty())
