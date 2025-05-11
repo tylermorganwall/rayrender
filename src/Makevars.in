@@ -2,22 +2,21 @@ CXX_STD = CXX20
 
 ## Compiler flags/defines:
 PKG_CPPFLAGS = @PKG_CPPFLAGS@ 
-PKG_LIBS = @PKG_LIBS@
+PKG_LIBS = @VISIBILITY_LDFLAGS@ @PKG_LIBS@
 PKG_CXXFLAGS = @DEFINES@ @PKG_CXXFLAGS@
 
-## Files to compile:
-SOURCES=@DIR_SOURCES@ @SUBDIR_SOURCES@ @EXT_C_SOURCES@ @EXT_CPP_SOURCES@ @PBRT_SOURCES@
-OBJECTS=$(SOURCES:.cpp=.o) 
+RcppExports.o: PKG_CXXFLAGS := $(filter-out -fvisibility=hidden -fvisibility-inlines-hidden,$(PKG_CXXFLAGS))
 
-# Silence warnings about symbols with different visibilities
-SHLIB_LDFLAGS += -Wl,-exported_symbol,_R_init_rayrender \
-                 -Wl,-exported_symbol,_R_unload_rayrender
+## Files to compile:
+C_SOURCES=@EXT_C_SOURCES@
+C_OBJECTS=$(C_SOURCES:.c=.o)
+
+CPP_SOURCES=@DIR_SOURCES@ @SUBDIR_SOURCES@ @EXT_CPP_SOURCES@ @PBRT_SOURCES@
+CPP_OBJECTS=$(CPP_SOURCES:.cpp=.o)
+
+OBJECTS=$(C_OBJECTS) $(CPP_OBJECTS)
 
 # Make the shared object
 all: $(SHLIB)
 
 $(SHLIB): $(OBJECTS)
-
-## Clean up object files:
-clean:
-	@rm -f $(OBJECTS)

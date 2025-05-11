@@ -1,16 +1,14 @@
 CXX_STD = CXX20
 
 ## Compiler flags/defines:
-PKG_LIBS = -lgdi32
+PKG_LIBS = @VISIBILITY_LDFLAGS@  -lgdi32
 PKG_CXXFLAGS = -DRAY_REPRODUCE_PERLIN -DSTRICT_R_HEADERS -DRAY_WINDOWS -DHAS_SSE -DRAYSIMD -DRAYSIMDVECOFF @PKG_CXXFLAGS@
 
-## Files to compile:
-SOURCES = @DIR_SOURCES@ @SUBDIR_SOURCES@ pbrt/util/colorspace.cpp
-OBJECTS = $(SOURCES:.cpp=.o)
+RcppExports.o: CXXFLAGS := $(filter-out -fvisibility=hidden -fvisibility-inlines-hidden,$(CXXFLAGS))
 
-# Silence warnings about symbols with different visibilities
-SHLIB_LDFLAGS += -Wl,-exported_symbol,_R_init_rayrender \
-                 -Wl,-exported_symbol,_R_unload_rayrender
+## Files to compile:
+SOURCES=@DIR_SOURCES@ @SUBDIR_SOURCES@ pbrt/util/colorspace.cpp
+OBJECTS=$(SOURCES:.c=.o) $(SOURCES:.cpp=.o)
 
 ## Build the DLL:
 all: $(SHLIB)
