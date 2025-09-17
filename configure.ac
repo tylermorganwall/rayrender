@@ -31,7 +31,7 @@ DEFINES="-D RAY_REPRODUCE_PERLIN -DSTRICT_R_HEADERS"
 AC_LANG(C++)
 AC_PROG_CPP
 
-PKG_CXXFLAGS=""
+PKG_CXXFLAGS="-ffp-contract=off"
 
 AC_MSG_CHECKING([for hidden‑visibility support])
 PKG_CXXFLAGS="${PKG_CXXFLAGS} -fvisibility=hidden -fvisibility-inlines-hidden"
@@ -282,6 +282,8 @@ PBRT_SOURCES="$(cd src/ && ls {ext/pbrt,ext/pbrt/cpu,ext/pbrt/util,ext/pbrt/spec
 
 DIR_SOURCES="$(cd src/ && ls *.cpp | tr '\n' ' ')"
 
+VISIBILITY_LDFLAGS="-Wl,-exported_symbol,_R_init_rayrender -Wl,-exported_symbol,_R_unload_rayrender"
+
 # Supply it as a variable
 AC_SUBST(SUBDIR_SOURCES)
 AC_SUBST(EXT_C_SOURCES)
@@ -289,7 +291,7 @@ AC_SUBST(EXT_CPP_SOURCES)
 AC_SUBST(PBRT_SOURCES)
 AC_SUBST(DIR_SOURCES)
 AC_SUBST(PKG_CXXFLAGS)
-
+AC_SUBST(VISIBILITY_LDFLAGS)
 
 AC_SUBST([PKG_CPPFLAGS], ["${PKG_CPPFLAGS} ${OIDN_CPPFLAGS}"])
 AC_SUBST([PKG_LIBS], ["${LIBS} ${PKG_LIBS} ${OIDN_LDFLAGS} ${OIDN_LIBS} "])

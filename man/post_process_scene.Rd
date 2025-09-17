@@ -7,6 +7,7 @@
 post_process_scene(
   rgb_mat,
   iso,
+  use_iso,
   tonemap,
   debug_channel,
   filename,
