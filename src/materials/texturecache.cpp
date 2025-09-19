@@ -6,11 +6,19 @@
 #include <string>
 #include <algorithm>
 #include <cctype>
+#include <cstdlib>
 #ifndef STBIMAGEH
 #define STBIMAGEH
 #include "../ext/stb/stb_image.h"
 #endif
-#include "../ext/tinyobj/tinyexr.h"
+
+#include <ImathBox.h>
+#include <ImfArray.h>
+#include <ImfRgbaFile.h>
+
+using namespace OPENEXR_IMF_NAMESPACE;
+using namespace IMATH_NAMESPACE;
+
 #include <filesystem>
 namespace fs = std::filesystem;
 
@@ -19,7 +27,7 @@ TextureCache::~TextureCache() {
     if (loadedBySTB[i]) {
       stbi_image_free(rawDataFloat[i]);
     } else {
-      free(rawDataFloat[i]);
+      std::free(rawDataFloat[i]);
     }
   }
   for (size_t i = 0; i < rawDataChar.size(); ++i) {
@@ -29,7 +37,7 @@ TextureCache::~TextureCache() {
 
 Float* TextureCache::LookupFloat(const std::string& filename,
                                  int& nx, int& ny, int& nn, int desired_channels) {
-  std::string standardizedFilename = StandardizeFilename(filename);;
+  std::string standardizedFilename = StandardizeFilename(filename);
   auto it = hashTableFloat.find(standardizedFilename);
   if (it != hashTableFloat.end()) {
     auto itDim = hashTableDims.find(standardizedFilename);
@@ -45,14 +53,14 @@ Float* TextureCache::LookupFloat(const std::string& filename,
   }
   
   hashTableFloat[standardizedFilename] = data;
-  hashTableDims[standardizedFilename] = std::make_tuple(nx,ny,desired_channels);
+  hashTableDims[standardizedFilename] = std::make_tuple(nx, ny, nn);
   rawDataFloat.push_back(data);
   return data;
 }
 
 unsigned char * TextureCache::LookupChar(const std::string& filename,
                                          int& nx, int& ny, int& nn, int desired_channels) {
-  std::string standardizedFilename = StandardizeFilename(filename);;
+  std::string standardizedFilename = StandardizeFilename(filename);
   auto it = hashTableChar.find(standardizedFilename);
   if (it != hashTableChar.end()) {
     auto itDim = hashTableDims.find(standardizedFilename);
@@ -68,7 +76,7 @@ unsigned char * TextureCache::LookupChar(const std::string& filename,
   }
   
   hashTableChar[standardizedFilename] = data;
-  hashTableDims[standardizedFilename] = std::make_tuple(nx,ny,desired_channels);
+  hashTableDims[standardizedFilename] = std::make_tuple(nx, ny, nn);
   rawDataChar.push_back(data);
   return data;
 }
@@ -81,50 +89,49 @@ std::string TextureCache::StandardizeFilename(const std::string& filename) {
   return result;
 }
 
-float* TextureCache::LoadImageFloat(const std::string& filename, int& width, int& height, 
+float* TextureCache::LoadImageFloat(const std::string& filename, int& width, int& height,
                                     int& channels, int desired_channels) {
   std::string standardizedFilename = StandardizeFilename(filename);
-  const char* input = standardizedFilename.c_str();
-  fs::path filepath(input);
+  fs::path filepath(standardizedFilename);
   bool is_exr = filepath.extension() == ".exr";
-  
+
   float* data = nullptr;
-  const char* err = nullptr;
   if (is_exr) {
-    if (IsEXR(input) != TINYEXR_SUCCESS) {
-      throw std::runtime_error("Not an EXR file.");
-    }
-    EXRVersion exr_version;
-    ParseEXRVersionFromFile(&exr_version, input);
-    
-    EXRHeader header;
-    InitEXRHeader(&header);
-    
-    int header_ret = ParseEXRHeaderFromFile(&header, &exr_version, input, &err);
-    if (header_ret != TINYEXR_SUCCESS) {
-      if (err) {
-        FreeEXRErrorMessage(err);
-        FreeEXRHeader(&header);
-        throw std::runtime_error("Error loading EXR header");
+    try {
+      RgbaInputFile file(filename.c_str());
+      Box2i dw = file.dataWindow();
+      width = dw.max.x - dw.min.x + 1;
+      height = dw.max.y - dw.min.y + 1;
+
+      OPENEXR_IMF_NAMESPACE::Array2D<Rgba> px;
+      px.resizeErase(height, width);
+
+      file.setFrameBuffer(&px[0][0] - dw.min.x - dw.min.y * width, 1, width);
+      file.readPixels(dw.min.y, dw.max.y);
+
+      constexpr int exr_channels = 4;
+      const size_t pixel_count = static_cast<size_t>(width) * static_cast<size_t>(height);
+      data = static_cast<float*>(std::malloc(sizeof(float) * pixel_count * exr_channels));
+      if (!data) {
+        throw std::runtime_error("Failed to allocate memory for EXR image: " + filename);
       }
+
+      for (int y = 0; y < height; ++y) {
+        for (int x = 0; x < width; ++x) {
+          const Rgba& p = px[y][x];
+          const size_t base = (static_cast<size_t>(y) * static_cast<size_t>(width) + static_cast<size_t>(x)) * exr_channels;
+          data[base + 0] = p.r;
+          data[base + 1] = p.g;
+          data[base + 2] = p.b;
+          data[base + 3] = p.a;
+        }
+      }
+
+      channels = exr_channels;
+      loadedBySTB.push_back(false);
+    } catch (const std::exception& e) {
+      throw std::runtime_error("Failed to load EXR image '" + filename + "': " + e.what());
     }
-    int ret = LoadEXR(&data, &width, &height, input, &err);
-    // channels = header.num_channels;
-    channels = 4;
-    
-    FreeEXRHeader(&header);
-    if (err) {
-      Rcpp::Rcout<< "Loading of '" + filename << "' failed due to: " << err << 
-        " -- nx/ny/channels :"  + std::to_string(width)  +  "/"  +  std::to_string(height)  +  "/"  +  std::to_string(channels) << 
-        std::endl;
-      FreeEXRErrorMessage(err);
-    }
-    
-    if (ret != TINYEXR_SUCCESS) {
-      throw std::runtime_error("Failed to load EXR image: " + filename);
-    }
-    
-    loadedBySTB.push_back(false);
   } else {
     data = stbi_loadf(filename.c_str(), &width, &height, &channels, desired_channels);
     if (!data) {
@@ -132,13 +139,16 @@ float* TextureCache::LoadImageFloat(const std::string& filename, int& width, int
                                "' (float) failed due to error: " + stbi_failure_reason() +
                                "-- nx/ny/channels :"  + std::to_string(width)  +  "/"  +  std::to_string(height)  +  "/"  +  std::to_string(channels));
     }
+    if (desired_channels != 0) {
+      channels = desired_channels;
+    }
     loadedBySTB.push_back(true);
   }
-  
+
   if (width == 0 || height == 0 || channels == 0) {
     throw std::runtime_error("Could not find " + filename);
   }
-  
+
   return data;
 }
 
@@ -150,6 +160,9 @@ unsigned char * TextureCache::LoadImageChar(const std::string& filename, int& wi
     throw std::runtime_error("Loading of '" + filename  +
                              "' (char) failed due to error: " + stbi_failure_reason() +
                              "-- nx/ny/channels :"  + std::to_string(width)  +  "/"  +  std::to_string(height)  +  "/"  +  std::to_string(channels));
+  }
+  if (desired_channels != 0) {
+    channels = desired_channels;
   }
   
   if (width == 0 || height == 0 || channels == 0) {

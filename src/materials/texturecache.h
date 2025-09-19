@@ -2,14 +2,14 @@
 #define TEXTURECACHE
 
 //This should include three containers for data: an std::vector<Float* > that holds the raw pointers from
-//loading the data via std_image/tinyexr, a std::vector<bool> that tracks whether it was stb_image 
-//or tinyexr that loaded it (to properly free the memory at the end),
+//loading the data via stb_image/OpenEXR, a std::vector<bool> that tracks whether it was stb_image 
+//or OpenEXR that loaded it (to properly free the memory at the end),
 //and a std::vector<std::shared_ptr<texture> > hashTable to hold the rayrender texture classes that will be looked up in the hash table,
 //This should have a lookup function that returns a raw ptr (using ,get()) for a given image filename.
 //If the filename isn't in the hash table, then it will load the file and put it in the hash table, and then return the pointer.
 //It should ensure the filename is standardized (so as to avoid different hashes from capitalization
 //and so on) so that when it encounters the same filename twice, it won't load the image again.
-//It should track whether the files were loaded via stb_image or 
+//It should track whether the files were loaded via stb_image or OpenEXR so it knows how to free them.
 
 #include "../materials/texture.h"
 #include <vector>
@@ -22,7 +22,6 @@
 #define STBIMAGEH
 #include "../ext/stb/stb_image.h"
 #endif
-#include "../ext/tinyobj/tinyexr.h"
 #include <filesystem>
 namespace fs = std::filesystem;
 
@@ -41,7 +40,7 @@ private:
   std::vector<float*> rawDataFloat;
   std::vector<unsigned char *> rawDataChar;
   
-  std::vector<bool> loadedBySTB; // For floats: true for stb_image, false for tinyexr
+  std::vector<bool> loadedBySTB; // For floats: true for stb_image, false for OpenEXR
   std::unordered_map<std::string, Float*> hashTableFloat;
   std::unordered_map<std::string, unsigned char *> hashTableChar;
   
