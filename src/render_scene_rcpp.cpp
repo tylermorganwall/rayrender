@@ -191,14 +191,14 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
   } else if(fov == 0) {
     cam = std::unique_ptr<RayCamera>(new ortho_camera(lookfrom, lookat, vec3f(camera_up(0),camera_up(1),camera_up(2)),
                       ortho_dimensions(0), ortho_dimensions(1),
-                      shutteropen, shutterclose));
+                      shutteropen, shutterclose, iso));
   } else if (fov == 360) {
     cam = std::unique_ptr<RayCamera>(new environment_camera(lookfrom, lookat, vec3f(camera_up(0),camera_up(1),camera_up(2)),
-                            shutteropen, shutterclose));
+                            shutteropen, shutterclose, iso));
   } else {
     cam = std::unique_ptr<RayCamera>(new camera(lookfrom, lookat, vec3f(camera_up(0),camera_up(1),camera_up(2)), fov, Float(nx)/Float(ny),
                                      aperture, dist_to_focus,
-                                     shutteropen, shutterclose));
+                                     shutteropen, shutterclose, iso));
   }
   print_time(verbose, "Generated Camera" );
 

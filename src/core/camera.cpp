@@ -3,7 +3,7 @@
 
 camera::camera(point3f lookfrom, point3f _lookat, vec3f _vup, Float vfov, 
                Float _aspect, Float aperture, Float _focus_dist,
-               Float t0, Float t1) {
+               Float t0, Float t1, Float _iso) {
   time0 = t0;
   time1 = t1;
   aspect = _aspect;
@@ -27,6 +27,7 @@ camera::camera(point3f lookfrom, point3f _lookat, vec3f _vup, Float vfov,
   lower_left_corner = origin - half_width * focus_dist *  u - half_height * focus_dist * v - focus_dist * w;
   horizontal = 2.0f * half_width * focus_dist * u;
   vertical = 2.0f * half_height * focus_dist * v;
+  iso = _iso;
 }
 
 Ray camera::get_ray(Float s, Float t, point3f u3, Float u1) {
@@ -168,7 +169,7 @@ void camera::reset() {
 
 ortho_camera::ortho_camera(point3f lookfrom, point3f _lookat, vec3f _vup, 
              Float _cam_width, Float _cam_height, 
-             Float t0, Float t1) {
+             Float t0, Float t1, Float _iso) {
   time0 = t0;
   time1 = t1;
   origin = lookfrom;
@@ -188,6 +189,7 @@ ortho_camera::ortho_camera(point3f lookfrom, point3f _lookat, vec3f _vup,
   horizontal = cam_width * u;
   vertical = cam_height * v;
   initial_ratio = cam_width / cam_height;
+  iso = _iso;
 }
 
 Ray ortho_camera::get_ray(Float s, Float t, point3f u3, Float u) {
@@ -299,7 +301,7 @@ void ortho_camera::reset() {
 
 
 environment_camera::environment_camera(point3f lookfrom, point3f lookat, vec3f _vup, 
-                   Float t0, Float t1) {
+                   Float t0, Float t1, Float _iso) {
   time0 = t0;
   time1 = t1;
   origin = lookfrom;
@@ -310,6 +312,7 @@ environment_camera::environment_camera(point3f lookfrom, point3f lookat, vec3f _
   v = unit_vector(-cross(vup, w));
   u = cross(w, v);
   uvw = onb(w,v,u);
+  iso = _iso;
 }
 
 

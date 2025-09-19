@@ -301,14 +301,14 @@ void render_animation_rcpp(List scene, List camera_info, List scene_info, List r
       } else if(fov == 0) {
         cam = std::unique_ptr<RayCamera>(new ortho_camera(lookfrom, lookat, camera_up,
                                                           orthox, orthoy,
-                                                          shutteropen, shutterclose));
+                                                          shutteropen, shutterclose, iso));
       } else if (fov == 360) {
         cam = std::unique_ptr<RayCamera>(new environment_camera(lookfrom, lookat, camera_up,
-                                                                shutteropen, shutterclose));
+                                                                shutteropen, shutterclose, iso));
       } else {
         cam = std::unique_ptr<RayCamera>(new camera(lookfrom, lookat, camera_up, fov, Float(nx)/Float(ny),
                                                     aperture, focus_distance,
-                                                    shutteropen, shutterclose));
+                                                    shutteropen, shutterclose, iso));
       }
 
       // world_radius = world_radius > (lookfrom - world_center).length() ? world_radius : (lookfrom - world_center).length()*2;
@@ -378,14 +378,14 @@ void render_animation_rcpp(List scene, List camera_info, List scene_info, List r
       } else if(fov == 0) {
         cam = std::unique_ptr<RayCamera>(new ortho_camera(lookfrom, lookat, camera_up,
                                                           orthox, orthoy,
-                                                          shutteropen, shutterclose));
+                                                          shutteropen, shutterclose, iso));
       } else if (fov == 360) {
         cam = std::unique_ptr<RayCamera>(new environment_camera(lookfrom, lookat, camera_up,
-                                                                shutteropen, shutterclose));
+                                                                shutteropen, shutterclose, iso));
       } else {
         cam = std::unique_ptr<RayCamera>(new camera(lookfrom, lookat, camera_up, fov, Float(nx)/Float(ny),
                                                     aperture, focus_distance,
-                                                    shutteropen, shutterclose));
+                                                    shutteropen, shutterclose, iso));
       }
 
       world_radius = world_radius > (lookfrom - world_center).length() ? world_radius : (lookfrom - world_center).length()*2;

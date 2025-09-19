@@ -59,7 +59,7 @@ class RayCamera {
 class camera : public RayCamera {
   public:
     camera(point3f lookfrom, point3f _lookat, vec3f _vup, Float vfov, Float aspect, Float aperture, Float _focus_dist,
-           Float t0, Float t1);
+           Float t0, Float t1, Float _iso);
     Ray get_ray(Float s, Float t, point3f u3, Float u);
 
     void update_position(vec3f delta, bool update_uvw, bool update_focal = true);
@@ -86,7 +86,8 @@ class camera : public RayCamera {
     vec3f get_up() {return(vup);}
     point3f get_lookat() {return(lookat);}
     point2f get_ortho() {return(point2f(1.f,1.f));}
-    
+    Float get_iso() {return(iso);}
+
     Float half_height;
     Float half_width;
     point3f origin;
@@ -106,6 +107,7 @@ class camera : public RayCamera {
     Float fov;
     Float start_fov;
     point3f start_lookat;
+	Float iso;
     
 };
 
@@ -113,7 +115,7 @@ class ortho_camera : public RayCamera {
 public:
   ortho_camera(point3f lookfrom, point3f _lookat, vec3f _vup, 
                Float _cam_width, Float _cam_height, 
-               Float t0, Float t1);
+               Float t0, Float t1, Float _iso);
   Ray get_ray(Float s, Float t, point3f u3, Float u);
   void update_position(vec3f delta, bool update_uvw, bool update_focal = true);
   void update_fov(Float delta_fov);
@@ -138,7 +140,8 @@ public:
   vec3f get_up() {return(vup);}
   point3f get_lookat() {return(lookat);}
   point2f get_ortho() {return(point2f(cam_width,cam_height));}
-  
+  Float get_iso() {return(iso);}
+
   point3f origin;
   point3f lower_left_corner;
   point3f start_origin;
@@ -153,13 +156,14 @@ public:
   point3f start_lookat;
   Float focus_dist;
   Float initial_ratio;
+	Float iso;
 };
 
 
 class environment_camera : public RayCamera {
   public:
     environment_camera(point3f lookfrom, point3f lookat, vec3f _vup, 
-                       Float t0, Float t1);
+                       Float t0, Float t1, Float _iso);
     Ray get_ray(Float s, Float t, point3f u3, Float u);
     void update_position(vec3f delta, bool update_uvw, bool update_focal = true);
     void update_fov(Float delta_fov);
@@ -184,7 +188,8 @@ class environment_camera : public RayCamera {
     vec3f get_up() {return(vup);}
     point3f get_lookat() {return(lookat);}
     point2f get_ortho() {return(point2f(1.f,1.f));}
-    
+    Float get_iso() {return(iso);}
+
     point3f origin;
     point3f start_origin;
     vec3f u, v, w;
@@ -194,6 +199,7 @@ class environment_camera : public RayCamera {
     vec3f vup;
     point3f lookat;
     point3f start_lookat;
+	Float iso;
     
 };
 
