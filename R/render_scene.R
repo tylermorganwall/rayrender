@@ -423,7 +423,7 @@ Left Mouse Click: Change Look At (new focal distance) | Right Mouse Click: Chang
 	return_array = post_process_scene(
 		rgb_mat,
 		camera_info$iso,
-		use_iso = nrow(camera_info$real_camera_info) == 0,
+		use_iso = FALSE,
 		tonemap,
 		debug_string,
 		filename,

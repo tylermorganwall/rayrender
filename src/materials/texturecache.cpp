@@ -115,15 +115,15 @@ float* TextureCache::LoadImageFloat(const std::string& filename, int& width, int
       if (!data) {
         throw std::runtime_error("Failed to allocate memory for EXR image: " + filename);
       }
-
+	  
       for (int y = 0; y < height; ++y) {
         for (int x = 0; x < width; ++x) {
           const Rgba& p = px[y][x];
           const size_t base = (static_cast<size_t>(y) * static_cast<size_t>(width) + static_cast<size_t>(x)) * exr_channels;
-          data[base + 0] = p.r;
-          data[base + 1] = p.g;
-          data[base + 2] = p.b;
-          data[base + 3] = p.a;
+          data[base + 0] = std::max(static_cast<float>(p.r), std::numeric_limits<float>::min());
+          data[base + 1] = std::max(static_cast<float>(p.g), std::numeric_limits<float>::min());
+          data[base + 2] = std::max(static_cast<float>(p.b), std::numeric_limits<float>::min());
+          data[base + 3] = std::max(static_cast<float>(p.a), std::numeric_limits<float>::min());
         }
       }
 
