@@ -74,14 +74,14 @@ post_process_scene = function(
 			rayimage::plot_image(
 				(returnmat - min(returnmat, na.rm = TRUE)) /
 					(max(returnmat, na.rm = TRUE) - min(returnmat, na.rm = TRUE)),
-				new_page = new_page
+				new_page = new_page, show_linear = TRUE
 			)
 			return(invisible(returnmat))
 		} else {
 			rayimage::ray_write_image(
 				(returnmat - min(returnmat, na.rm = TRUE)) /
 					(max(returnmat, na.rm = TRUE) - min(returnmat, na.rm = TRUE)),
-				filename
+				filename, write_linear = TRUE
 			)
 			return(invisible(returnmat))
 		}
@@ -91,15 +91,15 @@ post_process_scene = function(
 				if (debug_channel == 4) {
 					rayimage::plot_image(
 						full_array / (max(full_array, na.rm = TRUE)),
-						new_page = new_page
+						new_page = new_page, show_linear = TRUE
 					)
 				} else {
-					rayimage::plot_image(full_array, new_page = new_page)
+					rayimage::plot_image(full_array, new_page = new_page, show_linear = TRUE)
 				}
 			}
 			return(invisible(full_array))
 		} else {
-			rayimage::ray_write_image(full_array, filename)
+			rayimage::ray_write_image(full_array, filename, write_linear = TRUE)
 			return(invisible(full_array))
 		}
 	} else if (debug_channel %in% c(10, 13)) {
@@ -121,9 +121,9 @@ post_process_scene = function(
 		full_array[,, 3] = (full_array[,, 3] - min(full_array[,, 3])) /
 			(max(full_array[,, 3]) - min(full_array[,, 3]))
 		if (is.null(filename)) {
-			rayimage::plot_image(full_array, new_page = new_page)
+			rayimage::plot_image(full_array, new_page = new_page, show_linear = TRUE)
 		} else {
-			rayimage::ray_write_image(full_array, filename)
+			rayimage::ray_write_image(full_array, filename, write_linear = TRUE)
 		}
 		return(invisible(full_array_ret))
 	} else if (debug_channel == 11) {
@@ -133,9 +133,9 @@ post_process_scene = function(
 		full_array[,, 2] = (full_array[,, 2] + 1) / 2
 		full_array[,, 3] = (full_array[,, 3] + 1) / 2
 		if (is.null(filename)) {
-			rayimage::plot_image(full_array, new_page = new_page)
+			rayimage::plot_image(full_array, new_page = new_page, show_linear = TRUE)
 		} else {
-			rayimage::ray_write_image(full_array, filename)
+			rayimage::ray_write_image(full_array, filename, write_linear = TRUE)
 		}
 		return(invisible(full_array_ret))
 	} else if (debug_channel %in% c(12, 14, 15, 16)) {
@@ -147,9 +147,9 @@ post_process_scene = function(
 		full_array = (full_array - min(full_array)) /
 			(max(full_array) - min(full_array))
 		if (is.null(filename)) {
-			rayimage::plot_image(full_array, new_page = new_page)
+			rayimage::plot_image(full_array, new_page = new_page, show_linear = TRUE)
 		} else {
-			rayimage::ray_write_image(full_array, filename)
+			rayimage::ray_write_image(full_array, filename, write_linear = TRUE)
 		}
 		return(invisible(full_array_ret))
 	}
@@ -245,10 +245,10 @@ post_process_scene = function(
 	}
 	if (is.null(filename)) {
 		if (!return_raw_array) {
-			rayimage::plot_image(array_from_mat, new_page = new_page)
+			rayimage::plot_image(array_from_mat, new_page = new_page, show_linear = TRUE)
 		}
 	} else {
-		rayimage::ray_write_image(array_from_mat, filename)
+		rayimage::ray_write_image(array_from_mat, filename, write_linear = TRUE)
 	}
 	return(invisible(array_from_mat))
 }
