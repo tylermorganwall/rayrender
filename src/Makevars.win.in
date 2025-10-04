@@ -6,8 +6,8 @@ PKG_CXXFLAGS = -DRAY_REPRODUCE_PERLIN -DSTRICT_R_HEADERS -DRAY_WINDOWS -DHAS_SSE
 
 RcppExports.o: CXXFLAGS := $(filter-out -fvisibility=hidden -fvisibility-inlines-hidden,$(CXXFLAGS))
 
-## Files to compile:
-SOURCES=@DIR_SOURCES@ @SUBDIR_SOURCES@ pbrt/util/colorspace.cpp
+## Files to compile: (add in pbrt/util/colorspace.cpp)
+SOURCES=@DIR_SOURCES@ @SUBDIR_SOURCES@ 
 OBJECTS=$(SOURCES:.c=.o) $(SOURCES:.cpp=.o)
 
 ## Build the DLL:
