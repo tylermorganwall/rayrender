@@ -573,8 +573,6 @@ EXT_C_SOURCES = sort(list.files(
 	full.names = FALSE
 ))
 
-VISIBILITY_LDFLAGS = "-Wl,-exported_symbol,_R_init_rayrender -Wl,-exported_symbol,_R_unload_rayrender"
-
 PKG_CPPFLAGS_STR = collapse_flags(append_flags(PKG_CPPFLAGS, OIDN_CPPFLAGS))
 PKG_LIBS_STR = collapse_flags(append_flags(
 	LINK_LIBS,
@@ -590,7 +588,7 @@ define(
 	PKG_LIBS = PKG_LIBS_STR,
 	PKG_CXXFLAGS = PKG_CXXFLAGS_STR,
 	DEFINES = DEFINES_STR,
-	VISIBILITY_LDFLAGS = VISIBILITY_LDFLAGS,
+	VISIBILITY_LDFLAGS = "",
 	DIR_SOURCES = collapse_flags(DIR_SOURCES),
 	SUBDIR_SOURCES = collapse_flags(SUBDIR_SOURCES),
 	EXT_CPP_SOURCES = collapse_flags(EXT_CPP_SOURCES),
