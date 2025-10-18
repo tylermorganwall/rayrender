@@ -398,47 +398,6 @@ PKG_LIBS_ACC = append_flags(
 	"-lImath-3_2"
 )
 
-ptex_lib_dir = tryCatch(
-	normalizePath(
-		system.file("lib", package = "libptex", mustWork = TRUE),
-		winslash = "/",
-		mustWork = TRUE
-	),
-	error = function(e) {
-		stop("Ptex not found; please install libptex.", call. = FALSE)
-	}
-)
-ptex_inc_dir = tryCatch(
-	normalizePath(
-		system.file("include", package = "libptex", mustWork = TRUE),
-		winslash = "/",
-		mustWork = TRUE
-	),
-	error = function(e) {
-		stop("Ptex headers not found; please install libptex.", call. = FALSE)
-	}
-)
-ptex_lib_arch = file.path(ptex_lib_dir, target_arch, "ptex")
-if (!dir.exists(ptex_lib_arch)) {
-	stop(
-		sprintf(
-			"Ptex library directory for architecture '%s' not found at %s",
-			target_arch,
-			ptex_lib_arch
-		),
-		call. = FALSE
-	)
-}
-PKG_CPPFLAGS = append_flags(
-	PKG_CPPFLAGS,
-	flag_with_path("-I", ptex_inc_dir)
-)
-PKG_LIBS_ACC = append_flags(
-	PKG_LIBS_ACC,
-	flag_with_path("-L", ptex_lib_arch),
-	"-lPtex"
-)
-
 libdeflate_lib_dir = tryCatch(
 	normalizePath(
 		system.file("lib", package = "libdeflate", mustWork = TRUE),
