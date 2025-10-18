@@ -5,8 +5,6 @@ PKG_CPPFLAGS = @PKG_CPPFLAGS@
 PKG_LIBS = @VISIBILITY_LDFLAGS@ @PKG_LIBS@
 PKG_CXXFLAGS = @DEFINES@ @PKG_CXXFLAGS@
 
-RcppExports.o: PKG_CXXFLAGS := $(filter-out -fvisibility=hidden -fvisibility-inlines-hidden,$(PKG_CXXFLAGS))
-
 ## Files to compile:
 C_SOURCES=@EXT_C_SOURCES@
 C_OBJECTS=$(C_SOURCES:.c=.o)

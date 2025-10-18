@@ -4,10 +4,12 @@ CXX_STD = CXX20
 PKG_LIBS = @VISIBILITY_LDFLAGS@  -lgdi32
 PKG_CXXFLAGS = -DRAY_REPRODUCE_PERLIN -DSTRICT_R_HEADERS -DRAY_WINDOWS -DHAS_SSE -DRAYSIMD -DRAYSIMDVECOFF @PKG_CXXFLAGS@
 
-RcppExports.o: CXXFLAGS := $(filter-out -fvisibility=hidden -fvisibility-inlines-hidden,$(CXXFLAGS))
+## Files to compile:
+C_SOURCES=@EXT_C_SOURCES@
+C_OBJECTS=$(C_SOURCES:.c=.o)
 
 ## Files to compile: (add in pbrt/util/colorspace.cpp)
-SOURCES=@DIR_SOURCES@ @SUBDIR_SOURCES@ 
+SOURCES=@DIR_SOURCES@ @SUBDIR_SOURCES@ @EXT_CPP_SOURCES@
 OBJECTS=$(SOURCES:.c=.o) $(SOURCES:.cpp=.o)
 
 ## Build the DLL:

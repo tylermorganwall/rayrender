@@ -23,6 +23,7 @@
 ^.*\.obj$
 ^.*\.mtl$
 ^.*\.tmp$
+^.*\.o$
 ^compile_commands\.json$
 ^\.cache$
 ^\.vscode/*$

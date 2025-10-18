@@ -1128,7 +1128,7 @@ inline IVec4 simd_blend_int(SimdMask mask, IVec4 a, IVec4 b) {
     for (int i = 0; i < 4; ++i) {
         uint32_t bits;
         std::memcpy(&bits, &mask.xyzw[i], sizeof(bits));
-        result.xyzw[i] = (static_cast<int>(bits) ? a.xyzw[i] : b.xyzw[i];
+        result.xyzw[i] = static_cast<int>(bits) ? a.xyzw[i] : b.xyzw[i];
     }
     return result;
 #endif

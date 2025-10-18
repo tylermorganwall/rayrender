@@ -142,7 +142,7 @@ there will be bright spots that will not go away even with a large number of sam
 can be removed (at the cost of slightly darkening the image) by setting this to a small number greater than 1.}
 
 \item{filename}{Default `NULL`. If present, the renderer will write to the filename instead
-of the current device.}
+of the current device. Can write to JPEG/JPG, PNG, and high dynamic range EXR images.}
 
 \item{backgroundhigh}{Default `#80b4ff`. The "high" color in the background gradient. Can be either
 a hexadecimal code, or a numeric rgb vector listing three intensities between `0` and `1`.}

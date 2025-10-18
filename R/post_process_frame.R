@@ -26,13 +26,14 @@ post_process_frame = function(
   if (debug_channel == 1) {
     returnmat = full_array[,, 1]
     returnmat[is.infinite(returnmat)] = NA
-    save_png(
+    rayimage::ray_write_image(
       (full_array - min(full_array, na.rm = TRUE)) /
         (max(full_array, na.rm = TRUE) - min(full_array, na.rm = TRUE)),
-      filename
+      filename,
+			write_linear = TRUE
     )
   } else if (debug_channel %in% c(2, 3, 4, 5, 6, 7, 8, 9)) {
-    save_png(full_array, filename)
+    rayimage::ray_write_image(full_array, filename, write_linear = TRUE)
   }
   if (bloom) {
     kernel = rayimage::generate_2d_exponential(0.1, 11, 3)
@@ -77,8 +78,8 @@ post_process_frame = function(
     array_from_mat[array_from_mat < 0] = 0
   }
   if (write_file) {
-    save_png(array_from_mat, filename)
+    rayimage::ray_write_image(array_from_mat, filename, write_linear = TRUE)
   } else {
-    rayimage::plot_image(array_from_mat, new_page = TRUE)
+    rayimage::plot_image(array_from_mat, new_page = TRUE,show_linear = TRUE)
   }
 }
