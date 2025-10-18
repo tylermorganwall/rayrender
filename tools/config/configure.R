@@ -185,21 +185,11 @@ compile_test = function(
 if (is_windows) {
 	DEFINES = append_unique_flags(
 		DEFINES,
-		"-DPBRT_IS_WINDOWS",
-		"-DNOMINMAX",
-		"-DPBRT_HAVE__ALIGNED_MALLOC"
+		"-DRAY_WINDOWS"
 	)
-} else if (is_macos) {
-	DEFINES = append_unique_flags(
-		DEFINES,
-		"-DPBRT_IS_OSX",
-		"-DPBRT_HAVE_POSIX_MEMALIGN"
-	)
-} else if (identical(sysname, "Linux")) {
-	DEFINES = append_unique_flags(
-		DEFINES,
-		"-DPBRT_IS_LINUX",
-		"-DPBRT_HAVE_POSIX_MEMALIGN"
+	PKG_LIBS_ACC = append_unique_flags(
+		PKG_LIBS_ACC,
+		"-lgdi32"
 	)
 }
 

@@ -15,7 +15,7 @@ CPP_OBJECTS=$(CPP_SOURCES:.cpp=.o)
 
 OBJECTS=$(C_OBJECTS) $(CPP_OBJECTS)
 
+$(SHLIB): $(OBJECTS)
+
 # Make the shared object
 all: $(SHLIB)
-
-$(SHLIB): $(OBJECTS)
