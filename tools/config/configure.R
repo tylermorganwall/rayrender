@@ -442,31 +442,6 @@ PKG_LIBS_ACC = append_flags(
 	"-ldeflate"
 )
 
-nanovdb_inc_dir = tryCatch(
-	normalizePath(
-		system.file("include", package = "libnanovdb", mustWork = TRUE),
-		winslash = "/",
-		mustWork = TRUE
-	),
-	error = function(e) ""
-)
-if (nzchar(nanovdb_inc_dir) && dir.exists(nanovdb_inc_dir)) {
-	message(sprintf(
-		"*** configure: using NanoVDB headers at %s",
-		nanovdb_inc_dir
-	))
-	PKG_CPPFLAGS = append_flags(
-		PKG_CPPFLAGS,
-		flag_with_path("-I", nanovdb_inc_dir)
-	)
-	PKG_LIBS_ACC = append_flags(
-		PKG_LIBS_ACC,
-		flag_with_path("-L", nanovdb_inc_dir)
-	)
-} else {
-	message("*** configure: NanoVDB headers not found; proceeding without them")
-}
-
 sse_checked = FALSE
 if (
 	compile_test(
@@ -592,12 +567,7 @@ SUBDIR_SOURCES = sort(unlist(lapply(
 	pattern = "\\.cpp$"
 )))
 EXT_CPP_SOURCES = sort(unlist(lapply(
-	c("ext/rply", "ext/lodepng", "ext/sky", "ext/miniply"),
-	collect_sources,
-	pattern = "\\.cpp$"
-)))
-PBRT_SOURCES = sort(unlist(lapply(
-	c("ext/pbrt", "ext/pbrt/cpu", "ext/pbrt/util", "ext/pbrt/spectrums"),
+	c("ext/miniply"),
 	collect_sources,
 	pattern = "\\.cpp$"
 )))

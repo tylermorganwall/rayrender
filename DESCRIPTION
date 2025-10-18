@@ -37,7 +37,7 @@ Suggests:
     rayshader (>= 0.38.13),
     xml2,
     rgl
-LinkingTo: Rcpp, RcppThread, progress, spacefillr (>= 0.3.0), testthat
+LinkingTo: Rcpp, RcppThread, progress, spacefillr (>= 0.3.0), testthat, libopenexr, libdeflate, libimath
 URL: https://www.rayrender.net, https://github.com/tylermorganwall/rayrender, http://www.rayrender.net/
 RoxygenNote: 7.3.2
 SystemRequirements: C++20
