@@ -5,11 +5,6 @@ sysname = Sys.info()[["sysname"]]
 is_macos = identical(sysname, "Darwin")
 target_arch = Sys.info()[["machine"]]
 r_home = R.home()
-r_cmd = normalizePath(
-	file.path(r_home, "bin", "R"),
-	winslash = "/",
-	mustWork = TRUE
-)
 
 split_flags = function(flags) {
 	if (!nzchar(flags)) {
