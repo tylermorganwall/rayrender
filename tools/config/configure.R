@@ -599,8 +599,7 @@ define(
 	DIR_SOURCES = collapse_flags(DIR_SOURCES),
 	SUBDIR_SOURCES = collapse_flags(SUBDIR_SOURCES),
 	EXT_CPP_SOURCES = collapse_flags(EXT_CPP_SOURCES),
-	EXT_C_SOURCES = collapse_flags(EXT_C_SOURCES),
-	PBRT_SOURCES = collapse_flags(PBRT_SOURCES)
+	EXT_C_SOURCES = collapse_flags(EXT_C_SOURCES)
 )
 
 configure_file("src/Makevars.in")
