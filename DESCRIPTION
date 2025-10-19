@@ -26,10 +26,7 @@ Imports:
     withr,
     vctrs,
     cli,
-    pillar,
-	libopenexr, 
-	libimath, 
-	libdeflate
+    pillar
 Suggests:
     sf,
     spData,

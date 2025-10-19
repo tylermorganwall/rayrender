@@ -616,3 +616,9 @@ message(sprintf("  cxxflags: %s", PKG_CXXFLAGS_STR))
 message(sprintf("  includes: %s", PKG_CPPFLAGS_STR))
 message(sprintf("  libs:     %s", PKG_LIBS_STR))
 message("--------------------------------------------------")
+
+if (is_windows) {
+	remove_file("src/Makevars")
+} else {
+	remove_file("src/Makevars.win")
+}
