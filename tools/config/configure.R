@@ -330,11 +330,11 @@ if (!dir.exists(openexr_lib_arch)) {
 }
 PKG_CPPFLAGS = append_flags(
 	PKG_CPPFLAGS,
-	flag_with_path("-I", shQuote(openexr_inc_dir))
+	flag_with_path("-I", (openexr_inc_dir))
 )
 PKG_LIBS_ACC = append_flags(
 	PKG_LIBS_ACC,
-	flag_with_path("-L", shQuote(openexr_lib_arch)),
+	flag_with_path("-L", (openexr_lib_arch)),
 	"-lIlmThread-3_4",
 	"-lOpenEXR-3_4",
 	"-lIex-3_4",
@@ -375,11 +375,11 @@ if (!dir.exists(imath_lib_arch)) {
 }
 PKG_CPPFLAGS = append_flags(
 	PKG_CPPFLAGS,
-	flag_with_path("-I", shQuote(imath_inc_dir))
+	flag_with_path("-I", (imath_inc_dir))
 )
 PKG_LIBS_ACC = append_flags(
 	PKG_LIBS_ACC,
-	flag_with_path("-L", shQuote(imath_lib_arch)),
+	flag_with_path("-L", (imath_lib_arch)),
 	"-lImath-3_2"
 )
 
@@ -419,11 +419,11 @@ if (!dir.exists(libdeflate_lib_arch)) {
 }
 PKG_CPPFLAGS = append_flags(
 	PKG_CPPFLAGS,
-	flag_with_path("-I", shQuote(libdeflate_inc_dir))
+	flag_with_path("-I", (libdeflate_inc_dir))
 )
 PKG_LIBS_ACC = append_flags(
 	PKG_LIBS_ACC,
-	flag_with_path("-L", shQuote(libdeflate_lib_arch)),
+	flag_with_path("-L", (libdeflate_lib_arch)),
 	"-ldeflate"
 )
 
