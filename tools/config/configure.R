@@ -334,12 +334,20 @@ PKG_CPPFLAGS = append_flags(
 )
 PKG_LIBS_ACC = append_flags(
 	PKG_LIBS_ACC,
-	flag_with_path("-L", (openexr_lib_arch)),
-	"-lIlmThread-3_4",
+	flag_with_path("-L", openexr_lib_arch),
+	sprintf(
+		"-Wl,-rpath,%s",
+		normalizePath(openexr_lib_arch, winslash = "/", mustWork = FALSE)
+	),
+	sprintf(
+		"-Wl,-rpath-link,%s",
+		normalizePath(openexr_lib_arch, winslash = "/", mustWork = FALSE)
+	),
 	"-lOpenEXR-3_4",
-	"-lIex-3_4",
+	"-lOpenEXRUtil-3_4",
 	"-lOpenEXRCore-3_4",
-	"-lOpenEXRUtil-3_4"
+	"-lIex-3_4",
+	"-lIlmThread-3_4"
 )
 
 imath_lib_dir = tryCatch(
@@ -379,9 +387,18 @@ PKG_CPPFLAGS = append_flags(
 )
 PKG_LIBS_ACC = append_flags(
 	PKG_LIBS_ACC,
-	flag_with_path("-L", (imath_lib_arch)),
+	flag_with_path("-L", imath_lib_arch),
+	sprintf(
+		"-Wl,-rpath,%s",
+		normalizePath(imath_lib_arch, winslash = "/", mustWork = FALSE)
+	),
+	sprintf(
+		"-Wl,-rpath-link,%s",
+		normalizePath(imath_lib_arch, winslash = "/", mustWork = FALSE)
+	),
 	"-lImath-3_2"
 )
+
 
 libdeflate_lib_dir = tryCatch(
 	normalizePath(
@@ -423,7 +440,15 @@ PKG_CPPFLAGS = append_flags(
 )
 PKG_LIBS_ACC = append_flags(
 	PKG_LIBS_ACC,
-	flag_with_path("-L", (libdeflate_lib_arch)),
+	flag_with_path("-L", libdeflate_lib_arch),
+	sprintf(
+		"-Wl,-rpath,%s",
+		normalizePath(libdeflate_lib_arch, winslash = "/", mustWork = FALSE)
+	),
+	sprintf(
+		"-Wl,-rpath-link,%s",
+		normalizePath(libdeflate_lib_arch, winslash = "/", mustWork = FALSE)
+	),
 	"-ldeflate"
 )
 
