@@ -2,7 +2,7 @@ CXX_STD = CXX20
 
 ## Compiler flags/defines:
 PKG_CPPFLAGS = @PKG_CPPFLAGS@ 
-PKG_LIBS = @VISIBILITY_LDFLAGS@ @PKG_LIBS@
+PKG_LIBS = @PKG_LIBS@
 PKG_CXXFLAGS = @DEFINES@ @PKG_CXXFLAGS@
 
 ## Files to compile:
