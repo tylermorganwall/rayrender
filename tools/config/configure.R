@@ -335,11 +335,11 @@ PKG_CPPFLAGS = append_flags(
 PKG_LIBS_ACC = append_flags(
 	PKG_LIBS_ACC,
 	flag_with_path("-L", openexr_lib_arch),
-	"-lIlmThread-3_4",
-	"-lOpenEXR-3_4",
-	"-lIex-3_4",
-	"-lOpenEXRCore-3_4",
-	"-lOpenEXRUtil-3_4"
+	"-lIlmThread_3_4",
+	"-lOpenEXR_3_4",
+	"-lIex_3_4",
+	"-lOpenEXRCore_3_4",
+	"-lOpenEXRUtil_3_4"
 )
 
 imath_lib_dir = tryCatch(
