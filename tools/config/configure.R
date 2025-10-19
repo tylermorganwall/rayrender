@@ -3,6 +3,7 @@
 is_windows = identical(.Platform$OS.type, "windows")
 sysname = Sys.info()[["sysname"]]
 is_macos = identical(sysname, "Darwin")
+is_linux = !is_windows && !is_macos
 target_arch = Sys.info()[["machine"]]
 r_home = R.home()
 
@@ -53,6 +54,27 @@ collapse_flags = function(flags) {
 		return("")
 	}
 	paste(flags, collapse = " ")
+}
+
+add_rpath = function(flags, dir) {
+	flags = append_flags(flags, flag_with_path("-L", dir))
+	flags = append_flags(
+		flags,
+		sprintf(
+			"-Wl,-rpath,%s",
+			normalizePath(dir, winslash = "/", mustWork = FALSE)
+		)
+	)
+	if (is_linux) {
+		flags = append_flags(
+			flags,
+			sprintf(
+				"-Wl,-rpath-link,%s",
+				normalizePath(dir, winslash = "/", mustWork = FALSE)
+			)
+		)
+	}
+	flags
 }
 
 CXX = r_cmd_config("CXX20")
@@ -332,17 +354,10 @@ PKG_CPPFLAGS = append_flags(
 	PKG_CPPFLAGS,
 	flag_with_path("-I", (openexr_inc_dir))
 )
+
+PKG_LIBS_ACC = add_rpath(PKG_LIBS_ACC, openexr_lib_arch)
 PKG_LIBS_ACC = append_flags(
 	PKG_LIBS_ACC,
-	flag_with_path("-L", openexr_lib_arch),
-	sprintf(
-		"-Wl,-rpath,%s",
-		normalizePath(openexr_lib_arch, winslash = "/", mustWork = FALSE)
-	),
-	sprintf(
-		"-Wl,-rpath-link,%s",
-		normalizePath(openexr_lib_arch, winslash = "/", mustWork = FALSE)
-	),
 	"-lOpenEXR-3_4",
 	"-lOpenEXRUtil-3_4",
 	"-lOpenEXRCore-3_4",
@@ -385,19 +400,8 @@ PKG_CPPFLAGS = append_flags(
 	PKG_CPPFLAGS,
 	flag_with_path("-I", (imath_inc_dir))
 )
-PKG_LIBS_ACC = append_flags(
-	PKG_LIBS_ACC,
-	flag_with_path("-L", imath_lib_arch),
-	sprintf(
-		"-Wl,-rpath,%s",
-		normalizePath(imath_lib_arch, winslash = "/", mustWork = FALSE)
-	),
-	sprintf(
-		"-Wl,-rpath-link,%s",
-		normalizePath(imath_lib_arch, winslash = "/", mustWork = FALSE)
-	),
-	"-lImath-3_2"
-)
+PKG_LIBS_ACC = add_rpath(PKG_LIBS_ACC, imath_lib_arch)
+PKG_LIBS_ACC = append_flags(PKG_LIBS_ACC, "-lImath-3_2")
 
 
 libdeflate_lib_dir = tryCatch(
@@ -438,19 +442,8 @@ PKG_CPPFLAGS = append_flags(
 	PKG_CPPFLAGS,
 	flag_with_path("-I", (libdeflate_inc_dir))
 )
-PKG_LIBS_ACC = append_flags(
-	PKG_LIBS_ACC,
-	flag_with_path("-L", libdeflate_lib_arch),
-	sprintf(
-		"-Wl,-rpath,%s",
-		normalizePath(libdeflate_lib_arch, winslash = "/", mustWork = FALSE)
-	),
-	sprintf(
-		"-Wl,-rpath-link,%s",
-		normalizePath(libdeflate_lib_arch, winslash = "/", mustWork = FALSE)
-	),
-	"-ldeflate"
-)
+PKG_LIBS_ACC = add_rpath(PKG_LIBS_ACC, libdeflate_lib_arch)
+PKG_LIBS_ACC = append_flags(PKG_LIBS_ACC, "-ldeflate")
 
 sse_checked = FALSE
 if (
