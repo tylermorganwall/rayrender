@@ -26,7 +26,10 @@ Imports:
     withr,
     vctrs,
     cli,
-    pillar
+    pillar,
+	libopenexr, 
+	libimath, 
+	libdeflate
 Suggests:
     sf,
     spData,
@@ -37,7 +40,7 @@ Suggests:
     rayshader (>= 0.38.13),
     xml2,
     rgl
-LinkingTo: Rcpp, RcppThread, progress, spacefillr (>= 0.3.0), testthat, libdeflate, libimath, libopenexr
+LinkingTo: Rcpp, RcppThread, progress, spacefillr (>= 0.3.0), testthat, libopenexr, libimath, libdeflate
 URL: https://www.rayrender.net, https://github.com/tylermorganwall/rayrender, http://www.rayrender.net/
 RoxygenNote: 7.3.2
 SystemRequirements: C++20
