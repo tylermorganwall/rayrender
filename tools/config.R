@@ -112,7 +112,7 @@ configure_file <- function(
 
 	# write configured file to target location
 	# prefer unix newlines for Makevars
-	mode <- if (target %in% "Makevars") "wb" else "w"
+	mode <- if (basename(target) == "Makevars") "wb" else "w"
 	conn <- file(target, open = mode)
 	on.exit(close(conn), add = TRUE)
 	writeLines(contents, con = conn)
