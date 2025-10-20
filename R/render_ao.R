@@ -125,140 +125,141 @@
 #'
 #' }
 render_ao = function(
-  scene,
-  width = 400,
-  height = 400,
-  fov = 20,
-  sample_dist = 10,
-  keep_colors = FALSE,
-  samples = 100,
-  camera_description_file = NA,
-  camera_scale = 1,
-  iso = 100,
-  film_size = 22,
-  min_variance = 0.0000,
-  min_adaptive_size = 8,
-  sample_method = "sobol",
-  background_color = "white",
-  lookfrom = c(0, 1, 10),
-  lookat = c(0, 0, 0),
-  camera_up = c(0, 1, 0),
-  aperture = 0.1,
-  clamp_value = Inf,
-  filename = NULL,
-  shutteropen = 0.0,
-  shutterclose = 1.0,
-  focal_distance = NULL,
-  ortho_dimensions = c(1, 1),
-  parallel = TRUE,
-  bvh_type = "sah",
-  progress = interactive(),
-  verbose = FALSE
+	scene,
+	width = 400,
+	height = 400,
+	fov = 20,
+	sample_dist = 10,
+	keep_colors = FALSE,
+	samples = 100,
+	camera_description_file = NA,
+	camera_scale = 1,
+	iso = 100,
+	film_size = 22,
+	min_variance = 0.0000,
+	min_adaptive_size = 8,
+	sample_method = "sobol",
+	background_color = "white",
+	lookfrom = c(0, 1, 10),
+	lookat = c(0, 0, 0),
+	camera_up = c(0, 1, 0),
+	aperture = 0.1,
+	clamp_value = Inf,
+	filename = NULL,
+	shutteropen = 0.0,
+	shutterclose = 1.0,
+	focal_distance = NULL,
+	ortho_dimensions = c(1, 1),
+	parallel = TRUE,
+	bvh_type = "sah",
+	progress = interactive(),
+	verbose = FALSE
 ) {
-  #Check if Cornell Box scene and set camera if user did not:
-  if (!is.null(attr(scene, "cornell"))) {
-    corn_message = "Setting default values for Cornell box: "
-    missing_corn = FALSE
-    if (missing(lookfrom)) {
-      lookfrom = c(278, 278, -800)
-      corn_message = paste0(corn_message, "lookfrom `c(278,278,-800)` ")
-      missing_corn = TRUE
-    }
-    if (missing(lookat)) {
-      lookat = c(278, 278, 555 / 2)
-      corn_message = paste0(corn_message, "lookat `c(278,278,555/2)` ")
-      missing_corn = TRUE
-    }
-    if (missing(fov) && is.na(camera_description_file)) {
-      fov = 40
-      corn_message = paste0(corn_message, "fov `40` ")
-      missing_corn = TRUE
-    }
-    if (
-      fov == 0 && missing(ortho_dimensions) && is.na(camera_description_file)
-    ) {
-      ortho_dimensions = c(580, 580)
-      corn_message = paste0(corn_message, "ortho_dimensions `c(580, 580)` ")
-      missing_corn = TRUE
-    }
-    corn_message = paste0(corn_message, ".")
-    if (missing_corn) {
-      message(corn_message)
-    }
-  }
-  debug_channel = "ao"
-  tonemap = "gamma"
-  bloom = FALSE
+	#Check if Cornell Box scene and set camera if user did not:
+	if (!is.null(attr(scene, "cornell"))) {
+		corn_message = "Setting default values for Cornell box: "
+		missing_corn = FALSE
+		if (missing(lookfrom)) {
+			lookfrom = c(278, 278, -800)
+			corn_message = paste0(corn_message, "lookfrom `c(278,278,-800)` ")
+			missing_corn = TRUE
+		}
+		if (missing(lookat)) {
+			lookat = c(278, 278, 555 / 2)
+			corn_message = paste0(corn_message, "lookat `c(278,278,555/2)` ")
+			missing_corn = TRUE
+		}
+		if (missing(fov) && is.na(camera_description_file)) {
+			fov = 40
+			corn_message = paste0(corn_message, "fov `40` ")
+			missing_corn = TRUE
+		}
+		if (
+			fov == 0 && missing(ortho_dimensions) && is.na(camera_description_file)
+		) {
+			ortho_dimensions = c(580, 580)
+			corn_message = paste0(corn_message, "ortho_dimensions `c(580, 580)` ")
+			missing_corn = TRUE
+		}
+		corn_message = paste0(corn_message, ".")
+		if (missing_corn) {
+			message(corn_message)
+		}
+	}
+	debug_channel = "ao"
+	tonemap = "gamma"
+	bloom = FALSE
 
-  background_color = convert_color(background_color)
-  scene_list = prepare_scene_list(
-    scene = scene,
-    width = width,
-    height = height,
-    fov = fov,
-    samples = samples,
-    camera_description_file = camera_description_file,
-    camera_scale = camera_scale,
-    iso = iso,
-    film_size = film_size,
-    min_variance = min_variance,
-    min_adaptive_size = min_adaptive_size,
-    sample_method = sample_method,
-    max_depth = 1000,
-    roulette_active_depth = 1000,
-    ambient_light = FALSE,
-    lookfrom = lookfrom,
-    lookat = lookat,
-    camera_up = camera_up,
-    aperture = aperture,
-    clamp_value = clamp_value,
-    filename = filename,
-    backgroundhigh = background_color,
-    backgroundlow = background_color,
-    shutteropen = shutteropen,
-    shutterclose = shutterclose,
-    focal_distance = focal_distance,
-    ortho_dimensions = ortho_dimensions,
-    tonemap = "gamma",
-    bloom = FALSE,
-    parallel = parallel,
-    bvh_type = bvh_type,
-    environment_light = NULL,
-    rotate_env = 0,
-    intensity_env = 1,
-    debug_channel = debug_channel,
-    return_raw_array = FALSE,
-    progress = progress,
-    verbose = verbose,
-    sample_dist = sample_dist,
-    keep_colors = keep_colors
-  )
+	background_color = convert_color(background_color)
+	scene_list = prepare_scene_list(
+		scene = scene,
+		width = width,
+		height = height,
+		fov = fov,
+		samples = samples,
+		camera_description_file = camera_description_file,
+		camera_scale = camera_scale,
+		iso = iso,
+		film_size = film_size,
+		min_variance = min_variance,
+		min_adaptive_size = min_adaptive_size,
+		sample_method = sample_method,
+		max_depth = 1000,
+		roulette_active_depth = 1000,
+		ambient_light = FALSE,
+		lookfrom = lookfrom,
+		lookat = lookat,
+		camera_up = camera_up,
+		aperture = aperture,
+		clamp_value = clamp_value,
+		filename = filename,
+		backgroundhigh = background_color,
+		backgroundlow = background_color,
+		shutteropen = shutteropen,
+		shutterclose = shutterclose,
+		focal_distance = focal_distance,
+		ortho_dimensions = ortho_dimensions,
+		tonemap = "gamma",
+		bloom = FALSE,
+		parallel = parallel,
+		bvh_type = bvh_type,
+		environment_light = NULL,
+		rotate_env = 0,
+		intensity_env = 1,
+		debug_channel = debug_channel,
+		return_raw_array = FALSE,
+		progress = progress,
+		verbose = verbose,
+		sample_dist = sample_dist,
+		keep_colors = keep_colors
+	)
 
-  camera_info = scene_list$camera_info
-  scene_info = scene_list$scene_info
-  render_info = scene_list$render_info
-  processed_scene = scene_info$scene
+	camera_info = scene_list$camera_info
+	scene_info = scene_list$scene_info
+	render_info = scene_list$render_info
+	processed_scene = scene_info$scene
 
-  camera_info$preview = FALSE
-  camera_info$interactive = FALSE
-  debug_channel = 18 # converted to numeric
+	camera_info$preview = FALSE
+	camera_info$interactive = FALSE
+	debug_channel = 18 # converted to numeric
 
-  #Pathtrace Scene
-  rgb_mat = render_scene_rcpp(
-    scene = processed_scene,
-    camera_info = camera_info,
-    scene_info = scene_info,
-    render_info = render_info
-  )
+	#Pathtrace Scene
+	rgb_mat = render_scene_rcpp(
+		scene = processed_scene,
+		camera_info = camera_info,
+		scene_info = scene_info,
+		render_info = render_info
+	)
 
-  return_array = post_process_scene(
-    rgb_mat,
-    iso,
-    tonemap,
-    debug_channel,
-    filename,
-    FALSE,
-    bloom
-  )
-  return(invisible(return_array))
+	return_array = post_process_scene(
+		rgb_mat,
+		iso,
+		FALSE, #use_iso
+		tonemap,
+		debug_channel,
+		filename,
+		FALSE,
+		bloom
+	)
+	return(invisible(return_array))
 }
