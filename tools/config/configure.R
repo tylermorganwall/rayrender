@@ -290,26 +290,247 @@ if (!is_windows) {
 	}
 }
 
+# ---- TBB detection ----
+
+detect_tbb = function(extra_lib_dirs = character()) {
+	tbb_root = Sys.getenv("TBB_ROOT", unset = "")
+	tbb_lib_env = Sys.getenv("TBB_LIB", unset = "")
+	tbb_inc_env = Sys.getenv("TBB_INC", unset = "")
+
+	if (nzchar(tbb_root)) {
+		if (!nzchar(tbb_lib_env)) {
+			tbb_lib_env = file.path(tbb_root, "lib")
+		}
+		if (!nzchar(tbb_inc_env)) {
+			tbb_inc_env = file.path(tbb_root, "include")
+		}
+	}
+
+	search_dirs = character()
+	if (nzchar(tbb_lib_env)) {
+		search_dirs = c(
+			search_dirs,
+			normalizePath(tbb_lib_env, winslash = "/", mustWork = FALSE)
+		)
+	}
+
+	if (length(extra_lib_dirs)) {
+		search_dirs = c(
+			search_dirs,
+			normalizePath(extra_lib_dirs, winslash = "/", mustWork = FALSE)
+		)
+	}
+
+	# Windows: default to Rtools lib if nothing else specified
+	if (!length(search_dirs) && is_windows) {
+		gcc_path = normalizePath(
+			Sys.which("gcc"),
+			winslash = "/",
+			mustWork = FALSE
+		)
+		if (nzchar(gcc_path)) {
+			search_dirs = c(
+				search_dirs,
+				normalizePath(
+					file.path(gcc_path, "../../lib"),
+					winslash = "/",
+					mustWork = FALSE
+				)
+			)
+			if (!nzchar(tbb_inc_env)) {
+				tbb_inc_env = normalizePath(
+					file.path(gcc_path, "../../include"),
+					winslash = "/",
+					mustWork = FALSE
+				)
+			}
+		}
+	}
+
+	# Unix: optional auto-detect if requested
+	if (
+		!length(search_dirs) &&
+			.Platform$OS.type == "unix" &&
+			identical(Sys.getenv("TBB_AUTODETECT", unset = "FALSE"), "TRUE")
+	) {
+		sysname = Sys.info()[["sysname"]]
+		homebrew_prefix = if (identical(sysname, "Darwin")) {
+			"/opt/homebrew"
+		} else {
+			"/usr/local"
+		}
+
+		if (identical(sysname, "Darwin")) {
+			lib_candidate = file.path(homebrew_prefix, "opt/tbb/lib")
+			inc_candidate = file.path(homebrew_prefix, "opt/tbb/include")
+			search_dirs = c(search_dirs, lib_candidate)
+			if (!nzchar(tbb_inc_env)) {
+				tbb_inc_env = inc_candidate
+			}
+		} else {
+			tbb_lib_search = Sys.glob(c(
+				"/usr/*/libtbb.so",
+				"/usr/*/*/libtbb.so",
+				"/usr/*/*/*/libtbb.so"
+			))
+			if (length(tbb_lib_search)) {
+				search_dirs = c(search_dirs, dirname(tbb_lib_search[[1L]]))
+			}
+			if (!nzchar(tbb_inc_env)) {
+				tbb_inc_search = Sys.glob(c(
+					"/usr/include/tbb.h",
+					"/usr/include/*/tbb.h"
+				))
+				if (length(tbb_inc_search)) {
+					tbb_inc_env = dirname(tbb_inc_search[[1L]])
+				}
+			}
+		}
+	}
+
+	# If we still do not have an include dir, try ../include relative to lib
+	if (!nzchar(tbb_inc_env) && length(search_dirs)) {
+		candidate_inc = normalizePath(
+			file.path(search_dirs[[1L]], "../include"),
+			winslash = "/",
+			mustWork = FALSE
+		)
+		if (dir.exists(candidate_inc)) {
+			tbb_inc_env = candidate_inc
+		}
+	}
+
+	search_dirs = unique(search_dirs)
+
+	for (lib_dir in search_dirs) {
+		if (!dir.exists(lib_dir)) {
+			next
+		}
+
+		files = list.files(lib_dir, pattern = "^libtbb", full.names = FALSE)
+		if (!length(files)) {
+			next
+		}
+
+		# Prefer versioned libs like libtbb12.a, libtbb12.so, etc.
+		pattern = "^lib(tbb[0-9]*(?:_static)?)\\.(a|so|dylib|lib|dll)$"
+		matches = grep(pattern, files, perl = TRUE, value = TRUE)
+		if (!length(matches)) {
+			next
+		}
+
+		chosen = matches[[1L]]
+		lib_name = sub(pattern, "\\1", chosen, perl = TRUE)
+
+		lib_dir_norm = normalizePath(
+			lib_dir,
+			winslash = "/",
+			mustWork = FALSE
+		)
+		inc_dir_norm = if (nzchar(tbb_inc_env)) {
+			normalizePath(tbb_inc_env, winslash = "/", mustWork = FALSE)
+		} else {
+			""
+		}
+
+		message(sprintf(
+			"*** configure: found TBB (%s) in %s",
+			lib_name,
+			lib_dir_norm
+		))
+
+		return(list(
+			found = TRUE,
+			lib_dir = lib_dir_norm,
+			inc_dir = inc_dir_norm,
+			lib_name = lib_name
+		))
+	}
+
+	message(
+		"*** configure: TBB not found; TBB-dependent features will be disabled"
+	)
+
+	list(found = FALSE, lib_dir = "", inc_dir = "", lib_name = "")
+}
+
+
 oidn_path = Sys.getenv("OIDN_PATH", unset = "")
 if (nzchar(oidn_path) && dir.exists(oidn_path)) {
-	message(sprintf("*** configure: using Open Image Denoise at %s", oidn_path))
-	OIDN_CPPFLAGS = append_flags(
-		OIDN_CPPFLAGS,
-		flag_with_path("-I", file.path(oidn_path, "include"))
-	)
 	lib_dir = file.path(oidn_path, "lib")
-	if (dir.exists(lib_dir)) {
-		OIDN_LDFLAGS = append_flags(OIDN_LDFLAGS, flag_with_path("-L", lib_dir))
-		OIDN_LDFLAGS = append_flags(
-			OIDN_LDFLAGS,
-			sprintf(
-				"-Wl,-rpath,%s",
-				normalizePath(lib_dir, winslash = "/", mustWork = FALSE)
-			)
+
+	# Prefer TBB bundled alongside OIDN if present; otherwise fall back
+	tbb_info = detect_tbb(
+		extra_lib_dirs = if (dir.exists(lib_dir)) lib_dir else character()
+	)
+
+	if (!tbb_info$found) {
+		message(
+			"*** configure: Open Image Denoise (OIDN) found but TBB is not available; skipping denoiser support"
 		)
-		OIDN_LIBS = append_flags(OIDN_LIBS, "-lOpenImageDenoise", "-ltbb")
+	} else {
+		message(sprintf(
+			"*** configure: using Open Image Denoise at %s (TBB %s in %s)",
+			oidn_path,
+			tbb_info$lib_name,
+			tbb_info$lib_dir
+		))
+
+		# OIDN headers
+		OIDN_CPPFLAGS = append_flags(
+			OIDN_CPPFLAGS,
+			flag_with_path("-I", file.path(oidn_path, "include"))
+		)
+
+		# TBB headers (if we know an include dir)
+		if (nzchar(tbb_info$inc_dir)) {
+			OIDN_CPPFLAGS = append_flags(
+				OIDN_CPPFLAGS,
+				flag_with_path("-I", tbb_info$inc_dir)
+			)
+		}
+
+		# OIDN lib dir + rpath
+		if (dir.exists(lib_dir)) {
+			OIDN_LDFLAGS = append_flags(OIDN_LDFLAGS, flag_with_path("-L", lib_dir))
+			OIDN_LDFLAGS = append_flags(
+				OIDN_LDFLAGS,
+				sprintf(
+					"-Wl,-rpath,%s",
+					normalizePath(lib_dir, winslash = "/", mustWork = FALSE)
+				)
+			)
+		}
+
+		# TBB lib dir + rpath (may be distinct from OIDN lib dir)
+		if (nzchar(tbb_info$lib_dir) && dir.exists(tbb_info$lib_dir)) {
+			OIDN_LDFLAGS = append_flags(
+				OIDN_LDFLAGS,
+				flag_with_path("-L", tbb_info$lib_dir)
+			)
+			OIDN_LDFLAGS = append_flags(
+				OIDN_LDFLAGS,
+				sprintf(
+					"-Wl,-rpath,%s",
+					normalizePath(tbb_info$lib_dir, winslash = "/", mustWork = FALSE)
+				)
+			)
+		}
+
+		# Link against OIDN + detected TBB name (tbb, tbb12, tbb12_static, ...)
+		tbb_lib_flag = paste0(
+			"-l",
+			if (nzchar(tbb_info$lib_name)) tbb_info$lib_name else "tbb"
+		)
+
+		OIDN_LIBS = append_flags(
+			OIDN_LIBS,
+			"-lOpenImageDenoise",
+			tbb_lib_flag
+		)
+
+		DEFINES = append_unique_flags(DEFINES, "-DHAS_OIDN")
 	}
-	DEFINES = append_unique_flags(DEFINES, "-DHAS_OIDN")
 } else {
 	message(
 		"*** configure: Open Image Denoise (OIDN) not found; skipping denoiser support"
