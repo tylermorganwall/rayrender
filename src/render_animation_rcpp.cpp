@@ -7,7 +7,6 @@
 #include "math/float.h"
 #include "core/buildscene.h"
 #include "math/rng.h"
-#include "tonemap.h"
 #include "hitables/infinite_area_light.h"
 #include "core/adaptivesampler.h"
 #include "math/sampler.h"
@@ -39,7 +38,8 @@ using namespace std;
 void render_animation_rcpp(List scene, List camera_info, List scene_info, List render_info,
                            List camera_movement, 
                            int start_frame, int end_frame,
-                           CharacterVector filenames, Function post_process_frame, int toneval,
+                           CharacterVector filenames, Function post_process_frame, 
+						   CharacterVector tonemap,
                            bool bloom, bool write_image, bool transparent_background) {
   //Unpack scene info
   IntegerVector shape = as<IntegerVector>(scene_info["shape"]);
@@ -334,7 +334,8 @@ void render_animation_rcpp(List scene, List camera_info, List scene_info, List r
       List temp = List::create(_["r"] = rgb_output.ConvertRcpp(0), 
                                _["g"] = rgb_output.ConvertRcpp(1), 
                                _["b"] = rgb_output.ConvertRcpp(2));
-      post_process_frame(temp, debug_channel, as<std::string>(filenames(i)), toneval);
+      post_process_frame(temp, debug_channel, as<std::string>(filenames(i)), 
+	  as<std::string>(tonemap(0)));
     }
   } else {
     for(int i = start_frame; i < n_frames; i++ ) {
@@ -457,14 +458,14 @@ void render_animation_rcpp(List scene, List camera_info, List scene_info, List r
                                _["g"] = draw_rgb_output.ConvertRcpp(1), 
                                _["b"] = draw_rgb_output.ConvertRcpp(2),
                                _["a"] = alpha_output.ConvertRcpp());
-      post_process_frame(temp, debug_channel, as<std::string>(filenames(i)), toneval, bloom,
+      post_process_frame(temp, debug_channel, as<std::string>(filenames(i)), as<std::string>(tonemap(0)), bloom,
                        transparent_background, write_image);
 #else
       List temp = List::create(_["r"] = rgb_output.ConvertRcpp(0), 
                                _["g"] = rgb_output.ConvertRcpp(1), 
                                _["b"] = rgb_output.ConvertRcpp(2),
                                _["a"] = alpha_output.ConvertRcpp());
-      post_process_frame(temp, debug_channel, as<std::string>(filenames(i)), toneval, bloom,
+      post_process_frame(temp, debug_channel, as<std::string>(filenames(i)), as<std::string>(tonemap(0)), bloom,
                        transparent_background, write_image);
 #endif
     }

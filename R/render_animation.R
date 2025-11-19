@@ -57,13 +57,10 @@
 #' @param focal_distance Default `NULL`, automatically set to the `lookfrom-lookat` distance unless
 #' otherwise specified.
 #' @param ortho_dimensions Default `c(1,1)`. Width and height of the orthographic camera. Will only be used if `fov = 0`.
-#' @param tonemap Default `gamma`. Choose the tone mapping function,
-#' Default `gamma` solely adjusts for gamma and clamps values greater than 1 to 1.
+#' @param tonemap Default `raw`, no tonemapping. Choose the tone mapping function,
 #' `reinhold` scales values by their individual color channels `color/(1+color)` and then performs the
 #' gamma adjustment. `uncharted` uses the mapping developed for Uncharted 2 by John Hable. `hbd` uses an
-#' optimized formula by Jim Hejl and Richard Burgess-Dawson. Note: If set to anything other than `gamma`,
-#' objects with material `light()` may not be anti-aliased. If `raw`, the raw array of HDR values will be
-#' returned, rather than an image or a plot.
+#' optimized formula by Jim Hejl and Richard Burgess-Dawson.
 #' @param bloom Default `TRUE`. Set to `FALSE` to get the raw, pathtraced image. Otherwise,
 #' this performs a convolution of the HDR image of the scene with a sharp, long-tailed
 #' exponential kernel, which does not visibly affect dimly pixels, but does result in emitters light
@@ -175,175 +172,167 @@
 #'
 #' }
 render_animation = function(
-  scene,
-  camera_motion,
-  start_frame = 1,
-  end_frame = NA,
-  width = 400,
-  height = 400,
-  preview = interactive(),
-  denoise = TRUE,
-  camera_description_file = NA,
-  camera_scale = 1,
-  iso = 100,
-  film_size = 22,
-  samples = 100,
-  min_variance = 0,
-  min_adaptive_size = 8,
-  sample_method = "sobol",
-  ambient_occlusion = FALSE,
-  keep_colors = FALSE,
-  sample_dist = 10,
-  max_depth = 50,
-  roulette_active_depth = 10,
-  ambient_light = FALSE,
-  clamp_value = Inf,
-  filename = NA,
-  backgroundhigh = "#80b4ff",
-  backgroundlow = "#ffffff",
-  shutteropen = 0.0,
-  shutterclose = 1.0,
-  focal_distance = NULL,
-  ortho_dimensions = c(1, 1),
-  tonemap = "gamma",
-  bloom = TRUE,
-  parallel = TRUE,
-  bvh_type = "sah",
-  environment_light = NULL,
-  rotate_env = 0,
-  intensity_env = 1,
-  debug_channel = "none",
-  return_raw_array = FALSE,
-  progress = interactive(),
-  verbose = FALSE,
-  transparent_background = FALSE,
-  preview_light_direction = c(0, -1, 0),
-  preview_exponent = 6,
-  integrator_type = "rtiow"
+	scene,
+	camera_motion,
+	start_frame = 1,
+	end_frame = NA,
+	width = 400,
+	height = 400,
+	preview = interactive(),
+	denoise = TRUE,
+	camera_description_file = NA,
+	camera_scale = 1,
+	iso = 100,
+	film_size = 22,
+	samples = 100,
+	min_variance = 0,
+	min_adaptive_size = 8,
+	sample_method = "sobol",
+	ambient_occlusion = FALSE,
+	keep_colors = FALSE,
+	sample_dist = 10,
+	max_depth = 50,
+	roulette_active_depth = 10,
+	ambient_light = FALSE,
+	clamp_value = Inf,
+	filename = NA,
+	backgroundhigh = "#80b4ff",
+	backgroundlow = "#ffffff",
+	shutteropen = 0.0,
+	shutterclose = 1.0,
+	focal_distance = NULL,
+	ortho_dimensions = c(1, 1),
+	tonemap = "gamma",
+	bloom = TRUE,
+	parallel = TRUE,
+	bvh_type = "sah",
+	environment_light = NULL,
+	rotate_env = 0,
+	intensity_env = 1,
+	debug_channel = "none",
+	return_raw_array = FALSE,
+	progress = interactive(),
+	verbose = FALSE,
+	transparent_background = FALSE,
+	preview_light_direction = c(0, -1, 0),
+	preview_exponent = 6,
+	integrator_type = "rtiow"
 ) {
-  if (ambient_occlusion) {
-    debug_channel = "ao"
-  }
-  write_file = TRUE
-  if (is.na(filename)) {
-    write_file = FALSE
-  }
-  scene_list = prepare_scene_list(
-    scene = scene,
-    width = width,
-    height = height,
-    fov = 0,
-    samples = samples,
-    camera_description_file = camera_description_file,
-    camera_scale = camera_scale,
-    iso = iso,
-    film_size = film_size,
-    min_variance = min_variance,
-    min_adaptive_size = min_adaptive_size,
-    sample_method = sample_method,
-    max_depth = max_depth,
-    roulette_active_depth = roulette_active_depth,
-    ambient_light = ambient_light,
-    lookfrom = c(0, 1, 10),
-    lookat = c(0, 0, 0),
-    camera_up = c(0, 1, 0),
-    aperture = 0,
-    clamp_value = clamp_value,
-    filename = filename,
-    backgroundhigh = backgroundhigh,
-    backgroundlow = backgroundlow,
-    shutteropen = shutteropen,
-    shutterclose = shutterclose,
-    focal_distance = focal_distance,
-    ortho_dimensions = ortho_dimensions,
-    tonemap = tonemap,
-    bloom = bloom,
-    parallel = parallel,
-    bvh_type = bvh_type,
-    environment_light = environment_light,
-    rotate_env = rotate_env,
-    intensity_env = intensity_env,
-    debug_channel = debug_channel,
-    return_raw_array = return_raw_array,
-    progress = progress,
-    verbose = verbose,
-    sample_dist = sample_dist,
-    keep_colors = keep_colors,
-    integrator_type = integrator_type,
-    denoise = denoise
-  )
+	if (ambient_occlusion) {
+		debug_channel = "ao"
+	}
+	write_file = TRUE
+	if (is.na(filename)) {
+		write_file = FALSE
+	}
+	scene_list = prepare_scene_list(
+		scene = scene,
+		width = width,
+		height = height,
+		fov = 0,
+		samples = samples,
+		camera_description_file = camera_description_file,
+		camera_scale = camera_scale,
+		iso = iso,
+		film_size = film_size,
+		min_variance = min_variance,
+		min_adaptive_size = min_adaptive_size,
+		sample_method = sample_method,
+		max_depth = max_depth,
+		roulette_active_depth = roulette_active_depth,
+		ambient_light = ambient_light,
+		lookfrom = c(0, 1, 10),
+		lookat = c(0, 0, 0),
+		camera_up = c(0, 1, 0),
+		aperture = 0,
+		clamp_value = clamp_value,
+		filename = filename,
+		backgroundhigh = backgroundhigh,
+		backgroundlow = backgroundlow,
+		shutteropen = shutteropen,
+		shutterclose = shutterclose,
+		focal_distance = focal_distance,
+		ortho_dimensions = ortho_dimensions,
+		tonemap = tonemap,
+		bloom = bloom,
+		parallel = parallel,
+		bvh_type = bvh_type,
+		environment_light = environment_light,
+		rotate_env = rotate_env,
+		intensity_env = intensity_env,
+		debug_channel = debug_channel,
+		return_raw_array = return_raw_array,
+		progress = progress,
+		verbose = verbose,
+		sample_dist = sample_dist,
+		keep_colors = keep_colors,
+		integrator_type = integrator_type,
+		denoise = denoise
+	)
 
-  camera_info = scene_list$camera_info
-  scene_info = scene_list$scene_info
-  render_info = scene_list$render_info
-  processed_scene = scene_info$scene
+	camera_info = scene_list$camera_info
+	scene_info = scene_list$scene_info
+	render_info = scene_list$render_info
+	processed_scene = scene_info$scene
 
-  camera_info$preview = preview
-  camera_info$interactive = FALSE
-  if (!is.na(camera_description_file)) {
-    camera_description_file = switch(
-      camera_description_file,
-      "50mm" = system.file("extdata", "dgauss.50mm.txt", package = "rayrender"),
-      "wide" = system.file("extdata", "wide.22mm.txt", package = "rayrender"),
-      "fisheye" = system.file(
-        "extdata",
-        "fisheye.10mm.txt",
-        package = "rayrender"
-      ),
-      "telephoto" = system.file(
-        "extdata",
-        "telephoto.250mm.txt",
-        package = "rayrender"
-      ),
-      camera_description_file
-    )
-    if (file.exists(camera_description_file)) {
-      camera_motion$fov = -1
-    } else {
-      warning(
-        "Camera description file `",
-        camera_description_file,
-        "` not found. Ignoring."
-      )
-    }
-  }
+	camera_info$preview = preview
+	camera_info$interactive = FALSE
+	if (!is.na(camera_description_file)) {
+		camera_description_file = switch(
+			camera_description_file,
+			"50mm" = system.file("extdata", "dgauss.50mm.txt", package = "rayrender"),
+			"wide" = system.file("extdata", "wide.22mm.txt", package = "rayrender"),
+			"fisheye" = system.file(
+				"extdata",
+				"fisheye.10mm.txt",
+				package = "rayrender"
+			),
+			"telephoto" = system.file(
+				"extdata",
+				"telephoto.250mm.txt",
+				package = "rayrender"
+			),
+			camera_description_file
+		)
+		if (file.exists(camera_description_file)) {
+			camera_motion$fov = -1
+		} else {
+			warning(
+				"Camera description file `",
+				camera_description_file,
+				"` not found. Ignoring."
+			)
+		}
+	}
 
-  if (is.na(filename)) {
-    filename = ""
-  }
-  #Camera Movement Info
-  if (filename != "") {
-    filename_str = paste0(filename, 1:nrow(camera_motion), ".png")
-  } else {
-    filename_str = rep("", length(1:nrow(camera_motion)))
-  }
+	if (is.na(filename)) {
+		filename = ""
+	}
+	#Camera Movement Info
+	if (filename != "") {
+		filename_str = paste0(filename, 1:nrow(camera_motion), ".png")
+	} else {
+		filename_str = rep("", length(1:nrow(camera_motion)))
+	}
 
-  toneval = switch(
-    tonemap,
-    "gamma" = 1,
-    "reinhold" = 2,
-    "uncharted" = 3,
-    "hbd" = 4,
-    "raw" = 5
-  )
-  if (is.na(end_frame)) {
-    end_frame = nrow(camera_motion)
-  }
-  stopifnot(end_frame <= nrow(camera_motion))
-  #Animate Scene
-  rgb_mat = render_animation_rcpp(
-    scene = processed_scene,
-    camera_info = camera_info,
-    scene_info = scene_info,
-    render_info = render_info,
-    camera_movement = camera_motion,
-    start_frame = start_frame - 1,
-    end_frame = end_frame,
-    filenames = filename_str,
-    post_process_frame = post_process_frame,
-    toneval = toneval,
-    bloom = bloom,
-    write_image = write_file,
-    transparent_background = transparent_background
-  )
+	if (is.na(end_frame)) {
+		end_frame = nrow(camera_motion)
+	}
+	stopifnot(end_frame <= nrow(camera_motion))
+	#Animate Scene
+	rgb_mat = render_animation_rcpp(
+		scene = processed_scene,
+		camera_info = camera_info,
+		scene_info = scene_info,
+		render_info = render_info,
+		camera_movement = camera_motion,
+		start_frame = start_frame - 1,
+		end_frame = end_frame,
+		filenames = filename_str,
+		post_process_frame = post_process_frame,
+		tonemap = tonemap,
+		bloom = bloom,
+		write_image = write_file,
+		transparent_background = transparent_background
+	)
 }

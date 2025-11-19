@@ -187,7 +187,7 @@ render_ao = function(
 		}
 	}
 	debug_channel = "ao"
-	tonemap = "gamma"
+	tonemap = "raw"
 	bloom = FALSE
 
 	background_color = convert_color(background_color)
@@ -219,7 +219,7 @@ render_ao = function(
 		shutterclose = shutterclose,
 		focal_distance = focal_distance,
 		ortho_dimensions = ortho_dimensions,
-		tonemap = "gamma",
+		tonemap = "raw",
 		bloom = FALSE,
 		parallel = parallel,
 		bvh_type = bvh_type,

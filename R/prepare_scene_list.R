@@ -121,7 +121,7 @@ prepare_scene_list = function(
 	backgroundhigh = convert_color(backgroundhigh)
 	backgroundlow = convert_color(backgroundlow)
 
-	if (!tonemap %in% c("gamma", "reinhold", "uncharted", "hbd", "raw")) {
+	if (!tonemap %in% c("gamma", "reinhard", "uncharted", "hbd", "raw")) {
 		stop("tonemap value ", tonemap, " not recognized")
 	}
 

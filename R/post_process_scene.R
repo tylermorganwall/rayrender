@@ -15,14 +15,6 @@ post_process_scene = function(
 	new_page = TRUE,
 	transparent_background = FALSE
 ) {
-	toneval = switch(
-		tonemap,
-		"gamma" = 1,
-		"reinhold" = 2,
-		"uncharted" = 3,
-		"hbd" = 4,
-		"raw" = 5
-	)
 	if (!is.numeric(debug_channel)) {
 		debug_channel = unlist(lapply(
 			tolower(debug_channel),
@@ -74,14 +66,14 @@ post_process_scene = function(
 			rayimage::plot_image(
 				(returnmat - min(returnmat, na.rm = TRUE)) /
 					(max(returnmat, na.rm = TRUE) - min(returnmat, na.rm = TRUE)),
-				new_page = new_page, show_linear = TRUE
+				new_page = new_page
 			)
 			return(invisible(returnmat))
 		} else {
 			rayimage::ray_write_image(
 				(returnmat - min(returnmat, na.rm = TRUE)) /
 					(max(returnmat, na.rm = TRUE) - min(returnmat, na.rm = TRUE)),
-				filename, write_linear = TRUE
+				filename
 			)
 			return(invisible(returnmat))
 		}
@@ -91,15 +83,18 @@ post_process_scene = function(
 				if (debug_channel == 4) {
 					rayimage::plot_image(
 						full_array / (max(full_array, na.rm = TRUE)),
-						new_page = new_page, show_linear = TRUE
+						new_page = new_page
 					)
 				} else {
-					rayimage::plot_image(full_array, new_page = new_page, show_linear = TRUE)
+					rayimage::plot_image(
+						full_array,
+						new_page = new_page
+					)
 				}
 			}
 			return(invisible(full_array))
 		} else {
-			rayimage::ray_write_image(full_array, filename, write_linear = TRUE)
+			rayimage::ray_write_image(full_array, filename)
 			return(invisible(full_array))
 		}
 	} else if (debug_channel %in% c(10, 13)) {
@@ -121,9 +116,9 @@ post_process_scene = function(
 		full_array[,, 3] = (full_array[,, 3] - min(full_array[,, 3])) /
 			(max(full_array[,, 3]) - min(full_array[,, 3]))
 		if (is.null(filename)) {
-			rayimage::plot_image(full_array, new_page = new_page, show_linear = TRUE)
+			rayimage::plot_image(full_array, new_page = new_page)
 		} else {
-			rayimage::ray_write_image(full_array, filename, write_linear = TRUE)
+			rayimage::ray_write_image(full_array, filename)
 		}
 		return(invisible(full_array_ret))
 	} else if (debug_channel == 11) {
@@ -133,9 +128,9 @@ post_process_scene = function(
 		full_array[,, 2] = (full_array[,, 2] + 1) / 2
 		full_array[,, 3] = (full_array[,, 3] + 1) / 2
 		if (is.null(filename)) {
-			rayimage::plot_image(full_array, new_page = new_page, show_linear = TRUE)
+			rayimage::plot_image(full_array, new_page = new_page)
 		} else {
-			rayimage::ray_write_image(full_array, filename, write_linear = TRUE)
+			rayimage::ray_write_image(full_array, filename)
 		}
 		return(invisible(full_array_ret))
 	} else if (debug_channel %in% c(12, 14, 15, 16)) {
@@ -147,9 +142,9 @@ post_process_scene = function(
 		full_array = (full_array - min(full_array)) /
 			(max(full_array) - min(full_array))
 		if (is.null(filename)) {
-			rayimage::plot_image(full_array, new_page = new_page, show_linear = TRUE)
+			rayimage::plot_image(full_array, new_page = new_page)
 		} else {
-			rayimage::ray_write_image(full_array, filename, write_linear = TRUE)
+			rayimage::ray_write_image(full_array, filename)
 		}
 		return(invisible(full_array_ret))
 	}
@@ -194,61 +189,29 @@ post_process_scene = function(
 			)
 		}
 	}
-	tonemapped_channels = tonemap_image(
-		full_array[,, 1],
-		full_array[,, 2],
-		full_array[,, 3],
-		toneval
-	)
-	if (!transparent_background) {
-		full_array = array(
-			0,
-			c(nrow(tonemapped_channels$r), ncol(tonemapped_channels$r), 3)
-		)
-	} else {
-		alpha_layer = full_array[,, 4]
-		full_array = array(
-			0,
-			c(nrow(tonemapped_channels$r), ncol(tonemapped_channels$r), 4)
-		)
-	}
-	full_array[,, 1] = tonemapped_channels$r
-	full_array[,, 2] = tonemapped_channels$g
-	full_array[,, 3] = tonemapped_channels$b
-	if (transparent_background) {
-		full_array[,, 4] = alpha_layer
-	}
-	if (toneval == 5) {
+	full_array = full_array |>
+		rayimage::ray_read_image(
+			convert_to_array = TRUE,
+			assume_colorspace = rayimage::CS_SRGB,
+			assume_white = "D65"
+		) |>
+		rayimage::render_tonemap(method = tonemap)
+
+	if (return_raw_array) {
 		return(full_array)
 	}
-
-	if (!transparent_background) {
-		array_from_mat = array(
-			full_array,
-			dim = c(nrow(full_array), ncol(full_array), 3)
-		)
-	} else {
-		array_from_mat = array(
-			full_array,
-			dim = c(nrow(full_array), ncol(full_array), 4)
-		)
-	}
-	if (return_raw_array) {
-		return(array_from_mat)
-	}
-	if (any(is.na(array_from_mat))) {
-		array_from_mat[is.na(array_from_mat)] = 0
-	}
-	if (any(array_from_mat > 1 | array_from_mat < 0, na.rm = TRUE)) {
-		array_from_mat[array_from_mat > 1] = 1
-		array_from_mat[array_from_mat < 0] = 0
+	if (any(is.na(full_array))) {
+		full_array[is.na(full_array)] = 0
 	}
 	if (is.null(filename)) {
 		if (!return_raw_array) {
-			rayimage::plot_image(array_from_mat, new_page = new_page, show_linear = TRUE)
+			rayimage::plot_image(
+				full_array,
+				new_page = new_page
+			)
 		}
 	} else {
-		rayimage::ray_write_image(array_from_mat, filename, write_linear = TRUE)
+		rayimage::ray_write_image(full_array, filename)
 	}
-	return(invisible(array_from_mat))
+	return(invisible(full_array))
 }

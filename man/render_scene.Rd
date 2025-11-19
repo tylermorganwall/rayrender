@@ -35,7 +35,7 @@ render_scene(
   shutterclose = 1,
   focal_distance = NULL,
   ortho_dimensions = c(1, 1),
-  tonemap = "gamma",
+  tonemap = "raw",
   bloom = TRUE,
   parallel = TRUE,
   bvh_type = "sah",
@@ -159,12 +159,10 @@ otherwise specified.}
 
 \item{ortho_dimensions}{Default `c(1,1)`. Width and height of the orthographic camera. Will only be used if `fov = 0`.}
 
-\item{tonemap}{Default `gamma`. Choose the tone mapping function,
-Default `gamma` solely adjusts for gamma and clamps values greater than 1 to 1.
-`reinhold` scales values by their individual color channels `color/(1+color)` and then performs the
+\item{tonemap}{Default `raw`, no tonemapping. Choose the tone mapping function,
+`reinhard` scales values by their individual color channels `color/(1+color)` and then performs the
 gamma adjustment. `uncharted` uses the mapping developed for Uncharted 2 by John Hable. `hbd` uses an
-optimized formula by Jim Hejl and Richard Burgess-Dawson. If `raw`, the raw array of HDR values will be
-returned, rather than an image or a plot.}
+optimized formula by Jim Hejl and Richard Burgess-Dawson.}
 
 \item{bloom}{Default `TRUE`. Set to `FALSE` to get the raw, pathtraced image. Otherwise,
 this performs a convolution of the HDR image of the scene with a sharp, long-tailed

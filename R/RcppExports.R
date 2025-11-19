@@ -33,15 +33,11 @@ cppdef_HAS_SSE41 <- function() {
     .Call(`_rayrender_cppdef_HAS_SSE41`)
 }
 
-render_animation_rcpp <- function(scene, camera_info, scene_info, render_info, camera_movement, start_frame, end_frame, filenames, post_process_frame, toneval, bloom, write_image, transparent_background) {
-    invisible(.Call(`_rayrender_render_animation_rcpp`, scene, camera_info, scene_info, render_info, camera_movement, start_frame, end_frame, filenames, post_process_frame, toneval, bloom, write_image, transparent_background))
+render_animation_rcpp <- function(scene, camera_info, scene_info, render_info, camera_movement, start_frame, end_frame, filenames, post_process_frame, tonemap, bloom, write_image, transparent_background) {
+    invisible(.Call(`_rayrender_render_animation_rcpp`, scene, camera_info, scene_info, render_info, camera_movement, start_frame, end_frame, filenames, post_process_frame, tonemap, bloom, write_image, transparent_background))
 }
 
 render_scene_rcpp <- function(scene, camera_info, scene_info, render_info) {
     .Call(`_rayrender_render_scene_rcpp`, scene, camera_info, scene_info, render_info)
-}
-
-tonemap_image <- function(routput, goutput, boutput, toneval) {
-    .Call(`_rayrender_tonemap_image`, routput, goutput, boutput, toneval)
 }
 

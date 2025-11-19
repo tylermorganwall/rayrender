@@ -91,8 +91,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // render_animation_rcpp
-void render_animation_rcpp(List scene, List camera_info, List scene_info, List render_info, List camera_movement, int start_frame, int end_frame, CharacterVector filenames, Function post_process_frame, int toneval, bool bloom, bool write_image, bool transparent_background);
-RcppExport SEXP _rayrender_render_animation_rcpp(SEXP sceneSEXP, SEXP camera_infoSEXP, SEXP scene_infoSEXP, SEXP render_infoSEXP, SEXP camera_movementSEXP, SEXP start_frameSEXP, SEXP end_frameSEXP, SEXP filenamesSEXP, SEXP post_process_frameSEXP, SEXP tonevalSEXP, SEXP bloomSEXP, SEXP write_imageSEXP, SEXP transparent_backgroundSEXP) {
+void render_animation_rcpp(List scene, List camera_info, List scene_info, List render_info, List camera_movement, int start_frame, int end_frame, CharacterVector filenames, Function post_process_frame, CharacterVector tonemap, bool bloom, bool write_image, bool transparent_background);
+RcppExport SEXP _rayrender_render_animation_rcpp(SEXP sceneSEXP, SEXP camera_infoSEXP, SEXP scene_infoSEXP, SEXP render_infoSEXP, SEXP camera_movementSEXP, SEXP start_frameSEXP, SEXP end_frameSEXP, SEXP filenamesSEXP, SEXP post_process_frameSEXP, SEXP tonemapSEXP, SEXP bloomSEXP, SEXP write_imageSEXP, SEXP transparent_backgroundSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< List >::type scene(sceneSEXP);
@@ -104,11 +104,11 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< int >::type end_frame(end_frameSEXP);
     Rcpp::traits::input_parameter< CharacterVector >::type filenames(filenamesSEXP);
     Rcpp::traits::input_parameter< Function >::type post_process_frame(post_process_frameSEXP);
-    Rcpp::traits::input_parameter< int >::type toneval(tonevalSEXP);
+    Rcpp::traits::input_parameter< CharacterVector >::type tonemap(tonemapSEXP);
     Rcpp::traits::input_parameter< bool >::type bloom(bloomSEXP);
     Rcpp::traits::input_parameter< bool >::type write_image(write_imageSEXP);
     Rcpp::traits::input_parameter< bool >::type transparent_background(transparent_backgroundSEXP);
-    render_animation_rcpp(scene, camera_info, scene_info, render_info, camera_movement, start_frame, end_frame, filenames, post_process_frame, toneval, bloom, write_image, transparent_background);
+    render_animation_rcpp(scene, camera_info, scene_info, render_info, camera_movement, start_frame, end_frame, filenames, post_process_frame, tonemap, bloom, write_image, transparent_background);
     return R_NilValue;
 END_RCPP
 }
@@ -126,20 +126,6 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// tonemap_image
-Rcpp::List tonemap_image(Rcpp::NumericMatrix routput, Rcpp::NumericMatrix goutput, Rcpp::NumericMatrix boutput, int toneval);
-RcppExport SEXP _rayrender_tonemap_image(SEXP routputSEXP, SEXP goutputSEXP, SEXP boutputSEXP, SEXP tonevalSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type routput(routputSEXP);
-    Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type goutput(goutputSEXP);
-    Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type boutput(boutputSEXP);
-    Rcpp::traits::input_parameter< int >::type toneval(tonevalSEXP);
-    rcpp_result_gen = Rcpp::wrap(tonemap_image(routput, goutput, boutput, toneval));
-    return rcpp_result_gen;
-END_RCPP
-}
 
 RcppExport SEXP run_testthat_tests(SEXP);
 
@@ -154,7 +140,6 @@ static const R_CallMethodDef CallEntries[] = {
     {"_rayrender_cppdef_HAS_SSE41", (DL_FUNC) &_rayrender_cppdef_HAS_SSE41, 0},
     {"_rayrender_render_animation_rcpp", (DL_FUNC) &_rayrender_render_animation_rcpp, 13},
     {"_rayrender_render_scene_rcpp", (DL_FUNC) &_rayrender_render_scene_rcpp, 4},
-    {"_rayrender_tonemap_image", (DL_FUNC) &_rayrender_tonemap_image, 4},
     {"run_testthat_tests", (DL_FUNC) &run_testthat_tests, 1},
     {NULL, NULL, 0}
 };
