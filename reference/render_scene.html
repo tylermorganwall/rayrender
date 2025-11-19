@@ -124,7 +124,7 @@ or are on Windows.</p>
 <span>  shutterclose <span class="op">=</span> <span class="fl">1</span>,</span>
 <span>  focal_distance <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  ortho_dimensions <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">1</span><span class="op">)</span>,</span>
-<span>  tonemap <span class="op">=</span> <span class="st">"gamma"</span>,</span>
+<span>  tonemap <span class="op">=</span> <span class="st">"raw"</span>,</span>
 <span>  bloom <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  parallel <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  bvh_type <span class="op">=</span> <span class="st">"sah"</span>,</span>
@@ -311,12 +311,10 @@ otherwise specified.</p></dd>
 
 
 <dt id="arg-tonemap">tonemap<a class="anchor" aria-label="anchor" href="#arg-tonemap"></a></dt>
-<dd><p>Default `gamma`. Choose the tone mapping function,
-Default `gamma` solely adjusts for gamma and clamps values greater than 1 to 1.
-`reinhold` scales values by their individual color channels `color/(1+color)` and then performs the
+<dd><p>Default `raw`, no tonemapping. Choose the tone mapping function,
+`reinhard` scales values by their individual color channels `color/(1+color)` and then performs the
 gamma adjustment. `uncharted` uses the mapping developed for Uncharted 2 by John Hable. `hbd` uses an
-optimized formula by Jim Hejl and Richard Burgess-Dawson. If `raw`, the raw array of HDR values will be
-returned, rather than an image or a plot.</p></dd>
+optimized formula by Jim Hejl and Richard Burgess-Dawson.</p></dd>
 
 
 <dt id="arg-bloom">bloom<a class="anchor" aria-label="anchor" href="#arg-bloom"></a></dt>
@@ -552,7 +550,7 @@ array (containing either debug data or the RGB).</p>
 </div>
 
 <div class="pkgdown">
-  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.3.</p>
+  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
 </div>
 
       </footer></div>

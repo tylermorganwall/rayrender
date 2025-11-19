@@ -288,13 +288,10 @@ otherwise specified.</p></dd>
 
 
 <dt id="arg-tonemap">tonemap<a class="anchor" aria-label="anchor" href="#arg-tonemap"></a></dt>
-<dd><p>Default `gamma`. Choose the tone mapping function,
-Default `gamma` solely adjusts for gamma and clamps values greater than 1 to 1.
+<dd><p>Default `raw`, no tonemapping. Choose the tone mapping function,
 `reinhold` scales values by their individual color channels `color/(1+color)` and then performs the
 gamma adjustment. `uncharted` uses the mapping developed for Uncharted 2 by John Hable. `hbd` uses an
-optimized formula by Jim Hejl and Richard Burgess-Dawson. Note: If set to anything other than `gamma`,
-objects with material `light()` may not be anti-aliased. If `raw`, the raw array of HDR values will be
-returned, rather than an image or a plot.</p></dd>
+optimized formula by Jim Hejl and Richard Burgess-Dawson.</p></dd>
 
 
 <dt id="arg-bloom">bloom<a class="anchor" aria-label="anchor" href="#arg-bloom"></a></dt>
@@ -453,18 +450,7 @@ and `"basic"` (basic pathtracing, for high sample reference renders and debuggin
 <span class="r-in"><span>                   clamp_value<span class="op">=</span><span class="fl">10</span>, width<span class="op">=</span><span class="fl">400</span>, height<span class="op">=</span><span class="fl">400</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="op">}</span></span></span>
-<span class="r-plt img"><img src="render_animation-4.png" alt="" width="768" height="768"></span>
-<span class="r-plt img"><img src="render_animation-5.png" alt="" width="768" height="768"></span>
-<span class="r-plt img"><img src="render_animation-6.png" alt="" width="768" height="768"></span>
-<span class="r-plt img"><img src="render_animation-7.png" alt="" width="768" height="768"></span>
-<span class="r-plt img"><img src="render_animation-8.png" alt="" width="768" height="768"></span>
-<span class="r-plt img"><img src="render_animation-9.png" alt="" width="768" height="768"></span>
-<span class="r-plt img"><img src="render_animation-10.png" alt="" width="768" height="768"></span>
-<span class="r-plt img"><img src="render_animation-11.png" alt="" width="768" height="768"></span>
-<span class="r-plt img"><img src="render_animation-12.png" alt="" width="768" height="768"></span>
-<span class="r-plt img"><img src="render_animation-13.png" alt="" width="768" height="768"></span>
-<span class="r-plt img"><img src="render_animation-14.png" alt="" width="768" height="768"></span>
-<span class="r-plt img"><img src="render_animation-15.png" alt="" width="768" height="768"></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in match.arg(method):</span> 'arg' should be one of “raw”, “reinhard”, “uncharted”, “hbd”</span>
 </code></pre></div>
     </div>
   </div>
@@ -479,7 +465,7 @@ and `"basic"` (basic pathtracing, for high sample reference renders and debuggin
 </div>
 
 <div class="pkgdown">
-  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.3.</p>
+  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
 </div>
 
       </footer></div>
