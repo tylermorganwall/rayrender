@@ -752,13 +752,26 @@ if (
 		"-DRAYSIMD",
 		"-DRAYSIMDVECOFF"
 	)
-	if (is_macos) {
-		PKG_CXXFLAGS = append_unique_flags(PKG_CXXFLAGS, "-march=armv8-a+simd")
-	} else {
-		PKG_CXXFLAGS = append_unique_flags(PKG_CXXFLAGS, "-mfpu=neon")
+
+	# Use target_arch to decide which (if any) extra flags are safe:
+	# - aarch64 / arm64: NEON is mandatory; use -march=armv8-a+simd
+	# - 32-bit ARM: use -mfpu=neon
+	# - others: no extra flags (the compile_test wouldn't have succeeded anyway)
+	if (grepl("aarch64|arm64", target_arch)) {
+		PKG_CXXFLAGS = append_unique_flags(
+			PKG_CXXFLAGS,
+			"-march=armv8-a+simd"
+		)
+	} else if (grepl("^arm", target_arch)) {
+		PKG_CXXFLAGS = append_unique_flags(
+			PKG_CXXFLAGS,
+			"-mfpu=neon"
+		)
 	}
+
 	message("*** configure: enabling NEON support")
 }
+
 
 ray_color_debug = tolower(Sys.getenv("RAY_COLOR_DEBUG", unset = "false"))
 if (identical(ray_color_debug, "true")) {
