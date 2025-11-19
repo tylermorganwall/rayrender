@@ -15,6 +15,11 @@
 #include <ImathBox.h>
 #include <ImfArray.h>
 #include <ImfRgbaFile.h>
+#include <ImfHeader.h>
+#include <ImfInputFile.h>
+#include <ImfTiledInputFile.h>
+#include <ImfChannelList.h>
+#include <ImfFrameBuffer.h>
 
 using namespace OPENEXR_IMF_NAMESPACE;
 using namespace IMATH_NAMESPACE;
@@ -93,59 +98,120 @@ float* TextureCache::LoadImageFloat(const std::string& filename, int& width, int
                                     int& channels, int desired_channels) {
   std::string standardizedFilename = StandardizeFilename(filename);
   fs::path filepath(standardizedFilename);
-  bool is_exr = filepath.extension() == ".exr";
+  const bool is_exr = filepath.extension() == ".exr";
 
   float* data = nullptr;
   if (is_exr) {
     try {
-      RgbaInputFile file(filename.c_str());
-      Box2i dw = file.dataWindow();
-      width = dw.max.x - dw.min.x + 1;
-      height = dw.max.y - dw.min.y + 1;
+      // Open header (works for both scanline and tiled via their specific files below)
+      Imf::InputFile* scan = nullptr;
+      Imf::TiledInputFile* tiled = nullptr;
 
-      OPENEXR_IMF_NAMESPACE::Array2D<Rgba> px;
-      px.resizeErase(height, width);
-
-      file.setFrameBuffer(&px[0][0] - dw.min.x - dw.min.y * width, 1, width);
-      file.readPixels(dw.min.y, dw.max.y);
-
-      constexpr int exr_channels = 4;
-      const size_t pixel_count = static_cast<size_t>(width) * static_cast<size_t>(height);
-      data = static_cast<float*>(std::malloc(sizeof(float) * pixel_count * exr_channels));
-      if (!data) {
-        throw std::runtime_error("Failed to allocate memory for EXR image: " + filename);
-      }
-	  
-      for (int y = 0; y < height; ++y) {
-        for (int x = 0; x < width; ++x) {
-          const Rgba& p = px[y][x];
-          const size_t base = (static_cast<size_t>(y) * static_cast<size_t>(width) + static_cast<size_t>(x)) * exr_channels;
-          data[base + 0] = std::max(static_cast<float>(p.r), std::numeric_limits<float>::min());
-          data[base + 1] = std::max(static_cast<float>(p.g), std::numeric_limits<float>::min());
-          data[base + 2] = std::max(static_cast<float>(p.b), std::numeric_limits<float>::min());
-          data[base + 3] = std::max(static_cast<float>(p.a), std::numeric_limits<float>::min());
+      // Peek header once to get the window and channel list
+      Imf::Header hdr;
+      {
+        // Prefer scanline path; if it fails with tiled exception, fall back
+        try {
+          scan = new Imf::InputFile(filename.c_str());
+          hdr = scan->header();
+        } catch (...) {
+          delete scan; scan = nullptr;
+          tiled = new Imf::TiledInputFile(filename.c_str());
+          hdr = tiled->header();
         }
       }
 
-      channels = exr_channels;
+      const Imath::Box2i dw = hdr.dataWindow();
+      width  = dw.max.x - dw.min.x + 1;
+      height = dw.max.y - dw.min.y + 1;
+
+      // Decide channel count (3 or 4). We’ll try R,G,B,A; if A missing, we’ll fill 1.0f.
+      const bool hasR = hdr.channels().findChannel("R") != nullptr;
+      const bool hasG = hdr.channels().findChannel("G") != nullptr;
+      const bool hasB = hdr.channels().findChannel("B") != nullptr;
+      const bool hasA = hdr.channels().findChannel("A") != nullptr;
+
+      // If only Y exists, you could special-case it here; for now assume RGB present.
+      if (!(hasR && hasG && hasB)) {
+        throw std::runtime_error("EXR missing R/G/B channels (unsupported minimal loader).");
+      }
+
+      const bool wantAlpha = (desired_channels == 4) || (desired_channels == 0 && hasA);
+      channels = wantAlpha ? 4 : 3;
+
+      const size_t pixCount = (size_t)width * (size_t)height;
+      data = (float*)std::malloc(sizeof(float) * pixCount * channels);
+      if (!data) throw std::runtime_error("malloc failed for EXR buffer");
+
+      // Zero/init (so missing A can be set to 1.0f after read)
+      std::fill(data, data + pixCount * channels, 0.0f);
+      if (!wantAlpha) {
+        // nothing
+      } else if (!hasA) {
+        // Fill A=1 if we’re outputting 4 channels but file lacks A
+        for (size_t i = 0; i < pixCount; ++i) data[i*4 + 3] = 1.0f;
+      }
+
+      // Build framebuffer slices into interleaved [y*w + x]*C + c layout
+      Imf::FrameBuffer fb;
+      const size_t xStride = sizeof(float) * (size_t)channels;
+      const size_t yStride = xStride * (size_t)width;
+
+      auto insertSlice = [&](const char* name, int cIndex, bool present) {
+        if (!present) return;
+        char* base = reinterpret_cast<char*>(data)
+                   + cIndex * sizeof(float)
+                   - (dw.min.x * (ptrdiff_t)xStride + dw.min.y * (ptrdiff_t)yStride);
+        fb.insert(name, Imf::Slice(Imf::FLOAT, base,
+                                   (size_t)xStride, (size_t)yStride,
+                                   1, 1, /*fill*/ 0.0f));
+      };
+
+      insertSlice("R", 0, hasR);
+      insertSlice("G", 1, hasG);
+      insertSlice("B", 2, hasB);
+      if (channels == 4) insertSlice("A", 3, hasA); // if A missing, stays as init (1.0f set above)
+
+      // Read pixels
+      if (scan) {
+        scan->setFrameBuffer(fb);
+        scan->readPixels(dw.min.y, dw.max.y);
+        delete scan;
+      } else {
+        tiled->setFrameBuffer(fb);
+        // Read all tiles at level 0
+        const int tx0 = 0, ty0 = 0;
+        const int tx1 = tiled->numXTiles(0) - 1;
+        const int ty1 = tiled->numYTiles(0) - 1;
+        tiled->readTiles(tx0, tx1, ty0, ty1, /*lx*/0, /*ly*/0);
+        delete tiled;
+      }
+
+      // Sanitize NaN/Inf (optional but wise)
+      for (size_t i = 0, n = pixCount * (size_t)channels; i < n; ++i) {
+        if (!std::isfinite(data[i])) data[i] = 0.0f;
+      }
+
       loadedBySTB.push_back(false);
     } catch (const std::exception& e) {
-      throw std::runtime_error("Failed to load EXR image '" + filename + "': " + e.what());
+      if (data) std::free(data);
+      throw std::runtime_error("Failed to load EXR (float) '" + filename + "': " + e.what());
     }
   } else {
+    // Non-EXR: stb float path
     data = stbi_loadf(filename.c_str(), &width, &height, &channels, desired_channels);
     if (!data) {
-      throw std::runtime_error("Loading of '" + filename  +
-                               "' (float) failed due to error: " + stbi_failure_reason() +
-                               "-- nx/ny/channels :"  + std::to_string(width)  +  "/"  +  std::to_string(height)  +  "/"  +  std::to_string(channels));
+      throw std::runtime_error(
+        "Loading of '" + filename + "' (float) failed: " + stbi_failure_reason()
+        + " -- nx/ny/channels: " + std::to_string(width) + "/" + std::to_string(height)
+        + "/" + std::to_string(channels));
     }
-    if (desired_channels != 0) {
-      channels = desired_channels;
-    }
+    if (desired_channels != 0) channels = desired_channels;
     loadedBySTB.push_back(true);
   }
 
   if (width == 0 || height == 0 || channels == 0) {
+    if (data) std::free(data);
     throw std::runtime_error("Could not find " + filename);
   }
 
