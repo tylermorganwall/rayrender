@@ -24,6 +24,8 @@
 #elif defined(__linux__)
 #include <unistd.h>
 #include <sys/resource.h>
+#elif defined(__EMSCRIPTEN__) || defined(__wasm__) || defined(__wasm32__)
+// WebAssembly target: memory tracking unsupported, use stub implementation.
 #else
 #error "Unsupported platform for memory usage tracking"
 #endif

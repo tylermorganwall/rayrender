@@ -31,6 +31,8 @@ size_t getCurrentMemoryUsage() {
   fclose(fp);
   return rss * sysconf(_SC_PAGESIZE);
   
+#elif defined(__EMSCRIPTEN__) || defined(__wasm__) || defined(__wasm32__)
+  return 0; // WebAssembly does not expose per-process memory usage.
 #else
   return 0;
 #endif
