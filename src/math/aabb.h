@@ -161,6 +161,7 @@ inline std::ostream& operator<<(std::ostream &os, const aabb &t) {
 //                        IVec4& hits,
 //                        FVec4& tEnters);
 //                        //FVec4& tExits);
+#ifdef RAYSIMD
 inline void rayBBoxIntersect4(const Ray& r,
                        const BBox4& bbox4,
                        Float tMin,
@@ -207,6 +208,7 @@ inline void rayBBoxIntersect4(const Ray& r,
     // int hits = simd_extract_hitmask(simd_cast_to_int(hitMask));
     // return(hits);
 }
+#endif
 
 void rayBBoxIntersect4Serial(const Ray& ray,
                        const BBox4& bbox4,

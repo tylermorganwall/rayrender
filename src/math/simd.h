@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <stdio.h>
 #include <cstddef> // For alignas
+#include <cstring>
 #include "../math/dop.h"
 
 // SIMD vector size (4 for SSE, 8 for AVX)
@@ -386,10 +387,10 @@ inline SimdMask simd_setmask(bool m0, bool m1, bool m2, bool m3) {
     };
     result.v = vreinterpretq_f32_s32(mask_int);
 #else
+    const bool lanes[4] = {m0, m1, m2, m3};
     for (int i = 0; i < 4; ++i) {
-        uint32_t bits = ((i == 0 && m0) || (i == 1 && m1) || (i == 2 && m2) || (i == 3 && m3)) ? 0xFFFFFFFF : 0x00000000;
-        std::memcpy(&bits, &mask.xyzw[i], sizeof(bits)); 
-        result.xyzw[i] = static_cast<float>(bits);
+        const uint32_t bits = lanes[i] ? 0xFFFFFFFFu : 0u;
+        std::memcpy(&result.xyzw[i], &bits, sizeof(bits));
     }
 #endif
     return result;
@@ -946,7 +947,8 @@ inline SimdMask simd_cmpgt(FVec4 a, FVec4 b) {
 #else
     SimdMask result;
     for (int i = 0; i < SIMD_WIDTH; ++i) {
-        result.v[i] = (a.v[i] > b.v[i]) ? 0xFFFFFFFF : 0;
+        const uint32_t bits = (a.xyzw[i] > b.xyzw[i]) ? 0xFFFFFFFFu : 0u;
+        std::memcpy(&result.xyzw[i], &bits, sizeof(bits));
     }
     return result;
 #endif
@@ -1148,7 +1150,8 @@ inline SimdMask simd_not(SimdMask mask) {
     for (int i = 0; i < 4; ++i) {
         uint32_t bits;
         std::memcpy(&bits, &mask.xyzw[i], sizeof(bits));
-        result.xyzw[i] = reinterpret_cast<float&>(bits);
+        bits = ~bits;
+        std::memcpy(&result.xyzw[i], &bits, sizeof(bits));
     }
     return result;
 #endif
@@ -1162,15 +1165,11 @@ inline SimdMask simd_set1(unsigned int value) {
     result.v = vreinterpretq_f32_u32(vdupq_n_u32(value));
 #else
     for (int i = 0; i < 4; ++i) {
-        uint32_t bits;
-        std::memcpy(&bits, &mask.xyzw[i], sizeof(bits));
-        result.xyzw[i] = reinterpret_cast<float>(bits);
+        std::memcpy(&result.xyzw[i], &value, sizeof(value));
     }
 #endif
     return result;
 }
-
-#include <cstring>
 
 // Helper functions to convert between float and uint32_t
 inline uint32_t float_to_uint32(float f) {
