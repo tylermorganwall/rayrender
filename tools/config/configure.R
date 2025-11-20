@@ -297,32 +297,36 @@ detect_tbb = function(extra_lib_dirs = character()) {
 	tbb_lib_env = Sys.getenv("TBB_LIB", unset = "")
 	tbb_inc_env = Sys.getenv("TBB_INC", unset = "")
 
-	if (nzchar(tbb_root)) {
-		if (!nzchar(tbb_lib_env)) {
-			tbb_lib_env = file.path(tbb_root, "lib")
-		}
-		if (!nzchar(tbb_inc_env)) {
-			tbb_inc_env = file.path(tbb_root, "include")
-		}
-	}
+	candidate_lib_dirs = character()
 
-	search_dirs = character()
+	# 1) Explicit env hints first
 	if (nzchar(tbb_lib_env)) {
-		search_dirs = c(
-			search_dirs,
+		candidate_lib_dirs = c(
+			candidate_lib_dirs,
 			normalizePath(tbb_lib_env, winslash = "/", mustWork = FALSE)
 		)
 	}
+	if (nzchar(tbb_root)) {
+		candidate_lib_dirs = c(
+			candidate_lib_dirs,
+			normalizePath(
+				file.path(tbb_root, "lib"),
+				winslash = "/",
+				mustWork = FALSE
+			)
+		)
+	}
 
+	# 2) Any library dirs provided by the caller (e.g. alongside OIDN)
 	if (length(extra_lib_dirs)) {
-		search_dirs = c(
-			search_dirs,
+		candidate_lib_dirs = c(
+			candidate_lib_dirs,
 			normalizePath(extra_lib_dirs, winslash = "/", mustWork = FALSE)
 		)
 	}
 
-	# Windows: look in Rtools layout if nothing else specified
-	if (!length(search_dirs) && is_windows) {
+	# 3) Windows: always add Rtools candidates, regardless of what we already have
+	if (is_windows) {
 		gcc_path = normalizePath(
 			Sys.which("gcc"),
 			winslash = "/",
@@ -334,7 +338,7 @@ detect_tbb = function(extra_lib_dirs = character()) {
 			rtools_root = dirname(triple_dir) # .../rtools45 (or similar)
 			triple_name = basename(triple_dir) # x86_64-w64-mingw32.static.posix
 
-			# Old heuristic: ../../lib from gcc (may or may not contain TBB)
+			# Legacy ../../lib from gcc
 			legacy_lib = normalizePath(
 				file.path(gcc_bin_dir, "..", "..", "lib"),
 				winslash = "/",
@@ -348,12 +352,12 @@ detect_tbb = function(extra_lib_dirs = character()) {
 				mustWork = FALSE
 			)
 
-			candidate_libs = unique(c(legacy_lib, rtools_tbb_lib))
-			candidate_libs = candidate_libs[dir.exists(candidate_libs)]
+			rtools_candidates = c(legacy_lib, rtools_tbb_lib)
+			rtools_candidates = rtools_candidates[dir.exists(rtools_candidates)]
 
-			search_dirs = c(search_dirs, candidate_libs)
+			candidate_lib_dirs = c(candidate_lib_dirs, rtools_candidates)
 
-			# If we do not yet have an include dir, prefer <rtools_root>/<triple>/include
+			# If we have no include yet, prefer <rtools_root>/<triple>/include
 			if (!nzchar(tbb_inc_env)) {
 				rtools_tbb_inc = normalizePath(
 					file.path(rtools_root, triple_name, "include"),
@@ -362,22 +366,14 @@ detect_tbb = function(extra_lib_dirs = character()) {
 				)
 				if (dir.exists(rtools_tbb_inc)) {
 					tbb_inc_env = rtools_tbb_inc
-				} else if (dir.exists(file.path(gcc_bin_dir, "..", "..", "include"))) {
-					# Fallback to legacy ../../include if it exists
-					tbb_inc_env = normalizePath(
-						file.path(gcc_bin_dir, "..", "..", "include"),
-						winslash = "/",
-						mustWork = FALSE
-					)
 				}
 			}
 		}
 	}
 
-	# Unix: optional auto-detect if requested
+	# 4) Unix autodetect (optional); add, do NOT replace, candidates
 	if (
-		!length(search_dirs) &&
-			.Platform$OS.type == "unix" &&
+		.Platform$OS.type == "unix" &&
 			identical(Sys.getenv("TBB_AUTODETECT", unset = "FALSE"), "TRUE")
 	) {
 		sysname = Sys.info()[["sysname"]]
@@ -388,11 +384,23 @@ detect_tbb = function(extra_lib_dirs = character()) {
 		}
 
 		if (identical(sysname, "Darwin")) {
-			lib_candidate = file.path(homebrew_prefix, "opt/tbb/lib")
-			inc_candidate = file.path(homebrew_prefix, "opt/tbb/include")
-			search_dirs = c(search_dirs, lib_candidate)
+			hb_lib = normalizePath(
+				file.path(homebrew_prefix, "opt", "tbb", "lib"),
+				winslash = "/",
+				mustWork = FALSE
+			)
+			if (dir.exists(hb_lib)) {
+				candidate_lib_dirs = c(candidate_lib_dirs, hb_lib)
+			}
 			if (!nzchar(tbb_inc_env)) {
-				tbb_inc_env = inc_candidate
+				hb_inc = normalizePath(
+					file.path(homebrew_prefix, "opt", "tbb", "include"),
+					winslash = "/",
+					mustWork = FALSE
+				)
+				if (dir.exists(hb_inc)) {
+					tbb_inc_env = hb_inc
+				}
 			}
 		} else {
 			tbb_lib_search = Sys.glob(c(
@@ -401,7 +409,10 @@ detect_tbb = function(extra_lib_dirs = character()) {
 				"/usr/*/*/*/libtbb.so"
 			))
 			if (length(tbb_lib_search)) {
-				search_dirs = c(search_dirs, dirname(tbb_lib_search[[1L]]))
+				candidate_lib_dirs = c(
+					candidate_lib_dirs,
+					dirname(tbb_lib_search[[1L]])
+				)
 			}
 			if (!nzchar(tbb_inc_env)) {
 				tbb_inc_search = Sys.glob(c(
@@ -415,21 +426,18 @@ detect_tbb = function(extra_lib_dirs = character()) {
 		}
 	}
 
-	# If we still do not have an include dir, try ../include relative to lib
-	if (!nzchar(tbb_inc_env) && length(search_dirs)) {
-		candidate_inc = normalizePath(
-			file.path(search_dirs[[1L]], "../include"),
-			winslash = "/",
-			mustWork = FALSE
+	candidate_lib_dirs = unique(candidate_lib_dirs)
+
+	# Nothing to scan
+	if (!length(candidate_lib_dirs)) {
+		message(
+			"*** configure: TBB not found; TBB-dependent features will be disabled"
 		)
-		if (dir.exists(candidate_inc)) {
-			tbb_inc_env = candidate_inc
-		}
+		return(list(found = FALSE, lib_dir = "", inc_dir = "", lib_name = ""))
 	}
 
-	search_dirs = unique(search_dirs)
-
-	for (lib_dir in search_dirs) {
+	# 5) Scan all candidate lib dirs in order; pick the first that actually has a libtbb*
+	for (lib_dir in candidate_lib_dirs) {
 		if (!dir.exists(lib_dir)) {
 			next
 		}
@@ -439,7 +447,7 @@ detect_tbb = function(extra_lib_dirs = character()) {
 			next
 		}
 
-		# Prefer versioned libs like libtbb12.a, libtbb12.so, etc.
+		# Match libtbb.a, libtbb12.a, libtbb12_static.a, libtbb12.so, ...
 		pattern = "^lib(tbb[0-9]*(?:_static)?)\\.(a|so|dylib|lib|dll)$"
 		matches = grep(pattern, files, perl = TRUE, value = TRUE)
 		if (!length(matches)) {
@@ -454,10 +462,41 @@ detect_tbb = function(extra_lib_dirs = character()) {
 			winslash = "/",
 			mustWork = FALSE
 		)
-		inc_dir_norm = if (nzchar(tbb_inc_env)) {
-			normalizePath(tbb_inc_env, winslash = "/", mustWork = FALSE)
-		} else {
-			""
+
+		# Derive an include dir:
+		# 1) explicit TBB_INC if valid
+		inc_dir = ""
+		if (nzchar(tbb_inc_env) && dir.exists(tbb_inc_env)) {
+			inc_dir = normalizePath(tbb_inc_env, winslash = "/", mustWork = FALSE)
+		} else if (nzchar(tbb_root) && dir.exists(file.path(tbb_root, "include"))) {
+			# 2) TBB_ROOT/include
+			inc_dir = normalizePath(
+				file.path(tbb_root, "include"),
+				winslash = "/",
+				mustWork = FALSE
+			)
+		} else if (is_windows) {
+			# 3) For Rtools-style layout, <triple>/include next to <triple>/lib
+			win_inc_candidate = normalizePath(
+				file.path(dirname(lib_dir_norm), "include"),
+				winslash = "/",
+				mustWork = FALSE
+			)
+			if (dir.exists(win_inc_candidate)) {
+				inc_dir = win_inc_candidate
+			}
+		}
+
+		# 4) Generic ../include fallback relative to lib dir
+		if (!nzchar(inc_dir)) {
+			generic_inc = normalizePath(
+				file.path(lib_dir_norm, "..", "include"),
+				winslash = "/",
+				mustWork = FALSE
+			)
+			if (dir.exists(generic_inc)) {
+				inc_dir = generic_inc
+			}
 		}
 
 		message(sprintf(
@@ -469,15 +508,14 @@ detect_tbb = function(extra_lib_dirs = character()) {
 		return(list(
 			found = TRUE,
 			lib_dir = lib_dir_norm,
-			inc_dir = inc_dir_norm,
+			inc_dir = inc_dir,
 			lib_name = lib_name
 		))
 	}
 
 	message(
-		"*** configure: TBB not found; TBB-dependent features will be disabled"
+		"*** configure: TBB not found in any candidate locations; TBB-dependent features will be disabled"
 	)
-
 	list(found = FALSE, lib_dir = "", inc_dir = "", lib_name = "")
 }
 
