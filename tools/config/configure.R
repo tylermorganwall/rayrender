@@ -321,7 +321,7 @@ detect_tbb = function(extra_lib_dirs = character()) {
 		)
 	}
 
-	# Windows: default to Rtools lib if nothing else specified
+	# Windows: look in Rtools layout if nothing else specified
 	if (!length(search_dirs) && is_windows) {
 		gcc_path = normalizePath(
 			Sys.which("gcc"),
@@ -329,20 +329,47 @@ detect_tbb = function(extra_lib_dirs = character()) {
 			mustWork = FALSE
 		)
 		if (nzchar(gcc_path)) {
-			search_dirs = c(
-				search_dirs,
-				normalizePath(
-					file.path(gcc_path, "../../lib"),
-					winslash = "/",
-					mustWork = FALSE
-				)
+			gcc_bin_dir = dirname(gcc_path) # .../x86_64-w64-mingw32.static.posix/bin
+			triple_dir = dirname(gcc_bin_dir) # .../x86_64-w64-mingw32.static.posix
+			rtools_root = dirname(triple_dir) # .../rtools45 (or similar)
+			triple_name = basename(triple_dir) # x86_64-w64-mingw32.static.posix
+
+			# Old heuristic: ../../lib from gcc (may or may not contain TBB)
+			legacy_lib = normalizePath(
+				file.path(gcc_bin_dir, "..", "..", "lib"),
+				winslash = "/",
+				mustWork = FALSE
 			)
+
+			# Rtools layout: <rtools_root>/<triple>/lib
+			rtools_tbb_lib = normalizePath(
+				file.path(rtools_root, triple_name, "lib"),
+				winslash = "/",
+				mustWork = FALSE
+			)
+
+			candidate_libs = unique(c(legacy_lib, rtools_tbb_lib))
+			candidate_libs = candidate_libs[dir.exists(candidate_libs)]
+
+			search_dirs = c(search_dirs, candidate_libs)
+
+			# If we do not yet have an include dir, prefer <rtools_root>/<triple>/include
 			if (!nzchar(tbb_inc_env)) {
-				tbb_inc_env = normalizePath(
-					file.path(gcc_path, "../../include"),
+				rtools_tbb_inc = normalizePath(
+					file.path(rtools_root, triple_name, "include"),
 					winslash = "/",
 					mustWork = FALSE
 				)
+				if (dir.exists(rtools_tbb_inc)) {
+					tbb_inc_env = rtools_tbb_inc
+				} else if (dir.exists(file.path(gcc_bin_dir, "..", "..", "include"))) {
+					# Fallback to legacy ../../include if it exists
+					tbb_inc_env = normalizePath(
+						file.path(gcc_bin_dir, "..", "..", "include"),
+						winslash = "/",
+						mustWork = FALSE
+					)
+				}
 			}
 		}
 	}
