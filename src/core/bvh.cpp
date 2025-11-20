@@ -350,7 +350,17 @@ int BVHAggregate::flattenBVH(BVHBuildNode *node, int *offset) {
 
 
 #ifndef RAYSIMD
-const bool BVHAggregate::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
+namespace {
+inline bool rayDirIsNeg(const Ray& r, int axis) {
+    switch (axis) {
+        case 0: return r.d.xyz.x < 0.f;
+        case 1: return r.d.xyz.y < 0.f;
+        default: return r.d.xyz.z < 0.f;
+    }
+}
+} // namespace
+
+const bool BVHAggregate::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
     // SCOPED_CONTEXT("Hit");
     // SCOPED_TIMER_COUNTER("BVH Serial");
     if (!nodes) {
@@ -384,7 +394,7 @@ const bool BVHAggregate::hit(const ray& r, Float t_min, Float t_max, hit_record&
                 currentNodeIndex = nodesToVisit[--toVisitOffset];
             } else {
                 // Put far BVH node on _nodesToVisit_ stack, advance to near node
-                if (r.sign[node->axis]) {
+                if (rayDirIsNeg(r, node->axis)) {
                     nodesToVisit[toVisitOffset++] = currentNodeIndex + 1;
                     currentNodeIndex = node->secondChildOffset;
                 } else {
@@ -404,7 +414,7 @@ const bool BVHAggregate::hit(const ray& r, Float t_min, Float t_max, hit_record&
     return any_hit;
 }
 
-const bool BVHAggregate::hit(const ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const {
+const bool BVHAggregate::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const {
     // SCOPED_CONTEXT("Hit");
     // SCOPED_TIMER_COUNTER("BVH Serial");
     if (!nodes) {
@@ -438,7 +448,7 @@ const bool BVHAggregate::hit(const ray& r, Float t_min, Float t_max, hit_record&
                 currentNodeIndex = nodesToVisit[--toVisitOffset];
             } else {
                 // Put far BVH node on _nodesToVisit_ stack, advance to near node
-                if (r.sign[node->axis]) {
+                if (rayDirIsNeg(r, node->axis)) {
                     nodesToVisit[toVisitOffset++] = currentNodeIndex + 1;
                     currentNodeIndex = node->secondChildOffset;
                 } else {
