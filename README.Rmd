@@ -100,7 +100,6 @@ pacman -Sy --needed \
 	mingw-w64-ucrt-x86_64-make \
 	mingw-w64-ucrt-x86_64-ninja \
 	mingw-w64-ucrt-x86_64-cmake \
-	mingw-w64-ucrt-x86_64-git \
 	mingw-w64-ucrt-x86_64-ispc
 ```
 4. Make sure the Rtools static-posix toolchain and the MinGW binaries are on PATH (this mirrors the setup used to build OIDN):
@@ -120,19 +119,7 @@ cmake --version
 ispc --version
 ```
 
-5. Install **ISPC** in the same ucrt64 environment:
-
-```bash
-pacman -Sy mingw-w64-ucrt-x86_64-ispc
-```
-
-* Otherwise, download a prebuilt ISPC binary from the ISPC website, unpack it somewhere (e.g. `C:/local/ispc`), and add its `bin` directory to `PATH` inside the ucrt64 shell:
-
-```bash
-export PATH="/c/local/ispc/bin:${PATH}"
-```
-
-6. Confirm ISPC is visible:
+5. Confirm ISPC is available:
 
 ```bash
 ispc --version
@@ -157,7 +144,7 @@ OIDN_PREFIX="C:/local/oidn-static"
 
 # Configure OIDN with the Rtools static-posix toolchain, CPU-only, static lib
 # Update with your rtools45 path.
-"/path/to/rtools45/x86_64-w64-mingw32.static.posix/bin/cmake.exe" \
+cmake \
   -G "Ninja" \
   -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_C_COMPILER="/path/to/rtools45/x86_64-w64-mingw32.static.posix/bin/gcc.exe" \
