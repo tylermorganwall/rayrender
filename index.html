@@ -108,6 +108,7 @@
 
       </header><div class="row">
   <div class="contents col-md-9">
+
 <div class="section level1">
 <div class="page-header"><h1 id="rayrender">rayrender<a class="anchor" aria-label="anchor" href="#rayrender"></a>
 </h1></div>
@@ -129,8 +130,13 @@
 <code class="sourceCode R"><span><span class="co"># To install the latest version from Github:</span></span>
 <span><span class="co"># install.packages("devtools")</span></span>
 <span><span class="fu">devtools</span><span class="fu">::</span><span class="fu">install_github</span><span class="op">(</span><span class="st">"tylermorganwall/rayrender"</span><span class="op">)</span></span></code></pre></div>
-<p>To get denoising support, you need to install OIDN. You can download the official binaries from Intel and set the <code>OIDN_PATH</code> argument in your .Renviron file with the following command line instructions:</p>
 </div>
+</div>
+<div class="section level1">
+<h1 id="optional-denoising-with-intel-open-image-denoise-oidn">Optional: denoising with Intel Open Image Denoise (OIDN)<a class="anchor" aria-label="anchor" href="#optional-denoising-with-intel-open-image-denoise-oidn"></a>
+</h1>
+<p><code>rayrender</code> can use Intel Open Image Denoise to denoise rendered images when OIDN is available on your system. If OIDN is not found, <code>rayrender</code> will still work, just without denoising support.</p>
+<p>To get denoising support, you need to install OIDN. You can download the official binaries from Intel and set the <code>OIDN_PATH</code> argument in your .Renviron file with the following command line instructions:</p>
 <div class="section level2">
 <h2 id="macos">macOS<a class="anchor" aria-label="anchor" href="#macos"></a>
 </h2>
@@ -160,39 +166,138 @@
 <span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a><span class="bu">echo</span> <span class="st">"OIDN_PATH=/path/to/extracted/oidn"</span> <span class="op">&gt;&gt;</span> ~/.Renviron</span></code></pre></div>
 </div>
 <div class="section level2">
-<h2 id="windows">windows<a class="anchor" aria-label="anchor" href="#windows"></a>
+<h2 id="windows-rtools45">Windows (Rtools45)<a class="anchor" aria-label="anchor" href="#windows-rtools45"></a>
 </h2>
-<div class="sourceCode" id="cb4"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="co"># Download the binary</span></span>
-<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a><span class="ex">Invoke-WebRequest</span> <span class="at">-Uri</span> https://github.com/OpenImageDenoise/oidn/releases/download/v2.3.1/oidn-2.3.1.x64.windows.zip <span class="at">-OutFile</span> oidn-2.3.1.x64.windows.zip</span>
-<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a></span>
-<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a><span class="co"># Extract the archive</span></span>
-<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a><span class="ex">Expand-Archive</span> <span class="at">-Path</span> oidn-2.3.1.x64.windows.zip <span class="at">-DestinationPath</span> <span class="st">"C:\path\to\extract\oidn"</span></span>
-<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a></span>
-<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a><span class="co"># Set OIDN_PATH in your .Renviron file to the extracted directory</span></span>
-<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a><span class="bu">echo</span> <span class="st">"OIDN_PATH=C:/path/to/extracted/oidn"</span> <span class="op">&gt;&gt;</span> .Renviron</span></code></pre></div>
-<p>Ensure you restart your R session after setting the <code>OIDN_PATH</code> environment variable for the changes to take effect.</p>
+<p>Windows is slightly trickier and requires Rtools45. The steps are:</p>
+<ol style="list-style-type: decimal">
+<li>Install <code>make</code> and <code>ninja</code> via RTools.</li>
+<li>Install <strong>ISPC</strong> (Intel SPMD Program Compiler).</li>
+<li>Download the <strong>OIDN</strong> source repository.</li>
+<li>Compile and install OIDN, and point <code>rayrender</code> to it via <code>OIDN_PATH</code>.</li>
+</ol>
+<p><code>OIDN_PATH</code> should point to a directory that contains <code>include/OpenImageDenoise</code> and <code>lib</code> (or <code>lib64</code>) with the OIDN libraries.</p>
+<div class="section level3">
+<h3 id="install-prerequisites">Install prerequisites<a class="anchor" aria-label="anchor" href="#install-prerequisites"></a>
+</h3>
+<ol style="list-style-type: decimal">
+<li>Install <strong>Rtools45</strong> <a href="https://cran.r-project.org/bin/windows/Rtools/" class="external-link uri">https://cran.r-project.org/bin/windows/Rtools/</a>
+</li>
+<li>Open the <strong>“Rtools45 MinGW UCRT64”</strong> shell (ucrt64) in <strong>RTools45</strong>.</li>
+<li>Inside that shell, install the build tools (including <code>make</code>, <code>ninja</code>, <code>cmake</code>, <code>git</code>, and <code>ispc</code>) via <code>pacman</code>:</li>
+</ol>
+<div class="sourceCode" id="cb4"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="ex">pacman</span> <span class="at">-Sy</span> <span class="at">--needed</span> <span class="dt">\</span></span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>    mingw-w64-ucrt-x86_64-make <span class="dt">\</span></span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>    mingw-w64-ucrt-x86_64-ninja <span class="dt">\</span></span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a>    mingw-w64-ucrt-x86_64-cmake <span class="dt">\</span></span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a>    mingw-w64-ucrt-x86_64-git <span class="dt">\</span></span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a>    mingw-w64-ucrt-x86_64-ispc</span></code></pre></div>
+<ol start="4" style="list-style-type: decimal">
+<li>Make sure the Rtools static-posix toolchain and the MinGW binaries are on PATH (this mirrors the setup used to build OIDN):</li>
+</ol>
+<div class="sourceCode" id="cb5"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="bu">export</span> <span class="va">PATH</span><span class="op">=</span><span class="st">"/c/rtools45/x86_64-w64-mingw32.static.posix/bin:/mingw64/bin:</span><span class="va">${PATH}</span><span class="st">"</span></span></code></pre></div>
+<ol start="5" style="list-style-type: decimal">
+<li>Verify the toolchain:</li>
+</ol>
+<div class="sourceCode" id="cb6"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="fu">gcc</span> <span class="at">--version</span></span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a><span class="ex">g++</span> <span class="at">--version</span></span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a><span class="fu">make</span> <span class="at">--version</span></span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a><span class="ex">ninja</span> <span class="at">--version</span></span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a><span class="fu">cmake</span> <span class="at">--version</span></span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a><span class="ex">ispc</span> <span class="at">--version</span></span></code></pre></div>
+<ol start="5" style="list-style-type: decimal">
+<li>Install <strong>ISPC</strong> in the same ucrt64 environment:</li>
+</ol>
+<div class="sourceCode" id="cb7"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a><span class="ex">pacman</span> <span class="at">-Sy</span> mingw-w64-ucrt-x86_64-ispc</span></code></pre></div>
+<ul>
+<li>Otherwise, download a prebuilt ISPC binary from the ISPC website, unpack it somewhere (e.g. <code>C:/local/ispc</code>), and add its <code>bin</code> directory to <code>PATH</code> inside the ucrt64 shell:</li>
+</ul>
+<div class="sourceCode" id="cb8"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a><span class="bu">export</span> <span class="va">PATH</span><span class="op">=</span><span class="st">"/c/local/ispc/bin:</span><span class="va">${PATH}</span><span class="st">"</span></span></code></pre></div>
+<ol start="6" style="list-style-type: decimal">
+<li>Confirm ISPC is visible:</li>
+</ol>
+<div class="sourceCode" id="cb9"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a><span class="ex">ispc</span> <span class="at">--version</span></span></code></pre></div>
+</div>
+</div>
+<div class="section level2">
+<h2 id="build-and-install-oidn-from-source-cpu-only">Build and install OIDN from source (CPU-only)<a class="anchor" aria-label="anchor" href="#build-and-install-oidn-from-source-cpu-only"></a>
+</h2>
+<p>All of the following commands are run from the <strong>Rtools45 ucrt64 shell</strong>:</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a><span class="co"># Download the OIDN source</span></span>
+<span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a><span class="fu">git</span> clone <span class="at">--recursive</span> https://github.com/RenderKit/oidn.git</span>
+<span id="cb10-3"><a href="#cb10-3" tabindex="-1"></a><span class="bu">cd</span> oidn</span>
+<span id="cb10-4"><a href="#cb10-4" tabindex="-1"></a></span>
+<span id="cb10-5"><a href="#cb10-5" tabindex="-1"></a><span class="co"># Create a separate build directory</span></span>
+<span id="cb10-6"><a href="#cb10-6" tabindex="-1"></a><span class="fu">mkdir</span> build-cpu-static</span>
+<span id="cb10-7"><a href="#cb10-7" tabindex="-1"></a><span class="bu">cd</span> build-cpu-static</span>
+<span id="cb10-8"><a href="#cb10-8" tabindex="-1"></a></span>
+<span id="cb10-9"><a href="#cb10-9" tabindex="-1"></a><span class="co"># Choose an install prefix; use a simple path without spaces</span></span>
+<span id="cb10-10"><a href="#cb10-10" tabindex="-1"></a><span class="co"># This will become C:/local/oidn-static on Windows</span></span>
+<span id="cb10-11"><a href="#cb10-11" tabindex="-1"></a><span class="va">OIDN_PREFIX</span><span class="op">=</span><span class="st">"C:/local/oidn-static"</span></span>
+<span id="cb10-12"><a href="#cb10-12" tabindex="-1"></a></span>
+<span id="cb10-13"><a href="#cb10-13" tabindex="-1"></a><span class="co"># Configure OIDN with the Rtools static-posix toolchain, CPU-only, static lib</span></span>
+<span id="cb10-14"><a href="#cb10-14" tabindex="-1"></a><span class="co"># Update with your rtools45 path.</span></span>
+<span id="cb10-15"><a href="#cb10-15" tabindex="-1"></a><span class="st">"/path/to/rtools45/x86_64-w64-mingw32.static.posix/bin/cmake.exe"</span> <span class="dt">\</span></span>
+<span id="cb10-16"><a href="#cb10-16" tabindex="-1"></a>  <span class="at">-G</span> <span class="st">"Ninja"</span> <span class="dt">\</span></span>
+<span id="cb10-17"><a href="#cb10-17" tabindex="-1"></a>  <span class="at">-DCMAKE_BUILD_TYPE</span><span class="op">=</span>Release <span class="dt">\</span></span>
+<span id="cb10-18"><a href="#cb10-18" tabindex="-1"></a>  <span class="at">-DCMAKE_C_COMPILER</span><span class="op">=</span><span class="st">"/path/to/rtools45/x86_64-w64-mingw32.static.posix/bin/gcc.exe"</span> <span class="dt">\</span></span>
+<span id="cb10-19"><a href="#cb10-19" tabindex="-1"></a>  <span class="at">-DCMAKE_CXX_COMPILER</span><span class="op">=</span><span class="st">"/path/to/rtools45/x86_64-w64-mingw32.static.posix/bin/g++.exe"</span> <span class="dt">\</span></span>
+<span id="cb10-20"><a href="#cb10-20" tabindex="-1"></a>  <span class="at">-DOIDN_STATIC_LIB</span><span class="op">=</span>ON <span class="dt">\</span></span>
+<span id="cb10-21"><a href="#cb10-21" tabindex="-1"></a>  <span class="at">-DOIDN_DEVICE_CPU</span><span class="op">=</span>ON <span class="dt">\</span></span>
+<span id="cb10-22"><a href="#cb10-22" tabindex="-1"></a>  <span class="at">-DOIDN_DEVICE_SYCL</span><span class="op">=</span>OFF <span class="dt">\</span></span>
+<span id="cb10-23"><a href="#cb10-23" tabindex="-1"></a>  <span class="at">-DOIDN_DEVICE_CUDA</span><span class="op">=</span>OFF <span class="dt">\</span></span>
+<span id="cb10-24"><a href="#cb10-24" tabindex="-1"></a>  <span class="at">-DOIDN_DEVICE_HIP</span><span class="op">=</span>OFF <span class="dt">\</span></span>
+<span id="cb10-25"><a href="#cb10-25" tabindex="-1"></a>  <span class="at">-DOIDN_DEVICE_METAL</span><span class="op">=</span>OFF <span class="dt">\</span></span>
+<span id="cb10-26"><a href="#cb10-26" tabindex="-1"></a>  <span class="at">-DOIDN_APPS</span><span class="op">=</span>OFF <span class="dt">\</span></span>
+<span id="cb10-27"><a href="#cb10-27" tabindex="-1"></a>  <span class="at">-DISPC_EXECUTABLE</span><span class="op">=</span><span class="st">"</span><span class="va">$(</span><span class="bu">command</span> <span class="at">-v</span> ispc<span class="va">)</span><span class="st">"</span> <span class="dt">\</span></span>
+<span id="cb10-28"><a href="#cb10-28" tabindex="-1"></a>  <span class="at">-DTBB_DIR</span><span class="op">=</span><span class="st">"/path/to/rtools45/x86_64-w64-mingw32.static.posix/lib/cmake/TBB"</span> <span class="dt">\</span></span>
+<span id="cb10-29"><a href="#cb10-29" tabindex="-1"></a>  <span class="at">-DCMAKE_INSTALL_PREFIX</span><span class="op">=</span><span class="st">"</span><span class="va">${OIDN_PREFIX}</span><span class="st">"</span> <span class="dt">\</span></span>
+<span id="cb10-30"><a href="#cb10-30" tabindex="-1"></a>  ..</span></code></pre></div>
+<p>If CMake cannot find TBB in Rtools automatically, add a hint such as:</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a><span class="ex">-DTBB_ROOT=/path/to/rtools45/x86_64-w64-mingw32.static.posix</span></span></code></pre></div>
+<p>(adjust the path for your actual Rtools45 install) to the <code>cmake</code> command above.</p>
+<p>Then build and install:</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb12-1"><a href="#cb12-1" tabindex="-1"></a><span class="ex">ninja</span></span>
+<span id="cb12-2"><a href="#cb12-2" tabindex="-1"></a><span class="ex">ninja</span> install</span></code></pre></div>
+<p>After installation you should have, for example:</p>
+<pre class="text"><code>C:/local/oidn/include/OpenImageDenoise/oidn.h
+C:/local/oidn/lib/libOpenImageDenoise.a   (and related libs)</code></pre>
+</div>
+<div class="section level2">
+<h2 id="tell-r-where-oidn-lives">Tell R where OIDN lives<a class="anchor" aria-label="anchor" href="#tell-r-where-oidn-lives"></a>
+</h2>
+<p>In a regular Windows shell or PowerShell, add to your user <code>.Renviron</code>:</p>
+<div class="sourceCode" id="cb14"><pre class="sourceCode powershell"><code class="sourceCode powershell"><span id="cb14-1"><a href="#cb14-1" tabindex="-1"></a><span class="fu">echo</span> <span class="st">'OIDN_PATH=C:/local/oidn'</span> <span class="op">&gt;&gt;</span> <span class="st">"</span><span class="va">$HOME</span><span class="st">/.Renviron"</span></span></code></pre></div>
+<p>or edit the file and add the above manually with <code>devtools::edit_r_environ()</code>.</p>
+<p>Restart R (or your IDE), then reinstall <code>rayrender</code> from source:</p>
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu">devtools</span><span class="fu">::</span><span class="fu">install_github</span><span class="op">(</span><span class="st">"tylermorganwall/rayrender"</span>, force <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
+<p>After this, <code>rayrender</code> should detect OIDN during <code>configure</code> and enable denoising support on Windows.</p>
 </div>
 <div class="section level2">
 <h2 id="usage">Usage<a class="anchor" aria-label="anchor" href="#usage"></a>
 </h2>
 <p>We’ll first start by rendering a simple scene consisting of the ground, a sphere, and the included <code>R.obj</code> file. The location of the <code>R.obj</code> file can be accessed by calling the function <code><a href="reference/r_obj.html">r_obj()</a></code>. First adding the ground using the <code>render_ground()</code> function. This renders an extremely large sphere that (at our scene’s scale) functions as a flat surface. We also add a simple blue sphere to the scene.</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://www.rayrender.net" class="external-link">rayrender</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">scene</span> <span class="op">=</span> <span class="fu"><a href="reference/generate_ground.html">generate_ground</a></span><span class="op">(</span>material<span class="op">=</span><span class="fu"><a href="reference/diffuse.html">diffuse</a></span><span class="op">(</span>checkercolor<span class="op">=</span><span class="st">"grey20"</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="reference/pipe.html">%&gt;%</a></span></span>
 <span>  <span class="fu"><a href="reference/add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="reference/sphere.html">sphere</a></span><span class="op">(</span>y<span class="op">=</span><span class="fl">0.2</span>,material<span class="op">=</span><span class="fu"><a href="reference/glossy.html">glossy</a></span><span class="op">(</span>color<span class="op">=</span><span class="st">"#2b6eff"</span>,reflectance<span class="op">=</span><span class="fl">0.05</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> </span>
 <span><span class="fu"><a href="reference/render_scene.html">render_scene</a></span><span class="op">(</span><span class="va">scene</span>, parallel <span class="op">=</span> <span class="cn">TRUE</span>, width <span class="op">=</span> <span class="fl">800</span>, height <span class="op">=</span> <span class="fl">800</span>, samples <span class="op">=</span> <span class="fl">64</span><span class="op">)</span></span></code></pre></div>
-<p><img src="reference/figures/README_ground-1.png"><!-- --></p>
+<div class="float">
+<img src="reference/figures/README_ground-1.png" alt="plot of chunk README_ground"><div class="figcaption">plot of chunk README_ground</div>
+</div>
 <p>By default, a scene without any lights includes a blue sky. We can turn this off either by setting <code>ambient_light = FALSE</code>, or by adding a light to our scene. We will add an emissive sphere above and behind our camera.</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">scene</span> <span class="op">=</span> <span class="fu"><a href="reference/generate_ground.html">generate_ground</a></span><span class="op">(</span>material<span class="op">=</span><span class="fu"><a href="reference/diffuse.html">diffuse</a></span><span class="op">(</span>checkercolor<span class="op">=</span><span class="st">"grey20"</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="reference/pipe.html">%&gt;%</a></span></span>
 <span>  <span class="fu"><a href="reference/add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="reference/sphere.html">sphere</a></span><span class="op">(</span>y<span class="op">=</span><span class="fl">0.2</span>,material<span class="op">=</span><span class="fu"><a href="reference/glossy.html">glossy</a></span><span class="op">(</span>color<span class="op">=</span><span class="st">"#2b6eff"</span>,reflectance<span class="op">=</span><span class="fl">0.05</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="reference/pipe.html">%&gt;%</a></span></span>
 <span>  <span class="fu"><a href="reference/add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="reference/sphere.html">sphere</a></span><span class="op">(</span>y<span class="op">=</span><span class="fl">10</span>,z<span class="op">=</span><span class="fl">1</span>,radius<span class="op">=</span><span class="fl">4</span>,material<span class="op">=</span><span class="fu"><a href="reference/light.html">light</a></span><span class="op">(</span>intensity<span class="op">=</span><span class="fl">4</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="reference/pipe.html">%&gt;%</a></span></span>
 <span>  <span class="fu"><a href="reference/add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="reference/sphere.html">sphere</a></span><span class="op">(</span>z<span class="op">=</span><span class="fl">15</span>,material<span class="op">=</span><span class="fu"><a href="reference/light.html">light</a></span><span class="op">(</span>intensity<span class="op">=</span><span class="fl">70</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="reference/render_scene.html">render_scene</a></span><span class="op">(</span><span class="va">scene</span>, parallel <span class="op">=</span> <span class="cn">TRUE</span>, width <span class="op">=</span> <span class="fl">800</span>, height <span class="op">=</span> <span class="fl">800</span>, samples <span class="op">=</span> <span class="fl">64</span><span class="op">)</span></span></code></pre></div>
-<p><img src="reference/figures/README_ground_sphere-1.png"><!-- --></p>
+<div class="float">
+<img src="reference/figures/README_ground_sphere-1.png" alt="plot of chunk README_ground_sphere"><div class="figcaption">plot of chunk README_ground_sphere</div>
+</div>
 <p>Now we’ll add the (included) R .obj file into the scene, using the <code><a href="reference/obj_model.html">obj_model()</a></code> function. We will scale it down slightly using the <code>scale_obj</code> argument, and then embed it on the surface of the ball.</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">scene</span> <span class="op">=</span> <span class="fu"><a href="reference/generate_ground.html">generate_ground</a></span><span class="op">(</span>material<span class="op">=</span><span class="fu"><a href="reference/diffuse.html">diffuse</a></span><span class="op">(</span>checkercolor<span class="op">=</span><span class="st">"grey20"</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="reference/pipe.html">%&gt;%</a></span></span>
 <span>  <span class="fu"><a href="reference/add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="reference/sphere.html">sphere</a></span><span class="op">(</span>y<span class="op">=</span><span class="fl">0.2</span>,material<span class="op">=</span><span class="fu"><a href="reference/glossy.html">glossy</a></span><span class="op">(</span>color<span class="op">=</span><span class="st">"#2b6eff"</span>,reflectance<span class="op">=</span><span class="fl">0.05</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="reference/pipe.html">%&gt;%</a></span></span>
 <span>  <span class="fu"><a href="reference/add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="reference/obj_model.html">obj_model</a></span><span class="op">(</span><span class="fu"><a href="reference/r_obj.html">r_obj</a></span><span class="op">(</span>simple_r <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>,</span>
@@ -200,9 +305,11 @@
 <span>  <span class="fu"><a href="reference/add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="reference/sphere.html">sphere</a></span><span class="op">(</span>y<span class="op">=</span><span class="fl">10</span>,z<span class="op">=</span><span class="fl">1</span>,radius<span class="op">=</span><span class="fl">4</span>,material<span class="op">=</span><span class="fu"><a href="reference/light.html">light</a></span><span class="op">(</span>intensity<span class="op">=</span><span class="fl">4</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="reference/pipe.html">%&gt;%</a></span></span>
 <span>  <span class="fu"><a href="reference/add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="reference/sphere.html">sphere</a></span><span class="op">(</span>z<span class="op">=</span><span class="fl">15</span>,material<span class="op">=</span><span class="fu"><a href="reference/light.html">light</a></span><span class="op">(</span>intensity<span class="op">=</span><span class="fl">70</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="reference/render_scene.html">render_scene</a></span><span class="op">(</span><span class="va">scene</span>, parallel <span class="op">=</span> <span class="cn">TRUE</span>, width <span class="op">=</span> <span class="fl">800</span>, height <span class="op">=</span> <span class="fl">800</span>, samples <span class="op">=</span> <span class="fl">64</span><span class="op">)</span></span></code></pre></div>
-<p><img src="reference/figures/README_ground_r_path-1.png"><!-- --></p>
+<div class="float">
+<img src="reference/figures/README_ground_r_path-1.png" alt="plot of chunk README_ground_r_path"><div class="figcaption">plot of chunk README_ground_r_path</div>
+</div>
 <p>Here we’ll render a grid of different viewpoints.</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">filename</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="va">image1</span> <span class="op">=</span> <span class="fu"><a href="reference/render_scene.html">render_scene</a></span><span class="op">(</span><span class="va">scene</span>, parallel <span class="op">=</span> <span class="cn">TRUE</span>, width <span class="op">=</span> <span class="fl">400</span>, height <span class="op">=</span> <span class="fl">400</span>, </span>
 <span>             lookfrom <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">7</span>,<span class="fl">1</span>,<span class="fl">7</span><span class="op">)</span>, samples <span class="op">=</span> <span class="fl">64</span>, return_raw_array <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
@@ -213,22 +320,26 @@
 <span><span class="va">image4</span> <span class="op">=</span> <span class="fu"><a href="reference/render_scene.html">render_scene</a></span><span class="op">(</span><span class="va">scene</span>, parallel <span class="op">=</span> <span class="cn">TRUE</span>, width <span class="op">=</span> <span class="fl">400</span>, height <span class="op">=</span> <span class="fl">400</span>, </span>
 <span>             lookfrom <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">-</span><span class="fl">7</span>,<span class="fl">7</span>,<span class="fl">7</span><span class="op">)</span>, samples <span class="op">=</span> <span class="fl">64</span>, return_raw_array <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span><span class="fu">rayimage</span><span class="fu">::</span><span class="fu"><a href="https://www.rayimage.dev/reference/plot_image_grid.html" class="external-link">plot_image_grid</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">image1</span>,<span class="va">image2</span>,<span class="va">image3</span>,<span class="va">image4</span><span class="op">)</span>, dim <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2</span>,<span class="fl">2</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<p><img src="reference/figures/README_ground_grid-1.png"><!-- --></p>
+<div class="float">
+<img src="reference/figures/README_ground_grid-1.png" alt="plot of chunk README_ground_grid"><div class="figcaption">plot of chunk README_ground_grid</div>
+</div>
 <p>Here’s another example: We start by generating an empty Cornell box and rendering it with <code><a href="reference/render_scene.html">render_scene()</a></code>. Setting <code>parallel = TRUE</code> will utilize all available cores on your machine. The <code>lookat</code>, <code>lookfrom</code>, <code>aperture</code>, and <code>fov</code> arguments control the camera, and the <code>samples</code> argument controls how many samples to take at each pixel. Higher sample counts result in a less noisy image.</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">scene</span> <span class="op">=</span> <span class="fu"><a href="reference/generate_cornell.html">generate_cornell</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="fu"><a href="reference/render_scene.html">render_scene</a></span><span class="op">(</span><span class="va">scene</span>, lookfrom<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">278</span>,<span class="fl">278</span>,<span class="op">-</span><span class="fl">800</span><span class="op">)</span>,lookat <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">278</span>,<span class="fl">278</span>,<span class="fl">0</span><span class="op">)</span>, aperture<span class="op">=</span><span class="fl">0</span>, fov<span class="op">=</span><span class="fl">40</span>, samples <span class="op">=</span> <span class="fl">64</span>,</span>
 <span>             ambient_light<span class="op">=</span><span class="cn">FALSE</span>, parallel<span class="op">=</span><span class="cn">TRUE</span>, width<span class="op">=</span><span class="fl">800</span>, height<span class="op">=</span><span class="fl">800</span><span class="op">)</span></span></code></pre></div>
-<p><img src="reference/figures/README_basic-1.png"><!-- --></p>
+<div class="float">
+<img src="reference/figures/README_basic-1.png" alt="plot of chunk README_basic"><div class="figcaption">plot of chunk README_basic</div>
+</div>
 <p>Here we add a metal ellipsoid, a checkered purple cube, a colored glass sphere, a pig, and plaster the walls with the iris dataset using textures applied to rectangles. We first write the textures out to a temporary filename, and then read the image back in using the <code><a href="https://rdrr.io/pkg/png/man/readPNG.html" class="external-link">png::readPNG()</a></code> function. We then pass this to the <code>image</code> argument in the diffuse material, which applies it as a texture.</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">tempfileplot</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/grDevices/png.html" class="external-link">png</a></span><span class="op">(</span>filename<span class="op">=</span><span class="va">tempfileplot</span>,height<span class="op">=</span><span class="fl">1600</span>,width<span class="op">=</span><span class="fl">1600</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">iris</span><span class="op">$</span><span class="va">Petal.Length</span>,<span class="va">iris</span><span class="op">$</span><span class="va">Sepal.Width</span>,col<span class="op">=</span><span class="va">iris</span><span class="op">$</span><span class="va">Species</span>,pch<span class="op">=</span><span class="fl">18</span>,cex<span class="op">=</span><span class="fl">12</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/grDevices/dev.html" class="external-link">dev.off</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
-<div class="sourceCode" id="cb11"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a><span class="do">## quartz_off_screen </span></span>
-<span id="cb11-2"><a href="#cb11-2" tabindex="-1"></a><span class="do">##                 2</span></span></code></pre></div>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<pre><code><span><span class="co">## quartz_off_screen</span></span>
+<span><span class="co">##                 2</span></span></code></pre>
+<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">image_array</span> <span class="op">=</span> <span class="fu">png</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/png/man/readPNG.html" class="external-link">readPNG</a></span><span class="op">(</span><span class="va">tempfileplot</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="reference/generate_cornell.html">generate_cornell</a></span><span class="op">(</span><span class="op">)</span> <span class="op"><a href="reference/pipe.html">%&gt;%</a></span></span>
@@ -246,9 +357,11 @@
 <span>                     material <span class="op">=</span> <span class="fu"><a href="reference/diffuse.html">diffuse</a></span><span class="op">(</span>image_texture <span class="op">=</span> <span class="va">image_array</span><span class="op">)</span>,angle<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">180</span>,<span class="fl">0</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="reference/pipe.html">%&gt;%</a></span></span>
 <span>  <span class="fu"><a href="reference/render_scene.html">render_scene</a></span><span class="op">(</span>lookfrom<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">278</span>,<span class="fl">278</span>,<span class="op">-</span><span class="fl">800</span><span class="op">)</span>,lookat <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">278</span>,<span class="fl">278</span>,<span class="fl">0</span><span class="op">)</span>, aperture<span class="op">=</span><span class="fl">0</span>, fov<span class="op">=</span><span class="fl">40</span>,  samples <span class="op">=</span> <span class="fl">64</span>,</span>
 <span>             ambient_light<span class="op">=</span><span class="cn">FALSE</span>, parallel<span class="op">=</span><span class="cn">TRUE</span>, width<span class="op">=</span><span class="fl">800</span>, height<span class="op">=</span><span class="fl">800</span><span class="op">)</span></span></code></pre></div>
-<p><img src="reference/figures/README_basic_sphere-1.png"><!-- --></p>
+<div class="float">
+<img src="reference/figures/README_basic_sphere-1.png" alt="plot of chunk README_basic_sphere"><div class="figcaption">plot of chunk README_basic_sphere</div>
+</div>
 <p>Rayrender also has an interface to create objects using constructive solid geometry, with a wide variety of primitives and operations.</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="reference/generate_ground.html">generate_ground</a></span><span class="op">(</span>material<span class="op">=</span><span class="fu"><a href="reference/diffuse.html">diffuse</a></span><span class="op">(</span>checkercolor<span class="op">=</span><span class="st">"grey20"</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="reference/pipe.html">%&gt;%</a></span></span>
 <span>  <span class="fu"><a href="reference/add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="reference/csg_object.html">csg_object</a></span><span class="op">(</span><span class="fu"><a href="reference/csg_combine.html">csg_combine</a></span><span class="op">(</span></span>
 <span>    <span class="fu"><a href="reference/csg_combine.html">csg_combine</a></span><span class="op">(</span></span>
@@ -270,9 +383,17 @@
 <span>     material<span class="op">=</span><span class="fu"><a href="reference/glossy.html">glossy</a></span><span class="op">(</span>color<span class="op">=</span><span class="st">"dodgerblue4"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="reference/pipe.html">%&gt;%</a></span></span>
 <span>  <span class="fu"><a href="reference/add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="reference/sphere.html">sphere</a></span><span class="op">(</span>y<span class="op">=</span><span class="fl">5</span>,x<span class="op">=</span><span class="fl">3</span>,radius<span class="op">=</span><span class="fl">1</span>,material<span class="op">=</span><span class="fu"><a href="reference/light.html">light</a></span><span class="op">(</span>intensity<span class="op">=</span><span class="fl">30</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="reference/pipe.html">%&gt;%</a></span></span>
 <span>  <span class="fu"><a href="reference/render_scene.html">render_scene</a></span><span class="op">(</span>clamp_value<span class="op">=</span><span class="fl">10</span>, fov<span class="op">=</span><span class="fl">20</span>,lookfrom<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">5</span>,<span class="fl">5</span>,<span class="fl">10</span><span class="op">)</span>,samples<span class="op">=</span><span class="fl">64</span>,width<span class="op">=</span><span class="fl">800</span>,height<span class="op">=</span><span class="fl">800</span><span class="op">)</span></span></code></pre></div>
-<p><img src="reference/figures/unnamed-chunk-1-1.png"><!-- --></p>
+<pre><code><span><span class="co">## --------------------------Interactive Mode Controls---------------------------</span></span>
+<span><span class="co">## W/A/S/D: Horizontal Movement: | Q/Z: Vertical Movement | Up/Down: Adjust FOV | ESC: Close</span></span>
+<span><span class="co">## Left/Right: Adjust Aperture  | 1/2: Adjust Focal Distance | 3/4: Rotate Environment Light</span></span>
+<span><span class="co">## P: Print Camera Info | R: Reset Camera |  TAB: Toggle Orbit Mode |  E/C: Adjust Step Size</span></span>
+<span><span class="co">## K: Save Keyframe | L: Reset Camera to Last Keyframe (if set) | F: Toggle Fast Travel Mode</span></span>
+<span><span class="co">## Left Mouse Click: Change Look At (new focal distance) | Right Mouse Click: Change Look At</span></span></code></pre>
+<div class="float">
+<img src="reference/figures/unnamed-chunk-1-1.png" alt="plot of chunk unnamed-chunk-1"><div class="figcaption">plot of chunk unnamed-chunk-1</div>
+</div>
 <p>We can also use the <code><a href="reference/path.html">path()</a></code> element to draw 3D paths. Here, we render the Lorenz attractor:</p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="http://desolve.r-forge.r-project.org/" class="external-link">deSolve</a></span><span class="op">)</span></span>
 <span><span class="va">parameters</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>s <span class="op">=</span> <span class="fl">10</span>, r <span class="op">=</span> <span class="fl">28</span>, b <span class="op">=</span> <span class="fl">8</span><span class="op">/</span><span class="fl">3</span><span class="op">)</span></span>
 <span><span class="va">state</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>X <span class="op">=</span> <span class="fl">1</span>, Y <span class="op">=</span> <span class="fl">0</span>, Z <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
@@ -296,9 +417,11 @@
 <span>  <span class="fu"><a href="reference/add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="reference/path.html">path</a></span><span class="op">(</span>points<span class="op">=</span><span class="va">vals</span>,y<span class="op">=</span><span class="op">-</span><span class="fl">0.6</span>,width<span class="op">=</span><span class="fl">0.01</span>,material<span class="op">=</span><span class="fu"><a href="reference/diffuse.html">diffuse</a></span><span class="op">(</span>color<span class="op">=</span><span class="st">"red"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="reference/pipe.html">%&gt;%</a></span> </span>
 <span>  <span class="fu"><a href="reference/add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="reference/sphere.html">sphere</a></span><span class="op">(</span>y<span class="op">=</span><span class="fl">5</span>,z<span class="op">=</span><span class="fl">5</span>,radius<span class="op">=</span><span class="fl">0.5</span>,material<span class="op">=</span><span class="fu"><a href="reference/light.html">light</a></span><span class="op">(</span>intensity<span class="op">=</span><span class="fl">200</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="reference/pipe.html">%&gt;%</a></span> </span>
 <span>  <span class="fu"><a href="reference/render_scene.html">render_scene</a></span><span class="op">(</span>samples<span class="op">=</span><span class="fl">64</span>,lookat<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">0.5</span>,<span class="fl">0</span><span class="op">)</span>,lookfrom<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">1</span>,<span class="fl">10</span><span class="op">)</span>,width <span class="op">=</span> <span class="fl">800</span>, height <span class="op">=</span> <span class="fl">800</span>, parallel<span class="op">=</span><span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
-<p><img src="reference/figures/README_ground_r_lorenz-1.png"><!-- --></p>
+<div class="float">
+<img src="reference/figures/README_ground_r_lorenz-1.png" alt="plot of chunk README_ground_r_lorenz"><div class="figcaption">plot of chunk README_ground_r_lorenz</div>
+</div>
 <p>rayrender also supports an extruded path object that generates a variable width path with any non-intersecting simple polygon (including holes) as an input. You can vary the width, add twist, and change the shape of the polygon along the path’s length.</p>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">points</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">0</span>,<span class="fl">1</span><span class="op">)</span>,<span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">-</span><span class="fl">0.5</span>,<span class="fl">0</span>,<span class="op">-</span><span class="fl">1</span><span class="op">)</span>,<span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">1</span>,<span class="op">-</span><span class="fl">1</span><span class="op">)</span>,<span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>,<span class="fl">0.5</span>,<span class="fl">0</span><span class="op">)</span>,<span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.6</span>,<span class="fl">0.3</span>,<span class="fl">1</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#Create star polygon</span></span>
 <span><span class="va">angles</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">360</span>,by<span class="op">=</span><span class="fl">36</span><span class="op">)</span></span>
@@ -317,11 +440,12 @@
 <span>  <span class="fu"><a href="reference/render_scene.html">render_scene</a></span><span class="op">(</span>lookat<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.3</span>,<span class="fl">0.5</span>,<span class="fl">1</span><span class="op">)</span>, </span>
 <span>               fov<span class="op">=</span><span class="fl">12</span>, width<span class="op">=</span><span class="fl">800</span>,height<span class="op">=</span><span class="fl">800</span>, </span>
 <span>               aperture<span class="op">=</span><span class="fl">0.025</span>, samples<span class="op">=</span><span class="fl">64</span><span class="op">)</span></span></code></pre></div>
-<div class="sourceCode" id="cb16"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" tabindex="-1"></a><span class="do">## Warning in mesh3d_model(mesh, x = x, y = y, z = z, override_material = TRUE, :</span></span>
-<span id="cb16-2"><a href="#cb16-2" tabindex="-1"></a><span class="do">## material set as vertex color but no texture or bump map passed--ignoring mesh3d</span></span>
-<span id="cb16-3"><a href="#cb16-3" tabindex="-1"></a><span class="do">## material.</span></span></code></pre></div>
-<p><img src="reference/figures/README_r_extruded_path-1.png"><!-- --></p>
-<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<pre><code><span><span class="co">## Warning in mesh3d_model(mesh, x = x, y = y, z = z, override_material = TRUE, : material set as vertex color but no</span></span>
+<span><span class="co">## texture or bump map passed--ignoring mesh3d material.</span></span></code></pre>
+<div class="float">
+<img src="reference/figures/README_r_extruded_path-1.png" alt="plot of chunk README_r_extruded_path"><div class="figcaption">plot of chunk README_r_extruded_path</div>
+</div>
+<div class="sourceCode" id="cb29"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co">#Render a closed Mobius strip with 1.5 turns </span></span>
 <span><span class="va">points</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">0</span>,<span class="fl">0</span><span class="op">)</span>,<span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.5</span>,<span class="fl">0.5</span>,<span class="fl">0</span><span class="op">)</span>,<span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">1</span>,<span class="fl">0</span><span class="op">)</span>,<span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">-</span><span class="fl">0.5</span>,<span class="fl">0.5</span>,<span class="fl">0</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">square_polygon</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">-</span><span class="fl">1</span>, <span class="op">-</span><span class="fl">0.1</span>, <span class="fl">0</span>,</span>
@@ -339,12 +463,13 @@
 <span> <span class="fu"><a href="reference/add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="reference/sphere.html">sphere</a></span><span class="op">(</span>y<span class="op">=</span><span class="fl">20</span>,x<span class="op">=</span><span class="fl">0</span>,z<span class="op">=</span><span class="fl">21</span>,material<span class="op">=</span><span class="fu"><a href="reference/light.html">light</a></span><span class="op">(</span>intensity <span class="op">=</span> <span class="fl">1000</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span> </span>
 <span> <span class="fu"><a href="reference/render_scene.html">render_scene</a></span><span class="op">(</span>lookat<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">0.5</span>,<span class="fl">0</span><span class="op">)</span>, fov<span class="op">=</span><span class="fl">10</span>, samples<span class="op">=</span><span class="fl">64</span>,</span>
 <span>              width <span class="op">=</span> <span class="fl">800</span>, height<span class="op">=</span><span class="fl">800</span><span class="op">)</span></span></code></pre></div>
-<div class="sourceCode" id="cb18"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" tabindex="-1"></a><span class="do">## Warning in mesh3d_model(mesh, x = x, y = y, z = z, override_material = TRUE, :</span></span>
-<span id="cb18-2"><a href="#cb18-2" tabindex="-1"></a><span class="do">## material set as vertex color but no texture or bump map passed--ignoring mesh3d</span></span>
-<span id="cb18-3"><a href="#cb18-3" tabindex="-1"></a><span class="do">## material.</span></span></code></pre></div>
-<p><img src="reference/figures/README_r_extruded_path-2.png"><!-- --></p>
+<pre><code><span><span class="co">## Warning in mesh3d_model(mesh, x = x, y = y, z = z, override_material = TRUE, : material set as vertex color but no</span></span>
+<span><span class="co">## texture or bump map passed--ignoring mesh3d material.</span></span></code></pre>
+<div class="float">
+<img src="reference/figures/README_r_extruded_path-2.png" alt="plot of chunk README_r_extruded_path"><div class="figcaption">plot of chunk README_r_extruded_path</div>
+</div>
 <p>Finally, rayrender supports environment lighting with the <code>environment_light</code> argument. Pass a high dynamic range image (<code>.hdr</code>) or a low-dynamic range image (<code>.jpg</code>,<code>.png</code>) and the image will be used to light the scene (along with any other lights). Here’s an example using an HDR image of Venice at sunset (obtained for free from hdrihaven.com), also using the Oren-Nayar diffuse model with <code>sigma = 90</code> for a more realistic diffuse surface. We also add an extruded polygon star, using the <code>extruded_polygon</code> object.</p>
-<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb31"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">tempfilehdr</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".hdr"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/download.file.html" class="external-link">download.file</a></span><span class="op">(</span><span class="st">"https://www.tylermw.com/data/venice_sunset_2k.hdr"</span>,<span class="va">tempfilehdr</span>, mode<span class="op">=</span><span class="st">"wb"</span><span class="op">)</span></span>
 <span><span class="va">hollow_star</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">rbind</a></span><span class="op">(</span><span class="va">star_polygon</span>, <span class="fl">0.8</span> <span class="op">*</span> <span class="va">star_polygon</span><span class="op">)</span></span>
@@ -361,7 +486,9 @@
 <span>  <span class="fu"><a href="reference/render_scene.html">render_scene</a></span><span class="op">(</span>parallel <span class="op">=</span> <span class="cn">TRUE</span>, environment_light <span class="op">=</span> <span class="va">tempfilehdr</span>, width<span class="op">=</span><span class="fl">800</span>,height<span class="op">=</span><span class="fl">800</span>,</span>
 <span>               fov<span class="op">=</span><span class="fl">70</span>,samples<span class="op">=</span><span class="fl">64</span>, aperture<span class="op">=</span><span class="fl">0.1</span>, sample_method <span class="op">=</span> <span class="st">"sobol_blue"</span>,</span>
 <span>               lookfrom<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">-</span><span class="fl">0.9</span>,<span class="fl">1.2</span>,<span class="op">-</span><span class="fl">4.5</span><span class="op">)</span>,lookat<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>,<span class="op">-</span><span class="fl">1</span>,<span class="fl">0</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<p><img src="reference/figures/README_hdr-1.png"><!-- --></p>
+<div class="float">
+<img src="reference/figures/README_hdr-1.png" alt="plot of chunk README_hdr"><div class="figcaption">plot of chunk README_hdr</div>
+</div>
 </div>
 <div class="section level2">
 <h2 id="acknowledgments">Acknowledgments<a class="anchor" aria-label="anchor" href="#acknowledgments"></a>
@@ -369,6 +496,7 @@
 <p>Thanks to Brodie Gaslam (@brodieG) for contributions to the <code><a href="reference/extruded_polygon.html">extruded_polygon()</a></code> function.</p>
 </div>
 </div>
+
   </div>
 
   <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">
