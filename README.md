@@ -1,40 +1,43 @@
----
-output: 
-  github_document:
-    fig_width: 5
-    fig_height: 5
-  html_preview: false
-editor_options: 
-  chunk_output_type: console
----
-rayrender
-=========================================================
+
+# rayrender
 
 <!-- badges: start -->
-[![R build status](https://github.com/tylermorganwall/rayrender/workflows/R-CMD-check/badge.svg)](https://github.com/tylermorganwall/rayrender/actions)
-[![:name status badge](https://tylermorganwall.r-universe.dev/badges/:name)](https://tylermorganwall.r-universe.dev/)
-[![rayrender status badge](https://tylermorganwall.r-universe.dev/badges/rayrender)](https://tylermorganwall.r-universe.dev/rayrender)
-![cran-badge rayrender package](http://www.r-pkg.org/badges/version/rayrender)
+
+[![R build
+status](https://github.com/tylermorganwall/rayrender/workflows/R-CMD-check/badge.svg)](https://github.com/tylermorganwall/rayrender/actions)
+[![:name status
+badge](https://tylermorganwall.r-universe.dev/badges/:name)](https://tylermorganwall.r-universe.dev/)
+[![rayrender status
+badge](https://tylermorganwall.r-universe.dev/badges/rayrender)](https://tylermorganwall.r-universe.dev/rayrender)
+![cran-badge rayrender
+package](http://www.r-pkg.org/badges/version/rayrender)
 <!-- badges: end -->
 
 <img src="man/figures/swordsmall.gif" ></img>
 
-Overview
---------
+## Overview
 
-**rayrender** is an open source R package for raytracing scenes in created in R. This package provides a tidy R interface to a fast pathtracer written in C++ to render scenes built out of an array of primitives and meshes. **rayrender** builds scenes using a pipeable iterative interface, and supports diffuse, metallic, dielectric (glass), glossy, microfacet, light emitting materials, as well as procedural and user-specified image/roughness/bump/normal textures and HDR environment lighting. **rayrender** includes multicore support (with progress bars) via RcppThread, random number generation via the PCG RNG, OBJ/PLY support, and denoising support with Intel Open Image Denoise (OIDN).
+**rayrender** is an open source R package for raytracing scenes in
+created in R. This package provides a tidy R interface to a fast
+pathtracer written in C++ to render scenes built out of an array of
+primitives and meshes. **rayrender** builds scenes using a pipeable
+iterative interface, and supports diffuse, metallic, dielectric (glass),
+glossy, microfacet, light emitting materials, as well as procedural and
+user-specified image/roughness/bump/normal textures and HDR environment
+lighting. **rayrender** includes multicore support (with progress bars)
+via RcppThread, random number generation via the PCG RNG, OBJ/PLY
+support, and denoising support with Intel Open Image Denoise (OIDN).
 
-Browse the documentation and see more examples at the website (if you aren't already there):
+Browse the documentation and see more examples at the website (if you
+aren’t already there):
 
 <a href="https://www.rayrender.net">rayrender.net</a>
 
 <img src="man/figures/rayrendersmall.jpg" ></img>
 
+## Installation
 
-Installation
-------------
-
-```r
+``` r
 # To install the latest version from Github:
 # install.packages("devtools")
 devtools::install_github("tylermorganwall/rayrender")
@@ -42,10 +45,13 @@ devtools::install_github("tylermorganwall/rayrender")
 
 # Optional: denoising with Intel Open Image Denoise (OIDN)
 
-`rayrender` can use Intel Open Image Denoise to denoise rendered images when OIDN is available on your system.
-If OIDN is not found, `rayrender` will still work, just without denoising support.
+`rayrender` can use Intel Open Image Denoise to denoise rendered images
+when OIDN is available on your system. If OIDN is not found, `rayrender`
+will still work, just without denoising support.
 
-To get denoising support, you need to install OIDN. You can download the official binaries from Intel and set the `OIDN_PATH` argument in your .Renviron file with the following command line instructions:
+To get denoising support, you need to install OIDN. You can download the
+official binaries from Intel and set the `OIDN_PATH` argument in your
+.Renviron file with the following command line instructions:
 
 ## macOS
 
@@ -81,36 +87,42 @@ echo "OIDN_PATH=/path/to/extracted/oidn" >> ~/.Renviron
 
 Windows is slightly trickier and requires Rtools45. The steps are:
 
-1. Install `make` and `ninja` via RTools.
-2. Install **ISPC** (Intel SPMD Program Compiler).
-3. Download the **OIDN** source repository.
-4. Compile and install OIDN, and point `rayrender` to it via `OIDN_PATH`.
+1.  Install `make` and `ninja` via RTools.
+2.  Install **ISPC** (Intel SPMD Program Compiler).
+3.  Download the **OIDN** source repository.
+4.  Compile and install OIDN, and point `rayrender` to it via
+    `OIDN_PATH`.
 
-`OIDN_PATH` should point to a directory that contains `include/OpenImageDenoise` and `lib` (or `lib64`) with the OIDN libraries.
+`OIDN_PATH` should point to a directory that contains
+`include/OpenImageDenoise` and `lib` (or `lib64`) with the OIDN
+libraries.
 
 ### Install prerequisites
 
-1. Install **Rtools45**
-   <https://cran.r-project.org/bin/windows/Rtools/>
-2. Open the **“Rtools45 MinGW UCRT64”** shell (ucrt64) in **RTools45**.
-3. Inside that shell, install the build tools (including `make`, `ninja`, `cmake`, `git`, and `ispc`) via `pacman`:
+1.  Install **Rtools45**
+    <https://cran.r-project.org/bin/windows/Rtools/>
+2.  Open the **“Rtools45 MinGW UCRT64”** shell (ucrt64) in **RTools45**.
+3.  Inside that shell, install the build tools (including `make`,
+    `ninja`, `cmake`, `git`, and `ispc`) via `pacman`:
 
-```bash
+``` bash
 pacman -Sy --needed \
-	mingw-w64-ucrt-x86_64-make \
-	mingw-w64-ucrt-x86_64-ninja \
-	mingw-w64-ucrt-x86_64-cmake \
-	mingw-w64-ucrt-x86_64-ispc
+    mingw-w64-ucrt-x86_64-make \
+    mingw-w64-ucrt-x86_64-ninja \
+    mingw-w64-ucrt-x86_64-cmake \
+    mingw-w64-ucrt-x86_64-ispc
 ```
-4. Make sure the Rtools static-posix toolchain and the MinGW binaries are on PATH (this mirrors the setup used to build OIDN):
 
-```bash
+4.  Make sure the Rtools static-posix toolchain and the MinGW binaries
+    are on PATH (this mirrors the setup used to build OIDN):
+
+``` bash
 export PATH="/c/rtools45/x86_64-w64-mingw32.static.posix/bin:/mingw64/bin:${PATH}"
 ```
 
-5. Verify the toolchain:
+5.  Verify the toolchain:
 
-```bash
+``` bash
 gcc --version
 g++ --version
 make --version
@@ -119,17 +131,18 @@ cmake --version
 ispc --version
 ```
 
-5. Confirm ISPC is available:
+5.  Confirm ISPC is available:
 
-```bash
+``` bash
 ispc --version
 ```
 
 ## Build and install OIDN from source (CPU-only)
 
-All of the following commands are run from the **Rtools45 ucrt64 shell**:
+All of the following commands are run from the **Rtools45 ucrt64
+shell**:
 
-```bash
+``` bash
 # Download the OIDN source
 git clone --recursive https://github.com/RenderKit/oidn.git
 cd oidn
@@ -164,21 +177,23 @@ cmake \
 
 If CMake cannot find TBB in Rtools automatically, add a hint such as:
 
-```bash
+``` bash
 -DTBB_ROOT=/path/to/rtools45/x86_64-w64-mingw32.static.posix
 ```
-(adjust the path for your actual Rtools45 install) to the `cmake` command above.
+
+(adjust the path for your actual Rtools45 install) to the `cmake`
+command above.
 
 Then build and install:
 
-```bash
+``` bash
 ninja
 ninja install
 ```
 
 After installation you should have, for example:
 
-```text
+``` text
 C:/local/oidn/include/OpenImageDenoise/oidn.h
 C:/local/oidn/lib/libOpenImageDenoise.a   (and related libs)
 ```
@@ -187,27 +202,30 @@ C:/local/oidn/lib/libOpenImageDenoise.a   (and related libs)
 
 In a regular Windows shell or PowerShell, add to your user `.Renviron`:
 
-```powershell
+``` powershell
 echo 'OIDN_PATH=C:/local/oidn' >> "$HOME/.Renviron"
 ```
 
-or edit the file and add the above manually with `devtools::edit_r_environ()`.
+or edit the file and add the above manually with
+`devtools::edit_r_environ()`.
 
 Restart R (or your IDE), then reinstall `rayrender` from source:
 
-```r
+``` r
 devtools::install_github("tylermorganwall/rayrender", force = TRUE)
 ```
 
-After this, `rayrender` should detect OIDN during `configure` and enable denoising support on Windows.
+After this, `rayrender` should detect OIDN during `configure` and enable
+denoising support on Windows.
 
-Usage
------
+## Usage
 
-
-
-We'll first start by rendering a simple scene consisting of the ground, a sphere, and the included `R.obj` file. The location of the `R.obj` file can be accessed by calling the function `r_obj()`. First adding the ground using the `render_ground()` function. This renders an extremely large sphere that (at our scene's scale) functions as a flat surface. We also add a simple blue sphere to the scene.
-
+We’ll first start by rendering a simple scene consisting of the ground,
+a sphere, and the included `R.obj` file. The location of the `R.obj`
+file can be accessed by calling the function `r_obj()`. First adding the
+ground using the `render_ground()` function. This renders an extremely
+large sphere that (at our scene’s scale) functions as a flat surface. We
+also add a simple blue sphere to the scene.
 
 ``` r
 library(rayrender)
@@ -217,10 +235,12 @@ scene = generate_ground(material=diffuse(checkercolor="grey20")) %>%
 render_scene(scene, parallel = TRUE, width = 800, height = 800, samples = 64)
 ```
 
-![plot of chunk README_ground](man/figures/README_ground-1.png)
+![](man/figures/README_ground-1.png)<!-- -->
 
-By default, a scene without any lights includes a blue sky. We can turn this off either by setting `ambient_light = FALSE`, or by adding a light to our scene. We will add an emissive sphere above and behind our camera.
-
+By default, a scene without any lights includes a blue sky. We can turn
+this off either by setting `ambient_light = FALSE`, or by adding a light
+to our scene. We will add an emissive sphere above and behind our
+camera.
 
 ``` r
 scene = generate_ground(material=diffuse(checkercolor="grey20")) %>%
@@ -230,11 +250,11 @@ scene = generate_ground(material=diffuse(checkercolor="grey20")) %>%
 render_scene(scene, parallel = TRUE, width = 800, height = 800, samples = 64)
 ```
 
-![plot of chunk README_ground_sphere](man/figures/README_ground_sphere-1.png)
+![](man/figures/README_ground_sphere-1.png)<!-- -->
 
-Now we'll add the (included) R .obj file into the scene, using the `obj_model()` function. We will scale it down slightly using the `scale_obj` argument, and then embed it on the surface of the ball. 
-
-
+Now we’ll add the (included) R .obj file into the scene, using the
+`obj_model()` function. We will scale it down slightly using the
+`scale_obj` argument, and then embed it on the surface of the ball.
 
 ``` r
 scene = generate_ground(material=diffuse(checkercolor="grey20")) %>%
@@ -246,10 +266,9 @@ scene = generate_ground(material=diffuse(checkercolor="grey20")) %>%
 render_scene(scene, parallel = TRUE, width = 800, height = 800, samples = 64)
 ```
 
-![plot of chunk README_ground_r_path](man/figures/README_ground_r_path-1.png)
+![](man/figures/README_ground_r_path-1.png)<!-- -->
 
-Here we'll render a grid of different viewpoints.
-
+Here we’ll render a grid of different viewpoints.
 
 ``` r
 filename = tempfile()
@@ -264,10 +283,14 @@ image4 = render_scene(scene, parallel = TRUE, width = 400, height = 400,
 rayimage::plot_image_grid(list(image1,image2,image3,image4), dim = c(2,2))
 ```
 
-![plot of chunk README_ground_grid](man/figures/README_ground_grid-1.png)
+![](man/figures/README_ground_grid-1.png)<!-- -->
 
-Here's another example: We start by generating an empty Cornell box and rendering it with `render_scene()`. Setting `parallel = TRUE` will utilize all available cores on your machine. The `lookat`, `lookfrom`, `aperture`, and `fov` arguments control the camera, and the `samples` argument controls how many samples to take at each pixel. Higher sample counts result in a less noisy image.
-
+Here’s another example: We start by generating an empty Cornell box and
+rendering it with `render_scene()`. Setting `parallel = TRUE` will
+utilize all available cores on your machine. The `lookat`, `lookfrom`,
+`aperture`, and `fov` arguments control the camera, and the `samples`
+argument controls how many samples to take at each pixel. Higher sample
+counts result in a less noisy image.
 
 ``` r
 scene = generate_cornell()
@@ -275,10 +298,14 @@ render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), aperture=0, 
              ambient_light=FALSE, parallel=TRUE, width=800, height=800)
 ```
 
-![plot of chunk README_basic](man/figures/README_basic-1.png)
+![](man/figures/README_basic-1.png)<!-- -->
 
-Here we add a metal ellipsoid, a checkered purple cube, a colored glass sphere, a pig, and plaster the walls with the iris dataset using textures applied to rectangles. We first write the textures out to a temporary filename, and then read the image back in using the `png::readPNG()` function. We then pass this to the `image` argument in the diffuse material, which applies it as a texture.
-
+Here we add a metal ellipsoid, a checkered purple cube, a colored glass
+sphere, a pig, and plaster the walls with the iris dataset using
+textures applied to rectangles. We first write the textures out to a
+temporary filename, and then read the image back in using the
+`png::readPNG()` function. We then pass this to the `image` argument in
+the diffuse material, which applies it as a texture.
 
 ``` r
 tempfileplot = tempfile()
@@ -287,10 +314,8 @@ plot(iris$Petal.Length,iris$Sepal.Width,col=iris$Species,pch=18,cex=12)
 dev.off()
 ```
 
-```
-## quartz_off_screen 
-##                 2
-```
+    ## quartz_off_screen 
+    ##                 2
 
 ``` r
 image_array = png::readPNG(tempfileplot)
@@ -312,10 +337,10 @@ generate_cornell() %>%
              ambient_light=FALSE, parallel=TRUE, width=800, height=800)
 ```
 
-![plot of chunk README_basic_sphere](man/figures/README_basic_sphere-1.png)
+![](man/figures/README_basic_sphere-1.png)<!-- -->
 
-Rayrender also has an interface to create objects using constructive solid geometry, with a wide variety of primitives and operations. 
-
+Rayrender also has an interface to create objects using constructive
+solid geometry, with a wide variety of primitives and operations.
 
 ``` r
 generate_ground(material=diffuse(checkercolor="grey20")) %>%
@@ -341,19 +366,10 @@ generate_ground(material=diffuse(checkercolor="grey20")) %>%
   render_scene(clamp_value=10, fov=20,lookfrom=c(5,5,10),samples=64,width=800,height=800)
 ```
 
-```
-## --------------------------Interactive Mode Controls---------------------------
-## W/A/S/D: Horizontal Movement: | Q/Z: Vertical Movement | Up/Down: Adjust FOV | ESC: Close
-## Left/Right: Adjust Aperture  | 1/2: Adjust Focal Distance | 3/4: Rotate Environment Light 
-## P: Print Camera Info | R: Reset Camera |  TAB: Toggle Orbit Mode |  E/C: Adjust Step Size
-## K: Save Keyframe | L: Reset Camera to Last Keyframe (if set) | F: Toggle Fast Travel Mode
-## Left Mouse Click: Change Look At (new focal distance) | Right Mouse Click: Change Look At
-```
+![](man/figures/unnamed-chunk-1-1.png)<!-- -->
 
-![plot of chunk unnamed-chunk-1](man/figures/unnamed-chunk-1-1.png)
-
-We can also use the `path()` element to draw 3D paths. Here, we render the Lorenz attractor:
-
+We can also use the `path()` element to draw 3D paths. Here, we render
+the Lorenz attractor:
 
 ``` r
 library(deSolve)
@@ -381,10 +397,12 @@ generate_studio() %>%
   render_scene(samples=64,lookat=c(0,0.5,0),lookfrom=c(0,1,10),width = 800, height = 800, parallel=TRUE)
 ```
 
-![plot of chunk README_ground_r_lorenz](man/figures/README_ground_r_lorenz-1.png)
+![](man/figures/README_ground_r_lorenz-1.png)<!-- -->
 
-rayrender also supports an extruded path object that generates a variable width path with any non-intersecting simple polygon (including holes) as an input. You can vary the width, add twist, and change the shape of the polygon along the path's length.
-
+rayrender also supports an extruded path object that generates a
+variable width path with any non-intersecting simple polygon (including
+holes) as an input. You can vary the width, add twist, and change the
+shape of the polygon along the path’s length.
 
 ``` r
 points = list(c(0,0,1),c(-0.5,0,-1),c(0,1,-1),c(1,0.5,0),c(0.6,0.3,1))
@@ -407,12 +425,11 @@ generate_studio(depth=-0.4) |>
                aperture=0.025, samples=64)
 ```
 
-```
-## Warning in mesh3d_model(mesh, x = x, y = y, z = z, override_material = TRUE, : material set as vertex color but no
-## texture or bump map passed--ignoring mesh3d material.
-```
+    ## Warning in mesh3d_model(mesh, x = x, y = y, z = z, override_material = TRUE, :
+    ## material set as vertex color but no texture or bump map passed--ignoring mesh3d
+    ## material.
 
-![plot of chunk README_r_extruded_path](man/figures/README_r_extruded_path-1.png)
+![](man/figures/README_r_extruded_path-1.png)<!-- -->
 
 ``` r
 #Render a closed Mobius strip with 1.5 turns 
@@ -434,15 +451,20 @@ generate_studio(depth=-0.2,
               width = 800, height=800)
 ```
 
-```
-## Warning in mesh3d_model(mesh, x = x, y = y, z = z, override_material = TRUE, : material set as vertex color but no
-## texture or bump map passed--ignoring mesh3d material.
-```
+    ## Warning in mesh3d_model(mesh, x = x, y = y, z = z, override_material = TRUE, :
+    ## material set as vertex color but no texture or bump map passed--ignoring mesh3d
+    ## material.
 
-![plot of chunk README_r_extruded_path](man/figures/README_r_extruded_path-2.png)
+![](man/figures/README_r_extruded_path-2.png)<!-- -->
 
-Finally, rayrender supports environment lighting with the `environment_light` argument. Pass a high dynamic range image (`.hdr`) or a low-dynamic range image (`.jpg`,`.png`) and the image will be used to light the scene (along with any other lights). Here's an example using an HDR image of Venice at sunset (obtained for free from hdrihaven.com), also using the Oren-Nayar diffuse model with `sigma = 90` for a more realistic diffuse surface. We also add an extruded polygon star, using the `extruded_polygon` object.
-
+Finally, rayrender supports environment lighting with the
+`environment_light` argument. Pass a high dynamic range image (`.hdr`)
+or a low-dynamic range image (`.jpg`,`.png`) and the image will be used
+to light the scene (along with any other lights). Here’s an example
+using an HDR image of Venice at sunset (obtained for free from
+hdrihaven.com), also using the Oren-Nayar diffuse model with
+`sigma = 90` for a more realistic diffuse surface. We also add an
+extruded polygon star, using the `extruded_polygon` object.
 
 ``` r
 tempfilehdr = tempfile(fileext = ".hdr")
@@ -463,9 +485,9 @@ generate_ground(material = diffuse(color="grey20", checkercolor = "grey50",sigma
                lookfrom=c(-0.9,1.2,-4.5),lookat=c(0,-1,0))
 ```
 
-![plot of chunk README_hdr](man/figures/README_hdr-1.png)
+![](man/figures/README_hdr-1.png)<!-- -->
 
-Acknowledgments 
---------
+## Acknowledgments
 
-Thanks to Brodie Gaslam (@brodieG) for contributions to the `extruded_polygon()` function.
+Thanks to Brodie Gaslam (@brodieG) for contributions to the
+`extruded_polygon()` function.
