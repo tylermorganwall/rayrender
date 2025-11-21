@@ -191,6 +191,8 @@ compile_test = function(
 	}
 
 	cmd = build_command(CXX_COMMAND, args)
+
+	# First try: quiet run
 	status = tryCatch(
 		{
 			system(cmd, ignore.stdout = TRUE, ignore.stderr = TRUE)
@@ -199,7 +201,33 @@ compile_test = function(
 		error = function(e) 1L
 	)
 
-	isTRUE(status == 0)
+	if (!isTRUE(status == 0L)) {
+		# Second try: capture output for debugging
+		message("*** configure: test compile/link failed. Command:")
+		message(cmd)
+		message("*** configure: compiler/linker output:")
+
+		out = tryCatch(
+			{
+				# capture both stdout and stderr
+				system(paste(cmd, "2>&1"), intern = TRUE)
+			},
+			error = function(e) {
+				paste("system() error while capturing output:", conditionMessage(e))
+			}
+		)
+
+		# out can be character vector or single string
+		if (length(out)) {
+			for (line in out) {
+				message(line)
+			}
+		}
+
+		return(FALSE)
+	}
+
+	TRUE
 }
 
 if (is_windows) {
