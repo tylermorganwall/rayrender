@@ -1,5 +1,3 @@
-# Configure rayrender using an R-based workflow.
-
 is_windows = identical(.Platform$OS.type, "windows")
 sysname = Sys.info()[["sysname"]]
 is_macos = identical(sysname, "Darwin")
@@ -291,395 +289,202 @@ if (!is_windows) {
 }
 # ---- TBB detection ----
 
-detect_tbb = function(extra_lib_dirs = character()) {
-	tbb_root = Sys.getenv("TBB_ROOT", unset = "")
+# ---- Open Image Denoise (OIDN) + TBB ----
+
+find_tbb_for_oidn = function() {
+	# For now, we only need explicit TBB discovery on Windows with the
+	# static Rtools toolchain. On Unix, libOpenImageDenoise.* normally
+	# carries its own TBB dependency.
+	if (!is_windows) {
+		return(NULL)
+	}
+
+	candidates = character()
+
+	# Explicit env overrides
 	tbb_lib_env = Sys.getenv("TBB_LIB", unset = "")
-	tbb_inc_env = Sys.getenv("TBB_INC", unset = "")
-
-	candidate_lib_dirs = character()
-
-	# 1) Explicit env hints first
 	if (nzchar(tbb_lib_env)) {
-		candidate_lib_dirs = c(
-			candidate_lib_dirs,
-			normalizePath(tbb_lib_env, winslash = "/", mustWork = FALSE)
-		)
+		candidates = c(candidates, tbb_lib_env)
 	}
-	if (nzchar(tbb_root)) {
-		candidate_lib_dirs = c(
-			candidate_lib_dirs,
+
+	tbb_root_env = Sys.getenv("TBB_ROOT", unset = "")
+	if (nzchar(tbb_root_env)) {
+		candidates = c(candidates, file.path(tbb_root_env, "lib"))
+	}
+
+	# Rtools static.posix layout (derive from gcc)
+	gcc = Sys.which("gcc")
+	if (nzchar(gcc)) {
+		gcc_bin = normalizePath(gcc, winslash = "/", mustWork = FALSE)
+		tool_root = dirname(gcc_bin) # .../bin
+		candidates = c(
+			candidates,
 			normalizePath(
-				file.path(tbb_root, "lib"),
+				file.path(tool_root, "../lib"),
 				winslash = "/",
 				mustWork = FALSE
 			)
 		)
 	}
 
-	# 2) Any library dirs provided by the caller (e.g. alongside OIDN on Unix)
-	if (length(extra_lib_dirs)) {
-		candidate_lib_dirs = c(
-			candidate_lib_dirs,
-			normalizePath(extra_lib_dirs, winslash = "/", mustWork = FALSE)
-		)
+	# If someone built OIDN + TBB under the same prefix, look there too
+	oidn_root_env = Sys.getenv("OIDN_PATH", unset = "")
+	if (nzchar(oidn_root_env)) {
+		candidates = c(candidates, file.path(oidn_root_env, "lib"))
 	}
 
-	# 3) Windows: add Rtools-style candidates for TBB
-	if (is_windows) {
-		gcc_path = normalizePath(
-			Sys.which("gcc"),
-			winslash = "/",
-			mustWork = FALSE
-		)
-		if (nzchar(gcc_path)) {
-			gcc_bin_dir = dirname(gcc_path) # .../x86_64-w64-mingw32.static.posix/bin
-			triple_dir = dirname(gcc_bin_dir) # .../x86_64-w64-mingw32.static.posix
-			rtools_root = dirname(triple_dir) # .../rtools45 (or similar)
-			triple_name = basename(triple_dir) # x86_64-w64-mingw32.static.posix
+	candidates = unique(candidates[dir.exists(candidates)])
+	if (!length(candidates)) {
+		return(NULL)
+	}
 
-			legacy_lib = normalizePath(
-				file.path(gcc_bin_dir, "..", "..", "lib"),
-				winslash = "/",
-				mustWork = FALSE
-			)
-			rtools_tbb_lib = normalizePath(
-				file.path(rtools_root, triple_name, "lib"),
-				winslash = "/",
-				mustWork = FALSE
-			)
+	for (dir in candidates) {
+		# oneTBB layout: libtbb12.a
+		lib_tbb12 = file.path(dir, "libtbb12.a")
+		if (file.exists(lib_tbb12)) {
+			lib_malloc = file.path(dir, "libtbbmalloc.a")
+			malloc_name = if (file.exists(lib_malloc)) "tbbmalloc" else ""
+			return(list(lib_dir = dir, lib = "tbb12", malloc = malloc_name))
+		}
 
-			rtools_candidates = c(legacy_lib, rtools_tbb_lib)
-			rtools_candidates = rtools_candidates[dir.exists(rtools_candidates)]
-
-			candidate_lib_dirs = c(candidate_lib_dirs, rtools_candidates)
-
-			if (!nzchar(tbb_inc_env)) {
-				rtools_tbb_inc = normalizePath(
-					file.path(rtools_root, triple_name, "include"),
-					winslash = "/",
-					mustWork = FALSE
-				)
-				if (dir.exists(rtools_tbb_inc)) {
-					tbb_inc_env = rtools_tbb_inc
-				}
-			}
+		# Older / generic layout: libtbb.a
+		lib_tbb = file.path(dir, "libtbb.a")
+		if (file.exists(lib_tbb)) {
+			lib_malloc = file.path(dir, "libtbbmalloc.a")
+			malloc_name = if (file.exists(lib_malloc)) "tbbmalloc" else ""
+			return(list(lib_dir = dir, lib = "tbb", malloc = malloc_name))
 		}
 	}
 
-	# 4) Unix autodetect (optional); add, do NOT replace, candidates
-	if (
-		.Platform$OS.type == "unix" &&
-			identical(Sys.getenv("TBB_AUTODETECT", unset = "FALSE"), "TRUE")
-	) {
-		sysname = Sys.info()[["sysname"]]
-		homebrew_prefix = if (identical(sysname, "Darwin")) {
-			"/opt/homebrew"
-		} else {
-			"/usr/local"
-		}
-
-		if (identical(sysname, "Darwin")) {
-			hb_lib = normalizePath(
-				file.path(homebrew_prefix, "opt", "tbb", "lib"),
-				winslash = "/",
-				mustWork = FALSE
-			)
-			if (dir.exists(hb_lib)) {
-				candidate_lib_dirs = c(candidate_lib_dirs, hb_lib)
-			}
-			if (!nzchar(tbb_inc_env)) {
-				hb_inc = normalizePath(
-					file.path(homebrew_prefix, "opt", "tbb", "include"),
-					winslash = "/",
-					mustWork = FALSE
-				)
-				if (dir.exists(hb_inc)) {
-					tbb_inc_env = hb_inc
-				}
-			}
-		} else {
-			tbb_lib_search = Sys.glob(c(
-				"/usr/*/libtbb.so",
-				"/usr/*/*/libtbb.so",
-				"/usr/*/*/*/libtbb.so"
-			))
-			if (length(tbb_lib_search)) {
-				candidate_lib_dirs = c(
-					candidate_lib_dirs,
-					dirname(tbb_lib_search[[1L]])
-				)
-			}
-			if (!nzchar(tbb_inc_env)) {
-				tbb_inc_search = Sys.glob(c(
-					"/usr/include/tbb.h",
-					"/usr/include/*/tbb.h"
-				))
-				if (length(tbb_inc_search)) {
-					tbb_inc_env = dirname(tbb_inc_search[[1L]])
-				}
-			}
-		}
-	}
-
-	candidate_lib_dirs = unique(candidate_lib_dirs)
-
-	if (!length(candidate_lib_dirs)) {
-		message(
-			"*** configure: TBB not found; TBB-dependent features will be disabled"
-		)
-		return(list(found = FALSE, lib_dir = "", inc_dir = "", lib_name = ""))
-	}
-
-	# 5) Scan all candidate lib dirs in order; pick the first that actually has a libtbb*
-	for (lib_dir in candidate_lib_dirs) {
-		if (!dir.exists(lib_dir)) {
-			next
-		}
-
-		files = list.files(lib_dir, pattern = "^libtbb", full.names = FALSE)
-		if (!length(files)) {
-			next
-		}
-
-		pattern = "^lib(tbb[0-9]*(?:_static)?)\\.(a|so|dylib|lib|dll)$"
-		matches = grep(pattern, files, perl = TRUE, value = TRUE)
-		if (!length(matches)) {
-			next
-		}
-
-		chosen = matches[[1L]]
-		lib_name = sub(pattern, "\\1", chosen, perl = TRUE)
-
-		lib_dir_norm = normalizePath(
-			lib_dir,
-			winslash = "/",
-			mustWork = FALSE
-		)
-
-		# Derive an include dir
-		inc_dir = ""
-		if (nzchar(tbb_inc_env) && dir.exists(tbb_inc_env)) {
-			inc_dir = normalizePath(tbb_inc_env, winslash = "/", mustWork = FALSE)
-		} else if (nzchar(tbb_root) && dir.exists(file.path(tbb_root, "include"))) {
-			inc_dir = normalizePath(
-				file.path(tbb_root, "include"),
-				winslash = "/",
-				mustWork = FALSE
-			)
-		} else if (is_windows) {
-			win_inc_candidate = normalizePath(
-				file.path(dirname(lib_dir_norm), "include"),
-				winslash = "/",
-				mustWork = FALSE
-			)
-			if (dir.exists(win_inc_candidate)) {
-				inc_dir = win_inc_candidate
-			}
-		}
-
-		if (!nzchar(inc_dir)) {
-			generic_inc = normalizePath(
-				file.path(lib_dir_norm, "..", "include"),
-				winslash = "/",
-				mustWork = FALSE
-			)
-			if (dir.exists(generic_inc)) {
-				inc_dir = generic_inc
-			}
-		}
-
-		message(sprintf(
-			"*** configure: found TBB (%s) in %s",
-			lib_name,
-			lib_dir_norm
-		))
-
-		return(list(
-			found = TRUE,
-			lib_dir = lib_dir_norm,
-			inc_dir = inc_dir,
-			lib_name = lib_name
-		))
-	}
-
-	message(
-		"*** configure: TBB not found in any candidate locations; TBB-dependent features will be disabled"
-	)
-	list(found = FALSE, lib_dir = "", inc_dir = "", lib_name = "")
+	NULL
 }
 
-# ---- Open Image Denoise (OIDN) ----
+oidn_root = Sys.getenv("OIDN_PATH", unset = "")
+has_oidn = FALSE
+tbb_info = NULL
 
-oidn_path = Sys.getenv("OIDN_PATH", unset = "")
+if (nzchar(oidn_root) && dir.exists(oidn_root)) {
+	oidn_inc_dir = file.path(oidn_root, "include")
+	oidn_lib_dir = file.path(oidn_root, "lib")
 
-if (!nzchar(oidn_path) || !dir.exists(oidn_path)) {
-	message(
-		"*** configure: Open Image Denoise (OIDN) not found; skipping denoiser support"
-	)
-} else if (is_windows) {
-	## ---- Windows: link against DLL in bin/, copy DLLs into package libs ----
-
-	oidn_bin_dir = file.path(oidn_path, "bin")
-	oidn_inc_dir = file.path(oidn_path, "include")
-	oidn_dll = file.path(oidn_bin_dir, "OpenImageDenoise.dll")
-
-	if (!file.exists(oidn_dll)) {
+	if (!dir.exists(oidn_inc_dir) || !dir.exists(oidn_lib_dir)) {
 		message(
-			"*** configure: OpenImageDenoise.dll not found in OIDN_PATH/bin; skipping denoiser support"
+			"*** configure: OIDN_PATH set but include/lib not found; skipping denoiser support"
 		)
 	} else {
-		message(sprintf(
-			"*** configure: using Open Image Denoise DLL at %s",
-			oidn_dll
-		))
+		if (is_windows) {
+			tbb_info = find_tbb_for_oidn()
+			if (is.null(tbb_info)) {
+				message(
+					"*** configure: found OIDN, but no compatible TBB; disabling OIDN support"
+				)
+			}
+		}
 
-		# Headers
-		if (dir.exists(oidn_inc_dir)) {
+		if (!is_windows || !is.null(tbb_info)) {
+			message(sprintf(
+				"*** configure: using Open Image Denoise at %s%s",
+				oidn_root,
+				if (is_windows && !is.null(tbb_info)) {
+					sprintf(" (TBB %s in %s)", tbb_info$lib, tbb_info$lib_dir)
+				} else {
+					""
+				}
+			))
+
+			# Headers
 			OIDN_CPPFLAGS = append_flags(
 				OIDN_CPPFLAGS,
 				flag_with_path("-I", oidn_inc_dir)
 			)
-		}
 
-		# Link against the directory that contains the DLL (WRE pattern)
-		if (dir.exists(oidn_bin_dir)) {
+			# Link search path for OIDN libs
 			OIDN_LDFLAGS = append_flags(
 				OIDN_LDFLAGS,
-				flag_with_path("-L", oidn_bin_dir)
+				flag_with_path("-L", oidn_lib_dir)
 			)
-		}
 
-		# Let the linker/loader resolve OpenImageDenoise from bin/
-		OIDN_LIBS = append_flags(OIDN_LIBS, "-lOpenImageDenoise")
-
-		DEFINES = append_unique_flags(DEFINES, "-DHAS_OIDN")
-
-		# ---- copy runtime DLLs into ${R_PACKAGE_DIR}/libs/${R_ARCH} ----
-
-		r_arch = Sys.getenv("R_ARCH", "")
-		# R_ARCH is like "/x64" or "/i386" – strip leading slash if present
-		r_arch = sub("^/", "", r_arch)
-
-		pkg_dir = Sys.getenv("R_PACKAGE_DIR", "")
-		if (!nzchar(pkg_dir)) {
-			message(
-				"*** configure: R_PACKAGE_DIR not set; cannot copy OIDN DLLs, OIDN may fail at runtime"
-			)
-		} else {
-			dll_dest = if (nzchar(r_arch)) {
-				file.path(pkg_dir, "libs", r_arch)
-			} else {
-				file.path(pkg_dir, "libs")
+			# rpath on Unix so the .so can be found at runtime
+			if (!is_windows) {
+				OIDN_LDFLAGS = append_flags(
+					OIDN_LDFLAGS,
+					sprintf(
+						"-Wl,-rpath,%s",
+						normalizePath(oidn_lib_dir, winslash = "/", mustWork = FALSE)
+					)
+				)
 			}
 
-			dir.create(dll_dest, recursive = TRUE, showWarnings = FALSE)
-
-			dll_candidates = c(
-				file.path(oidn_bin_dir, "OpenImageDenoise.dll"),
-				file.path(oidn_bin_dir, "tbb12.dll"),
-				file.path(oidn_bin_dir, "tbb.dll"),
-				file.path(oidn_bin_dir, "tbbmalloc.dll"),
-				file.path(oidn_bin_dir, "tbbmalloc_proxy.dll")
+			# OIDN libs: works for both static and shared builds
+			OIDN_LIBS = append_flags(
+				OIDN_LIBS,
+				"-lOpenImageDenoise"
 			)
-			dll_candidates = dll_candidates[file.exists(dll_candidates)]
 
-			if (length(dll_candidates)) {
-				ok = file.copy(dll_candidates, dll_dest, overwrite = TRUE)
-				if (any(ok)) {
-					message(sprintf(
-						"*** configure: copied %d OIDN/TBB DLL(s) to %s",
-						sum(ok),
-						dll_dest
-					))
-				} else {
-					message(
-						"*** configure: failed to copy OIDN/TBB DLLs; OIDN may fail at runtime"
-					)
-				}
+			# On Windows with the static Rtools toolchain, we must also link TBB
+			if (is_windows && !is.null(tbb_info)) {
+				OIDN_LDFLAGS = append_flags(
+					OIDN_LDFLAGS,
+					flag_with_path("-L", tbb_info$lib_dir)
+				)
+				OIDN_LIBS = append_flags(
+					OIDN_LIBS,
+					sprintf("-l%s", tbb_info$lib),
+					if (nzchar(tbb_info$malloc)) {
+						sprintf("-l%s", tbb_info$malloc)
+					} else {
+						character()
+					}
+				)
+			}
+
+			oidn_test_code = paste(
+				"#include <OpenImageDenoise/oidn.h>",
+				"int main() {",
+				"  OIDNDevice device = oidnNewDevice(OIDN_DEVICE_TYPE_CPU);",
+				"  if (!device) return 1;",
+				"  oidnCommitDevice(device);",
+				"  oidnReleaseDevice(device);",
+				"  return 0;",
+				"}",
+				sep = "\n"
+			)
+
+			# Sanity check: can we actually compile + link a tiny OIDN program?
+			has_oidn = compile_test(
+				code = oidn_test_code,
+				extra_cppflags = OIDN_CPPFLAGS,
+				extra_ldflags = c(OIDN_LDFLAGS, OIDN_LIBS),
+				link = TRUE,
+				include_pkg_cppflags = FALSE,
+				include_pkg_cxxflags = FALSE
+			)
+
+			if (has_oidn) {
+				message(sprintf(
+					"*** configure: OIDN enabled (prefix %s%s)",
+					oidn_root,
+					if (is_windows && !is.null(tbb_info)) {
+						sprintf(", TBB %s from %s", tbb_info$lib, tbb_info$lib_dir)
+					} else {
+						""
+					}
+				))
+				DEFINES = append_unique_flags(DEFINES, "-DHAS_OIDN")
 			} else {
 				message(
-					"*** configure: no OIDN/TBB DLLs found to copy; OIDN may fail at runtime"
+					"*** configure: OIDN libraries present but test link failed; disabling OIDN support"
 				)
+				OIDN_CPPFLAGS = character()
+				OIDN_LDFLAGS = character()
+				OIDN_LIBS = character()
 			}
 		}
 	}
 } else {
-	## ---- non-Windows: use TBB + lib dir (rpath) ----
-
-	lib_dir = file.path(oidn_path, "lib")
-
-	# Prefer TBB bundled / adjacent to OIDN if present; otherwise fall back
-	tbb_info = detect_tbb(
-		extra_lib_dirs = if (dir.exists(lib_dir)) lib_dir else character()
+	message(
+		"*** configure: Open Image Denoise (OIDN) not found; skipping denoiser support"
 	)
-
-	if (!tbb_info$found) {
-		message(
-			"*** configure: Open Image Denoise (OIDN) found but TBB is not available; skipping denoiser support"
-		)
-	} else {
-		message(sprintf(
-			"*** configure: using Open Image Denoise at %s (TBB %s in %s)",
-			oidn_path,
-			tbb_info$lib_name,
-			tbb_info$lib_dir
-		))
-
-		# OIDN headers
-		OIDN_CPPFLAGS = append_flags(
-			OIDN_CPPFLAGS,
-			flag_with_path("-I", file.path(oidn_path, "include"))
-		)
-
-		# TBB headers if we know an include dir
-		if (nzchar(tbb_info$inc_dir)) {
-			OIDN_CPPFLAGS = append_flags(
-				OIDN_CPPFLAGS,
-				flag_with_path("-I", tbb_info$inc_dir)
-			)
-		}
-
-		# OIDN lib dir + rpath
-		if (dir.exists(lib_dir)) {
-			OIDN_LDFLAGS = append_flags(OIDN_LDFLAGS, flag_with_path("-L", lib_dir))
-			OIDN_LDFLAGS = append_flags(
-				OIDN_LDFLAGS,
-				sprintf(
-					"-Wl,-rpath,%s",
-					normalizePath(lib_dir, winslash = "/", mustWork = FALSE)
-				)
-			)
-		}
-
-		# TBB lib dir + rpath (may be distinct from OIDN lib dir)
-		if (nzchar(tbb_info$lib_dir) && dir.exists(tbb_info$lib_dir)) {
-			OIDN_LDFLAGS = append_flags(
-				OIDN_LDFLAGS,
-				flag_with_path("-L", tbb_info$lib_dir)
-			)
-			OIDN_LDFLAGS = append_flags(
-				OIDN_LDFLAGS,
-				sprintf(
-					"-Wl,-rpath,%s",
-					normalizePath(tbb_info$lib_dir, winslash = "/", mustWork = FALSE)
-				)
-			)
-		}
-
-		# Link against OIDN + detected TBB name (tbb, tbb12, tbb12_static, ...)
-		tbb_lib_flag = paste0(
-			"-l",
-			if (nzchar(tbb_info$lib_name)) tbb_info$lib_name else "tbb"
-		)
-
-		OIDN_LIBS = append_flags(
-			OIDN_LIBS,
-			"-lOpenImageDenoise",
-			tbb_lib_flag
-		)
-
-		DEFINES = append_unique_flags(DEFINES, "-DHAS_OIDN")
-	}
 }
 
 
