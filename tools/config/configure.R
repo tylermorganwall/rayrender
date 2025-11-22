@@ -641,79 +641,90 @@ PKG_LIBS_ACC = add_rpath(PKG_LIBS_ACC, libdeflate_lib_arch)
 PKG_LIBS_ACC = append_flags(PKG_LIBS_ACC, "-ldeflate")
 
 sse_checked = FALSE
-if (
-	compile_test(
-		"#include <smmintrin.h>\nint main() { __m128 v = _mm_dp_ps(_mm_set1_ps(1.0f), _mm_set1_ps(2.0f), 0xFF); (void)v; return 0; }\n"
-	)
-) {
-	PKG_CXXFLAGS = append_unique_flags(PKG_CXXFLAGS, "-msse4.1")
-	DEFINES = append_unique_flags(
-		DEFINES,
-		"-DHAS_SSE",
-		"-DHAS_SSE41",
-		"-DRAYSIMD",
-		"-DRAYSIMDVECOFF"
-	)
-	sse_checked = TRUE
-	message("*** configure: enabling SSE4.1 support")
-}
 
-if (
-	!sse_checked &&
+if (grepl("x86_64|amd64|i386|i686", target_arch)) {
+	# ---- x86: SSE probing ----
+	if (
 		compile_test(
-			"#include <pmmintrin.h>\nint main() { __m128 v = _mm_hadd_ps(_mm_set1_ps(1.0f), _mm_set1_ps(1.0f)); (void)v; return 0; }\n"
+			"#include <smmintrin.h>\nint main() { __m128 v = _mm_dp_ps(_mm_set1_ps(1.0f), _mm_set1_ps(2.0f), 0xFF); (void)v; return 0; }\n"
 		)
-) {
-	PKG_CXXFLAGS = append_unique_flags(PKG_CXXFLAGS, "-msse3")
-	DEFINES = append_unique_flags(
-		DEFINES,
-		"-DHAS_SSE",
-		"-DHAS_SSE3",
-		"-DRAYSIMD",
-		"-DRAYSIMDVECOFF"
+	) {
+		PKG_CXXFLAGS = append_unique_flags(PKG_CXXFLAGS, "-msse4.1")
+		DEFINES = append_unique_flags(
+			DEFINES,
+			"-DHAS_SSE",
+			"-DHAS_SSE41",
+			"-DRAYSIMD",
+			"-DRAYSIMDVECOFF"
+		)
+		sse_checked = TRUE
+		message("*** configure: enabling SSE4.1 support")
+	}
+
+	if (
+		!sse_checked &&
+			compile_test(
+				"#include <pmmintrin.h>\nint main() { __m128 v = _mm_hadd_ps(_mm_set1_ps(1.0f), _mm_set1_ps(1.0f)); (void)v; return 0; }\n"
+			)
+	) {
+		PKG_CXXFLAGS = append_unique_flags(PKG_CXXFLAGS, "-msse3")
+		DEFINES = append_unique_flags(
+			DEFINES,
+			"-DHAS_SSE",
+			"-DHAS_SSE3",
+			"-DRAYSIMD",
+			"-DRAYSIMDVECOFF"
+		)
+		sse_checked = TRUE
+		message("*** configure: enabling SSE3 support")
+	}
+
+	if (
+		!sse_checked &&
+			compile_test(
+				"#include <emmintrin.h>\nint main() { __m128d v = _mm_setzero_pd(); (void)v; return 0; }\n"
+			)
+	) {
+		PKG_CXXFLAGS = append_unique_flags(PKG_CXXFLAGS, "-msse2")
+		DEFINES = append_unique_flags(
+			DEFINES,
+			"-DHAS_SSE",
+			"-DHAS_SSE2",
+			"-DRAYSIMD",
+			"-DRAYSIMDVECOFF"
+		)
+		sse_checked = TRUE
+		message("*** configure: enabling SSE2 support")
+	}
+
+	if (
+		!sse_checked &&
+			compile_test(
+				"#include <xmmintrin.h>\nint main() { __m128 v = _mm_setzero_ps(); (void)v; return 0; }\n"
+			)
+	) {
+		PKG_CXXFLAGS = append_unique_flags(PKG_CXXFLAGS, "-msse")
+		DEFINES = append_unique_flags(
+			DEFINES,
+			"-DHAS_SSE",
+			"-DRAYSIMD",
+			"-DRAYSIMDVECOFF"
+		)
+		sse_checked = TRUE
+		message("*** configure: enabling SSE support")
+	}
+
+	if (!sse_checked) {
+		message("*** configure: SSE intrinsics not available")
+	}
+} else {
+	message(
+		"*** configure: skipping SSE probes on non-x86 arch (",
+		target_arch,
+		")"
 	)
-	sse_checked = TRUE
-	message("*** configure: enabling SSE3 support")
 }
 
-if (
-	!sse_checked &&
-		compile_test(
-			"#include <emmintrin.h>\nint main() { __m128d v = _mm_setzero_pd(); (void)v; return 0; }\n"
-		)
-) {
-	PKG_CXXFLAGS = append_unique_flags(PKG_CXXFLAGS, "-msse2")
-	DEFINES = append_unique_flags(
-		DEFINES,
-		"-DHAS_SSE",
-		"-DHAS_SSE2",
-		"-DRAYSIMD",
-		"-DRAYSIMDVECOFF"
-	)
-	sse_checked = TRUE
-	message("*** configure: enabling SSE2 support")
-}
-
-if (
-	!sse_checked &&
-		compile_test(
-			"#include <xmmintrin.h>\nint main() { __m128 v = _mm_setzero_ps(); (void)v; return 0; }\n"
-		)
-) {
-	PKG_CXXFLAGS = append_unique_flags(PKG_CXXFLAGS, "-msse")
-	DEFINES = append_unique_flags(
-		DEFINES,
-		"-DHAS_SSE",
-		"-DRAYSIMD",
-		"-DRAYSIMDVECOFF"
-	)
-	sse_checked = TRUE
-	message("*** configure: enabling SSE support")
-}
-
-if (!sse_checked) {
-	message("*** configure: SSE intrinsics not available")
-}
 
 if (
 	compile_test(
