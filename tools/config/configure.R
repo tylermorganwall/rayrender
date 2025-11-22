@@ -175,6 +175,7 @@ compile_test = function(
 	output = tempfile(fileext = output_ext)
 	on.exit(unlink(output), add = TRUE)
 
+	# Base flags + extras
 	args = c(
 		CPPFLAGS_BASE,
 		if (include_pkg_cppflags) PKG_CPPFLAGS else character(),
@@ -190,40 +191,34 @@ compile_test = function(
 		args = c(args, "-c", src, "-o", output)
 	}
 
-	cmd = build_command(CXX_COMMAND, args)
+	# Human-readable command for diagnostics
+	cmd_str = build_command(CXX_COMMAND, args)
 
-	# First try: quiet run
+	# Run the compiler with system2() to avoid shell redirection weirdness
+	output_lines = character()
 	status = tryCatch(
 		{
-			system(cmd, ignore.stdout = TRUE, ignore.stderr = TRUE)
+			output_lines <<- system2(
+				CXX_COMMAND[1],
+				args = c(CXX_COMMAND[-1], args),
+				stdout = TRUE,
+				stderr = TRUE
+			)
+			attr(output_lines, "status")
 		},
-		warning = function(w) 1L,
 		error = function(e) 1L
 	)
+	if (is.null(status)) {
+		status = 0L
+	}
 
-	if (!isTRUE(status == 0L)) {
-		# Second try: capture output for debugging
+	if (!identical(status, 0L)) {
 		message("*** configure: test compile/link failed. Command:")
-		message(cmd)
-		message("*** configure: compiler/linker output:")
-
-		out = tryCatch(
-			{
-				# capture both stdout and stderr
-				system(paste(cmd, "2>&1"), intern = TRUE)
-			},
-			error = function(e) {
-				paste("system() error while capturing output:", conditionMessage(e))
-			}
-		)
-
-		# out can be character vector or single string
-		if (length(out)) {
-			for (line in out) {
-				message(line)
-			}
+		message(cmd_str)
+		if (length(output_lines)) {
+			message("*** configure: compiler/linker output:")
+			message(paste(output_lines, collapse = "\n"))
 		}
-
 		return(FALSE)
 	}
 
