@@ -244,7 +244,12 @@ if (!is_windows) {
 
 	if (nzchar(pkgconfig)) {
 		status = tryCatch(
-			system2(pkgconfig, c("--exists", "x11"), stdout = FALSE, stderr = FALSE),
+			system2(
+				pkgconfig,
+				c("--exists", "x11"),
+				stdout = FALSE,
+				stderr = FALSE
+			),
 			warning = function(w) 1L,
 			error = function(e) 1L
 		)
@@ -433,7 +438,11 @@ if (nzchar(oidn_root) && dir.exists(oidn_root)) {
 					OIDN_LDFLAGS,
 					sprintf(
 						"-Wl,-rpath,%s",
-						normalizePath(oidn_lib_dir, winslash = "/", mustWork = FALSE)
+						normalizePath(
+							oidn_lib_dir,
+							winslash = "/",
+							mustWork = FALSE
+						)
 					)
 				)
 			}
@@ -488,7 +497,11 @@ if (nzchar(oidn_root) && dir.exists(oidn_root)) {
 					"*** configure: OIDN enabled (prefix %s%s)",
 					oidn_root,
 					if (is_windows && !is.null(tbb_info)) {
-						sprintf(", TBB %s from %s", tbb_info$lib, tbb_info$lib_dir)
+						sprintf(
+							", TBB %s from %s",
+							tbb_info$lib,
+							tbb_info$lib_dir
+						)
 					} else {
 						""
 					}
@@ -526,12 +539,20 @@ openexr_lib_dir = tryCatch(
 )
 openexr_inc_dir = tryCatch(
 	normalizePath(
-		system.file("include", "OpenEXR", package = "libopenexr", mustWork = TRUE),
+		system.file(
+			"include",
+			"OpenEXR",
+			package = "libopenexr",
+			mustWork = TRUE
+		),
 		winslash = "/",
 		mustWork = TRUE
 	),
 	error = function(e) {
-		stop("OpenEXR headers not found; please install libopenexr.", call. = FALSE)
+		stop(
+			"OpenEXR headers not found; please install libopenexr.",
+			call. = FALSE
+		)
 	}
 )
 openexr_lib_arch = file.path(openexr_lib_dir, target_arch)
@@ -640,13 +661,17 @@ PKG_CPPFLAGS = append_flags(
 PKG_LIBS_ACC = add_rpath(PKG_LIBS_ACC, libdeflate_lib_arch)
 PKG_LIBS_ACC = append_flags(PKG_LIBS_ACC, "-ldeflate")
 
+arch_norm = tolower(target_arch)
+# "x86-64" -> "x86_64"
+arch_norm = gsub("-", "_", arch_norm)
 sse_checked = FALSE
 
-if (grepl("x86_64|amd64|i386|i686", target_arch)) {
+if (grepl("x86_64|amd64|i386|i686", arch_norm)) {
 	# ---- x86: SSE probing ----
 	if (
 		compile_test(
-			"#include <smmintrin.h>\nint main() { __m128 v = _mm_dp_ps(_mm_set1_ps(1.0f), _mm_set1_ps(2.0f), 0xFF); (void)v; return 0; }\n"
+			"#include <smmintrin.h>\nint main() { __m128 v = _mm_dp_ps(_mm_set1_ps(1.0f), _mm_set1_ps(2.0f), 0xFF); (void)v; return 0; }\n",
+			extra_cxxflags = "-msse4.1"
 		)
 	) {
 		PKG_CXXFLAGS = append_unique_flags(PKG_CXXFLAGS, "-msse4.1")
@@ -664,7 +689,8 @@ if (grepl("x86_64|amd64|i386|i686", target_arch)) {
 	if (
 		!sse_checked &&
 			compile_test(
-				"#include <pmmintrin.h>\nint main() { __m128 v = _mm_hadd_ps(_mm_set1_ps(1.0f), _mm_set1_ps(1.0f)); (void)v; return 0; }\n"
+				"#include <pmmintrin.h>\nint main() { __m128 v = _mm_hadd_ps(_mm_set1_ps(1.0f), _mm_set1_ps(1.0f)); (void)v; return 0; }\n",
+				extra_cxxflags = "-msse3"
 			)
 	) {
 		PKG_CXXFLAGS = append_unique_flags(PKG_CXXFLAGS, "-msse3")
@@ -682,7 +708,8 @@ if (grepl("x86_64|amd64|i386|i686", target_arch)) {
 	if (
 		!sse_checked &&
 			compile_test(
-				"#include <emmintrin.h>\nint main() { __m128d v = _mm_setzero_pd(); (void)v; return 0; }\n"
+				"#include <emmintrin.h>\nint main() { __m128d v = _mm_setzero_pd(); (void)v; return 0; }\n",
+				extra_cxxflags = "-msse2"
 			)
 	) {
 		PKG_CXXFLAGS = append_unique_flags(PKG_CXXFLAGS, "-msse2")
@@ -700,7 +727,8 @@ if (grepl("x86_64|amd64|i386|i686", target_arch)) {
 	if (
 		!sse_checked &&
 			compile_test(
-				"#include <xmmintrin.h>\nint main() { __m128 v = _mm_setzero_ps(); (void)v; return 0; }\n"
+				"#include <xmmintrin.h>\nint main() { __m128 v = _mm_setzero_ps(); (void)v; return 0; }\n",
+				extra_cxxflags = "-msse"
 			)
 	) {
 		PKG_CXXFLAGS = append_unique_flags(PKG_CXXFLAGS, "-msse")
@@ -726,35 +754,29 @@ if (grepl("x86_64|amd64|i386|i686", target_arch)) {
 }
 
 
-if (
-	compile_test(
-		"#if defined(__ARM_NEON) || defined(__ARM_NEON__)\n#include <arm_neon.h>\n#endif\nint main() { float32x4_t v = vdupq_n_f32(0.0f); (void)v; return 0; }\n"
-	)
-) {
-	DEFINES = append_unique_flags(
-		DEFINES,
-		"-DHAS_NEON",
-		"-DRAYSIMD",
-		"-DRAYSIMDVECOFF"
-	)
-
-	# Use target_arch to decide which (if any) extra flags are safe:
-	# - aarch64 / arm64: NEON is mandatory; use -march=armv8-a+simd
-	# - 32-bit ARM: use -mfpu=neon
-	# - others: no extra flags (the compile_test wouldn't have succeeded anyway)
-	if (grepl("aarch64|arm64", target_arch)) {
-		PKG_CXXFLAGS = append_unique_flags(
-			PKG_CXXFLAGS,
-			"-march=armv8-a+simd"
+# ---- NEON probing: only on ARM, and only on non-Windows toolchains ----
+if (!is_windows && grepl("aarch64|arm64|^arm", arch_norm)) {
+	if (
+		compile_test(
+			"#include <arm_neon.h>\nint main() { float32x4_t v = vdupq_n_f32(0.0f); (void)v; return 0; }\n"
 		)
-	} else if (grepl("^arm", target_arch)) {
-		PKG_CXXFLAGS = append_unique_flags(
-			PKG_CXXFLAGS,
-			"-mfpu=neon"
+	) {
+		DEFINES = append_unique_flags(
+			DEFINES,
+			"-DHAS_NEON",
+			"-DRAYSIMD",
+			"-DRAYSIMDVECOFF"
 		)
+		message("*** configure: enabling NEON support")
+	} else {
+		message("*** configure: NEON intrinsics not available on ", target_arch)
 	}
-
-	message("*** configure: enabling NEON support")
+} else {
+	message(
+		"*** configure: skipping NEON probes on this platform (",
+		target_arch,
+		")"
+	)
 }
 
 
