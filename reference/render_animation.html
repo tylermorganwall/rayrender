@@ -17,7 +17,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">rayrender</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.39.1</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.39.2</span>
       </span>
     </div>
 
@@ -120,7 +120,7 @@
 <span>  shutterclose <span class="op">=</span> <span class="fl">1</span>,</span>
 <span>  focal_distance <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  ortho_dimensions <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">1</span><span class="op">)</span>,</span>
-<span>  tonemap <span class="op">=</span> <span class="st">"gamma"</span>,</span>
+<span>  tonemap <span class="op">=</span> <span class="st">"raw"</span>,</span>
 <span>  bloom <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  parallel <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  bvh_type <span class="op">=</span> <span class="st">"sah"</span>,</span>
@@ -288,10 +288,7 @@ otherwise specified.</p></dd>
 
 
 <dt id="arg-tonemap">tonemap<a class="anchor" aria-label="anchor" href="#arg-tonemap"></a></dt>
-<dd><p>Default `raw`, no tonemapping. Choose the tone mapping function,
-`reinhold` scales values by their individual color channels `color/(1+color)` and then performs the
-gamma adjustment. `uncharted` uses the mapping developed for Uncharted 2 by John Hable. `hbd` uses an
-optimized formula by Jim Hejl and Richard Burgess-Dawson.</p></dd>
+<dd><p>Default `raw`, no tonemapping. See `rayimage::render_tonemap()` for options.</p></dd>
 
 
 <dt id="arg-bloom">bloom<a class="anchor" aria-label="anchor" href="#arg-bloom"></a></dt>
@@ -450,7 +447,18 @@ and `"basic"` (basic pathtracing, for high sample reference renders and debuggin
 <span class="r-in"><span>                   clamp_value<span class="op">=</span><span class="fl">10</span>, width<span class="op">=</span><span class="fl">400</span>, height<span class="op">=</span><span class="fl">400</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="op">}</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in match.arg(method):</span> 'arg' should be one of “raw”, “reinhard”, “uncharted”, “hbd”</span>
+<span class="r-plt img"><img src="render_animation-4.png" alt="" width="768" height="768"></span>
+<span class="r-plt img"><img src="render_animation-5.png" alt="" width="768" height="768"></span>
+<span class="r-plt img"><img src="render_animation-6.png" alt="" width="768" height="768"></span>
+<span class="r-plt img"><img src="render_animation-7.png" alt="" width="768" height="768"></span>
+<span class="r-plt img"><img src="render_animation-8.png" alt="" width="768" height="768"></span>
+<span class="r-plt img"><img src="render_animation-9.png" alt="" width="768" height="768"></span>
+<span class="r-plt img"><img src="render_animation-10.png" alt="" width="768" height="768"></span>
+<span class="r-plt img"><img src="render_animation-11.png" alt="" width="768" height="768"></span>
+<span class="r-plt img"><img src="render_animation-12.png" alt="" width="768" height="768"></span>
+<span class="r-plt img"><img src="render_animation-13.png" alt="" width="768" height="768"></span>
+<span class="r-plt img"><img src="render_animation-14.png" alt="" width="768" height="768"></span>
+<span class="r-plt img"><img src="render_animation-15.png" alt="" width="768" height="768"></span>
 </code></pre></div>
     </div>
   </div>
