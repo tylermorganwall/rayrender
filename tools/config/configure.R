@@ -453,6 +453,30 @@ if (nzchar(oidn_root) && dir.exists(oidn_root)) {
 				"-lOpenImageDenoise"
 			)
 
+			if (is_windows) {
+				oidn_core_a = file.path(
+					oidn_lib_dir,
+					"libOpenImageDenoise_core.a"
+				)
+				oidn_dev_a = file.path(
+					oidn_lib_dir,
+					"libOpenImageDenoise_device_cpu.a"
+				)
+
+				if (file.exists(oidn_dev_a)) {
+					OIDN_LIBS = append_flags(
+						OIDN_LIBS,
+						"-lOpenImageDenoise_device_cpu"
+					)
+				}
+				if (file.exists(oidn_core_a)) {
+					OIDN_LIBS = append_flags(
+						OIDN_LIBS,
+						"-lOpenImageDenoise_core"
+					)
+				}
+			}
+
 			# On Windows with the static Rtools toolchain, we must also link TBB
 			if (is_windows && !is.null(tbb_info)) {
 				OIDN_LDFLAGS = append_flags(
