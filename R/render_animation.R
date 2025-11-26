@@ -57,10 +57,7 @@
 #' @param focal_distance Default `NULL`, automatically set to the `lookfrom-lookat` distance unless
 #' otherwise specified.
 #' @param ortho_dimensions Default `c(1,1)`. Width and height of the orthographic camera. Will only be used if `fov = 0`.
-#' @param tonemap Default `raw`, no tonemapping. Choose the tone mapping function,
-#' `reinhold` scales values by their individual color channels `color/(1+color)` and then performs the
-#' gamma adjustment. `uncharted` uses the mapping developed for Uncharted 2 by John Hable. `hbd` uses an
-#' optimized formula by Jim Hejl and Richard Burgess-Dawson.
+#' @param tonemap Default `raw`, no tonemapping. See `rayimage::render_tonemap()` for options.
 #' @param bloom Default `TRUE`. Set to `FALSE` to get the raw, pathtraced image. Otherwise,
 #' this performs a convolution of the HDR image of the scene with a sharp, long-tailed
 #' exponential kernel, which does not visibly affect dimly pixels, but does result in emitters light
@@ -202,7 +199,7 @@ render_animation = function(
 	shutterclose = 1.0,
 	focal_distance = NULL,
 	ortho_dimensions = c(1, 1),
-	tonemap = "gamma",
+	tonemap = "raw",
 	bloom = TRUE,
 	parallel = TRUE,
 	bvh_type = "sah",
