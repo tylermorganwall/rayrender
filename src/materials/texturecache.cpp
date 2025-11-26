@@ -96,6 +96,7 @@ std::string TextureCache::StandardizeFilename(const std::string& filename) {
 
 float* TextureCache::LoadImageFloat(const std::string& filename, int& width, int& height,
                                     int& channels, int desired_channels) {
+  width = height = channels = 0;
   std::string standardizedFilename = StandardizeFilename(filename);
   fs::path filepath(standardizedFilename);
   const bool is_exr = filepath.extension() == ".exr";
@@ -220,6 +221,7 @@ float* TextureCache::LoadImageFloat(const std::string& filename, int& width, int
 
 unsigned char * TextureCache::LoadImageChar(const std::string& filename, int& width, int& height, 
                                             int& channels, int desired_channels) {
+  width = height = channels = 0;
   unsigned char * data = nullptr;
   data = stbi_load(filename.c_str(), &width, &height, &channels, desired_channels);
   if (!data) {
