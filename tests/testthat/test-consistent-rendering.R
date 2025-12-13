@@ -6,7 +6,7 @@ test_that("Test rendering with and without OIDN", {
 			denoise = FALSE,
 			preview = FALSE,
 			print_debug_info = TRUE,
-			return_raw_array = TRUE
+			plot_scene = FALSE
 		)
 	if (abs(sum(rgb_output) - 389644.66) > 300) {
 		warning(sprintf("Sum of rgb_output is %f", sum(rgb_output)))
@@ -15,7 +15,7 @@ test_that("Test rendering with and without OIDN", {
 	if (rayrender:::cppdef_HAS_OIDN()) {
 		set.seed(1)
 		rgb_output_oidn = generate_cornell() |>
-			render_scene(samples = 16, preview = FALSE, return_raw_array = TRUE)
+			render_scene(samples = 16, preview = FALSE, plot_scene = FALSE)
 		if (abs(sum(rgb_output_oidn) - 389644.66) > 300) {
 			warning(sprintf("Sum of rgb_output_oidn is %f", sum(rgb_output_oidn)))
 		}

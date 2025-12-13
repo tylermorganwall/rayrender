@@ -43,7 +43,7 @@ render_animation(
   rotate_env = 0,
   intensity_env = 1,
   debug_channel = "none",
-  return_raw_array = FALSE,
+  plot_scene = TRUE,
   progress = interactive(),
   verbose = FALSE,
   transparent_background = FALSE,
@@ -170,8 +170,7 @@ an image showing the differential `u` and `u` coordinates. If `color`, function 
 values (with white for `metal` and `dielectric` materials). If `preview`, an image rendered with `render_preview()`
 will be returned. Can set to `ao` to render an animation with the ambient occlusion renderer.}
 
-\item{return_raw_array}{Default `FALSE`. If `TRUE`, function will return raw array with RGB intensity
-information.}
+\item{plot_scene}{Default `TRUE`. Whether to plot the rendered scene.}
 
 \item{progress}{Default `TRUE` if interactive session, `FALSE` otherwise.}
 

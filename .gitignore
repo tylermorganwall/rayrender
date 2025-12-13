@@ -22,3 +22,6 @@ compile_commands.json
 .cache
 *.asm
 docs
+
+/.quarto/
+cache/*

@@ -11,7 +11,7 @@ post_process_scene(
   tonemap,
   debug_channel,
   filename,
-  return_raw_array,
+  plot_scene,
   bloom,
   new_page = TRUE,
   transparent_background = FALSE

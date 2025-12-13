@@ -113,7 +113,7 @@ test_that("render_scene basic options", {
 		list(
 			scene = scene1,
 			lookat = c(0, 1, 0),
-			return_raw_array = TRUE,
+			plot_scene = FALSE,
 			samples = 16,
 			ortho_dimensions = c(3, 3)
 		)
@@ -133,7 +133,7 @@ test_that("render_scene basic options", {
 		plot_prefix = "cam_info",
 		list(
 			scene = scene1,
-			return_raw_array = TRUE,
+			plot_scene = FALSE,
 			samples = 16,
 			ortho_dimensions = c(3, 3)
 		)
@@ -152,7 +152,7 @@ test_that("render_scene basic options", {
 		list(
 			scene = scene1,
 			lookat = c(0, 1, 0),
-			return_raw_array = TRUE,
+			plot_scene = FALSE,
 			samples = 16,
 			ortho_dimensions = c(3, 3)
 		)
@@ -169,7 +169,7 @@ test_that("render_scene basic options", {
 			"dpdv",
 			"color"
 		),
-		return_raw_array = list(TRUE, FALSE)
+		plot_scene = list(TRUE, FALSE)
 	)
 
 	run_tests(
@@ -199,7 +199,7 @@ test_that("render_scene basic options", {
 		list(
 			scene = scene1,
 			lookat = c(0, 1, 0),
-			return_raw_array = TRUE,
+			plot_scene = FALSE,
 			width = 200,
 			height = 200
 		)
@@ -217,7 +217,7 @@ test_that("render_scene basic options", {
 		list(
 			scene = scene1,
 			lookat = c(0, 1, 0),
-			return_raw_array = TRUE,
+			plot_scene = FALSE,
 			samples = 16,
 			width = 200,
 			height = 200
@@ -242,7 +242,7 @@ test_that("render_scene basic options", {
 		list(
 			scene = scene1,
 			lookat = c(0, 1, 0),
-			return_raw_array = TRUE,
+			plot_scene = FALSE,
 			samples = 16,
 			iso = 10000,
 			width = 200,

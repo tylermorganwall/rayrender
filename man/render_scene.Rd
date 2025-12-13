@@ -44,7 +44,7 @@ render_scene(
   intensity_env = 1,
   transparent_background = FALSE,
   debug_channel = "none",
-  return_raw_array = FALSE,
+  plot_scene = TRUE,
   progress = interactive(),
   verbose = FALSE,
   print_debug_info = FALSE,
@@ -197,8 +197,7 @@ showing the number of samples needed to take for each block to converge. If `dpd
 an image showing the differential `u` and `u` coordinates. If `color`, function will return the raw albedo
 values (with white for `metal` and `dielectric` materials).}
 
-\item{return_raw_array}{Default `FALSE`. If `TRUE`, function will return raw array with RGB intensity
-information.}
+\item{plot_scene}{Default `TRUE`. Whether to plot the rendered scene.}
 
 \item{progress}{Default `interactive()` if interactive session, `FALSE` otherwise.}
 

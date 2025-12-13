@@ -273,13 +273,13 @@ Here we’ll render a grid of different viewpoints.
 ``` r
 filename = tempfile()
 image1 = render_scene(scene, parallel = TRUE, width = 400, height = 400, 
-             lookfrom = c(7,1,7), samples = 64, return_raw_array = TRUE)
+             lookfrom = c(7,1,7), samples = 64, plot_scene = FALSE)
 image2 = render_scene(scene, parallel = TRUE, width = 400, height = 400, 
-             lookfrom = c(0,7,7), samples = 64, return_raw_array = TRUE)
+             lookfrom = c(0,7,7), samples = 64, plot_scene = FALSE)
 image3 = render_scene(scene, parallel = TRUE, width = 400, height = 400, 
-             lookfrom = c(-7,0,-7), samples = 64, return_raw_array = TRUE)
+             lookfrom = c(-7,0,-7), samples = 64, plot_scene = FALSE)
 image4 = render_scene(scene, parallel = TRUE, width = 400, height = 400, 
-             lookfrom = c(-7,7,7), samples = 64, return_raw_array = TRUE)
+             lookfrom = c(-7,7,7), samples = 64, plot_scene = FALSE)
 rayimage::plot_image_grid(list(image1,image2,image3,image4), dim = c(2,2))
 ```
 

@@ -76,8 +76,7 @@
 #' an image showing the differential `u` and `u` coordinates. If `color`, function will return the raw albedo
 #' values (with white for `metal` and `dielectric` materials). If `preview`, an image rendered with `render_preview()`
 #' will be returned. Can set to `ao` to render an animation with the ambient occlusion renderer.
-#' @param return_raw_array Default `FALSE`. If `TRUE`, function will return raw array with RGB intensity
-#' information.
+#' @param plot_scene Default `TRUE`. Whether to plot the rendered scene.
 #' @param parallel Default `FALSE`. If `TRUE`, it will use all available cores to render the image
 #'  (or the number specified in `options("cores")` if that option is not `NULL`).
 #' @param bvh_type Default `"sah"`, "surface area heuristic". Method of building the bounding volume
@@ -207,7 +206,7 @@ render_animation = function(
 	rotate_env = 0,
 	intensity_env = 1,
 	debug_channel = "none",
-	return_raw_array = FALSE,
+	plot_scene = TRUE,
 	progress = interactive(),
 	verbose = FALSE,
 	transparent_background = FALSE,
@@ -258,7 +257,7 @@ render_animation = function(
 		rotate_env = rotate_env,
 		intensity_env = intensity_env,
 		debug_channel = debug_channel,
-		return_raw_array = return_raw_array,
+		plot_scene = plot_scene,
 		progress = progress,
 		verbose = verbose,
 		sample_dist = sample_dist,

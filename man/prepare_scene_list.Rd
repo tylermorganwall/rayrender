@@ -40,7 +40,7 @@ prepare_scene_list(
   rotate_env = 0,
   intensity_env = 1,
   debug_channel = "none",
-  return_raw_array = FALSE,
+  plot_scene = TRUE,
   progress = interactive(),
   verbose = FALSE,
   sample_dist = Inf,

@@ -34,3 +34,4 @@
 ^todo.txt$
 ^src/pbrt$
 ^nanovdb$
+^LICENSE\.md$
