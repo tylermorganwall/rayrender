@@ -120,7 +120,7 @@ If `TRUE`, the background will be a gradient varying from `backgroundhigh` direc
 there will be bright spots that will not go away even with a large number of samples. These
 can be removed (at the cost of slightly darkening the image) by setting this to a small number greater than 1.}
 
-\item{filename}{Default `NULL`. If present, the renderer will write to the filename instead
+\item{filename}{Default `NA`. If present, the renderer will write to the filename instead
 of the current device.}
 
 \item{backgroundhigh}{Default `#ffffff`. The "high" color in the background gradient. Can be either

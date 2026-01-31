@@ -25,7 +25,7 @@ prepare_scene_list(
   ambient_light = FALSE,
   aperture = 0.1,
   clamp_value = Inf,
-  filename = NULL,
+  filename = NA,
   backgroundhigh = "#80b4ff",
   backgroundlow = "#ffffff",
   shutteropen = 0,

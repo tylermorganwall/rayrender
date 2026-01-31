@@ -46,7 +46,7 @@
 #' @param clamp_value Default `Inf`. If a bright light or a reflective material is in the scene, occasionally
 #' there will be bright spots that will not go away even with a large number of samples. These
 #' can be removed (at the cost of slightly darkening the image) by setting this to a small number greater than 1.
-#' @param filename Default `NULL`. If present, the renderer will write to the filename instead
+#' @param filename Default `NA`. If present, the renderer will write to the filename instead
 #' of the current device.
 #' @param backgroundhigh Default `#ffffff`. The "high" color in the background gradient. Can be either
 #' a hexadecimal code, or a numeric rgb vector listing three intensities between `0` and `1`.
@@ -270,6 +270,7 @@ render_animation = function(
 	scene_info = scene_list$scene_info
 	render_info = scene_list$render_info
 	processed_scene = scene_info$scene
+	render_info$frame_seed = sample.int(.Machine$integer.max, 1)
 
 	camera_info$preview = preview
 	camera_info$interactive = FALSE

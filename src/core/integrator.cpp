@@ -24,7 +24,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
                 Float fov,
                 hitable_list& world, hitable_list& hlist,
                 Float clampval, std::size_t max_depth, std::size_t roulette_active,
-                PreviewDisplay& display, IntegratorType integrator_type) {
+                PreviewDisplay& display, IntegratorType integrator_type, random_gen* rng_override) {
   RProgress::RProgress pb_sampler("Generating Samples [:bar] :percent%");
   pb_sampler.set_width(70);
   RProgress::RProgress pb("Adaptive Raytracing [:bar] :percent%");
@@ -74,13 +74,18 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
   
   std::vector<std::unique_ptr<Sampler> > samplers;
   std::vector<std::unique_ptr<Sampler> > samplers_small;
+
+  auto next_seed = [rng_override]() {
+    Float rand_unit = rng_override ? rng_override->unif_rand() : unif_rand();
+    return static_cast<unsigned int>(rand_unit * std::pow(2, 32));
+  };
   
   for(unsigned int j = 0; j < ny; j++) {
     if(progress_bar) {
       pb_sampler.tick();
     }
     for(unsigned int i = 0; i < nx; i++) {
-      random_gen rng_single(unif_rand() * std::pow(2,32));
+      random_gen rng_single(next_seed());
       rngs.push_back(rng_single);
       if(sample_method == 0) {
         samplers.push_back(std::unique_ptr<Sampler>(new RandomSampler(rng_single)));
@@ -105,7 +110,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
       pb_sampler.tick();
     }
     for(size_t i = 0; i < nx_small; i++) {
-      random_gen rng_single(unif_rand() * std::pow(2,32));
+      random_gen rng_single(next_seed());
       rngs_small.push_back(rng_single);
       if(sample_method == 0) {
         samplers_small.push_back(std::unique_ptr<Sampler>(new RandomSampler(rng_single)));
@@ -124,7 +129,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
       samplers_small.back()->SetSampleNumber(0);
     }
   }
-  random_gen rng_interactive(unif_rand() * std::pow(2,32));
+  random_gen rng_interactive(next_seed());
   
   print_time(verbose, "Allocating sampler" );
   for(size_t s = 0; s < static_cast<size_t>(ns); s++) {

@@ -63,6 +63,11 @@ void render_animation_rcpp(List scene, List camera_info, List scene_info, List r
 #ifdef HAS_OIDN
   bool denoise = as<bool>(render_info["denoise"]);
 #endif
+  bool has_frame_seed = render_info.containsElementNamed("frame_seed");
+  unsigned int frame_seed = 0;
+  if(has_frame_seed) {
+    frame_seed = static_cast<unsigned int>(as<int>(render_info["frame_seed"]));
+  }
 
   Environment pkg = Environment::namespace_env("rayrender");
   Function print_time = pkg["print_time"];
@@ -263,6 +268,8 @@ void render_animation_rcpp(List scene, List camera_info, List scene_info, List r
 
   if(debug_channel != 0) {
     for(int i = start_frame; i < n_frames; i++ ) {
+      random_gen frame_rng(frame_seed);
+      random_gen* rng_for_frame = has_frame_seed ? &frame_rng : &rng;
       if(progress_bar) {
         pb_frames.tick();
       }
@@ -330,7 +337,7 @@ void render_animation_rcpp(List scene, List camera_info, List scene_info, List r
                   verbose, cam.get(), fov,
                   world, imp_sample_objects,
                   clampval, max_depth, roulette_active,
-                  light_direction, rng, sample_dist, keep_colors, backgroundhigh);
+                  light_direction, *rng_for_frame, sample_dist, keep_colors, backgroundhigh);
       List temp = List::create(_["r"] = rgb_output.ConvertRcpp(0), 
                                _["g"] = rgb_output.ConvertRcpp(1), 
                                _["b"] = rgb_output.ConvertRcpp(2));
@@ -339,6 +346,8 @@ void render_animation_rcpp(List scene, List camera_info, List scene_info, List r
     }
   } else {
     for(int i = start_frame; i < n_frames; i++ ) {
+      random_gen frame_rng(frame_seed);
+      random_gen* rng_for_frame = has_frame_seed ? &frame_rng : nullptr;
       if(progress_bar) {
         pb_frames.tick();
       }
@@ -444,7 +453,7 @@ void render_animation_rcpp(List scene, List camera_info, List scene_info, List r
                  progress_bar, sample_method, stratified_dim,
                  verbose, cam.get(),  fov,
                  world, imp_sample_objects,
-                 clampval, max_depth, roulette_active, d, integrator_type);
+                 clampval, max_depth, roulette_active, d, integrator_type, rng_for_frame);
       if(d.terminate) {
         break;
       }

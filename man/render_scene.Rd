@@ -28,7 +28,7 @@ render_scene(
   camera_up = c(0, 1, 0),
   aperture = 0.1,
   clamp_value = Inf,
-  filename = NULL,
+  filename = NA,
   backgroundhigh = "#80b4ff",
   backgroundlow = "#ffffff",
   shutteropen = 0,

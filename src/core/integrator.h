@@ -8,6 +8,7 @@
 #include "../math/RayMatrix.h"
 #include "../core/color.h"
 
+class random_gen;
 
 void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::size_t ns, int debug_channel,
                 Float min_variance, std::size_t min_adaptive_size, 
@@ -19,6 +20,6 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
                 Float fov,
                 hitable_list& world, hitable_list& hlist,
                 Float clampval, std::size_t max_depth, std::size_t roulette_active,
-                PreviewDisplay& display, IntegratorType integrator_type);
+                PreviewDisplay& display, IntegratorType integrator_type, random_gen* rng_override = nullptr);
 
 #endif

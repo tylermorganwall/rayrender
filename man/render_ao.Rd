@@ -25,7 +25,7 @@ render_ao(
   camera_up = c(0, 1, 0),
   aperture = 0.1,
   clamp_value = Inf,
-  filename = NULL,
+  filename = NA,
   shutteropen = 0,
   shutterclose = 1,
   focal_distance = NULL,
@@ -93,7 +93,7 @@ less blurring in areas not in focus.}
 there will be bright spots that will not go away even with a large number of samples. These
 can be removed (at the cost of slightly darkening the image) by setting this to a small number greater than 1.}
 
-\item{filename}{Default `NULL`. If present, the renderer will write to the filename instead
+\item{filename}{Default `NA`. If present, the renderer will write to the filename instead
 of the current device.}
 
 \item{shutteropen}{Default `0`. Time at which the shutter is open. Only affects moving objects.}
