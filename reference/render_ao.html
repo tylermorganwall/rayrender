@@ -112,7 +112,7 @@ either to the device or to a filename.</p>
 <span>  camera_up <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">1</span>, <span class="fl">0</span><span class="op">)</span>,</span>
 <span>  aperture <span class="op">=</span> <span class="fl">0.1</span>,</span>
 <span>  clamp_value <span class="op">=</span> <span class="cn">Inf</span>,</span>
-<span>  filename <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  filename <span class="op">=</span> <span class="cn">NA</span>,</span>
 <span>  shutteropen <span class="op">=</span> <span class="fl">0</span>,</span>
 <span>  shutterclose <span class="op">=</span> <span class="fl">1</span>,</span>
 <span>  focal_distance <span class="op">=</span> <span class="cn">NULL</span>,</span>
@@ -225,7 +225,7 @@ can be removed (at the cost of slightly darkening the image) by setting this to 
 
 
 <dt id="arg-filename">filename<a class="anchor" aria-label="anchor" href="#arg-filename"></a></dt>
-<dd><p>Default `NULL`. If present, the renderer will write to the filename instead
+<dd><p>Default `NA`. If present, the renderer will write to the filename instead
 of the current device.</p></dd>
 
 
