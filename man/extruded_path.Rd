@@ -130,7 +130,7 @@ if(run_documentation()) {
 generate_studio(depth=-0.4,material=ground_mat) \%>\%
   add_object(extruded_path(points = points, width=0.25,
                            material=diffuse(color="red"))) \%>\%
-  add_object(sphere(y=3,z=5,x=2,material=light(intensity=15))) \%>\%
+  add_object(sphere(y=3,z=-5,x=2,material=light(intensity=15))) \%>\%
   render_scene(lookat=c(0.3,0.5,0.5),fov=12, width=800,height=800, clamp_value = 10,
                aperture=0.025, samples=16, sample_method="sobol_blue")
 }
@@ -140,7 +140,7 @@ generate_studio(depth=-0.4,material=ground_mat) \%>\%
   add_object(extruded_path(points = points, width=0.25,
                            width_end = 0.5,
                            material=diffuse(color="red"))) \%>\%
-  add_object(sphere(y=3,z=5,x=2,material=light(intensity=15))) \%>\%
+  add_object(sphere(y=3,z=-5,x=2,material=light(intensity=15))) \%>\%
   render_scene(lookat=c(0.3,0.5,0.5),fov=12, width=800,height=800, clamp_value = 10,
                aperture=0.025, samples=16, sample_method="sobol_blue")
 }
@@ -150,7 +150,7 @@ generate_studio(depth=-0.4,material=ground_mat) \%>\%
   add_object(extruded_path(points = points,
                            width=0.25*sinpi(0:72*20/180),
                            material=diffuse(color="red"))) \%>\%
-  add_object(sphere(y=3,z=5,x=2,material=light(intensity=15))) \%>\%
+  add_object(sphere(y=3,z=-5,x=2,material=light(intensity=15))) \%>\%
   render_scene(lookat=c(0.3,0.5,0.5),fov=12, width=800,height=800, clamp_value = 10,
                aperture=0.025, samples=16, sample_method="sobol_blue")
 }
@@ -161,7 +161,7 @@ generate_studio(depth=-0.4,material=ground_mat) \%>\%
   add_object(extruded_path(points = points,
                            width=custom_width,
                            material=diffuse(color="red"))) \%>\%
-  add_object(sphere(y=3,z=5,x=2,material=light(intensity=15))) \%>\%
+  add_object(sphere(y=3,z=-5,x=2,material=light(intensity=15))) \%>\%
   render_scene(lookat=c(0.3,0.5,0.5),fov=12, width=800,height=800, clamp_value = 10,
                aperture=0.025, samples=16, sample_method="sobol_blue")
 }
@@ -177,7 +177,7 @@ generate_studio(depth=-0.4,material=ground_mat) \%>\%
   add_object(extruded_path(points = points, width=0.5,
                            polygon = star_polygon,
                            material=diffuse(color="red"))) \%>\%
-  add_object(sphere(y=3,z=5,x=2,material=light(intensity=15))) \%>\%
+  add_object(sphere(y=3,z=-5,x=2,material=light(intensity=15))) \%>\%
   render_scene(lookat=c(0.3,0.5,1),fov=12, width=800,height=800, clamp_value = 10,
                aperture=0.025, samples=16, sample_method="sobol_blue")
 }
@@ -194,7 +194,7 @@ generate_studio(depth=-0.4,material=ground_mat) \%>\%
                            polygon=circ_polygon, polygon_end = star_polygon,
                            material_cap  = diffuse(color="white"),
                            material=diffuse(color="red"))) \%>\%
-  add_object(sphere(y=3,z=5,x=2,material=light(intensity=15))) \%>\%
+  add_object(sphere(y=3,z=-5,x=2,material=light(intensity=15))) \%>\%
   render_scene(lookat=c(0.3,0.5,0.5),fov=12, width=800,height=800, clamp_value = 10,
                aperture=0.025, samples=16, sample_method="sobol_blue")
 }
@@ -205,7 +205,7 @@ generate_studio(depth=-0.4,material=ground_mat) \%>\%
                            polygon=star_polygon, linear_step = TRUE, breaks=360,
                            material_cap  = diffuse(color="white"),
                            material=diffuse(color="red"))) \%>\%
-  add_object(sphere(y=3,z=5,x=2,material=light(intensity=15))) \%>\%
+  add_object(sphere(y=3,z=-5,x=2,material=light(intensity=15))) \%>\%
   render_scene(lookat=c(0.3,0.5,0),fov=12, width=800,height=800, clamp_value = 10,
                aperture=0.025, samples=16, sample_method="sobol_blue")
 }
@@ -218,7 +218,7 @@ generate_studio(depth=-0.4,material=ground_mat) \%>\%
                            smooth_normals = TRUE,
                            material_cap  = diffuse(color="white"),
                            material=diffuse(color="red"))) \%>\%
-  add_object(sphere(y=3,z=5,x=2,material=light(intensity=15))) \%>\%
+  add_object(sphere(y=3,z=-5,x=2,material=light(intensity=15))) \%>\%
   render_scene(lookat=c(0.3,0.5,0),fov=12, width=800,height=800, clamp_value = 10,
                aperture=0.025, samples=16, sample_method="sobol_blue")
 }
@@ -230,7 +230,7 @@ generate_studio(depth=-0.4,material=ground_mat) \%>\%
                            polygon=star_polygon, linear_step = TRUE, breaks=360,
                            material_cap  = diffuse(color="white"),
                            material=diffuse(color="red"))) \%>\%
-  add_object(sphere(y=3,z=5,x=2,material=light(intensity=15))) \%>\%
+  add_object(sphere(y=3,z=-5,x=2,material=light(intensity=15))) \%>\%
   render_scene(lookat=c(0.3,0.5,0),fov=12, width=800,height=800, clamp_value = 10,
                aperture=0.025, samples=16, sample_method="sobol_blue")
 }
@@ -249,7 +249,7 @@ generate_studio(depth=-0.2,
                           linear_step = TRUE, twists = 1.5, breaks = 720,
                           material = diffuse(noisecolor = "black", noise = 10,
                                              noiseintensity = 10))) \%>\%
- add_object(sphere(y=20,x=0,z=21,material=light(intensity = 1000))) \%>\%
+ add_object(sphere(y=20,x=0,z=-21,material=light(intensity = 1000))) \%>\%
  render_scene(lookat=c(0,0.5,0), fov=10, samples=16, sample_method = "sobol_blue",
               width = 800, height=800)
 }

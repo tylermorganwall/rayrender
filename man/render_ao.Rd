@@ -137,7 +137,7 @@ hollow_star = rbind(star_polygon,0.8*star_polygon)
 generate_ground(material = diffuse(color="grey20", checkercolor = "grey50",sigma=90)) \%>\%
  add_object(sphere(material=metal())) \%>\%
  add_object(obj_model(r_obj(),y=-0.25,x=-1.8,scale=2,
-                      angle=c(0,135,0),material = diffuse(sigma=90))) \%>\%
+                      angle=c(0,-45,0),material = diffuse(sigma=90))) \%>\%
  add_object(pig(x=1.8,y=-1.2,scale=0.5,angle=c(0,90,0),diffuse_sigma = 90)) \%>\%
  add_object(extruded_polygon(hollow_star,top=-0.5,bottom=-1, z=-2,
                              hole = nrow(star_polygon),
@@ -152,7 +152,7 @@ if(run_documentation()) {
 generate_ground(material = diffuse(color="grey20", checkercolor = "grey50",sigma=90)) \%>\%
  add_object(sphere(material=metal())) \%>\%
  add_object(obj_model(r_obj(),y=-0.25,x=-1.8,scale=2,
-                      angle=c(0,135,0),material = diffuse(sigma=90))) \%>\%
+                      angle=c(0,-45,0),material = diffuse(sigma=90))) \%>\%
  add_object(pig(x=1.8,y=-1.2,scale=0.5,angle=c(0,90,0),diffuse_sigma = 90)) \%>\%
  add_object(extruded_polygon(hollow_star,top=-0.5,bottom=-1, z=-2,
                              hole = nrow(star_polygon),
@@ -166,7 +166,7 @@ if(run_documentation()) {
 generate_ground(material = diffuse(color="grey20", checkercolor = "grey50",sigma=90)) \%>\%
  add_object(sphere(material=metal())) \%>\%
  add_object(obj_model(r_obj(),y=-0.25,x=-1.8,scale=2,
-                      angle=c(0,135,0),material = diffuse(sigma=90))) \%>\%
+                      angle=c(0,-45,0),material = diffuse(sigma=90))) \%>\%
  add_object(pig(x=1.8,y=-1.2,scale=0.5,angle=c(0,90,0),diffuse_sigma = 90)) \%>\%
  add_object(extruded_polygon(hollow_star,top=-0.5,bottom=-1, z=-2,
                              hole = nrow(star_polygon),
@@ -180,7 +180,7 @@ if(run_documentation()) {
 generate_ground(material = diffuse(color="grey20", checkercolor = "grey50",sigma=90)) \%>\%
  add_object(sphere(material=metal())) \%>\%
  add_object(obj_model(r_obj(), y=-0.25,x=-1.8,scale=2,
-                      angle=c(0,135,0),material = diffuse(sigma=90))) \%>\%
+                      angle=c(0,-45,0),material = diffuse(sigma=90))) \%>\%
  add_object(pig(x=1.8,y=-1.2,scale=0.5,angle=c(0,90,0),diffuse_sigma = 90)) \%>\%
  add_object(extruded_polygon(hollow_star,top=-0.5,bottom=-1, z=-2,
                              hole = nrow(star_polygon),

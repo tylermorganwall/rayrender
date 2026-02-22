@@ -81,7 +81,7 @@ Bezier curve, defined by 4 control points.
 if(run_documentation()) {
 generate_studio(depth=-0.2) \%>\%
   add_object(bezier_curve(material=diffuse(color="red"))) \%>\%
-  add_object(sphere(y=3,z=5,x=2,radius=0.3,
+  add_object(sphere(y=3,z=-5,x=2,radius=0.3,
                     material=light(intensity=200, spotlight_focus = c(0,0.5,0)))) \%>\%
   render_scene(clamp_value = 10, lookat = c(0,0.5,0), fov=13,
                samples=16)
@@ -96,7 +96,7 @@ generate_studio(depth=-0.2) \%>\%
   add_object(sphere(radius=0.075,x=-1,y=0.33,material=glossy(color="green"))) \%>\%
   add_object(sphere(radius=0.075,x=1,y=0.66,material=glossy(color="green"))) \%>\%
   add_object(sphere(radius=0.075,y=1,material=glossy(color="green"))) \%>\%
-  add_object(sphere(y=3,z=5,x=2,radius=0.3,
+  add_object(sphere(y=3,z=-5,x=2,radius=0.3,
                     material=light(intensity=200, spotlight_focus = c(0,0.5,0)))) \%>\%
   render_scene(clamp_value = 10, lookat = c(0,0.5,0), fov=15,
                samples=16)
@@ -105,7 +105,7 @@ if(run_documentation()) {
 #We can make the curve flat (always facing the camera) by setting the type to `flat`
 generate_studio(depth=-0.2) \%>\%
   add_object(bezier_curve(type="flat", material=glossy(color="red"))) \%>\%
-  add_object(sphere(y=3,z=5,x=2,radius=0.3,
+  add_object(sphere(y=3,z=-5,x=2,radius=0.3,
                     material=light(intensity=200, spotlight_focus = c(0,0.5,0)))) \%>\%
   render_scene(clamp_value = 10, lookat = c(0,0.5,0), fov=13,
                samples=16)
@@ -118,7 +118,7 @@ generate_studio(depth=-0.2) \%>\%
                    p1 = c(0,0,0), p2 = c(0,0.33,0), p3 = c(0,0.66,0), p4 = c(0.3,1,0),
                    normal_end = c(0,0,1),
                    material=glossy(color="red"))) \%>\%
-  add_object(sphere(y=3,z=5,x=2,radius=0.3,
+  add_object(sphere(y=3,z=-5,x=2,radius=0.3,
                     material=light(intensity=200, spotlight_focus = c(0,0.5,0)))) \%>\%
   render_scene(clamp_value = 10, lookat = c(0,0.5,0), fov=13,
                samples=16)

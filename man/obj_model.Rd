@@ -103,44 +103,44 @@ if(run_documentation()) {
 #Load the basic 3D R logo with the included materials
 generate_ground(material = diffuse(checkercolor = "grey50")) \%>\%
   add_object(obj_model(y = 0.2, filename = rayrender::r_obj(),
-                       scale_obj=3)) \%>\%
-   add_object(sphere(z = 20, x = 20, y = 20, radius = 10,
+                       scale_obj=3, angle=c(0,180,0))) \%>\%
+   add_object(sphere(z = -20, x = 20, y = 20, radius = 10,
                      material = light(intensity = 10))) \%>\%
   render_scene(parallel = TRUE, samples = 16, aperture = 0.05,
                sample_method="sobol_blue",
-               fov = 20, lookfrom = c(0, 2, 10))
+               fov = 20, lookfrom = c(0, 2, -10))
 }
 
 if(run_documentation()) {
 # Smooth a mesh by setting the number of subdivision levels
 generate_ground(material = diffuse(checkercolor = "grey50")) \%>\%
   add_object(obj_model(y = 0.2, filename = rayrender::r_obj(),
-                       scale_obj=3, subdivision_levels = 3)) \%>\%
-   add_object(sphere(z = 20, x = 20, y = 20, radius = 10,
+                       scale_obj=3, subdivision_levels = 3, angle=c(0,180,0))) \%>\%
+   add_object(sphere(z = -20, x = 20, y = 20, radius = 10,
                      material = light(intensity = 10))) \%>\%
   render_scene(parallel = TRUE, samples = 16, aperture = 0.05,
                sample_method="sobol_blue",
-               fov = 20, lookfrom = c(0, 2, 10))
+               fov = 20, lookfrom = c(0, 2, -10))
 }
 
 if(run_documentation()) {
 #Override the materials for each object
 generate_ground(material = diffuse(checkercolor = "grey50")) \%>\%
   add_object(obj_model(y = 1.4, filename = rayrender::r_obj(), load_material = FALSE,
-                       scale_obj = 1.8, angle=c(10,0,0),
+                       scale_obj = 1.8, angle=c(10,180,0),
                        material = microfacet(color = "gold", roughness = 0.05))) \%>\%
   add_object(obj_model(x = 0.9, y = 0, filename = rayrender::r_obj(), load_material = FALSE,
-                       scale_obj = 1.8, angle=c(0,-20,0),
+                       scale_obj = 1.8, angle=c(0,160,0),
                        material = diffuse(color = "dodgerblue"))) \%>\%
   add_object(obj_model(x = -0.9, y = 0, filename = rayrender::r_obj() , load_material = FALSE,
-                       scale_obj = 1.8, angle=c(0,20,0),
+                       scale_obj = 1.8, angle=c(0,200,0),
                        material = dielectric(attenuation = c(1,0.3,1), priority = 1,
                                              attenuation_intensity = 20))) \%>\%
-  add_object(sphere(z = 20, x = 20, y = 20, radius = 10,
+  add_object(sphere(z = -20, x = 20, y = 20, radius = 10,
                     material = light(intensity = 10))) \%>\%
   render_scene(parallel = TRUE, samples = 16, aperture = 0.05,
                sample_method="sobol_blue", lookat=c(0,0.5,0),
-               fov = 22, lookfrom = c(0, 2, 10))
+               fov = 22, lookfrom = c(0, 2, -10))
 
 }
 }

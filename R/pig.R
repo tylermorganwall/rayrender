@@ -51,9 +51,9 @@
 #' if(run_documentation()) {
 #' #Render spiderpig
 #' generate_studio() %>%
-#'   add_object(pig(y=-1,angle=c(0,-100,0), scale=1/2,spider=TRUE)) %>%
-#'   add_object(sphere(y=5,z=5,x=5,material=light(intensity=100))) %>%
-#'   render_scene(samples=16,lookfrom=c(0,2,10),clamp_value=10)
+#'   add_object(pig(y=-1,angle=c(0,80,0), scale=1/2,spider=TRUE)) %>%
+#'   add_object(sphere(y=5,z=-5,x=5,material=light(intensity=100))) %>%
+#'   render_scene(samples=16,lookfrom=c(0,2,-10),clamp_value=10)
 #' }
 pig = function(
   x = 0,

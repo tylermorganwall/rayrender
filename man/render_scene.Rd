@@ -23,7 +23,7 @@ render_scene(
   max_depth = NA,
   roulette_active_depth = 100,
   ambient_light = NULL,
-  lookfrom = c(0, 1, 10),
+  lookfrom = c(0, 1, -10),
   lookat = c(0, 0, 0),
   camera_up = c(0, 1, 0),
   aperture = 0.1,
@@ -248,7 +248,7 @@ if (run_documentation()) {
   scene = scene \%>\%
     add_object(sphere(x = -1.1, y = 0, z = 0, radius = 0.5,
                       material = metal(color = "gold", fuzz = 0.1))) \%>\%
-    add_object(sphere(y=10,z=13,radius=2,material=light(intensity=40)))
+    add_object(sphere(y=10,z=-13,radius=2,material=light(intensity=40)))
   render_scene(scene, fov = 20, parallel = TRUE, samples = 16)
 }
 if (run_documentation()) {
@@ -297,7 +297,7 @@ if (run_documentation()) {
     add_object(xz_rect(x = 555 / 2, z = 555 / 2, y = 1, xwidth = 555, zwidth = 555,
                        material = glossy(checkercolor = "white",
                                          checkerperiod = 10, color = "dodgerblue"))) \%>\%
-    render_scene(lookfrom = c(278, 278, 30), lookat = c(278, 278, 500), clamp_value = 10,
+    render_scene(lookfrom = c(278, 278, -30), lookat = c(278, 278, 500), clamp_value = 10,
                  fov = 360,  samples = 16, width = 800, height = 800)
 }
 if (run_documentation()) {

@@ -1,5 +1,49 @@
 #include "../core/camera.h"
 #include "low_discrepancy.h"
+#include <cmath>
+
+#ifdef NOT_CRAN
+#include <testthat.h>
+#endif
+
+namespace {
+inline void BuildPBRTCameraFrame(const vec3f& forward_hint, const vec3f& up_hint,
+                                 vec3f& forward, vec3f& right, vec3f& up2) {
+  forward = forward_hint.length() > 0 ? unit_vector(forward_hint) : vec3f(0, 0, 1);
+  vec3f up = up_hint.length() > 0 ? unit_vector(up_hint) : vec3f(0, 1, 0);
+  right = cross(up, forward);
+  if (right.squared_length() < static_cast<Float>(1e-12)) {
+    // Fallback when up is parallel to the view direction.
+    up = std::abs(forward.xyz.y) < static_cast<Float>(0.999) ? vec3f(0, 1, 0) : vec3f(1, 0, 0);
+    right = cross(up, forward);
+    if (right.squared_length() < static_cast<Float>(1e-12)) {
+      up = vec3f(0, 0, 1);
+      right = cross(up, forward);
+    }
+  }
+  right = unit_vector(right);
+  up2 = unit_vector(cross(forward, right));
+}
+
+inline void BuildPBRTCameraFrameFromLookAt(const point3f& lookfrom, const point3f& lookat,
+                                           const vec3f& up_hint,
+                                           vec3f& forward, vec3f& right, vec3f& up2) {
+  BuildPBRTCameraFrame(lookat - lookfrom, up_hint, forward, right, up2);
+}
+
+inline void RecomputePerspectiveScreen(camera& cam) {
+  cam.lower_left_corner = cam.origin - cam.half_width * cam.focus_dist * cam.u -
+    cam.half_height * cam.focus_dist * cam.v + cam.focus_dist * cam.w;
+  cam.horizontal = 2.0f * cam.half_width * cam.focus_dist * cam.u;
+  cam.vertical = 2.0f * cam.half_height * cam.focus_dist * cam.v;
+}
+
+inline void RecomputeOrthoScreen(ortho_camera& cam) {
+  cam.lower_left_corner = cam.origin - cam.cam_width / 2 * cam.u - cam.cam_height / 2 * cam.v;
+  cam.horizontal = cam.cam_width * cam.u;
+  cam.vertical = cam.cam_height * cam.v;
+}
+} // namespace
 
 camera::camera(point3f lookfrom, point3f _lookat, vec3f _vup, Float vfov, 
                Float _aspect, Float aperture, Float _focus_dist,
@@ -21,12 +65,8 @@ camera::camera(point3f lookfrom, point3f _lookat, vec3f _vup, Float vfov,
   vup = _vup;
   focus_dist = _focus_dist;
   start_focus_dist = focus_dist;
-  w = unit_vector(lookfrom - lookat);
-  u = unit_vector(cross(vup, w)); //unit_same
-  v = cross(w, u);
-  lower_left_corner = origin - half_width * focus_dist *  u - half_height * focus_dist * v - focus_dist * w;
-  horizontal = 2.0f * half_width * focus_dist * u;
-  vertical = 2.0f * half_height * focus_dist * v;
+  BuildPBRTCameraFrameFromLookAt(origin, lookat, vup, w, u, v);
+  RecomputePerspectiveScreen(*this);
   iso = _iso;
 }
 
@@ -40,18 +80,17 @@ Ray camera::get_ray(Float s, Float t, point3f u3, Float u1) {
 void camera::update_position(vec3f delta, bool update_uvw, bool update_focal) {
   origin += delta;
   if(update_uvw) {
-    w = unit_vector(origin - lookat);
     if(update_focal) {
-      origin += w * (focus_dist - (origin - lookat).length());
+      vec3f from_lookat = origin - lookat;
+      if(from_lookat.length() > 0) {
+        origin = lookat + unit_vector(from_lookat) * focus_dist;
+      }
     } else {
       focus_dist = (origin - lookat).length();
     }
-    u = unit_vector(cross(vup, w));
-    v = cross(w, u);
+    BuildPBRTCameraFrameFromLookAt(origin, lookat, vup, w, u, v);
   }
-  lower_left_corner = origin - half_width * focus_dist *  u - half_height * focus_dist * v - focus_dist * w;
-  horizontal = 2.0f * half_width * focus_dist * u;
-  vertical = 2.0f * half_height * focus_dist * v;
+  RecomputePerspectiveScreen(*this);
   if(w.length() == 0 && u.length() == 0) {
     reset();
   } 
@@ -63,9 +102,7 @@ void camera::update_fov(Float delta_fov) {
   Float theta = fov * static_cast<Float>(M_PI)/180;
   half_height = tan(theta/2);
   half_width = aspect * half_height;
-  lower_left_corner = origin - half_width * focus_dist *  u - half_height * focus_dist * v - focus_dist * w;
-  horizontal = 2.0f * half_width * focus_dist * u;
-  vertical = 2.0f * half_height * focus_dist * v;
+  RecomputePerspectiveScreen(*this);
 }
 
 void camera::update_aperture(Float delta_aperture) {
@@ -76,18 +113,12 @@ void camera::update_aperture(Float delta_aperture) {
 void camera::update_focal_distance(Float delta_focus) {
   focus_dist += delta_focus;
   focus_dist = std::fmax(0.001,focus_dist);
-  lower_left_corner = origin - half_width * focus_dist *  u - half_height * focus_dist * v - focus_dist * w;
-  horizontal = 2.0f * half_width * focus_dist * u;
-  vertical = 2.0f * half_height * focus_dist * v;
+  RecomputePerspectiveScreen(*this);
 }
 
 void camera::update_look_direction(vec3f dir) {
-  w = unit_vector(dir);
-  u = unit_vector(cross(vup, w));
-  v = cross(w, u);
-  lower_left_corner = origin - half_width * focus_dist *  u - half_height * focus_dist * v - focus_dist * w;
-  horizontal = 2.0f * half_width * focus_dist * u;
-  vertical = 2.0f * half_height * focus_dist * v;
+  BuildPBRTCameraFrame(dir, vup, w, u, v);
+  RecomputePerspectiveScreen(*this);
   if(w.length() == 0 && u.length() == 0) {
     reset();
   } 
@@ -95,12 +126,8 @@ void camera::update_look_direction(vec3f dir) {
 
 void camera::update_lookat(point3f point) {
   lookat = point;
-  w = unit_vector(origin-lookat);
-  u = unit_vector(cross(vup, w));
-  v = cross(w, u);
-  lower_left_corner = origin - half_width * focus_dist *  u - half_height * focus_dist * v - focus_dist * w;
-  horizontal = 2.0f * half_width * focus_dist * u;
-  vertical = 2.0f * half_height * focus_dist * v;
+  BuildPBRTCameraFrameFromLookAt(origin, lookat, vup, w, u, v);
+  RecomputePerspectiveScreen(*this);
   if(w.length() == 0 && u.length() == 0) {
     reset();
   } 
@@ -108,12 +135,8 @@ void camera::update_lookat(point3f point) {
 
 void camera::update_position_absolute(point3f point) {
   origin = point;
-  w = unit_vector(origin - lookat);
-  u = unit_vector(cross(vup, w));
-  v = cross(w, u);
-  lower_left_corner = origin - half_width * focus_dist *  u - half_height * focus_dist * v - focus_dist * w;
-  horizontal = 2.0f * half_width * focus_dist * u;
-  vertical = 2.0f * half_height * focus_dist * v;
+  BuildPBRTCameraFrameFromLookAt(origin, lookat, vup, w, u, v);
+  RecomputePerspectiveScreen(*this);
   if(w.length() == 0 && u.length() == 0) {
     reset();
   } 
@@ -128,9 +151,7 @@ void camera::update_aperture_absolute(Float aperture) {
 
 void camera::update_focal_absolute(Float focal_length) {
   focus_dist = focal_length;
-  lower_left_corner = origin - half_width * focus_dist *  u - half_height * focus_dist * v - focus_dist * w;
-  horizontal = 2.0f * half_width * focus_dist * u;
-  vertical = 2.0f * half_height * focus_dist * v;
+  RecomputePerspectiveScreen(*this);
   if(w.length() == 0 && u.length() == 0) {
     reset();
   } 
@@ -142,9 +163,7 @@ void camera::update_fov_absolute(Float fov_new) {
   Float theta = fov * static_cast<Float>(M_PI)/180;
   half_height = tan(theta/2);
   half_width = aspect * half_height;
-  lower_left_corner = origin - half_width * focus_dist *  u - half_height * focus_dist * v - focus_dist * w;
-  horizontal = 2.0f * half_width * focus_dist * u;
-  vertical = 2.0f * half_height * focus_dist * v;
+  RecomputePerspectiveScreen(*this);
 }
 
 
@@ -158,12 +177,8 @@ void camera::reset() {
   half_height = tan(theta/2);
   half_width = aspect * half_height;
   lens_radius = start_lens_radius;
-  w = unit_vector(origin - lookat);
-  u = unit_vector(cross(vup, w));
-  v = cross(w, u);
-  lower_left_corner = origin - half_width * focus_dist *  u - half_height * focus_dist * v - focus_dist * w;
-  horizontal = 2.0f * half_width * focus_dist * u;
-  vertical = 2.0f * half_height * focus_dist * v;
+  BuildPBRTCameraFrameFromLookAt(origin, lookat, vup, w, u, v);
+  RecomputePerspectiveScreen(*this);
 }
 
 
@@ -182,35 +197,30 @@ ortho_camera::ortho_camera(point3f lookfrom, point3f _lookat, vec3f _vup,
   start_lookat = lookat;
   vup = _vup;
   focus_dist = (lookfrom-lookat).length();
-  w = unit_vector(lookfrom - lookat);
-  u = unit_vector(cross(vup, w));
-  v = cross(w, u);
-  lower_left_corner = origin - cam_width/2 *  u - cam_height/2 * v;
-  horizontal = cam_width * u;
-  vertical = cam_height * v;
+  BuildPBRTCameraFrameFromLookAt(origin, lookat, vup, w, u, v);
+  RecomputeOrthoScreen(*this);
   initial_ratio = cam_width / cam_height;
   iso = _iso;
 }
 
 Ray ortho_camera::get_ray(Float s, Float t, point3f u3, Float u) {
   Float time = time0 + u * (time1 - time0);
-  return(Ray(lower_left_corner + s * horizontal + t * vertical, -w, time)); 
+  return(Ray(lower_left_corner + s * horizontal + t * vertical, w, time)); 
 }
 
 void ortho_camera::update_position(vec3f delta, bool update_uvw, bool update_focal) {
   origin += delta;
   if(update_uvw) {
-    w = unit_vector(origin - lookat);
     if(update_focal) {
-      origin += w * (focus_dist - (origin - lookat).length());
+      vec3f from_lookat = origin - lookat;
+      if(from_lookat.length() > 0) {
+        origin = lookat + unit_vector(from_lookat) * focus_dist;
+      }
     } 
-    u = unit_vector(cross(vup, w));
-    v = cross(w, u);
+    BuildPBRTCameraFrameFromLookAt(origin, lookat, vup, w, u, v);
   }
   focus_dist = (origin - lookat).length();
-  lower_left_corner = origin - cam_width/2 *  u - cam_height/2 * v;
-  horizontal = cam_width * u;
-  vertical = cam_height * v;
+  RecomputeOrthoScreen(*this);
   if(w.length() == 0 && u.length() == 0) {
     reset();
   } 
@@ -222,9 +232,7 @@ void ortho_camera::update_fov(Float delta_fov) {
   cam_width = std::fmax(cam_width,0.001);
   cam_height = std::fmax(cam_height,0.001);
   
-  lower_left_corner = origin - cam_width/2 *  u - cam_height/2 * v;
-  horizontal = cam_width * u;
-  vertical = cam_height * v;
+  RecomputeOrthoScreen(*this);
 }
 
 void ortho_camera::update_aperture(Float delta_aperture) {
@@ -236,12 +244,8 @@ void ortho_camera::update_focal_distance(Float delta_focus) {
 }
 
 void ortho_camera::update_look_direction(vec3f dir) {
-  w = unit_vector(dir);
-  u = unit_vector(cross(vup, w));
-  v = cross(w, u);
-  lower_left_corner = origin - cam_width/2 *  u - cam_height/2 * v;
-  horizontal = cam_width * u;
-  vertical = cam_height * v;
+  BuildPBRTCameraFrame(dir, vup, w, u, v);
+  RecomputeOrthoScreen(*this);
   if(w.length() == 0 && u.length() == 0) {
     reset();
   } 
@@ -250,16 +254,14 @@ void ortho_camera::update_look_direction(vec3f dir) {
 void ortho_camera::update_lookat(point3f point) {
   lookat = point;
   focus_dist = (origin-lookat).length();
+  BuildPBRTCameraFrameFromLookAt(origin, lookat, vup, w, u, v);
+  RecomputeOrthoScreen(*this);
 }
 
 void ortho_camera::update_position_absolute(point3f point) {
   origin = point;
-  w = unit_vector(origin - lookat);
-  u = unit_vector(cross(vup, w));
-  v = cross(w, u);
-  lower_left_corner = origin - cam_width/2 *  u - cam_height/2 * v;
-  horizontal = cam_width * u;
-  vertical = cam_height * v;
+  BuildPBRTCameraFrameFromLookAt(origin, lookat, vup, w, u, v);
+  RecomputeOrthoScreen(*this);
   if(w.length() == 0 && u.length() == 0) {
     reset();
   } 
@@ -269,9 +271,7 @@ void ortho_camera::update_ortho_absolute(vec2f o_size) {
   cam_width = std::fmax(o_size.xy.x,0.001);
   cam_height = std::fmax(o_size.xy.y,0.001);
   
-  lower_left_corner = origin - cam_width/2 *  u - cam_height/2 * v;
-  horizontal = cam_width * u;
-  vertical = cam_height * v;
+  RecomputeOrthoScreen(*this);
 }
 
 void ortho_camera::update_aperture_absolute(Float aperture) {
@@ -291,12 +291,8 @@ void ortho_camera::reset() {
   lookat = start_lookat;
   cam_width = start_cam_width;
   cam_height = start_cam_height;
-  w = unit_vector(origin - lookat);
-  u = unit_vector(cross(vup, w));
-  v = cross(w, u);
-  lower_left_corner = origin - cam_width/2 *  u - cam_height/2 * v;
-  horizontal = cam_width * u;
-  vertical = cam_height * v;
+  BuildPBRTCameraFrameFromLookAt(origin, lookat, vup, w, u, v);
+  RecomputeOrthoScreen(*this);
 }
 
 
@@ -306,23 +302,22 @@ environment_camera::environment_camera(point3f lookfrom, point3f lookat, vec3f _
   time1 = t1;
   origin = lookfrom;
   start_origin = lookfrom;
+  this->lookat = lookat;
   start_lookat = lookat;
   vup = _vup;
-  w = unit_vector(lookfrom - lookat);
-  v = unit_vector(-cross(vup, w));
-  u = cross(w, v);
-  uvw = onb(w,v,u);
+  BuildPBRTCameraFrameFromLookAt(origin, this->lookat, vup, w, u, v);
+  uvw = onb(u, v, w);
   iso = _iso;
 }
 
 
 Ray environment_camera::get_ray(Float s, Float t, point3f u3, Float u1) {
   Float time = time0 + u1 * (time1 - time0);
-  Float theta = static_cast<Float>(M_PI) * t;
-  Float phi = 2 * static_cast<Float>(M_PI) * s;
-  vec3f dir(std::sin(theta) * std::cos(phi), 
-            std::sin(theta) * std::sin(phi),
-            std::cos(theta));
+  Float theta = static_cast<Float>(M_PI) * (1 - t);
+  Float phi = static_cast<Float>(M_PI) + 2 * static_cast<Float>(M_PI) * s;
+  vec3f dir(std::sin(theta) * std::sin(phi), 
+            std::cos(theta),
+            std::sin(theta) * std::cos(phi));
   dir = uvw.local_to_world(dir);
   return(Ray(origin, dir, time)); 
 }
@@ -331,15 +326,16 @@ void environment_camera::update_position(vec3f delta, bool update_uvw, bool upda
   Float focus_dist = (origin - lookat).length();
   origin += delta;
   if(update_uvw) {
-    w = unit_vector(origin - lookat);
     if(update_focal) {
-      origin += w * (focus_dist - (origin - lookat).length());
+      vec3f from_lookat = origin - lookat;
+      if(from_lookat.length() > 0) {
+        origin = lookat + unit_vector(from_lookat) * focus_dist;
+      }
     } else {
       focus_dist = (origin - lookat).length();
     }
-    v = unit_vector(-cross(vup, w));
-    u = cross(w, v);
-    uvw = onb(w,v,u);
+    BuildPBRTCameraFrameFromLookAt(origin, lookat, vup, w, u, v);
+    uvw = onb(u, v, w);
   }
   if(w.length() == 0 && u.length() == 0) {
     reset();
@@ -359,22 +355,20 @@ void environment_camera::update_focal_distance(Float delta_focus) {
 }
 
 void environment_camera::update_look_direction(vec3f dir) {
-  w = unit_vector(dir);
-  v = unit_vector(-cross(vup, w));
-  u = cross(w, v);
-  uvw = onb(w,v,u);
+  BuildPBRTCameraFrame(dir, vup, w, u, v);
+  uvw = onb(u, v, w);
 }
 
 void environment_camera::update_lookat(point3f point) {
   lookat = point;
+  BuildPBRTCameraFrameFromLookAt(origin, lookat, vup, w, u, v);
+  uvw = onb(u, v, w);
 }
 
 void environment_camera::update_position_absolute(point3f point) {
   origin = point;
-  w = unit_vector(origin - lookat);
-  v = unit_vector(-cross(vup, w));
-  u = cross(w, v);
-  uvw = onb(w,v,u);
+  BuildPBRTCameraFrameFromLookAt(origin, lookat, vup, w, u, v);
+  uvw = onb(u, v, w);
   if(w.length() == 0 && u.length() == 0) {
     reset();
   } 
@@ -393,17 +387,41 @@ void environment_camera::update_fov_absolute(Float fov_new) {
 }
 
 vec3f environment_camera::get_w() {return(w);}
-vec3f environment_camera::get_u() {return(-v);}
-vec3f environment_camera::get_v() {return(-u);}
+vec3f environment_camera::get_u() {return(u);}
+vec3f environment_camera::get_v() {return(v);}
 
 void environment_camera::reset() {
   origin = start_origin;
   lookat = start_lookat;
-  w = unit_vector(origin - lookat);
-  v = unit_vector(-cross(vup, w));
-  u = cross(w, v);
-  uvw = onb(w,v,u);
+  BuildPBRTCameraFrameFromLookAt(origin, lookat, vup, w, u, v);
+  uvw = onb(u, v, w);
 }
+
+#ifdef NOT_CRAN
+context("Camera basis follows PBRT LookAt convention") {
+  test_that("Canonical lookfrom/lookat/up yields +X right and +Z forward") {
+    camera cam(point3f(0, 0, -10), point3f(0, 0, 0), vec3f(0, 1, 0),
+               60.f, 1.f, 0.f, 10.f, 0.f, 1.f, 1.f);
+
+    vec3f forward = cam.get_w();
+    vec3f right = cam.get_u();
+    vec3f up = cam.get_v();
+
+    expect_true(forward.xyz.x == Approx(0.f));
+    expect_true(forward.xyz.y == Approx(0.f));
+    expect_true(forward.xyz.z == Approx(1.f));
+
+    expect_true(right.xyz.x == Approx(1.f));
+    expect_true(right.xyz.y == Approx(0.f));
+    expect_true(right.xyz.z == Approx(0.f));
+    expect_true(right.xyz.x > 0.f);
+
+    expect_true(up.xyz.x == Approx(0.f));
+    expect_true(up.xyz.y == Approx(1.f));
+    expect_true(up.xyz.z == Approx(0.f));
+  }
+}
+#endif
 
 RealisticCamera::RealisticCamera(const AnimatedTransform &CameraToWorld,
                                  Float shutterOpen, Float shutterClose, 
@@ -962,5 +980,3 @@ void RealisticCamera::reset() {
 vec3f RealisticCamera::get_w() {return(-CamTransform.w());}
 vec3f RealisticCamera::get_u() {return(-CamTransform.u());}
 vec3f RealisticCamera::get_v() {return(CamTransform.v());}
-
-

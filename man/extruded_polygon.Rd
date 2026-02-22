@@ -164,7 +164,7 @@ if(length(find.package("spData",quiet=TRUE)) > 0) {
 if(run_documentation()) {
 generate_ground(depth=-0.01,
                 material = diffuse(color="grey50",checkercolor="grey20")) \%>\%
-  add_object(extruded_polygon(texas, center = TRUE,
+  add_object(extruded_polygon(texas, center = TRUE, flip_horizontal = TRUE,
                               material=diffuse(color="#ff2222",sigma=90))) \%>\%
   add_object(sphere(y=30,x=-30,radius=10,
                     material=light(color="lightblue",intensity=40))) \%>\%
@@ -175,7 +175,7 @@ generate_ground(depth=-0.01,
 if(run_documentation()) {
 generate_ground(depth=-0.01,
                 material = diffuse(color="grey50",checkercolor="grey20")) \%>\%
-  add_object(extruded_polygon(us_states, x=-96,z=-40, top=2,
+  add_object(extruded_polygon(us_states, x=-96,z=-40, top=2, flip_horizontal = TRUE,
                               material=diffuse(color="#ff2222",sigma=90))) \%>\%
   add_object(sphere(y=30,x=-100,radius=10,
                     material=light(color="lightblue",intensity=200))) \%>\%
@@ -191,6 +191,7 @@ if(run_documentation()) {
 generate_ground(depth=0,
                 material = diffuse(color="grey50",checkercolor="grey20",sigma=90)) \%>\%
   add_object(extruded_polygon(us_states, x=-96,z=-45, data_column_top = "total_pop_15",
+                              flip_horizontal = TRUE,
                               scale_data = 1/max(us_states$total_pop_15)*5,
                               material=diffuse(color="#ff2222",sigma=90))) \%>\%
   add_object(sphere(y=30,x=-100,z=60,radius=10,

@@ -26,12 +26,12 @@
 #' if (run_documentation()) {
 #' # Generate the base scene
 #' base_scene = generate_ground(material = diffuse(checkercolor = "grey20")) %>%
-#'   add_object(sphere(z = 100, radius = 10, material = light(intensity = 70)))
+#'   add_object(sphere(z = -100, radius = 10, material = light(intensity = 70)))
 #'
 #' # Start with a single sphere with an R in it
 #' sphere_scene = sphere(y = 0, material = glossy(color = "#2b6eff", reflectance = 0.05)) %>%
-#'   add_object(obj_model(r_obj(simple_r = TRUE), z = 0.9, y = -0.2,
-#'   scale_obj = 0.45, material = diffuse())) %>%
+#'   add_object(obj_model(r_obj(simple_r = TRUE), z = -0.9, y = -0.2,
+#'   scale_obj = 0.45, angle = c(0,180,0), material = diffuse())) %>%
 #'   group_objects(scale = 0.1)
 #'
 #' # Render the scene
@@ -88,7 +88,7 @@
 #'   create_instances(x = c(-5, 0, 5),
 #'                    scale_y = c(0.5, 1, 0.75)) %>%
 #'   add_object(base_scene) %>%
-#'   render_scene(lookat = c(0, 10, 0), lookfrom = c(0, 10, 50),
+#'   render_scene(lookat = c(0, 10, 0), lookfrom = c(0, 10, -50),
 #'                width = 800, sample_method = "sobol_blue", fov = 30,
 #'                height = 800, samples = 16, clamp_value = 20)
 #' }

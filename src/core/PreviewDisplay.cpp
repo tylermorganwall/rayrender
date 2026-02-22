@@ -198,7 +198,7 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
             one_fast  = true;
           }
           if (e.xkey.keycode == W_key ) {
-            vec3f step = -speed * w * base_step;
+            vec3f step = speed * w * base_step;
             if(orbit) {
               Float dist_to_orbit = (cam->get_origin() - cam->get_lookat()).length();
               if(dist_to_orbit <= base_step * speed) {
@@ -212,7 +212,7 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
             cam->update_position(-speed * u * base_step, orbit);
           }
           if (e.xkey.keycode == S_key ) {
-            cam->update_position(speed * w * base_step, orbit, false);
+            cam->update_position(-speed * w * base_step, orbit, false);
           }
           if (e.xkey.keycode == D_key ) {
             cam->update_position(speed * u * base_step, orbit);
@@ -399,7 +399,7 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
             v = cam->get_v();
             
             if (e.xkey.keycode == W_key ) {
-              vec3f step = -speed * w * base_step;
+              vec3f step = speed * w * base_step;
               if(orbit) {
                 Float dist_to_orbit = (cam->get_origin() - cam->get_lookat()).length();
                 if(dist_to_orbit <= base_step * speed) {
@@ -413,7 +413,7 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
               cam->update_position(-speed * u * base_step, orbit);
             }
             if (e.xkey.keycode == S_key ) {
-              cam->update_position(speed * w * base_step, orbit, false);
+              cam->update_position(-speed * w * base_step, orbit, false);
             }
             if (e.xkey.keycode == D_key ) {
               cam->update_position(speed * u * base_step, orbit);
@@ -529,21 +529,20 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
             cam->GenerateRay(samp,&r2);
             if(world->hit(r2, 0.001, FLT_MAX, hrec, rng)) {
               if( hrec.shape->GetName() != "EnvironmentLight") {
-                dir = point3f(0)-hrec.p;
+                dir = point3f(0) - hrec.p;
               }  else {
                 left = false;
                 right = true;
-                dir = point3f(0)-hrec.p;
+                dir = point3f(0) - hrec.p;
               }
             }
           } else if (fov > 0) {
-            Ray r2 = cam->get_ray(u,1-v, point3f(0),
-                                 0.5f);
-            if(left) {
-              world->hit(r2, 0.001, FLT_MAX, hrec, rng);
-              if( hrec.shape->GetName() == "EnvironmentLight") {
-                right = true;
-              }
+            Ray r2 = cam->get_ray(u,1-v, point3f(0),0.5f);
+            if (left) {
+                world->hit(r2, 0.001, FLT_MAX, hrec, rng);
+                if (hrec.shape->GetName() == "EnvironmentLight") {
+                  right = true;
+                }
             }
             dir = r2.direction();
           } else {
@@ -564,11 +563,11 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
             if(fov != 0 && fov != 360) {
               Float current_fd = cam->get_focal_distance();
               Float new_fd = (hrec.p-cam->get_origin()).length();
-              cam->update_focal_distance(new_fd- current_fd);
+              cam->update_focal_distance(new_fd - current_fd);
             }
             cam->update_lookat(hrec.p);
           }
-          cam->update_look_direction(-dir);
+          cam->update_look_direction(dir);
           ns = 0;
           adaptive_pixel_sampler.reset();
           adaptive_pixel_sampler_small.reset();
@@ -880,7 +879,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         }
         case VK_KEY_W: {
           if(interactive_w) {
-            vec3f step = -speed * w * base_step;
+            vec3f step = speed * w * base_step;
             if(orbit) {
               Float dist_to_orbit = (cam_w->get_origin() - cam_w->get_lookat()).length();
               if(dist_to_orbit <= base_step * speed) {
@@ -901,7 +900,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         }
         case VK_KEY_S: {
           if(interactive_w) {
-          cam_w->update_position(speed * w * base_step, orbit, false);
+          cam_w->update_position(-speed * w * base_step, orbit, false);
         }
           break;
         }
@@ -1238,7 +1237,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
           dir = -cam_w->get_w();
         }
       }
-      cam_w->update_look_direction(-dir);
+      cam_w->update_look_direction(dir);
       *ns_w = 0;
       aps->reset();
       aps_small->reset();

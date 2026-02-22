@@ -150,7 +150,7 @@
 #'   scene = scene %>%
 #'     add_object(sphere(x = -1.1, y = 0, z = 0, radius = 0.5,
 #'                       material = metal(color = "gold", fuzz = 0.1))) %>%
-#'     add_object(sphere(y=10,z=13,radius=2,material=light(intensity=40)))
+#'     add_object(sphere(y=10,z=-13,radius=2,material=light(intensity=40)))
 #'   render_scene(scene, fov = 20, parallel = TRUE, samples = 16)
 #' }
 #' if (run_documentation()) {
@@ -166,6 +166,7 @@
 #'   image_array = aperm(png::readPNG(tempfileplot), c(2, 1, 3))
 #'   scene = scene %>%
 #'     add_object(xy_rect(x = 0, y = 1.1, z = 0, xwidth = 2, angle = c(0, 0, 0),
+#'                        flipped = TRUE,
 #'                        material = diffuse(image_texture = image_array)))
 #'   render_scene(scene, fov = 20, parallel = TRUE, samples = 16)
 #' }
@@ -186,7 +187,9 @@
 #'                aperture = 1, parallel = TRUE, samples = 16)
 #' }
 #' if (run_documentation()) {
-#'   # We can also capture a 360 environment image by setting `fov = 360` (can be used for VR)
+#'   # We can also capture a 360 environment image by setting `fov = 360` (can be used for VR).
+#'   # The left edge of the image is directly where the camera is pointing--we point the image
+#'   # backwards so the full cornell box is in the "center" of the environment map.
 #'   generate_cornell() %>%
 #'     add_object(ellipsoid(x = 555 / 2, y = 100, z = 555 / 2, a = 50, b = 100, c = 50,
 #'                           material = metal(color = "lightblue"))) %>%
@@ -199,24 +202,22 @@
 #'     add_object(xz_rect(x = 555 / 2, z = 555 / 2, y = 1, xwidth = 555, zwidth = 555,
 #'                        material = glossy(checkercolor = "white",
 #'                                          checkerperiod = 10, color = "dodgerblue"))) %>%
-#'     render_scene(lookfrom = c(278, 278, 30), lookat = c(278, 278, 500), clamp_value = 10,
+#'     render_scene(lookfrom = c(278, 278, -10), lookat = c(278, 278, -300), clamp_value = 100,
 #'                  fov = 360,  samples = 16, width = 800, height = 800)
 #' }
 #' if (run_documentation()) {
 #'   # Spin the camera around the scene, decreasing the number of samples to render faster. To make
 #'   # an animation, specify the a filename in `render_scene` for each frame and use the `av` package
 #'   # or ffmpeg to combine them all into a movie.
-#'   t = 1:30
-#'   xpos = 10 * sin(t * 12 * pi / 180 + pi / 2)
-#'   zpos = 10 * cos(t * 12 * pi / 180 + pi / 2)
-#'   # Save old par() settings
-#'   old.par = par(no.readonly = TRUE)
-#'   on.exit(par(old.par))
-#'   par(mfrow = c(5, 6))
-#'   for (i in 1:30) {
-#'     render_scene(scene, samples = 16,
+#'   t = 1:9
+#'   xpos = 10 * sin(t * 18 * pi / 180 + pi / 2)
+#'   zpos = 10 * cos(t * 18 * pi / 180 + pi / 2)
+#'   image_output = list()
+#'   for (i in 1:9) {
+#'     image_output[[i]] = render_scene(scene, samples = 16, plot_scene = FALSE,
 #'                  lookfrom = c(xpos[i], 1.5, zpos[i]), lookat = c(0, 0.5, 0), parallel = TRUE)
 #'   }
+#'   rayimage::plot_image_grid(image_output, dim = c(3,3) )
 #' }
 render_scene = function(
 	scene,
@@ -237,7 +238,7 @@ render_scene = function(
 	max_depth = NA,
 	roulette_active_depth = 100,
 	ambient_light = NULL,
-	lookfrom = c(0, 1, 10),
+	lookfrom = c(0, 1, -10),
 	lookat = c(0, 0, 0),
 	camera_up = c(0, 1, 0),
 	aperture = 0.1,

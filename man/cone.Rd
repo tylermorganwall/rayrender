@@ -85,7 +85,7 @@ generate_studio() \%>\%
   add_object(sphere(y=5,material=light())) \%>\%
   add_object(sphere(y=3,x=-3,z=-3,material=light(color="red"))) \%>\%
   add_object(sphere(y=3,x=3,z=-3,material=light(color="green"))) \%>\%
-  render_scene(lookfrom=c(0,4,10), clamp_value=10, samples=16)
+  render_scene(lookfrom=c(0,4,-10), clamp_value=10, samples=16)
 }
 if(run_documentation()) {
  #Render the position from the base, instead of the center of the cone:
@@ -100,6 +100,6 @@ if(run_documentation()) {
   add_object(cone(start = c(0,-1,1.5), from_center = FALSE, radius=0.5, direction = c(0,1,0),
     material = noise_mat)) \%>\%
   add_object(sphere(y=5,x=5,material=light(intensity=40))) \%>\%
-  render_scene(lookfrom=c(0,4,10), clamp_value=10,fov=25, samples=16)
+  render_scene(lookfrom=c(0,4,-10), clamp_value=10,fov=25, samples=16)
 }
 }

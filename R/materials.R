@@ -447,7 +447,7 @@ metal = function(
 #' #for the `green` (second) channel in the dielectric `attenuation` argument.
 #' if(run_documentation()) {
 #' generate_ground(depth=-0.5,material=diffuse(checkercolor="grey30",checkerperiod=2)) %>%
-#'   add_object(sphere(z=-5,x=-0.5,y=1,material=light(intensity=10))) %>%
+#'   add_object(sphere(z=5,x=-0.5,y=1,material=light(intensity=10))) %>%
 #'   add_object(cube(y=0.3,ywidth=0.1,xwidth=2,zwidth=2,
 #'                   material=dielectric(attenuation=c(1.2,0.2,1.2)),angle=c(45,110,0))) %>%
 #'   render_scene(parallel=TRUE, samples = 16)
@@ -622,7 +622,7 @@ dielectric = function(
 #' #Render a rough silver R with a smaller golden egg in front
 #' generate_cornell() %>%
 #'   add_object(obj_model(r_obj(simple_r = TRUE),
-#'                        x=555/2,z=350,y=0, scale_obj = 200, angle=c(0,200,0),
+#'                        x=555/2,z=350,y=0, scale_obj = 200, angle=c(0,20,0),
 #'              material=microfacet(roughness=0.2,
 #'                                  eta=c(1.1583,0.9302,0.5996), kappa=c(6.9650,6.396,5.332)))) %>%
 #'  add_object(ellipsoid(x=200,z=200,y=80, a=50,b=80,c=50,
@@ -635,7 +635,7 @@ dielectric = function(
 #' #Increase the roughness
 #' generate_cornell() %>%
 #'   add_object(obj_model(r_obj(simple_r = TRUE),
-#'                        x=555/2,z=350,y=0, scale_obj = 200, angle=c(0,200,0),
+#'                        x=555/2,z=350,y=0, scale_obj = 200, angle=c(0,20,0),
 #'              material=microfacet(roughness=0.5,
 #'                                  eta=c(1.1583,0.9302,0.5996), kappa=c(6.9650,6.396,5.332)))) %>%
 #'  add_object(ellipsoid(x=200,z=200,y=80, a=50,b=80,c=50,
@@ -648,7 +648,7 @@ dielectric = function(
 #'  #Use transmission for a rough dielectric
 #' generate_cornell() %>%
 #'   add_object(obj_model(r_obj(simple_r = TRUE),
-#'                        x=555/2,z=350,y=0, scale_obj = 200, angle=c(0,200,0),
+#'                        x=555/2,z=350,y=0, scale_obj = 200, angle=c(0,20,0),
 #'              material=microfacet(roughness=0.3, transmission=T, eta=1.6))) %>%
 #'  add_object(ellipsoid(x=200,z=200,y=80, a=50,b=80,c=50,
 #'              material=microfacet(roughness=0.3, transmission=T, eta=1.6))) %>%
@@ -908,8 +908,8 @@ microfacet = function(
 #' #All gather around the orb
 #' scene = generate_ground(material = diffuse(checkercolor="grey50")) %>%
 #'   add_object(sphere(radius=0.5,material=light(intensity=5,color="red"))) %>%
-#'   add_object(obj_model(r_obj(simple_r = TRUE), z=-3,x=-1.5,y=-1, angle=c(0,45,0))) %>%
-#'   add_object(pig(scale=0.3, x=1.5,z=-2,y=-1.5,angle=c(0,-135,0)))
+#'   add_object(obj_model(r_obj(simple_r = TRUE), z=-3,x=-1.5,y=-1, angle=c(0,225,0))) %>%
+#'   add_object(pig(scale=0.3, x=1.5,z=-2,y=-1.5,angle=c(0,45,0)))
 #' if(run_documentation()) {
 #' render_scene(scene, samples=16, parallel=TRUE, clamp_value=10)
 #' }
@@ -1117,9 +1117,9 @@ light = function(
 #' generate_ground(material=diffuse()) %>%
 #'   add_object(sphere(y=0.2,material=glossy(color="#2b6eff",reflectance=0.05))) %>%
 #'   add_object(obj_model(r_obj(simple_r = TRUE),
-#'                        z=1,y=-0.05,scale=0.45,material=diffuse())) %>%
-#'   add_object(sphere(y=6,z=1,radius=4,material=light(intensity=3))) %>%
-#'   add_object(sphere(z=15,material=light(intensity=50))) %>%
+#'                        z=-1,y=-0.05,scale=0.45,angle=c(0,180,0),material=diffuse())) %>%
+#'   add_object(sphere(y=6,z=-1,radius=4,material=light(intensity=3))) %>%
+#'   add_object(sphere(z=-15,material=light(intensity=50))) %>%
 #'   render_scene(parallel=TRUE,clamp_value=10,samples=16,sample_method="sobol_blue")
 #' }
 glossy = function(

@@ -77,7 +77,7 @@ Text Object
 if(run_documentation()) {
 generate_cornell() \%>\%
   add_object(text3d(label="Cornell Box", x=555/2,y=555/2,z=555/2,text_height=60,
-                    material=diffuse(color="grey10"), angle=c(0,180,0))) \%>\%
+                    material=diffuse(color="grey10"), angle=c(0,0,0))) \%>\%
   render_scene(samples=16)
 }
 if(run_documentation()) {
@@ -85,10 +85,10 @@ if(run_documentation()) {
 generate_cornell() \%>\%
   add_object(text3d(label="YZ Plane", x=550,y=555/2,z=555/2,text_height=150,
                     orientation = "yz",
-                    material=diffuse(color="grey10"), angle=c(0,180,0))) \%>\%
+                    material=diffuse(color="grey10"), angle=c(0,0,0))) \%>\%
  add_object(text3d(label="XY Plane", z=550,y=555/2,x=555/2,text_height=150,
                     orientation = "xy",
-                    material=diffuse(color="grey10"), angle=c(0,180,0))) \%>\%
+                    material=diffuse(color="grey10"), angle=c(0,0,0))) \%>\%
  add_object(text3d(label="XZ Plane", z=555/2,y=5,x=555/2,text_height=150,
                     orientation = "xz",
                     material=diffuse(color="grey10"))) \%>\%
@@ -98,9 +98,9 @@ if(run_documentation()) {
 #Add an label in front of a sphere
 generate_cornell() \%>\%
   add_object(text3d(label="Cornell Box", x=555/2,y=555/2,z=555/2,text_height=90,
-                    material=diffuse(color="grey10"), angle=c(0,180,0))) \%>\%
+                    material=diffuse(color="grey10"), angle=c(0,0,0))) \%>\%
   add_object(text3d(label="Sphere", x=555/2,y=100,z=100,text_height=60,
-                    material=diffuse(color="white"), angle=c(0,180,0))) \%>\%
+                    material=diffuse(color="white"), angle=c(0,0,0))) \%>\%
   add_object(sphere(y=100,radius=100,z=555/2,x=555/2,
                     material=glossy(color="purple"))) \%>\%
   add_object(sphere(y=555,radius=100,z=-1000,x=555/2,
@@ -114,7 +114,7 @@ if(run_documentation()) {
 bee_list = list()
 for(i in 1:100) {
 bee_list[[i]] = text3d("B", x=20+runif(1)*525, y=20+runif(1)*525, z=20+runif(1)*525,
-                       text_height = 50, angle=c(0,180,0))
+                       text_height = 50, angle=c(0,0,0))
 }
 bees = do.call(rbind,bee_list)
 generate_cornell() \%>\%
@@ -127,7 +127,7 @@ library(rayrender)
 generate_cornell(light_position = c(555/2,554,10),
                  lightwidth = 10, lightdepth = 100,
                  lightintensity = 800) |>
-  add_object(text3d(label="\U1F30A",font_size = 500,angle=c(0,180,0),
+  add_object(text3d(label="\U1F30A",font_size = 500,angle=c(0,0,0),
                     x=555/2,y=555/2,z=260,text_height=1000)) |>
   add_object(text3d(label="\U1F6A3", x=180,y=140,z=260-50,
                     text_height=400, font_size = 500,

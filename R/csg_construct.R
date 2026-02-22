@@ -677,14 +677,14 @@ csg_pyramid = function(x = 0, y = 0, z = 0, height = 1, base = 1) {
 #' #Generate a basic triangle:
 #' generate_ground(material=diffuse(checkercolor="grey20")) %>%
 #'   add_object(csg_object(csg_triangle(),material=diffuse(color="red"))) %>%
-#'   add_object(sphere(y=5,z=3,material=light(intensity=30))) %>%
+#'   add_object(sphere(y=5,z=-3,material=light(intensity=30))) %>%
 #'   render_scene(clamp_value=10, samples=16,fov=20)
 #'   }
 #' if(run_documentation()) {
 #' #Change a vertex:
 #' generate_ground(material=diffuse(checkercolor="grey20")) %>%
 #'   add_object(csg_object(csg_triangle(v1 = c(1,1,0)),material=diffuse(color="green"))) %>%
-#'   add_object(sphere(y=5,z=3,material=light(intensity=30))) %>%
+#'   add_object(sphere(y=5,z=-3,material=light(intensity=30))) %>%
 #'   render_scene(clamp_value=10, samples=16,fov=20)
 #'   }
 #' if(run_documentation()) {

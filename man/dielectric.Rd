@@ -89,7 +89,7 @@ scene \%>\%
 #for the `green` (second) channel in the dielectric `attenuation` argument.
 if(run_documentation()) {
 generate_ground(depth=-0.5,material=diffuse(checkercolor="grey30",checkerperiod=2)) \%>\%
-  add_object(sphere(z=-5,x=-0.5,y=1,material=light(intensity=10))) \%>\%
+  add_object(sphere(z=5,x=-0.5,y=1,material=light(intensity=10))) \%>\%
   add_object(cube(y=0.3,ywidth=0.1,xwidth=2,zwidth=2,
                   material=dielectric(attenuation=c(1.2,0.2,1.2)),angle=c(45,110,0))) \%>\%
   render_scene(parallel=TRUE, samples = 16)
