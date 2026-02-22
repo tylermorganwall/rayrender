@@ -83,13 +83,13 @@ generate_cornell() |>
 if(run_documentation()) {
 #Change the orientation
 generate_cornell() |>
-  add_object(text3d(label="YZ Plane", x=550,y=555/2,z=555/2,text_height=150,
+  add_object(text3d(label="YZ Plane", x=550,y=555/2,z=555/2,text_height=200,
                     orientation = "yz",
                     material=diffuse(color="grey10"), angle=c(0,0,0))) |>
- add_object(text3d(label="XY Plane", z=550,y=555/2,x=555/2,text_height=150,
+ add_object(text3d(label="XY Plane", z=550,y=555/2,x=555/2,text_height=200,
                     orientation = "xy",
                     material=diffuse(color="grey10"), angle=c(0,0,0))) |>
- add_object(text3d(label="XZ Plane", z=555/2,y=5,x=555/2,text_height=150,
+ add_object(text3d(label="XZ Plane", z=555/2,y=5,x=555/2,text_height=200,
                     orientation = "xz",
                     material=diffuse(color="grey10"))) |>
   render_scene(samples=16)

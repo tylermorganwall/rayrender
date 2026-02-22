@@ -63,7 +63,7 @@ base_scene = generate_ground(material = diffuse(checkercolor = "grey20")) |>
 # Start with a single sphere with an R in it
 sphere_scene = sphere(y = 0, material = glossy(color = "#2b6eff", reflectance = 0.05)) |>
   add_object(obj_model(r_obj(simple_r = TRUE), z = -0.9, y = -0.2,
-  scale_obj = 0.45, angle = c(0,180,0), material = diffuse())) |>
+  scale_obj = 0.45, angle = c(0,0,0), material = diffuse())) |>
   group_objects(scale = 0.1)
 
 # Render the scene
