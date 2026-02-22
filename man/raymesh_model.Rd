@@ -96,34 +96,34 @@ Load an `raymesh` object, as specified in the `rayvertex` package.
 library(rayvertex)
 if(run_documentation()) {
 raymesh_model(sphere_mesh(position = c(-1, 0, 0),
-              material = material_list(transmittance = "red"))) \%>\%
-  add_object(generate_ground(material = diffuse(checkercolor="grey20"))) \%>\%
+              material = material_list(transmittance = "red"))) |>
+  add_object(generate_ground(material = diffuse(checkercolor="grey20"))) |>
   render_scene(fov = 30, samples=16, sample_method="sobol_blue")
 }
 
 # We create a complex rayvertex mesh, using the `rayvertex::add_shape` function which
 # creates a new `raymesh` object out of individual `raymesh` objects
 rm_scene = sphere_mesh(position = c(-1, 0, 0),
-            material = material_list(transmittance = "red")) \%>\%
+            material = material_list(transmittance = "red")) |>
     add_shape(sphere_mesh(position = c(1, 0, 0),
             material = material_list(transmittance = "green", ior = 1.5)))
 
 # Pass the single raymesh object to `raymesh_model()`
 # `raymesh_model()`
 if(run_documentation()) {
-raymesh_model(rm_scene) \%>\%
-  add_object(generate_ground(material = diffuse(checkercolor="grey20"))) \%>\%
+raymesh_model(rm_scene) |>
+  add_object(generate_ground(material = diffuse(checkercolor="grey20"))) |>
   render_scene(fov = 30, samples=16, sample_method="sobol_blue")
 }
 
 # Set `flip_transmittance = FALSE` argument to specify attenuation coefficients directly
 # (as specified in the `dielectric()` material). We change the material's numerical attenuation
 # constants using `rayvertex::change_material`
-rm_scene_new= change_material(rm_scene, transmittance = c(1,2,0.3), id = 1) \%>\%
+rm_scene_new= change_material(rm_scene, transmittance = c(1,2,0.3), id = 1) |>
   change_material(transmittance = c(3,1,2), id = 2)
 if(run_documentation()) {
-raymesh_model(rm_scene_new, flip_transmittance = FALSE) \%>\%
-  add_object(generate_ground(material = diffuse(checkercolor="grey20"))) \%>\%
+raymesh_model(rm_scene_new, flip_transmittance = FALSE) |>
+  add_object(generate_ground(material = diffuse(checkercolor="grey20"))) |>
   render_scene(fov = 30, samples=16, sample_method="sobol_blue")
 }
 
@@ -131,16 +131,16 @@ raymesh_model(rm_scene_new, flip_transmittance = FALSE) \%>\%
 if(run_documentation()) {
 raymesh_model(rm_scene,
               material = dielectric(attenuation = "dodgerblue2", attenuation_intensity = 4),
-  override_material = TRUE) \%>\%
-  add_object(generate_ground(material = diffuse(checkercolor="grey20"))) \%>\%
+  override_material = TRUE) |>
+  add_object(generate_ground(material = diffuse(checkercolor="grey20"))) |>
   render_scene(fov = 30, samples=16, sample_method="sobol_blue")
 }
 
 # Adjusting the scale, position, and rotation parameters of the `raymesh` model
 if(run_documentation()) {
 raymesh_model(rm_scene,
-              x = 0, y = 0.5, z = -1, angle = c(0, 0, 20)) \%>\%
-  add_object(generate_ground(material = diffuse(checkercolor="grey20"))) \%>\%
+              x = 0, y = 0.5, z = -1, angle = c(0, 0, 20)) |>
+  add_object(generate_ground(material = diffuse(checkercolor="grey20"))) |>
   render_scene(fov = 30,lookat=c(0,0.5,0), samples=16, sample_method="sobol_blue")
 }
 }

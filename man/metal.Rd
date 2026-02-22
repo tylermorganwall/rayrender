@@ -100,7 +100,7 @@ Metallic Material
 # Generate the cornell box with a single chrome sphere in the center. For other metals,
 # See the website refractiveindex.info for eta and k data, use wavelengths 5
 # 80nm (R), 530nm (G), and 430nm (B).
-scene = generate_cornell() \%>\%
+scene = generate_cornell() |>
   add_object(sphere(x=555/2,y=555/2,z=555/2,radius=555/8,
   material=metal(eta=c(3.2176,3.1029,2.1839), k = c(3.3018,3.33,3.0339))))
 if(run_documentation()) {
@@ -108,7 +108,7 @@ render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=16,
              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 }
 #Add an aluminum rotated shiny metal block
-scene = scene \%>\%
+scene = scene |>
   add_object(cube(x=380,y=150/2,z=200,xwidth=150,ywidth=150,zwidth=150,
   material = metal(eta = c(1.07,0.8946,0.523), k = c(6.7144,6.188,4.95)),angle=c(0,45,0)))
 if(run_documentation()) {
@@ -116,7 +116,7 @@ render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=16,
              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 }
 #Add a copper metal cube
-scene = scene \%>\%
+scene = scene |>
   add_object(cube(x=150,y=150/2,z=300,xwidth=150,ywidth=150,zwidth=150,
                   material = metal(eta = c(0.497,0.8231,1.338),
                                    k = c(2.898,2.476,2.298)),
@@ -127,7 +127,7 @@ render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=16,
 }
 
 #Finally, let's add a lead pipe
-scene2 = scene \%>\%
+scene2 = scene |>
   add_object(cylinder(x=450,y=200,z=400,length=400,radius=30,
                   material = metal(eta = c(1.44,1.78,1.9),
                                    k = c(3.18,3.36,3.43)),

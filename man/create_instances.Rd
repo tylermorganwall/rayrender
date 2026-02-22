@@ -57,18 +57,18 @@ copy only requires a 4x4 matrix in memory.
 \examples{
 if (run_documentation()) {
 # Generate the base scene
-base_scene = generate_ground(material = diffuse(checkercolor = "grey20")) \%>\%
+base_scene = generate_ground(material = diffuse(checkercolor = "grey20")) |>
   add_object(sphere(z = -100, radius = 10, material = light(intensity = 70)))
 
 # Start with a single sphere with an R in it
-sphere_scene = sphere(y = 0, material = glossy(color = "#2b6eff", reflectance = 0.05)) \%>\%
+sphere_scene = sphere(y = 0, material = glossy(color = "#2b6eff", reflectance = 0.05)) |>
   add_object(obj_model(r_obj(simple_r = TRUE), z = -0.9, y = -0.2,
-  scale_obj = 0.45, angle = c(0,180,0), material = diffuse())) \%>\%
+  scale_obj = 0.45, angle = c(0,180,0), material = diffuse())) |>
   group_objects(scale = 0.1)
 
 # Render the scene
-sphere_scene \%>\%
-  add_object(base_scene) \%>\%
+sphere_scene |>
+  add_object(base_scene) |>
   render_scene(lookat = c(0, 1, 0), width = 800, sample_method = "sobol_blue", aperture = 0.2,
                height = 800, samples = 16, clamp_value = 20)
 }
@@ -79,8 +79,8 @@ create_instances(sphere_scene,
                  x = seq(-1.5, 1.5, length.out = 10),
                  angle_x = 90 * (runif(10) - 0.5),
                  angle_y = 90 * (runif(10) - 0.5),
-                 angle_z = 90 * (runif(10) - 0.5)) \%>\%
-  add_object(base_scene) \%>\%
+                 angle_z = 90 * (runif(10) - 0.5)) |>
+  add_object(base_scene) |>
   render_scene(lookat = c(0, 1, 0), width = 800, sample_method = "sobol_blue",
                height = 800, samples = 16, clamp_value = 20)
 }
@@ -92,8 +92,8 @@ create_instances(sphere_scene,
                  y = seq(0, 1.5, length.out = 10),
                  scale_x = 0.5 + runif(10),
                  scale_y = 0.5 + runif(10),
-                 scale_z = 0.5 + runif(10)) \%>\%
-  add_object(base_scene) \%>\%
+                 scale_z = 0.5 + runif(10)) |>
+  add_object(base_scene) |>
   render_scene(lookat = c(0, 1, 0), width = 800, sample_method = "sobol_blue",
                height = 800, samples = 16, clamp_value = 20)
 }
@@ -102,9 +102,9 @@ if (run_documentation()) {
 # Create instances of instances
 create_instances(sphere_scene,
                  x = seq(-1.5, 1.5, length.out = 10),
-                 angle_y = 90 * (runif(10) - 0.5)) \%>\%
-  create_instances(y = seq(0, 2, length.out = 10)) \%>\%
-  add_object(base_scene) \%>\%
+                 angle_y = 90 * (runif(10) - 0.5)) |>
+  create_instances(y = seq(0, 2, length.out = 10)) |>
+  add_object(base_scene) |>
   render_scene(lookat = c(0, 1, 0), width = 800, sample_method = "sobol_blue",
                height = 800, samples = 16, clamp_value = 20)
 }
@@ -113,13 +113,13 @@ if (run_documentation()) {
 # Create instances of instances of instances of instances
 create_instances(sphere_scene,
                  x = seq(-1.5, 1.5, length.out = 10),
-                 angle_y = 90 * (runif(10) - 0.5)) \%>\%
-  create_instances(y = seq(0, 1, length.out = 5)) \%>\%
+                 angle_y = 90 * (runif(10) - 0.5)) |>
+  create_instances(y = seq(0, 1, length.out = 5)) |>
   create_instances(y = seq(0, 2, length.out = 20) * 10,
-                   angle_y = seq(0, 360, length.out = 20)) \%>\%
+                   angle_y = seq(0, 360, length.out = 20)) |>
   create_instances(x = c(-5, 0, 5),
-                   scale_y = c(0.5, 1, 0.75)) \%>\%
-  add_object(base_scene) \%>\%
+                   scale_y = c(0.5, 1, 0.75)) |>
+  add_object(base_scene) |>
   render_scene(lookat = c(0, 10, 0), lookfrom = c(0, 10, -50),
                width = 800, sample_method = "sobol_blue", fov = 30,
                height = 800, samples = 16, clamp_value = 20)
@@ -136,24 +136,24 @@ image_array = png::readPNG(tempfileplot)
 
 # Note that if a instanced scene has importance sampled lights and there are many instances,
 # it will be slow to render.
-generate_cornell(importance_sample=FALSE) \%>\%
+generate_cornell(importance_sample=FALSE) |>
   add_object(ellipsoid(x = 555 / 2, y = 100, z = 555 / 2, a = 50, b = 100, c = 50,
-             material = metal(color = "lightblue"))) \%>\%
+             material = metal(color = "lightblue"))) |>
   add_object(cube(x = 100, y = 130 / 2, z = 200, xwidth = 130,
                   ywidth = 130, zwidth = 130, angle = c(0, 10, 0),
-                  material = diffuse(checkercolor = "purple", checkerperiod = 30))) \%>\%
-  add_object(pig(x = 100, y = 190, z = 200, scale = 40, angle = c(0, 30, 0))) \%>\%
+                  material = diffuse(checkercolor = "purple", checkerperiod = 30))) |>
+  add_object(pig(x = 100, y = 190, z = 200, scale = 40, angle = c(0, 30, 0))) |>
   add_object(sphere(x = 420, y = 555 / 8, z = 100, radius = 555 / 8,
-                    material = dielectric(color = "orange"))) \%>\%
+                    material = dielectric(color = "orange"))) |>
   add_object(yz_rect(x = 5, y = 300, z = 555 / 2, zwidth = 400, ywidth = 400,
-                     material = diffuse(image_texture = image_array))) \%>\%
+                     material = diffuse(image_texture = image_array))) |>
   add_object(yz_rect(x = 555 / 2, y = 300, z = 555 - 5, zwidth = 400, ywidth = 400,
-                     material = diffuse(image_texture = image_array), angle = c(0, 90, 0))) \%>\%
+                     material = diffuse(image_texture = image_array), angle = c(0, 90, 0))) |>
   add_object(yz_rect(x = 555 - 5, y = 300, z = 555 / 2, zwidth = 400, ywidth = 400,
-                     material = diffuse(image_texture = image_array), angle = c(0, 180, 0))) \%>\%
+                     material = diffuse(image_texture = image_array), angle = c(0, 180, 0))) |>
   create_instances(x = expand.grid(x = seq(-1, 1, by = 1) * 570 - 555 / 2,
                                    y = seq(-1, 1, by = 1) * 570 - 555 / 2,
-                                   z = 0)) \%>\%
+                                   z = 0)) |>
   render_scene(lookfrom = c(0, 0, -800) * 3, fov = 40,
                samples = 16, sample_method = "sobol_blue",
                parallel = TRUE, width = 800, height = 800)

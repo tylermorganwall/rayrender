@@ -52,28 +52,28 @@ Note: this is just a scaled sphere.
 \examples{
 #Generate an ellipsoid in a Cornell box
 if(run_documentation()) {
-generate_cornell() \%>\%
+generate_cornell() |>
   add_object(ellipsoid(x = 555/2, y = 555/2, z = 555/2,
-                       a = 100, b = 50, c = 50)) \%>\%
+                       a = 100, b = 50, c = 50)) |>
   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40,
                ambient_light = FALSE, samples = 16, parallel = TRUE, clamp_value = 5)
 }
 
 #Change the axes to make it taller rather than wide:
 if(run_documentation()) {
-generate_cornell() \%>\%
+generate_cornell() |>
   add_object(ellipsoid(x = 555/2, y = 555/2, z = 555/2,
-                       a = 100, b = 200, c = 100, material = metal())) \%>\%
+                       a = 100, b = 200, c = 100, material = metal())) |>
   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40,
                ambient_light = FALSE, samples = 16, parallel = TRUE, clamp_value = 5)
 }
 
 #Rotate it and make it dielectric:
 if(run_documentation()) {
-generate_cornell() \%>\%
+generate_cornell() |>
   add_object(ellipsoid(x = 555/2, y = 555/2, z = 555/2,
                        a = 100, b = 200, c = 100, angle = c(0, 0, 45),
-                       material = dielectric())) \%>\%
+                       material = dielectric())) |>
   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40,
                ambient_light = FALSE, samples = 16, parallel = TRUE, clamp_value = 5)
 }

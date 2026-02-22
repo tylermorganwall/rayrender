@@ -22,48 +22,48 @@ you carve into the object.
 \examples{
 if(run_documentation()) {
 #Cut and onion a sphere:
-generate_ground(material=diffuse(checkercolor="grey20")) \%>\%
+generate_ground(material=diffuse(checkercolor="grey20")) |>
   add_object(csg_object(csg_combine(
     csg_onion(csg_sphere(z=2,x=2,radius=1), thickness = 0.2),
     csg_box(y=1,width=c(10,2,10)), operation = "subtract"),
-    material=glossy(color="red"))) \%>\%
+    material=glossy(color="red"))) |>
     add_object(csg_object(csg_combine(
       csg_onion(csg_sphere(radius=1), thickness = 0.4),
       csg_box(y=1,width=c(10,2,10)), operation = "subtract"),
-      material=glossy(color="purple"))) \%>\%
+      material=glossy(color="purple"))) |>
     add_object(csg_object(csg_combine(
       csg_onion(csg_sphere(z=-2.5,x=-2.5,radius=1), thickness = 0.6),
       csg_box(y=1,width=c(10,2,10)), operation = "subtract"),
-      material=glossy(color="green"))) \%>\%
- add_object(sphere(y=5,x=5,radius=2,material=light())) \%>\%
+      material=glossy(color="green"))) |>
+ add_object(sphere(y=5,x=5,radius=2,material=light())) |>
  render_scene(clamp_value=10, samples=16,lookat=c(0,-0.5,0),
               lookfrom=c(3,5,10),fov=35)
 }
 if(run_documentation()) {
 #Multiple onion layers:
-generate_ground(material=diffuse(checkercolor="grey20")) \%>\%
+generate_ground(material=diffuse(checkercolor="grey20")) |>
   add_object(csg_object(csg_combine(
     csg_onion(csg_onion(csg_onion(csg_sphere(radius=1), 0.4), 0.2),0.1),
     csg_box(y=1,width=c(10,2,10)), operation = "subtract"),
-    material=glossy(color="purple"))) \%>\%
-  add_object(sphere(y=5,x=5,radius=2,material=light())) \%>\%
+    material=glossy(color="purple"))) |>
+  add_object(sphere(y=5,x=5,radius=2,material=light())) |>
   render_scene(clamp_value=10, samples=16,lookat=c(0,-0.5,0),
                lookfrom=c(3,5,10),fov=20)
   }
 if(run_documentation()) {
 #Onion with dielectric sphere to make a bubble:
-generate_cornell() \%>\%
+generate_cornell() |>
   add_object(csg_object(
     csg_onion(csg_sphere(x=555/2,y=555/2,z=555/2, radius=150), 5),
-    material=dielectric(attenuation=c(1,1,0.3)/100))) \%>\%
+    material=dielectric(attenuation=c(1,1,0.3)/100))) |>
   render_scene(clamp_value=10, samples=16)
   }
 if(run_documentation()) {
 #Multiple onion operations to make a bubble within a bubble:
-generate_cornell() \%>\%
+generate_cornell() |>
   add_object(csg_object(
     csg_onion(csg_onion(csg_sphere(x=555/2,y=555/2,z=555/2, radius=150), 10),5),
-    material=dielectric(attenuation=c(1,1,0.3)/100))) \%>\%
+    material=dielectric(attenuation=c(1,1,0.3)/100))) |>
   render_scene(clamp_value=10, samples=16)
 }
 }

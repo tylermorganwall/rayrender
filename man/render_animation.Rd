@@ -211,29 +211,29 @@ ellip_scene = do.call(rbind, elliplist)
 camera_pos = list(c(0,1,15),c(5,-5,5),c(-5,5,-5),c(0,1,-15))
 
 #Plot the camera path and render from above using the path object:
-generate_ground(material=diffuse(checkercolor="grey20"),depth=-10) \%>\%
-  add_object(ellip_scene) \%>\%
-  add_object(sphere(y=50,radius=10,material=light(intensity=30))) \%>\%
-  add_object(path(camera_pos, material=diffuse(color="red"))) \%>\%
+generate_ground(material=diffuse(checkercolor="grey20"),depth=-10) |>
+  add_object(ellip_scene) |>
+  add_object(sphere(y=50,radius=10,material=light(intensity=30))) |>
+  add_object(path(camera_pos, material=diffuse(color="red"))) |>
   render_scene(lookfrom=c(0,20,0), width=800,height=800,samples=32,
                camera_up = c(0,0,1),
                fov=80)
 }
 if(run_documentation()) {
 #Side view
-generate_ground(material=diffuse(checkercolor="grey20"),depth=-10) \%>\%
-  add_object(ellip_scene) \%>\%
-  add_object(sphere(y=50,radius=10,material=light(intensity=30))) \%>\%
-  add_object(path(camera_pos, material=diffuse(color="red"))) \%>\%
+generate_ground(material=diffuse(checkercolor="grey20"),depth=-10) |>
+  add_object(ellip_scene) |>
+  add_object(sphere(y=50,radius=10,material=light(intensity=30))) |>
+  add_object(path(camera_pos, material=diffuse(color="red"))) |>
   render_scene(lookfrom=c(20,0,0),width=800,height=800,samples=32,
                  fov=80)
  }
 if(run_documentation()) {
 #View from the start
-generate_ground(material=diffuse(checkercolor="grey20"),depth=-10) \%>\%
-  add_object(ellip_scene) \%>\%
-  add_object(sphere(y=50,radius=10,material=light(intensity=30))) \%>\%
-  add_object(path(camera_pos, material=diffuse(color="red"))) \%>\%
+generate_ground(material=diffuse(checkercolor="grey20"),depth=-10) |>
+  add_object(ellip_scene) |>
+  add_object(sphere(y=50,radius=10,material=light(intensity=30))) |>
+  add_object(path(camera_pos, material=diffuse(color="red"))) |>
   render_scene(lookfrom=c(0,1.5,16),width=800,height=800,samples=32,
                  fov=80)
  }
@@ -250,15 +250,15 @@ camera_motion
 
 #Pass NA filename to plot to the device. We'll keep the path and offset it slightly to see
 #where we're going. This results in a "roller coaster" effect.
-generate_ground(material=diffuse(checkercolor="grey20"),depth=-10) \%>\%
-  add_object(ellip_scene) \%>\%
-  add_object(sphere(y=50,radius=10,material=light(intensity=30))) \%>\%
-  add_object(obj_model(r_obj(),x=10,y=-5,z=10,scale=7, angle=c(-45,135,0),
-                       material=dielectric(attenuation=c(1,1,0.3)))) \%>\%
-  add_object(pig(x=-7,y=10,z=-5,scale=1,angle=c(0,-45,80),emotion="angry")) \%>\%
+generate_ground(material=diffuse(checkercolor="grey20"),depth=-10) |>
+  add_object(ellip_scene) |>
+  add_object(sphere(y=50,radius=10,material=light(intensity=30))) |>
+  add_object(obj_model(r_obj(),x=10,y=-5,z=10,scale=7, angle=c(45,135,0),
+                       material=dielectric(attenuation=c(1,1,0.3)))) |>
+  add_object(pig(x=-7,y=10,z=-5,scale=1,angle=c(0,-45,80),emotion="angry")) |>
   add_object(pig(x=0,y=-0.25,z=-15,scale=1,angle=c(0,225,-22), order_rotation = c(3,2,1),
-                 emotion="angry", spider=TRUE)) \%>\%
-  add_object(path(camera_pos, y=-0.2,material=diffuse(color="red"))) \%>\%
+                 emotion="angry", spider=TRUE)) |>
+  add_object(path(camera_pos, y=-0.2,material=diffuse(color="red"))) |>
   render_animation(filename = NA, camera_motion = camera_motion, samples=16,
                    sample_method="sobol_blue",
                    clamp_value=10, width=400, height=400)

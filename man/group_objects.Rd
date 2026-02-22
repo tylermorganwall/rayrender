@@ -41,8 +41,8 @@ Group and transform objects together.
 \examples{
 #Generate the ground and add some objects
 if(run_documentation()) {
-scene = generate_cornell() \%>\%
-        add_object(cube(x=555/2,y=555/8,z=555/2,width=555/4)) \%>\%
+scene = generate_cornell() |>
+        add_object(cube(x=555/2,y=555/8,z=555/2,width=555/4)) |>
         add_object(cube(x=555/2,y=555/4+555/16,z=555/2,width=555/8))
 render_scene(scene,lookfrom=c(278,278,-800),lookat = c(278,278,0), aperture=0,
              samples=16, fov=50, parallel=TRUE, clamp_value=5)
@@ -52,8 +52,8 @@ if(run_documentation()) {
 #Group the entire room and rotate around its center, but keep the cubes in the same place.
 scene2 = group_objects(generate_cornell(),
                        pivot_point=c(555/2,555/2,555/2),
-                       angle=c(0,30,0)) \%>\%
-         add_object(cube(x=555/2,y=555/8,z=555/2,width=555/4)) \%>\%
+                       angle=c(0,30,0)) |>
+         add_object(cube(x=555/2,y=555/8,z=555/2,width=555/4)) |>
         add_object(cube(x=555/2,y=555/4+555/16,z=555/2,width=555/8))
 
 render_scene(scene2,lookfrom=c(278,278,-800),lookat = c(278,278,0), aperture=0,
@@ -61,9 +61,9 @@ render_scene(scene2,lookfrom=c(278,278,-800),lookat = c(278,278,0), aperture=0,
 }
 if(run_documentation()) {
 #Now group the cubes instead of the Cornell box, and rotate/translate them together
-twocubes = cube(x=555/2,y=555/8,z=555/2,width=555/4) \%>\%
+twocubes = cube(x=555/2,y=555/8,z=555/2,width=555/4) |>
            add_object(cube(x=555/2, y=555/4 + 555/16, z=555/2, width=555/8))
-scene3 = generate_cornell() \%>\%
+scene3 = generate_cornell() |>
          add_object(group_objects(twocubes, translate = c(0,50,0),angle = c(0,45,0),
          pivot_point = c(555/2,0,555/2)))
 
@@ -72,7 +72,7 @@ render_scene(scene3,lookfrom=c(278,278,-800),lookat = c(278,278,0), aperture=0,
 }
 if(run_documentation()) {
 #Flatten and stretch the cubes together on two axes
-scene4 = generate_cornell() \%>\%
+scene4 = generate_cornell() |>
          add_object(group_objects(twocubes, translate = c(0,-40,0),
                                   angle = c(0,45,0), scale = c(2,0.5,1),
                                   pivot_point = c(555/2,0,555/2)))
@@ -82,8 +82,8 @@ render_scene(scene4,lookfrom=c(278,278,-800),lookat = c(278,278,0), aperture=0,
 }
 if(run_documentation()) {
 #Add another layer of grouping, including the Cornell box
-scene4 \%>\%
-  group_objects(pivot_point = c(555/2,555/2,555/2),scale=c(1.5,0.5,0.3), angle=c(-20,0,20)) \%>\%
+scene4 |>
+  group_objects(pivot_point = c(555/2,555/2,555/2),scale=c(1.5,0.5,0.3), angle=c(-20,0,20)) |>
   render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), aperture=0,
              samples=509, fov=50, parallel=TRUE, clamp_value=5)
 }

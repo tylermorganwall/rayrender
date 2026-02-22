@@ -60,7 +60,7 @@ render_scene(generate_cornell(lightwidth=200,lightdepth=200),
 }
 if(run_documentation()) {
 #Place a sphere in the middle of the box.
-scene = generate_cornell(lightwidth=200,lightdepth=200) \%>\%
+scene = generate_cornell(lightwidth=200,lightdepth=200) |>
   add_object(sphere(x=555/2,y=555/2,z=555/2,radius=555/4))
 render_scene(scene, samples=16,aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 }

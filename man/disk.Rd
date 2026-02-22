@@ -50,26 +50,26 @@ Disk Object
 \examples{
 #Generate a disk in the cornell box.
 if(run_documentation()) {
-generate_cornell() \%>\%
+generate_cornell() |>
   add_object(disk(x = 555/2, y = 50, z = 555/2, radius = 150,
-                  material = diffuse(color = "orange"))) \%>\%
+                  material = diffuse(color = "orange"))) |>
   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40,
                ambient_light = FALSE, samples = 16, parallel = TRUE, clamp_value = 5)
 }
 #Rotate the disk.
 if(run_documentation()) {
-generate_cornell() \%>\%
+generate_cornell() |>
   add_object(disk(x = 555/2, y = 555/2, z = 555/2, radius = 150, angle = c(-45, 0, 0),
-                  material = diffuse(color = "orange"))) \%>\%
+                  material = diffuse(color = "orange"))) |>
   render_scene(lookfrom = c(278, 278, -800) , lookat = c(278, 278, 0), fov = 40,
                ambient_light = FALSE, samples = 16, parallel = TRUE, clamp_value = 5)
 }
 #Pass a value for the inner radius.
 if(run_documentation()) {
-generate_cornell() \%>\%
+generate_cornell() |>
   add_object(disk(x = 555/2, y = 555/2, z = 555/2,
                   radius = 150, inner_radius = 75, angle = c(-45, 0, 0),
-                  material = diffuse(color = "orange"))) \%>\%
+                  material = diffuse(color = "orange"))) |>
   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40,
                ambient_light = FALSE, samples = 16, parallel = TRUE, clamp_value = 5)
 }

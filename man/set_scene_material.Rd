@@ -19,7 +19,7 @@ Set Material for All Objects
 }
 \examples{
 # Create a scene with different materials
-scene = generate_cornell() \%>\%
+scene = generate_cornell() |>
   add_object(sphere(x=555/2, y=555/2, z=555/2, radius=100))
 
 # Set all objects to be metallic

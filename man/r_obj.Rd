@@ -19,10 +19,10 @@ to be used with `obj_model()`
 \examples{
 #Load and render the included example R object file.
 if(run_documentation()) {
-generate_ground(material = diffuse(noise = TRUE, noisecolor = "grey20")) \%>\%
+generate_ground(material = diffuse(noise = TRUE, noisecolor = "grey20")) |>
   add_object(sphere(x = 2, y = 3, z = -2, radius = 1,
-                    material = light(intensity = 10))) \%>\%
-  add_object(obj_model(r_obj(), scale=2.5, angle = c(0,180,0), material = diffuse(color="red"))) \%>\%
+                    material = light(intensity = 10))) |>
+  add_object(obj_model(r_obj(), scale=2.5, angle = c(0,0,0), material = diffuse(color="red"))) |>
   render_scene(parallel=TRUE, lookfrom = c(0, 1, -10), clamp_value = 5, samples = 200)
 }
 }

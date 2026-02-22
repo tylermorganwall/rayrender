@@ -87,11 +87,11 @@ if(run_documentation()) {
   library(Rvcg)
   data(humface)
 
-  generate_studio() \%>\%
+  generate_studio() |>
     add_object(mesh3d_model(humface,y=-0.3,x=0,z=0,
                           material=glossy(color="dodgerblue4"), scale = 1/70,
-                          angle = c(0,180,0))) \%>\%
-    add_object(sphere(y=5,x=5,z=-5,material=light(intensity=50))) \%>\%
+                          angle = c(0,180,0))) |>
+    add_object(sphere(y=5,x=5,z=-5,material=light(intensity=50))) |>
     render_scene(samples=16,width=800,height=800,
                  lookat = c(0,0.5,1), aperture=0.0)
 }

@@ -126,61 +126,61 @@ Microfacet Material
 # See the website refractiveindex.info for eta and k data, use
 # wavelengths 580nm (R), 530nm (G), and 430nm (B).
 if(run_documentation()) {
-generate_cornell() \%>\%
+generate_cornell() |>
   add_object(ellipsoid(x=555/2,555/2,y=150, a=100,b=150,c=100,
              material=microfacet(roughness=0.1,
-                                 eta=c(0.216,0.42833,1.3184), kappa=c(3.239,2.4599,1.8661)))) \%>\%
+                                 eta=c(0.216,0.42833,1.3184), kappa=c(3.239,2.4599,1.8661)))) |>
  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=16,
              aperture=0, fov=40, parallel=TRUE,clamp_value=10)
  }
 if(run_documentation()) {
 #Make the roughness anisotropic (either horizontal or vertical), adding an extra light in front
 #to show off the different microfacet orientations
-generate_cornell() \%>\%
-  add_object(sphere(x=555/2,z=50,y=75,radius=20,material=light())) \%>\%
+generate_cornell() |>
+  add_object(sphere(x=555/2,z=50,y=75,radius=20,material=light())) |>
   add_object(ellipsoid(x=555-150,555/2,y=150, a=100,b=150,c=100,
              material=microfacet(roughness=c(0.3,0.1),
-                                 eta=c(0.216,0.42833,1.3184), kappa=c(3.239,2.4599,1.8661)))) \%>\%
+                                 eta=c(0.216,0.42833,1.3184), kappa=c(3.239,2.4599,1.8661)))) |>
  add_object(ellipsoid(x=150,555/2,y=150, a=100,b=150,c=100,
              material=microfacet(roughness=c(0.1,0.3),
-                                 eta=c(0.216,0.42833,1.3184), kappa=c(3.239,2.4599,1.8661)))) \%>\%
+                                 eta=c(0.216,0.42833,1.3184), kappa=c(3.239,2.4599,1.8661)))) |>
  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=16,
              aperture=0, fov=40,  parallel=TRUE,clamp_value=10)
 }
 if(run_documentation()) {
 #Render a rough silver R with a smaller golden egg in front
-generate_cornell() \%>\%
+generate_cornell() |>
   add_object(obj_model(r_obj(simple_r = TRUE),
                        x=555/2,z=350,y=0, scale_obj = 200, angle=c(0,20,0),
              material=microfacet(roughness=0.2,
-                                 eta=c(1.1583,0.9302,0.5996), kappa=c(6.9650,6.396,5.332)))) \%>\%
+                                 eta=c(1.1583,0.9302,0.5996), kappa=c(6.9650,6.396,5.332)))) |>
  add_object(ellipsoid(x=200,z=200,y=80, a=50,b=80,c=50,
              material=microfacet(roughness=0.1,
-                                 eta=c(0.216,0.42833,1.3184), kappa=c(3.239,2.4599,1.8661)))) \%>\%
+                                 eta=c(0.216,0.42833,1.3184), kappa=c(3.239,2.4599,1.8661)))) |>
  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=16,
              aperture=0, fov=40, parallel=TRUE,clamp_value=10)
  }
 if(run_documentation()) {
 #Increase the roughness
-generate_cornell() \%>\%
+generate_cornell() |>
   add_object(obj_model(r_obj(simple_r = TRUE),
                        x=555/2,z=350,y=0, scale_obj = 200, angle=c(0,20,0),
              material=microfacet(roughness=0.5,
-                                 eta=c(1.1583,0.9302,0.5996), kappa=c(6.9650,6.396,5.332)))) \%>\%
+                                 eta=c(1.1583,0.9302,0.5996), kappa=c(6.9650,6.396,5.332)))) |>
  add_object(ellipsoid(x=200,z=200,y=80, a=50,b=80,c=50,
              material=microfacet(roughness=0.3,
-                                 eta=c(0.216,0.42833,1.3184), kappa=c(3.239,2.4599,1.8661)))) \%>\%
+                                 eta=c(0.216,0.42833,1.3184), kappa=c(3.239,2.4599,1.8661)))) |>
  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=16,
              aperture=0, fov=40, parallel=TRUE,clamp_value=10)
  }
 if(run_documentation()) {
  #Use transmission for a rough dielectric
-generate_cornell() \%>\%
+generate_cornell() |>
   add_object(obj_model(r_obj(simple_r = TRUE),
                        x=555/2,z=350,y=0, scale_obj = 200, angle=c(0,20,0),
-             material=microfacet(roughness=0.3, transmission=T, eta=1.6))) \%>\%
+             material=microfacet(roughness=0.3, transmission=T, eta=1.6))) |>
  add_object(ellipsoid(x=200,z=200,y=80, a=50,b=80,c=50,
-             material=microfacet(roughness=0.3, transmission=T, eta=1.6))) \%>\%
+             material=microfacet(roughness=0.3, transmission=T, eta=1.6))) |>
  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=16,
              aperture=0, fov=40, parallel=TRUE,clamp_value=10, min_variance=1e-6)
 }
