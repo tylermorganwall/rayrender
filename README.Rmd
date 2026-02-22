@@ -219,7 +219,7 @@ We'll first start by rendering a simple scene consisting of the ground, a sphere
 ```{r README_ground,cache=TRUE, message=FALSE}
 library(rayrender)
 
-scene = generate_ground(material=diffuse(checkercolor="grey20")) %>%
+scene = generate_ground(material=diffuse(checkercolor="grey20")) |>
   add_object(sphere(y=0.2,material=glossy(color="#2b6eff",reflectance=0.05))) 
 render_scene(scene, parallel = TRUE, width = 800, height = 800, samples = 64)
 ```
@@ -227,9 +227,9 @@ render_scene(scene, parallel = TRUE, width = 800, height = 800, samples = 64)
 By default, a scene without any lights includes a blue sky. We can turn this off either by setting `ambient_light = FALSE`, or by adding a light to our scene. We will add an emissive sphere above and behind our camera.
 
 ```{r README_ground_sphere,cache=TRUE, message=FALSE}
-scene = generate_ground(material=diffuse(checkercolor="grey20")) %>%
-  add_object(sphere(y=0.2,material=glossy(color="#2b6eff",reflectance=0.05))) %>%
-  add_object(sphere(y=10,z=1,radius=4,material=light(intensity=4))) %>%
+scene = generate_ground(material=diffuse(checkercolor="grey20")) |>
+  add_object(sphere(y=0.2,material=glossy(color="#2b6eff",reflectance=0.05))) |>
+  add_object(sphere(y=10,z=1,radius=4,material=light(intensity=4))) |>
   add_object(sphere(z=15,material=light(intensity=70)))
 render_scene(scene, parallel = TRUE, width = 800, height = 800, samples = 64)
 ```
@@ -238,11 +238,11 @@ Now we'll add the (included) R .obj file into the scene, using the `obj_model()`
 
 
 ```{r README_ground_r_path,cache=TRUE, message=FALSE}
-scene = generate_ground(material=diffuse(checkercolor="grey20")) %>%
-  add_object(sphere(y=0.2,material=glossy(color="#2b6eff",reflectance=0.05))) %>%
+scene = generate_ground(material=diffuse(checkercolor="grey20")) |>
+  add_object(sphere(y=0.2,material=glossy(color="#2b6eff",reflectance=0.05))) |>
   add_object(obj_model(r_obj(simple_r = TRUE),
-                       z=1,y=-0.05,scale_obj=0.45,material=diffuse())) %>%
-  add_object(sphere(y=10,z=1,radius=4,material=light(intensity=4))) %>%
+                       z=1,y=-0.05,scale_obj=0.45,material=diffuse())) |>
+  add_object(sphere(y=10,z=1,radius=4,material=light(intensity=4))) |>
   add_object(sphere(z=15,material=light(intensity=70)))
 render_scene(scene, parallel = TRUE, width = 800, height = 800, samples = 64)
 ```
@@ -280,19 +280,19 @@ plot(iris$Petal.Length,iris$Sepal.Width,col=iris$Species,pch=18,cex=12)
 dev.off()
 image_array = png::readPNG(tempfileplot)
 
-generate_cornell() %>%
-  add_object(ellipsoid(x=555/2,y=100,z=555/2,a=50,b=100,c=50, material = metal(color="lightblue"))) %>%
+generate_cornell() |>
+  add_object(ellipsoid(x=555/2,y=100,z=555/2,a=50,b=100,c=50, material = metal(color="lightblue"))) |>
   add_object(cube(x=100,y=130/2,z=200,xwidth = 130,ywidth=130,zwidth = 130,
-                  material=diffuse(checkercolor="purple", checkerperiod = 30),angle=c(0,10,0))) %>%
-  add_object(pig(x=100,y=190,z=200,scale=40,angle=c(0,30,0))) %>%
+                  material=diffuse(checkercolor="purple", checkerperiod = 30),angle=c(0,10,0))) |>
+  add_object(pig(x=100,y=190,z=200,scale=40,angle=c(0,30,0))) |>
   add_object(sphere(x=420,y=555/8,z=100,radius=555/8,
-                    material = dielectric(color="orange"))) %>%
+                    material = dielectric(color="orange"))) |>
   add_object(yz_rect(x=0.01,y=300,z=555/2,zwidth=400,ywidth=400,
-                     material = diffuse(image_texture = image_array))) %>%
+                     material = diffuse(image_texture = image_array))) |>
   add_object(yz_rect(x=555/2,y=300,z=555-0.01,zwidth=400,ywidth=400,
-                     material = diffuse(image_texture = image_array),angle=c(0,90,0))) %>%
+                     material = diffuse(image_texture = image_array),angle=c(0,90,0))) |>
   add_object(yz_rect(x=555-0.01,y=300,z=555/2,zwidth=400,ywidth=400,
-                     material = diffuse(image_texture = image_array),angle=c(0,180,0))) %>%
+                     material = diffuse(image_texture = image_array),angle=c(0,180,0))) |>
   render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), aperture=0, fov=40,  samples = 64,
              ambient_light=FALSE, parallel=TRUE, width=800, height=800)
 ```
@@ -301,7 +301,7 @@ Rayrender also has an interface to create objects using constructive solid geome
 
 ```{r, cache=TRUE}
 
-generate_ground(material=diffuse(checkercolor="grey20")) %>%
+generate_ground(material=diffuse(checkercolor="grey20")) |>
   add_object(csg_object(csg_combine(
     csg_combine(
       csg_box(),
@@ -311,16 +311,16 @@ generate_ground(material=diffuse(checkercolor="grey20")) %>%
                    csg_cylinder(start=c(0,-1,0), end=c(0,1,0), radius=0.4),
                    csg_cylinder(start=c(0,0,-1), end=c(0,0,1), radius=0.4))),
     operation="subtract"),
-    material=glossy(color="red"))) %>%
+    material=glossy(color="red"))) |>
   add_object(csg_object(csg_translate(csg_combine(
     csg_onion(csg_onion(csg_onion(csg_sphere(radius=0.3), 0.2), 0.1),0.05),
     csg_box(y=1,width=c(10,2,10)), operation = "subtract"), x=1.3),
-    material=glossy(color="purple"))) %>%
+    material=glossy(color="purple"))) |>
   add_object(csg_object(csg_combine(
      csg_sphere(x=-1.2,z=-0.3, y=0.5,radius = 0.4),
      csg_sphere(x=-1.4,z=0.4, radius = 0.4), operation="blend", radius=0.5),
-     material=glossy(color="dodgerblue4"))) %>%
-  add_object(sphere(y=5,x=3,radius=1,material=light(intensity=30))) %>%
+     material=glossy(color="dodgerblue4"))) |>
+  add_object(sphere(y=5,x=3,radius=1,material=light(intensity=30))) |>
   render_scene(clamp_value=10, fov=20,lookfrom=c(5,5,10),samples=64,width=800,height=800)
 
 ```
@@ -347,9 +347,9 @@ vals = ode(y = state, times = times, func = Lorenz, parms = parameters)[,-1]
 #scale and rearrange:
 vals = vals[,c(1,3,2)]/20
 
-generate_studio() %>% 
-  add_object(path(points=vals,y=-0.6,width=0.01,material=diffuse(color="red"))) %>% 
-  add_object(sphere(y=5,z=5,radius=0.5,material=light(intensity=200))) %>% 
+generate_studio() |> 
+  add_object(path(points=vals,y=-0.6,width=0.01,material=diffuse(color="red"))) |> 
+  add_object(sphere(y=5,z=5,radius=0.5,material=light(intensity=200))) |> 
   render_scene(samples=64,lookat=c(0,0.5,0),lookfrom=c(0,1,10),width = 800, height = 800, parallel=TRUE)
 ```
 
@@ -401,15 +401,15 @@ tempfilehdr = tempfile(fileext = ".hdr")
 download.file("https://www.tylermw.com/data/venice_sunset_2k.hdr",tempfilehdr, mode="wb")
 hollow_star = rbind(star_polygon, 0.8 * star_polygon)
 
-generate_ground(material = diffuse(color="grey20", checkercolor = "grey50",sigma=90)) %>%
+generate_ground(material = diffuse(color="grey20", checkercolor = "grey50",sigma=90)) |>
   add_object(sphere(material=microfacet(roughness = 0.2,
-                                        eta=c(0.216,0.42833,1.3184), kappa=c(3.239,2.4599,1.8661)))) %>%
+                                        eta=c(0.216,0.42833,1.3184), kappa=c(3.239,2.4599,1.8661)))) |>
   add_object(obj_model(y=-1,x=-1.8,r_obj(simple_r = TRUE), 
-                       angle=c(0,135,0),material = diffuse(sigma=90))) %>%
-  add_object(pig(x=1.8,y=-1.2,scale=0.5,angle=c(0,90,0),diffuse_sigma = 90)) %>%
+                       angle=c(0,135,0),material = diffuse(sigma=90))) |>
+  add_object(pig(x=1.8,y=-1.2,scale=0.5,angle=c(0,90,0),diffuse_sigma = 90)) |>
   add_object(extruded_polygon(hollow_star,top=-0.5,bottom=-1, z=-2,
                               holes = nrow(star_polygon),
-                              material=diffuse(color="red",sigma=90))) %>%
+                              material=diffuse(color="red",sigma=90))) |>
   render_scene(parallel = TRUE, environment_light = tempfilehdr, width=800,height=800,
                fov=70,samples=64, aperture=0.1, sample_method = "sobol_blue",
                lookfrom=c(-0.9,1.2,-4.5),lookat=c(0,-1,0))
