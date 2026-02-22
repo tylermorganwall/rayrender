@@ -598,12 +598,16 @@ PKG_CPPFLAGS = append_flags(
 PKG_LIBS_ACC = add_rpath(PKG_LIBS_ACC, openexr_lib_arch)
 PKG_LIBS_ACC = append_flags(
 	PKG_LIBS_ACC,
-	"-lOpenEXR-3_4",
-	"-lOpenEXRUtil-3_4",
-	"-lOpenEXRCore-3_4",
-	"-lIex-3_4",
-	"-lIlmThread-3_4"
+	"-lOpenEXR-4_0",
+	"-lOpenEXRUtil-4_0",
+	"-lOpenEXRCore-4_0",
+	"-lIex-4_0",
+	"-lIlmThread-4_0"
 )
+openjph_static_lib = file.path(openexr_lib_arch, "libopenjph.a")
+if (file.exists(openjph_static_lib)) {
+	PKG_LIBS_ACC = append_flags(PKG_LIBS_ACC, openjph_static_lib)
+}
 
 imath_lib_dir = tryCatch(
 	normalizePath(
@@ -643,47 +647,6 @@ PKG_CPPFLAGS = append_flags(
 PKG_LIBS_ACC = add_rpath(PKG_LIBS_ACC, imath_lib_arch)
 PKG_LIBS_ACC = append_flags(PKG_LIBS_ACC, "-lImath-3_2")
 
-
-libdeflate_lib_dir = tryCatch(
-	normalizePath(
-		system.file("lib", package = "libdeflate", mustWork = TRUE),
-		winslash = "/",
-		mustWork = TRUE
-	),
-	error = function(e) {
-		stop("libdeflate not found; please install libdeflate.", call. = FALSE)
-	}
-)
-libdeflate_inc_dir = tryCatch(
-	normalizePath(
-		system.file("include", package = "libdeflate", mustWork = TRUE),
-		winslash = "/",
-		mustWork = TRUE
-	),
-	error = function(e) {
-		stop(
-			"libdeflate headers not found; please install libdeflate.",
-			call. = FALSE
-		)
-	}
-)
-libdeflate_lib_arch = file.path(libdeflate_lib_dir, target_arch)
-if (!dir.exists(libdeflate_lib_arch)) {
-	stop(
-		sprintf(
-			"libdeflate library directory for architecture '%s' not found at %s",
-			target_arch,
-			libdeflate_lib_arch
-		),
-		call. = FALSE
-	)
-}
-PKG_CPPFLAGS = append_flags(
-	PKG_CPPFLAGS,
-	flag_with_path("-I", (libdeflate_inc_dir))
-)
-PKG_LIBS_ACC = add_rpath(PKG_LIBS_ACC, libdeflate_lib_arch)
-PKG_LIBS_ACC = append_flags(PKG_LIBS_ACC, "-ldeflate")
 
 arch_norm = tolower(target_arch)
 # "x86-64" -> "x86_64"
