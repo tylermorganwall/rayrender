@@ -134,22 +134,22 @@
 #' }
 #' if (run_documentation()) {
 #'   # Add a sphere to the center
-#'   scene = scene %>%
+#'   scene = scene |>
 #'     add_object(sphere(x = 0, y = 0, z = 0, radius = 0.5, material = diffuse(color = c(1, 0, 1))))
 #'   render_scene(scene, fov = 20, parallel = TRUE, samples = 16)
 #' }
 #' if (run_documentation()) {
 #'   # Add a marbled cube
-#'   scene = scene %>%
+#'   scene = scene |>
 #'     add_object(cube(x = 1.1, y = 0, z = 0, material = diffuse(noise = 3)))
 #'   render_scene(scene, fov = 20, parallel = TRUE, samples = 16)
 #' }
 #' if (run_documentation()) {
 #'   # Add a metallic gold sphere, using stratified sampling for a higher quality render
 #'   # We also add a light, which turns off the default ambient lighting
-#'   scene = scene %>%
+#'   scene = scene |>
 #'     add_object(sphere(x = -1.1, y = 0, z = 0, radius = 0.5,
-#'                       material = metal(color = "gold", fuzz = 0.1))) %>%
+#'                       material = metal(color = "gold", fuzz = 0.1))) |>
 #'     add_object(sphere(y=10,z=-13,radius=2,material=light(intensity=40)))
 #'   render_scene(scene, fov = 20, parallel = TRUE, samples = 16)
 #' }
@@ -164,7 +164,7 @@
 #'   plot(iris$Petal.Length, iris$Sepal.Width, col = iris$Species, pch = 18, cex = 4)
 #'   dev.off()
 #'   image_array = aperm(png::readPNG(tempfileplot), c(2, 1, 3))
-#'   scene = scene %>%
+#'   scene = scene |>
 #'     add_object(xy_rect(x = 0, y = 1.1, z = 0, xwidth = 2, angle = c(0, 0, 0),
 #'                        flipped = TRUE,
 #'                        material = diffuse(image_texture = image_array)))
@@ -190,18 +190,18 @@
 #'   # We can also capture a 360 environment image by setting `fov = 360` (can be used for VR).
 #'   # The left edge of the image is directly where the camera is pointing--we point the image
 #'   # backwards so the full cornell box is in the "center" of the environment map.
-#'   generate_cornell() %>%
+#'   generate_cornell() |>
 #'     add_object(ellipsoid(x = 555 / 2, y = 100, z = 555 / 2, a = 50, b = 100, c = 50,
-#'                           material = metal(color = "lightblue"))) %>%
+#'                           material = metal(color = "lightblue"))) |>
 #'     add_object(cube(x = 100, y = 130 / 2, z = 200, xwidth = 130, ywidth = 130, zwidth = 130,
 #'                      material = diffuse(checkercolor = "purple",
-#'                                         checkerperiod = 30), angle = c(0, 10, 0))) %>%
-#'     add_object(pig(x = 100, y = 190, z = 200, scale = 40, angle = c(0, 30, 0))) %>%
+#'                                         checkerperiod = 30), angle = c(0, 10, 0))) |>
+#'     add_object(pig(x = 100, y = 190, z = 200, scale = 40, angle = c(0, 30, 0))) |>
 #'     add_object(sphere(x = 420, y = 555 / 8, z = 100, radius = 555 / 8,
-#'                        material = dielectric(color = "orange"))) %>%
+#'                        material = dielectric(color = "orange"))) |>
 #'     add_object(xz_rect(x = 555 / 2, z = 555 / 2, y = 1, xwidth = 555, zwidth = 555,
 #'                        material = glossy(checkercolor = "white",
-#'                                          checkerperiod = 10, color = "dodgerblue"))) %>%
+#'                                          checkerperiod = 10, color = "dodgerblue"))) |>
 #'     render_scene(lookfrom = c(278, 278, -10), lookat = c(278, 278, -300), clamp_value = 100,
 #'                  fov = 360,  samples = 16, width = 800, height = 800)
 #' }

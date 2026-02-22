@@ -20,17 +20,17 @@
 #' @examples
 #' #Generate a sphere in the cornell box.
 #' if(run_documentation()) {
-#' generate_cornell() %>%
-#'   add_object(sphere(x = 555/2, y = 555/2, z = 555/2, radius = 100)) %>%
+#' generate_cornell() |>
+#'   add_object(sphere(x = 555/2, y = 555/2, z = 555/2, radius = 100)) |>
 #'   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40,
 #'                ambient_light = FALSE, samples = 16, clamp_value = 5)
 #' }
 #'
 #' #Generate a gold sphere in the cornell box
 #' if(run_documentation()) {
-#' generate_cornell() %>%
+#' generate_cornell() |>
 #'   add_object(sphere(x = 555/2, y = 100, z = 555/2, radius = 100,
-#'                     material = microfacet(color = "gold"))) %>%
+#'                     material = microfacet(color = "gold"))) |>
 #'   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40,
 #'                ambient_light = FALSE, samples = 16, clamp_value = 5)
 #' }
@@ -103,28 +103,28 @@ sphere = function(
 #' @examples
 #' #Generate a cube in the cornell box.
 #' if(run_documentation()) {
-#' generate_cornell() %>%
+#' generate_cornell() |>
 #'   add_object(cube(x = 555/2, y = 100, z = 555/2,
-#'                   xwidth = 200, ywidth = 200, zwidth = 200, angle = c(0, 30, 0))) %>%
+#'                   xwidth = 200, ywidth = 200, zwidth = 200, angle = c(0, 30, 0))) |>
 #'   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40,
 #'                ambient_light = FALSE, samples = 16, parallel = TRUE, clamp_value = 5)
 #' }
 #' #Generate a gold cube in the cornell box
 #' if(run_documentation()) {
-#' generate_cornell() %>%
+#' generate_cornell() |>
 #'   add_object(cube(x = 555/2, y = 100, z = 555/2,
 #'                   xwidth = 200, ywidth = 200, zwidth = 200, angle = c(0, 30, 0),
-#'                   material = metal(color = "gold", fuzz = 0.2))) %>%
+#'                   material = metal(color = "gold", fuzz = 0.2))) |>
 #'   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40,
 #'                ambient_light = FALSE, samples = 16, parallel = TRUE, clamp_value = 5)
 #' }
 #'
 #' #Generate a rotated dielectric box in the cornell box
 #' if(run_documentation()) {
-#' generate_cornell() %>%
+#' generate_cornell() |>
 #'   add_object(cube(x = 555/2, y = 200, z = 555/2,
 #'                   xwidth = 200, ywidth = 100, zwidth = 200, angle = c(-30, 30, -30),
-#'                   material = dielectric())) %>%
+#'                   material = dielectric())) |>
 #'   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40,
 #'                ambient_light = FALSE, samples = 16, parallel = TRUE, clamp_value = 5)
 #' }
@@ -202,19 +202,19 @@ cube = function(
 #' @examples
 #' #Generate a purple rectangle in the cornell box.
 #' if(run_documentation()) {
-#' generate_cornell() %>%
+#' generate_cornell() |>
 #'   add_object(xy_rect(x = 555/2, y = 100, z = 555/2, xwidth = 200, ywidth = 200,
-#'              material = diffuse(color = "purple"))) %>%
+#'              material = diffuse(color = "purple"))) |>
 #'   render_scene(lookfrom = c(278, 278, -800), lookat = c(278, 278, 0), fov = 40,
 #'                ambient_light = FALSE, samples = 16, parallel = TRUE, clamp_value = 5)
 #' }
 #'
 #' #Generate a gold plane in the cornell box
 #' if(run_documentation()) {
-#' generate_cornell() %>%
+#' generate_cornell() |>
 #'   add_object(xy_rect(x = 555/2, y = 100, z = 555/2,
 #'                      xwidth = 200, ywidth = 200, angle = c(0, 30, 0),
-#'                      material = metal(color = "gold"))) %>%
+#'                      material = metal(color = "gold"))) |>
 #'   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40,
 #'                ambient_light = FALSE, samples = 16, parallel = TRUE, clamp_value = 5)
 #' }
@@ -287,18 +287,18 @@ xy_rect = function(
 #' @examples
 #' #Generate a purple rectangle in the cornell box.
 #' if(run_documentation()) {
-#' generate_cornell() %>%
+#' generate_cornell() |>
 #'   add_object(yz_rect(x = 100, y = 100, z = 555/2, ywidth = 200, zwidth = 200,
-#'                      material = diffuse(color = "purple"))) %>%
+#'                      material = diffuse(color = "purple"))) |>
 #'   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40,
 #'                ambient_light = FALSE, samples = 16, parallel = TRUE, clamp_value = 5)
 #' }
 #' #Generate a gold plane in the cornell box
 #' if(run_documentation()) {
-#' generate_cornell() %>%
+#' generate_cornell() |>
 #'   add_object(yz_rect(x = 100, y = 100, z = 555/2,
 #'                      ywidth = 200, zwidth = 200, angle = c(0, 30, 0),
-#'                      material = metal(color = "gold"))) %>%
+#'                      material = metal(color = "gold"))) |>
 #'   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40,
 #'                ambient_light = FALSE, samples = 16, parallel = TRUE, clamp_value = 5)
 #' }
@@ -371,19 +371,19 @@ yz_rect = function(
 #' @examples
 #' #Generate a purple rectangle in the cornell box.
 #' if(run_documentation()) {
-#' generate_cornell() %>%
+#' generate_cornell() |>
 #'   add_object(xz_rect(x = 555/2, y = 100, z = 555/2, xwidth = 200, zwidth = 200,
-#'              material = diffuse(color = "purple"))) %>%
+#'              material = diffuse(color = "purple"))) |>
 #'   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40,
 #'                ambient_light = FALSE, samples = 16, parallel = TRUE, clamp_value = 5)
 #' }
 #'
 #' #Generate a gold plane in the cornell box
 #' if(run_documentation()) {
-#' generate_cornell() %>%
+#' generate_cornell() |>
 #'   add_object(xz_rect(x = 555/2, y = 100, z = 555/2,
 #'              xwidth = 200, zwidth = 200, angle = c(0, 30, 0),
-#'              material = metal(color = "gold"))) %>%
+#'              material = metal(color = "gold"))) |>
 #'   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40,
 #'                ambient_light = FALSE, samples = 16, parallel = TRUE, clamp_value = 5)
 #' }
@@ -464,17 +464,17 @@ xz_rect = function(
 #' @examples
 #' #Generate a triangle in the Cornell box.
 #' if(run_documentation()) {
-#' generate_cornell() %>%
+#' generate_cornell() |>
 #'   add_object(triangle(v1 = c(100, 100, 100), v2 = c(555/2, 455, 455), v3 = c(455, 100, 100),
-#'                       material = diffuse(color = "purple"))) %>%
+#'                       material = diffuse(color = "purple"))) |>
 #'   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40,
 #'                ambient_light = FALSE, samples = 16, parallel = TRUE, clamp_value = 5)
 #' }
 #' #Pass individual colors to each vertex:
 #' if(run_documentation()) {
-#' generate_cornell() %>%
+#' generate_cornell() |>
 #'   add_object(triangle(v1 = c(100, 100, 100), v2 = c(555/2, 455, 455), v3 = c(455, 100, 100),
-#'                       color1 = "green", color2 = "yellow", color3 = "red")) %>%
+#'                       color1 = "green", color2 = "yellow", color3 = "red")) |>
 #'   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40,
 #'                ambient_light = FALSE, samples = 16, parallel = TRUE, clamp_value = 5)
 #' }
@@ -583,26 +583,26 @@ triangle = function(
 #' @examples
 #' #Generate a disk in the cornell box.
 #' if(run_documentation()) {
-#' generate_cornell() %>%
+#' generate_cornell() |>
 #'   add_object(disk(x = 555/2, y = 50, z = 555/2, radius = 150,
-#'                   material = diffuse(color = "orange"))) %>%
+#'                   material = diffuse(color = "orange"))) |>
 #'   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40,
 #'                ambient_light = FALSE, samples = 16, parallel = TRUE, clamp_value = 5)
 #' }
 #' #Rotate the disk.
 #' if(run_documentation()) {
-#' generate_cornell() %>%
+#' generate_cornell() |>
 #'   add_object(disk(x = 555/2, y = 555/2, z = 555/2, radius = 150, angle = c(-45, 0, 0),
-#'                   material = diffuse(color = "orange"))) %>%
+#'                   material = diffuse(color = "orange"))) |>
 #'   render_scene(lookfrom = c(278, 278, -800) , lookat = c(278, 278, 0), fov = 40,
 #'                ambient_light = FALSE, samples = 16, parallel = TRUE, clamp_value = 5)
 #' }
 #' #Pass a value for the inner radius.
 #' if(run_documentation()) {
-#' generate_cornell() %>%
+#' generate_cornell() |>
 #'   add_object(disk(x = 555/2, y = 555/2, z = 555/2,
 #'                   radius = 150, inner_radius = 75, angle = c(-45, 0, 0),
-#'                   material = diffuse(color = "orange"))) %>%
+#'                   material = diffuse(color = "orange"))) |>
 #'   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40,
 #'                ambient_light = FALSE, samples = 16, parallel = TRUE, clamp_value = 5)
 #' }
@@ -706,11 +706,11 @@ disk = function(
 #'
 #' if(run_documentation()) {
 #' #Load the basic 3D R logo with the included materials
-#' generate_ground(material = diffuse(checkercolor = "grey50")) %>%
+#' generate_ground(material = diffuse(checkercolor = "grey50")) |>
 #'   add_object(obj_model(y = 0.2, filename = rayrender::r_obj(),
-#'                        scale_obj=3, angle=c(0,180,0))) %>%
+#'                        scale_obj=3)) |>
 #'    add_object(sphere(z = -20, x = 20, y = 20, radius = 10,
-#'                      material = light(intensity = 10))) %>%
+#'                      material = light(intensity = 10))) |>
 #'   render_scene(parallel = TRUE, samples = 16, aperture = 0.05,
 #'                sample_method="sobol_blue",
 #'                fov = 20, lookfrom = c(0, 2, -10))
@@ -718,11 +718,11 @@ disk = function(
 #'
 #' if(run_documentation()) {
 #' # Smooth a mesh by setting the number of subdivision levels
-#' generate_ground(material = diffuse(checkercolor = "grey50")) %>%
+#' generate_ground(material = diffuse(checkercolor = "grey50")) |>
 #'   add_object(obj_model(y = 0.2, filename = rayrender::r_obj(),
-#'                        scale_obj=3, subdivision_levels = 3, angle=c(0,180,0))) %>%
+#'                        scale_obj=3, subdivision_levels = 3)) |>
 #'    add_object(sphere(z = -20, x = 20, y = 20, radius = 10,
-#'                      material = light(intensity = 10))) %>%
+#'                      material = light(intensity = 10))) |>
 #'   render_scene(parallel = TRUE, samples = 16, aperture = 0.05,
 #'                sample_method="sobol_blue",
 #'                fov = 20, lookfrom = c(0, 2, -10))
@@ -730,19 +730,19 @@ disk = function(
 #'
 #' if(run_documentation()) {
 #' #Override the materials for each object
-#' generate_ground(material = diffuse(checkercolor = "grey50")) %>%
+#' generate_ground(material = diffuse(checkercolor = "grey50")) |>
 #'   add_object(obj_model(y = 1.4, filename = rayrender::r_obj(), load_material = FALSE,
-#'                        scale_obj = 1.8, angle=c(10,180,0),
-#'                        material = microfacet(color = "gold", roughness = 0.05))) %>%
+#'                        scale_obj = 1.8, angle=c(10,0,0),
+#'                        material = microfacet(color = "gold", roughness = 0.2))) |>
 #'   add_object(obj_model(x = 0.9, y = 0, filename = rayrender::r_obj(), load_material = FALSE,
-#'                        scale_obj = 1.8, angle=c(0,160,0),
-#'                        material = diffuse(color = "dodgerblue"))) %>%
+#'                        scale_obj = 1.8, angle=c(0,20,0),
+#'                        material = diffuse(color = "dodgerblue"))) |>
 #'   add_object(obj_model(x = -0.9, y = 0, filename = rayrender::r_obj() , load_material = FALSE,
-#'                        scale_obj = 1.8, angle=c(0,200,0),
+#'                        scale_obj = 1.8, angle=c(0,-40,0),
 #'                        material = dielectric(attenuation = c(1,0.3,1), priority = 1,
-#'                                              attenuation_intensity = 20))) %>%
+#'                                              attenuation_intensity = 20))) |>
 #'   add_object(sphere(z = -20, x = 20, y = 20, radius = 10,
-#'                     material = light(intensity = 10))) %>%
+#'                     material = light(intensity = 10))) |>
 #'   render_scene(parallel = TRUE, samples = 16, aperture = 0.05,
 #'                sample_method="sobol_blue", lookat=c(0,0.5,0),
 #'                fov = 22, lookfrom = c(0, 2, -10))
@@ -870,28 +870,28 @@ obj_model = function(
 #' #Generate a cylinder in the cornell box. Add a cap to both ends.
 #'
 #' if(run_documentation()) {
-#' generate_cornell() %>%
+#' generate_cornell() |>
 #'   add_object(cylinder(x = 555/2, y = 250, z = 555/2,
-#'                       length = 300, radius = 100, material = metal())) %>%
+#'                       length = 300, radius = 100, material = metal())) |>
 #'   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40,
 #'                ambient_light = FALSE, samples = 16, parallel = TRUE, clamp_value = 5)
 #' }
 #' #Rotate the cylinder
 #' if(run_documentation()) {
-#' generate_cornell() %>%
+#' generate_cornell() |>
 #'   add_object(cylinder(x = 555/2, y = 250, z = 555/2,
 #'                       length = 300, radius = 100, angle = c(0, 0, 45),
-#'                       material = diffuse())) %>%
+#'                       material = diffuse())) |>
 #'   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40,
 #'                ambient_light = FALSE, samples = 16, parallel = TRUE, clamp_value = 5)
 #' }
 #'
 #' # Only render a subtended arc of the cylinder, flipping the normals.
 #' if(run_documentation()) {
-#' generate_cornell(lightintensity=3) %>%
+#' generate_cornell(lightintensity=3) |>
 #'   add_object(cylinder(x = 555/2, y = 250, z = 555/2, capped = FALSE,
 #'                       length = 300, radius = 100, angle = c(45, 0, 0), phi_min = 0, phi_max = 180,
-#'                       material = diffuse(), flipped = TRUE)) %>%
+#'                       material = diffuse(), flipped = TRUE)) |>
 #'   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40,
 #'                ambient_light = FALSE, samples = 16, parallel = TRUE, clamp_value = 5)
 #' }
@@ -980,8 +980,8 @@ cylinder = function(
 #' @examples
 #' #Generate a segment in the cornell box.
 #' if(run_documentation()) {
-#' generate_cornell() %>%
-#'   add_object(segment(start = c(100, 100, 100), end = c(455, 455, 455), radius = 50)) %>%
+#' generate_cornell() |>
+#'   add_object(segment(start = c(100, 100, 100), end = c(455, 455, 455), radius = 50)) |>
 #'   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40,
 #'                ambient_light = FALSE, samples = 16, parallel = TRUE, clamp_value = 5)
 #' }
@@ -999,39 +999,39 @@ cylinder = function(
 #' }
 #' scene_segments = do.call(rbind,scene_list)
 #' if(run_documentation()) {
-#' generate_cornell() %>%
-#'   add_object(scene_segments) %>%
+#' generate_cornell() |>
+#'   add_object(scene_segments) |>
 #'   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40,
 #'                ambient_light = FALSE, samples = 16, parallel = TRUE, clamp_value = 5)
 #' }
 #'
 #' #Draw the outline of a cube:
 #'
-#' cube_outline = segment(start = c(100, 100, 100), end = c(100, 100, 455), radius = 10) %>%
-#'   add_object(segment(start = c(100, 100, 100), end = c(100, 455, 100), radius = 10)) %>%
-#'   add_object(segment(start = c(100, 100, 100), end = c(455, 100, 100), radius = 10)) %>%
-#'   add_object(segment(start = c(100, 100, 455), end = c(100, 455, 455), radius = 10)) %>%
-#'   add_object(segment(start = c(100, 100, 455), end = c(455, 100, 455), radius = 10)) %>%
-#'   add_object(segment(start = c(100, 455, 455), end = c(100, 455, 100), radius = 10)) %>%
-#'   add_object(segment(start = c(100, 455, 455), end = c(455, 455, 455), radius = 10)) %>%
-#'   add_object(segment(start = c(455, 455, 100), end = c(455, 100, 100), radius = 10)) %>%
-#'   add_object(segment(start = c(455, 455, 100), end = c(455, 455, 455), radius = 10)) %>%
-#'   add_object(segment(start = c(455, 100, 100), end = c(455, 100, 455), radius = 10)) %>%
-#'   add_object(segment(start = c(455, 100, 455), end = c(455, 455, 455), radius = 10)) %>%
+#' cube_outline = segment(start = c(100, 100, 100), end = c(100, 100, 455), radius = 10) |>
+#'   add_object(segment(start = c(100, 100, 100), end = c(100, 455, 100), radius = 10)) |>
+#'   add_object(segment(start = c(100, 100, 100), end = c(455, 100, 100), radius = 10)) |>
+#'   add_object(segment(start = c(100, 100, 455), end = c(100, 455, 455), radius = 10)) |>
+#'   add_object(segment(start = c(100, 100, 455), end = c(455, 100, 455), radius = 10)) |>
+#'   add_object(segment(start = c(100, 455, 455), end = c(100, 455, 100), radius = 10)) |>
+#'   add_object(segment(start = c(100, 455, 455), end = c(455, 455, 455), radius = 10)) |>
+#'   add_object(segment(start = c(455, 455, 100), end = c(455, 100, 100), radius = 10)) |>
+#'   add_object(segment(start = c(455, 455, 100), end = c(455, 455, 455), radius = 10)) |>
+#'   add_object(segment(start = c(455, 100, 100), end = c(455, 100, 455), radius = 10)) |>
+#'   add_object(segment(start = c(455, 100, 455), end = c(455, 455, 455), radius = 10)) |>
 #'   add_object(segment(start = c(100, 455, 100), end = c(455, 455, 100), radius = 10))
 #'
 #' if(run_documentation()) {
-#' generate_cornell() %>%
-#'   add_object(cube_outline) %>%
+#' generate_cornell() |>
+#'   add_object(cube_outline) |>
 #'   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40,
 #'                ambient_light = FALSE, samples = 16, parallel = TRUE, clamp_value = 5)
 #' }
 #'
 #' #Shrink and rotate the cube
 #' if(run_documentation()) {
-#' generate_cornell() %>%
+#' generate_cornell() |>
 #'   add_object(group_objects(cube_outline, pivot_point = c(555/2, 555/2, 555/2),
-#'                            angle = c(45,45,45), scale = c(0.5,0.5,0.5))) %>%
+#'                            angle = c(45,45,45), scale = c(0.5,0.5,0.5))) |>
 #'   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40,
 #'                ambient_light = FALSE, samples = 16, parallel = TRUE, clamp_value = 5)
 #' }
@@ -1142,28 +1142,28 @@ segment = function(
 #' @examples
 #' #Generate an ellipsoid in a Cornell box
 #' if(run_documentation()) {
-#' generate_cornell() %>%
+#' generate_cornell() |>
 #'   add_object(ellipsoid(x = 555/2, y = 555/2, z = 555/2,
-#'                        a = 100, b = 50, c = 50)) %>%
+#'                        a = 100, b = 50, c = 50)) |>
 #'   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40,
 #'                ambient_light = FALSE, samples = 16, parallel = TRUE, clamp_value = 5)
 #' }
 #'
 #' #Change the axes to make it taller rather than wide:
 #' if(run_documentation()) {
-#' generate_cornell() %>%
+#' generate_cornell() |>
 #'   add_object(ellipsoid(x = 555/2, y = 555/2, z = 555/2,
-#'                        a = 100, b = 200, c = 100, material = metal())) %>%
+#'                        a = 100, b = 200, c = 100, material = metal())) |>
 #'   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40,
 #'                ambient_light = FALSE, samples = 16, parallel = TRUE, clamp_value = 5)
 #' }
 #'
 #' #Rotate it and make it dielectric:
 #' if(run_documentation()) {
-#' generate_cornell() %>%
+#' generate_cornell() |>
 #'   add_object(ellipsoid(x = 555/2, y = 555/2, z = 555/2,
 #'                        a = 100, b = 200, c = 100, angle = c(0, 0, 45),
-#'                        material = dielectric())) %>%
+#'                        material = dielectric())) |>
 #'   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40,
 #'                ambient_light = FALSE, samples = 16, parallel = TRUE, clamp_value = 5)
 #' }
@@ -1242,19 +1242,19 @@ ellipsoid = function(
 #'	generate_ground(
 #'		depth = 0,
 #'		material = diffuse(color = "grey50", checkercolor = "grey20")
-#'	) %>%
+#'	) |>
 #'		add_object(extruded_polygon(
 #'			star_polygon,
 #'			top = 0.5,
 #'			bottom = 0,
 #'			material = diffuse(color = "red", sigma = 90)
-#'		)) %>%
+#'		)) |>
 #'		add_object(sphere(
 #'			y = 4,
 #'			x = -3,
 #'			z = -3,
 #'			material = light(intensity = 30)
-#'		)) %>%
+#'		)) |>
 #'		render_scene(
 #'			parallel = TRUE,
 #'			lookfrom = c(0, 2, 3),
@@ -1277,20 +1277,20 @@ ellipsoid = function(
 #'	generate_ground(
 #'		depth = -0.01,
 #'		material = diffuse(color = "grey50", checkercolor = "grey20")
-#'	) %>%
+#'	) |>
 #'		add_object(extruded_polygon(
 #'			hollow_star,
 #'			top = 0.25,
 #'			bottom = 0,
 #'			holes = nrow(star_polygon) + 1,
 #'			material = diffuse(color = "red", sigma = 90)
-#'		)) %>%
+#'		)) |>
 #'		add_object(sphere(
 #'			y = 4,
 #'			x = -3,
 #'			z = -3,
 #'			material = light(intensity = 30)
-#'		)) %>%
+#'		)) |>
 #'		render_scene(
 #'			parallel = TRUE,
 #'			lookfrom = c(0, 2, 4),
@@ -1306,14 +1306,14 @@ ellipsoid = function(
 #'	generate_ground(
 #'		depth = -0.01,
 #'		material = diffuse(color = "grey50", checkercolor = "grey20")
-#'	) %>%
+#'	) |>
 #'		add_object(extruded_polygon(
 #'			hollow_star,
 #'			top = 0.25,
 #'			bottom = 0,
 #'			holes = nrow(star_polygon),
 #'			material = diffuse(color = "red", sigma = 90)
-#'		)) %>%
+#'		)) |>
 #'		add_object(extruded_polygon(
 #'			hollow_star,
 #'			top = 0.25,
@@ -1323,8 +1323,8 @@ ellipsoid = function(
 #'			holes = nrow(star_polygon) + 1,
 #'			plane = "yx",
 #'			material = diffuse(color = "green", sigma = 90)
-#'		)) %>%
-#'		add_object(sphere(y = 4, x = -3, material = light(intensity = 30))) %>%
+#'		)) |>
+#'		add_object(sphere(y = 4, x = -3, material = light(intensity = 30))) |>
 #'		render_scene(
 #'			parallel = TRUE,
 #'			lookfrom = c(0, 2, 4),
@@ -1339,14 +1339,14 @@ ellipsoid = function(
 #'	generate_ground(
 #'		depth = -0.01,
 #'		material = diffuse(color = "grey50", checkercolor = "grey20")
-#'	) %>%
+#'	) |>
 #'		add_object(extruded_polygon(
 #'			hollow_star,
 #'			top = 0.25,
 #'			bottom = 0,
 #'			holes = nrow(star_polygon) + 1,
 #'			material = diffuse(color = "red", sigma = 90)
-#'		)) %>%
+#'		)) |>
 #'		add_object(extruded_polygon(
 #'			hollow_star,
 #'			top = 0.25,
@@ -1356,7 +1356,7 @@ ellipsoid = function(
 #'			holes = nrow(star_polygon) + 1,
 #'			plane = "yx",
 #'			material = diffuse(color = "green", sigma = 90)
-#'		)) %>%
+#'		)) |>
 #'		add_object(extruded_polygon(
 #'			hollow_star,
 #'			top = 0.25,
@@ -1366,8 +1366,8 @@ ellipsoid = function(
 #'			holes = nrow(star_polygon) + 1,
 #'			plane = "zy",
 #'			material = diffuse(color = "blue", sigma = 90)
-#'		)) %>%
-#'		add_object(sphere(y = 4, x = -3, material = light(intensity = 30))) %>%
+#'		)) |>
+#'		add_object(sphere(y = 4, x = -3, material = light(intensity = 30))) |>
 #'		render_scene(
 #'			parallel = TRUE,
 #'			lookfrom = c(-4, 2, 4),
@@ -1393,18 +1393,18 @@ ellipsoid = function(
 #'	generate_ground(
 #'		depth = -0.01,
 #'		material = diffuse(color = "grey50", checkercolor = "grey20")
-#'	) %>%
+#'	) |>
 #'		add_object(extruded_polygon(
 #'			texas,
 #'			center = TRUE,
 #'			material = diffuse(color = "#ff2222", sigma = 90)
-#'		)) %>%
+#'		)) |>
 #'		add_object(sphere(
 #'			y = 30,
 #'			x = -30,
 #'			radius = 10,
 #'			material = light(color = "lightblue", intensity = 40)
-#'		)) %>%
+#'		)) |>
 #'		render_scene(
 #'			parallel = TRUE,
 #'			lookfrom = c(0, 10, -10),
@@ -1418,26 +1418,26 @@ ellipsoid = function(
 #'	generate_ground(
 #'		depth = -0.01,
 #'		material = diffuse(color = "grey50", checkercolor = "grey20")
-#'	) %>%
+#'	) |>
 #'		add_object(extruded_polygon(
 #'			us_states,
 #'			x = 96,
 #'			z = -40,
 #'			top = 2,
 #'			material = diffuse(color = "#ff2222", sigma = 90)
-#'		)) %>%
+#'		)) |>
 #'		add_object(sphere(
 #'			y = 30,
 #'			x = -100,
 #'			radius = 10,
 #'			material = light(color = "dodgerblue", intensity = 200)
-#'		)) %>%
+#'		)) |>
 #'		add_object(sphere(
 #'			y = 30,
 #'			x = 100,
 #'			radius = 10,
 #'			material = light(color = "orange", intensity = 200)
-#'		)) %>%
+#'		)) |>
 #'		render_scene(
 #'			parallel = TRUE,
 #'			lookfrom = c(0, 120, -120),
@@ -1453,7 +1453,7 @@ ellipsoid = function(
 #'	generate_ground(
 #'		depth = 0,
 #'		material = diffuse(color = "grey50", checkercolor = "grey20", sigma = 90)
-#'	) %>%
+#'	) |>
 #'		add_object(extruded_polygon(
 #'			us_states,
 #'			x = 96,
@@ -1461,21 +1461,21 @@ ellipsoid = function(
 #'			data_column_top = "total_pop_15",
 #'			scale_data = 1 / max(us_states$total_pop_15) * 5,
 #'			material = diffuse(color = "#ff2222", sigma = 90)
-#'		)) %>%
+#'		)) |>
 #'		add_object(sphere(
 #'			y = 30,
 #'			x = -100,
 #'			z = 60,
 #'			radius = 10,
 #'			material = light(color = "dodgerblue", intensity = 250)
-#'		)) %>%
+#'		)) |>
 #'		add_object(sphere(
 #'			y = 30,
 #'			x = 100,
 #'			z = -60,
 #'			radius = 10,
 #'			material = light(color = "orange", intensity = 200)
-#'		)) %>%
+#'		)) |>
 #'		render_scene(
 #'			parallel = TRUE,
 #'			lookfrom = c(60, 50, -40),
@@ -1944,56 +1944,56 @@ extruded_polygon = function(
 #' @examples
 #' #Generate a cone in a studio, pointing upwards:
 #' if(run_documentation()) {
-#' generate_studio() %>%
-#'  add_object(cone(start=c(0,-1,0), end=c(0,1,0), radius=1,material=diffuse(color="red"))) %>%
-#'  add_object(sphere(y=5,x=5,material=light(intensity=40))) %>%
+#' generate_studio() |>
+#'  add_object(cone(start=c(0,-1,0), end=c(0,1,0), radius=1,material=diffuse(color="red"))) |>
+#'  add_object(sphere(y=5,x=5,material=light(intensity=40))) |>
 #'  render_scene(samples=16,clamp_value=10)
 #' }
 #' if(run_documentation()) {
 #'  #Change the radius, length, and direction
-#' generate_studio() %>%
-#'  add_object(cone(start=c(0,0,0), end=c(0,-1,0), radius=0.5,material=diffuse(color="red"))) %>%
-#'  add_object(sphere(y=5,x=5,material=light(intensity=40))) %>%
+#' generate_studio() |>
+#'  add_object(cone(start=c(0,0,0), end=c(0,-1,0), radius=0.5,material=diffuse(color="red"))) |>
+#'  add_object(sphere(y=5,x=5,material=light(intensity=40))) |>
 #'  render_scene(samples=16,clamp_value=10)
 #' }
 #' if(run_documentation()) {
 #' #Give custom start and end points (and customize the color/texture)
-#' generate_studio() %>%
-#'  add_object(cone(start=c(-1,0.5,-1), end=c(0,0,0), radius=0.5,material=diffuse(color="red"))) %>%
-#'  add_object(cone(start=c(1,0.5,-1), end=c(0,0,0), radius=0.5,material=diffuse(color="green"))) %>%
-#'  add_object(cone(start=c(0,1,-1), end=c(0,0,0), radius=0.5,material=diffuse(color="orange"))) %>%
+#' generate_studio() |>
+#'  add_object(cone(start=c(-1,0.5,-1), end=c(0,0,0), radius=0.5,material=diffuse(color="red"))) |>
+#'  add_object(cone(start=c(1,0.5,-1), end=c(0,0,0), radius=0.5,material=diffuse(color="green"))) |>
+#'  add_object(cone(start=c(0,1,-1), end=c(0,0,0), radius=0.5,material=diffuse(color="orange"))) |>
 #'  add_object(cone(start=c(-1,-0.5,0), end=c(1,-0.5,0), radius=0.25,
-#'    material = diffuse(color="red",gradient_color="green"))) %>%
-#'  add_object(sphere(y=5,x=5,material=light(intensity=40))) %>%
+#'    material = diffuse(color="red",gradient_color="green"))) |>
+#'  add_object(sphere(y=5,x=5,material=light(intensity=40))) |>
 #'  render_scene(samples=16,clamp_value=10)
 #' }
 #' if(run_documentation()) {
 #' #Specify cone via direction and location, instead of start and end positions
 #' #Length is derived from the magnitude of the direction.
 #' gold_mat = microfacet(roughness=0.1,eta=c(0.216,0.42833,1.3184), kappa=c(3.239,2.4599,1.8661))
-#' generate_studio() %>%
-#'   add_object(cone(start = c(-1,0,0), direction = c(-0.5,0.5,0), material = gold_mat)) %>%
-#'   add_object(cone(start = c(1,0,0), direction = c(0.5,0.5,0), material = gold_mat)) %>%
-#'   add_object(cone(start = c(0,0,-1), direction = c(0,0.5,-0.5), material = gold_mat)) %>%
-#'   add_object(cone(start = c(0,0,1), direction = c(0,0.5,0.5), material = gold_mat)) %>%
-#'   add_object(sphere(y=5,material=light())) %>%
-#'   add_object(sphere(y=3,x=-3,z=-3,material=light(color="red"))) %>%
-#'   add_object(sphere(y=3,x=3,z=-3,material=light(color="green"))) %>%
+#' generate_studio() |>
+#'   add_object(cone(start = c(-1,0,0), direction = c(-0.5,0.5,0), material = gold_mat)) |>
+#'   add_object(cone(start = c(1,0,0), direction = c(0.5,0.5,0), material = gold_mat)) |>
+#'   add_object(cone(start = c(0,0,-1), direction = c(0,0.5,-0.5), material = gold_mat)) |>
+#'   add_object(cone(start = c(0,0,1), direction = c(0,0.5,0.5), material = gold_mat)) |>
+#'   add_object(sphere(y=5,material=light())) |>
+#'   add_object(sphere(y=3,x=-3,z=-3,material=light(color="red"))) |>
+#'   add_object(sphere(y=3,x=3,z=-3,material=light(color="green"))) |>
 #'   render_scene(lookfrom=c(0,4,-10), clamp_value=10, samples=16)
 #' }
 #' if(run_documentation()) {
 #'  #Render the position from the base, instead of the center of the cone:
 #'  noise_mat = material = glossy(color="purple",noisecolor="blue", noise=5)
-#'  generate_studio() %>%
+#'  generate_studio() |>
 #'   add_object(cone(start = c(0,-1,0), from_center = FALSE, radius=1, direction = c(0,2,0),
-#'     material = noise_mat)) %>%
+#'     material = noise_mat)) |>
 #'   add_object(cone(start = c(-1.5,-1,0), from_center = FALSE, radius=0.5, direction = c(0,1,0),
-#'     material = noise_mat)) %>%
+#'     material = noise_mat)) |>
 #'   add_object(cone(start = c(1.5,-1,0), from_center = FALSE, radius=0.5, direction = c(0,1,0),
-#'     material = noise_mat)) %>%
+#'     material = noise_mat)) |>
 #'   add_object(cone(start = c(0,-1,1.5), from_center = FALSE, radius=0.5, direction = c(0,1,0),
-#'     material = noise_mat)) %>%
-#'   add_object(sphere(y=5,x=5,material=light(intensity=40))) %>%
+#'     material = noise_mat)) |>
+#'   add_object(sphere(y=5,x=5,material=light(intensity=40))) |>
 #'   render_scene(lookfrom=c(0,4,-10), clamp_value=10,fov=25, samples=16)
 #' }
 cone = function(
@@ -2051,50 +2051,50 @@ cone = function(
 #' @examples
 #' #Draw a simple arrow from x = -1 to x = 1
 #' if(run_documentation()) {
-#' generate_studio() %>%
-#'   add_object(arrow(start = c(-1,0,0), end = c(1,0,0), material=glossy(color="red"))) %>%
-#'   add_object(sphere(y=5,material=light(intensity=20))) %>%
+#' generate_studio() |>
+#'   add_object(arrow(start = c(-1,0,0), end = c(1,0,0), material=glossy(color="red"))) |>
+#'   add_object(sphere(y=5,material=light(intensity=20))) |>
 #'   render_scene(clamp_value=10,  samples=16)
 #' }
 #' if(run_documentation()) {
 #' #Change the proportion of tail to top
-#' generate_studio(depth=-2) %>%
+#' generate_studio(depth=-2) |>
 #'   add_object(arrow(start = c(-1,-1,0), end = c(1,-1,0), tail_proportion = 0.5,
-#'                    material=glossy(color="red"))) %>%
+#'                    material=glossy(color="red"))) |>
 #'   add_object(arrow(start = c(-1,0,0), end = c(1,0,0), tail_proportion = 0.75,
-#'                    material=glossy(color="red"))) %>%
+#'                    material=glossy(color="red"))) |>
 #'   add_object(arrow(start = c(-1,1,0), end = c(1,1,0), tail_proportion = 0.9,
-#'                    material=glossy(color="red"))) %>%
-#'   add_object(sphere(y=5,z=-5,x=2,material=light(intensity=30))) %>%
+#'                    material=glossy(color="red"))) |>
+#'   add_object(sphere(y=5,z=-5,x=2,material=light(intensity=30))) |>
 #'   render_scene(clamp_value=10, fov=25,  samples=16)
 #' }
 #' if(run_documentation()) {
 #' #Change the radius of the tail/top segments
-#' generate_studio(depth=-1.5) %>%
+#' generate_studio(depth=-1.5) |>
 #'   add_object(arrow(start = c(-1,-1,0), end = c(1,-1,0), tail_proportion = 0.75,
 #'                    radius_top = 0.1, radius_tail=0.03,
-#'                    material=glossy(color="red"))) %>%
+#'                    material=glossy(color="red"))) |>
 #'   add_object(arrow(start = c(-1,0,0), end = c(1,0,0), tail_proportion = 0.75,
 #'                    radius_top = 0.2, radius_tail=0.1,
-#'                    material=glossy(color="red"))) %>%
+#'                    material=glossy(color="red"))) |>
 #'   add_object(arrow(start = c(-1,1,0), end = c(1,1,0), tail_proportion = 0.75,
 #'                    radius_top = 0.3, radius_tail=0.2,
-#'                    material=glossy(color="red"))) %>%
-#'   add_object(sphere(y=5,z=-5,x=2,material=light(intensity=30))) %>%
+#'                    material=glossy(color="red"))) |>
+#'   add_object(sphere(y=5,z=-5,x=2,material=light(intensity=30))) |>
 #'   render_scene(clamp_value=10, samples=16)
 #' }
 #' if(run_documentation()) {
 #' #We can also specify arrows via a midpoint and direction:
-#' generate_studio(depth=-1) %>%
+#' generate_studio(depth=-1) |>
 #'   add_object(arrow(start = c(-1,-0.5,0), direction = c(0,0,1),
-#'                    material=glossy(color="green"))) %>%
+#'                    material=glossy(color="green"))) |>
 #'   add_object(arrow(start = c(1,-0.5,0), direction = c(0,0,-1),
-#'                    material=glossy(color="red"))) %>%
+#'                    material=glossy(color="red"))) |>
 #'   add_object(arrow(start = c(0,-0.5,1), direction = c(1,0,0),
-#'                    material=glossy(color="yellow"))) %>%
+#'                    material=glossy(color="yellow"))) |>
 #'   add_object(arrow(start = c(0,-0.5,-1), direction = c(-1,0,0),
-#'                    material=glossy(color="purple"))) %>%
-#'   add_object(sphere(y=5,z=-5,x=2,material=light(intensity=30))) %>%
+#'                    material=glossy(color="purple"))) |>
+#'   add_object(sphere(y=5,z=-5,x=2,material=light(intensity=30))) |>
 #'   render_scene(clamp_value=10, samples=16,
 #'                lookfrom=c(0,5,10), lookat=c(0,-0.5,0), fov=16)
 #' }
@@ -2116,9 +2116,9 @@ cone = function(
 #'   }
 #' }
 #' vector_field = do.call(rbind,arrow_list)
-#' sphere(material=diffuse(noise=1,color="blue",noisecolor="darkgreen")) %>%
-#'   add_object(vector_field) %>%
-#'   add_object(sphere(y=0,x=10,z=-5,material=light(intensity=200))) %>%
+#' sphere(material=diffuse(noise=1,color="blue",noisecolor="darkgreen")) |>
+#'   add_object(vector_field) |>
+#'   add_object(sphere(y=0,x=10,z=-5,material=light(intensity=200))) |>
 #'   render_scene(fov=20, ambient=TRUE, samples=16,
 #'                backgroundlow="black",backgroundhigh="white")
 #' }
@@ -2155,7 +2155,7 @@ arrow = function(
 		material = material,
 		flipped = flipped,
 		scale = scale
-	) %>%
+	) |>
 		add_object(cone(
 			start = start_tip,
 			end = end_tip,
@@ -2202,10 +2202,10 @@ arrow = function(
 #' @examples
 #' #Generate the default curve:
 #' if(run_documentation()) {
-#' generate_studio(depth=-0.2) %>%
-#'   add_object(bezier_curve(material=diffuse(color="red"))) %>%
+#' generate_studio(depth=-0.2) |>
+#'   add_object(bezier_curve(material=diffuse(color="red"))) |>
 #'   add_object(sphere(y=3,z=-5,x=2,radius=0.3,
-#'                     material=light(intensity=200, spotlight_focus = c(0,0.5,0)))) %>%
+#'                     material=light(intensity=200, spotlight_focus = c(0,0.5,0)))) |>
 #'   render_scene(clamp_value = 10, lookat = c(0,0.5,0), fov=13,
 #'                samples=16)
 #' }
@@ -2213,36 +2213,36 @@ arrow = function(
 #' if(run_documentation()) {
 #' #Change the control points to change the direction of the curve. Here, we place spheres
 #' #at the control point locations.
-#' generate_studio(depth=-0.2) %>%
-#'   add_object(bezier_curve(material=diffuse(color="red"))) %>%
-#'   add_object(sphere(radius=0.075,material=glossy(color="green"))) %>%
-#'   add_object(sphere(radius=0.075,x=-1,y=0.33,material=glossy(color="green"))) %>%
-#'   add_object(sphere(radius=0.075,x=1,y=0.66,material=glossy(color="green"))) %>%
-#'   add_object(sphere(radius=0.075,y=1,material=glossy(color="green"))) %>%
+#' generate_studio(depth=-0.2) |>
+#'   add_object(bezier_curve(material=diffuse(color="red"))) |>
+#'   add_object(sphere(radius=0.075,material=glossy(color="green"))) |>
+#'   add_object(sphere(radius=0.075,x=-1,y=0.33,material=glossy(color="green"))) |>
+#'   add_object(sphere(radius=0.075,x=1,y=0.66,material=glossy(color="green"))) |>
+#'   add_object(sphere(radius=0.075,y=1,material=glossy(color="green"))) |>
 #'   add_object(sphere(y=3,z=-5,x=2,radius=0.3,
-#'                     material=light(intensity=200, spotlight_focus = c(0,0.5,0)))) %>%
+#'                     material=light(intensity=200, spotlight_focus = c(0,0.5,0)))) |>
 #'   render_scene(clamp_value = 10, lookat = c(0,0.5,0), fov=15,
 #'                samples=16)
 #' }
 #' if(run_documentation()) {
 #' #We can make the curve flat (always facing the camera) by setting the type to `flat`
-#' generate_studio(depth=-0.2) %>%
-#'   add_object(bezier_curve(type="flat", material=glossy(color="red"))) %>%
+#' generate_studio(depth=-0.2) |>
+#'   add_object(bezier_curve(type="flat", material=glossy(color="red"))) |>
 #'   add_object(sphere(y=3,z=-5,x=2,radius=0.3,
-#'                     material=light(intensity=200, spotlight_focus = c(0,0.5,0)))) %>%
+#'                     material=light(intensity=200, spotlight_focus = c(0,0.5,0)))) |>
 #'   render_scene(clamp_value = 10, lookat = c(0,0.5,0), fov=13,
 #'                samples=16)
 #' }
 #' if(run_documentation()) {
 #' #We can also plot a ribbon, which is further specified by a start and end orientation with
 #' #two surface normals.
-#' generate_studio(depth=-0.2) %>%
+#' generate_studio(depth=-0.2) |>
 #'   add_object(bezier_curve(type="ribbon", width=0.2,
 #'                    p1 = c(0,0,0), p2 = c(0,0.33,0), p3 = c(0,0.66,0), p4 = c(0.3,1,0),
 #'                    normal_end = c(0,0,1),
-#'                    material=glossy(color="red"))) %>%
+#'                    material=glossy(color="red"))) |>
 #'   add_object(sphere(y=3,z=-5,x=2,radius=0.3,
-#'                     material=light(intensity=200, spotlight_focus = c(0,0.5,0)))) %>%
+#'                     material=light(intensity=200, spotlight_focus = c(0,0.5,0)))) |>
 #'   render_scene(clamp_value = 10, lookat = c(0,0.5,0), fov=13,
 #'                samples=16)
 #' }
@@ -2256,9 +2256,9 @@ arrow = function(
 #'                             width = 0.1, width_end =0.1,material=glossy(color="red"))
 #' }
 #' all_curves = do.call(rbind, scene_curves)
-#' generate_ground(depth=0,material=diffuse(checkercolor="grey20")) %>%
-#'   add_object(all_curves) %>%
-#'   add_object(sphere(y=7,z=0,x=0,material=light(intensity=100))) %>%
+#' generate_ground(depth=0,material=diffuse(checkercolor="grey20")) |>
+#'   add_object(all_curves) |>
+#'   add_object(sphere(y=7,z=0,x=0,material=light(intensity=100))) |>
 #'   render_scene(lookfrom = c(12,20,50),samples=100,
 #'                lookat=c(0,1,0), fov=15, clamp_value = 10)
 #'
@@ -2414,21 +2414,21 @@ bezier_curve = function(
 #' #Generate a wavy line, showing the line goes through the specified points:
 #' wave = list(c(-2,1,0),c(-1,-1,0),c(0,1,0),c(1,-1,0),c(2,1,0))
 #' point_mat = glossy(color="green")
-#' generate_studio(depth=-1.5) %>%
-#'   add_object(path(points = wave,material=glossy(color="red"))) %>%
-#'   add_object(sphere(x=-2,y=1,radius=0.1,material=point_mat)) %>%
-#'   add_object(sphere(x=-1,y=-1,radius=0.1,material=point_mat)) %>%
-#'   add_object(sphere(x=0,y=1,radius=0.1,material=point_mat)) %>%
-#'   add_object(sphere(x=1,y=-1,radius=0.1,material=point_mat)) %>%
-#'   add_object(sphere(x=2,y=1,radius=0.1,material=point_mat)) %>%
-#'   add_object(sphere(z=-5,x=5,y=5,radius=2,material=light(intensity=15))) %>%
+#' generate_studio(depth=-1.5) |>
+#'   add_object(path(points = wave,material=glossy(color="red"))) |>
+#'   add_object(sphere(x=-2,y=1,radius=0.1,material=point_mat)) |>
+#'   add_object(sphere(x=-1,y=-1,radius=0.1,material=point_mat)) |>
+#'   add_object(sphere(x=0,y=1,radius=0.1,material=point_mat)) |>
+#'   add_object(sphere(x=1,y=-1,radius=0.1,material=point_mat)) |>
+#'   add_object(sphere(x=2,y=1,radius=0.1,material=point_mat)) |>
+#'   add_object(sphere(z=-5,x=5,y=5,radius=2,material=light(intensity=15))) |>
 #'   render_scene(samples=16, clamp_value=10,fov=30)
 #' }
 #' if(run_documentation()) {
 #' #Here we use straight lines by setting `straight = TRUE`:
-#' generate_studio(depth=-1.5) %>%
-#'   add_object(path(points = wave,straight = TRUE, material=glossy(color="red"))) %>%
-#'   add_object(sphere(z=-5,x=5,y=5,radius=2,material=light(intensity=15))) %>%
+#' generate_studio(depth=-1.5) |>
+#'   add_object(path(points = wave,straight = TRUE, material=glossy(color="red"))) |>
+#'   add_object(sphere(z=-5,x=5,y=5,radius=2,material=light(intensity=15))) |>
 #'   render_scene(samples=16, clamp_value=10,fov=30)
 #' }
 #' if(run_documentation()) {
@@ -2436,16 +2436,16 @@ bezier_curve = function(
 #' #we'll create a random curve:
 #' set.seed(21)
 #' random_mat = matrix(runif(3*9)*2-1, ncol=3)
-#' generate_studio(depth=-1.5) %>%
-#'   add_object(path(points=random_mat, material=glossy(color="red"))) %>%
-#'   add_object(sphere(y=5,radius=1,material=light(intensity=30))) %>%
+#' generate_studio(depth=-1.5) |>
+#'   add_object(path(points=random_mat, material=glossy(color="red"))) |>
+#'   add_object(sphere(y=5,radius=1,material=light(intensity=30))) |>
 #'   render_scene(samples=16, clamp_value=10)
 #' }
 #' if(run_documentation()) {
 #' #We can ensure the curve is closed by setting `closed = TRUE`
-#' generate_studio(depth=-1.5) %>%
-#'   add_object(path(points=random_mat, closed = TRUE, material=glossy(color="red"))) %>%
-#'   add_object(sphere(y=5,radius=1,material=light(intensity=30))) %>%
+#' generate_studio(depth=-1.5) |>
+#'   add_object(path(points=random_mat, closed = TRUE, material=glossy(color="red"))) |>
+#'   add_object(sphere(y=5,radius=1,material=light(intensity=30))) |>
 #'   render_scene(samples=16, clamp_value=10)
 #' }
 #' if(run_documentation()) {
@@ -2455,35 +2455,35 @@ bezier_curve = function(
 #'                c(0.6,-0.5,-0.1),c(0.5,0.5,-0.1), c(0,0.3,-0.1),c(-0,-0.2,0.1), c(0.8,-0.5,0.1))
 #'
 #' #Render the full pretzel:
-#' generate_studio(depth = -1.1) %>%
-#'   add_object(path(pretzel, width=0.17,  material = glossy(color="#db5b00"))) %>%
-#'   add_object(sphere(y=5,x=2,z=-4,material=light(intensity=20,spotlight_focus = c(0,0,0)))) %>%
+#' generate_studio(depth = -1.1) |>
+#'   add_object(path(pretzel, width=0.17,  material = glossy(color="#db5b00"))) |>
+#'   add_object(sphere(y=5,x=2,z=-4,material=light(intensity=20,spotlight_focus = c(0,0,0)))) |>
 #'   render_scene(samples=16, clamp_value=10)
 #' }
 #' if(run_documentation()) {
 #' #Here, we'll render only the first third of the pretzel by setting `u_max = 0.33`
-#' generate_studio(depth = -1.1) %>%
-#'   add_object(path(pretzel, width=0.17, u_max=0.33, material = glossy(color="#db5b00"))) %>%
-#'   add_object(sphere(y=5,x=2,z=-4,material=light(intensity=20,spotlight_focus = c(0,0,0)))) %>%
+#' generate_studio(depth = -1.1) |>
+#'   add_object(path(pretzel, width=0.17, u_max=0.33, material = glossy(color="#db5b00"))) |>
+#'   add_object(sphere(y=5,x=2,z=-4,material=light(intensity=20,spotlight_focus = c(0,0,0)))) |>
 #'   render_scene(samples=16, clamp_value=10)
 #' }
 #' if(run_documentation()) {
 #' #Here's the last third, by setting `u_min = 0.66`
-#' generate_studio(depth = -1.1) %>%
-#'   add_object(path(pretzel, width=0.17, u_min=0.66, material = glossy(color="#db5b00"))) %>%
-#'   add_object(sphere(y=5,x=2,z=-4,material=light(intensity=20,spotlight_focus = c(0,0,0)))) %>%
+#' generate_studio(depth = -1.1) |>
+#'   add_object(path(pretzel, width=0.17, u_min=0.66, material = glossy(color="#db5b00"))) |>
+#'   add_object(sphere(y=5,x=2,z=-4,material=light(intensity=20,spotlight_focus = c(0,0,0)))) |>
 #'   render_scene(samples=16, clamp_value=10)
 #' }
 #' if(run_documentation()) {
 #' #Here's the full pretzel, decomposed into thirds using the u_min and u_max coordinates
-#' generate_studio(depth = -1.1) %>%
+#' generate_studio(depth = -1.1) |>
 #'   add_object(path(pretzel, width=0.17, u_max=0.33, x = -0.8, y =0.6,
-#'                   material = glossy(color="#db5b00"))) %>%
+#'                   material = glossy(color="#db5b00"))) |>
 #'   add_object(path(pretzel, width=0.17, u_min=0.66, x = 0.8, y =0.6,
-#'                   material = glossy(color="#db5b00"))) %>%
+#'                   material = glossy(color="#db5b00"))) |>
 #'   add_object(path(pretzel, width=0.17, u_min=0.33, u_max=0.66, x=0,
-#'                   material = glossy(color="#db5b00"))) %>%
-#'   add_object(sphere(y=5,x=2,z=-4,material=light(intensity=20,spotlight_focus = c(0,0,0)))) %>%
+#'                   material = glossy(color="#db5b00"))) |>
+#'   add_object(sphere(y=5,x=2,z=-4,material=light(intensity=20,spotlight_focus = c(0,0,0)))) |>
 #'   render_scene(samples=16, clamp_value=10, lookfrom=c(0,3,-10))
 #' }
 path = function(
@@ -2687,37 +2687,37 @@ path = function(
 #' @examples
 #' #Generate a label in the cornell box.
 #' if(run_documentation()) {
-#' generate_cornell() %>%
+#' generate_cornell() |>
 #'   add_object(text3d(label="Cornell Box", x=555/2,y=555/2,z=555/2,text_height=60,
-#'                     material=diffuse(color="grey10"), angle=c(0,0,0))) %>%
+#'                     material=diffuse(color="grey10"), angle=c(0,0,0))) |>
 #'   render_scene(samples=16)
 #' }
 #' if(run_documentation()) {
 #' #Change the orientation
-#' generate_cornell() %>%
+#' generate_cornell() |>
 #'   add_object(text3d(label="YZ Plane", x=550,y=555/2,z=555/2,text_height=150,
 #'                     orientation = "yz",
-#'                     material=diffuse(color="grey10"), angle=c(0,0,0))) %>%
+#'                     material=diffuse(color="grey10"), angle=c(0,0,0))) |>
 #'  add_object(text3d(label="XY Plane", z=550,y=555/2,x=555/2,text_height=150,
 #'                     orientation = "xy",
-#'                     material=diffuse(color="grey10"), angle=c(0,0,0))) %>%
+#'                     material=diffuse(color="grey10"), angle=c(0,0,0))) |>
 #'  add_object(text3d(label="XZ Plane", z=555/2,y=5,x=555/2,text_height=150,
 #'                     orientation = "xz",
-#'                     material=diffuse(color="grey10"))) %>%
+#'                     material=diffuse(color="grey10"))) |>
 #'   render_scene(samples=16)
 #' }
 #' if(run_documentation()) {
 #' #Add an label in front of a sphere
-#' generate_cornell() %>%
+#' generate_cornell() |>
 #'   add_object(text3d(label="Cornell Box", x=555/2,y=555/2,z=555/2,text_height=90,
-#'                     material=diffuse(color="grey10"), angle=c(0,0,0))) %>%
+#'                     material=diffuse(color="grey10"), angle=c(0,0,0))) |>
 #'   add_object(text3d(label="Sphere", x=555/2,y=100,z=100,text_height=60,
-#'                     material=diffuse(color="white"), angle=c(0,0,0))) %>%
+#'                     material=diffuse(color="white"), angle=c(0,0,0))) |>
 #'   add_object(sphere(y=100,radius=100,z=555/2,x=555/2,
-#'                     material=glossy(color="purple"))) %>%
+#'                     material=glossy(color="purple"))) |>
 #'   add_object(sphere(y=555,radius=100,z=-1000,x=555/2,
 #'                     material=light(intensity=100,
-#'                                    spotlight_focus=c(555/2,100,100)))) %>%
+#'                                    spotlight_focus=c(555/2,100,100)))) |>
 #'   render_scene(samples=16)
 #' }
 #'
@@ -2729,8 +2729,8 @@ path = function(
 #'                        text_height = 50, angle=c(0,0,0))
 #' }
 #' bees = do.call(rbind,bee_list)
-#' generate_cornell() %>%
-#'   add_object(bees) %>%
+#' generate_cornell() |>
+#'   add_object(bees) |>
 #'   render_scene(samples=16)
 #' }
 #' if(run_documentation()) {
@@ -2988,11 +2988,11 @@ ply_model = function(
 #'   library(Rvcg)
 #'   data(humface)
 #'
-#'   generate_studio() %>%
+#'   generate_studio() |>
 #'     add_object(mesh3d_model(humface,y=-0.3,x=0,z=0,
 #'                           material=glossy(color="dodgerblue4"), scale = 1/70,
-#'                           angle = c(0,180,0))) %>%
-#'     add_object(sphere(y=5,x=5,z=-5,material=light(intensity=50))) %>%
+#'                           angle = c(0,180,0))) |>
+#'     add_object(sphere(y=5,x=5,z=-5,material=light(intensity=50))) |>
 #'     render_scene(samples=16,width=800,height=800,
 #'                  lookat = c(0,0.5,1), aperture=0.0)
 #' }
@@ -3277,41 +3277,41 @@ mesh3d_model = function(
 #' }
 #' if(run_documentation()) {
 #' #Default path shape is a circle
-#' generate_studio(depth=-0.4,material=ground_mat) %>%
+#' generate_studio(depth=-0.4,material=ground_mat) |>
 #'   add_object(extruded_path(points = points, width=0.25,
-#'                            material=diffuse(color="red"))) %>%
-#'   add_object(sphere(y=3,z=-5,x=2,material=light(intensity=15))) %>%
+#'                            material=diffuse(color="red"))) |>
+#'   add_object(sphere(y=3,z=-5,x=2,material=light(intensity=15))) |>
 #'   render_scene(lookat=c(0.3,0.5,0.5),fov=12, width=800,height=800, clamp_value = 10,
 #'                aperture=0.025, samples=16, sample_method="sobol_blue")
 #' }
 #' if(run_documentation()) {
 #' #Change the width evenly along the tube
-#' generate_studio(depth=-0.4,material=ground_mat) %>%
+#' generate_studio(depth=-0.4,material=ground_mat) |>
 #'   add_object(extruded_path(points = points, width=0.25,
 #'                            width_end = 0.5,
-#'                            material=diffuse(color="red"))) %>%
-#'   add_object(sphere(y=3,z=-5,x=2,material=light(intensity=15))) %>%
+#'                            material=diffuse(color="red"))) |>
+#'   add_object(sphere(y=3,z=-5,x=2,material=light(intensity=15))) |>
 #'   render_scene(lookat=c(0.3,0.5,0.5),fov=12, width=800,height=800, clamp_value = 10,
 #'                aperture=0.025, samples=16, sample_method="sobol_blue")
 #' }
 #' if(run_documentation()) {
 #' #Change the width along the full length of the tube
-#' generate_studio(depth=-0.4,material=ground_mat) %>%
+#' generate_studio(depth=-0.4,material=ground_mat) |>
 #'   add_object(extruded_path(points = points,
 #'                            width=0.25*sinpi(0:72*20/180),
-#'                            material=diffuse(color="red"))) %>%
-#'   add_object(sphere(y=3,z=-5,x=2,material=light(intensity=15))) %>%
+#'                            material=diffuse(color="red"))) |>
+#'   add_object(sphere(y=3,z=-5,x=2,material=light(intensity=15))) |>
 #'   render_scene(lookat=c(0.3,0.5,0.5),fov=12, width=800,height=800, clamp_value = 10,
 #'                aperture=0.025, samples=16, sample_method="sobol_blue")
 #' }
 #' if(run_documentation()) {
 #' #Specify the exact parametric x positions for the width values:
 #' custom_width = data.frame(x=c(0,0.2,0.5,0.8,1), y=c(0.25,0.5,0,0.5,0.25))
-#' generate_studio(depth=-0.4,material=ground_mat) %>%
+#' generate_studio(depth=-0.4,material=ground_mat) |>
 #'   add_object(extruded_path(points = points,
 #'                            width=custom_width,
-#'                            material=diffuse(color="red"))) %>%
-#'   add_object(sphere(y=3,z=-5,x=2,material=light(intensity=15))) %>%
+#'                            material=diffuse(color="red"))) |>
+#'   add_object(sphere(y=3,z=-5,x=2,material=light(intensity=15))) |>
 #'   render_scene(lookat=c(0.3,0.5,0.5),fov=12, width=800,height=800, clamp_value = 10,
 #'                aperture=0.025, samples=16, sample_method="sobol_blue")
 #' }
@@ -3323,11 +3323,11 @@ mesh3d_model = function(
 #' star_polygon = data.frame(x=xx,y=yy)
 #'
 #' #Extrude a path using a star polygon
-#' generate_studio(depth=-0.4,material=ground_mat) %>%
+#' generate_studio(depth=-0.4,material=ground_mat) |>
 #'   add_object(extruded_path(points = points, width=0.5,
 #'                            polygon = star_polygon,
-#'                            material=diffuse(color="red"))) %>%
-#'   add_object(sphere(y=3,z=-5,x=2,material=light(intensity=15))) %>%
+#'                            material=diffuse(color="red"))) |>
+#'   add_object(sphere(y=3,z=-5,x=2,material=light(intensity=15))) |>
 #'   render_scene(lookat=c(0.3,0.5,1),fov=12, width=800,height=800, clamp_value = 10,
 #'                aperture=0.025, samples=16, sample_method="sobol_blue")
 #' }
@@ -3339,48 +3339,48 @@ mesh3d_model = function(
 #' circ_polygon = data.frame(x=xx,y=yy)
 #'
 #' #Transform from the circle polygon to the star polygon and change the end cap material
-#' generate_studio(depth=-0.4,material=ground_mat) %>%
+#' generate_studio(depth=-0.4,material=ground_mat) |>
 #'   add_object(extruded_path(points = points, width=0.5,
 #'                            polygon=circ_polygon, polygon_end = star_polygon,
 #'                            material_cap  = diffuse(color="white"),
-#'                            material=diffuse(color="red"))) %>%
-#'   add_object(sphere(y=3,z=-5,x=2,material=light(intensity=15))) %>%
+#'                            material=diffuse(color="red"))) |>
+#'   add_object(sphere(y=3,z=-5,x=2,material=light(intensity=15))) |>
 #'   render_scene(lookat=c(0.3,0.5,0.5),fov=12, width=800,height=800, clamp_value = 10,
 #'                aperture=0.025, samples=16, sample_method="sobol_blue")
 #' }
 #' if(run_documentation()) {
 #' #Add three and a half twists along the path, and make sure the breaks are evenly spaced
-#' generate_studio(depth=-0.4,material=ground_mat) %>%
+#' generate_studio(depth=-0.4,material=ground_mat) |>
 #'   add_object(extruded_path(points = points, width=0.5, twists = 3.5,
 #'                            polygon=star_polygon, linear_step = TRUE, breaks=360,
 #'                            material_cap  = diffuse(color="white"),
-#'                            material=diffuse(color="red"))) %>%
-#'   add_object(sphere(y=3,z=-5,x=2,material=light(intensity=15))) %>%
+#'                            material=diffuse(color="red"))) |>
+#'   add_object(sphere(y=3,z=-5,x=2,material=light(intensity=15))) |>
 #'   render_scene(lookat=c(0.3,0.5,0),fov=12, width=800,height=800, clamp_value = 10,
 #'                aperture=0.025, samples=16, sample_method="sobol_blue")
 #' }
 #' if(run_documentation()) {
 #' #Smooth the normals for a less sharp appearance:
-#' generate_studio(depth=-0.4,material=ground_mat) %>%
+#' generate_studio(depth=-0.4,material=ground_mat) |>
 #'   add_object(extruded_path(points = points, width=0.5, twists = 3.5,
 #'                            polygon=star_polygon,
 #'                            linear_step = TRUE, breaks=360,
 #'                            smooth_normals = TRUE,
 #'                            material_cap  = diffuse(color="white"),
-#'                            material=diffuse(color="red"))) %>%
-#'   add_object(sphere(y=3,z=-5,x=2,material=light(intensity=15))) %>%
+#'                            material=diffuse(color="red"))) |>
+#'   add_object(sphere(y=3,z=-5,x=2,material=light(intensity=15))) |>
 #'   render_scene(lookat=c(0.3,0.5,0),fov=12, width=800,height=800, clamp_value = 10,
 #'                aperture=0.025, samples=16, sample_method="sobol_blue")
 #' }
 #' if(run_documentation()) {
 #' #Only generate part of the curve, specified by the u_min and u_max arguments
-#' generate_studio(depth=-0.4,material=ground_mat) %>%
+#' generate_studio(depth=-0.4,material=ground_mat) |>
 #'   add_object(extruded_path(points = points, width=0.5, twists = 3.5,
 #'                            u_min = 0.2, u_max = 0.8,
 #'                            polygon=star_polygon, linear_step = TRUE, breaks=360,
 #'                            material_cap  = diffuse(color="white"),
-#'                            material=diffuse(color="red"))) %>%
-#'   add_object(sphere(y=3,z=-5,x=2,material=light(intensity=15))) %>%
+#'                            material=diffuse(color="red"))) |>
+#'   add_object(sphere(y=3,z=-5,x=2,material=light(intensity=15))) |>
 #'   render_scene(lookat=c(0.3,0.5,0),fov=12, width=800,height=800, clamp_value = 10,
 #'                aperture=0.025, samples=16, sample_method="sobol_blue")
 #' }
@@ -3394,12 +3394,12 @@ mesh3d_model = function(
 #'
 #' generate_studio(depth=-0.2,
 #'                material=diffuse(color = "dodgerblue4", checkercolor = "#002a61",
-#'                                 checkerperiod = 1)) %>%
+#'                                 checkerperiod = 1)) |>
 #'  add_object(extruded_path(points = points,  polygon=square_polygon, closed = TRUE,
 #'                           linear_step = TRUE, twists = 1.5, breaks = 720,
 #'                           material = diffuse(noisecolor = "black", noise = 10,
-#'                                              noiseintensity = 10))) %>%
-#'  add_object(sphere(y=20,x=0,z=-21,material=light(intensity = 1000))) %>%
+#'                                              noiseintensity = 10))) |>
+#'  add_object(sphere(y=20,x=0,z=-21,material=light(intensity = 1000))) |>
 #'  render_scene(lookat=c(0,0.5,0), fov=10, samples=16, sample_method = "sobol_blue",
 #'               width = 800, height=800)
 #' }
@@ -3407,21 +3407,21 @@ mesh3d_model = function(
 #' #Create a green glass tube with the dielectric priority interface
 #' #and fill it with a purple neon tube light
 #' generate_ground(depth=-0.4,material=diffuse(color="grey50",
-#'                                             checkercolor = "grey20",checkerperiod = 1.5)) %>%
+#'                                             checkercolor = "grey20",checkerperiod = 1.5)) |>
 #'   add_object(extruded_path(points = points, width=0.7, linear_step = TRUE,
 #'                            polygon = star_polygon, twists = 2, closed = TRUE,
 #'                            polygon_end = star_polygon, breaks=500,
 #'                            material=dielectric(priority = 1, refraction = 1.2,
 #'                                                attenuation=c(1,0.3,1),
-#'                                                attenuation_intensity=20))) %>%
+#'                                                attenuation_intensity=20))) |>
 #'   add_object(extruded_path(points = points, width=0.4, linear_step = TRUE,
 #'                            polygon = star_polygon,twists = 2, closed = TRUE,
 #'                            polygon_end = star_polygon, breaks=500,
-#'                            material=dielectric(priority = 0,refraction = 1))) %>%
+#'                            material=dielectric(priority = 0,refraction = 1))) |>
 #'   add_object(extruded_path(points = points, width=0.05, closed = TRUE,
 #'                            material=light(color="purple", intensity = 5,
-#'                                           importance_sample = FALSE))) %>%
-#'   add_object(sphere(y=10,z=-5,x=0,radius=5,material=light(color = "white",intensity = 5))) %>%
+#'                                           importance_sample = FALSE))) |>
+#'   add_object(sphere(y=10,z=-5,x=0,radius=5,material=light(color = "white",intensity = 5))) |>
 #'   render_scene(lookat=c(0,0.5,1),fov=10,
 #'                width=800,height=800, clamp_value = 10,
 #'                aperture=0.025, samples=16, sample_method="sobol_blue")
@@ -4261,34 +4261,34 @@ extruded_path = function(
 #' library(rayvertex)
 #' if(run_documentation()) {
 #' raymesh_model(sphere_mesh(position = c(-1, 0, 0),
-#'               material = material_list(transmittance = "red"))) %>%
-#'   add_object(generate_ground(material = diffuse(checkercolor="grey20"))) %>%
+#'               material = material_list(transmittance = "red"))) |>
+#'   add_object(generate_ground(material = diffuse(checkercolor="grey20"))) |>
 #'   render_scene(fov = 30, samples=16, sample_method="sobol_blue")
 #' }
 #'
 #' # We create a complex rayvertex mesh, using the `rayvertex::add_shape` function which
 #' # creates a new `raymesh` object out of individual `raymesh` objects
 #' rm_scene = sphere_mesh(position = c(-1, 0, 0),
-#'             material = material_list(transmittance = "red")) %>%
+#'             material = material_list(transmittance = "red")) |>
 #'     add_shape(sphere_mesh(position = c(1, 0, 0),
 #'             material = material_list(transmittance = "green", ior = 1.5)))
 #'
 #' # Pass the single raymesh object to `raymesh_model()`
 #' # `raymesh_model()`
 #' if(run_documentation()) {
-#' raymesh_model(rm_scene) %>%
-#'   add_object(generate_ground(material = diffuse(checkercolor="grey20"))) %>%
+#' raymesh_model(rm_scene) |>
+#'   add_object(generate_ground(material = diffuse(checkercolor="grey20"))) |>
 #'   render_scene(fov = 30, samples=16, sample_method="sobol_blue")
 #' }
 #'
 #' # Set `flip_transmittance = FALSE` argument to specify attenuation coefficients directly
 #' # (as specified in the `dielectric()` material). We change the material's numerical attenuation
 #' # constants using `rayvertex::change_material`
-#' rm_scene_new= change_material(rm_scene, transmittance = c(1,2,0.3), id = 1) %>%
+#' rm_scene_new= change_material(rm_scene, transmittance = c(1,2,0.3), id = 1) |>
 #'   change_material(transmittance = c(3,1,2), id = 2)
 #' if(run_documentation()) {
-#' raymesh_model(rm_scene_new, flip_transmittance = FALSE) %>%
-#'   add_object(generate_ground(material = diffuse(checkercolor="grey20"))) %>%
+#' raymesh_model(rm_scene_new, flip_transmittance = FALSE) |>
+#'   add_object(generate_ground(material = diffuse(checkercolor="grey20"))) |>
 #'   render_scene(fov = 30, samples=16, sample_method="sobol_blue")
 #' }
 #'
@@ -4296,16 +4296,16 @@ extruded_path = function(
 #' if(run_documentation()) {
 #' raymesh_model(rm_scene,
 #'               material = dielectric(attenuation = "dodgerblue2", attenuation_intensity = 4),
-#'   override_material = TRUE) %>%
-#'   add_object(generate_ground(material = diffuse(checkercolor="grey20"))) %>%
+#'   override_material = TRUE) |>
+#'   add_object(generate_ground(material = diffuse(checkercolor="grey20"))) |>
 #'   render_scene(fov = 30, samples=16, sample_method="sobol_blue")
 #' }
 #'
 #' # Adjusting the scale, position, and rotation parameters of the `raymesh` model
 #' if(run_documentation()) {
 #' raymesh_model(rm_scene,
-#'               x = 0, y = 0.5, z = -1, angle = c(0, 0, 20)) %>%
-#'   add_object(generate_ground(material = diffuse(checkercolor="grey20"))) %>%
+#'               x = 0, y = 0.5, z = -1, angle = c(0, 0, 20)) |>
+#'   add_object(generate_ground(material = diffuse(checkercolor="grey20"))) |>
 #'   render_scene(fov = 30,lookat=c(0,0.5,0), samples=16, sample_method="sobol_blue")
 #' }
 raymesh_model = function(

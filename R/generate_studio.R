@@ -16,10 +16,10 @@
 #'
 #' @examples
 #' #Generate the ground and add some objects
-#' scene = generate_studio(depth=-1, material = diffuse(color="white")) %>%
+#' scene = generate_studio(depth=-1, material = diffuse(color="white")) |>
 #'    add_object(obj_model(r_obj(),y=-0.5,x=0.5, scale=1.2,
-#'                         material=glossy(color="darkred"),angle=c(0,160,0))) %>%
-#'    add_object(sphere(x=-0.5,radius=0.5,material=dielectric())) %>%
+#'                         material=glossy(color="darkred"),angle=c(0,160,0))) |>
+#'    add_object(sphere(x=-0.5,radius=0.5,material=dielectric())) |>
 #'    add_object(sphere(y=3,x=-2,z=-20,material=light(intensity=600)))
 #' if(run_documentation()) {
 #' render_scene(scene, parallel = TRUE, lookfrom = c(0,2,-10), lookat=c(0,-0.25,0),
@@ -31,39 +31,39 @@
 #' render_scene(scene, parallel=TRUE,lookfrom=c(0,200,-400),clamp_value=10,samples=16)
 #' }
 generate_studio = function(
-  depth = -1,
-  distance = -10,
-  width = 100,
-  height = 100,
-  curvature = 8,
-  material = diffuse()
+	depth = -1,
+	distance = -10,
+	width = 100,
+	height = 100,
+	curvature = 8,
+	material = diffuse()
 ) {
-  #Todo: replace studio with a single mesh
-  xz_rect(
-    y = depth,
-    xwidth = width,
-    zwidth = width,
-    z = distance + width / 2 + curvature,
-    material = material
-  ) %>%
-    add_object(xy_rect(
-      z = distance,
-      y = depth + height / 2 + curvature,
-      xwidth = width,
-      ywidth = height,
-      material = material
-    )) %>%
-    add_object(cylinder(
-      z = distance + curvature,
-      y = depth + curvature,
-      radius = curvature,
-      phi_min = 0,
-      phi_max = 90,
-      flipped = T,
-      angle = c(90, 90, 0),
-      capped = FALSE,
-      material = material,
-      length = width
-    )) |>
-    group_objects(angle = c(0, 180, 0))
+	#Todo: replace studio with a single mesh
+	xz_rect(
+		y = depth,
+		xwidth = width,
+		zwidth = width,
+		z = distance + width / 2 + curvature,
+		material = material
+	) |>
+		add_object(xy_rect(
+			z = distance,
+			y = depth + height / 2 + curvature,
+			xwidth = width,
+			ywidth = height,
+			material = material
+		)) |>
+		add_object(cylinder(
+			z = distance + curvature,
+			y = depth + curvature,
+			radius = curvature,
+			phi_min = 0,
+			phi_max = 90,
+			flipped = T,
+			angle = c(90, 90, 0),
+			capped = FALSE,
+			material = material,
+			length = width
+		)) |>
+		group_objects(angle = c(0, 180, 0))
 }
