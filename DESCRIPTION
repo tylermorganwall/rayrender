@@ -36,7 +36,7 @@ Suggests:
     rayshader (>= 0.38.13),
     xml2,
     rgl
-LinkingTo: Rcpp, RcppThread, progress, spacefillr (>= 0.3.0), testthat, libopenexr, libimath
+LinkingTo: Rcpp, RcppThread, progress, spacefillr (>= 0.3.0), testthat, libopenexr (>= 3.4.4), libimath (>= 3.2.2)
 URL: https://www.rayrender.net, https://github.com/tylermorganwall/rayrender, http://www.rayrender.net/
 RoxygenNote: 7.3.3
 SystemRequirements: C++20
@@ -44,4 +44,4 @@ Biarch: true
 Encoding: UTF-8
 Config/testthat/edition: 3
 Config/build/compilation-database: true
-Remotes: tylermorganwall/rayshader, tylermorganwall/rayimage, tylermorganwall/rayvertex
+Remotes: tylermorganwall/rayshader, tylermorganwall/rayimage, tylermorganwall/rayvertex, tylermorganwall/libopenexr, tylermorganwall/libimath
