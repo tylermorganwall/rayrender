@@ -20,7 +20,8 @@ class hitable;
 void get_sphere_uv(const vec3f& p, Float& u, Float& v);
 void get_sphere_uv(const normal3f& p, Float& u, Float& v);
 
-
+void get_sphere_uv_z(const vec3f &p, Float &u, Float &v);
+void get_sphere_uv_z(const normal3f &p, Float &u, Float &v);
 
 struct alignas(16) hit_record {
   hit_record() : has_bump(false), alpha_miss(false), infinite_area_hit(false) {};

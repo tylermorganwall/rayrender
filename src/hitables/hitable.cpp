@@ -5,9 +5,25 @@
 //Translate implementation
 
 void get_sphere_uv(const vec3f& p, Float& u, Float& v) {
+  // phi returns the angle from the +x axis to the to the point (x, z),
   Float phi = atan2(p.xyz.z,p.xyz.x);
   Float theta = asin(p.xyz.y);
   u = 1 - (phi * M_1_PI + 1) * 0.5;
+  v = (theta * M_1_PI + 0.5);
+}
+
+void get_sphere_uv_z(const vec3f &p, Float &u, Float &v) {
+  // phi returns the angle from the +z axis to the to the point (x, z),
+  Float phi = atan2(-p.xyz.x, -p.xyz.z);
+  Float theta = asin(p.xyz.y);
+  u = 1 - (phi * M_1_PI + 1) * 0.5; //Converts to 0..1
+  v = (theta * M_1_PI + 0.5);
+}
+
+void get_sphere_uv_z(const normal3f &p, Float &u, Float &v) {
+  Float phi = atan2(-p.xyz.x, -p.xyz.z);
+  Float theta = asin(p.xyz.y);
+  u = 1 - (phi * M_1_PI + 1) * 0.5; // Converts to 0..1
   v = (theta * M_1_PI + 0.5);
 }
 

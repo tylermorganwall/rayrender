@@ -44,8 +44,8 @@ const bool InfiniteAreaLight::hit(const Ray& r, Float t_min, Float t_max, hit_re
     rec.p *= radius / rec.p.length(); 
     rec.normal = convert_to_normal3(-(r2.direction())); 
     
-    vec3f v2(-r2.direction().xyz.z,r2.direction().xyz.y,r2.direction().xyz.x);
-    get_sphere_uv(unit_vector(v2), rec.u, rec.v);
+    // vec3f v2(r2.direction().xyz.z,r2.direction().xyz.y,r2.direction().xyz.x);
+    get_sphere_uv_z(unit_vector(r2.direction()), rec.u, rec.v);
     // rec.u = 1 - rec.u;
     
     //Interaction information
@@ -72,8 +72,8 @@ const bool InfiniteAreaLight::hit(const Ray& r, Float t_min, Float t_max, hit_re
     rec.p *= radius / rec.p.length(); 
     rec.normal = convert_to_normal3(-(r2.direction())); 
     
-    vec3f v2(-r2.direction().xyz.z,r2.direction().xyz.y,r2.direction().xyz.x);
-    get_sphere_uv(unit_vector(v2), rec.u, rec.v);
+    // vec3f v2(r2.direction().xyz.z,r2.direction().xyz.y,r2.direction().xyz.x);
+    get_sphere_uv_z(unit_vector(r2.direction()), rec.u, rec.v);
     // rec.u = 1 - rec.u;
     
     
@@ -119,11 +119,10 @@ const bool InfiniteAreaLight::hit(const Ray& r, Float t_min, Float t_max, hit_re
   //   rec.p *= radius / rec.p.length(); 
   //   rec.normal = convert_to_normal3(-(r2.direction()));
     
-    vec3f v2(-r2.direction().xyz.z,r2.direction().xyz.y,r2.direction().xyz.x);
-    get_sphere_uv(unit_vector(v2), rec.u, rec.v);
-    // rec.u = 1 - rec.u;    
-    
-    
+    // vec3f v(r2.direction().xyz.z,r2.direction().xyz.y,r2.direction().xyz.x);
+    get_sphere_uv_z(unit_vector(r2.direction()), rec.u, rec.v);
+    // rec.u = 1 - rec.u;
+
     // //Interaction information
     // Float zRadius = std::sqrt(rec.p.xyz.x * rec.p.xyz.x  + rec.p.xyz.z  * rec.p.xyz.z );
     // Float invZRadius = 1 / zRadius;
@@ -148,18 +147,19 @@ const bool InfiniteAreaLight::hit(const Ray& r, Float t_min, Float t_max, hit_re
   //   rec.p *= radius / rec.p.length(); 
   //   rec.normal = convert_to_normal3(-(r2.direction()));
     
-    vec3f v2(-r2.direction().xyz.z,r2.direction().xyz.y,r2.direction().xyz.x);
-    get_sphere_uv(unit_vector(v2), rec.u, rec.v);
+    // vec3f v2(r2.direction().xyz.z,r2.direction().xyz.y,r2.direction().xyz.x);
+    get_sphere_uv_z(unit_vector(r2.direction()), rec.u, rec.v);
     // rec.u = 1 - rec.u;
-    
-  //   //Interaction information
-  //   Float zRadius = std::sqrt(rec.p.xyz.x * rec.p.xyz.x  + rec.p.xyz.z  * rec.p.xyz.z );
-  //   Float invZRadius = 1 / zRadius;
-  //   Float cosPhi = rec.p.xyz.x * invZRadius;
-  //   Float sinPhi = rec.p.xyz.z * invZRadius;
-  //   Float theta = std::acos(clamp(rec.p.xyz.z / radius, -1, 1));
-  //   rec.dpdu = 2 * static_cast<Float>(M_PI) * vec3f(-rec.p.xyz.z, 0, rec.p.xyz.x);
-  //   rec.dpdv = 2 * static_cast<Float>(M_PI) * vec3f(rec.p.xyz.z * cosPhi, rec.p.xyz.z * sinPhi, -radius * std::sin(theta));
+
+    //   //Interaction information
+    //   Float zRadius = std::sqrt(rec.p.xyz.x * rec.p.xyz.x  + rec.p.xyz.z  *
+    //   rec.p.xyz.z ); Float invZRadius = 1 / zRadius; Float cosPhi =
+    //   rec.p.xyz.x * invZRadius; Float sinPhi = rec.p.xyz.z * invZRadius;
+    //   Float theta = std::acos(clamp(rec.p.xyz.z / radius, -1, 1));
+    //   rec.dpdu = 2 * static_cast<Float>(M_PI) * vec3f(-rec.p.xyz.z, 0,
+    //   rec.p.xyz.x); rec.dpdv = 2 * static_cast<Float>(M_PI) *
+    //   vec3f(rec.p.xyz.z * cosPhi, rec.p.xyz.z * sinPhi, -radius *
+    //   std::sin(theta));
     
     rec = (*ObjectToWorld)(rec);
     rec.shape = this;
@@ -226,8 +226,8 @@ Float InfiniteAreaLight::pdf_value(const point3f& o, const vec3f& v, random_gen&
   hit_record rec;
   // if(this->hit(ray(o,v), 0.001, FLT_MAX, rec, rng)) {
     vec3f d = (*WorldToObject)(v);
-    vec3f v2(-d.xyz.z,d.xyz.y,d.xyz.x);
-    get_sphere_uv(unit_vector(v2), rec.u, rec.v);
+    // vec3f v2(d.xyz.z,d.xyz.y,d.xyz.x);
+    get_sphere_uv_z(unit_vector(d), rec.u, rec.v);
     // rec.u = 1 - rec.u;
     Float sinTheta = std::sin(rec.v * static_cast<Float>(M_PI));
     if (sinTheta == 0) {
@@ -247,8 +247,8 @@ Float InfiniteAreaLight::pdf_value(const point3f& o, const vec3f& v, Sampler* sa
 
   // if(this->hit(ray(o,v), 0.001, FLT_MAX, rec, sampler)) {
     vec3f d = (*WorldToObject)(v);
-    vec3f v2(-d.xyz.z,d.xyz.y,d.xyz.x);
-    get_sphere_uv(unit_vector(v2), rec.u, rec.v);
+    // vec3f v2(d.xyz.z,d.xyz.y,d.xyz.x);
+    get_sphere_uv_z(unit_vector(d), rec.u, rec.v);
     // rec.u = 1 - rec.u;
     Float sinTheta = std::sin(rec.v * static_cast<Float>(M_PI));
     if (sinTheta == 0) {
@@ -270,7 +270,8 @@ vec3f InfiniteAreaLight::random(const point3f& o, random_gen& rng, Float time) {
     return(vec3f(0.f,0.f,0.f));
   }
   //theta vertical, phi horizontal
-  Float theta = (1-uv[1]) * static_cast<Float>(M_PI), phi = (uv[0]) * 2.0f * static_cast<Float>(M_PI);
+  Float theta = (1 - uv[1]) * static_cast<Float>(M_PI),
+        phi = (-uv[0]) * 2.0f * static_cast<Float>(M_PI);
   Float cosTheta = std::cos(theta), sinTheta = std::sin(theta);
   Float sinPhi = std::sin(phi), cosPhi = std::cos(phi);
   vec3f d(sinTheta * sinPhi, cosTheta, sinTheta * cosPhi);
@@ -285,7 +286,7 @@ vec3f InfiniteAreaLight::random(const point3f& o, Sampler* sampler, Float time) 
     return(vec3f(0.f,0.f,0.f));
   }
   //theta vertical, phi horizontal
-  Float theta = (1-uv[1]) * static_cast<Float>(M_PI), phi = (uv[0]) * 2.0f * static_cast<Float>(M_PI);
+  Float theta = (1 - uv[1]) * static_cast<Float>(M_PI), phi = (-uv[0]) * 2.0f * static_cast<Float>(M_PI);
   Float cosTheta = std::cos(theta), sinTheta = std::sin(theta);
   Float sinPhi = std::sin(phi), cosPhi = std::cos(phi);
   vec3f d(sinTheta * sinPhi, cosTheta, sinTheta * cosPhi);

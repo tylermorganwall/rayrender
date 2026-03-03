@@ -87,30 +87,31 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
       for(unsigned int j = 0; j < height; j++) {
         int samples;
         Float r_col,g_col,b_col;
-        if(finalized[i/4 + width * (height-1-j)]) {
+        if(finalized[(width - 1 - i/4) + width * (height-1-j)]) {
           samples = 1;
-          if(just_finalized[i/4 + width * (height-1-j)] && !interactive ) {
+          if (just_finalized[(width - 1 - i / 4) + width * (height - 1 - j)] &&
+              !interactive) {
             r_col = 0;
             g_col = 1;
             b_col = 0;
           } else {
-            r_col = interactive ? std::sqrt((rgb(i/4,height-1-j,0))) : std::sqrt((rgb(i/4,height-1-j,0))/4);
-            g_col = interactive ? std::sqrt((rgb(i/4,height-1-j,1))) : std::sqrt((rgb(i/4,height-1-j,1))/4);
-            b_col = interactive ? std::sqrt((rgb(i/4,height-1-j,2))) : std::sqrt((rgb(i/4,height-1-j,2))/4);
+            r_col = interactive ? std::sqrt((rgb((width - 1 - i/4),height-1-j,0))) : std::sqrt((rgb((width - 1 - i/4),height-1-j,0))/4);
+            g_col = interactive ? std::sqrt((rgb((width - 1 - i/4),height-1-j,1))) : std::sqrt((rgb((width - 1 - i/4),height-1-j,1))/4);
+            b_col = interactive ? std::sqrt((rgb((width - 1 - i/4),height-1-j,2))) : std::sqrt((rgb((width - 1 - i/4),height-1-j,2))/4);
           }
         } else {
           samples = ns+1;
-          r_col = std::sqrt((rgb(i/4,height-1-j,0))/samples);
-          g_col = std::sqrt((rgb(i/4,height-1-j,1))/samples);
-          b_col = std::sqrt((rgb(i/4,height-1-j,2))/samples);
+          r_col = std::sqrt((rgb((width - 1 - i/4),height-1-j,0))/samples);
+          g_col = std::sqrt((rgb((width - 1 - i/4),height-1-j,1))/samples);
+          b_col = std::sqrt((rgb((width - 1 - i/4),height-1-j,2))/samples);
         }
 
         data[i + 4*width*j]   = (unsigned char)(255*clamp(b_col,0,1));
         data[i + 4*width*j+1] = (unsigned char)(255*clamp(g_col,0,1));
         data[i + 4*width*j+2] = (unsigned char)(255*clamp(r_col,0,1));
 
-        if(finalized[i/4 + width * (height-1-j)]) {
-          just_finalized[i/4 + width * (height-1-j)] = false;
+        if(finalized[(width - 1 - i/4) + width * (height-1-j)]) {
+          just_finalized[(width - 1 - i/4) + width * (height-1-j)] = false;
         }
       }
     }
@@ -209,13 +210,13 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
             cam->update_position(step, orbit, false);
           }
           if (e.xkey.keycode == A_key ) {
-            cam->update_position(-speed * u * base_step, orbit);
+            cam->update_position(speed * u * base_step, orbit);
           }
           if (e.xkey.keycode == S_key ) {
             cam->update_position(-speed * w * base_step, orbit, false);
           }
           if (e.xkey.keycode == D_key ) {
-            cam->update_position(speed * u * base_step, orbit);
+            cam->update_position(-speed * u * base_step, orbit);
           }
           if (e.xkey.keycode == Q_key ) {
             cam->update_position(speed * v * base_step, orbit);
@@ -410,13 +411,13 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
               cam->update_position(step, orbit, false);
             }
             if (e.xkey.keycode == A_key ) {
-              cam->update_position(-speed * u * base_step, orbit);
+              cam->update_position(speed * u * base_step, orbit);
             }
             if (e.xkey.keycode == S_key ) {
               cam->update_position(-speed * w * base_step, orbit, false);
             }
             if (e.xkey.keycode == D_key ) {
-              cam->update_position(speed * u * base_step, orbit);
+              cam->update_position(-speed * u * base_step, orbit);
             }
             if (e.xkey.keycode == Q_key ) {
               cam->update_position(speed * v * base_step, orbit);
@@ -519,8 +520,8 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
           Float x = e.xbutton.x;
           Float y = e.xbutton.y;
           Float fov = cam->get_fov();
-          Float u = (Float(x)) / Float(width);
-          Float v = (Float(y)) / Float(height);
+          Float u = (Float(width) - 1 - (Float(x))) / Float(width);
+          Float v = (Float(width) - 1 - (Float(y))) / Float(height);
           vec3f dir;
           hit_record hrec;
           if(fov < 0) {
@@ -537,7 +538,7 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
               }
             }
           } else if (fov > 0) {
-            Ray r2 = cam->get_ray(u,1-v, point3f(0),0.5f);
+            Ray r2 = cam->get_ray(u,v, point3f(0),0.5f);
             if (left) {
                 world->hit(r2, 0.001, FLT_MAX, hrec, rng);
                 if (hrec.shape->GetName() == "EnvironmentLight") {
@@ -546,7 +547,7 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
             }
             dir = r2.direction();
           } else {
-            Ray r2 = cam->get_ray(u,1-v, point3f(0.5),
+            Ray r2 = cam->get_ray(u,v, point3f(0.5),
                                  0.5f);
             if(world->hit(r2, 0.001, FLT_MAX, hrec, rng)) {
               if( hrec.shape->GetName() != "EnvironmentLight") {
@@ -612,31 +613,31 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
       for(unsigned int j = 0; j < height; j++) {
         Float samples;
         Float r_col,g_col,b_col;
-        if(finalized[i/3 + width * (height-1-j)]) {
-          if(just_finalized[i/3 + width * (height-1-j)] && !interactive ) {
+        if(finalized[(width - 1 - i/3) + width * (height-1-j)]) {
+          if(just_finalized[(width - 1 - i/3) + width * (height-1-j)] && !interactive ) {
             r_col = 0.f;
             g_col = 1.f;
             b_col = 0.f;
           } else {
-            r_col = interactive ? std::sqrt((rgb_s(i/3,height-1-j,0))) : 
-              std::sqrt((rgb_s(i/3,height-1-j,0))/4.f);
-            g_col = interactive ? std::sqrt((rgb_s(i/3,height-1-j,1))) : 
-              std::sqrt((rgb_s(i/3,height-1-j,1))/4.f);
-            b_col = interactive ? std::sqrt((rgb_s(i/3,height-1-j,2))) : 
-              std::sqrt((rgb_s(i/3,height-1-j,2))/4.f);
+            r_col = interactive ? std::sqrt((rgb_s((width - 1 - i/3),height-1-j,0))) : 
+              std::sqrt((rgb_s((width - 1 - i/3),height-1-j,0))/4.f);
+            g_col = interactive ? std::sqrt((rgb_s((width - 1 - i/3),height-1-j,1))) : 
+              std::sqrt((rgb_s((width - 1 - i/3),height-1-j,1))/4.f);
+            b_col = interactive ? std::sqrt((rgb_s((width - 1 - i/3),height-1-j,2))) : 
+              std::sqrt((rgb_s((width - 1 - i/3),height-1-j,2))/4.f);
           }
         } else {
           samples = (Float)ns+1.f;
-          r_col = std::sqrt((rgb_s(i/3,height-1-j,0))/samples);
-          g_col = std::sqrt((rgb_s(i/3,height-1-j,1))/samples);
-          b_col = std::sqrt((rgb_s(i/3,height-1-j,2))/samples);
+          r_col = std::sqrt((rgb_s((width - 1 - i/3),height-1-j,0))/samples);
+          g_col = std::sqrt((rgb_s((width - 1 - i/3),height-1-j,1))/samples);
+          b_col = std::sqrt((rgb_s((width - 1 - i/3),height-1-j,2))/samples);
         }
         rgb[i+3*width*j]   = clamp(r_col,0.f,1.f);
         rgb[i+3*width*j+1] = clamp(g_col,0.f,1.f);
         rgb[i+3*width*j+2] = clamp(b_col,0.f,1.f);
         
-        if(finalized[i/3 + width * (height-1-j)]) {
-          just_finalized[i/3 + width * (height-1-j)] = false;
+        if(finalized[(width - 1 - i/3) + width * (height-1-j)]) {
+          just_finalized[(width - 1 - i/3) + width * (height-1-j)] = false;
         }
       }
     }
