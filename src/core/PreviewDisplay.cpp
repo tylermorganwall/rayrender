@@ -294,7 +294,7 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
           if (e.xkey.keycode == P_key || e.xkey.keycode == K_key ) {
             point3f origin = cam->get_origin();
             Float fov =  cam->get_fov();
-            vec3f cam_direction = -cam->get_w();
+            vec3f cam_direction = cam->get_w();
             Float cam_aperture = cam->get_aperture();
             Float fd = cam->get_focal_distance();
             vec3f cam_up = cam->get_up();
@@ -476,7 +476,7 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
             if (e.xkey.keycode == P_key ) {
               point3f origin = cam->get_origin();
               Float fov =  cam->get_fov();
-              vec3f cam_direction = -cam->get_w();
+              vec3f cam_direction = cam->get_w();
               Float fd = cam->get_focal_distance();
               point3f cam_lookat = cam->get_lookat();
               Float cam_aperture = cam->get_aperture();
@@ -521,11 +521,11 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
           Float y = e.xbutton.y;
           Float fov = cam->get_fov();
           Float u = (Float(width) - 1 - (Float(x))) / Float(width);
-          Float v = (Float(width) - 1 - (Float(y))) / Float(height);
+          Float v = (Float(height) - 1 - (Float(y))) / Float(height);
           vec3f dir;
           hit_record hrec;
           if(fov < 0) {
-            CameraSample samp({1-u,v},point2f(0.5,0.5), 0.5);
+            CameraSample samp({u,v},point2f(0.5,0.5), 0.5);
             Ray r2;
             cam->GenerateRay(samp,&r2);
             if(world->hit(r2, 0.001, FLT_MAX, hrec, rng)) {
@@ -1288,4 +1288,3 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
   return DefWindowProc(hwnd, uMsg, wParam, lParam);
 }
 #endif
-
