@@ -379,7 +379,7 @@ Left Mouse Click: Change Look At (new focal distance) | Right Mouse Click: Chang
 		parallel = parallel,
 		bvh_type = bvh_type,
 		environment_light = environment_light,
-		rotate_env = rotate_env,
+		rotate_env = -rotate_env,
 		intensity_env = intensity_env,
 		debug_channel = debug_channel,
 		plot_scene = plot_scene,
