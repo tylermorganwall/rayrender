@@ -834,8 +834,17 @@ define(
 	EXT_C_SOURCES = collapse_flags(EXT_C_SOURCES)
 )
 
-configure_file("src/Makevars.in")
-configure_file("src/Makevars.win.in")
+if (is_windows) {
+	configure_file("src/Makevars.win.in")
+	if (file.exists("src/Makevars")) {
+		unlink("src/Makevars")
+	}
+} else {
+	configure_file("src/Makevars.in")
+	if (file.exists("src/Makevars.win")) {
+		unlink("src/Makevars.win")
+	}
+}
 
 message("--------------------------------------------------")
 message("Configuration for rayrender")

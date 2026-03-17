@@ -35,3 +35,5 @@
 ^src/pbrt$
 ^nanovdb$
 ^LICENSE\.md$
+^cache$
+^AGENTS\.md$
