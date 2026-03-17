@@ -5,6 +5,13 @@ is_linux = !is_windows && !is_macos
 target_arch = Sys.info()[["machine"]]
 r_home = R.home()
 
+# This script configures Makevars explicitly; disable the helper's
+# post-script auto-configuration pass to avoid regenerating both files.
+options(
+	configure.common = FALSE,
+	configure.platform = FALSE
+)
+
 split_flags = function(flags) {
 	if (!nzchar(flags)) {
 		return(character())
