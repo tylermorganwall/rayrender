@@ -1557,7 +1557,7 @@ extruded_polygon = function(
 	} else {
 		extruded = TRUE
 	}
-	x_off = x
+	x_off = -x
 	y_off = y
 	z_off = z
 	poly_list = list()
@@ -1732,6 +1732,7 @@ extruded_polygon = function(
 	# Processing common to base and SF: flip/earcut/center
 
 	for (i in seq_along(poly_list)) {
+		poly_list[[i]][, 1] = -poly_list[[i]][, 1]
 		if (flip_horizontal) {
 			poly_list[[i]][, 1] = -poly_list[[i]][, 1]
 		}

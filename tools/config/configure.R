@@ -194,22 +194,26 @@ compile_test = function(
 	# Human-readable command for diagnostics
 	cmd_str = build_command(CXX_COMMAND, args)
 
-	# Run the compiler with system2() to avoid shell redirection weirdness
-	output_lines = character()
+	# Capture compiler output to file and trust the returned numeric exit status.
+	log_file = tempfile(fileext = ".log")
+	on.exit(unlink(log_file), add = TRUE)
 	status = tryCatch(
-		{
-			output_lines <<- system2(
-				CXX_COMMAND[1],
-				args = c(CXX_COMMAND[-1], args),
-				stdout = TRUE,
-				stderr = TRUE
-			)
-			attr(output_lines, "status")
-		},
+		suppressWarnings(system2(
+			CXX_COMMAND[1],
+			args = c(CXX_COMMAND[-1], args),
+			stdout = log_file,
+			stderr = log_file
+		)),
 		error = function(e) 1L
 	)
 	if (is.null(status)) {
-		status = 0L
+		status = 1L
+	}
+	status = as.integer(status)
+	output_lines = if (file.exists(log_file)) {
+		readLines(log_file, warn = FALSE)
+	} else {
+		character()
 	}
 
 	if (!identical(status, 0L)) {
