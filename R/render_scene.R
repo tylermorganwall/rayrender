@@ -14,13 +14,16 @@
 #' vector and the `sample_method` is `stratified`, this will control the number of strata in each dimension.
 #' The total number of samples in this case will be the product of the two numbers.
 #' @param preview Default `interactive()`. Whether to display a real-time progressive preview of the render. Press ESC to cancel the render.
+#' If `deferred_render = TRUE`, the preview stays interactive until the final render is explicitly started.
 #' @param interactive Default `interactive()`. Whether the scene preview should be interactive. Camera movement orbits around the
 #' lookat point (unless the mode is switched to free flying), with the following control mapping:
 #' W = Forward, S = Backward, A = Left, D = Right, Q = Up, Z = Down,
 #' E = 2x Step Distance (max 128), C = 0.5x Step Distance, Up Key = Zoom In (decrease FOV), Down Key = Zoom Out (increase FOV),
 #' Left Key = Decrease Aperture, Right Key = Increase Aperture, 1 = Decrease Focal Distance, 2 = Increase Focal Distance,
 #' 3/4 = Rotate Environment Light,
-#' R = Reset Camera, TAB: Toggle Orbit Mode, Left Mouse Click: Change Look Direction, Right Mouse Click: Change Look At
+#' Right bracket/left bracket = Increase/Decrease Preview Exposure,
+#' R = Reset Camera, Return = Toggle between deferred and final render if `deferred_render = TRUE`, TAB: Toggle Orbit Mode,
+#' Left Mouse Click: Change Look Direction, Right Mouse Click: Change Look At
 #' K: Save Keyframe (at the conclusion of the render, this will create the `ray_keyframes`
 #' data.frame in the global environment, which can be passed to `generate_camera_motion()` to tween between those saved positions.
 #' L: Reset Camera to Last Keyframe (if set) F: Toggle Fast Travel Mode
@@ -32,6 +35,9 @@
 #' the aperture and field of view cannot be changed from their initial settings. Additionally,
 #' clicking to direct the camera at the background environment image while using a realistic camera will
 #' not always point to the exact position selected.
+#' @param deferred_render Default `FALSE`. If `TRUE` and interactive preview is enabled, rayrender will keep
+#' updating the progressive preview until Return is pressed. Pressing Return toggles the full render in the
+#' same window; pressing Return again returns to deferred mode.
 #' @param denoise Default `TRUE`. Whether to de-noise the final image and preview images. Note, this requires
 #' the free Intel Open Image Denoise (OIDN) library be installed on your system. Pre-compiled binaries can be installed from
 #' ppenimagedenoise.org, as well as . Linking during rayrender installation is done by defining the environment variable
@@ -42,6 +48,9 @@
 #' @param camera_scale Default `1`. Amount to scale the camera up or down in size. Use this rather than scaling a
 #' scene.
 #' @param iso Default `100`. Camera exposure.
+#' @param auto_exposure Default `FALSE`. If `TRUE`, automatically adjust the exposure with
+#' `rayimage::render_exposure(auto = TRUE)`. If `preview = TRUE`, the preview window exposure
+#' is calibrated from the 90\% luminance quantile of the first rendered frame.
 #' @param film_size Default `22`, in `mm` (scene units in `m`. Size of the film if using a realistic camera, otherwise
 #' ignored.
 #' @param min_variance Default `0`. Minimum acceptable variance for a block of pixels for the
@@ -228,9 +237,11 @@ render_scene = function(
 	camera_description_file = NA,
 	preview = interactive(),
 	interactive = TRUE,
+	deferred_render = FALSE,
 	denoise = TRUE,
 	camera_scale = 1,
 	iso = 100,
+	auto_exposure = FALSE,
 	film_size = 22,
 	min_variance = 0,
 	min_adaptive_size = 8,
@@ -335,14 +346,24 @@ HAS_OIDN: %s
 			!is.numeric(debug_channel) &&
 			debug_channel == "none"
 	) {
-		message(
+		controls_message = if (deferred_render) {
+			"--------------------------Interactive Mode Controls---------------------------
+W/A/S/D: Horizontal Movement: | Q/Z: Vertical Movement | Up/Down: Adjust FOV | ESC: Close
+Left/Right: Adjust Aperture  | 1/2: Adjust Focal Distance | 3/4: Rotate Environment Light
+P: Print Camera Info | R: Reset Camera |  E/C: Adjust Step Size |  TAB: Toggle Orbit Mode
+K: Save Keyframe | L: Reset Camera to Last Keyframe (if set) | F: Toggle Fast Travel Mode
+Left Mouse Click: Change Look At (new focal distance) | Right Mouse Click: Change Look At
+]/[: Adjust Preview Exposure | Return: Start Final Render"
+		} else {
 			"--------------------------Interactive Mode Controls---------------------------
 W/A/S/D: Horizontal Movement: | Q/Z: Vertical Movement | Up/Down: Adjust FOV | ESC: Close
 Left/Right: Adjust Aperture  | 1/2: Adjust Focal Distance | 3/4: Rotate Environment Light 
 P: Print Camera Info | R: Reset Camera |  TAB: Toggle Orbit Mode |  E/C: Adjust Step Size
 K: Save Keyframe | L: Reset Camera to Last Keyframe (if set) | F: Toggle Fast Travel Mode
-Left Mouse Click: Change Look At (new focal distance) | Right Mouse Click: Change Look At "
-		)
+Left Mouse Click: Change Look At (new focal distance) | Right Mouse Click: Change Look At
+]/[: Adjust Preview Exposure"
+		}
+		message(controls_message)
 	}
 	print_time(verbose, "Pre-processing scene")
 	debug_string = debug_channel
@@ -386,6 +407,7 @@ Left Mouse Click: Change Look At (new focal distance) | Right Mouse Click: Chang
 		progress = progress,
 		verbose = verbose,
 		sample_dist = Inf,
+		deferred_render = deferred_render,
 		integrator_type = integrator_type,
 		denoise = denoise,
 		print_debug_info = print_debug_info
@@ -399,6 +421,7 @@ Left Mouse Click: Change Look At (new focal distance) | Right Mouse Click: Chang
 
 	camera_info$preview = preview
 	camera_info$interactive = interactive
+	camera_info$auto_exposure = auto_exposure
 	debug_channel = scene_info$debug_channel # converted to numeric
 
 	#Pathtrace Scene
@@ -428,7 +451,9 @@ Left Mouse Click: Change Look At (new focal distance) | Right Mouse Click: Chang
 		plot_scene,
 		bloom,
 		new_page,
-		transparent_background = transparent_background
+		transparent_background = transparent_background,
+		auto_exposure = auto_exposure,
+		verbose = verbose
 	)
 	print_time(verbose, "Post-processed image")
 

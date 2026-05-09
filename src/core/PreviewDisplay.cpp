@@ -3,6 +3,9 @@
 #include "../math/mathinline.h"
 #include "../utils/raylog.h"
 
+#include <algorithm>
+#include <cmath>
+
 
 #ifdef RAY_HAS_X11
 
@@ -14,6 +17,33 @@
 #include "X11/Xatom.h"
 static Float env_y_angle;;
 #undef Status
+
+static bool PreviewDisplayHasKeyboardFocus(Display* display, Window window) {
+  Window focus_window;
+  int revert_to;
+  XGetInputFocus(display, &focus_window, &revert_to);
+  return focus_window == window;
+}
+
+static bool IsX11RenderInvalidatingKey(Display* display, KeyCode keycode) {
+  return keycode == XKeysymToKeycode(display, XStringToKeysym("w")) ||
+         keycode == XKeysymToKeycode(display, XStringToKeysym("a")) ||
+         keycode == XKeysymToKeycode(display, XStringToKeysym("s")) ||
+         keycode == XKeysymToKeycode(display, XStringToKeysym("d")) ||
+         keycode == XKeysymToKeycode(display, XStringToKeysym("q")) ||
+         keycode == XKeysymToKeycode(display, XStringToKeysym("z")) ||
+         keycode == XKeysymToKeycode(display, XK_Up) ||
+         keycode == XKeysymToKeycode(display, XK_Down) ||
+         keycode == XKeysymToKeycode(display, XK_Left) ||
+         keycode == XKeysymToKeycode(display, XK_Right) ||
+         keycode == XKeysymToKeycode(display, XStringToKeysym("1")) ||
+         keycode == XKeysymToKeycode(display, XStringToKeysym("2")) ||
+         keycode == XKeysymToKeycode(display, XStringToKeysym("3")) ||
+         keycode == XKeysymToKeycode(display, XStringToKeysym("4")) ||
+         keycode == XKeysymToKeycode(display, XStringToKeysym("f")) ||
+         keycode == XKeysymToKeycode(display, XStringToKeysym("l")) ||
+         keycode == XKeysymToKeycode(display, XStringToKeysym("r"));
+}
 
 #endif
 
@@ -52,6 +82,9 @@ static Transform Start_EnvWorldToObject_w;
 static Transform Start_EnvObjectToWorld_w;
 static std::vector<Rcpp::List>* Keyframes_w;
 static bool* write_fast_output_w;
+static bool deferred_render_w;
+static bool* render_requested_w;
+static Float* preview_exposure_adjustment_w;
 
 
 
@@ -59,6 +92,68 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
 #endif
 
+
+void PreviewDisplay::CalibratePreviewExposure(adaptive_sampler& adaptive_pixel_sampler,
+                                              RayMatrix& rgb,
+                                              size_t ns) {
+  if(!auto_exposure || preview_exposure_calibrated) {
+    return;
+  }
+  std::vector<bool>& finalized = adaptive_pixel_sampler.finalized;
+  std::vector<Float> luminance;
+  luminance.reserve(rgb.size());
+
+  for(unsigned int x = 0; x < rgb.rows(); x++) {
+    for(unsigned int y = 0; y < rgb.cols(); y++) {
+      Float sample_count = (Float)ns + 1.f;
+      if(finalized[x + rgb.rows() * y]) {
+        sample_count = interactive ? 1.f : 4.f;
+      }
+      Float r = std::fmax((Float)0, rgb(x, y, 0) / sample_count);
+      Float g = std::fmax((Float)0, rgb(x, y, 1) / sample_count);
+      Float b = std::fmax((Float)0, rgb(x, y, 2) / sample_count);
+      Float l = 0.2126f * r + 0.7152f * g + 0.0722f * b;
+      if(std::isfinite(l)) {
+        luminance.push_back(l);
+      }
+    }
+  }
+
+  preview_exposure_scale = 1.f;
+  if(!luminance.empty()) {
+    size_t quantile_index = static_cast<size_t>(std::ceil(0.9 * luminance.size())) - 1;
+    quantile_index = std::min(quantile_index, luminance.size() - 1);
+    std::nth_element(luminance.begin(),
+                     luminance.begin() + quantile_index,
+                     luminance.end());
+    Float quantile = luminance[quantile_index];
+    if(std::isfinite(quantile) && quantile > 0.f) {
+      preview_exposure_scale = 1.f / quantile;
+    }
+  }
+  preview_exposure_calibrated = true;
+}
+
+Float PreviewDisplay::ApplyPreviewExposure(Float value, Float sample_count) const {
+  return std::sqrt(std::fmax((Float)0,
+                            value * preview_exposure_scale *
+                            preview_exposure_adjustment / sample_count));
+}
+
+void PreviewDisplay::ResetPreviewExposure() {
+  preview_exposure_calibrated = false;
+  preview_exposure_scale = 1.f;
+}
+
+void PreviewDisplay::IncreasePreviewExposure() {
+  preview_exposure_adjustment *= 2.f;
+  Rprintf("Preview Exposure: %.3f\n", preview_exposure_adjustment);
+}
+
+void PreviewDisplay::DecreasePreviewExposure() {
+  preview_exposure_adjustment *= 0.5f;
+  Rprintf("Preview Exposure: %.3f\n", preview_exposure_adjustment);
+}
 
 void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
                                adaptive_sampler& adaptive_pixel_sampler_small,
@@ -80,6 +175,7 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
 #else
     RayMatrix &rgb  = adaptive_pixel_sampler.rgb;
 #endif
+    CalibratePreviewExposure(adaptive_pixel_sampler, rgb, ns);
     std::vector<bool>& finalized = adaptive_pixel_sampler.finalized;
     std::vector<bool>& just_finalized = adaptive_pixel_sampler.just_finalized;
     
@@ -95,15 +191,16 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
             g_col = 1;
             b_col = 0;
           } else {
-            r_col = interactive ? std::sqrt((rgb((width - 1 - i/4),height-1-j,0))) : std::sqrt((rgb((width - 1 - i/4),height-1-j,0))/4);
-            g_col = interactive ? std::sqrt((rgb((width - 1 - i/4),height-1-j,1))) : std::sqrt((rgb((width - 1 - i/4),height-1-j,1))/4);
-            b_col = interactive ? std::sqrt((rgb((width - 1 - i/4),height-1-j,2))) : std::sqrt((rgb((width - 1 - i/4),height-1-j,2))/4);
+            Float sample_count = interactive ? 1.f : 4.f;
+            r_col = ApplyPreviewExposure(rgb((width - 1 - i/4),height-1-j,0), sample_count);
+            g_col = ApplyPreviewExposure(rgb((width - 1 - i/4),height-1-j,1), sample_count);
+            b_col = ApplyPreviewExposure(rgb((width - 1 - i/4),height-1-j,2), sample_count);
           }
         } else {
           samples = ns+1;
-          r_col = std::sqrt((rgb((width - 1 - i/4),height-1-j,0))/samples);
-          g_col = std::sqrt((rgb((width - 1 - i/4),height-1-j,1))/samples);
-          b_col = std::sqrt((rgb((width - 1 - i/4),height-1-j,2))/samples);
+          r_col = ApplyPreviewExposure(rgb((width - 1 - i/4),height-1-j,0), samples);
+          g_col = ApplyPreviewExposure(rgb((width - 1 - i/4),height-1-j,1), samples);
+          b_col = ApplyPreviewExposure(rgb((width - 1 - i/4),height-1-j,2), samples);
         }
 
         data[i + 4*width*j]   = (unsigned char)(255*clamp(b_col,0,1));
@@ -155,9 +252,17 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
     //Environment Rotate control
     KeyCode Three_key = XKeysymToKeycode(d,XStringToKeysym("3"));
     KeyCode Four_key = XKeysymToKeycode(d,XStringToKeysym("4"));
+
+    //Preview exposure control
+    KeyCode RightBracket_key = XKeysymToKeycode(d, XK_bracketright);
+    KeyCode LeftBracket_key = XKeysymToKeycode(d, XK_bracketleft);
     
     //Reset
     KeyCode R_key = XKeysymToKeycode(d,XStringToKeysym("r"));
+
+    //Toggle deferred/final render
+    KeyCode Return_key = XKeysymToKeycode(d,XK_Return);
+    KeyCode KeypadEnter_key = XKeysymToKeycode(d,XK_KP_Enter);
     
     //Print Position
     KeyCode P_key = XKeysymToKeycode(d,XStringToKeysym("p"));
@@ -177,6 +282,9 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
     while (XPending(d)) {
       XNextEvent(d, &e);
       if (e.type == KeyPress) {
+        if(!PreviewDisplayHasKeyboardFocus(d, this->w)) {
+          continue;
+        }
         if (e.xkey.keycode == esc ) {
           terminate = true;
           break;
@@ -261,6 +369,22 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
             (*EnvWorldToObject) =  RotateY(speed*8) * (*EnvWorldToObject);
             env_y_angle += speed*8;
           }
+          if (e.xkey.keycode == RightBracket_key ) {
+            IncreasePreviewExposure();
+          }
+          if (e.xkey.keycode == LeftBracket_key ) {
+            DecreasePreviewExposure();
+          }
+          if (e.xkey.keycode == Return_key || e.xkey.keycode == KeypadEnter_key ) {
+            if(deferred_render) {
+              render_requested = !render_requested;
+              if(render_requested) {
+                Rprintf("Starting final render...\n");
+              } else {
+                Rprintf("Returning to deferred render...\n");
+              }
+            }
+          }
           if (e.xkey.keycode == R_key ) {
             cam->reset();
             speed = 1;
@@ -279,6 +403,9 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
               Float last_aperture = Rcpp::as<Float>(LastKeyframe["aperture"]);
               Float last_fov = Rcpp::as<Float>(LastKeyframe["fov"]);
               Float last_focal = Rcpp::as<Float>(LastKeyframe["focal"]);
+              if(LastKeyframe.containsElementNamed("exposure")) {
+                preview_exposure_adjustment = Rcpp::as<Float>(LastKeyframe["exposure"]);
+              }
               vec2f last_ortho = vec2f(Rcpp::as<Float>(LastKeyframe["orthox"]),
                                        Rcpp::as<Float>(LastKeyframe["orthoy"]));
               cam->update_focal_absolute(last_focal);
@@ -312,6 +439,7 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
                                                        Named("aperture") = cam_aperture,
                                                        Named("fov") = fov,
                                                        Named("focal") = fd,
+                                                       Named("exposure") = preview_exposure_adjustment,
                                                        Named("orthox") = ortho.xy.x,
                                                        Named("orthoy") = ortho.xy.y,
                                                        Named("upx")  = cam_up.xyz.x,
@@ -327,6 +455,7 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
                                                        Named("aperture") = 0,
                                                        Named("fov") = 0,
                                                        Named("focal") = fd,
+                                                       Named("exposure") = preview_exposure_adjustment,
                                                        Named("orthox") = ortho.xy.x,
                                                        Named("orthoy") = ortho.xy.y,
                                                        Named("upx")  = cam_up.xyz.x,
@@ -342,6 +471,7 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
                                                        Named("aperture") = 0,
                                                        Named("fov") = 0,
                                                        Named("focal") = fd,
+                                                       Named("exposure") = preview_exposure_adjustment,
                                                        Named("orthox") = ortho.xy.x,
                                                        Named("orthoy") = ortho.xy.y,
                                                        Named("upx")  = cam_up.xyz.x,
@@ -350,31 +480,32 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
               }
             }
             if(fov > 0) {
-              Rprintf("Lookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f) FOV: %.1f Aperture: %0.3f Focal Dist: %0.3f Env Rotation: %.2f\n",
+              Rprintf("Lookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f) FOV: %.1f Aperture: %0.3f Focal Dist: %0.3f Env Rotation: %.2f Exposure: %.3f\n",
                       origin.xyz.x, origin.xyz.y, origin.xyz.z, 
                       origin.xyz.x + cam_direction.xyz.x*fd, 
                       origin.xyz.y + cam_direction.xyz.y*fd, 
                       origin.xyz.z + cam_direction.xyz.z*fd, 
                       fov, 
-                      cam_aperture, fd, env_y_angle);
+                      cam_aperture, fd, env_y_angle, preview_exposure_adjustment);
             } else if (fov < 0) {
-              Rprintf("Lookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f) Focal Dist: %0.3f Env Rotation: %.2f\n",
+              Rprintf("Lookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f) Focal Dist: %0.3f Env Rotation: %.2f Exposure: %.3f\n",
                       origin.xyz.x, origin.xyz.y, origin.xyz.z, 
                       origin.xyz.x+cam_direction.xyz.x*fd, origin.xyz.y+cam_direction.xyz.y*fd, origin.xyz.z+cam_direction.xyz.z*fd, 
-                      fd, env_y_angle);
+                      fd, env_y_angle, preview_exposure_adjustment);
             } else {
-              Rprintf("Lookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f) Focal Dist: %0.3f Env Rotation: %.2f\n",
+              Rprintf("Lookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f) Focal Dist: %0.3f Env Rotation: %.2f Exposure: %.3f\n",
                       origin.xyz.x, origin.xyz.y, origin.xyz.z, 
                       cam_lookat.xyz.x, cam_lookat.xyz.y, cam_lookat.xyz.z, 
-                      fd, env_y_angle);
+                      fd, env_y_angle, preview_exposure_adjustment);
             }
             
           } else {
-            if(!blanked && !terminate && e.xkey.keycode != C_key && e.xkey.keycode != E_key && e.xkey.keycode != tab) {
+            if(!blanked && !terminate && IsX11RenderInvalidatingKey(d, e.xkey.keycode)) {
               blanked = true;
               ns = 0;
               adaptive_pixel_sampler.reset();
               adaptive_pixel_sampler_small.reset();
+              ResetPreviewExposure();
               if(progress && !interactive) {
                 pb.update(0);
               }
@@ -382,6 +513,13 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
           }
           while(XPending(d)) {
             XNextEvent(d, &e);
+            if (e.type != KeyPress) {
+              XPutBackEvent(d, &e);
+              break;
+            }
+            if(!PreviewDisplayHasKeyboardFocus(d, this->w)) {
+              continue;
+            }
             if (e.xkey.keycode == esc ) {
               terminate = true;
             }
@@ -467,6 +605,22 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
               env_y_angle += speed*8;
               
             }
+            if (e.xkey.keycode == RightBracket_key ) {
+              IncreasePreviewExposure();
+            }
+            if (e.xkey.keycode == LeftBracket_key ) {
+              DecreasePreviewExposure();
+            }
+            if (e.xkey.keycode == Return_key || e.xkey.keycode == KeypadEnter_key ) {
+              if(deferred_render) {
+                render_requested = !render_requested;
+                if(render_requested) {
+                  Rprintf("Starting final render...\n");
+                } else {
+                  Rprintf("Returning to deferred render...\n");
+                }
+              }
+            }
             if (e.xkey.keycode == R_key ) {
               cam->reset();
               speed = 1;
@@ -481,28 +635,29 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
               point3f cam_lookat = cam->get_lookat();
               Float cam_aperture = cam->get_aperture();
               if(fov > 0) {
-                Rprintf("Lookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f) FOV: %.1f Aperture: %0.3f Focal Dist: %0.3f Env Rotation: %.2f\n",
+                Rprintf("Lookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f) FOV: %.1f Aperture: %0.3f Focal Dist: %0.3f Env Rotation: %.2f Exposure: %.3f\n",
                         origin.xyz.x, origin.xyz.y, origin.xyz.z, 
                         origin.xyz.x+cam_direction.xyz.x*fd, origin.xyz.y+cam_direction.xyz.y*fd, origin.xyz.z+cam_direction.xyz.z*fd, 
                         fov, 
-                        cam_aperture, fd, env_y_angle);
+                        cam_aperture, fd, env_y_angle, preview_exposure_adjustment);
               } else if (fov < 0) {
-                Rprintf("Lookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f) Focal Dist: %0.3f Env Rotation: %.2f\n",
+                Rprintf("Lookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f) Focal Dist: %0.3f Env Rotation: %.2f Exposure: %.3f\n",
                         origin.xyz.x, origin.xyz.y, origin.xyz.z, 
                         origin.xyz.x+cam_direction.xyz.x*fd, origin.xyz.y+cam_direction.xyz.y*fd, origin.xyz.z+cam_direction.xyz.z*fd, 
-                        fd, env_y_angle);
+                        fd, env_y_angle, preview_exposure_adjustment);
               } else {
-                Rprintf("Lookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f) Focal Dist: %0.3f Env Rotation: %.2f\n",
+                Rprintf("Lookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f) Focal Dist: %0.3f Env Rotation: %.2f Exposure: %.3f\n",
                         origin.xyz.x, origin.xyz.y, origin.xyz.z, 
                         cam_lookat.xyz.x, cam_lookat.xyz.y, cam_lookat.xyz.z, 
-                        fd, env_y_angle);
+                        fd, env_y_angle, preview_exposure_adjustment);
               }
             } else {
-              if(!blanked && !terminate && e.xkey.keycode != C_key && e.xkey.keycode != E_key && e.xkey.keycode != tab) {
+              if(!blanked && !terminate && IsX11RenderInvalidatingKey(d, e.xkey.keycode)) {
                 blanked = true;
                 ns = 0;
                 adaptive_pixel_sampler.reset();
                 adaptive_pixel_sampler_small.reset();
+                ResetPreviewExposure();
                 if(progress && !interactive) {
                   pb.update(0);
                 }
@@ -572,6 +727,7 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
           ns = 0;
           adaptive_pixel_sampler.reset();
           adaptive_pixel_sampler_small.reset();
+          ResetPreviewExposure();
           
           if(progress && !interactive) {
             pb.update(0);
@@ -597,10 +753,14 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
 #else
     RayMatrix &rgb_s  = adaptive_pixel_sampler.rgb;
 #endif
+    CalibratePreviewExposure(adaptive_pixel_sampler, rgb_s, ns);
     EnvWorldToObject_w = EnvWorldToObject;
     EnvObjectToWorld_w = EnvObjectToWorld;
     Start_EnvWorldToObject_w = Start_EnvWorldToObject;
     Start_EnvObjectToWorld_w = Start_EnvObjectToWorld;
+    deferred_render_w = deferred_render;
+    render_requested_w = &render_requested;
+    preview_exposure_adjustment_w = &preview_exposure_adjustment;
     std::vector<bool>& finalized = adaptive_pixel_sampler.finalized;
     std::vector<bool>& just_finalized = adaptive_pixel_sampler.just_finalized;
     write_fast_output_w = &write_fast_output;
@@ -619,18 +779,16 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
             g_col = 1.f;
             b_col = 0.f;
           } else {
-            r_col = interactive ? std::sqrt((rgb_s((width - 1 - i/3),height-1-j,0))) : 
-              std::sqrt((rgb_s((width - 1 - i/3),height-1-j,0))/4.f);
-            g_col = interactive ? std::sqrt((rgb_s((width - 1 - i/3),height-1-j,1))) : 
-              std::sqrt((rgb_s((width - 1 - i/3),height-1-j,1))/4.f);
-            b_col = interactive ? std::sqrt((rgb_s((width - 1 - i/3),height-1-j,2))) : 
-              std::sqrt((rgb_s((width - 1 - i/3),height-1-j,2))/4.f);
+            Float sample_count = interactive ? 1.f : 4.f;
+            r_col = ApplyPreviewExposure(rgb_s((width - 1 - i/3),height-1-j,0), sample_count);
+            g_col = ApplyPreviewExposure(rgb_s((width - 1 - i/3),height-1-j,1), sample_count);
+            b_col = ApplyPreviewExposure(rgb_s((width - 1 - i/3),height-1-j,2), sample_count);
           }
         } else {
           samples = (Float)ns+1.f;
-          r_col = std::sqrt((rgb_s((width - 1 - i/3),height-1-j,0))/samples);
-          g_col = std::sqrt((rgb_s((width - 1 - i/3),height-1-j,1))/samples);
-          b_col = std::sqrt((rgb_s((width - 1 - i/3),height-1-j,2))/samples);
+          r_col = ApplyPreviewExposure(rgb_s((width - 1 - i/3),height-1-j,0), samples);
+          g_col = ApplyPreviewExposure(rgb_s((width - 1 - i/3),height-1-j,1), samples);
+          b_col = ApplyPreviewExposure(rgb_s((width - 1 - i/3),height-1-j,2), samples);
         }
         rgb[i+3*width*j]   = clamp(r_col,0.f,1.f);
         rgb[i+3*width*j+1] = clamp(g_col,0.f,1.f);
@@ -665,24 +823,31 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
 #ifdef HAS_OIDN
 PreviewDisplay::PreviewDisplay(unsigned int _width, unsigned int _height, 
                                bool preview, bool _interactive,
-                               Float initial_lookat_distance, RayCamera* _cam,
+                               bool _deferred_render, Float initial_lookat_distance, RayCamera* _cam,
                                Transform* _EnvObjectToWorld, Transform* _EnvWorldToObject, 
                                oidn::FilterRef& _filter,
-                               bool denoise) :
-  preview(preview), EnvObjectToWorld(_EnvObjectToWorld), EnvWorldToObject(_EnvWorldToObject),
+                               bool denoise, bool _auto_exposure) :
+  preview(preview), auto_exposure(_auto_exposure), preview_exposure_calibrated(false),
+  preview_exposure_scale(1.f), preview_exposure_adjustment(1.f),
+  EnvObjectToWorld(_EnvObjectToWorld), EnvWorldToObject(_EnvWorldToObject),
   Start_EnvObjectToWorld(*_EnvObjectToWorld), Start_EnvWorldToObject(*_EnvWorldToObject), filter(_filter),
   denoise(denoise) {
 #else
 PreviewDisplay::PreviewDisplay(unsigned int _width, unsigned int _height, 
                                bool preview, bool _interactive,
-                               Float initial_lookat_distance, RayCamera* _cam,
-                               Transform* _EnvObjectToWorld, Transform* _EnvWorldToObject) :
-  preview(preview), EnvObjectToWorld(_EnvObjectToWorld), EnvWorldToObject(_EnvWorldToObject),
+                               bool _deferred_render, Float initial_lookat_distance, RayCamera* _cam,
+                               Transform* _EnvObjectToWorld, Transform* _EnvWorldToObject,
+                               bool _auto_exposure) :
+  preview(preview), auto_exposure(_auto_exposure), preview_exposure_calibrated(false),
+  preview_exposure_scale(1.f), preview_exposure_adjustment(1.f),
+  EnvObjectToWorld(_EnvObjectToWorld), EnvWorldToObject(_EnvWorldToObject),
   Start_EnvObjectToWorld(*_EnvObjectToWorld), Start_EnvWorldToObject(*_EnvWorldToObject) {
 #endif
   Keyframes.clear();
   write_fast_output = false;
   terminate = false;
+  deferred_render = _deferred_render && preview && _interactive;
+  render_requested = !deferred_render;
 #ifdef RAY_HAS_X11
   speed = 1.f;
   interactive = _interactive;
@@ -804,7 +969,6 @@ PreviewDisplay::~PreviewDisplay() {
 
 #ifdef RAY_WINDOWS
 
-#define VK_KEY_0 48
 #define VK_KEY_1 49
 #define VK_KEY_2 50
 #define VK_KEY_3 51
@@ -813,7 +977,8 @@ PreviewDisplay::~PreviewDisplay() {
 #define VK_KEY_6 54
 #define VK_KEY_7 55
 #define VK_KEY_8 56
-#define VK_KEY_9 57
+#define VK_KEY_LEFT_BRACKET 219
+#define VK_KEY_RIGHT_BRACKET 221
 //These are lower case
 #define VK_KEY_A 65
 #define VK_KEY_B 66
@@ -842,15 +1007,41 @@ PreviewDisplay::~PreviewDisplay() {
 #define VK_KEY_Y 89
 #define VK_KEY_Z 90
 
+static bool PreviewWindowHasKeyboardFocus(HWND hwnd) {
+  return GetForegroundWindow() == hwnd && GetFocus() == hwnd;
+}
+
+static bool IsWindowsRenderInvalidatingKey(WPARAM key) {
+  return key == VK_KEY_W ||
+         key == VK_KEY_A ||
+         key == VK_KEY_S ||
+         key == VK_KEY_D ||
+         key == VK_KEY_Q ||
+         key == VK_KEY_Z ||
+         key == VK_UP ||
+         key == VK_DOWN ||
+         key == VK_LEFT ||
+         key == VK_RIGHT ||
+         key == VK_KEY_1 ||
+         key == VK_KEY_2 ||
+         key == VK_KEY_3 ||
+         key == VK_KEY_4 ||
+         key == VK_KEY_F ||
+         key == VK_KEY_L ||
+         key == VK_KEY_R;
+}
+
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
   switch (uMsg) {
     case WM_DESTROY: {
       PostQuitMessage(0);
       term = true;
-      DestroyWindow(hwnd);
       return 0;
     }
     case WM_KEYDOWN: {
+      if(!PreviewWindowHasKeyboardFocus(hwnd)) {
+        return 0;
+      }
       vec3f w(1,0,0);
       vec3f u(0,1,0);
       vec3f v(0,0,1);
@@ -988,15 +1179,42 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
           }
           break;
         }
+        case VK_KEY_RIGHT_BRACKET: {
+          if(interactive_w) {
+            (*preview_exposure_adjustment_w) *= 2.f;
+            Rprintf("Preview Exposure: %.3f\n", *preview_exposure_adjustment_w);
+          }
+          break;
+        }
+        case VK_KEY_LEFT_BRACKET: {
+          if(interactive_w) {
+            (*preview_exposure_adjustment_w) *= 0.5f;
+            Rprintf("Preview Exposure: %.3f\n", *preview_exposure_adjustment_w);
+          }
+          break;
+        }
+        case VK_RETURN: {
+          if(interactive_w) {
+            if(deferred_render_w) {
+              (*render_requested_w) = !(*render_requested_w);
+              if(*render_requested_w) {
+                Rprintf("Starting final render...\n");
+              } else {
+                Rprintf("Returning to deferred render...\n");
+              }
+            }
+          }
+          break;
+        }
         case VK_KEY_R: {
           if(interactive_w) {
             cam_w->reset();
             speed = 1;
             (*EnvWorldToObject_w) = Start_EnvWorldToObject_w;
             (*EnvObjectToWorld_w) = Start_EnvObjectToWorld_w;
-        }
-          break;
           }
+          break;
+        }
         case VK_KEY_P: {
           point3f origin = cam_w->get_origin();
           Float fov =  cam_w->get_fov();
@@ -1006,21 +1224,21 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
           point2f ortho = cam_w->get_ortho();
           point3f cam_lookat = cam_w->get_lookat();
           if(fov > 0) {
-            Rprintf("Lookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f) FOV: %.1f Aperture: %0.3f Focal Dist: %0.3f Env Rotation: %.2f\n",
+            Rprintf("Lookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f) FOV: %.1f Aperture: %0.3f Focal Dist: %0.3f Env Rotation: %.2f Exposure: %.3f\n",
                     origin.xyz.x, origin.xyz.y, origin.xyz.z, 
                     origin.xyz.x+cam_direction.xyz.x*fd, origin.xyz.y+cam_direction.xyz.y*fd, origin.xyz.z+cam_direction.xyz.z*fd, 
                     fov, 
-                    cam_aperture, fd, env_y_angle);
+                    cam_aperture, fd, env_y_angle, *preview_exposure_adjustment_w);
           } else if (fov < 0) {
-            Rprintf("Lookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f) Focal Dist: %0.3f Env Rotation: %.2f\n",
+            Rprintf("Lookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f) Focal Dist: %0.3f Env Rotation: %.2f Exposure: %.3f\n",
                     origin.xyz.x, origin.xyz.y, origin.xyz.z, 
                     origin.xyz.x+cam_direction.xyz.x*fd, origin.xyz.y+cam_direction.xyz.y*fd, origin.xyz.z+cam_direction.xyz.z*fd, 
-                    fd, env_y_angle);
+                    fd, env_y_angle, *preview_exposure_adjustment_w);
           } else {
-            Rprintf("Lookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f) Focal Dist: %0.3f Env Rotation: %.2f\n",
+            Rprintf("Lookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f) Focal Dist: %0.3f Env Rotation: %.2f Exposure: %.3f\n",
                     origin.xyz.x, origin.xyz.y, origin.xyz.z, 
                     cam_lookat.xyz.x, cam_lookat.xyz.y, cam_lookat.xyz.z, 
-                    fd, env_y_angle);
+                    fd, env_y_angle, *preview_exposure_adjustment_w);
           }
             break;
           } 
@@ -1036,6 +1254,9 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
               Float last_aperture = Rcpp::as<Float>(LastKeyframe["aperture"]);
               Float last_fov = Rcpp::as<Float>(LastKeyframe["fov"]);
               Float last_focal = Rcpp::as<Float>(LastKeyframe["focal"]);
+              if(LastKeyframe.containsElementNamed("exposure")) {
+                (*preview_exposure_adjustment_w) = Rcpp::as<Float>(LastKeyframe["exposure"]);
+              }
               vec2f last_ortho = vec2f(Rcpp::as<Float>(LastKeyframe["orthox"]),
                                        Rcpp::as<Float>(LastKeyframe["orthoy"]));
               cam_w->update_focal_absolute(last_focal);
@@ -1069,6 +1290,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
                                                      Named("aperture") = cam_aperture,
                                                      Named("fov") = fov,
                                                      Named("focal") = fd,
+                                                     Named("exposure") = *preview_exposure_adjustment_w,
                                                      Named("orthox") = ortho.xy.x,
                                                      Named("orthoy") = ortho.xy.y,
                                                      Named("upx")  = cam_up.xyz.x,
@@ -1084,6 +1306,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
                                                      Named("aperture") = 0,
                                                      Named("fov") = 0,
                                                      Named("focal") = fd,
+                                                     Named("exposure") = *preview_exposure_adjustment_w,
                                                      Named("orthox") = ortho.xy.x,
                                                      Named("orthoy") = ortho.xy.y,
                                                      Named("upx")  = cam_up.xyz.x,
@@ -1099,6 +1322,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
                                                      Named("aperture") = 0,
                                                      Named("fov") = 0,
                                                      Named("focal") = fd,
+                                                     Named("exposure") = *preview_exposure_adjustment_w,
                                                      Named("orthox") = ortho.xy.x,
                                                      Named("orthoy") = ortho.xy.y,
                                                      Named("upx")  = cam_up.xyz.x,
@@ -1106,21 +1330,21 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
                                                      Named("upz")  = cam_up.xyz.z));
             }
             if(fov > 0) {
-              Rprintf("Lookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f) FOV: %.1f Aperture: %0.3f Focal Dist: %0.3f Env Rotation: %.2f\n",
+              Rprintf("Lookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f) FOV: %.1f Aperture: %0.3f Focal Dist: %0.3f Env Rotation: %.2f Exposure: %.3f\n",
                       origin.xyz.x, origin.xyz.y, origin.xyz.z, 
                       origin.xyz.x+cam_direction.xyz.x*fd, origin.xyz.y+cam_direction.xyz.y*fd, origin.xyz.z+cam_direction.xyz.z*fd, 
                       fov, 
-                      cam_aperture, fd, env_y_angle);
+                      cam_aperture, fd, env_y_angle, *preview_exposure_adjustment_w);
             } else if (fov < 0) {
-              Rprintf("Lookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f) Focal Dist: %0.3f Env Rotation: %.2f\n",
+              Rprintf("Lookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f) Focal Dist: %0.3f Env Rotation: %.2f Exposure: %.3f\n",
                       origin.xyz.x, origin.xyz.y, origin.xyz.z, 
                       origin.xyz.x+cam_direction.xyz.x*fd, origin.xyz.y+cam_direction.xyz.y*fd, origin.xyz.z+cam_direction.xyz.z*fd, 
-                      fd, env_y_angle);
+                      fd, env_y_angle, *preview_exposure_adjustment_w);
             } else {
-              Rprintf("Lookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f) Focal Dist: %0.3f Env Rotation: %.2f\n",
+              Rprintf("Lookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f) Focal Dist: %0.3f Env Rotation: %.2f Exposure: %.3f\n",
                       origin.xyz.x, origin.xyz.y, origin.xyz.z, 
                       cam_lookat.xyz.x, cam_lookat.xyz.y, cam_lookat.xyz.z, 
-                      fd, env_y_angle);
+                      fd, env_y_angle, *preview_exposure_adjustment_w);
             }
             break;
           } 
@@ -1129,7 +1353,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             break;
       }
       if(interactive_w) {
-        if(wParam != VK_KEY_P && wParam != VK_KEY_K && wParam != VK_TAB) {
+        if(IsWindowsRenderInvalidatingKey(wParam)) {
           if(!blanked && !term) {
             blanked = true;
             *ns_w = 0;

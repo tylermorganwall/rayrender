@@ -1,0 +1,21 @@
+CXX_STD = CXX20
+
+## Compiler flags/defines:
+PKG_CPPFLAGS = -I/opt/homebrew/Cellar/libx11/1.8.13/include -I/opt/homebrew/Cellar/xorgproto/2025.1/include -I/opt/homebrew/Cellar/libxcb/1.17.0/include -I/opt/homebrew/Cellar/libxau/1.0.12/include -I/opt/homebrew/Cellar/libxdmcp/1.1.5/include -I/opt/X11/include -I/Library/Frameworks/R.framework/Versions/4.6/Resources/library/libopenexr/include/OpenEXR -I/Library/Frameworks/R.framework/Versions/4.6/Resources/library/libimath/include/Imath -I/Applications/oidn-2.3.1.arm64.macos/include 
+PKG_LIBS = -L/opt/homebrew/Cellar/libx11/1.8.13/lib -lX11 -L/Library/Frameworks/R.framework/Versions/4.6/Resources/library/libopenexr/lib/arm64 -Wl,-rpath,/Library/Frameworks/R.framework/Versions/4.6/Resources/library/libopenexr/lib/arm64 -lOpenEXR-4_0 -lOpenEXRUtil-4_0 -lOpenEXRCore-4_0 -lIex-4_0 -lIlmThread-4_0 /Library/Frameworks/R.framework/Versions/4.6/Resources/library/libopenexr/lib/arm64/libopenjph.a -L/Library/Frameworks/R.framework/Versions/4.6/Resources/library/libimath/lib/arm64 -Wl,-rpath,/Library/Frameworks/R.framework/Versions/4.6/Resources/library/libimath/lib/arm64 -lImath-3_2 -L/Applications/oidn-2.3.1.arm64.macos/lib -Wl,-rpath,/Applications/oidn-2.3.1.arm64.macos/lib -lOpenImageDenoise
+PKG_CXXFLAGS = -DRAY_REPRODUCE_PERLIN -DSTRICT_R_HEADERS -DRAY_HAS_X11 -DHAS_OIDN -DHAS_NEON -DRAYSIMD -DRAYSIMDVECOFF -ffp-contract=off -fvisibility=hidden -fvisibility-inlines-hidden
+
+## Files to compile:
+C_SOURCES=
+C_OBJECTS=$(C_SOURCES:.c=.o)
+
+## Add in PBRT_SOURCES later
+CPP_SOURCES=define_functions.cpp PrintClassSizes.cpp RcppExports.cpp render_animation_rcpp.cpp render_scene_rcpp.cpp test-runner.cpp core/adaptivesampler.cpp core/buildscene.cpp core/bvh.cpp core/camera.cpp core/color.cpp core/integrator.cpp core/PreviewDisplay.cpp hitables/box.cpp hitables/csg.cpp hitables/curve.cpp hitables/cylinder.cpp hitables/disk.cpp hitables/ellipsoid.cpp hitables/hitable.cpp hitables/hitablelist.cpp hitables/infinite_area_light.cpp hitables/instance.cpp hitables/mesh3d.cpp hitables/plymesh.cpp hitables/raymesh.cpp hitables/rectangle.cpp hitables/sphere.cpp hitables/triangle.cpp hitables/trianglemesh.cpp hitables/trimesh.cpp materials/constant.cpp materials/material.cpp materials/microfacetdist.cpp materials/texture.cpp materials/texturecache.cpp math/aabb.cpp math/animatedtransform.cpp math/bounds.cpp math/calcnormals.cpp math/calctangents.cpp math/displacement.cpp math/distributions.cpp math/filter.cpp math/loopsubdiv.cpp math/math.cpp math/matrix.cpp math/noise.cpp math/pdf.cpp math/perlin.cpp math/quaternion.cpp math/RayMatrix.cpp math/rng.cpp math/sampler.cpp math/simd.cpp math/transform.cpp math/transformcache.cpp math/vectypes.cpp utils/assert.cpp utils/debug.cpp utils/raylog.cpp ext/miniply/miniply.cpp
+CPP_OBJECTS=$(CPP_SOURCES:.cpp=.o)
+
+OBJECTS=$(C_OBJECTS) $(CPP_OBJECTS)
+
+$(SHLIB): $(OBJECTS)
+
+# Make the shared object
+all: $(SHLIB)

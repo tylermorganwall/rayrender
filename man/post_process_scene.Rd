@@ -14,7 +14,9 @@ post_process_scene(
   plot_scene,
   bloom,
   new_page = TRUE,
-  transparent_background = FALSE
+  transparent_background = FALSE,
+  auto_exposure = FALSE,
+  verbose = FALSE
 )
 }
 \description{

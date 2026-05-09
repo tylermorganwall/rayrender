@@ -13,9 +13,11 @@ render_scene(
   camera_description_file = NA,
   preview = interactive(),
   interactive = TRUE,
+  deferred_render = FALSE,
   denoise = TRUE,
   camera_scale = 1,
   iso = 100,
+  auto_exposure = FALSE,
   film_size = 22,
   min_variance = 0,
   min_adaptive_size = 8,
@@ -70,7 +72,8 @@ The total number of samples in this case will be the product of the two numbers.
 \item{camera_description_file}{Default `NA`. Filename of a camera description file for rendering with
 a realistic camera. Several camera files are built-in: `"50mm"`,`"wide"`,`"fisheye"`, and `"telephoto"`.}
 
-\item{preview}{Default `interactive()`. Whether to display a real-time progressive preview of the render. Press ESC to cancel the render.}
+\item{preview}{Default `interactive()`. Whether to display a real-time progressive preview of the render. Press ESC to cancel the render.
+If `deferred_render = TRUE`, the preview stays interactive until the final render is explicitly started.}
 
 \item{interactive}{Default `interactive()`. Whether the scene preview should be interactive. Camera movement orbits around the
 lookat point (unless the mode is switched to free flying), with the following control mapping:
@@ -78,7 +81,9 @@ W = Forward, S = Backward, A = Left, D = Right, Q = Up, Z = Down,
 E = 2x Step Distance (max 128), C = 0.5x Step Distance, Up Key = Zoom In (decrease FOV), Down Key = Zoom Out (increase FOV),
 Left Key = Decrease Aperture, Right Key = Increase Aperture, 1 = Decrease Focal Distance, 2 = Increase Focal Distance,
 3/4 = Rotate Environment Light,
-R = Reset Camera, TAB: Toggle Orbit Mode, Left Mouse Click: Change Look Direction, Right Mouse Click: Change Look At
+Right bracket/left bracket = Increase/Decrease Preview Exposure,
+R = Reset Camera, Return = Toggle between deferred and final render if `deferred_render = TRUE`, TAB: Toggle Orbit Mode,
+Left Mouse Click: Change Look Direction, Right Mouse Click: Change Look At
 K: Save Keyframe (at the conclusion of the render, this will create the `ray_keyframes`
 data.frame in the global environment, which can be passed to `generate_camera_motion()` to tween between those saved positions.
 L: Reset Camera to Last Keyframe (if set) F: Toggle Fast Travel Mode
@@ -91,6 +96,10 @@ the aperture and field of view cannot be changed from their initial settings. Ad
 clicking to direct the camera at the background environment image while using a realistic camera will
 not always point to the exact position selected.}
 
+\item{deferred_render}{Default `FALSE`. If `TRUE` and interactive preview is enabled, rayrender will keep
+updating the progressive preview until Return is pressed. Pressing Return toggles the full render in the
+same window; pressing Return again returns to deferred mode.}
+
 \item{denoise}{Default `TRUE`. Whether to de-noise the final image and preview images. Note, this requires
 the free Intel Open Image Denoise (OIDN) library be installed on your system. Pre-compiled binaries can be installed from
 ppenimagedenoise.org, as well as . Linking during rayrender installation is done by defining the environment variable
@@ -101,6 +110,10 @@ directories) and re-installing this package from source.}
 scene.}
 
 \item{iso}{Default `100`. Camera exposure.}
+
+\item{auto_exposure}{Default `FALSE`. If `TRUE`, automatically adjust the exposure with
+`rayimage::render_exposure(auto = TRUE)`. If `preview = TRUE`, the preview window exposure
+is calibrated from the 90\% luminance quantile of the first rendered frame.}
 
 \item{film_size}{Default `22`, in `mm` (scene units in `m`. Size of the film if using a realistic camera, otherwise
 ignored.}

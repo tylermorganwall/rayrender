@@ -231,7 +231,8 @@ render_ao = function(
 		progress = progress,
 		verbose = verbose,
 		sample_dist = sample_dist,
-		keep_colors = keep_colors
+		keep_colors = keep_colors,
+		deferred_render = FALSE
 	)
 
 	camera_info = scene_list$camera_info

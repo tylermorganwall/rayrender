@@ -15,7 +15,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
                 RayMatrix& rgb_output, RayMatrix& normalOutput, RayMatrix& albedoOutput, 
                 RayMatrix& alpha_output,
                 RayMatrix& draw_rgb_output,
-                bool progress_bar, int sample_method, Rcpp::NumericVector& stratified_dim,
+                bool progress_bar, int sample_method, int stratified_x, int stratified_y,
                 bool verbose,RayCamera* cam, 
                 Float fov,
                 hitable_list& world, hitable_list& hlist,

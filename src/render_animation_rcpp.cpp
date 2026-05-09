@@ -57,6 +57,7 @@ void render_animation_rcpp(List scene, List camera_info, List scene_info, List r
   Float intensity_env = as<Float>(render_info["intensity_env"]);
   bool verbose = as<bool>(render_info["verbose"]);
   int debug_channel = as<int>(render_info["debug_channel"]);
+  bool plot_scene = as<bool>(render_info["plot_scene"]);
   Float min_variance = as<Float>(render_info["min_variance"]);
   int min_adaptive_size = as<int>(render_info["min_adaptive_size"]);
   IntegratorType integrator_type = static_cast<IntegratorType>(as<int>(render_info["integrator_type"]));
@@ -84,6 +85,10 @@ void render_animation_rcpp(List scene, List camera_info, List scene_info, List r
   int sample_method = as<int>(camera_info["sample_method"]);
   NumericVector stratified_dim = as<NumericVector>(camera_info["stratified_dim"]);
   NumericVector light_direction = as<NumericVector>(camera_info["light_direction"]);
+  int stratified_x = static_cast<int>(stratified_dim(0));
+  int stratified_y = static_cast<int>(stratified_dim(1));
+  vec3f preview_light_direction(light_direction(0), light_direction(1), light_direction(2));
+  Float preview_exponent = light_direction.size() > 3 ? static_cast<Float>(light_direction(3)) : 0;
   int bvh_type = as<int>(camera_info["bvh"]);
   NumericMatrix realCameraInfo = as<NumericMatrix>(camera_info["real_camera_info"]);
   Float film_size = as<Float>(camera_info["film_size"]);
@@ -355,16 +360,17 @@ void render_animation_rcpp(List scene, List camera_info, List scene_info, List r
       debug_scene(numbercores, nx, ny, ns, debug_channel,
                   min_variance, min_adaptive_size,
                   rgb_output, normalOutput, albedoOutput,
-                  progress_bar, sample_method, stratified_dim,
+                  progress_bar, sample_method, stratified_x, stratified_y,
                   verbose, cam.get(), fov,
-                  world, imp_sample_objects,
+                  world, imp_sample_objects, 
                   clampval, max_depth, roulette_active,
-                  light_direction, *rng_for_frame, sample_dist, keep_colors, backgroundhigh);
+                  preview_light_direction, preview_exponent, *rng_for_frame, sample_dist, keep_colors, backgroundhigh);
       List temp = List::create(_["r"] = rgb_output.ConvertRcpp(0), 
                                _["g"] = rgb_output.ConvertRcpp(1), 
                                _["b"] = rgb_output.ConvertRcpp(2));
       post_process_frame(temp, debug_channel, as<std::string>(filenames(i)), 
-	  as<std::string>(tonemap(0)));
+                         as<std::string>(tonemap(0)), bloom,
+                         transparent_background, write_image, plot_scene);
     }
   } else {
     for(int i = start_frame; i < n_frames; i++ ) {
@@ -458,21 +464,24 @@ void render_animation_rcpp(List scene, List camera_info, List scene_info, List r
 
 #ifdef HAS_OIDN
       PreviewDisplay d(nx, ny, preview, false, 
+                   false,
                    20.0f, cam.get(), 
                    background_sphere->ObjectToWorld,
                    background_sphere->WorldToObject,
-                   filter, denoise);
+                   filter, denoise, false);
 #else
   PreviewDisplay d(nx,ny, preview, false, 
+                         false,
                          20.0f, cam.get(),
                          background_sphere->ObjectToWorld,
-                         background_sphere->WorldToObject);
+                         background_sphere->WorldToObject,
+                         false);
 #endif
       pathtracer(numbercores, nx, ny, ns, debug_channel,
                  min_variance, min_adaptive_size,
                  rgb_output, normalOutput, albedoOutput,
                  alpha_output, draw_rgb_output,
-                 progress_bar, sample_method, stratified_dim,
+                 progress_bar, sample_method, stratified_x, stratified_y,
                  verbose, cam.get(),  fov,
                  world, imp_sample_objects,
                  clampval, max_depth, roulette_active, d, integrator_type, rng_for_frame);
@@ -490,14 +499,14 @@ void render_animation_rcpp(List scene, List camera_info, List scene_info, List r
                                _["b"] = draw_rgb_output.ConvertRcpp(2),
                                _["a"] = alpha_output.ConvertRcpp());
       post_process_frame(temp, debug_channel, as<std::string>(filenames(i)), as<std::string>(tonemap(0)), bloom,
-                       transparent_background, write_image);
+                       transparent_background, write_image, plot_scene);
 #else
       List temp = List::create(_["r"] = rgb_output.ConvertRcpp(0), 
                                _["g"] = rgb_output.ConvertRcpp(1), 
                                _["b"] = rgb_output.ConvertRcpp(2),
                                _["a"] = alpha_output.ConvertRcpp());
       post_process_frame(temp, debug_channel, as<std::string>(filenames(i)), as<std::string>(tonemap(0)), bloom,
-                       transparent_background, write_image);
+                       transparent_background, write_image, plot_scene);
 #endif
     }
   }

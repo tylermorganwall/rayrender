@@ -13,7 +13,9 @@ post_process_scene = function(
   plot_scene,
   bloom,
   new_page = TRUE,
-  transparent_background = FALSE
+  transparent_background = FALSE,
+  auto_exposure = FALSE,
+  verbose = FALSE
 ) {
   if (!is.numeric(debug_channel)) {
     debug_channel = unlist(lapply(
@@ -63,11 +65,13 @@ post_process_scene = function(
     returnmat = full_array[,, 1]
     returnmat[is.infinite(returnmat)] = NA
     if (is.na(filename)) {
-      rayimage::plot_image(
-        (returnmat - min(returnmat, na.rm = TRUE)) /
-          (max(returnmat, na.rm = TRUE) - min(returnmat, na.rm = TRUE)),
-        new_page = new_page
-      )
+      if (plot_scene) {
+        rayimage::plot_image(
+          (returnmat - min(returnmat, na.rm = TRUE)) /
+            (max(returnmat, na.rm = TRUE) - min(returnmat, na.rm = TRUE)),
+          new_page = new_page
+        )
+      }
       return(invisible(returnmat))
     } else {
       rayimage::ray_write_image(
@@ -116,7 +120,9 @@ post_process_scene = function(
     full_array[,, 3] = (full_array[,, 3] - min(full_array[,, 3])) /
       (max(full_array[,, 3]) - min(full_array[,, 3]))
     if (is.na(filename)) {
-      rayimage::plot_image(full_array, new_page = new_page)
+      if (plot_scene) {
+        rayimage::plot_image(full_array, new_page = new_page)
+      }
     } else {
       rayimage::ray_write_image(full_array, filename)
     }
@@ -128,7 +134,9 @@ post_process_scene = function(
     full_array[,, 2] = (full_array[,, 2] + 1) / 2
     full_array[,, 3] = (full_array[,, 3] + 1) / 2
     if (is.na(filename)) {
-      rayimage::plot_image(full_array, new_page = new_page)
+      if (plot_scene) {
+        rayimage::plot_image(full_array, new_page = new_page)
+      }
     } else {
       rayimage::ray_write_image(full_array, filename)
     }
@@ -142,7 +150,9 @@ post_process_scene = function(
     full_array = (full_array - min(full_array)) /
       (max(full_array) - min(full_array))
     if (is.na(filename)) {
-      rayimage::plot_image(full_array, new_page = new_page)
+      if (plot_scene) {
+        rayimage::plot_image(full_array, new_page = new_page)
+      }
     } else {
       rayimage::ray_write_image(full_array, filename)
     }
@@ -188,6 +198,14 @@ post_process_scene = function(
         preview = FALSE
       )
     }
+  }
+  if (isTRUE(auto_exposure)) {
+    full_array = rayimage::render_exposure(
+      full_array,
+      auto = TRUE,
+      preview = FALSE,
+      verbose = verbose
+    )
   }
   full_array = full_array |>
     rayimage::ray_read_image(

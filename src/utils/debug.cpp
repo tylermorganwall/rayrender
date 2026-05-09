@@ -7,13 +7,13 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                 RayMatrix& rgb_output, 
                 RayMatrix& normalOutput, 
                 RayMatrix& albedoOutput, 
-                bool progress_bar, int sample_method, Rcpp::NumericVector& stratified_dim,
+                bool progress_bar, int sample_method, int stratified_x, int stratified_y,
                 bool verbose, 
                 RayCamera* cam, 
                 Float fov,
                 hitable_list& world, hitable_list& hlist,
                 Float clampval, size_t max_depth, size_t roulette_active,
-                Rcpp::NumericVector& light_direction, random_gen& rng, Float sample_dist,
+                vec3f light_dir, Float preview_exponent, random_gen& rng, Float sample_dist,
                 bool keep_colors, point3f backgroundhigh) {
   Environment pkg = Environment::namespace_env("rayrender");
   Function print_time = pkg["print_time"];
@@ -159,8 +159,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
     }
     delete mat_stack;
   } else if (debug_channel == 9) {
-    vec3f light_dir(light_direction(0),light_direction(1),light_direction(2));
-    Float n_exp = light_direction(3);
+    Float n_exp = preview_exponent;
     RcppThread::ThreadPool pool(numbercores);
     auto worker = [&rgb_output, 
                    nx, ny,  fov, light_dir, n_exp,
@@ -512,7 +511,7 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
           samplers.push_back(std::unique_ptr<Sampler>(new RandomSampler(rng_single)));
           samplers.back()->StartPixel(0,0);
         } else if (sample_method == 1){
-          samplers.push_back(std::unique_ptr<Sampler>(new StratifiedSampler(stratified_dim(0), stratified_dim(1),
+          samplers.push_back(std::unique_ptr<Sampler>(new StratifiedSampler(stratified_x, stratified_y,
                                                                             true, 5, rng_single)));
           samplers.back()->StartPixel(0,0);
         } else if (sample_method == 2) {

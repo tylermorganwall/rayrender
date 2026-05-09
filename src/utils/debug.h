@@ -556,12 +556,12 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                  RayMatrix& rgb_output,
                  RayMatrix& normalOutput,
                  RayMatrix& albedoOutput, 
-                 bool progress_bar, int sample_method, Rcpp::NumericVector& stratified_dim,
+                 bool progress_bar, int sample_method, int stratified_x, int stratified_y,
                  bool verbose, RayCamera *cam,
                  Float fov,
                  hitable_list& world, hitable_list& hlist,
                  Float clampval, size_t max_depth, size_t roulette_active,
-                 Rcpp::NumericVector& light_direction, random_gen& rng, Float sample_dist,
+                 vec3f light_dir, Float preview_exponent, random_gen& rng, Float sample_dist,
                  bool keep_colors, point3f backgroundhigh);
 
 

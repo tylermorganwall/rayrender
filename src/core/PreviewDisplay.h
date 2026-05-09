@@ -2,6 +2,7 @@
 #define PREVIEWDISPLAYH
 
 #include <memory>
+#include <vector>
 #include "Rcpp.h"
 #include "RProgress.h"
 #include "../core/adaptivesampler.h"
@@ -36,13 +37,14 @@ class PreviewDisplay {
 public: 
 #ifdef HAS_OIDN
   PreviewDisplay(unsigned int _width, unsigned int _height, bool preview, bool _interactive,
-                 Float initial_lookat_distance, RayCamera* _cam,
+                 bool _deferred_render, Float initial_lookat_distance, RayCamera* _cam,
                  Transform* _EnvObjectToWorld, Transform* _EnvWorldToObject, oidn::FilterRef& _filter,
-                 bool denoise);
+                 bool denoise, bool _auto_exposure);
 #else
   PreviewDisplay(unsigned int _width, unsigned int _height, bool preview, bool _interactive,
-                 Float initial_lookat_distance, RayCamera* _cam,
-                 Transform* _EnvObjectToWorld, Transform* _EnvWorldToObject);
+                 bool _deferred_render, Float initial_lookat_distance, RayCamera* _cam,
+                 Transform* _EnvObjectToWorld, Transform* _EnvWorldToObject,
+                 bool _auto_exposure);
 #endif
   ~PreviewDisplay();
   void DrawImage(adaptive_sampler& adaptive_pixel_sampler, 
@@ -52,6 +54,13 @@ public:
                  Float percent_done,
                  hitable* world, random_gen& rng);
   std::vector<Rcpp::List> GetKeyframes() {return(Keyframes);}
+  void CalibratePreviewExposure(adaptive_sampler& adaptive_pixel_sampler,
+                                RayMatrix& rgb,
+                                size_t ns);
+  void ResetPreviewExposure();
+  Float ApplyPreviewExposure(Float value, Float sample_count) const;
+  void IncreasePreviewExposure();
+  void DecreasePreviewExposure();
 #ifdef RAY_HAS_X11
   Display *d;
   XImage *img;
@@ -72,8 +81,14 @@ public:
   WNDCLASS wc;
 #endif
   bool preview;
+  bool auto_exposure;
+  bool preview_exposure_calibrated;
+  Float preview_exposure_scale;
+  Float preview_exposure_adjustment;
   bool write_fast_output;
   bool interactive;
+  bool deferred_render;
+  bool render_requested;
   bool terminate;
   RayCamera* cam;
   Transform* EnvObjectToWorld;

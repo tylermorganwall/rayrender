@@ -11,7 +11,8 @@ post_process_frame(
   tonemap,
   bloom = TRUE,
   transparent_background = FALSE,
-  write_file = TRUE
+  write_file = TRUE,
+  plot_scene = TRUE
 )
 }
 \value{

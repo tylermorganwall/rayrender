@@ -45,6 +45,7 @@ prepare_scene_list(
   verbose = FALSE,
   sample_dist = Inf,
   keep_colors = FALSE,
+  deferred_render = FALSE,
   integrator_type = "nee",
   denoise = TRUE,
   print_debug_info = FALSE

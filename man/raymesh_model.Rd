@@ -18,7 +18,7 @@ raymesh_model(
   displacement_intensity = 1,
   displacement_vector = FALSE,
   recalculate_normals = FALSE,
-  override_material = TRUE,
+  override_material = NULL,
   material = diffuse(),
   angle = c(0, 0, 0),
   order_rotation = c(1, 2, 3),
@@ -65,8 +65,9 @@ Otherwise, the texture is interpreted as providing a scalar displacement.}
 connecting face orientations. This can be used to compute normals for meshes lacking them or
 to calculate new normals after a displacement map has been applied to the mesh.}
 
-\item{override_material}{Default `TRUE`. If `TRUE`, overrides the material specified in the
-`raymesh` object with the one specified in `material`.}
+\item{override_material}{Default `NULL`, which overrides the material specified in the
+`raymesh` object only when the user passes a value to `material`. If `TRUE`, overrides the
+material specified in the `raymesh` object with the one specified in `material`.}
 
 \item{material}{Default  \code{\link{diffuse}}, but ignored unless `override_material = TRUE`. The material, called from one of the material
 functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}.}

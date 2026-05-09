@@ -155,15 +155,18 @@ generate_camera_motion = function(
 	))
 	curvature_adjust_pos = curve_adj_type %in% c(1, 3)
 	curvature_adjust_look = curve_adj_type %in% c(2, 3)
-	if (!is.null(dim(positions)) && ncol(positions) == 14) {
+	if (!is.null(dim(positions)) && all(c(
+		"x", "y", "z", "dx", "dy", "dz", "aperture", "fov", "focal",
+		"orthox", "orthoy", "upx", "upy", "upz"
+	) %in% colnames(positions))) {
 		temp = positions
-		positions = temp[, 1:3]
-		lookats = temp[, 4:6]
-		apertures = temp[, 7]
-		fovs = temp[, 8]
-		focal_distances = temp[, 9]
-		ortho_dims = temp[, 10:11]
-		camera_ups = temp[, 12:14]
+		positions = temp[, c("x", "y", "z")]
+		lookats = temp[, c("dx", "dy", "dz")]
+		apertures = temp[, "aperture"]
+		fovs = temp[, "fov"]
+		focal_distances = temp[, "focal"]
+		ortho_dims = temp[, c("orthox", "orthoy")]
+		camera_ups = temp[, c("upx", "upy", "upz")]
 	}
 	if (type == "bezier") {
 		position_control_points = process_point_series(

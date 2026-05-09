@@ -1,7 +1,6 @@
 #'@title Process a scene
 #'
 #'@keywords internal
-#'#internal
 process_scene = function(scene, process_material_ids = TRUE) {
   shapevec = unlist(lapply(
     tolower(scene$shape),

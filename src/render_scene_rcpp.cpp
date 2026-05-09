@@ -100,6 +100,10 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
   int sample_method = as<int>(camera_info["sample_method"]);
   NumericVector stratified_dim = as<NumericVector>(camera_info["stratified_dim"]);
   NumericVector light_direction = as<NumericVector>(camera_info["light_direction"]);
+  int stratified_x = static_cast<int>(stratified_dim(0));
+  int stratified_y = static_cast<int>(stratified_dim(1));
+  vec3f preview_light_direction(light_direction(0), light_direction(1), light_direction(2));
+  Float preview_exponent = light_direction.size() > 3 ? static_cast<Float>(light_direction(3)) : 0;
   NumericMatrix realCameraInfo = as<NumericMatrix>(camera_info["real_camera_info"]);
   Float film_size = as<Float>(camera_info["film_size"]);
   Float camera_scale = as<Float>(camera_info["camera_scale"]);
@@ -107,6 +111,8 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
   bool keep_colors = as<bool>(camera_info["keep_colors"]);
   bool preview     = as<bool>(camera_info["preview"]);
   bool interactive = as<bool>(camera_info["interactive"]);
+  bool deferred_render = as<bool>(camera_info["deferred_render"]);
+  bool auto_exposure = as<bool>(camera_info["auto_exposure"]);
   Float iso = as<Float>(camera_info["iso"]);
   int bvh_type = as<int>(camera_info["bvh"]);
 
@@ -354,15 +360,16 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
   preview = preview && debug_channel == 0;
 #ifdef HAS_OIDN
   PreviewDisplay Display(nx,ny, preview, interactive, 
-                         (lookat-lookfrom).length(), cam.get(),
+                         deferred_render, (lookat-lookfrom).length(), cam.get(),
                          background_sphere->ObjectToWorld,
                          background_sphere->WorldToObject,
-                         filter, denoise);
+                         filter, denoise, auto_exposure);
 #else
   PreviewDisplay Display(nx,ny, preview, interactive, 
-                         (lookat-lookfrom).length(), cam.get(),
+                         deferred_render, (lookat-lookfrom).length(), cam.get(),
                          background_sphere->ObjectToWorld,
-                         background_sphere->WorldToObject);
+                         background_sphere->WorldToObject,
+                         auto_exposure);
 #endif
   
   if(impl_only_bg || hasbackground) {
@@ -377,11 +384,11 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
     debug_scene(numbercores, nx, ny, ns, debug_channel,
                 min_variance, min_adaptive_size,
                 rgb_output, normalOutput, albedoOutput,
-                progress_bar, sample_method, stratified_dim,
+                progress_bar, sample_method, stratified_x, stratified_y,
                 verbose, cam.get(), fov,
                 world, imp_sample_objects, 
                 clampval, max_depth, roulette_active,
-                light_direction, rng, sample_dist, keep_colors,
+                preview_light_direction, preview_exponent, rng, sample_dist, keep_colors,
                 backgroundhigh);
   } else {
     pathtracer(numbercores, nx, ny, ns, debug_channel,
@@ -389,7 +396,7 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
                rgb_output, normalOutput, albedoOutput,
                alpha_output,
                draw_rgb_output,
-               progress_bar, sample_method, stratified_dim,
+               progress_bar, sample_method, stratified_x, stratified_y,
                verbose, cam.get(),  fov,
                world, imp_sample_objects,
                clampval, max_depth, roulette_active, Display, integrator_type);

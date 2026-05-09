@@ -264,6 +264,42 @@ test_that("render_scene basic options", {
 	))
 })
 
+test_that("render_scene accepts rayvertex ray_mesh scenes", {
+	skip_on_cran()
+	testthat::skip_if_not_installed("rayvertex")
+
+	mesh = rayvertex::construct_mesh(
+		indices = matrix(c(0L, 1L, 2L), ncol = 3),
+		vertices = matrix(
+			c(0, 0, 0, 1, 0, 0, 0, 1, 0),
+			ncol = 3,
+			byrow = TRUE
+		)
+	)
+	scene = rayvertex::scene_from_list(list(mesh))
+
+	expect_no_error(render_scene(
+		scene,
+		width = 8,
+		height = 8,
+		samples = 1,
+		parallel = FALSE,
+		preview = FALSE,
+		plot_scene = FALSE,
+		progress = FALSE,
+		denoise = FALSE
+	))
+
+	expect_false(raymesh_model(scene)$shape_info[[1]]$shape_properties$override_material)
+	expect_true(raymesh_model(scene, material = diffuse())$shape_info[[1]]$shape_properties$override_material)
+	expect_true(raymesh_model(scene, override_material = TRUE)$shape_info[[1]]$shape_properties$override_material)
+	expect_false(raymesh_model(
+		scene,
+		material = diffuse(),
+		override_material = FALSE
+	)$shape_info[[1]]$shape_properties$override_material)
+})
+
 
 test_that("Test debug channels", {
 	set.seed(1)

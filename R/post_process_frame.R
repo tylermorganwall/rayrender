@@ -10,7 +10,8 @@ post_process_frame = function(
 	tonemap,
 	bloom = TRUE,
 	transparent_background = FALSE,
-	write_file = TRUE
+	write_file = TRUE,
+	plot_scene = TRUE
 ) {
 	if (!transparent_background) {
 		full_array = array(0, c(ncol(rgb_mat$r), nrow(rgb_mat$r), 3))
@@ -26,13 +27,21 @@ post_process_frame = function(
 	if (debug_channel == 1) {
 		returnmat = full_array[,, 1]
 		returnmat[is.infinite(returnmat)] = NA
-		rayimage::ray_write_image(
-			(full_array - min(full_array, na.rm = TRUE)) /
-				(max(full_array, na.rm = TRUE) - min(full_array, na.rm = TRUE)),
-			filename
-		)
+		output_array = (full_array - min(full_array, na.rm = TRUE)) /
+			(max(full_array, na.rm = TRUE) - min(full_array, na.rm = TRUE))
+		if (write_file) {
+			rayimage::ray_write_image(output_array, filename)
+		} else if (plot_scene) {
+			rayimage::plot_image(output_array, new_page = TRUE)
+		}
+		return(invisible(returnmat))
 	} else if (debug_channel %in% c(2, 3, 4, 5, 6, 7, 8, 9)) {
-		rayimage::ray_write_image(full_array, filename)
+		if (write_file) {
+			rayimage::ray_write_image(full_array, filename)
+		} else if (plot_scene) {
+			rayimage::plot_image(full_array, new_page = TRUE)
+		}
+		return(invisible(full_array))
 	}
 	if (bloom) {
 		kernel = rayimage::generate_2d_exponential(0.1, 11, 3)
@@ -56,7 +65,8 @@ post_process_frame = function(
 	}
 	if (write_file) {
 		rayimage::ray_write_image(full_array, filename)
-	} else {
+	} else if (plot_scene) {
 		rayimage::plot_image(full_array, new_page = TRUE)
 	}
+	return(invisible(full_array))
 }

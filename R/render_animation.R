@@ -262,6 +262,7 @@ render_animation = function(
 		verbose = verbose,
 		sample_dist = sample_dist,
 		keep_colors = keep_colors,
+		deferred_render = FALSE,
 		integrator_type = integrator_type,
 		denoise = denoise
 	)

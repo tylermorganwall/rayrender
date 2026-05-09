@@ -9,5 +9,4 @@ process_scene(scene, process_material_ids = TRUE)
 \description{
 Process a scene
 }
-\keyword{#internal}
 \keyword{internal}
