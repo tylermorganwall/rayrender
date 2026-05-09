@@ -44,10 +44,14 @@ prepare_scene_list = function(
 	verbose = FALSE,
 	sample_dist = Inf,
 	keep_colors = FALSE,
+	deferred_render = FALSE,
 	integrator_type = "nee",
 	denoise = TRUE,
 	print_debug_info = FALSE
 ) {
+	if (inherits(scene, "ray_mesh")) {
+		scene = raymesh_model(scene)
+	}
 	#Process images, convert shapes and materials to enums, extract positions, and
 	scene_info = process_scene(scene)
 	if (!is.numeric(debug_channel)) {
@@ -175,6 +179,10 @@ prepare_scene_list = function(
 		"cores",
 		default = getOption("Ncpus", default = parallel::detectCores())
 	)
+	if (length(numbercores) != 1 || is.na(numbercores) || !is.finite(numbercores) || numbercores < 1) {
+		numbercores = 1
+	}
+	numbercores = as.integer(numbercores)
 	if (!parallel) {
 		numbercores = 1
 	}
@@ -265,6 +273,7 @@ prepare_scene_list = function(
 	camera_info$camera_scale = camera_scale
 	camera_info$sample_dist = sample_dist
 	camera_info$keep_colors = keep_colors
+	camera_info$deferred_render = isTRUE(deferred_render)
 	camera_info$iso = iso
 
 	if (max_depth <= 0) {
@@ -298,6 +307,7 @@ prepare_scene_list = function(
 	render_info$intensity_env = intensity_env
 	render_info$verbose = verbose
 	render_info$debug_channel = debug_channel
+	render_info$plot_scene = plot_scene
 	render_info$min_variance = min_variance
 	render_info$min_adaptive_size = min_adaptive_size
 	render_info$integrator_type = integrator_type

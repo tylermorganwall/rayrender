@@ -4222,8 +4222,9 @@ extruded_path = function(
 #' @param y Default `0`. y-coordinate to offset the model.
 #' @param z Default `0`. z-coordinate to offset the model.
 #' @param verbose Default `FALSE`. If `TRUE`, prints information about the mesh to the console.
-#' @param override_material Default `TRUE`. If `TRUE`, overrides the material specified in the
-#' `raymesh` object with the one specified in `material`.
+#' @param override_material Default `NULL`, which overrides the material specified in the
+#' `raymesh` object only when the user passes a value to `material`. If `TRUE`, overrides the
+#' material specified in the `raymesh` object with the one specified in `material`.
 #' @param flip_transmittance Default `TRUE`. Flips `(1-t)` the transmittance values to match the way the colors
 #' would be interpreted in a rasterizer (where it specifies the transmitted color). Turn off to specify
 #' the attenuation values directly.
@@ -4323,7 +4324,7 @@ raymesh_model = function(
 	displacement_intensity = 1,
 	displacement_vector = FALSE,
 	recalculate_normals = FALSE,
-	override_material = TRUE,
+	override_material = NULL,
 	material = diffuse(),
 	angle = c(0, 0, 0),
 	order_rotation = c(1, 2, 3),
@@ -4331,6 +4332,9 @@ raymesh_model = function(
 	scale = c(1, 1, 1),
 	validate_mesh = TRUE
 ) {
+	if (is.null(override_material)) {
+		override_material = !missing(material)
+	}
 	if (length(scale) == 1) {
 		scale = c(scale, scale, scale)
 	}
