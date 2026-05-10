@@ -9,6 +9,21 @@
 #include "../core/camera.h"
 #include "../hitables/hitable.h"
 
+struct PreviewTextOverlay {
+  point3f anchor;
+  int x_offset;
+  int y_offset;
+  Float hjust;
+  Float vjust;
+  bool clip;
+  bool occlusion;
+  bool partial_occlusion;
+  Float occlusion_tolerance;
+  unsigned int width;
+  unsigned int height;
+  std::vector<unsigned char> rgba;
+};
+
 #ifdef RAY_HAS_X11
 #include <X11/Xlib.h>
 #undef Status
@@ -61,6 +76,26 @@ public:
   Float ApplyPreviewExposure(Float value, Float sample_count) const;
   void IncreasePreviewExposure();
   void DecreasePreviewExposure();
+  void SetTextOverlays(const std::vector<PreviewTextOverlay>& overlays);
+  bool ProjectTextAnchor(const PreviewTextOverlay& overlay,
+                         Float& screen_x,
+                         Float& screen_y) const;
+  bool IsTextAnchorOccluded(const PreviewTextOverlay& overlay,
+                            hitable* world,
+                            random_gen& rng) const;
+  bool IsTextPixelOccluded(const PreviewTextOverlay& overlay,
+                           Float screen_x,
+                           Float screen_y,
+                           hitable* world,
+                           random_gen& rng) const;
+#ifdef RAY_HAS_X11
+  void CompositeTextOverlaysToX11Buffer(hitable* world, random_gen& rng);
+#endif
+#ifdef RAY_WINDOWS
+  void CompositeTextOverlaysToFloatBuffer(std::vector<Float>& rgb,
+                                          hitable* world,
+                                          random_gen& rng);
+#endif
 #ifdef RAY_HAS_X11
   Display *d;
   XImage *img;
@@ -100,6 +135,7 @@ public:
   bool denoise;
   #endif
   std::vector<Rcpp::List> Keyframes;
+  std::vector<PreviewTextOverlay> text_overlays;
 };
 
 #endif

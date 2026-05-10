@@ -155,6 +155,304 @@ void PreviewDisplay::DecreasePreviewExposure() {
   Rprintf("Preview Exposure: %.3f\n", preview_exposure_adjustment);
 }
 
+void PreviewDisplay::SetTextOverlays(const std::vector<PreviewTextOverlay>& overlays) {
+  text_overlays = overlays;
+}
+
+bool PreviewDisplay::ProjectTextAnchor(const PreviewTextOverlay& overlay,
+                                       Float& screen_x,
+                                       Float& screen_y) const {
+  if(!cam) {
+    return false;
+  }
+  unsigned int display_width = 0;
+  unsigned int display_height = 0;
+#ifdef RAY_HAS_X11
+  display_width = width;
+  display_height = height;
+#endif
+#ifdef RAY_WINDOWS
+  display_width = ::width;
+  display_height = ::height;
+#endif
+  if(display_width == 0 || display_height == 0) {
+    return false;
+  }
+  Float fov = cam->get_fov();
+  if(fov < 0) {
+    return false;
+  }
+  point3f origin = cam->get_origin();
+  vec3f relative = overlay.anchor - origin;
+  Float rel_len2 = relative.squared_length();
+  if(rel_len2 <= 0) {
+    return false;
+  }
+  vec3f right = cam->get_u();
+  vec3f up = cam->get_v();
+  vec3f forward = cam->get_w();
+  Float x_camera = dot(relative, right);
+  Float y_camera = dot(relative, up);
+  Float z_camera = dot(relative, forward);
+  Float s = 0.5f;
+  Float t = 0.5f;
+  bool in_front = true;
+  const Float pi_val = static_cast<Float>(3.14159265358979323846);
+
+  if(fov == 0) {
+    point2f ortho = cam->get_ortho();
+    s = 0.5f + x_camera / ortho.xy.x;
+    t = 0.5f + y_camera / ortho.xy.y;
+    in_front = z_camera >= 0;
+  } else if(fov == 360) {
+    vec3f direction = relative / std::sqrt(rel_len2);
+    Float local_x = dot(direction, right);
+    Float local_y = dot(direction, up);
+    Float local_z = dot(direction, forward);
+    Float theta = std::acos(clamp(local_y, -1.f, 1.f));
+    Float phi = std::atan2(local_x, local_z);
+    s = std::fmod((phi - pi_val) /
+                    (2.f * pi_val) + 1.f,
+                  1.f);
+    t = 1.f - theta / pi_val;
+  } else {
+    if(z_camera <= 0) {
+      return false;
+    }
+    Float aspect = static_cast<Float>(display_width) /
+      static_cast<Float>(display_height);
+    Float half_height = std::tan(fov * pi_val / 360.f);
+    Float half_width = aspect * half_height;
+    s = 0.5f + x_camera / (2.f * z_camera * half_width);
+    t = 0.5f + y_camera / (2.f * z_camera * half_height);
+  }
+  if(!in_front) {
+    return false;
+  }
+  if(overlay.clip && (s < 0 || s > 1 || t < 0 || t > 1)) {
+    return false;
+  }
+  screen_x = (1.f - s) * static_cast<Float>(display_width - 1);
+  screen_y = (1.f - t) * static_cast<Float>(display_height - 1);
+  return std::isfinite(screen_x) && std::isfinite(screen_y);
+}
+
+bool PreviewDisplay::IsTextAnchorOccluded(const PreviewTextOverlay& overlay,
+                                          hitable* world,
+                                          random_gen& rng) const {
+  if(!overlay.occlusion || !cam || !world) {
+    return false;
+  }
+  point3f origin = cam->get_origin();
+  vec3f relative = overlay.anchor - origin;
+  Float distance_to_anchor = relative.length();
+  Float occlusion_tolerance = overlay.occlusion_tolerance;
+  if(occlusion_tolerance < 0.f) {
+    occlusion_tolerance = 0.f;
+  }
+  Float endpoint_tolerance = occlusion_tolerance < 1.f ?
+    distance_to_anchor * occlusion_tolerance : occlusion_tolerance;
+  if(distance_to_anchor <= endpoint_tolerance) {
+    return false;
+  }
+  vec3f direction = relative / distance_to_anchor;
+  Float t_max = distance_to_anchor - endpoint_tolerance;
+
+  if(cam->get_fov() == 0) {
+    vec3f right = cam->get_u();
+    vec3f up = cam->get_v();
+    vec3f forward = cam->get_w();
+    Float x_camera = dot(relative, right);
+    Float y_camera = dot(relative, up);
+    Float z_camera = dot(relative, forward);
+    endpoint_tolerance = occlusion_tolerance < 1.f ?
+      z_camera * occlusion_tolerance : occlusion_tolerance;
+    if(z_camera <= endpoint_tolerance) {
+      return false;
+    }
+    origin = origin + x_camera * right + y_camera * up;
+    direction = forward;
+    t_max = z_camera - endpoint_tolerance;
+  }
+
+  hit_record hrec;
+  Ray visibility_ray(origin, direction, 0.5f);
+  return world->hit(visibility_ray, 0.001f, t_max, hrec, rng) &&
+    hrec.shape->GetName() != "EnvironmentLight";
+}
+
+bool PreviewDisplay::IsTextPixelOccluded(const PreviewTextOverlay& overlay,
+                                         Float screen_x,
+                                         Float screen_y,
+                                         hitable* world,
+                                         random_gen& rng) const {
+  if(!overlay.partial_occlusion || !cam || !world) {
+    return false;
+  }
+  unsigned int display_width = 0;
+  unsigned int display_height = 0;
+#ifdef RAY_HAS_X11
+  display_width = width;
+  display_height = height;
+#endif
+#ifdef RAY_WINDOWS
+  display_width = ::width;
+  display_height = ::height;
+#endif
+  if(display_width == 0 || display_height == 0 || cam->get_fov() < 0) {
+    return false;
+  }
+
+  vec3f forward = cam->get_w();
+  Float label_depth = dot(overlay.anchor - cam->get_origin(), forward);
+  Float occlusion_tolerance = overlay.occlusion_tolerance;
+  if(occlusion_tolerance < 0.f) {
+    occlusion_tolerance = 0.f;
+  }
+  Float endpoint_tolerance = occlusion_tolerance < 1.f ?
+    label_depth * occlusion_tolerance : occlusion_tolerance;
+  if(label_depth <= endpoint_tolerance) {
+    return false;
+  }
+
+  Float denom_x = static_cast<Float>(std::max(1u, display_width - 1));
+  Float denom_y = static_cast<Float>(std::max(1u, display_height - 1));
+  Float s = 1.f - screen_x / denom_x;
+  Float t = 1.f - screen_y / denom_y;
+  Ray visibility_ray = cam->get_ray(s, t, point3f(0.f, 0.f, 0.f), 0.5f);
+
+  hit_record hrec;
+  if(!world->hit(visibility_ray, 0.001f, MaxT, hrec, rng) ||
+     hrec.shape->GetName() == "EnvironmentLight") {
+    return false;
+  }
+  Float scene_depth = dot(hrec.p - cam->get_origin(), forward);
+  return scene_depth < label_depth - endpoint_tolerance;
+}
+
+#ifdef RAY_HAS_X11
+void PreviewDisplay::CompositeTextOverlaysToX11Buffer(hitable* world, random_gen& rng) {
+  if(text_overlays.empty() || !data) {
+    return;
+  }
+  for(const PreviewTextOverlay& overlay : text_overlays) {
+    Float screen_x;
+    Float screen_y;
+    if(!ProjectTextAnchor(overlay, screen_x, screen_y)) {
+      continue;
+    }
+    if(IsTextAnchorOccluded(overlay, world, rng)) {
+      continue;
+    }
+    int overlay_width = static_cast<int>(overlay.width);
+    int overlay_height = static_cast<int>(overlay.height);
+    int left = static_cast<int>(std::round(screen_x + overlay.x_offset -
+                                           overlay.hjust * overlay_width));
+    int top = static_cast<int>(std::round(screen_y + overlay.y_offset -
+                                          overlay.vjust * overlay_height));
+    int right_bound = std::min<int>(left + overlay_width, width);
+    int bottom_bound = std::min<int>(top + overlay_height, height);
+    int x_start = std::max(0, left);
+    int y_start = std::max(0, top);
+    if(x_start >= right_bound || y_start >= bottom_bound) {
+      continue;
+    }
+    for(int y = y_start; y < bottom_bound; y++) {
+      unsigned int source_y = static_cast<unsigned int>(y - top);
+      for(int x = x_start; x < right_bound; x++) {
+        unsigned int source_x = static_cast<unsigned int>(x - left);
+        size_t src_idx = 4 * (source_x + overlay.width * source_y);
+        Float alpha = overlay.rgba[src_idx + 3] / 255.f;
+        if(alpha <= 0) {
+          continue;
+        }
+        if(IsTextPixelOccluded(overlay,
+                               static_cast<Float>(x),
+                               static_cast<Float>(y),
+                               world,
+                               rng)) {
+          continue;
+        }
+        size_t dst_idx = 4 * (x + width * y);
+        Float src_r = overlay.rgba[src_idx] / 255.f;
+        Float src_g = overlay.rgba[src_idx + 1] / 255.f;
+        Float src_b = overlay.rgba[src_idx + 2] / 255.f;
+        Float dst_b = static_cast<unsigned char>(data[dst_idx]) / 255.f;
+        Float dst_g = static_cast<unsigned char>(data[dst_idx + 1]) / 255.f;
+        Float dst_r = static_cast<unsigned char>(data[dst_idx + 2]) / 255.f;
+        data[dst_idx] = static_cast<unsigned char>(
+          255.f * clamp(src_b * alpha + dst_b * (1.f - alpha), 0.f, 1.f)
+        );
+        data[dst_idx + 1] = static_cast<unsigned char>(
+          255.f * clamp(src_g * alpha + dst_g * (1.f - alpha), 0.f, 1.f)
+        );
+        data[dst_idx + 2] = static_cast<unsigned char>(
+          255.f * clamp(src_r * alpha + dst_r * (1.f - alpha), 0.f, 1.f)
+        );
+      }
+    }
+  }
+}
+#endif
+
+#ifdef RAY_WINDOWS
+void PreviewDisplay::CompositeTextOverlaysToFloatBuffer(std::vector<Float>& rgb,
+                                                        hitable* world,
+                                                        random_gen& rng) {
+  if(text_overlays.empty() || rgb.empty()) {
+    return;
+  }
+  for(const PreviewTextOverlay& overlay : text_overlays) {
+    Float screen_x;
+    Float screen_y;
+    if(!ProjectTextAnchor(overlay, screen_x, screen_y)) {
+      continue;
+    }
+    if(IsTextAnchorOccluded(overlay, world, rng)) {
+      continue;
+    }
+    int overlay_width = static_cast<int>(overlay.width);
+    int overlay_height = static_cast<int>(overlay.height);
+    int left = static_cast<int>(std::round(screen_x + overlay.x_offset -
+                                           overlay.hjust * overlay_width));
+    int top = static_cast<int>(std::round(screen_y + overlay.y_offset -
+                                          overlay.vjust * overlay_height));
+    int right_bound = std::min<int>(left + overlay_width, width);
+    int bottom_bound = std::min<int>(top + overlay_height, height);
+    int x_start = std::max(0, left);
+    int y_start = std::max(0, top);
+    if(x_start >= right_bound || y_start >= bottom_bound) {
+      continue;
+    }
+    for(int y = y_start; y < bottom_bound; y++) {
+      unsigned int source_y = static_cast<unsigned int>(y - top);
+      for(int x = x_start; x < right_bound; x++) {
+        unsigned int source_x = static_cast<unsigned int>(x - left);
+        size_t src_idx = 4 * (source_x + overlay.width * source_y);
+        Float alpha = overlay.rgba[src_idx + 3] / 255.f;
+        if(alpha <= 0) {
+          continue;
+        }
+        if(IsTextPixelOccluded(overlay,
+                               static_cast<Float>(x),
+                               static_cast<Float>(y),
+                               world,
+                               rng)) {
+          continue;
+        }
+        size_t dst_idx = 3 * (x + width * y);
+        Float src_r = overlay.rgba[src_idx] / 255.f;
+        Float src_g = overlay.rgba[src_idx + 1] / 255.f;
+        Float src_b = overlay.rgba[src_idx + 2] / 255.f;
+        rgb[dst_idx] = clamp(src_r * alpha + rgb[dst_idx] * (1.f - alpha), 0.f, 1.f);
+        rgb[dst_idx + 1] = clamp(src_g * alpha + rgb[dst_idx + 1] * (1.f - alpha), 0.f, 1.f);
+        rgb[dst_idx + 2] = clamp(src_b * alpha + rgb[dst_idx + 2] * (1.f - alpha), 0.f, 1.f);
+      }
+    }
+  }
+}
+#endif
+
 void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
                                adaptive_sampler& adaptive_pixel_sampler_small,
                                size_t &ns, RProgress::RProgress &pb, bool progress,
@@ -221,6 +519,7 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
         }
       }
     }
+    CompositeTextOverlaysToX11Buffer(world, rng);
     KeyCode tab = XKeysymToKeycode(d, XK_Tab);
     KeyCode esc = XKeysymToKeycode(d, XK_Escape);
     //Movement
@@ -810,6 +1109,7 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
         }
       }
     }
+    CompositeTextOverlaysToFloatBuffer(rgb, world, rng);
     
     InvalidateRect(hwnd, NULL, 0);
     while (PeekMessage (&msg, NULL, 0, 0, PM_REMOVE) > 0) {

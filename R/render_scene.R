@@ -129,6 +129,9 @@
 #' each render.
 #' @param new_page Default `TRUE`. Whether to call `grid::grid.newpage()` when plotting the image (if
 #' no filename specified). Set to `FALSE` for faster plotting (does not affect render time).
+#' @param screen_text Default `NULL`. Optional screen-space text overlay created with `screen_text()`.
+#' Labels are anchored to 3D world-space points, projected through the current camera, and drawn after
+#' rendering so text size and justification are independent of scene scale and view distance.
 #' @export
 #' @importFrom  grDevices col2rgb
 #' @return A pathtraced image to the current device, or an image saved to a file. Invisibly returns the
@@ -229,58 +232,59 @@
 #'   rayimage::plot_image_grid(image_output, dim = c(3,3) )
 #' }
 render_scene = function(
-	scene,
-	width = 400,
-	height = 400,
-	fov = 20,
-	samples = 100,
-	camera_description_file = NA,
-	preview = interactive(),
-	interactive = TRUE,
-	deferred_render = FALSE,
-	denoise = TRUE,
-	camera_scale = 1,
-	iso = 100,
-	auto_exposure = FALSE,
-	film_size = 22,
-	min_variance = 0,
-	min_adaptive_size = 8,
-	sample_method = "sobol_blue",
-	max_depth = NA,
-	roulette_active_depth = 100,
-	ambient_light = NULL,
-	lookfrom = c(0, 1, -10),
-	lookat = c(0, 0, 0),
-	camera_up = c(0, 1, 0),
-	aperture = 0.1,
-	clamp_value = Inf,
-	filename = NA,
-	backgroundhigh = "#80b4ff",
-	backgroundlow = "#ffffff",
-	shutteropen = 0.0,
-	shutterclose = 1.0,
-	focal_distance = NULL,
-	ortho_dimensions = c(1, 1),
-	tonemap = "raw",
-	bloom = TRUE,
-	parallel = TRUE,
-	bvh_type = "sah",
-	environment_light = NULL,
-	rotate_env = 0,
-	intensity_env = 1,
-	transparent_background = FALSE,
-	debug_channel = "none",
-	plot_scene = TRUE,
-	progress = interactive(),
-	verbose = FALSE,
-	print_debug_info = FALSE,
-	new_page = TRUE,
-	integrator_type = "rtiow"
+  scene,
+  width = 400,
+  height = 400,
+  fov = 20,
+  samples = 100,
+  camera_description_file = NA,
+  preview = interactive(),
+  interactive = TRUE,
+  deferred_render = FALSE,
+  denoise = TRUE,
+  camera_scale = 1,
+  iso = 100,
+  auto_exposure = FALSE,
+  film_size = 22,
+  min_variance = 0,
+  min_adaptive_size = 8,
+  sample_method = "sobol_blue",
+  max_depth = NA,
+  roulette_active_depth = 100,
+  ambient_light = NULL,
+  lookfrom = c(0, 1, -10),
+  lookat = c(0, 0, 0),
+  camera_up = c(0, 1, 0),
+  aperture = 0.1,
+  clamp_value = Inf,
+  filename = NA,
+  backgroundhigh = "#80b4ff",
+  backgroundlow = "#ffffff",
+  shutteropen = 0.0,
+  shutterclose = 1.0,
+  focal_distance = NULL,
+  ortho_dimensions = c(1, 1),
+  tonemap = "raw",
+  bloom = TRUE,
+  parallel = TRUE,
+  bvh_type = "sah",
+  environment_light = NULL,
+  rotate_env = 0,
+  intensity_env = 1,
+  transparent_background = FALSE,
+  debug_channel = "none",
+  plot_scene = TRUE,
+  progress = interactive(),
+  verbose = FALSE,
+  print_debug_info = FALSE,
+  new_page = TRUE,
+  integrator_type = "rtiow",
+  screen_text = NULL
 ) {
-	init_time()
-	if (print_debug_info) {
-		message(sprintf(
-			"------Debug Info------
+  init_time()
+  if (print_debug_info) {
+    message(sprintf(
+      "------Debug Info------
 RAY_HAS_X11: %s 
 HAS_SSE: %s 
 HAS_SSE2: %s 
@@ -289,173 +293,187 @@ HAS_SSE41:  %s
 HAS_NEON: %s
 HAS_OIDN: %s
 ----------------------",
-			ifelse(has_gui_capability(), "TRUE", "FALSE"),
-			ifelse(cppdef_HAS_SSE(), "TRUE", "FALSE"),
-			ifelse(cppdef_HAS_SSE2(), "TRUE", "FALSE"),
-			ifelse(cppdef_HAS_SSE3(), "TRUE", "FALSE"),
-			ifelse(cppdef_HAS_SSE41(), "TRUE", "FALSE"),
-			ifelse(cppdef_HAS_NEON(), "TRUE", "FALSE"),
-			ifelse(cppdef_HAS_OIDN(), "TRUE", "FALSE")
-		))
-	}
-	if (samples > 256 && sample_method == "sobol_blue") {
-		warning(
-			'"sobol_blue" sample method only valid for `samples` than or equal to 256--switching to `sample_method = "sobol"`'
-		)
-		sample_method = "sobol"
-	}
+      ifelse(has_gui_capability(), "TRUE", "FALSE"),
+      ifelse(cppdef_HAS_SSE(), "TRUE", "FALSE"),
+      ifelse(cppdef_HAS_SSE2(), "TRUE", "FALSE"),
+      ifelse(cppdef_HAS_SSE3(), "TRUE", "FALSE"),
+      ifelse(cppdef_HAS_SSE41(), "TRUE", "FALSE"),
+      ifelse(cppdef_HAS_NEON(), "TRUE", "FALSE"),
+      ifelse(cppdef_HAS_OIDN(), "TRUE", "FALSE")
+    ))
+  }
+  if (samples > 256 && sample_method == "sobol_blue") {
+    warning(
+      '"sobol_blue" sample method only valid for `samples` than or equal to 256--switching to `sample_method = "sobol"`'
+    )
+    sample_method = "sobol"
+  }
 
-	#Check if Cornell Box scene and set camera if user did not:
-	if (!is.null(attr(scene, "cornell"))) {
-		corn_message = "Setting default values for Cornell box: "
-		missing_corn = FALSE
-		if (missing(lookfrom)) {
-			lookfrom = c(278, 278, -800)
-			corn_message = paste0(corn_message, "lookfrom `c(278,278,-800)` ")
-			missing_corn = TRUE
-		}
-		if (missing(lookat)) {
-			lookat = c(278, 278, 555 / 2)
-			corn_message = paste0(corn_message, "lookat `c(278,278,555/2)` ")
-			missing_corn = TRUE
-		}
-		if (missing(fov) && is.na(camera_description_file)) {
-			fov = 40
-			corn_message = paste0(corn_message, "fov `40` ")
-			missing_corn = TRUE
-		}
-		if (
-			fov == 0 && missing(ortho_dimensions) && is.na(camera_description_file)
-		) {
-			ortho_dimensions = c(580, 580)
-			corn_message = paste0(corn_message, "ortho_dimensions `c(580, 580)` ")
-			missing_corn = TRUE
-		}
-		corn_message = paste0(corn_message, ".")
-		if (missing_corn) {
-			message(corn_message)
-		}
-	}
-	if (width < 3 || height < 3) {
-		stop("Must specify a minimum width/height of 3 or more pixels")
-	}
-	if (
-		preview &&
-			interactive &&
-			has_gui_capability() &&
-			!is.numeric(debug_channel) &&
-			debug_channel == "none"
-	) {
-		controls_message = if (deferred_render) {
-			"--------------------------Interactive Mode Controls---------------------------
+  #Check if Cornell Box scene and set camera if user did not:
+  if (!is.null(attr(scene, "cornell"))) {
+    corn_message = "Setting default values for Cornell box: "
+    missing_corn = FALSE
+    if (missing(lookfrom)) {
+      lookfrom = c(278, 278, -800)
+      corn_message = paste0(corn_message, "lookfrom `c(278,278,-800)` ")
+      missing_corn = TRUE
+    }
+    if (missing(lookat)) {
+      lookat = c(278, 278, 555 / 2)
+      corn_message = paste0(corn_message, "lookat `c(278,278,555/2)` ")
+      missing_corn = TRUE
+    }
+    if (missing(fov) && is.na(camera_description_file)) {
+      fov = 40
+      corn_message = paste0(corn_message, "fov `40` ")
+      missing_corn = TRUE
+    }
+    if (
+      fov == 0 && missing(ortho_dimensions) && is.na(camera_description_file)
+    ) {
+      ortho_dimensions = c(580, 580)
+      corn_message = paste0(corn_message, "ortho_dimensions `c(580, 580)` ")
+      missing_corn = TRUE
+    }
+    corn_message = paste0(corn_message, ".")
+    if (missing_corn) {
+      message(corn_message)
+    }
+  }
+  if (width < 3 || height < 3) {
+    stop("Must specify a minimum width/height of 3 or more pixels")
+  }
+  if (
+    preview &&
+      interactive &&
+      has_gui_capability() &&
+      !is.numeric(debug_channel) &&
+      debug_channel == "none"
+  ) {
+    controls_message = if (deferred_render) {
+      "--------------------------Interactive Mode Controls---------------------------
 W/A/S/D: Horizontal Movement: | Q/Z: Vertical Movement | Up/Down: Adjust FOV | ESC: Close
 Left/Right: Adjust Aperture  | 1/2: Adjust Focal Distance | 3/4: Rotate Environment Light
 P: Print Camera Info | R: Reset Camera |  E/C: Adjust Step Size |  TAB: Toggle Orbit Mode
 K: Save Keyframe | L: Reset Camera to Last Keyframe (if set) | F: Toggle Fast Travel Mode
 Left Mouse Click: Change Look At (new focal distance) | Right Mouse Click: Change Look At
 ]/[: Adjust Preview Exposure | Return: Start Final Render"
-		} else {
-			"--------------------------Interactive Mode Controls---------------------------
+    } else {
+      "--------------------------Interactive Mode Controls---------------------------
 W/A/S/D: Horizontal Movement: | Q/Z: Vertical Movement | Up/Down: Adjust FOV | ESC: Close
 Left/Right: Adjust Aperture  | 1/2: Adjust Focal Distance | 3/4: Rotate Environment Light 
 P: Print Camera Info | R: Reset Camera |  TAB: Toggle Orbit Mode |  E/C: Adjust Step Size
 K: Save Keyframe | L: Reset Camera to Last Keyframe (if set) | F: Toggle Fast Travel Mode
 Left Mouse Click: Change Look At (new focal distance) | Right Mouse Click: Change Look At
 ]/[: Adjust Preview Exposure"
-		}
-		message(controls_message)
-	}
-	print_time(verbose, "Pre-processing scene")
-	debug_string = debug_channel
-	scene_list = prepare_scene_list(
-		scene = scene,
-		width = width,
-		height = height,
-		fov = fov,
-		samples = samples,
-		camera_description_file = camera_description_file,
-		camera_scale = camera_scale,
-		iso = iso,
-		film_size = film_size,
-		min_variance = min_variance,
-		min_adaptive_size = min_adaptive_size,
-		sample_method = sample_method,
-		max_depth = max_depth,
-		roulette_active_depth = roulette_active_depth,
-		ambient_light = ambient_light,
-		lookfrom = lookfrom,
-		lookat = lookat,
-		camera_up = camera_up,
-		aperture = aperture,
-		clamp_value = clamp_value,
-		filename = filename,
-		backgroundhigh = backgroundhigh,
-		backgroundlow = backgroundlow,
-		shutteropen = shutteropen,
-		shutterclose = shutterclose,
-		focal_distance = focal_distance,
-		ortho_dimensions = ortho_dimensions,
-		tonemap = tonemap,
-		bloom = bloom,
-		parallel = parallel,
-		bvh_type = bvh_type,
-		environment_light = environment_light,
-		rotate_env = -rotate_env,
-		intensity_env = intensity_env,
-		debug_channel = debug_channel,
-		plot_scene = plot_scene,
-		progress = progress,
-		verbose = verbose,
-		sample_dist = Inf,
-		deferred_render = deferred_render,
-		integrator_type = integrator_type,
-		denoise = denoise,
-		print_debug_info = print_debug_info
-	)
-	print_time(verbose, "Pre-processed scene")
+    }
+    message(controls_message)
+  }
+  print_time(verbose, "Pre-processing scene")
+  debug_string = debug_channel
+  scene_list = prepare_scene_list(
+    scene = scene,
+    width = width,
+    height = height,
+    fov = fov,
+    samples = samples,
+    camera_description_file = camera_description_file,
+    camera_scale = camera_scale,
+    iso = iso,
+    film_size = film_size,
+    min_variance = min_variance,
+    min_adaptive_size = min_adaptive_size,
+    sample_method = sample_method,
+    max_depth = max_depth,
+    roulette_active_depth = roulette_active_depth,
+    ambient_light = ambient_light,
+    lookfrom = lookfrom,
+    lookat = lookat,
+    camera_up = camera_up,
+    aperture = aperture,
+    clamp_value = clamp_value,
+    filename = filename,
+    backgroundhigh = backgroundhigh,
+    backgroundlow = backgroundlow,
+    shutteropen = shutteropen,
+    shutterclose = shutterclose,
+    focal_distance = focal_distance,
+    ortho_dimensions = ortho_dimensions,
+    tonemap = tonemap,
+    bloom = bloom,
+    parallel = parallel,
+    bvh_type = bvh_type,
+    environment_light = environment_light,
+    rotate_env = -rotate_env,
+    intensity_env = intensity_env,
+    debug_channel = debug_channel,
+    plot_scene = plot_scene,
+    progress = progress,
+    verbose = verbose,
+    sample_dist = Inf,
+    deferred_render = deferred_render,
+    integrator_type = integrator_type,
+    denoise = denoise,
+    print_debug_info = print_debug_info
+  )
+  print_time(verbose, "Pre-processed scene")
 
-	camera_info = scene_list$camera_info
-	scene_info = scene_list$scene_info
-	render_info = scene_list$render_info
-	processed_scene = scene_info$scene
+  camera_info = scene_list$camera_info
+  scene_info = scene_list$scene_info
+  render_info = scene_list$render_info
+  processed_scene = scene_info$scene
+  screen_text_native_overlay = screen_text_needs_native_overlay(screen_text)
+  render_info$screen_text_preview = if (
+    isTRUE(preview) || screen_text_native_overlay
+  ) {
+    prepare_screen_text_preview(screen_text)
+  } else {
+    list(active = FALSE)
+  }
+  render_info$screen_text_occlusion = prepare_screen_text_occlusion(screen_text)
+  render_info$screen_text_native_overlay = screen_text_native_overlay
 
-	camera_info$preview = preview
-	camera_info$interactive = interactive
-	camera_info$auto_exposure = auto_exposure
-	debug_channel = scene_info$debug_channel # converted to numeric
+  camera_info$preview = preview
+  camera_info$interactive = interactive
+  camera_info$auto_exposure = auto_exposure
+  debug_channel = scene_info$debug_channel # converted to numeric
 
-	#Pathtrace Scene
-	rgb_mat = render_scene_rcpp(
-		scene = processed_scene,
-		camera_info = camera_info,
-		scene_info = scene_info,
-		render_info = render_info
-	)
-	if (!is.null(attr(rgb_mat, "keyframes"))) {
-		message(
-			"Saving camera keyframes: Call `get_saved_keyframes()` function to return them."
-		)
-		keyframes = do.call(
-			rbind,
-			lapply(attr(rgb_mat, "keyframes"), as.data.frame)
-		)
-		assign("keyframes", keyframes, envir = ray_environment)
-	}
-	return_array = post_process_scene(
-		rgb_mat,
-		camera_info$iso,
-		use_iso = FALSE,
-		tonemap,
-		debug_string,
-		filename,
-		plot_scene,
-		bloom,
-		new_page,
-		transparent_background = transparent_background,
-		auto_exposure = auto_exposure,
-		verbose = verbose
-	)
-	print_time(verbose, "Post-processed image")
+  #Pathtrace Scene
+  rgb_mat = render_scene_rcpp(
+    scene = processed_scene,
+    camera_info = camera_info,
+    scene_info = scene_info,
+    render_info = render_info
+  )
+  if (!is.null(attr(rgb_mat, "keyframes"))) {
+    message(
+      "Saving camera keyframes: Call `get_saved_keyframes()` function to return them."
+    )
+    keyframes = do.call(
+      rbind,
+      lapply(attr(rgb_mat, "keyframes"), as.data.frame)
+    )
+    assign("keyframes", keyframes, envir = ray_environment)
+  }
+  return_array = post_process_scene(
+    rgb_mat,
+    camera_info$iso,
+    use_iso = FALSE,
+    tonemap,
+    debug_string,
+    filename,
+    plot_scene,
+    bloom,
+    new_page,
+    transparent_background = transparent_background,
+    auto_exposure = auto_exposure,
+    verbose = verbose,
+    screen_text = screen_text,
+    camera_info = camera_info,
+    screen_text_visible = attr(rgb_mat, "screen_text_visible"),
+    screen_text_overlay = attr(rgb_mat, "screen_text_overlay")
+  )
+  print_time(verbose, "Post-processed image")
 
-	return(invisible(return_array))
+  return(invisible(return_array))
 }

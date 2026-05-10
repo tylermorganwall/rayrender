@@ -51,7 +51,8 @@ render_scene(
   verbose = FALSE,
   print_debug_info = FALSE,
   new_page = TRUE,
-  integrator_type = "rtiow"
+  integrator_type = "rtiow",
+  screen_text = NULL
 )
 }
 \arguments{
@@ -226,6 +227,10 @@ no filename specified). Set to `FALSE` for faster plotting (does not affect rend
 \item{integrator_type}{Default `"rtiow"` (the algorithm specified in the book "Raytracing in One Weekend", a basic
 form of path guiding). Other options include `"nee"` (Next Event Estimation, with direct light sampling)
 and `"basic"` (basic pathtracing, for high sample reference renders and debugging only).}
+
+\item{screen_text}{Default `NULL`. Optional screen-space text overlay created with `screen_text()`.
+Labels are anchored to 3D world-space points, projected through the current camera, and drawn after
+rendering so text size and justification are independent of scene scale and view distance.}
 }
 \value{
 A pathtraced image to the current device, or an image saved to a file. Invisibly returns the

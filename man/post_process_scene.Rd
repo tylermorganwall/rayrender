@@ -16,7 +16,11 @@ post_process_scene(
   new_page = TRUE,
   transparent_background = FALSE,
   auto_exposure = FALSE,
-  verbose = FALSE
+  verbose = FALSE,
+  screen_text = NULL,
+  camera_info = NULL,
+  screen_text_visible = NULL,
+  screen_text_overlay = NULL
 )
 }
 \description{

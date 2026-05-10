@@ -15,7 +15,11 @@ post_process_scene = function(
   new_page = TRUE,
   transparent_background = FALSE,
   auto_exposure = FALSE,
-  verbose = FALSE
+  verbose = FALSE,
+  screen_text = NULL,
+  camera_info = NULL,
+  screen_text_visible = NULL,
+  screen_text_overlay = NULL
 ) {
   if (!is.numeric(debug_channel)) {
     debug_channel = unlist(lapply(
@@ -217,6 +221,37 @@ post_process_scene = function(
 
   if (any(is.na(full_array))) {
     full_array[is.na(full_array)] = 0
+  }
+  if (!is.null(screen_text_overlay)) {
+    full_array = composite_screen_text_image(
+      full_array,
+      screen_text_overlay,
+      x = 1,
+      y = 1,
+      hjust = 0,
+      vjust = 0
+    )
+  }
+  if (!is.null(screen_text)) {
+    screen_text_spec = normalize_screen_text(screen_text)
+    if (!is.null(screen_text_overlay)) {
+      draw_screen_text = !(screen_text_spec$occlusion &
+        screen_text_spec$occlusion_mode == "label")
+      if (!is.null(screen_text_visible)) {
+        screen_text_visible = screen_text_visible[draw_screen_text]
+      }
+      screen_text_spec = screen_text_spec[
+        draw_screen_text,
+        ,
+        drop = FALSE
+      ]
+    }
+    full_array = add_screen_text(
+      full_array,
+      screen_text_spec,
+      camera_info,
+      screen_text_visible
+    )
   }
   if (is.na(filename)) {
     if (plot_scene) {
