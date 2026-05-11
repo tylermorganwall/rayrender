@@ -18,9 +18,12 @@ post_process_scene(
   auto_exposure = FALSE,
   verbose = FALSE,
   screen_text = NULL,
+  screen_line = NULL,
   camera_info = NULL,
   screen_text_visible = NULL,
-  screen_text_overlay = NULL
+  screen_text_overlay = NULL,
+  screen_line_visible = NULL,
+  screen_line_overlay = NULL
 )
 }
 \description{

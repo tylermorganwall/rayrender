@@ -130,6 +130,7 @@
 #' @param new_page Default `TRUE`. Whether to call `grid::grid.newpage()` when plotting the image (if
 #' no filename specified). Set to `FALSE` for faster plotting (does not affect render time).
 #' @param screen_text Default `NULL`. Optional screen-space text overlay created with `screen_text()`.
+#' @param screen_line Default `NULL`. Optional screen-space line overlay created with `screen_line()`.
 #' Labels are anchored to 3D world-space points, projected through the current camera, and drawn after
 #' rendering so text size and justification are independent of scene scale and view distance.
 #' @export
@@ -279,7 +280,8 @@ render_scene = function(
   print_debug_info = FALSE,
   new_page = TRUE,
   integrator_type = "rtiow",
-  screen_text = NULL
+  screen_text = NULL,
+  screen_line = NULL
 ) {
   init_time()
   if (print_debug_info) {
@@ -423,6 +425,7 @@ Left Mouse Click: Change Look At (new focal distance) | Right Mouse Click: Chang
   render_info = scene_list$render_info
   processed_scene = scene_info$scene
   screen_text_native_overlay = screen_text_needs_native_overlay(screen_text)
+  screen_line_native_overlay = screen_line_needs_native_overlay(screen_line)
   render_info$screen_text_preview = if (
     isTRUE(preview) || screen_text_native_overlay
   ) {
@@ -432,6 +435,15 @@ Left Mouse Click: Change Look At (new focal distance) | Right Mouse Click: Chang
   }
   render_info$screen_text_occlusion = prepare_screen_text_occlusion(screen_text)
   render_info$screen_text_native_overlay = screen_text_native_overlay
+  render_info$screen_line_preview = if (
+    isTRUE(preview) || screen_line_native_overlay
+  ) {
+    prepare_screen_line_preview(screen_line)
+  } else {
+    list(active = FALSE)
+  }
+  render_info$screen_line_occlusion = prepare_screen_line_occlusion(screen_line)
+  render_info$screen_line_native_overlay = screen_line_native_overlay
 
   camera_info$preview = preview
   camera_info$interactive = interactive
@@ -469,9 +481,12 @@ Left Mouse Click: Change Look At (new focal distance) | Right Mouse Click: Chang
     auto_exposure = auto_exposure,
     verbose = verbose,
     screen_text = screen_text,
+    screen_line = screen_line,
     camera_info = camera_info,
     screen_text_visible = attr(rgb_mat, "screen_text_visible"),
-    screen_text_overlay = attr(rgb_mat, "screen_text_overlay")
+    screen_text_overlay = attr(rgb_mat, "screen_text_overlay"),
+    screen_line_visible = attr(rgb_mat, "screen_line_visible"),
+    screen_line_overlay = attr(rgb_mat, "screen_line_overlay")
   )
   print_time(verbose, "Post-processed image")
 

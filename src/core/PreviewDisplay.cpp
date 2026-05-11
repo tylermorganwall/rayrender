@@ -159,6 +159,91 @@ void PreviewDisplay::SetTextOverlays(const std::vector<PreviewTextOverlay>& over
   text_overlays = overlays;
 }
 
+void PreviewDisplay::SetLineOverlays(const std::vector<PreviewLineOverlay>& overlays) {
+  line_overlays = overlays;
+}
+
+bool PreviewDisplay::ProjectWorldPoint(const point3f& point,
+                                       bool clip,
+                                       Float& screen_x,
+                                       Float& screen_y,
+                                       Float& depth) const {
+  if(!cam) {
+    return false;
+  }
+  unsigned int display_width = 0;
+  unsigned int display_height = 0;
+#ifdef RAY_HAS_X11
+  display_width = width;
+  display_height = height;
+#endif
+#ifdef RAY_WINDOWS
+  display_width = ::width;
+  display_height = ::height;
+#endif
+  if(display_width == 0 || display_height == 0) {
+    return false;
+  }
+  Float fov = cam->get_fov();
+  if(fov < 0) {
+    return false;
+  }
+  point3f origin = cam->get_origin();
+  vec3f relative = point - origin;
+  Float rel_len2 = relative.squared_length();
+  if(rel_len2 <= 0) {
+    return false;
+  }
+  vec3f right = cam->get_u();
+  vec3f up = cam->get_v();
+  vec3f forward = cam->get_w();
+  Float x_camera = dot(relative, right);
+  Float y_camera = dot(relative, up);
+  Float z_camera = dot(relative, forward);
+  Float s = 0.5f;
+  Float t = 0.5f;
+  bool in_front = true;
+  const Float pi_val = static_cast<Float>(3.14159265358979323846);
+
+  if(fov == 0) {
+    point2f ortho = cam->get_ortho();
+    s = 0.5f + x_camera / ortho.xy.x;
+    t = 0.5f + y_camera / ortho.xy.y;
+    in_front = z_camera >= 0;
+  } else if(fov == 360) {
+    vec3f direction = relative / std::sqrt(rel_len2);
+    Float local_x = dot(direction, right);
+    Float local_y = dot(direction, up);
+    Float local_z = dot(direction, forward);
+    Float theta = std::acos(clamp(local_y, -1.f, 1.f));
+    Float phi = std::atan2(local_x, local_z);
+    s = std::fmod((phi - pi_val) /
+                    (2.f * pi_val) + 1.f,
+                  1.f);
+    t = 1.f - theta / pi_val;
+  } else {
+    if(z_camera <= 0) {
+      return false;
+    }
+    Float aspect = static_cast<Float>(display_width) /
+      static_cast<Float>(display_height);
+    Float half_height = std::tan(fov * pi_val / 360.f);
+    Float half_width = aspect * half_height;
+    s = 0.5f + x_camera / (2.f * z_camera * half_width);
+    t = 0.5f + y_camera / (2.f * z_camera * half_height);
+  }
+  if(!in_front) {
+    return false;
+  }
+  if(clip && (s < 0 || s > 1 || t < 0 || t > 1)) {
+    return false;
+  }
+  screen_x = (1.f - s) * static_cast<Float>(display_width - 1);
+  screen_y = (1.f - t) * static_cast<Float>(display_height - 1);
+  depth = z_camera;
+  return std::isfinite(screen_x) && std::isfinite(screen_y);
+}
+
 bool PreviewDisplay::ProjectTextAnchor(const PreviewTextOverlay& overlay,
                                        Float& screen_x,
                                        Float& screen_y) const {
@@ -330,6 +415,151 @@ bool PreviewDisplay::IsTextPixelOccluded(const PreviewTextOverlay& overlay,
   return scene_depth < label_depth - endpoint_tolerance;
 }
 
+bool PreviewDisplay::IsLineAnchorOccluded(const PreviewLineOverlay& overlay,
+                                          hitable* world,
+                                          random_gen& rng) const {
+  if(!overlay.occlusion || !cam || !world) {
+    return false;
+  }
+  point3f anchor = overlay.start + (overlay.end - overlay.start) * 0.5f;
+  point3f origin = cam->get_origin();
+  vec3f relative = anchor - origin;
+  Float distance_to_anchor = relative.length();
+  Float occlusion_tolerance = overlay.occlusion_tolerance;
+  if(occlusion_tolerance < 0.f) {
+    occlusion_tolerance = 0.f;
+  }
+  Float endpoint_tolerance = occlusion_tolerance < 1.f ?
+    distance_to_anchor * occlusion_tolerance : occlusion_tolerance;
+  if(distance_to_anchor <= endpoint_tolerance) {
+    return false;
+  }
+  vec3f direction = relative / distance_to_anchor;
+  Float t_max = distance_to_anchor - endpoint_tolerance;
+
+  if(cam->get_fov() == 0) {
+    vec3f right = cam->get_u();
+    vec3f up = cam->get_v();
+    vec3f forward = cam->get_w();
+    Float x_camera = dot(relative, right);
+    Float y_camera = dot(relative, up);
+    Float z_camera = dot(relative, forward);
+    endpoint_tolerance = occlusion_tolerance < 1.f ?
+      z_camera * occlusion_tolerance : occlusion_tolerance;
+    if(z_camera <= endpoint_tolerance) {
+      return false;
+    }
+    origin = origin + x_camera * right + y_camera * up;
+    direction = forward;
+    t_max = z_camera - endpoint_tolerance;
+  }
+
+  hit_record hrec;
+  Ray visibility_ray(origin, direction, 0.5f);
+  return world->hit(visibility_ray, 0.001f, t_max, hrec, rng) &&
+    hrec.shape->GetName() != "EnvironmentLight";
+}
+
+bool PreviewDisplay::IsLinePixelOccluded(const PreviewLineOverlay& overlay,
+                                         Float screen_x,
+                                         Float screen_y,
+                                         Float line_depth,
+                                         hitable* world,
+                                         random_gen& rng) const {
+  if(!overlay.partial_occlusion || !cam || !world) {
+    return false;
+  }
+  unsigned int display_width = 0;
+  unsigned int display_height = 0;
+#ifdef RAY_HAS_X11
+  display_width = width;
+  display_height = height;
+#endif
+#ifdef RAY_WINDOWS
+  display_width = ::width;
+  display_height = ::height;
+#endif
+  if(display_width == 0 || display_height == 0 || cam->get_fov() < 0) {
+    return false;
+  }
+  Float occlusion_tolerance = overlay.occlusion_tolerance;
+  if(occlusion_tolerance < 0.f) {
+    occlusion_tolerance = 0.f;
+  }
+  Float endpoint_tolerance = occlusion_tolerance < 1.f ?
+    line_depth * occlusion_tolerance : occlusion_tolerance;
+  if(line_depth <= endpoint_tolerance) {
+    return false;
+  }
+
+  Float denom_x = static_cast<Float>(std::max(1u, display_width - 1));
+  Float denom_y = static_cast<Float>(std::max(1u, display_height - 1));
+  Float s = 1.f - screen_x / denom_x;
+  Float t = 1.f - screen_y / denom_y;
+  Ray visibility_ray = cam->get_ray(s, t, point3f(0.f, 0.f, 0.f), 0.5f);
+
+  hit_record hrec;
+  if(!world->hit(visibility_ray, 0.001f, MaxT, hrec, rng) ||
+     hrec.shape->GetName() == "EnvironmentLight") {
+    return false;
+  }
+  Float scene_depth = dot(hrec.p - cam->get_origin(), cam->get_w());
+  return scene_depth < line_depth - endpoint_tolerance;
+}
+
+static Float LineCoverageAndDepth(Float x0,
+                                  Float y0,
+                                  Float depth0,
+                                  Float x1,
+                                  Float y1,
+                                  Float depth1,
+                                  Float px,
+                                  Float py,
+                                  Float width,
+                                  int lineend,
+                                  Float& line_depth) {
+  Float radius = width / 2.f;
+  Float dx = x1 - x0;
+  Float dy = y1 - y0;
+  Float len2 = dx * dx + dy * dy;
+  if(len2 <= static_cast<Float>(1e-12)) {
+    Float dist = std::sqrt((px - x0) * (px - x0) + (py - y0) * (py - y0));
+    line_depth = (depth0 + depth1) * 0.5f;
+    return clamp(radius + 0.5f - dist, 0.f, 1.f);
+  }
+
+  Float t_depth = ((px - x0) * dx + (py - y0) * dy) / len2;
+  line_depth = depth0 + clamp(t_depth, 0.f, 1.f) * (depth1 - depth0);
+  Float cx0 = x0;
+  Float cy0 = y0;
+  Float cx1 = x1;
+  Float cy1 = y1;
+
+  if(lineend == 2) {
+    Float len = std::sqrt(len2);
+    Float ux = dx / len;
+    Float uy = dy / len;
+    cx0 -= ux * radius;
+    cy0 -= uy * radius;
+    cx1 += ux * radius;
+    cy1 += uy * radius;
+    dx = cx1 - cx0;
+    dy = cy1 - cy0;
+    len2 = dx * dx + dy * dy;
+  }
+
+  Float t = ((px - cx0) * dx + (py - cy0) * dy) / len2;
+  if(lineend == 1 && (t < 0.f || t > 1.f)) {
+    return 0.f;
+  }
+  t = clamp(t, 0.f, 1.f);
+  Float closest_x = cx0 + t * dx;
+  Float closest_y = cy0 + t * dy;
+  Float dist = std::sqrt((px - closest_x) * (px - closest_x) +
+                         (py - closest_y) * (py - closest_y));
+  return clamp(radius + 0.5f - dist, 0.f, 1.f);
+}
+
 #ifdef RAY_HAS_X11
 void PreviewDisplay::CompositeTextOverlaysToX11Buffer(hitable* world, random_gen& rng) {
   if(text_overlays.empty() || !data) {
@@ -393,6 +623,73 @@ void PreviewDisplay::CompositeTextOverlaysToX11Buffer(hitable* world, random_gen
     }
   }
 }
+
+void PreviewDisplay::CompositeLineOverlaysToX11Buffer(hitable* world, random_gen& rng) {
+  if(line_overlays.empty() || !data) {
+    return;
+  }
+  for(const PreviewLineOverlay& overlay : line_overlays) {
+    Float x0;
+    Float y0;
+    Float depth0;
+    Float x1;
+    Float y1;
+    Float depth1;
+    if(!ProjectWorldPoint(overlay.start, overlay.clip, x0, y0, depth0) ||
+       !ProjectWorldPoint(overlay.end, overlay.clip, x1, y1, depth1)) {
+      continue;
+    }
+    x0 += overlay.x_offset;
+    y0 += overlay.y_offset;
+    x1 += overlay.xend_offset;
+    y1 += overlay.yend_offset;
+    if(IsLineAnchorOccluded(overlay, world, rng)) {
+      continue;
+    }
+    Float pad = overlay.width / 2.f + 1.f;
+    int left = std::max(0, static_cast<int>(std::floor(std::min(x0, x1) - pad)));
+    int right = std::min<int>(width - 1, static_cast<int>(std::ceil(std::max(x0, x1) + pad)));
+    int top = std::max(0, static_cast<int>(std::floor(std::min(y0, y1) - pad)));
+    int bottom = std::min<int>(height - 1, static_cast<int>(std::ceil(std::max(y0, y1) + pad)));
+    if(left > right || top > bottom) {
+      continue;
+    }
+    for(int y = top; y <= bottom; y++) {
+      for(int x = left; x <= right; x++) {
+        Float line_depth;
+        Float alpha = overlay.alpha * LineCoverageAndDepth(
+          x0, y0, depth0, x1, y1, depth1,
+          static_cast<Float>(x), static_cast<Float>(y),
+          overlay.width, overlay.lineend, line_depth
+        );
+        if(alpha <= 0.f) {
+          continue;
+        }
+        if(IsLinePixelOccluded(overlay,
+                               static_cast<Float>(x),
+                               static_cast<Float>(y),
+                               line_depth,
+                               world,
+                               rng)) {
+          continue;
+        }
+        size_t dst_idx = 4 * (x + width * y);
+        Float dst_b = static_cast<unsigned char>(data[dst_idx]) / 255.f;
+        Float dst_g = static_cast<unsigned char>(data[dst_idx + 1]) / 255.f;
+        Float dst_r = static_cast<unsigned char>(data[dst_idx + 2]) / 255.f;
+        data[dst_idx] = static_cast<unsigned char>(
+          255.f * clamp(overlay.blue * alpha + dst_b * (1.f - alpha), 0.f, 1.f)
+        );
+        data[dst_idx + 1] = static_cast<unsigned char>(
+          255.f * clamp(overlay.green * alpha + dst_g * (1.f - alpha), 0.f, 1.f)
+        );
+        data[dst_idx + 2] = static_cast<unsigned char>(
+          255.f * clamp(overlay.red * alpha + dst_r * (1.f - alpha), 0.f, 1.f)
+        );
+      }
+    }
+  }
+}
 #endif
 
 #ifdef RAY_WINDOWS
@@ -447,6 +744,66 @@ void PreviewDisplay::CompositeTextOverlaysToFloatBuffer(std::vector<Float>& rgb,
         rgb[dst_idx] = clamp(src_r * alpha + rgb[dst_idx] * (1.f - alpha), 0.f, 1.f);
         rgb[dst_idx + 1] = clamp(src_g * alpha + rgb[dst_idx + 1] * (1.f - alpha), 0.f, 1.f);
         rgb[dst_idx + 2] = clamp(src_b * alpha + rgb[dst_idx + 2] * (1.f - alpha), 0.f, 1.f);
+      }
+    }
+  }
+}
+
+void PreviewDisplay::CompositeLineOverlaysToFloatBuffer(std::vector<Float>& rgb,
+                                                        hitable* world,
+                                                        random_gen& rng) {
+  if(line_overlays.empty() || rgb.empty()) {
+    return;
+  }
+  for(const PreviewLineOverlay& overlay : line_overlays) {
+    Float x0;
+    Float y0;
+    Float depth0;
+    Float x1;
+    Float y1;
+    Float depth1;
+    if(!ProjectWorldPoint(overlay.start, overlay.clip, x0, y0, depth0) ||
+       !ProjectWorldPoint(overlay.end, overlay.clip, x1, y1, depth1)) {
+      continue;
+    }
+    x0 += overlay.x_offset;
+    y0 += overlay.y_offset;
+    x1 += overlay.xend_offset;
+    y1 += overlay.yend_offset;
+    if(IsLineAnchorOccluded(overlay, world, rng)) {
+      continue;
+    }
+    Float pad = overlay.width / 2.f + 1.f;
+    int left = std::max(0, static_cast<int>(std::floor(std::min(x0, x1) - pad)));
+    int right = std::min<int>(width - 1, static_cast<int>(std::ceil(std::max(x0, x1) + pad)));
+    int top = std::max(0, static_cast<int>(std::floor(std::min(y0, y1) - pad)));
+    int bottom = std::min<int>(height - 1, static_cast<int>(std::ceil(std::max(y0, y1) + pad)));
+    if(left > right || top > bottom) {
+      continue;
+    }
+    for(int y = top; y <= bottom; y++) {
+      for(int x = left; x <= right; x++) {
+        Float line_depth;
+        Float alpha = overlay.alpha * LineCoverageAndDepth(
+          x0, y0, depth0, x1, y1, depth1,
+          static_cast<Float>(x), static_cast<Float>(y),
+          overlay.width, overlay.lineend, line_depth
+        );
+        if(alpha <= 0.f) {
+          continue;
+        }
+        if(IsLinePixelOccluded(overlay,
+                               static_cast<Float>(x),
+                               static_cast<Float>(y),
+                               line_depth,
+                               world,
+                               rng)) {
+          continue;
+        }
+        size_t dst_idx = 3 * (x + width * y);
+        rgb[dst_idx] = clamp(overlay.red * alpha + rgb[dst_idx] * (1.f - alpha), 0.f, 1.f);
+        rgb[dst_idx + 1] = clamp(overlay.green * alpha + rgb[dst_idx + 1] * (1.f - alpha), 0.f, 1.f);
+        rgb[dst_idx + 2] = clamp(overlay.blue * alpha + rgb[dst_idx + 2] * (1.f - alpha), 0.f, 1.f);
       }
     }
   }
@@ -520,6 +877,7 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
       }
     }
     CompositeTextOverlaysToX11Buffer(world, rng);
+    CompositeLineOverlaysToX11Buffer(world, rng);
     KeyCode tab = XKeysymToKeycode(d, XK_Tab);
     KeyCode esc = XKeysymToKeycode(d, XK_Escape);
     //Movement
@@ -1110,6 +1468,7 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
       }
     }
     CompositeTextOverlaysToFloatBuffer(rgb, world, rng);
+    CompositeLineOverlaysToFloatBuffer(rgb, world, rng);
     
     InvalidateRect(hwnd, NULL, 0);
     while (PeekMessage (&msg, NULL, 0, 0, PM_REMOVE) > 0) {

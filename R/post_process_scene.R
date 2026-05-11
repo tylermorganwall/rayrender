@@ -17,9 +17,12 @@ post_process_scene = function(
   auto_exposure = FALSE,
   verbose = FALSE,
   screen_text = NULL,
+  screen_line = NULL,
   camera_info = NULL,
   screen_text_visible = NULL,
-  screen_text_overlay = NULL
+  screen_text_overlay = NULL,
+  screen_line_visible = NULL,
+  screen_line_overlay = NULL
 ) {
   if (!is.numeric(debug_channel)) {
     debug_channel = unlist(lapply(
@@ -230,6 +233,37 @@ post_process_scene = function(
       y = 1,
       hjust = 0,
       vjust = 0
+    )
+  }
+  if (!is.null(screen_line_overlay)) {
+    full_array = composite_screen_text_image(
+      full_array,
+      screen_line_overlay,
+      x = 1,
+      y = 1,
+      hjust = 0,
+      vjust = 0
+    )
+  }
+  if (!is.null(screen_line)) {
+    screen_line_spec = normalize_screen_line(screen_line)
+    if (!is.null(screen_line_overlay)) {
+      draw_screen_line = !(screen_line_spec$occlusion &
+        screen_line_spec$occlusion_mode == "line")
+      if (!is.null(screen_line_visible)) {
+        screen_line_visible = screen_line_visible[draw_screen_line]
+      }
+      screen_line_spec = screen_line_spec[
+        draw_screen_line,
+        ,
+        drop = FALSE
+      ]
+    }
+    full_array = add_screen_line(
+      full_array,
+      screen_line_spec,
+      camera_info,
+      screen_line_visible
     )
   }
   if (!is.null(screen_text)) {

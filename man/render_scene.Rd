@@ -52,7 +52,8 @@ render_scene(
   print_debug_info = FALSE,
   new_page = TRUE,
   integrator_type = "rtiow",
-  screen_text = NULL
+  screen_text = NULL,
+  screen_line = NULL
 )
 }
 \arguments{
@@ -228,7 +229,9 @@ no filename specified). Set to `FALSE` for faster plotting (does not affect rend
 form of path guiding). Other options include `"nee"` (Next Event Estimation, with direct light sampling)
 and `"basic"` (basic pathtracing, for high sample reference renders and debugging only).}
 
-\item{screen_text}{Default `NULL`. Optional screen-space text overlay created with `screen_text()`.
+\item{screen_text}{Default `NULL`. Optional screen-space text overlay created with `screen_text()`.}
+
+\item{screen_line}{Default `NULL`. Optional screen-space line overlay created with `screen_line()`.
 Labels are anchored to 3D world-space points, projected through the current camera, and drawn after
 rendering so text size and justification are independent of scene scale and view distance.}
 }

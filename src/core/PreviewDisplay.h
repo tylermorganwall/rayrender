@@ -24,6 +24,25 @@ struct PreviewTextOverlay {
   std::vector<unsigned char> rgba;
 };
 
+struct PreviewLineOverlay {
+  point3f start;
+  point3f end;
+  int x_offset;
+  int y_offset;
+  int xend_offset;
+  int yend_offset;
+  Float width;
+  Float red;
+  Float green;
+  Float blue;
+  Float alpha;
+  int lineend;
+  bool clip;
+  bool occlusion;
+  bool partial_occlusion;
+  Float occlusion_tolerance;
+};
+
 #ifdef RAY_HAS_X11
 #include <X11/Xlib.h>
 #undef Status
@@ -77,9 +96,15 @@ public:
   void IncreasePreviewExposure();
   void DecreasePreviewExposure();
   void SetTextOverlays(const std::vector<PreviewTextOverlay>& overlays);
+  void SetLineOverlays(const std::vector<PreviewLineOverlay>& overlays);
   bool ProjectTextAnchor(const PreviewTextOverlay& overlay,
                          Float& screen_x,
                          Float& screen_y) const;
+  bool ProjectWorldPoint(const point3f& point,
+                         bool clip,
+                         Float& screen_x,
+                         Float& screen_y,
+                         Float& depth) const;
   bool IsTextAnchorOccluded(const PreviewTextOverlay& overlay,
                             hitable* world,
                             random_gen& rng) const;
@@ -88,11 +113,24 @@ public:
                            Float screen_y,
                            hitable* world,
                            random_gen& rng) const;
+  bool IsLineAnchorOccluded(const PreviewLineOverlay& overlay,
+                            hitable* world,
+                            random_gen& rng) const;
+  bool IsLinePixelOccluded(const PreviewLineOverlay& overlay,
+                           Float screen_x,
+                           Float screen_y,
+                           Float line_depth,
+                           hitable* world,
+                           random_gen& rng) const;
 #ifdef RAY_HAS_X11
   void CompositeTextOverlaysToX11Buffer(hitable* world, random_gen& rng);
+  void CompositeLineOverlaysToX11Buffer(hitable* world, random_gen& rng);
 #endif
 #ifdef RAY_WINDOWS
   void CompositeTextOverlaysToFloatBuffer(std::vector<Float>& rgb,
+                                          hitable* world,
+                                          random_gen& rng);
+  void CompositeLineOverlaysToFloatBuffer(std::vector<Float>& rgb,
                                           hitable* world,
                                           random_gen& rng);
 #endif
@@ -136,6 +174,7 @@ public:
   #endif
   std::vector<Rcpp::List> Keyframes;
   std::vector<PreviewTextOverlay> text_overlays;
+  std::vector<PreviewLineOverlay> line_overlays;
 };
 
 #endif
