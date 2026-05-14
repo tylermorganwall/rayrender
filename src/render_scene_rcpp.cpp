@@ -288,6 +288,25 @@ static bool should_return_screen_line_overlay(List render_info) {
   return as<bool>(render_info["screen_line_native_overlay"]);
 }
 
+static List get_screen_camera_info(RayCamera* cam) {
+  if(!cam) {
+    return List::create();
+  }
+  point3f origin = cam->get_origin();
+  vec3f right = cam->get_u();
+  vec3f up = cam->get_v();
+  vec3f forward = cam->get_w();
+  point2f ortho = cam->get_ortho();
+  return List::create(
+    _["origin"] = NumericVector::create(origin.xyz.x, origin.xyz.y, origin.xyz.z),
+    _["u"] = NumericVector::create(right.xyz.x, right.xyz.y, right.xyz.z),
+    _["v"] = NumericVector::create(up.xyz.x, up.xyz.y, up.xyz.z),
+    _["w"] = NumericVector::create(forward.xyz.x, forward.xyz.y, forward.xyz.z),
+    _["fov"] = cam->get_fov(),
+    _["ortho_dimensions"] = NumericVector::create(ortho.xy.x, ortho.xy.y)
+  );
+}
+
 static bool project_text_anchor_to_screen(const PreviewTextOverlay& overlay,
                                           RayCamera* cam,
                                           unsigned int display_width,
@@ -1153,6 +1172,7 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
     }
     final_image.attr("keyframes") = keyframes;
   }
+  final_image.attr("screen_camera_info") = get_screen_camera_info(cam.get());
   if(screen_text_visible.size() > 0) {
     final_image.attr("screen_text_visible") = screen_text_visible;
   }

@@ -265,27 +265,38 @@ project_points_to_screen = function(points, camera_info) {
   if (ncol(points) != 3) {
     stop("`points` must have three columns")
   }
-  lookfrom = camera_info$lookfrom
-  lookat = camera_info$lookat
-  camera_up = camera_info$camera_up
-  forward = lookat - lookfrom
-  forward = forward / sqrt(sum(forward^2))
-  up = camera_up / sqrt(sum(camera_up^2))
-  right = cross_prod(up, forward)
-  right = right / sqrt(sum(right^2))
-  up = cross_prod(forward, right)
-  up = up / sqrt(sum(up^2))
+  if (!is.null(camera_info$screen_camera_origin)) {
+    lookfrom = camera_info$screen_camera_origin
+    right = camera_info$screen_camera_u
+    up = camera_info$screen_camera_v
+    forward = camera_info$screen_camera_w
+    fov = camera_info$screen_camera_fov
+    ortho_dimensions = camera_info$screen_camera_ortho_dimensions
+  } else {
+    lookfrom = camera_info$lookfrom
+    lookat = camera_info$lookat
+    camera_up = camera_info$camera_up
+    forward = lookat - lookfrom
+    forward = forward / sqrt(sum(forward^2))
+    up = camera_up / sqrt(sum(camera_up^2))
+    right = cross_prod(up, forward)
+    right = right / sqrt(sum(right^2))
+    up = cross_prod(forward, right)
+    up = up / sqrt(sum(up^2))
+    fov = camera_info$fov
+    ortho_dimensions = camera_info$ortho_dimensions
+  }
 
   relative_points = sweep(points, 2, lookfrom)
   x_camera = as.vector(relative_points %*% right)
   y_camera = as.vector(relative_points %*% up)
   z_camera = as.vector(relative_points %*% forward)
 
-  if (camera_info$fov == 0) {
-    s = 0.5 + x_camera / camera_info$ortho_dimensions[1]
-    t = 0.5 + y_camera / camera_info$ortho_dimensions[2]
+  if (fov == 0) {
+    s = 0.5 + x_camera / ortho_dimensions[1]
+    t = 0.5 + y_camera / ortho_dimensions[2]
     in_front = z_camera >= 0
-  } else if (camera_info$fov == 360) {
+  } else if (fov == 360) {
     direction = relative_points / sqrt(rowSums(relative_points^2))
     local_x = as.vector(direction %*% right)
     local_y = as.vector(direction %*% up)
@@ -295,9 +306,9 @@ project_points_to_screen = function(points, camera_info) {
     s = ((phi - pi) / (2 * pi)) %% 1
     t = 1 - theta / pi
     in_front = rowSums(relative_points^2) > 0
-  } else if (camera_info$fov > 0) {
+  } else if (fov > 0) {
     aspect = camera_info$nx / camera_info$ny
-    half_height = tan(camera_info$fov * pi / 360)
+    half_height = tan(fov * pi / 360)
     half_width = aspect * half_height
     s = 0.5 + x_camera / (2 * z_camera * half_width)
     t = 0.5 + y_camera / (2 * z_camera * half_height)

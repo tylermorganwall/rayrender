@@ -457,6 +457,16 @@ Left Mouse Click: Change Look At (new focal distance) | Right Mouse Click: Chang
     scene_info = scene_info,
     render_info = render_info
   )
+  screen_camera_info = attr(rgb_mat, "screen_camera_info")
+  if (!is.null(screen_camera_info)) {
+    camera_info$screen_camera_origin = screen_camera_info$origin
+    camera_info$screen_camera_u = screen_camera_info$u
+    camera_info$screen_camera_v = screen_camera_info$v
+    camera_info$screen_camera_w = screen_camera_info$w
+    camera_info$screen_camera_fov = screen_camera_info$fov
+    camera_info$screen_camera_ortho_dimensions =
+      screen_camera_info$ortho_dimensions
+  }
   if (!is.null(attr(rgb_mat, "keyframes"))) {
     message(
       "Saving camera keyframes: Call `get_saved_keyframes()` function to return them."

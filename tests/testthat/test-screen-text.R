@@ -68,6 +68,33 @@ test_that("project_points_to_screen matches orthographic camera center", {
   expect_equal(projected$y[2], 1)
 })
 
+test_that("project_points_to_screen uses final renderer camera orientation", {
+  camera_info = list(
+    lookfrom = c(0, 0, -10),
+    lookat = c(0, 0, 0),
+    camera_up = c(0, 1, 0),
+    fov = 0,
+    ortho_dimensions = c(4, 4),
+    nx = 101,
+    ny = 101,
+    screen_camera_origin = c(10, 0, 0),
+    screen_camera_u = c(0, 0, 1),
+    screen_camera_v = c(0, 1, 0),
+    screen_camera_w = c(-1, 0, 0),
+    screen_camera_fov = 0,
+    screen_camera_ortho_dimensions = c(4, 4)
+  )
+
+  projected = project_points_to_screen(
+    matrix(c(0, 0, 1), ncol = 3, byrow = TRUE),
+    camera_info
+  )
+
+  expect_equal(projected$x, 26)
+  expect_equal(projected$y, 51)
+  expect_true(projected$in_frame)
+})
+
 test_that("orthographic screen projection matches post-processed image orientation", {
   camera_info = list(
     lookfrom = c(1, 10, 0),
