@@ -264,6 +264,37 @@ test_that("render_scene basic options", {
 	))
 })
 
+test_that("post_process_scene applies preview exposure adjustment", {
+	rgb_mat = list(
+		r = matrix(0.1, 2, 2),
+		g = matrix(0.2, 2, 2),
+		b = matrix(0.3, 2, 2)
+	)
+	base = post_process_scene(
+		rgb_mat,
+		iso = 1,
+		use_iso = FALSE,
+		tonemap = "raw",
+		debug_channel = "none",
+		filename = NA,
+		plot_scene = FALSE,
+		bloom = FALSE,
+		exposure_adjustment = 1
+	)
+	adjusted = post_process_scene(
+		rgb_mat,
+		iso = 1,
+		use_iso = FALSE,
+		tonemap = "raw",
+		debug_channel = "none",
+		filename = NA,
+		plot_scene = FALSE,
+		bloom = FALSE,
+		exposure_adjustment = 2
+	)
+	expect_equal(adjusted[, , 1:3], base[, , 1:3] * 2)
+})
+
 test_that("render_scene accepts rayvertex ray_mesh scenes", {
 	skip_on_cran()
 	testthat::skip_if_not_installed("rayvertex")

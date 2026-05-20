@@ -477,6 +477,10 @@ Left Mouse Click: Change Look At (new focal distance) | Right Mouse Click: Chang
     )
     assign("keyframes", keyframes, envir = ray_environment)
   }
+  preview_exposure = attr(rgb_mat, "preview_exposure")
+  if (is.null(preview_exposure)) {
+    preview_exposure = 1
+  }
   return_array = post_process_scene(
     rgb_mat,
     camera_info$iso,
@@ -496,7 +500,8 @@ Left Mouse Click: Change Look At (new focal distance) | Right Mouse Click: Chang
     screen_text_visible = attr(rgb_mat, "screen_text_visible"),
     screen_text_overlay = attr(rgb_mat, "screen_text_overlay"),
     screen_line_visible = attr(rgb_mat, "screen_line_visible"),
-    screen_line_overlay = attr(rgb_mat, "screen_line_overlay")
+    screen_line_overlay = attr(rgb_mat, "screen_line_overlay"),
+    exposure_adjustment = preview_exposure
   )
   print_time(verbose, "Post-processed image")
 

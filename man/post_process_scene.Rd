@@ -23,7 +23,8 @@ post_process_scene(
   screen_text_visible = NULL,
   screen_text_overlay = NULL,
   screen_line_visible = NULL,
-  screen_line_overlay = NULL
+  screen_line_overlay = NULL,
+  exposure_adjustment = 1
 )
 }
 \description{

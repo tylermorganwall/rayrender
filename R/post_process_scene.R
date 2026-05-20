@@ -22,7 +22,8 @@ post_process_scene = function(
   screen_text_visible = NULL,
   screen_text_overlay = NULL,
   screen_line_visible = NULL,
-  screen_line_overlay = NULL
+  screen_line_overlay = NULL,
+  exposure_adjustment = 1
 ) {
   if (!is.numeric(debug_channel)) {
     debug_channel = unlist(lapply(
@@ -213,6 +214,11 @@ post_process_scene = function(
       preview = FALSE,
       verbose = verbose
     )
+  }
+  if (is.numeric(exposure_adjustment) &&
+      length(exposure_adjustment) == 1 &&
+      is.finite(exposure_adjustment)) {
+    full_array[,, 1:3] = full_array[,, 1:3] * exposure_adjustment
   }
   full_array = full_array |>
     rayimage::ray_read_image(

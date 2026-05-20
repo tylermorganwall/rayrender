@@ -1172,6 +1172,7 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
     }
     final_image.attr("keyframes") = keyframes;
   }
+  final_image.attr("preview_exposure") = Display.preview_exposure_adjustment;
   final_image.attr("screen_camera_info") = get_screen_camera_info(cam.get());
   if(screen_text_visible.size() > 0) {
     final_image.attr("screen_text_visible") = screen_text_visible;
