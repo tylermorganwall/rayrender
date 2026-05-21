@@ -70,6 +70,9 @@ reference:
   - starts_with("add")
   - starts_with("group")
   - starts_with("create")
+- title: Screen-space Annotations
+  desc: Functions for adding 2D annotations anchored to 3D scene positions.
+  contents: starts_with("screen")
 - title: Animating Scenes
   desc: Function for animating objects or the camera through a scene.
   contents:
