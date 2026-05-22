@@ -86,9 +86,6 @@ reference:
   desc: Functions to query compiled capabilities.
   contents:
   - has_denoiser
-- title: pkgdown utils
-  desc: Internal but must be exported to meet CRAN guidelines
-  contents: starts_with("run")
 navbar:
   title: rayrender
   type: inverse
