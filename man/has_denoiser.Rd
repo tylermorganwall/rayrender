@@ -13,5 +13,7 @@ Logical value.
 Returns TRUE if rayrender was compiled with Open Image Denoise (OIDN) support.
 }
 \examples{
+\dontshow{if (interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")) withAutoprint(\{ # examplesIf}
 has_denoiser()
+\dontshow{\}) # examplesIf}
 }

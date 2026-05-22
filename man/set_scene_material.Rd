@@ -18,6 +18,7 @@ A modified ray_scene with the new material applied to all objects
 Set Material for All Objects
 }
 \examples{
+\dontshow{if (interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")) withAutoprint(\{ # examplesIf}
 # Create a scene with different materials
 scene = generate_cornell() |>
   add_object(sphere(x=555/2, y=555/2, z=555/2, radius=100))
@@ -27,4 +28,5 @@ scene = set_scene_material(scene, metal(color="gold"))
 
 # Set all objects to be glass
 scene = set_scene_material(scene, dielectric())
+\dontshow{\}) # examplesIf}
 }

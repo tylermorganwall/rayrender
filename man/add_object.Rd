@@ -18,13 +18,13 @@ Tibble of object locations and properties.
 Add Object
 }
 \examples{
+\dontshow{if (interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")) withAutoprint(\{ # examplesIf}
 #Generate the ground and add some objects
 scene = generate_ground(depth=-0.5,material = diffuse(checkercolor="blue")) |>
   add_object(cube(x=0.7,
                   material=diffuse(noise=5,noisecolor="purple",color="black",noisephase=45),
                   angle=c(0,-30,0))) |>
   add_object(sphere(x=-0.7,radius=0.5,material=metal(color="gold")))
-if(run_documentation()) {
 render_scene(scene,parallel=TRUE)
-}
+\dontshow{\}) # examplesIf}
 }

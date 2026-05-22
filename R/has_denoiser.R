@@ -4,7 +4,7 @@
 #'
 #' @return Logical value.
 #' @export
-#' @examples
+#'@examplesIf interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")
 #' has_denoiser()
 has_denoiser = function() {
   cppdef_HAS_OIDN()

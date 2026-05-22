@@ -70,29 +70,25 @@ Single row of a tibble describing the light material.
 Light Material
 }
 \examples{
+\dontshow{if (interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")) withAutoprint(\{ # examplesIf}
 #Generate the cornell box without a light and add a single white sphere to the center
 scene = generate_cornell(light=FALSE) |>
   add_object(sphere(x=555/2,y=555/2,z=555/2,radius=555/8,material=light()))
-if(run_documentation()) {
 render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=16,
              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
-}
 
 #Remove the light for direct camera rays, but keep the lighting
 scene = generate_cornell(light=FALSE) |>
   add_object(sphere(x=555/2,y=555/2,z=555/2,radius=555/8,
              material=light(intensity=15,invisible=TRUE)))
-if(run_documentation()) {
 render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=16,
              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
-}
 
 #All gather around the orb
-if(run_documentation()) {
 scene = generate_ground(material = diffuse(checkercolor="grey50")) |>
   add_object(sphere(radius=0.25,material=light(intensity=90,color="#f11"))) |>
   add_object(obj_model(r_obj(), scale=2.5,z=-3,x=-1.25,y=0, angle=c(0,235,0))) |>
   add_object(pig(scale=0.3, x=1.5,z=-2,y=-1.5,angle=c(0,-135,0)))
 render_scene(scene, samples=16, parallel=TRUE, clamp_value=10, lookfrom=c(0,0,10))
-}
+\dontshow{\}) # examplesIf}
 }

@@ -7,7 +7,7 @@
 #' @return Tibble row.
 #' @keywords internal
 #'
-#' @examples
+#'@examplesIf interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")
 #' #none
 new_tibble_row = function(x) {
   x = unclass(x)

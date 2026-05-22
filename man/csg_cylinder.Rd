@@ -27,21 +27,17 @@ List describing the cylinder in the scene.
 CSG Cylinder
 }
 \examples{
-if(run_documentation()) {
+\dontshow{if (interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")) withAutoprint(\{ # examplesIf}
 #Generate a basic cylinder:
 generate_ground(material=diffuse(checkercolor="grey20")) |>
   add_object(csg_object(csg_cylinder(radius=0.25),material=glossy(color="red"))) |>
   render_scene(clamp_value=10, samples=16,fov=20)
-  }
-if(run_documentation()) {
 #Change the orientation by specifying a start and end
 generate_ground(material=diffuse(color="dodgerblue4",checkercolor="grey10")) |>
   add_object(csg_object(csg_cylinder(start = c(-1,0.5,-2), end = c(1,0.5,-2),
     radius=0.5),material=glossy(checkercolor="red"))) |>
   render_scene(clamp_value=10, samples=16,fov=20,
                lookat=c(0,0.5,-2),lookfrom=c(3,3,10))
- }
-if(run_documentation()) {
 #Show the effect of changing the radius
 generate_ground(material=diffuse(color="dodgerblue4",checkercolor="grey10")) |>
   add_object(csg_object(
@@ -51,8 +47,6 @@ generate_ground(material=diffuse(color="dodgerblue4",checkercolor="grey10")) |>
     material=glossy(checkercolor="red"))) |>
   render_scene(clamp_value=10, samples=16,fov=20,
                lookat=c(0,0.5,-2),lookfrom=c(-3,3,10))
-    }
-if(run_documentation()) {
 #Render a red marble cylinder in a Cornell box
 generate_cornell(light=FALSE) |>
   add_object(csg_object(
@@ -62,5 +56,5 @@ generate_cornell(light=FALSE) |>
                material=light(intensity=10000,
                               spotlight_focus = c(555/2,555/2,555/2),spotlight_width = 45))) |>
   render_scene(clamp_value=4)
-}
+\dontshow{\}) # examplesIf}
 }

@@ -55,6 +55,8 @@ prepare_scene_list(
 Prepare the scene list
 }
 \examples{
+\dontshow{if (interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")) withAutoprint(\{ # examplesIf}
 #internal
+\dontshow{\}) # examplesIf}
 }
 \keyword{internal}

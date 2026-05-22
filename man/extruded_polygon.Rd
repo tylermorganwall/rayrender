@@ -83,14 +83,12 @@ Multiple row tibble describing the extruded polygon in the scene.
 Extruded Polygon Object
 }
 \examples{
-if (run_documentation()) {
+\dontshow{if (interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")) withAutoprint(\{ # examplesIf}
 angles = seq(0, 360, by = 36)
 xx = rev(c(rep(c(1, 0.5), 5), 1) * sinpi(angles / 180))
 yy = rev(c(rep(c(1, 0.5), 5), 1) * cospi(angles / 180))
 star_polygon = data.frame(x = xx, y = yy)
-}
 
-if (run_documentation()) {
 generate_ground(
 	depth = 0,
 	material = diffuse(color = "grey50", checkercolor = "grey20")
@@ -114,18 +112,14 @@ generate_ground(
 		lookat = c(0, 0.5, 0),
 		fov = 60
 	)
-}
 
 #Now, let's add a hole to the center of the polygon. We'll make the polygon
 #hollow by shrinking it, combining it with the normal size polygon,
 #and specify with the `holes` argument that everything after `nrow(star_polygon)`
 #in the following should be used to draw a hole:
 
-if (run_documentation()) {
 hollow_star = rbind(star_polygon, 0.8 * star_polygon)
-}
 
-if (run_documentation()) {
 generate_ground(
 	depth = -0.01,
 	material = diffuse(color = "grey50", checkercolor = "grey20")
@@ -150,11 +144,9 @@ generate_ground(
 		lookat = c(0, 0, 0),
 		fov = 30
 	)
-}
 
 # Render one in the y-x plane as well by changing the `plane` argument,
 # as well as offset it slightly.
-if (run_documentation()) {
 generate_ground(
 	depth = -0.01,
 	material = diffuse(color = "grey50", checkercolor = "grey20")
@@ -184,10 +176,8 @@ generate_ground(
 		lookat = c(0, 0.9, 0),
 		fov = 40
 	)
-}
 
 # Now add the zy plane:
-if (run_documentation()) {
 generate_ground(
 	depth = -0.01,
 	material = diffuse(color = "grey50", checkercolor = "grey20")
@@ -227,21 +217,17 @@ generate_ground(
 		lookat = c(0, 0.9, 0),
 		fov = 40
 	)
-}
 
 #We can also directly pass in sf polygons:
-if (run_documentation()) {
 if (length(find.package("spData", quiet = TRUE)) > 0) {
 	us_states = spData::us_states
 	texas = us_states[us_states$NAME == "Texas", ]
 	#Fix no sfc class in us_states geometry data
 	class(texas$geometry) = c("list", "sfc")
 }
-}
 
 #This uses the raw coordinates, unless `center = TRUE`, which centers the bounding box
 #of the polygon at the origin.
-if (run_documentation()) {
 generate_ground(
 	depth = -0.01,
 	material = diffuse(color = "grey50", checkercolor = "grey20")
@@ -263,10 +249,8 @@ generate_ground(
 		samples = 16,
 		fov = 60
 	)
-}
 
 #Here we use the raw coordinates, but offset the polygon manually.
-if (run_documentation()) {
 generate_ground(
 	depth = -0.01,
 	material = diffuse(color = "grey50", checkercolor = "grey20")
@@ -296,12 +280,10 @@ generate_ground(
 		samples = 160,
 		fov = 20
 	)
-}
 
 #We can also set the map the height of each polygon to a column in the sf object,
 #scaling it down by the maximum population state.
 
-if (run_documentation()) {
 generate_ground(
 	depth = 0,
 	material = diffuse(color = "grey50", checkercolor = "grey20", sigma = 90)
@@ -335,5 +317,5 @@ generate_ground(
 		samples = 160,
 		fov = 30
 	)
-}
+\dontshow{\}) # examplesIf}
 }

@@ -18,7 +18,7 @@ List describing the triangle in the scene.
 CSG Round
 }
 \examples{
-if(run_documentation()) {
+\dontshow{if (interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")) withAutoprint(\{ # examplesIf}
 #Generate a rounded pyramid:
 generate_ground(material=diffuse(checkercolor="grey20")) |>
   add_object(csg_object(csg_pyramid(x=-1,y=-0.99,z=1),
@@ -30,8 +30,6 @@ generate_ground(material=diffuse(checkercolor="grey20")) |>
   add_object(sphere(y=5,x=5,z=5,radius=1,material=light(intensity=50))) |>
   render_scene(lookfrom=c(-3,4,10), fov=22,
                lookat=c(0,-0.5,0),clamp_value=10)
-}
-if(run_documentation()) {
 #Round a blend of two objects
 generate_ground(material=diffuse(checkercolor="grey20")) |>
   add_object(csg_object(csg_round(csg_combine(
@@ -45,5 +43,5 @@ generate_ground(material=diffuse(checkercolor="grey20")) |>
   add_object(sphere(y=5,x=5,z=5,radius=1,material=light(intensity=50))) |>
   render_scene(lookfrom=c(-3,5,10), fov=22,
                lookat=c(0,-0.5,0),clamp_value=10)
-}
+\dontshow{\}) # examplesIf}
 }

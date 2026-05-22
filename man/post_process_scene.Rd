@@ -31,6 +31,8 @@ post_process_scene(
 Post-process the scene
 }
 \examples{
+\dontshow{if (interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")) withAutoprint(\{ # examplesIf}
 #internal
+\dontshow{\}) # examplesIf}
 }
 \keyword{internal}

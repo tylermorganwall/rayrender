@@ -22,7 +22,7 @@ List describing the combined csg object in the scene.
 Note: Subtract operations aren't commutative: the second object is subtracted from the first.
 }
 \examples{
-if(run_documentation()) {
+\dontshow{if (interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")) withAutoprint(\{ # examplesIf}
 #Combine two spheres:
 generate_ground(material=diffuse(checkercolor="grey20")) |>
   add_object(csg_object(csg_combine(
@@ -31,8 +31,6 @@ generate_ground(material=diffuse(checkercolor="grey20")) |>
   material=glossy(color="dodgerblue4"))) |>
   add_object(sphere(y=5,x=5,radius=3,material=light(intensity=10))) |>
   render_scene(clamp_value=10, samples=16,fov=20,lookfrom=c(-3,5,10))
-  }
-if(run_documentation()) {
 #Subtract one sphere from another:
 generate_ground(material=diffuse(checkercolor="grey20")) |>
   add_object(csg_object(csg_combine(
@@ -41,8 +39,6 @@ generate_ground(material=diffuse(checkercolor="grey20")) |>
   material=glossy(color="dodgerblue4"))) |>
   add_object(sphere(y=5,x=5,radius=3,material=light(intensity=10))) |>
   render_scene(clamp_value=10, samples=16,fov=20,lookfrom=c(-3,5,10))
-  }
-if(run_documentation()) {
 #Get the intersection of two spheres:
 generate_ground(material=diffuse(checkercolor="grey20")) |>
   add_object(csg_object(csg_combine(
@@ -51,8 +47,6 @@ generate_ground(material=diffuse(checkercolor="grey20")) |>
   material=glossy(color="dodgerblue4"))) |>
   add_object(sphere(y=5,x=5,radius=3,material=light(intensity=10))) |>
   render_scene(clamp_value=10, samples=16,fov=20,lookfrom=c(-3,5,10))
-  }
-if(run_documentation()) {
 #Get the blended union of two spheres:
 generate_ground(material=diffuse(checkercolor="grey20")) |>
   add_object(csg_object(csg_combine(
@@ -61,8 +55,6 @@ generate_ground(material=diffuse(checkercolor="grey20")) |>
   material=glossy(color="dodgerblue4"))) |>
   add_object(sphere(y=5,x=5,radius=3,material=light(intensity=10))) |>
   render_scene(clamp_value=10, samples=16,fov=20,lookfrom=c(-3,5,10))
-  }
-if(run_documentation()) {
 #Get the blended subtraction of two spheres:
 generate_ground(material=diffuse(checkercolor="grey20")) |>
   add_object(csg_object(csg_combine(
@@ -71,8 +63,6 @@ generate_ground(material=diffuse(checkercolor="grey20")) |>
   material=glossy(color="dodgerblue4"))) |>
   add_object(sphere(y=5,x=5,radius=3,material=light(intensity=10))) |>
   render_scene(clamp_value=10, samples=16,fov=20,lookfrom=c(-3,5,10))
-  }
-if(run_documentation()) {
 #Change the blending radius:
 generate_ground(material=diffuse(checkercolor="grey20")) |>
   add_object(csg_object(csg_combine(
@@ -81,8 +71,6 @@ generate_ground(material=diffuse(checkercolor="grey20")) |>
   material=glossy(color="dodgerblue4"))) |>
   add_object(sphere(y=5,x=5,radius=3,material=light(intensity=10))) |>
   render_scene(clamp_value=10, samples=16,fov=20,lookfrom=c(-3,5,10))
-  }
-if(run_documentation()) {
 #Change the subtract blending radius:
 generate_ground(material=diffuse(checkercolor="grey20")) |>
   add_object(csg_object(csg_combine(
@@ -91,8 +79,6 @@ generate_ground(material=diffuse(checkercolor="grey20")) |>
   material=glossy(color="dodgerblue4"))) |>
   add_object(sphere(y=5,x=5,radius=3,material=light(intensity=10))) |>
   render_scene(clamp_value=10, samples=16,fov=20,lookfrom=c(-3,5,10))
-  }
-if(run_documentation()) {
 #Get the mixture of various objects:
 generate_ground(material=diffuse(checkercolor="grey20")) |>
   add_object(csg_object(csg_combine(
@@ -109,5 +95,5 @@ generate_ground(material=diffuse(checkercolor="grey20")) |>
   material=glossy(color="green"))) |>
   add_object(sphere(y=10,x=-5,radius=3,material=light(intensity=10))) |>
   render_scene(clamp_value=10, samples=16,fov=20,lookfrom=c(-15,10,10))
-}
+\dontshow{\}) # examplesIf}
 }

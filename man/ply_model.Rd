@@ -58,6 +58,8 @@ Load an PLY file via a filepath.
 Note: light importance sampling currently not supported for this shape.
 }
 \examples{
+\dontshow{if (interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")) withAutoprint(\{ # examplesIf}
 #See the documentation for `obj_model()`--no example PLY models are included with this package,
 #but the process of loading a model is the same (without support for vertex colors).
+\dontshow{\}) # examplesIf}
 }

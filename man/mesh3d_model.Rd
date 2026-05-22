@@ -82,8 +82,8 @@ Single row of a tibble describing the mesh3d model in the scene.
 Load an `mesh3d` (or `shapelist3d`) object, as specified in the `rgl` package.
 }
 \examples{
+\dontshow{if (interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")) withAutoprint(\{ # examplesIf}
 #Load a mesh3d object (from the Rvcg) and render it:
-if(run_documentation()) {
   library(Rvcg)
   data(humface)
 
@@ -94,5 +94,5 @@ if(run_documentation()) {
     add_object(sphere(y=5,x=5,z=-5,material=light(intensity=50))) |>
     render_scene(samples=16,width=800,height=800,
                  lookat = c(0,0.5,1), aperture=0.0)
-}
+\dontshow{\}) # examplesIf}
 }

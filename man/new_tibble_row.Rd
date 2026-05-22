@@ -16,6 +16,8 @@ Tibble row.
 Creates a row of a tibble, without the parsing and checks in tibble::new_tibble(). Internal use only.
 }
 \examples{
+\dontshow{if (interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")) withAutoprint(\{ # examplesIf}
 #none
+\dontshow{\}) # examplesIf}
 }
 \keyword{internal}

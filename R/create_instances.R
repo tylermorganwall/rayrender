@@ -22,8 +22,7 @@
 #' @return Single row of a tibble describing the instance in the scene.
 #' @export
 #'
-#' @examples
-#' if (run_documentation()) {
+#'@examplesIf interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")
 #' # Generate the base scene
 #' base_scene = generate_ground(material = diffuse(checkercolor = "grey20")) |>
 #'   add_object(sphere(z = -100, radius = 10, material = light(intensity = 70)))
@@ -39,9 +38,7 @@
 #'   add_object(base_scene) |>
 #'   render_scene(lookat = c(0, 1, 0), width = 800, sample_method = "sobol_blue", aperture = 0.2,
 #'                height = 800, samples = 16, clamp_value = 20)
-#' }
 #'
-#' if (run_documentation()) {
 #' # Create instances at different x positions, with random rotations applied
 #' create_instances(sphere_scene,
 #'                  x = seq(-1.5, 1.5, length.out = 10),
@@ -51,9 +48,7 @@
 #'   add_object(base_scene) |>
 #'   render_scene(lookat = c(0, 1, 0), width = 800, sample_method = "sobol_blue",
 #'                height = 800, samples = 16, clamp_value = 20)
-#' }
 #'
-#' if (run_documentation()) {
 #' # Create instances at different x/z positions, with random scaling factors
 #' create_instances(sphere_scene,
 #'                  x = seq(-1.5, 1.5, length.out = 10),
@@ -64,9 +59,7 @@
 #'   add_object(base_scene) |>
 #'   render_scene(lookat = c(0, 1, 0), width = 800, sample_method = "sobol_blue",
 #'                height = 800, samples = 16, clamp_value = 20)
-#' }
 #'
-#' if (run_documentation()) {
 #' # Create instances of instances
 #' create_instances(sphere_scene,
 #'                  x = seq(-1.5, 1.5, length.out = 10),
@@ -75,9 +68,7 @@
 #'   add_object(base_scene) |>
 #'   render_scene(lookat = c(0, 1, 0), width = 800, sample_method = "sobol_blue",
 #'                height = 800, samples = 16, clamp_value = 20)
-#' }
 #'
-#' if (run_documentation()) {
 #' # Create instances of instances of instances of instances
 #' create_instances(sphere_scene,
 #'                  x = seq(-1.5, 1.5, length.out = 10),
@@ -91,9 +82,7 @@
 #'   render_scene(lookat = c(0, 10, 0), lookfrom = c(0, 10, -50),
 #'                width = 800, sample_method = "sobol_blue", fov = 30,
 #'                height = 800, samples = 16, clamp_value = 20)
-#' }
 #'
-#' if (run_documentation()) {
 #' # Generate a complex scene in a Cornell box and replicate it in a 3x3 grid
 #' # Here, a single `data.frame` with all three coordinates is passed to the `x` argument.
 #' tempfileplot = tempfile()
@@ -125,94 +114,93 @@
 #'   render_scene(lookfrom = c(0, 0, -800) * 3, fov = 40,
 #'                samples = 16, sample_method = "sobol_blue",
 #'                parallel = TRUE, width = 800, height = 800)
-#' }
 create_instances = function(
-	ray_scene,
-	x = 0,
-	y = 0,
-	z = 0,
-	angle_x = 0,
-	angle_y = 0,
-	angle_z = 0,
-	scale_x = 1,
-	scale_y = 1,
-	scale_z = 1,
-	material = diffuse(),
-	order_rotation = c(1, 2, 3)
+  ray_scene,
+  x = 0,
+  y = 0,
+  z = 0,
+  angle_x = 0,
+  angle_y = 0,
+  angle_z = 0,
+  scale_x = 1,
+  scale_y = 1,
+  scale_z = 1,
+  material = diffuse(),
+  order_rotation = c(1, 2, 3)
 ) {
-	ray_scene_processed = process_scene(ray_scene, process_material_ids = FALSE)
+  ray_scene_processed = process_scene(ray_scene, process_material_ids = FALSE)
 
-	# Use data.frame for recycling
-	x_is_df = inherits(x, "data.frame") || inherits(x, "matrix")
+  # Use data.frame for recycling
+  x_is_df = inherits(x, "data.frame") || inherits(x, "matrix")
 
-	if (x_is_df && ncol(x) == 3) {
-		xyz = grDevices::xyz.coords(x = x)
-	} else {
-		xyz = data.frame(x = x, y = y, z = z)
-	}
-	x = xyz$x
-	y = xyz$y
-	z = xyz$z
-	angle_is_df = inherits(angle_x, "data.frame") || inherits(angle_x, "matrix")
-	if (angle_is_df && ncol(angle_x) == 3) {
-		angles = grDevices::xyz.coords(angle_x)
-		stopifnot(length(angles$x) == length(x))
-	} else {
-		angles = data.frame(x_val = x, x = angle_x, y = angle_y, z = angle_z)
-	}
-	angle_x = angles$x
-	angle_y = angles$y
-	angle_z = angles$z
+  if (x_is_df && ncol(x) == 3) {
+    xyz = grDevices::xyz.coords(x = x)
+  } else {
+    xyz = data.frame(x = x, y = y, z = z)
+  }
+  x = xyz$x
+  y = xyz$y
+  z = xyz$z
+  angle_is_df = inherits(angle_x, "data.frame") || inherits(angle_x, "matrix")
+  if (angle_is_df && ncol(angle_x) == 3) {
+    angles = grDevices::xyz.coords(angle_x)
+    stopifnot(length(angles$x) == length(x))
+  } else {
+    angles = data.frame(x_val = x, x = angle_x, y = angle_y, z = angle_z)
+  }
+  angle_x = angles$x
+  angle_y = angles$y
+  angle_z = angles$z
 
-	scale_is_df = inherits(scale_x, "data.frame") || inherits(scale_x, "matrix")
-	if (scale_is_df && ncol(scale_x) == 3) {
-		scales = grDevices::xyz.coords(scale_x)
-		stopifnot(length(scales$x) == length(x))
-	} else {
-		scales = data.frame(x_val = x, x = scale_x, y = scale_y, z = scale_z)
-	}
-	scale_x = scales$x
-	scale_y = scales$y
-	scale_z = scales$z
+  scale_is_df = inherits(scale_x, "data.frame") || inherits(scale_x, "matrix")
+  if (scale_is_df && ncol(scale_x) == 3) {
+    scales = grDevices::xyz.coords(scale_x)
+    stopifnot(length(scales$x) == length(x))
+  } else {
+    scales = data.frame(x_val = x, x = scale_x, y = scale_y, z = scale_z)
+  }
+  scale_x = scales$x
+  scale_y = scales$y
+  scale_z = scales$z
 
-	new_tibble_row(list(
-		x = 0,
-		y = 0,
-		z = 0,
-		shape = "instance",
-		material = material,
-		shape_info = ray_shape_info(
-			shape_properties = list(
-				original_scene = list(ray_scene_processed$scene),
-				x_values = x,
-				y_values = y,
-				z_values = z,
-				angle_x = angle_x,
-				angle_y = angle_y,
-				angle_z = angle_z,
-				scale_x = scale_x,
-				scale_y = scale_y,
-				scale_z = scale_z,
-				any_light = ray_scene_processed$any_light
-			),
-			tricolorinfo = list(NA),
-			fileinfo = NA,
-			material_id = NA_integer_,
-			csg_object = list(NA),
-			mesh_info = list(NA),
-			flipped = FALSE
-		),
-		transforms = ray_transform(
-			angle = list(c(0, 0, 0)),
-			order_rotation = list(order_rotation),
-			scale = list(c(1, 1, 1)),
-			group_transform = list(matrix(NA_real_))
-		),
-		animation_info = ray_animated_transform(
-			start_transform_animation = list(matrix(NA_real_)),
-			end_transform_animation = list(matrix(NA_real_)),
-			start_time = 0,
-			end_time = 1
-		)
-	))
+  new_tibble_row(list(
+    x = 0,
+    y = 0,
+    z = 0,
+    shape = "instance",
+    material = material,
+    shape_info = ray_shape_info(
+      shape_properties = list(
+        original_scene = list(ray_scene_processed$scene),
+        x_values = x,
+        y_values = y,
+        z_values = z,
+        angle_x = angle_x,
+        angle_y = angle_y,
+        angle_z = angle_z,
+        scale_x = scale_x,
+        scale_y = scale_y,
+        scale_z = scale_z,
+        any_light = ray_scene_processed$any_light
+      ),
+      tricolorinfo = list(NA),
+      fileinfo = NA,
+      material_id = NA_integer_,
+      csg_object = list(NA),
+      mesh_info = list(NA),
+      flipped = FALSE
+    ),
+    transforms = ray_transform(
+      angle = list(c(0, 0, 0)),
+      order_rotation = list(order_rotation),
+      scale = list(c(1, 1, 1)),
+      group_transform = list(matrix(NA_real_))
+    ),
+    animation_info = ray_animated_transform(
+      start_transform_animation = list(matrix(NA_real_)),
+      end_transform_animation = list(matrix(NA_real_)),
+      start_time = 0,
+      end_time = 1
+    )
+  ))
 }

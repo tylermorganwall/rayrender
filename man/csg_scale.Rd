@@ -18,7 +18,7 @@ List describing the triangle in the scene.
 CSG Scale
 }
 \examples{
-if(run_documentation()) {
+\dontshow{if (interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")) withAutoprint(\{ # examplesIf}
 #Scale a pyramid (translating it upwards because the object is scaled from the center):
 generate_ground(material=diffuse(checkercolor="grey20")) |>
   add_object(csg_object(csg_pyramid(z=1,y=-0.99),
@@ -28,5 +28,5 @@ generate_ground(material=diffuse(checkercolor="grey20")) |>
   add_object(sphere(y=5,x=5,z=5,material=light(intensity=40))) |>
   render_scene(lookfrom=c(-3,4,10), fov=20,
                lookat=c(0,-0.5,-0.5),clamp_value=10)
-}
+\dontshow{\}) # examplesIf}
 }

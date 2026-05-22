@@ -51,14 +51,12 @@ Single row of a tibble describing the cone in the scene.
 Composite object (cone + segment)
 }
 \examples{
+\dontshow{if (interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")) withAutoprint(\{ # examplesIf}
 #Draw a simple arrow from x = -1 to x = 1
-if(run_documentation()) {
 generate_studio() |>
   add_object(arrow(start = c(-1,0,0), end = c(1,0,0), material=glossy(color="red"))) |>
   add_object(sphere(y=5,material=light(intensity=20))) |>
   render_scene(clamp_value=10,  samples=16)
-}
-if(run_documentation()) {
 #Change the proportion of tail to top
 generate_studio(depth=-2) |>
   add_object(arrow(start = c(-1,-1,0), end = c(1,-1,0), tail_proportion = 0.5,
@@ -69,8 +67,6 @@ generate_studio(depth=-2) |>
                    material=glossy(color="red"))) |>
   add_object(sphere(y=5,z=-5,x=2,material=light(intensity=30))) |>
   render_scene(clamp_value=10, fov=25,  samples=16)
-}
-if(run_documentation()) {
 #Change the radius of the tail/top segments
 generate_studio(depth=-1.5) |>
   add_object(arrow(start = c(-1,-1,0), end = c(1,-1,0), tail_proportion = 0.75,
@@ -84,8 +80,6 @@ generate_studio(depth=-1.5) |>
                    material=glossy(color="red"))) |>
   add_object(sphere(y=5,z=-5,x=2,material=light(intensity=30))) |>
   render_scene(clamp_value=10, samples=16)
-}
-if(run_documentation()) {
 #We can also specify arrows via a midpoint and direction:
 generate_studio(depth=-1) |>
   add_object(arrow(start = c(-1,-0.5,0), direction = c(0,0,1),
@@ -99,8 +93,6 @@ generate_studio(depth=-1) |>
   add_object(sphere(y=5,z=-5,x=2,material=light(intensity=30))) |>
   render_scene(clamp_value=10, samples=16,
                lookfrom=c(0,5,10), lookat=c(0,-0.5,0), fov=16)
-}
-if(run_documentation()) {
 #Plot a 3D vector field for a gravitational well:
 
 r = 1.5
@@ -123,5 +115,5 @@ sphere(material=diffuse(noise=1,color="blue",noisecolor="darkgreen")) |>
   add_object(sphere(y=0,x=10,z=-5,material=light(intensity=200))) |>
   render_scene(fov=20, ambient=TRUE, samples=16,
                backgroundlow="black",backgroundhigh="white")
-}
+\dontshow{\}) # examplesIf}
 }

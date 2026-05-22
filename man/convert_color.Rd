@@ -17,6 +17,8 @@ Color vector
 Convert Color
 }
 \examples{
+\dontshow{if (interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")) withAutoprint(\{ # examplesIf}
 #none
+\dontshow{\}) # examplesIf}
 }
 \keyword{internal}

@@ -126,8 +126,8 @@ Takes the scene description and renders an image using ambient occlusion,
 either to the device or to a filename.
 }
 \examples{
+\dontshow{if (interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")) withAutoprint(\{ # examplesIf}
 #Generate and render a regular scene and an ambient occlusion version of that scene
-if(run_documentation()) {
 angles = seq(0,360,by=36)
 xx = rev(c(rep(c(1,0.5),5),1) * sinpi(angles/180))
 yy = rev(c(rep(c(1,0.5),5),1) * cospi(angles/180))
@@ -145,8 +145,6 @@ generate_ground(material = diffuse(color="grey20", checkercolor = "grey50",sigma
  render_scene(parallel = TRUE,width=800,height=800,
               fov=70,clamp_value=10,samples=16, aperture=0.1,
               lookfrom=c(-0.9,1.2,-4.5),lookat=c(0,-1,0))
-}
-if(run_documentation()) {
 
 #Render the scene with ambient occlusion
 generate_ground(material = diffuse(color="grey20", checkercolor = "grey50",sigma=90)) |>
@@ -160,8 +158,6 @@ generate_ground(material = diffuse(color="grey20", checkercolor = "grey50",sigma
  render_ao(parallel = TRUE,width=800,height=800, sample_dist=10,
            fov=70,samples=16, aperture=0.1,
            lookfrom=c(-0.9,1.2,-4.5),lookat=c(0,-1,0))
- }
-if(run_documentation()) {
 #Decrease the ray occlusion search distance
 generate_ground(material = diffuse(color="grey20", checkercolor = "grey50",sigma=90)) |>
  add_object(sphere(material=metal())) |>
@@ -174,8 +170,6 @@ generate_ground(material = diffuse(color="grey20", checkercolor = "grey50",sigma
  render_ao(parallel = TRUE,width=800,height=800, sample_dist=1,
            fov=70,samples=16, aperture=0.1,
            lookfrom=c(-0.9,1.2,-4.5),lookat=c(0,-1,0))
-}
-if(run_documentation()) {
 #Turn on colors
 generate_ground(material = diffuse(color="grey20", checkercolor = "grey50",sigma=90)) |>
  add_object(sphere(material=metal())) |>
@@ -188,6 +182,5 @@ generate_ground(material = diffuse(color="grey20", checkercolor = "grey50",sigma
  render_ao(parallel = TRUE,width=800,height=800, sample_dist=1,
            fov=70,samples=16, aperture=0.1, keep_colors = TRUE,
            lookfrom=c(-0.9,1.2,-4.5),lookat=c(0,-1,0))
-
-}
+\dontshow{\}) # examplesIf}
 }

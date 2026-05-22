@@ -77,17 +77,15 @@ Single row of a tibble describing the cube in the scene.
 Bezier curve, defined by 4 control points.
 }
 \examples{
+\dontshow{if (interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")) withAutoprint(\{ # examplesIf}
 #Generate the default curve:
-if(run_documentation()) {
 generate_studio(depth=-0.2) |>
   add_object(bezier_curve(material=diffuse(color="red"))) |>
   add_object(sphere(y=3,z=-5,x=2,radius=0.3,
                     material=light(intensity=200, spotlight_focus = c(0,0.5,0)))) |>
   render_scene(clamp_value = 10, lookat = c(0,0.5,0), fov=13,
                samples=16)
-}
 
-if(run_documentation()) {
 #Change the control points to change the direction of the curve. Here, we place spheres
 #at the control point locations.
 generate_studio(depth=-0.2) |>
@@ -100,8 +98,6 @@ generate_studio(depth=-0.2) |>
                     material=light(intensity=200, spotlight_focus = c(0,0.5,0)))) |>
   render_scene(clamp_value = 10, lookat = c(0,0.5,0), fov=15,
                samples=16)
-}
-if(run_documentation()) {
 #We can make the curve flat (always facing the camera) by setting the type to `flat`
 generate_studio(depth=-0.2) |>
   add_object(bezier_curve(type="flat", material=glossy(color="red"))) |>
@@ -109,8 +105,6 @@ generate_studio(depth=-0.2) |>
                     material=light(intensity=200, spotlight_focus = c(0,0.5,0)))) |>
   render_scene(clamp_value = 10, lookat = c(0,0.5,0), fov=13,
                samples=16)
-}
-if(run_documentation()) {
 #We can also plot a ribbon, which is further specified by a start and end orientation with
 #two surface normals.
 generate_studio(depth=-0.2) |>
@@ -122,8 +116,6 @@ generate_studio(depth=-0.2) |>
                     material=light(intensity=200, spotlight_focus = c(0,0.5,0)))) |>
   render_scene(clamp_value = 10, lookat = c(0,0.5,0), fov=13,
                samples=16)
-}
-if(run_documentation()) {
 #Create a single curve and copy and rotate it around the y-axis to create a wavy fountain effect:
 scene_curves = list()
 for(i in 1:90) {
@@ -138,6 +130,5 @@ generate_ground(depth=0,material=diffuse(checkercolor="grey20")) |>
   add_object(sphere(y=7,z=0,x=0,material=light(intensity=100))) |>
   render_scene(lookfrom = c(12,20,50),samples=100,
                lookat=c(0,1,0), fov=15, clamp_value = 10)
-
-}
+\dontshow{\}) # examplesIf}
 }

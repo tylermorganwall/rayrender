@@ -67,14 +67,12 @@ in `group_objects()` and in the object transformations themselves. This creates 
 open/close options in `render_scene()`.
 }
 \examples{
+\dontshow{if (interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")) withAutoprint(\{ # examplesIf}
 #Render a pig
-if(run_documentation()) {
 generate_studio() |>
   add_object(pig(y=-1.2,scale=0.5,angle=c(0,110,0)))|>
   add_object(sphere(y=5,x=5,z=-5,radius=2,material=light())) |>
   render_scene(samples=16,sample_method = "sobol_blue")
-}
-if(run_documentation()) {
 #Render a moving pig
 generate_studio() |>
   add_object(
@@ -84,8 +82,6 @@ generate_studio() |>
   ) |>
   add_object(sphere(y=5,x=5,z=-5,radius=2,material=light())) |>
   render_scene(samples=16,sample_method = "sobol_blue",clamp_value = 10)
-}
-if(run_documentation()) {
 
 #Render a shrinking pig
 generate_studio() |>
@@ -96,8 +92,6 @@ generate_studio() |>
   ) |>
   add_object(sphere(y=5,x=5,z=-5,radius=2,material=light())) |>
   render_scene(samples=16,sample_method = "sobol_blue",clamp_value = 10)
-}
-if(run_documentation()) {
 #Render a spinning pig
 generate_studio() |>
   add_object(
@@ -107,8 +101,6 @@ generate_studio() |>
   ) |>
   add_object(sphere(y=5,x=5,z=-5,radius=2,material=light())) |>
   render_scene(samples=16,sample_method = "sobol_blue",clamp_value = 10)
-}
-if(run_documentation()) {
 
 #Shorten the open shutter time frame
 generate_studio() |>
@@ -120,8 +112,6 @@ generate_studio() |>
   add_object(sphere(y=5,x=5,z=-5,radius=2,material=light())) |>
   render_scene(samples=16,sample_method = "sobol_blue",clamp_value = 10,
                shutteropen=0.4, shutterclose = 0.6)
-}
-if(run_documentation()) {
 #Change the time frame when the shutter is open
 generate_studio() |>
   add_object(
@@ -132,8 +122,6 @@ generate_studio() |>
   add_object(sphere(y=5,x=5,z=-5,radius=2,material=light())) |>
   render_scene(samples=16,sample_method = "sobol_blue",clamp_value = 10,
                shutteropen=0, shutterclose = 0.1)
-}
-if(run_documentation()) {
 #Shorten the time span in which the movement occurs (which, in effect,
 #increases the speed of the transition).
 generate_studio() |>
@@ -145,5 +133,5 @@ generate_studio() |>
   add_object(sphere(y=5,x=5,z=-5,radius=2,material=light())) |>
   render_scene(samples=16,sample_method = "sobol_blue",clamp_value = 10,
                shutteropen=0, shutterclose = 0.1)
-}
+\dontshow{\}) # examplesIf}
 }

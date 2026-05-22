@@ -25,7 +25,7 @@ Note: This primitive slows down immensely for large values of base and height. T
 with this object for large pyramids instead.
 }
 \examples{
-if(run_documentation()) {
+\dontshow{if (interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")) withAutoprint(\{ # examplesIf}
 #Generate a simple pyramid:
 generate_ground() |>
   add_object(csg_object(csg_pyramid(y=-0.99),
@@ -33,8 +33,6 @@ generate_ground() |>
   add_object(sphere(y=5,x=5,z=5,material=light(intensity=20))) |>
   render_scene(clamp_value=10, samples=16,lookfrom=c(-3,1,10),
                fov=15, lookat=c(0,-0.5,0))
-}
-if(run_documentation()) {
 #Make a taller pyramid
 generate_ground() |>
   add_object(csg_object(csg_pyramid(y=-0.95, height=1.5),
@@ -42,8 +40,6 @@ generate_ground() |>
   add_object(sphere(y=5,x=5,z=5,material=light(intensity=20))) |>
   render_scene(clamp_value=10, samples=16,lookfrom=c(-3,1,10),
                fov=15, lookat=c(0,-0.5,0))
-  }
-if(run_documentation()) {
 #Make a wider pyramid
 generate_ground() |>
   add_object(csg_object(csg_pyramid(y=-0.95, base=1.5),
@@ -51,5 +47,5 @@ generate_ground() |>
   add_object(sphere(y=5,x=5,z=5,material=light(intensity=20))) |>
   render_scene(clamp_value=10, samples=16,lookfrom=c(-3,1,10),
                fov=15, lookat=c(0,-0.5,0))
-}
+\dontshow{\}) # examplesIf}
 }

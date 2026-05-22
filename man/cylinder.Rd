@@ -57,32 +57,28 @@ Single row of a tibble describing the cylinder in the scene.
 Cylinder Object
 }
 \examples{
+\dontshow{if (interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")) withAutoprint(\{ # examplesIf}
 #Generate a cylinder in the cornell box. Add a cap to both ends.
 
-if(run_documentation()) {
 generate_cornell() |>
   add_object(cylinder(x = 555/2, y = 250, z = 555/2,
                       length = 300, radius = 100, material = metal())) |>
   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40,
                ambient_light = FALSE, samples = 16, parallel = TRUE, clamp_value = 5)
-}
 #Rotate the cylinder
-if(run_documentation()) {
 generate_cornell() |>
   add_object(cylinder(x = 555/2, y = 250, z = 555/2,
                       length = 300, radius = 100, angle = c(0, 0, 45),
                       material = diffuse())) |>
   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40,
                ambient_light = FALSE, samples = 16, parallel = TRUE, clamp_value = 5)
-}
 
 # Only render a subtended arc of the cylinder, flipping the normals.
-if(run_documentation()) {
 generate_cornell(lightintensity=3) |>
   add_object(cylinder(x = 555/2, y = 250, z = 555/2, capped = FALSE,
                       length = 300, radius = 100, angle = c(45, 0, 0), phi_min = 0, phi_max = 180,
                       material = diffuse(), flipped = TRUE)) |>
   render_scene(lookfrom = c(278, 278, -800) ,lookat = c(278, 278, 0), fov = 40,
                ambient_light = FALSE, samples = 16, parallel = TRUE, clamp_value = 5)
-}
+\dontshow{\}) # examplesIf}
 }

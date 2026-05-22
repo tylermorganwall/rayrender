@@ -16,6 +16,8 @@ Flipped matrix
 Flip Up-Down
 }
 \examples{
+\dontshow{if (interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")) withAutoprint(\{ # examplesIf}
 #Fake example
+\dontshow{\}) # examplesIf}
 }
 \keyword{internal}

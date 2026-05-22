@@ -13,6 +13,8 @@ Data frame of keyframes
 Get a dataframe of the saved keyframes (using the interactive renderer) to pass to `generate_camera_motion()`
 }
 \examples{
+\dontshow{if (interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")) withAutoprint(\{ # examplesIf}
 #This will return an empty data frame if no keyframes have been set.
 get_saved_keyframes()
+\dontshow{\}) # examplesIf}
 }

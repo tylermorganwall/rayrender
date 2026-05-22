@@ -20,21 +20,17 @@ Raytraced plot to current device, or an image saved to a file.
 Takes the scene description and renders an image, either to the device or to a filename.
 }
 \examples{
-if(run_documentation()) {
+\dontshow{if (interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")) withAutoprint(\{ # examplesIf}
 generate_ground(material=diffuse(color="darkgreen")) |>
   add_object(sphere(material=diffuse(checkercolor="red"))) |>
   render_preview()
-  }
-if(run_documentation()) {
 #Change the light direction
 generate_ground(material=diffuse(color="darkgreen")) |>
   add_object(sphere(material=diffuse(checkercolor="red"))) |>
   render_preview(light_direction = c(-1,-1,0))
-}
-if(run_documentation()) {
 #Change the Phong exponent
 generate_ground(material=diffuse(color="darkgreen")) |>
   add_object(sphere(material=diffuse(checkercolor="red"))) |>
   render_preview(light_direction = c(-1,-1,0), exponent=100)
-}
+\dontshow{\}) # examplesIf}
 }

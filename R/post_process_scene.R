@@ -1,7 +1,7 @@
 #'@title Post-process the scene
 #'
 #'@keywords internal
-#'@examples
+#'@examplesIf interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")
 #'#internal
 post_process_scene = function(
   rgb_mat,
@@ -215,9 +215,11 @@ post_process_scene = function(
       verbose = verbose
     )
   }
-  if (is.numeric(exposure_adjustment) &&
+  if (
+    is.numeric(exposure_adjustment) &&
       length(exposure_adjustment) == 1 &&
-      is.finite(exposure_adjustment)) {
+      is.finite(exposure_adjustment)
+  ) {
     full_array[,, 1:3] = full_array[,, 1:3] * exposure_adjustment
   }
   full_array = full_array |>

@@ -73,14 +73,12 @@ Single row of a tibble describing the text in the scene.
 Text Object
 }
 \examples{
+\dontshow{if (interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")) withAutoprint(\{ # examplesIf}
 #Generate a label in the cornell box.
-if(run_documentation()) {
 generate_cornell() |>
   add_object(text3d(label="Cornell Box", x=555/2,y=555/2,z=555/2,text_height=60,
                     material=diffuse(color="grey10"), angle=c(0,0,0))) |>
   render_scene(samples=16)
-}
-if(run_documentation()) {
 #Change the orientation
 generate_cornell() |>
   add_object(text3d(label="YZ Plane", x=550,y=555/2,z=555/2,text_height=200,
@@ -93,8 +91,6 @@ generate_cornell() |>
                     orientation = "xz",
                     material=diffuse(color="grey10"))) |>
   render_scene(samples=16)
-}
-if(run_documentation()) {
 #Add an label in front of a sphere
 generate_cornell() |>
   add_object(text3d(label="Cornell Box", x=555/2,y=555/2,z=555/2,text_height=90,
@@ -107,9 +103,7 @@ generate_cornell() |>
                     material=light(intensity=100,
                                    spotlight_focus=c(555/2,100,100)))) |>
   render_scene(samples=16)
-}
 
-if(run_documentation()) {
 #A room full of bees
 bee_list = list()
 for(i in 1:100) {
@@ -120,8 +114,6 @@ bees = do.call(rbind,bee_list)
 generate_cornell() |>
   add_object(bees) |>
   render_scene(samples=16)
-}
-if(run_documentation()) {
 # If you have ragg installed, you can also use color emojis.
 library(rayrender)
 generate_cornell(light_position = c(555/2,554,10),
@@ -139,6 +131,5 @@ generate_cornell(light_position = c(555/2,554,10),
   render_scene(samples=16)
 
 
-
-}
+\dontshow{\}) # examplesIf}
 }

@@ -48,31 +48,23 @@ Tibble containing the scene description of the Cornell box.
 Generate Cornell Box
 }
 \examples{
+\dontshow{if (interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")) withAutoprint(\{ # examplesIf}
 #Generate and render the default Cornell box.
-if(run_documentation()) {
 render_scene(generate_cornell(),
              samples=16,aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
-}
-if(run_documentation()) {
 #Make a much smaller light in the center of the room.
 render_scene(generate_cornell(lightwidth=200,lightdepth=200),
              samples=16,aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
-}
-if(run_documentation()) {
 #Place a sphere in the middle of the box.
 scene = generate_cornell(lightwidth=200,lightdepth=200) |>
   add_object(sphere(x=555/2,y=555/2,z=555/2,radius=555/4))
 render_scene(scene, samples=16,aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
-}
-if(run_documentation()) {
 #Reduce "fireflies" by setting a clamp_value in render_scene()
 render_scene(scene, samples=16,aperture=0, fov=40, ambient_light=FALSE,
              parallel=TRUE,clamp_value=3)
-}
-if(run_documentation()) {
 # Change the color scheme of the cornell box
 generate_cornell(leftcolor="purple", rightcolor="yellow") |>
   render_scene(samples=16,aperture=0, fov=40, ambient_light=FALSE,
                parallel=TRUE,clamp_value=3)
-}
+\dontshow{\}) # examplesIf}
 }

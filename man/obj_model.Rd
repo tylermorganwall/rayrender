@@ -94,12 +94,12 @@ Load an obj file via a filepath. Currently only supports the diffuse texture wit
 Note: light importance sampling currently not supported for this shape.
 }
 \examples{
+\dontshow{if (interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")) withAutoprint(\{ # examplesIf}
 #Load the included example R object file, by calling the r_obj() function. This
 #returns the local file path to the `r.txt` obj file. The file extension is "txt"
 #due to package constraints, but the file contents are identical and it does not
 #affect the function.
 
-if(run_documentation()) {
 #Load the basic 3D R logo with the included materials
 generate_ground(material = diffuse(checkercolor = "grey50")) |>
   add_object(obj_model(y = 0.2, filename = rayrender::r_obj(),
@@ -109,9 +109,7 @@ generate_ground(material = diffuse(checkercolor = "grey50")) |>
   render_scene(parallel = TRUE, samples = 16, aperture = 0.05,
                sample_method="sobol_blue",
                fov = 20, lookfrom = c(0, 2, -10))
-}
 
-if(run_documentation()) {
 # Smooth a mesh by setting the number of subdivision levels
 generate_ground(material = diffuse(checkercolor = "grey50")) |>
   add_object(obj_model(y = 0.2, filename = rayrender::r_obj(),
@@ -121,9 +119,7 @@ generate_ground(material = diffuse(checkercolor = "grey50")) |>
   render_scene(parallel = TRUE, samples = 16, aperture = 0.05,
                sample_method="sobol_blue",
                fov = 20, lookfrom = c(0, 2, -10))
-}
 
-if(run_documentation()) {
 #Override the materials for each object
 generate_ground(material = diffuse(checkercolor = "grey50")) |>
   add_object(obj_model(y = 1.4, filename = rayrender::r_obj(), load_material = FALSE,
@@ -141,6 +137,5 @@ generate_ground(material = diffuse(checkercolor = "grey50")) |>
   render_scene(parallel = TRUE, samples = 16, aperture = 0.05,
                sample_method="sobol_blue", lookat=c(0,0.5,0),
                fov = 22, lookfrom = c(0, 2, -10))
-
-}
+\dontshow{\}) # examplesIf}
 }

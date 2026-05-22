@@ -6,7 +6,7 @@
 #' @return Color vector
 #' @keywords internal
 #'
-#' @examples
+#'@examplesIf interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")
 #' #none
 convert_color = function(color, as_hex = FALSE) {
   if (inherits(color, "character")) {

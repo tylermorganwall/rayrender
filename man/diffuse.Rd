@@ -97,47 +97,39 @@ Single row of a tibble describing the diffuse material.
 Diffuse Material
 }
 \examples{
+\dontshow{if (interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")) withAutoprint(\{ # examplesIf}
 #Generate the cornell box and add a single white sphere to the center
 scene = generate_cornell() |>
   add_object(sphere(x=555/2,y=555/2,z=555/2,radius=555/8,material=diffuse()))
-if(run_documentation()) {
 render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=16,
              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
-}
 
 #Add a checkered rectangular cube below
 scene = scene |>
   add_object(cube(x=555/2,y=555/8,z=555/2,xwidth=555/2,ywidth=555/4,zwidth=555/2,
   material = diffuse(checkercolor="purple",checkerperiod=20)))
-if(run_documentation()) {
 render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=16,
              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
-}
 
 #Add a marbled sphere
 scene = scene |>
   add_object(sphere(x=555/2+555/4,y=555/2,z=555/2,radius=555/8,
   material = diffuse(noise=1/20)))
-if(run_documentation()) {
 render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=16,
              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
-}
 
 #Add an orange volumetric (fog) cube
 scene = scene |>
   add_object(cube(x=555/2-555/4,y=555/2,z=555/2,xwidth=555/4,ywidth=555/4,zwidth=555/4,
   material = diffuse(fog=TRUE, fogdensity=0.05,color="orange")))
-if(run_documentation()) {
 render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=16,
              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
-}
 
 #' #Add an line segment with a color gradient
 scene = scene |>
   add_object(segment(start = c(555,450,450),end=c(0,450,450),radius = 50,
                      material = diffuse(color="#1f7326", gradient_color = "#a60d0d")))
-if(run_documentation()) {
 render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=16,
              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
-}
+\dontshow{\}) # examplesIf}
 }

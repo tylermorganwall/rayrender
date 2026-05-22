@@ -55,7 +55,7 @@ from the origin of the ray_scene). This means the scene only uses the memory of 
 copy only requires a 4x4 matrix in memory.
 }
 \examples{
-if (run_documentation()) {
+\dontshow{if (interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")) withAutoprint(\{ # examplesIf}
 # Generate the base scene
 base_scene = generate_ground(material = diffuse(checkercolor = "grey20")) |>
   add_object(sphere(z = -100, radius = 10, material = light(intensity = 70)))
@@ -71,9 +71,7 @@ sphere_scene |>
   add_object(base_scene) |>
   render_scene(lookat = c(0, 1, 0), width = 800, sample_method = "sobol_blue", aperture = 0.2,
                height = 800, samples = 16, clamp_value = 20)
-}
 
-if (run_documentation()) {
 # Create instances at different x positions, with random rotations applied
 create_instances(sphere_scene,
                  x = seq(-1.5, 1.5, length.out = 10),
@@ -83,9 +81,7 @@ create_instances(sphere_scene,
   add_object(base_scene) |>
   render_scene(lookat = c(0, 1, 0), width = 800, sample_method = "sobol_blue",
                height = 800, samples = 16, clamp_value = 20)
-}
 
-if (run_documentation()) {
 # Create instances at different x/z positions, with random scaling factors
 create_instances(sphere_scene,
                  x = seq(-1.5, 1.5, length.out = 10),
@@ -96,9 +92,7 @@ create_instances(sphere_scene,
   add_object(base_scene) |>
   render_scene(lookat = c(0, 1, 0), width = 800, sample_method = "sobol_blue",
                height = 800, samples = 16, clamp_value = 20)
-}
 
-if (run_documentation()) {
 # Create instances of instances
 create_instances(sphere_scene,
                  x = seq(-1.5, 1.5, length.out = 10),
@@ -107,9 +101,7 @@ create_instances(sphere_scene,
   add_object(base_scene) |>
   render_scene(lookat = c(0, 1, 0), width = 800, sample_method = "sobol_blue",
                height = 800, samples = 16, clamp_value = 20)
-}
 
-if (run_documentation()) {
 # Create instances of instances of instances of instances
 create_instances(sphere_scene,
                  x = seq(-1.5, 1.5, length.out = 10),
@@ -123,9 +115,7 @@ create_instances(sphere_scene,
   render_scene(lookat = c(0, 10, 0), lookfrom = c(0, 10, -50),
                width = 800, sample_method = "sobol_blue", fov = 30,
                height = 800, samples = 16, clamp_value = 20)
-}
 
-if (run_documentation()) {
 # Generate a complex scene in a Cornell box and replicate it in a 3x3 grid
 # Here, a single `data.frame` with all three coordinates is passed to the `x` argument.
 tempfileplot = tempfile()
@@ -157,5 +147,5 @@ generate_cornell(importance_sample=FALSE) |>
   render_scene(lookfrom = c(0, 0, -800) * 3, fov = 40,
                samples = 16, sample_method = "sobol_blue",
                parallel = TRUE, width = 800, height = 800)
-}
+\dontshow{\}) # examplesIf}
 }

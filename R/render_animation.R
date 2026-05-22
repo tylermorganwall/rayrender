@@ -98,9 +98,8 @@
 #' @importFrom  grDevices col2rgb
 #' @return Raytraced plot to current device, or an image saved to a file.
 #'
-#' @examples
+#'@examplesIf interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")
 #' #Create and animate flying through a scene on a simulated roller coaster
-#' if(run_documentation()) {
 #' set.seed(3)
 #' elliplist = list()
 #' ellip_colors = rainbow(8)
@@ -121,8 +120,6 @@
 #'   render_scene(lookfrom=c(0,20,0), width=800,height=800,samples=32,
 #'                camera_up = c(0,0,1),
 #'                fov=80)
-#' }
-#' if(run_documentation()) {
 #' #Side view
 #' generate_ground(material=diffuse(checkercolor="grey20"),depth=-10) |>
 #'   add_object(ellip_scene) |>
@@ -130,8 +127,6 @@
 #'   add_object(path(camera_pos, material=diffuse(color="red"))) |>
 #'   render_scene(lookfrom=c(20,0,0),width=800,height=800,samples=32,
 #'                  fov=80)
-#'  }
-#' if(run_documentation()) {
 #' #View from the start
 #' generate_ground(material=diffuse(checkercolor="grey20"),depth=-10) |>
 #'   add_object(ellip_scene) |>
@@ -139,8 +134,6 @@
 #'   add_object(path(camera_pos, material=diffuse(color="red"))) |>
 #'   render_scene(lookfrom=c(0,1.5,16),width=800,height=800,samples=32,
 #'                  fov=80)
-#'  }
-#' if(run_documentation()) {
 #' #Generate Camera movement, setting the lookat position to be same as camera position, but offset
 #' #slightly in front. We'll render 12 frames, but you'd likely want more in a real animation.
 #'
@@ -166,171 +159,170 @@
 #'                    sample_method="sobol_blue",
 #'                    clamp_value=10, width=400, height=400)
 #'
-#' }
 render_animation = function(
-	scene,
-	camera_motion,
-	start_frame = 1,
-	end_frame = NA,
-	width = 400,
-	height = 400,
-	preview = interactive(),
-	denoise = TRUE,
-	camera_description_file = NA,
-	camera_scale = 1,
-	iso = 100,
-	film_size = 22,
-	samples = 100,
-	min_variance = 0,
-	min_adaptive_size = 8,
-	sample_method = "sobol",
-	ambient_occlusion = FALSE,
-	keep_colors = FALSE,
-	sample_dist = 10,
-	max_depth = 50,
-	roulette_active_depth = 10,
-	ambient_light = FALSE,
-	clamp_value = Inf,
-	filename = NA,
-	backgroundhigh = "#80b4ff",
-	backgroundlow = "#ffffff",
-	shutteropen = 0.0,
-	shutterclose = 1.0,
-	focal_distance = NULL,
-	ortho_dimensions = c(1, 1),
-	tonemap = "raw",
-	bloom = TRUE,
-	parallel = TRUE,
-	bvh_type = "sah",
-	environment_light = NULL,
-	rotate_env = 0,
-	intensity_env = 1,
-	debug_channel = "none",
-	plot_scene = TRUE,
-	progress = interactive(),
-	verbose = FALSE,
-	transparent_background = FALSE,
-	preview_light_direction = c(0, -1, 0),
-	preview_exponent = 6,
-	integrator_type = "rtiow"
+  scene,
+  camera_motion,
+  start_frame = 1,
+  end_frame = NA,
+  width = 400,
+  height = 400,
+  preview = interactive(),
+  denoise = TRUE,
+  camera_description_file = NA,
+  camera_scale = 1,
+  iso = 100,
+  film_size = 22,
+  samples = 100,
+  min_variance = 0,
+  min_adaptive_size = 8,
+  sample_method = "sobol",
+  ambient_occlusion = FALSE,
+  keep_colors = FALSE,
+  sample_dist = 10,
+  max_depth = 50,
+  roulette_active_depth = 10,
+  ambient_light = FALSE,
+  clamp_value = Inf,
+  filename = NA,
+  backgroundhigh = "#80b4ff",
+  backgroundlow = "#ffffff",
+  shutteropen = 0.0,
+  shutterclose = 1.0,
+  focal_distance = NULL,
+  ortho_dimensions = c(1, 1),
+  tonemap = "raw",
+  bloom = TRUE,
+  parallel = TRUE,
+  bvh_type = "sah",
+  environment_light = NULL,
+  rotate_env = 0,
+  intensity_env = 1,
+  debug_channel = "none",
+  plot_scene = TRUE,
+  progress = interactive(),
+  verbose = FALSE,
+  transparent_background = FALSE,
+  preview_light_direction = c(0, -1, 0),
+  preview_exponent = 6,
+  integrator_type = "rtiow"
 ) {
-	if (ambient_occlusion) {
-		debug_channel = "ao"
-	}
-	write_file = TRUE
-	if (is.na(filename)) {
-		write_file = FALSE
-	}
-	scene_list = prepare_scene_list(
-		scene = scene,
-		width = width,
-		height = height,
-		fov = 0,
-		samples = samples,
-		camera_description_file = camera_description_file,
-		camera_scale = camera_scale,
-		iso = iso,
-		film_size = film_size,
-		min_variance = min_variance,
-		min_adaptive_size = min_adaptive_size,
-		sample_method = sample_method,
-		max_depth = max_depth,
-		roulette_active_depth = roulette_active_depth,
-		ambient_light = ambient_light,
-		lookfrom = c(0, 1, 10),
-		lookat = c(0, 0, 0),
-		camera_up = c(0, 1, 0),
-		aperture = 0,
-		clamp_value = clamp_value,
-		filename = filename,
-		backgroundhigh = backgroundhigh,
-		backgroundlow = backgroundlow,
-		shutteropen = shutteropen,
-		shutterclose = shutterclose,
-		focal_distance = focal_distance,
-		ortho_dimensions = ortho_dimensions,
-		tonemap = tonemap,
-		bloom = bloom,
-		parallel = parallel,
-		bvh_type = bvh_type,
-		environment_light = environment_light,
-		rotate_env = rotate_env,
-		intensity_env = intensity_env,
-		debug_channel = debug_channel,
-		plot_scene = plot_scene,
-		progress = progress,
-		verbose = verbose,
-		sample_dist = sample_dist,
-		keep_colors = keep_colors,
-		deferred_render = FALSE,
-		integrator_type = integrator_type,
-		denoise = denoise
-	)
+  if (ambient_occlusion) {
+    debug_channel = "ao"
+  }
+  write_file = TRUE
+  if (is.na(filename)) {
+    write_file = FALSE
+  }
+  scene_list = prepare_scene_list(
+    scene = scene,
+    width = width,
+    height = height,
+    fov = 0,
+    samples = samples,
+    camera_description_file = camera_description_file,
+    camera_scale = camera_scale,
+    iso = iso,
+    film_size = film_size,
+    min_variance = min_variance,
+    min_adaptive_size = min_adaptive_size,
+    sample_method = sample_method,
+    max_depth = max_depth,
+    roulette_active_depth = roulette_active_depth,
+    ambient_light = ambient_light,
+    lookfrom = c(0, 1, 10),
+    lookat = c(0, 0, 0),
+    camera_up = c(0, 1, 0),
+    aperture = 0,
+    clamp_value = clamp_value,
+    filename = filename,
+    backgroundhigh = backgroundhigh,
+    backgroundlow = backgroundlow,
+    shutteropen = shutteropen,
+    shutterclose = shutterclose,
+    focal_distance = focal_distance,
+    ortho_dimensions = ortho_dimensions,
+    tonemap = tonemap,
+    bloom = bloom,
+    parallel = parallel,
+    bvh_type = bvh_type,
+    environment_light = environment_light,
+    rotate_env = rotate_env,
+    intensity_env = intensity_env,
+    debug_channel = debug_channel,
+    plot_scene = plot_scene,
+    progress = progress,
+    verbose = verbose,
+    sample_dist = sample_dist,
+    keep_colors = keep_colors,
+    deferred_render = FALSE,
+    integrator_type = integrator_type,
+    denoise = denoise
+  )
 
-	camera_info = scene_list$camera_info
-	scene_info = scene_list$scene_info
-	render_info = scene_list$render_info
-	processed_scene = scene_info$scene
-	render_info$frame_seed = sample.int(.Machine$integer.max, 1)
+  camera_info = scene_list$camera_info
+  scene_info = scene_list$scene_info
+  render_info = scene_list$render_info
+  processed_scene = scene_info$scene
+  render_info$frame_seed = sample.int(.Machine$integer.max, 1)
 
-	camera_info$preview = preview
-	camera_info$interactive = FALSE
-	if (!is.na(camera_description_file)) {
-		camera_description_file = switch(
-			camera_description_file,
-			"50mm" = system.file("extdata", "dgauss.50mm.txt", package = "rayrender"),
-			"wide" = system.file("extdata", "wide.22mm.txt", package = "rayrender"),
-			"fisheye" = system.file(
-				"extdata",
-				"fisheye.10mm.txt",
-				package = "rayrender"
-			),
-			"telephoto" = system.file(
-				"extdata",
-				"telephoto.250mm.txt",
-				package = "rayrender"
-			),
-			camera_description_file
-		)
-		if (file.exists(camera_description_file)) {
-			camera_motion$fov = -1
-		} else {
-			warning(
-				"Camera description file `",
-				camera_description_file,
-				"` not found. Ignoring."
-			)
-		}
-	}
+  camera_info$preview = preview
+  camera_info$interactive = FALSE
+  if (!is.na(camera_description_file)) {
+    camera_description_file = switch(
+      camera_description_file,
+      "50mm" = system.file("extdata", "dgauss.50mm.txt", package = "rayrender"),
+      "wide" = system.file("extdata", "wide.22mm.txt", package = "rayrender"),
+      "fisheye" = system.file(
+        "extdata",
+        "fisheye.10mm.txt",
+        package = "rayrender"
+      ),
+      "telephoto" = system.file(
+        "extdata",
+        "telephoto.250mm.txt",
+        package = "rayrender"
+      ),
+      camera_description_file
+    )
+    if (file.exists(camera_description_file)) {
+      camera_motion$fov = -1
+    } else {
+      warning(
+        "Camera description file `",
+        camera_description_file,
+        "` not found. Ignoring."
+      )
+    }
+  }
 
-	if (is.na(filename)) {
-		filename = ""
-	}
-	#Camera Movement Info
-	if (filename != "") {
-		filename_str = paste0(filename, 1:nrow(camera_motion), ".png")
-	} else {
-		filename_str = rep("", length(1:nrow(camera_motion)))
-	}
+  if (is.na(filename)) {
+    filename = ""
+  }
+  #Camera Movement Info
+  if (filename != "") {
+    filename_str = paste0(filename, 1:nrow(camera_motion), ".png")
+  } else {
+    filename_str = rep("", length(1:nrow(camera_motion)))
+  }
 
-	if (is.na(end_frame)) {
-		end_frame = nrow(camera_motion)
-	}
-	stopifnot(end_frame <= nrow(camera_motion))
-	#Animate Scene
-	rgb_mat = render_animation_rcpp(
-		scene = processed_scene,
-		camera_info = camera_info,
-		scene_info = scene_info,
-		render_info = render_info,
-		camera_movement = camera_motion,
-		start_frame = start_frame - 1,
-		end_frame = end_frame,
-		filenames = filename_str,
-		post_process_frame = post_process_frame,
-		tonemap = tonemap,
-		bloom = bloom,
-		write_image = write_file,
-		transparent_background = transparent_background
-	)
+  if (is.na(end_frame)) {
+    end_frame = nrow(camera_motion)
+  }
+  stopifnot(end_frame <= nrow(camera_motion))
+  #Animate Scene
+  rgb_mat = render_animation_rcpp(
+    scene = processed_scene,
+    camera_info = camera_info,
+    scene_info = scene_info,
+    render_info = render_info,
+    camera_movement = camera_motion,
+    start_frame = start_frame - 1,
+    end_frame = end_frame,
+    filenames = filename_str,
+    post_process_frame = post_process_frame,
+    tonemap = tonemap,
+    bloom = bloom,
+    write_image = write_file,
+    transparent_background = transparent_background
+  )
 }

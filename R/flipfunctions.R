@@ -5,7 +5,7 @@
 #' @return Flipped matrix
 #' @keywords internal
 #'
-#' @examples
+#'@examplesIf interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")
 #' #Fake example
 fliplr = function(x) {
   if (length(dim(x)) == 2) {
@@ -23,7 +23,7 @@ fliplr = function(x) {
 #' @return Flipped matrix
 #' @keywords internal
 #'
-#' @examples
+#'@examplesIf interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")
 #' #Fake example
 flipud = function(x) {
   if (length(dim(x)) == 2) {

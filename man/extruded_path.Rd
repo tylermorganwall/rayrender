@@ -119,13 +119,11 @@ Note: Bump mapping with non-diffuse materials does not work correctly, and smoot
 using a bump map.
 }
 \examples{
-if(run_documentation()) {
+\dontshow{if (interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")) withAutoprint(\{ # examplesIf}
 #Specify the points for the path to travel though and the ground material
 points = list(c(0,0,1),c(-0.5,0,-1),c(0,1,-1),c(1,0.5,0),c(0.6,0.3,1))
 ground_mat = material=diffuse(color="grey50",
                               checkercolor = "grey20",checkerperiod = 1.5)
-}
-if(run_documentation()) {
 #Default path shape is a circle
 generate_studio(depth=-0.4,material=ground_mat) |>
   add_object(extruded_path(points = points, width=0.25,
@@ -133,8 +131,6 @@ generate_studio(depth=-0.4,material=ground_mat) |>
   add_object(sphere(y=3,z=-5,x=2,material=light(intensity=15))) |>
   render_scene(lookat=c(0.3,0.5,0.5),fov=12, width=800,height=800, clamp_value = 10,
                aperture=0.025, samples=16, sample_method="sobol_blue")
-}
-if(run_documentation()) {
 #Change the width evenly along the tube
 generate_studio(depth=-0.4,material=ground_mat) |>
   add_object(extruded_path(points = points, width=0.25,
@@ -143,8 +139,6 @@ generate_studio(depth=-0.4,material=ground_mat) |>
   add_object(sphere(y=3,z=-5,x=2,material=light(intensity=15))) |>
   render_scene(lookat=c(0.3,0.5,0.5),fov=12, width=800,height=800, clamp_value = 10,
                aperture=0.025, samples=16, sample_method="sobol_blue")
-}
-if(run_documentation()) {
 #Change the width along the full length of the tube
 generate_studio(depth=-0.4,material=ground_mat) |>
   add_object(extruded_path(points = points,
@@ -153,8 +147,6 @@ generate_studio(depth=-0.4,material=ground_mat) |>
   add_object(sphere(y=3,z=-5,x=2,material=light(intensity=15))) |>
   render_scene(lookat=c(0.3,0.5,0.5),fov=12, width=800,height=800, clamp_value = 10,
                aperture=0.025, samples=16, sample_method="sobol_blue")
-}
-if(run_documentation()) {
 #Specify the exact parametric x positions for the width values:
 custom_width = data.frame(x=c(0,0.2,0.5,0.8,1), y=c(0.25,0.5,0,0.5,0.25))
 generate_studio(depth=-0.4,material=ground_mat) |>
@@ -164,8 +156,6 @@ generate_studio(depth=-0.4,material=ground_mat) |>
   add_object(sphere(y=3,z=-5,x=2,material=light(intensity=15))) |>
   render_scene(lookat=c(0.3,0.5,0.5),fov=12, width=800,height=800, clamp_value = 10,
                aperture=0.025, samples=16, sample_method="sobol_blue")
-}
-if(run_documentation()) {
 #Generate a star polygon
 angles = seq(360,0,length.out=21)
 xx = c(rep(c(1,0.75,0.5,0.75),5),1) * sinpi(angles/180)/4
@@ -180,8 +170,6 @@ generate_studio(depth=-0.4,material=ground_mat) |>
   add_object(sphere(y=3,z=-5,x=2,material=light(intensity=15))) |>
   render_scene(lookat=c(0.3,0.5,1),fov=12, width=800,height=800, clamp_value = 10,
                aperture=0.025, samples=16, sample_method="sobol_blue")
-}
-if(run_documentation()) {
 #Specify a circle polygon
 angles = seq(360,0,length.out=21)
 xx = sinpi(angles/180)/4
@@ -197,8 +185,6 @@ generate_studio(depth=-0.4,material=ground_mat) |>
   add_object(sphere(y=3,z=-5,x=2,material=light(intensity=15))) |>
   render_scene(lookat=c(0.3,0.5,0.5),fov=12, width=800,height=800, clamp_value = 10,
                aperture=0.025, samples=16, sample_method="sobol_blue")
-}
-if(run_documentation()) {
 #Add three and a half twists along the path, and make sure the breaks are evenly spaced
 generate_studio(depth=-0.4,material=ground_mat) |>
   add_object(extruded_path(points = points, width=0.5, twists = 3.5,
@@ -208,8 +194,6 @@ generate_studio(depth=-0.4,material=ground_mat) |>
   add_object(sphere(y=3,z=-5,x=2,material=light(intensity=15))) |>
   render_scene(lookat=c(0.3,0.5,0),fov=12, width=800,height=800, clamp_value = 10,
                aperture=0.025, samples=16, sample_method="sobol_blue")
-}
-if(run_documentation()) {
 #Smooth the normals for a less sharp appearance:
 generate_studio(depth=-0.4,material=ground_mat) |>
   add_object(extruded_path(points = points, width=0.5, twists = 3.5,
@@ -221,8 +205,6 @@ generate_studio(depth=-0.4,material=ground_mat) |>
   add_object(sphere(y=3,z=-5,x=2,material=light(intensity=15))) |>
   render_scene(lookat=c(0.3,0.5,0),fov=12, width=800,height=800, clamp_value = 10,
                aperture=0.025, samples=16, sample_method="sobol_blue")
-}
-if(run_documentation()) {
 #Only generate part of the curve, specified by the u_min and u_max arguments
 generate_studio(depth=-0.4,material=ground_mat) |>
   add_object(extruded_path(points = points, width=0.5, twists = 3.5,
@@ -233,8 +215,6 @@ generate_studio(depth=-0.4,material=ground_mat) |>
   add_object(sphere(y=3,z=-5,x=2,material=light(intensity=15))) |>
   render_scene(lookat=c(0.3,0.5,0),fov=12, width=800,height=800, clamp_value = 10,
                aperture=0.025, samples=16, sample_method="sobol_blue")
-}
-if(run_documentation()) {
 #Render a Mobius strip with 1.5 turns
 points = list(c(0,0,0),c(0.5,0.5,0),c(0,1,0),c(-0.5,0.5,0))
 square_polygon = matrix(c(-1, -0.1, 0,
@@ -252,8 +232,6 @@ generate_studio(depth=-0.2,
  add_object(sphere(y=20,x=0,z=-21,material=light(intensity = 1000))) |>
  render_scene(lookat=c(0,0.5,0), fov=10, samples=16, sample_method = "sobol_blue",
               width = 800, height=800)
-}
-if(run_documentation()) {
 #Create a green glass tube with the dielectric priority interface
 #and fill it with a purple neon tube light
 generate_ground(depth=-0.4,material=diffuse(color="grey50",
@@ -275,5 +253,5 @@ generate_ground(depth=-0.4,material=diffuse(color="grey50",
   render_scene(lookat=c(0,0.5,1),fov=10,
                width=800,height=800, clamp_value = 10,
                aperture=0.025, samples=16, sample_method="sobol_blue")
-}
+\dontshow{\}) # examplesIf}
 }

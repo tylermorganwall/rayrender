@@ -138,26 +138,19 @@
 #' @return A pathtraced image to the current device, or an image saved to a file. Invisibly returns the
 #' array (containing either debug data or the RGB).
 #'
-#' @examples
+#'@examplesIf interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")
 #' # Generate a large checkered sphere as the ground
-#' if (run_documentation()) {
 #'   scene = generate_ground(depth = -0.5,
 #'                           material = diffuse(color = "white", checkercolor = "darkgreen"))
 #'   render_scene(scene, parallel = TRUE, samples = 16, sample_method = "sobol")
-#' }
-#' if (run_documentation()) {
 #'   # Add a sphere to the center
 #'   scene = scene |>
 #'     add_object(sphere(x = 0, y = 0, z = 0, radius = 0.5, material = diffuse(color = c(1, 0, 1))))
 #'   render_scene(scene, fov = 20, parallel = TRUE, samples = 16)
-#' }
-#' if (run_documentation()) {
 #'   # Add a marbled cube
 #'   scene = scene |>
 #'     add_object(cube(x = 1.1, y = 0, z = 0, material = diffuse(noise = 3)))
 #'   render_scene(scene, fov = 20, parallel = TRUE, samples = 16)
-#' }
-#' if (run_documentation()) {
 #'   # Add a metallic gold sphere, using stratified sampling for a higher quality render
 #'   # We also add a light, which turns off the default ambient lighting
 #'   scene = scene |>
@@ -165,12 +158,8 @@
 #'                       material = metal(color = "gold", fuzz = 0.1))) |>
 #'     add_object(sphere(y=10,z=-13,radius=2,material=light(intensity=40)))
 #'   render_scene(scene, fov = 20, parallel = TRUE, samples = 16)
-#' }
-#' if (run_documentation()) {
 #'   # Lower the number of samples to render more quickly (here, we also use only one core).
 #'   render_scene(scene, samples = 4, parallel = FALSE)
-#' }
-#' if (run_documentation()) {
 #'   # Add a floating R plot using the iris dataset as a png onto a floating 2D rectangle
 #'   tempfileplot = tempfile()
 #'   png(filename = tempfileplot, height = 400, width = 800)
@@ -182,24 +171,16 @@
 #'                        flipped = TRUE,
 #'                        material = diffuse(image_texture = image_array)))
 #'   render_scene(scene, fov = 20, parallel = TRUE, samples = 16)
-#' }
-#' if (run_documentation()) {
 #'   # Move the camera
 #'   render_scene(scene, lookfrom = c(7, 1.5, 10), lookat = c(0, 0.5, 0), fov = 15, parallel = TRUE)
-#' }
-#' if (run_documentation()) {
 #'   # Change the background gradient to a firey sky
 #'   render_scene(scene, lookfrom = c(7, 1.5, 10), lookat = c(0, 0.5, 0), fov = 15,
 #'                backgroundhigh = "orange", backgroundlow = "red", parallel = TRUE,
 #'                ambient = TRUE,
 #'                samples = 16)
-#' }
-#' if (run_documentation()) {
 #'   # Increase the aperture to blur objects that are further from the focal plane.
 #'   render_scene(scene, lookfrom = c(7, 1.5, 10), lookat = c(0, 0.5, 0), fov = 15,
 #'                aperture = 1, parallel = TRUE, samples = 16)
-#' }
-#' if (run_documentation()) {
 #'   # We can also capture a 360 environment image by setting `fov = 360` (can be used for VR).
 #'   # The left edge of the image is directly where the camera is pointing--we point the image
 #'   # backwards so the full cornell box is in the "center" of the environment map.
@@ -217,8 +198,6 @@
 #'                                          checkerperiod = 10, color = "dodgerblue"))) |>
 #'     render_scene(lookfrom = c(278, 278, -10), lookat = c(278, 278, -300), clamp_value = 100,
 #'                  fov = 360,  samples = 16, width = 800, height = 800)
-#' }
-#' if (run_documentation()) {
 #'   # Spin the camera around the scene, decreasing the number of samples to render faster. To make
 #'   # an animation, specify the a filename in `render_scene` for each frame and use the `av` package
 #'   # or ffmpeg to combine them all into a movie.
@@ -231,7 +210,6 @@
 #'                  lookfrom = c(xpos[i], 1.5, zpos[i]), lookat = c(0, 0.5, 0), parallel = TRUE)
 #'   }
 #'   rayimage::plot_image_grid(image_output, dim = c(3,3) )
-#' }
 render_scene = function(
   scene,
   width = 400,
