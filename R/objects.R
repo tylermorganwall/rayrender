@@ -1298,14 +1298,14 @@ ellipsoid = function(
 #'			plane = "zy",
 #'			material = diffuse(color = "blue", sigma = 90)
 #'		)) |>
-#'		add_object(sphere(y = 4, x = -3, material = light(intensity = 30))) |>
-#'		render_scene(
-#'			parallel = TRUE,
-#'			lookfrom = c(-4, 2, 4),
-#'			samples = 16,
-#'			lookat = c(0, 0.9, 0),
-#'			fov = 40
-#'		)
+#'		  add_object(sphere(y = 4, x = 3, material = light(intensity = 30))) |>
+#'      render_scene(
+#'        parallel = TRUE,
+#'        lookfrom = c(4, 2, 4),
+#'        samples = 16,
+#'        lookat = c(0, 0.9, 0),
+#'        fov = 40
+#'      )
 #'
 #'#We can also directly pass in sf polygons:
 #'	if (length(find.package("spData", quiet = TRUE)) > 0) {
@@ -1607,7 +1607,7 @@ extruded_polygon = function(
       stop("holes must be integer")
     } else if (
       any(holes < 0L) ||
-        any(holes) > length(x) ||
+        any(holes > length(x)) ||
         (any(holes == 0L) && length(holes) != 1L)
     ) {
       stop("holes must be zero, or contain indices to polygon vertices")
@@ -2651,7 +2651,7 @@ text3d = function(
     background_color = background_color,
     background_alpha = background_alpha,
     filename = labelfile
-  )
+  ) |> rayimage::render_reorient(flipx=TRUE)
   height_val_raw = nrow(text_image)
   width_val_raw = ncol(text_image)
   ratio = text_height / height_val_raw
