@@ -25,3 +25,4 @@ docs
 /.quarto/
 cache/*
 src/Makevars
+.codex:/

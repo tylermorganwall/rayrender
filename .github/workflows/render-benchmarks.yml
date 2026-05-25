@@ -212,13 +212,15 @@ jobs:
 
       - name: Commit benchmark-history branch
         if: steps.check_results.outputs.has_results == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           cd benchmark-history-worktree
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add data site .nojekyll
           git commit -m "Update benchmark history for ${GITHUB_SHA}" || echo "No benchmark history changes"
-          git push origin HEAD:benchmark-history
+          git push "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:benchmark-history
 
       - name: Configure Pages
         if: steps.check_results.outputs.has_results == 'true'
