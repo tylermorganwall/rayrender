@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>rayrender Benchmarks</title>
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <header>
+    <h1>rayrender render benchmarks</h1>
+    <p>Persistent benchmark history from the benchmark-history branch.</p>
+  </header>
+  <main>
+    <section class="toolbar" aria-label="Filters">
+      <div class="field">
+        <label for="benchmarkFilter">Benchmark</label>
+        <select id="benchmarkFilter"></select>
+      </div>
+      <div class="field">
+        <label for="configFilter">Build config</label>
+        <select id="configFilter"></select>
+      </div>
+      <div class="field">
+        <label for="branchFilter">Branch</label>
+        <select id="branchFilter"></select>
+      </div>
+      <div class="meta">
+        <span id="rowCount">loading</span> &middot; 
+        <a href="data/render_benchmarks.csv">raw CSV</a>
+      </div>
+    </section>
+    <section>
+      <h2>Latest medians</h2>
+      <div class="table-wrap">
+        <table id="latestTable">
+          <thead>
+            <tr>
+              <th>Branch</th>
+              <th>Benchmark</th>
+              <th>Config</th>
+              <th>Commit</th>
+              <th>Timestamp</th>
+              <th>n</th>
+              <th>Render median</th>
+              <th>BVH build median</th>
+              <th>Max RSS median</th>
+              <th>Total median</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+    <section class="charts">
+      <div class="chart-panel"><h2>Render seconds over time</h2><div id="renderChart" class="chart"></div></div>
+      <div class="chart-panel"><h2>BVH build seconds over time</h2><div id="bvhChart" class="chart"></div></div>
+      <div class="chart-panel"><h2>Max RSS MB over time</h2><div id="memoryChart" class="chart"></div></div>
+      <div class="chart-panel"><h2>Package build seconds over time</h2><div id="packageChart" class="chart"></div></div>
+    </section>
+  </main>
+  <script type="text/plain" id="benchmark-csv">
+"timestamp_utc","run_id","run_attempt","workflow","event_name","source_ref","commit_label","commit_sha","git_dirty","branch_name","pull_request_number","pull_request_head_ref","pull_request_base_ref","benchmark_name","benchmark_source","benchmark_settings_json","iteration_index","iterations","warmup_iterations","seed","width","height","samples","threads","time_build","build_config_name","compiler_id","cc","cxx","cxxflags","cxx14flags","cxx17flags","pkg_cxxflags","makeflags","extra_env_json","simd_enabled","raysimd_defined","has_sse_defined","has_avx_defined","runner_os","platform_system","platform_release","platform_machine","platform_processor","cpu_count_logical","python_version","r_version","package_name","package_version","package_build_seconds","package_install_seconds","scene_build_seconds","bvh_build_seconds","render_seconds","total_seconds","process_elapsed_seconds","process_user_seconds","process_system_seconds","max_rss_kb","max_rss_mb","build_seconds","install_seconds","status","error","output_hash","artifact_path","build_log_path","benchmark_log_path","time_log_path","workdir_path"
+"2026-05-25T19:47:38Z","26416873682","1","Render Benchmarks","push","current","current","86dbdd169bc45604f4c57dad05befa80d93d4722","false","deferred",NA,NA,NA,"bvh_many_spheres","/home/runner/work/rayrender/rayrender/tools/benchmarks/scenes/bvh_many_spheres.R","{""width"":50,""height"":50,""samples"":32,""seed"":1,""threads"":1,""time_build"":true,""write_artifact"":false,""sphere_count"":3000,""object_count"":3000}",NA,"3","1","1","50","50","32","1","TRUE","o3_native_no_simd","error in running command","gcc -std=gnu2x","g++ -std=gnu++20","-O3 -march=native","-O3 -march=native","-O3 -march=native",NA,NA,"{""RAYRENDER_DISABLE_SIMD"":""true""}","FALSE","FALSE","FALSE","FALSE","Linux","Linux","6.17.0-1013-azure","x86_64",NA,"4",NA,"R version 4.6.0 (2026-04-24)","rayrender","0.40.1","3.655000",NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,"3.655000",NA,"build_failed","/_temp/Library/libimath/lib/x86_64 -Wl,-rpath,/home/runner/work/_temp/Library/libimath/lib/x86_64 -Wl,-rpath-link,/home/runner/work/_temp/Library/libimath/lib/x86_64 -lImath-3_2
+--------------------------------------------------
+** finished configure for package 'rayrender'
+** libs
+specified C++20
+using C++ compiler: ‘g++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0’
+using C++20
+g++ -std=gnu++20 -I""/opt/R/4.6.0/lib/R/include"" -DNDEBUG -I/home/runner/work/_temp/Library/libopenexr/include/OpenEXR -I/home/runner/work/_temp/Library/libimath/include/Imath  -I'/home/runner/work/_temp/Library/Rcpp/include' -I'/home/runner/work/_temp/Library/RcppThread/include' -I'/home/runner/work/_temp/Library/progress/include' -I'/home/runner/work/_temp/Library/spacefillr/include' -I'/home/runner/work/_temp/Library/testthat/include' -I'/home/runner/work/_temp/Library/libopenexr/include' -I'/home/runner/work/_temp/Library/libimath/include' -I/usr/local/include   -DRAY_REPRODUCE_PERLIN -DSTRICT_R_HEADERS -DRAY_HAS_X11 -ffp-contract=off -fvisibility=hidden -fvisibility-inlines-hidden -fpic  -g -O2   -c PrintClassSizes.cpp -o PrintClassSizes.o
+In file included from hitables/../math/../core/../math/vec3.h:7,
+                 from hitables/../math/../core/ray.h:5,
+                 from hitables/../math/aabb.h:4,
+                 from hitables/hitable.h:4,
+                 from PrintClassSizes.cpp:2:
+hitables/../math/../core/../math/../math/simd.h: In function ‘IVec4 simd_sgn(const IVec4&amp;)’:
+hitables/../math/../core/../math/../math/simd.h:715:5: error: ‘__m128i’ was not declared in this scope
+  715 |     __m128i zero = _mm_setzero_si128();
+      |     ^~~~~~~
+hitables/../math/../core/../math/../math/simd.h:716:12: error: expected ‘;’ before ‘one’
+  716 |     __m128i one = _mm_set1_epi32(1);
+      |            ^~~~
+      |            ;
+hitables/../math/../core/../math/../math/simd.h:717:12: error: expected ‘;’ before ‘neg_one’
+  717 |     __m128i neg_one = _mm_set1_epi32(-1);
+      |            ^~~~~~~~
+      |            ;
+hitables/../math/../core/../math/../math/simd.h:719:12: error: expected ‘;’ before ‘gt_mask’
+  719 |     __m128i gt_mask = _mm_cmpgt_epi32(a.v, zero);  // x &gt; 0
+      |            ^~~~~~~~
+      |            ;
+hitables/../math/../core/../math/../math/simd.h:720:12: error: expected ‘;’ before ‘lt_mask’
+  720 |     __m128i lt_mask = _mm_cmpgt_epi32(zero, a.v);  // x &lt; 0
+      |            ^~~~~~~~
+      |            ;
+hitables/../math/../core/../math/../math/simd.h:722:12: error: expected ‘;’ before ‘pos_result’
+  722 |     __m128i pos_result = _mm_and_si128(gt_mask, one);     // 1 where x &gt; 0
+      |            ^~~~~~~~~~~
+      |            ;
+hitables/../math/../core/../math/../math/simd.h:723:12: error: expected ‘;’ before ‘neg_result’
+  723 |     __m128i neg_result = _mm_and_si128(lt_mask, neg_one); // -1 where x &lt; 0
+      |            ^~~~~~~~~~~
+      |            ;
+hitables/../math/../core/../math/../math/simd.h:725:30: error: ‘pos_result’ was not declared in this scope; did you mean ‘result’?
+  725 |     result.v = _mm_add_epi32(pos_result, neg_result);
+      |                              ^~~~~~~~~~
+      |                              result
+hitables/../math/../core/../math/../math/simd.h:725:42: error: ‘neg_result’ was not declared in this scope; did you mean ‘result’?
+  725 |     result.v = _mm_add_epi32(pos_result, neg_result);
+      |                                          ^~~~~~~~~~
+      |                                          result
+hitables/../math/../core/../math/../math/simd.h:725:16: error: ‘_mm_add_epi32’ was not declared in this scope
+  725 |     result.v = _mm_add_epi32(pos_result, neg_result);
+      |                ^~~~~~~~~~~~~
+make: *** [/opt/R/4.6.0/lib/R/etc/Makeconf:199: PrintClassSizes.o] Error 1
+ERROR: compilation failed for package ‘rayrender’
+* removing ‘/home/runner/work/_temp/rayrender-benchmark-workdirs/rayrender-bench-root-26b62a3fdc75/rayrender-current-o3_native_no_simd-26b663f9abe5/r-lib/rayrender’",NA,NA,"/home/runner/work/_temp/rayrender-benchmark-workdirs/rayrender-bench-root-26b62a3fdc75/rayrender-current-o3_native_no_simd-26b663f9abe5/logs/R-CMD-INSTALL.log",NA,NA,"/home/runner/work/_temp/rayrender-benchmark-workdirs/rayrender-bench-root-26b62a3fdc75/rayrender-current-o3_native_no_simd-26b663f9abe5"
+"2026-05-25T19:47:38Z","26416873682","1","Render Benchmarks","push","current","current","86dbdd169bc45604f4c57dad05befa80d93d4722","false","deferred",NA,NA,NA,"bvh_mixed_primitives","/home/runner/work/rayrender/rayrender/tools/benchmarks/scenes/bvh_mixed_primitives.R","{""width"":50,""height"":50,""samples"":32,""seed"":1,""threads"":1,""time_build"":true,""write_artifact"":false,""sphere_count"":3000,""object_count"":3000}",NA,"3","1","1","50","50","32","1","TRUE","o3_native_no_simd","error in running command","gcc -std=gnu2x","g++ -std=gnu++20","-O3 -march=native","-O3 -march=native","-O3 -march=native",NA,NA,"{""RAYRENDER_DISABLE_SIMD"":""true""}","FALSE","FALSE","FALSE","FALSE","Linux","Linux","6.17.0-1013-azure","x86_64",NA,"4",NA,"R version 4.6.0 (2026-04-24)","rayrender","0.40.1","3.655000",NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,"3.655000",NA,"build_failed","/_temp/Library/libimath/lib/x86_64 -Wl,-rpath,/home/runner/work/_temp/Library/libimath/lib/x86_64 -Wl,-rpath-link,/home/runner/work/_temp/Library/libimath/lib/x86_64 -lImath-3_2
+--------------------------------------------------
+** finished configure for package 'rayrender'
+** libs
+specified C++20
+using C++ compiler: ‘g++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0’
+using C++20
+g++ -std=gnu++20 -I""/opt/R/4.6.0/lib/R/include"" -DNDEBUG -I/home/runner/work/_temp/Library/libopenexr/include/OpenEXR -I/home/runner/work/_temp/Library/libimath/include/Imath  -I'/home/runner/work/_temp/Library/Rcpp/include' -I'/home/runner/work/_temp/Library/RcppThread/include' -I'/home/runner/work/_temp/Library/progress/include' -I'/home/runner/work/_temp/Library/spacefillr/include' -I'/home/runner/work/_temp/Library/testthat/include' -I'/home/runner/work/_temp/Library/libopenexr/include' -I'/home/runner/work/_temp/Library/libimath/include' -I/usr/local/include   -DRAY_REPRODUCE_PERLIN -DSTRICT_R_HEADERS -DRAY_HAS_X11 -ffp-contract=off -fvisibility=hidden -fvisibility-inlines-hidden -fpic  -g -O2   -c PrintClassSizes.cpp -o PrintClassSizes.o
+In file included from hitables/../math/../core/../math/vec3.h:7,
+                 from hitables/../math/../core/ray.h:5,
+                 from hitables/../math/aabb.h:4,
+                 from hitables/hitable.h:4,
+                 from PrintClassSizes.cpp:2:
+hitables/../math/../core/../math/../math/simd.h: In function ‘IVec4 simd_sgn(const IVec4&amp;)’:
+hitables/../math/../core/../math/../math/simd.h:715:5: error: ‘__m128i’ was not declared in this scope
+  715 |     __m128i zero = _mm_setzero_si128();
+      |     ^~~~~~~
+hitables/../math/../core/../math/../math/simd.h:716:12: error: expected ‘;’ before ‘one’
+  716 |     __m128i one = _mm_set1_epi32(1);
+      |            ^~~~
+      |            ;
+hitables/../math/../core/../math/../math/simd.h:717:12: error: expected ‘;’ before ‘neg_one’
+  717 |     __m128i neg_one = _mm_set1_epi32(-1);
+      |            ^~~~~~~~
+      |            ;
+hitables/../math/../core/../math/../math/simd.h:719:12: error: expected ‘;’ before ‘gt_mask’
+  719 |     __m128i gt_mask = _mm_cmpgt_epi32(a.v, zero);  // x &gt; 0
+      |            ^~~~~~~~
+      |            ;
+hitables/../math/../core/../math/../math/simd.h:720:12: error: expected ‘;’ before ‘lt_mask’
+  720 |     __m128i lt_mask = _mm_cmpgt_epi32(zero, a.v);  // x &lt; 0
+      |            ^~~~~~~~
+      |            ;
+hitables/../math/../core/../math/../math/simd.h:722:12: error: expected ‘;’ before ‘pos_result’
+  722 |     __m128i pos_result = _mm_and_si128(gt_mask, one);     // 1 where x &gt; 0
+      |            ^~~~~~~~~~~
+      |            ;
+hitables/../math/../core/../math/../math/simd.h:723:12: error: expected ‘;’ before ‘neg_result’
+  723 |     __m128i neg_result = _mm_and_si128(lt_mask, neg_one); // -1 where x &lt; 0
+      |            ^~~~~~~~~~~
+      |            ;
+hitables/../math/../core/../math/../math/simd.h:725:30: error: ‘pos_result’ was not declared in this scope; did you mean ‘result’?
+  725 |     result.v = _mm_add_epi32(pos_result, neg_result);
+      |                              ^~~~~~~~~~
+      |                              result
+hitables/../math/../core/../math/../math/simd.h:725:42: error: ‘neg_result’ was not declared in this scope; did you mean ‘result’?
+  725 |     result.v = _mm_add_epi32(pos_result, neg_result);
+      |                                          ^~~~~~~~~~
+      |                                          result
+hitables/../math/../core/../math/../math/simd.h:725:16: error: ‘_mm_add_epi32’ was not declared in this scope
+  725 |     result.v = _mm_add_epi32(pos_result, neg_result);
+      |                ^~~~~~~~~~~~~
+make: *** [/opt/R/4.6.0/lib/R/etc/Makeconf:199: PrintClassSizes.o] Error 1
+ERROR: compilation failed for package ‘rayrender’
+* removing ‘/home/runner/work/_temp/rayrender-benchmark-workdirs/rayrender-bench-root-26b62a3fdc75/rayrender-current-o3_native_no_simd-26b663f9abe5/r-lib/rayrender’",NA,NA,"/home/runner/work/_temp/rayrender-benchmark-workdirs/rayrender-bench-root-26b62a3fdc75/rayrender-current-o3_native_no_simd-26b663f9abe5/logs/R-CMD-INSTALL.log",NA,NA,"/home/runner/work/_temp/rayrender-benchmark-workdirs/rayrender-bench-root-26b62a3fdc75/rayrender-current-o3_native_no_simd-26b663f9abe5"
+"2026-05-25T19:52:24Z","26416873682","1","Render Benchmarks","push","current","current","86dbdd169bc45604f4c57dad05befa80d93d4722","false","deferred",NA,NA,NA,"bvh_many_spheres","/home/runner/work/rayrender/rayrender/tools/benchmarks/scenes/bvh_many_spheres.R","{""width"":50,""height"":50,""samples"":32,""seed"":1,""threads"":1,""time_build"":true,""write_artifact"":false,""sphere_count"":3000,""object_count"":3000}","1","3","1","1","50","50","32","1","TRUE","o3_native_simd_sse","error in running command","gcc -std=gnu2x","g++ -std=gnu++20","-O3 -march=native -DRAYSIMD -DHAS_SSE","-O3 -march=native -DRAYSIMD -DHAS_SSE","-O3 -march=native -DRAYSIMD -DHAS_SSE",NA,NA,"{}","TRUE","TRUE","TRUE","FALSE","Linux","Linux","6.17.0-1013-azure","x86_64",NA,"4",NA,"R version 4.6.0 (2026-04-24)","rayrender","0.40.1","251.237000",NA,"2.544",NA,"0.736","3.28",NA,"3.920000","0.420000","170368","166.375000","251.237000",NA,"ok",NA,"7ab4bddb9095698e3ffa5b9259fc38d2",NA,"/home/runner/work/_temp/rayrender-benchmark-workdirs/rayrender-bench-root-26d8251e17f9/rayrender-current-o3_native_simd_sse-26d83c9cd168/logs/R-CMD-INSTALL.log","/home/runner/work/_temp/rayrender-benchmark-workdirs/rayrender-bench-root-26d8251e17f9/rayrender-current-o3_native_simd_sse-26d83c9cd168/logs/bvh_many_spheres-1.log","/home/runner/work/_temp/rayrender-benchmark-workdirs/rayrender-bench-root-26d8251e17f9/rayrender-current-o3_native_simd_sse-26d83c9cd168/logs/bvh_many_spheres-1.time.log","/home/runner/work/_temp/rayrender-benchmark-workdirs/rayrender-bench-root-26d8251e17f9/rayrender-current-o3_native_simd_sse-26d83c9cd168"
+"2026-05-25T19:52:29Z","26416873682","1","Render Benchmarks","push","current","current","86dbdd169bc45604f4c57dad05befa80d93d4722","false","deferred",NA,NA,NA,"bvh_many_spheres","/home/runner/work/rayrender/rayrender/tools/benchmarks/scenes/bvh_many_spheres.R","{""width"":50,""height"":50,""samples"":32,""seed"":1,""threads"":1,""time_build"":true,""write_artifact"":false,""sphere_count"":3000,""object_count"":3000}","2","3","1","1","50","50","32","1","TRUE","o3_native_simd_sse","error in running command","gcc -std=gnu2x","g++ -std=gnu++20","-O3 -march=native -DRAYSIMD -DHAS_SSE","-O3 -march=native -DRAYSIMD -DHAS_SSE","-O3 -march=native -DRAYSIMD -DHAS_SSE",NA,NA,"{}","TRUE","TRUE","TRUE","FALSE","Linux","Linux","6.17.0-1013-azure","x86_64",NA,"4",NA,"R version 4.6.0 (2026-04-24)","rayrender","0.40.1","251.237000",NA,"2.592",NA,"0.736","3.328",NA,"3.980000","0.430000","169916","165.933594","251.237000",NA,"ok",NA,"7ab4bddb9095698e3ffa5b9259fc38d2",NA,"/home/runner/work/_temp/rayrender-benchmark-workdirs/rayrender-bench-root-26d8251e17f9/rayrender-current-o3_native_simd_sse-26d83c9cd168/logs/R-CMD-INSTALL.log","/home/runner/work/_temp/rayrender-benchmark-workdirs/rayrender-bench-root-26d8251e17f9/rayrender-current-o3_native_simd_sse-26d83c9cd168/logs/bvh_many_spheres-2.log","/home/runner/work/_temp/rayrender-benchmark-workdirs/rayrender-bench-root-26d8251e17f9/rayrender-current-o3_native_simd_sse-26d83c9cd168/logs/bvh_many_spheres-2.time.log","/home/runner/work/_temp/rayrender-benchmark-workdirs/rayrender-bench-root-26d8251e17f9/rayrender-current-o3_native_simd_sse-26d83c9cd168"
+"2026-05-25T19:52:33Z","26416873682","1","Render Benchmarks","push","current","current","86dbdd169bc45604f4c57dad05befa80d93d4722","false","deferred",NA,NA,NA,"bvh_many_spheres","/home/runner/work/rayrender/rayrender/tools/benchmarks/scenes/bvh_many_spheres.R","{""width"":50,""height"":50,""samples"":32,""seed"":1,""threads"":1,""time_build"":true,""write_artifact"":false,""sphere_count"":3000,""object_count"":3000}","3","3","1","1","50","50","32","1","TRUE","o3_native_simd_sse","error in running command","gcc -std=gnu2x","g++ -std=gnu++20","-O3 -march=native -DRAYSIMD -DHAS_SSE","-O3 -march=native -DRAYSIMD -DHAS_SSE","-O3 -march=native -DRAYSIMD -DHAS_SSE",NA,NA,"{}","TRUE","TRUE","TRUE","FALSE","Linux","Linux","6.17.0-1013-azure","x86_64",NA,"4",NA,"R version 4.6.0 (2026-04-24)","rayrender","0.40.1","251.237000",NA,"2.603",NA,"0.734","3.337",NA,"3.970000","0.440000","169968","165.984375","251.237000",NA,"ok",NA,"7ab4bddb9095698e3ffa5b9259fc38d2",NA,"/home/runner/work/_temp/rayrender-benchmark-workdirs/rayrender-bench-root-26d8251e17f9/rayrender-current-o3_native_simd_sse-26d83c9cd168/logs/R-CMD-INSTALL.log","/home/runner/work/_temp/rayrender-benchmark-workdirs/rayrender-bench-root-26d8251e17f9/rayrender-current-o3_native_simd_sse-26d83c9cd168/logs/bvh_many_spheres-3.log","/home/runner/work/_temp/rayrender-benchmark-workdirs/rayrender-bench-root-26d8251e17f9/rayrender-current-o3_native_simd_sse-26d83c9cd168/logs/bvh_many_spheres-3.time.log","/home/runner/work/_temp/rayrender-benchmark-workdirs/rayrender-bench-root-26d8251e17f9/rayrender-current-o3_native_simd_sse-26d83c9cd168"
+"2026-05-25T19:52:42Z","26416873682","1","Render Benchmarks","push","current","current","86dbdd169bc45604f4c57dad05befa80d93d4722","false","deferred",NA,NA,NA,"bvh_mixed_primitives","/home/runner/work/rayrender/rayrender/tools/benchmarks/scenes/bvh_mixed_primitives.R","{""width"":50,""height"":50,""samples"":32,""seed"":1,""threads"":1,""time_build"":true,""write_artifact"":false,""sphere_count"":3000,""object_count"":3000}","1","3","1","1","50","50","32","1","TRUE","o3_native_simd_sse","error in running command","gcc -std=gnu2x","g++ -std=gnu++20","-O3 -march=native -DRAYSIMD -DHAS_SSE","-O3 -march=native -DRAYSIMD -DHAS_SSE","-O3 -march=native -DRAYSIMD -DHAS_SSE",NA,NA,"{}","TRUE","TRUE","TRUE","FALSE","Linux","Linux","6.17.0-1013-azure","x86_64",NA,"4",NA,"R version 4.6.0 (2026-04-24)","rayrender","0.40.1","251.237000",NA,"2.64",NA,"1.02","3.66",NA,"4.250000","0.490000","170140","166.152344","251.237000",NA,"ok",NA,"3b949af2755eb4dce15a1790d1175a40",NA,"/home/runner/work/_temp/rayrender-benchmark-workdirs/rayrender-bench-root-26d8251e17f9/rayrender-current-o3_native_simd_sse-26d83c9cd168/logs/R-CMD-INSTALL.log","/home/runner/work/_temp/rayrender-benchmark-workdirs/rayrender-bench-root-26d8251e17f9/rayrender-current-o3_native_simd_sse-26d83c9cd168/logs/bvh_mixed_primitives-1.log","/home/runner/work/_temp/rayrender-benchmark-workdirs/rayrender-bench-root-26d8251e17f9/rayrender-current-o3_native_simd_sse-26d83c9cd168/logs/bvh_mixed_primitives-1.time.log","/home/runner/work/_temp/rayrender-benchmark-workdirs/rayrender-bench-root-26d8251e17f9/rayrender-current-o3_native_simd_sse-26d83c9cd168"
+"2026-05-25T19:52:46Z","26416873682","1","Render Benchmarks","push","current","current","86dbdd169bc45604f4c57dad05befa80d93d4722","false","deferred",NA,NA,NA,"bvh_mixed_primitives","/home/runner/work/rayrender/rayrender/tools/benchmarks/scenes/bvh_mixed_primitives.R","{""width"":50,""height"":50,""samples"":32,""seed"":1,""threads"":1,""time_build"":true,""write_artifact"":false,""sphere_count"":3000,""object_count"":3000}","2","3","1","1","50","50","32","1","TRUE","o3_native_simd_sse","error in running command","gcc -std=gnu2x","g++ -std=gnu++20","-O3 -march=native -DRAYSIMD -DHAS_SSE","-O3 -march=native -DRAYSIMD -DHAS_SSE","-O3 -march=native -DRAYSIMD -DHAS_SSE",NA,NA,"{}","TRUE","TRUE","TRUE","FALSE","Linux","Linux","6.17.0-1013-azure","x86_64",NA,"4",NA,"R version 4.6.0 (2026-04-24)","rayrender","0.40.1","251.237000",NA,"2.569",NA,"1.009","3.578",NA,"4.180000","0.480000","170244","166.253906","251.237000",NA,"ok",NA,"3b949af2755eb4dce15a1790d1175a40",NA,"/home/runner/work/_temp/rayrender-benchmark-workdirs/rayrender-bench-root-26d8251e17f9/rayrender-current-o3_native_simd_sse-26d83c9cd168/logs/R-CMD-INSTALL.log","/home/runner/work/_temp/rayrender-benchmark-workdirs/rayrender-bench-root-26d8251e17f9/rayrender-current-o3_native_simd_sse-26d83c9cd168/logs/bvh_mixed_primitives-2.log","/home/runner/work/_temp/rayrender-benchmark-workdirs/rayrender-bench-root-26d8251e17f9/rayrender-current-o3_native_simd_sse-26d83c9cd168/logs/bvh_mixed_primitives-2.time.log","/home/runner/work/_temp/rayrender-benchmark-workdirs/rayrender-bench-root-26d8251e17f9/rayrender-current-o3_native_simd_sse-26d83c9cd168"
+"2026-05-25T19:52:51Z","26416873682","1","Render Benchmarks","push","current","current","86dbdd169bc45604f4c57dad05befa80d93d4722","false","deferred",NA,NA,NA,"bvh_mixed_primitives","/home/runner/work/rayrender/rayrender/tools/benchmarks/scenes/bvh_mixed_primitives.R","{""width"":50,""height"":50,""samples"":32,""seed"":1,""threads"":1,""time_build"":true,""write_artifact"":false,""sphere_count"":3000,""object_count"":3000}","3","3","1","1","50","50","32","1","TRUE","o3_native_simd_sse","error in running command","gcc -std=gnu2x","g++ -std=gnu++20","-O3 -march=native -DRAYSIMD -DHAS_SSE","-O3 -march=native -DRAYSIMD -DHAS_SSE","-O3 -march=native -DRAYSIMD -DHAS_SSE",NA,NA,"{}","TRUE","TRUE","TRUE","FALSE","Linux","Linux","6.17.0-1013-azure","x86_64",NA,"4",NA,"R version 4.6.0 (2026-04-24)","rayrender","0.40.1","251.237000",NA,"2.624",NA,"1.019","3.643",NA,"4.230000","0.490000","170352","166.359375","251.237000",NA,"ok",NA,"3b949af2755eb4dce15a1790d1175a40",NA,"/home/runner/work/_temp/rayrender-benchmark-workdirs/rayrender-bench-root-26d8251e17f9/rayrender-current-o3_native_simd_sse-26d83c9cd168/logs/R-CMD-INSTALL.log","/home/runner/work/_temp/rayrender-benchmark-workdirs/rayrender-bench-root-26d8251e17f9/rayrender-current-o3_native_simd_sse-26d83c9cd168/logs/bvh_mixed_primitives-3.log","/home/runner/work/_temp/rayrender-benchmark-workdirs/rayrender-bench-root-26d8251e17f9/rayrender-current-o3_native_simd_sse-26d83c9cd168/logs/bvh_mixed_primitives-3.time.log","/home/runner/work/_temp/rayrender-benchmark-workdirs/rayrender-bench-root-26d8251e17f9/rayrender-current-o3_native_simd_sse-26d83c9cd168"
+  </script>
+  <script src="assets/dashboard.js"></script>
+</body>
+</html>
