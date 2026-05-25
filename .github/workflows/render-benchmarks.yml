@@ -130,6 +130,9 @@ jobs:
   publish-history-and-site:
     needs: benchmark
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     if: >-
       ${{
         always() &&
@@ -233,5 +236,6 @@ jobs:
           path: benchmark-history-worktree/site
 
       - name: Deploy Pages
+        id: deployment
         if: steps.check_results.outputs.has_results == 'true'
         uses: actions/deploy-pages@v4
