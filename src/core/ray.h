@@ -47,6 +47,7 @@ class Ray {
       Float Sy = -dPermuted.xyz.y / dPermuted.xyz.z;
       Float Sz = 1.f / dPermuted.xyz.z;
       Svec = vec3f(Sx, Sy, Sz);
+      pri_stack = nullptr;
 #ifdef RAYSIMD
       origin4[0] = simd_set1(a.xyz.x);
       origin4[1] = simd_set1(a.xyz.y);

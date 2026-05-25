@@ -16,35 +16,36 @@ const Float aabb::Volume() const {
          10E20);
 }
 
-const bool aabb::hit(const Ray &r, Float tmin, Float tmax, random_gen& rng) const {
-  // SCOPED_CONTEXT("Hit");
-  // SCOPED_TIMER_COUNTER("AABB");
+static inline bool hit_aabb_impl(const aabb &box, const Ray &r, Float tmin,
+                                 Float tmax) {
+  for (int axis = 0; axis < 3; ++axis) {
+    const Float invD = r.inv_dir_pad.e[axis];
+    Float t0 = (box.bounds[0].e[axis] - r.o.e[axis]) * invD;
+    Float t1 = (box.bounds[1].e[axis] - r.o.e[axis]) * invD;
 
-  // Float txmin, txmax, tymin, tymax, tzmin, tzmax;
-  // txmin = (bounds[  r.sign[0]].xyz.x-r.origin().xyz.x) * r.inv_dir.xyz.x;
-  // txmax = (bounds[1-r.sign[0]].xyz.x-r.origin().xyz.x) * r.inv_dir_pad.xyz.x;
-  // tymin = (bounds[  r.sign[1]].xyz.y-r.origin().xyz.y) * r.inv_dir.xyz.y;
-  // tymax = (bounds[1-r.sign[1]].xyz.y-r.origin().xyz.y) * r.inv_dir_pad.xyz.y;
-  // tzmin = (bounds[  r.sign[2]].xyz.z-r.origin().xyz.z) * r.inv_dir.xyz.z;
-  // tzmax = (bounds[1-r.sign[2]].xyz.z-r.origin().xyz.z) * r.inv_dir_pad.xyz.z;
-  // tmin = ffmax(tzmin, ffmax(tymin, ffmax(txmin, tmin)));
-  // tmax = ffmin(tzmax, ffmin(tymax, ffmin(txmax, tmax)));
-  return(tmin <= tmax);
+    if (invD < 0.0) {
+      std::swap(t0, t1);
+    }
+
+    tmin = ffmax(tmin, t0);
+    tmax = ffmin(tmax, t1);
+
+    if (tmax < tmin) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
-const bool aabb::hit(const Ray &r, Float tmin, Float tmax, Sampler* sampler) const {
-  // SCOPED_CONTEXT("Hit");
-  // SCOPED_TIMER_COUNTER("AABB");
-  // Float txmin, txmax, tymin, tymax, tzmin, tzmax;
-  // txmin = (bounds[  r.sign[0]].xyz.x-r.origin().xyz.x) * r.inv_dir.xyz.x;
-  // txmax = (bounds[1-r.sign[0]].xyz.x-r.origin().xyz.x) * r.inv_dir_pad.xyz.x;
-  // tymin = (bounds[  r.sign[1]].xyz.y-r.origin().xyz.y) * r.inv_dir.xyz.y;
-  // tymax = (bounds[1-r.sign[1]].xyz.y-r.origin().xyz.y) * r.inv_dir_pad.xyz.y;
-  // tzmin = (bounds[  r.sign[2]].xyz.z-r.origin().xyz.z) * r.inv_dir.xyz.z;
-  // tzmax = (bounds[1-r.sign[2]].xyz.z-r.origin().xyz.z) * r.inv_dir_pad.xyz.z;
-  // tmin = ffmax(tzmin, ffmax(tymin, ffmax(txmin, tmin)));
-  // tmax = ffmin(tzmax, ffmin(tymax, ffmin(txmax, tmax)));
-  return(tmin <= tmax);
+const bool aabb::hit(const Ray &r, Float tmin, Float tmax,
+                     random_gen &rng) const {
+  return hit_aabb_impl(*this, r, tmin, tmax);
+}
+
+const bool aabb::hit(const Ray &r, Float tmin, Float tmax,
+                     Sampler *sampler) const {
+  return hit_aabb_impl(*this, r, tmin, tmax);
 }
 
 const point3f aabb::offset(const point3f p) const {

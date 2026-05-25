@@ -7,79 +7,78 @@
 #include "../math/aabb.h"
 #include "../math/simd.h"
 
-#include <queue>
-#include <vector>
+#include <algorithm>
+#include <atomic>
+#include <cstddef>
 #include <functional>
+#include <queue>
+#include <span>
+#include <stdexcept>
+#include <utility>
+#include <vector>
 
-// Define a structure to hold node index and tEnter time
-struct alignas(16) BVHNodeEntry {
+namespace {
+
+struct BVHNodeEntry {
     int nodeIndex;
     float tEnter;
 
-    // Comparator for the priority queue (min-heap)
     bool operator<(const BVHNodeEntry& other) const {
-        return tEnter > other.tEnter; // Inverted comparison for min-heap
+        return tEnter > other.tEnter;
     }
 };
 
-inline int floatToIntBits(float f) {
-    int i;
-    memcpy(&i, &f, sizeof(float));
-    return i;
-}
+static_assert(sizeof(BVHNodeEntry) == 8,
+              "BVHNodeEntry should remain compact: int + float");
 
-//Insertion sort is faster than a heap here
-template <size_t MaxSize>
-class StaticPriorityQueue {
+template <size_t MaxSize> class StaticPriorityQueue {
 public:
-    StaticPriorityQueue() : size_(0) {}
+  StaticPriorityQueue() : size_(0) {}
 
-    // Insert a new entry into the priority queue using insertion sort
-    void push(const BVHNodeEntry& entry) {
-        ASSERT(size_ < MaxSize && "Priority queue overflow");
-
-        // Find the correct position to insert the new entry
-        int i = size_ - 1;
-        while (i >= 0 && data_[i].tEnter < entry.tEnter) {
-            // Shift elements to make room for the new entry
-            data_[i + 1] = data_[i];
-            i--;
-        }
-        // Insert the new entry at the found position
-        data_[i + 1] = entry;
-        size_++;
+  bool try_push(const BVHNodeEntry &entry) {
+    if (size_ >= MaxSize) {
+      return false;
     }
 
-    // Remove and return the element with the smallest tEnter
-    BVHNodeEntry pop() {
-        ASSERT(size_ > 0 && "Priority queue underflow");
-        // The smallest element is at the end of the array
-        return data_[--size_];
+    int i = static_cast<int>(size_) - 1;
+
+    while (i >= 0 && data_[i].tEnter < entry.tEnter) {
+      data_[i + 1] = data_[i];
+      --i;
     }
 
-    // Return a const reference to the element with the smallest tEnter
-    const BVHNodeEntry& top() const {
-        ASSERT(size_ > 0 && "Priority queue is empty");
-        // The smallest element is at the end
-        return data_[size_ - 1];
-    }
+    data_[i + 1] = entry;
+    ++size_;
+    return true;
+  }
 
-    bool empty() const {
-        return size_ == 0;
+  void push(const BVHNodeEntry &entry) {
+    const bool ok = try_push(entry);
+    if (!ok) {
+      ASSERT(false && "Priority queue overflow");
     }
+  }
 
-    size_t size() const {
-        return size_;
-    }
+  BVHNodeEntry pop() {
+    ASSERT(size_ > 0 && "Priority queue underflow");
+    return data_[--size_];
+  }
 
-    void clear() {
-        size_ = 0;
-    }
+  const BVHNodeEntry &top() const {
+    ASSERT(size_ > 0 && "Priority queue is empty");
+    return data_[size_ - 1];
+  }
+
+  bool empty() const { return size_ == 0; }
+
+  size_t size() const { return size_; }
 
 private:
-    BVHNodeEntry data_[MaxSize];
-    size_t size_;
+  BVHNodeEntry data_[MaxSize];
+  size_t size_;
 };
+
+} // namespace
 
 BVHAggregate::BVHAggregate(std::vector<std::shared_ptr<hitable> > prims,
         float t_min, float t_max, 
@@ -93,6 +92,18 @@ BVHAggregate::BVHAggregate(std::vector<std::shared_ptr<hitable> > prims,
         { 
     SCOPED_CONTEXT("Initialization");
     SCOPED_TIMER_COUNTER("BVH Build");
+    if (primitives.empty()) {
+#ifndef RAYSIMD
+      nodes.reset();
+      n_nodes = 0;
+#else
+      static_assert(SIMD_WIDTH == 4,
+                    "BVH4 traversal requires SIMD_WIDTH == 4.");
+      nodes4.reset();
+      totalNodes4 = 0;
+#endif
+      return;
+    }
     std::vector<BVHPrimitive> bvhPrimitives(primitives.size());
     for (size_t i = 0; i < primitives.size(); ++i) {
         aabb temp_box;
@@ -109,14 +120,13 @@ BVHAggregate::BVHAggregate(std::vector<std::shared_ptr<hitable> > prims,
                           &orderedPrimsOffset, 
                           orderedPrims);
     primitives.swap(orderedPrims);
-    bvhPrimitives.resize(0);
-    bvhPrimitives.shrink_to_fit();
 
 #ifndef RAYSIMD
     nodes.reset(new LinearBVHNode[totalNodes]);
     n_nodes = totalNodes;
     int offset = 0;
     flattenBVH(root, &offset);
+    delete root;
 #else
     totalNodes4 = 0;
     BVHBuildNode4* rootBVH4 = ConvertBVH2ToBVH4(root, &totalNodes4);
@@ -124,8 +134,11 @@ BVHAggregate::BVHAggregate(std::vector<std::shared_ptr<hitable> > prims,
     delete root;
     int offset4 = 0;
     flattenBVH4(rootBVH4, &offset4);
+    ASSERT(offset4 == totalNodes4 && "BVH4 flatten count mismatch");
+#ifndef NDEBUG
+    validateBVH4();
+#endif
     delete rootBVH4;
-    // validateBVH4();
 #endif
 }
 
@@ -137,6 +150,16 @@ BVHAggregate::BVHAggregate(std::vector<std::shared_ptr<hitable> > prims,
                                 primitives(prims) { 
     SCOPED_CONTEXT("Initialization");
     SCOPED_TIMER_COUNTER("BVH Build");
+    if (primitives.empty()) {
+#ifndef RAYSIMD
+      nodes.reset();
+      n_nodes = 0;
+#else
+      nodes4.reset();
+      totalNodes4 = 0;
+#endif
+      return;
+    }
     std::vector<BVHPrimitive> bvhPrimitives(primitives.size());
     for (size_t i = 0; i < primitives.size(); ++i) {
         aabb temp_box;
@@ -154,13 +177,12 @@ BVHAggregate::BVHAggregate(std::vector<std::shared_ptr<hitable> > prims,
                           &orderedPrimsOffset, 
                           orderedPrims);
     primitives.swap(orderedPrims);
-    bvhPrimitives.resize(0);
-    bvhPrimitives.shrink_to_fit();
 #ifndef RAYSIMD
     nodes.reset(new LinearBVHNode[totalNodes]);
     n_nodes = totalNodes;
     int offset = 0;
     flattenBVH(root, &offset);
+    delete root;
 #else
     totalNodes4 = 0;
     BVHBuildNode4* rootBVH4 = ConvertBVH2ToBVH4(root, &totalNodes4);
@@ -168,14 +190,20 @@ BVHAggregate::BVHAggregate(std::vector<std::shared_ptr<hitable> > prims,
     nodes4.reset(new LinearBVHNode4[totalNodes4]);
     int offset4 = 0;
     flattenBVH4(rootBVH4, &offset4);
-    delete rootBVH4; //NEED TO WRITE THIS
-    // validateBVH4();
+    ASSERT(offset4 == totalNodes4 && "BVH4 flatten count mismatch");
+#ifndef NDEBUG
+    validateBVH4();
+#endif
+    delete rootBVH4;
 #endif
 }
 
 bool BVHAggregate::bounding_box(Float t0, Float t1, aabb& box) const {
-    box = scene_bounds;
-    return(true);
+	if (primitives.empty()) {
+		return(false);
+	}
+	box = scene_bounds;
+	return(true);
 }
 
 BVHBuildNode *BVHAggregate::buildRecursive(std::span<BVHPrimitive> bvhPrimitives,
@@ -300,7 +328,17 @@ BVHBuildNode *BVHAggregate::buildRecursive(std::span<BVHPrimitive> bvhPrimitives
                             }
                             return b <= minCostSplitBucket;
                         });
-                    mid = midIter - bvhPrimitives.begin();
+                    mid = static_cast<int>(midIter - bvhPrimitives.begin());
+                    if (mid == 0 ||
+                        mid == static_cast<int>(bvhPrimitives.size())) {
+                      mid = static_cast<int>(bvhPrimitives.size() / 2);
+                      std::nth_element(
+                          bvhPrimitives.begin(), bvhPrimitives.begin() + mid,
+                          bvhPrimitives.end(),
+                          [dim](const BVHPrimitive &a, const BVHPrimitive &b) {
+                            return a.Centroid()[dim] < b.Centroid()[dim];
+                          });
+                    }
                 } else {
                     // Create leaf _BVHBuildNode_
                     int firstPrimOffset =
@@ -334,7 +372,6 @@ int BVHAggregate::flattenBVH(BVHBuildNode *node, int *offset) {
     linearNode->bounds = node->bounds;
     int nodeOffset = (*offset)++;
     if (node->nPrimitives > 0) {
-        ASSERT(!node->children[0] && !node->children[1]);
         // CHECK_LT(node->nPrimitives, 65536);
         linearNode->primitivesOffset = node->firstPrimOffset;
         linearNode->nPrimitives = node->nPrimitives;
@@ -469,395 +506,285 @@ const bool BVHAggregate::hit(const Ray& r, Float t_min, Float t_max, hit_record&
 }
 #else
 
-#define TOTAL_NODES_STATIC 4096
-constexpr const int triggerLargeBVH = TOTAL_NODES_STATIC - SIMD_WIDTH;
-#define RAY_SUPPORT_LARGE_BVH
+constexpr size_t kBVH4PriorityStaticCapacity = 4096;
 
-const bool BVHAggregate::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
-    if (!nodes4) {
-        return false;
-    }
-    StaticPriorityQueue<TOTAL_NODES_STATIC> nodesToVisit;
-    bool large_bvh = false;
-    std::priority_queue<BVHNodeEntry> nodesToVisitLarge;
+namespace {
 
-    nodesToVisit.push({0, -INFINITY});
-
-    bool any_hit = false;
-    
-    while (!nodesToVisit.empty()) {
-        if(nodesToVisit.size() > triggerLargeBVH) {
-            large_bvh = true;
-        }
-        // Pop the node with the smallest tEnter
-        BVHNodeEntry entry = nodesToVisit.top();
-        nodesToVisit.pop();
-        int currentNodeIndex = entry.nodeIndex;
-        const LinearBVHNode4* node = &nodes4[currentNodeIndex];
-
-        if (node->nPrimitives > 0) {
-            // __builtin_prefetch(&primitives[node->primitivesOffset]);
-
-            // Leaf node: test ray against primitives
-            for (int i = 0; i < node->nPrimitives; ++i) {
-                hit_record tempRec;
-                bool hitPrimitive = primitives[node->primitivesOffset + i]->hit(r, t_min, t_max, tempRec, rng);
-                if (hitPrimitive) {
-                    any_hit = true;
-                    rec = tempRec;
-                    t_max = tempRec.t; // Update tMax to the closest hit
-                }
-            }
-            if (any_hit) {
-              if(nodesToVisit.empty()) {
-                return true;
-              }
-              if(nodesToVisit.top().tEnter > t_max) {
-                return true;
-              }
-            }
-        } else {
-            // Internal node
-            const BBox4& bbox4 = node->bbox4;
-            // Perform SIMD ray-box intersection
-
-            IVec4 hits;
-            FVec4 tEnters;
-            
-            rayBBoxIntersect4(r, bbox4, t_min, t_max, hits, tEnters);//, tExits);
-
-            float tEntersArray[4];
-            simd_extract_fvec4(tEnters, tEntersArray);
-            
-            const IVec4 valid_hit = simd_and(hits, simd_not_equals_minus_one(node->childOffsets));
-            // int hitmask = simd_extract_hitmask(valid_hit);
-            for (int i = 0; i < 4; ++i) {
-                if (valid_hit[i]) {
-                    nodesToVisit.push({node->childOffsets[i], tEntersArray[i]});
-                }
-            }
-        }
-    }
-    //If we exceed the static priority size, copy all elements to a normal priority queue and continue
-    if(large_bvh) {
-         while (!nodesToVisit.empty()) {
-            nodesToVisitLarge.push(nodesToVisit.top());
-            nodesToVisit.pop();
-         }
-        while (!nodesToVisitLarge.empty()) {
-            // Pop the node with the smallest tEnter
-            BVHNodeEntry entry = nodesToVisitLarge.top();
-            nodesToVisitLarge.pop();
-            int currentNodeIndex = entry.nodeIndex;
-            const LinearBVHNode4* node = &nodes4[currentNodeIndex];
-
-            if (node->nPrimitives > 0) {
-                // Leaf node: test ray against primitives
-                for (int i = 0; i < node->nPrimitives; ++i) {
-                    hit_record tempRec;
-                    bool hitPrimitive = primitives[node->primitivesOffset + i]->hit(r, t_min, t_max, tempRec, rng);
-                    if (hitPrimitive) {
-                        any_hit = true;
-                        rec = tempRec;
-                        t_max = tempRec.t; // Update tMax to the closest hit
-                    }
-                }
-                if (any_hit && nodesToVisitLarge.top().tEnter > t_max) {
-                    return true;
-                }
-            } else {
-                // Internal node
-                const BBox4& bbox4 = node->bbox4;
-                // Perform SIMD ray-box intersection
-
-                IVec4 hits;
-                FVec4 tEnters;
-                
-                rayBBoxIntersect4(r, bbox4, t_min, t_max, hits, tEnters);//, tExits);
-
-                const IVec4 valid_hit = simd_and(hits, simd_not_equals_minus_one(node->childOffsets));
-                int hitmask = simd_extract_hitmask(valid_hit);
-
-                float tEntersArray[4];
-                simd_extract_fvec4(tEnters, tEntersArray);
-                
-                for (int i = 0; i < 4; ++i) {
-                    const bool valid = (hitmask >> i) & 1;
-                    if (valid) {
-                        nodesToVisitLarge.push({node->childOffsets[i], tEntersArray[i]});
-                    }
-                }
-            }
-        }
+template <size_t StaticCapacity>
+class BVH4PriorityFrontier {
+public:
+  void push(const BVHNodeEntry& entry) {
+    if (using_heap_) {
+      heap_.push(entry);
+      return;
     }
 
-    return any_hit;
-}
-
-const bool BVHAggregate::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const {
-    if (!nodes4) {
-        return false;
+    if (!static_.try_push(entry)) {
+      spill_to_heap();
+      heap_.push(entry);
     }
-    StaticPriorityQueue<64> nodesToVisit;
-    nodesToVisit.push({0, -INFINITY});
+  }
 
-    bool any_hit = false;
-    
-    while (!nodesToVisit.empty()) {
-        // Pop the node with the smallest tEnter
-        BVHNodeEntry entry = nodesToVisit.top();
-        nodesToVisit.pop();
-        int currentNodeIndex = entry.nodeIndex;
-        const LinearBVHNode4* node = &nodes4[currentNodeIndex];
+  bool empty() const {
+    return using_heap_ ? heap_.empty() : static_.empty();
+  }
 
-        if (node->nPrimitives > 0) {
-            // Leaf node: test ray against primitives
-            for (int i = 0; i < node->nPrimitives; ++i) {
-                hit_record tempRec;
-                bool hitPrimitive = primitives[node->primitivesOffset + i]->hit(r, t_min, t_max, tempRec, sampler);
-                if (hitPrimitive) {
-                    any_hit = true;
-                    rec = tempRec;
-                    t_max = tempRec.t; // Update tMax to the closest hit
-                }
-            }
-            if (any_hit && nodesToVisit.top().tEnter > t_max) {
-                return true;
-            }
-        } else {
-            // Internal node
-            const BBox4& bbox4 = node->bbox4;
-            // Perform SIMD ray-box intersection
-
-            IVec4 hits;
-            FVec4 tEnters;
-            
-            rayBBoxIntersect4(r, bbox4, t_min, t_max, hits, tEnters);//, tExits);
-
-            const IVec4 valid_hit = simd_and(hits, simd_not_equals_minus_one(node->childOffsets));
-            int hitmask = simd_extract_hitmask(valid_hit);
-
-            float tEntersArray[4];
-            simd_extract_fvec4(tEnters, tEntersArray);
-
-            for (int i = 0; i < 4; ++i) {
-                const bool valid = (hitmask >> i) & 1;
-                if (valid) {
-                    nodesToVisit.push({node->childOffsets[i], tEntersArray[i]});
-                }
-            }
-        }
+  BVHNodeEntry pop() {
+    if (using_heap_) {
+      ASSERT(!heap_.empty() && "Priority frontier underflow");
+      BVHNodeEntry entry = heap_.top();
+      heap_.pop();
+      return entry;
     }
 
-    return any_hit;
-}
+    return static_.pop();
+  }
 
-bool BVHAggregate::HitP(const Ray& r, Float t_min, Float t_max, random_gen& rng) const {
-    if (!nodes4) {
-        return false;
-    }
-    StaticPriorityQueue<TOTAL_NODES_STATIC> nodesToVisit;
-    bool large_bvh = false;
-    std::priority_queue<BVHNodeEntry> nodesToVisitLarge;
+  float top_t() const {
+    ASSERT(!empty() && "Priority frontier is empty");
+    return using_heap_ ? heap_.top().tEnter : static_.top().tEnter;
+  }
 
-    nodesToVisit.push({0, -INFINITY});
-    
-    while (!nodesToVisit.empty()) {
-        if(nodesToVisit.size() > triggerLargeBVH) {
-            large_bvh = true;
-        }
-        // Pop the node with the smallest tEnter
-        BVHNodeEntry entry = nodesToVisit.top();
-        nodesToVisit.pop();
-        int currentNodeIndex = entry.nodeIndex;
-        const LinearBVHNode4* node = &nodes4[currentNodeIndex];
+  bool using_heap() const {
+    return using_heap_;
+  }
 
-        if (node->nPrimitives > 0) {
-            // __builtin_prefetch(&primitives[node->primitivesOffset]);
+private:
+  void spill_to_heap() {
+    ASSERT(!using_heap_);
 
-            // Leaf node: test ray against primitives
-            for (int i = 0; i < node->nPrimitives; ++i) {
-                bool hitPrimitive = primitives[node->primitivesOffset + i]->HitP(r, t_min, t_max, rng);
-                if (hitPrimitive) {
-                    return(true);
-                }
-            }
-        } else {
-            // Internal node
-            const BBox4& bbox4 = node->bbox4;
-            // Perform SIMD ray-box intersection
-
-            IVec4 hits;
-            FVec4 tEnters;
-            
-            rayBBoxIntersect4(r, bbox4, t_min, t_max, hits, tEnters);//, tExits);
-
-            float tEntersArray[4];
-            simd_extract_fvec4(tEnters, tEntersArray);
-            
-            const IVec4 valid_hit = simd_and(hits, simd_not_equals_minus_one(node->childOffsets));
-            // int hitmask = simd_extract_hitmask(valid_hit);
-            for (int i = 0; i < 4; ++i) {
-                if (valid_hit[i]) {
-                    nodesToVisit.push({node->childOffsets[i], tEntersArray[i]});
-                }
-            }
-        }
-    }
-    //If we exceed the static priority size, copy all elements to a normal priority queue and continue
-    if(large_bvh) {
-         while (!nodesToVisit.empty()) {
-            nodesToVisitLarge.push(nodesToVisit.top());
-            nodesToVisit.pop();
-         }
-        while (!nodesToVisitLarge.empty()) {
-            // Pop the node with the smallest tEnter
-            BVHNodeEntry entry = nodesToVisitLarge.top();
-            nodesToVisitLarge.pop();
-            int currentNodeIndex = entry.nodeIndex;
-            const LinearBVHNode4* node = &nodes4[currentNodeIndex];
-
-            if (node->nPrimitives > 0) {
-                // Leaf node: test ray against primitives
-                for (int i = 0; i < node->nPrimitives; ++i) {
-                    bool hitPrimitive = primitives[node->primitivesOffset + i]->HitP(r, t_min, t_max, rng);
-                    if (hitPrimitive) {
-                        return(true);
-                    }
-                }
-            } else {
-                // Internal node
-                const BBox4& bbox4 = node->bbox4;
-                // Perform SIMD ray-box intersection
-
-                IVec4 hits;
-                FVec4 tEnters;
-                
-                rayBBoxIntersect4(r, bbox4, t_min, t_max, hits, tEnters);//, tExits);
-
-                const IVec4 valid_hit = simd_and(hits, simd_not_equals_minus_one(node->childOffsets));
-                int hitmask = simd_extract_hitmask(valid_hit);
-
-                float tEntersArray[4];
-                simd_extract_fvec4(tEnters, tEntersArray);
-                
-                for (int i = 0; i < 4; ++i) {
-                    const bool valid = (hitmask >> i) & 1;
-                    if (valid) {
-                        nodesToVisitLarge.push({node->childOffsets[i], tEntersArray[i]});
-                    }
-                }
-            }
-        }
+    while (!static_.empty()) {
+      heap_.push(static_.pop());
     }
 
+    using_heap_ = true;
+  }
+
+  StaticPriorityQueue<StaticCapacity> static_;
+  std::priority_queue<BVHNodeEntry> heap_;
+  bool using_heap_ = false;
+};
+
+template <typename IntersectPrimitive>
+bool traverseClosestBVH4(
+    const LinearBVHNode4* nodes4,
+    const Ray& r,
+    Float t_min,
+    Float t_max,
+    hit_record& rec,
+    IntersectPrimitive&& intersectPrimitive
+) {
+  if (!nodes4) {
     return false;
+  }
+
+  BVH4PriorityFrontier<kBVH4PriorityStaticCapacity> frontier;
+  frontier.push({0, -std::numeric_limits<float>::infinity()});
+
+  bool any_hit = false;
+
+  while (!frontier.empty()) {
+    BVHNodeEntry entry = frontier.pop();
+
+    const int currentNodeIndex = entry.nodeIndex;
+    const LinearBVHNode4* node = &nodes4[currentNodeIndex];
+
+    if (node->nPrimitives > 0) {
+      for (int i = 0; i < node->nPrimitives; ++i) {
+        hit_record tempRec;
+        const int primIndex = node->primitivesOffset + i;
+
+        if (intersectPrimitive(primIndex, t_min, t_max, tempRec)) {
+          any_hit = true;
+          rec = tempRec;
+          t_max = tempRec.t;
+        }
+      }
+
+      if (any_hit) {
+        if (frontier.empty() || frontier.top_t() > t_max) {
+          return true;
+        }
+      }
+
+      continue;
+    }
+
+    IVec4 hits;
+    FVec4 tEnters;
+
+    rayBBoxIntersect4(r, node->bbox4, t_min, t_max, hits, tEnters);
+
+    const IVec4 valid_hit =
+        simd_and(hits, simd_not_equals_minus_one(node->childOffsets));
+
+    const int hitmask = simd_extract_hitmask(valid_hit);
+    if (hitmask == 0) {
+      continue;
+    }
+
+    float tEntersArray[4];
+    simd_extract_fvec4(tEnters, tEntersArray);
+
+    for (int i = 0; i < 4; ++i) {
+      if ((hitmask >> i) & 1) {
+        frontier.push({node->childOffsets[i], tEntersArray[i]});
+      }
+    }
+  }
+
+  return any_hit;
 }
 
-bool BVHAggregate::HitP(const Ray& r, Float t_min, Float t_max, Sampler* sampler) const {
-    if (!nodes4) {
-        return false;
-    }
-    StaticPriorityQueue<TOTAL_NODES_STATIC> nodesToVisit;
-    bool large_bvh = false;
-    std::priority_queue<BVHNodeEntry> nodesToVisitLarge;
-
-    nodesToVisit.push({0, -INFINITY});
-    
-    while (!nodesToVisit.empty()) {
-        if(nodesToVisit.size() > triggerLargeBVH) {
-            large_bvh = true;
-        }
-        // Pop the node with the smallest tEnter
-        BVHNodeEntry entry = nodesToVisit.top();
-        nodesToVisit.pop();
-        int currentNodeIndex = entry.nodeIndex;
-        const LinearBVHNode4* node = &nodes4[currentNodeIndex];
-
-        if (node->nPrimitives > 0) {
-            // __builtin_prefetch(&primitives[node->primitivesOffset]);
-
-            // Leaf node: test ray against primitives
-            for (int i = 0; i < node->nPrimitives; ++i) {
-                bool hitPrimitive = primitives[node->primitivesOffset + i]->HitP(r, t_min, t_max, sampler);
-                if (hitPrimitive) {
-                    return(true);
-                }
-            }
-        } else {
-            // Internal node
-            const BBox4& bbox4 = node->bbox4;
-            // Perform SIMD ray-box intersection
-
-            IVec4 hits;
-            FVec4 tEnters;
-            
-            rayBBoxIntersect4(r, bbox4, t_min, t_max, hits, tEnters);//, tExits);
-
-            float tEntersArray[4];
-            simd_extract_fvec4(tEnters, tEntersArray);
-            
-            const IVec4 valid_hit = simd_and(hits, simd_not_equals_minus_one(node->childOffsets));
-            // int hitmask = simd_extract_hitmask(valid_hit);
-            for (int i = 0; i < 4; ++i) {
-                if (valid_hit[i]) {
-                    nodesToVisit.push({node->childOffsets[i], tEntersArray[i]});
-                }
-            }
-        }
-    }
-    //If we exceed the static priority size, copy all elements to a normal priority queue and continue
-    if(large_bvh) {
-         while (!nodesToVisit.empty()) {
-            nodesToVisitLarge.push(nodesToVisit.top());
-            nodesToVisit.pop();
-         }
-        while (!nodesToVisitLarge.empty()) {
-            // Pop the node with the smallest tEnter
-            BVHNodeEntry entry = nodesToVisitLarge.top();
-            nodesToVisitLarge.pop();
-            int currentNodeIndex = entry.nodeIndex;
-            const LinearBVHNode4* node = &nodes4[currentNodeIndex];
-
-            if (node->nPrimitives > 0) {
-                // Leaf node: test ray against primitives
-                for (int i = 0; i < node->nPrimitives; ++i) {
-                    bool hitPrimitive = primitives[node->primitivesOffset + i]->HitP(r, t_min, t_max, sampler);
-                    if (hitPrimitive) {
-                        return(true);
-                    }
-                }
-            } else {
-                // Internal node
-                const BBox4& bbox4 = node->bbox4;
-                // Perform SIMD ray-box intersection
-
-                IVec4 hits;
-                FVec4 tEnters;
-                
-                rayBBoxIntersect4(r, bbox4, t_min, t_max, hits, tEnters);//, tExits);
-
-                const IVec4 valid_hit = simd_and(hits, simd_not_equals_minus_one(node->childOffsets));
-                int hitmask = simd_extract_hitmask(valid_hit);
-
-                float tEntersArray[4];
-                simd_extract_fvec4(tEnters, tEntersArray);
-                
-                for (int i = 0; i < 4; ++i) {
-                    const bool valid = (hitmask >> i) & 1;
-                    if (valid) {
-                        nodesToVisitLarge.push({node->childOffsets[i], tEntersArray[i]});
-                    }
-                }
-            }
-        }
-    }
-
+template <typename HitPrimitive>
+bool traverseAnyPriorityBVH4(
+    const LinearBVHNode4* nodes4,
+    const Ray& r,
+    Float t_min,
+    Float t_max,
+    HitPrimitive&& hitPrimitive
+) {
+  // Keep any-hit traversal closest-first. Some primitive HitP paths can call
+  // stochastic hit logic for alpha/transparency, so changing traversal order
+  // would also change RNG/sampler consumption and rendered results.
+  if (!nodes4) {
     return false;
+  }
+
+  BVH4PriorityFrontier<kBVH4PriorityStaticCapacity> frontier;
+  frontier.push({0, -std::numeric_limits<float>::infinity()});
+
+  while (!frontier.empty()) {
+    BVHNodeEntry entry = frontier.pop();
+    const LinearBVHNode4* node = &nodes4[entry.nodeIndex];
+
+    if (node->nPrimitives > 0) {
+      for (int i = 0; i < node->nPrimitives; ++i) {
+        const int primIndex = node->primitivesOffset + i;
+
+        if (hitPrimitive(primIndex, t_min, t_max)) {
+          return true;
+        }
+      }
+
+      continue;
+    }
+
+    IVec4 hits;
+    FVec4 tEnters;
+
+    rayBBoxIntersect4(r, node->bbox4, t_min, t_max, hits, tEnters);
+
+    const IVec4 valid_hit =
+        simd_and(hits, simd_not_equals_minus_one(node->childOffsets));
+
+    const int hitmask = simd_extract_hitmask(valid_hit);
+    if (hitmask == 0) {
+      continue;
+    }
+
+    float tEntersArray[4];
+    simd_extract_fvec4(tEnters, tEntersArray);
+
+    for (int i = 0; i < 4; ++i) {
+      if ((hitmask >> i) & 1) {
+        frontier.push({node->childOffsets[i], tEntersArray[i]});
+      }
+    }
+  }
+
+  return false;
+}
+
+} // namespace
+
+const bool BVHAggregate::hit(
+    const Ray& r,
+    Float t_min,
+    Float t_max,
+    hit_record& rec,
+    random_gen& rng
+) const {
+  return traverseClosestBVH4(
+      nodes4.get(),
+      r,
+      t_min,
+      t_max,
+      rec,
+      [&](int primIndex, Float local_t_min, Float local_t_max,
+          hit_record& tempRec) {
+        return primitives[primIndex]->hit(
+            r, local_t_min, local_t_max, tempRec, rng
+        );
+      }
+  );
+}
+
+const bool BVHAggregate::hit(
+    const Ray& r,
+    Float t_min,
+    Float t_max,
+    hit_record& rec,
+    Sampler* sampler
+) const {
+  return traverseClosestBVH4(
+      nodes4.get(),
+      r,
+      t_min,
+      t_max,
+      rec,
+      [&](int primIndex, Float local_t_min, Float local_t_max,
+          hit_record& tempRec) {
+        return primitives[primIndex]->hit(
+            r, local_t_min, local_t_max, tempRec, sampler
+        );
+      }
+  );
+}
+
+bool BVHAggregate::HitP(
+    const Ray& r,
+    Float t_min,
+    Float t_max,
+    random_gen& rng
+) const {
+  return traverseAnyPriorityBVH4(
+      nodes4.get(),
+      r,
+      t_min,
+      t_max,
+      [&](int primIndex, Float local_t_min, Float local_t_max) {
+        return primitives[primIndex]->HitP(
+            r, local_t_min, local_t_max, rng
+        );
+      }
+  );
+}
+
+bool BVHAggregate::HitP(
+    const Ray& r,
+    Float t_min,
+    Float t_max,
+    Sampler* sampler
+) const {
+  return traverseAnyPriorityBVH4(
+      nodes4.get(),
+      r,
+      t_min,
+      t_max,
+      [&](int primIndex, Float local_t_min, Float local_t_max) {
+        return primitives[primIndex]->HitP(
+            r, local_t_min, local_t_max, sampler
+        );
+      }
+  );
 }
 #endif
 
 Float BVHAggregate::pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Float time) {
+  if (primitives.empty()) {
+    return 0;
+  }
   Float weight = 1.0 / primitives.size();
   Float sum = 0;
   for (const auto& object : primitives) {
@@ -867,6 +794,9 @@ Float BVHAggregate::pdf_value(const point3f& o, const vec3f& v, random_gen& rng,
 }
 
 Float BVHAggregate::pdf_value(const point3f& o, const vec3f& v, Sampler* sampler, Float time) {
+  if (primitives.empty()) {
+    return 0;
+  }
   Float weight = 1.0 / primitives.size();
   Float sum = 0;
   for (const auto& object : primitives) {
@@ -876,11 +806,17 @@ Float BVHAggregate::pdf_value(const point3f& o, const vec3f& v, Sampler* sampler
 }
 
 vec3f BVHAggregate::random(const point3f& o, random_gen& rng, Float time) {
+  if (primitives.empty()) {
+    return vec3f(0, 0, 0);
+  }
   int index = int(rng.unif_rand() * primitives.size() * 0.99999999);
   return(primitives[index]->random(o, rng, time));
 }
 
 vec3f BVHAggregate::random(const point3f& o, Sampler* sampler, Float time) {
+  if (primitives.empty()) {
+    return vec3f(0, 0, 0);
+  }
   int index = int(sampler->Get1D() * primitives.size() * 0.99999999);
   return(primitives[index]->random(o, sampler, time));
 }
@@ -894,9 +830,6 @@ BVHBuildNode4* BVHAggregate::ConvertBVH2ToBVH4(BVHBuildNode* node, int* totalNod
     if (node->nPrimitives == 0 && node->children[0] == nullptr && node->children[1] == nullptr) {
         return nullptr;
     }
-
-    // Increment the total node count for BVH4
-    (*totalNodes4)++;
 
     BVHBuildNode4* newNode = new BVHBuildNode4();
     newNode->bounds = node->bounds;
@@ -947,6 +880,8 @@ BVHBuildNode4* BVHAggregate::ConvertBVH2ToBVH4(BVHBuildNode* node, int* totalNod
             delete newNode;
             return nullptr;
         }
+        // Increment the total node count for BVH4
+        (*totalNodes4)++;
 
         // Initialize the BVH4 node
         for (int i = 0; i < nChildren; ++i) {
@@ -993,6 +928,10 @@ int BVHAggregate::flattenBVH4(BVHBuildNode4* node, int* offset) {
         for (int i = 0; i < 4; ++i) {
             linearNode->childOffsets[i] = -1;
         }
+        ASSERT(!node->children[0] && !node->children[1]);
+        ASSERT(node->nPrimitives > 0);
+        // ASSERT(node->primitivesOffset >= 0);
+        // ASSERT(node->primitivesOffset + node->nPrimitives <= primitives.size());
         // Leaf nodes don't need bbox4; initialize to zero or leave as is
     } else {
         // Interior node
@@ -1012,6 +951,15 @@ int BVHAggregate::flattenBVH4(BVHBuildNode4* node, int* offset) {
 
         // Pack the child bounding boxes into bbox4
         linearNode->bbox4 = BBox4(childBoxes[0], childBoxes[1], childBoxes[2], childBoxes[3]);
+        // ASSERT(node->nPrimitives == 0);
+        // ASSERT(node->nChildren >= 1 && node->nChildren <= 4);
+        // for (int i = 0; i < 4; ++i) {
+        //   if (i < node->nChildren) {
+        //     ASSERT(node->childOffsets[i] >= 0);
+        //   } else {
+        //     ASSERT(node->childOffsets[i] == -1);
+        //   }
+        // }
     }
     return nodeOffset;
 }
@@ -1058,6 +1006,14 @@ void BVHAggregate::validateBVH4() const {
             }
             if (node->primitivesOffset + node->nPrimitives > primitives.size()) {
                 throw std::runtime_error("Invalid leaf node at index " + std::to_string(current.nodeIndex) + ": primitivesOffset + nPrimitives exceeds primitives.size()");
+            }
+            for (int i = 0; i < 4; ++i) {
+              if (node->childOffsets[i] != -1) {
+                throw std::runtime_error("Invalid leaf node at index " +
+                                         std::to_string(current.nodeIndex) +
+                                         ": childOffset[" + std::to_string(i) +
+                                         "] != -1");
+              }
             }
         } else {
             // Interior node validation

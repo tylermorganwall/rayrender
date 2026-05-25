@@ -762,7 +762,7 @@ inline void simd_extract_fvec4(FVec4 src, float* dest) {
 #ifdef HAS_NEON
     vst1q_f32(dest, src.v); // Store NEON float32x4 to array
 #elif defined(HAS_SSE)
-    _mm_store_ps(dest, src.v); // Store SSE __m128 to array
+    _mm_storeu_ps(dest, src.v); // Store SSE __m128 to array
 #else
     // Fallback for non-SIMD
     for (int i = 0; i < 4; ++i) {
