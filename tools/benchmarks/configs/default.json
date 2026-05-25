@@ -1,0 +1,20 @@
+{
+  "build_configs": [
+    {
+      "name": "default",
+      "env": {},
+      "makevars": {}
+    }
+  ],
+  "benchmark_defaults": {
+    "width": 50,
+    "height": 50,
+    "samples": 32,
+    "seed": 1,
+    "threads": 1,
+    "time_build": false,
+    "write_artifact": false,
+    "sphere_count": 1000,
+    "object_count": 1000
+  }
+}
