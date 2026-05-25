@@ -37,3 +37,6 @@
 ^LICENSE\.md$
 ^cache$
 ^AGENTS\.md$
+^AGENT\.md$
+^\.codex:
+^tools/benchmarks/results/\.gitkeep$
