@@ -66,6 +66,14 @@ struct BVHBuildNode {
 };
 
 struct BVHBuildNode4 {
+    BVHBuildNode4()
+        : bounds(),
+          children{nullptr, nullptr, nullptr, nullptr},
+          nChildren(0),
+          splitAxis(0),
+          firstPrimOffset(-1),
+          nPrimitives(0) {}
+
     ~BVHBuildNode4() {
         for(int i = 0; i < 4; i++) {
             if(children[i]) {

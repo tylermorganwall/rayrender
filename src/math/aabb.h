@@ -8,6 +8,7 @@
 #include "../math/sampler.h"
 #include "../math/simd.h"
 #include <algorithm>
+#include <cstdint>
 
 class aabb {
   public: 
@@ -154,59 +155,79 @@ inline std::ostream& operator<<(std::ostream &os, const aabb &t) {
   return os;
 }
 
-// inline void rayBBoxIntersect4(const ray& ray,
-//                        const BBox4& bbox4,
-//                        Float tMin,
-//                        Float tMax,
-//                        IVec4& hits,
-//                        FVec4& tEnters);
-//                        //FVec4& tExits);
 #ifdef RAYSIMD
-inline void rayBBoxIntersect4(const Ray& r,
+struct RayBBox4 {
+    FVec4 origin4[3];
+    FVec4 inv_dir_pad4[3];
+    uint8_t inv_dir_is_neg[3];
+
+    explicit RayBBox4(const Ray& r) {
+      origin4[0] = simd_set1(static_cast<float>(r.o.e[0]));
+      origin4[1] = simd_set1(static_cast<float>(r.o.e[1]));
+      origin4[2] = simd_set1(static_cast<float>(r.o.e[2]));
+
+      inv_dir_pad4[0] = simd_set1(static_cast<float>(r.inv_dir_pad.e[0]));
+      inv_dir_pad4[1] = simd_set1(static_cast<float>(r.inv_dir_pad.e[1]));
+      inv_dir_pad4[2] = simd_set1(static_cast<float>(r.inv_dir_pad.e[2]));
+
+      inv_dir_is_neg[0] = r.inv_dir_is_neg[0];
+      inv_dir_is_neg[1] = r.inv_dir_is_neg[1];
+      inv_dir_is_neg[2] = r.inv_dir_is_neg[2];
+    }
+};
+
+inline void rayBBoxIntersect4(const RayBBox4& rbox,
                        const BBox4& bbox4,
                        Float tMin,
                        Float tMax,
                        IVec4& hits,
                        FVec4& tEnters) {
-                       //FVec4& tExits) {
-    FVec4 bboxMinX = bbox4.getMinX();
-    FVec4 bboxMaxX = bbox4.getMaxX();
-    FVec4 bboxMinY = bbox4.getMinY();
-    FVec4 bboxMaxY = bbox4.getMaxY();
-    FVec4 bboxMinZ = bbox4.getMinZ();
-    FVec4 bboxMaxZ = bbox4.getMaxZ();
-    FVec4 origin0 = r.origin4[0];
-    FVec4 origin1 = r.origin4[1];
-    FVec4 origin2 = r.origin4[2];
-    FVec4 inv_pad0 = r.inv_dir_pad4[0];
-    FVec4 inv_pad1 = r.inv_dir_pad4[1];
-    FVec4 inv_pad2 = r.inv_dir_pad4[2];
+    const FVec4 origin0 = rbox.origin4[0];
+    const FVec4 origin1 = rbox.origin4[1];
+    const FVec4 origin2 = rbox.origin4[2];
 
-    // For X axis
-    FVec4 t0x = simd_mul(simd_sub(bboxMinX, origin0), inv_pad0);
-    FVec4 t1x = simd_mul(simd_sub(bboxMaxX, origin0), inv_pad0);
+    const FVec4 inv_pad0 = rbox.inv_dir_pad4[0];
+    const FVec4 inv_pad1 = rbox.inv_dir_pad4[1];
+    const FVec4 inv_pad2 = rbox.inv_dir_pad4[2];
 
-    // For Y axis
-    FVec4 t0y = simd_mul(simd_sub(bboxMinY, origin1), inv_pad1);
-    FVec4 t1y = simd_mul(simd_sub(bboxMaxY, origin1), inv_pad1);
+    const FVec4 nearX =
+        rbox.inv_dir_is_neg[0] ? bbox4.getMaxX() : bbox4.getMinX();
+    const FVec4 farX =
+        rbox.inv_dir_is_neg[0] ? bbox4.getMinX() : bbox4.getMaxX();
 
-    // For Z axis
-    FVec4 t0z = simd_mul(simd_sub(bboxMinZ, origin2), inv_pad2);
-    FVec4 t1z = simd_mul(simd_sub(bboxMaxZ, origin2), inv_pad2);
+    const FVec4 nearY =
+        rbox.inv_dir_is_neg[1] ? bbox4.getMaxY() : bbox4.getMinY();
+    const FVec4 farY =
+        rbox.inv_dir_is_neg[1] ? bbox4.getMinY() : bbox4.getMaxY();
 
-    // Compute tEnter and tExit
-    tEnters = simd_max(simd_max(simd_min(t0x, t1x), simd_min(t0y, t1y)), simd_min(t0z, t1z));
-    FVec4 tExits  = simd_min(simd_min(simd_max(t0x, t1x), simd_max(t0y, t1y)), simd_max(t0z, t1z));
+    const FVec4 nearZ =
+        rbox.inv_dir_is_neg[2] ? bbox4.getMaxZ() : bbox4.getMinZ();
+    const FVec4 farZ =
+        rbox.inv_dir_is_neg[2] ? bbox4.getMinZ() : bbox4.getMaxZ();
 
-    // Compute hit mask
-    FVec4 tmp_max = simd_max(tEnters, simd_set1(tMin));
-    FVec4 tmp_min = simd_min(tExits,  simd_set1(tMax));
+    const FVec4 txNear = simd_mul(simd_sub(nearX, origin0), inv_pad0);
+    const FVec4 txFar  = simd_mul(simd_sub(farX,  origin0), inv_pad0);
 
-    SimdMask hitMask = simd_less_equal(tmp_max,tmp_min);
+    const FVec4 tyNear = simd_mul(simd_sub(nearY, origin1), inv_pad1);
+    const FVec4 tyFar  = simd_mul(simd_sub(farY,  origin1), inv_pad1);
 
-    hits = simd_cast_to_int(hitMask);
-    // int hits = simd_extract_hitmask(simd_cast_to_int(hitMask));
-    // return(hits);
+    const FVec4 tzNear = simd_mul(simd_sub(nearZ, origin2), inv_pad2);
+    const FVec4 tzFar  = simd_mul(simd_sub(farZ,  origin2), inv_pad2);
+
+    const FVec4 tMin4 = simd_set1(static_cast<float>(tMin));
+    const FVec4 tMax4 = simd_set1(static_cast<float>(tMax));
+
+    tEnters = simd_max(
+        simd_max(simd_max(txNear, tyNear), tzNear),
+        tMin4
+    );
+
+    const FVec4 tExits = simd_min(
+        simd_min(simd_min(txFar, tyFar), tzFar),
+        tMax4
+    );
+
+    hits = simd_cast_to_int(simd_less_equal(tEnters, tExits));
 }
 #endif
 

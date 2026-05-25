@@ -7,6 +7,8 @@
 #include <vector>
 #include "../math/mathinline.h"
 #include "../math/simd.h"
+#include <cmath>
+#include <cstdint>
 
 class dielectric;
 
@@ -26,7 +28,18 @@ inline Float add_ulp_magnitude(Float f, int ulps) {
 
 class Ray {
   public: 
-    Ray() {}
+    Ray()
+        : o(0),
+          d(0),
+          inv_dir_pad(0),
+          inv_dir_is_neg{0, 0, 0},
+          Svec(0),
+          _time(0),
+          kx(0),
+          ky(1),
+          kz(2),
+          tMax(Infinity),
+          pri_stack(nullptr) {}
     Ray(const point3f& a, const vec3f& b, 
         Float ti = 0.0, Float tmax = Infinity) {
       o = a;
@@ -37,6 +50,9 @@ class Ray {
       inv_dir_pad.e[0] = add_ulp_magnitude(inv_dir.xyz.x, 2);
       inv_dir_pad.e[1] = add_ulp_magnitude(inv_dir.xyz.y, 2);
       inv_dir_pad.e[2] = add_ulp_magnitude(inv_dir.xyz.z, 2);
+      inv_dir_is_neg[0] = std::signbit(inv_dir_pad.e[0]) ? 1 : 0;
+      inv_dir_is_neg[1] = std::signbit(inv_dir_pad.e[1]) ? 1 : 0;
+      inv_dir_is_neg[2] = std::signbit(inv_dir_pad.e[2]) ? 1 : 0;
       kz = MaxDimension(Abs(d));
       kx = kz + 1;
       if (kx == 3) kx = 0;
@@ -48,17 +64,6 @@ class Ray {
       Float Sz = 1.f / dPermuted.xyz.z;
       Svec = vec3f(Sx, Sy, Sz);
       pri_stack = nullptr;
-#ifdef RAYSIMD
-      origin4[0] = simd_set1(a.xyz.x);
-      origin4[1] = simd_set1(a.xyz.y);
-      origin4[2] = simd_set1(a.xyz.z);
-      inv_dir_pad4[0] = simd_set1(inv_dir_pad.xyz.x);
-      inv_dir_pad4[1] = simd_set1(inv_dir_pad.xyz.y);
-      inv_dir_pad4[2] = simd_set1(inv_dir_pad.xyz.z);
-      maskPos4[0] = simd_cmpge(inv_dir_pad4[0], simd_set1(0.0f));
-      maskPos4[1] = simd_cmpge(inv_dir_pad4[1], simd_set1(0.0f));
-      maskPos4[2] = simd_cmpge(inv_dir_pad4[2], simd_set1(0.0f));
-#endif
     }
     Ray(const point3f& a, const vec3f& b,  std::vector<dielectric* > *priority2, 
         Float ti = 0.0, Float tmax = Infinity) {
@@ -70,6 +75,9 @@ class Ray {
       inv_dir_pad.e[0] = add_ulp_magnitude(inv_dir.xyz.x, 2);
       inv_dir_pad.e[1] = add_ulp_magnitude(inv_dir.xyz.y, 2);
       inv_dir_pad.e[2] = add_ulp_magnitude(inv_dir.xyz.z, 2);
+      inv_dir_is_neg[0] = std::signbit(inv_dir_pad.e[0]) ? 1 : 0;
+      inv_dir_is_neg[1] = std::signbit(inv_dir_pad.e[1]) ? 1 : 0;
+      inv_dir_is_neg[2] = std::signbit(inv_dir_pad.e[2]) ? 1 : 0;
       pri_stack = priority2;
       kz = MaxDimension(Abs(d));
       kx = kz + 1;
@@ -81,17 +89,6 @@ class Ray {
       Float Sy = -dPermuted.xyz.y / dPermuted.xyz.z;
       Float Sz = 1.f / dPermuted.xyz.z;
       Svec = vec3f(Sx, Sy, Sz);
-#ifdef RAYSIMD
-      origin4[0] = simd_set1(a.xyz.x);
-      origin4[1] = simd_set1(a.xyz.y);
-      origin4[2] = simd_set1(a.xyz.z);
-      inv_dir_pad4[0] = simd_set1(inv_dir_pad.xyz.x);
-      inv_dir_pad4[1] = simd_set1(inv_dir_pad.xyz.y);
-      inv_dir_pad4[2] = simd_set1(inv_dir_pad.xyz.z);
-      maskPos4[0] = simd_cmpge(inv_dir_pad4[0], simd_set1(0.0f));
-      maskPos4[1] = simd_cmpge(inv_dir_pad4[1], simd_set1(0.0f));
-      maskPos4[2] = simd_cmpge(inv_dir_pad4[2], simd_set1(0.0f));
-#endif
     }
     point3f operator()(Float t) const { return o + d * t; }
     
@@ -104,11 +101,7 @@ class Ray {
     point3f o;
     vec3f d;
     vec3f inv_dir_pad;
-  #ifdef RAYSIMD
-    FVec4 origin4[3];
-    FVec4 inv_dir_pad4[3];
-    SimdMask maskPos4[3];
-  #endif
+    uint8_t inv_dir_is_neg[3];
 
     // int sign[3];
     vec3f Svec;

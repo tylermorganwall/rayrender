@@ -1,6 +1,7 @@
 #include "../math/aabb.h"
 #include "../utils/raylog.h"
 #include "../math/simd.h"
+#include <cmath>
 
 const Float aabb::surface_area() const {
   point3f diag = Diag();
@@ -16,36 +17,51 @@ const Float aabb::Volume() const {
          10E20);
 }
 
-static inline bool hit_aabb_impl(const aabb &box, const Ray &r, Float tmin,
-                                 Float tmax) {
-  for (int axis = 0; axis < 3; ++axis) {
-    const Float invD = r.inv_dir_pad.e[axis];
-    Float t0 = (box.bounds[0].e[axis] - r.o.e[axis]) * invD;
-    Float t1 = (box.bounds[1].e[axis] - r.o.e[axis]) * invD;
+namespace {
 
-    if (invD < 0.0) {
-      std::swap(t0, t1);
-    }
+inline bool hit_aabb_branchless(const aabb &box, const Ray &r, Float tmin,
+                                Float tmax) {
+  const int sx = r.inv_dir_is_neg[0] ? 1 : 0;
+  const int sy = r.inv_dir_is_neg[1] ? 1 : 0;
+  const int sz = r.inv_dir_is_neg[2] ? 1 : 0;
 
-    tmin = ffmax(tmin, t0);
-    tmax = ffmin(tmax, t1);
+  const Float txNear =
+      (box.bounds[sx].e[0] - r.o.e[0]) * r.inv_dir_pad.e[0];
+  const Float txFar =
+      (box.bounds[1 - sx].e[0] - r.o.e[0]) * r.inv_dir_pad.e[0];
 
-    if (tmax < tmin) {
-      return false;
-    }
-  }
+  const Float tyNear =
+      (box.bounds[sy].e[1] - r.o.e[1]) * r.inv_dir_pad.e[1];
+  const Float tyFar =
+      (box.bounds[1 - sy].e[1] - r.o.e[1]) * r.inv_dir_pad.e[1];
 
-  return true;
+  const Float tzNear =
+      (box.bounds[sz].e[2] - r.o.e[2]) * r.inv_dir_pad.e[2];
+  const Float tzFar =
+      (box.bounds[1 - sz].e[2] - r.o.e[2]) * r.inv_dir_pad.e[2];
+
+  tmin = std::fmax(tmin, txNear);
+  tmax = std::fmin(tmax, txFar);
+
+  tmin = std::fmax(tmin, tyNear);
+  tmax = std::fmin(tmax, tyFar);
+
+  tmin = std::fmax(tmin, tzNear);
+  tmax = std::fmin(tmax, tzFar);
+
+  return tmin <= tmax;
 }
+
+} // namespace
 
 const bool aabb::hit(const Ray &r, Float tmin, Float tmax,
                      random_gen &rng) const {
-  return hit_aabb_impl(*this, r, tmin, tmax);
+  return hit_aabb_branchless(*this, r, tmin, tmax);
 }
 
 const bool aabb::hit(const Ray &r, Float tmin, Float tmax,
                      Sampler *sampler) const {
-  return hit_aabb_impl(*this, r, tmin, tmax);
+  return hit_aabb_branchless(*this, r, tmin, tmax);
 }
 
 const point3f aabb::offset(const point3f p) const {
@@ -111,163 +127,10 @@ int aabb::MaxDimension() const {
       return 2;
 }
 
-
-
-// void rayBBoxIntersect4(const ray& ray,
-//                        const BBox4& bbox4,
-//                        Float tMin,
-//                        Float tMax,
-//                        IVec4& hits,
-//                        FVec4& tMins,
-//                        FVec4& tMaxs) {
-//     // SCOPED_CONTEXT("Hit");
-//     // SCOPED_TIMER_COUNTER("BBox4");
-//     // Prepare ray data
-//     FVec4 rayOriginX = simd_set1(ray.origin().xyz.x);
-//     FVec4 rayOriginY = simd_set1(ray.origin().xyz.y);
-//     FVec4 rayOriginZ = simd_set1(ray.origin().xyz.z);
-//     FVec4 rayInvDirX = simd_set1(ray.inv_dir_pad.xyz.x);
-//     FVec4 rayInvDirY = simd_set1(ray.inv_dir_pad.xyz.y);
-//     FVec4 rayInvDirZ = simd_set1(ray.inv_dir_pad.xyz.z);
-
-//     // Determine near and far indices based on ray direction signs
-//     int ixNear = ray.sign[0] ? 3 : 0;
-//     int iyNear = ray.sign[1] ? 4 : 1;
-//     int izNear = ray.sign[2] ? 5 : 2;
-//     int ixFar = ray.sign[0] ? 0 : 3;
-//     int iyFar = ray.sign[1] ? 1 : 4;
-//     int izFar = ray.sign[2] ? 2 : 5;
-
-//     // Compute t values for slabs
-//     FVec4 t0x = simd_mul(simd_sub(bbox4.corners[ixNear], rayOriginX), rayInvDirX);
-//     FVec4 t1x = simd_mul(simd_sub(bbox4.corners[ixFar], rayOriginX), rayInvDirX);
-
-//     FVec4 t0y = simd_mul(simd_sub(bbox4.corners[iyNear], rayOriginY), rayInvDirY);
-//     FVec4 t1y = simd_mul(simd_sub(bbox4.corners[iyFar], rayOriginY), rayInvDirY);
-
-//     FVec4 t0z = simd_mul(simd_sub(bbox4.corners[izNear], rayOriginZ), rayInvDirZ);
-//     FVec4 t1z = simd_mul(simd_sub(bbox4.corners[izFar], rayOriginZ), rayInvDirZ);
-
-//     // Compute tEnter and tExit
-//     FVec4 tEnter = simd_max(simd_max(t0x, t0y), t0z);
-//     FVec4 tExit = simd_min(simd_min(t1x, t1y), t1z);
-
-//     // Clamp tEnter and tExit with tMin and tMax
-//     tMins = simd_max(tEnter, simd_set1(tMin));
-//     tMaxs = simd_min(tExit, simd_set1(tMax));
-
-//     // Compute hit mask
-//     SimdMask hitMask = simd_less_equal(tMins, tMaxs);
-//     hits = simd_cast_to_int(hitMask);
-// }
-
-// inline void rayBBoxIntersect4(const ray& r,
-//                        const BBox4& bbox4,
-//                        Float tMin,
-//                        Float tMax,
-//                        IVec4& hits,
-//                        FVec4& tEnters) {
-//                        //FVec4& tExits) {
-//     FVec4 bboxMinX = bbox4.getMinX();
-//     FVec4 bboxMaxX = bbox4.getMaxX();
-//     FVec4 bboxMinY = bbox4.getMinY();
-//     FVec4 bboxMaxY = bbox4.getMaxY();
-//     FVec4 bboxMinZ = bbox4.getMinZ();
-//     FVec4 bboxMaxZ = bbox4.getMaxZ();
-//     FVec4 origin0 = r.origin4[0];
-//     FVec4 origin1 = r.origin4[1];
-//     FVec4 origin2 = r.origin4[2];
-//     FVec4 inv_pad0 = r.inv_dir_pad4[0];
-//     FVec4 inv_pad1 = r.inv_dir_pad4[1];
-//     FVec4 inv_pad2 = r.inv_dir_pad4[2];
-
-//     // For X axis
-//     FVec4 t0x = simd_mul(simd_sub(bboxMinX, origin0), inv_pad0);
-//     FVec4 t1x = simd_mul(simd_sub(bboxMaxX, origin0), inv_pad0);
-
-//     // For Y axis
-//     FVec4 t0y = simd_mul(simd_sub(bboxMinY, origin1), inv_pad1);
-//     FVec4 t1y = simd_mul(simd_sub(bboxMaxY, origin1), inv_pad1);
-
-//     // For Z axis
-//     FVec4 t0z = simd_mul(simd_sub(bboxMinZ, origin2), inv_pad2);
-//     FVec4 t1z = simd_mul(simd_sub(bboxMaxZ, origin2), inv_pad2);
-
-//     // Compute tEnter and tExit
-//     tEnters = simd_max(simd_max(simd_min(t0x, t1x), simd_min(t0y, t1y)), simd_min(t0z, t1z));
-//     FVec4 tExits  = simd_min(simd_min(simd_max(t0x, t1x), simd_max(t0y, t1y)), simd_max(t0z, t1z));
-
-//     // Compute hit mask
-//     FVec4 tmp_max = simd_max(tEnters, simd_set1(tMin));
-//     FVec4 tmp_min = simd_min(tExits,  simd_set1(tMax));
-
-//     SimdMask hitMask = simd_less_equal(tmp_max,tmp_min);
-
-//     hits = simd_cast_to_int(hitMask);
-//     // int hits = simd_extract_hitmask(simd_cast_to_int(hitMask));
-//     // return(hits);
-// }
-
 void rayBBoxIntersect4Serial(const Ray& r,
                        const BBox4& bbox4,
                        Float tMin,
                        Float tMax,
                        IVec4& hits,
                        FVec4& tEnters) {
-    // FVec4 bboxMinX = bbox4.getMinX();
-    // FVec4 bboxMaxX = bbox4.getMaxX();
-    // FVec4 bboxMinY = bbox4.getMinY();
-    // FVec4 bboxMaxY = bbox4.getMaxY();
-    // FVec4 bboxMinZ = bbox4.getMinZ();
-    // FVec4 bboxMaxZ = bbox4.getMaxZ();
-    
-    // // Prepare ray data
-    // Float rayOriginX = r.origin().xyz.x;
-    // Float rayOriginY = r.origin().xyz.y;
-    // Float rayOriginZ = r.origin().xyz.z;
-    // Float rayInvDirX = r.inv_dir_pad.xyz.x;
-    // Float rayInvDirY = r.inv_dir_pad.xyz.y;
-    // Float rayInvDirZ = r.inv_dir_pad.xyz.z;
-    // // Loop over each bounding box (up to 4)
-    // for (int i = 0; i < 4; ++i) {
-    //     // Extract min and max coordinates for the i-th bounding box
-    //     Float minX = bboxMinX[i]; // bbox4.corners[0]: minX
-    //     Float minY = bboxMinY[i]; // bbox4.corners[1]: minY
-    //     Float minZ = bboxMinZ[i]; // bbox4.corners[2]: minZ
-    //     Float maxX = bboxMaxX[i]; // bbox4.corners[3]: maxX
-    //     Float maxY = bboxMaxY[i]; // bbox4.corners[4]: maxY
-    //     Float maxZ = bboxMaxZ[i]; // bbox4.corners[5]: maxZ
-
-    //     // Determine near and far coordinates based on ray direction signs
-    //     Float bboxNearX = r.sign[0] ? maxX : minX;
-    //     Float bboxFarX  = r.sign[0] ? minX : maxX;
-    //     Float bboxNearY = r.sign[1] ? maxY : minY;
-    //     Float bboxFarY  = r.sign[1] ? minY : maxY;
-    //     Float bboxNearZ = r.sign[2] ? maxZ : minZ;
-    //     Float bboxFarZ  = r.sign[2] ? minZ : maxZ;
-
-    //     // Compute t values for slabs
-    //     Float t0x = (bboxNearX - rayOriginX) * rayInvDirX;
-    //     Float t1x = (bboxFarX  - rayOriginX) * rayInvDirX;
-
-    //     Float t0y = (bboxNearY - rayOriginY) * rayInvDirY;
-    //     Float t1y = (bboxFarY  - rayOriginY) * rayInvDirY;
-
-    //     Float t0z = (bboxNearZ - rayOriginZ) * rayInvDirZ;
-    //     Float t1z = (bboxFarZ  - rayOriginZ) * rayInvDirZ;
-
-    //     // Compute tEnter and tExit
-    //     Float tEnter = ffmax(ffmax(t0x, t0y), t0z);
-    //     Float tExit  = ffmin(ffmin(t1x, t1y), t1z);
-
-    //     // Clamp tEnter and tExit with tMin and tMax
-    //     Float tMin_i = ffmax(tEnter, tMin);
-    //     Float tMax_i = ffmin(tExit, tMax);
-
-    //     // Store tMins and tMaxs
-    //     tEnters[i] = tMin_i;
-
-    //     // Compute hit mask
-    //     hits[i] = (tMin_i <= tMax_i) ? -1 : 0; // -1 indicates a hit (all bits set in integer)
-    // }
 }

@@ -130,6 +130,12 @@ BVHAggregate::BVHAggregate(std::vector<std::shared_ptr<hitable> > prims,
 #else
     totalNodes4 = 0;
     BVHBuildNode4* rootBVH4 = ConvertBVH2ToBVH4(root, &totalNodes4);
+    if (rootBVH4 == nullptr) {
+        delete root;
+        nodes4.reset();
+        totalNodes4 = 0;
+        return;
+    }
     nodes4.reset(new LinearBVHNode4[totalNodes4]);
     delete root;
     int offset4 = 0;
@@ -186,6 +192,12 @@ BVHAggregate::BVHAggregate(std::vector<std::shared_ptr<hitable> > prims,
 #else
     totalNodes4 = 0;
     BVHBuildNode4* rootBVH4 = ConvertBVH2ToBVH4(root, &totalNodes4);
+    if (rootBVH4 == nullptr) {
+        delete root;
+        nodes4.reset();
+        totalNodes4 = 0;
+        return;
+    }
     delete root;
     nodes4.reset(new LinearBVHNode4[totalNodes4]);
     int offset4 = 0;
@@ -388,12 +400,8 @@ int BVHAggregate::flattenBVH(BVHBuildNode *node, int *offset) {
 
 #ifndef RAYSIMD
 namespace {
-inline bool rayDirIsNeg(const Ray& r, int axis) {
-    switch (axis) {
-        case 0: return r.d.xyz.x < 0.f;
-        case 1: return r.d.xyz.y < 0.f;
-        default: return r.d.xyz.z < 0.f;
-    }
+inline bool rayInvDirIsNeg(const Ray& r, int axis) {
+    return r.inv_dir_is_neg[axis] != 0;
 }
 } // namespace
 
@@ -431,7 +439,7 @@ const bool BVHAggregate::hit(const Ray& r, Float t_min, Float t_max, hit_record&
                 currentNodeIndex = nodesToVisit[--toVisitOffset];
             } else {
                 // Put far BVH node on _nodesToVisit_ stack, advance to near node
-                if (rayDirIsNeg(r, node->axis)) {
+                if (rayInvDirIsNeg(r, node->axis)) {
                     nodesToVisit[toVisitOffset++] = currentNodeIndex + 1;
                     currentNodeIndex = node->secondChildOffset;
                 } else {
@@ -485,7 +493,7 @@ const bool BVHAggregate::hit(const Ray& r, Float t_min, Float t_max, hit_record&
                 currentNodeIndex = nodesToVisit[--toVisitOffset];
             } else {
                 // Put far BVH node on _nodesToVisit_ stack, advance to near node
-                if (rayDirIsNeg(r, node->axis)) {
+                if (rayInvDirIsNeg(r, node->axis)) {
                     nodesToVisit[toVisitOffset++] = currentNodeIndex + 1;
                     currentNodeIndex = node->secondChildOffset;
                 } else {
@@ -578,6 +586,7 @@ bool traverseClosestBVH4(
     return false;
   }
 
+  const RayBBox4 rbox(r);
   BVH4PriorityFrontier<kBVH4PriorityStaticCapacity> frontier;
   frontier.push({0, -std::numeric_limits<float>::infinity()});
 
@@ -613,7 +622,7 @@ bool traverseClosestBVH4(
     IVec4 hits;
     FVec4 tEnters;
 
-    rayBBoxIntersect4(r, node->bbox4, t_min, t_max, hits, tEnters);
+    rayBBoxIntersect4(rbox, node->bbox4, t_min, t_max, hits, tEnters);
 
     const IVec4 valid_hit =
         simd_and(hits, simd_not_equals_minus_one(node->childOffsets));
@@ -651,6 +660,7 @@ bool traverseAnyPriorityBVH4(
     return false;
   }
 
+  const RayBBox4 rbox(r);
   BVH4PriorityFrontier<kBVH4PriorityStaticCapacity> frontier;
   frontier.push({0, -std::numeric_limits<float>::infinity()});
 
@@ -673,7 +683,7 @@ bool traverseAnyPriorityBVH4(
     IVec4 hits;
     FVec4 tEnters;
 
-    rayBBoxIntersect4(r, node->bbox4, t_min, t_max, hits, tEnters);
+    rayBBoxIntersect4(rbox, node->bbox4, t_min, t_max, hits, tEnters);
 
     const IVec4 valid_hit =
         simd_and(hits, simd_not_equals_minus_one(node->childOffsets));
@@ -880,9 +890,6 @@ BVHBuildNode4* BVHAggregate::ConvertBVH2ToBVH4(BVHBuildNode* node, int* totalNod
             delete newNode;
             return nullptr;
         }
-        // Increment the total node count for BVH4
-        (*totalNodes4)++;
-
         // Initialize the BVH4 node
         for (int i = 0; i < nChildren; ++i) {
             // Recursively convert the child nodes
@@ -905,6 +912,7 @@ BVHBuildNode4* BVHAggregate::ConvertBVH2ToBVH4(BVHBuildNode* node, int* totalNod
         }
     }
 
+    (*totalNodes4)++;
     return newNode;
 }
 
