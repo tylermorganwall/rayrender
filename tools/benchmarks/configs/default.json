@@ -4,6 +4,24 @@
       "name": "default",
       "env": {},
       "makevars": {}
+    },
+    {
+      "name": "o3_native_no_simd",
+      "env": {},
+      "makevars": {
+        "CXX17FLAGS": "-O3 -march=native",
+        "CXX14FLAGS": "-O3 -march=native",
+        "CXXFLAGS": "-O3 -march=native"
+      }
+    },
+    {
+      "name": "o3_native_simd_sse",
+      "env": {},
+      "makevars": {
+        "CXX17FLAGS": "-O3 -march=native -DRAYSIMD -DHAS_SSE",
+        "CXX14FLAGS": "-O3 -march=native -DRAYSIMD -DHAS_SSE",
+        "CXXFLAGS": "-O3 -march=native -DRAYSIMD -DHAS_SSE"
+      }
     }
   ],
   "benchmark_defaults": {

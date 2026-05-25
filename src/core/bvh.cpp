@@ -97,8 +97,6 @@ BVHAggregate::BVHAggregate(std::vector<std::shared_ptr<hitable> > prims,
       nodes.reset();
       n_nodes = 0;
 #else
-      static_assert(SIMD_WIDTH == 4,
-                    "BVH4 traversal requires SIMD_WIDTH == 4.");
       nodes4.reset();
       totalNodes4 = 0;
 #endif
@@ -130,7 +128,10 @@ BVHAggregate::BVHAggregate(std::vector<std::shared_ptr<hitable> > prims,
 #else
     totalNodes4 = 0;
     BVHBuildNode4* rootBVH4 = ConvertBVH2ToBVH4(root, &totalNodes4);
-    if (rootBVH4 == nullptr) {
+    ASSERT(rootBVH4 != nullptr && "BVH4 conversion produced null root");
+    ASSERT(totalNodes4 > 0 && "BVH4 conversion produced zero nodes");
+    if (rootBVH4 == nullptr || totalNodes4 <= 0) {
+        delete rootBVH4;
         delete root;
         nodes4.reset();
         totalNodes4 = 0;
@@ -192,7 +193,10 @@ BVHAggregate::BVHAggregate(std::vector<std::shared_ptr<hitable> > prims,
 #else
     totalNodes4 = 0;
     BVHBuildNode4* rootBVH4 = ConvertBVH2ToBVH4(root, &totalNodes4);
-    if (rootBVH4 == nullptr) {
+    ASSERT(rootBVH4 != nullptr && "BVH4 conversion produced null root");
+    ASSERT(totalNodes4 > 0 && "BVH4 conversion produced zero nodes");
+    if (rootBVH4 == nullptr || totalNodes4 <= 0) {
+        delete rootBVH4;
         delete root;
         nodes4.reset();
         totalNodes4 = 0;
@@ -403,6 +407,103 @@ namespace {
 inline bool rayInvDirIsNeg(const Ray& r, int axis) {
     return r.inv_dir_is_neg[axis] != 0;
 }
+
+inline bool rayBoundsHitTEnter(
+    const Ray& r,
+    const aabb& bounds,
+    Float t_min,
+    Float t_max,
+    float& tEnter
+) {
+    const int sx = r.inv_dir_is_neg[0] ? 1 : 0;
+    const int sy = r.inv_dir_is_neg[1] ? 1 : 0;
+    const int sz = r.inv_dir_is_neg[2] ? 1 : 0;
+
+    const Float txNear =
+        (bounds.bounds[sx].e[0] - r.o.e[0]) * r.inv_dir_pad.e[0];
+    const Float txFar =
+        (bounds.bounds[1 - sx].e[0] - r.o.e[0]) * r.inv_dir_pad.e[0];
+
+    const Float tyNear =
+        (bounds.bounds[sy].e[1] - r.o.e[1]) * r.inv_dir_pad.e[1];
+    const Float tyFar =
+        (bounds.bounds[1 - sy].e[1] - r.o.e[1]) * r.inv_dir_pad.e[1];
+
+    const Float tzNear =
+        (bounds.bounds[sz].e[2] - r.o.e[2]) * r.inv_dir_pad.e[2];
+    const Float tzFar =
+        (bounds.bounds[1 - sz].e[2] - r.o.e[2]) * r.inv_dir_pad.e[2];
+
+    t_min = std::fmax(t_min, txNear);
+    t_max = std::fmin(t_max, txFar);
+
+    t_min = std::fmax(t_min, tyNear);
+    t_max = std::fmin(t_max, tyFar);
+
+    t_min = std::fmax(t_min, tzNear);
+    t_max = std::fmin(t_max, tzFar);
+
+    tEnter = static_cast<float>(t_min);
+    return t_min <= t_max;
+}
+
+template <typename HitPrimitive>
+bool traverseAnyPriorityBVH2(
+    const LinearBVHNode* nodes,
+    const Ray& r,
+    Float t_min,
+    Float t_max,
+    HitPrimitive&& hitPrimitive
+) {
+    if (!nodes) {
+        return false;
+    }
+
+    float rootTEnter;
+    if (!rayBoundsHitTEnter(r, nodes[0].bounds, t_min, t_max, rootTEnter)) {
+        return false;
+    }
+
+    std::priority_queue<BVHNodeEntry> frontier;
+    frontier.push({0, rootTEnter});
+
+    while (!frontier.empty()) {
+        const BVHNodeEntry entry = frontier.top();
+        frontier.pop();
+
+        const LinearBVHNode* node = &nodes[entry.nodeIndex];
+        if (node->nPrimitives > 0) {
+            for (int i = 0; i < node->nPrimitives; ++i) {
+                const int primIndex = node->primitivesOffset + i;
+
+                if (hitPrimitive(primIndex, t_min, t_max)) {
+                    return true;
+                }
+            }
+
+            continue;
+        }
+
+        const int firstChildOffset = entry.nodeIndex + 1;
+        const int secondChildOffset = node->secondChildOffset;
+        float firstTEnter;
+        float secondTEnter;
+
+        if (rayBoundsHitTEnter(
+                r, nodes[firstChildOffset].bounds, t_min, t_max, firstTEnter
+            )) {
+            frontier.push({firstChildOffset, firstTEnter});
+        }
+
+        if (rayBoundsHitTEnter(
+                r, nodes[secondChildOffset].bounds, t_min, t_max, secondTEnter
+            )) {
+            frontier.push({secondChildOffset, secondTEnter});
+        }
+    }
+
+    return false;
+}
 } // namespace
 
 const bool BVHAggregate::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
@@ -512,7 +613,38 @@ const bool BVHAggregate::hit(const Ray& r, Float t_min, Float t_max, hit_record&
     // bvhNodesVisited += nodesVisited;
     return any_hit;
 }
+
+bool BVHAggregate::HitP(const Ray& r, Float t_min, Float t_max, random_gen& rng) const {
+    return traverseAnyPriorityBVH2(
+        nodes.get(),
+        r,
+        t_min,
+        t_max,
+        [&](int primIndex, Float local_t_min, Float local_t_max) {
+            return primitives[primIndex]->HitP(
+                r, local_t_min, local_t_max, rng
+            );
+        }
+    );
+}
+
+bool BVHAggregate::HitP(const Ray& r, Float t_min, Float t_max, Sampler* sampler) const {
+    return traverseAnyPriorityBVH2(
+        nodes.get(),
+        r,
+        t_min,
+        t_max,
+        [&](int primIndex, Float local_t_min, Float local_t_max) {
+            return primitives[primIndex]->HitP(
+                r, local_t_min, local_t_max, sampler
+            );
+        }
+    );
+}
 #else
+
+static_assert(SIMD_WIDTH == 4,
+              "BVH4 traversal requires SIMD_WIDTH == 4.");
 
 constexpr size_t kBVH4PriorityStaticCapacity = 4096;
 

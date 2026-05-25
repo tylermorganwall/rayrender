@@ -231,10 +231,4 @@ inline void rayBBoxIntersect4(const RayBBox4& rbox,
 }
 #endif
 
-void rayBBoxIntersect4Serial(const Ray& ray,
-                       const BBox4& bbox4,
-                       Float tMin,
-                       Float tMax,
-                       IVec4& hits,
-                       FVec4& tEnters);
 #endif

@@ -127,10 +127,3 @@ int aabb::MaxDimension() const {
       return 2;
 }
 
-void rayBBoxIntersect4Serial(const Ray& r,
-                       const BBox4& bbox4,
-                       Float tMin,
-                       Float tMax,
-                       IVec4& hits,
-                       FVec4& tEnters) {
-}
