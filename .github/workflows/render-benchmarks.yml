@@ -1,0 +1,235 @@
+name: Render Benchmarks
+
+on:
+  workflow_dispatch:
+    inputs:
+      benchmarks:
+        description: "Comma-separated benchmark names"
+        required: false
+        default: "bvh_many_spheres,bvh_mixed_primitives"
+      iterations:
+        description: "Measured iterations"
+        required: false
+        default: "5"
+      warmup:
+        description: "Warmup iterations"
+        required: false
+        default: "1"
+      publish:
+        description: "Append to benchmark-history and deploy site"
+        required: false
+        default: "true"
+  push:
+    branches-ignore:
+      - gh-pages
+  pull_request:
+    branches-ignore:
+      - gh-pages
+
+concurrency:
+  group: render-benchmarks-history
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+  actions: read
+  pull-requests: read
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        build_config_name:
+          - o3_native_no_simd
+          - o3_native_simd_sse
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      R_KEEP_PKG_SOURCE: yes
+      NOT_CRAN: true
+      IS_GHA: true
+      RGL_USE_NULL: true
+      BENCHMARKS: ${{ inputs.benchmarks || 'bvh_many_spheres,bvh_mixed_primitives' }}
+      ITERATIONS: ${{ inputs.iterations || '3' }}
+      WARMUP: ${{ inputs.warmup || '1' }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: r-lib/actions/setup-pandoc@v2
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: release
+          use-public-rspm: true
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libcurl4-openssl-dev \
+            libfontconfig1-dev \
+            libfreetype6-dev \
+            libfribidi-dev \
+            libgl1-mesa-dev \
+            libglu1-mesa-dev \
+            libharfbuzz-dev \
+            libjpeg-dev \
+            libpng-dev \
+            libssl-dev \
+            libtiff-dev \
+            libx11-dev \
+            libxml2-dev \
+            libxt-dev \
+            mesa-common-dev
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          extra-packages: |
+            any::jsonlite
+            any::remotes
+
+      - name: Run render benchmarks
+        run: |
+          mkdir -p "$RUNNER_TEMP/rayrender-benchmark-workdirs"
+          Rscript tools/benchmarks/run_render_benchmarks.R \
+            --repo . \
+            --ref current \
+            --config tools/benchmarks/configs/default.json \
+            --only-config "${{ matrix.build_config_name }}" \
+            --benchmarks "$BENCHMARKS" \
+            --iterations "$ITERATIONS" \
+            --warmup "$WARMUP" \
+            --extra-r-arg "--time-build true" \
+            --output "benchmark-results/${{ matrix.build_config_name }}.csv" \
+            --workdir-root "$RUNNER_TEMP/rayrender-benchmark-workdirs" \
+            --keep-workdirs \
+            --no-append
+
+      - name: Upload benchmark result CSV
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results-${{ matrix.build_config_name }}
+          path: benchmark-results/*.csv
+          if-no-files-found: ignore
+
+      - name: Upload benchmark logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-logs-${{ matrix.build_config_name }}
+          path: ${{ runner.temp }}/rayrender-benchmark-workdirs/**/logs/**
+          if-no-files-found: ignore
+
+  publish-history-and-site:
+    needs: benchmark
+    runs-on: ubuntu-latest
+    if: >-
+      ${{
+        always() &&
+        (
+          (github.event_name == 'push' && github.ref_name != 'gh-pages') ||
+          (github.event_name == 'workflow_dispatch' && inputs.publish == 'true')
+        )
+      }}
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: release
+          use-public-rspm: true
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          extra-packages: |
+            any::jsonlite
+
+      - name: Download benchmark result artifacts
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          pattern: benchmark-results-*
+          path: downloaded-benchmark-results
+          merge-multiple: true
+
+      - name: Combine benchmark CSV artifacts
+        run: |
+          mkdir -p downloaded-benchmark-results
+          Rscript tools/benchmarks/combine_benchmark_csvs.R \
+            --input-dir downloaded-benchmark-results \
+            --output combined-new-results.csv
+
+      - name: Check for benchmark rows
+        id: check_results
+        run: |
+          if [ ! -s combined-new-results.csv ]; then
+            echo "has_results=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          rows=$(Rscript -e 'x = utils::read.csv("combined-new-results.csv", check.names = FALSE); cat(nrow(x))')
+          if [ "$rows" -gt 0 ]; then
+            echo "has_results=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_results=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Prepare benchmark-history worktree
+        if: steps.check_results.outputs.has_results == 'true'
+        run: |
+          git fetch origin benchmark-history || true
+          if git show-ref --verify --quiet refs/remotes/origin/benchmark-history; then
+            git worktree add -B benchmark-history benchmark-history-worktree origin/benchmark-history
+          else
+            mkdir benchmark-history-worktree
+            git -C benchmark-history-worktree init
+            git -C benchmark-history-worktree checkout --orphan benchmark-history
+            git -C benchmark-history-worktree remote add origin "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY.git"
+            mkdir -p benchmark-history-worktree/data benchmark-history-worktree/site
+          fi
+          touch benchmark-history-worktree/.nojekyll
+
+      - name: Append history and build site
+        if: steps.check_results.outputs.has_results == 'true'
+        run: |
+          Rscript tools/benchmarks/append_benchmark_history.R \
+            --history-dir benchmark-history-worktree \
+            --new-results combined-new-results.csv
+          Rscript tools/benchmarks/build_benchmark_site.R \
+            --history-csv benchmark-history-worktree/data/render_benchmarks.csv \
+            --site-dir benchmark-history-worktree/site
+
+      - name: Commit benchmark-history branch
+        if: steps.check_results.outputs.has_results == 'true'
+        run: |
+          cd benchmark-history-worktree
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data site .nojekyll
+          git commit -m "Update benchmark history for ${GITHUB_SHA}" || echo "No benchmark history changes"
+          git push origin HEAD:benchmark-history
+
+      - name: Configure Pages
+        if: steps.check_results.outputs.has_results == 'true'
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        if: steps.check_results.outputs.has_results == 'true'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: benchmark-history-worktree/site
+
+      - name: Deploy Pages
+        if: steps.check_results.outputs.has_results == 'true'
+        uses: actions/deploy-pages@v4

@@ -8,152 +8,152 @@ r_home = R.home()
 # This script configures Makevars explicitly; disable the helper's
 # post-script auto-configuration pass to avoid regenerating both files.
 options(
-	configure.common = FALSE,
-	configure.platform = FALSE
+  configure.common = FALSE,
+  configure.platform = FALSE
 )
 
 split_flags = function(flags) {
-	if (!nzchar(flags)) {
-		return(character())
-	}
-	strsplit(flags, "[[:space:]]+")[[1]]
+  if (!nzchar(flags)) {
+    return(character())
+  }
+  strsplit(flags, "[[:space:]]+")[[1]]
 }
 
 flag_with_path = function(flag, path) {
-	if (!nzchar(path)) {
-		return(character())
-	}
-	path = normalizePath(path, winslash = "/", mustWork = FALSE)
-	if (grepl("\\s", path)) {
-		c(flag, path)
-	} else {
-		paste0(flag, path)
-	}
+  if (!nzchar(path)) {
+    return(character())
+  }
+  path = normalizePath(path, winslash = "/", mustWork = FALSE)
+  if (grepl("\\s", path)) {
+    c(flag, path)
+  } else {
+    paste0(flag, path)
+  }
 }
 
 append_flags = function(existing, ...) {
-	new_flags = unlist(list(...))
-	new_flags = new_flags[nzchar(new_flags)]
-	if (length(new_flags) == 0) {
-		return(existing)
-	}
-	c(existing, new_flags)
+  new_flags = unlist(list(...))
+  new_flags = new_flags[nzchar(new_flags)]
+  if (length(new_flags) == 0) {
+    return(existing)
+  }
+  c(existing, new_flags)
 }
 
 append_unique_flags = function(existing, ...) {
-	new_flags = unlist(list(...))
-	new_flags = new_flags[nzchar(new_flags)]
-	if (length(new_flags) == 0) {
-		return(existing)
-	}
-	for (flag in new_flags) {
-		if (!(flag %in% existing)) {
-			existing = c(existing, flag)
-		}
-	}
-	existing
+  new_flags = unlist(list(...))
+  new_flags = new_flags[nzchar(new_flags)]
+  if (length(new_flags) == 0) {
+    return(existing)
+  }
+  for (flag in new_flags) {
+    if (!(flag %in% existing)) {
+      existing = c(existing, flag)
+    }
+  }
+  existing
 }
 
 collapse_flags = function(flags) {
-	if (length(flags) == 0) {
-		return("")
-	}
-	paste(flags, collapse = " ")
+  if (length(flags) == 0) {
+    return("")
+  }
+  paste(flags, collapse = " ")
 }
 
 add_rpath = function(flags, dir) {
-	flags = append_flags(flags, flag_with_path("-L", dir))
-	flags = append_flags(
-		flags,
-		sprintf(
-			"-Wl,-rpath,%s",
-			normalizePath(dir, winslash = "/", mustWork = FALSE)
-		)
-	)
-	if (is_linux) {
-		flags = append_flags(
-			flags,
-			sprintf(
-				"-Wl,-rpath-link,%s",
-				normalizePath(dir, winslash = "/", mustWork = FALSE)
-			)
-		)
-	}
-	flags
+  flags = append_flags(flags, flag_with_path("-L", dir))
+  flags = append_flags(
+    flags,
+    sprintf(
+      "-Wl,-rpath,%s",
+      normalizePath(dir, winslash = "/", mustWork = FALSE)
+    )
+  )
+  if (is_linux) {
+    flags = append_flags(
+      flags,
+      sprintf(
+        "-Wl,-rpath-link,%s",
+        normalizePath(dir, winslash = "/", mustWork = FALSE)
+      )
+    )
+  }
+  flags
 }
 
 CXX = r_cmd_config("CXX20")
 CXXFLAGS_BASE = split_flags(r_cmd_config("CXX20FLAGS"))
 if (!nzchar(CXX)) {
-	CXX = r_cmd_config("CXX17")
-	CXXFLAGS_BASE = split_flags(r_cmd_config("CXX17FLAGS"))
+  CXX = r_cmd_config("CXX17")
+  CXXFLAGS_BASE = split_flags(r_cmd_config("CXX17FLAGS"))
 }
 if (!nzchar(CXX)) {
-	stop("Failed to determine the C++ compiler via R CMD config.")
+  stop("Failed to determine the C++ compiler via R CMD config.")
 }
 CPPFLAGS_BASE = split_flags(r_cmd_config("CPPFLAGS"))
 
 split_command = function(command) {
-	if (!nzchar(command)) {
-		return(character())
-	}
-	tokens = strsplit(command, "[[:space:]]+")[[1]]
-	tokens = tokens[nzchar(tokens)]
-	if (length(tokens) == 0) {
-		return(tokens)
-	}
-	# remove wrapping quotes if present
-	gsub("(^['\"]|['\"]$)", "", tokens)
+  if (!nzchar(command)) {
+    return(character())
+  }
+  tokens = strsplit(command, "[[:space:]]+")[[1]]
+  tokens = tokens[nzchar(tokens)]
+  if (length(tokens) == 0) {
+    return(tokens)
+  }
+  # remove wrapping quotes if present
+  gsub("(^['\"]|['\"]$)", "", tokens)
 }
 
 unwrap_compiler = function(tokens) {
-	if (length(tokens) < 2) {
-		return(tokens)
-	}
-	wrappers = c("ccache", "sccache", "icecc", "distcc")
-	while (length(tokens) > 1 && tokens[[1]] %in% wrappers) {
-		tokens = tokens[-1]
-	}
-	tokens
+  if (length(tokens) < 2) {
+    return(tokens)
+  }
+  wrappers = c("ccache", "sccache", "icecc", "distcc")
+  while (length(tokens) > 1 && tokens[[1]] %in% wrappers) {
+    tokens = tokens[-1]
+  }
+  tokens
 }
 
 CXX_COMMAND = unwrap_compiler(split_command(CXX))
 if (length(CXX_COMMAND) == 0) {
-	stop("Failed to parse the C++ compiler command from R CMD config.")
+  stop("Failed to parse the C++ compiler command from R CMD config.")
 }
 
 build_command = function(base_tokens, extra_tokens = character()) {
-	tokens = c(base_tokens, extra_tokens)
-	tokens = tokens[nzchar(tokens)]
-	if (!length(tokens)) {
-		return("")
-	}
-	quote_type = if (is_windows) "cmd" else "sh"
-	quoted = vapply(
-		tokens,
-		function(token) {
-			if (!nzchar(token)) {
-				return("")
-			}
-			shQuote(token, type = quote_type)
-		},
-		character(1),
-		USE.NAMES = FALSE
-	)
-	paste(quoted[nzchar(quoted)], collapse = " ")
+  tokens = c(base_tokens, extra_tokens)
+  tokens = tokens[nzchar(tokens)]
+  if (!length(tokens)) {
+    return("")
+  }
+  quote_type = if (is_windows) "cmd" else "sh"
+  quoted = vapply(
+    tokens,
+    function(token) {
+      if (!nzchar(token)) {
+        return("")
+      }
+      shQuote(token, type = quote_type)
+    },
+    character(1),
+    USE.NAMES = FALSE
+  )
+  paste(quoted[nzchar(quoted)], collapse = " ")
 }
 
 PKG_CPPFLAGS = character()
 PKG_CXXFLAGS = append_unique_flags(
-	character(),
-	"-ffp-contract=off",
-	"-fvisibility=hidden",
-	"-fvisibility-inlines-hidden"
+  character(),
+  "-ffp-contract=off",
+  "-fvisibility=hidden",
+  "-fvisibility-inlines-hidden"
 )
 DEFINES = append_unique_flags(
-	character(),
-	"-DRAY_REPRODUCE_PERLIN",
-	"-DSTRICT_R_HEADERS"
+  character(),
+  "-DRAY_REPRODUCE_PERLIN",
+  "-DSTRICT_R_HEADERS"
 )
 LINK_LIBS = character()
 PKG_LIBS_ACC = character()
@@ -162,240 +162,240 @@ OIDN_LDFLAGS = character()
 OIDN_LIBS = character()
 
 compile_test = function(
-	code,
-	extra_cppflags = character(),
-	extra_cxxflags = character(),
-	extra_ldflags = character(),
-	link = FALSE,
-	include_pkg_cppflags = TRUE,
-	include_pkg_cxxflags = TRUE
+  code,
+  extra_cppflags = character(),
+  extra_cxxflags = character(),
+  extra_ldflags = character(),
+  link = FALSE,
+  include_pkg_cppflags = TRUE,
+  include_pkg_cxxflags = TRUE
 ) {
-	src = tempfile(fileext = ".cpp")
-	writeLines(code, src)
-	on.exit(unlink(src), add = TRUE)
+  src = tempfile(fileext = ".cpp")
+  writeLines(code, src)
+  on.exit(unlink(src), add = TRUE)
 
-	output_ext = if (link) {
-		if (is_windows) ".exe" else ""
-	} else {
-		".o"
-	}
-	output = tempfile(fileext = output_ext)
-	on.exit(unlink(output), add = TRUE)
+  output_ext = if (link) {
+    if (is_windows) ".exe" else ""
+  } else {
+    ".o"
+  }
+  output = tempfile(fileext = output_ext)
+  on.exit(unlink(output), add = TRUE)
 
-	# Base flags + extras
-	args = c(
-		CPPFLAGS_BASE,
-		if (include_pkg_cppflags) PKG_CPPFLAGS else character(),
-		extra_cppflags,
-		CXXFLAGS_BASE,
-		if (include_pkg_cxxflags) PKG_CXXFLAGS else character(),
-		extra_cxxflags
-	)
+  # Base flags + extras
+  args = c(
+    CPPFLAGS_BASE,
+    if (include_pkg_cppflags) PKG_CPPFLAGS else character(),
+    extra_cppflags,
+    CXXFLAGS_BASE,
+    if (include_pkg_cxxflags) PKG_CXXFLAGS else character(),
+    extra_cxxflags
+  )
 
-	if (link) {
-		args = c(args, src, extra_ldflags, "-o", output)
-	} else {
-		args = c(args, "-c", src, "-o", output)
-	}
+  if (link) {
+    args = c(args, src, extra_ldflags, "-o", output)
+  } else {
+    args = c(args, "-c", src, "-o", output)
+  }
 
-	# Human-readable command for diagnostics
-	cmd_str = build_command(CXX_COMMAND, args)
+  # Human-readable command for diagnostics
+  cmd_str = build_command(CXX_COMMAND, args)
 
-	# Capture compiler output to file and trust the returned numeric exit status.
-	log_file = tempfile(fileext = ".log")
-	on.exit(unlink(log_file), add = TRUE)
-	status = tryCatch(
-		suppressWarnings(system2(
-			CXX_COMMAND[1],
-			args = c(CXX_COMMAND[-1], args),
-			stdout = log_file,
-			stderr = log_file
-		)),
-		error = function(e) 1L
-	)
-	if (is.null(status)) {
-		status = 1L
-	}
-	status = as.integer(status)
-	output_lines = if (file.exists(log_file)) {
-		readLines(log_file, warn = FALSE)
-	} else {
-		character()
-	}
+  # Capture compiler output to file and trust the returned numeric exit status.
+  log_file = tempfile(fileext = ".log")
+  on.exit(unlink(log_file), add = TRUE)
+  status = tryCatch(
+    suppressWarnings(system2(
+      CXX_COMMAND[1],
+      args = c(CXX_COMMAND[-1], args),
+      stdout = log_file,
+      stderr = log_file
+    )),
+    error = function(e) 1L
+  )
+  if (is.null(status)) {
+    status = 1L
+  }
+  status = as.integer(status)
+  output_lines = if (file.exists(log_file)) {
+    readLines(log_file, warn = FALSE)
+  } else {
+    character()
+  }
 
-	if (!identical(status, 0L)) {
-		message("*** configure: test compile/link failed. Command:")
-		message(cmd_str)
-		if (length(output_lines)) {
-			message("*** configure: compiler/linker output:")
-			message(paste(output_lines, collapse = "\n"))
-		}
-		return(FALSE)
-	}
+  if (!identical(status, 0L)) {
+    message("*** configure: test compile/link failed. Command:")
+    message(cmd_str)
+    if (length(output_lines)) {
+      message("*** configure: compiler/linker output:")
+      message(paste(output_lines, collapse = "\n"))
+    }
+    return(FALSE)
+  }
 
-	TRUE
+  TRUE
 }
 
 if (is_windows) {
-	DEFINES = append_unique_flags(
-		DEFINES,
-		"-DRAY_WINDOWS"
-	)
-	PKG_LIBS_ACC = append_unique_flags(
-		PKG_LIBS_ACC,
-		"-lgdi32"
-	)
+  DEFINES = append_unique_flags(
+    DEFINES,
+    "-DRAY_WINDOWS"
+  )
+  PKG_LIBS_ACC = append_unique_flags(
+    PKG_LIBS_ACC,
+    "-lgdi32"
+  )
 }
 
 if (!is_windows) {
-	pkgconfig = Sys.which("pkg-config")
-	x11_cppflags = character()
-	x11_ldflags = character()
-	x11_found = FALSE
+  pkgconfig = Sys.which("pkg-config")
+  x11_cppflags = character()
+  x11_ldflags = character()
+  x11_found = FALSE
 
-	if (nzchar(pkgconfig)) {
-		status = tryCatch(
-			system2(
-				pkgconfig,
-				c("--exists", "x11"),
-				stdout = FALSE,
-				stderr = FALSE
-			),
-			warning = function(w) 1L,
-			error = function(e) 1L
-		)
-		if (isTRUE(status == 0)) {
-			x11_cppflags = split_flags(paste(
-				system2(pkgconfig, c("--cflags", "x11"), stdout = TRUE),
-				collapse = " "
-			))
-			x11_ldflags = split_flags(paste(
-				system2(pkgconfig, c("--libs", "x11"), stdout = TRUE),
-				collapse = " "
-			))
-			x11_found = compile_test(
-				code = "#include <X11/Xlib.h>\nint main() { XOpenDisplay(NULL); return 0; }\n",
-				extra_cppflags = x11_cppflags,
-				extra_ldflags = x11_ldflags,
-				link = TRUE
-			)
-		}
-	}
+  if (nzchar(pkgconfig)) {
+    status = tryCatch(
+      system2(
+        pkgconfig,
+        c("--exists", "x11"),
+        stdout = FALSE,
+        stderr = FALSE
+      ),
+      warning = function(w) 1L,
+      error = function(e) 1L
+    )
+    if (isTRUE(status == 0)) {
+      x11_cppflags = split_flags(paste(
+        system2(pkgconfig, c("--cflags", "x11"), stdout = TRUE),
+        collapse = " "
+      ))
+      x11_ldflags = split_flags(paste(
+        system2(pkgconfig, c("--libs", "x11"), stdout = TRUE),
+        collapse = " "
+      ))
+      x11_found = compile_test(
+        code = "#include <X11/Xlib.h>\nint main() { XOpenDisplay(NULL); return 0; }\n",
+        extra_cppflags = x11_cppflags,
+        extra_ldflags = x11_ldflags,
+        link = TRUE
+      )
+    }
+  }
 
-	if (!x11_found) {
-		fallback_cpp = character()
-		fallback_ld = character()
-		if (is_macos) {
-			fallback_cpp = append_flags(
-				fallback_cpp,
-				flag_with_path("-I", "/opt/X11/include")
-			)
-			fallback_ld = append_flags(
-				fallback_ld,
-				flag_with_path("-L", "/opt/X11/lib")
-			)
-		}
-		fallback_ld = append_flags(fallback_ld, "-lX11")
-		x11_found = compile_test(
-			code = "#include <X11/Xlib.h>\nint main() { XOpenDisplay(NULL); return 0; }\n",
-			extra_cppflags = fallback_cpp,
-			extra_ldflags = fallback_ld,
-			link = TRUE
-		)
-		if (x11_found) {
-			x11_cppflags = fallback_cpp
-			x11_ldflags = fallback_ld
-		}
-	}
+  if (!x11_found) {
+    fallback_cpp = character()
+    fallback_ld = character()
+    if (is_macos) {
+      fallback_cpp = append_flags(
+        fallback_cpp,
+        flag_with_path("-I", "/opt/X11/include")
+      )
+      fallback_ld = append_flags(
+        fallback_ld,
+        flag_with_path("-L", "/opt/X11/lib")
+      )
+    }
+    fallback_ld = append_flags(fallback_ld, "-lX11")
+    x11_found = compile_test(
+      code = "#include <X11/Xlib.h>\nint main() { XOpenDisplay(NULL); return 0; }\n",
+      extra_cppflags = fallback_cpp,
+      extra_ldflags = fallback_ld,
+      link = TRUE
+    )
+    if (x11_found) {
+      x11_cppflags = fallback_cpp
+      x11_ldflags = fallback_ld
+    }
+  }
 
-	if (x11_found) {
-		message("*** configure: found X11 headers and libraries")
-		PKG_CPPFLAGS = append_flags(PKG_CPPFLAGS, x11_cppflags)
-		LINK_LIBS = append_flags(LINK_LIBS, x11_ldflags)
-		DEFINES = append_unique_flags(DEFINES, "-DRAY_HAS_X11")
-		if (
-			is_macos &&
-				!any(grepl("/opt/X11/include", x11_cppflags, fixed = TRUE))
-		) {
-			PKG_CPPFLAGS = append_flags(
-				PKG_CPPFLAGS,
-				flag_with_path("-I", "/opt/X11/include")
-			)
-		}
-	} else {
-		message("*** configure: X11 not found; render preview will be disabled")
-	}
+  if (x11_found) {
+    message("*** configure: found X11 headers and libraries")
+    PKG_CPPFLAGS = append_flags(PKG_CPPFLAGS, x11_cppflags)
+    LINK_LIBS = append_flags(LINK_LIBS, x11_ldflags)
+    DEFINES = append_unique_flags(DEFINES, "-DRAY_HAS_X11")
+    if (
+      is_macos &&
+        !any(grepl("/opt/X11/include", x11_cppflags, fixed = TRUE))
+    ) {
+      PKG_CPPFLAGS = append_flags(
+        PKG_CPPFLAGS,
+        flag_with_path("-I", "/opt/X11/include")
+      )
+    }
+  } else {
+    message("*** configure: X11 not found; render preview will be disabled")
+  }
 }
 # ---- TBB detection ----
 
 # ---- Open Image Denoise (OIDN) + TBB ----
 
 find_tbb_for_oidn = function() {
-	# For now, we only need explicit TBB discovery on Windows with the
-	# static Rtools toolchain. On Unix, libOpenImageDenoise.* normally
-	# carries its own TBB dependency.
-	if (!is_windows) {
-		return(NULL)
-	}
+  # For now, we only need explicit TBB discovery on Windows with the
+  # static Rtools toolchain. On Unix, libOpenImageDenoise.* normally
+  # carries its own TBB dependency.
+  if (!is_windows) {
+    return(NULL)
+  }
 
-	candidates = character()
+  candidates = character()
 
-	# Explicit env overrides
-	tbb_lib_env = Sys.getenv("TBB_LIB", unset = "")
-	if (nzchar(tbb_lib_env)) {
-		candidates = c(candidates, tbb_lib_env)
-	}
+  # Explicit env overrides
+  tbb_lib_env = Sys.getenv("TBB_LIB", unset = "")
+  if (nzchar(tbb_lib_env)) {
+    candidates = c(candidates, tbb_lib_env)
+  }
 
-	tbb_root_env = Sys.getenv("TBB_ROOT", unset = "")
-	if (nzchar(tbb_root_env)) {
-		candidates = c(candidates, file.path(tbb_root_env, "lib"))
-	}
+  tbb_root_env = Sys.getenv("TBB_ROOT", unset = "")
+  if (nzchar(tbb_root_env)) {
+    candidates = c(candidates, file.path(tbb_root_env, "lib"))
+  }
 
-	# Rtools static.posix layout (derive from gcc)
-	gcc = Sys.which("gcc")
-	if (nzchar(gcc)) {
-		gcc_bin = normalizePath(gcc, winslash = "/", mustWork = FALSE)
-		tool_root = dirname(gcc_bin) # .../bin
-		candidates = c(
-			candidates,
-			normalizePath(
-				file.path(tool_root, "../lib"),
-				winslash = "/",
-				mustWork = FALSE
-			)
-		)
-	}
+  # Rtools static.posix layout (derive from gcc)
+  gcc = Sys.which("gcc")
+  if (nzchar(gcc)) {
+    gcc_bin = normalizePath(gcc, winslash = "/", mustWork = FALSE)
+    tool_root = dirname(gcc_bin) # .../bin
+    candidates = c(
+      candidates,
+      normalizePath(
+        file.path(tool_root, "../lib"),
+        winslash = "/",
+        mustWork = FALSE
+      )
+    )
+  }
 
-	# If someone built OIDN + TBB under the same prefix, look there too
-	oidn_root_env = Sys.getenv("OIDN_PATH", unset = "")
-	if (nzchar(oidn_root_env)) {
-		candidates = c(candidates, file.path(oidn_root_env, "lib"))
-	}
+  # If someone built OIDN + TBB under the same prefix, look there too
+  oidn_root_env = Sys.getenv("OIDN_PATH", unset = "")
+  if (nzchar(oidn_root_env)) {
+    candidates = c(candidates, file.path(oidn_root_env, "lib"))
+  }
 
-	candidates = unique(candidates[dir.exists(candidates)])
-	if (!length(candidates)) {
-		return(NULL)
-	}
+  candidates = unique(candidates[dir.exists(candidates)])
+  if (!length(candidates)) {
+    return(NULL)
+  }
 
-	for (dir in candidates) {
-		# oneTBB layout: libtbb12.a
-		lib_tbb12 = file.path(dir, "libtbb12.a")
-		if (file.exists(lib_tbb12)) {
-			lib_malloc = file.path(dir, "libtbbmalloc.a")
-			malloc_name = if (file.exists(lib_malloc)) "tbbmalloc" else ""
-			return(list(lib_dir = dir, lib = "tbb12", malloc = malloc_name))
-		}
+  for (dir in candidates) {
+    # oneTBB layout: libtbb12.a
+    lib_tbb12 = file.path(dir, "libtbb12.a")
+    if (file.exists(lib_tbb12)) {
+      lib_malloc = file.path(dir, "libtbbmalloc.a")
+      malloc_name = if (file.exists(lib_malloc)) "tbbmalloc" else ""
+      return(list(lib_dir = dir, lib = "tbb12", malloc = malloc_name))
+    }
 
-		# Older / generic layout: libtbb.a
-		lib_tbb = file.path(dir, "libtbb.a")
-		if (file.exists(lib_tbb)) {
-			lib_malloc = file.path(dir, "libtbbmalloc.a")
-			malloc_name = if (file.exists(lib_malloc)) "tbbmalloc" else ""
-			return(list(lib_dir = dir, lib = "tbb", malloc = malloc_name))
-		}
-	}
+    # Older / generic layout: libtbb.a
+    lib_tbb = file.path(dir, "libtbb.a")
+    if (file.exists(lib_tbb)) {
+      lib_malloc = file.path(dir, "libtbbmalloc.a")
+      malloc_name = if (file.exists(lib_malloc)) "tbbmalloc" else ""
+      return(list(lib_dir = dir, lib = "tbb", malloc = malloc_name))
+    }
+  }
 
-	NULL
+  NULL
 }
 
 oidn_root = Sys.getenv("OIDN_PATH", unset = "")
@@ -403,257 +403,257 @@ has_oidn = FALSE
 tbb_info = NULL
 
 if (nzchar(oidn_root) && dir.exists(oidn_root)) {
-	oidn_inc_dir = file.path(oidn_root, "include")
-	oidn_lib_dir = file.path(oidn_root, "lib")
+  oidn_inc_dir = file.path(oidn_root, "include")
+  oidn_lib_dir = file.path(oidn_root, "lib")
 
-	if (!dir.exists(oidn_inc_dir) || !dir.exists(oidn_lib_dir)) {
-		message(
-			"*** configure: OIDN_PATH set but include/lib not found; skipping denoiser support"
-		)
-	} else {
-		if (is_windows) {
-			tbb_info = find_tbb_for_oidn()
-			if (is.null(tbb_info)) {
-				message(
-					"*** configure: found OIDN, but no compatible TBB; disabling OIDN support"
-				)
-			}
-		}
+  if (!dir.exists(oidn_inc_dir) || !dir.exists(oidn_lib_dir)) {
+    message(
+      "*** configure: OIDN_PATH set but include/lib not found; skipping denoiser support"
+    )
+  } else {
+    if (is_windows) {
+      tbb_info = find_tbb_for_oidn()
+      if (is.null(tbb_info)) {
+        message(
+          "*** configure: found OIDN, but no compatible TBB; disabling OIDN support"
+        )
+      }
+    }
 
-		if (!is_windows || !is.null(tbb_info)) {
-			message(sprintf(
-				"*** configure: using Open Image Denoise at %s%s",
-				oidn_root,
-				if (is_windows && !is.null(tbb_info)) {
-					sprintf(" (TBB %s in %s)", tbb_info$lib, tbb_info$lib_dir)
-				} else {
-					""
-				}
-			))
+    if (!is_windows || !is.null(tbb_info)) {
+      message(sprintf(
+        "*** configure: using Open Image Denoise at %s%s",
+        oidn_root,
+        if (is_windows && !is.null(tbb_info)) {
+          sprintf(" (TBB %s in %s)", tbb_info$lib, tbb_info$lib_dir)
+        } else {
+          ""
+        }
+      ))
 
-			# Headers
-			OIDN_CPPFLAGS = append_flags(
-				OIDN_CPPFLAGS,
-				flag_with_path("-I", oidn_inc_dir)
-			)
+      # Headers
+      OIDN_CPPFLAGS = append_flags(
+        OIDN_CPPFLAGS,
+        flag_with_path("-I", oidn_inc_dir)
+      )
 
-			# Link search path for OIDN libs
-			OIDN_LDFLAGS = append_flags(
-				OIDN_LDFLAGS,
-				flag_with_path("-L", oidn_lib_dir)
-			)
+      # Link search path for OIDN libs
+      OIDN_LDFLAGS = append_flags(
+        OIDN_LDFLAGS,
+        flag_with_path("-L", oidn_lib_dir)
+      )
 
-			# rpath on Unix so the .so can be found at runtime
-			if (!is_windows) {
-				OIDN_LDFLAGS = append_flags(
-					OIDN_LDFLAGS,
-					sprintf(
-						"-Wl,-rpath,%s",
-						normalizePath(
-							oidn_lib_dir,
-							winslash = "/",
-							mustWork = FALSE
-						)
-					)
-				)
-			}
+      # rpath on Unix so the .so can be found at runtime
+      if (!is_windows) {
+        OIDN_LDFLAGS = append_flags(
+          OIDN_LDFLAGS,
+          sprintf(
+            "-Wl,-rpath,%s",
+            normalizePath(
+              oidn_lib_dir,
+              winslash = "/",
+              mustWork = FALSE
+            )
+          )
+        )
+      }
 
-			# OIDN libs: works for both static and shared builds
-			OIDN_LIBS = append_flags(
-				OIDN_LIBS,
-				"-lOpenImageDenoise"
-			)
+      # OIDN libs: works for both static and shared builds
+      OIDN_LIBS = append_flags(
+        OIDN_LIBS,
+        "-lOpenImageDenoise"
+      )
 
-			if (is_windows) {
-				oidn_core_a = file.path(
-					oidn_lib_dir,
-					"libOpenImageDenoise_core.a"
-				)
-				oidn_dev_a = file.path(
-					oidn_lib_dir,
-					"libOpenImageDenoise_device_cpu.a"
-				)
+      if (is_windows) {
+        oidn_core_a = file.path(
+          oidn_lib_dir,
+          "libOpenImageDenoise_core.a"
+        )
+        oidn_dev_a = file.path(
+          oidn_lib_dir,
+          "libOpenImageDenoise_device_cpu.a"
+        )
 
-				if (file.exists(oidn_dev_a)) {
-					OIDN_LIBS = append_flags(
-						OIDN_LIBS,
-						"-lOpenImageDenoise_device_cpu"
-					)
-				}
-				if (file.exists(oidn_core_a)) {
-					OIDN_LIBS = append_flags(
-						OIDN_LIBS,
-						"-lOpenImageDenoise_core"
-					)
-				}
-			}
+        if (file.exists(oidn_dev_a)) {
+          OIDN_LIBS = append_flags(
+            OIDN_LIBS,
+            "-lOpenImageDenoise_device_cpu"
+          )
+        }
+        if (file.exists(oidn_core_a)) {
+          OIDN_LIBS = append_flags(
+            OIDN_LIBS,
+            "-lOpenImageDenoise_core"
+          )
+        }
+      }
 
-			# On Windows with the static Rtools toolchain, we must also link TBB
-			if (is_windows && !is.null(tbb_info)) {
-				OIDN_LDFLAGS = append_flags(
-					OIDN_LDFLAGS,
-					flag_with_path("-L", tbb_info$lib_dir)
-				)
-				OIDN_LIBS = append_flags(
-					OIDN_LIBS,
-					sprintf("-l%s", tbb_info$lib),
-					if (nzchar(tbb_info$malloc)) {
-						sprintf("-l%s", tbb_info$malloc)
-					} else {
-						character()
-					}
-				)
-			}
+      # On Windows with the static Rtools toolchain, we must also link TBB
+      if (is_windows && !is.null(tbb_info)) {
+        OIDN_LDFLAGS = append_flags(
+          OIDN_LDFLAGS,
+          flag_with_path("-L", tbb_info$lib_dir)
+        )
+        OIDN_LIBS = append_flags(
+          OIDN_LIBS,
+          sprintf("-l%s", tbb_info$lib),
+          if (nzchar(tbb_info$malloc)) {
+            sprintf("-l%s", tbb_info$malloc)
+          } else {
+            character()
+          }
+        )
+      }
 
-			oidn_test_code = paste(
-				"#include <OpenImageDenoise/oidn.h>",
-				"int main() {",
-				"  OIDNDevice device = oidnNewDevice(OIDN_DEVICE_TYPE_CPU);",
-				"  if (!device) return 1;",
-				"  oidnCommitDevice(device);",
-				"  oidnReleaseDevice(device);",
-				"  return 0;",
-				"}",
-				sep = "\n"
-			)
+      oidn_test_code = paste(
+        "#include <OpenImageDenoise/oidn.h>",
+        "int main() {",
+        "  OIDNDevice device = oidnNewDevice(OIDN_DEVICE_TYPE_CPU);",
+        "  if (!device) return 1;",
+        "  oidnCommitDevice(device);",
+        "  oidnReleaseDevice(device);",
+        "  return 0;",
+        "}",
+        sep = "\n"
+      )
 
-			# Sanity check: can we actually compile + link a tiny OIDN program?
-			has_oidn = compile_test(
-				code = oidn_test_code,
-				extra_cppflags = OIDN_CPPFLAGS,
-				extra_ldflags = c(OIDN_LDFLAGS, OIDN_LIBS),
-				link = TRUE,
-				include_pkg_cppflags = FALSE,
-				include_pkg_cxxflags = FALSE
-			)
+      # Sanity check: can we actually compile + link a tiny OIDN program?
+      has_oidn = compile_test(
+        code = oidn_test_code,
+        extra_cppflags = OIDN_CPPFLAGS,
+        extra_ldflags = c(OIDN_LDFLAGS, OIDN_LIBS),
+        link = TRUE,
+        include_pkg_cppflags = FALSE,
+        include_pkg_cxxflags = FALSE
+      )
 
-			if (has_oidn) {
-				message(sprintf(
-					"*** configure: OIDN enabled (prefix %s%s)",
-					oidn_root,
-					if (is_windows && !is.null(tbb_info)) {
-						sprintf(
-							", TBB %s from %s",
-							tbb_info$lib,
-							tbb_info$lib_dir
-						)
-					} else {
-						""
-					}
-				))
-				DEFINES = append_unique_flags(DEFINES, "-DHAS_OIDN")
-			} else {
-				message(
-					"*** configure: OIDN libraries present but test link failed; disabling OIDN support"
-				)
-				OIDN_CPPFLAGS = character()
-				OIDN_LDFLAGS = character()
-				OIDN_LIBS = character()
-			}
-		}
-	}
+      if (has_oidn) {
+        message(sprintf(
+          "*** configure: OIDN enabled (prefix %s%s)",
+          oidn_root,
+          if (is_windows && !is.null(tbb_info)) {
+            sprintf(
+              ", TBB %s from %s",
+              tbb_info$lib,
+              tbb_info$lib_dir
+            )
+          } else {
+            ""
+          }
+        ))
+        DEFINES = append_unique_flags(DEFINES, "-DHAS_OIDN")
+      } else {
+        message(
+          "*** configure: OIDN libraries present but test link failed; disabling OIDN support"
+        )
+        OIDN_CPPFLAGS = character()
+        OIDN_LDFLAGS = character()
+        OIDN_LIBS = character()
+      }
+    }
+  }
 } else {
-	message(
-		"*** configure: Open Image Denoise (OIDN) not found; skipping denoiser support"
-	)
+  message(
+    "*** configure: Open Image Denoise (OIDN) not found; skipping denoiser support"
+  )
 }
 
 
 openexr_lib_dir = tryCatch(
-	normalizePath(
-		system.file("lib", package = "libopenexr", mustWork = TRUE),
-		winslash = "/",
-		mustWork = TRUE
-	),
-	error = function(e) {
-		stop(
-			"OpenEXR not found; please install libopenexr or ensure it is available on the library path.",
-			call. = FALSE
-		)
-	}
+  normalizePath(
+    system.file("lib", package = "libopenexr", mustWork = TRUE),
+    winslash = "/",
+    mustWork = TRUE
+  ),
+  error = function(e) {
+    stop(
+      "OpenEXR not found; please install libopenexr or ensure it is available on the library path.",
+      call. = FALSE
+    )
+  }
 )
 openexr_inc_dir = tryCatch(
-	normalizePath(
-		system.file(
-			"include",
-			"OpenEXR",
-			package = "libopenexr",
-			mustWork = TRUE
-		),
-		winslash = "/",
-		mustWork = TRUE
-	),
-	error = function(e) {
-		stop(
-			"OpenEXR headers not found; please install libopenexr.",
-			call. = FALSE
-		)
-	}
+  normalizePath(
+    system.file(
+      "include",
+      "OpenEXR",
+      package = "libopenexr",
+      mustWork = TRUE
+    ),
+    winslash = "/",
+    mustWork = TRUE
+  ),
+  error = function(e) {
+    stop(
+      "OpenEXR headers not found; please install libopenexr.",
+      call. = FALSE
+    )
+  }
 )
 openexr_lib_arch = file.path(openexr_lib_dir, target_arch)
 if (!dir.exists(openexr_lib_arch)) {
-	stop(
-		sprintf(
-			"OpenEXR library directory for architecture '%s' not found at %s",
-			target_arch,
-			openexr_lib_arch
-		),
-		call. = FALSE
-	)
+  stop(
+    sprintf(
+      "OpenEXR library directory for architecture '%s' not found at %s",
+      target_arch,
+      openexr_lib_arch
+    ),
+    call. = FALSE
+  )
 }
 PKG_CPPFLAGS = append_flags(
-	PKG_CPPFLAGS,
-	flag_with_path("-I", (openexr_inc_dir))
+  PKG_CPPFLAGS,
+  flag_with_path("-I", (openexr_inc_dir))
 )
 
 PKG_LIBS_ACC = add_rpath(PKG_LIBS_ACC, openexr_lib_arch)
 PKG_LIBS_ACC = append_flags(
-	PKG_LIBS_ACC,
-	"-lOpenEXR-4_0",
-	"-lOpenEXRUtil-4_0",
-	"-lOpenEXRCore-4_0",
-	"-lIex-4_0",
-	"-lIlmThread-4_0"
+  PKG_LIBS_ACC,
+  "-lOpenEXR-4_0",
+  "-lOpenEXRUtil-4_0",
+  "-lOpenEXRCore-4_0",
+  "-lIex-4_0",
+  "-lIlmThread-4_0"
 )
 openjph_static_lib = file.path(openexr_lib_arch, "libopenjph.a")
 if (file.exists(openjph_static_lib)) {
-	PKG_LIBS_ACC = append_flags(PKG_LIBS_ACC, openjph_static_lib)
+  PKG_LIBS_ACC = append_flags(PKG_LIBS_ACC, openjph_static_lib)
 }
 
 imath_lib_dir = tryCatch(
-	normalizePath(
-		system.file("lib", package = "libimath", mustWork = TRUE),
-		winslash = "/",
-		mustWork = TRUE
-	),
-	error = function(e) {
-		stop("Imath not found; please install libimath.", call. = FALSE)
-	}
+  normalizePath(
+    system.file("lib", package = "libimath", mustWork = TRUE),
+    winslash = "/",
+    mustWork = TRUE
+  ),
+  error = function(e) {
+    stop("Imath not found; please install libimath.", call. = FALSE)
+  }
 )
 imath_inc_dir = tryCatch(
-	normalizePath(
-		system.file("include", "Imath", package = "libimath", mustWork = TRUE),
-		winslash = "/",
-		mustWork = TRUE
-	),
-	error = function(e) {
-		stop("Imath headers not found; please install libimath.", call. = FALSE)
-	}
+  normalizePath(
+    system.file("include", "Imath", package = "libimath", mustWork = TRUE),
+    winslash = "/",
+    mustWork = TRUE
+  ),
+  error = function(e) {
+    stop("Imath headers not found; please install libimath.", call. = FALSE)
+  }
 )
 imath_lib_arch = file.path(imath_lib_dir, target_arch)
 if (!dir.exists(imath_lib_arch)) {
-	stop(
-		sprintf(
-			"Imath library directory for architecture '%s' not found at %s",
-			target_arch,
-			imath_lib_arch
-		),
-		call. = FALSE
-	)
+  stop(
+    sprintf(
+      "Imath library directory for architecture '%s' not found at %s",
+      target_arch,
+      imath_lib_arch
+    ),
+    call. = FALSE
+  )
 }
 PKG_CPPFLAGS = append_flags(
-	PKG_CPPFLAGS,
-	flag_with_path("-I", (imath_inc_dir))
+  PKG_CPPFLAGS,
+  flag_with_path("-I", (imath_inc_dir))
 )
 PKG_LIBS_ACC = add_rpath(PKG_LIBS_ACC, imath_lib_arch)
 PKG_LIBS_ACC = append_flags(PKG_LIBS_ACC, "-lImath-3_2")
@@ -663,202 +663,208 @@ arch_norm = tolower(target_arch)
 # "x86-64" -> "x86_64"
 arch_norm = gsub("-", "_", arch_norm)
 sse_checked = FALSE
+disable_simd = tolower(Sys.getenv("RAYRENDER_DISABLE_SIMD", unset = "false"))
+disable_simd = disable_simd %in% c("true", "1", "yes", "on")
 
-if (grepl("x86_64|amd64|i386|i686", arch_norm)) {
-	# ---- x86: SSE probing ----
-	if (
-		compile_test(
-			"#include <smmintrin.h>\nint main() { __m128 v = _mm_dp_ps(_mm_set1_ps(1.0f), _mm_set1_ps(2.0f), 0xFF); (void)v; return 0; }\n",
-			extra_cxxflags = "-msse4.1"
-		)
-	) {
-		PKG_CXXFLAGS = append_unique_flags(PKG_CXXFLAGS, "-msse4.1")
-		DEFINES = append_unique_flags(
-			DEFINES,
-			"-DHAS_SSE",
-			"-DHAS_SSE41",
-			"-DRAYSIMD",
-			"-DRAYSIMDVECOFF"
-		)
-		sse_checked = TRUE
-		message("*** configure: enabling SSE4.1 support")
-	}
+if (disable_simd) {
+  message("*** configure: SIMD support disabled by RAYRENDER_DISABLE_SIMD")
+} else if (grepl("x86_64|amd64|i386|i686", arch_norm)) {
+  # ---- x86: SSE probing ----
+  if (
+    compile_test(
+      "#include <smmintrin.h>\nint main() { __m128 v = _mm_dp_ps(_mm_set1_ps(1.0f), _mm_set1_ps(2.0f), 0xFF); (void)v; return 0; }\n",
+      extra_cxxflags = "-msse4.1"
+    )
+  ) {
+    PKG_CXXFLAGS = append_unique_flags(PKG_CXXFLAGS, "-msse4.1")
+    DEFINES = append_unique_flags(
+      DEFINES,
+      "-DHAS_SSE",
+      "-DHAS_SSE41",
+      "-DRAYSIMD",
+      "-DRAYSIMDVECOFF"
+    )
+    sse_checked = TRUE
+    message("*** configure: enabling SSE4.1 support")
+  }
 
-	if (
-		!sse_checked &&
-			compile_test(
-				"#include <pmmintrin.h>\nint main() { __m128 v = _mm_hadd_ps(_mm_set1_ps(1.0f), _mm_set1_ps(1.0f)); (void)v; return 0; }\n",
-				extra_cxxflags = "-msse3"
-			)
-	) {
-		PKG_CXXFLAGS = append_unique_flags(PKG_CXXFLAGS, "-msse3")
-		DEFINES = append_unique_flags(
-			DEFINES,
-			"-DHAS_SSE",
-			"-DHAS_SSE3",
-			"-DRAYSIMD",
-			"-DRAYSIMDVECOFF"
-		)
-		sse_checked = TRUE
-		message("*** configure: enabling SSE3 support")
-	}
+  if (
+    !sse_checked &&
+      compile_test(
+        "#include <pmmintrin.h>\nint main() { __m128 v = _mm_hadd_ps(_mm_set1_ps(1.0f), _mm_set1_ps(1.0f)); (void)v; return 0; }\n",
+        extra_cxxflags = "-msse3"
+      )
+  ) {
+    PKG_CXXFLAGS = append_unique_flags(PKG_CXXFLAGS, "-msse3")
+    DEFINES = append_unique_flags(
+      DEFINES,
+      "-DHAS_SSE",
+      "-DHAS_SSE3",
+      "-DRAYSIMD",
+      "-DRAYSIMDVECOFF"
+    )
+    sse_checked = TRUE
+    message("*** configure: enabling SSE3 support")
+  }
 
-	if (
-		!sse_checked &&
-			compile_test(
-				"#include <emmintrin.h>\nint main() { __m128d v = _mm_setzero_pd(); (void)v; return 0; }\n",
-				extra_cxxflags = "-msse2"
-			)
-	) {
-		PKG_CXXFLAGS = append_unique_flags(PKG_CXXFLAGS, "-msse2")
-		DEFINES = append_unique_flags(
-			DEFINES,
-			"-DHAS_SSE",
-			"-DHAS_SSE2",
-			"-DRAYSIMD",
-			"-DRAYSIMDVECOFF"
-		)
-		sse_checked = TRUE
-		message("*** configure: enabling SSE2 support")
-	}
+  if (
+    !sse_checked &&
+      compile_test(
+        "#include <emmintrin.h>\nint main() { __m128d v = _mm_setzero_pd(); (void)v; return 0; }\n",
+        extra_cxxflags = "-msse2"
+      )
+  ) {
+    PKG_CXXFLAGS = append_unique_flags(PKG_CXXFLAGS, "-msse2")
+    DEFINES = append_unique_flags(
+      DEFINES,
+      "-DHAS_SSE",
+      "-DHAS_SSE2",
+      "-DRAYSIMD",
+      "-DRAYSIMDVECOFF"
+    )
+    sse_checked = TRUE
+    message("*** configure: enabling SSE2 support")
+  }
 
-	if (
-		!sse_checked &&
-			compile_test(
-				"#include <xmmintrin.h>\nint main() { __m128 v = _mm_setzero_ps(); (void)v; return 0; }\n",
-				extra_cxxflags = "-msse"
-			)
-	) {
-		PKG_CXXFLAGS = append_unique_flags(PKG_CXXFLAGS, "-msse")
-		DEFINES = append_unique_flags(
-			DEFINES,
-			"-DHAS_SSE",
-			"-DRAYSIMD",
-			"-DRAYSIMDVECOFF"
-		)
-		sse_checked = TRUE
-		message("*** configure: enabling SSE support")
-	}
+  if (
+    !sse_checked &&
+      compile_test(
+        "#include <xmmintrin.h>\nint main() { __m128 v = _mm_setzero_ps(); (void)v; return 0; }\n",
+        extra_cxxflags = "-msse"
+      )
+  ) {
+    PKG_CXXFLAGS = append_unique_flags(PKG_CXXFLAGS, "-msse")
+    DEFINES = append_unique_flags(
+      DEFINES,
+      "-DHAS_SSE",
+      "-DRAYSIMD",
+      "-DRAYSIMDVECOFF"
+    )
+    sse_checked = TRUE
+    message("*** configure: enabling SSE support")
+  }
 
-	if (!sse_checked) {
-		message("*** configure: SSE intrinsics not available")
-	}
+  if (!sse_checked) {
+    message("*** configure: SSE intrinsics not available")
+  }
 } else {
-	message(
-		"*** configure: skipping SSE probes on non-x86 arch (",
-		target_arch,
-		")"
-	)
+  message(
+    "*** configure: skipping SSE probes on non-x86 arch (",
+    target_arch,
+    ")"
+  )
 }
 
 
 # ---- NEON probing: only on ARM, and only on non-Windows toolchains ----
-if (!is_windows && grepl("aarch64|arm64|^arm", arch_norm)) {
-	if (
-		compile_test(
-			"#include <arm_neon.h>\nint main() { float32x4_t v = vdupq_n_f32(0.0f); (void)v; return 0; }\n"
-		)
-	) {
-		DEFINES = append_unique_flags(
-			DEFINES,
-			"-DHAS_NEON",
-			"-DRAYSIMD",
-			"-DRAYSIMDVECOFF"
-		)
-		message("*** configure: enabling NEON support")
-	} else {
-		message("*** configure: NEON intrinsics not available on ", target_arch)
-	}
+if (disable_simd) {
+  message("*** configure: skipping NEON probes because SIMD is disabled")
+} else if (!is_windows && grepl("aarch64|arm64|^arm", arch_norm)) {
+  if (
+    compile_test(
+      "#include <arm_neon.h>\nint main() { float32x4_t v = vdupq_n_f32(0.0f); (void)v; return 0; }\n"
+    )
+  ) {
+    DEFINES = append_unique_flags(
+      DEFINES,
+      "-DHAS_NEON",
+      "-DRAYSIMD",
+      "-DRAYSIMDVECOFF"
+    )
+    message("*** configure: enabling NEON support")
+  } else {
+    message("*** configure: NEON intrinsics not available on ", target_arch)
+  }
 } else {
-	message(
-		"*** configure: skipping NEON probes on this platform (",
-		target_arch,
-		")"
-	)
+  message(
+    "*** configure: skipping NEON probes on this platform (",
+    target_arch,
+    ")"
+  )
 }
 
 
 ray_color_debug = tolower(Sys.getenv("RAY_COLOR_DEBUG", unset = "false"))
 if (identical(ray_color_debug, "true")) {
-	message("*** configure: enabling RAY_COLOR_DEBUG")
-	DEFINES = append_unique_flags(DEFINES, "-DRAY_COLOR_DEBUG")
+  message("*** configure: enabling RAY_COLOR_DEBUG")
+  DEFINES = append_unique_flags(DEFINES, "-DRAY_COLOR_DEBUG")
 } else {
-	message("*** configure: RAY_COLOR_DEBUG disabled")
+  message("*** configure: RAY_COLOR_DEBUG disabled")
 }
 
 collect_sources = function(subdir, pattern) {
-	if (!dir.exists(file.path("src", subdir))) {
-		return(character())
-	}
-	files = list.files(
-		file.path("src", subdir),
-		pattern = pattern,
-		full.names = FALSE,
-		no.. = TRUE
-	)
-	if (length(files) == 0) {
-		return(character())
-	}
-	file.path(subdir, files)
+  if (!dir.exists(file.path("src", subdir))) {
+    return(character())
+  }
+  files = list.files(
+    file.path("src", subdir),
+    pattern = pattern,
+    full.names = FALSE,
+    no.. = TRUE
+  )
+  if (length(files) == 0) {
+    return(character())
+  }
+  file.path(subdir, files)
 }
 
 DIR_SOURCES = sort(list.files("src", pattern = "\\.cpp$", full.names = FALSE))
 SUBDIR_SOURCES = sort(unlist(lapply(
-	c("core", "hitables", "materials", "math", "utils"),
-	collect_sources,
-	pattern = "\\.cpp$"
+  c("core", "hitables", "materials", "math", "utils"),
+  collect_sources,
+  pattern = "\\.cpp$"
 )))
 EXT_CPP_SOURCES = sort(unlist(lapply(
-	c("ext/miniply"),
-	collect_sources,
-	pattern = "\\.cpp$"
+  c("ext/miniply"),
+  collect_sources,
+  pattern = "\\.cpp$"
 )))
 EXT_C_SOURCES = sort(list.files(
-	"src",
-	pattern = "\\.c$",
-	recursive = TRUE,
-	full.names = FALSE
+  "src",
+  pattern = "\\.c$",
+  recursive = TRUE,
+  full.names = FALSE
 ))
 
 PKG_CPPFLAGS_STR = collapse_flags(append_flags(PKG_CPPFLAGS, OIDN_CPPFLAGS))
 PKG_LIBS_STR = collapse_flags(append_flags(
-	LINK_LIBS,
-	PKG_LIBS_ACC,
-	OIDN_LDFLAGS,
-	OIDN_LIBS
+  LINK_LIBS,
+  PKG_LIBS_ACC,
+  OIDN_LDFLAGS,
+  OIDN_LIBS
 ))
 PKG_CXXFLAGS_STR = collapse_flags(PKG_CXXFLAGS)
 DEFINES_STR = collapse_flags(DEFINES)
 
 define(
-	PKG_CPPFLAGS = PKG_CPPFLAGS_STR,
-	PKG_LIBS = PKG_LIBS_STR,
-	PKG_CXXFLAGS = PKG_CXXFLAGS_STR,
-	DEFINES = DEFINES_STR,
-	DIR_SOURCES = collapse_flags(DIR_SOURCES),
-	SUBDIR_SOURCES = collapse_flags(SUBDIR_SOURCES),
-	EXT_CPP_SOURCES = collapse_flags(EXT_CPP_SOURCES),
-	EXT_C_SOURCES = collapse_flags(EXT_C_SOURCES)
+  PKG_CPPFLAGS = PKG_CPPFLAGS_STR,
+  PKG_LIBS = PKG_LIBS_STR,
+  PKG_CXXFLAGS = PKG_CXXFLAGS_STR,
+  DEFINES = DEFINES_STR,
+  DIR_SOURCES = collapse_flags(DIR_SOURCES),
+  SUBDIR_SOURCES = collapse_flags(SUBDIR_SOURCES),
+  EXT_CPP_SOURCES = collapse_flags(EXT_CPP_SOURCES),
+  EXT_C_SOURCES = collapse_flags(EXT_C_SOURCES)
 )
 
 if (is_windows) {
-	configure_file("src/Makevars.win.in")
-	if (file.exists("src/Makevars")) {
-		unlink("src/Makevars")
-	}
+  configure_file("src/Makevars.win.in")
+  if (file.exists("src/Makevars")) {
+    unlink("src/Makevars")
+  }
 } else {
-	configure_file("src/Makevars.in")
-	if (file.exists("src/Makevars.win")) {
-		unlink("src/Makevars.win")
-	}
+  configure_file("src/Makevars.in")
+  if (file.exists("src/Makevars.win")) {
+    unlink("src/Makevars.win")
+  }
 }
 
 message("--------------------------------------------------")
 message("Configuration for rayrender")
 message(sprintf(
-	"  cppflags: %s %s",
-	collapse_flags(CPPFLAGS_BASE),
-	DEFINES_STR
+  "  cppflags: %s %s",
+  collapse_flags(CPPFLAGS_BASE),
+  DEFINES_STR
 ))
 message(sprintf("  cxxflags: %s", PKG_CXXFLAGS_STR))
 message(sprintf("  includes: %s", PKG_CPPFLAGS_STR))

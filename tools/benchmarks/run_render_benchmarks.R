@@ -1,5 +1,17 @@
 csv_columns = c(
   "timestamp_utc",
+  "run_id",
+  "run_attempt",
+  "workflow",
+  "event_name",
+  "source_ref",
+  "commit_label",
+  "commit_sha",
+  "git_dirty",
+  "branch_name",
+  "pull_request_number",
+  "pull_request_head_ref",
+  "pull_request_base_ref",
   "benchmark_name",
   "benchmark_source",
   "benchmark_settings_json",
@@ -11,6 +23,22 @@ csv_columns = c(
   "height",
   "samples",
   "threads",
+  "time_build",
+  "build_config_name",
+  "compiler_id",
+  "cc",
+  "cxx",
+  "cxxflags",
+  "cxx14flags",
+  "cxx17flags",
+  "pkg_cxxflags",
+  "makeflags",
+  "extra_env_json",
+  "simd_enabled",
+  "raysimd_defined",
+  "has_sse_defined",
+  "has_avx_defined",
+  "runner_os",
   "platform_system",
   "platform_release",
   "platform_machine",
@@ -20,28 +48,26 @@ csv_columns = c(
   "r_version",
   "package_name",
   "package_version",
-  "source_ref",
-  "commit_label",
-  "commit_sha",
-  "git_dirty",
-  "build_config_name",
-  "compiler_id",
-  "cc",
-  "cxx",
-  "cxxflags",
-  "cxx17flags",
-  "pkg_cxxflags",
-  "makeflags",
-  "extra_env_json",
+  "package_build_seconds",
+  "package_install_seconds",
+  "scene_build_seconds",
+  "bvh_build_seconds",
+  "render_seconds",
+  "total_seconds",
+  "process_elapsed_seconds",
+  "process_user_seconds",
+  "process_system_seconds",
+  "max_rss_kb",
+  "max_rss_mb",
   "build_seconds",
   "install_seconds",
-  "render_seconds",
   "status",
   "error",
   "output_hash",
   "artifact_path",
   "build_log_path",
   "benchmark_log_path",
+  "time_log_path",
   "workdir_path"
 )
 
@@ -290,21 +316,31 @@ run_logged = function(
   cwd,
   env,
   log_path,
-  timeout_seconds = NA_real_
+  timeout_seconds = NA_real_,
+  time_log_path = NULL
 ) {
   start = proc.time()[["elapsed"]]
   oldwd = setwd(cwd)
   on.exit(setwd(oldwd), add = TRUE)
   timeout = if (is.na(timeout_seconds)) 0 else timeout_seconds
-  shell_args = if (length(args) > 0) {
-    vapply(args, shQuote, character(1))
+  actual_command = command
+  actual_args = args
+  command_for_log = c(command, args)
+  if (!is.null(time_log_path) && nzchar(time_log_path) && supports_gnu_time()) {
+    dir.create(dirname(time_log_path), recursive = TRUE, showWarnings = FALSE)
+    actual_command = "/usr/bin/time"
+    actual_args = c("-v", "-o", time_log_path, command, args)
+    command_for_log = actual_args
+  }
+  shell_args = if (length(actual_args) > 0) {
+    vapply(actual_args, shQuote, character(1))
   } else {
     character()
   }
   output = tryCatch(
     suppressWarnings(
       system2(
-        command,
+        actual_command,
         shell_args,
         stdout = TRUE,
         stderr = TRUE,
@@ -326,9 +362,15 @@ run_logged = function(
     dir.create(log_dir, recursive = TRUE, showWarnings = FALSE)
   }
   lines = c(
-    paste0("$ ", quote_command(c(command, args))),
+    paste0("$ ", quote_command(c(actual_command, actual_args))),
     as.character(output)
   )
+  if (!identical(command_for_log, c(command, args))) {
+    lines = c(
+      paste0("$ measured command: ", quote_command(c(command, args))),
+      lines
+    )
+  }
   if (status == 124 && !is.na(timeout_seconds)) {
     lines = c(
       lines,
@@ -341,6 +383,113 @@ run_logged = function(
     elapsed = elapsed,
     error = if (status == 124) tail(lines, 1) else ""
   )
+}
+
+supports_gnu_time = local({
+  cache = new.env(parent = emptyenv())
+  cache$known = FALSE
+  cache$value = FALSE
+  function() {
+    if (isTRUE(cache$known)) {
+      return(cache$value)
+    }
+    if (!file.exists("/usr/bin/time")) {
+      cache$known = TRUE
+      cache$value = FALSE
+      return(cache$value)
+    }
+    temp_log = tempfile("rayrender-time-check-", fileext = ".log")
+    output = tryCatch(
+      suppressWarnings(system2(
+        "/usr/bin/time",
+        c("-v", "-o", temp_log, "true"),
+        stdout = TRUE,
+        stderr = TRUE
+      )),
+      error = function(e) {
+        structure(conditionMessage(e), status = 127)
+      }
+    )
+    status = attr(output, "status")
+    cache$value = (is.null(status) || identical(status, 0)) &&
+      file.exists(temp_log) &&
+      any(grepl("Maximum resident set size", readLines(temp_log, warn = FALSE)))
+    cache$known = TRUE
+    unlink(temp_log)
+    cache$value
+  }
+})
+
+parse_elapsed_time = function(value) {
+  value = trimws(value)
+  if (!nzchar(value) || identical(value, "NA")) {
+    return(NA_real_)
+  }
+  parts = strsplit(value, ":", fixed = TRUE)[[1]]
+  numeric_parts = suppressWarnings(as.numeric(parts))
+  if (any(is.na(numeric_parts))) {
+    return(NA_real_)
+  }
+  if (length(numeric_parts) == 3) {
+    return(
+      numeric_parts[[1]] * 3600 + numeric_parts[[2]] * 60 + numeric_parts[[3]]
+    )
+  }
+  if (length(numeric_parts) == 2) {
+    return(numeric_parts[[1]] * 60 + numeric_parts[[2]])
+  }
+  numeric_parts[[1]]
+}
+
+parse_time_log = function(path) {
+  empty = list(
+    process_elapsed_seconds = "NA",
+    process_user_seconds = "NA",
+    process_system_seconds = "NA",
+    max_rss_kb = "NA",
+    max_rss_mb = "NA",
+    time_log_path = "NA"
+  )
+  if (is.null(path) || !nzchar(path) || !file.exists(path)) {
+    return(empty)
+  }
+  lines = readLines(path, warn = FALSE)
+  field_value = function(pattern) {
+    hit = grep(pattern, lines, value = TRUE)
+    if (length(hit) == 0) {
+      return(NA_character_)
+    }
+    trimws(sub("^[^:]+:\\s*", "", hit[[1]]))
+  }
+  elapsed = parse_elapsed_time(field_value(
+    "^\\s*Elapsed \\(wall clock\\) time"
+  ))
+  user = suppressWarnings(as.numeric(field_value(
+    "^\\s*User time \\(seconds\\)"
+  )))
+  system = suppressWarnings(as.numeric(field_value(
+    "^\\s*System time \\(seconds\\)"
+  )))
+  rss = suppressWarnings(as.numeric(field_value(
+    "^\\s*Maximum resident set size"
+  )))
+  list(
+    process_elapsed_seconds = if (is.na(elapsed)) "NA" else
+      sprintf("%.6f", elapsed),
+    process_user_seconds = if (is.na(user)) "NA" else sprintf("%.6f", user),
+    process_system_seconds = if (is.na(system)) "NA" else
+      sprintf("%.6f", system),
+    max_rss_kb = if (is.na(rss)) "NA" else sprintf("%.0f", rss),
+    max_rss_mb = if (is.na(rss)) "NA" else sprintf("%.6f", rss / 1024),
+    time_log_path = path
+  )
+}
+
+apply_time_metrics = function(row, time_info) {
+  for (name in names(time_info)) {
+    row[[name]] = time_info[[name]]
+  }
+  row
 }
 
 read_tail = function(path, max_chars = 4000) {
@@ -446,6 +595,10 @@ parse_description = function(path) {
 
 git_metadata = function(repo, ref) {
   sha = run_text("git", c("rev-parse", "HEAD"), cwd = repo)
+  github_sha = Sys.getenv("GITHUB_SHA", unset = "")
+  if (nzchar(github_sha)) {
+    sha = github_sha
+  }
   dirty = run_text("git", c("status", "--porcelain"), cwd = repo, check = FALSE)
   list(
     source_ref = ref,
@@ -630,7 +783,17 @@ configured_value = function(build_config, env, name, source) {
     return(sys_value)
   }
   if (
-    name %in% c("CC", "CXX", "CXX17", "CXXFLAGS", "CXX17FLAGS", "PKG_CXXFLAGS")
+    name %in%
+      c(
+        "CC",
+        "CXX",
+        "CXX14",
+        "CXX17",
+        "CXXFLAGS",
+        "CXX14FLAGS",
+        "CXX17FLAGS",
+        "PKG_CXXFLAGS"
+      )
   ) {
     return(r_cmd_config(name, source, env))
   }
@@ -762,7 +925,7 @@ na = function(value) {
   if (is.null(value) || length(value) == 0) {
     return("NA")
   }
-  if (is.numeric(value) && any(is.na(value))) {
+  if (any(is.na(value))) {
     return("NA")
   }
   value = as.character(value[[1]])
@@ -772,7 +935,98 @@ na = function(value) {
   value
 }
 
+env_or_na = function(name) {
+  value = Sys.getenv(name, unset = NA_character_)
+  na(value)
+}
+
+git_branch_name = function(repo) {
+  branch = run_text(
+    "git",
+    c("rev-parse", "--abbrev-ref", "HEAD"),
+    cwd = repo,
+    check = FALSE
+  )
+  branch = strsplit(branch, "\n", fixed = TRUE)[[1]][[1]]
+  branch = trimws(branch)
+  if (!nzchar(branch) || startsWith(branch, "fatal:")) {
+    return("NA")
+  }
+  branch
+}
+
+github_context = function(repo) {
+  event_name = env_or_na("GITHUB_EVENT_NAME")
+  branch_name = Sys.getenv("GITHUB_HEAD_REF", unset = "")
+  if (!nzchar(branch_name)) {
+    branch_name = Sys.getenv("GITHUB_REF_NAME", unset = "")
+  }
+  if (!nzchar(branch_name)) {
+    branch_name = git_branch_name(repo)
+  }
+  pull_request_number = "NA"
+  event_path = Sys.getenv("GITHUB_EVENT_PATH", unset = "")
+  if (nzchar(event_path) && file.exists(event_path)) {
+    event = tryCatch(read_json(event_path), error = function(e) NULL)
+    if (
+      !is.null(event) &&
+        "pull_request" %in% names(event) &&
+        "number" %in% names(event$pull_request)
+    ) {
+      pull_request_number = as.character(event$pull_request$number)
+    } else if (!is.null(event) && "number" %in% names(event)) {
+      pull_request_number = as.character(event$number)
+    }
+  }
+  if (identical(pull_request_number, "NA") && event_name == "pull_request") {
+    ref = Sys.getenv("GITHUB_REF", unset = "")
+    match = regexec("refs/pull/([0-9]+)/", ref)
+    pieces = regmatches(ref, match)[[1]]
+    if (length(pieces) >= 2) {
+      pull_request_number = pieces[[2]]
+    }
+  }
+  list(
+    run_id = env_or_na("GITHUB_RUN_ID"),
+    run_attempt = env_or_na("GITHUB_RUN_ATTEMPT"),
+    workflow = env_or_na("GITHUB_WORKFLOW"),
+    event_name = event_name,
+    branch_name = na(branch_name),
+    pull_request_number = pull_request_number,
+    pull_request_head_ref = env_or_na("GITHUB_HEAD_REF"),
+    pull_request_base_ref = env_or_na("GITHUB_BASE_REF"),
+    runner_os = env_or_na("RUNNER_OS")
+  )
+}
+
+combined_build_flags = function(build_config, env, source) {
+  names = c(
+    "CFLAGS",
+    "CXXFLAGS",
+    "CXX11FLAGS",
+    "CXX14FLAGS",
+    "CXX17FLAGS",
+    "CXX20FLAGS",
+    "PKG_CXXFLAGS",
+    "MAKEFLAGS"
+  )
+  values = c(unlist(build_config$makevars), unlist(build_config$env))
+  for (name in names) {
+    configured = configured_value(build_config, env, name, source)
+    if (!identical(configured, "NA")) {
+      values = c(values, configured)
+    }
+  }
+  paste(values, collapse = " ")
+}
+
+flag_defined = function(flags, define) {
+  pattern = paste0("(^|[[:space:]])-D", define, "([=[:space:]]|$)")
+  grepl(pattern, flags)
+}
+
 base_row = function(
+  repo,
   benchmark_name,
   benchmark_source_path,
   settings_json,
@@ -791,8 +1045,25 @@ base_row = function(
   workdir
 ) {
   sys = Sys.info()
+  ci = github_context(repo)
+  flags = combined_build_flags(build_config, env, source)
+  raysimd_defined = flag_defined(flags, "RAYSIMD")
+  has_sse_defined = flag_defined(flags, "HAS_SSE")
+  has_avx_defined = flag_defined(flags, "HAS_AVX")
   row = list(
     timestamp_utc = timestamp_utc(),
+    run_id = ci$run_id,
+    run_attempt = ci$run_attempt,
+    workflow = ci$workflow,
+    event_name = ci$event_name,
+    source_ref = metadata$source_ref,
+    commit_label = metadata$commit_label,
+    commit_sha = metadata$commit_sha,
+    git_dirty = metadata$git_dirty,
+    branch_name = ci$branch_name,
+    pull_request_number = ci$pull_request_number,
+    pull_request_head_ref = ci$pull_request_head_ref,
+    pull_request_base_ref = ci$pull_request_base_ref,
     benchmark_name = benchmark_name,
     benchmark_source = benchmark_source_path,
     benchmark_settings_json = settings_json,
@@ -804,6 +1075,29 @@ base_row = function(
     height = as.character(settings$height),
     samples = as.character(settings$samples),
     threads = as.character(settings$threads),
+    time_build = as.character(isTRUE(settings$time_build)),
+    build_config_name = build_config$name,
+    compiler_id = compiler_id(build_config, env, source),
+    cc = na(configured_value(build_config, env, "CC", source)),
+    cxx = na(configured_value(build_config, env, "CXX", source)),
+    cxxflags = na(configured_value(build_config, env, "CXXFLAGS", source)),
+    cxx14flags = na(configured_value(build_config, env, "CXX14FLAGS", source)),
+    cxx17flags = na(configured_value(build_config, env, "CXX17FLAGS", source)),
+    pkg_cxxflags = na(configured_value(
+      build_config,
+      env,
+      "PKG_CXXFLAGS",
+      source
+    )),
+    makeflags = na(configured_value(build_config, env, "MAKEFLAGS", source)),
+    extra_env_json = to_json(build_config$env),
+    simd_enabled = as.character(
+      raysimd_defined || has_sse_defined || has_avx_defined
+    ),
+    raysimd_defined = as.character(raysimd_defined),
+    has_sse_defined = as.character(has_sse_defined),
+    has_avx_defined = as.character(has_avx_defined),
+    runner_os = ci$runner_os,
     platform_system = na(sys[["sysname"]]),
     platform_release = na(sys[["release"]]),
     platform_machine = na(sys[["machine"]]),
@@ -815,33 +1109,26 @@ base_row = function(
     r_version = R.version.string,
     package_name = package_name,
     package_version = package_version,
-    source_ref = metadata$source_ref,
-    commit_label = metadata$commit_label,
-    commit_sha = metadata$commit_sha,
-    git_dirty = metadata$git_dirty,
-    build_config_name = build_config$name,
-    compiler_id = compiler_id(build_config, env, source),
-    cc = na(configured_value(build_config, env, "CC", source)),
-    cxx = na(configured_value(build_config, env, "CXX", source)),
-    cxxflags = na(configured_value(build_config, env, "CXXFLAGS", source)),
-    cxx17flags = na(configured_value(build_config, env, "CXX17FLAGS", source)),
-    pkg_cxxflags = na(configured_value(
-      build_config,
-      env,
-      "PKG_CXXFLAGS",
-      source
-    )),
-    makeflags = na(configured_value(build_config, env, "MAKEFLAGS", source)),
-    extra_env_json = to_json(build_config$env),
+    package_build_seconds = build_seconds,
+    package_install_seconds = install_seconds,
+    scene_build_seconds = "NA",
+    bvh_build_seconds = "NA",
+    render_seconds = "NA",
+    total_seconds = "NA",
+    process_elapsed_seconds = "NA",
+    process_user_seconds = "NA",
+    process_system_seconds = "NA",
+    max_rss_kb = "NA",
+    max_rss_mb = "NA",
     build_seconds = build_seconds,
     install_seconds = install_seconds,
-    render_seconds = "NA",
     status = "NA",
     error = "NA",
     output_hash = "NA",
     artifact_path = "NA",
     build_log_path = build_log_path,
     benchmark_log_path = benchmark_log_path %||% "NA",
+    time_log_path = "NA",
     workdir_path = workdir
   )
   row[csv_columns]
@@ -853,6 +1140,42 @@ write_csv_row = function(output, append, row) {
   row = row[csv_columns]
   row = lapply(row, na)
   frame = as.data.frame(row, stringsAsFactors = FALSE, check.names = FALSE)
+  if (!write_header && file.exists(output)) {
+    existing_header = names(utils::read.csv(
+      output,
+      nrows = 0,
+      check.names = FALSE,
+      stringsAsFactors = FALSE
+    ))
+    if (!identical(existing_header, csv_columns)) {
+      existing = utils::read.csv(
+        output,
+        check.names = FALSE,
+        stringsAsFactors = FALSE,
+        colClasses = "character"
+      )
+      all_columns = unique(c(existing_header, csv_columns))
+      normalize = function(data) {
+        missing = setdiff(all_columns, names(data))
+        for (name in missing) {
+          data[[name]] = "NA"
+        }
+        data[all_columns]
+      }
+      combined = rbind(normalize(existing), normalize(frame))
+      utils::write.table(
+        combined,
+        file = output,
+        sep = ",",
+        row.names = FALSE,
+        col.names = TRUE,
+        append = FALSE,
+        qmethod = "double",
+        fileEncoding = "UTF-8"
+      )
+      return(invisible(TRUE))
+    }
+  }
   utils::write.table(
     frame,
     file = output,
@@ -1061,6 +1384,7 @@ run_benchmarks = function() {
         if (build$status != 0) {
           for (benchmark in benchmarks) {
             row = base_row(
+              repo,
               benchmark,
               benchmark_source(repo, benchmark),
               settings_json,
@@ -1095,6 +1419,10 @@ run_benchmarks = function() {
                   log_dir,
                   paste0(benchmark, "-warmup-", warmup_index, ".log")
                 )
+                warmup_time_log = file.path(
+                  log_dir,
+                  paste0(benchmark, "-warmup-", warmup_index, ".time.log")
+                )
                 command_args = worker_command(
                   repo,
                   benchmark,
@@ -1113,10 +1441,12 @@ run_benchmarks = function() {
                   cwd = repo,
                   env = runtime_env,
                   log_path = warmup_log,
-                  timeout_seconds = args$timeout_seconds
+                  timeout_seconds = args$timeout_seconds,
+                  time_log_path = warmup_time_log
                 )
                 if (warmup$status != 0) {
                   row = base_row(
+                    repo,
                     benchmark,
                     scene_source,
                     settings_json,
@@ -1137,6 +1467,7 @@ run_benchmarks = function() {
                   row$iteration_index = paste0("warmup_", warmup_index)
                   row$status = "render_failed"
                   row$error = read_tail(warmup_log)
+                  row = apply_time_metrics(row, parse_time_log(warmup_time_log))
                   write_csv_row(output, args$append, row)
                   next
                 }
@@ -1151,6 +1482,10 @@ run_benchmarks = function() {
               benchmark_log = file.path(
                 log_dir,
                 paste0(benchmark, "-", iteration, ".log")
+              )
+              time_log = file.path(
+                log_dir,
+                paste0(benchmark, "-", iteration, ".time.log")
               )
               command_args = worker_command(
                 repo,
@@ -1170,9 +1505,11 @@ run_benchmarks = function() {
                 cwd = repo,
                 env = runtime_env,
                 log_path = benchmark_log,
-                timeout_seconds = args$timeout_seconds
+                timeout_seconds = args$timeout_seconds,
+                time_log_path = time_log
               )
               row = base_row(
+                repo,
                 benchmark,
                 scene_source,
                 settings_json,
@@ -1191,6 +1528,7 @@ run_benchmarks = function() {
                 workdir
               )
               row$iteration_index = as.character(iteration)
+              row = apply_time_metrics(row, parse_time_log(time_log))
               if (render$status != 0 || !file.exists(output_json)) {
                 row$status = "render_failed"
                 row$error = if (nzchar(render$error)) render$error else
@@ -1199,7 +1537,10 @@ run_benchmarks = function() {
                 result = read_json(output_json)
                 row$status = result$status %||% "NA"
                 row$error = na(result$error)
+                row$scene_build_seconds = na(result$scene_build_seconds)
+                row$bvh_build_seconds = na(result$bvh_build_seconds)
                 row$render_seconds = na(result$render_seconds)
+                row$total_seconds = na(result$total_seconds)
                 row$output_hash = na(result$output_hash)
                 row$artifact_path = na(result$image_path)
               }

@@ -7,7 +7,9 @@
     },
     {
       "name": "o3_native_no_simd",
-      "env": {},
+      "env": {
+        "RAYRENDER_DISABLE_SIMD": "true"
+      },
       "makevars": {
         "CXX17FLAGS": "-O3 -march=native",
         "CXX14FLAGS": "-O3 -march=native",

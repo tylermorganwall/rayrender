@@ -178,6 +178,39 @@ validate_render_output = function(value) {
   TRUE
 }
 
+metric_value = function(value, name, default = NA_real_) {
+  if (is.list(value) && name %in% names(value)) {
+    return(value[[name]])
+  }
+  if (is.data.frame(value) && name %in% names(value) && nrow(value) > 0) {
+    return(value[[name]][[1]])
+  }
+  attr_value = attr(value, name, exact = TRUE)
+  if (!is.null(attr_value)) {
+    return(attr_value)
+  }
+  default
+}
+
+numeric_metric = function(value, name, default = NA_real_) {
+  metric = suppressWarnings(as.numeric(metric_value(value, name, default)))
+  if (length(metric) == 0 || is.na(metric[[1]])) {
+    return(default)
+  }
+  metric[[1]]
+}
+
+benchmark_output_object = function(value) {
+  if (is.list(value)) {
+    for (name in c("image", "rendered", "output", "artifact")) {
+      if (name %in% names(value) && !is.null(value[[name]])) {
+        return(value[[name]])
+      }
+    }
+  }
+  value
+}
+
 args = parse_args(commandArgs(trailingOnly = TRUE))
 
 required = c(
@@ -229,12 +262,28 @@ result = tryCatch(
     set.seed(settings$seed + settings$iteration)
 
     elapsed = system.time({
-      rendered = run_benchmark(settings)
+      benchmark_result = run_benchmark(settings)
     })[["elapsed"]]
-    render_seconds = attr(rendered, "render_seconds", exact = TRUE)
+    rendered = benchmark_output_object(benchmark_result)
+    render_seconds = numeric_metric(
+      benchmark_result,
+      "render_seconds",
+      NA_real_
+    )
     if (is.null(render_seconds) || is.na(render_seconds)) {
       render_seconds = elapsed
     }
+    scene_build_seconds = numeric_metric(
+      benchmark_result,
+      "scene_build_seconds",
+      NA_real_
+    )
+    bvh_build_seconds = numeric_metric(
+      benchmark_result,
+      "bvh_build_seconds",
+      NA_real_
+    )
+    total_seconds = numeric_metric(benchmark_result, "total_seconds", elapsed)
 
     validate_render_output(rendered)
     hash_info = hash_object(
@@ -245,6 +294,9 @@ result = tryCatch(
 
     list(
       render_seconds = as.numeric(render_seconds),
+      scene_build_seconds = scene_build_seconds,
+      bvh_build_seconds = bvh_build_seconds,
+      total_seconds = total_seconds,
       status = "ok",
       error = NA_character_,
       output_hash = hash_info$hash,
@@ -254,6 +306,9 @@ result = tryCatch(
   error = function(e) {
     list(
       render_seconds = NA_real_,
+      scene_build_seconds = NA_real_,
+      bvh_build_seconds = NA_real_,
+      total_seconds = NA_real_,
       status = "render_failed",
       error = conditionMessage(e),
       output_hash = NA_character_,

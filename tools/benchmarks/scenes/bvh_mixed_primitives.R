@@ -118,17 +118,25 @@ render_mixed_primitives_scene = function(scene, settings) {
 
 run_benchmark = function(settings) {
   if (isTRUE(settings$time_build)) {
-    elapsed = system.time({
+    scene_build_seconds = system.time({
       scene = build_mixed_primitives_scene(settings)
+    })[["elapsed"]]
+    render_seconds = system.time({
       image = render_mixed_primitives_scene(scene, settings)
     })[["elapsed"]]
+    total_seconds = scene_build_seconds + render_seconds
   } else {
     scene = build_mixed_primitives_scene(settings)
-    elapsed = system.time({
+    render_seconds = system.time({
       image = render_mixed_primitives_scene(scene, settings)
     })[["elapsed"]]
+    scene_build_seconds = NA_real_
+    total_seconds = render_seconds
   }
-  attr(image, "render_seconds") = as.numeric(elapsed)
+  attr(image, "render_seconds") = as.numeric(render_seconds)
+  attr(image, "scene_build_seconds") = as.numeric(scene_build_seconds)
+  attr(image, "bvh_build_seconds") = NA_real_
+  attr(image, "total_seconds") = as.numeric(total_seconds)
   image
 }
 
