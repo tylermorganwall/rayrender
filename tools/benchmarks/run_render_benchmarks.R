@@ -46,16 +46,19 @@ csv_columns = c(
 )
 
 supported_makevars = c(
+  "CXX_STD",
   "CXX",
   "CXX11",
   "CXX14",
   "CXX17",
+  "CXX20",
   "CC",
   "CFLAGS",
   "CXXFLAGS",
   "CXX11FLAGS",
   "CXX14FLAGS",
   "CXX17FLAGS",
+  "CXX20FLAGS",
   "PKG_CXXFLAGS",
   "PKG_LIBS",
   "MAKEFLAGS"
@@ -510,6 +513,7 @@ prepare_source_tree = function(repo, ref, workdir) {
   if (identical(ref, "current")) {
     metadata = git_metadata(repo, "current")
     copy_current_tree(repo, source)
+    apply_source_compatibility(source)
     return(list(source = source, metadata = metadata, used_worktree = FALSE))
   }
 
@@ -521,6 +525,7 @@ prepare_source_tree = function(repo, ref, workdir) {
     cwd = repo
   )
   utils::untar(archive, exdir = source)
+  apply_source_compatibility(source)
   sha = run_text("git", c("rev-parse", paste0(ref, "^{commit}")), cwd = repo)
   metadata = list(
     source_ref = ref,
@@ -529,6 +534,43 @@ prepare_source_tree = function(repo, ref, workdir) {
     git_dirty = "false"
   )
   list(source = source, metadata = metadata, used_worktree = FALSE)
+}
+
+apply_source_compatibility = function(source) {
+  configure = file.path(source, "configure")
+  marker = file.path(source, "rayrender")
+  if (!file.exists(configure) || file.exists(marker)) {
+    return(invisible(FALSE))
+  }
+
+  configure_text = paste(readLines(configure, warn = FALSE), collapse = "\n")
+  if (!grepl('ac_unique_file="rayrender"', configure_text, fixed = TRUE)) {
+    return(invisible(FALSE))
+  }
+
+  file.create(marker)
+}
+
+apply_build_config_compatibility = function(source, build_config) {
+  cxx_std = build_config$makevars$CXX_STD %||% NULL
+  if (is.null(cxx_std) || !nzchar(cxx_std)) {
+    return(invisible(FALSE))
+  }
+
+  makevars_files = file.path(source, "src", c("Makevars", "Makevars.in"))
+  for (makevars in makevars_files[file.exists(makevars_files)]) {
+    lines = readLines(makevars, warn = FALSE)
+    cxx_std_line = paste0("CXX_STD = ", cxx_std)
+    has_cxx_std = grepl("^\\s*CXX_STD\\s*=", lines)
+    if (any(has_cxx_std)) {
+      lines[has_cxx_std] = cxx_std_line
+    } else {
+      lines = c(cxx_std_line, lines)
+    }
+    writeLines(lines, makevars)
+  }
+
+  invisible(TRUE)
 }
 
 write_makevars = function(path, values) {
@@ -989,6 +1031,7 @@ run_benchmarks = function() {
         source_info = prepare_source_tree(repo, args$ref, workdir)
         source = source_info$source
         metadata = source_info$metadata
+        apply_build_config_compatibility(source, build_config)
         description = parse_description(file.path(source, "DESCRIPTION"))
         package_name = description$Package %||% "NA"
         package_version = description$Version %||% "NA"

@@ -93,8 +93,8 @@ build_mixed_primitives_scene = function(settings) {
 }
 
 render_mixed_primitives_scene = function(scene, settings) {
-  rayrender::render_scene(
-    scene,
+  render_args = list(
+    scene = scene,
     width = settings$width,
     height = settings$height,
     samples = settings$samples,
@@ -113,6 +113,7 @@ render_mixed_primitives_scene = function(scene, settings) {
     integrator_type = "nee",
     new_page = FALSE
   )
+  call_with_supported_args(rayrender::render_scene, render_args)
 }
 
 run_benchmark = function(settings) {
@@ -137,4 +138,9 @@ run_benchmark = function(settings) {
   } else {
     x
   }
+}
+
+call_with_supported_args = function(fun, args) {
+  supported = names(formals(fun))
+  do.call(fun, args[names(args) %in% supported])
 }

@@ -14,7 +14,7 @@
     "threads": 1,
     "time_build": false,
     "write_artifact": false,
-    "sphere_count": 1000,
-    "object_count": 1000
+    "sphere_count": 3000,
+    "object_count": 3000
   }
 }

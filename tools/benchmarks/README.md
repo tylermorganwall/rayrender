@@ -57,6 +57,30 @@ into a temporary source directory. Benchmark scene files are read from the
 current repository, so older commits do not need to contain this benchmark
 harness.
 
+## Release Commits
+
+Run the bundled benchmark across every release commit in the current
+first-parent history whose commit message contains a `v0.x.y` version:
+
+```sh
+Rscript tools/benchmarks/run_release_render_benchmarks.R \
+  --repo . \
+  --config tools/benchmarks/configs/default.json \
+  --benchmarks bvh_many_spheres,bvh_mixed_primitives \
+  --iterations 5 \
+  --warmup 1 \
+  --output tools/benchmarks/results/release_render_benchmark_times.csv
+```
+
+The release wrapper writes the benchmark rows to `--output` and writes a
+sidecar commit manifest next to it with a `_commits.csv` suffix. Use
+`--max-releases N --dry-run` for a quick plan check before starting a long run,
+or `--all-refs` to search branches, tags, and remotes instead of just the
+current first-parent history. By default, the wrapper uses `--cxx-std auto`:
+it reads each release commit's `DESCRIPTION` and sets `CXX_STD` to the declared
+C++20 when required and otherwise uses `CXX17` for older releases so current R
+toolchains and Rcpp headers do not compile them as pre-C++11.
+
 ## Build Configurations
 
 Build configs live in JSON under `tools/benchmarks/configs`. The default config
@@ -78,9 +102,9 @@ Additional configs can be added to `build_configs`:
 }
 ```
 
-Supported Makevars keys are `CXX`, `CXX11`, `CXX14`, `CXX17`, `CC`, `CFLAGS`,
-`CXXFLAGS`, `CXX11FLAGS`, `CXX14FLAGS`, `CXX17FLAGS`, `PKG_CXXFLAGS`,
-`PKG_LIBS`, and `MAKEFLAGS`.
+Supported Makevars keys are `CXX_STD`, `CXX`, `CXX11`, `CXX14`, `CXX17`,
+`CXX20`, `CC`, `CFLAGS`, `CXXFLAGS`, `CXX11FLAGS`, `CXX14FLAGS`,
+`CXX17FLAGS`, `CXX20FLAGS`, `PKG_CXXFLAGS`, `PKG_LIBS`, and `MAKEFLAGS`.
 
 Filter configs with:
 
