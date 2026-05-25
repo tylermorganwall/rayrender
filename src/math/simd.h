@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <algorithm>
+#include <cmath>
 #include <stdio.h>
 #include <cstddef> // For alignas
 #include <cstring>
@@ -291,6 +292,67 @@ inline FVec4 simd_max(FVec4 a, FVec4 b) {
 #else
   for (int i = 0; i < SIMD_WIDTH; ++i) {
     result.v[i] = std::max(a.v[i], b.v[i]);
+  }
+#endif
+  return result;
+}
+
+// Match std::fmin/std::fmax NaN handling for slab reductions.
+inline FVec4 simd_min_num(FVec4 a, FVec4 b) {
+  FVec4 result;
+#ifdef HAS_AVX
+  const __m256 min_value = _mm256_min_ps(a.v, b.v);
+  const __m256 a_nan = _mm256_cmp_ps(a.v, a.v, _CMP_UNORD_Q);
+  const __m256 b_nan = _mm256_cmp_ps(b.v, b.v, _CMP_UNORD_Q);
+  const __m256 use_b_for_a_nan = _mm256_blendv_ps(min_value, b.v, a_nan);
+  result.v = _mm256_blendv_ps(use_b_for_a_nan, a.v, b_nan);
+#elif defined(HAS_SSE)
+  const __m128 min_value = _mm_min_ps(a.v, b.v);
+  const __m128 a_nan = _mm_cmpunord_ps(a.v, a.v);
+  const __m128 b_nan = _mm_cmpunord_ps(b.v, b.v);
+  const __m128 use_b_for_a_nan =
+      _mm_or_ps(_mm_and_ps(a_nan, b.v), _mm_andnot_ps(a_nan, min_value));
+  result.v =
+      _mm_or_ps(_mm_and_ps(b_nan, a.v), _mm_andnot_ps(b_nan, use_b_for_a_nan));
+#elif defined(HAS_NEON)
+  const float32x4_t min_value = vminq_f32(a.v, b.v);
+  const uint32x4_t a_nan = vmvnq_u32(vceqq_f32(a.v, a.v));
+  const uint32x4_t b_nan = vmvnq_u32(vceqq_f32(b.v, b.v));
+  const float32x4_t use_b_for_a_nan = vbslq_f32(a_nan, b.v, min_value);
+  result.v = vbslq_f32(b_nan, a.v, use_b_for_a_nan);
+#else
+  for (int i = 0; i < SIMD_WIDTH; ++i) {
+    result.v[i] = std::fmin(a.v[i], b.v[i]);
+  }
+#endif
+  return result;
+}
+
+inline FVec4 simd_max_num(FVec4 a, FVec4 b) {
+  FVec4 result;
+#ifdef HAS_AVX
+  const __m256 max_value = _mm256_max_ps(a.v, b.v);
+  const __m256 a_nan = _mm256_cmp_ps(a.v, a.v, _CMP_UNORD_Q);
+  const __m256 b_nan = _mm256_cmp_ps(b.v, b.v, _CMP_UNORD_Q);
+  const __m256 use_b_for_a_nan = _mm256_blendv_ps(max_value, b.v, a_nan);
+  result.v = _mm256_blendv_ps(use_b_for_a_nan, a.v, b_nan);
+#elif defined(HAS_SSE)
+  const __m128 max_value = _mm_max_ps(a.v, b.v);
+  const __m128 a_nan = _mm_cmpunord_ps(a.v, a.v);
+  const __m128 b_nan = _mm_cmpunord_ps(b.v, b.v);
+  const __m128 use_b_for_a_nan =
+      _mm_or_ps(_mm_and_ps(a_nan, b.v), _mm_andnot_ps(a_nan, max_value));
+  result.v =
+      _mm_or_ps(_mm_and_ps(b_nan, a.v), _mm_andnot_ps(b_nan, use_b_for_a_nan));
+#elif defined(HAS_NEON)
+  const float32x4_t max_value = vmaxq_f32(a.v, b.v);
+  const uint32x4_t a_nan = vmvnq_u32(vceqq_f32(a.v, a.v));
+  const uint32x4_t b_nan = vmvnq_u32(vceqq_f32(b.v, b.v));
+  const float32x4_t use_b_for_a_nan = vbslq_f32(a_nan, b.v, max_value);
+  result.v = vbslq_f32(b_nan, a.v, use_b_for_a_nan);
+#else
+  for (int i = 0; i < SIMD_WIDTH; ++i) {
+    result.v[i] = std::fmax(a.v[i], b.v[i]);
   }
 #endif
   return result;

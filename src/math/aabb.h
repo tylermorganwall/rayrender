@@ -217,13 +217,13 @@ inline void rayBBoxIntersect4(const RayBBox4& rbox,
     const FVec4 tMin4 = simd_set1(static_cast<float>(tMin));
     const FVec4 tMax4 = simd_set1(static_cast<float>(tMax));
 
-    tEnters = simd_max(
-        simd_max(simd_max(txNear, tyNear), tzNear),
+    tEnters = simd_max_num(
+        simd_max_num(simd_max_num(txNear, tyNear), tzNear),
         tMin4
     );
 
-    const FVec4 tExits = simd_min(
-        simd_min(simd_min(txFar, tyFar), tzFar),
+    const FVec4 tExits = simd_min_num(
+        simd_min_num(simd_min_num(txFar, tyFar), tzFar),
         tMax4
     );
 
