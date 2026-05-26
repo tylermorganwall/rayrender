@@ -16,7 +16,7 @@ on:
         required: false
         default: "1"
       publish:
-        description: "Append to benchmark-history and deploy site"
+        description: "Append results to benchmark-history"
         required: false
         default: "true"
   push:
@@ -32,8 +32,6 @@ concurrency:
 
 permissions:
   contents: write
-  pages: write
-  id-token: write
   actions: read
   pull-requests: read
 
@@ -127,12 +125,9 @@ jobs:
           path: ${{ runner.temp }}/rayrender-benchmark-workdirs/**/logs/**
           if-no-files-found: ignore
 
-  publish-history-and-site:
+  publish-history:
     needs: benchmark
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     if: >-
       ${{
         always() &&
@@ -191,7 +186,7 @@ jobs:
       - name: Prepare benchmark-history worktree
         if: steps.check_results.outputs.has_results == 'true'
         run: |
-          git fetch origin benchmark-history || true
+          git fetch origin benchmark-history:refs/remotes/origin/benchmark-history || true
           if git show-ref --verify --quiet refs/remotes/origin/benchmark-history; then
             git worktree add -B benchmark-history benchmark-history-worktree origin/benchmark-history
           else
@@ -199,19 +194,15 @@ jobs:
             git -C benchmark-history-worktree init
             git -C benchmark-history-worktree checkout --orphan benchmark-history
             git -C benchmark-history-worktree remote add origin "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY.git"
-            mkdir -p benchmark-history-worktree/data benchmark-history-worktree/site
+            mkdir -p benchmark-history-worktree/data
           fi
-          touch benchmark-history-worktree/.nojekyll
 
-      - name: Append history and build site
+      - name: Append history
         if: steps.check_results.outputs.has_results == 'true'
         run: |
           Rscript tools/benchmarks/append_benchmark_history.R \
             --history-dir benchmark-history-worktree \
             --new-results combined-new-results.csv
-          Rscript tools/benchmarks/build_benchmark_site.R \
-            --history-csv benchmark-history-worktree/data/render_benchmarks.csv \
-            --site-dir benchmark-history-worktree/site
 
       - name: Commit benchmark-history branch
         if: steps.check_results.outputs.has_results == 'true'
@@ -221,21 +212,6 @@ jobs:
           cd benchmark-history-worktree
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data site .nojekyll
+          git add data
           git commit -m "Update benchmark history for ${GITHUB_SHA}" || echo "No benchmark history changes"
           git push "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:benchmark-history
-
-      - name: Configure Pages
-        if: steps.check_results.outputs.has_results == 'true'
-        uses: actions/configure-pages@v5
-
-      - name: Upload Pages artifact
-        if: steps.check_results.outputs.has_results == 'true'
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: benchmark-history-worktree/site
-
-      - name: Deploy Pages
-        id: deployment
-        if: steps.check_results.outputs.has_results == 'true'
-        uses: actions/deploy-pages@v4

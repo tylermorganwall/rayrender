@@ -73,6 +73,23 @@ jobs:
       - name: Build site
         run: Rscript -e "pkgdown::build_site_github_pages(new_process = FALSE, install = FALSE)"
 
+      - name: Add benchmark page
+        run: |
+          mkdir -p "$RUNNER_TEMP/benchmark-history/data"
+          if git ls-remote --exit-code --heads origin benchmark-history > /dev/null 2>&1; then
+            git fetch --depth=1 origin benchmark-history:refs/remotes/origin/benchmark-history
+            git show origin/benchmark-history:data/render_benchmarks.csv > "$RUNNER_TEMP/benchmark-history/data/render_benchmarks.csv" || true
+            git show origin/benchmark-history:data/latest.json > "$RUNNER_TEMP/benchmark-history/data/latest.json" || true
+          fi
+          if [ ! -s "$RUNNER_TEMP/benchmark-history/data/render_benchmarks.csv" ]; then
+            cat > "$RUNNER_TEMP/benchmark-history/data/render_benchmarks.csv" <<'CSV'
+          timestamp_utc,branch_name,commit_sha,benchmark_name,build_config_name,render_seconds,bvh_build_seconds,max_rss_mb,package_build_seconds,total_seconds
+          CSV
+          fi
+          Rscript tools/benchmarks/build_benchmark_site.R \
+            --history-csv "$RUNNER_TEMP/benchmark-history/data/render_benchmarks.csv" \
+            --site-dir docs/benchmarks
+
       - name: Deploy to GitHub pages 🚀
         if: github.event_name != 'pull_request'
         uses: JamesIves/github-pages-deploy-action@v4.5.0

@@ -222,13 +222,13 @@ recorded as `NA`.
 The workflow `.github/workflows/render-benchmarks.yml` runs on:
 
 - `workflow_dispatch`;
-- pushes to `main` and `deferred`;
-- pull requests.
+- pushes to any branch except `gh-pages`;
+- pull requests whose target branch is not `gh-pages`.
 
 Pull requests run the benchmark matrix and upload CSV/log artifacts, but do not
-push history or deploy Pages. Pushes to `main`/`deferred` and manual runs with
-`publish=true` append successful artifacts to the `benchmark-history` branch and
-deploy a static site through GitHub Actions Pages.
+push history. Pushes to non-`gh-pages` branches and manual runs with
+`publish=true` append successful artifacts to the `benchmark-history` branch.
+The benchmark workflow does not deploy GitHub Pages directly.
 
 To run manually:
 
@@ -236,26 +236,25 @@ To run manually:
 2. Choose benchmark names, iterations, warmups, and whether to publish.
 3. Run the workflow.
 
-Set GitHub Pages to use GitHub Actions:
+The pkgdown workflow pulls benchmark history from `benchmark-history` and
+generates `docs/benchmarks/index.html` before deploying the normal pkgdown site
+to `gh-pages`. Configure GitHub Pages the same way as the package website:
 
 1. Open repository Settings -> Pages.
-2. Set Source to `GitHub Actions`.
-3. Run the workflow with `publish=true`.
+2. Set Source to deploy from the `gh-pages` branch.
+3. Run the pkgdown workflow after benchmark history has been published.
 
 Persistent files live on the `benchmark-history` branch:
 
 - `data/render_benchmarks.csv`;
 - `data/render_benchmarks.rds`;
-- `data/latest.json`;
-- `site/index.html`;
-- `site/data/render_benchmarks.csv`;
-- `site/assets/dashboard.js`;
-- `site/assets/style.css`.
+- `data/latest.json`.
 
-The generated dashboard is static HTML, CSS, and JavaScript. It shows latest
-median rows, render time trends, BVH build time trends when available, max RSS,
-and package build time. Filters are available for branch, benchmark, and build
-configuration. The raw CSV is linked from the page.
+The pkgdown-generated benchmark page is static HTML, CSS, and JavaScript. It
+shows latest median and mean render rows, render time trends, BVH build time
+trends when available, max RSS, and package build time. Filters are available
+for branch, benchmark, and build configuration. The raw CSV is linked from the
+page.
 
 You can test the history append and site generation locally:
 

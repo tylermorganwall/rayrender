@@ -109,6 +109,9 @@ navbar:
     - text: Getting Stated with Rayrender--Forging the R Sword
       href: https://www.tylermw.com/getting-started-with-rayrender/
   right:
+  - icon: fa-line-chart
+    text: Benchmarks
+    href: benchmarks/index.html
   - icon: fa-file-code-o
     text: functions
     href: reference/index.html
@@ -118,4 +121,3 @@ navbar:
 authors:
   Tyler Morgan-Wall:
     href: https://www.tylermw.com
-

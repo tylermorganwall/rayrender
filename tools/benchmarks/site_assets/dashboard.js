@@ -115,6 +115,16 @@
     return clean.length % 2 ? clean[middle] : (clean[middle - 1] + clean[middle]) / 2;
   }
 
+  function mean(values) {
+    const clean = values
+      .map(Number)
+      .filter((value) => Number.isFinite(value));
+    if (!clean.length) {
+      return NaN;
+    }
+    return clean.reduce((total, value) => total + value, 0) / clean.length;
+  }
+
   function groupKey(row) {
     return [
       row.branch_name || "NA",
@@ -153,6 +163,7 @@
         threads: first.threads || "NA",
         n: items.length,
         median_render_seconds: median(items.map((row) => numberValue(row, "render_seconds"))),
+        mean_render_seconds: mean(items.map((row) => numberValue(row, "render_seconds"))),
         min_render_seconds: Math.min(...items.map((row) => numberValue(row, "render_seconds")).filter(Number.isFinite)),
         max_render_seconds: Math.max(...items.map((row) => numberValue(row, "render_seconds")).filter(Number.isFinite)),
         median_bvh_build_seconds: median(items.map((row) => numberValue(row, "bvh_build_seconds"))),
@@ -209,6 +220,7 @@
         row.timestamp_utc,
         row.n,
         formatNumber(row.median_render_seconds),
+        formatNumber(row.mean_render_seconds),
         formatNumber(row.median_bvh_build_seconds),
         formatNumber(row.median_max_rss_mb),
         formatNumber(row.median_total_seconds)

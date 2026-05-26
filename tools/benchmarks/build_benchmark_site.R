@@ -146,6 +146,7 @@ index = paste(
   '              <th>Timestamp</th>',
   '              <th>n</th>',
   '              <th>Render median</th>',
+  '              <th>Render mean</th>',
   '              <th>BVH build median</th>',
   '              <th>Max RSS median</th>',
   '              <th>Total median</th>',
