@@ -27,6 +27,8 @@ screen_text(
   halo_offset = c(0, 0),
   halo_blur = 0,
   halo_edge_softness = 0.1,
+  halo_gap_fill = 2,
+  halo_gap_fill_alpha_threshold = 0.25,
   occlusion = FALSE,
   occlusion_mode = "anchor",
   occlusion_tolerance = 0.001
@@ -88,6 +90,12 @@ as `c(x,y)`, with positive y moving down the image.}
 
 \item{halo_edge_softness}{Default `0.1`. Width of the softened halo edge
 transition, in pixels.}
+
+\item{halo_gap_fill}{Default `2`. Maximum alpha gap width, in pixels, to
+bridge in the halo outline.}
+
+\item{halo_gap_fill_alpha_threshold}{Default `0.25`. Alpha threshold used to
+protect enclosed interior halo gaps from `halo_gap_fill`.}
 
 \item{occlusion}{Default `FALSE`. If `TRUE`, trace a ray from the camera to
 the anchor point and skip the label when another scene object blocks it.}

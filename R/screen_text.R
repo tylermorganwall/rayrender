@@ -37,6 +37,10 @@
 #' @param halo_blur Default `0`. Amount of blur to apply to the halo.
 #' @param halo_edge_softness Default `0.1`. Width of the softened halo edge
 #' transition, in pixels.
+#' @param halo_gap_fill Default `2`. Maximum alpha gap width, in pixels, to
+#' bridge in the halo outline.
+#' @param halo_gap_fill_alpha_threshold Default `0.25`. Alpha threshold used to
+#' protect enclosed interior halo gaps from `halo_gap_fill`.
 #' @param occlusion Default `FALSE`. If `TRUE`, trace a ray from the camera to
 #' the anchor point and skip the label when another scene object blocks it.
 #' @param occlusion_mode Default `"anchor"`. If `"anchor"`, occlusion skips the
@@ -75,6 +79,8 @@ screen_text = function(
   halo_offset = c(0, 0),
   halo_blur = 0,
   halo_edge_softness = 0.1,
+  halo_gap_fill = 2,
+  halo_gap_fill_alpha_threshold = 0.25,
   occlusion = FALSE,
   occlusion_mode = "anchor",
   occlusion_tolerance = 0.001
@@ -108,6 +114,8 @@ screen_text = function(
     length(halo_alpha),
     length(halo_blur),
     length(halo_edge_softness),
+    length(halo_gap_fill),
+    length(halo_gap_fill_alpha_threshold),
     length(occlusion),
     length(occlusion_mode),
     length(occlusion_tolerance)
@@ -184,6 +192,14 @@ screen_text = function(
       halo_edge_softness,
       "halo_edge_softness"
     )),
+    halo_gap_fill = as.numeric(recycle_value(
+      halo_gap_fill,
+      "halo_gap_fill"
+    )),
+    halo_gap_fill_alpha_threshold = as.numeric(recycle_value(
+      halo_gap_fill_alpha_threshold,
+      "halo_gap_fill_alpha_threshold"
+    )),
     occlusion = as.logical(recycle_value(occlusion, "occlusion")),
     occlusion_mode = tolower(as.character(recycle_value(
       occlusion_mode,
@@ -202,7 +218,7 @@ screen_text = function(
   class(output) = c("ray_screen_text", class(output))
   output
 }
-
+#' @keywords internal
 normalize_screen_text = function(screen_text_spec) {
   if (is.null(screen_text_spec)) {
     return(NULL)
@@ -248,6 +264,8 @@ normalize_screen_text = function(screen_text_spec) {
     halo_y_offset = 0,
     halo_blur = 0,
     halo_edge_softness = 0.1,
+    halo_gap_fill = 2,
+    halo_gap_fill_alpha_threshold = 0.25,
     occlusion = FALSE,
     occlusion_mode = "anchor",
     occlusion_tolerance = 0.001
@@ -260,6 +278,7 @@ normalize_screen_text = function(screen_text_spec) {
   output
 }
 
+#' @keywords internal
 project_points_to_screen = function(points, camera_info) {
   points = as.matrix(points)
   if (ncol(points) != 3) {
@@ -333,6 +352,7 @@ project_points_to_screen = function(points, camera_info) {
   )
 }
 
+#' @keywords internal
 add_screen_text = function(
   image_array,
   screen_text_spec,
@@ -380,20 +400,28 @@ add_screen_text = function(
         halo_expand = screen_text_spec$halo_expand[i],
         halo_alpha = screen_text_spec$halo_alpha[i],
         halo_blur = screen_text_spec$halo_blur[i],
-        halo_edge_softness = screen_text_spec$halo_edge_softness[i]
+        halo_edge_softness = screen_text_spec$halo_edge_softness[i],
+        halo_gap_fill = screen_text_spec$halo_gap_fill[i],
+        halo_gap_fill_alpha_threshold = screen_text_spec$halo_gap_fill_alpha_threshold[
+          i
+        ]
       )
-      halo_padding = attr(halo_image, "padding")
+      halo_offset = screen_text_padding_offset(
+        attr(halo_image, "padding"),
+        screen_text_spec$hjust[i],
+        screen_text_spec$vjust[i]
+      )
       image_array = composite_screen_text_image(
         image_array = image_array,
         text_image = halo_image,
         x = projection$x[i] +
           screen_text_spec$x_offset[i] +
           screen_text_spec$halo_x_offset[i] +
-          halo_padding * (2 * screen_text_spec$hjust[i] - 1),
+          halo_offset[["x"]],
         y = projection$y[i] +
           screen_text_spec$y_offset[i] +
           screen_text_spec$halo_y_offset[i] +
-          halo_padding * (2 * screen_text_spec$vjust[i] - 1),
+          halo_offset[["y"]],
         hjust = screen_text_spec$hjust[i],
         vjust = screen_text_spec$vjust[i]
       )
@@ -410,6 +438,7 @@ add_screen_text = function(
   image_array
 }
 
+#' @keywords internal
 prepare_screen_text_preview = function(screen_text_spec) {
   screen_text_spec = normalize_screen_text(screen_text_spec)
   if (is.null(screen_text_spec) || nrow(screen_text_spec) == 0) {
@@ -434,18 +463,26 @@ prepare_screen_text_preview = function(screen_text_spec) {
         halo_expand = screen_text_spec$halo_expand[i],
         halo_alpha = screen_text_spec$halo_alpha[i],
         halo_blur = screen_text_spec$halo_blur[i],
-        halo_edge_softness = screen_text_spec$halo_edge_softness[i]
+        halo_edge_softness = screen_text_spec$halo_edge_softness[i],
+        halo_gap_fill = screen_text_spec$halo_gap_fill[i],
+        halo_gap_fill_alpha_threshold = screen_text_spec$halo_gap_fill_alpha_threshold[
+          i
+        ]
       )
-      halo_padding = attr(halo_image, "padding")
+      halo_offset = screen_text_padding_offset(
+        attr(halo_image, "padding"),
+        screen_text_spec$hjust[i],
+        screen_text_spec$vjust[i]
+      )
       overlays[[length(overlays) + 1]] = make_screen_text_preview_overlay(
         image = halo_image,
         row = screen_text_spec[i, , drop = FALSE],
         x_offset = screen_text_spec$x_offset[i] +
           screen_text_spec$halo_x_offset[i] +
-          halo_padding * (2 * screen_text_spec$hjust[i] - 1),
+          halo_offset[["x"]],
         y_offset = screen_text_spec$y_offset[i] +
           screen_text_spec$halo_y_offset[i] +
-          halo_padding * (2 * screen_text_spec$vjust[i] - 1)
+          halo_offset[["y"]]
       )
     }
     overlays[[length(overlays) + 1]] = make_screen_text_preview_overlay(
@@ -458,8 +495,11 @@ prepare_screen_text_preview = function(screen_text_spec) {
   list(active = length(overlays) > 0, overlays = overlays)
 }
 
+#' @keywords internal
 make_screen_text_preview_overlay = function(image, row, x_offset, y_offset) {
-  image = ensure_rgba_image(image)
+  image = rayimage::ray_read_image(image, convert_to_array = TRUE)
+  image = unclass(image)
+  image = array(image, dim = dim(image))
   anchor_occlusion = isTRUE(row$occlusion) && row$occlusion_mode == "anchor"
   partial_occlusion = isTRUE(row$occlusion) && row$occlusion_mode == "label"
   list(
@@ -478,6 +518,7 @@ make_screen_text_preview_overlay = function(image, row, x_offset, y_offset) {
   )
 }
 
+#' @keywords internal
 screen_text_needs_native_overlay = function(screen_text_spec) {
   screen_text_spec = normalize_screen_text(screen_text_spec)
   if (is.null(screen_text_spec) || nrow(screen_text_spec) == 0) {
@@ -503,99 +544,53 @@ prepare_screen_text_occlusion = function(screen_text_spec) {
   )
 }
 
+#' @keywords internal
 generate_screen_text_halo = function(
   text_image,
   halo_color,
   halo_expand,
   halo_alpha,
   halo_blur,
-  halo_edge_softness
+  halo_edge_softness,
+  halo_gap_fill,
+  halo_gap_fill_alpha_threshold
 ) {
-  halo_expand = max(0, halo_expand)
-  halo_alpha = min(max(halo_alpha, 0), 1)
-  halo_blur = max(0, halo_blur)
-  halo_edge_softness = max(.Machine$double.eps, halo_edge_softness)
-  padding = ceiling(halo_expand + halo_edge_softness + 3 * halo_blur)
-  halo_image = pad_screen_text_image(text_image, padding)
-  temp_alpha = halo_image[,, 4]
-  temp_alpha[temp_alpha > 0] = 1
-
-  if (halo_expand > 0) {
-    booldistance = rayimage::render_boolean_distance(temp_alpha)
-    inner = halo_expand - halo_edge_softness
-    outer = halo_expand + halo_edge_softness
-    halo_alpha_channel = matrix(
-      0,
-      nrow = nrow(temp_alpha),
-      ncol = ncol(temp_alpha)
-    )
-    halo_alpha_channel[booldistance <= inner] = 1
-    band = booldistance > inner & booldistance < outer
-    halo_alpha_channel[band] = (outer - booldistance[band]) / (outer - inner)
-  } else {
-    halo_alpha_channel = temp_alpha
-  }
-
-  halo_color_rgb = as.vector(grDevices::col2rgb(halo_color)) / 255
-  halo_image[] = 0
-  halo_image[,, 1] = halo_color_rgb[1]
-  halo_image[,, 2] = halo_color_rgb[2]
-  halo_image[,, 3] = halo_color_rgb[3]
-  halo_image[,, 4] = halo_alpha_channel * halo_alpha
-
-  if (halo_blur > 0) {
-    halo_image = rayimage::render_convolution(
-      halo_image,
-      kernel = rayimage::generate_2d_gaussian(
-        sd = halo_blur,
-        dim = 31,
-        width = 30
-      ),
-      include_alpha = TRUE,
-      preview = FALSE
-    )
-    halo_image[,, 1] = halo_color_rgb[1]
-    halo_image[,, 2] = halo_color_rgb[2]
-    halo_image[,, 3] = halo_color_rgb[3]
-  }
-  attr(halo_image, "padding") = padding
-  halo_image
-}
-
-ensure_rgba_image = function(text_image) {
-  if (length(dim(text_image)) == 2) {
-    text_image = array(rep(text_image, 3), c(dim(text_image), 3))
-  }
-  if (dim(text_image)[3] >= 4) {
-    return(text_image[,, 1:4, drop = FALSE])
-  }
-  rgba_image = array(1, c(dim(text_image)[1:2], 4))
-  rgba_image[,, 1:dim(text_image)[3]] = text_image
-  rgba_image[,, 4] = 1
-  rgba_image
-}
-
-pad_screen_text_image = function(text_image, padding) {
-  text_image = ensure_rgba_image(text_image)
-  if (padding == 0) {
-    return(text_image)
-  }
-  padded_image = array(
-    0,
-    c(
-      dim(text_image)[1] + 2 * padding,
-      dim(text_image)[2] + 2 * padding,
-      dim(text_image)[3]
-    )
+  halo_padding = ceiling(
+    max(0, halo_expand) +
+      max(.Machine$double.eps, halo_edge_softness) +
+      3 * max(0, halo_blur)
   )
-  padded_image[
-    (padding + 1):(padding + dim(text_image)[1]),
-    (padding + 1):(padding + dim(text_image)[2]),
-    seq_len(dim(text_image)[3])
-  ] = text_image
-  padded_image
+  rayimage::render_alpha_outline(
+    image = text_image,
+    expand = halo_expand,
+    edge_softness = halo_edge_softness,
+    blur = halo_blur,
+    color = halo_color,
+    alpha = halo_alpha,
+    pad = halo_padding,
+    gap_fill = halo_gap_fill,
+    gap_fill_alpha_threshold = halo_gap_fill_alpha_threshold,
+    composite = FALSE,
+    preview = FALSE
+  )
 }
 
+#' @keywords internal
+screen_text_padding_offset = function(padding, hjust, vjust) {
+  if (is.null(padding)) {
+    padding = 0
+  }
+  if (length(padding) == 1) {
+    padding = rep(padding, 4)
+  }
+  padding = as.numeric(padding[1:4])
+  c(
+    x = hjust * (padding[4] + padding[2]) - padding[4],
+    y = vjust * (padding[1] + padding[3]) - padding[1]
+  )
+}
+
+#' @keywords internal
 composite_screen_text_image = function(
   image_array,
   text_image,
@@ -604,56 +599,19 @@ composite_screen_text_image = function(
   hjust,
   vjust
 ) {
-  if (length(dim(text_image)) == 2) {
-    text_image = array(rep(text_image, 3), c(dim(text_image), 3))
+  output = rayimage::render_sprite_overlay(
+    image = image_array,
+    image_overlay = text_image,
+    convert_overlay_colorspace = FALSE,
+    overlay_coords = c(x, y),
+    hjust = hjust,
+    vjust = vjust,
+    preserve_channels = TRUE,
+    preview = FALSE
+  )
+  if (!inherits(image_array, "rayimg")) {
+    output = unclass(output)
+    output = array(output, dim = dim(output))
   }
-  text_height = dim(text_image)[1]
-  text_width = dim(text_image)[2]
-  image_height = dim(image_array)[1]
-  image_width = dim(image_array)[2]
-
-  left = round(x - hjust * text_width)
-  top = round(y - vjust * text_height)
-  right = left + text_width - 1
-  bottom = top + text_height - 1
-
-  if (right < 1 || bottom < 1 || left > image_width || top > image_height) {
-    return(image_array)
-  }
-  image_rows = max(top, 1):min(bottom, image_height)
-  image_cols = max(left, 1):min(right, image_width)
-  text_rows = (image_rows - top + 1)
-  text_cols = (image_cols - left + 1)
-
-  if (dim(text_image)[3] >= 4) {
-    source_alpha = text_image[text_rows, text_cols, 4]
-  } else {
-    source_alpha = matrix(1, nrow = length(text_rows), ncol = length(text_cols))
-  }
-  dest_alpha = if (dim(image_array)[3] >= 4) {
-    image_array[image_rows, image_cols, 4]
-  } else {
-    matrix(1, nrow = length(image_rows), ncol = length(image_cols))
-  }
-  output_alpha = source_alpha + dest_alpha * (1 - source_alpha)
-  for (channel in 1:3) {
-    source_channel = text_image[
-      text_rows,
-      text_cols,
-      min(channel, dim(text_image)[3])
-    ]
-    dest_channel = image_array[image_rows, image_cols, channel]
-    image_array[image_rows, image_cols, channel] = ifelse(
-      output_alpha > 0,
-      (source_channel *
-        source_alpha +
-        dest_channel * dest_alpha * (1 - source_alpha)) /
-        output_alpha,
-      0
-    )
-  }
-  if (dim(image_array)[3] >= 4) {
-    image_array[image_rows, image_cols, 4] = output_alpha
-  }
-  image_array
+  output
 }

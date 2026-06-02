@@ -7,6 +7,8 @@ test_that("screen_text recycles labels and anchor data", {
     halo_color = "white",
     halo_offset = c(1, 3),
     halo_expand = 2,
+    halo_gap_fill = 3,
+    halo_gap_fill_alpha_threshold = 0.4,
     occlusion = TRUE,
     occlusion_mode = "label",
     occlusion_tolerance = 0.01
@@ -19,6 +21,8 @@ test_that("screen_text recycles labels and anchor data", {
   expect_equal(labels$halo_color, c("white", "white"))
   expect_equal(labels$halo_y_offset, c(3, 3))
   expect_equal(labels$halo_expand, c(2, 2))
+  expect_equal(labels$halo_gap_fill, c(3, 3))
+  expect_equal(labels$halo_gap_fill_alpha_threshold, c(0.4, 0.4))
   expect_equal(labels$occlusion, c(TRUE, TRUE))
   expect_equal(labels$occlusion_mode, c("label", "label"))
   expect_equal(labels$occlusion_tolerance, c(0.01, 0.01))
