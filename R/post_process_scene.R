@@ -256,16 +256,8 @@ post_process_scene = function(
   if (!is.null(screen_line)) {
     screen_line_spec = normalize_screen_line(screen_line)
     if (!is.null(screen_line_overlay)) {
-      draw_screen_line = !(screen_line_spec$occlusion &
-        screen_line_spec$occlusion_mode == "line")
-      if (!is.null(screen_line_visible)) {
-        screen_line_visible = screen_line_visible[draw_screen_line]
-      }
-      screen_line_spec = screen_line_spec[
-        draw_screen_line,
-        ,
-        drop = FALSE
-      ]
+      screen_line_spec = screen_line_spec[FALSE, , drop = FALSE]
+      screen_line_visible = NULL
     }
     full_array = add_screen_line(
       full_array,
@@ -277,16 +269,8 @@ post_process_scene = function(
   if (!is.null(screen_text)) {
     screen_text_spec = normalize_screen_text(screen_text)
     if (!is.null(screen_text_overlay)) {
-      draw_screen_text = !(screen_text_spec$occlusion &
-        screen_text_spec$occlusion_mode == "label")
-      if (!is.null(screen_text_visible)) {
-        screen_text_visible = screen_text_visible[draw_screen_text]
-      }
-      screen_text_spec = screen_text_spec[
-        draw_screen_text,
-        ,
-        drop = FALSE
-      ]
+      screen_text_spec = screen_text_spec[FALSE, , drop = FALSE]
+      screen_text_visible = NULL
     }
     full_array = add_screen_text(
       full_array,

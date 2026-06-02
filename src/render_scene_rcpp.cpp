@@ -429,9 +429,6 @@ static NumericVector composite_screen_text_overlay(
     return output;
   }
   for(const PreviewTextOverlay& overlay : overlays) {
-    if(!overlay.partial_occlusion) {
-      continue;
-    }
     Float screen_x;
     Float screen_y;
     if(!project_text_anchor_to_screen(overlay,
@@ -440,6 +437,14 @@ static NumericVector composite_screen_text_overlay(
                                       display_height,
                                       screen_x,
                                       screen_y)) {
+      continue;
+    }
+    if(overlay.occlusion &&
+       is_text_anchor_occluded(overlay.anchor,
+                               overlay.occlusion_tolerance,
+                               cam,
+                               world,
+                               rng)) {
       continue;
     }
     int overlay_width = static_cast<int>(overlay.width);
@@ -672,9 +677,6 @@ static NumericVector composite_screen_line_overlay(
     return output;
   }
   for(const PreviewLineOverlay& overlay : overlays) {
-    if(!overlay.partial_occlusion) {
-      continue;
-    }
     Float x0;
     Float y0;
     Float depth0;
@@ -703,6 +705,16 @@ static NumericVector composite_screen_line_overlay(
     y0 += overlay.y_offset;
     x1 += overlay.xend_offset;
     y1 += overlay.yend_offset;
+    if(overlay.occlusion) {
+      point3f anchor = overlay.start + (overlay.end - overlay.start) * 0.5f;
+      if(is_text_anchor_occluded(anchor,
+                                 overlay.occlusion_tolerance,
+                                 cam,
+                                 world,
+                                 rng)) {
+        continue;
+      }
+    }
     Float pad = overlay.width / 2.f + 1.f;
     int left = std::max(0, static_cast<int>(std::floor(std::min(x0, x1) - pad)));
     int right = std::min<int>(display_width - 1,

@@ -129,8 +129,10 @@
 #' each render.
 #' @param new_page Default `TRUE`. Whether to call `grid::grid.newpage()` when plotting the image (if
 #' no filename specified). Set to `FALSE` for faster plotting (does not affect render time).
-#' @param screen_text Default `NULL`. Optional screen-space text overlay created with `screen_text()`.
-#' @param screen_line Default `NULL`. Optional screen-space line overlay created with `screen_line()`.
+#' @param screen_text Default `NULL`. Optional screen-space text overlay created with `screen_text()`,
+#' or a list of `screen_text()` outputs to draw in order.
+#' @param screen_line Default `NULL`. Optional screen-space line overlay created with `screen_line()`,
+#' or a list of `screen_line()` outputs to draw in order.
 #' Labels are anchored to 3D world-space points, projected through the current camera, and drawn after
 #' rendering so text size and justification are independent of scene scale and view distance.
 #' @export

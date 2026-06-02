@@ -29,6 +29,118 @@
 #'
 #' @return A data frame describing screen-space line annotations.
 #' @export
+#'
+#'@examplesIf interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")
+#' # Build the scene first, then add independent screen-space line layers.
+#' scene = generate_cornell(lightwidth = 250, lightdepth = 250) |>
+#'   add_object(sphere(
+#'     x = 180, y = 90, z = 260, radius = 90,
+#'     material = diffuse(color = "#f2c14e")
+#'   )) |>
+#'   add_object(cube(
+#'     x = 385, y = 90, z = 330, xwidth = 120, ywidth = 180, zwidth = 120,
+#'     angle = c(0, 25, 0), material = diffuse(color = "#243846")
+#'   ))
+#'
+#' # A round-ended measurement across the sphere uses matrix start/end points.
+#' sphere_measure = screen_line(
+#'   start = matrix(c(90, 6, 260), ncol = 3),
+#'   end = matrix(c(270, 6, 260), ncol = 3),
+#'   offset = c(0, 0),
+#'   end_offset = c(0, 0),
+#'   width = 5,
+#'   color = "#f2c14e",
+#'   alpha = 1,
+#'   lineend = "round",
+#'   clip = TRUE,
+#'   occlusion = FALSE,
+#'   occlusion_mode = "anchor",
+#'   occlusion_tolerance = 0.001
+#' )
+#'
+#' # A vertical guide on the rotated box exercises line-level occlusion.
+#' box_measure = screen_line(
+#'   start = matrix(c(385, 0, 330), ncol = 3),
+#'   end = matrix(c(385, 180, 330), ncol = 3),
+#'   offset = c(-12, 0),
+#'   end_offset = c(-12, 0),
+#'   width = 7,
+#'   color = "#4d9de0",
+#'   alpha = 0.8,
+#'   lineend = "butt",
+#'   clip = TRUE,
+#'   occlusion = TRUE,
+#'   occlusion_mode = "line",
+#'   occlusion_tolerance = 0.004
+#' )
+#'
+#' # A back-wall rule uses square caps, no clipping, and the "partial" alias.
+#' wall_rule = screen_line(
+#'   start = matrix(c(85, 18, 545), ncol = 3),
+#'   end = matrix(c(505, 18, 545), ncol = 3),
+#'   offset = c(0, -8),
+#'   end_offset = c(0, -8),
+#'   width = 4,
+#'   color = "white",
+#'   alpha = 0.6,
+#'   lineend = "square",
+#'   clip = FALSE,
+#'   occlusion = TRUE,
+#'   occlusion_mode = "partial",
+#'   occlusion_tolerance = 0.01
+#' )
+#'
+#' # Scalar coordinates work too, which is handy for one-off callout lines.
+#' callout_line = screen_line(
+#'   x = 180, y = 190, z = 260,
+#'   xend = 245, yend = 255, zend = 230,
+#'   offset = c(0, -4),
+#'   end_offset = c(30, -24),
+#'   width = 3,
+#'   color = "black",
+#'   alpha = 0.9,
+#'   lineend = "round",
+#'   clip = TRUE,
+#'   occlusion = TRUE,
+#'   occlusion_mode = "anchor",
+#'   occlusion_tolerance = 0.002
+#' )
+#'
+#' # Build a 3D spiral from many short screen-space line segments.
+#' spiral_theta = seq(0, 5 * pi, length.out = 120)
+#' spiral_radius = seq(6, 65, length.out = length(spiral_theta))
+#' spiral_points = cbind(
+#'   445 + spiral_radius * cos(spiral_theta),
+#'   390 + spiral_radius * sin(spiral_theta),
+#'   seq(245, 390, length.out = length(spiral_theta))
+#' )
+#' spiral_count = nrow(spiral_points) - 1
+#' spiral_lines = screen_line(
+#'   start = spiral_points[-nrow(spiral_points), ],
+#'   end = spiral_points[-1, ],
+#'   width = seq(1, 4, length.out = spiral_count),
+#'   color = grDevices::hcl(seq(250, 360, length.out = spiral_count), 80, 65),
+#'   alpha = seq(0.35, 0.95, length.out = spiral_count),
+#'   lineend = "round",
+#'   clip = TRUE
+#' )
+#'
+#' line_layers = list(
+#'   sphere_measure,
+#'   box_measure,
+#'   wall_rule,
+#'   callout_line,
+#'   spiral_lines
+#' )
+#'
+#' render_scene(
+#'   scene,
+#'   samples = 32,
+#'   clamp_value = 5,
+#'   aperture = 0,
+#'   ambient_light = FALSE,
+#'   screen_line = line_layers
+#' )
 screen_line = function(
   x = 0,
   y = 0,

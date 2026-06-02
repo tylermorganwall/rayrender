@@ -119,3 +119,121 @@ A data frame describing screen-space text annotations.
 Creates text annotations for `render_scene()` that are anchored to 3D
 world-space points but drawn in 2D screen space after rendering.
 }
+\examples{
+\dontshow{if (interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")) withAutoprint(\{ # examplesIf}
+# Start with a Cornell box that has one bright object and one dark object.
+scene = generate_cornell(lightwidth = 250, lightdepth = 250) |>
+  add_object(sphere(
+    x = 180, y = 90, z = 260, radius = 90,
+    material = diffuse(color = "#f2c14e")
+  )) |>
+  add_object(cube(
+    x = 385, y = 90, z = 330, xwidth = 120, ywidth = 180, zwidth = 120,
+    angle = c(0, 25, 0), material = diffuse(color = "#243846")
+  ))
+
+# Labels can be built in separate calls and passed as a list to render_scene().
+sphere_label = screen_text(
+  label = "matte sphere\nanchor test",
+  x = 180, y = 190, z = 260,
+  offset = c(18, -28),
+  hjust = 0.5,
+  vjust = 1,
+  size = 18,
+  color = "black",
+  lineheight = 0.95,
+  background_alpha = 0,
+  just = "left",
+  halo_color = "#f2c14e",
+  halo_expand = 4,
+  halo_alpha = 0.8,
+  halo_offset = c(1, 1),
+  halo_blur = 0.5,
+  halo_edge_softness = 0.5,
+  halo_gap_fill = 1,
+  halo_gap_fill_alpha_threshold = 0.2,
+  occlusion = TRUE,
+  occlusion_mode = "anchor",
+  occlusion_tolerance = 0.002
+)
+
+# Dark text over a dark object remains legible with a subtle white halo.
+box_label = screen_text(
+  label = "dark text\nwhite halo",
+  x = 385, y = 195, z = 20,
+  offset = c(-16, -34),
+  hjust = 0,
+  vjust = 1,
+  size = 16,
+  color = "#111111",
+  lineheight = 1.05,
+  background_alpha = 0,
+  just = "right",
+  halo_color = "white",
+  halo_expand = 6,
+  halo_alpha = 0.72,
+  halo_offset = c(-1, 2),
+  halo_blur = 1.5,
+  halo_edge_softness = 10,
+  halo_gap_fill = 3,
+  halo_gap_fill_alpha_threshold = 0.35,
+  occlusion = TRUE,
+  occlusion_mode = "label",
+  occlusion_tolerance = 0.01
+)
+
+# A floor label shows multi-line text, custom justification, and partial occlusion.
+floor_label = screen_text(
+  label = "floor label\n\nocclusion",
+  point = matrix(c(280, 0, 50), ncol = 3),
+  offset = c(0, 18),
+  hjust = 0.5,
+  vjust = 0.7,
+  size = 15,
+  color = "#222222",
+  lineheight = 1,
+  background_color = "#fff7cc",
+  background_alpha = 0.65,
+  just = "center",
+  clip = FALSE,
+  halo_color = "white",
+  halo_expand = 3,
+  halo_alpha = 0.7,
+  halo_blur = 0,
+  halo_edge_softness = 0.25,
+  halo_gap_fill = 2,
+  halo_gap_fill_alpha_threshold = 0.25,
+  occlusion = TRUE,
+  occlusion_mode = "partial",
+  occlusion_tolerance = 0.005
+)
+
+# Later list entries draw after earlier entries.
+wall_label = screen_text(
+  label = "back wall\nalways in front",
+  x = 278, y = 330, z = 545,
+  offset = c(0, -20),
+  hjust = 0.5,
+  vjust = 1,
+  size = 12,
+  color = "white",
+  background_color = "black",
+  background_alpha = 0.35,
+  halo_color = "black",
+  halo_expand = 2,
+  clip = TRUE
+)
+
+text_layers = list(sphere_label, box_label, floor_label, wall_label)
+
+render_scene(
+  scene,
+  samples = 32,
+  clamp_value = 5,
+  aperture = 0,
+  fov = 50,
+  ambient_light = FALSE,
+  screen_text = text_layers
+)
+\dontshow{\}) # examplesIf}
+}
