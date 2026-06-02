@@ -1,10 +1,10 @@
 {
-  "row_count": 24,
+  "row_count": 32,
   "latest_row_count": 8,
-  "latest_timestamp_utc": "2026-05-26T00:57:29Z",
-  "latest_run_id": "26425829110",
+  "latest_timestamp_utc": "2026-06-02T12:20:34Z",
+  "latest_run_id": "26818408857",
   "latest_run_attempt": "1",
-  "latest_commit_sha": "4d1bc555363e8a2f605df8a7188df0cba19a2820",
+  "latest_commit_sha": "64d0e74dc960b21d5c7132d137d5fa2a3ca58aa6",
   "latest_branch_name": "deferred",
   "latest_status_counts": {
     "build_failed": 2,
