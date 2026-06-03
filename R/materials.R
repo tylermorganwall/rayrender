@@ -585,7 +585,7 @@ dielectric = function(
 #' #Render a rough silver R with a smaller golden egg in front
 #' generate_cornell() |>
 #'   add_object(obj_model(r_obj(simple_r = TRUE),
-#'                        x=555/2,z=350,y=0, scale_obj = 200, angle=c(0,20,0),
+#'                        x=555/2,z=350,y=0, scale_obj = 200, angle=c(0,200,0),
 #'              material=microfacet(roughness=0.2,
 #'                                  eta=c(1.1583,0.9302,0.5996), kappa=c(6.9650,6.396,5.332)))) |>
 #'  add_object(ellipsoid(x=200,z=200,y=80, a=50,b=80,c=50,
@@ -596,7 +596,7 @@ dielectric = function(
 #' #Increase the roughness
 #' generate_cornell() |>
 #'   add_object(obj_model(r_obj(simple_r = TRUE),
-#'                        x=555/2,z=350,y=0, scale_obj = 200, angle=c(0,20,0),
+#'                        x=555/2,z=350,y=0, scale_obj = 200, angle=c(0,200,0),
 #'              material=microfacet(roughness=0.5,
 #'                                  eta=c(1.1583,0.9302,0.5996), kappa=c(6.9650,6.396,5.332)))) |>
 #'  add_object(ellipsoid(x=200,z=200,y=80, a=50,b=80,c=50,
@@ -607,11 +607,11 @@ dielectric = function(
 #'  #Use transmission for a rough dielectric
 #' generate_cornell() |>
 #'   add_object(obj_model(r_obj(simple_r = TRUE),
-#'                        x=555/2,z=350,y=0, scale_obj = 200, angle=c(0,20,0),
+#'                        x=555/2,z=350,y=0, scale_obj = 200, angle=c(0,200,0),
 #'              material=microfacet(roughness=0.3, transmission=T, eta=1.6))) |>
 #'  add_object(ellipsoid(x=200,z=200,y=80, a=50,b=80,c=50,
 #'              material=microfacet(roughness=0.3, transmission=T, eta=1.6))) |>
-#'  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=16,
+#'  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=64,
 #'              aperture=0, fov=40, parallel=TRUE,clamp_value=10, min_variance=1e-6)
 microfacet = function(
   color = "white",
@@ -1060,7 +1060,7 @@ light = function(
 #' generate_ground(material=diffuse()) |>
 #'   add_object(sphere(y=0.2,material=glossy(color="#2b6eff",reflectance=0.05))) |>
 #'   add_object(obj_model(r_obj(simple_r = TRUE),
-#'                        z=-1,y=-0.05,scale=0.45,angle=c(0,0,0),material=diffuse())) |>
+#'                        z=-1,y=-0.05,scale=0.45,angle=c(0,180,0),material=diffuse())) |>
 #'   add_object(sphere(y=6,z=-1,radius=4,material=light(intensity=3))) |>
 #'   add_object(sphere(z=-15,material=light(intensity=50))) |>
 #'   render_scene(parallel=TRUE,clamp_value=10,samples=16,sample_method="sobol_blue")

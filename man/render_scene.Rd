@@ -232,7 +232,7 @@ and `"basic"` (basic pathtracing, for high sample reference renders and debuggin
 \item{screen_text}{Default `NULL`. Optional screen-space text overlay created with `screen_text()`,
 or a list of `screen_text()` outputs to draw in order.}
 
-\item{screen_line}{Default `NULL`. Optional screen-space line overlay created with `screen_line()`.
+\item{screen_line}{Default `NULL`. Optional screen-space line overlay created with `screen_line()`,
 or a list of `screen_line()` outputs to draw in order.
 Labels are anchored to 3D world-space points, projected through the current camera, and drawn after
 rendering so text size and justification are independent of scene scale and view distance.}

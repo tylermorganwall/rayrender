@@ -162,7 +162,7 @@ box_label = screen_text(
   label = "dark text\nwhite halo",
   x = 385, y = 195, z = 20,
   offset = c(-16, -34),
-  hjust = 0,
+  hjust = 0.5,
   vjust = 1,
   size = 16,
   color = "#111111",
