@@ -1,0 +1,31 @@
+## rayrender 0.41.0
+
+- Added screen-space annotations with `screen_text()` and `screen_line()`, usable through new `render_scene(screen_text = ..., screen_line = ...)` arguments. Annotations are anchored to 3D world points, projected through the active camera, and support list/vector inputs, clipping, pixel offsets, text halos/backgrounds, line styles, and optional geometry-aware occlusion.
+
+- Added interactive deferred rendering via `render_scene(deferred_render = TRUE)`. When preview is enabled, the preview can remain interactive until Return starts the final render, and Return can toggle back to deferred preview mode.
+
+- Added `auto_exposure` support to `render_scene()`, including automatic final-image exposure and preview exposure calibration. Interactive preview exposure can also be adjusted with `[` and `]`.
+
+- Improved `render_scene()` and post-processing return behavior so rendered images and debug outputs are returned invisibly more consistently, while respecting `plot_scene = FALSE` in more paths.
+
+- `render_scene()` now accepts `rayvertex` `ray_mesh` scenes directly. `raymesh_model()` now preserves mesh materials by default unless a material override is explicitly supplied.
+
+- Improved CSG rendering performance and robustness with cached object/world bounds, tighter operation-specific CSG bounding boxes, bounded raymarching, and fixes for several rotated/rounded CSG bounds cases.
+
+- Improved BVH build and traversal robustness, especially for SIMD/BVH4 builds and large scenes. This includes safer empty-BVH handling, degenerate SAH split fallback, initialized BVH4 nodes, heap fallback for large priority queues, NaN-safe SIMD slab tests, and safer SIMD stores.
+
+- Improved ray/AABB traversal internals by caching padded inverse ray directions and direction signs on `Ray`, and using branchless AABB intersection logic.
+
+- Fixed `text3d()` orientation by reorienting generated text images before creating the scene geometry.
+
+- Improved `generate_camera_motion()` handling of saved keyframe data by reading expected column names instead of relying only on column count.
+
+- Replaced `run_documentation()` example gating with roxygen `@examplesIf`, and removed the exported `run_documentation()` helper.
+
+- Added tests for screen-space text/line projection, compositing, halos, occlusion, preview exposure adjustment, and direct `ray_mesh` rendering.
+
+- Added render benchmarking infrastructure, including bundled BVH-heavy benchmark scenes, CSG benchmark scripts, a GitHub Actions benchmark workflow, benchmark-history publishing, and a pkgdown benchmark dashboard.
+
+- Added a `RAYRENDER_DISABLE_SIMD` configure option to support scalar benchmark/build configurations.
+
+- Updated documentation, README examples, pkgdown reference sections, and package metadata for the new annotation and benchmark features.
