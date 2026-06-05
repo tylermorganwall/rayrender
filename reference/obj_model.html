@@ -18,7 +18,7 @@ Note: light importance sampling currently not supported for this shape."><meta p
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">rayrender</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.40.1</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.41.0</span>
       </span>
     </div>
 
@@ -58,6 +58,13 @@ Note: light importance sampling currently not supported for this shape."><meta p
     </li>
   </ul></li>
       </ul><ul class="nav navbar-nav navbar-right"><li>
+  <a href="../benchmarks/index.html">
+    <span class="fa fa-line-chart"></span>
+
+    Benchmarks
+  </a>
+</li>
+<li>
   <a href="../reference/index.html">
     <span class="fa fa-file-code-o"></span>
 
@@ -231,7 +238,6 @@ Note: emissive objects may not currently function correctly when scaled.</p></dd
 <span class="r-in"><span><span class="co">#due to package constraints, but the file contents are identical and it does not</span></span></span>
 <span class="r-in"><span><span class="co">#affect the function.</span></span></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="kw">if</span><span class="op">(</span><span class="fu"><a href="run_documentation.html">run_documentation</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span></span>
 <span class="r-in"><span><span class="co">#Load the basic 3D R logo with the included materials</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="generate_ground.html">generate_ground</a></span><span class="op">(</span>material <span class="op">=</span> <span class="fu"><a href="diffuse.html">diffuse</a></span><span class="op">(</span>checkercolor <span class="op">=</span> <span class="st">"grey50"</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu">obj_model</span><span class="op">(</span>y <span class="op">=</span> <span class="fl">0.2</span>, filename <span class="op">=</span> <span class="fu">rayrender</span><span class="fu">::</span><span class="fu"><a href="r_obj.html">r_obj</a></span><span class="op">(</span><span class="op">)</span>,</span></span>
@@ -241,10 +247,8 @@ Note: emissive objects may not currently function correctly when scaled.</p></dd
 <span class="r-in"><span>  <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>parallel <span class="op">=</span> <span class="cn">TRUE</span>, samples <span class="op">=</span> <span class="fl">16</span>, aperture <span class="op">=</span> <span class="fl">0.05</span>,</span></span>
 <span class="r-in"><span>               sample_method<span class="op">=</span><span class="st">"sobol_blue"</span>,</span></span>
 <span class="r-in"><span>               fov <span class="op">=</span> <span class="fl">20</span>, lookfrom <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">2</span>, <span class="op">-</span><span class="fl">10</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="op">}</span></span></span>
 <span class="r-plt img"><img src="obj_model-1.png" alt="" width="768" height="768"></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="kw">if</span><span class="op">(</span><span class="fu"><a href="run_documentation.html">run_documentation</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span></span>
 <span class="r-in"><span><span class="co"># Smooth a mesh by setting the number of subdivision levels</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="generate_ground.html">generate_ground</a></span><span class="op">(</span>material <span class="op">=</span> <span class="fu"><a href="diffuse.html">diffuse</a></span><span class="op">(</span>checkercolor <span class="op">=</span> <span class="st">"grey50"</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu">obj_model</span><span class="op">(</span>y <span class="op">=</span> <span class="fl">0.2</span>, filename <span class="op">=</span> <span class="fu">rayrender</span><span class="fu">::</span><span class="fu"><a href="r_obj.html">r_obj</a></span><span class="op">(</span><span class="op">)</span>,</span></span>
@@ -254,10 +258,8 @@ Note: emissive objects may not currently function correctly when scaled.</p></dd
 <span class="r-in"><span>  <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>parallel <span class="op">=</span> <span class="cn">TRUE</span>, samples <span class="op">=</span> <span class="fl">16</span>, aperture <span class="op">=</span> <span class="fl">0.05</span>,</span></span>
 <span class="r-in"><span>               sample_method<span class="op">=</span><span class="st">"sobol_blue"</span>,</span></span>
 <span class="r-in"><span>               fov <span class="op">=</span> <span class="fl">20</span>, lookfrom <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">2</span>, <span class="op">-</span><span class="fl">10</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="op">}</span></span></span>
 <span class="r-plt img"><img src="obj_model-2.png" alt="" width="768" height="768"></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="kw">if</span><span class="op">(</span><span class="fu"><a href="run_documentation.html">run_documentation</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span></span>
 <span class="r-in"><span><span class="co">#Override the materials for each object</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="generate_ground.html">generate_ground</a></span><span class="op">(</span>material <span class="op">=</span> <span class="fu"><a href="diffuse.html">diffuse</a></span><span class="op">(</span>checkercolor <span class="op">=</span> <span class="st">"grey50"</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu">obj_model</span><span class="op">(</span>y <span class="op">=</span> <span class="fl">1.4</span>, filename <span class="op">=</span> <span class="fu">rayrender</span><span class="fu">::</span><span class="fu"><a href="r_obj.html">r_obj</a></span><span class="op">(</span><span class="op">)</span>, load_material <span class="op">=</span> <span class="cn">FALSE</span>,</span></span>
@@ -275,8 +277,6 @@ Note: emissive objects may not currently function correctly when scaled.</p></dd
 <span class="r-in"><span>  <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>parallel <span class="op">=</span> <span class="cn">TRUE</span>, samples <span class="op">=</span> <span class="fl">16</span>, aperture <span class="op">=</span> <span class="fl">0.05</span>,</span></span>
 <span class="r-in"><span>               sample_method<span class="op">=</span><span class="st">"sobol_blue"</span>, lookat<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">0.5</span>,<span class="fl">0</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>               fov <span class="op">=</span> <span class="fl">22</span>, lookfrom <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">2</span>, <span class="op">-</span><span class="fl">10</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="op">}</span></span></span>
 <span class="r-plt img"><img src="obj_model-3.png" alt="" width="768" height="768"></span>
 </code></pre></div>
     </div>

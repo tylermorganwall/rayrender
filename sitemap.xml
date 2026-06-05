@@ -1,5 +1,6 @@
 <urlset xmlns = 'http://www.sitemaps.org/schemas/sitemap/0.9'>
 <url><loc>http://www.rayrender.net/404.html</loc></url>
+<url><loc>http://www.rayrender.net/AGENT.html</loc></url>
 <url><loc>http://www.rayrender.net/CODE_OF_CONDUCT.html</loc></url>
 <url><loc>http://www.rayrender.net/CONTRIBUTING.html</loc></url>
 <url><loc>http://www.rayrender.net/authors.html</loc></url>
@@ -107,7 +108,8 @@
 <url><loc>http://www.rayrender.net/reference/render_ao.html</loc></url>
 <url><loc>http://www.rayrender.net/reference/render_preview.html</loc></url>
 <url><loc>http://www.rayrender.net/reference/render_scene.html</loc></url>
-<url><loc>http://www.rayrender.net/reference/run_documentation.html</loc></url>
+<url><loc>http://www.rayrender.net/reference/screen_line.html</loc></url>
+<url><loc>http://www.rayrender.net/reference/screen_text.html</loc></url>
 <url><loc>http://www.rayrender.net/reference/segment.html</loc></url>
 <url><loc>http://www.rayrender.net/reference/set_scene_material.html</loc></url>
 <url><loc>http://www.rayrender.net/reference/slerp.html</loc></url>

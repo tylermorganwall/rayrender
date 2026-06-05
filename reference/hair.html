@@ -17,7 +17,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">rayrender</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.40.1</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.41.0</span>
       </span>
     </div>
 
@@ -57,6 +57,13 @@
     </li>
   </ul></li>
       </ul><ul class="nav navbar-nav navbar-right"><li>
+  <a href="../benchmarks/index.html">
+    <span class="fa fa-line-chart"></span>
+
+    Benchmarks
+  </a>
+</li>
+<li>
   <a href="../reference/index.html">
     <span class="fa fa-file-code-o"></span>
 
@@ -145,7 +152,6 @@
     <div id="ref-examples">
     <h2>Examples</h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co">#Create a hairball</span></span></span>
-<span class="r-in"><span><span class="kw">if</span><span class="op">(</span><span class="fu"><a href="run_documentation.html">run_documentation</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span></span>
 <span class="r-in"><span><span class="co">#Generate rendom points on a sphere</span></span></span>
 <span class="r-in"><span><span class="va">lengthval</span> <span class="op">=</span> <span class="fl">0.5</span></span></span>
 <span class="r-in"><span><span class="va">theta</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Trig.html" class="external-link">acos</a></span><span class="op">(</span><span class="fl">2</span><span class="op">*</span><span class="fu"><a href="https://rdrr.io/r/stats/Uniform.html" class="external-link">runif</a></span><span class="op">(</span><span class="fl">10000</span><span class="op">)</span><span class="op">-</span><span class="fl">1.0</span><span class="op">)</span>;</span></span>
@@ -174,9 +180,7 @@
 <span class="r-in"><span>  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="sphere.html">sphere</a></span><span class="op">(</span>y<span class="op">=</span><span class="fl">20</span>,z<span class="op">=</span><span class="fl">20</span>,radius<span class="op">=</span><span class="fl">5</span>,material<span class="op">=</span><span class="fu"><a href="light.html">light</a></span><span class="op">(</span>color<span class="op">=</span><span class="st">"white"</span>,intensity <span class="op">=</span> <span class="fl">100</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>samples<span class="op">=</span><span class="fl">16</span>, lookfrom<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">3</span>,<span class="fl">10</span><span class="op">)</span>,clamp_value <span class="op">=</span> <span class="fl">10</span>,</span></span>
 <span class="r-in"><span>               fov<span class="op">=</span><span class="fl">20</span>, width<span class="op">=</span><span class="fl">800</span>, height<span class="op">=</span><span class="fl">800</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="op">}</span></span></span>
 <span class="r-plt img"><img src="hair-1.png" alt="" width="768" height="768"></span>
-<span class="r-in"><span><span class="kw">if</span><span class="op">(</span><span class="fu"><a href="run_documentation.html">run_documentation</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co">#Specify the color directly and increase hair roughness</span></span></span>
 <span class="r-in"><span><span class="kw">for</span><span class="op">(</span><span class="va">i</span> <span class="kw">in</span> <span class="fl">1</span><span class="op">:</span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">phi</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span></span>
@@ -199,7 +203,6 @@
 <span class="r-in"><span>  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="sphere.html">sphere</a></span><span class="op">(</span>y<span class="op">=</span><span class="fl">20</span>,z<span class="op">=</span><span class="fl">20</span>,radius<span class="op">=</span><span class="fl">5</span>,material<span class="op">=</span><span class="fu"><a href="light.html">light</a></span><span class="op">(</span>color<span class="op">=</span><span class="st">"white"</span>,intensity <span class="op">=</span> <span class="fl">100</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>samples<span class="op">=</span><span class="fl">16</span>, lookfrom<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">3</span>,<span class="fl">10</span><span class="op">)</span>,clamp_value <span class="op">=</span> <span class="fl">10</span>,</span></span>
 <span class="r-in"><span>               fov<span class="op">=</span><span class="fl">20</span>, width<span class="op">=</span><span class="fl">800</span>, height<span class="op">=</span><span class="fl">800</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="op">}</span></span></span>
 <span class="r-plt img"><img src="hair-2.png" alt="" width="768" height="768"></span>
 </code></pre></div>
     </div>

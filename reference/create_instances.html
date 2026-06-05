@@ -19,7 +19,7 @@ copy only requires a 4x4 matrix in memory."><meta property="og:image" content="h
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">rayrender</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.40.1</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.41.0</span>
       </span>
     </div>
 
@@ -59,6 +59,13 @@ copy only requires a 4x4 matrix in memory."><meta property="og:image" content="h
     </li>
   </ul></li>
       </ul><ul class="nav navbar-nav navbar-right"><li>
+  <a href="../benchmarks/index.html">
+    <span class="fa fa-line-chart"></span>
+
+    Benchmarks
+  </a>
+</li>
+<li>
   <a href="../reference/index.html">
     <span class="fa fa-file-code-o"></span>
 
@@ -170,15 +177,14 @@ functions <code><a href="diffuse.html">diffuse</a></code>, <code><a href="metal.
 
     <div id="ref-examples">
     <h2>Examples</h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="run_documentation.html">run_documentation</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span></span>
-<span class="r-in"><span><span class="co"># Generate the base scene</span></span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># Generate the base scene</span></span></span>
 <span class="r-in"><span><span class="va">base_scene</span> <span class="op">=</span> <span class="fu"><a href="generate_ground.html">generate_ground</a></span><span class="op">(</span>material <span class="op">=</span> <span class="fu"><a href="diffuse.html">diffuse</a></span><span class="op">(</span>checkercolor <span class="op">=</span> <span class="st">"grey20"</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="sphere.html">sphere</a></span><span class="op">(</span>z <span class="op">=</span> <span class="op">-</span><span class="fl">100</span>, radius <span class="op">=</span> <span class="fl">10</span>, material <span class="op">=</span> <span class="fu"><a href="light.html">light</a></span><span class="op">(</span>intensity <span class="op">=</span> <span class="fl">70</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Start with a single sphere with an R in it</span></span></span>
 <span class="r-in"><span><span class="va">sphere_scene</span> <span class="op">=</span> <span class="fu"><a href="sphere.html">sphere</a></span><span class="op">(</span>y <span class="op">=</span> <span class="fl">0</span>, material <span class="op">=</span> <span class="fu"><a href="glossy.html">glossy</a></span><span class="op">(</span>color <span class="op">=</span> <span class="st">"#2b6eff"</span>, reflectance <span class="op">=</span> <span class="fl">0.05</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="obj_model.html">obj_model</a></span><span class="op">(</span><span class="fu"><a href="r_obj.html">r_obj</a></span><span class="op">(</span>simple_r <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>, z <span class="op">=</span> <span class="op">-</span><span class="fl">0.9</span>, y <span class="op">=</span> <span class="op">-</span><span class="fl">0.2</span>,</span></span>
-<span class="r-in"><span>  scale_obj <span class="op">=</span> <span class="fl">0.45</span>, angle <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">0</span>,<span class="fl">0</span><span class="op">)</span>, material <span class="op">=</span> <span class="fu"><a href="diffuse.html">diffuse</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
+<span class="r-in"><span>  scale_obj <span class="op">=</span> <span class="fl">0.45</span>, angle <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">180</span>,<span class="fl">0</span><span class="op">)</span>, material <span class="op">=</span> <span class="fu"><a href="diffuse.html">diffuse</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="group_objects.html">group_objects</a></span><span class="op">(</span>scale <span class="op">=</span> <span class="fl">0.1</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Render the scene</span></span></span>
@@ -186,10 +192,8 @@ functions <code><a href="diffuse.html">diffuse</a></code>, <code><a href="metal.
 <span class="r-in"><span>  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="va">base_scene</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>lookat <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">1</span>, <span class="fl">0</span><span class="op">)</span>, width <span class="op">=</span> <span class="fl">800</span>, sample_method <span class="op">=</span> <span class="st">"sobol_blue"</span>, aperture <span class="op">=</span> <span class="fl">0.2</span>,</span></span>
 <span class="r-in"><span>               height <span class="op">=</span> <span class="fl">800</span>, samples <span class="op">=</span> <span class="fl">16</span>, clamp_value <span class="op">=</span> <span class="fl">20</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="op">}</span></span></span>
 <span class="r-plt img"><img src="create_instances-1.png" alt="" width="768" height="768"></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="run_documentation.html">run_documentation</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span></span>
 <span class="r-in"><span><span class="co"># Create instances at different x positions, with random rotations applied</span></span></span>
 <span class="r-in"><span><span class="fu">create_instances</span><span class="op">(</span><span class="va">sphere_scene</span>,</span></span>
 <span class="r-in"><span>                 x <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="op">-</span><span class="fl">1.5</span>, <span class="fl">1.5</span>, length.out <span class="op">=</span> <span class="fl">10</span><span class="op">)</span>,</span></span>
@@ -199,10 +203,8 @@ functions <code><a href="diffuse.html">diffuse</a></code>, <code><a href="metal.
 <span class="r-in"><span>  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="va">base_scene</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>lookat <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">1</span>, <span class="fl">0</span><span class="op">)</span>, width <span class="op">=</span> <span class="fl">800</span>, sample_method <span class="op">=</span> <span class="st">"sobol_blue"</span>,</span></span>
 <span class="r-in"><span>               height <span class="op">=</span> <span class="fl">800</span>, samples <span class="op">=</span> <span class="fl">16</span>, clamp_value <span class="op">=</span> <span class="fl">20</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="op">}</span></span></span>
 <span class="r-plt img"><img src="create_instances-2.png" alt="" width="768" height="768"></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="run_documentation.html">run_documentation</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span></span>
 <span class="r-in"><span><span class="co"># Create instances at different x/z positions, with random scaling factors</span></span></span>
 <span class="r-in"><span><span class="fu">create_instances</span><span class="op">(</span><span class="va">sphere_scene</span>,</span></span>
 <span class="r-in"><span>                 x <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="op">-</span><span class="fl">1.5</span>, <span class="fl">1.5</span>, length.out <span class="op">=</span> <span class="fl">10</span><span class="op">)</span>,</span></span>
@@ -213,10 +215,8 @@ functions <code><a href="diffuse.html">diffuse</a></code>, <code><a href="metal.
 <span class="r-in"><span>  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="va">base_scene</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>lookat <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">1</span>, <span class="fl">0</span><span class="op">)</span>, width <span class="op">=</span> <span class="fl">800</span>, sample_method <span class="op">=</span> <span class="st">"sobol_blue"</span>,</span></span>
 <span class="r-in"><span>               height <span class="op">=</span> <span class="fl">800</span>, samples <span class="op">=</span> <span class="fl">16</span>, clamp_value <span class="op">=</span> <span class="fl">20</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="op">}</span></span></span>
 <span class="r-plt img"><img src="create_instances-3.png" alt="" width="768" height="768"></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="run_documentation.html">run_documentation</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span></span>
 <span class="r-in"><span><span class="co"># Create instances of instances</span></span></span>
 <span class="r-in"><span><span class="fu">create_instances</span><span class="op">(</span><span class="va">sphere_scene</span>,</span></span>
 <span class="r-in"><span>                 x <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="op">-</span><span class="fl">1.5</span>, <span class="fl">1.5</span>, length.out <span class="op">=</span> <span class="fl">10</span><span class="op">)</span>,</span></span>
@@ -225,10 +225,8 @@ functions <code><a href="diffuse.html">diffuse</a></code>, <code><a href="metal.
 <span class="r-in"><span>  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="va">base_scene</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>lookat <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">1</span>, <span class="fl">0</span><span class="op">)</span>, width <span class="op">=</span> <span class="fl">800</span>, sample_method <span class="op">=</span> <span class="st">"sobol_blue"</span>,</span></span>
 <span class="r-in"><span>               height <span class="op">=</span> <span class="fl">800</span>, samples <span class="op">=</span> <span class="fl">16</span>, clamp_value <span class="op">=</span> <span class="fl">20</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="op">}</span></span></span>
 <span class="r-plt img"><img src="create_instances-4.png" alt="" width="768" height="768"></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="run_documentation.html">run_documentation</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span></span>
 <span class="r-in"><span><span class="co"># Create instances of instances of instances of instances</span></span></span>
 <span class="r-in"><span><span class="fu">create_instances</span><span class="op">(</span><span class="va">sphere_scene</span>,</span></span>
 <span class="r-in"><span>                 x <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="op">-</span><span class="fl">1.5</span>, <span class="fl">1.5</span>, length.out <span class="op">=</span> <span class="fl">10</span><span class="op">)</span>,</span></span>
@@ -242,16 +240,16 @@ functions <code><a href="diffuse.html">diffuse</a></code>, <code><a href="metal.
 <span class="r-in"><span>  <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>lookat <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">10</span>, <span class="fl">0</span><span class="op">)</span>, lookfrom <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">10</span>, <span class="op">-</span><span class="fl">50</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>               width <span class="op">=</span> <span class="fl">800</span>, sample_method <span class="op">=</span> <span class="st">"sobol_blue"</span>, fov <span class="op">=</span> <span class="fl">30</span>,</span></span>
 <span class="r-in"><span>               height <span class="op">=</span> <span class="fl">800</span>, samples <span class="op">=</span> <span class="fl">16</span>, clamp_value <span class="op">=</span> <span class="fl">20</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="op">}</span></span></span>
 <span class="r-plt img"><img src="create_instances-5.png" alt="" width="768" height="768"></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="run_documentation.html">run_documentation</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span></span>
 <span class="r-in"><span><span class="co"># Generate a complex scene in a Cornell box and replicate it in a 3x3 grid</span></span></span>
 <span class="r-in"><span><span class="co"># Here, a single `data.frame` with all three coordinates is passed to the `x` argument.</span></span></span>
 <span class="r-in"><span><span class="va">tempfileplot</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/grDevices/png.html" class="external-link">png</a></span><span class="op">(</span>filename <span class="op">=</span> <span class="va">tempfileplot</span>, height <span class="op">=</span> <span class="fl">1600</span>, width <span class="op">=</span> <span class="fl">1600</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">iris</span><span class="op">$</span><span class="va">Petal.Length</span>, <span class="va">iris</span><span class="op">$</span><span class="va">Sepal.Width</span>, col <span class="op">=</span> <span class="va">iris</span><span class="op">$</span><span class="va">Species</span>, pch <span class="op">=</span> <span class="fl">18</span>, cex <span class="op">=</span> <span class="fl">12</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/grDevices/dev.html" class="external-link">dev.off</a></span><span class="op">(</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> agg_record_3cab3e48e33b </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>                       2 </span>
 <span class="r-in"><span><span class="va">image_array</span> <span class="op">=</span> <span class="fu">png</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/png/man/readPNG.html" class="external-link">readPNG</a></span><span class="op">(</span><span class="va">tempfileplot</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Note that if a instanced scene has importance sampled lights and there are many instances,</span></span></span>
@@ -277,7 +275,6 @@ functions <code><a href="diffuse.html">diffuse</a></code>, <code><a href="metal.
 <span class="r-in"><span>  <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span>lookfrom <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">0</span>, <span class="op">-</span><span class="fl">800</span><span class="op">)</span> <span class="op">*</span> <span class="fl">3</span>, fov <span class="op">=</span> <span class="fl">40</span>,</span></span>
 <span class="r-in"><span>               samples <span class="op">=</span> <span class="fl">16</span>, sample_method <span class="op">=</span> <span class="st">"sobol_blue"</span>,</span></span>
 <span class="r-in"><span>               parallel <span class="op">=</span> <span class="cn">TRUE</span>, width <span class="op">=</span> <span class="fl">800</span>, height <span class="op">=</span> <span class="fl">800</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="op">}</span></span></span>
 <span class="r-plt img"><img src="create_instances-6.png" alt="" width="768" height="768"></span>
 </code></pre></div>
     </div>
