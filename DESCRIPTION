@@ -18,7 +18,7 @@ Imports:
     png,
     raster,
     decido,
-    rayimage (>= 0.25.3),
+    rayimage (>= 0.26.1),
     stats,
     progress,
     rayvertex (>= 0.13.2),
