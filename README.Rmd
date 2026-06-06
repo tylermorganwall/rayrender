@@ -240,10 +240,10 @@ Now we'll add the (included) R .obj file into the scene, using the `obj_model()`
 ```{r README_ground_r_path,cache=TRUE, message=FALSE}
 scene = generate_ground(material=diffuse(checkercolor="grey20")) |>
   add_object(sphere(y=0.2,material=glossy(color="#2b6eff",reflectance=0.05))) |>
-  add_object(obj_model(r_obj(simple_r = TRUE),
-                       z=1,y=-0.05,scale_obj=0.45,material=diffuse())) |>
-  add_object(sphere(y=10,z=1,radius=4,material=light(intensity=4))) |>
-  add_object(sphere(z=15,material=light(intensity=70)))
+  add_object(obj_model(r_obj(simple_r = TRUE), 
+                       z=-0.9,y=-0.05,scale_obj=0.45,material=diffuse())) |>
+  add_object(sphere(y=10,z=-1,radius=4,material=light(intensity=4))) |>
+  add_object(sphere(z=-15,material=light(intensity=70)))
 render_scene(scene, parallel = TRUE, width = 800, height = 800, samples = 16)
 ```
 
@@ -252,13 +252,13 @@ Here we'll render a grid of different viewpoints.
 ```{r README_ground_grid,cache=TRUE, message=FALSE}
 filename = tempfile()
 image1 = render_scene(scene, parallel = TRUE, width = 400, height = 400, 
-             lookfrom = c(7,1,7), samples = 16, plot_scene = FALSE)
+             lookfrom = c(-7,1,-7), samples = 16, plot_scene = FALSE)
 image2 = render_scene(scene, parallel = TRUE, width = 400, height = 400, 
-             lookfrom = c(0,7,7), samples = 16, plot_scene = FALSE)
+             lookfrom = c(0,7,-7), samples = 16, plot_scene = FALSE)
 image3 = render_scene(scene, parallel = TRUE, width = 400, height = 400, 
-             lookfrom = c(-7,0,-7), samples = 16, plot_scene = FALSE)
+             lookfrom = c(7,0,-7), samples = 16, plot_scene = FALSE)
 image4 = render_scene(scene, parallel = TRUE, width = 400, height = 400, 
-             lookfrom = c(-7,7,7), samples = 16, plot_scene = FALSE)
+             lookfrom = c(7,7,-7), samples = 16, plot_scene = FALSE)
 rayimage::plot_image_grid(list(image1,image2,image3,image4), dim = c(2,2))
 
 ```
@@ -349,14 +349,14 @@ vals = vals[,c(1,3,2)]/20
 
 generate_studio() |> 
   add_object(path(points=vals,y=-0.6,width=0.01,material=diffuse(color="red"))) |> 
-  add_object(sphere(y=5,z=5,radius=0.5,material=light(intensity=200))) |> 
-  render_scene(samples = 16,lookat=c(0,0.5,0),lookfrom=c(0,1,10),width = 800, height = 800, parallel=TRUE)
+  add_object(sphere(y=5,z=-5,radius=0.5,material=light(intensity=200))) |> 
+  render_scene(samples = 32,lookat=c(0,0.5,0),width = 800, height = 800, parallel=TRUE)
 ```
 
 rayrender also supports an extruded path object that generates a variable width path with any non-intersecting simple polygon (including holes) as an input. You can vary the width, add twist, and change the shape of the polygon along the path's length.
 
 ```{r README_r_extruded_path, cache=TRUE, message=FALSE}
-points = list(c(0,0,1),c(-0.5,0,-1),c(0,1,-1),c(1,0.5,0),c(0.6,0.3,1))
+points = list(c(0,0,-1),c(0.5,0,1),c(0,1,1),c(-1,0.5,0),c(-0.6,0.3,-1))
 #Create star polygon
 angles = seq(0,360,by=36)
 xx = rev(c(rep(c(1,0.5),5),1) * sinpi(angles/180))
@@ -370,8 +370,8 @@ generate_studio(depth=-0.4) |>
                            twists = 4,
                            breaks = 1000,
                            material=diffuse(color="purple"))) |>
-  add_object(sphere(y=3,z=5,x=2,radius=1,material=light(intensity=15))) |>
-  render_scene(lookat=c(0.3,0.5,1), 
+  add_object(sphere(y=3,z=-5,x=-2,radius=1,material=light(intensity=15))) |>
+  render_scene(lookat=c(-0.3,0.5,-1), 
                fov=12, width=800,height=800, 
                aperture=0.025, samples = 16)
 
@@ -389,8 +389,8 @@ generate_studio(depth=-0.2,
                           linear_step = TRUE, twists = 1.5, breaks = 720, 
                           material = diffuse(noisecolor = "black", noise = 10, 
                                              noiseintensity = 10))) |>
- add_object(sphere(y=20,x=0,z=21,material=light(intensity = 1000))) |> 
- render_scene(lookat=c(0,0.5,0), fov=10, samples = 16,
+ add_object(sphere(y=20,x=0,z=-21,material=light(intensity = 1000))) |> 
+ render_scene(lookat=c(0,0.5,0), fov=8, samples = 16,
               width = 800, height=800)
 ```
 
