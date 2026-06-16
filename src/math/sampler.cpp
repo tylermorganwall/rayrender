@@ -210,7 +210,7 @@ static inline vec2f sobol_calc_double_bluenoise(int  x, int  y, int i, int dim) 
 SobolSampler::SobolSampler(unsigned int maxSamples,
              random_gen& rng) : PixelSampler(1000000000,0,rng),
              current1Dsample(0), current2Dsample(0)  {
-  pixelseed = rng.unif_rand()*(Float)std::numeric_limits<unsigned int>::max();
+  pixelseed = rng.unif_rand()*static_cast<Float>(std::numeric_limits<unsigned int>::max());
 }
 
 void SobolSampler::StartPixel( unsigned int i,  unsigned int j) { 
