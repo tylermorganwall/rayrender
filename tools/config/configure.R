@@ -168,7 +168,8 @@ compile_test = function(
   extra_ldflags = character(),
   link = FALSE,
   include_pkg_cppflags = TRUE,
-  include_pkg_cxxflags = TRUE
+  include_pkg_cxxflags = TRUE,
+  quiet = FALSE
 ) {
   src = tempfile(fileext = ".cpp")
   writeLines(code, src)
@@ -224,11 +225,13 @@ compile_test = function(
   }
 
   if (!identical(status, 0L)) {
-    message("*** configure: test compile/link failed. Command:")
-    message(cmd_str)
-    if (length(output_lines)) {
-      message("*** configure: compiler/linker output:")
-      message(paste(output_lines, collapse = "\n"))
+    if (!quiet) {
+      message("*** configure: test compile/link failed. Command:")
+      message(cmd_str)
+      if (length(output_lines)) {
+        message("*** configure: compiler/linker output:")
+        message(paste(output_lines, collapse = "\n"))
+      }
     }
     return(FALSE)
   }
@@ -670,17 +673,32 @@ if (disable_simd) {
   message("*** configure: SIMD support disabled by RAYRENDER_DISABLE_SIMD")
 } else if (grepl("x86_64|amd64|i386|i686", arch_norm)) {
   # ---- x86: SSE probing ----
+  # CRAN checks flag portability, so only enable SIMD levels that are already
+  # part of the compiler target. Do not add -msse* switches here.
   if (
     compile_test(
-      "#include <smmintrin.h>\nint main() { __m128 v = _mm_dp_ps(_mm_set1_ps(1.0f), _mm_set1_ps(2.0f), 0xFF); (void)v; return 0; }\n",
-      extra_cxxflags = "-msse4.1"
+      paste(
+        "#if !defined(__SSE4_1__)",
+        "#error SSE4.1 is not enabled by the compiler target",
+        "#endif",
+        "#include <smmintrin.h>",
+        "int main() {",
+        "  __m128 v = _mm_dp_ps(_mm_set1_ps(1.0f), _mm_set1_ps(2.0f), 0xFF);",
+        "  (void)v;",
+        "  return 0;",
+        "}",
+        sep = "\n"
+      ),
+      quiet = TRUE
     )
   ) {
-    PKG_CXXFLAGS = append_unique_flags(PKG_CXXFLAGS, "-msse4.1")
     DEFINES = append_unique_flags(
       DEFINES,
       "-DHAS_SSE",
+      "-DHAS_SSE2",
+      "-DHAS_SSE3",
       "-DHAS_SSE41",
+      "-DHAS_SSE4_1",
       "-DRAYSIMD",
       "-DRAYSIMDVECOFF"
     )
@@ -691,14 +709,25 @@ if (disable_simd) {
   if (
     !sse_checked &&
       compile_test(
-        "#include <pmmintrin.h>\nint main() { __m128 v = _mm_hadd_ps(_mm_set1_ps(1.0f), _mm_set1_ps(1.0f)); (void)v; return 0; }\n",
-        extra_cxxflags = "-msse3"
+        paste(
+          "#if !defined(__SSE3__)",
+          "#error SSE3 is not enabled by the compiler target",
+          "#endif",
+          "#include <pmmintrin.h>",
+          "int main() {",
+          "  __m128 v = _mm_hadd_ps(_mm_set1_ps(1.0f), _mm_set1_ps(1.0f));",
+          "  (void)v;",
+          "  return 0;",
+          "}",
+          sep = "\n"
+        ),
+        quiet = TRUE
       )
   ) {
-    PKG_CXXFLAGS = append_unique_flags(PKG_CXXFLAGS, "-msse3")
     DEFINES = append_unique_flags(
       DEFINES,
       "-DHAS_SSE",
+      "-DHAS_SSE2",
       "-DHAS_SSE3",
       "-DRAYSIMD",
       "-DRAYSIMDVECOFF"
@@ -710,11 +739,21 @@ if (disable_simd) {
   if (
     !sse_checked &&
       compile_test(
-        "#include <emmintrin.h>\nint main() { __m128d v = _mm_setzero_pd(); (void)v; return 0; }\n",
-        extra_cxxflags = "-msse2"
+        paste(
+          "#if !defined(__SSE2__)",
+          "#error SSE2 is not enabled by the compiler target",
+          "#endif",
+          "#include <emmintrin.h>",
+          "int main() {",
+          "  __m128d v = _mm_setzero_pd();",
+          "  (void)v;",
+          "  return 0;",
+          "}",
+          sep = "\n"
+        ),
+        quiet = TRUE
       )
   ) {
-    PKG_CXXFLAGS = append_unique_flags(PKG_CXXFLAGS, "-msse2")
     DEFINES = append_unique_flags(
       DEFINES,
       "-DHAS_SSE",
@@ -726,26 +765,8 @@ if (disable_simd) {
     message("*** configure: enabling SSE2 support")
   }
 
-  if (
-    !sse_checked &&
-      compile_test(
-        "#include <xmmintrin.h>\nint main() { __m128 v = _mm_setzero_ps(); (void)v; return 0; }\n",
-        extra_cxxflags = "-msse"
-      )
-  ) {
-    PKG_CXXFLAGS = append_unique_flags(PKG_CXXFLAGS, "-msse")
-    DEFINES = append_unique_flags(
-      DEFINES,
-      "-DHAS_SSE",
-      "-DRAYSIMD",
-      "-DRAYSIMDVECOFF"
-    )
-    sse_checked = TRUE
-    message("*** configure: enabling SSE support")
-  }
-
   if (!sse_checked) {
-    message("*** configure: SSE intrinsics not available")
+    message("*** configure: SSE2 intrinsics not available")
   }
 } else {
   message(

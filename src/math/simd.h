@@ -12,12 +12,25 @@
 // FVec4 and IVec4 are four-lane abstractions used by BVH4 traversal.
 #define SIMD_WIDTH 4
 
-#if defined(HAS_SSE) && !defined(__SSE__)
+#if defined(HAS_SSE) && !defined(__SSE2__)
 #undef HAS_SSE
 #undef HAS_SSE2
 #undef HAS_SSE3
 #undef HAS_SSE4_1
 #undef HAS_SSE41
+#endif
+
+#if defined(HAS_SSE4_1) && !defined(__SSE4_1__)
+#undef HAS_SSE4_1
+#undef HAS_SSE41
+#endif
+
+#if defined(HAS_SSE3) && !defined(__SSE3__)
+#undef HAS_SSE3
+#endif
+
+#if defined(HAS_SSE2) && !defined(__SSE2__)
+#undef HAS_SSE2
 #endif
 
 #ifndef HAS_SSE
@@ -28,10 +41,14 @@
 
 #if defined(__SSE4_1__)
 #include <smmintrin.h> 
+#elif defined(__SSSE3__)
+#include <tmmintrin.h>
 #endif
 
 #if defined(__SSE3__)
 #include <pmmintrin.h> 
+#elif defined(__SSE2__)
+#include <emmintrin.h>
 #endif
 
 
@@ -1047,7 +1064,7 @@ inline IVec4 simd_sub(IVec4 a, IVec4 b) {
 
 inline IVec4 simd_mul(IVec4 a, IVec4 b) {
     IVec4 result;
-#if defined(HAS_SSE4_1)
+#if defined(__SSE4_1__)
     result.v = _mm_mullo_epi32(a.v, b.v);
 #elif defined(HAS_NEON)
     result.v = vmulq_s32(a.v, b.v);

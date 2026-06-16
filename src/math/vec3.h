@@ -818,7 +818,7 @@ inline int MaxDimension(const vec3<int>& v) {
 
 inline vec3<int> Abs(const vec3<int>& v) {
     vec3<int> result;
-#ifdef __SSE3__
+#ifdef __SSSE3__
     result.e.v = _mm_abs_epi32(v.e.v);
 #elif defined(HAS_NEON)
     result.e.v = vabsq_s32(v.e.v);
