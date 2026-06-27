@@ -3415,10 +3415,21 @@ Move camera sampling onto the pbrt contract before implementing the spectral int
 
 ### Gate
 
-- geometric rays match legacy/reference cameras for nondispersive settings.
-- camera weight is spectrally neutral where expected.
-- wavelength packet remains unchanged for pinhole/thin-lens cameras.
-- camera ray/Film sample ordering is deterministic.
+- [x] geometric rays match legacy/reference cameras for nondispersive settings.
+- [x] camera weight is spectrally neutral where expected.
+- [x] wavelength packet remains unchanged for pinhole/thin-lens cameras.
+- [x] camera ray/Film sample ordering is deterministic.
+
+### Completion record
+
+Completed in PR 9 by `src/render/spectral_camera.h`,
+`src/render/spectral_camera.cpp`, `tools/spectral-tests/pr9-camera-tests.cpp`,
+and `tools/spectral-tests/run-pr9-camera-tests.R`.
+
+Gate evidence:
+
+- `Rscript tools/spectral-tests/run-pr9-camera-tests.R`
+- `tools/codex/install-local.sh`
 
 ## PR 10: Add Interaction, Shape adapters, Primitive, and Scene
 
