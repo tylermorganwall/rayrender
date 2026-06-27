@@ -6,6 +6,7 @@
 #include "sampled_spectrum.h"
 #include "sampling.h"
 #include "spectrum.h"
+#include "rgb_spectrum.h"
 #include "scratch_buffer.h"
 #include "tagged_handle.h"
 
