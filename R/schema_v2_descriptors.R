@@ -153,6 +153,16 @@ ensure_texture_descriptor = function(
   texture_constant(value, value_type = value_type)
 }
 
+ensure_float_texture_descriptor = function(value, path = "texture") {
+  if (inherits(value, "ray_texture")) {
+    if (!is.null(value$value_type) && !identical(value$value_type, "float")) {
+      schema_stop(path, "must be a float texture descriptor")
+    }
+    return(value)
+  }
+  texture_constant(value, value_type = "float")
+}
+
 check_named_list = function(value, path) {
   if (!is.list(value)) {
     schema_stop(path, "must be a list")
@@ -1205,6 +1215,7 @@ null_material = interface_material
 #'
 #' @param eta Default `spectrum_named("metal-Ag-eta")`. Eta spectrum.
 #' @param k Default `spectrum_named("metal-Ag-k")`. K spectrum.
+#' @param reflectance Default `NULL`. Compatibility reflectance spectrum used only when `eta` and `k` are omitted.
 #' @param roughness Default `0`. Isotropic roughness.
 #' @param u_roughness Default `NULL`. U roughness.
 #' @param v_roughness Default `NULL`. V roughness.
@@ -1217,6 +1228,7 @@ null_material = interface_material
 conductor = function(
   eta = spectrum_named("metal-Ag-eta"),
   k = spectrum_named("metal-Ag-k"),
+  reflectance = NULL,
   roughness = 0,
   u_roughness = NULL,
   v_roughness = NULL,
@@ -1224,18 +1236,72 @@ conductor = function(
   displacement = NULL,
   normal_map = NULL
 ) {
+  eta_missing = missing(eta)
+  k_missing = missing(k)
   check_nonnegative_numeric(roughness, "conductor(roughness)", length = 1)
   check_scalar_logical(remap_roughness, "conductor(remap_roughness)")
+  if (!is.null(reflectance) && (!eta_missing || !k_missing)) {
+    schema_stop(
+      "conductor(reflectance)",
+      "cannot be combined with eta or k"
+    )
+  }
+  if (!is.null(u_roughness)) {
+    u_roughness = ensure_float_texture_descriptor(
+      u_roughness,
+      "conductor(u_roughness)"
+    )
+  }
+  if (!is.null(v_roughness)) {
+    v_roughness = ensure_float_texture_descriptor(
+      v_roughness,
+      "conductor(v_roughness)"
+    )
+  }
+  if (is.null(u_roughness)) {
+    u_roughness = ensure_float_texture_descriptor(
+      roughness,
+      "conductor(roughness)"
+    )
+  }
+  if (is.null(v_roughness)) {
+    v_roughness = ensure_float_texture_descriptor(
+      roughness,
+      "conductor(roughness)"
+    )
+  }
+  conductor_params = list(
+    u_roughness = u_roughness,
+    v_roughness = v_roughness,
+    remap_roughness = remap_roughness
+  )
+  if (is.null(reflectance)) {
+    if (eta_missing) {
+      eta = spectrum_named("metal-Ag-eta")
+    }
+    if (k_missing) {
+      k = spectrum_named("metal-Ag-k")
+    }
+    conductor_params$eta = ensure_spectrum_descriptor(
+      eta,
+      role = "unbounded",
+      path = "conductor(eta)"
+    )
+    conductor_params$k = ensure_spectrum_descriptor(
+      k,
+      role = "unbounded",
+      path = "conductor(k)"
+    )
+  } else {
+    conductor_params$reflectance = ensure_spectrum_descriptor(
+      reflectance,
+      role = "albedo",
+      path = "conductor(reflectance)"
+    )
+  }
   new_ray_material(
     "conductor",
-    params = list(
-      eta = ensure_spectrum_descriptor(eta, role = "unbounded"),
-      k = ensure_spectrum_descriptor(k, role = "unbounded"),
-      roughness = roughness,
-      u_roughness = u_roughness,
-      v_roughness = v_roughness,
-      remap_roughness = remap_roughness
-    ),
+    params = conductor_params,
     normal_map = normal_map,
     displacement = displacement
   )
@@ -1397,6 +1463,7 @@ material_to_spectral = function(material) {
   legacy = material_payload(material, "material_to_spectral(material)")
   type = get_material_name(legacy$type)
   warning = NULL
+  spectral_type = paste0("legacy_", type)
   params = list()
   if (type %in% c("diffuse", "oren-nayar")) {
     params$reflectance = spectrum_rgb(
@@ -1404,6 +1471,24 @@ material_to_spectral = function(material) {
       role = "albedo",
       encoding = "legacy"
     )
+  } else if (type == "metal") {
+    properties = legacy$properties[[1]]
+    fuzz = if (is.numeric(properties) && length(properties) >= 4) {
+      properties[[4]]
+    } else {
+      0
+    }
+    fuzz = max(0, min(1, as.numeric(fuzz)))
+    params$reflectance = spectrum_rgb(
+      legacy_material_color(legacy, "material_to_spectral(material)"),
+      role = "albedo",
+      encoding = "legacy"
+    )
+    params$u_roughness = texture_constant(fuzz, value_type = "float")
+    params$v_roughness = texture_constant(fuzz, value_type = "float")
+    params$remap_roughness = FALSE
+    spectral_type = "compat_rgb_metal_conductor"
+    warning = "`metal()` is adapted to a spectral compatibility conductor from legacy RGB reflectance and fuzz. Prefer `conductor(eta = ..., k = ...)` for measured spectral metals."
   } else if (type %in% c("light", "spotlight")) {
     params$emission = spectrum_rgb(
       legacy_material_color(legacy, "material_to_spectral(material)"),
@@ -1414,7 +1499,7 @@ material_to_spectral = function(material) {
     warning = "`light()` as a material is a legacy shorthand. In spectral mode, prefer `with_light(area_light(...))`."
   }
   new_ray_material(
-    paste0("legacy_", type),
+    spectral_type,
     params = params,
     legacy = list(payload = legacy, warning = warning)
   )

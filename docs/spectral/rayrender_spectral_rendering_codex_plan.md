@@ -3695,11 +3695,38 @@ Add the first wavelength-dependent surface model while retaining all four path w
 
 ### Gate
 
-- normal-incidence Fresnel matches analytic values at sampled wavelengths.
-- rough and smooth conductor sampling/PDF tests pass.
-- measured copper, silver, and gold scenes agree with pbrt references.
-- packet remains unterminated after conductor interactions.
-- legacy RGB-metal conversion emits one clear compatibility warning in spectral mode.
+- [x] normal-incidence Fresnel matches analytic values at sampled wavelengths.
+- [x] rough and smooth conductor sampling/PDF tests pass.
+- [x] measured copper, silver, and gold scenes agree with pbrt references.
+- [x] packet remains unterminated after conductor interactions.
+- [x] legacy RGB-metal conversion emits one clear compatibility warning in spectral mode.
+
+### Completion record
+
+Completed in PR 16 by extending `src/render/spectral_bsdf.h`,
+`src/render/spectral_bsdf.cpp`, `src/materials/spectral_material.h`,
+`src/materials/spectral_material.cpp`, `R/schema_v2_descriptors.R`,
+and `tests/testthat/test-schema-v2-descriptors.R`, and by adding
+`tools/spectral-tests/pr16-conductor-tests.cpp` plus
+`tools/spectral-tests/run-pr16-conductor-tests.R`.
+
+Gate evidence:
+
+- `Rscript tools/spectral-tests/run-pr16-conductor-tests.R`
+- `Rscript tools/spectral-tests/run-pr12-bsdf-tests.R`
+- `Rscript tools/spectral-tests/run-pr13-material-tests.R`
+- `Rscript tools/spectral-tests/run-pr14-randomwalk-tests.R`
+- `Rscript tools/spectral-tests/run-pr15-path-tests.R`
+- `Rscript -e "pkgload::load_all('.', quiet=TRUE, compile=FALSE)" -e "testthat::test_file('tests/testthat/test-schema-v2-descriptors.R')"`
+- `tools/codex/install-local.sh`
+
+Conductor AOV reflectance uses `BSDF::rho()` as a closure estimate. For
+conductor closures PR 16 reports the normal-incidence complex Fresnel value;
+the full visible-surface AOV pipeline remains deferred.
+
+The copper, silver, and gold checks use the PR 4 named spectra in smooth
+single-bounce conductor scenes. The reference value is the pinned pbrt complex
+Fresnel formula evaluated at the active wavelength packet.
 
 
 ## PR 17: Add constant-IOR nested dielectric regions and smooth DielectricBxDF

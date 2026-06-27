@@ -51,6 +51,8 @@ const char* MaterialTypeName(MaterialType type) {
   switch (type) {
   case MaterialType::Diffuse:
     return "Diffuse";
+  case MaterialType::Conductor:
+    return "Conductor";
   case MaterialType::Interface:
     return "Interface";
   }
@@ -170,6 +172,135 @@ Float DiffuseMaterial::ClampUnit(Float value) {
   return Clamp(value, 0, 1);
 }
 
+ConductorMaterial ConductorMaterial::FromEtaK(
+  SpectrumTexture eta,
+  SpectrumTexture k,
+  FloatTexture roughness,
+  bool remapRoughness
+) {
+  return FromEtaK(
+    std::move(eta),
+    std::move(k),
+    roughness,
+    std::move(roughness),
+    remapRoughness
+  );
+}
+
+ConductorMaterial ConductorMaterial::FromEtaK(
+  SpectrumTexture eta,
+  SpectrumTexture k,
+  FloatTexture uRoughness,
+  FloatTexture vRoughness,
+  bool remapRoughness,
+  std::optional<FloatTexture> alpha,
+  std::optional<FloatTexture> bump
+) {
+  return ConductorMaterial(
+    std::move(eta),
+    std::move(k),
+    std::nullopt,
+    std::move(uRoughness),
+    std::move(vRoughness),
+    remapRoughness,
+    std::move(alpha),
+    std::move(bump)
+  );
+}
+
+ConductorMaterial ConductorMaterial::FromReflectance(
+  SpectrumTexture reflectance,
+  FloatTexture roughness,
+  bool remapRoughness
+) {
+  return FromReflectance(
+    std::move(reflectance),
+    roughness,
+    std::move(roughness),
+    remapRoughness
+  );
+}
+
+ConductorMaterial ConductorMaterial::FromReflectance(
+  SpectrumTexture reflectance,
+  FloatTexture uRoughness,
+  FloatTexture vRoughness,
+  bool remapRoughness,
+  std::optional<FloatTexture> alpha,
+  std::optional<FloatTexture> bump
+) {
+  return ConductorMaterial(
+    std::nullopt,
+    std::nullopt,
+    std::move(reflectance),
+    std::move(uRoughness),
+    std::move(vRoughness),
+    remapRoughness,
+    std::move(alpha),
+    std::move(bump)
+  );
+}
+
+ConductorMaterial::ConductorMaterial(
+  std::optional<SpectrumTexture> eta,
+  std::optional<SpectrumTexture> k,
+  std::optional<SpectrumTexture> reflectance,
+  FloatTexture uRoughness,
+  FloatTexture vRoughness,
+  bool remapRoughness,
+  std::optional<FloatTexture> alpha,
+  std::optional<FloatTexture> bump
+)
+  : eta_(std::move(eta)),
+    k_(std::move(k)),
+    reflectance_(std::move(reflectance)),
+    uRoughness_(std::move(uRoughness)),
+    vRoughness_(std::move(vRoughness)),
+    remapRoughness_(remapRoughness),
+    alpha_(std::move(alpha)),
+    bump_(std::move(bump)) {
+  bool hasEtaK = eta_.has_value() || k_.has_value();
+  if (hasEtaK && !(eta_.has_value() && k_.has_value())) {
+    throw std::invalid_argument("ConductorMaterial requires both eta and k spectra");
+  }
+  if (reflectance_.has_value() == (eta_.has_value() && k_.has_value())) {
+    throw std::invalid_argument("ConductorMaterial requires either eta/k or reflectance");
+  }
+}
+
+bool ConductorMaterial::UsesEtaK() const {
+  return eta_.has_value() && k_.has_value();
+}
+
+bool ConductorMaterial::UsesReflectance() const {
+  return reflectance_.has_value();
+}
+
+bool ConductorMaterial::HasAlpha() const {
+  return alpha_.has_value();
+}
+
+bool ConductorMaterial::HasBump() const {
+  return bump_.has_value();
+}
+
+bool ConductorMaterial::RemapRoughness() const {
+  return remapRoughness_;
+}
+
+MaterialTextureRequirements ConductorMaterial::TextureRequirements() const {
+  MaterialTextureRequirements requirements;
+  requirements.spectrumTextures = true;
+  requirements.floatTextures = true;
+  requirements.alphaTexture = alpha_.has_value();
+  requirements.bumpTexture = bump_.has_value();
+  return requirements;
+}
+
+Float ConductorMaterial::ClampUnit(Float value) {
+  return Clamp(value, 0, 1);
+}
+
 bool InterfaceMaterial::HasAlpha() const {
   return false;
 }
@@ -190,11 +321,17 @@ Material Material::Diffuse(DiffuseMaterial material) {
   return Material(std::move(material));
 }
 
+Material Material::Conductor(ConductorMaterial material) {
+  return Material(std::move(material));
+}
+
 Material Material::Interface() {
   return Material(InterfaceMaterial());
 }
 
 Material::Material(DiffuseMaterial material) : material_(std::move(material)) {}
+
+Material::Material(ConductorMaterial material) : material_(std::move(material)) {}
 
 Material::Material(InterfaceMaterial material) : material_(material) {}
 
@@ -205,6 +342,9 @@ bool Material::IsValid() const {
 MaterialType Material::Type() const {
   if (std::holds_alternative<DiffuseMaterial>(material_)) {
     return MaterialType::Diffuse;
+  }
+  if (std::holds_alternative<ConductorMaterial>(material_)) {
+    return MaterialType::Conductor;
   }
   if (std::holds_alternative<InterfaceMaterial>(material_)) {
     return MaterialType::Interface;

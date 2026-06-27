@@ -7,6 +7,7 @@
 conductor(
   eta = spectrum_named("metal-Ag-eta"),
   k = spectrum_named("metal-Ag-k"),
+  reflectance = NULL,
   roughness = 0,
   u_roughness = NULL,
   v_roughness = NULL,
@@ -19,6 +20,8 @@ conductor(
 \item{eta}{Default `spectrum_named("metal-Ag-eta")`. Eta spectrum.}
 
 \item{k}{Default `spectrum_named("metal-Ag-k")`. K spectrum.}
+
+\item{reflectance}{Default `NULL`. Compatibility reflectance spectrum used only when `eta` and `k` are omitted.}
 
 \item{roughness}{Default `0`. Isotropic roughness.}
 

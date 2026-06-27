@@ -37,6 +37,18 @@ test_that("schema-v2 descriptors serialize deterministically", {
     scene_validation("strict"),
     interface_material(),
     conductor(),
+    conductor(
+      eta = spectrum_sampled(
+        c(400, 500, 600),
+        c(0.2, 0.4, 0.8),
+        role = "unbounded"
+      ),
+      k = spectrum_sampled(c(400, 500, 600), c(2, 3, 4), role = "unbounded"),
+      u_roughness = texture_float(0.1),
+      v_roughness = texture_image_scalar("roughness.png"),
+      remap_roughness = FALSE
+    ),
+    conductor(reflectance = spectrum_rgb("#ccaa55", role = "albedo")),
     dielectric_interface(),
     thin_dielectric(),
     coated_diffuse(reflectance = spectrum_constant(0.5)),
@@ -68,6 +80,13 @@ test_that("schema-v2 constructors reject invalid descriptors early", {
   expect_error(spectrum_constant(-1), "spectrum_constant\\(value\\)")
   expect_error(spectrum_sampled(c(500, 400), c(1, 1)), "strictly increasing")
   expect_error(texture_image("albedo.png"), "texture_image\\(role\\)")
+  expect_error(
+    conductor(
+      reflectance = spectrum_constant(0.5),
+      eta = spectrum_named("metal-Cu-eta")
+    ),
+    "cannot be combined"
+  )
   expect_error(point_light(c(0, 1)), "point_light\\(position\\)")
 })
 
@@ -165,6 +184,32 @@ test_that("legacy scene adaptation aggregates warnings once per scene", {
   expect_length(report$warnings, 1)
   expect_s3_class(converted$light[[1]], "ray_light")
   expect_s3_class(converted$material[[1]], "ray_material_v2")
+})
+
+test_that("legacy metal adapts to one spectral compatibility warning", {
+  legacy_scene = add_object(
+    sphere(material = metal(color = "gold", fuzz = 0.2)),
+    sphere(x = 1, material = metal())
+  )
+
+  expect_warning(
+    {
+      converted = legacy_scene_to_schema_v2(legacy_scene)
+    },
+    "compatibility conductor"
+  )
+  report = attr(
+    suppressWarnings(legacy_scene_to_schema_v2(legacy_scene)),
+    "conversion_report"
+  )
+
+  expect_length(report$warnings, 1)
+  expect_equal(converted$material[[1]][[1]]$type, "compat_rgb_metal_conductor")
+  expect_s3_class(
+    converted$material[[1]][[1]]$params$reflectance,
+    "ray_spectrum"
+  )
+  expect_equal(converted$material[[1]][[1]]$params$u_roughness$value, 0.2)
 })
 
 test_that("render_scene exposes the schema-v2 spectral shell without rendering", {

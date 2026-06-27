@@ -33,6 +33,10 @@ bool IsInf(Float value) {
   return std::isinf(value);
 }
 
+Float AbsDot(const vec3f& v, const vec3f& w) {
+  return std::abs(dot(v, w));
+}
+
 vec3f UnitOrFallback(const vec3f& v, const vec3f& fallback) {
   Float length = v.length();
   if (length == 0 || !std::isfinite(length)) {
@@ -46,6 +50,10 @@ vec3f OrthogonalFallback(const vec3f& z) {
     return UnitOrFallback(vec3f(-z.xyz.z, 0, z.xyz.x), vec3f(1, 0, 0));
   }
   return UnitOrFallback(vec3f(0, z.xyz.z, -z.xyz.y), vec3f(1, 0, 0));
+}
+
+vec3f FaceForward(vec3f v, const vec3f& reference) {
+  return dot(v, reference) < 0 ? -v : v;
 }
 
 } // namespace
@@ -347,6 +355,132 @@ base::SampledSpectrum DiffuseBxDF::rho() const {
 
 void DiffuseBxDF::Regularize() {}
 
+ConductorBxDF::ConductorBxDF(
+  TrowbridgeReitzDistribution distribution,
+  base::SampledSpectrum eta,
+  base::SampledSpectrum k
+)
+  : distribution_(distribution),
+    eta_(eta),
+    k_(k) {}
+
+BxDFFlags ConductorBxDF::Flags() const {
+  return distribution_.EffectivelySmooth()
+           ? BxDFFlags::SpecularReflection
+           : BxDFFlags::GlossyReflection;
+}
+
+base::SampledSpectrum ConductorBxDF::f(
+  const vec3f& wo,
+  const vec3f& wi,
+  TransportMode mode
+) const {
+  (void)mode;
+  if (!SameHemisphere(wo, wi) || distribution_.EffectivelySmooth()) {
+    return base::SampledSpectrum(0);
+  }
+
+  Float cosThetaO = AbsCosTheta(wo);
+  Float cosThetaI = AbsCosTheta(wi);
+  if (cosThetaI == 0 || cosThetaO == 0) {
+    return base::SampledSpectrum(0);
+  }
+
+  vec3f wm = wi + wo;
+  if (wm.squared_length() == 0) {
+    return base::SampledSpectrum(0);
+  }
+  wm = UnitOrFallback(wm, vec3f(0, 0, 1));
+
+  base::SampledSpectrum F = FrComplex(AbsDot(wo, wm), eta_, k_);
+  return distribution_.D(wm) * F * distribution_.G(wo, wi) /
+         (static_cast<Float>(4) * cosThetaI * cosThetaO);
+}
+
+std::optional<BSDFSample> ConductorBxDF::Sample_f(
+  const vec3f& wo,
+  Float uc,
+  point2f u,
+  TransportMode mode,
+  BxDFReflTransFlags sampleFlags
+) const {
+  (void)uc;
+  (void)mode;
+  if (!base::HasFlag(sampleFlags, BxDFReflTransFlags::Reflection)) {
+    return {};
+  }
+
+  if (distribution_.EffectivelySmooth()) {
+    vec3f wi(-wo.xyz.x, -wo.xyz.y, wo.xyz.z);
+    Float absCosTheta = AbsCosTheta(wi);
+    if (absCosTheta == 0) {
+      return {};
+    }
+    base::SampledSpectrum f = FrComplex(absCosTheta, eta_, k_) / absCosTheta;
+    return BSDFSample{f, wi, 1, BxDFFlags::SpecularReflection};
+  }
+
+  if (wo.xyz.z == 0) {
+    return {};
+  }
+  vec3f wm = distribution_.Sample_wm(wo, u);
+  vec3f wi = Reflect(wo, wm);
+  if (!SameHemisphere(wo, wi)) {
+    return {};
+  }
+
+  Float absDotWoWm = AbsDot(wo, wm);
+  if (absDotWoWm == 0) {
+    return {};
+  }
+  Float pdf = distribution_.PDF(wo, wm) /
+              (static_cast<Float>(4) * absDotWoWm);
+  Float cosThetaO = AbsCosTheta(wo);
+  Float cosThetaI = AbsCosTheta(wi);
+  if (cosThetaI == 0 || cosThetaO == 0 || pdf == 0) {
+    return {};
+  }
+
+  base::SampledSpectrum F = FrComplex(absDotWoWm, eta_, k_);
+  base::SampledSpectrum f =
+    distribution_.D(wm) * F * distribution_.G(wo, wi) /
+    (static_cast<Float>(4) * cosThetaI * cosThetaO);
+  return BSDFSample{f, wi, pdf, BxDFFlags::GlossyReflection};
+}
+
+Float ConductorBxDF::PDF(
+  const vec3f& wo,
+  const vec3f& wi,
+  TransportMode mode,
+  BxDFReflTransFlags sampleFlags
+) const {
+  (void)mode;
+  if (!base::HasFlag(sampleFlags, BxDFReflTransFlags::Reflection) ||
+      !SameHemisphere(wo, wi) ||
+      distribution_.EffectivelySmooth()) {
+    return 0;
+  }
+
+  vec3f wm = wo + wi;
+  if (wm.squared_length() == 0) {
+    return 0;
+  }
+  wm = FaceForward(UnitOrFallback(wm, vec3f(0, 0, 1)), vec3f(0, 0, 1));
+  Float absDotWoWm = AbsDot(wo, wm);
+  if (absDotWoWm == 0) {
+    return 0;
+  }
+  return distribution_.PDF(wo, wm) / (static_cast<Float>(4) * absDotWoWm);
+}
+
+base::SampledSpectrum ConductorBxDF::rho() const {
+  return FrComplex(1, eta_, k_);
+}
+
+void ConductorBxDF::Regularize() {
+  distribution_.Regularize();
+}
+
 BxDFFlags NullBxDF::Flags() const {
   return BxDFFlags::Unset;
 }
@@ -394,6 +528,8 @@ void NullBxDF::Regularize() {}
 
 BxDF::BxDF(DiffuseBxDF* bxdf) : kind_(bxdf ? Kind::Diffuse : Kind::None), ptr_(bxdf) {}
 
+BxDF::BxDF(ConductorBxDF* bxdf) : kind_(bxdf ? Kind::Conductor : Kind::None), ptr_(bxdf) {}
+
 BxDF::BxDF(NullBxDF* bxdf) : kind_(bxdf ? Kind::Null : Kind::None), ptr_(bxdf) {}
 
 BxDF::operator bool() const {
@@ -404,6 +540,8 @@ BxDFFlags BxDF::Flags() const {
   switch (kind_) {
   case Kind::Diffuse:
     return static_cast<const DiffuseBxDF*>(ptr_)->Flags();
+  case Kind::Conductor:
+    return static_cast<const ConductorBxDF*>(ptr_)->Flags();
   case Kind::Null:
     return static_cast<const NullBxDF*>(ptr_)->Flags();
   case Kind::None:
@@ -420,6 +558,8 @@ base::SampledSpectrum BxDF::f(
   switch (kind_) {
   case Kind::Diffuse:
     return static_cast<const DiffuseBxDF*>(ptr_)->f(wo, wi, mode);
+  case Kind::Conductor:
+    return static_cast<const ConductorBxDF*>(ptr_)->f(wo, wi, mode);
   case Kind::Null:
     return static_cast<const NullBxDF*>(ptr_)->f(wo, wi, mode);
   case Kind::None:
@@ -438,6 +578,8 @@ std::optional<BSDFSample> BxDF::Sample_f(
   switch (kind_) {
   case Kind::Diffuse:
     return static_cast<const DiffuseBxDF*>(ptr_)->Sample_f(wo, uc, u, mode, sampleFlags);
+  case Kind::Conductor:
+    return static_cast<const ConductorBxDF*>(ptr_)->Sample_f(wo, uc, u, mode, sampleFlags);
   case Kind::Null:
     return static_cast<const NullBxDF*>(ptr_)->Sample_f(wo, uc, u, mode, sampleFlags);
   case Kind::None:
@@ -455,6 +597,8 @@ Float BxDF::PDF(
   switch (kind_) {
   case Kind::Diffuse:
     return static_cast<const DiffuseBxDF*>(ptr_)->PDF(wo, wi, mode, sampleFlags);
+  case Kind::Conductor:
+    return static_cast<const ConductorBxDF*>(ptr_)->PDF(wo, wi, mode, sampleFlags);
   case Kind::Null:
     return static_cast<const NullBxDF*>(ptr_)->PDF(wo, wi, mode, sampleFlags);
   case Kind::None:
@@ -463,10 +607,26 @@ Float BxDF::PDF(
   return 0;
 }
 
+base::SampledSpectrum BxDF::rho() const {
+  switch (kind_) {
+  case Kind::Diffuse:
+    return static_cast<const DiffuseBxDF*>(ptr_)->rho();
+  case Kind::Conductor:
+    return static_cast<const ConductorBxDF*>(ptr_)->rho();
+  case Kind::Null:
+  case Kind::None:
+    return base::SampledSpectrum(0);
+  }
+  return base::SampledSpectrum(0);
+}
+
 void BxDF::Regularize() {
   switch (kind_) {
   case Kind::Diffuse:
     static_cast<DiffuseBxDF*>(ptr_)->Regularize();
+    return;
+  case Kind::Conductor:
+    static_cast<ConductorBxDF*>(ptr_)->Regularize();
     return;
   case Kind::Null:
     static_cast<NullBxDF*>(ptr_)->Regularize();
@@ -570,6 +730,10 @@ Float BSDF::PDF(
     return 0;
   }
   return bxdf_.PDF(wo, wi, mode, sampleFlags);
+}
+
+base::SampledSpectrum BSDF::rho() const {
+  return bxdf_.rho();
 }
 
 void BSDF::Regularize() {

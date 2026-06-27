@@ -101,6 +101,39 @@ private:
   base::SampledSpectrum reflectance_;
 };
 
+class ConductorBxDF {
+public:
+  ConductorBxDF() = default;
+  ConductorBxDF(
+    TrowbridgeReitzDistribution distribution,
+    base::SampledSpectrum eta,
+    base::SampledSpectrum k
+  );
+
+  BxDFFlags Flags() const;
+  base::SampledSpectrum f(const vec3f& wo, const vec3f& wi, TransportMode mode) const;
+  std::optional<BSDFSample> Sample_f(
+    const vec3f& wo,
+    Float uc,
+    point2f u,
+    TransportMode mode,
+    BxDFReflTransFlags sampleFlags = BxDFReflTransFlags::All
+  ) const;
+  Float PDF(
+    const vec3f& wo,
+    const vec3f& wi,
+    TransportMode mode,
+    BxDFReflTransFlags sampleFlags = BxDFReflTransFlags::All
+  ) const;
+  base::SampledSpectrum rho() const;
+  void Regularize();
+
+private:
+  TrowbridgeReitzDistribution distribution_;
+  base::SampledSpectrum eta_;
+  base::SampledSpectrum k_;
+};
+
 class NullBxDF {
 public:
   BxDFFlags Flags() const;
@@ -125,6 +158,7 @@ class BxDF {
 public:
   BxDF() = default;
   explicit BxDF(DiffuseBxDF* bxdf);
+  explicit BxDF(ConductorBxDF* bxdf);
   explicit BxDF(NullBxDF* bxdf);
 
   explicit operator bool() const;
@@ -143,12 +177,14 @@ public:
     TransportMode mode,
     BxDFReflTransFlags sampleFlags = BxDFReflTransFlags::All
   ) const;
+  base::SampledSpectrum rho() const;
   void Regularize();
 
 private:
   enum class Kind {
     None,
     Diffuse,
+    Conductor,
     Null
   };
 
@@ -200,6 +236,7 @@ public:
     TransportMode mode = TransportMode::Radiance,
     BxDFReflTransFlags sampleFlags = BxDFReflTransFlags::All
   ) const;
+  base::SampledSpectrum rho() const;
   void Regularize();
   const BSDFFrame& Frame() const;
   normal3f GeometricNormal() const;
