@@ -53,7 +53,7 @@ print.ray_transform = function(x, ...) {
 
 #' @keywords internal
 format_pillar_transform = function(x) {
-  format_material <- function(x) {
+  format_material = function(x) {
     ord = paste0(c("x", "y", "z")[x$order_rotation[[1]]], collapse = "")
     if (ord != "xyz") {
       ord = cli::style_underline(ord)

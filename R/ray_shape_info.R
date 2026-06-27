@@ -53,7 +53,7 @@ print.ray_shape_info = function(x, ...) {
 
 #' @keywords internal
 format_pillar_shp = function(x) {
-  format_material <- function(x) {
+  format_material = function(x) {
     sprintf(
       "%s%s%s",
       pillar::style_subtle("<"),

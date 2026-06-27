@@ -474,11 +474,17 @@ parse_time_log = function(path) {
     "^\\s*Maximum resident set size"
   )))
   list(
-    process_elapsed_seconds = if (is.na(elapsed)) "NA" else
-      sprintf("%.6f", elapsed),
+    process_elapsed_seconds = if (is.na(elapsed)) {
+      "NA"
+    } else {
+      sprintf("%.6f", elapsed)
+    },
     process_user_seconds = if (is.na(user)) "NA" else sprintf("%.6f", user),
-    process_system_seconds = if (is.na(system)) "NA" else
-      sprintf("%.6f", system),
+    process_system_seconds = if (is.na(system)) {
+      "NA"
+    } else {
+      sprintf("%.6f", system)
+    },
     max_rss_kb = if (is.na(rss)) "NA" else sprintf("%.0f", rss),
     max_rss_mb = if (is.na(rss)) "NA" else sprintf("%.6f", rss / 1024),
     time_log_path = path
@@ -1531,8 +1537,11 @@ run_benchmarks = function() {
               row = apply_time_metrics(row, parse_time_log(time_log))
               if (render$status != 0 || !file.exists(output_json)) {
                 row$status = "render_failed"
-                row$error = if (nzchar(render$error)) render$error else
+                row$error = if (nzchar(render$error)) {
+                  render$error
+                } else {
                   read_tail(benchmark_log)
+                }
               } else {
                 result = read_json(output_json)
                 row$status = result$status %||% "NA"

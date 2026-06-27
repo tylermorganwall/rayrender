@@ -46,12 +46,12 @@ print.ray_scene = function(x, ...) {
     sprintf("%s%s%s%s", boldstart, blue_color, text, colorend)
   }
   # Count total objects and lights
-  total_objects <- nrow(x)
+  total_objects = nrow(x)
   total_lights = sum(unlist(lapply(x$material, \(x) x$type == "light")))
 
   # Count each type of object
-  shape_counts <- table(x$shape)
-  shape_summary <- sprintf(
+  shape_counts = table(x$shape)
+  shape_summary = sprintf(
     "Objects - %s",
     paste(
       cli::col_blue(names(shape_counts)),
@@ -62,8 +62,8 @@ print.ray_scene = function(x, ...) {
   )
 
   # Calculate bounding box
-  bbxmin <- c(min(x$x), min(x$y), min(x$z))
-  bbxmax <- c(max(x$x), max(x$y), max(x$z))
+  bbxmin = c(min(x$x), min(x$y), min(x$z))
+  bbxmax = c(max(x$x), max(x$y), max(x$z))
 
   # Construct the print output
   line1 = sprintf(

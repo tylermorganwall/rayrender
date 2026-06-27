@@ -57,7 +57,7 @@ print.ray_animated_transform = function(x, ...) {
 
 #' @keywords internal
 format_pillar_animated_transform = function(x) {
-  format_material <- function(x) {
+  format_material = function(x) {
     output_desc = pillar::style_subtle(c("", "|", "", "|"))
     animated = FALSE
     if (nrow(x$start_transform_animation[[1]]) == 4) {

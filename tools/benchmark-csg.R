@@ -1,4 +1,4 @@
-load_rayrender <- function() {
+load_rayrender = function() {
   if (
     !identical(Sys.getenv("RAYRENDER_BENCH_USE_INSTALLED"), "true") &&
       requireNamespace("devtools", quietly = TRUE) &&
@@ -10,8 +10,8 @@ load_rayrender <- function() {
   }
 }
 
-make_csg_scene <- function() {
-  csg_shape <- csg_combine(
+make_csg_scene = function() {
+  csg_shape = csg_combine(
     csg_combine(
       csg_box(width = c(1.6, 1.6, 1.6)),
       csg_sphere(radius = 1.05),
@@ -40,7 +40,7 @@ make_csg_scene <- function() {
   csg_object(csg_shape, material = diffuse(color = "white"))
 }
 
-render_csg_depth <- function(scene, width, height) {
+render_csg_depth = function(scene, width, height) {
   set.seed(1)
   invisible(render_scene(
     scene,
@@ -62,13 +62,13 @@ render_csg_depth <- function(scene, width, height) {
   ))
 }
 
-run_csg_benchmark <- function(iterations = 5, width = 160, height = 120) {
-  scene <- make_csg_scene()
+run_csg_benchmark = function(iterations = 5, width = 160, height = 120) {
+  scene = make_csg_scene()
   render_csg_depth(scene, width, height)
 
-  elapsed <- numeric(iterations)
+  elapsed = numeric(iterations)
   for (i in seq_len(iterations)) {
-    elapsed[[i]] <- unname(system.time(render_csg_depth(scene, width, height))[[
+    elapsed[[i]] = unname(system.time(render_csg_depth(scene, width, height))[[
       "elapsed"
     ]])
   }
@@ -82,12 +82,12 @@ run_csg_benchmark <- function(iterations = 5, width = 160, height = 120) {
   )
 }
 
-args <- commandArgs(trailingOnly = TRUE)
-iterations <- if (length(args) >= 1) as.integer(args[[1]]) else 5L
-width <- if (length(args) >= 2) as.integer(args[[2]]) else 160L
-height <- if (length(args) >= 3) as.integer(args[[3]]) else 120L
+args = commandArgs(trailingOnly = TRUE)
+iterations = if (length(args) >= 1) as.integer(args[[1]]) else 5L
+width = if (length(args) >= 2) as.integer(args[[2]]) else 160L
+height = if (length(args) >= 3) as.integer(args[[3]]) else 120L
 
 suppressPackageStartupMessages(load_rayrender())
-results <- run_csg_benchmark(iterations, width, height)
+results = run_csg_benchmark(iterations, width, height)
 print(results)
 cat("median_elapsed=", median(results$elapsed), "\n", sep = "")

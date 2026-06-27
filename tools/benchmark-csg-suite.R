@@ -1,4 +1,4 @@
-load_rayrender <- function() {
+load_rayrender = function() {
   if (
     !identical(Sys.getenv("RAYRENDER_BENCH_USE_INSTALLED"), "true") &&
       requireNamespace("devtools", quietly = TRUE) &&
@@ -10,15 +10,16 @@ load_rayrender <- function() {
   }
 }
 
-csg_case_specs <- function() {
+csg_case_specs = function() {
   list(
     sphere = function() csg_sphere(radius = 0.9),
     plane_rotated = function() {
       csg_plane(normal = c(1, 2, 1), width_x = 2.4, width_z = 2.4)
     },
     box = function() csg_box(width = c(1.5, 1.2, 1.0)),
-    rounded_box = function()
-      csg_box(width = c(1.4, 1.2, 1.0), corner_radius = 0.18),
+    rounded_box = function() {
+      csg_box(width = c(1.4, 1.2, 1.0), corner_radius = 0.18)
+    },
     torus = function() csg_torus(radius = 0.72, minor_radius = 0.22),
     capsule = function() {
       csg_capsule(
@@ -76,8 +77,9 @@ csg_case_specs <- function() {
     elongate_robust = function() {
       csg_elongate(csg_sphere(radius = 0.42), elongate = c(0.55, 0.15, 0.35))
     },
-    round = function()
-      csg_round(csg_box(width = c(1.1, 1.1, 1.1)), radius = 0.18),
+    round = function() {
+      csg_round(csg_box(width = c(1.1, 1.1, 1.1)), radius = 0.18)
+    },
     onion_subtract = function() {
       csg_combine(
         csg_onion(csg_sphere(radius = 0.9), thickness = 0.18),
@@ -85,8 +87,9 @@ csg_case_specs <- function() {
         operation = "subtract"
       )
     },
-    scale = function()
-      csg_scale(csg_pyramid(y = -0.45, height = 0.9, base = 0.9), scale = 1.35),
+    scale = function() {
+      csg_scale(csg_pyramid(y = -0.45, height = 0.9, base = 0.9), scale = 1.35)
+    },
     rotate_angles = function() {
       csg_rotate(csg_box(width = c(1.4, 0.8, 1.0)), angles = c(18, 35, 12))
     },
@@ -96,8 +99,9 @@ csg_case_specs <- function() {
         up = c(1, 1, 0.35)
       )
     },
-    translate = function()
-      csg_translate(csg_sphere(radius = 0.7), x = 0.35, y = -0.2, z = 0.15),
+    translate = function() {
+      csg_translate(csg_sphere(radius = 0.7), x = 0.35, y = -0.2, z = 0.15)
+    },
     group = function() {
       csg_group(list(
         csg_sphere(x = -0.65, z = -0.65, radius = 0.38),
@@ -176,8 +180,8 @@ csg_case_specs <- function() {
   )
 }
 
-render_csg_case <- function(object, width, height) {
-  scene <- csg_object(object, material = diffuse(color = "white"))
+render_csg_case = function(object, width, height) {
+  scene = csg_object(object, material = diffuse(color = "white"))
   set.seed(1)
   render_scene(
     scene,
@@ -199,23 +203,23 @@ render_csg_case <- function(object, width, height) {
   )
 }
 
-checksum_depth <- function(image) {
-  finite <- is.finite(image)
-  finite_values <- image[finite]
+checksum_depth = function(image) {
+  finite = is.finite(image)
+  finite_values = image[finite]
   list(
     finite_count = sum(finite),
     finite_sum = if (length(finite_values)) sum(finite_values) else 0
   )
 }
 
-benchmark_one_case <- function(case_name, factory, iterations, width, height) {
-  object <- factory()
-  image <- render_csg_case(object, width, height)
-  checksum <- checksum_depth(image)
+benchmark_one_case = function(case_name, factory, iterations, width, height) {
+  object = factory()
+  image = render_csg_case(object, width, height)
+  checksum = checksum_depth(image)
 
-  elapsed <- numeric(iterations)
+  elapsed = numeric(iterations)
   for (i in seq_len(iterations)) {
-    elapsed[[i]] <- unname(system.time(render_csg_case(object, width, height))[[
+    elapsed[[i]] = unname(system.time(render_csg_case(object, width, height))[[
       "elapsed"
     ]])
   }
@@ -231,8 +235,8 @@ benchmark_one_case <- function(case_name, factory, iterations, width, height) {
   )
 }
 
-run_csg_suite <- function(iterations = 5, width = 192, height = 144) {
-  cases <- csg_case_specs()
+run_csg_suite = function(iterations = 5, width = 192, height = 144) {
+  cases = csg_case_specs()
   do.call(
     rbind,
     lapply(names(cases), function(case_name) {
@@ -247,7 +251,7 @@ run_csg_suite <- function(iterations = 5, width = 192, height = 144) {
   )
 }
 
-summarize_results <- function(results) {
+summarize_results = function(results) {
   aggregate(
     elapsed ~ benchmark + width + height + finite_count + finite_sum,
     results,
@@ -255,15 +259,15 @@ summarize_results <- function(results) {
   )
 }
 
-args <- commandArgs(trailingOnly = TRUE)
-iterations <- if (length(args) >= 1) as.integer(args[[1]]) else 5L
-width <- if (length(args) >= 2) as.integer(args[[2]]) else 192L
-height <- if (length(args) >= 3) as.integer(args[[3]]) else 144L
-output_file <- if (length(args) >= 4) args[[4]] else NA_character_
+args = commandArgs(trailingOnly = TRUE)
+iterations = if (length(args) >= 1) as.integer(args[[1]]) else 5L
+width = if (length(args) >= 2) as.integer(args[[2]]) else 192L
+height = if (length(args) >= 3) as.integer(args[[3]]) else 144L
+output_file = if (length(args) >= 4) args[[4]] else NA_character_
 
 invisible(suppressPackageStartupMessages(load_rayrender()))
-results <- run_csg_suite(iterations, width, height)
-summary <- summarize_results(results)
+results = run_csg_suite(iterations, width, height)
+summary = summarize_results(results)
 
 print(summary[order(summary$benchmark), ], row.names = FALSE)
 cat("suite_median_elapsed=", median(summary$elapsed), "\n", sep = "")

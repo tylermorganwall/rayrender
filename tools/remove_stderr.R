@@ -17,34 +17,37 @@
 #' @param backup_suffix Default `'.bak'`. Suffix for the backup copy
 #'   written before each file is overwritten.
 strip_stderr_calls = function(
-	root_dir = ".",
-	exts = c("c", "cc", "cpp", "cxx", "C"),
-	backup_suffix = ".bak"
+  root_dir = ".",
+  exts = c("c", "cc", "cpp", "cxx", "C"),
+  backup_suffix = ".bak"
 ) {
-	## PCRE pattern: (?s) turns on DOTALL so '.' matches newlines;
-	## non‑greedy '.*?' stops at the first ');'
-	pat = "(?s)fprintf\\s*\\(\\s*stderr\\s*,.*?\\);"
+  ## PCRE pattern: (?s) turns on DOTALL so '.' matches newlines;
+  ## non‑greedy '.*?' stops at the first ');'
+  pat = "(?s)fprintf\\s*\\(\\s*stderr\\s*,.*?\\);"
 
-	files = list.files(
-		root_dir,
-		pattern = paste0("\\.(", paste(exts, collapse = "|"), ")$"),
-		recursive = TRUE,
-		full.names = TRUE
-	)
+  files = list.files(
+    root_dir,
+    pattern = paste0("\\.(", paste(exts, collapse = "|"), ")$"),
+    recursive = TRUE,
+    full.names = TRUE
+  )
 
-	for (f in files) {
-		size = file.info(f)$size
-		txt = if (is.na(size) || size == 0) "" else
-			readChar(f, size, useBytes = TRUE)
+  for (f in files) {
+    size = file.info(f)$size
+    txt = if (is.na(size) || size == 0) {
+      ""
+    } else {
+      readChar(f, size, useBytes = TRUE)
+    }
 
-		new_txt = gsub(pat, ";", txt, perl = TRUE)
+    new_txt = gsub(pat, ";", txt, perl = TRUE)
 
-		if (!identical(txt, new_txt)) {
-			file.copy(f, paste0(f, backup_suffix), overwrite = TRUE)
-			writeChar(new_txt, f, eos = NULL, useBytes = TRUE)
-			message("cleaned: ", f)
-		}
-	}
+    if (!identical(txt, new_txt)) {
+      file.copy(f, paste0(f, backup_suffix), overwrite = TRUE)
+      writeChar(new_txt, f, eos = NULL, useBytes = TRUE)
+      message("cleaned: ", f)
+    }
+  }
 }
 
 ## When executed directly (not sourced) run on supplied directory,

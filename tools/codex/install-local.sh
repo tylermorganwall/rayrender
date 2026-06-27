@@ -25,7 +25,8 @@ rsync -a \
   --exclude "*.dylib" \
   "$repo_root/" "$src_copy/"
 
-cat > "$makevars" <<'EOF'
+if [ "${RAYRENDER_CODEX_USE_CCACHE:-false}" = "true" ]; then
+  cat > "$makevars" <<'EOF'
 CC = ccache clang
 CXX = ccache clang++
 CXX11 = ccache clang++
@@ -33,17 +34,40 @@ CXX14 = ccache clang++
 CXX17 = ccache clang++
 CXX20 = ccache clang++
 EOF
+else
+  cat > "$makevars" <<'EOF'
+CCACHE =
+CC = clang
+CXX = clang++
+CXX11 = clang++
+CXX14 = clang++
+CXX17 = clang++
+CXX20 = clang++
+SHLIB_CXXLD = clang++
+EOF
+fi
 
 export R_LIBS_USER="$r_lib"
 export TMPDIR="$tmpdir"
 export CCACHE_DIR="$ccache_dir"
 export R_MAKEVARS_USER="$makevars"
 
-if [ -d /opt/homebrew/opt/ccache/libexec ]; then
+if [ "${RAYRENDER_CODEX_USE_CCACHE:-false}" != "true" ]; then
+  export CC="clang"
+  export CXX="clang++"
+  export CXX11="clang++"
+  export CXX14="clang++"
+  export CXX17="clang++"
+  export CXX20="clang++"
+  export SHLIB_CXXLD="clang++"
+  export CCACHE=""
+fi
+
+if [ "${RAYRENDER_CODEX_USE_CCACHE:-false}" = "true" ] && [ -d /opt/homebrew/opt/ccache/libexec ]; then
   export PATH="/opt/homebrew/opt/ccache/libexec:$PATH"
 fi
 
-if [ -d /usr/local/opt/ccache/libexec ]; then
+if [ "${RAYRENDER_CODEX_USE_CCACHE:-false}" = "true" ] && [ -d /usr/local/opt/ccache/libexec ]; then
   export PATH="/usr/local/opt/ccache/libexec:$PATH"
 fi
 

@@ -2642,16 +2642,16 @@ text3d = function(
 ) {
   labelfile = tempfile(fileext = ".png")
   text_image = rayimage::render_text_image(
-			label,
-			font = font,
-			size = font_size,
-			color = font_color,
-			just = "left",
-			lineheight = font_lineheight,
-			background_color = background_color,
-			background_alpha = background_alpha,
-		) |>
-			rayimage::render_reorient(flipx = TRUE, filename = labelfile)
+    label,
+    font = font,
+    size = font_size,
+    color = font_color,
+    just = "left",
+    lineheight = font_lineheight,
+    background_color = background_color,
+    background_alpha = background_alpha,
+  ) |>
+    rayimage::render_reorient(flipx = TRUE, filename = labelfile)
   height_val_raw = nrow(text_image)
   width_val_raw = ncol(text_image)
   ratio = text_height / height_val_raw
