@@ -3573,11 +3573,22 @@ Introduce immutable Material parameter objects and scratch-allocated per-hit BxD
 
 ### Gate
 
-- Material-created diffuse BSDF equals directly constructed DiffuseBxDF.
-- texture evaluation happens once per closure construction under instrumentation.
-- no heap allocation occurs per diffuse hit.
-- reset invalidates closures only after the sample has completed.
-- alpha/bump tests preserve region and geometric-normal invariants.
+- [x] Material-created diffuse BSDF equals directly constructed DiffuseBxDF.
+- [x] texture evaluation happens once per closure construction under instrumentation.
+- [x] no heap allocation occurs per diffuse hit.
+- [x] reset invalidates closures only after the sample has completed.
+- [x] alpha/bump tests preserve region and geometric-normal invariants.
+
+### Completion record
+
+Completed in PR 13 by `src/materials/spectral_material.h`,
+`src/materials/spectral_material.cpp`, `tools/spectral-tests/pr13-material-tests.cpp`,
+and `tools/spectral-tests/run-pr13-material-tests.R`.
+
+Gate evidence:
+
+- `Rscript tools/spectral-tests/run-pr13-material-tests.R`
+- `tools/codex/install-local.sh`
 
 ## PR 14: Implement the first spectral RandomWalk vertical slice
 
@@ -4626,14 +4637,14 @@ The spectral renderer is complete only when all of the following are true.
 
 - [ ] New spectral transport uses SampledSpectrum and SampledWavelengths throughout.
 - [ ] Geometric vectors/points are not used as radiometric values in new code.
-- [ ] Material evaluation produces scratch-allocated per-hit BxDF closures.
+- [x] Material evaluation produces scratch-allocated per-hit BxDF closures.
 - [ ] Spectral integrators never call legacy `material::scatter()`, `material::f()`, or `material::emitted()`.
 - [ ] Primitive separates Shape, Material, AreaLight, MediumInterface, and DielectricRegion.
 - [ ] explicit Light and LightSampler implementations drive direct lighting and MIS.
 - [ ] Infinite lights are evaluated on ray misses, not through spectral environment geometry.
 - [ ] Film and PixelSensor own spectral-to-tristimulus conversion.
 - [ ] still and animation use one RenderSession.
-- [ ] hot-path per-hit closure allocation is scratch based and leak free.
+- [x] hot-path per-hit closure allocation is scratch based and leak free.
 
 ## 19.2 Spectral representation
 
@@ -4651,9 +4662,9 @@ The spectral renderer is complete only when all of the following are true.
 - [x] BxDF conventions, flags, PDFs, eta, and TransportMode match pbrt.
 - [ ] conductor eta/k and dielectric eta are spectral.
 - [x] roughness remapping and microfacet sampling match pbrt.
-- [ ] no new spectral Material combines unrelated lobes through unvalidated ad hoc probabilities.
+- [x] no new spectral Material combines unrelated lobes through unvalidated ad hoc probabilities.
 - [ ] emissive behavior is represented by Light.
-- [ ] bump/normal mapping cannot alter geometric medium/region transitions.
+- [x] bump/normal mapping cannot alter geometric medium/region transitions.
 
 ## 19.4 Nested dielectrics
 

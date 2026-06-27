@@ -6,7 +6,8 @@ the R schema-v2 descriptor and compiler-input validation shell. PR 7 adds the fi
 texture layer. PR 8 adds the spectral PixelSensor and Film accumulation layer. PR 9 adds the
 wavelength-aware spectral camera interface. PR 10 adds spectral shape, primitive, aggregate, and
 scene scaffolding. PR 11 adds explicit spectral lights, infinite lights, light registries, and
-light samplers. PR 12 adds the isolated spectral BxDF/BSDF scattering foundation.
+light samplers. PR 12 adds the isolated spectral BxDF/BSDF scattering foundation. PR 13 adds
+the isolated pbrt-style spectral Material closure layer for diffuse and interface/null materials.
 
 ## Current Layout
 
@@ -19,6 +20,7 @@ light samplers. PR 12 adds the isolated spectral BxDF/BSDF scattering foundation
 - `src/render/spectral_bsdf.*`: PR 12 spectral `BSDFSample`, local scattering-coordinate helpers, Fresnel dielectric/conductor functions, `TrowbridgeReitzDistribution`, `DiffuseBxDF`, `NullBxDF`, non-owning `BxDF` dispatch, and the pbrt-style `BSDF` frame wrapper.
 - `src/base/`: explicit RGB/XYZ/color-space types, sRGB transfer functions, RGB-to-spectrum table loading, RGB spectrum wrappers, `SampledSpectrum`, `SampledWavelengths`, spectrum representations and named-spectrum registry loading, tagged dispatch handles, `ScratchBuffer`, BxDF flags, and optional sample-result conventions for future pbrt-style transport.
 - `src/materials/spectral_texture.*`: PR 7 spectral texture descriptors, evaluators, semantic image cache keys, image loading adapters, and hit-record derivative adapters.
+- `src/materials/spectral_material.*`: PR 13 spectral `MaterialEvalContext`, tagged Material dispatch, diffuse and interface/null material parameter objects, alpha and bump hooks, scratch-allocated `BSDF` closure construction, and a spectral material handle table.
 - `R/schema_v2_descriptors.R`: PR 6 schema-v2 spectral descriptors, scene decorators, validation, legacy schema-v1 adaptation, serialization helpers, and compiler-input shell.
 - `R/render_scene.R`, `R/add_object.R`, `R/ray_scene.R`: legacy-compatible entry points that detect schema-v2 scenes and expose the spectral validation shell without changing `rgb_legacy` rendering.
 - `inst/extdata/spectral/`: generated named spectral assets, per-spectrum metadata, and the pbrt-layout sRGB RGB-to-spectrum coefficient table used by the spectral base layer.
@@ -30,8 +32,8 @@ light samplers. PR 12 adds the isolated spectral BxDF/BSDF scattering foundation
 
 Do not add new top-level renderer setup duplication to the Rcpp entry points. New shared setup belongs under `src/render/`, and entry points should pass explicit inputs into `RenderSession` or a narrower helper there.
 
-The PR 1 render-session layer is intentionally RGB-only. PR 2 through PR 12 spectral code is
+The PR 1 render-session layer is intentionally RGB-only. PR 2 through PR 13 spectral code is
 scaffolding and must remain unused by legacy transport except for isolated conversion, packet,
 asset-loading, RGB reconstruction, descriptor validation, texture evaluation, Film/sensor conversion,
 spectral camera generation, spectral scene/shape adaptation, explicit spectral light construction,
-BSDF/BxDF scattering tests, and allocation tests.
+BSDF/BxDF scattering tests, material closure construction, alpha/bump tests, and allocation tests.
