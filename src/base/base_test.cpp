@@ -14,6 +14,12 @@ static_assert(!std::is_constructible<rayrender::base::XYZ, vec3f>::value,
               "XYZ must not be constructible from geometry vector types");
 static_assert(!std::is_same<rayrender::base::SpectrumHandle, rayrender::base::TextureHandle>::value,
               "Tagged handle aliases must remain distinct types");
+static_assert(rayrender::base::NSpectrumSamples == 4, "Spectral packets must have four samples");
+static_assert(sizeof(rayrender::base::SampledSpectrum) == sizeof(Float) * rayrender::base::NSpectrumSamples,
+              "SampledSpectrum must keep fixed inline storage");
+static_assert(sizeof(rayrender::base::SampledWavelengths) ==
+                sizeof(Float) * rayrender::base::NSpectrumSamples * 2,
+              "SampledWavelengths must keep fixed inline storage");
 
 #ifdef NOT_CRAN
 #include <testthat.h>
@@ -116,6 +122,45 @@ context("PR2 base spectral foundation") {
     expect_true(result->IsTransmission());
     expect_true(result->IsSpecular());
     expect_true(!result->IsReflection());
+  }
+}
+
+context("PR3 sampled spectrum and wavelength packets") {
+  test_that("SampledSpectrum arithmetic and diagnostics are componentwise") {
+    SampledSpectrum a{1, 2, 3, 4};
+    SampledSpectrum b{4, 3, 2, 1};
+    SampledSpectrum product = a * b;
+
+    expect_true(product[0] == Approx(4));
+    expect_true(product[1] == Approx(6));
+    expect_true(product[2] == Approx(6));
+    expect_true(product[3] == Approx(4));
+    expect_true(a.Average() == Approx(2.5));
+    expect_true(a.MinComponentValue() == Approx(1));
+    expect_true(a.MaxComponentValue() == Approx(4));
+    expect_true(a.IsPositive());
+    expect_true(!a.HasNaNs());
+    expect_true(!a.IsInf());
+  }
+
+  test_that("SampledWavelengths follows pbrt shifted sampling and termination") {
+    SampledWavelengths uniform = SampledWavelengths::SampleUniform(0.9f, 400.f, 700.f);
+    expect_true(uniform[0] == Approx(670));
+    expect_true(uniform[1] == Approx(445));
+    expect_true(uniform[2] == Approx(520));
+    expect_true(uniform[3] == Approx(595));
+    expect_true(uniform.PDF(0) == Approx(1.f / 300.f));
+    expect_true(uniform.InvariantsHold(400.f, 700.f));
+
+    SampledWavelengths visible = SampledWavelengths::SampleVisible(0.37f);
+    Float originalPDF0 = visible.PDF(0);
+    expect_true(!visible.SecondaryTerminated());
+    visible.TerminateSecondary();
+    expect_true(visible.SecondaryTerminated());
+    expect_true(visible.PDF(0) == Approx(originalPDF0 / NSpectrumSamples));
+    expect_true(visible.PDF(1) == Approx(0));
+    visible.TerminateSecondary();
+    expect_true(visible.PDF(0) == Approx(originalPDF0 / NSpectrumSamples));
   }
 }
 #endif

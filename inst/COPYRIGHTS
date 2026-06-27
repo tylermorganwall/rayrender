@@ -9,3 +9,8 @@ URL: https://github.com/syoyo/tinyobjloader/
 File: src/miniply.h src/miniply.cpp
 Copyright: 2019 Vilya Harvey
 URL: https://github.com/vilya/miniply/
+
+Files: src/base/sampled_spectrum.h tools/spectral-tests/pr3-spectrum-tests.cpp
+Copyright: 1998-2020 Matt Pharr, Wenzel Jakob, and Greg Humphreys.
+License: Apache License, Version 2.0
+URL: https://github.com/mmp/pbrt-v4
