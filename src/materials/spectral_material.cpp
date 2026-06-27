@@ -51,10 +51,16 @@ const char* MaterialTypeName(MaterialType type) {
   switch (type) {
   case MaterialType::Diffuse:
     return "Diffuse";
+  case MaterialType::DiffuseTransmission:
+    return "DiffuseTransmission";
   case MaterialType::Conductor:
     return "Conductor";
   case MaterialType::Dielectric:
     return "Dielectric";
+  case MaterialType::CoatedDiffuse:
+    return "CoatedDiffuse";
+  case MaterialType::CoatedConductor:
+    return "CoatedConductor";
   case MaterialType::ThinDielectric:
     return "ThinDielectric";
   case MaterialType::Interface:
@@ -173,6 +179,47 @@ MaterialTextureRequirements DiffuseMaterial::TextureRequirements() const {
 }
 
 Float DiffuseMaterial::ClampUnit(Float value) {
+  return Clamp(value, 0, 1);
+}
+
+DiffuseTransmissionMaterial::DiffuseTransmissionMaterial(
+  SpectrumTexture reflectance,
+  SpectrumTexture transmittance
+)
+  : reflectance_(std::move(reflectance)),
+    transmittance_(std::move(transmittance)) {}
+
+DiffuseTransmissionMaterial::DiffuseTransmissionMaterial(
+  SpectrumTexture reflectance,
+  SpectrumTexture transmittance,
+  Float scale,
+  std::optional<FloatTexture> alpha,
+  std::optional<FloatTexture> bump
+)
+  : reflectance_(std::move(reflectance)),
+    transmittance_(std::move(transmittance)),
+    scale_(scale),
+    alpha_(std::move(alpha)),
+    bump_(std::move(bump)) {}
+
+bool DiffuseTransmissionMaterial::HasAlpha() const {
+  return alpha_.has_value();
+}
+
+bool DiffuseTransmissionMaterial::HasBump() const {
+  return bump_.has_value();
+}
+
+MaterialTextureRequirements DiffuseTransmissionMaterial::TextureRequirements() const {
+  MaterialTextureRequirements requirements;
+  requirements.spectrumTextures = true;
+  requirements.floatTextures = alpha_.has_value() || bump_.has_value();
+  requirements.alphaTexture = alpha_.has_value();
+  requirements.bumpTexture = bump_.has_value();
+  return requirements;
+}
+
+Float DiffuseTransmissionMaterial::ClampUnit(Float value) {
   return Clamp(value, 0, 1);
 }
 
@@ -376,6 +423,291 @@ Float DielectricMaterial::ClampUnit(Float value) {
   return Clamp(value, 0, 1);
 }
 
+CoatedDiffuseMaterial::CoatedDiffuseMaterial(
+  SpectrumTexture reflectance,
+  FloatTexture roughness,
+  FloatTexture thickness,
+  SpectrumTexture albedo,
+  FloatTexture g,
+  render::EtaSpectrumHandle eta,
+  bool remapRoughness,
+  int maxDepth,
+  int nSamples
+) : CoatedDiffuseMaterial(
+      std::move(reflectance),
+      roughness,
+      std::move(roughness),
+      std::move(thickness),
+      std::move(albedo),
+      std::move(g),
+      std::move(eta),
+      remapRoughness,
+      maxDepth,
+      nSamples
+    ) {}
+
+CoatedDiffuseMaterial::CoatedDiffuseMaterial(
+  SpectrumTexture reflectance,
+  FloatTexture uRoughness,
+  FloatTexture vRoughness,
+  FloatTexture thickness,
+  SpectrumTexture albedo,
+  FloatTexture g,
+  render::EtaSpectrumHandle eta,
+  bool remapRoughness,
+  int maxDepth,
+  int nSamples,
+  std::optional<FloatTexture> alpha,
+  std::optional<FloatTexture> bump
+)
+  : reflectance_(std::move(reflectance)),
+    uRoughness_(std::move(uRoughness)),
+    vRoughness_(std::move(vRoughness)),
+    thickness_(std::move(thickness)),
+    albedo_(std::move(albedo)),
+    g_(std::move(g)),
+    eta_(std::move(eta)),
+    remapRoughness_(remapRoughness),
+    maxDepth_(std::max(1, maxDepth)),
+    nSamples_(std::max(1, nSamples)),
+    alpha_(std::move(alpha)),
+    bump_(std::move(bump)) {
+  if (!eta_) {
+    throw std::invalid_argument("CoatedDiffuseMaterial requires an eta spectrum");
+  }
+}
+
+bool CoatedDiffuseMaterial::HasAlpha() const {
+  return alpha_.has_value();
+}
+
+bool CoatedDiffuseMaterial::HasBump() const {
+  return bump_.has_value();
+}
+
+bool CoatedDiffuseMaterial::RemapRoughness() const {
+  return remapRoughness_;
+}
+
+MaterialTextureRequirements CoatedDiffuseMaterial::TextureRequirements() const {
+  MaterialTextureRequirements requirements;
+  requirements.spectrumTextures = true;
+  requirements.floatTextures = true;
+  requirements.alphaTexture = alpha_.has_value();
+  requirements.bumpTexture = bump_.has_value();
+  return requirements;
+}
+
+Float CoatedDiffuseMaterial::ClampUnit(Float value) {
+  return Clamp(value, 0, 1);
+}
+
+Float CoatedDiffuseMaterial::ClampSignedUnit(Float value) {
+  return Clamp(value, -1, 1);
+}
+
+CoatedConductorMaterial CoatedConductorMaterial::FromEtaK(
+  SpectrumTexture eta,
+  SpectrumTexture k,
+  FloatTexture roughness,
+  bool remapRoughness
+) {
+  FloatTexture interfaceVRoughness = roughness;
+  FloatTexture conductorURoughness = roughness;
+  FloatTexture conductorVRoughness = roughness;
+  return FromEtaK(
+    std::move(eta),
+    std::move(k),
+    roughness,
+    std::move(interfaceVRoughness),
+    std::move(conductorURoughness),
+    std::move(conductorVRoughness),
+    FloatTexture::Constant(static_cast<Float>(0.01)),
+    SpectrumTexture::Constant(0),
+    FloatTexture::Constant(0),
+    render::ConstantEtaSpectrum(static_cast<Float>(1.5)),
+    remapRoughness
+  );
+}
+
+CoatedConductorMaterial CoatedConductorMaterial::FromEtaK(
+  SpectrumTexture eta,
+  SpectrumTexture k,
+  FloatTexture interfaceURoughness,
+  FloatTexture interfaceVRoughness,
+  FloatTexture conductorURoughness,
+  FloatTexture conductorVRoughness,
+  FloatTexture thickness,
+  SpectrumTexture albedo,
+  FloatTexture g,
+  render::EtaSpectrumHandle interfaceEta,
+  bool remapRoughness,
+  int maxDepth,
+  int nSamples,
+  std::optional<FloatTexture> alpha,
+  std::optional<FloatTexture> bump
+) {
+  return CoatedConductorMaterial(
+    std::move(eta),
+    std::move(k),
+    std::nullopt,
+    std::move(interfaceURoughness),
+    std::move(interfaceVRoughness),
+    std::move(conductorURoughness),
+    std::move(conductorVRoughness),
+    std::move(thickness),
+    std::move(albedo),
+    std::move(g),
+    std::move(interfaceEta),
+    remapRoughness,
+    maxDepth,
+    nSamples,
+    std::move(alpha),
+    std::move(bump)
+  );
+}
+
+CoatedConductorMaterial CoatedConductorMaterial::FromReflectance(
+  SpectrumTexture reflectance,
+  FloatTexture roughness,
+  bool remapRoughness
+) {
+  FloatTexture interfaceVRoughness = roughness;
+  FloatTexture conductorURoughness = roughness;
+  FloatTexture conductorVRoughness = roughness;
+  return FromReflectance(
+    std::move(reflectance),
+    roughness,
+    std::move(interfaceVRoughness),
+    std::move(conductorURoughness),
+    std::move(conductorVRoughness),
+    FloatTexture::Constant(static_cast<Float>(0.01)),
+    SpectrumTexture::Constant(0),
+    FloatTexture::Constant(0),
+    render::ConstantEtaSpectrum(static_cast<Float>(1.5)),
+    remapRoughness
+  );
+}
+
+CoatedConductorMaterial CoatedConductorMaterial::FromReflectance(
+  SpectrumTexture reflectance,
+  FloatTexture interfaceURoughness,
+  FloatTexture interfaceVRoughness,
+  FloatTexture conductorURoughness,
+  FloatTexture conductorVRoughness,
+  FloatTexture thickness,
+  SpectrumTexture albedo,
+  FloatTexture g,
+  render::EtaSpectrumHandle interfaceEta,
+  bool remapRoughness,
+  int maxDepth,
+  int nSamples,
+  std::optional<FloatTexture> alpha,
+  std::optional<FloatTexture> bump
+) {
+  return CoatedConductorMaterial(
+    std::nullopt,
+    std::nullopt,
+    std::move(reflectance),
+    std::move(interfaceURoughness),
+    std::move(interfaceVRoughness),
+    std::move(conductorURoughness),
+    std::move(conductorVRoughness),
+    std::move(thickness),
+    std::move(albedo),
+    std::move(g),
+    std::move(interfaceEta),
+    remapRoughness,
+    maxDepth,
+    nSamples,
+    std::move(alpha),
+    std::move(bump)
+  );
+}
+
+CoatedConductorMaterial::CoatedConductorMaterial(
+  std::optional<SpectrumTexture> conductorEta,
+  std::optional<SpectrumTexture> conductorK,
+  std::optional<SpectrumTexture> reflectance,
+  FloatTexture interfaceURoughness,
+  FloatTexture interfaceVRoughness,
+  FloatTexture conductorURoughness,
+  FloatTexture conductorVRoughness,
+  FloatTexture thickness,
+  SpectrumTexture albedo,
+  FloatTexture g,
+  render::EtaSpectrumHandle interfaceEta,
+  bool remapRoughness,
+  int maxDepth,
+  int nSamples,
+  std::optional<FloatTexture> alpha,
+  std::optional<FloatTexture> bump
+)
+  : conductorEta_(std::move(conductorEta)),
+    conductorK_(std::move(conductorK)),
+    reflectance_(std::move(reflectance)),
+    interfaceURoughness_(std::move(interfaceURoughness)),
+    interfaceVRoughness_(std::move(interfaceVRoughness)),
+    conductorURoughness_(std::move(conductorURoughness)),
+    conductorVRoughness_(std::move(conductorVRoughness)),
+    thickness_(std::move(thickness)),
+    albedo_(std::move(albedo)),
+    g_(std::move(g)),
+    interfaceEta_(std::move(interfaceEta)),
+    remapRoughness_(remapRoughness),
+    maxDepth_(std::max(1, maxDepth)),
+    nSamples_(std::max(1, nSamples)),
+    alpha_(std::move(alpha)),
+    bump_(std::move(bump)) {
+  bool hasEtaK = conductorEta_.has_value() || conductorK_.has_value();
+  if (hasEtaK && !(conductorEta_.has_value() && conductorK_.has_value())) {
+    throw std::invalid_argument("CoatedConductorMaterial requires both eta and k spectra");
+  }
+  if (reflectance_.has_value() == (conductorEta_.has_value() && conductorK_.has_value())) {
+    throw std::invalid_argument("CoatedConductorMaterial requires either eta/k or reflectance");
+  }
+  if (!interfaceEta_) {
+    throw std::invalid_argument("CoatedConductorMaterial requires an interface eta spectrum");
+  }
+}
+
+bool CoatedConductorMaterial::UsesEtaK() const {
+  return conductorEta_.has_value() && conductorK_.has_value();
+}
+
+bool CoatedConductorMaterial::UsesReflectance() const {
+  return reflectance_.has_value();
+}
+
+bool CoatedConductorMaterial::HasAlpha() const {
+  return alpha_.has_value();
+}
+
+bool CoatedConductorMaterial::HasBump() const {
+  return bump_.has_value();
+}
+
+bool CoatedConductorMaterial::RemapRoughness() const {
+  return remapRoughness_;
+}
+
+MaterialTextureRequirements CoatedConductorMaterial::TextureRequirements() const {
+  MaterialTextureRequirements requirements;
+  requirements.spectrumTextures = true;
+  requirements.floatTextures = true;
+  requirements.alphaTexture = alpha_.has_value();
+  requirements.bumpTexture = bump_.has_value();
+  return requirements;
+}
+
+Float CoatedConductorMaterial::ClampUnit(Float value) {
+  return Clamp(value, 0, 1);
+}
+
+Float CoatedConductorMaterial::ClampSignedUnit(Float value) {
+  return Clamp(value, -1, 1);
+}
+
 ThinDielectricMaterial::ThinDielectricMaterial(render::EtaSpectrumHandle eta)
   : eta_(std::move(eta)) {
   if (!eta_) {
@@ -419,11 +751,23 @@ Material Material::Diffuse(DiffuseMaterial material) {
   return Material(std::move(material));
 }
 
+Material Material::DiffuseTransmission(DiffuseTransmissionMaterial material) {
+  return Material(std::move(material));
+}
+
 Material Material::Conductor(ConductorMaterial material) {
   return Material(std::move(material));
 }
 
 Material Material::Dielectric(DielectricMaterial material) {
+  return Material(std::move(material));
+}
+
+Material Material::CoatedDiffuse(CoatedDiffuseMaterial material) {
+  return Material(std::move(material));
+}
+
+Material Material::CoatedConductor(CoatedConductorMaterial material) {
   return Material(std::move(material));
 }
 
@@ -437,9 +781,15 @@ Material Material::Interface() {
 
 Material::Material(DiffuseMaterial material) : material_(std::move(material)) {}
 
+Material::Material(DiffuseTransmissionMaterial material) : material_(std::move(material)) {}
+
 Material::Material(ConductorMaterial material) : material_(std::move(material)) {}
 
 Material::Material(DielectricMaterial material) : material_(std::move(material)) {}
+
+Material::Material(CoatedDiffuseMaterial material) : material_(std::move(material)) {}
+
+Material::Material(CoatedConductorMaterial material) : material_(std::move(material)) {}
 
 Material::Material(ThinDielectricMaterial material) : material_(std::move(material)) {}
 
@@ -453,11 +803,20 @@ MaterialType Material::Type() const {
   if (std::holds_alternative<DiffuseMaterial>(material_)) {
     return MaterialType::Diffuse;
   }
+  if (std::holds_alternative<DiffuseTransmissionMaterial>(material_)) {
+    return MaterialType::DiffuseTransmission;
+  }
   if (std::holds_alternative<ConductorMaterial>(material_)) {
     return MaterialType::Conductor;
   }
   if (std::holds_alternative<DielectricMaterial>(material_)) {
     return MaterialType::Dielectric;
+  }
+  if (std::holds_alternative<CoatedDiffuseMaterial>(material_)) {
+    return MaterialType::CoatedDiffuse;
+  }
+  if (std::holds_alternative<CoatedConductorMaterial>(material_)) {
+    return MaterialType::CoatedConductor;
   }
   if (std::holds_alternative<ThinDielectricMaterial>(material_)) {
     return MaterialType::ThinDielectric;

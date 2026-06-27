@@ -1448,6 +1448,26 @@ legacy_dielectric_properties = function(legacy, path) {
   )
 }
 
+legacy_glossy_properties = function(legacy, path) {
+  glossyinfo = legacy$glossyinfo[[1]]
+  if (!is.numeric(glossyinfo) || length(glossyinfo) < 6) {
+    schema_stop(path, "legacy glossy material is missing microfacet fields")
+  }
+  f0 = mean(as.numeric(glossyinfo[4:6]))
+  f0 = max(0, min(0.99, f0))
+  sqrt_f0 = sqrt(f0)
+  eta = if (sqrt_f0 >= 1) {
+    1
+  } else {
+    (1 + sqrt_f0) / (1 - sqrt_f0)
+  }
+  list(
+    alpha_x = max(0, as.numeric(glossyinfo[[2]])),
+    alpha_y = max(0, as.numeric(glossyinfo[[3]])),
+    eta = eta
+  )
+}
+
 #' Convert a material to a schema-v2 spectral material
 #'
 #' @param material Material descriptor.
@@ -1502,6 +1522,25 @@ material_to_spectral = function(material) {
     params$remap_roughness = FALSE
     spectral_type = "compat_rgb_metal_conductor"
     warning = "`metal()` is adapted to a spectral compatibility conductor from legacy RGB reflectance and fuzz. Prefer `conductor(eta = ..., k = ...)` for measured spectral metals."
+  } else if (type == "glossy") {
+    glossy = legacy_glossy_properties(
+      legacy,
+      "material_to_spectral(material)"
+    )
+    params$reflectance = spectrum_rgb(
+      legacy_material_color(legacy, "material_to_spectral(material)"),
+      role = "albedo",
+      encoding = "legacy"
+    )
+    params$u_roughness = texture_constant(glossy$alpha_x, value_type = "float")
+    params$v_roughness = texture_constant(glossy$alpha_y, value_type = "float")
+    params$eta = spectrum_constant(glossy$eta)
+    params$remap_roughness = FALSE
+    params$thickness = texture_constant(0.01, value_type = "float")
+    params$albedo = spectrum_constant(0)
+    params$g = texture_constant(0, value_type = "float")
+    spectral_type = "coated_diffuse"
+    warning = "`glossy()` is adapted to a spectral coated diffuse material using its legacy RGB base color, microfacet alpha, and normal-incidence reflectance."
   } else if (type %in% c("light", "spotlight")) {
     params$emission = spectrum_rgb(
       legacy_material_color(legacy, "material_to_spectral(material)"),

@@ -2198,6 +2198,11 @@ Port pbrt's dedicated coated BxDFs rather than mixing diffuse and glossy samples
 
 Expose physical parameter names in R. Keep legacy `glossy()` through an adapter with a documented mapping.
 
+PR 19 implements the isolated C++ coated diffuse/conductor closures and material
+wrappers, including the pbrt layered random-walk estimator and a schema-v2
+legacy `glossy()` adapter. Rendered pbrt coated-reference image comparisons and
+full scene-compiler resolution remain pending.
+
 ## 10.8 Hair closure
 
 Port pbrt's Hair BxDF after core surface validation. Required spectral parameters include absorption `sigma_a` or one of pbrt's alternate parameterizations. The closure MUST capture the sampled absorption spectrum and scalar geometric parameters.
@@ -3842,25 +3847,52 @@ Replace remaining spectral surface behavior with dedicated pbrt-style closures.
 
 ### Required changes
 
-1. Port CoatedDiffuseBxDF/Material.
-2. Port CoatedConductorBxDF/Material.
-3. Port HairBxDF/Material and spectral absorption parameterizations.
-4. Port any pbrt diffuse-transmission or measured-material support required by rayrender scenes.
-5. Map legacy `glossy` to the physically closest coated model through schema adaptation.
-6. Decide Oren-Nayar handling:
+1. [x] Port CoatedDiffuseBxDF/Material.
+2. [x] Port CoatedConductorBxDF/Material.
+3. [ ] Port HairBxDF/Material and spectral absorption parameterizations.
+4. [x] Port pbrt diffuse-transmission support required by rayrender scenes.
+5. [ ] Port measured-material support if required by rayrender scenes.
+6. [x] Map legacy `glossy` to the physically closest coated model through schema adaptation.
+7. [ ] Decide Oren-Nayar handling:
    - port the pinned pbrt diffuse-rough model if available at the pinned commit; or
    - retain a separately validated Oren-Nayar BxDF with an ADR documenting the extension.
-7. Add stochastic MixMaterial only if existing rayrender behavior requires material mixing; follow pbrt's material-selection semantics rather than constructing an unvalidated lobe graph.
-8. Add regularization implementations for supported BxDFs.
-9. Remove any spectral fallback to legacy `material::scatter()`.
+8. [ ] Add stochastic MixMaterial only if existing rayrender behavior requires material mixing; follow pbrt's material-selection semantics rather than constructing an unvalidated lobe graph.
+9. [x] Add regularization implementations for supported BxDFs.
+10. [x] Remove any spectral fallback to legacy `material::scatter()`; no spectral fallback path exists in the isolated material layer.
 
 ### Gate
 
-- each BxDF passes sampling/PDF and furnace tests.
-- coated material images agree with pbrt references.
-- hair sampling and absorption tests pass.
-- every spectral schema-v2 surface Material resolves to a new closure or a clear unsupported error.
-- no Material emits radiance directly.
+- [x] diffuse-transmission and coated BxDFs pass isolated sampling/PDF checks.
+- [ ] furnace tests remain pending for coated closures.
+- [ ] coated material images agree with pbrt references; this remains blocked on the later schema-v2 compiler/reference-scene runner.
+- [ ] hair sampling and absorption tests pass.
+- [ ] every spectral schema-v2 surface Material resolves to a new closure or a clear unsupported error; the descriptor layer maps legacy `glossy()`, but C++ scene compilation is still deferred.
+- [x] no new Material emits radiance directly.
+
+### PR 19 progress update
+
+Completed the isolated PR 19 closure-composition slice by extending
+`src/render/spectral_bsdf.*` with `DiffuseTransmissionBxDF`,
+`CoatedDiffuseBxDF`, `CoatedConductorBxDF`, pbrt-style layered random-walk
+sampling/PDF estimation, and regularization dispatch. Extended
+`src/materials/spectral_material.*` with `DiffuseTransmissionMaterial`,
+`CoatedDiffuseMaterial`, `CoatedConductorMaterial`, material type dispatch, eta/k
+and reflectance conductor coating construction, and secondary-wavelength
+termination for dispersive coating-interface eta. Added legacy `glossy()`
+schema adaptation in `R/schema_v2_descriptors.R`, mapping RGB color, legacy
+microfacet alpha, and normal-incidence reflectance to a coated diffuse
+descriptor.
+
+Added `tools/spectral-tests/pr19-material-tests.cpp` and
+`tools/spectral-tests/run-pr19-material-tests.R`, plus schema-v2 regression
+coverage for `glossy()` adaptation. Hair, measured BSDF/material loading,
+Oren-Nayar, stochastic MixMaterial, coated furnace tests, and rendered pbrt
+coated-reference image comparisons remain deferred.
+
+Gate evidence:
+
+- `Rscript tools/spectral-tests/run-pr19-material-tests.R`
+- `R_MAKEVARS_USER=/private/tmp/codex-projects/rayrender/Makevars R_LIBS_USER=/private/tmp/codex-projects/rayrender/R-lib TMPDIR=/private/tmp/codex-projects/rayrender/tmp Rscript -e "devtools::load_all('.', quiet=TRUE); testthat::test_file('tests/testthat/test-schema-v2-descriptors.R')"`
 
 ## PR 20: Add Medium, PhaseFunction, absorption, and VolPathIntegrator
 

@@ -21,8 +21,11 @@ namespace materials {
 
 enum class MaterialType {
   Diffuse,
+  DiffuseTransmission,
   Conductor,
   Dielectric,
+  CoatedDiffuse,
+  CoatedConductor,
   ThinDielectric,
   Interface
 };
@@ -170,6 +173,71 @@ private:
   static Float ClampUnit(Float value);
 
   SpectrumTexture reflectance_;
+  std::optional<FloatTexture> alpha_;
+  std::optional<FloatTexture> bump_;
+};
+
+class DiffuseTransmissionMaterial {
+public:
+  using BxDF = render::DiffuseTransmissionBxDF;
+
+  DiffuseTransmissionMaterial() = default;
+  DiffuseTransmissionMaterial(SpectrumTexture reflectance, SpectrumTexture transmittance);
+  DiffuseTransmissionMaterial(
+    SpectrumTexture reflectance,
+    SpectrumTexture transmittance,
+    Float scale,
+    std::optional<FloatTexture> alpha,
+    std::optional<FloatTexture> bump
+  );
+
+  template <typename TextureEvaluator>
+  BxDF GetBxDF(
+    const TextureEvaluator& texEval,
+    const MaterialEvalContext& ctx,
+    base::SampledWavelengths& lambda
+  ) const {
+    base::SampledSpectrum reflectance =
+      base::Clamp(scale_ * texEval(reflectance_, ctx, lambda), 0, 1);
+    base::SampledSpectrum transmittance =
+      base::Clamp(scale_ * texEval(transmittance_, ctx, lambda), 0, 1);
+    return BxDF(reflectance, transmittance);
+  }
+
+  template <typename TextureEvaluator>
+  MaterialAlphaResult EvaluateAlpha(
+    const TextureEvaluator& texEval,
+    const MaterialEvalContext& ctx,
+    Float alphaSample = 0
+  ) const {
+    if (!alpha_) {
+      return {};
+    }
+    Float alpha = ClampUnit(texEval(*alpha_, ctx));
+    return MaterialAlphaResult{alpha, alphaSample < alpha};
+  }
+
+  template <typename TextureEvaluator>
+  BumpMapResult EvaluateBump(
+    const TextureEvaluator& texEval,
+    const MaterialEvalContext& ctx
+  ) const {
+    if (!bump_) {
+      return DefaultBumpMapResult(ctx);
+    }
+    return EvaluateBumpMap(texEval, *bump_, ctx);
+  }
+
+  bool HasAlpha() const;
+  bool HasBump() const;
+  MaterialTextureRequirements TextureRequirements() const;
+
+private:
+  static Float ClampUnit(Float value);
+
+  SpectrumTexture reflectance_;
+  SpectrumTexture transmittance_;
+  Float scale_ = 1;
   std::optional<FloatTexture> alpha_;
   std::optional<FloatTexture> bump_;
 };
@@ -380,6 +448,322 @@ private:
   std::optional<FloatTexture> bump_;
 };
 
+class CoatedDiffuseMaterial {
+public:
+  using BxDF = render::CoatedDiffuseBxDF;
+
+  CoatedDiffuseMaterial() = default;
+  CoatedDiffuseMaterial(
+    SpectrumTexture reflectance,
+    FloatTexture roughness = FloatTexture::Constant(0),
+    FloatTexture thickness = FloatTexture::Constant(static_cast<Float>(0.01)),
+    SpectrumTexture albedo = SpectrumTexture::Constant(0),
+    FloatTexture g = FloatTexture::Constant(0),
+    render::EtaSpectrumHandle eta = render::ConstantEtaSpectrum(static_cast<Float>(1.5)),
+    bool remapRoughness = true,
+    int maxDepth = 10,
+    int nSamples = 1
+  );
+  CoatedDiffuseMaterial(
+    SpectrumTexture reflectance,
+    FloatTexture uRoughness,
+    FloatTexture vRoughness,
+    FloatTexture thickness,
+    SpectrumTexture albedo,
+    FloatTexture g,
+    render::EtaSpectrumHandle eta,
+    bool remapRoughness,
+    int maxDepth,
+    int nSamples,
+    std::optional<FloatTexture> alpha = std::nullopt,
+    std::optional<FloatTexture> bump = std::nullopt
+  );
+
+  template <typename TextureEvaluator>
+  BxDF GetBxDF(
+    const TextureEvaluator& texEval,
+    const MaterialEvalContext& ctx,
+    base::SampledWavelengths& lambda
+  ) const {
+    base::SampledSpectrum reflectance =
+      base::Clamp(texEval(reflectance_, ctx, lambda), 0, 1);
+
+    Float uRoughness = texEval(uRoughness_, ctx);
+    Float vRoughness = texEval(vRoughness_, ctx);
+    if (remapRoughness_) {
+      uRoughness = render::TrowbridgeReitzDistribution::RoughnessToAlpha(uRoughness);
+      vRoughness = render::TrowbridgeReitzDistribution::RoughnessToAlpha(vRoughness);
+    }
+
+    Float thickness = texEval(thickness_, ctx);
+    if (!render::EtaSpectrumIsConstant(eta_)) {
+      lambda.TerminateSecondary();
+    }
+    Float eta = render::EvaluateEtaSpectrum(eta_, lambda[0]);
+    if (eta == 0) {
+      eta = 1;
+    }
+    if (!(eta > 0) || !std::isfinite(eta)) {
+      throw std::runtime_error("coated diffuse eta must be positive finite");
+    }
+
+    base::SampledSpectrum albedo = base::Clamp(texEval(albedo_, ctx, lambda), 0, 1);
+    Float gg = ClampSignedUnit(texEval(g_, ctx));
+
+    return BxDF(
+      render::DielectricBxDF(
+        eta,
+        render::TrowbridgeReitzDistribution(uRoughness, vRoughness)
+      ),
+      render::DiffuseBxDF(reflectance),
+      thickness,
+      albedo,
+      gg,
+      maxDepth_,
+      nSamples_
+    );
+  }
+
+  template <typename TextureEvaluator>
+  MaterialAlphaResult EvaluateAlpha(
+    const TextureEvaluator& texEval,
+    const MaterialEvalContext& ctx,
+    Float alphaSample = 0
+  ) const {
+    if (!alpha_) {
+      return {};
+    }
+    Float alpha = ClampUnit(texEval(*alpha_, ctx));
+    return MaterialAlphaResult{alpha, alphaSample < alpha};
+  }
+
+  template <typename TextureEvaluator>
+  BumpMapResult EvaluateBump(
+    const TextureEvaluator& texEval,
+    const MaterialEvalContext& ctx
+  ) const {
+    if (!bump_) {
+      return DefaultBumpMapResult(ctx);
+    }
+    return EvaluateBumpMap(texEval, *bump_, ctx);
+  }
+
+  bool HasAlpha() const;
+  bool HasBump() const;
+  bool RemapRoughness() const;
+  MaterialTextureRequirements TextureRequirements() const;
+
+private:
+  static Float ClampUnit(Float value);
+  static Float ClampSignedUnit(Float value);
+
+  SpectrumTexture reflectance_;
+  FloatTexture uRoughness_ = FloatTexture::Constant(0);
+  FloatTexture vRoughness_ = FloatTexture::Constant(0);
+  FloatTexture thickness_ = FloatTexture::Constant(static_cast<Float>(0.01));
+  SpectrumTexture albedo_ = SpectrumTexture::Constant(0);
+  FloatTexture g_ = FloatTexture::Constant(0);
+  render::EtaSpectrumHandle eta_ = render::ConstantEtaSpectrum(static_cast<Float>(1.5));
+  bool remapRoughness_ = true;
+  int maxDepth_ = 10;
+  int nSamples_ = 1;
+  std::optional<FloatTexture> alpha_;
+  std::optional<FloatTexture> bump_;
+};
+
+class CoatedConductorMaterial {
+public:
+  using BxDF = render::CoatedConductorBxDF;
+
+  static CoatedConductorMaterial FromEtaK(
+    SpectrumTexture eta,
+    SpectrumTexture k,
+    FloatTexture roughness = FloatTexture::Constant(0),
+    bool remapRoughness = true
+  );
+  static CoatedConductorMaterial FromEtaK(
+    SpectrumTexture eta,
+    SpectrumTexture k,
+    FloatTexture interfaceURoughness,
+    FloatTexture interfaceVRoughness,
+    FloatTexture conductorURoughness,
+    FloatTexture conductorVRoughness,
+    FloatTexture thickness = FloatTexture::Constant(static_cast<Float>(0.01)),
+    SpectrumTexture albedo = SpectrumTexture::Constant(0),
+    FloatTexture g = FloatTexture::Constant(0),
+    render::EtaSpectrumHandle interfaceEta =
+      render::ConstantEtaSpectrum(static_cast<Float>(1.5)),
+    bool remapRoughness = true,
+    int maxDepth = 10,
+    int nSamples = 1,
+    std::optional<FloatTexture> alpha = std::nullopt,
+    std::optional<FloatTexture> bump = std::nullopt
+  );
+  static CoatedConductorMaterial FromReflectance(
+    SpectrumTexture reflectance,
+    FloatTexture roughness = FloatTexture::Constant(0),
+    bool remapRoughness = true
+  );
+  static CoatedConductorMaterial FromReflectance(
+    SpectrumTexture reflectance,
+    FloatTexture interfaceURoughness,
+    FloatTexture interfaceVRoughness,
+    FloatTexture conductorURoughness,
+    FloatTexture conductorVRoughness,
+    FloatTexture thickness = FloatTexture::Constant(static_cast<Float>(0.01)),
+    SpectrumTexture albedo = SpectrumTexture::Constant(0),
+    FloatTexture g = FloatTexture::Constant(0),
+    render::EtaSpectrumHandle interfaceEta =
+      render::ConstantEtaSpectrum(static_cast<Float>(1.5)),
+    bool remapRoughness = true,
+    int maxDepth = 10,
+    int nSamples = 1,
+    std::optional<FloatTexture> alpha = std::nullopt,
+    std::optional<FloatTexture> bump = std::nullopt
+  );
+
+  template <typename TextureEvaluator>
+  BxDF GetBxDF(
+    const TextureEvaluator& texEval,
+    const MaterialEvalContext& ctx,
+    base::SampledWavelengths& lambda
+  ) const {
+    Float interfaceURoughness = texEval(interfaceURoughness_, ctx);
+    Float interfaceVRoughness = texEval(interfaceVRoughness_, ctx);
+    Float conductorURoughness = texEval(conductorURoughness_, ctx);
+    Float conductorVRoughness = texEval(conductorVRoughness_, ctx);
+    if (remapRoughness_) {
+      interfaceURoughness =
+        render::TrowbridgeReitzDistribution::RoughnessToAlpha(interfaceURoughness);
+      interfaceVRoughness =
+        render::TrowbridgeReitzDistribution::RoughnessToAlpha(interfaceVRoughness);
+      conductorURoughness =
+        render::TrowbridgeReitzDistribution::RoughnessToAlpha(conductorURoughness);
+      conductorVRoughness =
+        render::TrowbridgeReitzDistribution::RoughnessToAlpha(conductorVRoughness);
+    }
+
+    Float interfaceEta = render::EvaluateEtaSpectrum(interfaceEta_, lambda[0]);
+    if (!render::EtaSpectrumIsConstant(interfaceEta_)) {
+      lambda.TerminateSecondary();
+    }
+    if (interfaceEta == 0) {
+      interfaceEta = 1;
+    }
+    if (!(interfaceEta > 0) || !std::isfinite(interfaceEta)) {
+      throw std::runtime_error("coated conductor interface eta must be positive finite");
+    }
+
+    base::SampledSpectrum conductorEta;
+    base::SampledSpectrum conductorK;
+    if (conductorEta_ && conductorK_) {
+      conductorEta = texEval(*conductorEta_, ctx, lambda);
+      conductorK = texEval(*conductorK_, ctx, lambda);
+    } else {
+      base::SampledSpectrum reflectance =
+        base::Clamp(texEval(*reflectance_, ctx, lambda), 0, static_cast<Float>(0.9999));
+      conductorEta = base::SampledSpectrum(1);
+      conductorK = static_cast<Float>(2) * base::Sqrt(reflectance) /
+                   base::SafeSqrt(base::ClampZero(base::SampledSpectrum(1) - reflectance));
+    }
+    conductorEta /= interfaceEta;
+    conductorK /= interfaceEta;
+
+    Float thickness = texEval(thickness_, ctx);
+    base::SampledSpectrum albedo = base::Clamp(texEval(albedo_, ctx, lambda), 0, 1);
+    Float gg = ClampSignedUnit(texEval(g_, ctx));
+
+    return BxDF(
+      render::DielectricBxDF(
+        interfaceEta,
+        render::TrowbridgeReitzDistribution(interfaceURoughness, interfaceVRoughness)
+      ),
+      render::ConductorBxDF(
+        render::TrowbridgeReitzDistribution(conductorURoughness, conductorVRoughness),
+        conductorEta,
+        conductorK
+      ),
+      thickness,
+      albedo,
+      gg,
+      maxDepth_,
+      nSamples_
+    );
+  }
+
+  template <typename TextureEvaluator>
+  MaterialAlphaResult EvaluateAlpha(
+    const TextureEvaluator& texEval,
+    const MaterialEvalContext& ctx,
+    Float alphaSample = 0
+  ) const {
+    if (!alpha_) {
+      return {};
+    }
+    Float alpha = ClampUnit(texEval(*alpha_, ctx));
+    return MaterialAlphaResult{alpha, alphaSample < alpha};
+  }
+
+  template <typename TextureEvaluator>
+  BumpMapResult EvaluateBump(
+    const TextureEvaluator& texEval,
+    const MaterialEvalContext& ctx
+  ) const {
+    if (!bump_) {
+      return DefaultBumpMapResult(ctx);
+    }
+    return EvaluateBumpMap(texEval, *bump_, ctx);
+  }
+
+  bool UsesEtaK() const;
+  bool UsesReflectance() const;
+  bool HasAlpha() const;
+  bool HasBump() const;
+  bool RemapRoughness() const;
+  MaterialTextureRequirements TextureRequirements() const;
+
+private:
+  CoatedConductorMaterial(
+    std::optional<SpectrumTexture> conductorEta,
+    std::optional<SpectrumTexture> conductorK,
+    std::optional<SpectrumTexture> reflectance,
+    FloatTexture interfaceURoughness,
+    FloatTexture interfaceVRoughness,
+    FloatTexture conductorURoughness,
+    FloatTexture conductorVRoughness,
+    FloatTexture thickness,
+    SpectrumTexture albedo,
+    FloatTexture g,
+    render::EtaSpectrumHandle interfaceEta,
+    bool remapRoughness,
+    int maxDepth,
+    int nSamples,
+    std::optional<FloatTexture> alpha,
+    std::optional<FloatTexture> bump
+  );
+
+  static Float ClampUnit(Float value);
+  static Float ClampSignedUnit(Float value);
+
+  std::optional<SpectrumTexture> conductorEta_;
+  std::optional<SpectrumTexture> conductorK_;
+  std::optional<SpectrumTexture> reflectance_;
+  FloatTexture interfaceURoughness_ = FloatTexture::Constant(0);
+  FloatTexture interfaceVRoughness_ = FloatTexture::Constant(0);
+  FloatTexture conductorURoughness_ = FloatTexture::Constant(0);
+  FloatTexture conductorVRoughness_ = FloatTexture::Constant(0);
+  FloatTexture thickness_ = FloatTexture::Constant(static_cast<Float>(0.01));
+  SpectrumTexture albedo_ = SpectrumTexture::Constant(0);
+  FloatTexture g_ = FloatTexture::Constant(0);
+  render::EtaSpectrumHandle interfaceEta_ =
+    render::ConstantEtaSpectrum(static_cast<Float>(1.5));
+  bool remapRoughness_ = true;
+  int maxDepth_ = 10;
+  int nSamples_ = 1;
+  std::optional<FloatTexture> alpha_;
+  std::optional<FloatTexture> bump_;
+};
+
 class ThinDielectricMaterial {
 public:
   using BxDF = render::ThinDielectricBxDF;
@@ -471,8 +855,11 @@ public:
 
   static Material Diffuse(SpectrumTexture reflectance);
   static Material Diffuse(DiffuseMaterial material);
+  static Material DiffuseTransmission(DiffuseTransmissionMaterial material);
   static Material Conductor(ConductorMaterial material);
   static Material Dielectric(DielectricMaterial material = DielectricMaterial::Smooth());
+  static Material CoatedDiffuse(CoatedDiffuseMaterial material);
+  static Material CoatedConductor(CoatedConductorMaterial material);
   static Material ThinDielectric(
     ThinDielectricMaterial material = ThinDielectricMaterial()
   );
@@ -554,16 +941,22 @@ public:
 
 private:
   explicit Material(DiffuseMaterial material);
+  explicit Material(DiffuseTransmissionMaterial material);
   explicit Material(ConductorMaterial material);
   explicit Material(DielectricMaterial material);
+  explicit Material(CoatedDiffuseMaterial material);
+  explicit Material(CoatedConductorMaterial material);
   explicit Material(ThinDielectricMaterial material);
   explicit Material(InterfaceMaterial material);
 
   using Variant = std::variant<
     std::monostate,
     DiffuseMaterial,
+    DiffuseTransmissionMaterial,
     ConductorMaterial,
     DielectricMaterial,
+    CoatedDiffuseMaterial,
+    CoatedConductorMaterial,
     ThinDielectricMaterial,
     InterfaceMaterial
   >;

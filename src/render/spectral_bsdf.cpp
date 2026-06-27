@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <complex>
+#include <cstdint>
 #include <limits>
 
 namespace rayrender {
@@ -12,6 +13,7 @@ namespace {
 
 constexpr Float Pi = static_cast<Float>(3.14159265358979323846264338327950288);
 constexpr Float InvPi = static_cast<Float>(1) / Pi;
+constexpr Float Inv4Pi = static_cast<Float>(1) / (static_cast<Float>(4) * Pi);
 
 Float Clamp(Float value, Float low, Float high) {
   return std::min(std::max(value, low), high);
@@ -54,6 +56,643 @@ vec3f OrthogonalFallback(const vec3f& z) {
 
 vec3f FaceForward(vec3f v, const vec3f& reference) {
   return dot(v, reference) < 0 ? -v : v;
+}
+
+std::uint64_t MixBits(std::uint64_t value) {
+  value += 0x9e3779b97f4a7c15ull;
+  value = (value ^ (value >> 30u)) * 0xbf58476d1ce4e5b9ull;
+  value = (value ^ (value >> 27u)) * 0x94d049bb133111ebull;
+  return value ^ (value >> 31u);
+}
+
+std::uint64_t HashCombine(std::uint64_t lhs, std::uint64_t rhs) {
+  return MixBits(lhs ^ (rhs + 0x9e3779b97f4a7c15ull + (lhs << 6u) + (lhs >> 2u)));
+}
+
+std::uint64_t HashFloat(Float value) {
+  if (!std::isfinite(value)) {
+    return value < 0 ? 0x8ddf1c0b7d1f9f2bull : 0xf3c21a1d82ca6b15ull;
+  }
+  return MixBits(static_cast<std::uint64_t>(std::llround(value * static_cast<Float>(1048576))));
+}
+
+std::uint64_t HashVec(const vec3f& value) {
+  return HashCombine(HashCombine(HashFloat(value.xyz.x), HashFloat(value.xyz.y)), HashFloat(value.xyz.z));
+}
+
+std::uint64_t HashPoint2(const point2f& value) {
+  return HashCombine(HashFloat(value[0]), HashFloat(value[1]));
+}
+
+class LayeredRNG {
+public:
+  LayeredRNG(std::uint64_t seed1, std::uint64_t seed2)
+    : state_(HashCombine(seed1, seed2)) {}
+
+  Float Uniform() {
+    state_ = MixBits(state_);
+    constexpr std::uint64_t mantissaMask = (1ull << 24u) - 1ull;
+    return static_cast<Float>((state_ >> 40u) & mantissaMask) /
+           static_cast<Float>(1ull << 24u);
+  }
+
+private:
+  std::uint64_t state_ = 0;
+};
+
+Float OneMinusEpsilon() {
+  return std::nextafter(static_cast<Float>(1), static_cast<Float>(0));
+}
+
+Float LayeredRandom(LayeredRNG& rng) {
+  return std::min(rng.Uniform(), OneMinusEpsilon());
+}
+
+Float PowerHeuristicLocal(int nf, Float fPdf, int ng, Float gPdf) {
+  Float f = nf * fPdf;
+  Float g = ng * gPdf;
+  if (IsInf(Sqr(f))) {
+    return 1;
+  }
+  Float denom = Sqr(f) + Sqr(g);
+  return denom > 0 ? Sqr(f) / denom : 0;
+}
+
+Float SampleExponentialLocal(Float u, Float a) {
+  if (!(a > 0)) {
+    return std::numeric_limits<Float>::infinity();
+  }
+  u = Clamp(u, 0, OneMinusEpsilon());
+  return -std::log(static_cast<Float>(1) - u) / a;
+}
+
+Float HenyeyGreenstein(Float cosTheta, Float g) {
+  g = Clamp(g, static_cast<Float>(-0.99), static_cast<Float>(0.99));
+  Float denom = static_cast<Float>(1) + Sqr(g) + static_cast<Float>(2) * g * cosTheta;
+  return Inv4Pi * (static_cast<Float>(1) - Sqr(g)) / (denom * SafeSqrt(denom));
+}
+
+struct PhaseFunctionSample {
+  Float p = 0;
+  vec3f wi;
+  Float pdf = 0;
+};
+
+class HGPhaseFunction {
+public:
+  explicit HGPhaseFunction(Float g) : g_(Clamp(g, -1, 1)) {}
+
+  Float p(const vec3f& wo, const vec3f& wi) const {
+    return HenyeyGreenstein(dot(wo, wi), g_);
+  }
+
+  Float PDF(const vec3f& wo, const vec3f& wi) const {
+    return p(wo, wi);
+  }
+
+  std::optional<PhaseFunctionSample> Sample_p(const vec3f& wo, point2f u) const {
+    Float g = Clamp(g_, static_cast<Float>(-0.99), static_cast<Float>(0.99));
+    Float cosTheta;
+    if (std::abs(g) < static_cast<Float>(1e-3)) {
+      cosTheta = static_cast<Float>(1) - static_cast<Float>(2) * u[0];
+    } else {
+      Float sqrTerm =
+        (static_cast<Float>(1) - Sqr(g)) /
+        (static_cast<Float>(1) + g - static_cast<Float>(2) * g * u[0]);
+      cosTheta =
+        -static_cast<Float>(1) / (static_cast<Float>(2) * g) *
+        (static_cast<Float>(1) + Sqr(g) - Sqr(sqrTerm));
+    }
+
+    Float sinTheta = SafeSqrt(static_cast<Float>(1) - Sqr(cosTheta));
+    Float phi = static_cast<Float>(2) * Pi * u[1];
+    vec3f z = UnitOrFallback(wo, vec3f(0, 0, 1));
+    vec3f x = OrthogonalFallback(z);
+    vec3f y = cross(z, x);
+    vec3f wi =
+      sinTheta * std::cos(phi) * x +
+      sinTheta * std::sin(phi) * y +
+      cosTheta * z;
+    Float pdf = HenyeyGreenstein(cosTheta, g);
+    if (pdf == 0 || wi.xyz.z == 0) {
+      return {};
+    }
+    return PhaseFunctionSample{pdf, wi, pdf};
+  }
+
+private:
+  Float g_ = 0;
+};
+
+template <typename TopBxDF, typename BottomBxDF>
+class TopOrBottomBxDFRef {
+public:
+  TopOrBottomBxDFRef() = default;
+  explicit TopOrBottomBxDFRef(const TopBxDF* top) : top_(top) {}
+  explicit TopOrBottomBxDFRef(const BottomBxDF* bottom) : bottom_(bottom) {}
+
+  BxDFFlags Flags() const {
+    return top_ ? top_->Flags() : bottom_->Flags();
+  }
+
+  base::SampledSpectrum f(const vec3f& wo, const vec3f& wi, TransportMode mode) const {
+    return top_ ? top_->f(wo, wi, mode) : bottom_->f(wo, wi, mode);
+  }
+
+  std::optional<BSDFSample> Sample_f(
+    const vec3f& wo,
+    Float uc,
+    point2f u,
+    TransportMode mode,
+    BxDFReflTransFlags sampleFlags = BxDFReflTransFlags::All
+  ) const {
+    return top_ ? top_->Sample_f(wo, uc, u, mode, sampleFlags)
+                : bottom_->Sample_f(wo, uc, u, mode, sampleFlags);
+  }
+
+  Float PDF(
+    const vec3f& wo,
+    const vec3f& wi,
+    TransportMode mode,
+    BxDFReflTransFlags sampleFlags = BxDFReflTransFlags::All
+  ) const {
+    return top_ ? top_->PDF(wo, wi, mode, sampleFlags)
+                : bottom_->PDF(wo, wi, mode, sampleFlags);
+  }
+
+private:
+  const TopBxDF* top_ = nullptr;
+  const BottomBxDF* bottom_ = nullptr;
+};
+
+Float LayeredTr(Float dz, const vec3f& w) {
+  if (std::abs(dz) <= std::numeric_limits<Float>::min()) {
+    return 1;
+  }
+  if (w.xyz.z == 0) {
+    return 0;
+  }
+  return std::exp(-std::abs(dz / w.xyz.z));
+}
+
+template <typename TopBxDF, typename BottomBxDF>
+BxDFFlags LayeredFlags(
+  const TopBxDF& top,
+  const BottomBxDF& bottom,
+  const base::SampledSpectrum& albedo
+) {
+  BxDFFlags topFlags = top.Flags();
+  BxDFFlags bottomFlags = bottom.Flags();
+
+  BxDFFlags flags = BxDFFlags::Reflection;
+  if (base::IsSpecular(topFlags)) {
+    flags |= BxDFFlags::Specular;
+  }
+
+  if (base::IsDiffuse(topFlags) || base::IsDiffuse(bottomFlags) || static_cast<bool>(albedo)) {
+    flags |= BxDFFlags::Diffuse;
+  } else if (base::IsGlossy(topFlags) || base::IsGlossy(bottomFlags)) {
+    flags |= BxDFFlags::Glossy;
+  }
+
+  if (base::IsTransmissive(topFlags) && base::IsTransmissive(bottomFlags)) {
+    flags |= BxDFFlags::Transmission;
+  }
+  return flags;
+}
+
+template <typename TopBxDF, typename BottomBxDF>
+base::SampledSpectrum LayeredF(
+  const TopBxDF& top,
+  const BottomBxDF& bottom,
+  Float thickness,
+  const base::SampledSpectrum& albedo,
+  Float g,
+  int maxDepth,
+  int nSamples,
+  vec3f wo,
+  vec3f wi,
+  TransportMode mode
+) {
+  nSamples = std::max(1, nSamples);
+  maxDepth = std::max(1, maxDepth);
+
+  base::SampledSpectrum f(0);
+  if (wo.xyz.z < 0) {
+    wo = -wo;
+    wi = -wi;
+  }
+
+  bool enteredTop = true;
+  TopOrBottomBxDFRef<TopBxDF, BottomBxDF> enterInterface(&top);
+  TopOrBottomBxDFRef<TopBxDF, BottomBxDF> exitInterface;
+  TopOrBottomBxDFRef<TopBxDF, BottomBxDF> nonExitInterface;
+  if (SameHemisphere(wo, wi) != enteredTop) {
+    exitInterface = TopOrBottomBxDFRef<TopBxDF, BottomBxDF>(&bottom);
+    nonExitInterface = TopOrBottomBxDFRef<TopBxDF, BottomBxDF>(&top);
+  } else {
+    exitInterface = TopOrBottomBxDFRef<TopBxDF, BottomBxDF>(&top);
+    nonExitInterface = TopOrBottomBxDFRef<TopBxDF, BottomBxDF>(&bottom);
+  }
+  Float exitZ = (SameHemisphere(wo, wi) != enteredTop) ? 0 : thickness;
+
+  if (SameHemisphere(wo, wi)) {
+    f = static_cast<Float>(nSamples) * enterInterface.f(wo, wi, mode);
+  }
+
+  LayeredRNG rng(HashCombine(HashVec(wo), 0x3201536a76d4e9a3ull), HashVec(wi));
+  HGPhaseFunction phase(g);
+  for (int s = 0; s < nSamples; ++s) {
+    std::optional<BSDFSample> wos = enterInterface.Sample_f(
+      wo,
+      LayeredRandom(rng),
+      point2f(LayeredRandom(rng), LayeredRandom(rng)),
+      mode,
+      BxDFReflTransFlags::Transmission
+    );
+    if (!wos || !wos->f || wos->pdf == 0 || wos->wi.xyz.z == 0) {
+      continue;
+    }
+
+    std::optional<BSDFSample> wis = exitInterface.Sample_f(
+      wi,
+      LayeredRandom(rng),
+      point2f(LayeredRandom(rng), LayeredRandom(rng)),
+      !mode,
+      BxDFReflTransFlags::Transmission
+    );
+    if (!wis || !wis->f || wis->pdf == 0 || wis->wi.xyz.z == 0) {
+      continue;
+    }
+
+    base::SampledSpectrum beta = wos->f * AbsCosTheta(wos->wi) / wos->pdf;
+    Float z = enteredTop ? thickness : 0;
+    vec3f w = wos->wi;
+
+    for (int depth = 0; depth < maxDepth; ++depth) {
+      if (depth > 3 && beta.MaxComponentValue() < static_cast<Float>(0.25)) {
+        Float q = std::max(static_cast<Float>(0), static_cast<Float>(1) - beta.MaxComponentValue());
+        if (LayeredRandom(rng) < q) {
+          break;
+        }
+        beta /= static_cast<Float>(1) - q;
+      }
+
+      if (!albedo) {
+        z = (z == thickness) ? 0 : thickness;
+        beta *= LayeredTr(thickness, w);
+      } else {
+        Float dz = SampleExponentialLocal(LayeredRandom(rng), static_cast<Float>(1) / std::abs(w.xyz.z));
+        Float zp = w.xyz.z > 0 ? z + dz : z - dz;
+        if (std::abs(z - zp) <= std::numeric_limits<Float>::min()) {
+          continue;
+        }
+        if (0 < zp && zp < thickness) {
+          Float wt = 1;
+          if (!base::IsSpecular(exitInterface.Flags())) {
+            wt = PowerHeuristicLocal(1, wis->pdf, 1, phase.PDF(-w, -wis->wi));
+          }
+          f += beta * albedo * phase.p(-w, -wis->wi) * wt *
+               LayeredTr(zp - exitZ, wis->wi) * wis->f / wis->pdf;
+
+          std::optional<PhaseFunctionSample> ps =
+            phase.Sample_p(-w, point2f(LayeredRandom(rng), LayeredRandom(rng)));
+          if (!ps || ps->pdf == 0 || ps->wi.xyz.z == 0) {
+            continue;
+          }
+          beta *= albedo * ps->p / ps->pdf;
+          w = ps->wi;
+          z = zp;
+
+          if (((z < exitZ && w.xyz.z > 0) || (z > exitZ && w.xyz.z < 0)) &&
+              !base::IsSpecular(exitInterface.Flags())) {
+            base::SampledSpectrum fExit = exitInterface.f(-w, wi, mode);
+            if (fExit) {
+              Float exitPDF =
+                exitInterface.PDF(-w, wi, mode, BxDFReflTransFlags::Transmission);
+              Float exitWt = PowerHeuristicLocal(1, ps->pdf, 1, exitPDF);
+              f += beta * LayeredTr(zp - exitZ, ps->wi) * fExit * exitWt;
+            }
+          }
+          continue;
+        }
+        z = Clamp(zp, 0, thickness);
+      }
+
+      if (z == exitZ) {
+        std::optional<BSDFSample> bs = exitInterface.Sample_f(
+          -w,
+          LayeredRandom(rng),
+          point2f(LayeredRandom(rng), LayeredRandom(rng)),
+          mode,
+          BxDFReflTransFlags::Reflection
+        );
+        if (!bs || !bs->f || bs->pdf == 0 || bs->wi.xyz.z == 0) {
+          break;
+        }
+        beta *= bs->f * AbsCosTheta(bs->wi) / bs->pdf;
+        w = bs->wi;
+      } else {
+        if (!base::IsSpecular(nonExitInterface.Flags())) {
+          Float wt = 1;
+          if (!base::IsSpecular(exitInterface.Flags())) {
+            wt = PowerHeuristicLocal(
+              1,
+              wis->pdf,
+              1,
+              nonExitInterface.PDF(-w, -wis->wi, mode)
+            );
+          }
+          f += beta * nonExitInterface.f(-w, -wis->wi, mode) *
+               AbsCosTheta(wis->wi) * wt * LayeredTr(thickness, wis->wi) *
+               wis->f / wis->pdf;
+        }
+
+        std::optional<BSDFSample> bs = nonExitInterface.Sample_f(
+          -w,
+          LayeredRandom(rng),
+          point2f(LayeredRandom(rng), LayeredRandom(rng)),
+          mode,
+          BxDFReflTransFlags::Reflection
+        );
+        if (!bs || !bs->f || bs->pdf == 0 || bs->wi.xyz.z == 0) {
+          break;
+        }
+        beta *= bs->f * AbsCosTheta(bs->wi) / bs->pdf;
+        w = bs->wi;
+
+        if (!base::IsSpecular(exitInterface.Flags())) {
+          base::SampledSpectrum fExit = exitInterface.f(-w, wi, mode);
+          if (fExit) {
+            Float wt = 1;
+            if (!base::IsSpecular(nonExitInterface.Flags())) {
+              Float exitPDF =
+                exitInterface.PDF(-w, wi, mode, BxDFReflTransFlags::Transmission);
+              wt = PowerHeuristicLocal(1, bs->pdf, 1, exitPDF);
+            }
+            f += beta * LayeredTr(thickness, bs->wi) * fExit * wt;
+          }
+        }
+      }
+    }
+  }
+  return f / static_cast<Float>(nSamples);
+}
+
+template <typename TopBxDF, typename BottomBxDF>
+std::optional<BSDFSample> LayeredSampleF(
+  const TopBxDF& top,
+  const BottomBxDF& bottom,
+  Float thickness,
+  const base::SampledSpectrum& albedo,
+  Float g,
+  int maxDepth,
+  vec3f wo,
+  Float uc,
+  point2f u,
+  TransportMode mode,
+  BxDFReflTransFlags sampleFlags
+) {
+  maxDepth = std::max(1, maxDepth);
+
+  bool flipWi = false;
+  if (wo.xyz.z < 0) {
+    wo = -wo;
+    flipWi = true;
+  }
+
+  bool enteredTop = true;
+  std::optional<BSDFSample> bs = enteredTop ? top.Sample_f(wo, uc, u, mode)
+                                            : bottom.Sample_f(wo, uc, u, mode);
+  if (!bs || !bs->f || bs->pdf == 0 || bs->wi.xyz.z == 0) {
+    return {};
+  }
+  if (bs->IsReflection()) {
+    if (flipWi) {
+      bs->wi = -bs->wi;
+    }
+    bs->pdfIsProportional = true;
+    return base::HasAny(bs->flags, sampleFlags) ? bs : std::optional<BSDFSample>{};
+  }
+
+  vec3f w = bs->wi;
+  bool specularPath = bs->IsSpecular();
+  LayeredRNG rng(HashCombine(HashVec(wo), HashFloat(uc)), HashPoint2(u));
+  base::SampledSpectrum f = bs->f * AbsCosTheta(bs->wi);
+  Float pdf = bs->pdf;
+  Float z = enteredTop ? thickness : 0;
+  HGPhaseFunction phase(g);
+
+  for (int depth = 0; depth < maxDepth; ++depth) {
+    Float rrBeta = pdf > 0 ? f.MaxComponentValue() / pdf : 0;
+    if (depth > 3 && rrBeta < static_cast<Float>(0.25)) {
+      Float q = std::max(static_cast<Float>(0), static_cast<Float>(1) - rrBeta);
+      if (LayeredRandom(rng) < q) {
+        return {};
+      }
+      pdf *= static_cast<Float>(1) - q;
+    }
+    if (w.xyz.z == 0) {
+      return {};
+    }
+
+    if (albedo) {
+      Float dz = SampleExponentialLocal(
+        LayeredRandom(rng),
+        static_cast<Float>(1) / AbsCosTheta(w)
+      );
+      Float zp = w.xyz.z > 0 ? z + dz : z - dz;
+      if (std::abs(zp - z) <= std::numeric_limits<Float>::min()) {
+        return {};
+      }
+      if (0 < zp && zp < thickness) {
+        std::optional<PhaseFunctionSample> ps =
+          phase.Sample_p(-w, point2f(LayeredRandom(rng), LayeredRandom(rng)));
+        if (!ps || ps->pdf == 0 || ps->wi.xyz.z == 0) {
+          return {};
+        }
+        f *= albedo * ps->p;
+        pdf *= ps->pdf;
+        specularPath = false;
+        w = ps->wi;
+        z = zp;
+        continue;
+      }
+      z = Clamp(zp, 0, thickness);
+    } else {
+      z = (z == thickness) ? 0 : thickness;
+      f *= LayeredTr(thickness, w);
+    }
+
+    TopOrBottomBxDFRef<TopBxDF, BottomBxDF> interface =
+      z == 0 ? TopOrBottomBxDFRef<TopBxDF, BottomBxDF>(&bottom)
+             : TopOrBottomBxDFRef<TopBxDF, BottomBxDF>(&top);
+
+    bs = interface.Sample_f(
+      -w,
+      LayeredRandom(rng),
+      point2f(LayeredRandom(rng), LayeredRandom(rng)),
+      mode
+    );
+    if (!bs || !bs->f || bs->pdf == 0 || bs->wi.xyz.z == 0) {
+      return {};
+    }
+    f *= bs->f;
+    pdf *= bs->pdf;
+    specularPath = specularPath && bs->IsSpecular();
+    w = bs->wi;
+
+    if (bs->IsTransmission()) {
+      BxDFFlags flags = SameHemisphere(wo, w) ? BxDFFlags::Reflection : BxDFFlags::Transmission;
+      flags |= specularPath ? BxDFFlags::Specular : BxDFFlags::Glossy;
+      if (flipWi) {
+        w = -w;
+      }
+      BSDFSample result{f, w, pdf, flags, 1, true};
+      return base::HasAny(result.flags, sampleFlags) ? std::optional<BSDFSample>(result)
+                                                     : std::optional<BSDFSample>{};
+    }
+    f *= AbsCosTheta(bs->wi);
+  }
+  return {};
+}
+
+template <typename TopBxDF, typename BottomBxDF>
+Float LayeredPDF(
+  const TopBxDF& top,
+  const BottomBxDF& bottom,
+  Float thickness,
+  const base::SampledSpectrum& albedo,
+  Float g,
+  int nSamples,
+  vec3f wo,
+  vec3f wi,
+  TransportMode mode,
+  BxDFReflTransFlags sampleFlags
+) {
+  (void)thickness;
+  (void)albedo;
+  (void)g;
+  nSamples = std::max(1, nSamples);
+
+  bool reflection = SameHemisphere(wo, wi);
+  if (reflection && !base::HasFlag(sampleFlags, BxDFReflTransFlags::Reflection)) {
+    return 0;
+  }
+  if (!reflection && !base::HasFlag(sampleFlags, BxDFReflTransFlags::Transmission)) {
+    return 0;
+  }
+
+  if (wo.xyz.z < 0) {
+    wo = -wo;
+    wi = -wi;
+  }
+
+  LayeredRNG rng(HashCombine(HashVec(wi), 0x7d61a4e56b39cf28ull), HashVec(wo));
+  bool enteredTop = true;
+  Float pdfSum = 0;
+  if (SameHemisphere(wo, wi)) {
+    auto reflFlag = BxDFReflTransFlags::Reflection;
+    pdfSum += enteredTop ? static_cast<Float>(nSamples) * top.PDF(wo, wi, mode, reflFlag)
+                         : static_cast<Float>(nSamples) * bottom.PDF(wo, wi, mode, reflFlag);
+  }
+
+  for (int s = 0; s < nSamples; ++s) {
+    if (SameHemisphere(wo, wi)) {
+      TopOrBottomBxDFRef<TopBxDF, BottomBxDF> rInterface;
+      TopOrBottomBxDFRef<TopBxDF, BottomBxDF> tInterface;
+      if (enteredTop) {
+        rInterface = TopOrBottomBxDFRef<TopBxDF, BottomBxDF>(&bottom);
+        tInterface = TopOrBottomBxDFRef<TopBxDF, BottomBxDF>(&top);
+      } else {
+        rInterface = TopOrBottomBxDFRef<TopBxDF, BottomBxDF>(&top);
+        tInterface = TopOrBottomBxDFRef<TopBxDF, BottomBxDF>(&bottom);
+      }
+
+      auto trans = BxDFReflTransFlags::Transmission;
+      std::optional<BSDFSample> wos = tInterface.Sample_f(
+        wo,
+        LayeredRandom(rng),
+        point2f(LayeredRandom(rng), LayeredRandom(rng)),
+        mode,
+        trans
+      );
+      std::optional<BSDFSample> wis = tInterface.Sample_f(
+        wi,
+        LayeredRandom(rng),
+        point2f(LayeredRandom(rng), LayeredRandom(rng)),
+        !mode,
+        trans
+      );
+
+      if (wos && wos->f && wos->pdf > 0 && wis && wis->f && wis->pdf > 0) {
+        if (!base::IsNonSpecular(tInterface.Flags())) {
+          pdfSum += rInterface.PDF(-wos->wi, -wis->wi, mode);
+        } else {
+          std::optional<BSDFSample> rs = rInterface.Sample_f(
+            -wos->wi,
+            LayeredRandom(rng),
+            point2f(LayeredRandom(rng), LayeredRandom(rng)),
+            mode
+          );
+          if (rs && rs->f && rs->pdf > 0) {
+            if (!base::IsNonSpecular(rInterface.Flags())) {
+              pdfSum += tInterface.PDF(-rs->wi, wi, mode);
+            } else {
+              Float rPDF = rInterface.PDF(-wos->wi, -wis->wi, mode);
+              Float wt = PowerHeuristicLocal(1, wis->pdf, 1, rPDF);
+              pdfSum += wt * rPDF;
+
+              Float tPDF = tInterface.PDF(-rs->wi, wi, mode);
+              wt = PowerHeuristicLocal(1, rs->pdf, 1, tPDF);
+              pdfSum += wt * tPDF;
+            }
+          }
+        }
+      }
+    } else {
+      TopOrBottomBxDFRef<TopBxDF, BottomBxDF> toInterface;
+      TopOrBottomBxDFRef<TopBxDF, BottomBxDF> tiInterface;
+      if (enteredTop) {
+        toInterface = TopOrBottomBxDFRef<TopBxDF, BottomBxDF>(&top);
+        tiInterface = TopOrBottomBxDFRef<TopBxDF, BottomBxDF>(&bottom);
+      } else {
+        toInterface = TopOrBottomBxDFRef<TopBxDF, BottomBxDF>(&bottom);
+        tiInterface = TopOrBottomBxDFRef<TopBxDF, BottomBxDF>(&top);
+      }
+
+      std::optional<BSDFSample> wos = toInterface.Sample_f(
+        wo,
+        LayeredRandom(rng),
+        point2f(LayeredRandom(rng), LayeredRandom(rng)),
+        mode
+      );
+      if (!wos || !wos->f || wos->pdf == 0 || wos->wi.xyz.z == 0 || wos->IsReflection()) {
+        continue;
+      }
+
+      std::optional<BSDFSample> wis = tiInterface.Sample_f(
+        wi,
+        LayeredRandom(rng),
+        point2f(LayeredRandom(rng), LayeredRandom(rng)),
+        !mode
+      );
+      if (!wis || !wis->f || wis->pdf == 0 || wis->wi.xyz.z == 0 || wis->IsReflection()) {
+        continue;
+      }
+
+      if (base::IsSpecular(toInterface.Flags())) {
+        pdfSum += tiInterface.PDF(-wos->wi, wi, mode);
+      } else if (base::IsSpecular(tiInterface.Flags())) {
+        pdfSum += toInterface.PDF(wo, -wis->wi, mode);
+      } else {
+        pdfSum +=
+          (toInterface.PDF(wo, -wis->wi, mode) + tiInterface.PDF(-wos->wi, wi, mode)) /
+          static_cast<Float>(2);
+      }
+    }
+  }
+  return Lerp(static_cast<Float>(0.9), Inv4Pi, pdfSum / static_cast<Float>(nSamples));
 }
 
 } // namespace
@@ -375,6 +1014,91 @@ base::SampledSpectrum DiffuseBxDF::rho() const {
 }
 
 void DiffuseBxDF::Regularize() {}
+
+DiffuseTransmissionBxDF::DiffuseTransmissionBxDF(
+  base::SampledSpectrum reflectance,
+  base::SampledSpectrum transmittance
+)
+  : reflectance_(reflectance),
+    transmittance_(transmittance) {}
+
+BxDFFlags DiffuseTransmissionBxDF::Flags() const {
+  return (reflectance_ ? BxDFFlags::DiffuseReflection : BxDFFlags::Unset) |
+         (transmittance_ ? BxDFFlags::DiffuseTransmission : BxDFFlags::Unset);
+}
+
+base::SampledSpectrum DiffuseTransmissionBxDF::f(
+  const vec3f& wo,
+  const vec3f& wi,
+  TransportMode mode
+) const {
+  (void)mode;
+  return SameHemisphere(wo, wi) ? reflectance_ * InvPi : transmittance_ * InvPi;
+}
+
+std::optional<BSDFSample> DiffuseTransmissionBxDF::Sample_f(
+  const vec3f& wo,
+  Float uc,
+  point2f u,
+  TransportMode mode,
+  BxDFReflTransFlags sampleFlags
+) const {
+  Float pr = reflectance_.MaxComponentValue();
+  Float pt = transmittance_.MaxComponentValue();
+  if (!base::HasFlag(sampleFlags, BxDFReflTransFlags::Reflection)) {
+    pr = 0;
+  }
+  if (!base::HasFlag(sampleFlags, BxDFReflTransFlags::Transmission)) {
+    pt = 0;
+  }
+  if (pr == 0 && pt == 0) {
+    return {};
+  }
+
+  if (uc < pr / (pr + pt)) {
+    vec3f wi = SampleCosineHemisphere(u);
+    if (wo.xyz.z < 0) {
+      wi.xyz.z *= -1;
+    }
+    Float pdf = CosineHemispherePDF(AbsCosTheta(wi)) * pr / (pr + pt);
+    return BSDFSample{f(wo, wi, mode), wi, pdf, BxDFFlags::DiffuseReflection};
+  }
+
+  vec3f wi = SampleCosineHemisphere(u);
+  if (wo.xyz.z > 0) {
+    wi.xyz.z *= -1;
+  }
+  Float pdf = CosineHemispherePDF(AbsCosTheta(wi)) * pt / (pr + pt);
+  return BSDFSample{f(wo, wi, mode), wi, pdf, BxDFFlags::DiffuseTransmission};
+}
+
+Float DiffuseTransmissionBxDF::PDF(
+  const vec3f& wo,
+  const vec3f& wi,
+  TransportMode mode,
+  BxDFReflTransFlags sampleFlags
+) const {
+  (void)mode;
+  Float pr = reflectance_.MaxComponentValue();
+  Float pt = transmittance_.MaxComponentValue();
+  if (!base::HasFlag(sampleFlags, BxDFReflTransFlags::Reflection)) {
+    pr = 0;
+  }
+  if (!base::HasFlag(sampleFlags, BxDFReflTransFlags::Transmission)) {
+    pt = 0;
+  }
+  if (pr == 0 && pt == 0) {
+    return 0;
+  }
+  Float probability = SameHemisphere(wo, wi) ? pr : pt;
+  return probability / (pr + pt) * CosineHemispherePDF(AbsCosTheta(wi));
+}
+
+base::SampledSpectrum DiffuseTransmissionBxDF::rho() const {
+  return reflectance_ + transmittance_;
+}
+
+void DiffuseTransmissionBxDF::Regularize() {}
 
 ConductorBxDF::ConductorBxDF(
   TrowbridgeReitzDistribution distribution,
@@ -746,6 +1470,188 @@ void DielectricBxDF::Regularize() {
   distribution_.Regularize();
 }
 
+CoatedDiffuseBxDF::CoatedDiffuseBxDF(
+  DielectricBxDF top,
+  DiffuseBxDF bottom,
+  Float thickness,
+  base::SampledSpectrum albedo,
+  Float g,
+  int maxDepth,
+  int nSamples
+)
+  : top_(top),
+    bottom_(bottom),
+    thickness_(std::max(thickness, std::numeric_limits<Float>::min())),
+    albedo_(albedo),
+    g_(Clamp(g, -1, 1)),
+    maxDepth_(std::max(1, maxDepth)),
+    nSamples_(std::max(1, nSamples)) {}
+
+BxDFFlags CoatedDiffuseBxDF::Flags() const {
+  return LayeredFlags(top_, bottom_, albedo_);
+}
+
+base::SampledSpectrum CoatedDiffuseBxDF::f(
+  const vec3f& wo,
+  const vec3f& wi,
+  TransportMode mode
+) const {
+  return LayeredF(
+    top_,
+    bottom_,
+    thickness_,
+    albedo_,
+    g_,
+    maxDepth_,
+    nSamples_,
+    wo,
+    wi,
+    mode
+  );
+}
+
+std::optional<BSDFSample> CoatedDiffuseBxDF::Sample_f(
+  const vec3f& wo,
+  Float uc,
+  point2f u,
+  TransportMode mode,
+  BxDFReflTransFlags sampleFlags
+) const {
+  return LayeredSampleF(
+    top_,
+    bottom_,
+    thickness_,
+    albedo_,
+    g_,
+    maxDepth_,
+    wo,
+    uc,
+    u,
+    mode,
+    sampleFlags
+  );
+}
+
+Float CoatedDiffuseBxDF::PDF(
+  const vec3f& wo,
+  const vec3f& wi,
+  TransportMode mode,
+  BxDFReflTransFlags sampleFlags
+) const {
+  return LayeredPDF(
+    top_,
+    bottom_,
+    thickness_,
+    albedo_,
+    g_,
+    nSamples_,
+    wo,
+    wi,
+    mode,
+    sampleFlags
+  );
+}
+
+base::SampledSpectrum CoatedDiffuseBxDF::rho() const {
+  return base::SampledSpectrum(1);
+}
+
+void CoatedDiffuseBxDF::Regularize() {
+  top_.Regularize();
+  bottom_.Regularize();
+}
+
+CoatedConductorBxDF::CoatedConductorBxDF(
+  DielectricBxDF top,
+  ConductorBxDF bottom,
+  Float thickness,
+  base::SampledSpectrum albedo,
+  Float g,
+  int maxDepth,
+  int nSamples
+)
+  : top_(top),
+    bottom_(bottom),
+    thickness_(std::max(thickness, std::numeric_limits<Float>::min())),
+    albedo_(albedo),
+    g_(Clamp(g, -1, 1)),
+    maxDepth_(std::max(1, maxDepth)),
+    nSamples_(std::max(1, nSamples)) {}
+
+BxDFFlags CoatedConductorBxDF::Flags() const {
+  return LayeredFlags(top_, bottom_, albedo_);
+}
+
+base::SampledSpectrum CoatedConductorBxDF::f(
+  const vec3f& wo,
+  const vec3f& wi,
+  TransportMode mode
+) const {
+  return LayeredF(
+    top_,
+    bottom_,
+    thickness_,
+    albedo_,
+    g_,
+    maxDepth_,
+    nSamples_,
+    wo,
+    wi,
+    mode
+  );
+}
+
+std::optional<BSDFSample> CoatedConductorBxDF::Sample_f(
+  const vec3f& wo,
+  Float uc,
+  point2f u,
+  TransportMode mode,
+  BxDFReflTransFlags sampleFlags
+) const {
+  return LayeredSampleF(
+    top_,
+    bottom_,
+    thickness_,
+    albedo_,
+    g_,
+    maxDepth_,
+    wo,
+    uc,
+    u,
+    mode,
+    sampleFlags
+  );
+}
+
+Float CoatedConductorBxDF::PDF(
+  const vec3f& wo,
+  const vec3f& wi,
+  TransportMode mode,
+  BxDFReflTransFlags sampleFlags
+) const {
+  return LayeredPDF(
+    top_,
+    bottom_,
+    thickness_,
+    albedo_,
+    g_,
+    nSamples_,
+    wo,
+    wi,
+    mode,
+    sampleFlags
+  );
+}
+
+base::SampledSpectrum CoatedConductorBxDF::rho() const {
+  return base::SampledSpectrum(1);
+}
+
+void CoatedConductorBxDF::Regularize() {
+  top_.Regularize();
+  bottom_.Regularize();
+}
+
 ThinDielectricBxDF::ThinDielectricBxDF(Float eta) : eta_(eta) {}
 
 BxDFFlags ThinDielectricBxDF::Flags() const {
@@ -884,9 +1790,18 @@ void NullBxDF::Regularize() {}
 
 BxDF::BxDF(DiffuseBxDF* bxdf) : kind_(bxdf ? Kind::Diffuse : Kind::None), ptr_(bxdf) {}
 
+BxDF::BxDF(DiffuseTransmissionBxDF* bxdf)
+  : kind_(bxdf ? Kind::DiffuseTransmission : Kind::None), ptr_(bxdf) {}
+
 BxDF::BxDF(ConductorBxDF* bxdf) : kind_(bxdf ? Kind::Conductor : Kind::None), ptr_(bxdf) {}
 
 BxDF::BxDF(DielectricBxDF* bxdf) : kind_(bxdf ? Kind::Dielectric : Kind::None), ptr_(bxdf) {}
+
+BxDF::BxDF(CoatedDiffuseBxDF* bxdf)
+  : kind_(bxdf ? Kind::CoatedDiffuse : Kind::None), ptr_(bxdf) {}
+
+BxDF::BxDF(CoatedConductorBxDF* bxdf)
+  : kind_(bxdf ? Kind::CoatedConductor : Kind::None), ptr_(bxdf) {}
 
 BxDF::BxDF(ThinDielectricBxDF* bxdf)
   : kind_(bxdf ? Kind::ThinDielectric : Kind::None), ptr_(bxdf) {}
@@ -901,10 +1816,16 @@ BxDFFlags BxDF::Flags() const {
   switch (kind_) {
   case Kind::Diffuse:
     return static_cast<const DiffuseBxDF*>(ptr_)->Flags();
+  case Kind::DiffuseTransmission:
+    return static_cast<const DiffuseTransmissionBxDF*>(ptr_)->Flags();
   case Kind::Conductor:
     return static_cast<const ConductorBxDF*>(ptr_)->Flags();
   case Kind::Dielectric:
     return static_cast<const DielectricBxDF*>(ptr_)->Flags();
+  case Kind::CoatedDiffuse:
+    return static_cast<const CoatedDiffuseBxDF*>(ptr_)->Flags();
+  case Kind::CoatedConductor:
+    return static_cast<const CoatedConductorBxDF*>(ptr_)->Flags();
   case Kind::ThinDielectric:
     return static_cast<const ThinDielectricBxDF*>(ptr_)->Flags();
   case Kind::Null:
@@ -923,10 +1844,16 @@ base::SampledSpectrum BxDF::f(
   switch (kind_) {
   case Kind::Diffuse:
     return static_cast<const DiffuseBxDF*>(ptr_)->f(wo, wi, mode);
+  case Kind::DiffuseTransmission:
+    return static_cast<const DiffuseTransmissionBxDF*>(ptr_)->f(wo, wi, mode);
   case Kind::Conductor:
     return static_cast<const ConductorBxDF*>(ptr_)->f(wo, wi, mode);
   case Kind::Dielectric:
     return static_cast<const DielectricBxDF*>(ptr_)->f(wo, wi, mode);
+  case Kind::CoatedDiffuse:
+    return static_cast<const CoatedDiffuseBxDF*>(ptr_)->f(wo, wi, mode);
+  case Kind::CoatedConductor:
+    return static_cast<const CoatedConductorBxDF*>(ptr_)->f(wo, wi, mode);
   case Kind::ThinDielectric:
     return static_cast<const ThinDielectricBxDF*>(ptr_)->f(wo, wi, mode);
   case Kind::Null:
@@ -947,10 +1874,16 @@ std::optional<BSDFSample> BxDF::Sample_f(
   switch (kind_) {
   case Kind::Diffuse:
     return static_cast<const DiffuseBxDF*>(ptr_)->Sample_f(wo, uc, u, mode, sampleFlags);
+  case Kind::DiffuseTransmission:
+    return static_cast<const DiffuseTransmissionBxDF*>(ptr_)->Sample_f(wo, uc, u, mode, sampleFlags);
   case Kind::Conductor:
     return static_cast<const ConductorBxDF*>(ptr_)->Sample_f(wo, uc, u, mode, sampleFlags);
   case Kind::Dielectric:
     return static_cast<const DielectricBxDF*>(ptr_)->Sample_f(wo, uc, u, mode, sampleFlags);
+  case Kind::CoatedDiffuse:
+    return static_cast<const CoatedDiffuseBxDF*>(ptr_)->Sample_f(wo, uc, u, mode, sampleFlags);
+  case Kind::CoatedConductor:
+    return static_cast<const CoatedConductorBxDF*>(ptr_)->Sample_f(wo, uc, u, mode, sampleFlags);
   case Kind::ThinDielectric:
     return static_cast<const ThinDielectricBxDF*>(ptr_)->Sample_f(wo, uc, u, mode, sampleFlags);
   case Kind::Null:
@@ -970,10 +1903,16 @@ Float BxDF::PDF(
   switch (kind_) {
   case Kind::Diffuse:
     return static_cast<const DiffuseBxDF*>(ptr_)->PDF(wo, wi, mode, sampleFlags);
+  case Kind::DiffuseTransmission:
+    return static_cast<const DiffuseTransmissionBxDF*>(ptr_)->PDF(wo, wi, mode, sampleFlags);
   case Kind::Conductor:
     return static_cast<const ConductorBxDF*>(ptr_)->PDF(wo, wi, mode, sampleFlags);
   case Kind::Dielectric:
     return static_cast<const DielectricBxDF*>(ptr_)->PDF(wo, wi, mode, sampleFlags);
+  case Kind::CoatedDiffuse:
+    return static_cast<const CoatedDiffuseBxDF*>(ptr_)->PDF(wo, wi, mode, sampleFlags);
+  case Kind::CoatedConductor:
+    return static_cast<const CoatedConductorBxDF*>(ptr_)->PDF(wo, wi, mode, sampleFlags);
   case Kind::ThinDielectric:
     return static_cast<const ThinDielectricBxDF*>(ptr_)->PDF(wo, wi, mode, sampleFlags);
   case Kind::Null:
@@ -988,10 +1927,16 @@ base::SampledSpectrum BxDF::rho() const {
   switch (kind_) {
   case Kind::Diffuse:
     return static_cast<const DiffuseBxDF*>(ptr_)->rho();
+  case Kind::DiffuseTransmission:
+    return static_cast<const DiffuseTransmissionBxDF*>(ptr_)->rho();
   case Kind::Conductor:
     return static_cast<const ConductorBxDF*>(ptr_)->rho();
   case Kind::Dielectric:
     return static_cast<const DielectricBxDF*>(ptr_)->rho();
+  case Kind::CoatedDiffuse:
+    return static_cast<const CoatedDiffuseBxDF*>(ptr_)->rho();
+  case Kind::CoatedConductor:
+    return static_cast<const CoatedConductorBxDF*>(ptr_)->rho();
   case Kind::ThinDielectric:
     return static_cast<const ThinDielectricBxDF*>(ptr_)->rho();
   case Kind::Null:
@@ -1006,11 +1951,20 @@ void BxDF::Regularize() {
   case Kind::Diffuse:
     static_cast<DiffuseBxDF*>(ptr_)->Regularize();
     return;
+  case Kind::DiffuseTransmission:
+    static_cast<DiffuseTransmissionBxDF*>(ptr_)->Regularize();
+    return;
   case Kind::Conductor:
     static_cast<ConductorBxDF*>(ptr_)->Regularize();
     return;
   case Kind::Dielectric:
     static_cast<DielectricBxDF*>(ptr_)->Regularize();
+    return;
+  case Kind::CoatedDiffuse:
+    static_cast<CoatedDiffuseBxDF*>(ptr_)->Regularize();
+    return;
+  case Kind::CoatedConductor:
+    static_cast<CoatedConductorBxDF*>(ptr_)->Regularize();
     return;
   case Kind::ThinDielectric:
     static_cast<ThinDielectricBxDF*>(ptr_)->Regularize();

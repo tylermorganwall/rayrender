@@ -216,6 +216,36 @@ test_that("legacy metal adapts to one spectral compatibility warning", {
   expect_equal(converted$material[[1]][[1]]$params$u_roughness$value, 0.2)
 })
 
+test_that("legacy glossy adapts to coated diffuse", {
+  legacy_scene = add_object(
+    sphere(
+      material = glossy(color = "#336699", gloss = 0.5, reflectance = 0.04)
+    )
+  )
+
+  expect_warning(
+    {
+      converted = legacy_scene_to_schema_v2(legacy_scene)
+    },
+    "coated diffuse"
+  )
+  report = attr(
+    suppressWarnings(legacy_scene_to_schema_v2(legacy_scene)),
+    "conversion_report"
+  )
+
+  expect_length(report$warnings, 1)
+  expect_equal(converted$material[[1]][[1]]$type, "coated_diffuse")
+  expect_s3_class(
+    converted$material[[1]][[1]]$params$reflectance,
+    "ray_spectrum"
+  )
+  expect_equal(converted$material[[1]][[1]]$params$u_roughness$value, 0.0625)
+  expect_equal(converted$material[[1]][[1]]$params$v_roughness$value, 0.0625)
+  expect_equal(converted$material[[1]][[1]]$params$eta$value, 1.5)
+  expect_false(converted$material[[1]][[1]]$params$remap_roughness)
+})
+
 test_that("legacy dielectric adapts to optical region metadata", {
   legacy_scene = add_object(
     sphere(material = dielectric(refraction = 1.33, priority = -2))

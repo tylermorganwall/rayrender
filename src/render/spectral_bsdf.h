@@ -102,6 +102,37 @@ private:
   base::SampledSpectrum reflectance_;
 };
 
+class DiffuseTransmissionBxDF {
+public:
+  DiffuseTransmissionBxDF() = default;
+  DiffuseTransmissionBxDF(
+    base::SampledSpectrum reflectance,
+    base::SampledSpectrum transmittance
+  );
+
+  BxDFFlags Flags() const;
+  base::SampledSpectrum f(const vec3f& wo, const vec3f& wi, TransportMode mode) const;
+  std::optional<BSDFSample> Sample_f(
+    const vec3f& wo,
+    Float uc,
+    point2f u,
+    TransportMode mode,
+    BxDFReflTransFlags sampleFlags = BxDFReflTransFlags::All
+  ) const;
+  Float PDF(
+    const vec3f& wo,
+    const vec3f& wi,
+    TransportMode mode,
+    BxDFReflTransFlags sampleFlags = BxDFReflTransFlags::All
+  ) const;
+  base::SampledSpectrum rho() const;
+  void Regularize();
+
+private:
+  base::SampledSpectrum reflectance_;
+  base::SampledSpectrum transmittance_;
+};
+
 class ConductorBxDF {
 public:
   ConductorBxDF() = default;
@@ -163,6 +194,88 @@ private:
   TrowbridgeReitzDistribution distribution_;
 };
 
+class CoatedDiffuseBxDF {
+public:
+  CoatedDiffuseBxDF() = default;
+  CoatedDiffuseBxDF(
+    DielectricBxDF top,
+    DiffuseBxDF bottom,
+    Float thickness,
+    base::SampledSpectrum albedo,
+    Float g,
+    int maxDepth,
+    int nSamples
+  );
+
+  BxDFFlags Flags() const;
+  base::SampledSpectrum f(const vec3f& wo, const vec3f& wi, TransportMode mode) const;
+  std::optional<BSDFSample> Sample_f(
+    const vec3f& wo,
+    Float uc,
+    point2f u,
+    TransportMode mode,
+    BxDFReflTransFlags sampleFlags = BxDFReflTransFlags::All
+  ) const;
+  Float PDF(
+    const vec3f& wo,
+    const vec3f& wi,
+    TransportMode mode,
+    BxDFReflTransFlags sampleFlags = BxDFReflTransFlags::All
+  ) const;
+  base::SampledSpectrum rho() const;
+  void Regularize();
+
+private:
+  DielectricBxDF top_;
+  DiffuseBxDF bottom_;
+  Float thickness_ = 1;
+  base::SampledSpectrum albedo_;
+  Float g_ = 0;
+  int maxDepth_ = 10;
+  int nSamples_ = 1;
+};
+
+class CoatedConductorBxDF {
+public:
+  CoatedConductorBxDF() = default;
+  CoatedConductorBxDF(
+    DielectricBxDF top,
+    ConductorBxDF bottom,
+    Float thickness,
+    base::SampledSpectrum albedo,
+    Float g,
+    int maxDepth,
+    int nSamples
+  );
+
+  BxDFFlags Flags() const;
+  base::SampledSpectrum f(const vec3f& wo, const vec3f& wi, TransportMode mode) const;
+  std::optional<BSDFSample> Sample_f(
+    const vec3f& wo,
+    Float uc,
+    point2f u,
+    TransportMode mode,
+    BxDFReflTransFlags sampleFlags = BxDFReflTransFlags::All
+  ) const;
+  Float PDF(
+    const vec3f& wo,
+    const vec3f& wi,
+    TransportMode mode,
+    BxDFReflTransFlags sampleFlags = BxDFReflTransFlags::All
+  ) const;
+  base::SampledSpectrum rho() const;
+  void Regularize();
+
+private:
+  DielectricBxDF top_;
+  ConductorBxDF bottom_;
+  Float thickness_ = 1;
+  base::SampledSpectrum albedo_;
+  Float g_ = 0;
+  int maxDepth_ = 10;
+  int nSamples_ = 1;
+};
+
 class ThinDielectricBxDF {
 public:
   ThinDielectricBxDF() = default;
@@ -214,8 +327,11 @@ class BxDF {
 public:
   BxDF() = default;
   explicit BxDF(DiffuseBxDF* bxdf);
+  explicit BxDF(DiffuseTransmissionBxDF* bxdf);
   explicit BxDF(ConductorBxDF* bxdf);
   explicit BxDF(DielectricBxDF* bxdf);
+  explicit BxDF(CoatedDiffuseBxDF* bxdf);
+  explicit BxDF(CoatedConductorBxDF* bxdf);
   explicit BxDF(ThinDielectricBxDF* bxdf);
   explicit BxDF(NullBxDF* bxdf);
 
@@ -242,8 +358,11 @@ private:
   enum class Kind {
     None,
     Diffuse,
+    DiffuseTransmission,
     Conductor,
     Dielectric,
+    CoatedDiffuse,
+    CoatedConductor,
     ThinDielectric,
     Null
   };
