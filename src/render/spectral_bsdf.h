@@ -163,6 +163,33 @@ private:
   TrowbridgeReitzDistribution distribution_;
 };
 
+class ThinDielectricBxDF {
+public:
+  ThinDielectricBxDF() = default;
+  explicit ThinDielectricBxDF(Float eta);
+
+  BxDFFlags Flags() const;
+  base::SampledSpectrum f(const vec3f& wo, const vec3f& wi, TransportMode mode) const;
+  std::optional<BSDFSample> Sample_f(
+    const vec3f& wo,
+    Float uc,
+    point2f u,
+    TransportMode mode,
+    BxDFReflTransFlags sampleFlags = BxDFReflTransFlags::All
+  ) const;
+  Float PDF(
+    const vec3f& wo,
+    const vec3f& wi,
+    TransportMode mode,
+    BxDFReflTransFlags sampleFlags = BxDFReflTransFlags::All
+  ) const;
+  base::SampledSpectrum rho() const;
+  void Regularize();
+
+private:
+  Float eta_ = 1;
+};
+
 class NullBxDF {
 public:
   BxDFFlags Flags() const;
@@ -189,6 +216,7 @@ public:
   explicit BxDF(DiffuseBxDF* bxdf);
   explicit BxDF(ConductorBxDF* bxdf);
   explicit BxDF(DielectricBxDF* bxdf);
+  explicit BxDF(ThinDielectricBxDF* bxdf);
   explicit BxDF(NullBxDF* bxdf);
 
   explicit operator bool() const;
@@ -216,6 +244,7 @@ private:
     Diffuse,
     Conductor,
     Dielectric,
+    ThinDielectric,
     Null
   };
 

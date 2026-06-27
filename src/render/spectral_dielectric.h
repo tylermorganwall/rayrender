@@ -2,9 +2,11 @@
 #define RAYRENDER_RENDER_SPECTRAL_DIELECTRIC_H
 
 #include "../base/base.h"
+#include "../base/spectrum.h"
 #include "../math/vectypes.h"
 
 #include <cstdint>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -16,6 +18,22 @@ class Scene;
 using RegionId = std::uint32_t;
 
 constexpr RegionId ExteriorRegionId = 0;
+
+using EtaSpectrumHandle = std::shared_ptr<const base::Spectrum>;
+
+EtaSpectrumHandle ConstantEtaSpectrum(Float eta);
+EtaSpectrumHandle SampledEtaSpectrum(
+  std::vector<Float> wavelengthNm,
+  std::vector<Float> eta
+);
+EtaSpectrumHandle CauchyEtaSpectrum(Float a, Float b = 0, Float c = 0);
+EtaSpectrumHandle SellmeierEtaSpectrum(std::vector<Float> b, std::vector<Float> c);
+EtaSpectrumHandle NamedEtaSpectrum(
+  const base::NamedSpectrumRegistry& registry,
+  const std::string& name
+);
+Float EvaluateEtaSpectrum(const EtaSpectrumHandle& spectrum, Float lambdaNm);
+bool EtaSpectrumIsConstant(const EtaSpectrumHandle& spectrum);
 
 enum class RegionSide {
   NegativeNormal,
@@ -33,6 +51,7 @@ struct DielectricRegion {
   RegionId id = ExteriorRegionId;
   int priority = 0;
   Float eta = 1;
+  EtaSpectrumHandle etaSpectrum = ConstantEtaSpectrum(1);
   base::MediumHandle medium = base::MediumHandle::Invalid();
   std::string debugName;
 };
@@ -58,8 +77,12 @@ struct ResolvedDielectricInterface {
   int insideRegionId = static_cast<int>(ExteriorRegionId);
   Float etaOutside = 1;
   Float etaInside = 1;
+  EtaSpectrumHandle etaOutsideSpectrum = ConstantEtaSpectrum(1);
+  EtaSpectrumHandle etaInsideSpectrum = ConstantEtaSpectrum(1);
   bool ratioIsConstant = true;
+  bool ratioIsUnity = true;
 
+  Float Eta(Float lambdaNm) const;
   Float Eta() const {
     return etaInside / etaOutside;
   }
@@ -85,6 +108,18 @@ public:
 
   RegionId AddRegion(
     Float eta,
+    int priority,
+    std::string debugName = std::string(),
+    base::MediumHandle medium = base::MediumHandle::Invalid()
+  );
+  RegionId AddRegion(
+    EtaSpectrumHandle eta,
+    int priority,
+    std::string debugName = std::string(),
+    base::MediumHandle medium = base::MediumHandle::Invalid()
+  );
+  RegionId AddRegion(
+    base::Spectrum eta,
     int priority,
     std::string debugName = std::string(),
     base::MediumHandle medium = base::MediumHandle::Invalid()

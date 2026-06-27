@@ -5,6 +5,7 @@
 #include "sampled_spectrum.h"
 
 #include <algorithm>
+#include <cmath>
 #include <cstdlib>
 #include <fstream>
 #include <functional>
@@ -148,6 +149,7 @@ public:
   SampledSpectrum Sample(const SampledWavelengths&) const { return SampledSpectrum(c_); }
 
   Float MaxValue() const { return c_; }
+  Float Value() const { return c_; }
 
   std::string ToString() const {
     std::ostringstream out;
@@ -482,6 +484,137 @@ private:
   Float normalizationFactor_ = 1;
 };
 
+class CauchyIORSpectrum {
+public:
+  CauchyIORSpectrum(Float a, Float b = 0, Float c = 0) : a_(a), b_(b), c_(c) {
+    if (!(a_ > 0) || !std::isfinite(a_) || !std::isfinite(b_) || !std::isfinite(c_)) {
+      throw std::invalid_argument("CauchyIORSpectrum coefficients must be finite with positive A");
+    }
+  }
+
+  Float operator()(Float lambdaNm) const {
+    if (!std::isfinite(lambdaNm) || lambdaNm == 0) {
+      throw std::invalid_argument("CauchyIORSpectrum wavelength must be finite and non-zero");
+    }
+    Float lambdaUm = lambdaNm * static_cast<Float>(1e-3);
+    Float lambda2 = lambdaUm * lambdaUm;
+    Float value = a_ + b_ / lambda2 + c_ / (lambda2 * lambda2);
+    if (!(value > 0) || !std::isfinite(value)) {
+      throw std::runtime_error("CauchyIORSpectrum evaluated to a non-positive or non-finite eta");
+    }
+    return value;
+  }
+
+  SampledSpectrum Sample(const SampledWavelengths& lambda) const {
+    SampledSpectrum result;
+    for (int i = 0; i < NSpectrumSamples; ++i) {
+      result[i] = (*this)(lambda[i]);
+    }
+    return result;
+  }
+
+  Float MaxValue() const {
+    Float maxValue = (*this)(LambdaMin);
+    for (int lambda = static_cast<int>(LambdaMin) + 1; lambda <= static_cast<int>(LambdaMax); ++lambda) {
+      maxValue = std::max(maxValue, (*this)(static_cast<Float>(lambda)));
+    }
+    return maxValue;
+  }
+
+  bool IsConstant() const { return b_ == 0 && c_ == 0; }
+  Float A() const { return a_; }
+  Float B() const { return b_; }
+  Float C() const { return c_; }
+
+  std::string ToString() const {
+    std::ostringstream out;
+    out << "[ CauchyIORSpectrum A: " << a_ << " B: " << b_ << " C: " << c_ << " ]";
+    return out.str();
+  }
+
+private:
+  Float a_ = 1;
+  Float b_ = 0;
+  Float c_ = 0;
+};
+
+class SellmeierIORSpectrum {
+public:
+  SellmeierIORSpectrum(std::vector<Float> b, std::vector<Float> c)
+    : b_(std::move(b)), c_(std::move(c)) {
+    if (b_.empty() || b_.size() != c_.size()) {
+      throw std::invalid_argument("SellmeierIORSpectrum requires equal non-empty B and C coefficient lists");
+    }
+    for (Float value : b_) {
+      if (!std::isfinite(value)) {
+        throw std::invalid_argument("SellmeierIORSpectrum B coefficients must be finite");
+      }
+    }
+    for (Float value : c_) {
+      if (!std::isfinite(value)) {
+        throw std::invalid_argument("SellmeierIORSpectrum C coefficients must be finite");
+      }
+    }
+  }
+
+  Float operator()(Float lambdaNm) const {
+    if (!std::isfinite(lambdaNm) || lambdaNm == 0) {
+      throw std::invalid_argument("SellmeierIORSpectrum wavelength must be finite and non-zero");
+    }
+    Float lambdaUm = lambdaNm * static_cast<Float>(1e-3);
+    Float lambda2 = lambdaUm * lambdaUm;
+    Float eta2 = 1;
+    for (std::size_t i = 0; i < b_.size(); ++i) {
+      Float denominator = lambda2 - c_[i];
+      if (denominator == 0) {
+        throw std::runtime_error("SellmeierIORSpectrum hit a resonance denominator");
+      }
+      eta2 += b_[i] * lambda2 / denominator;
+    }
+    if (!(eta2 > 0) || !std::isfinite(eta2)) {
+      throw std::runtime_error("SellmeierIORSpectrum evaluated to a non-positive or non-finite eta squared");
+    }
+    return std::sqrt(eta2);
+  }
+
+  SampledSpectrum Sample(const SampledWavelengths& lambda) const {
+    SampledSpectrum result;
+    for (int i = 0; i < NSpectrumSamples; ++i) {
+      result[i] = (*this)(lambda[i]);
+    }
+    return result;
+  }
+
+  Float MaxValue() const {
+    Float maxValue = (*this)(LambdaMin);
+    for (int lambda = static_cast<int>(LambdaMin) + 1; lambda <= static_cast<int>(LambdaMax); ++lambda) {
+      maxValue = std::max(maxValue, (*this)(static_cast<Float>(lambda)));
+    }
+    return maxValue;
+  }
+
+  bool IsConstantOne() const {
+    for (Float value : b_) {
+      if (value != 0) {
+        return false;
+      }
+    }
+    return true;
+  }
+  const std::vector<Float>& B() const { return b_; }
+  const std::vector<Float>& C() const { return c_; }
+
+  std::string ToString() const {
+    std::ostringstream out;
+    out << "[ SellmeierIORSpectrum terms: " << b_.size() << " ]";
+    return out.str();
+  }
+
+private:
+  std::vector<Float> b_;
+  std::vector<Float> c_;
+};
+
 class Spectrum {
 public:
   Spectrum() = default;
@@ -489,6 +622,8 @@ public:
   Spectrum(PiecewiseLinearSpectrum spectrum) : spectrum_(std::move(spectrum)) {}
   Spectrum(DenselySampledSpectrum spectrum) : spectrum_(std::move(spectrum)) {}
   Spectrum(BlackbodySpectrum spectrum) : spectrum_(std::move(spectrum)) {}
+  Spectrum(CauchyIORSpectrum spectrum) : spectrum_(std::move(spectrum)) {}
+  Spectrum(SellmeierIORSpectrum spectrum) : spectrum_(std::move(spectrum)) {}
 
   bool IsValid() const { return !std::holds_alternative<std::monostate>(spectrum_); }
   explicit operator bool() const { return IsValid(); }
@@ -544,6 +679,16 @@ public:
     );
   }
 
+  template <typename T>
+  bool Is() const {
+    return std::holds_alternative<T>(spectrum_);
+  }
+
+  template <typename T>
+  const T* GetIf() const {
+    return std::get_if<T>(&spectrum_);
+  }
+
   std::string ToString() const {
     if (!IsValid()) {
       return "(nullptr)";
@@ -562,7 +707,15 @@ public:
   }
 
 private:
-  std::variant<std::monostate, ConstantSpectrum, PiecewiseLinearSpectrum, DenselySampledSpectrum, BlackbodySpectrum>
+  std::variant<
+    std::monostate,
+    ConstantSpectrum,
+    PiecewiseLinearSpectrum,
+    DenselySampledSpectrum,
+    BlackbodySpectrum,
+    CauchyIORSpectrum,
+    SellmeierIORSpectrum
+  >
     spectrum_;
 };
 

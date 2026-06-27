@@ -3808,12 +3808,31 @@ Complete pbrt dielectric scattering and hero-wavelength termination for effectiv
 
 ### Gate
 
-- pbrt single-interface smooth and rough dielectric comparisons pass.
-- dispersive prism/reference scenes agree with pbrt statistically and chromatically.
-- skipped dispersive region tests prove no wavelength termination.
-- active dispersive reflection still shows secondary termination, matching pbrt.
-- rough reflection/transmission state commits pass.
-- thin dielectric never changes region membership.
+- [x] pbrt single-interface smooth and rough dielectric comparison tests pass in isolated BSDF/material harnesses.
+- [ ] rendered dispersive prism/reference scenes agree with pbrt statistically and chromatically; this remains blocked on the later schema-v2 compiler/reference-scene runner.
+- [x] skipped dispersive region tests prove no wavelength termination.
+- [x] active dispersive reflection still shows secondary termination, matching pbrt.
+- [x] rough reflection/transmission state commits pass.
+- [x] thin dielectric never changes region membership.
+
+### Completion record
+
+Completed the isolated PR 18 implementation by extending `src/base/spectrum.h`,
+`src/render/spectral_dielectric.*`, `src/render/spectral_bsdf.*`,
+`src/materials/spectral_material.*`, and `src/render/spectral_integrator.*`,
+updating the PR 17 dielectric regression, and adding
+`tools/spectral-tests/pr18-dielectric-tests.cpp` plus
+`tools/spectral-tests/run-pr18-dielectric-tests.R`.
+
+Gate evidence:
+
+- `Rscript tools/spectral-tests/run-pr18-dielectric-tests.R`
+- `Rscript tools/spectral-tests/run-pr17-dielectric-tests.R`
+
+PR 18 remains isolated from the production renderer and from participating media.
+Absorption media remain assigned to PR 20, and full rendered pbrt prism/reference
+comparisons remain pending until the spectral scene compiler and reference-scene
+runner are available.
 
 ## PR 19: Port remaining surface materials and closure composition
 

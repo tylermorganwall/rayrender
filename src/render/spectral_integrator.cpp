@@ -214,6 +214,24 @@ bool CommitDielectricTransition(
   }
 }
 
+template <typename Stats>
+void RecordWavelengthTermination(
+  materials::MaterialType materialType,
+  bool wasTerminated,
+  const base::SampledWavelengths& lambda,
+  Stats* stats
+) {
+  if (stats == nullptr || wasTerminated || !lambda.SecondaryTerminated()) {
+    return;
+  }
+  ++stats->wavelengthTerminations;
+  if (materialType == materials::MaterialType::Dielectric) {
+    ++stats->dielectricWavelengthTerminations;
+  } else if (materialType == materials::MaterialType::ThinDielectric) {
+    ++stats->thinDielectricWavelengthTerminations;
+  }
+}
+
 DielectricPathState InitialDielectricState(
   const DielectricRegionTable* regionTable,
   const Scene& scene,
@@ -558,7 +576,10 @@ base::SampledSpectrum RandomWalkIntegrator::Li(
     }
 
     scratch.Reset();
+    materials::MaterialType materialType = material->Type();
+    bool wasTerminated = lambda.SecondaryTerminated();
     render::BSDF bsdf = material->GetBSDF(textureEvaluator, materialCtx, lambda, scratch);
+    RecordWavelengthTermination(materialType, wasTerminated, lambda, stats);
     if (!bsdf) {
       if (stats) {
         ++stats->nullBSDFs;
@@ -994,7 +1015,10 @@ base::SampledSpectrum PathIntegrator::Li(
     }
 
     scratch.Reset();
+    materials::MaterialType materialType = material->Type();
+    bool wasTerminated = lambda.SecondaryTerminated();
     BSDF bsdf = material->GetBSDF(textureEvaluator, materialCtx, lambda, scratch);
+    RecordWavelengthTermination(materialType, wasTerminated, lambda, stats);
     if (stats) {
       ++stats->materialClosures;
     }

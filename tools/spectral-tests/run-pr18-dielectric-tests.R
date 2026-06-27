@@ -51,19 +51,23 @@ compile_test = function(label, repo_root, extra_flags = character()) {
   cxx_flags = split_command(config_value("CXX20FLAGS", ""))
   cpp_flags = split_command(config_value("CPPFLAGS", ""))
 
-  build_dir = tempfile(paste0("rayrender-pr13-", label, "-"))
+  build_dir = tempfile(paste0("rayrender-pr18-", label, "-"))
   dir.create(build_dir)
-  executable = file.path(build_dir, paste0("pr13-material-tests-", label))
+  executable = file.path(build_dir, paste0("pr18-dielectric-tests-", label))
 
   sources = file.path(
     repo_root,
     c(
-      "tools/spectral-tests/pr13-material-tests.cpp",
+      "tools/spectral-tests/pr18-dielectric-tests.cpp",
+      "src/render/spectral_integrator.cpp",
+      "src/render/spectral_camera.cpp",
+      "src/render/spectral_film.cpp",
+      "src/render/spectral_light.cpp",
+      "src/render/spectral_scene.cpp",
+      "src/render/spectral_dielectric.cpp",
       "src/materials/spectral_material.cpp",
       "src/materials/spectral_texture.cpp",
       "src/render/spectral_bsdf.cpp",
-      "src/render/spectral_dielectric.cpp",
-      "src/render/spectral_scene.cpp",
       "src/math/perlin.cpp",
       "src/math/rng.cpp"
     )
@@ -94,13 +98,13 @@ compile_test = function(label, repo_root, extra_flags = character()) {
     executable
   )
 
-  message("Compiling PR13 Material tests (", label, ")")
+  message("Compiling PR18 Dielectric tests (", label, ")")
   run_command(cxx, args)
   executable
 }
 
 run_test = function(label, executable, extra_env = character()) {
-  message("Running PR13 Material tests (", label, ")")
+  message("Running PR18 Dielectric tests (", label, ")")
   run_command(executable, character(), env = extra_env)
 }
 
@@ -113,7 +117,7 @@ repo_root = normalizePath(
 normal_executable = compile_test("normal", repo_root)
 run_test("normal", normal_executable)
 
-if (!isTRUE(as.logical(Sys.getenv("RAYRENDER_PR13_SKIP_SANITIZER", "false")))) {
+if (!isTRUE(as.logical(Sys.getenv("RAYRENDER_PR18_SKIP_SANITIZER", "false")))) {
   leak_detection = if (identical(Sys.info()[["sysname"]], "Darwin")) {
     "0"
   } else {

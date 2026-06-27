@@ -55,6 +55,8 @@ const char* MaterialTypeName(MaterialType type) {
     return "Conductor";
   case MaterialType::Dielectric:
     return "Dielectric";
+  case MaterialType::ThinDielectric:
+    return "ThinDielectric";
   case MaterialType::Interface:
     return "Interface";
   }
@@ -374,6 +376,29 @@ Float DielectricMaterial::ClampUnit(Float value) {
   return Clamp(value, 0, 1);
 }
 
+ThinDielectricMaterial::ThinDielectricMaterial(render::EtaSpectrumHandle eta)
+  : eta_(std::move(eta)) {
+  if (!eta_) {
+    throw std::invalid_argument("ThinDielectricMaterial requires an eta spectrum");
+  }
+}
+
+bool ThinDielectricMaterial::HasAlpha() const {
+  return false;
+}
+
+bool ThinDielectricMaterial::HasBump() const {
+  return false;
+}
+
+MaterialTextureRequirements ThinDielectricMaterial::TextureRequirements() const {
+  return {};
+}
+
+const render::EtaSpectrumHandle& ThinDielectricMaterial::Eta() const {
+  return eta_;
+}
+
 bool InterfaceMaterial::HasAlpha() const {
   return false;
 }
@@ -402,6 +427,10 @@ Material Material::Dielectric(DielectricMaterial material) {
   return Material(std::move(material));
 }
 
+Material Material::ThinDielectric(ThinDielectricMaterial material) {
+  return Material(std::move(material));
+}
+
 Material Material::Interface() {
   return Material(InterfaceMaterial());
 }
@@ -411,6 +440,8 @@ Material::Material(DiffuseMaterial material) : material_(std::move(material)) {}
 Material::Material(ConductorMaterial material) : material_(std::move(material)) {}
 
 Material::Material(DielectricMaterial material) : material_(std::move(material)) {}
+
+Material::Material(ThinDielectricMaterial material) : material_(std::move(material)) {}
 
 Material::Material(InterfaceMaterial material) : material_(material) {}
 
@@ -427,6 +458,9 @@ MaterialType Material::Type() const {
   }
   if (std::holds_alternative<DielectricMaterial>(material_)) {
     return MaterialType::Dielectric;
+  }
+  if (std::holds_alternative<ThinDielectricMaterial>(material_)) {
+    return MaterialType::ThinDielectric;
   }
   if (std::holds_alternative<InterfaceMaterial>(material_)) {
     return MaterialType::Interface;

@@ -338,19 +338,16 @@ void TestDielectricMaterial() {
   }
   Check(missingInterfaceFailed, "dielectric material requires resolved interface");
 
-  bool roughFailed = false;
-  try {
-    Material rough = Material::Dielectric(DielectricMaterial::FromRoughness(
-      FloatTexture::Constant(static_cast<Float>(0.2)),
-      false
-    ));
-    SampledWavelengths roughLambda = TestWavelengths();
-    ScratchBuffer roughScratch(1024);
-    (void)rough.GetBSDF(evaluator, ctx, roughLambda, roughScratch);
-  } catch (const std::exception&) {
-    roughFailed = true;
-  }
-  Check(roughFailed, "rough dielectric is deferred");
+  Material rough = Material::Dielectric(DielectricMaterial::FromRoughness(
+    FloatTexture::Constant(static_cast<Float>(0.2)),
+    false
+  ));
+  SampledWavelengths roughLambda = TestWavelengths();
+  ScratchBuffer roughScratch(1024);
+  BSDF roughBsdf = rough.GetBSDF(evaluator, ctx, roughLambda, roughScratch);
+  Check(IsGlossy(roughBsdf.Flags()), "rough dielectric material creates glossy BSDF");
+  Check(IsReflective(roughBsdf.Flags()), "rough dielectric material remains reflective");
+  Check(IsTransmissive(roughBsdf.Flags()), "rough dielectric material remains transmissive");
 }
 
 void TestIndexMatchedPathTraversal() {

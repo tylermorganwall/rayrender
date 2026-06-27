@@ -67,6 +67,9 @@ struct RandomWalkRenderStats {
   std::uint64_t dielectricScatteringInterfaces = 0;
   std::uint64_t dielectricTransmissionCommits = 0;
   std::uint64_t dielectricStateErrors = 0;
+  std::uint64_t wavelengthTerminations = 0;
+  std::uint64_t dielectricWavelengthTerminations = 0;
+  std::uint64_t thinDielectricWavelengthTerminations = 0;
 };
 
 class RandomWalkWorkerState {
@@ -176,6 +179,9 @@ struct PathRenderStats {
   std::uint64_t dielectricTransmissionCommits = 0;
   std::uint64_t dielectricStateErrors = 0;
   std::uint64_t copiedVisibilityRegionTraversals = 0;
+  std::uint64_t wavelengthTerminations = 0;
+  std::uint64_t dielectricWavelengthTerminations = 0;
+  std::uint64_t thinDielectricWavelengthTerminations = 0;
 };
 
 bool RecordSpectralRadianceDiagnostics(

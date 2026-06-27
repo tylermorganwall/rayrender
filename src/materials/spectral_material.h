@@ -23,6 +23,7 @@ enum class MaterialType {
   Diffuse,
   Conductor,
   Dielectric,
+  ThinDielectric,
   Interface
 };
 
@@ -325,15 +326,11 @@ public:
       uRoughness = render::TrowbridgeReitzDistribution::RoughnessToAlpha(uRoughness);
       vRoughness = render::TrowbridgeReitzDistribution::RoughnessToAlpha(vRoughness);
     }
-    render::TrowbridgeReitzDistribution distribution(uRoughness, vRoughness);
-    if (!distribution.EffectivelySmooth()) {
-      throw std::runtime_error("rough spectral dielectric materials are deferred to PR 18");
-    }
-    Float eta = ctx.dielectric->Eta();
+    Float eta = ctx.dielectric->Eta(lambda[0]);
     if (!(eta > 0) || !std::isfinite(eta)) {
       throw std::runtime_error("resolved dielectric eta must be positive finite");
     }
-    return BxDF(eta, distribution);
+    return BxDF(eta, render::TrowbridgeReitzDistribution(uRoughness, vRoughness));
   }
 
   template <typename TextureEvaluator>
@@ -383,6 +380,56 @@ private:
   std::optional<FloatTexture> bump_;
 };
 
+class ThinDielectricMaterial {
+public:
+  using BxDF = render::ThinDielectricBxDF;
+
+  explicit ThinDielectricMaterial(
+    render::EtaSpectrumHandle eta = render::ConstantEtaSpectrum(static_cast<Float>(1.5))
+  );
+
+  template <typename TextureEvaluator>
+  BxDF GetBxDF(
+    const TextureEvaluator&,
+    const MaterialEvalContext&,
+    base::SampledWavelengths& lambda
+  ) const {
+    if (!render::EtaSpectrumIsConstant(eta_)) {
+      lambda.TerminateSecondary();
+    }
+    Float eta = render::EvaluateEtaSpectrum(eta_, lambda[0]);
+    if (!(eta > 0) || !std::isfinite(eta)) {
+      throw std::runtime_error("thin dielectric eta must be positive finite");
+    }
+    return BxDF(eta);
+  }
+
+  template <typename TextureEvaluator>
+  MaterialAlphaResult EvaluateAlpha(
+    const TextureEvaluator&,
+    const MaterialEvalContext&,
+    Float = 0
+  ) const {
+    return {};
+  }
+
+  template <typename TextureEvaluator>
+  BumpMapResult EvaluateBump(
+    const TextureEvaluator&,
+    const MaterialEvalContext& ctx
+  ) const {
+    return DefaultBumpMapResult(ctx);
+  }
+
+  bool HasAlpha() const;
+  bool HasBump() const;
+  MaterialTextureRequirements TextureRequirements() const;
+  const render::EtaSpectrumHandle& Eta() const;
+
+private:
+  render::EtaSpectrumHandle eta_;
+};
+
 class InterfaceMaterial {
 public:
   using BxDF = render::NullBxDF;
@@ -426,6 +473,9 @@ public:
   static Material Diffuse(DiffuseMaterial material);
   static Material Conductor(ConductorMaterial material);
   static Material Dielectric(DielectricMaterial material = DielectricMaterial::Smooth());
+  static Material ThinDielectric(
+    ThinDielectricMaterial material = ThinDielectricMaterial()
+  );
   static Material Interface();
 
   bool IsValid() const;
@@ -506,6 +556,7 @@ private:
   explicit Material(DiffuseMaterial material);
   explicit Material(ConductorMaterial material);
   explicit Material(DielectricMaterial material);
+  explicit Material(ThinDielectricMaterial material);
   explicit Material(InterfaceMaterial material);
 
   using Variant = std::variant<
@@ -513,6 +564,7 @@ private:
     DiffuseMaterial,
     ConductorMaterial,
     DielectricMaterial,
+    ThinDielectricMaterial,
     InterfaceMaterial
   >;
 

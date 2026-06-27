@@ -518,10 +518,47 @@ base::SampledSpectrum DielectricBxDF::f(
   const vec3f& wi,
   TransportMode mode
 ) const {
-  (void)wo;
-  (void)wi;
-  (void)mode;
-  return base::SampledSpectrum(0);
+  if (eta_ == 1 || distribution_.EffectivelySmooth()) {
+    return base::SampledSpectrum(0);
+  }
+
+  Float cosThetaO = CosTheta(wo);
+  Float cosThetaI = CosTheta(wi);
+  bool reflect = cosThetaI * cosThetaO > 0;
+  Float etap = 1;
+  if (!reflect) {
+    etap = cosThetaO > 0 ? eta_ : (static_cast<Float>(1) / eta_);
+  }
+
+  vec3f wm = wi * etap + wo;
+  if (cosThetaI == 0 || cosThetaO == 0 || wm.squared_length() == 0) {
+    return base::SampledSpectrum(0);
+  }
+  wm = FaceForward(UnitOrFallback(wm, vec3f(0, 0, 1)), vec3f(0, 0, 1));
+
+  if (dot(wm, wi) * cosThetaI < 0 || dot(wm, wo) * cosThetaO < 0) {
+    return base::SampledSpectrum(0);
+  }
+
+  Float F = FrDielectric(dot(wo, wm), eta_);
+  if (reflect) {
+    Float value =
+      distribution_.D(wm) * distribution_.G(wo, wi) * F /
+      std::abs(static_cast<Float>(4) * cosThetaI * cosThetaO);
+    return base::SampledSpectrum(value);
+  }
+
+  Float denom = Sqr(dot(wi, wm) + dot(wo, wm) / etap) * cosThetaI * cosThetaO;
+  if (denom == 0) {
+    return base::SampledSpectrum(0);
+  }
+  Float ft =
+    distribution_.D(wm) * (static_cast<Float>(1) - F) * distribution_.G(wo, wi) *
+    std::abs(dot(wi, wm) * dot(wo, wm) / denom);
+  if (mode == TransportMode::Radiance) {
+    ft /= Sqr(etap);
+  }
+  return base::SampledSpectrum(ft);
 }
 
 std::optional<BSDFSample> DielectricBxDF::Sample_f(
@@ -531,13 +568,217 @@ std::optional<BSDFSample> DielectricBxDF::Sample_f(
   TransportMode mode,
   BxDFReflTransFlags sampleFlags
 ) const {
-  (void)u;
-  if (!distribution_.EffectivelySmooth()) {
+  if (eta_ == 1 || distribution_.EffectivelySmooth()) {
+    Float R = FrDielectric(CosTheta(wo), eta_);
+    Float T = static_cast<Float>(1) - R;
+    Float pr = R;
+    Float pt = T;
+    if (!base::HasFlag(sampleFlags, BxDFReflTransFlags::Reflection)) {
+      pr = 0;
+    }
+    if (!base::HasFlag(sampleFlags, BxDFReflTransFlags::Transmission)) {
+      pt = 0;
+    }
+    if (pr == 0 && pt == 0) {
+      return {};
+    }
+
+    if (uc < pr / (pr + pt)) {
+      vec3f wi(-wo.xyz.x, -wo.xyz.y, wo.xyz.z);
+      Float absCosTheta = AbsCosTheta(wi);
+      if (absCosTheta == 0) {
+        return {};
+      }
+      return BSDFSample{
+        base::SampledSpectrum(R / absCosTheta),
+        wi,
+        pr / (pr + pt),
+        BxDFFlags::SpecularReflection
+      };
+    }
+
+    vec3f wi;
+    Float etap = 1;
+    if (!Refract(wo, normal3f(0, 0, 1), eta_, &etap, &wi)) {
+      return {};
+    }
+    Float absCosTheta = AbsCosTheta(wi);
+    if (absCosTheta == 0) {
+      return {};
+    }
+    base::SampledSpectrum ft(T / absCosTheta);
+    if (mode == TransportMode::Radiance) {
+      ft /= (etap * etap);
+    }
+    return BSDFSample{
+      ft,
+      wi,
+      pt / (pr + pt),
+      BxDFFlags::SpecularTransmission,
+      etap
+    };
+  }
+
+  vec3f wm = distribution_.Sample_wm(wo, u);
+  Float R = FrDielectric(dot(wo, wm), eta_);
+  Float T = static_cast<Float>(1) - R;
+  Float pr = R;
+  Float pt = T;
+  if (!base::HasFlag(sampleFlags, BxDFReflTransFlags::Reflection)) {
+    pr = 0;
+  }
+  if (!base::HasFlag(sampleFlags, BxDFReflTransFlags::Transmission)) {
+    pt = 0;
+  }
+  if (pr == 0 && pt == 0) {
     return {};
   }
 
-  Float R = FrDielectric(CosTheta(wo), eta_);
+  Float pdf = 0;
+  if (uc < pr / (pr + pt)) {
+    vec3f wi = Reflect(wo, wm);
+    if (!SameHemisphere(wo, wi)) {
+      return {};
+    }
+    Float absDotWoWm = AbsDot(wo, wm);
+    if (absDotWoWm == 0) {
+      return {};
+    }
+    pdf = distribution_.PDF(wo, wm) /
+          (static_cast<Float>(4) * absDotWoWm) * pr / (pr + pt);
+    base::SampledSpectrum f(
+      distribution_.D(wm) * distribution_.G(wo, wi) * R /
+      (static_cast<Float>(4) * CosTheta(wi) * CosTheta(wo))
+    );
+    return BSDFSample{f, wi, pdf, BxDFFlags::GlossyReflection};
+  }
+
+  Float etap = 1;
+  vec3f wi;
+  bool tir = !Refract(wo, normal3f(wm.xyz.x, wm.xyz.y, wm.xyz.z), eta_, &etap, &wi);
+  if (tir || SameHemisphere(wo, wi) || wi.xyz.z == 0) {
+    return {};
+  }
+  Float denom = Sqr(dot(wi, wm) + dot(wo, wm) / etap);
+  if (denom == 0) {
+    return {};
+  }
+  Float dwmDwi = AbsDot(wi, wm) / denom;
+  pdf = distribution_.PDF(wo, wm) * dwmDwi * pt / (pr + pt);
+  base::SampledSpectrum ft(
+    T * distribution_.D(wm) * distribution_.G(wo, wi) *
+    std::abs(
+      dot(wi, wm) * dot(wo, wm) /
+      (CosTheta(wi) * CosTheta(wo) * denom)
+    )
+  );
+  if (mode == TransportMode::Radiance) {
+    ft /= Sqr(etap);
+  }
+  return BSDFSample{ft, wi, pdf, BxDFFlags::GlossyTransmission, etap};
+}
+
+Float DielectricBxDF::PDF(
+  const vec3f& wo,
+  const vec3f& wi,
+  TransportMode mode,
+  BxDFReflTransFlags sampleFlags
+) const {
+  (void)mode;
+  if (eta_ == 1 || distribution_.EffectivelySmooth()) {
+    return 0;
+  }
+
+  Float cosThetaO = CosTheta(wo);
+  Float cosThetaI = CosTheta(wi);
+  bool reflect = cosThetaI * cosThetaO > 0;
+  Float etap = 1;
+  if (!reflect) {
+    etap = cosThetaO > 0 ? eta_ : (static_cast<Float>(1) / eta_);
+  }
+
+  vec3f wm = wi * etap + wo;
+  if (cosThetaI == 0 || cosThetaO == 0 || wm.squared_length() == 0) {
+    return 0;
+  }
+  wm = FaceForward(UnitOrFallback(wm, vec3f(0, 0, 1)), vec3f(0, 0, 1));
+
+  if (dot(wm, wi) * cosThetaI < 0 || dot(wm, wo) * cosThetaO < 0) {
+    return 0;
+  }
+
+  Float R = FrDielectric(dot(wo, wm), eta_);
   Float T = static_cast<Float>(1) - R;
+  Float pr = R;
+  Float pt = T;
+  if (!base::HasFlag(sampleFlags, BxDFReflTransFlags::Reflection)) {
+    pr = 0;
+  }
+  if (!base::HasFlag(sampleFlags, BxDFReflTransFlags::Transmission)) {
+    pt = 0;
+  }
+  if (pr == 0 && pt == 0) {
+    return 0;
+  }
+
+  if (reflect) {
+    Float absDotWoWm = AbsDot(wo, wm);
+    if (absDotWoWm == 0) {
+      return 0;
+    }
+    return distribution_.PDF(wo, wm) /
+           (static_cast<Float>(4) * absDotWoWm) * pr / (pr + pt);
+  }
+
+  Float denom = Sqr(dot(wi, wm) + dot(wo, wm) / etap);
+  if (denom == 0) {
+    return 0;
+  }
+  Float dwmDwi = AbsDot(wi, wm) / denom;
+  return distribution_.PDF(wo, wm) * dwmDwi * pt / (pr + pt);
+}
+
+base::SampledSpectrum DielectricBxDF::rho() const {
+  return base::SampledSpectrum(1);
+}
+
+void DielectricBxDF::Regularize() {
+  distribution_.Regularize();
+}
+
+ThinDielectricBxDF::ThinDielectricBxDF(Float eta) : eta_(eta) {}
+
+BxDFFlags ThinDielectricBxDF::Flags() const {
+  return BxDFFlags::Reflection | BxDFFlags::Transmission | BxDFFlags::Specular;
+}
+
+base::SampledSpectrum ThinDielectricBxDF::f(
+  const vec3f& wo,
+  const vec3f& wi,
+  TransportMode mode
+) const {
+  (void)wo;
+  (void)wi;
+  (void)mode;
+  return base::SampledSpectrum(0);
+}
+
+std::optional<BSDFSample> ThinDielectricBxDF::Sample_f(
+  const vec3f& wo,
+  Float uc,
+  point2f u,
+  TransportMode mode,
+  BxDFReflTransFlags sampleFlags
+) const {
+  (void)u;
+  (void)mode;
+  Float R = FrDielectric(AbsCosTheta(wo), eta_);
+  Float T = static_cast<Float>(1) - R;
+  if (R < 1) {
+    R += Sqr(T) * R / (static_cast<Float>(1) - Sqr(R));
+    T = static_cast<Float>(1) - R;
+  }
+
   Float pr = R;
   Float pt = T;
   if (!base::HasFlag(sampleFlags, BxDFReflTransFlags::Reflection)) {
@@ -564,29 +805,20 @@ std::optional<BSDFSample> DielectricBxDF::Sample_f(
     };
   }
 
-  vec3f wi;
-  Float etap = 1;
-  if (!Refract(wo, normal3f(0, 0, 1), eta_, &etap, &wi)) {
-    return {};
-  }
+  vec3f wi = -wo;
   Float absCosTheta = AbsCosTheta(wi);
   if (absCosTheta == 0) {
     return {};
   }
-  base::SampledSpectrum ft(T / absCosTheta);
-  if (mode == TransportMode::Radiance) {
-    ft /= (etap * etap);
-  }
   return BSDFSample{
-    ft,
+    base::SampledSpectrum(T / absCosTheta),
     wi,
     pt / (pr + pt),
-    BxDFFlags::SpecularTransmission,
-    etap
+    BxDFFlags::SpecularTransmission
   };
 }
 
-Float DielectricBxDF::PDF(
+Float ThinDielectricBxDF::PDF(
   const vec3f& wo,
   const vec3f& wi,
   TransportMode mode,
@@ -599,13 +831,11 @@ Float DielectricBxDF::PDF(
   return 0;
 }
 
-base::SampledSpectrum DielectricBxDF::rho() const {
+base::SampledSpectrum ThinDielectricBxDF::rho() const {
   return base::SampledSpectrum(1);
 }
 
-void DielectricBxDF::Regularize() {
-  distribution_.Regularize();
-}
+void ThinDielectricBxDF::Regularize() {}
 
 BxDFFlags NullBxDF::Flags() const {
   return BxDFFlags::Unset;
@@ -658,6 +888,9 @@ BxDF::BxDF(ConductorBxDF* bxdf) : kind_(bxdf ? Kind::Conductor : Kind::None), pt
 
 BxDF::BxDF(DielectricBxDF* bxdf) : kind_(bxdf ? Kind::Dielectric : Kind::None), ptr_(bxdf) {}
 
+BxDF::BxDF(ThinDielectricBxDF* bxdf)
+  : kind_(bxdf ? Kind::ThinDielectric : Kind::None), ptr_(bxdf) {}
+
 BxDF::BxDF(NullBxDF* bxdf) : kind_(bxdf ? Kind::Null : Kind::None), ptr_(bxdf) {}
 
 BxDF::operator bool() const {
@@ -672,6 +905,8 @@ BxDFFlags BxDF::Flags() const {
     return static_cast<const ConductorBxDF*>(ptr_)->Flags();
   case Kind::Dielectric:
     return static_cast<const DielectricBxDF*>(ptr_)->Flags();
+  case Kind::ThinDielectric:
+    return static_cast<const ThinDielectricBxDF*>(ptr_)->Flags();
   case Kind::Null:
     return static_cast<const NullBxDF*>(ptr_)->Flags();
   case Kind::None:
@@ -692,6 +927,8 @@ base::SampledSpectrum BxDF::f(
     return static_cast<const ConductorBxDF*>(ptr_)->f(wo, wi, mode);
   case Kind::Dielectric:
     return static_cast<const DielectricBxDF*>(ptr_)->f(wo, wi, mode);
+  case Kind::ThinDielectric:
+    return static_cast<const ThinDielectricBxDF*>(ptr_)->f(wo, wi, mode);
   case Kind::Null:
     return static_cast<const NullBxDF*>(ptr_)->f(wo, wi, mode);
   case Kind::None:
@@ -714,6 +951,8 @@ std::optional<BSDFSample> BxDF::Sample_f(
     return static_cast<const ConductorBxDF*>(ptr_)->Sample_f(wo, uc, u, mode, sampleFlags);
   case Kind::Dielectric:
     return static_cast<const DielectricBxDF*>(ptr_)->Sample_f(wo, uc, u, mode, sampleFlags);
+  case Kind::ThinDielectric:
+    return static_cast<const ThinDielectricBxDF*>(ptr_)->Sample_f(wo, uc, u, mode, sampleFlags);
   case Kind::Null:
     return static_cast<const NullBxDF*>(ptr_)->Sample_f(wo, uc, u, mode, sampleFlags);
   case Kind::None:
@@ -735,6 +974,8 @@ Float BxDF::PDF(
     return static_cast<const ConductorBxDF*>(ptr_)->PDF(wo, wi, mode, sampleFlags);
   case Kind::Dielectric:
     return static_cast<const DielectricBxDF*>(ptr_)->PDF(wo, wi, mode, sampleFlags);
+  case Kind::ThinDielectric:
+    return static_cast<const ThinDielectricBxDF*>(ptr_)->PDF(wo, wi, mode, sampleFlags);
   case Kind::Null:
     return static_cast<const NullBxDF*>(ptr_)->PDF(wo, wi, mode, sampleFlags);
   case Kind::None:
@@ -751,6 +992,8 @@ base::SampledSpectrum BxDF::rho() const {
     return static_cast<const ConductorBxDF*>(ptr_)->rho();
   case Kind::Dielectric:
     return static_cast<const DielectricBxDF*>(ptr_)->rho();
+  case Kind::ThinDielectric:
+    return static_cast<const ThinDielectricBxDF*>(ptr_)->rho();
   case Kind::Null:
   case Kind::None:
     return base::SampledSpectrum(0);
@@ -768,6 +1011,9 @@ void BxDF::Regularize() {
     return;
   case Kind::Dielectric:
     static_cast<DielectricBxDF*>(ptr_)->Regularize();
+    return;
+  case Kind::ThinDielectric:
+    static_cast<ThinDielectricBxDF*>(ptr_)->Regularize();
     return;
   case Kind::Null:
     static_cast<NullBxDF*>(ptr_)->Regularize();
