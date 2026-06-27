@@ -3455,10 +3455,22 @@ Separate geometry from material and light binding sufficiently for pbrt-style in
 
 ### Gate
 
-- intersection distances, UVs, normals, and instance transforms match legacy geometry tests.
-- Primitive bindings are correct for shared shapes/materials.
-- a shape can be used with a nonemissive Material and a separate AreaLight.
-- ray-origin offset tests avoid immediate self-intersections.
+- [x] intersection distances, UVs, normals, and instance transforms match legacy geometry tests.
+- [x] Primitive bindings are correct for shared shapes/materials.
+- [x] a shape can be used with a nonemissive Material and a separate AreaLight.
+- [x] ray-origin offset tests avoid immediate self-intersections.
+
+### Completion record
+
+Completed in PR 10 by `src/render/spectral_scene.h`,
+`src/render/spectral_scene.cpp`, `src/render/spectral_legacy_shape.cpp`,
+`tools/spectral-tests/pr10-scene-tests.cpp`, and
+`tools/spectral-tests/run-pr10-scene-tests.R`.
+
+Gate evidence:
+
+- `Rscript tools/spectral-tests/run-pr10-scene-tests.R`
+- `tools/codex/install-local.sh`
 
 ## PR 11: Add explicit Light, LightSampler, and InfiniteLight
 
