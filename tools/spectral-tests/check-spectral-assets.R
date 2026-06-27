@@ -67,17 +67,21 @@ build_source_package = function(root) {
     stdout = TRUE,
     stderr = TRUE
   )
-  tarball = grep("[.]tar[.]gz$", output, value = TRUE)
-  if (length(tarball) == 0) {
+  tarball = list.files(tmp, pattern = "[.]tar[.]gz$", full.names = TRUE)
+  if (length(tarball) != 1) {
     stop(
       "R CMD build did not report a source tarball:\n",
       paste(output, collapse = "\n")
     )
   }
-  normalizePath(
-    file.path(tmp, basename(tarball[[length(tarball)]])),
-    mustWork = TRUE
-  )
+  persistent_tarball = tempfile("rayrender-source-", fileext = ".tar.gz")
+  if (!file.copy(tarball[[1]], persistent_tarball, overwrite = TRUE)) {
+    stop(
+      "Unable to preserve source tarball for asset inspection",
+      call. = FALSE
+    )
+  }
+  normalizePath(persistent_tarball, mustWork = TRUE)
 }
 
 tar_entries = function(tarball) {

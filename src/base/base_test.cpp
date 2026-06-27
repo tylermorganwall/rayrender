@@ -163,4 +163,31 @@ context("PR3 sampled spectrum and wavelength packets") {
     expect_true(visible.PDF(0) == Approx(originalPDF0 / NSpectrumSamples));
   }
 }
+
+context("PR4 spectrum representations and named assets") {
+  test_that("spectrum implementations evaluate and validate setup data") {
+    ConstantSpectrum constant(2.5f);
+    expect_true(constant(410) == Approx(2.5));
+
+    PiecewiseLinearSpectrum piecewise({400, 500, 600}, {1, 3, 7});
+    expect_true(piecewise(450) == Approx(2));
+    expect_true(piecewise(399) == Approx(0));
+
+    SpectrumDataPolicy sortedPolicy;
+    sortedPolicy.order = SpectrumOrderPolicy::Sort;
+    PiecewiseLinearSpectrum sorted({600, 400, 500}, {7, 1, 3}, sortedPolicy);
+    expect_true(sorted(450) == Approx(2));
+
+    expect_error(PiecewiseLinearSpectrum({500, 400}, {1, 2}));
+    expect_error(PiecewiseLinearSpectrum({400, 400}, {1, 2}));
+    expect_error(PiecewiseLinearSpectrum({400, 500}, {1, -1}));
+
+    DenselySampledSpectrum dense(400, 402, {10, 20, 30});
+    expect_true(dense(401.51f) == Approx(30));
+
+    expect_true(Blackbody(483, 6000) == Approx(3.1849e13).epsilon(0.001));
+    BlackbodySpectrum blackbody(5000);
+    expect_true(blackbody.MaxValue() == Approx(1));
+  }
+}
 #endif

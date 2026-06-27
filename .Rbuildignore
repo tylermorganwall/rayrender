@@ -33,6 +33,7 @@
 ^CLAUDE.md$
 ^todo.txt$
 ^src/pbrt$
+^mmp$
 ^nanovdb$
 ^LICENSE\.md$
 ^cache$

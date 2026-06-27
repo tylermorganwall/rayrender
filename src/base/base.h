@@ -5,6 +5,7 @@
 #include "color_types.h"
 #include "sampled_spectrum.h"
 #include "sampling.h"
+#include "spectrum.h"
 #include "scratch_buffer.h"
 #include "tagged_handle.h"
 
