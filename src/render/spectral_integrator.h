@@ -81,6 +81,8 @@ bool RecordSpectralRadianceDiagnostics(
   RandomWalkRenderStats* stats
 );
 
+Float PowerHeuristic(int nf, Float fPdf, int ng, Float gPdf);
+
 void ValidateRandomWalkScene(
   const Scene& scene,
   const SpectralLightTable& lightTable,
@@ -119,6 +121,94 @@ RandomWalkRenderStats RenderRandomWalk(
   const SpectralCamera& camera,
   Film& film,
   const RandomWalkRenderOptions& options = {}
+);
+
+struct PathRenderOptions {
+  int pixelSamples = 1;
+  int maxDepth = 5;
+  std::uint64_t seed = 0;
+  std::size_t scratchBufferBytes = 4096;
+  bool jitterCameraSamples = true;
+  bool generateDifferentials = false;
+  bool rejectNonVacuum = true;
+  bool regularize = false;
+  bool russianRoulette = true;
+  bool sampleDirectLighting = true;
+  bool sampleBSDF = true;
+  int maxNullSkips = 64;
+};
+
+struct PathRenderStats {
+  std::uint64_t pixelSamples = 0;
+  std::uint64_t cameraRays = 0;
+  std::uint64_t raysTraced = 0;
+  std::uint64_t surfaceHits = 0;
+  std::uint64_t materialClosures = 0;
+  std::uint64_t directLightSamples = 0;
+  std::uint64_t directLightContributions = 0;
+  std::uint64_t deltaLightSamples = 0;
+  std::uint64_t bsdfSamples = 0;
+  std::uint64_t areaLightHits = 0;
+  std::uint64_t infiniteLightHits = 0;
+  std::uint64_t emitterHitMIS = 0;
+  std::uint64_t nullSkips = 0;
+  std::uint64_t maxDepthTerminations = 0;
+  std::uint64_t russianRouletteChecks = 0;
+  std::uint64_t russianRouletteTerminations = 0;
+  std::uint64_t invalidSamples = 0;
+  std::uint64_t invalidPDFs = 0;
+  std::uint64_t occludedShadowRays = 0;
+  std::uint64_t nonFiniteRadiance = 0;
+  std::uint64_t negativeRadiance = 0;
+  std::uint64_t unsupportedMediumInteractions = 0;
+};
+
+bool RecordSpectralRadianceDiagnostics(
+  const base::SampledSpectrum& spectrum,
+  PathRenderStats* stats
+);
+
+class PathIntegrator {
+public:
+  PathIntegrator(
+    const Scene& scene,
+    const materials::SpectralMaterialTable& materialTable,
+    const SpectralLightTable& lightTable,
+    PathRenderOptions options = {}
+  );
+
+  base::SampledSpectrum Li(
+    const Ray& ray,
+    base::SampledWavelengths& lambda,
+    SpectralRandomSampler& sampler,
+    base::ScratchBuffer& scratch,
+    SpectralVisibleSurface* visibleSurface = nullptr,
+    PathRenderStats* stats = nullptr
+  ) const;
+
+private:
+  base::SampledSpectrum SampleLd(
+    const SurfaceInteraction& interaction,
+    const BSDF& bsdf,
+    base::SampledWavelengths& lambda,
+    SpectralRandomSampler& sampler,
+    PathRenderStats* stats
+  ) const;
+
+  const Scene* scene_ = nullptr;
+  const materials::SpectralMaterialTable* materialTable_ = nullptr;
+  const SpectralLightTable* lightTable_ = nullptr;
+  UniformLightSampler lightSampler_;
+  PathRenderOptions options_;
+};
+
+PathRenderStats RenderPath(
+  const Scene& scene,
+  const materials::SpectralMaterialTable& materialTable,
+  SpectralLightTable& lightTable,
+  const SpectralCamera& camera,
+  Film& film,
+  const PathRenderOptions& options = {}
 );
 
 } // namespace render

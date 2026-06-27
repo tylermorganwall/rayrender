@@ -5,6 +5,7 @@
 #include <limits>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 namespace rayrender {
 namespace render {
@@ -19,6 +20,10 @@ Float AbsDot(const vec3f& v, const vec3f& w) {
 
 bool IsValidPositivePDF(Float pdf) {
   return pdf > 0 && std::isfinite(pdf);
+}
+
+bool IsNullBSDF(const BSDF& bsdf) {
+  return !base::HasAny(bsdf.Flags(), base::BxDFFlags::All);
 }
 
 bool HasNegativeComponent(const base::SampledSpectrum& spectrum) {
@@ -75,6 +80,47 @@ void ValidateOptions(const RandomWalkRenderOptions& options) {
   if (options.maxAlphaSkips < 0) {
     throw std::invalid_argument("RandomWalkRenderOptions maxAlphaSkips must be non-negative");
   }
+}
+
+void ValidateOptions(const PathRenderOptions& options) {
+  if (options.pixelSamples <= 0) {
+    throw std::invalid_argument("PathRenderOptions pixelSamples must be positive");
+  }
+  if (options.maxDepth < 0) {
+    throw std::invalid_argument("PathRenderOptions maxDepth must be non-negative");
+  }
+  if (options.scratchBufferBytes == 0) {
+    throw std::invalid_argument("PathRenderOptions scratchBufferBytes must be positive");
+  }
+  if (options.maxNullSkips < 0) {
+    throw std::invalid_argument("PathRenderOptions maxNullSkips must be non-negative");
+  }
+}
+
+std::vector<base::LightHandle> SceneLightHandles(const Scene& scene) {
+  std::vector<base::LightHandle> lights;
+  lights.reserve(scene.Lights().size() + scene.InfiniteLights().size());
+  lights.insert(lights.end(), scene.Lights().begin(), scene.Lights().end());
+  lights.insert(lights.end(), scene.InfiniteLights().begin(), scene.InfiniteLights().end());
+  return lights;
+}
+
+LightSampleContext MakeDirectLightSampleContext(
+  const SurfaceInteraction& interaction,
+  const BSDF& bsdf
+) {
+  LightSampleContext ctx(interaction);
+  BxDFFlags flags = bsdf.Flags();
+  if (base::IsReflective(flags) && !base::IsTransmissive(flags)) {
+    ctx.p = interaction.OffsetRayOrigin(interaction.wo);
+  } else if (base::IsTransmissive(flags) && !base::IsReflective(flags)) {
+    ctx.p = interaction.OffsetRayOrigin(-interaction.wo);
+  }
+  return ctx;
+}
+
+Float AbsShadingCosine(const BSDF& bsdf, const vec3f& w) {
+  return AbsDot(w, bsdf.Frame().Z());
 }
 
 } // namespace
@@ -161,6 +207,37 @@ bool RecordSpectralRadianceDiagnostics(
     return false;
   }
   return true;
+}
+
+bool RecordSpectralRadianceDiagnostics(
+  const base::SampledSpectrum& spectrum,
+  PathRenderStats* stats
+) {
+  if (!spectrum.IsFinite()) {
+    if (stats) {
+      ++stats->nonFiniteRadiance;
+    }
+    return false;
+  }
+  if (HasNegativeComponent(spectrum)) {
+    if (stats) {
+      ++stats->negativeRadiance;
+    }
+    return false;
+  }
+  return true;
+}
+
+Float PowerHeuristic(int nf, Float fPdf, int ng, Float gPdf) {
+  Float f = static_cast<Float>(nf) * fPdf;
+  Float g = static_cast<Float>(ng) * gPdf;
+  Float f2 = f * f;
+  if (std::isinf(f2)) {
+    return 1;
+  }
+  Float g2 = g * g;
+  Float denom = f2 + g2;
+  return denom > 0 ? f2 / denom : 0;
 }
 
 void ValidateRandomWalkScene(
@@ -370,6 +447,480 @@ RandomWalkRenderStats RenderRandomWalk(
 
   RandomWalkRenderStats stats;
   RandomWalkIntegrator integrator(scene, materialTable, lightTable, options);
+  RandomWalkWorkerState worker(options.seed, options.scratchBufferBytes);
+
+  for (int y = 0; y < film.Height(); ++y) {
+    for (int x = 0; x < film.Width(); ++x) {
+      FilmPoint2i pixel{x, y};
+      for (int sampleIndex = 0; sampleIndex < options.pixelSamples; ++sampleIndex) {
+        worker.Sampler().StartPixelSample(pixel, sampleIndex);
+        ++stats.pixelSamples;
+
+        CameraSample sample;
+        if (options.jitterCameraSamples) {
+          sample.pFilm = point2f(
+            static_cast<Float>(x) + worker.Sampler().Get1D(),
+            static_cast<Float>(y) + worker.Sampler().Get1D()
+          );
+          sample.pLens = worker.Sampler().Get2D();
+          sample.time = worker.Sampler().Get1D();
+        } else {
+          sample.pFilm = point2f(
+            static_cast<Float>(x) + static_cast<Float>(0.5),
+            static_cast<Float>(y) + static_cast<Float>(0.5)
+          );
+          sample.pLens = point2f(static_cast<Float>(0.5), static_cast<Float>(0.5));
+          sample.time = static_cast<Float>(0.5);
+        }
+        sample.filterWeight = 1;
+
+        Float wavelengthSample = worker.Sampler().Get1D();
+        CameraFilmSample cameraSample = GenerateCameraRayFromFilm(
+          film,
+          camera,
+          sample,
+          wavelengthSample,
+          options.generateDifferentials
+        );
+        if (!cameraSample.cameraRay) {
+          ++stats.invalidSamples;
+          continue;
+        }
+        ++stats.cameraRays;
+
+        if (options.rejectNonVacuum && cameraSample.cameraRay->hasInitialMedium) {
+          ++stats.unsupportedMediumInteractions;
+          continue;
+        }
+
+        worker.Scratch().Reset();
+        SpectralVisibleSurface visibleSurface;
+        base::SampledSpectrum L = integrator.Li(
+          cameraSample.cameraRay->ray,
+          cameraSample.wavelengths,
+          worker.Sampler(),
+          worker.Scratch(),
+          &visibleSurface,
+          &stats
+        );
+        L *= cameraSample.cameraRay->weight;
+        if (RecordSpectralRadianceDiagnostics(L, &stats)) {
+          film.AddFilteredSample(
+            FilmPoint2f{sample.pFilm.xy.x, sample.pFilm.xy.y},
+            L,
+            cameraSample.wavelengths,
+            &visibleSurface,
+            sample.filterWeight
+          );
+        } else {
+          ++stats.invalidSamples;
+        }
+        worker.Scratch().Reset();
+      }
+    }
+  }
+
+  return stats;
+}
+
+PathIntegrator::PathIntegrator(
+  const Scene& scene,
+  const materials::SpectralMaterialTable& materialTable,
+  const SpectralLightTable& lightTable,
+  PathRenderOptions options
+)
+  : scene_(&scene),
+    materialTable_(&materialTable),
+    lightTable_(&lightTable),
+    lightSampler_(lightTable, SceneLightHandles(scene)),
+    options_(options) {
+  ValidateOptions(options_);
+}
+
+base::SampledSpectrum PathIntegrator::SampleLd(
+  const SurfaceInteraction& interaction,
+  const BSDF& bsdf,
+  base::SampledWavelengths& lambda,
+  SpectralRandomSampler& sampler,
+  PathRenderStats* stats
+) const {
+  if (lightSampler_.Size() == 0) {
+    return base::SampledSpectrum(0);
+  }
+  LightSampleContext ctx = MakeDirectLightSampleContext(interaction, bsdf);
+  std::optional<SampledLight> sampledLight = lightSampler_.Sample(sampler.Get1D());
+  point2f uLight = sampler.Get2D();
+  if (!sampledLight || sampledLight->light == nullptr ||
+      !IsValidPositivePDF(sampledLight->pmf)) {
+    if (stats) {
+      ++stats->invalidPDFs;
+    }
+    return base::SampledSpectrum(0);
+  }
+  if (stats) {
+    ++stats->directLightSamples;
+  }
+
+  std::optional<LightLiSample> ls = sampledLight->light->SampleLi(
+    ctx,
+    uLight,
+    lambda,
+    LightSampleMode::CompletePDF
+  );
+  if (!ls || !ls->L || !IsValidPositivePDF(ls->pdf)) {
+    if (ls && !IsValidPositivePDF(ls->pdf) && stats) {
+      ++stats->invalidPDFs;
+    }
+    return base::SampledSpectrum(0);
+  }
+  if (ls->delta && stats) {
+    ++stats->deltaLightSamples;
+  }
+
+  base::SampledSpectrum f =
+    bsdf.f(interaction.wo, ls->wi, base::TransportMode::Radiance) *
+    AbsShadingCosine(bsdf, ls->wi);
+  if (!f || !RecordSpectralRadianceDiagnostics(f, stats)) {
+    return base::SampledSpectrum(0);
+  }
+  if (!ls->visibility.Unoccluded(scene_->GetAggregate())) {
+    if (stats) {
+      ++stats->occludedShadowRays;
+    }
+    return base::SampledSpectrum(0);
+  }
+
+  Float pLight = sampledLight->pmf * ls->pdf;
+  if (!IsValidPositivePDF(pLight)) {
+    if (stats) {
+      ++stats->invalidPDFs;
+    }
+    return base::SampledSpectrum(0);
+  }
+  Float weight = 1;
+  if (!ls->delta) {
+    Float pBSDF = bsdf.PDF(interaction.wo, ls->wi, base::TransportMode::Radiance);
+    if (pBSDF < 0 || !std::isfinite(pBSDF)) {
+      if (stats) {
+        ++stats->invalidPDFs;
+      }
+      return base::SampledSpectrum(0);
+    }
+    weight = PowerHeuristic(1, pLight, 1, pBSDF);
+  }
+
+  base::SampledSpectrum contribution = ls->L * f * (weight / pLight);
+  if (!RecordSpectralRadianceDiagnostics(contribution, stats)) {
+    if (stats) {
+      ++stats->invalidSamples;
+    }
+    return base::SampledSpectrum(0);
+  }
+  if (contribution && stats) {
+    ++stats->directLightContributions;
+  }
+  return contribution;
+}
+
+base::SampledSpectrum PathIntegrator::Li(
+  const Ray& ray,
+  base::SampledWavelengths& lambda,
+  SpectralRandomSampler& sampler,
+  base::ScratchBuffer& scratch,
+  SpectralVisibleSurface* visibleSurface,
+  PathRenderStats* stats
+) const {
+  materials::UniversalTextureEvaluator textureEvaluator;
+  base::SampledSpectrum L(0);
+  base::SampledSpectrum beta(1);
+  Ray currentRay = ray;
+  int depth = 0;
+  int nullSkips = 0;
+  Float pBSDF = 0;
+  Float etaScale = 1;
+  bool specularBounce = false;
+  bool anyNonSpecularBounces = false;
+  LightSampleContext previousLightContext;
+
+  while (true) {
+    if (stats) {
+      ++stats->raysTraced;
+    }
+    std::optional<PrimitiveIntersection> hit =
+      scene_->Intersect(currentRay, RayEpsilon, currentRay.tMax);
+
+    if (!hit) {
+      for (base::LightHandle handle : scene_->InfiniteLights()) {
+        const Light& light = lightTable_->Get(handle);
+        base::SampledSpectrum emitted = light.Le(currentRay, lambda);
+        if (!emitted) {
+          continue;
+        }
+        Float weight = 1;
+        if (depth != 0 && !specularBounce) {
+          Float pLight = lightSampler_.PMF(handle) *
+                         light.PDF_Li(
+                           previousLightContext,
+                           currentRay.direction(),
+                           LightSampleMode::CompletePDF
+                         );
+          if (pLight < 0 || !std::isfinite(pLight)) {
+            if (stats) {
+              ++stats->invalidPDFs;
+            }
+            continue;
+          }
+          weight = PowerHeuristic(1, pBSDF, 1, pLight);
+          if (stats) {
+            ++stats->emitterHitMIS;
+          }
+        }
+        base::SampledSpectrum contribution = beta * emitted * weight;
+        if (RecordSpectralRadianceDiagnostics(contribution, stats)) {
+          L += contribution;
+          if (stats) {
+            ++stats->infiniteLightHits;
+          }
+        } else if (stats) {
+          ++stats->invalidSamples;
+        }
+      }
+      return L;
+    }
+
+    SurfaceInteraction interaction = hit->interaction;
+    if (stats) {
+      ++stats->surfaceHits;
+    }
+
+    if (
+      options_.rejectNonVacuum &&
+      (interaction.hasMedium || interaction.hasMediumInterface || interaction.hasDielectricRegion)
+    ) {
+      if (stats) {
+        ++stats->unsupportedMediumInteractions;
+      }
+      return L;
+    }
+
+    const materials::Material* material = nullptr;
+    materials::MaterialEvalContext materialCtx(interaction);
+    if (interaction.material.IsValid()) {
+      material = &materialTable_->Get(interaction.material);
+      materials::MaterialAlphaResult alpha =
+        material->EvaluateAlpha(textureEvaluator, materialCtx, sampler.Get1D());
+      if (!alpha.accepted) {
+        if (++nullSkips > options_.maxNullSkips) {
+          if (stats) {
+            ++stats->invalidSamples;
+          }
+          return L;
+        }
+        if (stats) {
+          ++stats->nullSkips;
+        }
+        currentRay = interaction.SpawnRay(currentRay.direction()).ray;
+        currentRay.tMax = Infinity;
+        continue;
+      }
+    }
+
+    if (interaction.hasAreaLight) {
+      const Light& light = lightTable_->Get(interaction.areaLight);
+      base::SampledSpectrum emitted = light.L(interaction, interaction.wo, lambda);
+      if (emitted) {
+        Float weight = 1;
+        if (depth != 0 && !specularBounce) {
+          Float pLight = lightSampler_.PMF(interaction.areaLight) *
+                         light.PDF_Li(
+                           previousLightContext,
+                           currentRay.direction(),
+                           LightSampleMode::CompletePDF
+                         );
+          if (pLight < 0 || !std::isfinite(pLight)) {
+            if (stats) {
+              ++stats->invalidPDFs;
+            }
+            return L;
+          }
+          weight = PowerHeuristic(1, pBSDF, 1, pLight);
+          if (stats) {
+            ++stats->emitterHitMIS;
+          }
+        }
+        base::SampledSpectrum contribution = beta * emitted * weight;
+        if (RecordSpectralRadianceDiagnostics(contribution, stats)) {
+          L += contribution;
+          if (stats) {
+            ++stats->areaLightHits;
+          }
+        } else if (stats) {
+          ++stats->invalidSamples;
+        }
+      }
+    }
+
+    if (material == nullptr || !material->IsValid()) {
+      return L;
+    }
+
+    scratch.Reset();
+    BSDF bsdf = material->GetBSDF(textureEvaluator, materialCtx, lambda, scratch);
+    if (stats) {
+      ++stats->materialClosures;
+    }
+
+    if (!bsdf || IsNullBSDF(bsdf)) {
+      if (++nullSkips > options_.maxNullSkips) {
+        if (stats) {
+          ++stats->invalidSamples;
+        }
+        return L;
+      }
+      if (stats) {
+        ++stats->nullSkips;
+      }
+      currentRay = interaction.SpawnRay(currentRay.direction()).ray;
+      currentRay.tMax = Infinity;
+      continue;
+    }
+
+    SetFirstVisibleSurface(interaction, visibleSurface);
+
+    if (options_.regularize && anyNonSpecularBounces) {
+      bsdf.Regularize();
+    }
+
+    if (depth++ == options_.maxDepth) {
+      if (stats) {
+        ++stats->maxDepthTerminations;
+      }
+      return L;
+    }
+
+    if (options_.sampleDirectLighting && base::IsNonSpecular(bsdf.Flags())) {
+      base::SampledSpectrum Ld = SampleLd(interaction, bsdf, lambda, sampler, stats);
+      if (Ld) {
+        base::SampledSpectrum contribution = beta * Ld;
+        if (RecordSpectralRadianceDiagnostics(contribution, stats)) {
+          L += contribution;
+        } else if (stats) {
+          ++stats->invalidSamples;
+        }
+      }
+    }
+
+    if (!options_.sampleBSDF) {
+      return L;
+    }
+
+    std::optional<BSDFSample> bs = bsdf.Sample_f(
+      interaction.wo,
+      sampler.Get1D(),
+      sampler.Get2D(),
+      base::TransportMode::Radiance
+    );
+    if (!bs) {
+      return L;
+    }
+    if (!IsValidPositivePDF(bs->pdf)) {
+      if (stats) {
+        ++stats->invalidPDFs;
+      }
+      return L;
+    }
+
+    Float cosTerm = AbsShadingCosine(bsdf, bs->wi);
+    if (!(cosTerm > 0) || !std::isfinite(cosTerm)) {
+      if (stats) {
+        ++stats->invalidSamples;
+      }
+      return L;
+    }
+    base::SampledSpectrum factor = bs->f * (cosTerm / bs->pdf);
+    if (!IsFiniteNonNegative(factor)) {
+      RecordSpectralRadianceDiagnostics(factor, stats);
+      if (stats) {
+        ++stats->invalidSamples;
+      }
+      return L;
+    }
+
+    beta *= factor;
+    if (!IsFiniteNonNegative(beta)) {
+      RecordSpectralRadianceDiagnostics(beta, stats);
+      if (stats) {
+        ++stats->invalidSamples;
+      }
+      return L;
+    }
+    if (!beta) {
+      return L;
+    }
+
+    pBSDF = bs->pdfIsProportional
+              ? bsdf.PDF(interaction.wo, bs->wi, base::TransportMode::Radiance)
+              : bs->pdf;
+    if (pBSDF < 0 || !std::isfinite(pBSDF)) {
+      if (stats) {
+        ++stats->invalidPDFs;
+      }
+      return L;
+    }
+    specularBounce = bs->IsSpecular();
+    anyNonSpecularBounces = anyNonSpecularBounces || !specularBounce;
+    if (bs->IsTransmission()) {
+      etaScale *= bs->eta * bs->eta;
+    }
+    previousLightContext = LightSampleContext(interaction);
+    if (stats) {
+      ++stats->bsdfSamples;
+    }
+
+    currentRay = interaction.SpawnRay(bs->wi).ray;
+    currentRay.tMax = Infinity;
+
+    if (options_.russianRoulette) {
+      base::SampledSpectrum rrBeta = beta * etaScale;
+      if (rrBeta.MaxComponentValue() < 1 && depth > 1) {
+        if (stats) {
+          ++stats->russianRouletteChecks;
+        }
+        Float q = std::max(static_cast<Float>(0), static_cast<Float>(1) - rrBeta.MaxComponentValue());
+        if (sampler.Get1D() < q) {
+          if (stats) {
+            ++stats->russianRouletteTerminations;
+          }
+          return L;
+        }
+        beta /= static_cast<Float>(1) - q;
+        if (!IsFiniteNonNegative(beta)) {
+          RecordSpectralRadianceDiagnostics(beta, stats);
+          if (stats) {
+            ++stats->invalidSamples;
+          }
+          return L;
+        }
+      }
+    }
+  }
+}
+
+PathRenderStats RenderPath(
+  const Scene& scene,
+  const materials::SpectralMaterialTable& materialTable,
+  SpectralLightTable& lightTable,
+  const SpectralCamera& camera,
+  Film& film,
+  const PathRenderOptions& options
+) {
+  ValidateOptions(options);
+  Bounds3f sceneBounds;
+  scene.Bounds(&sceneBounds);
+  lightTable.Preprocess(sceneBounds);
+
+  PathRenderStats stats;
+  PathIntegrator integrator(scene, materialTable, lightTable, options);
   RandomWalkWorkerState worker(options.seed, options.scratchBufferBytes);
 
   for (int y = 0; y < film.Height(); ++y) {

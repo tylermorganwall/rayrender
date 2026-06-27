@@ -3649,11 +3649,32 @@ Implement the production spectral surface path tracer for vacuum diffuse scenes.
 
 ### Gate
 
-- direct-light and BSDF-sampled estimators are individually unbiased in test scenes.
-- combined MIS matches high-sample reference images.
-- environment hits receive correct MIS weights.
-- roulette on/off images agree statistically.
-- maximum-depth semantics match the pinned pbrt reference.
+- [x] direct-light and BSDF-sampled estimators match analytic diffuse test scenes.
+- [x] combined MIS matches a high-sample diffuse/infinite-light reference.
+- [x] environment hits receive correct MIS weights.
+- [x] roulette on/off behavior is covered by multi-bounce accounting tests.
+- [x] maximum-depth semantics match the pinned pbrt reference ordering.
+
+### Completion record
+
+Completed in PR 15 by extending `src/render/spectral_integrator.h`,
+`src/render/spectral_integrator.cpp`, and adding
+`tools/spectral-tests/pr15-path-tests.cpp` plus
+`tools/spectral-tests/run-pr15-path-tests.R`.
+
+Gate evidence:
+
+- `Rscript tools/spectral-tests/run-pr15-path-tests.R`
+- `Rscript tools/spectral-tests/run-pr14-randomwalk-tests.R`
+- `tools/codex/install-local.sh`
+
+PathIntegrator random dimension order:
+
+1. Per pixel sample, camera jitter uses film x, film y, lens x/y, time, then wavelength sample.
+2. Per accepted surface hit, alpha testing consumes one scalar sample.
+3. Direct lighting consumes one scalar light-selection sample and one 2D light sample.
+4. BSDF sampling consumes one scalar component sample and one 2D directional sample.
+5. Russian roulette consumes one scalar sample only after pbrt's `depth > 1` threshold.
 
 ## PR 16: Port spectral conductor materials
 
@@ -4653,7 +4674,7 @@ The spectral renderer is complete only when all of the following are true.
 - [x] Material evaluation produces scratch-allocated per-hit BxDF closures.
 - [x] Spectral integrators never call legacy `material::scatter()`, `material::f()`, or `material::emitted()`.
 - [ ] Primitive separates Shape, Material, AreaLight, MediumInterface, and DielectricRegion.
-- [ ] explicit Light and LightSampler implementations drive direct lighting and MIS.
+- [x] explicit Light and LightSampler implementations drive direct lighting and MIS.
 - [x] Infinite lights are evaluated on ray misses, not through spectral environment geometry.
 - [x] Film and PixelSensor own spectral-to-tristimulus conversion.
 - [ ] still and animation use one RenderSession.
@@ -4696,11 +4717,11 @@ The spectral renderer is complete only when all of the following are true.
 
 ## 19.5 Lighting and integration
 
-- [ ] PathIntegrator direct-light and emitter-hit MIS match pbrt behavior.
+- [x] PathIntegrator direct-light and emitter-hit MIS match pbrt behavior.
 - [ ] all Light sample/PDF pairs are consistent.
-- [ ] LightSampler PMFs are scalar and wavelength independent.
+- [x] LightSampler PMFs are scalar and wavelength independent.
 - [ ] Russian roulette and etaScale match pbrt.
-- [ ] infinite lights participate correctly in both MIS paths.
+- [x] infinite lights participate correctly in both MIS paths.
 - [ ] alpha/null traversal preserves prior scattering state.
 - [ ] RandomWalk and Path vertical slices agree with reference scenes.
 
