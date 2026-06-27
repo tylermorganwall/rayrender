@@ -3535,11 +3535,22 @@ Port pbrt's scattering contracts and coordinate conventions independent of Mater
 
 ### Gate
 
-- diffuse `f` and PDF integrate to expected reflectance.
-- microfacet distribution sampling/PDF agreement passes chi-square or equivalent tests.
-- Fresnel functions match high-precision references.
-- reciprocity/transport-mode tests pass where applicable.
-- no legacy cosine convention is imported.
+- [x] diffuse `f` and PDF integrate to expected reflectance.
+- [x] microfacet distribution sampling/PDF agreement passes chi-square or equivalent tests.
+- [x] Fresnel functions match high-precision references.
+- [x] reciprocity/transport-mode tests pass where applicable.
+- [x] no legacy cosine convention is imported.
+
+### Completion record
+
+Completed in PR 12 by `src/render/spectral_bsdf.h`,
+`src/render/spectral_bsdf.cpp`, `tools/spectral-tests/pr12-bsdf-tests.cpp`,
+and `tools/spectral-tests/run-pr12-bsdf-tests.R`.
+
+Gate evidence:
+
+- `Rscript tools/spectral-tests/run-pr12-bsdf-tests.R`
+- `tools/codex/install-local.sh`
 
 ## PR 13: Add pbrt-style Material closures and diffuse material
 
@@ -4637,9 +4648,9 @@ The spectral renderer is complete only when all of the following are true.
 ## 19.3 Materials and BSDFs
 
 - [ ] Diffuse, conductor, dielectric, thin dielectric, coated, and hair models required by rayrender are ported or explicitly unsupported.
-- [ ] BxDF conventions, flags, PDFs, eta, and TransportMode match pbrt.
+- [x] BxDF conventions, flags, PDFs, eta, and TransportMode match pbrt.
 - [ ] conductor eta/k and dielectric eta are spectral.
-- [ ] roughness remapping and microfacet sampling match pbrt.
+- [x] roughness remapping and microfacet sampling match pbrt.
 - [ ] no new spectral Material combines unrelated lobes through unvalidated ad hoc probabilities.
 - [ ] emissive behavior is represented by Light.
 - [ ] bump/normal mapping cannot alter geometric medium/region transitions.
