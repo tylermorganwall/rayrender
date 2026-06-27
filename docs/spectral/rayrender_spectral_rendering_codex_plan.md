@@ -3498,11 +3498,22 @@ Port pbrt's light architecture before adding MIS.
 
 ### Gate
 
-- `SampleLi` histograms agree with each light's PDF.
-- area-light solid-angle PDFs agree with shape sampling.
-- infinite-light PDF includes the correct spherical Jacobian and transform.
-- sampled and directly evaluated emission agree.
-- light-selection PMFs sum to one and do not depend on the current wavelength packet.
+- [x] `SampleLi` histograms agree with each light's PDF.
+- [x] area-light solid-angle PDFs agree with shape sampling.
+- [x] infinite-light PDF includes the correct spherical Jacobian and transform.
+- [x] sampled and directly evaluated emission agree.
+- [x] light-selection PMFs sum to one and do not depend on the current wavelength packet.
+
+### Completion record
+
+Completed in PR 11 by `src/render/spectral_light.h`,
+`src/render/spectral_light.cpp`, `tools/spectral-tests/pr11-light-tests.cpp`,
+and `tools/spectral-tests/run-pr11-light-tests.R`.
+
+Gate evidence:
+
+- `Rscript tools/spectral-tests/run-pr11-light-tests.R`
+- `tools/codex/install-local.sh`
 
 ## PR 12: Add the BxDF/BSDF foundation
 
