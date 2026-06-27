@@ -3376,11 +3376,22 @@ Establish the correct spectral-to-tristimulus estimator before tracing spectral 
 
 ### Gate
 
-- Monte Carlo integration of known spectra agrees with deterministic CIE integration.
-- results are invariant, within statistical tolerance, under visible versus uniform wavelength sampling.
-- wavelength-PDF division happens once; a deliberate double-division test fails.
-- Film tile and single-thread accumulation agree.
-- white-point and output-space tests pass.
+- [x] Monte Carlo integration of known spectra agrees with deterministic CIE integration.
+- [x] results are invariant, within statistical tolerance, under visible versus uniform wavelength sampling.
+- [x] wavelength-PDF division happens once; a deliberate double-division test fails.
+- [x] Film tile and single-thread accumulation agree.
+- [x] white-point and output-space tests pass.
+
+### Completion record
+
+Completed in PR 8 by `src/render/spectral_film.h`,
+`src/render/spectral_film.cpp`, `tools/spectral-tests/pr8-film-tests.cpp`,
+and `tools/spectral-tests/run-pr8-film-tests.R`.
+
+Gate evidence:
+
+- `Rscript tools/spectral-tests/run-pr8-film-tests.R`
+- `tools/codex/install-local.sh`
 
 
 ## PR 9: Add wavelength-aware camera interfaces
