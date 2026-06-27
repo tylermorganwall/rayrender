@@ -3294,13 +3294,24 @@ Expose validated descriptors and the new functional public API surface in R with
 
 ### Gate
 
-- Existing R scene construction tests pass.
-- Every new descriptor round-trips through serialization.
-- invalid spectra, lights, regions, and CSG capability combinations fail before rendering.
-- schema-v1 adaptation is deterministic and produces no worker-thread warnings.
-- `ray_scene_v2` remains compatible with existing object-row workflows.
-- `with_light()` and `with_region_boundary()` preserve row counts and scene attributes.
-- R code uses `=` assignment throughout.
+- [x] Existing R scene construction tests pass.
+- [x] Every new descriptor round-trips through serialization.
+- [x] invalid spectra, lights, regions, and CSG capability combinations fail before rendering.
+- [x] schema-v1 adaptation is deterministic and produces no worker-thread warnings.
+- [x] `ray_scene_v2` remains compatible with existing object-row workflows.
+- [x] `with_light()` and `with_region_boundary()` preserve row counts and scene attributes.
+- [x] R code uses `=` assignment throughout.
+
+### Completion record
+
+Completed in PR 6 by `R/schema_v2_descriptors.R`, `R/render_scene.R`,
+`R/add_object.R`, `R/ray_scene.R`, `tests/testthat/test-schema-v2-descriptors.R`,
+and generated export/documentation updates.
+
+Gate evidence:
+
+- `testthat::test_file("tests/testthat/test-schema-v2-descriptors.R")`
+- `tools/codex/install-local.sh`
 
 ## PR 7: Add FloatTexture, SpectrumTexture, and image color management
 
@@ -3323,11 +3334,26 @@ Port pbrt's texture evaluation split and make image semantics explicit.
 
 ### Gate
 
-- Scalar images are unaffected by gamma settings.
-- sRGB color textures decode/filter/reconstruct in the specified order.
-- image cache does not alias different semantic interpretations.
-- analytic texture tests match expected scalar and spectral values.
-- no per-evaluation heap allocation.
+- [x] Scalar images are unaffected by gamma settings.
+- [x] sRGB color textures decode/filter/reconstruct in the specified order.
+- [x] image cache does not alias different semantic interpretations.
+- [x] analytic texture tests match expected scalar and spectral values.
+- [x] no per-evaluation heap allocation.
+
+### Completion record
+
+Completed in PR 7 by `src/materials/spectral_texture.h`,
+`src/materials/spectral_texture.cpp`,
+`src/materials/spectral_texture_adapters.cpp`,
+`src/materials/spectral_texture_test.cpp`,
+`tools/spectral-tests/pr7-texture-tests.cpp`, and
+`tools/spectral-tests/run-pr7-texture-tests.R`.
+
+Gate evidence:
+
+- `Rscript tools/spectral-tests/run-pr7-texture-tests.R`
+- `tools/codex/install-local.sh`
+- focused schema-v2 descriptor test
 
 ## PR 8: Add PixelSensor and Film
 
