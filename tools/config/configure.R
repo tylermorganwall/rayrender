@@ -829,17 +829,12 @@ collect_sources = function(subdir, pattern) {
   file.path(subdir, files)
 }
 
-DIR_SOURCES = sort(list.files("src", pattern = "\\.cpp$", full.names = FALSE))
-SUBDIR_SOURCES = sort(unlist(lapply(
-  c("core", "hitables", "materials", "math", "utils"),
-  collect_sources,
-  pattern = "\\.cpp$"
-)))
-EXT_CPP_SOURCES = sort(unlist(lapply(
-  c("ext/miniply"),
-  collect_sources,
-  pattern = "\\.cpp$"
-)))
+CPP_SOURCES = sort(list.files(
+  "src",
+  pattern = "\\.cpp$",
+  recursive = TRUE,
+  full.names = FALSE
+))
 EXT_C_SOURCES = sort(list.files(
   "src",
   pattern = "\\.c$",
@@ -862,9 +857,7 @@ define(
   PKG_LIBS = PKG_LIBS_STR,
   PKG_CXXFLAGS = PKG_CXXFLAGS_STR,
   DEFINES = DEFINES_STR,
-  DIR_SOURCES = collapse_flags(DIR_SOURCES),
-  SUBDIR_SOURCES = collapse_flags(SUBDIR_SOURCES),
-  EXT_CPP_SOURCES = collapse_flags(EXT_CPP_SOURCES),
+  CPP_SOURCES = collapse_flags(CPP_SOURCES),
   EXT_C_SOURCES = collapse_flags(EXT_C_SOURCES)
 )
 

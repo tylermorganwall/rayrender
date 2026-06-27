@@ -19,6 +19,7 @@
 #include "utils/debug.h"
 #include "core/bvh.h"
 #include "core/PreviewDisplay.h"
+#include "render/render_session.h"
 
 #ifdef HAS_OIDN
 #undef None
@@ -97,9 +98,6 @@ void render_animation_rcpp(List scene, List camera_info, List scene_info, List r
   bool keep_colors = as<bool>(camera_info["keep_colors"]);
   bool preview = as<bool>(camera_info["preview"]);
   Float iso = as<Float>(camera_info["iso"]);
-  
-  std::unique_ptr<RayCamera> cam;
-
   //unpack motion info
   NumericVector cam_x        = as<NumericVector>(camera_movement["x"]);
   NumericVector cam_y        = as<NumericVector>(camera_movement["y"]);
@@ -120,56 +118,53 @@ void render_animation_rcpp(List scene, List camera_info, List scene_info, List r
   point3f backgroundhigh(bghigh[0],bghigh[1],bghigh[2]);
   point3f backgroundlow(bglow[0],bglow[1],bglow[2]);
 
+  rayrender::render::RenderOptions render_options;
+  render_options.nx = nx;
+  render_options.ny = ny;
+  render_options.samples = ns;
+  render_options.numbercores = numbercores;
+  render_options.progress_bar = progress_bar;
+  render_options.verbose = verbose;
+  render_options.debug_channel = debug_channel;
+  render_options.min_variance = min_variance;
+  render_options.min_adaptive_size = min_adaptive_size;
+  render_options.integrator_type = integrator_type;
+
+  rayrender::render::LegacyCameraStatic camera_static;
+  camera_static.nx = nx;
+  camera_static.ny = ny;
+  camera_static.shutteropen = shutteropen;
+  camera_static.shutterclose = shutterclose;
+  camera_static.film_size = film_size;
+  camera_static.camera_scale = camera_scale;
+  camera_static.iso = iso;
+  camera_static.lens_data =
+    rayrender::render::FlattenLensData(realCameraInfo);
+  camera_static.missing_lens_error =
+    "No lense data passed in lens descriptor file.";
+
+  rayrender::render::CompiledScene compiled_scene;
+  rayrender::render::RenderSession render_session(render_options,
+                                                  compiled_scene);
+
   RcppThread::ThreadPool pool(numbercores);
   GetRNGstate();
   random_gen rng(unif_rand() * std::pow(2,32));
-  int nx1, ny1, nn1;
   print_time(verbose, "Loaded Data");
 
-  std::vector<Float* > textures;
-  std::vector<unsigned char * > alpha_textures;
-  std::vector<unsigned char * > bump_textures;
-  std::vector<unsigned char * > roughness_textures;
-  //Shared material vector
-  std::vector<std::shared_ptr<material> >* shared_materials = new std::vector<std::shared_ptr<material> >;
-
-
-  //Initialize transformation cache
-  TransformCache transformCache;
-  
-  //Initialize texture cache
-  TextureCache texCache;
-  
-  hitable_list imp_sample_objects;
-  std::vector<std::shared_ptr<hitable> > instanced_objects;
-  std::vector<std::shared_ptr<hitable_list> > instance_importance_sampled;
-  std::vector<std::shared_ptr<alpha_texture> > alpha;
-  std::vector<std::shared_ptr<bump_texture> > bump;
-  std::vector<std::shared_ptr<roughness_texture> > roughness;
-  std::vector<int> texture_idx;
-
-  std::shared_ptr<hitable> worldbvh = build_scene(scene, shape, 
-                                                  shutteropen,shutterclose,
-                                                  textures, 
-                                                  alpha_textures,
-                                                  bump_textures,
-                                                  roughness_textures, 
-                                                  shared_materials, 
-                                                  alpha, bump, roughness,
-                                                  bvh_type,
-                                                  transformCache, 
-                                                  texCache,
-                                                  imp_sample_objects,
-                                                  instanced_objects,
-                                                  instance_importance_sampled,
-                                                  texture_idx,
-                                                  verbose, rng);
+  compiled_scene.Compile(scene,
+                         shape,
+                         shutteropen,
+                         shutterclose,
+                         bvh_type,
+                         verbose,
+                         rng);
   print_time(verbose, "Built Scene BVH" );
   
 
   //Calculate world bounds
   aabb bounding_box_world;
-  worldbvh->bounding_box(0,0,bounding_box_world);
+  compiled_scene.world_bvh->bounding_box(0,0,bounding_box_world);
   Float world_radius = bounding_box_world.Diag().length() ;
   vec3f world_center  = convert_to_vec3(bounding_box_world.Centroid());
   for(int i = 0; i < cam_x.length(); i++) {
@@ -178,103 +173,41 @@ void render_animation_rcpp(List scene, List camera_info, List scene_info, List r
       1.1*(lf - world_center).length();
   }
 
-  
-  std::shared_ptr<texture> background_texture = nullptr;
-  std::shared_ptr<material> background_material = nullptr;
-  std::shared_ptr<hitable> background_sphere = nullptr;
-  Float *background_texture_data = nullptr;
-  Matrix4x4 Identity;
-  Transform BackgroundAngle(Identity);
-  if(rotate_env != 0) {
-    BackgroundAngle = Translate(world_center) * RotateY(rotate_env);
-  } else {
-    BackgroundAngle = Translate(world_center);
-  }
-  Transform* BackgroundTransform = transformCache.Lookup(BackgroundAngle);
-  Transform* BackgroundTransformInv = transformCache.Lookup(BackgroundAngle.GetInverseMatrix());
-
-  if(hasbackground) {
-    background_texture_data = texCache.LookupFloat(background, nx1, ny1, nn1, 3);
-    // nn1 = 3;
-    // texture_bytes += nx1 * ny1 * nn1;
-    
-    if(background_texture_data) {
-      bool has_env_light = false;
-      const std::size_t env_size = static_cast<std::size_t>(nx1) *
-        static_cast<std::size_t>(ny1) *
-        static_cast<std::size_t>(nn1);
-      for(std::size_t i = 0; i < env_size; i++) {
-        if(background_texture_data[i] > 0) {
-          has_env_light = true;
-          break;
-        }
-      }
-      if(has_env_light) {
-        background_texture = std::make_shared<image_texture_float>(background_texture_data, nx1, ny1, nn1,
-                                                                   1, 1, intensity_env);
-        background_material = std::make_shared<diffuse_light>(background_texture, 1.0, false);
-        background_sphere = std::make_shared<InfiniteAreaLight>(nx1, ny1, world_radius*2, convert_to_point3(world_center),
-                                                                background_texture, background_material,
-                                                                BackgroundTransform,
-                                                                BackgroundTransformInv, false);
-      } else {
-        hasbackground = false;
-        ambient_light = true;
-        backgroundhigh = point3f(FLT_MIN,FLT_MIN,FLT_MIN);
-        backgroundlow = point3f(FLT_MIN,FLT_MIN,FLT_MIN);
-        background_texture = std::make_shared<gradient_texture>(backgroundlow, backgroundhigh, false, false);
-        background_material = std::make_shared<diffuse_light>(background_texture, 1.0, false);
-        background_sphere = std::make_shared<InfiniteAreaLight>(100, 100, world_radius*2, convert_to_point3(world_center),
-                                                                background_texture, background_material,
-                                                                BackgroundTransform,BackgroundTransformInv,false);
-      }
-    } else {
-      Rcpp::Rcout << "Failed to load background image at " << background << "\n";
-      hasbackground = false;
-      ambient_light = true;
-      backgroundhigh = point3f(FLT_MIN,FLT_MIN,FLT_MIN);
-      backgroundlow = point3f(FLT_MIN,FLT_MIN,FLT_MIN);
-      background_texture = std::make_shared<gradient_texture>(backgroundlow, backgroundhigh, false, false);
-      background_material = std::make_shared<diffuse_light>(background_texture, 1.0, false);
-      background_sphere = std::make_shared<InfiniteAreaLight>(100, 100, world_radius*2, convert_to_point3(world_center),
-                                                              background_texture, background_material,
-                                                              BackgroundTransform,BackgroundTransformInv,false);
-    }
-  } else if(ambient_light) {
-    //Check if both high and low are black, and set to FLT_MIN
-    if(backgroundhigh.length() == 0 && backgroundlow.length() == 0) {
-      backgroundhigh = point3f(FLT_MIN,FLT_MIN,FLT_MIN);
-      backgroundlow = point3f(FLT_MIN,FLT_MIN,FLT_MIN);
-    }
-    background_texture = std::make_shared<gradient_texture>(backgroundlow, backgroundhigh, false, false);
-    background_material = std::make_shared<diffuse_light>(background_texture, 1.0, false);
-    background_sphere = std::make_shared<InfiniteAreaLight>(100, 100, world_radius*2, convert_to_point3(world_center),
-                                                            background_texture, background_material,
-                                                            BackgroundTransform, BackgroundTransformInv, false);
-    
-  } else {
-    //Minimum intensity FLT_MIN so the CDF isn't NAN
-    background_texture = std::make_shared<constant_texture>(point3f(FLT_MIN,FLT_MIN,FLT_MIN));
-    background_material = std::make_shared<diffuse_light>(background_texture, 1.0, false);
-    background_sphere = std::make_shared<InfiniteAreaLight>(100, 100, world_radius*2, convert_to_point3(world_center),
-                                                            background_texture, background_material,
-                                                            BackgroundTransform,
-                                                            BackgroundTransformInv, false);
-  }
+  rayrender::render::LegacyEnvironmentInput environment_input;
+  environment_input.ambient_light = ambient_light;
+  environment_input.hasbackground = hasbackground;
+  environment_input.backgroundhigh = backgroundhigh;
+  environment_input.backgroundlow = backgroundlow;
+  environment_input.background = background;
+  environment_input.rotate_env = rotate_env;
+  environment_input.intensity_env = intensity_env;
+  environment_input.world_radius = world_radius;
+  environment_input.world_center = world_center;
+  rayrender::render::LegacyEnvironment environment =
+    rayrender::render::MakeLegacyEnvironment(
+      environment_input,
+      compiled_scene.texture_cache,
+      compiled_scene.transform_cache);
+  ambient_light = environment.ambient_light;
+  hasbackground = environment.hasbackground;
+  backgroundhigh = environment.backgroundhigh;
+  backgroundlow = environment.backgroundlow;
+  std::shared_ptr<hitable> background_sphere = environment.background_sphere;
   //Initialize background
   print_time(verbose, "Loaded Background" );
-  hitable_list world;
-  world.add(worldbvh);
+  compiled_scene.AssembleWorld(background_sphere);
+  hitable_list& world = compiled_scene.world;
+  hitable_list& imp_sample_objects =
+    compiled_scene.importance_sample_objects;
 
   bool impl_only_bg = false;
-  world.add(background_sphere);
   if((imp_sample_objects.size() == 0 || hasbackground || ambient_light) && debug_channel != 18) {
     impl_only_bg = true;
   }
   
-  if(impl_only_bg || hasbackground) {
-    imp_sample_objects.add(background_sphere);
-  }
+  compiled_scene.AddEnvironmentToImportanceSampling(background_sphere,
+                                                    impl_only_bg,
+                                                    hasbackground);
 
   if(verbose && !progress_bar) {
     Rcpp::message(CharacterVector("Starting Raytracing"));
@@ -309,41 +242,20 @@ void render_animation_rcpp(List scene, List camera_info, List scene_info, List r
       Float orthoy = cam_orthoy(i);
       vec3f camera_up = vec3f(cam_upx(i),cam_upy(i),cam_upz(i));
 
-
-      if(fov < 0) {
-        Transform CamTransform = LookAt(lookfrom,
-                                        lookat,
-                                        camera_up).GetInverseMatrix();
-        Transform* CameraTransform = transformCache.Lookup(CamTransform);
-        AnimatedTransform CamTr(CameraTransform,0,CameraTransform,0);
-        
-        std::vector<Float> lensData;
-        for(int i = 0; i < realCameraInfo.rows(); i++) {
-          for(int j = 0; j < realCameraInfo.cols(); j++) {
-            lensData.push_back(realCameraInfo.at(i,j));
-          }
-        }
-        
-        if(fov < 0 && lensData.size() == 0) {
-          throw std::runtime_error("No lense data passed in lens descriptor file.");
-        }
-        
-        cam = std::unique_ptr<RayCamera>(new RealisticCamera(CamTr,shutteropen, shutterclose,
-                                                             aperture, nx,ny, focus_distance, false, lensData,
-                                                             film_size, camera_scale, iso, camera_up, CamTransform,
-                                                             lookat));
-      } else if(fov == 0) {
-        cam = std::unique_ptr<RayCamera>(new ortho_camera(lookfrom, lookat, camera_up,
-                                                          orthox, orthoy,
-                                                          shutteropen, shutterclose, iso));
-      } else if (fov == 360) {
-        cam = std::unique_ptr<RayCamera>(new environment_camera(lookfrom, lookat, camera_up,
-                                                                shutteropen, shutterclose, iso));
-      } else {
-        cam = std::unique_ptr<RayCamera>(new camera(lookfrom, lookat, camera_up, fov, Float(nx)/Float(ny),
-                                                    aperture, focus_distance,
-                                                    shutteropen, shutterclose, iso));
-      }
+      rayrender::render::CameraFrameState frame_state;
+      frame_state.lookfrom = lookfrom;
+      frame_state.lookat = lookat;
+      frame_state.camera_up = camera_up;
+      frame_state.fov = fov;
+      frame_state.aperture = aperture;
+      frame_state.focus_distance = focus_distance;
+      frame_state.orthox = orthox;
+      frame_state.orthoy = orthoy;
+      rayrender::render::RenderFrameSetup frame_setup =
+        render_session.RenderFrame(frame_state,
+                                   camera_static,
+                                   compiled_scene.transform_cache);
+      std::unique_ptr<RayCamera>& cam = frame_setup.camera;
 
       // world_radius = world_radius > (lookfrom - world_center).length() ? world_radius : (lookfrom - world_center).length()*2;
 
@@ -352,10 +264,9 @@ void render_animation_rcpp(List scene, List camera_info, List scene_info, List r
         world_radius += ortho_diag;
       }
 
-      //Initialize output matrices
-      RayMatrix rgb_output(nx,ny, 3);
-      RayMatrix normalOutput(nx,ny, 3);
-      RayMatrix albedoOutput(nx,ny, 3);
+      RayMatrix& rgb_output = frame_setup.outputs.rgb_output;
+      RayMatrix& normalOutput = frame_setup.outputs.normal_output;
+      RayMatrix& albedoOutput = frame_setup.outputs.albedo_output;
 
       debug_scene(numbercores, nx, ny, ns, debug_channel,
                   min_variance, min_adaptive_size,
@@ -389,42 +300,20 @@ void render_animation_rcpp(List scene, List camera_info, List scene_info, List r
       Float orthox = cam_orthox(i);
       Float orthoy = cam_orthoy(i);
 
-      std::unique_ptr<RayCamera> cam;
-      if(fov < 0) {
-        Transform CamTransform = LookAt(lookfrom,
-                                        lookat,
-                                        camera_up).GetInverseMatrix();
-        Transform* CameraTransform = transformCache.Lookup(CamTransform);
-        
-        AnimatedTransform CamTr(CameraTransform,0,CameraTransform,0);
-        
-        std::vector<Float> lensData;
-        for(int i = 0; i < realCameraInfo.rows(); i++) {
-          for(int j = 0; j < realCameraInfo.cols(); j++) {
-            lensData.push_back(realCameraInfo.at(i,j));
-          }
-        }
-        
-        if(fov < 0 && lensData.size() == 0) {
-          throw std::runtime_error("No lense data passed in lens descriptor file.");
-        }
-        
-        cam = std::unique_ptr<RayCamera>(new RealisticCamera(CamTr,shutteropen, shutterclose,
-                                                             aperture, nx,ny, focus_distance, false, lensData,
-                                                             film_size, camera_scale, iso,camera_up,CamTransform,
-                                                             lookat));
-      } else if(fov == 0) {
-        cam = std::unique_ptr<RayCamera>(new ortho_camera(lookfrom, lookat, camera_up,
-                                                          orthox, orthoy,
-                                                          shutteropen, shutterclose, iso));
-      } else if (fov == 360) {
-        cam = std::unique_ptr<RayCamera>(new environment_camera(lookfrom, lookat, camera_up,
-                                                                shutteropen, shutterclose, iso));
-      } else {
-        cam = std::unique_ptr<RayCamera>(new camera(lookfrom, lookat, camera_up, fov, Float(nx)/Float(ny),
-                                                    aperture, focus_distance,
-                                                    shutteropen, shutterclose, iso));
-      }
+      rayrender::render::CameraFrameState frame_state;
+      frame_state.lookfrom = lookfrom;
+      frame_state.lookat = lookat;
+      frame_state.camera_up = camera_up;
+      frame_state.fov = fov;
+      frame_state.aperture = aperture;
+      frame_state.focus_distance = focus_distance;
+      frame_state.orthox = orthox;
+      frame_state.orthoy = orthoy;
+      rayrender::render::RenderFrameSetup frame_setup =
+        render_session.RenderFrame(frame_state,
+                                   camera_static,
+                                   compiled_scene.transform_cache);
+      std::unique_ptr<RayCamera>& cam = frame_setup.camera;
 
       world_radius = world_radius > (lookfrom - world_center).length() ? world_radius : (lookfrom - world_center).length()*2;
 
@@ -433,12 +322,11 @@ void render_animation_rcpp(List scene, List camera_info, List scene_info, List r
         world_radius += ortho_diag;
       }
 
-      //Initialize output matrices
-      RayMatrix rgb_output(nx,ny, 3);
-      RayMatrix normalOutput(nx,ny, 3);
-      RayMatrix albedoOutput(nx,ny, 3);
-      RayMatrix alpha_output(nx,ny, 1);
-      RayMatrix draw_rgb_output(nx,ny, 3);
+      RayMatrix& rgb_output = frame_setup.outputs.rgb_output;
+      RayMatrix& normalOutput = frame_setup.outputs.normal_output;
+      RayMatrix& albedoOutput = frame_setup.outputs.albedo_output;
+      RayMatrix& alpha_output = frame_setup.outputs.alpha_output;
+      RayMatrix& draw_rgb_output = frame_setup.outputs.draw_rgb_output;
 
 #ifdef HAS_OIDN
       // Create an Open Image Denoise device
@@ -511,7 +399,6 @@ void render_animation_rcpp(List scene, List camera_info, List scene_info, List r
     }
   }
 
-  delete shared_materials;
   PutRNGstate();
   print_time(verbose, "Finished rendering" );
   

@@ -40,3 +40,5 @@
 ^AGENT\.md$
 ^\.codex:
 ^tools/benchmarks/results/\.gitkeep$
+^\.vscode$
+^[.]?air[.]toml$
