@@ -181,6 +181,18 @@ test_that("render_scene exposes the schema-v2 spectral shell without rendering",
   expect_s3_class(compiler_input$render_defaults$integrator, "ray_integrator")
   expect_s3_class(compiler_input$render_defaults$sampler, "ray_sampler")
 
+  random_walk_input = render_scene(
+    sphere(),
+    render_mode = "spectral",
+    integrator_type = "randomwalk",
+    return_result = TRUE,
+    width = 8,
+    height = 8,
+    samples = 4
+  )
+
+  expect_equal(random_walk_input$render_defaults$integrator$type, "random_walk")
+
   expect_error(
     render_scene(sphere(), render_mode = "spectral", return_result = FALSE),
     "validates schema-v2 input only"

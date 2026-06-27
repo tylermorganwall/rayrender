@@ -8,6 +8,8 @@ wavelength-aware spectral camera interface. PR 10 adds spectral shape, primitive
 scene scaffolding. PR 11 adds explicit spectral lights, infinite lights, light registries, and
 light samplers. PR 12 adds the isolated spectral BxDF/BSDF scattering foundation. PR 13 adds
 the isolated pbrt-style spectral Material closure layer for diffuse and interface/null materials.
+PR 14 adds the isolated spectral RandomWalk vertical slice for diffuse surfaces and explicit
+area/infinite emitters.
 
 ## Current Layout
 
@@ -18,6 +20,7 @@ the isolated pbrt-style spectral Material closure layer for diffuse and interfac
 - `src/render/spectral_scene.*`: PR 10 spectral Interaction, SurfaceInteraction, Shape callbacks, native sphere and SDF CSG adapters, primitive bindings, transformed primitives, aggregates, Scene ownership, ray spawning, capability validation, and legacy hitable wrapping.
 - `src/render/spectral_light.*`: PR 11 spectral Light flags/types, point/spot/distant/diffuse-area lights, uniform/image infinite lights, visibility endpoints, scalar light power estimates, UniformLightSampler/PowerLightSampler, and schema/compiler adapter hooks for area lights, free lights, environments, and legacy emissive materials.
 - `src/render/spectral_bsdf.*`: PR 12 spectral `BSDFSample`, local scattering-coordinate helpers, Fresnel dielectric/conductor functions, `TrowbridgeReitzDistribution`, `DiffuseBxDF`, `NullBxDF`, non-owning `BxDF` dispatch, and the pbrt-style `BSDF` frame wrapper.
+- `src/render/spectral_integrator.*`: PR 14 deterministic sample streams, `RandomWalkIntegrator`, per-worker scratch state, Film render loop, vacuum-only/delta-light validation, and radiance diagnostics.
 - `src/base/`: explicit RGB/XYZ/color-space types, sRGB transfer functions, RGB-to-spectrum table loading, RGB spectrum wrappers, `SampledSpectrum`, `SampledWavelengths`, spectrum representations and named-spectrum registry loading, tagged dispatch handles, `ScratchBuffer`, BxDF flags, and optional sample-result conventions for future pbrt-style transport.
 - `src/materials/spectral_texture.*`: PR 7 spectral texture descriptors, evaluators, semantic image cache keys, image loading adapters, and hit-record derivative adapters.
 - `src/materials/spectral_material.*`: PR 13 spectral `MaterialEvalContext`, tagged Material dispatch, diffuse and interface/null material parameter objects, alpha and bump hooks, scratch-allocated `BSDF` closure construction, and a spectral material handle table.
@@ -32,8 +35,9 @@ the isolated pbrt-style spectral Material closure layer for diffuse and interfac
 
 Do not add new top-level renderer setup duplication to the Rcpp entry points. New shared setup belongs under `src/render/`, and entry points should pass explicit inputs into `RenderSession` or a narrower helper there.
 
-The PR 1 render-session layer is intentionally RGB-only. PR 2 through PR 13 spectral code is
+The PR 1 render-session layer is intentionally RGB-only. PR 2 through PR 14 spectral code is
 scaffolding and must remain unused by legacy transport except for isolated conversion, packet,
 asset-loading, RGB reconstruction, descriptor validation, texture evaluation, Film/sensor conversion,
 spectral camera generation, spectral scene/shape adaptation, explicit spectral light construction,
-BSDF/BxDF scattering tests, material closure construction, alpha/bump tests, and allocation tests.
+BSDF/BxDF scattering tests, material closure construction, alpha/bump tests, allocation tests,
+RandomWalk transport tests, and Film render-loop tests.

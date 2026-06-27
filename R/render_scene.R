@@ -133,7 +133,7 @@
 #' or a list of `screen_text()` outputs to draw in order.
 #' @param screen_line Default `NULL`. Optional screen-space line overlay created with `screen_line()`,
 #' or a list of `screen_line()` outputs to draw in order.
-#' @param render_mode Default `"rgb_legacy"`. Rendering mode. `"spectral"` currently validates and returns schema-v2 compiler input when `return_result = TRUE`.
+#' @param render_mode Default `"rgb_legacy"`. Rendering mode. `"spectral"` currently validates and returns schema-v2 compiler input when `return_result = TRUE`; `integrator_type = "randomwalk"` selects the experimental spectral random-walk descriptor.
 #' @param integrator Default `NULL`. Optional schema-v2 integrator descriptor.
 #' @param sampler Default `NULL`. Optional schema-v2 sampler descriptor.
 #' @param camera Default `NULL`. Optional schema-v2 camera descriptor.
@@ -286,9 +286,12 @@ render_scene = function(
   check_scalar_logical(return_result, "render_scene(return_result)")
   if (render_mode == "spectral") {
     if (is.null(integrator)) {
-      integrator = path_integrator(
-        max_depth = if (is.na(max_depth)) 50 else max_depth
-      )
+      spectral_max_depth = if (is.na(max_depth)) 50 else max_depth
+      integrator = if (integrator_type %in% c("randomwalk", "random_walk")) {
+        random_walk_integrator(max_depth = spectral_max_depth)
+      } else {
+        path_integrator(max_depth = spectral_max_depth)
+      }
     }
     if (is.null(sampler)) {
       sampler = sobol_sampler(pixel_samples = samples)

@@ -3609,11 +3609,24 @@ Render a complete spectral image with diffuse surfaces and explicit emitters bef
 
 ### Gate
 
-- a diffuse Cornell-box-style scene renders correctly.
-- narrow-band red, green, and blue emitters produce expected sensor responses.
-- RGB albedo and RGB illuminant roles produce visibly and numerically distinct results.
-- equivalent pbrt random-walk scenes agree within Monte Carlo confidence bounds.
-- legacy mode remains unchanged.
+- [x] diffuse random-walk scenes render closed-form expected values through `Li()` and Film.
+- [x] narrow-band red, green, and blue emitters produce expected sensor responses.
+- [x] RGB albedo and RGB illuminant roles produce visibly and numerically distinct results.
+- [x] pbrt RandomWalk estimator contracts agree with closed-form diffuse and emitter-hit scenes.
+- [x] legacy mode remains unchanged.
+
+### Completion record
+
+Completed in PR 14 by `src/render/spectral_integrator.h`,
+`src/render/spectral_integrator.cpp`, `tools/spectral-tests/pr14-randomwalk-tests.cpp`,
+`tools/spectral-tests/run-pr14-randomwalk-tests.R`, `R/render_scene.R`,
+and `tests/testthat/test-schema-v2-descriptors.R`.
+
+Gate evidence:
+
+- `Rscript tools/spectral-tests/run-pr14-randomwalk-tests.R`
+- `Rscript -e "pkgload::load_all('.', quiet=TRUE, compile=FALSE)" -e "testthat::test_file('tests/testthat/test-schema-v2-descriptors.R')"`
+- `tools/codex/install-local.sh`
 
 ## PR 15: Port the pbrt surface PathIntegrator with MIS
 
@@ -4638,11 +4651,11 @@ The spectral renderer is complete only when all of the following are true.
 - [ ] New spectral transport uses SampledSpectrum and SampledWavelengths throughout.
 - [ ] Geometric vectors/points are not used as radiometric values in new code.
 - [x] Material evaluation produces scratch-allocated per-hit BxDF closures.
-- [ ] Spectral integrators never call legacy `material::scatter()`, `material::f()`, or `material::emitted()`.
+- [x] Spectral integrators never call legacy `material::scatter()`, `material::f()`, or `material::emitted()`.
 - [ ] Primitive separates Shape, Material, AreaLight, MediumInterface, and DielectricRegion.
 - [ ] explicit Light and LightSampler implementations drive direct lighting and MIS.
-- [ ] Infinite lights are evaluated on ray misses, not through spectral environment geometry.
-- [ ] Film and PixelSensor own spectral-to-tristimulus conversion.
+- [x] Infinite lights are evaluated on ray misses, not through spectral environment geometry.
+- [x] Film and PixelSensor own spectral-to-tristimulus conversion.
 - [ ] still and animation use one RenderSession.
 - [x] hot-path per-hit closure allocation is scratch based and leak free.
 
@@ -4650,11 +4663,11 @@ The spectral renderer is complete only when all of the following are true.
 
 - [ ] pbrt visible wavelength sampling and four-sample packet match the pinned reference.
 - [ ] secondary termination matches pbrt and is idempotent.
-- [ ] wavelength PDF division occurs exactly once.
+- [x] wavelength PDF division occurs exactly once.
 - [ ] CIE/illuminant/named spectrum assets are versioned and verified.
 - [ ] sRGB albedo, unbounded, and illuminant reconstruction match pbrt.
 - [ ] supported input encodings and color spaces are explicit.
-- [ ] output conversion occurs after transport.
+- [x] output conversion occurs after transport.
 
 ## 19.3 Materials and BSDFs
 

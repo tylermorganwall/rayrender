@@ -35,6 +35,11 @@ Copyright: 1998-2020 Matt Pharr, Wenzel Jakob, and Greg Humphreys.
 License: Apache License, Version 2.0
 URL: https://github.com/mmp/pbrt-v4
 
+Files: src/render/spectral_integrator.h src/render/spectral_integrator.cpp tools/spectral-tests/pr14-randomwalk-tests.cpp
+Copyright: 1998-2020 Matt Pharr, Wenzel Jakob, and Greg Humphreys.
+License: Apache License, Version 2.0
+URL: https://github.com/mmp/pbrt-v4
+
 Files: inst/extdata/spectral/named-spectra-v1.tsv inst/extdata/spectral/named-spectra-v1-metadata.tsv
 Copyright: public domain source data from refractiveindex.info where identified in pbrt-v4
 License: CC0-1.0
