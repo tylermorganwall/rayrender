@@ -18,6 +18,24 @@ add_object = function(scene, objects = NULL) {
   if (is.null(objects)) {
     return(scene)
   }
+  if (inherits(scene, "ray_scene_v2") || inherits(objects, "ray_scene_v2")) {
+    scene = ensure_ray_scene_v2(scene)
+    objects = ensure_ray_scene_v2(objects)
+    scene_attrs = ray_scene_attrs(scene)
+    object_attrs = ray_scene_attrs(objects)
+    newscene = rbind(as.data.frame(scene), as.data.frame(objects))
+    class(newscene) = class(scene)
+    newscene = restore_ray_scene_attrs(
+      newscene,
+      merge_ray_scene_attrs(scene_attrs, object_attrs)
+    )
+    if (
+      !is.null(attr(objects, "cornell")) || !is.null(attr(scene, "cornell"))
+    ) {
+      attr(newscene, "cornell") = TRUE
+    }
+    return(assign_missing_object_ids(newscene))
+  }
   newscene = rbind(scene, objects)
   if (!is.null(attr(objects, "cornell")) || !is.null(attr(scene, "cornell"))) {
     attr(newscene, "cornell") = TRUE

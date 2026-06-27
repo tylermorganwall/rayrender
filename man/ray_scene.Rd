@@ -2,14 +2,16 @@
 % Please edit documentation in R/ray_scene.R
 \name{ray_scene}
 \alias{ray_scene}
-\title{Constructor for ray_material}
+\title{Constructor for ray_scene}
 \usage{
 ray_scene(...)
 }
+\arguments{
+\item{...}{Optional legacy ray_scene fields.}
+}
 \value{
-ray
+ray_scene
 }
 \description{
-Constructor for ray_material
+Constructor for ray_scene
 }
-\keyword{internal}

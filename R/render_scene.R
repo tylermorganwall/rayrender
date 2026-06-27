@@ -133,6 +133,15 @@
 #' or a list of `screen_text()` outputs to draw in order.
 #' @param screen_line Default `NULL`. Optional screen-space line overlay created with `screen_line()`,
 #' or a list of `screen_line()` outputs to draw in order.
+#' @param render_mode Default `"rgb_legacy"`. Rendering mode. `"spectral"` currently validates and returns schema-v2 compiler input when `return_result = TRUE`.
+#' @param integrator Default `NULL`. Optional schema-v2 integrator descriptor.
+#' @param sampler Default `NULL`. Optional schema-v2 sampler descriptor.
+#' @param camera Default `NULL`. Optional schema-v2 camera descriptor.
+#' @param film Default `NULL`. Optional schema-v2 film descriptor.
+#' @param spectral Default `spectral_options()`. Schema-v2 spectral options descriptor.
+#' @param environment Default `NULL`. Optional schema-v2 infinite light descriptor.
+#' @param validation Default `scene_validation()`. Schema-v2 validation descriptor.
+#' @param return_result Default `FALSE`. Return schema-v2 compiler input instead of rendering when `render_mode = "spectral"`.
 #' Labels are anchored to 3D world-space points, projected through the current camera, and drawn after
 #' rendering so text size and justification are independent of scene scale and view distance.
 #' @export
@@ -261,9 +270,127 @@ render_scene = function(
   new_page = TRUE,
   integrator_type = "rtiow",
   screen_text = NULL,
-  screen_line = NULL
+  screen_line = NULL,
+  render_mode = c("rgb_legacy", "spectral"),
+  integrator = NULL,
+  sampler = NULL,
+  camera = NULL,
+  film = NULL,
+  spectral = spectral_options(),
+  environment = NULL,
+  validation = scene_validation(),
+  return_result = FALSE
 ) {
   init_time()
+  render_mode = match.arg(render_mode)
+  check_scalar_logical(return_result, "render_scene(return_result)")
+  if (render_mode == "spectral") {
+    if (is.null(integrator)) {
+      integrator = path_integrator(
+        max_depth = if (is.na(max_depth)) 50 else max_depth
+      )
+    }
+    if (is.null(sampler)) {
+      sampler = sobol_sampler(pixel_samples = samples)
+    }
+    if (is.null(camera)) {
+      if (identical(fov, 0) || isTRUE(fov == 0)) {
+        camera = orthographic_camera(
+          lookfrom = lookfrom,
+          lookat = lookat,
+          up = camera_up,
+          ortho_dimensions = ortho_dimensions,
+          shutteropen = shutteropen,
+          shutterclose = shutterclose,
+          initial_regions = character()
+        )
+      } else {
+        camera = perspective_camera(
+          lookfrom = lookfrom,
+          lookat = lookat,
+          up = camera_up,
+          fov = fov,
+          aperture = aperture,
+          focal_distance = focal_distance,
+          shutteropen = shutteropen,
+          shutterclose = shutterclose,
+          initial_regions = character()
+        )
+      }
+    }
+    if (is.null(film)) {
+      film = rgb_film(
+        width = width,
+        height = height,
+        filename = if (is.na(filename)) NULL else filename
+      )
+    }
+    if (!inherits(integrator, "ray_integrator")) {
+      schema_stop(
+        "render_scene(integrator)",
+        "must be a ray_integrator descriptor"
+      )
+    }
+    if (!inherits(sampler, "ray_sampler")) {
+      schema_stop("render_scene(sampler)", "must be a ray_sampler descriptor")
+    }
+    if (!inherits(camera, "ray_camera")) {
+      schema_stop("render_scene(camera)", "must be a ray_camera descriptor")
+    }
+    if (!inherits(film, "ray_film")) {
+      schema_stop("render_scene(film)", "must be a ray_film descriptor")
+    }
+    if (!inherits(spectral, "ray_spectral_options")) {
+      schema_stop(
+        "render_scene(spectral)",
+        "must be a ray_spectral_options descriptor"
+      )
+    }
+    if (!inherits(validation, "ray_scene_validation")) {
+      schema_stop(
+        "render_scene(validation)",
+        "must be a ray_scene_validation descriptor"
+      )
+    }
+    if (
+      !is.null(environment) &&
+        (!inherits(environment, "ray_light") ||
+          !isTRUE(attr(environment, "infinite")))
+    ) {
+      schema_stop(
+        "render_scene(environment)",
+        "must be an infinite ray_light descriptor or NULL"
+      )
+    }
+    if (is.null(environment) && !is.null(environment_light)) {
+      environment = image_infinite_light(
+        filename = environment_light,
+        scale = intensity_env,
+        rotation = rotate_env
+      )
+    }
+    scene = legacy_scene_to_schema_v2(scene, validation = validation)
+    scene_attrs = ray_scene_attrs(scene)
+    scene_attrs$render_defaults = list(
+      integrator = integrator,
+      sampler = sampler,
+      camera = camera,
+      film = film,
+      spectral = spectral
+    )
+    if (!is.null(environment)) {
+      scene_attrs$environment = environment
+    }
+    scene = restore_ray_scene_attrs(scene, scene_attrs)
+    compiler_input = as_scene_compiler_input(scene, validation = validation)
+    if (return_result) {
+      return(compiler_input)
+    }
+    stop(
+      "render_mode = \"spectral\" currently validates schema-v2 input only; set return_result = TRUE to inspect compiler input.",
+      call. = FALSE
+    )
+  }
   if (print_debug_info) {
     message(sprintf(
       "------Debug Info------

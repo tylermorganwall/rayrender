@@ -53,7 +53,16 @@ render_scene(
   new_page = TRUE,
   integrator_type = "rtiow",
   screen_text = NULL,
-  screen_line = NULL
+  screen_line = NULL,
+  render_mode = c("rgb_legacy", "spectral"),
+  integrator = NULL,
+  sampler = NULL,
+  camera = NULL,
+  film = NULL,
+  spectral = spectral_options(),
+  environment = NULL,
+  validation = scene_validation(),
+  return_result = FALSE
 )
 }
 \arguments{
@@ -233,7 +242,25 @@ and `"basic"` (basic pathtracing, for high sample reference renders and debuggin
 or a list of `screen_text()` outputs to draw in order.}
 
 \item{screen_line}{Default `NULL`. Optional screen-space line overlay created with `screen_line()`,
-or a list of `screen_line()` outputs to draw in order.
+or a list of `screen_line()` outputs to draw in order.}
+
+\item{render_mode}{Default `"rgb_legacy"`. Rendering mode. `"spectral"` currently validates and returns schema-v2 compiler input when `return_result = TRUE`.}
+
+\item{integrator}{Default `NULL`. Optional schema-v2 integrator descriptor.}
+
+\item{sampler}{Default `NULL`. Optional schema-v2 sampler descriptor.}
+
+\item{camera}{Default `NULL`. Optional schema-v2 camera descriptor.}
+
+\item{film}{Default `NULL`. Optional schema-v2 film descriptor.}
+
+\item{spectral}{Default `spectral_options()`. Schema-v2 spectral options descriptor.}
+
+\item{environment}{Default `NULL`. Optional schema-v2 infinite light descriptor.}
+
+\item{validation}{Default `scene_validation()`. Schema-v2 validation descriptor.}
+
+\item{return_result}{Default `FALSE`. Return schema-v2 compiler input instead of rendering when `render_mode = "spectral"`.
 Labels are anchored to 3D world-space points, projected through the current camera, and drawn after
 rendering so text size and justification are independent of scene scale and view distance.}
 }

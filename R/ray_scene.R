@@ -6,11 +6,17 @@ is_rendering_in_knitr = function() {
   isTRUE(getOption('knitr.in.progress'))
 }
 
-#'@title Constructor for ray_material
+#'@title Constructor for ray_scene
 #'
-#'@return ray
-#'@keywords internal
+#'@param ... Optional legacy ray_scene fields.
+#'
+#'@return ray_scene
+#'@export
 ray_scene = function(...) {
+  args = list(...)
+  if (length(args) == 0) {
+    return(ray_scene_v2())
+  }
   structure(list(...), class = c("ray_scene", "tbl_df", "tbl", "data.frame"))
 }
 
@@ -47,23 +53,54 @@ print.ray_scene = function(x, ...) {
   }
   # Count total objects and lights
   total_objects = nrow(x)
-  total_lights = sum(unlist(lapply(x$material, \(x) x$type == "light")))
+  if (inherits(x, "ray_scene_v2")) {
+    total_area_lights = sum(!vapply(x$light, is.null, logical(1)))
+    total_free_lights = length(attr(x, "lights") %||% list())
+    total_infinite_lights = as.integer(!is.null(attr(x, "environment")))
+    total_lights = total_area_lights + total_free_lights + total_infinite_lights
+  } else {
+    total_lights = sum(unlist(lapply(x$material, \(x) x$type == "light")))
+  }
 
   # Count each type of object
-  shape_counts = table(x$shape)
-  shape_summary = sprintf(
-    "Objects - %s",
-    paste(
-      cli::col_blue(names(shape_counts)),
-      cli::col_red(shape_counts),
-      sep = ": ",
-      collapse = " | "
+  if (total_objects == 0) {
+    shape_summary = "Objects - none"
+    bbox_text = "XYZ Bounds - empty scene"
+  } else {
+    shape_counts = table(x$shape)
+    shape_summary = sprintf(
+      "Objects - %s",
+      paste(
+        cli::col_blue(names(shape_counts)),
+        cli::col_red(shape_counts),
+        sep = ": ",
+        collapse = " | "
+      )
     )
-  )
 
-  # Calculate bounding box
-  bbxmin = c(min(x$x), min(x$y), min(x$z))
-  bbxmax = c(max(x$x), max(x$y), max(x$z))
+    # Calculate bounding box
+    bbxmin = c(min(x$x), min(x$y), min(x$z))
+    bbxmax = c(max(x$x), max(x$y), max(x$z))
+    min_bbox = sprintf(
+      "c(%0.2f, %0.2f, %0.2f)",
+      bbxmin[1],
+      bbxmin[2],
+      bbxmin[3]
+    )
+    max_bbox = sprintf(
+      "c(%0.2f, %0.2f, %0.2f)",
+      bbxmax[1],
+      bbxmax[2],
+      bbxmax[3]
+    )
+    bbox_text = sprintf(
+      "XYZ Bounds - %s: %s | %s: %s",
+      cli::col_blue("Min"),
+      cli::col_red(min_bbox),
+      cli::col_blue("Max"),
+      cli::col_red(max_bbox)
+    )
+  }
 
   # Construct the print output
   line1 = sprintf(
@@ -73,23 +110,26 @@ print.ray_scene = function(x, ...) {
     cli::col_blue("Lights"),
     cli::col_red(as.character(total_lights))
   )
-  min_bbox = sprintf("c(%0.2f, %0.2f, %0.2f)", bbxmin[1], bbxmin[2], bbxmin[3])
-  max_bbox = sprintf("c(%0.2f, %0.2f, %0.2f)", bbxmax[1], bbxmax[2], bbxmax[3])
-  bbox_text = sprintf(
-    "XYZ Bounds - %s: %s | %s: %s",
-    cli::col_blue("Min"),
-    cli::col_red(min_bbox),
-    cli::col_blue("Max"),
-    cli::col_red(max_bbox)
-  )
 
   cli_output = function() {
     cli::cli_rule(left = "Scene Description")
-    cli::cli_bullets(c(
+    bullets = c(
       "*" = line1,
       ">" = shape_summary,
       "i" = bbox_text
-    ))
+    )
+    if (inherits(x, "ray_scene_v2")) {
+      schema_text = sprintf(
+        "Schema - v%s | Area lights: %s | Free lights: %s | Infinite lights: %s | Regions: %s",
+        attr(x, "ray_schema_version") %||% 2L,
+        total_area_lights,
+        total_free_lights,
+        total_infinite_lights,
+        length(attr(x, "regions") %||% list())
+      )
+      bullets = c(bullets, "i" = schema_text)
+    }
+    cli::cli_bullets(bullets)
     # cli::cli_li(c("{.emph Shapes}" = shape_summary))
     # cli_li("{.strong Strong} importance")
     # cli_li("A piece of code: {.code sum(a) / length(a)}")
