@@ -7,6 +7,7 @@ This table is the running record of which pbrt-v4 contracts have been ported, wh
 | Project pin | Git commit `8c19f304558fd7681e2fef2c395a689d0106fb05` | `docs/spectral/versions.md` | Pinned in PR 0 | Manual pin check | None |
 | Architecture decisions | pbrt-v4 renderer architecture | `docs/spectral/adr/0001-spectral-renderer.md` | Recorded in PR 0 | Documentation review | rayrender keeps legacy RGB renderer during migration |
 | Render session and source layout | pbrt-v4 renderer setup concepts | `src/render/render_session.*`, `docs/spectral/source-layout.md` | Extracted in PR 1 | Local install, deterministic source tests, PR 0 legacy baseline compare | Legacy RGB setup only; spectral state is deferred |
+| Base utility types | pbrt utility color types, typed dispatch handles, scratch allocation, BxDF flags | `src/base/*`, `tools/spectral-tests/pr2-base-tests.cpp` | Foundation in PR 2 | `Rscript tools/spectral-tests/run-pr2-base-tests.R`, local install, PR 0 legacy baseline compare | Isolated from legacy transport; `RGBBSDFSample` is a temporary convention until `SampledSpectrum` lands |
 | Wavelength packet | `src/pbrt/util/spectrum.h`, sampled wavelength logic | Not implemented | Not started | Pending PR 3 | None recorded |
 | Sampled spectrum | `SampledSpectrum` | Not implemented | Not started | Pending PR 3 | None recorded |
 | Spectrum hierarchy | `Spectrum`, RGB spectrum classes, spectral data | Not implemented | Not started | Pending PRs 4-5 | None recorded |
