@@ -105,6 +105,177 @@ std::vector<base::LightHandle> SceneLightHandles(const Scene& scene) {
   return lights;
 }
 
+std::vector<RegionBoundaryAttachment> DielectricBoundaries(
+  const SurfaceInteraction& interaction
+) {
+  std::vector<RegionBoundaryAttachment> boundaries = interaction.dielectricBoundaries;
+  if (interaction.hasDielectricRegion) {
+    boundaries.push_back({
+      static_cast<RegionId>(interaction.dielectricRegionId),
+      RegionSide::NegativeNormal
+    });
+  }
+  return boundaries;
+}
+
+bool HasDielectricBoundary(const SurfaceInteraction& interaction) {
+  return interaction.hasDielectricRegion || !interaction.dielectricBoundaries.empty();
+}
+
+bool HasUnsupportedMedium(const SurfaceInteraction& interaction) {
+  return interaction.hasMedium || interaction.hasMediumInterface;
+}
+
+void RecordDielectricKind(
+  DielectricBoundaryKind kind,
+  RandomWalkRenderStats* stats
+) {
+  if (stats == nullptr) {
+    return;
+  }
+  switch (kind) {
+  case DielectricBoundaryKind::PrioritySkipped:
+    ++stats->dielectricPrioritySkips;
+    return;
+  case DielectricBoundaryKind::IndexMatchedNull:
+    ++stats->dielectricIndexMatchedSkips;
+    return;
+  case DielectricBoundaryKind::ScatteringInterface:
+    ++stats->dielectricScatteringInterfaces;
+    return;
+  }
+}
+
+void RecordDielectricKind(
+  DielectricBoundaryKind kind,
+  PathRenderStats* stats
+) {
+  if (stats == nullptr) {
+    return;
+  }
+  switch (kind) {
+  case DielectricBoundaryKind::PrioritySkipped:
+    ++stats->dielectricPrioritySkips;
+    return;
+  case DielectricBoundaryKind::IndexMatchedNull:
+    ++stats->dielectricIndexMatchedSkips;
+    return;
+  case DielectricBoundaryKind::ScatteringInterface:
+    ++stats->dielectricScatteringInterfaces;
+    return;
+  }
+}
+
+template <typename Stats>
+std::optional<ResolvedDielectricTransition> AnalyzeDielectricTransition(
+  const DielectricRegionTable* regionTable,
+  const DielectricPathState& regions,
+  const SurfaceInteraction& interaction,
+  const Ray& ray,
+  Stats* stats
+) {
+  if (!HasDielectricBoundary(interaction)) {
+    return std::nullopt;
+  }
+  if (regionTable == nullptr) {
+    if (stats) {
+      ++stats->unsupportedMediumInteractions;
+    }
+    return std::nullopt;
+  }
+  try {
+    std::vector<RegionBoundaryAttachment> boundaries = DielectricBoundaries(interaction);
+    ResolvedDielectricTransition transition =
+      regions.Analyze(boundaries, interaction.n, ray.direction());
+    RecordDielectricKind(transition.kind, stats);
+    return transition;
+  } catch (const std::exception&) {
+    if (stats) {
+      ++stats->dielectricStateErrors;
+    }
+    return std::nullopt;
+  }
+}
+
+template <typename Stats>
+bool CommitDielectricTransition(
+  DielectricPathState& regions,
+  const DielectricTransitionToken& token,
+  Stats* stats
+) {
+  try {
+    regions.Commit(token);
+    return true;
+  } catch (const std::exception&) {
+    if (stats) {
+      ++stats->dielectricStateErrors;
+    }
+    return false;
+  }
+}
+
+DielectricPathState InitialDielectricState(
+  const DielectricRegionTable* regionTable,
+  const Scene& scene,
+  const Ray& ray,
+  const DielectricPathState* explicitState
+) {
+  if (explicitState != nullptr) {
+    return *explicitState;
+  }
+  if (regionTable == nullptr) {
+    return DielectricPathState();
+  }
+  return DielectricPathState::FromPointContainment(regionTable, scene, ray.origin());
+}
+
+bool RegionAwareUnoccluded(
+  const VisibilityTester& visibility,
+  const Scene& scene,
+  const DielectricRegionTable* regionTable,
+  DielectricPathState regions,
+  PathRenderStats* stats
+) {
+  if (regionTable == nullptr) {
+    return visibility.Unoccluded(scene.GetAggregate());
+  }
+
+  SpawnedRay spawned = visibility.SpawnRay();
+  Ray ray = spawned.ray;
+  for (int i = 0; i < 64; ++i) {
+    std::optional<PrimitiveIntersection> hit =
+      scene.Intersect(ray, RayEpsilon, ray.tMax);
+    if (!hit) {
+      return true;
+    }
+    const SurfaceInteraction& interaction = hit->interaction;
+    if (HasUnsupportedMedium(interaction)) {
+      if (stats) {
+        ++stats->unsupportedMediumInteractions;
+      }
+      return false;
+    }
+    std::optional<ResolvedDielectricTransition> transition =
+      AnalyzeDielectricTransition(regionTable, regions, interaction, ray, stats);
+    if (!transition || transition->kind == DielectricBoundaryKind::ScatteringInterface) {
+      return false;
+    }
+    if (!CommitDielectricTransition(regions, transition->token, stats)) {
+      return false;
+    }
+    if (stats) {
+      ++stats->copiedVisibilityRegionTraversals;
+    }
+    SpawnedRay next = interaction.SpawnRayTo(visibility.p1.p);
+    ray = next.ray;
+    ray.tMax = static_cast<Float>(1) - RayEpsilon;
+  }
+  if (stats) {
+    ++stats->dielectricStateErrors;
+  }
+  return false;
+}
+
 LightSampleContext MakeDirectLightSampleContext(
   const SurfaceInteraction& interaction,
   const BSDF& bsdf
@@ -263,11 +434,13 @@ RandomWalkIntegrator::RandomWalkIntegrator(
   const Scene& scene,
   const materials::SpectralMaterialTable& materialTable,
   const SpectralLightTable& lightTable,
-  RandomWalkRenderOptions options
+  RandomWalkRenderOptions options,
+  const DielectricRegionTable* dielectricRegions
 )
   : scene_(&scene),
     materialTable_(&materialTable),
     lightTable_(&lightTable),
+    dielectricRegions_(dielectricRegions),
     options_(options) {
   ValidateRandomWalkScene(scene, lightTable, options_);
 }
@@ -278,12 +451,15 @@ base::SampledSpectrum RandomWalkIntegrator::Li(
   SpectralRandomSampler& sampler,
   base::ScratchBuffer& scratch,
   SpectralVisibleSurface* visibleSurface,
-  RandomWalkRenderStats* stats
+  RandomWalkRenderStats* stats,
+  const DielectricPathState* initialRegions
 ) const {
   materials::UniversalTextureEvaluator textureEvaluator;
   base::SampledSpectrum L(0);
   base::SampledSpectrum beta(1);
   Ray currentRay = ray;
+  DielectricPathState regions =
+    InitialDielectricState(dielectricRegions_, *scene_, ray, initialRegions);
   int depth = 0;
   int alphaSkips = 0;
 
@@ -313,10 +489,7 @@ base::SampledSpectrum RandomWalkIntegrator::Li(
       ++stats->surfaceHits;
     }
 
-    if (
-      options_.rejectNonVacuum &&
-      (interaction.hasMedium || interaction.hasMediumInterface || interaction.hasDielectricRegion)
-    ) {
+    if (options_.rejectNonVacuum && HasUnsupportedMedium(interaction)) {
       if (stats) {
         ++stats->unsupportedMediumInteractions;
       }
@@ -342,6 +515,23 @@ base::SampledSpectrum RandomWalkIntegrator::Li(
         currentRay = interaction.SpawnRay(currentRay.direction()).ray;
         continue;
       }
+    }
+
+    std::optional<ResolvedDielectricTransition> dielectricTransition =
+      AnalyzeDielectricTransition(dielectricRegions_, regions, interaction, currentRay, stats);
+    if (HasDielectricBoundary(interaction) && !dielectricTransition) {
+      return L;
+    }
+    if (dielectricTransition && dielectricTransition->IsNullTraversal()) {
+      if (!CommitDielectricTransition(regions, dielectricTransition->token, stats)) {
+        return L;
+      }
+      currentRay = interaction.SpawnRay(currentRay.direction()).ray;
+      currentRay.tMax = Infinity;
+      continue;
+    }
+    if (dielectricTransition) {
+      materialCtx.dielectric = &dielectricTransition->interface;
     }
 
     SetFirstVisibleSurface(interaction, visibleSurface);
@@ -425,6 +615,15 @@ base::SampledSpectrum RandomWalkIntegrator::Li(
       return L;
     }
 
+    if (dielectricTransition && bs->IsTransmission()) {
+      if (!CommitDielectricTransition(regions, dielectricTransition->token, stats)) {
+        return L;
+      }
+      if (stats) {
+        ++stats->dielectricTransmissionCommits;
+      }
+    }
+
     currentRay = interaction.SpawnRay(bs->wi).ray;
     currentRay.tMax = Infinity;
     ++depth;
@@ -437,7 +636,8 @@ RandomWalkRenderStats RenderRandomWalk(
   SpectralLightTable& lightTable,
   const SpectralCamera& camera,
   Film& film,
-  const RandomWalkRenderOptions& options
+  const RandomWalkRenderOptions& options,
+  const DielectricRegionTable* dielectricRegions
 ) {
   ValidateOptions(options);
   Bounds3f sceneBounds;
@@ -446,7 +646,7 @@ RandomWalkRenderStats RenderRandomWalk(
   ValidateRandomWalkScene(scene, lightTable, options);
 
   RandomWalkRenderStats stats;
-  RandomWalkIntegrator integrator(scene, materialTable, lightTable, options);
+  RandomWalkIntegrator integrator(scene, materialTable, lightTable, options, dielectricRegions);
   RandomWalkWorkerState worker(options.seed, options.scratchBufferBytes);
 
   for (int y = 0; y < film.Height(); ++y) {
@@ -527,11 +727,13 @@ PathIntegrator::PathIntegrator(
   const Scene& scene,
   const materials::SpectralMaterialTable& materialTable,
   const SpectralLightTable& lightTable,
-  PathRenderOptions options
+  PathRenderOptions options,
+  const DielectricRegionTable* dielectricRegions
 )
   : scene_(&scene),
     materialTable_(&materialTable),
     lightTable_(&lightTable),
+    dielectricRegions_(dielectricRegions),
     lightSampler_(lightTable, SceneLightHandles(scene)),
     options_(options) {
   ValidateOptions(options_);
@@ -542,7 +744,8 @@ base::SampledSpectrum PathIntegrator::SampleLd(
   const BSDF& bsdf,
   base::SampledWavelengths& lambda,
   SpectralRandomSampler& sampler,
-  PathRenderStats* stats
+  PathRenderStats* stats,
+  const DielectricPathState& regions
 ) const {
   if (lightSampler_.Size() == 0) {
     return base::SampledSpectrum(0);
@@ -583,7 +786,7 @@ base::SampledSpectrum PathIntegrator::SampleLd(
   if (!f || !RecordSpectralRadianceDiagnostics(f, stats)) {
     return base::SampledSpectrum(0);
   }
-  if (!ls->visibility.Unoccluded(scene_->GetAggregate())) {
+  if (!RegionAwareUnoccluded(ls->visibility, *scene_, dielectricRegions_, regions, stats)) {
     if (stats) {
       ++stats->occludedShadowRays;
     }
@@ -628,12 +831,15 @@ base::SampledSpectrum PathIntegrator::Li(
   SpectralRandomSampler& sampler,
   base::ScratchBuffer& scratch,
   SpectralVisibleSurface* visibleSurface,
-  PathRenderStats* stats
+  PathRenderStats* stats,
+  const DielectricPathState* initialRegions
 ) const {
   materials::UniversalTextureEvaluator textureEvaluator;
   base::SampledSpectrum L(0);
   base::SampledSpectrum beta(1);
   Ray currentRay = ray;
+  DielectricPathState regions =
+    InitialDielectricState(dielectricRegions_, *scene_, ray, initialRegions);
   int depth = 0;
   int nullSkips = 0;
   Float pBSDF = 0;
@@ -693,10 +899,7 @@ base::SampledSpectrum PathIntegrator::Li(
       ++stats->surfaceHits;
     }
 
-    if (
-      options_.rejectNonVacuum &&
-      (interaction.hasMedium || interaction.hasMediumInterface || interaction.hasDielectricRegion)
-    ) {
+    if (options_.rejectNonVacuum && HasUnsupportedMedium(interaction)) {
       if (stats) {
         ++stats->unsupportedMediumInteractions;
       }
@@ -723,6 +926,32 @@ base::SampledSpectrum PathIntegrator::Li(
         currentRay.tMax = Infinity;
         continue;
       }
+    }
+
+    std::optional<ResolvedDielectricTransition> dielectricTransition =
+      AnalyzeDielectricTransition(dielectricRegions_, regions, interaction, currentRay, stats);
+    if (HasDielectricBoundary(interaction) && !dielectricTransition) {
+      return L;
+    }
+    if (dielectricTransition && dielectricTransition->IsNullTraversal()) {
+      if (++nullSkips > options_.maxNullSkips) {
+        if (stats) {
+          ++stats->invalidSamples;
+        }
+        return L;
+      }
+      if (!CommitDielectricTransition(regions, dielectricTransition->token, stats)) {
+        return L;
+      }
+      if (stats) {
+        ++stats->nullSkips;
+      }
+      currentRay = interaction.SpawnRay(currentRay.direction()).ray;
+      currentRay.tMax = Infinity;
+      continue;
+    }
+    if (dielectricTransition) {
+      materialCtx.dielectric = &dielectricTransition->interface;
     }
 
     if (interaction.hasAreaLight) {
@@ -799,7 +1028,7 @@ base::SampledSpectrum PathIntegrator::Li(
     }
 
     if (options_.sampleDirectLighting && base::IsNonSpecular(bsdf.Flags())) {
-      base::SampledSpectrum Ld = SampleLd(interaction, bsdf, lambda, sampler, stats);
+      base::SampledSpectrum Ld = SampleLd(interaction, bsdf, lambda, sampler, stats, regions);
       if (Ld) {
         base::SampledSpectrum contribution = beta * Ld;
         if (RecordSpectralRadianceDiagnostics(contribution, stats)) {
@@ -871,6 +1100,14 @@ base::SampledSpectrum PathIntegrator::Li(
     anyNonSpecularBounces = anyNonSpecularBounces || !specularBounce;
     if (bs->IsTransmission()) {
       etaScale *= bs->eta * bs->eta;
+      if (dielectricTransition) {
+        if (!CommitDielectricTransition(regions, dielectricTransition->token, stats)) {
+          return L;
+        }
+        if (stats) {
+          ++stats->dielectricTransmissionCommits;
+        }
+      }
     }
     previousLightContext = LightSampleContext(interaction);
     if (stats) {
@@ -912,7 +1149,8 @@ PathRenderStats RenderPath(
   SpectralLightTable& lightTable,
   const SpectralCamera& camera,
   Film& film,
-  const PathRenderOptions& options
+  const PathRenderOptions& options,
+  const DielectricRegionTable* dielectricRegions
 ) {
   ValidateOptions(options);
   Bounds3f sceneBounds;
@@ -920,7 +1158,7 @@ PathRenderStats RenderPath(
   lightTable.Preprocess(sceneBounds);
 
   PathRenderStats stats;
-  PathIntegrator integrator(scene, materialTable, lightTable, options);
+  PathIntegrator integrator(scene, materialTable, lightTable, options, dielectricRegions);
   RandomWalkWorkerState worker(options.seed, options.scratchBufferBytes);
 
   for (int y = 0; y < film.Height(); ++y) {

@@ -25,7 +25,7 @@ Copyright: 1998-2020 Matt Pharr, Wenzel Jakob, and Greg Humphreys.
 License: Apache License, Version 2.0
 URL: https://github.com/mmp/pbrt-v4
 
-Files: src/render/spectral_film.h src/render/spectral_film.cpp src/render/spectral_camera.h src/render/spectral_camera.cpp src/render/spectral_scene.h src/render/spectral_scene.cpp src/render/spectral_legacy_shape.cpp src/render/spectral_light.h src/render/spectral_light.cpp src/render/spectral_bsdf.h src/render/spectral_bsdf.cpp tools/spectral-tests/pr8-film-tests.cpp tools/spectral-tests/pr9-camera-tests.cpp tools/spectral-tests/pr10-scene-tests.cpp tools/spectral-tests/pr11-light-tests.cpp tools/spectral-tests/pr12-bsdf-tests.cpp tools/spectral-tests/pr16-conductor-tests.cpp
+Files: src/render/spectral_film.h src/render/spectral_film.cpp src/render/spectral_camera.h src/render/spectral_camera.cpp src/render/spectral_scene.h src/render/spectral_scene.cpp src/render/spectral_legacy_shape.cpp src/render/spectral_light.h src/render/spectral_light.cpp src/render/spectral_bsdf.h src/render/spectral_bsdf.cpp tools/spectral-tests/pr8-film-tests.cpp tools/spectral-tests/pr9-camera-tests.cpp tools/spectral-tests/pr10-scene-tests.cpp tools/spectral-tests/pr11-light-tests.cpp tools/spectral-tests/pr12-bsdf-tests.cpp tools/spectral-tests/pr16-conductor-tests.cpp tools/spectral-tests/pr17-dielectric-tests.cpp
 Copyright: 1998-2020 Matt Pharr, Wenzel Jakob, and Greg Humphreys.
 License: Apache License, Version 2.0
 URL: https://github.com/mmp/pbrt-v4

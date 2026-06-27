@@ -53,6 +53,8 @@ const char* MaterialTypeName(MaterialType type) {
     return "Diffuse";
   case MaterialType::Conductor:
     return "Conductor";
+  case MaterialType::Dielectric:
+    return "Dielectric";
   case MaterialType::Interface:
     return "Interface";
   }
@@ -178,11 +180,12 @@ ConductorMaterial ConductorMaterial::FromEtaK(
   FloatTexture roughness,
   bool remapRoughness
 ) {
+  FloatTexture vRoughness = roughness;
   return FromEtaK(
     std::move(eta),
     std::move(k),
     roughness,
-    std::move(roughness),
+    std::move(vRoughness),
     remapRoughness
   );
 }
@@ -213,10 +216,11 @@ ConductorMaterial ConductorMaterial::FromReflectance(
   FloatTexture roughness,
   bool remapRoughness
 ) {
+  FloatTexture vRoughness = roughness;
   return FromReflectance(
     std::move(reflectance),
     roughness,
-    std::move(roughness),
+    std::move(vRoughness),
     remapRoughness
   );
 }
@@ -301,6 +305,75 @@ Float ConductorMaterial::ClampUnit(Float value) {
   return Clamp(value, 0, 1);
 }
 
+DielectricMaterial DielectricMaterial::Smooth() {
+  return FromRoughness(FloatTexture::Constant(0), true);
+}
+
+DielectricMaterial DielectricMaterial::FromRoughness(
+  FloatTexture roughness,
+  bool remapRoughness
+) {
+  FloatTexture vRoughness = roughness;
+  return FromRoughness(
+    roughness,
+    std::move(vRoughness),
+    remapRoughness
+  );
+}
+
+DielectricMaterial DielectricMaterial::FromRoughness(
+  FloatTexture uRoughness,
+  FloatTexture vRoughness,
+  bool remapRoughness,
+  std::optional<FloatTexture> alpha,
+  std::optional<FloatTexture> bump
+) {
+  return DielectricMaterial(
+    std::move(uRoughness),
+    std::move(vRoughness),
+    remapRoughness,
+    std::move(alpha),
+    std::move(bump)
+  );
+}
+
+DielectricMaterial::DielectricMaterial(
+  FloatTexture uRoughness,
+  FloatTexture vRoughness,
+  bool remapRoughness,
+  std::optional<FloatTexture> alpha,
+  std::optional<FloatTexture> bump
+)
+  : uRoughness_(std::move(uRoughness)),
+    vRoughness_(std::move(vRoughness)),
+    remapRoughness_(remapRoughness),
+    alpha_(std::move(alpha)),
+    bump_(std::move(bump)) {}
+
+bool DielectricMaterial::HasAlpha() const {
+  return alpha_.has_value();
+}
+
+bool DielectricMaterial::HasBump() const {
+  return bump_.has_value();
+}
+
+bool DielectricMaterial::RemapRoughness() const {
+  return remapRoughness_;
+}
+
+MaterialTextureRequirements DielectricMaterial::TextureRequirements() const {
+  MaterialTextureRequirements requirements;
+  requirements.floatTextures = true;
+  requirements.alphaTexture = alpha_.has_value();
+  requirements.bumpTexture = bump_.has_value();
+  return requirements;
+}
+
+Float DielectricMaterial::ClampUnit(Float value) {
+  return Clamp(value, 0, 1);
+}
+
 bool InterfaceMaterial::HasAlpha() const {
   return false;
 }
@@ -325,6 +398,10 @@ Material Material::Conductor(ConductorMaterial material) {
   return Material(std::move(material));
 }
 
+Material Material::Dielectric(DielectricMaterial material) {
+  return Material(std::move(material));
+}
+
 Material Material::Interface() {
   return Material(InterfaceMaterial());
 }
@@ -332,6 +409,8 @@ Material Material::Interface() {
 Material::Material(DiffuseMaterial material) : material_(std::move(material)) {}
 
 Material::Material(ConductorMaterial material) : material_(std::move(material)) {}
+
+Material::Material(DielectricMaterial material) : material_(std::move(material)) {}
 
 Material::Material(InterfaceMaterial material) : material_(material) {}
 
@@ -345,6 +424,9 @@ MaterialType Material::Type() const {
   }
   if (std::holds_alternative<ConductorMaterial>(material_)) {
     return MaterialType::Conductor;
+  }
+  if (std::holds_alternative<DielectricMaterial>(material_)) {
+    return MaterialType::Dielectric;
   }
   if (std::holds_alternative<InterfaceMaterial>(material_)) {
     return MaterialType::Interface;

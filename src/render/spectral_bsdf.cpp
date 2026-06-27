@@ -126,6 +126,27 @@ vec3f Reflect(const vec3f& wo, const vec3f& n) {
   return -wo + static_cast<Float>(2) * dot(wo, n) * n;
 }
 
+bool Refract(const vec3f& wi, normal3f n, Float eta, Float* etap, vec3f* wt) {
+  Float cosThetaI = dot(convert_to_vec3(n), wi);
+  if (cosThetaI < 0) {
+    eta = static_cast<Float>(1) / eta;
+    cosThetaI = -cosThetaI;
+    n = -n;
+  }
+
+  Float sin2ThetaI = std::max(static_cast<Float>(0), static_cast<Float>(1) - Sqr(cosThetaI));
+  Float sin2ThetaT = sin2ThetaI / Sqr(eta);
+  if (sin2ThetaT >= 1) {
+    return false;
+  }
+  Float cosThetaT = SafeSqrt(static_cast<Float>(1) - sin2ThetaT);
+  *wt = -wi / eta + (cosThetaI / eta - cosThetaT) * convert_to_vec3(n);
+  if (etap != nullptr) {
+    *etap = eta;
+  }
+  return true;
+}
+
 vec3f SampleUniformDiskPolar(point2f u) {
   Float r = std::sqrt(u[0]);
   Float theta = static_cast<Float>(2) * Pi * u[1];
@@ -481,6 +502,111 @@ void ConductorBxDF::Regularize() {
   distribution_.Regularize();
 }
 
+DielectricBxDF::DielectricBxDF(Float eta, TrowbridgeReitzDistribution distribution)
+  : eta_(eta), distribution_(distribution) {}
+
+BxDFFlags DielectricBxDF::Flags() const {
+  BxDFFlags flags = eta_ == 1
+                       ? BxDFFlags::Transmission
+                       : (BxDFFlags::Reflection | BxDFFlags::Transmission);
+  return flags |
+         (distribution_.EffectivelySmooth() ? BxDFFlags::Specular : BxDFFlags::Glossy);
+}
+
+base::SampledSpectrum DielectricBxDF::f(
+  const vec3f& wo,
+  const vec3f& wi,
+  TransportMode mode
+) const {
+  (void)wo;
+  (void)wi;
+  (void)mode;
+  return base::SampledSpectrum(0);
+}
+
+std::optional<BSDFSample> DielectricBxDF::Sample_f(
+  const vec3f& wo,
+  Float uc,
+  point2f u,
+  TransportMode mode,
+  BxDFReflTransFlags sampleFlags
+) const {
+  (void)u;
+  if (!distribution_.EffectivelySmooth()) {
+    return {};
+  }
+
+  Float R = FrDielectric(CosTheta(wo), eta_);
+  Float T = static_cast<Float>(1) - R;
+  Float pr = R;
+  Float pt = T;
+  if (!base::HasFlag(sampleFlags, BxDFReflTransFlags::Reflection)) {
+    pr = 0;
+  }
+  if (!base::HasFlag(sampleFlags, BxDFReflTransFlags::Transmission)) {
+    pt = 0;
+  }
+  if (pr == 0 && pt == 0) {
+    return {};
+  }
+
+  if (uc < pr / (pr + pt)) {
+    vec3f wi(-wo.xyz.x, -wo.xyz.y, wo.xyz.z);
+    Float absCosTheta = AbsCosTheta(wi);
+    if (absCosTheta == 0) {
+      return {};
+    }
+    return BSDFSample{
+      base::SampledSpectrum(R / absCosTheta),
+      wi,
+      pr / (pr + pt),
+      BxDFFlags::SpecularReflection
+    };
+  }
+
+  vec3f wi;
+  Float etap = 1;
+  if (!Refract(wo, normal3f(0, 0, 1), eta_, &etap, &wi)) {
+    return {};
+  }
+  Float absCosTheta = AbsCosTheta(wi);
+  if (absCosTheta == 0) {
+    return {};
+  }
+  base::SampledSpectrum ft(T / absCosTheta);
+  if (mode == TransportMode::Radiance) {
+    ft /= (etap * etap);
+  }
+  return BSDFSample{
+    ft,
+    wi,
+    pt / (pr + pt),
+    BxDFFlags::SpecularTransmission,
+    etap
+  };
+}
+
+Float DielectricBxDF::PDF(
+  const vec3f& wo,
+  const vec3f& wi,
+  TransportMode mode,
+  BxDFReflTransFlags sampleFlags
+) const {
+  (void)wo;
+  (void)wi;
+  (void)mode;
+  (void)sampleFlags;
+  return 0;
+}
+
+base::SampledSpectrum DielectricBxDF::rho() const {
+  return base::SampledSpectrum(1);
+}
+
+void DielectricBxDF::Regularize() {
+  distribution_.Regularize();
+}
+
 BxDFFlags NullBxDF::Flags() const {
   return BxDFFlags::Unset;
 }
@@ -530,6 +656,8 @@ BxDF::BxDF(DiffuseBxDF* bxdf) : kind_(bxdf ? Kind::Diffuse : Kind::None), ptr_(b
 
 BxDF::BxDF(ConductorBxDF* bxdf) : kind_(bxdf ? Kind::Conductor : Kind::None), ptr_(bxdf) {}
 
+BxDF::BxDF(DielectricBxDF* bxdf) : kind_(bxdf ? Kind::Dielectric : Kind::None), ptr_(bxdf) {}
+
 BxDF::BxDF(NullBxDF* bxdf) : kind_(bxdf ? Kind::Null : Kind::None), ptr_(bxdf) {}
 
 BxDF::operator bool() const {
@@ -542,6 +670,8 @@ BxDFFlags BxDF::Flags() const {
     return static_cast<const DiffuseBxDF*>(ptr_)->Flags();
   case Kind::Conductor:
     return static_cast<const ConductorBxDF*>(ptr_)->Flags();
+  case Kind::Dielectric:
+    return static_cast<const DielectricBxDF*>(ptr_)->Flags();
   case Kind::Null:
     return static_cast<const NullBxDF*>(ptr_)->Flags();
   case Kind::None:
@@ -560,6 +690,8 @@ base::SampledSpectrum BxDF::f(
     return static_cast<const DiffuseBxDF*>(ptr_)->f(wo, wi, mode);
   case Kind::Conductor:
     return static_cast<const ConductorBxDF*>(ptr_)->f(wo, wi, mode);
+  case Kind::Dielectric:
+    return static_cast<const DielectricBxDF*>(ptr_)->f(wo, wi, mode);
   case Kind::Null:
     return static_cast<const NullBxDF*>(ptr_)->f(wo, wi, mode);
   case Kind::None:
@@ -580,6 +712,8 @@ std::optional<BSDFSample> BxDF::Sample_f(
     return static_cast<const DiffuseBxDF*>(ptr_)->Sample_f(wo, uc, u, mode, sampleFlags);
   case Kind::Conductor:
     return static_cast<const ConductorBxDF*>(ptr_)->Sample_f(wo, uc, u, mode, sampleFlags);
+  case Kind::Dielectric:
+    return static_cast<const DielectricBxDF*>(ptr_)->Sample_f(wo, uc, u, mode, sampleFlags);
   case Kind::Null:
     return static_cast<const NullBxDF*>(ptr_)->Sample_f(wo, uc, u, mode, sampleFlags);
   case Kind::None:
@@ -599,6 +733,8 @@ Float BxDF::PDF(
     return static_cast<const DiffuseBxDF*>(ptr_)->PDF(wo, wi, mode, sampleFlags);
   case Kind::Conductor:
     return static_cast<const ConductorBxDF*>(ptr_)->PDF(wo, wi, mode, sampleFlags);
+  case Kind::Dielectric:
+    return static_cast<const DielectricBxDF*>(ptr_)->PDF(wo, wi, mode, sampleFlags);
   case Kind::Null:
     return static_cast<const NullBxDF*>(ptr_)->PDF(wo, wi, mode, sampleFlags);
   case Kind::None:
@@ -613,6 +749,8 @@ base::SampledSpectrum BxDF::rho() const {
     return static_cast<const DiffuseBxDF*>(ptr_)->rho();
   case Kind::Conductor:
     return static_cast<const ConductorBxDF*>(ptr_)->rho();
+  case Kind::Dielectric:
+    return static_cast<const DielectricBxDF*>(ptr_)->rho();
   case Kind::Null:
   case Kind::None:
     return base::SampledSpectrum(0);
@@ -627,6 +765,9 @@ void BxDF::Regularize() {
     return;
   case Kind::Conductor:
     static_cast<ConductorBxDF*>(ptr_)->Regularize();
+    return;
+  case Kind::Dielectric:
+    static_cast<DielectricBxDF*>(ptr_)->Regularize();
     return;
   case Kind::Null:
     static_cast<NullBxDF*>(ptr_)->Regularize();

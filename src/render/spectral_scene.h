@@ -1,6 +1,8 @@
 #ifndef RAYRENDER_RENDER_SPECTRAL_SCENE_H
 #define RAYRENDER_RENDER_SPECTRAL_SCENE_H
 
+#include "spectral_dielectric.h"
+
 #include "../base/base.h"
 #include "../core/ray.h"
 #include "../math/vectypes.h"
@@ -147,6 +149,7 @@ struct SurfaceInteraction : public Interaction {
   base::MaterialHandle material = base::MaterialHandle::Invalid();
   base::LightHandle areaLight = base::LightHandle::Invalid();
   bool hasAreaLight = false;
+  std::vector<RegionBoundaryAttachment> dielectricBoundaries;
   int dielectricRegionId = -1;
   bool hasDielectricRegion = false;
 
@@ -318,9 +321,12 @@ struct PrimitiveBinding {
   base::LightHandle areaLight = base::LightHandle::Invalid();
   MediumInterface mediumInterface;
   bool hasMediumInterface = false;
+  std::vector<RegionBoundaryAttachment> dielectricBoundaries;
   int dielectricRegionId = -1;
   bool hasDielectricRegion = false;
   ShapeUsageRequirements shapeRequirements;
+
+  std::vector<RegionBoundaryAttachment> DielectricBoundaries() const;
 };
 
 struct PrimitiveIntersection {
@@ -389,6 +395,8 @@ public:
   const Aggregate& GetAggregate() const;
   std::optional<PrimitiveIntersection> Intersect(const Ray& ray, Float tMin, Float tMax) const;
   bool Bounds(Bounds3f* bounds) const;
+  const PrimitiveBinding& GetPrimitiveBinding(PrimitiveHandle handle) const;
+  ShapeHandle GetPrimitiveShape(PrimitiveHandle handle) const;
   std::size_t ShapeCount() const;
   std::size_t PrimitiveCount() const;
   const std::vector<base::LightHandle>& Lights() const;
@@ -398,6 +406,7 @@ private:
   std::vector<Shape> shapes_;
   std::vector<ShapeHandle::GenerationType> shapeGenerations_;
   std::vector<PrimitiveBinding> primitiveBindings_;
+  std::vector<ShapeHandle> primitiveShapes_;
   std::vector<PrimitiveHandle::GenerationType> primitiveGenerations_;
   Aggregate aggregate_;
   std::vector<base::LightHandle> lights_;

@@ -37,6 +37,7 @@ Float CosPhi(const vec3f& w);
 Float SinPhi(const vec3f& w);
 bool SameHemisphere(const vec3f& w, const vec3f& wp);
 vec3f Reflect(const vec3f& wo, const vec3f& n);
+bool Refract(const vec3f& wi, normal3f n, Float eta, Float* etap, vec3f* wt);
 
 vec3f SampleUniformDiskPolar(point2f u);
 vec3f SampleCosineHemisphere(point2f u);
@@ -134,6 +135,34 @@ private:
   base::SampledSpectrum k_;
 };
 
+class DielectricBxDF {
+public:
+  DielectricBxDF() = default;
+  DielectricBxDF(Float eta, TrowbridgeReitzDistribution distribution);
+
+  BxDFFlags Flags() const;
+  base::SampledSpectrum f(const vec3f& wo, const vec3f& wi, TransportMode mode) const;
+  std::optional<BSDFSample> Sample_f(
+    const vec3f& wo,
+    Float uc,
+    point2f u,
+    TransportMode mode,
+    BxDFReflTransFlags sampleFlags = BxDFReflTransFlags::All
+  ) const;
+  Float PDF(
+    const vec3f& wo,
+    const vec3f& wi,
+    TransportMode mode,
+    BxDFReflTransFlags sampleFlags = BxDFReflTransFlags::All
+  ) const;
+  base::SampledSpectrum rho() const;
+  void Regularize();
+
+private:
+  Float eta_ = 1;
+  TrowbridgeReitzDistribution distribution_;
+};
+
 class NullBxDF {
 public:
   BxDFFlags Flags() const;
@@ -159,6 +188,7 @@ public:
   BxDF() = default;
   explicit BxDF(DiffuseBxDF* bxdf);
   explicit BxDF(ConductorBxDF* bxdf);
+  explicit BxDF(DielectricBxDF* bxdf);
   explicit BxDF(NullBxDF* bxdf);
 
   explicit operator bool() const;
@@ -185,6 +215,7 @@ private:
     None,
     Diffuse,
     Conductor,
+    Dielectric,
     Null
   };
 

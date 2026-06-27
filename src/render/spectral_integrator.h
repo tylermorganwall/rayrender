@@ -62,6 +62,11 @@ struct RandomWalkRenderStats {
   std::uint64_t nonFiniteRadiance = 0;
   std::uint64_t negativeRadiance = 0;
   std::uint64_t unsupportedMediumInteractions = 0;
+  std::uint64_t dielectricPrioritySkips = 0;
+  std::uint64_t dielectricIndexMatchedSkips = 0;
+  std::uint64_t dielectricScatteringInterfaces = 0;
+  std::uint64_t dielectricTransmissionCommits = 0;
+  std::uint64_t dielectricStateErrors = 0;
 };
 
 class RandomWalkWorkerState {
@@ -95,7 +100,8 @@ public:
     const Scene& scene,
     const materials::SpectralMaterialTable& materialTable,
     const SpectralLightTable& lightTable,
-    RandomWalkRenderOptions options = {}
+    RandomWalkRenderOptions options = {},
+    const DielectricRegionTable* dielectricRegions = nullptr
   );
 
   base::SampledSpectrum Li(
@@ -104,13 +110,15 @@ public:
     SpectralRandomSampler& sampler,
     base::ScratchBuffer& scratch,
     SpectralVisibleSurface* visibleSurface = nullptr,
-    RandomWalkRenderStats* stats = nullptr
+    RandomWalkRenderStats* stats = nullptr,
+    const DielectricPathState* initialRegions = nullptr
   ) const;
 
 private:
   const Scene* scene_ = nullptr;
   const materials::SpectralMaterialTable* materialTable_ = nullptr;
   const SpectralLightTable* lightTable_ = nullptr;
+  const DielectricRegionTable* dielectricRegions_ = nullptr;
   RandomWalkRenderOptions options_;
 };
 
@@ -120,7 +128,8 @@ RandomWalkRenderStats RenderRandomWalk(
   SpectralLightTable& lightTable,
   const SpectralCamera& camera,
   Film& film,
-  const RandomWalkRenderOptions& options = {}
+  const RandomWalkRenderOptions& options = {},
+  const DielectricRegionTable* dielectricRegions = nullptr
 );
 
 struct PathRenderOptions {
@@ -161,6 +170,12 @@ struct PathRenderStats {
   std::uint64_t nonFiniteRadiance = 0;
   std::uint64_t negativeRadiance = 0;
   std::uint64_t unsupportedMediumInteractions = 0;
+  std::uint64_t dielectricPrioritySkips = 0;
+  std::uint64_t dielectricIndexMatchedSkips = 0;
+  std::uint64_t dielectricScatteringInterfaces = 0;
+  std::uint64_t dielectricTransmissionCommits = 0;
+  std::uint64_t dielectricStateErrors = 0;
+  std::uint64_t copiedVisibilityRegionTraversals = 0;
 };
 
 bool RecordSpectralRadianceDiagnostics(
@@ -174,7 +189,8 @@ public:
     const Scene& scene,
     const materials::SpectralMaterialTable& materialTable,
     const SpectralLightTable& lightTable,
-    PathRenderOptions options = {}
+    PathRenderOptions options = {},
+    const DielectricRegionTable* dielectricRegions = nullptr
   );
 
   base::SampledSpectrum Li(
@@ -183,7 +199,8 @@ public:
     SpectralRandomSampler& sampler,
     base::ScratchBuffer& scratch,
     SpectralVisibleSurface* visibleSurface = nullptr,
-    PathRenderStats* stats = nullptr
+    PathRenderStats* stats = nullptr,
+    const DielectricPathState* initialRegions = nullptr
   ) const;
 
 private:
@@ -192,12 +209,14 @@ private:
     const BSDF& bsdf,
     base::SampledWavelengths& lambda,
     SpectralRandomSampler& sampler,
-    PathRenderStats* stats
+    PathRenderStats* stats,
+    const DielectricPathState& regions
   ) const;
 
   const Scene* scene_ = nullptr;
   const materials::SpectralMaterialTable* materialTable_ = nullptr;
   const SpectralLightTable* lightTable_ = nullptr;
+  const DielectricRegionTable* dielectricRegions_ = nullptr;
   UniformLightSampler lightSampler_;
   PathRenderOptions options_;
 };
@@ -208,7 +227,8 @@ PathRenderStats RenderPath(
   SpectralLightTable& lightTable,
   const SpectralCamera& camera,
   Film& film,
-  const PathRenderOptions& options = {}
+  const PathRenderOptions& options = {},
+  const DielectricRegionTable* dielectricRegions = nullptr
 );
 
 } // namespace render

@@ -64,6 +64,7 @@ compile_test = function(label, repo_root, extra_flags = character()) {
       "src/render/spectral_film.cpp",
       "src/render/spectral_light.cpp",
       "src/render/spectral_scene.cpp",
+      "src/render/spectral_dielectric.cpp",
       "src/materials/spectral_material.cpp",
       "src/materials/spectral_texture.cpp",
       "src/render/spectral_bsdf.cpp",

@@ -3755,11 +3755,36 @@ Introduce the region resolver and smooth nondispersive glass with exact transact
 
 ### Gate
 
-- all state-machine tests in Section 12.18 that do not require dispersion/media pass.
-- concentric and overlapping constant-IOR reference scenes are declaration-order invariant.
-- pbrt-equivalent single-interface glass scenes match pbrt.
-- reflection, transmission, and TIR commit behavior is proven by unit tests.
-- camera-inside analytic shapes initialize correctly.
+- [x] all state-machine tests in Section 12.18 that do not require dispersion/media pass.
+- [x] concentric and overlapping constant-IOR reference scenes are declaration-order invariant.
+- [x] pbrt-equivalent single-interface glass scenes match pbrt.
+- [x] reflection, transmission, and TIR commit behavior is proven by unit tests.
+- [x] camera-inside analytic shapes initialize correctly.
+
+### Completion record
+
+Completed in PR 17 by adding `src/render/spectral_dielectric.h` and
+`src/render/spectral_dielectric.cpp`, extending `src/render/spectral_scene.*`,
+`src/render/spectral_bsdf.*`, `src/materials/spectral_material.*`,
+`src/render/spectral_integrator.*`, `R/schema_v2_descriptors.R`, and
+`tests/testthat/test-schema-v2-descriptors.R`, and by adding
+`tools/spectral-tests/pr17-dielectric-tests.cpp` plus
+`tools/spectral-tests/run-pr17-dielectric-tests.R`.
+
+Gate evidence:
+
+- `Rscript tools/spectral-tests/run-pr17-dielectric-tests.R`
+- `Rscript tools/spectral-tests/run-pr12-bsdf-tests.R`
+- `Rscript tools/spectral-tests/run-pr13-material-tests.R`
+- `Rscript tools/spectral-tests/run-pr14-randomwalk-tests.R`
+- `Rscript tools/spectral-tests/run-pr15-path-tests.R`
+- `Rscript tools/spectral-tests/run-pr16-conductor-tests.R`
+- `Rscript tools/spectral-tests/run-pr10-scene-tests.R`
+- `R_MAKEVARS_USER=/private/tmp/codex-projects/rayrender/Makevars R_LIBS_USER=/private/tmp/codex-projects/rayrender/R-lib TMPDIR=/private/tmp/codex-projects/rayrender/tmp Rscript -e "devtools::load_all('.', quiet=TRUE); testthat::test_file('tests/testthat/test-schema-v2-descriptors.R')"`
+
+PR 17 covers constant-IOR dielectric regions only. Rough dielectric sampling,
+spectral eta, dispersive wavelength termination, and absorbing/scattering media
+remain assigned to PRs 18 and 20.
 
 ## PR 18: Add rough and dispersive nested dielectrics
 
@@ -4729,17 +4754,17 @@ The spectral renderer is complete only when all of the following are true.
 
 ## 19.4 Nested dielectrics
 
-- [ ] each closed object instance has a stable RegionId distinct from Material identity.
-- [ ] lower numeric priority wins in overlapping membership.
-- [ ] Analyze is pure and Commit is transactional.
-- [ ] reflection/TIR never commit; transmission commits once.
-- [ ] skipped/null boundaries do not consume depth or disturb MIS state.
-- [ ] effective outside/inside eta spectra are resolved relative to geometric normal.
+- [x] each closed object instance has a stable RegionId distinct from Material identity.
+- [x] lower numeric priority wins in overlapping membership.
+- [x] Analyze is pure and Commit is transactional.
+- [x] reflection/TIR never commit; transmission commits once.
+- [x] skipped/null boundaries do not consume depth or disturb MIS state.
+- [x] effective outside/inside eta spectra are resolved relative to geometric normal for constant-IOR regions.
 - [ ] active dispersive ratios terminate wavelengths before closure sampling.
 - [ ] skipped dispersive boundaries do not terminate wavelengths.
 - [ ] ray Medium and active region Medium remain consistent.
-- [ ] camera rays can initialize inside nested regions.
-- [ ] visibility rays use independent copied region state.
+- [x] camera rays can initialize inside nested regions.
+- [x] visibility rays use independent copied region state.
 - [ ] all Section 12 unit and render tests pass.
 
 ## 19.5 Lighting and integration

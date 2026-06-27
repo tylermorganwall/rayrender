@@ -10,6 +10,7 @@
 #include <cstddef>
 #include <cmath>
 #include <optional>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -21,15 +22,11 @@ namespace materials {
 enum class MaterialType {
   Diffuse,
   Conductor,
+  Dielectric,
   Interface
 };
 
 const char* MaterialTypeName(MaterialType type);
-
-struct ResolvedDielectricInterface {
-  int outsideRegionId = -1;
-  int insideRegionId = -1;
-};
 
 struct MaterialEvalContext : public TextureEvalContext {
   vec3f wo;
@@ -39,7 +36,7 @@ struct MaterialEvalContext : public TextureEvalContext {
   vec3f dpdvs;
   normal3f dndus;
   normal3f dndvs;
-  const ResolvedDielectricInterface* dielectric = nullptr;
+  const render::ResolvedDielectricInterface* dielectric = nullptr;
 
   MaterialEvalContext() = default;
   explicit MaterialEvalContext(const render::SurfaceInteraction& interaction);
@@ -293,6 +290,99 @@ private:
   std::optional<FloatTexture> bump_;
 };
 
+class DielectricMaterial {
+public:
+  using BxDF = render::DielectricBxDF;
+
+  static DielectricMaterial Smooth();
+  static DielectricMaterial FromRoughness(
+    FloatTexture roughness = FloatTexture::Constant(0),
+    bool remapRoughness = true
+  );
+  static DielectricMaterial FromRoughness(
+    FloatTexture uRoughness,
+    FloatTexture vRoughness,
+    bool remapRoughness,
+    std::optional<FloatTexture> alpha = std::nullopt,
+    std::optional<FloatTexture> bump = std::nullopt
+  );
+
+  template <typename TextureEvaluator>
+  BxDF GetBxDF(
+    const TextureEvaluator& texEval,
+    const MaterialEvalContext& ctx,
+    base::SampledWavelengths& lambda
+  ) const {
+    if (ctx.dielectric == nullptr) {
+      throw std::runtime_error("DielectricMaterial requires a resolved dielectric interface");
+    }
+    if (!ctx.dielectric->ratioIsConstant) {
+      lambda.TerminateSecondary();
+    }
+    Float uRoughness = texEval(uRoughness_, ctx);
+    Float vRoughness = texEval(vRoughness_, ctx);
+    if (remapRoughness_) {
+      uRoughness = render::TrowbridgeReitzDistribution::RoughnessToAlpha(uRoughness);
+      vRoughness = render::TrowbridgeReitzDistribution::RoughnessToAlpha(vRoughness);
+    }
+    render::TrowbridgeReitzDistribution distribution(uRoughness, vRoughness);
+    if (!distribution.EffectivelySmooth()) {
+      throw std::runtime_error("rough spectral dielectric materials are deferred to PR 18");
+    }
+    Float eta = ctx.dielectric->Eta();
+    if (!(eta > 0) || !std::isfinite(eta)) {
+      throw std::runtime_error("resolved dielectric eta must be positive finite");
+    }
+    return BxDF(eta, distribution);
+  }
+
+  template <typename TextureEvaluator>
+  MaterialAlphaResult EvaluateAlpha(
+    const TextureEvaluator& texEval,
+    const MaterialEvalContext& ctx,
+    Float alphaSample = 0
+  ) const {
+    if (!alpha_) {
+      return {};
+    }
+    Float alpha = ClampUnit(texEval(*alpha_, ctx));
+    return MaterialAlphaResult{alpha, alphaSample < alpha};
+  }
+
+  template <typename TextureEvaluator>
+  BumpMapResult EvaluateBump(
+    const TextureEvaluator& texEval,
+    const MaterialEvalContext& ctx
+  ) const {
+    if (!bump_) {
+      return DefaultBumpMapResult(ctx);
+    }
+    return EvaluateBumpMap(texEval, *bump_, ctx);
+  }
+
+  bool HasAlpha() const;
+  bool HasBump() const;
+  bool RemapRoughness() const;
+  MaterialTextureRequirements TextureRequirements() const;
+
+private:
+  DielectricMaterial(
+    FloatTexture uRoughness,
+    FloatTexture vRoughness,
+    bool remapRoughness,
+    std::optional<FloatTexture> alpha,
+    std::optional<FloatTexture> bump
+  );
+
+  static Float ClampUnit(Float value);
+
+  FloatTexture uRoughness_ = FloatTexture::Constant(0);
+  FloatTexture vRoughness_ = FloatTexture::Constant(0);
+  bool remapRoughness_ = true;
+  std::optional<FloatTexture> alpha_;
+  std::optional<FloatTexture> bump_;
+};
+
 class InterfaceMaterial {
 public:
   using BxDF = render::NullBxDF;
@@ -335,6 +425,7 @@ public:
   static Material Diffuse(SpectrumTexture reflectance);
   static Material Diffuse(DiffuseMaterial material);
   static Material Conductor(ConductorMaterial material);
+  static Material Dielectric(DielectricMaterial material = DielectricMaterial::Smooth());
   static Material Interface();
 
   bool IsValid() const;
@@ -414,9 +505,16 @@ public:
 private:
   explicit Material(DiffuseMaterial material);
   explicit Material(ConductorMaterial material);
+  explicit Material(DielectricMaterial material);
   explicit Material(InterfaceMaterial material);
 
-  using Variant = std::variant<std::monostate, DiffuseMaterial, ConductorMaterial, InterfaceMaterial>;
+  using Variant = std::variant<
+    std::monostate,
+    DiffuseMaterial,
+    ConductorMaterial,
+    DielectricMaterial,
+    InterfaceMaterial
+  >;
 
   Variant material_;
 };

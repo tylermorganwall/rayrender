@@ -17,7 +17,7 @@ dielectric_region(
 
 \item{priority}{Default `0L`. Region priority.}
 
-\item{sigma_a}{Default `spectrum_constant(0)`. Absorption spectrum.}
+\item{sigma_a}{Default `spectrum_constant(0)`. Absorption spectrum. Must remain zero until spectral participating media are implemented.}
 
 \item{medium}{Default `NULL`. Optional medium descriptor.}
 
@@ -28,4 +28,7 @@ A schema-v2 optical-region descriptor.
 }
 \description{
 Dielectric Region Convenience Descriptor
+}
+\details{
+Nonzero absorption is rejected in the constant-IOR spectral region stage.
 }

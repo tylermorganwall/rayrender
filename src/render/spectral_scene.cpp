@@ -421,6 +421,7 @@ ShapeCapabilities ShapeCapabilities::Sphere() {
   capabilities.canSampleArea = true;
   capabilities.canSampleDirection = true;
   capabilities.supportsAreaLight = true;
+  capabilities.supportsContainment = true;
   capabilities.topologyClosed = true;
   capabilities.topologyManifold = true;
   return capabilities;
@@ -432,7 +433,7 @@ ShapeCapabilities ShapeCapabilities::CSGImplicit() {
   capabilities.supportsNormalMap = false;
   capabilities.supportsDisplacement = false;
   capabilities.supportsAreaLight = false;
-  capabilities.supportsDielectricRegion = false;
+  capabilities.supportsDielectricRegion = true;
   capabilities.hasSignedDistance = true;
   capabilities.supportsContainment = true;
   capabilities.supportsFiniteDifferenceNormals = true;
@@ -773,6 +774,17 @@ Shape Shape::FromCallbacks(
   return Shape(std::make_shared<Impl>(CallbackShape(std::move(name), capabilities, std::move(callbacks))));
 }
 
+std::vector<RegionBoundaryAttachment> PrimitiveBinding::DielectricBoundaries() const {
+  std::vector<RegionBoundaryAttachment> boundaries = dielectricBoundaries;
+  if (hasDielectricRegion) {
+    boundaries.push_back({
+      static_cast<RegionId>(dielectricRegionId),
+      RegionSide::NegativeNormal
+    });
+  }
+  return boundaries;
+}
+
 bool Shape::IsValid() const {
   return static_cast<bool>(impl_);
 }
@@ -846,6 +858,10 @@ GeometricPrimitive::GeometricPrimitive(
     primitiveHandle_(primitiveHandle) {
   ShapeUsageRequirements requirements = binding_.shapeRequirements;
   requirements.areaLight = requirements.areaLight || binding_.areaLight.IsValid();
+  requirements.dielectricRegionBoundary =
+    requirements.dielectricRegionBoundary ||
+    binding_.hasDielectricRegion ||
+    !binding_.dielectricBoundaries.empty();
   std::vector<std::string> errors = ValidateShapeCapabilities(shape_.Capabilities(), requirements);
   if (!errors.empty()) {
     throw std::invalid_argument(errors.front());
@@ -887,6 +903,7 @@ std::optional<PrimitiveIntersection> GeometricPrimitive::Intersect(
   result.interaction.hasAreaLight = binding_.areaLight.IsValid();
   result.interaction.mediumInterface = binding_.mediumInterface;
   result.interaction.hasMediumInterface = binding_.hasMediumInterface;
+  result.interaction.dielectricBoundaries = binding_.dielectricBoundaries;
   result.interaction.dielectricRegionId = binding_.dielectricRegionId;
   result.interaction.hasDielectricRegion = binding_.hasDielectricRegion;
   return result;
@@ -1002,6 +1019,7 @@ PrimitiveHandle Scene::AddPrimitive(ShapeHandle shape, PrimitiveBinding binding)
   );
   GeometricPrimitive primitive(sceneShape, binding, shape, handle);
   primitiveBindings_.push_back(binding);
+  primitiveShapes_.push_back(shape);
   primitiveGenerations_.push_back(handle.Generation());
   aggregate_.Add(std::move(primitive));
   return handle;
@@ -1037,6 +1055,22 @@ std::optional<PrimitiveIntersection> Scene::Intersect(const Ray& ray, Float tMin
 
 bool Scene::Bounds(Bounds3f* bounds) const {
   return aggregate_.Bounds(bounds);
+}
+
+const PrimitiveBinding& Scene::GetPrimitiveBinding(PrimitiveHandle handle) const {
+  if (!handle.IsValid() || handle.Index() >= primitiveBindings_.size() ||
+      primitiveGenerations_[handle.Index()] != handle.Generation()) {
+    throw std::out_of_range("invalid spectral primitive handle");
+  }
+  return primitiveBindings_[handle.Index()];
+}
+
+ShapeHandle Scene::GetPrimitiveShape(PrimitiveHandle handle) const {
+  if (!handle.IsValid() || handle.Index() >= primitiveShapes_.size() ||
+      primitiveGenerations_[handle.Index()] != handle.Generation()) {
+    throw std::out_of_range("invalid spectral primitive handle");
+  }
+  return primitiveShapes_[handle.Index()];
 }
 
 std::size_t Scene::ShapeCount() const {

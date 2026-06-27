@@ -284,7 +284,7 @@ void TestCSGCapabilitiesAndIntersection() {
   requirements.areaLight = true;
   requirements.dielectricRegionBoundary = true;
   std::vector<std::string> errors = ValidateShapeCapabilities(csg.Capabilities(), requirements);
-  Check(errors.size() == 5, "CSG rejects unsupported UV, normal-map, displacement, area-light, and region-boundary uses");
+  Check(errors.size() == 4, "CSG rejects unsupported UV, normal-map, displacement, and area-light uses");
 
   PrimitiveBinding areaLightBinding;
   areaLightBinding.areaLight = LightHandle::FromIndex(8, 1);

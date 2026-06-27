@@ -1435,6 +1435,19 @@ legacy_material_color = function(legacy, path) {
   as.numeric(color[seq_len(3)])
 }
 
+legacy_dielectric_properties = function(legacy, path) {
+  properties = legacy$properties[[1]]
+  if (!is.numeric(properties) || length(properties) < 8) {
+    schema_stop(path, "legacy dielectric material is missing optical fields")
+  }
+  list(
+    color = as.numeric(properties[seq_len(3)]),
+    refraction = as.numeric(properties[[4]]),
+    attenuation = as.numeric(properties[5:7]),
+    priority = as.integer(properties[[8]])
+  )
+}
+
 #' Convert a material to a schema-v2 spectral material
 #'
 #' @param material Material descriptor.
@@ -1497,6 +1510,15 @@ material_to_spectral = function(material) {
     )
     params$scale = legacy$lightintensity
     warning = "`light()` as a material is a legacy shorthand. In spectral mode, prefer `with_light(area_light(...))`."
+  } else if (type == "dielectric") {
+    properties = legacy_dielectric_properties(
+      legacy,
+      "material_to_spectral(material)"
+    )
+    params$eta = spectrum_constant(properties$refraction)
+    params$priority = properties$priority
+    spectral_type = "legacy_dielectric_interface"
+    warning = "`dielectric()` is adapted to a spectral dielectric interface plus optical-region metadata during scene conversion."
   }
   new_ray_material(
     spectral_type,
@@ -1542,7 +1564,7 @@ henyey_greenstein_phase = function(g = 0) {
 
 #' Homogeneous Medium Descriptor
 #'
-#' @param sigma_a Default `spectrum_constant(0)`. Absorption spectrum.
+#' @param sigma_a Default `spectrum_constant(0)`. Absorption spectrum. Must remain zero until spectral participating media are implemented.
 #' @param sigma_s Default `spectrum_constant(0)`. Scattering spectrum.
 #' @param scale Default `1`. Density scale.
 #' @param phase Default `henyey_greenstein_phase(0)`. Phase function.
@@ -1638,6 +1660,8 @@ region_boundary = function(
 #' @param id Default `NULL`. Region id.
 #'
 #' @return A schema-v2 optical-region descriptor.
+#'
+#' Nonzero absorption is rejected in the constant-IOR spectral region stage.
 #' @export
 dielectric_region = function(
   eta = spectrum_constant(1.5),
@@ -1649,11 +1673,14 @@ dielectric_region = function(
   if (!is.null(medium) && !identical(sigma_a, spectrum_constant(0))) {
     schema_stop("dielectric_region(sigma_a)", "cannot be supplied with medium")
   }
+  if (is.null(medium) && !identical(sigma_a, spectrum_constant(0))) {
+    schema_stop(
+      "dielectric_region(sigma_a)",
+      "nonzero absorption is deferred until spectral participating media"
+    )
+  }
   if (is.null(id)) {
     id = "dielectric_region"
-  }
-  if (is.null(medium) && !identical(sigma_a, spectrum_constant(0))) {
-    medium = homogeneous_medium(sigma_a = sigma_a)
   }
   optical_region(id = id, eta = eta, priority = priority, medium = medium)
 }
@@ -2409,6 +2436,7 @@ legacy_scene_to_schema_v2 = function(scene, validation = scene_validation()) {
   scene = ensure_ray_scene_v2(scene)
   warnings = character()
   entries = vector("list", nrow(scene))
+  attrs = ray_scene_attrs(scene)
   for (i in seq_len(nrow(scene))) {
     material = scene$material[[i]]
     if (
@@ -2422,12 +2450,38 @@ legacy_scene_to_schema_v2 = function(scene, validation = scene_validation()) {
       if (!is.null(legacy_warning)) {
         warnings = c(warnings, legacy_warning)
       }
-      if (get_material_name(legacy$type) %in% c("light", "spotlight")) {
+      legacy_type = get_material_name(legacy$type)
+      if (legacy_type %in% c("light", "spotlight")) {
         scene$light[[i]] = area_light(
           emission = converted[[1]]$params$emission,
           scale = converted[[1]]$params$scale %||% 1
         )
         scene$material[[i]] = interface_material()
+      } else if (identical(legacy_type, "dielectric")) {
+        properties = legacy_dielectric_properties(
+          legacy,
+          "legacy_scene_to_schema_v2(scene)"
+        )
+        if (any(properties$attenuation != 0)) {
+          warnings = c(
+            warnings,
+            "Legacy `dielectric(attenuation = ...)` absorption is deferred in spectral mode; conversion preserves IOR and priority only."
+          )
+        }
+        region_id = sprintf(
+          "legacy_dielectric_%s",
+          scene$object_id[[i]] %||% i
+        )
+        attrs$regions[[region_id]] = dielectric_region(
+          eta = spectrum_constant(properties$refraction),
+          priority = properties$priority,
+          id = region_id
+        )
+        scene$region_boundaries[[i]] = c(
+          scene$region_boundaries[[i]],
+          list(region_boundary(region_id, side = "negative_normal"))
+        )
+        scene$material[[i]] = dielectric_interface()
       } else {
         scene$material[[i]] = converted
       }
@@ -2438,6 +2492,7 @@ legacy_scene_to_schema_v2 = function(scene, validation = scene_validation()) {
     }
   }
   report = new_conversion_report(warnings = warnings, entries = entries)
+  scene = restore_ray_scene_attrs(scene, attrs)
   attr(scene, "conversion_report") = report
   attr(scene, "validation") = validation
   emit_conversion_warnings(report, validation)

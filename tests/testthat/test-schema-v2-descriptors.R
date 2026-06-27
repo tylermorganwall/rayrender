@@ -87,6 +87,10 @@ test_that("schema-v2 constructors reject invalid descriptors early", {
     ),
     "cannot be combined"
   )
+  expect_error(
+    dielectric_region(sigma_a = spectrum_constant(0.1)),
+    "nonzero absorption"
+  )
   expect_error(point_light(c(0, 1)), "point_light\\(position\\)")
 })
 
@@ -210,6 +214,35 @@ test_that("legacy metal adapts to one spectral compatibility warning", {
     "ray_spectrum"
   )
   expect_equal(converted$material[[1]][[1]]$params$u_roughness$value, 0.2)
+})
+
+test_that("legacy dielectric adapts to optical region metadata", {
+  legacy_scene = add_object(
+    sphere(material = dielectric(refraction = 1.33, priority = -2))
+  )
+
+  expect_warning(
+    {
+      converted = legacy_scene_to_schema_v2(legacy_scene)
+    },
+    "dielectric\\(\\)"
+  )
+  report = attr(
+    suppressWarnings(legacy_scene_to_schema_v2(legacy_scene)),
+    "conversion_report"
+  )
+  regions = attr(converted, "regions")
+
+  expect_length(report$warnings, 1)
+  expect_equal(converted$material[[1]][[1]]$type, "dielectric_interface")
+  expect_length(regions, 1)
+  expect_equal(regions[[1]]$eta$value, 1.33)
+  expect_equal(regions[[1]]$priority, -2L)
+  expect_equal(
+    converted$region_boundaries[[1]][[1]]$region,
+    names(regions)[[1]]
+  )
+  expect_equal(converted$region_boundaries[[1]][[1]]$side, "negative_normal")
 })
 
 test_that("render_scene exposes the schema-v2 spectral shell without rendering", {

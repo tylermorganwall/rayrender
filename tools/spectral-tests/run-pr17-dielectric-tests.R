@@ -51,14 +51,14 @@ compile_test = function(label, repo_root, extra_flags = character()) {
   cxx_flags = split_command(config_value("CXX20FLAGS", ""))
   cpp_flags = split_command(config_value("CPPFLAGS", ""))
 
-  build_dir = tempfile(paste0("rayrender-pr15-", label, "-"))
+  build_dir = tempfile(paste0("rayrender-pr17-", label, "-"))
   dir.create(build_dir)
-  executable = file.path(build_dir, paste0("pr15-path-tests-", label))
+  executable = file.path(build_dir, paste0("pr17-dielectric-tests-", label))
 
   sources = file.path(
     repo_root,
     c(
-      "tools/spectral-tests/pr15-path-tests.cpp",
+      "tools/spectral-tests/pr17-dielectric-tests.cpp",
       "src/render/spectral_integrator.cpp",
       "src/render/spectral_camera.cpp",
       "src/render/spectral_film.cpp",
@@ -98,13 +98,13 @@ compile_test = function(label, repo_root, extra_flags = character()) {
     executable
   )
 
-  message("Compiling PR15 PathIntegrator tests (", label, ")")
+  message("Compiling PR17 Dielectric tests (", label, ")")
   run_command(cxx, args)
   executable
 }
 
 run_test = function(label, executable, extra_env = character()) {
-  message("Running PR15 PathIntegrator tests (", label, ")")
+  message("Running PR17 Dielectric tests (", label, ")")
   run_command(executable, character(), env = extra_env)
 }
 
@@ -117,7 +117,7 @@ repo_root = normalizePath(
 normal_executable = compile_test("normal", repo_root)
 run_test("normal", normal_executable)
 
-if (!isTRUE(as.logical(Sys.getenv("RAYRENDER_PR15_SKIP_SANITIZER", "false")))) {
+if (!isTRUE(as.logical(Sys.getenv("RAYRENDER_PR17_SKIP_SANITIZER", "false")))) {
   leak_detection = if (identical(Sys.info()[["sysname"]], "Darwin")) {
     "0"
   } else {
