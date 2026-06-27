@@ -21,7 +21,6 @@ tasks.json
 compile_commands.json
 .cache
 *.asm
-docs
 /.quarto/
 cache/*
 src/Makevars
