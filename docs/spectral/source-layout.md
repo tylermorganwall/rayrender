@@ -22,7 +22,9 @@ spectral material layer, plus legacy `glossy()` schema adaptation to a coated di
 PR 20 adds the isolated pbrt-style Medium/PhaseFunction foundation, homogeneous spectral media,
 dielectric-region medium binding tests, and strict surface-integrator rejection for non-vacuum media.
 PR 21 adds spectral realistic-camera lens tracing, exit-pupil sampling, lens eta descriptors,
-camera wavelength termination, and measured-sensor regression coverage.
+camera wavelength termination, and measured-sensor regression coverage. PR 22 completes the R
+schema-v2 compiler boundary with importer color policies, shape capabilities, compilation caches,
+scene diagnostics, stable compiler hashes, unique region instances, and strict CSG diagnostics.
 
 ## Current Layout
 
@@ -39,7 +41,7 @@ camera wavelength termination, and measured-sensor regression coverage.
 - `src/base/`: explicit RGB/XYZ/color-space types, sRGB transfer functions, RGB-to-spectrum table loading, RGB spectrum wrappers, `SampledSpectrum`, `SampledWavelengths`, spectrum representations and named-spectrum registry loading, PR 18 Cauchy/Sellmeier IOR spectra, tagged dispatch handles, `ScratchBuffer`, BxDF flags, and optional sample-result conventions for future pbrt-style transport.
 - `src/materials/spectral_texture.*`: PR 7 spectral texture descriptors, evaluators, semantic image cache keys, image loading adapters, and hit-record derivative adapters.
 - `src/materials/spectral_material.*`: PR 13 spectral `MaterialEvalContext`, tagged Material dispatch, diffuse and interface/null material parameter objects, alpha and bump hooks, scratch-allocated `BSDF` closure construction, and a spectral material handle table; PR 16 `ConductorMaterial` with eta/k spectra, sampled reflectance compatibility, anisotropic roughness textures, remapping, and packet-preserving closure construction; PR 17 constant-ratio `DielectricMaterial` fed by `ResolvedDielectricInterface`; PR 18 rough/dispersive `DielectricMaterial` wavelength termination and `ThinDielectricMaterial`; PR 19 `DiffuseTransmissionMaterial`, `CoatedDiffuseMaterial`, and `CoatedConductorMaterial` with coating eta wavelength termination.
-- `R/schema_v2_descriptors.R`: PR 6 schema-v2 spectral descriptors, scene decorators, validation, legacy schema-v1 adaptation, serialization helpers, and compiler-input shell; PR 17 rejects nonzero dielectric absorption until media support and maps legacy dielectric refraction/priority into optical-region metadata; PR 19 maps legacy `glossy()` to a spectral coated diffuse descriptor using legacy RGB base color, microfacet alpha, and normal-incidence reflectance.
+- `R/schema_v2_descriptors.R`: PR 6 schema-v2 spectral descriptors, scene decorators, validation, legacy schema-v1 adaptation, serialization helpers, and compiler-input shell; PR 17 rejects nonzero dielectric absorption until media support and maps legacy dielectric refraction/priority into optical-region metadata; PR 19 maps legacy `glossy()` to a spectral coated diffuse descriptor using legacy RGB base color, microfacet alpha, and normal-incidence reflectance; PR 22 adds importer-derived `shape_capabilities`, explicit importer color/scalar-map policy, scene compiler caches for spectra/textures/materials/lights/media/shapes, stable compiler hashes, unique region instance IDs, normal-transform summaries, and strict CSG area-light/mapping diagnostics.
 - `R/render_scene.R`, `R/add_object.R`, `R/ray_scene.R`: legacy-compatible entry points that detect schema-v2 scenes and expose the spectral validation shell without changing `rgb_legacy` rendering.
 - `inst/extdata/spectral/`: generated named spectral assets, per-spectrum metadata, and the pbrt-layout sRGB RGB-to-spectrum coefficient table used by the spectral base layer.
 - `src/render_scene_rcpp.cpp`: Rcpp still-render entry point; it may own R-facing result assembly and preview overlays.
@@ -50,7 +52,7 @@ camera wavelength termination, and measured-sensor regression coverage.
 
 Do not add new top-level renderer setup duplication to the Rcpp entry points. New shared setup belongs under `src/render/`, and entry points should pass explicit inputs into `RenderSession` or a narrower helper there.
 
-The PR 1 render-session layer is intentionally RGB-only. PR 2 through PR 21 spectral code is
+The PR 1 render-session layer is intentionally RGB-only. PR 2 through PR 22 spectral code is
 scaffolding and must remain unused by legacy transport except for isolated conversion, packet,
 asset-loading, RGB reconstruction, descriptor validation, texture evaluation, Film/sensor conversion,
 spectral camera generation, spectral scene/shape adaptation, explicit spectral light construction,
@@ -59,4 +61,5 @@ RandomWalk transport tests, PathIntegrator estimator tests, conductor material t
 render-loop tests, plus constant-IOR dielectric region-state, smooth dielectric path tests, rough
 dielectric scattering tests, dispersive/thin-dielectric wavelength-termination tests, coated
 material closure tests, diffuse-transmission material tests, legacy glossy schema adaptation tests,
-isolated medium/phase-function tests, and realistic-camera dispersion/exit-pupil tests.
+isolated medium/phase-function tests, realistic-camera dispersion/exit-pupil tests, and schema-v2
+compiler-cache/importer/CSG validation tests.

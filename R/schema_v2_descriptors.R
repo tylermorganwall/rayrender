@@ -1994,14 +1994,202 @@ normalize_v2_row_columns = function(scene) {
   scene
 }
 
-default_shape_capabilities = function(shape) {
-  is_csg = identical(shape, "csg_object") || grepl("^csg", shape)
+unwrap_single_list = function(value) {
+  if (is.list(value) && length(value) == 1 && is.null(names(value))) {
+    value[[1]]
+  } else {
+    value
+  }
+}
+
+shape_info_payload = function(shape_info) {
+  if (inherits(shape_info, "ray_shape_info")) {
+    shape_info[[1]]
+  } else if (is.list(shape_info)) {
+    shape_info
+  } else {
+    list()
+  }
+}
+
+shape_properties = function(shape_info) {
+  payload = shape_info_payload(shape_info)
+  properties = payload$shape_properties %||% list()
+  if (is.list(properties)) {
+    properties
+  } else {
+    list()
+  }
+}
+
+shape_mesh_info = function(shape_info) {
+  payload = shape_info_payload(shape_info)
+  unwrap_single_list(payload$mesh_info %||% NULL)
+}
+
+shape_file_info = function(shape_info) {
+  payload = shape_info_payload(shape_info)
+  payload$fileinfo %||% NA_character_
+}
+
+is_csg_shape = function(shape) {
+  identical(shape, "csg_object") || grepl("^csg", shape)
+}
+
+is_imported_shape = function(shape) {
+  shape %in% c("obj", "ply", "mesh3d", "raymesh")
+}
+
+shape_property_is_true = function(properties, name) {
+  isTRUE(properties[[name]])
+}
+
+mesh_field_has_rows = function(value, columns = NULL) {
+  if (!is.matrix(value) && !is.data.frame(value)) {
+    return(FALSE)
+  }
+  if (nrow(value) == 0) {
+    return(FALSE)
+  }
+  is.null(columns) || ncol(value) >= columns
+}
+
+mesh_contains_field = function(mesh, names, columns = NULL) {
+  if (!is.list(mesh)) {
+    return(FALSE)
+  }
+  for (name in names) {
+    if (mesh_field_has_rows(mesh[[name]], columns = columns)) {
+      return(TRUE)
+    }
+  }
+  if (!is.null(mesh$material)) {
+    return(mesh_contains_field(mesh$material, names, columns = columns))
+  }
+  FALSE
+}
+
+importer_color_policy = function(shape, shape_info) {
+  properties = shape_properties(shape_info)
+  has_color_textures = switch(
+    shape,
+    obj = shape_property_is_true(properties, "load_textures"),
+    mesh3d = {
+      mesh = shape_mesh_info(shape_info)
+      is.character(mesh$texture) && nzchar(mesh$texture)
+    },
+    raymesh = mesh_contains_field(shape_mesh_info(shape_info), c("textures")),
+    FALSE
+  )
   list(
-    uv = !is_csg,
+    source = shape,
+    color_space = "sRGB",
+    base_color = list(
+      role = "albedo",
+      numeric_encoding = "legacy",
+      texture_encoding = if (has_color_textures) "srgb" else NULL
+    ),
+    emission = list(
+      role = "illuminant",
+      numeric_encoding = "legacy",
+      texture_encoding = if (has_color_textures) "srgb" else NULL
+    ),
+    scalar_maps = list(
+      encoding = "linear",
+      gamma_decoded = FALSE,
+      roles = c("roughness", "opacity", "alpha", "bump", "displacement")
+    ),
+    transmission = list(role = "unbounded", encoding = "linear"),
+    opacity = list(role = "coverage", channel = "alpha", encoding = "linear"),
+    ior = list(role = "unbounded", encoding = "linear"),
+    optical_constants = list(eta_role = "unbounded", k_role = "unbounded")
+  )
+}
+
+default_shape_capabilities = function(shape, shape_info = NULL) {
+  is_csg = is_csg_shape(shape)
+  if (is_csg) {
+    return(list(
+      uv = FALSE,
+      normal = TRUE,
+      generated_mapping = TRUE,
+      generated_mapping_descriptor = object_mapping(),
+      generated_normals = FALSE,
+      area_light = TRUE,
+      area_light_requires_mesh = TRUE,
+      region_boundary = TRUE,
+      coherent_inside = TRUE,
+      supports_child_materials = FALSE,
+      supports_child_regions = FALSE,
+      imported = FALSE
+    ))
+  }
+  if (is_imported_shape(shape)) {
+    properties = shape_properties(shape_info)
+    mesh = shape_mesh_info(shape_info)
+    has_uv = switch(
+      shape,
+      obj = shape_property_is_true(properties, "load_textures"),
+      mesh3d = mesh_contains_field(mesh, c("texcoords", "uv"), columns = 2),
+      raymesh = mesh_contains_field(
+        mesh,
+        c("texcoords", "texcoord", "uv", "texcoords0"),
+        columns = 2
+      ),
+      FALSE
+    )
+    has_normals = switch(
+      shape,
+      obj = shape_property_is_true(properties, "load_normals") ||
+        shape_property_is_true(properties, "calculate_consistent_normals") ||
+        shape_property_is_true(properties, "recalculate_normals"),
+      ply = shape_property_is_true(properties, "recalculate_normals"),
+      mesh3d = shape_property_is_true(properties, "recalculate_normals") ||
+        mesh_contains_field(mesh, c("normals", "normal"), columns = 3),
+      raymesh = shape_property_is_true(
+        properties,
+        "calculate_consistent_normals"
+      ) ||
+        shape_property_is_true(properties, "recalculate_normals") ||
+        mesh_contains_field(mesh, c("normals", "normal"), columns = 3),
+      FALSE
+    )
+    return(list(
+      uv = has_uv,
+      normal = has_normals,
+      generated_mapping = !has_uv,
+      generated_mapping_descriptor = if (!has_uv) object_mapping() else NULL,
+      generated_normals = !has_normals,
+      normal_source = if (has_normals) {
+        "source_or_recalculated"
+      } else {
+        "geometric"
+      },
+      area_light = TRUE,
+      area_light_requires_mesh = FALSE,
+      region_boundary = TRUE,
+      coherent_inside = FALSE,
+      supports_child_materials = FALSE,
+      supports_child_regions = FALSE,
+      imported = TRUE,
+      importer = shape,
+      importer_file = shape_file_info(shape_info),
+      importer_policy = importer_color_policy(shape, shape_info)
+    ))
+  }
+  list(
+    uv = TRUE,
+    normal = TRUE,
     generated_mapping = TRUE,
-    area_light = !is_csg,
+    generated_mapping_descriptor = object_mapping(),
+    generated_normals = FALSE,
+    area_light = TRUE,
+    area_light_requires_mesh = FALSE,
     region_boundary = TRUE,
-    coherent_inside = is_csg
+    coherent_inside = FALSE,
+    supports_child_materials = FALSE,
+    supports_child_regions = FALSE,
+    imported = FALSE
   )
 }
 
@@ -2085,7 +2273,7 @@ assign_missing_object_ids = function(scene) {
   if (!"object_id" %in% names(scene)) {
     scene$object_id = rep(NA_integer_, nrow(scene))
   }
-  missing_id = is.na(scene$object_id)
+  missing_id = is.na(scene$object_id) | duplicated(scene$object_id)
   if (any(missing_id)) {
     max_id = suppressWarnings(max(
       scene$object_id[!missing_id],
@@ -2123,7 +2311,7 @@ ensure_ray_scene_v2 = function(scene) {
   scene = add_list_col(scene, "region_boundaries", function(i) list())
   scene = add_list_col(scene, "medium_interface", function(i) NULL)
   scene = add_list_col(scene, "shape_capabilities", function(i) {
-    default_shape_capabilities(scene$shape[[i]])
+    default_shape_capabilities(scene$shape[[i]], scene$shape_info[[i]])
   })
   scene = add_list_col(scene, "visibility", function(i) default_visibility())
   scene = add_list_col(scene, "user_data", function(i) list())
@@ -2393,6 +2581,91 @@ emit_validation = function(mode, path, message) {
   invisible(FALSE)
 }
 
+csg_shape_tree = function(shape_info) {
+  payload = shape_info_payload(shape_info)
+  unwrap_single_list(payload$csg_object %||% NULL)
+}
+
+csg_contains_forbidden_metadata = function(value) {
+  if (
+    inherits(value, "ray_material") ||
+      inherits(value, "ray_region") ||
+      inherits(value, "ray_region_boundary")
+  ) {
+    return(TRUE)
+  }
+  if (!is.list(value)) {
+    return(FALSE)
+  }
+  bad_names = intersect(
+    names(value) %||% character(),
+    c(
+      "material",
+      "region",
+      "regions",
+      "region_boundary",
+      "region_boundaries",
+      "medium_interface"
+    )
+  )
+  if (length(bad_names) > 0) {
+    return(TRUE)
+  }
+  any(vapply(value, csg_contains_forbidden_metadata, logical(1)))
+}
+
+is_generated_texture_mapping = function(mapping) {
+  inherits(mapping, "ray_texture_mapping") &&
+    mapping$type %in% c("triplanar", "object")
+}
+
+contains_unsupported_csg_mapping = function(value) {
+  if (inherits(value, "ray_texture_image")) {
+    return(!is_generated_texture_mapping(value$mapping))
+  }
+  if (!is.list(value)) {
+    return(FALSE)
+  }
+  any(vapply(value, contains_unsupported_csg_mapping, logical(1)))
+}
+
+csg_mapping_diagnostic = function(material) {
+  if (!inherits(material, "ray_material_v2")) {
+    return(NULL)
+  }
+  material_payload = material[[1]]
+  if (
+    contains_unsupported_csg_mapping(material_payload$params) ||
+      contains_unsupported_csg_mapping(material_payload$textures)
+  ) {
+    return(
+      "CSG image textures require a generated mapping such as triplanar_mapping() or object_mapping()"
+    )
+  }
+  if (
+    !is.null(material_payload$normal_map) &&
+      contains_unsupported_csg_mapping(material_payload$normal_map)
+  ) {
+    return(
+      "CSG normal maps require a generated mapping such as triplanar_mapping() or object_mapping()"
+    )
+  }
+  if (
+    !is.null(material_payload$displacement) &&
+      contains_unsupported_csg_mapping(material_payload$displacement)
+  ) {
+    return(
+      "CSG displacement maps require a generated mapping such as triplanar_mapping() or object_mapping()"
+    )
+  }
+  NULL
+}
+
+csg_unsampled_emitters_allowed = function(validation) {
+  identical(validation_mode(validation), "advanced") &&
+    isTRUE(validation$allow_unsampled_emitters)
+}
+
 #' Validate a schema-v2 scene
 #'
 #' @param scene Scene.
@@ -2412,6 +2685,26 @@ validate_ray_scene_v2 = function(
   regions = attr(scene, "regions") %||% list()
   region_names = names(regions)
   for (i in seq_len(nrow(scene))) {
+    is_csg = is_csg_shape(scene$shape[[i]])
+    if (is_csg) {
+      if (
+        csg_contains_forbidden_metadata(csg_shape_tree(scene$shape_info[[i]]))
+      ) {
+        emit_validation(
+          mode,
+          sprintf("object[%i].csg", i),
+          "per-child CSG materials and regions are not supported"
+        )
+      }
+      mapping_message = csg_mapping_diagnostic(scene$material[[i]])
+      if (!is.null(mapping_message)) {
+        emit_validation(
+          mode,
+          sprintf("object[%i].material", i),
+          mapping_message
+        )
+      }
+    }
     for (boundary in scene$region_boundaries[[i]]) {
       if (!boundary$region %in% region_names) {
         emit_validation(
@@ -2428,6 +2721,16 @@ validate_ray_scene_v2 = function(
           mode,
           sprintf("object[%i].light", i),
           "area light is not supported by this shape capability"
+        )
+      } else if (
+        is_csg &&
+          !identical(scene$light[[i]]$sampling, "sampled") &&
+          !csg_unsampled_emitters_allowed(validation)
+      ) {
+        emit_validation(
+          mode,
+          sprintf("object[%i].light", i),
+          "CSG area lights require sampling = \"sampled\" in strict spectral mode"
         )
       }
     }
@@ -2577,6 +2880,485 @@ scene_row_to_compiler_list = function(scene, i) {
   result
 }
 
+canonicalize_schema_value = function(value) {
+  if (is.environment(value) || is.function(value)) {
+    return(sprintf("<%s>", class(value)[[1]]))
+  }
+  if (is.data.frame(value)) {
+    result = lapply(names(value), function(name) {
+      canonicalize_schema_value(value[[name]])
+    })
+    names(result) = names(value)
+    return(result)
+  }
+  if (is.matrix(value) || is.array(value)) {
+    return(structure(
+      as.vector(value),
+      dim = dim(value),
+      dimnames = dimnames(value)
+    ))
+  }
+  if (is.list(value)) {
+    result = lapply(value, canonicalize_schema_value)
+    names_value = names(result)
+    if (!is.null(names_value) && all(nzchar(names_value))) {
+      result = result[order(names_value)]
+    }
+    return(result)
+  }
+  if (is.factor(value)) {
+    return(as.character(value))
+  }
+  if (is.numeric(value)) {
+    return(unname(value))
+  }
+  value
+}
+
+stable_schema_hash = function(value) {
+  raw_value = serialize(canonicalize_schema_value(value), NULL, version = 3)
+  tmp = tempfile("rayrender-schema-hash-")
+  on.exit(unlink(tmp), add = TRUE)
+  writeBin(raw_value, tmp)
+  unname(tools::md5sum(tmp))
+}
+
+new_compiler_caches = function() {
+  list(
+    spectra = list(),
+    textures = list(),
+    materials = list(),
+    lights = list(),
+    media = list(),
+    shapes = list()
+  )
+}
+
+compiler_cache_prefix = function(kind) {
+  switch(
+    kind,
+    spectra = "spectrum",
+    textures = "texture",
+    materials = "material",
+    lights = "light",
+    media = "medium",
+    shapes = "shape"
+  )
+}
+
+compiler_cache_kind = function(value) {
+  if (inherits(value, "ray_spectrum")) {
+    return("spectra")
+  }
+  if (inherits(value, "ray_texture")) {
+    return("textures")
+  }
+  if (
+    inherits(value, "ray_material_v2") || inherits(value, "ray_named_material")
+  ) {
+    return("materials")
+  }
+  if (inherits(value, "ray_light")) {
+    return("lights")
+  }
+  if (inherits(value, "ray_medium") || inherits(value, "ray_phase")) {
+    return("media")
+  }
+  NULL
+}
+
+compiler_cache_insert = function(caches, kind, descriptor, label = NULL) {
+  hash = stable_schema_hash(descriptor)
+  existing_hashes = vapply(
+    caches[[kind]],
+    function(entry) entry$hash,
+    character(1)
+  )
+  existing = match(hash, existing_hashes)
+  if (!is.na(existing)) {
+    return(list(caches = caches, id = caches[[kind]][[existing]]$id))
+  }
+  id = sprintf(
+    "%s_%03i",
+    compiler_cache_prefix(kind),
+    length(caches[[kind]]) + 1L
+  )
+  caches[[kind]][[id]] = list(
+    id = id,
+    hash = hash,
+    label = label,
+    descriptor = descriptor
+  )
+  list(caches = caches, id = id)
+}
+
+compiler_collect_descriptor = function(caches, value) {
+  if (is.null(value)) {
+    return(caches)
+  }
+  kind = compiler_cache_kind(value)
+  if (!is.null(kind)) {
+    inserted = compiler_cache_insert(caches, kind, value)
+    caches = inserted$caches
+  }
+  payload = if (inherits(value, "ray_material")) {
+    lapply(seq_along(value), function(i) value[[i]])
+  } else {
+    value
+  }
+  if (is.list(payload)) {
+    for (element in payload) {
+      caches = compiler_collect_descriptor(caches, element)
+    }
+  }
+  caches
+}
+
+rotation_axis_matrix = function(axis, angle_degrees) {
+  theta = angle_degrees * pi / 180
+  ctheta = cos(theta)
+  stheta = sin(theta)
+  switch(
+    as.character(axis),
+    "1" = matrix(
+      c(1, 0, 0, 0, ctheta, stheta, 0, -stheta, ctheta),
+      nrow = 3
+    ),
+    "2" = matrix(
+      c(ctheta, 0, -stheta, 0, 1, 0, stheta, 0, ctheta),
+      nrow = 3
+    ),
+    "3" = matrix(
+      c(ctheta, stheta, 0, -stheta, ctheta, 0, 0, 0, 1),
+      nrow = 3
+    ),
+    diag(3)
+  )
+}
+
+transform_payload = function(transform) {
+  if (inherits(transform, "ray_transform")) {
+    transform[[1]]
+  } else if (is.list(transform)) {
+    transform
+  } else {
+    list()
+  }
+}
+
+transform_component = function(payload, name, default) {
+  value = unwrap_single_list(payload[[name]] %||% default)
+  if (is.null(value)) {
+    default
+  } else {
+    value
+  }
+}
+
+normal_transform_summary = function(transform) {
+  payload = transform_payload(transform)
+  angle = as.numeric(transform_component(payload, "angle", c(0, 0, 0)))
+  if (length(angle) != 3) {
+    angle = c(0, 0, 0)
+  }
+  order_rotation = as.integer(transform_component(
+    payload,
+    "order_rotation",
+    1:3
+  ))
+  order_rotation = order_rotation[order_rotation %in% 1:3]
+  if (length(order_rotation) == 0) {
+    order_rotation = 1:3
+  }
+  scale = as.numeric(transform_component(payload, "scale", c(1, 1, 1)))
+  if (length(scale) == 1) {
+    scale = rep(scale, 3)
+  }
+  if (length(scale) != 3 || any(!is.finite(scale))) {
+    scale = c(1, 1, 1)
+  }
+  rotation = diag(3)
+  for (axis in order_rotation) {
+    rotation = rotation_axis_matrix(axis, angle[[axis]]) %*% rotation
+  }
+  linear = rotation %*% diag(scale, nrow = 3)
+  group_transform = transform_component(payload, "group_transform", NULL)
+  if (
+    is.matrix(group_transform) &&
+      identical(dim(group_transform), c(4L, 4L)) &&
+      all(is.finite(group_transform))
+  ) {
+    linear = group_transform[1:3, 1:3, drop = FALSE] %*% linear
+  }
+  normal = tryCatch(
+    t(solve(linear)),
+    error = function(e) matrix(NA_real_, nrow = 3, ncol = 3)
+  )
+  list(
+    linear = unname(linear),
+    normal = unname(normal),
+    finite = all(is.finite(normal)),
+    source = "inverse_transpose_linear_transform"
+  )
+}
+
+region_instance_id = function(region, object_id, boundary_index) {
+  region_name = gsub("[^A-Za-z0-9_]+", "_", region)
+  sprintf(
+    "%s_object_%s_boundary_%02i",
+    region_name,
+    object_id,
+    boundary_index
+  )
+}
+
+compiled_region_instances = function(scene, i) {
+  boundaries = scene$region_boundaries[[i]]
+  if (length(boundaries) == 0) {
+    return(list())
+  }
+  object_id = scene$object_id[[i]] %||% i
+  lapply(seq_along(boundaries), function(boundary_index) {
+    boundary = boundaries[[boundary_index]]
+    list(
+      instance_id = region_instance_id(
+        boundary$region,
+        object_id,
+        boundary_index
+      ),
+      region = boundary$region,
+      side = boundary$side,
+      object_id = object_id,
+      boundary_index = boundary_index
+    )
+  })
+}
+
+compiler_shape_descriptor = function(scene, i) {
+  list(
+    shape = scene$shape[[i]],
+    shape_info = scene$shape_info[[i]],
+    transforms = scene$transforms[[i]],
+    position = c(scene$x[[i]], scene$y[[i]], scene$z[[i]]),
+    shape_capabilities = scene$shape_capabilities[[i]],
+    normal_transform = normal_transform_summary(scene$transforms[[i]]),
+    object_id = scene$object_id[[i]],
+    object_name = scene$object_name[[i]]
+  )
+}
+
+is_compiler_material = function(material) {
+  inherits(material, "ray_material_v2") ||
+    inherits(material, "ray_named_material")
+}
+
+reject_legacy_compiler_material = function(material, path) {
+  if (!is_compiler_material(material)) {
+    schema_stop(
+      path,
+      "legacy positional material data must be adapted with legacy_scene_to_schema_v2() before compilation"
+    )
+  }
+}
+
+compile_scene_objects = function(scene, caches) {
+  compiled_objects = vector("list", nrow(scene))
+  for (i in seq_len(nrow(scene))) {
+    material = scene$material[[i]]
+    reject_legacy_compiler_material(material, sprintf("object[%i].material", i))
+    material_insert = compiler_cache_insert(
+      caches,
+      "materials",
+      material,
+      label = sprintf("object[%i].material", i)
+    )
+    caches = material_insert$caches
+    caches = compiler_collect_descriptor(caches, material)
+
+    shape_descriptor = compiler_shape_descriptor(scene, i)
+    shape_insert = compiler_cache_insert(
+      caches,
+      "shapes",
+      shape_descriptor,
+      label = sprintf("object[%i].shape", i)
+    )
+    caches = shape_insert$caches
+
+    light_cache_id = NULL
+    if (!is.null(scene$light[[i]])) {
+      light_insert = compiler_cache_insert(
+        caches,
+        "lights",
+        scene$light[[i]],
+        label = sprintf("object[%i].light", i)
+      )
+      caches = light_insert$caches
+      caches = compiler_collect_descriptor(caches, scene$light[[i]])
+      light_cache_id = light_insert$id
+    }
+
+    is_csg = is_csg_shape(scene$shape[[i]])
+    requires_mesh_area_light = is_csg &&
+      !is.null(scene$light[[i]]) &&
+      isTRUE(attr(scene$light[[i]], "area")) &&
+      identical(scene$light[[i]]$sampling, "sampled")
+
+    compiled_object = scene_row_to_compiler_list(scene, i)
+    compiled_object$shape_cache_id = shape_insert$id
+    compiled_object$material_cache_id = material_insert$id
+    compiled_object$light_cache_id = light_cache_id
+    compiled_object$region_instances = compiled_region_instances(scene, i)
+    compiled_object$normal_transform = shape_descriptor$normal_transform
+    compiled_object$requires_mesh_area_light = requires_mesh_area_light
+    compiled_object$csg_compilation = if (is_csg) {
+      list(
+        surface = "ordinary_spectral_surface",
+        region_boundary = length(compiled_object$region_instances) > 0,
+        null_medium_boundary = !is.null(scene$medium_interface[[i]]),
+        area_light = if (requires_mesh_area_light) "render_mesh" else NULL
+      )
+    } else {
+      NULL
+    }
+    compiled_objects[[i]] = compiled_object
+  }
+  list(objects = compiled_objects, caches = caches)
+}
+
+compiler_collect_scene_registries = function(caches, attrs) {
+  for (region in attrs$regions %||% list()) {
+    caches = compiler_collect_descriptor(caches, region)
+  }
+  for (light in attrs$lights %||% list()) {
+    inserted = compiler_cache_insert(
+      caches,
+      "lights",
+      light,
+      label = "scene.light"
+    )
+    caches = compiler_collect_descriptor(inserted$caches, light)
+  }
+  if (!is.null(attrs$environment)) {
+    inserted = compiler_cache_insert(
+      caches,
+      "lights",
+      attrs$environment,
+      label = "scene.environment"
+    )
+    caches = compiler_collect_descriptor(inserted$caches, attrs$environment)
+  }
+  for (texture in attrs$named_textures %||% list()) {
+    inserted = compiler_cache_insert(
+      caches,
+      "textures",
+      texture,
+      label = "named_texture"
+    )
+    caches = compiler_collect_descriptor(inserted$caches, texture)
+  }
+  for (material in attrs$named_materials %||% list()) {
+    inserted = compiler_cache_insert(
+      caches,
+      "materials",
+      material,
+      label = "named_material"
+    )
+    caches = compiler_collect_descriptor(inserted$caches, material)
+  }
+  caches
+}
+
+compiler_scene_diagnostics = function(
+  scene,
+  compiled_objects,
+  caches,
+  validation
+) {
+  report = attr(scene, "conversion_report")
+  legacy_approximations = if (!is.null(report)) {
+    report$warnings %||% character()
+  } else {
+    character()
+  }
+  importers = list()
+  generated_mapping = character()
+  generated_normals = character()
+  unsupported_fields = character()
+  for (i in seq_len(nrow(scene))) {
+    caps = scene$shape_capabilities[[i]]
+    if (isTRUE(caps$imported)) {
+      importers[[length(importers) + 1L]] = list(
+        object_id = scene$object_id[[i]],
+        shape = scene$shape[[i]],
+        file = caps$importer_file,
+        color_policy = caps$importer_policy,
+        shape_capabilities = caps
+      )
+    }
+    if (isTRUE(caps$generated_mapping)) {
+      generated_mapping = c(
+        generated_mapping,
+        sprintf("object[%i] uses generated object-space texture mapping", i)
+      )
+    }
+    if (isTRUE(caps$generated_normals)) {
+      generated_normals = c(
+        generated_normals,
+        sprintf(
+          "object[%i] uses geometric normals for missing importer normals",
+          i
+        )
+      )
+    }
+    if (is_csg_shape(scene$shape[[i]])) {
+      if (
+        csg_contains_forbidden_metadata(csg_shape_tree(scene$shape_info[[i]]))
+      ) {
+        unsupported_fields = c(
+          unsupported_fields,
+          sprintf("object[%i].csg per-child material or region metadata", i)
+        )
+      }
+      mapping_message = csg_mapping_diagnostic(scene$material[[i]])
+      if (!is.null(mapping_message)) {
+        unsupported_fields = c(
+          unsupported_fields,
+          sprintf("object[%i].material %s", i, mapping_message)
+        )
+      }
+      if (
+        !is.null(scene$light[[i]]) &&
+          isTRUE(attr(scene$light[[i]], "area")) &&
+          !identical(scene$light[[i]]$sampling, "sampled") &&
+          !csg_unsampled_emitters_allowed(validation)
+      ) {
+        unsupported_fields = c(
+          unsupported_fields,
+          sprintf("object[%i].light unsampled CSG area light", i)
+        )
+      }
+    }
+  }
+  list(
+    validation_mode = validation_mode(validation),
+    cache_counts = vapply(caches, length, integer(1)),
+    legacy_approximations = unique(legacy_approximations),
+    importer_approximations = unique(c(generated_mapping, generated_normals)),
+    unsupported_fields = unique(unsupported_fields),
+    importers = importers,
+    object_count = length(compiled_objects),
+    area_light_count = sum(vapply(
+      compiled_objects,
+      function(object) {
+        !is.null(object$light) && isTRUE(attr(object$light, "area"))
+      },
+      logical(1)
+    )),
+    free_light_count = length(attr(scene, "lights") %||% list()),
+    environment_light = !is.null(attr(scene, "environment"))
+  )
+}
+
 #' Convert a schema-v2 scene to compiler input
 #'
 #' @param scene Scene.
@@ -2590,20 +3372,36 @@ as_scene_compiler_input = function(
 ) {
   scene = ensure_ray_scene_v2(scene)
   validate_ray_scene_v2(scene, validation = validation)
-  structure(
-    list(
-      schema_version = ray_schema_version,
-      objects = lapply(seq_len(nrow(scene)), function(i) {
-        scene_row_to_compiler_list(scene, i)
-      }),
-      regions = attr(scene, "regions") %||% list(),
-      lights = attr(scene, "lights") %||% list(),
-      environment = attr(scene, "environment"),
-      named_textures = attr(scene, "named_textures") %||% list(),
-      named_materials = attr(scene, "named_materials") %||% list(),
-      render_defaults = attr(scene, "render_defaults") %||% list(),
-      validation = validation
-    ),
-    class = "ray_scene_compiler_input"
+  attrs = ray_scene_attrs(scene)
+  compiled = compile_scene_objects(scene, new_compiler_caches())
+  caches = compiler_collect_scene_registries(compiled$caches, attrs)
+  diagnostics = compiler_scene_diagnostics(
+    scene,
+    compiled$objects,
+    caches,
+    validation
   )
+  result = list(
+    schema_version = ray_schema_version,
+    objects = lapply(seq_len(nrow(scene)), function(i) {
+      scene_row_to_compiler_list(scene, i)
+    }),
+    compiled = list(
+      objects = compiled$objects,
+      caches = caches,
+      diagnostics = diagnostics
+    ),
+    caches = caches,
+    diagnostics = diagnostics,
+    regions = attrs$regions %||% list(),
+    lights = attrs$lights %||% list(),
+    environment = attrs$environment,
+    named_textures = attrs$named_textures %||% list(),
+    named_materials = attrs$named_materials %||% list(),
+    render_defaults = attrs$render_defaults %||% list(),
+    validation = validation
+  )
+  result$compiler_hash = stable_schema_hash(result)
+  result$compiled$compiler_hash = result$compiler_hash
+  structure(result, class = "ray_scene_compiler_input")
 }

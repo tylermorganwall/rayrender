@@ -136,7 +136,98 @@ test_that("schema-v2 scene decorators preserve rows and registries", {
   expect_s3_class(compiler_input, "ray_scene_compiler_input")
   expect_equal(compiler_input$schema_version, 2)
   expect_equal(length(compiler_input$objects), 1)
+  expect_match(compiler_input$compiler_hash, "^[a-f0-9]{32}$")
+  expect_gt(length(compiler_input$caches$materials), 0)
+  expect_gt(length(compiler_input$caches$shapes), 0)
   expect_s3_class(ray_schema_roundtrip(scene), "ray_scene_v2")
+})
+
+test_that("compiler output caches and hashes are deterministic", {
+  scene = ray_scene_v2(sphere(material = interface_material())) |>
+    add_light(point_light(c(0, 4, 0))) |>
+    set_environment(uniform_infinite_light())
+
+  compiler_input1 = as_scene_compiler_input(
+    scene,
+    validation = scene_validation("strict")
+  )
+  compiler_input2 = as_scene_compiler_input(
+    scene,
+    validation = scene_validation("strict")
+  )
+
+  expect_identical(compiler_input1$compiler_hash, compiler_input2$compiler_hash)
+  expect_match(compiler_input1$compiler_hash, "^[a-f0-9]{32}$")
+  expect_gt(length(compiler_input1$caches$materials), 0)
+  expect_gt(length(compiler_input1$caches$lights), 1)
+  expect_gt(length(compiler_input1$caches$shapes), 0)
+  expect_true(compiler_input1$compiled$objects[[1]]$normal_transform$finite)
+})
+
+test_that("compiler rejects legacy positional material data", {
+  expect_error(
+    as_scene_compiler_input(
+      ray_scene_v2(sphere()),
+      validation = scene_validation("none")
+    ),
+    "legacy positional material data"
+  )
+})
+
+test_that("importers expose color policy and generated capabilities", {
+  obj_file = r_obj()
+  skip_if_not(file.exists(obj_file))
+
+  imported = obj_model(
+    obj_file,
+    load_material = TRUE,
+    load_textures = FALSE,
+    load_normals = FALSE,
+    calculate_consistent_normals = FALSE,
+    material = interface_material()
+  )
+  compiler_input = as_scene_compiler_input(
+    ray_scene_v2(imported),
+    validation = scene_validation("strict")
+  )
+  caps = compiler_input$compiled$objects[[1]]$shape_capabilities
+  policy = compiler_input$diagnostics$importers[[1]]$color_policy
+
+  expect_false(caps$uv)
+  expect_true(caps$generated_mapping)
+  expect_true(caps$generated_normals)
+  expect_equal(policy$base_color$role, "albedo")
+  expect_equal(policy$emission$role, "illuminant")
+  expect_equal(policy$scalar_maps$encoding, "linear")
+  expect_false(policy$scalar_maps$gamma_decoded)
+})
+
+test_that("shared materials do not collapse region instances", {
+  glass = optical_region("glass", eta = spectrum_constant(1.5))
+  material = dielectric_interface()
+  object1 = sphere(material = material) |>
+    with_region_boundary(region_boundary(glass))
+  object2 = sphere(x = 1, material = material) |>
+    with_region_boundary(region_boundary(glass))
+  compiler_input = ray_scene() |>
+    add_region(glass) |>
+    add_object(object1) |>
+    add_object(object2) |>
+    as_scene_compiler_input(validation = scene_validation("strict"))
+
+  ids = vapply(
+    compiler_input$compiled$objects,
+    function(object) object$region_instances[[1]]$instance_id,
+    character(1)
+  )
+  material_ids = vapply(
+    compiler_input$compiled$objects,
+    function(object) object$material_cache_id,
+    character(1)
+  )
+
+  expect_length(unique(ids), 2)
+  expect_identical(length(unique(material_ids)), 1L)
 })
 
 test_that("schema-v2 validation fails before rendering", {
@@ -163,8 +254,41 @@ test_that("schema-v2 validation fails before rendering", {
       csg_light_scene,
       validation = scene_validation("strict")
     ),
-    "area light is not supported"
+    "CSG area lights require sampling"
   )
+
+  csg_textured_scene = ray_scene_v2(
+    csg_object(
+      csg_sphere(),
+      material = coated_diffuse(
+        reflectance = texture_image_color("albedo.png", role = "albedo")
+      )
+    )
+  )
+
+  expect_error(
+    as_scene_compiler_input(
+      csg_textured_scene,
+      validation = scene_validation("strict")
+    ),
+    "CSG image textures require"
+  )
+})
+
+test_that("sampled CSG area lights compile through render-mesh path", {
+  csg_light_scene = ray_scene_v2(
+    csg_object(csg_sphere(), material = interface_material()) |>
+      with_light(area_light(sampling = "sampled"))
+  )
+
+  compiler_input = as_scene_compiler_input(
+    csg_light_scene,
+    validation = scene_validation("strict")
+  )
+  object = compiler_input$compiled$objects[[1]]
+
+  expect_true(object$requires_mesh_area_light)
+  expect_equal(object$csg_compilation$area_light, "render_mesh")
 })
 
 test_that("legacy scene adaptation aggregates warnings once per scene", {

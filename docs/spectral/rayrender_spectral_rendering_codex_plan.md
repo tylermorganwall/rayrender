@@ -4016,6 +4016,38 @@ Ensure all supported scene-ingestion paths produce correct spectral descriptors 
 - shared Material plus multiple instances produces unique regions.
 - compiler output is stable across runs and thread counts.
 
+### PR 22 implementation note
+
+PR 22 completes the R schema-v2 compiler boundary in
+`R/schema_v2_descriptors.R`. Imported OBJ/PLY/mesh3d/raymesh rows now receive
+explicit `shape_capabilities`, generated object-space mappings when UVs are
+absent, generated-normal diagnostics when importer normals are absent, and a
+source color policy that treats base colors as albedo, emission as illuminant,
+optical constants/IOR as unbounded, and scalar maps as linear/non-gamma-decoded.
+
+`as_scene_compiler_input()` now returns explicit compiled objects with
+spectrum/texture/material/light/media/shape caches, stable cache hashes, a
+deterministic `compiler_hash`, per-instance region IDs, normal-transform
+summaries, and scene diagnostics covering importer approximations, legacy
+conversion warnings, unsupported fields, and light/environment counts. Legacy
+positional material payloads are rejected after the centralized
+`legacy_scene_to_schema_v2()` adapter boundary.
+
+CSG validation now rejects per-child CSG material/region metadata, UV-only CSG
+image/normal/displacement mappings without generated mapping, and unsampled CSG
+area lights in strict mode. `area_light(sampling = "sampled")` marks the CSG
+object for the render-mesh area-light compilation path while preserving ordinary
+CSG surfaces, region boundaries, and null-medium-boundary metadata in the
+compiled object.
+
+Gate evidence:
+
+- `Rscript -e "devtools::load_all('.', quiet=TRUE); testthat::test_file('tests/testthat/test-schema-v2-descriptors.R')"`
+
+The direct-renderer bridge that consumes these compiled R objects remains
+isolated from legacy RGB transport; rendered imported-emitter MIS fixtures are
+therefore still tied to the later end-to-end spectral render harness.
+
 ## PR 23: Add remaining RGB spaces, spectral assets, packaging, and performance work
 
 ### Goal
