@@ -3902,28 +3902,39 @@ Port pbrt's spectral volume architecture and make dielectric-region bulk propert
 
 ### Required changes
 
-1. Add Medium and PhaseFunction tagged handles.
-2. Port Henyey-Greenstein and any pbrt phase functions required by current features.
-3. Implement HomogeneousMedium with spectral sigma_a, sigma_s, emission, and scale.
-4. Implement the heterogeneous/majorant medium needed to replace current constant-density hitables.
-5. Port pbrt's majorant transmittance sampling and null-collision logic.
-6. Port VolPathIntegrator rather than patching surface PathIntegrator.
-7. Bind active dielectric regions to Medium handles.
-8. Ensure segment medium is active-before and updated only after committed crossings.
-9. Implement transmittance-aware visibility through null boundaries and media.
-10. Map legacy dielectric attenuation to an absorption Medium using unbounded RGB reconstruction.
-11. Map legacy constant-medium constructs through documented sigma values.
-12. Add medium emission if supported by the pinned pbrt stage.
-13. Add strict rejection of incompatible surface PathIntegrator plus non-null Medium scenes.
+1. [x] Add Medium and PhaseFunction tagged handles.
+2. [x] Port Henyey-Greenstein and any pbrt phase functions required by current features.
+3. [x] Implement HomogeneousMedium with spectral sigma_a, sigma_s, emission, and scale.
+4. [ ] Implement the heterogeneous/majorant medium needed to replace current constant-density hitables.
+5. [ ] Port pbrt's majorant transmittance sampling and null-collision logic.
+6. [ ] Port VolPathIntegrator rather than patching surface PathIntegrator.
+7. [x] Bind active dielectric regions to Medium handles.
+8. [x] Ensure segment medium is active-before and updated only after committed crossings.
+9. [ ] Implement transmittance-aware visibility through null boundaries and media.
+10. [ ] Map legacy dielectric attenuation to an absorption Medium using unbounded RGB reconstruction.
+11. [ ] Map legacy constant-medium constructs through documented sigma values.
+12. [x] Add medium emission if supported by the pinned pbrt stage.
+13. [x] Add strict rejection of incompatible surface PathIntegrator plus non-null Medium scenes.
 
 ### Gate
 
-- homogeneous Beer-Lambert transmittance matches analytic spectra.
-- pure absorption nested glass scenes match analytic/reference output.
-- homogeneous scattering scenes agree with pbrt VolPath references.
-- null-collision estimator is unbiased under multiple majorants.
-- local visibility-state copies traverse medium transitions correctly.
-- current constant-medium reference scenes have documented spectral replacements.
+- [x] homogeneous Beer-Lambert transmittance matches analytic spectra.
+- [ ] pure absorption nested glass scenes match analytic/reference output.
+- [ ] homogeneous scattering scenes agree with pbrt VolPath references.
+- [ ] null-collision estimator is unbiased under multiple majorants.
+- [x] active region Medium before/after transition binding is tested; transmittance-aware visibility remains deferred with VolPath.
+- [ ] current constant-medium reference scenes have documented spectral replacements.
+
+### PR 20 implementation note
+
+PR 20 lands the pbrt-style `Medium`/`PhaseFunction` foundation in
+`src/render/spectral_medium.*`: Henyey-Greenstein phase dispatch,
+`HomogeneousMedium` spectral properties, homogeneous Beer-Lambert transmittance,
+emission storage, a homogeneous majorant iterator, and handle tables. It also
+keeps surface `RandomWalkIntegrator` and `PathIntegrator` strict: active
+dielectric-region media and camera media are rejected until `VolPathIntegrator`
+and heterogeneous/null-collision media are ported. Gate coverage is
+`Rscript tools/spectral-tests/run-pr20-medium-tests.R`.
 
 ## PR 21: Port realistic-camera spectral behavior and measured sensors
 

@@ -126,6 +126,17 @@ bool HasUnsupportedMedium(const SurfaceInteraction& interaction) {
   return interaction.hasMedium || interaction.hasMediumInterface;
 }
 
+template <typename Stats>
+bool HasUnsupportedActiveMedium(const DielectricPathState& regions, Stats* stats) {
+  if (regions.ActiveMedium().IsValid()) {
+    if (stats) {
+      ++stats->unsupportedMediumInteractions;
+    }
+    return true;
+  }
+  return false;
+}
+
 void RecordDielectricKind(
   DielectricBoundaryKind kind,
   RandomWalkRenderStats* stats
@@ -258,6 +269,10 @@ bool RegionAwareUnoccluded(
     return visibility.Unoccluded(scene.GetAggregate());
   }
 
+  if (HasUnsupportedActiveMedium(regions, stats)) {
+    return false;
+  }
+
   SpawnedRay spawned = visibility.SpawnRay();
   Ray ray = spawned.ray;
   for (int i = 0; i < 64; ++i) {
@@ -279,6 +294,9 @@ bool RegionAwareUnoccluded(
       return false;
     }
     if (!CommitDielectricTransition(regions, transition->token, stats)) {
+      return false;
+    }
+    if (HasUnsupportedActiveMedium(regions, stats)) {
       return false;
     }
     if (stats) {
@@ -481,6 +499,10 @@ base::SampledSpectrum RandomWalkIntegrator::Li(
   int depth = 0;
   int alphaSkips = 0;
 
+  if (options_.rejectNonVacuum && HasUnsupportedActiveMedium(regions, stats)) {
+    return L;
+  }
+
   while (true) {
     if (stats) {
       ++stats->raysTraced;
@@ -542,6 +564,9 @@ base::SampledSpectrum RandomWalkIntegrator::Li(
     }
     if (dielectricTransition && dielectricTransition->IsNullTraversal()) {
       if (!CommitDielectricTransition(regions, dielectricTransition->token, stats)) {
+        return L;
+      }
+      if (options_.rejectNonVacuum && HasUnsupportedActiveMedium(regions, stats)) {
         return L;
       }
       currentRay = interaction.SpawnRay(currentRay.direction()).ray;
@@ -638,6 +663,9 @@ base::SampledSpectrum RandomWalkIntegrator::Li(
 
     if (dielectricTransition && bs->IsTransmission()) {
       if (!CommitDielectricTransition(regions, dielectricTransition->token, stats)) {
+        return L;
+      }
+      if (options_.rejectNonVacuum && HasUnsupportedActiveMedium(regions, stats)) {
         return L;
       }
       if (stats) {
@@ -869,6 +897,10 @@ base::SampledSpectrum PathIntegrator::Li(
   bool anyNonSpecularBounces = false;
   LightSampleContext previousLightContext;
 
+  if (options_.rejectNonVacuum && HasUnsupportedActiveMedium(regions, stats)) {
+    return L;
+  }
+
   while (true) {
     if (stats) {
       ++stats->raysTraced;
@@ -962,6 +994,9 @@ base::SampledSpectrum PathIntegrator::Li(
         return L;
       }
       if (!CommitDielectricTransition(regions, dielectricTransition->token, stats)) {
+        return L;
+      }
+      if (options_.rejectNonVacuum && HasUnsupportedActiveMedium(regions, stats)) {
         return L;
       }
       if (stats) {
@@ -1126,6 +1161,9 @@ base::SampledSpectrum PathIntegrator::Li(
       etaScale *= bs->eta * bs->eta;
       if (dielectricTransition) {
         if (!CommitDielectricTransition(regions, dielectricTransition->token, stats)) {
+          return L;
+        }
+        if (options_.rejectNonVacuum && HasUnsupportedActiveMedium(regions, stats)) {
           return L;
         }
         if (stats) {
