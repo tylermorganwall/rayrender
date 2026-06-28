@@ -33,6 +33,12 @@ inline constexpr std::size_t RGBToSpectrumCoefficientCount =
 inline constexpr std::size_t RGBToSpectrumPayloadFloatCount =
   RGBToSpectrumResolution + RGBToSpectrumCoefficientCount;
 
+struct RGBToSpectrumTableLoadStats {
+  std::uint64_t lookups = 0;
+  std::uint64_t cacheHits = 0;
+  std::uint64_t fileLoads = 0;
+};
+
 class RGBSigmoidPolynomial {
 public:
   RGBSigmoidPolynomial() = default;
@@ -333,30 +339,108 @@ private:
   std::vector<Float> coefficients_;
 };
 
+namespace detail {
+
+inline std::mutex& RGBToSpectrumTableCacheMutex() {
+  static std::mutex mutex;
+  return mutex;
+}
+
+inline std::map<std::string, std::shared_ptr<const RGBToSpectrumTable>>& RGBToSpectrumTableCache() {
+  static std::map<std::string, std::shared_ptr<const RGBToSpectrumTable>> cache;
+  return cache;
+}
+
+inline RGBToSpectrumTableLoadStats& MutableRGBToSpectrumTableLoadStats() {
+  static RGBToSpectrumTableLoadStats stats;
+  return stats;
+}
+
+inline std::string RGBToSpectrumTableCacheKey(
+  const std::string& path,
+  const std::string& expectedColorSpaceId
+) {
+  return path + "\n" + expectedColorSpaceId;
+}
+
+} // namespace detail
+
+inline RGBToSpectrumTableLoadStats GetRGBToSpectrumTableLoadStats() {
+  std::lock_guard<std::mutex> lock(detail::RGBToSpectrumTableCacheMutex());
+  return detail::MutableRGBToSpectrumTableLoadStats();
+}
+
+inline void ResetRGBToSpectrumTableLoadStats() {
+  std::lock_guard<std::mutex> lock(detail::RGBToSpectrumTableCacheMutex());
+  detail::MutableRGBToSpectrumTableLoadStats() = RGBToSpectrumTableLoadStats();
+}
+
 inline std::shared_ptr<const RGBToSpectrumTable> LoadRGBToSpectrumTable(
   const std::string& path,
   const std::string& expectedColorSpaceId = "sRGB"
 ) {
-  static std::mutex mutex;
-  static std::map<std::string, std::shared_ptr<const RGBToSpectrumTable>> cache;
+  std::lock_guard<std::mutex> lock(detail::RGBToSpectrumTableCacheMutex());
+  std::map<std::string, std::shared_ptr<const RGBToSpectrumTable>>& cache =
+    detail::RGBToSpectrumTableCache();
+  RGBToSpectrumTableLoadStats& stats = detail::MutableRGBToSpectrumTableLoadStats();
+  std::string cacheKey = detail::RGBToSpectrumTableCacheKey(path, expectedColorSpaceId);
 
-  std::lock_guard<std::mutex> lock(mutex);
-  auto found = cache.find(path);
+  ++stats.lookups;
+  auto found = cache.find(cacheKey);
   if (found != cache.end()) {
+    ++stats.cacheHits;
     return found->second;
   }
 
+  ++stats.fileLoads;
   std::shared_ptr<const RGBToSpectrumTable> table =
     std::make_shared<RGBToSpectrumTable>(RGBToSpectrumTable::LoadFromFile(path, expectedColorSpaceId));
-  cache[path] = table;
+  cache[cacheKey] = table;
   return table;
+}
+
+inline std::string RGBToSpectrumTableColorSpaceId(const std::string& colorSpaceName) {
+  std::string canonical = RGBColorSpace::CanonicalName(colorSpaceName);
+  if (canonical == "Rec.2020") {
+    return "Rec2020";
+  }
+  return canonical;
+}
+
+inline std::string RGBToSpectrumTableFilename(const std::string& colorSpaceName) {
+  std::string canonical = RGBColorSpace::CanonicalName(colorSpaceName);
+  if (canonical == "sRGB") {
+    return "rgb-to-spectrum-srgb-v1.bin";
+  }
+  if (canonical == "DCI-P3") {
+    return "rgb-to-spectrum-dci-p3-v1.bin";
+  }
+  if (canonical == "Rec.2020") {
+    return "rgb-to-spectrum-rec2020-v1.bin";
+  }
+  return "rgb-to-spectrum-aces2065-1-v1.bin";
+}
+
+inline std::shared_ptr<const RGBToSpectrumTable> LoadRGBToSpectrumTableForColorSpace(
+  const std::string& colorSpaceName,
+  const std::string& preferredAssetDirectory = ""
+) {
+  std::string canonical = RGBColorSpace::CanonicalName(colorSpaceName);
+  std::string assetDirectory = FindSpectralAssetDirectory(preferredAssetDirectory);
+  std::string path = detail::JoinPath(assetDirectory, RGBToSpectrumTableFilename(canonical));
+  if (!detail::FileExists(path)) {
+    throw std::runtime_error(
+      "RGB-to-spectrum table for color space " + canonical +
+      " is not packaged: " + path
+    );
+  }
+  return LoadRGBToSpectrumTable(path, RGBToSpectrumTableColorSpaceId(canonical));
 }
 
 inline std::shared_ptr<const RGBToSpectrumTable> LoadSRGBRGBToSpectrumTable(
   const std::string& preferredAssetDirectory = ""
 ) {
-  std::string assetDirectory = FindSpectralAssetDirectory(preferredAssetDirectory);
-  return LoadRGBToSpectrumTable(detail::JoinPath(assetDirectory, "rgb-to-spectrum-srgb-v1.bin"), "sRGB");
+  return LoadRGBToSpectrumTableForColorSpace("sRGB", preferredAssetDirectory);
 }
 
 inline RGBSigmoidPolynomial RGBColorSpace::ToRGBCoeffs(const RGB& rgb) const {
@@ -369,31 +453,46 @@ inline RGBSigmoidPolynomial RGBColorSpace::ToRGBCoeffs(const RGB& rgb) const {
   return (*rgbToSpectrumTable)(ClampZero(rgb));
 }
 
+inline RGBColorSpace LoadRGBColorSpace(
+  const std::string& colorSpaceName,
+  const std::string& preferredAssetDirectory
+);
+
 inline RGBColorSpace LoadSRGBColorSpace(const std::string& preferredAssetDirectory = "") {
+  return LoadRGBColorSpace("sRGB", preferredAssetDirectory);
+}
+
+inline RGBColorSpace LoadRGBColorSpace(
+  const std::string& colorSpaceName,
+  const std::string& preferredAssetDirectory = ""
+) {
   std::string assetDirectory = FindSpectralAssetDirectory(preferredAssetDirectory);
   NamedSpectrumRegistry registry = NamedSpectrumRegistry::LoadFromDirectory(assetDirectory);
-  const Spectrum& d65 = registry.GetOrThrow("stdillum-D65");
+  RGBColorSpace namedColorSpace = RGBColorSpace::Named(colorSpaceName);
+  std::string canonical = RGBColorSpace::CanonicalName(colorSpaceName);
+  const Spectrum& illuminantSpectrum =
+    registry.GetOrThrow(canonical == "ACES2065-1" ? "illum-acesD60" : "stdillum-D65");
   const Spectrum& x = registry.GetOrThrow("cie-x");
   const Spectrum& y = registry.GetOrThrow("cie-y");
   const Spectrum& z = registry.GetOrThrow("cie-z");
 
-  XYZ white = SpectrumToXYZ(d65, x, y, z);
+  XYZ white = SpectrumToXYZ(illuminantSpectrum, x, y, z);
   RGBColorSpace colorSpace = RGBColorSpace::FromPrimaries(
-    "sRGB",
-    Chromaticity(static_cast<Float>(0.64), static_cast<Float>(0.33)),
-    Chromaticity(static_cast<Float>(0.30), static_cast<Float>(0.60)),
-    Chromaticity(static_cast<Float>(0.15), static_cast<Float>(0.06)),
+    namedColorSpace.name,
+    namedColorSpace.r,
+    namedColorSpace.g,
+    namedColorSpace.b,
     white,
-    RGBColorEncoding::SRGB()
+    namedColorSpace.encoding
   );
   colorSpace.illuminant = std::make_shared<DenselySampledSpectrum>(
     DenselySampledSpectrum::SampleFunction(
-      [&](Float lambda) { return d65(lambda); },
+      [&](Float lambda) { return illuminantSpectrum(lambda); },
       static_cast<int>(LambdaMin),
       static_cast<int>(LambdaMax)
     )
   );
-  colorSpace.rgbToSpectrumTable = LoadSRGBRGBToSpectrumTable(assetDirectory);
+  colorSpace.rgbToSpectrumTable = LoadRGBToSpectrumTableForColorSpace(canonical, assetDirectory);
   return colorSpace;
 }
 

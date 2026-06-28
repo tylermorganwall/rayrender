@@ -4081,6 +4081,27 @@ Finish color-space coverage and make the implementation practical as an R packag
 - performance targets in Section 16 are met or a measured exception is documented.
 - peak memory and asset sizes are recorded.
 
+Implementation note:
+
+PR 23 adds canonical DCI-P3, Rec.2020, and ACES2065-1 color-space definitions,
+schema-v2 validation, table filename policy, and RGB table cache counters. The
+additional RGB-to-spectrum tables are not packaged in this PR: the compact sRGB
+table is 9.0 MiB, and the three optional tables would add roughly 27 MiB of
+package data at the same binary layout. Until package-size policy explicitly
+permits bundling them, non-sRGB spectral reconstruction fails with a
+color-space-specific missing-table diagnostic. The measured asset footprint and
+Section 16 performance exception are recorded in
+`docs/spectral/pr23-package-performance-report.md`.
+
+Gate evidence:
+
+- `air format R/schema_v2_descriptors.R tests/testthat/test-schema-v2-descriptors.R`
+- `Rscript tools/spectral-tests/run-pr5-rgb-spectrum-tests.R`
+- `Rscript -e "devtools::load_all('.', quiet=TRUE); testthat::test_file('tests/testthat/test-schema-v2-descriptors.R')"` (144 passes)
+- `Rscript tools/spectral-tests/check-spectral-assets.R --manifest docs/spectral/assets-manifest.csv --build-source`
+- `R CMD INSTALL .`
+- `R CMD check --no-manual --no-vignettes /private/tmp/rayrender_0.41.3.tar.gz` (3 pre-existing Rd warnings, 1 pre-existing Rd note)
+
 ## PR 24: Restore feature parity, document, and define rollout
 
 ### Goal
@@ -4911,10 +4932,10 @@ The spectral renderer is complete only when all of the following are true.
 - [ ] schema-v1 adaptation is centralized and reports approximations.
 - [ ] existing scenes still render in `rgb_legacy` with preserved baselines.
 - [ ] adaptive sampling, AOVs, denoising inputs, alpha, preview, and animation work through Film.
-- [ ] package installation is offline and reproducible.
-- [ ] spectral assets include provenance and required notices.
+- [x] package installation is offline and reproducible.
+- [x] spectral assets include provenance and required notices.
 - [ ] package checks and sanitizers pass.
-- [ ] performance and memory reports meet or explain Section 16 targets.
+- [x] performance and memory reports meet or explain Section 16 targets.
 - [ ] pbrt comparison reports are checked in or archived reproducibly.
 - [ ] user documentation explains physical parameters, scene descriptors, decorators, CSG limitations, and appearance changes.
 

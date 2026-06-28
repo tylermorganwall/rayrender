@@ -2,6 +2,7 @@ test_that("schema-v2 descriptors serialize deterministically", {
   descriptors = list(
     spectrum_constant(1),
     spectrum_rgb("#884422", role = "albedo"),
+    spectrum_rgb(c(0.2, 0.3, 0.4), role = "albedo", color_space = "DCI-P3"),
     spectrum_sampled(c(400, 500, 600), c(0.1, 0.5, 0.2), role = "unbounded"),
     spectrum_blackbody(6500),
     spectrum_named("stdillum-D65"),
@@ -9,6 +10,12 @@ test_that("schema-v2 descriptors serialize deterministically", {
     spectrum_sellmeier_ior(B = c(1, 0.5), C = c(0.01, 0.1)),
     texture_constant(c(0.2, 0.3, 0.4)),
     texture_image_color("albedo.png", role = "albedo"),
+    texture_image_color(
+      "rec2020-albedo.png",
+      role = "albedo",
+      color_space = "Rec.2020",
+      encoding = "linear"
+    ),
     texture_image_scalar("roughness.png"),
     texture_checker(0, 1),
     texture_mix(0, 1),
@@ -27,13 +34,16 @@ test_that("schema-v2 descriptors serialize deterministically", {
     realistic_camera(lens = "lens.dat"),
     cie1931_sensor(),
     rgb_sensor(),
+    rgb_sensor(color_space = "ACES2065-1"),
     measured_sensor(
       spectrum_constant(1),
       spectrum_constant(1),
       spectrum_constant(1)
     ),
     rgb_film(width = 16, height = 16),
+    rgb_film(output_color_space = "Rec.2020"),
     spectral_options(),
+    spectral_options(input_color_space = "DCI-P3"),
     scene_validation("strict"),
     interface_material(),
     conductor(),
@@ -66,6 +76,11 @@ test_that("schema-v2 descriptors serialize deterministically", {
     distant_light(c(0, -1, 0)),
     uniform_infinite_light(),
     image_infinite_light("studio.hdr"),
+    image_infinite_light(
+      "studio-aces.exr",
+      color_space = "ACES2065-1",
+      encoding = "linear"
+    ),
     area_light(),
     named_texture("albedo"),
     named_material("surface")
@@ -78,6 +93,10 @@ test_that("schema-v2 descriptors serialize deterministically", {
 
 test_that("schema-v2 constructors reject invalid descriptors early", {
   expect_error(spectrum_constant(-1), "spectrum_constant\\(value\\)")
+  expect_error(
+    spectrum_rgb(c(0.1, 0.2, 0.3), color_space = "AdobeRGB"),
+    "must be one of"
+  )
   expect_error(spectrum_sampled(c(500, 400), c(1, 1)), "strictly increasing")
   expect_error(texture_image("albedo.png"), "texture_image\\(role\\)")
   expect_error(
@@ -92,6 +111,21 @@ test_that("schema-v2 constructors reject invalid descriptors early", {
     "nonzero absorption"
   )
   expect_error(point_light(c(0, 1)), "point_light\\(position\\)")
+})
+
+test_that("schema-v2 color spaces are explicit canonical names", {
+  expect_identical(
+    ray_supported_color_spaces(),
+    c("sRGB", "DCI-P3", "Rec.2020", "ACES2065-1")
+  )
+  expect_equal(
+    spectrum_rgb(c(0.1, 0.2, 0.3), color_space = "DCI-P3")$color_space,
+    "DCI-P3"
+  )
+  expect_equal(
+    rgb_film(output_color_space = "ACES2065-1")$output_color_space,
+    "ACES2065-1"
+  )
 })
 
 test_that("old scenes still construct through the legacy add_object path", {

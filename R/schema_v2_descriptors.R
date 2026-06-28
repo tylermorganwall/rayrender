@@ -55,10 +55,24 @@ check_scalar_character = function(value, path, allow_empty = FALSE) {
   invisible(value)
 }
 
+#' Supported Schema-V2 RGB Color Spaces
+#'
+#' @return Character vector of canonical color-space names.
+#' @keywords internal
+ray_supported_color_spaces = function() {
+  c("sRGB", "DCI-P3", "Rec.2020", "ACES2065-1")
+}
+
 check_color_space = function(value, path) {
   check_scalar_character(value, path)
-  if (!identical(value, "sRGB")) {
-    schema_stop(path, "only sRGB is supported in schema v2 PR6")
+  if (!value %in% ray_supported_color_spaces()) {
+    schema_stop(
+      path,
+      sprintf(
+        "must be one of %s",
+        paste(sprintf("'%s'", ray_supported_color_spaces()), collapse = ", ")
+      )
+    )
   }
   invisible(value)
 }

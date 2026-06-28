@@ -142,6 +142,64 @@ void TestMatrixConstruction() {
 
   RGB roundTrip = srgb.ToLinearRGB(srgb.ToXYZ(RGB(0.2f, 0.4f, 0.8f)));
   CheckRGBApprox(roundTrip, RGB(0.2f, 0.4f, 0.8f), static_cast<Float>(2e-5), "sRGB matrix round trip");
+
+  RGBColorSpace dciP3 = RGBColorSpace::Named("dci-p3");
+  Check(std::string(dciP3.name) == "DCI-P3", "DCI-P3 canonical name");
+  Check(Approx(dciP3.r.x, 0.680f), "DCI-P3 red chromaticity x");
+  Check(Approx(dciP3.rgbToXYZ(0, 0), 0.4865709f, static_cast<Float>(2e-5)), "DCI-P3 matrix row 0 col 0");
+  Check(Approx(dciP3.rgbToXYZ(1, 1), 0.6917385f, static_cast<Float>(2e-5)), "DCI-P3 matrix row 1 col 1");
+  Check(Approx(dciP3.rgbToXYZ(2, 2), 1.0439444f, static_cast<Float>(2e-5)), "DCI-P3 matrix row 2 col 2");
+  Check(!dciP3.HasSpectralReconstruction(), "static DCI-P3 has no packaged reconstruction table");
+
+  RGBColorSpace rec2020 = RGBColorSpace::Named("Rec2020");
+  Check(std::string(rec2020.name) == "Rec.2020", "Rec.2020 canonical name");
+  Check(Approx(rec2020.g.y, 0.797f), "Rec.2020 green chromaticity y");
+  Check(
+    Approx(rec2020.rgbToXYZ(0, 0), 0.6369580f, static_cast<Float>(2e-5)),
+    "Rec.2020 matrix row 0 col 0"
+  );
+  Check(
+    Approx(rec2020.rgbToXYZ(1, 1), 0.6779981f, static_cast<Float>(2e-5)),
+    "Rec.2020 matrix row 1 col 1"
+  );
+  Check(
+    Approx(rec2020.rgbToXYZ(2, 2), 1.0609851f, static_cast<Float>(2e-5)),
+    "Rec.2020 matrix row 2 col 2"
+  );
+
+  RGBColorSpace aces = RGBColorSpace::Named("aces2065_1");
+  Check(std::string(aces.name) == "ACES2065-1", "ACES2065-1 canonical name");
+  Check(Approx(aces.w.x, 0.32168f, static_cast<Float>(1e-5)), "ACES2065-1 D60 white x");
+  Check(Approx(aces.b.y, -0.0770f), "ACES2065-1 blue chromaticity y");
+
+  RGB sample(0.31f, 0.42f, 0.73f);
+  CheckRGBApprox(
+    dciP3.ToLinearRGB(dciP3.ToXYZ(sample)),
+    sample,
+    static_cast<Float>(2e-5),
+    "DCI-P3 matrix round trip"
+  );
+  CheckRGBApprox(
+    rec2020.ToLinearRGB(rec2020.ToXYZ(sample)),
+    sample,
+    static_cast<Float>(2e-5),
+    "Rec.2020 matrix round trip"
+  );
+  CheckRGBApprox(
+    aces.ToLinearRGB(aces.ToXYZ(sample)),
+    sample,
+    static_cast<Float>(2e-5),
+    "ACES2065-1 matrix round trip"
+  );
+
+  Check(RGBColorSpace::IsKnownName("sRGB"), "sRGB color-space name is known");
+  Check(RGBColorSpace::IsKnownName("ACES2065-1"), "ACES2065-1 color-space name is known");
+  Check(!RGBColorSpace::IsKnownName("AdobeRGB"), "unknown color-space name is rejected");
+  CheckThrowsContaining(
+    [&]() { (void)RGBColorSpace::Named("AdobeRGB"); },
+    "Unknown RGB color space",
+    "unknown RGB color-space diagnostic"
+  );
 }
 
 void TestTableLayoutAndInterpolation(const std::string& assetDirectory) {
@@ -251,6 +309,21 @@ void TestBinaryDiagnosticsAndCache(const std::string& assetDirectory) {
   std::string sourcePath = detail::JoinPath(assetDirectory, "rgb-to-spectrum-srgb-v1.bin");
   std::vector<unsigned char> valid = ReadBinaryFile(sourcePath);
 
+  Check(
+    RGBToSpectrumTableFilename("Rec2020") == "rgb-to-spectrum-rec2020-v1.bin",
+    "Rec.2020 table filename"
+  );
+  CheckThrowsContaining(
+    [&]() { (void)LoadRGBToSpectrumTable(sourcePath, "DCI-P3"); },
+    "color-space id mismatch",
+    "RGB table cache key includes expected color-space id"
+  );
+  CheckThrowsContaining(
+    [&]() { (void)LoadRGBToSpectrumTableForColorSpace("DCI-P3", assetDirectory); },
+    "not packaged",
+    "missing optional RGB table fails clearly"
+  );
+
   CheckThrowsContaining(
     [&]() { (void)RGBToSpectrumTable::LoadFromFile(detail::JoinPath(assetDirectory, "missing-rgb-table.bin")); },
     "Unable to open",
@@ -302,12 +375,17 @@ void TestBinaryDiagnosticsAndCache(const std::string& assetDirectory) {
 
   std::string cachePath = TempPath("cache");
   WriteBinaryFile(cachePath, valid);
+  ResetRGBToSpectrumTableLoadStats();
   std::shared_ptr<const RGBToSpectrumTable> first = LoadRGBToSpectrumTable(cachePath);
   std::vector<unsigned char> mutated = valid;
   mutated.back() ^= 1u;
   WriteBinaryFile(cachePath, mutated);
   std::shared_ptr<const RGBToSpectrumTable> second = LoadRGBToSpectrumTable(cachePath);
   Check(first.get() == second.get(), "RGB table cache loads once per process");
+  RGBToSpectrumTableLoadStats stats = GetRGBToSpectrumTableLoadStats();
+  Check(stats.lookups == 2, "RGB table cache stats track lookups");
+  Check(stats.cacheHits == 1, "RGB table cache stats track hits");
+  Check(stats.fileLoads == 1, "RGB table cache stats track file loads");
   std::remove(cachePath.c_str());
 }
 

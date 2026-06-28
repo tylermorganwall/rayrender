@@ -5,9 +5,11 @@
 
 #include <algorithm>
 #include <array>
+#include <cctype>
 #include <cmath>
 #include <memory>
 #include <stdexcept>
+#include <string>
 
 namespace rayrender {
 namespace base {
@@ -503,6 +505,88 @@ struct RGBColorSpace {
       Chromaticity(static_cast<Float>(0.3127), static_cast<Float>(0.3290)),
       RGBColorEncoding::SRGB()
     );
+  }
+
+  static RGBColorSpace DCIP3() {
+    return FromPrimaries(
+      "DCI-P3",
+      Chromaticity(static_cast<Float>(0.680), static_cast<Float>(0.320)),
+      Chromaticity(static_cast<Float>(0.265), static_cast<Float>(0.690)),
+      Chromaticity(static_cast<Float>(0.150), static_cast<Float>(0.060)),
+      Chromaticity(static_cast<Float>(0.3127), static_cast<Float>(0.3290))
+    );
+  }
+
+  static RGBColorSpace Rec2020() {
+    return FromPrimaries(
+      "Rec.2020",
+      Chromaticity(static_cast<Float>(0.708), static_cast<Float>(0.292)),
+      Chromaticity(static_cast<Float>(0.170), static_cast<Float>(0.797)),
+      Chromaticity(static_cast<Float>(0.131), static_cast<Float>(0.046)),
+      Chromaticity(static_cast<Float>(0.3127), static_cast<Float>(0.3290))
+    );
+  }
+
+  static RGBColorSpace ACES2065_1() {
+    return FromPrimaries(
+      "ACES2065-1",
+      Chromaticity(static_cast<Float>(0.7347), static_cast<Float>(0.2653)),
+      Chromaticity(static_cast<Float>(0.0), static_cast<Float>(1.0)),
+      Chromaticity(static_cast<Float>(0.0001), static_cast<Float>(-0.0770)),
+      Chromaticity(static_cast<Float>(0.32168), static_cast<Float>(0.33767))
+    );
+  }
+
+  static std::string NormalizedName(std::string name) {
+    std::string normalized;
+    normalized.reserve(name.size());
+    for (char c : name) {
+      if (c == '_' || c == '.' || c == ' ') {
+        continue;
+      }
+      normalized.push_back(static_cast<char>(std::tolower(static_cast<unsigned char>(c))));
+    }
+    return normalized;
+  }
+
+  static std::string CanonicalName(const std::string& name) {
+    std::string normalized = NormalizedName(name);
+    if (normalized == "srgb") {
+      return "sRGB";
+    }
+    if (normalized == "dci-p3" || normalized == "dcip3") {
+      return "DCI-P3";
+    }
+    if (normalized == "rec2020") {
+      return "Rec.2020";
+    }
+    if (normalized == "aces2065-1" || normalized == "aces20651") {
+      return "ACES2065-1";
+    }
+    throw std::invalid_argument("Unknown RGB color space: " + name);
+  }
+
+  static bool IsKnownName(const std::string& name) {
+    try {
+      (void)CanonicalName(name);
+    } catch (const std::invalid_argument&) {
+      return false;
+    }
+    return true;
+  }
+
+  static RGBColorSpace Named(const std::string& name) {
+    std::string canonical = CanonicalName(name);
+    if (canonical == "sRGB") {
+      return SRGB();
+    }
+    if (canonical == "DCI-P3") {
+      return DCIP3();
+    }
+    if (canonical == "Rec.2020") {
+      return Rec2020();
+    }
+    return ACES2065_1();
   }
 };
 
