@@ -94,6 +94,15 @@
 #' @param integrator_type Default `"rtiow"` (the algorithm specified in the book "Raytracing in One Weekend", a basic
 #' form of path guiding). Other options include `"nee"` (Next Event Estimation, with direct light sampling)
 #' and `"basic"` (basic pathtracing, for high sample reference renders and debugging only).
+#' @param render_mode Default `"rgb_legacy"`. Rendering mode. `"spectral"` builds frame-zero schema-v2 compiler input when `return_result = TRUE`; runtime spectral animation remains disabled until the direct spectral renderer bridge is connected.
+#' @param integrator Default `NULL`. Optional schema-v2 integrator descriptor.
+#' @param sampler Default `NULL`. Optional schema-v2 sampler descriptor.
+#' @param camera Default `NULL`. Optional schema-v2 camera descriptor.
+#' @param film Default `NULL`. Optional schema-v2 film descriptor.
+#' @param spectral Default `spectral_options()`. Schema-v2 spectral options descriptor.
+#' @param environment Default `NULL`. Optional schema-v2 infinite light descriptor.
+#' @param validation Default `scene_validation()`. Schema-v2 validation descriptor.
+#' @param return_result Default `FALSE`. Return frame-zero schema-v2 compiler input instead of rendering when `render_mode = "spectral"`.
 #' @export
 #' @importFrom  grDevices col2rgb
 #' @return Raytraced plot to current device, or an image saved to a file.
@@ -204,8 +213,73 @@ render_animation = function(
   transparent_background = FALSE,
   preview_light_direction = c(0, -1, 0),
   preview_exponent = 6,
-  integrator_type = "rtiow"
+  integrator_type = "rtiow",
+  render_mode = c("rgb_legacy", "spectral"),
+  integrator = NULL,
+  sampler = NULL,
+  camera = NULL,
+  film = NULL,
+  spectral = spectral_options(),
+  environment = NULL,
+  validation = scene_validation(),
+  return_result = FALSE
 ) {
+  render_mode = match.arg(render_mode)
+  check_scalar_logical(return_result, "render_animation(return_result)")
+  if (render_mode == "spectral") {
+    if (is.na(end_frame)) {
+      end_frame = nrow(camera_motion)
+    }
+    if (end_frame > nrow(camera_motion)) {
+      schema_stop("render_animation(end_frame)", "is outside camera_motion")
+    }
+    frame = spectral_camera_motion_frame(camera_motion, start_frame)
+    frame_filename = if (is.null(filename) || is.na(filename)) {
+      NA
+    } else {
+      paste0(filename, start_frame, ".png")
+    }
+    compiler_input = spectral_compile_render_input(
+      scene = scene,
+      width = width,
+      height = height,
+      samples = samples,
+      fov = frame$fov,
+      lookfrom = frame$lookfrom,
+      lookat = frame$lookat,
+      camera_up = frame$camera_up,
+      aperture = frame$aperture,
+      focal_distance = frame$focal_distance,
+      shutteropen = shutteropen,
+      shutterclose = shutterclose,
+      ortho_dimensions = frame$ortho_dimensions,
+      max_depth = max_depth,
+      integrator_type = integrator_type,
+      filename = frame_filename,
+      environment_light = environment_light,
+      rotate_env = rotate_env,
+      intensity_env = intensity_env,
+      preview = preview,
+      progress = progress,
+      denoise = denoise,
+      min_variance = min_variance,
+      debug_channel = debug_channel,
+      transparent_background = transparent_background,
+      integrator = integrator,
+      sampler = sampler,
+      camera = camera,
+      film = film,
+      spectral = spectral,
+      environment = environment,
+      validation = validation,
+      context = "render_animation",
+      frame_index = start_frame
+    )
+    if (return_result) {
+      return(compiler_input)
+    }
+    spectral_runtime_unavailable("render_animation")
+  }
   if (ambient_occlusion) {
     debug_channel = "ao"
   }

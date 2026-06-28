@@ -12,7 +12,7 @@ as_scene_compiler_input(
 \arguments{
 \item{scene}{Scene.}
 
-\item{validation}{Default `attr(scene, "validation") %||% scene_validation()`. Validation descriptor.}
+\item{validation}{Validation descriptor. Defaults to the scene validation attribute when present.}
 }
 \value{
 A schema-v2 compiler input list.

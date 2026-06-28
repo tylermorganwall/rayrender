@@ -21,6 +21,14 @@ mix_material(mat1, mat2, amount = 0.5)
 }
 \arguments{
 \item{...}{Named material fields.}
+
+\item{filename}{Material filename.}
+
+\item{mat1}{First material.}
+
+\item{mat2}{Second material.}
+
+\item{amount}{Default \code{0.5}. Mix amount.}
 }
 \value{
 A schema-v2 material descriptor.

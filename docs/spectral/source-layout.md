@@ -27,6 +27,8 @@ schema-v2 compiler boundary with importer color policies, shape capabilities, co
 scene diagnostics, stable compiler hashes, unique region instances, and strict CSG diagnostics.
 PR 23 adds remaining RGB color-space definitions, explicit optional-table asset policy, RGB table
 cache diagnostics, and package-size/performance reporting for the isolated spectral base layer.
+PR 24 adds the explicit spectral rollout contract, frame-zero animation compiler-input shell,
+sample-dimension documentation, legacy compatibility guide, and default-policy documentation.
 
 ## Current Layout
 
@@ -44,7 +46,8 @@ cache diagnostics, and package-size/performance reporting for the isolated spect
 - `src/materials/spectral_texture.*`: PR 7 spectral texture descriptors, evaluators, semantic image cache keys, image loading adapters, and hit-record derivative adapters.
 - `src/materials/spectral_material.*`: PR 13 spectral `MaterialEvalContext`, tagged Material dispatch, diffuse and interface/null material parameter objects, alpha and bump hooks, scratch-allocated `BSDF` closure construction, and a spectral material handle table; PR 16 `ConductorMaterial` with eta/k spectra, sampled reflectance compatibility, anisotropic roughness textures, remapping, and packet-preserving closure construction; PR 17 constant-ratio `DielectricMaterial` fed by `ResolvedDielectricInterface`; PR 18 rough/dispersive `DielectricMaterial` wavelength termination and `ThinDielectricMaterial`; PR 19 `DiffuseTransmissionMaterial`, `CoatedDiffuseMaterial`, and `CoatedConductorMaterial` with coating eta wavelength termination.
 - `R/schema_v2_descriptors.R`: PR 6 schema-v2 spectral descriptors, scene decorators, validation, legacy schema-v1 adaptation, serialization helpers, and compiler-input shell; PR 17 rejects nonzero dielectric absorption until media support and maps legacy dielectric refraction/priority into optical-region metadata; PR 19 maps legacy `glossy()` to a spectral coated diffuse descriptor using legacy RGB base color, microfacet alpha, and normal-incidence reflectance; PR 22 adds importer-derived `shape_capabilities`, explicit importer color/scalar-map policy, scene compiler caches for spectra/textures/materials/lights/media/shapes, stable compiler hashes, unique region instance IDs, normal-transform summaries, and strict CSG area-light/mapping diagnostics; PR 23 accepts canonical `sRGB`, `DCI-P3`, `Rec.2020`, and `ACES2065-1` color-space names.
-- `R/render_scene.R`, `R/add_object.R`, `R/ray_scene.R`: legacy-compatible entry points that detect schema-v2 scenes and expose the spectral validation shell without changing `rgb_legacy` rendering.
+- `R/spectral_rollout.R`: PR 24 spectral capability and rollout contracts for default policy, AOV semantics, denoiser input space, adaptive-sampling basis, alpha policy, still/animation shared state, and runtime-unavailable diagnostics.
+- `R/render_scene.R`, `R/render_animation.R`, `R/add_object.R`, `R/ray_scene.R`: legacy-compatible entry points that detect schema-v2 scenes and expose the spectral compiler-input shell without changing `rgb_legacy` rendering; PR 24 adds frame-zero animation compiler input for spectral mode.
 - `inst/extdata/spectral/`: generated named spectral assets, per-spectrum metadata, and the pbrt-layout sRGB RGB-to-spectrum coefficient table used by the spectral base layer; non-sRGB RGB-to-spectrum tables remain optional until package-size policy permits adding them.
 - `src/render_scene_rcpp.cpp`: Rcpp still-render entry point; it may own R-facing result assembly and preview overlays.
 - `src/render_animation_rcpp.cpp`: Rcpp animation entry point; it may own frame iteration and R `post_process_frame` calls.
@@ -54,7 +57,7 @@ cache diagnostics, and package-size/performance reporting for the isolated spect
 
 Do not add new top-level renderer setup duplication to the Rcpp entry points. New shared setup belongs under `src/render/`, and entry points should pass explicit inputs into `RenderSession` or a narrower helper there.
 
-The PR 1 render-session layer is intentionally RGB-only. PR 2 through PR 23 spectral code is
+The PR 1 render-session layer is intentionally RGB-only. PR 2 through PR 24 spectral code is
 scaffolding and must remain unused by legacy transport except for isolated conversion, packet,
 asset-loading, RGB reconstruction, descriptor validation, texture evaluation, Film/sensor conversion,
 spectral camera generation, spectral scene/shape adaptation, explicit spectral light construction,
@@ -65,4 +68,5 @@ dielectric scattering tests, dispersive/thin-dielectric wavelength-termination t
 material closure tests, diffuse-transmission material tests, legacy glossy schema adaptation tests,
 isolated medium/phase-function tests, realistic-camera dispersion/exit-pupil tests, and schema-v2
 compiler-cache/importer/CSG validation tests, plus PR 23 color-space matrix/table-policy tests and
-package-size reporting.
+package-size reporting, plus PR 24 spectral rollout/default-policy tests and animation frame-zero
+compiler-input tests.

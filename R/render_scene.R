@@ -133,7 +133,7 @@
 #' or a list of `screen_text()` outputs to draw in order.
 #' @param screen_line Default `NULL`. Optional screen-space line overlay created with `screen_line()`,
 #' or a list of `screen_line()` outputs to draw in order.
-#' @param render_mode Default `"rgb_legacy"`. Rendering mode. `"spectral"` currently validates and returns schema-v2 compiler input when `return_result = TRUE`; `integrator_type = "randomwalk"` selects the experimental spectral random-walk descriptor.
+#' @param render_mode Default `"rgb_legacy"`. Rendering mode. `"spectral"` builds schema-v2 compiler input when `return_result = TRUE`; runtime spectral rendering remains disabled until the direct spectral renderer bridge is connected.
 #' @param integrator Default `NULL`. Optional schema-v2 integrator descriptor.
 #' @param sampler Default `NULL`. Optional schema-v2 sampler descriptor.
 #' @param camera Default `NULL`. Optional schema-v2 camera descriptor.
@@ -285,114 +285,45 @@ render_scene = function(
   render_mode = match.arg(render_mode)
   check_scalar_logical(return_result, "render_scene(return_result)")
   if (render_mode == "spectral") {
-    if (is.null(integrator)) {
-      spectral_max_depth = if (is.na(max_depth)) 50 else max_depth
-      integrator = if (integrator_type %in% c("randomwalk", "random_walk")) {
-        random_walk_integrator(max_depth = spectral_max_depth)
-      } else {
-        path_integrator(max_depth = spectral_max_depth)
-      }
-    }
-    if (is.null(sampler)) {
-      sampler = sobol_sampler(pixel_samples = samples)
-    }
-    if (is.null(camera)) {
-      if (identical(fov, 0) || isTRUE(fov == 0)) {
-        camera = orthographic_camera(
-          lookfrom = lookfrom,
-          lookat = lookat,
-          up = camera_up,
-          ortho_dimensions = ortho_dimensions,
-          shutteropen = shutteropen,
-          shutterclose = shutterclose,
-          initial_regions = character()
-        )
-      } else {
-        camera = perspective_camera(
-          lookfrom = lookfrom,
-          lookat = lookat,
-          up = camera_up,
-          fov = fov,
-          aperture = aperture,
-          focal_distance = focal_distance,
-          shutteropen = shutteropen,
-          shutterclose = shutterclose,
-          initial_regions = character()
-        )
-      }
-    }
-    if (is.null(film)) {
-      film = rgb_film(
-        width = width,
-        height = height,
-        filename = if (is.na(filename)) NULL else filename
-      )
-    }
-    if (!inherits(integrator, "ray_integrator")) {
-      schema_stop(
-        "render_scene(integrator)",
-        "must be a ray_integrator descriptor"
-      )
-    }
-    if (!inherits(sampler, "ray_sampler")) {
-      schema_stop("render_scene(sampler)", "must be a ray_sampler descriptor")
-    }
-    if (!inherits(camera, "ray_camera")) {
-      schema_stop("render_scene(camera)", "must be a ray_camera descriptor")
-    }
-    if (!inherits(film, "ray_film")) {
-      schema_stop("render_scene(film)", "must be a ray_film descriptor")
-    }
-    if (!inherits(spectral, "ray_spectral_options")) {
-      schema_stop(
-        "render_scene(spectral)",
-        "must be a ray_spectral_options descriptor"
-      )
-    }
-    if (!inherits(validation, "ray_scene_validation")) {
-      schema_stop(
-        "render_scene(validation)",
-        "must be a ray_scene_validation descriptor"
-      )
-    }
-    if (
-      !is.null(environment) &&
-        (!inherits(environment, "ray_light") ||
-          !isTRUE(attr(environment, "infinite")))
-    ) {
-      schema_stop(
-        "render_scene(environment)",
-        "must be an infinite ray_light descriptor or NULL"
-      )
-    }
-    if (is.null(environment) && !is.null(environment_light)) {
-      environment = image_infinite_light(
-        filename = environment_light,
-        scale = intensity_env,
-        rotation = rotate_env
-      )
-    }
-    scene = legacy_scene_to_schema_v2(scene, validation = validation)
-    scene_attrs = ray_scene_attrs(scene)
-    scene_attrs$render_defaults = list(
+    compiler_input = spectral_compile_render_input(
+      scene = scene,
+      width = width,
+      height = height,
+      samples = samples,
+      fov = fov,
+      lookfrom = lookfrom,
+      lookat = lookat,
+      camera_up = camera_up,
+      aperture = aperture,
+      focal_distance = focal_distance,
+      shutteropen = shutteropen,
+      shutterclose = shutterclose,
+      ortho_dimensions = ortho_dimensions,
+      max_depth = max_depth,
+      integrator_type = integrator_type,
+      filename = filename,
+      environment_light = environment_light,
+      rotate_env = rotate_env,
+      intensity_env = intensity_env,
+      preview = preview,
+      progress = progress,
+      denoise = denoise,
+      min_variance = min_variance,
+      debug_channel = debug_channel,
+      transparent_background = transparent_background,
       integrator = integrator,
       sampler = sampler,
       camera = camera,
       film = film,
-      spectral = spectral
+      spectral = spectral,
+      environment = environment,
+      validation = validation,
+      context = "render_scene"
     )
-    if (!is.null(environment)) {
-      scene_attrs$environment = environment
-    }
-    scene = restore_ray_scene_attrs(scene, scene_attrs)
-    compiler_input = as_scene_compiler_input(scene, validation = validation)
     if (return_result) {
       return(compiler_input)
     }
-    stop(
-      "render_mode = \"spectral\" currently validates schema-v2 input only; set return_result = TRUE to inspect compiler input.",
-      call. = FALSE
-    )
+    spectral_runtime_unavailable("render_scene")
   }
   if (print_debug_info) {
     message(sprintf(

@@ -4133,6 +4133,32 @@ Integrate spectral rendering with rayrender's user-facing workflow and decide wh
 - documentation builds and examples run.
 - release candidate passes package checks on all supported platforms.
 
+Implementation note:
+
+PR 24 does not connect schema-v2 compiler input to a runtime spectral pixel
+renderer and does not change the default renderer. `render_mode = "rgb_legacy"`
+remains the default; `render_mode = "spectral"` is opt-in and returns compiler
+input only when `return_result = TRUE`. `render_animation()` now exposes the
+same frame-zero spectral compiler-input shell as `render_scene()`, using the
+first requested camera-motion row. Runtime spectral still/animation rendering,
+preview, progress, cancellation, adaptive sampling, denoising, AOV file output,
+and debug channels fail explicitly until the direct spectral renderer bridge is
+connected.
+
+PR 24 adds `spectral_render_capabilities()`, which records the default policy,
+still/animation shared-state contract, AOV semantics, adaptive-sampling basis,
+denoiser input space, alpha policy, warning schedule, and unsupported runtime
+features. Migration and rollout documentation is recorded in
+`docs/spectral/pr24-rollout-report.md`,
+`docs/spectral/legacy-compatibility.md`, and
+`docs/spectral/sample-dimensions.md`.
+
+Gate evidence:
+
+- `air format R/spectral_rollout.R R/render_scene.R R/render_animation.R R/schema_v2_descriptors.R tests/testthat/test-schema-v2-descriptors.R`
+- `Rscript -e "devtools::load_all('.', quiet=TRUE); testthat::test_file('tests/testthat/test-schema-v2-descriptors.R')"` (158 passes)
+- `R CMD INSTALL .`
+- `R CMD check --no-manual --no-vignettes /private/tmp/rayrender_0.41.3.tar.gz` (Status: OK)
 
 # 14. Test and validation program
 

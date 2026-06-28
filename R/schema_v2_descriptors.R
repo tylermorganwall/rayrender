@@ -1380,6 +1380,10 @@ thin_dielectric = function(
 #' Generic schema-v2 material descriptors
 #'
 #' @param ... Named material fields.
+#' @param filename Material filename.
+#' @param mat1 First material.
+#' @param mat2 Second material.
+#' @param amount Default `0.5`. Mix amount.
 #'
 #' @return A schema-v2 material descriptor.
 #' @name schema_v2_materials
@@ -2683,7 +2687,7 @@ csg_unsampled_emitters_allowed = function(validation) {
 #' Validate a schema-v2 scene
 #'
 #' @param scene Scene.
-#' @param validation Default `attr(scene, "validation") %||% scene_validation()`. Validation descriptor.
+#' @param validation Validation descriptor. Defaults to the scene validation attribute when present.
 #'
 #' @return The input scene, invisibly.
 #' @export
@@ -3376,7 +3380,7 @@ compiler_scene_diagnostics = function(
 #' Convert a schema-v2 scene to compiler input
 #'
 #' @param scene Scene.
-#' @param validation Default `attr(scene, "validation") %||% scene_validation()`. Validation descriptor.
+#' @param validation Validation descriptor. Defaults to the scene validation attribute when present.
 #'
 #' @return A schema-v2 compiler input list.
 #' @export

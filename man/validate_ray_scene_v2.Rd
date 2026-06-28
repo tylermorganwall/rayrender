@@ -12,7 +12,7 @@ validate_ray_scene_v2(
 \arguments{
 \item{scene}{Scene.}
 
-\item{validation}{Default `attr(scene, "validation") %||% scene_validation()`. Validation descriptor.}
+\item{validation}{Validation descriptor. Defaults to the scene validation attribute when present.}
 }
 \value{
 The input scene, invisibly.

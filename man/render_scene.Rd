@@ -244,7 +244,7 @@ or a list of `screen_text()` outputs to draw in order.}
 \item{screen_line}{Default `NULL`. Optional screen-space line overlay created with `screen_line()`,
 or a list of `screen_line()` outputs to draw in order.}
 
-\item{render_mode}{Default `"rgb_legacy"`. Rendering mode. `"spectral"` currently validates and returns schema-v2 compiler input when `return_result = TRUE`.}
+\item{render_mode}{Default `"rgb_legacy"`. Rendering mode. `"spectral"` builds schema-v2 compiler input when `return_result = TRUE`; runtime spectral rendering remains disabled until the direct spectral renderer bridge is connected.}
 
 \item{integrator}{Default `NULL`. Optional schema-v2 integrator descriptor.}
 

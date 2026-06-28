@@ -446,6 +446,17 @@ test_that("render_scene exposes the schema-v2 spectral shell without rendering",
   expect_s3_class(compiler_input, "ray_scene_compiler_input")
   expect_s3_class(compiler_input$render_defaults$integrator, "ray_integrator")
   expect_s3_class(compiler_input$render_defaults$sampler, "ray_sampler")
+  expect_equal(
+    compiler_input$render_defaults$spectral_policy$default_render_mode,
+    "rgb_legacy"
+  )
+  expect_false(
+    compiler_input$render_defaults$spectral_policy$runtime_rendering$still
+  )
+  expect_equal(
+    compiler_input$render_defaults$runtime$runtime_bridge,
+    "not_connected"
+  )
 
   random_walk_input = render_scene(
     sphere(),
@@ -461,6 +472,97 @@ test_that("render_scene exposes the schema-v2 spectral shell without rendering",
 
   expect_error(
     render_scene(sphere(), render_mode = "spectral", return_result = FALSE),
-    "validates schema-v2 input only"
+    "spectral runtime renderer is not connected"
+  )
+})
+
+test_that("spectral rollout policy documents unsupported runtime features", {
+  capabilities = spectral_render_capabilities()
+
+  expect_equal(capabilities$default_render_mode, "rgb_legacy")
+  expect_equal(capabilities$default_policy$decision, "keep_rgb_legacy_default")
+  expect_false(capabilities$compiler_input$direct_runtime_bridge)
+  expect_false(capabilities$runtime_rendering$denoising)
+  expect_equal(capabilities$denoiser$input_space, "output-linear RGB")
+  expect_false(capabilities$adaptive_sampling$uses_packet_components)
+  expect_false(capabilities$alpha$transmissive_dielectric_is_alpha)
+})
+
+test_that("spectral animation frame zero matches still compiler camera setup", {
+  camera_motion = generate_camera_motion(
+    positions = list(c(0, 1, -10), c(0, 1, -10)),
+    lookats = list(c(0, 0, 0), c(0, 0, 0)),
+    frames = 2,
+    type = "linear",
+    progress = FALSE
+  )
+  frame = list(
+    lookfrom = c(
+      camera_motion$x[[1]],
+      camera_motion$y[[1]],
+      camera_motion$z[[1]]
+    ),
+    lookat = c(
+      camera_motion$dx[[1]],
+      camera_motion$dy[[1]],
+      camera_motion$dz[[1]]
+    ),
+    camera_up = c(
+      camera_motion$upx[[1]],
+      camera_motion$upy[[1]],
+      camera_motion$upz[[1]]
+    ),
+    aperture = camera_motion$aperture[[1]],
+    fov = camera_motion$fov[[1]],
+    focal_distance = camera_motion$focal[[1]],
+    ortho_dimensions = c(camera_motion$orthox[[1]], camera_motion$orthoy[[1]])
+  )
+  still_input = render_scene(
+    sphere(),
+    render_mode = "spectral",
+    return_result = TRUE,
+    width = 8,
+    height = 8,
+    samples = 4,
+    fov = frame$fov,
+    lookfrom = frame$lookfrom,
+    lookat = frame$lookat,
+    camera_up = frame$camera_up,
+    aperture = frame$aperture,
+    focal_distance = frame$focal_distance,
+    ortho_dimensions = frame$ortho_dimensions,
+    progress = FALSE
+  )
+  animation_input = render_animation(
+    sphere(),
+    camera_motion = camera_motion,
+    render_mode = "spectral",
+    return_result = TRUE,
+    start_frame = 1,
+    end_frame = 1,
+    width = 8,
+    height = 8,
+    samples = 4,
+    progress = FALSE
+  )
+
+  expect_equal(
+    animation_input$render_defaults$camera,
+    still_input$render_defaults$camera
+  )
+  expect_equal(animation_input$render_defaults$frame_index, 1)
+  expect_equal(
+    animation_input$render_defaults$runtime$request$context,
+    "render_animation"
+  )
+  expect_error(
+    render_animation(
+      sphere(),
+      camera_motion = camera_motion,
+      render_mode = "spectral",
+      return_result = FALSE,
+      progress = FALSE
+    ),
+    "spectral runtime renderer is not connected"
   )
 })
