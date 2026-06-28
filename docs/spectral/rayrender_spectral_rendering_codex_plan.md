@@ -3963,6 +3963,28 @@ Make camera optics and sensing spectral where the existing camera model supports
 - chromatic-aberration reference images are stable and physically ordered.
 - camera wavelength termination is recorded correctly.
 
+### PR 21 implementation note
+
+PR 21 lands the isolated spectral realistic-camera foundation in
+`src/render/spectral_camera.*`: explicit lens-element descriptors, constant and
+spectral eta evaluation through the PR 18 eta helpers, pbrt-style film-to-lens
+Snell tracing, deterministic exit-pupil bounds, camera weights from sampled
+pupil area, and secondary-wavelength termination before dispersive lens
+directions are selected. Nondispersive systems preserve the packet.
+
+Measured and calibrated `PixelSensor` construction, calibration, and Bradford
+white balance were already present in `src/render/spectral_film.*`; PR 21 adds a
+deterministic measured-sensor integral regression alongside the camera tests.
+Gate coverage is `Rscript tools/spectral-tests/run-pr21-camera-tests.R`, plus
+`Rscript tools/spectral-tests/run-pr9-camera-tests.R` to preserve prior camera
+behavior.
+
+The spectral camera currently accepts explicit lens-element descriptors rather
+than parsing rayrender's legacy mm lens files in C++. Built-in legacy lens-file
+adaptation, focusing from those files, and rendered chromatic-aberration
+reference images remain tied to the future spectral scene compiler/reference
+render harness.
+
 ## PR 22: Complete importers, lights, and scene compilation
 
 ### Goal
@@ -4844,9 +4866,9 @@ The spectral renderer is complete only when all of the following are true.
 - [ ] Medium/PhaseFunction interfaces and VolPath follow the pinned pbrt implementation.
 - [ ] spectral absorption is applied along segments, not at ending surfaces.
 - [ ] visibility includes medium transmittance where appropriate.
-- [ ] realistic camera can evaluate wavelength-dependent lens IOR.
-- [ ] measured sensor curves integrate correctly.
-- [ ] camera/lens wavelength termination follows pbrt.
+- [x] realistic camera can evaluate wavelength-dependent lens IOR.
+- [x] measured sensor curves integrate correctly.
+- [x] camera/lens wavelength termination follows pbrt.
 
 ## 19.7 Product integration
 

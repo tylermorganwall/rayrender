@@ -21,13 +21,15 @@ PR 19 adds diffuse-transmission and coated diffuse/conductor closure composition
 spectral material layer, plus legacy `glossy()` schema adaptation to a coated diffuse descriptor.
 PR 20 adds the isolated pbrt-style Medium/PhaseFunction foundation, homogeneous spectral media,
 dielectric-region medium binding tests, and strict surface-integrator rejection for non-vacuum media.
+PR 21 adds spectral realistic-camera lens tracing, exit-pupil sampling, lens eta descriptors,
+camera wavelength termination, and measured-sensor regression coverage.
 
 ## Current Layout
 
 - `src/render/`: renderer setup orchestration shared by still and animation entry points.
 - `src/render/render_session.*`: legacy RGB setup bridge for scene compilation, camera construction, environment light setup, output buffers, and explicit frame inputs.
 - `src/render/spectral_film.*`: PR 8 PixelSensor, Film, FilmTile, output-color conversion, visible-surface hooks, and deterministic test accumulation.
-- `src/render/spectral_camera.*`: PR 9 spectral-only camera sample, ray, handle, perspective/orthographic/thin-lens generation, ray differentials, initial-medium recording, dielectric-region initialization hooks, and Film wavelength-sampling bridge.
+- `src/render/spectral_camera.*`: PR 9 spectral-only camera sample, ray, handle, perspective/orthographic/thin-lens generation, ray differentials, initial-medium recording, dielectric-region initialization hooks, and Film wavelength-sampling bridge; PR 21 adds realistic-camera lens elements with constant/Cauchy/Sellmeier/named eta handles, pbrt-style film-to-lens tracing, exit-pupil bounds, lens-weighting, and secondary-wavelength termination for dispersive optics.
 - `src/render/spectral_scene.*`: PR 10 spectral Interaction, SurfaceInteraction, Shape callbacks, native sphere and SDF CSG adapters, primitive bindings, transformed primitives, aggregates, Scene ownership, ray spawning, capability validation, and legacy hitable wrapping; PR 17 adds multi-boundary dielectric region attachments, binding lookup for camera-origin containment, and coherent CSG region-boundary capability support.
 - `src/render/spectral_light.*`: PR 11 spectral Light flags/types, point/spot/distant/diffuse-area lights, uniform/image infinite lights, visibility endpoints, scalar light power estimates, UniformLightSampler/PowerLightSampler, and schema/compiler adapter hooks for area lights, free lights, environments, and legacy emissive materials.
 - `src/render/spectral_medium.*`: PR 20 pbrt-style `PhaseFunction` and `Medium` dispatch wrappers, `HenyeyGreensteinPhaseFunction`, `HomogeneousMedium` spectral sigma_a/sigma_s/emission/scale evaluation, Beer-Lambert transmittance, homogeneous distance sampling, homogeneous majorant iteration, and Medium/PhaseFunction handle tables. Heterogeneous media, null-collision tracking, and `VolPathIntegrator` remain deferred.
@@ -48,7 +50,7 @@ dielectric-region medium binding tests, and strict surface-integrator rejection 
 
 Do not add new top-level renderer setup duplication to the Rcpp entry points. New shared setup belongs under `src/render/`, and entry points should pass explicit inputs into `RenderSession` or a narrower helper there.
 
-The PR 1 render-session layer is intentionally RGB-only. PR 2 through PR 20 spectral code is
+The PR 1 render-session layer is intentionally RGB-only. PR 2 through PR 21 spectral code is
 scaffolding and must remain unused by legacy transport except for isolated conversion, packet,
 asset-loading, RGB reconstruction, descriptor validation, texture evaluation, Film/sensor conversion,
 spectral camera generation, spectral scene/shape adaptation, explicit spectral light construction,
@@ -57,4 +59,4 @@ RandomWalk transport tests, PathIntegrator estimator tests, conductor material t
 render-loop tests, plus constant-IOR dielectric region-state, smooth dielectric path tests, rough
 dielectric scattering tests, dispersive/thin-dielectric wavelength-termination tests, coated
 material closure tests, diffuse-transmission material tests, legacy glossy schema adaptation tests,
-and isolated medium/phase-function tests.
+isolated medium/phase-function tests, and realistic-camera dispersion/exit-pupil tests.

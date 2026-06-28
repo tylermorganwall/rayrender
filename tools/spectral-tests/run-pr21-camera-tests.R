@@ -51,14 +51,14 @@ compile_test = function(label, repo_root, extra_flags = character()) {
   cxx_flags = split_command(config_value("CXX20FLAGS", ""))
   cpp_flags = split_command(config_value("CPPFLAGS", ""))
 
-  build_dir = tempfile(paste0("rayrender-pr9-", label, "-"))
+  build_dir = tempfile(paste0("rayrender-pr21-", label, "-"))
   dir.create(build_dir)
-  executable = file.path(build_dir, paste0("pr9-camera-tests-", label))
+  executable = file.path(build_dir, paste0("pr21-camera-tests-", label))
 
   sources = file.path(
     repo_root,
     c(
-      "tools/spectral-tests/pr9-camera-tests.cpp",
+      "tools/spectral-tests/pr21-camera-tests.cpp",
       "src/render/spectral_camera.cpp",
       "src/render/spectral_dielectric.cpp",
       "src/render/spectral_scene.cpp",
@@ -82,14 +82,14 @@ compile_test = function(label, repo_root, extra_flags = character()) {
     executable
   )
 
-  message("Compiling PR9 Camera tests (", label, ")")
+  message("Compiling PR21 Camera tests (", label, ")")
   run_command(cxx, args)
   executable
 }
 
 run_test = function(label, executable, asset_dir, extra_env = character()) {
   env = c(paste0("RAYRENDER_SPECTRAL_ASSET_DIR=", asset_dir), extra_env)
-  message("Running PR9 Camera tests (", label, ")")
+  message("Running PR21 Camera tests (", label, ")")
   run_command(executable, asset_dir, env = env)
 }
 
@@ -106,7 +106,7 @@ source_asset_dir = normalizePath(
 normal_executable = compile_test("normal", repo_root)
 run_test("normal", normal_executable, source_asset_dir)
 
-if (!isTRUE(as.logical(Sys.getenv("RAYRENDER_PR9_SKIP_SANITIZER", "false")))) {
+if (!isTRUE(as.logical(Sys.getenv("RAYRENDER_PR21_SKIP_SANITIZER", "false")))) {
   leak_detection = if (identical(Sys.info()[["sysname"]], "Darwin")) {
     "0"
   } else {

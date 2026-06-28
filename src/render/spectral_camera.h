@@ -1,14 +1,17 @@
 #ifndef RAYRENDER_RENDER_SPECTRAL_CAMERA_H
 #define RAYRENDER_RENDER_SPECTRAL_CAMERA_H
 
+#include "spectral_dielectric.h"
 #include "spectral_film.h"
 
 #include "../base/base.h"
 #include "../core/ray.h"
+#include "../math/bounds.h"
 #include "../math/vectypes.h"
 
 #include <cstdint>
 #include <optional>
+#include <string>
 #include <vector>
 
 namespace rayrender {
@@ -69,7 +72,8 @@ private:
 
 enum class CameraType {
   Perspective,
-  Orthographic
+  Orthographic,
+  Realistic
 };
 
 enum class CameraRegionInitializationMode {
@@ -132,10 +136,48 @@ struct OrthographicCameraParameters {
   SpectralCameraOptions options;
 };
 
+struct RealisticCameraLensElement {
+  Float curvatureRadius = 0;
+  Float thickness = 0;
+  EtaSpectrumHandle eta = ConstantEtaSpectrum(1);
+  Float apertureRadius = 0;
+
+  static RealisticCameraLensElement Spherical(
+    Float curvatureRadius,
+    Float thickness,
+    Float eta,
+    Float apertureRadius
+  );
+  static RealisticCameraLensElement Spherical(
+    Float curvatureRadius,
+    Float thickness,
+    EtaSpectrumHandle eta,
+    Float apertureRadius
+  );
+  static RealisticCameraLensElement ApertureStop(
+    Float thickness,
+    Float apertureRadius
+  );
+
+  bool IsStop() const;
+  bool IsDispersive() const;
+  Float Eta(Float lambdaNm) const;
+};
+
+struct RealisticCameraParameters {
+  point3f lookfrom;
+  point3f lookat;
+  vec3f up = vec3f(0, 1, 0);
+  std::vector<RealisticCameraLensElement> lensElements;
+  Float filmDiagonal = static_cast<Float>(0.035);
+  SpectralCameraOptions options;
+};
+
 class SpectralCamera {
 public:
   static SpectralCamera Perspective(const PerspectiveCameraParameters& params);
   static SpectralCamera Orthographic(const OrthographicCameraParameters& params);
+  static SpectralCamera Realistic(const RealisticCameraParameters& params);
 
   std::optional<CameraRay> GenerateRay(
     const CameraSample& sample,
@@ -165,14 +207,39 @@ private:
     vec3f vertical;
     Float lensRadius = 0;
     Float focusDistance = 1;
+    Float filmDiagonal = static_cast<Float>(0.035);
+    std::vector<RealisticCameraLensElement> lensElements;
+    std::vector<Bounds2f> exitPupilBounds;
+    bool hasDispersiveLens = false;
   };
 
   static SpectralCamera Create(CameraType type, Geometry geometry, SpectralCameraOptions options);
+  void PrecomputeExitPupilBounds();
 
-  std::optional<CameraRay> GenerateBaseRay(const CameraSample& sample) const;
+  std::optional<CameraRay> GenerateBaseRay(
+    const CameraSample& sample,
+    base::SampledWavelengths& lambda
+  ) const;
+  std::optional<CameraRay> GenerateProjectiveRay(const CameraSample& sample) const;
+  std::optional<CameraRay> GenerateRealisticRay(
+    const CameraSample& sample,
+    base::SampledWavelengths& lambda
+  ) const;
+  bool TraceLensesFromFilm(const Ray& ray, Float lambdaNm, Ray* out) const;
+  Bounds2f BoundExitPupil(Float pFilmX0, Float pFilmX1) const;
+  point3f SampleExitPupil(
+    const point2f& pFilm,
+    const point2f& lensSample,
+    Float* sampleBoundsArea
+  ) const;
+  Bounds2f PhysicalExtent() const;
   point3f FilmPoint(const point2f& pFilm) const;
   Float SampleTime(Float u) const;
   CameraRay AttachCameraState(Ray ray) const;
+  Float LensRearZ() const;
+  Float RearElementRadius() const;
+  point3f CameraToRenderPoint(const point3f& p) const;
+  vec3f CameraToRenderVector(const vec3f& v) const;
 
   CameraType type_ = CameraType::Perspective;
   Geometry geometry_;
