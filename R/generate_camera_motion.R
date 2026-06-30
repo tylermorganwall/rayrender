@@ -388,17 +388,7 @@ generate_camera_motion = function(
       "upz"
     )
     if (damp_motion) {
-      current_pos = final_motion[1, ]
-      temp_list = list()
-      temp_list[[1]] = current_pos
-      for (i in seq_len(nrow(final_motion))[-1]) {
-        temp_pos = current_pos *
-          damp_magnitude +
-          final_motion[i, ] * (1 - damp_magnitude)
-        temp_list[[i]] = temp_pos
-        current_pos = temp_pos
-      }
-      final_motion = do.call(rbind, temp_list)
+      final_motion = damp_camera_motion(final_motion, damp_magnitude, closed)
     }
 
     return(final_motion)
@@ -499,17 +489,7 @@ generate_camera_motion = function(
       final_motion$orthoy = tween(ortho$y, n = frames, ease = "linear")
     }
     if (damp_motion) {
-      current_pos = final_motion[1, ]
-      temp_list = list()
-      temp_list[[1]] = current_pos
-      for (i in seq_len(nrow(final_motion))[-1]) {
-        temp_pos = current_pos *
-          damp_magnitude +
-          final_motion[i, ] * (1 - damp_magnitude)
-        temp_list[[i]] = temp_pos
-        current_pos = temp_pos
-      }
-      final_motion = do.call(rbind, temp_list)
+      final_motion = damp_camera_motion(final_motion, damp_magnitude, closed)
     }
     return(final_motion)
   } else if (type == "manual") {
@@ -592,22 +572,119 @@ generate_camera_motion = function(
       upz = camera_ups$z
     )
     if (damp_motion) {
-      current_pos = final_motion[1, ]
-      temp_list = list()
-      temp_list[[1]] = current_pos
-      for (i in seq_len(nrow(final_motion))[-1]) {
-        temp_pos = current_pos *
-          damp_magnitude +
-          final_motion[i, ] * (1 - damp_magnitude)
-        temp_list[[i]] = temp_pos
-        current_pos = temp_pos
-      }
-      final_motion = do.call(rbind, temp_list)
+      final_motion = damp_camera_motion(final_motion, damp_magnitude, closed)
     }
     return(final_motion)
   } else {
     stop("type '", type, "' not recognized")
   }
+}
+
+#' Damp Camera Motion
+#'
+#' @param motion Motion data frame.
+#' @param damp_magnitude Damping multiplier.
+#' @param closed Whether to treat the motion as a closed loop.
+#' @return Damped motion data frame.
+#'
+#' @keywords internal
+damp_camera_motion = function(motion, damp_magnitude, closed = FALSE) {
+  motion_names = colnames(motion)
+  motion_matrix = as.matrix(motion)
+  if (nrow(motion_matrix) < 2) {
+    return(motion)
+  }
+
+  if (!closed) {
+    damped_motion = damp_camera_motion_open(motion_matrix, damp_magnitude)
+  } else {
+    closed_cols = seq_len(ncol(motion_matrix))
+    if (all(c("x", "y", "z") %in% motion_names)) {
+      closed_cols = match(c("x", "y", "z"), motion_names)
+    }
+    duplicate_endpoint = all(
+      abs(
+        motion_matrix[1, closed_cols] -
+          motion_matrix[nrow(motion_matrix), closed_cols]
+      ) <
+        sqrt(.Machine$double.eps)
+    )
+
+    if (duplicate_endpoint) {
+      damped_motion = damp_camera_motion_closed(
+        motion_matrix[-nrow(motion_matrix), , drop = FALSE],
+        damp_magnitude
+      )
+      damped_motion = rbind(damped_motion, damped_motion[1, , drop = FALSE])
+    } else {
+      damped_motion = damp_camera_motion_closed(motion_matrix, damp_magnitude)
+      damped_motion = close_damped_camera_motion(damped_motion)
+    }
+  }
+
+  damped_motion = as.data.frame(damped_motion)
+  colnames(damped_motion) = motion_names
+  rownames(damped_motion) = NULL
+  return(damped_motion)
+}
+
+#' Damp Open Camera Motion
+#'
+#' @param motion_matrix Motion matrix.
+#' @param damp_magnitude Damping multiplier.
+#' @return Damped motion matrix.
+#'
+#' @keywords internal
+damp_camera_motion_open = function(motion_matrix, damp_magnitude) {
+  damped_motion = motion_matrix
+  current_pos = motion_matrix[1, ]
+  for (i in seq_len(nrow(motion_matrix))[-1]) {
+    current_pos = current_pos *
+      damp_magnitude +
+      motion_matrix[i, ] * (1 - damp_magnitude)
+    damped_motion[i, ] = current_pos
+  }
+  return(damped_motion)
+}
+
+#' Damp Closed Camera Motion
+#'
+#' @param motion_matrix Motion matrix.
+#' @param damp_magnitude Damping multiplier.
+#' @return Damped motion matrix.
+#'
+#' @keywords internal
+damp_camera_motion_closed = function(motion_matrix, damp_magnitude) {
+  damped_motion = motion_matrix
+  target_weight = 1 - damp_magnitude
+  frame_count = nrow(motion_matrix)
+  powers = damp_magnitude^(rev(seq_len(frame_count)) - 1)
+  current_pos = as.numeric(
+    target_weight *
+      (powers %*% motion_matrix) /
+      (1 - damp_magnitude^frame_count)
+  )
+
+  for (i in seq_len(frame_count)) {
+    current_pos = current_pos *
+      damp_magnitude +
+      motion_matrix[i, ] * target_weight
+    damped_motion[i, ] = current_pos
+  }
+  return(damped_motion)
+}
+
+#' Close Damped Camera Motion
+#'
+#' @param motion_matrix Motion matrix.
+#' @return Closed motion matrix.
+#'
+#' @keywords internal
+close_damped_camera_motion = function(motion_matrix) {
+  endpoint_delta = motion_matrix[nrow(motion_matrix), ] - motion_matrix[1, ]
+  correction = seq(0, 1, length.out = nrow(motion_matrix)) %o%
+    endpoint_delta
+  return(motion_matrix - correction)
 }
 
 #' Process Points to Control Points
