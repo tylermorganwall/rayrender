@@ -489,14 +489,17 @@ void render_animation_rcpp(List scene, List camera_info, List scene_info, List r
         break;
       }
 #ifdef HAS_OIDN
-      filter.execute();
-      const char* errorMessage;
-      if (device.getError(errorMessage) != oidn::Error::None) {
-        Rcpp::Rcout << "Error: " << errorMessage << std::endl;
+      if(denoise) {
+        filter.execute();
+        const char* errorMessage;
+        if (device.getError(errorMessage) != oidn::Error::None) {
+          Rcpp::Rcout << "Error: " << errorMessage << std::endl;
+        }
       }
-      List temp = List::create(_["r"] = draw_rgb_output.ConvertRcpp(0), 
-                               _["g"] = draw_rgb_output.ConvertRcpp(1), 
-                               _["b"] = draw_rgb_output.ConvertRcpp(2),
+      RayMatrix final_output = denoise ? draw_rgb_output : rgb_output;
+      List temp = List::create(_["r"] = final_output.ConvertRcpp(0), 
+                               _["g"] = final_output.ConvertRcpp(1), 
+                               _["b"] = final_output.ConvertRcpp(2),
                                _["a"] = alpha_output.ConvertRcpp());
       post_process_frame(temp, debug_channel, as<std::string>(filenames(i)), as<std::string>(tonemap(0)), bloom,
                        transparent_background, write_image, plot_scene);
