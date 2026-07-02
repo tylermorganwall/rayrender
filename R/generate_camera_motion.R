@@ -391,7 +391,7 @@ generate_camera_motion = function(
       final_motion = damp_camera_motion(final_motion, damp_magnitude, closed)
     }
 
-    return(final_motion)
+    return(as_ray_camera_motion(final_motion))
   } else if (type %in% c("exp", "quad", "cubic", "linear")) {
     if (inherits(positions, "list")) {
       positions = do.call(rbind, positions)
@@ -491,7 +491,7 @@ generate_camera_motion = function(
     if (damp_motion) {
       final_motion = damp_camera_motion(final_motion, damp_magnitude, closed)
     }
-    return(final_motion)
+    return(as_ray_camera_motion(final_motion))
   } else if (type == "manual") {
     if (inherits(positions, "list")) {
       positions = do.call(rbind, positions)
@@ -574,7 +574,7 @@ generate_camera_motion = function(
     if (damp_motion) {
       final_motion = damp_camera_motion(final_motion, damp_magnitude, closed)
     }
-    return(final_motion)
+    return(as_ray_camera_motion(final_motion))
   } else {
     stop("type '", type, "' not recognized")
   }

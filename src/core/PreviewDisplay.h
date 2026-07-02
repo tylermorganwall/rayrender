@@ -72,7 +72,7 @@ public:
 #ifdef HAS_OIDN
   PreviewDisplay(unsigned int _width, unsigned int _height, bool preview, bool _interactive,
                  bool _deferred_render, Float initial_lookat_distance, RayCamera* _cam,
-                 Transform* _EnvObjectToWorld, Transform* _EnvWorldToObject, oidn::FilterRef& _filter,
+                 Transform* _EnvObjectToWorld, Transform* _EnvWorldToObject, oidn::FilterRef* _filter,
                  bool denoise, bool _auto_exposure);
 #else
   PreviewDisplay(unsigned int _width, unsigned int _height, bool preview, bool _interactive,
@@ -81,6 +81,10 @@ public:
                  bool _auto_exposure);
 #endif
   ~PreviewDisplay();
+  void SetCamera(RayCamera* _cam);
+#ifdef HAS_OIDN
+  void SetDenoiser(oidn::FilterRef* _filter, bool _denoise);
+#endif
   void DrawImage(adaptive_sampler& adaptive_pixel_sampler, 
                  adaptive_sampler& adaptive_pixel_sampler_small,
                  size_t &ns,
@@ -169,7 +173,7 @@ public:
   Transform Start_EnvObjectToWorld;
   Transform Start_EnvWorldToObject;
   #ifdef HAS_OIDN
-  oidn::FilterRef& filter;
+  oidn::FilterRef* filter;
   bool denoise;
   #endif
   std::vector<Rcpp::List> Keyframes;

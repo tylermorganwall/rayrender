@@ -3,7 +3,7 @@
 #' Takes the scene description and renders an image, either to the device or to a filename.
 #'
 #' @param scene Tibble of object locations and properties.
-#' @param camera_motion Data frame of camera motion vectors, calculated with `generate_camera_motion()`.
+#' @param camera_motion Default `NULL`. Data frame of camera motion vectors, calculated with `generate_camera_motion()`. If `NULL`, the camera is resolved from the scene.
 #' @param start_frame Default `1`. Frame to start the animation.
 #' @param end_frame Default `NA`. By default, this is set to `nrow(camera_motion)`, the full number of frames.
 #' @param width Default `400`. Width of the render, in pixels.
@@ -94,6 +94,7 @@
 #' @param integrator_type Default `"rtiow"` (the algorithm specified in the book "Raytracing in One Weekend", a basic
 #' form of path guiding). Other options include `"nee"` (Next Event Estimation, with direct light sampling)
 #' and `"basic"` (basic pathtracing, for high sample reference renders and debugging only).
+#' @param camera Default `NULL`. Scene-attached camera name, `"all"`, or a `ray_camera` object created with `camera()`.
 #' @export
 #' @importFrom  grDevices col2rgb
 #' @return Raytraced plot to current device, or an image saved to a file.
@@ -161,7 +162,7 @@
 #'
 render_animation = function(
   scene,
-  camera_motion,
+  camera_motion = NULL,
   start_frame = 1,
   end_frame = NA,
   width = 400,
@@ -204,25 +205,303 @@ render_animation = function(
   transparent_background = FALSE,
   preview_light_direction = c(0, -1, 0),
   preview_exponent = 6,
-  integrator_type = "rtiow"
+  integrator_type = "rtiow",
+  camera = NULL
 ) {
   if (ambient_occlusion) {
     debug_channel = "ao"
   }
-  write_file = TRUE
-  if (is.na(filename)) {
-    write_file = FALSE
+
+  filename_supplied = !missing(filename)
+  metadata_supplied = c(
+    camera_description_file = !missing(camera_description_file),
+    camera_scale = !missing(camera_scale),
+    iso = !missing(iso),
+    film_size = !missing(film_size),
+    shutteropen = !missing(shutteropen),
+    shutterclose = !missing(shutterclose),
+    filename = filename_supplied
+  )
+  metadata_overrides = list(
+    camera_description_file = camera_description_file,
+    camera_scale = camera_scale,
+    iso = iso,
+    film_size = film_size,
+    shutteropen = shutteropen,
+    shutterclose = shutterclose,
+    filename = filename
+  )
+
+  if (!missing(camera_motion) && !is.null(camera_motion)) {
+    if (inherits(camera_motion, "ray_camera")) {
+      cameras = list(apply_camera_overrides(
+        camera_motion,
+        overrides = metadata_overrides,
+        supplied = metadata_supplied
+      ))
+    } else {
+      cameras = list(camera(
+        motion = camera_motion,
+        filename = if (filename_supplied) filename else NA_character_,
+        camera_description_file = camera_description_file,
+        camera_scale = camera_scale,
+        iso = iso,
+        film_size = film_size,
+        shutteropen = shutteropen,
+        shutterclose = shutterclose
+      ))
+    }
+  } else {
+    scene_camera_available = length(ray_scene_cameras(scene)) > 0 ||
+      (!missing(camera) && !is.null(camera))
+    default_camera = render_scene_legacy_camera(
+      scene = scene,
+      supplied = rep(FALSE, 14),
+      lookfrom = c(0, 1, -10),
+      lookat = c(0, 0, 0),
+      camera_up = c(0, 1, 0),
+      fov = 20,
+      aperture = 0.1,
+      focal_distance = NULL,
+      ortho_dimensions = c(1, 1),
+      filename = if (scene_camera_available) {
+        NA_character_
+      } else if (filename_supplied) {
+        filename
+      } else {
+        NA_character_
+      },
+      camera_description_file = camera_description_file,
+      camera_scale = camera_scale,
+      iso = iso,
+      film_size = film_size,
+      shutteropen = shutteropen,
+      shutterclose = shutterclose,
+      message_cornell = FALSE
+    )
+    cameras = resolve_scene_camera(
+      scene,
+      camera = if (missing(camera)) NULL else camera,
+      allow_all = TRUE,
+      default_camera = default_camera
+    )
+    cameras = lapply(
+      cameras,
+      apply_camera_overrides,
+      overrides = metadata_overrides,
+      supplied = metadata_supplied
+    )
   }
+
+  if (length(cameras) > 1) {
+    validate_camera_output_filenames(
+      cameras,
+      mode = "animation",
+      start_frame = start_frame,
+      end_frame = end_frame,
+      filename_override = filename,
+      filename_supplied = FALSE
+    )
+    if (camera_batch_metadata_compatible(cameras)) {
+      return(render_camera_batch(
+        scene = scene,
+        cameras = cameras,
+        mode = "animation",
+        start_frame = start_frame,
+        end_frame = end_frame,
+        width = width,
+        height = height,
+        preview = preview,
+        denoise = denoise,
+        samples = samples,
+        min_variance = min_variance,
+        min_adaptive_size = min_adaptive_size,
+        sample_method = sample_method,
+        keep_colors = keep_colors,
+        sample_dist = sample_dist,
+        max_depth = max_depth,
+        roulette_active_depth = roulette_active_depth,
+        ambient_light = ambient_light,
+        clamp_value = clamp_value,
+        backgroundhigh = backgroundhigh,
+        backgroundlow = backgroundlow,
+        focal_distance = focal_distance,
+        ortho_dimensions = ortho_dimensions,
+        tonemap = tonemap,
+        bloom = bloom,
+        parallel = parallel,
+        bvh_type = bvh_type,
+        environment_light = environment_light,
+        rotate_env = rotate_env,
+        intensity_env = intensity_env,
+        debug_channel = debug_channel,
+        plot_scene = plot_scene,
+        progress = progress,
+        verbose = verbose,
+        transparent_background = transparent_background,
+        preview_light_direction = preview_light_direction,
+        preview_exponent = preview_exponent,
+        integrator_type = integrator_type
+      ))
+    }
+    warning(
+      "Rendering cameras one at a time because their camera metadata differs."
+    )
+    output = lapply(cameras, function(cam) {
+      render_animation_camera(
+        scene = scene,
+        camera = cam,
+        start_frame = start_frame,
+        end_frame = end_frame,
+        width = width,
+        height = height,
+        preview = preview,
+        denoise = denoise,
+        samples = samples,
+        min_variance = min_variance,
+        min_adaptive_size = min_adaptive_size,
+        sample_method = sample_method,
+        keep_colors = keep_colors,
+        sample_dist = sample_dist,
+        max_depth = max_depth,
+        roulette_active_depth = roulette_active_depth,
+        ambient_light = ambient_light,
+        clamp_value = clamp_value,
+        backgroundhigh = backgroundhigh,
+        backgroundlow = backgroundlow,
+        focal_distance = focal_distance,
+        ortho_dimensions = ortho_dimensions,
+        tonemap = tonemap,
+        bloom = bloom,
+        parallel = parallel,
+        bvh_type = bvh_type,
+        environment_light = environment_light,
+        rotate_env = rotate_env,
+        intensity_env = intensity_env,
+        debug_channel = debug_channel,
+        plot_scene = plot_scene,
+        progress = progress,
+        verbose = verbose,
+        transparent_background = transparent_background,
+        preview_light_direction = preview_light_direction,
+        preview_exponent = preview_exponent,
+        integrator_type = integrator_type
+      )
+    })
+    names(output) = vapply(cameras, function(cam) cam$name, character(1))
+    return(invisible(output))
+  }
+
+  render_animation_camera(
+    scene = scene,
+    camera = cameras[[1]],
+    start_frame = start_frame,
+    end_frame = end_frame,
+    width = width,
+    height = height,
+    preview = preview,
+    denoise = denoise,
+    samples = samples,
+    min_variance = min_variance,
+    min_adaptive_size = min_adaptive_size,
+    sample_method = sample_method,
+    keep_colors = keep_colors,
+    sample_dist = sample_dist,
+    max_depth = max_depth,
+    roulette_active_depth = roulette_active_depth,
+    ambient_light = ambient_light,
+    clamp_value = clamp_value,
+    backgroundhigh = backgroundhigh,
+    backgroundlow = backgroundlow,
+    focal_distance = focal_distance,
+    ortho_dimensions = ortho_dimensions,
+    tonemap = tonemap,
+    bloom = bloom,
+    parallel = parallel,
+    bvh_type = bvh_type,
+    environment_light = environment_light,
+    rotate_env = rotate_env,
+    intensity_env = intensity_env,
+    debug_channel = debug_channel,
+    plot_scene = plot_scene,
+    progress = progress,
+    verbose = verbose,
+    transparent_background = transparent_background,
+    preview_light_direction = preview_light_direction,
+    preview_exponent = preview_exponent,
+    integrator_type = integrator_type
+  )
+}
+
+#' @keywords internal
+render_animation_camera = function(
+  scene,
+  camera,
+  start_frame = 1,
+  end_frame = NA,
+  width = 400,
+  height = 400,
+  preview = interactive(),
+  denoise = TRUE,
+  samples = 100,
+  min_variance = 0,
+  min_adaptive_size = 8,
+  sample_method = "sobol",
+  keep_colors = FALSE,
+  sample_dist = 10,
+  max_depth = 50,
+  roulette_active_depth = 10,
+  ambient_light = FALSE,
+  clamp_value = Inf,
+  backgroundhigh = "#80b4ff",
+  backgroundlow = "#ffffff",
+  focal_distance = NULL,
+  ortho_dimensions = c(1, 1),
+  tonemap = "raw",
+  bloom = TRUE,
+  parallel = TRUE,
+  bvh_type = "sah",
+  environment_light = NULL,
+  rotate_env = 0,
+  intensity_env = 1,
+  debug_channel = "none",
+  plot_scene = TRUE,
+  progress = interactive(),
+  verbose = FALSE,
+  transparent_background = FALSE,
+  preview_light_direction = c(0, -1, 0),
+  preview_exponent = 6,
+  integrator_type = "rtiow",
+  force_no_write = FALSE
+) {
+  if (!inherits(camera, "ray_camera")) {
+    stop("camera must inherit from class 'ray_camera'")
+  }
+
+  camera_motion = as.data.frame(camera$motion)
+  frame_range = camera_frame_range(
+    nrow(camera_motion),
+    start_frame = start_frame,
+    end_frame = end_frame
+  )
+  filename_info = camera_frame_filenames(
+    if (isTRUE(force_no_write)) NA_character_ else camera$filename,
+    nrow(camera_motion),
+    seq_len(nrow(camera_motion))
+  )
+  write_file = filename_info$write_image && !isTRUE(force_no_write)
+  filename_str = filename_info$filenames
+
   scene_list = prepare_scene_list(
     scene = scene,
     width = width,
     height = height,
     fov = 0,
     samples = samples,
-    camera_description_file = camera_description_file,
-    camera_scale = camera_scale,
-    iso = iso,
-    film_size = film_size,
+    camera_description_file = camera$camera_description_file,
+    camera_scale = camera$camera_scale,
+    iso = camera$iso,
+    film_size = camera$film_size,
     min_variance = min_variance,
     min_adaptive_size = min_adaptive_size,
     sample_method = sample_method,
@@ -234,11 +513,11 @@ render_animation = function(
     camera_up = c(0, 1, 0),
     aperture = 0,
     clamp_value = clamp_value,
-    filename = filename,
+    filename = if (write_file) filename_str[frame_range[1]] else NA,
     backgroundhigh = backgroundhigh,
     backgroundlow = backgroundlow,
-    shutteropen = shutteropen,
-    shutterclose = shutterclose,
+    shutteropen = camera$shutteropen,
+    shutterclose = camera$shutterclose,
     focal_distance = focal_distance,
     ortho_dimensions = ortho_dimensions,
     tonemap = tonemap,
@@ -267,9 +546,9 @@ render_animation = function(
 
   camera_info$preview = preview
   camera_info$interactive = FALSE
-  if (!is.na(camera_description_file)) {
+  if (!is.na(camera$camera_description_file)) {
     camera_description_file = switch(
-      camera_description_file,
+      camera$camera_description_file,
       "50mm" = system.file("extdata", "dgauss.50mm.txt", package = "rayrender"),
       "wide" = system.file("extdata", "wide.22mm.txt", package = "rayrender"),
       "fisheye" = system.file(
@@ -282,7 +561,7 @@ render_animation = function(
         "telephoto.250mm.txt",
         package = "rayrender"
       ),
-      camera_description_file
+      camera$camera_description_file
     )
     if (file.exists(camera_description_file)) {
       camera_motion$fov = -1
@@ -295,20 +574,6 @@ render_animation = function(
     }
   }
 
-  if (is.na(filename)) {
-    filename = ""
-  }
-  #Camera Movement Info
-  if (filename != "") {
-    filename_str = paste0(filename, 1:nrow(camera_motion), ".png")
-  } else {
-    filename_str = rep("", length(1:nrow(camera_motion)))
-  }
-
-  if (is.na(end_frame)) {
-    end_frame = nrow(camera_motion)
-  }
-  stopifnot(end_frame <= nrow(camera_motion))
   #Animate Scene
   rgb_mat = render_animation_rcpp(
     scene = processed_scene,
@@ -316,8 +581,8 @@ render_animation = function(
     scene_info = scene_info,
     render_info = render_info,
     camera_movement = camera_motion,
-    start_frame = start_frame - 1,
-    end_frame = end_frame,
+    start_frame = frame_range[1] - 1,
+    end_frame = frame_range[length(frame_range)],
     filenames = filename_str,
     post_process_frame = post_process_frame,
     tonemap = tonemap,
@@ -325,4 +590,186 @@ render_animation = function(
     write_image = write_file,
     transparent_background = transparent_background
   )
+  invisible(rgb_mat)
+}
+
+#' @keywords internal
+render_camera_batch = function(
+  scene,
+  cameras,
+  mode = "auto",
+  start_frame = 1,
+  end_frame = NA,
+  width = 400,
+  height = 400,
+  preview = interactive(),
+  denoise = TRUE,
+  samples = 100,
+  min_variance = 0,
+  min_adaptive_size = 8,
+  sample_method = "sobol",
+  keep_colors = FALSE,
+  sample_dist = 10,
+  max_depth = 50,
+  roulette_active_depth = 10,
+  ambient_light = FALSE,
+  clamp_value = Inf,
+  backgroundhigh = "#80b4ff",
+  backgroundlow = "#ffffff",
+  focal_distance = NULL,
+  ortho_dimensions = c(1, 1),
+  tonemap = "raw",
+  bloom = TRUE,
+  parallel = TRUE,
+  bvh_type = "sah",
+  environment_light = NULL,
+  rotate_env = 0,
+  intensity_env = 1,
+  debug_channel = "none",
+  plot_scene = TRUE,
+  progress = interactive(),
+  verbose = FALSE,
+  transparent_background = FALSE,
+  preview_light_direction = c(0, -1, 0),
+  preview_exponent = 6,
+  integrator_type = "rtiow",
+  force_no_write = FALSE
+) {
+  if (!camera_batch_metadata_compatible(cameras)) {
+    stop(
+      "Cannot batch render cameras with different camera metadata. ",
+      "camera_description_file, camera_scale, iso, film_size, ",
+      "shutteropen, and shutterclose must match."
+    )
+  }
+
+  plan = camera_batch_plan(
+    cameras,
+    mode = mode,
+    start_frame = start_frame,
+    end_frame = end_frame,
+    force_no_write = force_no_write
+  )
+  camera = cameras[[1]]
+  camera_motion = plan$motion
+  write_file = plan$write_image && !isTRUE(force_no_write)
+  filename_str = plan$filenames
+  first_filename = if (write_file) {
+    filename_str[which(nzchar(filename_str))[1]]
+  } else {
+    NA_character_
+  }
+
+  scene_list = prepare_scene_list(
+    scene = scene,
+    width = width,
+    height = height,
+    fov = 0,
+    samples = samples,
+    camera_description_file = camera$camera_description_file,
+    camera_scale = camera$camera_scale,
+    iso = camera$iso,
+    film_size = camera$film_size,
+    min_variance = min_variance,
+    min_adaptive_size = min_adaptive_size,
+    sample_method = sample_method,
+    max_depth = max_depth,
+    roulette_active_depth = roulette_active_depth,
+    ambient_light = ambient_light,
+    lookfrom = c(0, 1, 10),
+    lookat = c(0, 0, 0),
+    camera_up = c(0, 1, 0),
+    aperture = 0,
+    clamp_value = clamp_value,
+    filename = first_filename,
+    backgroundhigh = backgroundhigh,
+    backgroundlow = backgroundlow,
+    shutteropen = camera$shutteropen,
+    shutterclose = camera$shutterclose,
+    focal_distance = focal_distance,
+    ortho_dimensions = ortho_dimensions,
+    tonemap = tonemap,
+    bloom = bloom,
+    parallel = parallel,
+    bvh_type = bvh_type,
+    environment_light = environment_light,
+    rotate_env = rotate_env,
+    intensity_env = intensity_env,
+    debug_channel = debug_channel,
+    plot_scene = plot_scene,
+    progress = progress,
+    verbose = verbose,
+    sample_dist = sample_dist,
+    keep_colors = keep_colors,
+    deferred_render = FALSE,
+    integrator_type = integrator_type,
+    denoise = denoise
+  )
+
+  camera_info = scene_list$camera_info
+  scene_info = scene_list$scene_info
+  render_info = scene_list$render_info
+  processed_scene = scene_info$scene
+  render_info$frame_seed = sample.int(.Machine$integer.max, 1)
+
+  camera_info$preview = preview
+  camera_info$interactive = FALSE
+  if (!is.na(camera$camera_description_file)) {
+    camera_description_file = switch(
+      camera$camera_description_file,
+      "50mm" = system.file("extdata", "dgauss.50mm.txt", package = "rayrender"),
+      "wide" = system.file("extdata", "wide.22mm.txt", package = "rayrender"),
+      "fisheye" = system.file(
+        "extdata",
+        "fisheye.10mm.txt",
+        package = "rayrender"
+      ),
+      "telephoto" = system.file(
+        "extdata",
+        "telephoto.250mm.txt",
+        package = "rayrender"
+      ),
+      camera$camera_description_file
+    )
+    if (file.exists(camera_description_file)) {
+      camera_motion$fov = -1
+    } else {
+      warning(
+        "Camera description file `",
+        camera_description_file,
+        "` not found. Ignoring."
+      )
+    }
+  }
+
+  frame_outputs = render_animation_rcpp(
+    scene = processed_scene,
+    camera_info = camera_info,
+    scene_info = scene_info,
+    render_info = render_info,
+    camera_movement = camera_motion,
+    start_frame = 0,
+    end_frame = nrow(camera_motion),
+    filenames = filename_str,
+    post_process_frame = post_process_frame,
+    tonemap = tonemap,
+    bloom = bloom,
+    write_image = write_file,
+    transparent_background = transparent_background
+  )
+
+  output = stats::setNames(vector("list", length(cameras)), plan$camera_names)
+  for (i in seq_along(cameras)) {
+    frame_indices = which(plan$camera_index == i)
+    frame_indices = frame_indices[frame_indices <= length(frame_outputs)]
+    if (length(frame_indices) == 0) {
+      output[i] = list(NULL)
+    } else if (length(frame_indices) == 1) {
+      output[i] = list(frame_outputs[[frame_indices]])
+    } else {
+      output[i] = list(frame_outputs[frame_indices])
+    }
+  }
+
+  invisible(output)
 }

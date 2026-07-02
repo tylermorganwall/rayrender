@@ -146,7 +146,7 @@ void camera::update_ortho_absolute(vec2f o_size) {
 }
 
 void camera::update_aperture_absolute(Float aperture) {
-  lens_radius = aperture;
+  lens_radius = aperture / 2;
 }
 
 void camera::update_focal_absolute(Float focal_length) {

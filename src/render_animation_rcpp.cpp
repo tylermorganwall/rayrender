@@ -34,8 +34,109 @@ using namespace Rcpp;
 
 using namespace std;
 
+namespace {
+
+int animation_camera_type(Float fov) {
+  if(fov < 0) {
+    return(-1);
+  }
+  if(fov == 0) {
+    return(0);
+  }
+  if(fov == 360) {
+    return(360);
+  }
+  return(1);
+}
+
+bool can_update_animation_camera(int camera_type) {
+  return(camera_type == 0 || camera_type == 1 || camera_type == 360);
+}
+
+bool same_animation_up(const vec3f& lhs, const vec3f& rhs) {
+  return(lhs.xyz.x == rhs.xyz.x &&
+         lhs.xyz.y == rhs.xyz.y &&
+         lhs.xyz.z == rhs.xyz.z);
+}
+
+std::unique_ptr<RayCamera> make_animation_camera(
+    const point3f& lookfrom,
+    const point3f& lookat,
+    const vec3f& camera_up,
+    Float fov,
+    Float aperture,
+    Float focus_distance,
+    Float orthox,
+    Float orthoy,
+    int nx,
+    int ny,
+    Float shutteropen,
+    Float shutterclose,
+    NumericMatrix realCameraInfo,
+    Float film_size,
+    Float camera_scale,
+    Float iso,
+    TransformCache& transformCache) {
+  if(fov < 0) {
+    Transform CamTransform = LookAt(lookfrom,
+                                    lookat,
+                                    camera_up).GetInverseMatrix();
+    Transform* CameraTransform = transformCache.Lookup(CamTransform);
+    AnimatedTransform CamTr(CameraTransform,0,CameraTransform,0);
+    
+    std::vector<Float> lensData;
+    for(int lens_row = 0; lens_row < realCameraInfo.rows(); lens_row++) {
+      for(int lens_col = 0; lens_col < realCameraInfo.cols(); lens_col++) {
+        lensData.push_back(realCameraInfo.at(lens_row,lens_col));
+      }
+    }
+    
+    if(lensData.size() == 0) {
+      throw std::runtime_error("No lense data passed in lens descriptor file.");
+    }
+    
+    return(std::unique_ptr<RayCamera>(new RealisticCamera(CamTr, shutteropen, shutterclose,
+                                                          aperture, nx, ny, focus_distance, false,
+                                                          lensData, film_size, camera_scale, iso,
+                                                          camera_up, CamTransform, lookat)));
+  } else if(fov == 0) {
+    return(std::unique_ptr<RayCamera>(new ortho_camera(lookfrom, lookat, camera_up,
+                                                       orthox, orthoy,
+                                                       shutteropen, shutterclose, iso)));
+  } else if(fov == 360) {
+    return(std::unique_ptr<RayCamera>(new environment_camera(lookfrom, lookat, camera_up,
+                                                             shutteropen, shutterclose, iso)));
+  }
+  return(std::unique_ptr<RayCamera>(new camera(lookfrom, lookat, camera_up, fov,
+                                               Float(nx)/Float(ny), aperture, focus_distance,
+                                               shutteropen, shutterclose, iso)));
+}
+
+void update_animation_camera(
+    RayCamera* cam,
+    int camera_type,
+    const point3f& lookfrom,
+    const point3f& lookat,
+    Float aperture,
+    Float fov,
+    Float focus_distance,
+    Float orthox,
+    Float orthoy) {
+  cam->update_position_absolute(lookfrom);
+  cam->update_lookat(lookat);
+  if(camera_type == 1) {
+    cam->update_aperture_absolute(aperture);
+    cam->update_focal_absolute(focus_distance);
+    cam->update_fov_absolute(fov);
+  } else if(camera_type == 0) {
+    cam->update_ortho_absolute(vec2f(orthox, orthoy));
+  }
+}
+
+} // namespace
+
 // [[Rcpp::export]]
-void render_animation_rcpp(List scene, List camera_info, List scene_info, List render_info,
+List render_animation_rcpp(List scene, List camera_info, List scene_info, List render_info,
                            List camera_movement, 
                            int start_frame, int end_frame,
                            CharacterVector filenames, Function post_process_frame, 
@@ -116,6 +217,8 @@ void render_animation_rcpp(List scene, List camera_info, List scene_info, List r
   NumericVector cam_orthox   = as<NumericVector>(camera_movement["orthox"]);
   NumericVector cam_orthoy   = as<NumericVector>(camera_movement["orthoy"]);
   int n_frames = end_frame;
+  List output_frames(n_frames - start_frame);
+  int output_frame_index = 0;
 
   point3f backgroundhigh(bghigh[0],bghigh[1],bghigh[2]);
   point3f backgroundlow(bglow[0],bglow[1],bglow[2]);
@@ -310,40 +413,10 @@ void render_animation_rcpp(List scene, List camera_info, List scene_info, List r
       vec3f camera_up = vec3f(cam_upx(i),cam_upy(i),cam_upz(i));
 
 
-      if(fov < 0) {
-        Transform CamTransform = LookAt(lookfrom,
-                                        lookat,
-                                        camera_up).GetInverseMatrix();
-        Transform* CameraTransform = transformCache.Lookup(CamTransform);
-        AnimatedTransform CamTr(CameraTransform,0,CameraTransform,0);
-        
-        std::vector<Float> lensData;
-        for(int i = 0; i < realCameraInfo.rows(); i++) {
-          for(int j = 0; j < realCameraInfo.cols(); j++) {
-            lensData.push_back(realCameraInfo.at(i,j));
-          }
-        }
-        
-        if(fov < 0 && lensData.size() == 0) {
-          throw std::runtime_error("No lense data passed in lens descriptor file.");
-        }
-        
-        cam = std::unique_ptr<RayCamera>(new RealisticCamera(CamTr,shutteropen, shutterclose,
-                                                             aperture, nx,ny, focus_distance, false, lensData,
-                                                             film_size, camera_scale, iso, camera_up, CamTransform,
-                                                             lookat));
-      } else if(fov == 0) {
-        cam = std::unique_ptr<RayCamera>(new ortho_camera(lookfrom, lookat, camera_up,
-                                                          orthox, orthoy,
-                                                          shutteropen, shutterclose, iso));
-      } else if (fov == 360) {
-        cam = std::unique_ptr<RayCamera>(new environment_camera(lookfrom, lookat, camera_up,
-                                                                shutteropen, shutterclose, iso));
-      } else {
-        cam = std::unique_ptr<RayCamera>(new camera(lookfrom, lookat, camera_up, fov, Float(nx)/Float(ny),
-                                                    aperture, focus_distance,
-                                                    shutteropen, shutterclose, iso));
-      }
+      cam = make_animation_camera(lookfrom, lookat, camera_up, fov, aperture,
+                                  focus_distance, orthox, orthoy, nx, ny,
+                                  shutteropen, shutterclose, realCameraInfo,
+                                  film_size, camera_scale, iso, transformCache);
 
       // world_radius = world_radius > (lookfrom - world_center).length() ? world_radius : (lookfrom - world_center).length()*2;
 
@@ -368,11 +441,21 @@ void render_animation_rcpp(List scene, List camera_info, List scene_info, List r
       List temp = List::create(_["r"] = rgb_output.ConvertRcpp(0), 
                                _["g"] = rgb_output.ConvertRcpp(1), 
                                _["b"] = rgb_output.ConvertRcpp(2));
-      post_process_frame(temp, debug_channel, as<std::string>(filenames(i)), 
+      std::string frame_filename = as<std::string>(filenames(i));
+      bool write_current_image = write_image && !frame_filename.empty();
+      RObject frame_output = post_process_frame(temp, debug_channel, frame_filename, 
                          as<std::string>(tonemap(0)), bloom,
-                         transparent_background, write_image, plot_scene);
+                         transparent_background, write_current_image, plot_scene);
+      output_frames[output_frame_index++] = frame_output;
     }
   } else {
+    bool preview_only = preview && !write_image && !plot_scene;
+    std::unique_ptr<RayCamera> preview_cam;
+    bool preview_cam_initialized = false;
+    int preview_camera_type = 0;
+    vec3f preview_camera_up;
+    std::unique_ptr<PreviewDisplay> preview_display;
+
     for(int i = start_frame; i < n_frames; i++ ) {
       random_gen frame_rng(frame_seed);
       random_gen* rng_for_frame = has_frame_seed ? &frame_rng : nullptr;
@@ -389,41 +472,33 @@ void render_animation_rcpp(List scene, List camera_info, List scene_info, List r
       Float orthox = cam_orthox(i);
       Float orthoy = cam_orthoy(i);
 
-      std::unique_ptr<RayCamera> cam;
-      if(fov < 0) {
-        Transform CamTransform = LookAt(lookfrom,
-                                        lookat,
-                                        camera_up).GetInverseMatrix();
-        Transform* CameraTransform = transformCache.Lookup(CamTransform);
-        
-        AnimatedTransform CamTr(CameraTransform,0,CameraTransform,0);
-        
-        std::vector<Float> lensData;
-        for(int i = 0; i < realCameraInfo.rows(); i++) {
-          for(int j = 0; j < realCameraInfo.cols(); j++) {
-            lensData.push_back(realCameraInfo.at(i,j));
-          }
+      int current_camera_type = animation_camera_type(fov);
+      RayCamera* frame_cam = nullptr;
+      std::unique_ptr<RayCamera> frame_cam_storage;
+      if(preview_only) {
+        if(preview_cam_initialized &&
+           current_camera_type == preview_camera_type &&
+           can_update_animation_camera(current_camera_type) &&
+           same_animation_up(camera_up, preview_camera_up)) {
+          update_animation_camera(preview_cam.get(), current_camera_type,
+                                  lookfrom, lookat, aperture, fov,
+                                  focus_distance, orthox, orthoy);
+        } else {
+          preview_cam = make_animation_camera(lookfrom, lookat, camera_up, fov, aperture,
+                                              focus_distance, orthox, orthoy, nx, ny,
+                                              shutteropen, shutterclose, realCameraInfo,
+                                              film_size, camera_scale, iso, transformCache);
+          preview_cam_initialized = true;
+          preview_camera_type = current_camera_type;
+          preview_camera_up = camera_up;
         }
-        
-        if(fov < 0 && lensData.size() == 0) {
-          throw std::runtime_error("No lense data passed in lens descriptor file.");
-        }
-        
-        cam = std::unique_ptr<RayCamera>(new RealisticCamera(CamTr,shutteropen, shutterclose,
-                                                             aperture, nx,ny, focus_distance, false, lensData,
-                                                             film_size, camera_scale, iso,camera_up,CamTransform,
-                                                             lookat));
-      } else if(fov == 0) {
-        cam = std::unique_ptr<RayCamera>(new ortho_camera(lookfrom, lookat, camera_up,
-                                                          orthox, orthoy,
-                                                          shutteropen, shutterclose, iso));
-      } else if (fov == 360) {
-        cam = std::unique_ptr<RayCamera>(new environment_camera(lookfrom, lookat, camera_up,
-                                                                shutteropen, shutterclose, iso));
+        frame_cam = preview_cam.get();
       } else {
-        cam = std::unique_ptr<RayCamera>(new camera(lookfrom, lookat, camera_up, fov, Float(nx)/Float(ny),
-                                                    aperture, focus_distance,
-                                                    shutteropen, shutterclose, iso));
+        frame_cam_storage = make_animation_camera(lookfrom, lookat, camera_up, fov, aperture,
+                                                 focus_distance, orthox, orthoy, nx, ny,
+                                                 shutteropen, shutterclose, realCameraInfo,
+                                                 film_size, camera_scale, iso, transformCache);
+        frame_cam = frame_cam_storage.get();
       }
 
       world_radius = world_radius > (lookfrom - world_center).length() ? world_radius : (lookfrom - world_center).length()*2;
@@ -441,75 +516,147 @@ void render_animation_rcpp(List scene, List camera_info, List scene_info, List r
       RayMatrix draw_rgb_output(nx,ny, 3);
 
 #ifdef HAS_OIDN
-      // Create an Open Image Denoise device
-      oidn::DeviceRef device = oidn::newDevice(); // CPU or GPU if available
-      // oidn::DeviceRef device = oidn::newDevice(oidn::DeviceType::CPU);
-      device.commit();
-      // Create buffers for input/output images accessible by both host (CPU) and device (CPU/GPU)
-      oidn::BufferRef colorBuf  = device.newBuffer(rgb_output.begin(), nx * ny * 3 * sizeof(Float));
-      oidn::BufferRef albedoBuf = device.newBuffer(albedoOutput.begin(), nx * ny * 3 * sizeof(Float));
-      oidn::BufferRef normalBuf = device.newBuffer(normalOutput.begin(), nx * ny * 3 * sizeof(Float));
-      oidn::BufferRef colorBuf2 = device.newBuffer(draw_rgb_output.begin(), nx * ny * 3 * sizeof(Float));
+      bool denoise_frame = denoise;
+      oidn::DeviceRef device;
+      oidn::BufferRef colorBuf;
+      oidn::BufferRef albedoBuf;
+      oidn::BufferRef normalBuf;
+      oidn::BufferRef colorBuf2;
+      oidn::FilterRef filter;
+      if(denoise_frame) {
+        // Create an Open Image Denoise device
+        device = oidn::newDevice(); // CPU or GPU if available
+        // oidn::DeviceRef device = oidn::newDevice(oidn::DeviceType::CPU);
+        device.commit();
+        // Create buffers for input/output images accessible by both host (CPU) and device (CPU/GPU)
+        colorBuf  = device.newBuffer(rgb_output.begin(), nx * ny * 3 * sizeof(Float));
+        albedoBuf = device.newBuffer(albedoOutput.begin(), nx * ny * 3 * sizeof(Float));
+        normalBuf = device.newBuffer(normalOutput.begin(), nx * ny * 3 * sizeof(Float));
+        colorBuf2 = device.newBuffer(draw_rgb_output.begin(), nx * ny * 3 * sizeof(Float));
 
-      // Create a filter for denoising a beauty (color) image using optional auxiliary images too
-      // This can be an expensive operation, so try no to create a new filter for every image!
-      oidn::FilterRef filter = device.newFilter("RT"); // generic ray tracing filter
-      filter.setImage("color",  colorBuf,  oidn::Format::Float3, nx, ny); // beauty
-      filter.setImage("albedo", albedoBuf, oidn::Format::Float3, nx, ny); // auxiliary
-      filter.setImage("normal", normalBuf, oidn::Format::Float3, nx, ny); // auxiliary
-      filter.setImage("output", colorBuf2,  oidn::Format::Float3, nx, ny); // denoised beauty
-      filter.set("hdr", true); // beauty image is HDR
-      filter.commit();
+        // Create a filter for denoising a beauty (color) image using optional auxiliary images too
+        // This can be an expensive operation, so try no to create a new filter for every image!
+        filter = device.newFilter("RT"); // generic ray tracing filter
+        filter.setImage("color",  colorBuf,  oidn::Format::Float3, nx, ny); // beauty
+        filter.setImage("albedo", albedoBuf, oidn::Format::Float3, nx, ny); // auxiliary
+        filter.setImage("normal", normalBuf, oidn::Format::Float3, nx, ny); // auxiliary
+        filter.setImage("output", colorBuf2,  oidn::Format::Float3, nx, ny); // denoised beauty
+        filter.set("hdr", true); // beauty image is HDR
+        filter.commit();
+      }
 #endif
 
+      bool terminated = false;
 #ifdef HAS_OIDN
-      PreviewDisplay d(nx, ny, preview, false, 
-                   false,
-                   20.0f, cam.get(), 
-                   background_sphere->ObjectToWorld,
-                   background_sphere->WorldToObject,
-                   filter, denoise, false);
+      if(preview_only) {
+        if(!preview_display) {
+          preview_display = std::unique_ptr<PreviewDisplay>(new PreviewDisplay(
+            nx, ny, preview, false, false, 20.0f, frame_cam,
+            background_sphere->ObjectToWorld,
+            background_sphere->WorldToObject,
+            denoise_frame ? &filter : nullptr, denoise_frame, false));
+        } else {
+          preview_display->SetCamera(frame_cam);
+          preview_display->SetDenoiser(denoise_frame ? &filter : nullptr,
+                                       denoise_frame);
+        }
+        pathtracer(numbercores, nx, ny, ns, debug_channel,
+                   min_variance, min_adaptive_size,
+                   rgb_output, normalOutput, albedoOutput,
+                   alpha_output, draw_rgb_output,
+                   progress_bar, sample_method, stratified_x, stratified_y,
+                   verbose, frame_cam, fov,
+                   world, imp_sample_objects,
+                   clampval, max_depth, roulette_active, *preview_display,
+                   integrator_type, rng_for_frame);
+        terminated = preview_display->terminate;
+      } else {
+        PreviewDisplay d(nx, ny, preview, false, 
+                     false,
+                     20.0f, frame_cam, 
+                     background_sphere->ObjectToWorld,
+                     background_sphere->WorldToObject,
+                     denoise_frame ? &filter : nullptr, denoise_frame, false);
+        pathtracer(numbercores, nx, ny, ns, debug_channel,
+                   min_variance, min_adaptive_size,
+                   rgb_output, normalOutput, albedoOutput,
+                   alpha_output, draw_rgb_output,
+                   progress_bar, sample_method, stratified_x, stratified_y,
+                   verbose, frame_cam, fov,
+                   world, imp_sample_objects,
+                   clampval, max_depth, roulette_active, d, integrator_type, rng_for_frame);
+        terminated = d.terminate;
+      }
 #else
-  PreviewDisplay d(nx,ny, preview, false, 
+      if(preview_only) {
+        if(!preview_display) {
+          preview_display = std::unique_ptr<PreviewDisplay>(new PreviewDisplay(
+            nx, ny, preview, false, false, 20.0f, frame_cam,
+            background_sphere->ObjectToWorld,
+            background_sphere->WorldToObject,
+            false));
+        } else {
+          preview_display->SetCamera(frame_cam);
+        }
+        pathtracer(numbercores, nx, ny, ns, debug_channel,
+                   min_variance, min_adaptive_size,
+                   rgb_output, normalOutput, albedoOutput,
+                   alpha_output, draw_rgb_output,
+                   progress_bar, sample_method, stratified_x, stratified_y,
+                   verbose, frame_cam, fov,
+                   world, imp_sample_objects,
+                   clampval, max_depth, roulette_active, *preview_display,
+                   integrator_type, rng_for_frame);
+        terminated = preview_display->terminate;
+      } else {
+        PreviewDisplay d(nx,ny, preview, false, 
                          false,
-                         20.0f, cam.get(),
+                         20.0f, frame_cam,
                          background_sphere->ObjectToWorld,
                          background_sphere->WorldToObject,
                          false);
+        pathtracer(numbercores, nx, ny, ns, debug_channel,
+                   min_variance, min_adaptive_size,
+                   rgb_output, normalOutput, albedoOutput,
+                   alpha_output, draw_rgb_output,
+                   progress_bar, sample_method, stratified_x, stratified_y,
+                   verbose, frame_cam,  fov,
+                   world, imp_sample_objects,
+                   clampval, max_depth, roulette_active, d, integrator_type, rng_for_frame);
+        terminated = d.terminate;
+      }
 #endif
-      pathtracer(numbercores, nx, ny, ns, debug_channel,
-                 min_variance, min_adaptive_size,
-                 rgb_output, normalOutput, albedoOutput,
-                 alpha_output, draw_rgb_output,
-                 progress_bar, sample_method, stratified_x, stratified_y,
-                 verbose, cam.get(),  fov,
-                 world, imp_sample_objects,
-                 clampval, max_depth, roulette_active, d, integrator_type, rng_for_frame);
-      if(d.terminate) {
+      if(terminated) {
         break;
       }
 #ifdef HAS_OIDN
-      if(denoise) {
+      if(denoise_frame) {
         filter.execute();
         const char* errorMessage;
         if (device.getError(errorMessage) != oidn::Error::None) {
           Rcpp::Rcout << "Error: " << errorMessage << std::endl;
         }
       }
-      RayMatrix final_output = denoise ? draw_rgb_output : rgb_output;
+      RayMatrix final_output = denoise_frame ? draw_rgb_output : rgb_output;
       List temp = List::create(_["r"] = final_output.ConvertRcpp(0), 
                                _["g"] = final_output.ConvertRcpp(1), 
                                _["b"] = final_output.ConvertRcpp(2),
                                _["a"] = alpha_output.ConvertRcpp());
-      post_process_frame(temp, debug_channel, as<std::string>(filenames(i)), as<std::string>(tonemap(0)), bloom,
-                       transparent_background, write_image, plot_scene);
+      std::string frame_filename = as<std::string>(filenames(i));
+      bool write_current_image = write_image && !frame_filename.empty();
+      RObject frame_output = post_process_frame(temp, debug_channel, frame_filename, as<std::string>(tonemap(0)), bloom,
+                       transparent_background, write_current_image, plot_scene);
+      output_frames[output_frame_index++] = frame_output;
 #else
       List temp = List::create(_["r"] = rgb_output.ConvertRcpp(0), 
                                _["g"] = rgb_output.ConvertRcpp(1), 
                                _["b"] = rgb_output.ConvertRcpp(2),
                                _["a"] = alpha_output.ConvertRcpp());
-      post_process_frame(temp, debug_channel, as<std::string>(filenames(i)), as<std::string>(tonemap(0)), bloom,
-                       transparent_background, write_image, plot_scene);
+      std::string frame_filename = as<std::string>(filenames(i));
+      bool write_current_image = write_image && !frame_filename.empty();
+      RObject frame_output = post_process_frame(temp, debug_channel, frame_filename, as<std::string>(tonemap(0)), bloom,
+                       transparent_background, write_current_image, plot_scene);
+      output_frames[output_frame_index++] = frame_output;
 #endif
     }
   }
@@ -517,5 +664,12 @@ void render_animation_rcpp(List scene, List camera_info, List scene_info, List r
   delete shared_materials;
   PutRNGstate();
   print_time(verbose, "Finished rendering" );
-  
+  if(output_frame_index < output_frames.size()) {
+    List trimmed_output_frames(output_frame_index);
+    for(int i = 0; i < output_frame_index; i++) {
+      trimmed_output_frames[i] = output_frames[i];
+    }
+    return trimmed_output_frames;
+  }
+  return output_frames;
 }

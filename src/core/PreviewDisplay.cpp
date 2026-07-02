@@ -820,13 +820,10 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
 #ifdef RAY_HAS_X11
   if (d) {
 #ifdef HAS_OIDN
-    if(denoise) {
-      filter.execute();
+    if(denoise && filter != nullptr) {
+      filter->execute();
     }
-    RayMatrix &rgb  = adaptive_pixel_sampler.draw_rgb_output;
-    if(!denoise) {
-      rgb = adaptive_pixel_sampler.rgb;
-    }
+    RayMatrix& rgb = denoise && filter != nullptr ? adaptive_pixel_sampler.draw_rgb_output : adaptive_pixel_sampler.rgb;
 #else
     RayMatrix &rgb  = adaptive_pixel_sampler.rgb;
 #endif
@@ -1405,8 +1402,10 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
     progress_w = progress;
     interactive_w = interactive;
 #ifdef HAS_OIDN
-    filter.execute();
-    RayMatrix &rgb_s  = adaptive_pixel_sampler.draw_rgb_output;
+    if(denoise && filter != nullptr) {
+      filter->execute();
+    }
+    RayMatrix& rgb_s = denoise && filter != nullptr ? adaptive_pixel_sampler.draw_rgb_output : adaptive_pixel_sampler.rgb;
 #else
     RayMatrix &rgb_s  = adaptive_pixel_sampler.rgb;
 #endif
@@ -1484,7 +1483,7 @@ PreviewDisplay::PreviewDisplay(unsigned int _width, unsigned int _height,
                                bool preview, bool _interactive,
                                bool _deferred_render, Float initial_lookat_distance, RayCamera* _cam,
                                Transform* _EnvObjectToWorld, Transform* _EnvWorldToObject, 
-                               oidn::FilterRef& _filter,
+                               oidn::FilterRef* _filter,
                                bool denoise, bool _auto_exposure) :
   preview(preview), auto_exposure(_auto_exposure), preview_exposure_calibrated(false),
   preview_exposure_scale(1.f), preview_exposure_adjustment(1.f),
@@ -1507,6 +1506,7 @@ PreviewDisplay::PreviewDisplay(unsigned int _width, unsigned int _height,
   terminate = false;
   deferred_render = _deferred_render && preview && _interactive;
   render_requested = !deferred_render;
+  cam = _cam;
 #ifdef RAY_HAS_X11
   speed = 1.f;
   interactive = _interactive;
@@ -1610,6 +1610,22 @@ PreviewDisplay::PreviewDisplay(unsigned int _width, unsigned int _height,
   }
 #endif
 }
+
+void PreviewDisplay::SetCamera(RayCamera* _cam) {
+  cam = _cam;
+#ifdef RAY_WINDOWS
+  if(hwnd != NULL) {
+    cam_w = _cam;
+  }
+#endif
+}
+
+#ifdef HAS_OIDN
+void PreviewDisplay::SetDenoiser(oidn::FilterRef* _filter, bool _denoise) {
+  filter = _filter;
+  denoise = _denoise && filter != nullptr;
+}
+#endif
 
 PreviewDisplay::~PreviewDisplay() {
 #ifdef RAY_HAS_X11

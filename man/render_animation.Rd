@@ -6,7 +6,7 @@
 \usage{
 render_animation(
   scene,
-  camera_motion,
+  camera_motion = NULL,
   start_frame = 1,
   end_frame = NA,
   width = 400,
@@ -49,13 +49,14 @@ render_animation(
   transparent_background = FALSE,
   preview_light_direction = c(0, -1, 0),
   preview_exponent = 6,
-  integrator_type = "rtiow"
+  integrator_type = "rtiow",
+  camera = NULL
 )
 }
 \arguments{
 \item{scene}{Tibble of object locations and properties.}
 
-\item{camera_motion}{Data frame of camera motion vectors, calculated with `generate_camera_motion()`.}
+\item{camera_motion}{Default `NULL`. Data frame of camera motion vectors, calculated with `generate_camera_motion()`. If `NULL`, the camera is resolved from the scene.}
 
 \item{start_frame}{Default `1`. Frame to start the animation.}
 
@@ -188,6 +189,8 @@ those pixels will be partially transparent.}
 \item{integrator_type}{Default `"rtiow"` (the algorithm specified in the book "Raytracing in One Weekend", a basic
 form of path guiding). Other options include `"nee"` (Next Event Estimation, with direct light sampling)
 and `"basic"` (basic pathtracing, for high sample reference renders and debugging only).}
+
+\item{camera}{Default `NULL`. Scene-attached camera name, `"all"`, or a `ray_camera` object created with `camera()`.}
 }
 \value{
 Raytraced plot to current device, or an image saved to a file.

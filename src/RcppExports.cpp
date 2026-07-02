@@ -91,9 +91,10 @@ BEGIN_RCPP
 END_RCPP
 }
 // render_animation_rcpp
-void render_animation_rcpp(List scene, List camera_info, List scene_info, List render_info, List camera_movement, int start_frame, int end_frame, CharacterVector filenames, Function post_process_frame, CharacterVector tonemap, bool bloom, bool write_image, bool transparent_background);
+List render_animation_rcpp(List scene, List camera_info, List scene_info, List render_info, List camera_movement, int start_frame, int end_frame, CharacterVector filenames, Function post_process_frame, CharacterVector tonemap, bool bloom, bool write_image, bool transparent_background);
 RcppExport SEXP _rayrender_render_animation_rcpp(SEXP sceneSEXP, SEXP camera_infoSEXP, SEXP scene_infoSEXP, SEXP render_infoSEXP, SEXP camera_movementSEXP, SEXP start_frameSEXP, SEXP end_frameSEXP, SEXP filenamesSEXP, SEXP post_process_frameSEXP, SEXP tonemapSEXP, SEXP bloomSEXP, SEXP write_imageSEXP, SEXP transparent_backgroundSEXP) {
 BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< List >::type scene(sceneSEXP);
     Rcpp::traits::input_parameter< List >::type camera_info(camera_infoSEXP);
@@ -108,8 +109,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< bool >::type bloom(bloomSEXP);
     Rcpp::traits::input_parameter< bool >::type write_image(write_imageSEXP);
     Rcpp::traits::input_parameter< bool >::type transparent_background(transparent_backgroundSEXP);
-    render_animation_rcpp(scene, camera_info, scene_info, render_info, camera_movement, start_frame, end_frame, filenames, post_process_frame, tonemap, bloom, write_image, transparent_background);
-    return R_NilValue;
+    rcpp_result_gen = Rcpp::wrap(render_animation_rcpp(scene, camera_info, scene_info, render_info, camera_movement, start_frame, end_frame, filenames, post_process_frame, tonemap, bloom, write_image, transparent_background));
+    return rcpp_result_gen;
 END_RCPP
 }
 // render_scene_rcpp

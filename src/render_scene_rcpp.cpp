@@ -1102,7 +1102,7 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
                          deferred_render, (lookat-lookfrom).length(), cam.get(),
                          background_sphere->ObjectToWorld,
                          background_sphere->WorldToObject,
-                         filter, denoise, auto_exposure);
+                         &filter, denoise, auto_exposure);
 #else
   PreviewDisplay Display(nx,ny, preview, interactive, 
                          deferred_render, (lookat-lookfrom).length(), cam.get(),

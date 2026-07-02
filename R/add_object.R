@@ -19,8 +19,5 @@ add_object = function(scene, objects = NULL) {
     return(scene)
   }
   newscene = rbind(scene, objects)
-  if (!is.null(attr(objects, "cornell")) || !is.null(attr(scene, "cornell"))) {
-    attr(newscene, "cornell") = TRUE
-  }
-  return(newscene)
+  preserve_ray_scene_attrs(newscene, scene, objects)
 }

@@ -135,6 +135,10 @@
 #' or a list of `screen_line()` outputs to draw in order.
 #' Labels are anchored to 3D world-space points, projected through the current camera, and drawn after
 #' rendering so text size and justification are independent of scene scale and view distance.
+#' @param camera Default `NULL`. Scene-attached camera name, `"all"`, or a `ray_camera` object created with `camera()`.
+#' @param start_frame Default `1`. First camera frame to render when using an animated camera.
+#' @param end_frame Default `NA`. Last camera frame to render when using an animated camera. If `NA`, renders through the final frame.
+#' @param mode Default `"auto"`. Rendering mode. `"auto"` renders a still image for static cameras and an animation for animated cameras.
 #' @export
 #' @importFrom  grDevices col2rgb
 #' @return A pathtraced image to the current device, or an image saved to a file. Invisibly returns the
@@ -261,8 +265,302 @@ render_scene = function(
   new_page = TRUE,
   integrator_type = "rtiow",
   screen_text = NULL,
-  screen_line = NULL
+  screen_line = NULL,
+  camera = NULL,
+  start_frame = 1,
+  end_frame = NA,
+  mode = c("auto", "image", "animation", "preview")
 ) {
+  mode = match.arg(mode)
+  camera_arg = if (missing(camera)) NULL else camera
+  filename_supplied = !missing(filename)
+  legacy_camera_supplied = c(
+    lookfrom = !missing(lookfrom),
+    lookat = !missing(lookat),
+    camera_up = !missing(camera_up),
+    fov = !missing(fov),
+    aperture = !missing(aperture),
+    focal_distance = !missing(focal_distance),
+    ortho_dimensions = !missing(ortho_dimensions),
+    camera_description_file = !missing(camera_description_file),
+    camera_scale = !missing(camera_scale),
+    iso = !missing(iso),
+    film_size = !missing(film_size),
+    shutteropen = !missing(shutteropen),
+    shutterclose = !missing(shutterclose),
+    filename = filename_supplied
+  )
+  legacy_camera_geometry_supplied = any(legacy_camera_supplied[c(
+    "lookfrom",
+    "lookat",
+    "camera_up",
+    "fov",
+    "aperture",
+    "focal_distance",
+    "ortho_dimensions"
+  )])
+  metadata_supplied = legacy_camera_supplied[c(
+    "camera_description_file",
+    "camera_scale",
+    "iso",
+    "film_size",
+    "shutteropen",
+    "shutterclose",
+    "filename"
+  )]
+  metadata_overrides = list(
+    camera_description_file = camera_description_file,
+    camera_scale = camera_scale,
+    iso = iso,
+    film_size = film_size,
+    shutteropen = shutteropen,
+    shutterclose = shutterclose,
+    filename = filename
+  )
+  scene_camera_available = length(ray_scene_cameras(scene)) > 0 ||
+    !is.null(camera_arg)
+  legacy_filename = if (
+    !legacy_camera_geometry_supplied &&
+      scene_camera_available
+  ) {
+    NA_character_
+  } else {
+    filename
+  }
+  legacy_camera = render_scene_legacy_camera(
+    scene = scene,
+    supplied = legacy_camera_supplied,
+    lookfrom = lookfrom,
+    lookat = lookat,
+    camera_up = camera_up,
+    fov = fov,
+    aperture = aperture,
+    focal_distance = focal_distance,
+    ortho_dimensions = ortho_dimensions,
+    filename = legacy_filename,
+    camera_description_file = camera_description_file,
+    camera_scale = camera_scale,
+    iso = iso,
+    film_size = film_size,
+    shutteropen = shutteropen,
+    shutterclose = shutterclose,
+    message_cornell = is.null(camera_arg) &&
+      length(ray_scene_cameras(scene)) == 0
+  )
+  cameras = resolve_scene_camera(
+    scene = scene,
+    camera = camera_arg,
+    legacy_camera = legacy_camera,
+    legacy_camera_supplied = legacy_camera_geometry_supplied,
+    allow_all = TRUE,
+    default_camera = legacy_camera
+  )
+  if (!legacy_camera_geometry_supplied) {
+    cameras = lapply(
+      cameras,
+      apply_camera_overrides,
+      overrides = metadata_overrides,
+      supplied = metadata_supplied
+    )
+  }
+
+  if (length(cameras) > 1) {
+    validate_camera_output_filenames(
+      cameras,
+      mode = mode,
+      start_frame = start_frame,
+      end_frame = end_frame
+    )
+    batch_blockers = character()
+    if (!camera_batch_metadata_compatible(cameras)) {
+      batch_blockers = c(batch_blockers, "camera metadata differs")
+    }
+    if (!is.null(screen_text) || !is.null(screen_line)) {
+      batch_blockers = c(batch_blockers, "screen overlays are enabled")
+    }
+    if (isTRUE(auto_exposure)) {
+      batch_blockers = c(batch_blockers, "auto_exposure is enabled")
+    }
+    if (isTRUE(deferred_render)) {
+      batch_blockers = c(batch_blockers, "deferred_render is enabled")
+    }
+    if (isTRUE(print_debug_info)) {
+      batch_blockers = c(batch_blockers, "print_debug_info is enabled")
+    }
+    if (
+      isTRUE(preview) &&
+        isTRUE(interactive) &&
+        !identical(mode, "preview")
+    ) {
+      batch_blockers = c(batch_blockers, "interactive preview is enabled")
+    }
+    if (length(batch_blockers) == 0) {
+      return(render_camera_batch(
+        scene = scene,
+        cameras = cameras,
+        mode = mode,
+        start_frame = start_frame,
+        end_frame = end_frame,
+        width = width,
+        height = height,
+        preview = if (identical(mode, "preview")) TRUE else preview,
+        denoise = denoise,
+        samples = samples,
+        min_variance = min_variance,
+        min_adaptive_size = min_adaptive_size,
+        sample_method = sample_method,
+        keep_colors = FALSE,
+        sample_dist = Inf,
+        max_depth = if (is.na(max_depth)) 50 else max_depth,
+        roulette_active_depth = roulette_active_depth,
+        ambient_light = ambient_light,
+        clamp_value = clamp_value,
+        backgroundhigh = backgroundhigh,
+        backgroundlow = backgroundlow,
+        focal_distance = focal_distance,
+        ortho_dimensions = ortho_dimensions,
+        tonemap = tonemap,
+        bloom = bloom,
+        parallel = parallel,
+        bvh_type = bvh_type,
+        environment_light = environment_light,
+        rotate_env = -rotate_env,
+        intensity_env = intensity_env,
+        debug_channel = debug_channel,
+        plot_scene = if (identical(mode, "preview")) FALSE else plot_scene,
+        progress = progress,
+        verbose = verbose,
+        transparent_background = transparent_background,
+        integrator_type = integrator_type,
+        force_no_write = identical(mode, "preview")
+      ))
+    }
+    warning(
+      "Rendering cameras one at a time because ",
+      paste(batch_blockers, collapse = ", "),
+      "."
+    )
+    output = lapply(cameras, function(cam) {
+      render_scene(
+        scene = scene,
+        width = width,
+        height = height,
+        samples = samples,
+        preview = preview,
+        interactive = interactive,
+        deferred_render = deferred_render,
+        denoise = denoise,
+        auto_exposure = auto_exposure,
+        min_variance = min_variance,
+        min_adaptive_size = min_adaptive_size,
+        sample_method = sample_method,
+        max_depth = max_depth,
+        roulette_active_depth = roulette_active_depth,
+        ambient_light = ambient_light,
+        clamp_value = clamp_value,
+        backgroundhigh = backgroundhigh,
+        backgroundlow = backgroundlow,
+        tonemap = tonemap,
+        bloom = bloom,
+        parallel = parallel,
+        bvh_type = bvh_type,
+        environment_light = environment_light,
+        rotate_env = rotate_env,
+        intensity_env = intensity_env,
+        transparent_background = transparent_background,
+        debug_channel = debug_channel,
+        plot_scene = plot_scene,
+        progress = progress,
+        verbose = verbose,
+        print_debug_info = print_debug_info,
+        new_page = new_page,
+        integrator_type = integrator_type,
+        screen_text = screen_text,
+        screen_line = screen_line,
+        camera = cam,
+        start_frame = start_frame,
+        end_frame = end_frame,
+        mode = mode
+      )
+    })
+    names(output) = vapply(cameras, function(cam) cam$name, character(1))
+    return(invisible(output))
+  }
+
+  selected_camera = cameras[[1]]
+  render_mode = camera_render_mode(selected_camera, mode)
+  if (
+    render_mode == "animation" ||
+      (render_mode == "preview" && nrow(selected_camera$motion) > 1)
+  ) {
+    return(render_animation_camera(
+      scene = scene,
+      camera = selected_camera,
+      start_frame = start_frame,
+      end_frame = end_frame,
+      width = width,
+      height = height,
+      preview = if (render_mode == "preview") TRUE else preview,
+      denoise = denoise,
+      samples = samples,
+      min_variance = min_variance,
+      min_adaptive_size = min_adaptive_size,
+      sample_method = sample_method,
+      keep_colors = FALSE,
+      sample_dist = Inf,
+      max_depth = if (is.na(max_depth)) 50 else max_depth,
+      roulette_active_depth = roulette_active_depth,
+      ambient_light = ambient_light,
+      clamp_value = clamp_value,
+      backgroundhigh = backgroundhigh,
+      backgroundlow = backgroundlow,
+      focal_distance = focal_distance,
+      ortho_dimensions = ortho_dimensions,
+      tonemap = tonemap,
+      bloom = bloom,
+      parallel = parallel,
+      bvh_type = bvh_type,
+      environment_light = environment_light,
+      rotate_env = -rotate_env,
+      intensity_env = intensity_env,
+      debug_channel = debug_channel,
+      plot_scene = if (render_mode == "preview") FALSE else plot_scene,
+      progress = progress,
+      verbose = verbose,
+      transparent_background = transparent_background,
+      integrator_type = integrator_type,
+      force_no_write = render_mode == "preview"
+    ))
+  }
+
+  frame = if (render_mode %in% c("image", "preview")) {
+    camera_frame_range(nrow(selected_camera$motion), start_frame, start_frame)[
+      1
+    ]
+  } else {
+    1
+  }
+  camera_args = camera_frame_args(selected_camera, frame)
+  lookfrom = camera_args$lookfrom
+  lookat = camera_args$lookat
+  camera_up = camera_args$camera_up
+  fov = camera_args$fov
+  aperture = camera_args$aperture
+  focal_distance = camera_args$focal_distance
+  ortho_dimensions = camera_args$ortho_dimensions
+  camera_description_file = camera_args$camera_description_file
+  camera_scale = camera_args$camera_scale
+  iso = camera_args$iso
+  film_size = camera_args$film_size
+  shutteropen = camera_args$shutteropen
+  shutterclose = camera_args$shutterclose
+  filename = camera_image_filename(selected_camera, frame)
+  if (render_mode == "preview") {
+    filename = NA
+    preview = TRUE
+    plot_scene = FALSE
+  }
+
   init_time()
   if (print_debug_info) {
     message(sprintf(
@@ -291,37 +589,6 @@ HAS_OIDN: %s
     sample_method = "sobol"
   }
 
-  #Check if Cornell Box scene and set camera if user did not:
-  if (!is.null(attr(scene, "cornell"))) {
-    corn_message = "Setting default values for Cornell box: "
-    missing_corn = FALSE
-    if (missing(lookfrom)) {
-      lookfrom = c(278, 278, -800)
-      corn_message = paste0(corn_message, "lookfrom `c(278,278,-800)` ")
-      missing_corn = TRUE
-    }
-    if (missing(lookat)) {
-      lookat = c(278, 278, 555 / 2)
-      corn_message = paste0(corn_message, "lookat `c(278,278,555/2)` ")
-      missing_corn = TRUE
-    }
-    if (missing(fov) && is.na(camera_description_file)) {
-      fov = 40
-      corn_message = paste0(corn_message, "fov `40` ")
-      missing_corn = TRUE
-    }
-    if (
-      fov == 0 && missing(ortho_dimensions) && is.na(camera_description_file)
-    ) {
-      ortho_dimensions = c(580, 580)
-      corn_message = paste0(corn_message, "ortho_dimensions `c(580, 580)` ")
-      missing_corn = TRUE
-    }
-    corn_message = paste0(corn_message, ".")
-    if (missing_corn) {
-      message(corn_message)
-    }
-  }
   if (width < 3 || height < 3) {
     stop("Must specify a minimum width/height of 3 or more pixels")
   }

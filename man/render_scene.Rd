@@ -53,7 +53,11 @@ render_scene(
   new_page = TRUE,
   integrator_type = "rtiow",
   screen_text = NULL,
-  screen_line = NULL
+  screen_line = NULL,
+  camera = NULL,
+  start_frame = 1,
+  end_frame = NA,
+  mode = c("auto", "image", "animation", "preview")
 )
 }
 \arguments{
@@ -236,6 +240,14 @@ or a list of `screen_text()` outputs to draw in order.}
 or a list of `screen_line()` outputs to draw in order.
 Labels are anchored to 3D world-space points, projected through the current camera, and drawn after
 rendering so text size and justification are independent of scene scale and view distance.}
+
+\item{camera}{Default `NULL`. Scene-attached camera name, `"all"`, or a `ray_camera` object created with `camera()`.}
+
+\item{start_frame}{Default `1`. First camera frame to render when using an animated camera.}
+
+\item{end_frame}{Default `NA`. Last camera frame to render when using an animated camera. If `NA`, renders through the final frame.}
+
+\item{mode}{Default `"auto"`. Rendering mode. `"auto"` renders a still image for static cameras and an animation for animated cameras.}
 }
 \value{
 A pathtraced image to the current device, or an image saved to a file. Invisibly returns the
