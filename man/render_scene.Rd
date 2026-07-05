@@ -42,6 +42,8 @@ render_scene(
   parallel = TRUE,
   bvh_type = "sah",
   environment_light = NULL,
+  environment_light_bake_white = FALSE,
+  environment_light_bake_white_target = "D65",
   rotate_env = 0,
   intensity_env = 1,
   transparent_background = FALSE,
@@ -194,7 +196,18 @@ hierarchy structure used when rendering. Other option is "equal", which splits t
 of equal size.}
 
 \item{environment_light}{Default `NULL`. An image to be used for the background for rays that escape
-the scene. Supports both HDR (`.hdr`) and low-dynamic range (`.png`, `.jpg`) images.}
+the scene. Supports EXR (`.exr`), HDR (`.hdr`), and low-dynamic range
+(`.png`, `.jpg`) images.}
+
+\item{environment_light_bake_white}{Default `FALSE`. If `TRUE`, and `environment_light`
+is an EXR with a `white_current` value read by `rayimage::ray_read_image()`,
+bake a temporary copy of the environment map from that white point to
+`environment_light_bake_white_target` before rendering. The source file is
+not modified.}
+
+\item{environment_light_bake_white_target}{Default `"D65"`. Target white point
+for `environment_light_bake_white`. Use a named white point (`"D65"`, `"D60"`,
+`"D55"`, `"D50"`, `"D75"`, or `"E"`) or an XYZ vector with Y = 1.}
 
 \item{rotate_env}{Default `0`. The number of degrees to rotate the environment map around the scene.}
 

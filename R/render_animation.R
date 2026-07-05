@@ -65,7 +65,16 @@
 #' tonemapping the image. Pass in a matrix to specify the convolution kernel manually, or a positive number
 #' to control the intensity of the bloom (higher number = more bloom).
 #' @param environment_light Default `NULL`. An image to be used for the background for rays that escape
-#' the scene. Supports both HDR (`.hdr`) and low-dynamic range (`.png`, `.jpg`) images.
+#' the scene. Supports EXR (`.exr`), HDR (`.hdr`), and low-dynamic range
+#' (`.png`, `.jpg`) images.
+#' @param environment_light_bake_white Default `FALSE`. If `TRUE`, and `environment_light`
+#' is an EXR with a `white_current` value read by `rayimage::ray_read_image()`,
+#' bake a temporary copy of the environment map from that white point to
+#' `environment_light_bake_white_target` before rendering. The source file is
+#' not modified.
+#' @param environment_light_bake_white_target Default `"D65"`. Target white point
+#' for `environment_light_bake_white`. Use a named white point (`"D65"`, `"D60"`,
+#' `"D55"`, `"D50"`, `"D75"`, or `"E"`) or an XYZ vector with Y = 1.
 #' @param rotate_env Default `0`. The number of degrees to rotate the environment map around the scene.
 #' @param intensity_env Default `1`. The amount to increase the intensity of the environment lighting. Useful
 #' if using a LDR (JPEG or PNG) image as an environment map.
@@ -195,6 +204,8 @@ render_animation = function(
   parallel = TRUE,
   bvh_type = "sah",
   environment_light = NULL,
+  environment_light_bake_white = FALSE,
+  environment_light_bake_white_target = "D65",
   rotate_env = 0,
   intensity_env = 1,
   debug_channel = "none",
@@ -208,6 +219,15 @@ render_animation = function(
 ) {
   if (ambient_occlusion) {
     debug_channel = "ao"
+  }
+  environment_light_info = prepare_environment_light_white_balance(
+    environment_light = environment_light,
+    environment_light_bake_white = environment_light_bake_white,
+    environment_light_bake_white_target = environment_light_bake_white_target
+  )
+  environment_light = environment_light_info$environment_light
+  if (length(environment_light_info$cleanup) > 0L) {
+    on.exit(unlink(environment_light_info$cleanup), add = TRUE)
   }
   write_file = TRUE
   if (is.na(filename)) {
