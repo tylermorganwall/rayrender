@@ -939,6 +939,50 @@ calculate_distance_along_bezier_curve = function(cps, breaks = 20) {
   return(final_values)
 }
 
+#' Remove Stalled Path Samples
+#'
+#' @param linearized_cp Linearized path data frame.
+#' @return Linearized path data frame with repeated cumulative-distance samples removed.
+#'
+#' @keywords internal
+remove_stalled_path_samples = function(linearized_cp) {
+  if (!"total_dist" %in% colnames(linearized_cp) || nrow(linearized_cp) < 2) {
+    return(linearized_cp)
+  }
+
+  distance_tolerance = .Machine$double.eps *
+    max(1, max(abs(linearized_cp$total_dist), na.rm = TRUE)) *
+    100
+  keep_rows = c(TRUE, diff(linearized_cp$total_dist) > distance_tolerance)
+  return(linearized_cp[keep_rows, , drop = FALSE])
+}
+
+#' Calculate Path Interval
+#'
+#' @param linearized_cp Linearized path data frame.
+#' @param current_dist Current cumulative distance.
+#' @return List containing the row and interpolation value.
+#'
+#' @keywords internal
+calculate_path_interval = function(linearized_cp, current_dist) {
+  distance_tolerance = .Machine$double.eps *
+    max(1, max(abs(linearized_cp$total_dist), na.rm = TRUE)) *
+    100
+  row = max(which(linearized_cp$total_dist <= current_dist), 1)
+  if (row + 1 > nrow(linearized_cp)) {
+    row = nrow(linearized_cp) - 1
+  }
+
+  dist_delta = linearized_cp$total_dist[row + 1] -
+    linearized_cp$total_dist[row]
+  if (dist_delta <= distance_tolerance) {
+    tval = 0
+  } else {
+    tval = (current_dist - linearized_cp$total_dist[row]) / dist_delta
+  }
+  return(list(row = row, tval = tval))
+}
+
 #' Linearize and Calculate Final Points (with constant stepsize)
 #'
 #' @param linearized_cp Matrix (4x3)
@@ -964,7 +1008,21 @@ calculate_final_path = function(
       as.numeric(single_row),
       nrow = steps,
       ncol = 3,
-      byrow = T
+      byrow = TRUE
+    ))
+    colnames(single_df) = c("x", "y", "z")
+    return(single_df)
+  }
+  if (constant_step || curvature_adjust) {
+    linearized_cp = remove_stalled_path_samples(linearized_cp)
+  }
+  if (nrow(linearized_cp) < 2) {
+    single_row = linearized_cp[1, c("x", "y", "z")]
+    single_df = as.data.frame(matrix(
+      as.numeric(single_row),
+      nrow = steps,
+      ncol = 3,
+      byrow = TRUE
     ))
     colnames(single_df) = c("x", "y", "z")
     return(single_df)
@@ -974,12 +1032,9 @@ calculate_final_path = function(
     final_points = list()
     current_dist = offset
     for (i in 1:steps) {
-      row = which.min(abs(floor(linearized_cp$total_dist - current_dist)))
-      if (row + 1 > nrow(linearized_cp)) {
-        row = nrow(linearized_cp) - 1
-      }
-      tval = (current_dist - linearized_cp$total_dist[row]) /
-        (linearized_cp$total_dist[row + 1] - linearized_cp$total_dist[row])
+      path_interval = calculate_path_interval(linearized_cp, current_dist)
+      row = path_interval$row
+      tval = path_interval$tval
 
       final_points[[i]] = lerp(
         tval,
@@ -1043,16 +1098,9 @@ calculate_final_path = function(
         if (progress) {
           pb$update(current_dist / maxdist)
         }
-        row = which.min(abs(linearized_cp$total_dist - current_dist))
-        if (linearized_cp$total_dist[row] - current_dist > 0) {
-          row = row - 1
-        }
-        if (row + 1 > nrow(linearized_cp)) {
-          row = nrow(linearized_cp) - 1
-        }
-
-        tval = (current_dist - linearized_cp$total_dist[row]) /
-          (linearized_cp$total_dist[row + 1] - linearized_cp$total_dist[row])
+        path_interval = calculate_path_interval(linearized_cp, current_dist)
+        row = path_interval$row
+        tval = path_interval$tval
 
         final_points[[i]] = lerp(
           tval,
@@ -1065,20 +1113,59 @@ calculate_final_path = function(
           linearized_cp[row + 1, c("dx", "dy", "dz")]
         )
 
-        direction = direction / sqrt(sum(direction^2))
+        direction_length = sqrt(sum(direction^2))
+        if (is.finite(direction_length) && direction_length > 0) {
+          direction = direction / direction_length
+        } else {
+          direction = c(0, 0, 0)
+        }
         final_points[[i]] = final_points[[i]] + direction * offset
         temp_curve = lerp(
           tval,
           linearized_cp[row, c("curvature")],
           linearized_cp[row + 1, c("curvature")]
         )
-        step = min(c(1 / temp_curve / curvature_scale, default_stepsize))
+        if (!is.finite(temp_curve) || temp_curve <= 0) {
+          step = default_stepsize
+        } else {
+          step = min(c(1 / temp_curve / curvature_scale, default_stepsize))
+        }
+        if (!is.finite(step) || step <= 0) {
+          step = default_stepsize
+        }
         current_dist = current_dist + step
         i = i + 1
       }
     }
   }
   return(do.call(rbind, final_points))
+}
+
+#' Remove Sequential Duplicate Keyframes
+#'
+#' @param keyframes Keyframe data frame.
+#' @return Keyframe data frame with adjacent duplicate rows removed.
+#'
+#' @keywords internal
+remove_sequential_duplicate_keyframes = function(keyframes) {
+  if (nrow(keyframes) < 2) {
+    return(keyframes)
+  }
+
+  duplicate_rows = rep(TRUE, nrow(keyframes) - 1)
+  for (col in seq_along(keyframes)) {
+    previous_values = keyframes[-nrow(keyframes), col]
+    current_values = keyframes[-1, col]
+    values_equal = previous_values == current_values
+
+    values_equal[is.na(previous_values) & is.na(current_values)] = TRUE
+    values_equal[is.na(values_equal)] = FALSE
+    duplicate_rows = duplicate_rows & values_equal
+  }
+
+  deduped_keyframes = keyframes[c(TRUE, !duplicate_rows), , drop = FALSE]
+  rownames(deduped_keyframes) = NULL
+  return(deduped_keyframes)
 }
 
 #' Get Saved Keyframes
@@ -1098,5 +1185,5 @@ get_saved_keyframes = function() {
     )
     return(keyframes)
   }
-  return(keyframes)
+  return(remove_sequential_duplicate_keyframes(keyframes))
 }

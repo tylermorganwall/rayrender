@@ -72,3 +72,61 @@ test_that("open damped camera motion keeps the one-way recurrence", {
 
   expect_equal(as.matrix(damped), expected)
 })
+
+test_that("saved keyframes remove only sequential duplicate camera states", {
+  env = rayrender:::ray_environment
+  old_keyframes = get("keyframes", envir = env)
+  on.exit(assign("keyframes", old_keyframes, envir = env), add = TRUE)
+
+  keyframes = data.frame(
+    x = c(0, 1, 1, 2, 1, 1 + 1e-12),
+    y = c(0, 0, 0, 0, 0, 0),
+    z = c(0, 0, 0, 0, 0, 0),
+    dx = c(10, 10, 10, 20, 10, 10),
+    dy = c(0, 0, 0, 0, 0, 0),
+    dz = c(0, 0, 0, 0, 0, 0),
+    aperture = c(0, 0.1, 0.1, 0.2, 0.1, 0.1),
+    fov = c(40, 35, 35, 30, 35, 35),
+    focal = c(10, 9, 9, 8, 9, 9),
+    exposure = c(1, 0.5, 0.5, 0.25, 0.5, 0.5),
+    orthox = c(1, 1, 1, 1, 1, 1),
+    orthoy = c(1, 1, 1, 1, 1, 1),
+    upx = c(0, 0, 0, 0, 0, 0),
+    upy = c(1, 1, 1, 1, 1, 1),
+    upz = c(0, 0, 0, 0, 0, 0)
+  )
+  assign("keyframes", keyframes, envir = env)
+
+  expected = keyframes[c(1, 2, 4, 5, 6), , drop = FALSE]
+  rownames(expected) = NULL
+  expect_equal(get_saved_keyframes(), expected)
+})
+
+test_that("bezier camera motion handles repeated scalar keyframe values", {
+  keyframes = data.frame(
+    x = c(0, 1, 2, 3),
+    y = c(0, 0, 0, 0),
+    z = c(0, 0, 0, 0),
+    dx = c(0, 1, 2, 3),
+    dy = c(0, 0, 0, 0),
+    dz = c(0, 0, 0, 0),
+    aperture = c(0, 1, 1, 2),
+    fov = c(40, 35, 35, 30),
+    focal = c(1, 1, 1, 1),
+    orthox = c(1, 1, 1, 1),
+    orthoy = c(1, 1, 1, 1),
+    upx = c(0, 0, 0, 0),
+    upy = c(1, 1, 1, 1),
+    upz = c(0, 0, 0, 0)
+  )
+
+  motion = generate_camera_motion(
+    keyframes,
+    type = "bezier",
+    frames = 4,
+    progress = FALSE
+  )
+
+  expect_equal(nrow(motion), 4)
+  expect_true(all(is.finite(as.matrix(motion))))
+})
