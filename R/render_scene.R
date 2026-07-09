@@ -23,10 +23,13 @@
 #' 3/4 = Rotate Environment Light,
 #' Right bracket/left bracket = Increase/Decrease Preview Exposure,
 #' R = Reset Camera, Return = Toggle between deferred and final render if `deferred_render = TRUE`, TAB: Toggle Orbit Mode,
-#' Left Mouse Click: Change Look Direction, Right Mouse Click: Change Look At
+#' Left Mouse Click: Change Look Direction, Right Mouse Click: Change Look At.
+#' If the interactive preview window is wide enough, a status bar at the bottom shows the current camera, exposure, environment rotation,
+#' and keyframe state.
 #' K: Save Keyframe (at the conclusion of the render, this will create the `ray_keyframes`
 #' data.frame in the global environment, which can be passed to `generate_camera_motion()` to tween between those saved positions.
-#' L: Reset Camera to Last Keyframe (if set) F: Toggle Fast Travel Mode
+#' L: Reset Camera to Last Keyframe (if set), < and >: Jump to previous/next keyframe, /: Delete current keyframe,
+#' F: Toggle Fast Travel Mode
 #'
 #' Initial step size is 1/20th of the distance from `lookat` to `lookfrom`.
 #'
@@ -604,7 +607,8 @@ HAS_OIDN: %s
 W/A/S/D: Horizontal Movement: | Q/Z: Vertical Movement | Up/Down: Adjust FOV | ESC: Close
 Left/Right: Adjust Aperture  | 1/2: Adjust Focal Distance | 3/4: Rotate Environment Light
 P: Print Camera Info | R: Reset Camera |  E/C: Adjust Step Size |  TAB: Toggle Orbit Mode
-K: Save Keyframe | L: Reset Camera to Last Keyframe (if set) | F: Toggle Fast Travel Mode
+K: Save Keyframe | L: Last Keyframe | </>: Previous/Next Keyframe | /: Delete Current Keyframe
+F: Toggle Fast Travel Mode | Wide Window: Bottom Camera/Exposure/Environment/Keyframe Status Bar
 Left Mouse Click: Change Look At (new focal distance) | Right Mouse Click: Change Look At
 ]/[: Adjust Preview Exposure | Return: Start Final Render"
     } else {
@@ -612,7 +616,8 @@ Left Mouse Click: Change Look At (new focal distance) | Right Mouse Click: Chang
 W/A/S/D: Horizontal Movement: | Q/Z: Vertical Movement | Up/Down: Adjust FOV | ESC: Close
 Left/Right: Adjust Aperture  | 1/2: Adjust Focal Distance | 3/4: Rotate Environment Light 
 P: Print Camera Info | R: Reset Camera |  TAB: Toggle Orbit Mode |  E/C: Adjust Step Size
-K: Save Keyframe | L: Reset Camera to Last Keyframe (if set) | F: Toggle Fast Travel Mode
+K: Save Keyframe | L: Last Keyframe | </>: Previous/Next Keyframe | /: Delete Current Keyframe
+F: Toggle Fast Travel Mode | Wide Window: Bottom Camera/Exposure/Environment/Keyframe Status Bar
 Left Mouse Click: Change Look At (new focal distance) | Right Mouse Click: Change Look At
 ]/[: Adjust Preview Exposure"
     }

@@ -89,10 +89,13 @@ Left Key = Decrease Aperture, Right Key = Increase Aperture, 1 = Decrease Focal 
 3/4 = Rotate Environment Light,
 Right bracket/left bracket = Increase/Decrease Preview Exposure,
 R = Reset Camera, Return = Toggle between deferred and final render if `deferred_render = TRUE`, TAB: Toggle Orbit Mode,
-Left Mouse Click: Change Look Direction, Right Mouse Click: Change Look At
+Left Mouse Click: Change Look Direction, Right Mouse Click: Change Look At.
+If the interactive preview window is wide enough, a status bar at the bottom shows the current camera, exposure, environment rotation,
+and keyframe state.
 K: Save Keyframe (at the conclusion of the render, this will create the `ray_keyframes`
 data.frame in the global environment, which can be passed to `generate_camera_motion()` to tween between those saved positions.
-L: Reset Camera to Last Keyframe (if set) F: Toggle Fast Travel Mode
+L: Reset Camera to Last Keyframe (if set), < and >: Jump to previous/next keyframe, /: Delete current keyframe,
+F: Toggle Fast Travel Mode
 
 Initial step size is 1/20th of the distance from `lookat` to `lookfrom`.
 

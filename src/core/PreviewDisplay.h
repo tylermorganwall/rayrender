@@ -2,6 +2,7 @@
 #define PREVIEWDISPLAYH
 
 #include <memory>
+#include <string>
 #include <vector>
 #include "Rcpp.h"
 #include "RProgress.h"
@@ -99,6 +100,13 @@ public:
   Float ApplyPreviewExposure(Float value, Float sample_count) const;
   void IncreasePreviewExposure();
   void DecreasePreviewExposure();
+  Rcpp::List CreateCurrentKeyframe(Float env_rotation) const;
+  void SaveCurrentKeyframe(Float env_rotation);
+  bool ApplyKeyframe(int index, Float* env_rotation);
+  bool JumpKeyframe(int step, Float* env_rotation);
+  bool DeleteCurrentKeyframe(Float* env_rotation);
+  void PrintCameraInfo(Float env_rotation) const;
+  std::string PreviewStatusText(Float env_rotation) const;
   void SetTextOverlays(const std::vector<PreviewTextOverlay>& overlays);
   void SetLineOverlays(const std::vector<PreviewLineOverlay>& overlays);
   bool ProjectTextAnchor(const PreviewTextOverlay& overlay,
@@ -127,10 +135,12 @@ public:
                            hitable* world,
                            random_gen& rng) const;
 #ifdef RAY_HAS_X11
+  void DrawStatusBarX11(Float env_rotation);
   void CompositeTextOverlaysToX11Buffer(hitable* world, random_gen& rng);
   void CompositeLineOverlaysToX11Buffer(hitable* world, random_gen& rng);
 #endif
 #ifdef RAY_WINDOWS
+  void DrawStatusBarWindows(HDC hdc, Float env_rotation) const;
   void CompositeTextOverlaysToFloatBuffer(std::vector<Float>& rgb,
                                           hitable* world,
                                           random_gen& rng);
@@ -177,6 +187,7 @@ public:
   bool denoise;
   #endif
   std::vector<Rcpp::List> Keyframes;
+  int current_keyframe;
   std::vector<PreviewTextOverlay> text_overlays;
   std::vector<PreviewLineOverlay> line_overlays;
 };
