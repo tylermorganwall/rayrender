@@ -431,9 +431,22 @@ bool PreviewDisplay::StartPreviewMotion(Float env_rotation) {
   preview_motion_restore_state = CreateCurrentKeyframe(env_rotation);
   preview_motion_restore_keyframe = current_keyframe;
   preview_motion_frame = 0;
+  current_keyframe = 0;
   preview_motion_active = true;
-  Rprintf("Previewing keyframe motion (%d frames). Movement input disabled until preview ends.\n",
+  Rprintf("Previewing keyframe motion (%d frames). Press M to cancel.\n",
           static_cast<int>(preview_motion.nrows()));
+  return true;
+}
+
+bool PreviewDisplay::CancelPreviewMotion(Float* env_rotation) {
+  if(!preview_motion_active) {
+    return false;
+  }
+  ApplyCameraState(preview_motion_restore_state, env_rotation);
+  current_keyframe = preview_motion_restore_keyframe;
+  preview_motion_active = false;
+  preview_motion_frame = 0;
+  Rprintf("Cancelled keyframe motion preview. Restored original camera.\n");
   return true;
 }
 
@@ -462,6 +475,14 @@ bool PreviewDisplay::AdvancePreviewMotion(Float* env_rotation) {
   Rcpp::NumericVector focal = preview_motion["focal"];
   Rcpp::NumericVector orthox = preview_motion["orthox"];
   Rcpp::NumericVector orthoy = preview_motion["orthoy"];
+  int keyframe_count = static_cast<int>(Keyframes.size());
+  if(keyframe_count > 0) {
+    double frames_per_keyframe =
+      static_cast<double>(preview_motion.nrows()) / static_cast<double>(keyframe_count);
+    int playback_keyframe = frames_per_keyframe > 0 ?
+      static_cast<int>(std::floor(preview_motion_frame / frames_per_keyframe)) : 0;
+    current_keyframe = std::max(0, std::min(playback_keyframe, keyframe_count - 1));
+  }
 
   Rcpp::List state = Rcpp::List::create(
     Named("x") = x[preview_motion_frame],
@@ -1400,6 +1421,10 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
           break;
         }
         if(interactive && IsPreviewMotionActive()) {
+          if(e.xkey.keycode == MotionPreview_key) {
+            CancelPreviewMotion(&env_y_angle);
+            reset_preview_render();
+          }
           continue;
         }
         if(interactive) {
@@ -1558,6 +1583,10 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
               terminate = true;
             }
             if(interactive && IsPreviewMotionActive()) {
+              if(e.xkey.keycode == MotionPreview_key) {
+                CancelPreviewMotion(&env_y_angle);
+                reset_preview_render();
+              }
               continue;
             }
             if (e.xkey.keycode == tab && !one_orbit) {
@@ -2137,7 +2166,8 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
       if(interactive_w &&
          preview_display_w != nullptr &&
          preview_display_w->IsPreviewMotionActive() &&
-         wParam != VK_ESCAPE) {
+         wParam != VK_ESCAPE &&
+         wParam != VK_KEY_M) {
         return 0;
       }
       vec3f w(1,0,0);
@@ -2337,7 +2367,11 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         }
         case VK_KEY_M: {
           if(preview_display_w != nullptr) {
-            preview_display_w->StartPreviewMotion(env_y_angle);
+            if(preview_display_w->IsPreviewMotionActive()) {
+              preview_display_w->CancelPreviewMotion(&env_y_angle);
+            } else {
+              preview_display_w->StartPreviewMotion(env_y_angle);
+            }
           }
           break;
         }

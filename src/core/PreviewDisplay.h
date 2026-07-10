@@ -111,6 +111,7 @@ public:
   void SetKeyframeMotionArgs(const Rcpp::List& args);
   Rcpp::DataFrame KeyframesDataFrame() const;
   bool StartPreviewMotion(Float env_rotation);
+  bool CancelPreviewMotion(Float* env_rotation);
   bool AdvancePreviewMotion(Float* env_rotation);
   bool IsPreviewMotionActive() const { return preview_motion_active; }
   void SetTextOverlays(const std::vector<PreviewTextOverlay>& overlays);
