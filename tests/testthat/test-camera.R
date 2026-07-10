@@ -31,6 +31,29 @@ test_that("camera preserves generated motion frame count", {
   expect_equal(nrow(cam$motion), 5)
 })
 
+test_that("camera normalizes keyframe motion preview arguments", {
+  default_cam = camera()
+  cam = camera(keyframe_motion_args = list(frames = 24, closed = TRUE))
+
+  expect_equal(default_cam$keyframe_motion_args$type, "linear")
+  expect_null(default_cam$keyframe_motion_args$frames)
+  expect_true(default_cam$keyframe_motion_args$damp_motion)
+
+  expect_equal(cam$keyframe_motion_args$type, "linear")
+  expect_equal(cam$keyframe_motion_args$frames, 24)
+  expect_true(cam$keyframe_motion_args$damp_motion)
+  expect_true(cam$keyframe_motion_args$closed)
+
+  expect_error(
+    camera(keyframe_motion_args = list(positions = list(c(0, 0, 0)))),
+    "cannot include arguments supplied by saved keyframes"
+  )
+  expect_error(
+    camera(keyframe_motion_args = c(frames = 24)),
+    "must be a named list"
+  )
+})
+
 test_that("generate_camera_motion returns camera motion data frame", {
   motion = generate_camera_motion(
     positions = list(c(0, 1, -10), c(1, 2, -8), c(0, 1, -6)),

@@ -11,6 +11,10 @@
 #' @param focal_distance Default `NULL`. Focal distance. If `NULL`, this is the distance between `lookfrom` and `lookat`.
 #' @param ortho_dimensions Default `c(1, 1)`. Width and height of the orthographic camera when `fov = 0`.
 #' @param motion Default `NULL`. Camera motion data frame from `generate_camera_motion()`.
+#' @param keyframe_motion_args Default `list()`. Named list of additional arguments passed to
+#' `generate_camera_motion()` when pressing `M` in interactive preview to preview the saved keyframes.
+#' The saved keyframes always supply the camera positions. Defaults are `type = "linear"`,
+#' 30 frames per saved keyframe, and `damp_motion = TRUE`.
 #' @param name Default `"camera"`. Camera name.
 #' @param filename Default `NA_character_`. Optional output filename or animation filename pattern.
 #' @param camera_description_file Default `NA`. Filename of a realistic camera description file.
@@ -75,6 +79,7 @@ camera = function(
   focal_distance = NULL,
   ortho_dimensions = c(1, 1),
   motion = NULL,
+  keyframe_motion_args = list(),
   name = "camera",
   filename = NA_character_,
   camera_description_file = NA,
@@ -85,6 +90,7 @@ camera = function(
   shutterclose = 1
 ) {
   validate_camera_name(name)
+  keyframe_motion_args = normalize_keyframe_motion_args(keyframe_motion_args)
 
   if (is.null(motion)) {
     validate_static_camera_inputs(
@@ -127,6 +133,7 @@ camera = function(
     list(
       name = name,
       motion = motion,
+      keyframe_motion_args = keyframe_motion_args,
       filename = filename,
       camera_description_file = camera_description_file,
       camera_scale = camera_scale,
@@ -540,6 +547,41 @@ validate_camera_motion = function(motion) {
     )
   }
   invisible(TRUE)
+}
+
+#' @keywords internal
+normalize_keyframe_motion_args = function(args = list()) {
+  if (is.null(args)) {
+    args = list()
+  }
+  if (!is.list(args)) {
+    stop("keyframe_motion_args must be a named list.")
+  }
+  if (length(args) > 0 && (is.null(names(args)) || any(!nzchar(names(args))))) {
+    stop("keyframe_motion_args must be a named list.")
+  }
+
+  keyframe_supplied_args = c(
+    "positions",
+    "lookats",
+    "apertures",
+    "fovs",
+    "focal_distances",
+    "ortho_dims",
+    "camera_ups"
+  )
+  conflicting_args = intersect(names(args), keyframe_supplied_args)
+  if (length(conflicting_args) > 0) {
+    stop(
+      "keyframe_motion_args cannot include arguments supplied by saved keyframes: ",
+      paste(conflicting_args, collapse = ", ")
+    )
+  }
+
+  utils::modifyList(
+    list(type = "linear", damp_motion = TRUE),
+    args
+  )
 }
 
 #' @keywords internal

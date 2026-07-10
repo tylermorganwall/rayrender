@@ -102,11 +102,17 @@ public:
   void DecreasePreviewExposure();
   Rcpp::List CreateCurrentKeyframe(Float env_rotation) const;
   void SaveCurrentKeyframe(Float env_rotation);
+  bool ApplyCameraState(const Rcpp::List& state, Float* env_rotation);
   bool ApplyKeyframe(int index, Float* env_rotation);
   bool JumpKeyframe(int step, Float* env_rotation);
   bool DeleteCurrentKeyframe(Float* env_rotation);
   void PrintCameraInfo(Float env_rotation) const;
   std::string PreviewStatusText(Float env_rotation) const;
+  void SetKeyframeMotionArgs(const Rcpp::List& args);
+  Rcpp::DataFrame KeyframesDataFrame() const;
+  bool StartPreviewMotion(Float env_rotation);
+  bool AdvancePreviewMotion(Float* env_rotation);
+  bool IsPreviewMotionActive() const { return preview_motion_active; }
   void SetTextOverlays(const std::vector<PreviewTextOverlay>& overlays);
   void SetLineOverlays(const std::vector<PreviewLineOverlay>& overlays);
   bool ProjectTextAnchor(const PreviewTextOverlay& overlay,
@@ -188,6 +194,12 @@ public:
   #endif
   std::vector<Rcpp::List> Keyframes;
   int current_keyframe;
+  Rcpp::List keyframe_motion_args;
+  Rcpp::DataFrame preview_motion;
+  Rcpp::List preview_motion_restore_state;
+  int preview_motion_frame;
+  int preview_motion_restore_keyframe;
+  bool preview_motion_active;
   std::vector<PreviewTextOverlay> text_overlays;
   std::vector<PreviewLineOverlay> line_overlays;
 };

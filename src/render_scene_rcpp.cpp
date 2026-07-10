@@ -836,6 +836,10 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
   bool interactive = as<bool>(camera_info["interactive"]);
   bool deferred_render = as<bool>(camera_info["deferred_render"]);
   bool auto_exposure = as<bool>(camera_info["auto_exposure"]);
+  List keyframe_motion_args = camera_info.containsElementNamed("keyframe_motion_args") ?
+    as<List>(camera_info["keyframe_motion_args"]) :
+    List::create(_["type"] = "linear",
+                 _["damp_motion"] = true);
   Float iso = as<Float>(camera_info["iso"]);
   int bvh_type = as<int>(camera_info["bvh"]);
 
@@ -1110,6 +1114,7 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
                          background_sphere->WorldToObject,
                          auto_exposure);
 #endif
+  Display.SetKeyframeMotionArgs(keyframe_motion_args);
   Display.SetTextOverlays(text_overlays);
   Display.SetLineOverlays(line_overlays);
   

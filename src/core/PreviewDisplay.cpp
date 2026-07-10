@@ -31,6 +31,16 @@ static point3f PreviewCameraLookat(RayCamera* cam) {
                  origin.xyz.z + direction.xyz.z * fd);
 }
 
+static bool IsKeyframeSuppliedMotionArg(const std::string& name) {
+  return name == "positions" ||
+         name == "lookats" ||
+         name == "apertures" ||
+         name == "fovs" ||
+         name == "focal_distances" ||
+         name == "ortho_dims" ||
+         name == "camera_ups";
+}
+
 
 #ifdef RAY_HAS_X11
 
@@ -218,6 +228,36 @@ void PreviewDisplay::SaveCurrentKeyframe(Float env_rotation) {
   current_keyframe = static_cast<int>(Keyframes.size()) - 1;
 }
 
+bool PreviewDisplay::ApplyCameraState(const Rcpp::List& state,
+                                      Float* env_rotation) {
+  point3f key_pos = point3f(Rcpp::as<Float>(state["x"]),
+                            Rcpp::as<Float>(state["y"]),
+                            Rcpp::as<Float>(state["z"]));
+  point3f key_lookat = point3f(Rcpp::as<Float>(state["dx"]),
+                               Rcpp::as<Float>(state["dy"]),
+                               Rcpp::as<Float>(state["dz"]));
+  Float key_aperture = Rcpp::as<Float>(state["aperture"]);
+  Float key_fov = Rcpp::as<Float>(state["fov"]);
+  Float key_focal = Rcpp::as<Float>(state["focal"]);
+  if(state.containsElementNamed("exposure")) {
+    preview_exposure_adjustment = Rcpp::as<Float>(state["exposure"]);
+  }
+  if(env_rotation != nullptr && state.containsElementNamed("env_rotation")) {
+    *env_rotation = Rcpp::as<Float>(state["env_rotation"]);
+    (*EnvObjectToWorld) = RotateY(-*env_rotation) * Start_EnvObjectToWorld;
+    (*EnvWorldToObject) = RotateY(*env_rotation) * Start_EnvWorldToObject;
+  }
+  vec2f key_ortho = vec2f(Rcpp::as<Float>(state["orthox"]),
+                          Rcpp::as<Float>(state["orthoy"]));
+  cam->update_focal_absolute(key_focal);
+  cam->update_position_absolute(key_pos);
+  cam->update_lookat(key_lookat);
+  cam->update_aperture_absolute(key_aperture);
+  cam->update_fov_absolute(key_fov);
+  cam->update_ortho_absolute(key_ortho);
+  return true;
+}
+
 bool PreviewDisplay::ApplyKeyframe(int index, Float* env_rotation) {
   if(Keyframes.empty()) {
     current_keyframe = -1;
@@ -229,31 +269,7 @@ bool PreviewDisplay::ApplyKeyframe(int index, Float* env_rotation) {
   }
 
   Rcpp::List keyframe = Keyframes.at(index);
-  point3f key_pos = point3f(Rcpp::as<Float>(keyframe["x"]),
-                            Rcpp::as<Float>(keyframe["y"]),
-                            Rcpp::as<Float>(keyframe["z"]));
-  point3f key_lookat = point3f(Rcpp::as<Float>(keyframe["dx"]),
-                               Rcpp::as<Float>(keyframe["dy"]),
-                               Rcpp::as<Float>(keyframe["dz"]));
-  Float key_aperture = Rcpp::as<Float>(keyframe["aperture"]);
-  Float key_fov = Rcpp::as<Float>(keyframe["fov"]);
-  Float key_focal = Rcpp::as<Float>(keyframe["focal"]);
-  if(keyframe.containsElementNamed("exposure")) {
-    preview_exposure_adjustment = Rcpp::as<Float>(keyframe["exposure"]);
-  }
-  if(env_rotation != nullptr && keyframe.containsElementNamed("env_rotation")) {
-    *env_rotation = Rcpp::as<Float>(keyframe["env_rotation"]);
-    (*EnvObjectToWorld) = RotateY(-*env_rotation) * Start_EnvObjectToWorld;
-    (*EnvWorldToObject) = RotateY(*env_rotation) * Start_EnvWorldToObject;
-  }
-  vec2f key_ortho = vec2f(Rcpp::as<Float>(keyframe["orthox"]),
-                          Rcpp::as<Float>(keyframe["orthoy"]));
-  cam->update_focal_absolute(key_focal);
-  cam->update_position_absolute(key_pos);
-  cam->update_lookat(key_lookat);
-  cam->update_aperture_absolute(key_aperture);
-  cam->update_fov_absolute(key_fov);
-  cam->update_ortho_absolute(key_ortho);
+  ApplyCameraState(keyframe, env_rotation);
   current_keyframe = index;
   return true;
 }
@@ -301,6 +317,168 @@ bool PreviewDisplay::DeleteCurrentKeyframe(Float* env_rotation) {
           deleted_keyframe + 1,
           Keyframes.size());
   return ApplyKeyframe(current_keyframe, env_rotation);
+}
+
+void PreviewDisplay::SetKeyframeMotionArgs(const Rcpp::List& args) {
+  keyframe_motion_args = Rcpp::clone(args);
+}
+
+Rcpp::DataFrame PreviewDisplay::KeyframesDataFrame() const {
+  size_t keyframe_count = Keyframes.size();
+  Rcpp::NumericVector x(keyframe_count);
+  Rcpp::NumericVector y(keyframe_count);
+  Rcpp::NumericVector z(keyframe_count);
+  Rcpp::NumericVector dx(keyframe_count);
+  Rcpp::NumericVector dy(keyframe_count);
+  Rcpp::NumericVector dz(keyframe_count);
+  Rcpp::NumericVector aperture(keyframe_count);
+  Rcpp::NumericVector fov(keyframe_count);
+  Rcpp::NumericVector focal(keyframe_count);
+  Rcpp::NumericVector exposure(keyframe_count);
+  Rcpp::NumericVector env_rotation(keyframe_count);
+  Rcpp::NumericVector orthox(keyframe_count);
+  Rcpp::NumericVector orthoy(keyframe_count);
+  Rcpp::NumericVector upx(keyframe_count);
+  Rcpp::NumericVector upy(keyframe_count);
+  Rcpp::NumericVector upz(keyframe_count);
+
+  for(size_t i = 0; i < keyframe_count; i++) {
+    Rcpp::List keyframe = Keyframes.at(i);
+    x[i] = Rcpp::as<Float>(keyframe["x"]);
+    y[i] = Rcpp::as<Float>(keyframe["y"]);
+    z[i] = Rcpp::as<Float>(keyframe["z"]);
+    dx[i] = Rcpp::as<Float>(keyframe["dx"]);
+    dy[i] = Rcpp::as<Float>(keyframe["dy"]);
+    dz[i] = Rcpp::as<Float>(keyframe["dz"]);
+    aperture[i] = Rcpp::as<Float>(keyframe["aperture"]);
+    fov[i] = Rcpp::as<Float>(keyframe["fov"]);
+    focal[i] = Rcpp::as<Float>(keyframe["focal"]);
+    exposure[i] = keyframe.containsElementNamed("exposure") ?
+      Rcpp::as<Float>(keyframe["exposure"]) : preview_exposure_adjustment;
+    env_rotation[i] = keyframe.containsElementNamed("env_rotation") ?
+      Rcpp::as<Float>(keyframe["env_rotation"]) : 0;
+    orthox[i] = Rcpp::as<Float>(keyframe["orthox"]);
+    orthoy[i] = Rcpp::as<Float>(keyframe["orthoy"]);
+    upx[i] = Rcpp::as<Float>(keyframe["upx"]);
+    upy[i] = Rcpp::as<Float>(keyframe["upy"]);
+    upz[i] = Rcpp::as<Float>(keyframe["upz"]);
+  }
+
+  return Rcpp::DataFrame::create(Named("x") = x,
+                                 Named("y") = y,
+                                 Named("z") = z,
+                                 Named("dx") = dx,
+                                 Named("dy") = dy,
+                                 Named("dz") = dz,
+                                 Named("aperture") = aperture,
+                                 Named("fov") = fov,
+                                 Named("focal") = focal,
+                                 Named("exposure") = exposure,
+                                 Named("env_rotation") = env_rotation,
+                                 Named("orthox") = orthox,
+                                 Named("orthoy") = orthoy,
+                                 Named("upx") = upx,
+                                 Named("upy") = upy,
+                                 Named("upz") = upz);
+}
+
+bool PreviewDisplay::StartPreviewMotion(Float env_rotation) {
+  if(preview_motion_active) {
+    return false;
+  }
+  if(Keyframes.size() < 2) {
+    Rprintf("Can't preview keyframe motion: Save at least two keyframes with K.\n");
+    return false;
+  }
+
+  try {
+    Rcpp::DataFrame keyframes = KeyframesDataFrame();
+    Rcpp::List call_args;
+    call_args.push_back(keyframes, "positions");
+
+    bool frames_supplied = false;
+    Rcpp::CharacterVector arg_names = keyframe_motion_args.names();
+    for(int i = 0; i < keyframe_motion_args.size(); i++) {
+      std::string arg_name = Rcpp::as<std::string>(arg_names[i]);
+      if(arg_name == "frames") {
+        frames_supplied = true;
+      }
+      if(!IsKeyframeSuppliedMotionArg(arg_name)) {
+        call_args.push_back(keyframe_motion_args[i], arg_name);
+      }
+    }
+    if(!frames_supplied) {
+      call_args.push_back(static_cast<int>(Keyframes.size() * 30), "frames");
+    }
+
+    Rcpp::Environment pkg = Rcpp::Environment::namespace_env("rayrender");
+    Rcpp::Function generate_camera_motion = pkg["generate_camera_motion"];
+    Rcpp::Environment base = Rcpp::Environment::base_env();
+    Rcpp::Function do_call = base["do.call"];
+    preview_motion = Rcpp::as<Rcpp::DataFrame>(
+      do_call(generate_camera_motion, call_args)
+    );
+  } catch(std::exception& ex) {
+    Rprintf("Can't preview keyframe motion: %s\n", ex.what());
+    return false;
+  }
+
+  if(preview_motion.nrows() < 1) {
+    Rprintf("Can't preview keyframe motion: generate_camera_motion() returned no frames.\n");
+    return false;
+  }
+
+  preview_motion_restore_state = CreateCurrentKeyframe(env_rotation);
+  preview_motion_restore_keyframe = current_keyframe;
+  preview_motion_frame = 0;
+  preview_motion_active = true;
+  Rprintf("Previewing keyframe motion (%d frames). Movement input disabled until preview ends.\n",
+          static_cast<int>(preview_motion.nrows()));
+  return true;
+}
+
+bool PreviewDisplay::AdvancePreviewMotion(Float* env_rotation) {
+  if(!preview_motion_active) {
+    return false;
+  }
+
+  if(preview_motion_frame >= preview_motion.nrows()) {
+    ApplyCameraState(preview_motion_restore_state, env_rotation);
+    current_keyframe = preview_motion_restore_keyframe;
+    preview_motion_active = false;
+    preview_motion_frame = 0;
+    Rprintf("Finished keyframe motion preview. Restored original camera.\n");
+    return true;
+  }
+
+  Rcpp::NumericVector x = preview_motion["x"];
+  Rcpp::NumericVector y = preview_motion["y"];
+  Rcpp::NumericVector z = preview_motion["z"];
+  Rcpp::NumericVector dx = preview_motion["dx"];
+  Rcpp::NumericVector dy = preview_motion["dy"];
+  Rcpp::NumericVector dz = preview_motion["dz"];
+  Rcpp::NumericVector aperture = preview_motion["aperture"];
+  Rcpp::NumericVector fov = preview_motion["fov"];
+  Rcpp::NumericVector focal = preview_motion["focal"];
+  Rcpp::NumericVector orthox = preview_motion["orthox"];
+  Rcpp::NumericVector orthoy = preview_motion["orthoy"];
+
+  Rcpp::List state = Rcpp::List::create(
+    Named("x") = x[preview_motion_frame],
+    Named("y") = y[preview_motion_frame],
+    Named("z") = z[preview_motion_frame],
+    Named("dx") = dx[preview_motion_frame],
+    Named("dy") = dy[preview_motion_frame],
+    Named("dz") = dz[preview_motion_frame],
+    Named("aperture") = aperture[preview_motion_frame],
+    Named("fov") = fov[preview_motion_frame],
+    Named("focal") = focal[preview_motion_frame],
+    Named("orthox") = orthox[preview_motion_frame],
+    Named("orthoy") = orthoy[preview_motion_frame]
+  );
+  ApplyCameraState(state, env_rotation);
+  preview_motion_frame++;
+  return true;
 }
 
 void PreviewDisplay::PrintCameraInfo(Float env_rotation) const {
@@ -1079,6 +1257,15 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
                                hitable *world, random_gen& rng) {
   SCOPED_CONTEXT("Overall");
   SCOPED_TIMER_COUNTER("Draw Image");
+  auto reset_preview_render = [&]() {
+    ns = 0;
+    adaptive_pixel_sampler.reset();
+    adaptive_pixel_sampler_small.reset();
+    ResetPreviewExposure();
+    if(progress && !interactive) {
+      pb.update(0);
+    }
+  };
 #ifdef RAY_HAS_X11
   if (d) {
 #ifdef HAS_OIDN
@@ -1193,6 +1380,7 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
     KeyCode PreviousKeyframe_key = XKeysymToKeycode(d, XK_less);
     KeyCode NextKeyframe_key = XKeysymToKeycode(d, XK_greater);
     KeyCode DeleteKeyframe_key = XKeysymToKeycode(d, XK_slash);
+    KeyCode MotionPreview_key = XKeysymToKeycode(d,XStringToKeysym("m"));
     
     //Fast Movement Key
     KeyCode F_key = XKeysymToKeycode(d,XStringToKeysym("f"));
@@ -1210,6 +1398,9 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
         if (e.xkey.keycode == esc ) {
           terminate = true;
           break;
+        }
+        if(interactive && IsPreviewMotionActive()) {
+          continue;
         }
         if(interactive) {
           vec3f w = cam->get_w();
@@ -1330,6 +1521,12 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
           if (e.xkey.keycode == DeleteKeyframe_key ) {
             DeleteCurrentKeyframe(&env_y_angle);
           }
+          if (e.xkey.keycode == MotionPreview_key ) {
+            if(StartPreviewMotion(env_y_angle)) {
+              blanked = true;
+              reset_preview_render();
+            }
+          }
           if (e.xkey.keycode == P_key || e.xkey.keycode == K_key ) {
             if(e.xkey.keycode == K_key) {
               SaveCurrentKeyframe(env_y_angle);
@@ -1359,6 +1556,9 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
             }
             if (e.xkey.keycode == esc ) {
               terminate = true;
+            }
+            if(interactive && IsPreviewMotionActive()) {
+              continue;
             }
             if (e.xkey.keycode == tab && !one_orbit) {
               orbit = !orbit;
@@ -1481,6 +1681,12 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
             if (e.xkey.keycode == DeleteKeyframe_key ) {
               DeleteCurrentKeyframe(&env_y_angle);
             }
+            if (e.xkey.keycode == MotionPreview_key ) {
+              if(StartPreviewMotion(env_y_angle)) {
+                blanked = true;
+                reset_preview_render();
+              }
+            }
             if (e.xkey.keycode == P_key || e.xkey.keycode == K_key ) {
               if(e.xkey.keycode == K_key) {
                 SaveCurrentKeyframe(env_y_angle);
@@ -1501,6 +1707,9 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
           }
         }
       } else if (e.type == ButtonPress) {
+        if(interactive && IsPreviewMotionActive()) {
+          continue;
+        }
         if(interactive) {
           bool left = e.xbutton.button == Button1;
           bool right = e.xbutton.button == Button3;
@@ -1571,6 +1780,9 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
       } else if (e.type == ClientMessage) {
         terminate = true;
       } 
+    }
+    if(AdvancePreviewMotion(&env_y_angle)) {
+      reset_preview_render();
     }
   }
 #endif
@@ -1656,6 +1868,10 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
       TranslateMessage(&msg);
       DispatchMessage(&msg); 
     }
+    if(AdvancePreviewMotion(&env_y_angle)) {
+      blanked = true;
+      reset_preview_render();
+    }
     terminate = term;
   }
 #endif
@@ -1685,6 +1901,13 @@ PreviewDisplay::PreviewDisplay(unsigned int _width, unsigned int _height,
 #endif
   Keyframes.clear();
   current_keyframe = -1;
+  keyframe_motion_args = Rcpp::List::create(Named("type") = "linear",
+                                            Named("damp_motion") = true);
+  preview_motion = Rcpp::DataFrame::create();
+  preview_motion_restore_state = Rcpp::List::create();
+  preview_motion_frame = 0;
+  preview_motion_restore_keyframe = -1;
+  preview_motion_active = false;
   write_fast_output = false;
   terminate = false;
   deferred_render = _deferred_render && preview && _interactive;
@@ -1893,6 +2116,7 @@ static bool IsWindowsRenderInvalidatingKey(WPARAM key) {
          key == VK_KEY_4 ||
          key == VK_KEY_F ||
          key == VK_KEY_L ||
+         key == VK_KEY_M ||
          key == VK_KEY_COMMA ||
          key == VK_KEY_PERIOD ||
          key == VK_KEY_SLASH ||
@@ -1908,6 +2132,12 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
     }
     case WM_KEYDOWN: {
       if(!PreviewWindowHasKeyboardFocus(hwnd)) {
+        return 0;
+      }
+      if(interactive_w &&
+         preview_display_w != nullptr &&
+         preview_display_w->IsPreviewMotionActive() &&
+         wParam != VK_ESCAPE) {
         return 0;
       }
       vec3f w(1,0,0);
@@ -2105,6 +2335,12 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
           }
           break;
         }
+        case VK_KEY_M: {
+          if(preview_display_w != nullptr) {
+            preview_display_w->StartPreviewMotion(env_y_angle);
+          }
+          break;
+        }
         case VK_KEY_COMMA: {
           if(preview_display_w != nullptr) {
             preview_display_w->JumpKeyframe(-1, &env_y_angle);
@@ -2150,6 +2386,11 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
       break;
     }
   case WM_LBUTTONDOWN: {
+    if(interactive_w &&
+       preview_display_w != nullptr &&
+       preview_display_w->IsPreviewMotionActive()) {
+      break;
+    }
     if(interactive_w) {
         Float x = GET_X_LPARAM(lParam);
         Float y = GET_Y_LPARAM(lParam);
@@ -2211,6 +2452,11 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
     break;
   }
   case WM_RBUTTONDOWN: {
+    if(interactive_w &&
+       preview_display_w != nullptr &&
+       preview_display_w->IsPreviewMotionActive()) {
+      break;
+    }
     if(interactive_w) {
       Float x = GET_X_LPARAM(lParam);
       Float y = GET_Y_LPARAM(lParam);

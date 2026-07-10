@@ -13,6 +13,7 @@ camera(
   focal_distance = NULL,
   ortho_dimensions = c(1, 1),
   motion = NULL,
+  keyframe_motion_args = list(),
   name = "camera",
   filename = NA_character_,
   camera_description_file = NA,
@@ -39,6 +40,11 @@ camera(
 \item{ortho_dimensions}{Default `c(1, 1)`. Width and height of the orthographic camera when `fov = 0`.}
 
 \item{motion}{Default `NULL`. Camera motion data frame from `generate_camera_motion()`.}
+
+\item{keyframe_motion_args}{Default `list()`. Named list of additional arguments passed to
+`generate_camera_motion()` when pressing `M` in interactive preview to preview the saved keyframes.
+The saved keyframes always supply the camera positions. Defaults are `type = "linear"`,
+30 frames per saved keyframe, and `damp_motion = TRUE`.}
 
 \item{name}{Default `"camera"`. Camera name.}
 
