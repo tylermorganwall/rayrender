@@ -63,6 +63,7 @@ camera::camera(point3f lookfrom, point3f _lookat, vec3f _vup, Float vfov,
   lookat = _lookat;
   start_lookat = lookat;
   vup = _vup;
+  start_vup = vup;
   focus_dist = _focus_dist;
   start_focus_dist = focus_dist;
   BuildPBRTCameraFrameFromLookAt(origin, lookat, vup, w, u, v);
@@ -133,6 +134,33 @@ void camera::update_lookat(point3f point) {
   } 
 }
 
+void camera::update_up(vec3f up) {
+  if(up.length() > 0) {
+    vup = up;
+  }
+  vec3f forward = w;
+  lookat = origin + focus_dist * forward;
+  BuildPBRTCameraFrame(forward, vup, w, u, v);
+  RecomputePerspectiveScreen(*this);
+}
+
+void camera::rotate_up(Float angle_degrees) {
+  vec3f forward = w;
+  vup = unit_vector(Rotate(angle_degrees, forward)(v));
+  lookat = origin + focus_dist * forward;
+  BuildPBRTCameraFrame(forward, vup, w, u, v);
+  RecomputePerspectiveScreen(*this);
+}
+
+void camera::rotate_forward(Float angle_degrees) {
+  Transform rotate = Rotate(angle_degrees, u);
+  vec3f new_forward = unit_vector(rotate(w));
+  vup = unit_vector(rotate(v));
+  lookat = origin + focus_dist * new_forward;
+  BuildPBRTCameraFrameFromLookAt(origin, lookat, vup, w, u, v);
+  RecomputePerspectiveScreen(*this);
+}
+
 void camera::update_position_absolute(point3f point) {
   origin = point;
   BuildPBRTCameraFrameFromLookAt(origin, lookat, vup, w, u, v);
@@ -177,6 +205,7 @@ void camera::reset() {
   half_height = tan(theta/2);
   half_width = aspect * half_height;
   lens_radius = start_lens_radius;
+  vup = start_vup;
   BuildPBRTCameraFrameFromLookAt(origin, lookat, vup, w, u, v);
   RecomputePerspectiveScreen(*this);
 }
@@ -196,6 +225,7 @@ ortho_camera::ortho_camera(point3f lookfrom, point3f _lookat, vec3f _vup,
   lookat = _lookat;
   start_lookat = lookat;
   vup = _vup;
+  start_vup = vup;
   focus_dist = (lookfrom-lookat).length();
   BuildPBRTCameraFrameFromLookAt(origin, lookat, vup, w, u, v);
   RecomputeOrthoScreen(*this);
@@ -258,6 +288,36 @@ void ortho_camera::update_lookat(point3f point) {
   RecomputeOrthoScreen(*this);
 }
 
+void ortho_camera::update_up(vec3f up) {
+  if(up.length() > 0) {
+    vup = up;
+  }
+  vec3f forward = w;
+  Float dist = focus_dist > 0 ? focus_dist : static_cast<Float>(1);
+  lookat = origin + dist * forward;
+  BuildPBRTCameraFrame(forward, vup, w, u, v);
+  RecomputeOrthoScreen(*this);
+}
+
+void ortho_camera::rotate_up(Float angle_degrees) {
+  vec3f forward = w;
+  vup = unit_vector(Rotate(angle_degrees, forward)(v));
+  Float dist = focus_dist > 0 ? focus_dist : static_cast<Float>(1);
+  lookat = origin + dist * forward;
+  BuildPBRTCameraFrame(forward, vup, w, u, v);
+  RecomputeOrthoScreen(*this);
+}
+
+void ortho_camera::rotate_forward(Float angle_degrees) {
+  Transform rotate = Rotate(angle_degrees, u);
+  vec3f new_forward = unit_vector(rotate(w));
+  vup = unit_vector(rotate(v));
+  Float dist = focus_dist > 0 ? focus_dist : static_cast<Float>(1);
+  lookat = origin + dist * new_forward;
+  BuildPBRTCameraFrameFromLookAt(origin, lookat, vup, w, u, v);
+  RecomputeOrthoScreen(*this);
+}
+
 void ortho_camera::update_position_absolute(point3f point) {
   origin = point;
   BuildPBRTCameraFrameFromLookAt(origin, lookat, vup, w, u, v);
@@ -291,6 +351,7 @@ void ortho_camera::reset() {
   lookat = start_lookat;
   cam_width = start_cam_width;
   cam_height = start_cam_height;
+  vup = start_vup;
   BuildPBRTCameraFrameFromLookAt(origin, lookat, vup, w, u, v);
   RecomputeOrthoScreen(*this);
 }
@@ -305,6 +366,7 @@ environment_camera::environment_camera(point3f lookfrom, point3f lookat, vec3f _
   this->lookat = lookat;
   start_lookat = lookat;
   vup = _vup;
+  start_vup = vup;
   BuildPBRTCameraFrameFromLookAt(origin, this->lookat, vup, w, u, v);
   uvw = onb(u, v, w);
   iso = _iso;
@@ -365,6 +427,45 @@ void environment_camera::update_lookat(point3f point) {
   uvw = onb(u, v, w);
 }
 
+void environment_camera::update_up(vec3f up) {
+  if(up.length() > 0) {
+    vup = up;
+  }
+  vec3f forward = w;
+  Float dist = (origin - lookat).length();
+  if(dist <= 0) {
+    dist = static_cast<Float>(1);
+  }
+  lookat = origin + dist * forward;
+  BuildPBRTCameraFrame(forward, vup, w, u, v);
+  uvw = onb(u, v, w);
+}
+
+void environment_camera::rotate_up(Float angle_degrees) {
+  vec3f forward = w;
+  vup = unit_vector(Rotate(angle_degrees, forward)(v));
+  Float dist = (origin - lookat).length();
+  if(dist <= 0) {
+    dist = static_cast<Float>(1);
+  }
+  lookat = origin + dist * forward;
+  BuildPBRTCameraFrame(forward, vup, w, u, v);
+  uvw = onb(u, v, w);
+}
+
+void environment_camera::rotate_forward(Float angle_degrees) {
+  Transform rotate = Rotate(angle_degrees, u);
+  vec3f new_forward = unit_vector(rotate(w));
+  vup = unit_vector(rotate(v));
+  Float dist = (origin - lookat).length();
+  if(dist <= 0) {
+    dist = static_cast<Float>(1);
+  }
+  lookat = origin + dist * new_forward;
+  BuildPBRTCameraFrameFromLookAt(origin, lookat, vup, w, u, v);
+  uvw = onb(u, v, w);
+}
+
 void environment_camera::update_position_absolute(point3f point) {
   origin = point;
   BuildPBRTCameraFrameFromLookAt(origin, lookat, vup, w, u, v);
@@ -393,6 +494,7 @@ vec3f environment_camera::get_v() {return(v);}
 void environment_camera::reset() {
   origin = start_origin;
   lookat = start_lookat;
+  vup = start_vup;
   BuildPBRTCameraFrameFromLookAt(origin, lookat, vup, w, u, v);
   uvw = onb(u, v, w);
 }
@@ -437,7 +539,8 @@ RealisticCamera::RealisticCamera(const AnimatedTransform &CameraToWorld,
   : CameraToWorld(CameraToWorld), 
     shutterOpen(shutterOpen), shutterClose(shutterClose), 
     simpleWeighting(simpleWeighting), cam_width(cam_width), cam_height(cam_height),
-    diag(film_size * camera_scale), iso(_iso), camera_up(_camera_up), CamTransform(_CamTransform),
+    diag(film_size * camera_scale), iso(_iso), camera_up(_camera_up),
+    start_camera_up(_camera_up), CamTransform(_CamTransform),
     focusDistance(_focusDistance), start_focusDistance(_focusDistance), start_lookat(_lookat),
     lookat(_lookat) {
   CameraMovement = Transform(Matrix4x4(1,0,0,0,
@@ -955,6 +1058,43 @@ void RealisticCamera::update_lookat(point3f point) {
   CamTransform = Transform(LookAt(get_origin(), point, camera_up).GetInverseMatrix());
 }
 
+void RealisticCamera::update_up(vec3f up) {
+  if(up.length() > 0) {
+    camera_up = up;
+  }
+  point3f origin = get_origin();
+  Float dist = (lookat - origin).length();
+  if(dist <= 0) {
+    dist = focusDistance > 0 ? focusDistance : static_cast<Float>(1);
+  }
+  lookat = origin + dist * get_w();
+  CamTransform = Transform(LookAt(origin, lookat, camera_up).GetInverseMatrix());
+}
+
+void RealisticCamera::rotate_up(Float angle_degrees) {
+  camera_up = unit_vector(Rotate(angle_degrees, get_w())(get_v()));
+  point3f origin = get_origin();
+  Float dist = (lookat - origin).length();
+  if(dist <= 0) {
+    dist = focusDistance > 0 ? focusDistance : static_cast<Float>(1);
+  }
+  lookat = origin + dist * get_w();
+  CamTransform = Transform(LookAt(origin, lookat, camera_up).GetInverseMatrix());
+}
+
+void RealisticCamera::rotate_forward(Float angle_degrees) {
+  point3f origin = get_origin();
+  Float dist = (lookat - origin).length();
+  if(dist <= 0) {
+    dist = focusDistance > 0 ? focusDistance : static_cast<Float>(1);
+  }
+  Transform rotate = Rotate(angle_degrees, get_u());
+  vec3f new_forward = unit_vector(rotate(get_w()));
+  camera_up = unit_vector(rotate(get_v()));
+  lookat = origin + dist * new_forward;
+  CamTransform = Transform(LookAt(origin, lookat, camera_up).GetInverseMatrix());
+}
+
 void RealisticCamera::update_position_absolute(point3f point) {
 }
 
@@ -973,6 +1113,7 @@ void RealisticCamera::reset() {
   CamTransform = (*CameraToWorld.GetStartTransform());
   focusDistance = start_focusDistance;
   lookat = start_lookat;
+  camera_up = start_camera_up;
   elementInterfaces.back().thickness =  FocusThickLens(focusDistance);
 }
 

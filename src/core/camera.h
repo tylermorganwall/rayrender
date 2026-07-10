@@ -31,6 +31,9 @@ class RayCamera {
     virtual void update_focal_distance(Float delta_focus)  = 0;
     virtual void update_look_direction(vec3f dir) = 0;
     virtual void update_lookat(point3f point) = 0;
+    virtual void update_up(vec3f up) = 0;
+    virtual void rotate_up(Float angle_degrees) = 0;
+    virtual void rotate_forward(Float angle_degrees) = 0;
     virtual void update_position_absolute(point3f point) = 0;
     virtual void update_ortho_absolute(vec2f o_size) = 0;
     virtual void update_aperture_absolute(Float aperture) = 0;
@@ -68,6 +71,9 @@ class camera : public RayCamera {
     void update_focal_distance(Float delta_focus);
     void update_look_direction(vec3f dir);
     void update_lookat(point3f point);
+    void update_up(vec3f up);
+    void rotate_up(Float angle_degrees);
+    void rotate_forward(Float angle_degrees);
     void update_position_absolute(point3f point);
     void update_ortho_absolute(vec2f o_size);
     void update_aperture_absolute(Float aperture);
@@ -107,6 +113,7 @@ class camera : public RayCamera {
     Float fov;
     Float start_fov;
     point3f start_lookat;
+    vec3f start_vup;
 	Float iso;
     
 };
@@ -123,6 +130,9 @@ public:
   void update_focal_distance(Float delta_focus);
   void update_look_direction(vec3f dir);
   void update_lookat(point3f point);
+  void update_up(vec3f up);
+  void rotate_up(Float angle_degrees);
+  void rotate_forward(Float angle_degrees);
   void update_position_absolute(point3f point);
   void update_ortho_absolute(vec2f o_size);
   void update_aperture_absolute(Float aperture);
@@ -147,6 +157,7 @@ public:
   point3f start_origin;
   point3f lookat;
   vec3f vup;
+  vec3f start_vup;
   vec3f horizontal;
   vec3f vertical;
   vec3f u, v, w;
@@ -171,6 +182,9 @@ class environment_camera : public RayCamera {
     void update_focal_distance(Float delta_focus);
     void update_look_direction(vec3f dir);
     void update_lookat(point3f point);
+    void update_up(vec3f up);
+    void rotate_up(Float angle_degrees);
+    void rotate_forward(Float angle_degrees);
     void update_position_absolute(point3f point);
     void update_ortho_absolute(vec2f o_size);
     void update_aperture_absolute(Float aperture);
@@ -197,6 +211,7 @@ class environment_camera : public RayCamera {
     Float time0, time1;
     onb uvw;
     vec3f vup;
+    vec3f start_vup;
     point3f lookat;
     point3f start_lookat;
 	Float iso;
@@ -220,6 +235,9 @@ public:
   void update_focal_distance(Float delta_focus);
   void update_look_direction(vec3f dir);
   void update_lookat(point3f point);
+  void update_up(vec3f up);
+  void rotate_up(Float angle_degrees);
+  void rotate_forward(Float angle_degrees);
   void update_position_absolute(point3f point);
   void update_ortho_absolute(vec2f o_size);
   void update_aperture_absolute(Float aperture);
@@ -295,6 +313,7 @@ private:
   bool init;
   Float iso;
   vec3f camera_up;
+  vec3f start_camera_up;
   Transform CamTransform;
   point3f origin;
   Float focusDistance;

@@ -84,6 +84,7 @@ If `deferred_render = TRUE`, the preview stays interactive until the final rende
 \item{interactive}{Default `interactive()`. Whether the scene preview should be interactive. Camera movement orbits around the
 lookat point (unless the mode is switched to free flying), with the following control mapping:
 W = Forward, S = Backward, A = Left, D = Right, Q = Up, Z = Down,
+Shift-W/Shift-S = Pitch Camera Forward/Back, Shift-A/Shift-D = Roll Camera Left/Right,
 E = 2x Step Distance (max 128), C = 0.5x Step Distance, Up Key = Zoom In (decrease FOV), Down Key = Zoom Out (increase FOV),
 Left Key = Decrease Aperture, Right Key = Increase Aperture, 1 = Decrease Focal Distance, 2 = Increase Focal Distance,
 3/4 = Rotate Environment Light,

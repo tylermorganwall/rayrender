@@ -18,6 +18,7 @@
 #' @param interactive Default `interactive()`. Whether the scene preview should be interactive. Camera movement orbits around the
 #' lookat point (unless the mode is switched to free flying), with the following control mapping:
 #' W = Forward, S = Backward, A = Left, D = Right, Q = Up, Z = Down,
+#' Shift-W/Shift-S = Pitch Camera Forward/Back, Shift-A/Shift-D = Roll Camera Left/Right,
 #' E = 2x Step Distance (max 128), C = 0.5x Step Distance, Up Key = Zoom In (decrease FOV), Down Key = Zoom Out (increase FOV),
 #' Left Key = Decrease Aperture, Right Key = Increase Aperture, 1 = Decrease Focal Distance, 2 = Increase Focal Distance,
 #' 3/4 = Rotate Environment Light,
@@ -603,25 +604,24 @@ HAS_OIDN: %s
       !is.numeric(debug_channel) &&
       debug_channel == "none"
   ) {
-    controls_message = if (deferred_render) {
-      "--------------------------Interactive Mode Controls---------------------------
-W/A/S/D: Horizontal Movement: | Q/Z: Vertical Movement | Up/Down: Adjust FOV | ESC: Close
-Left/Right: Adjust Aperture  | 1/2: Adjust Focal Distance | 3/4: Rotate Environment Light
-P: Print Camera Info | R: Reset Camera |  E/C: Adjust Step Size |  TAB: Toggle Orbit Mode
-K: Save Keyframe | L: Last Keyframe | </>: Previous/Next Keyframe | /: Delete Current Keyframe
-M: Preview/Cancel Keyframe Motion | F: Toggle Fast Travel Mode | Wide Window: Bottom Camera/Exposure/Environment/Keyframe Status Bar
-Left Mouse Click: Change Look At (new focal distance) | Right Mouse Click: Change Look At
-]/[: Adjust Preview Exposure | Return: Start Final Render"
-    } else {
-      "--------------------------Interactive Mode Controls---------------------------
-W/A/S/D: Horizontal Movement: | Q/Z: Vertical Movement | Up/Down: Adjust FOV | ESC: Close
-Left/Right: Adjust Aperture  | 1/2: Adjust Focal Distance | 3/4: Rotate Environment Light 
-P: Print Camera Info | R: Reset Camera |  TAB: Toggle Orbit Mode |  E/C: Adjust Step Size
-K: Save Keyframe | L: Last Keyframe | </>: Previous/Next Keyframe | /: Delete Current Keyframe
-M: Preview/Cancel Keyframe Motion | F: Toggle Fast Travel Mode | Wide Window: Bottom Camera/Exposure/Environment/Keyframe Status Bar
-Left Mouse Click: Change Look At (new focal distance) | Right Mouse Click: Change Look At
-]/[: Adjust Preview Exposure"
+    controls_lines = c(
+      "------------------------ Interactive Mode Controls ------------------------",
+      "Move:       W/A/S/D horizontal | Q/Z vertical | E/C step size | F fast travel",
+      "Look:       Shift-W/S pitch | Shift-A/D roll | Tab toggle orbit",
+      "Lens/Env:   Up/Down FOV | Left/Right aperture | 1/2 focal | 3/4 env rotate",
+      "Keyframes:  K save | L last | </> prev/next | / delete | M preview/cancel",
+      "Mouse:      Left click lookat + focal distance | Right click lookat",
+      "Status:     Wide window shows camera/exposure/env/keyframes",
+      "Exposure:   ]/[ preview exposure",
+      "General:    P print camera | R reset camera | ESC close"
+    )
+    if (deferred_render) {
+      controls_lines = c(
+        controls_lines,
+        "Render:     Return start final render"
+      )
     }
+    controls_message = paste(controls_lines, collapse = "\n")
     message(controls_message)
   }
   print_time(verbose, "Pre-processing scene")

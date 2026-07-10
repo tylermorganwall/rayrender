@@ -239,6 +239,14 @@ bool PreviewDisplay::ApplyCameraState(const Rcpp::List& state,
   Float key_aperture = Rcpp::as<Float>(state["aperture"]);
   Float key_fov = Rcpp::as<Float>(state["fov"]);
   Float key_focal = Rcpp::as<Float>(state["focal"]);
+  vec3f key_up = cam->get_up();
+  if(state.containsElementNamed("upx") &&
+     state.containsElementNamed("upy") &&
+     state.containsElementNamed("upz")) {
+    key_up = vec3f(Rcpp::as<Float>(state["upx"]),
+                   Rcpp::as<Float>(state["upy"]),
+                   Rcpp::as<Float>(state["upz"]));
+  }
   if(state.containsElementNamed("exposure")) {
     preview_exposure_adjustment = Rcpp::as<Float>(state["exposure"]);
   }
@@ -252,6 +260,7 @@ bool PreviewDisplay::ApplyCameraState(const Rcpp::List& state,
   cam->update_focal_absolute(key_focal);
   cam->update_position_absolute(key_pos);
   cam->update_lookat(key_lookat);
+  cam->update_up(key_up);
   cam->update_aperture_absolute(key_aperture);
   cam->update_fov_absolute(key_fov);
   cam->update_ortho_absolute(key_ortho);
@@ -475,6 +484,9 @@ bool PreviewDisplay::AdvancePreviewMotion(Float* env_rotation) {
   Rcpp::NumericVector focal = preview_motion["focal"];
   Rcpp::NumericVector orthox = preview_motion["orthox"];
   Rcpp::NumericVector orthoy = preview_motion["orthoy"];
+  Rcpp::NumericVector upx = preview_motion["upx"];
+  Rcpp::NumericVector upy = preview_motion["upy"];
+  Rcpp::NumericVector upz = preview_motion["upz"];
   int keyframe_count = static_cast<int>(Keyframes.size());
   if(keyframe_count > 0) {
     double frames_per_keyframe =
@@ -495,7 +507,10 @@ bool PreviewDisplay::AdvancePreviewMotion(Float* env_rotation) {
     Named("fov") = fov[preview_motion_frame],
     Named("focal") = focal[preview_motion_frame],
     Named("orthox") = orthox[preview_motion_frame],
-    Named("orthoy") = orthoy[preview_motion_frame]
+    Named("orthoy") = orthoy[preview_motion_frame],
+    Named("upx") = upx[preview_motion_frame],
+    Named("upy") = upy[preview_motion_frame],
+    Named("upz") = upz[preview_motion_frame]
   );
   ApplyCameraState(state, env_rotation);
   preview_motion_frame++;
@@ -1435,6 +1450,7 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
           bool blanked = false;
           bool one_orbit = false;
           bool one_fast = false;
+          bool shift_pressed = (e.xkey.state & ShiftMask) != 0;
           
           if (e.xkey.keycode == tab ) {
             orbit = !orbit;
@@ -1445,24 +1461,40 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
             one_fast  = true;
           }
           if (e.xkey.keycode == W_key ) {
-            vec3f step = speed * w * base_step;
-            if(orbit) {
-              Float dist_to_orbit = (cam->get_origin() - cam->get_lookat()).length();
-              if(dist_to_orbit <= base_step * speed) {
-                Rprintf("Moving forward will overstep orbit point, stopping (decrease step size to move closer).\n");
-                step = vec3f(0);
+            if(shift_pressed) {
+              cam->rotate_forward(speed * 1.f);
+            } else {
+              vec3f step = speed * w * base_step;
+              if(orbit) {
+                Float dist_to_orbit = (cam->get_origin() - cam->get_lookat()).length();
+                if(dist_to_orbit <= base_step * speed) {
+                  Rprintf("Moving forward will overstep orbit point, stopping (decrease step size to move closer).\n");
+                  step = vec3f(0);
+                }
               }
-            } 
-            cam->update_position(step, orbit, false);
+              cam->update_position(step, orbit, false);
+            }
           }
           if (e.xkey.keycode == A_key ) {
-            cam->update_position(speed * u * base_step, orbit);
+            if(shift_pressed) {
+              cam->rotate_up(speed * -1.f);
+            } else {
+              cam->update_position(speed * u * base_step, orbit);
+            }
           }
           if (e.xkey.keycode == S_key ) {
-            cam->update_position(-speed * w * base_step, orbit, false);
+            if(shift_pressed) {
+              cam->rotate_forward(speed * -1.f);
+            } else {
+              cam->update_position(-speed * w * base_step, orbit, false);
+            }
           }
           if (e.xkey.keycode == D_key ) {
-            cam->update_position(-speed * u * base_step, orbit);
+            if(shift_pressed) {
+              cam->rotate_up(speed * 1.f);
+            } else {
+              cam->update_position(-speed * u * base_step, orbit);
+            }
           }
           if (e.xkey.keycode == Q_key ) {
             cam->update_position(speed * v * base_step, orbit);
@@ -1602,26 +1634,43 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
             w = cam->get_w();
             u = cam->get_u();
             v = cam->get_v();
+            shift_pressed = (e.xkey.state & ShiftMask) != 0;
             
             if (e.xkey.keycode == W_key ) {
-              vec3f step = speed * w * base_step;
-              if(orbit) {
-                Float dist_to_orbit = (cam->get_origin() - cam->get_lookat()).length();
-                if(dist_to_orbit <= base_step * speed) {
-                  Rprintf("Moving forward will overstep orbit point, stopping (decrease step size to move closer).\n");
-                  step = vec3f(0);
+              if(shift_pressed) {
+                cam->rotate_forward(speed * 1.f);
+              } else {
+                vec3f step = speed * w * base_step;
+                if(orbit) {
+                  Float dist_to_orbit = (cam->get_origin() - cam->get_lookat()).length();
+                  if(dist_to_orbit <= base_step * speed) {
+                    Rprintf("Moving forward will overstep orbit point, stopping (decrease step size to move closer).\n");
+                    step = vec3f(0);
+                  }
                 }
-              } 
-              cam->update_position(step, orbit, false);
+                cam->update_position(step, orbit, false);
+              }
             }
             if (e.xkey.keycode == A_key ) {
-              cam->update_position(speed * u * base_step, orbit);
+              if(shift_pressed) {
+                cam->rotate_up(speed * -1.f);
+              } else {
+                cam->update_position(speed * u * base_step, orbit);
+              }
             }
             if (e.xkey.keycode == S_key ) {
-              cam->update_position(-speed * w * base_step, orbit, false);
+              if(shift_pressed) {
+                cam->rotate_forward(speed * -1.f);
+              } else {
+                cam->update_position(-speed * w * base_step, orbit, false);
+              }
             }
             if (e.xkey.keycode == D_key ) {
-              cam->update_position(-speed * u * base_step, orbit);
+              if(shift_pressed) {
+                cam->rotate_up(speed * 1.f);
+              } else {
+                cam->update_position(-speed * u * base_step, orbit);
+              }
             }
             if (e.xkey.keycode == Q_key ) {
               cam->update_position(speed * v * base_step, orbit);
@@ -2179,6 +2228,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         u = cam_w->get_u();
         v = cam_w->get_v();
       }
+      bool shift_pressed = (GetKeyState(VK_SHIFT) & 0x8000) != 0;
 
       switch (wParam) {
         case VK_ESCAPE: {
@@ -2199,35 +2249,51 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         }
         case VK_KEY_W: {
           if(interactive_w) {
-            vec3f step = speed * w * base_step;
-            if(orbit) {
-              Float dist_to_orbit = (cam_w->get_origin() - cam_w->get_lookat()).length();
-              if(dist_to_orbit <= base_step * speed) {
-                Rprintf("Moving forward will overstep orbit point, stopping (decrease step size to move closer).\n");
-                step = vec3f(0);
+            if(shift_pressed) {
+              cam_w->rotate_forward(speed * 1.f);
+            } else {
+              vec3f step = speed * w * base_step;
+              if(orbit) {
+                Float dist_to_orbit = (cam_w->get_origin() - cam_w->get_lookat()).length();
+                if(dist_to_orbit <= base_step * speed) {
+                  Rprintf("Moving forward will overstep orbit point, stopping (decrease step size to move closer).\n");
+                  step = vec3f(0);
+                }
               }
-            } 
-            cam_w->update_position(step, orbit, false);
+              cam_w->update_position(step, orbit, false);
+            }
           }
           break;
         }
 
         case VK_KEY_A: {
           if(interactive_w) {
-          cam_w->update_position(-speed * u * base_step, orbit);
-        }
+            if(shift_pressed) {
+              cam_w->rotate_up(speed * -1.f);
+            } else {
+              cam_w->update_position(-speed * u * base_step, orbit);
+            }
+          }
           break;
         }
         case VK_KEY_S: {
           if(interactive_w) {
-          cam_w->update_position(-speed * w * base_step, orbit, false);
-        }
+            if(shift_pressed) {
+              cam_w->rotate_forward(speed * -1.f);
+            } else {
+              cam_w->update_position(-speed * w * base_step, orbit, false);
+            }
+          }
           break;
         }
         case VK_KEY_D: {
           if(interactive_w) {
-          cam_w->update_position(speed * u * base_step, orbit);
-        }
+            if(shift_pressed) {
+              cam_w->rotate_up(speed * 1.f);
+            } else {
+              cam_w->update_position(speed * u * base_step, orbit);
+            }
+          }
           break;
         }
         case VK_KEY_Q: { 
