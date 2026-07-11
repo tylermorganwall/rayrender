@@ -23,6 +23,7 @@
 #' @param film_size Default `22`. Film size in millimeters for realistic cameras.
 #' @param shutteropen Default `0`. Time at which the shutter opens.
 #' @param shutterclose Default `1`. Time at which the shutter closes.
+#' @param camera_motion_blur Default `FALSE`. Whether to blur animated camera movement over the shutter interval.
 #'
 #' @return A `ray_camera` object.
 #' @export
@@ -87,10 +88,14 @@ camera = function(
   iso = 100,
   film_size = 22,
   shutteropen = 0,
-  shutterclose = 1
+  shutterclose = 1,
+  camera_motion_blur = FALSE
 ) {
   validate_camera_name(name)
   keyframe_motion_args = normalize_keyframe_motion_args(keyframe_motion_args)
+  if (!is.logical(camera_motion_blur) || length(camera_motion_blur) != 1) {
+    stop("camera_motion_blur must be a single TRUE/FALSE value.")
+  }
 
   if (is.null(motion)) {
     validate_static_camera_inputs(
@@ -140,7 +145,8 @@ camera = function(
       iso = iso,
       film_size = film_size,
       shutteropen = shutteropen,
-      shutterclose = shutterclose
+      shutterclose = shutterclose,
+      camera_motion_blur = isTRUE(camera_motion_blur)
     ),
     class = "ray_camera"
   )
@@ -230,6 +236,10 @@ print.ray_camera = function(x, ...) {
   if (!is.na(x$camera_description_file)) {
     cat(sprintf("  camera description: %s\n", x$camera_description_file))
   }
+  cat(sprintf(
+    "  camera motion blur: %s\n",
+    if (isTRUE(x$camera_motion_blur)) "on" else "off"
+  ))
   cat(sprintf("  output: %s\n", format_filename(x$filename)))
 
   invisible(x)
@@ -1036,6 +1046,7 @@ render_scene_legacy_camera = function(
   film_size,
   shutteropen,
   shutterclose,
+  camera_motion_blur = FALSE,
   message_cornell = TRUE
 ) {
   if (!is.null(attr(scene, "cornell"))) {
@@ -1088,7 +1099,8 @@ render_scene_legacy_camera = function(
     iso = iso,
     film_size = film_size,
     shutteropen = shutteropen,
-    shutterclose = shutterclose
+    shutterclose = shutterclose,
+    camera_motion_blur = camera_motion_blur
   )
 }
 
@@ -1109,7 +1121,8 @@ camera_frame_args = function(camera, frame = 1) {
     iso = camera$iso,
     film_size = camera$film_size,
     shutteropen = camera$shutteropen,
-    shutterclose = camera$shutterclose
+    shutterclose = camera$shutterclose,
+    camera_motion_blur = isTRUE(camera$camera_motion_blur)
   )
 }
 
@@ -1225,6 +1238,8 @@ camera_batch_plan = function(
       end_frame = end_frame
     )
     motions[[i]] = as.data.frame(camera$motion)[frame_range, , drop = FALSE]
+    motions[[i]]$camera_motion_blur = isTRUE(camera$camera_motion_blur)
+    motions[[i]]$camera_motion_blur_group = i
     filename_list[[i]] = camera_batch_frame_filenames(
       camera,
       mode = mode,

@@ -35,6 +35,7 @@ render_scene(
   backgroundlow = "#ffffff",
   shutteropen = 0,
   shutterclose = 1,
+  camera_motion_blur = FALSE,
   focal_distance = NULL,
   ortho_dimensions = c(1, 1),
   tonemap = "raw",
@@ -97,7 +98,8 @@ K: Save Keyframe (at the conclusion of the render, this will create the `ray_key
 data.frame in the global environment, which can be passed to `generate_camera_motion()` to tween between those saved positions.
 L: Reset Camera to Last Keyframe (if set), < and >: Jump to previous/next keyframe, /: Delete current keyframe,
 M: Preview/cancel keyframe motion,
-F: Toggle Fast Travel Mode
+F: Toggle Fast Travel Mode,
+B: Toggle Camera Motion Blur
 
 Initial step size is 1/20th of the distance from `lookat` to `lookfrom`.
 
@@ -177,6 +179,8 @@ a hexadecimal code, or a numeric rgb vector listing three intensities between `0
 \item{shutteropen}{Default `0`. Time at which the shutter is open. Only affects moving objects.}
 
 \item{shutterclose}{Default `1`. Time at which the shutter is open. Only affects moving objects.}
+
+\item{camera_motion_blur}{Default `FALSE`. Whether to blur camera movement over the shutter interval. Press `B` in interactive preview to toggle.}
 
 \item{focal_distance}{Default `NULL`, automatically set to the `lookfrom-lookat` distance unless
 otherwise specified.}

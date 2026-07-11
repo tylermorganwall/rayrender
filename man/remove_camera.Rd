@@ -19,7 +19,7 @@ Removes a camera from a `ray_scene`.
 }
 \examples{
 \dontshow{if (interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")) withAutoprint(\{ # examplesIf}
-scene = generate_ground() |>
+scene = generate_ground(material=diffuse(color="grey20")) |>
   add_camera(camera(name = "wide"), active = FALSE) |>
   add_camera(camera(name = "detail"), active = TRUE)
 

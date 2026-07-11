@@ -37,16 +37,20 @@ Previews a scene-attached camera without writing image files.
 }
 \examples{
 \dontshow{if (interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")) withAutoprint(\{ # examplesIf}
+#Zooming over the R logo
 motion = generate_camera_motion(
-  positions = list(c(0, 1, -10), c(6, 4, -8), c(0, 2, 8)),
+  positions = list(c(0, 1, -10), c(0, 1, -2), c(0, 1, 10)),
   lookats = list(c(0, 0, 0), c(0, 0.5, 0), c(0, 0, 0)),
-  fovs = c(35, 45, 30),
+  fovs = c(60, 45, 90),
   frames = 24,
-  type = "bezier"
+  type = "linear",
+  damp_motion = TRUE,
+  closed = TRUE
 )
 
-scene = generate_ground() |>
-  add_object(sphere()) |>
+scene = generate_ground(material=diffuse(color="grey20")) |>
+  add_object(obj_model(r_obj())) |>
+  add_object(sphere(y=10,x=-10,z=-5,material=light(intensity=100))) |>
   add_camera(camera(name = "flythrough", motion = motion))
 
 preview_camera(scene, camera = "flythrough", width = 400, height = 400)

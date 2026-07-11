@@ -30,6 +30,7 @@ prepare_scene_list(
   backgroundlow = "#ffffff",
   shutteropen = 0,
   shutterclose = 1,
+  camera_motion_blur = FALSE,
   focal_distance = NULL,
   ortho_dimensions = c(1, 1),
   tonemap = "gamma",

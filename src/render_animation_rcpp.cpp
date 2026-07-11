@@ -133,6 +133,74 @@ void update_animation_camera(
   }
 }
 
+bool frame_camera_motion_blur_enabled(
+    int frame,
+    bool default_camera_motion_blur,
+    bool has_camera_motion_blur_column,
+    const LogicalVector& camera_motion_blur_values) {
+  if(!has_camera_motion_blur_column ||
+     frame >= camera_motion_blur_values.size()) {
+    return default_camera_motion_blur;
+  }
+  int value = camera_motion_blur_values[frame];
+  if(value == NA_LOGICAL) {
+    return default_camera_motion_blur;
+  }
+  return value == TRUE;
+}
+
+int camera_motion_blur_end_frame(
+    int frame,
+    int frame_count,
+    bool has_camera_motion_blur_group,
+    const IntegerVector& camera_motion_blur_group,
+    const NumericVector& cam_fov) {
+  int end_frame = frame + 1;
+  if(end_frame >= frame_count) {
+    return frame;
+  }
+  if(animation_camera_type(cam_fov(frame)) !=
+     animation_camera_type(cam_fov(end_frame))) {
+    return frame;
+  }
+  if(has_camera_motion_blur_group &&
+     frame < camera_motion_blur_group.size() &&
+     end_frame < camera_motion_blur_group.size() &&
+     camera_motion_blur_group(frame) != camera_motion_blur_group(end_frame)) {
+    return frame;
+  }
+  return end_frame;
+}
+
+void set_animation_camera_motion_blur(
+    RayCamera* cam,
+    int frame,
+    int end_frame,
+    bool enabled,
+    const NumericVector& cam_x,
+    const NumericVector& cam_y,
+    const NumericVector& cam_z,
+    const NumericVector& cam_dx,
+    const NumericVector& cam_dy,
+    const NumericVector& cam_dz,
+    const NumericVector& cam_upx,
+    const NumericVector& cam_upy,
+    const NumericVector& cam_upz,
+    const NumericVector& cam_focal) {
+  point3f start_origin(cam_x(frame), cam_y(frame), cam_z(frame));
+  point3f start_lookat(cam_dx(frame), cam_dy(frame), cam_dz(frame));
+  vec3f start_up(cam_upx(frame), cam_upy(frame), cam_upz(frame));
+  point3f end_origin(cam_x(end_frame), cam_y(end_frame), cam_z(end_frame));
+  point3f end_lookat(cam_dx(end_frame), cam_dy(end_frame), cam_dz(end_frame));
+  vec3f end_up(cam_upx(end_frame), cam_upy(end_frame), cam_upz(end_frame));
+
+  cam->set_camera_motion_blur(enabled);
+  cam->set_camera_motion_blur_range(start_origin, start_lookat, start_up,
+                                    cam_focal(frame),
+                                    end_origin, end_lookat, end_up,
+                                    cam_focal(end_frame));
+}
+
 } // namespace
 
 // [[Rcpp::export]]
@@ -197,6 +265,9 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
   Float sample_dist = as<Float>(camera_info["sample_dist"]);
   bool keep_colors = as<bool>(camera_info["keep_colors"]);
   bool preview = as<bool>(camera_info["preview"]);
+  bool camera_motion_blur = camera_info.containsElementNamed("camera_motion_blur") ?
+    as<bool>(camera_info["camera_motion_blur"]) :
+    false;
   Float iso = as<Float>(camera_info["iso"]);
   
   std::unique_ptr<RayCamera> cam;
@@ -216,6 +287,17 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
   NumericVector cam_focal    = as<NumericVector>(camera_movement["focal"]);
   NumericVector cam_orthox   = as<NumericVector>(camera_movement["orthox"]);
   NumericVector cam_orthoy   = as<NumericVector>(camera_movement["orthoy"]);
+  bool has_camera_motion_blur_column = camera_movement.containsElementNamed("camera_motion_blur");
+  LogicalVector cam_motion_blur =
+    has_camera_motion_blur_column ?
+    as<LogicalVector>(camera_movement["camera_motion_blur"]) :
+    LogicalVector();
+  bool has_camera_motion_blur_group = camera_movement.containsElementNamed("camera_motion_blur_group");
+  IntegerVector cam_motion_blur_group =
+    has_camera_motion_blur_group ?
+    as<IntegerVector>(camera_movement["camera_motion_blur_group"]) :
+    IntegerVector();
+  int motion_frame_count = cam_x.size();
   int n_frames = end_frame;
   List output_frames(n_frames - start_frame);
   int output_frame_index = 0;
@@ -417,6 +499,24 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
                                   focus_distance, orthox, orthoy, nx, ny,
                                   shutteropen, shutterclose, realCameraInfo,
                                   film_size, camera_scale, iso, transformCache);
+      bool blur_enabled = frame_camera_motion_blur_enabled(
+        i,
+        camera_motion_blur,
+        has_camera_motion_blur_column,
+        cam_motion_blur
+      );
+      int blur_end_frame = camera_motion_blur_end_frame(
+        i,
+        motion_frame_count,
+        has_camera_motion_blur_group,
+        cam_motion_blur_group,
+        cam_fov
+      );
+      set_animation_camera_motion_blur(cam.get(), i, blur_end_frame, blur_enabled,
+                                       cam_x, cam_y, cam_z,
+                                       cam_dx, cam_dy, cam_dz,
+                                       cam_upx, cam_upy, cam_upz,
+                                       cam_focal);
 
       // world_radius = world_radius > (lookfrom - world_center).length() ? world_radius : (lookfrom - world_center).length()*2;
 
@@ -449,7 +549,7 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
       output_frames[output_frame_index++] = frame_output;
     }
   } else {
-    bool preview_only = preview && !write_image && !plot_scene;
+    bool persistent_preview = preview;
     std::unique_ptr<RayCamera> preview_cam;
     bool preview_cam_initialized = false;
     int preview_camera_type = 0;
@@ -475,7 +575,7 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
       int current_camera_type = animation_camera_type(fov);
       RayCamera* frame_cam = nullptr;
       std::unique_ptr<RayCamera> frame_cam_storage;
-      if(preview_only) {
+      if(persistent_preview) {
         if(preview_cam_initialized &&
            current_camera_type == preview_camera_type &&
            can_update_animation_camera(current_camera_type) &&
@@ -500,6 +600,24 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
                                                  film_size, camera_scale, iso, transformCache);
         frame_cam = frame_cam_storage.get();
       }
+      bool blur_enabled = frame_camera_motion_blur_enabled(
+        i,
+        camera_motion_blur,
+        has_camera_motion_blur_column,
+        cam_motion_blur
+      );
+      int blur_end_frame = camera_motion_blur_end_frame(
+        i,
+        motion_frame_count,
+        has_camera_motion_blur_group,
+        cam_motion_blur_group,
+        cam_fov
+      );
+      set_animation_camera_motion_blur(frame_cam, i, blur_end_frame, blur_enabled,
+                                       cam_x, cam_y, cam_z,
+                                       cam_dx, cam_dy, cam_dz,
+                                       cam_upx, cam_upy, cam_upz,
+                                       cam_focal);
 
       world_radius = world_radius > (lookfrom - world_center).length() ? world_radius : (lookfrom - world_center).length()*2;
 
@@ -548,7 +666,7 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
 
       bool terminated = false;
 #ifdef HAS_OIDN
-      if(preview_only) {
+      if(persistent_preview) {
         if(!preview_display) {
           preview_display = std::unique_ptr<PreviewDisplay>(new PreviewDisplay(
             nx, ny, preview, false, false, 20.0f, frame_cam,
@@ -588,7 +706,7 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
         terminated = d.terminate;
       }
 #else
-      if(preview_only) {
+      if(persistent_preview) {
         if(!preview_display) {
           preview_display = std::unique_ptr<PreviewDisplay>(new PreviewDisplay(
             nx, ny, preview, false, false, 20.0f, frame_cam,

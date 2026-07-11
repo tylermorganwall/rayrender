@@ -836,6 +836,9 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
   bool interactive = as<bool>(camera_info["interactive"]);
   bool deferred_render = as<bool>(camera_info["deferred_render"]);
   bool auto_exposure = as<bool>(camera_info["auto_exposure"]);
+  bool camera_motion_blur = camera_info.containsElementNamed("camera_motion_blur") ?
+    as<bool>(camera_info["camera_motion_blur"]) :
+    false;
   List keyframe_motion_args = camera_info.containsElementNamed("keyframe_motion_args") ?
     as<List>(camera_info["keyframe_motion_args"]) :
     List::create(_["type"] = "linear",
@@ -932,6 +935,7 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
                                      aperture, dist_to_focus,
                                      shutteropen, shutterclose, iso));
   }
+  cam->set_camera_motion_blur(camera_motion_blur);
   print_time(verbose, "Generated Camera" );
 
 

@@ -1,5 +1,9 @@
 library(xfun)
-gsub_dir(dir = "R", pattern = "parallel\\s?=\\s?TRUE", replacement = "parallel=FALSE")
+gsub_dir(
+  dir = "R",
+  pattern = "parallel\\s?=\\s?TRUE",
+  replacement = "parallel=FALSE"
+)
 Rcpp::compileAttributes()
 devtools::document(roclets = c('rd', 'collate', 'namespace'))
 devtools::build()

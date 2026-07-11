@@ -33,6 +33,7 @@ render_animation(
   backgroundlow = "#ffffff",
   shutteropen = 0,
   shutterclose = 1,
+  camera_motion_blur = FALSE,
   focal_distance = NULL,
   ortho_dimensions = c(1, 1),
   tonemap = "raw",
@@ -134,6 +135,8 @@ a hexadecimal code, or a numeric rgb vector listing three intensities between `0
 
 \item{shutterclose}{Default `1`. Time at which the shutter is open. Only affects moving objects.}
 
+\item{camera_motion_blur}{Default `FALSE`. Whether to blur camera movement over the shutter interval.}
+
 \item{focal_distance}{Default `NULL`, automatically set to the `lookfrom-lookat` distance unless
 otherwise specified.}
 
@@ -171,7 +174,9 @@ an image showing the differential `u` and `u` coordinates. If `color`, function 
 values (with white for `metal` and `dielectric` materials). If `preview`, an image rendered with `render_preview()`
 will be returned. Can set to `ao` to render an animation with the ambient occlusion renderer.}
 
-\item{plot_scene}{Default `TRUE`. Whether to plot the rendered scene.}
+\item{plot_scene}{Default `TRUE`. Whether to plot the rendered scene. If
+`preview = TRUE` and `filename` is omitted, this defaults to `FALSE` so the
+animation runs through the preview window.}
 
 \item{progress}{Default `TRUE` if interactive session, `FALSE` otherwise.}
 
@@ -256,7 +261,7 @@ generate_ground(material=diffuse(checkercolor="grey20"),depth=-10) |>
   add_object(pig(x=0,y=-0.25,z=-15,scale=1,angle=c(0,225,-22), order_rotation = c(3,2,1),
                  emotion="angry", spider=TRUE)) |>
   add_object(path(camera_pos, y=-0.2,material=diffuse(color="red"))) |>
-  render_animation(filename = NA, camera_motion = camera_motion, samples=16,
+  render_animation(camera_motion = camera_motion, samples=16,
                    sample_method="sobol_blue",
                    clamp_value=10, width=400, height=400)
 \dontshow{\}) # examplesIf}

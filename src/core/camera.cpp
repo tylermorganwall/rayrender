@@ -1,5 +1,6 @@
 #include "../core/camera.h"
 #include "low_discrepancy.h"
+#include "../math/quaternion.h"
 #include <cmath>
 
 #ifdef NOT_CRAN
@@ -7,6 +8,14 @@
 #endif
 
 namespace {
+struct CameraMotionFrame {
+  point3f origin;
+  vec3f right;
+  vec3f up;
+  vec3f forward;
+  Float focal;
+};
+
 inline void BuildPBRTCameraFrame(const vec3f& forward_hint, const vec3f& up_hint,
                                  vec3f& forward, vec3f& right, vec3f& up2) {
   forward = forward_hint.length() > 0 ? unit_vector(forward_hint) : vec3f(0, 0, 1);
@@ -43,6 +52,61 @@ inline void RecomputeOrthoScreen(ortho_camera& cam) {
   cam.horizontal = cam.cam_width * cam.u;
   cam.vertical = cam.cam_height * cam.v;
 }
+
+inline Matrix4x4 CameraBasisMatrix(const vec3f& right,
+                                   const vec3f& up,
+                                   const vec3f& forward) {
+  return Matrix4x4(right.xyz.x, up.xyz.x, forward.xyz.x, 0,
+                   right.xyz.y, up.xyz.y, forward.xyz.y, 0,
+                   right.xyz.z, up.xyz.z, forward.xyz.z, 0,
+                   0, 0, 0, 1);
+}
+
+inline void CameraBasisFromQuaternion(const Quaternion& q,
+                                      vec3f& right,
+                                      vec3f& up,
+                                      vec3f& forward) {
+  Transform basis = q.ToTransform();
+  right = unit_vector(basis.u());
+  up = unit_vector(basis.v());
+  forward = unit_vector(basis.w());
+}
+
+inline CameraMotionFrame InterpolateCameraMotionFrame(
+    Float t,
+    const point3f& start_origin,
+    const point3f& start_lookat,
+    const vec3f& start_up,
+    Float start_focal,
+    const point3f& end_origin,
+    const point3f& end_lookat,
+    const vec3f& end_up,
+    Float end_focal) {
+  t = clamp(t, static_cast<Float>(0), static_cast<Float>(1));
+  vec3f start_forward, start_right, start_camera_up;
+  vec3f end_forward, end_right, end_camera_up;
+  BuildPBRTCameraFrameFromLookAt(start_origin, start_lookat, start_up,
+                                 start_forward, start_right, start_camera_up);
+  BuildPBRTCameraFrameFromLookAt(end_origin, end_lookat, end_up,
+                                 end_forward, end_right, end_camera_up);
+  Quaternion start_orientation(CameraBasisMatrix(start_right, start_camera_up,
+                                                 start_forward));
+  Quaternion end_orientation(CameraBasisMatrix(end_right, end_camera_up,
+                                               end_forward));
+  if(dot(start_orientation, end_orientation) < 0) {
+    end_orientation = -end_orientation;
+  }
+  Quaternion orientation = Slerp(t, start_orientation, end_orientation);
+
+  CameraMotionFrame frame;
+  frame.origin = lerp(t, start_origin, end_origin);
+  frame.focal = lerp(t, start_focal, end_focal);
+  if(!std::isfinite(frame.focal) || frame.focal <= static_cast<Float>(0)) {
+    frame.focal = static_cast<Float>(1);
+  }
+  CameraBasisFromQuaternion(orientation, frame.right, frame.up, frame.forward);
+  return frame;
+}
 } // namespace
 
 camera::camera(point3f lookfrom, point3f _lookat, vec3f _vup, Float vfov, 
@@ -68,10 +132,38 @@ camera::camera(point3f lookfrom, point3f _lookat, vec3f _vup, Float vfov,
   start_focus_dist = focus_dist;
   BuildPBRTCameraFrameFromLookAt(origin, lookat, vup, w, u, v);
   RecomputePerspectiveScreen(*this);
+  camera_motion_blur = false;
+  camera_motion_blur_has_range = false;
   iso = _iso;
 }
 
 Ray camera::get_ray(Float s, Float t, point3f u3, Float u1) {
+  if(camera_motion_blur && camera_motion_blur_has_range) {
+    CameraMotionFrame frame = InterpolateCameraMotionFrame(
+      u1,
+      camera_motion_start_origin,
+      camera_motion_start_lookat,
+      camera_motion_start_up,
+      camera_motion_start_focal,
+      camera_motion_end_origin,
+      camera_motion_end_lookat,
+      camera_motion_end_up,
+      camera_motion_end_focal
+    );
+    point3f rd = lens_radius * u3;
+    vec3f offset = frame.right * rd.xyz.x + frame.up * rd.xyz.y;
+    Float time = time0 + u1 * (time1 - time0);
+    point3f motion_lower_left = frame.origin -
+      half_width * frame.focal * frame.right -
+      half_height * frame.focal * frame.up +
+      frame.focal * frame.forward;
+    vec3f motion_horizontal = 2.0f * half_width * frame.focal * frame.right;
+    vec3f motion_vertical = 2.0f * half_height * frame.focal * frame.up;
+    return(Ray(frame.origin + offset,
+               motion_lower_left + s * motion_horizontal +
+                 t * motion_vertical - frame.origin - offset,
+               time));
+  }
   point3f rd = lens_radius * u3;
   vec3f offset = u * rd.xyz.x + v * rd.xyz.y;
   Float time = time0 + u1 * (time1 - time0);
@@ -194,6 +286,29 @@ void camera::update_fov_absolute(Float fov_new) {
   RecomputePerspectiveScreen(*this);
 }
 
+void camera::set_camera_motion_blur(bool enabled) {
+  camera_motion_blur = enabled;
+}
+
+void camera::set_camera_motion_blur_range(point3f start_origin,
+                                          point3f start_lookat,
+                                          vec3f start_up,
+                                          Float start_focal,
+                                          point3f end_origin,
+                                          point3f end_lookat,
+                                          vec3f end_up,
+                                          Float end_focal) {
+  camera_motion_start_origin = start_origin;
+  camera_motion_start_lookat = start_lookat;
+  camera_motion_start_up = start_up;
+  camera_motion_start_focal = start_focal;
+  camera_motion_end_origin = end_origin;
+  camera_motion_end_lookat = end_lookat;
+  camera_motion_end_up = end_up;
+  camera_motion_end_focal = end_focal;
+  camera_motion_blur_has_range = true;
+}
+
 
 
 void camera::reset() {
@@ -206,6 +321,7 @@ void camera::reset() {
   half_width = aspect * half_height;
   lens_radius = start_lens_radius;
   vup = start_vup;
+  camera_motion_blur_has_range = false;
   BuildPBRTCameraFrameFromLookAt(origin, lookat, vup, w, u, v);
   RecomputePerspectiveScreen(*this);
 }
@@ -230,10 +346,34 @@ ortho_camera::ortho_camera(point3f lookfrom, point3f _lookat, vec3f _vup,
   BuildPBRTCameraFrameFromLookAt(origin, lookat, vup, w, u, v);
   RecomputeOrthoScreen(*this);
   initial_ratio = cam_width / cam_height;
+  camera_motion_blur = false;
+  camera_motion_blur_has_range = false;
   iso = _iso;
 }
 
 Ray ortho_camera::get_ray(Float s, Float t, point3f u3, Float u) {
+  if(camera_motion_blur && camera_motion_blur_has_range) {
+    CameraMotionFrame frame = InterpolateCameraMotionFrame(
+      u,
+      camera_motion_start_origin,
+      camera_motion_start_lookat,
+      camera_motion_start_up,
+      camera_motion_start_focal,
+      camera_motion_end_origin,
+      camera_motion_end_lookat,
+      camera_motion_end_up,
+      camera_motion_end_focal
+    );
+    Float time = time0 + u * (time1 - time0);
+    point3f motion_lower_left = frame.origin -
+      cam_width / 2 * frame.right - cam_height / 2 * frame.up;
+    vec3f motion_horizontal = cam_width * frame.right;
+    vec3f motion_vertical = cam_height * frame.up;
+    return(Ray(motion_lower_left + s * motion_horizontal +
+                 t * motion_vertical,
+               frame.forward,
+               time));
+  }
   Float time = time0 + u * (time1 - time0);
   return(Ray(lower_left_corner + s * horizontal + t * vertical, w, time)); 
 }
@@ -344,6 +484,29 @@ void ortho_camera::update_focal_absolute(Float focal_length) {
 void ortho_camera::update_fov_absolute(Float fov_new) {
 }
 
+void ortho_camera::set_camera_motion_blur(bool enabled) {
+  camera_motion_blur = enabled;
+}
+
+void ortho_camera::set_camera_motion_blur_range(point3f start_origin,
+                                                point3f start_lookat,
+                                                vec3f start_up,
+                                                Float start_focal,
+                                                point3f end_origin,
+                                                point3f end_lookat,
+                                                vec3f end_up,
+                                                Float end_focal) {
+  camera_motion_start_origin = start_origin;
+  camera_motion_start_lookat = start_lookat;
+  camera_motion_start_up = start_up;
+  camera_motion_start_focal = start_focal;
+  camera_motion_end_origin = end_origin;
+  camera_motion_end_lookat = end_lookat;
+  camera_motion_end_up = end_up;
+  camera_motion_end_focal = end_focal;
+  camera_motion_blur_has_range = true;
+}
+
 
 
 void ortho_camera::reset() {
@@ -352,6 +515,7 @@ void ortho_camera::reset() {
   cam_width = start_cam_width;
   cam_height = start_cam_height;
   vup = start_vup;
+  camera_motion_blur_has_range = false;
   BuildPBRTCameraFrameFromLookAt(origin, lookat, vup, w, u, v);
   RecomputeOrthoScreen(*this);
 }
@@ -369,19 +533,38 @@ environment_camera::environment_camera(point3f lookfrom, point3f lookat, vec3f _
   start_vup = vup;
   BuildPBRTCameraFrameFromLookAt(origin, this->lookat, vup, w, u, v);
   uvw = onb(u, v, w);
+  camera_motion_blur = false;
+  camera_motion_blur_has_range = false;
   iso = _iso;
 }
 
 
 Ray environment_camera::get_ray(Float s, Float t, point3f u3, Float u1) {
+  point3f ray_origin = origin;
+  onb ray_uvw = uvw;
+  if(camera_motion_blur && camera_motion_blur_has_range) {
+    CameraMotionFrame frame = InterpolateCameraMotionFrame(
+      u1,
+      camera_motion_start_origin,
+      camera_motion_start_lookat,
+      camera_motion_start_up,
+      camera_motion_start_focal,
+      camera_motion_end_origin,
+      camera_motion_end_lookat,
+      camera_motion_end_up,
+      camera_motion_end_focal
+    );
+    ray_origin = frame.origin;
+    ray_uvw = onb(frame.right, frame.up, frame.forward);
+  }
   Float time = time0 + u1 * (time1 - time0);
   Float theta = static_cast<Float>(M_PI) * (1 - t);
   Float phi = static_cast<Float>(M_PI) + 2 * static_cast<Float>(M_PI) * s;
   vec3f dir(std::sin(theta) * std::sin(phi), 
             std::cos(theta),
             std::sin(theta) * std::cos(phi));
-  dir = uvw.local_to_world(dir);
-  return(Ray(origin, dir, time)); 
+  dir = ray_uvw.local_to_world(dir);
+  return(Ray(ray_origin, dir, time));
 }
 
 void environment_camera::update_position(vec3f delta, bool update_uvw, bool update_focal) {
@@ -487,6 +670,29 @@ void environment_camera::update_focal_absolute(Float focal_length) {
 void environment_camera::update_fov_absolute(Float fov_new) {
 }
 
+void environment_camera::set_camera_motion_blur(bool enabled) {
+  camera_motion_blur = enabled;
+}
+
+void environment_camera::set_camera_motion_blur_range(point3f start_origin,
+                                                      point3f start_lookat,
+                                                      vec3f start_up,
+                                                      Float start_focal,
+                                                      point3f end_origin,
+                                                      point3f end_lookat,
+                                                      vec3f end_up,
+                                                      Float end_focal) {
+  camera_motion_start_origin = start_origin;
+  camera_motion_start_lookat = start_lookat;
+  camera_motion_start_up = start_up;
+  camera_motion_start_focal = start_focal;
+  camera_motion_end_origin = end_origin;
+  camera_motion_end_lookat = end_lookat;
+  camera_motion_end_up = end_up;
+  camera_motion_end_focal = end_focal;
+  camera_motion_blur_has_range = true;
+}
+
 vec3f environment_camera::get_w() {return(w);}
 vec3f environment_camera::get_u() {return(u);}
 vec3f environment_camera::get_v() {return(v);}
@@ -495,6 +701,7 @@ void environment_camera::reset() {
   origin = start_origin;
   lookat = start_lookat;
   vup = start_vup;
+  camera_motion_blur_has_range = false;
   BuildPBRTCameraFrameFromLookAt(origin, lookat, vup, w, u, v);
   uvw = onb(u, v, w);
 }
@@ -547,6 +754,8 @@ RealisticCamera::RealisticCamera(const AnimatedTransform &CameraToWorld,
                                        0,1,0,0,
                                        0,0,1,0,
                                        0,0,0,1));
+  camera_motion_blur = false;
+  camera_motion_blur_has_range = false;
   
   if(lensData.size() == 0) {
     init = false;
@@ -996,7 +1205,25 @@ Float RealisticCamera::GenerateRay(const CameraSample &sample, Ray *ray2) const 
     return 0;
   }
   // Finish initialization of _RealisticCamera_ ray
-  *ray2 = (CamTransform(*ray2));
+  if(camera_motion_blur && camera_motion_blur_has_range) {
+    CameraMotionFrame frame = InterpolateCameraMotionFrame(
+      sample.time,
+      camera_motion_start_origin,
+      camera_motion_start_lookat,
+      camera_motion_start_up,
+      camera_motion_start_focal,
+      camera_motion_end_origin,
+      camera_motion_end_lookat,
+      camera_motion_end_up,
+      camera_motion_end_focal
+    );
+    Transform MotionCamTransform = LookAt(frame.origin,
+                                          frame.origin + frame.focal * frame.forward,
+                                          frame.up).GetInverseMatrix();
+    *ray2 = (MotionCamTransform(*ray2));
+  } else {
+    *ray2 = (CamTransform(*ray2));
+  }
   ray2->d = unit_vector(ray2->direction());
   
   // Return weighting for _RealisticCamera_ ray
@@ -1109,11 +1336,35 @@ void RealisticCamera::update_focal_absolute(Float focal_length) {
 void RealisticCamera::update_fov_absolute(Float fov_new) {
 }
 
+void RealisticCamera::set_camera_motion_blur(bool enabled) {
+  camera_motion_blur = enabled;
+}
+
+void RealisticCamera::set_camera_motion_blur_range(point3f start_origin,
+                                                   point3f start_lookat,
+                                                   vec3f start_up,
+                                                   Float start_focal,
+                                                   point3f end_origin,
+                                                   point3f end_lookat,
+                                                   vec3f end_up,
+                                                   Float end_focal) {
+  camera_motion_start_origin = start_origin;
+  camera_motion_start_lookat = start_lookat;
+  camera_motion_start_up = start_up;
+  camera_motion_start_focal = start_focal;
+  camera_motion_end_origin = end_origin;
+  camera_motion_end_lookat = end_lookat;
+  camera_motion_end_up = end_up;
+  camera_motion_end_focal = end_focal;
+  camera_motion_blur_has_range = true;
+}
+
 void RealisticCamera::reset() {
   CamTransform = (*CameraToWorld.GetStartTransform());
   focusDistance = start_focusDistance;
   lookat = start_lookat;
   camera_up = start_camera_up;
+  camera_motion_blur_has_range = false;
   elementInterfaces.back().thickness =  FocusThickLens(focusDistance);
 }
 

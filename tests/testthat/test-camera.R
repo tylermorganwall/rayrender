@@ -11,9 +11,20 @@ test_that("camera creates one-frame static motion", {
   expect_s3_class(cam$motion, "data.frame")
   expect_equal(nrow(cam$motion), 1)
   expect_equal(cam$motion$fov, 35)
+  expect_false(cam$camera_motion_blur)
   expect_equal(
     cam$motion$focal,
     sqrt(sum((c(0, 1, -10) - c(0, 0, 0))^2))
+  )
+})
+
+test_that("camera stores camera motion blur flag", {
+  cam = camera(camera_motion_blur = TRUE)
+
+  expect_true(cam$camera_motion_blur)
+  expect_error(
+    camera(camera_motion_blur = c(TRUE, FALSE)),
+    "camera_motion_blur must be a single TRUE/FALSE value"
   )
 })
 
@@ -189,10 +200,34 @@ test_that("camera_batch_plan combines cameras and supports mixed writing", {
 
   expect_s3_class(plan$motion, "ray_camera_motion")
   expect_equal(nrow(plan$motion), 2)
+  expect_equal(plan$motion$camera_motion_blur, c(FALSE, FALSE))
+  expect_equal(plan$motion$camera_motion_blur_group, c(1, 2))
   expect_equal(plan$filenames, c("wide.png", ""))
   expect_true(plan$write_image)
   expect_equal(plan$camera_index, c(1L, 2L))
   expect_equal(plan$camera_names, c("wide", "preview"))
+})
+
+test_that("camera_batch_plan carries per-camera motion blur flags", {
+  cameras = list(
+    static = camera(name = "static", filename = NA_character_),
+    moving = camera(
+      name = "moving",
+      motion = generate_camera_motion(
+        positions = list(c(0, 1, -10), c(1, 1, -10)),
+        frames = 2,
+        type = "linear",
+        progress = FALSE
+      ),
+      filename = NA_character_,
+      camera_motion_blur = TRUE
+    )
+  )
+
+  plan = camera_batch_plan(cameras, mode = "preview")
+
+  expect_equal(plan$motion$camera_motion_blur, c(FALSE, TRUE, TRUE))
+  expect_equal(plan$motion$camera_motion_blur_group, c(1, 2, 2))
 })
 
 test_that("camera_batch_plan combines static and animated cameras", {
@@ -277,6 +312,7 @@ test_that("print.ray_camera summarizes static cameras", {
   expect_true(any(grepl("type: perspective static", output, fixed = TRUE)))
   expect_true(any(grepl("frames: 1", output, fixed = TRUE)))
   expect_true(any(grepl("lookfrom: c(0, 1, -10)", output, fixed = TRUE)))
+  expect_true(any(grepl("camera motion blur: off", output, fixed = TRUE)))
   expect_true(any(grepl("output: render.png", output, fixed = TRUE)))
 })
 

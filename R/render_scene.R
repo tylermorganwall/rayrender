@@ -31,7 +31,8 @@
 #' data.frame in the global environment, which can be passed to `generate_camera_motion()` to tween between those saved positions.
 #' L: Reset Camera to Last Keyframe (if set), < and >: Jump to previous/next keyframe, /: Delete current keyframe,
 #' M: Preview/cancel keyframe motion,
-#' F: Toggle Fast Travel Mode
+#' F: Toggle Fast Travel Mode,
+#' B: Toggle Camera Motion Blur
 #'
 #' Initial step size is 1/20th of the distance from `lookat` to `lookfrom`.
 #'
@@ -91,6 +92,7 @@
 #' a hexadecimal code, or a numeric rgb vector listing three intensities between `0` and `1`.
 #' @param shutteropen Default `0`. Time at which the shutter is open. Only affects moving objects.
 #' @param shutterclose Default `1`. Time at which the shutter is open. Only affects moving objects.
+#' @param camera_motion_blur Default `FALSE`. Whether to blur camera movement over the shutter interval. Press `B` in interactive preview to toggle.
 #' @param focal_distance Default `NULL`, automatically set to the `lookfrom-lookat` distance unless
 #' otherwise specified.
 #' @param ortho_dimensions Default `c(1,1)`. Width and height of the orthographic camera. Will only be used if `fov = 0`.
@@ -252,6 +254,7 @@ render_scene = function(
   backgroundlow = "#ffffff",
   shutteropen = 0.0,
   shutterclose = 1.0,
+  camera_motion_blur = FALSE,
   focal_distance = NULL,
   ortho_dimensions = c(1, 1),
   tonemap = "raw",
@@ -277,6 +280,9 @@ render_scene = function(
   mode = c("auto", "image", "animation", "preview")
 ) {
   mode = match.arg(mode)
+  if (!is.logical(camera_motion_blur) || length(camera_motion_blur) != 1) {
+    stop("camera_motion_blur must be a single TRUE/FALSE value.")
+  }
   camera_arg = if (missing(camera)) NULL else camera
   filename_supplied = !missing(filename)
   legacy_camera_supplied = c(
@@ -293,6 +299,7 @@ render_scene = function(
     film_size = !missing(film_size),
     shutteropen = !missing(shutteropen),
     shutterclose = !missing(shutterclose),
+    camera_motion_blur = !missing(camera_motion_blur),
     filename = filename_supplied
   )
   legacy_camera_geometry_supplied = any(legacy_camera_supplied[c(
@@ -311,6 +318,7 @@ render_scene = function(
     "film_size",
     "shutteropen",
     "shutterclose",
+    "camera_motion_blur",
     "filename"
   )]
   metadata_overrides = list(
@@ -320,6 +328,7 @@ render_scene = function(
     film_size = film_size,
     shutteropen = shutteropen,
     shutterclose = shutterclose,
+    camera_motion_blur = camera_motion_blur,
     filename = filename
   )
   scene_camera_available = length(ray_scene_cameras(scene)) > 0 ||
@@ -349,6 +358,7 @@ render_scene = function(
     film_size = film_size,
     shutteropen = shutteropen,
     shutterclose = shutterclose,
+    camera_motion_blur = camera_motion_blur,
     message_cornell = is.null(camera_arg) &&
       length(ray_scene_cameras(scene)) == 0
   )
@@ -559,6 +569,7 @@ render_scene = function(
   film_size = camera_args$film_size
   shutteropen = camera_args$shutteropen
   shutterclose = camera_args$shutterclose
+  camera_motion_blur = camera_args$camera_motion_blur
   filename = camera_image_filename(selected_camera, frame)
   if (render_mode == "preview") {
     filename = NA
@@ -613,6 +624,7 @@ HAS_OIDN: %s
       "Mouse:      Left click lookat + focal distance | Right click lookat",
       "Status:     Wide window shows camera/exposure/env/keyframes",
       "Exposure:   ]/[ preview exposure",
+      "Blur:       B camera motion blur",
       "General:    P print camera | R reset camera | ESC close"
     )
     if (deferred_render) {
@@ -652,6 +664,7 @@ HAS_OIDN: %s
     backgroundlow = backgroundlow,
     shutteropen = shutteropen,
     shutterclose = shutterclose,
+    camera_motion_blur = camera_motion_blur,
     focal_distance = focal_distance,
     ortho_dimensions = ortho_dimensions,
     tonemap = tonemap,
@@ -701,6 +714,7 @@ HAS_OIDN: %s
   camera_info$preview = preview
   camera_info$interactive = interactive
   camera_info$auto_exposure = auto_exposure
+  camera_info$camera_motion_blur = isTRUE(camera_motion_blur)
   camera_info$keyframe_motion_args = normalize_keyframe_motion_args(
     selected_camera$keyframe_motion_args
   )

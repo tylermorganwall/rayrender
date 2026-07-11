@@ -1,3 +1,22 @@
+#' Default Animation Plot Behavior
+#'
+#' @keywords internal
+animation_default_plot_scene = function(
+  plot_scene,
+  plot_scene_supplied,
+  filename_supplied,
+  preview
+) {
+  if (
+    !isTRUE(plot_scene_supplied) &&
+      !isTRUE(filename_supplied) &&
+      isTRUE(preview)
+  ) {
+    return(FALSE)
+  }
+  plot_scene
+}
+
 #' Render Animation
 #'
 #' Takes the scene description and renders an image, either to the device or to a filename.
@@ -54,6 +73,7 @@
 #' a hexadecimal code, or a numeric rgb vector listing three intensities between `0` and `1`.
 #' @param shutteropen Default `0`. Time at which the shutter is open. Only affects moving objects.
 #' @param shutterclose Default `1`. Time at which the shutter is open. Only affects moving objects.
+#' @param camera_motion_blur Default `FALSE`. Whether to blur camera movement over the shutter interval.
 #' @param focal_distance Default `NULL`, automatically set to the `lookfrom-lookat` distance unless
 #' otherwise specified.
 #' @param ortho_dimensions Default `c(1,1)`. Width and height of the orthographic camera. Will only be used if `fov = 0`.
@@ -76,7 +96,9 @@
 #' an image showing the differential `u` and `u` coordinates. If `color`, function will return the raw albedo
 #' values (with white for `metal` and `dielectric` materials). If `preview`, an image rendered with `render_preview()`
 #' will be returned. Can set to `ao` to render an animation with the ambient occlusion renderer.
-#' @param plot_scene Default `TRUE`. Whether to plot the rendered scene.
+#' @param plot_scene Default `TRUE`. Whether to plot the rendered scene. If
+#' `preview = TRUE` and `filename` is omitted, this defaults to `FALSE` so the
+#' animation runs through the preview window.
 #' @param parallel Default `FALSE`. If `TRUE`, it will use all available cores to render the image
 #'  (or the number specified in `options("cores")` if that option is not `NULL`).
 #' @param bvh_type Default `"sah"`, "surface area heuristic". Method of building the bounding volume
@@ -156,7 +178,7 @@
 #'   add_object(pig(x=0,y=-0.25,z=-15,scale=1,angle=c(0,225,-22), order_rotation = c(3,2,1),
 #'                  emotion="angry", spider=TRUE)) |>
 #'   add_object(path(camera_pos, y=-0.2,material=diffuse(color="red"))) |>
-#'   render_animation(filename = NA, camera_motion = camera_motion, samples=16,
+#'   render_animation(camera_motion = camera_motion, samples=16,
 #'                    sample_method="sobol_blue",
 #'                    clamp_value=10, width=400, height=400)
 #'
@@ -189,6 +211,7 @@ render_animation = function(
   backgroundlow = "#ffffff",
   shutteropen = 0.0,
   shutterclose = 1.0,
+  camera_motion_blur = FALSE,
   focal_distance = NULL,
   ortho_dimensions = c(1, 1),
   tonemap = "raw",
@@ -208,11 +231,21 @@ render_animation = function(
   integrator_type = "rtiow",
   camera = NULL
 ) {
+  if (!is.logical(camera_motion_blur) || length(camera_motion_blur) != 1) {
+    stop("camera_motion_blur must be a single TRUE/FALSE value.")
+  }
   if (ambient_occlusion) {
     debug_channel = "ao"
   }
 
   filename_supplied = !missing(filename)
+  plot_scene_supplied = !missing(plot_scene)
+  plot_scene = animation_default_plot_scene(
+    plot_scene = plot_scene,
+    plot_scene_supplied = plot_scene_supplied,
+    filename_supplied = filename_supplied,
+    preview = preview
+  )
   metadata_supplied = c(
     camera_description_file = !missing(camera_description_file),
     camera_scale = !missing(camera_scale),
@@ -220,6 +253,7 @@ render_animation = function(
     film_size = !missing(film_size),
     shutteropen = !missing(shutteropen),
     shutterclose = !missing(shutterclose),
+    camera_motion_blur = !missing(camera_motion_blur),
     filename = filename_supplied
   )
   metadata_overrides = list(
@@ -229,6 +263,7 @@ render_animation = function(
     film_size = film_size,
     shutteropen = shutteropen,
     shutterclose = shutterclose,
+    camera_motion_blur = camera_motion_blur,
     filename = filename
   )
 
@@ -248,7 +283,8 @@ render_animation = function(
         iso = iso,
         film_size = film_size,
         shutteropen = shutteropen,
-        shutterclose = shutterclose
+        shutterclose = shutterclose,
+        camera_motion_blur = camera_motion_blur
       ))
     }
   } else {
@@ -277,6 +313,7 @@ render_animation = function(
       film_size = film_size,
       shutteropen = shutteropen,
       shutterclose = shutterclose,
+      camera_motion_blur = camera_motion_blur,
       message_cornell = FALSE
     )
     cameras = resolve_scene_camera(
@@ -518,6 +555,7 @@ render_animation_camera = function(
     backgroundlow = backgroundlow,
     shutteropen = camera$shutteropen,
     shutterclose = camera$shutterclose,
+    camera_motion_blur = camera$camera_motion_blur,
     focal_distance = focal_distance,
     ortho_dimensions = ortho_dimensions,
     tonemap = tonemap,
@@ -543,6 +581,8 @@ render_animation_camera = function(
   render_info = scene_list$render_info
   processed_scene = scene_info$scene
   render_info$frame_seed = sample.int(.Machine$integer.max, 1)
+  camera_motion$camera_motion_blur = isTRUE(camera$camera_motion_blur)
+  camera_motion$camera_motion_blur_group = 1L
 
   camera_info$preview = preview
   camera_info$interactive = FALSE
@@ -686,6 +726,7 @@ render_camera_batch = function(
     backgroundlow = backgroundlow,
     shutteropen = camera$shutteropen,
     shutterclose = camera$shutterclose,
+    camera_motion_blur = camera$camera_motion_blur,
     focal_distance = focal_distance,
     ortho_dimensions = ortho_dimensions,
     tonemap = tonemap,
@@ -711,6 +752,12 @@ render_camera_batch = function(
   render_info = scene_list$render_info
   processed_scene = scene_info$scene
   render_info$frame_seed = sample.int(.Machine$integer.max, 1)
+  camera_motion$camera_motion_blur = vapply(
+    plan$camera_index,
+    function(index) isTRUE(cameras[[index]]$camera_motion_blur),
+    logical(1)
+  )
+  camera_motion$camera_motion_blur_group = plan$camera_index
 
   camera_info$preview = preview
   camera_info$interactive = FALSE

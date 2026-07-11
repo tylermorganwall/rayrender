@@ -31,6 +31,35 @@ static point3f PreviewCameraLookat(RayCamera* cam) {
                  origin.xyz.z + direction.xyz.z * fd);
 }
 
+struct PreviewCameraState {
+  point3f origin;
+  point3f lookat;
+  vec3f up;
+  Float focal;
+};
+
+static PreviewCameraState CapturePreviewCameraState(RayCamera* cam) {
+  PreviewCameraState state;
+  state.origin = cam->get_origin();
+  state.lookat = PreviewCameraLookat(cam);
+  state.up = cam->get_up();
+  state.focal = cam->get_focal_distance();
+  return state;
+}
+
+static void ApplyPreviewCameraMotionRange(RayCamera* cam,
+                                          const PreviewCameraState& start,
+                                          const PreviewCameraState& end) {
+  cam->set_camera_motion_blur_range(start.origin,
+                                    start.lookat,
+                                    start.up,
+                                    start.focal,
+                                    end.origin,
+                                    end.lookat,
+                                    end.up,
+                                    end.focal);
+}
+
 static bool IsKeyframeSuppliedMotionArg(const std::string& name) {
   return name == "positions" ||
          name == "lookats" ||
@@ -76,6 +105,7 @@ static bool IsX11RenderInvalidatingKey(Display* display, KeyCode keycode) {
          keycode == XKeysymToKeycode(display, XStringToKeysym("3")) ||
          keycode == XKeysymToKeycode(display, XStringToKeysym("4")) ||
          keycode == XKeysymToKeycode(display, XStringToKeysym("f")) ||
+         keycode == XKeysymToKeycode(display, XStringToKeysym("b")) ||
          keycode == XKeysymToKeycode(display, XStringToKeysym("l")) ||
          keycode == XKeysymToKeycode(display, XK_less) ||
          keycode == XKeysymToKeycode(display, XK_greater) ||
@@ -192,6 +222,24 @@ void PreviewDisplay::IncreasePreviewExposure() {
 void PreviewDisplay::DecreasePreviewExposure() {
   preview_exposure_adjustment *= 0.5f;
   Rprintf("Preview Exposure: %.3f\n", preview_exposure_adjustment);
+}
+
+void PreviewDisplay::SetCameraMotionBlur(bool enabled) {
+  camera_motion_blur_enabled = enabled;
+  if(cam != nullptr) {
+    cam->set_camera_motion_blur(enabled);
+  }
+#ifdef RAY_WINDOWS
+  if(cam_w != nullptr) {
+    cam_w->set_camera_motion_blur(enabled);
+  }
+#endif
+}
+
+bool PreviewDisplay::ToggleCameraMotionBlur() {
+  SetCameraMotionBlur(!camera_motion_blur_enabled);
+  Rprintf("Camera Motion Blur: %s\n", camera_motion_blur_enabled ? "ON" : "OFF");
+  return camera_motion_blur_enabled;
 }
 
 Rcpp::List PreviewDisplay::CreateCurrentKeyframe(Float env_rotation) const {
@@ -473,6 +521,7 @@ bool PreviewDisplay::AdvancePreviewMotion(Float* env_rotation) {
     return true;
   }
 
+  PreviewCameraState camera_state_before = CapturePreviewCameraState(cam);
   Rcpp::NumericVector x = preview_motion["x"];
   Rcpp::NumericVector y = preview_motion["y"];
   Rcpp::NumericVector z = preview_motion["z"];
@@ -513,6 +562,9 @@ bool PreviewDisplay::AdvancePreviewMotion(Float* env_rotation) {
     Named("upz") = upz[preview_motion_frame]
   );
   ApplyCameraState(state, env_rotation);
+  ApplyPreviewCameraMotionRange(cam,
+                                camera_state_before,
+                                CapturePreviewCameraState(cam));
   preview_motion_frame++;
   return true;
 }
@@ -525,16 +577,18 @@ void PreviewDisplay::PrintCameraInfo(Float env_rotation) const {
   point3f key_lookat = PreviewCameraLookat(cam);
 
   if(fov > 0) {
-    Rprintf("Lookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f) FOV: %.1f Aperture: %0.3f Focal Dist: %0.3f Env Rotation: %.2f Exposure: %.3f\n",
+    Rprintf("Lookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f) FOV: %.1f Aperture: %0.3f Focal Dist: %0.3f Env Rotation: %.2f Exposure: %.3f Camera Motion Blur: %s\n",
             origin.xyz.x, origin.xyz.y, origin.xyz.z,
             key_lookat.xyz.x, key_lookat.xyz.y, key_lookat.xyz.z,
             fov,
-            cam_aperture, fd, env_rotation, preview_exposure_adjustment);
+            cam_aperture, fd, env_rotation, preview_exposure_adjustment,
+            camera_motion_blur_enabled ? "ON" : "OFF");
   } else {
-    Rprintf("Lookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f) Focal Dist: %0.3f Env Rotation: %.2f Exposure: %.3f\n",
+    Rprintf("Lookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f) Focal Dist: %0.3f Env Rotation: %.2f Exposure: %.3f Camera Motion Blur: %s\n",
             origin.xyz.x, origin.xyz.y, origin.xyz.z,
             key_lookat.xyz.x, key_lookat.xyz.y, key_lookat.xyz.z,
-            fd, env_rotation, preview_exposure_adjustment);
+            fd, env_rotation, preview_exposure_adjustment,
+            camera_motion_blur_enabled ? "ON" : "OFF");
   }
 }
 
@@ -554,7 +608,7 @@ std::string PreviewDisplay::PreviewStatusText(Float env_rotation) const {
   char buffer[256];
   std::snprintf(buffer,
                 sizeof(buffer),
-                "Cam x/y/z %.2f %.2f %.2f | Look %.2f %.2f %.2f | Exp %.3f | Env %.1f | Key %d/%zu",
+                "Cam x/y/z %.2f %.2f %.2f | Look %.2f %.2f %.2f | Exp %.3f | Env %.1f | Blur %s | Key %d/%zu",
                 origin.xyz.x,
                 origin.xyz.y,
                 origin.xyz.z,
@@ -563,6 +617,7 @@ std::string PreviewDisplay::PreviewStatusText(Float env_rotation) const {
                 key_lookat.xyz.z,
                 preview_exposure_adjustment,
                 env_rotation,
+                camera_motion_blur_enabled ? "ON" : "OFF",
                 keyframe_number,
                 Keyframes.size());
   return std::string(buffer);
@@ -1417,6 +1472,7 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
     KeyCode NextKeyframe_key = XKeysymToKeycode(d, XK_greater);
     KeyCode DeleteKeyframe_key = XKeysymToKeycode(d, XK_slash);
     KeyCode MotionPreview_key = XKeysymToKeycode(d,XStringToKeysym("m"));
+    KeyCode CameraMotionBlur_key = XKeysymToKeycode(d,XStringToKeysym("b"));
     
     //Fast Movement Key
     KeyCode F_key = XKeysymToKeycode(d,XStringToKeysym("f"));
@@ -1435,6 +1491,11 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
           terminate = true;
           break;
         }
+        if (e.xkey.keycode == CameraMotionBlur_key ) {
+          ToggleCameraMotionBlur();
+          reset_preview_render();
+          continue;
+        }
         if(interactive && IsPreviewMotionActive()) {
           if(e.xkey.keycode == MotionPreview_key) {
             CancelPreviewMotion(&env_y_angle);
@@ -1446,6 +1507,7 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
           vec3f w = cam->get_w();
           vec3f u = cam->get_u();
           vec3f v = cam->get_v();
+          PreviewCameraState camera_state_before = CapturePreviewCameraState(cam);
         
           bool blanked = false;
           bool one_orbit = false;
@@ -1592,6 +1654,9 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
             
           } else {
             if(!blanked && !terminate && IsX11RenderInvalidatingKey(d, e.xkey.keycode)) {
+              ApplyPreviewCameraMotionRange(cam,
+                                            camera_state_before,
+                                            CapturePreviewCameraState(cam));
               blanked = true;
               ns = 0;
               adaptive_pixel_sampler.reset();
@@ -1613,6 +1678,11 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
             }
             if (e.xkey.keycode == esc ) {
               terminate = true;
+            }
+            if (e.xkey.keycode == CameraMotionBlur_key ) {
+              ToggleCameraMotionBlur();
+              reset_preview_render();
+              continue;
             }
             if(interactive && IsPreviewMotionActive()) {
               if(e.xkey.keycode == MotionPreview_key) {
@@ -1772,6 +1842,9 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
               PrintCameraInfo(env_y_angle);
             } else {
               if(!blanked && !terminate && IsX11RenderInvalidatingKey(d, e.xkey.keycode)) {
+                ApplyPreviewCameraMotionRange(cam,
+                                              camera_state_before,
+                                              CapturePreviewCameraState(cam));
                 blanked = true;
                 ns = 0;
                 adaptive_pixel_sampler.reset();
@@ -1789,6 +1862,7 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
           continue;
         }
         if(interactive) {
+          PreviewCameraState camera_state_before = CapturePreviewCameraState(cam);
           bool left = e.xbutton.button == Button1;
           bool right = e.xbutton.button == Button3;
           if(!left && !right) {
@@ -1846,6 +1920,9 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
             cam->update_lookat(hrec.p);
           }
           cam->update_look_direction(dir);
+          ApplyPreviewCameraMotionRange(cam,
+                                        camera_state_before,
+                                        CapturePreviewCameraState(cam));
           ns = 0;
           adaptive_pixel_sampler.reset();
           adaptive_pixel_sampler_small.reset();
@@ -1991,6 +2068,7 @@ PreviewDisplay::PreviewDisplay(unsigned int _width, unsigned int _height,
   deferred_render = _deferred_render && preview && _interactive;
   render_requested = !deferred_render;
   cam = _cam;
+  camera_motion_blur_enabled = cam != nullptr && cam->get_camera_motion_blur();
 #ifdef RAY_HAS_X11
   speed = 1.f;
   interactive = _interactive;
@@ -2098,9 +2176,15 @@ PreviewDisplay::PreviewDisplay(unsigned int _width, unsigned int _height,
 
 void PreviewDisplay::SetCamera(RayCamera* _cam) {
   cam = _cam;
+  if(cam != nullptr) {
+    cam->set_camera_motion_blur(camera_motion_blur_enabled);
+  }
 #ifdef RAY_WINDOWS
   if(hwnd != NULL) {
     cam_w = _cam;
+    if(cam_w != nullptr) {
+      cam_w->set_camera_motion_blur(camera_motion_blur_enabled);
+    }
   }
 #endif
 }
@@ -2193,6 +2277,7 @@ static bool IsWindowsRenderInvalidatingKey(WPARAM key) {
          key == VK_KEY_3 ||
          key == VK_KEY_4 ||
          key == VK_KEY_F ||
+         key == VK_KEY_B ||
          key == VK_KEY_L ||
          key == VK_KEY_M ||
          key == VK_KEY_COMMA ||
@@ -2229,6 +2314,11 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         v = cam_w->get_v();
       }
       bool shift_pressed = (GetKeyState(VK_SHIFT) & 0x8000) != 0;
+      PreviewCameraState camera_state_before;
+      bool has_camera_state_before = interactive_w && cam_w != nullptr;
+      if(has_camera_state_before) {
+        camera_state_before = CapturePreviewCameraState(cam_w);
+      }
 
       switch (wParam) {
         case VK_ESCAPE: {
@@ -2244,6 +2334,12 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         case VK_KEY_F: {
           if(interactive_w) {
             (*write_fast_output_w) = !(*write_fast_output_w);
+          }
+          break;
+        }
+        case VK_KEY_B: {
+          if(preview_display_w != nullptr) {
+            preview_display_w->ToggleCameraMotionBlur();
           }
           break;
         }
@@ -2473,6 +2569,11 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
       if(interactive_w) {
         if(IsWindowsRenderInvalidatingKey(wParam)) {
           if(!blanked && !term) {
+            if(has_camera_state_before && cam_w != nullptr) {
+              ApplyPreviewCameraMotionRange(cam_w,
+                                            camera_state_before,
+                                            CapturePreviewCameraState(cam_w));
+            }
             blanked = true;
             *ns_w = 0;
             aps->reset();
@@ -2492,63 +2593,67 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
       break;
     }
     if(interactive_w) {
-        Float x = GET_X_LPARAM(lParam);
-        Float y = GET_Y_LPARAM(lParam);
-        Float fov = cam_w->get_fov();
-        Float u = (Float(x)) / Float(width);
-        Float v = (Float(y)) / Float(height);
-        vec3f dir;
-        bool just_direction = false;
-        hit_record hrec;
-        if(fov < 0) {
-          CameraSample samp({1-u,v},point2f(0.5,0.5), 0.5);
-          Ray r2;
-          cam_w->GenerateRay(samp,&r2);
-          if(world_w->hit(r2, 0.001, FLT_MAX, hrec, *rng_w)) {
-            dir = convert_to_vec3(-hrec.p);
-            if( hrec.shape->GetName() == "EnvironmentLight") {
-              just_direction = true;
-            }
-          }
-        } else if (fov > 0) {
-          Ray r2 = cam_w->get_ray(u,1-v, point3f(0),
-                                0.5f);
-          world_w->hit(r2, 0.001, FLT_MAX, hrec, *rng_w);
-          dir = r2.direction();
+      PreviewCameraState camera_state_before = CapturePreviewCameraState(cam_w);
+      Float x = GET_X_LPARAM(lParam);
+      Float y = GET_Y_LPARAM(lParam);
+      Float fov = cam_w->get_fov();
+      Float u = (Float(x)) / Float(width);
+      Float v = (Float(y)) / Float(height);
+      vec3f dir;
+      bool just_direction = false;
+      hit_record hrec;
+      if(fov < 0) {
+        CameraSample samp({1-u,v},point2f(0.5,0.5), 0.5);
+        Ray r2;
+        cam_w->GenerateRay(samp,&r2);
+        if(world_w->hit(r2, 0.001, FLT_MAX, hrec, *rng_w)) {
+          dir = convert_to_vec3(-hrec.p);
           if( hrec.shape->GetName() == "EnvironmentLight") {
             just_direction = true;
-          } 
-        } else {
-          Ray r2 = cam_w->get_ray(u,1-v, point3f(0),
-                                0.5f);
-          if(world_w->hit(r2, 0.001, FLT_MAX, hrec, *rng_w)) {
-            if( hrec.shape->GetName() != "EnvironmentLight") {
-              dir = -(cam_w->get_origin()-hrec.p);
-            } else {
-              dir = -cam_w->get_w();
-              just_direction = true;
-            }
+          }
+        }
+      } else if (fov > 0) {
+        Ray r2 = cam_w->get_ray(u,1-v, point3f(0),
+                              0.5f);
+        world_w->hit(r2, 0.001, FLT_MAX, hrec, *rng_w);
+        dir = r2.direction();
+        if( hrec.shape->GetName() == "EnvironmentLight") {
+          just_direction = true;
+        }
+      } else {
+        Ray r2 = cam_w->get_ray(u,1-v, point3f(0),
+                              0.5f);
+        if(world_w->hit(r2, 0.001, FLT_MAX, hrec, *rng_w)) {
+          if( hrec.shape->GetName() != "EnvironmentLight") {
+            dir = -(cam_w->get_origin()-hrec.p);
           } else {
             dir = -cam_w->get_w();
+            just_direction = true;
           }
-        }
-        if(!just_direction) {
-          if(fov != 0 && fov != 360) {
-            Float current_fd = cam_w->get_focal_distance();
-            Float new_fd = (hrec.p-cam_w->get_origin()).length();
-            cam_w->update_focal_distance(new_fd- current_fd);
-          }
-          cam_w->update_lookat(hrec.p);
         } else {
-          cam_w->update_look_direction(-dir);
-        }
-        *ns_w = 0;
-        aps->reset();
-        aps_small->reset();
-        if(progress_w && !interactive_w) {
-          pb_w->update(0);
+          dir = -cam_w->get_w();
         }
       }
+      if(!just_direction) {
+        if(fov != 0 && fov != 360) {
+          Float current_fd = cam_w->get_focal_distance();
+          Float new_fd = (hrec.p-cam_w->get_origin()).length();
+          cam_w->update_focal_distance(new_fd- current_fd);
+        }
+        cam_w->update_lookat(hrec.p);
+      } else {
+        cam_w->update_look_direction(-dir);
+      }
+      ApplyPreviewCameraMotionRange(cam_w,
+                                    camera_state_before,
+                                    CapturePreviewCameraState(cam_w));
+      *ns_w = 0;
+      aps->reset();
+      aps_small->reset();
+      if(progress_w && !interactive_w) {
+        pb_w->update(0);
+      }
+    }
     break;
   }
   case WM_RBUTTONDOWN: {
@@ -2558,6 +2663,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
       break;
     }
     if(interactive_w) {
+      PreviewCameraState camera_state_before = CapturePreviewCameraState(cam_w);
       Float x = GET_X_LPARAM(lParam);
       Float y = GET_Y_LPARAM(lParam);
       Float fov = cam_w->get_fov();
@@ -2591,6 +2697,9 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         }
       }
       cam_w->update_look_direction(dir);
+      ApplyPreviewCameraMotionRange(cam_w,
+                                    camera_state_before,
+                                    CapturePreviewCameraState(cam_w));
       *ns_w = 0;
       aps->reset();
       aps_small->reset();

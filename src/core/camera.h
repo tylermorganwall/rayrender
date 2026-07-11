@@ -39,6 +39,16 @@ class RayCamera {
     virtual void update_aperture_absolute(Float aperture) = 0;
     virtual void update_focal_absolute(Float focal_length) = 0;
     virtual void update_fov_absolute(Float fov) = 0;
+    virtual void set_camera_motion_blur(bool enabled) = 0;
+    virtual bool get_camera_motion_blur() const = 0;
+    virtual void set_camera_motion_blur_range(point3f start_origin,
+                                              point3f start_lookat,
+                                              vec3f start_up,
+                                              Float start_focal,
+                                              point3f end_origin,
+                                              point3f end_lookat,
+                                              vec3f end_up,
+                                              Float end_focal) = 0;
     
     virtual void reset()  = 0;
     virtual Float GenerateRay(const CameraSample &sample, Ray* ray2) const {
@@ -79,6 +89,16 @@ class camera : public RayCamera {
     void update_aperture_absolute(Float aperture);
     void update_focal_absolute(Float focal_length);
     void update_fov_absolute(Float fov_new);
+    void set_camera_motion_blur(bool enabled);
+    bool get_camera_motion_blur() const {return(camera_motion_blur);}
+    void set_camera_motion_blur_range(point3f start_origin,
+                                      point3f start_lookat,
+                                      vec3f start_up,
+                                      Float start_focal,
+                                      point3f end_origin,
+                                      point3f end_lookat,
+                                      vec3f end_up,
+                                      Float end_focal);
     
     void reset();
     vec3f get_w() {return(w);}
@@ -114,6 +134,16 @@ class camera : public RayCamera {
     Float start_fov;
     point3f start_lookat;
     vec3f start_vup;
+    bool camera_motion_blur;
+    bool camera_motion_blur_has_range;
+    point3f camera_motion_start_origin;
+    point3f camera_motion_start_lookat;
+    vec3f camera_motion_start_up;
+    Float camera_motion_start_focal;
+    point3f camera_motion_end_origin;
+    point3f camera_motion_end_lookat;
+    vec3f camera_motion_end_up;
+    Float camera_motion_end_focal;
 	Float iso;
     
 };
@@ -138,6 +168,16 @@ public:
   void update_aperture_absolute(Float aperture);
   void update_focal_absolute(Float focal_length);
   void update_fov_absolute(Float fov_new);
+  void set_camera_motion_blur(bool enabled);
+  bool get_camera_motion_blur() const {return(camera_motion_blur);}
+  void set_camera_motion_blur_range(point3f start_origin,
+                                    point3f start_lookat,
+                                    vec3f start_up,
+                                    Float start_focal,
+                                    point3f end_origin,
+                                    point3f end_lookat,
+                                    vec3f end_up,
+                                    Float end_focal);
   
   void reset();
   vec3f get_w() {return(w);}
@@ -167,6 +207,16 @@ public:
   point3f start_lookat;
   Float focus_dist;
   Float initial_ratio;
+  bool camera_motion_blur;
+  bool camera_motion_blur_has_range;
+  point3f camera_motion_start_origin;
+  point3f camera_motion_start_lookat;
+  vec3f camera_motion_start_up;
+  Float camera_motion_start_focal;
+  point3f camera_motion_end_origin;
+  point3f camera_motion_end_lookat;
+  vec3f camera_motion_end_up;
+  Float camera_motion_end_focal;
 	Float iso;
 };
 
@@ -190,6 +240,16 @@ class environment_camera : public RayCamera {
     void update_aperture_absolute(Float aperture);
     void update_focal_absolute(Float focal_length);
     void update_fov_absolute(Float fov_new);
+    void set_camera_motion_blur(bool enabled);
+    bool get_camera_motion_blur() const {return(camera_motion_blur);}
+    void set_camera_motion_blur_range(point3f start_origin,
+                                      point3f start_lookat,
+                                      vec3f start_up,
+                                      Float start_focal,
+                                      point3f end_origin,
+                                      point3f end_lookat,
+                                      vec3f end_up,
+                                      Float end_focal);
     
     void reset();
     vec3f get_w();
@@ -214,6 +274,16 @@ class environment_camera : public RayCamera {
     vec3f start_vup;
     point3f lookat;
     point3f start_lookat;
+    bool camera_motion_blur;
+    bool camera_motion_blur_has_range;
+    point3f camera_motion_start_origin;
+    point3f camera_motion_start_lookat;
+    vec3f camera_motion_start_up;
+    Float camera_motion_start_focal;
+    point3f camera_motion_end_origin;
+    point3f camera_motion_end_lookat;
+    vec3f camera_motion_end_up;
+    Float camera_motion_end_focal;
 	Float iso;
     
 };
@@ -243,6 +313,16 @@ public:
   void update_aperture_absolute(Float aperture);
   void update_focal_absolute(Float focal_length);
   void update_fov_absolute(Float fov_new);
+  void set_camera_motion_blur(bool enabled);
+  bool get_camera_motion_blur() const {return(camera_motion_blur);}
+  void set_camera_motion_blur_range(point3f start_origin,
+                                    point3f start_lookat,
+                                    vec3f start_up,
+                                    Float start_focal,
+                                    point3f end_origin,
+                                    point3f end_lookat,
+                                    vec3f end_up,
+                                    Float end_focal);
   
   void reset();
   vec3f get_w();
@@ -320,6 +400,16 @@ private:
   Float start_focusDistance;
   point3f start_lookat;
   point3f lookat;
+  bool camera_motion_blur;
+  bool camera_motion_blur_has_range;
+  point3f camera_motion_start_origin;
+  point3f camera_motion_start_lookat;
+  vec3f camera_motion_start_up;
+  Float camera_motion_start_focal;
+  point3f camera_motion_end_origin;
+  point3f camera_motion_end_lookat;
+  vec3f camera_motion_end_up;
+  Float camera_motion_end_focal;
 };
 
 

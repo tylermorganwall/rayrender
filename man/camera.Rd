@@ -21,7 +21,8 @@ camera(
   iso = 100,
   film_size = 22,
   shutteropen = 0,
-  shutterclose = 1
+  shutterclose = 1,
+  camera_motion_blur = FALSE
 )
 }
 \arguments{
@@ -61,6 +62,8 @@ The saved keyframes always supply the camera positions. Defaults are `type = "li
 \item{shutteropen}{Default `0`. Time at which the shutter opens.}
 
 \item{shutterclose}{Default `1`. Time at which the shutter closes.}
+
+\item{camera_motion_blur}{Default `FALSE`. Whether to blur animated camera movement over the shutter interval.}
 }
 \value{
 A `ray_camera` object.

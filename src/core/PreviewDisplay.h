@@ -114,6 +114,9 @@ public:
   bool CancelPreviewMotion(Float* env_rotation);
   bool AdvancePreviewMotion(Float* env_rotation);
   bool IsPreviewMotionActive() const { return preview_motion_active; }
+  bool ToggleCameraMotionBlur();
+  void SetCameraMotionBlur(bool enabled);
+  bool CameraMotionBlurEnabled() const { return camera_motion_blur_enabled; }
   void SetTextOverlays(const std::vector<PreviewTextOverlay>& overlays);
   void SetLineOverlays(const std::vector<PreviewLineOverlay>& overlays);
   bool ProjectTextAnchor(const PreviewTextOverlay& overlay,
@@ -201,6 +204,7 @@ public:
   int preview_motion_frame;
   int preview_motion_restore_keyframe;
   bool preview_motion_active;
+  bool camera_motion_blur_enabled;
   std::vector<PreviewTextOverlay> text_overlays;
   std::vector<PreviewLineOverlay> line_overlays;
 };
