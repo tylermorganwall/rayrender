@@ -1369,16 +1369,30 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
     adaptive_pixel_sampler.reset();
     adaptive_pixel_sampler_small.reset();
     ResetPreviewExposure();
+#ifdef HAS_OIDN
+    InvalidateOidnAux();
+#endif
     if(progress && !interactive) {
       pb.update(0);
     }
   };
+  if(PollCloseEvent()) {
+    return;
+  }
 #ifdef RAY_HAS_X11
   if (d) {
 #ifdef HAS_OIDN
-    bool use_denoised_preview = denoise && filter != nullptr;
+    bool use_denoised_preview = denoise &&
+      denoiser != nullptr &&
+      denoiser->Ready();
     if(use_denoised_preview && !write_fast_output) {
-      filter->execute();
+      if(PollCloseEvent()) {
+        return;
+      }
+      denoiser->Execute();
+      if(!denoiser->ReportError()) {
+        MarkDenoisedPreviewReady(ns + 1);
+      }
     }
     RayMatrix& rgb = use_denoised_preview ? adaptive_pixel_sampler.draw_rgb_output : adaptive_pixel_sampler.rgb;
 #else
@@ -1676,6 +1690,9 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
               adaptive_pixel_sampler.reset();
               adaptive_pixel_sampler_small.reset();
               ResetPreviewExposure();
+#ifdef HAS_OIDN
+              InvalidateOidnAux();
+#endif
               if(progress && !interactive) {
                 pb.update(0);
               }
@@ -1862,6 +1879,9 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
                 adaptive_pixel_sampler.reset();
                 adaptive_pixel_sampler_small.reset();
                 ResetPreviewExposure();
+#ifdef HAS_OIDN
+                InvalidateOidnAux();
+#endif
                 if(progress && !interactive) {
                   pb.update(0);
                 }
@@ -1936,6 +1956,9 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
           adaptive_pixel_sampler.reset();
           adaptive_pixel_sampler_small.reset();
           ResetPreviewExposure();
+#ifdef HAS_OIDN
+          InvalidateOidnAux();
+#endif
           
           if(progress && !interactive) {
             pb.update(0);
@@ -1943,6 +1966,7 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
         }
       } else if (e.type == ClientMessage) {
         terminate = true;
+        break;
       } 
     }
     if(AdvancePreviewMotion(&env_y_angle)) {
@@ -1960,9 +1984,17 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
     progress_w = progress;
     interactive_w = interactive;
 #ifdef HAS_OIDN
-    bool use_denoised_preview = denoise && filter != nullptr;
+    bool use_denoised_preview = denoise &&
+      denoiser != nullptr &&
+      denoiser->Ready();
     if(use_denoised_preview && !write_fast_output) {
-      filter->execute();
+      if(PollCloseEvent()) {
+        return;
+      }
+      denoiser->Execute();
+      if(!denoiser->ReportError()) {
+        MarkDenoisedPreviewReady(ns + 1);
+      }
     }
     RayMatrix& rgb_s = use_denoised_preview ? adaptive_pixel_sampler.draw_rgb_output : adaptive_pixel_sampler.rgb;
 #else
@@ -2046,13 +2078,21 @@ PreviewDisplay::PreviewDisplay(unsigned int _width, unsigned int _height,
                                bool preview, bool _interactive,
                                bool _deferred_render, Float initial_lookat_distance, RayCamera* _cam,
                                Transform* _EnvObjectToWorld, Transform* _EnvWorldToObject, 
-                               oidn::FilterRef* _filter,
+                               RayOidnDenoiser* _denoiser,
+                               RayMatrix* _oidn_albedo_output,
+                               RayMatrix* _oidn_normal_output,
                                bool denoise, bool _auto_exposure) :
   preview(preview), auto_exposure(_auto_exposure), preview_exposure_calibrated(false),
   preview_exposure_scale(1.f), preview_exposure_adjustment(1.f),
   EnvObjectToWorld(_EnvObjectToWorld), EnvWorldToObject(_EnvWorldToObject),
-  Start_EnvObjectToWorld(*_EnvObjectToWorld), Start_EnvWorldToObject(*_EnvWorldToObject), filter(_filter),
-  denoise(denoise) {
+  Start_EnvObjectToWorld(*_EnvObjectToWorld), Start_EnvWorldToObject(*_EnvWorldToObject),
+  denoiser(_denoiser), oidn_albedo_output(_oidn_albedo_output),
+  oidn_normal_output(_oidn_normal_output),
+  denoise(denoise && _denoiser != nullptr &&
+          _oidn_albedo_output != nullptr &&
+          _oidn_normal_output != nullptr),
+  oidn_aux_dirty(true), oidn_fast_aux_dirty(true),
+  has_denoised_preview(false), denoised_preview_sample_count(0) {
 #else
 PreviewDisplay::PreviewDisplay(unsigned int _width, unsigned int _height, 
                                bool preview, bool _interactive,
@@ -2199,10 +2239,91 @@ void PreviewDisplay::SetCamera(RayCamera* _cam) {
 #endif
 }
 
+bool PreviewDisplay::PollCloseEvent() {
+#ifdef RAY_HAS_X11
+  if(d != nullptr && !terminate) {
+    std::vector<XEvent> deferred_events;
+    KeyCode esc = XKeysymToKeycode(d, XK_Escape);
+    while(XPending(d)) {
+      XEvent poll_event;
+      XNextEvent(d, &poll_event);
+      if(poll_event.type == ClientMessage) {
+        terminate = true;
+      } else if(poll_event.type == KeyPress &&
+                poll_event.xkey.keycode == esc &&
+                PreviewDisplayHasKeyboardFocus(d, this->w)) {
+        terminate = true;
+      } else {
+        deferred_events.push_back(poll_event);
+      }
+    }
+    if(!terminate) {
+      for(auto event_iter = deferred_events.rbegin();
+          event_iter != deferred_events.rend();
+          ++event_iter) {
+        XPutBackEvent(d, &(*event_iter));
+      }
+    }
+  }
+#endif
+#ifdef RAY_WINDOWS
+  if(hwnd != NULL && !terminate) {
+    if(GetForegroundWindow() == hwnd && (GetAsyncKeyState(VK_ESCAPE) & 0x8000)) {
+      term = true;
+      terminate = true;
+      PostMessage(hwnd, WM_CLOSE, 0, 0);
+    }
+    MSG close_msg;
+    while(PeekMessage(&close_msg, hwnd, WM_SYSCOMMAND, WM_SYSCOMMAND, PM_REMOVE) > 0) {
+      TranslateMessage(&close_msg);
+      DispatchMessage(&close_msg);
+    }
+    while(PeekMessage(&close_msg, hwnd, WM_CLOSE, WM_CLOSE, PM_REMOVE) > 0) {
+      TranslateMessage(&close_msg);
+      DispatchMessage(&close_msg);
+    }
+    while(PeekMessage(&close_msg, NULL, WM_QUIT, WM_QUIT, PM_REMOVE) > 0) {
+      term = true;
+    }
+    terminate = term;
+  }
+#endif
+  return terminate;
+}
+
 #ifdef HAS_OIDN
-void PreviewDisplay::SetDenoiser(oidn::FilterRef* _filter, bool _denoise) {
-  filter = _filter;
-  denoise = _denoise && filter != nullptr;
+void PreviewDisplay::SetDenoiser(RayOidnDenoiser* _denoiser,
+                                 RayMatrix* _oidn_albedo_output,
+                                 RayMatrix* _oidn_normal_output,
+                                 bool _denoise) {
+  denoiser = _denoiser;
+  oidn_albedo_output = _oidn_albedo_output;
+  oidn_normal_output = _oidn_normal_output;
+  denoise = _denoise &&
+    denoiser != nullptr &&
+    oidn_albedo_output != nullptr &&
+    oidn_normal_output != nullptr;
+  InvalidateOidnAux();
+}
+
+void PreviewDisplay::InvalidateOidnAux() {
+  oidn_aux_dirty = true;
+  oidn_fast_aux_dirty = true;
+  has_denoised_preview = false;
+  denoised_preview_sample_count = 0;
+}
+
+void PreviewDisplay::MarkOidnAuxClean(bool fast_preview) {
+  if(fast_preview) {
+    oidn_fast_aux_dirty = false;
+  } else {
+    oidn_aux_dirty = false;
+  }
+}
+
+void PreviewDisplay::MarkDenoisedPreviewReady(size_t sample_count) {
+  has_denoised_preview = true;
+  denoised_preview_sample_count = std::max<size_t>(sample_count, 1);
 }
 #endif
 

@@ -6,10 +6,15 @@
 // #include "fstream"
 // #define DEBUG
 
+static inline bool ColorCancelled(const std::atomic<bool>* cancel) {
+  return cancel != nullptr && cancel->load(std::memory_order_relaxed);
+}
+
 // Basic path tracing without importance sampling
 void color_basic(const Ray &r, hitable *world, size_t max_depth,
                  random_gen &rng, Sampler *sampler, bool &alpha, point3f &color,
-                 normal3f &normal, point3f &albedo) {
+                 normal3f &normal, point3f &albedo,
+                 const std::atomic<bool>* cancel) {
   point3f final_color(0, 0, 0);
   point3f emit_color(0, 0, 0);
   bool wrote_normal = false;
@@ -21,6 +26,10 @@ void color_basic(const Ray &r, hitable *world, size_t max_depth,
   // To-do: Add logic to detect when rays only go through transmissive surfaces
   // and make those transparent when transparent_background = TRUE
   for (size_t i = 0; i < max_depth; i++) {
+    if(ColorCancelled(cancel)) {
+      color = final_color;
+      return;
+    }
     #ifdef RAY_COLOR_DEBUG
     Rcpp::Rcout << i << "th ray: O[" <<  r2.origin() << "] Color: [" << throughput << "]\n";
     #endif
@@ -30,6 +39,10 @@ void color_basic(const Ray &r, hitable *world, size_t max_depth,
     if (world->hit(r2, 0.001, MaxT, hrec,
                    rng)) { // generated hit record, world space
       STOP_TIMER("Total Hits");
+      if(ColorCancelled(cancel)) {
+        color = final_color;
+        return;
+      }
       scatter_record srec;
       if (hrec.alpha_miss) {
         r2.o =
@@ -122,7 +135,8 @@ void color_basic_path_guiding(const Ray &r, hitable *world, hitable_list *hlist,
                               size_t max_depth, size_t roulette_activate,
                               random_gen &rng, Sampler *sampler, bool &alpha,
                               point3f &color, normal3f &normal,
-                              point3f &albedo) {
+                              point3f &albedo,
+                              const std::atomic<bool>* cancel) {
   SCOPED_CONTEXT("Overall");
   SCOPED_TIMER_COUNTER("Color");
   point3f final_color(0, 0, 0);
@@ -137,6 +151,10 @@ void color_basic_path_guiding(const Ray &r, hitable *world, hitable_list *hlist,
   // To-do: Add logic to detect when rays only go through transmissive surfaces
   // and make those transparent when transparent_background = TRUE
   for (size_t i = 0; i < max_depth; i++) {
+    if(ColorCancelled(cancel)) {
+      color = final_color;
+      return;
+    }
     #ifdef RAY_COLOR_DEBUG
     Rcpp::Rcout << i << "th ray: O[" <<  r2.origin() << "] Color: [" << throughput << "]\n";
     #endif
@@ -146,6 +164,10 @@ void color_basic_path_guiding(const Ray &r, hitable *world, hitable_list *hlist,
     if (world->hit(r2, 0.001, MaxT, hrec,
                    rng)) { // generated hit record, world space
       STOP_TIMER("Total Hits");
+      if(ColorCancelled(cancel)) {
+        color = final_color;
+        return;
+      }
       scatter_record srec;
       if (hrec.alpha_miss) {
         r2.o =
@@ -244,7 +266,8 @@ void color_basic_path_guiding(const Ray &r, hitable *world, hitable_list *hlist,
 void color_shadow_rays(const Ray &r, hitable *world, hitable_list *hlist,
                        size_t max_depth, size_t roulette_activate,
                        random_gen &rng, Sampler *sampler, bool &alpha,
-                       point3f &color, normal3f &normal, point3f &albedo) {
+                       point3f &color, normal3f &normal, point3f &albedo,
+                       const std::atomic<bool>* cancel) {
   SCOPED_CONTEXT("Overall");
   SCOPED_TIMER_COUNTER("Color");
   point3f final_color(0, 0, 0);
@@ -259,6 +282,10 @@ void color_shadow_rays(const Ray &r, hitable *world, hitable_list *hlist,
   // To-do: Add logic to detect when rays only go through transmissive surfaces
   // and make those transparent when transparent_background = TRUE
   for (size_t i = 0; i < max_depth; i++) {
+    if(ColorCancelled(cancel)) {
+      color = final_color;
+      return;
+    }
     #ifdef RAY_COLOR_DEBUG
     Rcpp::Rcout << i << "th ray: O[" <<  r2.origin() << "] Color: [" << throughput << "]\n";
     #endif
@@ -268,6 +295,10 @@ void color_shadow_rays(const Ray &r, hitable *world, hitable_list *hlist,
     if (world->hit(r2, 0.001, MaxT, hrec,
                    rng)) { // generated hit record, world space
       STOP_TIMER("Total Hits");
+      if(ColorCancelled(cancel)) {
+        color = final_color;
+        return;
+      }
       scatter_record srec;
       if (hrec.alpha_miss) {
         r2.o =
@@ -346,7 +377,15 @@ void color_shadow_rays(const Ray &r, hitable *world, hitable_list *hlist,
                          wi, r2.pri_stack, r2.time());
 
           // Check for occlusion using HitP
+          if(ColorCancelled(cancel)) {
+            color = final_color;
+            return;
+          }
           if (!world->HitP(shadow_ray, 0.001f, MaxT, rng)) {
+            if(ColorCancelled(cancel)) {
+              color = final_color;
+              return;
+            }
             // Unoccluded, compute contribution
             float cos_theta = dot(hrec.normal, wi);
             if (cos_theta > 0) {
@@ -422,21 +461,21 @@ void color_shadow_rays(const Ray &r, hitable *world, hitable_list *hlist,
 void color(const Ray &r, hitable *world, hitable_list *hlist, size_t max_depth,
            size_t roulette_activate, random_gen &rng, Sampler *sampler,
            bool &alpha, IntegratorType type, point3f &color, normal3f &normal,
-           point3f &albedo) {
+           point3f &albedo, const std::atomic<bool>* cancel) {
   switch (type) {
   case IntegratorType::Basic: {
     color_basic(r, world, max_depth, rng, sampler, alpha, color, normal,
-                albedo);
+                albedo, cancel);
     return;
   }
   case IntegratorType::BasicPathGuiding: {
     color_basic_path_guiding(r, world, hlist, max_depth, roulette_activate, rng,
-                             sampler, alpha, color, normal, albedo);
+                             sampler, alpha, color, normal, albedo, cancel);
     return;
   }
   case IntegratorType::ShadowRays: {
     color_shadow_rays(r, world, hlist, max_depth, roulette_activate, rng,
-                      sampler, alpha, color, normal, albedo);
+                      sampler, alpha, color, normal, albedo, cancel);
     return;
   }
   default: {

@@ -34,6 +34,7 @@ adaptive_sampler::adaptive_sampler(size_t _numbercores, size_t nx, size_t ny, si
 }
 void adaptive_sampler::reset() {
   pixel_chunks.clear();
+  max_s = 0;
   size_t nx_chunk = nx / numbercores;
   size_t ny_chunk = ny / numbercores;
   size_t bonus_x = nx - nx_chunk * numbercores;
@@ -197,6 +198,17 @@ void adaptive_sampler::write_final_pixels() {
       }
     }
     it++;
+  }
+}
+void adaptive_sampler::write_final_denoised_pixels(size_t sample_count) {
+  float active_sample_count = (float)(sample_count > 0 ? sample_count : 1);
+  for(size_t i = 0; i < nx; i++) {
+    for(size_t j = 0; j < ny; j++) {
+      float pixel_sample_count = finalized[i + nx * j] ? 1.f : active_sample_count;
+      draw_rgb_output(i,j,0) /= pixel_sample_count;
+      draw_rgb_output(i,j,1) /= pixel_sample_count;
+      draw_rgb_output(i,j,2) /= pixel_sample_count;
+    }
   }
 }
 void adaptive_sampler::add_color_main(size_t i, size_t j, point3f color) {

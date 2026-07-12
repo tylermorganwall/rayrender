@@ -12,6 +12,8 @@
 #include "math/sampler.h"
 #include "core/color.h"
 #include "core/integrator.h"
+#include "core/oidn_aux.h"
+#include "core/oidn_denoiser.h"
 #include "math/matrix.h"
 #include "math/transform.h"
 #include "math/transformcache.h"
@@ -635,32 +637,19 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
 
 #ifdef HAS_OIDN
       bool denoise_frame = denoise;
-      oidn::DeviceRef device;
-      oidn::BufferRef colorBuf;
-      oidn::BufferRef albedoBuf;
-      oidn::BufferRef normalBuf;
-      oidn::BufferRef colorBuf2;
-      oidn::FilterRef filter;
+      RayMatrix oidn_normal_output(nx, ny, 3);
+      RayMatrix oidn_albedo_output(nx, ny, 3);
+      RayOidnDenoiser oidn_denoiser;
       if(denoise_frame) {
-        // Create an Open Image Denoise device
-        device = oidn::newDevice(); // CPU or GPU if available
-        // oidn::DeviceRef device = oidn::newDevice(oidn::DeviceType::CPU);
-        device.commit();
-        // Create buffers for input/output images accessible by both host (CPU) and device (CPU/GPU)
-        colorBuf  = device.newBuffer(rgb_output.begin(), nx * ny * 3 * sizeof(Float));
-        albedoBuf = device.newBuffer(albedoOutput.begin(), nx * ny * 3 * sizeof(Float));
-        normalBuf = device.newBuffer(normalOutput.begin(), nx * ny * 3 * sizeof(Float));
-        colorBuf2 = device.newBuffer(draw_rgb_output.begin(), nx * ny * 3 * sizeof(Float));
-
-        // Create a filter for denoising a beauty (color) image using optional auxiliary images too
-        // This can be an expensive operation, so try no to create a new filter for every image!
-        filter = device.newFilter("RT"); // generic ray tracing filter
-        filter.setImage("color",  colorBuf,  oidn::Format::Float3, nx, ny); // beauty
-        filter.setImage("albedo", albedoBuf, oidn::Format::Float3, nx, ny); // auxiliary
-        filter.setImage("normal", normalBuf, oidn::Format::Float3, nx, ny); // auxiliary
-        filter.setImage("output", colorBuf2,  oidn::Format::Float3, nx, ny); // denoised beauty
-        filter.set("hdr", true); // beauty image is HDR
-        filter.commit();
+        oidn_denoiser.Setup(rgb_output,
+                            oidn_albedo_output,
+                            oidn_normal_output,
+                            draw_rgb_output,
+                            nx,
+                            ny,
+                            RayOidnQuality::Balanced,
+                            false,
+                            false);
       }
 #endif
 
@@ -672,10 +661,15 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
             nx, ny, preview, false, false, 20.0f, frame_cam,
             background_sphere->ObjectToWorld,
             background_sphere->WorldToObject,
-            denoise_frame ? &filter : nullptr, denoise_frame, false));
+            &oidn_denoiser,
+            &oidn_albedo_output,
+            &oidn_normal_output,
+            denoise_frame, false));
         } else {
           preview_display->SetCamera(frame_cam);
-          preview_display->SetDenoiser(denoise_frame ? &filter : nullptr,
+          preview_display->SetDenoiser(&oidn_denoiser,
+                                       &oidn_albedo_output,
+                                       &oidn_normal_output,
                                        denoise_frame);
         }
         pathtracer(numbercores, nx, ny, ns, debug_channel,
@@ -694,7 +688,10 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
                      20.0f, frame_cam, 
                      background_sphere->ObjectToWorld,
                      background_sphere->WorldToObject,
-                     denoise_frame ? &filter : nullptr, denoise_frame, false);
+                     &oidn_denoiser,
+                     &oidn_albedo_output,
+                     &oidn_normal_output,
+                     denoise_frame, false);
         pathtracer(numbercores, nx, ny, ns, debug_channel,
                    min_variance, min_adaptive_size,
                    rgb_output, normalOutput, albedoOutput,
@@ -749,11 +746,33 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
       }
 #ifdef HAS_OIDN
       if(denoise_frame) {
-        filter.execute();
-        const char* errorMessage;
-        if (device.getError(errorMessage) != oidn::Error::None) {
-          Rcpp::Rcout << "Error: " << errorMessage << std::endl;
-        }
+        OidnAuxRenderOptions oidn_aux_options;
+        oidn_aux_options.samples = static_cast<std::size_t>(std::max(ns, 1));
+        oidn_aux_options.max_depth = max_depth;
+        oidn_aux_options.max_dielectric_splits = 1;
+        oidn_aux_options.sample_method = sample_method;
+        oidn_aux_options.stratified_x = stratified_x;
+        oidn_aux_options.stratified_y = stratified_y;
+        render_oidn_aux_features(numbercores,
+                                 nx,
+                                 ny,
+                                 frame_cam,
+                                 fov,
+                                 &world,
+                                 oidn_aux_options,
+                                 oidn_normal_output,
+                                 oidn_albedo_output);
+        oidn_denoiser.Setup(rgb_output,
+                            oidn_albedo_output,
+                            oidn_normal_output,
+                            draw_rgb_output,
+                            nx,
+                            ny,
+                            RayOidnQuality::High,
+                            true,
+                            true);
+        oidn_denoiser.Execute();
+        oidn_denoiser.ReportError();
       }
       RayMatrix final_output = denoise_frame ? draw_rgb_output : rgb_output;
       List temp = List::create(_["r"] = final_output.ConvertRcpp(0), 

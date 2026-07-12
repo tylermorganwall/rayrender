@@ -84,6 +84,12 @@ class material {
     virtual point3f get_albedo(const hit_record& rec) const {
       return(point3f(0,0,0));
     }
+    virtual bool is_delta_specular() const {
+      return(false);
+    }
+    virtual bool is_dielectric() const {
+      return(false);
+    }
     virtual ~material() {};
     virtual const std::string GetName() = 0;
     virtual size_t GetSize() = 0;
@@ -112,6 +118,9 @@ class metal : public material {
     virtual bool scatter(const Ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng);
     virtual bool scatter(const Ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler);
     point3f get_albedo(const hit_record& rec) const;
+    bool is_delta_specular() const {
+      return(fuzz == 0);
+    }
     size_t GetSize();
     const std::string GetName() {
       return(std::string("metal"));
@@ -131,6 +140,12 @@ class dielectric : public material {
     
     point3f get_albedo(const hit_record& rec) const {
       return(point3f(1,1,1));
+    }
+    bool is_delta_specular() const {
+      return(true);
+    }
+    bool is_dielectric() const {
+      return(true);
     }
     size_t GetSize();
     const std::string GetName() {

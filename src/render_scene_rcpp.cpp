@@ -16,6 +16,8 @@
 #include "math/sampler.h"
 #include "core/color.h"
 #include "core/integrator.h"
+#include "core/oidn_aux.h"
+#include "core/oidn_denoiser.h"
 #include "utils/debug.h"
 
 #include "materials/texturecache.h"
@@ -862,25 +864,20 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
   RayMatrix albedoOutput(nx,ny, 3);
 
 #ifdef HAS_OIDN
-  // Create an Open Image Denoise device
-  oidn::DeviceRef device = oidn::newDevice(); // CPU or GPU if available
-  // oidn::DeviceRef device = oidn::newDevice(oidn::DeviceType::CPU);
-  device.commit();
-  // Create buffers for input/output images accessible by both host (CPU) and device (CPU/GPU)
-  oidn::BufferRef colorBuf  = device.newBuffer(rgb_output.begin(), nx * ny * 3 * sizeof(Float));
-  oidn::BufferRef albedoBuf = device.newBuffer(albedoOutput.begin(), nx * ny * 3 * sizeof(Float));
-  oidn::BufferRef normalBuf = device.newBuffer(normalOutput.begin(), nx * ny * 3 * sizeof(Float));
-  oidn::BufferRef colorBuf2 = device.newBuffer(draw_rgb_output.begin(), nx * ny * 3 * sizeof(Float));
-
-  // Create a filter for denoising a beauty (color) image using optional auxiliary images too
-  // This can be an expensive operation, so try no to create a new filter for every image!
-  oidn::FilterRef filter = device.newFilter("RT"); // generic ray tracing filter
-  filter.setImage("color",  colorBuf,  oidn::Format::Float3, nx, ny); // beauty
-  filter.setImage("albedo", albedoBuf, oidn::Format::Float3, nx, ny); // auxiliary
-  filter.setImage("normal", normalBuf, oidn::Format::Float3, nx, ny); // auxiliary
-  filter.setImage("output", colorBuf2,  oidn::Format::Float3, nx, ny); // denoised beauty
-  filter.set("hdr", true); // beauty image is HDR
-  filter.commit();
+  RayMatrix oidn_normal_output(nx, ny, 3);
+  RayMatrix oidn_albedo_output(nx, ny, 3);
+  RayOidnDenoiser oidn_denoiser;
+  if(denoise) {
+    oidn_denoiser.Setup(rgb_output,
+                        oidn_albedo_output,
+                        oidn_normal_output,
+                        draw_rgb_output,
+                        nx,
+                        ny,
+                        RayOidnQuality::Balanced,
+                        false,
+                        false);
+  }
 #endif
   
   point3f lookfrom(lookfromvec[0],lookfromvec[1],lookfromvec[2]);
@@ -1110,7 +1107,10 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
                          deferred_render, (lookat-lookfrom).length(), cam.get(),
                          background_sphere->ObjectToWorld,
                          background_sphere->WorldToObject,
-                         &filter, denoise, auto_exposure);
+                         &oidn_denoiser,
+                         &oidn_albedo_output,
+                         &oidn_normal_output,
+                         denoise, auto_exposure);
 #else
   PreviewDisplay Display(nx,ny, preview, interactive, 
                          deferred_render, (lookat-lookfrom).length(), cam.get(),
@@ -1153,12 +1153,39 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
   }
   PRINT_CURRENT_MEMORY("After raytracing");
 #ifdef HAS_OIDN
-  if(denoise) {
-    filter.execute();
-    const char* errorMessage;
-    if (device.getError(errorMessage) != oidn::Error::None) {
-      Rcpp::Rcout << "Error: " << errorMessage << std::endl;
-    }
+  Display.PollCloseEvent();
+  bool denoise_output = denoise && !Display.terminate;
+  bool use_cached_denoised_preview = denoise &&
+    Display.terminate &&
+    Display.HasDenoisedPreview();
+  if(denoise_output) {
+    OidnAuxRenderOptions oidn_aux_options;
+    oidn_aux_options.samples = static_cast<std::size_t>(std::max(ns, 1));
+    oidn_aux_options.max_depth = max_depth;
+    oidn_aux_options.max_dielectric_splits = 1;
+    oidn_aux_options.sample_method = sample_method;
+    oidn_aux_options.stratified_x = stratified_x;
+    oidn_aux_options.stratified_y = stratified_y;
+    render_oidn_aux_features(numbercores,
+                             nx,
+                             ny,
+                             cam.get(),
+                             fov,
+                             &world,
+                             oidn_aux_options,
+                             oidn_normal_output,
+                             oidn_albedo_output);
+    oidn_denoiser.Setup(rgb_output,
+                        oidn_albedo_output,
+                        oidn_normal_output,
+                        draw_rgb_output,
+                        nx,
+                        ny,
+                        RayOidnQuality::High,
+                        true,
+                        true);
+    oidn_denoiser.Execute();
+    oidn_denoiser.ReportError();
   }
 #endif
   delete shared_materials;
@@ -1166,7 +1193,7 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
   print_time(verbose, "Finished rendering" );
   RayMatrix final_output = rgb_output;
 #ifdef HAS_OIDN
-  if(denoise) {
+  if(denoise_output || use_cached_denoised_preview) {
     final_output = draw_rgb_output;
   }
 #endif

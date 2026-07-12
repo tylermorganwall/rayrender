@@ -35,6 +35,7 @@ public:
   
   void split_remove_chunks(size_t s);
   void write_final_pixels();
+  void write_final_denoised_pixels(size_t sample_count);
   void add_color_main(size_t i, size_t j, point3f color);
   
   void add_color_sec(size_t i, size_t j, point3f color);

@@ -53,6 +53,7 @@ struct PreviewLineOverlay {
 #ifdef HAS_OIDN
 #undef None
 #include <OpenImageDenoise/oidn.hpp>
+#include "../core/oidn_denoiser.h"
 #endif
 
 #ifdef RAY_WINDOWS
@@ -73,7 +74,10 @@ public:
 #ifdef HAS_OIDN
   PreviewDisplay(unsigned int _width, unsigned int _height, bool preview, bool _interactive,
                  bool _deferred_render, Float initial_lookat_distance, RayCamera* _cam,
-                 Transform* _EnvObjectToWorld, Transform* _EnvWorldToObject, oidn::FilterRef* _filter,
+                 Transform* _EnvObjectToWorld, Transform* _EnvWorldToObject,
+                 RayOidnDenoiser* _denoiser,
+                 RayMatrix* _oidn_albedo_output,
+                 RayMatrix* _oidn_normal_output,
                  bool denoise, bool _auto_exposure);
 #else
   PreviewDisplay(unsigned int _width, unsigned int _height, bool preview, bool _interactive,
@@ -83,8 +87,17 @@ public:
 #endif
   ~PreviewDisplay();
   void SetCamera(RayCamera* _cam);
+  bool PollCloseEvent();
 #ifdef HAS_OIDN
-  void SetDenoiser(oidn::FilterRef* _filter, bool _denoise);
+  void SetDenoiser(RayOidnDenoiser* _denoiser,
+                   RayMatrix* _oidn_albedo_output,
+                   RayMatrix* _oidn_normal_output,
+                   bool _denoise);
+  void InvalidateOidnAux();
+  void MarkOidnAuxClean(bool fast_preview);
+  void MarkDenoisedPreviewReady(size_t sample_count);
+  bool HasDenoisedPreview() const { return has_denoised_preview; }
+  size_t DenoisedPreviewSampleCount() const { return denoised_preview_sample_count; }
 #endif
   void DrawImage(adaptive_sampler& adaptive_pixel_sampler, 
                  adaptive_sampler& adaptive_pixel_sampler_small,
@@ -193,8 +206,14 @@ public:
   Transform Start_EnvObjectToWorld;
   Transform Start_EnvWorldToObject;
   #ifdef HAS_OIDN
-  oidn::FilterRef* filter;
+  RayOidnDenoiser* denoiser;
+  RayMatrix* oidn_albedo_output;
+  RayMatrix* oidn_normal_output;
   bool denoise;
+  bool oidn_aux_dirty;
+  bool oidn_fast_aux_dirty;
+  bool has_denoised_preview;
+  size_t denoised_preview_sample_count;
   #endif
   std::vector<Rcpp::List> Keyframes;
   int current_keyframe;

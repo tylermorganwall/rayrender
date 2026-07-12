@@ -11,8 +11,15 @@
 #include "../math/filter.h"
 #include "../math/sampler.h"
 #include "../core/PreviewDisplay.h"
+#include "../core/oidn_aux.h"
+#include "../core/oidn_denoiser.h"
 #include "../utils/raylog.h"
 
+#include <atomic>
+#include <chrono>
+#include <exception>
+#include <future>
+#include <thread>
 
 static const size_t FAST_INTERACTIVE_PREVIEW_SAMPLES = 4;
 
@@ -73,52 +80,20 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
                                                 adaptive_on);
 
 #ifdef HAS_OIDN
-  oidn::DeviceRef fast_preview_denoise_device;
-  oidn::BufferRef fast_preview_color_buffer;
-  oidn::BufferRef fast_preview_albedo_buffer;
-  oidn::BufferRef fast_preview_normal_buffer;
-  oidn::BufferRef fast_preview_output_buffer;
-  oidn::FilterRef fast_preview_denoise_filter;
+  RayMatrix oidn_normal_output_small(nx_small, ny_small, 3);
+  RayMatrix oidn_albedo_output_small(nx_small, ny_small, 3);
+  RayOidnDenoiser fast_preview_denoiser;
   bool denoise_fast_preview = display.denoise;
   if(denoise_fast_preview) {
-    fast_preview_denoise_device = oidn::newDevice();
-    fast_preview_denoise_device.commit();
-    fast_preview_color_buffer =
-      fast_preview_denoise_device.newBuffer(rgb_output_small.begin(),
-                                            nx_small * ny_small * 3 * sizeof(Float));
-    fast_preview_albedo_buffer =
-      fast_preview_denoise_device.newBuffer(albedo_output_small.begin(),
-                                            nx_small * ny_small * 3 * sizeof(Float));
-    fast_preview_normal_buffer =
-      fast_preview_denoise_device.newBuffer(normal_output_small.begin(),
-                                            nx_small * ny_small * 3 * sizeof(Float));
-    fast_preview_output_buffer =
-      fast_preview_denoise_device.newBuffer(draw_rgb_output_small.begin(),
-                                            nx_small * ny_small * 3 * sizeof(Float));
-
-    fast_preview_denoise_filter = fast_preview_denoise_device.newFilter("RT");
-    fast_preview_denoise_filter.setImage("color",
-                                         fast_preview_color_buffer,
-                                         oidn::Format::Float3,
-                                         nx_small,
-                                         ny_small);
-    fast_preview_denoise_filter.setImage("albedo",
-                                         fast_preview_albedo_buffer,
-                                         oidn::Format::Float3,
-                                         nx_small,
-                                         ny_small);
-    fast_preview_denoise_filter.setImage("normal",
-                                         fast_preview_normal_buffer,
-                                         oidn::Format::Float3,
-                                         nx_small,
-                                         ny_small);
-    fast_preview_denoise_filter.setImage("output",
-                                         fast_preview_output_buffer,
-                                         oidn::Format::Float3,
-                                         nx_small,
-                                         ny_small);
-    fast_preview_denoise_filter.set("hdr", true);
-    fast_preview_denoise_filter.commit();
+    fast_preview_denoiser.Setup(rgb_output_small,
+                                oidn_albedo_output_small,
+                                oidn_normal_output_small,
+                                draw_rgb_output_small,
+                                nx_small,
+                                ny_small,
+                                RayOidnQuality::Fast,
+                                false,
+                                false);
   }
 #endif
 
@@ -191,6 +166,76 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
   reset_sampler_state(nx_small, ny_small, seeds_small, rngs_small, samplers_small);
   random_gen rng_interactive(next_seed());
 
+#ifdef HAS_OIDN
+  auto make_oidn_aux_options = [sample_method,
+                                stratified_x,
+                                stratified_y,
+                                max_depth] (std::size_t samples) {
+    OidnAuxRenderOptions options;
+    options.samples = samples;
+    options.max_depth = max_depth;
+    options.max_dielectric_splits = 1;
+    options.sample_method = sample_method;
+    options.stratified_x = stratified_x;
+    options.stratified_y = stratified_y;
+    return options;
+  };
+
+  auto ensure_full_preview_oidn_aux = [&]() {
+    if(!display.preview ||
+       !display.denoise ||
+       !display.oidn_aux_dirty ||
+       display.oidn_albedo_output == nullptr ||
+       display.oidn_normal_output == nullptr) {
+      return;
+    }
+    if(display.PollCloseEvent()) {
+      return;
+    }
+    OidnAuxRenderOptions options = make_oidn_aux_options(1);
+    render_oidn_aux_features(numbercores,
+                             nx,
+                             ny,
+                             cam,
+                             fov,
+                             &world,
+                             options,
+                             *display.oidn_normal_output,
+                             *display.oidn_albedo_output,
+                             [&display]() { return display.PollCloseEvent(); });
+    if(display.terminate) {
+      return;
+    }
+    display.MarkOidnAuxClean(false);
+  };
+
+  auto ensure_fast_preview_oidn_aux = [&]() {
+    if(!display.preview ||
+       !denoise_fast_preview ||
+       !display.oidn_fast_aux_dirty) {
+      return;
+    }
+    if(display.PollCloseEvent()) {
+      return;
+    }
+    OidnAuxRenderOptions options = make_oidn_aux_options(1);
+    render_oidn_aux_features(numbercores,
+                             nx_small,
+                             ny_small,
+                             cam,
+                             fov,
+                             &world,
+                             options,
+                             oidn_normal_output_small,
+                             oidn_albedo_output_small,
+                             [&display]() { return display.PollCloseEvent(); });
+    if(display.terminate) {
+      return;
+    }
+    display.MarkOidnAuxClean(true);
+  };
+#endif
+
   auto copy_small_color = [nx_small, ny_small, nx, ny] (RayMatrix& target, RayMatrix& source) {
     Float ratio_x = (Float)nx_small/(Float)nx;
     Float ratio_y = (Float)ny_small/(Float)ny;
@@ -218,15 +263,58 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
     }
   };
 
+  std::atomic<bool> render_cancelled(false);
+  auto wait_for_render_jobs = [&display, &render_cancelled](
+      std::vector<std::future<void> >& futures) -> bool {
+    std::exception_ptr interrupt_exception = nullptr;
+    bool done = false;
+    while(!done) {
+      done = true;
+      for(auto& future : futures) {
+        if(future.wait_for(std::chrono::milliseconds(0)) != std::future_status::ready) {
+          done = false;
+          break;
+        }
+      }
+      if(done) {
+        break;
+      }
+      if(display.PollCloseEvent()) {
+        render_cancelled.store(true, std::memory_order_relaxed);
+      }
+      try {
+        RcppThread::checkUserInterrupt();
+      } catch(...) {
+        render_cancelled.store(true, std::memory_order_relaxed);
+        interrupt_exception = std::current_exception();
+        break;
+      }
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+    for(auto& future : futures) {
+      future.wait();
+    }
+    for(auto& future : futures) {
+      future.get();
+    }
+    if(interrupt_exception != nullptr) {
+      std::rethrow_exception(interrupt_exception);
+    }
+    return !render_cancelled.load(std::memory_order_relaxed);
+  };
+
   auto render_full_sample = [&adaptive_pixel_sampler, numbercores, nx, ny, sample_method,
                              &rngs, fov, &samplers, cam, &world, &hlist,
-                             clampval, max_depth, roulette_active, integrator_type] (size_t s) {
+                             clampval, max_depth, roulette_active, integrator_type,
+                             &render_cancelled, &wait_for_render_jobs] (size_t s) -> bool {
+    render_cancelled.store(false, std::memory_order_relaxed);
     RcppThread::ThreadPool pool(numbercores);
     auto worker = [&adaptive_pixel_sampler,
                    nx, ny, s, sample_method,
                    &rngs, fov, &samplers,
                    cam, &world, &hlist,
-                   clampval, max_depth, roulette_active, integrator_type] (int k) {
+                   clampval, max_depth, roulette_active, integrator_type,
+                   &render_cancelled] (int k) {
                      int nx_begin = adaptive_pixel_sampler.pixel_chunks[k].startx;
                      int ny_begin = adaptive_pixel_sampler.pixel_chunks[k].starty;
                      int nx_end = adaptive_pixel_sampler.pixel_chunks[k].endx;
@@ -234,7 +322,13 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
 
                      std::vector<dielectric*> *mat_stack = new std::vector<dielectric*>;
                      for(int i = nx_begin; i < nx_end; i++) {
+                       if(render_cancelled.load(std::memory_order_relaxed)) {
+                         break;
+                       }
                        for(int j = ny_begin; j < ny_end; j++) {
+                         if(render_cancelled.load(std::memory_order_relaxed)) {
+                           break;
+                         }
                          int index = j + ny * i;
                          Ray r;
                          vec2f u2 = samplers[index]->Get2D();
@@ -256,7 +350,8 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
                          point3f albedo_sample;
                          color(r, &world, &hlist, max_depth, roulette_active, rngs[index],
                                samplers[index].get(), alpha,integrator_type,
-                               color_sample, normal_sample, albedo_sample);
+                               color_sample, normal_sample, albedo_sample,
+                               &render_cancelled);
                          point3f col = weight != 0 ? clamp_point(de_nan(color_sample),
                                                                  0, clampval) * weight * cam->get_iso() : 0;
                          if(alpha) {
@@ -273,33 +368,43 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
                        }
                      }
                      if (adaptive_pixel_sampler.adaptive_on) {
-                      if((s % 2 == 1 && s > 3 && sample_method != 2) || (s % 2 == 1 && sample_method == 2 && s > 64)) {
+                      if(!render_cancelled.load(std::memory_order_relaxed) &&
+                         ((s % 2 == 1 && s > 3 && sample_method != 2) ||
+                          (s % 2 == 1 && sample_method == 2 && s > 64))) {
                         adaptive_pixel_sampler.test_for_convergence(k, s, nx_end, nx_begin, ny_end, ny_begin);
                       }
                      }
                      delete mat_stack;
                    };
+    std::vector<std::future<void> > futures;
+    futures.reserve(adaptive_pixel_sampler.size());
     for(size_t j = 0; j < adaptive_pixel_sampler.size(); j++) {
-      pool.push(worker, j);
+      futures.push_back(pool.pushReturn(worker, static_cast<int>(j)));
     }
-    pool.join();
+    bool completed_sample = wait_for_render_jobs(futures);
     if (adaptive_pixel_sampler.adaptive_on) {
-      if(s % 2 == 1 && s > 1) {
+      if(completed_sample && s % 2 == 1 && s > 1) {
         adaptive_pixel_sampler.split_remove_chunks(s);
       }
     }
-    adaptive_pixel_sampler.max_s++;
+    if(completed_sample) {
+      adaptive_pixel_sampler.max_s++;
+    }
+    return completed_sample;
   };
 
   auto render_small_sample = [&adaptive_pixel_sampler_small, numbercores, nx_small, ny_small, sample_method,
                               &rngs_small, fov, &samplers_small, cam, &world, &hlist,
-                              clampval, max_depth, roulette_active, integrator_type] (size_t s) {
+                              clampval, max_depth, roulette_active, integrator_type,
+                              &render_cancelled, &wait_for_render_jobs] (size_t s) -> bool {
+    render_cancelled.store(false, std::memory_order_relaxed);
     RcppThread::ThreadPool pool(numbercores);
     auto worker = [&adaptive_pixel_sampler_small,
                    nx_small, ny_small, s, sample_method,
                    &rngs_small, fov, &samplers_small,
                    cam, &world, &hlist,
-                   clampval, max_depth, roulette_active, integrator_type] (int k) {
+                   clampval, max_depth, roulette_active, integrator_type,
+                   &render_cancelled] (int k) {
                      int nx_begin = adaptive_pixel_sampler_small.pixel_chunks[k].startx;
                      int ny_begin = adaptive_pixel_sampler_small.pixel_chunks[k].starty;
                      int nx_end = adaptive_pixel_sampler_small.pixel_chunks[k].endx;
@@ -307,7 +412,13 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
 
                      std::vector<dielectric*> *mat_stack = new std::vector<dielectric*>;
                      for(int i = nx_begin; i < nx_end; i++) {
+                       if(render_cancelled.load(std::memory_order_relaxed)) {
+                         break;
+                       }
                        for(int j = ny_begin; j < ny_end; j++) {
+                         if(render_cancelled.load(std::memory_order_relaxed)) {
+                           break;
+                         }
                          int index = j + ny_small * i;
                          Ray r;
                          vec2f u2 = samplers_small[index]->Get2D();
@@ -331,7 +442,8 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
                                rngs_small[index],
                                samplers_small[index].get(),
                                alpha, integrator_type,
-                               color_sample, normal_sample, albedo_sample);
+                               color_sample, normal_sample, albedo_sample,
+                               &render_cancelled);
                          point3f col = weight != 0 ? clamp_point(de_nan(color_sample),
                                                                  0, clampval) * weight * cam->get_iso() : 0;
                          if(alpha) {
@@ -348,59 +460,100 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
                        }
                      }
                      if (adaptive_pixel_sampler_small.adaptive_on) {
-                        if((s % 2 == 1 && s > 3 && sample_method != 2) || (s % 2 == 1 && sample_method == 2 && s > 64)) {
+                        if(!render_cancelled.load(std::memory_order_relaxed) &&
+                           ((s % 2 == 1 && s > 3 && sample_method != 2) ||
+                            (s % 2 == 1 && sample_method == 2 && s > 64))) {
                           adaptive_pixel_sampler_small.test_for_convergence(k, s, nx_end, nx_begin, ny_end, ny_begin);
                         }
                      }
                      delete mat_stack;
                    };
+    std::vector<std::future<void> > futures;
+    futures.reserve(adaptive_pixel_sampler_small.size());
     for(size_t j = 0; j < adaptive_pixel_sampler_small.size(); j++) {
-      pool.push(worker, j);
+      futures.push_back(pool.pushReturn(worker, static_cast<int>(j)));
     }
-    pool.join();
+    bool completed_sample = wait_for_render_jobs(futures);
     if (adaptive_pixel_sampler_small.adaptive_on) {
-      if(s % 2 == 1 && s > 1) {
+      if(completed_sample && s % 2 == 1 && s > 1) {
         adaptive_pixel_sampler_small.split_remove_chunks(s);
       }
     }
-    adaptive_pixel_sampler_small.max_s++;
+    if(completed_sample) {
+      adaptive_pixel_sampler_small.max_s++;
+    }
+    return completed_sample;
   };
 
   auto render_fast_preview_sample = [&render_small_sample,
                                      &copy_small_color,
                                      &copy_small_preview,
                                      &adaptive_pixel_sampler,
-                                     &adaptive_pixel_sampler_small
+                                     &adaptive_pixel_sampler_small,
+                                     &display
 #ifdef HAS_OIDN
                                      ,
                                      denoise_fast_preview,
-                                     &fast_preview_denoise_filter
+                                     &fast_preview_denoiser,
+                                     &ensure_fast_preview_oidn_aux
 #endif
-                                     ] (size_t s) {
+                                     ] (size_t s) -> bool {
     for(size_t sample_offset = 0;
         sample_offset < FAST_INTERACTIVE_PREVIEW_SAMPLES;
         sample_offset++) {
-      render_small_sample(s * FAST_INTERACTIVE_PREVIEW_SAMPLES + sample_offset);
+      if(display.PollCloseEvent()) {
+        return false;
+      }
+      if(!render_small_sample(s * FAST_INTERACTIVE_PREVIEW_SAMPLES + sample_offset)) {
+        return false;
+      }
+    }
+    if(display.PollCloseEvent()) {
+      return false;
     }
     copy_small_color(adaptive_pixel_sampler.rgb, adaptive_pixel_sampler_small.rgb);
     copy_small_color(adaptive_pixel_sampler.normalOutput, adaptive_pixel_sampler_small.normalOutput);
     copy_small_color(adaptive_pixel_sampler.albedoOutput, adaptive_pixel_sampler_small.albedoOutput);
     copy_small_preview();
+    adaptive_pixel_sampler.max_s = std::max(adaptive_pixel_sampler.max_s, s + 1);
 #ifdef HAS_OIDN
     if(denoise_fast_preview) {
-      fast_preview_denoise_filter.execute();
-      copy_small_color(adaptive_pixel_sampler.draw_rgb_output,
-                       adaptive_pixel_sampler_small.draw_rgb_output);
+      if(display.PollCloseEvent()) {
+        return true;
+      }
+      ensure_fast_preview_oidn_aux();
+      if(display.PollCloseEvent()) {
+        return true;
+      }
+      fast_preview_denoiser.Execute();
+      if(!fast_preview_denoiser.ReportError()) {
+        copy_small_color(adaptive_pixel_sampler.draw_rgb_output,
+                         adaptive_pixel_sampler_small.draw_rgb_output);
+        display.MarkDenoisedPreviewReady(s + 1);
+      }
     }
 #endif
+    return true;
   };
 
   auto reset_render_state = [&]() {
     adaptive_pixel_sampler.reset();
     adaptive_pixel_sampler_small.reset();
     display.ResetPreviewExposure();
+#ifdef HAS_OIDN
+    display.InvalidateOidnAux();
+#endif
     reset_sampler_state(nx, ny, seeds, rngs, samplers);
     reset_sampler_state(nx_small, ny_small, seeds_small, rngs_small, samplers_small);
+  };
+
+  bool termination_sample_count_set = false;
+  auto finish_preview_termination = [&](size_t rendered_samples) {
+    if(display.preview && !termination_sample_count_set) {
+      adaptive_pixel_sampler.ns = std::max<size_t>(rendered_samples, 1);
+      adaptive_pixel_sampler.max_s = adaptive_pixel_sampler.ns;
+      termination_sample_count_set = true;
+    }
   };
 
   print_time(verbose, "Allocating sampler" );
@@ -410,10 +563,34 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
     while(!display.terminate && !completed_final_render) {
       while(!display.render_requested && !display.terminate) {
         Rcpp::checkUserInterrupt();
+        if(display.PollCloseEvent()) {
+          finish_preview_termination(preview_sample);
+          break;
+        }
+        bool rendered_sample = false;
         if(!display.write_fast_output) {
-          render_full_sample(preview_sample);
+          rendered_sample = render_full_sample(preview_sample);
+          if(!rendered_sample) {
+            finish_preview_termination(preview_sample);
+            break;
+          }
+          if(display.PollCloseEvent()) {
+            finish_preview_termination(preview_sample + 1);
+            break;
+          }
+#ifdef HAS_OIDN
+          ensure_full_preview_oidn_aux();
+          if(display.PollCloseEvent()) {
+            finish_preview_termination(preview_sample + 1);
+            break;
+          }
+#endif
         } else {
-          render_fast_preview_sample(preview_sample);
+          rendered_sample = render_fast_preview_sample(preview_sample);
+        }
+        if(display.PollCloseEvent()) {
+          finish_preview_termination(preview_sample + (rendered_sample ? 1 : 0));
+          break;
         }
         display.DrawImage(adaptive_pixel_sampler, adaptive_pixel_sampler_small,
                           preview_sample, pb, false,
@@ -423,8 +600,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
         }
       }
       if(display.terminate) {
-        adaptive_pixel_sampler.ns = std::max<size_t>(preview_sample, 1);
-        adaptive_pixel_sampler.max_s = adaptive_pixel_sampler.ns;
+        finish_preview_termination(preview_sample + 1);
         break;
       }
 
@@ -433,20 +609,43 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
 
       for(size_t s = 0; s < static_cast<size_t>(ns); s++) {
         Rcpp::checkUserInterrupt();
+        if(display.PollCloseEvent()) {
+          finish_preview_termination(s);
+          break;
+        }
         if(progress_bar && !display.preview) {
           pb.tick();
         }
+        bool rendered_sample = false;
         if(!display.write_fast_output) {
-          render_full_sample(s);
+          rendered_sample = render_full_sample(s);
+          if(!rendered_sample) {
+            finish_preview_termination(s);
+            break;
+          }
+          if(display.PollCloseEvent()) {
+            finish_preview_termination(s + 1);
+            break;
+          }
+#ifdef HAS_OIDN
+          ensure_full_preview_oidn_aux();
+          if(display.PollCloseEvent()) {
+            finish_preview_termination(s + 1);
+            break;
+          }
+#endif
         } else {
-          render_fast_preview_sample(s);
+          rendered_sample = render_fast_preview_sample(s);
+        }
+        if(display.PollCloseEvent()) {
+          finish_preview_termination(s + (rendered_sample ? 1 : 0));
+          break;
         }
         display.DrawImage(adaptive_pixel_sampler, adaptive_pixel_sampler_small,
                           s, pb, progress_bar,
                           (Float)s/(Float)ns, &world, rng_interactive);
         if(display.terminate && display.preview) {
-          adaptive_pixel_sampler.ns = s;
-          adaptive_pixel_sampler.max_s = s;
+          finish_preview_termination(s + 1);
           break;
         }
         if(!display.render_requested) {
@@ -465,20 +664,43 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
   } else {
     for(size_t s = 0; s < static_cast<size_t>(ns); s++) {
       Rcpp::checkUserInterrupt();
+      if(display.PollCloseEvent()) {
+        finish_preview_termination(s);
+        break;
+      }
       if(progress_bar && !display.preview) {
         pb.tick();
       }
+      bool rendered_sample = false;
       if(!display.write_fast_output) {
-        render_full_sample(s);
+        rendered_sample = render_full_sample(s);
+        if(!rendered_sample) {
+          finish_preview_termination(s);
+          break;
+        }
+        if(display.PollCloseEvent()) {
+          finish_preview_termination(s + 1);
+          break;
+        }
+#ifdef HAS_OIDN
+        ensure_full_preview_oidn_aux();
+        if(display.PollCloseEvent()) {
+          finish_preview_termination(s + 1);
+          break;
+        }
+#endif
       } else {
-        render_fast_preview_sample(s);
+        rendered_sample = render_fast_preview_sample(s);
+      }
+      if(display.PollCloseEvent()) {
+        finish_preview_termination(s + (rendered_sample ? 1 : 0));
+        break;
       }
       display.DrawImage(adaptive_pixel_sampler, adaptive_pixel_sampler_small,
                         s, pb, progress_bar,
                         (Float)s/(Float)ns, &world, rng_interactive);
       if(display.terminate && display.preview) {
-        adaptive_pixel_sampler.ns = s;
-        adaptive_pixel_sampler.max_s = s;
+        finish_preview_termination(s + 1);
         break;
       }
     }
@@ -489,4 +711,9 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
   adaptive_pixel_sampler.rgb.print();
   #endif
   adaptive_pixel_sampler.write_final_pixels();
+#ifdef HAS_OIDN
+  if(display.terminate && display.HasDenoisedPreview()) {
+    adaptive_pixel_sampler.write_final_denoised_pixels(display.DenoisedPreviewSampleCount());
+  }
+#endif
 }
