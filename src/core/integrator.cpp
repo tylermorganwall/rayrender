@@ -71,6 +71,57 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
                                                 alpha_output_small,
                                                 draw_rgb_output_small,
                                                 adaptive_on);
+
+#ifdef HAS_OIDN
+  oidn::DeviceRef fast_preview_denoise_device;
+  oidn::BufferRef fast_preview_color_buffer;
+  oidn::BufferRef fast_preview_albedo_buffer;
+  oidn::BufferRef fast_preview_normal_buffer;
+  oidn::BufferRef fast_preview_output_buffer;
+  oidn::FilterRef fast_preview_denoise_filter;
+  bool denoise_fast_preview = display.denoise;
+  if(denoise_fast_preview) {
+    fast_preview_denoise_device = oidn::newDevice();
+    fast_preview_denoise_device.commit();
+    fast_preview_color_buffer =
+      fast_preview_denoise_device.newBuffer(rgb_output_small.begin(),
+                                            nx_small * ny_small * 3 * sizeof(Float));
+    fast_preview_albedo_buffer =
+      fast_preview_denoise_device.newBuffer(albedo_output_small.begin(),
+                                            nx_small * ny_small * 3 * sizeof(Float));
+    fast_preview_normal_buffer =
+      fast_preview_denoise_device.newBuffer(normal_output_small.begin(),
+                                            nx_small * ny_small * 3 * sizeof(Float));
+    fast_preview_output_buffer =
+      fast_preview_denoise_device.newBuffer(draw_rgb_output_small.begin(),
+                                            nx_small * ny_small * 3 * sizeof(Float));
+
+    fast_preview_denoise_filter = fast_preview_denoise_device.newFilter("RT");
+    fast_preview_denoise_filter.setImage("color",
+                                         fast_preview_color_buffer,
+                                         oidn::Format::Float3,
+                                         nx_small,
+                                         ny_small);
+    fast_preview_denoise_filter.setImage("albedo",
+                                         fast_preview_albedo_buffer,
+                                         oidn::Format::Float3,
+                                         nx_small,
+                                         ny_small);
+    fast_preview_denoise_filter.setImage("normal",
+                                         fast_preview_normal_buffer,
+                                         oidn::Format::Float3,
+                                         nx_small,
+                                         ny_small);
+    fast_preview_denoise_filter.setImage("output",
+                                         fast_preview_output_buffer,
+                                         oidn::Format::Float3,
+                                         nx_small,
+                                         ny_small);
+    fast_preview_denoise_filter.set("hdr", true);
+    fast_preview_denoise_filter.commit();
+  }
+#endif
+
   std::vector<random_gen > rngs;
   std::vector<random_gen > rngs_small;
 
@@ -140,6 +191,20 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
   reset_sampler_state(nx_small, ny_small, seeds_small, rngs_small, samplers_small);
   random_gen rng_interactive(next_seed());
 
+  auto copy_small_color = [nx_small, ny_small, nx, ny] (RayMatrix& target, RayMatrix& source) {
+    Float ratio_x = (Float)nx_small/(Float)nx;
+    Float ratio_y = (Float)ny_small/(Float)ny;
+    for(size_t ii = 0; ii < nx; ii++) {
+      for(size_t jj = 0; jj < ny; jj++) {
+        int iii = (Float)ii * ratio_x;
+        int jjj = (Float)jj * ratio_y;
+        target(ii,jj,0) = source(iii,jjj,0) / (Float)FAST_INTERACTIVE_PREVIEW_SAMPLES;
+        target(ii,jj,1) = source(iii,jjj,1) / (Float)FAST_INTERACTIVE_PREVIEW_SAMPLES;
+        target(ii,jj,2) = source(iii,jjj,2) / (Float)FAST_INTERACTIVE_PREVIEW_SAMPLES;
+      }
+    }
+  };
+
   auto copy_small_preview = [&adaptive_pixel_sampler, &adaptive_pixel_sampler_small, nx_small, ny_small, nx, ny]() {
     Float ratio_x = (Float)nx_small/(Float)nx;
     Float ratio_y = (Float)ny_small/(Float)ny;
@@ -147,27 +212,6 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
       for(size_t jj = 0; jj < ny; jj++) {
         int iii = (Float)ii * ratio_x;
         int jjj = (Float)jj * ratio_y;
-        adaptive_pixel_sampler.rgb(ii,jj,0) = adaptive_pixel_sampler_small.rgb(iii,jjj,0) /
-          (Float)FAST_INTERACTIVE_PREVIEW_SAMPLES;
-        adaptive_pixel_sampler.rgb(ii,jj,1) = adaptive_pixel_sampler_small.rgb(iii,jjj,1) /
-          (Float)FAST_INTERACTIVE_PREVIEW_SAMPLES;
-        adaptive_pixel_sampler.rgb(ii,jj,2) = adaptive_pixel_sampler_small.rgb(iii,jjj,2) /
-          (Float)FAST_INTERACTIVE_PREVIEW_SAMPLES;
-
-        adaptive_pixel_sampler.normalOutput(ii,jj,0) = adaptive_pixel_sampler_small.normalOutput(iii,jjj,0) /
-          (Float)FAST_INTERACTIVE_PREVIEW_SAMPLES;
-        adaptive_pixel_sampler.normalOutput(ii,jj,1) = adaptive_pixel_sampler_small.normalOutput(iii,jjj,1) /
-          (Float)FAST_INTERACTIVE_PREVIEW_SAMPLES;
-        adaptive_pixel_sampler.normalOutput(ii,jj,2) = adaptive_pixel_sampler_small.normalOutput(iii,jjj,2) /
-          (Float)FAST_INTERACTIVE_PREVIEW_SAMPLES;
-
-        adaptive_pixel_sampler.albedoOutput(ii,jj,0) = adaptive_pixel_sampler_small.albedoOutput(iii,jjj,0) /
-          (Float)FAST_INTERACTIVE_PREVIEW_SAMPLES;
-        adaptive_pixel_sampler.albedoOutput(ii,jj,1) = adaptive_pixel_sampler_small.albedoOutput(iii,jjj,1) /
-          (Float)FAST_INTERACTIVE_PREVIEW_SAMPLES;
-        adaptive_pixel_sampler.albedoOutput(ii,jj,2) = adaptive_pixel_sampler_small.albedoOutput(iii,jjj,2) /
-          (Float)FAST_INTERACTIVE_PREVIEW_SAMPLES;
-
         adaptive_pixel_sampler.a(ii,jj,0) = adaptive_pixel_sampler_small.a(iii,jjj,0) /
           (Float)FAST_INTERACTIVE_PREVIEW_SAMPLES;
       }
@@ -322,13 +366,33 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
     adaptive_pixel_sampler_small.max_s++;
   };
 
-  auto render_fast_preview_sample = [&render_small_sample, &copy_small_preview] (size_t s) {
+  auto render_fast_preview_sample = [&render_small_sample,
+                                     &copy_small_color,
+                                     &copy_small_preview,
+                                     &adaptive_pixel_sampler,
+                                     &adaptive_pixel_sampler_small
+#ifdef HAS_OIDN
+                                     ,
+                                     denoise_fast_preview,
+                                     &fast_preview_denoise_filter
+#endif
+                                     ] (size_t s) {
     for(size_t sample_offset = 0;
         sample_offset < FAST_INTERACTIVE_PREVIEW_SAMPLES;
         sample_offset++) {
       render_small_sample(s * FAST_INTERACTIVE_PREVIEW_SAMPLES + sample_offset);
     }
+    copy_small_color(adaptive_pixel_sampler.rgb, adaptive_pixel_sampler_small.rgb);
+    copy_small_color(adaptive_pixel_sampler.normalOutput, adaptive_pixel_sampler_small.normalOutput);
+    copy_small_color(adaptive_pixel_sampler.albedoOutput, adaptive_pixel_sampler_small.albedoOutput);
     copy_small_preview();
+#ifdef HAS_OIDN
+    if(denoise_fast_preview) {
+      fast_preview_denoise_filter.execute();
+      copy_small_color(adaptive_pixel_sampler.draw_rgb_output,
+                       adaptive_pixel_sampler_small.draw_rgb_output);
+    }
+#endif
   };
 
   auto reset_render_state = [&]() {

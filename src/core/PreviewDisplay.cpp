@@ -60,6 +60,14 @@ static void ApplyPreviewCameraMotionRange(RayCamera* cam,
                                     end.focal);
 }
 
+static void ApplyStaticPreviewCameraMotionRange(RayCamera* cam) {
+  if(cam == nullptr) {
+    return;
+  }
+  PreviewCameraState state = CapturePreviewCameraState(cam);
+  ApplyPreviewCameraMotionRange(cam, state, state);
+}
+
 static bool IsKeyframeSuppliedMotionArg(const std::string& name) {
   return name == "positions" ||
          name == "lookats" ||
@@ -228,10 +236,16 @@ void PreviewDisplay::SetCameraMotionBlur(bool enabled) {
   camera_motion_blur_enabled = enabled;
   if(cam != nullptr) {
     cam->set_camera_motion_blur(enabled);
+    if(enabled && interactive && !preview_motion_active) {
+      ApplyStaticPreviewCameraMotionRange(cam);
+    }
   }
 #ifdef RAY_WINDOWS
   if(cam_w != nullptr) {
     cam_w->set_camera_motion_blur(enabled);
+    if(enabled && interactive && !preview_motion_active) {
+      ApplyStaticPreviewCameraMotionRange(cam_w);
+    }
   }
 #endif
 }
@@ -503,6 +517,7 @@ bool PreviewDisplay::CancelPreviewMotion(Float* env_rotation) {
   current_keyframe = preview_motion_restore_keyframe;
   preview_motion_active = false;
   preview_motion_frame = 0;
+  ApplyStaticPreviewCameraMotionRange(cam);
   Rprintf("Cancelled keyframe motion preview. Restored original camera.\n");
   return true;
 }
@@ -517,6 +532,7 @@ bool PreviewDisplay::AdvancePreviewMotion(Float* env_rotation) {
     current_keyframe = preview_motion_restore_keyframe;
     preview_motion_active = false;
     preview_motion_frame = 0;
+    ApplyStaticPreviewCameraMotionRange(cam);
     Rprintf("Finished keyframe motion preview. Restored original camera.\n");
     return true;
   }
@@ -1360,10 +1376,11 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
 #ifdef RAY_HAS_X11
   if (d) {
 #ifdef HAS_OIDN
-    if(denoise && filter != nullptr) {
+    bool use_denoised_preview = denoise && filter != nullptr;
+    if(use_denoised_preview && !write_fast_output) {
       filter->execute();
     }
-    RayMatrix& rgb = denoise && filter != nullptr ? adaptive_pixel_sampler.draw_rgb_output : adaptive_pixel_sampler.rgb;
+    RayMatrix& rgb = use_denoised_preview ? adaptive_pixel_sampler.draw_rgb_output : adaptive_pixel_sampler.rgb;
 #else
     RayMatrix &rgb  = adaptive_pixel_sampler.rgb;
 #endif
@@ -1507,7 +1524,6 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
           vec3f w = cam->get_w();
           vec3f u = cam->get_u();
           vec3f v = cam->get_v();
-          PreviewCameraState camera_state_before = CapturePreviewCameraState(cam);
         
           bool blanked = false;
           bool one_orbit = false;
@@ -1654,9 +1670,7 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
             
           } else {
             if(!blanked && !terminate && IsX11RenderInvalidatingKey(d, e.xkey.keycode)) {
-              ApplyPreviewCameraMotionRange(cam,
-                                            camera_state_before,
-                                            CapturePreviewCameraState(cam));
+              ApplyStaticPreviewCameraMotionRange(cam);
               blanked = true;
               ns = 0;
               adaptive_pixel_sampler.reset();
@@ -1842,9 +1856,7 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
               PrintCameraInfo(env_y_angle);
             } else {
               if(!blanked && !terminate && IsX11RenderInvalidatingKey(d, e.xkey.keycode)) {
-                ApplyPreviewCameraMotionRange(cam,
-                                              camera_state_before,
-                                              CapturePreviewCameraState(cam));
+                ApplyStaticPreviewCameraMotionRange(cam);
                 blanked = true;
                 ns = 0;
                 adaptive_pixel_sampler.reset();
@@ -1862,7 +1874,6 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
           continue;
         }
         if(interactive) {
-          PreviewCameraState camera_state_before = CapturePreviewCameraState(cam);
           bool left = e.xbutton.button == Button1;
           bool right = e.xbutton.button == Button3;
           if(!left && !right) {
@@ -1920,9 +1931,7 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
             cam->update_lookat(hrec.p);
           }
           cam->update_look_direction(dir);
-          ApplyPreviewCameraMotionRange(cam,
-                                        camera_state_before,
-                                        CapturePreviewCameraState(cam));
+          ApplyStaticPreviewCameraMotionRange(cam);
           ns = 0;
           adaptive_pixel_sampler.reset();
           adaptive_pixel_sampler_small.reset();
@@ -1951,10 +1960,11 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
     progress_w = progress;
     interactive_w = interactive;
 #ifdef HAS_OIDN
-    if(denoise && filter != nullptr) {
+    bool use_denoised_preview = denoise && filter != nullptr;
+    if(use_denoised_preview && !write_fast_output) {
       filter->execute();
     }
-    RayMatrix& rgb_s = denoise && filter != nullptr ? adaptive_pixel_sampler.draw_rgb_output : adaptive_pixel_sampler.rgb;
+    RayMatrix& rgb_s = use_denoised_preview ? adaptive_pixel_sampler.draw_rgb_output : adaptive_pixel_sampler.rgb;
 #else
     RayMatrix &rgb_s  = adaptive_pixel_sampler.rgb;
 #endif
@@ -2314,11 +2324,6 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         v = cam_w->get_v();
       }
       bool shift_pressed = (GetKeyState(VK_SHIFT) & 0x8000) != 0;
-      PreviewCameraState camera_state_before;
-      bool has_camera_state_before = interactive_w && cam_w != nullptr;
-      if(has_camera_state_before) {
-        camera_state_before = CapturePreviewCameraState(cam_w);
-      }
 
       switch (wParam) {
         case VK_ESCAPE: {
@@ -2569,11 +2574,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
       if(interactive_w) {
         if(IsWindowsRenderInvalidatingKey(wParam)) {
           if(!blanked && !term) {
-            if(has_camera_state_before && cam_w != nullptr) {
-              ApplyPreviewCameraMotionRange(cam_w,
-                                            camera_state_before,
-                                            CapturePreviewCameraState(cam_w));
-            }
+            ApplyStaticPreviewCameraMotionRange(cam_w);
             blanked = true;
             *ns_w = 0;
             aps->reset();
@@ -2593,7 +2594,6 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
       break;
     }
     if(interactive_w) {
-      PreviewCameraState camera_state_before = CapturePreviewCameraState(cam_w);
       Float x = GET_X_LPARAM(lParam);
       Float y = GET_Y_LPARAM(lParam);
       Float fov = cam_w->get_fov();
@@ -2644,9 +2644,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
       } else {
         cam_w->update_look_direction(-dir);
       }
-      ApplyPreviewCameraMotionRange(cam_w,
-                                    camera_state_before,
-                                    CapturePreviewCameraState(cam_w));
+      ApplyStaticPreviewCameraMotionRange(cam_w);
       *ns_w = 0;
       aps->reset();
       aps_small->reset();
@@ -2663,7 +2661,6 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
       break;
     }
     if(interactive_w) {
-      PreviewCameraState camera_state_before = CapturePreviewCameraState(cam_w);
       Float x = GET_X_LPARAM(lParam);
       Float y = GET_Y_LPARAM(lParam);
       Float fov = cam_w->get_fov();
@@ -2697,9 +2694,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         }
       }
       cam_w->update_look_direction(dir);
-      ApplyPreviewCameraMotionRange(cam_w,
-                                    camera_state_before,
-                                    CapturePreviewCameraState(cam_w));
+      ApplyStaticPreviewCameraMotionRange(cam_w);
       *ns_w = 0;
       aps->reset();
       aps_small->reset();
