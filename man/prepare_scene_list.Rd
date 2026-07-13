@@ -31,6 +31,7 @@ prepare_scene_list(
   shutteropen = 0,
   shutterclose = 1,
   camera_motion_blur = FALSE,
+  shutter_speed = 2,
   focal_distance = NULL,
   ortho_dimensions = c(1, 1),
   tonemap = "gamma",

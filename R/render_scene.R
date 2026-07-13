@@ -22,7 +22,7 @@
 #' E = 2x Step Distance (max 128), C = 0.5x Step Distance, Up Key = Zoom In (decrease FOV), Down Key = Zoom Out (increase FOV),
 #' Left Key = Decrease Aperture, Right Key = Increase Aperture, 1 = Decrease Focal Distance, 2 = Increase Focal Distance,
 #' 3/4 = Rotate Environment Light,
-#' Right bracket/left bracket = Increase/Decrease Preview Exposure,
+#' Right bracket/left bracket = Increase/Decrease Preview Exposure, Shift + right bracket/left bracket = Increase/Decrease shutter speed,
 #' R = Reset Camera, Return = Toggle between deferred and final render if `deferred_render = TRUE`, TAB: Toggle Orbit Mode,
 #' Left Mouse Click: Change Look Direction, Right Mouse Click: Change Look At.
 #' If the interactive preview window is wide enough, a status bar at the bottom shows the current camera, exposure, environment rotation,
@@ -93,6 +93,11 @@
 #' @param shutteropen Default `0`. Time at which the shutter is open. Only affects moving objects.
 #' @param shutterclose Default `1`. Time at which the shutter is open. Only affects moving objects.
 #' @param camera_motion_blur Default `FALSE`. Whether to blur camera movement over the shutter interval. Press `B` in interactive preview to toggle.
+#' @param shutter_speed Default `NULL`. Optional render-time override for the
+#' selected camera's frame-relative shutter speed. A value of `1` samples the
+#' full frame-to-frame motion interval, `2` samples one-half, and `4` samples
+#' one-quarter. Higher values produce less motion blur. `Inf` disables temporal
+#' motion blur. This does not affect exposure or brightness.
 #' @param focal_distance Default `NULL`, automatically set to the `lookfrom-lookat` distance unless
 #' otherwise specified.
 #' @param ortho_dimensions Default `c(1,1)`. Width and height of the orthographic camera. Will only be used if `fov = 0`.
@@ -255,6 +260,7 @@ render_scene = function(
   shutteropen = 0.0,
   shutterclose = 1.0,
   camera_motion_blur = FALSE,
+  shutter_speed = NULL,
   focal_distance = NULL,
   ortho_dimensions = c(1, 1),
   tonemap = "raw",
@@ -283,6 +289,11 @@ render_scene = function(
   if (!is.logical(camera_motion_blur) || length(camera_motion_blur) != 1) {
     stop("camera_motion_blur must be a single TRUE/FALSE value.")
   }
+  shutter_speed_supplied = !is.null(shutter_speed)
+  if (shutter_speed_supplied) {
+    validate_shutter_speed(shutter_speed)
+  }
+  camera_shutter_speed = if (shutter_speed_supplied) shutter_speed else 2
   camera_arg = if (missing(camera)) NULL else camera
   filename_supplied = !missing(filename)
   legacy_camera_supplied = c(
@@ -319,6 +330,7 @@ render_scene = function(
     "shutteropen",
     "shutterclose",
     "camera_motion_blur",
+    "shutter_speed",
     "filename"
   )]
   metadata_overrides = list(
@@ -329,8 +341,10 @@ render_scene = function(
     shutteropen = shutteropen,
     shutterclose = shutterclose,
     camera_motion_blur = camera_motion_blur,
+    shutter_speed = camera_shutter_speed,
     filename = filename
   )
+  metadata_supplied[["shutter_speed"]] = shutter_speed_supplied
   scene_camera_available = length(ray_scene_cameras(scene)) > 0 ||
     !is.null(camera_arg)
   legacy_filename = if (
@@ -359,6 +373,7 @@ render_scene = function(
     shutteropen = shutteropen,
     shutterclose = shutterclose,
     camera_motion_blur = camera_motion_blur,
+    shutter_speed = camera_shutter_speed,
     message_cornell = is.null(camera_arg) &&
       length(ray_scene_cameras(scene)) == 0
   )
@@ -570,6 +585,7 @@ render_scene = function(
   shutteropen = camera_args$shutteropen
   shutterclose = camera_args$shutterclose
   camera_motion_blur = camera_args$camera_motion_blur
+  shutter_speed = camera_args$shutter_speed
   filename = camera_image_filename(selected_camera, frame)
   if (render_mode == "preview") {
     filename = NA
@@ -623,7 +639,7 @@ HAS_OIDN: %s
       "Keyframes:  K save | L last | </> prev/next | / delete | M preview/cancel",
       "Mouse:      Left click lookat + focal distance | Right click lookat",
       "Status:     Wide window shows camera/exposure/env/keyframes",
-      "Exposure:   ]/[ preview exposure",
+      "Exposure:   ]/[ preview exposure | Shift-]/[ shutter speed",
       "Blur:       B camera motion blur",
       "General:    P print camera | R reset camera | ESC close"
     )
@@ -665,6 +681,7 @@ HAS_OIDN: %s
     shutteropen = shutteropen,
     shutterclose = shutterclose,
     camera_motion_blur = camera_motion_blur,
+    shutter_speed = shutter_speed,
     focal_distance = focal_distance,
     ortho_dimensions = ortho_dimensions,
     tonemap = tonemap,
@@ -715,6 +732,7 @@ HAS_OIDN: %s
   camera_info$interactive = interactive
   camera_info$auto_exposure = auto_exposure
   camera_info$camera_motion_blur = isTRUE(camera_motion_blur)
+  camera_info$shutter_speed = shutter_speed
   camera_info$keyframe_motion_args = normalize_keyframe_motion_args(
     selected_camera$keyframe_motion_args
   )

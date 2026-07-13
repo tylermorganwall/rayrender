@@ -12,10 +12,25 @@ test_that("camera creates one-frame static motion", {
   expect_equal(nrow(cam$motion), 1)
   expect_equal(cam$motion$fov, 35)
   expect_false(cam$camera_motion_blur)
+  expect_equal(cam$shutter_speed, 2)
   expect_equal(
     cam$motion$focal,
     sqrt(sum((c(0, 1, -10) - c(0, 0, 0))^2))
   )
+})
+
+test_that("camera validates and stores shutter speed", {
+  expect_equal(camera()$shutter_speed, 2)
+  expect_equal(camera(shutter_speed = 4)$shutter_speed, 4)
+  expect_equal(camera(shutter_speed = Inf)$shutter_speed, Inf)
+
+  bad_values = list(0, -1, 0.5, NA_real_, NaN, -Inf, c(1, 2), "2")
+  for (bad_value in bad_values) {
+    expect_error(
+      camera(shutter_speed = bad_value),
+      "shutter_speed must be a numeric scalar greater than or equal to 1"
+    )
+  }
 })
 
 test_that("camera stores camera motion blur flag", {
@@ -230,6 +245,70 @@ test_that("camera_batch_plan carries per-camera motion blur flags", {
   expect_equal(plan$motion$camera_motion_blur_group, c(1, 2, 2))
 })
 
+test_that("render-time shutter speed override takes precedence over camera metadata", {
+  cam = camera(name = "main", shutter_speed = 8)
+
+  resolved = apply_camera_overrides(
+    cam,
+    overrides = list(shutter_speed = 4),
+    supplied = c(shutter_speed = TRUE)
+  )
+
+  expect_equal(ray_camera_shutter_speed(resolved), 4)
+  expect_equal(camera_frame_args(resolved)$shutter_speed, 4)
+})
+
+test_that("fallback legacy camera receives default shutter speed", {
+  fallback = render_scene_legacy_camera(
+    scene = generate_ground(),
+    supplied = rep(FALSE, 14),
+    lookfrom = c(0, 1, -10),
+    lookat = c(0, 0, 0),
+    camera_up = c(0, 1, 0),
+    fov = 20,
+    aperture = 0.1,
+    focal_distance = NULL,
+    ortho_dimensions = c(1, 1),
+    filename = NA_character_,
+    camera_description_file = NA,
+    camera_scale = 1,
+    iso = 100,
+    film_size = 22,
+    shutteropen = 0,
+    shutterclose = 1,
+    camera_motion_blur = FALSE
+  )
+
+  expect_equal(fallback$shutter_speed, 2)
+  expect_equal(camera_frame_args(fallback)$shutter_speed, 2)
+})
+
+test_that("static scene brightness is independent of shutter speed", {
+  scene = generate_ground(material = diffuse(color = "grey70"))
+  render_once = function(speed) {
+    set.seed(42)
+    render_scene(
+      scene,
+      width = 4,
+      height = 4,
+      samples = 1,
+      parallel = FALSE,
+      preview = FALSE,
+      plot_scene = FALSE,
+      shutter_speed = speed,
+      tonemap = "raw",
+      clamp_value = Inf,
+      bloom = FALSE
+    )
+  }
+
+  base = render_once(1)
+
+  expect_identical(render_once(2), base)
+  expect_identical(render_once(4), base)
+  expect_identical(render_once(Inf), base)
+})
+
 test_that("camera_batch_plan combines static and animated cameras", {
   motion = generate_camera_motion(
     positions = list(c(0, 1, -10), c(1, 2, -8), c(0, 1, -6)),
@@ -313,6 +392,7 @@ test_that("print.ray_camera summarizes static cameras", {
   expect_true(any(grepl("frames: 1", output, fixed = TRUE)))
   expect_true(any(grepl("lookfrom: c(0, 1, -10)", output, fixed = TRUE)))
   expect_true(any(grepl("camera motion blur: off", output, fixed = TRUE)))
+  expect_true(any(grepl("shutter speed: 2", output, fixed = TRUE)))
   expect_true(any(grepl("output: render.png", output, fixed = TRUE)))
 })
 

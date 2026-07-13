@@ -24,6 +24,10 @@
 #' @param shutteropen Default `0`. Time at which the shutter opens.
 #' @param shutterclose Default `1`. Time at which the shutter closes.
 #' @param camera_motion_blur Default `FALSE`. Whether to blur animated camera movement over the shutter interval.
+#' @param shutter_speed Default `2`. Frame-relative shutter speed controlling
+#' motion blur. A value of `1` samples the full frame-to-frame motion
+#' interval, `2` samples one-half, and `4` samples one-quarter. Higher
+#' values produce less motion blur. `Inf` disables temporal motion blur.
 #'
 #' @return A `ray_camera` object.
 #' @export
@@ -42,6 +46,14 @@
 #'   ))
 #' render_scene(scene, samples = 16, parallel = TRUE)
 #'
+#' # Shutter speed is frame-relative: higher values sample a smaller fraction
+#' # of camera/object motion without changing exposure.
+#' fast_shutter_camera = camera(
+#'   lookfrom = c(7, 1.5, 10),
+#'   lookat = c(0, 0.5, 0),
+#'   shutter_speed = 4
+#' )
+#'
 #' # Animated camera attached to the scene, equivalent to passing camera_motion
 #' # directly to render_animation().
 #' camera_pos = list(c(0, 1, 15), c(5, -5, 5), c(-5, 5, -5), c(0, 1, -15))
@@ -59,6 +71,8 @@
 #'   add_camera(camera(
 #'     name = "flythrough",
 #'     motion = camera_motion,
+#'     camera_motion_blur = TRUE,
+#'     shutter_speed = 4,
 #'     filename = NA_character_
 #'   ))
 #' render_scene(
@@ -89,13 +103,15 @@ camera = function(
   film_size = 22,
   shutteropen = 0,
   shutterclose = 1,
-  camera_motion_blur = FALSE
+  camera_motion_blur = FALSE,
+  shutter_speed = 2
 ) {
   validate_camera_name(name)
   keyframe_motion_args = normalize_keyframe_motion_args(keyframe_motion_args)
   if (!is.logical(camera_motion_blur) || length(camera_motion_blur) != 1) {
     stop("camera_motion_blur must be a single TRUE/FALSE value.")
   }
+  validate_shutter_speed(shutter_speed)
 
   if (is.null(motion)) {
     validate_static_camera_inputs(
@@ -146,7 +162,8 @@ camera = function(
       film_size = film_size,
       shutteropen = shutteropen,
       shutterclose = shutterclose,
-      camera_motion_blur = isTRUE(camera_motion_blur)
+      camera_motion_blur = isTRUE(camera_motion_blur),
+      shutter_speed = shutter_speed
     ),
     class = "ray_camera"
   )
@@ -239,6 +256,10 @@ print.ray_camera = function(x, ...) {
   cat(sprintf(
     "  camera motion blur: %s\n",
     if (isTRUE(x$camera_motion_blur)) "on" else "off"
+  ))
+  cat(sprintf(
+    "  shutter speed: %s\n",
+    format(ray_camera_shutter_speed(x), trim = TRUE, scientific = FALSE)
   ))
   cat(sprintf("  output: %s\n", format_filename(x$filename)))
 
@@ -384,6 +405,7 @@ list_cameras = function(scene) {
       name = character(),
       frames = integer(),
       animated = logical(),
+      shutter_speed = numeric(),
       filename = character(),
       active = logical()
     ))
@@ -392,6 +414,7 @@ list_cameras = function(scene) {
     name = names(cameras),
     frames = vapply(cameras, function(cam) nrow(cam$motion), integer(1)),
     animated = vapply(cameras, function(cam) nrow(cam$motion) > 1, logical(1)),
+    shutter_speed = vapply(cameras, ray_camera_shutter_speed, numeric(1)),
     filename = vapply(
       cameras,
       function(cam) paste(cam$filename, collapse = ","),
@@ -674,6 +697,32 @@ validate_numeric_scalar = function(x, arg) {
     stop(arg, " must be a finite numeric scalar.")
   }
   invisible(TRUE)
+}
+
+#' @keywords internal
+validate_shutter_speed = function(shutter_speed) {
+  if (
+    !is.numeric(shutter_speed) ||
+      length(shutter_speed) != 1 ||
+      is.na(shutter_speed) ||
+      is.nan(shutter_speed) ||
+      shutter_speed < 1
+  ) {
+    stop(
+      "shutter_speed must be a numeric scalar greater than or equal to 1, or Inf."
+    )
+  }
+  invisible(TRUE)
+}
+
+#' @keywords internal
+ray_camera_shutter_speed = function(camera) {
+  shutter_speed = camera$shutter_speed
+  if (is.null(shutter_speed)) {
+    return(2)
+  }
+  validate_shutter_speed(shutter_speed)
+  shutter_speed
 }
 
 #' @keywords internal
@@ -973,6 +1022,7 @@ apply_camera_overrides = function(camera, overrides, supplied) {
     }
   }
   validate_camera_filename(camera$filename, nrow(camera$motion))
+  camera$shutter_speed = ray_camera_shutter_speed(camera)
   camera
 }
 
@@ -1047,6 +1097,7 @@ render_scene_legacy_camera = function(
   shutteropen,
   shutterclose,
   camera_motion_blur = FALSE,
+  shutter_speed = 2,
   message_cornell = TRUE
 ) {
   if (!is.null(attr(scene, "cornell"))) {
@@ -1100,7 +1151,8 @@ render_scene_legacy_camera = function(
     film_size = film_size,
     shutteropen = shutteropen,
     shutterclose = shutterclose,
-    camera_motion_blur = camera_motion_blur
+    camera_motion_blur = camera_motion_blur,
+    shutter_speed = shutter_speed
   )
 }
 
@@ -1122,7 +1174,8 @@ camera_frame_args = function(camera, frame = 1) {
     film_size = camera$film_size,
     shutteropen = camera$shutteropen,
     shutterclose = camera$shutterclose,
-    camera_motion_blur = isTRUE(camera$camera_motion_blur)
+    camera_motion_blur = isTRUE(camera$camera_motion_blur),
+    shutter_speed = ray_camera_shutter_speed(camera)
   )
 }
 
@@ -1141,7 +1194,8 @@ camera_batch_metadata = function(camera) {
     iso = as.numeric(camera$iso),
     film_size = as.numeric(camera$film_size),
     shutteropen = as.numeric(camera$shutteropen),
-    shutterclose = as.numeric(camera$shutterclose)
+    shutterclose = as.numeric(camera$shutterclose),
+    shutter_speed = as.numeric(ray_camera_shutter_speed(camera))
   )
 }
 

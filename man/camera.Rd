@@ -22,7 +22,8 @@ camera(
   film_size = 22,
   shutteropen = 0,
   shutterclose = 1,
-  camera_motion_blur = FALSE
+  camera_motion_blur = FALSE,
+  shutter_speed = 2
 )
 }
 \arguments{
@@ -64,6 +65,11 @@ The saved keyframes always supply the camera positions. Defaults are `type = "li
 \item{shutterclose}{Default `1`. Time at which the shutter closes.}
 
 \item{camera_motion_blur}{Default `FALSE`. Whether to blur animated camera movement over the shutter interval.}
+
+\item{shutter_speed}{Default `2`. Frame-relative shutter speed controlling
+motion blur. A value of `1` samples the full frame-to-frame motion
+interval, `2` samples one-half, and `4` samples one-quarter. Higher
+values produce less motion blur. `Inf` disables temporal motion blur.}
 }
 \value{
 A `ray_camera` object.
@@ -87,6 +93,14 @@ scene = generate_ground(depth = -0.5, material = diffuse(checkercolor = "blue"))
   ))
 render_scene(scene, samples = 16, parallel = TRUE)
 
+# Shutter speed is frame-relative: higher values sample a smaller fraction
+# of camera/object motion without changing exposure.
+fast_shutter_camera = camera(
+  lookfrom = c(7, 1.5, 10),
+  lookat = c(0, 0.5, 0),
+  shutter_speed = 4
+)
+
 # Animated camera attached to the scene, equivalent to passing camera_motion
 # directly to render_animation().
 camera_pos = list(c(0, 1, 15), c(5, -5, 5), c(-5, 5, -5), c(0, 1, -15))
@@ -104,6 +118,8 @@ animated_scene = generate_ground(material = diffuse(checkercolor = "grey20"), de
   add_camera(camera(
     name = "flythrough",
     motion = camera_motion,
+    camera_motion_blur = TRUE,
+    shutter_speed = 4,
     filename = NA_character_
   ))
 render_scene(

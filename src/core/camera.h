@@ -6,6 +6,10 @@
 #include "../math/onbh.h"
 #include "../math/animatedtransform.h"
 #include "../math/bounds.h"
+#include "../math/mathinline.h"
+
+#include <cmath>
+#include <stdexcept>
 
 
 struct CameraSample {
@@ -49,6 +53,15 @@ class RayCamera {
                                               point3f end_lookat,
                                               vec3f end_up,
                                               Float end_focal) = 0;
+    void set_shutter_speed(Float value) {
+      if(std::isnan(value) ||
+         value < static_cast<Float>(1) ||
+         (std::isinf(value) && value < static_cast<Float>(0))) {
+        throw std::runtime_error("shutter_speed must be greater than or equal to 1, or Inf.");
+      }
+      shutter_speed = value;
+    }
+    Float get_shutter_speed() const {return(shutter_speed);}
     
     virtual void reset()  = 0;
     virtual Float GenerateRay(const CameraSample &sample, Ray* ray2) const {
@@ -66,6 +79,15 @@ class RayCamera {
     virtual point3f get_lookat() {return(point3f(0,0,0));}
     virtual point2f get_ortho() {return(point2f(1.f,1.f));}
     
+  protected:
+    Float sample_motion_time(Float unit_time) const {
+      Float u = clamp(unit_time, static_cast<Float>(0), static_cast<Float>(1));
+      if(std::isinf(shutter_speed)) {
+        return static_cast<Float>(0);
+      }
+      return u / shutter_speed;
+    }
+    Float shutter_speed = static_cast<Float>(2);
     
 };
 

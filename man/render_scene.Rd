@@ -36,6 +36,7 @@ render_scene(
   shutteropen = 0,
   shutterclose = 1,
   camera_motion_blur = FALSE,
+  shutter_speed = NULL,
   focal_distance = NULL,
   ortho_dimensions = c(1, 1),
   tonemap = "raw",
@@ -89,7 +90,7 @@ Shift-W/Shift-S = Pitch Camera Forward/Back, Shift-A/Shift-D = Roll Camera Left/
 E = 2x Step Distance (max 128), C = 0.5x Step Distance, Up Key = Zoom In (decrease FOV), Down Key = Zoom Out (increase FOV),
 Left Key = Decrease Aperture, Right Key = Increase Aperture, 1 = Decrease Focal Distance, 2 = Increase Focal Distance,
 3/4 = Rotate Environment Light,
-Right bracket/left bracket = Increase/Decrease Preview Exposure,
+Right bracket/left bracket = Increase/Decrease Preview Exposure, Shift + right bracket/left bracket = Increase/Decrease shutter speed,
 R = Reset Camera, Return = Toggle between deferred and final render if `deferred_render = TRUE`, TAB: Toggle Orbit Mode,
 Left Mouse Click: Change Look Direction, Right Mouse Click: Change Look At.
 If the interactive preview window is wide enough, a status bar at the bottom shows the current camera, exposure, environment rotation,
@@ -181,6 +182,12 @@ a hexadecimal code, or a numeric rgb vector listing three intensities between `0
 \item{shutterclose}{Default `1`. Time at which the shutter is open. Only affects moving objects.}
 
 \item{camera_motion_blur}{Default `FALSE`. Whether to blur camera movement over the shutter interval. Press `B` in interactive preview to toggle.}
+
+\item{shutter_speed}{Default `NULL`. Optional render-time override for the
+selected camera's frame-relative shutter speed. A value of `1` samples the
+full frame-to-frame motion interval, `2` samples one-half, and `4` samples
+one-quarter. Higher values produce less motion blur. `Inf` disables temporal
+motion blur. This does not affect exposure or brightness.}
 
 \item{focal_distance}{Default `NULL`, automatically set to the `lookfrom-lookat` distance unless
 otherwise specified.}

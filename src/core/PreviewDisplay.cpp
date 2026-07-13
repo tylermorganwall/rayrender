@@ -6,9 +6,16 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <stdexcept>
+
+#ifdef NOT_CRAN
+#include <testthat.h>
+#endif
 
 static const unsigned int PREVIEW_STATUS_MIN_WIDTH = 640;
 static const unsigned int PREVIEW_STATUS_BAR_HEIGHT = 24;
+static const Float PREVIEW_SHUTTER_SPEED_MIN = static_cast<Float>(1);
+static const Float PREVIEW_SHUTTER_SPEED_MAX = static_cast<Float>(4096);
 
 static vec3f PreviewCameraDirection(RayCamera* cam) {
   vec3f direction = cam->get_w();
@@ -121,6 +128,24 @@ static bool IsX11RenderInvalidatingKey(Display* display, KeyCode keycode) {
          keycode == XKeysymToKeycode(display, XStringToKeysym("r"));
 }
 
+static KeySym X11EventKeysym(XKeyEvent event) {
+  return XLookupKeysym(&event, (event.state & ShiftMask) != 0 ? 1 : 0);
+}
+
+static bool IsX11ShiftedLeftBracket(Display* display, XKeyEvent event) {
+  bool shift_pressed = (event.state & ShiftMask) != 0;
+  KeySym key_symbol = X11EventKeysym(event);
+  return key_symbol == XK_braceleft ||
+         (shift_pressed && event.keycode == XKeysymToKeycode(display, XK_bracketleft));
+}
+
+static bool IsX11ShiftedRightBracket(Display* display, XKeyEvent event) {
+  bool shift_pressed = (event.state & ShiftMask) != 0;
+  KeySym key_symbol = X11EventKeysym(event);
+  return key_symbol == XK_braceright ||
+         (shift_pressed && event.keycode == XKeysymToKeycode(display, XK_bracketright));
+}
+
 #endif
 
 #ifdef RAY_WINDOWS
@@ -230,6 +255,56 @@ void PreviewDisplay::IncreasePreviewExposure() {
 void PreviewDisplay::DecreasePreviewExposure() {
   preview_exposure_adjustment *= 0.5f;
   Rprintf("Preview Exposure: %.3f\n", preview_exposure_adjustment);
+}
+
+void PreviewDisplay::SetShutterSpeed(Float value) {
+  if(std::isnan(value) ||
+     value < static_cast<Float>(1) ||
+     (std::isinf(value) && value < static_cast<Float>(0))) {
+    throw std::runtime_error("shutter_speed must be greater than or equal to 1, or Inf.");
+  }
+  shutter_speed = value;
+  ApplyShutterSpeedToCameras();
+}
+
+Float PreviewDisplay::GetShutterSpeed() const {
+  return shutter_speed;
+}
+
+void PreviewDisplay::AdjustShutterSpeedStops(Float stops) {
+  Float next = shutter_speed;
+  if(std::isinf(shutter_speed)) {
+    if(stops < static_cast<Float>(0)) {
+      next = PREVIEW_SHUTTER_SPEED_MAX;
+    }
+  } else {
+    next = shutter_speed * std::pow(static_cast<Float>(2), stops);
+    next = clamp(next, PREVIEW_SHUTTER_SPEED_MIN, PREVIEW_SHUTTER_SPEED_MAX);
+  }
+  SetShutterSpeed(next);
+  PrintShutterSpeed();
+}
+
+void PreviewDisplay::ApplyShutterSpeedToCameras() {
+  if(cam != nullptr) {
+    cam->set_shutter_speed(shutter_speed);
+  }
+#ifdef RAY_WINDOWS
+  if(cam_w != nullptr) {
+    cam_w->set_shutter_speed(shutter_speed);
+  }
+#endif
+}
+
+void PreviewDisplay::PrintShutterSpeed() const {
+  if(std::isinf(shutter_speed)) {
+    Rprintf("Shutter speed: Inf; motion blur interval: 0\n");
+    return;
+  }
+  Float interval = static_cast<Float>(1) / shutter_speed;
+  Float angle = static_cast<Float>(360) * interval;
+  Rprintf("Shutter speed: %.3f; interval: %.3f frame; angle: %.0f deg\n",
+          shutter_speed, interval, angle);
 }
 
 void PreviewDisplay::SetCameraMotionBlur(bool enabled) {
@@ -591,20 +666,42 @@ void PreviewDisplay::PrintCameraInfo(Float env_rotation) const {
   Float cam_aperture = cam->get_aperture();
   Float fd = cam->get_focal_distance();
   point3f key_lookat = PreviewCameraLookat(cam);
+  const char* shutter_label = std::isinf(shutter_speed) ? "Inf" : "";
 
   if(fov > 0) {
-    Rprintf("Lookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f) FOV: %.1f Aperture: %0.3f Focal Dist: %0.3f Env Rotation: %.2f Exposure: %.3f Camera Motion Blur: %s\n",
-            origin.xyz.x, origin.xyz.y, origin.xyz.z,
-            key_lookat.xyz.x, key_lookat.xyz.y, key_lookat.xyz.z,
-            fov,
-            cam_aperture, fd, env_rotation, preview_exposure_adjustment,
-            camera_motion_blur_enabled ? "ON" : "OFF");
+    if(std::isinf(shutter_speed)) {
+      Rprintf("Lookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f) FOV: %.1f Aperture: %0.3f Focal Dist: %0.3f Env Rotation: %.2f Exposure: %.3f Camera Motion Blur: %s Shutter Speed: %s\n",
+              origin.xyz.x, origin.xyz.y, origin.xyz.z,
+              key_lookat.xyz.x, key_lookat.xyz.y, key_lookat.xyz.z,
+              fov,
+              cam_aperture, fd, env_rotation, preview_exposure_adjustment,
+              camera_motion_blur_enabled ? "ON" : "OFF",
+              shutter_label);
+    } else {
+      Rprintf("Lookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f) FOV: %.1f Aperture: %0.3f Focal Dist: %0.3f Env Rotation: %.2f Exposure: %.3f Camera Motion Blur: %s Shutter Speed: %.3f\n",
+              origin.xyz.x, origin.xyz.y, origin.xyz.z,
+              key_lookat.xyz.x, key_lookat.xyz.y, key_lookat.xyz.z,
+              fov,
+              cam_aperture, fd, env_rotation, preview_exposure_adjustment,
+              camera_motion_blur_enabled ? "ON" : "OFF",
+              shutter_speed);
+    }
   } else {
-    Rprintf("Lookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f) Focal Dist: %0.3f Env Rotation: %.2f Exposure: %.3f Camera Motion Blur: %s\n",
-            origin.xyz.x, origin.xyz.y, origin.xyz.z,
-            key_lookat.xyz.x, key_lookat.xyz.y, key_lookat.xyz.z,
-            fd, env_rotation, preview_exposure_adjustment,
-            camera_motion_blur_enabled ? "ON" : "OFF");
+    if(std::isinf(shutter_speed)) {
+      Rprintf("Lookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f) Focal Dist: %0.3f Env Rotation: %.2f Exposure: %.3f Camera Motion Blur: %s Shutter Speed: %s\n",
+              origin.xyz.x, origin.xyz.y, origin.xyz.z,
+              key_lookat.xyz.x, key_lookat.xyz.y, key_lookat.xyz.z,
+              fd, env_rotation, preview_exposure_adjustment,
+              camera_motion_blur_enabled ? "ON" : "OFF",
+              shutter_label);
+    } else {
+      Rprintf("Lookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f) Focal Dist: %0.3f Env Rotation: %.2f Exposure: %.3f Camera Motion Blur: %s Shutter Speed: %.3f\n",
+              origin.xyz.x, origin.xyz.y, origin.xyz.z,
+              key_lookat.xyz.x, key_lookat.xyz.y, key_lookat.xyz.z,
+              fd, env_rotation, preview_exposure_adjustment,
+              camera_motion_blur_enabled ? "ON" : "OFF",
+              shutter_speed);
+    }
   }
 }
 
@@ -621,21 +718,39 @@ std::string PreviewDisplay::PreviewStatusText(Float env_rotation) const {
     keyframe_number = current_keyframe + 1;
   }
 
-  char buffer[256];
-  std::snprintf(buffer,
-                sizeof(buffer),
-                "Cam x/y/z %.2f %.2f %.2f | Look %.2f %.2f %.2f | Exp %.3f | Env %.1f | Blur %s | Key %d/%zu",
-                origin.xyz.x,
-                origin.xyz.y,
-                origin.xyz.z,
-                key_lookat.xyz.x,
-                key_lookat.xyz.y,
-                key_lookat.xyz.z,
-                preview_exposure_adjustment,
-                env_rotation,
-                camera_motion_blur_enabled ? "ON" : "OFF",
-                keyframe_number,
-                Keyframes.size());
+  char buffer[320];
+  if(std::isinf(shutter_speed)) {
+    std::snprintf(buffer,
+                  sizeof(buffer),
+                  "Cam x/y/z %.2f %.2f %.2f | Look %.2f %.2f %.2f | Exp %.3f | Shutter Inf | Env %.1f | Blur %s | Key %d/%zu",
+                  origin.xyz.x,
+                  origin.xyz.y,
+                  origin.xyz.z,
+                  key_lookat.xyz.x,
+                  key_lookat.xyz.y,
+                  key_lookat.xyz.z,
+                  preview_exposure_adjustment,
+                  env_rotation,
+                  camera_motion_blur_enabled ? "ON" : "OFF",
+                  keyframe_number,
+                  Keyframes.size());
+  } else {
+    std::snprintf(buffer,
+                  sizeof(buffer),
+                  "Cam x/y/z %.2f %.2f %.2f | Look %.2f %.2f %.2f | Exp %.3f | Shutter %.3f | Env %.1f | Blur %s | Key %d/%zu",
+                  origin.xyz.x,
+                  origin.xyz.y,
+                  origin.xyz.z,
+                  key_lookat.xyz.x,
+                  key_lookat.xyz.y,
+                  key_lookat.xyz.z,
+                  preview_exposure_adjustment,
+                  shutter_speed,
+                  env_rotation,
+                  camera_motion_blur_enabled ? "ON" : "OFF",
+                  keyframe_number,
+                  Keyframes.size());
+  }
   return std::string(buffer);
 }
 
@@ -1543,6 +1658,16 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
           bool one_orbit = false;
           bool one_fast = false;
           bool shift_pressed = (e.xkey.state & ShiftMask) != 0;
+          if(IsX11ShiftedLeftBracket(d, e.xkey)) {
+            AdjustShutterSpeedStops(static_cast<Float>(-1) / static_cast<Float>(3));
+            reset_preview_render();
+            continue;
+          }
+          if(IsX11ShiftedRightBracket(d, e.xkey)) {
+            AdjustShutterSpeedStops(static_cast<Float>(1) / static_cast<Float>(3));
+            reset_preview_render();
+            continue;
+          }
           
           if (e.xkey.keycode == tab ) {
             orbit = !orbit;
@@ -1736,6 +1861,16 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
             u = cam->get_u();
             v = cam->get_v();
             shift_pressed = (e.xkey.state & ShiftMask) != 0;
+            if(IsX11ShiftedLeftBracket(d, e.xkey)) {
+              AdjustShutterSpeedStops(static_cast<Float>(-1) / static_cast<Float>(3));
+              reset_preview_render();
+              continue;
+            }
+            if(IsX11ShiftedRightBracket(d, e.xkey)) {
+              AdjustShutterSpeedStops(static_cast<Float>(1) / static_cast<Float>(3));
+              reset_preview_render();
+              continue;
+            }
             
             if (e.xkey.keycode == W_key ) {
               if(shift_pressed) {
@@ -2119,6 +2254,8 @@ PreviewDisplay::PreviewDisplay(unsigned int _width, unsigned int _height,
   render_requested = !deferred_render;
   cam = _cam;
   camera_motion_blur_enabled = cam != nullptr && cam->get_camera_motion_blur();
+  shutter_speed = cam != nullptr ? cam->get_shutter_speed() : static_cast<Float>(2);
+  ApplyShutterSpeedToCameras();
 #ifdef RAY_HAS_X11
   speed = 1.f;
   interactive = _interactive;
@@ -2180,6 +2317,7 @@ PreviewDisplay::PreviewDisplay(unsigned int _width, unsigned int _height,
     base_step = initial_lookat_distance/20;
     rgb.resize(width*height*3);
     cam_w = _cam;
+    ApplyShutterSpeedToCameras();
     hInstance = (HINSTANCE)GetModuleHandle(NULL);
     // Register the window class.
     const wchar_t CLASS_NAME[]  = L"Rayrender";
@@ -2228,12 +2366,14 @@ void PreviewDisplay::SetCamera(RayCamera* _cam) {
   cam = _cam;
   if(cam != nullptr) {
     cam->set_camera_motion_blur(camera_motion_blur_enabled);
+    cam->set_shutter_speed(shutter_speed);
   }
 #ifdef RAY_WINDOWS
   if(hwnd != NULL) {
     cam_w = _cam;
     if(cam_w != nullptr) {
       cam_w->set_camera_motion_blur(camera_motion_blur_enabled);
+      cam_w->set_shutter_speed(shutter_speed);
     }
   }
 #endif
@@ -2417,6 +2557,33 @@ static bool IsWindowsRenderInvalidatingKey(WPARAM key) {
          key == VK_KEY_R;
 }
 
+static void ResetWindowsPreviewRenderState(bool update_camera_motion_range = true) {
+  if(!blanked && !term) {
+    if(update_camera_motion_range) {
+      ApplyStaticPreviewCameraMotionRange(cam_w);
+    }
+    blanked = true;
+    if(ns_w != nullptr) {
+      *ns_w = 0;
+    }
+    if(aps != nullptr) {
+      aps->reset();
+    }
+    if(aps_small != nullptr) {
+      aps_small->reset();
+    }
+    if(preview_display_w != nullptr) {
+      preview_display_w->ResetPreviewExposure();
+#ifdef HAS_OIDN
+      preview_display_w->InvalidateOidnAux();
+#endif
+    }
+    if(progress_w && !interactive_w && pb_w != nullptr) {
+      pb_w->update(0);
+    }
+  }
+}
+
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
   switch (uMsg) {
     case WM_DESTROY: {
@@ -2445,6 +2612,22 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         v = cam_w->get_v();
       }
       bool shift_pressed = (GetKeyState(VK_SHIFT) & 0x8000) != 0;
+      if(interactive_w &&
+         preview_display_w != nullptr &&
+         shift_pressed &&
+         wParam == VK_KEY_LEFT_BRACKET) {
+        preview_display_w->AdjustShutterSpeedStops(static_cast<Float>(-1) / static_cast<Float>(3));
+        ResetWindowsPreviewRenderState(false);
+        return 0;
+      }
+      if(interactive_w &&
+         preview_display_w != nullptr &&
+         shift_pressed &&
+         wParam == VK_KEY_RIGHT_BRACKET) {
+        preview_display_w->AdjustShutterSpeedStops(static_cast<Float>(1) / static_cast<Float>(3));
+        ResetWindowsPreviewRenderState(false);
+        return 0;
+      }
 
       switch (wParam) {
         case VK_ESCAPE: {
@@ -2694,16 +2877,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
       }
       if(interactive_w) {
         if(IsWindowsRenderInvalidatingKey(wParam)) {
-          if(!blanked && !term) {
-            ApplyStaticPreviewCameraMotionRange(cam_w);
-            blanked = true;
-            *ns_w = 0;
-            aps->reset();
-            aps_small->reset();
-            if(progress_w && !interactive_w) {
-              pb_w->update(0);
-            }
-          }
+          ResetWindowsPreviewRenderState();
         }
       }
       break;
@@ -2866,5 +3040,72 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
   return 0;
   }
   return DefWindowProc(hwnd, uMsg, wParam, lParam);
+}
+#endif
+
+#ifdef NOT_CRAN
+namespace {
+std::unique_ptr<PreviewDisplay> MakeTestPreviewDisplay(camera& cam,
+                                                       Transform& env_transform) {
+#ifdef HAS_OIDN
+  return std::unique_ptr<PreviewDisplay>(new PreviewDisplay(
+    4, 4, false, true, false, 10.f, &cam,
+    &env_transform, &env_transform,
+    nullptr, nullptr, nullptr, false, false));
+#else
+  return std::unique_ptr<PreviewDisplay>(new PreviewDisplay(
+    4, 4, false, true, false, 10.f, &cam,
+    &env_transform, &env_transform, false));
+#endif
+}
+}
+
+context("Preview shutter speed controls") {
+  test_that("preview shutter speed adjustments use one-third stop increments") {
+    Matrix4x4 identity_matrix;
+    Transform env_transform(identity_matrix);
+    camera cam(point3f(0, 0, -10), point3f(0, 0, 0), vec3f(0, 1, 0),
+               60.f, 1.f, 0.f, 10.f, 0.f, 1.f, 1.f);
+    auto display = MakeTestPreviewDisplay(cam, env_transform);
+
+    display->SetShutterSpeed(2.f);
+    display->AdjustShutterSpeedStops(static_cast<Float>(1) / static_cast<Float>(3));
+    expect_true(display->GetShutterSpeed() == Approx(2.f * std::pow(2.f, 1.f / 3.f)));
+    expect_true(cam.get_shutter_speed() == Approx(display->GetShutterSpeed()));
+
+    display->AdjustShutterSpeedStops(static_cast<Float>(-1) / static_cast<Float>(3));
+    expect_true(display->GetShutterSpeed() == Approx(2.f));
+  }
+
+  test_that("preview shutter speed clamps finite keyboard adjustments") {
+    Matrix4x4 identity_matrix;
+    Transform env_transform(identity_matrix);
+    camera cam(point3f(0, 0, -10), point3f(0, 0, 0), vec3f(0, 1, 0),
+               60.f, 1.f, 0.f, 10.f, 0.f, 1.f, 1.f);
+    auto display = MakeTestPreviewDisplay(cam, env_transform);
+
+    display->SetShutterSpeed(1.f);
+    display->AdjustShutterSpeedStops(static_cast<Float>(-1) / static_cast<Float>(3));
+    expect_true(display->GetShutterSpeed() == Approx(1.f));
+
+    display->SetShutterSpeed(4096.f);
+    display->AdjustShutterSpeedStops(static_cast<Float>(1) / static_cast<Float>(3));
+    expect_true(display->GetShutterSpeed() == Approx(4096.f));
+  }
+
+  test_that("preview shutter speed exits Inf through slower-shutter adjustment") {
+    Matrix4x4 identity_matrix;
+    Transform env_transform(identity_matrix);
+    camera cam(point3f(0, 0, -10), point3f(0, 0, 0), vec3f(0, 1, 0),
+               60.f, 1.f, 0.f, 10.f, 0.f, 1.f, 1.f);
+    auto display = MakeTestPreviewDisplay(cam, env_transform);
+
+    display->SetShutterSpeed(Infinity);
+    display->AdjustShutterSpeedStops(static_cast<Float>(1) / static_cast<Float>(3));
+    expect_true(std::isinf(display->GetShutterSpeed()));
+
+    display->AdjustShutterSpeedStops(static_cast<Float>(-1) / static_cast<Float>(3));
+    expect_true(display->GetShutterSpeed() == Approx(4096.f));
+  }
 }
 #endif

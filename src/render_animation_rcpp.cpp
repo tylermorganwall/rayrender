@@ -78,7 +78,9 @@ std::unique_ptr<RayCamera> make_animation_camera(
     Float film_size,
     Float camera_scale,
     Float iso,
+    Float shutter_speed,
     TransformCache& transformCache) {
+  std::unique_ptr<RayCamera> cam;
   if(fov < 0) {
     Transform CamTransform = LookAt(lookfrom,
                                     lookat,
@@ -97,21 +99,24 @@ std::unique_ptr<RayCamera> make_animation_camera(
       throw std::runtime_error("No lense data passed in lens descriptor file.");
     }
     
-    return(std::unique_ptr<RayCamera>(new RealisticCamera(CamTr, shutteropen, shutterclose,
-                                                          aperture, nx, ny, focus_distance, false,
-                                                          lensData, film_size, camera_scale, iso,
-                                                          camera_up, CamTransform, lookat)));
+    cam = std::unique_ptr<RayCamera>(new RealisticCamera(CamTr, shutteropen, shutterclose,
+                                                         aperture, nx, ny, focus_distance, false,
+                                                         lensData, film_size, camera_scale, iso,
+                                                         camera_up, CamTransform, lookat));
   } else if(fov == 0) {
-    return(std::unique_ptr<RayCamera>(new ortho_camera(lookfrom, lookat, camera_up,
-                                                       orthox, orthoy,
-                                                       shutteropen, shutterclose, iso)));
+    cam = std::unique_ptr<RayCamera>(new ortho_camera(lookfrom, lookat, camera_up,
+                                                      orthox, orthoy,
+                                                      shutteropen, shutterclose, iso));
   } else if(fov == 360) {
-    return(std::unique_ptr<RayCamera>(new environment_camera(lookfrom, lookat, camera_up,
-                                                             shutteropen, shutterclose, iso)));
+    cam = std::unique_ptr<RayCamera>(new environment_camera(lookfrom, lookat, camera_up,
+                                                            shutteropen, shutterclose, iso));
+  } else {
+    cam = std::unique_ptr<RayCamera>(new camera(lookfrom, lookat, camera_up, fov,
+                                                Float(nx)/Float(ny), aperture, focus_distance,
+                                                shutteropen, shutterclose, iso));
   }
-  return(std::unique_ptr<RayCamera>(new camera(lookfrom, lookat, camera_up, fov,
-                                               Float(nx)/Float(ny), aperture, focus_distance,
-                                               shutteropen, shutterclose, iso)));
+  cam->set_shutter_speed(shutter_speed);
+  return cam;
 }
 
 void update_animation_camera(
@@ -251,6 +256,9 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
   int ns = as<int>(camera_info["ns"]);
   Float shutteropen = as<Float>(camera_info["shutteropen"]);
   Float shutterclose = as<Float>(camera_info["shutterclose"]);
+  Float shutter_speed = camera_info.containsElementNamed("shutter_speed") ?
+    as<Float>(camera_info["shutter_speed"]) :
+    static_cast<Float>(2);
   std::size_t max_depth = as<std::size_t>(camera_info["max_depth"]);
   std::size_t roulette_active = as<std::size_t>(camera_info["roulette_active_depth"]);
   int sample_method = as<int>(camera_info["sample_method"]);
@@ -336,7 +344,7 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
   std::vector<int> texture_idx;
 
   std::shared_ptr<hitable> worldbvh = build_scene(scene, shape, 
-                                                  shutteropen,shutterclose,
+                                                  static_cast<Float>(0), static_cast<Float>(1),
                                                   textures, 
                                                   alpha_textures,
                                                   bump_textures,
@@ -500,7 +508,8 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
       cam = make_animation_camera(lookfrom, lookat, camera_up, fov, aperture,
                                   focus_distance, orthox, orthoy, nx, ny,
                                   shutteropen, shutterclose, realCameraInfo,
-                                  film_size, camera_scale, iso, transformCache);
+                                  film_size, camera_scale, iso, shutter_speed,
+                                  transformCache);
       bool blur_enabled = frame_camera_motion_blur_enabled(
         i,
         camera_motion_blur,
@@ -589,7 +598,8 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
           preview_cam = make_animation_camera(lookfrom, lookat, camera_up, fov, aperture,
                                               focus_distance, orthox, orthoy, nx, ny,
                                               shutteropen, shutterclose, realCameraInfo,
-                                              film_size, camera_scale, iso, transformCache);
+                                              film_size, camera_scale, iso, shutter_speed,
+                                              transformCache);
           preview_cam_initialized = true;
           preview_camera_type = current_camera_type;
           preview_camera_up = camera_up;
@@ -599,7 +609,8 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
         frame_cam_storage = make_animation_camera(lookfrom, lookat, camera_up, fov, aperture,
                                                  focus_distance, orthox, orthoy, nx, ny,
                                                  shutteropen, shutterclose, realCameraInfo,
-                                                 film_size, camera_scale, iso, transformCache);
+                                                 film_size, camera_scale, iso, shutter_speed,
+                                                 transformCache);
         frame_cam = frame_cam_storage.get();
       }
       bool blur_enabled = frame_camera_motion_blur_enabled(

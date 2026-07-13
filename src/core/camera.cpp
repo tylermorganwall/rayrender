@@ -138,9 +138,10 @@ camera::camera(point3f lookfrom, point3f _lookat, vec3f _vup, Float vfov,
 }
 
 Ray camera::get_ray(Float s, Float t, point3f u3, Float u1) {
+  Float motion_time = sample_motion_time(u1);
   if(camera_motion_blur && camera_motion_blur_has_range) {
     CameraMotionFrame frame = InterpolateCameraMotionFrame(
-      u1,
+      motion_time,
       camera_motion_start_origin,
       camera_motion_start_lookat,
       camera_motion_start_up,
@@ -152,7 +153,6 @@ Ray camera::get_ray(Float s, Float t, point3f u3, Float u1) {
     );
     point3f rd = lens_radius * u3;
     vec3f offset = frame.right * rd.xyz.x + frame.up * rd.xyz.y;
-    Float time = time0 + u1 * (time1 - time0);
     point3f motion_lower_left = frame.origin -
       half_width * frame.focal * frame.right -
       half_height * frame.focal * frame.up +
@@ -162,12 +162,11 @@ Ray camera::get_ray(Float s, Float t, point3f u3, Float u1) {
     return(Ray(frame.origin + offset,
                motion_lower_left + s * motion_horizontal +
                  t * motion_vertical - frame.origin - offset,
-               time));
+               motion_time));
   }
   point3f rd = lens_radius * u3;
   vec3f offset = u * rd.xyz.x + v * rd.xyz.y;
-  Float time = time0 + u1 * (time1 - time0);
-  return(Ray(origin + offset, lower_left_corner + s * horizontal + t * vertical - origin - offset, time)); 
+  return(Ray(origin + offset, lower_left_corner + s * horizontal + t * vertical - origin - offset, motion_time));
 }
 
 void camera::update_position(vec3f delta, bool update_uvw, bool update_focal) {
@@ -352,9 +351,10 @@ ortho_camera::ortho_camera(point3f lookfrom, point3f _lookat, vec3f _vup,
 }
 
 Ray ortho_camera::get_ray(Float s, Float t, point3f u3, Float u) {
+  Float motion_time = sample_motion_time(u);
   if(camera_motion_blur && camera_motion_blur_has_range) {
     CameraMotionFrame frame = InterpolateCameraMotionFrame(
-      u,
+      motion_time,
       camera_motion_start_origin,
       camera_motion_start_lookat,
       camera_motion_start_up,
@@ -364,7 +364,6 @@ Ray ortho_camera::get_ray(Float s, Float t, point3f u3, Float u) {
       camera_motion_end_up,
       camera_motion_end_focal
     );
-    Float time = time0 + u * (time1 - time0);
     point3f motion_lower_left = frame.origin -
       cam_width / 2 * frame.right - cam_height / 2 * frame.up;
     vec3f motion_horizontal = cam_width * frame.right;
@@ -372,10 +371,9 @@ Ray ortho_camera::get_ray(Float s, Float t, point3f u3, Float u) {
     return(Ray(motion_lower_left + s * motion_horizontal +
                  t * motion_vertical,
                frame.forward,
-               time));
+               motion_time));
   }
-  Float time = time0 + u * (time1 - time0);
-  return(Ray(lower_left_corner + s * horizontal + t * vertical, w, time)); 
+  return(Ray(lower_left_corner + s * horizontal + t * vertical, w, motion_time));
 }
 
 void ortho_camera::update_position(vec3f delta, bool update_uvw, bool update_focal) {
@@ -540,11 +538,12 @@ environment_camera::environment_camera(point3f lookfrom, point3f lookat, vec3f _
 
 
 Ray environment_camera::get_ray(Float s, Float t, point3f u3, Float u1) {
+  Float motion_time = sample_motion_time(u1);
   point3f ray_origin = origin;
   onb ray_uvw = uvw;
   if(camera_motion_blur && camera_motion_blur_has_range) {
     CameraMotionFrame frame = InterpolateCameraMotionFrame(
-      u1,
+      motion_time,
       camera_motion_start_origin,
       camera_motion_start_lookat,
       camera_motion_start_up,
@@ -557,14 +556,13 @@ Ray environment_camera::get_ray(Float s, Float t, point3f u3, Float u1) {
     ray_origin = frame.origin;
     ray_uvw = onb(frame.right, frame.up, frame.forward);
   }
-  Float time = time0 + u1 * (time1 - time0);
   Float theta = static_cast<Float>(M_PI) * (1 - t);
   Float phi = static_cast<Float>(M_PI) + 2 * static_cast<Float>(M_PI) * s;
   vec3f dir(std::sin(theta) * std::sin(phi), 
             std::cos(theta),
             std::sin(theta) * std::cos(phi));
   dir = ray_uvw.local_to_world(dir);
-  return(Ray(ray_origin, dir, time));
+  return(Ray(ray_origin, dir, motion_time));
 }
 
 void environment_camera::update_position(vec3f delta, bool update_uvw, bool update_focal) {
@@ -1190,6 +1188,7 @@ Bounds2f  RealisticCamera::GetPhysicalExtent() const {
 
 
 Float RealisticCamera::GenerateRay(const CameraSample &sample, Ray *ray2) const {
+  Float motion_time = sample_motion_time(sample.time);
   // Find point on film, _pFilm_, corresponding to _sample.pFilm_
   point2f pFilm2 = GetPhysicalExtent().Lerp(sample.pFilm);
   point3f pFilm(-pFilm2.xy.x, pFilm2.xy.y, 0);
@@ -1199,15 +1198,14 @@ Float RealisticCamera::GenerateRay(const CameraSample &sample, Ray *ray2) const 
   point3f pRear = SampleExitPupil(point2f(pFilm.xyz.x, pFilm.xyz.y), sample.pLens,
                                   &exitPupilBoundsArea);
 
-  Ray rFilm(pFilm, unit_vector(pRear - pFilm), 
-            lerp(sample.time, shutterOpen, shutterClose));
+  Ray rFilm(pFilm, unit_vector(pRear - pFilm), motion_time);
   if (!TraceLensesFromFilm(rFilm, ray2)) {
     return 0;
   }
   // Finish initialization of _RealisticCamera_ ray
   if(camera_motion_blur && camera_motion_blur_has_range) {
     CameraMotionFrame frame = InterpolateCameraMotionFrame(
-      sample.time,
+      motion_time,
       camera_motion_start_origin,
       camera_motion_start_lookat,
       camera_motion_start_up,
@@ -1372,3 +1370,116 @@ void RealisticCamera::reset() {
 vec3f RealisticCamera::get_w() {return(-CamTransform.w());}
 vec3f RealisticCamera::get_u() {return(-CamTransform.u());}
 vec3f RealisticCamera::get_v() {return(CamTransform.v());}
+
+#ifdef NOT_CRAN
+namespace {
+void ExpectRayTimeForShutterSpeed(Float shutter_speed,
+                                  Float unit_time,
+                                  Float expected_time) {
+  camera cam(point3f(0, 0, -10), point3f(0, 0, 0), vec3f(0, 1, 0),
+             60.f, 1.f, 0.f, 10.f, 0.f, 1.f, 1.f);
+  cam.set_shutter_speed(shutter_speed);
+  Ray ray = cam.get_ray(0.5f, 0.5f, point3f(0), unit_time);
+  expect_true(ray.time() == Approx(expected_time));
+}
+
+void ConfigureQuarterMotion(RayCamera& cam) {
+  cam.set_camera_motion_blur(true);
+  cam.set_shutter_speed(4.f);
+  cam.set_camera_motion_blur_range(point3f(0, 0, -10),
+                                   point3f(0, 0, 0),
+                                   vec3f(0, 1, 0),
+                                   10.f,
+                                   point3f(10, 0, -10),
+                                   point3f(10, 0, 0),
+                                   vec3f(0, 1, 0),
+                                   10.f);
+}
+}
+
+context("Camera shutter speed temporal mapping") {
+  test_that("shutter speed maps unit samples to motion time") {
+    ExpectRayTimeForShutterSpeed(1.f, 1.f, 1.f);
+    ExpectRayTimeForShutterSpeed(2.f, 1.f, 0.5f);
+    ExpectRayTimeForShutterSpeed(4.f, 1.f, 0.25f);
+    ExpectRayTimeForShutterSpeed(Infinity, 1.f, 0.f);
+    ExpectRayTimeForShutterSpeed(4.f, 0.f, 0.f);
+    ExpectRayTimeForShutterSpeed(4.f, -0.25f, 0.f);
+    ExpectRayTimeForShutterSpeed(4.f, 1.25f, 0.25f);
+  }
+
+  test_that("perspective camera uses mapped time for ray time and pose") {
+    camera cam(point3f(0, 0, -10), point3f(0, 0, 0), vec3f(0, 1, 0),
+               60.f, 1.f, 0.f, 10.f, 0.f, 1.f, 1.f);
+    ConfigureQuarterMotion(cam);
+
+    Ray ray = cam.get_ray(0.5f, 0.5f, point3f(0), 1.f);
+
+    expect_true(ray.time() == Approx(0.25f));
+    expect_true(ray.origin().xyz.x == Approx(2.5f));
+  }
+
+  test_that("orthographic camera uses mapped time for ray time and pose") {
+    ortho_camera cam(point3f(0, 0, -10), point3f(0, 0, 0), vec3f(0, 1, 0),
+                     2.f, 2.f, 0.f, 1.f, 1.f);
+    ConfigureQuarterMotion(cam);
+
+    Ray ray = cam.get_ray(0.5f, 0.5f, point3f(0), 1.f);
+
+    expect_true(ray.time() == Approx(0.25f));
+    expect_true(ray.origin().xyz.x == Approx(2.5f));
+  }
+
+  test_that("environment camera uses mapped time for ray time and pose") {
+    environment_camera cam(point3f(0, 0, -10), point3f(0, 0, 0),
+                           vec3f(0, 1, 0), 0.f, 1.f, 1.f);
+    ConfigureQuarterMotion(cam);
+
+    Ray ray = cam.get_ray(0.5f, 0.5f, point3f(0), 1.f);
+
+    expect_true(ray.time() == Approx(0.25f));
+    expect_true(ray.origin().xyz.x == Approx(2.5f));
+  }
+
+  test_that("realistic camera uses mapped time without changing exposure weight") {
+    Transform cam_transform = LookAt(point3f(0, 0, -10),
+                                     point3f(0, 0, 0),
+                                     vec3f(0, 1, 0)).GetInverseMatrix();
+    AnimatedTransform cam_tr(&cam_transform, 0.f, &cam_transform, 0.f);
+    std::vector<Float> lens_data = {
+      29.475f, 3.76f, 1.67f, 25.2f,
+      84.83f, 0.12f, 1.f, 25.2f,
+      19.275f, 4.025f, 1.67f, 23.f,
+      40.77f, 3.275f, 1.699f, 23.f,
+      12.75f, 5.705f, 1.f, 18.f,
+      0.f, 4.5f, 0.f, 17.1f,
+      -14.495f, 1.18f, 1.603f, 17.f,
+      40.77f, 6.065f, 1.658f, 20.f,
+      -20.385f, 0.19f, 1.f, 20.f,
+      437.065f, 3.22f, 1.717f, 20.f,
+      -39.73f, 0.f, 1.f, 20.f
+    };
+    RealisticCamera cam(cam_tr, 0.f, 1.f, 10.f, 10.f, 10.f, 10.f,
+                        false, lens_data, 0.022f, 1.f, 1.f,
+                        vec3f(0, 1, 0), cam_transform, point3f(0, 0, 0));
+    ConfigureQuarterMotion(cam);
+
+    Ray ray;
+    Float full_weight = cam.GenerateRay(CameraSample(point2f(0.5f, 0.5f),
+                                                     point2f(0.5f, 0.5f),
+                                                     1.f),
+                                        &ray);
+    cam.set_shutter_speed(1.f);
+    Ray full_ray;
+    Float same_exposure_weight = cam.GenerateRay(CameraSample(point2f(0.5f, 0.5f),
+                                                              point2f(0.5f, 0.5f),
+                                                              1.f),
+                                                 &full_ray);
+
+    expect_true(full_weight > 0.f);
+    expect_true(ray.time() == Approx(0.25f));
+    expect_true(ray.origin().xyz.x == Approx(2.5f).epsilon(0.01));
+    expect_true(same_exposure_weight == Approx(full_weight));
+  }
+}
+#endif

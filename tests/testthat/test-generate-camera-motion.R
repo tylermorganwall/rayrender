@@ -70,41 +70,35 @@ test_that("open damped camera motion keeps the one-way recurrence", {
     expected[i, ] = current_pos
   }
 
-  damped_columns = setdiff(
-    colnames(damped),
-    c("dx", "dy", "dz", "upx", "upy", "upz")
-  )
-  expect_equal(as.matrix(damped[, damped_columns]), expected[, damped_columns])
+  expect_equal(as.matrix(damped), expected)
 })
 
-test_that("linear camera motion slerps look direction", {
+test_that("linear camera motion interpolates lookats directly", {
   motion = generate_camera_motion(
     positions = list(c(0, 0, 0), c(0, 0, 0)),
-    lookats = list(c(0, 0, 1), c(0, 0, -1)),
+    lookats = list(c(1, 0, 0), c(0, 0, 1)),
     camera_ups = list(c(0, 1, 0), c(0, 1, 0)),
     type = "linear",
     frames = 3,
     progress = FALSE
   )
 
-  middle_direction = unname(as.numeric(motion[2, c("dx", "dy", "dz")]))
-  expect_equal(sqrt(sum(middle_direction^2)), 1)
-  expect_lt(abs(middle_direction[3]), 1e-10)
+  middle_lookat = unname(as.numeric(motion[2, c("dx", "dy", "dz")]))
+  expect_equal(middle_lookat, c(0.5, 0, 0.5))
 })
 
-test_that("linear camera motion slerps roll without zeroing up vector", {
+test_that("linear camera motion interpolates up vectors directly", {
   motion = generate_camera_motion(
     positions = list(c(0, 0, 0), c(0, 0, 0)),
     lookats = list(c(0, 0, 1), c(0, 0, 1)),
-    camera_ups = list(c(0, 1, 0), c(0, -1, 0)),
+    camera_ups = list(c(0, 1, 0), c(0, 0, 1)),
     type = "linear",
     frames = 3,
     progress = FALSE
   )
 
   middle_up = unname(as.numeric(motion[2, c("upx", "upy", "upz")]))
-  expect_equal(sqrt(sum(middle_up^2)), 1)
-  expect_lt(abs(middle_up[2]), 1e-10)
+  expect_equal(middle_up, c(0, 0.5, 0.5))
 })
 
 test_that("saved keyframes remove only sequential duplicate camera states", {

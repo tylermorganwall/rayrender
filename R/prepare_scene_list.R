@@ -30,6 +30,7 @@ prepare_scene_list = function(
   shutteropen = 0.0,
   shutterclose = 1.0,
   camera_motion_blur = FALSE,
+  shutter_speed = 2,
   focal_distance = NULL,
   ortho_dimensions = c(1, 1),
   tonemap = "gamma",
@@ -53,6 +54,7 @@ prepare_scene_list = function(
   if (inherits(scene, "ray_mesh")) {
     scene = raymesh_model(scene)
   }
+  validate_shutter_speed(shutter_speed)
   #Process images, convert shapes and materials to enums, extract positions, and
   scene_info = process_scene(scene)
   if (!is.numeric(debug_channel)) {
@@ -267,6 +269,7 @@ prepare_scene_list = function(
   camera_info$shutteropen = shutteropen
   camera_info$shutterclose = shutterclose
   camera_info$camera_motion_blur = isTRUE(camera_motion_blur)
+  camera_info$shutter_speed = shutter_speed
   camera_info$ortho_dimensions = ortho_dimensions
   camera_info$focal_distance = focal_distance
   camera_info$max_depth = max_depth

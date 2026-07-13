@@ -818,6 +818,9 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
   NumericVector camera_up = as<NumericVector>(camera_info["camera_up"]);
   Float shutteropen = as<Float>(camera_info["shutteropen"]);
   Float shutterclose = as<Float>(camera_info["shutterclose"]);
+  Float shutter_speed = camera_info.containsElementNamed("shutter_speed") ?
+    as<Float>(camera_info["shutter_speed"]) :
+    static_cast<Float>(2);
   Float focus_distance = as<Float>(camera_info["focal_distance"]);
   NumericVector ortho_dimensions = as<NumericVector>(camera_info["ortho_dimensions"]);
   std::size_t max_depth = as<std::size_t>(camera_info["max_depth"]);
@@ -933,6 +936,7 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
                                      shutteropen, shutterclose, iso));
   }
   cam->set_camera_motion_blur(camera_motion_blur);
+  cam->set_shutter_speed(shutter_speed);
   print_time(verbose, "Generated Camera" );
 
 
@@ -957,8 +961,8 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
 
   std::shared_ptr<hitable> worldbvh = build_scene(scene, 
                                                    shape, 
-                                                   shutteropen,
-                                                   shutterclose,
+                                                   static_cast<Float>(0),
+                                                   static_cast<Float>(1),
                                                    textures, 
                                                    alpha_textures,
                                                    bump_textures,
@@ -976,7 +980,7 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
                                                    rng);
   print_time(verbose, "Built Scene BVH" );
   if(print_debug_info) {
-    worldbvh->hitable_info_bounds(shutteropen,shutterclose);
+    worldbvh->hitable_info_bounds(static_cast<Float>(0), static_cast<Float>(1));
   }
   //Calculate world bounds and ensure camera is inside infinite area light
   aabb bounding_box_world;

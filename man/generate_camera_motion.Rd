@@ -52,7 +52,7 @@ of orthographic dimensions.}
 \item{type}{Default `cubic`. Type of transition between keyframes.
 Other options are `linear`, `quad`, `bezier`, `exp`, and `manual`. `manual` just returns the values
 passed in, properly formatted to be passed to `render_animation()`. `linear`, `quad`, `cubic`, and
-`exp` interpolate camera orientation with shortest-path quaternion slerp.}
+`exp` interpolate lookat and up vectors directly.}
 
 \item{frames}{Default `30`. Total number of frames.}
 

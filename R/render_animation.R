@@ -556,6 +556,7 @@ render_animation_camera = function(
     shutteropen = camera$shutteropen,
     shutterclose = camera$shutterclose,
     camera_motion_blur = camera$camera_motion_blur,
+    shutter_speed = ray_camera_shutter_speed(camera),
     focal_distance = focal_distance,
     ortho_dimensions = ortho_dimensions,
     tonemap = tonemap,
@@ -679,7 +680,7 @@ render_camera_batch = function(
     stop(
       "Cannot batch render cameras with different camera metadata. ",
       "camera_description_file, camera_scale, iso, film_size, ",
-      "shutteropen, and shutterclose must match."
+      "shutteropen, shutterclose, and shutter_speed must match."
     )
   }
 
@@ -727,6 +728,7 @@ render_camera_batch = function(
     shutteropen = camera$shutteropen,
     shutterclose = camera$shutterclose,
     camera_motion_blur = camera$camera_motion_blur,
+    shutter_speed = ray_camera_shutter_speed(camera),
     focal_distance = focal_distance,
     ortho_dimensions = ortho_dimensions,
     tonemap = tonemap,

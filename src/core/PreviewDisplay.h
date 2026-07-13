@@ -113,6 +113,11 @@ public:
   Float ApplyPreviewExposure(Float value, Float sample_count) const;
   void IncreasePreviewExposure();
   void DecreasePreviewExposure();
+  void SetShutterSpeed(Float value);
+  Float GetShutterSpeed() const;
+  void AdjustShutterSpeedStops(Float stops);
+  void ApplyShutterSpeedToCameras();
+  void PrintShutterSpeed() const;
   Rcpp::List CreateCurrentKeyframe(Float env_rotation) const;
   void SaveCurrentKeyframe(Float env_rotation);
   bool ApplyCameraState(const Rcpp::List& state, Float* env_rotation);
@@ -224,6 +229,7 @@ public:
   int preview_motion_restore_keyframe;
   bool preview_motion_active;
   bool camera_motion_blur_enabled;
+  Float shutter_speed;
   std::vector<PreviewTextOverlay> text_overlays;
   std::vector<PreviewLineOverlay> line_overlays;
 };
