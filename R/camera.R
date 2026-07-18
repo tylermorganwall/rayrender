@@ -69,17 +69,58 @@
 #'   add_object(sphere(y = 50, radius = 10, material = light(intensity = 30))) |>
 #'   add_object(path(camera_pos, y = -0.2, material = diffuse(color = "red"))) |>
 #'   add_camera(camera(
-#'     name = "flythrough",
+#'     name = "flythrough_blur",
 #'     motion = camera_motion,
 #'     camera_motion_blur = TRUE,
-#'     shutter_speed = 4,
-#'     filename = NA_character_
+#'     shutter_speed = 2
+#'   )) |>
+#'   add_camera(camera(
+#'     name = "flythrough_no_blur",
+#'     motion = camera_motion,
+#'     camera_motion_blur = FALSE
+#'   )) |>
+#'   add_camera(camera(
+#'     name = "flythrough_medium_blur",
+#'     motion = camera_motion,
+#'     camera_motion_blur = FALSE,
+#'     shutter_speed = 4
 #'   ))
+#' #We can render these individual cameras by calling out their specific name in render_scene()
+#' #With no blur
 #' render_scene(
 #'   animated_scene,
-#'   camera = "flythrough",
+#'   camera = "flythrough_no_blur",
 #'   mode = "animation",
 #'   samples = 16,
+#'   start_frame = 1,
+#'   end_frame = 2,
+#'   sample_method = "sobol_blue",
+#'   clamp_value = 10,
+#'   width = 400,
+#'   height = 400
+#' )
+#' #Now, with blur
+#' render_scene(
+#'   animated_scene,
+#'   camera = "flythrough_blur",
+#'   mode = "animation",
+#'   samples = 16,
+#'   start_frame = 1,
+#'   end_frame = 2,
+#'   sample_method = "sobol_blue",
+#'   clamp_value = 10,
+#'   width = 400,
+#'   height = 400
+#' )
+#' #Now, with less blur
+#' #' #Now, with blur
+#' render_scene(
+#'   animated_scene,
+#'   camera = "flythrough_medium_blur",
+#'   mode = "animation",
+#'   samples = 16,
+#'   start_frame = 1,
+#'   end_frame = 2,
 #'   sample_method = "sobol_blue",
 #'   clamp_value = 10,
 #'   width = 400,
