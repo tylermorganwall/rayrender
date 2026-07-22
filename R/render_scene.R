@@ -23,7 +23,8 @@
 #' Left Key = Decrease Aperture, Right Key = Increase Aperture, 1 = Decrease Focal Distance, 2 = Increase Focal Distance,
 #' 3/4 = Rotate Environment Light,
 #' Right bracket/left bracket = Increase/Decrease Preview Exposure, Shift + right bracket/left bracket = Increase/Decrease shutter speed,
-#' R = Reset Camera, Return = Toggle between deferred and final render if `deferred_render = TRUE`, TAB: Toggle Orbit Mode,
+#' Shift-Enter = Save Preview Snapshot, R = Reset Camera,
+#' Return = Toggle between deferred and final render if `deferred_render = TRUE`, TAB: Toggle Orbit Mode,
 #' Left Mouse Click: Change Look Direction, Right Mouse Click: Change Look At.
 #' If the interactive preview window is wide enough, a status bar at the bottom shows the current camera, exposure, environment rotation,
 #' and keyframe state.
@@ -85,7 +86,11 @@
 #' there will be bright spots that will not go away even with a large number of samples. These
 #' can be removed (at the cost of slightly darkening the image) by setting this to a small number greater than 1.
 #' @param filename Default `NULL`. If present, the renderer will write to the filename instead
-#' of the current device. Can write to JPEG/JPG, PNG, and high dynamic range EXR images.
+#' of the current device. Can write to JPEG/JPG, PNG, and high dynamic range EXR images. In the
+#' interactive preview, press Shift+Enter to save the current preview. A source filename with an
+#' extension produces numbered snapshots with the number inserted before the extension; otherwise
+#' snapshots are saved as `rayrender_snapshot1.png`, `rayrender_snapshot2.png`, and so on in the
+#' current directory.
 #' @param backgroundhigh Default `#80b4ff`. The "high" color in the background gradient. Can be either
 #' a hexadecimal code, or a numeric rgb vector listing three intensities between `0` and `1`.
 #' @param backgroundlow Default `#ffffff`. The "low" color in the background gradient. Can be either
@@ -563,6 +568,16 @@ render_scene = function(
     ))
   }
 
+  snapshot_filename = if (
+    length(selected_camera$filename) == 1 &&
+      !is.na(selected_camera$filename) &&
+      nzchar(tools::file_ext(selected_camera$filename))
+  ) {
+    selected_camera$filename
+  } else {
+    NA_character_
+  }
+
   frame = if (render_mode %in% c("image", "preview")) {
     camera_frame_range(nrow(selected_camera$motion), start_frame, start_frame)[
       1
@@ -641,6 +656,7 @@ HAS_OIDN: %s
       "Status:     Wide window shows camera/exposure/env/keyframes",
       "Exposure:   ]/[ preview exposure | Shift-]/[ shutter speed",
       "Blur:       B camera motion blur",
+      "Snapshot:   Shift-Enter save current preview",
       "General:    P print camera | R reset camera | ESC close"
     )
     if (deferred_render) {
@@ -733,6 +749,7 @@ HAS_OIDN: %s
   camera_info$auto_exposure = auto_exposure
   camera_info$camera_motion_blur = isTRUE(camera_motion_blur)
   camera_info$shutter_speed = shutter_speed
+  camera_info$snapshot_filename = snapshot_filename
   camera_info$keyframe_motion_args = normalize_keyframe_motion_args(
     selected_camera$keyframe_motion_args
   )

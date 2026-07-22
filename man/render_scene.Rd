@@ -91,7 +91,8 @@ E = 2x Step Distance (max 128), C = 0.5x Step Distance, Up Key = Zoom In (decrea
 Left Key = Decrease Aperture, Right Key = Increase Aperture, 1 = Decrease Focal Distance, 2 = Increase Focal Distance,
 3/4 = Rotate Environment Light,
 Right bracket/left bracket = Increase/Decrease Preview Exposure, Shift + right bracket/left bracket = Increase/Decrease shutter speed,
-R = Reset Camera, Return = Toggle between deferred and final render if `deferred_render = TRUE`, TAB: Toggle Orbit Mode,
+Shift-Enter = Save Preview Snapshot, R = Reset Camera,
+Return = Toggle between deferred and final render if `deferred_render = TRUE`, TAB: Toggle Orbit Mode,
 Left Mouse Click: Change Look Direction, Right Mouse Click: Change Look At.
 If the interactive preview window is wide enough, a status bar at the bottom shows the current camera, exposure, environment rotation,
 and keyframe state.
@@ -169,7 +170,11 @@ there will be bright spots that will not go away even with a large number of sam
 can be removed (at the cost of slightly darkening the image) by setting this to a small number greater than 1.}
 
 \item{filename}{Default `NULL`. If present, the renderer will write to the filename instead
-of the current device. Can write to JPEG/JPG, PNG, and high dynamic range EXR images.}
+of the current device. Can write to JPEG/JPG, PNG, and high dynamic range EXR images. In the
+interactive preview, press Shift+Enter to save the current preview. A source filename with an
+extension produces numbered snapshots with the number inserted before the extension; otherwise
+snapshots are saved as `rayrender_snapshot1.png`, `rayrender_snapshot2.png`, and so on in the
+current directory.}
 
 \item{backgroundhigh}{Default `#80b4ff`. The "high" color in the background gradient. Can be either
 a hexadecimal code, or a numeric rgb vector listing three intensities between `0` and `1`.}

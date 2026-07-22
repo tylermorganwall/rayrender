@@ -848,6 +848,15 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
     as<List>(camera_info["keyframe_motion_args"]) :
     List::create(_["type"] = "linear",
                  _["damp_motion"] = true);
+  std::string snapshot_filename;
+  if(camera_info.containsElementNamed("snapshot_filename")) {
+    CharacterVector snapshot_filename_value =
+      as<CharacterVector>(camera_info["snapshot_filename"]);
+    if(snapshot_filename_value.size() > 0 &&
+       !CharacterVector::is_na(snapshot_filename_value[0])) {
+      snapshot_filename = as<std::string>(snapshot_filename_value[0]);
+    }
+  }
   Float iso = as<Float>(camera_info["iso"]);
   int bvh_type = as<int>(camera_info["bvh"]);
 
@@ -1122,6 +1131,7 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
                          background_sphere->WorldToObject,
                          auto_exposure);
 #endif
+  Display.SetSnapshotFilename(snapshot_filename);
   Display.SetKeyframeMotionArgs(keyframe_motion_args);
   Display.SetTextOverlays(text_overlays);
   Display.SetLineOverlays(line_overlays);

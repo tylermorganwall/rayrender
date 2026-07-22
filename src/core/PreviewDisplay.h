@@ -87,6 +87,8 @@ public:
 #endif
   ~PreviewDisplay();
   void SetCamera(RayCamera* _cam);
+  void SetSnapshotFilename(const std::string& filename);
+  void SavePreviewSnapshot() const;
   bool PollCloseEvent();
 #ifdef HAS_OIDN
   void SetDenoiser(RayOidnDenoiser* _denoiser,
@@ -230,6 +232,10 @@ public:
   bool preview_motion_active;
   bool camera_motion_blur_enabled;
   Float shutter_speed;
+  std::string snapshot_filename;
+  std::vector<unsigned char> snapshot_pixels;
+  unsigned int snapshot_width;
+  unsigned int snapshot_height;
   std::vector<PreviewTextOverlay> text_overlays;
   std::vector<PreviewLineOverlay> line_overlays;
 };

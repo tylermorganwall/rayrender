@@ -1561,6 +1561,20 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
     }
     CompositeTextOverlaysToX11Buffer(world, rng);
     CompositeLineOverlaysToX11Buffer(world, rng);
+    snapshot_width = width;
+    snapshot_height = height;
+    snapshot_pixels.resize(static_cast<size_t>(width) *
+                           static_cast<size_t>(height) * 3);
+    for(size_t pixel = 0;
+        pixel < static_cast<size_t>(width) * static_cast<size_t>(height);
+        pixel++) {
+      snapshot_pixels[3 * pixel] =
+        static_cast<unsigned char>(data[4 * pixel + 2]);
+      snapshot_pixels[3 * pixel + 1] =
+        static_cast<unsigned char>(data[4 * pixel + 1]);
+      snapshot_pixels[3 * pixel + 2] =
+        static_cast<unsigned char>(data[4 * pixel]);
+    }
     KeyCode tab = XKeysymToKeycode(d, XK_Tab);
     KeyCode esc = XKeysymToKeycode(d, XK_Escape);
     //Movement
@@ -1640,6 +1654,13 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
         if (e.xkey.keycode == CameraMotionBlur_key ) {
           ToggleCameraMotionBlur();
           reset_preview_render();
+          continue;
+        }
+        if(interactive &&
+           (e.xkey.keycode == Return_key ||
+            e.xkey.keycode == KeypadEnter_key) &&
+           (e.xkey.state & ShiftMask) != 0) {
+          SavePreviewSnapshot();
           continue;
         }
         if(interactive && IsPreviewMotionActive()) {
@@ -1838,6 +1859,13 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
             if (e.xkey.keycode == CameraMotionBlur_key ) {
               ToggleCameraMotionBlur();
               reset_preview_render();
+              continue;
+            }
+            if(interactive &&
+               (e.xkey.keycode == Return_key ||
+                e.xkey.keycode == KeypadEnter_key) &&
+               (e.xkey.state & ShiftMask) != 0) {
+              SavePreviewSnapshot();
               continue;
             }
             if(interactive && IsPreviewMotionActive()) {
@@ -2194,6 +2222,20 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
     }
     CompositeTextOverlaysToFloatBuffer(rgb, world, rng);
     CompositeLineOverlaysToFloatBuffer(rgb, world, rng);
+    snapshot_width = width;
+    snapshot_height = height;
+    snapshot_pixels.resize(static_cast<size_t>(width) *
+                           static_cast<size_t>(height) * 3);
+    for(size_t pixel = 0;
+        pixel < static_cast<size_t>(width) * static_cast<size_t>(height);
+        pixel++) {
+      snapshot_pixels[3 * pixel] = static_cast<unsigned char>(
+        255.f * clamp(rgb[3 * pixel], 0.f, 1.f));
+      snapshot_pixels[3 * pixel + 1] = static_cast<unsigned char>(
+        255.f * clamp(rgb[3 * pixel + 1], 0.f, 1.f));
+      snapshot_pixels[3 * pixel + 2] = static_cast<unsigned char>(
+        255.f * clamp(rgb[3 * pixel + 2], 0.f, 1.f));
+    }
     
     InvalidateRect(hwnd, NULL, 0);
     while (PeekMessage (&msg, NULL, 0, 0, PM_REMOVE) > 0) {
@@ -2248,6 +2290,8 @@ PreviewDisplay::PreviewDisplay(unsigned int _width, unsigned int _height,
   preview_motion_frame = 0;
   preview_motion_restore_keyframe = -1;
   preview_motion_active = false;
+  snapshot_width = 0;
+  snapshot_height = 0;
   write_fast_output = false;
   terminate = false;
   deferred_render = _deferred_render && preview && _interactive;
@@ -2377,6 +2421,58 @@ void PreviewDisplay::SetCamera(RayCamera* _cam) {
     }
   }
 #endif
+}
+
+void PreviewDisplay::SetSnapshotFilename(const std::string& filename) {
+  snapshot_filename = filename;
+}
+
+void PreviewDisplay::SavePreviewSnapshot() const {
+  if(snapshot_width == 0 || snapshot_height == 0 || snapshot_pixels.empty()) {
+    Rprintf("Unable to save preview snapshot: no preview image is available.\n");
+    return;
+  }
+
+  try {
+    Rcpp::NumericVector image(
+      static_cast<R_xlen_t>(snapshot_width) *
+      static_cast<R_xlen_t>(snapshot_height) * 3
+    );
+    size_t channel_size = static_cast<size_t>(snapshot_width) *
+      static_cast<size_t>(snapshot_height);
+    for(unsigned int y = 0; y < snapshot_height; y++) {
+      for(unsigned int x = 0; x < snapshot_width; x++) {
+        size_t source_pixel = static_cast<size_t>(x) +
+          static_cast<size_t>(snapshot_width) * y;
+        size_t target_pixel = static_cast<size_t>(y) +
+          static_cast<size_t>(snapshot_height) * x;
+        for(size_t channel = 0; channel < 3; channel++) {
+          image[target_pixel + channel_size * channel] =
+            static_cast<Float>(snapshot_pixels[3 * source_pixel + channel]) /
+            255.f;
+        }
+      }
+    }
+    image.attr("dim") = Rcpp::IntegerVector::create(
+      snapshot_height,
+      snapshot_width,
+      3
+    );
+
+    Rcpp::CharacterVector source_filename(1);
+    if(snapshot_filename.empty()) {
+      source_filename[0] = NA_STRING;
+    } else {
+      source_filename[0] = snapshot_filename;
+    }
+    Rcpp::Environment pkg = Rcpp::Environment::namespace_env("rayrender");
+    Rcpp::Function save_snapshot = pkg["save_preview_snapshot"];
+    save_snapshot(image, source_filename);
+  } catch(const std::exception& error) {
+    Rprintf("Unable to save preview snapshot: %s\n", error.what());
+  } catch(...) {
+    Rprintf("Unable to save preview snapshot.\n");
+  }
 }
 
 bool PreviewDisplay::PollCloseEvent() {
@@ -2595,6 +2691,14 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
       if(!PreviewWindowHasKeyboardFocus(hwnd)) {
         return 0;
       }
+      bool shift_pressed = (GetKeyState(VK_SHIFT) & 0x8000) != 0;
+      if(interactive_w &&
+         shift_pressed &&
+         wParam == VK_RETURN &&
+         preview_display_w != nullptr) {
+        preview_display_w->SavePreviewSnapshot();
+        return 0;
+      }
       if(interactive_w &&
          preview_display_w != nullptr &&
          preview_display_w->IsPreviewMotionActive() &&
@@ -2611,7 +2715,6 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         u = cam_w->get_u();
         v = cam_w->get_v();
       }
-      bool shift_pressed = (GetKeyState(VK_SHIFT) & 0x8000) != 0;
       if(interactive_w &&
          preview_display_w != nullptr &&
          shift_pressed &&
