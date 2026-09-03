@@ -25,6 +25,9 @@ post_process_scene = function(
   screen_line_overlay = NULL,
   exposure_adjustment = 1
 ) {
+  if (isTRUE(attr(rgb_mat, "render_cancelled"))) {
+    plot_scene = FALSE
+  }
   if (!is.numeric(debug_channel)) {
     debug_channel = unlist(lapply(
       tolower(debug_channel),

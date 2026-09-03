@@ -1550,15 +1550,6 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
         }
       }
     }
-    if(progress) {
-      for(unsigned int i = 0; i < 4*width*percent_done; i += 4 ) {
-        for(unsigned int j = 0; j < 3; j++) {
-          data[i + 4*width*j]   = (unsigned char)0;
-          data[i + 4*width*j+1] = (unsigned char)0;
-          data[i + 4*width*j+2] = (unsigned char)255;
-        }
-      }
-    }
     CompositeTextOverlaysToX11Buffer(world, rng);
     CompositeLineOverlaysToX11Buffer(world, rng);
     snapshot_width = width;
@@ -1574,6 +1565,16 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
         static_cast<unsigned char>(data[4 * pixel + 1]);
       snapshot_pixels[3 * pixel + 2] =
         static_cast<unsigned char>(data[4 * pixel]);
+    }
+    // Paint display-only UI after populating the snapshot buffer.
+    if(progress) {
+      for(unsigned int i = 0; i < 4*width*percent_done; i += 4 ) {
+        for(unsigned int j = 0; j < 3; j++) {
+          data[i + 4*width*j]   = (unsigned char)0;
+          data[i + 4*width*j+1] = (unsigned char)0;
+          data[i + 4*width*j+2] = (unsigned char)255;
+        }
+      }
     }
     KeyCode tab = XKeysymToKeycode(d, XK_Tab);
     KeyCode esc = XKeysymToKeycode(d, XK_Escape);
@@ -2211,15 +2212,6 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
     }
     blanked = false;
     
-    if(progress) {
-      for(unsigned int i = 0; i < 3*width*percent_done; i += 3 ) {
-        for(unsigned int j = 0; j < 3; j++) {
-          rgb[i + 3*width*j]   = 1.f;
-          rgb[i + 3*width*j+1] = 0.f;
-          rgb[i + 3*width*j+2] = 0.f;
-        }
-      }
-    }
     CompositeTextOverlaysToFloatBuffer(rgb, world, rng);
     CompositeLineOverlaysToFloatBuffer(rgb, world, rng);
     snapshot_width = width;
@@ -2235,6 +2227,16 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
         255.f * clamp(rgb[3 * pixel + 1], 0.f, 1.f));
       snapshot_pixels[3 * pixel + 2] = static_cast<unsigned char>(
         255.f * clamp(rgb[3 * pixel + 2], 0.f, 1.f));
+    }
+    // Paint display-only UI after populating the snapshot buffer.
+    if(progress) {
+      for(unsigned int i = 0; i < 3*width*percent_done; i += 3 ) {
+        for(unsigned int j = 0; j < 3; j++) {
+          rgb[i + 3*width*j]   = 1.f;
+          rgb[i + 3*width*j+1] = 0.f;
+          rgb[i + 3*width*j+2] = 0.f;
+        }
+      }
     }
     
     InvalidateRect(hwnd, NULL, 0);
