@@ -45,8 +45,9 @@ camera(
 
 \item{keyframe_motion_args}{Default `list()`. Named list of additional arguments passed to
 `generate_camera_motion()` when pressing `M` in interactive preview to preview the saved keyframes.
-The saved keyframes always supply the camera positions. Defaults are `type = "linear"`,
-30 frames per saved keyframe, and `damp_motion = TRUE`.}
+The saved keyframes always supply the camera positions. Defaults are `type = "spline"`,
+30 frames per saved keyframe, and `damp_motion = TRUE`.
+Press Shift-L in the preview window to toggle the current path between open and closed.}
 
 \item{name}{Default `"camera"`. Camera name.}
 

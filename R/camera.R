@@ -13,8 +13,9 @@
 #' @param motion Default `NULL`. Camera motion data frame from `generate_camera_motion()`.
 #' @param keyframe_motion_args Default `list()`. Named list of additional arguments passed to
 #' `generate_camera_motion()` when pressing `M` in interactive preview to preview the saved keyframes.
-#' The saved keyframes always supply the camera positions. Defaults are `type = "linear"`,
+#' The saved keyframes always supply the camera positions. Defaults are `type = "spline"`,
 #' 30 frames per saved keyframe, and `damp_motion = TRUE`.
+#' Press Shift-L in the preview window to toggle the current path between open and closed.
 #' @param name Default `"camera"`. Camera name.
 #' @param filename Default `NA_character_`. Optional output filename or animation filename pattern.
 #' @param camera_description_file Default `NA`. Filename of a realistic camera description file.
@@ -653,7 +654,11 @@ normalize_keyframe_motion_args = function(args = list()) {
   }
 
   utils::modifyList(
-    list(type = "linear", damp_motion = TRUE),
+    list(
+      type = "spline",
+      smooth_orientation = TRUE,
+      damp_motion = TRUE
+    ),
     args
   )
 }

@@ -168,15 +168,20 @@ slerp = function(vec1, vec2, n) {
 
 #' Tween
 #'
-#' @param vals Numeric values
-#' @param n Frames
-#' @param ease type
+#' @param vals Numeric values.
+#' @param n Number of frames.
+#' @param ease Default `"cubic"`. Interpolation type.
+#' @param closed Default `FALSE`. Whether spline interpolation should match speed
+#' at the path boundaries.
 #' @return number
 #'
 #' @keywords internal
-tween = function(vals, n, ease = "cubic") {
+tween = function(vals, n, ease = "cubic", closed = FALSE) {
   if (length(vals) == 1) {
     return(rep(vals, n))
+  }
+  if (ease == "spline") {
+    return(tween_spline(vals, n, closed))
   }
   len_vals = rep(0, length(vals) - 1)
   free_vals = n - length(vals)
@@ -226,6 +231,458 @@ tween = function(vals, n, ease = "cubic") {
     )
   }
   return(unlist(final_vals))
+}
+
+#' Interpolate Values with Smooth Speed
+#'
+#' @param vals Numeric values.
+#' @param n Number of frames.
+#' @param closed Default `FALSE`. Whether to match speed at the path boundaries.
+#' @return Numeric vector of interpolated values.
+#'
+#' @keywords internal
+tween_spline = function(vals, n, closed = FALSE) {
+  interpolated = tween_spline_path(
+    matrix(vals, ncol = 1),
+    n = n,
+    closed = closed
+  )
+  return(as.numeric(interpolated[, 1]))
+}
+
+#' Interpolate Speed Along a Piecewise Linear Path
+#'
+#' @param points Matrix of path points.
+#' @param n Number of frames.
+#' @param closed Default `FALSE`. Whether to match speed at the path boundaries.
+#' @return Matrix of interpolated points.
+#'
+#' @keywords internal
+tween_spline_path = function(points, n, closed = FALSE) {
+  points = as.matrix(points)
+  if (nrow(points) == 1) {
+    return(matrix(
+      points[1, ],
+      nrow = n,
+      ncol = ncol(points),
+      byrow = TRUE,
+      dimnames = list(NULL, colnames(points))
+    ))
+  }
+
+  len_vals = rep(0, nrow(points) - 1)
+  free_vals = n - nrow(points)
+  counter = 1
+  for (i in seq_len(free_vals)) {
+    len_vals[counter] = len_vals[counter] + 1
+    counter = counter + 1
+    if (counter > (nrow(points) - 1)) {
+      counter = 1
+    }
+  }
+
+  segment_frames = len_vals + 1
+  keyframe_frames = c(1, 1 + cumsum(segment_frames))
+  segment_delta = points[-1, , drop = FALSE] -
+    points[-nrow(points), , drop = FALSE]
+  segment_distance = sqrt(rowSums(segment_delta^2))
+  segment_speed = segment_distance / segment_frames
+
+  weighted_speed = function(
+    previous_speed,
+    next_speed,
+    previous_frames,
+    next_frames
+  ) {
+    if (previous_speed <= 0 || next_speed <= 0) {
+      return(0)
+    }
+    previous_weight = 2 * next_frames + previous_frames
+    next_weight = next_frames + 2 * previous_frames
+    (previous_weight + next_weight) /
+      (previous_weight / previous_speed + next_weight / next_speed)
+  }
+  endpoint_speed = function(
+    primary_speed,
+    adjacent_speed,
+    primary_frames,
+    adjacent_frames
+  ) {
+    speed = ((2 * primary_frames + adjacent_frames) *
+      primary_speed -
+      primary_frames * adjacent_speed) /
+      (primary_frames + adjacent_frames)
+    if (speed <= 0) {
+      return(0)
+    }
+    if (adjacent_speed == 0 && speed > 3 * primary_speed) {
+      return(3 * primary_speed)
+    }
+    speed
+  }
+
+  knot_speed = numeric(nrow(points))
+  if (length(segment_speed) == 1) {
+    knot_speed[] = segment_speed
+  } else {
+    for (i in 2:(nrow(points) - 1)) {
+      knot_speed[i] = weighted_speed(
+        segment_speed[i - 1],
+        segment_speed[i],
+        segment_frames[i - 1],
+        segment_frames[i]
+      )
+    }
+    if (closed) {
+      boundary_speed = weighted_speed(
+        segment_speed[length(segment_speed)],
+        segment_speed[1],
+        segment_frames[length(segment_frames)],
+        segment_frames[1]
+      )
+      knot_speed[1] = boundary_speed
+      knot_speed[length(knot_speed)] = boundary_speed
+    } else {
+      knot_speed[1] = endpoint_speed(
+        segment_speed[1],
+        segment_speed[2],
+        segment_frames[1],
+        segment_frames[2]
+      )
+      final_segment = length(segment_speed)
+      knot_speed[length(knot_speed)] = endpoint_speed(
+        segment_speed[final_segment],
+        segment_speed[final_segment - 1],
+        segment_frames[final_segment],
+        segment_frames[final_segment - 1]
+      )
+    }
+  }
+
+  interpolated = matrix(
+    0,
+    nrow = n,
+    ncol = ncol(points),
+    dimnames = list(NULL, colnames(points))
+  )
+  for (i in seq_along(segment_distance)) {
+    frame_rows = seq.int(keyframe_frames[i], keyframe_frames[i + 1])
+    time = (frame_rows - keyframe_frames[i]) / segment_frames[i]
+    if (segment_distance[i] < sqrt(.Machine$double.eps)) {
+      fraction = cubicInOut(time)
+    } else {
+      time2 = time^2
+      time3 = time^3
+      start_slope = segment_frames[i] * knot_speed[i] / segment_distance[i]
+      end_slope = segment_frames[i] * knot_speed[i + 1] / segment_distance[i]
+      fraction = (time3 - 2 * time2 + time) *
+        start_slope +
+        (-2 * time3 + 3 * time2) +
+        (time3 - time2) * end_slope
+      fraction = pmax(0, pmin(1, fraction))
+    }
+
+    interpolated[frame_rows, ] = matrix(
+      points[i, ],
+      nrow = length(frame_rows),
+      ncol = ncol(points),
+      byrow = TRUE
+    ) +
+      fraction %o% segment_delta[i, ]
+  }
+
+  return(interpolated)
+}
+
+#' Interpolate Camera Orientation with a Quaternion Spline
+#'
+#' @param positions Keyframe camera positions.
+#' @param lookats Keyframe lookat positions.
+#' @param camera_ups Keyframe camera up vectors.
+#' @param output_positions Interpolated camera positions.
+#' @param closed Default `FALSE`. Whether to use periodic orientation tangents.
+#' @return List containing interpolated lookat positions and camera up vectors.
+#'
+#' @keywords internal
+tween_camera_orientation = function(
+  positions,
+  lookats,
+  camera_ups,
+  output_positions,
+  closed = FALSE
+) {
+  positions = as.matrix(positions)
+  lookats = as.matrix(lookats)
+  camera_ups = as.matrix(camera_ups)
+  output_positions = as.matrix(output_positions)
+
+  normalize_vector = function(value, fallback) {
+    magnitude = sqrt(sum(value^2))
+    if (!is.finite(magnitude) || magnitude < sqrt(.Machine$double.eps)) {
+      return(fallback)
+    }
+    return(value / magnitude)
+  }
+  cross_vector = function(a, b) {
+    c(
+      a[2] * b[3] - a[3] * b[2],
+      a[3] * b[1] - a[1] * b[3],
+      a[1] * b[2] - a[2] * b[1]
+    )
+  }
+  quaternion_normalize = function(value) {
+    value / sqrt(sum(value^2))
+  }
+  quaternion_multiply = function(a, b) {
+    c(
+      a[1] * b[1] - sum(a[2:4] * b[2:4]),
+      a[1] * b[2:4] + b[1] * a[2:4] + cross_vector(a[2:4], b[2:4])
+    )
+  }
+  quaternion_inverse = function(value) {
+    c(value[1], -value[2:4]) / sum(value^2)
+  }
+  quaternion_log = function(value) {
+    value = quaternion_normalize(value)
+    vector_magnitude = sqrt(sum(value[2:4]^2))
+    if (vector_magnitude < sqrt(.Machine$double.eps)) {
+      return(c(0, 0, 0, 0))
+    }
+    half_angle = atan2(vector_magnitude, value[1])
+    c(0, value[2:4] * half_angle / vector_magnitude)
+  }
+  quaternion_exp = function(value) {
+    vector_magnitude = sqrt(sum(value[2:4]^2))
+    if (vector_magnitude < sqrt(.Machine$double.eps)) {
+      return(c(1, 0, 0, 0))
+    }
+    c(
+      cos(vector_magnitude),
+      value[2:4] * sin(vector_magnitude) / vector_magnitude
+    )
+  }
+  quaternion_slerp = function(a, b, amount) {
+    cosine = sum(a * b)
+    if (cosine < 0) {
+      b = -b
+      cosine = -cosine
+    }
+    cosine = pmax(-1, pmin(1, cosine))
+    if (cosine > 0.9995) {
+      return(quaternion_normalize((1 - amount) * a + amount * b))
+    }
+    angle = acos(cosine)
+    quaternion_normalize(
+      sin((1 - amount) * angle) /
+        sin(angle) *
+        a +
+        sin(amount * angle) / sin(angle) * b
+    )
+  }
+  matrix_to_quaternion = function(value) {
+    trace = sum(diag(value))
+    if (trace > 0) {
+      scale = 2 * sqrt(trace + 1)
+      quaternion = c(
+        0.25 * scale,
+        (value[3, 2] - value[2, 3]) / scale,
+        (value[1, 3] - value[3, 1]) / scale,
+        (value[2, 1] - value[1, 2]) / scale
+      )
+    } else if (value[1, 1] > value[2, 2] && value[1, 1] > value[3, 3]) {
+      scale = 2 * sqrt(1 + value[1, 1] - value[2, 2] - value[3, 3])
+      quaternion = c(
+        (value[3, 2] - value[2, 3]) / scale,
+        0.25 * scale,
+        (value[1, 2] + value[2, 1]) / scale,
+        (value[1, 3] + value[3, 1]) / scale
+      )
+    } else if (value[2, 2] > value[3, 3]) {
+      scale = 2 * sqrt(1 + value[2, 2] - value[1, 1] - value[3, 3])
+      quaternion = c(
+        (value[1, 3] - value[3, 1]) / scale,
+        (value[1, 2] + value[2, 1]) / scale,
+        0.25 * scale,
+        (value[2, 3] + value[3, 2]) / scale
+      )
+    } else {
+      scale = 2 * sqrt(1 + value[3, 3] - value[1, 1] - value[2, 2])
+      quaternion = c(
+        (value[2, 1] - value[1, 2]) / scale,
+        (value[1, 3] + value[3, 1]) / scale,
+        (value[2, 3] + value[3, 2]) / scale,
+        0.25 * scale
+      )
+    }
+    quaternion_normalize(quaternion)
+  }
+  quaternion_to_matrix = function(value) {
+    value = quaternion_normalize(value)
+    w = value[1]
+    x = value[2]
+    y = value[3]
+    z = value[4]
+    matrix(
+      c(
+        1 - 2 * (y^2 + z^2),
+        2 * (x * y - z * w),
+        2 * (x * z + y * w),
+        2 * (x * y + z * w),
+        1 - 2 * (x^2 + z^2),
+        2 * (y * z - x * w),
+        2 * (x * z - y * w),
+        2 * (y * z + x * w),
+        1 - 2 * (x^2 + y^2)
+      ),
+      nrow = 3,
+      byrow = TRUE
+    )
+  }
+  camera_quaternion = function(position, lookat, camera_up) {
+    forward = normalize_vector(lookat - position, c(0, 0, 1))
+    up = normalize_vector(camera_up, c(0, 1, 0))
+    right = cross_vector(up, forward)
+    if (sum(right^2) < 1e-12) {
+      up = if (abs(forward[2]) < 0.999) c(0, 1, 0) else c(1, 0, 0)
+      right = cross_vector(up, forward)
+      if (sum(right^2) < 1e-12) {
+        right = cross_vector(c(0, 0, 1), forward)
+      }
+    }
+    right = normalize_vector(right, c(1, 0, 0))
+    up = normalize_vector(cross_vector(forward, right), c(0, 1, 0))
+    matrix_to_quaternion(cbind(right, up, forward))
+  }
+  orientation_tangent = function(
+    current,
+    previous,
+    next_value,
+    previous_frames,
+    next_frames
+  ) {
+    if (sum(current * previous) < 0) {
+      previous = -previous
+    }
+    if (sum(current * next_value) < 0) {
+      next_value = -next_value
+    }
+    previous_log = quaternion_log(
+      quaternion_multiply(quaternion_inverse(current), previous)
+    )
+    next_log = quaternion_log(
+      quaternion_multiply(quaternion_inverse(current), next_value)
+    )
+    tangent_log = -0.5 *
+      (next_frames * previous_log + previous_frames * next_log) /
+      (previous_frames + next_frames)
+    quaternion_normalize(
+      quaternion_multiply(current, quaternion_exp(tangent_log))
+    )
+  }
+  quaternion_squad = function(start, start_tangent, end_tangent, end, amount) {
+    quaternion_slerp(
+      quaternion_slerp(start, end, amount),
+      quaternion_slerp(start_tangent, end_tangent, amount),
+      2 * amount * (1 - amount)
+    )
+  }
+
+  number_keyframes = nrow(positions)
+  number_segments = number_keyframes - 1
+  number_frames = nrow(output_positions)
+  if (number_segments < 1) {
+    stop("At least two camera orientation keyframes are required.")
+  }
+  if (number_frames < number_keyframes) {
+    stop("`frames` must be at least the number of camera keyframes.")
+  }
+
+  extra_frames = number_frames - number_keyframes
+  segment_frames = rep(1, number_segments)
+  if (extra_frames > 0) {
+    segment_frames = segment_frames +
+      tabulate(
+        rep(seq_len(number_segments), length.out = extra_frames),
+        nbins = number_segments
+      )
+  }
+  keyframe_frames = c(1, 1 + cumsum(segment_frames))
+
+  quaternions = matrix(0, nrow = number_keyframes, ncol = 4)
+  for (i in seq_len(number_keyframes)) {
+    quaternions[i, ] = camera_quaternion(
+      positions[i, ],
+      lookats[i, ],
+      camera_ups[i, ]
+    )
+    if (i > 1 && sum(quaternions[i - 1, ] * quaternions[i, ]) < 0) {
+      quaternions[i, ] = -quaternions[i, ]
+    }
+  }
+
+  tangents = quaternions
+  if (number_keyframes > 2) {
+    for (i in 2:(number_keyframes - 1)) {
+      tangents[i, ] = orientation_tangent(
+        quaternions[i, ],
+        quaternions[i - 1, ],
+        quaternions[i + 1, ],
+        segment_frames[i - 1],
+        segment_frames[i]
+      )
+    }
+  }
+  if (closed && number_keyframes > 2) {
+    tangents[1, ] = orientation_tangent(
+      quaternions[1, ],
+      quaternions[number_keyframes - 1, ],
+      quaternions[2, ],
+      segment_frames[number_segments],
+      segment_frames[1]
+    )
+    tangent_sign = if (
+      sum(quaternions[number_keyframes, ] * quaternions[1, ]) < 0
+    ) {
+      -1
+    } else {
+      1
+    }
+    tangents[number_keyframes, ] = tangent_sign * tangents[1, ]
+  }
+
+  output_quaternions = matrix(0, nrow = number_frames, ncol = 4)
+  for (i in seq_len(number_segments)) {
+    frame_rows = seq.int(keyframe_frames[i], keyframe_frames[i + 1])
+    amount = (frame_rows - keyframe_frames[i]) / segment_frames[i]
+    for (j in seq_along(frame_rows)) {
+      output_quaternions[frame_rows[j], ] = quaternion_squad(
+        quaternions[i, ],
+        tangents[i, ],
+        tangents[i + 1, ],
+        quaternions[i + 1, ],
+        amount[j]
+      )
+    }
+  }
+
+  lookat_distance = sqrt(rowSums((lookats - positions)^2))
+  output_lookat_distance = tween_spline(
+    lookat_distance,
+    n = number_frames,
+    closed = closed
+  )
+  output_lookats = matrix(0, nrow = number_frames, ncol = 3)
+  output_camera_ups = matrix(0, nrow = number_frames, ncol = 3)
+  for (i in seq_len(number_frames)) {
+    camera_basis = quaternion_to_matrix(output_quaternions[i, ])
+    output_lookats[i, ] = output_positions[i, ] +
+      camera_basis[, 3] * output_lookat_distance[i]
+    output_camera_ups[i, ] = camera_basis[, 2]
+  }
+
+  output_lookats[keyframe_frames, ] = lookats
+  output_camera_ups[keyframe_frames, ] = camera_ups
+  list(lookats = output_lookats, camera_ups = output_camera_ups)
 }
 
 #' Generate Translation Matrix

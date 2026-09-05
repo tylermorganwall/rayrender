@@ -61,14 +61,27 @@ test_that("camera normalizes keyframe motion preview arguments", {
   default_cam = camera()
   cam = camera(keyframe_motion_args = list(frames = 24, closed = TRUE))
 
-  expect_equal(default_cam$keyframe_motion_args$type, "linear")
+  expect_equal(default_cam$keyframe_motion_args$type, "spline")
   expect_null(default_cam$keyframe_motion_args$frames)
+  expect_true(default_cam$keyframe_motion_args$smooth_orientation)
   expect_true(default_cam$keyframe_motion_args$damp_motion)
 
-  expect_equal(cam$keyframe_motion_args$type, "linear")
+  expect_equal(cam$keyframe_motion_args$type, "spline")
   expect_equal(cam$keyframe_motion_args$frames, 24)
+  expect_true(cam$keyframe_motion_args$smooth_orientation)
   expect_true(cam$keyframe_motion_args$damp_motion)
   expect_true(cam$keyframe_motion_args$closed)
+
+  linear_cam = camera(keyframe_motion_args = list(type = "linear"))
+  expect_equal(linear_cam$keyframe_motion_args$type, "linear")
+
+  cubic_cam = camera(keyframe_motion_args = list(type = "cubic"))
+  expect_equal(cubic_cam$keyframe_motion_args$type, "cubic")
+
+  direct_orientation_cam = camera(
+    keyframe_motion_args = list(smooth_orientation = FALSE)
+  )
+  expect_false(direct_orientation_cam$keyframe_motion_args$smooth_orientation)
 
   expect_error(
     camera(keyframe_motion_args = list(positions = list(c(0, 0, 0)))),

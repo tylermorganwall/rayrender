@@ -129,6 +129,8 @@ public:
   void PrintCameraInfo(Float env_rotation) const;
   std::string PreviewStatusText(Float env_rotation) const;
   void SetKeyframeMotionArgs(const Rcpp::List& args);
+  bool ToggleKeyframeMotionClosed();
+  bool KeyframeMotionClosed() const { return keyframe_motion_closed; }
   Rcpp::DataFrame KeyframesDataFrame() const;
   bool StartPreviewMotion(Float env_rotation);
   bool CancelPreviewMotion(Float* env_rotation);
@@ -225,6 +227,7 @@ public:
   std::vector<Rcpp::List> Keyframes;
   int current_keyframe;
   Rcpp::List keyframe_motion_args;
+  bool keyframe_motion_closed;
   Rcpp::DataFrame preview_motion;
   Rcpp::List preview_motion_restore_state;
   int preview_motion_frame;

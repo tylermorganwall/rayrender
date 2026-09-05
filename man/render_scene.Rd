@@ -98,7 +98,8 @@ If the interactive preview window is wide enough, a status bar at the bottom sho
 and keyframe state.
 K: Save Keyframe (at the conclusion of the render, this will create the `ray_keyframes`
 data.frame in the global environment, which can be passed to `generate_camera_motion()` to tween between those saved positions.
-L: Reset Camera to Last Keyframe (if set), < and >: Jump to previous/next keyframe, /: Delete current keyframe,
+L: Reset Camera to Last Keyframe (if set), Shift-L: Toggle keyframe path open/closed,
+< and >: Jump to previous/next keyframe, /: Delete current keyframe,
 M: Preview/cancel keyframe motion,
 F: Toggle Fast Travel Mode,
 B: Toggle Camera Motion Blur

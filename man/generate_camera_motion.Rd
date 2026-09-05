@@ -12,7 +12,7 @@ generate_camera_motion(
   focal_distances = NULL,
   ortho_dims = NULL,
   camera_ups = NULL,
-  type = "cubic",
+  type = "spline",
   frames = 30,
   closed = FALSE,
   aperture_linear = TRUE,
@@ -25,7 +25,8 @@ generate_camera_motion(
   offset_lookat = 0,
   damp_motion = FALSE,
   damp_magnitude = 0.1,
-  progress = TRUE
+  progress = TRUE,
+  smooth_orientation = TRUE
 )
 }
 \arguments{
@@ -49,10 +50,12 @@ of orthographic dimensions.}
 
 \item{camera_ups}{Default `NULL`, which gives at up vector of `c(0,1,0)`. Camera up orientation.}
 
-\item{type}{Default `cubic`. Type of transition between keyframes.
-Other options are `linear`, `quad`, `bezier`, `exp`, and `manual`. `manual` just returns the values
-passed in, properly formatted to be passed to `render_animation()`. `linear`, `quad`, `cubic`, and
-`exp` interpolate lookat and up vectors directly.}
+\item{type}{Default `spline`. Type of transition between keyframes.
+Other options are `linear`, `quad`, `cubic`, `bezier`, `exp`, and `manual`. `spline` keeps the
+path linear between keyframes while using a shape-preserving cubic Hermite spline to smoothly
+vary speed. Closed paths use matching boundary speeds. Direction can still change abruptly at
+a corner because the keyed path is preserved. `manual` just returns the values passed in,
+properly formatted to be passed to `render_animation()`.}
 
 \item{frames}{Default `30`. Total number of frames.}
 
@@ -66,7 +69,8 @@ passed in, properly formatted to be passed to `render_animation()`. `linear`, `q
 
 \item{ortho_linear}{Default `TRUE`. This linearly interpolates orthographic dimensions, rather than using a smooth Bezier curve or easing function.}
 
-\item{constant_step}{Default `TRUE`. This will make the camera travel at a constant speed.}
+\item{constant_step}{Default `TRUE`. Whether to make the camera travel at a constant speed
+when `type = "bezier"`.}
 
 \item{curvature_adjust}{Default `none`. Other options are `position`, `lookat`, and `both`. Whether to slow down the camera at areas of high curvature
 to prevent fast swings. Only used for curve `type = bezier`. This does not preserve key frame positions.
@@ -90,6 +94,12 @@ The equation for the position is `cam_current = cam_current * damp_magnitude + c
 less than `1`.}
 
 \item{progress}{Default `TRUE`. Whether to display a progress bar.}
+
+\item{smooth_orientation}{Default `TRUE`. Whether to use a quaternion orientation spline for
+`spline`, `linear`, `quad`, `cubic`, and `exp` motion. This preserves the keyed camera positions
+and orientations while making angular velocity continuous through orientation keyframes. Closed
+paths use periodic orientation tangents. Set this to `FALSE` to interpolate lookat and up vectors
+directly with the selected `type`.}
 }
 \value{
 Data frame of camera positions, orientations, apertures, focal distances, and field of views

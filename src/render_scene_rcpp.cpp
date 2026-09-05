@@ -846,7 +846,8 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
     false;
   List keyframe_motion_args = camera_info.containsElementNamed("keyframe_motion_args") ?
     as<List>(camera_info["keyframe_motion_args"]) :
-    List::create(_["type"] = "linear",
+    List::create(_["type"] = "spline",
+                 _["smooth_orientation"] = true,
                  _["damp_motion"] = true);
   std::string snapshot_filename;
   if(camera_info.containsElementNamed("snapshot_filename")) {

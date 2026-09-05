@@ -16,13 +16,16 @@
 #' @param ortho_dims Default `NULL`, which results in `c(1,1)` orthographic dimensions.  A list or 2-column matrix
 #' of orthographic dimensions.
 #' @param camera_ups Default `NULL`, which gives at up vector of `c(0,1,0)`. Camera up orientation.
-#' @param type Default `cubic`. Type of transition between keyframes.
-#' Other options are `linear`, `quad`, `bezier`, `exp`, and `manual`. `manual` just returns the values
-#' passed in, properly formatted to be passed to `render_animation()`. `linear`, `quad`, `cubic`, and
-#' `exp` interpolate lookat and up vectors directly.
+#' @param type Default `spline`. Type of transition between keyframes.
+#' Other options are `linear`, `quad`, `cubic`, `bezier`, `exp`, and `manual`. `spline` keeps the
+#' path linear between keyframes while using a shape-preserving cubic Hermite spline to smoothly
+#' vary speed. Closed paths use matching boundary speeds. Direction can still change abruptly at
+#' a corner because the keyed path is preserved. `manual` just returns the values passed in,
+#' properly formatted to be passed to `render_animation()`.
 #' @param frames Default `30`. Total number of frames.
 #' @param closed Default `FALSE`. Whether to close the camera curve so the first position matches the last. Set this to `TRUE` for perfect loops.
-#' @param constant_step Default `TRUE`. This will make the camera travel at a constant speed.
+#' @param constant_step Default `TRUE`. Whether to make the camera travel at a constant speed
+#' when `type = "bezier"`.
 #' @param aperture_linear Default `TRUE`. This linearly interpolates focal distances, rather than using a smooth Bezier curve  or easing function.
 #' @param fov_linear Default `TRUE`. This linearly interpolates focal distances, rather than using a smooth Bezier curve  or easing function.
 #' @param focal_linear Default `TRUE`. This linearly interpolates focal distances, rather than using a smooth Bezier curve or easing function.
@@ -44,6 +47,11 @@
 #' @param damp_magnitude Default `0.1`. Amount to damp the motion, a numeric value greater than `0` (no damping) and
 #' less than `1`.
 #' @param progress Default `TRUE`. Whether to display a progress bar.
+#' @param smooth_orientation Default `TRUE`. Whether to use a quaternion orientation spline for
+#' `spline`, `linear`, `quad`, `cubic`, and `exp` motion. This preserves the keyed camera positions
+#' and orientations while making angular velocity continuous through orientation keyframes. Closed
+#' paths use periodic orientation tangents. Set this to `FALSE` to interpolate lookat and up vectors
+#' directly with the selected `type`.
 #'
 #' @export
 #' @return Data frame of camera positions, orientations, apertures, focal distances, and field of views
@@ -117,7 +125,7 @@ generate_camera_motion = function(
   focal_distances = NULL,
   ortho_dims = NULL,
   camera_ups = NULL,
-  type = "cubic",
+  type = "spline",
   frames = 30,
   closed = FALSE,
   aperture_linear = TRUE,
@@ -130,7 +138,8 @@ generate_camera_motion = function(
   offset_lookat = 0,
   damp_motion = FALSE,
   damp_magnitude = 0.1,
-  progress = TRUE
+  progress = TRUE,
+  smooth_orientation = TRUE
 ) {
   damp_magnitude = 1 - damp_magnitude
   stopifnot(damp_magnitude >= 0 && damp_magnitude < 1)
@@ -393,7 +402,7 @@ generate_camera_motion = function(
     }
 
     return(as_ray_camera_motion(final_motion))
-  } else if (type %in% c("exp", "quad", "cubic", "linear")) {
+  } else if (type %in% c("exp", "quad", "cubic", "linear", "spline")) {
     if (inherits(positions, "list")) {
       positions = do.call(rbind, positions)
     }
@@ -467,14 +476,44 @@ generate_camera_motion = function(
       apertures = c(apertures, apertures[1])
       fovs = c(fovs, fovs[1])
       focal_distances = c(focal_distances, focal_distances[1])
+      ortho$x = c(ortho$x, ortho$x[1])
+      ortho$y = c(ortho$y, ortho$y[1])
     }
-    final_motion = as.data.frame(apply(
-      tween_df,
-      2,
-      tween,
-      n = frames,
-      ease = type
-    ))
+    if (type == "spline") {
+      spline_groups = list(
+        c("x", "y", "z"),
+        c("dx", "dy", "dz"),
+        "aperture",
+        "fov",
+        "focal",
+        c("orthox", "orthoy"),
+        c("upx", "upy", "upz")
+      )
+      final_motion = do.call(
+        cbind,
+        lapply(
+          spline_groups,
+          function(columns) {
+            tween_spline_path(
+              tween_df[, columns, drop = FALSE],
+              n = frames,
+              closed = closed
+            )
+          }
+        )
+      )
+      final_motion = as.data.frame(final_motion)
+      colnames(final_motion) = colnames(tween_df)
+    } else {
+      final_motion = as.data.frame(apply(
+        tween_df,
+        2,
+        tween,
+        n = frames,
+        ease = type,
+        closed = closed
+      ))
+    }
     rownames(final_motion) = NULL
     if (aperture_linear) {
       final_motion$aperture = tween(apertures, n = frames, ease = "linear")
@@ -488,6 +527,17 @@ generate_camera_motion = function(
     if (ortho_linear) {
       final_motion$orthox = tween(ortho$x, n = frames, ease = "linear")
       final_motion$orthoy = tween(ortho$y, n = frames, ease = "linear")
+    }
+    if (smooth_orientation) {
+      orientation_motion = tween_camera_orientation(
+        positions = as.matrix(tween_df[, c("x", "y", "z")]),
+        lookats = as.matrix(tween_df[, c("dx", "dy", "dz")]),
+        camera_ups = as.matrix(tween_df[, c("upx", "upy", "upz")]),
+        output_positions = as.matrix(final_motion[, c("x", "y", "z")]),
+        closed = closed
+      )
+      final_motion[, c("dx", "dy", "dz")] = orientation_motion$lookats
+      final_motion[, c("upx", "upy", "upz")] = orientation_motion$camera_ups
     }
     if (damp_motion) {
       final_motion = damp_camera_motion(final_motion, damp_magnitude, closed)

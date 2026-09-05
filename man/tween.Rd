@@ -4,14 +4,17 @@
 \alias{tween}
 \title{Tween}
 \usage{
-tween(vals, n, ease = "cubic")
+tween(vals, n, ease = "cubic", closed = FALSE)
 }
 \arguments{
-\item{vals}{Numeric values}
+\item{vals}{Numeric values.}
 
-\item{n}{Frames}
+\item{n}{Number of frames.}
 
-\item{ease}{type}
+\item{ease}{Default `"cubic"`. Interpolation type.}
+
+\item{closed}{Default `FALSE`. Whether spline interpolation should match speed
+at the path boundaries.}
 }
 \value{
 number

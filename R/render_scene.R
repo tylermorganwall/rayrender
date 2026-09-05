@@ -30,7 +30,8 @@
 #' and keyframe state.
 #' K: Save Keyframe (at the conclusion of the render, this will create the `ray_keyframes`
 #' data.frame in the global environment, which can be passed to `generate_camera_motion()` to tween between those saved positions.
-#' L: Reset Camera to Last Keyframe (if set), < and >: Jump to previous/next keyframe, /: Delete current keyframe,
+#' L: Reset Camera to Last Keyframe (if set), Shift-L: Toggle keyframe path open/closed,
+#' < and >: Jump to previous/next keyframe, /: Delete current keyframe,
 #' M: Preview/cancel keyframe motion,
 #' F: Toggle Fast Travel Mode,
 #' B: Toggle Camera Motion Blur
@@ -651,9 +652,9 @@ HAS_OIDN: %s
       "Move:       W/A/S/D horizontal | Q/Z vertical | E/C step size | F fast travel",
       "Look:       Shift-W/S pitch | Shift-A/D roll | Tab toggle orbit",
       "Lens/Env:   Up/Down FOV | Left/Right aperture | 1/2 focal | 3/4 env rotate",
-      "Keyframes:  K save | L last | </> prev/next | / delete | M preview/cancel",
+      "Keyframes:  K save | L last | Shift-L loop | </> prev/next | / delete | M preview/cancel",
       "Mouse:      Left click lookat + focal distance | Right click lookat",
-      "Status:     Wide window shows camera/exposure/env/keyframes",
+      "Status:     Wide window shows camera/exposure/env/keyframes/loop",
       "Exposure:   ]/[ preview exposure | Shift-]/[ shutter speed",
       "Blur:       B camera motion blur",
       "Snapshot:   Shift-Enter save current preview",

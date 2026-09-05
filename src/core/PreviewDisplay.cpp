@@ -467,6 +467,15 @@ bool PreviewDisplay::DeleteCurrentKeyframe(Float* env_rotation) {
 
 void PreviewDisplay::SetKeyframeMotionArgs(const Rcpp::List& args) {
   keyframe_motion_args = Rcpp::clone(args);
+  keyframe_motion_closed = args.containsElementNamed("closed") ?
+    Rcpp::as<bool>(args["closed"]) : false;
+}
+
+bool PreviewDisplay::ToggleKeyframeMotionClosed() {
+  keyframe_motion_closed = !keyframe_motion_closed;
+  Rprintf("Keyframe motion loop: %s.\n",
+          keyframe_motion_closed ? "CLOSED" : "OPEN");
+  return keyframe_motion_closed;
 }
 
 Rcpp::DataFrame PreviewDisplay::KeyframesDataFrame() const {
@@ -549,6 +558,9 @@ bool PreviewDisplay::StartPreviewMotion(Float env_rotation) {
       if(arg_name == "frames") {
         frames_supplied = true;
       }
+      if(arg_name == "closed") {
+        continue;
+      }
       if(!IsKeyframeSuppliedMotionArg(arg_name)) {
         call_args.push_back(keyframe_motion_args[i], arg_name);
       }
@@ -556,6 +568,7 @@ bool PreviewDisplay::StartPreviewMotion(Float env_rotation) {
     if(!frames_supplied) {
       call_args.push_back(static_cast<int>(Keyframes.size() * 30), "frames");
     }
+    call_args.push_back(keyframe_motion_closed, "closed");
 
     Rcpp::Environment pkg = Rcpp::Environment::namespace_env("rayrender");
     Rcpp::Function generate_camera_motion = pkg["generate_camera_motion"];
@@ -722,7 +735,8 @@ std::string PreviewDisplay::PreviewStatusText(Float env_rotation) const {
   if(std::isinf(shutter_speed)) {
     std::snprintf(buffer,
                   sizeof(buffer),
-                  "Cam x/y/z %.2f %.2f %.2f | Look %.2f %.2f %.2f | Exp %.3f | Shutter Inf | Env %.1f | Blur %s | Key %d/%zu",
+                  "Loop %s | Cam x/y/z %.2f %.2f %.2f | Look %.2f %.2f %.2f | Exp %.3f | Shutter Inf | Env %.1f | Blur %s | Key %d/%zu",
+                  keyframe_motion_closed ? "CLOSED" : "OPEN",
                   origin.xyz.x,
                   origin.xyz.y,
                   origin.xyz.z,
@@ -737,7 +751,8 @@ std::string PreviewDisplay::PreviewStatusText(Float env_rotation) const {
   } else {
     std::snprintf(buffer,
                   sizeof(buffer),
-                  "Cam x/y/z %.2f %.2f %.2f | Look %.2f %.2f %.2f | Exp %.3f | Shutter %.3f | Env %.1f | Blur %s | Key %d/%zu",
+                  "Loop %s | Cam x/y/z %.2f %.2f %.2f | Look %.2f %.2f %.2f | Exp %.3f | Shutter %.3f | Env %.1f | Blur %s | Key %d/%zu",
+                  keyframe_motion_closed ? "CLOSED" : "OPEN",
                   origin.xyz.x,
                   origin.xyz.y,
                   origin.xyz.z,
@@ -1802,7 +1817,11 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
             env_y_angle = 0;
           }
           if (e.xkey.keycode == L_key) {
-            if(Keyframes.size() > 0) {
+            if(shift_pressed) {
+              ToggleKeyframeMotionClosed();
+              DrawStatusBarX11(env_y_angle);
+              continue;
+            } else if(Keyframes.size() > 0) {
               ApplyKeyframe(static_cast<int>(Keyframes.size()) - 1, &env_y_angle);
             } else {
               Rprintf("Can't reset to last keyframe: No keyframes have been saved. Use the R key to reset camera.");
@@ -2009,7 +2028,11 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
               env_y_angle = 0;
             }
             if (e.xkey.keycode == L_key) {
-              if(Keyframes.size() > 0) {
+              if(shift_pressed) {
+                ToggleKeyframeMotionClosed();
+                DrawStatusBarX11(env_y_angle);
+                continue;
+              } else if(Keyframes.size() > 0) {
                 ApplyKeyframe(static_cast<int>(Keyframes.size()) - 1, &env_y_angle);
               } else {
                 Rprintf("Can't reset to last keyframe: No keyframes have been saved. Use the R key to reset camera.");
@@ -2285,8 +2308,12 @@ PreviewDisplay::PreviewDisplay(unsigned int _width, unsigned int _height,
 #endif
   Keyframes.clear();
   current_keyframe = -1;
-  keyframe_motion_args = Rcpp::List::create(Named("type") = "linear",
-                                            Named("damp_motion") = true);
+  keyframe_motion_args = Rcpp::List::create(
+    Named("type") = "spline",
+    Named("smooth_orientation") = true,
+    Named("damp_motion") = true
+  );
+  keyframe_motion_closed = false;
   preview_motion = Rcpp::DataFrame::create();
   preview_motion_restore_state = Rcpp::List::create();
   preview_motion_frame = 0;
@@ -2706,6 +2733,14 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
          preview_display_w->IsPreviewMotionActive() &&
          wParam != VK_ESCAPE &&
          wParam != VK_KEY_M) {
+        return 0;
+      }
+      if(interactive_w &&
+         preview_display_w != nullptr &&
+         shift_pressed &&
+         wParam == VK_KEY_L) {
+        preview_display_w->ToggleKeyframeMotionClosed();
+        InvalidateRect(hwnd, nullptr, FALSE);
         return 0;
       }
       vec3f w(1,0,0);
@@ -3163,6 +3198,31 @@ std::unique_ptr<PreviewDisplay> MakeTestPreviewDisplay(camera& cam,
     &env_transform, &env_transform, false));
 #endif
 }
+}
+
+context("Preview keyframe loop controls") {
+  test_that("preview keyframe loop state toggles and appears in status text") {
+    Matrix4x4 identity_matrix;
+    Transform env_transform(identity_matrix);
+    camera cam(point3f(0, 0, -10), point3f(0, 0, 0), vec3f(0, 1, 0),
+               60.f, 1.f, 0.f, 10.f, 0.f, 1.f, 1.f);
+    auto display = MakeTestPreviewDisplay(cam, env_transform);
+
+    expect_false(display->KeyframeMotionClosed());
+    expect_true(display->PreviewStatusText(0.f).find("Loop OPEN") !=
+                std::string::npos);
+
+    display->SetKeyframeMotionArgs(
+      Rcpp::List::create(Rcpp::Named("closed") = true)
+    );
+    expect_true(display->KeyframeMotionClosed());
+    expect_true(display->PreviewStatusText(0.f).find("Loop CLOSED") !=
+                std::string::npos);
+
+    expect_false(display->ToggleKeyframeMotionClosed());
+    expect_true(display->PreviewStatusText(0.f).find("Loop OPEN") !=
+                std::string::npos);
+  }
 }
 
 context("Preview shutter speed controls") {
