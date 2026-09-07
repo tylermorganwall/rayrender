@@ -13,68 +13,81 @@ pig(
   angle = c(0, 0, 0),
   order_rotation = c(1, 2, 3),
   scale = c(1, 1, 1),
-  diffuse_sigma = 0
+  diffuse_sigma = 0,
+  ski = FALSE,
+  hair_count = 12000,
+  hair_length = 1,
+  hair_seed = 8,
+  hair_material = NULL
 )
 }
 \arguments{
-\item{x}{Default `0`. x-coordinate of the center of the pig.}
+\item{x}{Default \code{0}. x-coordinate offset of the pig.}
 
-\item{y}{Default `0`. y-coordinate of the center of the pig.}
+\item{y}{Default \code{0}. y-coordinate offset of the pig.}
 
-\item{z}{Default `0`. z-coordinate of the center of the pig.}
+\item{z}{Default \code{0}. z-coordinate offset of the pig.}
 
-\item{emotion}{Default `neutral`. Other options include `skeptical`, `worried`, and `angry`.}
+\item{emotion}{Default \code{"neutral"}. Facial expression: \code{neutral}, \code{skeptical},
+\code{worried}, \code{angry}, \code{surprised}, or \code{excited}. \code{cheerful} is an alias for
+\code{neutral}. When omitted with \code{ski = TRUE}, the expression is \code{excited}.}
 
-\item{spider}{Default `FALSE`. Spiderpig.}
+\item{spider}{Default \code{FALSE}. Generate an eight-legged, four-eyed spider pig.}
 
-\item{angle}{Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.}
+\item{angle}{Default \code{c(0, 0, 0)}. Rotation in degrees about the x, y and z axes.}
 
-\item{order_rotation}{Default `c(1, 2, 3)`. The order to apply the rotations, referring to "x", "y", and "z".}
+\item{order_rotation}{Default \code{c(1, 2, 3)}. Order of the rotation axes.}
 
-\item{scale}{Default `c(1, 1, 1)`. Scale transformation in the x, y, and z directions. If this is a single value,
-number, the object will be scaled uniformly.}
+\item{scale}{Default \code{c(1, 1, 1)}. Uniform scalar or x/y/z scale factors.}
 
-\item{diffuse_sigma}{Default `0`. Controls the Oren-Nayar sigma parameter for the pig's diffuse material.}
+\item{diffuse_sigma}{Default \code{0}. Oren-Nayar roughness for diffuse surfaces,
+including the skin. Does not affect glossy eyes, lenses or hair.}
+
+\item{ski}{Default \code{FALSE}. Add the ski outfit and skiing pose. If both \code{ski}
+and \code{spider} are \code{TRUE}, warns \code{"spiders can't ski"} and generates the spider
+without ski gear.}
+
+\item{hair_count}{Default \code{12000}. Number of procedural spider hair curves.
+Set to zero for a bare spider mesh. Ignored for a regular or skiing pig.}
+
+\item{hair_length}{Default \code{1}. Multiplier for spider hair lengths.}
+
+\item{hair_seed}{Default \code{8}. Reproducible spider hair seed; preserves the
+caller's random-number state.}
+
+\item{hair_material}{Default \code{NULL}. Use the built-in rust/copper hair palette.
+Supply a single \code{\link[=hair]{hair()}} material to override the entire coat.}
 }
 \value{
-Single row of a tibble describing the pig in the scene.
+A scene tibble containing mesh objects and, for a hairy spider, curves.
 }
 \description{
-Pig Object
+Builds an earless, low-poly mesh pig from compact data included in rayrender.
+The skiing outfit includes goggles, a scarf and skis; the spider variant has
+eight legs, four eyes and procedural copper-colored hair curves.
+}
+\details{
+Geometry, expression heads and the ski pose are assembled in memory;
+no OBJ paths, downloads, Blender or rgl installation are required. The
+character faces +X, uses Y up, and retains the rotation/scale pivot at
+\code{c(0, 1, 0)}. Feet or skis rest approximately at \code{y - 0.6} before rotation
+and scaling. The mask and goggles can obscure eyebrows in skiing poses.
+Hair uses tapered \code{\link[=bezier_curve]{bezier_curve()}} objects with \code{\link[=hair]{hair()}} materials. A
+finite bounce limit, such as \code{max_depth = 12}, is useful for dense fur.
 }
 \examples{
 \dontshow{if (interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")) withAutoprint(\{ # examplesIf}
-#Generate a pig in the cornell box.
+generate_ground(depth = -0.6) |>
+  add_object(pig()) |>
+  render_scene(lookfrom = c(8, 5, 8), lookat = c(0, 1, 0), samples = 64)
 
-generate_cornell() |>
-  add_object(pig(x=555/2,z=555/2,y=120,
-  scale=c(80,80,80), angle = c(0,135,0))) |>
-  render_scene(parallel=TRUE, samples=16,clamp_value=10)
-# Show the pig staring into a mirror, worried
-generate_cornell() |>
-  add_object(pig(x=555/2-70,z=555/2+50,y=120,scale=c(80,80,80),
-                 angle = c(0,-40,0), emotion = "worried")) |>
-  add_object(cube(x=450,z=450,y=250, ywidth=500, xwidth=200,
-                  angle = c(0,45,0), material = metal())) |>
-  render_scene(parallel=TRUE, samples=16,clamp_value=10)
-# Render many small pigs facing random directions, with an evil pig overlord
-set.seed(1)
-lots_of_pigs = list()
-for(i in 1:10) {
-  lots_of_pigs[[i]] = pig(x=50 + 450 * runif(1), z = 50 + 450 * runif(1), y=50,
-                             scale = c(30,30,30), angle = c(0,360*runif(1),0), emotion = "worried")
-}
+generate_ground(depth = -0.6) |>
+  add_object(pig(ski = TRUE)) |>
+  render_scene(lookfrom = c(8, 5, 8), lookat = c(0, 1, 0), samples = 64)
 
-many_pigs_scene = do.call(rbind, lots_of_pigs) |>
- add_object(generate_cornell(lightintensity=30, lightwidth=100)) |>
- add_object(pig(z=500,x=555/2,y=350, emotion = "angry",
-            scale=c(100,100,100),angle=c(-30,90,0), order_rotation=c(3,2,1)))
-
-render_scene(many_pigs_scene,parallel=TRUE,clamp_value=10, samples=16)
-#Render spiderpig
-generate_studio() |>
-  add_object(pig(y=-1,angle=c(0,80,0), scale=1/2,spider=TRUE)) |>
-  add_object(sphere(y=5,z=-5,x=5,material=light(intensity=100))) |>
-  render_scene(samples=16,lookfrom=c(0,2,-10),clamp_value=10)
+generate_ground(depth = -0.6) |>
+  add_object(pig(spider = TRUE)) |>
+  render_scene(lookfrom = c(10, 7, 8), lookat = c(0, 1, 0),
+               samples = 64, max_depth = 12)
 \dontshow{\}) # examplesIf}
 }

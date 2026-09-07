@@ -2,6 +2,8 @@
 #include "../core/PreviewDisplay.h"
 #include "../math/mathinline.h"
 #include "../utils/raylog.h"
+#include "../volumes/picking.h"
+#include "RcppThread.h"
 
 #include <algorithm>
 #include <cmath>
@@ -9,6 +11,8 @@
 #include <stdexcept>
 
 #ifdef NOT_CRAN
+#include "../hitables/sphere.h"
+#include "../materials/material.h"
 #include <testthat.h>
 #endif
 
@@ -17,25 +21,15 @@ static const unsigned int PREVIEW_STATUS_BAR_HEIGHT = 24;
 static const Float PREVIEW_SHUTTER_SPEED_MIN = static_cast<Float>(1);
 static const Float PREVIEW_SHUTTER_SPEED_MAX = static_cast<Float>(4096);
 
-static vec3f PreviewCameraDirection(RayCamera* cam) {
-  vec3f direction = cam->get_w();
-#ifdef RAY_WINDOWS
-  direction = -direction;
-#endif
-  return direction;
-}
-
 static point3f PreviewCameraLookat(RayCamera* cam) {
-  Float fov = cam->get_fov();
-  if(fov == 0) {
-    return cam->get_lookat();
+  point3f origin = cam->get_origin(), pivot = cam->get_lookat();
+  vec3f forward = unit_vector(cam->get_w()), to_pivot = pivot - origin;
+  if(to_pivot.length() > 0 && dot(unit_vector(to_pivot), forward) > .999999f) {
+    return pivot;
   }
-  point3f origin = cam->get_origin();
-  Float fd = cam->get_focal_distance();
-  vec3f direction = PreviewCameraDirection(cam);
-  return point3f(origin.xyz.x + direction.xyz.x * fd,
-                 origin.xyz.y + direction.xyz.y * fd,
-                 origin.xyz.z + direction.xyz.z * fd);
+  // Free-flight translation can leave the stored orbit point off the viewing
+  // axis. Capture that view without replacing an aligned, explicitly picked pivot.
+  return origin + forward * std::max(cam->get_focal_distance(), Float(.001));
 }
 
 struct PreviewCameraState {
@@ -73,6 +67,50 @@ static void ApplyStaticPreviewCameraMotionRange(RayCamera* cam) {
   }
   PreviewCameraState state = CapturePreviewCameraState(cam);
   ApplyPreviewCameraMotionRange(cam, state, state);
+}
+
+bool PreviewDisplay::PickCameraTarget(Float u, Float v, bool update_focus, hitable* world) {
+  if(!cam || !world || u < 0 || u > 1 || v < 0 || v > 1) {
+    return false;
+  }
+  Ray ray;
+  Float fov = cam->get_fov();
+  if(fov < 0) {
+    // Match GenerateRay's film convention, using the center of the lens and
+    // a fixed shutter sample rather than the current rendering sample.
+    CameraSample sample(point2f(1 - u, 1 - v), point2f(.5f, .5f), .5f);
+    if(!(cam->GenerateRay(sample, &ray) > 0)) {
+      return false;
+    }
+  } else {
+    ray = cam->get_ray(u, v, point3f(0), .5f);
+  }
+  bool cancelled = false;
+  size_t polls = 0;
+  auto cancel = [&] {
+    if(!cancelled && polls++ % 64 == 0) {
+      cancelled = PollCloseEvent() || RcppThread::isInterrupted();
+    }
+    return cancelled;
+  };
+  try {
+    auto target = PickRay(ray, world, volume_scene.get(), .15, cancel);
+    if(!target || (target->p - cam->get_origin()).length() <= 0) {
+      return false;
+    }
+    if(update_focus && fov != 0 && fov != 360) {
+      cam->update_focal_distance((target->p - cam->get_origin()).length() -
+                                cam->get_focal_distance());
+    }
+    // This updates both the stored orbit point and the camera frame. Updating
+    // just the direction would snap back to the previous pivot on the next orbit.
+    cam->update_lookat(target->p);
+    ApplyStaticPreviewCameraMotionRange(cam);
+    return true;
+  } catch(const std::exception& error) {
+    Rprintf("Unable to pick preview target: %s\n", error.what());
+    return false;
+  }
 }
 
 static bool IsKeyframeSuppliedMotionArg(const std::string& name) {
@@ -2099,57 +2137,11 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
           }
           Float x = e.xbutton.x;
           Float y = e.xbutton.y;
-          Float fov = cam->get_fov();
-          Float u = (Float(width) - 1 - (Float(x))) / Float(width);
-          Float v = (Float(height) - 1 - (Float(y))) / Float(height);
-          vec3f dir;
-          hit_record hrec;
-          if(fov < 0) {
-            CameraSample samp({u,v},point2f(0.5,0.5), 0.5);
-            Ray r2;
-            cam->GenerateRay(samp,&r2);
-            if(world->hit(r2, 0.001, FLT_MAX, hrec, rng)) {
-              if( hrec.shape->GetName() != "EnvironmentLight") {
-                dir = point3f(0) - hrec.p;
-              }  else {
-                left = false;
-                right = true;
-                dir = point3f(0) - hrec.p;
-              }
-            }
-          } else if (fov > 0) {
-            Ray r2 = cam->get_ray(u,v, point3f(0),0.5f);
-            if (left) {
-                world->hit(r2, 0.001, FLT_MAX, hrec, rng);
-                if (hrec.shape->GetName() == "EnvironmentLight") {
-                  right = true;
-                }
-            }
-            dir = r2.direction();
-          } else {
-            Ray r2 = cam->get_ray(u,v, point3f(0.5),
-                                 0.5f);
-            if(world->hit(r2, 0.001, FLT_MAX, hrec, rng)) {
-              if( hrec.shape->GetName() != "EnvironmentLight") {
-                dir = -(cam->get_origin()-hrec.p);
-              } else {
-                Rprintf("Clicking on the environment light while using a orthographic camera does not change the view.\n");
-                dir = -cam->get_w();
-              }
-            } else {
-              dir = -cam->get_w();
-            }
+          Float u = 1 - (x + .5f) / Float(width);
+          Float v = 1 - (y + .5f) / Float(height);
+          if(!PickCameraTarget(u, v, left, world)) {
+            continue;
           }
-          if(left && !right) {
-            if(fov != 0 && fov != 360) {
-              Float current_fd = cam->get_focal_distance();
-              Float new_fd = (hrec.p-cam->get_origin()).length();
-              cam->update_focal_distance(new_fd - current_fd);
-            }
-            cam->update_lookat(hrec.p);
-          }
-          cam->update_look_direction(dir);
-          ApplyStaticPreviewCameraMotionRange(cam);
           ns = 0;
           adaptive_pixel_sampler.reset();
           adaptive_pixel_sampler_small.reset();
@@ -3059,119 +3051,14 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
       }
       break;
     }
-  case WM_LBUTTONDOWN: {
-    if(interactive_w &&
-       preview_display_w != nullptr &&
-       preview_display_w->IsPreviewMotionActive()) {
-      break;
-    }
-    if(interactive_w) {
-      Float x = GET_X_LPARAM(lParam);
-      Float y = GET_Y_LPARAM(lParam);
-      Float fov = cam_w->get_fov();
-      Float u = (Float(x)) / Float(width);
-      Float v = (Float(y)) / Float(height);
-      vec3f dir;
-      bool just_direction = false;
-      hit_record hrec;
-      if(fov < 0) {
-        CameraSample samp({1-u,v},point2f(0.5,0.5), 0.5);
-        Ray r2;
-        cam_w->GenerateRay(samp,&r2);
-        if(world_w->hit(r2, 0.001, FLT_MAX, hrec, *rng_w)) {
-          dir = convert_to_vec3(-hrec.p);
-          if( hrec.shape->GetName() == "EnvironmentLight") {
-            just_direction = true;
-          }
-        }
-      } else if (fov > 0) {
-        Ray r2 = cam_w->get_ray(u,1-v, point3f(0),
-                              0.5f);
-        world_w->hit(r2, 0.001, FLT_MAX, hrec, *rng_w);
-        dir = r2.direction();
-        if( hrec.shape->GetName() == "EnvironmentLight") {
-          just_direction = true;
-        }
-      } else {
-        Ray r2 = cam_w->get_ray(u,1-v, point3f(0),
-                              0.5f);
-        if(world_w->hit(r2, 0.001, FLT_MAX, hrec, *rng_w)) {
-          if( hrec.shape->GetName() != "EnvironmentLight") {
-            dir = -(cam_w->get_origin()-hrec.p);
-          } else {
-            dir = -cam_w->get_w();
-            just_direction = true;
-          }
-        } else {
-          dir = -cam_w->get_w();
-        }
-      }
-      if(!just_direction) {
-        if(fov != 0 && fov != 360) {
-          Float current_fd = cam_w->get_focal_distance();
-          Float new_fd = (hrec.p-cam_w->get_origin()).length();
-          cam_w->update_focal_distance(new_fd- current_fd);
-        }
-        cam_w->update_lookat(hrec.p);
-      } else {
-        cam_w->update_look_direction(-dir);
-      }
-      ApplyStaticPreviewCameraMotionRange(cam_w);
-      *ns_w = 0;
-      aps->reset();
-      aps_small->reset();
-      if(progress_w && !interactive_w) {
-        pb_w->update(0);
-      }
-    }
-    break;
-  }
+  case WM_LBUTTONDOWN:
   case WM_RBUTTONDOWN: {
-    if(interactive_w &&
-       preview_display_w != nullptr &&
-       preview_display_w->IsPreviewMotionActive()) {
-      break;
-    }
-    if(interactive_w) {
-      Float x = GET_X_LPARAM(lParam);
-      Float y = GET_Y_LPARAM(lParam);
-      Float fov = cam_w->get_fov();
-      Float u = (Float(x)) / Float(width);
-      Float v = (Float(y)) / Float(height);
-      vec3f dir;
-      hit_record hrec;
-      if(fov < 0) {
-        CameraSample samp({1-u,v},point2f(0.5,0.5), 0.5);
-        Ray r2;
-        cam_w->GenerateRay(samp,&r2);
-        if(world_w->hit(r2, 0.001, FLT_MAX, hrec, *rng_w)) {
-          dir = convert_to_vec3(-hrec.p);
-        }
-      } else if (fov > 0) {
-        Ray r2 = cam_w->get_ray(u,1-v, point3f(0),
-                                0.5f);
-        dir = r2.direction();
-      } else {
-        Ray r2 = cam_w->get_ray(u,1-v, point3f(0),
-                              0.5f);
-        if(world_w->hit(r2, 0.001, FLT_MAX, hrec, *rng_w)) {
-          if( hrec.shape->GetName() != "EnvironmentLight") {
-            dir = -(cam_w->get_origin()-hrec.p);
-          } else {
-            Rprintf("Clicking on the environment light while using a orthographic camera does not change the view.\n");
-            dir = -cam_w->get_w();
-          }
-        } else {
-          dir = -cam_w->get_w();
-        }
-      }
-      cam_w->update_look_direction(dir);
-      ApplyStaticPreviewCameraMotionRange(cam_w);
-      *ns_w = 0;
-      aps->reset();
-      aps_small->reset();
-      if(progress_w && !interactive_w) {
-        pb_w->update(0);
+    if(interactive_w && preview_display_w != nullptr &&
+       !preview_display_w->IsPreviewMotionActive()) {
+      Float u = 1 - (Float(GET_X_LPARAM(lParam)) + .5f) / Float(width);
+      Float v = 1 - (Float(GET_Y_LPARAM(lParam)) + .5f) / Float(height);
+      if(preview_display_w->PickCameraTarget(u, v, uMsg == WM_LBUTTONDOWN, world_w)) {
+        ResetWindowsPreviewRenderState();
       }
     }
     break;
@@ -3222,7 +3109,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
 
 #ifdef NOT_CRAN
 namespace {
-std::unique_ptr<PreviewDisplay> MakeTestPreviewDisplay(camera& cam,
+std::unique_ptr<PreviewDisplay> MakeTestPreviewDisplay(RayCamera& cam,
                                                        Transform& env_transform) {
 #ifdef HAS_OIDN
   return std::unique_ptr<PreviewDisplay>(new PreviewDisplay(
@@ -3235,6 +3122,75 @@ std::unique_ptr<PreviewDisplay> MakeTestPreviewDisplay(camera& cam,
     &env_transform, &env_transform, false));
 #endif
 }
+}
+
+context("Preview picking and orbit targets") {
+  test_that("volume clicks update the pivot and sparse misses leave the camera untouched") {
+    Transform identity;
+    camera cam(point3f(0, 0, -10), point3f(0), vec3f(0, 1, 0),
+               60.f, 1.f, 1.f, 10.f, 0.f, 1.f, 1.f);
+    auto display = MakeTestPreviewDisplay(cam, identity);
+    auto scene = std::make_shared<VolumeScene>();
+    Rcpp::Function describe = Rcpp::Environment::namespace_env("rayrender")["homogeneous_medium"];
+    auto medium = LoadMedium(describe());
+    auto mat = std::make_shared<lambertian>(std::make_shared<constant_texture>(point3f(1)));
+    auto sphere_geometry = std::make_shared<sphere>(2, mat, nullptr, nullptr,
+                                                  &identity, &identity, false);
+    auto boundary = std::make_shared<MediumBoundary>(sphere_geometry, medium, identity, false,
+                                                    scene->NextBoundaryId());
+    scene->boundaries.add(boundary);
+    scene->Finish(0, 1);
+    display->volume_scene = scene;
+    hitable_list world;
+    world.add(boundary);
+    expect_true(display->PickCameraTarget(.5, .5, true, &world));
+    point3f pivot = cam.get_lookat();
+    expect_true(std::abs(pivot[2] - (-2 - std::log(.85))) < 1e-5);
+    expect_true(std::abs(cam.get_focal_distance() - (pivot - cam.get_origin()).length()) < 1e-5);
+    cam.update_position(cam.get_u(), true);
+    expect_true((cam.get_lookat() - pivot).length() == 0);
+    expect_true(dot(unit_vector(pivot - cam.get_origin()), cam.get_w()) > .99999);
+    point3f origin = cam.get_origin();
+    vec3f direction = cam.get_w();
+    Float focal = cam.get_focal_distance();
+    expect_false(display->PickCameraTarget(0, 0, true, &world));
+    expect_true((cam.get_origin() - origin).length() == 0);
+    expect_true((cam.get_lookat() - pivot).length() == 0);
+    expect_true((cam.get_w() - direction).length() == 0);
+    expect_true(cam.get_focal_distance() == focal);
+  }
+  test_that("right clicks preserve focus while orbiting about the selected surface") {
+    Transform identity;
+    auto mat = std::make_shared<lambertian>(std::make_shared<constant_texture>(point3f(1)));
+    hitable_list world;
+    world.add(std::make_shared<sphere>(2, mat, nullptr, nullptr, &identity, &identity, false));
+    camera cam(point3f(0, 0, -10), point3f(0), vec3f(0, 1, 0),
+               60.f, 1.f, 0.f, 10.f, 0.f, 1.f, 1.f);
+    auto display = MakeTestPreviewDisplay(cam, identity);
+    expect_true(display->PickCameraTarget(.5, .5, false, &world));
+    point3f pivot = cam.get_lookat();
+    Float distance = (pivot - cam.get_origin()).length();
+    expect_true(pivot[2] == Approx(-2));
+    expect_true(cam.get_focal_distance() == 10);
+    cam.update_position(cam.get_u(), true);
+    expect_true((cam.get_lookat() - pivot).length() == 0);
+    expect_true((cam.get_origin() - pivot).length() == Approx(distance));
+    expect_true(cam.get_focal_distance() == 10);
+    Rcpp::List keyframe = display->CreateCurrentKeyframe(0);
+    expect_true(Rcpp::as<Float>(keyframe["dz"]) == pivot[2]);
+    expect_true(Rcpp::as<Float>(keyframe["focal"]) == 10);
+  }
+  test_that("free-flight keyframes still capture the current viewing direction") {
+    Transform identity;
+    camera cam(point3f(0, 0, -10), point3f(0), vec3f(0, 1, 0),
+               60.f, 1.f, 0.f, 10.f, 0.f, 1.f, 1.f);
+    auto display = MakeTestPreviewDisplay(cam, identity);
+    cam.update_position(vec3f(2, 0, 0), false);
+    Rcpp::List keyframe = display->CreateCurrentKeyframe(0);
+    point3f target(Rcpp::as<Float>(keyframe["dx"]), Rcpp::as<Float>(keyframe["dy"]),
+                    Rcpp::as<Float>(keyframe["dz"]));
+    expect_true(dot(unit_vector(target - cam.get_origin()), cam.get_w()) > .999999);
+  }
 }
 
 context("Preview keyframe loop controls") {

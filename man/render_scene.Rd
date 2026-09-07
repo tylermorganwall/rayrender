@@ -93,7 +93,7 @@ Left Key = Decrease Aperture, Right Key = Increase Aperture, 1 = Decrease Focal 
 Right bracket/left bracket = Increase/Decrease Preview Exposure, Shift + right bracket/left bracket = Increase/Decrease shutter speed,
 Shift-Enter = Save Preview Snapshot, R = Reset Camera,
 Return = Toggle between deferred and final render if `deferred_render = TRUE`, TAB: Toggle Orbit Mode,
-Left Mouse Click: Change Look Direction, Right Mouse Click: Change Look At.
+Left Mouse Click: Set Look At and Focal Distance, Right Mouse Click: Set Look At.
 If the interactive preview window is wide enough, a status bar at the bottom shows the current camera, exposure, environment rotation,
 and keyframe state.
 K: Save Keyframe (at the conclusion of the render, this will create the `ray_keyframes`
@@ -106,11 +106,14 @@ B: Toggle Camera Motion Blur
 
 Initial step size is 1/20th of the distance from `lookat` to `lookfrom`.
 
-Note: Clicking on the environment image will only redirect the view direction, not change the orbit point.
-Some options aren't available all cameras. When using a realistic camera,
-the aperture and field of view cannot be changed from their initial settings. Additionally,
-clicking to direct the camera at the background environment image while using a realistic camera will
-not always point to the exact position selected.}
+With \code{integrator_type = "nee"}, clicks select the first point where accumulated volume opacity
+reaches 15\%, or the first ordinary surface if reached sooner. Picking integrates extinction
+deterministically with a fixed shutter sample and a centered lens sample. Thin or empty regions
+allow selection of surfaces behind them; invisible container faces are skipped. Clicking the
+background without reaching this opacity leaves the camera unchanged. The selected point remains
+the orbit center when rotating. Right clicking preserves the focal distance.
+Some options aren't available for all cameras. When using a realistic camera,
+the aperture and field of view cannot be changed from their initial settings.}
 
 \item{deferred_render}{Default `FALSE`. If `TRUE` and interactive preview is enabled, rayrender will keep
 updating the progressive preview until Return is pressed. Pressing Return toggles the full render in the

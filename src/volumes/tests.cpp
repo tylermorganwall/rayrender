@@ -6,6 +6,7 @@
 #include "../materials/texture.h"
 #include "boundary.h"
 #include "medium.h"
+#include "picking.h"
 #include "volpath.h"
 #include <chrono>
 #include <set>
@@ -27,7 +28,195 @@ Rcpp::List medium_description(Float scattering = 1) {
       Rcpp::Named("temperature_scale") = 1, Rcpp::Named("temperature_offset") = 0,
       Rcpp::Named("medium_transform") = transform);
 }
+struct PickingScene {
+  Transform identity;
+  VolumeScene scene;
+  hitable_list world;
+  std::shared_ptr<material> mat =
+      std::make_shared<lambertian>(std::make_shared<constant_texture>(point3f(1)));
+  void Add(const std::shared_ptr<const Medium> &medium, Float radius, bool surface = false) {
+    auto geometry = std::make_shared<box>(vec3f(-radius), vec3f(radius), mat, nullptr, nullptr,
+                                         &identity, &identity, false);
+    auto boundary = std::make_shared<MediumBoundary>(geometry, medium, identity, surface,
+                                                    scene.NextBoundaryId());
+    scene.boundaries.add(boundary);
+    world.add(boundary);
+    scene.Finish(0, 1);
+  }
+};
+Rcpp::List grid_description(const Rcpp::NumericVector &values, int nx, int ny, int nz) {
+  Rcpp::List description = medium_description();
+  Rcpp::NumericVector density = Rcpp::clone(values);
+  density.attr("dim") = Rcpp::IntegerVector::create(nx, ny, nz);
+  Rcpp::NumericMatrix bounds(2, 3);
+  for (int a = 0; a < 3; ++a) {
+    bounds(0, a) = -1;
+    bounds(1, a) = 1;
+  }
+  description["density"] = density;
+  description["bounds"] = bounds;
+  return description;
+}
 } // namespace
+context("Deterministic volume picking") {
+  test_that("homogeneous RGB opacity uses world distance and repeats exactly") {
+    PickingScene s;
+    auto description = medium_description();
+    description["sigma_s"] = Rcpp::NumericVector::create(1, 0, 0);
+    s.Add(std::make_shared<Medium>(description), 1);
+    Ray ray(point3f(0, 0, -3), vec3f(0, 0, 7));
+    auto pick = PickRay(ray, &s.world, &s.scene);
+    expect_true(bool(pick));
+    expect_true(pick->volume);
+    expect_true(std::abs(pick->p[2] - (-1 - std::log(1 - 3 * .15))) < 1e-5);
+    for (int i = 0; i < 8; ++i) {
+      auto repeated = PickRay(ray, &s.world, &s.scene);
+      expect_true(repeated->p[2] == pick->p[2]);
+    }
+    auto inside = PickRay(Ray(point3f(0), vec3f(0, 0, 1)), &s.world, &s.scene);
+    expect_true(std::abs(inside->p[2] + std::log(1 - 3 * .15)) < 1e-5);
+    // A single extinguished channel cannot reach 50% mean RGB opacity.
+    expect_false(bool(PickRay(ray, &s.world, &s.scene, .5)));
+  }
+  test_that("thin media fall through to surfaces and vacuum cavities restore their enclosing medium") {
+    PickingScene thin;
+    thin.Add(std::make_shared<Medium>(medium_description(.01)), 1);
+    Ray ray(point3f(0, 0, -3), vec3f(0, 0, 1));
+    expect_false(bool(PickRay(ray, &thin.world, &thin.scene)));
+    thin.world.add(std::make_shared<sphere>(.25, thin.mat, nullptr, nullptr,
+                                          &thin.identity, &thin.identity, false));
+    auto surface = PickRay(ray, &thin.world, &thin.scene);
+    expect_true(bool(surface));
+    expect_false(surface->volume);
+    expect_true(surface->p[2] == Approx(-.25));
+    PickingScene nested;
+    nested.Add(std::make_shared<Medium>(medium_description(.1)), 2);
+    nested.Add(std::make_shared<Medium>(medium_description(0)), 1);
+    auto pick = PickRay(ray, &nested.world, &nested.scene);
+    expect_true(pick->volume);
+    expect_true(std::abs(pick->p[2] - (1 + (-std::log(.85) - .1) / .1)) < 1e-5);
+    PickingScene visible;
+    visible.Add(std::make_shared<Medium>(medium_description()), 1, true);
+    auto container = PickRay(ray, &visible.world, &visible.scene);
+    expect_false(container->volume);
+    expect_true(container->p[2] == Approx(-1));
+  }
+  test_that("grid ramps and isolated voxels are integrated between interpolation knots") {
+    PickingScene ramp;
+    ramp.Add(std::make_shared<GridMedium>(
+                 grid_description(Rcpp::NumericVector::create(0, 2), 1, 1, 2)), 1);
+    Ray ray(point3f(0, 0, -3), vec3f(0, 0, 1));
+    auto pick = PickRay(ray, &ramp.world, &ramp.scene);
+    expect_true(std::abs(pick->p[2] - (std::sqrt(-std::log(.85)) - .5)) < 1e-5);
+    PickingScene spike;
+    Rcpp::NumericVector density(128);
+    density[64] = 100;
+    spike.Add(std::make_shared<GridMedium>(grid_description(density, 1, 1, 128)), 1);
+    pick = PickRay(ray, &spike.world, &spike.scene);
+    double start = -.0078125, width = 2.0 / 128;
+    expect_true(std::abs(pick->p[2] - (start + std::sqrt(-2 * std::log(.85) * width / 100))) < 1e-5);
+    PickingScene constant;
+    constant.Add(std::make_shared<GridMedium>(
+                     grid_description(Rcpp::NumericVector(8, 1.0), 2, 2, 2)), 1);
+    pick = PickRay(ray, &constant.world, &constant.scene);
+    expect_true(std::abs(pick->p[2] - (-1 - std::log(.85))) < 1e-5);
+    PickingScene empty;
+    empty.Add(std::make_shared<GridMedium>(
+                  grid_description(Rcpp::NumericVector(8), 2, 2, 2)), 1);
+    expect_false(bool(PickRay(ray, &empty.world, &empty.scene)));
+  }
+  test_that("diagonal trilinear fields use cubic density integrals") {
+    PickingScene s;
+    Rcpp::NumericVector density(8);
+    density[7] = 1;
+    s.Add(std::make_shared<GridMedium>(grid_description(density, 2, 2, 2)), 1);
+    auto pick = PickRay(Ray(point3f(-2), vec3f(1)), &s.world, &s.scene);
+    // On the diagonal inside [-.5,.5], density = (x+.5)^3.
+    double expected = std::pow(-4 * std::log(.85) / std::sqrt(3.0), .25) - .5;
+    expect_true(std::abs(pick->p[0] - expected) < 1e-5);
+  }
+  test_that("NanoVDB picking respects sparse tiles and interpolation boundaries") {
+    Rcpp::Function test_path = Rcpp::Environment::namespace_env("testthat")["test_path"];
+    Rcpp::List description = medium_description();
+    description["filename"] = test_path("fixtures", "volumes", "tiles.nvdb");
+    description["density_grid"] = "density";
+    description["temperature_grid"] = R_NilValue;
+    PickingScene s;
+    s.Add(std::make_shared<NanoVDBMedium>(description), 10);
+    auto pick = PickRay(Ray(point3f(3, 3, -12), vec3f(0, 0, 1)), &s.world, &s.scene);
+    expect_true(bool(pick));
+    expect_true(std::abs(pick->p[2] - (-1 + std::sqrt(-2 * std::log(.85)))) < 1e-5);
+    pick = PickRay(Ray(point3f(3), vec3f(0, 0, 1)), &s.world, &s.scene);
+    expect_true(std::abs(pick->p[2] - (3 - std::log(.85))) < 1e-5);
+    expect_false(bool(PickRay(Ray(point3f(-3, -3, -12), vec3f(0, 0, 1)), &s.world, &s.scene)));
+  }
+  test_that("majorant partition and magnitude do not move the opacity target") {
+    class RepartitionedMedium : public Medium {
+      GridMedium field;
+      MajorantGrid grid;
+    public:
+      RepartitionedMedium(int resolution, Float bound)
+          : Medium(medium_description()),
+            field(grid_description(Rcpp::NumericVector::create(0, 2), 1, 1, 2)) {
+        grid.lo = point3f(-1);
+        grid.hi = point3f(1);
+        grid.resolution = resolution;
+        grid.density.assign(resolution * resolution * resolution, bound);
+      }
+      bool IsHomogeneous() const override { return false; }
+      Float Density(const point3f &p) const override { return field.Density(p); }
+      DensityIndexRay DensityRay(const Ray &r) const override { return field.DensityRay(r); }
+      RayMajorantIterator SampleRay(const Ray &r, double end) const override {
+        return RayMajorantIterator(r, end, point3f(1), &grid);
+      }
+    };
+    for (int resolution : {1, 5, 32}) {
+      PickingScene s;
+      s.Add(std::make_shared<RepartitionedMedium>(resolution, resolution * 10), 1);
+      auto pick = PickRay(Ray(point3f(0, 0, -3), vec3f(0, 0, 1)), &s.world, &s.scene);
+      expect_true(std::abs(pick->p[2] - (std::sqrt(-std::log(.85)) - .5)) < 1e-5);
+    }
+  }
+  test_that("absorption inside glass adds to explicit medium extinction") {
+    PickingScene s;
+    s.mat = std::make_shared<dielectric>(point3f(1), 1.5, point3f(.5), 0);
+    s.Add(std::make_shared<Medium>(medium_description(.5)), 1, true);
+    auto pick = PickRay(Ray(point3f(0), vec3f(0, 0, 1)), &s.world, &s.scene);
+    expect_true(pick->volume);
+    expect_true(std::abs(pick->p[2] + std::log(.85)) < 1e-5);
+    pick = PickRay(Ray(point3f(0, 0, -3), vec3f(0, 0, 1)), &s.world, &s.scene);
+    expect_false(pick->volume);
+    expect_true(pick->p[2] == Approx(-1));
+  }
+  test_that("picking preserves animated instance transforms and can cancel voxel traversal") {
+    PickingScene s;
+    auto medium = std::make_shared<GridMedium>(
+        grid_description(Rcpp::NumericVector::create(0, 2), 1, 1, 2));
+    s.Add(medium, 1);
+    Transform transform = Translate(vec3f(4, 0, 0)) * Scale(1, 1, 3);
+    Transform inverse = Inverse(transform), end = Translate(vec3f(0, 2, 0));
+    AnimatedTransform motion(&s.identity, 0, &end, 1);
+    hitable_list lights, world;
+    std::shared_ptr<hitable> placed = std::make_shared<instance>(
+        &s.world, &transform, &inverse, &lights, 0);
+    auto animated = std::make_shared<AnimatedHitable>(placed, motion);
+    world.add(animated);
+    VolumeScene scene;
+    scene.boundaries.add(animated);
+    scene.Finish(0, 1);
+    for (Float time : {0.f, .5f, 1.f}) {
+      auto pick = PickRay(Ray(point3f(4, 2 * time, -6), vec3f(0, 0, 1), time), &world, &scene);
+      expect_true(std::abs(pick->p[2] - (std::sqrt(-3 * std::log(.85)) - 1.5)) < 1e-5);
+    }
+    int polls = 0;
+    auto cancel = [&] { return ++polls >= 12; };
+    auto pick = PickRay(Ray(point3f(0, 0, -3), vec3f(0, 0, 1)), &s.world, &s.scene, .99, cancel);
+    expect_false(bool(pick));
+    expect_true(polls >= 12);
+    polls = 12;
+    expect_false(bool(PickRay(Ray(point3f(0), vec3f(0, 0, 1)), &s.world, &s.scene, .15, cancel)));
+  }
+}
 context("Participating media geometry and sampling") {
   test_that("NEE scalar and vector requests use distinct sampler coordinates") {
     random_gen rng1(7), rng2(7);
@@ -294,6 +483,41 @@ context("Participating media geometry and sampling") {
     crossing.segment_absorption = true;
     expect_true(boundary.hit(crossing, 0, 100, h, rng));
     expect_true(dot(crossing.d, h.geometric_normal) < 0);
+  }
+  test_that("invisible boxes retain grazing entries before their exits") {
+    Transform transform = Scale(-1, 1, -1) * Translate(vec3f(5.889312909, 11.514999986, 0));
+    Transform inverse = Inverse(transform);
+    auto material = std::make_shared<lambertian>(std::make_shared<constant_texture>(point3f(.5)));
+    vec3f half_size(16.956099017, 5, 23.314636148);
+    auto geometry = std::make_shared<box>(-half_size, half_size, material, nullptr, nullptr,
+                                         &transform, &inverse, false);
+    auto medium = std::make_shared<Medium>(medium_description(0));
+    VolumeScene scene;
+    auto boundary = std::make_shared<MediumBoundary>(geometry, medium, transform, false,
+                                                    scene.NextBoundaryId());
+    scene.boundaries.add(boundary);
+    scene.Finish(0, 1);
+    // Primary ray from the geographic cloud example, crossing an x/z edge.
+    Ray ray(point3f(48.439773559570312, 53.806549072265625, -76.688796997070312),
+            vec3f(-0.49673172831535339, -0.5, 0.70940649509429932));
+    auto state = scene.InitialState(ray, nullptr);
+    expect_true(state.media.empty());
+    state.SetRay(ray);
+    random_gen rng(4);
+    RandomSampler sampler(rng);
+    hit_record random_hit, sampled_hit;
+    expect_true(boundary->hit(ray, 0, MaxT, random_hit, rng));
+    expect_true(boundary->hit(ray, 0, MaxT, sampled_hit, &sampler));
+    expect_true(dot(ray.d, random_hit.geometric_normal) < 0);
+    expect_true(random_hit.t == Approx(75.23777));
+    expect_true(random_hit.t == sampled_hit.t);
+    state.Cross(random_hit, ray.d);
+    Ray continued(OffsetMediumOrigin(random_hit, ray.d), ray.d);
+    state.SetRay(continued);
+    expect_true(boundary->hit(continued, 0, MaxT, random_hit, rng));
+    expect_true(dot(continued.d, random_hit.geometric_normal) > 0);
+    state.Cross(random_hit, continued.d);
+    expect_true(state.media.empty());
   }
   test_that("camera containment resolves points close to a curved boundary") {
     Transform transform = Translate(vec3f(278, 220, 250)), inverse = Inverse(transform);

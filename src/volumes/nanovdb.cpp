@@ -343,6 +343,11 @@ NanoVDBMedium::NanoVDBMedium(const Rcpp::List &d) : Medium(d), data(new Data) {
 }
 NanoVDBMedium::~NanoVDBMedium() = default;
 Float NanoVDBMedium::Density(const point3f &p) const { return lookup(data->d, p); }
+DensityIndexRay NanoVDBMedium::DensityRay(const Ray &r) const {
+  auto o = data->d->worldToIndex(nanovdb::Vec3d(r.o[0], r.o[1], r.o[2]));
+  auto d = data->d->worldToIndexDir(nanovdb::Vec3d(r.d[0], r.d[1], r.d[2]));
+  return {{o[0], o[1], o[2]}, {d[0], d[1], d[2]}};
+}
 point3f NanoVDBMedium::Emission(const point3f &p) const {
   return emission_scale *
          (data->t ? BlackbodyRGB((lookup(data->t, p) - temperature_offset) * temperature_scale)

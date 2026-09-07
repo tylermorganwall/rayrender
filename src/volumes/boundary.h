@@ -5,6 +5,7 @@
 #include "medium.h"
 #include <atomic>
 #include <cstdlib>
+#include <functional>
 #include <string>
 #include <unordered_map>
 
@@ -97,7 +98,8 @@ public:
   mutable VolumeStatistics statistics;
   Rcpp::List Statistics() const;
   void Finish(Float t0, Float t1);
-  VolumePathState InitialState(const Ray &, const std::atomic<bool> *cancel) const;
+  VolumePathState InitialState(const Ray &, const std::atomic<bool> *cancel,
+                              const std::function<bool()> &poll = {}) const;
 
 private:
   uint64_t boundary_count = 0;

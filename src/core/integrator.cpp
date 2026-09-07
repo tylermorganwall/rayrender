@@ -51,6 +51,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
   display.write_fast_output = false;
   bool adaptive_on = min_variance > 0;
   bool has_media = hlist.volume_scene && hlist.volume_scene->has_media;
+  display.volume_scene = hlist.volume_scene;
   display.transparent_volume_background = hlist.volume_scene && hlist.volume_scene->transparent_background;
   if(hlist.volume_scene) {
     hlist.volume_scene->light_sampler = std::make_shared<VolumeLightSampler>(hlist);

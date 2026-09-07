@@ -170,12 +170,13 @@ Ray camera::get_ray(Float s, Float t, point3f u3, Float u1) {
 }
 
 void camera::update_position(vec3f delta, bool update_uvw, bool update_focal) {
+  Float orbit_distance = (origin - lookat).length();
   origin += delta;
   if(update_uvw) {
     if(update_focal) {
       vec3f from_lookat = origin - lookat;
       if(from_lookat.length() > 0) {
-        origin = lookat + unit_vector(from_lookat) * focus_dist;
+        origin = lookat + unit_vector(from_lookat) * orbit_distance;
       }
     } else {
       focus_dist = (origin - lookat).length();

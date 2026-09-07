@@ -280,6 +280,15 @@ Float GridMedium::Density(const point3f &p) const {
       return 0;
   return density.Lookup(uvw);
 }
+DensityIndexRay GridMedium::DensityRay(const Ray &r) const {
+  DensityIndexRay result;
+  for (int a = 0; a < 3; ++a) {
+    double scale = density.dims[a] / (double(majorants.hi[a]) - majorants.lo[a]);
+    result.origin[a] = (double(r.o[a]) - majorants.lo[a]) * scale - 0.5;
+    result.direction[a] = double(r.d[a]) * scale;
+  }
+  return result;
+}
 point3f GridMedium::Emission(const point3f &p) const {
   point3f uvw = Normalize(p);
   if (has_temperature)

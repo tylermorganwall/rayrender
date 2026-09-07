@@ -62,6 +62,11 @@ struct SampledField {
   std::vector<Float> values;
   Float Lookup(const point3f &normalized, int channel = 0) const;
 };
+// Affine ray in density-sample coordinates. Integer planes are trilinear
+// interpolation knots; the parameter still measures world-space distance.
+struct DensityIndexRay {
+  std::array<double, 3> origin{}, direction{};
+};
 class Medium {
 public:
   explicit Medium(const Rcpp::List &description);
@@ -72,6 +77,7 @@ public:
   virtual size_t MemoryBytes() const { return sizeof(*this); }
   virtual bool IsHomogeneous() const { return true; }
   virtual Float Density(const point3f &) const { return 1; }
+  virtual DensityIndexRay DensityRay(const Ray &) const { return {}; }
   virtual point3f Emission(const point3f &) const;
   point3f sigma_a, sigma_s, emission;
   Float g, emission_scale, temperature_scale, temperature_offset;
@@ -91,6 +97,7 @@ public:
   RayMajorantIterator SampleRay(const Ray &r, double t_max) const override;
   bool IsHomogeneous() const override { return false; }
   Float Density(const point3f &p) const override;
+  DensityIndexRay DensityRay(const Ray &r) const override;
   point3f Emission(const point3f &p) const override;
 
 private:
@@ -107,6 +114,7 @@ public:
   RayMajorantIterator SampleRay(const Ray &r, double t_max) const override;
   bool IsHomogeneous() const override { return false; }
   Float Density(const point3f &p) const override;
+  DensityIndexRay DensityRay(const Ray &r) const override;
   point3f Emission(const point3f &p) const override;
 
 private:

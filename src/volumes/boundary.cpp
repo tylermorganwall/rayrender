@@ -40,31 +40,78 @@ double signed_mesh_volume(const TriangleMesh &mesh) {
   }
   return sum / 6;
 }
-// Face-by-face box intersections can report a contact at an exterior edge as
-// an exit. A contact with no resolvable interior interval is not a crossing.
-bool has_interior_interval(const hitable *geometry, const Ray &ray) {
-  const auto *b = dynamic_cast<const box *>(geometry);
-  if (!b)
-    return true;
-  point3f o = (*b->WorldToObject)(ray.o);
-  vec3f d = (*b->WorldToObject)(ray.d);
+struct MediumBoxInterval {
+  point3f origin;
+  vec3f direction;
   double near = -INFINITY, far = INFINITY;
+  int near_axis = -1, far_axis = -1;
+};
+// A contact with no resolvable interior interval is not a boundary crossing.
+bool box_interval(const box &geometry, const Ray &ray, MediumBoxInterval &interval) {
+  interval.origin = (*geometry.WorldToObject)(ray.o);
+  interval.direction = (*geometry.WorldToObject)(ray.d);
   for (int axis = 0; axis < 3; ++axis) {
-    if (d[axis] == 0) {
-      if (o[axis] <= b->pmin[axis] || o[axis] >= b->pmax[axis])
+    if (interval.direction[axis] == 0) {
+      if (interval.origin[axis] <= geometry.pmin[axis] ||
+          interval.origin[axis] >= geometry.pmax[axis])
         return false;
       continue;
     }
-    double a = (double(b->pmin[axis]) - o[axis]) / d[axis];
-    double z = (double(b->pmax[axis]) - o[axis]) / d[axis];
-    if (a > z)
-      std::swap(a, z);
-    near = std::max(near, a);
-    far = std::min(far, z);
+    double a = (double(geometry.pmin[axis]) - interval.origin[axis]) / interval.direction[axis];
+    double b = (double(geometry.pmax[axis]) - interval.origin[axis]) / interval.direction[axis];
+    if (a > b)
+      std::swap(a, b);
+    if (a > interval.near) {
+      interval.near = a;
+      interval.near_axis = axis;
+    }
+    if (b < interval.far) {
+      interval.far = b;
+      interval.far_axis = axis;
+    }
   }
-  double tolerance =
-      8 * std::numeric_limits<Float>::epsilon() * std::max({1.0, std::abs(near), std::abs(far)});
-  return far - near > tolerance;
+  double tolerance = 8 * std::numeric_limits<Float>::epsilon() *
+                     std::max({1.0, std::abs(interval.near), std::abs(interval.far)});
+  return interval.far - interval.near > tolerance;
+}
+bool has_interior_interval(const hitable *geometry, const Ray &ray) {
+  const auto *b = dynamic_cast<const box *>(geometry);
+  MediumBoxInterval interval;
+  return !b || box_interval(*b, ray, interval);
+}
+// Independent Float rectangle tests can both reject an entry at a box edge,
+// leaving only the exit hit. Invisible containers need a single consistent slab
+// interval; their intersections do not require surface texture or bump evaluation.
+bool hit_invisible_box(const box &geometry, const Ray &ray, Float lo, Float hi, hit_record &h) {
+  MediumBoxInterval interval;
+  if (!box_interval(geometry, ray, interval))
+    return false;
+  bool entering = interval.near >= lo;
+  double t = entering ? interval.near : interval.far;
+  int axis = entering ? interval.near_axis : interval.far_axis;
+  if (axis < 0 || t < lo || t > hi)
+    return false;
+  const auto &o = interval.origin;
+  const auto &d = interval.direction;
+  normal3f normal(0);
+  normal[axis] = (d[axis] > 0 ? 1 : -1) * (entering ? -1 : 1);
+  point3f p;
+  vec3f error;
+  for (int a = 0; a < 3; ++a) {
+    p[a] = Float(double(o[a]) + double(d[a]) * t);
+    error[a] = Float(gamma(3) * (std::abs(double(o[a])) + std::abs(double(d[a]) * t)));
+  }
+  p[axis] = normal[axis] < 0 ? geometry.pmin[axis] : geometry.pmax[axis];
+  h.t = Float(t);
+  h.p = (*geometry.ObjectToWorld)(p, error, &h.pError);
+  h.normal = h.geometric_normal = unit_vector((*geometry.ObjectToWorld)(normal));
+  h.bump_normal = h.normal;
+  h.dpdu = h.dpdv = vec3f(0);
+  h.u = h.v = 0;
+  h.mat_ptr = geometry.mat_ptr.get();
+  h.shape = &geometry;
+  h.alpha_miss = h.has_bump = h.infinite_area_hit = false;
+  return true;
 }
 } // namespace
 
@@ -135,7 +182,11 @@ const bool MediumBoundary::hit(const Ray &r, Float lo, Float hi, hit_record &h,
                                random_gen &rng) const {
   if (!r.segment_absorption && !keep_surface)
     return false;
-  if (!has_interior_interval(geometry.get(), r) || !geometry->hit(r, lo, hi, h, rng))
+  const auto *b = dynamic_cast<const box *>(geometry.get());
+  if (b && !keep_surface) {
+    if (!hit_invisible_box(*b, r, lo, hi, h))
+      return false;
+  } else if (!has_interior_interval(geometry.get(), r) || !geometry->hit(r, lo, hi, h, rng))
     return false;
   Annotate(h);
   return true;
@@ -144,7 +195,11 @@ const bool MediumBoundary::hit(const Ray &r, Float lo, Float hi, hit_record &h,
                                Sampler *sampler) const {
   if (!r.segment_absorption && !keep_surface)
     return false;
-  if (!has_interior_interval(geometry.get(), r) || !geometry->hit(r, lo, hi, h, sampler))
+  const auto *b = dynamic_cast<const box *>(geometry.get());
+  if (b && !keep_surface) {
+    if (!hit_invisible_box(*b, r, lo, hi, h))
+      return false;
+  } else if (!has_interior_interval(geometry.get(), r) || !geometry->hit(r, lo, hi, h, sampler))
     return false;
   Annotate(h);
   return true;
@@ -188,7 +243,8 @@ void VolumeScene::Finish(Float t0, Float t1) {
   if (!boundaries.objects.empty())
     boundary_bvh = std::make_shared<BVHAggregate>(boundaries.objects, t0, t1, 1, true);
 }
-VolumePathState VolumeScene::InitialState(const Ray &ray, const std::atomic<bool> *cancel) const {
+VolumePathState VolumeScene::InitialState(const Ray &ray, const std::atomic<bool> *cancel,
+                                          const std::function<bool()> &poll) const {
   VolumePathState state;
   if (!boundary_bvh)
     return state;
@@ -201,7 +257,10 @@ VolumePathState VolumeScene::InitialState(const Ray &ray, const std::atomic<bool
   // Trace outward from the exact camera origin, then replay crossings inward
   // from known vacuum. This avoids cancellation when constructing a distant
   // starting point whose line must terminate exactly at the camera.
-  while (!(cancel && cancel->load(std::memory_order_relaxed))) {
+  auto cancelled = [&] {
+    return (cancel && cancel->load(std::memory_order_relaxed)) || (poll && poll());
+  };
+  while (!cancelled()) {
     hit_record h;
     if (!boundary_bvh->hit(probe, 0, MaxT, h, rng))
       break;
@@ -220,7 +279,7 @@ VolumePathState VolumeScene::InitialState(const Ray &ray, const std::atomic<bool
     probe.segment_absorption = true;
   }
   for (auto i = crossings.rbegin(); i != crossings.rend(); ++i) {
-    if (cancel && cancel->load(std::memory_order_relaxed))
+    if (cancelled())
       break;
     const hit_record &h = *i;
     state.Cross(h, -direction);

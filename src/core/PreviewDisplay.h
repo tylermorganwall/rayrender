@@ -10,6 +10,8 @@
 #include "../core/camera.h"
 #include "../hitables/hitable.h"
 
+class VolumeScene;
+
 struct PreviewTextOverlay {
   point3f anchor;
   int x_offset;
@@ -87,6 +89,9 @@ public:
 #endif
   ~PreviewDisplay();
   void SetCamera(RayCamera* _cam);
+  // Coordinates match the renderer's film samples, independent of window API.
+  bool PickCameraTarget(Float u, Float v, bool update_focus, hitable* world);
+  std::shared_ptr<VolumeScene> volume_scene;
   void SetSnapshotFilename(const std::string& filename);
   void SavePreviewSnapshot() const;
   void CaptureVolumeSnapshot(adaptive_sampler&, RayMatrix&, size_t samples, hitable*, random_gen&);
