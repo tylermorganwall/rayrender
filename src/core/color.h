@@ -16,7 +16,7 @@ enum class IntegratorType {
 
 void color(const Ray& r, hitable *world, hitable_list *hlist,
            size_t max_depth, size_t roulette_activate, random_gen& rng, Sampler* sampler,
-           bool& alpha, IntegratorType type,
+           Float& transparency, IntegratorType type,
            point3f& color, normal3f& normal, point3f& albedo,
            const std::atomic<bool>* cancel = nullptr);
 

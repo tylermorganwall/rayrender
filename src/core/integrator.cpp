@@ -12,6 +12,7 @@
 #include "../math/sampler.h"
 #include "../core/PreviewDisplay.h"
 #include "../core/oidn_aux.h"
+#include "../volumes/boundary.h"
 #include "../core/oidn_denoiser.h"
 #include "../utils/raylog.h"
 
@@ -49,13 +50,19 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
   RayMatrix rgb_output2(nx,ny,3);
   display.write_fast_output = false;
   bool adaptive_on = min_variance > 0;
+  bool has_media = hlist.volume_scene && hlist.volume_scene->has_media;
+  display.transparent_volume_background = hlist.volume_scene && hlist.volume_scene->transparent_background;
+  if(hlist.volume_scene) {
+    hlist.volume_scene->light_sampler = std::make_shared<VolumeLightSampler>(hlist);
+    hlist.volume_scene->statistics.Reset();
+  }
   adaptive_sampler adaptive_pixel_sampler(numbercores, nx, ny, ns, debug_channel,
                                           min_variance, min_adaptive_size,
                                           rgb_output,
                                           rgb_output2,
                                           normalOutput, albedoOutput,
                                           alpha_output, draw_rgb_output,
-                                          adaptive_on);
+                                          adaptive_on, has_media);
 
   size_t nx_small = nx*0.25;
   size_t ny_small = ny*0.25;
@@ -77,7 +84,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
                                                 albedo_output_small,
                                                 alpha_output_small,
                                                 draw_rgb_output_small,
-                                                adaptive_on);
+                                                adaptive_on, has_media);
 
 #ifdef HAS_OIDN
   RayMatrix oidn_normal_output_small(nx_small, ny_small, 3);
@@ -93,7 +100,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
                                 ny_small,
                                 RayOidnQuality::Fast,
                                 false,
-                                false);
+                                false, !has_media);
   }
 #endif
 
@@ -130,7 +137,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
     }
   }
 
-  auto reset_sampler_state = [sample_method, ns, stratified_x, stratified_y] (
+  auto reset_sampler_state = [sample_method, ns, stratified_x, stratified_y, integrator_type] (
       size_t width, size_t height, const std::vector<unsigned int>& state_seeds,
       std::vector<random_gen>& state_rngs, std::vector<std::unique_ptr<Sampler> >& state_samplers) {
     state_rngs.clear();
@@ -156,6 +163,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
           state_samplers.push_back(std::unique_ptr<Sampler>(new SobolBlueNoiseSampler(rng_single)));
           state_samplers.back()->StartPixel(i,j);
         }
+        state_samplers.back()->independent_dimensions = integrator_type == IntegratorType::ShadowRays;
         state_samplers.back()->SetSampleNumber(0);
         index++;
       }
@@ -182,6 +190,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
   };
 
   auto ensure_full_preview_oidn_aux = [&]() {
+    if(has_media) { display.oidn_aux_dirty = false; return; }
     if(!display.preview ||
        !display.denoise ||
        !display.oidn_aux_dirty ||
@@ -210,6 +219,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
   };
 
   auto ensure_fast_preview_oidn_aux = [&]() {
+    if(has_media) { display.oidn_fast_aux_dirty = false; return; }
     if(!display.preview ||
        !denoise_fast_preview ||
        !display.oidn_fast_aux_dirty) {
@@ -344,7 +354,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
                            weight = cam->GenerateRay(samp, &r);
                          }
                          r.pri_stack = mat_stack;
-                         bool alpha = false;
+                         Float alpha = 0;
                          point3f color_sample;
                          normal3f normal_sample;
                          point3f albedo_sample;
@@ -354,9 +364,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
                                &render_cancelled);
                          point3f col = weight != 0 ? clamp_point(de_nan(color_sample),
                                                                  0, clampval) * weight * cam->get_iso() : 0;
-                         if(alpha) {
-                           adaptive_pixel_sampler.add_alpha_count(i,j);
-                         }
+                         adaptive_pixel_sampler.add_alpha_count(i,j, alpha);
                          mat_stack->clear();
                          adaptive_pixel_sampler.add_color_main(i, j, col);
                          if(s % 2 == 0) {
@@ -434,7 +442,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
                            weight = cam->GenerateRay(samp, &r);
                          }
                          r.pri_stack = mat_stack;
-                         bool alpha = false;
+                         Float alpha = 0;
                          point3f color_sample;
                          normal3f normal_sample;
                          point3f albedo_sample;
@@ -446,9 +454,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
                                &render_cancelled);
                          point3f col = weight != 0 ? clamp_point(de_nan(color_sample),
                                                                  0, clampval) * weight * cam->get_iso() : 0;
-                         if(alpha) {
-                           adaptive_pixel_sampler_small.add_alpha_count(i,j);
-                         }
+                         adaptive_pixel_sampler_small.add_alpha_count(i,j, alpha);
                          adaptive_pixel_sampler_small.add_albedo(i, j, albedo_sample);
                          adaptive_pixel_sampler_small.add_normal(i, j, normal_sample);
                          mat_stack->clear();
@@ -710,6 +716,15 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
   Rcpp::Rcout << "ns: " << adaptive_pixel_sampler.ns << " adaptive_pixel_sampler.rgb pre divide:\n";
   adaptive_pixel_sampler.rgb.print();
   #endif
+  // Optional headless capture exercises the same RGBA snapshot path as the UI.
+  if(const char* capture=std::getenv("RAYRENDER_VOLUME_SNAPSHOT")) {
+    if(*capture && display.transparent_volume_background) {
+      display.SetSnapshotFilename(capture);
+      display.CaptureVolumeSnapshot(adaptive_pixel_sampler,adaptive_pixel_sampler.rgb,
+                                    adaptive_pixel_sampler.ns,&world,rng_interactive);
+      display.SavePreviewSnapshot();
+    }
+  }
   adaptive_pixel_sampler.write_final_pixels();
 #ifdef HAS_OIDN
   if(display.terminate && display.HasDenoisedPreview()) {

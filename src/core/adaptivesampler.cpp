@@ -9,12 +9,15 @@ adaptive_sampler::adaptive_sampler(size_t _numbercores, size_t nx, size_t ny, si
                  RayMatrix& normalOutput, 
                  RayMatrix& albedoOutput,
                  RayMatrix& alpha, 
-                 RayMatrix& draw_rgb_output, bool adaptive_on) : 
+                 RayMatrix& draw_rgb_output, bool adaptive_on, bool track_alpha) :
     numbercores(_numbercores), nx(nx), ny(ny), ns(ns), max_s(0), debug_channel(debug_channel), 
     min_variance(min_variance), min_adaptive_size(min_adaptive_size),
     rgb(rgb), rgb2(rgb2), normalOutput(normalOutput), albedoOutput(albedoOutput),
     draw_rgb_output(draw_rgb_output),
-    a(alpha), adaptive_on(adaptive_on) {
+    a(alpha), adaptive_on(adaptive_on), track_alpha(track_alpha) {
+  if(track_alpha) {
+    alpha_mean.resize(nx*ny); alpha_m2.resize(nx*ny); alpha_samples.resize(nx*ny);
+  }
   size_t nx_chunk = nx / numbercores;
   size_t ny_chunk = ny / numbercores;
   size_t bonus_x = nx - nx_chunk * numbercores;
@@ -60,6 +63,9 @@ void adaptive_sampler::reset() {
   albedoOutput.reset();
   draw_rgb_output.reset();
   a.reset();
+  std::fill(alpha_mean.begin(), alpha_mean.end(), 0);
+  std::fill(alpha_m2.begin(), alpha_m2.end(), 0);
+  std::fill(alpha_samples.begin(), alpha_samples.end(), 0);
 }
 
 void adaptive_sampler::test_for_convergence(size_t k, size_t s,
@@ -87,11 +93,18 @@ void adaptive_sampler::test_for_convergence(size_t k, size_t s,
       if(normalize != 0) {
         error_sum[(i-nx_begin) + (j-ny_begin) * nx_block] /= normalize;
       }
+      if(track_alpha) {
+        size_t pixel = i + nx*j;
+        double n = alpha_samples[pixel];
+        double alpha_error = n > 1 ? std::sqrt(alpha_m2[pixel] / (n*(n-1))) : 1;
+        auto& error = error_sum[(i-nx_begin) + (j-ny_begin) * nx_block];
+        error = std::max(double(error), 3 * r_b * alpha_error / N);
+      }
       error_block += error_sum[(i-nx_begin) + (j-ny_begin) * nx_block];
     }
   }
   pixel_chunks[k].error = error_block;
-  if(error_block < min_variance) {
+  if(error_block < min_variance && (!track_alpha || s >= 63)) {
     pixel_chunks[k].erase = true;
   } else if(error_block < min_variance*256) {
     pixel_chunks[k].split = true;
@@ -241,6 +254,12 @@ void adaptive_sampler::add_normal(size_t i, size_t j, normal3f normal) {
   normalOutput(i,j,2) += normal.xyz.z;
 }
 
-void adaptive_sampler::add_alpha_count(size_t i, size_t j) {
-  a.add_one(i,j,0); 
+void adaptive_sampler::add_alpha_count(size_t i, size_t j, Float transparency) {
+  a(i,j,0) += transparency;
+  if(track_alpha) {
+    size_t pixel = i + nx*j;
+    double delta = transparency - alpha_mean[pixel];
+    alpha_mean[pixel] += delta / ++alpha_samples[pixel];
+    alpha_m2[pixel] += delta * (transparency - alpha_mean[pixel]);
+  }
 }

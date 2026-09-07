@@ -28,7 +28,8 @@ public:
              std::size_t height,
              RayOidnQuality quality,
              bool clean_aux,
-             bool prefilter_aux);
+             bool prefilter_aux,
+             bool use_auxiliary = true);
 
   void Execute();
   bool ReportError();

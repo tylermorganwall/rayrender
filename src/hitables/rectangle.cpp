@@ -7,7 +7,7 @@ const bool xy_rect::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec,
   
   Ray r2 = (*WorldToObject)(r);
   
-  Float t = (k-r2.origin().xyz.z) * r2.inv_dir_pad.xyz.z;
+  Float t = (k-r2.origin().xyz.z) * (r.segment_absorption ? 1/r2.direction().xyz.z : r2.inv_dir_pad.xyz.z);
 
   if(t < t_min || t > t_max) {
     return(false);
@@ -55,7 +55,8 @@ const bool xy_rect::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec,
   rec.pError = vec3f(0,0,0);
   
   rec = (*ObjectToWorld)(rec);
-  rec.shape = this;
+  rec.geometric_normal = (*ObjectToWorld)(normal3f(0,0,1) * (reverseOrientation ? -1 : 1));
+    rec.shape = this;
   rec.alpha_miss = alpha_miss;
   return(true);
 }
@@ -65,7 +66,7 @@ const bool xy_rect::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec,
   SCOPED_TIMER_COUNTER("Rect");
   Ray r2 = (*WorldToObject)(r);
   
-  Float t = (k-r2.origin().xyz.z) * r2.inv_dir_pad.xyz.z;
+  Float t = (k-r2.origin().xyz.z) * (r.segment_absorption ? 1/r2.direction().xyz.z : r2.inv_dir_pad.xyz.z);
 
   if(t < t_min || t > t_max) {
     return(false);
@@ -113,7 +114,8 @@ const bool xy_rect::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec,
   rec.pError = vec3f(0,0,0);
   
   rec = (*ObjectToWorld)(rec);
-  rec.shape = this;
+  rec.geometric_normal = (*ObjectToWorld)(normal3f(0,0,1) * (reverseOrientation ? -1 : 1));
+    rec.shape = this;
   rec.alpha_miss = alpha_miss;
   return(true);
 }
@@ -124,7 +126,7 @@ bool xy_rect::HitP(const Ray& r, Float t_min, Float t_max, random_gen& rng) cons
   
   Ray r2 = (*WorldToObject)(r);
   
-  Float t = (k-r2.origin().xyz.z) * r2.inv_dir_pad.xyz.z;
+  Float t = (k-r2.origin().xyz.z) * (r.segment_absorption ? 1/r2.direction().xyz.z : r2.inv_dir_pad.xyz.z);
 
   if(t < t_min || t > t_max) {
     return(false);
@@ -143,7 +145,7 @@ bool xy_rect::HitP(const Ray& r, Float t_min, Float t_max, Sampler* sampler) con
   
   Ray r2 = (*WorldToObject)(r);
   
-  Float t = (k-r2.origin().xyz.z) * r2.inv_dir_pad.xyz.z;
+  Float t = (k-r2.origin().xyz.z) * (r.segment_absorption ? 1/r2.direction().xyz.z : r2.inv_dir_pad.xyz.z);
 
   if(t < t_min || t > t_max) {
     return(false);
@@ -202,7 +204,7 @@ const bool xz_rect::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec,
   
   Ray r2 = (*WorldToObject)(r);
   
-  Float t = (k-r2.origin().xyz.y) * r2.inv_dir_pad.xyz.y;
+  Float t = (k-r2.origin().xyz.y) * (r.segment_absorption ? 1/r2.direction().xyz.y : r2.inv_dir_pad.xyz.y);
 
   if(t < t_min || t > t_max) {
     return(false);
@@ -252,7 +254,8 @@ const bool xz_rect::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec,
   rec.p.e[1] = k;
   rec.pError = vec3f(0,0,0);
   rec = (*ObjectToWorld)(rec);
-  rec.shape = this;
+  rec.geometric_normal = (*ObjectToWorld)(normal3f(0,1,0) * (reverseOrientation ? -1 : 1));
+    rec.shape = this;
   rec.alpha_miss = alpha_miss;
   
   
@@ -266,7 +269,7 @@ const bool xz_rect::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec,
   
   Ray r2 = (*WorldToObject)(r);
   
-  Float t = (k-r2.origin().xyz.y) * r2.inv_dir_pad.xyz.y;
+  Float t = (k-r2.origin().xyz.y) * (r.segment_absorption ? 1/r2.direction().xyz.y : r2.inv_dir_pad.xyz.y);
 
   if(t < t_min || t > t_max) {
     return(false);
@@ -315,7 +318,8 @@ const bool xz_rect::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec,
   rec.pError = vec3f(0,0,0);
   
   rec = (*ObjectToWorld)(rec);
-  rec.shape = this;
+  rec.geometric_normal = (*ObjectToWorld)(normal3f(0,1,0) * (reverseOrientation ? -1 : 1));
+    rec.shape = this;
   rec.alpha_miss = alpha_miss;
   
   return(true);
@@ -327,7 +331,7 @@ bool xz_rect::HitP(const Ray& r, Float t_min, Float t_max, random_gen& rng) cons
   
   Ray r2 = (*WorldToObject)(r);
   
-  Float t = (k-r2.origin().xyz.y) * r2.inv_dir_pad.xyz.y;
+  Float t = (k-r2.origin().xyz.y) * (r.segment_absorption ? 1/r2.direction().xyz.y : r2.inv_dir_pad.xyz.y);
 
   if(t < t_min || t > t_max) {
     return(false);
@@ -349,7 +353,7 @@ bool xz_rect::HitP(const Ray& r, Float t_min, Float t_max, Sampler* sampler) con
   
   Ray r2 = (*WorldToObject)(r);
   
-  Float t = (k-r2.origin().xyz.y) * r2.inv_dir_pad.xyz.y;
+  Float t = (k-r2.origin().xyz.y) * (r.segment_absorption ? 1/r2.direction().xyz.y : r2.inv_dir_pad.xyz.y);
 
   if(t < t_min || t > t_max) {
     return(false);
@@ -412,7 +416,7 @@ const bool yz_rect::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec,
   SCOPED_TIMER_COUNTER("Rect");
   Ray r2 = (*WorldToObject)(r);
   
-  Float t = (k-r2.origin().xyz.x) * r2.inv_dir_pad.xyz.x;
+  Float t = (k-r2.origin().xyz.x) * (r.segment_absorption ? 1/r2.direction().xyz.x : r2.inv_dir_pad.xyz.x);
 
   if(t < t_min || t > t_max) {
     return(false);
@@ -461,7 +465,8 @@ const bool yz_rect::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec,
                             rec.dpdv - bvbu.xyz.y * convert_to_vec3(rec.normal) ));
     rec.bump_normal.make_unit_vector();
   }
-  rec.shape = this;
+  rec.geometric_normal = (*ObjectToWorld)(normal3f(1,0,0) * (reverseOrientation ? -1 : 1));
+    rec.shape = this;
   rec.alpha_miss = alpha_miss;
   
   return(true);
@@ -473,7 +478,7 @@ const bool yz_rect::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec,
   
   Ray r2 = (*WorldToObject)(r);
   
-  Float t = (k-r2.origin().xyz.x) * r2.inv_dir_pad.xyz.x;
+  Float t = (k-r2.origin().xyz.x) * (r.segment_absorption ? 1/r2.direction().xyz.x : r2.inv_dir_pad.xyz.x);
 
   if(t < t_min || t > t_max) {
     return(false);
@@ -523,7 +528,8 @@ const bool yz_rect::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec,
   
   rec = (*ObjectToWorld)(rec);
   
-  rec.shape = this;
+  rec.geometric_normal = (*ObjectToWorld)(normal3f(1,0,0) * (reverseOrientation ? -1 : 1));
+    rec.shape = this;
   rec.alpha_miss = alpha_miss;
   
   return(true);
@@ -535,7 +541,7 @@ bool yz_rect::HitP(const Ray& r, Float t_min, Float t_max, random_gen& rng) cons
   SCOPED_TIMER_COUNTER("Rect");
   Ray r2 = (*WorldToObject)(r);
   
-  Float t = (k-r2.origin().xyz.x) * r2.inv_dir_pad.xyz.x;
+  Float t = (k-r2.origin().xyz.x) * (r.segment_absorption ? 1/r2.direction().xyz.x : r2.inv_dir_pad.xyz.x);
 
   if(t < t_min || t > t_max) {
     return(false);
@@ -554,7 +560,7 @@ bool yz_rect::HitP(const Ray& r, Float t_min, Float t_max, Sampler* sampler) con
   SCOPED_TIMER_COUNTER("Rect");
   Ray r2 = (*WorldToObject)(r);
   
-  Float t = (k-r2.origin().xyz.x) * r2.inv_dir_pad.xyz.x;
+  Float t = (k-r2.origin().xyz.x) * (r.segment_absorption ? 1/r2.direction().xyz.x : r2.inv_dir_pad.xyz.x);
 
   if(t < t_min || t > t_max) {
     return(false);

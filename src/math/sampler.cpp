@@ -223,6 +223,10 @@ void SobolSampler::StartPixel( unsigned int i,  unsigned int j) {
 #include "RcppThread.h"
 
 Float SobolSampler::Get1D() {
+  if(independent_dimensions) {
+    size_t dim=current1DDimension++;
+    return sobol_calc_single(current1Dsample,dim%21200,pixelseed+uint32_t(dim/21200));
+  }
   double temp = sobol_calc_single(current1Dsample,
                                   2,
                                   pixelseed + current1DDimension
@@ -233,6 +237,7 @@ Float SobolSampler::Get1D() {
 
 
 vec2f SobolSampler::Get2D() {
+  if(independent_dimensions) { Float u=Get1D(),v=Get1D(); return vec2f(u,v); }
   vec2f temp = sobol_calc_double(current2Dsample,
                                 0,
                                 pixelseed + current2DDimension
@@ -260,6 +265,14 @@ std::unique_ptr<Sampler> SobolSampler::Clone(int seed) {
 
 
 Float SobolBlueNoiseSampler::Get1D() {
+  if(independent_dimensions) {
+    size_t dim=current1DDimension++;
+    if(dim<8) return sobol_calc_single_bluenoise(currentPixelx,currentPixely,current1Dsample,dim);
+    // The optimized blue-noise ranking tile has only eight dimensions. Do not
+    // reuse coordinates or index beyond it on longer surface/volume paths.
+    uint32_t seed=uint32_t(currentPixelx)*0x9e3779b9u ^ uint32_t(currentPixely)*0x85ebca6bu;
+    return sobol_calc_single(current1Dsample,dim%21200,seed+uint32_t(dim/21200));
+  }
   double temp = sobol_calc_single_bluenoise(currentPixelx,
                                             currentPixely,
                                             current1Dsample,
@@ -270,6 +283,7 @@ Float SobolBlueNoiseSampler::Get1D() {
 }
 
 vec2f SobolBlueNoiseSampler::Get2D() {
+  if(independent_dimensions) { Float u=Get1D(),v=Get1D(); return vec2f(u,v); }
   vec2f temp = sobol_calc_double_bluenoise(currentPixelx,
                                           currentPixely,
                                           current2Dsample,

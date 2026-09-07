@@ -4,6 +4,7 @@
 #include "../hitables/hitable.h"
 #include "../math/sampler.h"
 #include <memory>
+class VolumeScene;
 
 class hitable_list: public hitable {
   public:
@@ -35,6 +36,7 @@ class hitable_list: public hitable {
     
     size_t size() {return(objects.size());}
     std::vector<std::shared_ptr<hitable>> objects;
+    std::shared_ptr<VolumeScene> volume_scene;
     std::string GetName() const;
     size_t GetSize();
 };

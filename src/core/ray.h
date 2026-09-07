@@ -11,6 +11,7 @@
 #include <cstdint>
 
 class dielectric;
+class Medium;
 
 #ifdef RAY_FLOAT_AS_DOUBLE
 inline Float add_ulp_magnitude(Float f, int ulps) {
@@ -90,6 +91,12 @@ class Ray {
       Float Sz = 1.f / dPermuted.xyz.z;
       Svec = vec3f(Sx, Sy, Sz);
     }
+    Ray WithDirection(const vec3f& direction) const {
+      Ray result(o,direction,pri_stack,_time,tMax);
+      result.segment_absorption=segment_absorption;
+      result.medium=medium;
+      return result;
+    }
     point3f operator()(Float t) const { return o + d * t; }
     
     point3f origin() const {return(o);}
@@ -110,6 +117,9 @@ class Ray {
     int kx, ky, kz;
     mutable Float tMax;
     std::vector<dielectric*> *pri_stack;
+    // nee evaluates Beer-Lambert absorption over traveled segments.
+    bool segment_absorption = false;
+    const Medium* medium = nullptr;
 };
 
 inline std::istream& operator>>(std::istream &is, Ray &r) {

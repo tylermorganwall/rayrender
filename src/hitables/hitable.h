@@ -16,6 +16,7 @@
 
 class material;
 class hitable;
+class MediumBoundary;
 
 void get_sphere_uv(const vec3f& p, Float& u, Float& v);
 void get_sphere_uv(const normal3f& p, Float& u, Float& v);
@@ -28,6 +29,10 @@ struct alignas(16) hit_record {
   point3f p; //PBRT: In Interaction
   Float t; //PBRT: In Interaction
   normal3f normal; //PBRT: In interaction
+  normal3f geometric_normal{0};
+  const MediumBoundary* medium_boundary = nullptr;
+  Transform medium_to_world;
+  uint64_t boundary_id = 0; // Scene-assigned placement ID; zero for ordinary surfaces.
 
 #ifdef DEBUGBVH
   Float bvh_nodes;

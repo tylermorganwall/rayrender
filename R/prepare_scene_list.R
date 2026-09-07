@@ -56,6 +56,13 @@ prepare_scene_list = function(
   }
   validate_shutter_speed(shutter_speed)
   #Process images, convert shapes and materials to enums, extract positions, and
+  medium_features = scene_medium_features(scene)
+  if (medium_features$attached && tolower(integrator_type) != "nee") {
+    stop(
+      'Medium attachments require integrator_type = "nee". Use legacy material fog with "rtiow" or "basic".',
+      call. = FALSE
+    )
+  }
   scene_info = process_scene(scene)
   if (!is.numeric(debug_channel)) {
     debug_channel = unlist(lapply(
@@ -134,6 +141,7 @@ prepare_scene_list = function(
 
   if (
     !scene_info$any_light &&
+      !(tolower(integrator_type) == "nee" && medium_features$emissive) &&
       is.null(ambient_light) &&
       is.null(environment_light)
   ) {

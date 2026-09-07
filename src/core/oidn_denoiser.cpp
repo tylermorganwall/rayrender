@@ -26,15 +26,18 @@ void RayOidnDenoiser::Setup(RayMatrix& color,
                             std::size_t height,
                             RayOidnQuality quality,
                             bool clean_aux,
-                            bool _prefilter_aux) {
-  prefilter_aux = _prefilter_aux;
+                            bool _prefilter_aux,
+                            bool use_auxiliary) {
+  prefilter_aux = _prefilter_aux && use_auxiliary;
   ready = false;
 
   device = oidn::newDevice();
   device.commit();
   color_buffer = device.newBuffer(color.begin(), width * height * 3 * sizeof(Float));
+  if(use_auxiliary) {
   albedo_buffer = device.newBuffer(albedo.begin(), width * height * 3 * sizeof(Float));
   normal_buffer = device.newBuffer(normal.begin(), width * height * 3 * sizeof(Float));
+  }
   output_buffer = device.newBuffer(output.begin(), width * height * 3 * sizeof(Float));
 
   if(prefilter_aux) {
@@ -76,6 +79,7 @@ void RayOidnDenoiser::Setup(RayMatrix& color,
                          oidn::Format::Float3,
                          width,
                          height);
+  if(use_auxiliary) {
   beauty_filter.setImage("albedo",
                          albedo_buffer,
                          oidn::Format::Float3,
@@ -86,13 +90,14 @@ void RayOidnDenoiser::Setup(RayMatrix& color,
                          oidn::Format::Float3,
                          width,
                          height);
+  }
   beauty_filter.setImage("output",
                          output_buffer,
                          oidn::Format::Float3,
                          width,
                          height);
   beauty_filter.set("hdr", true);
-  beauty_filter.set("cleanAux", clean_aux);
+  beauty_filter.set("cleanAux", clean_aux && use_auxiliary);
   beauty_filter.set("quality", OidnQualityValue(quality));
   beauty_filter.commit();
   ready = true;

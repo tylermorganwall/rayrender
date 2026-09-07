@@ -26,7 +26,7 @@ public:
                    RayMatrix& albedoOutput,
                    RayMatrix& alpha, 
                    RayMatrix& draw_rgb_output,
-                   bool adaptive_on);
+                   bool adaptive_on, bool track_alpha = false);
   void reset();
   ~adaptive_sampler() {}
   void test_for_convergence(size_t k, size_t s,
@@ -41,7 +41,7 @@ public:
   void add_color_sec(size_t i, size_t j, point3f color);
   //For use when s = 1 in small image preview
   void set_color_main(size_t i, size_t j, point3f color);
-  void add_alpha_count(size_t i, size_t j);
+  void add_alpha_count(size_t i, size_t j, Float transparency = 1);
   void add_albedo(size_t i, size_t j, point3f albedo);
   void add_normal(size_t i, size_t j, normal3f normal);
 
@@ -59,6 +59,9 @@ public:
   std::vector<bool> finalized;
   std::vector<bool> just_finalized;
   bool adaptive_on;
+  bool track_alpha;
+  std::vector<double> alpha_mean, alpha_m2;
+  std::vector<size_t> alpha_samples;
   
 };
 

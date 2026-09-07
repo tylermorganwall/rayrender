@@ -72,6 +72,7 @@ inline void populate_hit_record(const csg& object, const Ray& object_ray,
   rec = (*object.ObjectToWorld)(rec);
   rec.normal *= object.reverseOrientation ? -1 : 1;
   rec.bump_normal *= object.reverseOrientation ? -1 : 1;
+  rec.geometric_normal = rec.normal;
   rec.shape = &object;
   rec.alpha_miss = false;
 }

@@ -1,0 +1,4 @@
+NanoVDB headers from OpenVDB v12.1.1
+https://github.com/AcademySoftwareFoundation/openvdb/tree/v12.1.1/nanovdb
+Apache-2.0; see LICENSE and individual file notices.
+Only CPU reading, interpolation, and validation are enabled. No compression libraries.

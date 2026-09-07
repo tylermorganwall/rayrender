@@ -1,3 +1,4 @@
+#include "volumes/boundary.h"
 #ifndef STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_IMPLEMENTATION 
 #endif
@@ -880,17 +881,7 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
   RayMatrix oidn_normal_output(nx, ny, 3);
   RayMatrix oidn_albedo_output(nx, ny, 3);
   RayOidnDenoiser oidn_denoiser;
-  if(denoise) {
-    oidn_denoiser.Setup(rgb_output,
-                        oidn_albedo_output,
-                        oidn_normal_output,
-                        draw_rgb_output,
-                        nx,
-                        ny,
-                        RayOidnQuality::Balanced,
-                        false,
-                        false);
-  }
+
 #endif
   
   point3f lookfrom(lookfromvec[0],lookfromvec[1],lookfromvec[2]);
@@ -962,6 +953,10 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
 
   
   hitable_list imp_sample_objects;
+  if(integrator_type == IntegratorType::ShadowRays) {
+    imp_sample_objects.volume_scene = std::make_shared<VolumeScene>();
+    imp_sample_objects.volume_scene->transparent_background = render_info.containsElementNamed("transparent_background") && as<bool>(render_info["transparent_background"]);
+  }
   std::vector<std::shared_ptr<hitable> > instanced_objects;
   std::vector<std::shared_ptr<hitable_list> > instance_importance_sampled;
   std::vector<std::shared_ptr<alpha_texture> > alpha;
@@ -988,6 +983,20 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
                                                    texture_idx,
                                                    verbose, 
                                                    rng);
+  bool has_media = imp_sample_objects.volume_scene && imp_sample_objects.volume_scene->has_media;
+#ifdef HAS_OIDN
+  if(denoise) {
+    oidn_denoiser.Setup(rgb_output,
+                        oidn_albedo_output,
+                        oidn_normal_output,
+                        draw_rgb_output,
+                        nx,
+                        ny,
+                        RayOidnQuality::Balanced,
+                        false,
+                        false, !has_media);
+  }
+#endif
   print_time(verbose, "Built Scene BVH" );
   if(print_debug_info) {
     worldbvh->hitable_info_bounds(static_cast<Float>(0), static_cast<Float>(1));
@@ -1096,7 +1105,7 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
 
   bool impl_only_bg = false;
   world.add(background_sphere);
-  if((imp_sample_objects.size() == 0 || hasbackground || ambient_light || interactive) && debug_channel != 18) {
+  if(((imp_sample_objects.size() == 0 && !(imp_sample_objects.volume_scene && imp_sample_objects.volume_scene->has_emission)) || hasbackground || ambient_light || interactive) && debug_channel != 18) {
     impl_only_bg = true;
   }
   LogicalVector screen_text_visible = compute_screen_text_visibility(
@@ -1181,7 +1190,7 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
     oidn_aux_options.sample_method = sample_method;
     oidn_aux_options.stratified_x = stratified_x;
     oidn_aux_options.stratified_y = stratified_y;
-    render_oidn_aux_features(numbercores,
+    if(!has_media) render_oidn_aux_features(numbercores,
                              nx,
                              ny,
                              cam.get(),
@@ -1198,7 +1207,7 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
                         ny,
                         RayOidnQuality::High,
                         true,
-                        true);
+                        true, !has_media);
     oidn_denoiser.Execute();
     oidn_denoiser.ReportError();
   }
@@ -1227,7 +1236,10 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
                                   _["cy"] = albedoOutput.ConvertRcpp(1), 
                                   _["cz"] = albedoOutput.ConvertRcpp(2),
 
-                                  _["a"] = alpha_output.ConvertRcpp());
+                                  _["a"] = alpha_output.ConvertRcpp(),
+                                  _["premultiplied"] = integrator_type == IntegratorType::ShadowRays);
+  if(imp_sample_objects.volume_scene && imp_sample_objects.volume_scene->collect_statistics)
+    final_image.attr("volume_statistics")=imp_sample_objects.volume_scene->Statistics();
   if(Display.Keyframes.size() > 0) {
     List keyframes(Display.Keyframes.size());
     for(unsigned int i = 0; i < Display.Keyframes.size(); i++ ) {

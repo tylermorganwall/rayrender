@@ -1,4 +1,5 @@
 #include "../core/color.h"
+#include "../volumes/volpath.h"
 #include "RcppThread.h"
 #include "../math/mathinline.h"
 #include "../utils/raylog.h"
@@ -263,219 +264,28 @@ void color_basic_path_guiding(const Ray &r, hitable *world, hitable_list *hlist,
   return;
 }
 
-void color_shadow_rays(const Ray &r, hitable *world, hitable_list *hlist,
-                       size_t max_depth, size_t roulette_activate,
-                       random_gen &rng, Sampler *sampler, bool &alpha,
-                       point3f &color, normal3f &normal, point3f &albedo,
-                       const std::atomic<bool>* cancel) {
-  SCOPED_CONTEXT("Overall");
-  SCOPED_TIMER_COUNTER("Color");
-  point3f final_color(0, 0, 0);
-  point3f emit_color(0, 0, 0);
-
-  bool wrote_normal = false;
-  bool wrote_albedo = false;
-  point3f throughput(1, 1, 1);
-  float prev_t = 1;
-  Ray r2 = r;
-  bool diffuse_bounce = false;
-  // To-do: Add logic to detect when rays only go through transmissive surfaces
-  // and make those transparent when transparent_background = TRUE
-  for (size_t i = 0; i < max_depth; i++) {
-    if(ColorCancelled(cancel)) {
-      color = final_color;
-      return;
-    }
-    #ifdef RAY_COLOR_DEBUG
-    Rcpp::Rcout << i << "th ray: O[" <<  r2.origin() << "] Color: [" << throughput << "]\n";
-    #endif
-    bool is_invisible = false;
-    hit_record hrec;
-    START_TIMER("Total Hits");
-    if (world->hit(r2, 0.001, MaxT, hrec,
-                   rng)) { // generated hit record, world space
-      STOP_TIMER("Total Hits");
-      if(ColorCancelled(cancel)) {
-        color = final_color;
-        return;
-      }
-      scatter_record srec;
-      if (hrec.alpha_miss) {
-        r2.o =
-            OffsetRayOrigin(hrec.p, hrec.pError, hrec.normal, r2.direction());
-        continue;
-      }
-      if (hrec.infinite_area_hit && i == 0) {
-        alpha = true;
-      }
-      emit_color = throughput * hrec.mat_ptr->emitted(r2, hrec, hrec.u, hrec.v,
-                                                      hrec.p, is_invisible);
-      // Some lights can be invisible until after diffuse bounce
-      // If so, generate new ray with intersection point and continue ray
-      if (is_invisible && !diffuse_bounce) {
-        r2.o =
-            OffsetRayOrigin(hrec.p, hrec.pError, hrec.normal, r2.direction());
-        continue;
-      }
-      final_color += emit_color;
-      if (throughput.xyz.x == 0 && throughput.xyz.y == 0 && throughput.xyz.z == 0) {
-        color = point3f(0, 0, 0);
-        return;
-      }
-      if (i > roulette_activate) {
-        float t = std::fmax(throughput.xyz.x,
-                            std::fmax(throughput.xyz.y, throughput.xyz.z));
-        // From Szecsi, Szirmay-Kalos, and Kelemen
-        float prob_continue = std::fmin(1.0f, std::sqrt(t / prev_t));
-        prev_t = t;
-        if (rng.unif_rand() > prob_continue) {
-          color = final_color;
-          return;
-        }
-        throughput *= 1 / prob_continue;
-      }
-      // generates scatter record and sends out new ray, otherwise exits out
-      // with accumulated color
-      if (hrec.mat_ptr->scatter(r2, hrec, srec, sampler)) {
-          if(!wrote_normal) {
-            normal = hrec.normal;
-            wrote_normal = true;
-          }        
-          if(!wrote_albedo) {
-            albedo = throughput;
-            wrote_albedo = true;
-          }
-        if (srec.is_specular) {
-          // Handle specular reflection/transmission
-          r2 = srec.specular_ray;
-          throughput *= srec.attenuation;
-          diffuse_bounce = false;
-          continue;
-        }
-
-        // Compute direct lighting via shadow rays
-        point3f direct_light(0, 0, 0);
-        int num_lights = hlist->size();
-        if (num_lights > 0) {
-          int li = rng.UniformUInt32(num_lights);
-          // Optionally, sample a subset of lights or implement multiple
-          // importance sampling for (int li = 0; li < num_lights; li++) {
-          hitable *light = hlist->objects[li].get();
-
-          // Sample a point on the light using the random function
-          vec3f wi = light->random(hrec.p, sampler, r2.time());
-          float pdf_light = light->pdf_value(hrec.p, wi, sampler, r2.time());
-          Float p_light_selection = 1.0f / num_lights;
-
-          // Avoid division by zero
-          if (pdf_light <= 0.0f) {
-            continue;
-          }
-
-          // Create a shadow ray towards the light
-          Ray shadow_ray(OffsetRayOrigin(hrec.p, hrec.pError, hrec.normal, wi),
-                         wi, r2.pri_stack, r2.time());
-
-          // Check for occlusion using HitP
-          if(ColorCancelled(cancel)) {
-            color = final_color;
-            return;
-          }
-          if (!world->HitP(shadow_ray, 0.001f, MaxT, rng)) {
-            if(ColorCancelled(cancel)) {
-              color = final_color;
-              return;
-            }
-            // Unoccluded, compute contribution
-            float cos_theta = dot(hrec.normal, wi);
-            if (cos_theta > 0) {
-              // Evaluate BRDF
-              point3f f = hrec.mat_ptr->f(r2, hrec, wi);
-
-              // Get emitted radiance from the light material
-              bool is_invisible = false;
-              point3f emitted_radiance = light->mat_ptr->emitted(
-                  shadow_ray, hrec, hrec.u, hrec.v, hrec.p, is_invisible);
-
-              // Accumulate direct lighting
-              direct_light += f * emitted_radiance * cos_theta /
-                              (pdf_light * p_light_selection);
-            }
-          }
-          // }
-          // Average over all lights
-          direct_light /= float(num_lights);
-        }
-        final_color += throughput * direct_light;
-
-        // Continue with indirect lighting using your mixture PDFs
-        // Sample the BRDF to get a new direction
-        vec3f scatter_direction;
-        float pdf_scatter;
-
-        // Create a mixture PDF that combines your BRDF sampling and light
-        // sampling
-        hitable_pdf light_pdf(hlist, hrec.p);
-        mixture_pdf mixed_pdf(&light_pdf, srec.pdf_ptr);
-
-        // Generate a new direction using the mixture PDF
-        scatter_direction =
-            mixed_pdf.generate(sampler, diffuse_bounce, r2.time());
-        pdf_scatter = mixed_pdf.value(scatter_direction, sampler, r2.time());
-
-        if (pdf_scatter == 0) {
-          break;
-        }
-
-        // Evaluate the BRDF
-        point3f f = hrec.mat_ptr->f(r2, hrec, scatter_direction);
-
-        // Update throughput
-        // float cos_theta = dot(scatter_direction, hrec.normal);
-        // if (cos_theta <= 0) {
-        //     break;
-        // }
-        throughput *= f / pdf_scatter;
-
-        // Update the ray
-        r2 = Ray(OffsetRayOrigin(hrec.p, hrec.pError, hrec.normal,
-                                 scatter_direction),
-                 scatter_direction, r2.pri_stack, r2.time());
-
-        diffuse_bounce = true;
-        continue;
-      } else {
-        color = final_color;
-        return;
-      }
-    } else {
-      STOP_TIMER("hit");
-      color = final_color;
-      return;
-    }
-  }
-  color = final_color;
-  return;
-}
 
 void color(const Ray &r, hitable *world, hitable_list *hlist, size_t max_depth,
            size_t roulette_activate, random_gen &rng, Sampler *sampler,
-           bool &alpha, IntegratorType type, point3f &color, normal3f &normal,
+           Float &transparency, IntegratorType type, point3f &color, normal3f &normal,
            point3f &albedo, const std::atomic<bool>* cancel) {
+  bool alpha = false;
   switch (type) {
   case IntegratorType::Basic: {
     color_basic(r, world, max_depth, rng, sampler, alpha, color, normal,
                 albedo, cancel);
+    transparency = alpha ? 1 : 0;
     return;
   }
   case IntegratorType::BasicPathGuiding: {
     color_basic_path_guiding(r, world, hlist, max_depth, roulette_activate, rng,
                              sampler, alpha, color, normal, albedo, cancel);
+    transparency = alpha ? 1 : 0;
     return;
   }
   case IntegratorType::ShadowRays: {
-    color_shadow_rays(r, world, hlist, max_depth, roulette_activate, rng,
-                      sampler, alpha, color, normal, albedo, cancel);
+    color_volume(r, world, hlist, max_depth, roulette_activate, rng,
+                 sampler, transparency, color, normal, albedo, cancel);
     return;
   }
   default: {

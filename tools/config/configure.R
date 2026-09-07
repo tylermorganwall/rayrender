@@ -143,7 +143,7 @@ build_command = function(base_tokens, extra_tokens = character()) {
   paste(quoted[nzchar(quoted)], collapse = " ")
 }
 
-PKG_CPPFLAGS = character()
+PKG_CPPFLAGS = "-Iext/nanovdb"
 PKG_CXXFLAGS = append_unique_flags(
   character(),
   "-ffp-contract=off",
@@ -850,7 +850,7 @@ collect_sources = function(subdir, pattern) {
 
 DIR_SOURCES = sort(list.files("src", pattern = "\\.cpp$", full.names = FALSE))
 SUBDIR_SOURCES = sort(unlist(lapply(
-  c("core", "hitables", "materials", "math", "utils"),
+  c("core", "hitables", "materials", "math", "utils", "volumes"),
   collect_sources,
   pattern = "\\.cpp$"
 )))
@@ -865,6 +865,10 @@ EXT_C_SOURCES = sort(list.files(
   recursive = TRUE,
   full.names = FALSE
 ))
+
+if (identical(tolower(Sys.getenv("RAYRENDER_CPP_TESTS", "false")), "true")) {
+  PKG_CPPFLAGS = append_flags(PKG_CPPFLAGS, "-DNOT_CRAN")
+}
 
 PKG_CPPFLAGS_STR = collapse_flags(append_flags(PKG_CPPFLAGS, OIDN_CPPFLAGS))
 PKG_LIBS_STR = collapse_flags(append_flags(

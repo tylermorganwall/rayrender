@@ -27,6 +27,7 @@ Imports:
     cli,
     pillar
 Suggests:
+    ambient,
     sf,
     spData,
     dplyr,

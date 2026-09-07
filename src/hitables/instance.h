@@ -12,7 +12,7 @@ public:
   instance(hitable* scene, 
            Transform* ObjectToWorld, 
            Transform* WorldToObject,
-           hitable_list* imp_list);
+           hitable_list* imp_list, uint64_t boundary_id_offset = 0);
   
   virtual const bool hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const;
   virtual const bool hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const;
@@ -38,6 +38,11 @@ public:
   //Embedded scene
   hitable* original_scene;
   hitable_list* importance_sampled_objects;
+
+private:
+  // Remap child boundary IDs into this placement's reserved range in its
+  // parent scene. Zero means the first range, or an instance without boundaries.
+  const uint64_t boundary_id_offset = 0;
 };
 
 #endif

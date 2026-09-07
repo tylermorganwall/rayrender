@@ -13,6 +13,9 @@ post_process_frame = function(
   write_file = TRUE,
   plot_scene = TRUE
 ) {
+  if (transparent_background && isTRUE(rgb_mat$premultiplied)) {
+    rgb_mat = straight_volume_rgb(rgb_mat)
+  }
   if (!transparent_background) {
     full_array = array(0, c(ncol(rgb_mat$r), nrow(rgb_mat$r), 3))
   } else {
@@ -43,6 +46,10 @@ post_process_frame = function(
     }
     return(invisible(full_array))
   }
+  coverage = if (transparent_background) full_array[,, 4] else NULL
+  if (transparent_background) {
+    full_array = full_array[,, 1:3, drop = FALSE]
+  }
   if (bloom) {
     kernel = rayimage::generate_2d_exponential(0.1, 11, 3)
     full_array = rayimage::render_convolution(
@@ -60,8 +67,14 @@ post_process_frame = function(
     ) |>
     rayimage::render_tonemap(method = tonemap)
 
+  if (transparent_background) {
+    full_array[,, 4] = coverage
+  }
   if (any(is.na(full_array))) {
     full_array[is.na(full_array)] = 0
+  }
+  if (!is.null(attr(rgb_mat, "volume_statistics"))) {
+    attr(full_array, "volume_statistics") = attr(rgb_mat, "volume_statistics")
   }
   if (write_file) {
     rayimage::ray_write_image(full_array, filename)

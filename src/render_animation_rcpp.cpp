@@ -1,3 +1,4 @@
+#include "volumes/boundary.h"
 #define RCPP_USE_UNWIND_PROTECT
 
 #include "math/float.h"
@@ -336,6 +337,10 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
   TextureCache texCache;
   
   hitable_list imp_sample_objects;
+  if(integrator_type == IntegratorType::ShadowRays) {
+    imp_sample_objects.volume_scene = std::make_shared<VolumeScene>();
+    imp_sample_objects.volume_scene->transparent_background = render_info.containsElementNamed("transparent_background") && as<bool>(render_info["transparent_background"]);
+  }
   std::vector<std::shared_ptr<hitable> > instanced_objects;
   std::vector<std::shared_ptr<hitable_list> > instance_importance_sampled;
   std::vector<std::shared_ptr<alpha_texture> > alpha;
@@ -359,6 +364,7 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
                                                   instance_importance_sampled,
                                                   texture_idx,
                                                   verbose, rng);
+  bool has_media = imp_sample_objects.volume_scene && imp_sample_objects.volume_scene->has_media;
   print_time(verbose, "Built Scene BVH" );
   
 
@@ -463,7 +469,7 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
 
   bool impl_only_bg = false;
   world.add(background_sphere);
-  if((imp_sample_objects.size() == 0 || hasbackground || ambient_light) && debug_channel != 18) {
+  if(((imp_sample_objects.size() == 0 && !(imp_sample_objects.volume_scene && imp_sample_objects.volume_scene->has_emission)) || hasbackground || ambient_light) && debug_channel != 18) {
     impl_only_bg = true;
   }
   
@@ -552,6 +558,8 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
       List temp = List::create(_["r"] = rgb_output.ConvertRcpp(0), 
                                _["g"] = rgb_output.ConvertRcpp(1), 
                                _["b"] = rgb_output.ConvertRcpp(2));
+      if(imp_sample_objects.volume_scene && imp_sample_objects.volume_scene->collect_statistics)
+        temp.attr("volume_statistics")=imp_sample_objects.volume_scene->Statistics();
       std::string frame_filename = as<std::string>(filenames(i));
       bool write_current_image = write_image && !frame_filename.empty();
       RObject frame_output = post_process_frame(temp, debug_channel, frame_filename, 
@@ -660,7 +668,7 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
                             ny,
                             RayOidnQuality::Balanced,
                             false,
-                            false);
+                            false, !has_media);
       }
 #endif
 
@@ -764,7 +772,7 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
         oidn_aux_options.sample_method = sample_method;
         oidn_aux_options.stratified_x = stratified_x;
         oidn_aux_options.stratified_y = stratified_y;
-        render_oidn_aux_features(numbercores,
+        if(!has_media) render_oidn_aux_features(numbercores,
                                  nx,
                                  ny,
                                  frame_cam,
@@ -781,7 +789,7 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
                             ny,
                             RayOidnQuality::High,
                             true,
-                            true);
+                            true, !has_media);
         oidn_denoiser.Execute();
         oidn_denoiser.ReportError();
       }
@@ -789,7 +797,10 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
       List temp = List::create(_["r"] = final_output.ConvertRcpp(0), 
                                _["g"] = final_output.ConvertRcpp(1), 
                                _["b"] = final_output.ConvertRcpp(2),
-                               _["a"] = alpha_output.ConvertRcpp());
+                               _["a"] = alpha_output.ConvertRcpp(),
+                               _["premultiplied"] = integrator_type == IntegratorType::ShadowRays);
+      if(imp_sample_objects.volume_scene && imp_sample_objects.volume_scene->collect_statistics)
+        temp.attr("volume_statistics")=imp_sample_objects.volume_scene->Statistics();
       std::string frame_filename = as<std::string>(filenames(i));
       bool write_current_image = write_image && !frame_filename.empty();
       RObject frame_output = post_process_frame(temp, debug_channel, frame_filename, as<std::string>(tonemap(0)), bloom,
@@ -799,7 +810,10 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
       List temp = List::create(_["r"] = rgb_output.ConvertRcpp(0), 
                                _["g"] = rgb_output.ConvertRcpp(1), 
                                _["b"] = rgb_output.ConvertRcpp(2),
-                               _["a"] = alpha_output.ConvertRcpp());
+                               _["a"] = alpha_output.ConvertRcpp(),
+                               _["premultiplied"] = integrator_type == IntegratorType::ShadowRays);
+      if(imp_sample_objects.volume_scene && imp_sample_objects.volume_scene->collect_statistics)
+        temp.attr("volume_statistics")=imp_sample_objects.volume_scene->Statistics();
       std::string frame_filename = as<std::string>(filenames(i));
       bool write_current_image = write_image && !frame_filename.empty();
       RObject frame_output = post_process_frame(temp, debug_channel, frame_filename, as<std::string>(tonemap(0)), bloom,

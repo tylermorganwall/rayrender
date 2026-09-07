@@ -1338,10 +1338,9 @@ void PreviewDisplay::DrawStatusBarX11(Float env_rotation) {
 }
 #endif
 
-#ifdef RAY_WINDOWS
 void PreviewDisplay::CompositeTextOverlaysToFloatBuffer(std::vector<Float>& rgb,
                                                         hitable* world,
-                                                        random_gen& rng) {
+                                                        random_gen& rng, std::vector<Float>* coverage) {
   if(text_overlays.empty() || rgb.empty()) {
     return;
   }
@@ -1387,9 +1386,14 @@ void PreviewDisplay::CompositeTextOverlaysToFloatBuffer(std::vector<Float>& rgb,
         Float src_r = overlay.rgba[src_idx] / 255.f;
         Float src_g = overlay.rgba[src_idx + 1] / 255.f;
         Float src_b = overlay.rgba[src_idx + 2] / 255.f;
-        rgb[dst_idx] = clamp(src_r * alpha + rgb[dst_idx] * (1.f - alpha), 0.f, 1.f);
-        rgb[dst_idx + 1] = clamp(src_g * alpha + rgb[dst_idx + 1] * (1.f - alpha), 0.f, 1.f);
-        rgb[dst_idx + 2] = clamp(src_b * alpha + rgb[dst_idx + 2] * (1.f - alpha), 0.f, 1.f);
+        Float dest_alpha=coverage ? (*coverage)[dst_idx/3] : 1;
+        Float out_alpha=alpha+dest_alpha*(1-alpha);
+        Float src_weight=out_alpha>0 ? alpha/out_alpha : 0;
+        Float dst_weight=out_alpha>0 ? dest_alpha*(1-alpha)/out_alpha : 0;
+        if(coverage) (*coverage)[dst_idx/3]=out_alpha;
+        rgb[dst_idx] = clamp(src_r * src_weight + rgb[dst_idx] * dst_weight, 0.f, 1.f);
+        rgb[dst_idx + 1] = clamp(src_g * src_weight + rgb[dst_idx + 1] * dst_weight, 0.f, 1.f);
+        rgb[dst_idx + 2] = clamp(src_b * src_weight + rgb[dst_idx + 2] * dst_weight, 0.f, 1.f);
       }
     }
   }
@@ -1397,7 +1401,7 @@ void PreviewDisplay::CompositeTextOverlaysToFloatBuffer(std::vector<Float>& rgb,
 
 void PreviewDisplay::CompositeLineOverlaysToFloatBuffer(std::vector<Float>& rgb,
                                                         hitable* world,
-                                                        random_gen& rng) {
+                                                        random_gen& rng, std::vector<Float>* coverage) {
   if(line_overlays.empty() || rgb.empty()) {
     return;
   }
@@ -1447,14 +1451,20 @@ void PreviewDisplay::CompositeLineOverlaysToFloatBuffer(std::vector<Float>& rgb,
           continue;
         }
         size_t dst_idx = 3 * (x + width * y);
-        rgb[dst_idx] = clamp(overlay.red * alpha + rgb[dst_idx] * (1.f - alpha), 0.f, 1.f);
-        rgb[dst_idx + 1] = clamp(overlay.green * alpha + rgb[dst_idx + 1] * (1.f - alpha), 0.f, 1.f);
-        rgb[dst_idx + 2] = clamp(overlay.blue * alpha + rgb[dst_idx + 2] * (1.f - alpha), 0.f, 1.f);
+        Float dest_alpha=coverage ? (*coverage)[dst_idx/3] : 1;
+        Float out_alpha=alpha+dest_alpha*(1-alpha);
+        Float src_weight=out_alpha>0 ? alpha/out_alpha : 0;
+        Float dst_weight=out_alpha>0 ? dest_alpha*(1-alpha)/out_alpha : 0;
+        if(coverage) (*coverage)[dst_idx/3]=out_alpha;
+        rgb[dst_idx] = clamp(overlay.red * src_weight + rgb[dst_idx] * dst_weight, 0.f, 1.f);
+        rgb[dst_idx + 1] = clamp(overlay.green * src_weight + rgb[dst_idx + 1] * dst_weight, 0.f, 1.f);
+        rgb[dst_idx + 2] = clamp(overlay.blue * src_weight + rgb[dst_idx + 2] * dst_weight, 0.f, 1.f);
       }
     }
   }
 }
 
+#ifdef RAY_WINDOWS
 void PreviewDisplay::DrawStatusBarWindows(HDC hdc, Float env_rotation) const {
   if(!interactive ||
      width < PREVIEW_STATUS_MIN_WIDTH ||
@@ -1581,6 +1591,7 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
       snapshot_pixels[3 * pixel + 2] =
         static_cast<unsigned char>(data[4 * pixel]);
     }
+    CaptureVolumeSnapshot(adaptive_pixel_sampler, rgb, ns+1, world, rng);
     // Paint display-only UI after populating the snapshot buffer.
     if(progress) {
       for(unsigned int i = 0; i < 4*width*percent_done; i += 4 ) {
@@ -2251,6 +2262,7 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
       snapshot_pixels[3 * pixel + 2] = static_cast<unsigned char>(
         255.f * clamp(rgb[3 * pixel + 2], 0.f, 1.f));
     }
+    CaptureVolumeSnapshot(adaptive_pixel_sampler, rgb_s, ns+1, world, rng);
     // Paint display-only UI after populating the snapshot buffer.
     if(progress) {
       for(unsigned int i = 0; i < 3*width*percent_done; i += 3 ) {
@@ -2306,6 +2318,7 @@ PreviewDisplay::PreviewDisplay(unsigned int _width, unsigned int _height,
   EnvObjectToWorld(_EnvObjectToWorld), EnvWorldToObject(_EnvWorldToObject),
   Start_EnvObjectToWorld(*_EnvObjectToWorld), Start_EnvWorldToObject(*_EnvWorldToObject) {
 #endif
+  width = _width; height = _height;
   Keyframes.clear();
   current_keyframe = -1;
   keyframe_motion_args = Rcpp::List::create(
@@ -2456,6 +2469,28 @@ void PreviewDisplay::SetSnapshotFilename(const std::string& filename) {
   snapshot_filename = filename;
 }
 
+void PreviewDisplay::CaptureVolumeSnapshot(adaptive_sampler& sampler, RayMatrix& color,
+                                           size_t samples, hitable* world, random_gen& rng) {
+  snapshot_alpha.clear();
+  if(!transparent_volume_background) return;
+  snapshot_width=width; snapshot_height=height;
+  snapshot_alpha.resize(size_t(width)*height);
+  std::vector<Float> rgb(size_t(width)*height*3);
+  for(size_t y=0;y<height;++y) for(size_t x=0;x<width;++x) {
+    size_t sx=width-1-x, sy=height-1-y, pixel=x+width*y;
+    bool final=sampler.finalized[sx+width*sy];
+    Float count=final ? 1 : std::max(size_t(1),samples);
+    Float alpha=clamp(final ? sampler.a(sx,sy,0) : 1-sampler.a(sx,sy,0)/count,0.f,1.f);
+    snapshot_alpha[pixel]=alpha;
+    for(int channel=0;channel<3;++channel)
+      rgb[3*pixel+channel]=alpha>0 ? ApplyPreviewExposure(color(sx,sy,channel)/alpha,count) : 0;
+  }
+  CompositeTextOverlaysToFloatBuffer(rgb,world,rng,&snapshot_alpha);
+  CompositeLineOverlaysToFloatBuffer(rgb,world,rng,&snapshot_alpha);
+  snapshot_pixels.resize(rgb.size());
+  for(size_t i=0;i<rgb.size();++i) snapshot_pixels[i]=static_cast<unsigned char>(255*clamp(rgb[i],0.f,1.f));
+}
+
 void PreviewDisplay::SavePreviewSnapshot() const {
   if(snapshot_width == 0 || snapshot_height == 0 || snapshot_pixels.empty()) {
     Rprintf("Unable to save preview snapshot: no preview image is available.\n");
@@ -2463,9 +2498,10 @@ void PreviewDisplay::SavePreviewSnapshot() const {
   }
 
   try {
+    size_t channels=snapshot_alpha.empty() ? 3 : 4;
     Rcpp::NumericVector image(
       static_cast<R_xlen_t>(snapshot_width) *
-      static_cast<R_xlen_t>(snapshot_height) * 3
+      static_cast<R_xlen_t>(snapshot_height) * channels
     );
     size_t channel_size = static_cast<size_t>(snapshot_width) *
       static_cast<size_t>(snapshot_height);
@@ -2475,6 +2511,7 @@ void PreviewDisplay::SavePreviewSnapshot() const {
           static_cast<size_t>(snapshot_width) * y;
         size_t target_pixel = static_cast<size_t>(y) +
           static_cast<size_t>(snapshot_height) * x;
+        if(channels==4) image[target_pixel + 3*channel_size]=snapshot_alpha[source_pixel];
         for(size_t channel = 0; channel < 3; channel++) {
           image[target_pixel + channel_size * channel] =
             static_cast<Float>(snapshot_pixels[3 * source_pixel + channel]) /
@@ -2485,7 +2522,7 @@ void PreviewDisplay::SavePreviewSnapshot() const {
     image.attr("dim") = Rcpp::IntegerVector::create(
       snapshot_height,
       snapshot_width,
-      3
+      channels
     );
 
     Rcpp::CharacterVector source_filename(1);

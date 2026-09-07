@@ -253,7 +253,9 @@ no filename specified). Set to `FALSE` for faster plotting (does not affect rend
 
 \item{integrator_type}{Default `"rtiow"` (the algorithm specified in the book "Raytracing in One Weekend", a basic
 form of path guiding). Other options include `"nee"` (Next Event Estimation, with direct light sampling)
-and `"basic"` (basic pathtracing, for high sample reference renders and debugging only).}
+and `"basic"` (basic pathtracing, for high sample reference renders and debugging only).
+With `nee`, surfaces and participating media use RGB null-scattering transport;
+new medium attachments require this integrator. See [set_medium()].}
 
 \item{screen_text}{Default `NULL`. Optional screen-space text overlay created with `screen_text()`,
 or a list of `screen_text()` outputs to draw in order.}

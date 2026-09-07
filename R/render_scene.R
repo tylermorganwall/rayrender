@@ -128,6 +128,8 @@
 #' @param integrator_type Default `"rtiow"` (the algorithm specified in the book "Raytracing in One Weekend", a basic
 #' form of path guiding). Other options include `"nee"` (Next Event Estimation, with direct light sampling)
 #' and `"basic"` (basic pathtracing, for high sample reference renders and debugging only).
+#' With `nee`, surfaces and participating media use RGB null-scattering transport;
+#' new medium attachments require this integrator. See [set_medium()].
 #' @param debug_channel Default `none`. If `depth`, function will return a depth map of rays into the scene
 #' instead of an image. If `normals`, function will return an image of scene normals, mapped from 0 to 1.
 #' If `uv`, function will return an image of the uv coords. If `variance`, function will return an image
@@ -723,6 +725,7 @@ HAS_OIDN: %s
   camera_info = scene_list$camera_info
   scene_info = scene_list$scene_info
   render_info = scene_list$render_info
+  render_info$transparent_background = transparent_background
   processed_scene = scene_info$scene
   screen_text_native_overlay = screen_text_needs_native_overlay(screen_text)
   screen_line_native_overlay = screen_line_needs_native_overlay(screen_line)

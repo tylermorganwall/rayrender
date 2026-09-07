@@ -89,6 +89,9 @@ public:
   void SetCamera(RayCamera* _cam);
   void SetSnapshotFilename(const std::string& filename);
   void SavePreviewSnapshot() const;
+  void CaptureVolumeSnapshot(adaptive_sampler&, RayMatrix&, size_t samples, hitable*, random_gen&);
+  bool transparent_volume_background = false;
+  std::vector<Float> snapshot_alpha;
   bool PollCloseEvent();
 #ifdef HAS_OIDN
   void SetDenoiser(RayOidnDenoiser* _denoiser,
@@ -173,13 +176,13 @@ public:
 #endif
 #ifdef RAY_WINDOWS
   void DrawStatusBarWindows(HDC hdc, Float env_rotation) const;
+#endif
   void CompositeTextOverlaysToFloatBuffer(std::vector<Float>& rgb,
                                           hitable* world,
-                                          random_gen& rng);
+                                          random_gen& rng, std::vector<Float>* coverage = nullptr);
   void CompositeLineOverlaysToFloatBuffer(std::vector<Float>& rgb,
                                           hitable* world,
-                                          random_gen& rng);
-#endif
+                                          random_gen& rng, std::vector<Float>* coverage = nullptr);
 #ifdef RAY_HAS_X11
   Display *d;
   XImage *img;

@@ -3,6 +3,34 @@
 #include "../utils/raylog.h"
 #include "../math/vectypes.h"
 
+namespace {
+// Use double precision for deterministic boundary crossings. The legacy float
+// error-bound rejection can discard an entry just beyond a spawned ray origin.
+bool volume_triangle_intersection(const Ray& r, const point3f& a, const point3f& b,
+                                  const point3f& c, Float tmin, Float tmax,
+                                  Float& t, Float& b0, Float& b1, Float& b2) {
+  const point3f* vertices[3]={&a,&b,&c};
+  int z=MaxDimension(Abs(r.d)), x=(z+1)%3, y=(x+1)%3;
+  double p[3][3];
+  for(int i=0;i<3;++i) {
+    double dz=double((*vertices[i])[z])-r.o[z];
+    p[i][0]=double((*vertices[i])[x])-r.o[x]-double(r.d[x])/r.d[z]*dz;
+    p[i][1]=double((*vertices[i])[y])-r.o[y]-double(r.d[y])/r.d[z]*dz;
+    p[i][2]=dz/r.d[z];
+  }
+  double e[3]={p[1][0]*p[2][1]-p[1][1]*p[2][0],
+               p[2][0]*p[0][1]-p[2][1]*p[0][0],
+               p[0][0]*p[1][1]-p[0][1]*p[1][0]};
+  if((e[0]<0 || e[1]<0 || e[2]<0) && (e[0]>0 || e[1]>0 || e[2]>0)) return false;
+  double det=e[0]+e[1]+e[2];
+  if(det==0) return false;
+  double distance=(e[0]*p[0][2]+e[1]*p[1][2]+e[2]*p[2][2])/det;
+  if(!(distance>std::max(0.0,double(tmin))) || distance>tmax) return false;
+  t=Float(distance); b0=Float(e[0]/det); b1=Float(e[1]/det); b2=Float(e[2]/det);
+  return true;
+}
+}
+
 const bool triangle::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("Triangle");
@@ -11,6 +39,10 @@ const bool triangle::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
   const point3f &p1 = mesh->p[v[1]];
   const point3f &p2 = mesh->p[v[2]];
   
+  Float t,b0,b1,b2;
+  if(r.segment_absorption) {
+    if(!volume_triangle_intersection(r,p0,p1,p2,t_min,t_max,t,b0,b1,b2)) return false;
+  } else {
   vec3f p0t = p0 - r.origin();
   vec3f p1t = p1 - r.origin();
   vec3f p2t = p2 - r.origin();
@@ -83,7 +115,7 @@ const bool triangle::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
 
   // Compute barycentric coordinates and $t$ value for triangle intersection
   Float invDet = 1 / det;
-  Float t = tScaled * invDet;
+  t = tScaled * invDet;
   {
     Float maxZt = MaxComponent(Abs(vec3f(p0t.xyz.z, p1t.xyz.z, p2t.xyz.z)));
     Float deltaZ = gamma(3) * maxZt;
@@ -107,15 +139,13 @@ const bool triangle::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
     }
   }
 
-  Float b0 = e0 * invDet;
-  Float b1 = e1 * invDet;
-  Float b2 = e2 * invDet;
-  point3f b0v(b0);
-  point3f b1v(b1);
-  point3f b2v(b2);
+  b0 = e0 * invDet;
+  b1 = e1 * invDet;
+  b2 = e2 * invDet;
 
-  vec3f bVec(b0, b1, b2);
 
+  }
+  point3f b0v(b0), b1v(b1), b2v(b2);
   vec3f dpdu, dpdv;
   point2f uv[3];
   GetUVs(uv);
@@ -170,6 +200,7 @@ const bool triangle::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
       alpha_miss = true;
     }
   }
+  rec.geometric_normal = unit_vector(normal);
   rec.p = pHit;
   rec.t = t;
   
@@ -249,6 +280,10 @@ const bool triangle::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
   const point3f &p1 = mesh->p[v[1]];
   const point3f &p2 = mesh->p[v[2]];
   
+  Float t,b0,b1,b2;
+  if(r.segment_absorption) {
+    if(!volume_triangle_intersection(r,p0,p1,p2,t_min,t_max,t,b0,b1,b2)) return false;
+  } else {
   vec3f p0t = p0 - r.origin();
   vec3f p1t = p1 - r.origin();
   vec3f p2t = p2 - r.origin();
@@ -312,10 +347,10 @@ const bool triangle::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
   
   // Compute barycentric coordinates and $t$ value for triangle intersection
   Float invDet = 1 / det;
-  Float b0 = e0 * invDet;
-  Float b1 = e1 * invDet;
-  Float b2 = e2 * invDet;
-  Float t = tScaled * invDet;
+  b0 = e0 * invDet;
+  b1 = e1 * invDet;
+  b2 = e2 * invDet;
+  t = tScaled * invDet;
   Float maxZt = MaxComponent(Abs(vec3f(p0t.xyz.z, p1t.xyz.z, p2t.xyz.z)));
   Float deltaZ = gamma(3) * maxZt;
   
@@ -335,6 +370,7 @@ const bool triangle::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
     ffabs(invDet);
   if (t <= deltaT) return false;
   
+  }
   vec3f dpdu, dpdv;
   point2f uv[3];
   GetUVs(uv);
@@ -387,6 +423,7 @@ const bool triangle::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
     }
   }
   rec.t = t;
+  rec.geometric_normal = unit_vector(normal);
   rec.p = pHit;
   rec.pError = gamma(7) * vec3f(xAbsSum, yAbsSum, zAbsSum);
   rec.has_bump = false;

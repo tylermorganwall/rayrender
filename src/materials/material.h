@@ -52,6 +52,9 @@ inline Float schlick_reflection(Float cosine, Float r0) {
 struct scatter_record {
   Ray specular_ray;
   bool is_specular;
+  bool is_passthrough = false;
+  bool is_transmission = false;
+  Float eta = 1; // transmitted IOR / incident IOR; NEE uses radiance transport
   point3f attenuation;
   pdf *pdf_ptr = nullptr;
   ~scatter_record() { if(pdf_ptr) delete pdf_ptr; }

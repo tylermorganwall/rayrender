@@ -59,7 +59,8 @@ const bool disk::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, ra
     rec.normal *= reverseOrientation  ? -1 : 1;
     rec.bump_normal *= reverseOrientation  ? -1 : 1;
   }
-  rec.shape = this;
+  rec.geometric_normal = rec.normal;
+    rec.shape = this;
   rec.alpha_miss = alpha_miss;
   
   return(true);
@@ -123,7 +124,8 @@ const bool disk::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, Sa
     rec.normal *= reverseOrientation  ? -1 : 1;
     rec.bump_normal *= reverseOrientation  ? -1 : 1;
   }
-  rec.shape = this;
+  rec.geometric_normal = rec.normal;
+    rec.shape = this;
   rec.alpha_miss = alpha_miss;
   
   return(true);

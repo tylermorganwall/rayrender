@@ -989,7 +989,7 @@ bool RealisticCamera::TraceLensesFromScene(const Ray &rCamera,
       if (!Refract(unit_vector(-rLens.direction()), n, etaT / etaI, &wt)) {
         return false;
       }
-      rLens.d = wt;
+      rLens = rLens.WithDirection(wt);
     }
     elementZ += element.thickness;
   }
@@ -1052,10 +1052,9 @@ bool RealisticCamera::TraceLensesFromFilm(const Ray &rCamera, Ray *rOut) const {
       if (!Refract(unit_vector(-rLens.direction()), n, etaT / etaI, &w)) {
         return false;
       }
-      rLens.d = w;
+      rLens = rLens.WithDirection(w);
     }
   }
-  rLens = Ray(rLens.origin(), rLens.direction());
   // Transform _rLens_ from lens system space back to camera space
   if (rOut) {
     static const Transform LensToCamera = Scale(1, 1, -1);
@@ -1222,7 +1221,7 @@ Float RealisticCamera::GenerateRay(const CameraSample &sample, Ray *ray2) const 
   } else {
     *ray2 = (CamTransform(*ray2));
   }
-  ray2->d = unit_vector(ray2->direction());
+  *ray2 = ray2->WithDirection(unit_vector(ray2->direction()));
   
   // Return weighting for _RealisticCamera_ ray
   Float cosTheta = unit_vector(rFilm.direction()).xyz.z;
