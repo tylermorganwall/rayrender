@@ -223,12 +223,16 @@ hierarchy structure used when rendering. Other option is "equal", which splits t
 of equal size.}
 
 \item{environment_light}{Default `NULL`. An image to be used for the background for rays that escape
-the scene. Supports both HDR (`.hdr`) and low-dynamic range (`.png`, `.jpg`) images.}
+the scene. Supports EXR, HDR, PNG, and JPEG images. For reusable scene lights and
+multiple environments, use \code{\link{infinite_light}()} and \code{\link{add_infinite_light}()}. This
+argument adds a light to any infinite lights already attached to the scene.}
 
-\item{rotate_env}{Default `0`. The number of degrees to rotate the environment map around the scene.}
+\item{rotate_env}{Default `0`. The number of degrees to rotate all infinite lights around the scene,
+in addition to their individual rotations.}
 
 \item{intensity_env}{Default `1`. The amount to increase the intensity of the environment lighting. Useful
-if using a LDR (JPEG or PNG) image as an environment map.}
+if using a LDR (JPEG or PNG) image as an environment map. Applies only to the
+`environment_light` argument; scene lights have their own intensity.}
 
 \item{transparent_background}{Default `FALSE`. If `TRUE`, any initial camera rays that escape the scene
 will be marked as transparent in the final image. If for a pixel some rays escape and others hit a surface,

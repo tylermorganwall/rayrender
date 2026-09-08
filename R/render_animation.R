@@ -85,8 +85,10 @@ animation_default_plot_scene = function(
 #' tonemapping the image. Pass in a matrix to specify the convolution kernel manually, or a positive number
 #' to control the intensity of the bloom (higher number = more bloom).
 #' @param environment_light Default `NULL`. An image to be used for the background for rays that escape
-#' the scene. Supports both HDR (`.hdr`) and low-dynamic range (`.png`, `.jpg`) images.
-#' @param rotate_env Default `0`. The number of degrees to rotate the environment map around the scene.
+#' the scene. Supports EXR, HDR, PNG, and JPEG images. Scene lights added with
+#' \code{\link{add_infinite_light}()} are included in every frame, together with this image.
+#' @param rotate_env Default `0`. The number of degrees to rotate all infinite lights around the scene,
+#' in addition to their individual rotations.
 #' @param intensity_env Default `1`. The amount to increase the intensity of the environment lighting. Useful
 #' if using a LDR (JPEG or PNG) image as an environment map.
 #' @param debug_channel Default `none`. If `depth`, function will return a depth map of rays into the scene
@@ -564,7 +566,7 @@ render_animation_camera = function(
     parallel = parallel,
     bvh_type = bvh_type,
     environment_light = environment_light,
-    rotate_env = rotate_env,
+    rotate_env = -rotate_env,
     intensity_env = intensity_env,
     debug_channel = debug_channel,
     plot_scene = plot_scene,
@@ -737,7 +739,7 @@ render_camera_batch = function(
     parallel = parallel,
     bvh_type = bvh_type,
     environment_light = environment_light,
-    rotate_env = rotate_env,
+    rotate_env = -rotate_env,
     intensity_env = intensity_env,
     debug_channel = debug_channel,
     plot_scene = plot_scene,

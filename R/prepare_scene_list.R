@@ -134,6 +134,7 @@ prepare_scene_list = function(
   }
   backgroundhigh = convert_color(backgroundhigh)
   backgroundlow = convert_color(backgroundlow)
+  infinite_lights = ray_scene_infinite_lights(scene)
 
   if (!tonemap %in% c("gamma", "reinhard", "uncharted", "hbd", "raw")) {
     stop("tonemap value ", tonemap, " not recognized")
@@ -143,7 +144,8 @@ prepare_scene_list = function(
     !scene_info$any_light &&
       !(tolower(integrator_type) == "nee" && medium_features$emissive) &&
       is.null(ambient_light) &&
-      is.null(environment_light)
+      is.null(environment_light) &&
+      !length(infinite_lights)
   ) {
     ambient_light = TRUE
   } else {
@@ -156,7 +158,7 @@ prepare_scene_list = function(
   if (!is.null(environment_light) && intensity_env > 0) {
     hasbackground = TRUE
     backgroundstring = path.expand(environment_light)
-    if (!file.exists(environment_light)) {
+    if (!file.exists(backgroundstring)) {
       hasbackground = FALSE
       warning(
         "file '",
@@ -164,7 +166,7 @@ prepare_scene_list = function(
         "' cannot be found, not using background image."
       )
     }
-    if (dir.exists(environment_light)) {
+    if (dir.exists(backgroundstring)) {
       stop(
         "environment_light argument '",
         environment_light,
@@ -175,6 +177,17 @@ prepare_scene_list = function(
     hasbackground = FALSE
     backgroundstring = ""
   }
+  if (hasbackground) {
+    infinite_lights = c(
+      infinite_lights,
+      list(infinite_light(
+        backgroundstring,
+        intensity = intensity_env,
+        name = "legacy_environment"
+      ))
+    )
+  }
+  hasbackground = length(infinite_lights) > 0
 
   #scale handler
   if (length(lookfrom) != 3) {
@@ -323,6 +336,10 @@ prepare_scene_list = function(
   render_info$background = backgroundstring
   render_info$rotate_env = rotate_env
   render_info$intensity_env = intensity_env
+  render_info$infinite_lights = unname(lapply(
+    infinite_lights,
+    prepare_infinite_light
+  ))
   render_info$verbose = verbose
   render_info$debug_channel = debug_channel
   render_info$plot_scene = plot_scene

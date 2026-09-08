@@ -44,10 +44,16 @@ next_preview_snapshot_filename = function(filename = NA_character_) {
 #' @keywords internal
 save_preview_snapshot = function(image, filename = NA_character_) {
   snapshot_filename = next_preview_snapshot_filename(filename)
+  # The native preview supplies display-encoded RGB pixels. Identify their
+  # primaries and decode once, rather than treating an untagged array as ACEScg.
+  image = rayimage::ray_read_image(
+    image,
+    source_linear = FALSE,
+    assume_colorspace = rayimage::CS_SRGB
+  )
   rayimage::ray_write_image(
     image,
-    snapshot_filename,
-    write_linear = TRUE
+    snapshot_filename
   )
   message("Saved preview snapshot: ", snapshot_filename)
   invisible(snapshot_filename)

@@ -850,7 +850,7 @@ collect_sources = function(subdir, pattern) {
 
 DIR_SOURCES = sort(list.files("src", pattern = "\\.cpp$", full.names = FALSE))
 SUBDIR_SOURCES = sort(unlist(lapply(
-  c("core", "hitables", "materials", "math", "utils", "volumes"),
+  c("core", "hitables", "lights", "materials", "math", "utils", "volumes"),
   collect_sources,
   pattern = "\\.cpp$"
 )))

@@ -81,9 +81,11 @@ generate_ground(depth = -0.6) |>
   add_object(pig()) |>
   render_scene(lookfrom = c(8, 5, 8), lookat = c(0, 1, 0), samples = 64)
 
-generate_ground(depth = -0.6) |>
+generate_ground(depth = -0.6, material = glossy(color="white")) |>
   add_object(pig(ski = TRUE)) |>
-  render_scene(lookfrom = c(8, 5, 8), lookat = c(0, 1, 0), samples = 64)
+  render_scene(lookfrom = c(8, 5, 8),
+               lookat = c(0, 1, 0),
+               fov=40,samples = 64)
 
 generate_ground(depth = -0.6) |>
   add_object(pig(spider = TRUE)) |>

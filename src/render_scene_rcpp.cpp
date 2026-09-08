@@ -791,9 +791,7 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
   bool progress_bar = as<bool>(render_info["progress_bar"]);
   int numbercores = as<int>(render_info["numbercores"]);
   bool hasbackground = as<bool>(render_info["hasbackground"]);
-  std::string background = as<std::string>(render_info["background"]);
   Float rotate_env = as<Float>(render_info["rotate_env"]);
-  Float intensity_env = as<Float>(render_info["intensity_env"]);
   bool verbose = as<bool>(render_info["verbose"]);
   int debug_channel = as<int>(render_info["debug_channel"]);
   Float min_variance = as<Float>(render_info["min_variance"]);
@@ -941,7 +939,6 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
   print_time(verbose, "Generated Camera" );
 
 
-  int nx1, ny1, nn1;
 
   std::vector<Float* > textures;
   std::vector<unsigned char * > alpha_textures;
@@ -1018,7 +1015,6 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
   std::shared_ptr<texture> background_texture = nullptr;
   std::shared_ptr<material> background_material = nullptr;
   std::shared_ptr<hitable> background_sphere = nullptr;
-  Float *background_texture_data = nullptr;
 
   //Background rotation
   Matrix4x4 Identity;
@@ -1032,52 +1028,11 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
   Transform* BackgroundTransform = transformCacheBg.Lookup(BackgroundAngle);
   Transform* BackgroundTransformInv = transformCacheBg.Lookup(BackgroundAngle.GetInverseMatrix());
   if(hasbackground) {
-    background_texture_data = texCache.LookupFloat(background, nx1, ny1, nn1, 3);
-    // nn1 = 3;
-    // texture_bytes += nx1 * ny1 * nn1;
-    
-    if(background_texture_data) {
-      bool has_env_light = false;
-      const std::size_t env_size = static_cast<std::size_t>(nx1) *
-        static_cast<std::size_t>(ny1) *
-        static_cast<std::size_t>(nn1);
-      for(std::size_t i = 0; i < env_size; i++) {
-        if(background_texture_data[i] > 0) {
-          has_env_light = true;
-          break;
-        }
-      }
-      if(has_env_light) {
-        background_texture = std::make_shared<image_texture_float>(background_texture_data, nx1, ny1, nn1,
-                                                                   1, 1, intensity_env);
-        background_material = std::make_shared<diffuse_light>(background_texture, 1.0, false);
-        background_sphere = std::make_shared<InfiniteAreaLight>(nx1, ny1, world_radius*2, convert_to_point3(world_center),
-                                                                background_texture, background_material,
-                                                                BackgroundTransform,
-                                                                BackgroundTransformInv, false);
-      } else {
-        hasbackground = false;
-        ambient_light = true;
-        backgroundhigh = point3f(FLT_MIN,FLT_MIN,FLT_MIN);
-        backgroundlow = point3f(FLT_MIN,FLT_MIN,FLT_MIN);
-        background_texture = std::make_shared<gradient_texture>(backgroundlow, backgroundhigh, false, false);
-        background_material = std::make_shared<diffuse_light>(background_texture, 1.0, false);
-        background_sphere = std::make_shared<InfiniteAreaLight>(100, 100, world_radius*2, convert_to_point3(world_center),
-                                                                background_texture, background_material,
-                                                                BackgroundTransform,BackgroundTransformInv,false);
-      }
-    } else {
-      Rcpp::Rcout << "Failed to load background image at " << background << "\n";
-      hasbackground = false;
-      ambient_light = true;
-      backgroundhigh = point3f(FLT_MIN,FLT_MIN,FLT_MIN);
-      backgroundlow = point3f(FLT_MIN,FLT_MIN,FLT_MIN);
-      background_texture = std::make_shared<gradient_texture>(backgroundlow, backgroundhigh, false, false);
-      background_material = std::make_shared<diffuse_light>(background_texture, 1.0, false);
-      background_sphere = std::make_shared<InfiniteAreaLight>(100, 100, world_radius*2, convert_to_point3(world_center),
-                                                              background_texture, background_material,
-                                                              BackgroundTransform,BackgroundTransformInv,false);
-    }
+    auto infinite_lights = BuildInfiniteLights(
+        Rcpp::as<Rcpp::List>(render_info["infinite_lights"]), texCache);
+    background_sphere = std::make_shared<InfiniteAreaLight>(
+        infinite_lights, world_radius * 2, convert_to_point3(world_center),
+        BackgroundTransform, BackgroundTransformInv);
   } else if(ambient_light) {
     //Check if both high and low are black, and set to FLT_MIN
     if(backgroundhigh.length() == 0 && backgroundlow.length() == 0) {

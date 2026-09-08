@@ -806,6 +806,18 @@ ray_scene_cameras = function(scene) {
 
 #' @keywords internal
 preserve_ray_scene_attrs = function(newscene, scene, objects = NULL) {
+  scene_lights = ray_scene_infinite_lights(scene)
+  object_lights = ray_scene_infinite_lights(objects)
+  duplicates = intersect(names(scene_lights), names(object_lights))
+  if (length(duplicates)) {
+    stop(
+      "Duplicate infinite light names found while combining scenes: ",
+      paste(duplicates, collapse = ", "),
+      call. = FALSE
+    )
+  }
+  lights = c(scene_lights, object_lights)
+  attr(newscene, "ray_infinite_lights") = if (length(lights)) lights else NULL
   if (!is.null(attr(scene, "cornell")) || !is.null(attr(objects, "cornell"))) {
     attr(newscene, "cornell") = TRUE
   }

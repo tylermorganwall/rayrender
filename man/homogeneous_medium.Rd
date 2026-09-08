@@ -53,7 +53,27 @@ Describe a medium independently of the surface that contains it. Attach it to
 closed objects with [set_medium()] and render with `integrator_type = "nee"`.
 }
 \examples{
-fog = homogeneous_medium(sigma_s = 0.1, g = 0.5)
-scene = set_medium(cube(), fog)
-# render_scene(scene, integrator_type = "nee")
+fog = homogeneous_medium(sigma_s = 5, g = 1)
+scene = set_medium(cube(width=1.2), fog) |>
+add_object(sphere(y=1,x=1,radius=0.3,material=light(intensity=20))) |>
+add_object(generate_studio(material=diffuse(color="dodgerblue")	))
+render_scene(scene, integrator_type = "nee", sample_method="sobol")
+
+# Foggy cornell box
+fog = homogeneous_medium(sigma_s = 0.1, sigma_a = 0.1, g = 0, density_scale = 0.01, temperature = 0)
+ scene = generate_cornell(
+ lightwidth = 10,
+ lightdepth = 10,
+ lightintensity = 3000
+) |>
+ add_object(set_medium(
+   cube(x = 555 / 2, y = 555 / 2, z = 555 / 2, width = 554),
+   fog
+ ))
+render_scene(
+ scene,
+ integrator_type = "nee",
+ fov = 40,
+ samples = 256
+)
 }

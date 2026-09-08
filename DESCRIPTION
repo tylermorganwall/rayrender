@@ -28,6 +28,7 @@ Imports:
     pillar
 Suggests:
     ambient,
+    skymodelr,
     sf,
     spData,
     dplyr,

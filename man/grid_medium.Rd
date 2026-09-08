@@ -61,6 +61,10 @@ correspond to x, y, z, with x varying fastest. Outside `bounds` the medium is
 vacuum. Inside the bounds, interpolation clamps to the outermost samples.
 }
 \examples{
-smoke = grid_medium(array(seq(0, 1, length.out = 64), c(4, 4, 4)))
-scene = set_medium(cube(), smoke)
+noise_field = ambient::noise_perlin(dim = c(300, 300, 300), frequency=0.02,octaves=8, gain=0.1)
+noise_field[noise_field < 0] = 0
+smoke = grid_medium(noise_field, g=0.2, sigma_a = 10)
+scene = set_medium(cube(), smoke) |>
+  add_object(sphere(x=3, material=light(intensity=10)))
+render_scene(scene, integrator_type = "nee")
 }
