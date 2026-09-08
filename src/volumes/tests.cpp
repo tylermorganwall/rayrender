@@ -1,6 +1,7 @@
 #ifdef NOT_CRAN
 #include "../hitables/box.h"
 #include "../hitables/instance.h"
+#include "../hitables/infinite_area_light.h"
 #include "../hitables/sphere.h"
 #include "../materials/material.h"
 #include "../materials/texture.h"
@@ -59,6 +60,30 @@ Rcpp::List grid_description(const Rcpp::NumericVector &values, int nx, int ny, i
 }
 } // namespace
 context("Deterministic volume picking") {
+  test_that("thin media reach the background while visible matter takes priority") {
+    PickingScene s;
+    s.Add(std::make_shared<Medium>(medium_description(.01)), 1);
+    auto texture = std::make_shared<constant_texture>(point3f(1));
+    auto light = std::make_shared<diffuse_light>(texture, 1, false);
+    s.world.add(std::make_shared<InfiniteAreaLight>(16, 8, 100, point3f(0), texture,
+                                                   light, &s.identity, &s.identity, false));
+    Ray ray(point3f(0, 0, -3), vec3f(0, 0, 1));
+    auto target = PickRay(ray, &s.world, &s.scene);
+    expect_true(bool(target));
+    expect_true(target->background);
+    expect_false(target->volume);
+    s.Add(std::make_shared<Medium>(medium_description(1)), .5);
+    target = PickRay(ray, &s.world, &s.scene);
+    expect_true(target->volume);
+    expect_false(target->background);
+    s.world.add(std::make_shared<sphere>(.75, s.mat, nullptr, nullptr,
+                                        &s.identity, &s.identity, false));
+    target = PickRay(ray, &s.world, &s.scene);
+    expect_false(target->background);
+    expect_false(target->volume);
+    expect_true(target->p[2] == Approx(-.75));
+    expect_false(bool(PickRay(ray, &s.world, &s.scene, .15, [] { return true; })));
+  }
   test_that("homogeneous RGB opacity uses world distance and repeats exactly") {
     PickingScene s;
     auto description = medium_description();

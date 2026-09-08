@@ -42,8 +42,10 @@
 #' reaches 15\%, or the first ordinary surface if reached sooner. Picking integrates extinction
 #' deterministically with a fixed shutter sample and a centered lens sample. Thin or empty regions
 #' allow selection of surfaces behind them; invisible container faces are skipped. Clicking the
-#' background without reaching this opacity leaves the camera unchanged. The selected point remains
-#' the orbit center when rotating. Right clicking preserves the focal distance.
+#' background without reaching this opacity turns perspective and panoramic cameras toward that
+#' direction, preserving focal distance and orbit radius. Orthographic background clicks leave the
+#' view unchanged. Selected surface and volume points remain the orbit center when rotating.
+#' Right clicking preserves the focal distance.
 #' Some options aren't available for all cameras. When using a realistic camera,
 #' the aperture and field of view cannot be changed from their initial settings.
 #' @param deferred_render Default `FALSE`. If `TRUE` and interactive preview is enabled, rayrender will keep

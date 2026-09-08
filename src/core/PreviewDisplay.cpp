@@ -11,6 +11,7 @@
 #include <stdexcept>
 
 #ifdef NOT_CRAN
+#include "../hitables/infinite_area_light.h"
 #include "../hitables/sphere.h"
 #include "../materials/material.h"
 #include <testthat.h>
@@ -95,10 +96,22 @@ bool PreviewDisplay::PickCameraTarget(Float u, Float v, bool update_focus, hitab
   };
   try {
     auto target = PickRay(ray, world, volume_scene.get(), .15, cancel);
-    if(!target || (target->p - cam->get_origin()).length() <= 0) {
+    if(!target) {
       return false;
     }
-    if(update_focus && fov != 0 && fov != 360) {
+    if(target->background) {
+      // Orthographic rays all look in the same direction. Perspective and
+      // panoramic background clicks turn the camera while preserving focus
+      // and orbit radius, independent of the environment proxy sphere's size.
+      if(fov == 0) return false;
+      Float radius = std::max((PreviewCameraLookat(cam) - cam->get_origin()).length(),
+                              Float(.001));
+      target->p = cam->get_origin() + unit_vector(ray.direction()) * radius;
+    }
+    if((target->p - cam->get_origin()).length() <= 0) {
+      return false;
+    }
+    if(update_focus && !target->background && fov != 0 && fov != 360) {
       cam->update_focal_distance((target->p - cam->get_origin()).length() -
                                 cam->get_focal_distance());
     }
@@ -3125,6 +3138,36 @@ std::unique_ptr<PreviewDisplay> MakeTestPreviewDisplay(RayCamera& cam,
 }
 
 context("Preview picking and orbit targets") {
+  test_that("background clicks turn the camera and retain focus and orbit radius") {
+    Transform identity;
+    auto texture = std::make_shared<constant_texture>(point3f(1));
+    auto light = std::make_shared<ImageInfiniteLight>(texture, 16, 8, 30);
+    for(bool update_focus : {false, true}) {
+      for(Float radius : {Float(100), Float(10000)}) {
+        hitable_list world;
+        world.add(std::make_shared<InfiniteAreaLight>(light, radius, point3f(0),
+                                                      &identity, &identity));
+        camera cam(point3f(0, 0, -10), point3f(0), vec3f(0, 1, 0),
+                   60.f, 1.f, 0.f, 5.f, 0.f, 1.f, 1.f);
+        auto display = MakeTestPreviewDisplay(cam, identity);
+        point3f origin = cam.get_origin();
+        vec3f expected = unit_vector(cam.get_ray(.7, .65, point3f(0), .5).direction());
+        expect_true(display->PickCameraTarget(.7, .65, update_focus, &world));
+        expect_true((cam.get_origin() - origin).length() == 0);
+        expect_true((cam.get_w() - expected).length() < 1e-5);
+        expect_true(cam.get_focal_distance() == 5);
+        point3f pivot = cam.get_lookat();
+        expect_true((pivot - origin).length() == Approx(10));
+        cam.update_position(cam.get_u(), true);
+        expect_true((cam.get_lookat() - pivot).length() == 0);
+        expect_true((cam.get_origin() - pivot).length() == Approx(10));
+        expect_true(dot(unit_vector(pivot - cam.get_origin()), cam.get_w()) > .99999);
+        Rcpp::List keyframe = display->CreateCurrentKeyframe(0);
+        expect_true(Rcpp::as<Float>(keyframe["dx"]) == pivot[0]);
+        expect_true(Rcpp::as<Float>(keyframe["focal"]) == 5);
+      }
+    }
+  }
   test_that("volume clicks update the pivot and sparse misses leave the camera untouched") {
     Transform identity;
     camera cam(point3f(0, 0, -10), point3f(0), vec3f(0, 1, 0),

@@ -145,8 +145,10 @@ std::optional<RayPick> PickRay(const Ray &input, hitable *world, const VolumeSce
       if (t)
         return RayPick{At(ray, *t), true};
     }
-    if (!hit || h.infinite_area_hit || (h.shape && h.shape->GetName() == "EnvironmentLight"))
+    if (!hit)
       return {};
+    if (h.infinite_area_hit || (h.shape && h.shape->GetName() == "EnvironmentLight"))
+      return RayPick{h.p, false, true};
     if (h.medium_boundary && !h.medium_boundary->keep_surface) {
       state.Cross(h, ray.d);
       ray = Ray(OffsetMediumOrigin(h, ray.d), ray.d, ray.time());
