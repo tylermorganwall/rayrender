@@ -20,6 +20,22 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
+// query_prague_atmosphere
+Rcpp::List query_prague_atmosphere(Rcpp::List description, Rcpp::NumericMatrix positions, Rcpp::NumericMatrix directions, Rcpp::NumericVector distances, bool sample, bool build_sampler);
+RcppExport SEXP _rayrender_query_prague_atmosphere(SEXP descriptionSEXP, SEXP positionsSEXP, SEXP directionsSEXP, SEXP distancesSEXP, SEXP sampleSEXP, SEXP build_samplerSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::List >::type description(descriptionSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type positions(positionsSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type directions(directionsSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type distances(distancesSEXP);
+    Rcpp::traits::input_parameter< bool >::type sample(sampleSEXP);
+    Rcpp::traits::input_parameter< bool >::type build_sampler(build_samplerSEXP);
+    rcpp_result_gen = Rcpp::wrap(query_prague_atmosphere(description, positions, directions, distances, sample, build_sampler));
+    return rcpp_result_gen;
+END_RCPP
+}
 // has_gui_capability
 bool has_gui_capability();
 RcppExport SEXP _rayrender_has_gui_capability() {
@@ -132,6 +148,7 @@ RcppExport SEXP run_testthat_tests(SEXP);
 
 static const R_CallMethodDef CallEntries[] = {
     {"_rayrender_PrintClassSizes", (DL_FUNC) &_rayrender_PrintClassSizes, 0},
+    {"_rayrender_query_prague_atmosphere", (DL_FUNC) &_rayrender_query_prague_atmosphere, 6},
     {"_rayrender_has_gui_capability", (DL_FUNC) &_rayrender_has_gui_capability, 0},
     {"_rayrender_cppdef_HAS_OIDN", (DL_FUNC) &_rayrender_cppdef_HAS_OIDN, 0},
     {"_rayrender_cppdef_HAS_NEON", (DL_FUNC) &_rayrender_cppdef_HAS_NEON, 0},

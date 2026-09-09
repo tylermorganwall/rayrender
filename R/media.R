@@ -22,8 +22,8 @@
 #'   medium coordinates into the containing object's local coordinates.
 #' @return A reusable `ray_medium` description.
 #' @export
-#' @examples
-#' fog = homogeneous_medium(sigma_s = 5, g = 1)
+#' @examplesIf interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")
+#' fog = homogeneous_medium(sigma_s = 5, g = 0.65)
 #' scene = set_medium(cube(width=1.2), fog) |>
 #' add_object(sphere(y=1,x=1,radius=0.3,material=light(intensity=20))) |>
 #' add_object(generate_studio(material=diffuse(color="dodgerblue")	))

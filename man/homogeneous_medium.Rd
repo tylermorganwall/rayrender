@@ -53,7 +53,8 @@ Describe a medium independently of the surface that contains it. Attach it to
 closed objects with [set_medium()] and render with `integrator_type = "nee"`.
 }
 \examples{
-fog = homogeneous_medium(sigma_s = 5, g = 1)
+\dontshow{if (interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")) withAutoprint(\{ # examplesIf}
+fog = homogeneous_medium(sigma_s = 5, g = 0.65)
 scene = set_medium(cube(width=1.2), fog) |>
 add_object(sphere(y=1,x=1,radius=0.3,material=light(intensity=20))) |>
 add_object(generate_studio(material=diffuse(color="dodgerblue")	))
@@ -76,4 +77,5 @@ render_scene(
  fov = 40,
  samples = 256
 )
+\dontshow{\}) # examplesIf}
 }

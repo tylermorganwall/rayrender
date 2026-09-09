@@ -11,7 +11,7 @@ Maintainer: Tyler Morgan-Wall <tylermw@gmail.com>
 Description: Render scenes using pathtracing. Build 3D scenes out of spheres, cubes, planes, disks, triangles, cones, curves, line segments, cylinders, ellipsoids, and 3D models in the 'Wavefront' OBJ file format or the PLY Polygon File Format. Supports several material types, textures, multicore rendering, and tone-mapping. Based on the "Ray Tracing in One Weekend" book series. Peter Shirley (2018) <https://raytracing.github.io>.
 License: GPL-3
 Copyright: file inst/COPYRIGHTS 
-Depends: R (>= 4.1.0)
+Depends: R (>= 4.3.0)
 Imports: 
     Rcpp (>= 1.0.0),
     parallel,
@@ -25,10 +25,10 @@ Imports:
     withr,
     vctrs,
     cli,
-    pillar
+    pillar,
+    skymodelr (>= 0.6.1),
 Suggests:
     ambient,
-    skymodelr,
     sf,
     spData,
     dplyr,
@@ -38,7 +38,8 @@ Suggests:
     rayshader (>= 0.38.13),
     xml2,
     rgl
-LinkingTo: Rcpp, RcppThread (>= 2.4.0), progress, spacefillr (>= 0.3.0), testthat, libopenexr (>= 3.4.4), libimath (>= 3.2.2)
+LinkingTo: Rcpp, RcppThread (>= 2.4.0), progress, spacefillr (>= 0.3.0), testthat, libopenexr (>= 3.4.4), libimath (>= 3.2.2), skymodelr (>= 0.6.0.9000)
+Remotes: tylermorganwall/skymodelr
 URL: https://www.rayrender.net, https://github.com/tylermorganwall/rayrender, http://www.rayrender.net/
 SystemRequirements: C++20
 Biarch: true

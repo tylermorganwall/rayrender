@@ -1,11 +1,12 @@
 #ifndef BVHH
 #define BVHH
+#include "../hitables/hitable.h"
+#include "../math/aabb.h"
+#include "../math/simd.h"
+#include "../utils/assert.h"
+#include <atomic>
 #include <memory>
 #include <span>
-#include "../utils/assert.h"
-#include "../hitables/hitable.h"
-#include "../math/simd.h"
-#include "../math/aabb.h"
 
 struct BVHPrimitive {
     BVHPrimitive() : primitiveIndex(0), bounds(aabb()) {};

@@ -57,6 +57,25 @@ prepare_scene_list = function(
   validate_shutter_speed(shutter_speed)
   #Process images, convert shapes and materials to enums, extract positions, and
   medium_features = scene_medium_features(scene)
+  atmospheric_lights = vapply(
+    ray_scene_infinite_lights(scene),
+    function(light) {
+      isTRUE(light$atmosphere)
+    },
+    logical(1)
+  )
+  if (sum(atmospheric_lights) > 1L) {
+    stop(
+      "A scene can contain only one sky_light(atmosphere = TRUE).",
+      call. = FALSE
+    )
+  }
+  if (any(atmospheric_lights) && tolower(integrator_type) != "nee") {
+    stop(
+      'Atmospheric sky lights require integrator_type = "nee".',
+      call. = FALSE
+    )
+  }
   if (medium_features$attached && tolower(integrator_type) != "nee") {
     stop(
       'Medium attachments require integrator_type = "nee". Use legacy material fog with "rtiow" or "basic".',
@@ -327,6 +346,7 @@ prepare_scene_list = function(
 
   render_info = list()
   render_info$ambient_light = ambient_light
+  render_info$has_atmosphere = any(atmospheric_lights)
   render_info$bghigh = backgroundhigh
   render_info$bglow = backgroundlow
   render_info$clampval = clamp_value
@@ -336,10 +356,7 @@ prepare_scene_list = function(
   render_info$background = backgroundstring
   render_info$rotate_env = rotate_env
   render_info$intensity_env = intensity_env
-  render_info$infinite_lights = unname(lapply(
-    infinite_lights,
-    prepare_infinite_light
-  ))
+  render_info$infinite_lights = prepare_scene_infinite_lights(infinite_lights)
   render_info$verbose = verbose
   render_info$debug_channel = debug_channel
   render_info$plot_scene = plot_scene

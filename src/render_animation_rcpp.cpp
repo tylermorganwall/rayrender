@@ -362,6 +362,10 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
                                                   instance_importance_sampled,
                                                   texture_idx,
                                                   verbose, rng);
+  bool has_atmosphere = render_info.containsElementNamed("has_atmosphere") &&
+                        Rcpp::as<bool>(render_info["has_atmosphere"]);
+  if (has_atmosphere && imp_sample_objects.volume_scene)
+    imp_sample_objects.volume_scene->has_media = true;
   bool has_media = imp_sample_objects.volume_scene && imp_sample_objects.volume_scene->has_media;
   print_time(verbose, "Built Scene BVH" );
   
@@ -394,6 +398,8 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
   if(hasbackground) {
     auto infinite_lights = BuildInfiniteLights(
         Rcpp::as<Rcpp::List>(render_info["infinite_lights"]), texCache);
+    if (imp_sample_objects.volume_scene)
+      imp_sample_objects.volume_scene->atmosphere = infinite_lights->GetAtmosphere();
     background_sphere = std::make_shared<InfiniteAreaLight>(
         infinite_lights, world_radius * 2, convert_to_point3(world_center),
         BackgroundTransform, BackgroundTransformInv);

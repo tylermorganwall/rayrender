@@ -40,8 +40,10 @@ Prague model: \code{altitude}, \code{visibility}, \code{albedo}, \code{wide_spec
 \code{number_cores}, and the \code{prague_rgb_correction} options accepted by
 \code{skymodelr::calculate_sky_values()}. \code{hosek = FALSE} is accepted;
 \code{hosek = TRUE} is unsupported because these lights use per-direction queries.
-Defaults match that function. Altitude describes one observer for the whole
-light; radiance does not vary with a scene interaction's altitude.}
+Defaults match that function. Without a native atmospheric sky, altitude
+describes one observer for the whole light. With \code{\link[=sky_light]{sky_light()}}'s
+\code{atmosphere = TRUE}, a missing altitude uses that sky's reference altitude
+for ephemeris placement; atmospheric filtering uses each interaction's position.}
 
 \item{resolution}{Default \code{256} for the Sun and \code{1024} for the Moon. Target
 disk image width and height in pixels, at least 16. The Moon's padded image is
@@ -57,7 +59,9 @@ same convention as \code{\link[=infinite_light]{infinite_light()}}.}
 
 \item{moon_args}{Default \code{list()}. Named options for skymodelr's Moon routines:
 \code{earthshine = TRUE}, \code{earthshine_albedo = 0.19},
-\code{solar_irradiance_w_m2 = 1300}, and \code{moon_extinction_kV = 0.172}.}
+\code{solar_irradiance_w_m2 = 1300}, and \code{moon_extinction_kV = 0.172}.
+Native atmospheric scenes ignore \code{moon_extinction_kV}, using Prague
+transmission instead.}
 }
 \value{
 A \code{ray_infinite_light} description.
@@ -77,6 +81,9 @@ Requires skymodelr and its Prague data. Install datasets with
 Pair a Sun disk with \code{sky_light(..., sky_args = list(hosek = FALSE, render_mode = "atmosphere"))} to exclude the sky map's rasterized Sun. Leave
 \code{moon = FALSE} in that sky when adding a Moon disk. Lights add radiance; they
 do not eclipse or occlude each other, and adding a second copy doubles its light.
+With \code{sky_light(atmosphere = TRUE)}, an explicit Sun automatically replaces
+the built-in Sun; there is no need to change \code{render_mode}. The clear-air sky
+and haze retain that sky light's own location, time, rotation, and intensity.
 
 Both lights use north at world +Z, east at world -X, and up at world +Y,
 matching \code{\link[=sky_light]{sky_light()}}. They have no parallax and add no scene geometry.
@@ -90,6 +97,19 @@ angular diameter. Moon radiance preserves skymodelr's phase-dependent total
 irradiance and atmospheric extinction, with its spectral RGB and atmospheric
 tint. Earthshine is part of the generated phase texture. These are radiance
 images; exposure and tone mapping are applied only by the final render.
+
+With a native atmospheric sky, preparation automatically requests
+\code{atmospheric_attenuation = FALSE} through skymodelr's public disk generators.
+Sun radiance and lunar phase, surface detail, and earthshine are generated
+before atmospheric filtering. The renderer applies the Sun's spectrum or the
+Moon's reference spectrum to Prague transmission along each light direction.
+Spherical Earth visibility clips each direction, so a partially set disk can
+illuminate high clouds while being hidden from the ground. Texture detail
+remains independent of the sky sampling resolution. Skymodelr must support
+the new argument. Without a native atmosphere, the existing fixed-observer
+attenuation and geometric horizon clipping remain in effect.
+The precomputed clear-air haze is Sun-driven; lunar atmospheric in-scattering
+and halos are not modeled. See \code{\link[=sky_light]{sky_light()}} for the model's supported domain.
 }
 \examples{
 \dontshow{if (interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")) withAutoprint(\{ # examplesIf}

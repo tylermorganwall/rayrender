@@ -3,6 +3,7 @@
 #include "../hitables/hitablelist.h"
 #include "lights.h"
 #include "medium.h"
+#include "../lights/atmosphere.h"
 #include <atomic>
 #include <cstdlib>
 #include <functional>
@@ -82,6 +83,8 @@ public:
   uint64_t BoundaryCount() const { return boundary_count; }
   hitable_list boundaries;
   std::shared_ptr<VolumeLightSampler> light_sampler;
+  // Owned by the scene's infinite light collection; immutable during a render.
+  const Atmosphere *atmosphere = nullptr;
   using MediumCache = std::unordered_map<SEXP, std::shared_ptr<const Medium>>;
   std::shared_ptr<MediumCache> medium_cache = std::make_shared<MediumCache>();
   std::shared_ptr<const Medium> GetMedium(const Rcpp::List &description) {

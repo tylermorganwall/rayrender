@@ -5,6 +5,10 @@ PrintClassSizes <- function() {
     invisible(.Call(`_rayrender_PrintClassSizes`))
 }
 
+query_prague_atmosphere <- function(description, positions, directions, distances, sample = FALSE, build_sampler = FALSE) {
+    .Call(`_rayrender_query_prague_atmosphere`, description, positions, directions, distances, sample, build_sampler)
+}
+
 has_gui_capability <- function() {
     .Call(`_rayrender_has_gui_capability`)
 }

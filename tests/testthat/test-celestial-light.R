@@ -198,3 +198,71 @@ test_that("native disks preserve angular coverage and additive backgrounds in al
     expect_equal(as.numeric(transparent[,, 4]), rep(0, 16))
   }
 })
+
+
+test_that('unattenuated disk metadata and caches stay separate from static disks', {
+  skip_if_not_installed('skymodelr')
+  flags = logical()
+  local_mocked_bindings(
+    generate_sun_disk = function(atmospheric_attenuation = TRUE, ...) {
+      flags <<- c(flags, atmospheric_attenuation)
+      list(
+        image = array(if (atmospheric_attenuation) 1 else 2, c(16, 16, 3)),
+        azimuth_deg = 0,
+        elevation_deg = -1,
+        angular_diameter_deg = .53,
+        projection = 'rectilinear',
+        atmospheric_attenuation = atmospheric_attenuation
+      )
+    },
+    .package = 'skymodelr'
+  )
+  sun = sun_light(
+    0,
+    0,
+    as.POSIXct('2026-01-04', tz = 'UTC') + as.numeric(Sys.time()) / 1e6,
+    resolution = 16
+  )
+  static = prepare_celestial_light(sun)
+  native = prepare_celestial_light(sun, atmospheric_attenuation = FALSE)
+  expect_identical(flags, c(TRUE, FALSE))
+  expect_true(static$clip_horizon)
+  expect_false(native$clip_horizon)
+  expect_false(native$atmospheric_attenuation)
+  expect_equal(native$radiance_spectrum, 'sun')
+  expect_false(identical(static$filename, native$filename))
+  expect_gt(
+    mean(rayimage::ray_read_image(native$filename)[,, 1:3]),
+    mean(rayimage::ray_read_image(static$filename)[,, 1:3])
+  )
+})
+
+test_that("atmospheric scenes require a generator that actually removes attenuation", {
+  skip_if_not_installed("skymodelr")
+  sun = sun_light(0, 0, as.POSIXct("2026-02-05", tz = "UTC"), resolution = 16)
+  local_mocked_bindings(
+    generate_sun_disk = function(datetime, lat, lon) NULL,
+    .package = "skymodelr"
+  )
+  expect_error(
+    prepare_celestial_light(sun, atmospheric_attenuation = FALSE),
+    "Update skymodelr.*atmospheric_attenuation"
+  )
+  local_mocked_bindings(
+    generate_sun_disk = function(...) {
+      list(
+        image = array(1, c(16, 16, 3)),
+        azimuth_deg = 0,
+        elevation_deg = 10,
+        angular_diameter_deg = .53,
+        projection = "rectilinear",
+        atmospheric_attenuation = TRUE
+      )
+    },
+    .package = "skymodelr"
+  )
+  expect_error(
+    prepare_celestial_light(sun, atmospheric_attenuation = FALSE),
+    "did not return an unattenuated celestial disk"
+  )
+})

@@ -16,8 +16,10 @@
 #' `number_cores`, and the `prague_rgb_correction` options accepted by
 #' `skymodelr::calculate_sky_values()`. `hosek = FALSE` is accepted;
 #' `hosek = TRUE` is unsupported because these lights use per-direction queries.
-#' Defaults match that function. Altitude describes one observer for the whole
-#' light; radiance does not vary with a scene interaction's altitude.
+#' Defaults match that function. Without a native atmospheric sky, altitude
+#' describes one observer for the whole light. With [sky_light()]'s
+#' `atmosphere = TRUE`, a missing altitude uses that sky's reference altitude
+#' for ephemeris placement; atmospheric filtering uses each interaction's position.
 #' @param resolution Default `256` for the Sun and `1024` for the Moon. Target
 #' disk image width and height in pixels, at least 16. The Moon's padded image is
 #' cropped without downsampling; edge coverage can add a few pixels. Texture
@@ -29,6 +31,8 @@
 #' @param moon_args Default `list()`. Named options for skymodelr's Moon routines:
 #' `earthshine = TRUE`, `earthshine_albedo = 0.19`,
 #' `solar_irradiance_w_m2 = 1300`, and `moon_extinction_kV = 0.172`.
+#' Native atmospheric scenes ignore `moon_extinction_kV`, using Prague
+#' transmission instead.
 #'
 #' @details Requires skymodelr and its Prague data. Install datasets with
 #' `skymodelr::download_sky_data()` before rendering. Requires the public
@@ -38,6 +42,9 @@
 #' render_mode = "atmosphere"))` to exclude the sky map's rasterized Sun. Leave
 #' `moon = FALSE` in that sky when adding a Moon disk. Lights add radiance; they
 #' do not eclipse or occlude each other, and adding a second copy doubles its light.
+#' With `sky_light(atmosphere = TRUE)`, an explicit Sun automatically replaces
+#' the built-in Sun; there is no need to change `render_mode`. The clear-air sky
+#' and haze retain that sky light's own location, time, rotation, and intensity.
 #'
 #' Both lights use north at world +Z, east at world -X, and up at world +Y,
 #' matching [sky_light()]. They have no parallax and add no scene geometry.
@@ -51,6 +58,19 @@
 #' irradiance and atmospheric extinction, with its spectral RGB and atmospheric
 #' tint. Earthshine is part of the generated phase texture. These are radiance
 #' images; exposure and tone mapping are applied only by the final render.
+#'
+#' With a native atmospheric sky, preparation automatically requests
+#' `atmospheric_attenuation = FALSE` through skymodelr's public disk generators.
+#' Sun radiance and lunar phase, surface detail, and earthshine are generated
+#' before atmospheric filtering. The renderer applies the Sun's spectrum or the
+#' Moon's reference spectrum to Prague transmission along each light direction.
+#' Spherical Earth visibility clips each direction, so a partially set disk can
+#' illuminate high clouds while being hidden from the ground. Texture detail
+#' remains independent of the sky sampling resolution. Skymodelr must support
+#' the new argument. Without a native atmosphere, the existing fixed-observer
+#' attenuation and geometric horizon clipping remain in effect.
+#' The precomputed clear-air haze is Sun-driven; lunar atmospheric in-scattering
+#' and halos are not modeled. See [sky_light()] for the model's supported domain.
 #'
 #' @return A `ray_infinite_light` description.
 #' @export
@@ -277,7 +297,7 @@ celestial_disk = function(
 }
 
 #' @keywords internal
-prepare_celestial_light = function(light) {
+prepare_celestial_light = function(light, atmospheric_attenuation = TRUE) {
   if (!requireNamespace("skymodelr", quietly = TRUE)) {
     stop(
       "Sun and Moon lights require skymodelr. Install it with install.packages('skymodelr').",
@@ -293,10 +313,26 @@ prepare_celestial_light = function(light) {
       call. = FALSE
     )
   }
+  supported = names(formals(getExportedValue("skymodelr", generator)))
+  if (
+    !atmospheric_attenuation &&
+      !any(c("atmospheric_attenuation", "...") %in% supported)
+  ) {
+    stop(
+      "Update skymodelr to a version supporting atmospheric_attenuation = FALSE in ",
+      generator,
+      "().",
+      call. = FALSE
+    )
+  }
   settings = celestial_sky_args(light$sky_args)
-  cache = file.path(tempdir(), "rayrender-celestial-disk-api-v1")
+  if (!atmospheric_attenuation) {
+    settings$atmospheric_attenuation = FALSE
+  }
+  cache = file.path(tempdir(), "rayrender-celestial-disk-api-v2")
   dir.create(cache, showWarnings = FALSE)
   key = light
+  key$atmospheric_attenuation = atmospheric_attenuation
   key[c("intensity", "rotation", "name")] = NULL
   key_file = tempfile(tmpdir = cache)
   on.exit(unlink(key_file), add = TRUE)
@@ -333,6 +369,15 @@ prepare_celestial_light = function(light) {
       )
     }
     validate_skymodelr_disk(disk)
+    if (
+      !atmospheric_attenuation &&
+        !identical(disk$atmospheric_attenuation, FALSE)
+    ) {
+      stop(
+        "skymodelr did not return an unattenuated celestial disk. Update skymodelr.",
+        call. = FALSE
+      )
+    }
     azimuth = disk$azimuth_deg * pi / 180
     elevation = disk$elevation_deg * pi / 180
     direction = c(
@@ -354,14 +399,18 @@ prepare_celestial_light = function(light) {
     success = TRUE
   }
   info = readRDS(metadata)
-  celestial_disk(
+  result = celestial_disk(
     filename,
     info$direction,
     info$diameter,
     light$intensity,
     light$rotation,
-    light$name
+    light$name,
+    clip_horizon = atmospheric_attenuation
   )
+  result$radiance_spectrum = if (atmospheric_attenuation) "rgb" else light$type
+  result$atmospheric_attenuation = atmospheric_attenuation
+  result
 }
 
 #' @keywords internal
