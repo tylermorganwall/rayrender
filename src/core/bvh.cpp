@@ -434,14 +434,10 @@ inline bool rayBoundsHitTEnter(
     const Float tzFar =
         (bounds.bounds[1 - sz].e[2] - r.o.e[2]) * r.inv_dir_pad.e[2];
 
-    t_min = std::fmax(t_min, txNear);
-    t_max = std::fmin(t_max, txFar);
-
-    t_min = std::fmax(t_min, tyNear);
-    t_max = std::fmin(t_max, tyFar);
-
-    t_min = std::fmax(t_min, tzNear);
-    t_max = std::fmin(t_max, tzFar);
+    const Float near = std::fmax(std::fmax(txNear, tyNear), tzNear);
+    const Float far = std::fmin(std::fmin(txFar, tyFar), tzFar);
+    t_min = std::fmax(t_min, bounds_entry_lower(near));
+    t_max = std::fmin(t_max, bounds_exit_upper(far));
 
     tEnter = static_cast<float>(t_min);
     return t_min <= t_max;

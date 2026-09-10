@@ -1,7 +1,9 @@
 #ifdef NOT_CRAN
+#include "../core/bvh.h"
 #include "../hitables/box.h"
 #include "../hitables/instance.h"
 #include "../hitables/infinite_area_light.h"
+#include "../hitables/rectangle.h"
 #include "../hitables/sphere.h"
 #include "../materials/material.h"
 #include "../materials/texture.h"
@@ -628,4 +630,92 @@ context("Participating media geometry and sampling") {
     }
   }
 }
+
+context("Conservative bounds around medium boundaries") {
+  test_that("slab rounding preserves clipped hits and parallel rays") {
+    aabb bounds(point3f(-1), point3f(1));
+    random_gen rng(2026);
+    RandomSampler sampler(rng);
+    auto check = [&](const Ray &ray, Float lo, Float hi, bool expected) {
+      expect_true(bounds.hit(ray, lo, hi, rng) == expected);
+      expect_true(bounds.hit(ray, lo, hi, &sampler) == expected);
+#ifdef RAYSIMD
+      BBox4 packed(bounds, bounds, bounds, bounds);
+      IVec4 hits;
+      FVec4 entries;
+      rayBBoxIntersect4(RayBBox4(ray), packed, lo, hi, hits, entries);
+      for (int lane = 0; lane < 4; ++lane) {
+        expect_true((hits.xyzw[lane] != 0) == expected);
+        if (expected) {
+          expect_true(entries.xyzw[lane] >= lo);
+          expect_true(entries.xyzw[lane] <= hi);
+        }
+      }
+#endif
+    };
+    for (int axis = 0; axis < 3; ++axis) {
+      for (Float sign : {Float(-1), Float(1)}) {
+        point3f origin(0);
+        vec3f direction(0);
+        origin.e[axis] = -2 * sign;
+        direction.e[axis] = sign;
+        check(Ray(origin, direction), 0, 1, true);
+        check(Ray(origin, -direction), -1, -1, true);
+        check(Ray(origin, -direction), 0, MaxT, false);
+
+        // Parallel rays on either face generate 0 * infinity in one slab.
+        // Signed zero must work as well as ordinary zero, and rays just
+        // outside the parallel slab must still miss.
+        for (Float face : {Float(-1), Float(1)}) {
+          origin.e[(axis + 1) % 3] = face;
+          direction.e[(axis + 1) % 3] = std::copysign(Float(0), face);
+          check(Ray(origin, direction), 0, 1, true);
+          origin.e[(axis + 1) % 3] = face * 1.01;
+          check(Ray(origin, direction), 0, MaxT, false);
+        }
+      }
+    }
+  }
+
+  test_that("a surface just behind a cloud face cannot hide its entry") {
+    Transform transform = Translate(vec3f(0, 13.4, 63)), inverse = Inverse(transform), identity;
+    auto mat = std::make_shared<lambertian>(std::make_shared<constant_texture>(point3f(.5)));
+    auto geometry = std::make_shared<box>(vec3f(-45, -.9, -12), vec3f(45, .9, 12),
+                                         mat, nullptr, nullptr, &transform, &inverse, false);
+    auto medium = std::make_shared<Medium>(medium_description(0));
+    VolumeScene scene;
+    auto boundary = std::make_shared<MediumBoundary>(geometry, medium, transform, false,
+                                                    scene.NextBoundaryId());
+    for (int side : {-1, 1}) {
+      const Float face = side < 0 ? Float(12.5) : Float(13.4) + Float(.9);
+      auto surface = std::make_shared<xz_rect>(
+          -1, 1, 62, 64, std::nextafter(face, Float(13.4)), mat, nullptr, nullptr,
+          &identity, &identity, false);
+      hitable_list reference;
+      reference.add(boundary);
+      reference.add(surface);
+      // Separate leaves force traversal to compare the cloud's entry bound
+      // with the surface hit. A padded reciprocal used to reverse their order.
+      BVHAggregate world(reference.objects, 0, 1, 1, true);
+      Ray ray(point3f(0, side < 0 ? 0 : 26.8, 63), vec3f(0, -side, 0));
+      ray.segment_absorption = true;
+      random_gen rng(2026);
+      RandomSampler sampler(rng);
+      hit_record expected, actual;
+      expect_true(reference.hit(ray, 0, MaxT, expected, rng));
+      expect_true(expected.medium_boundary == boundary.get());
+      expect_true(world.hit(ray, 0, MaxT, actual, rng));
+      expect_true(actual.medium_boundary == boundary.get());
+      expect_true(actual.t == expected.t);
+      expect_true(world.hit(ray, 0, MaxT, actual, &sampler));
+      expect_true(actual.medium_boundary == boundary.get());
+      expect_true(actual.t == expected.t);
+      expect_true(world.hit(ray, 0, expected.t, actual, rng));
+      expect_true(actual.medium_boundary == boundary.get());
+      expect_true(world.HitP(ray, 0, expected.t, rng));
+      expect_true(world.HitP(ray, 0, expected.t, &sampler));
+    }
+  }
+}
+
 #endif
