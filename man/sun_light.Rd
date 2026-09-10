@@ -78,7 +78,7 @@ Requires skymodelr and its Prague data. Install datasets with
 \code{skymodelr::download_sky_data()} before rendering. Requires the public
 \code{skymodelr::generate_sun_disk()} and \code{skymodelr::generate_moon_disk()} exports.
 
-Pair a Sun disk with \code{sky_light(..., sky_args = list(hosek = FALSE, render_mode = "atmosphere"))} to exclude the sky map's rasterized Sun. Leave
+Pair a Sun disk with \code{sky_light(..., hosek = FALSE, render_mode = "atmosphere")} to exclude the sky map's rasterized Sun. Leave
 \code{moon = FALSE} in that sky when adding a Moon disk. Lights add radiance; they
 do not eclipse or occlude each other, and adding a second copy doubles its light.
 With \code{sky_light(atmosphere = TRUE)}, an explicit Sun automatically replaces
@@ -108,6 +108,9 @@ illuminate high clouds while being hidden from the ground. Texture detail
 remains independent of the sky sampling resolution. Skymodelr must support
 the new argument. Without a native atmosphere, the existing fixed-observer
 attenuation and geometric horizon clipping remain in effect.
+The sky's \code{attenuation = FALSE} option removes finite scene haze while keeping
+this celestial filtering. Its \code{query_altitude} option controls whether the
+filtering and horizon follow each interaction or use the reference observer.
 The precomputed clear-air haze is Sun-driven; lunar atmospheric in-scattering
 and halos are not modeled. See \code{\link[=sky_light]{sky_light()}} for the model's supported domain.
 }

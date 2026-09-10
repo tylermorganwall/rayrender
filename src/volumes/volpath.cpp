@@ -125,6 +125,14 @@ RGB glass_transmittance(const VolumePathState &state, double distance) {
 }
 
 
+// Region selection follows boundary membership, including zero-density cells
+// and nested media. Glass always excludes the clear-air transport model.
+bool integrate_atmosphere(const Atmosphere *atmosphere, const VolumePathState &state) {
+  return atmosphere && state.glass.empty() &&
+         (atmosphere->IntegrateInVolumes() || !state.Active());
+}
+
+
 // Dielectric membership depends on geometry, even when a shading normal differs.
 // Older hit records can fall back to their only available normal.
 normal3f geometric_normal(const hit_record &h) {
@@ -308,16 +316,20 @@ Float primary_transparency(const Ray &input, VolumePathState state, hitable *wor
   Ray ray(input.o, unit_vector(input.d), input.time());
   state.SetRay(ray);
   RGB tr(1);
+  const bool outside_only = atmosphere && !atmosphere->IntegrateInVolumes();
+  bool air_active = integrate_atmosphere(atmosphere, state);
+  point3f air_origin = ray.o;
   while (!cancelled(cancel)) {
     hit_record h;
     if (!world->hit(ray, 0, MaxT, h, rng))
       return Float(tr.Average());
     double distance = h.t;
 
-    // Query clear-air attenuation once from the original camera at the infinite
-    // endpoint. Local glass and medium extinction accumulate along each segment.
-    if (atmosphere && h.infinite_area_hit)
-      tr *= RGB(atmosphere->Transmission(input.o, unit_vector(input.d), INFINITY));
+    // The default needs one infinite query. Outside-only haze instead multiplies
+    // each completed air interval and the final tail; volume interiors are never
+    // included in a transmission query. Ordinary alpha masks do not split fits.
+    if (atmosphere && h.infinite_area_hit && (!outside_only || air_active))
+      tr *= RGB(atmosphere->Transmission(outside_only ? air_origin : input.o, ray.d, INFINITY));
     tr *= glass_transmittance(state, distance);
     if (const auto *entry = state.Active())
       tr *= segment_opacity_transmittance(*entry, ray, distance, rng, cancel);
@@ -325,7 +337,14 @@ Float primary_transparency(const Ray &input, VolumePathState state, hitable *wor
 
     if (h.medium_boundary && !h.medium_boundary->keep_surface) {
       state.Cross(h, ray.d);
+      bool next_air = integrate_atmosphere(atmosphere, state);
+      if (outside_only && air_active && !next_air) {
+        double d = dot(ray(Float(distance)) - air_origin, ray.d);
+        tr *= RGB(atmosphere->Transmission(air_origin, ray.d, std::max(0.0, d)));
+      }
       ray = spawn(h, ray.d, ray.time(), state);
+      if (outside_only && !air_active && next_air) air_origin = ray.o;
+      air_active = next_air;
       continue;
     }
 
@@ -426,28 +445,50 @@ RGB direct_light(const Ray &parent, const point3f &p, const hit_record *surface,
   // Atmospheric source radiance accumulates along the connection as well.
   RGB tr(1), ru(1), rl(1);
   RGB atmospheric_light(0);
+  const point3f lighting_origin = ray.o;
   const Atmosphere *atmosphere = lights->volume_scene ? lights->volume_scene->atmosphere : nullptr;
   random_gen tracker = tracking_rng(sampler);
   AtmosphereRay atmosphere_ray(atmosphere);
+  const bool deferred_haze = atmosphere && atmosphere->DeferredHaze();
+  random_gen haze_rng = deferred_haze ? tracking_rng(sampler) : random_gen(0);
+  auto flush_haze = [&]() {
+    if (!deferred_haze) return;
+    double endpoint_uniform = 0, correction_uniform = 0;
+    if (atmosphere->SampleHazeCorrection()) {
+      endpoint_uniform = haze_rng.unif_rand();
+      correction_uniform = haze_rng.unif_rand();
+    }
+    auto segment = atmosphere_ray.Flush(endpoint_uniform, correction_uniform);
+    for (int c = 0; c < 3; ++c) atmospheric_light[c] += segment.radiance[c];
+    tr *= RGB(segment.transmission);
+  };
   while (!cancelled(cancel)) {
-    atmosphere_ray.Start(ray.o, ray.d, state.glass.empty());
+    const bool integrate_haze = integrate_atmosphere(atmosphere, state);
+    atmosphere_ray.Start(ray.o, ray.d, integrate_haze);
     hit_record h;
-    if (!world->hit(ray, 0, MaxT, h, rng))
+    if (!world->hit(ray, 0, MaxT, h, rng)) {
+      flush_haze();
       return atmospheric_light;
+    }
     double distance = h.t, previous_distance = 0;
 
 
     // Add clear-air in-scattering before attenuating the remaining connection.
-    // A fixed atmosphere anchor survives null events and invisible boundaries;
-    // glass absorption uses each segment while clear air is disabled inside glass.
+    // A fixed atmosphere anchor survives null events and ordinary boundaries.
+    // Excluded regions pause it; glass absorption still uses each local segment.
     auto advance = [&](double end) {
       double d = end - previous_distance;
-      if (atmosphere && state.glass.empty() && d > 0) {
-        auto segment = atmosphere_ray.Advance(ray(Float(end)));
+      if (integrate_haze && d > 0) {
         double denom = (rl * rp * RGB(sample.pdf) + ru * rp * RGB(ps)).Average();
-        if (denom > 0)
-          atmospheric_light += beta * f * tr * RGB(segment.radiance) / denom;
-        tr *= RGB(segment.transmission);
+        if (deferred_haze) {
+          RGB weight = denom > 0 ? beta * f * tr / denom : RGB(0);
+          atmosphere_ray.Accumulate(ray(Float(end)), {weight[0], weight[1], weight[2]}, haze_rng.unif_rand());
+        } else {
+          auto segment = atmosphere_ray.Advance(ray(Float(end)));
+          if (denom > 0)
+            atmospheric_light += beta * f * tr * RGB(segment.radiance) / denom;
+          tr *= RGB(segment.transmission);
+        }
       }
       tr *= glass_transmittance(state, d);
       previous_distance = end;
@@ -480,6 +521,9 @@ RGB direct_light(const Ray &parent, const point3f &p, const hit_record *surface,
 
             // Stop weak connections stochastically, doubling the surviving
             // throughput to compensate for the one-half survival probability.
+            // Deferred haze uses the current weight before pending extinction.
+            // This may trace longer connections; roulette remains compensated
+            // without querying the atmosphere at every candidate just to stop.
             double relative = (ru + rl).Average();
             if (relative > 0 && tr.Max() / relative < .05) {
               if (tracker.unif_rand() < .5) {
@@ -490,9 +534,11 @@ RGB direct_light(const Ray &parent, const point3f &p, const hit_record *surface,
             }
             return tr.Max() > 0;
           },
-          cancel, stats, atmosphere != nullptr);
-      if (tr.Max() == 0)
+          cancel, stats, atmosphere && atmosphere->IntegrateInVolumes());
+      if (tr.Max() == 0) {
+        flush_haze();
         return atmospheric_light;
+      }
 
       // No further candidate occurred before the endpoint. Correct every RGB
       // channel for that residual interval relative to the chosen hero channel.
@@ -515,6 +561,9 @@ RGB direct_light(const Ray &parent, const point3f &p, const hit_record *surface,
     // connection. Boundary crossings update membership before continuing straight.
     if (h.medium_boundary && !h.medium_boundary->keep_surface) {
       state.Cross(h, ray.d);
+      // Keep collecting across a boundary if haze stays enabled on both sides.
+      // Excluded regions must resolve the preceding air span before pausing it.
+      if (integrate_haze != integrate_atmosphere(atmosphere, state)) flush_haze();
       ray = spawn(h, ray.d, ray.time(), state);
       continue;
     }
@@ -522,15 +571,16 @@ RGB direct_light(const Ray &parent, const point3f &p, const hit_record *surface,
       ray = spawn(h, ray.d, ray.time(), state);
       continue;
     }
+    flush_haze();
     bool invisible = false;
     Ray emission_ray = ray;
 
 
-    // Infinite emission is queried at the atmosphere anchor, then stripped of
-    // haze already accumulated above. A nonemissive finite endpoint contributes
-    // no endpoint light, but the haze accumulated before it remains visible.
-    if (atmosphere && h.infinite_area_hit) {
-      emission_ray = Ray(atmosphere_ray.Origin(ray.o), ray.d, ray.time());
+    // Query infinite emission at the original lighting vertex, or the finite
+    // atmosphere's anchor, so invisible boundaries cannot change its altitude.
+    // A nonemissive finite endpoint still retains haze accumulated before it.
+    if (h.infinite_area_hit) {
+      emission_ray = Ray(atmosphere ? atmosphere_ray.Origin(ray.o) : lighting_origin, ray.d, ray.time());
       state.SetRay(emission_ray);
     }
     sample.radiance = h.mat_ptr ? h.mat_ptr->emitted(emission_ray, h, h.u, h.v, h.p, invisible) : point3f(0);
@@ -592,34 +642,58 @@ void color_volume(const Ray &input, hitable *world, hitable_list *lights, size_t
   RGB L(0), beta(1), ru(1), rl(1);
   double eta_scale = 1;
   point3f previous_point(0);
+  // Native lighting without finite haze still belongs to the last real vertex.
+  // Crossing an invisible cloud boundary must not move its altitude query.
+  point3f lighting_origin = ray.o;
   bool specular = true, any_diffuse = false, wrote_feature = false;
   size_t depth = 0;
-  AtmosphereRay atmosphere_ray(scene ? scene->atmosphere : nullptr);
+  const Atmosphere *atmosphere = scene ? scene->atmosphere : nullptr;
+  AtmosphereRay atmosphere_ray(atmosphere);
+  const bool deferred_haze = atmosphere && atmosphere->DeferredHaze();
+  random_gen haze_rng = deferred_haze ? tracking_rng(sampler) : random_gen(0);
+  auto flush_haze = [&]() {
+    if (!deferred_haze) return;
+    double endpoint_uniform = 0, correction_uniform = 0;
+    if (atmosphere->SampleHazeCorrection()) {
+      endpoint_uniform = haze_rng.unif_rand();
+      correction_uniform = haze_rng.unif_rand();
+    }
+    auto segment = atmosphere_ray.Flush(endpoint_uniform, correction_uniform);
+    for (int c = 0; c < 3; ++c) L[c] += segment.radiance[c];
+    beta *= RGB(segment.transmission);
+  };
 
 
   while (!cancelled(cancel)) {
     // Find the next geometric endpoint while retaining the atmosphere anchor
-    // across straight-through events. A new direction or glass state resets it.
-    atmosphere_ray.Start(ray.o, ray.d, state.glass.empty());
+    // across straight-through events. A new direction or excluded region resets it.
+    const bool integrate_haze = integrate_atmosphere(atmosphere, state);
+    atmosphere_ray.Start(ray.o, ray.d, integrate_haze);
     hit_record h;
-    if (!world->hit(ray, 0, MaxT, h, rng))
+    if (!world->hit(ray, 0, MaxT, h, rng)) {
+      flush_haze();
       break;
+    }
     double distance = h.t, previous_distance = 0;
-    const Atmosphere *atmosphere = scene ? scene->atmosphere : nullptr;
-    Float atmosphere_light_pdf = atmosphere && !specular && use_light_sampling()
+    Float atmosphere_light_pdf = integrate_haze && !specular && use_light_sampling()
                                      ? light_pdf(lights, previous_point, ray.d, rng, ray.time()) : 0;
 
 
     // Between candidates, add clear-air source radiance with the current MIS
     // weights before applying attenuation. Glass absorption advances over the
-    // same distance, while clear-air transport is active only outside glass.
+    // same distance, while clear-air transport follows the selected air regions.
     auto advance = [&](double end) {
       double d = end - previous_distance;
-      if (atmosphere && state.glass.empty() && d > 0) {
-        auto segment = atmosphere_ray.Advance(ray(Float(end)));
+      if (integrate_haze && d > 0) {
         double denom = (ru + rl * RGB(atmosphere_light_pdf)).Average();
-        if (denom > 0) L += beta * RGB(segment.radiance) / denom;
-        beta *= RGB(segment.transmission);
+        if (deferred_haze) {
+          RGB weight = denom > 0 ? beta / denom : RGB(0);
+          atmosphere_ray.Accumulate(ray(Float(end)), {weight[0], weight[1], weight[2]}, haze_rng.unif_rand());
+        } else {
+          auto segment = atmosphere_ray.Advance(ray(Float(end)));
+          if (denom > 0) L += beta * RGB(segment.radiance) / denom;
+          beta *= RGB(segment.transmission);
+        }
       }
       beta *= glass_transmittance(state, d);
       previous_distance = end;
@@ -647,6 +721,9 @@ void color_volume(const Ray &input, hitable *world, hitable_list *lights, size_t
             // it. Correct the absorption-weighted source for the candidate proposal
             // and RGB density term, independent of the subsequent event choice.
             if (depth < max_depth) {
+              // An emitting candidate needs extinction at its own position.
+              // Nonemissive null events can keep accumulating cheap weights.
+              if ((RGB(mp.sigma_a) * RGB(mp.Le)).Max() > 0) flush_haze();
               RGB re = ru * T * RGB(m) / proposal;
               if (re.Average() > 0)
                 L += beta * T * RGB(mp.sigma_a) * RGB(mp.Le) / proposal / re.Average();
@@ -666,6 +743,7 @@ void color_volume(const Ray &input, hitable *world, hitable_list *lights, size_t
             // A real scattering event consumes a bounce and reweights the RGB
             // channels by their scattering coefficients relative to the proposal.
             if (mode < pa + ps) {
+              flush_haze();
               if (depth >= max_depth) {
                 terminated = true;
                 return false;
@@ -710,6 +788,7 @@ void color_volume(const Ray &input, hitable *world, hitable_list *lights, size_t
               rl = ru / sample.pdf;
               previous_point = p;
               ray = Ray(p, unit_vector(sample.wi), ray.time());
+              lighting_origin = p;
               state.SetRay(ray);
               scattered = true;
               specular = false;
@@ -746,14 +825,16 @@ void color_volume(const Ray &input, hitable *world, hitable_list *lights, size_t
             }
             return true;
           },
-          cancel, stats, atmosphere != nullptr);
+          cancel, stats, atmosphere && atmosphere->IntegrateInVolumes());
 
 
       // A callback that scattered already installed the new ray. Apply roulette
       // there and start another iteration; only an unscattered path reaches the
       // original geometric endpoint and needs the residual interval correction.
-      if (terminated)
+      if (terminated) {
+        flush_haze();
         break;
+      }
       if (scattered) {
         if (depth > roulette_depth) {
           double survival = std::min(1.0, (beta * RGB(eta_scale) / ru.Average()).Max());
@@ -783,6 +864,7 @@ void color_volume(const Ray &input, hitable *world, hitable_list *lights, size_t
     // without spending a bounce or changing the last real scattering proposal.
     if (h.medium_boundary && !h.medium_boundary->keep_surface) {
       state.Cross(h, ray.d);
+      if (integrate_haze != integrate_atmosphere(atmosphere, state)) flush_haze();
       ray = spawn(h, ray.d, ray.time(), state);
       continue;
     }
@@ -790,14 +872,15 @@ void color_volume(const Ray &input, hitable *world, hitable_list *lights, size_t
       ray = spawn(h, ray.d, ray.time(), state);
       continue;
     }
+    flush_haze();
     bool invisible = false;
     Ray emission_ray = ray;
 
 
-    // Evaluate infinite emission at the fixed atmosphere anchor. Hidden emitters
-    // can be skipped along paths that have not yet scattered diffusely/in a medium.
-    if (atmosphere && h.infinite_area_hit) {
-      emission_ray = Ray(atmosphere_ray.Origin(ray.o), ray.d, ray.time());
+    // Evaluate infinite emission at the last real lighting vertex or atmospheric
+    // anchor. Hidden emitters can be skipped before diffuse/medium scattering.
+    if (h.infinite_area_hit) {
+      emission_ray = Ray(atmosphere ? atmosphere_ray.Origin(ray.o) : lighting_origin, ray.d, ray.time());
       state.SetRay(emission_ray);
     }
     point3f le = h.mat_ptr ? h.mat_ptr->emitted(emission_ray, h, h.u, h.v, h.p, invisible) : point3f(0);
@@ -891,6 +974,8 @@ void color_volume(const Ray &input, hitable *world, hitable_list *lights, size_t
     // Repair membership if the surface offset crossed a coincident boundary,
     // stabilize the RGB ratios, and apply compensated roulette after real bounces.
     reconcile_surface_origin(scene, h, ray, state, cancel);
+    if (!s.is_passthrough)
+      lighting_origin = ray.o;
     rescale(beta, ru, rl);
     if (!s.is_passthrough && depth > roulette_depth) {
       double survival = std::min(1.0, (beta * RGB(eta_scale) / ru.Average()).Max());

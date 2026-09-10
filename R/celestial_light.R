@@ -38,8 +38,8 @@
 #' `skymodelr::download_sky_data()` before rendering. Requires the public
 #' `skymodelr::generate_sun_disk()` and `skymodelr::generate_moon_disk()` exports.
 #'
-#' Pair a Sun disk with `sky_light(..., sky_args = list(hosek = FALSE,
-#' render_mode = "atmosphere"))` to exclude the sky map's rasterized Sun. Leave
+#' Pair a Sun disk with `sky_light(..., hosek = FALSE,
+#' render_mode = "atmosphere")` to exclude the sky map's rasterized Sun. Leave
 #' `moon = FALSE` in that sky when adding a Moon disk. Lights add radiance; they
 #' do not eclipse or occlude each other, and adding a second copy doubles its light.
 #' With `sky_light(atmosphere = TRUE)`, an explicit Sun automatically replaces
@@ -69,6 +69,9 @@
 #' remains independent of the sky sampling resolution. Skymodelr must support
 #' the new argument. Without a native atmosphere, the existing fixed-observer
 #' attenuation and geometric horizon clipping remain in effect.
+#' The sky's `attenuation = FALSE` option removes finite scene haze while keeping
+#' this celestial filtering. Its `query_altitude` option controls whether the
+#' filtering and horizon follow each interaction or use the reference observer.
 #' The precomputed clear-air haze is Sun-driven; lunar atmospheric in-scattering
 #' and halos are not modeled. See [sky_light()] for the model's supported domain.
 #'
@@ -90,7 +93,15 @@ sun_light = function(
   rotation = 0,
   name = "sun"
 ) {
-  light = sky_light(lat, long, datetime, sky_args, intensity, rotation, name)
+  light = sky_light(
+    lat,
+    long,
+    datetime,
+    intensity = intensity,
+    rotation = rotation,
+    name = name
+  )
+  light$sky_args = sky_args
   light$type = "sun"
   light$resolution = resolution
   validate_infinite_light(light)
@@ -110,7 +121,15 @@ moon_light = function(
   rotation = 0,
   name = "moon"
 ) {
-  light = sky_light(lat, long, datetime, sky_args, intensity, rotation, name)
+  light = sky_light(
+    lat,
+    long,
+    datetime,
+    intensity = intensity,
+    rotation = rotation,
+    name = name
+  )
+  light$sky_args = sky_args
   light$type = "moon"
   light$resolution = resolution
   light$moon_args = moon_args

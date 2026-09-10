@@ -195,6 +195,15 @@ const Atmosphere *InfiniteLightMixture::GetAtmosphere() const {
 }
 
 
+// A native sky remains available to celestial filtering even when the path
+// integrator should skip finite-distance atmospheric transport entirely.
+const Atmosphere *InfiniteLightMixture::GetTransportAtmosphere() const {
+  for (const auto &source : lights)
+    if (const auto *atmosphere = source->GetTransportAtmosphere()) return atmosphere;
+  return nullptr;
+}
+
+
 // Propagate the enclosing environment rotation to every source so preview
 // changes affect sampling, radiance lookup, and atmospheric filtering together.
 void InfiniteLightMixture::SetEnvironmentTransform(const Transform *to_world,

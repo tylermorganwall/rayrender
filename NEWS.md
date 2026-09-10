@@ -1,5 +1,20 @@
 # rayrender 0.41.5.9000
 
+* Expose sky model settings directly in `sky_light()`: use `altitude`,
+  `visibility`, `resolution`, `hosek`, and other named arguments instead of a
+  `sky_args` list. Image and native atmosphere defaults are preserved.
+
+* Add `cloud()`, a procedural cumulus/stratus volume centered at the origin, with
+  standard position, rotation, and scale controls. The density field and its
+  boundary transform together. Sky examples now use the exported constructor.
+* Correct the Z rotation matrix used by R-side group and animation transforms
+  to match the positive-angle convention of direct objects and instances.
+
+* Enable `sky_light()`'s deferred atmospheric haze by default, with a horizon
+  correction probability of `0.5`. Disabling deferred haze defaults that
+  probability to `1`. Add capsule terrain and cloud examples comparing altitude
+  lighting, haze, visibility, sampling, and the exact cache controls.
+
 * Fix Moon disk and legacy sky preparation in skymodelr so the upper limb
   remains visible after the center sets. Normalize the complete disk before
   horizon clipping, with continuous horizon attenuation and color.

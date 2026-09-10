@@ -24,6 +24,8 @@ public:
   virtual double SamplingWeight() const = 0;
   virtual size_t GetSize() const = 0;
   virtual const Atmosphere *GetAtmosphere() const { return nullptr; }
+  // Lighting can use Prague at each altitude without integrating finite haze.
+  virtual const Atmosphere *GetTransportAtmosphere() const { return GetAtmosphere(); }
   virtual InfiniteLightSpectrum RadianceSpectrum() const { return InfiniteLightSpectrum::RGB; }
   virtual bool Available(const point3f &, const Atmosphere *) const { return true; }
   // Borrow the preview's mutable environment transform. Positions stay in world
@@ -68,6 +70,7 @@ public:
   double SamplingWeight() const override { return weight; }
   size_t GetSize() const override;
   const Atmosphere *GetAtmosphere() const override;
+  const Atmosphere *GetTransportAtmosphere() const override;
   void SetEnvironmentTransform(const Transform *, const Transform *) override;
 
 private:

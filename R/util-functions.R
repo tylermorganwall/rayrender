@@ -834,7 +834,8 @@ RotateZ = function(theta) {
       1
     ),
     4,
-    4
+    4,
+    byrow = TRUE
   )
   return(M)
 }

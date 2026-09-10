@@ -22,7 +22,7 @@ prague_sky_settings = function(args) {
   unknown = setdiff(names(args), names(defaults))
   if (length(unknown)) {
     stop(
-      "Unsupported atmospheric sky_args: ",
+      "Unsupported atmospheric sky arguments: ",
       paste(unknown, collapse = ", "),
       ".",
       call. = FALSE
@@ -32,7 +32,7 @@ prague_sky_settings = function(args) {
   for (flag in c("hosek", "wide_spectrum", "stars", "moon", "planets")) {
     if (!identical(result[[flag]], FALSE)) {
       stop(
-        "Atmospheric sky lights require sky_args$",
+        "Atmospheric sky lights require ",
         flag,
         " = FALSE.",
         call. = FALSE
@@ -69,7 +69,7 @@ prague_sky_settings = function(args) {
         value > bounds[2] ||
         (field %in% c("resolution", "number_cores") && value != floor(value))
     ) {
-      stop("Invalid atmospheric sky_args$", field, ".", call. = FALSE)
+      stop("Invalid atmospheric ", field, ".", call. = FALSE)
     }
   }
   if (
@@ -78,7 +78,7 @@ prague_sky_settings = function(args) {
       !result$render_mode %in% c("all", "atmosphere", "sun")
   ) {
     stop(
-      'sky_args$render_mode must be "all", "atmosphere", or "sun".',
+      'render_mode must be "all", "atmosphere", or "sun".',
       call. = FALSE
     )
   }
@@ -89,6 +89,22 @@ prague_sky_settings = function(args) {
 validate_prague_sky_light = function(light) {
   if (!identical(light$type, "sky")) {
     stop("The atmosphere option belongs to sky_light().", call. = FALSE)
+  }
+  if (
+    !is.null(light$haze_correction_probability) &&
+      light$haze_correction_probability < 1 &&
+      !isTRUE(light$deferred_haze)
+  ) {
+    stop(
+      "haze_correction_probability < 1 requires deferred_haze = TRUE.",
+      call. = FALSE
+    )
+  }
+  if (
+    !identical(light$attenuation, FALSE) &&
+      identical(light$query_altitude, FALSE)
+  ) {
+    stop("attenuation = TRUE requires query_altitude = TRUE.", call. = FALSE)
   }
   scale = light$meters_per_unit
   if (
@@ -145,6 +161,24 @@ prepare_prague_sky_light = function(light) {
     rotation = light$rotation,
     origin = unname(light$atmosphere_origin),
     meters_per_unit = light$meters_per_unit,
+    attenuation = !identical(light$attenuation, FALSE),
+    query_altitude = !identical(light$query_altitude, FALSE),
+    haze_in_volumes = !identical(light$haze_in_volumes, FALSE),
+    deferred_haze = identical(light$deferred_haze, TRUE),
+    haze_correction_probability = if (
+      is.null(light$haze_correction_probability)
+    ) {
+      1
+    } else {
+      light$haze_correction_probability
+    },
+    cache_spectra = !identical(light$cache_spectra, FALSE),
+    transmission_table = !identical(light$transmission_table, FALSE),
+    transmission_table_max_mb = if (is.null(light$transmission_table_max_mb)) {
+      512
+    } else {
+      light$transmission_table_max_mb
+    },
     altitude = settings$altitude,
     visibility = settings$visibility,
     albedo = settings$albedo,

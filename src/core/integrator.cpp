@@ -20,6 +20,7 @@
 #include <chrono>
 #include <exception>
 #include <future>
+#include <limits>
 #include <thread>
 
 static const size_t FAST_INTERACTIVE_PREVIEW_SAMPLES = 4;
@@ -314,9 +315,14 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
     return !render_cancelled.load(std::memory_order_relaxed);
   };
 
+  // Sampled haze corrections may be signed. Clamping them before accumulation
+  // would bias their expectation; ordinary rendering keeps its existing floor.
+  const Float sample_floor = hlist.volume_scene && hlist.volume_scene->atmosphere &&
+      hlist.volume_scene->atmosphere->DeferredHaze() ? -std::numeric_limits<Float>::infinity() : 0;
+
   auto render_full_sample = [&adaptive_pixel_sampler, numbercores, nx, ny, sample_method,
                              &rngs, fov, &samplers, cam, &world, &hlist,
-                             clampval, max_depth, roulette_active, integrator_type,
+                             clampval, sample_floor, max_depth, roulette_active, integrator_type,
                              &render_cancelled, &wait_for_render_jobs] (size_t s) -> bool {
     render_cancelled.store(false, std::memory_order_relaxed);
     RcppThread::ThreadPool pool(numbercores);
@@ -324,7 +330,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
                    nx, ny, s, sample_method,
                    &rngs, fov, &samplers,
                    cam, &world, &hlist,
-                   clampval, max_depth, roulette_active, integrator_type,
+                   clampval, sample_floor, max_depth, roulette_active, integrator_type,
                    &render_cancelled] (int k) {
                      int nx_begin = adaptive_pixel_sampler.pixel_chunks[k].startx;
                      int ny_begin = adaptive_pixel_sampler.pixel_chunks[k].starty;
@@ -364,7 +370,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
                                color_sample, normal_sample, albedo_sample,
                                &render_cancelled);
                          point3f col = weight != 0 ? clamp_point(de_nan(color_sample),
-                                                                 0, clampval) * weight * cam->get_iso() : 0;
+                                                                 sample_floor, clampval) * weight * cam->get_iso() : 0;
                          adaptive_pixel_sampler.add_alpha_count(i,j, alpha);
                          mat_stack->clear();
                          adaptive_pixel_sampler.add_color_main(i, j, col);
@@ -404,7 +410,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
 
   auto render_small_sample = [&adaptive_pixel_sampler_small, numbercores, nx_small, ny_small, sample_method,
                               &rngs_small, fov, &samplers_small, cam, &world, &hlist,
-                              clampval, max_depth, roulette_active, integrator_type,
+                              clampval, sample_floor, max_depth, roulette_active, integrator_type,
                               &render_cancelled, &wait_for_render_jobs] (size_t s) -> bool {
     render_cancelled.store(false, std::memory_order_relaxed);
     RcppThread::ThreadPool pool(numbercores);
@@ -412,7 +418,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
                    nx_small, ny_small, s, sample_method,
                    &rngs_small, fov, &samplers_small,
                    cam, &world, &hlist,
-                   clampval, max_depth, roulette_active, integrator_type,
+                   clampval, sample_floor, max_depth, roulette_active, integrator_type,
                    &render_cancelled] (int k) {
                      int nx_begin = adaptive_pixel_sampler_small.pixel_chunks[k].startx;
                      int ny_begin = adaptive_pixel_sampler_small.pixel_chunks[k].starty;
@@ -454,7 +460,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
                                color_sample, normal_sample, albedo_sample,
                                &render_cancelled);
                          point3f col = weight != 0 ? clamp_point(de_nan(color_sample),
-                                                                 0, clampval) * weight * cam->get_iso() : 0;
+                                                                 sample_floor, clampval) * weight * cam->get_iso() : 0;
                          adaptive_pixel_sampler_small.add_alpha_count(i,j, alpha);
                          adaptive_pixel_sampler_small.add_albedo(i, j, albedo_sample);
                          adaptive_pixel_sampler_small.add_normal(i, j, normal_sample);

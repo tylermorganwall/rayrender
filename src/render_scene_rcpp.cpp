@@ -1035,7 +1035,7 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
     auto infinite_lights = BuildInfiniteLights(
         Rcpp::as<Rcpp::List>(render_info["infinite_lights"]), texCache);
     if (imp_sample_objects.volume_scene)
-      imp_sample_objects.volume_scene->atmosphere = infinite_lights->GetAtmosphere();
+      imp_sample_objects.volume_scene->atmosphere = infinite_lights->GetTransportAtmosphere();
     background_sphere = std::make_shared<InfiniteAreaLight>(
         infinite_lights, world_radius * 2, convert_to_point3(world_center),
         BackgroundTransform, BackgroundTransformInv);

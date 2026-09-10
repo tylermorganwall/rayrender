@@ -58,29 +58,38 @@ vec2f to_uv(V w) {
 }
 
 
-std::shared_ptr<const Model> load_model(const std::string &path, double visibility) {
+std::shared_ptr<const Model> load_model(const std::string &path, double visibility,
+                                      bool cache_spectra, bool transmission_table,
+                                      double transmission_table_max_mb) {
   // Keep only the most recently used visibility slice between renders. Loading
   // happens before workers start; const queries share the immutable coefficients.
   static std::mutex mutex;
   static std::shared_ptr<const Model> cached;
   static std::string last_path;
   static double last_visibility = -1;
+  static bool last_cache_spectra = false, last_transmission_table = false;
+  static double last_table_max_mb = -1;
 
 
   // Resolve R's registered callable on the main thread, before taking a C++
   // lock. Every subsequent operation on this wrapper stays in native code.
   auto model = std::make_shared<Model>();
   std::lock_guard<std::mutex> guard(mutex);
-  if (cached && path == last_path && visibility == last_visibility) return cached;
+  if (cached && path == last_path && visibility == last_visibility &&
+      cache_spectra == last_cache_spectra && transmission_table == last_transmission_table &&
+      transmission_table_max_mb == last_table_max_mb)
+    return cached;
 
 
   // A ground-only dataset cannot describe elevated surfaces or cloud paths.
   // Publish the new slice to the cache only after checking its altitude coverage.
-  model->initialize(path, visibility);
+  model->initialize(path, visibility, cache_spectra, transmission_table, transmission_table_max_mb);
   auto data = model->getAvailableData();
   if (data.altitudeMax < 15000 || data.altitudeMin > 0)
     throw std::runtime_error("Atmospheric sky lights require the full-altitude Prague dataset.");
   cached = model; last_path = path; last_visibility = visibility;
+  last_cache_spectra = cache_spectra; last_transmission_table = transmission_table;
+  last_table_max_mb = transmission_table_max_mb;
   return model;
 }
 
@@ -92,6 +101,17 @@ double scalar(const Rcpp::List &x, const char *name, double lo, double hi) {
   if (!std::isfinite(value) || value < lo || value > hi)
     throw std::runtime_error(std::string("Invalid Prague atmosphere parameter: ") + name);
   return value;
+}
+
+
+// Missing switches preserve descriptions saved before lighting and finite haze
+// became independently configurable. Reject NA rather than treating it as true.
+bool flag(const Rcpp::List &x, const char *name, bool fallback = true) {
+  if (!x.containsElementNamed(name)) return fallback;
+  SEXP value = x[name];
+  if (TYPEOF(value) != LGLSXP || Rf_xlength(value) != 1 || LOGICAL(value)[0] == NA_LOGICAL)
+    throw std::runtime_error(std::string(name) + " must be TRUE or FALSE.");
+  return LOGICAL(value)[0] != 0;
 }
 
 
@@ -110,15 +130,16 @@ std::array<double, 3> triple(const Rcpp::List &x, const char *name, bool positiv
 
 
 // Keep one anchor while a ray crosses null events or invisible boundaries.
-// Restart only when its direction changes or atmospheric transport is toggled
-// by entering/leaving glass; subdividing a fitted path must not change its total.
-void AtmosphereRay::Start(const point3f &p, const vec3f &w, bool outside_glass) {
-  bool enabled = model && outside_glass;
+// Restart when direction changes or a glass/excluded-volume boundary toggles
+// transport. Ordinary subdivisions of one air interval keep their common fit.
+void AtmosphereRay::Start(const point3f &p, const vec3f &w, bool integrate) {
+  bool enabled = model && integrate;
   if (!initialized || active != enabled || w[0] != direction[0] ||
       w[1] != direction[1] || w[2] != direction[2]) {
     initialized = true; active = enabled; origin = p; direction = w;
     cumulative = AtmosphereSegment(); distance = 0;
     cache.ready = cache.near_ready = false;
+    pending = false; reservoir_mass = 0;
   }
 }
 
@@ -153,6 +174,67 @@ AtmosphereSegment AtmosphereRay::Advance(const point3f &p) {
 }
 
 
+// Factor atmospheric transmission out of the per-event throughput. If S(d) is
+// cumulative in-scattering at our fixed anchor, a span contributes
+// sum_i c_i [S(d_i) - S(d_{i-1})]. Summation by parts leaves an endpoint term
+// plus corrections (c_i - c_{i+1}) at intermediate events. Constant weights
+// telescope exactly, including arbitrarily many neutral primary-ray null events.
+void AtmosphereRay::Accumulate(const point3f &p, const std::array<double, 3> &weight,
+                               double uniform) {
+  if (!active) return;
+  double next = 0;
+  for (int c = 0; c < 3; ++c) next += (double(p[c]) - origin[c]) * direction[c];
+  if (next <= (pending ? pending_distance : distance)) return;
+  std::array<double, 3> coefficient{}, change{};
+  double mass = 0;
+  for (int c = 0; c < 3; ++c) {
+    coefficient[c] = cumulative.transmission[c] > 0 ? weight[c] / cumulative.transmission[c] : 0;
+    change[c] = pending_weight[c] - coefficient[c];
+    mass = std::max(mass, std::abs(change[c]));
+  }
+
+
+  // Select a correction using only its RGB weight, without evaluating S there.
+  // Dividing by its selection probability at Flush preserves the conditional
+  // expectation, including signed corrections from colored media or roulette.
+  if (pending && mass > 0) {
+    reservoir_mass += mass;
+    if (reservoir_mass == mass || uniform < mass / reservoir_mass) {
+      selected_weight = change;
+      selected_distance = pending_distance;
+      selected_mass = mass;
+    }
+  }
+  pending = true;
+  pending_distance = next;
+  pending_weight = coefficient;
+}
+
+
+// Apply deferred extinction at the endpoint and estimate its source integral.
+// Subtract the last flushed S from both terms to reduce cancellation on long
+// rays. Keep the original fit anchor across flushes and invisible boundaries.
+WeightedAtmosphereSegment AtmosphereRay::Flush(double endpoint_uniform, double correction_uniform) {
+  WeightedAtmosphereSegment result;
+  if (!pending) return result;
+  auto endpoint = model->SampledSegment(origin, direction, pending_distance, cache, endpoint_uniform);
+  for (int c = 0; c < 3; ++c) {
+    result.transmission[c] = cumulative.transmission[c] > 0
+        ? endpoint.transmission[c] / cumulative.transmission[c] : 0;
+    result.radiance[c] = pending_weight[c] * (double(endpoint.radiance[c]) - cumulative.radiance[c]);
+  }
+  if (reservoir_mass > 0) {
+    auto selected = model->SampledSegment(origin, direction, selected_distance, cache, correction_uniform);
+    for (int c = 0; c < 3; ++c)
+      result.radiance[c] += selected_weight[c] * (reservoir_mass / selected_mass) *
+          (double(selected.radiance[c]) - cumulative.radiance[c]);
+  }
+  cumulative = endpoint; distance = pending_distance;
+  pending = false; reservoir_mass = 0;
+  return result;
+}
+
+
 // The environment is evaluated at the fixed anchor and already includes haze.
 // Remove the accumulated part so adding the remaining background reconstructs
 // that environment exactly, instead of applying the nearby atmosphere twice.
@@ -177,6 +259,31 @@ PragueInfiniteLight::PragueInfiniteLight(const Rcpp::List &description, bool bui
   elevation = scalar(description, "elevation", -4.2, 90) * pi / 180;
   azimuth = scalar(description, "azimuth", 0, 360) * pi / 180;
   intensity = scalar(description, "intensity", 0, 1e30);
+  attenuation = flag(description, "attenuation");
+  query_altitude = flag(description, "query_altitude");
+  haze_in_volumes = flag(description, "haze_in_volumes");
+  deferred_haze = flag(description, "deferred_haze", false);
+  if (description.containsElementNamed("haze_correction_probability"))
+    haze_correction_probability = scalar(description, "haze_correction_probability", 0, 1);
+  if (!(haze_correction_probability > 0))
+    throw std::runtime_error("haze_correction_probability must be greater than zero.");
+  if (haze_correction_probability < 1 && !deferred_haze)
+    throw std::runtime_error("haze_correction_probability < 1 requires deferred_haze = TRUE.");
+  if (attenuation && !query_altitude)
+    throw std::runtime_error("attenuation = TRUE requires query_altitude = TRUE.");
+
+
+  // This budget controls optional storage only. Zero skips expansion, and
+  // positive infinity requests the complete table without a user memory cap.
+  double transmission_table_max_mb = 512;
+  if (description.containsElementNamed("transmission_table_max_mb")) {
+    SEXP value = description["transmission_table_max_mb"];
+    if ((TYPEOF(value) != REALSXP && TYPEOF(value) != INTSXP) || Rf_xlength(value) != 1)
+      throw std::runtime_error("transmission_table_max_mb must be a nonnegative number or Inf.");
+    transmission_table_max_mb = Rcpp::as<double>(value);
+    if (std::isnan(transmission_table_max_mb) || transmission_table_max_mb < 0)
+      throw std::runtime_error("transmission_table_max_mb must be a nonnegative number or Inf.");
+  }
 
 
   // Keep the light's rotation separate from the enclosing environment transform.
@@ -202,7 +309,9 @@ PragueInfiniteLight::PragueInfiniteLight(const Rcpp::List &description, bool bui
 
   // Integrate at the dataset's visible channel centres. Interpolate the 1 nm CIE
   // tables, then convert XYZ matching functions to linear RGB quadrature weights.
-  model = load_model(Rcpp::as<std::string>(description["filename"]), visibility);
+  model = load_model(Rcpp::as<std::string>(description["filename"]), visibility,
+                     flag(description, "cache_spectra"), flag(description, "transmission_table"),
+                     transmission_table_max_mb);
   auto data = model->getAvailableData();
   std::array<double, 3> totals{0, 0, 0};
   for (int i = 0; i < data.channels; ++i) {
@@ -266,6 +375,9 @@ PragueInfiniteLight::PragueInfiniteLight(const Rcpp::List &description, bool bui
   if (!build_sampler) return;
   int height = int(scalar(description, "resolution", 16, 2048)), width = 2 * height;
   proposal_altitudes = {0, 100, 500, 1500, 4000, 8000, 15000};
+  // A fixed observer needs only one proposal; per-position lighting brackets
+  // the actual height with neighbouring maps without interpolating radiance.
+  if (!query_altitude) proposal_altitudes = {altitude};
   for (double h : proposal_altitudes) {
     std::vector<Float> values(size_t(width) * height);
     double total = 0;
@@ -296,7 +408,7 @@ PragueInfiniteLight::PragueInfiniteLight(const Rcpp::List &description, bool bui
   // high-altitude estimate where extinction does not suppress the disk as much.
   V sun(std::cos(azimuth) * std::cos(elevation), std::sin(azimuth) * std::cos(elevation),
         std::sin(elevation));
-  auto rgb = RGB(Spectrum(V(0, 0, 15000), sun, include_sun, false));
+  auto rgb = RGB(Spectrum(V(0, 0, query_altitude ? 15000 : altitude), sun, include_sun, false));
   sampling_weight += std::max(0.0, .212671 * rgb[0] + .715160 * rgb[1] + .072169 * rgb[2]) *
                      sun_solid_angle;
 }
@@ -310,6 +422,13 @@ PragueInfiniteLight::Vector PragueInfiniteLight::Position(const point3f &p) cons
   vec3f local = environment_to_light(EnvironmentDirection(offset));
   return V(local[2] * meters_per_unit, -local[0] * meters_per_unit,
            local[1] * meters_per_unit + altitude);
+}
+
+
+// Freeze the entire local observer frame in fixed-altitude mode: its horizon,
+// solar visibility, radiance, and sampling must all describe the same observer.
+PragueInfiniteLight::Vector PragueInfiniteLight::LightingPosition(const point3f &p) const {
+  return query_altitude ? Position(p) : V(0, 0, altitude);
 }
 
 
@@ -369,7 +488,7 @@ bool PragueInfiniteLight::PlanetOccludes(Vector p, Vector w, double distance) co
 // depressed horizon at altitude and the disk radius, so a visible upper limb
 // can still contribute after the disk's centre has passed below the horizon.
 bool PragueInfiniteLight::MaySeeDisk(const point3f &p, const vec3f &w, double radius) const {
-  V position = Position(p);
+  V position = LightingPosition(p);
   V up = normalized(position + V(0, 0, earth_radius));
   double h = std::clamp(Height(position), 0.0, 15000.0);
   double horizon = -std::acos(earth_radius / (earth_radius + h));
@@ -381,7 +500,7 @@ bool PragueInfiniteLight::MaySeeDisk(const point3f &p, const vec3f &w, double ra
 // Evaluate the enabled radiance components spectrally before any RGB conversion.
 // Finite haze segments request only the sky; direct solar emission is separate.
 PragueInfiniteLight::SpectrumValues PragueInfiniteLight::Spectrum(Vector p, Vector w,
-                                                                 bool sun, bool sky) const {
+                                                                 bool sun, bool sky, bool smooth) const {
   SpectrumValues result{};
   auto params = Parameters(p, w);
 
@@ -401,6 +520,7 @@ PragueInfiniteLight::SpectrumValues PragueInfiniteLight::Spectrum(Vector p, Vect
   // for the dome and segment endpoints, preserving their transport relationship.
   double near_horizon = std::clamp((5 * pi / 180 - std::abs(params.theta - pi / 2)) /
                                    (pi / 180), 0.0, 1.0);
+  if (!smooth) near_horizon = 0;
   V up = normalized(p + V(0, 0, earth_radius));
   V vertical = up - w * dotv(up, w);
   for (int j = -1; j <= 1; ++j) {
@@ -435,20 +555,22 @@ point3f PragueInfiniteLight::RGB(const SpectrumValues &values) const {
 // Environment queries can include the built-in Sun. The sky-only entry point
 // also supports retaining atmospheric haze when the background is transparent.
 point3f PragueInfiniteLight::Radiance(const point3f &p, const vec3f &w, Float) const {
-  return RGB(Spectrum(Position(p), Direction(w), include_sun, include_sky));
+  return RGB(Spectrum(LightingPosition(p), Direction(w), include_sun, include_sky));
 }
 
 
 point3f PragueInfiniteLight::SkyRadiance(const point3f &p, const vec3f &w) const {
-  return RGB(Spectrum(Position(p), Direction(w), false, include_sky));
+  return RGB(Spectrum(LightingPosition(p), Direction(w), false, include_sky));
 }
 
 
 // Generic RGB attenuation for a path of the requested length. A zero-length path
 // is transparent; an infinite path that intersects Earth is completely blocked.
 point3f PragueInfiniteLight::Transmission(const point3f &p, const vec3f &w, double distance) const {
-  if (distance <= 0) return point3f(1);
-  V position = Position(p), direction = Direction(w);
+  if (distance <= 0 || (!attenuation && std::isfinite(distance))) return point3f(1);
+  // Disabling finite haze does not remove extinction from space to the light's
+  // observer. Additional environment images still need that infinite filtering.
+  V position = std::isfinite(distance) ? Position(p) : LightingPosition(p), direction = Direction(w);
   if (!std::isfinite(distance) && PlanetOccludes(position, direction, INFINITY)) return point3f(0);
   auto params = Parameters(position, direction);
   double d = std::isfinite(distance) ? distance * meters_per_unit : std::numeric_limits<double>::max();
@@ -480,7 +602,7 @@ point3f PragueInfiniteLight::Transmission(const point3f &p, const vec3f &w, doub
 // preserving solar/lunar color changes that generic RGB weights would miss.
 point3f PragueInfiniteLight::CelestialTransmission(const point3f &p, const vec3f &w,
                                                   InfiniteLightSpectrum spectrum) const {
-  V position = Position(p), direction = Direction(w);
+  V position = LightingPosition(p), direction = Direction(w);
   if (PlanetOccludes(position, direction, INFINITY)) return point3f(0);
   SpectrumValues values{};
   model->transmittanceSpectrum(Parameters(position, direction), wavelengths.data(), wavelengths.size(),
@@ -507,8 +629,18 @@ AtmosphereSegment PragueInfiniteLight::Segment(const point3f &p, const vec3f &w,
 
 AtmosphereSegment PragueInfiniteLight::Segment(const point3f &p, const vec3f &w, double distance,
                                               AtmosphereSegmentCache &cache) const {
+  return EvaluateSegment(p, w, distance, cache, -1);
+}
+
+AtmosphereSegment PragueInfiniteLight::SampledSegment(const point3f &p, const vec3f &w,
+    double distance, AtmosphereSegmentCache &cache, double uniform) const {
+  return EvaluateSegment(p, w, distance, cache, uniform);
+}
+
+AtmosphereSegment PragueInfiniteLight::EvaluateSegment(const point3f &p, const vec3f &w,
+    double distance, AtmosphereSegmentCache &cache, double uniform) const {
   AtmosphereSegment result;
-  if (distance <= 0) return result;
+  if (!attenuation || distance <= 0) return result;
   V position = Position(p), direction = Direction(w);
   double d = distance * meters_per_unit;
   if (!std::isfinite(d)) throw std::runtime_error("Finite atmosphere segment length required.");
@@ -536,7 +668,20 @@ AtmosphereSegment PragueInfiniteLight::Segment(const point3f &p, const vec3f &w,
   // Recover the light scattered between endpoints a and b from the common sky
   // field: L_ab = L_a - T_ab * L_b. Subtract spectrally before converting to RGB
   // so wavelength-dependent extinction colors the finite haze consistently.
-  auto b = Spectrum(position + direction * d, direction, false, include_sky);
+  // Use the native central direction as a cheap control. Sample only the
+  // correction for the two neighboring vertical directions used in smoothing.
+  // The correction must be formed AFTER the original spectral clamp, otherwise
+  // the nonlinear clamp would bias the sampled source estimate.
+  V endpoint = position + direction * d;
+  bool sample_correction = false;
+  if (include_sky && uniform >= 0 && haze_correction_probability < 1) {
+    auto endpoint_params = Parameters(endpoint, direction);
+    sample_correction = std::abs(endpoint_params.theta - pi / 2) < 5 * pi / 180;
+  }
+  bool selected = sample_correction && uniform < haze_correction_probability;
+  auto b = Spectrum(endpoint, direction, false, include_sky, !sample_correction);
+  SpectrumValues full{};
+  if (selected) full = Spectrum(endpoint, direction, false, include_sky);
   SpectrumValues source{};
   SpectrumValues values = cache.near_transmission;
   if (d >= 100)
@@ -547,6 +692,10 @@ AtmosphereSegment PragueInfiniteLight::Segment(const point3f &p, const vec3f &w,
     // The fitted data can have small negative residuals; radiance cannot be
     // negative spectrally. RGB conversion follows after this spectral subtraction.
     source[i] = std::max(0.0, cache.radiance[i] - value * b[i]);
+    if (selected) {
+      double target = std::max(0.0, cache.radiance[i] - value * full[i]);
+      source[i] += (target - source[i]) / haze_correction_probability;
+    }
     for (int c = 0; c < 3; ++c) tr[c] += value * transmission_weights[i][c];
   }
 
@@ -563,6 +712,7 @@ AtmosphereSegment PragueInfiniteLight::Segment(const point3f &p, const vec3f &w,
 // Bracket the observer's height with two precomputed sampling maps. The fraction
 // selects a mixture of their distributions, not an interpolation of sky radiance.
 std::pair<size_t, double> PragueInfiniteLight::Proposal(Vector p) const {
+  if (proposal_altitudes.size() == 1) return {0, 0};
   double h = std::clamp(Height(p), 0.0, 15000.0);
   auto upper = std::upper_bound(proposal_altitudes.begin(), proposal_altitudes.end(), h);
   size_t i = std::min(proposal_altitudes.size() - 2, size_t(upper - proposal_altitudes.begin() - 1));
@@ -578,8 +728,10 @@ Float PragueInfiniteLight::SkyPdf(Vector p, Vector w) const {
   auto mix = Proposal(p);
   vec2f uv = to_uv(w);
   double sine = std::sqrt(std::max(0.0, 1 - w.z * w.z));
-  double pdf = sine > 0 ? ((1 - mix.second) * proposals[mix.first]->Pdf(uv) +
-                           mix.second * proposals[mix.first + 1]->Pdf(uv)) / (2 * pi * pi * sine) : 0;
+  double density = proposals[mix.first]->Pdf(uv);
+  if (mix.second > 0)
+    density = (1 - mix.second) * density + mix.second * proposals[mix.first + 1]->Pdf(uv);
+  double pdf = sine > 0 ? density / (2 * pi * pi * sine) : 0;
   return Float(uniform_fraction / (4 * pi) + (1 - uniform_fraction) * pdf);
 }
 
@@ -625,7 +777,7 @@ vec3f PragueInfiniteLight::Sample(const point3f &p, vec2f u, Float) const {
   // Choose one of the two neighbouring altitude maps and remap the same variate
   // into that map's unit interval. SkyPdf() evaluates the full mixture density.
   u.xy.x = (u[0] - uniform_fraction) / (1 - uniform_fraction);
-  auto mix = Proposal(Position(p));
+  auto mix = Proposal(LightingPosition(p));
   size_t index = mix.first;
   if (mix.second > 0 && u[0] < mix.second) { ++index; u.xy.x /= mix.second; }
   else u.xy.x = (u[0] - mix.second) / (1 - mix.second);
@@ -640,7 +792,7 @@ Float PragueInfiniteLight::Pdf(const point3f &p, const vec3f &w, Float) const {
   V d = Direction(w);
   V sun(std::cos(azimuth) * std::cos(elevation), std::sin(azimuth) * std::cos(elevation), std::sin(elevation));
   double solar = dotv(d, sun) >= std::cos(sun_radius) ? sun_fraction / sun_solid_angle : 0;
-  return Float(solar + (1 - sun_fraction) * SkyPdf(Position(p), d));
+  return Float(solar + (1 - sun_fraction) * SkyPdf(LightingPosition(p), d));
 }
 
 

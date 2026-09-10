@@ -111,11 +111,15 @@ test_that("sky lights retain location, time and generation settings", {
     40.7,
     -74,
     time,
-    sky_args = list(hosek = FALSE, resolution = 64)
+    hosek = FALSE,
+    resolution = 64
   )
   expect_s3_class(light, "ray_infinite_light")
   expect_identical(light$datetime, time)
-  expect_identical(light$sky_args, list(hosek = FALSE, resolution = 64))
+  expect_identical(
+    light$sky_args[c("hosek", "resolution")],
+    list(hosek = FALSE, resolution = 64)
+  )
   scene = sphere() |> add_infinite_light(light)
   expect_identical(get_infinite_light(scene, "sky"), light)
   expect_output(print(light), "location: 40.7, -74")
@@ -124,13 +128,39 @@ test_that("sky lights retain location, time and generation settings", {
   }
   expect_error(sky_light(0, 181, time), "long")
   expect_error(sky_light(0, 0, "2026-06-21"), "POSIXct")
-  expect_error(sky_light(0, 0, time, list(32)), "named list")
   expect_error(
-    sky_light(0, 0, time, list(filename = "sky.exr")),
+    sky_light(0, 0, time, filename = "sky.exr"),
     "cannot override"
   )
-  expect_error(sky_light(0, 0, time, list(lat = 1)), "cannot override")
+  expect_error(
+    sky_light(lat = 0, long = 0, datetime = time, lon = 1),
+    "cannot override"
+  )
+  expect_error(sky_light(0, 0, time, allow_download = TRUE), "cannot override")
+  expect_error(
+    sky_light(0, 0, time, sky_args = list(resolution = 32)),
+    "directly"
+  )
+  expect_error(
+    sky_light(0, 0, time, unknown = 1, unknown = 2),
+    "uniquely named"
+  )
   expect_error(sky_light(0, 0, time, intensity = -1), "intensity")
+})
+
+test_that("direct sky settings retain the image and native mode defaults", {
+  time = as.POSIXct("2026-06-21 18:00:00", tz = "America/New_York")
+  image = sky_light(40.7, -74, time)
+  native = sky_light(40.7, -74, time, atmosphere = TRUE)
+  expect_true(image$sky_args$hosek)
+  expect_equal(image$sky_args$resolution, 2048)
+  expect_false(native$sky_args$hosek)
+  expect_equal(native$sky_args$resolution, 64)
+  expect_equal(native$sky_args$altitude, 0)
+  expect_equal(native$sky_args$visibility, 50)
+  expect_equal(native$sky_args$albedo, 0.5)
+  expect_equal(image$sky_args$turbidity, 3)
+  expect_null(native$sky_args$turbidity)
 })
 
 test_that("static sky generation is cached independently of intensity and rotation", {
@@ -151,7 +181,8 @@ test_that("static sky generation is cached independently of intensity and rotati
         lat = lat,
         lon = lon,
         datetime = datetime,
-        resolution = resolution
+        resolution = resolution,
+        ...
       )
       # This test checks preparation/caching; native image decoding is tested by renders.
       writeBin(as.raw(1), filename)
@@ -161,7 +192,29 @@ test_that("static sky generation is cached independently of intensity and rotati
   time = as.POSIXct("2026-06-21 18:00:00", tz = "America/New_York")
   # A unique timestamp separates this mocked cache from actual sky images.
   time = time + as.numeric(Sys.time()) / 1e6
-  sky = sky_light(40.7, -74, time, sky_args = list(resolution = 32))
+  sky = sky_light(
+    40.7,
+    -74,
+    time,
+    resolution = 32,
+    hosek = FALSE,
+    altitude = 250,
+    visibility = 40,
+    albedo = 0.3,
+    render_mode = "atmosphere",
+    moon = TRUE,
+    stars = TRUE,
+    star_width = 2,
+    stars_exposure = 1,
+    planets = TRUE,
+    moon_atmosphere = TRUE,
+    moon_hosek = FALSE,
+    prague_rgb_correction_strength = 0.5,
+    prague_rgb_correction_gain = c(1, 0.95, 0.9),
+    exr_adopted_white = "D65",
+    exr_metadata = FALSE,
+    earthshine = FALSE
+  )
   a = prepare_infinite_light(sky)
   on.exit(unlink(a$filename))
   sky$intensity = 0.5
@@ -171,6 +224,23 @@ test_that("static sky generation is cached independently of intensity and rotati
   expect_identical(a$filename, b$filename)
   expect_identical(seen$datetime, time)
   expect_equal(seen$lon, -74)
+  expect_equal(seen$altitude, 250)
+  expect_equal(seen$visibility, 40)
+  expect_equal(seen$albedo, 0.3)
+  expect_equal(seen$render_mode, "atmosphere")
+  expect_false(seen$hosek)
+  expect_true(seen$moon)
+  expect_true(seen$stars)
+  expect_true(seen$planets)
+  expect_true(seen$moon_atmosphere)
+  expect_false(seen$moon_hosek)
+  expect_equal(seen$star_width, 2)
+  expect_equal(seen$stars_exposure, 1)
+  expect_equal(seen$prague_rgb_correction_strength, 0.5)
+  expect_equal(seen$prague_rgb_correction_gain, c(1, 0.95, 0.9))
+  expect_equal(seen$exr_adopted_white, "D65")
+  expect_false(seen$exr_metadata)
+  expect_false(seen$earthshine)
   expect_equal(b$rotation, 45)
   expect_equal(b$intensity, 0.5)
   expect_identical(b$type, "image")
