@@ -76,6 +76,8 @@ test_that("cloud controls reject invalid positions, grids, and transforms", {
     "height",
     "depth",
     "seed",
+    "t",
+    "animation_seed",
     "resolution",
     "coverage",
     "detail",
@@ -93,6 +95,7 @@ test_that("cloud controls reject invalid positions, grids, and transforms", {
     height = -1,
     depth = 0,
     seed = 0.5,
+    animation_seed = -1,
     resolution = 24.5,
     coverage = -0.1,
     detail = 1.1,
@@ -108,6 +111,131 @@ test_that("cloud controls reject invalid positions, grids, and transforms", {
     expect_error(do.call(cloud, args), name)
   }
   expect_error(cloud(style = "smoke", resolution = 24), "arg")
+})
+
+test_that("cloud evolution is smooth, repeatable, and independent of placement", {
+  skip_if_not_installed("ambient")
+  for (style in c("cumulus", "stratus")) {
+    initial = cloud(style = style, seed = 8, resolution = 32)
+    at_zero = cloud(
+      style = style,
+      seed = 8,
+      resolution = 32,
+      t = 0,
+      animation_seed = 101
+    )
+    expect_identical(at_zero, initial)
+    middle = cloud(
+      style = style,
+      seed = 8,
+      resolution = 32,
+      t = 0.5,
+      animation_seed = 101
+    )
+    next_frame = cloud(
+      style = style,
+      seed = 8,
+      resolution = 32,
+      t = 0.501,
+      animation_seed = 101
+    )
+    later = cloud(
+      style = style,
+      seed = 8,
+      resolution = 32,
+      t = 1,
+      animation_seed = 101
+    )
+    a = initial$shape_info[[1]]$medium$density
+    b = middle$shape_info[[1]]$medium$density
+    c = next_frame$shape_info[[1]]$medium$density
+    d = later$shape_info[[1]]$medium$density
+    expect_gt(mean(abs(b - a)), 1e-4)
+    expect_gt(mean(abs(d - b)), 1e-4)
+    expect_lt(mean(abs(c - b)), mean(abs(d - b)) / 20)
+    near_zero = cloud(
+      style = style,
+      seed = 8,
+      resolution = 32,
+      t = 0.001,
+      animation_seed = 101
+    )$shape_info[[1]]$medium$density
+    expect_lt(mean(abs(near_zero - a)), mean(abs(b - a)) / 20)
+
+    # Revisiting a frame after later times does not depend on rendering order.
+    expect_identical(
+      cloud(
+        style = style,
+        seed = 8,
+        resolution = 32,
+        t = 0.5,
+        animation_seed = 101
+      ),
+      middle
+    )
+    alternative = cloud(
+      style = style,
+      seed = 8,
+      resolution = 32,
+      t = 0.5,
+      animation_seed = 102
+    )
+    expect_gt(mean(abs(alternative$shape_info[[1]]$medium$density - b)), 1e-4)
+    moved = cloud(
+      x = 20,
+      y = 30,
+      z = -40,
+      angle = c(10, 30, 20),
+      scale = 2,
+      style = style,
+      seed = 8,
+      resolution = 32,
+      t = 0.5,
+      animation_seed = 101
+    )
+    expect_identical(
+      moved$shape_info[[1]]$medium,
+      middle$shape_info[[1]]$medium
+    )
+    expect_equal(c(middle$x, middle$y, middle$z), c(0, 0, 0))
+    expect_identical(
+      middle$shape_info[[1]]$medium$bounds,
+      initial$shape_info[[1]]$medium$bounds
+    )
+    expect_identical(dim(b), dim(a))
+    expect_true(all(is.finite(b) & b >= 0 & b <= 1))
+    expect_true(all(b[c(1, dim(b)[1]), , ] == 0))
+    expect_true(all(b[, c(1, dim(b)[2]), ] == 0))
+    expect_true(all(b[,, c(1, dim(b)[3])] == 0))
+  }
+  # Broad features still evolve when fine detail is disabled.
+  a = cloud(detail = 0, t = 0, resolution = 24)$shape_info[[1]]$medium$density
+  b = cloud(detail = 0, t = 1, resolution = 24)$shape_info[[1]]$medium$density
+  expect_gt(mean(abs(b - a)), 1e-4)
+})
+
+test_that("animated clouds preserve RNG state and support negative times and seed limits", {
+  skip_if_not_installed("ambient")
+  withr::local_seed(109)
+  state = .Random.seed
+  for (time in c(-1, 0.5, 1, 10)) {
+    object = cloud(
+      t = time,
+      animation_seed = .Machine$integer.max - 1,
+      resolution = 24
+    )
+    expect_identical(.Random.seed, state)
+    expect_true(all(is.finite(object$shape_info[[1]]$medium$density)))
+  }
+  for (seed in c(0.5, -1, .Machine$integer.max)) {
+    expect_error(
+      cloud(t = 1, animation_seed = seed, resolution = 24),
+      "animation_seed"
+    )
+  }
+  rm(".Random.seed", envir = .GlobalEnv)
+  invisible(cloud(t = 1, resolution = 24))
+  expect_false(exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE))
 })
 
 test_that("cloud density follows object, group, and instance transformations in renders", {

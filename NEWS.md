@@ -1,5 +1,9 @@
 # rayrender 0.41.5.9000
 
+* Add continuous local evolution to `cloud()` with `t` and an independent
+  `animation_seed`. Broad and fine noise evolve smoothly while position remains
+  controlled by x/y/z. Time zero preserves existing clouds exactly.
+
 * Expose sky model settings directly in `sky_light()`: use `altitude`,
   `visibility`, `resolution`, `hosek`, and other named arguments instead of a
   `sky_args` list. Image and native atmosphere defaults are preserved.

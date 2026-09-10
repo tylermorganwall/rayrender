@@ -355,3 +355,16 @@ test_that("extent cropping leaves contained clouds alone and clips a partial ove
     "does not overlap the terrain extent"
   )
 })
+
+
+test_that("example cloud wrappers forward evolution time and its independent seed", {
+  skip_if_not_installed("ambient")
+  args = list(seed = 4, resolution = 24, t = 0.75, animation_seed = 18)
+  direct = do.call(cloud, args)$shape_info[[1]]$medium$density
+  layer = do.call(cloud_example_helpers$perlin_cloud_layer, args)
+  expect_identical(layer$shape_info[[1]]$medium$density, direct)
+  expect_identical(
+    do.call(cloud_example_helpers$perlin_cloud_density, args),
+    direct
+  )
+})

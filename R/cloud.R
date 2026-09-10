@@ -16,6 +16,14 @@
 #'   rounded bodies with billowing tops; `"stratus"` creates a shallow cloud bank.
 #' @param seed Default `42`. Nonnegative integer seed for the cloud shape.
 #'   Generating a cloud preserves the caller's random-number state.
+#' @param t Default `0`. Continuous, dimensionless evolution time.
+#'   Small changes gently reshape the broad and fine density features without
+#'   moving the bounding box. Zero reproduces the original static cloud.
+#'   Keep both seeds fixed and increase this value between frames; for example,
+#'   use `seq(0, 1, length.out = 30)` for a gentle transition. Negative times work.
+#' @param animation_seed Default `1`. Nonnegative integer seed for the local
+#'   evolution, independent of the shape's `seed`. Changing it selects a different
+#'   evolution of the same cloud; it has no effect at `t = 0`.
 #' @param resolution Default `128`. Integer number of density cells along the
 #'   longest dimension, at least 24. Other dimensions follow the aspect ratio,
 #'   with at least eight cells each. Higher values add detail and use more memory.
@@ -50,6 +58,17 @@
 #' [animate_objects()], and [create_instances()] operations transform the cloud
 #' using the same object machinery as other closed shapes.
 #'
+#' Evolution adds small, bounded perturbations to the broad and fine noise
+#' fields using separately seeded four-dimensional simplex noise (space and
+#' time). Subtracting the perturbation at time zero anchors the original shape.
+#' Broad domes, the base profile, and edge fades stay fixed while local density
+#' swells and erodes. Evolution is procedural rather than a fluid simulation;
+#' cloud mass is not conserved. Use `x`, `y`, and `z` for bulk movement.
+#'
+#' Rebuild the cloud with a new `t` value for each rendered frame.
+#' [animate_objects()] animates its transform; it does not evolve the density
+#' within a frame or during the shutter interval.
+#'
 #' Cloud scattering is separate from [sky_light()]'s clear-air atmospheric haze.
 #' Avoid intersecting, non-nested cloud boxes, including their empty edge cells:
 #' these are separate medium boundaries. Use one larger field for a connected
@@ -80,6 +99,23 @@
 #'                coverage = 0.7, detail = 0.2, optical_depth = 6, g = 0.6)
 #'   scaled = cloud(scale = c(1.5, 1, 0.75), angle = c(10, 30, 0),
 #'                  order_rotation = c(2, 1, 3), resolution = 64)
+#'
+#'   # Keep seeds and position fixed to evolve the cloud locally over time.
+#'   # Rebuilding a frame at the same t value always gives the same cloud.
+#'   for (frame in 0:3) {
+#'     evolving = cloud(y = 20, width = 60, height = 20, depth = 40,
+#'       seed = 42, t = frame / 3, animation_seed = 17,
+#'       resolution = 64, optical_depth = 4)
+#'     scene = generate_ground(material = diffuse("#699447")) |>
+#'       add_object(evolving) |>
+#'       add_object(sphere(x = -50, y = 80, z = -30, radius = 15,
+#'         material = light(intensity = 40)))
+#'     set.seed(2026)
+#'     render_scene(scene, lookfrom = c(80, 35, -100), lookat = c(0, 20, 0),
+#'       width = 256, height = 160, fov = 35, integrator_type = "nee",
+#'       samples = 64, iso = 100, aperture = 0,
+#'       filename = file.path(tempdir(), sprintf("cloud-%02d.png", frame)))
+#'   }
 #' }
 cloud = function(
   x = 0,
@@ -97,7 +133,9 @@ cloud = function(
   g = 0.65,
   angle = c(0, 0, 0),
   order_rotation = c(1, 2, 3),
-  scale = c(1, 1, 1)
+  scale = c(1, 1, 1),
+  t = 0,
+  animation_seed = 1
 ) {
   for (field in c("x", "y", "z")) {
     validate_cloud_scalar(get(field), field)
@@ -152,7 +190,9 @@ cloud = function(
     style,
     seed,
     coverage,
-    detail
+    detail,
+    t = t,
+    animation_seed = animation_seed
   )
   extinction = optical_depth / height
   medium = grid_medium(
@@ -200,7 +240,9 @@ perlin_cloud_density = function(
   style = c("cumulus", "stratus"),
   seed = 42,
   coverage = 0.5,
-  detail = 0.35
+  detail = 0.35,
+  t = 0,
+  animation_seed = 1
 ) {
   if (!requireNamespace("ambient", quietly = TRUE)) {
     stop("Install the ambient package to generate Perlin cloud density.")
@@ -230,16 +272,19 @@ perlin_cloud_density = function(
   if (coverage < 0 || coverage > 1 || detail < 0 || detail > 1) {
     stop("coverage and detail must be between zero and one.", call. = FALSE)
   }
-  validate_cloud_scalar(seed, "seed")
-  if (
-    seed < 0 ||
-      seed > .Machine$integer.max - 1 ||
-      seed != floor(seed)
-  ) {
-    stop(
-      "seed must be a nonnegative integer smaller than .Machine$integer.max.",
-      call. = FALSE
-    )
+  validate_cloud_scalar(t, "t")
+  for (field in c("seed", "animation_seed")) {
+    value = get(field)
+    validate_cloud_scalar(value, field)
+    if (
+      value < 0 || value > .Machine$integer.max - 1 || value != floor(value)
+    ) {
+      stop(
+        field,
+        " must be a nonnegative integer smaller than .Machine$integer.max.",
+        call. = FALSE
+      )
+    }
   }
   dims = pmax(8L, as.integer(ceiling(resolution * (size / max(size)))))
   # noise_perlin() draws its seed from R's RNG. Restore the caller's RNG state.
@@ -274,6 +319,42 @@ perlin_cloud_density = function(
     gain = 0.5,
     lacunarity = 2
   )
+  # Time changes the local erosion fields, not the domes or object placement.
+  # Explicit simplex seeds leave the shape RNG sequence (including puff centers)
+  # untouched. Skip this work at zero to preserve the original field exactly.
+  if (t != 0) {
+    coordinates = expand.grid(
+      x = (seq_len(dims[1]) - 0.5) / max(dims),
+      y = (seq_len(dims[2]) - 0.5) / max(dims),
+      z = (seq_len(dims[3]) - 0.5) / max(dims),
+      KEEP.OUT.ATTRS = FALSE
+    )
+    broad = broad +
+      array(
+        cloud_evolution_noise(
+          coordinates,
+          t,
+          animation_seed,
+          frequency = 3,
+          speed = 1
+        ),
+        dims
+      ) *
+        0.12
+    fine = fine +
+      array(
+        cloud_evolution_noise(
+          coordinates,
+          t,
+          (animation_seed + 1) %% .Machine$integer.max,
+          frequency = 9,
+          speed = 1.5
+        ),
+        dims
+      ) *
+        0.18
+  }
+
   # Cell centers, in the same x/y/z order as grid_medium().
   x = (seq_len(dims[1]) - 0.5) / dims[1]
   y = (seq_len(dims[2]) - 0.5) / dims[2]
@@ -332,4 +413,31 @@ perlin_cloud_density = function(
   density[, c(1, dims[2]), ] = 0
   density[,, c(1, dims[3])] = 0
   density
+}
+
+#' @keywords internal
+cloud_evolution_noise = function(
+  coordinates,
+  t,
+  seed,
+  frequency,
+  speed
+) {
+  # The fourth coordinate supplies smooth temporal change at each fixed point.
+  # Anchor at zero; bounded simplex values keep even long evolutions local.
+  initial = ambient::gen_simplex(
+    x = coordinates$x * frequency,
+    y = coordinates$y * frequency,
+    z = coordinates$z * frequency,
+    t = 0,
+    seed = seed
+  )
+  evolved = ambient::gen_simplex(
+    x = coordinates$x * frequency,
+    y = coordinates$y * frequency,
+    z = coordinates$z * frequency,
+    t = t * speed,
+    seed = seed
+  )
+  evolved - initial
 }

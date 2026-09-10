@@ -20,7 +20,9 @@ cloud(
   g = 0.65,
   angle = c(0, 0, 0),
   order_rotation = c(1, 2, 3),
-  scale = c(1, 1, 1)
+  scale = c(1, 1, 1),
+  t = 0,
+  animation_seed = 1
 )
 }
 \arguments{
@@ -69,6 +71,16 @@ x, y, and z. Must be a permutation of \code{c(1, 2, 3)}.}
 \item{scale}{Default \code{c(1, 1, 1)}. Nonzero scale factors along x, y, and z.
 A single value scales uniformly. Scales the density field and its boundary
 together, retaining extinction per world-space unit.}
+
+\item{t}{Default \code{0}. Continuous, dimensionless evolution time.
+Small changes gently reshape the broad and fine density features without
+moving the bounding box. Zero reproduces the original static cloud.
+Keep both seeds fixed and increase this value between frames; for example,
+use \code{seq(0, 1, length.out = 30)} for a gentle transition. Negative times work.}
+
+\item{animation_seed}{Default \code{1}. Nonnegative integer seed for the local
+evolution, independent of the shape's \code{seed}. Changing it selects a different
+evolution of the same cloud; it has no effect at \code{t = 0}.}
 }
 \value{
 A single-row \code{ray_scene} containing an invisible box with an attached
@@ -92,6 +104,17 @@ the existing volume without renormalizing extinction, so stretching it along
 a ray increases that ray's optical depth. Standard \code{\link[=group_objects]{group_objects()}},
 \code{\link[=animate_objects]{animate_objects()}}, and \code{\link[=create_instances]{create_instances()}} operations transform the cloud
 using the same object machinery as other closed shapes.
+
+Evolution adds small, bounded perturbations to the broad and fine noise
+fields using separately seeded four-dimensional simplex noise (space and
+time). Subtracting the perturbation at time zero anchors the original shape.
+Broad domes, the base profile, and edge fades stay fixed while local density
+swells and erodes. Evolution is procedural rather than a fluid simulation;
+cloud mass is not conserved. Use \code{x}, \code{y}, and \code{z} for bulk movement.
+
+Rebuild the cloud with a new \code{t} value for each rendered frame.
+\code{\link[=animate_objects]{animate_objects()}} animates its transform; it does not evolve the density
+within a frame or during the shutter interval.
 
 Cloud scattering is separate from \code{\link[=sky_light]{sky_light()}}'s clear-air atmospheric haze.
 Avoid intersecting, non-nested cloud boxes, including their empty edge cells:
@@ -120,6 +143,23 @@ if (requireNamespace("ambient", quietly = TRUE)) {
                coverage = 0.7, detail = 0.2, optical_depth = 6, g = 0.6)
   scaled = cloud(scale = c(1.5, 1, 0.75), angle = c(10, 30, 0),
                  order_rotation = c(2, 1, 3), resolution = 64)
+
+  # Keep seeds and position fixed to evolve the cloud locally over time.
+  # Rebuilding a frame at the same t value always gives the same cloud.
+  for (frame in 0:3) {
+    evolving = cloud(y = 20, width = 60, height = 20, depth = 40,
+      seed = 42, t = frame / 3, animation_seed = 17,
+      resolution = 64, optical_depth = 4)
+    scene = generate_ground(material = diffuse("#699447")) |>
+      add_object(evolving) |>
+      add_object(sphere(x = -50, y = 80, z = -30, radius = 15,
+        material = light(intensity = 40)))
+    set.seed(2026)
+    render_scene(scene, lookfrom = c(80, 35, -100), lookat = c(0, 20, 0),
+      width = 256, height = 160, fov = 35, integrator_type = "nee",
+      samples = 64, iso = 100, aperture = 0,
+      filename = file.path(tempdir(), sprintf("cloud-\%02d.png", frame)))
+  }
 }
 \dontshow{\}) # examplesIf}
 }
