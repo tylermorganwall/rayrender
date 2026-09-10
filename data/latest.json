@@ -1,13 +1,12 @@
 {
-  "row_count": 104,
-  "latest_row_count": 8,
-  "latest_timestamp_utc": "2026-09-05T19:56:48Z",
-  "latest_run_id": "33988197902",
+  "row_count": 108,
+  "latest_row_count": 4,
+  "latest_timestamp_utc": "2026-09-10T04:34:47Z",
+  "latest_run_id": "34437004895",
   "latest_run_attempt": "1",
-  "latest_commit_sha": "dc6d6569c7c0d37e63c55dcdc40724775aeb2944",
-  "latest_branch_name": "camera",
+  "latest_commit_sha": "8da4a7a419831a93c3183c45642b0b485a0a57c7",
+  "latest_branch_name": "null-scatter-volume",
   "latest_status_counts": {
-    "build_failed": 2,
-    "ok": 6
+    "build_failed": 4
   }
 }
