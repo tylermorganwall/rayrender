@@ -9,6 +9,7 @@
 #include "../materials/texture.h"
 #include "boundary.h"
 #include "medium.h"
+#include "haze.h"
 #include "picking.h"
 #include "volpath.h"
 #include <chrono>
@@ -61,6 +62,133 @@ Rcpp::List grid_description(const Rcpp::NumericVector &values, int nx, int ny, i
   return description;
 }
 } // namespace
+context("Density-selected atmospheric haze") {
+  test_that("density metadata preserves fractional RGB tracking bounds") {
+    auto description = grid_description(Rcpp::NumericVector(8, .35), 2, 2, 2);
+    description["sigma_s"] = Rcpp::NumericVector::create(.2, 1.1, 2.2);
+    GridMedium medium(description);
+    auto iterator = medium.SampleRay(Ray(point3f(0, 0, -1), vec3f(0, 0, 1)), 2);
+    auto segment = iterator.Next();
+    for (int c = 0; c < 3; ++c) {
+      double expected = double(medium.sigma_s[c]) * Float(.35);
+      expect_true(segment->sigma_maj[c] >= expected);
+      expect_true(std::abs(segment->sigma_maj[c] - expected) < 1e-6);
+    }
+    expect_true(std::abs(segment->density_max - .35) < 1e-6);
+  }
+  test_that("threshold crossings preserve empty space and scaled grid ramps without collisions") {
+    auto description = grid_description(Rcpp::NumericVector::create(0, 2), 1, 1, 2);
+    description["sigma_s"] = Rcpp::NumericVector::create(0, 0, 0);
+    description["haze"] = true;
+    description["haze_density_threshold"] = .5;
+    for (double scale : {1., 2.}) {
+      description["density_scale"] = scale;
+      GridMedium medium(description);
+      for (double speed : {1., 2.}) {
+        MediumHazeIterator iterator(&medium, Ray(point3f(0, 0, -3), vec3f(0, 0, speed)),
+                                      5 / speed, true);
+        auto air = iterator.Next(), dense = iterator.Next(), tail = iterator.Next();
+        expect_true((bool(air) && bool(dense) && bool(tail)));
+        expect_true((air->integrate && !dense->integrate && tail->integrate));
+        expect_true(air->t_min == 0);
+        expect_true(std::abs(air->t_max - (2.5 + .25 / scale) / speed) < 1e-10);
+        expect_true((dense->t_min == air->t_max && dense->t_max == 4 / speed));
+        expect_true((tail->t_min == dense->t_max && tail->t_max == 5 / speed));
+        expect_false(bool(iterator.Next()));
+      }
+      MediumHazeIterator reverse(&medium, Ray(point3f(0, 0, 3), vec3f(0, 0, -1)), 6, true);
+      auto air = reverse.Next(), dense = reverse.Next(), tail = reverse.Next();
+      expect_true(air->t_max == 2);
+      expect_true(std::abs(dense->t_max - (3.5 - .25 / scale)) < 1e-10);
+      expect_true((tail->integrate && tail->t_max == 6));
+      MediumHazeIterator disabled(&medium, Ray(point3f(0), vec3f(0, 0, 1)), 2, false);
+      auto off = disabled.Next();
+      expect_true((!off->integrate && off->t_max == 2));
+      expect_false(bool(disabled.Next()));
+    }
+  }
+  test_that("cubic density crosses a threshold three times inside one cell") {
+    class CubicMedium : public Medium {
+    public:
+      CubicMedium() : Medium(medium_description(0)) { haze_density_threshold = 1; }
+      bool IsHomogeneous() const override { return false; }
+      DensityIndexRay DensityRay(const Ray &) const override { return {{0, 0, 0}, {1, 1, 1}}; }
+      std::array<double, 8> DensityCorners(const std::array<double, 3> &) const override {
+        // rho(u) = 1 + (u - .2)(u - .5)(u - .8), in Bernstein form.
+        return {.92, 1.14, 1.14, .86, 1.14, .86, .86, 1.08};
+      }
+    } medium;
+    MediumHazeIterator iterator(&medium, Ray(point3f(0), vec3f(1)), 1, true);
+    double endpoints[4] = {.2, .5, .8, 1};
+    for (int i = 0; i < 4; ++i) {
+      auto segment = iterator.Next();
+      expect_true(bool(segment));
+      expect_true(segment->integrate == (i % 2 == 0));
+      expect_true(std::abs(segment->t_max - endpoints[i]) < 1e-10);
+    }
+    expect_false(bool(iterator.Next()));
+    std::atomic<bool> cancel(true);
+    MediumHazeIterator cancelled(&medium, Ray(point3f(0), vec3f(1)), 1, true, &cancel);
+    expect_false(bool(cancelled.Next()));
+  }
+  test_that("constant equality, tag overrides, and sparse NanoVDB transitions are deterministic") {
+    auto description = medium_description();
+    description["haze"] = true;
+    description["haze_density_threshold"] = 1.;
+    for (double scale : {0., .5, 1., 2.}) {
+      description["density_scale"] = scale;
+      Medium medium(description);
+      MediumHazeIterator iterator(&medium, Ray(point3f(0), vec3f(0, 0, 1)), 2, true);
+      auto interval = iterator.Next();
+      expect_true(interval->integrate == (scale < 1));
+      expect_true(interval->t_max == 2);
+      medium.haze = false;
+      MediumHazeIterator tagged(&medium, Ray(point3f(0), vec3f(0, 0, 1)), 2, true);
+      expect_false(tagged.Next()->integrate);
+    }
+    Rcpp::Function test_path = Rcpp::Environment::namespace_env("testthat")["test_path"];
+    description["density_scale"] = 1.;
+    description["haze_density_threshold"] = .5;
+    description["filename"] = test_path("fixtures", "volumes", "tiles.nvdb");
+    description["density_grid"] = "density";
+    description["temperature_grid"] = R_NilValue;
+    NanoVDBMedium medium(description);
+    MediumHazeIterator iterator(&medium, Ray(point3f(3, 3, -3), vec3f(0, 0, 1)), 14, true);
+    auto air = iterator.Next(), dense = iterator.Next(), tail = iterator.Next();
+    expect_true((air->integrate && !dense->integrate && tail->integrate));
+    expect_true(std::abs(air->t_max - 2.5) < 1e-10);
+    expect_true(std::abs(dense->t_max - 10.5) < 1e-10);
+    expect_true(tail->t_max == 14);
+  }
+  test_that("disabled haze and an absent cutoff bypass heterogeneous density traversal") {
+    class CountingMedium : public Medium {
+    public:
+      CountingMedium() : Medium(medium_description(0)) {}
+      bool IsHomogeneous() const override { return false; }
+      DensityIndexRay DensityRay(const Ray &) const override { ++queries; return {}; }
+      mutable int queries = 0;
+    } medium;
+    medium.haze = false;
+    medium.haze_density_threshold = .05;
+    Ray ray(point3f(0), vec3f(0, 0, 1));
+    MediumHazeIterator off(&medium, ray, 2, true);
+    auto interval = off.Next();
+    expect_true((!interval->integrate && interval->t_min == 0 && interval->t_max == 2));
+    expect_false(bool(off.Next()));
+    expect_true(medium.queries == 0);
+
+    medium.haze = true;
+    MediumHazeIterator global_off(&medium, ray, 2, false);
+    expect_false(global_off.Next()->integrate);
+    expect_true(medium.queries == 0);
+
+    medium.haze_density_threshold = 0;
+    MediumHazeIterator full(&medium, ray, 2, true);
+    expect_true(full.Next()->integrate);
+    expect_false(bool(full.Next()));
+    expect_true(medium.queries == 0);
+  }
+}
 context("Deterministic volume picking") {
   test_that("thin media reach the background while visible matter takes priority") {
     PickingScene s;

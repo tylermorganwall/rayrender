@@ -17,8 +17,8 @@
 #' `skymodelr::calculate_sky_values()`. `hosek = FALSE` is accepted;
 #' `hosek = TRUE` is unsupported because these lights use per-direction queries.
 #' Defaults match that function. Without a native atmospheric sky, altitude
-#' describes one observer for the whole light. With [sky_light()]'s
-#' `atmosphere = TRUE`, a missing altitude uses that sky's reference altitude
+#' describes one observer for the whole light. With [sky_light()], a missing
+#' altitude uses that sky's reference altitude
 #' for ephemeris placement; atmospheric filtering uses each interaction's position.
 #' @param resolution Default `256` for the Sun and `1024` for the Moon. Target
 #' disk image width and height in pixels, at least 16. The Moon's padded image is
@@ -38,12 +38,13 @@
 #' `skymodelr::download_sky_data()` before rendering. Requires the public
 #' `skymodelr::generate_sun_disk()` and `skymodelr::generate_moon_disk()` exports.
 #'
-#' Pair a Sun disk with `sky_light(..., hosek = FALSE,
+#' Pair a Sun disk with `sky_light_image(..., hosek = FALSE,
 #' render_mode = "atmosphere")` to exclude the sky map's rasterized Sun. Leave
 #' `moon = FALSE` in that sky when adding a Moon disk. Lights add radiance; they
 #' do not eclipse or occlude each other, and adding a second copy doubles its light.
-#' With `sky_light(atmosphere = TRUE)`, an explicit Sun automatically replaces
-#' the built-in Sun; there is no need to change `render_mode`. The clear-air sky
+#' With `sky_light()`, explicit Sun and Moon lights replace the corresponding
+#' automatic disks; there is no need to change `sun`, `moon`, or `render_mode`.
+#' The clear-air sky
 #' and haze retain that sky light's own location, time, rotation, and intensity.
 #'
 #' Both lights use north at world +Z, east at world -X, and up at world +Y,
@@ -93,16 +94,16 @@ sun_light = function(
   rotation = 0,
   name = "sun"
 ) {
-  light = sky_light(
+  light = new_sky_light(
+    "sun",
     lat,
     long,
     datetime,
-    intensity = intensity,
-    rotation = rotation,
-    name = name
+    sky_args,
+    intensity,
+    rotation,
+    name
   )
-  light$sky_args = sky_args
-  light$type = "sun"
   light$resolution = resolution
   validate_infinite_light(light)
   light
@@ -121,16 +122,16 @@ moon_light = function(
   rotation = 0,
   name = "moon"
 ) {
-  light = sky_light(
+  light = new_sky_light(
+    "moon",
     lat,
     long,
     datetime,
-    intensity = intensity,
-    rotation = rotation,
-    name = name
+    sky_args,
+    intensity,
+    rotation,
+    name
   )
-  light$sky_args = sky_args
-  light$type = "moon"
   light$resolution = resolution
   light$moon_args = moon_args
   validate_infinite_light(light)

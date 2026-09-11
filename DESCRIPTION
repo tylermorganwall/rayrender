@@ -29,17 +29,20 @@ Imports:
     skymodelr (>= 0.6.2),
 Suggests:
     ambient,
+    knitr,
+    rmarkdown,
     sf,
     spData,
     dplyr,
     Rvcg,
     testthat (>= 3.2.3),
     tibble,
+    tree3d,
     rayshader (>= 0.38.13),
     xml2,
     rgl
 LinkingTo: Rcpp, RcppThread (>= 2.4.0), progress, spacefillr (>= 0.3.0), testthat, libopenexr (>= 3.4.4), libimath (>= 3.2.2), skymodelr (>= 0.6.2)
-Remotes: tylermorganwall/skymodelr
+Remotes: tylermorganwall/skymodelr, tylermorganwall/tree3d
 URL: https://www.rayrender.net, https://github.com/tylermorganwall/rayrender, http://www.rayrender.net/
 SystemRequirements: C++20
 Biarch: true
@@ -47,3 +50,4 @@ Encoding: UTF-8
 Config/testthat/edition: 3
 Config/build/compilation-database: true
 Config/roxygen2/version: 8.0.0
+VignetteBuilder: knitr

@@ -168,7 +168,7 @@ infinite_light = function(
 #' @md
 #'
 #' @param scene Scene to modify.
-#' @param light Light created with [infinite_light()], [sky_light()],
+#' @param light Light created with [infinite_light()], [sky_light()], [sky_light_image()],
 #' [sun_light()], or [moon_light()].
 #' @param name Default `NULL`. Optional name overriding the light's name.
 #' @param replace Default `FALSE`. Replace an existing light with the same name.
@@ -243,7 +243,7 @@ remove_infinite_light = function(scene, name) {
 
 #' @export
 print.ray_infinite_light = function(x, ...) {
-  if (x$type %in% c("sky", "sun", "moon")) {
+  if (x$type %in% c("sky", "sky_image", "sun", "moon")) {
     cat(sprintf(
       "Infinite light '%s' (%s)\n  location: %g, %g\n  datetime: %s\n  intensity: %g\n  rotation: %g degrees\n",
       x$name,
@@ -272,10 +272,10 @@ validate_infinite_light = function(light) {
     !inherits(light, "ray_infinite_light") ||
       !is.character(light$type) ||
       length(light$type) != 1 ||
-      !light$type %in% c("image", "sky", "sun", "moon", "disk")
+      !light$type %in% c("image", "sky", "sky_image", "sun", "moon", "disk")
   ) {
     stop(
-      "Expected an image, sky, sun, or moon ray_infinite_light.",
+      "Expected an image, atmospheric sky, image sky, sun, or moon ray_infinite_light.",
       call. = FALSE
     )
   }
@@ -287,9 +287,9 @@ validate_infinite_light = function(light) {
   ) {
     stop("Infinite light name must be a nonempty string.", call. = FALSE)
   }
-  if (light$type %in% c("sky", "sun", "moon")) {
+  if (light$type %in% c("sky", "sky_image", "sun", "moon")) {
     validate_sky_light(light)
-    if (light$type != "sky") validate_celestial_light(light)
+    if (light$type %in% c("sun", "moon")) validate_celestial_light(light)
   } else {
     if (
       !is.character(light$filename) ||
@@ -358,4 +358,47 @@ ray_scene_infinite_lights = function(scene) {
     }
   }
   lights
+}
+
+#' @keywords internal
+new_sky_light = function(
+  type,
+  lat,
+  long,
+  datetime,
+  sky_args,
+  intensity,
+  rotation,
+  name
+) {
+  structure(
+    list(
+      type = type,
+      lat = lat,
+      long = long,
+      datetime = datetime,
+      sky_args = sky_args,
+      intensity = intensity,
+      rotation = rotation,
+      name = name,
+      atmosphere = FALSE
+    ),
+    class = "ray_infinite_light"
+  )
+}
+
+#' @keywords internal
+prepare_infinite_light = function(light) {
+  validate_infinite_light(light)
+  if (isTRUE(light$atmosphere)) {
+    return(prepare_prague_sky_light(light))
+  }
+  if (light$type %in% c("image", "disk")) {
+    return(light)
+  }
+  if (light$type %in% c("sun", "moon")) {
+    return(prepare_celestial_light(light))
+  }
+  # Older serialized sky descriptions without native atmosphere remain images.
+  prepare_sky_light_image(light)
 }

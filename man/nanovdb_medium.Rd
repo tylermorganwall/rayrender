@@ -16,7 +16,9 @@ nanovdb_medium(
   emission_scale = 1,
   temperature_scale = 1,
   temperature_offset = 0,
-  medium_transform = diag(4)
+  medium_transform = diag(4),
+  haze = TRUE,
+  haze_density_threshold = NULL
 )
 }
 \arguments{
@@ -49,6 +51,25 @@ subtracting `temperature_offset` from the temperature.}
 
 \item{medium_transform}{Default `diag(4)`. Invertible affine matrix mapping
 medium coordinates into the containing object's local coordinates.}
+
+\item{haze}{Default `TRUE`. Include clear-air atmospheric haze inside this
+medium when enabled by [sky_light()], subject to `haze_density_threshold`.
+Set `FALSE` to skip its atmospheric in-scattering and extinction throughout
+the entire boundary, including empty cells, regardless of the threshold.
+The medium's own scattering,
+absorption, and emission remain active. In nested media the innermost
+medium's setting applies;
+`sky_light(haze_in_volumes = FALSE)` overrides all media. This is an
+approximation and may affect thin clouds, edges, or low-altitude haze.}
+
+\item{haze_density_threshold}{Default `NULL`. With `haze = TRUE`, omit haze
+only where interpolated density times `density_scale` is at least this
+positive number. Lower-density regions and empty space retain haze. A
+homogeneous medium has density one before scaling. `NULL` includes haze
+throughout the boundary. Ignored with `haze = FALSE` or global haze exclusion.
+The threshold measures density, not optical depth or scattering strength;
+choose which media to tag accordingly. Crossings follow the trilinear
+field, including between scattering events, and transform with the medium.}
 }
 \value{
 A reusable `ray_medium` description. Files are loaded during scene construction.

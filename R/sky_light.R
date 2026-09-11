@@ -1,88 +1,80 @@
-#' Location and Time Sky Light
+#' Atmospheric Location and Time Sky Light
 #' @md
 #'
 #' @description
-#' Creates a location-and-time sky light. Add it with [add_infinite_light()].
-#' By default, `skymodelr::generate_sky_latlong()` generates a cached EXR.
-#' Set `atmosphere = TRUE` to evaluate the Prague model throughout the scene,
-#' including finite-distance atmospheric attenuation and in-scattering by default.
+#' Evaluate the native Prague atmosphere at scene interactions, including
+#' altitude-dependent Sun and sky lighting, finite-distance attenuation, and
+#' in-scattering. Sun and Moon disk lights are included automatically.
+#' Add the light with [add_infinite_light()] and render with
+#' `integrator_type = "nee"`. Use [sky_light_image()] for a cached sky image.
 #'
 #' @param lat Latitude in degrees, between -90 and 90.
 #' @param long Longitude in degrees, between -180 and 180.
 #' @param datetime A single `POSIXct` date and time. Specify its time zone when
 #' constructing it with `as.POSIXct()`.
-#' @param altitude Default `0`. Reference altitude in meters above sea level.
-#' Prague supports 0--15000 m. With native atmosphere this is the altitude at
-#' `atmosphere_origin`; with an image sky it selects one observer for the image.
-#' @param visibility Default `50`. Prague meteorological visibility in kilometers,
+#' @param altitude Default `0`. Reference altitude in meters above sea level,
+#' at `atmosphere_origin`. Prague supports 0--15000 m.
+#' @param visibility Default `131.8`. Prague meteorological visibility in kilometers,
 #' from 20 to 131.8. Smaller values produce stronger haze.
 #' @param albedo Default `0.5`. Uniform ground reflectance for the sky model,
 #' between 0 and 1. Local surface materials are specified separately.
-#' @param resolution Default `if (isTRUE(atmosphere)) 64 else 2048`. Image height
-#' in pixels for a cached sky (width is twice the height). With native atmosphere,
-#' the height of directional importance-sampling tables, from 16 to 2048;
-#' this does not limit the rendered sky's detail.
-#' @param hosek Default `!isTRUE(atmosphere)`. Use the Hosek model for an image
-#' sky. Set `FALSE` to use Prague. Must be `FALSE` with native atmosphere.
-#' @param render_mode Default `"all"`. Render sky and Sun (`"all"`), sky without
+#' @param resolution Default `64`. Height of directional importance-sampling
+#' tables, from 16 to 2048. This does not limit the rendered sky's detail.
+#' @param render_mode Default `"all"`. Select sky and Sun (`"all"`), sky without
 #' the solar disk (`"atmosphere"`), or the solar disk alone (`"sun"`).
-#' @param turbidity Default `3`. Hosek turbidity, from 1.7 to 10. Image skies only.
-#' @param wide_spectrum Default `FALSE`. Use Prague's 55-channel sea-level
-#' coefficients for an image sky. Must be `FALSE` with native atmosphere.
-#' @param below_horizon Default `TRUE`. Include atmospheric radiance below the
-#' horizon. Must be `TRUE` with native atmosphere for downward queries.
+#' Moon, star, and planet switches are independent of this selection.
+#' @param sun Default `TRUE`. Include an independently sampled Sun disk when
+#' selected by `render_mode`. Set `FALSE` to omit direct sunlight and the visible
+#' disk; solar sky radiance and haze remain. A separate [sun_light()] overrides
+#' the automatic Sun.
+#' @param moon Default `TRUE`. Include an independently sampled Moon disk with
+#' its phase and earthshine for this location and time. A separate [moon_light()]
+#' overrides the automatic Moon. Set `FALSE` to omit the automatic disk.
+#' @param sun_resolution Default `256`. Sun disk texture width and height in
+#' pixels, at least 16; independent of the atmospheric sampling `resolution`.
+#' @param moon_resolution Default `1024`. Moon disk texture width and height in
+#' pixels, at least 16. Cropping and edge coverage can change the final dimensions.
+#' @param earthshine Default `TRUE`. Illuminate the Moon's dark side with earthshine.
+#' @param earthshine_albedo Default `0.19`. Effective Earth reflectance used to
+#' calculate earthshine.
+#' @param solar_irradiance_w_m2 Default `1300`. Reference solar irradiance at
+#' 1 AU, in W/m^2, used to normalize earthshine.
+#' @param stars Default `FALSE`. Include a star field, filtered by the native
+#' atmosphere at each interaction.
+#' @param star_width Default `1`. Star and planet point-spread width in pixels
+#' in the celestial background image.
+#' @param stars_exposure Default `0`. Exposure adjustment for stars only, in stops.
+#' @param planets Default `FALSE`. Include bright planets, filtered by the native
+#' atmosphere at each interaction.
+#' @param celestial_resolution Default `2048`. Height of the star/planet background
+#' image; its width is twice this value. Independent of the atmospheric sampling
+#' and Sun/Moon texture resolutions. Used only when `stars` or `planets` is enabled.
+#' @param number_cores Default `1`. CPU threads used to prepare celestial textures.
 #' @param prague_rgb_correction Default `TRUE`. Apply skymodelr's Prague RGB
-#' tint correction. Applies when `hosek = FALSE`.
+#' tint correction.
 #' @param prague_rgb_correction_strength Default `1`. Strength of the Prague RGB
 #' tint correction. Must be finite and nonnegative: 0 disables correction,
 #' and 1 applies the full calibrated correction.
 #' @param prague_rgb_correction_gain Default `"auto"`. Calibrated Prague RGB
 #' gains, or a numeric vector of three finite, positive linear RGB multipliers.
-#' @param stars Default `FALSE`. Composite stars into an image sky.
-#' Must be `FALSE` with native atmosphere.
-#' @param star_width Default `1`. Stellar point-spread size, passed to
-#' `skymodelr::generate_stars()`. Image skies only.
-#' @param stars_exposure Default `0`. Artistic exposure adjustment for stars,
-#' in stops. Image skies only.
-#' @param planets Default `FALSE`. Composite bright planets into an image sky.
-#' Must be `FALSE` with native atmosphere.
-#' @param moon Default `FALSE`. Composite a Moon image into the cached sky.
-#' Must be `FALSE` with native atmosphere; use [moon_light()] for a separate disk.
-#' @param moon_atmosphere Default `FALSE`. Include atmospheric scattering of
-#' moonlight in an image sky.
-#' @param moon_hosek Default `TRUE`. Use Hosek for the image sky's moonlight
-#' scattering. Set `FALSE` to use Prague.
-#' @param exr_adopted_white Default `"D60"`. Adopted white for cached EXR metadata:
-#' `"D60"`, `"D65"`, or numeric XYZ with Y = 1. Does not change image pixels.
-#' @param exr_metadata Default `TRUE`. Attach skymodelr color metadata to the
-#' cached EXR. Image skies only.
-#' @param number_cores Default `1`. CPU threads used to generate a cached sky.
-#' Native atmospheric rendering uses the renderer's thread settings.
-#' @param verbose Default `FALSE`. Print sky-generation progress information.
-#' @param ... Additional named image-sky arguments forwarded by
-#' `skymodelr::generate_sky_latlong()` to its star, planet, and Moon generators.
-#' Location, datetime, and the cached filename are managed by this light.
-#' Native atmosphere rejects unsupported arguments.
 #' @param intensity Default `1`. Nonnegative multiplier for this light's radiance.
 #' @param rotation Default `0`. Additional rotation in degrees around the world
 #' Y axis, using the same convention as [infinite_light()].
 #' @param name Default `"sky"`. Unique light name within the scene.
-#' @param atmosphere Default `FALSE`. Use the native Prague model, with
-#' `attenuation` and `query_altitude` controlling finite haze and observer
-#' positions. Requires `integrator_type = "nee"` and the full-altitude dataset.
-#' @param attenuation Default `TRUE`. With `atmosphere = TRUE`, include
-#' finite-distance attenuation and in-scattering between scene interactions.
+#' @param attenuation Default `TRUE`. Include finite-distance attenuation and
+#' in-scattering between scene interactions.
 #' Set `FALSE` to evaluate native Prague lighting without this finite-distance
 #' haze. Sun/sky radiance and celestial disk filtering still include the
 #' atmosphere between the query location and space.
-#' @param haze_in_volumes Default `TRUE`. With native atmospheric attenuation,
-#' integrate clear-air haze inside attached volume materials as well as outside.
+#' @param haze_in_volumes Default `TRUE`. Integrate clear-air haze inside attached
+#' volume materials as well as outside,
+#' except in regions excluded by a medium's `haze` and `haze_density_threshold` settings.
 #' Set `FALSE` to pause finite haze while a ray is inside any volume boundary,
 #' resuming at its exit. This applies to camera paths, shadow connections, and
 #' background opacity. The entire enclosed volume is excluded, including empty
 #' cells; the volume's own scattering, absorption, and emission remain active.
-#' @param deferred_haze Default `TRUE`. With native atmospheric attenuation,
-#' defer haze queries between interactions and estimate changes in transport
+#' @param deferred_haze Default `TRUE`. Defer haze queries between interactions
+#' and estimate changes in transport
 #' weights using one reservoir sample. This reduces model queries while preserving
 #' the estimator's mean, with additional Monte Carlo noise. Extinction is applied
 #' at each completed span; emitting medium events also end a span. Works with
@@ -99,11 +91,11 @@
 #' correction. Disabling `deferred_haze` defaults this probability to `1`.
 #' Transmission and direct lighting stay exact.
 #' Keep `clamp_value = Inf` so signed corrections are averaged without clipping.
-#' @param cache_spectra Default `TRUE`. With `atmosphere = TRUE`, reuse exactly
-#' matching Prague sky spectra in a small cache per rendering thread. This changes
+#' @param cache_spectra Default `TRUE`. Reuse exactly matching Prague sky spectra
+#' in a small cache per rendering thread. This changes
 #' neither the model nor individual samples. Set `FALSE` to disable this cache.
-#' @param transmission_table Default `TRUE`. With `atmosphere = TRUE`, precompute
-#' transmission reconstruction at Prague's existing grid points, preserving its
+#' @param transmission_table Default `TRUE`. Precompute transmission
+#' reconstruction at Prague's existing grid points, preserving its
 #' interpolation and individual sample results. Adds about 128 MiB per model at
 #' 50 km visibility, shared across threads. Tables exceeding
 #' `transmission_table_max_mb`, allocation failures, and queries outside the
@@ -114,107 +106,101 @@
 #' Accepts nonnegative numbers, including fractional values. Set `0` to disable
 #' table allocation or `Inf` to remove the cap. If the complete table does not
 #' fit, use the original exact evaluator. Applies when `transmission_table = TRUE`.
-#' @param query_altitude Default `TRUE`. With `atmosphere = TRUE`, query lighting
-#' at each surface, cloud, or camera position, using `meters_per_unit` and
+#' @param query_altitude Default `TRUE`. Query lighting at each surface, cloud,
+#' or camera position, using `meters_per_unit` and
 #' `atmosphere_origin`. Set `FALSE` with `attenuation = FALSE` to evaluate all
 #' lighting at the fixed reference point and `altitude`. Finite-distance
 #' haze requires position-dependent queries, so `attenuation = TRUE` requires
 #' `query_altitude = TRUE`.
-#' @param meters_per_unit Default `1`. Physical meters per world-space unit when
-#' `atmosphere = TRUE`. Applies to distances along every axis.
+#' @param meters_per_unit Default `1`. Physical meters per world-space unit.
+#' Applies to distances along every axis.
 #' @param atmosphere_origin Default `c(0, 0, 0)`. World-space location of the
 #' geographic reference point, at `altitude` meters above sea level.
 #' World +Y is up; horizontal offsets follow the model's spherical Earth.
 #'
-#' @details skymodelr is a required package dependency. Install any required
-#' Prague datasets with `skymodelr::download_sky_data()` before rendering.
-#' Atmospheric queries run through skymodelr's registered native API; its
-#' implementation and coefficients are shared without calling R from workers.
+#' @details Install the full-altitude Prague data with
+#' `skymodelr::download_sky_data(sea_level = FALSE)` before rendering.
+#' Atmospheric queries share skymodelr's coefficients and registered native API;
+#' rendering does not download data or call R from worker threads.
 #'
-#' By default this is a static image-based sky: `altitude` selects one
-#' observer altitude for the entire environment. With `atmosphere = TRUE` and
-#' the default `query_altitude = TRUE`, the
-#' sky and Sun change with the location of each surface or cloud interaction.
-#' Date and time stay fixed during an animation in both modes.
-#' The image uses skymodelr's orientation: north at the image seam, east one
-#' quarter across. With zero rotation, north is world +Z and east is world -X.
-#' Other infinite lights add to the sky. Adjust `iso` in [render_scene()] for
-#' the sky's physical radiance scale; use the same ISO when comparing lights.
+#' With `query_altitude = TRUE`, the sky and Sun change with the location of
+#' each surface or cloud interaction. With `attenuation = FALSE`, finite haze
+#' is disabled while this local lighting remains active. Setting both
+#' `attenuation = FALSE` and `query_altitude = FALSE` uses the fixed reference
+#' observer for all lighting. Date and time stay fixed during an animation.
 #'
-#' Atmospheric mode uses the Prague model regardless of the static sky default.
-#' Install its data with `skymodelr::download_sky_data(sea_level = FALSE)`.
-#' A scene can have one atmospheric sky. Do not combine its haze with a medium
-#' modeling the same atmospheric scattering or absorption: that would count the
-#' atmosphere twice. Separate cloud volumes can be added normally.
-#' The Sun is sampled as a disk independently of the sky sampling resolution.
-#' Its visibility accounts for Earth's curvature, allowing high clouds to remain
-#' sunlit after ground-level sunset. Atmospheric refraction is not modeled.
-#' This also works with `attenuation = FALSE, query_altitude = TRUE`: a cloud
-#' base several kilometres above sea level can receive direct sunlight from
-#' below its local horizontal plane while Earth hides the Sun from the ground.
-#' Ground surfaces still receive diffuse twilight and any indirect cloud light.
-#' An image sky or `query_altitude = FALSE` shares one observer's horizon across
-#' the scene and cannot reproduce this altitude-dependent lighting.
+#' World +Y is up. With zero rotation, north is world +Z and east is world -X.
+#' `meters_per_unit` sets the physical scene scale, and `atmosphere_origin`
+#' locates the geographic reference point at `altitude` meters above sea level.
+#' Horizontal offsets follow the model's spherical Earth. The Sun is sampled
+#' independently of the sky sampling resolution. Its visibility includes Earth's
+#' curvature, allowing elevated clouds to receive sunlight on their undersides
+#' after the Sun disappears from the ground. Refraction is not modeled.
+#' Ground surfaces can still receive diffuse twilight and indirect cloud light.
 #'
-#' Supported atmospheric sky settings are `altitude` (default 0 m, range
-#' 0--15000), `visibility` (default 50 km, range 20--131.8), `albedo` (default
-#' 0.5, range 0--1), `render_mode` (`"all"`, `"atmosphere"`, or `"sun"`),
-#' and skymodelr's `prague_rgb_correction`, `prague_rgb_correction_strength`,
-#' and `prague_rgb_correction_gain`. `resolution` (default 64) controls the
-#' height of directional importance-sampling tables, not the rendered sky's
-#' detail. `hosek`, `wide_spectrum`, `moon`, `stars`, and `planets` must be
-#' `FALSE`; `below_horizon` must be `TRUE`. Solar elevations
-#' outside -4.2--90 degrees are rejected. Queries outside the altitude range
-#' use the nearest modeled altitude; keep scene interactions within that range.
+#' A scene can contain one atmospheric sky. Solar elevations outside -4.2--90
+#' degrees are rejected. Queries outside 0--15000 m use the nearest modeled
+#' altitude; keep scene interactions within that range. Do not add another medium
+#' modeling the same clear-air scattering or absorption. Separate clouds can be
+#' added normally. Clouds default to no interior haze; `cloud(haze = TRUE)`
+#' enables haze below density 0.05, and `haze_density_threshold = NULL` removes
+#' that cutoff. See [cloud()] for details.
 #'
 #' The model precomputes clear-air multiple scattering over a spherical Earth
 #' with uniform ground albedo. Local geometry and clouds block direct Sun and
-#' sky lighting, but do not cast shadows into this precomputed atmospheric
-#' in-scattering field. Haze is disabled inside dielectric solids.
-#' Radiance is integrated spectrally and converted to renderer RGB; attenuation
-#' of RGB materials uses a broadband approximation. Finite-distance fitted
-#' transmittance is normalized at zero distance and interpolated in optical
-#' depth over the first 100 m. Ray-anchored cumulative transport prevents those
-#' fitting errors from accumulating at each cloud null event or boundary.
+#' sky lighting but do not cast shadows into this precomputed in-scattering.
+#' Haze is disabled inside dielectric solids. Radiance is integrated spectrally
+#' and converted to renderer RGB; attenuation of RGB materials uses a broadband
+#' approximation. Finite-distance fitted transmission is normalized at zero
+#' distance and interpolated in optical depth over the first 100 m. Ray-anchored
+#' cumulative transport avoids accumulating fit errors at cloud null events.
 #'
-#' Additional image lights represent radiance outside the atmosphere and receive
-#' atmospheric attenuation. Do not supply an image that already includes the
-#' same haze. In atmospheric scenes, [sun_light()] and [moon_light()] automatically
-#' request unattenuated textures from skymodelr. The renderer applies spectral
-#' atmospheric filtering and Earth occlusion at each interaction, including
-#' partial disks and the depressed horizon at altitude. An explicit Sun light
-#' replaces this sky's built-in solar disk, preserving the sky and haze.
-#' Without an explicit disk altitude, celestial ephemerides use this sky's
-#' reference altitude. Light rotations and intensities remain independent;
-#' match them when the disk should correspond to this sky's solar illumination.
-#' The precomputed haze remains Sun-driven: a Moon disk illuminates surfaces and
-#' clouds but does not add moonlit atmospheric in-scattering or a lunar halo.
-#' With a transparent background,
-#' atmospheric in-scattering remains foreground radiance, with scalar opacity
-#' derived from primary-ray atmospheric transmittance. RGB transmission into
-#' an arbitrary compositing background remains an approximation.
+#' Sun and Moon are prepared automatically using [sun_light()] and [moon_light()]
+#' with this sky's location, time, altitude, rotation, intensity, and color settings.
+#' Disk textures are generated without atmospheric filtering or a fixed horizon
+#' mask, then cached. The renderer applies spectral atmospheric filtering and
+#' Earth occlusion at each interaction. Disabling finite haze does not disable
+#' this filtering. Separate Sun or Moon lights replace the matching automatic
+#' disk, preserving their own settings. Removing or replacing the sky also
+#' removes or replaces its automatic celestial components.
 #'
-#' @return A `ray_infinite_light` object containing the sky description.
+#' Stars and planets use cached, unattenuated images of the full sphere, with
+#' native RGB atmospheric filtering and Earth occlusion at each interaction.
+#' Their map resolution affects point-source detail, not the Prague atmosphere.
+#'
+#' Other infinite lights add to the sky. Additional image lights represent
+#' radiance outside the atmosphere and receive atmospheric attenuation; do not
+#' use an image that already includes the same haze. [sun_light()] and
+#' [moon_light()] request unattenuated textures automatically. The renderer
+#' applies spectral atmospheric filtering and Earth occlusion at each interaction.
+#' The sampled Sun replaces the built-in solar disk while preserving the sky and
+#' haze. Without an explicit disk altitude, ephemerides use this sky's reference
+#' altitude. Match light rotations and intensities when they should describe
+#' the same illumination. The precomputed haze remains Sun-driven: a Moon disk
+#' lights surfaces and clouds but adds no moonlit in-scattering or lunar halo.
+#' Image-only model choices such as `hosek` and `moon_atmosphere` belong to
+#' [sky_light_image()].
+#'
+#' Use [render_scene()]'s `iso` to adjust exposure, keeping it fixed within each
+#' comparison. With a transparent background, atmospheric in-scattering remains
+#' foreground radiance and scalar opacity comes from primary-ray transmission.
+#' RGB transmission into an arbitrary compositing background is approximate.
+#'
+#' The standalone vignette `vignette("sky-light", package = "rayrender")`
+#' builds the full capsule landscape, river, question blocks, pipes, and clouds,
+#' and demonstrates image skies, celestial lights, and additional sky controls.
+#'
+#' @return A `ray_infinite_light` containing a native atmospheric sky description.
+#' @seealso [sky_light_image()], [cloud()], [sun_light()], [moon_light()]
 #' @export
 #' @examplesIf interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")
-#' if (requireNamespace("skymodelr", quietly = TRUE)) {
-#'   scene = sphere(material = diffuse(color = "white")) |>
-#'     add_infinite_light(sky_light(
-#'       lat = 40.7,
-#'       long = -74,
-#'       datetime = as.POSIXct("2026-06-21 18:00:00", tz = "America/New_York"),
-#'       resolution = 256
-#'     )) |>
-#'     add_camera(camera(aperture = 0, fov=50))
-#'   render_scene(scene, integrator_type = "nee", iso = 4)
-#' }
-#'
-#' # Capsule hills and fluffy clouds at several distances. All scene coordinates
-#' # below are kilometres; meters_per_unit = 1000 supplies the physical scale.
-#' # Install the full-altitude Prague data once before running these examples:
+#' # Install the full-altitude Prague data once before rendering:
 #' # skymodelr::download_sky_data(sea_level = FALSE)
-#' # cloud() generates the Perlin volumes and requires ambient.
-#' if (requireNamespace("ambient", quietly = TRUE)) {
+#' if (
+#'   requireNamespace("ambient", quietly = TRUE) &&
+#'     requireNamespace("tree3d", quietly = TRUE)
+#' ) {
+#'   # Scene units are kilometres.
 #'   # Rounded green hills, with their lower capsule ends buried in the ground.
 #'   # The rows are roughly 3-7, 17-26, and 60-85 km from the camera.
 #'   # Small foreground hills stay crisp while larger distant hills fade.
@@ -236,17 +222,23 @@
 #'           end = c(h$x, h$top - h$radius, h$z),
 #'           radius = h$radius
 #'         ),
-#'         material = terrain_mat)
-#'      )
+#'         material = terrain_mat
+#'       )
+#'     )
 #'   }
 #'
 #'   # A river winds around the capsule footprints and turns out of sight behind
 #'   # the distant pair at (-6, 69) and (7, 58). Coordinates and width are in km.
+#'   # fmt: skip
 #'   river_bends = data.frame(
 #'     x = c(0.3, 0.1, 0.7, 0.8, -1.2, -2.6, -3.9, -4.2, 0.2, 2.5, -1.1, 0.7, 1.4, 1.1, -2, -4.5),
 #'     z = c(-12, -7, -4, -1, 3, 7, 12, 17, 23, 32, 43, 53, 62, 69, 76, 79)
 #'   )
-#'   river_curve = stats::splinefun(river_bends$z, river_bends$x, method = "natural")
+#'   river_curve = stats::splinefun(
+#'     river_bends$z,
+#'     river_bends$x,
+#'     method = "natural"
+#'   )
 #'   river_z = seq(min(river_bends$z), max(river_bends$z), length.out = 600)
 #'   river_center = cbind(x = river_curve(river_z), z = river_z)
 #'
@@ -254,7 +246,10 @@
 #'   # through bends. Reverse the second bank to make one closed polygon.
 #'   river_width = 1
 #'   river_slope = river_curve(river_z, deriv = 1)
-#'   bank_offset = river_width / 2 * cbind(1, -river_slope) / sqrt(1 + river_slope^2)
+#'   bank_offset = river_width /
+#'     2 *
+#'     cbind(1, -river_slope) /
+#'     sqrt(1 + river_slope^2)
 #'   river_banks = rbind(
 #'     river_center + bank_offset,
 #'     (river_center - bank_offset)[length(river_z):1, ]
@@ -270,9 +265,91 @@
 #'       top = 0.001,
 #'       bottom = -0.001,
 #'       flip_horizontal = TRUE,
-#'       material = diffuse("#168BC4")
+#'       material = microfacet(color="#168BC4",transmission=TRUE, roughness=0.2)
 #'     )
 #'   )
+#'
+#'   # Redwood-sized trees: 60-100 m tall, in a scene measured in kilometres.
+#'   # Generate three solid tree meshes once, then share them across 20,000 instances.
+#'   # Crown widths are 12-25 m and trunk diameters are approximately 2.4-5 m.
+#'   tree_types = c("pyramidal1", "pyramidal2", "columnar")
+#'   tree_colors = c("#245638", "#2B603E", "#305A3B")
+#'   tree_models = lapply(seq_along(tree_types), function(i) {
+#'     tree3d::tree_mesh(
+#'       crown_type = tree_types[i],
+#'       solid = TRUE,
+#'       resolution = "medium",
+#'       tree_height = 0.08,
+#'       trunk_height_ratio = c(0.25, 0.3, 0.35)[i],
+#'       crown_width = c(0.018, 0.016, 0.020)[i],
+#'       trunk_width = c(0.0032, 0.0036, 0.0040)[i],
+#'       crown_color = tree_colors[i],
+#'       trunk_color = "#794A35",
+#'       ambient_intensity = 0
+#'     ) |>
+#'       raymesh_model()
+#'   })
+#'
+#'   # Log-spaced distances give the foreground enough trees to establish scale.
+#'   # Candidate positions follow the camera's view across the flat valley floor.
+#'   tree_count = 20000
+#'   tree_candidates = 4 * tree_count
+#'   set.seed(2028)
+#'   tree_distance = exp(runif(tree_candidates, log(1.4), log(85)))
+#'   tree_positions = data.frame(
+#'     x = runif(tree_candidates, -0.65, 0.65) * tree_distance,
+#'     z = -8 + tree_distance,
+#'     size = runif(tree_candidates, 0.75, 1.25),
+#'     angle = runif(tree_candidates, 0, 360),
+#'     model = sample(seq_along(tree_models), tree_candidates, replace = TRUE)
+#'   )
+#'
+#'   # Leave enough room for the widest crown along both riverbanks and hills.
+#'   # Measure distance to river segments so the exclusion follows every bend.
+#'   tree_clearance = 0.015
+#'   tree_clear = rep(TRUE, nrow(tree_positions))
+#'   for (i in seq_len(nrow(river_center) - 1)) {
+#'     dx = river_center[i + 1, 1] - river_center[i, 1]
+#'     dz = river_center[i + 1, 2] - river_center[i, 2]
+#'     along = pmin(
+#'       pmax(
+#'         ((tree_positions$x - river_center[i, 1]) *
+#'           dx +
+#'           (tree_positions$z - river_center[i, 2]) * dz) /
+#'           (dx^2 + dz^2),
+#'         0
+#'       ),
+#'       1
+#'     )
+#'     river_dx = tree_positions$x - (river_center[i, 1] + along * dx)
+#'     river_dz = tree_positions$z - (river_center[i, 2] + along * dz)
+#'     tree_clear = tree_clear &
+#'       river_dx^2 + river_dz^2 > (river_width / 2 + tree_clearance)^2
+#'   }
+#'   for (i in seq_len(nrow(hills))) {
+#'     tree_clear = tree_clear &
+#'       (tree_positions$x - hills$x[i])^2 +
+#'         (tree_positions$z - hills$z[i])^2 >
+#'         (hills$radius[i] + tree_clearance)^2
+#'   }
+#'   tree_positions = head(tree_positions[tree_clear, ], tree_count)
+#'
+#'   # Each group shares one mesh/BVH. Vary height and yaw without copying geometry.
+#'   for (i in seq_along(tree_models)) {
+#'     grove = tree_positions[tree_positions$model == i, ]
+#'     terrain = add_object(
+#'       terrain,
+#'       create_instances(
+#'         tree_models[[i]],
+#'         x = grove$x,
+#'         z = grove$z,
+#'         angle_y = grove$angle,
+#'         scale_x = grove$size,
+#'         scale_y = grove$size,
+#'         scale_z = grove$size
+#'       )
+#'     )
+#'   }
 #'
 #'   # Billowing Perlin volumes sit above each row of hills. Optical depth sets
 #'   # the cloud's own scattering; sky_light() separately supplies clear-air haze.
@@ -302,20 +379,18 @@
 #'       )
 #'     )
 #'   }
-#'
 #'   day = as.POSIXct("2026-06-21 18:00:00", tz = "America/New_York")
 #'   sunset = as.POSIXct("2026-06-21 20:35:00", tz = "America/New_York")
 #'
-#'   # Reuse camera, seed, and sample count, with manually chosen ISO values.
-#'   # Append a white caption strip below the rendered image using rayimage.
-#'   render_sky = function(light, scene = landscape, iso = 100, caption = "") {
+#'   render_sky = function(light, iso = 4, caption = "") {
 #'     set.seed(2026)
-#'     image = scene |>
+#'     image = landscape |>
 #'       add_infinite_light(light) |>
 #'       render_scene(
 #'         lookfrom = c(0, 0.35, -8),
-#'         lookat = c(0, 2.4, 7),
-#'         fov = 48,
+#'         lookat = c(0, 2.4, 3),
+#'         fov = 47,
+#'         aperture = 0,
 #'         width = 384,
 #'         height = 240,
 #'         samples = 32,
@@ -329,9 +404,9 @@
 #'       rayimage::render_text_image(
 #'         caption,
 #'         size = 14,
-#'         font = "Arial",
+#'         font = "sans",
 #'         width = dim(image)[2],
-#'         height = 32,
+#'         height = 34,
 #'         just = "center",
 #'         check_text_width = FALSE,
 #'         check_text_height = FALSE
@@ -339,430 +414,74 @@
 #'     ))
 #'   }
 #'
-#'   # Keep ISO fixed within each comparison: 4 by day and 175 at sunset.
-#'   day_iso = 4
-#'   sunset_iso = 175
-#'
-#'   # Left to right: cached image sky, native lighting without finite haze,
-#'   # native lighting with haze. The image has one altitude for the whole scene.
-#'   # All three use Prague; the native modes also query each local altitude.
-#'   # A 256-row image can undersample the small Sun disk; the next example
-#'   # samples that disk separately instead of relying on the image resolution.
-#'   image_sky = sky_light(
-#'     40.7,
-#'     -74,
-#'     day,
-#'     atmosphere = FALSE,
-#'     hosek = FALSE,
-#'     altitude = 0,
-#'     visibility = 50,
-#'     albedo = 0.3,
-#'     resolution = 256
-#'   )
-#'   modes = list(
-#'     image = render_sky(image_sky, iso = day_iso, caption = "Fixed EXR sky"),
-#'     native = render_sky(
-#'       sky_light(
-#'         40.7,
-#'         -74,
-#'         day,
-#'         atmosphere = TRUE,
-#'         meters_per_unit = 1000,
-#'         attenuation = FALSE,
-#'         altitude = 0,
-#'         visibility = 50,
-#'         albedo = 0.3,
-#'         resolution = 32
-#'       ),
-#'       iso = day_iso,
-#'       caption = "Atmosphere model, no haze"
-#'     ),
-#'     haze = render_sky(
-#'       sky_light(
-#'         40.7,
-#'         -74,
-#'         day,
-#'         atmosphere = TRUE,
-#'         meters_per_unit = 1000,
-#'         altitude = 0,
-#'         visibility = 120,
-#'         albedo = 0.3,
-#'         resolution = 32
-#'       ),
-#'       iso = day_iso,
-#'       caption = "Haze (120 km, p = 0.5)"
-#'     )
-#'   )
-#'   rayimage::plot_image_grid(modes, dim = c(1, 3))
-#'
-#'   # A detailed, independently sampled Sun can also accompany an image sky.
-#'   # Exclude its rasterized disk to avoid adding the Sun twice.
-#'   image_with_sun = landscape |>
-#'     add_infinite_light(sun_light(
-#'       40.7,
-#'       -74,
-#'       day,
-#'       sky_args = list(altitude = 0, visibility = 50, albedo = 0.3)
-#'     ))
-#'   image_atmosphere = sky_light(
-#'     40.7,
-#'     -74,
-#'     day,
-#'     atmosphere = FALSE,
-#'
-#'     hosek = FALSE,
-#'     altitude = 0,
-#'     visibility = 50,
-#'     albedo = 0.3,
-#'     resolution = 256,
-#'     render_mode = "atmosphere"
-#'   )
-#'   rayimage::plot_image_grid(
-#'     list(render_sky(
-#'       image_atmosphere,
-#'       image_with_sun,
-#'       iso = day_iso,
-#'       caption = "Image sky + separate Sun"
-#'     )),
-#'     dim = c(1, 1)
-#'   )
-#'
-#'   # The distant capsules lose contrast and approach the sky's color as
-#'   # visibility decreases. Visibility is in km, independent of scene units.
-#'   visibility = list(
-#'     hazy_20_km = render_sky(
-#'       sky_light(
-#'         40.7,
-#'         -74,
-#'         day,
-#'         atmosphere = TRUE,
-#'         meters_per_unit = 1000,
-#'
-#'         altitude = 0,
-#'         visibility = 20,
-#'         albedo = 0.3,
-#'         resolution = 32
-#'       ),
-#'       iso = day_iso,
-#'       caption = "Visibility: 20 km"
-#'     ),
-#'     normal_50_km = modes$haze,
-#'     clear_120_km = render_sky(
-#'       sky_light(
-#'         40.7,
-#'         -74,
-#'         day,
-#'         atmosphere = TRUE,
-#'         meters_per_unit = 1000,
-#'
-#'         altitude = 0,
-#'         visibility = 120,
-#'         albedo = 0.3,
-#'         resolution = 32
-#'       ),
-#'       iso = day_iso,
-#'       caption = "Visibility: 120 km"
-#'     )
-#'   )
-#'   rayimage::plot_image_grid(visibility, dim = c(1, 3))
-#'
-#'   # At sunset the Sun is about 1.7 degrees below the ground horizon. Clouds
-#'   # above 5 km can still see it and receive sunlight on their undersides.
-#'   # Turn finite haze off in BOTH first images to isolate query_altitude.
-#'   twilight = list(
-#'     fixed_altitude = render_sky(
-#'       sky_light(
-#'         40.7,
-#'         -74,
-#'         sunset,
-#'         atmosphere = TRUE,
-#'         meters_per_unit = 1000,
-#'         attenuation = FALSE,
-#'         query_altitude = FALSE,
-#'
-#'         altitude = 0,
-#'         visibility = 50,
-#'         albedo = 0.3,
-#'         resolution = 32
-#'       ),
-#'       iso = sunset_iso,
-#'       caption = "Fixed altitude, no haze"
-#'     ),
-#'     cloud_altitude = render_sky(
-#'       sky_light(
-#'         40.7,
-#'         -74,
-#'         sunset,
-#'         atmosphere = TRUE,
-#'         meters_per_unit = 1000,
-#'         attenuation = FALSE,
-#'         query_altitude = TRUE,
-#'
-#'         altitude = 0,
-#'         visibility = 50,
-#'         albedo = 0.3,
-#'         resolution = 32
-#'       ),
-#'       iso = sunset_iso,
-#'       caption = "Local altitude, no haze"
-#'     ),
-#'     cloud_altitude_haze = render_sky(
-#'       sky_light(
-#'         40.7,
-#'         -74,
-#'         sunset,
-#'         atmosphere = TRUE,
-#'         meters_per_unit = 1000,
-#'
-#'         altitude = 0,
-#'         visibility = 50,
-#'         albedo = 0.3,
-#'         resolution = 32
-#'       ),
-#'       iso = sunset_iso,
-#'       caption = "Local altitude + haze"
-#'     )
-#'   )
-#'   rayimage::plot_image_grid(twilight, dim = c(1, 3))
-#'
-#'   # Both images retain the cloud material. FALSE excludes clear-air haze
-#'   # throughout its enclosing boxes, including their empty cells.
+#'   # Haze changes contrast and color with distance. Hold visibility and ISO fixed.
 #'   rayimage::plot_image_grid(
 #'     list(
-#'       everywhere = modes$haze,
-#'       outside_clouds = render_sky(
-#'         sky_light(
-#'           40.7,
-#'           -74,
-#'           day,
-#'           atmosphere = TRUE,
-#'           meters_per_unit = 1000,
-#'           haze_in_volumes = FALSE,
-#'
-#'           altitude = 0,
-#'           visibility = 50,
-#'           albedo = 0.3,
-#'           resolution = 32
-#'         ),
-#'         iso = day_iso,
-#'         caption = "Haze outside cloud volumes"
-#'       )
-#'     ),
-#'     dim = c(1, 2)
-#'   )
-#'
-#'   # Compare haze settings at equal samples. Deferred haze and the 0.5
-#'   # correction probability are the defaults. Their radiance estimates converge
-#'   # to eager haze, with different noise before the default denoising step.
-#'   # Use more samples for final cloud renders.
-#'   rayimage::plot_image_grid(
-#'     list(
-#'       eager = render_sky(
-#'         sky_light(
-#'           40.7,
-#'           -74,
-#'           day,
-#'           atmosphere = TRUE,
-#'           meters_per_unit = 1000,
-#'           deferred_haze = FALSE,
-#'
-#'           altitude = 0,
-#'           visibility = 50,
-#'           albedo = 0.3,
-#'           resolution = 32
-#'         ),
-#'         iso = day_iso,
-#'         caption = "Eager haze"
-#'       ),
-#'       deferred_full_correction = render_sky(
-#'         sky_light(
-#'           40.7,
-#'           -74,
-#'           day,
-#'           atmosphere = TRUE,
-#'           meters_per_unit = 1000,
-#'           deferred_haze = TRUE,
-#'           haze_correction_probability = 1,
-#'
-#'           altitude = 0,
-#'           visibility = 50,
-#'           albedo = 0.3,
-#'           resolution = 32
-#'         ),
-#'         iso = day_iso,
-#'         caption = "Deferred haze, p = 1"
-#'       ),
-#'       deferred_half_correction = modes$haze
-#'     ),
-#'     dim = c(1, 3)
-#'   )
-#'
-#'   # Exact acceleration controls: these change cost and memory, not samples.
-#'   # Pass any of these lights to render_sky() using the same seed to compare.
-#'   no_cache = sky_light(
-#'     40.7,
-#'     -74,
-#'     day,
-#'     atmosphere = TRUE,
-#'     meters_per_unit = 1000,
-#'     cache_spectra = FALSE,
-#'     transmission_table = FALSE,
-#'
-#'     altitude = 0,
-#'     visibility = 50,
-#'     albedo = 0.3,
-#'     resolution = 32
-#'   )
-#'   limited_table = sky_light(
-#'     40.7,
-#'     -74,
-#'     day,
-#'     atmosphere = TRUE,
-#'     meters_per_unit = 1000,
-#'     transmission_table_max_mb = 64,
-#'
-#'     altitude = 0,
-#'     visibility = 50,
-#'     albedo = 0.3,
-#'     resolution = 32
-#'   )
-#'   larger_table = sky_light(
-#'     40.7,
-#'     -74,
-#'     day,
-#'     atmosphere = TRUE,
-#'     meters_per_unit = 1000,
-#'     transmission_table_max_mb = 1024,
-#'
-#'     altitude = 0,
-#'     visibility = 50,
-#'     albedo = 0.3,
-#'     resolution = 32
-#'   )
-#'   unlimited_table = sky_light(
-#'     40.7,
-#'     -74,
-#'     day,
-#'     atmosphere = TRUE,
-#'     meters_per_unit = 1000,
-#'     transmission_table_max_mb = Inf,
-#'
-#'     altitude = 0,
-#'     visibility = 50,
-#'     albedo = 0.3,
-#'     resolution = 32
-#'   )
-#'   no_table_allocation = sky_light(
-#'     40.7,
-#'     -74,
-#'     day,
-#'     atmosphere = TRUE,
-#'     meters_per_unit = 1000,
-#'     transmission_table_max_mb = 0,
-#'
-#'     altitude = 0,
-#'     visibility = 50,
-#'     albedo = 0.3,
-#'     resolution = 32
-#'   )
-#'
-#'   # Other controls: rotate the illumination, dim it, and name the light.
-#'   rayimage::plot_image_grid(
-#'     list(
-#'       modes$haze,
 #'       render_sky(
 #'         sky_light(
 #'           40.7,
 #'           -74,
 #'           day,
-#'           atmosphere = TRUE,
 #'           meters_per_unit = 1000,
-#'           rotation = 35,
-#'           intensity = 0.7,
-#'           name = "rotated_sky",
-#'
-#'           altitude = 0,
-#'           visibility = 50,
-#'           albedo = 0.3,
-#'           resolution = 32
+#'           visibility = 120,
+#'           attenuation = FALSE
 #'         ),
-#'         iso = day_iso,
-#'         caption = "Rotation: 35 deg, intensity: 0.7"
+#'         caption = "No finite haze"
+#'       ),
+#'       render_sky(
+#'         sky_light(40.7, -74, day, meters_per_unit = 1000, visibility = 120),
+#'         caption = "Finite haze, 120km"
+#'       ),
+#'       render_sky(
+#'         sky_light(40.7, -74, day, meters_per_unit = 1000, visibility = 20),
+#'         caption = "Finite haze, 20km"
 #'       )
 #'     ),
-#'     dim = c(1, 2)
-#'   )
-#'   # These two reference frames describe the same physical atmosphere:
-#'   # sea level at world y=0, or 1000 m altitude at world y=1 (units are km).
-#'   raised_reference = sky_light(
-#'     40.7,
-#'     -74,
-#'     day,
-#'     atmosphere = TRUE,
-#'     meters_per_unit = 1000,
-#'     atmosphere_origin = c(0, 1, 0),
-#'
-#'     altitude = 1000,
-#'     visibility = 50,
-#'     albedo = 0.3,
-#'     resolution = 32
+#'     dim = c(1, 3)
 #'   )
 #'
-#'   # Select sky only or Sun only with render_mode; retain all for normal use.
-#'   sky_only = sky_light(
-#'     40.7,
-#'     -74,
-#'     day,
-#'     atmosphere = TRUE,
-#'     meters_per_unit = 1000,
-#'
-#'     altitude = 0,
-#'     visibility = 50,
-#'     albedo = 0.3,
-#'     resolution = 32,
-#'     render_mode = "atmosphere"
-#'   )
-#'   sun_only = sky_light(
-#'     40.7,
-#'     -74,
-#'     day,
-#'     atmosphere = TRUE,
-#'     meters_per_unit = 1000,
-#'
-#'     altitude = 0,
-#'     visibility = 50,
-#'     albedo = 0.3,
-#'     resolution = 32,
-#'     render_mode = "sun"
-#'   )
-#'   # Disable or adjust Prague's RGB color correction.
-#'   uncorrected = sky_light(
-#'     40.7,
-#'     -74,
-#'     day,
-#'     atmosphere = TRUE,
-#'     meters_per_unit = 1000,
-#'
-#'     altitude = 0,
-#'     visibility = 50,
-#'     albedo = 0.3,
-#'     resolution = 32,
-#'     prague_rgb_correction = FALSE
-#'   )
-#'   custom_color = sky_light(
-#'     40.7,
-#'     -74,
-#'     day,
-#'     atmosphere = TRUE,
-#'     meters_per_unit = 1000,
-#'
-#'     altitude = 0,
-#'     visibility = 50,
-#'     albedo = 0.3,
-#'     resolution = 32,
-#'     prague_rgb_correction = TRUE,
-#'     prague_rgb_correction_strength = 0.5,
-#'     prague_rgb_correction_gain = c(1, 0.95, 0.9)
+#'   # Isolate altitude-dependent lighting by disabling finite haze in both images.
+#'   # The Sun is below the ground horizon, but the elevated cloud can still see it.
+#'   rayimage::plot_image_grid(
+#'     list(
+#'       render_sky(
+#'         sky_light(
+#'           40.7,
+#'           -74,
+#'           sunset,
+#'           meters_per_unit = 1000,
+#'           attenuation = FALSE,
+#'           query_altitude = FALSE
+#'         ),
+#'         iso = 175,
+#'         caption = "Fixed observer altitude"
+#'       ),
+#'       render_sky(
+#'         sky_light(
+#'           40.7,
+#'           -74,
+#'           sunset,
+#'           meters_per_unit = 1000,
+#'           attenuation = FALSE,
+#'           query_altitude = TRUE
+#'         ),
+#'         iso = 175,
+#'         caption = "Altitude at each interaction"
+#'       ),
+#'       render_sky(
+#'         sky_light(
+#'           40.7,
+#'           -74,
+#'           sunset,
+#'           meters_per_unit = 1000,
+#'           attenuation = TRUE,
+#'           query_altitude = TRUE
+#'         ),
+#'         iso = 175,
+#'         caption = "Altitude + haze each interaction"
+#'       )
+#'     ),
+#'     dim = c(1, 3)
 #'   )
 #' }
 sky_light = function(
@@ -772,111 +491,85 @@ sky_light = function(
   intensity = 1,
   rotation = 0,
   name = "sky",
-  atmosphere = FALSE,
   meters_per_unit = 1,
   atmosphere_origin = c(0, 0, 0),
   attenuation = TRUE,
   query_altitude = TRUE,
-  haze_in_volumes = TRUE,
+  haze_in_volumes = FALSE,
   deferred_haze = TRUE,
   haze_correction_probability = if (isTRUE(deferred_haze)) 0.5 else 1,
   cache_spectra = TRUE,
   transmission_table = TRUE,
   transmission_table_max_mb = 512,
   altitude = 0,
-  visibility = 50,
+  visibility = 131.8,
   albedo = 0.5,
-  resolution = if (isTRUE(atmosphere)) 64 else 2048,
-  hosek = !isTRUE(atmosphere),
+  resolution = 64,
   render_mode = "all",
-  turbidity = 3,
-  wide_spectrum = FALSE,
-  below_horizon = TRUE,
   prague_rgb_correction = TRUE,
   prague_rgb_correction_strength = 1,
   prague_rgb_correction_gain = "auto",
+  sun = TRUE,
+  moon = TRUE,
+  sun_resolution = 256,
+  moon_resolution = 1024,
+  earthshine = TRUE,
+  earthshine_albedo = 0.19,
+  solar_irradiance_w_m2 = 1300,
   stars = FALSE,
   star_width = 1,
   stars_exposure = 0,
   planets = FALSE,
-  moon = FALSE,
-  moon_atmosphere = FALSE,
-  moon_hosek = TRUE,
-  exr_adopted_white = "D60",
-  exr_metadata = TRUE,
-  number_cores = 1,
-  verbose = FALSE,
-  ...
+  celestial_resolution = 2048,
+  number_cores = 1
 ) {
-  extra = list(...)
-  if ("sky_args" %in% names(extra)) {
-    stop(
-      "Pass sky settings directly to sky_light(), not in sky_args.",
-      call. = FALSE
-    )
-  }
-
-  # These settings are shared by the cached image and native Prague paths.
   sky_args = list(
     altitude = altitude,
     visibility = visibility,
     albedo = albedo,
     resolution = resolution,
-    hosek = hosek,
     render_mode = render_mode,
-    wide_spectrum = wide_spectrum,
-    below_horizon = below_horizon,
     prague_rgb_correction = prague_rgb_correction,
     prague_rgb_correction_strength = prague_rgb_correction_strength,
-    prague_rgb_correction_gain = prague_rgb_correction_gain,
-    stars = stars,
-    planets = planets,
-    moon = moon,
-    number_cores = number_cores,
-    verbose = verbose
+    prague_rgb_correction_gain = prague_rgb_correction_gain
   )
-
-  # Native atmosphere rejects explicitly requested image-only controls. Keep
-  # their defaults out of the native description so they do not change its API.
-  image_args = list(
-    turbidity = turbidity,
+  result = new_sky_light(
+    "sky",
+    lat,
+    long,
+    datetime,
+    sky_args,
+    intensity,
+    rotation,
+    name
+  )
+  controls = list(
+    atmosphere = TRUE,
+    meters_per_unit = meters_per_unit,
+    atmosphere_origin = atmosphere_origin,
+    attenuation = attenuation,
+    query_altitude = query_altitude,
+    haze_in_volumes = haze_in_volumes,
+    deferred_haze = deferred_haze,
+    haze_correction_probability = haze_correction_probability,
+    cache_spectra = cache_spectra,
+    transmission_table = transmission_table,
+    transmission_table_max_mb = transmission_table_max_mb,
+    sun = sun,
+    moon = moon,
+    sun_resolution = sun_resolution,
+    moon_resolution = moon_resolution,
+    earthshine = earthshine,
+    earthshine_albedo = earthshine_albedo,
+    solar_irradiance_w_m2 = solar_irradiance_w_m2,
+    stars = stars,
     star_width = star_width,
     stars_exposure = stars_exposure,
-    moon_atmosphere = moon_atmosphere,
-    moon_hosek = moon_hosek,
-    exr_adopted_white = exr_adopted_white,
-    exr_metadata = exr_metadata
+    planets = planets,
+    celestial_resolution = celestial_resolution,
+    number_cores = number_cores
   )
-  if (isTRUE(atmosphere)) {
-    supplied = names(match.call(expand.dots = FALSE))
-    image_args = image_args[intersect(names(image_args), supplied)]
-  }
-  sky_args = c(sky_args, image_args, extra)
-
-  result = structure(
-    list(
-      type = "sky",
-      lat = lat,
-      long = long,
-      datetime = datetime,
-      sky_args = sky_args,
-      intensity = intensity,
-      rotation = rotation,
-      name = name,
-      atmosphere = atmosphere,
-      meters_per_unit = meters_per_unit,
-      atmosphere_origin = atmosphere_origin,
-      attenuation = attenuation,
-      query_altitude = query_altitude,
-      haze_in_volumes = haze_in_volumes,
-      deferred_haze = deferred_haze,
-      haze_correction_probability = haze_correction_probability,
-      cache_spectra = cache_spectra,
-      transmission_table = transmission_table,
-      transmission_table_max_mb = transmission_table_max_mb
-    ),
-    class = "ray_infinite_light"
-  )
+  result[names(controls)] = controls
   validate_infinite_light(result)
   result
 }
@@ -894,6 +587,7 @@ validate_sky_light = function(light) {
     }
   }
   for (field in c(
+    "sun",
     "attenuation",
     "query_altitude",
     "haze_in_volumes",
@@ -978,7 +672,7 @@ validate_sky_light = function(light) {
           anyDuplicated(names(args))))
   ) {
     stop(
-      if (light$type == "sky") {
+      if (light$type %in% c("sky", "sky_image")) {
         "Sky arguments must be uniquely named."
       } else {
         "sky_args must be a uniquely named list."
@@ -992,7 +686,7 @@ validate_sky_light = function(light) {
   )
   if (length(reserved)) {
     stop(
-      if (light$type == "sky") {
+      if (light$type %in% c("sky", "sky_image")) {
         "Sky arguments cannot override: "
       } else {
         "sky_args cannot override: "
@@ -1006,67 +700,4 @@ validate_sky_light = function(light) {
     validate_prague_sky_light(light)
   }
   invisible(TRUE)
-}
-
-#' @keywords internal
-prepare_infinite_light = function(light) {
-  validate_infinite_light(light)
-  if (isTRUE(light$atmosphere)) {
-    return(prepare_prague_sky_light(light))
-  }
-  if (light$type %in% c("image", "disk")) {
-    return(light)
-  }
-  if (light$type %in% c("sun", "moon")) {
-    return(prepare_celestial_light(light))
-  }
-  if (!requireNamespace("skymodelr", quietly = TRUE)) {
-    stop(
-      "sky_light() requires skymodelr. Install it with install.packages('skymodelr').",
-      call. = FALSE
-    )
-  }
-  args = c(
-    list(lat = light$lat, lon = light$long, datetime = light$datetime),
-    light$sky_args
-  )
-  supported = names(formals(skymodelr::generate_sky_latlong))
-  unknown = setdiff(names(args), supported)
-  if (length(unknown) && !"..." %in% supported) {
-    stop(
-      "Unsupported sky arguments: ",
-      paste(unknown, collapse = ", "),
-      ".",
-      call. = FALSE
-    )
-  }
-  if ("allow_download" %in% supported) {
-    args$allow_download = FALSE
-  }
-  cache = file.path(tempdir(), "rayrender-skies")
-  dir.create(cache, showWarnings = FALSE)
-  key_file = tempfile(tmpdir = cache)
-  on.exit(unlink(key_file), add = TRUE)
-  saveRDS(
-    list(
-      args = args,
-      version = as.character(utils::packageVersion("skymodelr"))
-    ),
-    key_file,
-    version = 2
-  )
-  filename = file.path(cache, paste0(unname(tools::md5sum(key_file)), ".exr"))
-  if (!file.exists(filename)) {
-    success = FALSE
-    on.exit(if (!success) unlink(filename), add = TRUE)
-    args$filename = filename
-    do.call(skymodelr::generate_sky_latlong, args)
-    success = TRUE
-  }
-  infinite_light(
-    filename,
-    intensity = light$intensity,
-    rotation = light$rotation,
-    name = light$name
-  )
 }

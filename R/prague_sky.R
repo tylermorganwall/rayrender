@@ -88,7 +88,7 @@ prague_sky_settings = function(args) {
 #' @keywords internal
 validate_prague_sky_light = function(light) {
   if (!identical(light$type, "sky")) {
-    stop("The atmosphere option belongs to sky_light().", call. = FALSE)
+    stop("Native atmosphere belongs to sky_light().", call. = FALSE)
   }
   if (
     !is.null(light$haze_correction_probability) &&
@@ -120,6 +120,7 @@ validate_prague_sky_light = function(light) {
     )
   }
   prague_sky_settings(light$sky_args)
+  sky_light_celestial_settings(light)
   invisible(TRUE)
 }
 
@@ -187,7 +188,8 @@ prepare_prague_sky_light = function(light) {
     angular_diameter = metadata$angular_diameter_deg,
     rgb_gain = unname(metadata$rgb_gain),
     resolution = as.integer(settings$resolution),
-    render_mode = settings$render_mode
+    render_mode = settings$render_mode,
+    include_sun = !identical(light$sun, FALSE)
   )
 }
 
@@ -201,13 +203,20 @@ prepare_scene_infinite_lights = function(lights) {
   if (!length(atmospheric)) {
     return(unname(lapply(lights, prepare_infinite_light)))
   }
-  settings = prague_sky_settings(lights[[atmospheric]]$sky_args)
+  sky = lights[[atmospheric]]
+  settings = prague_sky_settings(sky$sky_args)
+  # Expand the sky's celestial components only for rendering. The scene keeps
+  # one editable sky description; explicit disks replace their automatic peers.
+  automatic = sky_light_celestial_lights(sky)
+  explicit_types = vapply(lights, function(light) light$type, character(1))
+  automatic = Filter(function(light) !light$type %in% explicit_types, automatic)
+  lights = c(lights, automatic)
   explicit_sun = any(vapply(
     lights,
     function(light) light$type == "sun",
     logical(1)
   ))
-  unname(lapply(lights, function(light) {
+  result = unname(lapply(lights, function(light) {
     if (light$type %in% c("sun", "moon")) {
       if (is.null(light$sky_args$altitude)) {
         light$sky_args$altitude = settings$altitude
@@ -220,4 +229,8 @@ prepare_scene_infinite_lights = function(lights) {
     }
     result
   }))
+  if (isTRUE(sky$stars) || isTRUE(sky$planets)) {
+    result = c(result, list(prepare_sky_celestial_background(sky)))
+  }
+  result
 }

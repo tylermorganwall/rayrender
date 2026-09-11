@@ -113,11 +113,12 @@ std::optional<RayMajorantSegment> RayMajorantIterator::Next() {
     return {};
   if (!grid) {
     finished = true;
-    return RayMajorantSegment{t, end, sigma_t};
+    return RayMajorantSegment{t, end, sigma_t, 1};
   }
   while (t < end) {
     double stop = std::min({end, next[0], next[1], next[2]});
-    RayMajorantSegment result{t, stop, sigma_t * grid->Get(cell[0], cell[1], cell[2])};
+    Float density = grid->Get(cell[0], cell[1], cell[2]);
+    RayMajorantSegment result{t, stop, sigma_t * density, density};
     t = stop;
     for (int a = 0; a < 3; ++a)
       if (next[a] <= stop) {
@@ -170,6 +171,24 @@ Medium::Medium(const Rcpp::List &d)
       temperature_offset(Rcpp::as<Float>(d["temperature_offset"])),
       medium_to_object(Rcpp::as<Rcpp::NumericMatrix>(d["medium_transform"])) {
   ValidateMediumTransform(medium_to_object);
+  // Missing fields retain haze for older serialized medium descriptions.
+  if (d.containsElementNamed("haze")) {
+    SEXP value = d["haze"];
+    if (TYPEOF(value) != LGLSXP || Rf_xlength(value) != 1 || LOGICAL(value)[0] == NA_LOGICAL)
+      throw std::runtime_error("Medium haze must be TRUE or FALSE.");
+    haze = LOGICAL(value)[0];
+  }
+  density_scale = Rcpp::as<double>(d["density_scale"]);
+  if (!std::isfinite(density_scale) || density_scale < 0)
+    throw std::runtime_error("Medium density_scale must be finite and nonnegative.");
+  if (d.containsElementNamed("haze_density_threshold") && !Rf_isNull(d["haze_density_threshold"])) {
+    SEXP value = d["haze_density_threshold"];
+    if ((TYPEOF(value) != REALSXP && TYPEOF(value) != INTSXP) || Rf_xlength(value) != 1)
+      throw std::runtime_error("Medium haze_density_threshold must be NULL or a positive finite number.");
+    haze_density_threshold = Rcpp::as<double>(value);
+    if (!std::isfinite(haze_density_threshold) || haze_density_threshold <= 0)
+      throw std::runtime_error("Medium haze_density_threshold must be NULL or a positive finite number.");
+  }
   if (!std::isfinite(emission_scale) || emission_scale < 0 || !std::isfinite(temperature_scale) ||
       temperature_scale < 0 || !std::isfinite(temperature_offset))
     throw std::runtime_error("Medium emission and temperature controls must be finite and "
@@ -286,6 +305,17 @@ DensityIndexRay GridMedium::DensityRay(const Ray &r) const {
     double scale = density.dims[a] / (double(majorants.hi[a]) - majorants.lo[a]);
     result.origin[a] = (double(r.o[a]) - majorants.lo[a]) * scale - 0.5;
     result.direction[a] = double(r.d[a]) * scale;
+  }
+  return result;
+}
+std::array<double, 8> GridMedium::DensityCorners(const std::array<double, 3> &cell) const {
+  std::array<double, 8> result;
+  for (int corner = 0; corner < 8; ++corner) {
+    int index[3];
+    for (int a = 0; a < 3; ++a)
+      index[a] = int(std::clamp(cell[a] + ((corner >> a) & 1), 0.0, double(density.dims[a] - 1)));
+    result[corner] = density.values[index[0] + size_t(density.dims[0]) *
+                                    (index[1] + size_t(density.dims[1]) * index[2])];
   }
   return result;
 }

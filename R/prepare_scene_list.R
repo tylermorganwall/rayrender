@@ -66,7 +66,7 @@ prepare_scene_list = function(
   )
   if (sum(atmospheric_lights) > 1L) {
     stop(
-      "A scene can contain only one sky_light(atmosphere = TRUE).",
+      "A scene can contain only one sky_light().",
       call. = FALSE
     )
   }

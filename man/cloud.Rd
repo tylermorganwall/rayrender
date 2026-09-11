@@ -22,7 +22,9 @@ cloud(
   order_rotation = c(1, 2, 3),
   scale = c(1, 1, 1),
   t = 0,
-  animation_seed = 1
+  animation_seed = 1,
+  haze = FALSE,
+  haze_density_threshold = 0.05
 )
 }
 \arguments{
@@ -81,6 +83,22 @@ use \code{seq(0, 1, length.out = 30)} for a gentle transition. Negative times wo
 \item{animation_seed}{Default \code{1}. Nonnegative integer seed for the local
 evolution, independent of the shape's \code{seed}. Changing it selects a different
 evolution of the same cloud; it has no effect at \code{t = 0}.}
+
+\item{haze}{Default \code{FALSE}. Include clear-air atmospheric haze inside the
+cloud boundary when enabled by \code{\link[=sky_light]{sky_light()}}. The default omits haze
+throughout the boundary, including empty cells, while retaining cloud
+scattering and altitude-dependent illumination. Set \code{TRUE} to enable haze
+subject to \code{haze_density_threshold}. Omitting haze is an approximation most
+useful for dense clouds at high altitude; thin clouds and wispy edges can
+show larger differences. See \code{\link[=homogeneous_medium]{homogeneous_medium()}}.}
+
+\item{haze_density_threshold}{Default \code{0.05}. With \code{haze = TRUE}, omit haze
+only where the interpolated cloud density is at least this positive value.
+When haze is enabled, the default retains it in empty space and regions
+below density 0.05. Cloud density ranges from zero to one. \code{NULL} enables
+haze throughout the boundary. Ignored with \code{haze = FALSE}. This is a
+density threshold, not an opacity threshold; \code{optical_depth} still controls
+the strength of the cloud's scattering. See \code{\link[=homogeneous_medium]{homogeneous_medium()}}.}
 }
 \value{
 A single-row \code{ray_scene} containing an invisible box with an attached

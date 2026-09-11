@@ -33,6 +33,7 @@ struct MediumInteraction {
 struct RayMajorantSegment {
   double t_min, t_max;
   point3f sigma_maj;
+  double density_max = INFINITY;
 };
 struct MajorantGrid {
   point3f lo{-0.5f}, hi{0.5f};
@@ -78,10 +79,16 @@ public:
   virtual bool IsHomogeneous() const { return true; }
   virtual Float Density(const point3f &) const { return 1; }
   virtual DensityIndexRay DensityRay(const Ray &) const { return {}; }
+  // Samples at the eight integer corners of one interpolation cell, in xyz bit order.
+  virtual std::array<double, 8> DensityCorners(const std::array<double, 3> &) const {
+    return {1, 1, 1, 1, 1, 1, 1, 1};
+  }
   virtual point3f Emission(const point3f &) const;
   point3f sigma_a, sigma_s, emission;
   Float g, emission_scale, temperature_scale, temperature_offset;
   bool has_temperature = false, has_rgb_emission = false;
+  bool haze = true;
+  double density_scale = 1, haze_density_threshold = 0;
   Float temperature = 0;
   Transform medium_to_object;
   std::shared_ptr<texture> legacy_albedo;
@@ -98,6 +105,7 @@ public:
   bool IsHomogeneous() const override { return false; }
   Float Density(const point3f &p) const override;
   DensityIndexRay DensityRay(const Ray &r) const override;
+  std::array<double, 8> DensityCorners(const std::array<double, 3> &) const override;
   point3f Emission(const point3f &p) const override;
 
 private:
@@ -115,6 +123,7 @@ public:
   bool IsHomogeneous() const override { return false; }
   Float Density(const point3f &p) const override;
   DensityIndexRay DensityRay(const Ray &r) const override;
+  std::array<double, 8> DensityCorners(const std::array<double, 3> &) const override;
   point3f Emission(const point3f &p) const override;
 
 private:

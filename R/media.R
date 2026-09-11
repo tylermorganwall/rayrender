@@ -20,6 +20,23 @@
 #' @param temperature_offset Default `0`. Offset subtracted from temperatures.
 #' @param medium_transform Default `diag(4)`. Invertible affine matrix mapping
 #'   medium coordinates into the containing object's local coordinates.
+#' @param haze Default `TRUE`. Include clear-air atmospheric haze inside this
+#'   medium when enabled by [sky_light()], subject to `haze_density_threshold`.
+#'   Set `FALSE` to skip its atmospheric in-scattering and extinction throughout
+#'   the entire boundary, including empty cells, regardless of the threshold.
+#'   The medium's own scattering,
+#'   absorption, and emission remain active. In nested media the innermost
+#'   medium's setting applies;
+#'   `sky_light(haze_in_volumes = FALSE)` overrides all media. This is an
+#'   approximation and may affect thin clouds, edges, or low-altitude haze.
+#' @param haze_density_threshold Default `NULL`. With `haze = TRUE`, omit haze
+#'   only where interpolated density times `density_scale` is at least this
+#'   positive number. Lower-density regions and empty space retain haze. A
+#'   homogeneous medium has density one before scaling. `NULL` includes haze
+#'   throughout the boundary. Ignored with `haze = FALSE` or global haze exclusion.
+#'   The threshold measures density, not optical depth or scattering strength;
+#'   choose which media to tag accordingly. Crossings follow the trilinear
+#'   field, including between scattering events, and transform with the medium.
 #' @return A reusable `ray_medium` description.
 #' @export
 #' @examplesIf interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")
@@ -56,7 +73,9 @@ homogeneous_medium = function(
   emission_scale = 1,
   temperature_scale = 1,
   temperature_offset = 0,
-  medium_transform = diag(4)
+  medium_transform = diag(4),
+  haze = TRUE,
+  haze_density_threshold = NULL
 ) {
   new_medium(
     "homogeneous",
@@ -69,7 +88,9 @@ homogeneous_medium = function(
     emission_scale,
     temperature_scale,
     temperature_offset,
-    medium_transform
+    medium_transform,
+    haze,
+    haze_density_threshold
   )
 }
 
@@ -108,7 +129,9 @@ grid_medium = function(
   emission_scale = 1,
   temperature_scale = 1,
   temperature_offset = 0,
-  medium_transform = diag(4)
+  medium_transform = diag(4),
+  haze = TRUE,
+  haze_density_threshold = NULL
 ) {
   validate_medium_array(density, "density", 3L)
   if (
@@ -149,7 +172,9 @@ grid_medium = function(
     emission_scale,
     temperature_scale,
     temperature_offset,
-    medium_transform
+    medium_transform,
+    haze,
+    haze_density_threshold
   )
   out$density = density
   out$bounds = bounds
@@ -180,7 +205,9 @@ nanovdb_medium = function(
   emission_scale = 1,
   temperature_scale = 1,
   temperature_offset = 0,
-  medium_transform = diag(4)
+  medium_transform = diag(4),
+  haze = TRUE,
+  haze_density_threshold = NULL
 ) {
   if (
     !is.character(filename) ||
@@ -215,7 +242,9 @@ nanovdb_medium = function(
     emission_scale,
     temperature_scale,
     temperature_offset,
-    medium_transform
+    medium_transform,
+    haze,
+    haze_density_threshold
   )
   out$filename = normalizePath(path.expand(filename), mustWork = TRUE)
   out$density_grid = density_grid
@@ -323,6 +352,25 @@ validate_medium_array = function(x, name, dimensions) {
 }
 
 #' @keywords internal
+validate_medium_haze = function(haze, haze_density_threshold = NULL) {
+  if (!is.logical(haze) || length(haze) != 1L || is.na(haze)) {
+    stop("`haze` must be TRUE or FALSE.", call. = FALSE)
+  }
+  if (
+    !is.null(haze_density_threshold) &&
+      (!is.numeric(haze_density_threshold) ||
+        length(haze_density_threshold) != 1L ||
+        !is.finite(haze_density_threshold) ||
+        haze_density_threshold <= 0)
+  ) {
+    stop(
+      "`haze_density_threshold` must be NULL or a positive finite number.",
+      call. = FALSE
+    )
+  }
+}
+
+#' @keywords internal
 new_medium = function(
   type,
   sigma_a,
@@ -334,8 +382,11 @@ new_medium = function(
   emission_scale,
   temperature_scale,
   temperature_offset,
-  medium_transform
+  medium_transform,
+  haze = TRUE,
+  haze_density_threshold = NULL
 ) {
+  validate_medium_haze(haze, haze_density_threshold)
   sigma_a = medium_rgb(sigma_a, "sigma_a")
   sigma_s = medium_rgb(sigma_s, "sigma_s")
   emission = medium_rgb(emission, "emission")
@@ -405,7 +456,9 @@ new_medium = function(
         sigma_s = sigma_s,
         emission = emission,
         temperature = temperature,
-        medium_transform = medium_transform
+        medium_transform = medium_transform,
+        haze = haze,
+        haze_density_threshold = haze_density_threshold
       ),
       controls
     ),

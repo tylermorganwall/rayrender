@@ -9,7 +9,7 @@ add_infinite_light(scene, light, name = NULL, replace = FALSE)
 \arguments{
 \item{scene}{Scene to modify.}
 
-\item{light}{Light created with \code{\link[=infinite_light]{infinite_light()}}, \code{\link[=sky_light]{sky_light()}},
+\item{light}{Light created with \code{\link[=infinite_light]{infinite_light()}}, \code{\link[=sky_light]{sky_light()}}, \code{\link[=sky_light_image]{sky_light_image()}},
 \code{\link[=sun_light]{sun_light()}}, or \code{\link[=moon_light]{moon_light()}}.}
 
 \item{name}{Default \code{NULL}. Optional name overriding the light's name.}

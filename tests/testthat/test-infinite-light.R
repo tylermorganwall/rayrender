@@ -105,9 +105,9 @@ test_that("preparation adds legacy images and disables implicit fallback", {
   expect_error(prepare_scene_list(scene), "does not exist")
 })
 
-test_that("sky lights retain location, time and generation settings", {
+test_that("image sky lights retain location, time and generation settings", {
   time = as.POSIXct("2026-06-21 18:00:00", tz = "America/New_York")
-  light = sky_light(
+  light = sky_light_image(
     40.7,
     -74,
     time,
@@ -124,43 +124,64 @@ test_that("sky lights retain location, time and generation settings", {
   expect_identical(get_infinite_light(scene, "sky"), light)
   expect_output(print(light), "location: 40.7, -74")
   for (value in list(NA_real_, Inf, 91, c(0, 1))) {
-    expect_error(sky_light(value, 0, time), "lat")
+    expect_error(sky_light_image(value, 0, time), "lat")
   }
-  expect_error(sky_light(0, 181, time), "long")
-  expect_error(sky_light(0, 0, "2026-06-21"), "POSIXct")
+  expect_error(sky_light_image(0, 181, time), "long")
+  expect_error(sky_light_image(0, 0, "2026-06-21"), "POSIXct")
   expect_error(
-    sky_light(0, 0, time, filename = "sky.exr"),
+    sky_light_image(0, 0, time, filename = "sky.exr"),
     "cannot override"
   )
   expect_error(
-    sky_light(lat = 0, long = 0, datetime = time, lon = 1),
+    sky_light_image(lat = 0, long = 0, datetime = time, lon = 1),
     "cannot override"
   )
-  expect_error(sky_light(0, 0, time, allow_download = TRUE), "cannot override")
   expect_error(
-    sky_light(0, 0, time, sky_args = list(resolution = 32)),
+    sky_light_image(0, 0, time, allow_download = TRUE),
+    "cannot override"
+  )
+  expect_error(
+    sky_light_image(0, 0, time, sky_args = list(resolution = 32)),
     "directly"
   )
   expect_error(
-    sky_light(0, 0, time, unknown = 1, unknown = 2),
+    sky_light_image(0, 0, time, unknown = 1, unknown = 2),
     "uniquely named"
   )
-  expect_error(sky_light(0, 0, time, intensity = -1), "intensity")
+  expect_error(sky_light_image(0, 0, time, intensity = -1), "intensity")
 })
 
 test_that("direct sky settings retain the image and native mode defaults", {
   time = as.POSIXct("2026-06-21 18:00:00", tz = "America/New_York")
-  image = sky_light(40.7, -74, time)
-  native = sky_light(40.7, -74, time, atmosphere = TRUE)
+  image = sky_light_image(40.7, -74, time)
+  native = sky_light(40.7, -74, time)
   expect_true(image$sky_args$hosek)
   expect_equal(image$sky_args$resolution, 2048)
-  expect_false(native$sky_args$hosek)
+  expect_null(native$sky_args$hosek)
   expect_equal(native$sky_args$resolution, 64)
   expect_equal(native$sky_args$altitude, 0)
   expect_equal(native$sky_args$visibility, 50)
   expect_equal(native$sky_args$albedo, 0.5)
   expect_equal(image$sky_args$turbidity, 3)
   expect_null(native$sky_args$turbidity)
+  expect_identical(image$type, "sky_image")
+  expect_identical(native$type, "sky")
+  expect_false(image$atmosphere)
+  expect_true(native$atmosphere)
+  expect_true(native$sun)
+  expect_true(native$moon)
+  expect_true(image$sun)
+  expect_true(image$sky_args$moon)
+  expect_true(sky_light(40.7, -74, time, stars = TRUE)$stars)
+  expect_error(sky_light(40.7, -74, time, hosek = TRUE), "unused argument")
+  expect_error(
+    sky_light_image(40.7, -74, time, query_altitude = TRUE),
+    "Use sky_light"
+  )
+  expect_error(
+    sky_light_image(40.7, -74, time, atmosphere = TRUE),
+    "Use sky_light"
+  )
 })
 
 test_that("static sky generation is cached independently of intensity and rotation", {
@@ -192,7 +213,7 @@ test_that("static sky generation is cached independently of intensity and rotati
   time = as.POSIXct("2026-06-21 18:00:00", tz = "America/New_York")
   # A unique timestamp separates this mocked cache from actual sky images.
   time = time + as.numeric(Sys.time()) / 1e6
-  sky = sky_light(
+  sky = sky_light_image(
     40.7,
     -74,
     time,

@@ -3,7 +3,6 @@ prague_test_light = function(...) {
     40.7,
     -74,
     as.POSIXct('2026-06-21 20:35:00', tz = 'America/New_York'),
-    atmosphere = TRUE,
     ...
   )
 }
@@ -24,8 +23,6 @@ test_that('atmospheric descriptions validate physical units and supported model 
   }
   for (x in list(
     list(hosek = TRUE),
-    list(moon = TRUE),
-    list(stars = TRUE),
     list(visibility = 10),
     list(altitude = 20000),
     list(albedo = 2),
@@ -43,7 +40,7 @@ test_that('atmospheric descriptions validate physical units and supported model 
   time = light$datetime
   expect_error(sky_light(0, 0, time, atmosphere = NA), 'atmosphere')
   expect_error(sky_light(0, 0, time, atmosphere = NULL), 'atmosphere')
-  expect_false(sky_light(0, 0, time)$atmosphere)
+  expect_true(sky_light(0, 0, time)$atmosphere)
 })
 
 test_that('native lighting switches validate and retain serialized defaults', {
@@ -151,6 +148,8 @@ test_that('native preparation uses public metadata without generating an image',
     .package = 'skymodelr'
   )
   light = prague_test_light(
+    sun = FALSE,
+    moon = FALSE,
     altitude = 250,
     visibility = 40,
     meters_per_unit = 5,
@@ -428,7 +427,8 @@ test_that('atmospheric preparation requests unattenuated disks and replaces the 
   expect_equal(seen$sun$altitude, 1200)
   expect_null(sun$sky_args$altitude) # The reusable description is unchanged.
   result = prepare_scene_infinite_lights(list(sky, moon))
-  expect_true(result[[1]]$include_sun)
+  expect_false(result[[1]]$include_sun)
+  expect_length(result, 3)
   moon$sky_args$altitude = 500
   prepare_scene_infinite_lights(list(sky, moon))
   expect_equal(seen$moon$altitude, 500)

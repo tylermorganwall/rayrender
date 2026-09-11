@@ -348,6 +348,20 @@ DensityIndexRay NanoVDBMedium::DensityRay(const Ray &r) const {
   auto d = data->d->worldToIndexDir(nanovdb::Vec3d(r.d[0], r.d[1], r.d[2]));
   return {{o[0], o[1], o[2]}, {d[0], d[1], d[2]}};
 }
+std::array<double, 8> NanoVDBMedium::DensityCorners(const std::array<double, 3> &cell) const {
+  std::array<double, 8> result{};
+  for (int corner = 0; corner < 8; ++corner) {
+    nanovdb::Coord index;
+    bool valid = true;
+    for (int a = 0; a < 3; ++a) {
+      double v = cell[a] + ((corner >> a) & 1);
+      if (v < INT32_MIN || v > INT32_MAX) { valid = false; break; }
+      index[a] = int32_t(v);
+    }
+    if (valid) result[corner] = data->d->tree().getValue(index);
+  }
+  return result;
+}
 point3f NanoVDBMedium::Emission(const point3f &p) const {
   return emission_scale *
          (data->t ? BlackbodyRGB((lookup(data->t, p) - temperature_offset) * temperature_scale)

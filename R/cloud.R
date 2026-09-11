@@ -37,6 +37,20 @@
 #'   along the ray. Extinction is 99.9% scattering and 0.1% absorption.
 #' @param g Default `0.65`. Henyey-Greenstein scattering asymmetry, strictly
 #'   between -1 and 1. Positive values scatter forward along the light direction.
+#' @param haze Default `FALSE`. Include clear-air atmospheric haze inside the
+#'   cloud boundary when enabled by [sky_light()]. The default omits haze
+#'   throughout the boundary, including empty cells, while retaining cloud
+#'   scattering and altitude-dependent illumination. Set `TRUE` to enable haze
+#'   subject to `haze_density_threshold`. Omitting haze is an approximation most
+#'   useful for dense clouds at high altitude; thin clouds and wispy edges can
+#'   show larger differences. See [homogeneous_medium()].
+#' @param haze_density_threshold Default `0.05`. With `haze = TRUE`, omit haze
+#'   only where the interpolated cloud density is at least this positive value.
+#'   When haze is enabled, the default retains it in empty space and regions
+#'   below density 0.05. Cloud density ranges from zero to one. `NULL` enables
+#'   haze throughout the boundary. Ignored with `haze = FALSE`. This is a
+#'   density threshold, not an opacity threshold; `optical_depth` still controls
+#'   the strength of the cloud's scattering. See [homogeneous_medium()].
 #' @param angle Default `c(0, 0, 0)`. Rotation in degrees around the x, y, and z
 #'   axes, applied in the order specified by `order_rotation`.
 #' @param order_rotation Default `c(1, 2, 3)`. Order of rotations, referring to
@@ -135,8 +149,11 @@ cloud = function(
   order_rotation = c(1, 2, 3),
   scale = c(1, 1, 1),
   t = 0,
-  animation_seed = 1
+  animation_seed = 1,
+  haze = FALSE,
+  haze_density_threshold = 0.05
 ) {
+  validate_medium_haze(haze, haze_density_threshold)
   for (field in c("x", "y", "z")) {
     validate_cloud_scalar(get(field), field)
   }
@@ -200,7 +217,9 @@ cloud = function(
     bounds = rbind(-size / 2, size / 2),
     sigma_s = extinction * 0.999,
     sigma_a = extinction * 0.001,
-    g = g
+    g = g,
+    haze = haze,
+    haze_density_threshold = haze_density_threshold
   )
   set_medium(
     cube(

@@ -41,8 +41,8 @@ Prague model: \code{altitude}, \code{visibility}, \code{albedo}, \code{wide_spec
 \code{skymodelr::calculate_sky_values()}. \code{hosek = FALSE} is accepted;
 \code{hosek = TRUE} is unsupported because these lights use per-direction queries.
 Defaults match that function. Without a native atmospheric sky, altitude
-describes one observer for the whole light. With \code{\link[=sky_light]{sky_light()}}'s
-\code{atmosphere = TRUE}, a missing altitude uses that sky's reference altitude
+describes one observer for the whole light. With \code{\link[=sky_light]{sky_light()}}, a missing
+altitude uses that sky's reference altitude
 for ephemeris placement; atmospheric filtering uses each interaction's position.}
 
 \item{resolution}{Default \code{256} for the Sun and \code{1024} for the Moon. Target
@@ -78,11 +78,12 @@ Requires skymodelr and its Prague data. Install datasets with
 \code{skymodelr::download_sky_data()} before rendering. Requires the public
 \code{skymodelr::generate_sun_disk()} and \code{skymodelr::generate_moon_disk()} exports.
 
-Pair a Sun disk with \code{sky_light(..., hosek = FALSE, render_mode = "atmosphere")} to exclude the sky map's rasterized Sun. Leave
+Pair a Sun disk with \code{sky_light_image(..., hosek = FALSE, render_mode = "atmosphere")} to exclude the sky map's rasterized Sun. Leave
 \code{moon = FALSE} in that sky when adding a Moon disk. Lights add radiance; they
 do not eclipse or occlude each other, and adding a second copy doubles its light.
-With \code{sky_light(atmosphere = TRUE)}, an explicit Sun automatically replaces
-the built-in Sun; there is no need to change \code{render_mode}. The clear-air sky
+With \code{sky_light()}, explicit Sun and Moon lights replace the corresponding
+automatic disks; there is no need to change \code{sun}, \code{moon}, or \code{render_mode}.
+The clear-air sky
 and haze retain that sky light's own location, time, rotation, and intensity.
 
 Both lights use north at world +Z, east at world -X, and up at world +Y,
