@@ -13,18 +13,17 @@ sky_light(
   name = "sky",
   meters_per_unit = 1,
   atmosphere_origin = c(0, 0, 0),
-  attenuation = TRUE,
+  haze = TRUE,
   query_altitude = TRUE,
   haze_in_volumes = FALSE,
   deferred_haze = TRUE,
-  haze_correction_probability = if (isTRUE(deferred_haze)) 0.5 else 1,
   cache_spectra = TRUE,
   transmission_table = TRUE,
   transmission_table_max_mb = 512,
   altitude = 0,
-  visibility = 50,
+  visibility = 131.8,
   albedo = 0.5,
-  resolution = 64,
+  sampling_resolution = 64,
   render_mode = "all",
   prague_rgb_correction = TRUE,
   prague_rgb_correction_strength = 1,
@@ -41,7 +40,8 @@ sky_light(
   stars_exposure = 0,
   planets = FALSE,
   celestial_resolution = 2048,
-  number_cores = 1
+  number_cores = 1,
+  haze_filter = TRUE
 )
 }
 \arguments{
@@ -66,7 +66,7 @@ Applies to distances along every axis.}
 geographic reference point, at \code{altitude} meters above sea level.
 World +Y is up; horizontal offsets follow the model's spherical Earth.}
 
-\item{attenuation}{Default \code{TRUE}. Include finite-distance attenuation and
+\item{haze}{Default \code{TRUE}. Include finite-distance haze and
 in-scattering between scene interactions.
 Set \code{FALSE} to evaluate native Prague lighting without this finite-distance
 haze. Sun/sky radiance and celestial disk filtering still include the
@@ -74,12 +74,12 @@ atmosphere between the query location and space.}
 
 \item{query_altitude}{Default \code{TRUE}. Query lighting at each surface, cloud,
 or camera position, using \code{meters_per_unit} and
-\code{atmosphere_origin}. Set \code{FALSE} with \code{attenuation = FALSE} to evaluate all
+\code{atmosphere_origin}. Set \code{FALSE} with \code{haze = FALSE} to evaluate all
 lighting at the fixed reference point and \code{altitude}. Finite-distance
-haze requires position-dependent queries, so \code{attenuation = TRUE} requires
+haze requires position-dependent queries, so \code{haze = TRUE} requires
 \code{query_altitude = TRUE}.}
 
-\item{haze_in_volumes}{Default \code{TRUE}. Integrate clear-air haze inside attached
+\item{haze_in_volumes}{Default \code{FALSE}. Integrate clear-air haze inside attached
 volume materials as well as outside,
 except in regions excluded by a medium's \code{haze} and \code{haze_density_threshold} settings.
 Set \code{FALSE} to pause finite haze while a ray is inside any volume boundary,
@@ -95,17 +95,6 @@ at each completed span; emitting medium events also end a span. Works with
 either \code{haze_in_volumes} setting. Set \code{FALSE} to evaluate every haze interval.
 Signed corrections are averaged before display processing. Keep
 \code{render_scene(clamp_value = Inf)} to avoid clipping that estimator.}
-
-\item{haze_correction_probability}{Default \code{if (isTRUE(deferred_haze)) 0.5 else 1}.
-Probability of evaluating the full horizon-smoothing correction at each
-deferred haze endpoint. Values below
-\code{1} require \code{deferred_haze = TRUE}. The deferred default, \code{0.5}, reduces sky
-queries while preserving the expected radiance, with possible additional
-noise. Must be a finite number
-greater than zero and at most one. Set \code{1} to always evaluate the full
-correction. Disabling \code{deferred_haze} defaults this probability to \code{1}.
-Transmission and direct lighting stay exact.
-Keep \code{clamp_value = Inf} so signed corrections are averaged without clipping.}
 
 \item{cache_spectra}{Default \code{TRUE}. Reuse exactly matching Prague sky spectra
 in a small cache per rendering thread. This changes
@@ -128,13 +117,13 @@ fit, use the original exact evaluator. Applies when \code{transmission_table = T
 \item{altitude}{Default \code{0}. Reference altitude in meters above sea level,
 at \code{atmosphere_origin}. Prague supports 0--15000 m.}
 
-\item{visibility}{Default \code{50}. Prague meteorological visibility in kilometers,
+\item{visibility}{Default \code{131.8}. Prague meteorological visibility in kilometers,
 from 20 to 131.8. Smaller values produce stronger haze.}
 
 \item{albedo}{Default \code{0.5}. Uniform ground reflectance for the sky model,
 between 0 and 1. Local surface materials are specified separately.}
 
-\item{resolution}{Default \code{64}. Height of directional importance-sampling
+\item{sampling_resolution}{Default \code{64}. Height of directional importance-sampling
 tables, from 16 to 2048. This does not limit the rendered sky's detail.}
 
 \item{render_mode}{Default \code{"all"}. Select sky and Sun (\code{"all"}), sky without
@@ -161,7 +150,7 @@ its phase and earthshine for this location and time. A separate \code{\link[=moo
 overrides the automatic Moon. Set \code{FALSE} to omit the automatic disk.}
 
 \item{sun_resolution}{Default \code{256}. Sun disk texture width and height in
-pixels, at least 16; independent of the atmospheric sampling \code{resolution}.}
+pixels, at least 16; independent of the atmospheric \code{sampling_resolution}.}
 
 \item{moon_resolution}{Default \code{1024}. Moon disk texture width and height in
 pixels, at least 16. Cropping and edge coverage can change the final dimensions.}
@@ -190,13 +179,25 @@ image; its width is twice this value. Independent of the atmospheric sampling
 and Sun/Moon texture resolutions. Used only when \code{stars} or \code{planets} is enabled.}
 
 \item{number_cores}{Default \code{1}. CPU threads used to prepare celestial textures.}
+
+\item{haze_filter}{Default \code{TRUE}. Reduce finite-haze bands by averaging complete
+nearby atmospheric paths with a 0.5-degree vertical Gaussian, truncated at
+plus or minus 1.5 degrees. Each path uses Prague's sky spectra and its own
+endpoint and transmission; paths entering Earth are excluded. This changes
+finite in-scattering, while retaining the sky, celestial lights, and the
+actual ray's transmission. Existing haze is retained within 3 degrees of the
+Sun, with a smooth transition to filtering at 6 degrees. Set \code{FALSE} to use
+the endpoint-smoothing calculation. Each filtered haze query samples
+one of 129 weighted directions, preserving the full filter's mean with
+additional Monte Carlo noise. This sampling applies with either value of
+\code{deferred_haze}.}
 }
 \value{
 A \code{ray_infinite_light} containing a native atmospheric sky description.
 }
 \description{
 Evaluate the native Prague atmosphere at scene interactions, including
-altitude-dependent Sun and sky lighting, finite-distance attenuation, and
+altitude-dependent Sun and sky lighting, finite-distance haze, and
 in-scattering. Sun and Moon disk lights are included automatically.
 Add the light with \code{\link[=add_infinite_light]{add_infinite_light()}} and render with
 \code{integrator_type = "nee"}. Use \code{\link[=sky_light_image]{sky_light_image()}} for a cached sky image.
@@ -204,13 +205,12 @@ Add the light with \code{\link[=add_infinite_light]{add_infinite_light()}} and r
 \details{
 Install the full-altitude Prague data with
 \code{skymodelr::download_sky_data(sea_level = FALSE)} before rendering.
-Atmospheric queries share skymodelr's coefficients and registered native API;
-rendering does not download data or call R from worker threads.
+Atmospheric queries share skymodelr's coefficients and registered native API.
 
-With \code{query_altitude = TRUE}, the sky and Sun change with the location of
-each surface or cloud interaction. With \code{attenuation = FALSE}, finite haze
+With \code{query_altitude = TRUE}, the sky and Sun elevation change with the altitude of
+each surface or cloud interaction. With \code{haze = FALSE}, finite haze
 is disabled while this local lighting remains active. Setting both
-\code{attenuation = FALSE} and \code{query_altitude = FALSE} uses the fixed reference
+\code{haze = FALSE} and \code{query_altitude = FALSE} uses the fixed reference
 observer for all lighting. Date and time stay fixed during an animation.
 
 World +Y is up. With zero rotation, north is world +Z and east is world -X.
@@ -234,10 +234,14 @@ The model precomputes clear-air multiple scattering over a spherical Earth
 with uniform ground albedo. Local geometry and clouds block direct Sun and
 sky lighting but do not cast shadows into this precomputed in-scattering.
 Haze is disabled inside dielectric solids. Radiance is integrated spectrally
-and converted to renderer RGB; attenuation of RGB materials uses a broadband
+and converted to renderer RGB; haze of RGB materials uses a broadband
 approximation. Finite-distance fitted transmission is normalized at zero
 distance and interpolated in optical depth over the first 100 m. Ray-anchored
 cumulative transport avoids accumulating fit errors at cloud null events.
+Finite haze is filtered over complete neighboring paths by default to reduce
+bands from subtracting independently fitted sky spectra. This is an angular
+regularization of the finite source. It does not blur the environment image
+or surface geometry.
 
 Sun and Moon are prepared automatically using \code{\link[=sun_light]{sun_light()}} and \code{\link[=moon_light]{moon_light()}}
 with this sky's location, time, altitude, rotation, intensity, and color settings.
@@ -253,7 +257,7 @@ native RGB atmospheric filtering and Earth occlusion at each interaction.
 Their map resolution affects point-source detail, not the Prague atmosphere.
 
 Other infinite lights add to the sky. Additional image lights represent
-radiance outside the atmosphere and receive atmospheric attenuation; do not
+radiance outside the atmosphere and receive atmospheric haze; do not
 use an image that already includes the same haze. \code{\link[=sun_light]{sun_light()}} and
 \code{\link[=moon_light]{moon_light()}} request unattenuated textures automatically. The renderer
 applies spectral atmospheric filtering and Earth occlusion at each interaction.
@@ -347,7 +351,7 @@ if (
       top = 0.001,
       bottom = -0.001,
       flip_horizontal = TRUE,
-      material = diffuse("#168BC4")
+      material = microfacet(color="#168BC4",transmission=TRUE, roughness=0.2)
     )
   )
 
@@ -505,17 +509,21 @@ if (
           -74,
           day,
           meters_per_unit = 1000,
-          visibility = 50,
-          attenuation = FALSE
+          visibility = 120,
+          haze = FALSE
         ),
         caption = "No finite haze"
       ),
       render_sky(
-        sky_light(40.7, -74, day, meters_per_unit = 1000, visibility = 50),
-        caption = "Finite haze"
+        sky_light(40.7, -74, day, meters_per_unit = 1000, visibility = 120),
+        caption = "Finite haze, 120km"
+      ),
+      render_sky(
+        sky_light(40.7, -74, day, meters_per_unit = 1000, visibility = 20),
+        caption = "Finite haze, 20km"
       )
     ),
-    dim = c(1, 2)
+    dim = c(1, 3)
   )
 
   # Isolate altitude-dependent lighting by disabling finite haze in both images.
@@ -528,7 +536,7 @@ if (
           -74,
           sunset,
           meters_per_unit = 1000,
-          attenuation = FALSE,
+          haze = FALSE,
           query_altitude = FALSE
         ),
         iso = 175,
@@ -540,7 +548,7 @@ if (
           -74,
           sunset,
           meters_per_unit = 1000,
-          attenuation = FALSE,
+          haze = FALSE,
           query_altitude = TRUE
         ),
         iso = 175,
@@ -552,7 +560,7 @@ if (
           -74,
           sunset,
           meters_per_unit = 1000,
-          attenuation = TRUE,
+          haze = TRUE,
           query_altitude = TRUE
         ),
         iso = 175,

@@ -497,11 +497,12 @@ RGB direct_light(const Ray &parent, const point3f &p, const hit_record *surface,
   AtmosphereRay atmosphere_ray(atmosphere);
   bool air_active = false;
   const bool deferred_haze = atmosphere && atmosphere->DeferredHaze();
-  random_gen haze_rng = deferred_haze ? tracking_rng(sampler) : random_gen(0);
+  const bool sample_haze = atmosphere && atmosphere->SampleHaze();
+  random_gen haze_rng = (deferred_haze || sample_haze) ? tracking_rng(sampler) : random_gen(0);
   auto flush_haze = [&]() {
     if (!deferred_haze) return;
-    double endpoint_uniform = 0, correction_uniform = 0;
-    if (atmosphere->SampleHazeCorrection()) {
+    double endpoint_uniform = -1, correction_uniform = -1;
+    if (sample_haze) {
       endpoint_uniform = haze_rng.unif_rand();
       correction_uniform = haze_rng.unif_rand();
     }
@@ -539,7 +540,7 @@ RGB direct_light(const Ray &parent, const point3f &p, const hit_record *surface,
           RGB weight = denom > 0 ? beta * f * tr / denom : RGB(0);
           atmosphere_ray.Accumulate(ray(Float(stop)), {weight[0], weight[1], weight[2]}, haze_rng.unif_rand());
         } else {
-          auto segment = atmosphere_ray.Advance(ray(Float(stop)));
+          auto segment = atmosphere_ray.Advance(ray(Float(stop)), sample_haze ? haze_rng.unif_rand() : -1);
           if (denom > 0)
             atmospheric_light += beta * f * tr * RGB(segment.radiance) / denom;
           tr *= RGB(segment.transmission);
@@ -704,11 +705,12 @@ void color_volume(const Ray &input, hitable *world, hitable_list *lights, size_t
   AtmosphereRay atmosphere_ray(atmosphere);
   bool air_active = false;
   const bool deferred_haze = atmosphere && atmosphere->DeferredHaze();
-  random_gen haze_rng = deferred_haze ? tracking_rng(sampler) : random_gen(0);
+  const bool sample_haze = atmosphere && atmosphere->SampleHaze();
+  random_gen haze_rng = (deferred_haze || sample_haze) ? tracking_rng(sampler) : random_gen(0);
   auto flush_haze = [&]() {
     if (!deferred_haze) return;
-    double endpoint_uniform = 0, correction_uniform = 0;
-    if (atmosphere->SampleHazeCorrection()) {
+    double endpoint_uniform = -1, correction_uniform = -1;
+    if (sample_haze) {
       endpoint_uniform = haze_rng.unif_rand();
       correction_uniform = haze_rng.unif_rand();
     }
@@ -752,7 +754,7 @@ void color_volume(const Ray &input, hitable *world, hitable_list *lights, size_t
           RGB weight = denom > 0 ? beta / denom : RGB(0);
           atmosphere_ray.Accumulate(ray(Float(stop)), {weight[0], weight[1], weight[2]}, haze_rng.unif_rand());
         } else {
-          auto segment = atmosphere_ray.Advance(ray(Float(stop)));
+          auto segment = atmosphere_ray.Advance(ray(Float(stop)), sample_haze ? haze_rng.unif_rand() : -1);
           if (denom > 0) L += beta * RGB(segment.radiance) / denom;
           beta *= RGB(segment.transmission);
         }

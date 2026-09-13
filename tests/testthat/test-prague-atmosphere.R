@@ -49,6 +49,7 @@ test_that('native lighting switches validate and retain serialized defaults', {
     'query_altitude',
     'haze_in_volumes',
     'deferred_haze',
+    'haze_filter',
     'cache_spectra',
     'transmission_table'
   )) {
@@ -70,7 +71,8 @@ test_that('native lighting switches validate and retain serialized defaults', {
   old$attenuation = old$query_altitude = NULL
   old$haze_in_volumes = NULL
   old$deferred_haze = NULL
-  old$cache_spectra = old$transmission_table = old$haze_correction_probability = NULL
+  old$haze_filter = NULL
+  old$cache_spectra = old$transmission_table = NULL
   old$transmission_table_max_mb = NULL
   expect_silent(validate_infinite_light(old))
 })
@@ -89,32 +91,15 @@ test_that('transmission table memory limits accept zero, fractions, and infinity
   }
 })
 
-test_that('sampled haze correction validates probability and requires deferred transport', {
+test_that('haze filtering remains enabled with eager or deferred transport', {
   default = prague_test_light()
   expect_true(default$deferred_haze)
-  expect_equal(default$haze_correction_probability, .5)
+  expect_true(default$haze_filter)
+  expect_false(prague_test_light(haze_filter = FALSE)$haze_filter)
   eager = prague_test_light(deferred_haze = FALSE)
   expect_false(eager$deferred_haze)
-  expect_equal(eager$haze_correction_probability, 1)
-  for (value in list(NULL, NA, NaN, Inf, 0, -1, 1.1, TRUE, '0.5', c(.5, 1))) {
-    expect_error(
-      prague_test_light(
-        deferred_haze = TRUE,
-        haze_correction_probability = value
-      ),
-      'haze_correction_probability'
-    )
-  }
-  expect_error(
-    prague_test_light(deferred_haze = FALSE, haze_correction_probability = .5),
-    'requires deferred_haze'
-  )
-  light = prague_test_light(
-    deferred_haze = TRUE,
-    haze_correction_probability = .25
-  )
-  expect_equal(light$haze_correction_probability, .25)
-  expect_identical(unserialize(serialize(light, NULL)), light)
+  expect_true(eager$haze_filter)
+  expect_identical(unserialize(serialize(eager, NULL)), eager)
 })
 
 test_that('atmosphere requires nee and is unique in a scene', {
@@ -160,9 +145,9 @@ test_that('native preparation uses public metadata without generating an image',
   expect_equal(result$altitude, 250)
   expect_equal(result$meters_per_unit, 5)
   expect_equal(result$origin, c(0, -50, 0))
-  expect_true(result$haze_in_volumes)
+  expect_false(result$haze_in_volumes)
   expect_true(result$deferred_haze)
-  expect_equal(result$haze_correction_probability, .5)
+  expect_true(result$haze_filter)
   expect_true(result$cache_spectra)
   expect_true(result$transmission_table)
   expect_equal(result$transmission_table_max_mb, 512)
@@ -176,7 +161,7 @@ test_that('native preparation uses public metadata without generating an image',
   light$attenuation = light$query_altitude = FALSE
   light$haze_in_volumes = FALSE
   light$deferred_haze = TRUE
-  light$haze_correction_probability = .5
+  light$haze_filter = FALSE
   light$cache_spectra = light$transmission_table = FALSE
   light$transmission_table_max_mb = Inf
   result = prepare_infinite_light(light)
@@ -184,21 +169,24 @@ test_that('native preparation uses public metadata without generating an image',
   expect_false(result$query_altitude)
   expect_false(result$haze_in_volumes)
   expect_true(result$deferred_haze)
-  expect_equal(result$haze_correction_probability, .5)
+  expect_false(result$haze_filter)
   expect_false(result$cache_spectra)
   expect_false(result$transmission_table)
   expect_equal(result$transmission_table_max_mb, Inf)
   light$attenuation = light$query_altitude = NULL
   light$haze_in_volumes = NULL
   light$deferred_haze = NULL
-  light$haze_correction_probability = light$cache_spectra = light$transmission_table = NULL
+  light$haze_filter = NULL
+  light$cache_spectra = light$transmission_table = NULL
   light$transmission_table_max_mb = NULL
   result = prepare_infinite_light(light)
   expect_true(result$attenuation)
   expect_true(result$query_altitude)
   expect_true(result$haze_in_volumes)
   expect_false(result$deferred_haze)
-  expect_equal(result$haze_correction_probability, 1)
+  expect_true(result$haze_filter)
+  light$deferred_haze = TRUE
+  result = prepare_infinite_light(light)
   expect_true(result$cache_spectra)
   expect_true(result$transmission_table)
   expect_equal(result$transmission_table_max_mb, 512)
@@ -244,15 +232,14 @@ test_that('native exact cache controls preserve spectra when switched between qu
     )
   }
   d$transmission_table_max_mb = NULL
-  d$haze_correction_probability = .5
   d$deferred_haze = FALSE
-  expect_error(
+  # The private diagnostic still provides a stable reference for the sampler.
+  expect_identical(
     query_prague_atmosphere(d, positions, directions, distance),
-    'requires deferred_haze'
+    original
   )
   d$deferred_haze = TRUE
-  # Diagnostic segment queries remain deterministic even when rendering samples
-  # the horizon correction. The native C++ test checks both sampled outcomes.
+  # Deferral does not alter the internal reference average.
   expect_identical(
     query_prague_atmosphere(d, positions, directions, distance),
     original

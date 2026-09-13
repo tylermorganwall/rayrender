@@ -111,12 +111,19 @@ homogeneous_medium = function(
 #' @return A reusable `ray_medium` description.
 #' @export
 #' @examples
-#' noise_field = ambient::noise_perlin(dim = c(300, 300, 300), frequency=0.02,octaves=8, gain=0.1)
-#' noise_field[noise_field < 0] = 0
-#' smoke = grid_medium(noise_field, g=0.2, sigma_a = 10)
-#' scene = set_medium(cube(), smoke) |>
-#'   add_object(sphere(x=3, material=light(intensity=10)))
-#' render_scene(scene, integrator_type = "nee")
+#' if (requireNamespace("ambient", quietly = TRUE)) {
+#'   noise_field = ambient::noise_perlin(
+#'     dim = c(24, 24, 24), frequency = 0.02, octaves = 8, gain = 0.1
+#'   )
+#'   noise_field[noise_field < 0] = 0
+#'   smoke = grid_medium(noise_field, g = 0.2, sigma_a = 10)
+#'   scene = set_medium(cube(), smoke) |>
+#'     add_object(sphere(x = 3, material = light(intensity = 10)))
+#'   render_scene(
+#'     scene, integrator_type = "nee", width = 64, height = 64,
+#'     samples = 4, parallel = FALSE, plot_scene = FALSE
+#'   )
+#' }
 grid_medium = function(
   density,
   sigma_a = 0,

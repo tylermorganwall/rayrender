@@ -160,7 +160,7 @@ test_that("direct sky settings retain the image and native mode defaults", {
   expect_null(native$sky_args$hosek)
   expect_equal(native$sky_args$resolution, 64)
   expect_equal(native$sky_args$altitude, 0)
-  expect_equal(native$sky_args$visibility, 50)
+  expect_equal(native$sky_args$visibility, 131.8)
   expect_equal(native$sky_args$albedo, 0.5)
   expect_equal(image$sky_args$turbidity, 3)
   expect_null(native$sky_args$turbidity)

@@ -40,7 +40,12 @@ test_that("per-medium haze controls compose camera radiance, alpha, and nested i
     40.7,
     -74,
     as.POSIXct("2026-06-21 18:00:00", tz = "America/New_York"),
+    # Enable the global gate so these checks exercise each medium's controls.
+    haze_in_volumes = TRUE,
     deferred_haze = FALSE,
+    # These exact interval comparisons need no angular sampling noise.
+    # Native filter tests separately check sampled means and subdivisions.
+    haze_filter = FALSE,
     resolution = 16
   )
   description = tryCatch(prepare_infinite_light(sky), error = function(e) {
@@ -129,7 +134,6 @@ test_that("per-medium haze controls compose camera radiance, alpha, and nested i
         q$transmission[2, ] * (q$inscatter[3, ] + q$transmission[3, ]))
   for (deferred in c(FALSE, TRUE)) {
     sky$deferred_haze = deferred
-    sky$haze_correction_probability = 1
     actual = render(nested)
     expect_equal(
       vapply(1:3, function(i) mean(actual[,, i]), numeric(1)),
@@ -251,7 +255,6 @@ test_that("per-medium haze controls compose camera radiance, alpha, and nested i
   settings$samples = 16
   for (deferred in c(FALSE, TRUE)) {
     sky$deferred_haze = outside_sky$deferred_haze = deferred
-    sky$haze_correction_probability = outside_sky$haze_correction_probability = 1
     tagged = render(add_object(empty, set_medium(shell, scattering)))
     scattering$haze = TRUE
     global = render(

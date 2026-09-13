@@ -108,8 +108,8 @@ Spherical Earth visibility clips each direction, so a partially set disk can
 illuminate high clouds while being hidden from the ground. Texture detail
 remains independent of the sky sampling resolution. Skymodelr must support
 the new argument. Without a native atmosphere, the existing fixed-observer
-attenuation and geometric horizon clipping remain in effect.
-The sky's \code{attenuation = FALSE} option removes finite scene haze while keeping
+haze and geometric horizon clipping remain in effect.
+The sky's \code{haze = FALSE} option removes finite scene haze while keeping
 this celestial filtering. Its \code{query_altitude} option controls whether the
 filtering and horizon follow each interaction or use the reference observer.
 The precomputed clear-air haze is Sun-driven; lunar atmospheric in-scattering

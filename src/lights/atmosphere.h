@@ -31,9 +31,9 @@ public:
                                     AtmosphereSegmentCache &) const {
     return Segment(p, w, distance);
   }
-  // Deferred callers supply independent uniforms for sampled source estimates.
-  // Direct Segment queries always retain the complete deterministic evaluator.
-  virtual bool SampleHazeCorrection() const { return false; }
+  // Rendering callers supply uniforms for sampled source estimates, including
+  // eager integration. Direct Segment queries are internal reference averages.
+  virtual bool SampleHaze() const { return false; }
   virtual AtmosphereSegment SampledSegment(const point3f &p, const vec3f &w, double d,
                                            AtmosphereSegmentCache &cache, double uniform) const {
     return Segment(p, w, d, cache);
@@ -58,7 +58,7 @@ class AtmosphereRay {
 public:
   explicit AtmosphereRay(const Atmosphere *model) : model(model) {}
   void Start(const point3f &, const vec3f &, bool integrate);
-  AtmosphereSegment Advance(const point3f &);
+  AtmosphereSegment Advance(const point3f &, double uniform = -1);
   // Deferred callers pass throughput/MIS before pending atmospheric extinction.
   // Flush applies that extinction before the next real interaction consumes it;
   // never reset or use eager Advance while a deferred span is pending.
@@ -92,7 +92,7 @@ public:
   double SamplingWeight() const override { return sampling_weight; }
   size_t GetSize() const override;
   const Atmosphere *GetAtmosphere() const override { return this; }
-  const Atmosphere *GetTransportAtmosphere() const override { return attenuation ? this : nullptr; }
+  const Atmosphere *GetTransportAtmosphere() const override { return haze ? this : nullptr; }
   AtmosphereSegment Segment(const point3f &, const vec3f &, double) const override;
   AtmosphereSegment Segment(const point3f &, const vec3f &, double,
                             AtmosphereSegmentCache &) const override;
@@ -102,7 +102,7 @@ public:
   point3f SkyRadiance(const point3f &, const vec3f &) const override;
   bool IntegrateInVolumes() const override { return haze_in_volumes; }
   bool DeferredHaze() const override { return deferred_haze; }
-  bool SampleHazeCorrection() const override { return haze_correction_probability < 1; }
+  bool SampleHaze() const override { return haze_filter; }
   AtmosphereSegment SampledSegment(const point3f &, const vec3f &, double,
                                    AtmosphereSegmentCache &, double) const override;
 
@@ -115,9 +115,8 @@ private:
   std::array<double, 3> origin, gain;
   double meters_per_unit, altitude, elevation, azimuth, visibility, albedo, intensity;
   double sun_radius, sun_solid_angle, sun_fraction = 0, sampling_weight = 0;
-  double haze_correction_probability = 1;
-  bool include_sky, include_sun, attenuation = true, query_altitude = true,
-       haze_in_volumes = true, deferred_haze = false;
+  bool include_sky, include_sun, haze = true, query_altitude = true,
+       haze_in_volumes = true, deferred_haze = false, haze_filter = true;
   std::vector<double> wavelengths;
   std::vector<std::array<double, 3>> rgb_weights, transmission_weights;
   std::array<std::vector<std::array<double, 3>>, 2> celestial_weights;
@@ -132,6 +131,7 @@ private:
   bool PlanetOccludes(Vector, Vector, double distance) const;
   SpectrumValues Spectrum(Vector, Vector, bool sun, bool sky, bool smooth = true) const;
   point3f RGB(const SpectrumValues &) const;
+  SpectrumValues FilteredHaze(Vector, Vector, double distance, double uniform) const;
   AtmosphereSegment EvaluateSegment(const point3f &, const vec3f &, double,
                                     AtmosphereSegmentCache &, double) const;
   std::pair<size_t, double> Proposal(Vector) const;

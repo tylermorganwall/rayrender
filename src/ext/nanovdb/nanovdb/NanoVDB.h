@@ -1,5 +1,6 @@
 // Copyright Contributors to the OpenVDB Project
 // SPDX-License-Identifier: Apache-2.0
+// Modified for rayrender: removed GCC diagnostic suppression pragmas.
 
 /*!
     \file   nanovdb/NanoVDB.h
@@ -3213,21 +3214,10 @@ struct NANOVDB_ALIGN(NANOVDB_DATA_ALIGNMENT) InternalData
     __hostdev__ const StatsT& average() const { return mAverage; }
     __hostdev__ const StatsT& stdDeviation() const { return mStdDevi; }
 
-// GCC 13 (and possibly prior versions) has a regression that results in invalid
-// warnings when -Wstringop-overflow is turned on. For details, refer to
-// https://gcc.gnu.org/bugzilla/show_bug.cgi?id=101854
-// https://gcc.gnu.org/bugzilla/show_bug.cgi?id=106757
-#if defined(__GNUC__) && (__GNUC__ < 14) && !defined(__APPLE__) && !defined(__llvm__)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wstringop-overflow"
-#endif
     __hostdev__ void setMin(const ValueT& v) { mMinimum = v; }
     __hostdev__ void setMax(const ValueT& v) { mMaximum = v; }
     __hostdev__ void setAvg(const StatsT& v) { mAverage = v; }
     __hostdev__ void setDev(const StatsT& v) { mStdDevi = v; }
-#if defined(__GNUC__) && (__GNUC__ < 14) && !defined(__APPLE__) && !defined(__llvm__)
-#pragma GCC diagnostic pop
-#endif
 
     /// @brief This class cannot be constructed or deleted
     InternalData() = delete;
@@ -3660,20 +3650,10 @@ struct NANOVDB_ALIGN(NANOVDB_DATA_ALIGNMENT) LeafData
     __hostdev__ FloatType getAvg() const { return mAverage; }
     __hostdev__ FloatType getDev() const { return mStdDevi; }
 
-// GCC 11 (and possibly prior versions) has a regression that results in invalid
-// warnings when -Wstringop-overflow is turned on. For details, refer to
-// https://gcc.gnu.org/bugzilla/show_bug.cgi?id=101854
-#if defined(__GNUC__) && (__GNUC__ < 12) && !defined(__APPLE__) && !defined(__llvm__)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wstringop-overflow"
-#endif
     __hostdev__ void setMin(const ValueType& v) { mMinimum = v; }
     __hostdev__ void setMax(const ValueType& v) { mMaximum = v; }
     __hostdev__ void setAvg(const FloatType& v) { mAverage = v; }
     __hostdev__ void setDev(const FloatType& v) { mStdDevi = v; }
-#if defined(__GNUC__) && (__GNUC__ < 12) && !defined(__APPLE__) && !defined(__llvm__)
-#pragma GCC diagnostic pop
-#endif
 
     template<typename T>
     __hostdev__ void setOrigin(const T& ijk) { mBBoxMin = ijk; }

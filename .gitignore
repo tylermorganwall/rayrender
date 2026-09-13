@@ -26,3 +26,11 @@ docs
 cache/*
 src/Makevars
 .codex:/
+.codex/
+.codex-sccache/
+.sccache-*/
+.vscode/*
+*.png
+*.exr
+*.pdf
+*.txt

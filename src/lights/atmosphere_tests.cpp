@@ -291,15 +291,16 @@ Rcpp::List PragueTestDescription(const char *filename) {
 }
 }
 
-context("Sampled horizon correction") {
-  test_that("weighted correction outcomes recover the original clamped source") {
+context("Horizon smoothing fallback") {
+  test_that("the full fallback does not depend on an angular variate or deferral") {
     const char *filename = std::getenv("RAYRENDER_PRAGUE_TEST_FILE");
     if (!filename) return;
     Rcpp::List description = PragueTestDescription(filename);
-    for (double probability : {.25, .5, 1.}) {
-      description["haze_correction_probability"] = probability;
+    description["haze_filter"] = false;
+    for (bool deferred : {false, true}) {
+      description["deferred_haze"] = deferred;
       PragueInfiniteLight light(description, false);
-      expect_true(light.SampleHazeCorrection() == (probability < 1));
+      expect_true(!light.SampleHaze());
       for (double height : {0., 100., 1000., 5000., 15000.})
         for (double slope : {-.1, -.01, 0., .01, .1, .5})
           for (double distance : {.01, 30., 100., 1000., 10000.}) {
@@ -307,13 +308,11 @@ context("Sampled horizon correction") {
             vec3f w = unit_vector(vec3f(1, slope, 0));
             AtmosphereSegmentCache exact_cache, low_cache, high_cache;
             auto exact = light.Segment(p, w, distance, exact_cache);
-            auto low = light.SampledSegment(p, w, distance, low_cache, probability / 2);
-            auto high = light.SampledSegment(p, w, distance, high_cache, (1 + probability) / 2);
+            auto low = light.SampledSegment(p, w, distance, low_cache, .125);
+            auto high = light.SampledSegment(p, w, distance, high_cache, .875);
             for (int c = 0; c < 3; ++c) {
-              double average = probability * double(low.radiance[c]) +
-                               (1 - probability) * double(high.radiance[c]);
-              expect_true(std::abs(average - exact.radiance[c]) <
-                          2e-5 * std::max(1., std::abs(double(exact.radiance[c]))));
+              expect_true(low.radiance[c] == exact.radiance[c]);
+              expect_true(high.radiance[c] == exact.radiance[c]);
               expect_true(low.transmission[c] == exact.transmission[c]);
               expect_true(high.transmission[c] == exact.transmission[c]);
             }
@@ -348,6 +347,192 @@ context("Sampled horizon correction") {
         expect_true(actual.radiance[c] == expected.radiance[c]);
       }
     }
+  }
+}
+
+
+context("Filtered finite atmospheric paths") {
+  test_that("sampled complete paths recover deterministic filtered haze") {
+    const char *filename = std::getenv("RAYRENDER_PRAGUE_TEST_FILE");
+    if (!filename) return;
+    auto description = PragueTestDescription(filename);
+    PragueInfiniteLight light(description, false);
+    const point3f origins[] = {point3f(0, 350, 0), point3f(0, 5, 0),
+                              point3f(0, 5000, 0), point3f(0, 350, 0)};
+    double azimuth = 250 * M_PI / 180, angle = 3 * M_PI / 180;
+    const vec3f directions[] = {unit_vector(vec3f(0, -.01, 1)), vec3f(1, 0, 0),
+      vec3f(0, 1, 0), vec3f(-std::sin(azimuth) * std::cos(angle), std::sin(angle),
+                           std::cos(azimuth) * std::cos(angle))};
+    const double distances[] = {5000, 5000, 1000, 1000};
+    for (int ray = 0; ray < 4; ++ray) {
+      auto expected = light.Segment(origins[ray], directions[ray], distances[ray]);
+      std::array<double, 3> average{};
+      AtmosphereSegmentCache cache;
+      const int count = 4096;
+      for (int i = 0; i < count; ++i) {
+        auto actual = light.SampledSegment(origins[ray], directions[ray], distances[ray],
+                                           cache, (i + .5) / count);
+        for (int c = 0; c < 3; ++c) {
+          average[c] += double(actual.radiance[c]) / count;
+          expect_true(actual.transmission[c] == expected.transmission[c]);
+        }
+      }
+      for (int c = 0; c < 3; ++c)
+        expect_true(std::abs(average[c] - expected.radiance[c]) <
+                    .002 * std::max(1e-4, std::abs(double(expected.radiance[c]))) + 1e-6);
+      // Endpoint variates and a truncated near-ground kernel must stay valid.
+      auto upper = light.SampledSegment(origins[ray], directions[ray], distances[ray], cache, 1);
+      auto below = light.SampledSegment(origins[ray], directions[ray], distances[ray], cache,
+                                        std::nextafter(1.0, 0.0));
+      for (int c = 0; c < 3; ++c) {
+        expect_true(std::isfinite(upper.radiance[c]));
+        expect_true(upper.radiance[c] == below.radiance[c]);
+      }
+    }
+  }
+
+  test_that("eager haze samples one direction and preserves cumulative transport") {
+    const char *filename = std::getenv("RAYRENDER_PRAGUE_TEST_FILE");
+    if (!filename) return;
+    auto description = PragueTestDescription(filename);
+    description["deferred_haze"] = false;
+    PragueInfiniteLight light(description, false);
+    expect_true(light.SampleHaze());
+    point3f p(0, 350, 0);
+    vec3f w(0, 0, 1);
+    bool different = false;
+    auto reference = light.Segment(p, w, 5000);
+    for (int count : {1, 7, 31}) {
+      AtmosphereRay ray(&light);
+      ray.Start(p, w, true);
+      point3f radiance(0), transmission(1);
+      for (int i = 1; i <= count; ++i) {
+        auto step = ray.Advance(p + w * Float(5000. * i / count), (i % 5) / 5.);
+        radiance += transmission * step.radiance;
+        transmission *= step.transmission;
+      }
+      AtmosphereSegmentCache cache;
+      auto expected = light.SampledSegment(p, w, 5000, cache, (count % 5) / 5.);
+      auto environment = radiance + transmission * ray.Remaining(point3f(3, 5, 7));
+      for (int c = 0; c < 3; ++c) {
+        expect_true(std::abs(radiance[c] - expected.radiance[c]) <
+                    2e-5 * std::max(1., std::abs(double(expected.radiance[c]))));
+        expect_true(std::abs(transmission[c] - expected.transmission[c]) < 1e-6);
+        expect_true(std::abs(environment[c] - (3 + 2 * c)) < 1e-5);
+        different |= radiance[c] != reference.radiance[c];
+      }
+    }
+    expect_true(different);
+  }
+
+  test_that("deferral does not change the angular sample") {
+    const char *filename = std::getenv("RAYRENDER_PRAGUE_TEST_FILE");
+    if (!filename) return;
+    auto description = PragueTestDescription(filename);
+    point3f p(0, 350, 0);
+    vec3f w = unit_vector(vec3f(1, -.01, 0)); // Outside the solar guard/transition.
+    PragueInfiniteLight reference(description, false);
+    const double variates[] = {0., .2, .5, 1.};
+    AtmosphereSegment samples[4];
+    AtmosphereSegmentCache cache;
+    for (int i = 0; i < 4; ++i) samples[i] = reference.SampledSegment(p, w, 5000, cache, variates[i]);
+    bool different = false;
+    for (int c = 0; c < 3; ++c)
+      different |= samples[0].radiance[c] != samples[3].radiance[c];
+    expect_true(different);
+    for (bool deferred : {false, true}) {
+      description["deferred_haze"] = deferred;
+      PragueInfiniteLight light(description, false);
+      expect_true(light.SampleHaze());
+      AtmosphereSegmentCache local_cache;
+      for (int i = 0; i < 4; ++i) {
+        auto value = light.SampledSegment(p, w, 5000, local_cache, variates[i]);
+        auto expected = samples[i];
+        for (int c = 0; c < 3; ++c) {
+          expect_true(value.radiance[c] == expected.radiance[c]);
+          expect_true(value.transmission[c] == expected.transmission[c]);
+        }
+      }
+    }
+  }
+
+  test_that("sampled filtering with the full fallback preserves nonzero haze in the solar transition") {
+    const char *filename = std::getenv("RAYRENDER_PRAGUE_TEST_FILE");
+    if (!filename) return;
+    auto description = PragueTestDescription(filename);
+    double azimuth = 254 * M_PI / 180;
+    point3f p(0, 350, 0);
+    for (bool deferred : {false, true}) {
+      description["deferred_haze"] = deferred;
+      PragueInfiniteLight light(description, false);
+      bool nonzero = false;
+      // Exercise both the angular draw and complete horizon average, including
+      // fractional Sun-transition weights in non-SIMD Float builds.
+      for (double degrees : {-1., -.8, -.6, -.4, -.2, 0.}) {
+        double angle = degrees * M_PI / 180;
+        vec3f w(-std::sin(azimuth) * std::cos(angle), std::sin(angle),
+                 std::cos(azimuth) * std::cos(angle));
+        auto exact = light.Segment(p, w, 1000);
+        AtmosphereSegmentCache cache;
+        std::array<double, 3> average{};
+        const int count = 4096;
+        for (int i = 0; i < count; ++i) {
+          auto value = light.SampledSegment(p, w, 1000, cache, (i + .5) / count);
+          for (int c = 0; c < 3; ++c) average[c] += double(value.radiance[c]) / count;
+        }
+        for (int c = 0; c < 3; ++c) {
+          expect_true(std::abs(average[c] - exact.radiance[c]) <
+                      .002 * std::max(1e-4, std::abs(double(exact.radiance[c]))) + 1e-6);
+          nonzero |= exact.radiance[c] > 1e-6;
+        }
+      }
+      expect_true(nonzero);
+    }
+  }
+
+  test_that("Sun protection retains current haze and filtered paths still telescope") {
+    const char *filename = std::getenv("RAYRENDER_PRAGUE_TEST_FILE");
+    if (!filename) return;
+    auto description = PragueTestDescription(filename);
+    PragueInfiniteLight filtered(description, false);
+    description["haze_filter"] = false;
+    PragueInfiniteLight original(description, false);
+    double azimuth = 250 * M_PI / 180;
+    for (double offset : {-2., 0., 2.}) {
+      double angle = (-1 + offset) * M_PI / 180;
+      vec3f w(-std::sin(azimuth) * std::cos(angle), std::sin(angle),
+               std::cos(azimuth) * std::cos(angle));
+      point3f p(0, 5000, 0);
+      auto a = filtered.Segment(p, w, 1000), b = original.Segment(p, w, 1000);
+      for (int c = 0; c < 3; ++c) {
+        expect_true(a.radiance[c] == b.radiance[c]);
+        expect_true(a.transmission[c] == b.transmission[c]);
+        expect_true(filtered.Radiance(p, w, 0)[c] == original.Radiance(p, w, 0)[c]);
+      }
+    }
+    point3f origin(0, 350, 0);
+    vec3f direction(0, 0, 1);
+    auto whole = filtered.Segment(origin, direction, 5000);
+    for (int count : {1, 7, 31}) {
+      AtmosphereRay ray(&filtered);
+      point3f radiance(0), transmission(1);
+      ray.Start(origin, direction, true);
+      for (int i = 1; i <= count; ++i) {
+        auto step = ray.Advance(origin + direction * (5000. * i / count));
+        radiance += transmission * step.radiance;
+        transmission *= step.transmission;
+      }
+      point3f environment(3, 5, 7);
+      auto combined = radiance + transmission * ray.Remaining(environment);
+      for (int c = 0; c < 3; ++c) {
+        expect_true(std::abs(radiance[c] - whole.radiance[c]) <
+                    2e-5 * std::max(1., std::abs(double(whole.radiance[c]))));
+        expect_true(std::abs(transmission[c] - whole.transmission[c]) < 1e-6);
+        expect_true(std::abs(combined[c] - environment[c]) < 1e-5);
+      }
+    }
+    auto underground = filtered.Segment(point3f(0, 5, 0), vec3f(0, -1, 0), 1000);
+    for (int c = 0; c < 3; ++c) expect_true(underground.radiance[c] == 0);
   }
 }
 #endif

@@ -3,7 +3,7 @@
 #'
 #' @description
 #' Evaluate the native Prague atmosphere at scene interactions, including
-#' altitude-dependent Sun and sky lighting, finite-distance attenuation, and
+#' altitude-dependent Sun and sky lighting, finite-distance haze, and
 #' in-scattering. Sun and Moon disk lights are included automatically.
 #' Add the light with [add_infinite_light()] and render with
 #' `integrator_type = "nee"`. Use [sky_light_image()] for a cached sky image.
@@ -18,7 +18,7 @@
 #' from 20 to 131.8. Smaller values produce stronger haze.
 #' @param albedo Default `0.5`. Uniform ground reflectance for the sky model,
 #' between 0 and 1. Local surface materials are specified separately.
-#' @param resolution Default `64`. Height of directional importance-sampling
+#' @param sampling_resolution Default `64`. Height of directional importance-sampling
 #' tables, from 16 to 2048. This does not limit the rendered sky's detail.
 #' @param render_mode Default `"all"`. Select sky and Sun (`"all"`), sky without
 #' the solar disk (`"atmosphere"`), or the solar disk alone (`"sun"`).
@@ -31,7 +31,7 @@
 #' its phase and earthshine for this location and time. A separate [moon_light()]
 #' overrides the automatic Moon. Set `FALSE` to omit the automatic disk.
 #' @param sun_resolution Default `256`. Sun disk texture width and height in
-#' pixels, at least 16; independent of the atmospheric sampling `resolution`.
+#' pixels, at least 16; independent of the atmospheric `sampling_resolution`.
 #' @param moon_resolution Default `1024`. Moon disk texture width and height in
 #' pixels, at least 16. Cropping and edge coverage can change the final dimensions.
 #' @param earthshine Default `TRUE`. Illuminate the Moon's dark side with earthshine.
@@ -61,12 +61,12 @@
 #' @param rotation Default `0`. Additional rotation in degrees around the world
 #' Y axis, using the same convention as [infinite_light()].
 #' @param name Default `"sky"`. Unique light name within the scene.
-#' @param attenuation Default `TRUE`. Include finite-distance attenuation and
+#' @param haze Default `TRUE`. Include finite-distance haze and
 #' in-scattering between scene interactions.
 #' Set `FALSE` to evaluate native Prague lighting without this finite-distance
 #' haze. Sun/sky radiance and celestial disk filtering still include the
 #' atmosphere between the query location and space.
-#' @param haze_in_volumes Default `TRUE`. Integrate clear-air haze inside attached
+#' @param haze_in_volumes Default `FALSE`. Integrate clear-air haze inside attached
 #' volume materials as well as outside,
 #' except in regions excluded by a medium's `haze` and `haze_density_threshold` settings.
 #' Set `FALSE` to pause finite haze while a ray is inside any volume boundary,
@@ -81,16 +81,17 @@
 #' either `haze_in_volumes` setting. Set `FALSE` to evaluate every haze interval.
 #' Signed corrections are averaged before display processing. Keep
 #' `render_scene(clamp_value = Inf)` to avoid clipping that estimator.
-#' @param haze_correction_probability Default `if (isTRUE(deferred_haze)) 0.5 else 1`.
-#' Probability of evaluating the full horizon-smoothing correction at each
-#' deferred haze endpoint. Values below
-#' `1` require `deferred_haze = TRUE`. The deferred default, `0.5`, reduces sky
-#' queries while preserving the expected radiance, with possible additional
-#' noise. Must be a finite number
-#' greater than zero and at most one. Set `1` to always evaluate the full
-#' correction. Disabling `deferred_haze` defaults this probability to `1`.
-#' Transmission and direct lighting stay exact.
-#' Keep `clamp_value = Inf` so signed corrections are averaged without clipping.
+#' @param haze_filter Default `TRUE`. Reduce finite-haze bands by averaging complete
+#' nearby atmospheric paths with a 0.5-degree vertical Gaussian, truncated at
+#' plus or minus 1.5 degrees. Each path uses Prague's sky spectra and its own
+#' endpoint and transmission; paths entering Earth are excluded. This changes
+#' finite in-scattering, while retaining the sky, celestial lights, and the
+#' actual ray's transmission. Existing haze is retained within 3 degrees of the
+#' Sun, with a smooth transition to filtering at 6 degrees. Set `FALSE` to use
+#' the endpoint-smoothing calculation. Each filtered haze query samples
+#' one of 129 weighted directions, preserving the full filter's mean with
+#' additional Monte Carlo noise. This sampling applies with either value of
+#' `deferred_haze`.
 #' @param cache_spectra Default `TRUE`. Reuse exactly matching Prague sky spectra
 #' in a small cache per rendering thread. This changes
 #' neither the model nor individual samples. Set `FALSE` to disable this cache.
@@ -108,9 +109,9 @@
 #' fit, use the original exact evaluator. Applies when `transmission_table = TRUE`.
 #' @param query_altitude Default `TRUE`. Query lighting at each surface, cloud,
 #' or camera position, using `meters_per_unit` and
-#' `atmosphere_origin`. Set `FALSE` with `attenuation = FALSE` to evaluate all
+#' `atmosphere_origin`. Set `FALSE` with `haze = FALSE` to evaluate all
 #' lighting at the fixed reference point and `altitude`. Finite-distance
-#' haze requires position-dependent queries, so `attenuation = TRUE` requires
+#' haze requires position-dependent queries, so `haze = TRUE` requires
 #' `query_altitude = TRUE`.
 #' @param meters_per_unit Default `1`. Physical meters per world-space unit.
 #' Applies to distances along every axis.
@@ -120,13 +121,12 @@
 #'
 #' @details Install the full-altitude Prague data with
 #' `skymodelr::download_sky_data(sea_level = FALSE)` before rendering.
-#' Atmospheric queries share skymodelr's coefficients and registered native API;
-#' rendering does not download data or call R from worker threads.
+#' Atmospheric queries share skymodelr's coefficients and registered native API.
 #'
-#' With `query_altitude = TRUE`, the sky and Sun change with the location of
-#' each surface or cloud interaction. With `attenuation = FALSE`, finite haze
+#' With `query_altitude = TRUE`, the sky and Sun elevation change with the altitude of
+#' each surface or cloud interaction. With `haze = FALSE`, finite haze
 #' is disabled while this local lighting remains active. Setting both
-#' `attenuation = FALSE` and `query_altitude = FALSE` uses the fixed reference
+#' `haze = FALSE` and `query_altitude = FALSE` uses the fixed reference
 #' observer for all lighting. Date and time stay fixed during an animation.
 #'
 #' World +Y is up. With zero rotation, north is world +Z and east is world -X.
@@ -150,10 +150,14 @@
 #' with uniform ground albedo. Local geometry and clouds block direct Sun and
 #' sky lighting but do not cast shadows into this precomputed in-scattering.
 #' Haze is disabled inside dielectric solids. Radiance is integrated spectrally
-#' and converted to renderer RGB; attenuation of RGB materials uses a broadband
+#' and converted to renderer RGB; haze of RGB materials uses a broadband
 #' approximation. Finite-distance fitted transmission is normalized at zero
 #' distance and interpolated in optical depth over the first 100 m. Ray-anchored
 #' cumulative transport avoids accumulating fit errors at cloud null events.
+#' Finite haze is filtered over complete neighboring paths by default to reduce
+#' bands from subtracting independently fitted sky spectra. This is an angular
+#' regularization of the finite source. It does not blur the environment image
+#' or surface geometry.
 #'
 #' Sun and Moon are prepared automatically using [sun_light()] and [moon_light()]
 #' with this sky's location, time, altitude, rotation, intensity, and color settings.
@@ -169,7 +173,7 @@
 #' Their map resolution affects point-source detail, not the Prague atmosphere.
 #'
 #' Other infinite lights add to the sky. Additional image lights represent
-#' radiance outside the atmosphere and receive atmospheric attenuation; do not
+#' radiance outside the atmosphere and receive atmospheric haze; do not
 #' use an image that already includes the same haze. [sun_light()] and
 #' [moon_light()] request unattenuated textures automatically. The renderer
 #' applies spectral atmospheric filtering and Earth occlusion at each interaction.
@@ -423,8 +427,7 @@
 #'           -74,
 #'           day,
 #'           meters_per_unit = 1000,
-#'           visibility = 120,
-#'           attenuation = FALSE
+#'           haze = FALSE
 #'         ),
 #'         caption = "No finite haze"
 #'       ),
@@ -450,7 +453,7 @@
 #'           -74,
 #'           sunset,
 #'           meters_per_unit = 1000,
-#'           attenuation = FALSE,
+#'           haze = FALSE,
 #'           query_altitude = FALSE
 #'         ),
 #'         iso = 175,
@@ -462,7 +465,7 @@
 #'           -74,
 #'           sunset,
 #'           meters_per_unit = 1000,
-#'           attenuation = FALSE,
+#'           haze = FALSE,
 #'           query_altitude = TRUE
 #'         ),
 #'         iso = 175,
@@ -474,7 +477,7 @@
 #'           -74,
 #'           sunset,
 #'           meters_per_unit = 1000,
-#'           attenuation = TRUE,
+#'           haze = TRUE,
 #'           query_altitude = TRUE
 #'         ),
 #'         iso = 175,
@@ -493,18 +496,17 @@ sky_light = function(
   name = "sky",
   meters_per_unit = 1,
   atmosphere_origin = c(0, 0, 0),
-  attenuation = TRUE,
+  haze = TRUE,
   query_altitude = TRUE,
   haze_in_volumes = FALSE,
   deferred_haze = TRUE,
-  haze_correction_probability = if (isTRUE(deferred_haze)) 0.5 else 1,
   cache_spectra = TRUE,
   transmission_table = TRUE,
   transmission_table_max_mb = 512,
   altitude = 0,
   visibility = 131.8,
   albedo = 0.5,
-  resolution = 64,
+  sampling_resolution = 64,
   render_mode = "all",
   prague_rgb_correction = TRUE,
   prague_rgb_correction_strength = 1,
@@ -521,13 +523,14 @@ sky_light = function(
   stars_exposure = 0,
   planets = FALSE,
   celestial_resolution = 2048,
-  number_cores = 1
+  number_cores = 1,
+  haze_filter = TRUE
 ) {
   sky_args = list(
     altitude = altitude,
     visibility = visibility,
     albedo = albedo,
-    resolution = resolution,
+    resolution = sampling_resolution,
     render_mode = render_mode,
     prague_rgb_correction = prague_rgb_correction,
     prague_rgb_correction_strength = prague_rgb_correction_strength,
@@ -547,11 +550,11 @@ sky_light = function(
     atmosphere = TRUE,
     meters_per_unit = meters_per_unit,
     atmosphere_origin = atmosphere_origin,
-    attenuation = attenuation,
+    haze = haze,
     query_altitude = query_altitude,
     haze_in_volumes = haze_in_volumes,
     deferred_haze = deferred_haze,
-    haze_correction_probability = haze_correction_probability,
+    haze_filter = haze_filter,
     cache_spectra = cache_spectra,
     transmission_table = transmission_table,
     transmission_table_max_mb = transmission_table_max_mb,
@@ -588,10 +591,11 @@ validate_sky_light = function(light) {
   }
   for (field in c(
     "sun",
-    "attenuation",
+    "haze",
     "query_altitude",
     "haze_in_volumes",
     "deferred_haze",
+    "haze_filter",
     "cache_spectra",
     "transmission_table"
   )) {
@@ -603,21 +607,6 @@ validate_sky_light = function(light) {
           is.na(light[[field]]))
     ) {
       stop(field, " must be TRUE or FALSE.", call. = FALSE)
-    }
-  }
-  if ("haze_correction_probability" %in% names(light)) {
-    probability = light$haze_correction_probability
-    if (
-      !is.numeric(probability) ||
-        length(probability) != 1L ||
-        !is.finite(probability) ||
-        probability <= 0 ||
-        probability > 1
-    ) {
-      stop(
-        "haze_correction_probability must be a finite number greater than zero and at most one.",
-        call. = FALSE
-      )
     }
   }
   if ("transmission_table_max_mb" %in% names(light)) {

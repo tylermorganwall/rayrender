@@ -91,20 +91,10 @@ validate_prague_sky_light = function(light) {
     stop("Native atmosphere belongs to sky_light().", call. = FALSE)
   }
   if (
-    !is.null(light$haze_correction_probability) &&
-      light$haze_correction_probability < 1 &&
-      !isTRUE(light$deferred_haze)
-  ) {
-    stop(
-      "haze_correction_probability < 1 requires deferred_haze = TRUE.",
-      call. = FALSE
-    )
-  }
-  if (
-    !identical(light$attenuation, FALSE) &&
+    !identical(light$haze, FALSE) &&
       identical(light$query_altitude, FALSE)
   ) {
-    stop("attenuation = TRUE requires query_altitude = TRUE.", call. = FALSE)
+    stop("haze = TRUE requires query_altitude = TRUE.", call. = FALSE)
   }
   scale = light$meters_per_unit
   if (
@@ -162,17 +152,11 @@ prepare_prague_sky_light = function(light) {
     rotation = light$rotation,
     origin = unname(light$atmosphere_origin),
     meters_per_unit = light$meters_per_unit,
-    attenuation = !identical(light$attenuation, FALSE),
+    haze = !identical(light$haze, FALSE),
     query_altitude = !identical(light$query_altitude, FALSE),
     haze_in_volumes = !identical(light$haze_in_volumes, FALSE),
     deferred_haze = identical(light$deferred_haze, TRUE),
-    haze_correction_probability = if (
-      is.null(light$haze_correction_probability)
-    ) {
-      1
-    } else {
-      light$haze_correction_probability
-    },
+    haze_filter = !identical(light$haze_filter, FALSE),
     cache_spectra = !identical(light$cache_spectra, FALSE),
     transmission_table = !identical(light$transmission_table, FALSE),
     transmission_table_max_mb = if (is.null(light$transmission_table_max_mb)) {

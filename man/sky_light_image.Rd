@@ -12,7 +12,7 @@ sky_light_image(
   rotation = 0,
   name = "sky",
   altitude = 0,
-  visibility = 50,
+  visibility = 131.8,
   albedo = 0.5,
   resolution = 2048,
   hosek = TRUE,
@@ -56,7 +56,7 @@ Y axis, using the same convention as \code{\link[=infinite_light]{infinite_light
 \item{altitude}{Default \code{0}. Observer altitude in meters above sea level for
 the entire sky image. Prague supports 0--15000 m with its full-altitude data.}
 
-\item{visibility}{Default \code{50}. Prague meteorological visibility in kilometers,
+\item{visibility}{Default \code{131.8}. Prague meteorological visibility in kilometers,
 from 20 to 131.8. Smaller values produce stronger haze.}
 
 \item{albedo}{Default \code{0.5}. Uniform ground reflectance for the sky model,

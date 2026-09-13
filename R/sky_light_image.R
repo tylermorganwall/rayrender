@@ -156,11 +156,11 @@ sky_light_image = function(
       "atmosphere",
       "meters_per_unit",
       "atmosphere_origin",
-      "attenuation",
+      "haze",
       "query_altitude",
       "haze_in_volumes",
       "deferred_haze",
-      "haze_correction_probability",
+      "haze_filter",
       "cache_spectra",
       "transmission_table",
       "transmission_table_max_mb"

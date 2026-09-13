@@ -389,7 +389,8 @@ perlin_cloud_density = function(
       c(0.32, 0.72),
       c(0.65, 0.77)
     )
-    centers = centers + matrix(runif(length(centers), -0.045, 0.045), ncol = 2)
+    centers = centers +
+      matrix(stats::runif(length(centers), -0.045, 0.045), ncol = 2)
     radius = 0.16 + 0.12 * coverage
     for (j in seq_along(y)) {
       envelope = matrix(-Inf, dims[1], dims[3])
