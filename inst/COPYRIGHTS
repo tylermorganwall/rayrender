@@ -9,3 +9,11 @@ URL: https://github.com/syoyo/tinyobjloader/
 File: src/miniply.h src/miniply.cpp
 Copyright: 2019 Vilya Harvey
 URL: https://github.com/vilya/miniply/
+
+Files: src/ext/nanovdb/NanoVDB.h
+Copyright: Contributors to the OpenVDB Project, OpenVDB v12.1.1.
+URL: https://github.com/AcademySoftwareFoundation/openvdb/tree/v12.1.1
+
+File: src/volumes/cie.h
+Copyright: 1998-2020 Matt Pharr, Wenzel Jakob, and Greg Humphreys.
+URL: https://github.com/mmp/pbrt-v4
