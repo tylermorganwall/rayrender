@@ -1,5 +1,7 @@
 // Copyright Contributors to the OpenVDB Project
 // SPDX-License-Identifier: Apache-2.0
+// Modified for rayrender: run CPU work on the calling thread so exceptions
+// propagate to R and NanoVDB does not create an independent worker pool.
 
 /*!
     \file nanovdb/util/ForEach.h
@@ -8,7 +10,7 @@
 
     \date August 24, 2020
 
-    \brief A unified wrapper for tbb::parallel_for and a naive std::thread fallback
+    \brief Serial range traversal for rayrender's NanoVDB loading and validation
 */
 
 #ifndef NANOVDB_UTIL_FOREACH_H_HAS_BEEN_INCLUDED
@@ -16,19 +18,11 @@
 
 #include <nanovdb/util/Range.h>// for Range1D
 
-#ifdef NANOVDB_USE_TBB
-#include <tbb/parallel_for.h>
-#else
-#include <thread>
-#include <mutex>
-#include <vector>
-#endif
-
 namespace nanovdb {
 
 namespace util {
 
-/// @brief simple wrapper for tbb::parallel_for with a naive std fallback
+/// @brief Visit a nonempty range on the calling thread.
 ///
 /// @param range Range, CoordBBox, tbb::blocked_range, blocked_range2D, or blocked_range3D.
 /// @param func functor with the signature [](const RangeT&){...},
@@ -42,26 +36,7 @@ template <typename RangeT, typename FuncT>
 inline void forEach(RangeT range, const FuncT &func)
 {
     if (range.empty()) return;
-#ifdef NANOVDB_USE_TBB
-    tbb::parallel_for(range, func);
-#else// naive and likely slow alternative based on std::thread
-    if (const size_t threadCount = std::thread::hardware_concurrency()>>1) {
-        std::vector<RangeT> rangePool{ range };
-        while(rangePool.size() < threadCount) {
-            const size_t oldSize = rangePool.size();
-            for (size_t i = 0; i < oldSize && rangePool.size() < threadCount; ++i) {
-                auto &r = rangePool[i];
-                if (r.is_divisible()) rangePool.push_back(RangeT(r, Split()));
-            }
-            if (rangePool.size() == oldSize) break;// none of the ranges were divided so stop
-        }
-        std::vector<std::thread> threadPool;
-        for (auto &r : rangePool) threadPool.emplace_back(func, r);// launch threads
-        for (auto &t : threadPool) t.join();// synchronize threads
-    } else {//serial
-        func(range);
-    }
-#endif
+    func(range);
 }
 
 /// @brief Simple wrapper for the function defined above

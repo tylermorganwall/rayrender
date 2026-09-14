@@ -1,5 +1,6 @@
 // Copyright Contributors to the OpenVDB Project
 // SPDX-License-Identifier: Apache-2.0
+// Modified for rayrender: empty node arrays have no offset to compute.
 
 /*!
     \file nanovdb/NodeManager.h
@@ -292,9 +293,11 @@ NodeManagerHandle<BufferT> createNodeManager(const NanoGrid<BuildT> &grid,
 
     if (NodeManager<BuildT>::isLinear(grid)) {
         data->mLinear = uint8_t(1u);
-        data->mOff[0] = util::PtrDiff(grid.tree().template getFirstNode<0>(), &grid);
-        data->mOff[1] = util::PtrDiff(grid.tree().template getFirstNode<1>(), &grid);
-        data->mOff[2] = util::PtrDiff(grid.tree().template getFirstNode<2>(), &grid);
+        // Sparse tile-only grids can omit entire node levels. Avoid subtracting
+        // a null node pointer, which also trips an assertion in debug builds.
+        data->mOff[0] = grid.tree().nodeCount(0) ? util::PtrDiff(grid.tree().template getFirstNode<0>(), &grid) : 0;
+        data->mOff[1] = grid.tree().nodeCount(1) ? util::PtrDiff(grid.tree().template getFirstNode<1>(), &grid) : 0;
+        data->mOff[2] = grid.tree().nodeCount(2) ? util::PtrDiff(grid.tree().template getFirstNode<2>(), &grid) : 0;
     } else {
         int64_t *ptr0 = data->mPtr[0] = reinterpret_cast<int64_t*>(data + 1);
         int64_t *ptr1 = data->mPtr[1] = data->mPtr[0] + grid.tree().nodeCount(0);

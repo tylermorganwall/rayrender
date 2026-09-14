@@ -1,6 +1,7 @@
 // Copyright Contributors to the OpenVDB Project
 // SPDX-License-Identifier: Apache-2.0
 // Modified for rayrender: removed GCC diagnostic suppression pragmas.
+// Host I/O failures throw exceptions, and FILE cleanup tolerates failed opens.
 
 /*!
     \file   nanovdb/NanoVDB.h
@@ -129,6 +130,11 @@
 // The following two header files are the only mandatory dependencies
 #include <nanovdb/util/Util.h>// for __hostdev__ and lots of other utility functions
 #include <nanovdb/math/Math.h>// for Coord, BBox, Vec3, Vec4 etc
+
+#if !defined(__CUDA_ARCH__) && !defined(__HIP__)
+#include <stdexcept> // rayrender: report host I/O failures without terminating R
+#include <string>
+#endif
 
 // Do not change this value! 32 byte alignment is fixed in NanoVDB
 #define NANOVDB_DATA_ALIGNMENT 32
@@ -5898,14 +5904,14 @@ void writeUncompressedGrids(const char* fileName, const VecT<GridHandleT>& handl
     struct StreamT {
         FILE* fptr;
         StreamT(const char* name) { fptr = fopen(name, "wb"); }
-        ~StreamT() { fclose(fptr); }
+        ~StreamT() { if (fptr) fclose(fptr); }
         void write(const char* data, size_t n) { fwrite(data, 1, n, fptr); }
         bool is_open() const { return fptr != NULL; }
     } os(fileName);
 #endif
     if (!os.is_open()) {
-        fprintf(stderr, "nanovdb::writeUncompressedGrids: Unable to open file \"%s\"for output\n", fileName);
-        exit(EXIT_FAILURE);
+        throw std::runtime_error(std::string("nanovdb::writeUncompressedGrids: Unable to open file \"") +
+                                 fileName + "\" for output");
     }
     for (auto& h : handles) {
         for (uint32_t n=0; n<h.gridCount(); ++n) writeUncompressedGrid(os, h.gridData(n), raw);
@@ -5939,16 +5945,15 @@ VecT<GridHandleT> readUncompressedGrids(StreamT& is, const typename GridHandleT:
         FileHeader head;
         while(is.read((char*)&head, sizeof(FileHeader))) {
             if (!head.isValid()) {
-                fprintf(stderr, "nanovdb::readUncompressedGrids: invalid magic number = \"%s\"\n", (const char*)&(head.magic));
-                exit(EXIT_FAILURE);
+                throw std::invalid_argument("nanovdb::readUncompressedGrids: invalid magic number");
             } else if (!head.version.isCompatible()) {
                 char str[20];
-                fprintf(stderr, "nanovdb::readUncompressedGrids: invalid major version = \"%s\"\n", toStr(str, head.version));
-                exit(EXIT_FAILURE);
+                throw std::invalid_argument(std::string("nanovdb::readUncompressedGrids: invalid major version = ") +
+                                            toStr(str, head.version));
             } else if (head.codec != Codec::NONE) {
                 char str[8];
-                fprintf(stderr, "nanovdb::readUncompressedGrids: invalid codec = \"%s\"\n", toStr(str, head.codec));
-                exit(EXIT_FAILURE);
+                throw std::invalid_argument(std::string("nanovdb::readUncompressedGrids: invalid codec = ") +
+                                            toStr(str, head.codec));
             }
             FileMetaData meta;
             for (uint16_t i = 0; i < head.gridCount; ++i) { // read all grids in segment
@@ -5976,7 +5981,7 @@ VecT<GridHandleT> readUncompressedGrids(const char* fileName, const typename Gri
     struct StreamT {
         FILE* fptr;
         StreamT(const char* name) { fptr = fopen(name, "rb"); }
-        ~StreamT() { fclose(fptr); }
+        ~StreamT() { if (fptr) fclose(fptr); }
         bool read(char* data, size_t n) {
             size_t m = fread(data, 1, n, fptr);
             return n == m;
@@ -5987,8 +5992,8 @@ VecT<GridHandleT> readUncompressedGrids(const char* fileName, const typename Gri
 #endif
     StreamT is(fileName);
     if (!is.is_open()) {
-        fprintf(stderr, "nanovdb::readUncompressedGrids: Unable to open file \"%s\"for input\n", fileName);
-        exit(EXIT_FAILURE);
+        throw std::runtime_error(std::string("nanovdb::readUncompressedGrids: Unable to open file \"") +
+                                 fileName + "\" for input");
     }
     return readUncompressedGrids<GridHandleT, StreamT, VecT>(is, buffer);
 } // readUncompressedGrids

@@ -1,5 +1,6 @@
 // Copyright Contributors to the OpenVDB Project
 // SPDX-License-Identifier: Apache-2.0
+// Modified for rayrender: debug pointer failures throw instead of exiting R.
 
 /*!
     @file nanovdb/HostBuffer.h
@@ -87,6 +88,7 @@
 #include <cassert>//           for assert
 #include <sstream>//           for std::stringstream
 #include <cstring>//           for memcpy
+#include <stdexcept>//         for recoverable host errors
 
 #define checkPtr(ptr, msg) \
     { \
@@ -122,14 +124,16 @@ class HostBuffer
     static inline void ptrAssert(void* ptr, const char* msg, const char* file, int line, bool abort = true)
     {
         if (ptr == nullptr) {
-            fprintf(stderr, "NULL pointer error: %s %s %d\n", msg, file, line);
             if (abort)
-                exit(1);
+                throw std::runtime_error(std::string("NULL pointer error: ") + msg + " " +
+                                         file + " " + std::to_string(line));
+            fprintf(stderr, "NULL pointer error: %s %s %d\n", msg, file, line);
         }
         if (uint64_t(ptr) % NANOVDB_DATA_ALIGNMENT) {
-            fprintf(stderr, "Alignment pointer error: %s %s %d\n", msg, file, line);
             if (abort)
-                exit(1);
+                throw std::runtime_error(std::string("Alignment pointer error: ") + msg + " " +
+                                         file + " " + std::to_string(line));
+            fprintf(stderr, "Alignment pointer error: %s %s %d\n", msg, file, line);
         }
     }
 #else
