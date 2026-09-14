@@ -1,10 +1,10 @@
 {
-  "row_count": 116,
+  "row_count": 120,
   "latest_row_count": 4,
-  "latest_timestamp_utc": "2026-09-11T04:33:48Z",
-  "latest_run_id": "34562106171",
+  "latest_timestamp_utc": "2026-09-14T03:02:09Z",
+  "latest_run_id": "34800468723",
   "latest_run_attempt": "1",
-  "latest_commit_sha": "3c63dae819b0a0a8cedf5a7258b44deb4b1188f3",
+  "latest_commit_sha": "b9d3adb209e178a2325a2a349b57d9cb182cead1",
   "latest_branch_name": "null-scatter-volume",
   "latest_status_counts": {
     "build_failed": 4
